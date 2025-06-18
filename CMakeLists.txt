@@ -15,11 +15,11 @@ file(GLOB SOURCES
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-target_include_directories(${PROJECT_NAME} PRIVATE include include/imgui include/tinyxml2 src )
+target_include_directories(${PROJECT_NAME} PRIVATE include include/imgui include/tinyxml2 src)
 
 set(CMAKE_CXX_FLAGS "-g -O2 -std=c++23 -Wall -Wextra -pedantic -Wno-unused-variable -Wno-unused-parameter -Wno-ignored-qualifiers -Wno-parentheses -Wno-unused-function -Wno-class-memaccess -Wno-delete-incomplete")
 
-target_link_libraries(${PROJECT_NAME} PRIVATE m GL GLEW SDL3 SDL3_mixer)
+target_link_libraries(${PROJECT_NAME} PRIVATE m GL GLEW SDL3)
 
 message("System: ${CMAKE_SYSTEM_NAME}")
 message("Project: ${PROJECT_NAME}")

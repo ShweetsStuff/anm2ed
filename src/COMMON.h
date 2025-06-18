@@ -1,7 +1,6 @@
 #pragma once
 
 #include <SDL3/SDL.h>
-#include <SDL3_mixer/SDL_mixer.h>
 
 #include <GL/glew.h>
 #include <GL/gl.h>
