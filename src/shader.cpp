@@ -1,17 +1,14 @@
 #include "shader.h"
 
-static bool _shader_compile(GLuint handle, const char* path);
+static bool _shader_compile(GLuint handle, const char* text);
 
 static bool
-_shader_compile(GLuint handle, const char* path)
+_shader_compile(GLuint handle, const char* text)
 {
-	char buffer[SHADER_BUFFER_MAX];
 	char compileLog[SHADER_BUFFER_MAX];
 	s32 isCompile;
 
-	file_read(path, buffer, SHADER_BUFFER_MAX);
-
-	const GLchar* source = buffer;
+	const GLchar* source = text;
 
 	glShaderSource(handle, 1, &source, NULL);
 
@@ -21,7 +18,7 @@ _shader_compile(GLuint handle, const char* path)
 	if (!isCompile)
 	{
 		glGetShaderInfoLog(handle, SHADER_BUFFER_MAX, NULL, compileLog);
-		printf(STRING_ERROR_SHADER_INIT, path, compileLog);
+		printf(STRING_ERROR_SHADER_INIT, handle, compileLog);
 		return false;
 	}
 
@@ -29,7 +26,7 @@ _shader_compile(GLuint handle, const char* path)
 }
 
 bool
-shader_init(Shader* self, const char* vertexPath, const char* fragmentPath)
+shader_init(Shader* self, const char* vertex, const char* fragment)
 {
 	GLuint vertexHandle;
 	GLuint fragmentHandle;
@@ -42,8 +39,8 @@ shader_init(Shader* self, const char* vertexPath, const char* fragmentPath)
 
 	if 
 	(
-		!_shader_compile(vertexHandle, vertexPath) 	||
-		!_shader_compile(fragmentHandle, fragmentPath)
+		!_shader_compile(vertexHandle, vertex) 	||
+		!_shader_compile(fragmentHandle, fragment)
 	)
 		return false;
 
@@ -57,7 +54,7 @@ shader_init(Shader* self, const char* vertexPath, const char* fragmentPath)
 	glDeleteShader(vertexHandle);
 	glDeleteShader(fragmentHandle);
 
-	printf(STRING_INFO_SHADER_INIT, vertexPath, fragmentPath);
+	printf(STRING_INFO_SHADER_INIT, self->handle);
 
 	return true;
 }

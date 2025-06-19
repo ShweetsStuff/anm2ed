@@ -5,285 +5,216 @@
 #define ANM2_SCALE_CONVERT(x) ((f32)x / 100.0f)
 #define ANM2_TINT_CONVERT(x) ((f32)x / 255.0f)
 
-#define ANM2_STRING_MAX 255
+#define ANM2_STRING_MAX 0xFF
+#define ANM2_STRING_FORMATTED_MAX 0xFFF
+#define ANM2_BUFFER_MAX 0xFFFFF
+#define ANM2_FPS_MIN 0
+#define ANM2_FPS_DEFAULT 30
+#define ANM2_FPS_MAX 60
 
 /* Elements */
-#define STRING_ANM2_ELEMENT_ANIMATED_ACTOR "AnimatedActor"
-#define STRING_ANM2_ELEMENT_INFO "Info"
-#define STRING_ANM2_ELEMENT_CONTENT "Content"
-#define STRING_ANM2_ELEMENT_SPRITESHEETS "Spritesheets"
-#define STRING_ANM2_ELEMENT_SPRITESHEET "Spritesheet"
-#define STRING_ANM2_ELEMENT_LAYERS "Layers"
-#define STRING_ANM2_ELEMENT_LAYER "Layer"
-#define STRING_ANM2_ELEMENT_NULLS "Nulls"
-#define STRING_ANM2_ELEMENT_NULL "Null"
-#define STRING_ANM2_ELEMENT_EVENTS "Events"
-#define STRING_ANM2_ELEMENT_EVENT "Event"
-#define STRING_ANM2_ELEMENT_ANIMATIONS "Animations"
-#define STRING_ANM2_ELEMENT_ANIMATION "Animation"
-#define STRING_ANM2_ELEMENT_ROOT_ANIMATION "RootAnimation"
-#define STRING_ANM2_ELEMENT_FRAME "Frame"
-#define STRING_ANM2_ELEMENT_LAYER_ANIMATIONS "LayerAnimations"
-#define STRING_ANM2_ELEMENT_LAYER_ANIMATION "LayerAnimation"
-#define STRING_ANM2_ELEMENT_NULL_ANIMATIONS "NullAnimations"
-#define STRING_ANM2_ELEMENT_NULL_ANIMATION "NullAnimation"
-#define STRING_ANM2_ELEMENT_TRIGGERS "Triggers"
-#define STRING_ANM2_ELEMENT_TRIGGER "Trigger"
+#define ANM2_ELEMENT_LIST \
+    X(ANIMATED_ACTOR,     "AnimatedActor")     \
+    X(INFO,               "Info")              \
+    X(CONTENT,            "Content")           \
+    X(SPRITESHEETS,       "Spritesheets")      \
+    X(SPRITESHEET,        "Spritesheet")       \
+    X(LAYERS,             "Layers")            \
+    X(LAYER,              "Layer")             \
+    X(NULLS,              "Nulls")             \
+    X(NULL,               "Null")              \
+    X(EVENTS,             "Events")            \
+    X(EVENT,              "Event")             \
+    X(ANIMATIONS,         "Animations")        \
+    X(ANIMATION,          "Animation")         \
+    X(ROOT_ANIMATION,     "RootAnimation")     \
+    X(FRAME,              "Frame")             \
+    X(LAYER_ANIMATIONS,   "LayerAnimations")   \
+    X(LAYER_ANIMATION,    "LayerAnimation")    \
+    X(NULL_ANIMATIONS,    "NullAnimations")    \
+    X(NULL_ANIMATION,     "NullAnimation")     \
+    X(TRIGGERS,           "Triggers")          \
+    X(TRIGGER,            "Trigger")
 
-/* Attributes */
-#define STRING_ANM2_ATTRIBUTE_CREATED_BY "CreatedBy"
-#define STRING_ANM2_ATTRIBUTE_CREATED_ON "CreatedOn"
-#define STRING_ANM2_ATTRIBUTE_FPS "Fps"
-#define STRING_ANM2_ATTRIBUTE_VERSION "Version"
-#define STRING_ANM2_ATTRIBUTE_ID "Id"
-#define STRING_ANM2_ATTRIBUTE_PATH "Path"
-#define STRING_ANM2_ATTRIBUTE_NAME "Name"
-#define STRING_ANM2_ATTRIBUTE_SPRITESHEET_ID "SpritesheetId"
-#define STRING_ANM2_ATTRIBUTE_SHOW_RECT "ShowRect"
-#define STRING_ANM2_ATTRIBUTE_DEFAULT_ANIMATION "DefaultAnimation"
-#define STRING_ANM2_ATTRIBUTE_FRAME_NUM "FrameNum"
-#define STRING_ANM2_ATTRIBUTE_LOOP "Loop"
-#define STRING_ANM2_ATTRIBUTE_X_POSITION "XPosition"
-#define STRING_ANM2_ATTRIBUTE_Y_POSITION "YPosition"
-#define STRING_ANM2_ATTRIBUTE_X_PIVOT "XPivot"
-#define STRING_ANM2_ATTRIBUTE_Y_PIVOT "YPivot"
-#define STRING_ANM2_ATTRIBUTE_X_CROP "XCrop"
-#define STRING_ANM2_ATTRIBUTE_Y_CROP "YCrop"
-#define STRING_ANM2_ATTRIBUTE_WIDTH "Width"
-#define STRING_ANM2_ATTRIBUTE_HEIGHT "Height"
-#define STRING_ANM2_ATTRIBUTE_X_SCALE "XScale"
-#define STRING_ANM2_ATTRIBUTE_Y_SCALE "YScale"
-#define STRING_ANM2_ATTRIBUTE_DELAY "Delay"
-#define STRING_ANM2_ATTRIBUTE_VISIBLE "Visible"
-#define STRING_ANM2_ATTRIBUTE_RED_TINT "RedTint"
-#define STRING_ANM2_ATTRIBUTE_GREEN_TINT "GreenTint"
-#define STRING_ANM2_ATTRIBUTE_BLUE_TINT "BlueTint"
-#define STRING_ANM2_ATTRIBUTE_ALPHA_TINT "AlphaTint"
-#define STRING_ANM2_ATTRIBUTE_RED_OFFSET "RedOffset"
-#define STRING_ANM2_ATTRIBUTE_GREEN_OFFSET "GreenOffset"
-#define STRING_ANM2_ATTRIBUTE_BLUE_OFFSET "BlueOffset"
-#define STRING_ANM2_ATTRIBUTE_ROTATION "Rotation"
-#define STRING_ANM2_ATTRIBUTE_INTERPOLATED "Interpolated"
-#define STRING_ANM2_ATTRIBUTE_LAYER_ID "LayerId"
-#define STRING_ANM2_ATTRIBUTE_NULL_ID "NullId"
-#define STRING_ANM2_ATTRIBUTE_EVENT_ID "EventId"
-#define STRING_ANM2_ATTRIBUTE_AT_FRAME "AtFrame"
+typedef enum {
+    #define X(name, str) ANM2_ELEMENT_##name,
+    ANM2_ELEMENT_LIST
+    #undef X
+    ANM2_ELEMENT_COUNT
+} Anm2Element;
 
-#define ANM2_ELEMENT_COUNT (ANM2_ELEMENT_TRIGGER + 1)
-enum Anm2Element
-{
-	ANM2_ELEMENT_ANIMATED_ACTOR,
-	ANM2_ELEMENT_INFO,
-	ANM2_ELEMENT_CONTENT,
-	ANM2_ELEMENT_SPRITESHEETS,
-	ANM2_ELEMENT_SPRITESHEET,
-	ANM2_ELEMENT_LAYERS,
-	ANM2_ELEMENT_LAYER,
-	ANM2_ELEMENT_NULLS,
-	ANM2_ELEMENT_NULL,
-	ANM2_ELEMENT_EVENTS,
-	ANM2_ELEMENT_EVENT,
-	ANM2_ELEMENT_ANIMATIONS,
-	ANM2_ELEMENT_ANIMATION,
-	ANM2_ELEMENT_ROOT_ANIMATION,
-	ANM2_ELEMENT_FRAME,
-	ANM2_ELEMENT_LAYER_ANIMATIONS,
-	ANM2_ELEMENT_LAYER_ANIMATION,
-	ANM2_ELEMENT_NULL_ANIMATIONS,
-	ANM2_ELEMENT_NULL_ANIMATION,
-	ANM2_ELEMENT_TRIGGERS,
-	ANM2_ELEMENT_TRIGGER
+static const char* ANM2_ELEMENT_STRINGS[] = {
+    #define X(name, str) str,
+    ANM2_ELEMENT_LIST
+    #undef X
 };
 
-static const char* ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_COUNT] = 
-{
-	STRING_ANM2_ELEMENT_ANIMATED_ACTOR,
-	STRING_ANM2_ELEMENT_INFO,
-	STRING_ANM2_ELEMENT_CONTENT,
-	STRING_ANM2_ELEMENT_SPRITESHEETS,
-	STRING_ANM2_ELEMENT_SPRITESHEET,
-	STRING_ANM2_ELEMENT_LAYERS,
-	STRING_ANM2_ELEMENT_LAYER,
-	STRING_ANM2_ELEMENT_NULLS,
-	STRING_ANM2_ELEMENT_NULL,
-	STRING_ANM2_ELEMENT_EVENTS,
-	STRING_ANM2_ELEMENT_EVENT,
-	STRING_ANM2_ELEMENT_ANIMATIONS,
-	STRING_ANM2_ELEMENT_ANIMATION,
-	STRING_ANM2_ELEMENT_ROOT_ANIMATION,
-	STRING_ANM2_ELEMENT_FRAME,
-	STRING_ANM2_ELEMENT_LAYER_ANIMATIONS,
-	STRING_ANM2_ELEMENT_LAYER_ANIMATION,
-	STRING_ANM2_ELEMENT_NULL_ANIMATIONS,
-	STRING_ANM2_ELEMENT_NULL_ANIMATION,
-	STRING_ANM2_ELEMENT_TRIGGERS,
-	STRING_ANM2_ELEMENT_TRIGGER
+DEFINE_STRING_TO_ENUM_FN(anm2_element_from_string, Anm2Element, ANM2_ELEMENT_STRINGS, ANM2_ELEMENT_COUNT)
+
+#define ANM2_ATTRIBUTE_LIST \
+    X(CREATED_BY,        "CreatedBy")        \
+    X(CREATED_ON,        "CreatedOn")        \
+    X(VERSION,           "Version")          \
+    X(FPS,               "Fps")              \
+    X(ID,                "Id")               \
+    X(PATH,              "Path")             \
+    X(NAME,              "Name")             \
+    X(SPRITESHEET_ID,    "SpritesheetId")    \
+    X(SHOW_RECT,         "ShowRect")         \
+    X(DEFAULT_ANIMATION, "DefaultAnimation") \
+    X(FRAME_NUM,         "FrameNum")         \
+    X(LOOP,              "Loop")             \
+    X(X_POSITION,        "XPosition")        \
+    X(Y_POSITION,        "YPosition")        \
+    X(X_PIVOT,           "XPivot")           \
+    X(Y_PIVOT,           "YPivot")           \
+    X(X_CROP,            "XCrop")            \
+    X(Y_CROP,            "YCrop")            \
+    X(WIDTH,             "Width")            \
+    X(HEIGHT,            "Height")           \
+    X(X_SCALE,           "XScale")           \
+    X(Y_SCALE,           "YScale")           \
+    X(DELAY,             "Delay")            \
+    X(VISIBLE,           "Visible")          \
+    X(RED_TINT,          "RedTint")          \
+    X(GREEN_TINT,        "GreenTint")        \
+    X(BLUE_TINT,         "BlueTint")         \
+    X(ALPHA_TINT,        "AlphaTint")        \
+    X(RED_OFFSET,        "RedOffset")        \
+    X(GREEN_OFFSET,      "GreenOffset")      \
+    X(BLUE_OFFSET,       "BlueOffset")       \
+    X(ROTATION,          "Rotation")         \
+    X(INTERPOLATED,      "Interpolated")     \
+    X(LAYER_ID,          "LayerId")          \
+    X(NULL_ID,           "NullId")           \
+    X(EVENT_ID,          "EventId")          \
+    X(AT_FRAME,          "AtFrame")
+
+typedef enum {
+    #define X(name, str) ANM2_ATTRIBUTE_##name,
+    ANM2_ATTRIBUTE_LIST
+    #undef X
+    ANM2_ATTRIBUTE_COUNT
+} Anm2Attribute;
+
+static const char* ANM2_ATTRIBUTE_STRINGS[] = {
+    #define X(name, str) str,
+    ANM2_ATTRIBUTE_LIST
+    #undef X
 };
 
-#define ANM2_ATTRIBUTE_COUNT (ANM2_ATTRIBUTE_AT_FRAME + 1)
-enum Anm2Attribute
-{
-	ANM2_ATTRIBUTE_CREATED_BY,
-	ANM2_ATTRIBUTE_CREATED_ON,
-	ANM2_ATTRIBUTE_FPS,
-	ANM2_ATTRIBUTE_VERSION,
-	ANM2_ATTRIBUTE_ID,
-	ANM2_ATTRIBUTE_PATH,
-	ANM2_ATTRIBUTE_NAME,
-	ANM2_ATTRIBUTE_SPRITESHEET_ID,
-	ANM2_ATTRIBUTE_SHOW_RECT,
-	ANM2_ATTRIBUTE_DEFAULT_ANIMATION,
-	ANM2_ATTRIBUTE_FRAME_NUM,
-	ANM2_ATTRIBUTE_LOOP,
-	ANM2_ATTRIBUTE_X_POSITION,
-	ANM2_ATTRIBUTE_Y_POSITION,
-	ANM2_ATTRIBUTE_X_PIVOT,
-	ANM2_ATTRIBUTE_Y_PIVOT,
-	ANM2_ATTRIBUTE_X_CROP,
-	ANM2_ATTRIBUTE_Y_CROP,
-	ANM2_ATTRIBUTE_WIDTH,
-	ANM2_ATTRIBUTE_HEIGHT,
-	ANM2_ATTRIBUTE_X_SCALE,
-	ANM2_ATTRIBUTE_Y_SCALE,
-	ANM2_ATTRIBUTE_DELAY,
-	ANM2_ATTRIBUTE_VISIBLE,
-	ANM2_ATTRIBUTE_RED_TINT,
-	ANM2_ATTRIBUTE_GREEN_TINT,
-	ANM2_ATTRIBUTE_BLUE_TINT,
-	ANM2_ATTRIBUTE_ALPHA_TINT,
-	ANM2_ATTRIBUTE_RED_OFFSET,
-	ANM2_ATTRIBUTE_GREEN_OFFSET,
-	ANM2_ATTRIBUTE_BLUE_OFFSET,
-	ANM2_ATTRIBUTE_ROTATION,
-	ANM2_ATTRIBUTE_INTERPOLATED,
-	ANM2_ATTRIBUTE_LAYER_ID,
-	ANM2_ATTRIBUTE_NULL_ID,
-	ANM2_ATTRIBUTE_EVENT_ID,
-	ANM2_ATTRIBUTE_AT_FRAME
-};
+DEFINE_STRING_TO_ENUM_FN(anm2_attribute_from_string, Anm2Attribute, ANM2_ATTRIBUTE_STRINGS, ANM2_ATTRIBUTE_COUNT)
 
-static const char* ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_COUNT] = 
-{
-	STRING_ANM2_ATTRIBUTE_CREATED_BY,
-	STRING_ANM2_ATTRIBUTE_CREATED_ON,
-	STRING_ANM2_ATTRIBUTE_FPS,
-	STRING_ANM2_ATTRIBUTE_VERSION,
-	STRING_ANM2_ATTRIBUTE_ID,
-	STRING_ANM2_ATTRIBUTE_PATH,
-	STRING_ANM2_ATTRIBUTE_NAME,
-	STRING_ANM2_ATTRIBUTE_SPRITESHEET_ID,
-	STRING_ANM2_ATTRIBUTE_SHOW_RECT,
-	STRING_ANM2_ATTRIBUTE_DEFAULT_ANIMATION,
-	STRING_ANM2_ATTRIBUTE_FRAME_NUM,
-	STRING_ANM2_ATTRIBUTE_LOOP,
-	STRING_ANM2_ATTRIBUTE_X_POSITION,
-	STRING_ANM2_ATTRIBUTE_Y_POSITION,
-	STRING_ANM2_ATTRIBUTE_X_PIVOT,
-	STRING_ANM2_ATTRIBUTE_Y_PIVOT,
-	STRING_ANM2_ATTRIBUTE_X_CROP,
-	STRING_ANM2_ATTRIBUTE_Y_CROP,
-	STRING_ANM2_ATTRIBUTE_WIDTH,
-	STRING_ANM2_ATTRIBUTE_HEIGHT,
-	STRING_ANM2_ATTRIBUTE_X_SCALE,
-	STRING_ANM2_ATTRIBUTE_Y_SCALE,
-	STRING_ANM2_ATTRIBUTE_DELAY,
-	STRING_ANM2_ATTRIBUTE_VISIBLE,
-	STRING_ANM2_ATTRIBUTE_RED_TINT,
-	STRING_ANM2_ATTRIBUTE_GREEN_TINT,
-	STRING_ANM2_ATTRIBUTE_BLUE_TINT,
-	STRING_ANM2_ATTRIBUTE_ALPHA_TINT,
-	STRING_ANM2_ATTRIBUTE_RED_OFFSET,
-	STRING_ANM2_ATTRIBUTE_GREEN_OFFSET,
-	STRING_ANM2_ATTRIBUTE_BLUE_OFFSET,
-	STRING_ANM2_ATTRIBUTE_ROTATION,
-	STRING_ANM2_ATTRIBUTE_INTERPOLATED,
-	STRING_ANM2_ATTRIBUTE_LAYER_ID,
-	STRING_ANM2_ATTRIBUTE_NULL_ID,
-	STRING_ANM2_ATTRIBUTE_EVENT_ID,
-	STRING_ANM2_ATTRIBUTE_AT_FRAME
-};
-
-#define ANM2_ANIMATION_TYPE_COUNT (ANM2_ANIMATION_NULL + 1)
+#define ANM2_ANIMATION_TYPE_COUNT (ANM2_ANIMATION_TRIGGERS + 1)
 enum Anm2AnimationType
 {
-	ANM2_ANIMATION_ROOT,
-	ANM2_ANIMATION_LAYER,
-	ANM2_ANIMATION_NULL
+    ANM2_NONE,
+	ANM2_ROOT_ANIMATION,
+	ANM2_LAYER_ANIMATION,
+	ANM2_NULL_ANIMATION,
+    ANM2_TRIGGERS
 };
 
 struct Anm2Spritesheet
 {
-	s32 id;
-	char path[ANM2_STRING_MAX];
+	char path[ANM2_STRING_MAX] = STRING_EMPTY;
 };
 
 struct Anm2Layer
 {
-	s32 id;
-	char name[ANM2_STRING_MAX];
-	s32 spritesheetID;
+	s32 spritesheetID = -1;
+	char name[ANM2_STRING_MAX] = STRING_ANM2_NEW_LAYER;
+};
+
+struct Anm2Null
+{
+    char name[ANM2_STRING_MAX] = STRING_ANM2_NEW_NULL;
+    bool isShowRect = false;
 };
 
 struct Anm2Event
 {
-	s32 id;
-	char name[ANM2_STRING_MAX];
+	char name[ANM2_STRING_MAX] = STRING_ANM2_NEW_EVENT;
 };
 
 struct Anm2Trigger
 {
-	s32 eventID;
-	s32 frame;
+	s32 eventID = -1;
+	s32 atFrame = -1;
 };
 
 struct Anm2Frame
 {
-	bool isInterpolated;
-	bool isVisible;
-	f32 rotation;
-	s32 delay;
-	ivec2 crop;
-	ivec2 pivot;
-	ivec2 position;
-	ivec2 size;
-	ivec2 scale;
-	ivec3 colorOffset;
-	ivec4 tint;
-	s32 index;
+	bool isInterpolated = false;
+	bool isVisible = true;
+	f32 rotation = 1.0f;
+	s32 delay = 1;
+	vec2 crop = {0.0f, 0.0f};
+	vec2 pivot = {0.0f, 0.0f};
+	vec2 position = {0.0f, 0.0f};
+	vec2 size = {1.0f, 1.0f};
+	vec2 scale = {1.0f, 1.0f};
+	ivec3 offsetRGB = {0, 0, 0};
+	ivec4 tintRGBA = {255, 255, 255, 255};
 };
 
 struct Anm2LayerAnimation
 {
-	s32 layerID;
-	bool isVisible;
-	vector<Anm2Frame> frames;
+	bool isVisible = true;
+	std::vector<Anm2Frame> frames;
+};
+
+struct Anm2NullAnimation
+{
+	bool isVisible = true;
+	std::vector<Anm2Frame> frames;
+};
+
+struct Anm2RootAnimation
+{
+    bool isVisible = true;
+	std::vector<Anm2Frame> frames;
+};
+
+struct Anm2Triggers
+{
+    bool isVisible = true;
+    std::vector<Anm2Trigger> items;
 };
 
 struct Anm2Animation
 {
-	s32 id;
-	s32 length;
-	char name[ANM2_STRING_MAX];
-	bool isVisible;
-	bool isLoop;
-	Anm2Frame rootAnimationFrame;
-	vector<Anm2LayerAnimation> layerAnimations; 
-	vector<Anm2Trigger> triggers; 
+	s32 frameNum = 0;
+	char name[ANM2_STRING_MAX] = STRING_ANM2_NEW_ANIMATION;
+	bool isLoop = true;
+	Anm2RootAnimation rootAnimation;
+    std::map<s32, Anm2LayerAnimation> layerAnimations; 
+	std::map<s32, Anm2NullAnimation> nullAnimations;
+    Anm2Triggers triggers;
 };
 
 struct Anm2 
 {
-	s32 fps;
-	s32 version;
-	char createdBy[ANM2_STRING_MAX];
-	char createdOn[ANM2_STRING_MAX];
-	char defaultAnimation[ANM2_STRING_MAX];
-	bool isInit;
-	vector<Anm2Spritesheet> spritesheets; 
-	vector<Anm2Layer> layers; 
-	vector<Anm2Event> events; 
-	vector<Anm2Animation> animations; 
+    char path[PATH_MAX] = STRING_EMPTY;
+	s32 fps = ANM2_FPS_DEFAULT;
+	s32 version = 0;
+	char createdBy[ANM2_STRING_MAX] = STRING_ANM2_CREATED_BY_DEFAULT;
+	char createdOn[ANM2_STRING_MAX] = STRING_EMPTY;
+	char defaultAnimation[ANM2_STRING_MAX] = STRING_EMPTY;
+	std::map<s32, Anm2Spritesheet> spritesheets; 
+	std::map<s32, Anm2Layer> layers; 
+	std::map<s32, Anm2Null> nulls; 
+	std::map<s32, Anm2Event> events; 
+	std::map<s32, Anm2Animation> animations; 
 };
 
-bool anm2_init(Anm2* self, const char* path);
-void anm2_free(Anm2* self);
+void anm2_layer_add(Anm2* self);
+void anm2_layer_remove(Anm2* self, s32 id);
+void anm2_null_add(Anm2* self);
+void anm2_null_remove(Anm2* self, s32 id);
+bool anm2_serialize(Anm2* self, const char* path);
+bool anm2_deserialize(Anm2* self, const char* path);
+void anm2_new(Anm2* self);
+void anm2_created_on_set(Anm2* self);
+s32 anm2_animation_add(Anm2* self);
+void anm2_animation_remove(Anm2* self, s32 id);

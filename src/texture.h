@@ -9,5 +9,7 @@ struct Texture
     s32 channels = -1;
 };
 
-bool texture_init(Texture* self, const char* path);
+void texture_gl_set(Texture* self, void* data);
+bool texture_from_path_init(Texture* self, const char* path);
+bool texture_from_data_init(Texture* self, const u8* data, u32 length);
 void texture_free(Texture* self);

@@ -6,16 +6,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-bool
-texture_init(Texture* self, const char* path)
+void
+texture_gl_set(Texture* self, void* data)
 {
-	void* data;
-
-	data = stbi_load(path, &self->size[0], &self->size[1], &self->channels, 4);
-
-	if (!data)
-		return false;
-
 	glGenTextures(1, &self->handle);
 	
 	glBindTexture(GL_TEXTURE_2D, self->handle);
@@ -27,7 +20,40 @@ texture_init(Texture* self, const char* path)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindTexture(GL_TEXTURE_2D, 0); /* unbinds */
+}
+
+bool
+texture_from_path_init(Texture* self, const char* path)
+{
+	void* data;
+
+	data = stbi_load(path, &self->size.x, &self->size.y, &self->channels, 4);
+
+	if (!data)
+	{
+		printf(STRING_ERROR_TEXTURE_INIT, path);
+		return false;
+	}
+
+	printf(STRING_INFO_TEXTURE_INIT, path);
+
+	texture_gl_set(self, data);
+
+	return true;
+}
+
+bool
+texture_from_data_init(Texture* self, const u8* data, u32 length)
+{
+	void* textureData;
+
+	textureData = stbi_load_from_memory(data, length, &self->size.x, &self->size.y, &self->channels, 4);
+
+	if (!textureData)
+		return false;
+
+	texture_gl_set(self, textureData);
 
 	return true;
 }
