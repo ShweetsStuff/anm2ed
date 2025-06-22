@@ -1,7 +1,19 @@
 #include "imgui.h"
 
 static void _imgui_tooltip(const char* tooltip);
-static void _imgui_timeline_element(Imgui* self, void* element, s32* id, s32* index, Anm2AnimationType type, Anm2AnimationType* selectType, s32* selectID);
+
+static void
+_imgui_timeline_element
+(
+	Imgui* self,
+	Anm2Animation* animation, 
+	void* element, 
+	s32* id, 
+	s32* index, 
+	Anm2AnimationType type, 
+	Anm2AnimationType* selectType, 
+	s32* selectID
+);
 
 /* Makes a tooltip! */
 static void _imgui_tooltip(const char* tooltip)
@@ -12,17 +24,32 @@ static void _imgui_tooltip(const char* tooltip)
 
 /* Displays each element of the timeline of a selected animation */
 static void
-_imgui_timeline_element(Imgui* self, void* element, s32* id, s32* index, Anm2AnimationType type, Anm2AnimationType* selectType, s32* selectID)
+_imgui_timeline_element
+(
+	Imgui* self,
+	Anm2Animation* animation, 
+	void* element, 
+	s32* id, 
+	s32* index, 
+	Anm2AnimationType type, 
+	Anm2AnimationType* selectType, 
+	s32* selectID
+)
 {
 		static s32 selectedElementIndex = -1;
 		static s32 selectedSpritesheetIndex = -1;
+		void* frames = NULL;
 		Anm2Layer* layer = NULL;
 		Anm2LayerAnimation* layerAnimation = NULL;
 		Anm2Null* null = NULL;
 		Anm2NullAnimation* nullAnimation = NULL;
 		Anm2RootAnimation* rootAnimation = NULL;
 		Anm2Triggers* triggers = NULL;
+		ImVec2 frameListSize = {IMGUI_TIMELINE_FRAME_SIZE.x * animation->frameNum, IMGUI_TIMELINE_ELEMENTS_TIMELINE_SIZE.y};
 		ImTextureID iconTexture = -1;
+		ImGuiWindowFlags windowFlags = 0 | 
+			ImGuiWindowFlags_NoScrollbar | 
+			ImGuiWindowFlags_NoScrollWithMouse;
 
 		bool isArrows = false;
 		bool* isShowRect = NULL;
@@ -38,33 +65,37 @@ _imgui_timeline_element(Imgui* self, void* element, s32* id, s32* index, Anm2Ani
 		{
 			case ANM2_ROOT_ANIMATION:
 				rootAnimation = (Anm2RootAnimation*)element;
-				iconTexture = self->packed->textures[PACKED_TEXTURE_ROOT].handle;
+				iconTexture = self->resources->textures[TEXTURE_ROOT].handle;
 				strncpy(nameVisible, STRING_IMGUI_TIMELINE_ROOT, ANM2_STRING_FORMATTED_MAX);
 				isVisible = &rootAnimation->isVisible;
+				frames = &rootAnimation->frames;
 				break;
 			case ANM2_LAYER_ANIMATION:
 				layerAnimation = (Anm2LayerAnimation*)element;
 				layer = &self->anm2->layers[*id];
-				iconTexture = self->packed->textures[PACKED_TEXTURE_LAYER].handle;
+				iconTexture = self->resources->textures[TEXTURE_LAYER].handle;
 				isVisible = &layerAnimation->isVisible;
 				spritesheetID = &layer->spritesheetID;
 				namePointer = layer->name;
+				frames = &layerAnimation->frames;
 				snprintf(nameBuffer, ANM2_STRING_MAX, "%s", namePointer);
 				snprintf(nameVisible, ANM2_STRING_FORMATTED_MAX, STRING_IMGUI_TIMELINE_ELEMENT_FORMAT, *id, namePointer); 
 				break;
 			case ANM2_NULL_ANIMATION:
 				nullAnimation = (Anm2NullAnimation*)element;
 				null = &self->anm2->nulls[*id];
-				iconTexture = self->packed->textures[PACKED_TEXTURE_NULL].handle;
+				iconTexture = self->resources->textures[TEXTURE_NULL].handle;
 				isVisible = &nullAnimation->isVisible;
 				isShowRect = &null->isShowRect;
 				namePointer = null->name;
+				frames = &nullAnimation->frames;
 				snprintf(nameBuffer, ANM2_STRING_MAX, "%s", namePointer);
 				snprintf(nameVisible, ANM2_STRING_FORMATTED_MAX, STRING_IMGUI_TIMELINE_ELEMENT_FORMAT, *id, namePointer); 
 				break;
 			case ANM2_TRIGGERS:
 				triggers = (Anm2Triggers*)element;
-				iconTexture = self->packed->textures[PACKED_TEXTURE_TRIGGER].handle;
+				frames = &triggers->items;
+				iconTexture = self->resources->textures[TEXTURE_TRIGGER].handle;
 				strncpy(nameVisible, STRING_IMGUI_TIMELINE_TRIGGERS, ANM2_STRING_FORMATTED_MAX);
 				isVisible = &triggers->isVisible;
 				break;
@@ -72,7 +103,7 @@ _imgui_timeline_element(Imgui* self, void* element, s32* id, s32* index, Anm2Ani
 				break;
 		}
 
-		ImGui::BeginChild(nameVisible, IMGUI_TIMELINE_ELEMENT_SIZE, true, ImGuiWindowFlags_NoScrollbar);
+		ImGui::BeginChild(nameVisible, IMGUI_TIMELINE_ELEMENT_SIZE, true, windowFlags);
 
 		ImGui::PushID(*index);
 		
@@ -95,7 +126,7 @@ _imgui_timeline_element(Imgui* self, void* element, s32* id, s32* index, Anm2Ani
 				if (canMoveUp)
 				{
 					auto target = isReversed ? std::next(it) : std::prev(it);
-					if (target != map.end() && ImGui::ImageButton(STRING_IMGUI_TIMELINE_ELEMENT_SHIFT_ABOVE, self->packed->textures[PACKED_TEXTURE_ARROW_UP].handle, IMGUI_ICON_SIZE))
+					if (target != map.end() && ImGui::ImageButton(STRING_IMGUI_TIMELINE_ELEMENT_SHIFT_ABOVE, self->resources->textures[TEXTURE_ARROW_UP].handle, IMGUI_ICON_SIZE))
 					{
 						map_swap(map, it->first, target->first);
 						*didSwap = true;
@@ -107,11 +138,14 @@ _imgui_timeline_element(Imgui* self, void* element, s32* id, s32* index, Anm2Ani
 
 				if (canMoveDown)
 				{
+
 					if (!canMoveUp)
 						ImGui::Dummy(IMGUI_ICON_BUTTON_SIZE);
+						
+					ImGui::SameLine();
 
 					auto target = isReversed ? std::prev(it) : std::next(it);
-					if (target != map.end() && ImGui::ImageButton(STRING_IMGUI_TIMELINE_ELEMENT_SHIFT_BELOW, self->packed->textures[PACKED_TEXTURE_ARROW_DOWN].handle, IMGUI_ICON_SIZE))
+					if (target != map.end() && ImGui::ImageButton(STRING_IMGUI_TIMELINE_ELEMENT_SHIFT_BELOW, self->resources->textures[TEXTURE_ARROW_DOWN].handle, IMGUI_ICON_SIZE))
 					{
 						map_swap(map, it->first, target->first);
 						*didSwap = true;
@@ -176,7 +210,7 @@ _imgui_timeline_element(Imgui* self, void* element, s32* id, s32* index, Anm2Ani
 			}
 
 		}
-
+	
 		switch (type)
 		{
 			case ANM2_ROOT_ANIMATION:
@@ -200,18 +234,22 @@ _imgui_timeline_element(Imgui* self, void* element, s32* id, s32* index, Anm2Ani
 		/* Visiblity */
 		if (isVisible)
 		{
+			ImVec2 cursorPos;
 			ImTextureID visibilityIcon = *isVisible
-				? self->packed->textures[PACKED_TEXTURE_EYE_OPEN].handle
-				: self->packed->textures[PACKED_TEXTURE_EYE_CLOSED].handle;
+				? self->resources->textures[TEXTURE_EYE_OPEN].handle
+				: self->resources->textures[TEXTURE_EYE_CLOSED].handle;
 
 			ImGui::SameLine();
 				
-			ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - IMGUI_ICON_BUTTON_SIZE.x - ImGui::GetStyle().FramePadding.x * 2);
-			
+			cursorPos = ImGui::GetCursorPos();
+			ImGui::SetCursorPosX(cursorPos.x + ImGui::GetContentRegionAvail().x - IMGUI_ICON_BUTTON_SIZE.x - ImGui::GetStyle().FramePadding.x * 2);
+
 			if (ImGui::ImageButton(STRING_IMGUI_TIMELINE_VISIBLE, visibilityIcon, IMGUI_ICON_SIZE))
 				*isVisible = !*isVisible;
 
 			_imgui_tooltip(STRING_IMGUI_TOOLTIP_TIMELINE_ELEMENT_VISIBLE);
+
+			ImGui::SetCursorPos(cursorPos);
 		}
 		
 		/* Spritesheet IDs */
@@ -224,14 +262,14 @@ _imgui_timeline_element(Imgui* self, void* element, s32* id, s32* index, Anm2Ani
 			else
 				snprintf(spritesheetIDName, ANM2_STRING_FORMATTED_MAX, STRING_IMGUI_TIMELINE_SPRITESHEET_FORMAT, *spritesheetID);
 
-			ImGui::Image(self->packed->textures[PACKED_TEXTURE_SPRITESHEET].handle, IMGUI_ICON_SIZE);
+			ImGui::Image(self->resources->textures[TEXTURE_SPRITESHEET].handle, IMGUI_ICON_SIZE);
 			ImGui::SameLine();
 
 			ImGui::BeginChild(STRING_IMGUI_TIMELINE_ELEMENT_SPRITESHEET_ID_LABEL, IMGUI_TIMELINE_SPRITESHEET_ID_SIZE);
 
 			if (selectedSpritesheetIndex == *index)
 			{
-				if (ImGui::DragInt(STRING_IMGUI_TIMELINE_ELEMENT_SPRITESHEET_ID_LABEL, spritesheetID, 0, 1, self->anm2->spritesheets.size() - 1))
+				if (ImGui::InputInt(STRING_IMGUI_TIMELINE_ELEMENT_SPRITESHEET_ID_LABEL, spritesheetID, 0, 0, ImGuiInputTextFlags_None))
 					selectedSpritesheetIndex = -1; 
 			}
 			else
@@ -249,10 +287,10 @@ _imgui_timeline_element(Imgui* self, void* element, s32* id, s32* index, Anm2Ani
 		if (isShowRect)
 		{
 			ImTextureID rectIcon = *isShowRect
-				? self->packed->textures[PACKED_TEXTURE_RECT_HIDE].handle
-				: self->packed->textures[PACKED_TEXTURE_RECT_SHOW].handle;
+				? self->resources->textures[TEXTURE_RECT_HIDE].handle
+				: self->resources->textures[TEXTURE_RECT_SHOW].handle;
 
-			ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - IMGUI_ICON_BUTTON_SIZE.x - ImGui::GetStyle().FramePadding.x * 2);
+			ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - ((IMGUI_ICON_BUTTON_SIZE.x - ImGui::GetStyle().FramePadding.x * 2) * 4));
 			
 			if (ImGui::ImageButton(STRING_IMGUI_TIMELINE_RECT, rectIcon, IMGUI_ICON_SIZE))
 				*isShowRect = !*isShowRect;
@@ -265,25 +303,69 @@ _imgui_timeline_element(Imgui* self, void* element, s32* id, s32* index, Anm2Ani
 			selectedElementIndex = -1;
 			selectedSpritesheetIndex = -1;
 		}
-
-		ImGui::PopID();
 		
 		ImGui::EndGroup();
 	
+		ImGui::PopID();
+		
 		ImGui::EndChild();
+
+		if (animation->frameNum > 0)
+		{
+			ImGui::SameLine();
+		
+			ImGui::PushID(*index);
+		
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));		
+			ImGui::BeginChild(STRING_IMGUI_TIMELINE_ELEMENT_TIMELINE, frameListSize, true);
+		
+			for (s32 i = 0; i < animation->frameNum; i++)
+			{
+				ImGui::PushID(i);
+				if (ImGui::Button(" ", IMGUI_TIMELINE_FRAME_SIZE))
+				{
+
+				}
+				ImGui::SameLine(0.0f, 0.0f);		
+				ImGui::PopID();
+			}
+
+			ImGui::EndChild();
+			ImGui::PopStyleVar();
+
+			ImGui::PopID();
+		}
 
 		*index = *index + 1;
 }
 
 void
-imgui_init(SDL_Window* window, SDL_GLContext glContext)
+imgui_init
+(
+	Imgui* self, 
+	Dialog* dialog,
+	Resources* resources,
+	Input* input,
+	Anm2* anm2,
+	Preview* preview,
+	SDL_Window* window, 
+	SDL_GLContext* glContext
+)
 {
 	IMGUI_CHECKVERSION();
+
+	self->dialog = dialog;
+	self->resources = resources;
+	self->input = input;
+	self->anm2 = anm2;
+	self->preview = preview;
+	self->window = window;
+	self->glContext = glContext;
 
 	ImGui::CreateContext();
 	ImGui::StyleColorsDark();
 
-	ImGui_ImplSDL3_InitForOpenGL(window, glContext);
+	ImGui_ImplSDL3_InitForOpenGL(self->window, *self->glContext);
 	ImGui_ImplOpenGL3_Init(STRING_OPENGL_VERSION);
 
 	ImGuiIO& io = ImGui::GetIO();
@@ -302,6 +384,10 @@ imgui_tick(Imgui* self)
 	static Anm2AnimationType selectedTimelineElementType = ANM2_NONE;
 	static bool isInterpolated = true;
 	static bool isVisible = true;
+	static bool isHoverPreview = false;
+	static ImRect previewWindowRect; 
+	static ImVec2 settingsCursorPos; 
+	static bool isFirstTick = true;
 
 	static f32 rotation = 0;
 	static s32 duration = 0;
@@ -313,27 +399,15 @@ imgui_tick(Imgui* self)
 	static vec3 offset = {0.0f, 0.0f, 0.0f};
 	static vec4 tint = {0.0f, 0.0f, 0.0f, 1.0f};
 
-	ImVec2 previewWindowSize;
-	ImVec2 previewSize;
-	f32 previewAspect = 0.0f;
-	f32 previewWindowAspect = 0.0f;
-
-	ImGuiWindowFlags taskbarWindowFlags;
-	ImGuiWindowFlags dockspaceWindowFlags;
-	ImGuiDockNodeFlags dockNodeFlags;
-	
-	ImGui_ImplSDL3_NewFrame();
-	ImGui_ImplOpenGL3_NewFrame();
-	ImGui::NewFrame();
-
-	taskbarWindowFlags = 0 |
+	ImGuiWindowFlags taskbarWindowFlags = 0 |
 		ImGuiWindowFlags_NoTitleBar |
 		ImGuiWindowFlags_NoResize |
 		ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_NoScrollbar |
+		ImGuiWindowFlags_NoScrollWithMouse |
 		ImGuiWindowFlags_NoSavedSettings;
 
-	dockspaceWindowFlags = 0 |
+	ImGuiWindowFlags dockspaceWindowFlags = 0 |
 		ImGuiWindowFlags_NoTitleBar | 
 		ImGuiWindowFlags_NoCollapse | 
 		ImGuiWindowFlags_NoResize | 
@@ -341,9 +415,23 @@ imgui_tick(Imgui* self)
 		ImGuiWindowFlags_NoBringToFrontOnFocus | 
 		ImGuiWindowFlags_NoNavFocus;
 
-	dockNodeFlags = 0 |
+	ImGuiWindowFlags childWindowFlags = 0 |
+		ImGuiWindowFlags_NoTitleBar | 
+		ImGuiWindowFlags_NoCollapse | 
+		ImGuiWindowFlags_NoResize | 
+		ImGuiWindowFlags_NoMove | 
+		ImGuiWindowFlags_NoBringToFrontOnFocus | 
+		ImGuiWindowFlags_NoNavFocus |
+		ImGuiWindowFlags_NoScrollbar |
+		ImGuiWindowFlags_NoScrollWithMouse;
+
+	ImGuiDockNodeFlags dockNodeFlags = 0 |
 		ImGuiDockNodeFlags_PassthruCentralNode; 
-		
+
+	ImGui_ImplSDL3_NewFrame();
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui::NewFrame();
+
 	ImGuiViewport* viewport = ImGui::GetMainViewport();
 	
 	/* Taskbar */
@@ -457,7 +545,7 @@ imgui_tick(Imgui* self)
 
 		ImGui::PushID(id);
 
-		ImGui::Image(self->packed->textures[PACKED_TEXTURE_ANIMATION].handle, IMGUI_ICON_SIZE);
+		ImGui::Image(self->resources->textures[TEXTURE_ANIMATION].handle, IMGUI_ICON_SIZE);
 		ImGui::SameLine();
 
 		if (isSelected)
@@ -545,7 +633,7 @@ imgui_tick(Imgui* self)
 
 		ImGui::PushID(id);
 		
-		ImGui::Image(self->packed->textures[PACKED_TEXTURE_EVENT].handle, IMGUI_ICON_SIZE);
+		ImGui::Image(self->resources->textures[TEXTURE_EVENT].handle, IMGUI_ICON_SIZE);
 		ImGui::SameLine();
 
 		isSelected = selectedEventID == id;
@@ -596,46 +684,70 @@ imgui_tick(Imgui* self)
 
 	for (auto [id, spritesheet] : self->anm2->spritesheets)
 	{
+		ImVec2 spritesheetPreviewSize = IMGUI_SPRITESHEET_PREVIEW_SIZE;
 		char spritesheetString[ANM2_STRING_FORMATTED_MAX];
 		bool isSelected = false;
 
-		snprintf(spritesheetString, ANM2_STRING_FORMATTED_MAX, STRING_IMGUI_SPRITESHEET_FORMAT, (s32)id, spritesheet.path);
+		f32 spritesheetAspect = (f32)self->resources->loadedTextures[id].size.x / self->resources->loadedTextures[id].size.y;
+
+		if ((IMGUI_SPRITESHEET_PREVIEW_SIZE.x / IMGUI_SPRITESHEET_PREVIEW_SIZE.y) > spritesheetAspect)
+			spritesheetPreviewSize.x = IMGUI_SPRITESHEET_PREVIEW_SIZE.y * spritesheetAspect;
+		else
+			spritesheetPreviewSize.y = IMGUI_SPRITESHEET_PREVIEW_SIZE.x / spritesheetAspect;
+
+		snprintf(spritesheetString, ANM2_PATH_FORMATTED_MAX, STRING_IMGUI_SPRITESHEET_FORMAT, (s32)id, spritesheet.path);
 	
 		ImGui::BeginChild(spritesheetString, IMGUI_SPRITESHEET_SIZE, true, ImGuiWindowFlags_None);
 		
 		ImGui::PushID(id);
 
-		ImGui::Image(self->packed->textures[PACKED_TEXTURE_SPRITESHEET].handle, IMGUI_ICON_SIZE);
+		ImGui::Image(self->resources->textures[TEXTURE_SPRITESHEET].handle, IMGUI_ICON_SIZE);
 		ImGui::SameLine();
 
 		isSelected = selectedSpritesheetID == id;
 		if (ImGui::Selectable(spritesheetString, isSelected))
 			selectedSpritesheetID = id;
 
+		_imgui_tooltip(STRING_IMGUI_TOOLTIP_SPRITESHEETS_SELECT);
+			
+		ImGui::Image(self->resources->loadedTextures[id].handle, spritesheetPreviewSize);
+			
 		ImGui::PopID();
 			
 		ImGui::EndChild();
 	}
 
-	ImGui::Button(STRING_IMGUI_SPRITESHEETS_ADD);
+	if (ImGui::Button(STRING_IMGUI_SPRITESHEETS_ADD))
+		dialog_png_open(self->dialog);
 	_imgui_tooltip(STRING_IMGUI_TOOLTIP_SPRITESHEETS_ADD);
 	
 	ImGui::SameLine();
 
 	if (selectedSpritesheetID != -1)
 	{
+		/* Remove */
 		if (ImGui::Button(STRING_IMGUI_SPRITESHEETS_REMOVE))
 		{
+			self->resources->loadedTextures.erase(selectedSpritesheetID);
 			self->anm2->spritesheets.erase(selectedSpritesheetID);
 			selectedSpritesheetID = -1;
 		}
 		_imgui_tooltip(STRING_IMGUI_TOOLTIP_SPRITESHEETS_REMOVE);
 
 		ImGui::SameLine();
-		ImGui::Button(STRING_IMGUI_SPRITESHEETS_RELOAD);
+		
+		/* Reload */
+		if (ImGui::Button(STRING_IMGUI_SPRITESHEETS_RELOAD))
+			anm2_spritesheet_texture_load(self->anm2, self->resources, self->anm2->spritesheets[selectedSpritesheetID].path, selectedSpritesheetID);
 		_imgui_tooltip(STRING_IMGUI_TOOLTIP_SPRITESHEETS_RELOAD);
 		ImGui::SameLine();
-		ImGui::Button(STRING_IMGUI_SPRITESHEETS_REPLACE);
+		
+		/* Replace */
+		if (ImGui::Button(STRING_IMGUI_SPRITESHEETS_REPLACE))
+		{
+			self->dialog->replaceID = selectedSpritesheetID;
+			dialog_png_replace(self->dialog);
+		}
 		_imgui_tooltip(STRING_IMGUI_TOOLTIP_SPRITESHEETS_REPLACE);
 	}
 
@@ -686,14 +798,58 @@ imgui_tick(Imgui* self)
 	ImGui::End();
 
 	/* -- Animation Preview --  */
-
 	ImGui::Begin(STRING_IMGUI_ANIMATION_PREVIEW);
 	
+	/* elements drawn out of order in order to get the size of the preview before how it visually appears */
+	settingsCursorPos = ImGui::GetCursorPos();
+	ImGui::SetCursorPos(IMGUI_ANIMATION_PREVIEW_POSITION);
+	
+	ImGui::BeginChild(STRING_IMGUI_ANIMATION_PREVIEW_LABEL, ImVec2(0, 0), true, childWindowFlags);
+	
+	previewWindowRect = ImGui::GetCurrentWindow()->ClipRect;
+	
+	ImGui::Image(self->preview->texture, ImVec2(PREVIEW_SIZE.x, PREVIEW_SIZE.y));
+	
+	/* Panning */
+	if (ImGui::IsItemHovered())
+	{
+		SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_MOVE));
+		isHoverPreview = true;
+		
+		if (mouse_held(&self->input->mouse, MOUSE_LEFT))
+		{
+			self->preview->pan.x += self->input->mouse.delta.x;
+			self->preview->pan.y -= self->input->mouse.delta.y;
+		}
+
+		self->preview->zoom = self->preview->zoom == PREVIEW_ZOOM_MIN ? 0 : self->preview->zoom;
+
+		if (self->input->mouse.wheelDeltaY > 0)
+			self->preview->zoom += PREVIEW_ZOOM_STEP;
+
+		if (self->input->mouse.wheelDeltaY < 0)
+			self->preview->zoom -= PREVIEW_ZOOM_STEP;
+
+    	self->preview->zoom = CLAMP(self->preview->zoom, PREVIEW_ZOOM_MIN, PREVIEW_ZOOM_MAX);
+	}
+	else
+	{
+		if (isHoverPreview)
+		{
+			SDL_SetCursor(SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_DEFAULT));
+			isHoverPreview = false;
+		}
+	}
+
+	ImGui::EndChild();
+	
+	ImGui::SetCursorPos(settingsCursorPos);
+	
 	/* Settings */
-	ImGui::BeginChild(STRING_IMGUI_ANIMATION_PREVIEW_SETTINGS, IMGUI_ANIMATION_PREVIEW_SETTINGS_SIZE, true);
+	ImGui::BeginChild(STRING_IMGUI_ANIMATION_PREVIEW_SETTINGS, IMGUI_ANIMATION_PREVIEW_SETTINGS_SIZE, true, childWindowFlags);
 
 	/* Grid settings */
-	ImGui::BeginChild(STRING_IMGUI_ANIMATION_PREVIEW_GRID_SETTINGS, IMGUI_ANIMATION_PREVIEW_SETTINGS_GRID_SIZE, true);
+	ImGui::BeginChild(STRING_IMGUI_ANIMATION_PREVIEW_GRID_SETTINGS, IMGUI_ANIMATION_PREVIEW_SETTINGS_CHILD_SIZE, true);
 
 	/* Grid toggle */
 	ImGui::Checkbox(STRING_IMGUI_ANIMATION_PREVIEW_GRID, &self->preview->isGrid);
@@ -715,32 +871,60 @@ imgui_tick(Imgui* self)
 	
 	ImGui::SameLine();
 	
-	/* Zoom settings */
-	ImGui::BeginChild(STRING_IMGUI_ANIMATION_PREVIEW_ZOOM_SETTINGS, IMGUI_ANIMATION_PREVIEW_SETTINGS_ZOOM_SIZE, true);
+	/* Helper settings */
+	ImGui::BeginChild(STRING_IMGUI_ANIMATION_PREVIEW_HELPER_SETTINGS, IMGUI_ANIMATION_PREVIEW_SETTINGS_CHILD_SIZE, true);
+	
+	/* Axis toggle */
+	ImGui::Checkbox(STRING_IMGUI_ANIMATION_PREVIEW_AXIS, &self->preview->isAxis);
+	_imgui_tooltip(STRING_IMGUI_TOOLTIP_ANIMATION_PREVIEW_AXIS);
+
+	ImGui::SameLine();
+
+	/* Axis colors*/
+	ImGui::ColorEdit4(STRING_IMGUI_ANIMATION_PREVIEW_AXIS_COLOR, value_ptr(self->preview->axisColor), ImGuiColorEditFlags_NoInputs);
+	_imgui_tooltip(STRING_IMGUI_TOOLTIP_ANIMATION_PREVIEW_AXIS_COLOR);
+	
+	ImGui::EndChild();
+	
+	ImGui::SameLine();
+	
+	/* View settings */
+	ImGui::BeginChild(STRING_IMGUI_ANIMATION_PREVIEW_VIEW_SETTINGS, IMGUI_ANIMATION_PREVIEW_SETTINGS_CHILD_SIZE, true);
 
 	/* Zoom */
 	ImGui::DragFloat(STRING_IMGUI_ANIMATION_PREVIEW_ZOOM, &self->preview->zoom, 1, PREVIEW_ZOOM_MIN, PREVIEW_ZOOM_MAX, "%.0f");
 	_imgui_tooltip(STRING_IMGUI_TOOLTIP_ANIMATION_PREVIEW_ZOOM);
+	
+	/* Center view */
+	if (ImGui::Button(STRING_IMGUI_ANIMATION_PREVIEW_CENTER_VIEW) || isFirstTick)
+	{
+		ImVec2 previewWindowSize = previewWindowRect.GetSize();
+
+		previewWindowSize.x = MAX(previewWindowSize.x, PREVIEW_SIZE.x);
+		previewWindowSize.y = MAX(previewWindowSize.y, PREVIEW_SIZE.y);
+
+		/* Based on the preview's crop in its window, adjust the preview */
+		self->preview->pan.x = PREVIEW_CENTER.x + ((previewWindowSize.x - PREVIEW_SIZE.x) / 2);
+		self->preview->pan.y = PREVIEW_CENTER.y - ((previewWindowSize.y - PREVIEW_SIZE.y) / 2);
+
+	}
+	_imgui_tooltip(STRING_IMGUI_TOOLTIP_ANIMATION_PREVIEW_CENTER_VIEW);
 	
 	ImGui::EndChild();
 	
 	ImGui::SameLine();
 	
 	/* Background settings */
-	ImGui::BeginChild(STRING_IMGUI_ANIMATION_PREVIEW_BACKGROUND_SETTINGS, IMGUI_ANIMATION_PREVIEW_SETTINGS_BACKGROUND_SIZE, true);
+	ImGui::BeginChild(STRING_IMGUI_ANIMATION_PREVIEW_BACKGROUND_SETTINGS, IMGUI_ANIMATION_PREVIEW_SETTINGS_CHILD_SIZE, true);
 
 	/* Background color */
-	ImGui::ColorEdit4(STRING_IMGUI_ANIMATION_PREVIEW_BACKGROUND_COLOR, value_ptr(self->preview->color), ImGuiColorEditFlags_NoInputs);
+	ImGui::ColorEdit4(STRING_IMGUI_ANIMATION_PREVIEW_BACKGROUND_COLOR, value_ptr(self->preview->backgroundColor), ImGuiColorEditFlags_NoInputs);
 	_imgui_tooltip(STRING_IMGUI_TOOLTIP_ANIMATION_PREVIEW_BACKGROUND_COLOR);
 	
 	ImGui::EndChild();
 	
-	ImGui::SameLine();
-
 	ImGui::EndChild();
 
-	ImGui::Image(self->preview->texture, ImVec2(PREVIEW_SIZE.x, PREVIEW_SIZE.y));
-	
 	ImGui::End();
 	
 	/* -- Spritesheet Editor -- */
@@ -755,12 +939,31 @@ imgui_tick(Imgui* self)
 	if (selectedAnimationID != -1)
 	{
 		s32 index = 0;
+		ImVec2 timelineSize = IMGUI_TIMELINE_SIZE;
 		Anm2Animation* animation = &self->anm2->animations[selectedAnimationID];
-
-		ImGui::BeginChild(STRING_IMGUI_TIMELINE_ANIMATIONS, IMGUI_TIMELINE_ELEMENT_LIST_SIZE, true);
+		ImVec2 frameIndicesSize = 
+		{IMGUI_TIMELINE_FRAME_SIZE.x * animation->frameNum, IMGUI_TIMELINE_FRAME_INDICES_SIZE.y};
+	
+		timelineSize.y = ImGui::GetContentRegionAvail().y - IMGUI_TIMELINE_OFFSET_Y;
 		
+		ImGui::BeginChild(STRING_IMGUI_TIMELINE_ANIMATIONS, timelineSize, true);
+		
+		/* Element top bar */
+		ImGui::BeginChild(STRING_IMGUI_TIMELINE_ELEMENTS, IMGUI_TIMELINE_ELEMENTS_BAR_SIZE, true);
+		ImGui::Text(STRING_IMGUI_TIMELINE_ELEMENTS);
+		ImGui::EndChild();
+
+
+		/* Frame indicies */
+		if (animation->frameNum > 0)
+		{
+			ImGui::SameLine();
+			ImGui::BeginChild(STRING_IMGUI_TIMELINE_FRAME_INDICES, frameIndicesSize, true);
+			ImGui::EndChild();
+		}
+
 		/* Root */
-		_imgui_timeline_element(self, &animation->rootAnimation, NULL, &index, ANM2_ROOT_ANIMATION, NULL, NULL); 
+		_imgui_timeline_element(self, animation, &animation->rootAnimation, NULL, &index, ANM2_ROOT_ANIMATION, NULL, NULL); 
 
 		/* reverse order */
 		for (auto it = animation->layerAnimations.rbegin(); it != animation->layerAnimations.rend(); it++)
@@ -768,21 +971,23 @@ imgui_tick(Imgui* self)
 			s32 id = it->first;
 			Anm2LayerAnimation& layer = it->second;
 
-			_imgui_timeline_element(self, &layer, &id, &index, ANM2_LAYER_ANIMATION, &selectedTimelineElementType, &selectedTimelineElementID); 
+			_imgui_timeline_element(self, animation, &layer, &id, &index, ANM2_LAYER_ANIMATION, &selectedTimelineElementType, &selectedTimelineElementID); 
 		}
 
 		for (auto & [id, null] : animation->nullAnimations)
-			_imgui_timeline_element(self, &null, (s32*)&id, &index, ANM2_NULL_ANIMATION, &selectedTimelineElementType, &selectedTimelineElementID); 
+			_imgui_timeline_element(self, animation, &null, (s32*)&id, &index, ANM2_NULL_ANIMATION, &selectedTimelineElementType, &selectedTimelineElementID); 
 
 		/* Triggers */
-		_imgui_timeline_element(self, &animation->triggers, NULL, &index, ANM2_TRIGGERS, NULL, NULL); 
+		_imgui_timeline_element(self, animation, &animation->triggers, NULL, &index, ANM2_TRIGGERS, NULL, NULL); 
+		
+		ImGui::EndChild();
 		
 		/* Element configuration */
 		if (ImGui::Button(STRING_IMGUI_TIMELINE_ELEMENT_ADD))
 			ImGui::OpenPopup(STRING_IMGUI_TIMELINE_ELEMENT_ADD_MENU);
 		_imgui_tooltip(STRING_IMGUI_TOOLTIP_TIMELINE_ELEMENT_ADD);
 
-			
+		
 		if (ImGui::BeginPopup(STRING_IMGUI_TIMELINE_ELEMENT_ADD_MENU))
 		{
 			if (ImGui::Selectable(STRING_IMGUI_TIMELINE_ELEMENT_ADD_MENU_LAYER))
@@ -798,41 +1003,29 @@ imgui_tick(Imgui* self)
 
 		if 
 		(
-			selectedTimelineElementID != -1 && 
-			((selectedTimelineElementType == ANM2_LAYER_ANIMATION) || (selectedTimelineElementType == ANM2_NULL_ANIMATION))
+			ImGui::Button(STRING_IMGUI_TIMELINE_ELEMENT_REMOVE) &&
+			selectedTimelineElementID != -1
 		)
 		{
-			if (ImGui::Button(STRING_IMGUI_TIMELINE_ELEMENT_REMOVE))
+			switch (selectedTimelineElementType)
 			{
-				switch (selectedTimelineElementType)
-				{
-					case ANM2_LAYER_ANIMATION:
-						anm2_layer_remove(self->anm2, selectedTimelineElementID);
-						break;
-					case ANM2_NULL_ANIMATION:
-						anm2_null_remove(self->anm2, selectedTimelineElementID);
-						break;
-					default:
-						break;
-				}
-
-				selectedTimelineElementID = -1;
-				selectedTimelineElementType = ANM2_NONE;
+				case ANM2_LAYER_ANIMATION:
+					anm2_layer_remove(self->anm2, selectedTimelineElementID);
+					break;
+				case ANM2_NULL_ANIMATION:
+					anm2_null_remove(self->anm2, selectedTimelineElementID);
+					break;
+				default:
+					break;
 			}
 
-			_imgui_tooltip(STRING_IMGUI_TOOLTIP_TIMELINE_ELEMENT_REMOVE);
-		}
-		else
-		{
 			selectedTimelineElementID = -1;
 			selectedTimelineElementType = ANM2_NONE;
 		}
-
-		ImGui::EndChild();
+		_imgui_tooltip(STRING_IMGUI_TOOLTIP_TIMELINE_ELEMENT_REMOVE);
 
 		ImGui::SameLine();
 
-		/* Animation playback and frames */
 		static bool isPlaying = false;
 
 		if (isPlaying)
@@ -853,10 +1046,9 @@ imgui_tick(Imgui* self)
 			_imgui_tooltip(STRING_IMGUI_TOOLTIP_TIMELINE_PAUSE);
 		}
 
-		/*
 		ImGui::SameLine();
 
-		if (ImGui::Button(STRING_IMGUI_TIMELINE_ADD_FRAME))
+		if (ImGui::Button(STRING_IMGUI_TIMELINE_FRAME_ADD))
 		{
 
 		}
@@ -864,15 +1056,24 @@ imgui_tick(Imgui* self)
 
 		ImGui::SameLine();
 
-		if (ImGui::Button(STRING_IMGUI_TIMELINE_REMOVE_FRAME))
+		if (ImGui::Button(STRING_IMGUI_TIMELINE_FRAME_REMOVE))
 		{
 
 		}
-		*/
+		_imgui_tooltip(STRING_IMGUI_TOOLTIP_TIMELINE_FRAME_REMOVE);
+
+		ImGui::SameLine();
+
+		ImGui::PushItemWidth(IMGUI_TIMELINE_ANIMATION_LENGTH_WIDTH);
+		ImGui::InputInt(STRING_IMGUI_TIMELINE_ANIMATION_LENGTH, &animation->frameNum);
+		ImGui::PopItemWidth();
+		_imgui_tooltip(STRING_IMGUI_TOOLTIP_TIMELINE_ANIMATION_LENGTH);
 	}
 
 	ImGui::End();
 
+	if (isFirstTick)
+		isFirstTick = false;
 }
 
 void

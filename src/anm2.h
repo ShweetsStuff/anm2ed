@@ -1,12 +1,14 @@
 #pragma once
 
 #include "COMMON.h"
+#include "resources.h"
 
 #define ANM2_SCALE_CONVERT(x) ((f32)x / 100.0f)
 #define ANM2_TINT_CONVERT(x) ((f32)x / 255.0f)
 
 #define ANM2_STRING_MAX 0xFF
 #define ANM2_STRING_FORMATTED_MAX 0xFFF
+#define ANM2_PATH_FORMATTED_MAX PATH_MAX + 0xFF
 #define ANM2_BUFFER_MAX 0xFFFFF
 #define ANM2_FPS_MIN 0
 #define ANM2_FPS_DEFAULT 30
@@ -117,7 +119,7 @@ enum Anm2AnimationType
 
 struct Anm2Spritesheet
 {
-	char path[ANM2_STRING_MAX] = STRING_EMPTY;
+	char path[PATH_MAX] = STRING_EMPTY;
 };
 
 struct Anm2Layer
@@ -213,8 +215,9 @@ void anm2_layer_remove(Anm2* self, s32 id);
 void anm2_null_add(Anm2* self);
 void anm2_null_remove(Anm2* self, s32 id);
 bool anm2_serialize(Anm2* self, const char* path);
-bool anm2_deserialize(Anm2* self, const char* path);
+bool anm2_deserialize(Anm2* self, Resources* resources, const char* path);
 void anm2_new(Anm2* self);
 void anm2_created_on_set(Anm2* self);
 s32 anm2_animation_add(Anm2* self);
 void anm2_animation_remove(Anm2* self, s32 id);
+void anm2_spritesheet_texture_load(Anm2* self, Resources* resources, const char* path, s32 id);

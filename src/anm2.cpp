@@ -37,6 +37,7 @@ anm2_serialize(Anm2* self, const char* path)
 	if (!self || !path)
 		return false;
 
+
 	/* Update creation date on first version */
 	if (self->version == 0)
 		anm2_created_on_set(self);
@@ -308,6 +309,8 @@ anm2_serialize(Anm2* self, const char* path)
 		return false;
 	}
 
+	working_directory_from_path_set(path);
+
 	printf(STRING_INFO_ANM2_WRITE, path);
 	strncpy(self->path, path, PATH_MAX - 1);
 	
@@ -316,7 +319,7 @@ anm2_serialize(Anm2* self, const char* path)
 
 /* Loads the .anm2 file and deserializes it into the struct equivalent */
 bool 
-anm2_deserialize(Anm2* self, const char* path)
+anm2_deserialize(Anm2* self, Resources* resources, const char* path)
 {
 	XMLDocument document;
 	XMLError error;
@@ -349,6 +352,7 @@ anm2_deserialize(Anm2* self, const char* path)
 		return false;
 	}
 
+	resources_loaded_textures_free(resources);
 	strncpy(self->path, path, PATH_MAX - 1);
 
     root = document.FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATED_ACTOR]);
@@ -422,7 +426,6 @@ anm2_deserialize(Anm2* self, const char* path)
 				break;
 		}
 
-
 		/* Attributes */
 		attribute = element->FirstAttribute();
 
@@ -469,7 +472,8 @@ anm2_deserialize(Anm2* self, const char* path)
 					}
 					break;
 				case ANM2_ATTRIBUTE_PATH:
-					strncpy(lastSpritesheet->path, attribute->Value(), ANM2_STRING_MAX - 1);
+					strncpy(lastSpritesheet->path, attribute->Value(), PATH_MAX - 1);
+					anm2_spritesheet_texture_load(self, resources, attribute->Value(), id);
 					break;
 				case ANM2_ATTRIBUTE_NAME:
 					switch (anm2Element)
@@ -638,6 +642,8 @@ anm2_deserialize(Anm2* self, const char* path)
 		}
 	}
 
+	working_directory_from_path_set(path);
+
 	printf(STRING_INFO_ANM2_READ, path);
 
 	return true;
@@ -719,4 +725,17 @@ anm2_new(Anm2* self)
 {
 	*self = Anm2{};
 	anm2_created_on_set(self);
+}
+
+void
+anm2_spritesheet_texture_load(Anm2* self, Resources* resources, const char* path, s32 id)
+{
+	Texture texture;
+
+	/* free texture if it exists */
+	if (resources->loadedTextures.find(id) != resources->loadedTextures.end())
+		texture_free(&resources->loadedTextures[id]);
+
+	texture_from_path_init(&texture, path);
+	resources->loadedTextures[id] = texture;
 }

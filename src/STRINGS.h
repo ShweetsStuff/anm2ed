@@ -97,15 +97,20 @@
 #define STRING_IMGUI_FRAME_PROPERTIES_COLOR_OFFSET "Color Offset"
 
 #define STRING_IMGUI_ANIMATION_PREVIEW "Animation Preview"
+#define STRING_IMGUI_ANIMATION_PREVIEW_LABEL "##Animation Preview"
 #define STRING_IMGUI_ANIMATION_PREVIEW_SETTINGS "##Animation Preview Settings"
 #define STRING_IMGUI_ANIMATION_PREVIEW_GRID_SETTINGS "##Grid Settings"
 #define STRING_IMGUI_ANIMATION_PREVIEW_GRID "Grid"
 #define STRING_IMGUI_ANIMATION_PREVIEW_GRID_SIZE "##Grid Size"
 #define STRING_IMGUI_ANIMATION_PREVIEW_GRID_COLOR "Color"
-#define STRING_IMGUI_ANIMATION_PREVIEW_ZOOM_SETTINGS "##Zoom Settings"
+#define STRING_IMGUI_ANIMATION_PREVIEW_VIEW_SETTINGS "##View Settings"
 #define STRING_IMGUI_ANIMATION_PREVIEW_ZOOM "Zoom"
 #define STRING_IMGUI_ANIMATION_PREVIEW_BACKGROUND_SETTINGS "##Background Settings"
 #define STRING_IMGUI_ANIMATION_PREVIEW_BACKGROUND_COLOR "Background Color"
+#define STRING_IMGUI_ANIMATION_PREVIEW_HELPER_SETTINGS "##Helper Settings"
+#define STRING_IMGUI_ANIMATION_PREVIEW_CENTER_VIEW "Center View"
+#define STRING_IMGUI_ANIMATION_PREVIEW_AXIS "Axes"
+#define STRING_IMGUI_ANIMATION_PREVIEW_AXIS_COLOR "Color"
 
 #define STRING_IMGUI_SPRITESHEET_EDITOR "Spritesheet Editor"
 
@@ -124,98 +129,75 @@
 #define STRING_IMGUI_TIMELINE_ANIMATIONS "Animations"
 #define STRING_IMGUI_TIMELINE_PLAY  "|>  Play"
 #define STRING_IMGUI_TIMELINE_PAUSE "|| Pause"
-#define STRING_IMGUI_TIMELINE_ADD_FRAME    "+    Add Frame"
-#define STRING_IMGUI_TIMELINE_REMOVE_FRAME "- Remove Frame"
+#define STRING_IMGUI_TIMELINE_FRAME_ADD    "Add Frame"
+#define STRING_IMGUI_TIMELINE_FRAME_REMOVE "Remove Frame"
 #define STRING_IMGUI_TIMELINE_FIT_ANIMATION_LENGTH "= Fit Animation Length"
 #define STRING_IMGUI_TIMELINE_ANIMATION LENGTH "Animation Length:"
 #define STRING_IMGUI_TIMELINE_VISIBLE "Visible"
 #define STRING_IMGUI_TIMELINE_LAYER "Layer"
 #define STRING_IMGUI_TIMELINE_NULL "Null"
 #define STRING_IMGUI_TIMELINE_RECT "Rect"
+#define STRING_IMGUI_TIMELINE_FRAME_INDICES "Frame Indices"
+#define STRING_IMGUI_TIMELINE_ANIMATION_LENGTH "Animation Length"
+#define STRING_IMGUI_TIMELINE_ELEMENT_TIMELINE "Element Timeline"
 #define STRING_IMGUI_TIMELINE_ELEMENTS "Elements"
-#define STRING_IMGUI_TIMELINE_ELEMENT_ADD "Add"
+#define STRING_IMGUI_TIMELINE_ELEMENT_ADD "Add Element"
 #define STRING_IMGUI_TIMELINE_ELEMENT_ADD_MENU "Element Add Menu"
 #define STRING_IMGUI_TIMELINE_ELEMENT_ADD_MENU_LAYER "Add Layer..."
 #define STRING_IMGUI_TIMELINE_ELEMENT_ADD_MENU_NULL "Add Null..."
-#define STRING_IMGUI_TIMELINE_ELEMENT_REMOVE "Remove"
+#define STRING_IMGUI_TIMELINE_ELEMENT_REMOVE "Remove Element"
 
-#define STRING_IMGUI_TOOLTIP_ANIMATIONS_SELECT "Select the animation to edit.\nYou can also click the name to edit it."
 #define STRING_IMGUI_TOOLTIP_ANIMATIONS_ADD "Add a new animation."
-#define STRING_IMGUI_TOOLTIP_ANIMATIONS_REMOVE "Removes the selected animation."
 #define STRING_IMGUI_TOOLTIP_ANIMATIONS_DUPLICATE "Duplicates the selected animation."
+#define STRING_IMGUI_TOOLTIP_ANIMATIONS_REMOVE "Removes the selected animation."
+#define STRING_IMGUI_TOOLTIP_ANIMATIONS_SELECT "Select the animation to edit.\nYou can also click the name to edit it."
 #define STRING_IMGUI_TOOLTIP_ANIMATIONS_SET_AS_DEFAULT "Sets the selected animation as the default.\nDefault animations are marked with \"(*)\"."
-#define STRING_IMGUI_TOOLTIP_EVENTS_SELECT "Set the event for the trigger, or rename it."
+#define STRING_IMGUI_TOOLTIP_ANIMATION_PREVIEW_AXIS "Toggles the display of the X/Y axes."
+#define STRING_IMGUI_TOOLTIP_ANIMATION_PREVIEW_AXIS_COLOR "Changes the color of the X/Y axes."
+#define STRING_IMGUI_TOOLTIP_ANIMATION_PREVIEW_BACKGROUND_COLOR "Changes the background color of the animation preview."
+#define STRING_IMGUI_TOOLTIP_ANIMATION_PREVIEW_CENTER_VIEW "Centers the preview's pan."
+#define STRING_IMGUI_TOOLTIP_ANIMATION_PREVIEW_GRID "Toggles grid visibility on the animation preview."
+#define STRING_IMGUI_TOOLTIP_ANIMATION_PREVIEW_GRID_SIZE "Changes the grid's size, in pixels."
+#define STRING_IMGUI_TOOLTIP_ANIMATION_PREVIEW_GRID_COLOR "Changes the animation preview grid color."
+#define STRING_IMGUI_TOOLTIP_ANIMATION_PREVIEW_ZOOM "Changes the animation preview zoom level."
 #define STRING_IMGUI_TOOLTIP_EVENTS_ADD "Add a new event."
 #define STRING_IMGUI_TOOLTIP_EVENTS_REMOVE "Removes the selected event."
-#define STRING_IMGUI_TOOLTIP_SPRITESHEETS_ADD "Opens the file dialog to load in a new sprite."
-#define STRING_IMGUI_TOOLTIP_SPRITESHEETS_REMOVE "Removes the selected spritesheet."
-#define STRING_IMGUI_TOOLTIP_SPRITESHEETS_RELOAD "Reloads the selected spritesheet."
-#define STRING_IMGUI_TOOLTIP_SPRITESHEETS_REPLACE "Replaces the selected spritesheet; opens up the file dialog."
-#define STRING_IMGUI_TOOLTIP_PROPERTIES_FPS "Change the FPS of the animation."
-#define STRING_IMGUI_TOOLTIP_PROPERTIES_CREATED_BY "Change the author of the animation."
-#define STRING_IMGUI_TOOLTIP_PROPERTIES_CREATED_ON_NOW "Set the date of creation to the current system time."
-#define STRING_IMGUI_TOOLTIP_FRAME_PROPERTIES_POSITION "Change the position of the frame."
+#define STRING_IMGUI_TOOLTIP_EVENTS_SELECT "Set the event for the trigger, or rename it."
+#define STRING_IMGUI_TOOLTIP_FRAME_PROPERTIES_COLOR_OFFSET "Change the color offset of the frame."
 #define STRING_IMGUI_TOOLTIP_FRAME_PROPERTIES_CROP_POSITION "Change the crop position of the frame."
 #define STRING_IMGUI_TOOLTIP_FRAME_PROPERTIES_CROP_SIZE "Change the crop size of the frame."
-#define STRING_IMGUI_TOOLTIP_FRAME_PROPERTIES_PIVOT "Change the pivot of the frame."
-#define STRING_IMGUI_TOOLTIP_FRAME_PROPERTIES_SCALE "Change the scale of the frame."
-#define STRING_IMGUI_TOOLTIP_FRAME_PROPERTIES_ROTATION "Change the rotation of the frame."
 #define STRING_IMGUI_TOOLTIP_FRAME_PROPERTIES_DURATION "Change the duration of the frame."
-#define STRING_IMGUI_TOOLTIP_FRAME_PROPERTIES_TINT "Change the tint of the frame."
-#define STRING_IMGUI_TOOLTIP_FRAME_PROPERTIES_COLOR_OFFSET "Change the color offset of the frame."
-#define STRING_IMGUI_TOOLTIP_FRAME_PROPERTIES_VISIBLE "Toggles the visibility of the frame."
 #define STRING_IMGUI_TOOLTIP_FRAME_PROPERTIES_INTERPOLATED "Toggles the interpolation of the frame.\nBetween keyframes, will transform the values in the in-betweens to be smooth."
+#define STRING_IMGUI_TOOLTIP_FRAME_PROPERTIES_PIVOT "Change the pivot of the frame."
+#define STRING_IMGUI_TOOLTIP_FRAME_PROPERTIES_POSITION "Change the position of the frame."
+#define STRING_IMGUI_TOOLTIP_FRAME_PROPERTIES_ROTATION "Change the rotation of the frame."
+#define STRING_IMGUI_TOOLTIP_FRAME_PROPERTIES_SCALE "Change the scale of the frame."
+#define STRING_IMGUI_TOOLTIP_FRAME_PROPERTIES_TINT "Change the tint of the frame."
+#define STRING_IMGUI_TOOLTIP_FRAME_PROPERTIES_VISIBLE "Toggles the visibility of the frame."
+#define STRING_IMGUI_TOOLTIP_PROPERTIES_CREATED_BY "Change the author of the animation."
+#define STRING_IMGUI_TOOLTIP_PROPERTIES_CREATED_ON_NOW "Set the date of creation to the current system time."
+#define STRING_IMGUI_TOOLTIP_PROPERTIES_FPS "Change the FPS of the animation."
+#define STRING_IMGUI_TOOLTIP_SPRITESHEETS_ADD "Opens the file dialog to load in a new spritesheet."
+#define STRING_IMGUI_TOOLTIP_SPRITESHEETS_RELOAD "Reloads the selected spritesheet."
+#define STRING_IMGUI_TOOLTIP_SPRITESHEETS_REMOVE "Removes the selected spritesheet."
+#define STRING_IMGUI_TOOLTIP_SPRITESHEETS_REPLACE "Replaces the selected spritesheet; opens up the file dialog."
+#define STRING_IMGUI_TOOLTIP_SPRITESHEETS_SELECT "Select the spritesheet element."
+#define STRING_IMGUI_TOOLTIP_TIMELINE_ANIMATION_LENGTH "Changes the current animation's length."
 #define STRING_IMGUI_TOOLTIP_TIMELINE_ELEMENT_ADD "Add a layer or null timeline element."
-#define STRING_IMGUI_TOOLTIP_TIMELINE_ELEMENT_NAME "Click to rename the element."
-#define STRING_IMGUI_TOOLTIP_TIMELINE_ELEMENT_SPRITESHEET "Click to change the spritesheet the layer is using."
-#define STRING_IMGUI_TOOLTIP_TIMELINE_ELEMENT_REMOVE "Remove a timeline element."
-#define STRING_IMGUI_TOOLTIP_TIMELINE_ELEMENT_SHIFT_UP "Shift this timeline element above.\nElements with higher indices will display further behind."
-#define STRING_IMGUI_TOOLTIP_TIMELINE_ELEMENT_SHIFT_DOWN "Shift this timeline element below.\nElements with lower indices will display further in front."
-#define STRING_IMGUI_TOOLTIP_TIMELINE_ELEMENT_VISIBLE "Toggle visibility for this element."
-#define STRING_IMGUI_TOOLTIP_TIMELINE_ELEMENT_RECT "Toggle visibility for a rectangle around the null."
-#define STRING_IMGUI_TOOLTIP_TIMELINE_ELEMENT_ROOT "This is the Root element."
 #define STRING_IMGUI_TOOLTIP_TIMELINE_ELEMENT_LAYER "This is a Layer element.\nThese are the main graphical animation elements.\nClick to rename."
+#define STRING_IMGUI_TOOLTIP_TIMELINE_ELEMENT_NAME "Click to rename the element."
 #define STRING_IMGUI_TOOLTIP_TIMELINE_ELEMENT_NULL "This is a Null element.\nThese are invisible elements where a game engine may have access to them for additional effects.\nClick to rename."
+#define STRING_IMGUI_TOOLTIP_TIMELINE_ELEMENT_RECT "Toggle visibility for a rectangle around the null."
+#define STRING_IMGUI_TOOLTIP_TIMELINE_ELEMENT_REMOVE "Remove a timeline element."
+#define STRING_IMGUI_TOOLTIP_TIMELINE_ELEMENT_ROOT "This is the Root element."
+#define STRING_IMGUI_TOOLTIP_TIMELINE_ELEMENT_SHIFT_DOWN "Shift this timeline element below.\nElements with lower indices will display further in front."
+#define STRING_IMGUI_TOOLTIP_TIMELINE_ELEMENT_SHIFT_UP "Shift this timeline element above.\nElements with higher indices will display further behind."
+#define STRING_IMGUI_TOOLTIP_TIMELINE_ELEMENT_SPRITESHEET "Click to change the spritesheet the layer is using."
 #define STRING_IMGUI_TOOLTIP_TIMELINE_ELEMENT_TRIGGERS "This is the animation's Triggers.\nTriggers are special activations; each is bound to an Event."
-#define STRING_IMGUI_TOOLTIP_TIMELINE_PLAY "Plays the animation."
+#define STRING_IMGUI_TOOLTIP_TIMELINE_ELEMENT_VISIBLE "Toggle visibility for this element."
+#define STRING_IMGUI_TOOLTIP_TIMELINE_FRAME_ADD "Add a frame to the current selected element."
+#define STRING_IMGUI_TOOLTIP_TIMELINE_FRAME_REMOVE "Removes the selected frame from the current selected element."
 #define STRING_IMGUI_TOOLTIP_TIMELINE_PAUSE "Pauses the animation."
-#define STRING_IMGUI_TOOLTIP_ANIMATION_PREVIEW_GRID "Toggles grid visibility on the animation preview."
-#define STRING_IMGUI_TOOLTIP_ANIMATION_PREVIEW_GRID_COLOR "Changes the animation preview grid color."
-#define STRING_IMGUI_TOOLTIP_ANIMATION_PREVIEW_GRID_SIZE "Changes the animation preview grid size (number of rows/columns)."
-#define STRING_IMGUI_TOOLTIP_ANIMATION_PREVIEW_ZOOM "Changes the animation preview zoom level."
-#define STRING_IMGUI_TOOLTIP_ANIMATION_PREVIEW_BACKGROUND_COLOR "Changes the background color of the animation preview."
+#define STRING_IMGUI_TOOLTIP_TIMELINE_PLAY "Plays the animation."
 
 #define STRING_OPENGL_VERSION "#version 330"
-
-#define SHADER_VERTEX "#version 330 core\n" \
-"in vec2 l_position;\n" \
-"in vec2 l_uv;\n" \
-"\n" \
-"uniform mat3 u_view;\n" \
-"uniform mat3 u_projection;\n" \
-"uniform mat3 u_model;\n" \
-"\n" \
-"out vec2 o_uv;\n" \
-"\n" \
-"void main()\n" \
-"{\n" \
-"    gl_Position = vec4(u_projection * u_view * u_model * vec3(l_position, 1.0), 1.0);\n" \
-"    o_uv = l_uv;\n" \
-"}"
-
-#define SHADER_FRAGMENT "#version 330 core\n" \
-"uniform vec4 u_tint;\n" \
-"uniform vec4 u_color_offset;\n" \
-"uniform sampler2D u_texture;\n" \
-"\n" \
-"in vec2 i_uv;\n" \
-"\n" \
-"out vec4 FragColor;\n" \
-"\n" \
-"void main()\n" \
-"{\n" \
-"    FragColor = texture(u_texture, i_uv) * u_tint;\n" \
-"    FragColor.rgb += u_color_offset.rgb;\n" \
-"\n" \
-"    if (FragColor.a == 0.0) discard;\n" \
-"}\n"

@@ -2,7 +2,8 @@
 
 #include "COMMON.h"
 
-struct PackedData
+/* TextureData */
+struct TextureData
 {
   const u8* data;
   u32 length;
@@ -266,25 +267,25 @@ static const unsigned char texture_arrow_down[] = {
 };
 static const unsigned int texture_arrow_down_len = 153;
 
-#define PACKED_TEXTURE_COUNT (PACKED_TEXTURE_ARROW_DOWN + 1)
-enum PackedTextureType
+#define TEXTURE_COUNT (TEXTURE_ARROW_DOWN + 1)
+enum TextureType
 {
-  PACKED_TEXTURE_EYE_OPEN,
-  PACKED_TEXTURE_EYE_CLOSED,
-  PACKED_TEXTURE_ANIMATION,
-  PACKED_TEXTURE_EVENT,
-  PACKED_TEXTURE_LAYER,
-  PACKED_TEXTURE_NULL,
-  PACKED_TEXTURE_ROOT,
-  PACKED_TEXTURE_SPRITESHEET,
-  PACKED_TEXTURE_TRIGGER,
-  PACKED_TEXTURE_RECT_SHOW,
-  PACKED_TEXTURE_RECT_HIDE,
-  PACKED_TEXTURE_ARROW_UP,
-  PACKED_TEXTURE_ARROW_DOWN
+  TEXTURE_EYE_OPEN,
+  TEXTURE_EYE_CLOSED,
+  TEXTURE_ANIMATION,
+  TEXTURE_EVENT,
+  TEXTURE_LAYER,
+  TEXTURE_NULL,
+  TEXTURE_ROOT,
+  TEXTURE_SPRITESHEET,
+  TEXTURE_TRIGGER,
+  TEXTURE_RECT_SHOW,
+  TEXTURE_RECT_HIDE,
+  TEXTURE_ARROW_UP,
+  TEXTURE_ARROW_DOWN
 };
 
-static const PackedData PACKED_TEXTURE_DATA[PACKED_TEXTURE_COUNT] = 
+static const TextureData TEXTURE_DATA[TEXTURE_COUNT] = 
 {
   {texture_eye_open, texture_eye_open_len},
   {texture_eye_closed, texture_eye_closed_len},
@@ -299,4 +300,46 @@ static const PackedData PACKED_TEXTURE_DATA[PACKED_TEXTURE_COUNT] =
   {texture_rect_hide, texture_rect_hide_len},
   {texture_arrow_up, texture_arrow_up_len},
   {texture_arrow_down, texture_arrow_down_len},
+};
+
+/* Shaders */
+struct ShaderData
+{
+  const char* vertex;
+  const char* fragment;
+};
+
+#define SHADER_COUNT (SHADER + 1)
+enum ShaderType
+{
+    SHADER
+};
+
+static const char SHADER_VERTEX[] =  
+"#version 330 core\n" \
+"layout (location = 0)\n" \
+"in vec2 i_position;\n" \
+"uniform mat4 u_transform;\n" \
+"\n" \
+"void main()\n" \
+"{\n" \
+"    vec4 pos = vec4(i_position, 0.0, 1.0);\n" \
+"    gl_Position = u_transform * pos;\n" \
+"}\n";
+
+static const char SHADER_FRAGMENT[] =  "#version 330 core\n" \
+"out vec4 FragColor;\n" \
+"uniform vec4 u_color;\n" \
+"\n" \
+"void main()\n" \
+"{\n" \
+"    FragColor = u_color;\n" \
+"}\n";
+
+static const char SHADER_UNIFORM_COLOR[] = "u_color";
+static const char SHADER_UNIFORM_TRANSFORM[] = "u_transform";
+
+static const ShaderData SHADER_DATA[SHADER_COUNT] = 
+{
+  {SHADER_VERTEX, SHADER_FRAGMENT}
 };

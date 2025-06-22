@@ -14,10 +14,11 @@ struct State
 	SDL_Renderer* renderer;
 	SDL_GLContext glContext;
     Imgui imgui;
+	Input input;
 	Dialog dialog;
 	Preview preview;
     Anm2 anm2;
-	Packed packed;
+	Resources resources;
 	char argument[PATH_MAX] = STRING_EMPTY;
 	bool isArgument = false;
 	u64 tick = 0;

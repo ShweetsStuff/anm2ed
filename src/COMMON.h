@@ -6,6 +6,7 @@
 #include <GL/gl.h>
 #include <glm/glm/glm.hpp>
 #include <glm/glm/gtc/type_ptr.hpp>
+#include <glm/glm/gtc/matrix_transform.hpp>
 #include <limits.h>
 #include <math.h>
 #include <stdbool.h>
@@ -16,9 +17,10 @@
 #include <tinyxml2.h>
 
 #include <algorithm>
+#include <filesystem>
+#include <map>
 #include <ranges>
 #include <vector>
-#include <map>
 
 #include "STRINGS.h"
 
@@ -47,6 +49,14 @@ using namespace glm; // fuck you
 static inline const char* enum_to_string(const char* arr[], s32 count, s32 index) { return (index >= 0 && index < count) ? arr[index] : "undefined"; }
 static inline s32 string_to_enum(const char* str, const char* const* arr, s32 n) { for (s32 i=0; i<n; ++i) if (!strcmp(str, arr[i])) return i; return -1; }
 static inline bool string_to_bool(const char* str) { if (strcmp(str, "true") == 0) return true; return false; }
+
+static inline void working_directory_from_path_set(const char* path)
+{
+    std::filesystem::path filePath = path;
+	std::filesystem::path dir = filePath.parent_path();
+    if (!dir.empty())
+        std::filesystem::current_path(dir);
+};
 
 template<typename T>
 static inline s32 map_next_id_get(const std::map<s32, T>& map) {
