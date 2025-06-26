@@ -7,6 +7,7 @@ struct Texture
     GLuint handle = 0;
     ivec2 size = {0, 0};
     s32 channels = -1;
+    bool isInvalid = false;
 };
 
 void texture_gl_set(Texture* self, void* data);

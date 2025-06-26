@@ -29,6 +29,8 @@ _tick(State* state)
 		}
 	}
 
+	SDL_GetWindowSize(state->window, &state->settings.windowW, &state->settings.windowH);
+
 	input_tick(&state->input);
 	preview_tick(&state->preview);
 	dialog_tick(&state->dialog);
@@ -47,6 +49,15 @@ _draw(State* state)
 void
 init(State* state)
 {
+	/* set start working directory */
+    std::filesystem::path startPath = std::filesystem::current_path();
+
+	memset(state->startPath, '\0', PATH_MAX - 1);
+
+	strncpy(state->startPath, startPath.c_str(), PATH_MAX - 1);
+	
+	settings_load(&state->settings);
+	
 	printf(STRING_INFO_INIT);
 
 	if (!SDL_Init(SDL_INIT_VIDEO))
@@ -60,15 +71,21 @@ init(State* state)
 	SDL_CreateWindowAndRenderer
 	(
 		STRING_WINDOW_TITLE, 
-		WINDOW_WIDTH, 
-		WINDOW_HEIGHT, 
+		state->settings.windowW, 
+		state->settings.windowH, 
 		WINDOW_FLAGS, 
 		&state->window, 
 		&state->renderer
 	);
 
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+   	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+   	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+
 	state->glContext = SDL_GL_CreateContext(state->window);
 	
+	printf(STRING_INFO_OPENGL, glGetString(GL_VERSION));
+
 	if (!state->glContext)
 	{
 		printf(STRING_ERROR_GL_CONTEXT_INIT, SDL_GetError());
@@ -76,24 +93,18 @@ init(State* state)
 	}
 
 	glewInit();
-
+	
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  
+	glDisable(GL_DEPTH_TEST);
 
 	printf(STRING_INFO_GLEW_INIT);
-	
+
 	resources_init(&state->resources);
-	dialog_init(&state->dialog, &state->anm2, &state->resources);
+	dialog_init(&state->dialog, &state->anm2, &state->resources, state->window);
 	
-	preview_init(&state->preview, &state->resources, &state->input);
+	preview_init(&state->preview, &state->anm2, &state->resources, &state->input, &state->settings);
 
-	if (state->isArgument)
-		anm2_deserialize(&state->anm2, &state->resources, state->argument);
-	else
-		anm2_new(&state->anm2);
-
-	window_title_from_anm2_set(state->window, &state->anm2);
-	
 	imgui_init
 	(
 		&state->imgui,
@@ -102,9 +113,17 @@ init(State* state)
 		&state->input,
 		&state->anm2,
 		&state->preview,
+		&state->settings,
 		state->window, 
 		&state->glContext
 	);
+
+	if (state->isArgument)
+		anm2_deserialize(&state->anm2, &state->resources, state->argument);
+	else
+		anm2_new(&state->anm2);
+
+	window_title_from_anm2_set(state->window, &state->anm2);
 }
 
 void
@@ -129,7 +148,11 @@ loop(State* state)
 void
 quit(State* state)
 {
+	/* return to base path */
+    std::filesystem::current_path(state->startPath);
+
 	imgui_free(&state->imgui);
+	settings_save(&state->settings);
 	preview_free(&state->preview);
 	resources_free(&state->resources);
 

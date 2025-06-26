@@ -171,13 +171,13 @@ anm2_serialize(Anm2* self, const char* path)
 			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_Y_SCALE], frame.scale.y); /* XScale */
 			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_DELAY], frame.delay); /* Delay */
 			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_VISIBLE], frame.isVisible); /* Visible */
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_TINT], frame.tintRGBA.r); /* RedTint */
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_TINT], frame.tintRGBA.g); /* GreenTint */
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_TINT], frame.tintRGBA.b); /* BlueTint */
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ALPHA_TINT], frame.tintRGBA.a); /* AlphaTint */
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_OFFSET], frame.offsetRGB.r); /* RedOffset */
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_OFFSET], frame.offsetRGB.g); /* GreenOffset */
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_OFFSET], frame.offsetRGB.b); /* BlueOffset */
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.r)); /* RedTint */
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.g)); /* GreenTint */
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.b)); /* BlueTint */
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ALPHA_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.a)); /* AlphaTint */
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.r)); /* RedOffset */
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.g)); /* GreenOffset */
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.b)); /* BlueOffset */
 			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ROTATION], frame.rotation); /* Rotation */
 			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_INTERPOLATED], frame.isInterpolated); /* Interpolated */
 		
@@ -217,13 +217,13 @@ anm2_serialize(Anm2* self, const char* path)
 				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_Y_SCALE], frame.scale.y); /* XScale */
 				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_DELAY], frame.delay); /* Delay */
 				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_VISIBLE], frame.isVisible); /* Visible */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_TINT], frame.tintRGBA.r); /* RedTint */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_TINT], frame.tintRGBA.g); /* GreenTint */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_TINT], frame.tintRGBA.b); /* BlueTint */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ALPHA_TINT], frame.tintRGBA.a); /* AlphaTint */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_OFFSET], frame.offsetRGB.r); /* RedOffset */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_OFFSET], frame.offsetRGB.g); /* GreenOffset */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_OFFSET], frame.offsetRGB.b); /* BlueOffset */
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.r)); /* RedTint */
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.g)); /* GreenTint */
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.b)); /* BlueTint */
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ALPHA_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.a)); /* AlphaTint */
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.r)); /* RedOffset */
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.g)); /* GreenOffset */
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.b)); /* BlueOffset */
 				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ROTATION], frame.rotation); /* Rotation */
 				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_INTERPOLATED], frame.isInterpolated); /* Interpolated */
 			
@@ -262,13 +262,13 @@ anm2_serialize(Anm2* self, const char* path)
 				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_Y_SCALE], frame.scale.y); /* XScale */
 				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_DELAY], frame.delay); /* Delay */
 				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_VISIBLE], frame.isVisible); /* Visible */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_TINT], frame.tintRGBA.r); /* RedTint */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_TINT], frame.tintRGBA.g); /* GreenTint */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_TINT], frame.tintRGBA.b); /* BlueTint */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ALPHA_TINT], frame.tintRGBA.a); /* AlphaTint */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_OFFSET], frame.offsetRGB.r); /* RedOffset */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_OFFSET], frame.offsetRGB.g); /* GreenOffset */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_OFFSET], frame.offsetRGB.b); /* BlueOffset */
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.r)); /* RedTint */
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.g)); /* GreenTint */
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.b)); /* BlueTint */
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ALPHA_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.a)); /* AlphaTint */
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.r)); /* RedOffset */
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.g)); /* GreenOffset */
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.b)); /* BlueOffset */
 				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ROTATION], frame.rotation); /* Rotation */
 				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_INTERPOLATED], frame.isInterpolated); /* Interpolated */
 			
@@ -341,6 +341,7 @@ anm2_deserialize(Anm2* self, Resources* resources, const char* path)
 	Anm2Layer tempLayer;
 	Anm2Spritesheet tempSpritesheet;
 	Anm2Event tempEvent;
+	char lastSpritesheetPath[PATH_MAX];
 
 	*self = Anm2{};
 
@@ -354,7 +355,8 @@ anm2_deserialize(Anm2* self, Resources* resources, const char* path)
 
 	resources_loaded_textures_free(resources);
 	strncpy(self->path, path, PATH_MAX - 1);
-
+	working_directory_from_path_set(path);
+	
     root = document.FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATED_ACTOR]);
 	element = root;
 
@@ -472,8 +474,8 @@ anm2_deserialize(Anm2* self, Resources* resources, const char* path)
 					}
 					break;
 				case ANM2_ATTRIBUTE_PATH:
-					strncpy(lastSpritesheet->path, attribute->Value(), PATH_MAX - 1);
-					anm2_spritesheet_texture_load(self, resources, attribute->Value(), id);
+					/* Make path lowercase */
+					strncpy(lastSpritesheetPath, attribute->Value(), PATH_MAX - 1);
 					break;
 				case ANM2_ATTRIBUTE_NAME:
 					switch (anm2Element)
@@ -566,25 +568,25 @@ anm2_deserialize(Anm2* self, Resources* resources, const char* path)
 					}
 					break;
 				case ANM2_ATTRIBUTE_RED_TINT:
-					lastFrame->tintRGBA.r = atof(attribute->Value());
+					lastFrame->tintRGBA.r = COLOR_INT_TO_FLOAT(atoi(attribute->Value()));
 					break;
 				case ANM2_ATTRIBUTE_GREEN_TINT:
-					lastFrame->tintRGBA.g = atof(attribute->Value());
+					lastFrame->tintRGBA.g = COLOR_INT_TO_FLOAT(atoi(attribute->Value()));
 					break;
 				case ANM2_ATTRIBUTE_BLUE_TINT:
-					lastFrame->tintRGBA.b = atof(attribute->Value());
+					lastFrame->tintRGBA.b = COLOR_INT_TO_FLOAT(atoi(attribute->Value()));
 					break;
 				case ANM2_ATTRIBUTE_ALPHA_TINT:
-					lastFrame->tintRGBA.a = atof(attribute->Value());
+					lastFrame->tintRGBA.a = COLOR_INT_TO_FLOAT(atoi(attribute->Value()));
 					break;
 				case ANM2_ATTRIBUTE_RED_OFFSET:
-					lastFrame->offsetRGB.r = atof(attribute->Value());
+					lastFrame->offsetRGB.r = COLOR_INT_TO_FLOAT(atoi(attribute->Value()));
 					break;
 				case ANM2_ATTRIBUTE_GREEN_OFFSET:
-					lastFrame->offsetRGB.g = atof(attribute->Value());
+					lastFrame->offsetRGB.g = COLOR_INT_TO_FLOAT(atoi(attribute->Value()));
 					break;
 				case ANM2_ATTRIBUTE_BLUE_OFFSET:
-					lastFrame->offsetRGB.b = atof(attribute->Value());
+					lastFrame->offsetRGB.b = COLOR_INT_TO_FLOAT(atoi(attribute->Value()));
 					break;
 				case ANM2_ATTRIBUTE_ROTATION:
 					lastFrame->rotation = atof(attribute->Value());
@@ -615,6 +617,13 @@ anm2_deserialize(Anm2* self, Resources* resources, const char* path)
 			attribute = attribute->Next();
 		}
 
+		/* Load spritesheet textures */
+		if (anm2Element == ANM2_ELEMENT_SPRITESHEET)
+		{
+			strncpy(lastSpritesheet->path, lastSpritesheetPath, PATH_MAX);
+			anm2_spritesheet_texture_load(self, resources, lastSpritesheetPath , id);
+		}
+
 		/* Iterate through children */
 		child = element->FirstChildElement();
 
@@ -641,8 +650,6 @@ anm2_deserialize(Anm2* self, Resources* resources, const char* path)
 			element = element->Parent() ? element->Parent()->ToElement() : NULL;
 		}
 	}
-
-	working_directory_from_path_set(path);
 
 	printf(STRING_INFO_ANM2_READ, path);
 
@@ -702,12 +709,19 @@ anm2_animation_add(Anm2* self)
 
 	/* match layers */
     for (auto & [layerID, layer] : self->layers)
+	{
         animation.layerAnimations[layerID] = Anm2LayerAnimation{};
+	}
 
 	/* match nulls */
     for (auto & [nullID, null] : self->nulls)
-        animation.nullAnimations[nullID] = Anm2NullAnimation{};
+	{
+    	animation.nullAnimations[nullID] = Anm2NullAnimation{};
+	}
 
+	/* add a root frame */
+	animation.rootAnimation.frames.push_back(Anm2Frame{});
+		
     self->animations[id] = animation;
 
 	return id;
@@ -732,10 +746,99 @@ anm2_spritesheet_texture_load(Anm2* self, Resources* resources, const char* path
 {
 	Texture texture;
 
-	/* free texture if it exists */
-	if (resources->loadedTextures.find(id) != resources->loadedTextures.end())
+	/* free texture if it exists, and if it's not texture error */
+	if 
+	(
+		resources->loadedTextures.find(id) != resources->loadedTextures.end() &&
+		resources->loadedTextures[id].handle != resources->textures[TEXTURE_ERROR].handle
+	)
 		texture_free(&resources->loadedTextures[id]);
 
-	texture_from_path_init(&texture, path);
-	resources->loadedTextures[id] = texture;
+	if (texture_from_path_init(&texture, path))
+		resources->loadedTextures[id] = texture;
+	else
+	{
+		resources->loadedTextures[id] = resources->textures[TEXTURE_ERROR];
+		resources->loadedTextures[id].isInvalid = true;
+	}
+}
+
+/* Creates/fetches a frame from a given time. */
+/* Returns true/false if frame will be valid or not. */
+bool
+anm2_frame_from_time(Anm2* self, Anm2Animation* animation, Anm2Frame* frame, Anm2AnimationType type, s32 id, f32 time)
+{
+	/* Out of range */
+	if (time < 0 || time > animation->frameNum)
+		return false;
+
+	Anm2RootAnimation* rootAnimation;
+	Anm2LayerAnimation* layerAnimation;
+	Anm2NullAnimation* nullAnimation;
+	Anm2Frame* baseFrame = NULL;
+	Anm2Frame* nextFrame = NULL;
+	std::vector<Anm2Frame>* frames = NULL;
+	f32 delayCurrent = 0;
+	f32 delayNext = 0;
+	bool isBaseFrame = false;
+
+	switch (type)
+	{
+		case ANM2_ROOT_ANIMATION:
+			frames = &animation->rootAnimation.frames;
+			break;
+		case ANM2_LAYER_ANIMATION:
+			if (id < 0 || id >= (s32)animation->layerAnimations.size())
+				return false;
+			frames = &animation->layerAnimations[id].frames;
+			break;
+		case ANM2_NULL_ANIMATION:
+			if (id < 0 || id >= (s32)animation->nullAnimations.size())
+				return false;
+			frames = &animation->nullAnimations[id].frames;
+			break;
+		default:
+			return false;
+	}
+
+	for (s32 i = 0; i < (s32)frames->size(); i++)
+	{
+		Anm2Frame* frame = &(*frames)[i];
+		delayNext += frame->delay;
+
+		if (time >= delayCurrent && time < delayNext)
+		{
+			baseFrame = frame;
+
+			if (i + 1 < (s32)frames->size())
+				nextFrame = &(*frames)[i + 1];
+			else
+				nextFrame = NULL;
+
+			isBaseFrame = true;
+			break;
+		}
+
+		delayCurrent += frame->delay;
+	}
+
+	/* No valid frame found */
+	if (!isBaseFrame)
+		return false;
+
+	*frame = *baseFrame;
+
+	/* interpolate only if there's a frame following */
+	if (frame->isInterpolated && nextFrame)
+	{
+		f32 interpolationTime = (time - delayCurrent) / (delayNext - delayCurrent);
+
+		frame->rotation    = glm::mix(baseFrame->rotation,    nextFrame->rotation,    interpolationTime);;
+		frame->position    = glm::mix(baseFrame->position,    nextFrame->position,    interpolationTime);;
+		frame->scale       = glm::mix(baseFrame->scale,       nextFrame->scale,       interpolationTime);;
+		frame->offsetRGB   = glm::mix(baseFrame->offsetRGB,   nextFrame->offsetRGB,   interpolationTime);;
+		frame->tintRGBA    = glm::mix(baseFrame->tintRGBA,    nextFrame->tintRGBA,    interpolationTime);;
+	}
+
+	return true;
 }

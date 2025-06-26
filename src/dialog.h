@@ -2,6 +2,7 @@
 
 #include "anm2.h"
 #include "resources.h"
+#include "window.h"
 
 static const SDL_DialogFileFilter DIALOG_FILE_FILTER_ANM2[] =
 {
@@ -26,13 +27,14 @@ struct Dialog
 {
     Anm2* anm2 = NULL;
     Resources* resources = NULL;
+    SDL_Window* window = NULL;
     s32 replaceID = -1;
     enum DialogType type = DIALOG_NONE;
     char path[PATH_MAX] = "";
     bool isSelected = false;
 };
 
-void dialog_init(Dialog* self, Anm2* anm2, Resources* resources);
+void dialog_init(Dialog* self, Anm2* anm2, Resources* resources, SDL_Window* window);
 void dialog_anm2_open(Dialog* self);
 void dialog_png_open(Dialog* self);
 void dialog_png_replace(Dialog* self);

@@ -9,9 +9,22 @@ enum MouseType
     MOUSE_RIGHT
 };
 
+#define KEY_COUNT (KEY_DELETE + 1) 
+enum KeyType
+{
+    KEY_DELETE
+};
+
+#define INPUT_COUNT (INPUT_MOUSE_CLICK + 1)
 enum InputType
 {
     INPUT_MOUSE_CLICK
+};
+
+struct Keyboard
+{
+    bool current[MOUSE_COUNT];
+    bool previous[MOUSE_COUNT];
 };
 
 struct Mouse
@@ -26,6 +39,7 @@ struct Mouse
 
 struct Input
 {
+    Keyboard keyboard;
     Mouse mouse;
 };
 

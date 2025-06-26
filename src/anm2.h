@@ -11,8 +11,9 @@
 #define ANM2_PATH_FORMATTED_MAX PATH_MAX + 0xFF
 #define ANM2_BUFFER_MAX 0xFFFFF
 #define ANM2_FPS_MIN 0
-#define ANM2_FPS_DEFAULT 30
-#define ANM2_FPS_MAX 60
+#define ANM2_FPS_MAX 120
+#define ANM2_FRAME_NUM_MIN 1
+#define ANM2_FRAME_NUM_MAX 1000000
 
 /* Elements */
 #define ANM2_ELEMENT_LIST \
@@ -114,7 +115,7 @@ enum Anm2AnimationType
 	ANM2_ROOT_ANIMATION,
 	ANM2_LAYER_ANIMATION,
 	ANM2_NULL_ANIMATION,
-    ANM2_TRIGGERS
+    ANM2_TRIGGER
 };
 
 struct Anm2Spritesheet
@@ -154,10 +155,10 @@ struct Anm2Frame
 	vec2 crop = {0.0f, 0.0f};
 	vec2 pivot = {0.0f, 0.0f};
 	vec2 position = {0.0f, 0.0f};
-	vec2 size = {1.0f, 1.0f};
-	vec2 scale = {1.0f, 1.0f};
-	ivec3 offsetRGB = {0, 0, 0};
-	ivec4 tintRGBA = {255, 255, 255, 255};
+	vec2 size = {0.0f, 0.0f};
+	vec2 scale = {100.0f, 100.0f};
+	vec3 offsetRGB = {0.0f, 0.0f, 0.0f};
+	vec4 tintRGBA = {1.0f, 1.0f, 1.0f, 1.0f};
 };
 
 struct Anm2LayerAnimation
@@ -186,7 +187,7 @@ struct Anm2Triggers
 
 struct Anm2Animation
 {
-	s32 frameNum = 0;
+	s32 frameNum = ANM2_FRAME_NUM_MIN;
 	char name[ANM2_STRING_MAX] = STRING_ANM2_NEW_ANIMATION;
 	bool isLoop = true;
 	Anm2RootAnimation rootAnimation;
@@ -198,7 +199,7 @@ struct Anm2Animation
 struct Anm2 
 {
     char path[PATH_MAX] = STRING_EMPTY;
-	s32 fps = ANM2_FPS_DEFAULT;
+	s32 fps = 30;
 	s32 version = 0;
 	char createdBy[ANM2_STRING_MAX] = STRING_ANM2_CREATED_BY_DEFAULT;
 	char createdOn[ANM2_STRING_MAX] = STRING_EMPTY;
@@ -221,3 +222,4 @@ void anm2_created_on_set(Anm2* self);
 s32 anm2_animation_add(Anm2* self);
 void anm2_animation_remove(Anm2* self, s32 id);
 void anm2_spritesheet_texture_load(Anm2* self, Resources* resources, const char* path, s32 id);
+bool anm2_frame_from_time(Anm2* self, Anm2Animation* animation, Anm2Frame* frame, Anm2AnimationType type, s32 id, f32 time);

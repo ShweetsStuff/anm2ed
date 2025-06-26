@@ -11,6 +11,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -18,6 +19,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <iostream>
 #include <map>
 #include <ranges>
 #include <vector>
@@ -45,6 +47,13 @@ using namespace glm; // fuck you
 #define MIN(x, min) (x < min ? min : x)
 #define MAX(x, max) (x > max ? max : x)
 #define CLAMP(x, min, max) (MIN(MAX(x, max), min))
+
+#define COLOR_FLOAT_TO_INT(x) (static_cast<int>((x) * 255.0f))
+#define COLOR_INT_TO_FLOAT(x) ((x) / 255.0f)
+
+#define TICK_DELAY 33.3f
+#define SECOND 1000.0f
+#define TICK_RATE (SECOND / TICK_DELAY)
 
 static inline const char* enum_to_string(const char* arr[], s32 count, s32 index) { return (index >= 0 && index < count) ? arr[index] : "undefined"; }
 static inline s32 string_to_enum(const char* str, const char* const* arr, s32 n) { for (s32 i=0; i<n; ++i) if (!strcmp(str, arr[i])) return i; return -1; }

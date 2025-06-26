@@ -1,11 +1,9 @@
 #pragma once
 
-#include "shader.h"
 #include "imgui.h"
 
-#define TICK_DELAY 16
-#define WINDOW_WIDTH 1600
-#define WINDOW_HEIGHT 900
+#define WINDOW_WIDTH 1920
+#define WINDOW_HEIGHT 1080
 #define WINDOW_FLAGS SDL_WINDOW_RESIZABLE
 
 struct State
@@ -19,7 +17,9 @@ struct State
 	Preview preview;
     Anm2 anm2;
 	Resources resources;
+	Settings settings;
 	char argument[PATH_MAX] = STRING_EMPTY;
+	char startPath[PATH_MAX] = STRING_EMPTY;
 	bool isArgument = false;
 	u64 tick = 0;
 	u64 lastTick = 0;

@@ -25,6 +25,7 @@ resources_free(Resources* self)
     resources_loaded_textures_free(self);
 }
 
+/* Frees loaded textures */
 void
 resources_loaded_textures_free(Resources* self)
 {

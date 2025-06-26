@@ -16,14 +16,14 @@ _dialog_callback(void* userdata, const char* const* filelist, s32 filter)
 	}
 	else
 		self->isSelected = false;
-	
 }
 
 void
-dialog_init(Dialog* self, Anm2* anm2, Resources* resources)
+dialog_init(Dialog* self, Anm2* anm2, Resources* resources, SDL_Window* window)
 {
 	self->anm2 = anm2;
 	self->resources = resources;
+	self->window = window;
 }
 
 /* Opens file dialog for user to pick anm2 files */
@@ -76,11 +76,13 @@ dialog_tick(Dialog* self)
 		switch (self->type)
 		{
 			case DIALOG_ANM2_OPEN:
-				anm2_deserialize(self->anm2, self->resources, relativePath);
 				resources_loaded_textures_free(self->resources);
+				anm2_deserialize(self->anm2, self->resources, self->path);
+				window_title_from_anm2_set(self->window, self->anm2);
 				break;
 			case DIALOG_ANM2_SAVE:
 				anm2_serialize(self->anm2, relativePath);
+				window_title_from_anm2_set(self->window, self->anm2);
 				break;
 			case DIALOG_PNG_OPEN:
 				id = map_next_id_get(self->resources->loadedTextures);
