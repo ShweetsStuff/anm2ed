@@ -55,6 +55,42 @@ using namespace glm; // fuck you
 #define SECOND 1000.0f
 #define TICK_RATE (SECOND / TICK_DELAY)
 
+#define UV_VERTICES(uvMin, uvMax) \
+{ \
+  0, 0, uvMin.x, uvMin.y, \
+  1, 0, uvMax.x, uvMin.y, \
+  1, 1, uvMax.x, uvMax.y, \
+  0, 1, uvMin.x, uvMax.y, \
+}
+
+static const f32 GL_VERTICES[] =
+{
+    0, 0,  
+    1, 0,  
+    1, 1,  
+    0, 1  
+};
+
+static const f32 GL_UV_VERTICES[] = 
+{
+    0, 0, 0.0f, 0.0f,
+    1, 0, 1.0f, 0.0f,
+    1, 1, 1.0f, 1.0f,
+    0, 1, 0.0f, 1.0f
+};
+#define IMVEC2_VEC2(value) ImVec2(value.x, value.y)
+#define VEC2_IMVEC2(value) glm::vec2(value.x, value.y)
+
+static const GLuint GL_TEXTURE_INDICES[] = {0, 1, 2, 2, 3, 0};
+
+static const vec4 COLOR_RED = {1.0f, 0.0f, 0.0f, 1.0f};
+static const vec4 COLOR_GREEN = {0.0f, 1.0f, 0.0f, 1.0f};
+static const vec4 COLOR_BLUE = {0.0f, 0.0f, 1.0f, 1.0f};
+static const vec4 COLOR_OPAQUE = {1.0f, 1.0f, 1.0f, 1.0f};
+static const vec4 COLOR_TRANSPARENT = {0.0f, 0.0f, 0.0f, 1.0f};
+static const vec3 COLOR_OFFSET_NONE = {0.0f, 0.0f, 0.0f};
+
+
 static inline const char* enum_to_string(const char* arr[], s32 count, s32 index) { return (index >= 0 && index < count) ? arr[index] : "undefined"; }
 static inline s32 string_to_enum(const char* str, const char* const* arr, s32 n) { for (s32 i=0; i<n; ++i) if (!strcmp(str, arr[i])) return i; return -1; }
 static inline bool string_to_bool(const char* str) { if (strcmp(str, "true") == 0) return true; return false; }

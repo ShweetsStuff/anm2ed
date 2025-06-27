@@ -353,7 +353,7 @@ anm2_deserialize(Anm2* self, Resources* resources, const char* path)
 		return false;
 	}
 
-	resources_loaded_textures_free(resources);
+	resources_textures_free(resources);
 	strncpy(self->path, path, PATH_MAX - 1);
 	working_directory_from_path_set(path);
 	
@@ -746,21 +746,15 @@ anm2_spritesheet_texture_load(Anm2* self, Resources* resources, const char* path
 {
 	Texture texture;
 
-	/* free texture if it exists, and if it's not texture error */
-	if 
-	(
-		resources->loadedTextures.find(id) != resources->loadedTextures.end() &&
-		resources->loadedTextures[id].handle != resources->textures[TEXTURE_ERROR].handle
-	)
-		texture_free(&resources->loadedTextures[id]);
+	if (resources->textures.find(id) != resources->textures.end() && resources->textures[id].id != resources->textures[TEXTURE_ERROR].id)
+		texture_free(&resources->textures[id]);
 
 	if (texture_from_path_init(&texture, path))
-		resources->loadedTextures[id] = texture;
+		resources->textures[id] = texture;
 	else
-	{
-		resources->loadedTextures[id] = resources->textures[TEXTURE_ERROR];
-		resources->loadedTextures[id].isInvalid = true;
-	}
+		texture.isInvalid = true;
+
+	resources->textures[id] = texture;
 }
 
 /* Creates/fetches a frame from a given time. */
@@ -775,12 +769,11 @@ anm2_frame_from_time(Anm2* self, Anm2Animation* animation, Anm2Frame* frame, Anm
 	Anm2RootAnimation* rootAnimation;
 	Anm2LayerAnimation* layerAnimation;
 	Anm2NullAnimation* nullAnimation;
-	Anm2Frame* baseFrame = NULL;
 	Anm2Frame* nextFrame = NULL;
 	std::vector<Anm2Frame>* frames = NULL;
 	f32 delayCurrent = 0;
 	f32 delayNext = 0;
-	bool isBaseFrame = false;
+	bool isTimeMatchedFrame = false;
 
 	switch (type)
 	{
@@ -803,19 +796,19 @@ anm2_frame_from_time(Anm2* self, Anm2Animation* animation, Anm2Frame* frame, Anm
 
 	for (s32 i = 0; i < (s32)frames->size(); i++)
 	{
-		Anm2Frame* frame = &(*frames)[i];
+		*frame = (*frames)[i];
 		delayNext += frame->delay;
 
+		/* If a frame is within the time constraints, it's a time matched frame, break */
+		/* Otherwise, the last found frame parsed will be used. */
 		if (time >= delayCurrent && time < delayNext)
 		{
-			baseFrame = frame;
-
 			if (i + 1 < (s32)frames->size())
 				nextFrame = &(*frames)[i + 1];
 			else
 				nextFrame = NULL;
 
-			isBaseFrame = true;
+			isTimeMatchedFrame = true;
 			break;
 		}
 
@@ -823,21 +816,19 @@ anm2_frame_from_time(Anm2* self, Anm2Animation* animation, Anm2Frame* frame, Anm
 	}
 
 	/* No valid frame found */
-	if (!isBaseFrame)
+	if (!isTimeMatchedFrame)
 		return false;
-
-	*frame = *baseFrame;
 
 	/* interpolate only if there's a frame following */
 	if (frame->isInterpolated && nextFrame)
 	{
 		f32 interpolationTime = (time - delayCurrent) / (delayNext - delayCurrent);
 
-		frame->rotation    = glm::mix(baseFrame->rotation,    nextFrame->rotation,    interpolationTime);;
-		frame->position    = glm::mix(baseFrame->position,    nextFrame->position,    interpolationTime);;
-		frame->scale       = glm::mix(baseFrame->scale,       nextFrame->scale,       interpolationTime);;
-		frame->offsetRGB   = glm::mix(baseFrame->offsetRGB,   nextFrame->offsetRGB,   interpolationTime);;
-		frame->tintRGBA    = glm::mix(baseFrame->tintRGBA,    nextFrame->tintRGBA,    interpolationTime);;
+		frame->rotation    = glm::mix(frame->rotation,    nextFrame->rotation,    interpolationTime);;
+		frame->position    = glm::mix(frame->position,    nextFrame->position,    interpolationTime);;
+		frame->scale       = glm::mix(frame->scale,       nextFrame->scale,       interpolationTime);;
+		frame->offsetRGB   = glm::mix(frame->offsetRGB,   nextFrame->offsetRGB,   interpolationTime);;
+		frame->tintRGBA    = glm::mix(frame->tintRGBA,    nextFrame->tintRGBA,    interpolationTime);;
 	}
 
 	return true;

@@ -14,7 +14,6 @@ _settings_setting_load(Settings* self, char* line)
             char* value = line + strlen(SETTINGS_ENTRIES[i].value);
             void* target = (u8*)self + SETTINGS_ENTRIES[i].offset;
 
-
             switch (SETTINGS_ENTRIES[i].type) 
             {
                 case SETTINGS_TYPE_INT:

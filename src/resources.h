@@ -6,11 +6,11 @@
 
 struct Resources
 {
-    Texture textures[TEXTURE_COUNT];
     GLuint shaders[SHADER_COUNT];
-    std::map<s32, Texture> loadedTextures;
+    Texture atlas;
+    std::map<s32, Texture> textures;
 };
 
 void resources_init(Resources* self);
 void resources_free(Resources* self);
-void resources_loaded_textures_free(Resources* self);
+void resources_textures_free(Resources* self);

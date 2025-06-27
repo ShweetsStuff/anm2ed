@@ -5,6 +5,7 @@
 #define WINDOW_WIDTH 1920
 #define WINDOW_HEIGHT 1080
 #define WINDOW_FLAGS SDL_WINDOW_RESIZABLE
+#define LINE_WIDTH 2.0f
 
 struct State
 {
@@ -14,6 +15,7 @@ struct State
     Imgui imgui;
 	Input input;
 	Dialog dialog;
+	Editor editor;
 	Preview preview;
     Anm2 anm2;
 	Resources resources;

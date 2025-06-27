@@ -9,9 +9,9 @@
 void
 texture_gl_set(Texture* self, void* data)
 {
-	glGenTextures(1, &self->handle);
+	glGenTextures(1, &self->id);
 	
-	glBindTexture(GL_TEXTURE_2D, self->handle);
+	glBindTexture(GL_TEXTURE_2D, self->id);
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, self->size.x, self->size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 
@@ -20,7 +20,7 @@ texture_gl_set(Texture* self, void* data)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	glBindTexture(GL_TEXTURE_2D, 0); /* unbinds */
+	glBindTexture(GL_TEXTURE_2D, 0); 
 }
 
 bool
@@ -61,6 +61,6 @@ texture_from_data_init(Texture* self, const u8* data, u32 length)
 void
 texture_free(Texture* self)
 {
-	glDeleteTextures(1, &self->handle);
+	glDeleteTextures(1, &self->id);
 	memset(self, '\0', sizeof(Texture));
 }

@@ -76,7 +76,7 @@ dialog_tick(Dialog* self)
 		switch (self->type)
 		{
 			case DIALOG_ANM2_OPEN:
-				resources_loaded_textures_free(self->resources);
+				resources_textures_free(self->resources);
 				anm2_deserialize(self->anm2, self->resources, self->path);
 				window_title_from_anm2_set(self->window, self->anm2);
 				break;
@@ -85,7 +85,7 @@ dialog_tick(Dialog* self)
 				window_title_from_anm2_set(self->window, self->anm2);
 				break;
 			case DIALOG_PNG_OPEN:
-				id = map_next_id_get(self->resources->loadedTextures);
+				id = map_next_id_get(self->resources->textures);
 				self->anm2->spritesheets[id] = Anm2Spritesheet{};
 				strncpy(self->anm2->spritesheets[id].path, relativePath, PATH_MAX);
 				anm2_spritesheet_texture_load(self->anm2, self->resources, relativePath, id);

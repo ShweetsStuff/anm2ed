@@ -21,13 +21,13 @@ _preview_grid_set(Preview* self)
 {
     std::vector<f32> vertices;
 
-    s32 verticalLineCount = PREVIEW_SIZE.x / MIN(self->settings->gridSizeX, PREVIEW_GRID_MIN);
-    s32 horizontalLineCount = PREVIEW_SIZE.y / MIN(self->settings->gridSizeY, PREVIEW_GRID_MIN);
+    s32 verticalLineCount = PREVIEW_SIZE.x / MIN(self->settings->previewGridSizeX, PREVIEW_GRID_MIN);
+    s32 horizontalLineCount = PREVIEW_SIZE.y / MIN(self->settings->previewGridSizeY, PREVIEW_GRID_MIN);
 
     /* Vertical */
     for (s32 i = 0; i <= verticalLineCount; i++)
     {
-        s32 x = i * self->settings->gridSizeX - self->settings->gridOffsetX;
+        s32 x = i * self->settings->previewGridSizeX - self->settings->previewGridOffsetX;
         f32 normX = (2.0f * x) / PREVIEW_SIZE.x - 1.0f;
 
         vertices.push_back(normX);
@@ -39,7 +39,7 @@ _preview_grid_set(Preview* self)
     /* Horizontal */
     for (s32 i = 0; i <= horizontalLineCount; i++)
     {
-        s32 y = i * self->settings->gridSizeY - self->settings->gridOffsetY;
+        s32 y = i * self->settings->previewGridSizeY - self->settings->previewGridOffsetY;
         f32 normY = (2.0f * y) / PREVIEW_SIZE.y - 1.0f;
 
         vertices.push_back(-1.0f);
@@ -66,13 +66,14 @@ preview_init(Preview* self, Anm2* anm2, Resources* resources, Input* input, Sett
     self->input = input;
     self->settings = settings;
 
+    /* Framebuffer + texture */
     glGenFramebuffers(1, &self->fbo);
 
     glBindFramebuffer(GL_FRAMEBUFFER, self->fbo);
 
     glGenTextures(1, &self->texture);
     glBindTexture(GL_TEXTURE_2D, self->texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, PREVIEW_SIZE.x, PREVIEW_SIZE.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (s32)PREVIEW_SIZE.x, (s32)PREVIEW_SIZE.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -80,17 +81,32 @@ preview_init(Preview* self, Anm2* anm2, Resources* resources, Input* input, Sett
 
     glGenRenderbuffers(1, &self->rbo);
     glBindRenderbuffer(GL_RENDERBUFFER, self->rbo);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, PREVIEW_SIZE.x, PREVIEW_SIZE.y);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, (s32)PREVIEW_SIZE.x, (s32)PREVIEW_SIZE.y);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, self->rbo);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+    /* Axis */
     glGenVertexArrays(1, &self->axisVAO);
     glGenBuffers(1, &self->axisVBO);
 
+    /* Grid */
     glGenVertexArrays(1, &self->gridVAO);
     glGenBuffers(1, &self->gridVBO);
 
+    /* Rect */
+    glGenVertexArrays(1, &self->rectVAO);
+    glGenBuffers(1, &self->rectVBO);
+
+    glBindVertexArray(self->rectVAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, self->rectVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(GL_VERTICES), GL_VERTICES, GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(f32), (void*)0);
+
+    /* Texture */
     glGenVertexArrays(1, &self->textureVAO);
     glGenBuffers(1, &self->textureVBO);
     glGenBuffers(1, &self->textureEBO);
@@ -101,7 +117,7 @@ preview_init(Preview* self, Anm2* anm2, Resources* resources, Input* input, Sett
     glBufferData(GL_ARRAY_BUFFER, sizeof(f32) * 4 * 4, NULL, GL_DYNAMIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self->textureEBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(PREVIEW_TEXTURE_INDICES), PREVIEW_TEXTURE_INDICES, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GL_TEXTURE_INDICES), GL_TEXTURE_INDICES, GL_STATIC_DRAW);
 
     /* Position */
     glEnableVertexAttribArray(0); 
@@ -120,9 +136,10 @@ preview_init(Preview* self, Anm2* anm2, Resources* resources, Input* input, Sett
 void
 preview_tick(Preview* self)
 {
-    self->settings->zoom = CLAMP(self->settings->zoom, PREVIEW_ZOOM_MIN, PREVIEW_ZOOM_MAX);
-    self->oldGridSize = glm::vec2(self->settings->gridSizeX, self->settings->gridSizeY);
-    self->oldGridOffset = glm::vec2(self->settings->gridOffsetX, self->settings->gridOffsetY);
+    self->settings->previewZoom = CLAMP(self->settings->previewZoom, PREVIEW_ZOOM_MIN, PREVIEW_ZOOM_MAX);
+    
+    self->oldGridSize = glm::vec2(self->settings->previewGridSizeX, self->settings->previewGridSizeY);
+    self->oldGridOffset = glm::vec2(self->settings->previewGridOffsetX, self->settings->previewGridOffsetY);
 
     if (self->animationID > -1)
     {
@@ -146,81 +163,79 @@ preview_draw(Preview* self)
     GLuint shaderLine = self->resources->shaders[SHADER_LINE];
     GLuint shaderTexture = self->resources->shaders[SHADER_TEXTURE];
     
-    f32 zoomFactor = self->settings->zoom / 100.0f;
-
-    /* Convert pan to pixels */
-    glm::vec2 ndcPan = glm::vec2(
-    self->settings->panX / (PREVIEW_SIZE.x / 2.0f),
-    -self->settings->panY / (PREVIEW_SIZE.y / 2.0f)
-    );
-
-    /* Transformation matrix */
+    f32 zoomFactor = self->settings->previewZoom / 100.0f;
+    glm::vec2 ndcPan = glm::vec2(-self->settings->previewPanX / (PREVIEW_SIZE.x / 2.0f), -self->settings->previewPanY / (PREVIEW_SIZE.y / 2.0f));
     glm::mat4 previewTransform = glm::translate(glm::mat4(1.0f), glm::vec3(ndcPan, 0.0f));
     previewTransform = glm::scale(previewTransform, glm::vec3(zoomFactor, zoomFactor, 1.0f));
 
     glBindFramebuffer(GL_FRAMEBUFFER, self->fbo);
-    glViewport(0, 0, PREVIEW_SIZE.x, PREVIEW_SIZE.y);
+    glViewport(0, 0, (s32)PREVIEW_SIZE.x, (s32)PREVIEW_SIZE.y);
 
     glClearColor
     (
-        self->settings->backgroundColorR, 
-        self->settings->backgroundColorG, 
-        self->settings->backgroundColorB, 
-        self->settings->backgroundColorA
+        self->settings->previewBackgroundColorR, 
+        self->settings->previewBackgroundColorG, 
+        self->settings->previewBackgroundColorB, 
+        self->settings->previewBackgroundColorA
     ); 
     glClear(GL_COLOR_BUFFER_BIT);
 
-    glUseProgram(shaderLine);
-    glUniformMatrix4fv(glGetUniformLocation(shaderLine, SHADER_UNIFORM_TRANSFORM), 1, GL_FALSE, (f32*)value_ptr(previewTransform));
-
-    if (self->settings->isGrid)
+    /* Grid */
+    if (self->settings->previewIsGrid)
     {
         if 
         (
-            (ivec2(self->settings->gridSizeX, self->settings->gridSizeY) != self->oldGridSize) ||
-            (ivec2(self->settings->gridOffsetX, self->settings->gridOffsetY) != self->oldGridOffset)
+            (ivec2(self->settings->previewGridSizeX, self->settings->previewGridSizeY) != self->oldGridSize) ||
+            (ivec2(self->settings->previewGridOffsetX, self->settings->previewGridOffsetY) != self->oldGridOffset)
         )
             _preview_grid_set(self);
 
+        glUseProgram(shaderLine);
         glBindVertexArray(self->gridVAO);
+        glUniformMatrix4fv(glGetUniformLocation(shaderLine, SHADER_UNIFORM_TRANSFORM), 1, GL_FALSE, (f32*)value_ptr(previewTransform));
         
         glUniform4f
         (
             glGetUniformLocation(shaderLine, SHADER_UNIFORM_COLOR),
-            self->settings->gridColorR, self->settings->gridColorG, self->settings->gridColorB, self->settings->gridColorA
+            self->settings->previewGridColorR, self->settings->previewGridColorG, self->settings->previewGridColorB, self->settings->previewGridColorA
         );
 
         glDrawArrays(GL_LINES, 0, self->gridVertexCount);
     
         glBindVertexArray(0);
+        glUseProgram(0);
     }
 
-    if (self->settings->isAxis)
+    /* Axes */
+    if (self->settings->previewIsAxis)
     {
+        glUseProgram(shaderLine);
         glBindVertexArray(self->axisVAO);
 
-        /* Axes */
+        glUniformMatrix4fv(glGetUniformLocation(shaderLine, SHADER_UNIFORM_TRANSFORM), 1, GL_FALSE, (f32*)value_ptr(previewTransform));
+
         glUniform4f
         (
             glGetUniformLocation(shaderLine, SHADER_UNIFORM_COLOR), 
-            self->settings->axisColorR, self->settings->axisColorG, self->settings->axisColorB, self->settings->axisColorA
+            self->settings->previewAxisColorR, self->settings->previewAxisColorG, self->settings->previewAxisColorB, self->settings->previewAxisColorA
         );
+
         glDrawArrays(GL_LINES, 0, 2);
+        
         glUniform4f
         (
             glGetUniformLocation(shaderLine, SHADER_UNIFORM_COLOR), 
-            self->settings->axisColorR, self->settings->axisColorG, self->settings->axisColorB, self->settings->axisColorA
+            self->settings->previewAxisColorR, self->settings->previewAxisColorG, self->settings->previewAxisColorB, self->settings->previewAxisColorA
         );
+
         glDrawArrays(GL_LINES, 2, 2);
 
-        
+
         glBindVertexArray(0);
+        glUseProgram(0);
     }
 
-    glUseProgram(0);
- 
-    glUseProgram(shaderTexture);
-    
+    /* Animation */
     if (self->animationID > -1)
     {
         Anm2Frame rootFrame = Anm2Frame{};
@@ -230,63 +245,53 @@ preview_draw(Preview* self)
         /* Layers (Reversed) */
         for (auto & [id, layerAnimation] : animation->layerAnimations)
         {
-            Anm2Layer* layer = &self->anm2->layers[id];
-            Anm2Frame frame;
-
-            Texture* texture = &self->resources->loadedTextures[layer->spritesheetID];
-
-            if (texture->isInvalid)
-                continue;
-
             if (!layerAnimation.isVisible || layerAnimation.frames.size() <= 0)
                 continue;
 
-            if (!anm2_frame_from_time(self->anm2, animation, &frame, ANM2_LAYER_ANIMATION, id, self->time))
-                continue;
+            Anm2Layer* layer = &self->anm2->layers[id];
+            Anm2Frame frame = layerAnimation.frames[0];
+
+            anm2_frame_from_time(self->anm2, animation, &frame, ANM2_LAYER_ANIMATION, id, self->time);
 
             if (!frame.isVisible)
                 continue;
 
+            Texture* texture = &self->resources->textures[layer->spritesheetID];
+
+            if (texture->isInvalid)
+                continue;
+
             glm::mat4 layerTransform = previewTransform;
-            glm::vec2 previewSize = glm::vec2(PREVIEW_SIZE);
 
-            glm::vec2 scale = self->settings->isRootTransform ?
-                (frame.scale / 100.0f) * (rootFrame.scale / 100.0f) :
-                (frame.scale / 100.0f);
-
-            glm::vec2 position = self->settings->isRootTransform ?
-                (frame.position + rootFrame.position) :
-                frame.position;
-
-            glm::vec2 scaledSize = frame.size * scale;
-            glm::vec2 scaledPivot = frame.pivot * scale;
-
-            glm::vec2 ndcPos = position / (previewSize / 2.0f);
-            glm::vec2 ndcPivotOffset = scaledPivot / (previewSize * 0.5f);
-            glm::vec2 ndcScale = scaledSize / (previewSize * 0.5f);
+            glm::vec2 position = self->settings->previewIsRootTransform ? (frame.position + rootFrame.position) : frame.position;
+            glm::vec2 scale = self->settings->previewIsRootTransform ? (frame.scale / 100.0f) * (rootFrame.scale / 100.0f) : (frame.scale / 100.0f);
+            glm::vec2 ndcPos = position / (PREVIEW_SIZE / 2.0f);
+            glm::vec2 ndcPivotOffset = (frame.pivot * scale) / (PREVIEW_SIZE / 2.0f);
+            glm::vec2 ndcScale = (frame.size * scale) / (PREVIEW_SIZE / 2.0f);
+            f32 rotation = frame.rotation;
 
             layerTransform = glm::translate(layerTransform, glm::vec3(ndcPos - ndcPivotOffset, 0.0f));
             layerTransform = glm::translate(layerTransform, glm::vec3(ndcPivotOffset, 0.0f));
-            layerTransform = glm::rotate(layerTransform, glm::radians(frame.rotation), glm::vec3(0, 0, 1));
+            layerTransform = glm::rotate(layerTransform, glm::radians(rotation), glm::vec3(0, 0, 1));
             layerTransform = glm::translate(layerTransform, glm::vec3(-ndcPivotOffset, 0.0f));
             layerTransform = glm::scale(layerTransform, glm::vec3(ndcScale, 1.0f));
-                        
+
+
             glm::vec2 uvMin = frame.crop / glm::vec2(texture->size);
             glm::vec2 uvMax = (frame.crop + frame.size) / glm::vec2(texture->size);
 
-            f32 vertices[] = {
-                0, 0, uvMin.x, uvMin.y,
-                1, 0, uvMax.x, uvMin.y,
-                1, 1, uvMax.x, uvMax.y,
-                0, 1, uvMin.x, uvMax.y
-            };
+            f32 vertices[] = UV_VERTICES(uvMin, uvMax);
+
+            glUseProgram(shaderTexture);
                         
             glBindVertexArray(self->textureVAO);
             
             glBindBuffer(GL_ARRAY_BUFFER, self->textureVBO);
             glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+            
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, texture->handle);
+            glBindTexture(GL_TEXTURE_2D, texture->id);
+
             glUniform1i(glGetUniformLocation(shaderTexture, SHADER_UNIFORM_TEXTURE), 0);
             glUniform4fv(glGetUniformLocation(shaderTexture, SHADER_UNIFORM_TINT), 1, (f32*)value_ptr(frame.tintRGBA));
             glUniform3fv(glGetUniformLocation(shaderTexture, SHADER_UNIFORM_COLOR_OFFSET), 1, (f32*)value_ptr(frame.offsetRGB));
@@ -294,7 +299,10 @@ preview_draw(Preview* self)
             
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
             
+            glBindVertexArray(0);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
             glBindTexture(GL_TEXTURE_2D, 0);
+            glUseProgram(0);
         }
 
         /* Root */
@@ -302,151 +310,170 @@ preview_draw(Preview* self)
         (isRootFrame && animation->rootAnimation.isVisible && rootFrame.isVisible)
         {
             glm::mat4 rootTransform = previewTransform;
-            glm::vec2 previewSize = {(f32)PREVIEW_SIZE.x, (f32)PREVIEW_SIZE.y};
-            glm::vec2 ndcPos = (rootFrame.position - (PREVIEW_TARGET_SIZE / 2.0f)) / (previewSize / 2.0f);
-            glm::vec2 ndcScale = PREVIEW_TARGET_SIZE / (previewSize * 0.5f);
+            glm::vec2 ndcPos = (rootFrame.position - (ATLAS_SIZES[TEXTURE_TARGET] / 2.0f)) / (PREVIEW_SIZE / 2.0f);
+            glm::vec2 ndcScale = ATLAS_SIZES[TEXTURE_TARGET] / (PREVIEW_SIZE / 2.0f);
+            glm::vec2 ndcPivot = (-ATLAS_SIZES[TEXTURE_TARGET] / 2.0f) / (PREVIEW_SIZE / 2.0f);
 
             rootTransform = glm::translate(rootTransform, glm::vec3(ndcPos, 0.0f));
+            rootTransform = glm::rotate(rootTransform, glm::radians(rootFrame.rotation), glm::vec3(0, 0, 1));
             rootTransform = glm::scale(rootTransform, glm::vec3(ndcScale, 1.0f));
 
-            f32 vertices[] = 
-            {
-                0, 0, 0.0f, 0.0f,
-                1, 0, 1.0f, 0.0f,
-                1, 1, 1.0f, 1.0f,
-                0, 1, 0.0f, 1.0f
-            };
-
+            f32 vertices[] = ATLAS_UV_VERTICES(TEXTURE_TARGET);
+            
+            glUseProgram(shaderTexture);
+            
             glBindVertexArray(self->textureVAO);
             
             glBindBuffer(GL_ARRAY_BUFFER, self->textureVBO);
             glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+            
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, self->resources->textures[TEXTURE_TARGET].handle);
+            glBindTexture(GL_TEXTURE_2D, self->resources->atlas.id);
+            
             glUniform1i(glGetUniformLocation(shaderTexture, SHADER_UNIFORM_TEXTURE), 0);
             glUniform4fv(glGetUniformLocation(shaderTexture, SHADER_UNIFORM_TINT), 1, value_ptr(PREVIEW_ROOT_TINT));
-            glUniform3fv(glGetUniformLocation(shaderTexture, SHADER_UNIFORM_COLOR_OFFSET), 1, value_ptr(PREVIEW_ROOT_COLOR_OFFSET));
+            glUniform3fv(glGetUniformLocation(shaderTexture, SHADER_UNIFORM_COLOR_OFFSET), 1, value_ptr(COLOR_OFFSET_NONE));
             glUniformMatrix4fv(glGetUniformLocation(shaderTexture, SHADER_UNIFORM_TRANSFORM), 1, GL_FALSE, value_ptr(rootTransform));
             
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
             
+            glBindVertexArray(0);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
             glBindTexture(GL_TEXTURE_2D, 0);
+            glUseProgram(0);
         }
 
         /* Pivots */
-        if (self->settings->isShowPivot)
+        if (self->settings->previewIsShowPivot)
         {
 		    for (auto it = animation->layerAnimations.rbegin(); it != animation->layerAnimations.rend(); it++)
             {
                 s32 id = it->first;
                 Anm2LayerAnimation layerAnimation = it->second;
 
-                Anm2Layer* layer = &self->anm2->layers[id];
-                Anm2Frame frame;
-
-                Texture* texture = &self->resources->loadedTextures[layer->spritesheetID];
-
                 if (!layerAnimation.isVisible || layerAnimation.frames.size() <= 0)
                     continue;
+                
+                Anm2Frame frame = layerAnimation.frames[0];
 
-                if (!anm2_frame_from_time(self->anm2, animation, &frame, ANM2_LAYER_ANIMATION, id, self->time))
-                    continue;
+                anm2_frame_from_time(self->anm2, animation, &frame, ANM2_LAYER_ANIMATION, id, self->time);
 
                 if (!frame.isVisible)
                     continue;
 
-
-                glm::vec2 scale = self->settings->isRootTransform ?
-                    (frame.scale / 100.0f) * (rootFrame.scale / 100.0f) :
-                    (frame.scale / 100.0f);
-
-                glm::vec2 position = self->settings->isRootTransform ?
-                    (frame.position + rootFrame.position) :
-                    frame.position;
-                    
                 glm::mat4 pivotTransform = previewTransform;
-                glm::vec2 previewSize = {(f32)PREVIEW_SIZE.x, (f32)PREVIEW_SIZE.y};
-                glm::vec2 scaledSize = PREVIEW_PIVOT_SIZE * scale;
-                glm::vec2 ndcPos = (position - (PREVIEW_PIVOT_SIZE / 2.0f)) / (previewSize / 2.0f);
-                glm::vec2 ndcScale = scaledSize / (previewSize * 0.5f);
+                    
+                glm::vec2 position = self->settings->previewIsRootTransform ? (frame.position + rootFrame.position) : frame.position;
+                
+                glm::vec2 ndcPos = (position - (ATLAS_SIZES[TEXTURE_PIVOT] / 2.0f)) / (PREVIEW_SIZE / 2.0f);
+                glm::vec2 ndcScale = ATLAS_SIZES[TEXTURE_PIVOT] / (PREVIEW_SIZE / 2.0f);
 
                 pivotTransform = glm::translate(pivotTransform, glm::vec3(ndcPos, 0.0f));
                 pivotTransform = glm::scale(pivotTransform, glm::vec3(ndcScale, 1.0f));
 
-                f32 vertices[] = 
-                {
-                    0, 0, 0.0f, 0.0f,
-                    1, 0, 1.0f, 0.0f,
-                    1, 1, 1.0f, 1.0f,
-                    0, 1, 0.0f, 1.0f
-                };
-
+                f32 vertices[] = ATLAS_UV_VERTICES(TEXTURE_PIVOT);
+                
+                glUseProgram(shaderTexture);
+                
                 glBindVertexArray(self->textureVAO);
                 
                 glBindBuffer(GL_ARRAY_BUFFER, self->textureVBO);
                 glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+                
                 glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, self->resources->textures[TEXTURE_PIVOT].handle);
+                glBindTexture(GL_TEXTURE_2D, self->resources->atlas.id);
+                
                 glUniform1i(glGetUniformLocation(shaderTexture, SHADER_UNIFORM_TEXTURE), 0);
                 glUniform4fv(glGetUniformLocation(shaderTexture, SHADER_UNIFORM_TINT), 1, value_ptr(PREVIEW_PIVOT_TINT));
-                glUniform3fv(glGetUniformLocation(shaderTexture, SHADER_UNIFORM_COLOR_OFFSET), 1, value_ptr(PREVIEW_PIVOT_COLOR_OFFSET));
+                glUniform3fv(glGetUniformLocation(shaderTexture, SHADER_UNIFORM_COLOR_OFFSET), 1, value_ptr(COLOR_OFFSET_NONE));
                 glUniformMatrix4fv(glGetUniformLocation(shaderTexture, SHADER_UNIFORM_TRANSFORM), 1, GL_FALSE, value_ptr(pivotTransform));
                 
                 glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
                 
+                glBindVertexArray(0);
+                glBindBuffer(GL_ARRAY_BUFFER, 0);
                 glBindTexture(GL_TEXTURE_2D, 0);
+                glUseProgram(0); 
             }
         }
 
         /* Nulls */
         for (auto & [id, nullAnimation] : animation->nullAnimations)
         {
-            Anm2Frame frame;
-
             if (!nullAnimation.isVisible || nullAnimation.frames.size() <= 0)
                 continue;
 
-            if (!anm2_frame_from_time(self->anm2, animation, &frame, ANM2_NULL_ANIMATION, id, self->time))
-                continue;
+            Anm2Frame frame = nullAnimation.frames[0];
+            
+            anm2_frame_from_time(self->anm2, animation, &frame, ANM2_NULL_ANIMATION, id, self->time);
 
             if (!frame.isVisible)
                 continue;
 
-            glm::mat4 nullTransform = previewTransform;
-            glm::vec2 previewSize = {(f32)PREVIEW_SIZE.x, (f32)PREVIEW_SIZE.y};
-            
-            glm::vec2 pos = self->settings->isRootTransform ? 
-            frame.position + (rootFrame.position) - (PREVIEW_TARGET_SIZE / 2.0f): 
-            frame.position - (PREVIEW_TARGET_SIZE / 2.0f);
+            Anm2Null* null = NULL;
 
-            glm::vec2 ndcPos = pos / (previewSize / 2.0f);
-            glm::vec2 ndcScale = PREVIEW_TARGET_SIZE / (previewSize * 0.5f);
+            null = &self->anm2->nulls[id];
+
+            glm::mat4 nullTransform = previewTransform;
+
+            TextureType textureType = null->isShowRect ? TEXTURE_SQUARE : TEXTURE_TARGET;
+            glm::vec2 size = null->isShowRect ? PREVIEW_POINT_SIZE : ATLAS_SIZES[TEXTURE_TARGET];
+            glm::vec2 pos = self->settings->previewIsRootTransform ? frame.position + (rootFrame.position) - (size / 2.0f) : frame.position - (size / 2.0f);
+
+            glm::vec2 ndcPos = pos / (PREVIEW_SIZE / 2.0f);
+            glm::vec2 ndcScale = size / (PREVIEW_SIZE / 2.0f);
 
             nullTransform = glm::translate(nullTransform, glm::vec3(ndcPos, 0.0f));
             nullTransform = glm::scale(nullTransform, glm::vec3(ndcScale, 1.0f));
 
-           f32 vertices[] = 
-            {
-                0, 0, 0.0f, 0.0f,
-                1, 0, 1.0f, 0.0f,
-                1, 1, 1.0f, 1.0f,
-                0, 1, 0.0f, 1.0f
-            };
+            f32 vertices[] = ATLAS_UV_VERTICES(textureType);
+            
+            glUseProgram(shaderTexture);
 
             glBindVertexArray(self->textureVAO);
             
             glBindBuffer(GL_ARRAY_BUFFER, self->textureVBO);
             glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+            
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, self->resources->textures[TEXTURE_TARGET].handle);
+            glBindTexture(GL_TEXTURE_2D, self->resources->atlas.id);
+            
             glUniform1i(glGetUniformLocation(shaderTexture, SHADER_UNIFORM_TEXTURE), 0);
             glUniform4fv(glGetUniformLocation(shaderTexture, SHADER_UNIFORM_TINT), 1, value_ptr(PREVIEW_NULL_TINT));
-            glUniform3fv(glGetUniformLocation(shaderTexture, SHADER_UNIFORM_COLOR_OFFSET), 1, value_ptr(PREVIEW_NULL_COLOR_OFFSET));
+            glUniform3fv(glGetUniformLocation(shaderTexture, SHADER_UNIFORM_COLOR_OFFSET), 1, value_ptr(COLOR_OFFSET_NONE));
             glUniformMatrix4fv(glGetUniformLocation(shaderTexture, SHADER_UNIFORM_TRANSFORM), 1, GL_FALSE, value_ptr(nullTransform));
             
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
             
             glBindTexture(GL_TEXTURE_2D, 0);
+            glBindVertexArray(0);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+            glUseProgram(0);
+
+            if (null->isShowRect)
+            {
+                glm::mat4 rectTransform = previewTransform;  
+
+                glm::vec2 rectPos = pos - (PREVIEW_NULL_RECT_SIZE / 2.0f);  
+                glm::vec2 rectNDCPos = rectPos / (PREVIEW_SIZE / 2.0f);  
+                glm::vec2 rectNDCScale = PREVIEW_NULL_RECT_SIZE / (PREVIEW_SIZE / 2.0f);  
+
+                rectTransform = glm::translate(rectTransform, glm::vec3(rectNDCPos, 0.0f));  
+                rectTransform = glm::scale(rectTransform, glm::vec3(rectNDCScale, 1.0f));  
+
+                glUseProgram(shaderLine);
+
+                glBindVertexArray(self->rectVAO);
+
+                glUniformMatrix4fv(glGetUniformLocation(shaderLine, SHADER_UNIFORM_TRANSFORM), 1, GL_FALSE, glm::value_ptr(rectTransform));
+
+                glUniform4fv(glGetUniformLocation(shaderLine, SHADER_UNIFORM_COLOR), 1, glm::value_ptr(PREVIEW_NULL_TINT));
+
+                glDrawArrays(GL_LINE_LOOP, 0, 4);
+
+                glBindVertexArray(0);
+                glUseProgram(0);
+            }
         }
    }
 
@@ -461,6 +488,4 @@ preview_free(Preview* self)
     glDeleteTextures(1, &self->texture);
     glDeleteFramebuffers(1, &self->fbo);
     glDeleteRenderbuffers(1, &self->rbo);
-
-    memset(self, '\0', sizeof(Preview));
 }

@@ -32,6 +32,7 @@ _tick(State* state)
 	SDL_GetWindowSize(state->window, &state->settings.windowW, &state->settings.windowH);
 
 	input_tick(&state->input);
+	editor_tick(&state->editor);
 	preview_tick(&state->preview);
 	dialog_tick(&state->dialog);
 	imgui_tick(&state->imgui);
@@ -40,6 +41,7 @@ _tick(State* state)
 static void 
 _draw(State* state)
 {
+	editor_draw(&state->editor);
 	preview_draw(&state->preview);
 	imgui_draw(&state->imgui);
 
@@ -97,6 +99,7 @@ init(State* state)
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  
 	glDisable(GL_DEPTH_TEST);
+	glLineWidth(LINE_WIDTH);
 
 	printf(STRING_INFO_GLEW_INIT);
 
@@ -104,7 +107,8 @@ init(State* state)
 	dialog_init(&state->dialog, &state->anm2, &state->resources, state->window);
 	
 	preview_init(&state->preview, &state->anm2, &state->resources, &state->input, &state->settings);
-
+	editor_init(&state->editor, &state->resources, &state->settings);
+	
 	imgui_init
 	(
 		&state->imgui,
@@ -112,6 +116,7 @@ init(State* state)
 		&state->resources,
 		&state->input,
 		&state->anm2,
+		&state->editor,
 		&state->preview,
 		&state->settings,
 		state->window, 
@@ -154,6 +159,7 @@ quit(State* state)
 	imgui_free(&state->imgui);
 	settings_save(&state->settings);
 	preview_free(&state->preview);
+	editor_free(&state->editor);
 	resources_free(&state->resources);
 
 	SDL_GL_DestroyContext(state->glContext);
