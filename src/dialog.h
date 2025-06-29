@@ -26,6 +26,7 @@ enum DialogType
 struct Dialog
 {
     Anm2* anm2 = NULL;
+    Anm2Reference* reference = NULL;
     Resources* resources = NULL;
     SDL_Window* window = NULL;
     s32 replaceID = -1;
@@ -34,7 +35,7 @@ struct Dialog
     bool isSelected = false;
 };
 
-void dialog_init(Dialog* self, Anm2* anm2, Resources* resources, SDL_Window* window);
+void dialog_init(Dialog* self, Anm2* anm2, Anm2Reference* reference, Resources* resources, SDL_Window* window);
 void dialog_anm2_open(Dialog* self);
 void dialog_png_open(Dialog* self);
 void dialog_png_replace(Dialog* self);

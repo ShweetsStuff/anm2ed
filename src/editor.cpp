@@ -1,8 +1,8 @@
 #include "editor.h"
 
-static void _editor_grid_set(Editor* self);
+static s32 _editor_grid_set(Editor* self);
 
-static void
+static s32
 _editor_grid_set(Editor* self)
 {
     std::vector<f32> vertices;
@@ -34,19 +34,32 @@ _editor_grid_set(Editor* self)
         vertices.push_back(normY);
     }
 
-    self->gridVertexCount = (s32)vertices.size();
-    
     glBindVertexArray(self->gridVAO);
     glBindBuffer(GL_ARRAY_BUFFER, self->gridVBO);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(f32), vertices.data(), GL_DYNAMIC_DRAW);
 
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(f32), (void*)0);
+
+    return (s32)vertices.size();
 }
 
 void
-editor_init(Editor* self, Resources* resources, Settings* settings)
+editor_init
+(
+    Editor* self, 
+    Anm2* anm2, 
+    Anm2Reference* reference, 
+    s32* animationID, 
+    s32* spritesheetID, 
+    Resources* resources, 
+    Settings* settings
+)
 {
+    self->anm2 = anm2;
+    self->reference = reference;
+    self->animationID = animationID;
+    self->spritesheetID = spritesheetID;
     self->resources = resources;
     self->settings = settings;
 
@@ -140,9 +153,9 @@ editor_draw(Editor* self)
 
     glClear(GL_COLOR_BUFFER_BIT);
 
-    if (self->spritesheetID > -1)
+    if (*self->spritesheetID > -1)
     {
-        Texture* texture = &self->resources->textures[self->spritesheetID];
+        Texture* texture = &self->resources->textures[*self->spritesheetID];
 
         glm::mat4 spritesheetTransform = editorTransform;
         glm::vec2 ndcScale = glm::vec2(texture->size.x, texture->size.y) / (EDITOR_SIZE * 0.5f);
@@ -186,12 +199,16 @@ editor_draw(Editor* self)
             glUseProgram(0);
         }
 
-        if (self->isFrame)
+        Anm2Frame* frame = (Anm2Frame*)anm2_frame_from_reference(self->anm2, self->reference, *self->animationID);
+
+        /* Draw the layer frame's crop and pivot */
+        if (frame && self->reference->type == ANM2_LAYER)
         {
+            /* Rect */
             glm::mat4 rectTransform = editorTransform;  
 
-            glm::vec2 rectNDCPos = self->frame.crop / (EDITOR_SIZE / 2.0f);  
-            glm::vec2 rectNDCScale = self->frame.size / (EDITOR_SIZE * 0.5f);
+            glm::vec2 rectNDCPos = frame->crop / (EDITOR_SIZE / 2.0f);  
+            glm::vec2 rectNDCScale = frame->size / (EDITOR_SIZE / 2.0f);
 
             rectTransform = glm::translate(rectTransform, glm::vec3(rectNDCPos, 0.0f));  
             rectTransform = glm::scale(rectTransform, glm::vec3(rectNDCScale, 1.0f));
@@ -208,9 +225,10 @@ editor_draw(Editor* self)
             glBindVertexArray(0);
             glUseProgram(0);
 
+            /* Pivot */
             glm::mat4 pivotTransform = editorTransform;
-            glm::vec2 pivotNDCPos = self->frame.pivot / (EDITOR_SIZE / 2.0f);
-            glm::vec2 pivotNDCScale = ATLAS_SIZES[TEXTURE_PIVOT] / (EDITOR_SIZE * 0.5f);
+            glm::vec2 pivotNDCPos = ((frame->crop + frame->pivot) - (EDITOR_PIVOT_SIZE / 2.0f)) / (EDITOR_SIZE / 2.0f);
+            glm::vec2 pivotNDCScale = EDITOR_PIVOT_SIZE / (EDITOR_SIZE / 2.0f);
 
             pivotTransform = glm::translate(pivotTransform, glm::vec3(pivotNDCPos, 0.0f));
             pivotTransform = glm::scale(pivotTransform, glm::vec3(pivotNDCScale, 1.0f));
@@ -244,16 +262,21 @@ editor_draw(Editor* self)
 
     if (self->settings->editorIsGrid)
     {
-        if 
-        (
-            (ivec2(self->settings->editorGridSizeX, self->settings->editorGridSizeY) != self->oldGridSize) ||
-            (ivec2(self->settings->editorGridOffsetX, self->settings->editorGridOffsetY) != self->oldGridOffset)
-        )
-            _editor_grid_set(self);
+        static ivec2 previousGridSize = {-1, -1};
+        static ivec2 previousGridOffset = {-1, -1};
+        static s32 gridVertexCount = -1;
+        ivec2 gridSize = ivec2(self->settings->editorGridSizeX, self->settings->editorGridSizeY);
+        ivec2 gridOffset = ivec2(self->settings->editorGridOffsetX, self->settings->editorGridOffsetY);
+
+        if (previousGridSize != gridSize || previousGridOffset != gridOffset)
+        {
+            gridVertexCount = _editor_grid_set(self);
+            previousGridSize = gridSize;
+            previousGridOffset = gridOffset;
+        }
 
         glUseProgram(shaderLine);
         glBindVertexArray(self->gridVAO);
-    
         glUniformMatrix4fv(glGetUniformLocation(shaderLine, SHADER_UNIFORM_TRANSFORM), 1, GL_FALSE, (f32*)value_ptr(editorTransform));
         
         glUniform4f
@@ -262,7 +285,7 @@ editor_draw(Editor* self)
             self->settings->editorGridColorR, self->settings->editorGridColorG, self->settings->editorGridColorB, self->settings->editorGridColorA
         );
 
-        glDrawArrays(GL_LINES, 0, self->gridVertexCount);
+        glDrawArrays(GL_LINES, 0, gridVertexCount);
     
         glBindVertexArray(0);
         glUseProgram(0);
@@ -275,8 +298,6 @@ void
 editor_tick(Editor* self)
 {
     self->settings->editorZoom = CLAMP(self->settings->editorZoom, EDITOR_ZOOM_MIN, EDITOR_ZOOM_MAX);
-    self->oldGridSize = glm::vec2(self->settings->editorGridSizeX, self->settings->editorGridSizeY);
-    self->oldGridOffset = glm::vec2(self->settings->editorGridOffsetX, self->settings->editorGridOffsetY);
 }
 
 void

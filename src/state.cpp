@@ -34,6 +34,7 @@ _tick(State* state)
 	input_tick(&state->input);
 	editor_tick(&state->editor);
 	preview_tick(&state->preview);
+	tool_tick(&state->tool);
 	dialog_tick(&state->dialog);
 	imgui_tick(&state->imgui);
 }
@@ -104,10 +105,29 @@ init(State* state)
 	printf(STRING_INFO_GLEW_INIT);
 
 	resources_init(&state->resources);
-	dialog_init(&state->dialog, &state->anm2, &state->resources, state->window);
-	
-	preview_init(&state->preview, &state->anm2, &state->resources, &state->input, &state->settings);
-	editor_init(&state->editor, &state->resources, &state->settings);
+	dialog_init(&state->dialog, &state->anm2, &state->reference, &state->resources, state->window);
+	tool_init(&state->tool, &state->input);
+
+	preview_init
+	(
+		&state->preview, 
+		&state->anm2, 
+		&state->reference, 
+		&state->animationID,
+		&state->resources, 
+		&state->settings
+	);
+
+	editor_init
+	(
+		&state->editor, 
+		&state->anm2, 
+		&state->reference, 
+		&state->animationID, 
+		&state->spritesheetID, 
+		&state->resources, 
+		&state->settings
+	);
 	
 	imgui_init
 	(
@@ -116,10 +136,14 @@ init(State* state)
 		&state->resources,
 		&state->input,
 		&state->anm2,
+		&state->reference,
+		&state->animationID,
+		&state->spritesheetID,
 		&state->editor,
 		&state->preview,
 		&state->settings,
-		state->window, 
+		&state->tool,
+		state->window,
 		&state->glContext
 	);
 
@@ -144,10 +168,11 @@ loop(State* state)
         	SDL_Delay(TICK_DELAY - (state->tick - state->lastTick));
 
 		_tick(state);
-		_draw(state);
 
 		state->lastTick = state->tick;
 	}
+
+	_draw(state);
 }
 
 void

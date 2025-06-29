@@ -15,6 +15,9 @@ static const vec2 PREVIEW_CENTER = {0, 0};
 #define PREVIEW_GRID_MAX 1000
 #define PREVIEW_GRID_OFFSET_MIN 0
 #define PREVIEW_GRID_OFFSET_MAX 100
+#define PREVIEW_MOVE_STEP 1
+#define PREVIEW_ROTATE_STEP 1
+#define PREVIEW_SCALE_STEP 1
 
 static const f32 PREVIEW_AXIS_VERTICES[] = 
 {
@@ -26,16 +29,20 @@ static const f32 PREVIEW_AXIS_VERTICES[] =
 
 static const vec2 PREVIEW_NULL_RECT_SIZE = {100, 100};
 static const vec2 PREVIEW_POINT_SIZE = {2, 2};
+static const vec2 PREVIEW_PIVOT_SIZE = {4, 4};
 static const vec4 PREVIEW_ROOT_TINT = COLOR_GREEN;
 static const vec4 PREVIEW_NULL_TINT = COLOR_BLUE;
 static const vec4 PREVIEW_PIVOT_TINT = COLOR_RED;
+static const vec2 PREVIEW_TARGET_SIZE = {16, 16};
 
 struct Preview
 {
     Anm2* anm2 = NULL;
+    Anm2Reference* reference = NULL;
     Input* input = NULL;
     Resources* resources = NULL;
     Settings* settings = NULL;
+    s32* animationID = NULL;
     GLuint axisVAO;
     GLuint axisVBO;
     GLuint fbo;
@@ -50,14 +57,9 @@ struct Preview
     GLuint textureVBO;
     bool isPlaying = false;
     f32 time = 0;
-    ivec2 oldGridOffset = {-1, -1};
-    ivec2 oldGridSize = {-1, -1};
-    ivec2 viewport = PREVIEW_SIZE;
-    s32 animationID = -1;
-    s32 gridVertexCount = -1;
 };
 
-void preview_init(Preview* self, Anm2* anm2, Resources* resources, Input* input, Settings* settings);
+void preview_init(Preview* self, Anm2* anm2, Anm2Reference* reference, s32* animationID, Resources* resources, Settings* settings);
 void preview_draw(Preview* self);
 void preview_tick(Preview* self);
 void preview_free(Preview* self);

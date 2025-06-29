@@ -52,6 +52,7 @@ enum SettingsItem
     SETTINGS_PREVIEW_BACKGROUND_COLOR_B,
     SETTINGS_PREVIEW_BACKGROUND_COLOR_A,
     SETTINGS_EDITOR_IS_GRID,
+    SETTINGS_EDITOR_IS_GRID_SNAP,
     SETTINGS_EDITOR_IS_BORDER,
     SETTINGS_EDITOR_PAN_X,
     SETTINGS_EDITOR_PAN_Y,
@@ -98,6 +99,7 @@ struct Settings
     f32 previewBackgroundColorB = 0.286f;
     f32 previewBackgroundColorA = 1.0f;
     bool editorIsGrid = true;
+    bool editorIsGridSnap = true;
     bool editorIsBorder = true;
     f32 editorPanX = 0.0f;
     f32 editorPanY = 0.0f;
@@ -144,6 +146,7 @@ static const SettingsEntry SETTINGS_ENTRIES[SETTINGS_COUNT] =
     {"previewBackgroundColorB=", "previewBackgroundColorB=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewBackgroundColorB)},
     {"previewBackgroundColorA=", "previewBackgroundColorA=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewBackgroundColorA)},
     {"editorIsGrid=", "editorIsGrid=%i", SETTINGS_TYPE_BOOL, offsetof(Settings, editorIsGrid)},
+    {"editorIsGridSnap=", "editorIsGridSnap=%i", SETTINGS_TYPE_BOOL, offsetof(Settings, editorIsGridSnap)},
     {"editorIsBorder=", "editorIsBorder=%i", SETTINGS_TYPE_BOOL, offsetof(Settings, editorIsBorder)},
     {"editorPanX=", "editorPanX=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorPanX)},
     {"editorPanY=", "editorPanY=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorPanY)},

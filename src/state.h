@@ -18,14 +18,18 @@ struct State
 	Editor editor;
 	Preview preview;
     Anm2 anm2;
+	Anm2Reference reference;
 	Resources resources;
 	Settings settings;
+	Tool tool;
+	bool isArgument = false;
+	bool isRunning = true;
 	char argument[PATH_MAX] = STRING_EMPTY;
 	char startPath[PATH_MAX] = STRING_EMPTY;
-	bool isArgument = false;
-	u64 tick = 0;
+	s32 animationID = -1;
+	s32 spritesheetID = -1;
 	u64 lastTick = 0;
-	bool isRunning = true;
+	u64 tick = 0;
 }; 
 
 void init(State* state);

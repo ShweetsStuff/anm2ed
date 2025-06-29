@@ -13,12 +13,17 @@
 #define EDITOR_GRID_OFFSET_MAX 100
 
 static const vec2 EDITOR_SIZE = {5000, 5000};
+static const vec2 EDITOR_PIVOT_SIZE = {4, 4};
 static const vec4 EDITOR_TEXTURE_TINT = COLOR_OPAQUE;
 static const vec4 EDITOR_BORDER_TINT = COLOR_OPAQUE;
 static const vec4 EDITOR_FRAME_TINT = COLOR_RED;
 
 struct Editor
 {
+    Anm2* anm2 = NULL;
+    Anm2Reference* reference = NULL;
+    s32* animationID = NULL;
+    s32* spritesheetID = NULL;
     Resources* resources = NULL;
     Settings* settings = NULL;
     GLuint fbo;
@@ -31,16 +36,19 @@ struct Editor
     GLuint textureVBO;
     GLuint borderVAO;
     GLuint borderVBO;
-    s32 gridVertexCount = -1;
-    s32 spritesheetID = -1;
-    s32 oldSpritesheetID = -1;
-    ivec2 oldGridSize = {-1, -1};
-    ivec2 oldGridOffset = {-1, -1};
-    Anm2Frame frame;
-    bool isFrame = false;
 };
 
-void editor_init(Editor* self, Resources* resources, Settings* settings);
+void editor_init
+(
+    Editor* self, 
+    Anm2* anm2, 
+    Anm2Reference* reference, 
+    s32* animationID, 
+    s32* spritesheetID, 
+    Resources* resources, 
+    Settings* settings
+);
+
 void editor_draw(Editor* self);
 void editor_tick(Editor* self);
 void editor_free(Editor* self);

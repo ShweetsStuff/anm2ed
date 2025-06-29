@@ -108,17 +108,35 @@ static inline s32 map_next_id_get(const std::map<s32, T>& map) {
     s32 id = 0; for (const auto& [key, _] : map) if (key != id) break; else ++id; return id;
 }
 
+/* Swaps elements in a map */
+/* If neither key exists, do nothing */
+/* If one key exists, change its ID */
+/* If both keys exist, swap */
 template<typename Map, typename Key>
 static inline void map_swap(Map& map, const Key& key1, const Key& key2)
 {
+    if (key1 == key2)
+        return;
+    
     auto it1 = map.find(key1);
     auto it2 = map.find(key2);
-    if (it1 == map.end() || it2 == map.end())
-        return;
 
-    using std::swap;
-    swap(it1->second, it2->second);
-}
+    if (it1 != map.end() && it2 != map.end()) 
+    {
+        using std::swap;
+        swap(it1->second, it2->second);
+    } 
+    else if (it1 != map.end()) 
+    {
+        map[key2] = std::move(it1->second);
+        map.erase(it1);
+    } 
+    else if (it2 != map.end()) 
+    {
+        map[key1] = std::move(it2->second);
+        map.erase(it2);
+    }
+};
 
 #define DEFINE_ENUM_TO_STRING_FN(fn_name, arr, count) \
     static inline const char* fn_name(s32 index) {   \

@@ -14,6 +14,7 @@
 #define ANM2_FPS_MAX 120
 #define ANM2_FRAME_NUM_MIN 1
 #define ANM2_FRAME_NUM_MAX 1000000
+#define ANM2_FRAME_DELAY_MIN 1
 
 /* Elements */
 #define ANM2_ELEMENT_LIST \
@@ -108,14 +109,14 @@ static const char* ANM2_ATTRIBUTE_STRINGS[] = {
 
 DEFINE_STRING_TO_ENUM_FN(anm2_attribute_from_string, Anm2Attribute, ANM2_ATTRIBUTE_STRINGS, ANM2_ATTRIBUTE_COUNT)
 
-#define ANM2_ANIMATION_TYPE_COUNT (ANM2_ANIMATION_TRIGGERS + 1)
-enum Anm2AnimationType
+#define ANM2_COUNT (ANM2_TRIGGER + 1)
+enum Anm2Type
 {
     ANM2_NONE,
-	ANM2_ROOT_ANIMATION,
-	ANM2_LAYER_ANIMATION,
-	ANM2_NULL_ANIMATION,
-    ANM2_TRIGGER
+	ANM2_ROOT,
+	ANM2_LAYER,
+	ANM2_NULL,
+    ANM2_TRIGGERS
 };
 
 struct Anm2Spritesheet
@@ -140,18 +141,14 @@ struct Anm2Event
 	char name[ANM2_STRING_MAX] = STRING_ANM2_NEW_EVENT;
 };
 
-struct Anm2Trigger
-{
-	s32 eventID = -1;
-	s32 atFrame = -1;
-};
-
 struct Anm2Frame
 {
 	bool isInterpolated = false;
 	bool isVisible = true;
 	f32 rotation = 1.0f;
-	s32 delay = 1;
+	s32 delay = ANM2_FRAME_DELAY_MIN;
+    s32 atFrame = -1;
+    s32 eventID = -1;
 	vec2 crop = {0.0f, 0.0f};
 	vec2 pivot = {0.0f, 0.0f};
 	vec2 position = {0.0f, 0.0f};
@@ -161,28 +158,10 @@ struct Anm2Frame
 	vec4 tintRGBA = {1.0f, 1.0f, 1.0f, 1.0f};
 };
 
-struct Anm2LayerAnimation
-{
-	bool isVisible = true;
-	std::vector<Anm2Frame> frames;
-};
-
-struct Anm2NullAnimation
-{
-	bool isVisible = true;
-	std::vector<Anm2Frame> frames;
-};
-
-struct Anm2RootAnimation
+struct Anm2Item
 {
     bool isVisible = true;
 	std::vector<Anm2Frame> frames;
-};
-
-struct Anm2Triggers
-{
-    bool isVisible = true;
-    std::vector<Anm2Trigger> items;
 };
 
 struct Anm2Animation
@@ -190,10 +169,10 @@ struct Anm2Animation
 	s32 frameNum = ANM2_FRAME_NUM_MIN;
 	char name[ANM2_STRING_MAX] = STRING_ANM2_NEW_ANIMATION;
 	bool isLoop = true;
-	Anm2RootAnimation rootAnimation;
-    std::map<s32, Anm2LayerAnimation> layerAnimations; 
-	std::map<s32, Anm2NullAnimation> nullAnimations;
-    Anm2Triggers triggers;
+    Anm2Item rootAnimation;
+    std::map<s32, Anm2Item> layerAnimations;
+    std::map<s32, Anm2Item> nullAnimations;
+    Anm2Item triggers;
 };
 
 struct Anm2 
@@ -211,6 +190,15 @@ struct Anm2
 	std::map<s32, Anm2Animation> animations; 
 };
 
+struct Anm2Reference
+{
+    Anm2Type type = ANM2_NONE;
+    s32 id = -1;
+    s32 index = -1;
+
+    auto operator<=>(const Anm2Reference&) const = default; 
+};
+
 void anm2_layer_add(Anm2* self);
 void anm2_layer_remove(Anm2* self, s32 id);
 void anm2_null_add(Anm2* self);
@@ -222,4 +210,8 @@ void anm2_created_on_set(Anm2* self);
 s32 anm2_animation_add(Anm2* self);
 void anm2_animation_remove(Anm2* self, s32 id);
 void anm2_spritesheet_texture_load(Anm2* self, Resources* resources, const char* path, s32 id);
-bool anm2_frame_from_time(Anm2* self, Anm2Animation* animation, Anm2Frame* frame, Anm2AnimationType type, s32 id, f32 time);
+Anm2Animation* anm2_animation_from_id(Anm2* self, s32 animationID);
+Anm2Item* anm2_item_from_reference(Anm2* self, Anm2Reference* reference, s32 animationID);
+Anm2Frame* anm2_frame_from_reference(Anm2* self, Anm2Reference* reference, s32 animationID);
+Anm2Frame* anm2_frame_add(Anm2* self, Anm2Reference* reference, s32 animationID, s32 time);
+void anm2_frame_from_time(Anm2* self, Anm2Frame* frame, Anm2Reference reference, s32 animationID, f32 time);

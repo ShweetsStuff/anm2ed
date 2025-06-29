@@ -7,6 +7,7 @@
 #include "window.h"
 #include "input.h"
 #include "settings.h"
+#include "tool.h"
 
 #define IMGUI_IMPL_OPENGL_LOADER_CUSTOM
 #define IMGUI_ENABLE_DOCKING
@@ -15,8 +16,6 @@
 #include <imgui/backends/imgui_impl_sdl3.h>
 #include <imgui/backends/imgui_impl_opengl3.h>
 
-
-#define IMGUI_TIMELINE_ELEMENT_WIDTH 300
 #define IMGUI_TIMELINE_ELEMENT_WIDTH 300
 
 #define IMGUI_DRAG_SPEED 1.0
@@ -32,14 +31,14 @@
 #define IMGUI_PICKER_LINE_COLOR IM_COL32(255, 255, 255, 255)
 #define IMGUI_TOOLS_WIDTH_INCREMENT -2
 
+#define IMGUI_POSITION_STRING_MAX 0xFF
+
 static const vec2 IMGUI_TASKBAR_MARGINS = {8, 4};
+static const vec2 IMGUI_SPRITESHEET_EDITOR_CROP_FORGIVENESS = {1, 1};
 
 static const ImVec2 IMGUI_ANIMATION_PREVIEW_SETTINGS_SIZE = {1280, 105};
 static const ImVec2 IMGUI_ANIMATION_PREVIEW_SETTINGS_CHILD_SIZE = {200, 85};
 static const ImVec2 IMGUI_ANIMATION_PREVIEW_POSITION = {8, 135};
-
-static const ImVec2 IMGUI_TIMELINE_ELEMENT_NAME_SIZE = {95, 20};
-static const ImVec2 IMGUI_TIMELINE_ELEMENT_SPRITESHEET_ID_SIZE = {45, 20};
 
 static const ImVec2 IMGUI_SPRITESHEET_EDITOR_SETTINGS_CHILD_SIZE = {200, 85};
 static const ImVec2 IMGUI_SPRITESHEET_EDITOR_SETTINGS_SIZE = {1280, 105};
@@ -52,15 +51,13 @@ static const ImVec2 IMGUI_TIMELINE_VIEWER_SIZE = {0, 40};
 static const ImVec2 IMGUI_TIMELINE_ELEMENTS_TIMELINE_SIZE = {0, 40};
 static const ImVec2 IMGUI_TIMELINE_FRAME_INDICES_SIZE = {0, 40};
 static const ImVec2 IMGUI_TIMELINE_ELEMENT_SIZE = {300, 40};
-static const ImVec2 IMGUI_TIMELINE_SHIFT_ARROWS_SIZE = {64, 40};
+static const ImVec2 IMGUI_TIMELINE_ELEMENT_NAME_SIZE = {150, 20};
+static const ImVec2 IMGUI_TIMELINE_ELEMENT_SPRITESHEET_ID_SIZE = {60, 20};
 
 static const ImVec2 IMGUI_SPRITESHEET_SIZE = {0, 150};
 static const ImVec2 IMGUI_SPRITESHEET_PREVIEW_SIZE = {100, 100};
-static const ImVec2 IMGUI_ICON_SIZE = {16, 16};
-static const ImVec2 IMGUI_ICON_SMALL_SIZE = {8, 8};
-static const ImVec2 IMGUI_ICON_DUMMY_SIZE = {20, 16};
-static const ImVec2 IMGUI_ICON_BUTTON_SIZE = {24, 24};
 static const ImVec2 IMGUI_IMAGE_TARGET_SIZE = {125, 125};
+static const ImVec2 IMGUI_ICON_BUTTON_SIZE = {24, 24};
 static const ImVec2 IMGUI_DUMMY_SIZE = {1, 1};
 
 static const ImVec4 IMGUI_TIMELINE_HEADER_COLOR = {0.04, 0.04, 0.04, 1.0f};
@@ -89,15 +86,6 @@ static const ImVec4 IMGUI_TIMELINE_LAYER_ACTIVE_COLOR = {1.000, 0.618, 0.324, 0.
 static const ImVec4 IMGUI_TIMELINE_NULL_ACTIVE_COLOR = {0.646, 0.971, 0.441, 0.75};
 static const ImVec4 IMGUI_TIMELINE_TRIGGERS_ACTIVE_COLOR = {1.000, 0.618, 0.735, 0.75};
 
-#define TOOL_COUNT (TOOL_CROP + 1)
-enum ToolType
-{
-    TOOL_PAN,
-    TOOL_MOVE,
-    TOOL_ROTATE,
-    TOOL_SCALE,
-    TOOL_CROP
-};
 
 struct Imgui
 {  
@@ -105,32 +93,34 @@ struct Imgui
     Resources* resources = NULL;
     Input* input = NULL;
     Anm2* anm2 = NULL;
+    Anm2Reference* reference = NULL;
+    s32* animationID = NULL;
+    s32* spritesheetID = NULL;
     Editor* editor = NULL;
     Preview* preview = NULL;
+    Settings* settings = NULL;
+    Tool* tool = NULL;
     SDL_Window* window = NULL;
     SDL_GLContext* glContext = NULL;
-    Settings* settings = NULL;
-    s32 animationID = -1;
-    s32 timelineElementID = -1;
-    s32 eventID = -1;
-    s32 spritesheetID = -1;
-    s32 timelineElementIndex = -1;
-    Anm2AnimationType animationType = ANM2_NONE;
-    ToolType tool = TOOL_PAN;
-    void* frameVector = NULL;
-    s32 frameIndex = -1;
+    bool isSwap = false;
+    Anm2Reference swapReference;
 };
 
-void imgui_init
+void 
+imgui_init
 (
     Imgui* self,
     Dialog* dialog,
     Resources* resources,
     Input* input,
     Anm2* anm2,
+    Anm2Reference* reference,
+    s32* animationID,
+    s32* spritesheetID,
     Editor* editor,
     Preview* preview,
     Settings* settings,
+    Tool* tool,
     SDL_Window* window,
     SDL_GLContext* glContext
 );

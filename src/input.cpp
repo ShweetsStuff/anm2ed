@@ -29,6 +29,19 @@ _mouse_tick(Mouse* self)
     self->oldPosition = self->position;
 }
 
+static void
+_keyboard_tick(Keyboard* self)
+{
+	const bool* state;
+
+	memcpy(&self->previous, &self->current, sizeof(self->previous));
+	memset(&self->current, '\0', sizeof(self->current));
+
+	state = SDL_GetKeyboardState(NULL);
+
+	memcpy(&self->current, state, KEY_COUNT);
+}
+
 bool
 mouse_press(Mouse* self, MouseType type)
 {
@@ -47,8 +60,27 @@ mouse_release(Mouse* self, MouseType type)
     return (!self->current[type] && self->previous[type]);
 }
 
+bool
+key_press(Keyboard* self, KeyType type)
+{
+	return (self->current[type] && !self->previous[type]);
+}
+
+bool
+key_held(Keyboard* self, KeyType type)
+{
+	return (self->current[type] && self->previous[type]);
+}
+
+bool
+key_release(Keyboard* self, KeyType type)
+{
+	return (!self->current[type] && self->previous[type]);
+}
+
 void
 input_tick(Input* self)
 {
     _mouse_tick(&self->mouse);
+    _keyboard_tick(&self->keyboard);
 }

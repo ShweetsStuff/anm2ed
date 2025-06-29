@@ -19,9 +19,10 @@ _dialog_callback(void* userdata, const char* const* filelist, s32 filter)
 }
 
 void
-dialog_init(Dialog* self, Anm2* anm2, Resources* resources, SDL_Window* window)
+dialog_init(Dialog* self, Anm2* anm2, Anm2Reference* reference, Resources* resources, SDL_Window* window)
 {
 	self->anm2 = anm2;
+	self->reference = reference;
 	self->resources = resources;
 	self->window = window;
 }
@@ -76,6 +77,7 @@ dialog_tick(Dialog* self)
 		switch (self->type)
 		{
 			case DIALOG_ANM2_OPEN:
+				*self->reference = Anm2Reference{};
 				resources_textures_free(self->resources);
 				anm2_deserialize(self->anm2, self->resources, self->path);
 				window_title_from_anm2_set(self->window, self->anm2);
