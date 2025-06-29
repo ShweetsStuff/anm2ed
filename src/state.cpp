@@ -143,6 +143,7 @@ init(State* state)
 		&state->preview,
 		&state->settings,
 		&state->tool,
+		&state->undoStack,
 		state->window,
 		&state->glContext
 	);

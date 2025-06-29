@@ -1842,6 +1842,7 @@ imgui_init
     Preview* preview,
     Settings* settings,
     Tool* tool,
+    UndoStack* undoStack,
     SDL_Window* window,
     SDL_GLContext* glContext
 )
@@ -1859,6 +1860,7 @@ imgui_init
 	self->preview = preview;
 	self->settings = settings;
 	self->tool = tool;
+	self->undoStack = undoStack;
 	self->window = window;
 	self->glContext = glContext;
 
@@ -1923,6 +1925,9 @@ imgui_tick(Imgui* self)
 
 	_imgui_taskbar(self);
 	_imgui_dock(self);
+
+	if (key_press(&self->input->keyboard, INPUT_KEYS[INPUT_UNDO]))
+		undo_stack_pop(self->undoStack, self->anm2);
 }
 
 void

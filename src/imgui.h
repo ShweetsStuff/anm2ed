@@ -8,6 +8,7 @@
 #include "input.h"
 #include "settings.h"
 #include "tool.h"
+#include "undo_stack.h"
 
 #define IMGUI_IMPL_OPENGL_LOADER_CUSTOM
 #define IMGUI_ENABLE_DOCKING
@@ -100,6 +101,7 @@ struct Imgui
     Preview* preview = NULL;
     Settings* settings = NULL;
     Tool* tool = NULL;
+    UndoStack* undoStack = NULL;
     SDL_Window* window = NULL;
     SDL_GLContext* glContext = NULL;
     bool isSwap = false;
@@ -121,6 +123,7 @@ imgui_init
     Preview* preview,
     Settings* settings,
     Tool* tool,
+    UndoStack* undoStack,
     SDL_Window* window,
     SDL_GLContext* glContext
 );

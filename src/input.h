@@ -233,7 +233,7 @@ enum KeyType
         KEY_RGUI = 231
 };
 
-#define INPUT_COUNT (INPUT_ZOOM_OUT + 1)
+#define INPUT_COUNT (INPUT_UNDO + 1)
 enum InputType
 {
     INPUT_PAN,
@@ -247,7 +247,8 @@ enum InputType
     INPUT_ROTATE_LEFT,
     INPUT_ROTATE_RIGHT,
     INPUT_ZOOM_IN,
-    INPUT_ZOOM_OUT
+    INPUT_ZOOM_OUT,
+    INPUT_UNDO
 };
 
 static const KeyType INPUT_KEYS[INPUT_COUNT]
@@ -263,7 +264,8 @@ static const KeyType INPUT_KEYS[INPUT_COUNT]
     KEY_Q,
     KEY_W,
     KEY_1,
-    KEY_2
+    KEY_2,
+    KEY_Z
 };
 
 struct Keyboard
