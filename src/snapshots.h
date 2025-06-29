@@ -14,9 +14,9 @@ struct Snapshots
 {
     SnapshotStack undoStack;
     SnapshotStack redoStack;
-}
+};
 
-
-
+/*
 void undo_stack_push(UndoStack* self, Anm2* anm2);
 bool undo_stack_pop(UndoStack* self, Anm2* anm2);
+*/

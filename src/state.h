@@ -22,7 +22,7 @@ struct State
 	Resources resources;
 	Settings settings;
 	Tool tool;
-	UndoStack undoStack;
+	Snapshots snapshots;
 	bool isArgument = false;
 	bool isRunning = true;
 	char argument[PATH_MAX] = STRING_EMPTY;

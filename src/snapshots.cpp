@@ -1,5 +1,7 @@
-#include "undo_stack.h"
+#include "snapshots.h"
 
+/* TODO */
+/*
 void 
 undo_stack_push(Snapshots* self, Anm2* anm2)
 {
@@ -22,3 +24,4 @@ undo_stack_pop(Snapshots* self, Anm2* anm2)
 
     return true;
 }
+*/
