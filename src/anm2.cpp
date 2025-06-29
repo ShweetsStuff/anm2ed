@@ -431,14 +431,6 @@ anm2_deserialize(Anm2* self, Resources* resources, const char* path)
 				case ANM2_ATTRIBUTE_FPS:
 					self->fps = atoi(xmlAttribute->Value());
 					break;
-				case ANM2_ATTRIBUTE_ID:
-					break;
-				case ANM2_ATTRIBUTE_LAYER_ID:
-					map_swap(animation->layerAnimations, id, atoi(xmlAttribute->Value()));
-					break;
-				case ANM2_ATTRIBUTE_NULL_ID:
-					map_swap(animation->nullAnimations, id, atoi(xmlAttribute->Value()));
-					break;
 				case ANM2_ATTRIBUTE_PATH:
 					strncpy(spritesheet->path, xmlAttribute->Value(), PATH_MAX - 1);
 					break;
