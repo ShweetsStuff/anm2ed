@@ -1,6 +1,6 @@
 # Anm2ed
 
-![Preview](https://shweetz.net/https://shweetz.net/files/projects/anm2ed/preview.png)
+![Preview](https://shweetz.net/files/projects/anm2ed/preview.png)
 
 A reimplementation of *The Binding of Isaac: Rebirth*'s proprietary animation editor. Manipulates the XML-based ".anm2" format, used for in-game tweened animations.
 
