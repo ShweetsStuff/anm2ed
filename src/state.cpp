@@ -57,7 +57,7 @@ init(State* state)
 
 	memset(state->startPath, '\0', PATH_MAX - 1);
 
-	strncpy(state->startPath, startPath.c_str(), PATH_MAX - 1);
+	strncpy(state->startPath, startPath.string().c_str(), PATH_MAX - 1);
 	
 	settings_load(&state->settings);
 	

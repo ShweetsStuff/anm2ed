@@ -72,7 +72,7 @@ dialog_tick(Dialog* self)
 		std::filesystem::path baseDirectory = std::filesystem::current_path();
 		std::filesystem::path relativePathString = std::filesystem::relative(self->path, baseDirectory);
 		
-		strncpy(relativePath, relativePathString.c_str(), PATH_MAX - 1);
+		strncpy(relativePath, relativePathString.string().c_str(), PATH_MAX - 1);
 		
 		switch (self->type)
 		{
