@@ -39,10 +39,10 @@ struct Preview
 {
     Anm2* anm2 = NULL;
     Anm2Reference* reference = NULL;
+    f32* time = NULL;
     Input* input = NULL;
     Resources* resources = NULL;
     Settings* settings = NULL;
-    s32* animationID = NULL;
     GLuint axisVAO;
     GLuint axisVBO;
     GLuint fbo;
@@ -56,10 +56,12 @@ struct Preview
     GLuint textureVAO;
     GLuint textureVBO;
     bool isPlaying = false;
-    f32 time = 0;
+    bool isRecording = false;
+    vec2 recordSize = {0.0f, 0.0f};
 };
 
-void preview_init(Preview* self, Anm2* anm2, Anm2Reference* reference, s32* animationID, Resources* resources, Settings* settings);
+void preview_init(Preview* self, Anm2* anm2, Anm2Reference* reference, f32* time, Resources* resources, Settings* settings);
 void preview_draw(Preview* self);
 void preview_tick(Preview* self);
 void preview_free(Preview* self);
+void preview_record_set(Preview* self);

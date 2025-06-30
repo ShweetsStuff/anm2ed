@@ -30,7 +30,6 @@ shader_init(GLuint* self, const char* vertex, const char* fragment)
 {
 	GLuint vertexHandle;
 	GLuint fragmentHandle;
-	bool isSuccess;
 
 	vertexHandle = glCreateShader(GL_VERTEX_SHADER);
 	fragmentHandle = glCreateShader(GL_FRAGMENT_SHADER);

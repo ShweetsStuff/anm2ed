@@ -60,11 +60,11 @@ _preview_grid_set(Preview* self)
 }
 
 void
-preview_init(Preview* self, Anm2* anm2, Anm2Reference* reference, s32* animationID, Resources* resources, Settings* settings)
+preview_init(Preview* self, Anm2* anm2, Anm2Reference* reference, f32* time, Resources* resources, Settings* settings)
 {
     self->anm2 = anm2;
     self->reference = reference;
-    self->animationID = animationID;
+    self->time = time;
     self->resources = resources;
     self->settings = settings;
 
@@ -140,19 +140,25 @@ preview_tick(Preview* self)
 {
     self->settings->previewZoom = CLAMP(self->settings->previewZoom, PREVIEW_ZOOM_MIN, PREVIEW_ZOOM_MAX);
  
-    Anm2Animation* animation = anm2_animation_from_id(self->anm2, *self->animationID);
+    Anm2Animation* animation = anm2_animation_from_reference(self->anm2, self->reference);
 
     if (animation)
     {
         if (self->isPlaying)
         {  
-            self->time += (f32)self->anm2->fps / TICK_RATE;
+            *self->time += (f32)self->anm2->fps / TICK_RATE;
 
-            if (self->time >= (f32)animation->frameNum - 1)
-                self->time = 0.0f;
+            if (*self->time >= (f32)animation->frameNum - 1)
+            {
+                if (self->settings->playbackIsLoop && !self->isRecording)
+                    *self->time = 0.0f;
+                else
+                    self->isPlaying = false;
+            }
         }
-        else
-            self->time = CLAMP(self->time, 0.0f, (f32)animation->frameNum);
+        
+        if (!self->isPlaying)
+            *self->time = CLAMP(*self->time, 0.0f, (f32)animation->frameNum - 1);
     }
 }
 
@@ -161,6 +167,9 @@ preview_draw(Preview* self)
 {
     GLuint shaderLine = self->resources->shaders[SHADER_LINE];
     GLuint shaderTexture = self->resources->shaders[SHADER_TEXTURE];
+    static bool isRecordThisFrame = false;
+    static f32 recordFrameTimeNext = 0.0f;
+    static s32 recordFrameIndex = 0;
 
     f32 zoomFactor = self->settings->previewZoom / 100.0f;
     glm::vec2 ndcPan = glm::vec2(-self->settings->previewPanX / (PREVIEW_SIZE.x / 2.0f), -self->settings->previewPanY / (PREVIEW_SIZE.y / 2.0f));
@@ -239,13 +248,14 @@ preview_draw(Preview* self)
         glUseProgram(0);
     }
 
-    Anm2Animation* animation = anm2_animation_from_id(self->anm2, *self->animationID);
+    Anm2Animation* animation = anm2_animation_from_reference(self->anm2, self->reference);
     
     /* Animation */
     if (animation)
     {
         Anm2Frame rootFrame;
-        anm2_frame_from_time(self->anm2, &rootFrame, Anm2Reference{ANM2_ROOT, 0, 0}, *self->animationID, self->time);
+        Anm2Frame frame;
+        anm2_frame_from_time(self->anm2, &rootFrame, Anm2Reference{ANM2_ROOT, self->reference->animationID, 0, 0}, *self->time);
 
         /* Layers */
         for (auto & [id, layerAnimation] : animation->layerAnimations)
@@ -253,9 +263,7 @@ preview_draw(Preview* self)
             if (!layerAnimation.isVisible || layerAnimation.frames.size() <= 0)
                 continue;
 
-            Anm2Frame frame;
-
-            anm2_frame_from_time(self->anm2, &frame, Anm2Reference{ANM2_LAYER, id, 0}, *self->animationID, self->time);
+            anm2_frame_from_time(self->anm2, &frame, Anm2Reference{ANM2_LAYER, self->reference->animationID, id, 0}, *self->time);
 
             if (!frame.isVisible)
                 continue;
@@ -351,9 +359,7 @@ preview_draw(Preview* self)
                 if (!layerAnimation.isVisible || layerAnimation.frames.size() <= 0)
                     continue;
                 
-                Anm2Frame frame;
-
-                anm2_frame_from_time(self->anm2, &frame, Anm2Reference{ANM2_LAYER, id, 0}, *self->animationID, self->time);
+                anm2_frame_from_time(self->anm2, &frame, Anm2Reference{ANM2_LAYER, self->reference->animationID, id, 0}, *self->time);
 
                 if (!frame.isVisible)
                     continue;
@@ -361,8 +367,8 @@ preview_draw(Preview* self)
                 glm::mat4 pivotTransform = previewTransform;
                     
                 glm::vec2 position = self->settings->previewIsRootTransform ? (frame.position + rootFrame.position) : frame.position;
-                
-                glm::vec2 ndcPos = (position - (PREVIEW_PIVOT_SIZE / 2.0f)) / (PREVIEW_SIZE / 2.0f);
+
+                glm::vec2 ndcPos = position /(PREVIEW_SIZE / 2.0f);
                 glm::vec2 ndcScale = PREVIEW_PIVOT_SIZE / (PREVIEW_SIZE / 2.0f);
 
                 pivotTransform = glm::translate(pivotTransform, glm::vec3(ndcPos, 0.0f));
@@ -400,9 +406,7 @@ preview_draw(Preview* self)
             if (!nullAnimation.isVisible || nullAnimation.frames.size() <= 0)
                 continue;
 
-            Anm2Frame frame;
-            
-            anm2_frame_from_time(self->anm2, &frame, Anm2Reference{ANM2_NULL, id, 0}, *self->animationID, self->time);
+            anm2_frame_from_time(self->anm2, &frame, Anm2Reference{ANM2_NULL, id, 0}, *self->time);
 
             if (!frame.isVisible)
                 continue;
@@ -470,7 +474,77 @@ preview_draw(Preview* self)
                 glUseProgram(0);
             }
         }
-   }
+    }
+
+    if (self->isRecording && animation)
+    {
+        if (recordFrameIndex == 0)
+        {
+            if 
+            (
+                std::filesystem::exists(STRING_PREVIEW_FRAMES_DIRECTORY) && 
+                std::filesystem::is_directory(STRING_PREVIEW_FRAMES_DIRECTORY)) 
+            {
+                for (const auto & entry : std::filesystem::directory_iterator(STRING_PREVIEW_FRAMES_DIRECTORY)) 
+                    std::filesystem::remove(entry);
+            }
+            else
+                std::filesystem::create_directories(STRING_PREVIEW_FRAMES_DIRECTORY); 
+            self->isPlaying = true;
+        }
+
+        if (isRecordThisFrame)
+        {
+            size_t frameSize = (self->recordSize.x * self->recordSize.y * 4);
+            u8* frame = (u8*)malloc(frameSize);
+            memset(frame, '\0',frameSize);
+            char path[PATH_MAX];
+            vec2 position = 
+            {
+                self->settings->previewPanX - (PREVIEW_SIZE.x / 2.0f) + (self->recordSize.x / 2.0f),
+                self->settings->previewPanY - (PREVIEW_SIZE.y / 2.0f) + (self->recordSize.y / 2.0f)
+            };
+
+            memset(path, '\0', PATH_MAX);
+
+            snprintf(path, PATH_MAX, STRING_PREVIEW_FRAMES_FORMAT, STRING_PREVIEW_FRAMES_DIRECTORY, recordFrameIndex);
+
+            glReadBuffer(GL_FRONT);
+            glReadPixels
+            (
+                (s32)position.x,
+                (s32)position.y,
+                self->recordSize.x, 
+                self->recordSize.y, 
+                GL_RGBA, 
+                GL_UNSIGNED_BYTE, 
+                frame
+            );
+
+            texture_from_data_write(path, frame, self->recordSize.x, self->recordSize.y);
+
+            free(frame);
+
+            isRecordThisFrame = false;
+            recordFrameIndex++;
+        }
+        else
+        {
+            if (*self->time >= (f32)animation->frameNum - 1)
+            {
+                self->isRecording = false;
+                self->isPlaying = false;
+                recordFrameIndex = 0;
+                recordFrameTimeNext = 0;
+                *self->time = 0.0f;
+            }
+            else if (*self->time >= recordFrameTimeNext)
+            {
+                isRecordThisFrame = true;
+                recordFrameTimeNext = *self->time + (f32)self->anm2->fps / TICK_RATE;
+            }
+        }
+    }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0); 
 }

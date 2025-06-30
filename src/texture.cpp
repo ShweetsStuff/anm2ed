@@ -6,6 +6,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>
+
 void
 texture_gl_set(Texture* self, void* data)
 {
@@ -56,6 +59,14 @@ texture_from_data_init(Texture* self, const u8* data, u32 length)
 	texture_gl_set(self, textureData);
 
 	return true;
+}
+
+/* Writes a *.png to the path from the data/size */
+/* Returns true on success */
+bool
+texture_from_data_write(const char* path, const u8* data, s32 width, s32 height)
+{
+	return (bool)stbi_write_png(path, width, height, 4, data, width * 4);
 }
 
 void

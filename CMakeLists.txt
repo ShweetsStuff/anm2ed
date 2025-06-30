@@ -18,7 +18,7 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 
 target_include_directories(${PROJECT_NAME} PRIVATE include include/imgui include/tinyxml2 include/inih src)
 
-set(CMAKE_CXX_FLAGS "-g -O2 -std=c++23 -Wall -Wextra -pedantic -Wno-unused-variable -Wno-unused-parameter -Wno-ignored-qualifiers -Wno-parentheses -Wno-unused-function -Wno-class-memaccess -Wno-delete-incomplete")
+set(CMAKE_CXX_FLAGS "-g -O2 -std=c++23 -Wall -Wextra -pedantic -Wno-unused-variable -Wno-unused-parameter -Wno-ignored-qualifiers -Wno-parentheses -Wno-missing-field-initializers -Wno-unused-function -Wno-class-memaccess -Wno-delete-incomplete")
 
 target_link_libraries(${PROJECT_NAME} PRIVATE m GL GLEW SDL3)
 

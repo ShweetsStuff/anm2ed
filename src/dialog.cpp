@@ -66,13 +66,6 @@ dialog_tick(Dialog* self)
 	{
 		Texture texture;
 		s32 id;
-		char relativePath[PATH_MAX];
-
-		/* Get the relative path */
-		std::filesystem::path baseDirectory = std::filesystem::current_path();
-		std::filesystem::path relativePathString = std::filesystem::relative(self->path, baseDirectory);
-		
-		strncpy(relativePath, relativePathString.c_str(), PATH_MAX - 1);
 		
 		switch (self->type)
 		{
@@ -80,21 +73,21 @@ dialog_tick(Dialog* self)
 				*self->reference = Anm2Reference{};
 				resources_textures_free(self->resources);
 				anm2_deserialize(self->anm2, self->resources, self->path);
-				window_title_from_anm2_set(self->window, self->anm2);
+				window_title_from_path_set(self->window, self->path);
 				break;
 			case DIALOG_ANM2_SAVE:
-				anm2_serialize(self->anm2, relativePath);
-				window_title_from_anm2_set(self->window, self->anm2);
+				anm2_serialize(self->anm2, self->path);
+				window_title_from_path_set(self->window, self->path);
 				break;
 			case DIALOG_PNG_OPEN:
 				id = map_next_id_get(self->resources->textures);
 				self->anm2->spritesheets[id] = Anm2Spritesheet{};
-				strncpy(self->anm2->spritesheets[id].path, relativePath, PATH_MAX);
-				anm2_spritesheet_texture_load(self->anm2, self->resources, relativePath, id);
+				strncpy(self->anm2->spritesheets[id].path, self->path, PATH_MAX);
+				anm2_spritesheet_texture_load(self->anm2, self->resources, self->path, id);
 				break;
 			case DIALOG_PNG_REPLACE:
-				strncpy(self->anm2->spritesheets[self->replaceID].path, relativePath, PATH_MAX);
-				anm2_spritesheet_texture_load(self->anm2, self->resources, relativePath, self->replaceID);
+				strncpy(self->anm2->spritesheets[self->replaceID].path, self->path, PATH_MAX);
+				anm2_spritesheet_texture_load(self->anm2, self->resources, self->path, self->replaceID);
 				self->replaceID = -1;
 				break;
 			default:

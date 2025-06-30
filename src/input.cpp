@@ -6,7 +6,6 @@ static void
 _mouse_tick(Mouse* self)
 {
     s32 state;
-    SDL_Event event;
 
     memcpy(&self->previous, &self->current, sizeof(bool) * MOUSE_COUNT);
     memset(&self->current, '\0', sizeof(bool) * MOUSE_COUNT);

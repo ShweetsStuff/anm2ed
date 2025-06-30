@@ -6,6 +6,8 @@
 #define STRING_WINDOW_TITLE "Anm2Ed"
 #define STRING_WINDOW_TITLE_EDITING "Anm2Ed (%s)"
 
+#define STRING_ANM2_CREATED_ON_FORMAT "%d-%B-%Y %I:%M:%S %p"
+
 #define STRING_ERROR_SDL_INIT "[ERROR] Could not initialize SDL (%s)\n"
 #define STRING_ERROR_GL_CONTEXT_INIT "[ERROR] Could not initialize OpenGL context (%s)\n"
 #define STRING_ERROR_FILE_READ "[ERROR] Could not read from file: %s\n"
@@ -45,16 +47,30 @@
 #define STRING_ANM2_NEW_EVENT "New Event"
 #define STRING_ANM2_ROOT "Root"
 
+#define STRING_PREVIEW_FRAMES_DIRECTORY "frames/"
+#define STRING_PREVIEW_FRAMES_FORMAT "%s/%03d.png"
+
 #define STRING_IMGUI_WINDOW "Window"
 #define STRING_IMGUI_DOCKSPACE "Dockspace"
+
 #define STRING_IMGUI_TASKBAR "Taskbar"
+#define STRING_IMGUI_TASKBAR_PLAYBACK "Playback"
 #define STRING_IMGUI_TASKBAR_FILE "File"
+#define STRING_IMGUI_TASKBAR_WIZARD "Wizard"
 
 #define STRING_IMGUI_FILE_MENU "File Menu"
 #define STRING_IMGUI_FILE_NEW "New"
 #define STRING_IMGUI_FILE_OPEN "Open"
 #define STRING_IMGUI_FILE_SAVE "Save"
 #define STRING_IMGUI_FILE_SAVE_AS "Save As"
+
+#define STRING_IMGUI_PLAYBACK_MENU "Playback Menu"
+#define STRING_IMGUI_PLAYBACK_LOOP "Loop"
+
+#define STRING_IMGUI_WIZARD_MENU "Wizard Menu"
+#define STRING_IMGUI_WIZARD_EXPORT_FRAMES_TO_PNG "Export Frames to PNG"
+
+#define STRING_IMGUI_RECORDING "Recording..."
 
 #define STRING_IMGUI_ANIMATIONS "Animations"
 #define STRING_IMGUI_ANIMATIONS_ANIMATION_LABEL "##Animation"
@@ -162,7 +178,7 @@
 #define STRING_IMGUI_TIMELINE_FRAME_LABEL    "##Frame"
 #define STRING_IMGUI_TIMELINE_TRIGGER_LABEL    "##Trigger"
 #define STRING_IMGUI_TIMELINE_FRAME_REMOVE "Remove Frame"
-#define STRING_IMGUI_TIMELINE_FIT_ANIMATION_LENGTH "= Fit Animation Length"
+#define STRING_IMGUI_TIMELINE_FIT_ANIMATION_LENGTH "Fit Animation Length"
 #define STRING_IMGUI_TIMELINE_ANIMATION LENGTH "Animation Length:"
 #define STRING_IMGUI_TIMELINE_VISIBLE "##Visible"
 #define STRING_IMGUI_TIMELINE_LAYER "Layer"
@@ -251,6 +267,7 @@
 #define STRING_IMGUI_TOOLTIP_TIMELINE_ELEMENT_TRIGGERS "This is the animation's Triggers.\nTriggers are special activations; each is bound to an Event.\nClick to select."
 #define STRING_IMGUI_TOOLTIP_TIMELINE_ELEMENT_VISIBLE "Toggle visibility for this element."
 #define STRING_IMGUI_TOOLTIP_TIMELINE_FPS "Change the FPS of the animation."
+#define STRING_IMGUI_TOOLTIP_TIMELINE_FIT_ANIMATION_LENGTH "Sets the animation length to the latest frame."
 #define STRING_IMGUI_TOOLTIP_TIMELINE_FRAME_ADD "Add a frame to the current selected element."
 #define STRING_IMGUI_TOOLTIP_TIMELINE_FRAME_REMOVE "Removes the selected frame from the current selected element."
 #define STRING_IMGUI_TOOLTIP_TIMELINE_LOOP "Toggles the animation looping."
@@ -272,6 +289,15 @@
 #define STRING_IMGUI_TOOLTIP_TOOLS_ROTATE "Use the rotate tool.\nWill rotate selected elements as the cursor is dragged.\n(Animation Preview only.)"
 #define STRING_IMGUI_TOOLTIP_TOOLS_SCALE "Use the scale tool.\nWill scale the selected elements as the cursor is dragged.\n(Animation Preview only.)"
 #define STRING_IMGUI_TOOLTIP_TOOLS_CROP "Use the crop tool.\nWill set the crop of the selected elements as the cursor is dragged.\n(Spritesheet Editor only.)"
+#define STRING_IMGUI_TOOLTIP_FILE_NEW "Load a blank .anm2 file to edit."
+#define STRING_IMGUI_TOOLTIP_FILE_OPEN "Open an existing .anm2 file to edit."
+#define STRING_IMGUI_TOOLTIP_FILE_SAVE "Save the current .anm2 file."
+#define STRING_IMGUI_TOOLTIP_FILE_SAVE_AS "Save the current .anm2 file to a location."
+#define STRING_IMGUI_TOOLTIP_PLAYBACK_IS_LOOP "Toggles the animation playback looping when the time reaches the end."
+#define STRING_IMGUI_TOOLTIP_WIZARD_EXPORT_FRAMES_TO_PNG "Records the current animation and exports the frames as .pngs.\nLook in the working directory of the program for them."
+#define STRING_IMGUI_TOOLTIP_FILE_MENU "Opens the file menu, for reading/writing anm2 files."
+#define STRING_IMGUI_TOOLTIP_PLAYBACK_MENU "Opens the playback menu, for managing playback settings."
+#define STRING_IMGUI_TOOLTIP_WIZARD_MENU "Opens the wizard menu, for handy functions involving the anm2."
 
 #define STRING_OPENGL_VERSION "#version 330"
 

@@ -28,6 +28,7 @@ enum SettingsItem
 {
     SETTINGS_WINDOW_W,
     SETTINGS_WINDOW_H,
+    SETTINGS_PLAYBACK_IS_LOOP,
     SETTINGS_PREVIEW_IS_AXIS,
     SETTINGS_PREVIEW_IS_GRID,
     SETTINGS_PREVIEW_IS_ROOT_TRANSFORM,
@@ -68,13 +69,14 @@ enum SettingsItem
     SETTINGS_EDITOR_BACKGROUND_COLOR_R,
     SETTINGS_EDITOR_BACKGROUND_COLOR_G,
     SETTINGS_EDITOR_BACKGROUND_COLOR_B,
-    SETTINGS_EDITOR_BACKGROUND_COLOR_A
+    SETTINGS_EDITOR_BACKGROUND_COLOR_A,
 };
 
 struct Settings
 {
     s32 windowW = 1920;
     s32 windowH = 1080;
+    bool playbackIsLoop = true;
     bool previewIsAxis = true;
     bool previewIsGrid = true;
     bool previewIsRootTransform = false;
@@ -122,6 +124,7 @@ static const SettingsEntry SETTINGS_ENTRIES[SETTINGS_COUNT] =
 {
     {"windowW=", "windowW=%i", SETTINGS_TYPE_INT, offsetof(Settings, windowW)},
     {"windowH=", "windowH=%i", SETTINGS_TYPE_INT, offsetof(Settings, windowH)},
+    {"playbackIsLoop=", "playbackIsLoop=%i", SETTINGS_TYPE_BOOL, offsetof(Settings, playbackIsLoop)},
     {"previewIsAxis=", "previewIsAxis=%i", SETTINGS_TYPE_BOOL, offsetof(Settings, previewIsAxis)},
     {"previewIsGrid=", "previewIsGrid=%i", SETTINGS_TYPE_BOOL, offsetof(Settings, previewIsGrid)},
     {"previewIsRootTransform=", "previewIsRootTransform=%i", SETTINGS_TYPE_BOOL, offsetof(Settings, previewIsRootTransform)},

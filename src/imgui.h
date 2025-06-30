@@ -37,6 +37,7 @@
 static const vec2 IMGUI_TASKBAR_MARGINS = {8, 4};
 static const vec2 IMGUI_SPRITESHEET_EDITOR_CROP_FORGIVENESS = {1, 1};
 
+static const ImVec2 IMGUI_RECORD_TOOLTIP_OFFSET = {16, 16};
 static const ImVec2 IMGUI_ANIMATION_PREVIEW_SETTINGS_SIZE = {1280, 105};
 static const ImVec2 IMGUI_ANIMATION_PREVIEW_SETTINGS_CHILD_SIZE = {200, 85};
 static const ImVec2 IMGUI_ANIMATION_PREVIEW_POSITION = {8, 135};
@@ -95,8 +96,7 @@ struct Imgui
     Input* input = NULL;
     Anm2* anm2 = NULL;
     Anm2Reference* reference = NULL;
-    s32* animationID = NULL;
-    s32* spritesheetID = NULL;
+    f32* time = NULL;
     Editor* editor = NULL;
     Preview* preview = NULL;
     Settings* settings = NULL;
@@ -117,8 +117,7 @@ imgui_init
     Input* input,
     Anm2* anm2,
     Anm2Reference* reference,
-    s32* animationID,
-    s32* spritesheetID,
+    f32* time,
     Editor* editor,
     Preview* preview,
     Settings* settings,

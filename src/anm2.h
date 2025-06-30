@@ -192,9 +192,10 @@ struct Anm2
 
 struct Anm2Reference
 {
-    Anm2Type type = ANM2_NONE;
-    s32 id = -1;
-    s32 index = -1;
+    Anm2Type itemType = ANM2_NONE;
+    s32 animationID = -1;
+    s32 itemID = -1;
+    s32 frameIndex = -1;
 
     auto operator<=>(const Anm2Reference&) const = default; 
 };
@@ -210,8 +211,12 @@ void anm2_created_on_set(Anm2* self);
 s32 anm2_animation_add(Anm2* self);
 void anm2_animation_remove(Anm2* self, s32 id);
 void anm2_spritesheet_texture_load(Anm2* self, Resources* resources, const char* path, s32 id);
-Anm2Animation* anm2_animation_from_id(Anm2* self, s32 animationID);
-Anm2Item* anm2_item_from_reference(Anm2* self, Anm2Reference* reference, s32 animationID);
-Anm2Frame* anm2_frame_from_reference(Anm2* self, Anm2Reference* reference, s32 animationID);
-Anm2Frame* anm2_frame_add(Anm2* self, Anm2Reference* reference, s32 animationID, s32 time);
-void anm2_frame_from_time(Anm2* self, Anm2Frame* frame, Anm2Reference reference, s32 animationID, f32 time);
+Anm2Animation* anm2_animation_from_reference(Anm2* self, Anm2Reference* reference);
+Anm2Item* anm2_item_from_reference(Anm2* self, Anm2Reference* reference);
+Anm2Frame* anm2_frame_from_reference(Anm2* self, Anm2Reference* reference);
+Anm2Frame* anm2_frame_add(Anm2* self, Anm2Reference* reference, s32 time);
+void anm2_frame_from_time(Anm2* self, Anm2Frame* frame, Anm2Reference reference, f32 time);
+void anm2_reference_clear(Anm2Reference* self);
+void anm2_reference_item_clear(Anm2Reference* self);
+void anm2_reference_frame_clear(Anm2Reference* self);
+s32 anm2_animation_length_get(Anm2* self, s32 animationID);
