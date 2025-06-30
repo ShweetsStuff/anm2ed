@@ -19,6 +19,7 @@ struct State
 	Preview preview;
     Anm2 anm2;
 	Anm2Reference reference;
+	f32 time;
 	Resources resources;
 	Settings settings;
 	Tool tool;
@@ -26,9 +27,6 @@ struct State
 	bool isArgument = false;
 	bool isRunning = true;
 	char argument[PATH_MAX] = STRING_EMPTY;
-	char startPath[PATH_MAX] = STRING_EMPTY;
-	s32 animationID = -1;
-	s32 spritesheetID = -1;
 	u64 lastTick = 0;
 	u64 tick = 0;
 }; 

@@ -35,6 +35,7 @@ _tick(State* state)
 	editor_tick(&state->editor);
 	preview_tick(&state->preview);
 	tool_tick(&state->tool);
+	snapshots_tick(&state->snapshots);
 	dialog_tick(&state->dialog);
 	imgui_tick(&state->imgui);
 }
@@ -52,13 +53,6 @@ _draw(State* state)
 void
 init(State* state)
 {
-	/* set start working directory */
-    std::filesystem::path startPath = std::filesystem::current_path();
-
-	memset(state->startPath, '\0', PATH_MAX - 1);
-
-	strncpy(state->startPath, startPath.string().c_str(), PATH_MAX - 1);
-	
 	settings_load(&state->settings);
 	
 	printf(STRING_INFO_INIT);
@@ -107,27 +101,9 @@ init(State* state)
 	resources_init(&state->resources);
 	dialog_init(&state->dialog, &state->anm2, &state->reference, &state->resources, state->window);
 	tool_init(&state->tool, &state->input);
-
-	preview_init
-	(
-		&state->preview, 
-		&state->anm2, 
-		&state->reference, 
-		&state->animationID,
-		&state->resources, 
-		&state->settings
-	);
-
-	editor_init
-	(
-		&state->editor, 
-		&state->anm2, 
-		&state->reference, 
-		&state->animationID, 
-		&state->spritesheetID, 
-		&state->resources, 
-		&state->settings
-	);
+	snapshots_init(&state->snapshots, &state->anm2, &state->reference, &state->time, &state->input);
+	preview_init(&state->preview, &state->anm2, &state->reference, &state->time, &state->resources, &state->settings);
+	editor_init(&state->editor, &state->anm2, &state->reference, &state->resources, &state->settings);
 	
 	imgui_init
 	(
@@ -137,8 +113,7 @@ init(State* state)
 		&state->input,
 		&state->anm2,
 		&state->reference,
-		&state->animationID,
-		&state->spritesheetID,
+		&state->time,
 		&state->editor,
 		&state->preview,
 		&state->settings,
@@ -149,11 +124,12 @@ init(State* state)
 	);
 
 	if (state->isArgument)
+	{
 		anm2_deserialize(&state->anm2, &state->resources, state->argument);
+		window_title_from_path_set(state->window, state->argument);
+	}
 	else
 		anm2_new(&state->anm2);
-
-	window_title_from_anm2_set(state->window, &state->anm2);
 }
 
 void
@@ -179,9 +155,6 @@ loop(State* state)
 void
 quit(State* state)
 {
-	/* return to base path */
-    std::filesystem::current_path(state->startPath);
-
 	imgui_free(&state->imgui);
 	settings_save(&state->settings);
 	preview_free(&state->preview);

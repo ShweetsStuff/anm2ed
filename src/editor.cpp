@@ -45,21 +45,10 @@ _editor_grid_set(Editor* self)
 }
 
 void
-editor_init
-(
-    Editor* self, 
-    Anm2* anm2, 
-    Anm2Reference* reference, 
-    s32* animationID, 
-    s32* spritesheetID, 
-    Resources* resources, 
-    Settings* settings
-)
+editor_init(Editor* self, Anm2* anm2, Anm2Reference* reference, Resources* resources, Settings* settings)
 {
     self->anm2 = anm2;
     self->reference = reference;
-    self->animationID = animationID;
-    self->spritesheetID = spritesheetID;
     self->resources = resources;
     self->settings = settings;
 
@@ -153,9 +142,12 @@ editor_draw(Editor* self)
 
     glClear(GL_COLOR_BUFFER_BIT);
 
-    if (*self->spritesheetID > -1)
+    s32 spritesheetID = self->reference->itemType == ANM2_LAYER ? 
+    self->anm2->layers[self->reference->itemID].spritesheetID : -1;
+
+    if (spritesheetID > -1)
     {
-        Texture* texture = &self->resources->textures[*self->spritesheetID];
+        Texture* texture = &self->resources->textures[spritesheetID];
 
         glm::mat4 spritesheetTransform = editorTransform;
         glm::vec2 ndcScale = glm::vec2(texture->size.x, texture->size.y) / (EDITOR_SIZE * 0.5f);
@@ -199,10 +191,10 @@ editor_draw(Editor* self)
             glUseProgram(0);
         }
 
-        Anm2Frame* frame = (Anm2Frame*)anm2_frame_from_reference(self->anm2, self->reference, *self->animationID);
+        Anm2Frame* frame = (Anm2Frame*)anm2_frame_from_reference(self->anm2, self->reference);
 
         /* Draw the layer frame's crop and pivot */
-        if (frame && self->reference->type == ANM2_LAYER)
+        if (frame)
         {
             /* Rect */
             glm::mat4 rectTransform = editorTransform;  
@@ -265,6 +257,12 @@ editor_draw(Editor* self)
         static ivec2 previousGridSize = {-1, -1};
         static ivec2 previousGridOffset = {-1, -1};
         static s32 gridVertexCount = -1;
+
+        glm::mat4 gridTransform = editorTransform;
+        glm::vec2 gridNDCPos = (EDITOR_SIZE / 2.0f) / (EDITOR_SIZE / 2.0f);
+
+        gridTransform = glm::translate(gridTransform, glm::vec3(gridNDCPos, 0.0f));
+
         ivec2 gridSize = ivec2(self->settings->editorGridSizeX, self->settings->editorGridSizeY);
         ivec2 gridOffset = ivec2(self->settings->editorGridOffsetX, self->settings->editorGridOffsetY);
 
@@ -277,7 +275,7 @@ editor_draw(Editor* self)
 
         glUseProgram(shaderLine);
         glBindVertexArray(self->gridVAO);
-        glUniformMatrix4fv(glGetUniformLocation(shaderLine, SHADER_UNIFORM_TRANSFORM), 1, GL_FALSE, (f32*)value_ptr(editorTransform));
+        glUniformMatrix4fv(glGetUniformLocation(shaderLine, SHADER_UNIFORM_TRANSFORM), 1, GL_FALSE, (f32*)value_ptr(gridTransform));
         
         glUniform4f
         (

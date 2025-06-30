@@ -22,8 +22,6 @@ struct Editor
 {
     Anm2* anm2 = NULL;
     Anm2Reference* reference = NULL;
-    s32* animationID = NULL;
-    s32* spritesheetID = NULL;
     Resources* resources = NULL;
     Settings* settings = NULL;
     GLuint fbo;
@@ -38,16 +36,7 @@ struct Editor
     GLuint borderVBO;
 };
 
-void editor_init
-(
-    Editor* self, 
-    Anm2* anm2, 
-    Anm2Reference* reference, 
-    s32* animationID, 
-    s32* spritesheetID, 
-    Resources* resources, 
-    Settings* settings
-);
+void editor_init(Editor* self, Anm2* anm2, Anm2Reference* reference, Resources* resources,  Settings* settings);
 
 void editor_draw(Editor* self);
 void editor_tick(Editor* self);

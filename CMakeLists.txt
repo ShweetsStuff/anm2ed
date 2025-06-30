@@ -29,7 +29,7 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 
 target_include_directories(${PROJECT_NAME} PRIVATE include include/imgui include/tinyxml2 include/inih src)
 if (NOT MSVC)
-set(CMAKE_CXX_FLAGS "-g -O2 -std=c++23 -Wall -Wextra -pedantic -Wno-unused-variable -Wno-unused-parameter -Wno-ignored-qualifiers -Wno-parentheses -Wno-unused-function -Wno-class-memaccess -Wno-delete-incomplete")
+set(CMAKE_CXX_FLAGS "-g -O2 -std=c++23 -Wall -Wextra -pedantic -Wno-unused-variable -Wno-unused-parameter -Wno-ignored-qualifiers -Wno-parentheses -Wno-missing-field-initializers -Wno-unused-function -Wno-class-memaccess -Wno-delete-incomplete")
 else()
 # /std:c++latest is required to make MSVC grant access to all the latest C++ stuff (C++23 is listed as preview even on dev previews of MSVC....)
 # /STACK allocation size change is a hack, a proper fix would be to remove all the instances of allocating gigantic objects on the stack :pleading_face:
