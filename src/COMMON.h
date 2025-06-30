@@ -26,6 +26,10 @@
 
 #include "STRINGS.h"
 
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
 typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
