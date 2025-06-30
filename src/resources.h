@@ -1,6 +1,6 @@
 #pragma once
 
-#include "RESOURCES.h"
+#include "RENDER_RESOURCES.h"
 #include "texture.h"
 #include "shader.h"
 
