@@ -1,3 +1,4 @@
 build/
 concept/
 packed/
+vcpkg_installed/
