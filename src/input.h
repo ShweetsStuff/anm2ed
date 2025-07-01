@@ -273,7 +273,7 @@ const std::vector<KeyType> INPUT_KEYS[INPUT_COUNT] =
     { KEY_2 },
     { KEY_Z },
     { KEY_Y },
-    { KEY_LCTRL }
+    { KEY_LCTRL, KEY_S }
 };
 
 struct Keyboard
