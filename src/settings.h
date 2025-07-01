@@ -17,61 +17,12 @@ enum SettingsValueType
 
 struct SettingsEntry
 {
-    const char* value;
-    const char* format;
+    std::string key;
     SettingsValueType type;
     s32 offset;
 };
 
-#define SETTINGS_COUNT (SETTINGS_EDITOR_BACKGROUND_COLOR_A + 1)
-enum SettingsItem
-{
-    SETTINGS_WINDOW_W,
-    SETTINGS_WINDOW_H,
-    SETTINGS_PLAYBACK_IS_LOOP,
-    SETTINGS_PREVIEW_IS_AXIS,
-    SETTINGS_PREVIEW_IS_GRID,
-    SETTINGS_PREVIEW_IS_ROOT_TRANSFORM,
-    SETTINGS_PREVIEW_IS_SHOW_PIVOT,
-    SETTINGS_PREVIEW_PAN_X,
-    SETTINGS_PREVIEW_PAN_Y,
-    SETTINGS_PREVIEW_ZOOM,
-    SETTINGS_PREVIEW_GRID_SIZE_X,
-    SETTINGS_PREVIEW_GRID_SIZE_Y,
-    SETTINGS_PREVIEW_GRID_OFFSET_X,
-    SETTINGS_PREVIEW_GRID_OFFSET_Y,
-    SETTINGS_PREVIEW_GRID_COLOR_R,
-    SETTINGS_PREVIEW_GRID_COLOR_G,
-    SETTINGS_PREVIEW_GRID_COLOR_B,
-    SETTINGS_PREVIEW_GRID_COLOR_A,
-    SETTINGS_PREVIEW_AXIS_COLOR_R,
-    SETTINGS_PREVIEW_AXIS_COLOR_G,
-    SETTINGS_PREVIEW_AXIS_COLOR_B,
-    SETTINGS_PREVIEW_AXIS_COLOR_A,
-    SETTINGS_PREVIEW_BACKGROUND_COLOR_R,
-    SETTINGS_PREVIEW_BACKGROUND_COLOR_G,
-    SETTINGS_PREVIEW_BACKGROUND_COLOR_B,
-    SETTINGS_PREVIEW_BACKGROUND_COLOR_A,
-    SETTINGS_EDITOR_IS_GRID,
-    SETTINGS_EDITOR_IS_GRID_SNAP,
-    SETTINGS_EDITOR_IS_BORDER,
-    SETTINGS_EDITOR_PAN_X,
-    SETTINGS_EDITOR_PAN_Y,
-    SETTINGS_EDITOR_ZOOM,
-    SETTINGS_EDITOR_GRID_SIZE_X,
-    SETTINGS_EDITOR_GRID_SIZE_Y,
-    SETTINGS_EDITOR_GRID_OFFSET_X,
-    SETTINGS_EDITOR_GRID_OFFSET_Y,
-    SETTINGS_EDITOR_GRID_COLOR_R,
-    SETTINGS_EDITOR_GRID_COLOR_G,
-    SETTINGS_EDITOR_GRID_COLOR_B,
-    SETTINGS_EDITOR_GRID_COLOR_A,
-    SETTINGS_EDITOR_BACKGROUND_COLOR_R,
-    SETTINGS_EDITOR_BACKGROUND_COLOR_G,
-    SETTINGS_EDITOR_BACKGROUND_COLOR_B,
-    SETTINGS_EDITOR_BACKGROUND_COLOR_A,
-};
-
+#define SETTINGS_COUNT 44
 struct Settings
 {
     s32 windowW = 1920;
@@ -120,52 +71,52 @@ struct Settings
     f32 editorBackgroundColorA = 1.0f;
 }; 
 
-static const SettingsEntry SETTINGS_ENTRIES[SETTINGS_COUNT] =
+const SettingsEntry SETTINGS_ENTRIES[SETTINGS_COUNT] =
 {
-    {"windowW=", "windowW=%i", SETTINGS_TYPE_INT, offsetof(Settings, windowW)},
-    {"windowH=", "windowH=%i", SETTINGS_TYPE_INT, offsetof(Settings, windowH)},
-    {"playbackIsLoop=", "playbackIsLoop=%i", SETTINGS_TYPE_BOOL, offsetof(Settings, playbackIsLoop)},
-    {"previewIsAxis=", "previewIsAxis=%i", SETTINGS_TYPE_BOOL, offsetof(Settings, previewIsAxis)},
-    {"previewIsGrid=", "previewIsGrid=%i", SETTINGS_TYPE_BOOL, offsetof(Settings, previewIsGrid)},
-    {"previewIsRootTransform=", "previewIsRootTransform=%i", SETTINGS_TYPE_BOOL, offsetof(Settings, previewIsRootTransform)},
-    {"previewIsShowPivot=", "previewIsShowPivot=%i", SETTINGS_TYPE_BOOL, offsetof(Settings, previewIsShowPivot)},
-    {"previewPanX=", "previewPanX=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewPanX)},
-    {"previewPanY=", "previewPanY=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewPanY)},
-    {"previewZoom=", "previewZoom=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewZoom)},
-    {"previewGridSizeX=", "previewGridSizeX=%i", SETTINGS_TYPE_INT, offsetof(Settings, previewGridSizeX)},
-    {"previewGridSizeY=", "previewGridSizeY=%i", SETTINGS_TYPE_INT, offsetof(Settings, previewGridSizeY)},
-    {"previewGridOffsetX=", "previewGridOffsetX=%i", SETTINGS_TYPE_INT, offsetof(Settings, previewGridOffsetX)},
-    {"previewGridOffsetY=", "previewGridOffsetY=%i", SETTINGS_TYPE_INT, offsetof(Settings, previewGridOffsetY)},
-    {"previewGridColorR=", "previewGridColorR=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewGridColorR)},
-    {"previewGridColorG=", "previewGridColorG=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewGridColorG)},
-    {"previewGridColorB=", "previewGridColorB=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewGridColorB)},
-    {"previewGridColorA=", "previewGridColorA=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewGridColorA)},
-    {"previewAxisColorR=", "previewAxisColorR=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewAxisColorR)},
-    {"previewAxisColorG=", "previewAxisColorG=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewAxisColorG)},
-    {"previewAxisColorB=", "previewAxisColorB=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewAxisColorB)},
-    {"previewAxisColorA=", "previewAxisColorA=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewAxisColorA)},
-    {"previewBackgroundColorR=", "previewBackgroundColorR=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewBackgroundColorR)},
-    {"previewBackgroundColorG=", "previewBackgroundColorG=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewBackgroundColorG)},
-    {"previewBackgroundColorB=", "previewBackgroundColorB=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewBackgroundColorB)},
-    {"previewBackgroundColorA=", "previewBackgroundColorA=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewBackgroundColorA)},
-    {"editorIsGrid=", "editorIsGrid=%i", SETTINGS_TYPE_BOOL, offsetof(Settings, editorIsGrid)},
-    {"editorIsGridSnap=", "editorIsGridSnap=%i", SETTINGS_TYPE_BOOL, offsetof(Settings, editorIsGridSnap)},
-    {"editorIsBorder=", "editorIsBorder=%i", SETTINGS_TYPE_BOOL, offsetof(Settings, editorIsBorder)},
-    {"editorPanX=", "editorPanX=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorPanX)},
-    {"editorPanY=", "editorPanY=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorPanY)},
-    {"editorZoom=", "editorZoom=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorZoom)},
-    {"editorGridSizeX=", "editorGridSizeX=%i", SETTINGS_TYPE_INT, offsetof(Settings, editorGridSizeX)},
-    {"editorGridSizeY=", "editorGridSizeY=%i", SETTINGS_TYPE_INT, offsetof(Settings, editorGridSizeY)},
-    {"editorGridOffsetX=", "editorGridOffsetX=%i", SETTINGS_TYPE_INT, offsetof(Settings, editorGridOffsetX)},
-    {"editorGridOffsetY=", "editorGridOffsetY=%i", SETTINGS_TYPE_INT, offsetof(Settings, editorGridOffsetY)},
-    {"editorGridColorR=", "editorGridColorR=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorGridColorR)},
-    {"editorGridColorG=", "editorGridColorG=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorGridColorG)},
-    {"editorGridColorB=", "editorGridColorB=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorGridColorB)},
-    {"editorGridColorA=", "editorGridColorA=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorGridColorA)},
-    {"editorBackgroundColorR=", "editorBackgroundColorR=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorBackgroundColorR)},
-    {"editorBackgroundColorG=", "editorBackgroundColorG=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorBackgroundColorG)},
-    {"editorBackgroundColorB=", "editorBackgroundColorB=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorBackgroundColorB)},
-    {"editorBackgroundColorA=", "editorBackgroundColorA=%f", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorBackgroundColorA)}
+    {"windowW=", SETTINGS_TYPE_INT, offsetof(Settings, windowW)},
+    {"windowH=", SETTINGS_TYPE_INT, offsetof(Settings, windowH)},
+    {"playbackIsLoop=", SETTINGS_TYPE_BOOL, offsetof(Settings, playbackIsLoop)},
+    {"previewIsAxis=", SETTINGS_TYPE_BOOL, offsetof(Settings, previewIsAxis)},
+    {"previewIsGrid=", SETTINGS_TYPE_BOOL, offsetof(Settings, previewIsGrid)},
+    {"previewIsRootTransform=", SETTINGS_TYPE_BOOL, offsetof(Settings, previewIsRootTransform)},
+    {"previewIsShowPivot=", SETTINGS_TYPE_BOOL, offsetof(Settings, previewIsShowPivot)},
+    {"previewPanX=", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewPanX)},
+    {"previewPanY=", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewPanY)},
+    {"previewZoom=", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewZoom)},
+    {"previewGridSizeX=", SETTINGS_TYPE_INT, offsetof(Settings, previewGridSizeX)},
+    {"previewGridSizeY=", SETTINGS_TYPE_INT, offsetof(Settings, previewGridSizeY)},
+    {"previewGridOffsetX=", SETTINGS_TYPE_INT, offsetof(Settings, previewGridOffsetX)},
+    {"previewGridOffsetY=", SETTINGS_TYPE_INT, offsetof(Settings, previewGridOffsetY)},
+    {"previewGridColorR=", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewGridColorR)},
+    {"previewGridColorG=", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewGridColorG)},
+    {"previewGridColorB=", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewGridColorB)},
+    {"previewGridColorA=", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewGridColorA)},
+    {"previewAxisColorR=", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewAxisColorR)},
+    {"previewAxisColorG=", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewAxisColorG)},
+    {"previewAxisColorB=", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewAxisColorB)},
+    {"previewAxisColorA=", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewAxisColorA)},
+    {"previewBackgroundColorR=", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewBackgroundColorR)},
+    {"previewBackgroundColorG=", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewBackgroundColorG)},
+    {"previewBackgroundColorB=", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewBackgroundColorB)},
+    {"previewBackgroundColorA=", SETTINGS_TYPE_FLOAT, offsetof(Settings, previewBackgroundColorA)},
+    {"editorIsGrid=", SETTINGS_TYPE_BOOL, offsetof(Settings, editorIsGrid)},
+    {"editorIsGridSnap=", SETTINGS_TYPE_BOOL, offsetof(Settings, editorIsGridSnap)},
+    {"editorIsBorder=", SETTINGS_TYPE_BOOL, offsetof(Settings, editorIsBorder)},
+    {"editorPanX=", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorPanX)},
+    {"editorPanY=", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorPanY)},
+    {"editorZoom=", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorZoom)},
+    {"editorGridSizeX=", SETTINGS_TYPE_INT, offsetof(Settings, editorGridSizeX)},
+    {"editorGridSizeY=", SETTINGS_TYPE_INT, offsetof(Settings, editorGridSizeY)},
+    {"editorGridOffsetX=", SETTINGS_TYPE_INT, offsetof(Settings, editorGridOffsetX)},
+    {"editorGridOffsetY=", SETTINGS_TYPE_INT, offsetof(Settings, editorGridOffsetY)},
+    {"editorGridColorR=", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorGridColorR)},
+    {"editorGridColorG=", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorGridColorG)},
+    {"editorGridColorB=", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorGridColorB)},
+    {"editorGridColorA=", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorGridColorA)},
+    {"editorBackgroundColorR=", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorBackgroundColorR)},
+    {"editorBackgroundColorG=", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorBackgroundColorG)},
+    {"editorBackgroundColorB=", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorBackgroundColorB)},
+    {"editorBackgroundColorA=", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorBackgroundColorA)}
 };
 
 void settings_save(Settings* self);

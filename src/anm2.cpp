@@ -2,25 +2,24 @@
 
 using namespace tinyxml2;
 
-/* Sets the anm2's date to the system's current date */
-void
-anm2_created_on_set(Anm2* self)
+static void _anm2_created_on_set(Anm2* self);
+
+// Sets the anm2's date to the system's current date
+static void
+_anm2_created_on_set(Anm2* self)
 {
-	time_t currentTime; 
-    struct tm* local; 
-	char date[ANM2_STRING_MAX];
+	auto now = std::chrono::system_clock::now();
+    std::time_t time = std::chrono::system_clock::to_time_t(now);
+    std::tm localTime = *std::localtime(&time);
 
-	currentTime = time(NULL);
-	local = localtime(&currentTime);
-
-    strftime(date, ANM2_STRING_MAX, STRING_ANM2_CREATED_ON_FORMAT, local);
-
-	strncpy(self->createdOn, date, ANM2_STRING_MAX);
+	std::ostringstream timeString;
+	timeString << std::put_time(&localTime, STRING_ANM2_CREATED_ON_FORMAT);
+	self->createdOn = timeString.str();
 }
 
-/* Serializes the anm2 struct into XML and exports it to the given path */
+// Serializes the anm2 struct into XML and exports it to the given path
 bool
-anm2_serialize(Anm2* self, const char* path)
+anm2_serialize(Anm2* self, const std::string& path)
 {
 	XMLDocument document;
 	XMLError error;
@@ -34,108 +33,111 @@ anm2_serialize(Anm2* self, const char* path)
 	XMLElement* eventsElement;
 	XMLElement* animationsElement;
 
-	if (!self || !path)
+	if (!self || path.empty())
 		return false;
 
-	/* Update creation date on first version */
+	// Update creation date on first version
 	if (self->version == 0)
-		anm2_created_on_set(self);
+		_anm2_created_on_set(self);
 
-	/* Increment anm2's version */
+	// Set anm2 path to argument
+	self->path = path;
+		
+	// Update version 
 	self->version++;
 
-	/* AnimatedActor */
+	// AnimatedActor
 	animatedActorElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATED_ACTOR]);
 	document.InsertFirstChild(animatedActorElement);
 
-	/* Info */
+	// Info 
 	infoElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_INFO]);
-	infoElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_CREATED_BY], self->createdBy); /* CreatedBy */
-	infoElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_CREATED_ON], self->createdOn); /* CreatedOn */
-	infoElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_VERSION], self->version); /* Version; note its incrementation */
-	infoElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_FPS], self->fps); /* FPS */
+	infoElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_CREATED_BY], self->createdBy.c_str()); // CreatedBy 
+	infoElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_CREATED_ON], self->createdOn.c_str()); // CreatedOn 
+	infoElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_VERSION], self->version); // Version
+	infoElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_FPS], self->fps); // FPS 
 	animatedActorElement->InsertEndChild(infoElement);
 
-	/* Content */
+	// Content 
 	contentElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_CONTENT]);
 	
-	/* Spritesheets */
+	// Spritesheets 
 	spritesheetsElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_SPRITESHEETS]);
 
 	for (auto & [id, spritesheet] : self->spritesheets)
 	{
 		XMLElement* spritesheetElement;
 		
-		/* Spritesheet */
+		// Spritesheet 
 		spritesheetElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_SPRITESHEET]);
-		spritesheetElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_PATH], spritesheet.path); /* Path */
-		spritesheetElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ID], id); /* ID */
+		spritesheetElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_PATH], spritesheet.path.c_str()); // Path 
+		spritesheetElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ID], id); // ID 
 		spritesheetsElement->InsertEndChild(spritesheetElement);
 	}
 	
 	contentElement->InsertEndChild(spritesheetsElement);
 	
-	/* Layers */
+	// Layers 
 	layersElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYERS]);
 
 	for (auto & [id, layer] : self->layers)
 	{
 		XMLElement* layerElement;
 		
-		/* Layer */
+		// Layer 
 		layerElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYER]);
-		layerElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_NAME], layer.name); /* Path */
-		layerElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ID], id); /* ID */
-		layerElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_SPRITESHEET_ID], layer.spritesheetID); /* SpritesheetId */
+		layerElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_NAME], layer.name.c_str()); // Path 
+		layerElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ID], id); // ID 
+		layerElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_SPRITESHEET_ID], layer.spritesheetID); // SpritesheetId 
 		
 		layersElement->InsertEndChild(layerElement);
 	}
 	
 	contentElement->InsertEndChild(layersElement);
 	
-	/* Nulls */
+	// Nulls 
 	nullsElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_NULLS]);
 
 	for (auto & [id, null] : self->nulls)
 	{
 		XMLElement* nullElement;
 		
-		/* Null */
+		// Null 
 		nullElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_NULL]);
-		nullElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_NAME], null.name); /* Name */
-		nullElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ID], id); /* ID */
+		nullElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_NAME], null.name.c_str()); // Name 
+		nullElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ID], id); // ID 
 
-		/* special case; only serialize if this is true */
+		// special case; only serialize if this is true 
 		if (null.isShowRect)
-			nullElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_SHOW_RECT], null.isShowRect); /* ShowRect */
+			nullElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_SHOW_RECT], null.isShowRect); // ShowRect 
 		nullsElement->InsertEndChild(nullElement);
 	}
 	
 	contentElement->InsertEndChild(nullsElement);
 
-	/* Events */
+	// Events 
 	eventsElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_EVENTS]);
 
 	for (auto & [id, event] : self->events)
 	{
 		XMLElement* eventElement;
 		
-		/* Event */
+		// Event 
 		eventElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_EVENT]);
-		eventElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_NAME], event.name); /* Name */
-		eventElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ID], id); /* ID */
+		eventElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_NAME], event.name.c_str()); // Name 
+		eventElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ID], id); // ID 
 		eventsElement->InsertEndChild(eventElement);
 	}
 	
 	contentElement->InsertEndChild(eventsElement);
 
 	animatedActorElement->InsertEndChild(contentElement);
-
-	/* Animations */
+		
+	// Animations
 	animationsElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATIONS]);
-	animationsElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_DEFAULT_ANIMATION], self->defaultAnimation);
+	animationsElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_DEFAULT_ANIMATION], self->defaultAnimation.c_str()); // DefaultAnimation
 
-	for (auto & [id, animation] : self->animations)
+	for (const auto & [id, animation] : self->animations)
 	{
 		XMLElement* animationElement;
 		XMLElement* rootAnimationElement;
@@ -143,86 +145,86 @@ anm2_serialize(Anm2* self, const char* path)
 		XMLElement* nullAnimationsElement;
 		XMLElement* triggersElement;
 		
-		/* Animation */
+		// Animation
 		animationElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATION]);
 
-		animationElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_NAME], animation.name); /* Name */
-		animationElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_FRAME_NUM], animation.frameNum); /* FrameNum */
-		animationElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_LOOP], animation.isLoop); /* Loop */
+		animationElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_NAME], animation.name.c_str()); // Name
+		animationElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_FRAME_NUM], animation.frameNum); // FrameNum
+		animationElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_LOOP], animation.isLoop); // Loop
 
-		/* RootAnimation */
+		// RootAnimation
 		rootAnimationElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ROOT_ANIMATION]);
 
-		for (auto & frame : animation.rootAnimation.frames)
+		for (const auto & frame : animation.rootAnimation.frames)
 		{
 			XMLElement* frameElement;
 
-			/* Frame */
+			// Frame
 			frameElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_FRAME]);
 			
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_X_POSITION], frame.position.x); /* XPosition */
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_Y_POSITION], frame.position.y); /* YPosition */
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_X_PIVOT], frame.pivot.x); /* XPivot */
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_Y_PIVOT], frame.pivot.y); /* YPivot */
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_X_SCALE], frame.scale.x); /* XScale */
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_Y_SCALE], frame.scale.y); /* XScale */
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_DELAY], frame.delay); /* Delay */
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_VISIBLE], frame.isVisible); /* Visible */
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.r)); /* RedTint */
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.g)); /* GreenTint */
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.b)); /* BlueTint */
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ALPHA_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.a)); /* AlphaTint */
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.r)); /* RedOffset */
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.g)); /* GreenOffset */
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.b)); /* BlueOffset */
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ROTATION], frame.rotation); /* Rotation */
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_INTERPOLATED], frame.isInterpolated); /* Interpolated */
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_X_POSITION], frame.position.x); // XPosition
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_Y_POSITION], frame.position.y); //  YPosition
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_X_PIVOT], frame.pivot.x); // XPivot
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_Y_PIVOT], frame.pivot.y); // YPivot
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_X_SCALE], frame.scale.x); // XScale
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_Y_SCALE], frame.scale.y); // YScale
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_DELAY], frame.delay); // Delay
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_VISIBLE], frame.isVisible); // Visible
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.r)); // RedTint
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.g)); // GreenTint
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.b)); // BlueTint
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ALPHA_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.a)); // AlphaTint
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.r)); // RedOffset
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.g)); // GreenOffset
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.b)); // BlueOffset
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ROTATION], frame.rotation); // Rotation
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_INTERPOLATED], frame.isInterpolated); // Interpolated
 		
 			rootAnimationElement->InsertEndChild(frameElement);
 		}
 
 		animationElement->InsertEndChild(rootAnimationElement);
 
-		/* LayerAnimations */
+		// LayerAnimations
 		layerAnimationsElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYER_ANIMATIONS]);
 
 		for (const auto & [layerID, layerAnimation] : animation.layerAnimations)
 		{
 			XMLElement* layerAnimationElement;
 
-			/* LayerAnimation */
+			// LayerAnimation
 			layerAnimationElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYER_ANIMATION]);
-			layerAnimationElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_LAYER_ID], layerID); /* LayerID */
-			layerAnimationElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_VISIBLE], layerAnimation.isVisible); /* Visible */ 
+			layerAnimationElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_LAYER_ID], layerID); // LayerId
+			layerAnimationElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_VISIBLE], layerAnimation.isVisible); // Visible 
 	
 			for (auto & frame : layerAnimation.frames)
 			{
 				XMLElement* frameElement;
 
-				/* Frame */
+				// Frame
 				frameElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_FRAME]);
 				
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_X_POSITION], frame.position.x); /* XPosition */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_Y_POSITION], frame.position.y); /* YPosition */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_X_PIVOT], frame.pivot.x); /* XPivot */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_Y_PIVOT], frame.pivot.y); /* YPivot */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_X_CROP], frame.crop.x); /* XCrop */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_Y_CROP], frame.crop.y); /* YCrop */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_WIDTH], frame.size.x); /* Width */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_HEIGHT], frame.size.y); /* Height */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_X_SCALE], frame.scale.x); /* XScale */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_Y_SCALE], frame.scale.y); /* XScale */
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_X_POSITION], frame.position.x); // XPosition
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_Y_POSITION], frame.position.y); // YPosition
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_X_PIVOT], frame.pivot.x); // XPivot
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_Y_PIVOT], frame.pivot.y); // YPivot
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_X_CROP], frame.crop.x); // XCrop
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_Y_CROP], frame.crop.y); // YCrop
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_WIDTH], frame.size.x); // Width
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_HEIGHT], frame.size.y); // Height
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_X_SCALE], frame.scale.x); // XScale
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_Y_SCALE], frame.scale.y); // YScale
 				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_DELAY], frame.delay); /* Delay */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_VISIBLE], frame.isVisible); /* Visible */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.r)); /* RedTint */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.g)); /* GreenTint */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.b)); /* BlueTint */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ALPHA_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.a)); /* AlphaTint */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.r)); /* RedOffset */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.g)); /* GreenOffset */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.b)); /* BlueOffset */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ROTATION], frame.rotation); /* Rotation */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_INTERPOLATED], frame.isInterpolated); /* Interpolated */
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_VISIBLE], frame.isVisible); // Visible
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.r)); // RedTint
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.g)); // GreenTint
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.b)); // BlueTint
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ALPHA_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.a)); // AlphaTint
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.r)); // RedOffset
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.g)); // GreenOffset
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.b)); // BlueOffset
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ROTATION], frame.rotation); // Rotation
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_INTERPOLATED], frame.isInterpolated); // Interpolated
 			
 				layerAnimationElement->InsertEndChild(frameElement);
 			}
@@ -232,42 +234,42 @@ anm2_serialize(Anm2* self, const char* path)
 
 		animationElement->InsertEndChild(layerAnimationsElement);
 
-		/* NullAnimations */
+		// NullAnimations
 		nullAnimationsElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_NULL_ANIMATIONS]);
 
 		for (const auto & [nullID, nullAnimation] : animation.nullAnimations)
 		{
 			XMLElement* nullAnimationElement;
 
-			/* NullAnimation */
+			// NullAnimation
 			nullAnimationElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_NULL_ANIMATION]);
-			nullAnimationElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_NULL_ID], nullID); /* NullID */
-			nullAnimationElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_VISIBLE], nullAnimation.isVisible); /* Visible */ 
+			nullAnimationElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_NULL_ID], nullID); // NullId
+			nullAnimationElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_VISIBLE], nullAnimation.isVisible); // Visible 
 			
-			for (auto & frame : nullAnimation.frames)
+			for (const auto & frame : nullAnimation.frames)
 			{
 				XMLElement* frameElement;
 
-				/* Frame */
+				// Frame
 				frameElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_FRAME]);
 				
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_X_POSITION], frame.position.x); /* XPosition */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_Y_POSITION], frame.position.y); /* YPosition */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_X_PIVOT], frame.pivot.x); /* XPivot */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_Y_PIVOT], frame.pivot.y); /* YPivot */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_X_SCALE], frame.scale.x); /* XScale */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_Y_SCALE], frame.scale.y); /* XScale */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_DELAY], frame.delay); /* Delay */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_VISIBLE], frame.isVisible); /* Visible */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.r)); /* RedTint */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.g)); /* GreenTint */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.b)); /* BlueTint */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ALPHA_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.a)); /* AlphaTint */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.r)); /* RedOffset */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.g)); /* GreenOffset */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.b)); /* BlueOffset */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ROTATION], frame.rotation); /* Rotation */
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_INTERPOLATED], frame.isInterpolated); /* Interpolated */
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_X_POSITION], frame.position.x); // XPosition
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_Y_POSITION], frame.position.y); // YPosition
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_X_PIVOT], frame.pivot.x); // XPivot
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_Y_PIVOT], frame.pivot.y); // YPivot
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_X_SCALE], frame.scale.x); // XScale
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_Y_SCALE], frame.scale.y); // XScale
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_DELAY], frame.delay); // Delay 
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_VISIBLE], frame.isVisible); // Visible 
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.r)); // RedTint 
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.g)); // GreenTint 
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.b)); // BlueTint 
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ALPHA_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.a)); // AlphaTint 
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.r)); // RedOffset 
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.g)); // GreenOffset 
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.b)); // BlueOffset 
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ROTATION], frame.rotation); // Rotation 
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_INTERPOLATED], frame.isInterpolated); // Interpolated 
 			
 				nullAnimationElement->InsertEndChild(frameElement);
 			}
@@ -277,17 +279,17 @@ anm2_serialize(Anm2* self, const char* path)
 
 		animationElement->InsertEndChild(nullAnimationsElement);
 
-		/* Triggers */
+		// Triggers 
 		triggersElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_TRIGGERS]);
 
-		for (auto & frame : animation.triggers.frames)
+		for (const auto & frame : animation.triggers.frames)
 		{
 			XMLElement* triggerElement;
 
-			/* Trigger */
+			// Trigger 
 			triggerElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_TRIGGER]);
-			triggerElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_EVENT_ID], frame.eventID); /* EventID */
-			triggerElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_AT_FRAME], frame.atFrame); /* AtFrame */
+			triggerElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_EVENT_ID], frame.eventID); // EventID 
+			triggerElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_AT_FRAME], frame.atFrame); // AtFrame 
 			triggersElement->InsertEndChild(triggerElement);
 		}
 
@@ -298,23 +300,22 @@ anm2_serialize(Anm2* self, const char* path)
 
 	animatedActorElement->InsertEndChild(animationsElement);
 
-	error = document.SaveFile(path);
+	error = document.SaveFile(path.c_str());
 
 	if (error != XML_SUCCESS)
 	{
-		printf(STRING_ERROR_ANM2_WRITE, path, document.ErrorStr());
+		std::cout << STRING_ERROR_ANM2_WRITE << path << std::endl;
 		return false;
 	}
 
-	printf(STRING_INFO_ANM2_WRITE, path);
-	strncpy(self->path, path, PATH_MAX - 1);
+	std::cout << STRING_INFO_ANM2_WRITE << path << std::endl;
 	
 	return true;
 }
 
-/* Loads the .anm2 file and deserializes it into the struct equivalent */
+// Loads the .anm2 file and deserializes it into the struct equivalent
 bool 
-anm2_deserialize(Anm2* self, Resources* resources, const char* path)
+anm2_deserialize(Anm2* self, Resources* resources, const std::string& path)
 {
 	XMLDocument xmlDocument;
 	XMLError xmlError;
@@ -335,69 +336,72 @@ anm2_deserialize(Anm2* self, Resources* resources, const char* path)
 	Anm2Event addEvent;
 	Anm2Spritesheet addSpritesheet;
 
+	if (!self || path.empty())
+		return false;
+
 	*self = Anm2{};
 
-	xmlError = xmlDocument.LoadFile(path);
+	xmlError = xmlDocument.LoadFile(path.c_str());
 
 	if (xmlError != XML_SUCCESS)
 	{
-		printf(STRING_ERROR_ANM2_READ, path, xmlDocument.ErrorStr());
+		std::cout << STRING_ERROR_ANM2_READ << path << xmlDocument.ErrorStr() << std::endl;
 		return false;
 	}
 
+	// Free the loaded textures used by resources so new ones for the anm2 can be loaded 
 	resources_textures_free(resources);
 	
-	/* Save old working directory and then use anm2's path as directory */
-	/* (useful for loading textures from anm2 correctly) */
+	// Save old working directory and then use anm2's path as directory
+	// (used for loading textures from anm2 correctly which are relative)
     std::filesystem::path workingPath = std::filesystem::current_path();
-    std::filesystem::path filePath = path;
-    std::filesystem::path parentPath = filePath.parent_path();
-	std::filesystem::current_path(parentPath);
-	strncpy(self->path, path, PATH_MAX - 1);
+	working_directory_from_file_set(path);
 	
-    xmlRoot = xmlDocument.FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATED_ACTOR]);
+	self->path = path;
+	
+    xmlRoot = xmlDocument.FirstChildElement(ANM2_ELEMENT_ENUM_TO_STRING(ANM2_ELEMENT_ANIMATED_ACTOR).c_str());
 	xmlElement = xmlRoot;
 
+	// Iterate through elements
 	while (xmlElement)
 	{
 		const XMLAttribute* xmlAttribute = NULL;
 		const XMLElement* xmlChild = NULL;
 		s32 id = 0;
-
-		/* Elements */
-		anm2Element = anm2_element_from_string(xmlElement->Name());
+		
+		anm2Element = ANM2_ELEMENT_STRING_TO_ENUM(xmlElement->Name());
 
 		switch (anm2Element)
 		{
-			case ANM2_ELEMENT_SPRITESHEET:
+			case ANM2_ELEMENT_SPRITESHEET: // Spritesheet 
 				spritesheet = &addSpritesheet;
 				break;
-			case ANM2_ELEMENT_LAYER:
+			case ANM2_ELEMENT_LAYER: // Layer
 				layer = &addLayer;
 				break;
-			case ANM2_ELEMENT_NULL:
+			case ANM2_ELEMENT_NULL: // Null
 				null = &addNull;
 				break;
-			case ANM2_ELEMENT_EVENT:
+			case ANM2_ELEMENT_EVENT: // Event
 				event = &addEvent;
 				break;
-			case ANM2_ELEMENT_ANIMATION:
+			case ANM2_ELEMENT_ANIMATION: // Animation
 				id = map_next_id_get(self->animations);
 				self->animations[id] = Anm2Animation{};
 				animation = &self->animations[id];
 				break;
-			case ANM2_ELEMENT_ROOT_ANIMATION:
+			case ANM2_ELEMENT_ROOT_ANIMATION: // RootAnimation
 				item = &animation->rootAnimation;
 				break;
-			case ANM2_ELEMENT_LAYER_ANIMATION:
-			case ANM2_ELEMENT_NULL_ANIMATION:
+			case ANM2_ELEMENT_LAYER_ANIMATION: // LayerAnimation
+			case ANM2_ELEMENT_NULL_ANIMATION: // NullAnimation
 				item = &addItem;
 				break;
-			case ANM2_ELEMENT_TRIGGERS:
+			case ANM2_ELEMENT_TRIGGERS: // Triggers
 				item = &animation->triggers;
 				break;
-			case ANM2_ELEMENT_FRAME:
-			case ANM2_ELEMENT_TRIGGER:
+			case ANM2_ELEMENT_FRAME: // Frame
+			case ANM2_ELEMENT_TRIGGER: // Trigger
 				item->frames.push_back(Anm2Frame{});
 				frame = &item->frames.back();
 			default:
@@ -406,42 +410,42 @@ anm2_deserialize(Anm2* self, Resources* resources, const char* path)
 
 		/* Attributes */
 		xmlAttribute = xmlElement->FirstAttribute();
-
+		
 		while (xmlAttribute)
 		{
-			anm2Attribute = anm2_attribute_from_string(xmlAttribute->Name());
+			anm2Attribute = ANM2_ATTRIBUTE_STRING_TO_ENUM(xmlAttribute->Name());
 
 			switch (anm2Attribute)
 			{
-				case ANM2_ATTRIBUTE_CREATED_BY:
-					strncpy(self->createdBy, xmlAttribute->Value(), ANM2_STRING_MAX - 1);
+				case ANM2_ATTRIBUTE_CREATED_BY: // CreatedBy
+					self->createdBy = xmlAttribute->Value();
 					break;
-				case ANM2_ATTRIBUTE_CREATED_ON:
-					strncpy(self->createdOn, xmlAttribute->Value(), ANM2_STRING_MAX - 1);
+				case ANM2_ATTRIBUTE_CREATED_ON: // CreatedOn
+					self->createdOn = xmlAttribute->Value();
 					break;
-				case ANM2_ATTRIBUTE_VERSION:
+				case ANM2_ATTRIBUTE_VERSION: // Version
 					self->version = atoi(xmlAttribute->Value());
 					break;
-				case ANM2_ATTRIBUTE_FPS:
+				case ANM2_ATTRIBUTE_FPS: // FPS
 					self->fps = atoi(xmlAttribute->Value());
 					break;
-				case ANM2_ATTRIBUTE_ID:
+				case ANM2_ATTRIBUTE_ID: // ID
 					id = atoi(xmlAttribute->Value());
 					switch (anm2Element)
 					{
-						case ANM2_ELEMENT_SPRITESHEET:
+						case ANM2_ELEMENT_SPRITESHEET: // Spritesheet
 							self->spritesheets[id] = addSpritesheet;
 							spritesheet = &self->spritesheets[id];
 							break;
-						case ANM2_ELEMENT_LAYER:
+						case ANM2_ELEMENT_LAYER: // Layer
 							self->layers[id] = addLayer;
 							layer = &self->layers[id];
 							break;
-						case ANM2_ELEMENT_NULL:
+						case ANM2_ELEMENT_NULL: // Null
 							self->nulls[id] = addNull;
 							null = &self->nulls[id];
 							break;
-						case ANM2_ELEMENT_EVENT:
+						case ANM2_ELEMENT_EVENT: // Event
 							self->events[id] = addEvent;
 							event = &self->events[id];
 							break;
@@ -449,33 +453,33 @@ anm2_deserialize(Anm2* self, Resources* resources, const char* path)
 							break;
 					}
 					break;
-				case ANM2_ATTRIBUTE_LAYER_ID:
+				case ANM2_ATTRIBUTE_LAYER_ID: // LayerId
 					id = atoi(xmlAttribute->Value());
 					animation->layerAnimations[id] = addItem;
 					item = &animation->layerAnimations[id];
 					break;
-				case ANM2_ATTRIBUTE_NULL_ID:
+				case ANM2_ATTRIBUTE_NULL_ID: // NullId
 					id = atoi(xmlAttribute->Value());
 					animation->nullAnimations[id] = addItem;
 					item = &animation->nullAnimations[id];
 					break;
-				case ANM2_ATTRIBUTE_PATH:
-					strncpy(spritesheet->path, xmlAttribute->Value(), PATH_MAX - 1);
+				case ANM2_ATTRIBUTE_PATH: // Path
+					spritesheet->path = xmlAttribute->Value();
 					break;
-				case ANM2_ATTRIBUTE_NAME:
+				case ANM2_ATTRIBUTE_NAME: // Name
 					switch (anm2Element)
 					{
 						case ANM2_ELEMENT_LAYER:
-							strncpy(layer->name, xmlAttribute->Value(), ANM2_STRING_MAX - 1);
+							layer->name = std::string(xmlAttribute->Value());
 							break;
 						case ANM2_ELEMENT_NULL:
-							strncpy(null->name, xmlAttribute->Value(), ANM2_STRING_MAX - 1);
+							null->name = std::string(xmlAttribute->Value());
 							break;
 						case ANM2_ELEMENT_ANIMATION:
-							strncpy(animation->name, xmlAttribute->Value(), ANM2_STRING_MAX - 1);
+							animation->name = std::string(xmlAttribute->Value());
 							break;
 						case ANM2_ELEMENT_EVENT:
-							strncpy(event->name, xmlAttribute->Value(), ANM2_STRING_MAX - 1);
+							event->name = std::string(xmlAttribute->Value());
 							break;
 						default:
 							break;
@@ -488,7 +492,7 @@ anm2_deserialize(Anm2* self, Resources* resources, const char* path)
 					null->isShowRect = string_to_bool(xmlAttribute->Value());
 					break;
 				case ANM2_ATTRIBUTE_DEFAULT_ANIMATION:
-					strncpy(self->defaultAnimation, xmlAttribute->Value(), ANM2_STRING_MAX - 1);
+					self->defaultAnimation = xmlAttribute->Value();
 					break;
 				case ANM2_ATTRIBUTE_FRAME_NUM:
 					animation->frameNum = atoi(xmlAttribute->Value());
@@ -584,11 +588,10 @@ anm2_deserialize(Anm2* self, Resources* resources, const char* path)
 			xmlAttribute = xmlAttribute->Next();
 		}
 
-		/* Load spritesheet textures */
+		// Load this anm2's spritesheet textures
 		if (anm2Element == ANM2_ELEMENT_SPRITESHEET)
-			anm2_spritesheet_texture_load(self, resources, spritesheet->path , id);
+			resources_texture_init(resources, spritesheet->path , id);
 
-		/* Iterate through children */
 		xmlChild = xmlElement->FirstChildElement();
 
 		if (xmlChild)
@@ -597,7 +600,7 @@ anm2_deserialize(Anm2* self, Resources* resources, const char* path)
 			continue;
 		}
 
-		/* Iterate through siblings */
+		// Iterate through siblings
 		while (xmlElement)
 		{
 			const XMLElement* xmlNext;
@@ -610,20 +613,20 @@ anm2_deserialize(Anm2* self, Resources* resources, const char* path)
 				break;
 			}
 
-			/* If no siblings, return to parent. If no parent, end parsing */
+			// If no siblings, return to parent. If no parent, end parsing
 			xmlElement = xmlElement->Parent() ? xmlElement->Parent()->ToElement() : NULL;
 		}
 	}
 
-	printf(STRING_INFO_ANM2_READ, path);
-
-	/* Set working directory back to old */
+	std::cout << STRING_INFO_ANM2_READ << path << std::endl;
+	
+	// Return to old working directory
 	std::filesystem::current_path(workingPath);
 
 	return true;
 }
 
-/* Adds a new layer to the anm2 */
+// Adds a layer to the anm2
 void
 anm2_layer_add(Anm2* self)
 {
@@ -635,17 +638,22 @@ anm2_layer_add(Anm2* self)
 		animation.layerAnimations[id] = Anm2Item{};
 }
 
-/* Removes a layer from the anm2 given the index/id */
+// Removes a layer from the anm2
 void
 anm2_layer_remove(Anm2* self, s32 id)
 {
+	// Make sure the layer exists
+	auto it = self->layers.find(id);
+	if (it == self->layers.end())
+		return;
+
     self->layers.erase(id);
 
     for (auto & [animationID, animation] : self->animations)
         animation.layerAnimations.erase(id);
 }
 
-/* Adds a new null to the anm2 */
+// Adds a null to the anm2
 void
 anm2_null_add(Anm2* self)
 {
@@ -657,36 +665,41 @@ anm2_null_add(Anm2* self)
 		animation.nullAnimations[id] = Anm2Item{};
 }
 
-/* Removes a null from the anm2 given the index/id */
+// Removes the specified null from the anm2
 void
 anm2_null_remove(Anm2* self, s32 id)
 {
+	// Make sure the null exists
+	auto it = self->nulls.find(id);
+	if (it == self->nulls.end())
+		return;
+
     self->nulls.erase(id);
 
     for (auto & [animationID, animation] : self->animations)
         animation.nullAnimations.erase(id);
 }
 
-/* Adds a new animation to the anm2, makes sure to keep the layeranimations/nullsanimation check */
+// Adds an animation to the anm2
 s32
 anm2_animation_add(Anm2* self)
 {
     s32 id  = map_next_id_get(self->animations);
     Anm2Animation animation;
 
-	/* match layers */
+	// Match layers
     for (auto & [layerID, layer] : self->layers)
 	{
         animation.layerAnimations[layerID] = Anm2Item{};
 	}
 
-	/* match nulls */
+	// Match nulls 
     for (auto & [nullID, null] : self->nulls)
 	{
     	animation.nullAnimations[nullID] = Anm2Item{};
 	}
 
-	/* add a root frame */
+	// Add a root frame 
 	animation.rootAnimation.frames.push_back(Anm2Frame{});
 		
     self->animations[id] = animation;
@@ -694,34 +707,19 @@ anm2_animation_add(Anm2* self)
 	return id;
 }
 
+// Removes an animation by id from the anm2
 void
 anm2_animation_remove(Anm2* self, s32 id)
 {
 	self->animations.erase(id);
 }
 
-/* Makes an entirely new anm2 */
+// Sets the anm2 to default
 void
 anm2_new(Anm2* self)
 {
 	*self = Anm2{};
-	anm2_created_on_set(self);
-}
-
-void
-anm2_spritesheet_texture_load(Anm2* self, Resources* resources, const char* path, s32 id)
-{
-	Texture texture;
-
-	if (resources->textures.find(id) != resources->textures.end() && resources->textures[id].id != resources->textures[TEXTURE_ERROR].id)
-		texture_free(&resources->textures[id]);
-
-	if (texture_from_path_init(&texture, path))
-		resources->textures[id] = texture;
-	else
-		texture.isInvalid = true;
-
-	resources->textures[id] = texture;
+	_anm2_created_on_set(self);
 }
 
 Anm2Animation*
@@ -733,7 +731,7 @@ anm2_animation_from_reference(Anm2* self, Anm2Reference* reference)
 	return &it->second;
 }
 
-/* Returns the item from a anm2 reference. */
+// Returns the item from a anm2 reference.
 Anm2Item*
 anm2_item_from_reference(Anm2* self, Anm2Reference* reference)
 {
@@ -767,7 +765,7 @@ anm2_item_from_reference(Anm2* self, Anm2Reference* reference)
 	}
 }
 
-/* Gets the frame from the reference's properties */
+// Gets the frame from the reference's properties
 Anm2Frame*
 anm2_frame_from_reference(Anm2* self, Anm2Reference* reference)
 {
@@ -782,14 +780,15 @@ anm2_frame_from_reference(Anm2* self, Anm2Reference* reference)
 	return &item->frames[reference->frameIndex];
 }
 
-/* Creates/fetches a frame from a given time. */
-/* Returns true/false if frame will be valid or not. */
+// Creates or fetches a frame from a given time.
 void 
 anm2_frame_from_time(Anm2* self, Anm2Frame* frame, Anm2Reference reference, f32 time)
 {
 	Anm2Animation* animation = anm2_animation_from_reference(self, &reference);
 
-	/* Out of range */
+	if (!animation)
+		return;
+
 	if (time < 0 || time > animation->frameNum)
 		return;
 
@@ -807,8 +806,7 @@ anm2_frame_from_time(Anm2* self, Anm2Frame* frame, Anm2Reference reference, f32 
 		*frame = item->frames[i];
 		delayNext += frame->delay;
 
-		/* If a frame is within the time constraints, it's a time matched frame, break */
-		/* Otherwise, the last found frame parsed will be used. */
+		// Use the last parsed frame as the given frame.
 		if (time >= delayCurrent && time < delayNext)
 		{
 			if (i + 1 < (s32)item->frames.size())
@@ -821,7 +819,7 @@ anm2_frame_from_time(Anm2* self, Anm2Frame* frame, Anm2Reference reference, f32 
 		delayCurrent += frame->delay;
 	}
 
-	/* Interpolate only if there's a frame following */
+	// Interpolate, but only if there's a frame following.
 	if (frame->isInterpolated && nextFrame)
 	{
 		f32 interpolationTime = (time - delayCurrent) / (delayNext - delayCurrent);
@@ -834,11 +832,10 @@ anm2_frame_from_time(Anm2* self, Anm2Frame* frame, Anm2Reference reference, f32 
 	}
 }
 
-/* Returns the current length of the animation, from the used frames. */
+// Returns the animation's length, based on the present frames.
 s32
 anm2_animation_length_get(Anm2* self, s32 animationID)
 {
-	/* Get valid animation */
 	auto it = self->animations.find(animationID);
 	if (it == self->animations.end())
 		return -1;
@@ -846,28 +843,29 @@ anm2_animation_length_get(Anm2* self, s32 animationID)
 	Anm2Animation* animation = &it->second;
 	s32 delayHighest = 0;
 
-	/* Root frames */
+	// Go through all items and see which one has the latest frame; that's the length
+	// Root
 	for (auto & frame : animation->rootAnimation.frames)
 		delayHighest = std::max(delayHighest, frame.delay);
 
-	/* Layer frames */
+	// Layer
 	for (auto & [id, item] : animation->layerAnimations)
 		for (auto & frame : item.frames)
 			delayHighest = std::max(delayHighest, frame.delay);
 
-	/* Null frames */
+	// Null
 	for (auto & [id, item] : animation->nullAnimations)
 		for (auto & frame : item.frames)
 			delayHighest = std::max(delayHighest, frame.delay);
 
-	/* Trigger frames (assuming this is from `animation->triggers.frames`) */
+	// Triggers
 	for (auto & trigger : animation->triggers.frames)
 		delayHighest = std::max(delayHighest, trigger.atFrame);
 
 	return delayHighest;
 }
 
-/* Will try adding a frame to the anm2 given the specified reference */
+// Will try adding a frame to the anm2 given the specified reference 
 Anm2Frame*
 anm2_frame_add(Anm2* self, Anm2Reference* reference, s32 time)
 {
@@ -884,7 +882,7 @@ anm2_frame_add(Anm2* self, Anm2Reference* reference, s32 time)
 
 		if (reference->itemType == ANM2_TRIGGERS)
 		{
-			/* don't add redudant triggers (i.e. at same time) */
+			// Don't add redundant triggers
 			for (auto & frameCheck : item->frames)
 			{
 				if (frameCheck.atFrame == time)
@@ -898,20 +896,20 @@ anm2_frame_add(Anm2* self, Anm2Reference* reference, s32 time)
 		{
 			s32 frameDelayCount = 0;
 
-			/* Add up all delay to see where this new frame might lie */
+			// Get the latest frame delay, to see where this frame might lie
 			for (auto & frameCheck : item->frames)
 				frameDelayCount += frameCheck.delay;
 			
-			/* If adding the smallest frame would be over the length, don't bother */
+			// If adding the smallest frame delay would be over the length, don't bother
 			if (frameDelayCount + ANM2_FRAME_DELAY_MIN > animation->frameNum)
 				return NULL;
 
-			/* Will insert next to frame if frame exists */
+			// Will insert next to frame if frame exists
 			Anm2Frame* checkFrame = anm2_frame_from_reference(self, reference);
 
 			if (checkFrame)
 			{
-				/* Will shrink frame delay to fit */
+				// Will shrink frame delay to fit
 				if (frameDelayCount + checkFrame->delay > animation->frameNum)
 					frame.delay = animation->frameNum - frameDelayCount;
 
@@ -929,14 +927,14 @@ anm2_frame_add(Anm2* self, Anm2Reference* reference, s32 time)
 	return NULL;
 }
 
-/* Clears anm2 reference */
+// Clears the anm2 reference, totally
 void
 anm2_reference_clear(Anm2Reference* self)
 {
 	*self = Anm2Reference{};
 }
 
-/* Clears anm2 item reference */
+// Clears the anm2 reference's item
 void
 anm2_reference_item_clear(Anm2Reference* self)
 {
@@ -944,7 +942,7 @@ anm2_reference_item_clear(Anm2Reference* self)
 	self->itemID = -1;
 }
 
-/* Clears anm2 reference */
+// Clears the anm2 reference's frame
 void
 anm2_reference_frame_clear(Anm2Reference* self)
 {

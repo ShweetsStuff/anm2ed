@@ -1,6 +1,23 @@
 #include "resources.h"
 
-/* Loads in resources */
+// Loads a texture, given a path and an id for it to be assigned to
+void
+resources_texture_init(Resources* resources, const std::string& path, s32 id)
+{
+	Texture texture;
+
+	if (resources->textures.find(id) != resources->textures.end() && resources->textures[id].id != resources->textures[TEXTURE_ERROR].id)
+		texture_free(&resources->textures[id]);
+
+	if (texture_from_path_init(&texture, path))
+		resources->textures[id] = texture;
+	else
+		texture.isInvalid = true;
+
+	resources->textures[id] = texture;
+}
+
+// Loads in resources
 void
 resources_init(Resources* self)
 {
@@ -10,7 +27,7 @@ resources_init(Resources* self)
         shader_init(&self->shaders[i], SHADER_DATA[i].vertex, SHADER_DATA[i].fragment);
 }
 
-/* Frees resources*/
+// Frees resources
 void
 resources_free(Resources* self)
 {
@@ -22,7 +39,7 @@ resources_free(Resources* self)
     texture_free(&self->atlas);
 }
 
-/* Frees loaded textures */
+// Frees loaded textures
 void
 resources_textures_free(Resources* self)
 {

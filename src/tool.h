@@ -2,14 +2,14 @@
 
 #include "input.h"
 
-#define TOOL_COUNT (TOOL_CROP + 1)
 enum ToolType
 {
     TOOL_PAN,
     TOOL_MOVE,
     TOOL_ROTATE,
     TOOL_SCALE,
-    TOOL_CROP
+    TOOL_CROP,
+    TOOL_COUNT
 };
 
 struct Tool

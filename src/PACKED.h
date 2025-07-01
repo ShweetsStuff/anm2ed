@@ -2,8 +2,8 @@
 
 #include "COMMON.h"
 
-static const unsigned int TEXTURE_ATLAS_LENGTH = 916;
-static const unsigned char TEXTURE_ATLAS[] = 
+const u32 TEXTURE_ATLAS_LENGTH = 916;
+const u8 TEXTURE_ATLAS[] = 
 {
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
   0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x60, 0x00, 0x00, 0x00, 0x68,
@@ -84,7 +84,6 @@ static const unsigned char TEXTURE_ATLAS[] =
   0xae, 0x42, 0x60, 0x82
 };
 
-#define TEXTURE_COUNT (TEXTURE_TARGET + 1)
 enum TextureType
 {
   TEXTURE_ROOT,
@@ -117,17 +116,18 @@ enum TextureType
   TEXTURE_PICKER,
   TEXTURE_FRAME,
   TEXTURE_FRAME_ALT,
-  TEXTURE_TARGET
+  TEXTURE_TARGET,
+  TEXTURE_COUNT
 };
 
-static const vec2 ATLAS_SIZE = {96, 104};
-static const vec2 TEXTURE_SIZE = {16, 16};
-static const vec2 TEXTURE_SIZE_SMALL = {8, 8};
-static const vec2 TEXTURE_SIZE_BIG = {32, 32};
-static const vec2 TEXTURE_SIZE_OBLONG = {16, 40};
+const vec2 ATLAS_SIZE = {96, 104};
+const vec2 TEXTURE_SIZE = {16, 16};
+const vec2 TEXTURE_SIZE_SMALL = {8, 8};
+const vec2 TEXTURE_SIZE_BIG = {32, 32};
+const vec2 TEXTURE_SIZE_OBLONG = {16, 40};
 
 #define ATLAS_UV(x,y){(f32)x / ATLAS_SIZE[0], (f32) y / ATLAS_SIZE[1]}
-static const vec2 ATLAS_UVS[TEXTURE_COUNT][2] = 
+const vec2 ATLAS_UVS[TEXTURE_COUNT][2] = 
 {
   { ATLAS_UV(  0,  0), ATLAS_UV( 16, 16) }, /* 16 x 16 v */
   { ATLAS_UV( 16,  0), ATLAS_UV( 32, 16) },
@@ -162,7 +162,7 @@ static const vec2 ATLAS_UVS[TEXTURE_COUNT][2] =
   { ATLAS_UV( 48, 64), ATLAS_UV( 80, 96) }  /* 32 x 32 */ 
 };
 
-static const vec2 ATLAS_SIZES[TEXTURE_COUNT] = 
+const vec2 ATLAS_SIZES[TEXTURE_COUNT] = 
 {
   TEXTURE_SIZE,
   TEXTURE_SIZE,
@@ -197,89 +197,92 @@ static const vec2 ATLAS_SIZES[TEXTURE_COUNT] =
   TEXTURE_SIZE_BIG
 };
 
-#define IMVEC2_ATLAS_UV_GET(type) IMVEC2_VEC2(ATLAS_UVS[type][0]), IMVEC2_VEC2(ATLAS_UVS[type][1])
 #define ATLAS_UV_VERTICES(type) UV_VERTICES(ATLAS_UVS[type][0], ATLAS_UVS[type][1])
 
 /* Shaders */
 struct ShaderData
 {
-  const char* vertex;
-  const char* fragment;
+  std::string vertex;
+  std::string fragment;
 };
 
-#define SHADER_COUNT (SHADER_LINE_DOTTED + 1)
 enum ShaderType
 {
     SHADER_LINE,
     SHADER_TEXTURE,
-    SHADER_LINE_DOTTED
+    SHADER_LINE_DOTTED,
+    SHADER_COUNT
 };
 
-static const char SHADER_VERTEX[] =  
-"#version 330 core\n" \
-"layout (location = 0) in vec2 i_position;\n" \
-"layout (location = 1) in vec2 i_uv;\n" \
-"\n" \
-"out vec2 i_uv_out;\n" \
-"\n" \
-"uniform mat4 u_transform;\n" \
-"\n" \
-"void main()\n" \
-"{\n" \
-"    i_uv_out = i_uv;\n" \
-"    gl_Position = u_transform * vec4(i_position, 0.0, 1.0);\n" \
-"}\n";
+const std::string SHADER_VERTEX = R"(
+#version 330 core
+layout (location = 0) in vec2 i_position;
+layout (location = 1) in vec2 i_uv;
 
-static const char SHADER_TEXTURE_FRAGMENT[] =
-"#version 330 core\n" \
-"in vec2 i_uv_out;\n" \
-"uniform sampler2D u_texture;\n" \
-"uniform vec4 u_tint;\n" \
-"uniform vec3 u_color_offset;\n" \
-"out vec4 o_fragColor;\n" \
-"void main()\n" \
-"{\n" \
-"    vec4 texColor = texture(u_texture, i_uv_out);\n" \
-"    texColor *= u_tint;\n" \
-"    texColor.rgb += u_color_offset;\n" \
-"    o_fragColor = texColor;\n" \
-"}\n";
+out vec2 i_uv_out;
 
-static const char SHADER_FRAGMENT[] =  
-"#version 330 core\n" \
-"out vec4 o_fragColor;\n" \
-"uniform vec4 u_color;\n" \
-"\n" \
-"void main()\n" \
-"{\n" \
-"    o_fragColor = u_color;\n" \
-"}\n";
+uniform mat4 u_transform;
 
-static const char SHADER_LINE_DOTTED_FRAGMENT[] = 
-"#version 330 core\n" \
-"uniform vec4 u_color;\n" \
-"out vec4 o_fragColor;\n" \
-"void main()\n" \
-"{\n" \
-"   float patternX = mod(gl_FragCoord.x, 10.0);\n" \
-"   float patternY = mod(gl_FragCoord.y, 10.0);\n" \
-"   if (patternX < 5.0 || patternY < 5.0)\n" \
-"   {\n" \
-"     o_fragColor = u_color;\n" \
-"   }\n" \
-"   else\n" \
-"   {\n" \
-"     discard;\n" \
-"   }\n" \
-"}\n";
+void main()
+{
+    i_uv_out = i_uv;
+    gl_Position = u_transform * vec4(i_position, 0.0, 1.0);
+}
+)";
 
-static const char SHADER_UNIFORM_COLOR[] = "u_color";
-static const char SHADER_UNIFORM_TRANSFORM[] = "u_transform";
-static const char SHADER_UNIFORM_TINT[] = "u_tint";
-static const char SHADER_UNIFORM_COLOR_OFFSET[] = "u_color_offset";
-static const char SHADER_UNIFORM_TEXTURE[] = "u_texture";
+const std::string SHADER_FRAGMENT = R"(
+#version 330 core
+out vec4 o_fragColor;
+uniform vec4 u_color;
 
-static const ShaderData SHADER_DATA[SHADER_COUNT] = 
+void main()
+{
+    o_fragColor = u_color;
+}
+)";
+
+const std::string SHADER_TEXTURE_FRAGMENT = R"(
+#version 330 core
+in vec2 i_uv_out;
+uniform sampler2D u_texture;
+uniform vec4 u_tint;
+uniform vec3 u_color_offset;
+out vec4 o_fragColor;
+void main()
+{
+    vec4 texColor = texture(u_texture, i_uv_out);
+    texColor *= u_tint;
+    texColor.rgb += u_color_offset;
+    o_fragColor = texColor;
+}
+)";
+
+const std::string SHADER_LINE_DOTTED_FRAGMENT = R"(
+#version 330 core
+uniform vec4 u_color;
+out vec4 o_fragColor;
+void main()
+{
+   float patternX = mod(gl_FragCoord.x, 10.0);
+   float patternY = mod(gl_FragCoord.y, 10.0);
+   if (patternX < 5.0 || patternY < 5.0)
+   {
+     o_fragColor = u_color;
+   }
+   else
+   {
+     discard;
+   }
+}
+)";
+
+#define SHADER_UNIFORM_COLOR "u_color"
+#define SHADER_UNIFORM_TRANSFORM "u_transform"
+#define SHADER_UNIFORM_TINT "u_tint"
+#define SHADER_UNIFORM_COLOR_OFFSET "u_color_offset"
+#define SHADER_UNIFORM_TEXTURE "u_texture"
+
+const ShaderData SHADER_DATA[SHADER_COUNT] = 
 {
   {SHADER_VERTEX, SHADER_FRAGMENT},
   {SHADER_VERTEX, SHADER_TEXTURE_FRAGMENT},

@@ -12,11 +12,11 @@
 #define EDITOR_GRID_OFFSET_MIN 0
 #define EDITOR_GRID_OFFSET_MAX 100
 
-static const vec2 EDITOR_SIZE = {5000, 5000};
-static const vec2 EDITOR_PIVOT_SIZE = {4, 4};
-static const vec4 EDITOR_TEXTURE_TINT = COLOR_OPAQUE;
-static const vec4 EDITOR_BORDER_TINT = COLOR_OPAQUE;
-static const vec4 EDITOR_FRAME_TINT = COLOR_RED;
+const vec2 EDITOR_SIZE = {5000, 5000};
+const vec2 EDITOR_PIVOT_SIZE = {4, 4};
+const vec4 EDITOR_TEXTURE_TINT = COLOR_OPAQUE;
+const vec4 EDITOR_BORDER_TINT = COLOR_OPAQUE;
+const vec4 EDITOR_FRAME_TINT = COLOR_RED;
 
 struct Editor
 {
@@ -34,6 +34,7 @@ struct Editor
     GLuint textureVBO;
     GLuint borderVAO;
     GLuint borderVBO;
+    s32 spritesheetID = -1;
 };
 
 void editor_init(Editor* self, Anm2* anm2, Anm2Reference* reference, Resources* resources,  Settings* settings);

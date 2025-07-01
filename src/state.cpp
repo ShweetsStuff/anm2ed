@@ -38,6 +38,21 @@ _tick(State* state)
 	snapshots_tick(&state->snapshots);
 	dialog_tick(&state->dialog);
 	imgui_tick(&state->imgui);
+
+	if (input_release(&state->input, INPUT_SAVE))
+	{
+		// Open dialog if path empty, otherwise save in-place
+		if (state->anm2.path.empty())
+			dialog_anm2_save(&state->dialog);
+		else 
+			anm2_serialize(&state->anm2, state->anm2.path);
+	}
+
+	if (input_release(&state->input, INPUT_PLAY))
+	{
+		state->preview.isPlaying = !state->preview.isPlaying;
+		state->preview.isRecording = false;
+	}
 }
 
 static void 
@@ -45,7 +60,7 @@ _draw(State* state)
 {
 	editor_draw(&state->editor);
 	preview_draw(&state->preview);
-	imgui_draw(&state->imgui);
+	imgui_draw();
 
 	SDL_GL_SwapWindow(state->window);
 }
@@ -55,16 +70,14 @@ init(State* state)
 {
 	settings_load(&state->settings);
 	
-	printf(STRING_INFO_INIT);
+	std::cout << STRING_INFO_INIT << std::endl;
 
 	if (!SDL_Init(SDL_INIT_VIDEO))
 	{
-		printf(STRING_ERROR_SDL_INIT, SDL_GetError());
+		std::cout << STRING_ERROR_SDL_INIT << SDL_GetError() << std::endl;
 		quit(state);
 	}
-
-	printf(STRING_INFO_SDL_INIT);
-
+	
 	SDL_CreateWindowAndRenderer
 	(
 		STRING_WINDOW_TITLE, 
@@ -81,14 +94,14 @@ init(State* state)
 
 	state->glContext = SDL_GL_CreateContext(state->window);
 	
-	printf(STRING_INFO_OPENGL, glGetString(GL_VERSION));
-
 	if (!state->glContext)
 	{
-		printf(STRING_ERROR_GL_CONTEXT_INIT, SDL_GetError());
+		std::cout << STRING_ERROR_GL_CONTEXT_INIT << SDL_GetError() << std::endl;
 		quit(state);
 	}
 
+	std::cout << STRING_INFO_SDL_INIT << "(" << STRING_INFO_OPENGL << glGetString(GL_VERSION) << ")" << std::endl;
+	
 	glewInit();
 	
 	glEnable(GL_BLEND);
@@ -96,7 +109,7 @@ init(State* state)
 	glDisable(GL_DEPTH_TEST);
 	glLineWidth(LINE_WIDTH);
 
-	printf(STRING_INFO_GLEW_INIT);
+	std::cout << STRING_INFO_GLEW_INIT << std::endl;
 
 	resources_init(&state->resources);
 	dialog_init(&state->dialog, &state->anm2, &state->reference, &state->resources, state->window);
@@ -155,7 +168,7 @@ loop(State* state)
 void
 quit(State* state)
 {
-	imgui_free(&state->imgui);
+	imgui_free();
 	settings_save(&state->settings);
 	preview_free(&state->preview);
 	editor_free(&state->editor);
@@ -164,6 +177,6 @@ quit(State* state)
 	SDL_GL_DestroyContext(state->glContext);
 	SDL_Quit();
 
-	printf(STRING_INFO_QUIT);
+	std::cout << STRING_INFO_QUIT << std::endl;
 }
 

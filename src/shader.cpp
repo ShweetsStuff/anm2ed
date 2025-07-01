@@ -1,14 +1,15 @@
 #include "shader.h"
 
-static bool _shader_compile(GLuint* self, const char* text);
+static bool _shader_compile(GLuint* self, const std::string& text);
 
+// Compiles the shader; returns true/false based on success
 static bool
-_shader_compile(GLuint* self, const char* text)
+_shader_compile(GLuint* self, const std::string& text)
 {
-	char compileLog[SHADER_BUFFER_MAX];
+	std::string compileLog;
 	s32 isCompile;
 
-	const GLchar* source = text;
+	const GLchar* source = text.c_str();
 
 	glShaderSource(*self, 1, &source, NULL);
 
@@ -17,16 +18,17 @@ _shader_compile(GLuint* self, const char* text)
 
 	if (!isCompile)
 	{
-		glGetShaderInfoLog(*self, SHADER_BUFFER_MAX, NULL, compileLog);
-		printf(STRING_ERROR_SHADER_INIT, *self, compileLog);
+		glGetShaderInfoLog(*self, SHADER_INFO_LOG_MAX, NULL, &compileLog[0]);
+		std::cout << STRING_ERROR_SHADER_INIT << *self << std::endl << compileLog << std::endl;
 		return false;
 	}
 
 	return true;
 }
 
+// Initializes a given shader with vertex/fragment
 bool
-shader_init(GLuint* self, const char* vertex, const char* fragment)
+shader_init(GLuint* self, const std::string& vertex, const std::string& fragment)
 {
 	GLuint vertexHandle;
 	GLuint fragmentHandle;
@@ -51,11 +53,10 @@ shader_init(GLuint* self, const char* vertex, const char* fragment)
 	glDeleteShader(vertexHandle);
 	glDeleteShader(fragmentHandle);
 
-	printf(STRING_INFO_SHADER_INIT, *self);
-
 	return true;
 }
 
+// Frees a given shader 
 void
 shader_free(GLuint* self)
 {

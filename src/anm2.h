@@ -6,15 +6,12 @@
 #define ANM2_SCALE_CONVERT(x) ((f32)x / 100.0f)
 #define ANM2_TINT_CONVERT(x) ((f32)x / 255.0f)
 
-#define ANM2_STRING_MAX 0xFF
-#define ANM2_STRING_FORMATTED_MAX 0xFFF
-#define ANM2_PATH_FORMATTED_MAX PATH_MAX + 0xFF
-#define ANM2_BUFFER_MAX 0xFFFFF
 #define ANM2_FPS_MIN 0
 #define ANM2_FPS_MAX 120
 #define ANM2_FRAME_NUM_MIN 1
 #define ANM2_FRAME_NUM_MAX 1000000
 #define ANM2_FRAME_DELAY_MIN 1
+#define ANM2_STRING_MAX 0xFF
 
 /* Elements */
 #define ANM2_ELEMENT_LIST \
@@ -53,7 +50,8 @@ static const char* ANM2_ELEMENT_STRINGS[] = {
     #undef X
 };
 
-DEFINE_STRING_TO_ENUM_FN(anm2_element_from_string, Anm2Element, ANM2_ELEMENT_STRINGS, ANM2_ELEMENT_COUNT)
+DEFINE_STRING_TO_ENUM_FUNCTION(ANM2_ELEMENT_STRING_TO_ENUM, Anm2Element, ANM2_ELEMENT_STRINGS, ANM2_ELEMENT_COUNT)
+DEFINE_ENUM_TO_STRING_FUNCTION(ANM2_ELEMENT_ENUM_TO_STRING, ANM2_ELEMENT_STRINGS, ANM2_ELEMENT_COUNT)
 
 #define ANM2_ATTRIBUTE_LIST \
     X(CREATED_BY,        "CreatedBy")        \
@@ -107,38 +105,39 @@ static const char* ANM2_ATTRIBUTE_STRINGS[] = {
     #undef X
 };
 
-DEFINE_STRING_TO_ENUM_FN(anm2_attribute_from_string, Anm2Attribute, ANM2_ATTRIBUTE_STRINGS, ANM2_ATTRIBUTE_COUNT)
+DEFINE_STRING_TO_ENUM_FUNCTION(ANM2_ATTRIBUTE_STRING_TO_ENUM, Anm2Attribute, ANM2_ATTRIBUTE_STRINGS, ANM2_ATTRIBUTE_COUNT)
+DEFINE_ENUM_TO_STRING_FUNCTION(ANM2_ATTRIBUTE_ENUM_TO_STRING, ANM2_ATTRIBUTE_STRINGS, ANM2_ATTRIBUTE_COUNT)
 
-#define ANM2_COUNT (ANM2_TRIGGER + 1)
 enum Anm2Type
 {
     ANM2_NONE,
 	ANM2_ROOT,
 	ANM2_LAYER,
 	ANM2_NULL,
-    ANM2_TRIGGERS
+    ANM2_TRIGGERS,
+    ANM2_COUNT
 };
 
 struct Anm2Spritesheet
 {
-	char path[PATH_MAX] = STRING_EMPTY;
+    std::string path;
 };
 
 struct Anm2Layer
 {
+    std::string name = STRING_ANM2_NEW_LAYER;
 	s32 spritesheetID = -1;
-	char name[ANM2_STRING_MAX] = STRING_ANM2_NEW_LAYER;
 };
 
 struct Anm2Null
 {
-    char name[ANM2_STRING_MAX] = STRING_ANM2_NEW_NULL;
+    std::string name = STRING_ANM2_NEW_NULL;
     bool isShowRect = false;
 };
 
 struct Anm2Event
 {
-	char name[ANM2_STRING_MAX] = STRING_ANM2_NEW_EVENT;
+    std::string name = STRING_ANM2_NEW_EVENT;
 };
 
 struct Anm2Frame
@@ -167,7 +166,7 @@ struct Anm2Item
 struct Anm2Animation
 {
 	s32 frameNum = ANM2_FRAME_NUM_MIN;
-	char name[ANM2_STRING_MAX] = STRING_ANM2_NEW_ANIMATION;
+    std::string name = STRING_ANM2_NEW_ANIMATION;
 	bool isLoop = true;
     Anm2Item rootAnimation;
     std::map<s32, Anm2Item> layerAnimations;
@@ -177,23 +176,23 @@ struct Anm2Animation
 
 struct Anm2 
 {
-    char path[PATH_MAX] = STRING_EMPTY;
-	s32 fps = 30;
-	s32 version = 0;
-	char createdBy[ANM2_STRING_MAX] = STRING_ANM2_CREATED_BY_DEFAULT;
-	char createdOn[ANM2_STRING_MAX] = STRING_EMPTY;
-	char defaultAnimation[ANM2_STRING_MAX] = STRING_EMPTY;
+    std::string path;
+    std::string defaultAnimation;
+    std::string createdBy = STRING_ANM2_CREATED_BY_DEFAULT;
+    std::string createdOn;
 	std::map<s32, Anm2Spritesheet> spritesheets; 
 	std::map<s32, Anm2Layer> layers; 
 	std::map<s32, Anm2Null> nulls; 
 	std::map<s32, Anm2Event> events; 
 	std::map<s32, Anm2Animation> animations; 
+    s32 fps = 30;
+	s32 version = 0;
 };
 
 struct Anm2Reference
 {
-    Anm2Type itemType = ANM2_NONE;
     s32 animationID = -1;
+    Anm2Type itemType = ANM2_NONE;
     s32 itemID = -1;
     s32 frameIndex = -1;
 
@@ -204,13 +203,13 @@ void anm2_layer_add(Anm2* self);
 void anm2_layer_remove(Anm2* self, s32 id);
 void anm2_null_add(Anm2* self);
 void anm2_null_remove(Anm2* self, s32 id);
-bool anm2_serialize(Anm2* self, const char* path);
-bool anm2_deserialize(Anm2* self, Resources* resources, const char* path);
+bool anm2_serialize(Anm2* self, const std::string& path);
+bool anm2_deserialize(Anm2* self, Resources* resources, const std::string& path);
 void anm2_new(Anm2* self);
 void anm2_created_on_set(Anm2* self);
 s32 anm2_animation_add(Anm2* self);
 void anm2_animation_remove(Anm2* self, s32 id);
-void anm2_spritesheet_texture_load(Anm2* self, Resources* resources, const char* path, s32 id);
+void anm2_spritesheet_texture_load(Anm2* self, Resources* resources, const std::string& path, s32 id);
 Anm2Animation* anm2_animation_from_reference(Anm2* self, Anm2Reference* reference);
 Anm2Item* anm2_item_from_reference(Anm2* self, Anm2Reference* reference);
 Anm2Frame* anm2_frame_from_reference(Anm2* self, Anm2Reference* reference);

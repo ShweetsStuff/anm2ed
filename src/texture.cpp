@@ -9,6 +9,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 
+// Generates GL texture and sets parameters
 void
 texture_gl_set(Texture* self, void* data)
 {
@@ -26,26 +27,28 @@ texture_gl_set(Texture* self, void* data)
 	glBindTexture(GL_TEXTURE_2D, 0); 
 }
 
+// Initializes texture from path; returns true/false on success
 bool
-texture_from_path_init(Texture* self, const char* path)
+texture_from_path_init(Texture* self, const std::string& path)
 {
 	void* data;
 
-	data = stbi_load(path, &self->size.x, &self->size.y, &self->channels, 4);
+	data = stbi_load(path.c_str(), &self->size.x, &self->size.y, &self->channels, 4);
 
 	if (!data)
 	{
-		printf(STRING_ERROR_TEXTURE_INIT, path);
+		std::cout << STRING_ERROR_TEXTURE_INIT << path << std::endl;
 		return false;
 	}
 
-	printf(STRING_INFO_TEXTURE_INIT, path);
+	std::cout << STRING_INFO_TEXTURE_INIT << path << std::endl;
 
 	texture_gl_set(self, data);
 
 	return true;
 }
 
+// Initializes texture from data; returns true/false on success
 bool
 texture_from_data_init(Texture* self, const u8* data, u32 length)
 {
@@ -61,17 +64,17 @@ texture_from_data_init(Texture* self, const u8* data, u32 length)
 	return true;
 }
 
-/* Writes a *.png to the path from the data/size */
-/* Returns true on success */
+// Writes an image to the path from the data/size
 bool
-texture_from_data_write(const char* path, const u8* data, s32 width, s32 height)
+texture_from_data_write(const std::string& path, const u8* data, s32 width, s32 height)
 {
-	return (bool)stbi_write_png(path, width, height, 4, data, width * 4);
+	return (bool)stbi_write_png(path.c_str(), width, height, 4, data, width * 4);
 }
 
+// Frees texture
 void
 texture_free(Texture* self)
 {
 	glDeleteTextures(1, &self->id);
-	memset(self, '\0', sizeof(Texture));
+	*self = Texture{};
 }

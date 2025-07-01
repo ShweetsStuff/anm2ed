@@ -8,6 +8,3 @@
 [submodule "include/tinyxml2"]
 	path = include/tinyxml2
 	url = https://github.com/leethomason/tinyxml2
-[submodule "include/inih"]
-	path = include/inih
-	url = https://github.com/benhoyt/inih

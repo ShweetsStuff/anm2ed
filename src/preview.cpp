@@ -3,6 +3,7 @@
 static void _preview_axis_set(Preview* self);
 static s32 _preview_grid_set(Preview* self);
 
+// Sets the preview's axis (lines across x/y)
 static void
 _preview_axis_set(Preview* self)
 {
@@ -16,7 +17,7 @@ _preview_axis_set(Preview* self)
     glBindVertexArray(0);
 }
 
-/* Sets and returns the grid's vertices */
+// Sets and returns the grid's vertices 
 static s32
 _preview_grid_set(Preview* self)
 {
@@ -59,6 +60,7 @@ _preview_grid_set(Preview* self)
     return (s32)vertices.size();
 }
 
+// Initializes preview
 void
 preview_init(Preview* self, Anm2* anm2, Anm2Reference* reference, f32* time, Resources* resources, Settings* settings)
 {
@@ -68,7 +70,7 @@ preview_init(Preview* self, Anm2* anm2, Anm2Reference* reference, f32* time, Res
     self->resources = resources;
     self->settings = settings;
 
-    /* Framebuffer + texture */
+    // Framebuffer + texture
     glGenFramebuffers(1, &self->fbo);
 
     glBindFramebuffer(GL_FRAMEBUFFER, self->fbo);
@@ -88,15 +90,15 @@ preview_init(Preview* self, Anm2* anm2, Anm2Reference* reference, f32* time, Res
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    /* Axis */
+    // Axis
     glGenVertexArrays(1, &self->axisVAO);
     glGenBuffers(1, &self->axisVBO);
 
-    /* Grid */
+    // Grid
     glGenVertexArrays(1, &self->gridVAO);
     glGenBuffers(1, &self->gridVBO);
 
-    /* Rect */
+    // Rect
     glGenVertexArrays(1, &self->rectVAO);
     glGenBuffers(1, &self->rectVBO);
 
@@ -108,7 +110,7 @@ preview_init(Preview* self, Anm2* anm2, Anm2Reference* reference, f32* time, Res
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(f32), (void*)0);
 
-    /* Texture */
+    // Texture
     glGenVertexArrays(1, &self->textureVAO);
     glGenBuffers(1, &self->textureVBO);
     glGenBuffers(1, &self->textureEBO);
@@ -121,11 +123,11 @@ preview_init(Preview* self, Anm2* anm2, Anm2Reference* reference, f32* time, Res
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self->textureEBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GL_TEXTURE_INDICES), GL_TEXTURE_INDICES, GL_STATIC_DRAW);
 
-    /* Position */
+    // Position attribute
     glEnableVertexAttribArray(0); 
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(f32), (void*)0);
 
-    /* UV */
+    // UV attribute
     glEnableVertexAttribArray(1); 
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(f32), (void*)(2 * sizeof(f32)));
 
@@ -135,6 +137,7 @@ preview_init(Preview* self, Anm2* anm2, Anm2Reference* reference, f32* time, Res
     _preview_grid_set(self);
 }
 
+// Ticks preview
 void
 preview_tick(Preview* self)
 {
@@ -142,12 +145,14 @@ preview_tick(Preview* self)
  
     Anm2Animation* animation = anm2_animation_from_reference(self->anm2, self->reference);
 
+    // If animation is valid, manage playback
     if (animation)
     {
         if (self->isPlaying)
         {  
             *self->time += (f32)self->anm2->fps / TICK_RATE;
 
+            // If looping, return back to 0; if not, stop at length
             if (*self->time >= (f32)animation->frameNum - 1)
             {
                 if (self->settings->playbackIsLoop && !self->isRecording)
@@ -157,11 +162,13 @@ preview_tick(Preview* self)
             }
         }
         
+        // Make sure to clamp time within appropriate range
         if (!self->isPlaying)
             *self->time = CLAMP(*self->time, 0.0f, (f32)animation->frameNum - 1);
     }
 }
 
+// Draws preview
 void
 preview_draw(Preview* self)
 {
@@ -171,7 +178,7 @@ preview_draw(Preview* self)
     static f32 recordFrameTimeNext = 0.0f;
     static s32 recordFrameIndex = 0;
 
-    f32 zoomFactor = self->settings->previewZoom / 100.0f;
+    f32 zoomFactor = PERCENT_TO_UNIT(self->settings->previewZoom);
     glm::vec2 ndcPan = glm::vec2(-self->settings->previewPanX / (PREVIEW_SIZE.x / 2.0f), -self->settings->previewPanY / (PREVIEW_SIZE.y / 2.0f));
     glm::mat4 previewTransform = glm::translate(glm::mat4(1.0f), glm::vec3(ndcPan, 0.0f));
     previewTransform = glm::scale(previewTransform, glm::vec3(zoomFactor, zoomFactor, 1.0f));
@@ -188,7 +195,7 @@ preview_draw(Preview* self)
     ); 
     glClear(GL_COLOR_BUFFER_BIT);
 
-    /* Grid */
+    // Grid
     if (self->settings->previewIsGrid)
     {
         static ivec2 previousGridSize = {-1, -1};
@@ -220,7 +227,7 @@ preview_draw(Preview* self)
         glUseProgram(0);
     }
 
-    /* Axes */
+    // Axes
     if (self->settings->previewIsAxis)
     {
         glUseProgram(shaderLine);
@@ -249,21 +256,22 @@ preview_draw(Preview* self)
     }
 
     Anm2Animation* animation = anm2_animation_from_reference(self->anm2, self->reference);
-    
-    /* Animation */
+    s32& animationID = self->reference->animationID;
+
+    // Animation
     if (animation)
     {
         Anm2Frame rootFrame;
         Anm2Frame frame;
-        anm2_frame_from_time(self->anm2, &rootFrame, Anm2Reference{ANM2_ROOT, self->reference->animationID, 0, 0}, *self->time);
+        anm2_frame_from_time(self->anm2, &rootFrame, Anm2Reference{animationID, ANM2_ROOT, 0, 0}, *self->time);
 
-        /* Layers */
+        // Layers
         for (auto & [id, layerAnimation] : animation->layerAnimations)
         {
             if (!layerAnimation.isVisible || layerAnimation.frames.size() <= 0)
                 continue;
 
-            anm2_frame_from_time(self->anm2, &frame, Anm2Reference{ANM2_LAYER, self->reference->animationID, id, 0}, *self->time);
+            anm2_frame_from_time(self->anm2, &frame, Anm2Reference{animationID, ANM2_LAYER, id, 0}, *self->time);
 
             if (!frame.isVisible)
                 continue;
@@ -275,8 +283,12 @@ preview_draw(Preview* self)
 
             glm::mat4 layerTransform = previewTransform;
 
-            glm::vec2 position = self->settings->previewIsRootTransform ? (frame.position + rootFrame.position) : frame.position;
-            glm::vec2 scale = frame.scale / 100.0f;
+            glm::vec2 position = self->settings->previewIsRootTransform ? 
+            (frame.position + rootFrame.position) : frame.position;
+ 
+            glm::vec2 scale = self->settings->previewIsRootTransform ? 
+            PERCENT_TO_UNIT(frame.scale) *  PERCENT_TO_UNIT(rootFrame.scale) : PERCENT_TO_UNIT(frame.scale);
+
             glm::vec2 ndcPos = position / (PREVIEW_SIZE / 2.0f);
             glm::vec2 ndcPivotOffset = (frame.pivot * scale) / (PREVIEW_SIZE / 2.0f);
             glm::vec2 ndcScale = (frame.size * scale) / (PREVIEW_SIZE / 2.0f);
@@ -316,6 +328,7 @@ preview_draw(Preview* self)
             glUseProgram(0);
         }
 
+        // Root target
         if (animation->rootAnimation.isVisible && rootFrame.isVisible)
         {
             glm::mat4 rootTransform = previewTransform;
@@ -350,25 +363,29 @@ preview_draw(Preview* self)
             glUseProgram(0);
         }
 
-        /* Pivots */
+        // Layer pivots
         if (self->settings->previewIsShowPivot)
         {
-            /* Layers (Reversed) */
+            // Layers (Reversed)
             for (auto & [id, layerAnimation] : animation->layerAnimations)
             {
                 if (!layerAnimation.isVisible || layerAnimation.frames.size() <= 0)
                     continue;
                 
-                anm2_frame_from_time(self->anm2, &frame, Anm2Reference{ANM2_LAYER, self->reference->animationID, id, 0}, *self->time);
+                anm2_frame_from_time(self->anm2, &frame, Anm2Reference{animationID, ANM2_LAYER, id, 0}, *self->time);
 
                 if (!frame.isVisible)
                     continue;
 
                 glm::mat4 pivotTransform = previewTransform;
                     
-                glm::vec2 position = self->settings->previewIsRootTransform ? (frame.position + rootFrame.position) : frame.position;
+                glm::vec2 position = self->settings->previewIsRootTransform 
+                ? (frame.position + rootFrame.position) : frame.position;
 
-                glm::vec2 ndcPos = position /(PREVIEW_SIZE / 2.0f);
+                glm::vec2 scale = self->settings->previewIsRootTransform ? 
+                PERCENT_TO_UNIT(frame.scale) *  PERCENT_TO_UNIT(rootFrame.scale) : PERCENT_TO_UNIT(frame.scale);
+
+                glm::vec2 ndcPos = (position - (PREVIEW_PIVOT_SIZE / 2.0f)) / (PREVIEW_SIZE / 2.0f);
                 glm::vec2 ndcScale = PREVIEW_PIVOT_SIZE / (PREVIEW_SIZE / 2.0f);
 
                 pivotTransform = glm::translate(pivotTransform, glm::vec3(ndcPos, 0.0f));
@@ -400,13 +417,13 @@ preview_draw(Preview* self)
             }
         }
 
-        /* Nulls */
+        // Null target/rect
         for (auto & [id, nullAnimation] : animation->nullAnimations)
         {
             if (!nullAnimation.isVisible || nullAnimation.frames.size() <= 0)
                 continue;
 
-            anm2_frame_from_time(self->anm2, &frame, Anm2Reference{ANM2_NULL, id, 0}, *self->time);
+            anm2_frame_from_time(self->anm2, &frame, Anm2Reference{animationID, ANM2_NULL, id, 0}, *self->time);
 
             if (!frame.isVisible)
                 continue;
@@ -449,6 +466,7 @@ preview_draw(Preview* self)
             glBindBuffer(GL_ARRAY_BUFFER, 0);
             glUseProgram(0);
 
+            // Null rect
             if (null->isShowRect)
             {
                 glm::mat4 rectTransform = previewTransform;  
@@ -476,10 +494,12 @@ preview_draw(Preview* self)
         }
     }
 
+    // Manage recording
     if (self->isRecording && animation)
     {
         if (recordFrameIndex == 0)
         {
+            // Create frames directory, if it exists
             if 
             (
                 std::filesystem::exists(STRING_PREVIEW_FRAMES_DIRECTORY) && 
@@ -496,18 +516,16 @@ preview_draw(Preview* self)
         if (isRecordThisFrame)
         {
             size_t frameSize = (self->recordSize.x * self->recordSize.y * 4);
-            u8* frame = (u8*)malloc(frameSize);
-            memset(frame, '\0',frameSize);
-            char path[PATH_MAX];
+            u8* frame = (u8*)calloc(frameSize, 1);
+            std:: string path;
+
             vec2 position = 
             {
                 self->settings->previewPanX - (PREVIEW_SIZE.x / 2.0f) + (self->recordSize.x / 2.0f),
                 self->settings->previewPanY - (PREVIEW_SIZE.y / 2.0f) + (self->recordSize.y / 2.0f)
             };
 
-            memset(path, '\0', PATH_MAX);
-
-            snprintf(path, PATH_MAX, STRING_PREVIEW_FRAMES_FORMAT, STRING_PREVIEW_FRAMES_DIRECTORY, recordFrameIndex);
+            path = std::format(STRING_PREVIEW_FRAMES_FORMAT, STRING_PREVIEW_FRAMES_DIRECTORY, recordFrameIndex);
 
             glReadBuffer(GL_FRONT);
             glReadPixels

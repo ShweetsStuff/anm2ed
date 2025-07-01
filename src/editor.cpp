@@ -2,6 +2,7 @@
 
 static s32 _editor_grid_set(Editor* self);
 
+// Sets the editor's grid
 static s32
 _editor_grid_set(Editor* self)
 {
@@ -44,6 +45,7 @@ _editor_grid_set(Editor* self)
     return (s32)vertices.size();
 }
 
+// Initializes editor
 void
 editor_init(Editor* self, Anm2* anm2, Anm2Reference* reference, Resources* resources, Settings* settings)
 {
@@ -52,7 +54,7 @@ editor_init(Editor* self, Anm2* anm2, Anm2Reference* reference, Resources* resou
     self->resources = resources;
     self->settings = settings;
 
-    /* Framebuffer + texture  */
+    // Framebuffer + texture
     glGenFramebuffers(1, &self->fbo);
 
     glBindFramebuffer(GL_FRAMEBUFFER, self->fbo);
@@ -72,11 +74,11 @@ editor_init(Editor* self, Anm2* anm2, Anm2Reference* reference, Resources* resou
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    /* Grid */
+    // Grid
     glGenVertexArrays(1, &self->gridVAO);
     glGenBuffers(1, &self->gridVBO);
 
-    /* Border */
+    // Border
     glGenVertexArrays(1, &self->borderVAO);
     glGenBuffers(1, &self->borderVBO);
 
@@ -88,7 +90,7 @@ editor_init(Editor* self, Anm2* anm2, Anm2Reference* reference, Resources* resou
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(f32), (void*)0);
 
-    /* Viewing texture */
+    // Texture
     glGenVertexArrays(1, &self->textureVAO);
     glGenBuffers(1, &self->textureVBO);
     glGenBuffers(1, &self->textureEBO);
@@ -101,11 +103,11 @@ editor_init(Editor* self, Anm2* anm2, Anm2Reference* reference, Resources* resou
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self->textureEBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GL_TEXTURE_INDICES), GL_TEXTURE_INDICES, GL_STATIC_DRAW);
 
-    /* Position */
+    // Position attribute
     glEnableVertexAttribArray(0); 
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(f32), (void*)0);
 
-    /* UV */
+    // UV position attribute
     glEnableVertexAttribArray(1); 
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(f32), (void*)(2 * sizeof(f32)));
 
@@ -114,18 +116,18 @@ editor_init(Editor* self, Anm2* anm2, Anm2Reference* reference, Resources* resou
     _editor_grid_set(self);
 }
 
+// Draws the editor
 void
 editor_draw(Editor* self)
 {
     GLuint shaderLine = self->resources->shaders[SHADER_LINE];
     GLuint shaderLineDotted = self->resources->shaders[SHADER_LINE_DOTTED];
     GLuint shaderTexture = self->resources->shaders[SHADER_TEXTURE];
-    f32 zoomFactor = self->settings->editorZoom / 100.0f;
+    f32 zoomFactor = PERCENT_TO_UNIT(self->settings->editorZoom);
 
-    /* Convert pan to pixels */
+    // Get normalized panning
     glm::vec2 ndcPan = glm::vec2(-self->settings->editorPanX / (EDITOR_SIZE.x / 2.0f), -self->settings->editorPanY / (EDITOR_SIZE.y / 2.0f));
 
-    /* Transformation matrix */
     glm::mat4 editorTransform = glm::translate(glm::mat4(1.0f), glm::vec3(ndcPan, 0.0f));
     editorTransform = glm::scale(editorTransform, glm::vec3(zoomFactor, zoomFactor, 1.0f));
 
@@ -142,12 +144,10 @@ editor_draw(Editor* self)
 
     glClear(GL_COLOR_BUFFER_BIT);
 
-    s32 spritesheetID = self->reference->itemType == ANM2_LAYER ? 
-    self->anm2->layers[self->reference->itemID].spritesheetID : -1;
-
-    if (spritesheetID > -1)
+    // Drawing the selected spritesheet
+    if (self->spritesheetID > -1)
     {
-        Texture* texture = &self->resources->textures[spritesheetID];
+        Texture* texture = &self->resources->textures[self->spritesheetID];
 
         glm::mat4 spritesheetTransform = editorTransform;
         glm::vec2 ndcScale = glm::vec2(texture->size.x, texture->size.y) / (EDITOR_SIZE * 0.5f);
@@ -176,6 +176,7 @@ editor_draw(Editor* self)
         glBindVertexArray(0);
         glUseProgram(0);
 
+        // Border around the spritesheet
         if (self->settings->editorIsBorder)
         {
             glUseProgram(shaderLineDotted);
@@ -193,10 +194,10 @@ editor_draw(Editor* self)
 
         Anm2Frame* frame = (Anm2Frame*)anm2_frame_from_reference(self->anm2, self->reference);
 
-        /* Draw the layer frame's crop and pivot */
+        // Drawing the frame's crop and pivot
         if (frame)
         {
-            /* Rect */
+            // Crop
             glm::mat4 rectTransform = editorTransform;  
 
             glm::vec2 rectNDCPos = frame->crop / (EDITOR_SIZE / 2.0f);  
@@ -217,7 +218,7 @@ editor_draw(Editor* self)
             glBindVertexArray(0);
             glUseProgram(0);
 
-            /* Pivot */
+            // Pivot
             glm::mat4 pivotTransform = editorTransform;
             glm::vec2 pivotNDCPos = ((frame->crop + frame->pivot) - (EDITOR_PIVOT_SIZE / 2.0f)) / (EDITOR_SIZE / 2.0f);
             glm::vec2 pivotNDCScale = EDITOR_PIVOT_SIZE / (EDITOR_SIZE / 2.0f);
@@ -252,6 +253,7 @@ editor_draw(Editor* self)
         }
     }
 
+    // Grid
     if (self->settings->editorIsGrid)
     {
         static ivec2 previousGridSize = {-1, -1};
@@ -292,12 +294,14 @@ editor_draw(Editor* self)
     glBindFramebuffer(GL_FRAMEBUFFER, 0); 
 }
 
+// Ticks editor
 void
 editor_tick(Editor* self)
 {
     self->settings->editorZoom = CLAMP(self->settings->editorZoom, EDITOR_ZOOM_MIN, EDITOR_ZOOM_MAX);
 }
 
+// Frees editor
 void
 editor_free(Editor* self)
 {

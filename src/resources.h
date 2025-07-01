@@ -12,5 +12,6 @@ struct Resources
 };
 
 void resources_init(Resources* self);
+void resources_texture_init(Resources* resources, const std::string& path, s32 id);
 void resources_free(Resources* self);
 void resources_textures_free(Resources* self);

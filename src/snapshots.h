@@ -9,7 +9,7 @@ struct Snapshot
 {
     Anm2 anm2;
     Anm2Reference reference;
-    f32 time;
+    f32 time = 0.0f;
 };
 
 struct SnapshotStack
@@ -26,6 +26,8 @@ struct Snapshots
     Input* input = NULL;
     SnapshotStack undoStack;
     SnapshotStack redoStack;
+    bool isUndo = false;
+    bool isRedo = false;
 };
 
 void snapshots_undo_stack_push(Snapshots* self, Snapshot* snapshot);

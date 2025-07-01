@@ -5,8 +5,9 @@
 #include "input.h"
 #include "settings.h"
 
-static const vec2 PREVIEW_SIZE = {5000, 5000};
-static const vec2 PREVIEW_CENTER = {0, 0};
+const vec2 PREVIEW_SIZE = {5000, 5000};
+const vec2 PREVIEW_CENTER = {0, 0};
+
 
 #define PREVIEW_ZOOM_MIN 1
 #define PREVIEW_ZOOM_MAX 1000
@@ -16,10 +17,13 @@ static const vec2 PREVIEW_CENTER = {0, 0};
 #define PREVIEW_GRID_OFFSET_MIN 0
 #define PREVIEW_GRID_OFFSET_MAX 100
 #define PREVIEW_MOVE_STEP 1
+#define PREVIEW_MOVE_STEP_MOD 10
 #define PREVIEW_ROTATE_STEP 1
+#define PREVIEW_ROTATE_STEP_MOD 10
 #define PREVIEW_SCALE_STEP 1
+#define PREVIEW_SCALE_STEP_MOD 10
 
-static const f32 PREVIEW_AXIS_VERTICES[] = 
+const f32 PREVIEW_AXIS_VERTICES[] = 
 {
     -1.0f,  0.0f,
     1.0f,   0.0f,
@@ -27,13 +31,13 @@ static const f32 PREVIEW_AXIS_VERTICES[] =
     0.0f,   1.0f
 };
 
-static const vec2 PREVIEW_NULL_RECT_SIZE = {100, 100};
-static const vec2 PREVIEW_POINT_SIZE = {2, 2};
-static const vec2 PREVIEW_PIVOT_SIZE = {4, 4};
-static const vec4 PREVIEW_ROOT_TINT = COLOR_GREEN;
-static const vec4 PREVIEW_NULL_TINT = COLOR_BLUE;
-static const vec4 PREVIEW_PIVOT_TINT = COLOR_RED;
-static const vec2 PREVIEW_TARGET_SIZE = {16, 16};
+const vec2 PREVIEW_NULL_RECT_SIZE = {100, 100};
+const vec2 PREVIEW_POINT_SIZE = {2, 2};
+const vec2 PREVIEW_PIVOT_SIZE = {4, 4};
+const vec4 PREVIEW_ROOT_TINT = COLOR_GREEN;
+const vec4 PREVIEW_NULL_TINT = COLOR_BLUE;
+const vec4 PREVIEW_PIVOT_TINT = COLOR_RED;
+const vec2 PREVIEW_TARGET_SIZE = {16, 16};
 
 struct Preview
 {

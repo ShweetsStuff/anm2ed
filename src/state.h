@@ -26,7 +26,7 @@ struct State
 	Snapshots snapshots;
 	bool isArgument = false;
 	bool isRunning = true;
-	char argument[PATH_MAX] = STRING_EMPTY;
+	std::string argument;
 	u64 lastTick = 0;
 	u64 tick = 0;
 }; 
