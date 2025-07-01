@@ -273,13 +273,13 @@ const std::vector<KeyType> INPUT_KEYS[INPUT_COUNT] =
     { KEY_2 },
     { KEY_Z },
     { KEY_Y },
-    { KEY_LCTRL, KEY_S }
+    { KEY_LCTRL , KEY_S}
 };
 
 struct Keyboard
 {
-    bool current[KEY_COUNT];
-    bool previous[KEY_COUNT];
+    bool current[KEY_COUNT] = { 0 };
+    bool previous[KEY_COUNT] = { 0 };
 };
 
 struct Mouse

@@ -23,7 +23,11 @@ file(GLOB SOURCES
 	"${PROJECT_SOURCE_DIR}/src/*.h"
 )
 
-add_executable(${PROJECT_NAME} ${SOURCES})
+if (WIN32)
+    enable_language("RC")
+    set (WIN32_RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/assets/win_icon.rc)
+endif()
+add_executable(${PROJECT_NAME} ${SOURCES} ${WIN32_RESOURCES})
 
 target_include_directories(${PROJECT_NAME} PRIVATE include include/imgui include/tinyxml2 src)
 if (NOT MSVC)

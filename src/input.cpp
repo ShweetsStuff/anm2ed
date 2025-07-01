@@ -109,9 +109,17 @@ input_held(Input* self, InputType type)
 bool
 input_release(Input* self, InputType type)
 {
-    for (KeyType key : INPUT_KEYS[type])
-        if (!key_release(&self->keyboard, (key))) 
-            return false; 
+    for (size_t i = 0; i < INPUT_KEYS[type].size(); i++) {
+        auto& key = INPUT_KEYS[type][i];
+        //below is some hackery to ensure that multikey shortcuts work...
+        //ideally would split this into a separate function or rename this?
+        if (i != INPUT_KEYS[type].size()) {
+            if (!key_held(&self->keyboard, key)) return false;
+        }
+        // last key in the shortcut chain, so in a mod1-mod2-...-key it won't be a mod key
+        // todo: introduce a list of modifer keys as a more reliable solution
+        else if (!key_release(&self->keyboard, (key))) return false;
+    };
     return true;
 }
 
