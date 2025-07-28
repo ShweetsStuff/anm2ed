@@ -6,6 +6,8 @@
 #define SETTINGS_BUFFER_ITEM 0xFF
 #define SETTINGS_SECTION "[Settings]"
 #define SETTINGS_SECTION_IMGUI "# Dear ImGui"
+#define SETTINGS_INIT_ERROR "Failed to read settings file! ({})"
+#define SETTINGS_PATH "settings.ini"
 
 enum SettingsValueType
 {
@@ -22,7 +24,6 @@ struct SettingsEntry
     s32 offset;
 };
 
-#define SETTINGS_COUNT 44
 struct Settings
 {
     s32 windowW = 1920;
@@ -69,9 +70,13 @@ struct Settings
     f32 editorBackgroundColorG = 0.184f;
     f32 editorBackgroundColorB = 0.286f;
     f32 editorBackgroundColorA = 1.0f;
+    f32 toolColorR = 1.0f;
+    f32 toolColorG = 1.0f;
+    f32 toolColorB = 1.0f;
+    f32 toolColorA = 1.0f;
 }; 
 
-const SettingsEntry SETTINGS_ENTRIES[SETTINGS_COUNT] =
+const SettingsEntry SETTINGS_ENTRIES[] =
 {
     {"windowW=", SETTINGS_TYPE_INT, offsetof(Settings, windowW)},
     {"windowH=", SETTINGS_TYPE_INT, offsetof(Settings, windowH)},
@@ -116,8 +121,13 @@ const SettingsEntry SETTINGS_ENTRIES[SETTINGS_COUNT] =
     {"editorBackgroundColorR=", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorBackgroundColorR)},
     {"editorBackgroundColorG=", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorBackgroundColorG)},
     {"editorBackgroundColorB=", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorBackgroundColorB)},
-    {"editorBackgroundColorA=", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorBackgroundColorA)}
+    {"editorBackgroundColorA=", SETTINGS_TYPE_FLOAT, offsetof(Settings, editorBackgroundColorA)},
+    {"toolColorR=", SETTINGS_TYPE_FLOAT, offsetof(Settings, toolColorR)},
+    {"toolColorG=", SETTINGS_TYPE_FLOAT, offsetof(Settings, toolColorG)},
+    {"toolColorB=", SETTINGS_TYPE_FLOAT, offsetof(Settings, toolColorB)},
+    {"toolColorA=", SETTINGS_TYPE_FLOAT, offsetof(Settings, toolColorA)}
 };
+constexpr s32 SETTINGS_COUNT = (s32)std::size(SETTINGS_ENTRIES);
 
 void settings_save(Settings* self);
-void settings_load(Settings* self);
+void settings_init(Settings* self);

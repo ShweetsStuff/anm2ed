@@ -1,112 +1,62 @@
 #include "snapshots.h"
 
-// Pushes the undo stack
-void 
-snapshots_undo_stack_push(Snapshots* self, Snapshot* snapshot)
+static void _snapshot_stack_push(SnapshotStack* stack, const Snapshot* snapshot)
 {
-    // If stack over the limit, shift it
-    if (self->undoStack.top >= SNAPSHOT_STACK_MAX)
+    if (stack->top >= SNAPSHOT_STACK_MAX)
     {
         for (s32 i = 0; i < SNAPSHOT_STACK_MAX - 1; i++)
-            self->undoStack.snapshots[i] = self->undoStack.snapshots[i + 1];
-
-        self->undoStack.top = SNAPSHOT_STACK_MAX - 1;
+            stack->snapshots[i] = stack->snapshots[i + 1];
+        stack->top = SNAPSHOT_STACK_MAX - 1;
     }
-
-    self->undoStack.snapshots[self->undoStack.top++] = *snapshot;
-    self->redoStack.top = 0; 
+    stack->snapshots[stack->top++] = *snapshot;
 }
 
-// Pops the undo stack
-bool
-snapshots_undo_stack_pop(Snapshots* self, Snapshot* snapshot)
+static bool _snapshot_stack_pop(SnapshotStack* stack, Snapshot* snapshot)
 {
-    if (self->undoStack.top == 0)
-        return false;
+    if (stack->top == 0) return false;
 
-    *snapshot = self->undoStack.snapshots[--self->undoStack.top];
-
+    *snapshot = stack->snapshots[--stack->top];
     return true;
 }
 
-// Pushes the redo stack
-void
-snapshots_redo_stack_push(Snapshots* self, Snapshot* snapshot)
+static void _snapshot_set(Snapshots* self, const Snapshot& snapshot)
 {
-    if (self->redoStack.top >= SNAPSHOT_STACK_MAX)
-    {
-        for (s32 i = 0; i < SNAPSHOT_STACK_MAX - 1; i++)
-            self->redoStack.snapshots[i] = self->redoStack.snapshots[i + 1];
-        self->redoStack.top = SNAPSHOT_STACK_MAX - 1;
-    }
-
-    self->redoStack.snapshots[self->redoStack.top++] = *snapshot;
+    *self->anm2 = snapshot.anm2;
+    *self->reference = snapshot.reference;
+    self->preview->time = snapshot.time;
 }
 
-// Pops the redo stack
-bool
-snapshots_redo_stack_pop(Snapshots* self, Snapshot* snapshot)
-{
-    if (self->redoStack.top == 0)
-        return false;
-
-    *snapshot = self->redoStack.snapshots[--self->redoStack.top];
-    return true;
-}
-
-// Initializes snapshots
-void 
-snapshots_init(Snapshots* self, Anm2* anm2, Anm2Reference* reference, f32* time, Input* input)
+void snapshots_init(Snapshots* self, Anm2* anm2, Anm2Reference* reference, Preview* preview)
 {
     self->anm2 = anm2;
     self->reference = reference;
-    self->time = time;
-    self->input = input;
+    self->preview = preview;
 }
 
-// Ticks snapshots
-void
-snapshots_tick(Snapshots* self)
+void snapshots_undo_stack_push(Snapshots* self, const Snapshot* snapshot)
 {
-    /* Undo */
-    if (input_press(self->input, INPUT_UNDO))
-        self->isUndo = true;
-    
-    // isUndo disconnected, if another part of the program wants to set it 
-    if (self->isUndo)
+    _snapshot_stack_push(&self->undoStack, snapshot);
+    self->redoStack.top = 0;
+}
+
+void snapshots_undo(Snapshots* self)
+{
+    Snapshot snapshot;
+    if (_snapshot_stack_pop(&self->undoStack, &snapshot))
     {
-        Snapshot snapshot;
-        if (snapshots_undo_stack_pop(self, &snapshot))
-        {
-            Snapshot current = {*self->anm2, *self->reference, *self->time};
-            snapshots_redo_stack_push(self, &current);
-
-            *self->anm2 = snapshot.anm2;
-            *self->reference = snapshot.reference;
-            *self->time = snapshot.time;
-        }
-
-        self->isUndo = false;
+        Snapshot current = {*self->anm2, *self->reference, self->preview->time};
+        _snapshot_stack_push(&self->redoStack, &current);
+        _snapshot_set(self, snapshot);
     }
+}
 
-    /* Redo */
-    if (input_press(self->input, INPUT_REDO))
-        self->isRedo = true;
-
-    // isRedo disconnected, if another part of the program wants to set it 
-    if (self->isRedo)
+void snapshots_redo(Snapshots* self)
+{
+    Snapshot snapshot;
+    if (_snapshot_stack_pop(&self->redoStack, &snapshot))
     {
-        Snapshot snapshot;
-        if (snapshots_redo_stack_pop(self, &snapshot))
-        {
-            Snapshot current = {*self->anm2, *self->reference, *self->time};
-            snapshots_undo_stack_push(self, &current);
-
-            *self->anm2 = snapshot.anm2;
-            *self->reference = snapshot.reference;
-            *self->time = snapshot.time;
-        }
-
-        self->isRedo = false;
+        Snapshot current = {*self->anm2, *self->reference, self->preview->time};
+        _snapshot_stack_push(&self->undoStack, &current);
+        _snapshot_set(self, snapshot);
     }
 }

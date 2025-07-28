@@ -1,15 +1,12 @@
+// Handles the rendering of the animation preview
+
 #include "preview.h"
 
-static void _preview_axis_set(Preview* self);
-static s32 _preview_grid_set(Preview* self);
-
-// Sets the preview's axis (lines across x/y)
-static void
-_preview_axis_set(Preview* self)
+static void _preview_axis_set(Preview* self)
 {
     glBindVertexArray(self->axisVAO);
     glBindBuffer(GL_ARRAY_BUFFER, self->axisVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(PREVIEW_AXIS_VERTICES), PREVIEW_AXIS_VERTICES, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(CANVAS_AXIS_VERTICES), CANVAS_AXIS_VERTICES, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(f32), (void*)0);
@@ -17,16 +14,14 @@ _preview_axis_set(Preview* self)
     glBindVertexArray(0);
 }
 
-// Sets and returns the grid's vertices 
-static s32
-_preview_grid_set(Preview* self)
+static s32 _preview_grid_set(Preview* self)
 {
     std::vector<f32> vertices;
 
     s32 verticalLineCount = (s32)(PREVIEW_SIZE.x / MIN(self->settings->previewGridSizeX, PREVIEW_GRID_MIN));
     s32 horizontalLineCount = (s32)(PREVIEW_SIZE.y / MIN(self->settings->previewGridSizeY, PREVIEW_GRID_MIN));
 
-    /* Vertical */
+    // Vertical
     for (s32 i = 0; i <= verticalLineCount; i++)
     {
         s32 x = i * self->settings->previewGridSizeX - self->settings->previewGridOffsetX;
@@ -38,7 +33,7 @@ _preview_grid_set(Preview* self)
         vertices.push_back(1.0f);
     }
 
-    /* Horizontal */
+    // Horizontal
     for (s32 i = 0; i <= horizontalLineCount; i++)
     {
         s32 y = i * self->settings->previewGridSizeY - self->settings->previewGridOffsetY;
@@ -60,13 +55,10 @@ _preview_grid_set(Preview* self)
     return (s32)vertices.size();
 }
 
-// Initializes preview
-void
-preview_init(Preview* self, Anm2* anm2, Anm2Reference* reference, f32* time, Resources* resources, Settings* settings)
+void preview_init(Preview* self, Anm2* anm2, Anm2Reference* reference, Resources* resources, Settings* settings)
 {
     self->anm2 = anm2;
     self->reference = reference;
-    self->time = time;
     self->resources = resources;
     self->settings = settings;
 
@@ -77,7 +69,7 @@ preview_init(Preview* self, Anm2* anm2, Anm2Reference* reference, f32* time, Res
 
     glGenTextures(1, &self->texture);
     glBindTexture(GL_TEXTURE_2D, self->texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (s32)PREVIEW_SIZE.x, (s32)PREVIEW_SIZE.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (s32)PREVIEW_SIZE.x, (s32)PREVIEW_SIZE.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -118,7 +110,7 @@ preview_init(Preview* self, Anm2* anm2, Anm2Reference* reference, f32* time, Res
     glBindVertexArray(self->textureVAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, self->textureVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(f32) * 4 * 4, NULL, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(f32) * 4 * 4, nullptr, GL_DYNAMIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self->textureEBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GL_TEXTURE_INDICES), GL_TEXTURE_INDICES, GL_STATIC_DRAW);
@@ -137,9 +129,7 @@ preview_init(Preview* self, Anm2* anm2, Anm2Reference* reference, f32* time, Res
     _preview_grid_set(self);
 }
 
-// Ticks preview
-void
-preview_tick(Preview* self)
+void preview_tick(Preview* self)
 {
     self->settings->previewZoom = CLAMP(self->settings->previewZoom, PREVIEW_ZOOM_MIN, PREVIEW_ZOOM_MAX);
  
@@ -150,13 +140,13 @@ preview_tick(Preview* self)
     {
         if (self->isPlaying)
         {  
-            *self->time += (f32)self->anm2->fps / TICK_RATE;
+            self->time += (f32)self->anm2->fps / TICK_RATE;
 
             // If looping, return back to 0; if not, stop at length
-            if (*self->time >= (f32)animation->frameNum - 1)
+            if (self->time >= (f32)animation->frameNum - 1)
             {
                 if (self->settings->playbackIsLoop && !self->isRecording)
-                    *self->time = 0.0f;
+                    self->time = 0.0f;
                 else
                     self->isPlaying = false;
             }
@@ -164,13 +154,11 @@ preview_tick(Preview* self)
         
         // Make sure to clamp time within appropriate range
         if (!self->isPlaying)
-            *self->time = CLAMP(*self->time, 0.0f, (f32)animation->frameNum - 1);
+            self->time = CLAMP(self->time, 0.0f, (f32)animation->frameNum - 1);
     }
 }
 
-// Draws preview
-void
-preview_draw(Preview* self)
+void preview_draw(Preview* self)
 {
     GLuint shaderLine = self->resources->shaders[SHADER_LINE];
     GLuint shaderTexture = self->resources->shaders[SHADER_TEXTURE];
@@ -263,15 +251,17 @@ preview_draw(Preview* self)
     {
         Anm2Frame rootFrame;
         Anm2Frame frame;
-        anm2_frame_from_time(self->anm2, &rootFrame, Anm2Reference{animationID, ANM2_ROOT, 0, 0}, *self->time);
+        anm2_frame_from_time(self->anm2, &rootFrame, Anm2Reference{animationID, ANM2_ROOT, 0, 0}, self->time);
 
         // Layers
-        for (auto & [id, layerAnimation] : animation->layerAnimations)
+		for (auto [i, id] : self->anm2->layerMap)
         {
+            Anm2Item& layerAnimation = animation->layerAnimations[id];
+
             if (!layerAnimation.isVisible || layerAnimation.frames.size() <= 0)
                 continue;
 
-            anm2_frame_from_time(self->anm2, &frame, Anm2Reference{animationID, ANM2_LAYER, id, 0}, *self->time);
+            anm2_frame_from_time(self->anm2, &frame, Anm2Reference{animationID, ANM2_LAYER, id, 0}, self->time);
 
             if (!frame.isVisible)
                 continue;
@@ -372,7 +362,7 @@ preview_draw(Preview* self)
                 if (!layerAnimation.isVisible || layerAnimation.frames.size() <= 0)
                     continue;
                 
-                anm2_frame_from_time(self->anm2, &frame, Anm2Reference{animationID, ANM2_LAYER, id, 0}, *self->time);
+                anm2_frame_from_time(self->anm2, &frame, Anm2Reference{animationID, ANM2_LAYER, id, 0}, self->time);
 
                 if (!frame.isVisible)
                     continue;
@@ -423,7 +413,7 @@ preview_draw(Preview* self)
             if (!nullAnimation.isVisible || nullAnimation.frames.size() <= 0)
                 continue;
 
-            anm2_frame_from_time(self->anm2, &frame, Anm2Reference{animationID, ANM2_NULL, id, 0}, *self->time);
+            anm2_frame_from_time(self->anm2, &frame, Anm2Reference{animationID, ANM2_NULL, id, 0}, self->time);
 
             if (!frame.isVisible)
                 continue;
@@ -432,7 +422,7 @@ preview_draw(Preview* self)
 
             glm::mat4 nullTransform = previewTransform;
 
-            TextureType textureType = null->isShowRect ? TEXTURE_SQUARE : TEXTURE_TARGET;
+            TextureType textureType = null->isShowRect ? TEXTURE_UNINTERPOLATED : TEXTURE_TARGET;
             glm::vec2 size = null->isShowRect ? PREVIEW_POINT_SIZE : PREVIEW_TARGET_SIZE;
             glm::vec2 pos = self->settings->previewIsRootTransform ? frame.position + (rootFrame.position) - (size / 2.0f) : frame.position - (size / 2.0f);
 
@@ -494,12 +484,11 @@ preview_draw(Preview* self)
         }
     }
 
-    // Manage recording
+    /*
     if (self->isRecording && animation)
     {
         if (recordFrameIndex == 0)
         {
-            // Create frames directory, if it exists
             if 
             (
                 std::filesystem::exists(STRING_PREVIEW_FRAMES_DIRECTORY) && 
@@ -548,27 +537,27 @@ preview_draw(Preview* self)
         }
         else
         {
-            if (*self->time >= (f32)animation->frameNum - 1)
+            if (self->time >= (f32)animation->frameNum - 1)
             {
                 self->isRecording = false;
                 self->isPlaying = false;
                 recordFrameIndex = 0;
                 recordFrameTimeNext = 0;
-                *self->time = 0.0f;
+                self->time = 0.0f;
             }
-            else if (*self->time >= recordFrameTimeNext)
+            else if (self->time >= recordFrameTimeNext)
             {
                 isRecordThisFrame = true;
-                recordFrameTimeNext = *self->time + (f32)self->anm2->fps / TICK_RATE;
+                recordFrameTimeNext = self->time + (f32)self->anm2->fps / TICK_RATE;
             }
         }
     }
+    */
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0); 
 }
 
-void
-preview_free(Preview* self)
+void preview_free(Preview* self)
 {
     glDeleteTextures(1, &self->texture);
     glDeleteFramebuffers(1, &self->fbo);

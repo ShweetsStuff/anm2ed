@@ -13,6 +13,12 @@
 #define ANM2_FRAME_DELAY_MIN 1
 #define ANM2_STRING_MAX 0xFF
 
+#define ANM2_READ_ERROR "Failed to read anm2 from file: {}"
+#define ANM2_READ_INFO "Read anm2 from file: {}"
+#define ANM2_WRITE_ERROR "Failed to write anm2 to file: {}"
+#define ANM2_WRITE_INFO "Wrote anm2 to file: {}"
+#define STRING_ANM2_CREATED_ON_FORMAT "%d-%B-%Y %I:%M:%S %p"
+
 /* Elements */
 #define ANM2_ELEMENT_LIST \
     X(ANIMATED_ACTOR,     "AnimatedActor")     \
@@ -120,24 +126,24 @@ enum Anm2Type
 
 struct Anm2Spritesheet
 {
-    std::string path;
+    std::string path{};
 };
 
 struct Anm2Layer
 {
-    std::string name = STRING_ANM2_NEW_LAYER;
+    std::string name = "New Layer";
 	s32 spritesheetID = -1;
 };
 
 struct Anm2Null
 {
-    std::string name = STRING_ANM2_NEW_NULL;
+    std::string name = "New Null";   
     bool isShowRect = false;
 };
 
 struct Anm2Event
 {
-    std::string name = STRING_ANM2_NEW_EVENT;
+    std::string name = "New Event";
 };
 
 struct Anm2Frame
@@ -146,8 +152,8 @@ struct Anm2Frame
 	bool isVisible = true;
 	f32 rotation = 1.0f;
 	s32 delay = ANM2_FRAME_DELAY_MIN;
-    s32 atFrame = -1;
-    s32 eventID = -1;
+    s32 atFrame = INDEX_NONE;
+    s32 eventID = ID_NONE;
 	vec2 crop = {0.0f, 0.0f};
 	vec2 pivot = {0.0f, 0.0f};
 	vec2 position = {0.0f, 0.0f};
@@ -166,7 +172,7 @@ struct Anm2Item
 struct Anm2Animation
 {
 	s32 frameNum = ANM2_FRAME_NUM_MIN;
-    std::string name = STRING_ANM2_NEW_ANIMATION;
+    std::string name = "New Animation";
 	bool isLoop = true;
     Anm2Item rootAnimation;
     std::map<s32, Anm2Item> layerAnimations;
@@ -176,27 +182,45 @@ struct Anm2Animation
 
 struct Anm2 
 {
-    std::string path;
-    std::string defaultAnimation;
-    std::string createdBy = STRING_ANM2_CREATED_BY_DEFAULT;
-    std::string createdOn;
+    std::string path{};
+    std::string defaultAnimation{};
+    std::string createdBy = "robot";
+    std::string createdOn{};
 	std::map<s32, Anm2Spritesheet> spritesheets; 
 	std::map<s32, Anm2Layer> layers; 
 	std::map<s32, Anm2Null> nulls; 
-	std::map<s32, Anm2Event> events; 
+    std::map<s32, Anm2Event> events;
 	std::map<s32, Anm2Animation> animations; 
+    std::map<s32, s32> layerMap; // id, index
     s32 fps = 30;
 	s32 version = 0;
 };
 
 struct Anm2Reference
 {
-    s32 animationID = -1;
+    s32 animationID = ID_NONE;
     Anm2Type itemType = ANM2_NONE;
-    s32 itemID = -1;
-    s32 frameIndex = -1;
-
+    s32 itemID = ID_NONE;
+    s32 frameIndex = INDEX_NONE;
     auto operator<=>(const Anm2Reference&) const = default; 
+};
+
+struct Anm2AnimationWithID
+{
+    s32 id;
+    Anm2Animation animation;
+};
+
+struct Anm2EventWithID
+{
+    s32 id;
+    Anm2Event event;
+};
+
+struct Anm2FrameWithReference
+{
+    Anm2Reference reference;
+    Anm2Frame frame;
 };
 
 void anm2_layer_add(Anm2* self);
@@ -213,9 +237,11 @@ void anm2_spritesheet_texture_load(Anm2* self, Resources* resources, const std::
 Anm2Animation* anm2_animation_from_reference(Anm2* self, Anm2Reference* reference);
 Anm2Item* anm2_item_from_reference(Anm2* self, Anm2Reference* reference);
 Anm2Frame* anm2_frame_from_reference(Anm2* self, Anm2Reference* reference);
+s32 anm2_frame_index_from_time(Anm2* self, Anm2Reference reference, f32 time);
 Anm2Frame* anm2_frame_add(Anm2* self, Anm2Reference* reference, s32 time);
 void anm2_frame_from_time(Anm2* self, Anm2Frame* frame, Anm2Reference reference, f32 time);
 void anm2_reference_clear(Anm2Reference* self);
 void anm2_reference_item_clear(Anm2Reference* self);
 void anm2_reference_frame_clear(Anm2Reference* self);
-s32 anm2_animation_length_get(Anm2* self, s32 animationID);
+s32 anm2_animation_length_get(Anm2Animation* self);
+void anm2_animation_length_set(Anm2Animation* self);

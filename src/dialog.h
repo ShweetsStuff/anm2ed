@@ -26,12 +26,12 @@ enum DialogType
 
 struct Dialog
 {
-    Anm2* anm2 = NULL;
-    Anm2Reference* reference = NULL;
-    Resources* resources = NULL;
-    SDL_Window* window = NULL;
-    std::string path;
-    s32 replaceID = -1;
+    Anm2* anm2 = nullptr;
+    Anm2Reference* reference = nullptr;
+    Resources* resources = nullptr;
+    SDL_Window* window = nullptr;
+    std::string path{};
+    s32 replaceID = ID_NONE;
     DialogType type = DIALOG_NONE;
     bool isSelected = false;
 };

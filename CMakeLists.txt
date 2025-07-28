@@ -6,6 +6,7 @@ endif()
 
 project(anm2ed CXX)
 
+
 find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3-shared)
 find_package(GLEW REQUIRED)
 find_package(OpenGL REQUIRED)
@@ -29,6 +30,8 @@ if (WIN32)
 endif()
 add_executable(${PROJECT_NAME} ${SOURCES} ${WIN32_RESOURCES})
 
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_23)
+
 target_include_directories(${PROJECT_NAME} PRIVATE include include/imgui include/tinyxml2 src)
 if (NOT MSVC)
     set(CMAKE_CXX_FLAGS "-g -O2 -std=c++23 -Wall -Wextra -pedantic -fmax-errors=1")
@@ -40,6 +43,7 @@ if(NOT MSVC)
     target_link_libraries(${PROJECT_NAME} PRIVATE m)
 endif()
     target_link_libraries(${PROJECT_NAME} PRIVATE OpenGL::GL GLEW::GLEW SDL3::SDL3)
+
 
 message("System: ${CMAKE_SYSTEM_NAME}")
 message("Project: ${PROJECT_NAME}")

@@ -1,17 +1,15 @@
+// Handles the rendering of the spritesheet editor
+
 #include "editor.h"
 
-static s32 _editor_grid_set(Editor* self);
-
-// Sets the editor's grid
-static s32
-_editor_grid_set(Editor* self)
+static s32 _editor_grid_set(Editor* self)
 {
     std::vector<f32> vertices;
 
     s32 verticalLineCount = (s32)(EDITOR_SIZE.x / MIN(self->settings->editorGridSizeX, EDITOR_GRID_MIN));
     s32 horizontalLineCount = (s32)(EDITOR_SIZE.y / MIN(self->settings->editorGridSizeY, EDITOR_GRID_MIN));
 
-    /* Vertical */
+    // Vertical
     for (s32 i = 0; i <= verticalLineCount; i++)
     {
         s32 x = i * self->settings->editorGridSizeX - self->settings->editorGridOffsetX;
@@ -23,7 +21,7 @@ _editor_grid_set(Editor* self)
         vertices.push_back(1.0f);
     }
 
-    /* Horizontal */
+    // Horizontal
     for (s32 i = 0; i <= horizontalLineCount; i++)
     {
         s32 y = i * self->settings->editorGridSizeY - self->settings->editorGridOffsetY;
@@ -45,9 +43,7 @@ _editor_grid_set(Editor* self)
     return (s32)vertices.size();
 }
 
-// Initializes editor
-void
-editor_init(Editor* self, Anm2* anm2, Anm2Reference* reference, Resources* resources, Settings* settings)
+void editor_init(Editor* self, Anm2* anm2, Anm2Reference* reference, Resources* resources, Settings* settings)
 {
     self->anm2 = anm2;
     self->reference = reference;
@@ -61,7 +57,7 @@ editor_init(Editor* self, Anm2* anm2, Anm2Reference* reference, Resources* resou
 
     glGenTextures(1, &self->texture);
     glBindTexture(GL_TEXTURE_2D, self->texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (s32)EDITOR_SIZE.x, (s32)EDITOR_SIZE.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (s32)EDITOR_SIZE.x, (s32)EDITOR_SIZE.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -98,7 +94,7 @@ editor_init(Editor* self, Anm2* anm2, Anm2Reference* reference, Resources* resou
     glBindVertexArray(self->textureVAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, self->textureVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(f32) * 4 * 4, NULL, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(f32) * 4 * 4, nullptr, GL_DYNAMIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self->textureEBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GL_TEXTURE_INDICES), GL_TEXTURE_INDICES, GL_STATIC_DRAW);
@@ -116,15 +112,14 @@ editor_init(Editor* self, Anm2* anm2, Anm2Reference* reference, Resources* resou
     _editor_grid_set(self);
 }
 
-// Draws the editor
-void
-editor_draw(Editor* self)
+void editor_draw(Editor* self)
 {
     GLuint shaderLine = self->resources->shaders[SHADER_LINE];
     GLuint shaderLineDotted = self->resources->shaders[SHADER_LINE_DOTTED];
     GLuint shaderTexture = self->resources->shaders[SHADER_TEXTURE];
-    f32 zoomFactor = PERCENT_TO_UNIT(self->settings->editorZoom);
 
+    f32 zoomFactor = PERCENT_TO_UNIT(self->settings->editorZoom);
+    
     // Get normalized panning
     glm::vec2 ndcPan = glm::vec2(-self->settings->editorPanX / (EDITOR_SIZE.x / 2.0f), -self->settings->editorPanY / (EDITOR_SIZE.y / 2.0f));
 
@@ -294,16 +289,12 @@ editor_draw(Editor* self)
     glBindFramebuffer(GL_FRAMEBUFFER, 0); 
 }
 
-// Ticks editor
-void
-editor_tick(Editor* self)
+void editor_tick(Editor* self)
 {
     self->settings->editorZoom = CLAMP(self->settings->editorZoom, EDITOR_ZOOM_MIN, EDITOR_ZOOM_MAX);
 }
 
-// Frees editor
-void
-editor_free(Editor* self)
+void editor_free(Editor* self)
 {
     glDeleteTextures(1, &self->texture);
     glDeleteFramebuffers(1, &self->fbo);

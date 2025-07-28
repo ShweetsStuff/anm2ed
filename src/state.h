@@ -2,10 +2,13 @@
 
 #include "imgui.h"
 
-#define WINDOW_WIDTH 1920
-#define WINDOW_HEIGHT 1080
-#define WINDOW_FLAGS SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL
-#define LINE_WIDTH 2.0f
+#define STATE_INIT_INFO "Initializing..."
+#define STATE_SDL_INIT_ERROR "Failed to initialize SDL! {}"
+#define STATE_SDL_INIT_INFO "Initialized SDL"
+#define STATE_GL_CONTEXT_INIT_ERROR "Failed to initialize OpenGL context! {}"
+#define STATE_GL_CONTEXT_INIT_INFO "Initialized OpenGL context (OpenGL {})"
+#define STATE_QUIT_INFO "Exiting..."
+#define STATE_GL_LINE_WIDTH 2.0f
 
 struct State
 {
@@ -13,22 +16,21 @@ struct State
 	SDL_Renderer* renderer;
 	SDL_GLContext glContext;
     Imgui imgui;
-	Input input;
 	Dialog dialog;
 	Editor editor;
 	Preview preview;
     Anm2 anm2;
 	Anm2Reference reference;
-	f32 time;
 	Resources resources;
 	Settings settings;
-	Tool tool;
 	Snapshots snapshots;
-	bool isArgument = false;
+	Clipboard clipboard;
 	bool isRunning = true;
-	std::string argument;
+	std::string argument{};
 	u64 lastTick = 0;
 	u64 tick = 0;
+
+	bool is_argument() const { return !argument.empty(); }
 }; 
 
 void init(State* state);

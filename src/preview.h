@@ -2,12 +2,11 @@
 
 #include "anm2.h"
 #include "resources.h"
-#include "input.h"
 #include "settings.h"
+#include "canvas.h"
 
-const vec2 PREVIEW_SIZE = {5000, 5000};
+const vec2 PREVIEW_SIZE = {2000, 2000};
 const vec2 PREVIEW_CENTER = {0, 0};
-
 
 #define PREVIEW_ZOOM_MIN 1
 #define PREVIEW_ZOOM_MAX 1000
@@ -16,20 +15,6 @@ const vec2 PREVIEW_CENTER = {0, 0};
 #define PREVIEW_GRID_MAX 1000
 #define PREVIEW_GRID_OFFSET_MIN 0
 #define PREVIEW_GRID_OFFSET_MAX 100
-#define PREVIEW_MOVE_STEP 1
-#define PREVIEW_MOVE_STEP_MOD 10
-#define PREVIEW_ROTATE_STEP 1
-#define PREVIEW_ROTATE_STEP_MOD 10
-#define PREVIEW_SCALE_STEP 1
-#define PREVIEW_SCALE_STEP_MOD 10
-
-const f32 PREVIEW_AXIS_VERTICES[] = 
-{
-    -1.0f,  0.0f,
-    1.0f,   0.0f,
-    0.0f,   -1.0f,
-    0.0f,   1.0f
-};
 
 const vec2 PREVIEW_NULL_RECT_SIZE = {100, 100};
 const vec2 PREVIEW_POINT_SIZE = {2, 2};
@@ -41,30 +26,29 @@ const vec2 PREVIEW_TARGET_SIZE = {16, 16};
 
 struct Preview
 {
-    Anm2* anm2 = NULL;
-    Anm2Reference* reference = NULL;
-    f32* time = NULL;
-    Input* input = NULL;
-    Resources* resources = NULL;
-    Settings* settings = NULL;
-    GLuint axisVAO;
-    GLuint axisVBO;
-    GLuint fbo;
-    GLuint gridVAO;
-    GLuint gridVBO;
-    GLuint rbo;
-    GLuint texture;
-    GLuint rectVAO;
-    GLuint rectVBO;
-    GLuint textureEBO;
-    GLuint textureVAO;
-    GLuint textureVBO;
+    Anm2* anm2 = nullptr;
+    Anm2Reference* reference = nullptr;
+    Resources* resources = nullptr;
+    Settings* settings = nullptr;
+    GLuint axisVAO = ID_NONE;
+    GLuint axisVBO = ID_NONE;
+    GLuint fbo = ID_NONE;
+    GLuint gridVAO = ID_NONE;
+    GLuint gridVBO = ID_NONE;
+    GLuint rbo = ID_NONE;
+    GLuint texture = ID_NONE;
+    GLuint rectVAO = ID_NONE;
+    GLuint rectVBO = ID_NONE;
+    GLuint textureEBO = ID_NONE;
+    GLuint textureVAO = ID_NONE;
+    GLuint textureVBO = ID_NONE;
     bool isPlaying = false;
     bool isRecording = false;
-    vec2 recordSize = {0.0f, 0.0f};
+    vec2 recordSize{};
+    f32 time{};
 };
 
-void preview_init(Preview* self, Anm2* anm2, Anm2Reference* reference, f32* time, Resources* resources, Settings* settings);
+void preview_init(Preview* self, Anm2* anm2, Anm2Reference* reference, Resources* resources, Settings* settings);
 void preview_draw(Preview* self);
 void preview_tick(Preview* self);
 void preview_free(Preview* self);

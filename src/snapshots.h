@@ -1,7 +1,7 @@
 #pragma once
 
 #include "anm2.h"
-#include "input.h"
+#include "preview.h"
 
 #define SNAPSHOT_STACK_MAX 100
 
@@ -20,17 +20,14 @@ struct SnapshotStack
 
 struct Snapshots
 {
-    Anm2* anm2 = NULL;
-    Anm2Reference* reference = NULL;
-    f32* time = NULL;
-    Input* input = NULL;
+    Anm2* anm2 = nullptr;
+    Preview* preview = nullptr;
+    Anm2Reference* reference = nullptr;
     SnapshotStack undoStack;
     SnapshotStack redoStack;
-    bool isUndo = false;
-    bool isRedo = false;
 };
 
-void snapshots_undo_stack_push(Snapshots* self, Snapshot* snapshot);
-bool snapshots_undo_stack_pop(Snapshots* self, Snapshot* snapshot);
-void snapshots_init(Snapshots* self, Anm2* anm2, Anm2Reference* reference, f32* time, Input* input);
-void snapshots_tick(Snapshots* self);
+void snapshots_undo_stack_push(Snapshots* self, const Snapshot* snapshot);
+void snapshots_init(Snapshots* self, Anm2* anm2, Anm2Reference* reference, Preview* preview);
+void snapshots_undo(Snapshots* self);
+void snapshots_redo(Snapshots* self);

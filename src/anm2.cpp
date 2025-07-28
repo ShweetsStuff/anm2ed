@@ -1,12 +1,10 @@
+// Anm2 file format; serializing/deserializing
+
 #include "anm2.h"
 
 using namespace tinyxml2;
 
-static void _anm2_created_on_set(Anm2* self);
-
-// Sets the anm2's date to the system's current date
-static void
-_anm2_created_on_set(Anm2* self)
+static void _anm2_created_on_set(Anm2* self)
 {
 	auto now = std::chrono::system_clock::now();
     std::time_t time = std::chrono::system_clock::to_time_t(now);
@@ -17,9 +15,7 @@ _anm2_created_on_set(Anm2* self)
 	self->createdOn = timeString.str();
 }
 
-// Serializes the anm2 struct into XML and exports it to the given path
-bool
-anm2_serialize(Anm2* self, const std::string& path)
+bool anm2_serialize(Anm2* self, const std::string& path)
 {
 	XMLDocument document;
 	XMLError error;
@@ -33,17 +29,11 @@ anm2_serialize(Anm2* self, const std::string& path)
 	XMLElement* eventsElement;
 	XMLElement* animationsElement;
 
-	if (!self || path.empty())
-		return false;
+	if (!self || path.empty()) return false;
 
-	// Update creation date on first version
-	if (self->version == 0)
-		_anm2_created_on_set(self);
+	if (self->version == 0) _anm2_created_on_set(self);
 
-	// Set anm2 path to argument
 	self->path = path;
-		
-	// Update version 
 	self->version++;
 
 	// AnimatedActor
@@ -137,7 +127,7 @@ anm2_serialize(Anm2* self, const std::string& path)
 	animationsElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATIONS]);
 	animationsElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_DEFAULT_ANIMATION], self->defaultAnimation.c_str()); // DefaultAnimation
 
-	for (const auto & [id, animation] : self->animations)
+	for (auto& [id, animation] : self->animations)
 	{
 		XMLElement* animationElement;
 		XMLElement* rootAnimationElement;
@@ -155,7 +145,7 @@ anm2_serialize(Anm2* self, const std::string& path)
 		// RootAnimation
 		rootAnimationElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ROOT_ANIMATION]);
 
-		for (const auto & frame : animation.rootAnimation.frames)
+		for (auto& frame : animation.rootAnimation.frames)
 		{
 			XMLElement* frameElement;
 
@@ -188,8 +178,10 @@ anm2_serialize(Anm2* self, const std::string& path)
 		// LayerAnimations
 		layerAnimationsElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYER_ANIMATIONS]);
 
-		for (const auto & [layerID, layerAnimation] : animation.layerAnimations)
+		for (auto& [layerIndex, layerID] : self->layerMap)
 		{
+			Anm2Item& layerAnimation = animation.layerAnimations[layerID];
+
 			XMLElement* layerAnimationElement;
 
 			// LayerAnimation
@@ -304,30 +296,28 @@ anm2_serialize(Anm2* self, const std::string& path)
 
 	if (error != XML_SUCCESS)
 	{
-		std::cout << STRING_ERROR_ANM2_WRITE << path << std::endl;
+		log_error(std::format(ANM2_WRITE_ERROR, path));
 		return false;
 	}
 
-	std::cout << STRING_INFO_ANM2_WRITE << path << std::endl;
+	log_info(std::format(ANM2_WRITE_INFO, path));
 	
 	return true;
 }
 
-// Loads the .anm2 file and deserializes it into the struct equivalent
-bool 
-anm2_deserialize(Anm2* self, Resources* resources, const std::string& path)
+bool anm2_deserialize(Anm2* self, Resources* resources, const std::string& path)
 {
 	XMLDocument xmlDocument;
 	XMLError xmlError;
 	const XMLElement* xmlElement;
 	const XMLElement* xmlRoot;
-	Anm2Animation* animation = NULL;
-	Anm2Layer* layer = NULL;
-	Anm2Null* null = NULL;
-	Anm2Item* item = NULL;
-	Anm2Event* event = NULL;
-	Anm2Frame* frame = NULL;
-	Anm2Spritesheet* spritesheet = NULL;
+	Anm2Animation* animation = nullptr;
+	Anm2Layer* layer = nullptr;
+	Anm2Null* null = nullptr;
+	Anm2Item* item = nullptr;
+	Anm2Event* event = nullptr;
+	Anm2Frame* frame = nullptr;
+	Anm2Spritesheet* spritesheet = nullptr;
 	Anm2Element anm2Element = ANM2_ELEMENT_ANIMATED_ACTOR;
 	Anm2Attribute anm2Attribute =  ANM2_ATTRIBUTE_ID;
 	Anm2Item addItem;
@@ -335,9 +325,11 @@ anm2_deserialize(Anm2* self, Resources* resources, const std::string& path)
 	Anm2Null addNull;
 	Anm2Event addEvent;
 	Anm2Spritesheet addSpritesheet;
+	s32 layerMapIndex = 0;
+	bool isLayerMapSet = false;
+	bool isFirstAnimationDone = false;
 
-	if (!self || path.empty())
-		return false;
+	if (!self || path.empty()) return false;
 
 	*self = Anm2{};
 
@@ -345,13 +337,10 @@ anm2_deserialize(Anm2* self, Resources* resources, const std::string& path)
 
 	if (xmlError != XML_SUCCESS)
 	{
-		std::cout << STRING_ERROR_ANM2_READ << path << xmlDocument.ErrorStr() << std::endl;
+		log_error(std::format(ANM2_READ_ERROR, xmlDocument.ErrorStr()));
 		return false;
 	}
 
-	// Free the loaded textures used by resources so new ones for the anm2 can be loaded 
-	resources_textures_free(resources);
-	
 	// Save old working directory and then use anm2's path as directory
 	// (used for loading textures from anm2 correctly which are relative)
     std::filesystem::path workingPath = std::filesystem::current_path();
@@ -365,8 +354,8 @@ anm2_deserialize(Anm2* self, Resources* resources, const std::string& path)
 	// Iterate through elements
 	while (xmlElement)
 	{
-		const XMLAttribute* xmlAttribute = NULL;
-		const XMLElement* xmlChild = NULL;
+		const XMLAttribute* xmlAttribute = nullptr;
+		const XMLElement* xmlChild = nullptr;
 		s32 id = 0;
 		
 		anm2Element = ANM2_ELEMENT_STRING_TO_ENUM(xmlElement->Name());
@@ -389,6 +378,11 @@ anm2_deserialize(Anm2* self, Resources* resources, const std::string& path)
 				id = map_next_id_get(self->animations);
 				self->animations[id] = Anm2Animation{};
 				animation = &self->animations[id];
+
+				if (isFirstAnimationDone)
+					isLayerMapSet = true;
+
+				isFirstAnimationDone = true;
 				break;
 			case ANM2_ELEMENT_ROOT_ANIMATION: // RootAnimation
 				item = &animation->rootAnimation;
@@ -455,6 +449,13 @@ anm2_deserialize(Anm2* self, Resources* resources, const std::string& path)
 					break;
 				case ANM2_ATTRIBUTE_LAYER_ID: // LayerId
 					id = atoi(xmlAttribute->Value());
+					
+					if (!isLayerMapSet)
+					{
+						self->layerMap[layerMapIndex] = id;
+						layerMapIndex++;
+					}
+
 					animation->layerAnimations[id] = addItem;
 					item = &animation->layerAnimations[id];
 					break;
@@ -588,9 +589,7 @@ anm2_deserialize(Anm2* self, Resources* resources, const std::string& path)
 			xmlAttribute = xmlAttribute->Next();
 		}
 
-		// Load this anm2's spritesheet textures
-		if (anm2Element == ANM2_ELEMENT_SPRITESHEET)
-			resources_texture_init(resources, spritesheet->path , id);
+		if (anm2Element == ANM2_ELEMENT_SPRITESHEET) resources_texture_init(resources, spritesheet->path , id);
 
 		xmlChild = xmlElement->FirstChildElement();
 
@@ -600,7 +599,6 @@ anm2_deserialize(Anm2* self, Resources* resources, const std::string& path)
 			continue;
 		}
 
-		// Iterate through siblings
 		while (xmlElement)
 		{
 			const XMLElement* xmlNext;
@@ -613,12 +611,11 @@ anm2_deserialize(Anm2* self, Resources* resources, const std::string& path)
 				break;
 			}
 
-			// If no siblings, return to parent. If no parent, end parsing
-			xmlElement = xmlElement->Parent() ? xmlElement->Parent()->ToElement() : NULL;
+			xmlElement = xmlElement->Parent() ? xmlElement->Parent()->ToElement() : nullptr;
 		}
 	}
 
-	std::cout << STRING_INFO_ANM2_READ << path << std::endl;
+	log_info(std::format(ANM2_READ_INFO, path));
 	
 	// Return to old working directory
 	std::filesystem::current_path(workingPath);
@@ -626,9 +623,7 @@ anm2_deserialize(Anm2* self, Resources* resources, const std::string& path)
 	return true;
 }
 
-// Adds a layer to the anm2
-void
-anm2_layer_add(Anm2* self)
+void anm2_layer_add(Anm2* self)
 {
 	s32 id = map_next_id_get(self->layers);
 
@@ -638,9 +633,7 @@ anm2_layer_add(Anm2* self)
 		animation.layerAnimations[id] = Anm2Item{};
 }
 
-// Removes a layer from the anm2
-void
-anm2_layer_remove(Anm2* self, s32 id)
+void anm2_layer_remove(Anm2* self, s32 id)
 {
 	// Make sure the layer exists
 	auto it = self->layers.find(id);
@@ -653,9 +646,7 @@ anm2_layer_remove(Anm2* self, s32 id)
         animation.layerAnimations.erase(id);
 }
 
-// Adds a null to the anm2
-void
-anm2_null_add(Anm2* self)
+void anm2_null_add(Anm2* self)
 {
 	s32 id = map_next_id_get(self->nulls);
 
@@ -665,9 +656,7 @@ anm2_null_add(Anm2* self)
 		animation.nullAnimations[id] = Anm2Item{};
 }
 
-// Removes the specified null from the anm2
-void
-anm2_null_remove(Anm2* self, s32 id)
+void anm2_null_remove(Anm2* self, s32 id)
 {
 	// Make sure the null exists
 	auto it = self->nulls.find(id);
@@ -680,26 +669,16 @@ anm2_null_remove(Anm2* self, s32 id)
         animation.nullAnimations.erase(id);
 }
 
-// Adds an animation to the anm2
-s32
-anm2_animation_add(Anm2* self)
+s32 anm2_animation_add(Anm2* self)
 {
     s32 id  = map_next_id_get(self->animations);
     Anm2Animation animation;
 
-	// Match layers
-    for (auto & [layerID, layer] : self->layers)
-	{
-        animation.layerAnimations[layerID] = Anm2Item{};
-	}
+    for (auto& [layerID, layer] : self->layers) 
+		animation.layerAnimations[layerID] = Anm2Item{};
+    for (auto & [nullID, null] : self->nulls) 
+		animation.nullAnimations[nullID] = Anm2Item{};
 
-	// Match nulls 
-    for (auto & [nullID, null] : self->nulls)
-	{
-    	animation.nullAnimations[nullID] = Anm2Item{};
-	}
-
-	// Add a root frame 
 	animation.rootAnimation.frames.push_back(Anm2Frame{});
 		
     self->animations[id] = animation;
@@ -707,38 +686,29 @@ anm2_animation_add(Anm2* self)
 	return id;
 }
 
-// Removes an animation by id from the anm2
-void
-anm2_animation_remove(Anm2* self, s32 id)
+void anm2_animation_remove(Anm2* self, s32 id)
 {
 	self->animations.erase(id);
 }
 
-// Sets the anm2 to default
-void
-anm2_new(Anm2* self)
+void anm2_new(Anm2* self)
 {
 	*self = Anm2{};
 	_anm2_created_on_set(self);
 }
 
-Anm2Animation*
-anm2_animation_from_reference(Anm2* self, Anm2Reference* reference)
+Anm2Animation* anm2_animation_from_reference(Anm2* self, Anm2Reference* reference)
 {
 	auto it = self->animations.find(reference->animationID);
-	if (it == self->animations.end())
-		return NULL;
+	if (it == self->animations.end()) return nullptr;
 	return &it->second;
 }
 
-// Returns the item from a anm2 reference.
-Anm2Item*
-anm2_item_from_reference(Anm2* self, Anm2Reference* reference)
+Anm2Item* anm2_item_from_reference(Anm2* self, Anm2Reference* reference)
 {
 	Anm2Animation* animation = anm2_animation_from_reference(self, reference);
 	
-	if (!animation)
-		return NULL;
+	if (!animation) return nullptr;
 
 	switch (reference->itemType)
 	{
@@ -748,78 +718,108 @@ anm2_item_from_reference(Anm2* self, Anm2Reference* reference)
 		{
 			auto it = animation->layerAnimations.find(reference->itemID);
 			if (it == animation->layerAnimations.end())
-				return NULL;
+				return nullptr;
 			return &it->second;
 		}
 		case ANM2_NULL:
 		{
 			auto it = animation->nullAnimations.find(reference->itemID);
 			if (it == animation->nullAnimations.end())
-				return NULL;
+				return nullptr;
 			return &it->second;
 		}
 		case ANM2_TRIGGERS:
 			return &animation->triggers;
 		default:
-			return NULL;
+			return nullptr;
 	}
 }
 
-// Gets the frame from the reference's properties
-Anm2Frame*
-anm2_frame_from_reference(Anm2* self, Anm2Reference* reference)
+Anm2Frame* anm2_frame_from_reference(Anm2* self, Anm2Reference* reference)
 {
 	Anm2Item* item = anm2_item_from_reference(self, reference);
 
-	if (!item)
-		return NULL;
-
-	if (reference->frameIndex < 0 || reference->frameIndex >= (s32)item->frames.size())
-		return NULL;
+	if (!item) return nullptr;
+	if (reference->frameIndex < 0 || reference->frameIndex >= (s32)item->frames.size()) return nullptr;
 
 	return &item->frames[reference->frameIndex];
 }
 
-// Creates or fetches a frame from a given time.
-void 
-anm2_frame_from_time(Anm2* self, Anm2Frame* frame, Anm2Reference reference, f32 time)
+s32 anm2_frame_index_from_time(Anm2* self, Anm2Reference reference, f32 time)
 {
 	Anm2Animation* animation = anm2_animation_from_reference(self, &reference);
 
-	if (!animation)
-		return;
-
-	if (time < 0 || time > animation->frameNum)
-		return;
+	if (!animation) return INDEX_NONE;
+	if (time < 0 || time > animation->frameNum) return INDEX_NONE;
 
 	Anm2Item* item = anm2_item_from_reference(self, &reference);
 
-	if (!item)
-		return;
+	if (!item) return INDEX_NONE;
 
-	Anm2Frame* nextFrame = NULL;
 	s32 delayCurrent = 0;
 	s32 delayNext = 0;
 
-	for (s32 i = 0; i < (s32)item->frames.size(); i++)
+	for (auto [i, frame] : std::views::enumerate(item->frames))
 	{
-		*frame = item->frames[i];
-		delayNext += frame->delay;
+		delayNext += frame.delay;
 
-		// Use the last parsed frame as the given frame.
 		if (time >= delayCurrent && time < delayNext)
-		{
-			if (i + 1 < (s32)item->frames.size())
-				nextFrame = &item->frames[i + 1];
-			else
-				nextFrame = NULL;
-			break;
-		}
+			return i;
 
-		delayCurrent += frame->delay;
+		delayCurrent += frame.delay;
 	}
 
-	// Interpolate, but only if there's a frame following.
+	return INDEX_NONE;
+}
+
+void anm2_frame_from_time(Anm2* self, Anm2Frame* frame, Anm2Reference reference, f32 time)
+{
+	Anm2Animation* animation = anm2_animation_from_reference(self, &reference);
+
+	if (!animation) return;
+	if (time < 0 || time > animation->frameNum) return;
+
+	Anm2Item* item = anm2_item_from_reference(self, &reference);
+
+	if (!item) return;
+
+	Anm2Frame* nextFrame = nullptr;
+	s32 delayCurrent = 0;
+	s32 delayNext = 0;
+
+	for (auto [i, iFrame] : std::views::enumerate(item->frames))
+	{
+		
+		if (reference.itemType == ANM2_TRIGGERS)
+		{
+			if ((s32)time == iFrame.atFrame)
+			{
+				*frame = iFrame;
+				break;	
+			}
+		}
+		else
+		{
+			*frame = iFrame;
+			
+			delayNext += frame->delay;
+
+			if (time >= delayCurrent && time < delayNext)
+			{
+				if (i + 1 < (s32)item->frames.size())
+					nextFrame = &item->frames[i + 1];
+				else
+					nextFrame = nullptr;
+				break;
+			}
+
+			delayCurrent += frame->delay;
+		}
+	}
+
+	if (reference.itemType == ANM2_TRIGGERS)
+		return;
+
 	if (frame->isInterpolated && nextFrame)
 	{
 		f32 interpolationTime = (time - delayCurrent) / (delayNext - delayCurrent);
@@ -832,62 +832,54 @@ anm2_frame_from_time(Anm2* self, Anm2Frame* frame, Anm2Reference reference, f32 
 	}
 }
 
-// Returns the animation's length, based on the present frames.
-s32
-anm2_animation_length_get(Anm2* self, s32 animationID)
+s32 anm2_animation_length_get(Anm2Animation* self)
 {
-	auto it = self->animations.find(animationID);
-	if (it == self->animations.end())
-		return -1;
+	s32 length = 0;
 
-	Anm2Animation* animation = &it->second;
-	s32 delayHighest = 0;
+	auto accumulate_max_delay = [&](const std::vector<Anm2Frame>& frames)
+	{
+		s32 delaySum = 0;
+		for (const auto& frame : frames)
+		{
+			delaySum += frame.delay;
+			length = std::max(length, delaySum);
+		}
+	};
 
-	// Go through all items and see which one has the latest frame; that's the length
-	// Root
-	for (auto & frame : animation->rootAnimation.frames)
-		delayHighest = std::max(delayHighest, frame.delay);
+	accumulate_max_delay(self->rootAnimation.frames);
 
-	// Layer
-	for (auto & [id, item] : animation->layerAnimations)
-		for (auto & frame : item.frames)
-			delayHighest = std::max(delayHighest, frame.delay);
+	for (const auto& [_, item] : self->layerAnimations)
+		accumulate_max_delay(item.frames);
 
-	// Null
-	for (auto & [id, item] : animation->nullAnimations)
-		for (auto & frame : item.frames)
-			delayHighest = std::max(delayHighest, frame.delay);
+	for (const auto& [_, item] : self->nullAnimations)
+		accumulate_max_delay(item.frames);
 
-	// Triggers
-	for (auto & trigger : animation->triggers.frames)
-		delayHighest = std::max(delayHighest, trigger.atFrame);
+	for (const auto& frame : self->triggers.frames)
+		length = std::max(length, frame.atFrame);
 
-	return delayHighest;
+	return length;
 }
 
-// Will try adding a frame to the anm2 given the specified reference 
-Anm2Frame*
-anm2_frame_add(Anm2* self, Anm2Reference* reference, s32 time)
+void anm2_animation_length_set(Anm2Animation* self)
+{
+	self->frameNum = anm2_animation_length_get(self);
+}
+
+Anm2Frame* anm2_frame_add(Anm2* self, Anm2Reference* reference, s32 time)
 {
 	Anm2Animation* animation = anm2_animation_from_reference(self, reference);
 	Anm2Item* item = anm2_item_from_reference(self, reference);
 	
-	if (!animation || !item)
-		return NULL;
+	if (!animation || !item) return nullptr;
 
 	if (item)
 	{
 		Anm2Frame frame = Anm2Frame{};
-		s32 index = -1;
+		s32 index = INDEX_NONE;
 
 		if (reference->itemType == ANM2_TRIGGERS)
 		{
-			// Don't add redundant triggers
-			for (auto & frameCheck : item->frames)
-			{
-				if (frameCheck.atFrame == time)
-					return NULL;
-			}
+			for (auto & frameCheck : item->frames) if (frameCheck.atFrame == time) return nullptr;
 
 			frame.atFrame = time;
 			index = item->frames.size();
@@ -896,20 +888,15 @@ anm2_frame_add(Anm2* self, Anm2Reference* reference, s32 time)
 		{
 			s32 frameDelayCount = 0;
 
-			// Get the latest frame delay, to see where this frame might lie
 			for (auto & frameCheck : item->frames)
 				frameDelayCount += frameCheck.delay;
 			
-			// If adding the smallest frame delay would be over the length, don't bother
-			if (frameDelayCount + ANM2_FRAME_DELAY_MIN > animation->frameNum)
-				return NULL;
+			if (frameDelayCount + ANM2_FRAME_DELAY_MIN > animation->frameNum) return nullptr;
 
-			// Will insert next to frame if frame exists
 			Anm2Frame* checkFrame = anm2_frame_from_reference(self, reference);
 
 			if (checkFrame)
 			{
-				// Will shrink frame delay to fit
 				if (frameDelayCount + checkFrame->delay > animation->frameNum)
 					frame.delay = animation->frameNum - frameDelayCount;
 
@@ -924,27 +911,22 @@ anm2_frame_add(Anm2* self, Anm2Reference* reference, s32 time)
 		return &item->frames[index];
 	}
 
-	return NULL;
+	return nullptr;
 }
 
-// Clears the anm2 reference, totally
-void
-anm2_reference_clear(Anm2Reference* self)
+void anm2_reference_clear(Anm2Reference* self)
 {
 	*self = Anm2Reference{};
 }
 
-// Clears the anm2 reference's item
-void
-anm2_reference_item_clear(Anm2Reference* self)
+void anm2_reference_item_clear(Anm2Reference* self)
 {
 	self->itemType = ANM2_NONE;
-	self->itemID = -1;
+	self->itemID = ID_NONE;
+	self->frameIndex = INDEX_NONE;
 }
 
-// Clears the anm2 reference's frame
-void
-anm2_reference_frame_clear(Anm2Reference* self)
+void anm2_reference_frame_clear(Anm2Reference* self)
 {
-	self->frameIndex = -1;
+	self->frameIndex = INDEX_NONE;
 }

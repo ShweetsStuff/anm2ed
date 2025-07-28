@@ -2,6 +2,10 @@
 
 #include "COMMON.h"
 
+#define TEXTURE_CHANNELS 4
+#define TEXTURE_INIT_INFO "Initialized texture from file: {}"
+#define TEXTURE_INIT_ERROR "Failed to initialize texture from file: {}"
+
 struct Texture
 {
     GLuint id = 0;

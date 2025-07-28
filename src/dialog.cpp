@@ -1,10 +1,10 @@
+// File dialog; saving/writing to files
+
 #include "dialog.h"
 
 static void _dialog_callback(void* userdata, const char* const* filelist, s32 filter); 
 
-// Callback that runs during the file dialog; will get the path and determine if one has been selected
-static void
-_dialog_callback(void* userdata, const char* const* filelist, s32 filter) 
+static void _dialog_callback(void* userdata, const char* const* filelist, s32 filter) 
 {
 	Dialog* self;
 
@@ -19,9 +19,7 @@ _dialog_callback(void* userdata, const char* const* filelist, s32 filter)
 		self->isSelected = false;
 }
 
-// Initializes dialog
-void
-dialog_init(Dialog* self, Anm2* anm2, Anm2Reference* reference, Resources* resources, SDL_Window* window)
+void dialog_init(Dialog* self, Anm2* anm2, Anm2Reference* reference, Resources* resources, SDL_Window* window)
 {
 	self->anm2 = anm2;
 	self->reference = reference;
@@ -29,41 +27,31 @@ dialog_init(Dialog* self, Anm2* anm2, Anm2Reference* reference, Resources* resou
 	self->window = window;
 }
 
-// Opens file dialog to open a new anm2
-void
-dialog_anm2_open(Dialog* self)
+void dialog_anm2_open(Dialog* self)
 {
-	SDL_ShowOpenFileDialog(_dialog_callback, self, NULL, DIALOG_FILE_FILTER_ANM2, 1, NULL, false);
+	SDL_ShowOpenFileDialog(_dialog_callback, self, nullptr, DIALOG_FILE_FILTER_ANM2, 1, nullptr, false);
 	self->type = DIALOG_ANM2_OPEN;
 }
 
-// Opens file dialog to save anm2
-void
-dialog_anm2_save(Dialog* self)
+void dialog_anm2_save(Dialog* self)
 {
-	SDL_ShowSaveFileDialog(_dialog_callback, self, NULL, DIALOG_FILE_FILTER_ANM2, 1, NULL);
+	SDL_ShowSaveFileDialog(_dialog_callback, self, nullptr, DIALOG_FILE_FILTER_ANM2, 1, nullptr);
 	self->type = DIALOG_ANM2_SAVE;
 }
 
-// Opens file dialog to open png
-void
-dialog_png_open(Dialog* self)
+void dialog_png_open(Dialog* self)
 {
-	SDL_ShowOpenFileDialog(_dialog_callback, self, NULL, DIALOG_FILE_FILTER_PNG, 1, NULL, false);
+	SDL_ShowOpenFileDialog(_dialog_callback, self, nullptr, DIALOG_FILE_FILTER_PNG, 1, nullptr, false);
 	self->type = DIALOG_PNG_OPEN;
 }
 
-// Opens file dialog to replace a given png
-void
-dialog_png_replace(Dialog* self)
+void dialog_png_replace(Dialog* self)
 {
-	SDL_ShowOpenFileDialog(_dialog_callback, self, NULL, DIALOG_FILE_FILTER_PNG, 1, NULL, false);
+	SDL_ShowOpenFileDialog(_dialog_callback, self, nullptr, DIALOG_FILE_FILTER_PNG, 1, nullptr, false);
 	self->type = DIALOG_PNG_REPLACE;
 }
 
-// Ticks dialog
-void
-dialog_tick(Dialog* self)
+void dialog_tick(Dialog* self)
 {
 	if (self->isSelected)
 	{

@@ -1,25 +1,21 @@
 #include "shader.h"
 
-static bool _shader_compile(GLuint* self, const std::string& text);
-
-// Compiles the shader; returns true/false based on success
-static bool
-_shader_compile(GLuint* self, const std::string& text)
+static bool _shader_compile(GLuint* self, const std::string& text)
 {
 	std::string compileLog;
 	s32 isCompile;
 
 	const GLchar* source = text.c_str();
 
-	glShaderSource(*self, 1, &source, NULL);
+	glShaderSource(*self, 1, &source, nullptr);
 
 	glCompileShader(*self);
 	glGetShaderiv(*self, GL_COMPILE_STATUS, &isCompile);
 
 	if (!isCompile)
 	{
-		glGetShaderInfoLog(*self, SHADER_INFO_LOG_MAX, NULL, &compileLog[0]);
-		std::cout << STRING_ERROR_SHADER_INIT << *self << std::endl << compileLog << std::endl;
+		glGetShaderInfoLog(*self, SHADER_INFO_LOG_MAX, nullptr, &compileLog[0]);
+		log_error(std::format(SHADER_INIT_ERROR, *self, compileLog));
 		return false;
 	}
 
@@ -27,8 +23,7 @@ _shader_compile(GLuint* self, const std::string& text)
 }
 
 // Initializes a given shader with vertex/fragment
-bool
-shader_init(GLuint* self, const std::string& vertex, const std::string& fragment)
+bool shader_init(GLuint* self, const std::string& vertex, const std::string& fragment)
 {
 	GLuint vertexHandle;
 	GLuint fragmentHandle;
@@ -36,11 +31,7 @@ shader_init(GLuint* self, const std::string& vertex, const std::string& fragment
 	vertexHandle = glCreateShader(GL_VERTEX_SHADER);
 	fragmentHandle = glCreateShader(GL_FRAGMENT_SHADER);
 
-	if 
-	(
-		!_shader_compile(&vertexHandle, vertex) 	||
-		!_shader_compile(&fragmentHandle, fragment)
-	)
+	if (!_shader_compile(&vertexHandle, vertex) || !_shader_compile(&fragmentHandle, fragment)) 
 		return false;
 
 	*self = glCreateProgram();
@@ -56,9 +47,7 @@ shader_init(GLuint* self, const std::string& vertex, const std::string& fragment
 	return true;
 }
 
-// Frees a given shader 
-void
-shader_free(GLuint* self)
+void shader_free(GLuint* self)
 {
 	glDeleteProgram(*self);
 }
