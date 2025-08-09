@@ -2,20 +2,18 @@
 
 static bool _shader_compile(GLuint* self, const std::string& text)
 {
-	std::string compileLog;
 	s32 isCompile;
-
 	const GLchar* source = text.c_str();
 
 	glShaderSource(*self, 1, &source, nullptr);
-
 	glCompileShader(*self);
 	glGetShaderiv(*self, GL_COMPILE_STATUS, &isCompile);
 
 	if (!isCompile)
 	{
-		glGetShaderInfoLog(*self, SHADER_INFO_LOG_MAX, nullptr, &compileLog[0]);
-		log_error(std::format(SHADER_INIT_ERROR, *self, compileLog));
+		std::string compileLog(SHADER_INFO_LOG_MAX, '\0');
+		glGetShaderInfoLog(*self, SHADER_INFO_LOG_MAX, nullptr, compileLog.data());
+		log_error(std::format(SHADER_INIT_ERROR, *self, compileLog.c_str()));
 		return false;
 	}
 

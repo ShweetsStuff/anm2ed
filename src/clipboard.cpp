@@ -47,17 +47,6 @@ static void _clipboard_item_remove(ClipboardItem* self, Anm2* anm2)
             }
             break;
         }
-        case CLIPBOARD_EVENT:
-        {
-            Anm2EventWithID eventWithID = std::get<Anm2EventWithID>(self->data);
-
-            for (auto & [id, event] : anm2->events)
-            {
-                if (id == eventWithID.id)
-                    anm2->events.erase(eventWithID.id);
-            }
-            break;
-        }
         default:
             break;
     }
@@ -81,7 +70,7 @@ static void _clipboard_item_paste(ClipboardItem* self, ClipboardLocation* locati
             if (!animation || !anm2Item) break;
 
             s32 insertIndex = (reference->itemType == ANM2_TRIGGERS) ? 
-            reference->frameIndex : MAX(reference->frameIndex, (s32)anm2Item->frames.size()); 
+            reference->frameIndex : std::max(reference->frameIndex, (s32)anm2Item->frames.size()); 
             
             anm2Item->frames.insert(anm2Item->frames.begin() + insertIndex, frameWithReference->frame);
             
@@ -95,21 +84,9 @@ static void _clipboard_item_paste(ClipboardItem* self, ClipboardLocation* locati
             if (std::holds_alternative<s32>(*location))
                 index = std::get<s32>(*location);
 
-            index = CLAMP(index, 0, (s32)anm2->animations.size());
+            index = std::clamp(index, 0, (s32)anm2->animations.size());
 
             map_insert_shift(anm2->animations, index, std::get<Anm2AnimationWithID>(self->data).animation);
-            break;
-        }
-        case CLIPBOARD_EVENT:
-        {
-            s32 index = 0;
-            
-            if (std::holds_alternative<s32>(*location))
-                index = std::get<s32>(*location);
-
-            index = CLAMP(index, 0, (s32)anm2->events.size());
-
-            map_insert_shift(anm2->events, index, std::get<Anm2EventWithID>(self->data).event);
             break;
         }
         default:

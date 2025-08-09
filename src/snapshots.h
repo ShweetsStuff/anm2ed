@@ -3,13 +3,15 @@
 #include "anm2.h"
 #include "preview.h"
 
-#define SNAPSHOT_STACK_MAX 100
+#define SNAPSHOT_STACK_MAX 1000
+#define SNAPSHOT_ACTION "Action"
 
 struct Snapshot
 {
     Anm2 anm2;
     Anm2Reference reference;
     f32 time = 0.0f;
+    std::string action = SNAPSHOT_ACTION;
 };
 
 struct SnapshotStack
@@ -23,6 +25,7 @@ struct Snapshots
     Anm2* anm2 = nullptr;
     Preview* preview = nullptr;
     Anm2Reference* reference = nullptr;
+    std::string action = SNAPSHOT_ACTION;
     SnapshotStack undoStack;
     SnapshotStack redoStack;
 };

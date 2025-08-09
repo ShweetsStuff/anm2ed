@@ -17,7 +17,7 @@
 #define ANM2_READ_INFO "Read anm2 from file: {}"
 #define ANM2_WRITE_ERROR "Failed to write anm2 to file: {}"
 #define ANM2_WRITE_INFO "Wrote anm2 to file: {}"
-#define STRING_ANM2_CREATED_ON_FORMAT "%d-%B-%Y %I:%M:%S %p"
+#define ANM2_CREATED_ON_FORMAT "%d-%B-%Y %I:%M:%S %p"
 
 /* Elements */
 #define ANM2_ELEMENT_LIST \
@@ -132,7 +132,7 @@ struct Anm2Spritesheet
 struct Anm2Layer
 {
     std::string name = "New Layer";
-	s32 spritesheetID = -1;
+	s32 spritesheetID = ID_NONE;
 };
 
 struct Anm2Null
@@ -154,12 +154,12 @@ struct Anm2Frame
 	s32 delay = ANM2_FRAME_DELAY_MIN;
     s32 atFrame = INDEX_NONE;
     s32 eventID = ID_NONE;
-	vec2 crop = {0.0f, 0.0f};
-	vec2 pivot = {0.0f, 0.0f};
-	vec2 position = {0.0f, 0.0f};
-	vec2 size = {0.0f, 0.0f};
-	vec2 scale = {100.0f, 100.0f};
-	vec3 offsetRGB = {0.0f, 0.0f, 0.0f};
+	vec2 crop{};
+	vec2 pivot{};
+	vec2 position{};
+	vec2 size{};
+	vec2 scale{};
+	vec3 offsetRGB{};
 	vec4 tintRGBA = {1.0f, 1.0f, 1.0f, 1.0f};
 };
 
@@ -183,7 +183,6 @@ struct Anm2Animation
 struct Anm2 
 {
     std::string path{};
-    std::string defaultAnimation{};
     std::string createdBy = "robot";
     std::string createdOn{};
 	std::map<s32, Anm2Spritesheet> spritesheets; 
@@ -191,9 +190,10 @@ struct Anm2
 	std::map<s32, Anm2Null> nulls; 
     std::map<s32, Anm2Event> events;
 	std::map<s32, Anm2Animation> animations; 
-    std::map<s32, s32> layerMap; // id, index
+    std::map<s32, s32> layerMap; // index, id
+    s32 defaultAnimationID{};
     s32 fps = 30;
-	s32 version = 0;
+	s32 version{};
 };
 
 struct Anm2Reference
@@ -223,6 +223,14 @@ struct Anm2FrameWithReference
     Anm2Frame frame;
 };
 
+enum Anm2MergeType
+{
+    ANM2_MERGE_APPEND_FRAMES,
+    ANM2_MERGE_REPLACE_FRAMES,
+    ANM2_MERGE_PREPEND_FRAMES,
+    ANM2_MERGE_IGNORE
+};
+
 void anm2_layer_add(Anm2* self);
 void anm2_layer_remove(Anm2* self, s32 id);
 void anm2_null_add(Anm2* self);
@@ -245,3 +253,5 @@ void anm2_reference_item_clear(Anm2Reference* self);
 void anm2_reference_frame_clear(Anm2Reference* self);
 s32 anm2_animation_length_get(Anm2Animation* self);
 void anm2_animation_length_set(Anm2Animation* self);
+void anm2_animation_merge(Anm2* self, s32 animationID, const std::vector<s32>& mergeIDs, Anm2MergeType type);
+void anm2_frame_bake(Anm2* self, Anm2Reference* reference, s32 interval, bool isRoundScale, bool isRoundRotation);

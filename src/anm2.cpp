@@ -11,7 +11,7 @@ static void _anm2_created_on_set(Anm2* self)
     std::tm localTime = *std::localtime(&time);
 
 	std::ostringstream timeString;
-	timeString << std::put_time(&localTime, STRING_ANM2_CREATED_ON_FORMAT);
+	timeString << std::put_time(&localTime, ANM2_CREATED_ON_FORMAT);
 	self->createdOn = timeString.str();
 }
 
@@ -54,7 +54,7 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 	// Spritesheets 
 	spritesheetsElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_SPRITESHEETS]);
 
-	for (auto & [id, spritesheet] : self->spritesheets)
+	for (auto& [id, spritesheet] : self->spritesheets)
 	{
 		XMLElement* spritesheetElement;
 		
@@ -70,7 +70,7 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 	// Layers 
 	layersElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYERS]);
 
-	for (auto & [id, layer] : self->layers)
+	for (auto& [id, layer] : self->layers)
 	{
 		XMLElement* layerElement;
 		
@@ -88,7 +88,7 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 	// Nulls 
 	nullsElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_NULLS]);
 
-	for (auto & [id, null] : self->nulls)
+	for (auto& [id, null] : self->nulls)
 	{
 		XMLElement* nullElement;
 		
@@ -108,7 +108,7 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 	// Events 
 	eventsElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_EVENTS]);
 
-	for (auto & [id, event] : self->events)
+	for (auto& [id, event] : self->events)
 	{
 		XMLElement* eventElement;
 		
@@ -125,7 +125,7 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 		
 	// Animations
 	animationsElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATIONS]);
-	animationsElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_DEFAULT_ANIMATION], self->defaultAnimation.c_str()); // DefaultAnimation
+	animationsElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_DEFAULT_ANIMATION], self->animations[self->defaultAnimationID].name.c_str()); // DefaultAnimation
 
 	for (auto& [id, animation] : self->animations)
 	{
@@ -160,13 +160,13 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_Y_SCALE], frame.scale.y); // YScale
 			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_DELAY], frame.delay); // Delay
 			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_VISIBLE], frame.isVisible); // Visible
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.r)); // RedTint
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.g)); // GreenTint
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.b)); // BlueTint
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ALPHA_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.a)); // AlphaTint
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.r)); // RedOffset
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.g)); // GreenOffset
-			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.b)); // BlueOffset
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_TINT], FLOAT_TO_U8(frame.tintRGBA.r)); // RedTint
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_TINT], FLOAT_TO_U8(frame.tintRGBA.g)); // GreenTint
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_TINT], FLOAT_TO_U8(frame.tintRGBA.b)); // BlueTint
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ALPHA_TINT], FLOAT_TO_U8(frame.tintRGBA.a)); // AlphaTint
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_OFFSET], FLOAT_TO_U8(frame.offsetRGB.r)); // RedOffset
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_OFFSET], FLOAT_TO_U8(frame.offsetRGB.g)); // GreenOffset
+			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_OFFSET], FLOAT_TO_U8(frame.offsetRGB.b)); // BlueOffset
 			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ROTATION], frame.rotation); // Rotation
 			frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_INTERPOLATED], frame.isInterpolated); // Interpolated
 		
@@ -189,7 +189,7 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 			layerAnimationElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_LAYER_ID], layerID); // LayerId
 			layerAnimationElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_VISIBLE], layerAnimation.isVisible); // Visible 
 	
-			for (auto & frame : layerAnimation.frames)
+			for (auto& frame : layerAnimation.frames)
 			{
 				XMLElement* frameElement;
 
@@ -208,13 +208,13 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_Y_SCALE], frame.scale.y); // YScale
 				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_DELAY], frame.delay); /* Delay */
 				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_VISIBLE], frame.isVisible); // Visible
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.r)); // RedTint
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.g)); // GreenTint
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.b)); // BlueTint
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ALPHA_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.a)); // AlphaTint
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.r)); // RedOffset
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.g)); // GreenOffset
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.b)); // BlueOffset
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_TINT], FLOAT_TO_U8(frame.tintRGBA.r)); // RedTint
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_TINT], FLOAT_TO_U8(frame.tintRGBA.g)); // GreenTint
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_TINT], FLOAT_TO_U8(frame.tintRGBA.b)); // BlueTint
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ALPHA_TINT], FLOAT_TO_U8(frame.tintRGBA.a)); // AlphaTint
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_OFFSET], FLOAT_TO_U8(frame.offsetRGB.r)); // RedOffset
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_OFFSET], FLOAT_TO_U8(frame.offsetRGB.g)); // GreenOffset
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_OFFSET], FLOAT_TO_U8(frame.offsetRGB.b)); // BlueOffset
 				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ROTATION], frame.rotation); // Rotation
 				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_INTERPOLATED], frame.isInterpolated); // Interpolated
 			
@@ -229,7 +229,7 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 		// NullAnimations
 		nullAnimationsElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_NULL_ANIMATIONS]);
 
-		for (const auto & [nullID, nullAnimation] : animation.nullAnimations)
+		for (const auto& [nullID, nullAnimation] : animation.nullAnimations)
 		{
 			XMLElement* nullAnimationElement;
 
@@ -238,7 +238,7 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 			nullAnimationElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_NULL_ID], nullID); // NullId
 			nullAnimationElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_VISIBLE], nullAnimation.isVisible); // Visible 
 			
-			for (const auto & frame : nullAnimation.frames)
+			for (const auto& frame : nullAnimation.frames)
 			{
 				XMLElement* frameElement;
 
@@ -253,13 +253,13 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_Y_SCALE], frame.scale.y); // XScale
 				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_DELAY], frame.delay); // Delay 
 				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_VISIBLE], frame.isVisible); // Visible 
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.r)); // RedTint 
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.g)); // GreenTint 
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.b)); // BlueTint 
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ALPHA_TINT], COLOR_FLOAT_TO_INT(frame.tintRGBA.a)); // AlphaTint 
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.r)); // RedOffset 
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.g)); // GreenOffset 
-				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_OFFSET], COLOR_FLOAT_TO_INT(frame.offsetRGB.b)); // BlueOffset 
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_TINT], FLOAT_TO_U8(frame.tintRGBA.r)); // RedTint 
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_TINT], FLOAT_TO_U8(frame.tintRGBA.g)); // GreenTint 
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_TINT], FLOAT_TO_U8(frame.tintRGBA.b)); // BlueTint 
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ALPHA_TINT], FLOAT_TO_U8(frame.tintRGBA.a)); // AlphaTint 
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_RED_OFFSET], FLOAT_TO_U8(frame.offsetRGB.r)); // RedOffset 
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_GREEN_OFFSET], FLOAT_TO_U8(frame.offsetRGB.g)); // GreenOffset 
+				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_BLUE_OFFSET], FLOAT_TO_U8(frame.offsetRGB.b)); // BlueOffset 
 				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ROTATION], frame.rotation); // Rotation 
 				frameElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_INTERPOLATED], frame.isInterpolated); // Interpolated 
 			
@@ -274,7 +274,7 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 		// Triggers 
 		triggersElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_TRIGGERS]);
 
-		for (const auto & frame : animation.triggers.frames)
+		for (const auto& frame : animation.triggers.frames)
 		{
 			XMLElement* triggerElement;
 
@@ -328,10 +328,11 @@ bool anm2_deserialize(Anm2* self, Resources* resources, const std::string& path)
 	s32 layerMapIndex = 0;
 	bool isLayerMapSet = false;
 	bool isFirstAnimationDone = false;
+	std::string defaultAnimation{};
 
 	if (!self || path.empty()) return false;
 
-	*self = Anm2{};
+	anm2_new(self);
 
 	xmlError = xmlDocument.LoadFile(path.c_str());
 
@@ -418,13 +419,13 @@ bool anm2_deserialize(Anm2* self, Resources* resources, const std::string& path)
 					self->createdOn = xmlAttribute->Value();
 					break;
 				case ANM2_ATTRIBUTE_VERSION: // Version
-					self->version = atoi(xmlAttribute->Value());
+					self->version = std::atoi(xmlAttribute->Value());
 					break;
 				case ANM2_ATTRIBUTE_FPS: // FPS
-					self->fps = atoi(xmlAttribute->Value());
+					self->fps = std::atoi(xmlAttribute->Value());
 					break;
 				case ANM2_ATTRIBUTE_ID: // ID
-					id = atoi(xmlAttribute->Value());
+					id = std::atoi(xmlAttribute->Value());
 					switch (anm2Element)
 					{
 						case ANM2_ELEMENT_SPRITESHEET: // Spritesheet
@@ -448,7 +449,7 @@ bool anm2_deserialize(Anm2* self, Resources* resources, const std::string& path)
 					}
 					break;
 				case ANM2_ATTRIBUTE_LAYER_ID: // LayerId
-					id = atoi(xmlAttribute->Value());
+					id = std::atoi(xmlAttribute->Value());
 					
 					if (!isLayerMapSet)
 					{
@@ -460,7 +461,7 @@ bool anm2_deserialize(Anm2* self, Resources* resources, const std::string& path)
 					item = &animation->layerAnimations[id];
 					break;
 				case ANM2_ATTRIBUTE_NULL_ID: // NullId
-					id = atoi(xmlAttribute->Value());
+					id = std::atoi(xmlAttribute->Value());
 					animation->nullAnimations[id] = addItem;
 					item = &animation->nullAnimations[id];
 					break;
@@ -487,52 +488,52 @@ bool anm2_deserialize(Anm2* self, Resources* resources, const std::string& path)
 					}
 					break;
 				case ANM2_ATTRIBUTE_SPRITESHEET_ID:
-					layer->spritesheetID = atoi(xmlAttribute->Value());
+					layer->spritesheetID = std::atoi(xmlAttribute->Value());
 					break;
 				case ANM2_ATTRIBUTE_SHOW_RECT:
 					null->isShowRect = string_to_bool(xmlAttribute->Value());
 					break;
 				case ANM2_ATTRIBUTE_DEFAULT_ANIMATION:
-					self->defaultAnimation = xmlAttribute->Value();
+					defaultAnimation = xmlAttribute->Value();
 					break;
 				case ANM2_ATTRIBUTE_FRAME_NUM:
-					animation->frameNum = atoi(xmlAttribute->Value());
+					animation->frameNum = std::atoi(xmlAttribute->Value());
 					break;
 				case ANM2_ATTRIBUTE_LOOP:
 					animation->isLoop = string_to_bool(xmlAttribute->Value());
 					break;
 				case ANM2_ATTRIBUTE_X_POSITION:
-					frame->position.x = atof(xmlAttribute->Value());
+					frame->position.x = std::atof(xmlAttribute->Value());
 					break;
 				case ANM2_ATTRIBUTE_Y_POSITION:
-					frame->position.y = atof(xmlAttribute->Value());
+					frame->position.y = std::atof(xmlAttribute->Value());
 					break;
 				case ANM2_ATTRIBUTE_X_PIVOT:
-					frame->pivot.x = atof(xmlAttribute->Value());
+					frame->pivot.x = std::atof(xmlAttribute->Value());
 					break;
 				case ANM2_ATTRIBUTE_Y_PIVOT:
-					frame->pivot.y = atof(xmlAttribute->Value());
+					frame->pivot.y = std::atof(xmlAttribute->Value());
 					break;
 				case ANM2_ATTRIBUTE_X_CROP:
-					frame->crop.x = atof(xmlAttribute->Value());
+					frame->crop.x = std::atof(xmlAttribute->Value());
 					break;
 				case ANM2_ATTRIBUTE_Y_CROP:
-					frame->crop.y = atof(xmlAttribute->Value());
+					frame->crop.y = std::atof(xmlAttribute->Value());
 					break;	
 				case ANM2_ATTRIBUTE_WIDTH:
-					frame->size.x = atof(xmlAttribute->Value());
+					frame->size.x = std::atof(xmlAttribute->Value());
 					break;		
 				case ANM2_ATTRIBUTE_HEIGHT:
-					frame->size.y = atof(xmlAttribute->Value());
+					frame->size.y = std::atof(xmlAttribute->Value());
 					break;		
 				case ANM2_ATTRIBUTE_X_SCALE:
-					frame->scale.x = atof(xmlAttribute->Value());
+					frame->scale.x = std::atof(xmlAttribute->Value());
 					break;
 				case ANM2_ATTRIBUTE_Y_SCALE:
-					frame->scale.y = atof(xmlAttribute->Value());
+					frame->scale.y = std::atof(xmlAttribute->Value());
 					break;
 				case ANM2_ATTRIBUTE_DELAY:
-					frame->delay = atoi(xmlAttribute->Value());
+					frame->delay = std::atoi(xmlAttribute->Value());
 					break;
 				case ANM2_ATTRIBUTE_VISIBLE:
 					switch (anm2Element)
@@ -550,37 +551,37 @@ bool anm2_deserialize(Anm2* self, Resources* resources, const std::string& path)
 					}
 					break;
 				case ANM2_ATTRIBUTE_RED_TINT:
-					frame->tintRGBA.r = COLOR_INT_TO_FLOAT(atoi(xmlAttribute->Value()));
+					frame->tintRGBA.r = U8_TO_FLOAT(std::atoi(xmlAttribute->Value()));
 					break;
 				case ANM2_ATTRIBUTE_GREEN_TINT:
-					frame->tintRGBA.g = COLOR_INT_TO_FLOAT(atoi(xmlAttribute->Value()));
+					frame->tintRGBA.g = U8_TO_FLOAT(std::atoi(xmlAttribute->Value()));
 					break;
 				case ANM2_ATTRIBUTE_BLUE_TINT:
-					frame->tintRGBA.b = COLOR_INT_TO_FLOAT(atoi(xmlAttribute->Value()));
+					frame->tintRGBA.b = U8_TO_FLOAT(std::atoi(xmlAttribute->Value()));
 					break;
 				case ANM2_ATTRIBUTE_ALPHA_TINT:
-					frame->tintRGBA.a = COLOR_INT_TO_FLOAT(atoi(xmlAttribute->Value()));
+					frame->tintRGBA.a = U8_TO_FLOAT(std::atoi(xmlAttribute->Value()));
 					break;
 				case ANM2_ATTRIBUTE_RED_OFFSET:
-					frame->offsetRGB.r = COLOR_INT_TO_FLOAT(atoi(xmlAttribute->Value()));
+					frame->offsetRGB.r = U8_TO_FLOAT(std::atoi(xmlAttribute->Value()));
 					break;
 				case ANM2_ATTRIBUTE_GREEN_OFFSET:
-					frame->offsetRGB.g = COLOR_INT_TO_FLOAT(atoi(xmlAttribute->Value()));
+					frame->offsetRGB.g = U8_TO_FLOAT(std::atoi(xmlAttribute->Value()));
 					break;
 				case ANM2_ATTRIBUTE_BLUE_OFFSET:
-					frame->offsetRGB.b = COLOR_INT_TO_FLOAT(atoi(xmlAttribute->Value()));
+					frame->offsetRGB.b = U8_TO_FLOAT(std::atoi(xmlAttribute->Value()));
 					break;
 				case ANM2_ATTRIBUTE_ROTATION:
-					frame->rotation = atof(xmlAttribute->Value());
+					frame->rotation = std::atof(xmlAttribute->Value());
 					break;
 				case ANM2_ATTRIBUTE_INTERPOLATED:
 					frame->isInterpolated = string_to_bool(xmlAttribute->Value());
 					break;
 				case ANM2_ATTRIBUTE_EVENT_ID:
-					frame->eventID = atoi(xmlAttribute->Value());
+					frame->eventID = std::atoi(xmlAttribute->Value());
 					break;
 				case ANM2_ATTRIBUTE_AT_FRAME:
-					frame->atFrame = atoi(xmlAttribute->Value());
+					frame->atFrame = std::atoi(xmlAttribute->Value());
 					break;
 				default:
 					break;
@@ -589,7 +590,8 @@ bool anm2_deserialize(Anm2* self, Resources* resources, const std::string& path)
 			xmlAttribute = xmlAttribute->Next();
 		}
 
-		if (anm2Element == ANM2_ELEMENT_SPRITESHEET) resources_texture_init(resources, spritesheet->path , id);
+		if (anm2Element == ANM2_ELEMENT_SPRITESHEET) 
+			resources_texture_init(resources, spritesheet->path , id);
 
 		xmlChild = xmlElement->FirstChildElement();
 
@@ -615,6 +617,11 @@ bool anm2_deserialize(Anm2* self, Resources* resources, const std::string& path)
 		}
 	}
 
+	// Set default animation ID
+	for (auto& [id, animation] : self->animations)
+		if (animation.name == defaultAnimation)
+			self->defaultAnimationID = id;
+
 	log_info(std::format(ANM2_READ_INFO, path));
 	
 	// Return to old working directory
@@ -625,24 +632,48 @@ bool anm2_deserialize(Anm2* self, Resources* resources, const std::string& path)
 
 void anm2_layer_add(Anm2* self)
 {
+
+
+
+
+
+
+
+
 	s32 id = map_next_id_get(self->layers);
 
 	self->layers[id] = Anm2Layer{};
-
-	for (auto & [animationID, animation] : self->animations)
+	self->layerMap[self->layers.size() - 1] = id;
+	
+	for (auto& [_, animation] : self->animations)
 		animation.layerAnimations[id] = Anm2Item{};
 }
 
 void anm2_layer_remove(Anm2* self, s32 id)
 {
-	// Make sure the layer exists
-	auto it = self->layers.find(id);
-	if (it == self->layers.end())
-		return;
+    if (!self->layers.contains(id))
+        return;
 
     self->layers.erase(id);
 
-    for (auto & [animationID, animation] : self->animations)
+    for (auto it = self->layerMap.begin(); it != self->layerMap.end(); ++it)
+    {
+        if (it->second == id)
+        {
+            self->layerMap.erase(it);
+            break;
+        }
+    }
+
+    std::map<s32, s32> newLayerMap;
+    s32 newIndex = 0;
+
+    for (const auto& [_, layerID] : self->layerMap)
+        newLayerMap[newIndex++] = layerID;
+
+    self->layerMap = std::move(newLayerMap);
+ 
+	for (auto& [_, animation] : self->animations)
         animation.layerAnimations.erase(id);
 }
 
@@ -652,22 +683,39 @@ void anm2_null_add(Anm2* self)
 
 	self->nulls[id] = Anm2Null{};
 
-	for (auto & [animationID, animation] : self->animations)
+	for (auto& [_, animation] : self->animations)
 		animation.nullAnimations[id] = Anm2Item{};
 }
 
 void anm2_null_remove(Anm2* self, s32 id)
 {
-	// Make sure the null exists
-	auto it = self->nulls.find(id);
-	if (it == self->nulls.end())
-		return;
+    if (!self->nulls.contains(id))
+        return;
 
     self->nulls.erase(id);
 
-    for (auto & [animationID, animation] : self->animations)
-        animation.nullAnimations.erase(id);
+    std::map<s32, Anm2Null> newNulls;
+    s32 newID = 0;
+	
+    for (const auto& [_, null] : self->nulls)
+        newNulls[newID++] = null;
+
+    self->nulls = std::move(newNulls);
+
+    for (auto& [_, animation] : self->animations)
+    {
+        if (animation.nullAnimations.contains(id))
+            animation.nullAnimations.erase(id);
+
+        std::map<s32, Anm2Item> newNullAnims;
+        s32 newAnimID = 0;
+        for (const auto& [_, nullAnim] : animation.nullAnimations)
+            newNullAnims[newAnimID++] = nullAnim;
+
+        animation.nullAnimations = std::move(newNullAnims);
+    }
 }
+
 
 s32 anm2_animation_add(Anm2* self)
 {
@@ -676,7 +724,7 @@ s32 anm2_animation_add(Anm2* self)
 
     for (auto& [layerID, layer] : self->layers) 
 		animation.layerAnimations[layerID] = Anm2Item{};
-    for (auto & [nullID, null] : self->nulls) 
+    for (auto& [nullID, null] : self->nulls) 
 		animation.nullAnimations[nullID] = Anm2Item{};
 
 	animation.rootAnimation.frames.push_back(Anm2Frame{});
@@ -699,13 +747,19 @@ void anm2_new(Anm2* self)
 
 Anm2Animation* anm2_animation_from_reference(Anm2* self, Anm2Reference* reference)
 {
-	auto it = self->animations.find(reference->animationID);
-	if (it == self->animations.end()) return nullptr;
-	return &it->second;
+	if (reference->animationID == ID_NONE) return nullptr;
+
+	if (!self->animations.contains(reference->animationID))
+		return nullptr;
+
+	return &self->animations[reference->animationID];
 }
 
 Anm2Item* anm2_item_from_reference(Anm2* self, Anm2Reference* reference)
 {
+	if (reference->itemType == ANM2_NONE)
+		return nullptr;
+
 	Anm2Animation* animation = anm2_animation_from_reference(self, reference);
 	
 	if (!animation) return nullptr;
@@ -715,19 +769,11 @@ Anm2Item* anm2_item_from_reference(Anm2* self, Anm2Reference* reference)
 		case ANM2_ROOT:
 			return &animation->rootAnimation;
 		case ANM2_LAYER:
-		{
-			auto it = animation->layerAnimations.find(reference->itemID);
-			if (it == animation->layerAnimations.end())
-				return nullptr;
-			return &it->second;
-		}
+			if (!animation->layerAnimations.contains(reference->itemID)) return nullptr;
+			return &animation->layerAnimations[reference->itemID];
 		case ANM2_NULL:
-		{
-			auto it = animation->nullAnimations.find(reference->itemID);
-			if (it == animation->nullAnimations.end())
-				return nullptr;
-			return &it->second;
-		}
+			if (!animation->nullAnimations.contains(reference->itemID)) return nullptr;
+			return &animation->nullAnimations[reference->itemID];
 		case ANM2_TRIGGERS:
 			return &animation->triggers;
 		default:
@@ -740,7 +786,9 @@ Anm2Frame* anm2_frame_from_reference(Anm2* self, Anm2Reference* reference)
 	Anm2Item* item = anm2_item_from_reference(self, reference);
 
 	if (!item) return nullptr;
-	if (reference->frameIndex < 0 || reference->frameIndex >= (s32)item->frames.size()) return nullptr;
+	
+	if (reference->frameIndex <= INDEX_NONE || reference->frameIndex >= (s32)item->frames.size()) 
+		return nullptr;
 
 	return &item->frames[reference->frameIndex];
 }
@@ -777,19 +825,19 @@ void anm2_frame_from_time(Anm2* self, Anm2Frame* frame, Anm2Reference reference,
 	Anm2Animation* animation = anm2_animation_from_reference(self, &reference);
 
 	if (!animation) return;
-	if (time < 0 || time > animation->frameNum) return;
+	
+	time = std::clamp(time, 0.0f, animation->frameNum - 1.0f);
 
 	Anm2Item* item = anm2_item_from_reference(self, &reference);
 
 	if (!item) return;
 
-	Anm2Frame* nextFrame = nullptr;
+	Anm2Frame* frameNext = nullptr;
 	s32 delayCurrent = 0;
 	s32 delayNext = 0;
 
 	for (auto [i, iFrame] : std::views::enumerate(item->frames))
 	{
-		
 		if (reference.itemType == ANM2_TRIGGERS)
 		{
 			if ((s32)time == iFrame.atFrame)
@@ -807,9 +855,9 @@ void anm2_frame_from_time(Anm2* self, Anm2Frame* frame, Anm2Reference reference,
 			if (time >= delayCurrent && time < delayNext)
 			{
 				if (i + 1 < (s32)item->frames.size())
-					nextFrame = &item->frames[i + 1];
+					frameNext = &item->frames[i + 1];
 				else
-					nextFrame = nullptr;
+					frameNext = nullptr;
 				break;
 			}
 
@@ -820,15 +868,15 @@ void anm2_frame_from_time(Anm2* self, Anm2Frame* frame, Anm2Reference reference,
 	if (reference.itemType == ANM2_TRIGGERS)
 		return;
 
-	if (frame->isInterpolated && nextFrame)
+	if (frame->isInterpolated && frameNext && frame->delay > 1)
 	{
-		f32 interpolationTime = (time - delayCurrent) / (delayNext - delayCurrent);
+		f32 interpolation = (time - delayCurrent) / (delayNext - delayCurrent);
 
-		frame->rotation    = glm::mix(frame->rotation,    nextFrame->rotation,    interpolationTime);;
-		frame->position    = glm::mix(frame->position,    nextFrame->position,    interpolationTime);;
-		frame->scale       = glm::mix(frame->scale,       nextFrame->scale,       interpolationTime);;
-		frame->offsetRGB   = glm::mix(frame->offsetRGB,   nextFrame->offsetRGB,   interpolationTime);;
-		frame->tintRGBA    = glm::mix(frame->tintRGBA,    nextFrame->tintRGBA,    interpolationTime);;
+		frame->rotation    = glm::mix(frame->rotation,    frameNext->rotation,    interpolation);
+		frame->position    = glm::mix(frame->position,    frameNext->position,    interpolation);
+		frame->scale       = glm::mix(frame->scale,       frameNext->scale,       interpolation);
+		frame->offsetRGB   = glm::mix(frame->offsetRGB,   frameNext->offsetRGB,   interpolation);
+		frame->tintRGBA    = glm::mix(frame->tintRGBA,    frameNext->tintRGBA,    interpolation);
 	}
 }
 
@@ -870,7 +918,8 @@ Anm2Frame* anm2_frame_add(Anm2* self, Anm2Reference* reference, s32 time)
 	Anm2Animation* animation = anm2_animation_from_reference(self, reference);
 	Anm2Item* item = anm2_item_from_reference(self, reference);
 	
-	if (!animation || !item) return nullptr;
+	if (!animation || !item) 
+		return nullptr;
 
 	if (item)
 	{
@@ -879,7 +928,7 @@ Anm2Frame* anm2_frame_add(Anm2* self, Anm2Reference* reference, s32 time)
 
 		if (reference->itemType == ANM2_TRIGGERS)
 		{
-			for (auto & frameCheck : item->frames) if (frameCheck.atFrame == time) return nullptr;
+			for (auto& frameCheck : item->frames) if (frameCheck.atFrame == time) return nullptr;
 
 			frame.atFrame = time;
 			index = item->frames.size();
@@ -888,7 +937,7 @@ Anm2Frame* anm2_frame_add(Anm2* self, Anm2Reference* reference, s32 time)
 		{
 			s32 frameDelayCount = 0;
 
-			for (auto & frameCheck : item->frames)
+			for (auto& frameCheck : item->frames)
 				frameDelayCount += frameCheck.delay;
 			
 			if (frameDelayCount + ANM2_FRAME_DELAY_MIN > animation->frameNum) return nullptr;
@@ -929,4 +978,106 @@ void anm2_reference_item_clear(Anm2Reference* self)
 void anm2_reference_frame_clear(Anm2Reference* self)
 {
 	self->frameIndex = INDEX_NONE;
+}
+
+void anm2_animation_merge(Anm2* self, s32 animationID, const std::vector<s32>& mergeIDs, Anm2MergeType type)
+{
+	Anm2Animation newAnimation = self->animations[animationID];
+
+	newAnimation.rootAnimation.frames.clear();
+	
+	for (auto& [id, layerAnimation] : newAnimation.layerAnimations)
+		layerAnimation.frames.clear();
+	
+	for (auto& [id, nullAnimation] : newAnimation.nullAnimations)
+		nullAnimation.frames.clear();
+	
+	newAnimation.triggers.frames.clear();
+
+ 	auto merge_item = [&](Anm2Item& destinationItem, const Anm2Item& sourceItem)
+    {
+        switch (type)
+        {
+            case ANM2_MERGE_APPEND_FRAMES:
+                destinationItem.frames.insert(destinationItem.frames.end(), sourceItem.frames.begin(), sourceItem.frames.end());
+                break;
+            case ANM2_MERGE_PREPEND_FRAMES:
+                destinationItem.frames.insert(destinationItem.frames.begin(), sourceItem.frames.begin(), sourceItem.frames.end());
+                break;
+            case ANM2_MERGE_REPLACE_FRAMES:
+                if (destinationItem.frames.size() < sourceItem.frames.size())
+                    destinationItem.frames.resize(sourceItem.frames.size());
+                for (s32 i = 0; i < (s32)sourceItem.frames.size(); i++)
+                    destinationItem.frames[i] = sourceItem.frames[i];
+                break;
+            case ANM2_MERGE_IGNORE:
+                break;
+        }
+    };
+
+    for (auto mergeID : mergeIDs)
+    {
+        const Anm2Animation& mergeAnimation = self->animations[mergeID];
+
+        merge_item(newAnimation.rootAnimation, mergeAnimation.rootAnimation);
+
+        for (const auto& [id, layerAnimation] : mergeAnimation.layerAnimations)
+            merge_item(newAnimation.layerAnimations[id], layerAnimation);
+        
+		for (const auto& [id, nullAnimation] : mergeAnimation.nullAnimations)
+            merge_item(newAnimation.nullAnimations[id], nullAnimation);
+        
+		merge_item(newAnimation.triggers, mergeAnimation.triggers);
+    }
+	
+	self->animations[animationID] = newAnimation;
+
+	anm2_animation_length_set(&self->animations[animationID]);
+}
+
+void anm2_frame_bake(Anm2* self, Anm2Reference* reference, s32 interval, bool isRoundScale, bool isRoundRotation)
+{
+	Anm2Item* item = anm2_item_from_reference(self, reference);
+	if (!item) return;
+
+	Anm2Frame* frame = anm2_frame_from_reference(self, reference);
+	if (!frame) return;
+	
+	Anm2Reference referenceNext = *reference;
+	referenceNext.frameIndex = reference->frameIndex + 1;
+
+	Anm2Frame* frameNext = anm2_frame_from_reference(self, &referenceNext);
+	if (!frameNext) return;
+
+	const Anm2Frame baseFrame = *frame;
+	const Anm2Frame baseFrameNext = *frameNext;
+	
+	s32 delay = 0;
+	s32 insertIndex = reference->frameIndex;
+
+	while (delay < baseFrame.delay)
+	{
+		f32 interpolation = (f32)delay / baseFrame.delay;
+		
+		Anm2Frame baked = *frame; 
+		baked.delay = std::min(interval, baseFrame.delay - delay);
+		baked.isInterpolated = (insertIndex == reference->frameIndex) ? baseFrame.isInterpolated : false;
+
+		baked.rotation    = glm::mix(baseFrame.rotation,    baseFrameNext.rotation,    interpolation);
+		baked.position    = glm::mix(baseFrame.position,    baseFrameNext.position,    interpolation);
+		baked.scale       = glm::mix(baseFrame.scale,       baseFrameNext.scale,       interpolation);
+		baked.offsetRGB   = glm::mix(baseFrame.offsetRGB,   baseFrameNext.offsetRGB,   interpolation);
+		baked.tintRGBA    = glm::mix(baseFrame.tintRGBA,    baseFrameNext.tintRGBA,    interpolation);
+
+		if (isRoundScale) baked.scale = vec2((s32)baked.scale.x, (s32)baked.scale.y);
+		if (isRoundRotation) baked.rotation = (s32)baked.rotation;
+		
+		if (insertIndex == reference->frameIndex)
+			item->frames[insertIndex] = baked;
+		else
+			item->frames.insert(item->frames.begin() + insertIndex, baked);
+		insertIndex++;
+		
+		delay += baked.delay;
+	}
 }

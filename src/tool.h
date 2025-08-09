@@ -1,0 +1,52 @@
+#pragma once
+
+#include "COMMON.h"
+
+#define TOOL_STEP 1
+#define TOOL_STEP_MOD 10
+
+enum ToolType
+{
+    TOOL_PAN,
+    TOOL_MOVE,
+    TOOL_ROTATE,
+    TOOL_SCALE,
+    TOOL_CROP,
+    TOOL_DRAW,
+    TOOL_ERASE,
+    TOOL_COLOR_PICKER,
+    TOOL_UNDO,
+    TOOL_REDO,
+    TOOL_COLOR,
+    TOOL_COUNT,
+};
+
+const SDL_SystemCursor MOUSE_CURSOR_DEFAULT = SDL_SYSTEM_CURSOR_DEFAULT;
+const SDL_SystemCursor TOOL_MOUSE_CURSORS[TOOL_COUNT] = 
+{
+    SDL_SYSTEM_CURSOR_POINTER,
+    SDL_SYSTEM_CURSOR_MOVE,
+    SDL_SYSTEM_CURSOR_CROSSHAIR,
+    SDL_SYSTEM_CURSOR_NE_RESIZE,
+    SDL_SYSTEM_CURSOR_CROSSHAIR,
+    SDL_SYSTEM_CURSOR_CROSSHAIR,
+    SDL_SYSTEM_CURSOR_CROSSHAIR,
+    SDL_SYSTEM_CURSOR_CROSSHAIR,
+    SDL_SYSTEM_CURSOR_DEFAULT,
+    SDL_SYSTEM_CURSOR_DEFAULT
+};
+
+const bool TOOL_MOUSE_CURSOR_IS_CONSTANT[TOOL_COUNT] =
+{
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false
+};

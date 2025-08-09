@@ -5,10 +5,21 @@
 #define STATE_INIT_INFO "Initializing..."
 #define STATE_SDL_INIT_ERROR "Failed to initialize SDL! {}"
 #define STATE_SDL_INIT_INFO "Initialized SDL"
+#define STATE_MIX_INIT_WARNING "Unable to initialize SDL_mixer! {}"
+#define STATE_MIX_AUDIO_DEVICE_INIT_WARNING "Unable to initialize audio device! {}"
+#define STATE_MIX_INIT_INFO "Initialized SDL_mixer"
 #define STATE_GL_CONTEXT_INIT_ERROR "Failed to initialize OpenGL context! {}"
 #define STATE_GL_CONTEXT_INIT_INFO "Initialized OpenGL context (OpenGL {})"
 #define STATE_QUIT_INFO "Exiting..."
 #define STATE_GL_LINE_WIDTH 2.0f
+
+#define STATE_MIX_FLAGS (MIX_INIT_MP3 | MIX_INIT_OGG | MIX_INIT_WAV)
+#define STATE_MIX_SAMPLE_RATE 44100
+#define STATE_MIX_FORMAT MIX_DEFAULT_FORMAT
+#define STATE_MIX_CHANNELS 2
+#define STATE_MIX_CHUNK_SIZE 1024
+#define STATE_MIX_DEVICE NULL
+#define STATE_MIX_ALLOWED_CHANGES SDL_AUDIO_ALLOW_FORMAT_CHANGE
 
 struct State
 {
@@ -25,11 +36,13 @@ struct State
 	Settings settings;
 	Snapshots snapshots;
 	Clipboard clipboard;
-	bool isRunning = true;
 	std::string argument{};
-	u64 lastTick = 0;
-	u64 tick = 0;
+	std::string lastAction{};
+	u64 lastTick{};
+	u64 tick{};
+	bool isRunning = true;
 
+	bool is_last_action() const { return !lastAction.empty(); }
 	bool is_argument() const { return !argument.empty(); }
 }; 
 

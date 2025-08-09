@@ -8,6 +8,18 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 
+
+static std::vector<u8> _texture_download(Texture* self)
+{
+    std::vector<u8> pixels(self->size.x * self->size.y * TEXTURE_CHANNELS);
+    
+	glBindTexture(GL_TEXTURE_2D, self->id);
+	glPixelStorei(GL_PACK_ALIGNMENT, 1);
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+ 
+	return pixels;
+}
+
 void texture_gl_set(Texture* self, void* data)
 {
 	glGenTextures(1, &self->id);
@@ -48,13 +60,37 @@ bool texture_from_data_init(Texture* self, const u8* data, u32 length)
 	return true;
 }
 
-bool texture_from_data_write(const std::string& path, const u8* data, s32 width, s32 height)
+bool texture_from_data_write(const std::string& path, const u8* data, ivec2 size)
 {
-	return (bool)stbi_write_png(path.c_str(), width, height, TEXTURE_CHANNELS, data, width * TEXTURE_CHANNELS);
+	log_info(std::format(TEXTURE_SAVE_INFO, path));
+	return (bool)stbi_write_png(path.c_str(), size.x, size.y, TEXTURE_CHANNELS, data, size.x * TEXTURE_CHANNELS);
+}
+
+bool texture_from_gl_write(Texture* self, const std::string& path)
+{
+	return texture_from_data_write(path, _texture_download(self).data(), self->size);
 }
 
 void texture_free(Texture* self)
 {
 	glDeleteTextures(1, &self->id);
 	*self = Texture{};
+}
+
+bool texture_pixel_set(Texture* self, ivec2 position, vec4 color)
+{
+    if 
+	(
+		position.x < 0 || position.y < 0 || 
+		position.x >= self->size.x || position.y >= self->size.y
+	)
+        return false;
+
+    uint8_t rgba8[4] = {FLOAT_TO_U8(color.r), FLOAT_TO_U8(color.g), FLOAT_TO_U8(color.b), FLOAT_TO_U8(color.a)};
+
+    glBindTexture(GL_TEXTURE_2D, self->id);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1); 
+    glTexSubImage2D(GL_TEXTURE_2D, 0,position.x, position.y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, rgba8);
+
+    return true;
 }

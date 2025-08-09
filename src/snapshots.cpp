@@ -24,6 +24,7 @@ static void _snapshot_set(Snapshots* self, const Snapshot& snapshot)
     *self->anm2 = snapshot.anm2;
     *self->reference = snapshot.reference;
     self->preview->time = snapshot.time;
+    self->action = snapshot.action;
 }
 
 void snapshots_init(Snapshots* self, Anm2* anm2, Anm2Reference* reference, Preview* preview)
@@ -44,7 +45,7 @@ void snapshots_undo(Snapshots* self)
     Snapshot snapshot;
     if (_snapshot_stack_pop(&self->undoStack, &snapshot))
     {
-        Snapshot current = {*self->anm2, *self->reference, self->preview->time};
+        Snapshot current = {*self->anm2, *self->reference, self->preview->time, self->action};
         _snapshot_stack_push(&self->redoStack, &current);
         _snapshot_set(self, snapshot);
     }
@@ -55,7 +56,7 @@ void snapshots_redo(Snapshots* self)
     Snapshot snapshot;
     if (_snapshot_stack_pop(&self->redoStack, &snapshot))
     {
-        Snapshot current = {*self->anm2, *self->reference, self->preview->time};
+        Snapshot current = {*self->anm2, *self->reference, self->preview->time, self->action};
         _snapshot_stack_push(&self->undoStack, &current);
         _snapshot_set(self, snapshot);
     }

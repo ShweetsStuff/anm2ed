@@ -6,6 +6,7 @@
 #include "canvas.h"
 
 const vec2 PREVIEW_SIZE = {2000, 2000};
+const vec2 PREVIEW_CANVAS_SIZE = {2000, 2000};
 const vec2 PREVIEW_CENTER = {0, 0};
 
 #define PREVIEW_ZOOM_MIN 1
@@ -18,11 +19,12 @@ const vec2 PREVIEW_CENTER = {0, 0};
 
 const vec2 PREVIEW_NULL_RECT_SIZE = {100, 100};
 const vec2 PREVIEW_POINT_SIZE = {2, 2};
-const vec2 PREVIEW_PIVOT_SIZE = {4, 4};
-const vec4 PREVIEW_ROOT_TINT = COLOR_GREEN;
-const vec4 PREVIEW_NULL_TINT = COLOR_BLUE;
-const vec4 PREVIEW_PIVOT_TINT = COLOR_RED;
 const vec2 PREVIEW_TARGET_SIZE = {16, 16};
+const vec4 PREVIEW_BORDER_COLOR = COLOR_RED;
+const vec4 PREVIEW_ROOT_COLOR = COLOR_GREEN;
+const vec4 PREVIEW_NULL_COLOR = COLOR_BLUE;
+const vec4 PREVIEW_NULL_SELECTED_COLOR = COLOR_RED;
+const vec4 PREVIEW_PIVOT_COLOR = COLOR_RED;
 
 struct Preview
 {
@@ -30,21 +32,10 @@ struct Preview
     Anm2Reference* reference = nullptr;
     Resources* resources = nullptr;
     Settings* settings = nullptr;
-    GLuint axisVAO = ID_NONE;
-    GLuint axisVBO = ID_NONE;
-    GLuint fbo = ID_NONE;
-    GLuint gridVAO = ID_NONE;
-    GLuint gridVBO = ID_NONE;
-    GLuint rbo = ID_NONE;
-    GLuint texture = ID_NONE;
-    GLuint rectVAO = ID_NONE;
-    GLuint rectVBO = ID_NONE;
-    GLuint textureEBO = ID_NONE;
-    GLuint textureVAO = ID_NONE;
-    GLuint textureVBO = ID_NONE;
+    s32 animationOverlayID = ID_NONE;
+    Canvas canvas;
     bool isPlaying = false;
     bool isRecording = false;
-    vec2 recordSize{};
     f32 time{};
 };
 

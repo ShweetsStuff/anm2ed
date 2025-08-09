@@ -14,9 +14,13 @@ static void _dialog_callback(void* userdata, const char* const* filelist, s32 fi
 	{
 		self->path = filelist[0];
 		self->isSelected = true;
+		self->selectedFilter = filter;
 	}
 	else
+	{
 		self->isSelected = false;
+		self->selectedFilter = INDEX_NONE;
+	}
 }
 
 void dialog_init(Dialog* self, Anm2* anm2, Anm2Reference* reference, Resources* resources, SDL_Window* window)
@@ -51,8 +55,10 @@ void dialog_png_replace(Dialog* self)
 	self->type = DIALOG_PNG_REPLACE;
 }
 
-void dialog_tick(Dialog* self)
+void dialog_update(Dialog* self)
 {
+	self->isJustSelected = false;
+
 	if (self->isSelected)
 	{
 		Texture texture;
@@ -73,7 +79,7 @@ void dialog_tick(Dialog* self)
 			case DIALOG_PNG_OPEN:
 				id = map_next_id_get(self->resources->textures);
 				self->anm2->spritesheets[id] = Anm2Spritesheet{};
-				self->path = self->anm2->spritesheets[id].path;
+				self->anm2->spritesheets[id].path = self->path;
 				resources_texture_init(self->resources, self->path, id);
 				break;
 			case DIALOG_PNG_REPLACE:
@@ -85,8 +91,23 @@ void dialog_tick(Dialog* self)
 				break;
 		}
 
+		self->lastType = self->type;
+		self->lastPath = self->path;
+		self->type = DIALOG_NONE;
 		self->path.clear();
+
+		self->isJustSelected = true;
 		self->isSelected = false;
 	}
 }
 
+void
+dialog_reset(Dialog* self)
+{
+	self->lastType = DIALOG_NONE;
+	self->type = DIALOG_NONE;
+	self->lastPath.clear();
+	self->path.clear();
+	self->isJustSelected = false;
+	self->isSelected = false;
+}

@@ -2,34 +2,59 @@
 
 static void _settings_setting_load(Settings* self, const std::string& line)
 {
-    for (s32 i = 0; i < SETTINGS_COUNT; i++) 
+    for (s32 i = 0; i < SETTINGS_COUNT; i++)
     {
-        const std::string& key = SETTINGS_ENTRIES[i].key;
-        size_t keyLength = key.length();
+        const auto& entry = SETTINGS_ENTRIES[i];
+        const std::string& key = entry.key;
+        void* target = (u8*)self + entry.offset;
 
-        if (line.compare(0, keyLength, key) == 0) 
+        auto match_key = [&](const std::string& full) -> const char*
         {
-            const char* value = line.c_str() + keyLength;
-            void* target = (u8*)self + SETTINGS_ENTRIES[i].offset;
+            return (line.starts_with(full) && line[full.size()] == '=') ? line.c_str() + full.size() + 1 : nullptr;
+        };
 
-            switch (SETTINGS_ENTRIES[i].type) 
+        auto* value = match_key(key);
+
+        if (value)
+        {
+            switch (entry.type)
             {
-                case SETTINGS_TYPE_INT:
-                    *(s32*)target = std::atoi(value);
-                    break;
-                case SETTINGS_TYPE_BOOL:
-                    *(s32*)target = string_to_bool(std::string(value));
-                    break;
-                case SETTINGS_TYPE_FLOAT:
-                    *(f32*)target = std::atof(value);
-                    break;
-                case SETTINGS_TYPE_STRING:
-                    *(std::string*)target = std::string(value);
-                    break;
-                default:
+                case TYPE_INT:    
+                    *(s32*)target = std::atoi(value); 
+                    return;
+                case TYPE_BOOL:   
+                    *(bool*)target = string_to_bool(value); 
+                    return;
+                case TYPE_FLOAT:  
+                    *(f32*)target = std::atof(value); 
+                    return;
+                case TYPE_STRING: 
+                    *(std::string*)target = value; 
+                    return;
+                default: 
                     break;
             }
-            return; 
+        }
+
+        if (entry.type == TYPE_VEC2)
+        {
+            vec2* v = (vec2*)target;
+            if ((value = match_key(key + "X"))) { v->x = std::atof(value); return; }
+            if ((value = match_key(key + "Y"))) { v->y = std::atof(value); return; }
+        }
+        else if (entry.type == TYPE_IVEC2)
+        {
+            ivec2* v = (ivec2*)target;
+            if ((value = match_key(key + "X"))) { v->x = std::atoi(value); return; }
+            if ((value = match_key(key + "Y"))) { v->y = std::atoi(value); return; }
+        }
+        else if (entry.type == TYPE_VEC4)
+        {
+            vec4* v = (vec4*)target;
+            if ((value = match_key(key + "R"))) { v->x = std::atof(value); return; }
+            if ((value = match_key(key + "G"))) { v->y = std::atof(value); return; }
+            if ((value = match_key(key + "B"))) { v->z = std::atof(value); return; }
+            if ((value = match_key(key + "A"))) { v->w = std::atof(value); return; }
         }
     }
 }
@@ -41,23 +66,48 @@ static void _settings_setting_write(Settings* self, std::ostream& out, SettingsE
 
     switch (entry.type)
     {
-        case SETTINGS_TYPE_INT:
+        case TYPE_INT:
             value = std::format("{}", *(s32*)(selfPointer + entry.offset));
+            out << entry.key << "=" << value << "\n";
             break;
-        case SETTINGS_TYPE_BOOL:
+        case TYPE_BOOL:
             value = std::format("{}", *(bool*)(selfPointer + entry.offset));
+            out << entry.key << "=" << value << "\n";
             break;
-        case SETTINGS_TYPE_FLOAT:
+        case TYPE_FLOAT:
             value = std::format("{:.3f}", *(f32*)(selfPointer + entry.offset));
+            out << entry.key << "=" << value << "\n";
             break;
-        case SETTINGS_TYPE_STRING:
+        case TYPE_STRING:
             value = *(std::string*)(selfPointer + entry.offset);
+            out << entry.key << "=" << value << "\n";
             break;
+        case TYPE_IVEC2:
+        {
+            ivec2* data = (ivec2*)(selfPointer + entry.offset);
+            out << entry.key << "X=" << data->x << "\n";
+            out << entry.key << "Y=" << data->y << "\n";
+            break;
+        }
+        case TYPE_VEC2:
+        {
+            vec2* data = (vec2*)(selfPointer + entry.offset);
+            out << entry.key << "X=" << std::format(SETTINGS_FLOAT_FORMAT, data->x) << "\n";
+            out << entry.key << "Y=" << std::format(SETTINGS_FLOAT_FORMAT, data->y) << "\n";
+            break;
+        }
+        case TYPE_VEC4:
+        {
+            vec4* data = (vec4*)(selfPointer + entry.offset);
+            out << entry.key << "R=" << std::format(SETTINGS_FLOAT_FORMAT, data->r) << "\n";
+            out << entry.key << "G=" << std::format(SETTINGS_FLOAT_FORMAT, data->g) << "\n";
+            out << entry.key << "B=" << std::format(SETTINGS_FLOAT_FORMAT, data->b) << "\n";
+            out << entry.key << "A=" << std::format(SETTINGS_FLOAT_FORMAT, data->a) << "\n";
+            break;
+        }
         default:
             break;
     }
-
-    out << entry.key << value << "\n";
 }
 
 void settings_save(Settings* self)
@@ -75,6 +125,7 @@ void settings_save(Settings* self)
     input.close();
 
     std::ofstream output(SETTINGS_PATH);
+
     if (!output)
     {
         log_error(std::format(SETTINGS_INIT_ERROR, SETTINGS_PATH));

@@ -2,14 +2,18 @@
 
 static void _tick(State* self)
 {
-	SDL_GetWindowSize(self->window, &self->settings.windowW, &self->settings.windowH);
-
-	editor_tick(&self->editor);
 	preview_tick(&self->preview);
-	dialog_tick(&self->dialog);
-	imgui_tick(&self->imgui);
+}
 
-	if (self->imgui.isQuit) self->isRunning = false;
+static void _update(State* self)
+{
+	SDL_GetWindowSize(self->window, &self->settings.windowSize.x, &self->settings.windowSize.y);
+	
+	imgui_update(&self->imgui);
+	dialog_update(&self->dialog);
+
+	if (self->imgui.isQuit) 
+		self->isRunning = false;
 }
 
 static void _draw(State* self)
@@ -35,11 +39,37 @@ void init(State* self)
 
 	log_info(STATE_SDL_INIT_INFO);
 	
+	// Todo, when sdl3 mixer is released officially
+	/*
+    if ((Mix_Init(STATE_MIX_FLAGS) & mixFlags) != mixFlags) 
+		log_warning(std::format(STATE_MIX_INIT_WARNING, Mix_GetError()));
+		
+    if 
+	(
+		Mix_OpenAudioDevice
+		(
+			STATE_MIX_SAMPLE_RATE, 
+			STATE_MIX_FORMAT, 
+			STATE_MIX_CHANNELS, 
+			STATE_CHUNK_SIZE, 
+			STATE_MIX_DEVICE, 
+			STATE_MIX_ALLOWED_CHANGES
+		) 
+		< 0 
+	)
+	{
+		log_warning(std::format(STATE_MIX_INIT_WARNING, Mix_GetError()));
+        Mix_Quit();
+    }
+	else
+		log_info(STATE_MIX_INIT_INFO);
+	*/
+
 	SDL_CreateWindowAndRenderer
 	(
 		WINDOW_TITLE, 
-		self->settings.windowW, 
-		self->settings.windowH, 
+		self->settings.windowSize.x, 
+		self->settings.windowSize.y, 
 		WINDOW_FLAGS, 
 		&self->window, 
 		&self->renderer
@@ -63,9 +93,11 @@ void init(State* self)
 	
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  
-	glDisable(GL_DEPTH_TEST);
 	glLineWidth(STATE_GL_LINE_WIDTH);
-
+	glDisable(GL_MULTISAMPLE);
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_LINE_SMOOTH);
+	
 	resources_init(&self->resources);
 	clipboard_init(&self->clipboard, &self->anm2);
 	dialog_init(&self->dialog, &self->anm2, &self->reference, &self->resources, self->window);
@@ -98,6 +130,7 @@ void init(State* self)
 		anm2_new(&self->anm2);
 }
 
+
 void loop(State* self)
 {
 	self->tick = SDL_GetTicks();
@@ -112,22 +145,27 @@ void loop(State* self)
 		_tick(self);
 
 		self->lastTick = self->tick;
-
 	}
 
+	_update(self);
 	_draw(self);
 }
 
 void quit(State* self)
 {
 	imgui_free();
-	settings_save(&self->settings);
 	preview_free(&self->preview);
 	editor_free(&self->editor);
 	resources_free(&self->resources);
 
+	/*
+    Mix_CloseAudio();
+    Mix_Quit();
+	*/
+
 	SDL_GL_DestroyContext(self->glContext);
 	SDL_Quit();
 
+	settings_save(&self->settings);
 	log_info(STATE_QUIT_INFO);
 }

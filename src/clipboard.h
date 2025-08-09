@@ -7,7 +7,6 @@ enum ClipboardItemType
     CLIPBOARD_NONE,
     CLIPBOARD_FRAME,
     CLIPBOARD_ANIMATION,
-    CLIPBOARD_EVENT
 };
 
 struct ClipboardItem
@@ -22,9 +21,6 @@ struct ClipboardItem
 
     ClipboardItem(const Anm2AnimationWithID& anim)
         : data(anim), type(CLIPBOARD_ANIMATION) {}
-
-    ClipboardItem(const Anm2EventWithID& event)
-        : data(event), type(CLIPBOARD_EVENT) {}
 };
     
 using ClipboardLocation = std::variant<std::monostate, Anm2Reference, s32>;

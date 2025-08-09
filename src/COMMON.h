@@ -1,8 +1,6 @@
 #pragma once
 
 #include <SDL3/SDL.h>
-
-#include <SDL3/SDL.h>
 #include <GL/glew.h>
 #include <GL/gl.h>
 #include <glm/glm/glm.hpp>
@@ -45,12 +43,9 @@ typedef double f64;
 
 using namespace glm; 
 
-#define MIN(x, min) (x < min ? min : x)
-#define MAX(x, max) (x > max ? max : x)
-#define CLAMP(x, min, max) (MIN(MAX(x, max), min))
-#define ROUND_NEAREST_FLOAT(value, multiple) (roundf((value) / (multiple)) * (multiple))
-#define COLOR_FLOAT_TO_INT(x) (static_cast<int>((x) * 255.0f))
-#define COLOR_INT_TO_FLOAT(x) ((x) / 255.0f)
+#define ROUND_NEAREST_MULTIPLE(value, multiple) (roundf((value) / (multiple)) * (multiple))
+#define FLOAT_TO_U8(x) (static_cast<u8>((x) * 255.0f))
+#define U8_TO_FLOAT(x) ((x) / 255.0f)
 #define PERCENT_TO_UNIT(x) (x / 100.0f)
 #define TICK_DELAY 33.3f
 #define TICK_CATCH_UP_MAX (33.3f * 5)
@@ -58,14 +53,14 @@ using namespace glm;
 #define TICK_RATE (SECOND / TICK_DELAY)
 #define ID_NONE -1
 #define INDEX_NONE -1
-#define LENGTH_NONE -1
+#define TIME_NONE -1.0f
 
 #define UV_VERTICES(uvMin, uvMax) \
 { \
   0, 0, uvMin.x, uvMin.y, \
   1, 0, uvMax.x, uvMin.y, \
   1, 1, uvMax.x, uvMax.y, \
-  0, 1, uvMin.x, uvMax.y, \
+  0, 1, uvMin.x, uvMax.y  \
 }
 
 static const f32 GL_VERTICES[] =
@@ -76,7 +71,7 @@ static const f32 GL_VERTICES[] =
     0, 1  
 };
 
-static const f32 GL_UV_VERTICES[] = 
+constexpr f32 GL_UV_VERTICES[] = 
 {
     0, 0, 0.0f, 0.0f,
     1, 0, 1.0f, 0.0f,
@@ -88,8 +83,9 @@ static const GLuint GL_TEXTURE_INDICES[] = {0, 1, 2, 2, 3, 0};
 static const vec4 COLOR_RED = {1.0f, 0.0f, 0.0f, 1.0f};
 static const vec4 COLOR_GREEN = {0.0f, 1.0f, 0.0f, 1.0f};
 static const vec4 COLOR_BLUE = {0.0f, 0.0f, 1.0f, 1.0f};
+static const vec4 COLOR_PINK = {1.0f, 0.0f, 1.0f, 1.0f};
 static const vec4 COLOR_OPAQUE = {1.0f, 1.0f, 1.0f, 1.0f};
-static const vec4 COLOR_TRANSPARENT = {0.0f, 0.0f, 0.0f, 1.0f};
+static const vec4 COLOR_TRANSPARENT = {0.0f, 0.0f, 0.0f, 0.0f};
 static const vec3 COLOR_OFFSET_NONE = {0.0f, 0.0f, 0.0f};
 
 static inline void log_error(const std::string& string)
@@ -100,6 +96,11 @@ static inline void log_error(const std::string& string)
 static inline void log_info(const std::string& string)
 {
     std::println("[INFO] {}", string);
+}
+
+static inline void log_warning(const std::string& string)
+{
+    std::println("[WARNING] {}", string);
 }
 
 static inline bool string_to_bool(const std::string& string) 
@@ -147,28 +148,11 @@ static inline s32 map_next_id_get(const std::map<s32, T>& map)
 }
 
 template<typename T>
-static inline s32 vector_next_id_get(const std::vector<T>& vec)
+static inline T* map_find(std::map<s32, T>& map, s32 id) 
 {
-    std::unordered_set<s32> usedIDs;
-    for (const auto& item : vec)
-        usedIDs.insert(item.id);
-
-    for (s32 i = 0; ; ++i)
-        if (!usedIDs.contains(i))
-            return i;
-}
-
-template<typename T>
-void vector_swap_by_id(std::vector<T>& vec, s32 idA, s32 idB)
-{
-    if (idA == idB)
-        return;
-
-    auto itA = std::find_if(vec.begin(), vec.end(), [=](const T& item) { return item.id == idA; });
-    auto itB = std::find_if(vec.begin(), vec.end(), [=](const T& item) { return item.id == idB; });
-
-    if (itA != vec.end() && itB != vec.end())
-        std::swap(*itA, *itB);
+    if (auto it = map.find(id); it != map.end())
+        return &it->second;
+    return nullptr;
 }
 
 template<typename Map, typename Key>
@@ -219,6 +203,39 @@ static inline void map_insert_shift(std::map<int, T>& map, s32 index, const T& v
     map[insertIndex] = value;
 }
 
+static inline mat4 quad_model_get(vec2 size, vec2 position, vec2 pivot, f32 rotation, vec2 scale)
+{
+    vec2 scaleAbsolute  = glm::abs(scale);
+    vec2 scaleSign = glm::sign(scale);
+    vec2 pivotScaled = pivot * scaleAbsolute;
+    vec2 sizeScaled  = size  * scaleAbsolute;
+
+    mat4 model(1.0f);
+    model = glm::translate(model, vec3(position - pivotScaled, 0.0f));
+    model = glm::translate(model, vec3(pivotScaled, 0.0f));
+    model = glm::scale(model, vec3(scaleSign, 1.0f));
+    model = glm::rotate(model, glm::radians(rotation), vec3(0, 0, 1));
+    model = glm::translate(model, vec3(-pivotScaled, 0.0f));
+    model = glm::scale(model, vec3(sizeScaled, 1.0f));
+    return model;
+}
+
+static inline mat4 quad_parent_model_get(vec2 position, vec2 pivot, f32 rotation, vec2 scale)
+{
+    vec2 scaleSign = glm::sign(scale);
+    vec2 scaleAbsolute  = glm::abs(scale);
+    f32 handedness = (scaleSign.x * scaleSign.y) < 0.0f ? -1.0f : 1.0f;
+
+    mat4 local(1.0f);
+    local = glm::translate(local, vec3(pivot, 0.0f));
+    local = glm::scale(local, vec3(scaleSign, 1.0f)); // mirror if needed
+    local = glm::rotate(local, glm::radians(rotation) * handedness, vec3(0, 0, 1));
+    local = glm::translate(local, vec3(-pivot, 0.0f));
+    local = glm::scale(local, vec3(scaleAbsolute, 1.0f));
+
+    return glm::translate(mat4(1.0f), vec3(position, 0.0f)) * local;
+}
+
 #define DEFINE_ENUM_TO_STRING_FUNCTION(function, array, count) \
     static inline std::string function(s32 index)              \
     {                                                          \
@@ -230,3 +247,21 @@ static inline void map_insert_shift(std::map<int, T>& map, s32 index, const T& v
     {                                                                             \
         return static_cast<enumType>(string_to_enum(string, stringArray, count)); \
     };
+
+
+enum DataType
+{
+    TYPE_INT,
+    TYPE_BOOL,
+    TYPE_FLOAT,
+    TYPE_STRING,
+    TYPE_IVEC2,
+    TYPE_VEC2,
+    TYPE_VEC4
+};
+
+enum OriginType
+{
+    ORIGIN_TOP_LEFT,
+    ORIGIN_CENTER
+};
