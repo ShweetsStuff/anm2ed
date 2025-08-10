@@ -34,6 +34,13 @@ void snapshots_init(Snapshots* self, Anm2* anm2, Anm2Reference* reference, Previ
     self->preview = preview;
 }
 
+void snapshots_reset(Snapshots* self)
+{
+    self->undoStack = SnapshotStack{};
+    self->redoStack = SnapshotStack{};
+    self->action.clear();
+}
+
 void snapshots_undo_stack_push(Snapshots* self, const Snapshot* snapshot)
 {
     _snapshot_stack_push(&self->undoStack, snapshot);

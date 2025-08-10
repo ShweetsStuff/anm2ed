@@ -44,7 +44,7 @@ void editor_draw(Editor* self)
             canvas_rect_draw(&self->canvas, shaderLine, mvp, EDITOR_FRAME_COLOR);
 
             mvp = canvas_mvp_get(transform, CANVAS_PIVOT_SIZE, frame->crop + frame->pivot, CANVAS_PIVOT_SIZE * 0.5f);
-            f32 vertices[] = ATLAS_UV_VERTICES(TEXTURE_PIVOT);
+            f32 vertices[] = ATLAS_UV_VERTICES(ATLAS_PIVOT);
             canvas_texture_draw(&self->canvas, shaderTexture, self->resources->atlas.id, mvp, vertices, EDITOR_PIVOT_COLOR);
         }
     }

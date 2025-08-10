@@ -2,8 +2,6 @@
 
 #include "dialog.h"
 
-static void _dialog_callback(void* userdata, const char* const* filelist, s32 filter); 
-
 static void _dialog_callback(void* userdata, const char* const* filelist, s32 filter) 
 {
 	Dialog* self;
@@ -23,91 +21,59 @@ static void _dialog_callback(void* userdata, const char* const* filelist, s32 fi
 	}
 }
 
-void dialog_init(Dialog* self, Anm2* anm2, Anm2Reference* reference, Resources* resources, SDL_Window* window)
+void dialog_init(Dialog* self, SDL_Window* window)
 {
-	self->anm2 = anm2;
-	self->reference = reference;
-	self->resources = resources;
 	self->window = window;
 }
 
 void dialog_anm2_open(Dialog* self)
 {
-	SDL_ShowOpenFileDialog(_dialog_callback, self, nullptr, DIALOG_FILE_FILTER_ANM2, 1, nullptr, false);
+	SDL_ShowOpenFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_ANM2, 1, nullptr, false);
 	self->type = DIALOG_ANM2_OPEN;
 }
 
 void dialog_anm2_save(Dialog* self)
 {
-	SDL_ShowSaveFileDialog(_dialog_callback, self, nullptr, DIALOG_FILE_FILTER_ANM2, 1, nullptr);
+	SDL_ShowSaveFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_ANM2, 1, nullptr);
 	self->type = DIALOG_ANM2_SAVE;
 }
 
-void dialog_png_open(Dialog* self)
+void dialog_spritesheet_add(Dialog* self)
 {
-	SDL_ShowOpenFileDialog(_dialog_callback, self, nullptr, DIALOG_FILE_FILTER_PNG, 1, nullptr, false);
-	self->type = DIALOG_PNG_OPEN;
+	SDL_ShowOpenFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_PNG, 1, nullptr, false);
+	self->type = DIALOG_SPRITESHEET_ADD;
 }
 
-void dialog_png_replace(Dialog* self)
+void dialog_spritesheet_replace(Dialog* self, s32 id)
 {
-	SDL_ShowOpenFileDialog(_dialog_callback, self, nullptr, DIALOG_FILE_FILTER_PNG, 1, nullptr, false);
-	self->type = DIALOG_PNG_REPLACE;
+	SDL_ShowOpenFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_PNG, 1, nullptr, false);
+	self->replaceID = id;
+	self->type = DIALOG_SPRITESHEET_REPLACE;
 }
 
-void dialog_update(Dialog* self)
+void dialog_render_path_set(Dialog* self)
 {
-	self->isJustSelected = false;
+	SDL_ShowSaveFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_RENDER, 2, nullptr);
+	self->type = DIALOG_RENDER_PATH_SET;
+}
 
-	if (self->isSelected)
-	{
-		Texture texture;
-		s32 id;
-		
-		switch (self->type)
-		{
-			case DIALOG_ANM2_OPEN:
-				*self->reference = Anm2Reference{};
-				resources_textures_free(self->resources);
-				anm2_deserialize(self->anm2, self->resources, self->path);
-				window_title_from_path_set(self->window, self->path);
-				break;
-			case DIALOG_ANM2_SAVE:
-				anm2_serialize(self->anm2, self->path);
-				window_title_from_path_set(self->window, self->path);
-				break;
-			case DIALOG_PNG_OPEN:
-				id = map_next_id_get(self->resources->textures);
-				self->anm2->spritesheets[id] = Anm2Spritesheet{};
-				self->anm2->spritesheets[id].path = self->path;
-				resources_texture_init(self->resources, self->path, id);
-				break;
-			case DIALOG_PNG_REPLACE:
-				self->anm2->spritesheets[self->replaceID].path = self->path;
-				resources_texture_init(self->resources, self->path, self->replaceID);
-				self->replaceID = -1;
-				break;
-			default:
-				break;
-		}
+void dialog_render_directory_set(Dialog* self)
+{
+	SDL_ShowOpenFolderDialog(_dialog_callback, self, self->window, nullptr, false);
+	self->type = DIALOG_RENDER_DIRECTORY_SET;
+}
 
-		self->lastType = self->type;
-		self->lastPath = self->path;
-		self->type = DIALOG_NONE;
-		self->path.clear();
-
-		self->isJustSelected = true;
-		self->isSelected = false;
-	}
+void dialog_ffmpeg_path_set(Dialog* self)
+{
+	SDL_ShowOpenFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_FFMPEG, 1, nullptr, false);
+	self->type = DIALOG_FFMPEG_PATH_SET;
 }
 
 void
 dialog_reset(Dialog* self)
 {
-	self->lastType = DIALOG_NONE;
+	self->replaceID = ID_NONE;
 	self->type = DIALOG_NONE;
-	self->lastPath.clear();
 	self->path.clear();
-	self->isJustSelected = false;
 	self->isSelected = false;
 }

@@ -35,9 +35,9 @@ static void _imgui_clipboard_hovered_item_set(Imgui* self, const T& data)
 	self->clipboard->hoveredItem = ClipboardItem(data);
 }
 
-static void _imgui_atlas_image(Imgui* self, TextureType type)
+static void _imgui_atlas_image(Imgui* self, AtlasType type)
 {
-	ImGui::Image(self->resources->atlas.id, ATLAS_SIZES[type], ATLAS_UV_ARGS(type));
+	ImGui::Image(self->resources->atlas.id, ATLAS_SIZE(type), ATLAS_UV_ARGS(type));
 }
 
 static void _imgui_item_text(const ImguiItem& item)
@@ -83,7 +83,7 @@ static void _imgui_item(Imgui* self, const ImguiItem& item, bool* isActivated)
 		}
 	}
 
-	if (isActivated && self->isHotkeysEnabled && (item.is_chord() && ImGui::IsKeyChordPressed(item.chord)))
+	if (isActivated && self->isContextualActionsEnabled && (item.is_chord() && ImGui::IsKeyChordPressed(item.chord)))
 		if (item.is_focus_window() && (imgui_nav_window_root_get() == item.focusWindow))
 			*isActivated = true;
 
@@ -97,25 +97,43 @@ static void _imgui_item(Imgui* self, const ImguiItem& item, bool* isActivated)
 
 		if (item.is_popup())
 		{
-			ImGui::OpenPopup(item.popup.c_str());
-
-			switch (item.popupType)
-			{
-				case IMGUI_POPUP_CENTER_SCREEN:
-					ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-					break;
-				case IMGUI_POPUP_BY_ITEM:
-				default:
-					ImGui::SetNextWindowPos(ImVec2(ImGui::GetItemRectMin().x, ImGui::GetItemRectMin().y + ImGui::GetItemRectSize().y));
-					break;
-			}
+			self->pendingPopup = item.popup;
+			self->pendingPopupType = item.popupType;
+			self->pendingPopupPosition = ImVec2(ImGui::GetItemRectMin().x, ImGui::GetItemRectMin().y + ImGui::GetItemRectSize().y);
 		}
 	}
 }
 
-static bool _imgui_item_combo(Imgui* self, const ImguiItem& item, s32* current, const char* const items[], s32 count)
+static void _imgui_pending_popup_process(Imgui* self)
 {
-	bool isActivated = ImGui::Combo(item.label.c_str(), current, items, count);
+	if (self->pendingPopup.empty()) return;
+
+	switch (self->pendingPopupType)
+	{
+		case IMGUI_POPUP_CENTER_SCREEN:
+			ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+			break;
+		case IMGUI_POPUP_BY_ITEM:
+		default:
+			ImGui::SetNextWindowPos(self->pendingPopupPosition);
+			break;
+	}
+
+	ImGui::OpenPopup(self->pendingPopup.c_str());
+
+	self->pendingPopup.clear();
+	self->pendingPopupType = IMGUI_POPUP_NONE;
+	self->pendingPopupPosition = ImVec2();
+}
+
+static bool _imgui_item_combo(Imgui* self, const ImguiItem& item, s32* current)
+{
+	std::vector<const char*> cStrings;
+	cStrings.reserve(item.items.size());
+	for (auto& string : item.items)
+		cStrings.push_back(string.c_str());
+
+	bool isActivated = ImGui::Combo(item.label.c_str(), current, cStrings.data(), (s32)item.items.size());
 	_imgui_item(self, item, &isActivated);
 	return isActivated;
 }
@@ -125,14 +143,15 @@ static bool _imgui_item_selectable(Imgui* self, const ImguiItem& item)
     const char* label = item.label.c_str();
 	s32 flags = item.flags;
 
-	if (item.isInactive || item.color.is_normal())
+    if (item.isInactive) 
 	{
-		vec4 color = item.isInactive ? IMGUI_INACTIVE_COLOR : item.color.normal;
-		ImGui::PushStyleColor(ImGuiCol_Text, color);
-		flags |= ImGuiSelectableFlags_Disabled;
-	}
+        ImGui::PushStyleColor(ImGuiCol_Text, IMGUI_INACTIVE_COLOR);
+        flags |= ImGuiSelectableFlags_Disabled;
+    }
+	else if (item.color.is_normal())
+		ImGui::PushStyleColor(ImGuiCol_Text, item.color.normal);
 
-	ImVec2 size = item.is_size() ? item.size : item.isSizeToText ? ImGui::CalcTextSize(label) :ImVec2(0, 0);
+	ImVec2 size = item.is_size() ? item.size : item.isSizeToText ? ImGui::CalcTextSize(label) : ImVec2();
 	bool isActivated = ImGui::Selectable(label, item.isSelected, flags, size);
 	_imgui_item(self, item, &isActivated);
 
@@ -173,14 +192,19 @@ static bool _imgui_item_inputint2(Imgui* self, const ImguiItem& item, ivec2& val
 
 static bool _imgui_item_inputtext(Imgui* self, const ImguiItem& item, std::string& buffer)
 {
-	if ((s32)buffer.size() < item.max) buffer.resize(item.max); 
+	if ((s32)buffer.size() < (s32)item.max) buffer.resize(item.max); 
 
 	ImVec2 size = item.is_size() ? item.size : ImVec2(-FLT_MIN, 0);
-	
+
+	if (item.isSizeToChild)
+	{
+		size.x = (ImGui::GetWindowSize().x - ImGui::GetStyle().ItemSpacing.x * (item.childRowItemCount + 1)) / item.childRowItemCount;
+		size.x -= ImGui::CalcTextSize(item.label.c_str()).x * 2;
+	}
+
 	ImGui::SetNextItemWidth(size.x);
 		
-	ImGui::InputText(item.label.c_str(), &buffer[0], item.max, item.flags);
-	bool isActivated = ImGui::IsItemActivated();
+	bool isActivated = ImGui::InputText(item.label.c_str(), &buffer[0], item.max, item.flags);
 	_imgui_item(self, item, &isActivated);
 
     return isActivated;
@@ -292,7 +316,7 @@ static bool _imgui_item_selectable_inputtext(Imgui* self, const ImguiItem& item,
             renameID = ID_NONE;
             itemID = ID_NONE;
 			self->isRename = false;
-
+			self->isContextualActionsEnabled = true;
         }
 
         ImGui::PopID();
@@ -307,6 +331,7 @@ static bool _imgui_item_selectable_inputtext(Imgui* self, const ImguiItem& item,
             renameID = id;
             itemID = item.id;
             ImGui::SetKeyboardFocusHere(-1);
+			self->isContextualActionsEnabled = false;
         }
     }
 
@@ -340,6 +365,7 @@ static bool _imgui_item_selectable_inputint(Imgui* self, const ImguiItem& item, 
             itemID = ID_NONE;
 			changeID = ID_NONE;
 			self->isChangeValue = false;
+			self->isContextualActionsEnabled = true;
         }
 
         ImGui::PopID();
@@ -353,6 +379,7 @@ static bool _imgui_item_selectable_inputint(Imgui* self, const ImguiItem& item, 
             itemID = item.id;
             changeID = id;
             ImGui::SetKeyboardFocusHere(-1);
+			self->isContextualActionsEnabled = false;
         }
     }
 
@@ -361,16 +388,9 @@ static bool _imgui_item_selectable_inputint(Imgui* self, const ImguiItem& item, 
 	return isActivated;
 }
 
-static void _imgui_item_atlas_image_text(Imgui* self, const ImguiItem& item)
-{
-	_imgui_atlas_image(self, item.texture);
-	ImGui::SameLine();
-	ImGui::Text(item.label.c_str());
-}
-
 static bool _imgui_item_atlas_image_selectable(Imgui* self, const ImguiItem& item)
 {
-	_imgui_atlas_image(self, item.texture);
+	_imgui_atlas_image(self, item.atlas);
 	ImGui::SameLine();
 	return _imgui_item_selectable(self, item);
 }
@@ -388,14 +408,14 @@ static bool _imgui_item_text_inputtext(Imgui* self, const ImguiItem& item, std::
 
 static bool _imgui_item_atlas_image_selectable_inputtext(Imgui* self, ImguiItem& item, std::string& string, s32 id)
 {
-	_imgui_atlas_image(self, item.texture);
+	_imgui_atlas_image(self, item.atlas);
 	ImGui::SameLine();
 	return _imgui_item_selectable_inputtext(self, item, string, id);
 }
 
 static bool _imgui_item_atlas_image_selectable_inputint(Imgui* self, ImguiItem& item, s32& value, s32 id)
 {
-	_imgui_atlas_image(self, item.texture);
+	_imgui_atlas_image(self, item.atlas);
 	ImGui::SameLine();
 	return _imgui_item_selectable_inputint(self, item, value, id);
 }
@@ -407,7 +427,7 @@ static bool _imgui_item_atlas_image_checkbox_selectable(Imgui* self, const Imgui
 
 	_imgui_item_checkbox(self, checkboxItem, value);
 	ImGui::SameLine();
-	_imgui_atlas_image(self, item.texture);
+	_imgui_atlas_image(self, item.atlas);
 	ImGui::SameLine();
 	return _imgui_item_selectable(self, item);
 }
@@ -415,7 +435,7 @@ static bool _imgui_item_atlas_image_checkbox_selectable(Imgui* self, const Imgui
 static bool _imgui_item_atlas_image_button(Imgui* self, const ImguiItem& item)
 {
 	bool isActivated = false;
-	ImVec2 imageSize = (ATLAS_SIZES[item.texture]);
+	ImVec2 imageSize = (ATLAS_SIZE(item.atlas));
 	ImVec2 buttonSize = item.is_size() ? item.size : imageSize;
 
     if (item.color.is_normal()) ImGui::PushStyleColor(ImGuiCol_Button, item.color.normal);
@@ -432,10 +452,10 @@ static bool _imgui_item_atlas_image_button(Imgui* self, const ImguiItem& item)
 		ImVec2 imageMin = pos + item.contentOffset;
 		ImVec2 imageMax = imageMin + imageSize;
 
-		ImGui::GetWindowDrawList()->AddImage(self->resources->atlas.id, imageMin, imageMax, ATLAS_UV_ARGS(item.texture));
+		ImGui::GetWindowDrawList()->AddImage(self->resources->atlas.id, imageMin, imageMax, ATLAS_UV_ARGS(item.atlas));
 	}
 	else
-		isActivated = ImGui::ImageButton(item.label.c_str(), self->resources->atlas.id, buttonSize, ATLAS_UV_ARGS(item.texture));
+		isActivated = ImGui::ImageButton(item.label.c_str(), self->resources->atlas.id, buttonSize, ATLAS_UV_ARGS(item.atlas));
 	_imgui_item(self, item, &isActivated);
 	
     if (item.color.is_normal()) ImGui::PopStyleColor();
@@ -481,26 +501,32 @@ static void _imgui_keyboard_navigation_set(bool value)
 	if (!value) ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NavEnableKeyboard;
 }
 
-static bool _imgui_item_yes_no_popup(Imgui* self, const ImguiItem& item)
+static bool _imgui_item_option_popup(Imgui* self, const ImguiItem& item)
 {
 	ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 	
 	if (ImGui::BeginPopupModal(item.popup.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 	{
+		self->isContextualActionsEnabled = false;
+
 		ImGui::Text(item.label.c_str());
 		ImGui::Separator();
 
-		if (_imgui_item_button(self, IMGUI_POPUP_YES_BUTTON))
+		if (_imgui_item_button(self, IMGUI_POPUP_CONFIRM_BUTTON))
 		{
 			ImGui::CloseCurrentPopup();
 			ImGui::EndPopup();
+			self->isContextualActionsEnabled = true;
 			return true;
 		}
 
 		ImGui::SameLine();
 		
-		if (_imgui_item_button(self, IMGUI_POPUP_NO_BUTTON))
+		if (_imgui_item_button(self, IMGUI_POPUP_CANCEL_BUTTON))
+		{
 			ImGui::CloseCurrentPopup();
+			self->isContextualActionsEnabled = true;
+		}
 
 		ImGui::EndPopup();
 	}
@@ -639,7 +665,7 @@ static void _imgui_timeline(Imgui* self)
 				drawList->AddText(textPosition, textColor, buffer.c_str());
 			}
 
-			drawList->AddImage(self->resources->atlas.id, positionStart, positionEnd, ATLAS_UV_ARGS(TEXTURE_FRAME));
+			drawList->AddImage(self->resources->atlas.id, positionStart, positionEnd, ATLAS_UV_ARGS(ATLAS_FRAME_ALT));
 		}
 
 		_imgui_item_end_child(); // IMGUI_TIMELINE_HEADER
@@ -656,7 +682,7 @@ static void _imgui_timeline(Imgui* self)
 		drawList = ImGui::GetWindowDrawList();
 
 		drawList->PushClipRect(clipRectMin, clipRectMax, true);
-		drawList->AddImage(self->resources->atlas.id, pos, ImVec2(pos.x + frameSize.x, pos.y + frameSize.y), ATLAS_UV_ARGS(TEXTURE_PICKER));
+		drawList->AddImage(self->resources->atlas.id, pos, ImVec2(pos.x + frameSize.x, pos.y + frameSize.y), ATLAS_UV_ARGS(ATLAS_PICKER));
 		drawList->AddRectFilled(lineStart, lineEnd, IMGUI_PICKER_LINE_COLOR);
 		drawList->PopClipRect();
 
@@ -669,7 +695,7 @@ static void _imgui_timeline(Imgui* self)
 
 		if (!item) return;
 
-		ImVec2 buttonSize = ImVec2(TEXTURE_SIZE) + (defaultFramePadding * ImVec2(2, 2));
+		ImVec2 buttonSize = ImVec2(ATLAS_SIZE_NORMAL) + (defaultFramePadding * ImVec2(2, 2));
 		
 		Anm2Type& type = reference.itemType;
 		Anm2Layer* layer = nullptr;
@@ -749,14 +775,14 @@ static void _imgui_timeline(Imgui* self)
 
 		if (type == ANM2_NULL)
 		{
-			ImguiItem rectItem = null->isShowRect ? IMGUI_TIMELINE_ITEM_SHOW_RECT : IMGUI_TIMELINE_ITEM_HIDE_RECT;
+			const ImguiItem& rectItem = null->isShowRect ? IMGUI_TIMELINE_ITEM_SHOW_RECT : IMGUI_TIMELINE_ITEM_HIDE_RECT;
 			if (_imgui_item_atlas_image_button(self, rectItem))
 				null->isShowRect = !null->isShowRect;
 
 			ImGui::SameLine(0.0f, defaultItemSpacing.x);
 		}
 		
-		ImguiItem visibleItem = item->isVisible ? IMGUI_TIMELINE_ITEM_VISIBLE : IMGUI_TIMELINE_ITEM_INVISIBLE;
+		const ImguiItem& visibleItem = item->isVisible ? IMGUI_TIMELINE_ITEM_VISIBLE : IMGUI_TIMELINE_ITEM_INVISIBLE;
 		if (_imgui_item_atlas_image_button(self, visibleItem))
 			item->isVisible = !item->isVisible;
 
@@ -875,7 +901,7 @@ static void _imgui_timeline(Imgui* self)
 			ImVec2 endPosition(endX, cursorPos.y + frameSize.y);
 
 			drawList->AddRectFilled(startPosition, endPosition, bgColor);
-			drawList->AddImage(self->resources->atlas.id, startPosition, endPosition, ATLAS_UV_ARGS(TEXTURE_FRAME_ALT));
+			drawList->AddImage(self->resources->atlas.id, startPosition, endPosition, ATLAS_UV_ARGS(ATLAS_FRAME));
 		}
 
 		ImGui::SetCursorPos(startPos);
@@ -886,14 +912,14 @@ static void _imgui_timeline(Imgui* self)
 			reference.frameIndex = i;
 			ImguiItem frameButton = *IMGUI_TIMELINE_FRAMES[type];
 			ImVec2 framePos = ImGui::GetCursorPos();
-			frameButton.texture = frame.isInterpolated ? TEXTURE_CIRCLE : TEXTURE_SQUARE;
+			frameButton.atlas = frame.isInterpolated ? ATLAS_CIRCLE : ATLAS_SQUARE;
 			frameButton.size = {frameSize.x * frame.delay, frameSize.y};
 			frameButton.isSelected = reference == *self->reference;
 
 			if (type == ANM2_TRIGGERS)
 			{
 				framePos.x = startPos.x + (frameSize.x * frame.atFrame);
-				frameButton.texture = TEXTURE_TRIGGER;
+				frameButton.atlas = ATLAS_TRIGGER;
 			}
 
 			ImGui::SetCursorPos(framePos);
@@ -1017,21 +1043,7 @@ static void _imgui_timeline(Imgui* self)
 	Anm2Frame* frame = anm2_frame_from_reference(self->anm2, self->reference);
 	
 	_imgui_item_begin_child(IMGUI_TIMELINE_FOOTER_ITEM_CHILD);
-
-	if(_imgui_item_button(self, IMGUI_TIMELINE_ADD_ITEM))
-		ImGui::OpenPopup(IMGUI_TIMELINE_ADD_ITEM.popup.c_str());
-	
-	if (ImGui::BeginPopup(IMGUI_TIMELINE_ADD_ITEM.popup.c_str()))
-	{
-		if (_imgui_item_selectable(self, IMGUI_TIMELINE_ADD_ITEM_LAYER))
-			anm2_layer_add(self->anm2);
-
-		if (_imgui_item_selectable(self, IMGUI_TIMELINE_ADD_ITEM_NULL))
-			anm2_null_add(self->anm2);
-
-		ImGui::EndPopup();
-	}
-
+	_imgui_item_button(self, IMGUI_TIMELINE_ADD_ITEM);
 	ImGui::SameLine();
 
 	if (_imgui_item_button(self, IMGUI_TIMELINE_REMOVE_ITEM))
@@ -1059,7 +1071,7 @@ static void _imgui_timeline(Imgui* self)
 	
 	_imgui_item_begin_child(IMGUI_TIMELINE_FOOTER_OPTIONS_CHILD);
 	
-	ImguiItem playPauseItem = self->preview->isPlaying ? IMGUI_TIMELINE_PAUSE : IMGUI_TIMELINE_PLAY;
+	const ImguiItem& playPauseItem = self->preview->isPlaying ? IMGUI_TIMELINE_PAUSE : IMGUI_TIMELINE_PLAY;
 	if (_imgui_item_button(self, playPauseItem))
 		self->preview->isPlaying = !self->preview->isPlaying;
 
@@ -1082,12 +1094,35 @@ static void _imgui_timeline(Imgui* self)
 
 	ImGui::SameLine();
 
-	if (_imgui_item_button(self, IMGUI_TIMELINE_BAKE))
+	_imgui_item_button(self, IMGUI_TIMELINE_BAKE);
+
+	ImGui::SameLine();
+		
+	if (_imgui_item_button(self, IMGUI_TIMELINE_FIT_ANIMATION_LENGTH))
+		anm2_animation_length_set(animation);
+
+	ImGui::SameLine();
+	_imgui_item_inputint(self, IMGUI_TIMELINE_ANIMATION_LENGTH, animation->frameNum);
+	ImGui::SameLine();
+	_imgui_item_inputint(self, IMGUI_TIMELINE_FPS, self->anm2->fps);
+	ImGui::SameLine();
+	_imgui_item_checkbox(self, IMGUI_TIMELINE_LOOP, animation->isLoop);
+	ImGui::SameLine();
+	_imgui_item_text_inputtext(self, IMGUI_TIMELINE_CREATED_BY, self->anm2->createdBy);
+
+	_imgui_item_end_child(); //IMGUI_TIMELINE_FOOTER_OPTIONS_CHILD
+	
+	_imgui_pending_popup_process(self);
+
+	if (ImGui::BeginPopup(IMGUI_TIMELINE_ADD_ITEM.popup.c_str()))
 	{
-		if (frame)
-			ImGui::OpenPopup(IMGUI_TIMELINE_BAKE.popup.c_str());
-		else
-			ImGui::CloseCurrentPopup();
+		if (_imgui_item_selectable(self, IMGUI_TIMELINE_ADD_ITEM_LAYER))
+			anm2_layer_add(self->anm2);
+
+		if (_imgui_item_selectable(self, IMGUI_TIMELINE_ADD_ITEM_NULL))
+			anm2_null_add(self->anm2);
+
+		ImGui::EndPopup();
 	}
 
 	if (ImGui::BeginPopupModal(IMGUI_TIMELINE_BAKE.popup.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize))
@@ -1129,22 +1164,6 @@ static void _imgui_timeline(Imgui* self)
 			ImGui::EndPopup();
 		}
 	}
-
-	ImGui::SameLine();
-		
-	if (_imgui_item_button(self, IMGUI_TIMELINE_FIT_ANIMATION_LENGTH))
-		anm2_animation_length_set(animation);
-
-	ImGui::SameLine();
-	_imgui_item_inputint(self, IMGUI_TIMELINE_ANIMATION_LENGTH, animation->frameNum);
-	ImGui::SameLine();
-	_imgui_item_inputint(self, IMGUI_TIMELINE_FPS, self->anm2->fps);
-	ImGui::SameLine();
-	_imgui_item_checkbox(self, IMGUI_TIMELINE_LOOP, animation->isLoop);
-	ImGui::SameLine();
-	_imgui_item_text_inputtext(self, IMGUI_TIMELINE_CREATED_BY, self->anm2->createdBy);
-
-	_imgui_item_end_child(); //IMGUI_TIMELINE_FOOTER_OPTIONS_CHILD
 	
 	_imgui_item_end(); // IMGUI_TIMELINE
 
@@ -1159,37 +1178,237 @@ static void _imgui_taskbar(Imgui* self)
 	ImGui::SetNextWindowPos(viewport->Pos);
 	_imgui_item_begin(taskbarItem);
 
+	Anm2Animation* animation = anm2_animation_from_reference(self->anm2, self->reference);
+
 	_imgui_item_selectable(self, IMGUI_TASKBAR_FILE);
+	ImGui::SameLine();
+	_imgui_item_selectable(self, IMGUI_TASKBAR_WIZARD);
+	ImGui::SameLine();
+	_imgui_item_selectable(self, IMGUI_TASKBAR_PLAYBACK);
+	_imgui_pending_popup_process(self);
 
 	if (ImGui::BeginPopup(IMGUI_TASKBAR_FILE.popup.c_str()))
 	{
-		_imgui_item_selectable(self, IMGUI_FILE_NEW);
-		_imgui_item_selectable(self, IMGUI_FILE_OPEN);
-		_imgui_item_selectable(self, IMGUI_FILE_SAVE);
-		_imgui_item_selectable(self, IMGUI_FILE_SAVE_AS);
+		_imgui_item_selectable(self, IMGUI_FILE_NEW); // imgui_file_new
+		_imgui_item_selectable(self, IMGUI_FILE_OPEN); // imgui_file_open
+		_imgui_item_selectable(self, IMGUI_FILE_SAVE); // imgui_file_save
+		_imgui_item_selectable(self, IMGUI_FILE_SAVE_AS); // imgui_file_save_as
+
 		ImGui::EndPopup();
 	}
 
-	ImGui::SameLine();
-
-	_imgui_item_selectable(self, IMGUI_TASKBAR_WIZARD);
-	
 	if (ImGui::BeginPopup(IMGUI_TASKBAR_WIZARD.popup.c_str()))
 	{
 		_imgui_item_selectable(self, IMGUI_TASKBAR_WIZARD_GENERATE_ANIMATION_FROM_GRID);
-		_imgui_item_selectable(self, IMGUI_TASKBAR_WIZARD_RECORD_GIF_ANIMATION);
+		ImGui::Separator();
+		_imgui_item_selectable(self, IMGUI_TASKBAR_WIZARD_RENDER_ANIMATION);
+	
 		ImGui::EndPopup();
 	}
-	
+
+	_imgui_pending_popup_process(self);
+
+	if (ImGui::BeginPopupModal(IMGUI_TASKBAR_WIZARD_RENDER_ANIMATION.popup.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		if (animation)
+		{
+			RenderType& type = self->settings->renderType;
+			std::string& path = self->settings->renderPath;
+			std::string& format = self->settings->renderFormat;
+			std::string& ffmpegPath = self->settings->ffmpegPath;
+
+			self->isContextualActionsEnabled = false;
+
+			_imgui_item_begin_child(IMGUI_RENDER_ANIMATION_CHILD);
+
+			if (_imgui_item_atlas_image_button(self, IMGUI_RENDER_ANIMATION_BROWSE))
+			{
+				switch (self->settings->renderType)
+				{
+					case RENDER_PNG:
+						dialog_render_directory_set(self->dialog);
+						break;
+					default:
+						dialog_render_path_set(self->dialog);
+						break;
+				}
+			}
+
+			if (self->dialog->isSelected && self->dialog->type == DIALOG_RENDER_PATH_SET)
+			{
+				path = self->dialog->path;
+				dialog_reset(self->dialog);
+			}
+
+			ImGui::SameLine();
+			_imgui_item_inputtext(self, IMGUI_RENDER_ANIMATION_LOCATION, path);
+			
+			if (_imgui_item_atlas_image_button(self, IMGUI_RENDER_ANIMATION_FFMPEG_BROWSE))
+				dialog_ffmpeg_path_set(self->dialog);
+
+			if (self->dialog->isSelected && self->dialog->type == DIALOG_FFMPEG_PATH_SET)
+			{
+				ffmpegPath = self->dialog->path;
+				dialog_reset(self->dialog);
+			}
+			
+			ImGui::SameLine();
+			_imgui_item_inputtext(self, IMGUI_RENDER_ANIMATION_FFMPEG_PATH, ffmpegPath);
+
+			_imgui_item_combo(self, IMGUI_RENDER_ANIMATION_OUTPUT, (s32*)&type);
+
+			_imgui_item_inputtext(self, IMGUI_RENDER_ANIMATION_FORMAT, format);
+
+			ImGui::Separator();
+
+			if (_imgui_item_button(self, IMGUI_RENDER_ANIMATION_CONFIRM))
+			{
+				bool isRenderStart = true;
+
+				switch (type)
+				{
+					case RENDER_PNG:
+						if (!std::filesystem::is_directory(path))
+						{
+							imgui_message_queue_push(self, IMGUI_MESSAGE_RENDER_ANIMATION_DIRECTORY_ERROR);
+							isRenderStart = false;
+						}
+						break;
+					case RENDER_GIF:
+					case RENDER_WEBM:
+						if (!path_valid(path))
+						{
+							imgui_message_queue_push(self, IMGUI_MESSAGE_RENDER_ANIMATION_PATH_ERROR);
+							isRenderStart = false;
+						}
+					default:
+						break;
+				}
+
+				if (isRenderStart)
+					preview_render_start(self->preview);
+				else
+					self->preview->isRenderCancelled = true;
+
+				ImGui::CloseCurrentPopup();
+			}
+			
+			ImGui::SameLine();
+		
+			if (_imgui_item_button(self, IMGUI_RENDER_ANIMATION_CANCEL))
+				ImGui::CloseCurrentPopup();
+
+			_imgui_item_end_child(); // IMGUI_RENDER_ANIMATION_CHILD
+			ImGui::EndPopup();
+		}
+		else
+		{
+			ImGui::CloseCurrentPopup();
+			ImGui::EndPopup();
+			imgui_message_queue_push(self, IMGUI_MESSAGE_RENDER_ANIMATION_NO_SELECTED_ANIMATION_ERROR);
+		}
+	}
+
+	_imgui_pending_popup_process(self);
+
+	if (ImGui::BeginPopupModal(IMGUI_RENDER_ANIMATION_CONFIRM.popup.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		auto rendering_end = [&]()
+		{
+			preview_render_end(self->preview);
+			self->isContextualActionsEnabled = true;
+			ImGui::CloseCurrentPopup();
+		};
+		
+		RenderType& type = self->settings->renderType;
+		std::string& format = self->settings->renderFormat;
+		std::vector<Texture>& frames = self->preview->renderFrames;
+		std::string path = std::string(self->settings->renderPath.c_str());
+		
+		if (self->preview->isRenderCancelled)
+		{
+			rendering_end();
+			self->preview->isRenderCancelled = false;
+		}
+
+		if (!animation)
+		{
+			imgui_message_queue_push(self, IMGUI_MESSAGE_RENDER_ANIMATION_NO_ANIMATION_ERROR);
+			rendering_end();
+		}
+
+		_imgui_item_begin_child(IMGUI_RENDERING_ANIMATION_CHILD);
+
+		f32 progress = self->preview->time / (animation->frameNum - 1);
+		ImGui::ProgressBar(progress);
+
+		if (_imgui_item_button(self, IMGUI_RENDERING_ANIMATION_CANCEL))
+			self->preview->isRenderCancelled = true;
+
+		_imgui_item_end_child(); // IMGUI_RENDERING_ANIMATION_CHILD
+
+		if (self->preview->isRenderFinished && frames.empty())
+		{
+			imgui_message_queue_push(self, IMGUI_MESSAGE_RENDER_ANIMATION_NO_FRAMES_ERROR);
+			rendering_end();
+		}
+		
+		if (self->preview->isRenderFinished)
+		{
+			switch (type)
+			{
+				case RENDER_PNG:
+				{
+					std::filesystem::path workingPath = std::filesystem::current_path();
+					std::filesystem::current_path(path);
+
+					for (auto [i, frame] : std::views::enumerate(frames))
+					{
+						std::string framePath = std::vformat(format, std::make_format_args(i));
+						framePath = path_extension_change(framePath, RENDER_EXTENSIONS[type]);
+						if (!frame.isInvalid)
+							texture_from_gl_write(&frame, framePath);
+					}
+
+					std::filesystem::current_path(workingPath);
+					imgui_message_queue_push(self, std::format(IMGUI_MESSAGE_RENDER_ANIMATION_FRAMES_SAVE_FORMAT, path));
+					break;
+				}
+				case RENDER_GIF:
+				case RENDER_WEBM:
+				{
+					std::string ffmpegPath = std::string(self->settings->ffmpegPath.c_str());
+					path = path_extension_change(path, RENDER_EXTENSIONS[type]);
+					
+					if (ffmpeg_render(ffmpegPath, path, frames, self->preview->canvas.size, self->anm2->fps, type))
+					{
+						std::string message = std::format(IMGUI_MESSAGE_RENDER_ANIMATION_SAVE_FORMAT, path);
+						imgui_message_queue_push(self, message);
+						log_info(message);
+					}
+					else
+					{
+						std::string message = std::format(IMGUI_MESSAGE_RENDER_ANIMATION_FFMPEG_ERROR, path);
+						imgui_message_queue_push(self, message);
+						log_error(message);
+					}
+					break;
+				}
+				default:
+					break;
+			}
+			
+			rendering_end();
+		}
+
+		ImGui::EndPopup();
+	}
+
 	if (ImGui::BeginPopupModal(IMGUI_TASKBAR_WIZARD_GENERATE_ANIMATION_FROM_GRID.popup.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 	{
 		ImGui::EndPopup();
 	}
 
-	ImGui::SameLine();
-	
-	_imgui_item_selectable(self, IMGUI_TASKBAR_PLAYBACK);
-		
 	if (ImGui::BeginPopup(IMGUI_TASKBAR_PLAYBACK.popup.c_str()))
 	{
 		_imgui_item_checkbox(self, IMGUI_PLAYBACK_ALWAYS_LOOP, self->settings->playbackIsLoop);
@@ -1197,6 +1416,30 @@ static void _imgui_taskbar(Imgui* self)
 	}
 
 	_imgui_item_end();
+
+	if (self->dialog->isSelected)
+	{
+		switch (self->dialog->type)
+		{
+			case DIALOG_ANM2_OPEN:
+				*self->reference = Anm2Reference{};
+				resources_textures_free(self->resources);
+				anm2_deserialize(self->anm2, self->resources, self->dialog->path);
+				window_title_from_path_set(self->window, self->dialog->path);
+				snapshots_reset(self->snapshots);
+				imgui_message_queue_push(self, std::format(IMGUI_MESSAGE_FILE_OPEN_FORMAT, self->dialog->path));
+				break;
+			case DIALOG_ANM2_SAVE:
+				anm2_serialize(self->anm2, self->dialog->path);
+				window_title_from_path_set(self->window, self->dialog->path);
+				imgui_message_queue_push(self, std::format(IMGUI_MESSAGE_FILE_SAVE_FORMAT, self->dialog->path));
+				break;
+			default:
+				break;
+		}
+
+		dialog_reset(self->dialog);
+	}
 }
 
 static void _imgui_tools(Imgui* self)
@@ -1345,8 +1588,21 @@ static void _imgui_animations(Imgui* self)
 	}
 
 	ImGui::SameLine();
-
 	_imgui_item_button(self, IMGUI_ANIMATIONS_MERGE);
+	ImGui::SameLine();
+	
+	if (_imgui_item_button(self, IMGUI_ANIMATION_REMOVE) && animation)
+	{
+		anm2_animation_remove(self->anm2, self->reference->animationID);
+		anm2_reference_clear(self->reference);
+	}
+	
+	ImGui::SameLine();
+	
+	if (_imgui_item_button(self, IMGUI_ANIMATION_DEFAULT) && animation)
+		self->anm2->defaultAnimationID = self->reference->animationID; 
+
+	_imgui_pending_popup_process(self);
 
 	if (ImGui::BeginPopupModal(IMGUI_ANIMATIONS_MERGE.popup.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 	{
@@ -1462,18 +1718,9 @@ static void _imgui_animations(Imgui* self)
 		ImGui::EndPopup();
 	}
 
-	ImGui::SameLine();
-	
-	if (_imgui_item_button(self, IMGUI_ANIMATION_REMOVE) && animation)
-	{
-		anm2_animation_remove(self->anm2, self->reference->animationID);
-		anm2_reference_clear(self->reference);
-	}
-	
-	ImGui::SameLine();
-	
-	if (_imgui_item_button(self, IMGUI_ANIMATION_DEFAULT) && animation)
-		self->anm2->defaultAnimationID = self->reference->animationID; 
+
+
+
 
 	_imgui_item_end_child(); // IMGUI_ANIMATIONS_OPTIONS_CHILD)
 	_imgui_item_end();
@@ -1598,7 +1845,7 @@ static void _imgui_spritesheets(Imgui* self)
 			spritesheetPreviewSize.y = IMGUI_SPRITESHEET_PREVIEW_SIZE.x / spritesheetAspect;
 
 		if (texture->isInvalid)
-			_imgui_atlas_image(self, TEXTURE_NONE);
+			_imgui_atlas_image(self, ATLAS_NONE);
 		else
 			ImGui::Image(texture->id, spritesheetPreviewSize);
 			
@@ -1614,8 +1861,9 @@ static void _imgui_spritesheets(Imgui* self)
 		
 	_imgui_item_begin_child(IMGUI_SPRITESHEETS_OPTIONS_CHILD);
 	
-	_imgui_item_button(self, IMGUI_SPRITESHEETS_ADD);
-	
+	if (_imgui_item_button(self, IMGUI_SPRITESHEETS_ADD))
+    	dialog_spritesheet_add(self->dialog);
+
 	ImGui::SameLine();
 
 	if (_imgui_item_button(self, IMGUI_SPRITESHEETS_RELOAD))
@@ -1634,13 +1882,30 @@ static void _imgui_spritesheets(Imgui* self)
 
 	ImGui::SameLine();
 	
-	if (_imgui_item_button(self, IMGUI_SPRITESHEETS_REPLACE))
+	if (_imgui_item_button(self, IMGUI_SPRITESHEETS_REPLACE) && highlightedID != ID_NONE)
+			dialog_spritesheet_replace(self->dialog, highlightedID);
+
+	if (self->dialog->isSelected)
 	{
-		if (highlightedID != ID_NONE)
+		switch (self->dialog->type)
 		{
-			self->dialog->replaceID = highlightedID;
-			dialog_png_replace(self->dialog);
+			case DIALOG_SPRITESHEET_ADD:
+			{
+				s32 id = map_next_id_get(self->resources->textures);
+				self->anm2->spritesheets[id] = Anm2Spritesheet{};
+				self->anm2->spritesheets[id].path = self->dialog->path;
+				resources_texture_init(self->resources, self->dialog->path, id);
+				break;
+			}
+			case DIALOG_SPRITESHEET_REPLACE:
+				self->anm2->spritesheets[self->dialog->replaceID].path = self->dialog->path;
+				resources_texture_init(self->resources, self->dialog->path, self->dialog->replaceID);
+				break;
+			default:
+				break;
 		}
+
+		dialog_reset(self->dialog);
 	}
 
 	ImGui::SameLine();
@@ -1688,7 +1953,7 @@ static void _imgui_spritesheets(Imgui* self)
 				Anm2Spritesheet* spritesheet = &self->anm2->spritesheets[id];
 				Texture* texture = &self->resources->textures[id];
 				texture_from_gl_write(texture, spritesheet->path);
-				imgui_message_queue_push(self, std::format(IMGUI_ACTION_SPRITESHEET_SAVE_FORMAT, id, spritesheet->path));
+				imgui_message_queue_push(self, std::format(IMGUI_MESSAGE_SPRITESHEET_SAVE_FORMAT, id, spritesheet->path));
 				std::filesystem::current_path(workingPath);
 			}
 		}
@@ -1736,29 +2001,25 @@ static void _imgui_animation_preview(Imgui* self)
 	_imgui_item_begin_child(IMGUI_ANIMATION_PREVIEW_BACKGROUND_SETTINGS);
 	_imgui_item_coloredit4(self, IMGUI_ANIMATION_PREVIEW_BACKGROUND_COLOR, self->settings->previewBackgroundColor);
 	
-	std::vector<std::string> animationStrings;
-	std::vector<const char*> animationLabels;
 	std::vector<s32> animationIDs;
+	ImguiItem animationOverlayItem = IMGUI_ANIMATION_PREVIEW_OVERLAY;
+	s32 animationOverlayCount = self->anm2->animations.size() + 1;
 
-	animationStrings.reserve(self->anm2->animations.size() + 1);
-	animationIDs.reserve(self->anm2->animations.size() + 1);
-	animationLabels.reserve(self->anm2->animations.size() + 1);
-
+	animationIDs.reserve(animationOverlayCount);
+	animationOverlayItem.items.reserve(animationOverlayCount);
 	animationIDs.push_back(ID_NONE);
-	animationStrings.push_back(IMGUI_EVENT_NONE);
-	animationLabels.push_back(animationStrings.back().c_str());
-	
+	animationOverlayItem.items.push_back(IMGUI_ANIMATION_NONE);
+
 	for (auto & [id, animation] : self->anm2->animations) 
 	{
 		animationIDs.push_back(id);
-		animationStrings.push_back(animation.name);
-		animationLabels.push_back(animationStrings.back().c_str());
+		animationOverlayItem.items.push_back(animation.name);
 	}
 
-	s32 selectedAnimationID = std::find(animationIDs.begin(), animationIDs.end(), self->preview->animationOverlayID) - animationIDs.begin();
+	s32 animationIndex = std::find(animationIDs.begin(), animationIDs.end(), self->preview->animationOverlayID) - animationIDs.begin();
 
-	if (_imgui_item_combo(self, IMGUI_ANIMATION_PREVIEW_OVERLAY, &selectedAnimationID, animationLabels.data(), (s32)animationLabels.size()))
-		self->preview->animationOverlayID = animationIDs[selectedAnimationID];
+	if (_imgui_item_combo(self, animationOverlayItem, &animationIndex))
+		self->preview->animationOverlayID = animationIDs[animationIndex];
 
 	_imgui_item_dragfloat(self, IMGUI_ANIMATION_PREVIEW_OVERLAY_TRANSPARENCY, self->settings->previewOverlayTransparency);
 	_imgui_item_end_child();
@@ -1770,7 +2031,9 @@ static void _imgui_animation_preview(Imgui* self)
 	ImGui::SameLine();
 	_imgui_item_coloredit4(self, IMGUI_ANIMATION_PREVIEW_AXIS_COLOR, self->settings->previewAxisColor);
 	_imgui_item_checkbox(self, IMGUI_ANIMATION_PREVIEW_ROOT_TRANSFORM, self->settings->previewIsRootTransform);
-	_imgui_item_checkbox(self, IMGUI_ANIMATION_PREVIEW_SHOW_PIVOT, self->settings->previewIsShowPivot);
+	_imgui_item_checkbox(self, IMGUI_ANIMATION_PREVIEW_PIVOTS, self->settings->previewIsPivots);
+	ImGui::SameLine();
+	_imgui_item_checkbox(self, IMGUI_ANIMATION_PREVIEW_TARGETS, self->settings->previewIsTargets);
 	ImGui::SameLine();
 	_imgui_item_checkbox(self, IMGUI_ANIMATION_PREVIEW_BORDER, self->settings->previewIsBorder);
 	_imgui_item_end_child();
@@ -1995,6 +2258,8 @@ static void _imgui_spritesheet_editor(Imgui* self)
 	}
 
 	_imgui_item_end();
+
+
 }
 
 static void _imgui_frame_properties(Imgui* self)
@@ -2045,29 +2310,25 @@ static void _imgui_frame_properties(Imgui* self)
 	}
 	else if (type == ANM2_TRIGGERS)
 	{
-		std::vector<std::string> eventStrings;
-		std::vector<const char*> eventLabels;
 		std::vector<s32> eventIDs;
+		ImguiItem framePropertiesEventItem = IMGUI_FRAME_PROPERTIES_EVENT;
+		s32 eventComboCount = self->anm2->events.size() + 1;
 	
-		eventStrings.reserve(self->anm2->events.size() + 1);
-		eventIDs.reserve(self->anm2->events.size() + 1);
-		eventLabels.reserve(self->anm2->events.size() + 1);
-
+		framePropertiesEventItem.items.reserve(eventComboCount);
+		eventIDs.reserve(eventComboCount);
+		framePropertiesEventItem.items.push_back(IMGUI_EVENT_NONE);
 		eventIDs.push_back(ID_NONE);
-		eventStrings.push_back(IMGUI_EVENT_NONE);
-		eventLabels.push_back(eventStrings.back().c_str());
 		
 		for (auto & [id, event] : self->anm2->events) 
 		{
 			eventIDs.push_back(id);
-			eventStrings.push_back(event.name);
-			eventLabels.push_back(eventStrings.back().c_str());
+			framePropertiesEventItem.items.push_back(event.name);
 		}
 
-		s32 selectedEventIndex = std::find(eventIDs.begin(), eventIDs.end(), frame->eventID) - eventIDs.begin();
-
-		if (_imgui_item_combo(self, IMGUI_FRAME_PROPERTIES_EVENT, &selectedEventIndex, eventLabels.data(), (s32)eventLabels.size()))
-			frame->eventID = eventIDs[selectedEventIndex];
+		s32 eventIndex = std::find(eventIDs.begin(), eventIDs.end(), frame->eventID) - eventIDs.begin();
+		
+		if (_imgui_item_combo(self, framePropertiesEventItem, &eventIndex))
+			frame->eventID = eventIDs[eventIndex];
 				
 		_imgui_item_inputint(self, IMGUI_FRAME_PROPERTIES_AT_FRAME, frame->atFrame);
 		frame->atFrame = std::clamp(frame->atFrame, 0, animation->frameNum - 1);
@@ -2109,7 +2370,7 @@ static void _imgui_messages(Imgui* self)
 			self->messageQueue.erase(self->messageQueue.begin() + i); 
 			continue; 
 		}
-	    
+	
         ImGui::SetNextWindowPos(position, ImGuiCond_Always, {1.0f, 1.0f});
         ImGui::PushStyleColor(ImGuiCol_Border, borderColor);
         ImGui::PushStyleColor(ImGuiCol_Text, textColor);
@@ -2124,36 +2385,11 @@ static void _imgui_messages(Imgui* self)
 
         position.y -= windowSize.y + IMGUI_MESSAGE_PADDING;
     }
-
-	if (self->dialog->isJustSelected)
-	{
-		switch (self->dialog->lastType)
-		{
-			case DIALOG_ANM2_OPEN:
-				imgui_message_queue_push(self, std::format(IMGUI_ACTION_FILE_OPEN_FORMAT, self->dialog->lastPath));
-				break;
-			case DIALOG_ANM2_SAVE:
-				imgui_message_queue_push(self, std::format(IMGUI_ACTION_FILE_SAVE_FORMAT, self->dialog->lastPath));
-				break;
-			default:
-				break;
-		}
-
-		dialog_reset(self->dialog);
-	}
 }
 
 static void _imgui_persistent(Imgui* self)
 {
-	if (self->preview->isRecording)
-	{
-		ImVec2 mousePos = ImGui::GetMousePos();
-
-		ImGui::SetNextWindowPos(ImVec2(mousePos.x + IMGUI_TOOLTIP_OFFSET.x, mousePos.y + IMGUI_TOOLTIP_OFFSET.y));
-		ImGui::BeginTooltip();
-		_imgui_item_atlas_image_text(self, IMGUI_RECORDING);
-		ImGui::EndTooltip();
-	}
+	if (!self->isContextualActionsEnabled) return;
 
 	if (ImGui::IsMouseClicked(ImGuiMouseButton_Right))
 		ImGui::OpenPopup(IMGUI_CONTEXT_MENU.popup.c_str());
@@ -2251,9 +2487,7 @@ void imgui_update(Imgui* self)
 	_imgui_messages(self);
 	_imgui_persistent(self);
 
-	self->isHotkeysEnabled = !self->isRename && !self->isChangeValue;
-
-	if (self->isHotkeysEnabled)
+	if (self->isContextualActionsEnabled)
 	{
 		for (const auto& hotkey : imgui_hotkey_registry())
 		{
@@ -2286,7 +2520,7 @@ void imgui_update(Imgui* self)
 		}
 	}
 
-	if (_imgui_item_yes_no_popup(self, IMGUI_EXIT_CONFIRMATION))
+	if (_imgui_item_option_popup(self, IMGUI_EXIT_CONFIRMATION))
 		self->isQuit = true;
 }
 

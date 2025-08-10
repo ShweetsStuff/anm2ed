@@ -34,3 +34,4 @@ void snapshots_undo_stack_push(Snapshots* self, const Snapshot* snapshot);
 void snapshots_init(Snapshots* self, Anm2* anm2, Anm2Reference* reference, Preview* preview);
 void snapshots_undo(Snapshots* self);
 void snapshots_redo(Snapshots* self);
+void snapshots_reset(Snapshots* self);

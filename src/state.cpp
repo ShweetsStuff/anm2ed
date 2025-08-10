@@ -10,7 +10,6 @@ static void _update(State* self)
 	SDL_GetWindowSize(self->window, &self->settings.windowSize.x, &self->settings.windowSize.y);
 	
 	imgui_update(&self->imgui);
-	dialog_update(&self->dialog);
 
 	if (self->imgui.isQuit) 
 		self->isRunning = false;
@@ -99,8 +98,8 @@ void init(State* self)
 	glDisable(GL_LINE_SMOOTH);
 	
 	resources_init(&self->resources);
+	dialog_init(&self->dialog, self->window);
 	clipboard_init(&self->clipboard, &self->anm2);
-	dialog_init(&self->dialog, &self->anm2, &self->reference, &self->resources, self->window);
 	snapshots_init(&self->snapshots, &self->anm2, &self->reference, &self->preview);
 	preview_init(&self->preview, &self->anm2, &self->reference, &self->resources, &self->settings);
 	editor_init(&self->editor, &self->anm2, &self->reference, &self->resources, &self->settings);
@@ -129,7 +128,6 @@ void init(State* self)
 	else
 		anm2_new(&self->anm2);
 }
-
 
 void loop(State* self)
 {

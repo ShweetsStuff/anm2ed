@@ -1,17 +1,26 @@
 #pragma once
 
-#include "anm2.h"
-#include "resources.h"
 #include "window.h"
 
 const SDL_DialogFileFilter DIALOG_FILE_FILTER_ANM2[] =
 {
-    {"Anm2", "anm2;xml"}
+    {"Anm2 file", "anm2;xml"}
 };
 
 const SDL_DialogFileFilter DIALOG_FILE_FILTER_PNG[] =
 {
-    {"png", "png"}
+    {"PNG image", "png"}
+};
+
+const SDL_DialogFileFilter DIALOG_FILE_FILTER_RENDER[] =
+{
+    {"GIF image", "gif"}, 
+    {"WebM video", "webm"}
+};
+
+const SDL_DialogFileFilter DIALOG_FILE_FILTER_FFMPEG[] =
+{
+    {"Executable", ""}
 };
 
 enum DialogType 
@@ -19,32 +28,29 @@ enum DialogType
     DIALOG_NONE,
     DIALOG_ANM2_OPEN,
     DIALOG_ANM2_SAVE,
-    DIALOG_PNG_OPEN,
-    DIALOG_PNG_REPLACE,
-    DIALOG_FRAME_DIRECTORY_OPEN,
+    DIALOG_SPRITESHEET_ADD,
+    DIALOG_SPRITESHEET_REPLACE,
+    DIALOG_RENDER_PATH_SET,
+    DIALOG_RENDER_DIRECTORY_SET,
+    DIALOG_FFMPEG_PATH_SET
 };
 
 struct Dialog
 {
-    Anm2* anm2 = nullptr;
-    Anm2Reference* reference = nullptr;
-    Resources* resources = nullptr;
     SDL_Window* window = nullptr;
+    s32 selectedFilter = ID_NONE;
     std::string path{};
-    std::string lastPath{};
     s32 replaceID = ID_NONE;
-    s32 selectedFilter{};
     DialogType type = DIALOG_NONE;
-    DialogType lastType = DIALOG_NONE;
     bool isSelected = false;
-    bool isJustSelected = false;
 };
 
-void dialog_init(Dialog* self, Anm2* anm2, Anm2Reference* reference, Resources* resources, SDL_Window* window);
+void dialog_init(Dialog* self, SDL_Window* window);
 void dialog_anm2_open(Dialog* self);
-void dialog_png_open(Dialog* self);
-void dialog_png_replace(Dialog* self);
+void dialog_spritesheet_add(Dialog* self);
+void dialog_spritesheet_replace(Dialog* self, s32 id);
 void dialog_anm2_save(Dialog* self);
-void dialog_frame_directory_open(Dialog* self);
-void dialog_update(Dialog* self);
+void dialog_render_path_set(Dialog* self);
+void dialog_render_directory_set(Dialog* self);
+void dialog_ffmpeg_path_set(Dialog* self);
 void dialog_reset(Dialog* self);

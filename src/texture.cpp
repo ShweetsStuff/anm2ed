@@ -8,19 +8,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 
-
-static std::vector<u8> _texture_download(Texture* self)
-{
-    std::vector<u8> pixels(self->size.x * self->size.y * TEXTURE_CHANNELS);
-    
-	glBindTexture(GL_TEXTURE_2D, self->id);
-	glPixelStorei(GL_PACK_ALIGNMENT, 1);
-	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
- 
-	return pixels;
-}
-
-void texture_gl_set(Texture* self, void* data)
+static void _texture_gl_set(Texture* self, const u8* data)
 {
 	glGenTextures(1, &self->id);
 	glBindTexture(GL_TEXTURE_2D, self->id);
@@ -32,35 +20,67 @@ void texture_gl_set(Texture* self, void* data)
 	glBindTexture(GL_TEXTURE_2D, 0); 
 }
 
+std::vector<u8> texture_download(const Texture* self)
+{
+    std::vector<u8> pixels(self->size.x * self->size.y * TEXTURE_CHANNELS);
+    
+	glBindTexture(GL_TEXTURE_2D, self->id);
+	glPixelStorei(GL_PACK_ALIGNMENT, 1);
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+ 
+	return pixels;
+}
+
 bool texture_from_path_init(Texture* self, const std::string& path)
 {
-	void* data = stbi_load(path.c_str(), &self->size.x, &self->size.y, &self->channels, TEXTURE_CHANNELS);
+	*self = Texture{};
+	u8* data = stbi_load(path.c_str(), &self->size.x, &self->size.y, &self->channels, TEXTURE_CHANNELS);
 
 	if (!data)
 	{
 		log_error(std::format(TEXTURE_INIT_ERROR, path));
+		self->isInvalid = true;
 		return false;
 	}
 
 	log_info(std::format(TEXTURE_INIT_INFO, path));
 
-	texture_gl_set(self, data);
+	_texture_gl_set(self, data);
 
 	return true;
 }
 
-bool texture_from_data_init(Texture* self, const u8* data, u32 length)
+bool texture_from_encoded_data_init(Texture* self, ivec2 size, s32 channels, const u8* data, u32 length)
 {
-	void* textureData = stbi_load_from_memory(data, length, &self->size.x, &self->size.y, &self->channels, TEXTURE_CHANNELS);
+	*self = Texture{};
+	self->size = size;
+	self->channels = channels;
 
-	if (!textureData) return false;
+	u8* textureData = stbi_load_from_memory(data, length, &self->size.x, &self->size.y, &self->channels, TEXTURE_CHANNELS);
 
-	texture_gl_set(self, textureData);
+	if (!textureData) 
+	{
+		self->isInvalid = true;
+		return false;
+	}
+
+	_texture_gl_set(self, textureData);
 
 	return true;
 }
 
-bool texture_from_data_write(const std::string& path, const u8* data, ivec2 size)
+bool texture_from_rgba_init(Texture* self, ivec2 size, s32 channels, const u8* data)
+{
+	*self = Texture{};
+	self->size = size;
+	self->channels = channels;
+
+	_texture_gl_set(self, data);
+
+	return true;
+}
+
+bool texture_from_rgba_write(const std::string& path, const u8* data, ivec2 size)
 {
 	log_info(std::format(TEXTURE_SAVE_INFO, path));
 	return (bool)stbi_write_png(path.c_str(), size.x, size.y, TEXTURE_CHANNELS, data, size.x * TEXTURE_CHANNELS);
@@ -68,7 +88,7 @@ bool texture_from_data_write(const std::string& path, const u8* data, ivec2 size
 
 bool texture_from_gl_write(Texture* self, const std::string& path)
 {
-	return texture_from_data_write(path, _texture_download(self).data(), self->size);
+	return texture_from_rgba_write(path, texture_download(self).data(), self->size);
 }
 
 void texture_free(Texture* self)

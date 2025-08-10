@@ -55,6 +55,16 @@ using namespace glm;
 #define INDEX_NONE -1
 #define TIME_NONE -1.0f
 
+#if defined(_WIN32)
+  #define POPEN  _popen
+  #define PCLOSE _pclose
+  #define PWRITE_MODE "wb"
+#else
+  #define POPEN  popen
+  #define PCLOSE pclose
+  #define PWRITE_MODE "w"
+#endif
+
 #define UV_VERTICES(uvMin, uvMax) \
 { \
   0, 0, uvMin.x, uvMin.y, \
@@ -119,6 +129,41 @@ static inline void working_directory_from_file_set(const std::string& path)
     std::filesystem::path parentPath = filePath.parent_path();
 	std::filesystem::current_path(parentPath);
 };
+
+static inline std::string path_extension_change(const std::string& path, const std::string& extension)
+{
+    std::filesystem::path filePath(path);
+    filePath.replace_extension(extension);
+    return filePath.string();
+}
+
+static inline bool path_exists(const std::filesystem::path& pathCheck)
+{
+    std::error_code errorCode;
+    return std::filesystem::exists(pathCheck, errorCode) && ((void)std::filesystem::status(pathCheck, errorCode), !errorCode);
+}
+
+static inline bool path_valid(const std::filesystem::path& pathCheck)
+{
+    namespace fs = std::filesystem;
+    std::error_code ec;
+
+    if (fs::is_directory(pathCheck, ec)) return false;
+    if (fs::exists(pathCheck, ec) && !fs::is_regular_file(pathCheck, ec)) return false;
+
+    fs::path parentDir = pathCheck.has_parent_path() ? pathCheck.parent_path() : fs::path(".");
+    if (!fs::is_directory(parentDir, ec)) return false;
+
+    bool existedBefore = fs::exists(pathCheck, ec);
+    std::ofstream testStream(pathCheck, std::ios::app | std::ios::binary);
+    bool isValid = testStream.is_open();
+    testStream.close();
+
+    if (!existedBefore && isValid)
+        fs::remove(pathCheck, ec); // cleanup if we created it
+
+    return isValid;
+}
 
 static inline const char* enum_to_string(const char* array[], s32 count, s32 index) 
 { 

@@ -6,11 +6,17 @@ static void _settings_setting_load(Settings* self, const std::string& line)
     {
         const auto& entry = SETTINGS_ENTRIES[i];
         const std::string& key = entry.key;
+
         void* target = (u8*)self + entry.offset;
 
         auto match_key = [&](const std::string& full) -> const char*
         {
-            return (line.starts_with(full) && line[full.size()] == '=') ? line.c_str() + full.size() + 1 : nullptr;
+            if (!line.starts_with(full)) 
+                return nullptr;
+            size_t p = full.size();
+            while (p < line.size() && std::isspace((u8)line[p])) ++p;
+            if (p < line.size() && line[p] == '=') return line.c_str() + p + 1;
+            return nullptr;
         };
 
         auto* value = match_key(key);
@@ -79,9 +85,12 @@ static void _settings_setting_write(Settings* self, std::ostream& out, SettingsE
             out << entry.key << "=" << value << "\n";
             break;
         case TYPE_STRING:
-            value = *(std::string*)(selfPointer + entry.offset);
-            out << entry.key << "=" << value << "\n";
+        {
+            const std::string data = *reinterpret_cast<const std::string*>(selfPointer + entry.offset);
+            if (!data.empty())
+                out << entry.key << "=" << data.c_str() << "\n";
             break;
+        }
         case TYPE_IVEC2:
         {
             ivec2* data = (ivec2*)(selfPointer + entry.offset);

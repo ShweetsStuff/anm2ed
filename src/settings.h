@@ -1,5 +1,6 @@
 #pragma once
 
+#include "render.h"
 #include "tool.h"
 
 #define SETTINGS_BUFFER 0xFFFF
@@ -24,7 +25,8 @@ struct Settings
     bool previewIsAxis = true;
     bool previewIsGrid = true;
     bool previewIsRootTransform = false;
-    bool previewIsShowPivot = false;
+    bool previewIsPivots = false;
+    bool previewIsTargets = true;
     bool previewIsBorder = false;
     f32 previewOverlayTransparency = 255.0f;
     f32 previewZoom = 200.0;
@@ -45,6 +47,10 @@ struct Settings
     vec4 editorBackgroundColor = {0.113, 0.184, 0.286, 1.0};
     ToolType tool = TOOL_PAN;
     vec4 toolColor = {1.0, 1.0, 1.0, 1.0}; 
+    RenderType renderType = RENDER_PNG;
+    std::string renderPath = ".";
+    std::string renderFormat = "{}.png";
+    std::string ffmpegPath = "/usr/bin/ffmpeg";
 }; 
 
 const SettingsEntry SETTINGS_ENTRIES[] =
@@ -54,7 +60,8 @@ const SettingsEntry SETTINGS_ENTRIES[] =
     {"previewIsAxis", TYPE_BOOL, offsetof(Settings, previewIsAxis)},
     {"previewIsGrid", TYPE_BOOL, offsetof(Settings, previewIsGrid)},
     {"previewIsRootTransform", TYPE_BOOL, offsetof(Settings, previewIsRootTransform)},
-    {"previewIsShowPivot", TYPE_BOOL, offsetof(Settings, previewIsShowPivot)},
+    {"previewIsPivots", TYPE_BOOL, offsetof(Settings, previewIsPivots)},
+    {"previewIsTargets", TYPE_BOOL, offsetof(Settings, previewIsTargets)},
     {"previewIsBorder", TYPE_BOOL, offsetof(Settings, previewIsBorder)},
     {"previewOverlayTransparency", TYPE_FLOAT, offsetof(Settings, previewOverlayTransparency)},
     {"previewZoom", TYPE_FLOAT, offsetof(Settings, previewZoom)},
@@ -75,6 +82,10 @@ const SettingsEntry SETTINGS_ENTRIES[] =
     {"editorBackgroundColor", TYPE_VEC4, offsetof(Settings, editorBackgroundColor)},
     {"tool", TYPE_INT, offsetof(Settings, tool)},
     {"toolColor", TYPE_VEC4, offsetof(Settings, toolColor)},
+    {"renderType", TYPE_INT, offsetof(Settings, renderType)},
+    {"renderPath", TYPE_STRING, offsetof(Settings, renderPath)},
+    {"renderFormat", TYPE_STRING, offsetof(Settings, renderFormat)},
+    {"ffmpegPath", TYPE_STRING, offsetof(Settings, ffmpegPath)}
 };
 constexpr s32 SETTINGS_COUNT = (s32)std::size(SETTINGS_ENTRIES);
 

@@ -10,6 +10,8 @@
 #include "tool.h"
 #include "window.h"
 
+#include "ffmpeg.h"
+
 #define IMGUI_IMPL_OPENGL_LOADER_CUSTOM
 #define IMGUI_ENABLE_DOCKING
 #define IM_VEC2_CLASS_EXTRA                                                                   \
@@ -35,56 +37,69 @@
 #include <imgui/backends/imgui_impl_sdl3.h>
 #include <imgui/backends/imgui_impl_opengl3.h>
 
-#define IMGUI_ANIMATION_DEFAULT_FORMAT "(*) {}"
-#define IMGUI_CHORD_NONE (ImGuiMod_None)
-#define IMGUI_EVENT_NONE "None"
-#define IMGUI_FRAME_BORDER 2.0f
-#define IMGUI_FRAME_PROPERTIES_NO_FRAME "Select a frame to show properties..."
-#define IMGUI_ITEM_SELECTABLE_EDITABLE_LABEL "## Editing"
-#define IMGUI_OPENGL_VERSION "#version 330"
-#define IMGUI_PICKER_LINE_COLOR IM_COL32(255, 255, 255, 255)
-#define IMGUI_POSITION_FORMAT "Position: {{{:6}, {:6}}}"
-#define IMGUI_SPRITESHEET_FORMAT "#{} {}"
-#define IMGUI_TIMELINE_CHILD_ID_LABEL "#{} {}"
-#define IMGUI_TIMELINE_FOOTER_HEIGHT 40
 #define IMGUI_ANIMATIONS_FOOTER_HEIGHT 40
-#define IMGUI_EVENTS_FOOTER_HEIGHT 40
-#define IMGUI_SPRITESHEETS_FOOTER_HEIGHT 65
-#define IMGUI_TIMELINE_FRAME_BORDER 2
-#define IMGUI_TIMELINE_FRAME_LABEL_FORMAT "## {}"
-#define IMGUI_TIMELINE_FRAME_MULTIPLE 5
-#define IMGUI_TIMELINE_MERGE
-#define IMGUI_TIMELINE_NO_ANIMATION "Select an animation to show timeline..."
-#define IMGUI_TIMELINE_PICKER_LINE_WIDTH 2.0f
-#define IMGUI_TIMELINE_SPRITESHEET_ID_FORMAT "#{}"
-
-#define IMGUI_INVISIBLE_LABEL_MARKER "##"
 #define IMGUI_ANIMATIONS_OPTIONS_ROW_ITEM_COUNT 5
+#define IMGUI_CHORD_NONE (ImGuiMod_None)
+#define IMGUI_EVENTS_FOOTER_HEIGHT 40
 #define IMGUI_EVENTS_OPTIONS_ROW_ITEM_COUNT 2
-#define IMGUI_SPRITESHEETS_OPTIONS_FIRST_ROW_ITEM_COUNT 4
-#define IMGUI_SPRITESHEETS_OPTIONS_SECOND_ROW_ITEM_COUNT 3
-#define IMGUI_TIMELINE_FOOTER_ITEM_CHILD_ITEM_COUNT 2
-#define IMGUI_TIMELINE_BAKE_OPTIONS_CHILD_ROW_ITEM_COUNT 2
-#define IMGUI_TIMELINE_MERGE_OPTIONS_ROW_ITEM_COUNT 2
+#define IMGUI_FRAME_BORDER 2.0f
 #define IMGUI_MESSAGE_DURATION 3.0f
 #define IMGUI_MESSAGE_PADDING 10.0f
-#define IMGUI_MESSAGE_FORMAT "## Message {}"
-#define IMGUI_MESSAGE_UNDO_FORMAT "Undo: {}"
-#define IMGUI_MESSAGE_REDO_FORMAT "Redo: {}"
+#define IMGUI_PICKER_LINE_COLOR IM_COL32(255, 255, 255, 255)
+#define IMGUI_POPUP_OPTION_CHILD_ROW_ITEM_COUNT 2
+#define IMGUI_RENDER_ANIMATION_OPTIONS_ROW_ITEM_COUNT 2
+#define IMGUI_SPRITESHEETS_FOOTER_HEIGHT 65
+#define IMGUI_SPRITESHEETS_OPTIONS_FIRST_ROW_ITEM_COUNT 4
+#define IMGUI_SPRITESHEETS_OPTIONS_SECOND_ROW_ITEM_COUNT 3
+#define IMGUI_TIMELINE_BAKE_OPTIONS_CHILD_ROW_ITEM_COUNT 2
+#define IMGUI_TIMELINE_FOOTER_HEIGHT 40
+#define IMGUI_TIMELINE_FOOTER_ITEM_CHILD_ITEM_COUNT 2
+#define IMGUI_TIMELINE_FRAME_BORDER 2
+#define IMGUI_TIMELINE_FRAME_MULTIPLE 5
+#define IMGUI_TIMELINE_MERGE
+#define IMGUI_TIMELINE_MERGE_OPTIONS_ROW_ITEM_COUNT 2
+#define IMGUI_TIMELINE_PICKER_LINE_WIDTH 2.0f
 
-#define IMGUI_ACTION_FILE_SAVE_FORMAT "Saved anm2 to: {}" 
-#define IMGUI_ACTION_FILE_OPEN_FORMAT "Opened anm2: {}" 
-#define IMGUI_ACTION_SPRITESHEET_SAVE_FORMAT "Saved spritesheet #{} to: {}" 
-#define IMGUI_ACTION_TRIGGER_MOVE "Trigger AtFrame"
-#define IMGUI_ACTION_FRAME_SWAP "Frame Swap"
-#define IMGUI_ACTION_ANIMATION_SWAP "Animation Swap"
-#define IMGUI_ACTION_FRAME_TRANSFORM "Frame Transform"
 #define IMGUI_ACTION_FRAME_CROP "Frame Crop"
+#define IMGUI_ACTION_FRAME_SWAP "Frame Swap"
+#define IMGUI_ACTION_FRAME_TRANSFORM "Frame Transform"
+#define IMGUI_ACTION_ANIMATION_SWAP "Animation Swap"
+#define IMGUI_ACTION_TRIGGER_MOVE "Trigger AtFrame"
+
+#define IMGUI_MESSAGE_FILE_OPEN_FORMAT "Opened anm2: {}" 
+#define IMGUI_MESSAGE_FILE_SAVE_FORMAT "Saved anm2 to: {}" 
+#define IMGUI_MESSAGE_RENDER_ANIMATION_FRAMES_SAVE_FORMAT "Saved rendered frames to: {}" 
+#define IMGUI_MESSAGE_RENDER_ANIMATION_SAVE_FORMAT "Saved rendered animation to: {}" 
+#define IMGUI_MESSAGE_RENDER_ANIMATION_NO_SELECTED_ANIMATION_ERROR "Select an animation first to render!"
+#define IMGUI_MESSAGE_RENDER_ANIMATION_NO_ANIMATION_ERROR "No animation selected; rendering cancelled."
+#define IMGUI_MESSAGE_RENDER_ANIMATION_NO_FRAMES_ERROR "No frames to render; rendering cancelled."
+#define IMGUI_MESSAGE_RENDER_ANIMATION_DIRECTORY_ERROR "Invalid directory! Make sure it's valid and you have write permissions."
+#define IMGUI_MESSAGE_RENDER_ANIMATION_PATH_ERROR "Invalid path! Make sure it's valid and you have write permissions."
+#define IMGUI_MESSAGE_RENDER_ANIMATION_FFMPEG_PATH_ERROR "Invalid FFmpeg path! Make sure you have it installed and the path is correct."
+#define IMGUI_MESSAGE_RENDER_ANIMATION_FFMPEG_ERROR "FFmpeg could not render animation! Check paths or your FFmpeg installation."
+#define IMGUI_MESSAGE_SPRITESHEET_SAVE_FORMAT "Saved spritesheet #{} to: {}" 
+#define IMGUI_ANIMATION_DEFAULT_FORMAT "(*) {}"
+#define IMGUI_ANIMATION_NONE "None"
+#define IMGUI_BUFFER_MAX 255
+#define IMGUI_EVENT_NONE "None"
+#define IMGUI_FRAME_PROPERTIES_NO_FRAME "Select a frame to show properties..."
+#define IMGUI_INVISIBLE_LABEL_MARKER "##"
+#define IMGUI_ITEM_SELECTABLE_EDITABLE_LABEL "## Editing"
+#define IMGUI_MESSAGE_FORMAT "## Message {}"
+#define IMGUI_MESSAGE_REDO_FORMAT "Redo: {}"
+#define IMGUI_MESSAGE_UNDO_FORMAT "Undo: {}"
+#define IMGUI_OPENGL_VERSION "#version 330"
+#define IMGUI_POSITION_FORMAT "Position: ({:8}, {:8})"
+#define IMGUI_SPRITESHEET_FORMAT "#{} {}"
+#define IMGUI_TIMELINE_CHILD_ID_LABEL "#{} {}"
+#define IMGUI_TIMELINE_FRAME_LABEL_FORMAT "## {}"
+#define IMGUI_TIMELINE_NO_ANIMATION "Select an animation to show timeline..."
+#define IMGUI_TIMELINE_SPRITESHEET_ID_FORMAT "#{}"
 
 #define IMGUI_SPACING 4
 
 const ImVec2 IMGUI_TIMELINE_FRAME_SIZE = {16, 40};
-const ImVec2 IMGUI_TIMELINE_FRAME_CONTENT_OFFSET = {TEXTURE_SIZE_SMALL.x * 0.25f, (IMGUI_TIMELINE_FRAME_SIZE.y * 0.5f) - (TEXTURE_SIZE_SMALL.y * 0.5f)};
+const ImVec2 IMGUI_TIMELINE_FRAME_CONTENT_OFFSET = {ATLAS_SIZE_SMALL.x * 0.25f, (IMGUI_TIMELINE_FRAME_SIZE.y * 0.5f) - (ATLAS_SIZE_SMALL.y * 0.5f)};
 const ImVec2 IMGUI_TIMELINE_ITEM_SELECTABLE_SIZE = {150, 0};
 const ImVec2 IMGUI_TIMELINE_ITEM_SIZE = {300, 40};
 
@@ -102,7 +117,7 @@ const ImVec2 IMGUI_FRAME_PROPERTIES_FLIP_BUTTON_SIZE = {100, 0};
 const ImVec2 IMGUI_SPRITESHEET_PREVIEW_SIZE = {125.0, 125.0};
 const ImVec2 IMGUI_TOOLTIP_OFFSET = {16, 8};
 const vec2 IMGUI_SPRITESHEET_EDITOR_CROP_FORGIVENESS = {1, 1};
-const ImVec2 IMGUI_CANVAS_CHILD_SIZE = {200, 85};
+const ImVec2 IMGUI_CANVAS_CHILD_SIZE = {230, 85};
 
 const ImGuiKey IMGUI_INPUT_DELETE = ImGuiKey_Delete;
 const ImGuiKey IMGUI_INPUT_LEFT = ImGuiKey_LeftArrow;
@@ -136,6 +151,13 @@ struct ImguiMessage
     f32 timeRemaining;
 };
 
+enum ImguiPopupType
+{
+    IMGUI_POPUP_NONE,
+    IMGUI_POPUP_BY_ITEM,
+    IMGUI_POPUP_CENTER_SCREEN
+};
+
 struct Imgui
 {  
     Dialog* dialog = nullptr;
@@ -149,8 +171,11 @@ struct Imgui
     Clipboard* clipboard = nullptr;
     SDL_Window* window = nullptr;
     SDL_GLContext* glContext = nullptr;
+    std::string pendingPopup{};
+    ImguiPopupType pendingPopupType = IMGUI_POPUP_NONE;
+    ImVec2 pendingPopupPosition{};
     std::vector<ImguiMessage> messageQueue;
-    bool isHotkeysEnabled = true;
+    bool isContextualActionsEnabled = true;
     bool isRename = false;
     bool isChangeValue = false;
     bool isQuit = false;
@@ -173,12 +198,6 @@ static std::vector<ImguiHotkey>& imgui_hotkey_registry()
     return registry;
 }
 
-enum PopupType
-{
-    IMGUI_POPUP_BY_ITEM,
-    IMGUI_POPUP_CENTER_SCREEN
-};
-
 struct ImguiColorSet 
 {
     ImVec4 normal{};
@@ -199,20 +218,21 @@ struct ImguiItemBuilder
     std::string dragDrop{};
     std::string format = "%.1f";
     std::string focusWindow{};
+    std::vector<std::string> items{};
     ImguiFunction function = nullptr;
     ImGuiKeyChord chord = IMGUI_CHORD_NONE;
-    TextureType texture = TEXTURE_NONE;
-    PopupType popupType = IMGUI_POPUP_BY_ITEM;
+    AtlasType atlas = ATLAS_NONE;
+    ImguiPopupType popupType = IMGUI_POPUP_BY_ITEM;
     bool isUndoable = false;
     bool isSizeToText = true;
     bool isSizeToChild = false;
     ImguiColorSet color{};
     ImVec2 size{};
     ImVec2 contentOffset{};
-    s32 childRowItemCount{};
+    s32 childRowItemCount = 1;
     f64 speed{};
     f64 min{};
-    f64 max{};
+    f64 max = IMGUI_BUFFER_MAX;
     s32 border{};
     s32 step = 1;
     s32 stepFast = 1;
@@ -231,10 +251,11 @@ struct ImguiItem
     std::string dragDrop{};
     std::string format = "%.1f";
     std::string focusWindow{};
+    std::vector<std::string> items{};
     ImguiFunction function = nullptr;
     ImGuiKeyChord chord = IMGUI_CHORD_NONE;
-    TextureType texture = TEXTURE_NONE;
-    PopupType popupType = IMGUI_POPUP_BY_ITEM;
+    AtlasType atlas = ATLAS_NONE;
+    ImguiPopupType popupType = IMGUI_POPUP_BY_ITEM;
     bool isUndoable = false;
     bool isInactive = false;
     bool isSizeToText = true;
@@ -242,7 +263,7 @@ struct ImguiItem
     bool isSelected = false;
     f64 speed{};
     f64 min{};
-    f64 max{};
+    f64 max = IMGUI_BUFFER_MAX;
     s32 border{};
     s32 childRowItemCount = 1;
     s32 step = 1;
@@ -276,10 +297,11 @@ struct ImguiItem
         dragDrop      = builder.dragDrop;
         format        = builder.format;
         focusWindow   = builder.focusWindow;
+        items         = builder.items;
         function      = builder.function;
         chord         = builder.chord;
         popupType     = builder.popupType;
-        texture       = builder.texture;
+        atlas       = builder.atlas;
         isUndoable    = builder.isUndoable;
         isSizeToText  = builder.isSizeToText;
         isSizeToChild = builder.isSizeToChild;
@@ -363,27 +385,13 @@ static inline void imgui_file_save(Imgui* self)
 	else 
     {
 		anm2_serialize(self->anm2, self->anm2->path);
-        imgui_message_queue_push(self, std::format(IMGUI_ACTION_FILE_SAVE_FORMAT, self->anm2->path));
+        imgui_message_queue_push(self, std::format(IMGUI_MESSAGE_FILE_SAVE_FORMAT, self->anm2->path));
     }
 }
 
 static inline void imgui_file_save_as(Imgui* self)
 {
 	dialog_anm2_save(self->dialog);
-}
-
-static inline void imgui_png_open(Imgui* self)
-{
-    dialog_png_open(self->dialog);
-}
-
-static inline void imgui_generate_gif_animation(Imgui* self)
-{
-    if (anm2_animation_from_reference(self->anm2, self->reference))
-    {
-        self->preview->isRecording = true;
-        self->preview->time = 0;
-    }
 }
 
 static inline void imgui_undo_stack_push(Imgui* self, const std::string& action = SNAPSHOT_ACTION)
@@ -549,11 +557,90 @@ const inline ImguiItem IMGUI_TASKBAR_WIZARD_GENERATE_ANIMATION_FROM_GRID = Imgui
     .popupType = IMGUI_POPUP_CENTER_SCREEN
 });
 
-const inline ImguiItem IMGUI_TASKBAR_WIZARD_RECORD_GIF_ANIMATION = ImguiItem
+const inline ImguiItem IMGUI_TASKBAR_WIZARD_RENDER_ANIMATION = ImguiItem
 ({
-    .label = "G&enerate GIF Animation",
-    .tooltip = "Generates a GIF animation from the current animation.",
-    .function = imgui_generate_gif_animation
+    .label = "&Render Animation",
+    .tooltip = "Renders the current animation preview; output options can be customized.",
+    .popup = "Render Animation",
+    .popupType = IMGUI_POPUP_CENTER_SCREEN
+});
+
+const inline ImguiItem IMGUI_RENDER_ANIMATION_CHILD = ImguiItem
+({
+    .label = "## Render Animation Child",
+    .size = {600, 125}
+});
+
+const inline ImguiItem IMGUI_RENDER_ANIMATION_LOCATION = ImguiItem
+({
+    .label = "Location",
+    .tooltip = "Set the rendered animation's output location.",
+    .isSizeToChild = true
+});
+
+const inline ImguiItem IMGUI_RENDER_ANIMATION_BROWSE = ImguiItem
+({
+    .label = "## Location Browse",
+    .atlas = ATLAS_FOLDER
+});
+
+const inline ImguiItem IMGUI_RENDER_ANIMATION_OUTPUT = ImguiItem
+({
+    .label = "Output",
+    .tooltip = "Select the rendered animation output.\nIt can either be one animated image or a sequence of frames.",
+    .items = {std::begin(RENDER_TYPE_STRINGS), std::end(RENDER_TYPE_STRINGS)},
+    .isSizeToChild = true
+});
+
+const inline ImguiItem IMGUI_RENDER_ANIMATION_FORMAT = ImguiItem
+({
+    .label = "Format",
+    .tooltip = "(PNG images only).\nSet the format of each output frame; i.e., its filename.\nThe format will only take one argument; that being the frame's index.\nFor example, a format like \"{}.png\" will export a frame of index 0 as \"0.png\".",
+    .isSizeToChild = true
+});
+
+const inline ImguiItem IMGUI_RENDER_ANIMATION_FFMPEG_PATH = ImguiItem
+({
+    .label = "FFmpeg Path",
+    .tooltip = "Sets the path FFmpeg currently resides in.\nFFmpeg is required for rendering animations.\nDownload it from https://ffmpeg.org/, your package manager, or wherever else.",
+    .isSizeToChild = true
+});
+
+const inline ImguiItem IMGUI_RENDER_ANIMATION_FFMPEG_BROWSE = ImguiItem
+({
+    .label = "## FFMpeg Browse",
+    .atlas = ATLAS_FOLDER
+});
+
+const inline ImguiItem IMGUI_RENDER_ANIMATION_CONFIRM = ImguiItem
+({
+    .label = "Render",
+    .tooltip = "Render the animation with the chosen options.",
+    .popup = "Rendering Animation...",
+    .popupType = IMGUI_POPUP_CENTER_SCREEN,
+    .isSizeToChild = true,
+    .childRowItemCount = IMGUI_RENDER_ANIMATION_OPTIONS_ROW_ITEM_COUNT
+});
+
+const inline ImguiItem IMGUI_RENDER_ANIMATION_CANCEL = ImguiItem
+({
+    .label = "Cancel",
+    .tooltip = "Cancel rendering animation.",
+    .isSizeToChild = true,
+    .childRowItemCount = IMGUI_RENDER_ANIMATION_OPTIONS_ROW_ITEM_COUNT
+});
+
+const inline ImguiItem IMGUI_RENDERING_ANIMATION_CHILD = ImguiItem
+({
+    .label = "## Render Animation Child",
+    .size = {300, 60},
+    .flags = true
+});
+
+const inline ImguiItem IMGUI_RENDERING_ANIMATION_CANCEL = ImguiItem
+({
+    .label = "Cancel",
+    .isSizeToChild = true
 });
 
 const inline ImguiItem IMGUI_TASKBAR_PLAYBACK = ImguiItem
@@ -583,7 +670,7 @@ const inline ImguiItem IMGUI_ANIMATION = ImguiItem
     .label = "## Animation Item",
     .action = "Select Animation",
     .dragDrop = "## Animation Drag Drop",
-    .texture = TEXTURE_ANIMATION,
+    .atlas = ATLAS_ANIMATION,
     .isUndoable = true,
     .isSizeToText = false
 });
@@ -731,7 +818,7 @@ const inline ImguiItem IMGUI_EVENTS_CHILD = ImguiItem
 const inline ImguiItem IMGUI_EVENT = ImguiItem
 ({
     .label = "## Event Item",
-    .texture = TEXTURE_EVENT,
+    .atlas = ATLAS_EVENT,
     .isUndoable = true,
     .isSizeToText = false
 });
@@ -781,7 +868,7 @@ const inline ImguiItem IMGUI_SPRITESHEET = ImguiItem
 ({
     .label = "## Spritesheet",
     .dragDrop = "## Spritesheet Drag Drop",
-    .texture = TEXTURE_SPRITESHEET,
+    .atlas = ATLAS_SPRITESHEET,
     .flags = true
 });
 
@@ -795,7 +882,6 @@ const inline ImguiItem IMGUI_SPRITESHEETS_ADD = ImguiItem
 ({
     .label = "Add",
     .tooltip = "Select an image to add as a spritesheet.",
-    .function = imgui_png_open,
     .isSizeToChild = true,
     .childRowItemCount = IMGUI_SPRITESHEETS_OPTIONS_FIRST_ROW_ITEM_COUNT
 });
@@ -967,10 +1053,16 @@ const inline ImguiItem IMGUI_ANIMATION_PREVIEW_ROOT_TRANSFORM = ImguiItem
     .tooltip = "Toggles the root frames's attributes transforming the other items in an animation."
 });
 
-const inline ImguiItem IMGUI_ANIMATION_PREVIEW_SHOW_PIVOT = ImguiItem
+const inline ImguiItem IMGUI_ANIMATION_PREVIEW_PIVOTS = ImguiItem
 ({
-    .label   = "Show Pivot",
-    .tooltip = "Toggles the appearance of an icon for each animation item's pivot."
+    .label   = "Pivots",
+    .tooltip = "Toggles drawing each layer's pivot."
+});
+
+const inline ImguiItem IMGUI_ANIMATION_PREVIEW_TARGETS = ImguiItem
+({
+    .label   = "Targets",
+    .tooltip = "Toggles drawing the targets (i.e., the colored root/null icons)."
 });
 
 const inline ImguiItem IMGUI_ANIMATION_PREVIEW_BORDER = ImguiItem
@@ -1078,6 +1170,8 @@ const inline ImguiItem IMGUI_FRAME_PROPERTIES_POSITION = ImguiItem
     .format = "%.0f",
     .isUndoable = true,
     .speed = 0.25f,
+    .min = 0,
+    .max = 0
 });
 
 const inline ImguiItem IMGUI_FRAME_PROPERTIES_CROP = ImguiItem
@@ -1088,6 +1182,8 @@ const inline ImguiItem IMGUI_FRAME_PROPERTIES_CROP = ImguiItem
     .format = "%.0f",
     .isUndoable = true,
     .speed = 0.25f,
+    .min = 0,
+    .max = 0
 });
 
 const inline ImguiItem IMGUI_FRAME_PROPERTIES_SIZE = ImguiItem
@@ -1097,7 +1193,9 @@ const inline ImguiItem IMGUI_FRAME_PROPERTIES_SIZE = ImguiItem
     .action = "Frame Size",
     .format = "%.0f",
     .isUndoable = true,
-    .speed = 0.25f
+    .speed = 0.25f,
+    .min = 0,
+    .max = 0
 });
 
 const inline ImguiItem IMGUI_FRAME_PROPERTIES_PIVOT = ImguiItem
@@ -1107,7 +1205,9 @@ const inline ImguiItem IMGUI_FRAME_PROPERTIES_PIVOT = ImguiItem
     .action = "Frame Pivot",
     .format = "%.0f",
     .isUndoable = true,
-    .speed = 0.25f
+    .speed = 0.25f,
+    .min = 0,
+    .max = 0
 });
 
 const inline ImguiItem IMGUI_FRAME_PROPERTIES_SCALE = ImguiItem
@@ -1116,7 +1216,9 @@ const inline ImguiItem IMGUI_FRAME_PROPERTIES_SCALE = ImguiItem
     .tooltip = "Change the scale of the selected frame.",
     .action = "Frame Scale",
     .isUndoable = true,
-    .speed = 0.25f
+    .speed = 0.25f,
+    .min = 0,
+    .max = 0
 });
 
 const inline ImguiItem IMGUI_FRAME_PROPERTIES_ROTATION = ImguiItem
@@ -1125,7 +1227,9 @@ const inline ImguiItem IMGUI_FRAME_PROPERTIES_ROTATION = ImguiItem
     .tooltip = "Change the rotation of the selected frame.",
     .action = "Frame Rotation",
     .isUndoable = true,
-    .speed = 0.25f
+    .speed = 0.25f,
+    .min = 0,
+    .max = 0
 });
 
 const inline ImguiItem IMGUI_FRAME_PROPERTIES_DURATION = ImguiItem
@@ -1191,7 +1295,7 @@ const inline ImguiItem IMGUI_FRAME_PROPERTIES_FLIP_Y = ImguiItem
 const inline ImguiItem IMGUI_FRAME_PROPERTIES_EVENT = ImguiItem
 ({
     .label = "Event",
-    .tooltip = "Change the event the trigger uses.\nNOTE: This sets the event ID, not the event. If the events change IDs, then this will need to be changed.",
+    .tooltip = "Change the event the trigger uses.\n",
     .action = "Trigger Event",
     .isUndoable = true
 });
@@ -1212,7 +1316,7 @@ const inline ImguiItem IMGUI_TOOL_PAN = ImguiItem
     .tooltip = "Use the pan tool.\nWill shift the view as the cursor is dragged.\nYou can also use the middle mouse button to pan at any time.",
     .function = imgui_tool_pan_set,
     .chord = ImGuiKey_P,
-    .texture = TEXTURE_PAN,
+    .atlas = ATLAS_PAN,
 });
 
 const inline ImguiItem IMGUI_TOOL_MOVE = ImguiItem
@@ -1221,7 +1325,7 @@ const inline ImguiItem IMGUI_TOOL_MOVE = ImguiItem
     .tooltip = "Use the move tool.\nWill move the selected item as the cursor is dragged, or directional keys are pressed.\n(Animation Preview only.)",
     .function = imgui_tool_move_set,
     .chord = ImGuiKey_M,
-    .texture = TEXTURE_MOVE,
+    .atlas = ATLAS_MOVE,
 });
 
 const inline ImguiItem IMGUI_TOOL_ROTATE = ImguiItem
@@ -1230,7 +1334,7 @@ const inline ImguiItem IMGUI_TOOL_ROTATE = ImguiItem
     .tooltip = "Use the rotate tool.\nWill rotate the selected item as the cursor is dragged, or directional keys are pressed.\n(Animation Preview only.)",
     .function = imgui_tool_rotate_set,
     .chord = ImGuiKey_R,
-    .texture = TEXTURE_ROTATE,
+    .atlas = ATLAS_ROTATE,
 });
 
 const inline ImguiItem IMGUI_TOOL_SCALE = ImguiItem
@@ -1239,7 +1343,7 @@ const inline ImguiItem IMGUI_TOOL_SCALE = ImguiItem
     .tooltip = "Use the scale tool.\nWill scale the selected item as the cursor is dragged, or directional keys are pressed.\n(Animation Preview only.)",
     .function = imgui_tool_scale_set,
     .chord = ImGuiKey_S,
-    .texture = TEXTURE_SCALE,
+    .atlas = ATLAS_SCALE,
 });
 
 const inline ImguiItem IMGUI_TOOL_CROP = ImguiItem
@@ -1248,7 +1352,7 @@ const inline ImguiItem IMGUI_TOOL_CROP = ImguiItem
     .tooltip = "Use the crop tool.\nWill produce a crop rectangle based on how the cursor is dragged.\n(Spritesheet Editor only.)",
     .function = imgui_tool_crop_set,
     .chord = ImGuiKey_C,
-    .texture = TEXTURE_CROP,
+    .atlas = ATLAS_CROP,
 });
 
 const inline ImguiItem IMGUI_TOOL_DRAW = ImguiItem
@@ -1257,7 +1361,7 @@ const inline ImguiItem IMGUI_TOOL_DRAW = ImguiItem
     .tooltip = "Draws pixels onto the selected spritesheet, with the current color.\n(Spritesheet Editor only.)",
     .function = imgui_tool_draw_set,
     .chord = ImGuiKey_B,
-    .texture = TEXTURE_DRAW,
+    .atlas = ATLAS_DRAW,
 });
 
 const inline ImguiItem IMGUI_TOOL_ERASE = ImguiItem
@@ -1266,7 +1370,7 @@ const inline ImguiItem IMGUI_TOOL_ERASE = ImguiItem
     .tooltip = "Erases pixels from the selected spritesheet.\n(Spritesheet Editor only.)",
     .function = imgui_tool_erase_set,
     .chord = ImGuiKey_E,
-    .texture = TEXTURE_ERASE,
+    .atlas = ATLAS_ERASE,
 });
 
 const inline ImguiItem IMGUI_TOOL_COLOR_PICKER = ImguiItem
@@ -1275,7 +1379,7 @@ const inline ImguiItem IMGUI_TOOL_COLOR_PICKER = ImguiItem
     .tooltip = "Selects a color from anywhere on the screen, to be used for drawing.",
     .function = imgui_tool_color_picker_set,
     .chord = ImGuiKey_W,
-    .texture = TEXTURE_COLOR_PICKER,
+    .atlas = ATLAS_COLOR_PICKER,
 });
 
 const inline ImguiItem IMGUI_TOOL_UNDO = ImguiItem
@@ -1284,7 +1388,7 @@ const inline ImguiItem IMGUI_TOOL_UNDO = ImguiItem
     .tooltip = "Undoes the last action.",
     .function = imgui_undo,
     .chord = ImGuiKey_Z,
-    .texture = TEXTURE_UNDO
+    .atlas = ATLAS_UNDO
 });
 
 const inline ImguiItem IMGUI_TOOL_REDO = ImguiItem
@@ -1293,7 +1397,7 @@ const inline ImguiItem IMGUI_TOOL_REDO = ImguiItem
     .tooltip = "Redoes the last action.",
     .function = imgui_redo,
     .chord = ImGuiMod_Shift + ImGuiKey_Z,
-    .texture = TEXTURE_REDO
+    .atlas = ATLAS_REDO
 });
 
 const inline ImguiItem IMGUI_TOOL_COLOR = ImguiItem
@@ -1423,7 +1527,7 @@ const inline ImguiItem IMGUI_TIMELINE_ITEM_ROOT_SELECTABLE = ImguiItem
     .label = "Root",
     .tooltip = "The root item of an animation.\nChanging its properties will transform the rest of the animation.",
     .action = "Root Item Select",
-    .texture = TEXTURE_ROOT,
+    .atlas = ATLAS_ROOT,
     .isUndoable = true,
     .size = IMGUI_TIMELINE_ITEM_SELECTABLE_SIZE
 });
@@ -1434,7 +1538,7 @@ const inline ImguiItem IMGUI_TIMELINE_ITEM_LAYER_SELECTABLE = ImguiItem
     .tooltip = "A layer item.\nA graphical item within the animation.",
     .action = "Layer Item Select",
     .dragDrop = "## Layer Drag Drop",
-    .texture = TEXTURE_LAYER,
+    .atlas = ATLAS_LAYER,
     .isUndoable = true,
     .size = IMGUI_TIMELINE_ITEM_SELECTABLE_SIZE
 });
@@ -1445,7 +1549,7 @@ const inline ImguiItem IMGUI_TIMELINE_ITEM_NULL_SELECTABLE = ImguiItem
     .tooltip = "A null item.\nAn invisible item within the animation that is accessible via a game engine.",
     .action = "Null Item Select",
     .dragDrop = "## Null Drag Drop",
-    .texture = TEXTURE_NULL,
+    .atlas = ATLAS_NULL,
     .isUndoable = true,
     .size = IMGUI_TIMELINE_ITEM_SELECTABLE_SIZE
 });
@@ -1455,7 +1559,7 @@ const inline ImguiItem IMGUI_TIMELINE_ITEM_TRIGGERS_SELECTABLE = ImguiItem
     .label = "Triggers",
     .tooltip = "The animation's triggers.\nWill fire based on an event.",
     .action = "Triggers Item Select",
-    .texture = TEXTURE_TRIGGERS,
+    .atlas = ATLAS_TRIGGERS,
     .isUndoable = true,
     .size = IMGUI_TIMELINE_ITEM_SELECTABLE_SIZE
 });
@@ -1473,7 +1577,7 @@ const inline ImguiItem IMGUI_TIMELINE_ITEM_VISIBLE = ImguiItem
 ({
     .label = "## Visible",
     .tooltip = "The item is visible.\nPress to set to invisible.",
-    .texture = TEXTURE_VISIBLE,
+    .atlas = ATLAS_VISIBLE,
     .isUndoable = true
 });
 
@@ -1481,7 +1585,7 @@ const inline ImguiItem IMGUI_TIMELINE_ITEM_INVISIBLE = ImguiItem
 ({
     .label = "## Invisible",
     .tooltip = "The item is invisible.\nPress to set to visible.",
-    .texture = TEXTURE_INVISIBLE,
+    .atlas = ATLAS_INVISIBLE,
     .isUndoable = true
 });
 
@@ -1489,7 +1593,7 @@ const inline ImguiItem IMGUI_TIMELINE_ITEM_SHOW_RECT = ImguiItem
 ({
     .label = "## Show Rect",
     .tooltip = "The rect is shown.\nPress to hide rect.",
-    .texture = TEXTURE_SHOW_RECT,
+    .atlas = ATLAS_SHOW_RECT,
     .isUndoable = true
 });
 
@@ -1497,7 +1601,7 @@ const inline ImguiItem IMGUI_TIMELINE_ITEM_HIDE_RECT = ImguiItem
 ({
     .label = "## Hide Rect",
     .tooltip = "The rect is hidden.\nPress to show rect.",
-    .texture = TEXTURE_HIDE_RECT,
+    .atlas = ATLAS_HIDE_RECT,
     .isUndoable = true
 });
 
@@ -1505,7 +1609,7 @@ const inline ImguiItem IMGUI_TIMELINE_SPRITESHEET_ID = ImguiItem
 ({
     .label = "## Spritesheet ID",
     .tooltip = "Change the spritesheet ID this item uses.",
-    .texture = TEXTURE_SPRITESHEET,
+    .atlas = ATLAS_SPRITESHEET,
     .isUndoable = true,
     .size = {32, 0},
 });
@@ -1631,6 +1735,7 @@ const inline ImguiItem IMGUI_TIMELINE_PLAY = ImguiItem
 ({
     .label = "|>  Play",
     .tooltip = "Play the current animation, if paused.",
+    .focusWindow = IMGUI_TIMELINE.label,
     .chord = ImGuiKey_Space
 });
 
@@ -1638,6 +1743,7 @@ const inline ImguiItem IMGUI_TIMELINE_PAUSE = ImguiItem
 ({
     .label = "|| Pause",
     .tooltip = "Pause the current animation, if playing.",
+    .focusWindow = IMGUI_TIMELINE.label,
     .chord = ImGuiKey_Space
 });
 
@@ -1760,12 +1866,6 @@ const inline ImguiItem IMGUI_TIMELINE_CREATED_BY = ImguiItem
 const inline ImguiItem IMGUI_TIMELINE_CREATED_ON = ImguiItem({"Created on: "});
 const inline ImguiItem IMGUI_TIMELINE_VERSION = ImguiItem({"Version: "});
 
-const inline ImguiItem IMGUI_RECORDING = ImguiItem
-({
-    .label = "Recording...",
-    .texture = TEXTURE_RECORD
-});
-
 const inline ImguiItem IMGUI_CONTEXT_MENU = ImguiItem
 ({
     .label = "## Context Menu",
@@ -1794,8 +1894,8 @@ const inline ImguiItem IMGUI_COPY = ImguiItem
 
 const inline ImguiItem IMGUI_PASTE = ImguiItem
 ({
-    .label          = "Paste",
-    .tooltip        = "Pastes the currently selection contextual element from the clipboard.",
+    .label = "Paste",
+    .tooltip = "Pastes the currently selection contextual element from the clipboard.",
     .action = "Paste",
     .function = imgui_paste,
     .chord = ImGuiMod_Ctrl | ImGuiKey_V,
@@ -1808,7 +1908,7 @@ const inline ImguiItem IMGUI_RENAMABLE = ImguiItem
     .tooltip = "Rename the selected item.",
     .action = "Rename",
     .isUndoable = true,
-    .max = 255,
+    .max = IMGUI_BUFFER_MAX,
     .flags = ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue
 });
 
@@ -1827,16 +1927,24 @@ const inline ImguiItem IMGUI_EXIT_CONFIRMATION = ImguiItem
     .popup = "Exit Confirmation"
 });
 
-const inline ImguiItem IMGUI_POPUP_YES_BUTTON = ImguiItem
+const inline ImguiItem IMGUI_POPUP_OK_BUTTON = ImguiItem
 ({
-    .label = "Yes",
-    .size = {120, 0}
+    .label = "OK",
+    .isSizeToChild = true
 });
 
-const inline ImguiItem IMGUI_POPUP_NO_BUTTON = ImguiItem
+const inline ImguiItem IMGUI_POPUP_CONFIRM_BUTTON = ImguiItem
 ({
-    .label = "No",
-    .size = {120, 0}
+    .label = "OK",
+    .isSizeToChild = true,
+    .childRowItemCount = IMGUI_POPUP_OPTION_CHILD_ROW_ITEM_COUNT
+});
+
+const inline ImguiItem IMGUI_POPUP_CANCEL_BUTTON = ImguiItem
+({
+    .label = "Cancel",
+    .isSizeToChild = true,
+    .childRowItemCount = IMGUI_POPUP_OPTION_CHILD_ROW_ITEM_COUNT
 });
 
 void imgui_init

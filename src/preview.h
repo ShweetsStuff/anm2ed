@@ -35,7 +35,10 @@ struct Preview
     s32 animationOverlayID = ID_NONE;
     Canvas canvas;
     bool isPlaying = false;
-    bool isRecording = false;
+    bool isRender = false;
+    bool isRenderFinished = false;
+    bool isRenderCancelled = false;
+    std::vector<Texture> renderFrames;
     f32 time{};
 };
 
@@ -43,4 +46,5 @@ void preview_init(Preview* self, Anm2* anm2, Anm2Reference* reference, Resources
 void preview_draw(Preview* self);
 void preview_tick(Preview* self);
 void preview_free(Preview* self);
-void preview_record_set(Preview* self);
+void preview_render_start(Preview* self);
+void preview_render_end(Preview* self);

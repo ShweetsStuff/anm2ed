@@ -228,21 +228,6 @@ void canvas_rect_draw(Canvas* self, const GLuint& shader, const mat4& transform,
     glUseProgram(0);
 }
 
-void canvas_rect_dotted_draw(Canvas* self, const GLuint& shader, const mat4& transform, const vec4& color)
-{
-    glUseProgram(shader);
-
-    glBindVertexArray(self->rectVAO);
-
-    glUniformMatrix4fv(glGetUniformLocation(shader, SHADER_UNIFORM_TRANSFORM), 1, GL_FALSE, value_ptr(transform));
-    glUniform4fv(glGetUniformLocation(shader, SHADER_UNIFORM_COLOR), 1, value_ptr(color));
-
-    glDrawArrays(GL_LINE_LOOP, 0, 4);
-
-    glBindVertexArray(0);
-    glUseProgram(0);
-}
-
 void canvas_axes_draw(Canvas* self, GLuint& shader, mat4& transform, vec4& color)
 {
     glUseProgram(shader);
