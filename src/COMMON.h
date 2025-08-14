@@ -10,20 +10,20 @@
 
 #include <algorithm>                   
 #include <chrono>                      
-#include <cstring>
 #include <cmath>                          
+#include <cstring>
 #include <filesystem>                  
 #include <format>           
-#include <functional>            
 #include <fstream>
+#include <functional>            
 #include <iostream>
 #include <map>                          
-#include <print>                          
 #include <optional>
+#include <print>                          
 #include <ranges>                      
 #include <string>
-#include <vector>                      
 #include <unordered_set>                      
+#include <vector>                      
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -123,11 +123,12 @@ static inline bool string_to_bool(const std::string& string)
     return lower == "true";
 }
 
-static inline void working_directory_from_file_set(const std::string& path)
+static inline std::string working_directory_from_file_set(const std::string& path)
 {
     std::filesystem::path filePath = path;
     std::filesystem::path parentPath = filePath.parent_path();
 	std::filesystem::current_path(parentPath);
+    return parentPath;
 };
 
 static inline std::string path_extension_change(const std::string& path, const std::string& extension)
@@ -177,6 +178,13 @@ static inline s32 string_to_enum(const std::string& string, const char* const* a
             return i;
     return -1;
 };
+
+template <typename T>
+T& dummy_value()
+{
+    static T value{}; 
+    return value;
+}
 
 template<typename T>
 static inline s32 map_next_id_get(const std::map<s32, T>& map) 
@@ -302,6 +310,7 @@ enum DataType
     TYPE_STRING,
     TYPE_IVEC2,
     TYPE_VEC2,
+    TYPE_VEC3,
     TYPE_VEC4
 };
 

@@ -17,8 +17,6 @@ static void _update(State* self)
 
 static void _draw(State* self)
 {
-	editor_draw(&self->editor);
-	preview_draw(&self->preview);
 	imgui_draw();
 
 	SDL_GL_SwapWindow(self->window);
@@ -147,6 +145,8 @@ void loop(State* self)
 
 	_update(self);
 	_draw(self);
+
+	SDL_Delay(STATE_DELAY_MIN);
 }
 
 void quit(State* self)

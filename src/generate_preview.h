@@ -1,0 +1,22 @@
+#pragma once
+
+#include "anm2.h"
+#include "resources.h"
+#include "settings.h"
+#include "canvas.h"
+
+const vec2 GENERATE_PREVIEW_SIZE = {325, 215};
+
+struct GeneratePreview
+{
+    Anm2* anm2 = nullptr;
+    Anm2Reference* reference = nullptr;
+    Resources* resources = nullptr;
+    Settings* settings = nullptr;
+    Canvas canvas;
+    f32 time{};
+};
+
+void generate_preview_init(GeneratePreview* self, Anm2* anm2, Anm2Reference* reference, Resources* resources, Settings* settings);
+void generate_preview_draw(GeneratePreview* self);
+void generate_preview_free(GeneratePreview* self);

@@ -1,5 +1,3 @@
-// File dialog; saving/writing to files
-
 #include "dialog.h"
 
 static void _dialog_callback(void* userdata, const char* const* filelist, s32 filter) 

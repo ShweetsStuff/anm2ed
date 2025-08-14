@@ -7,6 +7,7 @@
 #define ANM2_TINT_CONVERT(x) ((f32)x / 255.0f)
 
 #define ANM2_FPS_MIN 0
+#define ANM2_FPS_DEFAULT 30
 #define ANM2_FPS_MAX 120
 #define ANM2_FRAME_NUM_MIN 1
 #define ANM2_FRAME_NUM_MAX 1000000
@@ -148,8 +149,8 @@ struct Anm2Event
 
 struct Anm2Frame
 {
-	bool isInterpolated = false;
 	bool isVisible = true;
+	bool isInterpolated = false;
 	f32 rotation = 1.0f;
 	s32 delay = ANM2_FRAME_DELAY_MIN;
     s32 atFrame = INDEX_NONE;
@@ -161,6 +162,21 @@ struct Anm2Frame
 	vec2 scale{};
 	vec3 offsetRGB{};
 	vec4 tintRGBA = {1.0f, 1.0f, 1.0f, 1.0f};
+};
+
+struct Anm2FrameChange
+{
+    std::optional<bool> isVisible;
+    std::optional<bool> isInterpolated;
+    std::optional<f32> rotation;
+    std::optional<s32> delay;
+    std::optional<vec2> crop;
+    std::optional<vec2> pivot;
+    std::optional<vec2> position;
+    std::optional<vec2> size;
+    std::optional<vec2> scale;
+    std::optional<vec3> offsetRGB;
+    std::optional<vec4> tintRGBA;
 };
 
 struct Anm2Item
@@ -192,7 +208,7 @@ struct Anm2
 	std::map<s32, Anm2Animation> animations; 
     std::map<s32, s32> layerMap; // index, id
     s32 defaultAnimationID{};
-    s32 fps = 30;
+    s32 fps = ANM2_FPS_DEFAULT;
 	s32 version{};
 };
 
@@ -231,6 +247,13 @@ enum Anm2MergeType
     ANM2_MERGE_IGNORE
 };
 
+enum Anm2ChangeType
+{
+    ANM2_CHANGE_ADD,
+    ANM2_CHANGE_SUBTRACT,
+    ANM2_CHANGE_SET
+};
+
 void anm2_layer_add(Anm2* self);
 void anm2_layer_remove(Anm2* self, s32 id);
 void anm2_null_add(Anm2* self);
@@ -246,7 +269,8 @@ Anm2Animation* anm2_animation_from_reference(Anm2* self, Anm2Reference* referenc
 Anm2Item* anm2_item_from_reference(Anm2* self, Anm2Reference* reference);
 Anm2Frame* anm2_frame_from_reference(Anm2* self, Anm2Reference* reference);
 s32 anm2_frame_index_from_time(Anm2* self, Anm2Reference reference, f32 time);
-Anm2Frame* anm2_frame_add(Anm2* self, Anm2Reference* reference, s32 time);
+Anm2Frame* anm2_frame_add(Anm2* self, Anm2Frame* frame, Anm2Reference* reference, s32 time);
+void anm2_frame_erase(Anm2* self, Anm2Reference* reference);
 void anm2_frame_from_time(Anm2* self, Anm2Frame* frame, Anm2Reference reference, f32 time);
 void anm2_reference_clear(Anm2Reference* self);
 void anm2_reference_item_clear(Anm2Reference* self);
@@ -255,3 +279,4 @@ s32 anm2_animation_length_get(Anm2Animation* self);
 void anm2_animation_length_set(Anm2Animation* self);
 void anm2_animation_merge(Anm2* self, s32 animationID, const std::vector<s32>& mergeIDs, Anm2MergeType type);
 void anm2_frame_bake(Anm2* self, Anm2Reference* reference, s32 interval, bool isRoundScale, bool isRoundRotation);
+void anm2_item_frame_set(Anm2* self, Anm2Reference* reference, const Anm2FrameChange& change, Anm2ChangeType type, s32 start, s32 count);

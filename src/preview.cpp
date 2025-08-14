@@ -1,5 +1,3 @@
-// Handles the render of the animation preview
-
 #include "preview.h"
 
 static void _preview_render_textures_free(Preview* self)
@@ -17,11 +15,12 @@ void preview_init(Preview* self, Anm2* anm2, Anm2Reference* reference, Resources
     self->resources = resources;
     self->settings = settings;
 
-    canvas_init(&self->canvas);
+    canvas_init(&self->canvas, vec2());
 }
 
 void preview_tick(Preview* self)
 {
+    f32& time = self->time;
     Anm2Animation* animation = anm2_animation_from_reference(self->anm2, self->reference);
 
     if (animation)
@@ -45,29 +44,38 @@ void preview_tick(Preview* self)
                 self->renderFrames.push_back(frameTexture);
             }
 
-            self->time += (f32)self->anm2->fps / TICK_RATE;
+            time += (f32)self->anm2->fps / TICK_RATE;
 
-            if (self->time >= (f32)animation->frameNum - 1)
+            if (time >= (f32)animation->frameNum - 1)
             {
                 if (self->isRender)
                 {
                     self->isRender = false;
                     self->isRenderFinished = true;
-                    self->time = 0.0f;
+                    time = 0.0f;
                     self->isPlaying = false;
                 }
                 else
                 {
                     if (self->settings->playbackIsLoop)
-                        self->time = 0.0f;
+                        time = 0.0f;
                     else
+                    {
+			            time = std::clamp(time, 0.0f, std::max(0.0f, (f32)animation->frameNum - 1));
                         self->isPlaying = false;
+                    }
                 }
             }
         }
- 
-        self->time = std::clamp(self->time, 0.0f, (f32)animation->frameNum - 1);
+
+		if (self->settings->playbackIsClampPlayhead)
+			time = std::clamp(time, 0.0f, std::max(0.0f, (f32)animation->frameNum - 1));
+		else
+			time = std::max(time, 0.0f);
+
     }
+
+
 }
 
 void preview_draw(Preview* self)
@@ -89,8 +97,8 @@ void preview_draw(Preview* self)
     if (self->settings->previewIsGrid)
         canvas_grid_draw(&self->canvas, shaderLine, transform, zoom, gridSize, gridOffset, gridColor);
 
-    if (self->settings->previewIsAxis)
-        canvas_axes_draw(&self->canvas, shaderLine, transform, self->settings->previewAxisColor);
+    if (self->settings->previewIsAxes)
+        canvas_axes_draw(&self->canvas, shaderLine, transform, self->settings->previewAxesColor);
 
     Anm2Animation* animation = anm2_animation_from_reference(self->anm2, self->reference);
     s32& animationID = self->reference->animationID;

@@ -41,7 +41,7 @@ void snapshots_reset(Snapshots* self)
     self->action.clear();
 }
 
-void snapshots_undo_stack_push(Snapshots* self, const Snapshot* snapshot)
+void snapshots_undo_push(Snapshots* self, const Snapshot* snapshot)
 {
     _snapshot_stack_push(&self->undoStack, snapshot);
     self->redoStack.top = 0;

@@ -23,3 +23,4 @@ bool texture_from_rgba_write(const std::string& path, const u8* data, ivec2 size
 bool texture_pixel_set(Texture* self, ivec2 position, vec4 color);
 void texture_free(Texture* self);
 std::vector<u8> texture_download(const Texture* self);
+Texture texture_copy(Texture* self);

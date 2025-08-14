@@ -2,6 +2,7 @@
 
 #include "anm2.h"
 #include "preview.h"
+#include "texture.h"
 
 #define SNAPSHOT_STACK_MAX 1000
 #define SNAPSHOT_ACTION "Action"
@@ -18,6 +19,8 @@ struct SnapshotStack
 {
     Snapshot snapshots[SNAPSHOT_STACK_MAX];
     s32 top = 0;
+
+    bool is_empty() const { return top == 0; }
 };
 
 struct Snapshots
@@ -30,7 +33,7 @@ struct Snapshots
     SnapshotStack redoStack;
 };
 
-void snapshots_undo_stack_push(Snapshots* self, const Snapshot* snapshot);
+void snapshots_undo_push(Snapshots* self, const Snapshot* snapshot);
 void snapshots_init(Snapshots* self, Anm2* anm2, Anm2Reference* reference, Preview* preview);
 void snapshots_undo(Snapshots* self);
 void snapshots_redo(Snapshots* self);

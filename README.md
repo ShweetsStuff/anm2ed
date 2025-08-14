@@ -5,20 +5,22 @@
 A reimplementation of *The Binding of Isaac: Rebirth*'s proprietary animation editor. Manipulates the XML-based ".anm2" format, used for in-game tweened animations.
 
 ## Features
-
-- Most things present in the original IsaacAnimationEditor.exe, except some stuff like drawing (why not use an art program!)
+- Extended version of the original proprietary Nicalis animation editor
 - Smooth [Dear ImGui](https://github.com/ocornut/imgui) interface; docking, dragging and dropping, etc.
-- Keybinds/keyboard control for common actions(see [src/input.h](https://github.com/ShweetsStuff/anm2ed/blob/master/src/input.h))
-
-### Known Issues
-- Root Transform doesn't work for scale/rotation (matrix math is hard; if you can help me fix it I will give you $100.)
-- Some .anm2 files used in Rebirth might not render correctly due to the ordering of layers; just drag and drop to fix the ordering and save, they will work fine afterwards. 
+- New features
+    - Can output .webm or *.png sequence
+    - Cutting, copying and pasting
+    - Robust snapshot (undo/redo) system
+    - Additional hotkeys/shortcuts
+    - Settings that will preserve on exit
 
 ## Dependencies
 Download these from your package manager:
 
 - SDL3
 - GLEW
+
+Note, to render animations, you'll need to download [FFmpeg](https://ffmpeg.org/download.html) and specify its install path in the program.
 
 ## Build
 

@@ -6,44 +6,26 @@ static void _clipboard_item_remove(ClipboardItem* self, Anm2* anm2)
     {
         case CLIPBOARD_FRAME:
         {
-            Anm2FrameWithReference frameWithReference = std::get<Anm2FrameWithReference>(self->data);
-            Anm2Animation* animation = anm2_animation_from_reference(anm2, &frameWithReference.reference);
-
-            if (!animation) break;
-
-            std::vector<Anm2Frame>* frames = nullptr;
+            Anm2FrameWithReference* frameWithReference = std::get_if<Anm2FrameWithReference>(&self->data);
             
-            switch (frameWithReference.reference.itemType)
-            {
-                case ANM2_ROOT:
-                    frames = &animation->rootAnimation.frames;
-                    break;
-                case ANM2_LAYER:
-                    frames = &animation->layerAnimations[frameWithReference.reference.itemID].frames;
-                    break;
-                case ANM2_NULL:
-                    frames = &animation->nullAnimations[frameWithReference.reference.itemID].frames;
-                    break;
-                case ANM2_TRIGGERS:
-                    frames = &animation->triggers.frames;
-                    break;
-                default:
-                    break;
-            }
+            if (!frameWithReference) break;
 
-            if (frames)
-                frames->erase(frames->begin() + frameWithReference.reference.frameIndex);
-            
+            anm2_frame_erase(anm2, &frameWithReference->reference);
             break;
         }
         case CLIPBOARD_ANIMATION:
         {
-            Anm2AnimationWithID animationWithID = std::get<Anm2AnimationWithID>(self->data);
+            Anm2AnimationWithID* animationWithID = std::get_if<Anm2AnimationWithID>(&self->data);
+
+            if (!animationWithID) break;
 
             for (auto & [id, animation] : anm2->animations)
             {
-                if (id == animationWithID.id)
-                    anm2->animations.erase(animationWithID.id);
+                if (id == animationWithID->id)
+                {
+                    anm2->animations.erase(animationWithID->id);
+                    break;
+                }
             }
             break;
         }
@@ -69,24 +51,26 @@ static void _clipboard_item_paste(ClipboardItem* self, ClipboardLocation* locati
  
             if (!animation || !anm2Item) break;
 
-            s32 insertIndex = (reference->itemType == ANM2_TRIGGERS) ? 
-            reference->frameIndex : std::max(reference->frameIndex, (s32)anm2Item->frames.size()); 
-            
-            anm2Item->frames.insert(anm2Item->frames.begin() + insertIndex, frameWithReference->frame);
-            
-            anm2_animation_length_set(animation);
+            anm2_frame_add(anm2, &frameWithReference->frame, reference, reference->frameIndex); 
+
             break;
         }
         case CLIPBOARD_ANIMATION:
         {
+            Anm2AnimationWithID* animationWithID = std::get_if<Anm2AnimationWithID>(&self->data);
+           
+            if (!animationWithID) break;
+
             s32 index = 0;
             
             if (std::holds_alternative<s32>(*location))
                 index = std::get<s32>(*location);
+            else
+                break;
 
             index = std::clamp(index, 0, (s32)anm2->animations.size());
 
-            map_insert_shift(anm2->animations, index, std::get<Anm2AnimationWithID>(self->data).animation);
+            map_insert_shift(anm2->animations, index, animationWithID->animation);
             break;
         }
         default:

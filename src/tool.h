@@ -21,8 +21,8 @@ enum ToolType
     TOOL_COUNT,
 };
 
-const SDL_SystemCursor MOUSE_CURSOR_DEFAULT = SDL_SYSTEM_CURSOR_DEFAULT;
-const SDL_SystemCursor TOOL_MOUSE_CURSORS[TOOL_COUNT] = 
+const SDL_SystemCursor CURSOR_DEFAULT = SDL_SYSTEM_CURSOR_DEFAULT;
+const SDL_SystemCursor TOOL_CURSORS[TOOL_COUNT] = 
 {
     SDL_SYSTEM_CURSOR_POINTER,
     SDL_SYSTEM_CURSOR_MOVE,
@@ -34,19 +34,4 @@ const SDL_SystemCursor TOOL_MOUSE_CURSORS[TOOL_COUNT] =
     SDL_SYSTEM_CURSOR_CROSSHAIR,
     SDL_SYSTEM_CURSOR_DEFAULT,
     SDL_SYSTEM_CURSOR_DEFAULT
-};
-
-const bool TOOL_MOUSE_CURSOR_IS_CONSTANT[TOOL_COUNT] =
-{
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-    false,
-    true,
-    false,
-    false,
-    false
 };

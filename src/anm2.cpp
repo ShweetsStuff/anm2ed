@@ -1,5 +1,3 @@
-// Anm2 file format; serializing/deserializing
-
 #include "anm2.h"
 
 using namespace tinyxml2;
@@ -781,6 +779,7 @@ Anm2Item* anm2_item_from_reference(Anm2* self, Anm2Reference* reference)
 	}
 }
 
+
 Anm2Frame* anm2_frame_from_reference(Anm2* self, Anm2Reference* reference)
 {
 	Anm2Item* item = anm2_item_from_reference(self, reference);
@@ -903,7 +902,7 @@ s32 anm2_animation_length_get(Anm2Animation* self)
 		accumulate_max_delay(item.frames);
 
 	for (const auto& frame : self->triggers.frames)
-		length = std::max(length, frame.atFrame);
+		length = std::max(length, frame.atFrame + 1);
 
 	return length;
 }
@@ -913,7 +912,7 @@ void anm2_animation_length_set(Anm2Animation* self)
 	self->frameNum = anm2_animation_length_get(self);
 }
 
-Anm2Frame* anm2_frame_add(Anm2* self, Anm2Reference* reference, s32 time)
+Anm2Frame* anm2_frame_add(Anm2* self, Anm2Frame* frame, Anm2Reference* reference, s32 time)
 {
 	Anm2Animation* animation = anm2_animation_from_reference(self, reference);
 	Anm2Item* item = anm2_item_from_reference(self, reference);
@@ -923,44 +922,41 @@ Anm2Frame* anm2_frame_add(Anm2* self, Anm2Reference* reference, s32 time)
 
 	if (item)
 	{
-		Anm2Frame frame = Anm2Frame{};
-		s32 index = INDEX_NONE;
+		Anm2Frame frameAdd = frame ? *frame : Anm2Frame{};
+		s32 index = reference->frameIndex + 1;
 
 		if (reference->itemType == ANM2_TRIGGERS)
 		{
-			for (auto& frameCheck : item->frames) if (frameCheck.atFrame == time) return nullptr;
+			s32 index = time;
+			
+			for (auto& frameCheck : item->frames) 
+			{
+				if (frameCheck.atFrame == time)
+				{
+					index++;
+					break;	
+				}
+			}
 
-			frame.atFrame = time;
+			frameAdd.atFrame = index;
 			index = item->frames.size();
+			return &item->frames.emplace_back(frameAdd);
 		}
 		else
 		{
-			s32 frameDelayCount = 0;
-
-			for (auto& frameCheck : item->frames)
-				frameDelayCount += frameCheck.delay;
-			
-			if (frameDelayCount + ANM2_FRAME_DELAY_MIN > animation->frameNum) return nullptr;
-
-			Anm2Frame* checkFrame = anm2_frame_from_reference(self, reference);
-
-			if (checkFrame)
-			{
-				if (frameDelayCount + checkFrame->delay > animation->frameNum)
-					frame.delay = animation->frameNum - frameDelayCount;
-
-				index = reference->frameIndex + 1;
-			}
-			else
-				index = (s32)item->frames.size();
+			item->frames.insert(item->frames.begin() + index, frameAdd);
+			return &item->frames[index];
 		}
-
-		item->frames.insert(item->frames.begin() + index, frame);
-
-		return &item->frames[index];
 	}
 
 	return nullptr;
+}
+
+void anm2_frame_erase(Anm2* self, Anm2Reference* reference)
+{
+	Anm2Item* item = anm2_item_from_reference(self, reference);
+	if (!item) return;
+	item->frames.erase(item->frames.begin() + reference->frameIndex);
 }
 
 void anm2_reference_clear(Anm2Reference* self)
@@ -970,9 +966,7 @@ void anm2_reference_clear(Anm2Reference* self)
 
 void anm2_reference_item_clear(Anm2Reference* self)
 {
-	self->itemType = ANM2_NONE;
-	self->itemID = ID_NONE;
-	self->frameIndex = INDEX_NONE;
+	*self = {self->animationID};
 }
 
 void anm2_reference_frame_clear(Anm2Reference* self)
@@ -980,19 +974,69 @@ void anm2_reference_frame_clear(Anm2Reference* self)
 	self->frameIndex = INDEX_NONE;
 }
 
+void anm2_item_frame_set(Anm2* self, Anm2Reference* reference, const Anm2FrameChange& change, Anm2ChangeType type, s32 start, s32 count)
+{
+    Anm2Item* item = anm2_item_from_reference(self, reference);
+    if (!item) return;
+
+    if (start < 0 || count <= 0) return;
+    const s32 size = (s32)item->frames.size();
+    if (size == 0 || start >= size) return;
+
+    const s32 end = std::min(start + count, size);
+
+    for (s32 i = start; i < end; ++i)
+    {
+        Anm2Frame& dest = item->frames[i];
+
+        // Booleans always just set if provided
+        if (change.isVisible)      dest.isVisible      = *change.isVisible;
+        if (change.isInterpolated) dest.isInterpolated = *change.isInterpolated;
+
+        switch (type)
+        {
+            case ANM2_CHANGE_SET:
+                if (change.rotation)  dest.rotation  = *change.rotation;
+                if (change.delay)     dest.delay     = std::max(ANM2_FRAME_DELAY_MIN, *change.delay);
+                if (change.crop)      dest.crop      = *change.crop;
+                if (change.pivot)     dest.pivot     = *change.pivot;
+                if (change.position)  dest.position  = *change.position;
+                if (change.size)      dest.size      = *change.size;
+                if (change.scale)     dest.scale     = *change.scale;
+                if (change.offsetRGB) dest.offsetRGB = glm::clamp(*change.offsetRGB, 0.0f, 1.0f);
+                if (change.tintRGBA)  dest.tintRGBA  = glm::clamp(*change.tintRGBA, 0.0f, 1.0f);
+                break;
+
+            case ANM2_CHANGE_ADD:
+                if (change.rotation)  dest.rotation  += *change.rotation;
+                if (change.delay)     dest.delay      = std::max(ANM2_FRAME_DELAY_MIN, dest.delay + *change.delay);
+                if (change.crop)      dest.crop      += *change.crop;
+                if (change.pivot)     dest.pivot     += *change.pivot;
+                if (change.position)  dest.position  += *change.position;
+                if (change.size)      dest.size      += *change.size;
+                if (change.scale)     dest.scale     += *change.scale;
+                if (change.offsetRGB) dest.offsetRGB  = glm::clamp(dest.offsetRGB + *change.offsetRGB, 0.0f, 1.0f);
+                if (change.tintRGBA)  dest.tintRGBA   = glm::clamp(dest.tintRGBA  + *change.tintRGBA,  0.0f, 1.0f);
+                break;
+
+            case ANM2_CHANGE_SUBTRACT:
+                if (change.rotation)  dest.rotation  -= *change.rotation;
+                if (change.delay)     dest.delay      = std::max(ANM2_FRAME_DELAY_MIN, dest.delay - *change.delay);
+                if (change.crop)      dest.crop      -= *change.crop;
+                if (change.pivot)     dest.pivot     -= *change.pivot;
+                if (change.position)  dest.position  -= *change.position;
+                if (change.size)      dest.size      -= *change.size;
+                if (change.scale)     dest.scale     -= *change.scale;
+                if (change.offsetRGB) dest.offsetRGB  = glm::clamp(dest.offsetRGB - *change.offsetRGB, 0.0f, 1.0f);
+                if (change.tintRGBA)  dest.tintRGBA   = glm::clamp(dest.tintRGBA  - *change.tintRGBA,  0.0f, 1.0f);
+                break;
+        }
+    }
+}
+
 void anm2_animation_merge(Anm2* self, s32 animationID, const std::vector<s32>& mergeIDs, Anm2MergeType type)
 {
 	Anm2Animation newAnimation = self->animations[animationID];
-
-	newAnimation.rootAnimation.frames.clear();
-	
-	for (auto& [id, layerAnimation] : newAnimation.layerAnimations)
-		layerAnimation.frames.clear();
-	
-	for (auto& [id, nullAnimation] : newAnimation.nullAnimations)
-		nullAnimation.frames.clear();
-	
-	newAnimation.triggers.frames.clear();
 
  	auto merge_item = [&](Anm2Item& destinationItem, const Anm2Item& sourceItem)
     {
@@ -1017,6 +1061,8 @@ void anm2_animation_merge(Anm2* self, s32 animationID, const std::vector<s32>& m
 
     for (auto mergeID : mergeIDs)
     {
+		if (animationID == mergeID) continue;
+
         const Anm2Animation& mergeAnimation = self->animations[mergeID];
 
         merge_item(newAnimation.rootAnimation, mergeAnimation.rootAnimation);
@@ -1047,7 +1093,7 @@ void anm2_frame_bake(Anm2* self, Anm2Reference* reference, s32 interval, bool is
 	referenceNext.frameIndex = reference->frameIndex + 1;
 
 	Anm2Frame* frameNext = anm2_frame_from_reference(self, &referenceNext);
-	if (!frameNext) return;
+	if (!frameNext) frameNext = frame;
 
 	const Anm2Frame baseFrame = *frame;
 	const Anm2Frame baseFrameNext = *frameNext;

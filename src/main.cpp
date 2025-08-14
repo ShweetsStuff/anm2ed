@@ -1,5 +1,3 @@
-// Main function
-
 #include "main.h"
 
 s32

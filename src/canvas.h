@@ -4,14 +4,16 @@
 
 #define CANVAS_ZOOM_MIN 1.0f
 #define CANVAS_ZOOM_MAX 2000.0f
+#define CANVAS_ZOOM_DEFAULT 100.0f
 #define CANVAS_ZOOM_STEP 10.0f
 #define CANVAS_ZOOM_MOD 10.0f
 #define CANVAS_GRID_MIN 1
 #define CANVAS_GRID_MAX 1000
+#define CANVAS_GRID_DEFAULT 32
 #define CANVAS_LINE_LENGTH (FLT_MAX * 0.001f)
 
 static const vec2 CANVAS_GRID_SIZE = {3200, 1600};
-static const vec2 CANVAS_PIVOT_SIZE = {4, 4};
+static const vec2 CANVAS_PIVOT_SIZE = {8, 8};
 
 const f32 CANVAS_AXIS_VERTICES[] = 
 {
@@ -38,7 +40,7 @@ struct Canvas
     vec2 size{};
 };
 
-void canvas_init(Canvas* self);
+void canvas_init(Canvas* self, const vec2& size);
 mat4 canvas_transform_get(Canvas* self, vec2& pan, f32& zoom, OriginType origin);
 void canvas_clear(vec4& color);
 void canvas_bind(Canvas* self);

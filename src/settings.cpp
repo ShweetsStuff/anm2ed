@@ -54,6 +54,13 @@ static void _settings_setting_load(Settings* self, const std::string& line)
             if ((value = match_key(key + "X"))) { v->x = std::atoi(value); return; }
             if ((value = match_key(key + "Y"))) { v->y = std::atoi(value); return; }
         }
+        else if (entry.type == TYPE_VEC3)
+        {
+            vec3* v = (vec3*)target;
+            if ((value = match_key(key + "R"))) { v->x = std::atof(value); return; }
+            if ((value = match_key(key + "G"))) { v->y = std::atof(value); return; }
+            if ((value = match_key(key + "B"))) { v->z = std::atof(value); return; }
+        }
         else if (entry.type == TYPE_VEC4)
         {
             vec4* v = (vec4*)target;
@@ -103,6 +110,14 @@ static void _settings_setting_write(Settings* self, std::ostream& out, SettingsE
             vec2* data = (vec2*)(selfPointer + entry.offset);
             out << entry.key << "X=" << std::format(SETTINGS_FLOAT_FORMAT, data->x) << "\n";
             out << entry.key << "Y=" << std::format(SETTINGS_FLOAT_FORMAT, data->y) << "\n";
+            break;
+        }
+        case TYPE_VEC3:
+        {
+            vec3* data = (vec3*)(selfPointer + entry.offset);
+            out << entry.key << "R=" << std::format(SETTINGS_FLOAT_FORMAT, data->r) << "\n";
+            out << entry.key << "G=" << std::format(SETTINGS_FLOAT_FORMAT, data->g) << "\n";
+            out << entry.key << "B=" << std::format(SETTINGS_FLOAT_FORMAT, data->b) << "\n";
             break;
         }
         case TYPE_VEC4:

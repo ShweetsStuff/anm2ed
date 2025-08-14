@@ -1,5 +1,3 @@
-// Handles the rendering of the spritesheet editor
-
 #include "editor.h"
 
 void editor_init(Editor* self, Anm2* anm2, Anm2Reference* reference, Resources* resources, Settings* settings)
@@ -9,7 +7,7 @@ void editor_init(Editor* self, Anm2* anm2, Anm2Reference* reference, Resources* 
     self->resources = resources;
     self->settings = settings;
 
-    canvas_init(&self->canvas);
+    canvas_init(&self->canvas, vec2());
 }
 
 void editor_draw(Editor* self)

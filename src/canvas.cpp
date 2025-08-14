@@ -1,5 +1,3 @@
-// Common rendering area
-
 #include "canvas.h"
 
 static void _canvas_texture_free(Canvas* self)
@@ -9,7 +7,7 @@ static void _canvas_texture_free(Canvas* self)
     if (self->texture != 0) glDeleteTextures(1, &self->texture);
 }
 
-static void _canvas_texture_init(Canvas* self, vec2& size)
+static void _canvas_texture_init(Canvas* self, const vec2& size)
 {
     _canvas_texture_free(self);
 
@@ -35,7 +33,7 @@ static void _canvas_texture_init(Canvas* self, vec2& size)
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void canvas_init(Canvas* self)
+void canvas_init(Canvas* self, const vec2& size)
 {
     // Axis
     glGenVertexArrays(1, &self->axisVAO);
@@ -91,6 +89,8 @@ void canvas_init(Canvas* self)
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(f32), (void*)(2 * sizeof(f32)));
     
     glBindVertexArray(0);
+
+    _canvas_texture_init(self, size);
 }
 
 mat4 canvas_transform_get(Canvas* self, vec2& pan, f32& zoom, OriginType origin)
@@ -278,29 +278,3 @@ mat4 canvas_mvp_get(mat4& transform, vec2 size, vec2 position, vec2 pivot, f32 r
 
     return transform * model;
 }
-
-/*
-mat4 canvas_mvp_get(mat4& transform, vec2 size, vec2 position, vec2 pivot, f32 rotation, vec2 scale, vec2 pivotAlt, f32 rotationAlt)
-{
-    vec2 scaleAbsolute = abs(scale);
-    vec2 signScale  = glm::sign(scale); 
-    vec2 pivotScaled = pivot * scaleAbsolute;
-    vec2 pivotAltScaled = pivotAlt * scaleAbsolute;
-    vec2 sizeScaled = size * scaleAbsolute;
-
-    mat4 model = glm::translate(mat4(1.0f), vec3(position - pivotScaled, 0.0f));
-
-    model = glm::translate(model, vec3(pivotScaled, 0.0f));
-    model = glm::scale(model, vec3(signScale, 1.0f)); // Flip
-    model = glm::rotate(model, radians(rotation), vec3(0,0,1));
-    model = glm::translate(model, vec3(-pivotScaled, 0.0f));
-    
-    model = glm::translate(model, vec3(pivotAltScaled, 0.0f));
-    model = glm::rotate(model, radians(rotationAlt), vec3(0,0,1));
-    model = glm::translate(model, vec3(-pivotAltScaled, 0.0f));
-
-    model = glm::scale(model, vec3(sizeScaled, 1.0f));
-
-    return transform * model;
-}
-*/

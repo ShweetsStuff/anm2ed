@@ -15,12 +15,8 @@ struct ClipboardItem
     ClipboardItemType type = CLIPBOARD_NONE;
 
     ClipboardItem() = default; 
-    
-    ClipboardItem(const Anm2FrameWithReference& frame)
-        : data(frame), type(CLIPBOARD_FRAME) {}
-
-    ClipboardItem(const Anm2AnimationWithID& anim)
-        : data(anim), type(CLIPBOARD_ANIMATION) {}
+    ClipboardItem(const Anm2FrameWithReference& frame) : data(frame), type(CLIPBOARD_FRAME) {}
+    ClipboardItem(const Anm2AnimationWithID& animation) : data(animation), type(CLIPBOARD_ANIMATION) {}
 };
     
 using ClipboardLocation = std::variant<std::monostate, Anm2Reference, s32>;

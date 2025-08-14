@@ -114,3 +114,33 @@ bool texture_pixel_set(Texture* self, ivec2 position, vec4 color)
 
     return true;
 }
+
+Texture texture_copy(Texture* self)
+{
+	Texture copy = *self;
+	_texture_gl_set(&copy, nullptr);
+
+    GLuint fboSource;
+	GLuint fboDestination;
+    glGenFramebuffers(1, &fboSource);
+    glGenFramebuffers(1, &fboDestination);
+
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, fboSource);
+    glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, self->id, 0);
+
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fboDestination);
+    glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, copy.id, 0);
+
+    glBlitFramebuffer
+	(
+        0, 0, self->size.x, self->size.y,
+        0, 0, self->size.x, self->size.y,
+        GL_COLOR_BUFFER_BIT, GL_NEAREST
+    );
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDeleteFramebuffers(1, &fboSource);
+    glDeleteFramebuffers(1, &fboDestination);
+
+	return copy;
+}
