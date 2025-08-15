@@ -96,6 +96,8 @@ void init(State* self)
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_LINE_SMOOTH);
 	
+	SDL_GL_SetSwapInterval(1);
+
 	resources_init(&self->resources);
 	dialog_init(&self->dialog, self->window);
 	clipboard_init(&self->clipboard, &self->anm2);
