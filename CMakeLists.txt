@@ -25,7 +25,7 @@ file(GLOB SOURCES
 
 if (WIN32)
     enable_language("RC")
-    set (WIN32_RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/assets/win_icon.rc)
+    set (WIN32_RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/assets/Icon.rc)
 endif()
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${WIN32_RESOURCES})
@@ -38,6 +38,7 @@ if (NOT MSVC)
     set(CMAKE_CXX_FLAGS "-O2 -std=c++23 -Wall -Wextra -pedantic -fmax-errors=1")
 else()
     set(CMAKE_CXX_FLAGS "/std:c++latest /EHsc") 
+    target_link_options(${PROJECT_NAME} PRIVATE "/STACK:0xffffff")
 endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")

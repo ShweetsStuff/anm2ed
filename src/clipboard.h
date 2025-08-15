@@ -1,6 +1,7 @@
 #pragma once
 
 #include "anm2.h"
+#include <variant>
 
 enum ClipboardItemType
 {
