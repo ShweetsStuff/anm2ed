@@ -189,7 +189,7 @@ static inline std::string working_directory_from_file_set(const std::string& pat
     std::filesystem::path filePath = path;
     std::filesystem::path parentPath = filePath.parent_path();
 	std::filesystem::current_path(parentPath);
-    return parentPath;
+    return parentPath.string();
 };
 
 static inline std::string path_extension_change(const std::string& path, const std::string& extension)

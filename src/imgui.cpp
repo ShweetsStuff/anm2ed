@@ -37,7 +37,7 @@ static void _imgui_spritesheet_add(Imgui* self, const std::string& path)
 {
 	std::filesystem::path workingPath = std::filesystem::current_path();
 	std::string anm2WorkingPath = working_directory_from_file_set(self->anm2->path);
-	std::string spritesheetPath = std::filesystem::relative(path, anm2WorkingPath);
+	std::string spritesheetPath = std::filesystem::relative(path, anm2WorkingPath).string();
 
 	s32 id = map_next_id_get(self->resources->textures);
 	self->anm2->spritesheets[id] = Anm2Spritesheet{};
@@ -1996,7 +1996,7 @@ static void _imgui_spritesheets(Imgui* self)
 	{
 		std::filesystem::path workingPath = std::filesystem::current_path();
 		std::string anm2WorkingPath = working_directory_from_file_set(self->anm2->path);
-		std::string spritesheetPath = std::filesystem::relative(self->dialog->path, anm2WorkingPath);
+		std::string spritesheetPath = std::filesystem::relative(self->dialog->path, anm2WorkingPath).string();
 	
 		self->anm2->spritesheets[self->dialog->replaceID].path = spritesheetPath;
 		resources_texture_init(self->resources, spritesheetPath, self->dialog->replaceID);

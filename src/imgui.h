@@ -255,7 +255,7 @@ static inline void imgui_explore(Imgui* self)
 {
     std::filesystem::path filePath = self->anm2->path;
     std::filesystem::path parentPath = filePath.parent_path();
-    dialog_explorer_open(parentPath);
+    dialog_explorer_open(parentPath.string());
 }
 
 static inline void imgui_undo_push(Imgui* self, const std::string& action = SNAPSHOT_ACTION)
