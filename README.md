@@ -1,4 +1,4 @@
-# Anm2ed
+# Anm2Ed
 
 ![Preview](https://shweetz.net/files/projects/anm2ed/preview.png)
 
@@ -17,13 +17,12 @@ A reimplementation of *The Binding of Isaac: Rebirth*'s proprietary animation ed
 
 ## Dependencies
 Download these from your package manager:
-
 - SDL3
 - GLEW
-
+  
 Note, to render animations, you'll need to download [FFmpeg](https://ffmpeg.org/download.html) and specify its install path in the program.
 
-## Build
+## Build (Linux)
 
 After cloning and enter the repository's directory, make sure to initialize the submodules:
 
@@ -33,10 +32,7 @@ Then:
 
 ```
 mkdir build
-
 cd build
-
 cmake ..
-
-make -j
+make 
 ```

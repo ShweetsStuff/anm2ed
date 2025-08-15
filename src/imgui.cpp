@@ -1250,8 +1250,6 @@ static void _imgui_taskbar(Imgui* self)
 
 	if (_imgui_option_popup(IMGUI_EXIT_CONFIRMATION, self))
 		self->isQuit = true;
-	else
-		self->isTryQuit = false;
 
 	_imgui_selectable(IMGUI_WIZARD.copy({}), self);
 	
@@ -2584,9 +2582,10 @@ void imgui_update(Imgui* self)
 				break;
 			}
 			case SDL_EVENT_QUIT:
-				imgui_quit(self);
-				if (imgui_is_popup_open(IMGUI_EXIT_CONFIRMATION.popup))
+				if (self->isTryQuit)
 					self->isQuit = true;
+				else
+					imgui_quit(self);
 				break;
 			default:
 				break;
