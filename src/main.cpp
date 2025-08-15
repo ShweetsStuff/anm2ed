@@ -14,6 +14,8 @@ main(s32 argc, char* argv[])
 {
 	State state;
 
+	log_init(preferences_path_get() + LOG_PATH);
+
 	if (argc > 0 && argv[1])
 	{
 		if (std::string(argv[1]) == ARGUMENT_RESCALE)

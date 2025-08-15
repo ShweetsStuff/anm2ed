@@ -1,6 +1,5 @@
 #pragma once
 
-#include "COMMON.h"
 #include "resources.h"
 
 #define ANM2_SCALE_CONVERT(x) ((f32)x / 100.0f)

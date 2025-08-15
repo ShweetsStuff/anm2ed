@@ -207,7 +207,7 @@ struct ImguiHotkey
 static void imgui_log_push(Imgui* self, const std::string& text)
 {
     self->log.push_back({text, IMGUI_LOG_DURATION});
-    std::println("[IMGUI] {}", text);
+    log_imgui(text);
 }
 
 static std::vector<ImguiHotkey>& imgui_hotkey_registry()

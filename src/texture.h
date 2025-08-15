@@ -1,6 +1,6 @@
 #pragma once
 
-#include "COMMON.h"
+#include "log.h"
 
 #define TEXTURE_CHANNELS 4
 #define TEXTURE_INIT_INFO "Initialized texture from file: {}"

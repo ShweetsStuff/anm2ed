@@ -1,6 +1,6 @@
 #pragma once
 
-#include "COMMON.h"
+#include "log.h"
 
 #define SHADER_INFO_LOG_MAX 0xFF
 #define SHADER_INIT_ERROR "Failed to initialize shader {}:\n{}"

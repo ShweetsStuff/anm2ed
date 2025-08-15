@@ -44,6 +44,8 @@ typedef double f64;
 
 using namespace glm; 
 
+#define PREFERENCES_DIRECTORY "anm2ed"
+
 #define ROUND_NEAREST_MULTIPLE(value, multiple) (roundf((value) / (multiple)) * (multiple))
 #define FLOAT_TO_U8(x) (static_cast<u8>((x) * 255.0f))
 #define U8_TO_FLOAT(x) ((x) / 255.0f)
@@ -98,19 +100,12 @@ static const vec4 COLOR_OPAQUE = {1.0f, 1.0f, 1.0f, 1.0f};
 static const vec4 COLOR_TRANSPARENT = {0.0f, 0.0f, 0.0f, 0.0f};
 static const vec3 COLOR_OFFSET_NONE = {0.0f, 0.0f, 0.0f};
 
-static inline void log_error(const std::string& string)
+static inline std::string preferences_path_get(void)
 {
-    std::println("[ERROR] {}", string);
-}
-
-static inline void log_info(const std::string& string)
-{
-    std::println("[INFO] {}", string);
-}
-
-static inline void log_warning(const std::string& string)
-{
-    std::println("[WARNING] {}", string);
+    char* preferencesPath = SDL_GetPrefPath("", PREFERENCES_DIRECTORY);
+    std::string preferencesPathString = preferencesPath;
+    SDL_free(preferencesPath);
+    return preferencesPathString;
 }
 
 static inline bool string_to_bool(const std::string& string) 

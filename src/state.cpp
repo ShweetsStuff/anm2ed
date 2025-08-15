@@ -24,9 +24,6 @@ static void _draw(State* self)
 
 void init(State* self)
 {
-
-	log_info(STATE_INIT_INFO);
-	
 	settings_init(&self->settings);
 
 	if (!SDL_Init(SDL_INIT_VIDEO))
@@ -78,8 +75,6 @@ void init(State* self)
    	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 
 	self->glContext = SDL_GL_CreateContext(self->window);
-
-	window_vsync_set(self->settings.isVsync);
 	
 	if (!self->glContext)
 	{
@@ -87,9 +82,17 @@ void init(State* self)
 		quit(self);
 	}
 
-	glewInit();
+	GLenum glewError = glewInit();
+
+	if (glewError != GLEW_OK)
+	{
+		log_error(std::format(STATE_GL_CONTEXT_INIT_ERROR, (const char*)glewGetErrorString(glewError)));
+		quit(self);
+	}
 
 	log_info(std::format(STATE_GL_CONTEXT_INIT_INFO, (const char*)glGetString(GL_VERSION)));
+	
+	window_vsync_set(self->settings.isVsync);
 	
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  
@@ -191,4 +194,5 @@ void quit(State* self)
 
 	settings_save(&self->settings);
 	log_info(STATE_QUIT_INFO);
+	log_free();
 }

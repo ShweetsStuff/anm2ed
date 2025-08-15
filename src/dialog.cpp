@@ -73,11 +73,11 @@ void dialog_ffmpeg_path_set(Dialog* self)
 void dialog_explorer_open(const std::string& path)
 {
 #ifdef _WIN32
-		ShellExecuteA(NULL, "open", path.c_str(), NULL, NULL, SW_SHOWNORMAL);
+		ShellExecuteA(NULL, DIALOG_FILE_EXPLORER_COMMAND, path.c_str(), NULL, NULL, SW_SHOWNORMAL);
 #else 
-		char cmd[512];
-		snprintf(cmd, sizeof(cmd), "xdg-open \"%s\" &", path.c_str());
-		system(cmd);
+		char command[DIALOG_FILE_EXPLORER_COMMAND_SIZE];
+		snprintf(command, sizeof(command), DIALOG_FILE_EXPLORER_COMMAND, path.c_str());
+		system(command);
 #endif
 }
 
