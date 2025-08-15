@@ -7,11 +7,12 @@ static void _canvas_texture_free(Canvas* self)
     if (self->texture != 0) glDeleteTextures(1, &self->texture);
 }
 
-static void _canvas_texture_init(Canvas* self, const vec2& size)
+static void _canvas_texture_init(Canvas* self, const ivec2& size)
 {
     _canvas_texture_free(self);
 
     self->size = size;
+    self->previousSize = size;
     
     glGenFramebuffers(1, &self->fbo);
 
@@ -19,7 +20,7 @@ static void _canvas_texture_init(Canvas* self, const vec2& size)
 
     glGenTextures(1, &self->texture);
     glBindTexture(GL_TEXTURE_2D, self->texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (s32)self->size.x, (s32)self->size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, self->size.x, self->size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -27,13 +28,13 @@ static void _canvas_texture_init(Canvas* self, const vec2& size)
 
     glGenRenderbuffers(1, &self->rbo);
     glBindRenderbuffer(GL_RENDERBUFFER, self->rbo);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, (s32)self->size.x, (s32)self->size.y);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, self->size.x, self->size.y);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, self->rbo);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void canvas_init(Canvas* self, const vec2& size)
+void canvas_init(Canvas* self, const ivec2& size)
 {
     // Axis
     glGenVertexArrays(1, &self->axisVAO);
@@ -109,8 +110,9 @@ void canvas_init(Canvas* self, const vec2& size)
 mat4 canvas_transform_get(Canvas* self, vec2 pan, f32 zoom, OriginType origin)
 {
     f32 zoomFactor = PERCENT_TO_UNIT(zoom);
-    mat4 projection = glm::ortho(0.0f, self->size.x, 0.0f, self->size.y, -1.0f, 1.0f);
+    mat4 projection = glm::ortho(0.0f, (f32)self->size.x, 0.0f, (f32)self->size.y, -1.0f, 1.0f);
     mat4 view = mat4{1.0f};
+    vec2 size = vec2(self->size.x, self->size.y);
     
     switch (origin)
     {
@@ -118,7 +120,7 @@ mat4 canvas_transform_get(Canvas* self, vec2 pan, f32 zoom, OriginType origin)
             view = glm::translate(view, vec3(pan, 0.0f));
             break;
         default:
-            view = glm::translate(view, vec3((self->size * 0.5f) + pan, 0.0f));
+            view = glm::translate(view, vec3((size * 0.5f) + pan, 0.0f));
             break;
     }
 
@@ -140,13 +142,8 @@ void canvas_viewport_set(Canvas* self)
 
 void canvas_texture_set(Canvas* self)
 {
-    static vec2 previousSize = {-1, -1};
-
-    if (previousSize != self->size)
-    {
+    if (self->previousSize != self->size)
         _canvas_texture_init(self, self->size);
-        previousSize = self->size;
-    }
 }
 
 void canvas_grid_draw(Canvas* self, GLuint& shader, mat4& transform, ivec2& size, ivec2& offset, vec4& color)

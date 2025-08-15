@@ -29,7 +29,7 @@ void preview_tick(Preview* self)
         {  
             if (self->isRender)
             {
-                vec2& size = self->canvas.size;
+                ivec2& size = self->canvas.size;
                 u32 framebufferPixelCount = size.x * size.y * TEXTURE_CHANNELS;
                 std::vector<u8> framebufferPixels(framebufferPixelCount);
                 Texture frameTexture;

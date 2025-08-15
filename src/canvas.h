@@ -12,7 +12,6 @@
 #define CANVAS_GRID_DEFAULT 32
 #define CANVAS_LINE_LENGTH (FLT_MAX * 0.001f)
 
-static const vec2 CANVAS_GRID_SIZE = {3200, 1600};
 static const vec2 CANVAS_PIVOT_SIZE = {8, 8};
 static const vec2 CANVAS_SCALE_DEFAULT = {1.0f, 1.0f};
 
@@ -45,10 +44,11 @@ struct Canvas
     GLuint textureEBO{};
     GLuint textureVAO{};
     GLuint textureVBO{};
-    vec2 size{};
+    ivec2 size{};
+    ivec2 previousSize{};
 };
 
-void canvas_init(Canvas* self, const vec2& size);
+void canvas_init(Canvas* self, const ivec2& size);
 mat4 canvas_transform_get(Canvas* self, vec2 pan, f32 zoom, OriginType origin);
 void canvas_clear(vec4& color);
 void canvas_bind(Canvas* self);
