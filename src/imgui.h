@@ -466,7 +466,6 @@ struct ImguiItem
 {
     std::string label{};
     std::string tooltip{};
-    std::string format{};
     std::string& text = tooltip;
     std::string undoAction{};
     std::string popup{};
@@ -548,11 +547,7 @@ struct ImguiItem
     ImguiItem copy(const ImguiItemOverride& override) const
     {
         ImguiItem out = *this;
-        if (override.isDisabled) 
-        {
-            out.isDisabled = override.isDisabled;
-            out.format.clear();
-        }
+        if (override.isDisabled) out.isDisabled = override.isDisabled;
         if(override.isSelected) out.isSelected = override.isSelected;
         if (is_popup() && imgui_is_popup_open(popup)) out.isSelected = true;
         if (id != ID_NONE) out.id = id + idOffset + override.id;
@@ -581,7 +576,6 @@ struct ImguiItem
     const char* drag_drop_get() const { return dragDrop.c_str(); }
     const char* tooltip_get() const { return tooltip.c_str(); }
     const char* text_get() const { return text.c_str(); }
-    const char* format_get() const { return format.c_str(); }
 };
 
 #define IMGUI_ITEM(NAME, ...) const inline ImguiItem NAME = []{ ImguiItem self; __VA_ARGS__; self.construct(); return self; }()
@@ -888,7 +882,6 @@ IMGUI_ITEM(IMGUI_SCALE_ANM2_OPTIONS_CHILD,
 IMGUI_ITEM(IMGUI_SCALE_ANM2_VALUE,
     self.label = "Value",
     self.tooltip = "The size and position-related frame properties in the anm2 will be scaled by this value.",
-    self.format = "%.2f",
     self.value = 1,
     self.step = 0.25,
     self.stepFast = 1
@@ -1277,7 +1270,6 @@ IMGUI_ITEM(IMGUI_CANVAS_VIEW_CHILD,
 IMGUI_ITEM(IMGUI_CANVAS_ZOOM, 
     self.label = "Zoom",
     self.tooltip = "Change the zoom of the canvas.",
-    self.format = "%.0f",
     self.min = CANVAS_ZOOM_MIN,
     self.max = CANVAS_ZOOM_MAX,
     self.value = CANVAS_ZOOM_DEFAULT
@@ -1309,7 +1301,6 @@ IMGUI_ITEM(IMGUI_CANVAS_ANIMATION_OVERLAY,
 IMGUI_ITEM(IMGUI_CANVAS_ANIMATION_OVERLAY_TRANSPARENCY,
     self.label = "Alpha",
     self.tooltip = "Set the transparency of the animation overlay.",
-    self.format = "%.0f",
     self.value = 255,
     self.max = 255
 );
@@ -1374,39 +1365,34 @@ IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_POSITION,
     self.label = "Position",
     self.tooltip = "Change the position of the selected frame.",
     self.undoAction = "Frame Position",
-    self.isUseItemActivated = true,
-    self.format = "%.0f"
+    self.isUseItemActivated = true
 );
 
 IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_CROP,
     self.label = "Crop",
     self.tooltip = "Change the crop position of the selected frame.",
     self.undoAction = "Frame Crop",
-    self.isUseItemActivated = true,
-    self.format = "%.0f"
+    self.isUseItemActivated = true
 );
 
 IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_SIZE,
     self.label = "Size",
     self.tooltip = "Change the size of the crop of the selected frame.",
     self.undoAction = "Frame Size",
-    self.isUseItemActivated = true,
-    self.format = "%.0f"
+    self.isUseItemActivated = true
 );
 
 IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_PIVOT,
     self.label = "Pivot",
     self.tooltip = "Change the pivot of the selected frame.",
     self.undoAction = "Frame Pivot",
-    self.isUseItemActivated = true,
-    self.format = "%.0f"
+    self.isUseItemActivated = true
 );
 
 IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_SCALE,
     self.label = "Scale",
     self.tooltip = "Change the scale of the selected frame.",
     self.undoAction = "Frame Scale",
-    self.format = "%.0f",
     self.isUseItemActivated = true,
     self.value = 100
 );
@@ -1415,8 +1401,7 @@ IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_ROTATION,
     self.label = "Rotation",
     self.tooltip = "Change the rotation of the selected frame.",
     self.undoAction = "Frame Rotation",
-    self.isUseItemActivated = true,
-    self.format = "%.0f"
+    self.isUseItemActivated = true
 );
 
 IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_DELAY,

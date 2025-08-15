@@ -389,12 +389,12 @@ IMGUI_ITEM_FUNCTION(_imgui_selectable, IMGUI_SELECTABLE, ImGui::Selectable(self.
 IMGUI_ITEM_VALUE_FUNCTION(_imgui_radio_button, IMGUI_RADIO_BUTTON, s32, ImGui::RadioButton(self.label_get(), &value, self.value));
 IMGUI_ITEM_VALUE_FUNCTION(_imgui_color_button, IMGUI_COLOR_BUTTON, vec4, ImGui::ColorButton(self.label_get(), ImVec4(value), self.flags));
 IMGUI_ITEM_VALUE_FUNCTION(_imgui_checkbox, IMGUI_CHECKBOX, bool, ImGui::Checkbox(self.label_get(), &value));
-IMGUI_ITEM_VALUE_CLAMP_FUNCTION(_imgui_input_int, IMGUI_INPUT_INT, s32, ImGui::InputInt(self.label.c_str(), &value, self.step, self.stepFast, self.flags));
-IMGUI_ITEM_VALUE_CLAMP_FUNCTION(_imgui_input_int2, IMGUI_INPUT_INT, ivec2, ImGui::InputInt2(self.label.c_str(), value_ptr(value), self.flags));
-IMGUI_ITEM_VALUE_CLAMP_FUNCTION(_imgui_input_float, IMGUI_INPUT_FLOAT, f32, ImGui::InputFloat(self.label.c_str(), &value, self.step, self.stepFast, self.format_get(), self.flags));
-IMGUI_ITEM_VALUE_FUNCTION(_imgui_slider_float, IMGUI_SLIDER_FLOAT, f32, ImGui::SliderFloat(self.label_get(), &value, self.min, self.max, self.format_get(), self.flags));
-IMGUI_ITEM_VALUE_FUNCTION(_imgui_drag_float, IMGUI_DRAG_FLOAT, f32, ImGui::DragFloat(self.label_get(), &value, self.speed, self.min, self.max, self.format_get()));
-IMGUI_ITEM_VALUE_FUNCTION(_imgui_drag_float2, IMGUI_DRAG_FLOAT, vec2, ImGui::DragFloat2(self.label_get(), value_ptr(value), self.speed, self.min, self.max, self.format_get()));
+IMGUI_ITEM_VALUE_CLAMP_FUNCTION(_imgui_input_int, IMGUI_INPUT_INT, s32, ImGui::InputInt(self.label_get(), &value, self.step, self.stepFast, self.flags));
+IMGUI_ITEM_VALUE_CLAMP_FUNCTION(_imgui_input_int2, IMGUI_INPUT_INT, ivec2, ImGui::InputInt2(self.label_get(), value_ptr(value), self.flags));
+IMGUI_ITEM_VALUE_CLAMP_FUNCTION(_imgui_input_float, IMGUI_INPUT_FLOAT, f32, ImGui::InputFloat(self.label_get(), &value, self.step, self.stepFast, f32_format_get(value), self.flags));
+IMGUI_ITEM_VALUE_FUNCTION(_imgui_slider_float, IMGUI_SLIDER_FLOAT, f32, ImGui::SliderFloat(self.label_get(), &value, self.min, self.max, f32_format_get(value), self.flags));
+IMGUI_ITEM_VALUE_FUNCTION(_imgui_drag_float, IMGUI_DRAG_FLOAT, f32, ImGui::DragFloat(self.label_get(), &value, self.speed, self.min, self.max, f32_format_get(value)));
+IMGUI_ITEM_VALUE_FUNCTION(_imgui_drag_float2, IMGUI_DRAG_FLOAT, vec2, ImGui::DragFloat2(self.label_get(), value_ptr(value), self.speed, self.min, self.max, vec2_format_get(value)));
 IMGUI_ITEM_VALUE_FUNCTION(_imgui_color_edit3, IMGUI_COLOR_EDIT, vec3, ImGui::ColorEdit3(self.label_get(), value_ptr(value), self.flags));
 IMGUI_ITEM_VALUE_FUNCTION(_imgui_color_edit4, IMGUI_COLOR_EDIT, vec4, ImGui::ColorEdit4(self.label_get(), value_ptr(value), self.flags));
 IMGUI_ITEM_CHECKBOX_FUNCTION(_imgui_checkbox_selectable, _imgui_selectable(self, imgui));

@@ -128,6 +128,46 @@ static inline std::string string_quote(const std::string& string)
     return "\"" + string + "\"";
 }
 
+#define FLOAT_FORMAT_MAX_DECIMALS 2
+#define FLOAT_FORMAT_EPSILON 1e-6f
+static constexpr f32 FLOAT_FORMAT_POW10[] = {1.f, 10.f, 100.f};
+
+static inline s32 f32_decimals_needed(f32 value)
+{
+    f32 integerPart = 0.f;
+    f32 fractionalPart = modff(value, &integerPart);
+    fractionalPart = fabsf(fractionalPart);
+
+    if (fractionalPart < FLOAT_FORMAT_EPSILON)
+        return 0;
+
+    for (s32 decimalCount = 1; decimalCount <= FLOAT_FORMAT_MAX_DECIMALS; ++decimalCount)
+    {
+        f32 scaledFraction = fractionalPart * FLOAT_FORMAT_POW10[decimalCount];
+        if (fabsf(scaledFraction - roundf(scaledFraction)) < FLOAT_FORMAT_EPSILON * FLOAT_FORMAT_POW10[decimalCount])
+            return decimalCount;
+    }
+    return FLOAT_FORMAT_MAX_DECIMALS;
+}
+
+static inline const char* f32_format_get(f32 value)
+{
+    static std::string formatString;
+    const s32 decimalCount = f32_decimals_needed(value);
+    formatString = (decimalCount == 0) ? "%.0f" : ("%." + std::to_string(decimalCount) + "f");
+    return formatString.c_str();
+}
+
+static inline const char* vec2_format_get(const vec2& value)
+{
+    static std::string formatString;
+    const s32 decimalCountX = f32_decimals_needed(value.x);
+    const s32 decimalCountY = f32_decimals_needed(value.y);
+    const s32 decimalCount = (decimalCountX > decimalCountY) ? decimalCountX : decimalCountY;
+    formatString = (decimalCount == 0) ? "%.0f" : ("%." + std::to_string(decimalCount) + "f");
+    return formatString.c_str();
+}
+
 static inline std::string path_canonical_resolve
 (
     const std::string& inputPath,

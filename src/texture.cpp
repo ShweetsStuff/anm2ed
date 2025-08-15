@@ -1,3 +1,10 @@
+#if defined(__clang__) || defined(__GNUC__)
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+  #pragma GCC diagnostic ignored "-Wunused-function"
+  #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+
 #include "texture.h"
 
 #define STBI_ONLY_PNG  
