@@ -25,7 +25,7 @@ file(GLOB SOURCES
 
 if (WIN32)
     enable_language("RC")
-    set (WIN32_RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/assets/win_icon.rc)
+    set (WIN32_RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/assets/Icon.rc)
 endif()
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${WIN32_RESOURCES})
