@@ -197,8 +197,10 @@ struct ImguiHotkey
     ImGuiKeyChord chord;
     ImguiFunction function;
     std::string focusWindow{};
+    std::string undoAction{};
 
     bool is_focus_window() const { return !focusWindow.empty(); }
+    bool is_undoable() const { return !undoAction.empty(); }
 };
 
 static void imgui_log_push(Imgui* self, const std::string& text)
@@ -423,8 +425,6 @@ static inline void imgui_end_popup(Imgui* imgui)
 	imgui_pending_popup_process(imgui);
 }
 
-
-
 enum ImguiItemType
 {
     IMGUI_ITEM,
@@ -504,7 +504,6 @@ struct ImguiItem
     s32 windowFlags{};
     s32 rowCount = 0;
 
-
     void construct()
     {
         static s32 idNew = 0;
@@ -517,7 +516,7 @@ struct ImguiItem
                 label += std::format(IMGUI_LABEL_SHORTCUT_FORMAT, chordString);
             tooltip += std::format(IMGUI_TOOLTIP_SHORTCUT_FORMAT, chordString);
             if (function)
-                imgui_hotkey_registry().push_back({chord, function, focusWindow});
+                imgui_hotkey_registry().push_back({chord, function, focusWindow, undoAction});
         }
 
         std::string labelNew{};

@@ -556,7 +556,6 @@ static bool _imgui_option_popup(ImguiItem self, Imgui* imgui)
 static void _imgui_context_menu(Imgui* self)
 {
 	if (!self->isContextualActionsEnabled) return;
-
 	
 	if (_imgui_is_window_hovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
 		imgui_open_popup(IMGUI_CONTEXT_MENU.label_get());
@@ -2548,6 +2547,7 @@ void imgui_update(Imgui* self)
 		{
 			if (ImGui::IsKeyChordPressed(hotkey.chord))
 			{
+				if (hotkey.is_undoable()) imgui_undo_push(self, hotkey.undoAction);
 				if (hotkey.is_focus_window()) continue;
 				hotkey.function(self);
 			}
