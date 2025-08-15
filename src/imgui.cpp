@@ -970,6 +970,12 @@ static void _imgui_timeline(Imgui* self)
 
 		std::function<void(s32, Anm2Frame&)> timeline_item_frame = [&](s32 i, Anm2Frame& frame)
 		{
+			static s32 frameDelayStart{};
+			static f32 frameDelayTimeStart{};
+			const bool isModCtrl = ImGui::IsKeyDown(IMGUI_INPUT_CTRL);
+			static Anm2Frame* draggingFrame = nullptr;
+			static Anm2Type draggingFrameType = ANM2_NONE;
+
 			ImGui::PushID(i);
 			reference.frameIndex = i;
 			ImVec2 framePos = ImGui::GetCursorPos();
@@ -986,8 +992,7 @@ static void _imgui_timeline(Imgui* self)
 
 			ImGui::SetCursorPos(framePos);
 			
-			if (_imgui_atlas_button(frameButton, self))
-				*self->reference = reference;
+			if (_imgui_atlas_button(frameButton, self)) *self->reference = reference;
 
 			if (ImGui::IsItemHovered())
 			{
@@ -995,23 +1000,47 @@ static void _imgui_timeline(Imgui* self)
 				_imgui_clipboard_hovered_item_set(self, frameWithReference);
 			}
 
-			if (type == ANM2_TRIGGERS)
+			if (ImGui::IsItemActivated())
 			{
-				if (ImGui::IsItemActivated()) imgui_undo_push(self, IMGUI_ACTION_TRIGGER_MOVE);
-
-				if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceNoPreviewTooltip))
+				if (type == ANM2_TRIGGERS || isModCtrl)
 				{
-					frame.atFrame = std::max(frameTime, 0);
+					draggingFrame = &frame;
+					draggingFrameType = type;
+					*self->reference = reference;
+				}
+
+				if (type == ANM2_TRIGGERS)
+					imgui_undo_push(self, IMGUI_ACTION_TRIGGER_MOVE);
+				else if (isModCtrl)
+				{
+					imgui_undo_push(self, IMGUI_ACTION_FRAME_DELAY);
+					frameDelayStart = draggingFrame->delay;
+					frameDelayTimeStart = frameTime;
+				}
+			}
+
+			if (draggingFrame)
+			{
+				if (draggingFrameType == ANM2_TRIGGERS)
+				{
+					draggingFrame->atFrame = std::max(frameTime, 0);
 					for (auto& frameCheck : animation->triggers.frames)
 					{
-						if (&frame == &frameCheck) continue;
-						if (frame.atFrame == frameCheck.atFrame)
+						if (draggingFrame == &frameCheck) continue;
+						if (draggingFrame->atFrame == frameCheck.atFrame)
 						{
-							frame.atFrame++;
+							draggingFrame->atFrame++;
 							break;
 						}
 					}
-					ImGui::EndDragDropSource();
+				}
+				else if (isModCtrl)
+					draggingFrame->delay = std::max(frameDelayStart + (s32)(frameTime - frameDelayTimeStart), ANM2_FRAME_NUM_MIN);
+
+				if (ImGui::IsMouseReleased(0))
+				{
+					draggingFrame = nullptr;
+					draggingFrameType = ANM2_NONE;
 				}
 			}
 			else
@@ -1022,32 +1051,32 @@ static void _imgui_timeline(Imgui* self)
 					timeline_item_frame(i, frame);
 					ImGui::EndDragDropSource();
 				}
-			}
 
-			if (ImGui::BeginDragDropTarget())
-			{
-				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(frameButton.drag_drop_get()))
+				if (ImGui::BeginDragDropTarget())
 				{
-					Anm2Reference swapReference = *(Anm2Reference*)payload->Data;
-					if (swapReference != reference)
+					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(frameButton.drag_drop_get()))
 					{
-						imgui_undo_push(self, IMGUI_ACTION_FRAME_SWAP);
-
-						Anm2Frame* swapFrame = anm2_frame_from_reference(self->anm2, &reference);
-						Anm2Frame* dragFrame = anm2_frame_from_reference(self->anm2, &swapReference);
-						
-						if (swapFrame && dragFrame)
+						Anm2Reference swapReference = *(Anm2Reference*)payload->Data;
+						if (swapReference != reference)
 						{
-							Anm2Frame oldFrame = *swapFrame;
+							imgui_undo_push(self, IMGUI_ACTION_FRAME_SWAP);
 
-							*swapFrame = *dragFrame;
-							*dragFrame = oldFrame;
+							Anm2Frame* swapFrame = anm2_frame_from_reference(self->anm2, &reference);
+							Anm2Frame* dragFrame = anm2_frame_from_reference(self->anm2, &swapReference);
+							
+							if (swapFrame && dragFrame)
+							{
+								Anm2Frame oldFrame = *swapFrame;
 
-							*self->reference = swapReference;
+								*swapFrame = *dragFrame;
+								*dragFrame = oldFrame;
+
+								*self->reference = swapReference;
+							}
 						}
 					}
+					ImGui::EndDragDropTarget();
 				}
-				ImGui::EndDragDropTarget();
 			}
 					
 			if (i < (s32)item->frames.size() - 1) ImGui::SameLine();

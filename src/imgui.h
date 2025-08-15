@@ -66,6 +66,7 @@
 #define IMGUI_ACTION_FRAME_TRANSFORM "Frame Transform"
 #define IMGUI_ACTION_ANIMATION_SWAP "Animation Swap"
 #define IMGUI_ACTION_TRIGGER_MOVE "Trigger AtFrame"
+#define IMGUI_ACTION_FRAME_DELAY "Frame Delay"
 #define IMGUI_ACTION_MOVE_PLAYHEAD "Move Playhead"
 
 #define IMGUI_POPUP_FLAGS ImGuiWindowFlags_NoMove
