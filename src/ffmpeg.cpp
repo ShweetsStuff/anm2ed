@@ -31,7 +31,7 @@ ffmpeg_render
     }
 
 #if _WIN32
-    command = string_quote(command)
+    command = string_quote(command);
 #endif
 
     FILE* fp = POPEN(command.c_str(), PWRITE_MODE);

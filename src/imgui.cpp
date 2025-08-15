@@ -1251,6 +1251,8 @@ static void _imgui_taskbar(Imgui* self)
 
 	if (_imgui_option_popup(IMGUI_EXIT_CONFIRMATION, self))
 		self->isQuit = true;
+	else
+		self->isTryQuit = false;
 
 	_imgui_selectable(IMGUI_WIZARD.copy({}), self);
 	

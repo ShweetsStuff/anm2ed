@@ -168,6 +168,8 @@ void loop(State* self)
 
 			self->lastUpdate = self->update;
 		}
+
+		SDL_Delay(STATE_DELAY_MIN);
 	}
 }
 
