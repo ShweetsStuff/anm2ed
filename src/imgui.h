@@ -146,6 +146,14 @@ enum ImguiPopupType
     IMGUI_POPUP_CENTER_WINDOW
 };
 
+enum ImguiPopupState
+{
+    IMGUI_POPUP_STATE_CLOSED,
+    IMGUI_POPUP_STATE_OPEN,
+    IMGUI_POPUP_STATE_CONFIRM,
+    IMGUI_POPUP_STATE_CANCEL
+};
+
 struct ImguiColorSet 
 {
     ImVec4 normal{};
@@ -603,7 +611,7 @@ IMGUI_ITEM(IMGUI_FOOTER_CHILD,
 );
 
 IMGUI_ITEM(IMGUI_TASKBAR,
-    self.label = "## Taskbar",
+    self.label = "Taskbar",
     self.size = {0, 32},
     self.flags = ImGuiWindowFlags_NoTitleBar        |
                  ImGuiWindowFlags_NoResize          |
