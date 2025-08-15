@@ -2069,14 +2069,15 @@ static void _imgui_animation_preview(Imgui* self)
 	static s32& tool = self->settings->tool;
 	static f32& zoom = self->settings->previewZoom;
 	static vec2& pan = self->settings->previewPan;
-	static vec2& size = self->preview->canvas.size;
+	static ivec2& size = self->preview->canvas.size;
 	static vec2 mousePos{};
 	static vec2 previewPos{};
 	static ImVec2 previewScreenPos{};
 
 	std::string mousePositionString = std::format(IMGUI_POSITION_FORMAT, (s32)mousePos.x, (s32)mousePos.y);
 	
-	_imgui_begin(IMGUI_ANIMATION_PREVIEW, self);
+	IMGUI_BEGIN_OR_RETURN(IMGUI_ANIMATION_PREVIEW, self);
+
 	_imgui_begin_child(IMGUI_CANVAS_GRID_CHILD, self);
 	_imgui_checkbox(IMGUI_CANVAS_GRID, self, self->settings->previewIsGrid);
 	ImGui::SameLine();
@@ -2140,9 +2141,10 @@ static void _imgui_animation_preview(Imgui* self)
 	previewPos = vec2(ImGui::GetCursorPos());
 	previewScreenPos = vec2(ImGui::GetCursorScreenPos());
 	
-	size = ImGui::GetContentRegionAvail();
+	vec2 imageSize = ImGui::GetContentRegionAvail();
+	size = ivec2(imageSize);
 	preview_draw(self->preview);
-	ImGui::Image(self->preview->canvas.texture, size);
+	ImGui::Image(self->preview->canvas.texture, imageSize);
 	
 	if (self->settings->previewIsTriggers)
 	{
@@ -2169,7 +2171,7 @@ static void _imgui_animation_preview(Imgui* self)
 
 	_imgui_end(); // IMGUI_ANIMATION_PREVIEW
 
-	mousePos = (vec2((ImGui::GetMousePos()) - (ImGui::GetWindowPos() + previewPos)) - (size * 0.5f) - pan) / PERCENT_TO_UNIT(zoom);
+	mousePos = (vec2((ImGui::GetMousePos()) - (ImGui::GetWindowPos() + previewPos)) - (imageSize * 0.5f) - pan) / PERCENT_TO_UNIT(zoom);
 	
 	const bool isLeft = ImGui::IsKeyPressed(IMGUI_INPUT_LEFT);
 	const bool isRight = ImGui::IsKeyPressed(IMGUI_INPUT_RIGHT);
@@ -2255,11 +2257,11 @@ static void _imgui_spritesheet_editor(Imgui* self)
 	static ivec2& gridOffset = self->settings->editorGridOffset;
 	static vec2& pan = self->settings->editorPan;
 	static f32& zoom = self->settings->editorZoom;
-	static vec2& size = self->editor->canvas.size;
+	static ivec2& size = self->editor->canvas.size;
 	
 	std::string mousePositionString = std::format(IMGUI_POSITION_FORMAT, (s32)mousePos.x, (s32)mousePos.y);
 
-	_imgui_begin(IMGUI_SPRITESHEET_EDITOR, self);
+	IMGUI_BEGIN_OR_RETURN(IMGUI_SPRITESHEET_EDITOR, self);
 	
 	_imgui_begin_child(IMGUI_CANVAS_GRID_CHILD, self);
 	_imgui_checkbox(IMGUI_CANVAS_GRID, self, self->settings->editorIsGrid);
@@ -2287,9 +2289,10 @@ static void _imgui_spritesheet_editor(Imgui* self)
 	_imgui_end_child(); // IMGUI_CANVAS_VISUAL_CHILD
 	
 	ImVec2 editorPos = ImGui::GetCursorPos();
-	size = ImGui::GetContentRegionAvail();
+	vec2 imageSize = ImGui::GetContentRegionAvail();
+	size = ivec2(imageSize);
 	editor_draw(self->editor);
-	ImGui::Image(self->editor->canvas.texture, size);
+	ImGui::Image(self->editor->canvas.texture, imageSize);
 	
 	if (ImGui::IsItemHovered()) 
 		self->pendingCursor = TOOL_CURSORS[tool];
