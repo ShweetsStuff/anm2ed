@@ -8,9 +8,19 @@
 #define SETTINGS_BUFFER_ITEM 0xFF
 #define SETTINGS_SECTION "[Settings]"
 #define SETTINGS_SECTION_IMGUI "# Dear ImGui"
-#define SETTINGS_INIT_ERROR "Failed to read settings file! ({})"
-#define SETTINGS_PATH "settings.ini"
+#define SETTINGS_INIT_ERROR "Failed to read settings file: {}"
+#define SETTINGS_DEFAULT_ERROR "Failed to write default settings file: {}"
+#define SETTINGS_SAVE_ERROR "Failed to write settings file: {}"
+#define SETTINGS_SAVE_FINALIZE_ERROR "Failed to write settings file: {} ({})"
 #define SETTINGS_FLOAT_FORMAT "{:.3f}"
+#define SETTINGS_INIT_INFO "Initialized settings from: {}"
+#define SETTINGS_DEFAULT_INFO "Using default settings"
+#define SETTINGS_DIRECTORY_ERROR "Failed to create settings directory: {} ({})"
+#define SETTINGS_SAVE_INFO "Saved settings to: {}"
+
+#define SETTINGS_FOLDER "anm2ed"
+#define SETTINGS_PATH "settings.ini"
+#define SETTINGS_TEMPORARY_EXTENSION ".tmp"
 
 struct SettingsEntry
 {
@@ -48,6 +58,7 @@ struct Settings
     bool changeIsVisible{};
     bool changeIsInterpolated{};
     s32 changeNumberFrames = 1;
+    f32 scaleValue = 1.0f;
     bool previewIsAxes = true;
     bool previewIsGrid = true;
     bool previewIsRootTransform = false;
@@ -64,11 +75,11 @@ struct Settings
     vec4 previewAxesColor = {1.0, 1.0, 1.0, 0.125};
     vec4 previewBackgroundColor = {0.113, 0.184, 0.286, 1.0};
     ivec2 generateStartPosition = {0, 0};
-    ivec2 generateFrameSize = {64, 64};
+    ivec2 generateSize = {64, 64};
     ivec2 generatePivot = {32, 32};
     s32 generateRows = 4;
     s32 generateColumns = 4;
-    s32 generateFrameCount = 16;
+    s32 generateCount = 16;
     s32 generateDelay = 1;
     bool editorIsGrid = true;
     bool editorIsGridSnap = true;
@@ -89,7 +100,7 @@ struct Settings
     s32 renderType = RENDER_PNG;
     std::string renderPath = ".";
     std::string renderFormat = "{}.png";
-    std::string ffmpegPath = "/usr/bin/ffmpeg";
+    std::string ffmpegPath{};
 }; 
 
 const SettingsEntry SETTINGS_ENTRIES[] =
@@ -121,6 +132,7 @@ const SettingsEntry SETTINGS_ENTRIES[] =
     {"changeIsVisible", TYPE_BOOL, offsetof(Settings, changeIsVisibleSet)},
     {"changeIsInterpolated", TYPE_BOOL, offsetof(Settings, changeIsInterpolatedSet)},
     {"changeNumberFrames", TYPE_INT, offsetof(Settings, changeNumberFrames)},
+    {"scaleValue", TYPE_FLOAT, offsetof(Settings, scaleValue)},
     {"previewIsAxes", TYPE_BOOL, offsetof(Settings, previewIsAxes)},
     {"previewIsGrid", TYPE_BOOL, offsetof(Settings, previewIsGrid)},
     {"previewIsRootTransform", TYPE_BOOL, offsetof(Settings, previewIsRootTransform)},
@@ -136,12 +148,12 @@ const SettingsEntry SETTINGS_ENTRIES[] =
     {"previewGridColor", TYPE_VEC4, offsetof(Settings, previewGridColor)},
     {"previewAxesColor", TYPE_VEC4, offsetof(Settings, previewAxesColor)},
     {"previewBackgroundColor", TYPE_VEC4, offsetof(Settings, previewBackgroundColor)},
-    {"generateStartPosition", TYPE_VEC2, offsetof(Settings, generateStartPosition)},
-    {"generateFrameSize", TYPE_VEC2, offsetof(Settings, generateFrameSize)},
-    {"generatePivot", TYPE_VEC2, offsetof(Settings, generatePivot)},
+    {"generateStartPosition", TYPE_IVEC2, offsetof(Settings, generateStartPosition)},
+    {"generateSize", TYPE_IVEC2, offsetof(Settings, generateSize)},
+    {"generatePivot", TYPE_IVEC2, offsetof(Settings, generatePivot)},
     {"generateRows", TYPE_INT, offsetof(Settings, generateRows)},
     {"generateColumns", TYPE_INT, offsetof(Settings, generateColumns)},
-    {"generateFrameCount", TYPE_INT, offsetof(Settings, generateFrameCount)},
+    {"generateCount", TYPE_INT, offsetof(Settings, generateCount)},
     {"generateDelay", TYPE_INT, offsetof(Settings, generateDelay)},
     {"editorIsGrid", TYPE_BOOL, offsetof(Settings, editorIsGrid)},
     {"editorIsGridSnap", TYPE_BOOL, offsetof(Settings, editorIsGridSnap)},
@@ -166,5 +178,192 @@ const SettingsEntry SETTINGS_ENTRIES[] =
 };
 constexpr s32 SETTINGS_COUNT = (s32)std::size(SETTINGS_ENTRIES);
 
+const std::string SETTINGS_DEFAULT = R"(
+[Settings]
+windowX=1920
+windowY=1080
+playbackIsLoop=true
+playbackIsClampPlayhead=false
+changeIsCrop=false
+changeIsSize=false
+changeIsPosition=false
+changeIsPivot=false
+changeIsScale=false
+changeIsRotation=false
+changeIsDelay=false
+changeIsTint=false
+changeIsColorOffset=false
+changeIsVisibleSet=false
+changeIsInterpolatedSet=false
+changeIsFromSelectedFrame=false
+changeCropX=0.000
+changeCropY=0.000
+changeSizeX=0.000
+changeSizeY=0.000
+changePositionX=0.000
+changePositionY=0.000
+changePivotX=0.000
+changePivotY=0.000
+changeScaleX=0.000
+changeScaleY=0.000
+changeRotation=0.000
+changeDelay=1
+changeTintR=0.000
+changeTintG=0.000
+changeTintB=0.000
+changeTintA=0.000
+changeColorOffsetR=0.000
+changeColorOffsetG=0.000
+changeColorOffsetB=0.000
+changeIsVisible=false
+changeIsInterpolated=false
+changeNumberFrames=1
+scaleValue=1.000
+previewIsAxes=true
+previewIsGrid=false
+previewIsRootTransform=true
+previewIsTriggers=false
+previewIsPivots=false
+previewIsTargets=true
+previewIsBorder=false
+previewOverlayTransparency=255.000
+previewZoom=400.000
+previewPanX=0.000
+previewPanY=0.000
+previewGridSizeX=32
+previewGridSizeY=32
+previewGridOffsetX=0
+previewGridOffsetY=0
+previewGridColorR=1.000
+previewGridColorG=1.000
+previewGridColorB=1.000
+previewGridColorA=0.125
+previewAxesColorR=1.000
+previewAxesColorG=1.000
+previewAxesColorB=1.000
+previewAxesColorA=0.125
+previewBackgroundColorR=0.114
+previewBackgroundColorG=0.184
+previewBackgroundColorB=0.286
+previewBackgroundColorA=1.000
+generateStartPositionX=0.000
+generateStartPositionY=0.000
+generateSizeX=0.000
+generateSizeY=0.000
+generatePivotX=0.000
+generatePivotY=0.000
+generateRows=4
+generateColumns=4
+generateCount=16
+generateDelay=1
+editorIsGrid=true
+editorIsGridSnap=true
+editorIsBorder=true
+editorZoom=400.000
+editorPanX=0.000
+editorPanY=0.000
+editorGridSizeX=32
+editorGridSizeY=32
+editorGridOffsetX=0
+editorGridOffsetY=0
+editorGridColorR=1.000
+editorGridColorG=1.000
+editorGridColorB=1.000
+editorGridColorA=0.125
+editorBackgroundColorR=0.113
+editorBackgroundColorG=0.183
+editorBackgroundColorB=0.286
+editorBackgroundColorA=1.000
+mergeType=1
+mergeIsDeleteAnimationsAfter=false
+bakeInterval=1
+bakeRoundScale=true
+bakeRoundRotation=true
+tool=0
+toolColorR=0.000
+toolColorG=0.000
+toolColorB=0.000
+toolColorA=1.000
+renderType=0
+renderPath=.
+renderFormat={}.png
+ffmpegPath=/usr/bin/ffmpeg
+
+# Dear ImGui
+[Window][## Window]
+Pos=0,32
+Size=1918,1032
+Collapsed=0
+
+[Window][Debug##Default]
+Pos=60,60
+Size=400,400
+Collapsed=0
+
+[Window][Tools]
+Pos=8,40
+Size=39,654
+Collapsed=0
+DockId=0x0000000B,0
+
+[Window][Animations]
+Pos=1452,388
+Size=458,306
+Collapsed=0
+DockId=0x0000000A,0
+
+[Window][Events]
+Pos=1025,348
+Size=425,346
+Collapsed=0
+DockId=0x00000008,0
+
+[Window][Spritesheets]
+Pos=1452,40
+Size=458,346
+Collapsed=0
+DockId=0x00000009,0
+
+[Window][Animation Preview]
+Pos=49,40
+Size=974,654
+Collapsed=0
+DockId=0x0000000C,0
+
+[Window][Spritesheet Editor]
+Pos=49,40
+Size=974,654
+Collapsed=0
+DockId=0x0000000C,1
+
+[Window][Timeline]
+Pos=8,696
+Size=1902,360
+Collapsed=0
+DockId=0x00000004,0
+
+[Window][Frame Properties]
+Pos=1025,40
+Size=425,306
+Collapsed=0
+DockId=0x00000007,0
+
+[Docking][Data]
+DockSpace         ID=0xFC02A410 Window=0x0E46F4F7 Pos=8,40 Size=1902,1016 Split=Y
+  DockNode        ID=0x00000003 Parent=0xFC02A410 SizeRef=1902,654 Split=X
+    DockNode      ID=0x00000001 Parent=0x00000003 SizeRef=1442,1016 Split=X Selected=0x024430EF
+      DockNode    ID=0x00000005 Parent=0x00000001 SizeRef=1015,654 Split=X Selected=0x024430EF
+        DockNode  ID=0x0000000B Parent=0x00000005 SizeRef=39,654 Selected=0x18A5FDB9
+        DockNode  ID=0x0000000C Parent=0x00000005 SizeRef=974,654 CentralNode=1 Selected=0x024430EF
+      DockNode    ID=0x00000006 Parent=0x00000001 SizeRef=425,654 Split=Y Selected=0x754E368F
+        DockNode  ID=0x00000007 Parent=0x00000006 SizeRef=631,306 Selected=0x754E368F
+        DockNode  ID=0x00000008 Parent=0x00000006 SizeRef=631,346 Selected=0x8A65D963
+    DockNode      ID=0x00000002 Parent=0x00000003 SizeRef=458,1016 Split=Y Selected=0x4EFD0020
+      DockNode    ID=0x00000009 Parent=0x00000002 SizeRef=634,346 Selected=0x4EFD0020
+      DockNode    ID=0x0000000A Parent=0x00000002 SizeRef=634,306 Selected=0xC1986EE2
+  DockNode        ID=0x00000004 Parent=0xFC02A410 SizeRef=1902,360 Selected=0x4F89F0DC
+)";
+
 void settings_save(Settings* self);
 void settings_init(Settings* self);
+std::string settings_path_get(void);

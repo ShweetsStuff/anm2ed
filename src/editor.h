@@ -34,7 +34,7 @@ struct Editor
     GLuint textureVBO;
     GLuint borderVAO;
     GLuint borderVBO;
-    s32 spritesheetID = -1;
+    s32 spritesheetID = ID_NONE;
 };
 
 void editor_init(Editor* self, Anm2* anm2, Anm2Reference* reference, Resources* resources,  Settings* settings);

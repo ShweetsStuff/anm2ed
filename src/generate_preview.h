@@ -5,6 +5,9 @@
 #include "settings.h"
 #include "canvas.h"
 
+#define GENERATE_PREVIEW_TIME_MIN 0.0f
+#define GENERATE_PREVIEW_TIME_MAX 1.0f
+
 const vec2 GENERATE_PREVIEW_SIZE = {325, 215};
 
 struct GeneratePreview

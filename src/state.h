@@ -32,6 +32,7 @@ struct State
 	Dialog dialog;
 	Editor editor;
 	Preview preview;
+	GeneratePreview generatePreview;
     Anm2 anm2;
 	Anm2Reference reference;
 	Resources resources;
@@ -43,9 +44,6 @@ struct State
 	u64 lastTick{};
 	u64 tick{};
 	bool isRunning = true;
-
-	bool is_last_action() const { return !lastAction.empty(); }
-	bool is_argument() const { return !argument.empty(); }
 }; 
 
 void init(State* state);

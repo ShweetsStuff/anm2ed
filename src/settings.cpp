@@ -72,6 +72,14 @@ static void _settings_setting_load(Settings* self, const std::string& line)
     }
 }
 
+std::string settings_path_get(void)
+{
+    char* path = SDL_GetPrefPath("", SETTINGS_FOLDER);
+    std::string filePath = std::string(path) + SETTINGS_PATH;
+    SDL_free(path);
+    return filePath;
+}
+
 static void _settings_setting_write(Settings* self, std::ostream& out, SettingsEntry entry)
 {
     u8* selfPointer = (u8*)self;
@@ -136,59 +144,119 @@ static void _settings_setting_write(Settings* self, std::ostream& out, SettingsE
 
 void settings_save(Settings* self)
 {
-    std::ifstream input(SETTINGS_PATH);
-    std::string oldContents;
+    const std::string path = settings_path_get();
+    const std::filesystem::path filesystemPath(path);
+    const std::filesystem::path directory = filesystemPath.parent_path();
 
-    if (!input)
+    if (!directory.empty()) 
     {
-        log_error(std::format(SETTINGS_INIT_ERROR, SETTINGS_PATH));
+        std::error_code errorCode;
+        std::filesystem::create_directories(directory, errorCode);
+        if (errorCode) 
+        {
+            log_error(std::format(SETTINGS_DIRECTORY_ERROR, directory.string(), errorCode.message()));
+            return;
+        }
+    }
+
+    std::string data;
+    if (std::filesystem::exists(filesystemPath)) 
+    {
+        if (std::ifstream in(path, std::ios::binary); in)
+            data.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+    }
+
+    std::filesystem::path temp = filesystemPath;
+    temp += SETTINGS_TEMPORARY_EXTENSION;
+
+    std::ofstream out(temp, std::ios::binary | std::ios::trunc);
+    if (!out) 
+    {
+        log_error(std::format(SETTINGS_INIT_ERROR, temp.string()));
         return;
     }
 
-    oldContents.assign((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
-    input.close();
-
-    std::ofstream output(SETTINGS_PATH);
-
-    if (!output)
-    {
-        log_error(std::format(SETTINGS_INIT_ERROR, SETTINGS_PATH));
-        return;
-    }
-
-    output << SETTINGS_SECTION << "\n";
-
+    out << SETTINGS_SECTION << "\n";
     for (s32 i = 0; i < SETTINGS_COUNT; i++)
-        _settings_setting_write(self, output, SETTINGS_ENTRIES[i]);
+        _settings_setting_write(self, out, SETTINGS_ENTRIES[i]);
 
-    output << "\n" << SETTINGS_SECTION_IMGUI << "\n";
-    output << oldContents;
+    out << "\n" << SETTINGS_SECTION_IMGUI << "\n";
+    out << data;
 
-    output.close();
+    out.flush();
+
+    if (!out.good()) 
+    {
+        log_error(std::format(SETTINGS_SAVE_ERROR, temp.string()));
+        return;
+    }
+
+    out.close();
+
+    std::error_code errorCode;
+    std::filesystem::rename(temp, filesystemPath, errorCode);
+    if (errorCode) 
+    {
+        // Windows can block rename if target exists; try remove+rename
+        std::filesystem::remove(filesystemPath, errorCode);
+        errorCode = {};
+        std::filesystem::rename(temp, filesystemPath, errorCode);
+        if (errorCode) 
+        {
+            log_error(std::format(SETTINGS_SAVE_FINALIZE_ERROR, filesystemPath.string(), errorCode.message()));
+            std::filesystem::remove(temp);
+            return;
+        }
+    }
+
+    log_info(std::format(SETTINGS_SAVE_INFO, path));
 }
 
 void settings_init(Settings* self)
 {
-    std::ifstream file(SETTINGS_PATH);
+    const std::string path = settings_path_get();
+    std::ifstream file(path, std::ios::binary);
+    std::istream* in = nullptr;
+    std::istringstream defaultSettings;
     
-    if (!file)
+    if (file)
     {
-        log_error(std::format(SETTINGS_INIT_ERROR, SETTINGS_PATH));
-        return;
+        log_info(std::format(SETTINGS_INIT_INFO, path));
+        in = &file; 
+    }
+    else
+    {
+        log_error(std::format(SETTINGS_INIT_ERROR, path));
+        log_info(SETTINGS_DEFAULT_INFO);
+        defaultSettings.str(SETTINGS_DEFAULT);
+        in = &defaultSettings;
     }
 
     std::string line;
     bool inSettingsSection = false;
 
-    while (std::getline(file, line))
-    {
+    while (std::getline(*in, line)) 
+    { 
         if (line == SETTINGS_SECTION)
-        {
-            inSettingsSection = true;
-            continue;
-        }
-
+        { 
+            inSettingsSection = true; 
+            continue; 
+        } 
         if (line == SETTINGS_SECTION_IMGUI) break; 
-        if (inSettingsSection) _settings_setting_load(self, line);
+        if (inSettingsSection) _settings_setting_load(self, line); 
+    }
+
+    // Save default settings
+    if (!file) 
+    {
+        std::ofstream out(path, std::ios::binary | std::ios::trunc);
+        if (out) 
+        {
+            out << SETTINGS_DEFAULT;
+            out.flush();
+            log_info(std::format(SETTINGS_SAVE_INFO, path));
+        } 
+        else
+            log_error(std::format(SETTINGS_DEFAULT_ERROR, path));
     }
 }

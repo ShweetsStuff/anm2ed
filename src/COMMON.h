@@ -23,7 +23,9 @@
 #include <ranges>                      
 #include <string>
 #include <unordered_set>                      
-#include <vector>                      
+#include <vector>                  
+
+
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -123,6 +125,65 @@ static inline bool string_to_bool(const std::string& string)
     return lower == "true";
 }
 
+static inline std::string path_canonical_resolve
+(
+    const std::string& inputPath,
+    const std::string& basePath = std::filesystem::current_path().string()
+)
+{
+    auto strings_equal_ignore_case = [](std::string a, std::string b) {
+        auto to_lower = [](unsigned char c) { return static_cast<char>(std::tolower(c)); };
+        std::transform(a.begin(), a.end(), a.begin(), to_lower);
+        std::transform(b.begin(), b.end(), b.begin(), to_lower);
+        return a == b;
+    };
+
+    std::string sanitized = inputPath;
+    std::replace(sanitized.begin(), sanitized.end(), '\\', '/');
+
+    std::filesystem::path normalizedPath = sanitized;
+    std::filesystem::path absolutePath = normalizedPath.is_absolute()
+        ? normalizedPath
+        : (std::filesystem::path(basePath) / normalizedPath);
+
+    std::error_code error;
+    if (std::filesystem::exists(absolutePath, error)) {
+        std::error_code canonicalError;
+        std::filesystem::path canonicalPath = std::filesystem::weakly_canonical(absolutePath, canonicalError);
+        return (canonicalError ? absolutePath : canonicalPath).generic_string();
+    }
+
+    std::filesystem::path resolvedPath = absolutePath.root_path();
+    std::filesystem::path remainingPath = absolutePath.relative_path();
+
+    for (const std::filesystem::path& segment : remainingPath) {
+        std::filesystem::path candidatePath = resolvedPath / segment;
+        if (std::filesystem::exists(candidatePath, error)) {
+            resolvedPath = candidatePath;
+            continue;
+        }
+
+        bool matched = false;
+        if (std::filesystem::exists(resolvedPath, error) && std::filesystem::is_directory(resolvedPath, error)) {
+            for (const auto& directoryEntry : std::filesystem::directory_iterator(resolvedPath, error)) {
+                if (strings_equal_ignore_case(directoryEntry.path().filename().string(), segment.string())) {
+                    resolvedPath = directoryEntry.path();
+                    matched = true;
+                    break;
+                }
+            }
+        }
+        if (!matched) return sanitized; 
+    }
+
+    if (!std::filesystem::exists(resolvedPath, error))
+        return sanitized;
+
+    std::error_code canonicalError;
+    std::filesystem::path canonicalPath = std::filesystem::weakly_canonical(resolvedPath, canonicalError);
+    return (canonicalError ? resolvedPath : canonicalPath).generic_string();
+};
+
 static inline std::string working_directory_from_file_set(const std::string& path)
 {
     std::filesystem::path filePath = path;
@@ -138,13 +199,20 @@ static inline std::string path_extension_change(const std::string& path, const s
     return filePath.string();
 }
 
+static inline bool path_is_extension(const std::string& path, const std::string& extension)
+{
+    auto e = std::filesystem::path(path).extension().string();
+    std::transform(e.begin(), e.end(), e.begin(), ::tolower);
+    return e == ("." + extension);
+}
+
 static inline bool path_exists(const std::filesystem::path& pathCheck)
 {
     std::error_code errorCode;
     return std::filesystem::exists(pathCheck, errorCode) && ((void)std::filesystem::status(pathCheck, errorCode), !errorCode);
 }
 
-static inline bool path_valid(const std::filesystem::path& pathCheck)
+static inline bool path_is_valid(const std::filesystem::path& pathCheck)
 {
     namespace fs = std::filesystem;
     std::error_code ec;

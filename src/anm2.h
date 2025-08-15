@@ -20,6 +20,9 @@
 #define ANM2_WRITE_INFO "Wrote anm2 to file: {}"
 #define ANM2_CREATED_ON_FORMAT "%d-%B-%Y %I:%M:%S %p"
 
+#define ANM2_EXTENSION "anm2"
+#define ANM2_SPRITESHEET_EXTENSION "png"
+
 /* Elements */
 #define ANM2_ELEMENT_LIST \
     X(ANIMATED_ACTOR,     "AnimatedActor")     \
@@ -151,7 +154,7 @@ struct Anm2Frame
 {
 	bool isVisible = true;
 	bool isInterpolated = false;
-	f32 rotation = 1.0f;
+	f32 rotation{};
 	s32 delay = ANM2_FRAME_DELAY_MIN;
     s32 atFrame = INDEX_NONE;
     s32 eventID = ID_NONE;
@@ -159,7 +162,7 @@ struct Anm2Frame
 	vec2 pivot{};
 	vec2 position{};
 	vec2 size{};
-	vec2 scale{};
+	vec2 scale = {100, 100};
 	vec3 offsetRGB{};
 	vec4 tintRGBA = {1.0f, 1.0f, 1.0f, 1.0f};
 };
@@ -269,7 +272,7 @@ Anm2Animation* anm2_animation_from_reference(Anm2* self, Anm2Reference* referenc
 Anm2Item* anm2_item_from_reference(Anm2* self, Anm2Reference* reference);
 Anm2Frame* anm2_frame_from_reference(Anm2* self, Anm2Reference* reference);
 s32 anm2_frame_index_from_time(Anm2* self, Anm2Reference reference, f32 time);
-Anm2Frame* anm2_frame_add(Anm2* self, Anm2Frame* frame, Anm2Reference* reference, s32 time);
+Anm2Frame* anm2_frame_add(Anm2* self, Anm2Frame* frame, Anm2Reference* reference, s32 time = 0.0f);
 void anm2_frame_erase(Anm2* self, Anm2Reference* reference);
 void anm2_frame_from_time(Anm2* self, Anm2Frame* frame, Anm2Reference reference, f32 time);
 void anm2_reference_clear(Anm2Reference* self);
@@ -280,3 +283,5 @@ void anm2_animation_length_set(Anm2Animation* self);
 void anm2_animation_merge(Anm2* self, s32 animationID, const std::vector<s32>& mergeIDs, Anm2MergeType type);
 void anm2_frame_bake(Anm2* self, Anm2Reference* reference, s32 interval, bool isRoundScale, bool isRoundRotation);
 void anm2_item_frame_set(Anm2* self, Anm2Reference* reference, const Anm2FrameChange& change, Anm2ChangeType type, s32 start, s32 count);
+void anm2_scale(Anm2* self, f32 scale);
+void anm2_generate_from_grid(Anm2* self, Anm2Reference* reference, vec2 startPosition, vec2 size, vec2 pivot, s32 columns, s32 count, s32 delay);

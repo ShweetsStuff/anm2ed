@@ -19,6 +19,34 @@ static bool _imgui_window_color_from_position_get(SDL_Window* self, const vec2& 
     return true;
 }
 
+static void _imgui_anm2_new(Imgui* self, const std::string& path)
+{
+	*self->reference = Anm2Reference{};
+	resources_textures_free(self->resources);
+	if (anm2_deserialize(self->anm2, self->resources, path))
+	{
+		window_title_from_path_set(self->window, path);
+		snapshots_reset(self->snapshots);
+		imgui_log_push(self, std::format(IMGUI_LOG_FILE_OPEN_FORMAT, path));
+	}
+	else
+		imgui_log_push(self, std::format(IMGUI_LOG_FILE_OPEN_FORMAT, path));
+}
+
+static void _imgui_spritesheet_add(Imgui* self, const std::string& path)
+{
+	std::filesystem::path workingPath = std::filesystem::current_path();
+	std::string anm2WorkingPath = working_directory_from_file_set(self->anm2->path);
+	std::string spritesheetPath = std::filesystem::relative(path, anm2WorkingPath);
+
+	s32 id = map_next_id_get(self->resources->textures);
+	self->anm2->spritesheets[id] = Anm2Spritesheet{};
+	self->anm2->spritesheets[id].path = spritesheetPath;
+	resources_texture_init(self->resources, spritesheetPath, id);
+	
+	std::filesystem::current_path(workingPath);
+}
+
 template<typename T>
 static void _imgui_clipboard_hovered_item_set(Imgui* self, const T& data)
 {
@@ -107,6 +135,7 @@ static void _imgui_item_pre(const ImguiItem& self, ImguiItemType type)
 		case IMGUI_INPUT_INT:
 		case IMGUI_INPUT_TEXT:
 		case IMGUI_DRAG_FLOAT:
+		case IMGUI_SLIDER_FLOAT:
 		case IMGUI_COLOR_EDIT:
 				ImGui::SetNextItemWidth(size.x);
 				break;
@@ -360,6 +389,8 @@ IMGUI_ITEM_VALUE_FUNCTION(_imgui_color_button, IMGUI_COLOR_BUTTON, vec4, ImGui::
 IMGUI_ITEM_VALUE_FUNCTION(_imgui_checkbox, IMGUI_CHECKBOX, bool, ImGui::Checkbox(self.label_get(), &value));
 IMGUI_ITEM_VALUE_CLAMP_FUNCTION(_imgui_input_int, IMGUI_INPUT_INT, s32, ImGui::InputInt(self.label.c_str(), &value, self.step, self.stepFast, self.flags));
 IMGUI_ITEM_VALUE_CLAMP_FUNCTION(_imgui_input_int2, IMGUI_INPUT_INT, ivec2, ImGui::InputInt2(self.label.c_str(), value_ptr(value), self.flags));
+IMGUI_ITEM_VALUE_CLAMP_FUNCTION(_imgui_input_float, IMGUI_INPUT_FLOAT, f32, ImGui::InputFloat(self.label.c_str(), &value, self.step, self.stepFast, self.format_get(), self.flags));
+IMGUI_ITEM_VALUE_FUNCTION(_imgui_slider_float, IMGUI_SLIDER_FLOAT, f32, ImGui::SliderFloat(self.label_get(), &value, self.min, self.max, self.format_get(), self.flags));
 IMGUI_ITEM_VALUE_FUNCTION(_imgui_drag_float, IMGUI_DRAG_FLOAT, f32, ImGui::DragFloat(self.label_get(), &value, self.speed, self.min, self.max, self.format_get()));
 IMGUI_ITEM_VALUE_FUNCTION(_imgui_drag_float2, IMGUI_DRAG_FLOAT, vec2, ImGui::DragFloat2(self.label_get(), value_ptr(value), self.speed, self.min, self.max, self.format_get()));
 IMGUI_ITEM_VALUE_FUNCTION(_imgui_color_edit3, IMGUI_COLOR_EDIT, vec3, ImGui::ColorEdit3(self.label_get(), value_ptr(value), self.flags));
@@ -520,6 +551,24 @@ static bool _imgui_option_popup(ImguiItem self, Imgui* imgui)
 	}
 
 	return false;
+}
+
+static void _imgui_context_menu(Imgui* self)
+{
+	if (!self->isContextualActionsEnabled) return;
+
+	
+	if (_imgui_is_window_hovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+		imgui_open_popup(IMGUI_CONTEXT_MENU.label_get());
+
+	if (imgui_begin_popup(IMGUI_CONTEXT_MENU.label_get(), self))
+	{
+		_imgui_selectable(IMGUI_CUT, self);			
+		_imgui_selectable(IMGUI_COPY, self);			
+		_imgui_selectable(IMGUI_PASTE.copy({self->clipboard->item.type == CLIPBOARD_NONE}), self);
+
+		imgui_end_popup(self);
+	}
 }
 
 static void _imgui_spritesheet_editor_set(Imgui* self, s32 id)
@@ -1036,6 +1085,11 @@ static void _imgui_timeline(Imgui* self)
 
 		timeline_item_frames(Anm2Reference(animationID, ANM2_TRIGGERS), index);
 
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, defaultItemSpacing);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, defaultWindowPadding);
+		_imgui_context_menu(self);
+		ImGui::PopStyleVar(2);
+		
 		_imgui_end_child(); // IMGUI_TIMELINE_FRAMES_CHILD
 	};
 
@@ -1056,6 +1110,7 @@ static void _imgui_timeline(Imgui* self)
 	_imgui_end_child(); // IMGUI_TIMELINE_CHILD
 
 	Anm2Frame* frame = anm2_frame_from_reference(self->anm2, self->reference);
+	Anm2Item* item = anm2_item_from_reference(self->anm2, self->reference);
 	_imgui_begin_child(IMGUI_TIMELINE_ITEM_FOOTER_CHILD, self);
 	_imgui_button(IMGUI_TIMELINE_ADD_ITEM, self);
 
@@ -1066,7 +1121,7 @@ static void _imgui_timeline(Imgui* self)
 		imgui_end_popup(self);
 	}
 
-	if (_imgui_button(IMGUI_TIMELINE_REMOVE_ITEM.copy({itemType == ANM2_NONE || itemType == ANM2_ROOT || itemType == ANM2_TRIGGERS}), self))
+	if (_imgui_button(IMGUI_TIMELINE_REMOVE_ITEM.copy({!item || itemType == ANM2_ROOT || itemType == ANM2_TRIGGERS}), self))
 	{
 		switch (itemType)
 		{
@@ -1098,8 +1153,13 @@ static void _imgui_timeline(Imgui* self)
 		self->preview->isPlaying = !self->preview->isPlaying;
 	}
 
-	if (_imgui_button(IMGUI_ADD_FRAME, self))
-		anm2_frame_add(self->anm2, nullptr, self->reference, (s32)time);
+	if (_imgui_button(IMGUI_ADD_FRAME.copy({!item}), self))
+	{
+		Anm2Reference frameReference = *self->reference;
+		frameReference.frameIndex = std::clamp(frameReference.frameIndex, 0, (s32)item->frames.size() - 1);
+		Anm2Frame* addFrame = anm2_frame_from_reference(self->anm2, &frameReference);
+		anm2_frame_add(self->anm2, addFrame, &frameReference);
+	}
 
 	if(_imgui_button(IMGUI_REMOVE_FRAME.copy({!frame}), self))
 	{
@@ -1163,23 +1223,18 @@ static void _imgui_taskbar(Imgui* self)
 	
 	if (imgui_begin_popup(IMGUI_FILE.popup, self))
 	{
-		_imgui_selectable(IMGUI_NEW, self); 	// imgui_file_new
-		_imgui_selectable(IMGUI_OPEN, self); 	// imgui_file_open
-	
-		_imgui_selectable(IMGUI_SAVE, self); 	// imgui_file_save
-		_imgui_selectable(IMGUI_SAVE_AS, self); // imgui_file_save_as
-
+		_imgui_selectable(IMGUI_NEW, self);
+		_imgui_selectable(IMGUI_OPEN, self);
+		_imgui_selectable(IMGUI_SAVE, self);
+		_imgui_selectable(IMGUI_SAVE_AS, self);
+		_imgui_selectable(IMGUI_EXPLORE_ANM2_LOCATION, self);
+		_imgui_selectable(IMGUI_EXIT, self);
 		imgui_end_popup(self);
 	}
 
 	if (self->dialog->isSelected && self->dialog->type == DIALOG_ANM2_OPEN)
 	{
-		*self->reference = Anm2Reference{};
-		resources_textures_free(self->resources);
-		anm2_deserialize(self->anm2, self->resources, self->dialog->path);
-		window_title_from_path_set(self->window, self->dialog->path);
-		snapshots_reset(self->snapshots);
-		imgui_log_push(self, std::format(IMGUI_LOG_FILE_OPEN_FORMAT, self->dialog->path));
+		_imgui_anm2_new(self, self->dialog->path);
 		dialog_reset(self->dialog);
 	}			
 
@@ -1190,13 +1245,21 @@ static void _imgui_taskbar(Imgui* self)
 		imgui_log_push(self, std::format(IMGUI_LOG_FILE_SAVE_FORMAT, self->dialog->path));
 		dialog_reset(self->dialog);
 	}
-	
+
+	if (self->isTryQuit) imgui_open_popup(IMGUI_EXIT_CONFIRMATION.label);
+
+	if (_imgui_option_popup(IMGUI_EXIT_CONFIRMATION, self))
+		self->isQuit = true;
+	else
+		self->isTryQuit = false;
+
 	_imgui_selectable(IMGUI_WIZARD.copy({}), self);
 	
 	if (imgui_begin_popup(IMGUI_WIZARD.popup, self))
 	{
 		_imgui_selectable(IMGUI_GENERATE_ANIMATION_FROM_GRID.copy({!item || (self->reference->itemType != ANM2_LAYER)}), self);
 		_imgui_selectable(IMGUI_CHANGE_ALL_FRAME_PROPERTIES.copy({!item}), self);
+		_imgui_selectable(IMGUI_SCALE_ANM2.copy({self->anm2->animations.empty()}), self);
 		_imgui_selectable(IMGUI_RENDER_ANIMATION.copy({!animation}), self);
 	
 		imgui_end_popup(self);
@@ -1204,27 +1267,44 @@ static void _imgui_taskbar(Imgui* self)
 
 	if (imgui_begin_popup_modal(IMGUI_GENERATE_ANIMATION_FROM_GRID.popup, self, IMGUI_GENERATE_ANIMATION_FROM_GRID.popupSize))
 	{
+		static auto& startPosition = self->settings->generateStartPosition;
+		static auto& size = self->settings->generateSize;
+		static auto& pivot = self->settings->generatePivot;
+		static auto& rows = self->settings->generateRows;
+		static auto& columns = self->settings->generateColumns;
+		static auto& count = self->settings->generateCount;
+		static auto& delay = self->settings->generateDelay;
+		static auto& time = self->generatePreview->time;
+
 		_imgui_begin_child(IMGUI_GENERATE_ANIMATION_FROM_GRID_OPTIONS_CHILD, self);
-		_imgui_input_int2(IMGUI_GENERATE_ANIMATION_FROM_GRID_START_POSITION, self, self->settings->generateStartPosition);
-		_imgui_input_int2(IMGUI_GENERATE_ANIMATION_FROM_GRID_FRAME_SIZE, self, self->settings->generateFrameSize);
-		_imgui_input_int2(IMGUI_GENERATE_ANIMATION_FROM_GRID_PIVOT, self, self->settings->generatePivot);
-		_imgui_input_int(IMGUI_GENERATE_ANIMATION_FROM_GRID_ROWS, self, self->settings->generateRows);
-		_imgui_input_int(IMGUI_GENERATE_ANIMATION_FROM_GRID_COLUMNS, self, self->settings->generateColumns);
-		_imgui_input_int
-		(
-			IMGUI_GENERATE_ANIMATION_FROM_GRID_FRAME_COUNT.copy({.max = self->settings->generateRows * self->settings->generateColumns}),
-			self, self->settings->generateFrameCount
-		);
-		_imgui_input_int(IMGUI_GENERATE_ANIMATION_FROM_GRID_DELAY, self, self->settings->generateDelay);
+		_imgui_input_int2(IMGUI_GENERATE_ANIMATION_FROM_GRID_START_POSITION, self, startPosition);
+		_imgui_input_int2(IMGUI_GENERATE_ANIMATION_FROM_GRID_SIZE, self, size);
+		_imgui_input_int2(IMGUI_GENERATE_ANIMATION_FROM_GRID_PIVOT, self, pivot);
+		_imgui_input_int(IMGUI_GENERATE_ANIMATION_FROM_GRID_ROWS, self, rows);
+		_imgui_input_int(IMGUI_GENERATE_ANIMATION_FROM_GRID_COLUMNS, self, columns);
+		_imgui_input_int(IMGUI_GENERATE_ANIMATION_FROM_GRID_COUNT.copy({.max = rows * columns}), self, count);
+		_imgui_input_int(IMGUI_GENERATE_ANIMATION_FROM_GRID_DELAY, self, delay);
 		_imgui_end_child(); //IMGUI_GENERATE_ANIMATION_FROM_GRID_OPTIONS_CHILD 
 		
 		ImGui::SameLine();
 
 		_imgui_begin_child(IMGUI_GENERATE_ANIMATION_FROM_GRID_PREVIEW_CHILD, self);
+		
+		generate_preview_draw(self->generatePreview);
+		ImGui::Image(self->generatePreview->canvas.texture, GENERATE_PREVIEW_SIZE);
+
+		_imgui_begin_child(IMGUI_GENERATE_ANIMATION_FROM_GRID_SLIDER_CHILD, self);
+		_imgui_slider_float(IMGUI_GENERATE_ANIMATION_FROM_GRID_SLIDER, self, time);
+		_imgui_end_child(); // IMGUI_GENERATE_ANIMATION_FROM_GRID_SLIDER_CHILD
+
 		_imgui_end_child(); //IMGUI_GENERATE_ANIMATION_FROM_GRID_PREVIEW_CHILD 
 	
 		_imgui_begin_child(IMGUI_FOOTER_CHILD, self);
-		if (_imgui_button(IMGUI_GENERATE_ANIMATION_FROM_GRID_GENERATE, self)) imgui_close_current_popup(self);
+		if (_imgui_button(IMGUI_GENERATE_ANIMATION_FROM_GRID_GENERATE, self))
+		{
+			anm2_generate_from_grid(self->anm2, self->reference, startPosition, size, pivot, columns, count, delay);
+			imgui_close_current_popup(self);
+		}
 		if (_imgui_button(IMGUI_POPUP_CANCEL, self)) imgui_close_current_popup(self);
 		_imgui_end_child(); // IMGUI_FOOTER_CHILD
 
@@ -1316,6 +1396,24 @@ static void _imgui_taskbar(Imgui* self)
 		imgui_end_popup(self);
 	}
 
+	if (imgui_begin_popup_modal(IMGUI_SCALE_ANM2.popup, self, IMGUI_SCALE_ANM2.popupSize))
+	{
+		_imgui_begin_child(IMGUI_SCALE_ANM2_OPTIONS_CHILD, self);
+		_imgui_input_float(IMGUI_SCALE_ANM2_VALUE, self, self->settings->scaleValue);	
+		_imgui_end_child(); // IMGUI_SCALE_ANM2_OPTIONS_CHILD
+		
+		_imgui_begin_child(IMGUI_FOOTER_CHILD, self);
+		if (_imgui_button(IMGUI_SCALE_ANM2_SCALE, self)) 
+		{
+			anm2_scale(self->anm2, self->settings->scaleValue);
+			imgui_close_current_popup(self);
+		}
+		if (_imgui_button(IMGUI_POPUP_CANCEL, self)) imgui_close_current_popup(self);
+		_imgui_end_child(); // IMGUI_FOOTER_CHILD
+
+		imgui_end_popup(self);
+	}
+
 	if (imgui_begin_popup_modal(IMGUI_RENDER_ANIMATION.popup, self, IMGUI_RENDER_ANIMATION.popupSize))
 	{
 		_imgui_begin_child(IMGUI_RENDER_ANIMATION_CHILD, self);
@@ -1331,7 +1429,11 @@ static void _imgui_taskbar(Imgui* self)
 			}
 		}
 
-		if (self->dialog->isSelected && self->dialog->type == DIALOG_RENDER_PATH_SET)
+		if 
+		(
+			self->dialog->isSelected && 
+			(self->dialog->type == DIALOG_RENDER_PATH_SET || self->dialog->type == DIALOG_RENDER_DIRECTORY_SET)
+		)
 		{
 			self->settings->renderPath = self->dialog->path;
 			dialog_reset(self->dialog);
@@ -1356,24 +1458,33 @@ static void _imgui_taskbar(Imgui* self)
 		{
 			bool isRenderStart = true;
 
-			switch (self->settings->renderType)
+			if (!std::filesystem::exists(self->settings->ffmpegPath))
 			{
-				case RENDER_PNG:
-					if (!std::filesystem::is_directory(self->settings->renderPath))
-					{
-						imgui_log_push(self, IMGUI_LOG_RENDER_ANIMATION_DIRECTORY_ERROR);
-						isRenderStart = false;
-					}
-					break;
-				case RENDER_GIF:
-				case RENDER_WEBM:
-					if (!path_valid(self->settings->renderPath))
-					{
-						imgui_log_push(self, IMGUI_LOG_RENDER_ANIMATION_PATH_ERROR);
-						isRenderStart = false;
-					}
-				default:
-					break;
+				imgui_log_push(self, IMGUI_LOG_RENDER_ANIMATION_FFMPEG_PATH_ERROR);
+				isRenderStart = false;
+			}
+
+			if (isRenderStart)
+			{
+				switch (self->settings->renderType)
+				{
+					case RENDER_PNG:
+						if (!std::filesystem::is_directory(self->settings->renderPath))
+						{
+							imgui_log_push(self, IMGUI_LOG_RENDER_ANIMATION_DIRECTORY_ERROR);
+							isRenderStart = false;
+						}
+						break;
+					case RENDER_GIF:
+					case RENDER_WEBM:
+						if (!path_is_valid(self->settings->renderPath))
+						{
+							imgui_log_push(self, IMGUI_LOG_RENDER_ANIMATION_PATH_ERROR);
+							isRenderStart = false;
+						}
+					default:
+						break;
+				}
 			}
 
 			if (isRenderStart)
@@ -1576,6 +1687,8 @@ static void _imgui_animations(Imgui* self)
 		
 		ImGui::PopID();
 	};
+
+	_imgui_context_menu(self);
 
 	_imgui_end_child(); // animationsChild
 	
@@ -1800,7 +1913,7 @@ static void _imgui_spritesheets(Imgui* self)
 		Texture* texture = &self->resources->textures[id];
 		bool isContains = selectedIDs.contains(id);
 		
-		_imgui_begin_child(IMGUI_SPRITESHEET_CHILD.copy({.size = {windowSize.x, IMGUI_SPRITESHEET_CHILD.size.y}}), self);
+		_imgui_begin_child(IMGUI_SPRITESHEET_CHILD, self);
 
 		if (_imgui_checkbox(IMGUI_SPRITESHEET_SELECTED, self, isContains))
 		{
@@ -1864,17 +1977,8 @@ static void _imgui_spritesheets(Imgui* self)
 
 	if (self->dialog->isSelected && self->dialog->type == DIALOG_SPRITESHEET_ADD)
 	{
-		std::filesystem::path workingPath = std::filesystem::current_path();
-		std::string anm2WorkingPath = working_directory_from_file_set(self->anm2->path);
-		std::string spritesheetPath = std::filesystem::relative(self->dialog->path, anm2WorkingPath);
-	
-		s32 id = map_next_id_get(self->resources->textures);
-		self->anm2->spritesheets[id] = Anm2Spritesheet{};
-		self->anm2->spritesheets[id].path = spritesheetPath;
-		resources_texture_init(self->resources, spritesheetPath, id);
+		_imgui_spritesheet_add(self, self->dialog->path);
 		dialog_reset(self->dialog);
-		
-		std::filesystem::current_path(workingPath);
 	}
 		
 	if (_imgui_button(IMGUI_SPRITESHEETS_RELOAD.copy({selectedIDs.empty()}), self))
@@ -1935,10 +2039,10 @@ static void _imgui_spritesheets(Imgui* self)
 	{
 		for (auto& id : selectedIDs)
 		{
-			std::filesystem::path workingPath = std::filesystem::current_path();
-			working_directory_from_file_set(self->anm2->path);
 			Anm2Spritesheet* spritesheet = &self->anm2->spritesheets[id];
 			Texture* texture = &self->resources->textures[id];
+			std::filesystem::path workingPath = std::filesystem::current_path();
+			working_directory_from_file_set(self->anm2->path);
 			texture_from_gl_write(texture, spritesheet->path);
 			imgui_log_push(self, std::format(IMGUI_LOG_SPRITESHEET_SAVE_FORMAT, id, spritesheet->path));
 			std::filesystem::current_path(workingPath);
@@ -2064,7 +2168,7 @@ static void _imgui_animation_preview(Imgui* self)
 	const bool isDown = ImGui::IsKeyPressed(IMGUI_INPUT_DOWN);
 	const bool isMod = ImGui::IsKeyDown(IMGUI_INPUT_SHIFT);
 	const bool isZoomIn = ImGui::IsKeyDown(IMGUI_INPUT_ZOOM_IN);
-	const bool isZoomOut = ImGui::IsKeyDown(IMGUI_INPUT_ZOOM_IN);
+	const bool isZoomOut = ImGui::IsKeyDown(IMGUI_INPUT_ZOOM_OUT);
 	const bool isMouseClick = ImGui::IsMouseClicked(ImGuiMouseButton_Left);
 	const bool isMouseDown = ImGui::IsMouseDown(ImGuiMouseButton_Left);
 	const bool isMouseMiddleDown = ImGui::IsMouseDown(ImGuiMouseButton_Middle);
@@ -2194,7 +2298,7 @@ static void _imgui_spritesheet_editor(Imgui* self)
 	const bool isMouseDown = ImGui::IsMouseDown(ImGuiMouseButton_Left);
 	const bool isMouseMiddleDown = ImGui::IsMouseDown(ImGuiMouseButton_Middle);
 	const bool isZoomIn = ImGui::IsKeyDown(IMGUI_INPUT_ZOOM_IN);
-	const bool isZoomOut = ImGui::IsKeyDown(IMGUI_INPUT_ZOOM_IN);
+	const bool isZoomOut = ImGui::IsKeyDown(IMGUI_INPUT_ZOOM_OUT);
 	const bool isMod = ImGui::IsKeyDown(IMGUI_INPUT_SHIFT);
 	const f32 mouseWheel = ImGui::GetIO().MouseWheel;
 	const ImVec2 mouseDelta = ImGui::GetIO().MouseDelta;
@@ -2358,22 +2462,6 @@ static void _imgui_log(Imgui* self)
   	}
 }
 
-static void _imgui_persistent(Imgui* self)
-{
-	if (!self->isContextualActionsEnabled) return;
-
-	if (ImGui::IsMouseClicked(ImGuiMouseButton_Right))
-		imgui_open_popup(IMGUI_CONTEXT_MENU.label_get());
-
-	if (imgui_begin_popup(IMGUI_CONTEXT_MENU.label_get(), self))
-	{
-		_imgui_selectable(IMGUI_CUT, self);			
-		_imgui_selectable(IMGUI_COPY, self);			
-		_imgui_selectable(IMGUI_PASTE.copy({self->clipboard->item.type == CLIPBOARD_NONE}), self);
-
-		imgui_end_popup(self);
-	}
-}
 
 static void _imgui_dock(Imgui* self)
 {
@@ -2408,6 +2496,7 @@ void imgui_init
     Anm2Reference* reference,
     Editor* editor,
     Preview* preview,
+    GeneratePreview* generatePreview,
     Settings* settings,
     Snapshots* snapshots,
     Clipboard* clipboard,
@@ -2423,6 +2512,7 @@ void imgui_init
 	self->reference = reference;
 	self->editor = editor;
 	self->preview = preview;
+	self->generatePreview = generatePreview;
 	self->settings = settings;
 	self->snapshots = snapshots;
 	self->clipboard = clipboard;
@@ -2441,7 +2531,7 @@ void imgui_init
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 	io.ConfigWindowsMoveFromTitleBarOnly = true;
 
-	ImGui::LoadIniSettingsFromDisk(SETTINGS_PATH);
+	ImGui::LoadIniSettingsFromDisk(settings_path_get().c_str());
 }
 
 void imgui_update(Imgui* self)
@@ -2453,7 +2543,6 @@ void imgui_update(Imgui* self)
 	_imgui_taskbar(self);
 	_imgui_dock(self);
 	_imgui_log(self);
-	_imgui_persistent(self);
 
 	if (self->isContextualActionsEnabled)
 	{
@@ -2483,15 +2572,20 @@ void imgui_update(Imgui* self)
 		
 		switch (event.type)
 		{
+			case SDL_EVENT_DROP_FILE:
+        	{
+            	const char* droppedFile = event.drop.data;
+            	
+				if (path_is_extension(droppedFile, ANM2_EXTENSION))  
+					_imgui_anm2_new(self, droppedFile);
+				else if (path_is_extension(droppedFile, ANM2_SPRITESHEET_EXTENSION))
+					_imgui_spritesheet_add(self, droppedFile);
+            	
+				break;
+			}
 			case SDL_EVENT_QUIT:
-				if (!self->snapshots->undoStack.is_empty())
-				{
-					if (imgui_is_popup_open(IMGUI_EXIT_CONFIRMATION.label_get()))
-						self->isQuit = true;
-					else
-						imgui_open_popup(IMGUI_EXIT_CONFIRMATION.label_get());
-				}
-				else
+				imgui_quit(self);
+				if (imgui_is_popup_open(IMGUI_EXIT_CONFIRMATION.popup))
 					self->isQuit = true;
 				break;
 			default:
@@ -2499,8 +2593,6 @@ void imgui_update(Imgui* self)
 		}
 	}
 
-	if (_imgui_option_popup(IMGUI_EXIT_CONFIRMATION, self))
-		self->isQuit = true;
 }
 
 void imgui_draw(void)
@@ -2513,7 +2605,6 @@ void imgui_free(void)
 {
 	ImGui_ImplSDL3_Shutdown();
 	ImGui_ImplOpenGL3_Shutdown();
-
-	ImGui::SaveIniSettingsToDisk(SETTINGS_PATH);
+	ImGui::SaveIniSettingsToDisk(settings_path_get().c_str());
 	ImGui::DestroyContext();
 }

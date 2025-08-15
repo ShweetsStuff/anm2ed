@@ -83,9 +83,9 @@ void preview_draw(Preview* self)
     ivec2& gridSize = self->settings->previewGridSize;
     ivec2& gridOffset = self->settings->previewGridOffset;
     vec4& gridColor = self->settings->previewGridColor;
-    f32& zoom = self->settings->previewZoom;
     GLuint& shaderLine = self->resources->shaders[SHADER_LINE];
     GLuint& shaderTexture = self->resources->shaders[SHADER_TEXTURE];
+    GLuint& shaderGrid = self->resources->shaders[SHADER_GRID];
     mat4 transform = canvas_transform_get(&self->canvas, self->settings->previewPan, self->settings->previewZoom, ORIGIN_CENTER);
  
     canvas_texture_set(&self->canvas);
@@ -95,7 +95,7 @@ void preview_draw(Preview* self)
     canvas_clear(self->settings->previewBackgroundColor);
     
     if (self->settings->previewIsGrid)
-        canvas_grid_draw(&self->canvas, shaderLine, transform, zoom, gridSize, gridOffset, gridColor);
+        canvas_grid_draw(&self->canvas, shaderGrid, transform, gridSize, gridOffset, gridColor);
 
     if (self->settings->previewIsAxes)
         canvas_axes_draw(&self->canvas, shaderLine, transform, self->settings->previewAxesColor);
@@ -136,20 +136,20 @@ void preview_draw(Preview* self)
             if (!frame.isVisible)
                 continue;
 
-            Texture* texture = map_find(self->resources->textures, self->anm2->layers[id].spritesheetID);
-
-            if (!texture || texture->isInvalid)
-                continue;
-
-            vec2 uvMin = frame.crop / vec2(texture->size);
-            vec2 uvMax = (frame.crop + frame.size) / vec2(texture->size);
-            f32 vertices[] = UV_VERTICES(uvMin, uvMax);
-
             mat4 model = quad_model_get(frame.size, frame.position, frame.pivot, frame.rotation, PERCENT_TO_UNIT(frame.scale));
             mat4 layerTransform = transform * (rootModel * model);
 
-            canvas_texture_draw(&self->canvas, shaderTexture, texture->id, layerTransform, vertices, frame.tintRGBA, frame.offsetRGB);
+            Texture* texture = map_find(self->resources->textures, self->anm2->layers[id].spritesheetID);
+           
+            if (texture && !texture->isInvalid)
+            {
+                vec2 uvMin = frame.crop / vec2(texture->size);
+                vec2 uvMax = (frame.crop + frame.size) / vec2(texture->size);
+                f32 vertices[] = UV_VERTICES(uvMin, uvMax);
 
+                canvas_texture_draw(&self->canvas, shaderTexture, texture->id, layerTransform, vertices, frame.tintRGBA, frame.offsetRGB);
+            }
+ 
             if (self->settings->previewIsBorder)
                 canvas_rect_draw(&self->canvas, shaderLine, layerTransform, PREVIEW_BORDER_COLOR);
 

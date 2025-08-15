@@ -17,6 +17,7 @@ void editor_draw(Editor* self)
     vec4& gridColor = self->settings->editorGridColor;
     GLuint& shaderLine = self->resources->shaders[SHADER_LINE];
     GLuint& shaderTexture = self->resources->shaders[SHADER_TEXTURE];
+    GLuint& shaderGrid = self->resources->shaders[SHADER_GRID];
     mat4 transform = canvas_transform_get(&self->canvas, self->settings->editorPan, self->settings->editorZoom, ORIGIN_TOP_LEFT);
     
     canvas_texture_set(&self->canvas);
@@ -48,7 +49,7 @@ void editor_draw(Editor* self)
     }
 
     if (self->settings->editorIsGrid)
-        canvas_grid_draw(&self->canvas, shaderLine, transform, self->settings->editorZoom, gridSize, gridOffset, gridColor);
+        canvas_grid_draw(&self->canvas, shaderGrid, transform, gridSize, gridOffset, gridColor);
 
     canvas_unbind();
 }

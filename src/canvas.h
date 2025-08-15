@@ -14,6 +14,7 @@
 
 static const vec2 CANVAS_GRID_SIZE = {3200, 1600};
 static const vec2 CANVAS_PIVOT_SIZE = {8, 8};
+static const vec2 CANVAS_SCALE_DEFAULT = {1.0f, 1.0f};
 
 const f32 CANVAS_AXIS_VERTICES[] = 
 {
@@ -21,6 +22,13 @@ const f32 CANVAS_AXIS_VERTICES[] =
     CANVAS_LINE_LENGTH, 0.0f,
     0.0f, -CANVAS_LINE_LENGTH,
     0.0f, CANVAS_LINE_LENGTH
+};
+
+const f32 CANVAS_GRID_VERTICES[] =
+{
+   -1.0f, -1.0f,
+    3.0f, -1.0f,
+   -1.0f,  3.0f
 };
 
 struct Canvas
@@ -41,13 +49,13 @@ struct Canvas
 };
 
 void canvas_init(Canvas* self, const vec2& size);
-mat4 canvas_transform_get(Canvas* self, vec2& pan, f32& zoom, OriginType origin);
+mat4 canvas_transform_get(Canvas* self, vec2 pan, f32 zoom, OriginType origin);
 void canvas_clear(vec4& color);
 void canvas_bind(Canvas* self);
 void canvas_viewport_set(Canvas* self);
 void canvas_unbind(void);
 void canvas_texture_set(Canvas* self);
-void canvas_grid_draw(Canvas* self, GLuint& shader, mat4& transform, f32& zoom, ivec2& size, ivec2& offset, vec4& color);
+void canvas_grid_draw(Canvas* self, GLuint& shader, mat4& transform, ivec2& size, ivec2& offset, vec4& color);
 void canvas_axes_draw(Canvas* self, GLuint& shader, mat4& transform, vec4& color);
 void canvas_rect_draw(Canvas* self, const GLuint& shader, const mat4& transform, const vec4& color);
 void canvas_free(Canvas* self);

@@ -217,6 +217,7 @@ enum ShaderType
 {
     SHADER_LINE,
     SHADER_TEXTURE,
+    SHADER_GRID,
     SHADER_COUNT
 };
 
@@ -259,14 +260,62 @@ void main()
 }
 )";
 
+const std::string SHADER_GRID_VERTEX = R"(
+#version 330 core
+layout ( location = 0 ) in vec2 i_position;
+out vec2 clip;
+
+void main() {
+    clip = i_position;
+    gl_Position = vec4(i_position, 0.0, 1.0);
+}
+)";
+
+const std::string SHADER_GRID_FRAGMENT = R"(
+#version 330 core
+in vec2 clip;
+
+uniform mat4 u_model;   // inverse of your world->clip matrix (MVP)
+uniform vec2 u_size;     // world-space cell size (e.g. 64,64)
+uniform vec2 u_offset;   // world-space grid offset (shifts entire grid)
+uniform vec4 u_color;    // RGBA
+
+out vec4 o_fragColor;
+
+void main() 
+{
+    // clip -> world on z=0 plane
+    vec4 w = u_model * vec4(clip, 0.0, 1.0);
+    w /= w.w;
+    vec2 world = w.xy;
+
+    // grid space
+    vec2 g = (world - u_offset) / u_size;
+
+    vec2 d = abs(fract(g) - 0.5);
+    float distance = min(d.x, d.y);
+
+    float fw = min(fwidth(g.x), fwidth(g.y));
+    float alpha = 1.0 - smoothstep(0.0, fw, distance);
+
+    if (alpha <= 0.0) discard;
+    o_fragColor = vec4(u_color.rgb, u_color.a * alpha);
+}
+)";
+
+
 #define SHADER_UNIFORM_COLOR "u_color"
 #define SHADER_UNIFORM_TRANSFORM "u_transform"
 #define SHADER_UNIFORM_TINT "u_tint"
 #define SHADER_UNIFORM_COLOR_OFFSET "u_color_offset"
+#define SHADER_UNIFORM_OFFSET "u_offset"
+#define SHADER_UNIFORM_SIZE "u_size"
+#define SHADER_UNIFORM_MODEL "u_model"
 #define SHADER_UNIFORM_TEXTURE "u_texture"
 
 const ShaderData SHADER_DATA[SHADER_COUNT] = 
 {
   {SHADER_VERTEX, SHADER_FRAGMENT},
-  {SHADER_VERTEX, SHADER_TEXTURE_FRAGMENT}
+  {SHADER_VERTEX, SHADER_TEXTURE_FRAGMENT},
+  {SHADER_GRID_VERTEX, SHADER_GRID_FRAGMENT}
 };

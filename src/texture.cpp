@@ -35,12 +35,16 @@ bool texture_from_path_init(Texture* self, const std::string& path)
 {
 	*self = Texture{};
 	u8* data = stbi_load(path.c_str(), &self->size.x, &self->size.y, &self->channels, TEXTURE_CHANNELS);
-
+	
 	if (!data)
 	{
-		log_error(std::format(TEXTURE_INIT_ERROR, path));
-		self->isInvalid = true;
-		return false;
+		data = stbi_load(path_canonical_resolve(path).c_str(), &self->size.x, &self->size.y, &self->channels, TEXTURE_CHANNELS);
+		if (!data)
+		{
+			log_error(std::format(TEXTURE_INIT_ERROR, path));
+			self->isInvalid = true;
+			return false;
+		}
 	}
 
 	log_info(std::format(TEXTURE_INIT_INFO, path));
@@ -82,8 +86,16 @@ bool texture_from_rgba_init(Texture* self, ivec2 size, s32 channels, const u8* d
 
 bool texture_from_rgba_write(const std::string& path, const u8* data, ivec2 size)
 {
+	bool isSuccess = stbi_write_png(path.c_str(), size.x, size.y, TEXTURE_CHANNELS, data, size.x * TEXTURE_CHANNELS);
+	if (!isSuccess)
+	{
+		isSuccess = stbi_write_png(path_canonical_resolve(path).c_str(), size.x, size.y, TEXTURE_CHANNELS, data, size.x * TEXTURE_CHANNELS);
+		if (!isSuccess) log_info(std::format(TEXTURE_SAVE_ERROR, path));
+	}
+		
 	log_info(std::format(TEXTURE_SAVE_INFO, path));
-	return (bool)stbi_write_png(path.c_str(), size.x, size.y, TEXTURE_CHANNELS, data, size.x * TEXTURE_CHANNELS);
+		
+	return isSuccess;
 }
 
 bool texture_from_gl_write(Texture* self, const std::string& path)

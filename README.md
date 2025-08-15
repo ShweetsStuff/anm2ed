@@ -10,9 +10,10 @@ A reimplementation of *The Binding of Isaac: Rebirth*'s proprietary animation ed
 - New features
     - Can output .webm or *.png sequence
     - Cutting, copying and pasting
+    - Additional wizard options
     - Robust snapshot (undo/redo) system
     - Additional hotkeys/shortcuts
-    - Settings that will preserve on exit
+    - Settings that will preserve on exit (stored in %APPDATA% on Windows or ~/.local/share on Linux)
 
 ## Dependencies
 Download these from your package manager:

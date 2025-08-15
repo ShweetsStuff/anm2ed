@@ -6,6 +6,7 @@
 #define TEXTURE_INIT_INFO "Initialized texture from file: {}"
 #define TEXTURE_INIT_ERROR "Failed to initialize texture from file: {}"
 #define TEXTURE_SAVE_INFO "Saved texture to: {}"
+#define TEXTURE_SAVE_ERROR "Failed to save texture to: {}"
 
 struct Texture
 {

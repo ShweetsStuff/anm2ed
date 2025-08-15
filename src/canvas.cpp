@@ -69,6 +69,19 @@ void canvas_init(Canvas* self, const vec2& size)
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(f32), (void*)0);
 
+    // Grid
+    glGenVertexArrays(1, &self->gridVAO);
+    glBindVertexArray(self->gridVAO);
+
+    glGenBuffers(1, &self->gridVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, self->gridVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(CANVAS_GRID_VERTICES), CANVAS_GRID_VERTICES, GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, (void*)0);
+
+    glBindVertexArray(0);
+
     // Texture
     glGenVertexArrays(1, &self->textureVAO);
     glGenBuffers(1, &self->textureVBO);
@@ -93,7 +106,7 @@ void canvas_init(Canvas* self, const vec2& size)
     _canvas_texture_init(self, size);
 }
 
-mat4 canvas_transform_get(Canvas* self, vec2& pan, f32& zoom, OriginType origin)
+mat4 canvas_transform_get(Canvas* self, vec2 pan, f32 zoom, OriginType origin)
 {
     f32 zoomFactor = PERCENT_TO_UNIT(zoom);
     mat4 projection = glm::ortho(0.0f, self->size.x, 0.0f, self->size.y, -1.0f, 1.0f);
@@ -136,55 +149,21 @@ void canvas_texture_set(Canvas* self)
     }
 }
 
-void canvas_grid_draw(Canvas* self, GLuint& shader, mat4& transform, f32& zoom, ivec2& size, ivec2& offset, vec4& color)
+void canvas_grid_draw(Canvas* self, GLuint& shader, mat4& transform, ivec2& size, ivec2& offset, vec4& color)
 {
-    if (size.x <= 0 || size.y <= 0)
-        return; // avoid div-by-zero
-
-    std::vector<f32> vertices;
-
-    vec2 gridSize = self->size * (PERCENT_TO_UNIT(CANVAS_ZOOM_MAX - zoom));
-
-    // First visible vertical line <= 0
-    s32 startX = -(offset.x % size.x);
-    if (startX > 0) startX -= size.x;
-
-    for (s32 x = startX; x <= gridSize.x; x += size.x)
-    {
-        vertices.push_back((f32)x);
-        vertices.push_back(0.0f);
-        vertices.push_back((f32)x);
-        vertices.push_back((f32)gridSize.y);
-    }
-
-    // First visible horizontal line <= 0
-    s32 startY = -(offset.y % size.y);
-    if (startY > 0) startY -= size.y;
-
-    for (s32 y = startY; y <= gridSize.y; y += size.y)
-    {
-        vertices.push_back(0.0f);
-        vertices.push_back((f32)y);
-        vertices.push_back((f32)gridSize.x);
-        vertices.push_back((f32)y);
-    }
-
-    s32 vertexCount = (s32)vertices.size() / 2;
-
-    if (vertexCount == 0)
-        return;
-
-    glBindVertexArray(self->gridVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, self->gridVBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(f32), vertices.data(), GL_DYNAMIC_DRAW);
+    mat4 inverseTransform = glm::inverse(transform);
 
     glUseProgram(shader);
-    glBindVertexArray(self->gridVAO);
-    glUniformMatrix4fv(glGetUniformLocation(shader, SHADER_UNIFORM_TRANSFORM), 1, GL_FALSE, value_ptr(transform));
-    glUniform4f(glGetUniformLocation(shader, SHADER_UNIFORM_COLOR), color.r, color.g, color.b, color.a);
-    glDrawArrays(GL_LINES, 0, vertexCount);
 
+    glUniformMatrix4fv(glGetUniformLocation(shader, SHADER_UNIFORM_MODEL), 1, GL_FALSE, glm::value_ptr(inverseTransform));
+    glUniform2f(glGetUniformLocation(shader, SHADER_UNIFORM_SIZE),   size.x, size.y);
+    glUniform2f(glGetUniformLocation(shader, SHADER_UNIFORM_OFFSET), offset.x, offset.y);
+    glUniform4f(glGetUniformLocation(shader, SHADER_UNIFORM_COLOR),  color.r, color.g, color.b, color.a);
+
+    glBindVertexArray(self->gridVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
     glBindVertexArray(0);
+
     glUseProgram(0);
 }
 

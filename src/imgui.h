@@ -5,6 +5,7 @@
 #include "editor.h"
 #include "ffmpeg.h"
 #include "preview.h"
+#include "generate_preview.h"
 #include "resources.h"
 #include "settings.h"
 #include "snapshots.h"
@@ -67,13 +68,16 @@
 #define IMGUI_ACTION_TRIGGER_MOVE "Trigger AtFrame"
 #define IMGUI_ACTION_MOVE_PLAYHEAD "Move Playhead"
 
+#define IMGUI_POPUP_FLAGS ImGuiWindowFlags_NoMove
+#define IMGUI_POPUP_MODAL_FLAGS ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize
+
 #define IMGUI_LOG_FILE_OPEN_FORMAT "Opened anm2: {}" 
 #define IMGUI_LOG_FILE_SAVE_FORMAT "Saved anm2 to: {}" 
 #define IMGUI_LOG_RENDER_ANIMATION_FRAMES_SAVE_FORMAT "Saved rendered frames to: {}" 
 #define IMGUI_LOG_RENDER_ANIMATION_SAVE_FORMAT "Saved rendered animation to: {}" 
 #define IMGUI_LOG_RENDER_ANIMATION_NO_ANIMATION_ERROR "No animation selected; rendering cancelled."
 #define IMGUI_LOG_RENDER_ANIMATION_NO_FRAMES_ERROR "No frames to render; rendering cancelled."
-#define IMGUI_LOG_RENDER_ANIMATION_DIRECTORY_ERROR "Invalid directory! Make sure it's valid and you have write permissions."
+#define IMGUI_LOG_RENDER_ANIMATION_DIRECTORY_ERROR "Invalid directory! Make sure it exists and you have write permissions."
 #define IMGUI_LOG_RENDER_ANIMATION_PATH_ERROR "Invalid path! Make sure it's valid and you have write permissions."
 #define IMGUI_LOG_RENDER_ANIMATION_FFMPEG_PATH_ERROR "Invalid FFmpeg path! Make sure you have it installed and the path is correct."
 #define IMGUI_LOG_RENDER_ANIMATION_FFMPEG_ERROR "FFmpeg could not render animation! Check paths or your FFmpeg installation."
@@ -116,7 +120,7 @@ const ImVec4 IMGUI_TIMELINE_HEADER_FRAME_MULTIPLE_INACTIVE_COLOR = {0.113, 0.184
 const ImVec4 IMGUI_ACTIVE_COLOR = {1.0, 1.0, 1.0, 1.0};
 const ImVec4 IMGUI_INACTIVE_COLOR = {1.0, 1.0, 1.0, 0.25};
 
-const ImVec2 IMGUI_SPRITESHEET_PREVIEW_SIZE = {125.0, 125.0};
+const ImVec2 IMGUI_SPRITESHEET_PREVIEW_SIZE = {50.0, 50.0};
 const ImVec2 IMGUI_TOOLTIP_OFFSET = {16, 8};
 const vec2 IMGUI_SPRITESHEET_EDITOR_CROP_FORGIVENESS = {1, 1};
 
@@ -168,6 +172,7 @@ struct Imgui
     Anm2Reference* reference = nullptr;
     Editor* editor = nullptr;
     Preview* preview = nullptr;
+    GeneratePreview* generatePreview = nullptr;
     Settings* settings = nullptr;
     Snapshots* snapshots = nullptr;
     Clipboard* clipboard = nullptr;
@@ -182,6 +187,7 @@ struct Imgui
     bool isCursorSet = false;
     bool isContextualActionsEnabled = true;
     bool isQuit = false;
+    bool isTryQuit = false;
 };
 
 typedef void(*ImguiFunction)(Imgui*);
@@ -233,6 +239,21 @@ static inline void imgui_file_save(Imgui* self)
 static inline void imgui_file_save_as(Imgui* self)
 {
 	dialog_anm2_save(self->dialog);
+}
+
+static inline void imgui_quit(Imgui* self)
+{
+    if (!self->snapshots->undoStack.is_empty())
+        self->isTryQuit = true;
+    else
+        self->isQuit = true;
+}
+
+static inline void imgui_explore(Imgui* self)
+{
+    std::filesystem::path filePath = self->anm2->path;
+    std::filesystem::path parentPath = filePath.parent_path();
+    dialog_explorer_open(parentPath);
 }
 
 static inline void imgui_undo_push(Imgui* self, const std::string& action = SNAPSHOT_ACTION)
@@ -377,7 +398,7 @@ static inline bool imgui_begin_popup(const std::string& label, Imgui* imgui, ImV
 {
 	imgui_pending_popup_process(imgui);
 	if (size != ImVec2()) ImGui::SetNextWindowSizeConstraints(size, ImVec2(FLT_MAX, FLT_MAX));
-	bool isActivated = ImGui::BeginPopup(label.c_str());
+	bool isActivated = ImGui::BeginPopup(label.c_str(), IMGUI_POPUP_FLAGS);
 	return isActivated;
 }
 
@@ -385,7 +406,7 @@ static inline bool imgui_begin_popup_modal(const std::string& label, Imgui* imgu
 {
 	imgui_pending_popup_process(imgui);
 	if (size != ImVec2()) ImGui::SetNextWindowSizeConstraints(size, ImVec2(FLT_MAX, FLT_MAX));
-	bool isActivated = ImGui::BeginPopupModal(label.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+	bool isActivated = ImGui::BeginPopupModal(label.c_str(), nullptr, IMGUI_POPUP_MODAL_FLAGS);
 	if (isActivated) imgui_contextual_actions_disable(imgui);
 	return isActivated;
 }
@@ -402,6 +423,8 @@ static inline void imgui_end_popup(Imgui* imgui)
 	imgui_pending_popup_process(imgui);
 }
 
+
+
 enum ImguiItemType
 {
     IMGUI_ITEM,
@@ -417,6 +440,8 @@ enum ImguiItemType
     IMGUI_CHECKBOX,
     IMGUI_INPUT_INT,
     IMGUI_INPUT_TEXT,
+    IMGUI_INPUT_FLOAT,
+    IMGUI_SLIDER_FLOAT,
     IMGUI_DRAG_FLOAT,
     IMGUI_COLOR_EDIT,
     IMGUI_COMBO,
@@ -470,14 +495,15 @@ struct ImguiItem
     f32 speed = 0.25f;
     s32 step = 1;
     s32 stepFast = 10;
-    s32 border{};
-    s32 max{};
     s32 min{};
+    s32 max{};
     s32 value{};
+    vec2 atlasOffset;
+    s32 border{};
     s32 flags{};
     s32 windowFlags{};
     s32 rowCount = 0;
-    vec2 atlasOffset;
+
 
     void construct()
     {
@@ -638,6 +664,28 @@ IMGUI_ITEM(IMGUI_SAVE_AS,
     self.isShortcutInLabel = true
 );
 
+IMGUI_ITEM(IMGUI_EXPLORE_ANM2_LOCATION,
+    self.label = "E&xplore Anm2 Location",
+    self.tooltip = "Open the system's file explorer in the anm2's path.",
+    self.function = imgui_explore,
+    self.isSizeToText = true,
+    self.isSeparator = true
+);
+
+IMGUI_ITEM(IMGUI_EXIT,
+    self.label = "&Exit          ",
+    self.tooltip = "Exits the program.",
+    self.function = imgui_quit,
+    self.chord = ImGuiMod_Alt | ImGuiKey_F4,
+    self.isSizeToText  = true,
+    self.isShortcutInLabel = true
+);
+
+IMGUI_ITEM(IMGUI_EXIT_CONFIRMATION,
+    self.label = "Exit Confirmation",
+    self.text = "Unsaved changes will be lost!\nAre you sure you want to exit?"
+);
+
 IMGUI_ITEM(IMGUI_WIZARD,
     self.label = "&Wizard",
     self.tooltip = "Opens the wizard menu, for neat functions related to the .anm2.",
@@ -647,12 +695,17 @@ IMGUI_ITEM(IMGUI_WIZARD,
     self.isSameLine = true
 );
 
+#define IMGUI_GENERATE_ANIMATION_FROM_GRID_PADDING 40
 IMGUI_ITEM(IMGUI_GENERATE_ANIMATION_FROM_GRID,
     self.label = "&Generate Animation from Grid",
     self.tooltip = "Generate a new animation from grid values.",
     self.popup = "Generate Animation from Grid",
     self.popupType = IMGUI_POPUP_CENTER_WINDOW,
-    self.popupSize = {650, 215}
+    self.popupSize = 
+    {
+        (GENERATE_PREVIEW_SIZE.x * 2) + IMGUI_GENERATE_ANIMATION_FROM_GRID_PADDING, 
+        GENERATE_PREVIEW_SIZE.y + (IMGUI_FOOTER_CHILD.size.y * 2) + (IMGUI_GENERATE_ANIMATION_FROM_GRID_PADDING / 2)
+    }
 );
 
 IMGUI_ITEM(IMGUI_GENERATE_ANIMATION_FROM_GRID_OPTIONS_CHILD,
@@ -670,8 +723,8 @@ IMGUI_ITEM(IMGUI_GENERATE_ANIMATION_FROM_GRID_START_POSITION,
     self.tooltip = "Set the starting position on the layer's spritesheet for the generated animation."
 );
 
-IMGUI_ITEM(IMGUI_GENERATE_ANIMATION_FROM_GRID_FRAME_SIZE,
-    self.label = "Frame Size",
+IMGUI_ITEM(IMGUI_GENERATE_ANIMATION_FROM_GRID_SIZE,
+    self.label = "Size",
     self.tooltip = "Set the size of each frame in the generated animation."
 );
 
@@ -692,9 +745,10 @@ IMGUI_ITEM(IMGUI_GENERATE_ANIMATION_FROM_GRID_COLUMNS,
     self.max = 1000
 );
 
-IMGUI_ITEM(IMGUI_GENERATE_ANIMATION_FROM_GRID_FRAME_COUNT,
+IMGUI_ITEM(IMGUI_GENERATE_ANIMATION_FROM_GRID_COUNT,
     self.label = "Count",
-    self.tooltip = "Set how many frames will be made for the generated animation."
+    self.tooltip = "Set how many frames will be made for the generated animation.",
+    self.value = ANM2_FRAME_NUM_MIN
 );
 
 IMGUI_ITEM(IMGUI_GENERATE_ANIMATION_FROM_GRID_DELAY,
@@ -713,9 +767,30 @@ IMGUI_ITEM(IMGUI_GENERATE_ANIMATION_FROM_GRID_PREVIEW_CHILD,
     self.flags = true
 );
 
+IMGUI_ITEM(IMGUI_GENERATE_ANIMATION_FROM_GRID_SLIDER_CHILD,
+    self.label = "## Generate Animation From Grid Slider Child",
+    self.size = 
+    {
+        (IMGUI_GENERATE_ANIMATION_FROM_GRID.popupSize.x / 2) - (IMGUI_GENERATE_ANIMATION_FROM_GRID_PADDING / 2), 
+        IMGUI_FOOTER_CHILD.size.y
+    },
+    self.flags = true
+);
+
+IMGUI_ITEM(IMGUI_GENERATE_ANIMATION_FROM_GRID_SLIDER,
+    self.label = "## Generate Animation From Grid Slider",
+    self.tooltip = "Change the time of the generated animation preview.",
+    self.min = GENERATE_PREVIEW_TIME_MIN,
+    self.max = GENERATE_PREVIEW_TIME_MAX,
+    self.value = GENERATE_PREVIEW_TIME_MIN,
+    self.rowCount = 1,
+    self.flags = ImGuiSliderFlags_NoInput
+);
+
 IMGUI_ITEM(IMGUI_GENERATE_ANIMATION_FROM_GRID_GENERATE,
     self.label = "Generate",
     self.tooltip = "Generate an animation with the used settings.",
+    self.undoAction = "Generate Animation from Grid",
     self.rowCount = IMGUI_OPTION_POPUP_ROW_COUNT,
     self.isSameLine = true
 );
@@ -725,8 +800,7 @@ IMGUI_ITEM(IMGUI_CHANGE_ALL_FRAME_PROPERTIES,
     self.tooltip = "Change all frame properties in the selected animation item (or selected frame).",
     self.popup = "Change All Frame Properties",
     self.popupType = IMGUI_POPUP_CENTER_WINDOW,
-    self.popupSize = {500, 380},
-    self.isSeparator = true
+    self.popupSize = {500, 380}
 );
 
 IMGUI_ITEM(IMGUI_CHANGE_ALL_FRAME_PROPERTIES_CHILD,
@@ -794,6 +868,39 @@ IMGUI_ITEM(IMGUI_CHANGE_ALL_FRAME_PROPERTIES_CANCEL,
     self.label = "Cancel",
     self.tooltip = "Cancel changing all frame properties.",
     self.rowCount = IMGUI_CHANGE_ALL_FRAME_PROPERTIES_OPTIONS_ROW_COUNT
+);
+
+IMGUI_ITEM(IMGUI_SCALE_ANM2,
+    self.label = "&Scale Anm2",
+    self.tooltip = "Scale up all size and position-related frame properties in the anm2.",
+    self.popup = "Scale Anm2",
+    self.popupType = IMGUI_POPUP_CENTER_WINDOW,
+    self.popupSize = {260, 72},
+    self.isSizeToText = true,
+    self.isSeparator = true
+);
+
+IMGUI_ITEM(IMGUI_SCALE_ANM2_OPTIONS_CHILD,
+    self.label = "## Scale Anm2 Options Child",
+    self.size = {IMGUI_SCALE_ANM2.popupSize.x, IMGUI_SCALE_ANM2.popupSize.y - IMGUI_FOOTER_CHILD.size.y},
+    self.flags = true
+);
+
+IMGUI_ITEM(IMGUI_SCALE_ANM2_VALUE,
+    self.label = "Value",
+    self.tooltip = "The size and position-related frame properties in the anm2 will be scaled by this value.",
+    self.format = "%.2f",
+    self.value = 1,
+    self.step = 0.25,
+    self.stepFast = 1
+);
+
+IMGUI_ITEM(IMGUI_SCALE_ANM2_SCALE,
+    self.label = "Scale",
+    self.tooltip = "Scale the anm2 with the value specified.",
+    self.undoAction = "Scale Anm2",
+    self.rowCount = IMGUI_OPTION_POPUP_ROW_COUNT,
+    self.isSameLine = true
 );
 
 IMGUI_ITEM(IMGUI_RENDER_ANIMATION,
@@ -1043,7 +1150,8 @@ IMGUI_ITEM(IMGUI_SPRITESHEETS_CHILD, self.label = "## Spritesheets Child", self.
 
 IMGUI_ITEM(IMGUI_SPRITESHEET_CHILD, 
     self.label = "## Spritesheet Child",
-    self.size = {0, 175},
+    self.rowCount = 1,
+    self.size = {0, IMGUI_SPRITESHEET_PREVIEW_SIZE.y + 40},
     self.flags = true
 );
 
@@ -1253,6 +1361,7 @@ IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_POSITION,
     self.label = "Position",
     self.tooltip = "Change the position of the selected frame.",
     self.undoAction = "Frame Position",
+    self.isUseItemActivated = true,
     self.format = "%.0f"
 );
 
@@ -1260,6 +1369,7 @@ IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_CROP,
     self.label = "Crop",
     self.tooltip = "Change the crop position of the selected frame.",
     self.undoAction = "Frame Crop",
+    self.isUseItemActivated = true,
     self.format = "%.0f"
 );
 
@@ -1267,6 +1377,7 @@ IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_SIZE,
     self.label = "Size",
     self.tooltip = "Change the size of the crop of the selected frame.",
     self.undoAction = "Frame Size",
+    self.isUseItemActivated = true,
     self.format = "%.0f"
 );
 
@@ -1274,6 +1385,7 @@ IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_PIVOT,
     self.label = "Pivot",
     self.tooltip = "Change the pivot of the selected frame.",
     self.undoAction = "Frame Pivot",
+    self.isUseItemActivated = true,
     self.format = "%.0f"
 );
 
@@ -1282,6 +1394,7 @@ IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_SCALE,
     self.tooltip = "Change the scale of the selected frame.",
     self.undoAction = "Frame Scale",
     self.format = "%.0f",
+    self.isUseItemActivated = true,
     self.value = 100
 );
 
@@ -1289,6 +1402,7 @@ IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_ROTATION,
     self.label = "Rotation",
     self.tooltip = "Change the rotation of the selected frame.",
     self.undoAction = "Frame Rotation",
+    self.isUseItemActivated = true,
     self.format = "%.0f"
 );
 
@@ -1296,6 +1410,7 @@ IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_DELAY,
     self.label = "Duration",
     self.tooltip = "Change the duration of the selected frame.",
     self.undoAction = "Frame Duration",
+    self.isUseItemActivated = true,
     self.min = ANM2_FRAME_NUM_MIN,
     self.max = ANM2_FRAME_NUM_MAX,
     self.value = ANM2_FRAME_NUM_MIN
@@ -1305,6 +1420,7 @@ IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_TINT,
     self.label = "Tint",
     self.tooltip = "Change the tint of the selected frame.",
     self.undoAction = "Frame Tint",
+    self.isUseItemActivated = true,
     self.value = 1
 );
 
@@ -1312,6 +1428,7 @@ IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_COLOR_OFFSET,
     self.label = "Color Offset",
     self.tooltip = "Change the color offset of the selected frame.",
     self.undoAction = "Frame Color Offset",
+    self.isUseItemActivated = true,
     self.value = 0
 );
 
@@ -1898,10 +2015,7 @@ IMGUI_ITEM(IMGUI_CHANGE_INPUT_INT,
     self.step = 0
 );
 
-IMGUI_ITEM(IMGUI_EXIT_CONFIRMATION,
-    self.label = "Exit Confirmation",
-    self.text = "Unsaved changes will be lost!\nAre you sure you want to exit?"
-);
+
 
 #define IMGUI_OPTION_POPUP_ROW_COUNT 2
 IMGUI_ITEM(IMGUI_POPUP_OK,
@@ -1938,6 +2052,7 @@ void imgui_init
     Anm2Reference* reference,
     Editor* editor,
     Preview* preview,
+    GeneratePreview* generatePreview,
     Settings* settings,
     Snapshots* snapshots,
     Clipboard* clipboard,

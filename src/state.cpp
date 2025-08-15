@@ -24,9 +24,10 @@ static void _draw(State* self)
 
 void init(State* self)
 {
-	settings_init(&self->settings);
-	
+
 	log_info(STATE_INIT_INFO);
+	
+	settings_init(&self->settings);
 
 	if (!SDL_Init(SDL_INIT_VIDEO))
 	{
@@ -76,8 +77,6 @@ void init(State* self)
    	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
    	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 
-	glewInit();
-	
 	self->glContext = SDL_GL_CreateContext(self->window);
 	
 	if (!self->glContext)
@@ -85,6 +84,8 @@ void init(State* self)
 		log_error(std::format(STATE_GL_CONTEXT_INIT_ERROR, SDL_GetError()));
 		quit(self);
 	}
+
+	glewInit();
 
 	log_info(std::format(STATE_GL_CONTEXT_INIT_INFO, (const char*)glGetString(GL_VERSION)));
 	
@@ -100,6 +101,7 @@ void init(State* self)
 	clipboard_init(&self->clipboard, &self->anm2);
 	snapshots_init(&self->snapshots, &self->anm2, &self->reference, &self->preview);
 	preview_init(&self->preview, &self->anm2, &self->reference, &self->resources, &self->settings);
+	generate_preview_init(&self->generatePreview, &self->anm2, &self->reference, &self->resources, &self->settings);
 	editor_init(&self->editor, &self->anm2, &self->reference, &self->resources, &self->settings);
 	
 	imgui_init
@@ -111,6 +113,7 @@ void init(State* self)
 		&self->reference,
 		&self->editor,
 		&self->preview,
+		&self->generatePreview,
 		&self->settings,
 		&self->snapshots,
 		&self->clipboard,
@@ -118,7 +121,7 @@ void init(State* self)
 		&self->glContext
 	);
 
-	if (self->is_argument())
+	if (!self->argument.empty())
 	{
 		anm2_deserialize(&self->anm2, &self->resources, self->argument);
 		window_title_from_path_set(self->window, self->argument);
@@ -152,6 +155,7 @@ void loop(State* self)
 void quit(State* self)
 {
 	imgui_free();
+	generate_preview_free(&self->generatePreview);
 	preview_free(&self->preview);
 	editor_free(&self->editor);
 	resources_free(&self->resources);

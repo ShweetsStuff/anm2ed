@@ -588,8 +588,8 @@ bool anm2_deserialize(Anm2* self, Resources* resources, const std::string& path)
 			xmlAttribute = xmlAttribute->Next();
 		}
 
-		if (anm2Element == ANM2_ELEMENT_SPRITESHEET) 
-			resources_texture_init(resources, spritesheet->path , id);
+		if (anm2Element == ANM2_ELEMENT_SPRITESHEET && resources) 
+			resources_texture_init(resources, spritesheet->path, id);
 
 		xmlChild = xmlElement->FirstChildElement();
 
@@ -630,14 +630,6 @@ bool anm2_deserialize(Anm2* self, Resources* resources, const std::string& path)
 
 void anm2_layer_add(Anm2* self)
 {
-
-
-
-
-
-
-
-
 	s32 id = map_next_id_get(self->layers);
 
 	self->layers[id] = Anm2Layer{};
@@ -1125,5 +1117,54 @@ void anm2_frame_bake(Anm2* self, Anm2Reference* reference, s32 interval, bool is
 		insertIndex++;
 		
 		delay += baked.delay;
+	}
+}
+
+void anm2_scale(Anm2* self, f32 scale)
+{
+ 	auto frame_scale = [&](Anm2Frame& frame)
+	{
+		frame.position = vec2((s32)(frame.position.x * scale), (s32)(frame.position.y * scale));
+		frame.size = vec2((s32)(frame.size.x * scale), (s32)(frame.size.y * scale));
+		frame.crop = vec2((s32)(frame.crop.x * scale), (s32)(frame.crop.y * scale));
+		frame.pivot = vec2((s32)(frame.pivot.x * scale), (s32)(frame.pivot.y * scale));
+	};
+
+	for (auto& [_, animation] : self->animations)
+	{
+		for (auto& frame : animation.rootAnimation.frames)
+			frame_scale(frame);
+	
+		for (auto& [_, layerAnimation] : animation.layerAnimations)
+				for (auto& frame : layerAnimation.frames)
+					frame_scale(frame);
+
+		for (auto& [_, nullAnimation] : animation.nullAnimations)
+				for (auto& frame : nullAnimation.frames)
+					frame_scale(frame);
+	}
+}
+
+void anm2_generate_from_grid(Anm2* self, Anm2Reference* reference, vec2 startPosition, vec2 size, vec2 pivot, s32 columns, s32 count, s32 delay)
+{
+	Anm2Item* item = anm2_item_from_reference(self, reference);
+	if (!item) return;
+
+	Anm2Reference frameReference = *reference;
+
+	for (s32 i = 0; i < count; i++)
+	{
+		const s32 row = i / columns;
+		const s32 column = i % columns;
+
+		Anm2Frame frame{};
+
+		frame.delay = delay;
+		frame.pivot = pivot;
+		frame.size = size;
+        frame.crop  = startPosition + vec2(size.x * column, size.y * row);
+		
+		anm2_frame_add(self, &frame, &frameReference);
+		frameReference.frameIndex++;
 	}
 }

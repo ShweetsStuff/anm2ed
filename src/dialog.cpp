@@ -1,5 +1,9 @@
 #include "dialog.h"
 
+#ifdef _WIN32
+    #include <windows.h>
+#endif
+
 static void _dialog_callback(void* userdata, const char* const* filelist, s32 filter) 
 {
 	Dialog* self;
@@ -65,6 +69,17 @@ void dialog_ffmpeg_path_set(Dialog* self)
 {
 	SDL_ShowOpenFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_FFMPEG, 1, nullptr, false);
 	self->type = DIALOG_FFMPEG_PATH_SET;
+}
+
+void dialog_explorer_open(const std::string& path)
+{
+#ifdef _WIN32
+		ShellExecuteA(NULL, "open", path.c_str(), NULL, NULL, SW_SHOWNORMAL);
+#else 
+		char cmd[512];
+		snprintf(cmd, sizeof(cmd), "xdg-open \"%s\" &", path.c_str());
+		system(cmd);
+#endif
 }
 
 void

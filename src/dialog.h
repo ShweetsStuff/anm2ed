@@ -54,3 +54,4 @@ void dialog_render_path_set(Dialog* self);
 void dialog_render_directory_set(Dialog* self);
 void dialog_ffmpeg_path_set(Dialog* self);
 void dialog_reset(Dialog* self);
+void dialog_explorer_open(const std::string& path);
