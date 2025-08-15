@@ -32,6 +32,7 @@ struct SettingsEntry
 struct Settings
 {
     ivec2 windowSize = {1080, 720};
+    bool isVsync = true;
     bool playbackIsLoop = true;
     bool playbackIsClampPlayhead = true;
     bool changeIsCrop = false;
@@ -106,6 +107,7 @@ struct Settings
 const SettingsEntry SETTINGS_ENTRIES[] =
 {
     {"window", TYPE_IVEC2, offsetof(Settings, windowSize)},
+    {"isVsync", TYPE_BOOL, offsetof(Settings, isVsync)},
     {"playbackIsLoop", TYPE_BOOL, offsetof(Settings, playbackIsLoop)},
     {"playbackIsClampPlayhead", TYPE_BOOL, offsetof(Settings, playbackIsClampPlayhead)},
     {"changeIsCrop", TYPE_BOOL, offsetof(Settings, changeIsCrop)},
@@ -182,6 +184,7 @@ const std::string SETTINGS_DEFAULT = R"(
 [Settings]
 windowX=1920
 windowY=1080
+isVsync=true
 playbackIsLoop=true
 playbackIsClampPlayhead=false
 changeIsCrop=false

@@ -354,10 +354,11 @@ static bool NAME(const ImguiItem& self, Imgui* imgui, bool& boolValue)				      
 	ImguiItem checkboxItem = self.copy																\
 	({.label = std::format(IMGUI_INVISIBLE_FORMAT, self.label), .isMnemonicDisabled = true});		\
 	checkboxItem.isDisabled = false;																\
-	_imgui_checkbox(checkboxItem, imgui, boolValue);												\
+	bool isCheckboxActivated = _imgui_checkbox(checkboxItem, imgui, boolValue);						\
 	ImGui::SameLine();			                                                                    \
     bool isActivated = ([&] { return FUNCTION; })();                                                \
 	if (isActivated) boolValue = !boolValue;											            \
+	if (isCheckboxActivated) isActivated = true;													\
 	return isActivated;																				\
 }
 
@@ -367,9 +368,10 @@ static bool NAME(const ImguiItem& self, Imgui* imgui, VALUE& value, bool& boolVa
 	ImguiItem checkboxItem = self.copy																\
 	({.label = std::format(IMGUI_INVISIBLE_FORMAT, self.label), .isMnemonicDisabled = true});		\
 	checkboxItem.isDisabled = false;																\
-	_imgui_checkbox(checkboxItem, imgui, boolValue);												\
+	bool isCheckboxActivated = _imgui_checkbox(checkboxItem, imgui, boolValue);						\
 	ImGui::SameLine();																				\
     bool isActivated = ([&](VALUE& value) { return FUNCTION; })(value);								\
+	if (isCheckboxActivated) isActivated = true;													\
 	return isActivated;																				\
 }
 
@@ -1413,49 +1415,45 @@ static void _imgui_taskbar(Imgui* self)
 
 	if (imgui_begin_popup_modal(IMGUI_RENDER_ANIMATION.popup, self, IMGUI_RENDER_ANIMATION.popupSize))
 	{
+		static DialogType& dialogType = self->dialog->type;
+		static bool& dialogIsSelected = self->dialog->isSelected;
+		static s32& type = self->settings->renderType;
+		static std::string& dialogPath = self->dialog->path;
+		static std::string& ffmpegPath = self->settings->ffmpegPath;
+		static std::string& format = self->settings->renderFormat;
+		static std::string& path = self->settings->renderPath;
+
 		_imgui_begin_child(IMGUI_RENDER_ANIMATION_CHILD, self);
 
 		if (_imgui_atlas_button(IMGUI_RENDER_ANIMATION_LOCATION_BROWSE, self))
-		{
-			switch (self->settings->renderType)
-			{
-				case RENDER_PNG: dialog_render_directory_set(self->dialog); break;
-				default: 
-					dialog_render_path_set(self->dialog); 
-					break;
-			}
-		}
+			dialog_render_path_set(self->dialog, (RenderType)type);
 
-		if 
-		(
-			self->dialog->isSelected && 
-			(self->dialog->type == DIALOG_RENDER_PATH_SET || self->dialog->type == DIALOG_RENDER_DIRECTORY_SET)
-		)
+		if (dialogIsSelected && (dialogType == DIALOG_RENDER_PATH_SET))
 		{
-			self->settings->renderPath = self->dialog->path;
+			path = path_extension_change(dialogPath, RENDER_EXTENSIONS[type]);
 			dialog_reset(self->dialog);
 		}
 
-		_imgui_input_text(IMGUI_RENDER_ANIMATION_LOCATION, self, self->settings->renderPath);
+		_imgui_input_text(IMGUI_RENDER_ANIMATION_LOCATION, self, path);
 		
 		if (_imgui_atlas_button(IMGUI_RENDER_ANIMATION_FFMPEG_BROWSE, self)) 
 			dialog_ffmpeg_path_set(self->dialog);
 
-		if (self->dialog->isSelected && self->dialog->type == DIALOG_FFMPEG_PATH_SET)
+		if (dialogIsSelected && dialogType == DIALOG_FFMPEG_PATH_SET)
 		{
-			self->settings->ffmpegPath = self->dialog->path;
+			ffmpegPath = self->dialog->path;
 			dialog_reset(self->dialog);
 		}
 		
-		_imgui_input_text(IMGUI_RENDER_ANIMATION_FFMPEG_PATH, self, self->settings->ffmpegPath);
-		_imgui_input_text(IMGUI_RENDER_ANIMATION_FORMAT, self, self->settings->renderFormat);
-		_imgui_combo(IMGUI_RENDER_ANIMATION_OUTPUT, self, &self->settings->renderType);
+		_imgui_input_text(IMGUI_RENDER_ANIMATION_FFMPEG_PATH, self, ffmpegPath);
+		_imgui_input_text(IMGUI_RENDER_ANIMATION_FORMAT, self, format);
+		_imgui_combo(IMGUI_RENDER_ANIMATION_OUTPUT, self, &type);
 
 		if (_imgui_button(IMGUI_RENDER_ANIMATION_CONFIRM, self))
 		{
 			bool isRenderStart = true;
 
-			if (!std::filesystem::exists(self->settings->ffmpegPath))
+			if (!std::filesystem::exists(ffmpegPath))
 			{
 				imgui_log_push(self, IMGUI_LOG_RENDER_ANIMATION_FFMPEG_PATH_ERROR);
 				isRenderStart = false;
@@ -1466,7 +1464,7 @@ static void _imgui_taskbar(Imgui* self)
 				switch (self->settings->renderType)
 				{
 					case RENDER_PNG:
-						if (!std::filesystem::is_directory(self->settings->renderPath))
+						if (!std::filesystem::is_directory(path))
 						{
 							imgui_log_push(self, IMGUI_LOG_RENDER_ANIMATION_DIRECTORY_ERROR);
 							isRenderStart = false;
@@ -1474,7 +1472,8 @@ static void _imgui_taskbar(Imgui* self)
 						break;
 					case RENDER_GIF:
 					case RENDER_WEBM:
-						if (!path_is_valid(self->settings->renderPath))
+					case RENDER_MP4:
+						if (!path_is_valid(path))
 						{
 							imgui_log_push(self, IMGUI_LOG_RENDER_ANIMATION_PATH_ERROR);
 							isRenderStart = false;
@@ -1502,6 +1501,9 @@ static void _imgui_taskbar(Imgui* self)
 
 	if (imgui_begin_popup_modal(IMGUI_RENDER_ANIMATION_CONFIRM.popup, self, IMGUI_RENDER_ANIMATION_CONFIRM.popupSize))
 	{
+		static s32& type = self->settings->renderType;
+		static std::string& format = self->settings->renderFormat;
+
 		auto rendering_end = [&]()
 		{
 			preview_render_end(self->preview);
@@ -1537,7 +1539,7 @@ static void _imgui_taskbar(Imgui* self)
 		
 		if (self->preview->isRenderFinished)
 		{
-			switch (self->settings->renderType)
+			switch (type)
 			{
 				case RENDER_PNG:
 				{
@@ -1546,10 +1548,9 @@ static void _imgui_taskbar(Imgui* self)
 
 					for (auto [i, frame] : std::views::enumerate(frames))
 					{
-						std::string framePath = std::vformat(self->settings->renderFormat, std::make_format_args(i));
-						framePath = path_extension_change(framePath, RENDER_EXTENSIONS[self->settings->renderType]);
-						if (!frame.isInvalid)
-							texture_from_gl_write(&frame, framePath);
+						std::string framePath = std::vformat(format, std::make_format_args(i));
+						framePath = path_extension_change(framePath, RENDER_EXTENSIONS[type]);
+						if (!frame.isInvalid) texture_from_gl_write(&frame, framePath);
 					}
 
 					std::filesystem::current_path(workingPath);
@@ -1558,11 +1559,12 @@ static void _imgui_taskbar(Imgui* self)
 				}
 				case RENDER_GIF:
 				case RENDER_WEBM:
+				case RENDER_MP4:
 				{
 					std::string ffmpegPath = std::string(self->settings->ffmpegPath.c_str());
 					path = path_extension_change(path, RENDER_EXTENSIONS[self->settings->renderType]);
 					
-					if (ffmpeg_render(ffmpegPath, path, frames, self->preview->canvas.size, self->anm2->fps, (RenderType)self->settings->renderType))
+					if (ffmpeg_render(ffmpegPath, path, frames, self->preview->canvas.size, self->anm2->fps, (RenderType)type))
 						imgui_log_push(self, std::format(IMGUI_LOG_RENDER_ANIMATION_SAVE_FORMAT, path));
 					else
 						imgui_log_push(self, std::format(IMGUI_LOG_RENDER_ANIMATION_FFMPEG_ERROR, path));
@@ -1584,6 +1586,14 @@ static void _imgui_taskbar(Imgui* self)
 	{
 		_imgui_checkbox_selectable(IMGUI_ALWAYS_LOOP, self, self->settings->playbackIsLoop);
 		_imgui_checkbox_selectable(IMGUI_CLAMP_PLAYHEAD, self, self->settings->playbackIsClampPlayhead);
+		imgui_end_popup(self);
+	}
+
+	_imgui_selectable(IMGUI_SETTINGS.copy({}), self);
+
+	if (imgui_begin_popup(IMGUI_SETTINGS.popup, self, IMGUI_SETTINGS.popupSize))
+	{
+		if (_imgui_checkbox_selectable(IMGUI_VSYNC, self, self->settings->isVsync)) window_vsync_set(self->settings->isVsync);
 		imgui_end_popup(self);
 	}
 	

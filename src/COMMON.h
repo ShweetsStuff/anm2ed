@@ -23,9 +23,8 @@
 #include <ranges>                      
 #include <string>
 #include <unordered_set>                      
+#include <variant>                  
 #include <vector>                  
-
-
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -49,10 +48,9 @@ using namespace glm;
 #define FLOAT_TO_U8(x) (static_cast<u8>((x) * 255.0f))
 #define U8_TO_FLOAT(x) ((x) / 255.0f)
 #define PERCENT_TO_UNIT(x) (x / 100.0f)
-#define TICK_DELAY 33.3f
-#define TICK_CATCH_UP_MAX (33.3f * 5)
 #define SECOND 1000.0f
-#define TICK_RATE (SECOND / TICK_DELAY)
+#define TICK_DELAY (SECOND / 30.0)
+#define UPDATE_DELAY (SECOND / 120.0)
 #define ID_NONE -1
 #define INDEX_NONE -1
 #define TIME_NONE -1.0f
@@ -123,6 +121,11 @@ static inline bool string_to_bool(const std::string& string)
     std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
  
     return lower == "true";
+}
+
+static inline std::string string_quote(const std::string& string) 
+{
+    return "\"" + string + "\"";
 }
 
 static inline std::string path_canonical_resolve

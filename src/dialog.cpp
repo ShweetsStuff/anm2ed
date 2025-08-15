@@ -30,44 +30,43 @@ void dialog_init(Dialog* self, SDL_Window* window)
 
 void dialog_anm2_open(Dialog* self)
 {
-	SDL_ShowOpenFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_ANM2, 1, nullptr, false);
+	SDL_ShowOpenFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_ANM2, std::size(DIALOG_FILE_FILTER_ANM2), nullptr, false);
 	self->type = DIALOG_ANM2_OPEN;
 }
 
 void dialog_anm2_save(Dialog* self)
 {
-	SDL_ShowSaveFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_ANM2, 1, nullptr);
+	SDL_ShowSaveFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_ANM2, std::size(DIALOG_FILE_FILTER_ANM2), nullptr);
 	self->type = DIALOG_ANM2_SAVE;
 }
 
 void dialog_spritesheet_add(Dialog* self)
 {
-	SDL_ShowOpenFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_PNG, 1, nullptr, false);
+	SDL_ShowOpenFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_PNG, std::size(DIALOG_FILE_FILTER_PNG), nullptr, false);
 	self->type = DIALOG_SPRITESHEET_ADD;
 }
 
 void dialog_spritesheet_replace(Dialog* self, s32 id)
 {
-	SDL_ShowOpenFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_PNG, 1, nullptr, false);
+	SDL_ShowOpenFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_PNG, std::size(DIALOG_FILE_FILTER_PNG), nullptr, false);
 	self->replaceID = id;
 	self->type = DIALOG_SPRITESHEET_REPLACE;
 }
 
-void dialog_render_path_set(Dialog* self)
+void dialog_render_path_set(Dialog* self, RenderType type)
 {
-	SDL_ShowSaveFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_RENDER, 2, nullptr);
-	self->type = DIALOG_RENDER_PATH_SET;
-}
+	SDL_DialogFileFilter filter = DIALOG_RENDER_FILE_FILTERS[type];
 
-void dialog_render_directory_set(Dialog* self)
-{
-	SDL_ShowOpenFolderDialog(_dialog_callback, self, self->window, nullptr, false);
-	self->type = DIALOG_RENDER_DIRECTORY_SET;
+	if (type == RENDER_PNG)
+		SDL_ShowOpenFolderDialog(_dialog_callback, self, self->window, nullptr, false);
+	else
+		SDL_ShowSaveFileDialog(_dialog_callback, self, self->window, &filter, 1, nullptr);
+	self->type = DIALOG_RENDER_PATH_SET;
 }
 
 void dialog_ffmpeg_path_set(Dialog* self)
 {
-	SDL_ShowOpenFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_FFMPEG, 1, nullptr, false);
+	SDL_ShowOpenFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_FFMPEG, std::size(DIALOG_FILE_FILTER_FFMPEG), nullptr, false);
 	self->type = DIALOG_FFMPEG_PATH_SET;
 }
 

@@ -23,9 +23,16 @@ ffmpeg_render
         case RENDER_WEBM:
             command = std::format(FFMPEG_WEBM_FORMAT, ffmpegPath, size.x, size.y, fps, outputPath);
             break;
+        case RENDER_MP4:
+            command = std::format(FFMPEG_MP4_FORMAT, ffmpegPath, size.x, size.y, fps, outputPath);
+            break;
         default:
-            return false;
+            break;
     }
+
+#if _WIN32
+    command = string_quote(command)
+#endif
 
     FILE* fp = POPEN(command.c_str(), PWRITE_MODE);
 

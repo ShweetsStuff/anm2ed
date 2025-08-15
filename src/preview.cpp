@@ -44,7 +44,7 @@ void preview_tick(Preview* self)
                 self->renderFrames.push_back(frameTexture);
             }
 
-            time += (f32)self->anm2->fps / TICK_RATE;
+            time += (f32)self->anm2->fps / TICK_DELAY;
 
             if (time >= (f32)animation->frameNum - 1)
             {
@@ -72,10 +72,7 @@ void preview_tick(Preview* self)
 			time = std::clamp(time, 0.0f, std::max(0.0f, (f32)animation->frameNum - 1));
 		else
 			time = std::max(time, 0.0f);
-
     }
-
-
 }
 
 void preview_draw(Preview* self)

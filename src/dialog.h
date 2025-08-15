@@ -1,5 +1,6 @@
 #pragma once
 
+#include "render.h"
 #include "window.h"
 
 const SDL_DialogFileFilter DIALOG_FILE_FILTER_ANM2[] =
@@ -12,15 +13,17 @@ const SDL_DialogFileFilter DIALOG_FILE_FILTER_PNG[] =
     {"PNG image", "png"}
 };
 
-const SDL_DialogFileFilter DIALOG_FILE_FILTER_RENDER[] =
+const SDL_DialogFileFilter DIALOG_RENDER_FILE_FILTERS[] =
 {
+    {"PNG image", "png"},
     {"GIF image", "gif"}, 
-    {"WebM video", "webm"}
+    {"WebM video", "webm"},
+    {"MP4 video", "mp4"}
 };
 
 const SDL_DialogFileFilter DIALOG_FILE_FILTER_FFMPEG[] =
 {
-    {"Executable", ""}
+    {"Executable", "exe"}
 };
 
 enum DialogType 
@@ -31,7 +34,6 @@ enum DialogType
     DIALOG_SPRITESHEET_ADD,
     DIALOG_SPRITESHEET_REPLACE,
     DIALOG_RENDER_PATH_SET,
-    DIALOG_RENDER_DIRECTORY_SET,
     DIALOG_FFMPEG_PATH_SET
 };
 
@@ -50,7 +52,7 @@ void dialog_anm2_open(Dialog* self);
 void dialog_spritesheet_add(Dialog* self);
 void dialog_spritesheet_replace(Dialog* self, s32 id);
 void dialog_anm2_save(Dialog* self);
-void dialog_render_path_set(Dialog* self);
+void dialog_render_path_set(Dialog* self, RenderType type);
 void dialog_render_directory_set(Dialog* self);
 void dialog_ffmpeg_path_set(Dialog* self);
 void dialog_reset(Dialog* self);

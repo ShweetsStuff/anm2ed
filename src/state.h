@@ -43,6 +43,8 @@ struct State
 	std::string lastAction{};
 	u64 lastTick{};
 	u64 tick{};
+	u64 update{};
+	u64 lastUpdate{};
 	bool isRunning = true;
 }; 
 

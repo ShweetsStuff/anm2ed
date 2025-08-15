@@ -78,6 +78,8 @@ void init(State* self)
    	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 
 	self->glContext = SDL_GL_CreateContext(self->window);
+
+	window_vsync_set(self->settings.isVsync);
 	
 	if (!self->glContext)
 	{
@@ -96,8 +98,6 @@ void init(State* self)
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_LINE_SMOOTH);
 	
-	SDL_GL_SetSwapInterval(1);
-
 	resources_init(&self->resources);
 	dialog_init(&self->dialog, self->window);
 	clipboard_init(&self->clipboard, &self->anm2);
@@ -135,7 +135,8 @@ void init(State* self)
 void loop(State* self)
 {
 	self->tick = SDL_GetTicks();
-	
+	self->update = self->tick;
+
 	while (self->tick > self->lastTick + TICK_DELAY)
 	{
 		self->tick = SDL_GetTicks();
@@ -148,10 +149,26 @@ void loop(State* self)
 		self->lastTick = self->tick;
 	}
 
-	_update(self);
-	_draw(self);
+	if (self->settings.isVsync)
+	{
+		_update(self);
+		_draw(self);
+	}
+	else
+	{
+		while (self->update > self->lastUpdate + UPDATE_DELAY)
+		{
+			self->update = SDL_GetTicks();
+			
+			if (self->update - self->lastUpdate < UPDATE_DELAY)
+				SDL_Delay(UPDATE_DELAY - (self->update - self->lastUpdate));
 
-	SDL_Delay(STATE_DELAY_MIN);
+			_update(self);
+			_draw(self);
+
+			self->lastUpdate = self->update;
+		}
+	}
 }
 
 void quit(State* self)

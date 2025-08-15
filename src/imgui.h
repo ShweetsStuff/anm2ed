@@ -975,8 +975,8 @@ IMGUI_ITEM(IMGUI_PLAYBACK,
     self.tooltip = "Opens the playback menu, for configuring playback settings.",
     self.popup = "## Playback Popup",
     self.popupType = IMGUI_POPUP_BY_ITEM,
-    self.popupSize = {150, 0},
-    self.isSizeToText = true
+    self.isSizeToText = true,
+    self.isSameLine = true
 );
 
 IMGUI_ITEM(IMGUI_ALWAYS_LOOP,
@@ -988,6 +988,20 @@ IMGUI_ITEM(IMGUI_ALWAYS_LOOP,
 IMGUI_ITEM(IMGUI_CLAMP_PLAYHEAD,
     self.label = "&Clamp Playhead",
     self.tooltip = "The playhead (draggable icon on timeline) won't be able to exceed the animation length.",
+    self.isSizeToText = true
+);
+
+IMGUI_ITEM(IMGUI_SETTINGS,
+    self.label = "&Settings",
+    self.tooltip = "Opens the setting menu, for configuring general program settings.",
+    self.popup = "## Settings Popup",
+    self.popupType = IMGUI_POPUP_BY_ITEM,
+    self.isSizeToText = true
+);
+
+IMGUI_ITEM(IMGUI_VSYNC,
+    self.label = "&Vsync",
+    self.tooltip = "Toggle vertical sync; synchronizes program framerate with your monitor's refresh rate.",
     self.isSizeToText = true
 );
 
