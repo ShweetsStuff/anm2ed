@@ -14,7 +14,7 @@ main(s32 argc, char* argv[])
 {
 	State state;
 
-	log_init(preferences_path_get() + LOG_PATH);
+	log_init();
 
 	if (argc > 0 && argv[1])
 	{

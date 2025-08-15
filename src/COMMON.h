@@ -61,10 +61,12 @@ using namespace glm;
   #define POPEN  _popen
   #define PCLOSE _pclose
   #define PWRITE_MODE "wb"
+  #define PREAD_MODE "r"
 #else
   #define POPEN  popen
   #define PCLOSE pclose
   #define PWRITE_MODE "w"
+  #define PREAD_MODE "r"
 #endif
 
 #define UV_VERTICES(uvMin, uvMax) \
