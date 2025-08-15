@@ -23,7 +23,11 @@ const SDL_DialogFileFilter DIALOG_RENDER_FILE_FILTERS[] =
 
 const SDL_DialogFileFilter DIALOG_FILE_FILTER_FFMPEG[] =
 {
+#ifdef _WIN32
     {"Executable", "exe"}
+#else
+    {"Executable", ""}
+#endif
 };
 
 enum DialogType 
