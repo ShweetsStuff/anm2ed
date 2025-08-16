@@ -26,7 +26,6 @@
 struct State
 {
 	SDL_Window* window;
-	SDL_Renderer* renderer;
 	SDL_GLContext glContext;
     Imgui imgui;
 	Dialog dialog;

@@ -60,14 +60,12 @@ void init(State* self)
 		log_info(STATE_MIX_INIT_INFO);
 	*/
 
-	SDL_CreateWindowAndRenderer
+	self->window = SDL_CreateWindow
 	(
 		WINDOW_TITLE, 
 		self->settings.windowSize.x, 
 		self->settings.windowSize.y, 
-		WINDOW_FLAGS, 
-		&self->window, 
-		&self->renderer
+		WINDOW_FLAGS
 	);
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
