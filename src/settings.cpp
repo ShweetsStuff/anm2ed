@@ -74,9 +74,7 @@ static void _settings_setting_load(Settings* self, const std::string& line)
 
 std::string settings_path_get(void)
 {
-    char* path = SDL_GetPrefPath("", SETTINGS_FOLDER);
-    std::string filePath = std::string(path) + SETTINGS_PATH;
-    SDL_free(path);
+    std::string filePath = preferences_path_get() + SETTINGS_PATH;
     return filePath;
 }
 

@@ -3,6 +3,14 @@
 #include "render.h"
 #include "window.h"
 
+#define DIALOG_FILE_EXPLORER_COMMAND_SIZE 512
+
+#ifdef _WIN32
+#define DIALOG_FILE_EXPLORER_COMMAND "open"
+#else 
+#define DIALOG_FILE_EXPLORER_COMMAND "xdg-open \"%s\" &"
+#endif
+
 const SDL_DialogFileFilter DIALOG_FILE_FILTER_ANM2[] =
 {
     {"Anm2 file", "anm2;xml"}

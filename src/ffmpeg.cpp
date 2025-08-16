@@ -30,19 +30,32 @@ ffmpeg_render
             break;
     }
 
+    // ffmpeg output will be piped into the log
+    std::string logOutput = " 2>> \"" + log_path_get() + "\"";
+
 #if _WIN32
-    command = string_quote(command);
+    command = string_quote(command) + logOutput;
+#else
+    command += logOutput;
 #endif
+
+    log_command(command);
 
     FILE* fp = POPEN(command.c_str(), PWRITE_MODE);
 
     if (!fp) 
     {
-        log_info(std::format(FFMPEG_POPEN_ERROR, strerror(errno)));
+        log_error(std::format(FFMPEG_POPEN_ERROR, strerror(errno)));
         return false;
     }
 
+    
     size_t frameBytes = size.x * size.y * TEXTURE_CHANNELS;
+
+// supposedly, might help with video corruption issues on windows?
+#if _WIN32
+    _setmode(_fileno(stdout), _O_BINARY);
+#endif
 
     for (const auto& frame : frames) 
     {

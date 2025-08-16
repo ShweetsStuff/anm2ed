@@ -66,6 +66,7 @@
 #define IMGUI_ACTION_FRAME_TRANSFORM "Frame Transform"
 #define IMGUI_ACTION_ANIMATION_SWAP "Animation Swap"
 #define IMGUI_ACTION_TRIGGER_MOVE "Trigger AtFrame"
+#define IMGUI_ACTION_FRAME_DELAY "Frame Delay"
 #define IMGUI_ACTION_MOVE_PLAYHEAD "Move Playhead"
 
 #define IMGUI_POPUP_FLAGS ImGuiWindowFlags_NoMove
@@ -145,6 +146,14 @@ enum ImguiPopupType
     IMGUI_POPUP_CENTER_WINDOW
 };
 
+enum ImguiPopupState
+{
+    IMGUI_POPUP_STATE_CLOSED,
+    IMGUI_POPUP_STATE_OPEN,
+    IMGUI_POPUP_STATE_CONFIRM,
+    IMGUI_POPUP_STATE_CANCEL
+};
+
 struct ImguiColorSet 
 {
     ImVec4 normal{};
@@ -206,7 +215,7 @@ struct ImguiHotkey
 static void imgui_log_push(Imgui* self, const std::string& text)
 {
     self->log.push_back({text, IMGUI_LOG_DURATION});
-    std::println("[IMGUI] {}", text);
+    log_imgui(text);
 }
 
 static std::vector<ImguiHotkey>& imgui_hotkey_registry()
@@ -602,7 +611,7 @@ IMGUI_ITEM(IMGUI_FOOTER_CHILD,
 );
 
 IMGUI_ITEM(IMGUI_TASKBAR,
-    self.label = "## Taskbar",
+    self.label = "Taskbar",
     self.size = {0, 32},
     self.flags = ImGuiWindowFlags_NoTitleBar        |
                  ImGuiWindowFlags_NoResize          |

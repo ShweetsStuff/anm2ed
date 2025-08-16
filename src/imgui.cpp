@@ -528,12 +528,16 @@ IMGUI_ITEM_ATLAS_FUNCTION(_imgui_atlas_selectable, _imgui_selectable(self, imgui
 IMGUI_ITEM_ATLAS_VALUE_FUNCTION(_imgui_atlas_selectable_input_int, s32, _imgui_selectable_input_int(self, imgui, value));
 IMGUI_ITEM_ATLAS_VALUE_FUNCTION(_imgui_atlas_selectable_input_text, std::string, _imgui_selectable_input_text(self, imgui, value));
 
-static bool _imgui_option_popup(ImguiItem self, Imgui* imgui)
+static bool _imgui_option_popup(ImguiItem self, Imgui* imgui, ImguiPopupState* state = nullptr)
 {
 	ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 	
+	if (state) *state = IMGUI_POPUP_STATE_CLOSED;
+
 	if (imgui_begin_popup_modal(self.label_get(), imgui))
 	{
+		if (state) *state = IMGUI_POPUP_STATE_OPEN;
+		
 		ImGui::Text(self.text_get());
 		ImGui::Separator();
 
@@ -541,13 +545,17 @@ static bool _imgui_option_popup(ImguiItem self, Imgui* imgui)
 		{
 			imgui_close_current_popup(imgui);
 			imgui_end_popup(imgui);
+			if (state) *state = IMGUI_POPUP_STATE_CONFIRM;
 			return true;
 		}
 
 		ImGui::SameLine();
 		
 		if (_imgui_button(IMGUI_POPUP_CANCEL, imgui))
+		{
 			imgui_close_current_popup(imgui);
+			if (state) *state = IMGUI_POPUP_STATE_CANCEL;
+		}
 
 		imgui_end_popup(imgui);
 	}
@@ -970,6 +978,12 @@ static void _imgui_timeline(Imgui* self)
 
 		std::function<void(s32, Anm2Frame&)> timeline_item_frame = [&](s32 i, Anm2Frame& frame)
 		{
+			static s32 frameDelayStart{};
+			static f32 frameDelayTimeStart{};
+			const bool isModCtrl = ImGui::IsKeyDown(IMGUI_INPUT_CTRL);
+			static Anm2Frame* draggingFrame = nullptr;
+			static Anm2Type draggingFrameType = ANM2_NONE;
+
 			ImGui::PushID(i);
 			reference.frameIndex = i;
 			ImVec2 framePos = ImGui::GetCursorPos();
@@ -986,8 +1000,7 @@ static void _imgui_timeline(Imgui* self)
 
 			ImGui::SetCursorPos(framePos);
 			
-			if (_imgui_atlas_button(frameButton, self))
-				*self->reference = reference;
+			if (_imgui_atlas_button(frameButton, self)) *self->reference = reference;
 
 			if (ImGui::IsItemHovered())
 			{
@@ -995,23 +1008,47 @@ static void _imgui_timeline(Imgui* self)
 				_imgui_clipboard_hovered_item_set(self, frameWithReference);
 			}
 
-			if (type == ANM2_TRIGGERS)
+			if (ImGui::IsItemActivated())
 			{
-				if (ImGui::IsItemActivated()) imgui_undo_push(self, IMGUI_ACTION_TRIGGER_MOVE);
-
-				if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceNoPreviewTooltip))
+				if (type == ANM2_TRIGGERS || isModCtrl)
 				{
-					frame.atFrame = std::max(frameTime, 0);
+					draggingFrame = &frame;
+					draggingFrameType = type;
+					*self->reference = reference;
+				}
+
+				if (type == ANM2_TRIGGERS)
+					imgui_undo_push(self, IMGUI_ACTION_TRIGGER_MOVE);
+				else if (isModCtrl)
+				{
+					imgui_undo_push(self, IMGUI_ACTION_FRAME_DELAY);
+					frameDelayStart = draggingFrame->delay;
+					frameDelayTimeStart = frameTime;
+				}
+			}
+
+			if (draggingFrame)
+			{
+				if (draggingFrameType == ANM2_TRIGGERS)
+				{
+					draggingFrame->atFrame = std::max(frameTime, 0);
 					for (auto& frameCheck : animation->triggers.frames)
 					{
-						if (&frame == &frameCheck) continue;
-						if (frame.atFrame == frameCheck.atFrame)
+						if (draggingFrame == &frameCheck) continue;
+						if (draggingFrame->atFrame == frameCheck.atFrame)
 						{
-							frame.atFrame++;
+							draggingFrame->atFrame++;
 							break;
 						}
 					}
-					ImGui::EndDragDropSource();
+				}
+				else if (isModCtrl)
+					draggingFrame->delay = std::max(frameDelayStart + (s32)(frameTime - frameDelayTimeStart), ANM2_FRAME_NUM_MIN);
+
+				if (ImGui::IsMouseReleased(0))
+				{
+					draggingFrame = nullptr;
+					draggingFrameType = ANM2_NONE;
 				}
 			}
 			else
@@ -1022,32 +1059,32 @@ static void _imgui_timeline(Imgui* self)
 					timeline_item_frame(i, frame);
 					ImGui::EndDragDropSource();
 				}
-			}
 
-			if (ImGui::BeginDragDropTarget())
-			{
-				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(frameButton.drag_drop_get()))
+				if (ImGui::BeginDragDropTarget())
 				{
-					Anm2Reference swapReference = *(Anm2Reference*)payload->Data;
-					if (swapReference != reference)
+					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(frameButton.drag_drop_get()))
 					{
-						imgui_undo_push(self, IMGUI_ACTION_FRAME_SWAP);
-
-						Anm2Frame* swapFrame = anm2_frame_from_reference(self->anm2, &reference);
-						Anm2Frame* dragFrame = anm2_frame_from_reference(self->anm2, &swapReference);
-						
-						if (swapFrame && dragFrame)
+						Anm2Reference swapReference = *(Anm2Reference*)payload->Data;
+						if (swapReference != reference)
 						{
-							Anm2Frame oldFrame = *swapFrame;
+							imgui_undo_push(self, IMGUI_ACTION_FRAME_SWAP);
 
-							*swapFrame = *dragFrame;
-							*dragFrame = oldFrame;
+							Anm2Frame* swapFrame = anm2_frame_from_reference(self->anm2, &reference);
+							Anm2Frame* dragFrame = anm2_frame_from_reference(self->anm2, &swapReference);
+							
+							if (swapFrame && dragFrame)
+							{
+								Anm2Frame oldFrame = *swapFrame;
 
-							*self->reference = swapReference;
+								*swapFrame = *dragFrame;
+								*dragFrame = oldFrame;
+
+								*self->reference = swapReference;
+							}
 						}
 					}
+					ImGui::EndDragDropTarget();
 				}
-				ImGui::EndDragDropTarget();
 			}
 					
 			if (i < (s32)item->frames.size() - 1) ImGui::SameLine();
@@ -1211,6 +1248,8 @@ static void _imgui_timeline(Imgui* self)
 
 static void _imgui_taskbar(Imgui* self)
 {
+	static ImguiPopupState exitConfirmState = IMGUI_POPUP_STATE_CLOSED;
+
 	ImGuiViewport* viewport = ImGui::GetMainViewport();
 	ImguiItem taskbar = IMGUI_TASKBAR;
 	ImGui::SetNextWindowSize({viewport->Size.x, IMGUI_TASKBAR.size.y});
@@ -1249,10 +1288,15 @@ static void _imgui_taskbar(Imgui* self)
 
 	if (self->isTryQuit) imgui_open_popup(IMGUI_EXIT_CONFIRMATION.label);
 
-	if (_imgui_option_popup(IMGUI_EXIT_CONFIRMATION, self))
-		self->isQuit = true;
-	else
-		self->isTryQuit = false;
+	_imgui_option_popup(IMGUI_EXIT_CONFIRMATION, self, &exitConfirmState);
+
+	switch (exitConfirmState)
+	{
+		case IMGUI_POPUP_STATE_CLOSED: self->isTryQuit = false; break;
+		case IMGUI_POPUP_STATE_OPEN: self->isTryQuit = true; break;
+		case IMGUI_POPUP_STATE_CONFIRM: self->isQuit = true; break;
+		case IMGUI_POPUP_STATE_CANCEL: self->isTryQuit = false; break;
+	}
 
 	_imgui_selectable(IMGUI_WIZARD.copy({}), self);
 	

@@ -17,6 +17,8 @@ main(s32 argc, char* argv[])
 {
 	State state;
 
+	log_init();
+
 	if (argc > 0 && argv[1])
 	{
 		if (std::string(argv[1]) == ARGUMENT_RESCALE)

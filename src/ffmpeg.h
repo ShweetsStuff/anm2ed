@@ -4,6 +4,7 @@
 #include "texture.h"
 
 #define FFMPEG_POPEN_ERROR "popen() (for FFmpeg) failed!\n{}"
+#define FFMPEG_LOG_BUFFER_SIZE 256
 
 static constexpr const char* FFMPEG_GIF_FORMAT =
 "\"{0}\" -y "
