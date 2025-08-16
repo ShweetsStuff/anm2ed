@@ -37,7 +37,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE include include/imgui include
 if (NOT MSVC)
     set(CMAKE_CXX_FLAGS "-O2 -std=c++23 -Wall -Wextra -pedantic -fmax-errors=1")
 else()
-    set(CMAKE_CXX_FLAGS "/std:c++latest /EHsc") 
+    set(CMAKE_CXX_FLAGS "/std:c++latest /EHsc /MP") 
     target_link_options(${PROJECT_NAME} PRIVATE "/STACK:0xffffff")
 endif()
 
