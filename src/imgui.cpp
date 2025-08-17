@@ -969,8 +969,19 @@ static void _imgui_timeline(Imgui* self)
 			f32 endX = startX + frameSize.x;
 			ImVec2 startPosition(startX, cursorPos.y);
 			ImVec2 endPosition(endX, cursorPos.y + frameSize.y);
-
 			drawList->AddRectFilled(startPosition, endPosition, bgColor);
+		}
+
+		//separate loop for frame atlas image calls to help with batching
+		for (s32 i = start; i < end; i++)
+		{
+			bool isMultiple = (i % IMGUI_TIMELINE_FRAME_MULTIPLE) == 0;
+			ImU32 bgColor = isMultiple ? frameMultipleColor : frameColor;
+
+			f32 startX = cursorPos.x + i * frameSize.x;
+			f32 endX = startX + frameSize.x;
+			ImVec2 startPosition(startX, cursorPos.y);
+			ImVec2 endPosition(endX, cursorPos.y + frameSize.y);
 			drawList->AddImage(self->resources->atlas.id, startPosition, endPosition, ATLAS_UV_ARGS(ATLAS_FRAME));
 		}
 

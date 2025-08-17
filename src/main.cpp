@@ -1,4 +1,7 @@
 #include "main.h"
+#if defined(_WIN32) && !defined(_DEBUG)
+#pragma comment(linker, "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup")
+#endif
 
 static bool _anm2_rescale(const std::string& file, f32 scale)
 {

@@ -70,14 +70,16 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 
 	for (auto& [id, layer] : self->layers)
 	{
+		if (id == ID_NONE) continue; // add this line
+
 		XMLElement* layerElement;
-		
+
 		// Layer 
 		layerElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYER]);
 		layerElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_NAME], layer.name.c_str()); // Path 
 		layerElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ID], id); // ID 
 		layerElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_SPRITESHEET_ID], layer.spritesheetID); // SpritesheetId 
-		
+
 		layersElement->InsertEndChild(layerElement);
 	}
 	
