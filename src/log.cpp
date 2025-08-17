@@ -2,6 +2,8 @@
 
 inline std::ofstream logFile;
 
+inline bool keep_trying_out_to_console=true;
+
 std::string log_path_get(void)
 {
     return preferences_path_get() + LOG_PATH;
@@ -9,7 +11,14 @@ std::string log_path_get(void)
 
 void log_write(const std::string& string)
 {
-    std::println("{}", string);
+    if (keep_trying_out_to_console) {
+        try {
+            std::println("{}", string);
+        }
+        catch (const std::exception& e) {
+            keep_trying_out_to_console = false;
+        };
+    };
     
     if (logFile.is_open())
     {
