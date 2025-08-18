@@ -61,18 +61,6 @@ void canvas_rect_draw(Canvas* self, const GLuint& shader, const mat4& transform,
 void canvas_free(Canvas* self);
 void canvas_draw(Canvas* self);
 
-mat4 canvas_mvp_get
-(
-    mat4& transform, 
-    vec2 size,
-    vec2 position = {0.0f, 0.0f}, 
-    vec2 pivot = {0.0f, 0.0f}, 
-    f32 rotation = {0.0f},
-    vec2 scale = {1.0f, 1.0f},
-    vec2 pivotAlt = {0.0f, 0.0f},
-    f32 rotationAlt = {0.0f}
-);
-
 void canvas_texture_draw
 (
     Canvas* self, 

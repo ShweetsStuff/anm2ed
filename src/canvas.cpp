@@ -2,9 +2,9 @@
 
 static void _canvas_texture_free(Canvas* self)
 {
-    if (self->fbo != 0)     glDeleteFramebuffers(1, &self->fbo);
-    if (self->rbo != 0)     glDeleteRenderbuffers(1, &self->rbo);
-    if (self->texture != 0) glDeleteTextures(1, &self->texture);
+    glDeleteFramebuffers(1, &self->fbo);
+    glDeleteRenderbuffers(1, &self->rbo);
+    glDeleteTextures(1, &self->texture);
 }
 
 static void _canvas_texture_init(Canvas* self, const ivec2& size)
@@ -228,29 +228,13 @@ void canvas_unbind(void)
 void canvas_free(Canvas* self)
 {
     _canvas_texture_free(self);
-}
-
-mat4 canvas_mvp_get(mat4& transform, vec2 size, vec2 position, vec2 pivot, f32 rotation, vec2 scale, vec2 pivotAlt, f32 rotationAlt)
-{
-    vec2 scaleAbsolute  = glm::abs(scale);
-    vec2 scaleSign = glm::sign(scale);
-    f32 usedSign = (scaleSign.x * scaleSign.y) < 0.0f ? -1.0f : 1.0f;
-
-    vec2 sizeScaled = size * scaleAbsolute;
-    vec2 pivotScaled  = pivot * scaleAbsolute;
-    vec2 pivotAltScaled = pivotAlt * scaleAbsolute;
-
-    vec2 pivotAltMirrored = pivotScaled + (pivotAltScaled - pivotScaled) * scaleSign;
-
-    mat4 model = glm::translate(mat4(1.0f), vec3(position - pivotScaled, 0.0f));
-    model = glm::translate(model, vec3(pivotScaled, 0.0f));
-    model = glm::scale(model, vec3(scaleSign, 1.0f));
-    model = glm::rotate(model, glm::radians(rotation) * usedSign, vec3(0,0,1));
-    model = glm::translate(model, vec3(-pivotScaled, 0.0f));
-    model = glm::translate(model, vec3(pivotAltMirrored, 0.0f));
-    model = glm::rotate(model, glm::radians(rotationAlt) * usedSign, vec3(0,0,1));
-    model = glm::translate(model, vec3(-pivotAltMirrored, 0.0f));
-    model = glm::scale(model, vec3(sizeScaled, 1.0f));
-
-    return transform * model;
+    glDeleteVertexArrays(1, &self->axisVAO);
+    glDeleteBuffers(1, &self->axisVBO);
+    glDeleteVertexArrays(1, &self->rectVAO);
+    glDeleteBuffers(1, &self->rectVBO);
+    glDeleteVertexArrays(1, &self->gridVAO);
+    glDeleteBuffers(1, &self->gridVBO);
+    glDeleteVertexArrays(1, &self->textureVAO);
+    glDeleteBuffers(1, &self->textureVBO);
+    glDeleteBuffers(1, &self->textureEBO);
 }

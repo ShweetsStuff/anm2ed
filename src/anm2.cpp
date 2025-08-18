@@ -819,7 +819,7 @@ void anm2_frame_from_time(Anm2* self, Anm2Frame* frame, Anm2Reference reference,
 
 	if (!animation) return;
 	
-	time = std::clamp(time, 0.0f, animation->frameNum - 1.0f);
+	time = std::clamp(ROUND_NEAREST_MULTIPLE(time, 1.0f), 0.0f, animation->frameNum - 1.0f);
 
 	Anm2Item* item = anm2_item_from_reference(self, &reference);
 
