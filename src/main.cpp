@@ -4,7 +4,7 @@ static bool _anm2_rescale(const std::string& file, f32 scale)
 {
 	Anm2 anm2;
 
-	if (!anm2_deserialize(&anm2, nullptr, file)) return false;
+	if (!anm2_deserialize(&anm2, file)) return false;
 	anm2_scale(&anm2, scale);
 	return anm2_serialize(&anm2, file);
 }

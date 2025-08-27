@@ -26,23 +26,21 @@ void generate_preview_draw(GeneratePreview* self)
     canvas_clear(self->settings->previewBackgroundColor);
  
     Anm2Item* item = anm2_item_from_reference(self->anm2, self->reference);
-    Texture* texture = map_find(self->resources->textures, self->anm2->layers[self->reference->itemID].spritesheetID);
+    Texture& texture = self->anm2->spritesheets[self->anm2->layers[self->reference->itemID].spritesheetID].texture;
         
-    if (item && texture && !texture->isInvalid)
+    if (item && !texture.isInvalid)
     {
         const s32 index = std::clamp((s32)(self->time * count), 0, count);
         const s32 row = index / columns;
         const s32 column = index % columns;
         vec2 crop = startPosition + vec2(size.x * column, size.y * row);
 
-        vec2 uvMin = crop / vec2(texture->size);
-        vec2 uvMax = (crop + size) / vec2(texture->size);
+        vec2 uvMin = crop / vec2(texture.size);
+        vec2 uvMax = (crop + size) / vec2(texture.size);
         f32 vertices[] = UV_VERTICES(uvMin, uvMax);
 
-        mat4 model = quad_model_get(size, {}, pivot, {}, CANVAS_SCALE_DEFAULT);
-        mat4 generateTransform = transform * model;
-
-        canvas_texture_draw(&self->canvas, shaderTexture, texture->id, generateTransform, vertices, COLOR_OPAQUE, COLOR_OFFSET_NONE);
+        mat4 generateTransform = transform * canvas_model_get(size, {}, pivot);
+        canvas_texture_draw(&self->canvas, shaderTexture, texture.id, generateTransform, vertices, COLOR_OPAQUE, COLOR_OFFSET_NONE);
     }
     
     canvas_unbind();

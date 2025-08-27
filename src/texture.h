@@ -10,10 +10,10 @@
 
 struct Texture
 {
-    GLuint id = 0;
-    ivec2 size = {0, 0};
-    s32 channels = -1;
-    bool isInvalid = false;
+    GLuint id = GL_ID_NONE;
+    ivec2 size{};
+    s32 channels = TEXTURE_CHANNELS;
+    bool isInvalid = true;
 };
 
 bool texture_from_encoded_data_init(Texture* self, ivec2 size, s32 channels, const u8* data, u32 length);

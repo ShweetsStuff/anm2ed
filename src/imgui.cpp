@@ -19,11 +19,11 @@ static bool _imgui_window_color_from_position_get(SDL_Window* self, const vec2& 
     return true;
 }
 
-static void _imgui_anm2_new(Imgui* self, const std::string& path)
+static void _imgui_anm2_open(Imgui* self, const std::string& path)
 {
-	*self->reference = Anm2Reference{};
-	resources_textures_free(self->resources);
-	if (anm2_deserialize(self->anm2, self->resources, path))
+	imgui_file_new(self);
+
+	if (anm2_deserialize(self->anm2, path))
 	{
 		window_title_from_path_set(self->window, path);
 		snapshots_reset(self->snapshots);
@@ -36,13 +36,18 @@ static void _imgui_anm2_new(Imgui* self, const std::string& path)
 static void _imgui_spritesheet_add(Imgui* self, const std::string& path)
 {
 	std::filesystem::path workingPath = std::filesystem::current_path();
-	std::string anm2WorkingPath = working_directory_from_file_set(self->anm2->path);
-	std::string spritesheetPath = std::filesystem::relative(path, anm2WorkingPath).string();
+	std::string spritesheetPath = path;
 
-	s32 id = map_next_id_get(self->resources->textures);
+	if (!self->anm2->path.empty())
+	{
+		std::string anm2WorkingPath = working_directory_from_file_set(self->anm2->path);
+		spritesheetPath = std::filesystem::relative(path, anm2WorkingPath).string();
+	}
+
+	s32 id = map_next_id_get(self->anm2->spritesheets);
 	self->anm2->spritesheets[id] = Anm2Spritesheet{};
 	self->anm2->spritesheets[id].path = spritesheetPath;
-	resources_texture_init(self->resources, spritesheetPath, id);
+	texture_from_path_init(&self->anm2->spritesheets[id].texture, spritesheetPath);
 	
 	std::filesystem::current_path(workingPath);
 }
@@ -202,7 +207,7 @@ static void _imgui_item_post(const ImguiItem& self, Imgui* imgui, ImguiItemType 
 	if (isActivated)
 	{
 		if (self.is_undoable()) 
-			imgui_undo_push(imgui, self.undoAction);
+			imgui_snapshot(imgui, self.snapshotAction);
 
 		if (self.function) self.function(imgui);
 
@@ -666,7 +671,7 @@ static void _imgui_timeline(Imgui* self)
 		if (ImGui::IsMouseDown(0) && _imgui_is_window_hovered()) 
 		{
 			if (!isPlayheadDrag)
-				imgui_undo_push(self, IMGUI_ACTION_MOVE_PLAYHEAD);
+				imgui_snapshot(self, IMGUI_ACTION_MOVE_PLAYHEAD);
 			isPlayheadDrag = true;
 		}
 
@@ -1018,10 +1023,10 @@ static void _imgui_timeline(Imgui* self)
 				}
 
 				if (type == ANM2_TRIGGERS)
-					imgui_undo_push(self, IMGUI_ACTION_TRIGGER_MOVE);
+					imgui_snapshot(self, IMGUI_ACTION_TRIGGER_MOVE);
 				else if (isModCtrl)
 				{
-					imgui_undo_push(self, IMGUI_ACTION_FRAME_DELAY);
+					imgui_snapshot(self, IMGUI_ACTION_FRAME_DELAY);
 					frameDelayStart = draggingFrame->delay;
 					frameDelayTimeStart = frameTime;
 				}
@@ -1067,7 +1072,7 @@ static void _imgui_timeline(Imgui* self)
 						Anm2Reference swapReference = *(Anm2Reference*)payload->Data;
 						if (swapReference != reference)
 						{
-							imgui_undo_push(self, IMGUI_ACTION_FRAME_SWAP);
+							imgui_snapshot(self, IMGUI_ACTION_FRAME_SWAP);
 
 							Anm2Frame* swapFrame = anm2_frame_from_reference(self->anm2, &reference);
 							Anm2Frame* dragFrame = anm2_frame_from_reference(self->anm2, &swapReference);
@@ -1274,7 +1279,7 @@ static void _imgui_taskbar(Imgui* self)
 
 	if (self->dialog->isSelected && self->dialog->type == DIALOG_ANM2_OPEN)
 	{
-		_imgui_anm2_new(self, self->dialog->path);
+		_imgui_anm2_open(self, self->dialog->path);
 		dialog_reset(self->dialog);
 	}			
 
@@ -1336,7 +1341,7 @@ static void _imgui_taskbar(Imgui* self)
 		_imgui_begin_child(IMGUI_GENERATE_ANIMATION_FROM_GRID_PREVIEW_CHILD, self);
 		
 		generate_preview_draw(self->generatePreview);
-		ImGui::Image(self->generatePreview->canvas.texture, GENERATE_PREVIEW_SIZE);
+		ImGui::Image(self->generatePreview->canvas.framebuffer, GENERATE_PREVIEW_SIZE);
 
 		_imgui_begin_child(IMGUI_GENERATE_ANIMATION_FROM_GRID_SLIDER_CHILD, self);
 		_imgui_slider_float(IMGUI_GENERATE_ANIMATION_FROM_GRID_SLIDER, self, time);
@@ -1730,7 +1735,7 @@ static void _imgui_animations(Imgui* self)
 				s32 sourceID = *(s32*)payload->Data;
 				if (sourceID != id)
 				{
-					imgui_undo_push(self, IMGUI_ACTION_ANIMATION_SWAP);
+					imgui_snapshot(self, IMGUI_ACTION_ANIMATION_SWAP);
 					map_swap(self->anm2->animations, sourceID, id);
 				}
 			}
@@ -1963,7 +1968,7 @@ static void _imgui_spritesheets(Imgui* self)
 	{
 		ImGui::PushID(id);
 		
-		Texture* texture = &self->resources->textures[id];
+		Texture& texture = spritesheet.texture;
 		bool isContains = selectedIDs.contains(id);
 		
 		_imgui_begin_child(IMGUI_SPRITESHEET_CHILD, self);
@@ -1992,26 +1997,23 @@ static void _imgui_spritesheets(Imgui* self)
 			{
 				s32 sourceID = *(s32*)payload->Data;
 				if (sourceID != id)
-				{
 					map_swap(self->anm2->spritesheets, sourceID, id);
-					map_swap(self->resources->textures, sourceID, id);
-				}
 			}
 			ImGui::EndDragDropTarget();
 		}
 
 		ImVec2 spritesheetPreviewSize = IMGUI_SPRITESHEET_PREVIEW_SIZE;
-		f32 spritesheetAspect = (f32)self->resources->textures[id].size.x / self->resources->textures[id].size.y;
+		f32 spritesheetAspect = (f32)texture.size.x / texture.size.y;
 
 		if ((IMGUI_SPRITESHEET_PREVIEW_SIZE.x / IMGUI_SPRITESHEET_PREVIEW_SIZE.y) > spritesheetAspect)
 			spritesheetPreviewSize.x = IMGUI_SPRITESHEET_PREVIEW_SIZE.y * spritesheetAspect;
 		else
 			spritesheetPreviewSize.y = IMGUI_SPRITESHEET_PREVIEW_SIZE.x / spritesheetAspect;
 
-		if (texture->isInvalid)
+		if (texture.isInvalid)
 			_imgui_atlas(ATLAS_NONE, self);
 		else
-			ImGui::Image(texture->id, spritesheetPreviewSize);
+			ImGui::Image(texture.id, spritesheetPreviewSize);
 			
 		_imgui_end_child(); // IMGUI_SPRITESHEET_CHILD
 
@@ -2033,14 +2035,19 @@ static void _imgui_spritesheets(Imgui* self)
 		_imgui_spritesheet_add(self, self->dialog->path);
 		dialog_reset(self->dialog);
 	}
-		
+	
 	if (_imgui_button(IMGUI_SPRITESHEETS_RELOAD.copy({selectedIDs.empty()}), self))
 	{
+		if (selectedIDs.size() > 0) 
+			imgui_snapshot(self, IMGUI_ACTION_RELOAD_SPRITESHEET);
+
 		for (auto& id : selectedIDs)
 		{
 			std::filesystem::path workingPath = std::filesystem::current_path();
 			working_directory_from_file_set(self->anm2->path);
-			resources_texture_init(self->resources, self->anm2->spritesheets[id].path, id);
+			Texture texture;
+			texture_from_path_init(&texture, self->anm2->spritesheets[id].path);
+			self->anm2->spritesheets[id].texture = texture;
 			std::filesystem::current_path(workingPath);
 		}
 	}
@@ -2050,14 +2057,17 @@ static void _imgui_spritesheets(Imgui* self)
 
 	if (self->dialog->isSelected && self->dialog->type == DIALOG_SPRITESHEET_REPLACE)
 	{
+		imgui_snapshot(self, IMGUI_ACTION_REPLACE_SPRITESHEET);
+		
 		std::filesystem::path workingPath = std::filesystem::current_path();
 		std::string anm2WorkingPath = working_directory_from_file_set(self->anm2->path);
 		std::string spritesheetPath = std::filesystem::relative(self->dialog->path, anm2WorkingPath).string();
 	
 		self->anm2->spritesheets[self->dialog->replaceID].path = spritesheetPath;
-		resources_texture_init(self->resources, spritesheetPath, self->dialog->replaceID);
+		Texture texture;
+		texture_from_path_init(&texture, spritesheetPath);
+		self->anm2->spritesheets[self->dialog->replaceID].texture = texture; 
 		dialog_reset(self->dialog);
-
 		std::filesystem::current_path(workingPath);
 	}
 
@@ -2073,8 +2083,8 @@ static void _imgui_spritesheets(Imgui* self)
 		{
 			if (!usedSpritesheetIDs.count(it->first))
 			{
+				texture_free(&self->anm2->spritesheets[it->first].texture);
 				it = self->anm2->spritesheets.erase(it);
-				texture_free(&self->resources->textures[it->first]);
 			}
 			else
 				it++;
@@ -2092,12 +2102,11 @@ static void _imgui_spritesheets(Imgui* self)
 	{
 		for (auto& id : selectedIDs)
 		{
-			Anm2Spritesheet* spritesheet = &self->anm2->spritesheets[id];
-			Texture* texture = &self->resources->textures[id];
+			Anm2Spritesheet& spritesheet = self->anm2->spritesheets[id];
 			std::filesystem::path workingPath = std::filesystem::current_path();
 			working_directory_from_file_set(self->anm2->path);
-			texture_from_gl_write(texture, spritesheet->path);
-			imgui_log_push(self, std::format(IMGUI_LOG_SPRITESHEET_SAVE_FORMAT, id, spritesheet->path));
+			texture_from_gl_write(&spritesheet.texture, spritesheet.path);
+			imgui_log_push(self, std::format(IMGUI_LOG_SPRITESHEET_SAVE_FORMAT, id, spritesheet.path));
 			std::filesystem::current_path(workingPath);
 		}
 	}
@@ -2116,7 +2125,6 @@ static void _imgui_animation_preview(Imgui* self)
 	static ivec2& size = self->preview->canvas.size;
 	static vec2 mousePos{};
 	static vec2 previewPos{};
-	static ImVec2 previewScreenPos{};
 
 	std::string mousePositionString = std::format(IMGUI_POSITION_FORMAT, (s32)mousePos.x, (s32)mousePos.y);
 	
@@ -2182,13 +2190,10 @@ static void _imgui_animation_preview(Imgui* self)
 	_imgui_checkbox(IMGUI_CANVAS_BORDER, self, self->settings->previewIsBorder);
 	_imgui_end_child(); // IMGUI_CANVAS_HELPER_CHILD
 
-	previewPos = vec2(ImGui::GetCursorPos());
-	previewScreenPos = vec2(ImGui::GetCursorScreenPos());
-	
-	vec2 imageSize = ImGui::GetContentRegionAvail();
-	size = ivec2(imageSize);
+	ImVec2 previewCursorScreenPos = ImGui::GetCursorScreenPos();
+	size = ivec2(vec2(ImGui::GetContentRegionAvail()));
 	preview_draw(self->preview);
-	ImGui::Image(self->preview->canvas.texture, imageSize);
+	ImGui::Image(self->preview->canvas.framebuffer, vec2(size));
 	
 	if (self->settings->previewIsTriggers)
 	{
@@ -2198,7 +2203,7 @@ static void _imgui_animation_preview(Imgui* self)
 		if (trigger.eventID != ID_NONE)
 		{
 			f32 textScale = ImGui::GetCurrentWindow()->FontWindowScale;
-			ImVec2 textPos = previewScreenPos + ImGui::GetStyle().ItemSpacing;
+			ImVec2 textPos = previewCursorScreenPos + ImGui::GetStyle().ItemSpacing;
 			ImGui::SetWindowFontScale(IMGUI_TRIGGERS_FONT_SCALE);
 			ImGui::GetWindowDrawList()->AddText(textPos, IMGUI_TRIGGERS_EVENT_COLOR, self->anm2->events[trigger.eventID].name.c_str());
 			ImGui::SetWindowFontScale(textScale);
@@ -2215,7 +2220,7 @@ static void _imgui_animation_preview(Imgui* self)
 
 	_imgui_end(); // IMGUI_ANIMATION_PREVIEW
 
-	mousePos = (vec2((ImGui::GetMousePos()) - (ImGui::GetWindowPos() + previewPos)) - (imageSize * 0.5f) - pan) / PERCENT_TO_UNIT(zoom);
+	mousePos = vec2(ImGui::GetMousePos() - previewCursorScreenPos - pan - (vec2(size) * 0.5f)) / PERCENT_TO_UNIT(zoom);
 	
 	const bool isLeft = ImGui::IsKeyPressed(IMGUI_INPUT_LEFT);
 	const bool isRight = ImGui::IsKeyPressed(IMGUI_INPUT_RIGHT);
@@ -2232,7 +2237,7 @@ static void _imgui_animation_preview(Imgui* self)
 	
 	if (tool == TOOL_MOVE || tool == TOOL_SCALE || tool == TOOL_ROTATE)
 		if (isMouseClick || isLeft || isRight || isUp || isDown)
-			imgui_undo_push(self, IMGUI_ACTION_FRAME_TRANSFORM);
+			imgui_snapshot(self, IMGUI_ACTION_FRAME_TRANSFORM);
 	
 	if ((tool == TOOL_PAN && isMouseDown) || isMouseMiddleDown)
 		pan += vec2(mouseDelta.x, mouseDelta.y);
@@ -2332,11 +2337,10 @@ static void _imgui_spritesheet_editor(Imgui* self)
 	_imgui_checkbox(IMGUI_CANVAS_BORDER, self, self->settings->editorIsBorder);
 	_imgui_end_child(); // IMGUI_CANVAS_VISUAL_CHILD
 	
-	ImVec2 editorPos = ImGui::GetCursorPos();
-	vec2 imageSize = ImGui::GetContentRegionAvail();
-	size = ivec2(imageSize);
+	ImVec2 editorCursorScreenPos = ImGui::GetCursorScreenPos();
+	size = ivec2(vec2(ImGui::GetContentRegionAvail()));
 	editor_draw(self->editor);
-	ImGui::Image(self->editor->canvas.texture, imageSize);
+	ImGui::Image(self->editor->canvas.framebuffer, vec2(size));
 	
 	if (ImGui::IsItemHovered()) 
 		self->pendingCursor = TOOL_CURSORS[tool];
@@ -2348,7 +2352,7 @@ static void _imgui_spritesheet_editor(Imgui* self)
 
 	_imgui_end(); // IMGUI_SPRITESHEET_EDITOR
 
-	mousePos = (vec2((ImGui::GetMousePos()) - (ImGui::GetWindowPos() + editorPos)) - pan) / PERCENT_TO_UNIT(zoom);
+	mousePos = vec2(ImGui::GetMousePos() - editorCursorScreenPos - pan) / PERCENT_TO_UNIT(zoom);
 
 	const bool isMouseClick = ImGui::IsMouseClicked(ImGuiMouseButton_Left);
 	const bool isMouseDown = ImGui::IsMouseDown(ImGuiMouseButton_Left);
@@ -2366,7 +2370,8 @@ static void _imgui_spritesheet_editor(Imgui* self)
 	if (self->reference->itemType == ANM2_LAYER) 
 		frame = anm2_frame_from_reference(self->anm2, self->reference);
 
-	Texture* texture = map_find(self->resources->textures, self->editor->spritesheetID);
+	Anm2Spritesheet* spritesheet = map_find(self->anm2->spritesheets, self->editor->spritesheetID);
+	Texture* texture = spritesheet ? &spritesheet->texture : nullptr;
 
 	vec2 position = mousePos;
 
@@ -2377,16 +2382,13 @@ static void _imgui_spritesheet_editor(Imgui* self)
 
 			if (self->settings->editorIsGridSnap)
 			{
-				position = 
-				{
-					(s32)((position.x - gridOffset.x) / gridSize.x) * gridSize.x + gridOffset.x,
-					(s32)((position.y - gridOffset.y) / gridSize.y) * gridSize.y + gridOffset.y
-				};
+				position.x = roundf(position.x / gridSize.x) * gridSize.x + gridOffset.x - (gridSize.x * 0.5f);
+				position.y = roundf(position.y / gridSize.y) * gridSize.y + gridOffset.y - (gridSize.y * 0.5f);
 			}
 			
 			if (isMouseClick)
 			{
-				imgui_undo_push(self, IMGUI_ACTION_FRAME_CROP);
+				imgui_snapshot(self, IMGUI_ACTION_FRAME_CROP);
 				frame->crop = position;
 				frame->size = ivec2(0,0);
 			}
@@ -2396,9 +2398,13 @@ static void _imgui_spritesheet_editor(Imgui* self)
 		case TOOL_DRAW:
 		case TOOL_ERASE:
 		{
-			if (!frame || !texture) break;
+			if (!texture) break;
+			
 			vec4 color = tool == TOOL_ERASE ? COLOR_TRANSPARENT : toolColor;
 			
+			if (isMouseClick)
+				imgui_snapshot(self, IMGUI_ACTION_DRAW);
+
 			if (isMouseDown)
 				texture_pixel_set(texture, position, color);
 			break;
@@ -2606,7 +2612,7 @@ void imgui_update(Imgui* self)
 		{
 			if (ImGui::IsKeyChordPressed(hotkey.chord))
 			{
-				if (hotkey.is_undoable()) imgui_undo_push(self, hotkey.undoAction);
+				if (hotkey.is_undoable()) imgui_snapshot(self, hotkey.snapshotAction);
 				if (hotkey.is_focus_window()) continue;
 				hotkey.function(self);
 			}
@@ -2634,9 +2640,11 @@ void imgui_update(Imgui* self)
             	const char* droppedFile = event.drop.data;
             	
 				if (path_is_extension(droppedFile, ANM2_EXTENSION))  
-					_imgui_anm2_new(self, droppedFile);
+					_imgui_anm2_open(self, droppedFile);
 				else if (path_is_extension(droppedFile, ANM2_SPRITESHEET_EXTENSION))
 					_imgui_spritesheet_add(self, droppedFile);
+				else
+					imgui_log_push(self, IMGUI_LOG_DRAG_DROP_ERROR);
             	
 				break;
 			}

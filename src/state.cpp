@@ -99,13 +99,21 @@ void init(State* self)
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_LINE_SMOOTH);
 	
+	if (!self->argument.empty())
+	{
+		anm2_deserialize(&self->anm2, self->argument);
+		window_title_from_path_set(self->window, self->argument);
+	}
+	else
+		anm2_new(&self->anm2);
+
 	resources_init(&self->resources);
 	dialog_init(&self->dialog, self->window);
 	clipboard_init(&self->clipboard, &self->anm2);
-	snapshots_init(&self->snapshots, &self->anm2, &self->reference, &self->preview);
 	preview_init(&self->preview, &self->anm2, &self->reference, &self->resources, &self->settings);
 	generate_preview_init(&self->generatePreview, &self->anm2, &self->reference, &self->resources, &self->settings);
 	editor_init(&self->editor, &self->anm2, &self->reference, &self->resources, &self->settings);
+	snapshots_init(&self->snapshots, &self->anm2, &self->reference, &self->preview);
 	
 	imgui_init
 	(
@@ -123,14 +131,6 @@ void init(State* self)
 		self->window,
 		&self->glContext
 	);
-
-	if (!self->argument.empty())
-	{
-		anm2_deserialize(&self->anm2, &self->resources, self->argument);
-		window_title_from_path_set(self->window, self->argument);
-	}
-	else
-		anm2_new(&self->anm2);
 }
 
 void loop(State* self)

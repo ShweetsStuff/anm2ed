@@ -1,32 +1,19 @@
 #include "canvas.h"
 
-static void _canvas_texture_free(Canvas* self)
+static void _canvas_framebuffer_set(Canvas* self, const ivec2& size)
 {
-    if (self->fbo != 0)     glDeleteFramebuffers(1, &self->fbo);
-    if (self->rbo != 0)     glDeleteRenderbuffers(1, &self->rbo);
-    if (self->texture != 0) glDeleteTextures(1, &self->texture);
-}
-
-static void _canvas_texture_init(Canvas* self, const ivec2& size)
-{
-    _canvas_texture_free(self);
-
     self->size = size;
     self->previousSize = size;
     
-    glGenFramebuffers(1, &self->fbo);
-
     glBindFramebuffer(GL_FRAMEBUFFER, self->fbo);
 
-    glGenTextures(1, &self->texture);
-    glBindTexture(GL_TEXTURE_2D, self->texture);
+    glBindTexture(GL_TEXTURE_2D, self->framebuffer);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, self->size.x, self->size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, self->texture, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, self->framebuffer, 0);
 
-    glGenRenderbuffers(1, &self->rbo);
     glBindRenderbuffer(GL_RENDERBUFFER, self->rbo);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, self->size.x, self->size.y);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, self->rbo);
@@ -65,7 +52,7 @@ void canvas_init(Canvas* self, const ivec2& size)
     glBindVertexArray(self->rectVAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, self->rectVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(GL_VERTICES), GL_VERTICES, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(CANVAS_RECT_VERTICES), CANVAS_RECT_VERTICES, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(f32), (void*)0);
@@ -104,7 +91,11 @@ void canvas_init(Canvas* self, const ivec2& size)
     
     glBindVertexArray(0);
 
-    _canvas_texture_init(self, size);
+    // Framebuffer
+    glGenTextures(1, &self->framebuffer);
+    glGenFramebuffers(1, &self->fbo);
+    glGenRenderbuffers(1, &self->rbo);
+    _canvas_framebuffer_set(self, size);
 }
 
 mat4 canvas_transform_get(Canvas* self, vec2 pan, f32 zoom, OriginType origin)
@@ -140,10 +131,10 @@ void canvas_viewport_set(Canvas* self)
     glViewport(0, 0, (s32)self->size.x, (s32)self->size.y);
 }
 
-void canvas_texture_set(Canvas* self)
+void canvas_framebuffer_resize_check(Canvas* self)
 {
     if (self->previousSize != self->size)
-        _canvas_texture_init(self, self->size);
+        _canvas_framebuffer_set(self, self->size);
 }
 
 void canvas_grid_draw(Canvas* self, GLuint& shader, mat4& transform, ivec2& size, ivec2& offset, vec4& color)
@@ -171,7 +162,7 @@ void canvas_texture_draw(Canvas* self, GLuint& shader, GLuint& texture, mat4& tr
     glBindVertexArray(self->textureVAO);
     
     glBindBuffer(GL_ARRAY_BUFFER, self->textureVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(GL_UV_VERTICES), vertices, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(CANVAS_TEXTURE_VERTICES), vertices, GL_DYNAMIC_DRAW);
     
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
@@ -227,30 +218,49 @@ void canvas_unbind(void)
 
 void canvas_free(Canvas* self)
 {
-    _canvas_texture_free(self);
+    glDeleteFramebuffers(1, &self->fbo);
+    glDeleteRenderbuffers(1, &self->rbo);
+    glDeleteTextures(1, &self->framebuffer);
+    glDeleteVertexArrays(1, &self->axisVAO);
+    glDeleteVertexArrays(1, &self->rectVAO);
+    glDeleteVertexArrays(1, &self->gridVAO);
+    glDeleteVertexArrays(1, &self->textureVAO);
+    glDeleteBuffers(1, &self->axisVBO);
+    glDeleteBuffers(1, &self->rectVBO);
+    glDeleteBuffers(1, &self->gridVBO);
+    glDeleteBuffers(1, &self->textureVBO);
+    glDeleteBuffers(1, &self->textureEBO);
 }
 
-mat4 canvas_mvp_get(mat4& transform, vec2 size, vec2 position, vec2 pivot, f32 rotation, vec2 scale, vec2 pivotAlt, f32 rotationAlt)
+mat4 canvas_model_get(vec2 size, vec2 position, vec2 pivot, vec2 scale, f32 rotation)
 {
     vec2 scaleAbsolute  = glm::abs(scale);
     vec2 scaleSign = glm::sign(scale);
-    f32 usedSign = (scaleSign.x * scaleSign.y) < 0.0f ? -1.0f : 1.0f;
+    vec2 pivotScaled = pivot * scaleAbsolute;
+    vec2 sizeScaled  = size  * scaleAbsolute;
 
-    vec2 sizeScaled = size * scaleAbsolute;
-    vec2 pivotScaled  = pivot * scaleAbsolute;
-    vec2 pivotAltScaled = pivotAlt * scaleAbsolute;
-
-    vec2 pivotAltMirrored = pivotScaled + (pivotAltScaled - pivotScaled) * scaleSign;
-
-    mat4 model = glm::translate(mat4(1.0f), vec3(position - pivotScaled, 0.0f));
+    mat4 model(1.0f);
+    model = glm::translate(model, vec3(position - pivotScaled, 0.0f));
     model = glm::translate(model, vec3(pivotScaled, 0.0f));
     model = glm::scale(model, vec3(scaleSign, 1.0f));
-    model = glm::rotate(model, glm::radians(rotation) * usedSign, vec3(0,0,1));
+    model = glm::rotate(model, glm::radians(rotation), vec3(0, 0, 1));
     model = glm::translate(model, vec3(-pivotScaled, 0.0f));
-    model = glm::translate(model, vec3(pivotAltMirrored, 0.0f));
-    model = glm::rotate(model, glm::radians(rotationAlt) * usedSign, vec3(0,0,1));
-    model = glm::translate(model, vec3(-pivotAltMirrored, 0.0f));
     model = glm::scale(model, vec3(sizeScaled, 1.0f));
+    return model;
+}
 
-    return transform * model;
+mat4 canvas_parent_model_get(vec2 position, vec2 pivot, vec2 scale, f32 rotation)
+{
+    vec2 scaleSign = glm::sign(scale);
+    vec2 scaleAbsolute  = glm::abs(scale);
+    f32 handedness = (scaleSign.x * scaleSign.y) < 0.0f ? -1.0f : 1.0f;
+
+    mat4 local(1.0f);
+    local = glm::translate(local, vec3(pivot, 0.0f));
+    local = glm::scale(local, vec3(scaleSign, 1.0f));
+    local = glm::rotate(local, glm::radians(rotation) * handedness, vec3(0, 0, 1));
+    local = glm::translate(local, vec3(-pivot, 0.0f));
+    local = glm::scale(local, vec3(scaleAbsolute, 1.0f));
+
+    return glm::translate(mat4(1.0f), vec3(position, 0.0f)) * local;
 }

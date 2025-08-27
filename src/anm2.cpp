@@ -303,7 +303,7 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 	return true;
 }
 
-bool anm2_deserialize(Anm2* self, Resources* resources, const std::string& path)
+bool anm2_deserialize(Anm2* self, const std::string& path)
 {
 	XMLDocument xmlDocument;
 	XMLError xmlError;
@@ -588,8 +588,8 @@ bool anm2_deserialize(Anm2* self, Resources* resources, const std::string& path)
 			xmlAttribute = xmlAttribute->Next();
 		}
 
-		if (anm2Element == ANM2_ELEMENT_SPRITESHEET && resources) 
-			resources_texture_init(resources, spritesheet->path, id);
+		if (anm2Element == ANM2_ELEMENT_SPRITESHEET)
+			texture_from_path_init(&spritesheet->texture, spritesheet->path);
 
 		xmlChild = xmlElement->FirstChildElement();
 
@@ -620,6 +620,10 @@ bool anm2_deserialize(Anm2* self, Resources* resources, const std::string& path)
 		if (animation.name == defaultAnimation)
 			self->defaultAnimationID = id;
 
+	// Copy texture data to pixels (used for snapshots)
+	anm2_spritesheet_texture_pixels_download(self);
+
+	// Read
 	log_info(std::format(ANM2_READ_INFO, path));
 	
 	// Return to old working directory
@@ -705,7 +709,6 @@ void anm2_null_remove(Anm2* self, s32 id)
         animation.nullAnimations = std::move(newNullAnims);
     }
 }
-
 
 s32 anm2_animation_add(Anm2* self)
 {
@@ -1167,4 +1170,40 @@ void anm2_generate_from_grid(Anm2* self, Anm2Reference* reference, vec2 startPos
 		anm2_frame_add(self, &frame, &frameReference);
 		frameReference.frameIndex++;
 	}
+}
+
+void anm2_free(Anm2* self)
+{
+	for (auto& [id, spritesheet] : self->spritesheets)
+		texture_free(&spritesheet.texture);
+}
+
+void anm2_spritesheet_texture_pixels_upload(Anm2* self)
+{
+    for (auto& [_, spritesheet] : self->spritesheets)
+    {
+        Texture& texture = spritesheet.texture;
+
+        if (texture.id != GL_ID_NONE && !texture.isInvalid)
+        {
+            assert(!spritesheet.pixels.empty());
+            glBindTexture(GL_TEXTURE_2D, texture.id);
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texture.size.x, texture.size.y, GL_RGBA, GL_UNSIGNED_BYTE, spritesheet.pixels.data());
+        }
+    }
+}
+
+void anm2_spritesheet_texture_pixels_download(Anm2* self)
+{
+    for (auto& [_, spritesheet] : self->spritesheets)
+    {
+        Texture& texture = spritesheet.texture;
+
+        if (texture.id != GL_ID_NONE && !texture.isInvalid)
+        {
+            spritesheet.pixels.resize(texture.size.x * texture.size.y * texture.channels);
+            glBindTexture(GL_TEXTURE_2D, texture.id);
+            glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, spritesheet.pixels.data());
+        }
+    }
 }

@@ -12,10 +12,10 @@
 #define CANVAS_GRID_DEFAULT 32
 #define CANVAS_LINE_LENGTH (FLT_MAX * 0.001f)
 
-static const vec2 CANVAS_PIVOT_SIZE = {8, 8};
-static const vec2 CANVAS_SCALE_DEFAULT = {1.0f, 1.0f};
+const inline vec2 CANVAS_PIVOT_SIZE = {8, 8};
+const inline vec2 CANVAS_SCALE_DEFAULT = {1.0f, 1.0f};
 
-const f32 CANVAS_AXIS_VERTICES[] = 
+const inline f32 CANVAS_AXIS_VERTICES[] = 
 {
     -CANVAS_LINE_LENGTH, 0.0f,
     CANVAS_LINE_LENGTH, 0.0f,
@@ -23,11 +23,27 @@ const f32 CANVAS_AXIS_VERTICES[] =
     0.0f, CANVAS_LINE_LENGTH
 };
 
-const f32 CANVAS_GRID_VERTICES[] =
+const inline f32 CANVAS_GRID_VERTICES[] =
 {
    -1.0f, -1.0f,
     3.0f, -1.0f,
    -1.0f,  3.0f
+};
+
+const inline f32 CANVAS_RECT_VERTICES[] =
+{
+    0, 0,  
+    1, 0,  
+    1, 1,  
+    0, 1  
+};
+
+const inline f32 CANVAS_TEXTURE_VERTICES[] = 
+{
+    0, 0, 0.0f, 0.0f,
+    1, 0, 1.0f, 0.0f,
+    1, 1, 1.0f, 1.0f,
+    0, 1, 0.0f, 1.0f
 };
 
 struct Canvas
@@ -40,38 +56,36 @@ struct Canvas
     GLuint rectVBO{};
     GLuint gridVAO{};
     GLuint gridVBO{};
-    GLuint texture{};
-    GLuint textureEBO{};
+    GLuint framebuffer{};
     GLuint textureVAO{};
     GLuint textureVBO{};
+    GLuint textureEBO{};
     ivec2 size{};
     ivec2 previousSize{};
 };
 
-void canvas_init(Canvas* self, const ivec2& size);
-mat4 canvas_transform_get(Canvas* self, vec2 pan, f32 zoom, OriginType origin);
-void canvas_clear(vec4& color);
-void canvas_bind(Canvas* self);
-void canvas_viewport_set(Canvas* self);
-void canvas_unbind(void);
-void canvas_texture_set(Canvas* self);
-void canvas_grid_draw(Canvas* self, GLuint& shader, mat4& transform, ivec2& size, ivec2& offset, vec4& color);
-void canvas_axes_draw(Canvas* self, GLuint& shader, mat4& transform, vec4& color);
-void canvas_rect_draw(Canvas* self, const GLuint& shader, const mat4& transform, const vec4& color);
-void canvas_free(Canvas* self);
-void canvas_draw(Canvas* self);
+#define UV_VERTICES(uvMin, uvMax) \
+{ \
+  0, 0, uvMin.x, uvMin.y, \
+  1, 0, uvMax.x, uvMin.y, \
+  1, 1, uvMax.x, uvMax.y, \
+  0, 1, uvMin.x, uvMax.y  \
+}
 
-mat4 canvas_mvp_get
-(
-    mat4& transform, 
-    vec2 size,
-    vec2 position = {0.0f, 0.0f}, 
-    vec2 pivot = {0.0f, 0.0f}, 
-    f32 rotation = {0.0f},
-    vec2 scale = {1.0f, 1.0f},
-    vec2 pivotAlt = {0.0f, 0.0f},
-    f32 rotationAlt = {0.0f}
-);
+mat4 canvas_transform_get(Canvas* self, vec2 pan, f32 zoom, OriginType origin);
+void canvas_axes_draw(Canvas* self, GLuint& shader, mat4& transform, vec4& color);
+void canvas_bind(Canvas* self);
+void canvas_clear(vec4& color);
+void canvas_draw(Canvas* self);
+void canvas_free(Canvas* self);
+void canvas_grid_draw(Canvas* self, GLuint& shader, mat4& transform, ivec2& size, ivec2& offset, vec4& color);
+void canvas_init(Canvas* self, const ivec2& size);
+void canvas_rect_draw(Canvas* self, const GLuint& shader, const mat4& transform, const vec4& color);
+void canvas_framebuffer_resize_check(Canvas* self);
+void canvas_unbind(void);
+void canvas_viewport_set(Canvas* self);
+mat4 canvas_model_get(vec2 size = {}, vec2 position = {}, vec2 pivot = {}, vec2 scale = vec2(1.0f), f32 rotation = {});
+mat4 canvas_parent_model_get(vec2 position = {}, vec2 pivot = {}, vec2 scale = vec2(1.0f), f32 rotation = {});
 
 void canvas_texture_draw
 (
@@ -79,7 +93,7 @@ void canvas_texture_draw
     GLuint& shader, 
     GLuint& texture, 
     mat4& transform, 
-    const f32* vertices = GL_UV_VERTICES,
-    vec4 tint = COLOR_OPAQUE,
+    const f32* vertices = CANVAS_TEXTURE_VERTICES, 
+    vec4 tint = COLOR_OPAQUE, 
     vec3 colorOffset = COLOR_OFFSET_NONE
 );

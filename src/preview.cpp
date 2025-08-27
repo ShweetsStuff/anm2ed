@@ -85,7 +85,7 @@ void preview_draw(Preview* self)
     GLuint& shaderGrid = self->resources->shaders[SHADER_GRID];
     mat4 transform = canvas_transform_get(&self->canvas, self->settings->previewPan, self->settings->previewZoom, ORIGIN_CENTER);
  
-    canvas_texture_set(&self->canvas);
+    canvas_framebuffer_resize_check(&self->canvas);
     
     canvas_bind(&self->canvas);
     canvas_viewport_set(&self->canvas);
@@ -108,12 +108,12 @@ void preview_draw(Preview* self)
         anm2_frame_from_time(self->anm2, &root, Anm2Reference{animationID, ANM2_ROOT}, self->time);
 
         if (self->settings->previewIsRootTransform)
-            rootModel = quad_parent_model_get(root.position, vec2(0.0f), root.rotation, PERCENT_TO_UNIT(root.scale));
+            rootModel = canvas_parent_model_get(root.position, {}, PERCENT_TO_UNIT(root.scale), root.rotation);
 
         // Root
         if (self->settings->previewIsTargets && animation->rootAnimation.isVisible && root.isVisible)
         {
-            mat4 model = quad_model_get(PREVIEW_TARGET_SIZE, root.position, PREVIEW_TARGET_SIZE * 0.5f, root.rotation, PERCENT_TO_UNIT(root.scale));
+            mat4 model = canvas_model_get(PREVIEW_TARGET_SIZE, root.position, PREVIEW_TARGET_SIZE * 0.5f, PERCENT_TO_UNIT(root.scale), root.rotation);
             mat4 rootTransform = transform * model;
             f32 vertices[] = ATLAS_UV_VERTICES(ATLAS_TARGET);
             canvas_texture_draw(&self->canvas, shaderTexture, self->resources->atlas.id, rootTransform, vertices, PREVIEW_ROOT_COLOR);
@@ -133,18 +133,18 @@ void preview_draw(Preview* self)
             if (!frame.isVisible)
                 continue;
 
-            mat4 model = quad_model_get(frame.size, frame.position, frame.pivot, frame.rotation, PERCENT_TO_UNIT(frame.scale));
+            mat4 model = canvas_model_get(frame.size, frame.position, frame.pivot, PERCENT_TO_UNIT(frame.scale), frame.rotation);
             mat4 layerTransform = transform * (rootModel * model);
 
-            Texture* texture = map_find(self->resources->textures, self->anm2->layers[id].spritesheetID);
+            Texture& texture = self->anm2->spritesheets[self->anm2->layers[id].spritesheetID].texture;
            
-            if (texture && !texture->isInvalid)
+            if (!texture.isInvalid)
             {
-                vec2 uvMin = frame.crop / vec2(texture->size);
-                vec2 uvMax = (frame.crop + frame.size) / vec2(texture->size);
+                vec2 uvMin = frame.crop / vec2(texture.size);
+                vec2 uvMax = (frame.crop + frame.size) / vec2(texture.size);
                 f32 vertices[] = UV_VERTICES(uvMin, uvMax);
 
-                canvas_texture_draw(&self->canvas, shaderTexture, texture->id, layerTransform, vertices, frame.tintRGBA, frame.offsetRGB);
+                canvas_texture_draw(&self->canvas, shaderTexture, texture.id, layerTransform, vertices, frame.tintRGBA, frame.offsetRGB);
             }
  
             if (self->settings->previewIsBorder)
@@ -153,7 +153,7 @@ void preview_draw(Preview* self)
             if (self->settings->previewIsPivots)
             {
                 f32 vertices[] = ATLAS_UV_VERTICES(ATLAS_PIVOT);
-                mat4 pivotModel = quad_model_get(CANVAS_PIVOT_SIZE, frame.position, CANVAS_PIVOT_SIZE * 0.5f, frame.rotation, PERCENT_TO_UNIT(frame.scale));
+                mat4 pivotModel = canvas_model_get(CANVAS_PIVOT_SIZE, frame.position, CANVAS_PIVOT_SIZE * 0.5f, PERCENT_TO_UNIT(frame.scale), frame.rotation);
                 mat4 pivotTransform = transform * (rootModel * pivotModel);
                 canvas_texture_draw(&self->canvas, shaderTexture, self->resources->atlas.id, pivotTransform, vertices, PREVIEW_PIVOT_COLOR);
             }
@@ -182,7 +182,7 @@ void preview_draw(Preview* self)
                 vec2 size = null.isShowRect ? CANVAS_PIVOT_SIZE : PREVIEW_TARGET_SIZE;
                 AtlasType atlas = null.isShowRect ? ATLAS_SQUARE : ATLAS_TARGET;
           
-                mat4 model = quad_model_get(size, frame.position, size * 0.5f, frame.rotation, PERCENT_TO_UNIT(frame.scale));
+                mat4 model = canvas_model_get(size, frame.position, size * 0.5f, PERCENT_TO_UNIT(frame.scale), frame.rotation);
                 mat4 nullTransform = transform * (rootModel * model);
      
                 f32 vertices[] = ATLAS_UV_VERTICES(atlas);
@@ -191,7 +191,7 @@ void preview_draw(Preview* self)
 
                 if (null.isShowRect)
                 {
-                    mat4 rectModel = quad_model_get(PREVIEW_NULL_RECT_SIZE, frame.position, PREVIEW_NULL_RECT_SIZE * 0.5f, frame.rotation, PERCENT_TO_UNIT(frame.scale));
+                    mat4 rectModel = canvas_model_get(PREVIEW_NULL_RECT_SIZE, frame.position, PREVIEW_NULL_RECT_SIZE * 0.5f, PERCENT_TO_UNIT(frame.scale), frame.rotation);
                     mat4 rectTransform = transform * (rootModel * rectModel);
                     canvas_rect_draw(&self->canvas, shaderLine, rectTransform, color);
                 }
@@ -210,7 +210,7 @@ void preview_draw(Preview* self)
         anm2_frame_from_time(self->anm2, &root, Anm2Reference{animationOverlayID, ANM2_ROOT}, self->time);
 
         if (self->settings->previewIsRootTransform)
-            rootModel = quad_parent_model_get(root.position, vec2(0.0f), root.rotation, PERCENT_TO_UNIT(root.scale));
+            rootModel = canvas_parent_model_get(root.position, {}, PERCENT_TO_UNIT(root.scale));
 
 		for (auto [i, id] : self->anm2->layerMap)
         {
@@ -225,22 +225,21 @@ void preview_draw(Preview* self)
             if (!frame.isVisible)
                 continue;
 
-            Texture* texture = map_find(self->resources->textures, self->anm2->layers[id].spritesheetID);
+            Texture& texture = self->anm2->spritesheets[self->anm2->layers[id].spritesheetID].texture;
             
-            if (!texture || texture->isInvalid)
-                continue;
+            if (texture.isInvalid) continue;
 
-            vec2 uvMin = frame.crop / vec2(texture->size);
-            vec2 uvMax = (frame.crop + frame.size) / vec2(texture->size);
+            vec2 uvMin = frame.crop / vec2(texture.size);
+            vec2 uvMax = (frame.crop + frame.size) / vec2(texture.size);
             f32 vertices[] = UV_VERTICES(uvMin, uvMax);
 
-            mat4 model = quad_model_get(frame.size, frame.position, frame.pivot, frame.rotation, PERCENT_TO_UNIT(frame.scale));
+            mat4 model = canvas_model_get(frame.size, frame.position, frame.pivot, PERCENT_TO_UNIT(frame.scale), frame.rotation);
             mat4 layerTransform = transform * (rootModel * model);
 
             vec4 tint = frame.tintRGBA;
             tint.a *= U8_TO_FLOAT(self->settings->previewOverlayTransparency);
 
-            canvas_texture_draw(&self->canvas, shaderTexture, texture->id, layerTransform, vertices, tint, frame.offsetRGB);
+            canvas_texture_draw(&self->canvas, shaderTexture, texture.id, layerTransform, vertices, tint, frame.offsetRGB);
         }
     }
 

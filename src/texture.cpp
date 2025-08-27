@@ -17,7 +17,9 @@
 
 static void _texture_gl_set(Texture* self, const u8* data)
 {
-	glGenTextures(1, &self->id);
+	if (self->id == GL_ID_NONE) 
+		glGenTextures(1, &self->id);
+	
 	glBindTexture(GL_TEXTURE_2D, self->id);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, self->size.x, self->size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -40,7 +42,6 @@ std::vector<u8> texture_download(const Texture* self)
 
 bool texture_from_path_init(Texture* self, const std::string& path)
 {
-	*self = Texture{};
 	u8* data = stbi_load(path.c_str(), &self->size.x, &self->size.y, &self->channels, TEXTURE_CHANNELS);
 	
 	if (!data)
@@ -49,10 +50,11 @@ bool texture_from_path_init(Texture* self, const std::string& path)
 		if (!data)
 		{
 			log_error(std::format(TEXTURE_INIT_ERROR, path));
-			self->isInvalid = true;
 			return false;
 		}
 	}
+
+	self->isInvalid = false;
 
 	log_info(std::format(TEXTURE_INIT_INFO, path));
 
@@ -132,34 +134,4 @@ bool texture_pixel_set(Texture* self, ivec2 position, vec4 color)
     glTexSubImage2D(GL_TEXTURE_2D, 0,position.x, position.y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, rgba8);
 
     return true;
-}
-
-Texture texture_copy(Texture* self)
-{
-	Texture copy = *self;
-	_texture_gl_set(&copy, nullptr);
-
-    GLuint fboSource;
-	GLuint fboDestination;
-    glGenFramebuffers(1, &fboSource);
-    glGenFramebuffers(1, &fboDestination);
-
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, fboSource);
-    glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, self->id, 0);
-
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fboDestination);
-    glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, copy.id, 0);
-
-    glBlitFramebuffer
-	(
-        0, 0, self->size.x, self->size.y,
-        0, 0, self->size.x, self->size.y,
-        GL_COLOR_BUFFER_BIT, GL_NEAREST
-    );
-
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glDeleteFramebuffers(1, &fboSource);
-    glDeleteFramebuffers(1, &fboDestination);
-
-	return copy;
 }

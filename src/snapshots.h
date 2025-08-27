@@ -4,7 +4,7 @@
 #include "preview.h"
 #include "texture.h"
 
-#define SNAPSHOT_STACK_MAX 1000
+#define SNAPSHOT_STACK_MAX 100
 #define SNAPSHOT_ACTION "Action"
 
 struct Snapshot
@@ -33,8 +33,9 @@ struct Snapshots
     SnapshotStack redoStack;
 };
 
-void snapshots_undo_push(Snapshots* self, const Snapshot* snapshot);
+void snapshots_undo_push(Snapshots* self, Snapshot* snapshot);
 void snapshots_init(Snapshots* self, Anm2* anm2, Anm2Reference* reference, Preview* preview);
 void snapshots_undo(Snapshots* self);
 void snapshots_redo(Snapshots* self);
 void snapshots_reset(Snapshots* self);
+Snapshot snapshot_get(Snapshots* self);

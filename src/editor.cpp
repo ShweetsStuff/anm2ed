@@ -20,7 +20,7 @@ void editor_draw(Editor* self)
     GLuint& shaderGrid = self->resources->shaders[SHADER_GRID];
     mat4 transform = canvas_transform_get(&self->canvas, self->settings->editorPan, self->settings->editorZoom, ORIGIN_TOP_LEFT);
     
-    canvas_texture_set(&self->canvas);
+    canvas_framebuffer_resize_check(&self->canvas);
     
     canvas_bind(&self->canvas);
     canvas_viewport_set(&self->canvas);
@@ -28,23 +28,24 @@ void editor_draw(Editor* self)
 
     if (self->spritesheetID != ID_NONE)
     {
-        Texture texture = self->resources->textures[self->spritesheetID];
-        mat4 mvp = canvas_mvp_get(transform, texture.size);
-        canvas_texture_draw(&self->canvas, shaderTexture, texture.id, mvp);
+        Texture& texture = self->anm2->spritesheets[self->spritesheetID].texture;
+        
+        mat4 spritesheetTransform = transform * canvas_model_get(texture.size);
+        canvas_texture_draw(&self->canvas, shaderTexture, texture.id, spritesheetTransform);
 
         if (self->settings->editorIsBorder)
-            canvas_rect_draw(&self->canvas, shaderLine, mvp, EDITOR_BORDER_COLOR);
+            canvas_rect_draw(&self->canvas, shaderLine, spritesheetTransform, EDITOR_BORDER_COLOR);
 
         Anm2Frame* frame = (Anm2Frame*)anm2_frame_from_reference(self->anm2, self->reference);
     
         if (frame)
         {
-            mvp = canvas_mvp_get(transform, frame->size, frame->crop);
-            canvas_rect_draw(&self->canvas, shaderLine, mvp, EDITOR_FRAME_COLOR);
+            mat4 cropTransform = transform * canvas_model_get(frame->size, frame->crop);
+            canvas_rect_draw(&self->canvas, shaderLine, cropTransform, EDITOR_FRAME_COLOR);
 
-            mvp = canvas_mvp_get(transform, CANVAS_PIVOT_SIZE, frame->crop + frame->pivot, CANVAS_PIVOT_SIZE * 0.5f);
+            mat4 pivotTransform = transform * canvas_model_get(CANVAS_PIVOT_SIZE, frame->crop + frame->pivot, CANVAS_PIVOT_SIZE * 0.5f);
             f32 vertices[] = ATLAS_UV_VERTICES(ATLAS_PIVOT);
-            canvas_texture_draw(&self->canvas, shaderTexture, self->resources->atlas.id, mvp, vertices, EDITOR_PIVOT_COLOR);
+            canvas_texture_draw(&self->canvas, shaderTexture, self->resources->atlas.id, pivotTransform, vertices, EDITOR_PIVOT_COLOR);
         }
     }
 

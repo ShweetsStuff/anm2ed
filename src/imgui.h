@@ -68,12 +68,16 @@
 #define IMGUI_ACTION_TRIGGER_MOVE "Trigger AtFrame"
 #define IMGUI_ACTION_FRAME_DELAY "Frame Delay"
 #define IMGUI_ACTION_MOVE_PLAYHEAD "Move Playhead"
+#define IMGUI_ACTION_DRAW "Draw"
+#define IMGUI_ACTION_RELOAD_SPRITESHEET "Reload Spritesheet(s)"
+#define IMGUI_ACTION_REPLACE_SPRITESHEET "Replace Spritesheet"
 
 #define IMGUI_POPUP_FLAGS ImGuiWindowFlags_NoMove
 #define IMGUI_POPUP_MODAL_FLAGS ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize
 
 #define IMGUI_LOG_FILE_OPEN_FORMAT "Opened anm2: {}" 
 #define IMGUI_LOG_FILE_SAVE_FORMAT "Saved anm2 to: {}" 
+#define IMGUI_LOG_SPRITESHEET_RELOAD "Reloaded selected spritesheets"
 #define IMGUI_LOG_RENDER_ANIMATION_FRAMES_SAVE_FORMAT "Saved rendered frames to: {}" 
 #define IMGUI_LOG_RENDER_ANIMATION_SAVE_FORMAT "Saved rendered animation to: {}" 
 #define IMGUI_LOG_RENDER_ANIMATION_NO_ANIMATION_ERROR "No animation selected; rendering cancelled."
@@ -83,6 +87,7 @@
 #define IMGUI_LOG_RENDER_ANIMATION_FFMPEG_PATH_ERROR "Invalid FFmpeg path! Make sure you have it installed and the path is correct."
 #define IMGUI_LOG_RENDER_ANIMATION_FFMPEG_ERROR "FFmpeg could not render animation! Check paths or your FFmpeg installation."
 #define IMGUI_LOG_SPRITESHEET_SAVE_FORMAT "Saved spritesheet #{} to: {}" 
+#define IMGUI_LOG_DRAG_DROP_ERROR "Invalid file for dragging/dropping!"
 
 #define IMGUI_NONE "None"
 #define IMGUI_ANIMATION_DEFAULT_FORMAT "(*) {}"
@@ -206,10 +211,10 @@ struct ImguiHotkey
     ImGuiKeyChord chord;
     ImguiFunction function;
     std::string focusWindow{};
-    std::string undoAction{};
+    std::string snapshotAction{};
 
     bool is_focus_window() const { return !focusWindow.empty(); }
-    bool is_undoable() const { return !undoAction.empty(); }
+    bool is_undoable() const { return !snapshotAction.empty(); }
 };
 
 static void imgui_log_push(Imgui* self, const std::string& text)
@@ -227,8 +232,8 @@ static std::vector<ImguiHotkey>& imgui_hotkey_registry()
 static inline void imgui_file_new(Imgui* self)
 {
     anm2_reference_clear(self->reference);
+    anm2_free(self->anm2);
 	anm2_new(self->anm2);
-    resources_textures_free(self->resources);
 }
 
 static inline void imgui_file_open(Imgui* self)
@@ -267,9 +272,9 @@ static inline void imgui_explore(Imgui* self)
     dialog_explorer_open(parentPath.string());
 }
 
-static inline void imgui_undo_push(Imgui* self, const std::string& action = SNAPSHOT_ACTION)
+static inline void imgui_snapshot(Imgui* self, const std::string& action = SNAPSHOT_ACTION)
 {
-    Snapshot snapshot = {*self->anm2, *self->reference, self->preview->time, action};
+    Snapshot snapshot = snapshot_get(self->snapshots);
     snapshots_undo_push(self->snapshots, &snapshot);
 }
 
@@ -476,7 +481,7 @@ struct ImguiItem
     std::string label{};
     std::string tooltip{};
     std::string& text = tooltip;
-    std::string undoAction{};
+    std::string snapshotAction{};
     std::string popup{};
     std::string dragDrop{};
     std::string focusWindow{};
@@ -524,7 +529,7 @@ struct ImguiItem
                 label += std::format(IMGUI_LABEL_SHORTCUT_FORMAT, chordString);
             tooltip += std::format(IMGUI_TOOLTIP_SHORTCUT_FORMAT, chordString);
             if (function)
-                imgui_hotkey_registry().push_back({chord, function, focusWindow, undoAction});
+                imgui_hotkey_registry().push_back({chord, function, focusWindow, snapshotAction});
         }
 
         std::string labelNew{};
@@ -578,7 +583,7 @@ struct ImguiItem
     bool is_size() const { return size != ImVec2(); }
     bool is_popup_size() const { return popupSize != ImVec2(); }
     bool is_tooltip() const { return !tooltip.empty(); }
-    bool is_undoable() const { return !undoAction.empty(); }
+    bool is_undoable() const { return !snapshotAction.empty(); }
     bool is_mnemonic() const { return mnemonicKey != ImGuiKey_None; }
     bool is_range() const { return min != 0 || max != 0; }
     const char* label_get() const { return label.c_str(); }
@@ -792,7 +797,7 @@ IMGUI_ITEM(IMGUI_GENERATE_ANIMATION_FROM_GRID_SLIDER,
 IMGUI_ITEM(IMGUI_GENERATE_ANIMATION_FROM_GRID_GENERATE,
     self.label = "Generate",
     self.tooltip = "Generate an animation with the used settings.",
-    self.undoAction = "Generate Animation from Grid",
+    self.snapshotAction = "Generate Animation from Grid",
     self.rowCount = IMGUI_OPTION_POPUP_ROW_COUNT,
     self.isSameLine = true
 );
@@ -845,7 +850,7 @@ IMGUI_ITEM(IMGUI_CHANGE_ALL_FRAME_PROPERTIES_NUMBER_FRAMES,
 IMGUI_ITEM(IMGUI_CHANGE_ALL_FRAME_PROPERTIES_ADD,
     self.label = "Add",
     self.tooltip = "The specified values will be added to all specified frames.",
-    self.undoAction = "Add Frame Properties",
+    self.snapshotAction = "Add Frame Properties",
     self.rowCount = IMGUI_CHANGE_ALL_FRAME_PROPERTIES_OPTIONS_ROW_COUNT,
     self.isSameLine = true
 );
@@ -853,7 +858,7 @@ IMGUI_ITEM(IMGUI_CHANGE_ALL_FRAME_PROPERTIES_ADD,
 IMGUI_ITEM(IMGUI_CHANGE_ALL_FRAME_PROPERTIES_SUBTRACT,
     self.label = "Subtract",
     self.tooltip = "The specified values will be added to all selected frames.",
-    self.undoAction = "Subtract Frame Properties",
+    self.snapshotAction = "Subtract Frame Properties",
     self.rowCount = IMGUI_CHANGE_ALL_FRAME_PROPERTIES_OPTIONS_ROW_COUNT,
     self.isSameLine = true
 );
@@ -861,7 +866,7 @@ IMGUI_ITEM(IMGUI_CHANGE_ALL_FRAME_PROPERTIES_SUBTRACT,
 IMGUI_ITEM(IMGUI_CHANGE_ALL_FRAME_PROPERTIES_SET,
     self.label = "Set",
     self.tooltip = "The specified values will be set to the specified value in selected frames.",
-    self.undoAction = "Set Frame Properties",
+    self.snapshotAction = "Set Frame Properties",
     self.rowCount = IMGUI_CHANGE_ALL_FRAME_PROPERTIES_OPTIONS_ROW_COUNT,
     self.isSameLine = true
 );
@@ -899,7 +904,7 @@ IMGUI_ITEM(IMGUI_SCALE_ANM2_VALUE,
 IMGUI_ITEM(IMGUI_SCALE_ANM2_SCALE,
     self.label = "Scale",
     self.tooltip = "Scale the anm2 with the value specified.",
-    self.undoAction = "Scale Anm2",
+    self.snapshotAction = "Scale Anm2",
     self.rowCount = IMGUI_OPTION_POPUP_ROW_COUNT,
     self.isSameLine = true
 );
@@ -926,7 +931,7 @@ IMGUI_ITEM(IMGUI_RENDER_ANIMATION_LOCATION_BROWSE,
 IMGUI_ITEM(IMGUI_RENDER_ANIMATION_LOCATION,
     self.label = "Location",
     self.tooltip = "Select the location of the rendered animation.",
-    self.max = 255
+    self.max = 1024
 );
 
 IMGUI_ITEM(IMGUI_RENDER_ANIMATION_FFMPEG_BROWSE,
@@ -939,7 +944,7 @@ IMGUI_ITEM(IMGUI_RENDER_ANIMATION_FFMPEG_BROWSE,
 IMGUI_ITEM(IMGUI_RENDER_ANIMATION_FFMPEG_PATH,
     self.label = "FFmpeg Path",
     self.tooltip = "Sets the path FFmpeg currently resides in.\nFFmpeg is required for rendering animations.\nDownload it from https://ffmpeg.org/, your package manager, or wherever else.",
-    self.max = 255
+    self.max = 1024
 );
 
 IMGUI_ITEM(IMGUI_RENDER_ANIMATION_OUTPUT,
@@ -1016,7 +1021,7 @@ IMGUI_ITEM(IMGUI_ANIMATIONS_CHILD, self.label = "## Animations Child", self.flag
 
 IMGUI_ITEM(IMGUI_ANIMATION,
     self.label = "## Animation Item",
-    self.undoAction = "Select Animation",
+    self.snapshotAction = "Select Animation",
     self.dragDrop = "## Animation Drag Drop",
     self.atlas = ATLAS_ANIMATION,
     self.idOffset = 2000
@@ -1026,7 +1031,7 @@ IMGUI_ITEM(IMGUI_ANIMATION,
 IMGUI_ITEM(IMGUI_ANIMATION_ADD,
     self.label = "Add",
     self.tooltip = "Adds a new animation.",
-    self.undoAction = "Add Animation",
+    self.snapshotAction = "Add Animation",
     self.rowCount = IMGUI_ANIMATIONS_OPTIONS_ROW_COUNT,
     self.isSameLine = true
 );
@@ -1034,7 +1039,7 @@ IMGUI_ITEM(IMGUI_ANIMATION_ADD,
 IMGUI_ITEM(IMGUI_ANIMATION_DUPLICATE,
     self.label = "Duplicate",
     self.tooltip = "Duplicates the selected animation, placing it after.",
-    self.undoAction = "Duplicate Animation",
+    self.snapshotAction = "Duplicate Animation",
     self.rowCount = IMGUI_ANIMATIONS_OPTIONS_ROW_COUNT,
     self.isSameLine = true
 );
@@ -1102,7 +1107,7 @@ IMGUI_ITEM(IMGUI_MERGE_DELETE_ANIMATIONS_AFTER,
 IMGUI_ITEM(IMGUI_MERGE_CONFIRM,
     self.label = "Merge",
     self.tooltip = "Merge the selected animations with the options set.",
-    self.undoAction = "Merge Animations",
+    self.snapshotAction = "Merge Animations",
     self.rowCount = IMGUI_OPTION_POPUP_ROW_COUNT,
     self.isSameLine = true
 );
@@ -1110,7 +1115,7 @@ IMGUI_ITEM(IMGUI_MERGE_CONFIRM,
 IMGUI_ITEM(IMGUI_ANIMATION_REMOVE,
     self.label = "Remove",
     self.tooltip = "Remove the selected animation.",
-    self.undoAction = "Remove Animation",
+    self.snapshotAction = "Remove Animation",
     self.rowCount = IMGUI_ANIMATIONS_OPTIONS_ROW_COUNT,
     self.chord = ImGuiKey_Delete,
     self.focusWindow = IMGUI_ANIMATIONS.label,
@@ -1120,7 +1125,7 @@ IMGUI_ITEM(IMGUI_ANIMATION_REMOVE,
 IMGUI_ITEM(IMGUI_ANIMATION_DEFAULT,
     self.label = "Default",
     self.tooltip = "Set the selected animation as the default one.",
-    self.undoAction = "Default Animation",
+    self.snapshotAction = "Default Animation",
     self.rowCount = IMGUI_ANIMATIONS_OPTIONS_ROW_COUNT,
     self.isSameLine = true
 );
@@ -1143,7 +1148,7 @@ IMGUI_ITEM(IMGUI_EVENT,
 IMGUI_ITEM(IMGUI_EVENTS_ADD,
     self.label = "Add",
     self.tooltip = "Adds a new event.",
-    self.undoAction = "Add Event",
+    self.snapshotAction = "Add Event",
     self.rowCount = IMGUI_EVENTS_OPTIONS_ROW_COUNT,
     self.isSameLine = true
 );
@@ -1151,7 +1156,7 @@ IMGUI_ITEM(IMGUI_EVENTS_ADD,
 IMGUI_ITEM(IMGUI_EVENTS_REMOVE_UNUSED,
     self.label = "Remove Unused",
     self.tooltip = "Removes all unused events (i.e., not being used in any triggers in any animation).",
-    self.undoAction = "Remove Unused Events",
+    self.snapshotAction = "Remove Unused Events",
     self.rowCount = IMGUI_EVENTS_OPTIONS_ROW_COUNT
 );
 
@@ -1197,6 +1202,7 @@ IMGUI_ITEM(IMGUI_SPRITESHEET_ADD,
 IMGUI_ITEM(IMGUI_SPRITESHEETS_RELOAD,
     self.label = "Reload",
     self.tooltip = "Reload the selected spritesheet.",
+    self.snapshotAction = "Reload Spritesheet",
     self.rowCount = IMGUI_SPRITESHEETS_OPTIONS_FIRST_ROW_COUNT,
     self.isSameLine = true
 );
@@ -1373,35 +1379,35 @@ IMGUI_ITEM(IMGUI_FRAME_PROPERTIES, self.label = "Frame Properties");
 IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_POSITION,
     self.label = "Position",
     self.tooltip = "Change the position of the selected frame.",
-    self.undoAction = "Frame Position",
+    self.snapshotAction = "Frame Position",
     self.isUseItemActivated = true
 );
 
 IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_CROP,
     self.label = "Crop",
     self.tooltip = "Change the crop position of the selected frame.",
-    self.undoAction = "Frame Crop",
+    self.snapshotAction = "Frame Crop",
     self.isUseItemActivated = true
 );
 
 IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_SIZE,
     self.label = "Size",
     self.tooltip = "Change the size of the crop of the selected frame.",
-    self.undoAction = "Frame Size",
+    self.snapshotAction = "Frame Size",
     self.isUseItemActivated = true
 );
 
 IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_PIVOT,
     self.label = "Pivot",
     self.tooltip = "Change the pivot of the selected frame.",
-    self.undoAction = "Frame Pivot",
+    self.snapshotAction = "Frame Pivot",
     self.isUseItemActivated = true
 );
 
 IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_SCALE,
     self.label = "Scale",
     self.tooltip = "Change the scale of the selected frame.",
-    self.undoAction = "Frame Scale",
+    self.snapshotAction = "Frame Scale",
     self.isUseItemActivated = true,
     self.value = 100
 );
@@ -1409,14 +1415,14 @@ IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_SCALE,
 IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_ROTATION,
     self.label = "Rotation",
     self.tooltip = "Change the rotation of the selected frame.",
-    self.undoAction = "Frame Rotation",
+    self.snapshotAction = "Frame Rotation",
     self.isUseItemActivated = true
 );
 
 IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_DELAY,
     self.label = "Duration",
     self.tooltip = "Change the duration of the selected frame.",
-    self.undoAction = "Frame Duration",
+    self.snapshotAction = "Frame Duration",
     self.isUseItemActivated = true,
     self.min = ANM2_FRAME_NUM_MIN,
     self.max = ANM2_FRAME_NUM_MAX,
@@ -1426,7 +1432,7 @@ IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_DELAY,
 IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_TINT,
     self.label = "Tint",
     self.tooltip = "Change the tint of the selected frame.",
-    self.undoAction = "Frame Tint",
+    self.snapshotAction = "Frame Tint",
     self.isUseItemActivated = true,
     self.value = 1
 );
@@ -1434,7 +1440,7 @@ IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_TINT,
 IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_COLOR_OFFSET,
     self.label = "Color Offset",
     self.tooltip = "Change the color offset of the selected frame.",
-    self.undoAction = "Frame Color Offset",
+    self.snapshotAction = "Frame Color Offset",
     self.isUseItemActivated = true,
     self.value = 0
 );
@@ -1443,7 +1449,7 @@ const ImVec2 IMGUI_FRAME_PROPERTIES_FLIP_BUTTON_SIZE = {75, 0};
 IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_FLIP_X,
     self.label = "Flip X",
     self.tooltip = "Change the sign of the X scale, to cheat flipping the layer horizontally.\n(Anm2 doesn't support flipping directly.)",
-    self.undoAction = "Frame Flip X",
+    self.snapshotAction = "Frame Flip X",
     self.size = IMGUI_FRAME_PROPERTIES_FLIP_BUTTON_SIZE,
     self.isSameLine = true
 );
@@ -1451,14 +1457,14 @@ IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_FLIP_X,
 IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_FLIP_Y,
     self.label = "Flip Y",
     self.tooltip = "Change the sign of the Y scale, to cheat flipping the layer vertically.\n(Anm2 doesn't support flipping directly.)",
-    self.undoAction = "Frame Flip Y",
+    self.snapshotAction = "Frame Flip Y",
     self.size = IMGUI_FRAME_PROPERTIES_FLIP_BUTTON_SIZE 
 );
 
 IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_VISIBLE,
     self.label = "Visible",
     self.tooltip = "Toggles the visibility of the selected frame.",
-    self.undoAction = "Frame Visibility",
+    self.snapshotAction = "Frame Visibility",
     self.isSameLine = true,
     self.value = true
 );
@@ -1466,20 +1472,20 @@ IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_VISIBLE,
 IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_INTERPOLATED,
     self.label = "Interpolation",
     self.tooltip = "Toggles the interpolation of the selected frame.",
-    self.undoAction = "Frame Interpolation",
+    self.snapshotAction = "Frame Interpolation",
     self.value = true
 );
 
 IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_EVENT,
     self.label = "Event",
     self.tooltip = "Change the event the trigger uses.",
-    self.undoAction = "Trigger Event"
+    self.snapshotAction = "Trigger Event"
 );
 
 IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_AT_FRAME,
     self.label = "At Frame",
     self.tooltip = "Change the frame where the trigger occurs.",
-    self.undoAction = "Trigger At Frame"
+    self.snapshotAction = "Trigger At Frame"
 );
 
 IMGUI_ITEM(IMGUI_TOOLS, self.label = "Tools");
@@ -1674,7 +1680,7 @@ IMGUI_ITEM(IMGUI_TIMELINE_ITEM_SELECTABLE,
 IMGUI_ITEM(IMGUI_TIMELINE_ITEM_ROOT_SELECTABLE,
     self.label = "Root",
     self.tooltip = "The root item of an animation.\nChanging its properties will transform the rest of the animation.",
-    self.undoAction = "Root Item Select",
+    self.snapshotAction = "Root Item Select",
     self.atlas = ATLAS_ROOT,
     self.size = IMGUI_TIMELINE_ITEM_SELECTABLE_SIZE
 );
@@ -1682,7 +1688,7 @@ IMGUI_ITEM(IMGUI_TIMELINE_ITEM_ROOT_SELECTABLE,
 IMGUI_ITEM(IMGUI_TIMELINE_ITEM_LAYER_SELECTABLE,
     self.label = "## Layer Selectable",
     self.tooltip = "A layer item.\nA graphical item within the animation.",
-    self.undoAction = "Layer Item Select",
+    self.snapshotAction = "Layer Item Select",
     self.dragDrop = "## Layer Drag Drop",
     self.atlas = ATLAS_LAYER,
     self.size = IMGUI_TIMELINE_ITEM_SELECTABLE_SIZE
@@ -1691,7 +1697,7 @@ IMGUI_ITEM(IMGUI_TIMELINE_ITEM_LAYER_SELECTABLE,
 IMGUI_ITEM(IMGUI_TIMELINE_ITEM_NULL_SELECTABLE,
     self.label = "## Null Selectable",
     self.tooltip = "A null item.\nAn invisible item within the animation that is accessible via a game engine.",
-    self.undoAction = "Null Item Select",
+    self.snapshotAction = "Null Item Select",
     self.dragDrop = "## Null Drag Drop",
     self.atlas = ATLAS_NULL,
     self.size = IMGUI_TIMELINE_ITEM_SELECTABLE_SIZE
@@ -1700,7 +1706,7 @@ IMGUI_ITEM(IMGUI_TIMELINE_ITEM_NULL_SELECTABLE,
 IMGUI_ITEM(IMGUI_TIMELINE_ITEM_TRIGGERS_SELECTABLE,
     self.label = "Triggers",
     self.tooltip = "The animation's triggers.\nWill fire based on an event.",
-    self.undoAction = "Triggers Item Select",
+    self.snapshotAction = "Triggers Item Select",
     self.atlas = ATLAS_TRIGGERS,
     self.size = IMGUI_TIMELINE_ITEM_SELECTABLE_SIZE
 );
@@ -1717,28 +1723,28 @@ const inline ImguiItem* IMGUI_TIMELINE_ITEM_SELECTABLES[ANM2_COUNT]
 IMGUI_ITEM(IMGUI_TIMELINE_ITEM_VISIBLE,
     self.label = "## Visible",
     self.tooltip = "The item is visible.\nPress to set to invisible.",
-    self.undoAction = "Item Invisible",
+    self.snapshotAction = "Item Invisible",
     self.atlas = ATLAS_VISIBLE
 );
 
 IMGUI_ITEM(IMGUI_TIMELINE_ITEM_INVISIBLE,
     self.label = "## Invisible",
     self.tooltip = "The item is invisible.\nPress to set to visible.",
-    self.undoAction = "Item Visible",
+    self.snapshotAction = "Item Visible",
     self.atlas = ATLAS_INVISIBLE
 );
 
 IMGUI_ITEM(IMGUI_TIMELINE_ITEM_SHOW_RECT,
     self.label = "## Show Rect",
     self.tooltip = "The rect is shown.\nPress to hide rect.",
-    self.undoAction = "Hide Rect",
+    self.snapshotAction = "Hide Rect",
     self.atlas = ATLAS_SHOW_RECT
 );
 
 IMGUI_ITEM(IMGUI_TIMELINE_ITEM_HIDE_RECT,
     self.label = "## Hide Rect",
     self.tooltip = "The rect is hidden.\nPress to show rect.",
-    self.undoAction = "Show Rect",
+    self.snapshotAction = "Show Rect",
     self.atlas = ATLAS_HIDE_RECT
 );
 
@@ -1765,7 +1771,7 @@ IMGUI_ITEM(IMGUI_TIMELINE_FRAME, self.label = "## Frame");
 static const vec4 IMGUI_FRAME_BORDER_COLOR = {1.0f, 1.0f, 1.0f, 0.25f};
 IMGUI_ITEM(IMGUI_TIMELINE_ROOT_FRAME,
     self.label = "## Root Frame",
-    self.undoAction = "Root Frame Select",
+    self.snapshotAction = "Root Frame Select",
     self.color = {{0.14f, 0.27f, 0.39f, 1.0f}, {0.28f, 0.54f, 0.78f, 1.0f}, {0.36f, 0.70f, 0.95f, 1.0f}, IMGUI_FRAME_BORDER_COLOR},
     self.size = IMGUI_TIMELINE_FRAME_SIZE,
     self.atlasOffset = IMGUI_TIMELINE_FRAME_ATLAS_OFFSET,
@@ -1774,7 +1780,7 @@ IMGUI_ITEM(IMGUI_TIMELINE_ROOT_FRAME,
 
 IMGUI_ITEM(IMGUI_TIMELINE_LAYER_FRAME,
     self.label = "## Layer Frame",
-    self.undoAction = "Layer Frame Select",
+    self.snapshotAction = "Layer Frame Select",
     self.dragDrop = "## Layer Frame Drag Drop",
     self.color = {{0.45f, 0.18f, 0.07f, 1.0f}, {0.78f, 0.32f, 0.12f, 1.0f}, {0.95f, 0.40f, 0.15f, 1.0f}, IMGUI_FRAME_BORDER_COLOR},
     self.size = IMGUI_TIMELINE_FRAME_SIZE,
@@ -1784,7 +1790,7 @@ IMGUI_ITEM(IMGUI_TIMELINE_LAYER_FRAME,
 
 IMGUI_ITEM(IMGUI_TIMELINE_NULL_FRAME,
     self.label = "## Null Frame",
-    self.undoAction = "Null Frame Select",
+    self.snapshotAction = "Null Frame Select",
     self.dragDrop = "## Null Frame Drag Drop",
     self.color = {{0.17f, 0.33f, 0.17f, 1.0f}, {0.34f, 0.68f, 0.34f, 1.0f}, {0.44f, 0.88f, 0.44f, 1.0f}, IMGUI_FRAME_BORDER_COLOR},
     self.size = IMGUI_TIMELINE_FRAME_SIZE,
@@ -1794,7 +1800,7 @@ IMGUI_ITEM(IMGUI_TIMELINE_NULL_FRAME,
 
 IMGUI_ITEM(IMGUI_TIMELINE_TRIGGERS_FRAME,
     self.label = "## Triggers Frame",
-    self.undoAction = "Trigger Select",
+    self.snapshotAction = "Trigger Select",
     self.color = {{0.36f, 0.14f, 0.24f, 1.0f}, {0.72f, 0.28f, 0.48f, 1.0f}, {0.92f, 0.36f, 0.60f, 1.0f}, IMGUI_FRAME_BORDER_COLOR},
     self.size = IMGUI_TIMELINE_FRAME_SIZE,
     self.atlasOffset = IMGUI_TIMELINE_FRAME_ATLAS_OFFSET,
@@ -1834,21 +1840,21 @@ IMGUI_ITEM(IMGUI_TIMELINE_ADD_ITEM,
 IMGUI_ITEM(IMGUI_TIMELINE_ADD_ITEM_LAYER,
     self.label = "Layer",
     self.tooltip = "Adds a layer item.\nA layer item is a primary graphical item, using a spritesheet.",
-    self.undoAction = "Add Layer",
+    self.snapshotAction = "Add Layer",
     self.isSizeToText = true
 );
 
 IMGUI_ITEM(IMGUI_TIMELINE_ADD_ITEM_NULL,
     self.label = "Null",
     self.tooltip = "Adds a null item.\nA null item is an invisible item, often accessed by the game engine.",
-    self.undoAction = "Add Null",
+    self.snapshotAction = "Add Null",
     self.isSizeToText = true
 );
 
 IMGUI_ITEM(IMGUI_TIMELINE_REMOVE_ITEM,
     self.label = "Remove",
     self.tooltip = "Removes the selected item (layer or null) from the animation.",
-    self.undoAction = "Remove Item",
+    self.snapshotAction = "Remove Item",
     self.focusWindow = IMGUI_TIMELINE.label,
     self.rowCount = IMGUI_TIMELINE_FOOTER_ITEM_CHILD_ITEM_COUNT
 );
@@ -1875,7 +1881,7 @@ IMGUI_ITEM(IMGUI_PAUSE,
 IMGUI_ITEM(IMGUI_ADD_FRAME,
     self.label = "+ Insert Frame",
     self.tooltip = "Inserts a frame in the selected animation item, based on the preview time.",
-    self.undoAction = "Insert Frame",
+    self.snapshotAction = "Insert Frame",
     self.rowCount = IMGUI_TIMELINE_OPTIONS_ROW_COUNT,
     self.isSameLine = true
 );
@@ -1883,7 +1889,7 @@ IMGUI_ITEM(IMGUI_ADD_FRAME,
 IMGUI_ITEM(IMGUI_REMOVE_FRAME,
     self.label = "- Delete Frame",
     self.tooltip = "Removes the selected frame from the selected animation item.",
-    self.undoAction = "Delete Frame",
+    self.snapshotAction = "Delete Frame",
     self.focusWindow = IMGUI_TIMELINE.label,
     self.chord = ImGuiKey_Delete,
     self.rowCount = IMGUI_TIMELINE_OPTIONS_ROW_COUNT,
@@ -1927,7 +1933,7 @@ IMGUI_ITEM(IMGUI_BAKE_ROUND_ROTATION,
 IMGUI_ITEM(IMGUI_BAKE_CONFIRM,
     self.label = "Bake",
     self.tooltip = "Bake the selected frame with the options selected.",
-    self.undoAction = "Bake Frames",
+    self.snapshotAction = "Bake Frames",
     self.rowCount = IMGUI_OPTION_POPUP_ROW_COUNT,
     self.isSameLine = true
 );
@@ -1935,7 +1941,7 @@ IMGUI_ITEM(IMGUI_BAKE_CONFIRM,
 IMGUI_ITEM(IMGUI_FIT_ANIMATION_LENGTH, 
     self.label = "Fit Animation Length",
     self.tooltip = "Sets the animation's length to the latest frame.",
-    self.undoAction = "Fit Animation Length",
+    self.snapshotAction = "Fit Animation Length",
     self.rowCount = IMGUI_TIMELINE_OPTIONS_ROW_COUNT,
     self.isSameLine = true
 );
@@ -1943,7 +1949,7 @@ IMGUI_ITEM(IMGUI_FIT_ANIMATION_LENGTH,
 IMGUI_ITEM(IMGUI_ANIMATION_LENGTH, 
     self.label = "Length",
     self.tooltip = "Sets the animation length.\n(Will not change frames.)",
-    self.undoAction = "Set Animation Length",
+    self.snapshotAction = "Set Animation Length",
     self.rowCount = IMGUI_TIMELINE_OPTIONS_ROW_COUNT,
     self.min = ANM2_FRAME_NUM_MIN,
     self.max = ANM2_FRAME_NUM_MAX,
@@ -1954,7 +1960,7 @@ IMGUI_ITEM(IMGUI_ANIMATION_LENGTH,
 IMGUI_ITEM(IMGUI_FPS, 
     self.label = "FPS",
     self.tooltip = "Sets the animation's frames per second (its speed).",
-    self.undoAction = "Set FPS",
+    self.snapshotAction = "Set FPS",
     self.rowCount = IMGUI_TIMELINE_OPTIONS_ROW_COUNT,
     self.min = ANM2_FPS_MIN,
     self.max = ANM2_FPS_MAX,
@@ -1965,7 +1971,7 @@ IMGUI_ITEM(IMGUI_FPS,
 IMGUI_ITEM(IMGUI_LOOP,
     self.label = "Loop",
     self.tooltip = "Toggles the animation looping.",
-    self.undoAction = "Set Loop",
+    self.snapshotAction = "Set Loop",
     self.rowCount = IMGUI_TIMELINE_OPTIONS_ROW_COUNT,
     self.value = true,
     self.isSameLine = true
@@ -1983,7 +1989,7 @@ IMGUI_ITEM(IMGUI_CONTEXT_MENU, self.label = "## Context Menu");
 IMGUI_ITEM(IMGUI_CUT,
     self.label = "Cut",
     self.tooltip = "Cuts the currently selected contextual element; removing it and putting it to the clipboard.",
-    self.undoAction = "Cut",
+    self.snapshotAction = "Cut",
     self.function = imgui_cut,
     self.chord = ImGuiMod_Ctrl | ImGuiKey_X,
     self.isSizeToText = true
@@ -1992,7 +1998,7 @@ IMGUI_ITEM(IMGUI_CUT,
 IMGUI_ITEM(IMGUI_COPY,
     self.label = "Copy",
     self.tooltip = "Copies the currently selected contextual element to the clipboard.",
-    self.undoAction = "Copy",
+    self.snapshotAction = "Copy",
     self.function = imgui_copy,
     self.chord = ImGuiMod_Ctrl | ImGuiKey_C,
     self.isSizeToText = true
@@ -2001,7 +2007,7 @@ IMGUI_ITEM(IMGUI_COPY,
 IMGUI_ITEM(IMGUI_PASTE,
     self.label = "Paste",
     self.tooltip = "Pastes the currently selection contextual element from the clipboard.",
-    self.undoAction = "Paste",
+    self.snapshotAction = "Paste",
     self.function = imgui_paste,
     self.chord = ImGuiMod_Ctrl | ImGuiKey_V,
     self.isSizeToText = true
@@ -2010,7 +2016,7 @@ IMGUI_ITEM(IMGUI_PASTE,
 IMGUI_ITEM(IMGUI_CHANGE_INPUT_TEXT,
     self.label = "## Input Text",
     self.tooltip = "Rename the selected item.",
-    self.undoAction = "Rename Item",
+    self.snapshotAction = "Rename Item",
     self.flags = ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue,
     self.max = 255
 );
@@ -2018,7 +2024,7 @@ IMGUI_ITEM(IMGUI_CHANGE_INPUT_TEXT,
 IMGUI_ITEM(IMGUI_CHANGE_INPUT_INT,
     self.label = "## Input Int",
     self.tooltip = "Change the selected item's value.",
-    self.undoAction = "Change Value",
+    self.snapshotAction = "Change Value",
     self.step = 0
 );
 

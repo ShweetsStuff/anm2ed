@@ -130,6 +130,8 @@ enum Anm2Type
 struct Anm2Spritesheet
 {
     std::string path{};
+    Texture texture;
+    std::vector<u8> pixels; 
 };
 
 struct Anm2Layer
@@ -162,8 +164,8 @@ struct Anm2Frame
 	vec2 position{};
 	vec2 size{};
 	vec2 scale = {100, 100};
-	vec3 offsetRGB{};
-	vec4 tintRGBA = {1.0f, 1.0f, 1.0f, 1.0f};
+	vec3 offsetRGB = COLOR_OFFSET_NONE;
+	vec4 tintRGBA = COLOR_OPAQUE;
 };
 
 struct Anm2FrameChange
@@ -261,12 +263,12 @@ void anm2_layer_remove(Anm2* self, s32 id);
 void anm2_null_add(Anm2* self);
 void anm2_null_remove(Anm2* self, s32 id);
 bool anm2_serialize(Anm2* self, const std::string& path);
-bool anm2_deserialize(Anm2* self, Resources* resources, const std::string& path);
+bool anm2_deserialize(Anm2* self, const std::string& path);
 void anm2_new(Anm2* self);
+void anm2_free(Anm2* self);
 void anm2_created_on_set(Anm2* self);
 s32 anm2_animation_add(Anm2* self);
 void anm2_animation_remove(Anm2* self, s32 id);
-void anm2_spritesheet_texture_load(Anm2* self, Resources* resources, const std::string& path, s32 id);
 Anm2Animation* anm2_animation_from_reference(Anm2* self, Anm2Reference* reference);
 Anm2Item* anm2_item_from_reference(Anm2* self, Anm2Reference* reference);
 Anm2Frame* anm2_frame_from_reference(Anm2* self, Anm2Reference* reference);
@@ -284,3 +286,5 @@ void anm2_frame_bake(Anm2* self, Anm2Reference* reference, s32 interval, bool is
 void anm2_item_frame_set(Anm2* self, Anm2Reference* reference, const Anm2FrameChange& change, Anm2ChangeType type, s32 start, s32 count);
 void anm2_scale(Anm2* self, f32 scale);
 void anm2_generate_from_grid(Anm2* self, Anm2Reference* reference, vec2 startPosition, vec2 size, vec2 pivot, s32 columns, s32 count, s32 delay);
+void anm2_spritesheet_texture_pixels_upload(Anm2* self);
+void anm2_spritesheet_texture_pixels_download(Anm2* self);

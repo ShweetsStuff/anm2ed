@@ -26,7 +26,7 @@ Note, to render animations, you'll need to download [FFmpeg](https://ffmpeg.org/
 
 After cloning and enter the repository's directory, make sure to initialize the submodules:
 
-```git submodules update --init```
+```git submodule update --init```
 
 Then:
 

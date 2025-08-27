@@ -275,21 +275,19 @@ const std::string SHADER_GRID_FRAGMENT = R"(
 #version 330 core
 in vec2 clip;
 
-uniform mat4 u_model;   // inverse of your world->clip matrix (MVP)
-uniform vec2 u_size;     // world-space cell size (e.g. 64,64)
-uniform vec2 u_offset;   // world-space grid offset (shifts entire grid)
-uniform vec4 u_color;    // RGBA
+uniform mat4 u_model;
+uniform vec2 u_size; 
+uniform vec2 u_offset;
+uniform vec4 u_color;
 
 out vec4 o_fragColor;
 
 void main() 
 {
-    // clip -> world on z=0 plane
     vec4 w = u_model * vec4(clip, 0.0, 1.0);
     w /= w.w;
     vec2 world = w.xy;
 
-    // grid space
     vec2 g = (world - u_offset) / u_size;
 
     vec2 d = abs(fract(g) - 0.5);

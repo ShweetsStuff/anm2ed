@@ -1,5 +1,10 @@
 #include "ffmpeg.h"
 
+static std::string ffmpeg_log_path_get(void)
+{
+    return preferences_path_get() + FFMPEG_LOG_PATH;
+}
+
 bool 
 ffmpeg_render
 (
@@ -31,7 +36,7 @@ ffmpeg_render
     }
 
     // ffmpeg output will be piped into the log
-    std::string logOutput = " 2>> \"" + log_path_get() + "\"";
+    std::string logOutput = " 2>> \"" + ffmpeg_log_path_get() + "\"";
 
 #if _WIN32
     command = string_quote(command) + logOutput;

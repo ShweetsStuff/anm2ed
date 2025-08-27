@@ -56,6 +56,7 @@ using namespace glm;
 #define ID_NONE -1
 #define INDEX_NONE -1
 #define TIME_NONE -1.0f
+#define GL_ID_NONE 0
 
 #if defined(_WIN32)
   #define POPEN  _popen
@@ -69,29 +70,6 @@ using namespace glm;
   #define PREAD_MODE "r"
 #endif
 
-#define UV_VERTICES(uvMin, uvMax) \
-{ \
-  0, 0, uvMin.x, uvMin.y, \
-  1, 0, uvMax.x, uvMin.y, \
-  1, 1, uvMax.x, uvMax.y, \
-  0, 1, uvMin.x, uvMax.y  \
-}
-
-static const f32 GL_VERTICES[] =
-{
-    0, 0,  
-    1, 0,  
-    1, 1,  
-    0, 1  
-};
-
-constexpr f32 GL_UV_VERTICES[] = 
-{
-    0, 0, 0.0f, 0.0f,
-    1, 0, 1.0f, 0.0f,
-    1, 1, 1.0f, 1.0f,
-    0, 1, 0.0f, 1.0f
-};
 
 static const GLuint GL_TEXTURE_INDICES[] = {0, 1, 2, 2, 3, 0};
 static const vec4 COLOR_RED = {1.0f, 0.0f, 0.0f, 1.0f};
@@ -364,38 +342,7 @@ static inline void map_insert_shift(std::map<int, T>& map, s32 index, const T& v
     map[insertIndex] = value;
 }
 
-static inline mat4 quad_model_get(vec2 size, vec2 position, vec2 pivot, f32 rotation, vec2 scale)
-{
-    vec2 scaleAbsolute  = glm::abs(scale);
-    vec2 scaleSign = glm::sign(scale);
-    vec2 pivotScaled = pivot * scaleAbsolute;
-    vec2 sizeScaled  = size  * scaleAbsolute;
 
-    mat4 model(1.0f);
-    model = glm::translate(model, vec3(position - pivotScaled, 0.0f));
-    model = glm::translate(model, vec3(pivotScaled, 0.0f));
-    model = glm::scale(model, vec3(scaleSign, 1.0f));
-    model = glm::rotate(model, glm::radians(rotation), vec3(0, 0, 1));
-    model = glm::translate(model, vec3(-pivotScaled, 0.0f));
-    model = glm::scale(model, vec3(sizeScaled, 1.0f));
-    return model;
-}
-
-static inline mat4 quad_parent_model_get(vec2 position, vec2 pivot, f32 rotation, vec2 scale)
-{
-    vec2 scaleSign = glm::sign(scale);
-    vec2 scaleAbsolute  = glm::abs(scale);
-    f32 handedness = (scaleSign.x * scaleSign.y) < 0.0f ? -1.0f : 1.0f;
-
-    mat4 local(1.0f);
-    local = glm::translate(local, vec3(pivot, 0.0f));
-    local = glm::scale(local, vec3(scaleSign, 1.0f)); // mirror if needed
-    local = glm::rotate(local, glm::radians(rotation) * handedness, vec3(0, 0, 1));
-    local = glm::translate(local, vec3(-pivot, 0.0f));
-    local = glm::scale(local, vec3(scaleAbsolute, 1.0f));
-
-    return glm::translate(mat4(1.0f), vec3(position, 0.0f)) * local;
-}
 
 #define DEFINE_ENUM_TO_STRING_FUNCTION(function, array, count) \
     static inline std::string function(s32 index)              \
