@@ -35,15 +35,16 @@ static void _imgui_anm2_open(Imgui* self, const std::string& path)
 
 static void _imgui_spritesheet_add(Imgui* self, const std::string& path)
 {
-	std::filesystem::path workingPath = std::filesystem::current_path();
-	std::string spritesheetPath = path;
-
-	if (!self->anm2->path.empty())
+	if (self->anm2->path.empty())
 	{
-		std::string anm2WorkingPath = working_directory_from_file_set(self->anm2->path);
-		spritesheetPath = std::filesystem::relative(path, anm2WorkingPath).string();
+		imgui_log_push(self, IMGUI_LOG_NO_ANM2_PATH);
+		return;
 	}
 
+	std::filesystem::path workingPath = std::filesystem::current_path();
+	std::string spritesheetPath = path;
+	std::string anm2WorkingPath = working_directory_from_file_set(self->anm2->path);
+	spritesheetPath = std::filesystem::relative(path, anm2WorkingPath).string();
 	s32 id = map_next_id_get(self->anm2->spritesheets);
 	self->anm2->spritesheets[id] = Anm2Spritesheet{};
 	self->anm2->spritesheets[id].path = spritesheetPath;
@@ -209,7 +210,8 @@ static void _imgui_item_post(const ImguiItem& self, Imgui* imgui, ImguiItemType 
 		if (self.is_undoable()) 
 			imgui_snapshot(imgui, self.snapshotAction);
 
-		if (self.function) self.function(imgui);
+		if (self.function) 
+			self.function(imgui);
 
 		if (self.is_popup())
 		{
@@ -1754,12 +1756,12 @@ static void _imgui_animations(Imgui* self)
 	
 	_imgui_begin_child(IMGUI_FOOTER_CHILD, self);
 	
-	if (_imgui_button(IMGUI_ANIMATION_ADD, self))
+	if (_imgui_button(IMGUI_ANIMATION_ADD.copy({self->anm2->path.empty()}), self))
 	{
 		s32 id = anm2_animation_add(self->anm2);
 		self->reference->animationID = id;
 
-		if (self->anm2->animations.size() == 0)
+		if (self->anm2->animations.size() == 1)
 			self->anm2->defaultAnimationID = id;
 	}
 
@@ -1924,7 +1926,7 @@ static void _imgui_events(Imgui* self)
 	
 	_imgui_begin_child(IMGUI_FOOTER_CHILD, self);
 	
-	if (_imgui_button(IMGUI_EVENTS_ADD, self))
+	if (_imgui_button(IMGUI_EVENTS_ADD.copy({self->anm2->path.empty()}), self))
 	{
 		s32 id = map_next_id_get(self->anm2->events);
 		self->anm2->events[id] = Anm2Event{}; 
@@ -2027,8 +2029,8 @@ static void _imgui_spritesheets(Imgui* self)
 		
 	_imgui_begin_child(IMGUI_SPRITESHEETS_FOOTER_CHILD, self);
 	
-	if (_imgui_button(IMGUI_SPRITESHEET_ADD, self))
-    	dialog_spritesheet_add(self->dialog);
+	if (_imgui_button(IMGUI_SPRITESHEET_ADD.copy({self->anm2->path.empty()}), self))
+		dialog_spritesheet_add(self->dialog);
 
 	if (self->dialog->isSelected && self->dialog->type == DIALOG_SPRITESHEET_ADD)
 	{
@@ -2227,8 +2229,8 @@ static void _imgui_animation_preview(Imgui* self)
 	const bool isUp = ImGui::IsKeyPressed(IMGUI_INPUT_UP);
 	const bool isDown = ImGui::IsKeyPressed(IMGUI_INPUT_DOWN);
 	const bool isMod = ImGui::IsKeyDown(IMGUI_INPUT_SHIFT);
-	const bool isZoomIn = ImGui::IsKeyDown(IMGUI_INPUT_ZOOM_IN);
-	const bool isZoomOut = ImGui::IsKeyDown(IMGUI_INPUT_ZOOM_OUT);
+	const bool isZoomIn = ImGui::IsKeyPressed(IMGUI_INPUT_ZOOM_IN);
+	const bool isZoomOut = ImGui::IsKeyPressed(IMGUI_INPUT_ZOOM_OUT);
 	const bool isMouseClick = ImGui::IsMouseClicked(ImGuiMouseButton_Left);
 	const bool isMouseDown = ImGui::IsMouseDown(ImGuiMouseButton_Left);
 	const bool isMouseMiddleDown = ImGui::IsMouseDown(ImGuiMouseButton_Middle);
@@ -2357,8 +2359,8 @@ static void _imgui_spritesheet_editor(Imgui* self)
 	const bool isMouseClick = ImGui::IsMouseClicked(ImGuiMouseButton_Left);
 	const bool isMouseDown = ImGui::IsMouseDown(ImGuiMouseButton_Left);
 	const bool isMouseMiddleDown = ImGui::IsMouseDown(ImGuiMouseButton_Middle);
-	const bool isZoomIn = ImGui::IsKeyDown(IMGUI_INPUT_ZOOM_IN);
-	const bool isZoomOut = ImGui::IsKeyDown(IMGUI_INPUT_ZOOM_OUT);
+	const bool isZoomIn = ImGui::IsKeyPressed(IMGUI_INPUT_ZOOM_IN);
+	const bool isZoomOut = ImGui::IsKeyPressed(IMGUI_INPUT_ZOOM_OUT);
 	const bool isMod = ImGui::IsKeyDown(IMGUI_INPUT_SHIFT);
 	const f32 mouseWheel = ImGui::GetIO().MouseWheel;
 	const ImVec2 mouseDelta = ImGui::GetIO().MouseDelta;

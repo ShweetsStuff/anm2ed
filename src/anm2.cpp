@@ -123,7 +123,9 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 		
 	// Animations
 	animationsElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATIONS]);
-	animationsElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_DEFAULT_ANIMATION], self->animations[self->defaultAnimationID].name.c_str()); // DefaultAnimation
+	
+	if (self->defaultAnimationID != ID_NONE)
+		animationsElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_DEFAULT_ANIMATION], self->animations[self->defaultAnimationID].name.c_str()); // DefaultAnimation
 
 	for (auto& [id, animation] : self->animations)
 	{

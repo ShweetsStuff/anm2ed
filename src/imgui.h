@@ -75,6 +75,7 @@
 #define IMGUI_POPUP_FLAGS ImGuiWindowFlags_NoMove
 #define IMGUI_POPUP_MODAL_FLAGS ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize
 
+#define IMGUI_LOG_NO_ANM2_PATH "Please save the .anm2 to a path first!"
 #define IMGUI_LOG_FILE_OPEN_FORMAT "Opened anm2: {}" 
 #define IMGUI_LOG_FILE_SAVE_FORMAT "Saved anm2 to: {}" 
 #define IMGUI_LOG_SPRITESHEET_RELOAD "Reloaded selected spritesheets"
@@ -274,6 +275,7 @@ static inline void imgui_explore(Imgui* self)
 
 static inline void imgui_snapshot(Imgui* self, const std::string& action = SNAPSHOT_ACTION)
 {
+    self->snapshots->action = action;
     Snapshot snapshot = snapshot_get(self->snapshots);
     snapshots_undo_push(self->snapshots, &snapshot);
 }

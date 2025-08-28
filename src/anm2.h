@@ -211,7 +211,7 @@ struct Anm2
     std::map<s32, Anm2Event> events;
 	std::map<s32, Anm2Animation> animations; 
     std::map<s32, s32> layerMap; // index, id
-    s32 defaultAnimationID{};
+    s32 defaultAnimationID = ID_NONE;
     s32 fps = ANM2_FPS_DEFAULT;
 	s32 version{};
 };
