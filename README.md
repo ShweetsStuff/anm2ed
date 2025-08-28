@@ -21,8 +21,17 @@ Download these from your package manager:
 - GLEW
   
 Note, to render animations, you'll need to download [FFmpeg](https://ffmpeg.org/download.html) and specify its install path in the program.
+This program runs on OpenGL 3.3 at the minimum.
 
-## Build (Linux)
+## Build
+
+### Windows
+
+Visual Studio is recommended; make sure your installation has "Desktop development with C++" and ".NET desktop development" workloads.
+Install and configure [vcpkg](https://vcpkg.io/en/).
+Build should be straightforward from there.
+
+### Linux
 
 After cloning and enter the repository's directory, make sure to initialize the submodules:
 
