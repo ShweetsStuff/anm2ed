@@ -28,7 +28,9 @@ This program runs on OpenGL 3.3 at the minimum.
 ### Windows
 
 Visual Studio is recommended; make sure your installation has "Desktop development with C++" and ".NET desktop development" workloads.
+
 Install and configure [vcpkg](https://vcpkg.io/en/).
+
 Build should be straightforward from there.
 
 ### Linux
