@@ -21,7 +21,8 @@ Download these from your package manager:
 - GLEW
   
 Note, to render animations, you'll need to download [FFmpeg](https://ffmpeg.org/download.html) and specify its install path in the program.
-This program runs on OpenGL 3.3 at the minimum.
+
+This program runs using OpenGL 3.3, so have that.
 
 ## Build
 
