@@ -53,14 +53,8 @@ ffmpeg_render
         log_error(std::format(FFMPEG_POPEN_ERROR, strerror(errno)));
         return false;
     }
-
     
     size_t frameBytes = size.x * size.y * TEXTURE_CHANNELS;
-
-// supposedly, might help with video corruption issues on windows?
-#if _WIN32
-    _setmode(_fileno(stdout), _O_BINARY);
-#endif
 
     for (const auto& frame : frames) 
     {
