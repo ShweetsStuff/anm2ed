@@ -182,8 +182,8 @@ constexpr s32 SETTINGS_COUNT = (s32)std::size(SETTINGS_ENTRIES);
 
 const std::string SETTINGS_DEFAULT = R"(
 [Settings]
-windowX=1920
-windowY=1080
+windowX=1600
+windowY=900
 isVsync=true
 playbackIsLoop=true
 playbackIsClampPlayhead=false
@@ -249,12 +249,12 @@ previewBackgroundColorR=0.114
 previewBackgroundColorG=0.184
 previewBackgroundColorB=0.286
 previewBackgroundColorA=1.000
-generateStartPositionX=0.000
-generateStartPositionY=0.000
-generateSizeX=0.000
-generateSizeY=0.000
-generatePivotX=0.000
-generatePivotY=0.000
+generateStartPositionX=0
+generateStartPositionY=0
+generateSizeX=0
+generateSizeY=0
+generatePivotX=0
+generatePivotY=0
 generateRows=4
 generateColumns=4
 generateCount=16
@@ -290,12 +290,12 @@ toolColorA=1.000
 renderType=0
 renderPath=.
 renderFormat={}.png
-ffmpegPath=/usr/bin/ffmpeg
+ffmpegPath=
 
 # Dear ImGui
 [Window][## Window]
 Pos=0,32
-Size=1918,1032
+Size=1600,868
 Collapsed=0
 
 [Window][Debug##Default]
@@ -305,66 +305,66 @@ Collapsed=0
 
 [Window][Tools]
 Pos=8,40
-Size=39,654
+Size=39,612
 Collapsed=0
 DockId=0x0000000B,0
 
 [Window][Animations]
-Pos=1452,388
-Size=458,306
+Pos=1288,301
+Size=304,351
 Collapsed=0
 DockId=0x0000000A,0
 
 [Window][Events]
-Pos=1025,348
-Size=425,346
+Pos=1005,353
+Size=281,299
 Collapsed=0
 DockId=0x00000008,0
 
 [Window][Spritesheets]
-Pos=1452,40
-Size=458,346
+Pos=1288,40
+Size=304,259
 Collapsed=0
 DockId=0x00000009,0
 
 [Window][Animation Preview]
 Pos=49,40
-Size=974,654
+Size=954,612
 Collapsed=0
 DockId=0x0000000C,0
 
 [Window][Spritesheet Editor]
 Pos=49,40
-Size=974,654
+Size=954,612
 Collapsed=0
 DockId=0x0000000C,1
 
 [Window][Timeline]
-Pos=8,696
-Size=1902,360
+Pos=8,654
+Size=1584,238
 Collapsed=0
 DockId=0x00000004,0
 
 [Window][Frame Properties]
-Pos=1025,40
-Size=425,306
+Pos=1005,40
+Size=281,311
 Collapsed=0
 DockId=0x00000007,0
 
 [Docking][Data]
-DockSpace         ID=0xFC02A410 Window=0x0E46F4F7 Pos=8,40 Size=1902,1016 Split=Y
-  DockNode        ID=0x00000003 Parent=0xFC02A410 SizeRef=1902,654 Split=X
-    DockNode      ID=0x00000001 Parent=0x00000003 SizeRef=1442,1016 Split=X Selected=0x024430EF
-      DockNode    ID=0x00000005 Parent=0x00000001 SizeRef=1015,654 Split=X Selected=0x024430EF
+DockSpace         ID=0xFC02A410 Window=0x0E46F4F7 Pos=8,40 Size=1584,852 Split=Y
+  DockNode        ID=0x00000003 Parent=0xFC02A410 SizeRef=1902,612 Split=X
+    DockNode      ID=0x00000001 Parent=0x00000003 SizeRef=1278,1016 Split=X Selected=0x024430EF
+      DockNode    ID=0x00000005 Parent=0x00000001 SizeRef=995,654 Split=X Selected=0x024430EF
         DockNode  ID=0x0000000B Parent=0x00000005 SizeRef=39,654 Selected=0x18A5FDB9
-        DockNode  ID=0x0000000C Parent=0x00000005 SizeRef=974,654 CentralNode=1 Selected=0x024430EF
-      DockNode    ID=0x00000006 Parent=0x00000001 SizeRef=425,654 Split=Y Selected=0x754E368F
-        DockNode  ID=0x00000007 Parent=0x00000006 SizeRef=631,306 Selected=0x754E368F
-        DockNode  ID=0x00000008 Parent=0x00000006 SizeRef=631,346 Selected=0x8A65D963
-    DockNode      ID=0x00000002 Parent=0x00000003 SizeRef=458,1016 Split=Y Selected=0x4EFD0020
-      DockNode    ID=0x00000009 Parent=0x00000002 SizeRef=634,346 Selected=0x4EFD0020
-      DockNode    ID=0x0000000A Parent=0x00000002 SizeRef=634,306 Selected=0xC1986EE2
-  DockNode        ID=0x00000004 Parent=0xFC02A410 SizeRef=1902,360 Selected=0x4F89F0DC
+        DockNode  ID=0x0000000C Parent=0x00000005 SizeRef=954,654 CentralNode=1 Selected=0x024430EF
+      DockNode    ID=0x00000006 Parent=0x00000001 SizeRef=281,654 Split=Y Selected=0x754E368F
+        DockNode  ID=0x00000007 Parent=0x00000006 SizeRef=631,311 Selected=0x754E368F
+        DockNode  ID=0x00000008 Parent=0x00000006 SizeRef=631,299 Selected=0x8A65D963
+    DockNode      ID=0x00000002 Parent=0x00000003 SizeRef=304,1016 Split=Y Selected=0x4EFD0020
+      DockNode    ID=0x00000009 Parent=0x00000002 SizeRef=634,259 Selected=0x4EFD0020
+      DockNode    ID=0x0000000A Parent=0x00000002 SizeRef=634,351 Selected=0xC1986EE2
+  DockNode        ID=0x00000004 Parent=0xFC02A410 SizeRef=1902,238 Selected=0x4F89F0DC
 )";
 
 void settings_save(Settings* self);
