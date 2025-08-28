@@ -54,6 +54,8 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 
 	for (auto& [id, spritesheet] : self->spritesheets)
 	{
+		if (id == ID_NONE) continue;
+		
 		XMLElement* spritesheetElement;
 		
 		// Spritesheet 
@@ -70,6 +72,8 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 
 	for (auto& [id, layer] : self->layers)
 	{
+		if (id == ID_NONE) continue;
+
 		XMLElement* layerElement;
 		
 		// Layer 
@@ -88,6 +92,8 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 
 	for (auto& [id, null] : self->nulls)
 	{
+		if (id == ID_NONE) continue;
+		
 		XMLElement* nullElement;
 		
 		// Null 
@@ -108,6 +114,8 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 
 	for (auto& [id, event] : self->events)
 	{
+		if (id == ID_NONE) continue;
+		
 		XMLElement* eventElement;
 		
 		// Event 
@@ -129,6 +137,8 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 
 	for (auto& [id, animation] : self->animations)
 	{
+		if (id == ID_NONE) continue;
+		
 		XMLElement* animationElement;
 		XMLElement* rootAnimationElement;
 		XMLElement* layerAnimationsElement;
