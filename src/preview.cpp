@@ -136,7 +136,11 @@ void preview_draw(Preview* self)
             mat4 model = canvas_model_get(frame.size, frame.position, frame.pivot, PERCENT_TO_UNIT(frame.scale), frame.rotation);
             mat4 layerTransform = transform * (rootModel * model);
 
-            Texture& texture = self->anm2->spritesheets[self->anm2->layers[id].spritesheetID].texture;
+            Anm2Spritesheet* spritesheet = map_find(self->anm2->spritesheets, self->anm2->layers[id].spritesheetID);
+            
+            if (!spritesheet) continue;
+
+            Texture& texture = spritesheet->texture;
            
             if (!texture.isInvalid)
             {

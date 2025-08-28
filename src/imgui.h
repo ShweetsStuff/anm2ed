@@ -488,7 +488,7 @@ struct ImguiItem
     std::string dragDrop{};
     std::string focusWindow{};
     std::vector<std::string> items{};
-    AtlasType atlas;
+    AtlasType atlas = ATLAS_NONE;
     ImGuiKeyChord chord = IMGUI_CHORD_NONE;
     ImGuiKey mnemonicKey = ImGuiKey_None;
     s32 mnemonicIndex = INDEX_NONE;
@@ -513,7 +513,7 @@ struct ImguiItem
     s32 min{};
     s32 max{};
     s32 value{};
-    vec2 atlasOffset;
+    vec2 atlasOffset{};
     s32 border{};
     s32 flags{};
     s32 windowFlags{};
@@ -553,7 +553,7 @@ struct ImguiItem
                     i++;
                 }
             }
-            else 
+            else
                 labelNew += label[i];
         }
 

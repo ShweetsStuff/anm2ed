@@ -1201,7 +1201,7 @@ static void _imgui_timeline(Imgui* self)
 	if (_imgui_button(IMGUI_ADD_FRAME.copy({!item}), self))
 	{
 		Anm2Reference frameReference = *self->reference;
-		frameReference.frameIndex = std::clamp(frameReference.frameIndex, 0, (s32)item->frames.size() - 1);
+		frameReference.frameIndex = item->frames.empty() ? 0 : std::clamp(frameReference.frameIndex, 0, static_cast<s32>(item->frames.size() - 1));
 		Anm2Frame* addFrame = anm2_frame_from_reference(self->anm2, &frameReference);
 		anm2_frame_add(self->anm2, addFrame, &frameReference);
 	}
@@ -2445,7 +2445,7 @@ static void _imgui_frame_properties(Imgui* self)
 	
 	bool isLayerFrame = frame && type == ANM2_LAYER;
 	
-	if (type != ANM2_TRIGGERS || !frame)
+	if (!frame || type != ANM2_TRIGGERS)
 	{
 		_imgui_drag_float2(IMGUI_FRAME_PROPERTIES_CROP.copy({!isLayerFrame}), self, !isLayerFrame ? dummy_value<vec2>() : frame->crop);
 		_imgui_drag_float2(IMGUI_FRAME_PROPERTIES_SIZE.copy({!isLayerFrame}), self, !isLayerFrame ? dummy_value<vec2>() : frame->size);

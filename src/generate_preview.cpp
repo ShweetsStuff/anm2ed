@@ -26,23 +26,27 @@ void generate_preview_draw(GeneratePreview* self)
     canvas_clear(self->settings->previewBackgroundColor);
  
     Anm2Item* item = anm2_item_from_reference(self->anm2, self->reference);
-    Texture& texture = self->anm2->spritesheets[self->anm2->layers[self->reference->itemID].spritesheetID].texture;
-        
-    if (item && !texture.isInvalid)
+
+    if (item)
     {
-        const s32 index = std::clamp((s32)(self->time * count), 0, count);
-        const s32 row = index / columns;
-        const s32 column = index % columns;
-        vec2 crop = startPosition + vec2(size.x * column, size.y * row);
+        if (Anm2Spritesheet* spritesheet = map_find(self->anm2->spritesheets, self->anm2->layers[self->reference->itemID].spritesheetID))
+        {
+            Texture& texture = spritesheet->texture;
 
-        vec2 uvMin = crop / vec2(texture.size);
-        vec2 uvMax = (crop + size) / vec2(texture.size);
-        f32 vertices[] = UV_VERTICES(uvMin, uvMax);
+            const s32 index = std::clamp((s32)(self->time * count), 0, count);
+            const s32 row = index / columns;
+            const s32 column = index % columns;
+            vec2 crop = startPosition + vec2(size.x * column, size.y * row);
 
-        mat4 generateTransform = transform * canvas_model_get(size, {}, pivot);
-        canvas_texture_draw(&self->canvas, shaderTexture, texture.id, generateTransform, vertices, COLOR_OPAQUE, COLOR_OFFSET_NONE);
+            vec2 uvMin = crop / vec2(texture.size);
+            vec2 uvMax = (crop + size) / vec2(texture.size);
+            f32 vertices[] = UV_VERTICES(uvMin, uvMax);
+
+            mat4 generateTransform = transform * canvas_model_get(size, {}, pivot);
+            canvas_texture_draw(&self->canvas, shaderTexture, texture.id, generateTransform, vertices, COLOR_OPAQUE, COLOR_OFFSET_NONE);
+        }
     }
-    
+           
     canvas_unbind();
 }
 

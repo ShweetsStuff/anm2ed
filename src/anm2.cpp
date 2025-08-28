@@ -913,40 +913,42 @@ Anm2Frame* anm2_frame_add(Anm2* self, Anm2Frame* frame, Anm2Reference* reference
 {
 	Anm2Animation* animation = anm2_animation_from_reference(self, reference);
 	Anm2Item* item = anm2_item_from_reference(self, reference);
-	
-	if (!animation || !item) 
+
+	if (!animation || !item)
 		return nullptr;
 
-	if (item)
+	Anm2Frame frameAdd = frame ? *frame : Anm2Frame{};
+	s32 index = reference->frameIndex + 1;
+
+	if (reference->itemType == ANM2_TRIGGERS)
 	{
-		Anm2Frame frameAdd = frame ? *frame : Anm2Frame{};
-		s32 index = reference->frameIndex + 1;
+		s32 triggerIndex = time;
 
-		if (reference->itemType == ANM2_TRIGGERS)
+		for (auto& frameCheck : item->frames)
 		{
-			s32 index = time;
-			
-			for (auto& frameCheck : item->frames) 
+			if (frameCheck.atFrame == time)
 			{
-				if (frameCheck.atFrame == time)
-				{
-					index++;
-					break;	
-				}
+				triggerIndex++;
+				break;
 			}
+		}
 
-			frameAdd.atFrame = index;
-			index = item->frames.size();
-			return &item->frames.emplace_back(frameAdd);
+		frameAdd.atFrame = triggerIndex;
+		return &item->frames.emplace_back(frameAdd);
+	}
+	else
+	{
+		if (index >= static_cast<s32>(item->frames.size()))
+		{
+			item->frames.push_back(frameAdd);
+			return &item->frames.back();
 		}
 		else
 		{
 			item->frames.insert(item->frames.begin() + index, frameAdd);
-			return &item->frames[index];
+			return &item->frames[static_cast<size_t>(index)];
 		}
 	}
-
-	return nullptr;
 }
 
 void anm2_frame_erase(Anm2* self, Anm2Reference* reference)

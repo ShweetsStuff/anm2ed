@@ -26,9 +26,9 @@ void editor_draw(Editor* self)
     canvas_viewport_set(&self->canvas);
     canvas_clear(self->settings->editorBackgroundColor);
 
-    if (self->spritesheetID != ID_NONE)
+    if (Anm2Spritesheet* spritesheet = map_find(self->anm2->spritesheets, self->spritesheetID))
     {
-        Texture& texture = self->anm2->spritesheets[self->spritesheetID].texture;
+        Texture& texture = spritesheet->texture;
         
         mat4 spritesheetTransform = transform * canvas_model_get(texture.size);
         canvas_texture_draw(&self->canvas, shaderTexture, texture.id, spritesheetTransform);
