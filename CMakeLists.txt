@@ -12,7 +12,10 @@ find_package(GLEW REQUIRED)
 find_package(OpenGL REQUIRED)
 
 file(GLOB SOURCES
-    include/imgui/*.cpp
+    include/imgui/imgui.cpp
+    include/imgui/imgui_draw.cpp
+    include/imgui/imgui_widgets.cpp
+    include/imgui/imgui_tables.cpp
     include/imgui/backends/imgui_impl_sdl3.cpp
     include/imgui/backends/imgui_impl_opengl3.cpp
     include/tinyxml2/tinyxml2.cpp

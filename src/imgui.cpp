@@ -2661,6 +2661,11 @@ void imgui_update(Imgui* self)
 		}
 	}
 
+	if (map_find(self->anm2->layers, -1))
+		printf("Layers -1\n");
+
+	if (map_find(self->anm2->spritesheets, -1))
+		printf("Spritesheets -1\n");
 }
 
 void imgui_draw(void)
