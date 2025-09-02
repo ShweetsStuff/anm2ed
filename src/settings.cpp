@@ -45,14 +45,14 @@ static void _settings_setting_load(Settings* self, const std::string& line)
         if (entry.type == TYPE_VEC2)
         {
             vec2* v = (vec2*)target;
-            if ((value = match_key(key + "X"))) { v->x = std::atof(value); return; }
-            if ((value = match_key(key + "Y"))) { v->y = std::atof(value); return; }
+            if ((value = match_key(key + (entry.isWidthHeight ? "W" : "X")))) { v->x = std::atof(value); return; }
+            if ((value = match_key(key + (entry.isWidthHeight ? "H" : "Y")))) { v->y = std::atof(value); return; }
         }
         else if (entry.type == TYPE_IVEC2)
         {
             ivec2* v = (ivec2*)target;
-            if ((value = match_key(key + "X"))) { v->x = std::atoi(value); return; }
-            if ((value = match_key(key + "Y"))) { v->y = std::atoi(value); return; }
+            if ((value = match_key(key + (entry.isWidthHeight ? "W" : "X")))) { v->x = std::atoi(value); return; }
+            if ((value = match_key(key + (entry.isWidthHeight ? "H" : "Y")))) { v->y = std::atoi(value); return; }
         }
         else if (entry.type == TYPE_VEC3)
         {
@@ -107,15 +107,15 @@ static void _settings_setting_write(Settings* self, std::ostream& out, SettingsE
         case TYPE_IVEC2:
         {
             ivec2* data = (ivec2*)(selfPointer + entry.offset);
-            out << entry.key << "X=" << data->x << "\n";
-            out << entry.key << "Y=" << data->y << "\n";
+            out << entry.key << (entry.isWidthHeight ? "W=" : "X=") << data->x << "\n";
+            out << entry.key << (entry.isWidthHeight ? "H=" : "Y=") << data->y << "\n";
             break;
         }
         case TYPE_VEC2:
         {
             vec2* data = (vec2*)(selfPointer + entry.offset);
-            out << entry.key << "X=" << std::format(SETTINGS_FLOAT_FORMAT, data->x) << "\n";
-            out << entry.key << "Y=" << std::format(SETTINGS_FLOAT_FORMAT, data->y) << "\n";
+            out << entry.key << (entry.isWidthHeight ? "W=" : "X=") << std::format(SETTINGS_FLOAT_FORMAT, data->x) << "\n";
+            out << entry.key << (entry.isWidthHeight ? "H=" : "Y=") << std::format(SETTINGS_FLOAT_FORMAT, data->y) << "\n";
             break;
         }
         case TYPE_VEC3:

@@ -27,11 +27,12 @@ struct SettingsEntry
     std::string key;
     DataType type;
     s32 offset;
+    bool isWidthHeight = false;
 };
 
 struct Settings
 {
-    ivec2 windowSize = {1080, 720};
+    ivec2 windowSize = {1600, 900};
     bool isVsync = true;
     bool playbackIsLoop = true;
     bool playbackIsClampPlayhead = true;
@@ -70,7 +71,7 @@ struct Settings
     f32 previewOverlayTransparency = 255.0f;
     f32 previewZoom = 200.0;
     vec2 previewPan = {0.0, 0.0};
-    ivec2 previewGridSize = {32, 3};
+    ivec2 previewGridSize = {32, 32};
     ivec2 previewGridOffset{};
     vec4 previewGridColor = {1.0, 1.0, 1.0, 0.125};
     vec4 previewAxesColor = {1.0, 1.0, 1.0, 0.125};
@@ -106,7 +107,7 @@ struct Settings
 
 const SettingsEntry SETTINGS_ENTRIES[] =
 {
-    {"window", TYPE_IVEC2, offsetof(Settings, windowSize)},
+    {"window", TYPE_IVEC2, offsetof(Settings, windowSize), true},
     {"isVsync", TYPE_BOOL, offsetof(Settings, isVsync)},
     {"playbackIsLoop", TYPE_BOOL, offsetof(Settings, playbackIsLoop)},
     {"playbackIsClampPlayhead", TYPE_BOOL, offsetof(Settings, playbackIsClampPlayhead)},
@@ -182,8 +183,8 @@ constexpr s32 SETTINGS_COUNT = (s32)std::size(SETTINGS_ENTRIES);
 
 const std::string SETTINGS_DEFAULT = R"(
 [Settings]
-windowX=1600
-windowY=900
+windowW=1600
+windowH=900
 isVsync=true
 playbackIsLoop=true
 playbackIsClampPlayhead=false

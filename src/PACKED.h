@@ -301,7 +301,6 @@ void main()
 }
 )";
 
-
 #define SHADER_UNIFORM_COLOR "u_color"
 #define SHADER_UNIFORM_TRANSFORM "u_transform"
 #define SHADER_UNIFORM_TINT "u_tint"

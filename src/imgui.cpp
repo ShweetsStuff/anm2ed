@@ -1647,6 +1647,7 @@ static void _imgui_taskbar(Imgui* self)
 	if (imgui_begin_popup(IMGUI_SETTINGS.popup, self, IMGUI_SETTINGS.popupSize))
 	{
 		if (_imgui_checkbox_selectable(IMGUI_VSYNC, self, self->settings->isVsync)) window_vsync_set(self->settings->isVsync);
+		if (_imgui_selectable(IMGUI_DEFAULT_SETTINGS, self)) *self->settings = Settings();
 		imgui_end_popup(self);
 	}
 	

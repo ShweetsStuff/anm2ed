@@ -657,8 +657,7 @@ void anm2_layer_add(Anm2* self)
 
 void anm2_layer_remove(Anm2* self, s32 id)
 {
-    if (!self->layers.contains(id))
-        return;
+    if (!self->layers.contains(id)) return;
 
     self->layers.erase(id);
 
@@ -752,18 +751,12 @@ void anm2_new(Anm2* self)
 
 Anm2Animation* anm2_animation_from_reference(Anm2* self, Anm2Reference* reference)
 {
-	if (reference->animationID == ID_NONE) return nullptr;
-
-	if (!self->animations.contains(reference->animationID))
-		return nullptr;
-
-	return &self->animations[reference->animationID];
+	return map_find(self->animations, reference->animationID);
 }
 
 Anm2Item* anm2_item_from_reference(Anm2* self, Anm2Reference* reference)
 {
-	if (reference->itemType == ANM2_NONE)
-		return nullptr;
+	if (reference->itemType == ANM2_NONE) return nullptr;
 
 	Anm2Animation* animation = anm2_animation_from_reference(self, reference);
 	
@@ -771,22 +764,13 @@ Anm2Item* anm2_item_from_reference(Anm2* self, Anm2Reference* reference)
 
 	switch (reference->itemType)
 	{
-		case ANM2_ROOT:
-			return &animation->rootAnimation;
-		case ANM2_LAYER:
-			if (!animation->layerAnimations.contains(reference->itemID)) return nullptr;
-			return &animation->layerAnimations[reference->itemID];
-		case ANM2_NULL:
-			if (!animation->nullAnimations.contains(reference->itemID)) return nullptr;
-			return &animation->nullAnimations[reference->itemID];
-		case ANM2_TRIGGERS:
-			return &animation->triggers;
-		default:
-			return nullptr;
+		case ANM2_ROOT: return &animation->rootAnimation;
+		case ANM2_LAYER: return map_find(animation->layerAnimations, reference->itemID);
+		case ANM2_NULL: return map_find(animation->nullAnimations, reference->itemID);
+		case ANM2_TRIGGERS: return &animation->triggers;
+		default: return nullptr;
 	}
 }
-
-
 Anm2Frame* anm2_frame_from_reference(Anm2* self, Anm2Reference* reference)
 {
 	Anm2Item* item = anm2_item_from_reference(self, reference);

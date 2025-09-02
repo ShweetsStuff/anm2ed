@@ -1014,6 +1014,12 @@ IMGUI_ITEM(IMGUI_VSYNC,
     self.isSizeToText = true
 );
 
+IMGUI_ITEM(IMGUI_DEFAULT_SETTINGS,       
+    self.label = "&Reset to Default Settings",
+    self.tooltip = "Reset the program's settings to their default state.",
+    self.isSizeToText = true
+);
+
 IMGUI_ITEM(IMGUI_ANIMATIONS, 
     self.label = "Animations",
     self.flags = ImGuiWindowFlags_NoScrollbar       |
