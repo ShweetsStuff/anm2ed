@@ -18,11 +18,8 @@ A reimplementation of *The Binding of Isaac: Rebirth*'s proprietary animation ed
 ## Dependencies
 Download these from your package manager:
 - SDL3
-- GLEW
   
 Note, to render animations, you'll need to download [FFmpeg](https://ffmpeg.org/download.html) and specify its install path in the program.
-
-This program runs using OpenGL 3.3, so have that.
 
 ## Build
 

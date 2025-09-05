@@ -81,6 +81,7 @@ void preview_draw(Preview* self)
     ivec2& gridOffset = self->settings->previewGridOffset;
     vec4& gridColor = self->settings->previewGridColor;
     GLuint& shaderLine = self->resources->shaders[SHADER_LINE];
+    GLuint& shaderAxis = self->resources->shaders[SHADER_AXIS];
     GLuint& shaderTexture = self->resources->shaders[SHADER_TEXTURE];
     GLuint& shaderGrid = self->resources->shaders[SHADER_GRID];
     mat4 transform = canvas_transform_get(&self->canvas, self->settings->previewPan, self->settings->previewZoom, ORIGIN_CENTER);
@@ -95,7 +96,7 @@ void preview_draw(Preview* self)
         canvas_grid_draw(&self->canvas, shaderGrid, transform, gridSize, gridOffset, gridColor);
 
     if (self->settings->previewIsAxes)
-        canvas_axes_draw(&self->canvas, shaderLine, transform, self->settings->previewAxesColor);
+        canvas_axes_draw(&self->canvas, shaderAxis, transform, self->settings->previewAxesColor);
 
     Anm2Animation* animation = anm2_animation_from_reference(self->anm2, self->reference);
     s32& animationID = self->reference->animationID;

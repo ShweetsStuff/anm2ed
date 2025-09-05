@@ -69,6 +69,7 @@
 #define IMGUI_ACTION_FRAME_DELAY "Frame Delay"
 #define IMGUI_ACTION_MOVE_PLAYHEAD "Move Playhead"
 #define IMGUI_ACTION_DRAW "Draw"
+#define IMGUI_ACTION_ERASE "Erase"
 #define IMGUI_ACTION_RELOAD_SPRITESHEET "Reload Spritesheet(s)"
 #define IMGUI_ACTION_REPLACE_SPRITESHEET "Replace Spritesheet"
 
@@ -1564,17 +1565,17 @@ IMGUI_ITEM(IMGUI_TOOL_COLOR_PICKER,
 
 IMGUI_ITEM(IMGUI_TOOL_UNDO,
     self.label = "## Undo",
-    self.tooltip = "Undoes the last action.",
+    self.tooltip = "Undo the last action.",
     self.function = imgui_undo,
-    self.chord = ImGuiKey_Z,
+    self.chord = ImGuiMod_Ctrl | ImGuiKey_Z,
     self.atlas = ATLAS_UNDO
 );
 
 IMGUI_ITEM(IMGUI_TOOL_REDO,
     self.label = "## Redo",
-    self.tooltip = "Redoes the last action.",
+    self.tooltip = "Redo the last action.",
     self.function = imgui_redo,
-    self.chord = ImGuiMod_Shift + ImGuiKey_Z,
+    self.chord = ImGuiMod_Ctrl | ImGuiKey_Y,
     self.atlas = ATLAS_REDO
 );
 
@@ -2035,8 +2036,6 @@ IMGUI_ITEM(IMGUI_CHANGE_INPUT_INT,
     self.snapshotAction = "Change Value",
     self.step = 0
 );
-
-
 
 #define IMGUI_OPTION_POPUP_ROW_COUNT 2
 IMGUI_ITEM(IMGUI_POPUP_OK,

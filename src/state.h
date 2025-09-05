@@ -9,6 +9,7 @@
 #define STATE_MIX_AUDIO_DEVICE_INIT_WARNING "Unable to initialize audio device! {}"
 #define STATE_MIX_INIT_INFO "Initialized SDL_mixer"
 #define STATE_GL_CONTEXT_INIT_ERROR "Failed to initialize OpenGL context! {}"
+#define STATE_GLAD_INIT_ERROR "Failed to initialize GLAD!"
 #define STATE_GL_CONTEXT_INIT_INFO "Initialized OpenGL context (OpenGL {})"
 #define STATE_QUIT_INFO "Exiting..."
 #define STATE_GL_LINE_WIDTH 2.0f
@@ -22,6 +23,9 @@
 #define STATE_MIX_CHUNK_SIZE 1024
 #define STATE_MIX_DEVICE NULL
 #define STATE_MIX_ALLOWED_CHANGES SDL_AUDIO_ALLOW_FORMAT_CHANGE
+
+#define STATE_GL_VERSION_MAJOR 3
+#define STATE_GL_VERSION_MINOR 3
 
 struct State
 {

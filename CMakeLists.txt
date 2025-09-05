@@ -8,10 +8,12 @@ endif()
 project(anm2ed CXX)
 
 find_package(SDL3 REQUIRED)
-find_package(GLEW REQUIRED)
 find_package(OpenGL REQUIRED)
 
+set(GLAD_SRC ${CMAKE_CURRENT_SOURCE_DIR}/include/glad/glad.cpp)
+
 file(GLOB SOURCES
+    ${GLAD_SRC}
     include/imgui/imgui.cpp
     include/imgui/imgui_draw.cpp
     include/imgui/imgui_widgets.cpp
@@ -23,6 +25,10 @@ file(GLOB SOURCES
     src/*.h
 )
 
+if(NOT MSVC)
+    set_source_files_properties(${GLAD_SRC} PROPERTIES COMPILE_FLAGS "-Wno-cast-function-type")
+endif()
+
 add_executable(${PROJECT_NAME} ${SOURCES})
 
 if(WIN32)
@@ -32,7 +38,7 @@ if(WIN32)
 endif()
 
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_23)
-target_include_directories(${PROJECT_NAME} PRIVATE include include/imgui include/tinyxml2 src)
+target_include_directories(${PROJECT_NAME} PRIVATE include include/glad include/imgui include/tinyxml2 src)
 
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /std:c++latest /EHsc)
@@ -47,7 +53,7 @@ else()
     target_link_libraries(${PROJECT_NAME} PRIVATE m)
 endif()
 
-target_link_libraries(${PROJECT_NAME} PRIVATE OpenGL::GL GLEW::GLEW SDL3::SDL3)
+target_link_libraries(${PROJECT_NAME} PRIVATE OpenGL::GL SDL3::SDL3)
 
 message("System: ${CMAKE_SYSTEM_NAME}")
 message("Project: ${PROJECT_NAME}")

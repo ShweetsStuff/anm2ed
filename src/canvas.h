@@ -10,18 +10,11 @@
 #define CANVAS_GRID_MIN 1
 #define CANVAS_GRID_MAX 1000
 #define CANVAS_GRID_DEFAULT 32
-#define CANVAS_LINE_LENGTH (FLT_MAX * 0.001f)
 
 const inline vec2 CANVAS_PIVOT_SIZE = {8, 8};
 const inline vec2 CANVAS_SCALE_DEFAULT = {1.0f, 1.0f};
 
-const inline f32 CANVAS_AXIS_VERTICES[] = 
-{
-    -CANVAS_LINE_LENGTH, 0.0f,
-    CANVAS_LINE_LENGTH, 0.0f,
-    0.0f, -CANVAS_LINE_LENGTH,
-    0.0f, CANVAS_LINE_LENGTH
-};
+const inline f32 CANVAS_AXIS_VERTICES[] = {-1.0f, 1.0f};
 
 const inline f32 CANVAS_GRID_VERTICES[] =
 {
@@ -62,6 +55,7 @@ struct Canvas
     GLuint textureEBO{};
     ivec2 size{};
     ivec2 previousSize{};
+    bool isInit = false;
 };
 
 #define UV_VERTICES(uvMin, uvMax) \

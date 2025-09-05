@@ -114,6 +114,8 @@ bool texture_from_gl_write(Texture* self, const std::string& path)
 
 void texture_free(Texture* self)
 {
+	if (self->isInvalid) return;
+
 	glDeleteTextures(1, &self->id);
 	*self = Texture{};
 }

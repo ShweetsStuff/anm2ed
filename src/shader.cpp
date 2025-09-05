@@ -47,5 +47,7 @@ bool shader_init(GLuint* self, const std::string& vertex, const std::string& fra
 
 void shader_free(GLuint* self)
 {
+	if (*self == GL_ID_NONE) return;
+	
 	glDeleteProgram(*self);
 }

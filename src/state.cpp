@@ -30,6 +30,7 @@ void init(State* self)
 	{
 		log_error(std::format(STATE_SDL_INIT_ERROR, SDL_GetError()));
 		quit(self);
+		return;
 	}
 
 	log_info(STATE_SDL_INIT_INFO);
@@ -69,8 +70,8 @@ void init(State* self)
 	);
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-   	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-   	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+   	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, STATE_GL_VERSION_MAJOR);
+   	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, STATE_GL_VERSION_MINOR);
 
 	self->glContext = SDL_GL_CreateContext(self->window);
 	
@@ -78,14 +79,14 @@ void init(State* self)
 	{
 		log_error(std::format(STATE_GL_CONTEXT_INIT_ERROR, SDL_GetError()));
 		quit(self);
+		return;
 	}
 
-	GLenum glewError = glewInit();
-
-	if (glewError != GLEW_OK)
+	if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) 
 	{
-		log_error(std::format(STATE_GL_CONTEXT_INIT_ERROR, (const char*)glewGetErrorString(glewError)));
+		log_error(std::format(STATE_GLAD_INIT_ERROR));
 		quit(self);
+		return;
 	}
 
 	log_info(std::format(STATE_GL_CONTEXT_INIT_INFO, (const char*)glGetString(GL_VERSION)));

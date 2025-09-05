@@ -2404,9 +2404,9 @@ static void _imgui_spritesheet_editor(Imgui* self)
 			if (!texture) break;
 			
 			vec4 color = tool == TOOL_ERASE ? COLOR_TRANSPARENT : toolColor;
-			
+
 			if (isMouseClick)
-				imgui_snapshot(self, IMGUI_ACTION_DRAW);
+				imgui_snapshot(self, tool == TOOL_DRAW ? IMGUI_ACTION_DRAW : IMGUI_ACTION_ERASE);
 
 			if (isMouseDown)
 				texture_pixel_set(texture, position, color);
@@ -2661,12 +2661,6 @@ void imgui_update(Imgui* self)
 				break;
 		}
 	}
-
-	if (map_find(self->anm2->layers, -1))
-		printf("Layers -1\n");
-
-	if (map_find(self->anm2->spritesheets, -1))
-		printf("Spritesheets -1\n");
 }
 
 void imgui_draw(void)
@@ -2677,6 +2671,8 @@ void imgui_draw(void)
 
 void imgui_free(void)
 {
+    if (!ImGui::GetCurrentContext()) return;
+	
 	ImGui_ImplSDL3_Shutdown();
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui::SaveIniSettingsToDisk(settings_path_get().c_str());

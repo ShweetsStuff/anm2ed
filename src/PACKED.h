@@ -217,6 +217,7 @@ enum ShaderType
 {
     SHADER_LINE,
     SHADER_TEXTURE,
+    SHADER_AXIS,
     SHADER_GRID,
     SHADER_COUNT
 };
@@ -231,6 +232,33 @@ void main()
 {
     i_uv_out = i_uv;
     gl_Position = u_transform * vec4(i_position, 0.0, 1.0);
+}
+)";
+
+const std::string SHADER_AXIS_VERTEX = R"(
+#version 330 core
+layout (location = 0) in vec2 i_position; // full screen line segment: -1..1
+uniform vec2 u_origin_ndc; // world origin in NDC
+uniform int u_axis;       // 0 = X axis, 1 = Y axis
+
+void main()
+{
+    vec2 pos = (u_axis == 0) 
+        ? vec2(i_position.x, u_origin_ndc.y) // horizontal line across screen
+        : vec2(u_origin_ndc.x, i_position.x); // vertical line across screen;
+
+    gl_Position = vec4(pos, 0.0, 1.0);
+}
+)";
+
+const std::string SHADER_GRID_VERTEX = R"(
+#version 330 core
+layout ( location = 0 ) in vec2 i_position;
+out vec2 clip;
+
+void main() {
+    clip = i_position;
+    gl_Position = vec4(i_position, 0.0, 1.0);
 }
 )";
 
@@ -257,17 +285,6 @@ void main()
     texColor *= u_tint;
     texColor.rgb += u_color_offset;
     o_fragColor = texColor;
-}
-)";
-
-const std::string SHADER_GRID_VERTEX = R"(
-#version 330 core
-layout ( location = 0 ) in vec2 i_position;
-out vec2 clip;
-
-void main() {
-    clip = i_position;
-    gl_Position = vec4(i_position, 0.0, 1.0);
 }
 )";
 
@@ -301,11 +318,13 @@ void main()
 }
 )";
 
+#define SHADER_UNIFORM_AXIS "u_axis"
 #define SHADER_UNIFORM_COLOR "u_color"
 #define SHADER_UNIFORM_TRANSFORM "u_transform"
 #define SHADER_UNIFORM_TINT "u_tint"
 #define SHADER_UNIFORM_COLOR_OFFSET "u_color_offset"
 #define SHADER_UNIFORM_OFFSET "u_offset"
+#define SHADER_UNIFORM_ORIGIN_NDC "u_origin_ndc"
 #define SHADER_UNIFORM_SIZE "u_size"
 #define SHADER_UNIFORM_MODEL "u_model"
 #define SHADER_UNIFORM_TEXTURE "u_texture"
@@ -314,5 +333,6 @@ const ShaderData SHADER_DATA[SHADER_COUNT] =
 {
   {SHADER_VERTEX, SHADER_FRAGMENT},
   {SHADER_VERTEX, SHADER_TEXTURE_FRAGMENT},
+  {SHADER_AXIS_VERTEX, SHADER_FRAGMENT},
   {SHADER_GRID_VERTEX, SHADER_GRID_FRAGMENT}
 };

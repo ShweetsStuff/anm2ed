@@ -33,7 +33,7 @@ void canvas_init(Canvas* self, const ivec2& size)
     glBufferData(GL_ARRAY_BUFFER, sizeof(CANVAS_AXIS_VERTICES), CANVAS_AXIS_VERTICES, GL_STATIC_DRAW);
  
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(f32), (void*)0);
+    glVertexAttribPointer(0, 1, GL_FLOAT, GL_FALSE, sizeof(f32), (void*)0);
     
     // Grid
     glGenVertexArrays(1, &self->gridVAO);
@@ -96,6 +96,8 @@ void canvas_init(Canvas* self, const ivec2& size)
     glGenFramebuffers(1, &self->fbo);
     glGenRenderbuffers(1, &self->rbo);
     _canvas_framebuffer_set(self, size);
+
+    self->isInit = true;
 }
 
 mat4 canvas_transform_get(Canvas* self, vec2 pan, f32 zoom, OriginType origin)
@@ -197,11 +199,17 @@ void canvas_rect_draw(Canvas* self, const GLuint& shader, const mat4& transform,
 
 void canvas_axes_draw(Canvas* self, GLuint& shader, mat4& transform, vec4& color)
 {
+    vec4 originNDC = transform * vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    originNDC /= originNDC.w;
+
     glUseProgram(shader);
     glBindVertexArray(self->axisVAO);
-    glUniformMatrix4fv(glGetUniformLocation(shader, SHADER_UNIFORM_TRANSFORM), 1, GL_FALSE, value_ptr(transform));
-    glUniform4f(glGetUniformLocation(shader, SHADER_UNIFORM_COLOR), color.r, color.g, color.b, color.a);
-    glDrawArrays(GL_LINES, 0, 4);
+    glUniform4fv(glGetUniformLocation(shader, SHADER_UNIFORM_COLOR), 1, value_ptr(color));
+    glUniform2f(glGetUniformLocation(shader, SHADER_UNIFORM_ORIGIN_NDC), originNDC.x, originNDC.y);
+    glUniform1i(glGetUniformLocation(shader, SHADER_UNIFORM_AXIS), 0);
+    glDrawArrays(GL_LINES, 0, 2);
+    glUniform1i(glGetUniformLocation(shader, SHADER_UNIFORM_AXIS), 1);
+    glDrawArrays(GL_LINES, 0, 2);
     glBindVertexArray(0);
     glUseProgram(0);
 }
@@ -218,6 +226,8 @@ void canvas_unbind(void)
 
 void canvas_free(Canvas* self)
 {
+    if (!self->isInit) return;
+
     glDeleteFramebuffers(1, &self->fbo);
     glDeleteRenderbuffers(1, &self->rbo);
     glDeleteTextures(1, &self->framebuffer);
