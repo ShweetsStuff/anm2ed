@@ -22,7 +22,6 @@
 #define ANM2_EXTENSION "anm2"
 #define ANM2_SPRITESHEET_EXTENSION "png"
 
-/* Elements */
 #define ANM2_ELEMENT_LIST \
     X(ANIMATED_ACTOR,     "AnimatedActor")     \
     X(INFO,               "Info")              \
@@ -101,14 +100,16 @@ DEFINE_ENUM_TO_STRING_FUNCTION(ANM2_ELEMENT_ENUM_TO_STRING, ANM2_ELEMENT_STRINGS
     X(EVENT_ID,          "EventId")          \
     X(AT_FRAME,          "AtFrame")
 
-typedef enum {
+typedef enum 
+{
     #define X(name, str) ANM2_ATTRIBUTE_##name,
     ANM2_ATTRIBUTE_LIST
     #undef X
     ANM2_ATTRIBUTE_COUNT
 } Anm2Attribute;
 
-static const char* ANM2_ATTRIBUTE_STRINGS[] = {
+static const char* ANM2_ATTRIBUTE_STRINGS[] = 
+{
     #define X(name, str) str,
     ANM2_ATTRIBUTE_LIST
     #undef X

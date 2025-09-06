@@ -500,6 +500,7 @@ struct ImguiItem
     ImguiPopupType popupType = IMGUI_POPUP_CENTER_WINDOW;
     bool isDisabled = false;
     bool isMnemonicDisabled = false;
+    bool isEmptyFormat = false;
     bool isSelected = false;
     bool isUseItemActivated = false;
     bool isSizeToText = false;
@@ -794,6 +795,7 @@ IMGUI_ITEM(IMGUI_GENERATE_ANIMATION_FROM_GRID_SLIDER,
     self.max = GENERATE_PREVIEW_TIME_MAX,
     self.value = GENERATE_PREVIEW_TIME_MIN,
     self.rowCount = 1,
+    self.isEmptyFormat = true,
     self.flags = ImGuiSliderFlags_NoInput
 );
 

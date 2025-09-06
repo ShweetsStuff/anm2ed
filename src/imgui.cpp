@@ -1,5 +1,17 @@
 #include "imgui.h"
 
+static const char* _imgui_f32_format_get(const ImguiItem& item, f32& value)
+{
+	if (item.isEmptyFormat) return "";
+	return f32_format_get(value);
+}
+
+static const char* _imgui_vec2_format_get(const ImguiItem& item, vec2& value)
+{
+	if (item.isEmptyFormat) return "";
+	return vec2_format_get(value);
+}
+
 static bool _imgui_window_color_from_position_get(SDL_Window* self, const vec2& position, vec4& color)
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -259,7 +271,6 @@ static void _imgui_item_post(const ImguiItem& self, Imgui* imgui, ImguiItemType 
 	if (self.isSeparator) ImGui::Separator();
 }
 
-
 #define IMGUI_ITEM_FUNCTION(NAME, TYPE, FUNCTION)                                 \
 static bool NAME(ImguiItem self, Imgui* imgui)                                    \
 {                                                                                 \
@@ -398,10 +409,10 @@ IMGUI_ITEM_VALUE_FUNCTION(_imgui_color_button, IMGUI_COLOR_BUTTON, vec4, ImGui::
 IMGUI_ITEM_VALUE_FUNCTION(_imgui_checkbox, IMGUI_CHECKBOX, bool, ImGui::Checkbox(self.label_get(), &value));
 IMGUI_ITEM_VALUE_CLAMP_FUNCTION(_imgui_input_int, IMGUI_INPUT_INT, s32, ImGui::InputInt(self.label_get(), &value, self.step, self.stepFast, self.flags));
 IMGUI_ITEM_VALUE_CLAMP_FUNCTION(_imgui_input_int2, IMGUI_INPUT_INT, ivec2, ImGui::InputInt2(self.label_get(), value_ptr(value), self.flags));
-IMGUI_ITEM_VALUE_CLAMP_FUNCTION(_imgui_input_float, IMGUI_INPUT_FLOAT, f32, ImGui::InputFloat(self.label_get(), &value, self.step, self.stepFast, f32_format_get(value), self.flags));
-IMGUI_ITEM_VALUE_FUNCTION(_imgui_slider_float, IMGUI_SLIDER_FLOAT, f32, ImGui::SliderFloat(self.label_get(), &value, self.min, self.max, f32_format_get(value), self.flags));
-IMGUI_ITEM_VALUE_FUNCTION(_imgui_drag_float, IMGUI_DRAG_FLOAT, f32, ImGui::DragFloat(self.label_get(), &value, self.speed, self.min, self.max, f32_format_get(value)));
-IMGUI_ITEM_VALUE_FUNCTION(_imgui_drag_float2, IMGUI_DRAG_FLOAT, vec2, ImGui::DragFloat2(self.label_get(), value_ptr(value), self.speed, self.min, self.max, vec2_format_get(value)));
+IMGUI_ITEM_VALUE_CLAMP_FUNCTION(_imgui_input_float, IMGUI_INPUT_FLOAT, f32, ImGui::InputFloat(self.label_get(), &value, self.step, self.stepFast, _imgui_f32_format_get(self, value), self.flags));
+IMGUI_ITEM_VALUE_FUNCTION(_imgui_slider_float, IMGUI_SLIDER_FLOAT, f32, ImGui::SliderFloat(self.label_get(), &value, self.min, self.max, _imgui_f32_format_get(self, value), self.flags));
+IMGUI_ITEM_VALUE_FUNCTION(_imgui_drag_float, IMGUI_DRAG_FLOAT, f32, ImGui::DragFloat(self.label_get(), &value, self.speed, self.min, self.max, _imgui_f32_format_get(self, value)));
+IMGUI_ITEM_VALUE_FUNCTION(_imgui_drag_float2, IMGUI_DRAG_FLOAT, vec2, ImGui::DragFloat2(self.label_get(), value_ptr(value), self.speed, self.min, self.max, _imgui_vec2_format_get(self, value)));
 IMGUI_ITEM_VALUE_FUNCTION(_imgui_color_edit3, IMGUI_COLOR_EDIT, vec3, ImGui::ColorEdit3(self.label_get(), value_ptr(value), self.flags));
 IMGUI_ITEM_VALUE_FUNCTION(_imgui_color_edit4, IMGUI_COLOR_EDIT, vec4, ImGui::ColorEdit4(self.label_get(), value_ptr(value), self.flags));
 IMGUI_ITEM_CHECKBOX_FUNCTION(_imgui_checkbox_selectable, _imgui_selectable(self, imgui));
@@ -1326,7 +1337,7 @@ static void _imgui_taskbar(Imgui* self)
 		static auto& columns = self->settings->generateColumns;
 		static auto& count = self->settings->generateCount;
 		static auto& delay = self->settings->generateDelay;
-		static auto& time = self->generatePreview->time;
+		static f32& time = self->generatePreview->time;
 
 		_imgui_begin_child(IMGUI_GENERATE_ANIMATION_FROM_GRID_OPTIONS_CHILD, self);
 		_imgui_input_int2(IMGUI_GENERATE_ANIMATION_FROM_GRID_START_POSITION, self, startPosition);
