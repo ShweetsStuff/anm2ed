@@ -51,6 +51,7 @@ struct State
 	bool isRunning = true;
 }; 
 
+bool sdl_init(State* self, bool isTestMode);
 void init(State* state);
 void loop(State* state);
 void quit(State* state);

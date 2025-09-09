@@ -51,15 +51,17 @@ using namespace glm;
 #define FLOAT_TO_U8(x) (static_cast<u8>((x) * 255.0f))
 #define U8_TO_FLOAT(x) ((x) / 255.0f)
 #define PERCENT_TO_UNIT(x) (x / 100.0f)
+#define UNIT_TO_PERCENT(x) (x * 100.0f)
 #define SECOND 1000.0f
 #define TICK_DELAY (SECOND / 30.0)
 #define UPDATE_DELAY (SECOND / 120.0)
 #define ID_NONE -1
 #define INDEX_NONE -1
+#define VALUE_NONE -1
 #define TIME_NONE -1.0f
 #define GL_ID_NONE 0
 
-#if defined(_WIN32)
+#ifdef _WIN32
   #define POPEN  _popen
   #define PCLOSE _pclose
   #define PWRITE_MODE "wb"
@@ -70,7 +72,6 @@ using namespace glm;
   #define PWRITE_MODE "w"
   #define PREAD_MODE "r"
 #endif
-
 
 static const GLuint GL_TEXTURE_INDICES[] = {0, 1, 2, 2, 3, 0};
 static const vec4 COLOR_RED = {1.0f, 0.0f, 0.0f, 1.0f};
@@ -102,6 +103,15 @@ static inline bool string_to_bool(const std::string& string)
 static inline std::string string_quote(const std::string& string) 
 {
     return "\"" + string + "\"";
+}
+
+static inline std::string string_to_lowercase(std::string string) {
+    std::transform
+    (
+        string.begin(), string.end(), string.begin(),
+        [](u8 character){ return std::tolower(character); }
+    );
+    return string;
 }
 
 #define FLOAT_FORMAT_MAX_DECIMALS 2
@@ -144,65 +154,6 @@ static inline const char* vec2_format_get(const vec2& value)
     return formatString.c_str();
 }
 
-static inline std::string path_canonical_resolve
-(
-    const std::string& inputPath,
-    const std::string& basePath = std::filesystem::current_path().string()
-)
-{
-    auto strings_equal_ignore_case = [](std::string a, std::string b) {
-        auto to_lower = [](unsigned char c) { return static_cast<char>(std::tolower(c)); };
-        std::transform(a.begin(), a.end(), a.begin(), to_lower);
-        std::transform(b.begin(), b.end(), b.begin(), to_lower);
-        return a == b;
-    };
-
-    std::string sanitized = inputPath;
-    std::replace(sanitized.begin(), sanitized.end(), '\\', '/');
-
-    std::filesystem::path normalizedPath = sanitized;
-    std::filesystem::path absolutePath = normalizedPath.is_absolute()
-        ? normalizedPath
-        : (std::filesystem::path(basePath) / normalizedPath);
-
-    std::error_code error;
-    if (std::filesystem::exists(absolutePath, error)) {
-        std::error_code canonicalError;
-        std::filesystem::path canonicalPath = std::filesystem::weakly_canonical(absolutePath, canonicalError);
-        return (canonicalError ? absolutePath : canonicalPath).generic_string();
-    }
-
-    std::filesystem::path resolvedPath = absolutePath.root_path();
-    std::filesystem::path remainingPath = absolutePath.relative_path();
-
-    for (const std::filesystem::path& segment : remainingPath) {
-        std::filesystem::path candidatePath = resolvedPath / segment;
-        if (std::filesystem::exists(candidatePath, error)) {
-            resolvedPath = candidatePath;
-            continue;
-        }
-
-        bool matched = false;
-        if (std::filesystem::exists(resolvedPath, error) && std::filesystem::is_directory(resolvedPath, error)) {
-            for (const auto& directoryEntry : std::filesystem::directory_iterator(resolvedPath, error)) {
-                if (strings_equal_ignore_case(directoryEntry.path().filename().string(), segment.string())) {
-                    resolvedPath = directoryEntry.path();
-                    matched = true;
-                    break;
-                }
-            }
-        }
-        if (!matched) return sanitized; 
-    }
-
-    if (!std::filesystem::exists(resolvedPath, error))
-        return sanitized;
-
-    std::error_code canonicalError;
-    std::filesystem::path canonicalPath = std::filesystem::weakly_canonical(resolvedPath, canonicalError);
-    return (canonicalError ? resolvedPath : canonicalPath).generic_string();
-};
-
 static inline std::string working_directory_from_file_set(const std::string& path)
 {
     std::filesystem::path filePath = path;
@@ -237,7 +188,6 @@ static inline bool path_is_valid(const std::filesystem::path& pathCheck)
     std::error_code ec;
 
     if (fs::is_directory(pathCheck, ec)) return false;
-    if (fs::exists(pathCheck, ec) && !fs::is_regular_file(pathCheck, ec)) return false;
 
     fs::path parentDir = pathCheck.has_parent_path() ? pathCheck.parent_path() : fs::path(".");
     if (!fs::is_directory(parentDir, ec)) return false;
@@ -248,7 +198,7 @@ static inline bool path_is_valid(const std::filesystem::path& pathCheck)
     testStream.close();
 
     if (!existedBefore && isValid)
-        fs::remove(pathCheck, ec); // cleanup if we created it
+        fs::remove(pathCheck, ec);
 
     return isValid;
 }
@@ -341,6 +291,39 @@ static inline void map_insert_shift(std::map<int, T>& map, s32 index, const T& v
         map[newKey] = std::move(val);
 
     map[insertIndex] = value;
+}
+
+static inline mat4 quad_model_get(vec2 size = {}, vec2 position = {}, vec2 pivot = {}, vec2 scale = vec2(1.0f), f32 rotation = {})
+{
+    vec2 scaleAbsolute  = glm::abs(scale);
+    vec2 scaleSign = glm::sign(scale);
+    vec2 pivotScaled = pivot * scaleAbsolute;
+    vec2 sizeScaled  = size  * scaleAbsolute;
+
+    mat4 model(1.0f);
+    model = glm::translate(model, vec3(position - pivotScaled, 0.0f));
+    model = glm::translate(model, vec3(pivotScaled, 0.0f));
+    model = glm::scale(model, vec3(scaleSign, 1.0f));
+    model = glm::rotate(model, glm::radians(rotation), vec3(0, 0, 1));
+    model = glm::translate(model, vec3(-pivotScaled, 0.0f));
+    model = glm::scale(model, vec3(sizeScaled, 1.0f));
+    return model;
+}
+
+static inline mat4 quad_model_parent_get(vec2 position = {}, vec2 pivot = {}, vec2 scale = vec2(1.0f), f32 rotation = {})
+{
+    vec2 scaleSign = glm::sign(scale);
+    vec2 scaleAbsolute  = glm::abs(scale);
+    f32 handedness = (scaleSign.x * scaleSign.y) < 0.0f ? -1.0f : 1.0f;
+
+    mat4 local(1.0f);
+    local = glm::translate(local, vec3(pivot, 0.0f));
+    local = glm::scale(local, vec3(scaleSign, 1.0f));
+    local = glm::rotate(local, glm::radians(rotation) * handedness, vec3(0, 0, 1));
+    local = glm::translate(local, vec3(-pivot, 0.0f));
+    local = glm::scale(local, vec3(scaleAbsolute, 1.0f));
+
+    return glm::translate(mat4(1.0f), vec3(position, 0.0f)) * local;
 }
 
 #define DEFINE_ENUM_TO_STRING_FUNCTION(function, array, count) \

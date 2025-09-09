@@ -20,12 +20,19 @@
 #define SETTINGS_PATH "settings.ini"
 #define SETTINGS_TEMPORARY_EXTENSION ".tmp"
 
+#ifdef _WIN32
+#define SETTINGS_FFMPEG_PATH_VALUE_DEFAULT "C:\\ffmpeg\\bin\\ffmpeg.exe"
+#else
+#define SETTINGS_FFMPEG_PATH_VALUE_DEFAULT "/usr/bin/ffmpeg"
+#endif
+
 #define SETTINGS_LIST \
     /* name,                  symbol,                       type,              defaultValue */ \
     X(windowSize,             WINDOW_SIZE,                  TYPE_IVEC2_WH,     {1280, 720}) \
     X(isVsync,                IS_VSYNC,                     TYPE_BOOL,         true) \
     \
     X(hotkeyCenterView,       HOTKEY_CENTER_VIEW,           TYPE_STRING,       "Home") \
+    X(hotkeyFit,              HOTKEY_FIT,                   TYPE_STRING,       "F") \
     X(hotkeyZoomIn,           HOTKEY_ZOOM_IN,               TYPE_STRING,       "Ctrl++") \
     X(hotkeyZoomOut,          HOTKEY_ZOOM_OUT,              TYPE_STRING,       "Ctrl+-") \
     X(hotkeyPlayPause,        HOTKEY_PLAY_PAUSE,            TYPE_STRING,       "Space") \
@@ -84,7 +91,7 @@
     X(previewIsRootTransform, PREVIEW_IS_ROOT_TRANSFORM,    TYPE_BOOL,         false) \
     X(previewIsTriggers,      PREVIEW_IS_TRIGGERS,          TYPE_BOOL,         true) \
     X(previewIsPivots,        PREVIEW_IS_PIVOTS,            TYPE_BOOL,         false) \
-    X(previewIsTargets,       PREVIEW_IS_TARGETS,           TYPE_BOOL,         true) \
+    X(previewIsIcons,         PREVIEW_IS_ICONS,           TYPE_BOOL,         true) \
     X(previewIsBorder,        PREVIEW_IS_BORDER,            TYPE_BOOL,         false) \
     X(previewIsAltIcons,      PREVIEW_IS_ALT_ICONS,         TYPE_BOOL,         false) \
     X(previewOverlayTransparency,PREVIEW_OVERLAY_TRANSPARENCY,TYPE_FLOAT,      255.0f) \
@@ -95,6 +102,8 @@
     X(previewGridColor,       PREVIEW_GRID_COLOR,           TYPE_VEC4,         {1.0,1.0,1.0,0.125}) \
     X(previewAxesColor,       PREVIEW_AXES_COLOR,           TYPE_VEC4,         {1.0,1.0,1.0,0.125}) \
     X(previewBackgroundColor, PREVIEW_BACKGROUND_COLOR,     TYPE_VEC4,         {0.113,0.184,0.286,1.0}) \
+    \
+    X(propertiesIsRound,      PROPERTIES_IS_ROUND,          TYPE_BOOL,         true) \
     \
     X(generateStartPosition,  GENERATE_START_POSITION,      TYPE_IVEC2,        {}) \
     X(generateSize,           GENERATE_SIZE,                TYPE_IVEC2,        {64,64}) \
@@ -134,7 +143,7 @@
     X(renderType,             RENDER_TYPE,                  TYPE_INT,          RENDER_PNG) \
     X(renderPath,             RENDER_PATH,                  TYPE_STRING,       ".") \
     X(renderFormat,           RENDER_FORMAT,                TYPE_STRING,       "{}.png") \
-    X(ffmpegPath,             FFMPEG_PATH,                  TYPE_STRING,       "")
+    X(ffmpegPath,             FFMPEG_PATH,                  TYPE_STRING,       SETTINGS_FFMPEG_PATH_VALUE_DEFAULT)
 
 #define X(name, symbol, type, ...) \
 const inline DATATYPE_TO_CTYPE(type) SETTINGS_##symbol##_DEFAULT = __VA_ARGS__;
@@ -169,6 +178,7 @@ constexpr s32 SETTINGS_COUNT = (s32)std::size(SETTINGS_ENTRIES);
 #define HOTKEY_LIST \
     X(NONE,     "None")                 \
     X(CENTER_VIEW,     "Center View")   \
+    X(FIT,     "Fit")                   \
     X(ZOOM_IN,     "Zoom In")           \
     X(ZOOM_OUT,     "Zoom Out")         \
     X(PLAY_PAUSE,     "Play/Pause")     \
@@ -213,6 +223,7 @@ const inline HotkeyMember SETTINGS_HOTKEY_MEMBERS[HOTKEY_COUNT] =
 {
     nullptr,
     &Settings::hotkeyCenterView,
+    &Settings::hotkeyFit,
     &Settings::hotkeyZoomIn,
     &Settings::hotkeyZoomOut,
     &Settings::hotkeyPlayPause,
@@ -251,66 +262,72 @@ Collapsed=0
 
 [Window][Tools]
 Pos=8,40
-Size=39,612
+Size=37,460
 Collapsed=0
 DockId=0x0000000B,0
 
 [Window][Animations]
-Pos=1288,301
-Size=304,351
+Pos=1288,284
+Size=304,216
 Collapsed=0
 DockId=0x0000000A,0
 
 [Window][Events]
-Pos=1005,353
-Size=281,299
+Pos=1007,332
+Size=279,168
 Collapsed=0
 DockId=0x00000008,0
 
 [Window][Spritesheets]
 Pos=1288,40
-Size=304,259
+Size=304,242
 Collapsed=0
 DockId=0x00000009,0
 
 [Window][Animation Preview]
-Pos=49,40
-Size=954,612
+Pos=47,40
+Size=958,460
 Collapsed=0
 DockId=0x0000000C,0
 
 [Window][Spritesheet Editor]
-Pos=49,40
-Size=954,612
+Pos=47,40
+Size=958,460
 Collapsed=0
 DockId=0x0000000C,1
 
 [Window][Timeline]
-Pos=8,654
-Size=1584,238
+Pos=8,502
+Size=1584,390
 Collapsed=0
 DockId=0x00000004,0
 
 [Window][Frame Properties]
-Pos=1005,40
-Size=281,311
+Pos=1007,40
+Size=279,290
 Collapsed=0
 DockId=0x00000007,0
 
+[Window][Onionskin]
+Pos=8,502
+Size=1584,390
+Collapsed=0
+DockId=0x00000004,1
+
 [Docking][Data]
 DockSpace         ID=0xFC02A410 Window=0x0E46F4F7 Pos=8,40 Size=1584,852 Split=Y
-  DockNode        ID=0x00000003 Parent=0xFC02A410 SizeRef=1902,612 Split=X
-    DockNode      ID=0x00000001 Parent=0x00000003 SizeRef=1278,1016 Split=X Selected=0x024430EF
-      DockNode    ID=0x00000005 Parent=0x00000001 SizeRef=995,654 Split=X Selected=0x024430EF
-        DockNode  ID=0x0000000B Parent=0x00000005 SizeRef=39,654 Selected=0x18A5FDB9
-        DockNode  ID=0x0000000C Parent=0x00000005 SizeRef=954,654 CentralNode=1 Selected=0x024430EF
-      DockNode    ID=0x00000006 Parent=0x00000001 SizeRef=281,654 Split=Y Selected=0x754E368F
-        DockNode  ID=0x00000007 Parent=0x00000006 SizeRef=631,311 Selected=0x754E368F
-        DockNode  ID=0x00000008 Parent=0x00000006 SizeRef=631,299 Selected=0x8A65D963
+  DockNode        ID=0x00000003 Parent=0xFC02A410 SizeRef=1902,568 Split=X
+    DockNode      ID=0x00000001 Parent=0x00000003 SizeRef=1595,1016 Split=X Selected=0x024430EF
+      DockNode    ID=0x00000005 Parent=0x00000001 SizeRef=997,654 Split=X Selected=0x024430EF
+        DockNode  ID=0x0000000B Parent=0x00000005 SizeRef=37,654 Selected=0x18A5FDB9
+        DockNode  ID=0x0000000C Parent=0x00000005 SizeRef=958,654 CentralNode=1 Selected=0x024430EF
+      DockNode    ID=0x00000006 Parent=0x00000001 SizeRef=279,654 Split=Y Selected=0x754E368F
+        DockNode  ID=0x00000007 Parent=0x00000006 SizeRef=631,359 Selected=0x754E368F
+        DockNode  ID=0x00000008 Parent=0x00000006 SizeRef=631,207 Selected=0x8A65D963
     DockNode      ID=0x00000002 Parent=0x00000003 SizeRef=304,1016 Split=Y Selected=0x4EFD0020
-      DockNode    ID=0x00000009 Parent=0x00000002 SizeRef=634,259 Selected=0x4EFD0020
-      DockNode    ID=0x0000000A Parent=0x00000002 SizeRef=634,351 Selected=0xC1986EE2
-  DockNode        ID=0x00000004 Parent=0xFC02A410 SizeRef=1902,238 Selected=0x4F89F0DC
+      DockNode    ID=0x00000009 Parent=0x00000002 SizeRef=634,299 Selected=0x4EFD0020
+      DockNode    ID=0x0000000A Parent=0x00000002 SizeRef=634,267 Selected=0xC1986EE2
+  DockNode        ID=0x00000004 Parent=0xFC02A410 SizeRef=1902,390 Selected=0x4F89F0DC
 )";
 
 void settings_save(Settings* self);

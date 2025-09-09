@@ -13,7 +13,9 @@
 #define ANM2_FRAME_DELAY_MIN 1
 #define ANM2_STRING_MAX 0xFF
 
+#define ANM2_EMPTY_ERROR "No path given for anm2"
 #define ANM2_READ_ERROR "Failed to read anm2 from file: {}"
+#define ANM2_PARSE_ERROR "Failed to parse anm2: {} ({})"
 #define ANM2_READ_INFO "Read anm2 from file: {}"
 #define ANM2_WRITE_ERROR "Failed to write anm2 to file: {}"
 #define ANM2_WRITE_INFO "Wrote anm2 to file: {}"
@@ -272,7 +274,7 @@ void anm2_layer_remove(Anm2* self, s32 id);
 void anm2_null_add(Anm2* self);
 void anm2_null_remove(Anm2* self, s32 id);
 bool anm2_serialize(Anm2* self, const std::string& path);
-bool anm2_deserialize(Anm2* self, const std::string& path);
+bool anm2_deserialize(Anm2* self, const std::string& path, bool isTextures = true);
 void anm2_new(Anm2* self);
 void anm2_free(Anm2* self);
 void anm2_created_on_set(Anm2* self);
@@ -297,3 +299,4 @@ void anm2_scale(Anm2* self, f32 scale);
 void anm2_generate_from_grid(Anm2* self, Anm2Reference* reference, vec2 startPosition, vec2 size, vec2 pivot, s32 columns, s32 count, s32 delay);
 void anm2_spritesheet_texture_pixels_upload(Anm2* self);
 void anm2_spritesheet_texture_pixels_download(Anm2* self);
+vec4 anm2_animation_rect_get(Anm2* anm2, Anm2Reference* reference, bool isRootTransform);

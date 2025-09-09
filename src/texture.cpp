@@ -35,6 +35,7 @@ std::vector<u8> texture_download(const Texture* self)
     
 	glBindTexture(GL_TEXTURE_2D, self->id);
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
+	glPixelStorei(GL_PACK_ROW_LENGTH, 0);
 	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
  
 	return pixels;
@@ -46,12 +47,8 @@ bool texture_from_path_init(Texture* self, const std::string& path)
 	
 	if (!data)
 	{
-		data = stbi_load(path_canonical_resolve(path).c_str(), &self->size.x, &self->size.y, &self->channels, TEXTURE_CHANNELS);
-		if (!data)
-		{
-			log_error(std::format(TEXTURE_INIT_ERROR, path));
-			return false;
-		}
+		log_error(std::format(TEXTURE_INIT_ERROR, path));
+		return false;
 	}
 
 	self->isInvalid = false;
@@ -96,13 +93,8 @@ bool texture_from_rgba_init(Texture* self, ivec2 size, s32 channels, const u8* d
 bool texture_from_rgba_write(const std::string& path, const u8* data, ivec2 size)
 {
 	bool isSuccess = stbi_write_png(path.c_str(), size.x, size.y, TEXTURE_CHANNELS, data, size.x * TEXTURE_CHANNELS);
-	if (!isSuccess)
-	{
-		isSuccess = stbi_write_png(path_canonical_resolve(path).c_str(), size.x, size.y, TEXTURE_CHANNELS, data, size.x * TEXTURE_CHANNELS);
-		if (!isSuccess) log_info(std::format(TEXTURE_SAVE_ERROR, path));
-	}
-		
-	log_info(std::format(TEXTURE_SAVE_INFO, path));
+	if (!isSuccess) log_error(std::format(TEXTURE_SAVE_ERROR, path));
+	else log_info(std::format(TEXTURE_SAVE_INFO, path));
 		
 	return isSuccess;
 }

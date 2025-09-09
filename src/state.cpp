@@ -22,18 +22,16 @@ static void _draw(State* self)
 	SDL_GL_SwapWindow(self->window);
 }
 
-void init(State* self)
+bool sdl_init(State* self, bool isTestMode = false)
 {
-	settings_init(&self->settings);
-
 	if (!SDL_Init(SDL_INIT_VIDEO))
 	{
 		log_error(std::format(STATE_SDL_INIT_ERROR, SDL_GetError()));
 		quit(self);
-		return;
+		return false;
 	}
 
-	log_info(STATE_SDL_INIT_INFO);
+	if (!isTestMode) log_info(STATE_SDL_INIT_INFO);
 	
 	// Todo, when sdl3 mixer is released officially
 	/*
@@ -61,13 +59,26 @@ void init(State* self)
 		log_info(STATE_MIX_INIT_INFO);
 	*/
 
-	self->window = SDL_CreateWindow
-	(
-		WINDOW_TITLE, 
-		self->settings.windowSize.x, 
-		self->settings.windowSize.y, 
-		WINDOW_FLAGS
-	);
+
+	if (isTestMode)
+	{
+		self->window = SDL_CreateWindow
+		(
+			WINDOW_TITLE, 
+			WINDOW_TEST_MODE_SIZE.x, WINDOW_TEST_MODE_SIZE.y,
+			WINDOW_TEST_MODE_FLAGS
+		);
+	}
+	else
+	{
+		self->window = SDL_CreateWindow
+		(
+			WINDOW_TITLE, 
+			self->settings.windowSize.x, 
+			self->settings.windowSize.y, 
+			WINDOW_FLAGS
+		);
+	}
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
    	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, STATE_GL_VERSION_MAJOR);
@@ -79,17 +90,17 @@ void init(State* self)
 	{
 		log_error(std::format(STATE_GL_CONTEXT_INIT_ERROR, SDL_GetError()));
 		quit(self);
-		return;
+		return false;
 	}
 
 	if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) 
 	{
 		log_error(std::format(STATE_GLAD_INIT_ERROR));
 		quit(self);
-		return;
+		return false;
 	}
 
-	log_info(std::format(STATE_GL_CONTEXT_INIT_INFO, (const char*)glGetString(GL_VERSION)));
+	if (!isTestMode) log_info(std::format(STATE_GL_CONTEXT_INIT_INFO, (const char*)glGetString(GL_VERSION)));
 	
 	window_vsync_set(self->settings.isVsync);
 	
@@ -99,7 +110,16 @@ void init(State* self)
 	glDisable(GL_MULTISAMPLE);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_LINE_SMOOTH);
-	
+
+	return true;
+}
+
+void init(State* self)
+{
+	settings_init(&self->settings);
+
+	if (!sdl_init(self)) return;
+
 	if (!self->argument.empty())
 	{
 		anm2_deserialize(&self->anm2, self->argument);

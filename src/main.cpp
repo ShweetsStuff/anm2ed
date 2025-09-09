@@ -4,7 +4,7 @@ static bool _anm2_rescale(const std::string& file, f32 scale)
 {
 	Anm2 anm2;
 
-	if (!anm2_deserialize(&anm2, file)) return false;
+	if (!anm2_deserialize(&anm2, file, false)) return false;
 	anm2_scale(&anm2, scale);
 	return anm2_serialize(&anm2, file);
 }
@@ -35,9 +35,19 @@ main(s32 argc, char* argv[])
 			
 			return EXIT_FAILURE;
 		}
+		else if (std::string(argv[1]) == ARGUMENT_TEST && argv[2])
+		{
+			if (anm2_deserialize(&state.anm2, std::string(argv[2]), false)) return EXIT_SUCCESS;
+			return EXIT_FAILURE;
+		}
+		else if (std::string(argv[1]) == ARGUMENT_TEST_GL && argv[2])
+		{
+			if (!sdl_init(&state, true)) return EXIT_FAILURE;
+			if (anm2_deserialize(&state.anm2, std::string(argv[2]))) return EXIT_SUCCESS;
+			return EXIT_FAILURE;
+		}
 		else
-			if (argv[1])
-				state.argument = argv[1];
+			if (argv[1]) state.argument = argv[1];
 	}
 
 	init(&state);

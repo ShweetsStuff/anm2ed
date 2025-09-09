@@ -305,7 +305,7 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 	return true;
 }
 
-bool anm2_deserialize(Anm2* self, const std::string& path)
+bool anm2_deserialize(Anm2* self, const std::string& path, bool isTextures)
 {
 	XMLDocument xmlDocument;
 	XMLError xmlError;
@@ -330,7 +330,13 @@ bool anm2_deserialize(Anm2* self, const std::string& path)
 	bool isFirstAnimationDone = false;
 	std::string defaultAnimation{};
 
-	if (!self || path.empty()) return false;
+	if (!self) return false;
+	
+	if (path.empty()) 
+	{
+		log_error(ANM2_EMPTY_ERROR);
+		return false;
+	}
 
 	anm2_new(self);
 
@@ -338,7 +344,7 @@ bool anm2_deserialize(Anm2* self, const std::string& path)
 
 	if (xmlError != XML_SUCCESS)
 	{
-		log_error(std::format(ANM2_READ_ERROR, xmlDocument.ErrorStr()));
+		log_error(std::format(ANM2_PARSE_ERROR, path, xmlDocument.ErrorStr()));
 		return false;
 	}
 
@@ -590,8 +596,17 @@ bool anm2_deserialize(Anm2* self, const std::string& path)
 			xmlAttribute = xmlAttribute->Next();
 		}
 
-		if (anm2Element == ANM2_ELEMENT_SPRITESHEET)
+		if (anm2Element == ANM2_ELEMENT_SPRITESHEET && isTextures)
+		{
+			// Spritesheet paths from Isaac Rebirth are made with the assumption that the paths are case-insensitive (developed on Windows)
+			// However when using the resource dumper, the spritesheet paths are all lowercase (on Linux anyways)
+			// If the check doesn't work, set the spritesheet path to lowercase
+			// If it doesn't work beyond that then that's on the user :^)
+
+			if (!path_exists(spritesheet->path))
+				spritesheet->path = string_to_lowercase(spritesheet->path);
 			texture_from_path_init(&spritesheet->texture, spritesheet->path);
+		}
 
 		xmlChild = xmlElement->FirstChildElement();
 
@@ -617,20 +632,16 @@ bool anm2_deserialize(Anm2* self, const std::string& path)
 		}
 	}
 
-	// Set default animation ID
 	for (auto& [id, animation] : self->animations)
 		if (animation.name == defaultAnimation)
 			self->defaultAnimationID = id;
 
-	// Copy texture data to pixels (used for snapshots)
-	anm2_spritesheet_texture_pixels_download(self);
-
-	// Read
-	log_info(std::format(ANM2_READ_INFO, path));
+	if (isTextures) anm2_spritesheet_texture_pixels_download(self);
 	
-	// Return to old working directory
 	std::filesystem::current_path(workingPath);
 
+	log_info(std::format(ANM2_READ_INFO, path));
+	
 	return true;
 }
 
@@ -1189,9 +1200,61 @@ void anm2_spritesheet_texture_pixels_download(Anm2* self)
 
         if (texture.id != GL_ID_NONE && !texture.isInvalid)
         {
-            spritesheet.pixels.resize(texture.size.x * texture.size.y * texture.channels);
+			size_t bufferSize = (size_t)texture.size.x * (size_t)texture.size.y * (size_t)texture.channels;
+            spritesheet.pixels.resize(bufferSize);
             glBindTexture(GL_TEXTURE_2D, texture.id);
             glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, spritesheet.pixels.data());
         }
     }
+}
+
+vec4 anm2_animation_rect_get(Anm2* self, Anm2Reference* reference, bool isRootTransform)
+{
+    f32 minX =  std::numeric_limits<f32>::infinity();
+    f32 minY =  std::numeric_limits<f32>::infinity();
+    f32 maxX = -std::numeric_limits<f32>::infinity();
+    f32 maxY = -std::numeric_limits<f32>::infinity();
+
+	bool any = false;
+
+    Anm2Frame frame;
+    Anm2Frame root;
+
+    Anm2Animation* animation = anm2_animation_from_reference(self, reference);
+    if (!animation) return vec4(-1.0f);
+
+    for (f32 t = 0.0f; t <= animation->frameNum; t += 1.0f)
+    {
+        for (const auto& [id, _] : animation->layerAnimations)
+        {
+            anm2_frame_from_time(self, &frame, {reference->animationID, ANM2_LAYER, id}, t);
+			if (!frame.isVisible) continue;
+            if (frame.size.x <= 0 || frame.size.y <= 0) continue;
+
+            mat4 rootModel(1.0f);
+            if (isRootTransform)
+            {
+                anm2_frame_from_time(self, &root, {reference->animationID, ANM2_ROOT}, t);
+				rootModel = quad_model_parent_get(root.position, root.pivot, PERCENT_TO_UNIT(root.scale), root.rotation);
+            }
+
+			mat4 model = quad_model_get(frame.size, frame.position, frame.pivot, PERCENT_TO_UNIT(frame.scale), frame.rotation);
+            mat4 fullModel = rootModel * model;
+
+            vec2 corners[4] = { {0,0}, {1,0}, {1,1}, {0,1} };
+
+            for (auto& corner : corners)
+            {
+                vec4 world = fullModel * vec4(corner, 0.0f, 1.0f);
+                minX = std::min(minX, world.x);
+                minY = std::min(minY, world.y);
+                maxX = std::max(maxX, world.x);
+                maxY = std::max(maxY, world.y);
+                any = true;
+            }
+        }
+    }
+
+    if (!any) return vec4(-1.0f);
+    return {minX, minY, maxX - minX, maxY - minY};
 }

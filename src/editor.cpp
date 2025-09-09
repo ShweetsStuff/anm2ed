@@ -30,7 +30,7 @@ void editor_draw(Editor* self)
     {
         Texture& texture = spritesheet->texture;
         
-        mat4 spritesheetTransform = transform * canvas_model_get(texture.size);
+        mat4 spritesheetTransform = transform * quad_model_get(texture.size);
         canvas_texture_draw(&self->canvas, shaderTexture, texture.id, spritesheetTransform);
 
         if (self->settings->editorIsBorder)
@@ -40,10 +40,10 @@ void editor_draw(Editor* self)
     
         if (frame)
         {
-            mat4 cropTransform = transform * canvas_model_get(frame->size, frame->crop);
+            mat4 cropTransform = transform * quad_model_get(frame->size, frame->crop);
             canvas_rect_draw(&self->canvas, shaderLine, cropTransform, EDITOR_FRAME_COLOR);
 
-            mat4 pivotTransform = transform * canvas_model_get(CANVAS_PIVOT_SIZE, frame->crop + frame->pivot, CANVAS_PIVOT_SIZE * 0.5f);
+            mat4 pivotTransform = transform * quad_model_get(CANVAS_PIVOT_SIZE, frame->crop + frame->pivot, CANVAS_PIVOT_SIZE * 0.5f);
             f32 vertices[] = ATLAS_UV_VERTICES(ATLAS_PIVOT);
             canvas_texture_draw(&self->canvas, shaderTexture, self->resources->atlas.id, pivotTransform, vertices, EDITOR_PIVOT_COLOR);
         }

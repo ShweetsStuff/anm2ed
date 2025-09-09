@@ -105,7 +105,7 @@ void preview_draw(Preview* self)
 
         auto root_draw = [&](Anm2Frame root, vec3 colorOffset = {}, f32 alphaOffset = {}, bool isOnionskin = {})
         {
-            mat4 model = canvas_model_get(PREVIEW_TARGET_SIZE, root.position, PREVIEW_TARGET_SIZE * 0.5f, PERCENT_TO_UNIT(root.scale), root.rotation);
+            mat4 model = quad_model_get(PREVIEW_TARGET_SIZE, root.position, PREVIEW_TARGET_SIZE * 0.5f, PERCENT_TO_UNIT(root.scale), root.rotation);
             mat4 rootTransform = transform * model;
             vec4 color = isOnionskin ? vec4(colorOffset, 1.0f - alphaOffset) : PREVIEW_ROOT_COLOR;
             AtlasType atlas = self->settings->previewIsAltIcons ? ATLAS_TARGET_ALT : ATLAS_TARGET;
@@ -122,7 +122,7 @@ void preview_draw(Preview* self)
             anm2_frame_from_time(self->anm2, &frame, Anm2Reference{animationID, ANM2_LAYER, id}, time);
             if (!frame.isVisible) return;
 
-            mat4 model = canvas_model_get(frame.size, frame.position, frame.pivot, PERCENT_TO_UNIT(frame.scale), frame.rotation);
+            mat4 model = quad_model_get(frame.size, frame.position, frame.pivot, PERCENT_TO_UNIT(frame.scale), frame.rotation);
             mat4 layerTransform = transform * (rootModel * model);
             vec3 frameColorOffset = frame.offsetRGB + colorOffset;
             vec4 frameTint = frame.tintRGBA;
@@ -149,7 +149,7 @@ void preview_draw(Preview* self)
             {
                 vec4 pivotColor = isOnionskin ? vec4(colorOffset, 1.0f - alphaOffset) : PREVIEW_PIVOT_COLOR;
                 f32 vertices[] = ATLAS_UV_VERTICES(ATLAS_PIVOT);
-                mat4 pivotModel = canvas_model_get(CANVAS_PIVOT_SIZE, frame.position, CANVAS_PIVOT_SIZE * 0.5f, PERCENT_TO_UNIT(frame.scale), frame.rotation);
+                mat4 pivotModel = quad_model_get(CANVAS_PIVOT_SIZE, frame.position, CANVAS_PIVOT_SIZE * 0.5f, PERCENT_TO_UNIT(frame.scale), frame.rotation);
                 mat4 pivotTransform = transform * (rootModel * pivotModel);
                 canvas_texture_draw(&self->canvas, shaderTexture, self->resources->atlas.id, pivotTransform, vertices, pivotColor);
             }
@@ -173,7 +173,7 @@ void preview_draw(Preview* self)
             vec2 size = null.isShowRect ? CANVAS_PIVOT_SIZE : PREVIEW_TARGET_SIZE;
             AtlasType atlas = null.isShowRect ? ATLAS_SQUARE : self->settings->previewIsAltIcons ? ATLAS_TARGET_ALT : ATLAS_TARGET;
       
-            mat4 model = canvas_model_get(size, frame.position, size * 0.5f, PERCENT_TO_UNIT(frame.scale), frame.rotation);
+            mat4 model = quad_model_get(size, frame.position, size * 0.5f, PERCENT_TO_UNIT(frame.scale), frame.rotation);
             mat4 nullTransform = transform * (rootModel * model);
  
             f32 vertices[] = ATLAS_UV_VERTICES(atlas);
@@ -182,7 +182,7 @@ void preview_draw(Preview* self)
 
             if (null.isShowRect)
             {
-                mat4 rectModel = canvas_model_get(PREVIEW_NULL_RECT_SIZE, frame.position, PREVIEW_NULL_RECT_SIZE * 0.5f, PERCENT_TO_UNIT(frame.scale), frame.rotation);
+                mat4 rectModel = quad_model_get(PREVIEW_NULL_RECT_SIZE, frame.position, PREVIEW_NULL_RECT_SIZE * 0.5f, PERCENT_TO_UNIT(frame.scale), frame.rotation);
                 mat4 rectTransform = transform * (rootModel * rectModel);
                 canvas_rect_draw(&self->canvas, shaderLine, rectTransform, color);
             }
@@ -194,15 +194,15 @@ void preview_draw(Preview* self)
             anm2_frame_from_time(self->anm2, &root, Anm2Reference{animationID, ANM2_ROOT}, time);
 
             mat4 rootModel = self->settings->previewIsRootTransform ?
-            canvas_parent_model_get(root.position, {}, PERCENT_TO_UNIT(root.scale), root.rotation) : mat4(1.0f);
+            quad_model_parent_get(root.position, {}, PERCENT_TO_UNIT(root.scale), root.rotation) : mat4(1.0f);
 
-            if (self->settings->previewIsTargets && animation->rootAnimation.isVisible && root.isVisible)
+            if (self->settings->previewIsIcons && animation->rootAnimation.isVisible && root.isVisible)
                 root_draw(root, colorOffset, alphaOffset, isOnionskin);
 
             for (auto [i, id] : self->anm2->layerMap)
                 layer_draw(rootModel, id, time, colorOffset, alphaOffset, isOnionskin);
 
-            if (self->settings->previewIsTargets)
+            if (self->settings->previewIsIcons)
                 for (auto& [id, _] : animation->nullAnimations)
                     null_draw(rootModel, id, time, colorOffset, alphaOffset, isOnionskin); 
         };

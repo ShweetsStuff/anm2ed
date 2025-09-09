@@ -77,8 +77,6 @@ void canvas_rect_draw(Canvas* self, const GLuint& shader, const mat4& transform,
 void canvas_framebuffer_resize_check(Canvas* self);
 void canvas_unbind(void);
 void canvas_viewport_set(Canvas* self);
-mat4 canvas_model_get(vec2 size = {}, vec2 position = {}, vec2 pivot = {}, vec2 scale = vec2(1.0f), f32 rotation = {});
-mat4 canvas_parent_model_get(vec2 position = {}, vec2 pivot = {}, vec2 scale = vec2(1.0f), f32 rotation = {});
 
 void canvas_texture_draw
 (

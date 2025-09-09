@@ -42,8 +42,6 @@ struct Preview
     f32 time{};
 };
 
-
-
 void preview_init(Preview* self, Anm2* anm2, Anm2Reference* reference, Resources* resources, Settings* settings);
 void preview_draw(Preview* self);
 void preview_tick(Preview* self);

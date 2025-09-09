@@ -43,7 +43,7 @@ static bool _imgui_window_color_from_position_get(SDL_Window* self, const vec2& 
 
 static void _imgui_anm2_open(Imgui* self, const std::string& path)
 {
-	imgui_file_new(self);
+	imgui_anm2_new(self);
 
 	if (anm2_deserialize(self->anm2, path))
 	{
@@ -72,12 +72,6 @@ static void _imgui_spritesheet_add(Imgui* self, const std::string& path)
 	texture_from_path_init(&self->anm2->spritesheets[id].texture, spritesheetPath);
 	
 	std::filesystem::current_path(workingPath);
-}
-
-template<typename T>
-static void _imgui_clipboard_hovered_item_set(Imgui* self, const T& data)
-{
-	self->clipboard->hoveredItem = ClipboardItem(data);
 }
 
 static bool _imgui_is_window_hovered(void)
@@ -128,7 +122,7 @@ static ImVec2 _imgui_item_size_get(const ImguiItem& self, ImguiItemType type)
 			if (self.is_row())
 				size.x = (ImGui::GetWindowSize().x - (ImGui::GetStyle().ItemSpacing.x * (self.rowCount + 1))) / self.rowCount;
 			else if (self.isSizeToText)
-				size.x = (ImGui::CalcTextSize(self.label_get()).x + ImGui::GetStyle().FramePadding.x);
+				size.x = (ImGui::CalcTextSize(self.label_get().c_str()).x + ImGui::GetStyle().FramePadding.x);
 			else if (!self.is_size())
 				size.x = ImGui::CalcItemWidth();
 			break;
@@ -188,16 +182,6 @@ static void _imgui_item_pre(const ImguiItem& self, ImguiItemType type)
 		default:
 			break;
 	}
-
-	/*
-	if (self.is_hotkey())
-	{
- 	   	std::string chordString = imgui_string_from_chord_get(imgui->hotkeys[self.hotkey]);
-		if (isShortcutInLabel)
-			label += std::format(IMGUI_LABEL_SHORTCUT_FORMAT, chordString);
-		tooltip += std::format(IMGUI_TOOLTIP_SHORTCUT_FORMAT, chordString);
-	}
-	*/
 }
 
 static void _imgui_item_post(const ImguiItem& self, Imgui* imgui, ImguiItemType type, bool& isActivated)
@@ -238,7 +222,7 @@ static void _imgui_item_post(const ImguiItem& self, Imgui* imgui, ImguiItemType 
 		if (!self.isDisabled) isActivated = true;
 
 	if (self.is_tooltip() && ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) 
-		ImGui::SetTooltip(self.tooltip.c_str());
+		ImGui::SetTooltip(self.tooltip_get().c_str());
 
 	if (isActivated)
 	{
@@ -429,32 +413,32 @@ static bool NAME(const ImguiItem& self, const ImguiItem& checkboxItem, Imgui* im
 
 #define IMGUI_ITEM_DISABLED_GET(VALUE, ITEM, CONDITION) ImguiItem VALUE = ITEM; VALUE.isDisabled = CONDITION;
 
-IMGUI_ITEM_FUNCTION(_imgui_begin, IMGUI_WINDOW, ImGui::Begin(self.label_get(), nullptr, self.flags));
+IMGUI_ITEM_FUNCTION(_imgui_begin, IMGUI_WINDOW, ImGui::Begin(self.label_get().c_str(), nullptr, self.flags));
 #define IMGUI_BEGIN_OR_RETURN(item, imgui) if (!_imgui_begin(item, imgui)) { _imgui_end(); return; }
 static void _imgui_end(void){ImGui::End();}
-IMGUI_ITEM_VOID_FUNCTION(_imgui_dockspace, IMGUI_DOCKSPACE, ImGui::DockSpace(ImGui::GetID(self.label_get()), self.size, self.flags));
-IMGUI_ITEM_FUNCTION(_imgui_begin_child, IMGUI_CHILD, ImGui::BeginChild(self.label_get(), self.size, self.flags, self.windowFlags));
+IMGUI_ITEM_VOID_FUNCTION(_imgui_dockspace, IMGUI_DOCKSPACE, ImGui::DockSpace(ImGui::GetID(self.label_get().c_str()), self.size, self.flags));
+IMGUI_ITEM_FUNCTION(_imgui_begin_child, IMGUI_CHILD, ImGui::BeginChild(self.label_get().c_str(), self.size, self.flags, self.windowFlags));
 static void _imgui_end_child(void) {ImGui::EndChild(); }
-IMGUI_ITEM_VOID_FUNCTION(_imgui_text, IMGUI_TEXT, ImGui::Text(self.label_get()));
-IMGUI_ITEM_FUNCTION(_imgui_button, IMGUI_BUTTON, ImGui::Button(self.label_get(), _imgui_item_size_get(self, type)));
-IMGUI_ITEM_FUNCTION(_imgui_begin_table, IMGUI_TABLE, ImGui::BeginTable(self.label_get(), self.value, self.flags));
+IMGUI_ITEM_VOID_FUNCTION(_imgui_text, IMGUI_TEXT, ImGui::Text(self.label_get().c_str()));
+IMGUI_ITEM_FUNCTION(_imgui_button, IMGUI_BUTTON, ImGui::Button(self.label_get().c_str(), _imgui_item_size_get(self, type)));
+IMGUI_ITEM_FUNCTION(_imgui_begin_table, IMGUI_TABLE, ImGui::BeginTable(self.label_get().c_str(), self.value, self.flags));
 static void _imgui_end_table(void) {ImGui::EndTable(); }
 static void _imgui_table_setup_column(const char* text) {ImGui::TableSetupColumn(text); }
 static void _imgui_table_headers_row(void) {ImGui::TableHeadersRow(); }
 static void _imgui_table_next_row(void) {ImGui::TableNextRow(); }
 static void _imgui_table_set_column_index(s32 index) {ImGui::TableSetColumnIndex(index); }
-IMGUI_ITEM_FUNCTION(_imgui_selectable, IMGUI_SELECTABLE, ImGui::Selectable(self.label_get(), self.isSelected, self.flags, _imgui_item_size_get(self, type)));
-IMGUI_ITEM_VALUE_FUNCTION(_imgui_radio_button, IMGUI_RADIO_BUTTON, s32, ImGui::RadioButton(self.label_get(), &value, self.value));
-IMGUI_ITEM_VALUE_FUNCTION(_imgui_color_button, IMGUI_COLOR_BUTTON, vec4, ImGui::ColorButton(self.label_get(), ImVec4(value), self.flags));
-IMGUI_ITEM_VALUE_FUNCTION(_imgui_checkbox, IMGUI_CHECKBOX, bool, ImGui::Checkbox(self.label_get(), &value));
-IMGUI_ITEM_VALUE_CLAMP_FUNCTION(_imgui_input_int, IMGUI_INPUT_INT, s32, ImGui::InputInt(self.label_get(), &value, self.step, self.stepFast, self.flags));
-IMGUI_ITEM_VALUE_CLAMP_FUNCTION(_imgui_input_int2, IMGUI_INPUT_INT, ivec2, ImGui::InputInt2(self.label_get(), value_ptr(value), self.flags));
-IMGUI_ITEM_VALUE_CLAMP_FUNCTION(_imgui_input_float, IMGUI_INPUT_FLOAT, f32, ImGui::InputFloat(self.label_get(), &value, self.step, self.stepFast, _imgui_f32_format_get(self, value), self.flags));
-IMGUI_ITEM_VALUE_FUNCTION(_imgui_slider_float, IMGUI_SLIDER_FLOAT, f32, ImGui::SliderFloat(self.label_get(), &value, self.min, self.max, _imgui_f32_format_get(self, value), self.flags));
-IMGUI_ITEM_VALUE_FUNCTION(_imgui_drag_float, IMGUI_DRAG_FLOAT, f32, ImGui::DragFloat(self.label_get(), &value, self.speed, self.min, self.max, _imgui_f32_format_get(self, value)));
-IMGUI_ITEM_VALUE_FUNCTION(_imgui_drag_float2, IMGUI_DRAG_FLOAT, vec2, ImGui::DragFloat2(self.label_get(), value_ptr(value), self.speed, self.min, self.max, _imgui_vec2_format_get(self, value)));
-IMGUI_ITEM_VALUE_FUNCTION(_imgui_color_edit3, IMGUI_COLOR_EDIT, vec3, ImGui::ColorEdit3(self.label_get(), value_ptr(value), self.flags));
-IMGUI_ITEM_VALUE_FUNCTION(_imgui_color_edit4, IMGUI_COLOR_EDIT, vec4, ImGui::ColorEdit4(self.label_get(), value_ptr(value), self.flags));
+IMGUI_ITEM_FUNCTION(_imgui_selectable, IMGUI_SELECTABLE, ImGui::Selectable(self.label_get().c_str(), self.isSelected, self.flags, _imgui_item_size_get(self, type)));
+IMGUI_ITEM_VALUE_FUNCTION(_imgui_radio_button, IMGUI_RADIO_BUTTON, s32, ImGui::RadioButton(self.label_get().c_str(), &value, self.value));
+IMGUI_ITEM_VALUE_FUNCTION(_imgui_color_button, IMGUI_COLOR_BUTTON, vec4, ImGui::ColorButton(self.label_get().c_str(), ImVec4(value), self.flags));
+IMGUI_ITEM_VALUE_FUNCTION(_imgui_checkbox, IMGUI_CHECKBOX, bool, ImGui::Checkbox(self.label_get().c_str(), &value));
+IMGUI_ITEM_VALUE_CLAMP_FUNCTION(_imgui_input_int, IMGUI_INPUT_INT, s32, ImGui::InputInt(self.label_get().c_str(), &value, self.step, self.stepFast, self.flags));
+IMGUI_ITEM_VALUE_CLAMP_FUNCTION(_imgui_input_int2, IMGUI_INPUT_INT, ivec2, ImGui::InputInt2(self.label_get().c_str(), value_ptr(value), self.flags));
+IMGUI_ITEM_VALUE_CLAMP_FUNCTION(_imgui_input_float, IMGUI_INPUT_FLOAT, f32, ImGui::InputFloat(self.label_get().c_str(), &value, self.step, self.stepFast, _imgui_f32_format_get(self, value), self.flags));
+IMGUI_ITEM_VALUE_FUNCTION(_imgui_slider_float, IMGUI_SLIDER_FLOAT, f32, ImGui::SliderFloat(self.label_get().c_str(), &value, self.min, self.max, _imgui_f32_format_get(self, value), self.flags));
+IMGUI_ITEM_VALUE_FUNCTION(_imgui_drag_float, IMGUI_DRAG_FLOAT, f32, ImGui::DragFloat(self.label_get().c_str(), &value, self.speed, self.min, self.max, _imgui_f32_format_get(self, value)));
+IMGUI_ITEM_VALUE_FUNCTION(_imgui_drag_float2, IMGUI_DRAG_FLOAT, vec2, ImGui::DragFloat2(self.label_get().c_str(), value_ptr(value), self.speed, self.min, self.max, _imgui_vec2_format_get(self, value)));
+IMGUI_ITEM_VALUE_FUNCTION(_imgui_color_edit3, IMGUI_COLOR_EDIT, vec3, ImGui::ColorEdit3(self.label_get().c_str(), value_ptr(value), self.flags));
+IMGUI_ITEM_VALUE_FUNCTION(_imgui_color_edit4, IMGUI_COLOR_EDIT, vec4, ImGui::ColorEdit4(self.label_get().c_str(), value_ptr(value), self.flags));
 IMGUI_ITEM_CHECKBOX_FUNCTION(_imgui_checkbox_selectable, _imgui_selectable(self, imgui));
 IMGUI_ITEM_CHECKBOX_VALUE_FUNCTION(_imgui_checkbox_checkbox, bool, _imgui_checkbox(self, imgui, value));
 IMGUI_ITEM_CHECKBOX_VALUE_FUNCTION(_imgui_checkbox_input_int, s32, _imgui_input_int(self, imgui, value));
@@ -467,7 +451,7 @@ static bool _imgui_input_text(const ImguiItem& self, Imgui* imgui, std::string& 
 {
 	value.resize(self.max);
     _imgui_item_pre(self, IMGUI_INPUT_TEXT);
-    bool isActivated = ImGui::InputText(self.label_get(), value.data(), self.max, self.flags);
+    bool isActivated = ImGui::InputText(self.label_get().c_str(), value.data(), self.max, self.flags);
     _imgui_item_post(self, imgui, IMGUI_INPUT_TEXT, isActivated);
     return isActivated;
 }
@@ -481,7 +465,7 @@ static bool _imgui_combo(ImguiItem self, Imgui* imgui, s32* value)
 
 	_imgui_item_pre(self, IMGUI_COMBO);
 
-	bool isActivated = ImGui::Combo(self.label_get(), value, cStrings.data(), (s32)self.items.size());
+	bool isActivated = ImGui::Combo(self.label_get().c_str(), value, cStrings.data(), (s32)self.items.size());
 	if (_imgui_is_input_default()) 
 	{
 		*value = self.value; 
@@ -499,7 +483,7 @@ IMGUI_ITEM_CUSTOM_FUNCTION(_imgui_atlas_button, IMGUI_ATLAS_BUTTON,
 
 	if (self.is_size())
 	{
-		isActivated = ImGui::Button(self.label_get(), size);
+		isActivated = ImGui::Button(self.label_get().c_str(), size);
 		
 		ImVec2 start = ImGui::GetItemRectMin() + self.atlasOffset;
 		ImVec2 end = start + ImVec2(ATLAS_SIZE(self.atlas));
@@ -507,7 +491,7 @@ IMGUI_ITEM_CUSTOM_FUNCTION(_imgui_atlas_button, IMGUI_ATLAS_BUTTON,
 		ImGui::GetWindowDrawList()->AddImage(imgui->resources->atlas.id, start, end, ATLAS_UV_ARGS(self.atlas));
 	}
 	else
-		isActivated = ImGui::ImageButton(self.label_get(), imgui->resources->atlas.id, size, ATLAS_UV_ARGS(self.atlas));
+		isActivated = ImGui::ImageButton(self.label_get().c_str(), imgui->resources->atlas.id, size, ATLAS_UV_ARGS(self.atlas));
 });
 
 static bool _imgui_selectable_input_int(const ImguiItem& self, Imgui* imgui, s32& value)
@@ -592,7 +576,7 @@ static bool _imgui_option_popup(ImguiItem self, Imgui* imgui, ImguiPopupState* s
 	
 	if (state) *state = IMGUI_POPUP_STATE_CLOSED;
 
-	if (imgui_begin_popup_modal(self.label_get(), imgui))
+	if (imgui_begin_popup_modal(self.label_get().c_str(), imgui))
 	{
 		if (state) *state = IMGUI_POPUP_STATE_OPEN;
 		
@@ -1007,8 +991,8 @@ static void _imgui_timeline(Imgui* self)
 			if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 			{
 				*self->reference = reference;
-				self->clipboard->location = hoverReference;
-				_imgui_spritesheet_editor_set(self, self->anm2->layers[self->reference->itemID].spritesheetID);
+				if (reference.itemType == ANM2_LAYER && reference.itemID != ID_NONE)
+					_imgui_spritesheet_editor_set(self, self->anm2->layers[self->reference->itemID].spritesheetID);
 			}
 		}
 
@@ -1059,12 +1043,6 @@ static void _imgui_timeline(Imgui* self)
 			ImGui::SetCursorPos(framePos);
 			
 			if (_imgui_atlas_button(frameButton, self)) *self->reference = reference;
-
-			if (ImGui::IsItemHovered())
-			{
-				Anm2FrameWithReference frameWithReference = {reference, frame};
-				_imgui_clipboard_hovered_item_set(self, frameWithReference);
-			}
 
 			if (ImGui::IsItemActivated())
 			{
@@ -1291,8 +1269,7 @@ static void _imgui_timeline(Imgui* self)
 		imgui_end_popup(self);
 	}
 	
-	if (_imgui_button(IMGUI_FIT_ANIMATION_LENGTH, self))
-		anm2_animation_length_set(animation);
+	if (_imgui_button(IMGUI_FIT_ANIMATION_LENGTH, self)) anm2_animation_length_set(animation);
 
 	_imgui_input_int(IMGUI_ANIMATION_LENGTH, self, animation->frameNum);
 	_imgui_input_int(IMGUI_FPS, self, self->anm2->fps);
@@ -1355,7 +1332,7 @@ static void _imgui_taskbar(Imgui* self)
 	
 	if (imgui_begin_popup(IMGUI_FILE.popup, self))
 	{
-		_imgui_selectable(IMGUI_NEW.copy({self->anm2->path.empty()}), self);
+		_imgui_selectable(IMGUI_NEW, self);
 		_imgui_selectable(IMGUI_OPEN, self);
 		_imgui_selectable(IMGUI_SAVE.copy({self->anm2->path.empty()}), self);
 		_imgui_selectable(IMGUI_SAVE_AS.copy({self->anm2->path.empty()}), self);
@@ -1664,8 +1641,14 @@ static void _imgui_taskbar(Imgui* self)
 			rendering_end();
 		}
 
+		_imgui_begin_child(IMGUI_RENDERING_ANIMATION_CHILD, self);
+
 		f32 progress = self->preview->time / (animation->frameNum - 1);
 		ImGui::ProgressBar(progress);
+
+		_imgui_text(IMGUI_RENDERING_ANIMATION_INFO, self);
+
+		_imgui_end_child(); //IMGUI_RENDERING_ANIMATION_CHILD
 
 		if (_imgui_button(IMGUI_RENDERING_ANIMATION_CANCEL, self))
 			self->preview->isRenderCancelled = true;
@@ -1868,13 +1851,6 @@ static void _imgui_animations(Imgui* self)
 			anm2_reference_item_clear(self->reference);
 		}
 		
-		if (ImGui::IsItemHovered())
-		{
-			Anm2AnimationWithID animationWithID = {id, animation};
-			_imgui_clipboard_hovered_item_set(self, animationWithID);
-			self->clipboard->location = (s32)id;
-		}
-
 		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
 		{
 			if (ImGui::IsDragDropActive()) ImGui::SetNextItemWidth(_imgui_item_size_get(animationItem, IMGUI_SELECTABLE).x);
@@ -2298,6 +2274,22 @@ static void _imgui_animation_preview(Imgui* self)
 	_imgui_begin_child(IMGUI_CANVAS_VIEW_CHILD, self);
 	_imgui_drag_float(IMGUI_CANVAS_ZOOM, self, zoom);
 	if (_imgui_button(IMGUI_ANIMATION_PREVIEW_CENTER_VIEW.copy({pan == vec2()}), self)) pan = vec2();
+	if (_imgui_button(IMGUI_ANIMATION_PREVIEW_FIT.copy({self->reference->animationID == ID_NONE}), self))
+	{
+        vec4 rect = anm2_animation_rect_get(self->anm2, self->reference, self->settings->previewIsRootTransform);
+
+		if (rect != vec4(-1.0f) && (rect.z > 0 && rect.w > 0))
+		{
+			f32 scaleX = self->preview->canvas.size.x / rect.z;
+			f32 scaleY = self->preview->canvas.size.y / rect.w;
+			f32 fitScale = std::min(scaleX, scaleY);
+
+			zoom = UNIT_TO_PERCENT(fitScale);
+
+        	vec2 rectCenter = { rect.x + rect.z * 0.5f, rect.y + rect.w * 0.5f };
+        	pan = -rectCenter * fitScale;
+		}
+	}
 	ImGui::Text(mousePositionString.c_str());
 	_imgui_end_child(); //IMGUI_CANVAS_VIEW_CHILD
 
@@ -2342,7 +2334,7 @@ static void _imgui_animation_preview(Imgui* self)
 	_imgui_checkbox(IMGUI_CANVAS_TRIGGERS, self, self->settings->previewIsTriggers);
 	_imgui_checkbox(IMGUI_CANVAS_PIVOTS, self, self->settings->previewIsPivots);
 	ImGui::SameLine();
-	_imgui_checkbox(IMGUI_CANVAS_TARGETS, self, self->settings->previewIsTargets);
+	_imgui_checkbox(IMGUI_CANVAS_ICONS, self, self->settings->previewIsIcons);
 	ImGui::SameLine();
 	_imgui_checkbox(IMGUI_CANVAS_BORDER, self, self->settings->previewIsBorder);
 	_imgui_end_child(); // IMGUI_CANVAS_HELPER_CHILD
@@ -2368,10 +2360,14 @@ static void _imgui_animation_preview(Imgui* self)
 	}
 
 	if (ImGui::IsItemHovered()) 
+	{
 		self->pendingCursor = TOOL_CURSORS[tool];
+		imgui_keyboard_nav_disable();
+	}
 	else
 	{
 		_imgui_end(); // IMGUI_ANIMATION_EDITOR
+		imgui_keyboard_nav_enable();
 		return;
 	}
 
@@ -2392,58 +2388,66 @@ static void _imgui_animation_preview(Imgui* self)
 	const ImVec2 mouseDelta = ImGui::GetIO().MouseDelta;
 	const f32 mouseWheel = ImGui::GetIO().MouseWheel;
 	
-	if (tool == TOOL_MOVE || tool == TOOL_SCALE || tool == TOOL_ROTATE)
-		if (isMouseClick || isLeft || isRight || isUp || isDown)
-			imgui_snapshot(self, IMGUI_ACTION_FRAME_TRANSFORM);
-	
-	if ((tool == TOOL_PAN && isMouseDown) || isMouseMiddleDown)
-		pan += vec2(mouseDelta.x, mouseDelta.y);
-
 	Anm2Frame* frame = nullptr;
 	
 	if (self->reference->itemType != ANM2_TRIGGERS) 
 		frame = anm2_frame_from_reference(self->anm2, self->reference);
 
-	if (frame)
+	f32 step = isMod ? TOOL_STEP_MOD : TOOL_STEP;
+	
+	if ((tool == TOOL_PAN && isMouseDown) || isMouseMiddleDown)
+		pan += vec2(mouseDelta.x, mouseDelta.y);
+
+	switch (tool)
 	{
-		f32 step = isMod ? TOOL_STEP_MOD : TOOL_STEP;
+		case TOOL_MOVE:
+			if (!frame) break;
 		
-		switch (tool)
-		{
-			case TOOL_MOVE:
-				if (isMouseDown) 
-					frame->position = vec2(mousePos);
-				else 
-				{
-					if (isLeft)  frame->position.x -= step;
-					if (isRight) frame->position.x += step;
-					if (isUp)    frame->position.y -= step;
-					if (isDown)  frame->position.y += step;
-				}
-				break;
-			case TOOL_ROTATE:
-				if (isMouseDown)
-					frame->rotation += mouseDelta.x;
-				else
-				{
-					if (isLeft || isUp) frame->rotation -= step;
-					if (isRight || isDown) frame->rotation += step;
-				}
-				break;
-			case TOOL_SCALE:
-				if (isMouseDown)
-					frame->scale += vec2(mouseDelta.x, mouseDelta.y);
-				else
-				{
-					if (isLeft)  frame->scale.x -= step;
-					if (isRight) frame->scale.x += step;
-					if (isUp)    frame->scale.y -= step;
-					if (isDown)  frame->scale.y += step;
-				}
-				break;
-			default:
-				break;
-		}
+			if (isMouseClick || isLeft || isRight || isUp || isDown)
+				imgui_snapshot(self, IMGUI_ACTION_MOVE);
+		
+			if (isMouseDown) 
+				frame->position = vec2(mousePos);
+			else 
+			{
+				if (isLeft)  frame->position.x -= step;
+				if (isRight) frame->position.x += step;
+				if (isUp)    frame->position.y -= step;
+				if (isDown)  frame->position.y += step;
+			}
+			break;
+		case TOOL_ROTATE:
+			if (!frame) break;
+
+			if (isMouseClick || isLeft || isRight || isUp || isDown)
+				imgui_snapshot(self, IMGUI_ACTION_ROTATE);
+		
+			if (isMouseDown)
+				frame->rotation += mouseDelta.x;
+			else
+			{
+				if (isLeft || isUp) frame->rotation -= step;
+				if (isRight || isDown) frame->rotation += step;
+			}
+			break;
+		case TOOL_SCALE:
+			if (!frame) break;
+
+			if (isMouseClick || isLeft || isRight || isUp || isDown)
+				imgui_snapshot(self, IMGUI_ACTION_SCALE);
+		
+			if (isMouseDown)
+				frame->scale += vec2(mouseDelta.x, mouseDelta.y);
+			else
+			{
+				if (isLeft)  frame->scale.x -= step;
+				if (isRight) frame->scale.x += step;
+				if (isUp)    frame->scale.y -= step;
+				if (isDown)  frame->scale.y += step;
+			}
+			break;
+		default:
+			break;
 	}
 
 	if (mouseWheel != 0 || isZoomIn || isZoomOut)
@@ -2499,10 +2503,14 @@ static void _imgui_spritesheet_editor(Imgui* self)
 	ImGui::Image(self->editor->canvas.framebuffer, vec2(size));
 	
 	if (ImGui::IsItemHovered()) 
+	{
 		self->pendingCursor = TOOL_CURSORS[tool];
+		imgui_keyboard_nav_disable();
+	}
 	else
 	{
 		_imgui_end(); // IMGUI_SPRITESHEET_EDITOR
+		imgui_keyboard_nav_enable();
 		return;
 	}
 
@@ -2510,6 +2518,12 @@ static void _imgui_spritesheet_editor(Imgui* self)
 
 	mousePos = vec2(ImGui::GetMousePos() - editorCursorScreenPos - pan) / PERCENT_TO_UNIT(zoom);
 
+	const bool isLeft = ImGui::IsKeyPressed(IMGUI_INPUT_LEFT);
+	const bool isRight = ImGui::IsKeyPressed(IMGUI_INPUT_RIGHT);
+	const bool isUp = ImGui::IsKeyPressed(IMGUI_INPUT_UP);
+	const bool isDown = ImGui::IsKeyPressed(IMGUI_INPUT_DOWN);
+	const bool isShift = ImGui::IsKeyDown(IMGUI_INPUT_SHIFT);
+	const bool isCtrl = ImGui::IsKeyDown(IMGUI_INPUT_CTRL);
 	const bool isMouseClick = ImGui::IsMouseClicked(ImGuiMouseButton_Left);
 	const bool isMouseDown = ImGui::IsMouseDown(ImGuiMouseButton_Left);
 	const bool isMouseMiddleDown = ImGui::IsMouseDown(ImGuiMouseButton_Middle);
@@ -2518,9 +2532,6 @@ static void _imgui_spritesheet_editor(Imgui* self)
 	const f32 mouseWheel = ImGui::GetIO().MouseWheel;
 	const ImVec2 mouseDelta = ImGui::GetIO().MouseDelta;
 	
-	if ((tool == TOOL_PAN && isMouseDown) || isMouseMiddleDown)
-		pan += vec2(mouseDelta.x, mouseDelta.y);
-
 	Anm2Frame* frame = nullptr;
 	if (self->reference->itemType == ANM2_LAYER) 
 		frame = anm2_frame_from_reference(self->anm2, self->reference);
@@ -2529,11 +2540,42 @@ static void _imgui_spritesheet_editor(Imgui* self)
 	Texture* texture = spritesheet ? &spritesheet->texture : nullptr;
 
 	vec2 position = mousePos;
-
+	f32 step = isShift ? TOOL_STEP_MOD : TOOL_STEP;
+	
+	if ((tool == TOOL_PAN && isMouseDown) || isMouseMiddleDown)
+		pan += vec2(mouseDelta.x, mouseDelta.y);
+		
 	switch (tool)
 	{
+		case TOOL_MOVE:
+			if (!texture || !frame) break;
+
+			if (isMouseClick || isLeft || isRight || isUp || isDown)
+				imgui_snapshot(self, IMGUI_ACTION_MOVE);
+
+			if (isMouseDown) 
+			{
+				if (self->settings->editorIsGridSnap)
+				{
+					position.x = roundf(position.x / gridSize.x) * gridSize.x + gridOffset.x - (gridSize.x * 0.5f);
+					position.y = roundf(position.y / gridSize.y) * gridSize.y + gridOffset.y - (gridSize.y * 0.5f);
+				}	
+
+				frame->pivot = position - frame->crop;
+			}
+			else 
+			{
+				if (isLeft)  frame->pivot.x -= step;
+				if (isRight) frame->pivot.x += step;
+				if (isUp)    frame->pivot.y -= step;
+				if (isDown)  frame->pivot.y += step;
+			}
+			break;
 		case TOOL_CROP:
-			if (!frame || !texture) break;
+			if (!texture || !frame) break;
+
+			if (isMouseClick || isLeft || isRight || isUp || isDown)
+				imgui_snapshot(self, IMGUI_ACTION_MOVE);
 
 			if (self->settings->editorIsGridSnap)
 			{
@@ -2543,12 +2585,31 @@ static void _imgui_spritesheet_editor(Imgui* self)
 			
 			if (isMouseClick)
 			{
-				imgui_snapshot(self, IMGUI_ACTION_FRAME_CROP);
 				frame->crop = position;
 				frame->size = ivec2(0,0);
 			}
 			else if (isMouseDown)
 				frame->size = position - frame->crop;
+			else
+			{
+				if (isCtrl)
+				{
+					if (isLeft)  frame->crop.x -= step;
+					if (isRight) frame->crop.x += step;
+					if (isUp)    frame->crop.y -= step;
+					if (isDown)  frame->crop.y += step;
+				}
+				else
+				{
+					if (isLeft)  frame->size.x -= step;
+					if (isRight) frame->size.x += step;
+					if (isUp)    frame->size.y -= step;
+					if (isDown)  frame->size.y += step;
+				}
+
+				frame->size.x = std::max({}, frame->size.x);
+				frame->size.y = std::max({}, frame->size.y);
+			}
 			break;
 		case TOOL_DRAW:
 		case TOOL_ERASE:
@@ -2610,8 +2671,20 @@ static void _imgui_frame_properties(Imgui* self)
 		_imgui_color_edit3(IMGUI_FRAME_PROPERTIES_COLOR_OFFSET.copy({!frame}), self, !frame ? dummy_value<vec3>() : frame->offsetRGB);
 		_imgui_checkbox(IMGUI_FRAME_PROPERTIES_VISIBLE.copy({!frame}), self, !frame ? dummy_value<bool>() : frame->isVisible);
 		_imgui_checkbox(IMGUI_FRAME_PROPERTIES_INTERPOLATED.copy({!frame}), self, !frame ? dummy_value<bool>() : frame->isInterpolated);
+		_imgui_checkbox(IMGUI_FRAME_PROPERTIES_ROUND.copy({!frame}), self, self->settings->propertiesIsRound);
 		if (_imgui_button(IMGUI_FRAME_PROPERTIES_FLIP_X.copy({!frame}), self)) frame->scale.x = -frame->scale.x;
 		if (_imgui_button(IMGUI_FRAME_PROPERTIES_FLIP_Y.copy({!frame}), self)) frame->scale.y = -frame->scale.y;
+	
+		if (self->settings->propertiesIsRound && frame)
+		{
+			frame->position = glm::trunc(frame->position);
+			frame->pivot = glm::trunc(frame->pivot);
+			frame->crop = glm::trunc(frame->crop);
+			frame->scale = glm::trunc(frame->scale);
+			frame->rotation = glm::trunc(frame->rotation);
+			frame->tintRGBA = glm::trunc(frame->tintRGBA);
+			frame->offsetRGB = glm::trunc(frame->offsetRGB);
+		}
 	}
 	else
 	{
@@ -2744,9 +2817,10 @@ void imgui_init
 	ImGuiIO& io = ImGui::GetIO();
 	io.IniFilename = nullptr;
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 	io.ConfigWindowsMoveFromTitleBarOnly = true;
 
+	imgui_keyboard_nav_enable();
+	
 	ImGui::LoadIniSettingsFromDisk(settings_path_get().c_str());
 
 	for (s32 i = 0; i < HOTKEY_COUNT; i++)
@@ -2778,6 +2852,8 @@ void imgui_update(Imgui* self)
 			}
 		}
 	}
+
+	imgui_contextual_actions_enable(self);
 
 	if (self->pendingCursor != self->cursor)
 	{ 

@@ -42,7 +42,7 @@ void generate_preview_draw(GeneratePreview* self)
             vec2 uvMax = (crop + size) / vec2(texture.size);
             f32 vertices[] = UV_VERTICES(uvMin, uvMax);
 
-            mat4 generateTransform = transform * canvas_model_get(size, {}, pivot);
+            mat4 generateTransform = transform * quad_model_get(size, {}, pivot);
             canvas_texture_draw(&self->canvas, shaderTexture, texture.id, generateTransform, vertices, COLOR_OPAQUE, COLOR_OFFSET_NONE);
         }
     }

@@ -26,13 +26,13 @@ static void _snapshot_set(Snapshots* self, Snapshot* snapshot)
     self->preview->time = snapshot->time;
     self->action = snapshot->action;
 
-    anm2_spritesheet_texture_pixels_upload(self->anm2);
+    //anm2_spritesheet_texture_pixels_upload(self->anm2);
 }
 
 Snapshot snapshot_get(Snapshots* self)
 {
     Snapshot snapshot = {*self->anm2, *self->reference, self->preview->time, self->action};
-    anm2_spritesheet_texture_pixels_download(&snapshot.anm2);
+    //anm2_spritesheet_texture_pixels_download(&snapshot.anm2);
     return snapshot;
 }
 

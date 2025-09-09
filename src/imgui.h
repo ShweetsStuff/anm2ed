@@ -64,13 +64,17 @@
 
 #define IMGUI_ACTION_FRAME_CROP "Frame Crop"
 #define IMGUI_ACTION_FRAME_SWAP "Frame Swap"
-#define IMGUI_ACTION_FRAME_TRANSFORM "Frame Transform"
+
 #define IMGUI_ACTION_ANIMATION_SWAP "Animation Swap"
 #define IMGUI_ACTION_TRIGGER_MOVE "Trigger AtFrame"
 #define IMGUI_ACTION_FRAME_DELAY "Frame Delay"
 #define IMGUI_ACTION_MOVE_PLAYHEAD "Move Playhead"
 #define IMGUI_ACTION_DRAW "Draw"
 #define IMGUI_ACTION_ERASE "Erase"
+#define IMGUI_ACTION_MOVE "Move"
+#define IMGUI_ACTION_SCALE "Scale"
+#define IMGUI_ACTION_ROTATE "Rotate"
+#define IMGUI_ACTION_CROP "Crop"
 #define IMGUI_ACTION_RELOAD_SPRITESHEET "Reload Spritesheet(s)"
 #define IMGUI_ACTION_REPLACE_SPRITESHEET "Replace Spritesheet"
 #define IMGUI_ACTION_OPEN_FILE "Open File"
@@ -110,9 +114,10 @@
 #define IMGUI_SELECTABLE_INPUT_INT_FORMAT "#{}"
 #define IMGUI_TIMELINE_ANIMATION_NONE "Select an animation to show timeline..."
 #define IMGUI_HOTKEY_CHANGE "Input new hotkey..."
-#define IMGUI_LABEL_SHORTCUT_FORMAT "({})"
-#define IMGUI_TOOLTIP_SHORTCUT_FORMAT "\n(Shortcut: {})"
+#define IMGUI_LABEL_HOTKEY_FORMAT " ({})"
+#define IMGUI_TOOLTIP_HOTKEY_FORMAT "\n(Hotkey: {})"
 #define IMGUI_INVISIBLE_FORMAT "## {}"
+#define IMGUI_RENDERING_FFMPEG_INFO_THRESHOLD 0.95f
 
 #define IMGUI_TRIGGERS_FONT_SCALE 2.0
 
@@ -222,7 +227,7 @@ static void imgui_log_push(Imgui* self, const std::string& text)
     log_imgui(text);
 }
 
-static inline void imgui_file_new(Imgui* self)
+static inline void imgui_anm2_new(Imgui* self)
 {
     anm2_reference_clear(self->reference);
     anm2_free(self->anm2);
@@ -243,6 +248,14 @@ static inline void imgui_file_save(Imgui* self)
 		anm2_serialize(self->anm2, self->anm2->path);
         imgui_log_push(self, std::format(IMGUI_LOG_FILE_SAVE_FORMAT, self->anm2->path));
     }
+}
+
+static inline void imgui_file_new(Imgui* self)
+{
+    std::string path = self->anm2->path;
+    imgui_anm2_new(self);
+    self->anm2->path = path;
+    imgui_file_save(self);
 }
 
 static inline void imgui_file_save_as(Imgui* self)
@@ -520,10 +533,17 @@ static inline ImGuiKeyChord imgui_chord_from_string_get(const std::string& str)
     return chord;
 }
 
-
-static void imgui_contextual_actions_enable(Imgui* self) { self->isContextualActionsEnabled = true; }
-static void imgui_contextual_actions_disable(Imgui* self){ self->isContextualActionsEnabled = false; }
+static inline void imgui_keyboard_nav_enable(void) { ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; }
+static inline void imgui_keyboard_nav_disable(void) { ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NavEnableKeyboard; }
+static inline void imgui_contextual_actions_enable(Imgui* self) { self->isContextualActionsEnabled = true; }
+static inline void imgui_contextual_actions_disable(Imgui* self){ self->isContextualActionsEnabled = false; }
 static inline bool imgui_is_popup_open(const std::string& label) { return ImGui::IsPopupOpen(label.c_str()); }
+
+static inline bool imgui_is_any_popup_open(void)
+{
+    return ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId);
+}
+
 static inline void imgui_open_popup(const std::string& label) { ImGui::OpenPopup(label.c_str()); }
 static inline void imgui_pending_popup_process(Imgui* self)
 {
@@ -656,7 +676,7 @@ struct ImguiItem
     bool isSelected = false;
     bool isUseItemActivated = false;
     bool isSizeToText = false;
-    bool isShortcutInLabel = false;
+    bool isHotkeyInLabel = false;
     bool isSameLine = false;
     bool isSeparator = false;
     s32 id = 0;
@@ -673,6 +693,23 @@ struct ImguiItem
     s32 windowFlags{};
     s32 rowCount = 0;
 
+    bool is_border() const { return border != 0; }
+    bool is_row() const { return rowCount != 0; }
+    bool is_hotkey() const { return hotkey != HOTKEY_NONE; }
+    bool is_chord() const { return chord != IMGUI_CHORD_NONE || is_hotkey(); }
+    bool is_drag_drop() const { return !dragDrop.empty(); }
+    bool is_focus_window() const { return !focusWindow.empty(); }
+    bool is_popup() const { return !popup.empty(); }
+    bool is_function() const { return function; }
+    bool is_size() const { return size != ImVec2(); }
+    bool is_popup_size() const { return popupSize != ImVec2(); }
+    bool is_tooltip() const { return !tooltip.empty(); }
+    bool is_undoable() const { return !snapshotAction.empty(); }
+    bool is_mnemonic() const { return mnemonicKey != ImGuiKey_None; }
+    bool is_range() const { return min != 0 || max != 0; }
+    const char* drag_drop_get() const { return dragDrop.c_str(); }
+    const char* text_get() const { return text.c_str(); }
+        
     void construct()
     {
         static s32 idNew = 0;
@@ -728,24 +765,21 @@ struct ImguiItem
         return chord;
     }
 
-    bool is_border() const { return border != 0; }
-    bool is_row() const { return rowCount != 0; }
-    bool is_hotkey() const { return hotkey != HOTKEY_NONE; }
-    bool is_chord() const { return chord != IMGUI_CHORD_NONE || is_hotkey(); }
-    bool is_drag_drop() const { return !dragDrop.empty(); }
-    bool is_focus_window() const { return !focusWindow.empty(); }
-    bool is_popup() const { return !popup.empty(); }
-    bool is_function() const { return function; }
-    bool is_size() const { return size != ImVec2(); }
-    bool is_popup_size() const { return popupSize != ImVec2(); }
-    bool is_tooltip() const { return !tooltip.empty(); }
-    bool is_undoable() const { return !snapshotAction.empty(); }
-    bool is_mnemonic() const { return mnemonicKey != ImGuiKey_None; }
-    bool is_range() const { return min != 0 || max != 0; }
-    const char* label_get() const { return label.c_str(); }
-    const char* drag_drop_get() const { return dragDrop.c_str(); }
-    const char* tooltip_get() const { return tooltip.c_str(); }
-    const char* text_get() const { return text.c_str(); }
+    std::string label_get() const 
+    { 
+        std::string newLabel = label;
+        if (isHotkeyInLabel)
+            newLabel += std::format(IMGUI_LABEL_HOTKEY_FORMAT, imgui_string_from_chord_get(chord_get()));
+        return newLabel;
+    }
+    
+    std::string tooltip_get() const 
+    { 
+        std::string newTooltip = tooltip;
+        if (is_chord())
+            newTooltip += std::format(IMGUI_TOOLTIP_HOTKEY_FORMAT, imgui_string_from_chord_get(chord_get()));
+        return newTooltip;
+    }
 };
 
 #define IMGUI_ITEM(NAME, ...) const inline ImguiItem NAME = []{ ImguiItem self; __VA_ARGS__; self.construct(); return self; }()
@@ -797,7 +831,7 @@ IMGUI_ITEM(IMGUI_NEW,
     self.function = imgui_file_new,
     self.hotkey = HOTKEY_NEW,
     self.isSizeToText = true,
-    self.isShortcutInLabel = true
+    self.isHotkeyInLabel = true
 );
 
 IMGUI_ITEM(IMGUI_OPEN,
@@ -806,7 +840,7 @@ IMGUI_ITEM(IMGUI_OPEN,
     self.function = imgui_file_open,
     self.hotkey = HOTKEY_OPEN,
     self.isSizeToText = true,
-    self.isShortcutInLabel = true
+    self.isHotkeyInLabel = true
 );
 
 IMGUI_ITEM(IMGUI_SAVE,
@@ -815,7 +849,7 @@ IMGUI_ITEM(IMGUI_SAVE,
     self.function = imgui_file_save,
     self.hotkey = HOTKEY_SAVE,
     self.isSizeToText = true,
-    self.isShortcutInLabel = true
+    self.isHotkeyInLabel = true
 );
 
 IMGUI_ITEM(IMGUI_SAVE_AS,
@@ -824,7 +858,7 @@ IMGUI_ITEM(IMGUI_SAVE_AS,
     self.function = imgui_file_save_as,
     self.hotkey = HOTKEY_SAVE_AS,
     self.isSizeToText = true,
-    self.isShortcutInLabel = true
+    self.isHotkeyInLabel = true
 );
 
 IMGUI_ITEM(IMGUI_EXPLORE_ANM2_LOCATION,
@@ -841,7 +875,7 @@ IMGUI_ITEM(IMGUI_EXIT,
     self.function = imgui_quit,
     self.hotkey = HOTKEY_EXIT,
     self.isSizeToText  = true,
-    self.isShortcutInLabel = true
+    self.isHotkeyInLabel = true
 );
 
 IMGUI_ITEM(IMGUI_EXIT_CONFIRMATION,
@@ -1042,7 +1076,7 @@ IMGUI_ITEM(IMGUI_CHANGE_ALL_FRAME_PROPERTIES_CANCEL,
 );
 
 IMGUI_ITEM(IMGUI_SCALE_ANM2,
-    self.label = "&Scale Anm2",
+    self.label = "S&cale Anm2",
     self.tooltip = "Scale up all size and position-related frame properties in the anm2.",
     self.popup = "Scale Anm2",
     self.popupType = IMGUI_POPUP_CENTER_WINDOW,
@@ -1135,6 +1169,13 @@ IMGUI_ITEM(IMGUI_RENDER_ANIMATION_CONFIRM,
     self.rowCount = IMGUI_OPTION_POPUP_ROW_COUNT
 );
 
+IMGUI_ITEM(IMGUI_RENDERING_ANIMATION_CHILD, 
+    self.label = "##Rendering Child",
+    self.size = {400.0f, 65.0f},
+    self.flags = true
+);
+
+IMGUI_ITEM(IMGUI_RENDERING_ANIMATION_INFO, self.label = "Recording frames. Once done, the program may halt\nas FFmpeg renders the animation. Please be patient!");
 IMGUI_ITEM(IMGUI_RENDERING_ANIMATION_CANCEL,
     self.label = "Cancel",
     self.tooltip = "Cancel rendering the animation.",
@@ -1558,10 +1599,10 @@ IMGUI_ITEM(IMGUI_CANVAS_PIVOTS,
     self.value = SETTINGS_PREVIEW_IS_PIVOTS_DEFAULT
 );
 
-IMGUI_ITEM(IMGUI_CANVAS_TARGETS,
-    self.label   = "Targets",
-    self.tooltip = "Toggles drawing the targets (the colored root/null icons).",
-    self.value = SETTINGS_PREVIEW_IS_TARGETS_DEFAULT
+IMGUI_ITEM(IMGUI_CANVAS_ICONS,
+    self.label   = "Icons",
+    self.tooltip = "Toggles drawing the the colored root/null icons.",
+    self.value = SETTINGS_PREVIEW_IS_ICONS_DEFAULT
 );
 
 IMGUI_ITEM(IMGUI_CANVAS_ALT_ICONS,
@@ -1581,12 +1622,22 @@ IMGUI_ITEM(IMGUI_ANIMATION_PREVIEW,
     self.flags =  ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse
 );
 
+#define IMGUI_ANIMATION_PREVIEW_VIEW_ROW_COUNT 2
 IMGUI_ITEM(IMGUI_ANIMATION_PREVIEW_CENTER_VIEW,
     self.label = "Center View",
     self.tooltip = "Centers the current view on the animation preview.",
     self.hotkey = HOTKEY_CENTER_VIEW,
     self.focusWindow = IMGUI_ANIMATION_PREVIEW.label,
-    self.size = {-FLT_MIN, 0}
+    self.rowCount = IMGUI_ANIMATION_PREVIEW_VIEW_ROW_COUNT,
+    self.isSameLine = true
+);
+
+IMGUI_ITEM(IMGUI_ANIMATION_PREVIEW_FIT,
+    self.label = "Fit",
+    self.tooltip = "Adjust the view/pan based on the size of the animation, to fit the canvas' size.",
+    self.hotkey = HOTKEY_FIT,
+    self.focusWindow = IMGUI_ANIMATION_PREVIEW.label, 
+    self.rowCount = IMGUI_ANIMATION_PREVIEW_VIEW_ROW_COUNT
 );
 
 IMGUI_ITEM(IMGUI_SPRITESHEET_EDITOR, 
@@ -1672,12 +1723,12 @@ IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_COLOR_OFFSET,
     self.value = 0
 );
 
-const ImVec2 IMGUI_FRAME_PROPERTIES_FLIP_BUTTON_SIZE = {75, 0};
+#define IMGUI_FRAME_PROPERTIES_FLIP_ROW_COUNT 2
 IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_FLIP_X,
     self.label = "Flip X",
     self.tooltip = "Change the sign of the X scale, to cheat flipping the layer horizontally.\n(Anm2 doesn't support flipping directly.)",
     self.snapshotAction = "Frame Flip X",
-    self.size = IMGUI_FRAME_PROPERTIES_FLIP_BUTTON_SIZE,
+    self.rowCount = IMGUI_FRAME_PROPERTIES_FLIP_ROW_COUNT,
     self.isSameLine = true
 );
 
@@ -1685,7 +1736,7 @@ IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_FLIP_Y,
     self.label = "Flip Y",
     self.tooltip = "Change the sign of the Y scale, to cheat flipping the layer vertically.\n(Anm2 doesn't support flipping directly.)",
     self.snapshotAction = "Frame Flip Y",
-    self.size = IMGUI_FRAME_PROPERTIES_FLIP_BUTTON_SIZE 
+    self.rowCount = IMGUI_FRAME_PROPERTIES_FLIP_ROW_COUNT
 );
 
 IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_VISIBLE,
@@ -1700,7 +1751,14 @@ IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_INTERPOLATED,
     self.label = "Interpolation",
     self.tooltip = "Toggles the interpolation of the selected frame.",
     self.snapshotAction = "Frame Interpolation",
+    self.isSameLine = true,
     self.value = true
+);
+
+IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_ROUND,
+    self.label = "Round",
+    self.tooltip = "Values will be rounded to the nearest integer.",
+    self.value = SETTINGS_PROPERTIES_IS_ROUND_DEFAULT
 );
 
 IMGUI_ITEM(IMGUI_FRAME_PROPERTIES_EVENT,
@@ -1727,7 +1785,7 @@ IMGUI_ITEM(IMGUI_TOOL_PAN,
 
 IMGUI_ITEM(IMGUI_TOOL_MOVE,
     self.label = "## Move",
-    self.tooltip = "Use the move tool.\nWill move the selected item as the cursor is dragged, or directional keys are pressed.\n(Animation Preview only.)",
+    self.tooltip = "Use the move tool.\nWhen in animation preview, will move the position of the frame.\nWhen in spritesheet editor, will move the pivot instead.\nUse mouse or directional keys to change the value.",
     self.function = imgui_tool_move_set,
     self.hotkey = HOTKEY_MOVE,
     self.atlas = ATLAS_MOVE
@@ -1751,7 +1809,7 @@ IMGUI_ITEM(IMGUI_TOOL_SCALE,
 
 IMGUI_ITEM(IMGUI_TOOL_CROP,
     self.label = "## Crop",
-    self.tooltip = "Use the crop tool.\nWill produce a crop rectangle based on how the cursor is dragged.\n(Spritesheet Editor only.)",
+    self.tooltip = "Use the crop tool.\nWill produce a crop rectangle based on how the cursor is dragged.\nAlternatively, you can use the arrow keys and Ctrl/Shift to move the size/position, respectively.\n(Spritesheet Editor only.)",
     self.function = imgui_tool_crop_set,
     self.hotkey = HOTKEY_CROP,
     self.atlas = ATLAS_CROP
@@ -2082,7 +2140,8 @@ IMGUI_ITEM(IMGUI_TIMELINE_REMOVE_ITEM,
     self.label = "Remove",
     self.tooltip = "Removes the selected item (layer or null) from the animation.",
     self.snapshotAction = "Remove Item",
-    self.focusWindow = IMGUI_TIMELINE.label,
+    self.chord = ImGuiKey_Delete,
+    self.focusWindow = IMGUI_TIMELINE_ITEMS_CHILD.label,
     self.rowCount = IMGUI_TIMELINE_FOOTER_ITEM_CHILD_ITEM_COUNT
 );
 
@@ -2221,7 +2280,7 @@ IMGUI_ITEM(IMGUI_ONIONSKIN_ENABLED,
     self.isSeparator = true
 );
 
-IMGUI_ITEM(IMGUI_ONIONSKIN_BEFORE, self.label = "-- Before-- ");
+IMGUI_ITEM(IMGUI_ONIONSKIN_BEFORE, self.label = "-- Before -- ");
 IMGUI_ITEM(IMGUI_ONIONSKIN_AFTER, self.label = "-- After -- ");
 
 IMGUI_ITEM(IMGUI_ONIONSKIN_COUNT, 
