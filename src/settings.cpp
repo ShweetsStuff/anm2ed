@@ -6,70 +6,87 @@ static void _settings_setting_load(Settings* self, const std::string& line)
     {
         const auto& entry = SETTINGS_ENTRIES[i];
         const std::string& key = entry.key;
-
         void* target = (u8*)self + entry.offset;
 
         auto match_key = [&](const std::string& full) -> const char*
         {
-            if (!line.starts_with(full)) 
+            if (!line.starts_with(full))
                 return nullptr;
+
             size_t p = full.size();
             while (p < line.size() && std::isspace((u8)line[p])) ++p;
-            if (p < line.size() && line[p] == '=') return line.c_str() + p + 1;
+            if (p < line.size() && line[p] == '=') 
+                return line.c_str() + p + 1;
             return nullptr;
         };
 
-        auto* value = match_key(key);
+        const char* value = nullptr;
 
-        if (value)
+        switch (entry.type)
         {
-            switch (entry.type)
+            case TYPE_INT:
+                if ((value = match_key(key))) { *(s32*)target = std::atoi(value); return; }
+                break;
+            case TYPE_BOOL:
+                if ((value = match_key(key))) { *(bool*)target = string_to_bool(value); return; }
+                break;
+            case TYPE_FLOAT:
+                if ((value = match_key(key))) { *(f32*)target = std::atof(value); return; }
+                break;
+            case TYPE_STRING:
+                if ((value = match_key(key))) { *(std::string*)target = value; return; }
+                break;
+            case TYPE_IVEC2:
             {
-                case TYPE_INT:    
-                    *(s32*)target = std::atoi(value); 
-                    return;
-                case TYPE_BOOL:   
-                    *(bool*)target = string_to_bool(value); 
-                    return;
-                case TYPE_FLOAT:  
-                    *(f32*)target = std::atof(value); 
-                    return;
-                case TYPE_STRING: 
-                    *(std::string*)target = value; 
-                    return;
-                default: 
-                    break;
+                ivec2* v = (ivec2*)target;
+                if ((value = match_key(key + "X"))) { v->x = std::atoi(value); return; }
+                if ((value = match_key(key + "Y"))) { v->y = std::atoi(value); return; }
+                break;
             }
-        }
-
-        if (entry.type == TYPE_VEC2)
-        {
-            vec2* v = (vec2*)target;
-            if ((value = match_key(key + (entry.isWidthHeight ? "W" : "X")))) { v->x = std::atof(value); return; }
-            if ((value = match_key(key + (entry.isWidthHeight ? "H" : "Y")))) { v->y = std::atof(value); return; }
-        }
-        else if (entry.type == TYPE_IVEC2)
-        {
-            ivec2* v = (ivec2*)target;
-            if ((value = match_key(key + (entry.isWidthHeight ? "W" : "X")))) { v->x = std::atoi(value); return; }
-            if ((value = match_key(key + (entry.isWidthHeight ? "H" : "Y")))) { v->y = std::atoi(value); return; }
-        }
-        else if (entry.type == TYPE_VEC3)
-        {
-            vec3* v = (vec3*)target;
-            if ((value = match_key(key + "R"))) { v->x = std::atof(value); return; }
-            if ((value = match_key(key + "G"))) { v->y = std::atof(value); return; }
-            if ((value = match_key(key + "B"))) { v->z = std::atof(value); return; }
-        }
-        else if (entry.type == TYPE_VEC4)
-        {
-            vec4* v = (vec4*)target;
-            if ((value = match_key(key + "R"))) { v->x = std::atof(value); return; }
-            if ((value = match_key(key + "G"))) { v->y = std::atof(value); return; }
-            if ((value = match_key(key + "B"))) { v->z = std::atof(value); return; }
-            if ((value = match_key(key + "A"))) { v->w = std::atof(value); return; }
+            case TYPE_IVEC2_WH:
+            {
+                ivec2* v = (ivec2*)target;
+                if ((value = match_key(key + "W"))) { v->x = std::atoi(value); return; }
+                if ((value = match_key(key + "H"))) { v->y = std::atoi(value); return; }
+                break;
+            };
+            case TYPE_VEC2:
+            {
+                vec2* v = (vec2*)target;
+                if ((value = match_key(key + "X"))) { v->x = std::atof(value); return; }
+                if ((value = match_key(key + "Y"))) { v->y = std::atof(value); return; }
+                break;
+            }
+            case TYPE_VEC2_WH:
+            {
+                vec2* v = (vec2*)target;
+                if ((value = match_key(key + "W"))) { v->x = std::atof(value); return; }
+                if ((value = match_key(key + "H"))) { v->y = std::atof(value); return; }
+                break;
+            };
+            case TYPE_VEC3:
+            {
+                vec3* v = (vec3*)target;
+                if ((value = match_key(key + "R"))) { v->x = std::atof(value); return; }
+                if ((value = match_key(key + "G"))) { v->y = std::atof(value); return; }
+                if ((value = match_key(key + "B"))) { v->z = std::atof(value); return; }
+                break;
+            }
+            case TYPE_VEC4:
+            {
+                vec4* v = (vec4*)target;
+                if ((value = match_key(key + "R"))) { v->x = std::atof(value); return; }
+                if ((value = match_key(key + "G"))) { v->y = std::atof(value); return; }
+                if ((value = match_key(key + "B"))) { v->z = std::atof(value); return; }
+                if ((value = match_key(key + "A"))) { v->w = std::atof(value); return; }
+                break;
+            }
+            default:
+                break;
         }
     }
+
+    log_warning(std::format(SETTINGS_VALUE_INIT_WARNING, line));
 }
 
 std::string settings_path_get(void)
@@ -107,15 +124,29 @@ static void _settings_setting_write(Settings* self, std::ostream& out, SettingsE
         case TYPE_IVEC2:
         {
             ivec2* data = (ivec2*)(selfPointer + entry.offset);
-            out << entry.key << (entry.isWidthHeight ? "W=" : "X=") << data->x << "\n";
-            out << entry.key << (entry.isWidthHeight ? "H=" : "Y=") << data->y << "\n";
+            out << entry.key << "X=" << data->x << "\n";
+            out << entry.key << "Y=" << data->y << "\n";
+            break;
+        }
+        case TYPE_IVEC2_WH:
+        {
+            ivec2* data = (ivec2*)(selfPointer + entry.offset);
+            out << entry.key << "W=" << data->x << "\n";
+            out << entry.key << "H=" << data->y << "\n";
             break;
         }
         case TYPE_VEC2:
         {
             vec2* data = (vec2*)(selfPointer + entry.offset);
-            out << entry.key << (entry.isWidthHeight ? "W=" : "X=") << std::format(SETTINGS_FLOAT_FORMAT, data->x) << "\n";
-            out << entry.key << (entry.isWidthHeight ? "H=" : "Y=") << std::format(SETTINGS_FLOAT_FORMAT, data->y) << "\n";
+            out << entry.key << "X=" << std::format(SETTINGS_FLOAT_FORMAT, data->x) << "\n";
+            out << entry.key << "Y=" << std::format(SETTINGS_FLOAT_FORMAT, data->y) << "\n";
+            break;
+        }
+        case TYPE_VEC2_WH:
+        {
+            vec2* data = (vec2*)(selfPointer + entry.offset);
+            out << entry.key << "W=" << std::format(SETTINGS_FLOAT_FORMAT, data->x) << "\n";
+            out << entry.key << "H=" << std::format(SETTINGS_FLOAT_FORMAT, data->y) << "\n";
             break;
         }
         case TYPE_VEC3:
@@ -214,47 +245,32 @@ void settings_init(Settings* self)
 {
     const std::string path = settings_path_get();
     std::ifstream file(path, std::ios::binary);
-    std::istream* in = nullptr;
-    std::istringstream defaultSettings;
-    
+
     if (file)
-    {
         log_info(std::format(SETTINGS_INIT_INFO, path));
-        in = &file; 
-    }
     else
     {
-        log_error(std::format(SETTINGS_INIT_ERROR, path));
-        log_info(SETTINGS_DEFAULT_INFO);
-        defaultSettings.str(SETTINGS_DEFAULT);
-        in = &defaultSettings;
+        log_warning(std::format(SETTINGS_INIT_WARNING, path));
+        settings_save(self);
+        std::ofstream out(path, std::ios::binary | std::ios::app);
+        out << SETTINGS_IMGUI_DEFAULT;
+        out.flush();
+        out.close();
+        file.open(path, std::ios::binary);
     }
 
     std::string line;
     bool inSettingsSection = false;
 
-    while (std::getline(*in, line)) 
-    { 
-        if (line == SETTINGS_SECTION)
-        { 
-            inSettingsSection = true; 
-            continue; 
-        } 
-        if (line == SETTINGS_SECTION_IMGUI) break; 
-        if (inSettingsSection) _settings_setting_load(self, line); 
-    }
-
-    // Save default settings
-    if (!file) 
+    while (std::getline(file, line))
     {
-        std::ofstream out(path, std::ios::binary | std::ios::trunc);
-        if (out) 
+        if (line == SETTINGS_SECTION)
         {
-            out << SETTINGS_DEFAULT;
-            out.flush();
-            log_info(std::format(SETTINGS_SAVE_INFO, path));
-        } 
-        else
-            log_error(std::format(SETTINGS_DEFAULT_ERROR, path));
+            inSettingsSection = true;
+            continue;
+        }
+        if (line.empty()) continue;
+        if (line == SETTINGS_SECTION_IMGUI) break;
+        if (inSettingsSection) _settings_setting_load(self, line);
     }
 }

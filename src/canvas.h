@@ -5,13 +5,12 @@
 #define CANVAS_ZOOM_MIN 1.0f
 #define CANVAS_ZOOM_MAX 2000.0f
 #define CANVAS_ZOOM_DEFAULT 100.0f
-#define CANVAS_ZOOM_STEP 10.0f
-#define CANVAS_ZOOM_MOD 10.0f
+#define CANVAS_ZOOM_STEP 100.0f
 #define CANVAS_GRID_MIN 1
 #define CANVAS_GRID_MAX 1000
 #define CANVAS_GRID_DEFAULT 32
 
-const inline vec2 CANVAS_PIVOT_SIZE = {8, 8};
+const inline vec2 CANVAS_PIVOT_SIZE = {4, 4};
 const inline vec2 CANVAS_SCALE_DEFAULT = {1.0f, 1.0f};
 
 const inline f32 CANVAS_AXIS_VERTICES[] = {-1.0f, 1.0f};

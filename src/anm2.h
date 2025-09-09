@@ -45,14 +45,16 @@
     X(TRIGGERS,           "Triggers")          \
     X(TRIGGER,            "Trigger")
 
-typedef enum {
+typedef enum 
+{
     #define X(name, str) ANM2_ELEMENT_##name,
     ANM2_ELEMENT_LIST
     #undef X
     ANM2_ELEMENT_COUNT
 } Anm2Element;
 
-static const char* ANM2_ELEMENT_STRINGS[] = {
+const inline char* ANM2_ELEMENT_STRINGS[] = 
+{
     #define X(name, str) str,
     ANM2_ELEMENT_LIST
     #undef X
@@ -257,6 +259,12 @@ enum Anm2ChangeType
     ANM2_CHANGE_ADD,
     ANM2_CHANGE_SUBTRACT,
     ANM2_CHANGE_SET
+};
+
+enum OnionskinDrawOrder 
+{
+    ONIONSKIN_BELOW,
+    ONIONSKIN_ABOVE
 };
 
 void anm2_layer_add(Anm2* self);

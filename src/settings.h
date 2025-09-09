@@ -4,17 +4,15 @@
 #include "render.h"
 #include "tool.h"
 
-#define SETTINGS_BUFFER 0xFFFF
-#define SETTINGS_BUFFER_ITEM 0xFF
 #define SETTINGS_SECTION "[Settings]"
 #define SETTINGS_SECTION_IMGUI "# Dear ImGui"
-#define SETTINGS_INIT_ERROR "Failed to read settings file: {}"
-#define SETTINGS_DEFAULT_ERROR "Failed to write default settings file: {}"
+#define SETTINGS_INIT_WARNING "Unable to read settings file: {}; using default settings"
+#define SETTINGS_INIT_ERROR "Unable to read settings file: {}"
 #define SETTINGS_SAVE_ERROR "Failed to write settings file: {}"
 #define SETTINGS_SAVE_FINALIZE_ERROR "Failed to write settings file: {} ({})"
+#define SETTINGS_VALUE_INIT_WARNING "Unknown setting: {}"
 #define SETTINGS_FLOAT_FORMAT "{:.3f}"
 #define SETTINGS_INIT_INFO "Initialized settings from: {}"
-#define SETTINGS_DEFAULT_INFO "Using default settings"
 #define SETTINGS_DIRECTORY_ERROR "Failed to create settings directory: {} ({})"
 #define SETTINGS_SAVE_INFO "Saved settings to: {}"
 
@@ -22,277 +20,224 @@
 #define SETTINGS_PATH "settings.ini"
 #define SETTINGS_TEMPORARY_EXTENSION ".tmp"
 
+#define SETTINGS_LIST \
+    /* name,                  symbol,                       type,              defaultValue */ \
+    X(windowSize,             WINDOW_SIZE,                  TYPE_IVEC2_WH,     {1280, 720}) \
+    X(isVsync,                IS_VSYNC,                     TYPE_BOOL,         true) \
+    \
+    X(hotkeyCenterView,       HOTKEY_CENTER_VIEW,           TYPE_STRING,       "Home") \
+    X(hotkeyZoomIn,           HOTKEY_ZOOM_IN,               TYPE_STRING,       "Ctrl++") \
+    X(hotkeyZoomOut,          HOTKEY_ZOOM_OUT,              TYPE_STRING,       "Ctrl+-") \
+    X(hotkeyPlayPause,        HOTKEY_PLAY_PAUSE,            TYPE_STRING,       "Space") \
+    X(hotkeyOnionskin,        HOTKEY_ONIONSKIN,             TYPE_STRING,       "O") \
+    X(hotkeyNew,              HOTKEY_NEW,                   TYPE_STRING,       "Ctrl+N") \
+    X(hotkeyOpen,             HOTKEY_OPEN,                  TYPE_STRING,       "Ctrl+O") \
+    X(hotkeySave,             HOTKEY_SAVE,                  TYPE_STRING,       "Ctrl+S") \
+    X(hotkeySaveAs,           HOTKEY_SAVE_AS,               TYPE_STRING,       "Ctrl+Shift+S") \
+    X(hotkeyExit,             HOTKEY_EXIT,                  TYPE_STRING,       "Alt+F4") \
+    X(hotkeyPan,              HOTKEY_PAN,                   TYPE_STRING,       "P") \
+    X(hotkeyMove,             HOTKEY_MOVE,                  TYPE_STRING,       "V") \
+    X(hotkeyRotate,           HOTKEY_ROTATE,                TYPE_STRING,       "R") \
+    X(hotkeyScale,            HOTKEY_SCALE,                 TYPE_STRING,       "S") \
+    X(hotkeyCrop,             HOTKEY_CROP,                  TYPE_STRING,       "C") \
+    X(hotkeyDraw,             HOTKEY_DRAW,                  TYPE_STRING,       "B") \
+    X(hotkeyErase,            HOTKEY_ERASE,                 TYPE_STRING,       "E") \
+    X(hotkeyColorPicker,      HOTKEY_COLOR_PICKER,          TYPE_STRING,       "I") \
+    X(hotkeyUndo,             HOTKEY_UNDO,                  TYPE_STRING,       "Ctrl+Z") \
+    X(hotkeyRedo,             HOTKEY_REDO,                  TYPE_STRING,       "Ctrl+Shift+Z") \
+    X(hotkeyCopy,             HOTKEY_COPY,                  TYPE_STRING,       "Ctrl+C") \
+    X(hotkeyCut,              HOTKEY_CUT,                   TYPE_STRING,       "Ctrl+X") \
+    X(hotkeyPaste,            HOTKEY_PASTE,                 TYPE_STRING,       "Ctrl+V") \
+    \
+    X(playbackIsLoop,         PLAYBACK_IS_LOOP,             TYPE_BOOL,         true) \
+    X(playbackIsClampPlayhead,PLAYBACK_IS_CLAMP_PLAYHEAD,   TYPE_BOOL,         true) \
+    \
+    X(changeIsCrop,           CHANGE_IS_CROP,               TYPE_BOOL,         false) \
+    X(changeIsSize,           CHANGE_IS_SIZE,               TYPE_BOOL,         false) \
+    X(changeIsPosition,       CHANGE_IS_POSITION,           TYPE_BOOL,         false) \
+    X(changeIsPivot,          CHANGE_IS_PIVOT,              TYPE_BOOL,         false) \
+    X(changeIsScale,          CHANGE_IS_SCALE,              TYPE_BOOL,         false) \
+    X(changeIsRotation,       CHANGE_IS_ROTATION,           TYPE_BOOL,         false) \
+    X(changeIsDelay,          CHANGE_IS_DELAY,              TYPE_BOOL,         false) \
+    X(changeIsTint,           CHANGE_IS_TINT,               TYPE_BOOL,         false) \
+    X(changeIsColorOffset,    CHANGE_IS_COLOR_OFFSET,       TYPE_BOOL,         false) \
+    X(changeIsVisibleSet,     CHANGE_IS_VISIBLE_SET,        TYPE_BOOL,         false) \
+    X(changeIsInterpolatedSet,CHANGE_IS_INTERPOLATED_SET,   TYPE_BOOL,         false) \
+    X(changeIsFromSelectedFrame,CHANGE_IS_FROM_SELECTED_FRAME,TYPE_BOOL,       false) \
+    X(changeCrop,             CHANGE_CROP,                  TYPE_VEC2,         {}) \
+    X(changeSize,             CHANGE_SIZE,                  TYPE_VEC2,         {}) \
+    X(changePosition,         CHANGE_POSITION,              TYPE_VEC2,         {}) \
+    X(changePivot,            CHANGE_PIVOT,                 TYPE_VEC2,         {}) \
+    X(changeScale,            CHANGE_SCALE,                 TYPE_VEC2,         {}) \
+    X(changeRotation,         CHANGE_ROTATION,              TYPE_FLOAT,        0.0f) \
+    X(changeDelay,            CHANGE_DELAY,                 TYPE_INT,          0) \
+    X(changeTint,             CHANGE_TINT,                  TYPE_VEC4,         {}) \
+    X(changeColorOffset,      CHANGE_COLOR_OFFSET,          TYPE_VEC3,         {}) \
+    X(changeIsVisible,        CHANGE_IS_VISIBLE,            TYPE_BOOL,         false) \
+    X(changeIsInterpolated,   CHANGE_IS_INTERPOLATED,       TYPE_BOOL,         false) \
+    X(changeNumberFrames,     CHANGE_NUMBER_FRAMES,         TYPE_INT,          1) \
+    \
+    X(scaleValue,             SCALE_VALUE,                  TYPE_FLOAT,        1.0f) \
+    \
+    X(previewIsAxes,          PREVIEW_IS_AXES,              TYPE_BOOL,         true) \
+    X(previewIsGrid,          PREVIEW_IS_GRID,              TYPE_BOOL,         true) \
+    X(previewIsRootTransform, PREVIEW_IS_ROOT_TRANSFORM,    TYPE_BOOL,         false) \
+    X(previewIsTriggers,      PREVIEW_IS_TRIGGERS,          TYPE_BOOL,         true) \
+    X(previewIsPivots,        PREVIEW_IS_PIVOTS,            TYPE_BOOL,         false) \
+    X(previewIsTargets,       PREVIEW_IS_TARGETS,           TYPE_BOOL,         true) \
+    X(previewIsBorder,        PREVIEW_IS_BORDER,            TYPE_BOOL,         false) \
+    X(previewIsAltIcons,      PREVIEW_IS_ALT_ICONS,         TYPE_BOOL,         false) \
+    X(previewOverlayTransparency,PREVIEW_OVERLAY_TRANSPARENCY,TYPE_FLOAT,      255.0f) \
+    X(previewZoom,            PREVIEW_ZOOM,                 TYPE_FLOAT,        200.0f) \
+    X(previewPan,             PREVIEW_PAN,                  TYPE_VEC2,         {}) \
+    X(previewGridSize,        PREVIEW_GRID_SIZE,            TYPE_IVEC2,        {32,32}) \
+    X(previewGridOffset,      PREVIEW_GRID_OFFSET,          TYPE_IVEC2,        {}) \
+    X(previewGridColor,       PREVIEW_GRID_COLOR,           TYPE_VEC4,         {1.0,1.0,1.0,0.125}) \
+    X(previewAxesColor,       PREVIEW_AXES_COLOR,           TYPE_VEC4,         {1.0,1.0,1.0,0.125}) \
+    X(previewBackgroundColor, PREVIEW_BACKGROUND_COLOR,     TYPE_VEC4,         {0.113,0.184,0.286,1.0}) \
+    \
+    X(generateStartPosition,  GENERATE_START_POSITION,      TYPE_IVEC2,        {}) \
+    X(generateSize,           GENERATE_SIZE,                TYPE_IVEC2,        {64,64}) \
+    X(generatePivot,          GENERATE_PIVOT,               TYPE_IVEC2,        {32,32}) \
+    X(generateRows,           GENERATE_ROWS,                TYPE_INT,          4) \
+    X(generateColumns,        GENERATE_COLUMNS,             TYPE_INT,          4) \
+    X(generateCount,          GENERATE_COUNT,               TYPE_INT,          16) \
+    X(generateDelay,          GENERATE_DELAY,               TYPE_INT,          1) \
+    \
+    X(editorIsGrid,           EDITOR_IS_GRID,               TYPE_BOOL,         true) \
+    X(editorIsGridSnap,       EDITOR_IS_GRID_SNAP,          TYPE_BOOL,         true) \
+    X(editorIsBorder,         EDITOR_IS_BORDER,             TYPE_BOOL,         true) \
+    X(editorZoom,             EDITOR_ZOOM,                  TYPE_FLOAT,        200.0f) \
+    X(editorPan,              EDITOR_PAN,                   TYPE_VEC2,         {0.0,0.0}) \
+    X(editorGridSize,         EDITOR_GRID_SIZE,             TYPE_IVEC2,        {32,32}) \
+    X(editorGridOffset,       EDITOR_GRID_OFFSET,           TYPE_IVEC2,        {32,32}) \
+    X(editorGridColor,        EDITOR_GRID_COLOR,            TYPE_VEC4,         {1.0,1.0,1.0,0.125}) \
+    X(editorBackgroundColor,  EDITOR_BACKGROUND_COLOR,      TYPE_VEC4,         {0.113,0.184,0.286,1.0}) \
+    \
+    X(mergeType,              MERGE_TYPE,                   TYPE_INT,          ANM2_MERGE_APPEND_FRAMES) \
+    X(mergeIsDeleteAnimationsAfter,MERGE_IS_DELETE_ANIMATIONS_AFTER,TYPE_BOOL, false) \
+    \
+    X(bakeInterval,           BAKE_INTERVAL,                TYPE_INT,          1) \
+    X(bakeIsRoundScale,       BAKE_IS_ROUND_SCALE,          TYPE_BOOL,         true) \
+    X(bakeIsRoundRotation,    BAKE_IS_ROUND_ROTATION,       TYPE_BOOL,         true) \
+    \
+    X(onionskinIsEnabled,     ONIONSKIN_IS_ENABLED,         TYPE_BOOL,         false) \
+    X(onionskinDrawOrder,     ONIONSKIN_DRAW_ORDER,         TYPE_INT,          ONIONSKIN_BELOW) \
+    X(onionskinBeforeCount,   ONIONSKIN_BEFORE_COUNT,       TYPE_INT,          1) \
+    X(onionskinAfterCount,    ONIONSKIN_AFTER_COUNT,        TYPE_INT,          1) \
+    X(onionskinBeforeColorOffset,ONIONSKIN_BEFORE_COLOR_OFFSET,TYPE_VEC3,      COLOR_RED) \
+    X(onionskinAfterColorOffset, ONIONSKIN_AFTER_COLOR_OFFSET,TYPE_VEC3,       COLOR_BLUE) \
+    \
+    X(tool,                   TOOL,                         TYPE_INT,          TOOL_PAN) \
+    X(toolColor,              TOOL_COLOR,                   TYPE_VEC4,         {1.0,1.0,1.0,1.0}) \
+    \
+    X(renderType,             RENDER_TYPE,                  TYPE_INT,          RENDER_PNG) \
+    X(renderPath,             RENDER_PATH,                  TYPE_STRING,       ".") \
+    X(renderFormat,           RENDER_FORMAT,                TYPE_STRING,       "{}.png") \
+    X(ffmpegPath,             FFMPEG_PATH,                  TYPE_STRING,       "")
+
+#define X(name, symbol, type, ...) \
+const inline DATATYPE_TO_CTYPE(type) SETTINGS_##symbol##_DEFAULT = __VA_ARGS__;
+SETTINGS_LIST
+#undef X
+
+struct Settings 
+{
+    #define X(name, symbol, type, ...) \
+    DATATYPE_TO_CTYPE(type) name = SETTINGS_##symbol##_DEFAULT;
+    SETTINGS_LIST
+    #undef X
+};
+    
 struct SettingsEntry
 {
     std::string key;
     DataType type;
     s32 offset;
-    bool isWidthHeight = false;
 };
 
-struct Settings
+const inline SettingsEntry SETTINGS_ENTRIES[] =
 {
-    ivec2 windowSize = {1600, 900};
-    bool isVsync = true;
-    bool playbackIsLoop = true;
-    bool playbackIsClampPlayhead = true;
-    bool changeIsCrop = false;
-    bool changeIsSize = false;
-    bool changeIsPosition = false;
-    bool changeIsPivot = false;
-    bool changeIsScale = false;
-    bool changeIsRotation = false;
-    bool changeIsDelay = false;
-    bool changeIsTint = false;
-    bool changeIsColorOffset = false;
-    bool changeIsVisibleSet = false;
-    bool changeIsInterpolatedSet = false;
-    bool changeIsFromSelectedFrame = false;
-    vec2 changeCrop{};
-    vec2 changeSize{};
-    vec2 changePosition{};
-    vec2 changePivot{};
-    vec2 changeScale{};
-    f32 changeRotation{};
-    s32 changeDelay{};
-    vec4 changeTint{};
-    vec3 changeColorOffset{};
-    bool changeIsVisible{};
-    bool changeIsInterpolated{};
-    s32 changeNumberFrames = 1;
-    f32 scaleValue = 1.0f;
-    bool previewIsAxes = true;
-    bool previewIsGrid = true;
-    bool previewIsRootTransform = false;
-    bool previewIsTriggers = true;
-    bool previewIsPivots = false;
-    bool previewIsTargets = true;
-    bool previewIsBorder = false;
-    f32 previewOverlayTransparency = 255.0f;
-    f32 previewZoom = 200.0;
-    vec2 previewPan = {0.0, 0.0};
-    ivec2 previewGridSize = {32, 32};
-    ivec2 previewGridOffset{};
-    vec4 previewGridColor = {1.0, 1.0, 1.0, 0.125};
-    vec4 previewAxesColor = {1.0, 1.0, 1.0, 0.125};
-    vec4 previewBackgroundColor = {0.113, 0.184, 0.286, 1.0};
-    ivec2 generateStartPosition = {0, 0};
-    ivec2 generateSize = {64, 64};
-    ivec2 generatePivot = {32, 32};
-    s32 generateRows = 4;
-    s32 generateColumns = 4;
-    s32 generateCount = 16;
-    s32 generateDelay = 1;
-    bool editorIsGrid = true;
-    bool editorIsGridSnap = true;
-    bool editorIsBorder = true;
-    f32 editorZoom = 200.0;
-    vec2 editorPan = {0.0, 0.0};
-    ivec2 editorGridSize = {32, 32};
-    ivec2 editorGridOffset = {32, 32};
-    vec4 editorGridColor = {1.0, 1.0, 1.0, 0.125};
-    vec4 editorBackgroundColor = {0.113, 0.184, 0.286, 1.0};
-    s32 mergeType = ANM2_MERGE_APPEND_FRAMES;
-    bool mergeIsDeleteAnimationsAfter = false;
-    s32 bakeInterval = 1;
-    bool bakeIsRoundScale = true;
-    bool bakeIsRoundRotation = true;
-    s32 tool = TOOL_PAN;
-    vec4 toolColor = {1.0, 1.0, 1.0, 1.0}; 
-    s32 renderType = RENDER_PNG;
-    std::string renderPath = ".";
-    std::string renderFormat = "{}.png";
-    std::string ffmpegPath{};
-}; 
-
-const SettingsEntry SETTINGS_ENTRIES[] =
-{
-    {"window", TYPE_IVEC2, offsetof(Settings, windowSize), true},
-    {"isVsync", TYPE_BOOL, offsetof(Settings, isVsync)},
-    {"playbackIsLoop", TYPE_BOOL, offsetof(Settings, playbackIsLoop)},
-    {"playbackIsClampPlayhead", TYPE_BOOL, offsetof(Settings, playbackIsClampPlayhead)},
-    {"changeIsCrop", TYPE_BOOL, offsetof(Settings, changeIsCrop)},
-    {"changeIsSize", TYPE_BOOL, offsetof(Settings, changeIsSize)},
-    {"changeIsPosition", TYPE_BOOL, offsetof(Settings, changeIsPosition)},
-    {"changeIsPivot", TYPE_BOOL, offsetof(Settings, changeIsPivot)},
-    {"changeIsScale", TYPE_BOOL, offsetof(Settings, changeIsScale)},
-    {"changeIsRotation", TYPE_BOOL, offsetof(Settings, changeIsRotation)},
-    {"changeIsDelay", TYPE_BOOL, offsetof(Settings, changeIsDelay)},
-    {"changeIsTint", TYPE_BOOL, offsetof(Settings, changeIsTint)},
-    {"changeIsColorOffset", TYPE_BOOL, offsetof(Settings, changeIsColorOffset)},
-    {"changeIsVisibleSet", TYPE_BOOL, offsetof(Settings, changeIsVisibleSet)},
-    {"changeIsInterpolatedSet", TYPE_BOOL, offsetof(Settings, changeIsInterpolatedSet)},
-    {"changeIsFromSelectedFrame", TYPE_BOOL, offsetof(Settings, changeIsFromSelectedFrame)},
-    {"changeCrop", TYPE_VEC2, offsetof(Settings, changeCrop)},
-    {"changeSize", TYPE_VEC2, offsetof(Settings, changeSize)},
-    {"changePosition", TYPE_VEC2, offsetof(Settings, changePosition)},
-    {"changePivot", TYPE_VEC2, offsetof(Settings, changePivot)},
-    {"changeScale", TYPE_VEC2, offsetof(Settings, changeScale)},
-    {"changeRotation", TYPE_FLOAT, offsetof(Settings, changeRotation)},
-    {"changeDelay", TYPE_INT, offsetof(Settings, changeDelay)},
-    {"changeTint", TYPE_VEC4, offsetof(Settings, changeTint)},
-    {"changeColorOffset", TYPE_VEC3, offsetof(Settings, changeColorOffset)},
-    {"changeIsVisible", TYPE_BOOL, offsetof(Settings, changeIsVisibleSet)},
-    {"changeIsInterpolated", TYPE_BOOL, offsetof(Settings, changeIsInterpolatedSet)},
-    {"changeNumberFrames", TYPE_INT, offsetof(Settings, changeNumberFrames)},
-    {"scaleValue", TYPE_FLOAT, offsetof(Settings, scaleValue)},
-    {"previewIsAxes", TYPE_BOOL, offsetof(Settings, previewIsAxes)},
-    {"previewIsGrid", TYPE_BOOL, offsetof(Settings, previewIsGrid)},
-    {"previewIsRootTransform", TYPE_BOOL, offsetof(Settings, previewIsRootTransform)},
-    {"previewIsTriggers", TYPE_BOOL, offsetof(Settings, previewIsTriggers)},
-    {"previewIsPivots", TYPE_BOOL, offsetof(Settings, previewIsPivots)},
-    {"previewIsTargets", TYPE_BOOL, offsetof(Settings, previewIsTargets)},
-    {"previewIsBorder", TYPE_BOOL, offsetof(Settings, previewIsBorder)},
-    {"previewOverlayTransparency", TYPE_FLOAT, offsetof(Settings, previewOverlayTransparency)},
-    {"previewZoom", TYPE_FLOAT, offsetof(Settings, previewZoom)},
-    {"previewPan", TYPE_VEC2, offsetof(Settings, previewPan)},
-    {"previewGridSize", TYPE_IVEC2, offsetof(Settings, previewGridSize)},
-    {"previewGridOffset", TYPE_IVEC2, offsetof(Settings, previewGridOffset)},
-    {"previewGridColor", TYPE_VEC4, offsetof(Settings, previewGridColor)},
-    {"previewAxesColor", TYPE_VEC4, offsetof(Settings, previewAxesColor)},
-    {"previewBackgroundColor", TYPE_VEC4, offsetof(Settings, previewBackgroundColor)},
-    {"generateStartPosition", TYPE_IVEC2, offsetof(Settings, generateStartPosition)},
-    {"generateSize", TYPE_IVEC2, offsetof(Settings, generateSize)},
-    {"generatePivot", TYPE_IVEC2, offsetof(Settings, generatePivot)},
-    {"generateRows", TYPE_INT, offsetof(Settings, generateRows)},
-    {"generateColumns", TYPE_INT, offsetof(Settings, generateColumns)},
-    {"generateCount", TYPE_INT, offsetof(Settings, generateCount)},
-    {"generateDelay", TYPE_INT, offsetof(Settings, generateDelay)},
-    {"editorIsGrid", TYPE_BOOL, offsetof(Settings, editorIsGrid)},
-    {"editorIsGridSnap", TYPE_BOOL, offsetof(Settings, editorIsGridSnap)},
-    {"editorIsBorder", TYPE_BOOL, offsetof(Settings, editorIsBorder)},
-    {"editorZoom", TYPE_FLOAT, offsetof(Settings, editorZoom)},
-    {"editorPan", TYPE_VEC2, offsetof(Settings, editorPan)},
-    {"editorGridSize", TYPE_IVEC2, offsetof(Settings, editorGridSize)},
-    {"editorGridOffset", TYPE_IVEC2, offsetof(Settings, editorGridOffset)},
-    {"editorGridColor", TYPE_VEC4, offsetof(Settings, editorGridColor)},
-    {"editorBackgroundColor", TYPE_VEC4, offsetof(Settings, editorBackgroundColor)},
-    {"mergeType", TYPE_INT, offsetof(Settings, mergeType)},
-    {"mergeIsDeleteAnimationsAfter", TYPE_BOOL, offsetof(Settings, mergeIsDeleteAnimationsAfter)},
-    {"bakeInterval", TYPE_INT, offsetof(Settings, bakeInterval)},
-    {"bakeRoundScale", TYPE_BOOL, offsetof(Settings, bakeIsRoundScale)},
-    {"bakeRoundRotation", TYPE_BOOL, offsetof(Settings, bakeIsRoundRotation)},
-    {"tool", TYPE_INT, offsetof(Settings, tool)},
-    {"toolColor", TYPE_VEC4, offsetof(Settings, toolColor)},
-    {"renderType", TYPE_INT, offsetof(Settings, renderType)},
-    {"renderPath", TYPE_STRING, offsetof(Settings, renderPath)},
-    {"renderFormat", TYPE_STRING, offsetof(Settings, renderFormat)},
-    {"ffmpegPath", TYPE_STRING, offsetof(Settings, ffmpegPath)}
+    #define X(name, symbol, type, ...) \
+    { #name, type, offsetof(Settings, name) },
+    SETTINGS_LIST
+    #undef X
 };
+
 constexpr s32 SETTINGS_COUNT = (s32)std::size(SETTINGS_ENTRIES);
 
-const std::string SETTINGS_DEFAULT = R"(
-[Settings]
-windowW=1600
-windowH=900
-isVsync=true
-playbackIsLoop=true
-playbackIsClampPlayhead=false
-changeIsCrop=false
-changeIsSize=false
-changeIsPosition=false
-changeIsPivot=false
-changeIsScale=false
-changeIsRotation=false
-changeIsDelay=false
-changeIsTint=false
-changeIsColorOffset=false
-changeIsVisibleSet=false
-changeIsInterpolatedSet=false
-changeIsFromSelectedFrame=false
-changeCropX=0.000
-changeCropY=0.000
-changeSizeX=0.000
-changeSizeY=0.000
-changePositionX=0.000
-changePositionY=0.000
-changePivotX=0.000
-changePivotY=0.000
-changeScaleX=0.000
-changeScaleY=0.000
-changeRotation=0.000
-changeDelay=1
-changeTintR=0.000
-changeTintG=0.000
-changeTintB=0.000
-changeTintA=0.000
-changeColorOffsetR=0.000
-changeColorOffsetG=0.000
-changeColorOffsetB=0.000
-changeIsVisible=false
-changeIsInterpolated=false
-changeNumberFrames=1
-scaleValue=1.000
-previewIsAxes=true
-previewIsGrid=false
-previewIsRootTransform=true
-previewIsTriggers=false
-previewIsPivots=false
-previewIsTargets=true
-previewIsBorder=false
-previewOverlayTransparency=255.000
-previewZoom=400.000
-previewPanX=0.000
-previewPanY=0.000
-previewGridSizeX=32
-previewGridSizeY=32
-previewGridOffsetX=16
-previewGridOffsetY=16
-previewGridColorR=1.000
-previewGridColorG=1.000
-previewGridColorB=1.000
-previewGridColorA=0.125
-previewAxesColorR=1.000
-previewAxesColorG=1.000
-previewAxesColorB=1.000
-previewAxesColorA=0.125
-previewBackgroundColorR=0.114
-previewBackgroundColorG=0.184
-previewBackgroundColorB=0.286
-previewBackgroundColorA=1.000
-generateStartPositionX=0
-generateStartPositionY=0
-generateSizeX=0
-generateSizeY=0
-generatePivotX=0
-generatePivotY=0
-generateRows=4
-generateColumns=4
-generateCount=16
-generateDelay=1
-editorIsGrid=true
-editorIsGridSnap=true
-editorIsBorder=true
-editorZoom=400.000
-editorPanX=0.000
-editorPanY=0.000
-editorGridSizeX=32
-editorGridSizeY=32
-editorGridOffsetX=16
-editorGridOffsetY=16
-editorGridColorR=1.000
-editorGridColorG=1.000
-editorGridColorB=1.000
-editorGridColorA=0.125
-editorBackgroundColorR=0.113
-editorBackgroundColorG=0.183
-editorBackgroundColorB=0.286
-editorBackgroundColorA=1.000
-mergeType=1
-mergeIsDeleteAnimationsAfter=false
-bakeInterval=1
-bakeRoundScale=true
-bakeRoundRotation=true
-tool=0
-toolColorR=0.000
-toolColorG=0.000
-toolColorB=0.000
-toolColorA=1.000
-renderType=0
-renderPath=.
-renderFormat={}.png
-ffmpegPath=
+#define HOTKEY_LIST \
+    X(NONE,     "None")                 \
+    X(CENTER_VIEW,     "Center View")   \
+    X(ZOOM_IN,     "Zoom In")           \
+    X(ZOOM_OUT,     "Zoom Out")         \
+    X(PLAY_PAUSE,     "Play/Pause")     \
+    X(ONIONSKIN,     "Onionskin")       \
+    X(NEW,     "New")                   \
+    X(OPEN,     "Open")                 \
+    X(SAVE,     "Save")                 \
+    X(SAVE_AS,     "Save As")           \
+    X(EXIT,   "Exit")                   \
+    X(PAN,     "Pan")                   \
+    X(MOVE,     "Move")                 \
+    X(ROTATE,     "Rotate")             \
+    X(SCALE,     "Scale")               \
+    X(CROP,     "Crop")                 \
+    X(DRAW,     "Draw")                 \
+    X(ERASE,     "Erase")               \
+    X(COLOR_PICKER,     "Color Picker") \
+    X(UNDO,     "Undo")                 \
+    X(REDO,     "Redo")                 \
+    X(COPY,     "Copy")                 \
+    X(CUT,     "Cut")                   \
+    X(PASTE,     "Paste")               \
+       
+typedef enum 
+{
+    #define X(name, str) HOTKEY_##name,
+    HOTKEY_LIST
+    #undef X
+    HOTKEY_COUNT
+} HotkeyType;
 
+const inline char* HOTKEY_STRINGS[] = 
+{
+    #define X(name, str) str,
+    HOTKEY_LIST
+    #undef X
+};
+
+using HotkeyMember = std::string Settings::*;
+
+const inline HotkeyMember SETTINGS_HOTKEY_MEMBERS[HOTKEY_COUNT] =
+{
+    nullptr,
+    &Settings::hotkeyCenterView,
+    &Settings::hotkeyZoomIn,
+    &Settings::hotkeyZoomOut,
+    &Settings::hotkeyPlayPause,
+    &Settings::hotkeyOnionskin,
+    &Settings::hotkeyNew,
+    &Settings::hotkeyOpen,
+    &Settings::hotkeySave,
+    &Settings::hotkeySaveAs,
+    &Settings::hotkeyExit,
+    &Settings::hotkeyPan,
+    &Settings::hotkeyMove,
+    &Settings::hotkeyRotate,
+    &Settings::hotkeyScale,
+    &Settings::hotkeyCrop,
+    &Settings::hotkeyDraw,
+    &Settings::hotkeyErase,
+    &Settings::hotkeyColorPicker,
+    &Settings::hotkeyUndo,
+    &Settings::hotkeyRedo,
+    &Settings::hotkeyCopy,
+    &Settings::hotkeyCut,
+    &Settings::hotkeyPaste
+};
+
+const std::string SETTINGS_IMGUI_DEFAULT = R"(
 # Dear ImGui
 [Window][## Window]
 Pos=0,32

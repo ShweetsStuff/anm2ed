@@ -98,155 +98,139 @@ void preview_draw(Preview* self)
     if (self->settings->previewIsAxes)
         canvas_axes_draw(&self->canvas, shaderAxis, transform, self->settings->previewAxesColor);
 
-    Anm2Animation* animation = anm2_animation_from_reference(self->anm2, self->reference);
-    s32& animationID = self->reference->animationID;
-
-    if (animation)
+    auto animation_draw = [&](s32 animationID)
     {
-        Anm2Frame root;
-        mat4 rootModel = mat4(1.0f);
-        
-        anm2_frame_from_time(self->anm2, &root, Anm2Reference{animationID, ANM2_ROOT}, self->time);
+        Anm2Animation* animation = map_find(self->anm2->animations, animationID);
+        if (!animation) return;
 
-        if (self->settings->previewIsRootTransform)
-            rootModel = canvas_parent_model_get(root.position, {}, PERCENT_TO_UNIT(root.scale), root.rotation);
-
-        // Root
-        if (self->settings->previewIsTargets && animation->rootAnimation.isVisible && root.isVisible)
+        auto root_draw = [&](Anm2Frame root, vec3 colorOffset = {}, f32 alphaOffset = {}, bool isOnionskin = {})
         {
             mat4 model = canvas_model_get(PREVIEW_TARGET_SIZE, root.position, PREVIEW_TARGET_SIZE * 0.5f, PERCENT_TO_UNIT(root.scale), root.rotation);
             mat4 rootTransform = transform * model;
-            f32 vertices[] = ATLAS_UV_VERTICES(ATLAS_TARGET);
-            canvas_texture_draw(&self->canvas, shaderTexture, self->resources->atlas.id, rootTransform, vertices, PREVIEW_ROOT_COLOR);
-        }
+            vec4 color = isOnionskin ? vec4(colorOffset, 1.0f - alphaOffset) : PREVIEW_ROOT_COLOR;
+            AtlasType atlas = self->settings->previewIsAltIcons ? ATLAS_TARGET_ALT : ATLAS_TARGET;
+            f32 vertices[] = ATLAS_UV_VERTICES(atlas);
+            canvas_texture_draw(&self->canvas, shaderTexture, self->resources->atlas.id, rootTransform, vertices, color);
+        };
 
-        // Layers
-		for (auto [i, id] : self->anm2->layerMap)
+        auto layer_draw = [&](mat4 rootModel, s32 id, f32 time, vec3 colorOffset = {}, f32 alphaOffset = {}, bool isOnionskin = {})
         {
-            Anm2Frame frame;
             Anm2Item& layerAnimation = animation->layerAnimations[id];
+            if (!layerAnimation.isVisible || layerAnimation.frames.size() <= 0) return;
 
-            if (!layerAnimation.isVisible || layerAnimation.frames.size() <= 0)
-                continue;
-
-            anm2_frame_from_time(self->anm2, &frame, Anm2Reference{animationID, ANM2_LAYER, id}, self->time);
-
-            if (!frame.isVisible)
-                continue;
+            Anm2Frame frame;
+            anm2_frame_from_time(self->anm2, &frame, Anm2Reference{animationID, ANM2_LAYER, id}, time);
+            if (!frame.isVisible) return;
 
             mat4 model = canvas_model_get(frame.size, frame.position, frame.pivot, PERCENT_TO_UNIT(frame.scale), frame.rotation);
             mat4 layerTransform = transform * (rootModel * model);
-
-            Anm2Spritesheet* spritesheet = map_find(self->anm2->spritesheets, self->anm2->layers[id].spritesheetID);
+            vec3 frameColorOffset = frame.offsetRGB + colorOffset;
+            vec4 frameTint = frame.tintRGBA;
+            frameTint.a = std::max(0.0f, frameTint.a - alphaOffset);
             
-            if (!spritesheet) continue;
+            Anm2Spritesheet* spritesheet = map_find(self->anm2->spritesheets, self->anm2->layers[id].spritesheetID);
+            if (!spritesheet) return;
 
             Texture& texture = spritesheet->texture;
-           
-            if (!texture.isInvalid)
-            {
-                vec2 uvMin = frame.crop / vec2(texture.size);
-                vec2 uvMax = (frame.crop + frame.size) / vec2(texture.size);
-                f32 vertices[] = UV_VERTICES(uvMin, uvMax);
-
-                canvas_texture_draw(&self->canvas, shaderTexture, texture.id, layerTransform, vertices, frame.tintRGBA, frame.offsetRGB);
-            }
- 
-            if (self->settings->previewIsBorder)
-                canvas_rect_draw(&self->canvas, shaderLine, layerTransform, PREVIEW_BORDER_COLOR);
-
-            if (self->settings->previewIsPivots)
-            {
-                f32 vertices[] = ATLAS_UV_VERTICES(ATLAS_PIVOT);
-                mat4 pivotModel = canvas_model_get(CANVAS_PIVOT_SIZE, frame.position, CANVAS_PIVOT_SIZE * 0.5f, PERCENT_TO_UNIT(frame.scale), frame.rotation);
-                mat4 pivotTransform = transform * (rootModel * pivotModel);
-                canvas_texture_draw(&self->canvas, shaderTexture, self->resources->atlas.id, pivotTransform, vertices, PREVIEW_PIVOT_COLOR);
-            }
-        }
-
-        // Nulls
-        if (self->settings->previewIsTargets)
-        {
-            for (auto& [id, nullAnimation] : animation->nullAnimations)
-            {
-                if (!nullAnimation.isVisible || nullAnimation.frames.size() <= 0)
-                    continue;
-
-                Anm2Frame frame;
-                anm2_frame_from_time(self->anm2, &frame, Anm2Reference{animationID, ANM2_NULL, id}, self->time);
-
-                if (!frame.isVisible)
-                    continue;
-
-                Anm2Null null = self->anm2->nulls[id];
-
-                vec4 color = (self->reference->itemType == ANM2_NULL && self->reference->itemID == id) ? 
-                             PREVIEW_NULL_SELECTED_COLOR                                               : 
-                             PREVIEW_NULL_COLOR;
-
-                vec2 size = null.isShowRect ? CANVAS_PIVOT_SIZE : PREVIEW_TARGET_SIZE;
-                AtlasType atlas = null.isShowRect ? ATLAS_SQUARE : ATLAS_TARGET;
-          
-                mat4 model = canvas_model_get(size, frame.position, size * 0.5f, PERCENT_TO_UNIT(frame.scale), frame.rotation);
-                mat4 nullTransform = transform * (rootModel * model);
-     
-                f32 vertices[] = ATLAS_UV_VERTICES(atlas);
-        
-                canvas_texture_draw(&self->canvas, shaderTexture, self->resources->atlas.id, nullTransform, vertices, color);
-
-                if (null.isShowRect)
-                {
-                    mat4 rectModel = canvas_model_get(PREVIEW_NULL_RECT_SIZE, frame.position, PREVIEW_NULL_RECT_SIZE * 0.5f, PERCENT_TO_UNIT(frame.scale), frame.rotation);
-                    mat4 rectTransform = transform * (rootModel * rectModel);
-                    canvas_rect_draw(&self->canvas, shaderLine, rectTransform, color);
-                }
-            }
-        }
-    }
-
-    s32& animationOverlayID = self->animationOverlayID;
-    Anm2Animation* animationOverlay = map_find(self->anm2->animations, animationOverlayID);
-
-    if (animationOverlay)
-    {
-        Anm2Frame root;
-        mat4 rootModel = mat4(1.0f);
-        
-        anm2_frame_from_time(self->anm2, &root, Anm2Reference{animationOverlayID, ANM2_ROOT}, self->time);
-
-        if (self->settings->previewIsRootTransform)
-            rootModel = canvas_parent_model_get(root.position, {}, PERCENT_TO_UNIT(root.scale));
-
-		for (auto [i, id] : self->anm2->layerMap)
-        {
-            Anm2Frame frame;
-            Anm2Item& layerAnimation = animationOverlay->layerAnimations[id];
-
-            if (!layerAnimation.isVisible || layerAnimation.frames.size() <= 0)
-                continue;
-
-            anm2_frame_from_time(self->anm2, &frame, Anm2Reference{animationOverlayID, ANM2_LAYER, id}, self->time);
-
-            if (!frame.isVisible)
-                continue;
-
-            Texture& texture = self->anm2->spritesheets[self->anm2->layers[id].spritesheetID].texture;
+            if (texture.isInvalid) return;
             
-            if (texture.isInvalid) continue;
-
             vec2 uvMin = frame.crop / vec2(texture.size);
             vec2 uvMax = (frame.crop + frame.size) / vec2(texture.size);
             f32 vertices[] = UV_VERTICES(uvMin, uvMax);
+            canvas_texture_draw(&self->canvas, shaderTexture, texture.id, layerTransform, vertices, frameTint, frameColorOffset);
 
-            mat4 model = canvas_model_get(frame.size, frame.position, frame.pivot, PERCENT_TO_UNIT(frame.scale), frame.rotation);
-            mat4 layerTransform = transform * (rootModel * model);
+            if (self->settings->previewIsBorder)
+            {
+                vec4 borderColor = isOnionskin ? vec4(colorOffset, 1.0f - alphaOffset) : PREVIEW_BORDER_COLOR;
+                canvas_rect_draw(&self->canvas, shaderLine, layerTransform, borderColor);
+            }
 
-            vec4 tint = frame.tintRGBA;
-            tint.a *= U8_TO_FLOAT(self->settings->previewOverlayTransparency);
+            if (self->settings->previewIsPivots)
+            {
+                vec4 pivotColor = isOnionskin ? vec4(colorOffset, 1.0f - alphaOffset) : PREVIEW_PIVOT_COLOR;
+                f32 vertices[] = ATLAS_UV_VERTICES(ATLAS_PIVOT);
+                mat4 pivotModel = canvas_model_get(CANVAS_PIVOT_SIZE, frame.position, CANVAS_PIVOT_SIZE * 0.5f, PERCENT_TO_UNIT(frame.scale), frame.rotation);
+                mat4 pivotTransform = transform * (rootModel * pivotModel);
+                canvas_texture_draw(&self->canvas, shaderTexture, self->resources->atlas.id, pivotTransform, vertices, pivotColor);
+            }
+        };
 
-            canvas_texture_draw(&self->canvas, shaderTexture, texture.id, layerTransform, vertices, tint, frame.offsetRGB);
-        }
-    }
+        auto null_draw = [&](mat4 rootModel, s32 id, f32 time, vec3 colorOffset = {}, f32 alphaOffset = {}, bool isOnionskin = {}) 
+        {
+            Anm2Item& nullAnimation = animation->nullAnimations[id];
+            if (!nullAnimation.isVisible || nullAnimation.frames.size() <= 0) return;
+
+            Anm2Frame frame;
+            anm2_frame_from_time(self->anm2, &frame, Anm2Reference{animationID, ANM2_NULL, id}, time);
+            if (!frame.isVisible) return;
+
+            Anm2Null null = self->anm2->nulls[id];
+
+            vec4 color = isOnionskin ? vec4(colorOffset, 1.0f - alphaOffset) : 
+            (self->reference->itemType == ANM2_NULL && self->reference->itemID == id) ? 
+            PREVIEW_NULL_SELECTED_COLOR : PREVIEW_NULL_COLOR;
+
+            vec2 size = null.isShowRect ? CANVAS_PIVOT_SIZE : PREVIEW_TARGET_SIZE;
+            AtlasType atlas = null.isShowRect ? ATLAS_SQUARE : self->settings->previewIsAltIcons ? ATLAS_TARGET_ALT : ATLAS_TARGET;
+      
+            mat4 model = canvas_model_get(size, frame.position, size * 0.5f, PERCENT_TO_UNIT(frame.scale), frame.rotation);
+            mat4 nullTransform = transform * (rootModel * model);
+ 
+            f32 vertices[] = ATLAS_UV_VERTICES(atlas);
+    
+            canvas_texture_draw(&self->canvas, shaderTexture, self->resources->atlas.id, nullTransform, vertices, color);
+
+            if (null.isShowRect)
+            {
+                mat4 rectModel = canvas_model_get(PREVIEW_NULL_RECT_SIZE, frame.position, PREVIEW_NULL_RECT_SIZE * 0.5f, PERCENT_TO_UNIT(frame.scale), frame.rotation);
+                mat4 rectTransform = transform * (rootModel * rectModel);
+                canvas_rect_draw(&self->canvas, shaderLine, rectTransform, color);
+            }
+        };
+
+        auto base_draw = [&](f32 time, vec3 colorOffset = {}, f32 alphaOffset = {}, bool isOnionskin = {})
+        {
+            Anm2Frame root;
+            anm2_frame_from_time(self->anm2, &root, Anm2Reference{animationID, ANM2_ROOT}, time);
+
+            mat4 rootModel = self->settings->previewIsRootTransform ?
+            canvas_parent_model_get(root.position, {}, PERCENT_TO_UNIT(root.scale), root.rotation) : mat4(1.0f);
+
+            if (self->settings->previewIsTargets && animation->rootAnimation.isVisible && root.isVisible)
+                root_draw(root, colorOffset, alphaOffset, isOnionskin);
+
+            for (auto [i, id] : self->anm2->layerMap)
+                layer_draw(rootModel, id, time, colorOffset, alphaOffset, isOnionskin);
+
+            if (self->settings->previewIsTargets)
+                for (auto& [id, _] : animation->nullAnimations)
+                    null_draw(rootModel, id, time, colorOffset, alphaOffset, isOnionskin); 
+        };
+
+        auto onionskin_draw = [&](s32 count, s32 direction, vec3 colorOffset)
+        {
+            for (s32 i = 1; i <= count; i++)
+            {
+                f32 time  = self->time + (f32)(direction * i);
+                f32 alphaOffset = (1.0f / (count + 1)) * i;
+                base_draw(time, colorOffset, alphaOffset, true);
+            }
+        };
+
+        auto onionskins_draw = [&]()
+        {
+            if (!self->settings->onionskinIsEnabled) return;
+            onionskin_draw(self->settings->onionskinBeforeCount, -1, self->settings->onionskinBeforeColorOffset);
+            onionskin_draw(self->settings->onionskinAfterCount, 1, self->settings->onionskinAfterColorOffset);
+        };
+
+        if (self->settings->onionskinDrawOrder == ONIONSKIN_BELOW) onionskins_draw();
+        base_draw(self->time);
+        if (self->settings->onionskinDrawOrder == ONIONSKIN_ABOVE) onionskins_draw();
+    };
+
+    animation_draw(self->reference->animationID);
+    animation_draw(self->animationOverlayID);
 
     canvas_unbind();
 }

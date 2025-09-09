@@ -10,6 +10,7 @@
 
 #include <algorithm>                   
 #include <chrono>                      
+#include <climits>
 #include <cmath>                          
 #include <cstring>
 #include <filesystem>                  
@@ -24,7 +25,7 @@
 #include <string>
 #include <unordered_set>                      
 #include <variant>                  
-#include <vector>                  
+#include <vector>           
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -342,8 +343,6 @@ static inline void map_insert_shift(std::map<int, T>& map, s32 index, const T& v
     map[insertIndex] = value;
 }
 
-
-
 #define DEFINE_ENUM_TO_STRING_FUNCTION(function, array, count) \
     static inline std::string function(s32 index)              \
     {                                                          \
@@ -356,18 +355,29 @@ static inline void map_insert_shift(std::map<int, T>& map, s32 index, const T& v
         return static_cast<enumType>(string_to_enum(string, stringArray, count)); \
     };
 
+#define DATATYPE_LIST \
+    X(TYPE_INT,      s32) \
+    X(TYPE_BOOL,     bool) \
+    X(TYPE_FLOAT,    f32) \
+    X(TYPE_STRING,   std::string) \
+    X(TYPE_IVEC2,    ivec2) \
+    X(TYPE_IVEC2_WH, ivec2) \
+    X(TYPE_VEC2,     vec2) \
+    X(TYPE_VEC2_WH,  vec2) \
+    X(TYPE_VEC3,     vec3) \
+    X(TYPE_VEC4,     vec4)
 
-enum DataType
+enum DataType 
 {
-    TYPE_INT,
-    TYPE_BOOL,
-    TYPE_FLOAT,
-    TYPE_STRING,
-    TYPE_IVEC2,
-    TYPE_VEC2,
-    TYPE_VEC3,
-    TYPE_VEC4
+    #define X(symbol, ctype) symbol,
+    DATATYPE_LIST
+    #undef X
 };
+
+#define DATATYPE_TO_CTYPE(dt) DATATYPE_CTYPE_##dt
+#define X(symbol, ctype) typedef ctype DATATYPE_CTYPE_##symbol;
+DATATYPE_LIST
+#undef X
 
 enum OriginType
 {

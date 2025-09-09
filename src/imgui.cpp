@@ -1,5 +1,15 @@
 #include "imgui.h"
 
+static bool _imgui_chord_pressed(ImGuiKeyChord chord)
+{
+    if (chord == IMGUI_CHORD_NONE) return false;
+    ImGuiKey key = (ImGuiKey)(chord & ~ImGuiMod_Mask_);
+    if (key == ImGuiKey_None) return false;
+    if (key < ImGuiKey_NamedKey_BEGIN || key >= ImGuiKey_NamedKey_END) return false;
+
+    return ImGui::IsKeyChordPressed(chord);
+}
+
 static const char* _imgui_f32_format_get(const ImguiItem& item, f32& value)
 {
 	if (item.isEmptyFormat) return "";
@@ -38,7 +48,6 @@ static void _imgui_anm2_open(Imgui* self, const std::string& path)
 	if (anm2_deserialize(self->anm2, path))
 	{
 		window_title_from_path_set(self->window, path);
-		snapshots_reset(self->snapshots);
 		imgui_log_push(self, std::format(IMGUI_LOG_FILE_OPEN_FORMAT, path));
 	}
 	else
@@ -152,6 +161,7 @@ static void _imgui_item_pre(const ImguiItem& self, ImguiItemType type)
 			break;
 		case IMGUI_INPUT_INT:
 		case IMGUI_INPUT_TEXT:
+		case IMGUI_INPUT_FLOAT:
 		case IMGUI_DRAG_FLOAT:
 		case IMGUI_SLIDER_FLOAT:
 		case IMGUI_COLOR_EDIT:
@@ -178,6 +188,16 @@ static void _imgui_item_pre(const ImguiItem& self, ImguiItemType type)
 		default:
 			break;
 	}
+
+	/*
+	if (self.is_hotkey())
+	{
+ 	   	std::string chordString = imgui_string_from_chord_get(imgui->hotkeys[self.hotkey]);
+		if (isShortcutInLabel)
+			label += std::format(IMGUI_LABEL_SHORTCUT_FORMAT, chordString);
+		tooltip += std::format(IMGUI_TOOLTIP_SHORTCUT_FORMAT, chordString);
+	}
+	*/
 }
 
 static void _imgui_item_post(const ImguiItem& self, Imgui* imgui, ImguiItemType type, bool& isActivated)
@@ -201,7 +221,7 @@ static void _imgui_item_post(const ImguiItem& self, Imgui* imgui, ImguiItemType 
 		ImU32 color = ImGui::GetColorU32(ImGuiCol_Text);
 		ImGui::GetWindowDrawList()->AddLine(lineStart, lineEnd, color, 1.0f);
 		
-		if (ImGui::IsKeyChordPressed(ImGuiMod_Alt | self.mnemonicKey))
+		if (_imgui_chord_pressed(ImGuiMod_Alt | self.mnemonicKey))
 		{
 			if (!self.isDisabled) isActivated = true;
 			imgui_close_current_popup(imgui);
@@ -210,20 +230,20 @@ static void _imgui_item_post(const ImguiItem& self, Imgui* imgui, ImguiItemType 
 
 	if (self.isUseItemActivated && !self.isDisabled) isActivated = ImGui::IsItemActivated();
 	
-	if (imgui->isContextualActionsEnabled && (self.is_chord() && ImGui::IsKeyChordPressed(self.chord)))
-		if (self.is_focus_window() && (imgui_window_get() == self.focusWindow))
-			if (!self.isDisabled) isActivated = true;
+	if 
+	(
+		imgui->isContextualActionsEnabled && _imgui_chord_pressed(self.chord_get()) &&
+		self.is_focus_window() && (imgui_window_get() == self.focusWindow)
+	)
+		if (!self.isDisabled) isActivated = true;
 
 	if (self.is_tooltip() && ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) 
 		ImGui::SetTooltip(self.tooltip.c_str());
 
 	if (isActivated)
 	{
-		if (self.is_undoable()) 
-			imgui_snapshot(imgui, self.snapshotAction);
-
-		if (self.function) 
-			self.function(imgui);
+		if (self.is_undoable()) imgui_snapshot(imgui, self.snapshotAction);
+		if (self.is_function()) self.function(imgui);
 
 		if (self.is_popup())
 		{
@@ -372,6 +392,8 @@ static bool NAME(const ImguiItem& self, Imgui* imgui, bool& boolValue)				      
 	ImguiItem checkboxItem = self.copy																\
 	({.label = std::format(IMGUI_INVISIBLE_FORMAT, self.label), .isMnemonicDisabled = true});		\
 	checkboxItem.isDisabled = false;																\
+	checkboxItem.isSeparator = false;																\
+	checkboxItem.value = 0;																		    \
 	bool isCheckboxActivated = _imgui_checkbox(checkboxItem, imgui, boolValue);						\
 	ImGui::SameLine();			                                                                    \
     bool isActivated = ([&] { return FUNCTION; })();                                                \
@@ -386,6 +408,18 @@ static bool NAME(const ImguiItem& self, Imgui* imgui, VALUE& value, bool& boolVa
 	ImguiItem checkboxItem = self.copy																\
 	({.label = std::format(IMGUI_INVISIBLE_FORMAT, self.label), .isMnemonicDisabled = true});		\
 	checkboxItem.isDisabled = false;																\
+	checkboxItem.isSeparator = false;																\
+	checkboxItem.value = 0;																		    \
+	bool isCheckboxActivated = _imgui_checkbox(checkboxItem, imgui, boolValue);						\
+	ImGui::SameLine();																				\
+    bool isActivated = ([&](VALUE& value) { return FUNCTION; })(value);								\
+	if (isCheckboxActivated) isActivated = true;													\
+	return isActivated;																				\
+}
+
+#define IMGUI_ITEM_AND_CHECKBOX_FUNCTION(NAME, VALUE, FUNCTION)							    		\
+static bool NAME(const ImguiItem& self, const ImguiItem& checkboxItem, Imgui* imgui, VALUE& value, bool& boolValue) \
+{																									\
 	bool isCheckboxActivated = _imgui_checkbox(checkboxItem, imgui, boolValue);						\
 	ImGui::SameLine();																				\
     bool isActivated = ([&](VALUE& value) { return FUNCTION; })(value);								\
@@ -403,6 +437,12 @@ IMGUI_ITEM_FUNCTION(_imgui_begin_child, IMGUI_CHILD, ImGui::BeginChild(self.labe
 static void _imgui_end_child(void) {ImGui::EndChild(); }
 IMGUI_ITEM_VOID_FUNCTION(_imgui_text, IMGUI_TEXT, ImGui::Text(self.label_get()));
 IMGUI_ITEM_FUNCTION(_imgui_button, IMGUI_BUTTON, ImGui::Button(self.label_get(), _imgui_item_size_get(self, type)));
+IMGUI_ITEM_FUNCTION(_imgui_begin_table, IMGUI_TABLE, ImGui::BeginTable(self.label_get(), self.value, self.flags));
+static void _imgui_end_table(void) {ImGui::EndTable(); }
+static void _imgui_table_setup_column(const char* text) {ImGui::TableSetupColumn(text); }
+static void _imgui_table_headers_row(void) {ImGui::TableHeadersRow(); }
+static void _imgui_table_next_row(void) {ImGui::TableNextRow(); }
+static void _imgui_table_set_column_index(s32 index) {ImGui::TableSetColumnIndex(index); }
 IMGUI_ITEM_FUNCTION(_imgui_selectable, IMGUI_SELECTABLE, ImGui::Selectable(self.label_get(), self.isSelected, self.flags, _imgui_item_size_get(self, type)));
 IMGUI_ITEM_VALUE_FUNCTION(_imgui_radio_button, IMGUI_RADIO_BUTTON, s32, ImGui::RadioButton(self.label_get(), &value, self.value));
 IMGUI_ITEM_VALUE_FUNCTION(_imgui_color_button, IMGUI_COLOR_BUTTON, vec4, ImGui::ColorButton(self.label_get(), ImVec4(value), self.flags));
@@ -1264,6 +1304,40 @@ static void _imgui_timeline(Imgui* self)
 	_imgui_end(); // IMGUI_TIMELINE
 }
 
+static void _imgui_onionskin(Imgui* self)
+{
+    IMGUI_BEGIN_OR_RETURN(IMGUI_ONIONSKIN, self);
+
+    static auto& isEnabled         = self->settings->onionskinIsEnabled;
+    static auto& beforeCount       = self->settings->onionskinBeforeCount;
+    static auto& afterCount        = self->settings->onionskinAfterCount;
+    static auto& beforeColorOffset = self->settings->onionskinBeforeColorOffset;
+    static auto& afterColorOffset  = self->settings->onionskinAfterColorOffset;
+    static auto& drawOrder = self->settings->onionskinDrawOrder;
+
+    _imgui_checkbox(IMGUI_ONIONSKIN_ENABLED, self, isEnabled);
+
+    auto onionskin_section = [&](auto& text, auto& count, auto& colorOffset)
+    {
+        ImGui::PushID(text.label.c_str());
+        _imgui_text(text, self);
+        _imgui_input_int(IMGUI_ONIONSKIN_COUNT.copy({!isEnabled}), self, count);
+		_imgui_color_edit3(IMGUI_ONIONSKIN_COLOR_OFFSET.copy({!isEnabled}), self, colorOffset);
+        ImGui::PopID();
+    };
+
+    onionskin_section(IMGUI_ONIONSKIN_BEFORE, beforeCount, beforeColorOffset);
+	onionskin_section(IMGUI_ONIONSKIN_AFTER, afterCount,  afterColorOffset);
+	
+	ImGui::Separator();
+
+	_imgui_text(IMGUI_ONIONSKIN_DRAW_ORDER, self);
+	_imgui_radio_button(IMGUI_ONIONSKIN_BELOW.copy({!isEnabled}), self, drawOrder);
+	_imgui_radio_button(IMGUI_ONIONSKIN_ABOVE.copy({!isEnabled}), self, drawOrder);
+
+    _imgui_end(); // IMGUI_ONIONSKIN
+}
+
 static void _imgui_taskbar(Imgui* self)
 {
 	static ImguiPopupState exitConfirmState = IMGUI_POPUP_STATE_CLOSED;
@@ -1277,15 +1351,15 @@ static void _imgui_taskbar(Imgui* self)
 	Anm2Animation* animation = anm2_animation_from_reference(self->anm2, self->reference);
 	Anm2Item* item = anm2_item_from_reference(self->anm2, self->reference);
 
-	_imgui_selectable(IMGUI_FILE.copy({}), self);
+	_imgui_selectable(IMGUI_FILE, self);
 	
 	if (imgui_begin_popup(IMGUI_FILE.popup, self))
 	{
-		_imgui_selectable(IMGUI_NEW, self);
+		_imgui_selectable(IMGUI_NEW.copy({self->anm2->path.empty()}), self);
 		_imgui_selectable(IMGUI_OPEN, self);
-		_imgui_selectable(IMGUI_SAVE, self);
-		_imgui_selectable(IMGUI_SAVE_AS, self);
-		_imgui_selectable(IMGUI_EXPLORE_ANM2_LOCATION, self);
+		_imgui_selectable(IMGUI_SAVE.copy({self->anm2->path.empty()}), self);
+		_imgui_selectable(IMGUI_SAVE_AS.copy({self->anm2->path.empty()}), self);
+		_imgui_selectable(IMGUI_EXPLORE_ANM2_LOCATION.copy({self->anm2->path.empty()}), self);
 		_imgui_selectable(IMGUI_EXIT, self);
 		imgui_end_popup(self);
 	}
@@ -1440,6 +1514,7 @@ static void _imgui_taskbar(Imgui* self)
 		_imgui_checkbox_color_edit4(IMGUI_FRAME_PROPERTIES_TINT.copy({!isTint}), self, tint, isTint);
 		_imgui_checkbox_color_edit3(IMGUI_FRAME_PROPERTIES_COLOR_OFFSET.copy({!isColorOffset}), self, colorOffset, isColorOffset);
 		_imgui_checkbox_checkbox(IMGUI_FRAME_PROPERTIES_VISIBLE.copy({!isVisibleSet}), self, isVisible, isVisibleSet);
+		ImGui::NewLine();
 		_imgui_checkbox_checkbox(IMGUI_FRAME_PROPERTIES_INTERPOLATED.copy({!isInterpolatedSet}), self, isInterpolated, isInterpolatedSet);
 		_imgui_end_child(); // IMGUI_FOOTER_CHILD
 
@@ -1658,7 +1733,73 @@ static void _imgui_taskbar(Imgui* self)
 	if (imgui_begin_popup(IMGUI_SETTINGS.popup, self, IMGUI_SETTINGS.popupSize))
 	{
 		if (_imgui_checkbox_selectable(IMGUI_VSYNC, self, self->settings->isVsync)) window_vsync_set(self->settings->isVsync);
+		_imgui_selectable(IMGUI_HOTKEYS, self);
 		if (_imgui_selectable(IMGUI_DEFAULT_SETTINGS, self)) *self->settings = Settings();
+		imgui_end_popup(self);
+	}
+
+	if (imgui_begin_popup_modal(IMGUI_HOTKEYS.popup, self, IMGUI_HOTKEYS.popupSize))
+	{
+		_imgui_begin_child(IMGUI_HOTKEYS_CHILD, self);
+
+		if (_imgui_begin_table(IMGUI_HOTKEYS_TABLE, self))
+		{
+			static s32 selectedIndex = INDEX_NONE;
+
+			_imgui_table_setup_column(IMGUI_HOTKEYS_FUNCTION);
+			_imgui_table_setup_column(IMGUI_HOTKEYS_HOTKEY);
+			_imgui_table_headers_row();
+
+			for (s32 i = 0; i < HOTKEY_COUNT; i++)
+			{
+				if (!SETTINGS_HOTKEY_MEMBERS[i]) continue;
+
+				bool isSelected = selectedIndex == i;
+    			const char* string = HOTKEY_STRINGS[i];
+    			std::string* settingString = &(self->settings->*SETTINGS_HOTKEY_MEMBERS[i]);
+    			std::string chordString = isSelected ? IMGUI_HOTKEY_CHANGE : *settingString;
+	
+				ImGui::PushID(i);
+				_imgui_table_next_row();
+				_imgui_table_set_column_index(0);
+				ImGui::TextUnformatted(string);
+				_imgui_table_set_column_index(1);
+
+				if (ImGui::Selectable(chordString.c_str(), isSelected)) selectedIndex = i;
+				ImGui::PopID();
+
+				if (isSelected)
+				{
+					ImGuiKeyChord chord = IMGUI_CHORD_NONE;
+
+					if (ImGui::IsKeyDown(ImGuiMod_Ctrl))  chord |= ImGuiMod_Ctrl;
+					if (ImGui::IsKeyDown(ImGuiMod_Shift)) chord |= ImGuiMod_Shift;
+					if (ImGui::IsKeyDown(ImGuiMod_Alt))   chord |= ImGuiMod_Alt;
+					if (ImGui::IsKeyDown(ImGuiMod_Super)) chord |= ImGuiMod_Super;
+
+					for (auto& [_, key] : IMGUI_KEY_MAP)
+					{
+						if (ImGui::IsKeyPressed(key))
+						{
+							chord |= key;
+							imgui_hotkey_chord_registry()[i] = chord;
+							*settingString = imgui_string_from_chord_get(chord);
+							selectedIndex = INDEX_NONE;
+							break;
+						}
+					}
+				}
+			}
+
+			_imgui_end_table();
+		}
+
+		_imgui_end_child(); // IMGUI_HOTKEYS_CHILD;
+
+		_imgui_begin_child(IMGUI_HOTKEYS_OPTIONS_CHILD, self);
+		if (_imgui_button(IMGUI_HOTKEYS_CONFIRM, self)) imgui_close_current_popup(self);
+		_imgui_end_child(); // IMGUI_HOTKEYS_OPTIONS_CHILD
+		
 		imgui_end_popup(self);
 	}
 	
@@ -2156,7 +2297,7 @@ static void _imgui_animation_preview(Imgui* self)
 	
 	_imgui_begin_child(IMGUI_CANVAS_VIEW_CHILD, self);
 	_imgui_drag_float(IMGUI_CANVAS_ZOOM, self, zoom);
-	if (_imgui_button(IMGUI_CANVAS_CENTER_VIEW.copy({pan == vec2()}), self)) pan = vec2();
+	if (_imgui_button(IMGUI_ANIMATION_PREVIEW_CENTER_VIEW.copy({pan == vec2()}), self)) pan = vec2();
 	ImGui::Text(mousePositionString.c_str());
 	_imgui_end_child(); //IMGUI_CANVAS_VIEW_CHILD
 
@@ -2194,6 +2335,8 @@ static void _imgui_animation_preview(Imgui* self)
 	_imgui_checkbox(IMGUI_CANVAS_AXES, self, self->settings->previewIsAxes);
 	ImGui::SameLine();
 	_imgui_color_edit4(IMGUI_CANVAS_AXES_COLOR, self, self->settings->previewAxesColor);
+	ImGui::SameLine();
+	_imgui_checkbox(IMGUI_CANVAS_ALT_ICONS, self, self->settings->previewIsAltIcons);
 	_imgui_checkbox(IMGUI_CANVAS_ROOT_TRANSFORM, self, self->settings->previewIsRootTransform);
 	ImGui::SameLine();
 	_imgui_checkbox(IMGUI_CANVAS_TRIGGERS, self, self->settings->previewIsTriggers);
@@ -2241,8 +2384,8 @@ static void _imgui_animation_preview(Imgui* self)
 	const bool isUp = ImGui::IsKeyPressed(IMGUI_INPUT_UP);
 	const bool isDown = ImGui::IsKeyPressed(IMGUI_INPUT_DOWN);
 	const bool isMod = ImGui::IsKeyDown(IMGUI_INPUT_SHIFT);
-	const bool isZoomIn = ImGui::IsKeyPressed(IMGUI_INPUT_ZOOM_IN);
-	const bool isZoomOut = ImGui::IsKeyPressed(IMGUI_INPUT_ZOOM_OUT);
+	const bool isZoomIn = _imgui_chord_pressed(imgui_hotkey_chord_registry()[HOTKEY_ZOOM_IN]);
+	const bool isZoomOut = _imgui_chord_pressed(imgui_hotkey_chord_registry()[HOTKEY_ZOOM_OUT]);
 	const bool isMouseClick = ImGui::IsMouseClicked(ImGuiMouseButton_Left);
 	const bool isMouseDown = ImGui::IsMouseDown(ImGuiMouseButton_Left);
 	const bool isMouseMiddleDown = ImGui::IsMouseDown(ImGuiMouseButton_Middle);
@@ -2306,7 +2449,6 @@ static void _imgui_animation_preview(Imgui* self)
 	if (mouseWheel != 0 || isZoomIn || isZoomOut)
 	{
 		f32 delta = (mouseWheel > 0 || isZoomIn) ? CANVAS_ZOOM_STEP : -CANVAS_ZOOM_STEP;
-		delta = isMod ? delta * CANVAS_ZOOM_MOD : delta;
 		zoom = std::clamp(ROUND_NEAREST_MULTIPLE(zoom + delta, CANVAS_ZOOM_STEP), CANVAS_ZOOM_MIN, CANVAS_ZOOM_MAX);
 	}
 }
@@ -2340,7 +2482,7 @@ static void _imgui_spritesheet_editor(Imgui* self)
 	
 	_imgui_begin_child(IMGUI_CANVAS_VIEW_CHILD, self);
 	_imgui_drag_float(IMGUI_CANVAS_ZOOM, self, zoom);
-	if (_imgui_button(IMGUI_CANVAS_CENTER_VIEW.copy({pan == vec2()}), self)) pan = vec2();
+	if (_imgui_button(IMGUI_SPRITESHEET_EDITOR_CENTER_VIEW.copy({pan == vec2()}), self)) pan = vec2();
 	ImGui::Text(mousePositionString.c_str());
 	_imgui_end_child(); // IMGUI_CANVAS_VIEW_CHILD
 	
@@ -2371,9 +2513,8 @@ static void _imgui_spritesheet_editor(Imgui* self)
 	const bool isMouseClick = ImGui::IsMouseClicked(ImGuiMouseButton_Left);
 	const bool isMouseDown = ImGui::IsMouseDown(ImGuiMouseButton_Left);
 	const bool isMouseMiddleDown = ImGui::IsMouseDown(ImGuiMouseButton_Middle);
-	const bool isZoomIn = ImGui::IsKeyPressed(IMGUI_INPUT_ZOOM_IN);
-	const bool isZoomOut = ImGui::IsKeyPressed(IMGUI_INPUT_ZOOM_OUT);
-	const bool isMod = ImGui::IsKeyDown(IMGUI_INPUT_SHIFT);
+	const bool isZoomIn = _imgui_chord_pressed(imgui_hotkey_chord_registry()[HOTKEY_ZOOM_IN]);
+	const bool isZoomOut = _imgui_chord_pressed(imgui_hotkey_chord_registry()[HOTKEY_ZOOM_OUT]);
 	const f32 mouseWheel = ImGui::GetIO().MouseWheel;
 	const ImVec2 mouseDelta = ImGui::GetIO().MouseDelta;
 	
@@ -2442,7 +2583,6 @@ static void _imgui_spritesheet_editor(Imgui* self)
 	if (mouseWheel != 0 || isZoomIn || isZoomOut)
 	{
 		f32 delta = (mouseWheel > 0 || isZoomIn) ? CANVAS_ZOOM_STEP : -CANVAS_ZOOM_STEP;
-		delta = isMod ? delta * CANVAS_ZOOM_MOD : delta;
 		zoom = std::clamp(ROUND_NEAREST_MULTIPLE(zoom + delta, CANVAS_ZOOM_STEP), CANVAS_ZOOM_MIN, CANVAS_ZOOM_MAX);
 	}
 }
@@ -2538,7 +2678,6 @@ static void _imgui_log(Imgui* self)
   	}
 }
 
-
 static void _imgui_dock(Imgui* self)
 {
 	ImguiItem window = IMGUI_WINDOW_MAIN;
@@ -2558,6 +2697,7 @@ static void _imgui_dock(Imgui* self)
 	_imgui_animation_preview(self);
 	_imgui_spritesheet_editor(self);
 	_imgui_timeline(self);
+	_imgui_onionskin(self);
 	_imgui_frame_properties(self);
 
 	_imgui_end(); // IMGUI_WINDOW_MAIN 
@@ -2608,6 +2748,12 @@ void imgui_init
 	io.ConfigWindowsMoveFromTitleBarOnly = true;
 
 	ImGui::LoadIniSettingsFromDisk(settings_path_get().c_str());
+
+	for (s32 i = 0; i < HOTKEY_COUNT; i++)
+	{
+		if (!SETTINGS_HOTKEY_MEMBERS[i]) continue;
+		imgui_hotkey_chord_registry()[i] = imgui_chord_from_string_get(*&(self->settings->*SETTINGS_HOTKEY_MEMBERS[i]));
+	}
 }
 
 void imgui_update(Imgui* self)
@@ -2622,13 +2768,13 @@ void imgui_update(Imgui* self)
 
 	if (self->isContextualActionsEnabled)
 	{
-		for (const auto& hotkey : imgui_hotkey_registry())
+		for (const auto& item : imgui_item_registry())
 		{
-			if (ImGui::IsKeyChordPressed(hotkey.chord))
+			if (item->is_chord() && _imgui_chord_pressed(item->chord_get()))
 			{
-				if (hotkey.is_undoable()) imgui_snapshot(self, hotkey.snapshotAction);
-				if (hotkey.is_focus_window()) continue;
-				hotkey.function(self);
+				if (item->is_undoable()) imgui_snapshot(self, item->snapshotAction);
+				if (item->is_focus_window()) continue;
+				if (item->is_function()) item->function(self);
 			}
 		}
 	}

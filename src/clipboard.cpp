@@ -7,7 +7,6 @@ static void _clipboard_item_remove(ClipboardItem* self, Anm2* anm2)
         case CLIPBOARD_FRAME:
         {
             Anm2FrameWithReference* frameWithReference = std::get_if<Anm2FrameWithReference>(&self->data);
-            
             if (!frameWithReference) break;
 
             anm2_frame_erase(anm2, &frameWithReference->reference);
@@ -16,7 +15,6 @@ static void _clipboard_item_remove(ClipboardItem* self, Anm2* anm2)
         case CLIPBOARD_ANIMATION:
         {
             Anm2AnimationWithID* animationWithID = std::get_if<Anm2AnimationWithID>(&self->data);
-
             if (!animationWithID) break;
 
             for (auto & [id, animation] : anm2->animations)
@@ -58,7 +56,6 @@ static void _clipboard_item_paste(ClipboardItem* self, ClipboardLocation* locati
         case CLIPBOARD_ANIMATION:
         {
             Anm2AnimationWithID* animationWithID = std::get_if<Anm2AnimationWithID>(&self->data);
-           
             if (!animationWithID) break;
 
             s32 index = 0;
