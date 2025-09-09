@@ -327,7 +327,6 @@ bool anm2_deserialize(Anm2* self, const std::string& path, bool isTextures)
 	Anm2Spritesheet addSpritesheet;
 	s32 layerMapIndex = 0;
 	bool isLayerMapSet = false;
-	bool isFirstAnimationDone = false;
 	std::string defaultAnimation{};
 
 	if (!self) return false;
@@ -385,11 +384,6 @@ bool anm2_deserialize(Anm2* self, const std::string& path, bool isTextures)
 				id = map_next_id_get(self->animations);
 				self->animations[id] = Anm2Animation{};
 				animation = &self->animations[id];
-
-				if (isFirstAnimationDone)
-					isLayerMapSet = true;
-
-				isFirstAnimationDone = true;
 				break;
 			case ANM2_ELEMENT_ROOT_ANIMATION: // RootAnimation
 				item = &animation->rootAnimation;
@@ -456,13 +450,10 @@ bool anm2_deserialize(Anm2* self, const std::string& path, bool isTextures)
 					break;
 				case ANM2_ATTRIBUTE_LAYER_ID: // LayerId
 					id = std::atoi(xmlAttribute->Value());
+	
+					self->layerMap[layerMapIndex] = id;
+					layerMapIndex++;
 					
-					if (!isLayerMapSet)
-					{
-						self->layerMap[layerMapIndex] = id;
-						layerMapIndex++;
-					}
-
 					animation->layerAnimations[id] = addItem;
 					item = &animation->layerAnimations[id];
 					break;
@@ -608,6 +599,9 @@ bool anm2_deserialize(Anm2* self, const std::string& path, bool isTextures)
 			texture_from_path_init(&spritesheet->texture, spritesheet->path);
 		}
 
+		if (anm2Element == ANM2_ELEMENT_ANIMATION)
+			layerMapIndex = 0;
+
 		xmlChild = xmlElement->FirstChildElement();
 
 		if (xmlChild)
@@ -633,8 +627,15 @@ bool anm2_deserialize(Anm2* self, const std::string& path, bool isTextures)
 	}
 
 	for (auto& [id, animation] : self->animations)
+	{
 		if (animation.name == defaultAnimation)
 			self->defaultAnimationID = id;
+
+		for (auto& [i, id] : self->layerMap)
+		{
+
+		}
+	}
 
 	if (isTextures) anm2_spritesheet_texture_pixels_download(self);
 	
