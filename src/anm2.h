@@ -16,6 +16,8 @@
 #define ANM2_EMPTY_ERROR "No path given for anm2"
 #define ANM2_READ_ERROR "Failed to read anm2 from file: {}"
 #define ANM2_PARSE_ERROR "Failed to parse anm2: {} ({})"
+#define ANM2_FRAME_PARSE_ERROR "Failed to parse frame: {} ({})"
+#define ANM2_ANIMATION_PARSE_ERROR "Failed to parse frame: {} ({})"
 #define ANM2_READ_INFO "Read anm2 from file: {}"
 #define ANM2_WRITE_ERROR "Failed to write anm2 to file: {}"
 #define ANM2_WRITE_INFO "Wrote anm2 to file: {}"
@@ -63,7 +65,6 @@ const inline char* ANM2_ELEMENT_STRINGS[] =
 };
 
 DEFINE_STRING_TO_ENUM_FUNCTION(ANM2_ELEMENT_STRING_TO_ENUM, Anm2Element, ANM2_ELEMENT_STRINGS, ANM2_ELEMENT_COUNT)
-DEFINE_ENUM_TO_STRING_FUNCTION(ANM2_ELEMENT_ENUM_TO_STRING, ANM2_ELEMENT_STRINGS, ANM2_ELEMENT_COUNT)
 
 #define ANM2_ATTRIBUTE_LIST \
     X(CREATED_BY,        "CreatedBy")        \
@@ -120,7 +121,6 @@ static const char* ANM2_ATTRIBUTE_STRINGS[] =
 };
 
 DEFINE_STRING_TO_ENUM_FUNCTION(ANM2_ATTRIBUTE_STRING_TO_ENUM, Anm2Attribute, ANM2_ATTRIBUTE_STRINGS, ANM2_ATTRIBUTE_COUNT)
-DEFINE_ENUM_TO_STRING_FUNCTION(ANM2_ATTRIBUTE_ENUM_TO_STRING, ANM2_ATTRIBUTE_STRINGS, ANM2_ATTRIBUTE_COUNT)
 
 enum Anm2Type
 {
@@ -199,6 +199,7 @@ struct Anm2Animation
 	s32 frameNum = ANM2_FRAME_NUM_MIN;
     std::string name = "New Animation";
 	bool isLoop = true;
+    bool isShowUnused = true;
     Anm2Item rootAnimation;
     std::map<s32, Anm2Item> layerAnimations;
     std::map<s32, Anm2Item> nullAnimations;
@@ -227,25 +228,8 @@ struct Anm2Reference
     Anm2Type itemType = ANM2_NONE;
     s32 itemID = ID_NONE;
     s32 frameIndex = INDEX_NONE;
+    f32 time = VALUE_NONE;
     auto operator<=>(const Anm2Reference&) const = default; 
-};
-
-struct Anm2AnimationWithID
-{
-    s32 id;
-    Anm2Animation animation;
-};
-
-struct Anm2EventWithID
-{
-    s32 id;
-    Anm2Event event;
-};
-
-struct Anm2FrameWithReference
-{
-    Anm2Reference reference;
-    Anm2Frame frame;
 };
 
 enum Anm2MergeType
@@ -278,14 +262,14 @@ bool anm2_deserialize(Anm2* self, const std::string& path, bool isTextures = tru
 void anm2_new(Anm2* self);
 void anm2_free(Anm2* self);
 void anm2_created_on_set(Anm2* self);
-s32 anm2_animation_add(Anm2* self);
+s32 anm2_animation_add(Anm2* self, bool isAddRootFrame = true, Anm2Animation* animation = nullptr, s32 id = ID_NONE);
 void anm2_animation_remove(Anm2* self, s32 id);
 Anm2Animation* anm2_animation_from_reference(Anm2* self, Anm2Reference* reference);
 Anm2Item* anm2_item_from_reference(Anm2* self, Anm2Reference* reference);
 Anm2Frame* anm2_frame_from_reference(Anm2* self, Anm2Reference* reference);
 s32 anm2_frame_index_from_time(Anm2* self, Anm2Reference reference, f32 time);
-Anm2Frame* anm2_frame_add(Anm2* self, Anm2Frame* frame, Anm2Reference* reference, s32 time = 0.0f);
-void anm2_frame_erase(Anm2* self, Anm2Reference* reference);
+Anm2Frame* anm2_frame_add(Anm2* self, Anm2Frame* frame, Anm2Reference* reference);
+void anm2_frame_remove(Anm2* self, Anm2Reference* reference);
 void anm2_frame_from_time(Anm2* self, Anm2Frame* frame, Anm2Reference reference, f32 time);
 void anm2_reference_clear(Anm2Reference* self);
 void anm2_reference_item_clear(Anm2Reference* self);
@@ -300,3 +284,7 @@ void anm2_generate_from_grid(Anm2* self, Anm2Reference* reference, vec2 startPos
 void anm2_spritesheet_texture_pixels_upload(Anm2* self);
 void anm2_spritesheet_texture_pixels_download(Anm2* self);
 vec4 anm2_animation_rect_get(Anm2* anm2, Anm2Reference* reference, bool isRootTransform);
+void anm2_frame_serialize(Anm2Frame* frame, Anm2Type type, XMLDocument* document, XMLElement* addElement, std::string* string);
+void anm2_animation_serialize(Anm2* self, Anm2Animation* animation, XMLDocument* document, XMLElement* addElement, std::string* string);
+bool anm2_frame_deserialize_from_xml(Anm2* self, Anm2Frame* frame, const std::string& xml);
+bool anm2_animation_deserialize_from_xml(Anm2* self, Anm2Animation* frame, const std::string& xml);

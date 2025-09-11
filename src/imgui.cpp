@@ -94,14 +94,13 @@ static bool _imgui_is_input_default(void)
 	return ImGui::IsItemHovered() && (ImGui::IsKeyPressed(IMGUI_INPUT_DEFAULT) || ImGui::IsMouseClicked(IMGUI_MOUSE_DEFAULT));
 }
 
-static std::string_view imgui_window_get(void)
+static bool _imgui_is_focus_window(const std::string& focus)
 {
-    ImGuiWindow* navWindow = ImGui::GetCurrentContext()->NavWindow;
-	if (!navWindow) return {};
+    ImGuiContext* ctx = ImGui::GetCurrentContext();
+    if (!ctx || !ctx->NavWindow)  return false;
 
-    std::string_view name(navWindow->Name);
-    size_t slash = name.find('/');
-	return (slash == std::string_view::npos) ? name : name.substr(0, slash);
+    std::string_view name(ctx->NavWindow->Name);
+    return name.find(focus) != std::string_view::npos;
 }
 
 static void _imgui_atlas(const AtlasType& self, Imgui* imgui)
@@ -217,7 +216,7 @@ static void _imgui_item_post(const ImguiItem& self, Imgui* imgui, ImguiItemType 
 	if 
 	(
 		imgui->isContextualActionsEnabled && _imgui_chord_pressed(self.chord_get()) &&
-		self.is_focus_window() && (imgui_window_get() == self.focusWindow)
+		(self.is_focus_window() && _imgui_is_focus_window(self.focusWindow))
 	)
 		if (!self.isDisabled) isActivated = true;
 
@@ -616,7 +615,7 @@ static void _imgui_context_menu(Imgui* self)
 	{
 		_imgui_selectable(IMGUI_CUT, self);			
 		_imgui_selectable(IMGUI_COPY, self);			
-		_imgui_selectable(IMGUI_PASTE.copy({self->clipboard->item.type == CLIPBOARD_NONE}), self);
+		_imgui_selectable(IMGUI_PASTE.copy({!clipboard_is_value()}), self);
 
 		imgui_end_popup(self);
 	}
@@ -983,11 +982,11 @@ static void _imgui_timeline(Imgui* self)
 		if (_imgui_is_window_hovered())
 		{
 			hoverReference = reference;
-			if (reference.itemType == ANM2_TRIGGERS)
-				hoverReference.frameIndex = frameTime;
-			else 
-				hoverReference.frameIndex = anm2_frame_index_from_time(self->anm2, reference, frameTime);
-
+			hoverReference.time = frameTime;
+			hoverReference.frameIndex = anm2_frame_index_from_time(self->anm2, reference, frameTime);
+			self->clipboard->location = hoverReference;
+			self->clipboard->type = CLIPBOARD_FRAME;
+				
 			if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 			{
 				*self->reference = reference;
@@ -1230,14 +1229,14 @@ static void _imgui_timeline(Imgui* self)
 	if (_imgui_button(IMGUI_ADD_FRAME.copy({!item}), self))
 	{
 		Anm2Reference frameReference = *self->reference;
-		frameReference.frameIndex = item->frames.empty() ? 0 : std::clamp(frameReference.frameIndex, 0, static_cast<s32>(item->frames.size() - 1));
+		frameReference.frameIndex = item->frames.empty() ? 0 : std::clamp(frameReference.frameIndex, 0, (s32)(item->frames.size() - 1));
 		Anm2Frame* addFrame = anm2_frame_from_reference(self->anm2, &frameReference);
 		anm2_frame_add(self->anm2, addFrame, &frameReference);
 	}
 
 	if(_imgui_button(IMGUI_REMOVE_FRAME.copy({!frame}), self))
 	{
-		anm2_frame_erase(self->anm2, self->reference);
+		anm2_frame_remove(self->anm2, self->reference);
 		anm2_reference_frame_clear(self->reference);
 	}
 
@@ -1850,6 +1849,12 @@ static void _imgui_animations(Imgui* self)
 			self->reference->animationID = id;
 			anm2_reference_item_clear(self->reference);
 		}
+
+		if (ImGui::IsItemHovered())
+		{
+			self->clipboard->type = CLIPBOARD_ANIMATION;
+			self->clipboard->location = (s32)id;
+		}
 		
 		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
 		{
@@ -1895,11 +1900,7 @@ static void _imgui_animations(Imgui* self)
 	}
 
 	if (_imgui_button(IMGUI_ANIMATION_DUPLICATE.copy({!animation}), self))
-	{
-		s32 id = map_next_id_get(self->anm2->animations);
-		self->anm2->animations.insert({id, *animation});
-		self->reference->animationID = id;
-	}
+		self->reference->animationID = anm2_animation_add(self->anm2, false, animation, self->reference->animationID);
 
 	_imgui_button(IMGUI_ANIMATION_MERGE.copy({!animation}), self);
 	
@@ -2844,10 +2845,9 @@ void imgui_update(Imgui* self)
 	{
 		for (const auto& item : imgui_item_registry())
 		{
-			if (item->is_chord() && _imgui_chord_pressed(item->chord_get()))
+			if (item->is_chord() && _imgui_chord_pressed(item->chord_get()) && !item->is_focus_window())
 			{
 				if (item->is_undoable()) imgui_snapshot(self, item->snapshotAction);
-				if (item->is_focus_window()) continue;
 				if (item->is_function()) item->function(self);
 			}
 		}

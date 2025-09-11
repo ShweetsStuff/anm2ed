@@ -66,7 +66,7 @@
 #define IMGUI_ACTION_FRAME_SWAP "Frame Swap"
 
 #define IMGUI_ACTION_ANIMATION_SWAP "Animation Swap"
-#define IMGUI_ACTION_TRIGGER_MOVE "Trigger AtFrame"
+#define IMGUI_ACTION_TRIGGER_MOVE "Trigger At Frame"
 #define IMGUI_ACTION_FRAME_DELAY "Frame Delay"
 #define IMGUI_ACTION_MOVE_PLAYHEAD "Move Playhead"
 #define IMGUI_ACTION_DRAW "Draw"
@@ -1268,7 +1268,6 @@ IMGUI_ITEM(IMGUI_ANIMATIONS_CHILD, self.label = "## Animations Child", self.flag
 
 IMGUI_ITEM(IMGUI_ANIMATION,
     self.label = "## Animation Item",
-    self.snapshotAction = "Select Animation",
     self.dragDrop = "## Animation Drag Drop",
     self.atlas = ATLAS_ANIMATION,
     self.idOffset = 2000
@@ -1965,7 +1964,6 @@ IMGUI_ITEM(IMGUI_TIMELINE_ITEM_SELECTABLE,
 IMGUI_ITEM(IMGUI_TIMELINE_ITEM_ROOT_SELECTABLE,
     self.label = "Root",
     self.tooltip = "The root item of an animation.\nChanging its properties will transform the rest of the animation.",
-    self.snapshotAction = "Root Item Select",
     self.atlas = ATLAS_ROOT,
     self.size = IMGUI_TIMELINE_ITEM_SELECTABLE_SIZE
 );
@@ -1973,7 +1971,6 @@ IMGUI_ITEM(IMGUI_TIMELINE_ITEM_ROOT_SELECTABLE,
 IMGUI_ITEM(IMGUI_TIMELINE_ITEM_LAYER_SELECTABLE,
     self.label = "## Layer Selectable",
     self.tooltip = "A layer item.\nA graphical item within the animation.",
-    self.snapshotAction = "Layer Item Select",
     self.dragDrop = "## Layer Drag Drop",
     self.atlas = ATLAS_LAYER,
     self.size = IMGUI_TIMELINE_ITEM_SELECTABLE_SIZE
@@ -1982,7 +1979,6 @@ IMGUI_ITEM(IMGUI_TIMELINE_ITEM_LAYER_SELECTABLE,
 IMGUI_ITEM(IMGUI_TIMELINE_ITEM_NULL_SELECTABLE,
     self.label = "## Null Selectable",
     self.tooltip = "A null item.\nAn invisible item within the animation that is accessible via a game engine.",
-    self.snapshotAction = "Null Item Select",
     self.dragDrop = "## Null Drag Drop",
     self.atlas = ATLAS_NULL,
     self.size = IMGUI_TIMELINE_ITEM_SELECTABLE_SIZE
@@ -1991,7 +1987,6 @@ IMGUI_ITEM(IMGUI_TIMELINE_ITEM_NULL_SELECTABLE,
 IMGUI_ITEM(IMGUI_TIMELINE_ITEM_TRIGGERS_SELECTABLE,
     self.label = "Triggers",
     self.tooltip = "The animation's triggers.\nWill fire based on an event.",
-    self.snapshotAction = "Triggers Item Select",
     self.atlas = ATLAS_TRIGGERS,
     self.size = IMGUI_TIMELINE_ITEM_SELECTABLE_SIZE
 );
@@ -2056,7 +2051,6 @@ IMGUI_ITEM(IMGUI_TIMELINE_FRAME, self.label = "## Frame");
 static const vec4 IMGUI_FRAME_BORDER_COLOR = {1.0f, 1.0f, 1.0f, 0.25f};
 IMGUI_ITEM(IMGUI_TIMELINE_ROOT_FRAME,
     self.label = "## Root Frame",
-    self.snapshotAction = "Root Frame Select",
     self.color = {{0.14f, 0.27f, 0.39f, 1.0f}, {0.28f, 0.54f, 0.78f, 1.0f}, {0.36f, 0.70f, 0.95f, 1.0f}, IMGUI_FRAME_BORDER_COLOR},
     self.size = IMGUI_TIMELINE_FRAME_SIZE,
     self.atlasOffset = IMGUI_TIMELINE_FRAME_ATLAS_OFFSET,
@@ -2065,7 +2059,6 @@ IMGUI_ITEM(IMGUI_TIMELINE_ROOT_FRAME,
 
 IMGUI_ITEM(IMGUI_TIMELINE_LAYER_FRAME,
     self.label = "## Layer Frame",
-    self.snapshotAction = "Layer Frame Select",
     self.dragDrop = "## Layer Frame Drag Drop",
     self.color = {{0.45f, 0.18f, 0.07f, 1.0f}, {0.78f, 0.32f, 0.12f, 1.0f}, {0.95f, 0.40f, 0.15f, 1.0f}, IMGUI_FRAME_BORDER_COLOR},
     self.size = IMGUI_TIMELINE_FRAME_SIZE,
@@ -2075,7 +2068,6 @@ IMGUI_ITEM(IMGUI_TIMELINE_LAYER_FRAME,
 
 IMGUI_ITEM(IMGUI_TIMELINE_NULL_FRAME,
     self.label = "## Null Frame",
-    self.snapshotAction = "Null Frame Select",
     self.dragDrop = "## Null Frame Drag Drop",
     self.color = {{0.17f, 0.33f, 0.17f, 1.0f}, {0.34f, 0.68f, 0.34f, 1.0f}, {0.44f, 0.88f, 0.44f, 1.0f}, IMGUI_FRAME_BORDER_COLOR},
     self.size = IMGUI_TIMELINE_FRAME_SIZE,
@@ -2085,7 +2077,6 @@ IMGUI_ITEM(IMGUI_TIMELINE_NULL_FRAME,
 
 IMGUI_ITEM(IMGUI_TIMELINE_TRIGGERS_FRAME,
     self.label = "## Triggers Frame",
-    self.snapshotAction = "Trigger Select",
     self.color = {{0.36f, 0.14f, 0.24f, 1.0f}, {0.72f, 0.28f, 0.48f, 1.0f}, {0.92f, 0.36f, 0.60f, 1.0f}, IMGUI_FRAME_BORDER_COLOR},
     self.size = IMGUI_TIMELINE_FRAME_SIZE,
     self.atlasOffset = IMGUI_TIMELINE_FRAME_ATLAS_OFFSET,

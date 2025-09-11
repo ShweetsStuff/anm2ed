@@ -2,33 +2,25 @@
 
 #include "anm2.h"
 
-enum ClipboardItemType
+#define CLIPBOARD_TEXT_SET_WARNING "Unable to set clipboard text! ({})"
+
+enum ClipboardType
 {
     CLIPBOARD_NONE,
     CLIPBOARD_FRAME,
-    CLIPBOARD_ANIMATION,
+    CLIPBOARD_ANIMATION
 };
 
-struct ClipboardItem
-{
-    std::variant<std::monostate, Anm2FrameWithReference, Anm2AnimationWithID, Anm2EventWithID> data = std::monostate();
-    ClipboardItemType type = CLIPBOARD_NONE;
-
-    ClipboardItem() = default; 
-    ClipboardItem(const Anm2FrameWithReference& frame) : data(frame), type(CLIPBOARD_FRAME) {}
-    ClipboardItem(const Anm2AnimationWithID& animation) : data(animation), type(CLIPBOARD_ANIMATION) {}
-};
-    
 using ClipboardLocation = std::variant<std::monostate, Anm2Reference, s32>;
 
 struct Clipboard
 {
     Anm2* anm2 = nullptr;
-    ClipboardItem item;
-    ClipboardItem hoveredItem;
+    ClipboardType type;
     ClipboardLocation location;
 };
 
+bool clipboard_is_value(void);
 void clipboard_copy(Clipboard* self);
 void clipboard_cut(Clipboard* self);
 void clipboard_paste(Clipboard* self);

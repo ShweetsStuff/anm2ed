@@ -44,6 +44,7 @@ typedef double f64;
 #define TAU (PI * 2)
 
 using namespace glm; 
+using namespace tinyxml2;
 
 #define PREFERENCES_DIRECTORY "anm2ed"
 
@@ -203,11 +204,6 @@ static inline bool path_is_valid(const std::filesystem::path& pathCheck)
     return isValid;
 }
 
-static inline const char* enum_to_string(const char* array[], s32 count, s32 index) 
-{ 
-    return (index >= 0 && index < count) ? array[index] : ""; 
-};
-
 static inline s32 string_to_enum(const std::string& string, const char* const* array, s32 n) 
 {
     for (s32 i = 0; i < n; i++) 
@@ -325,12 +321,6 @@ static inline mat4 quad_model_parent_get(vec2 position = {}, vec2 pivot = {}, ve
 
     return glm::translate(mat4(1.0f), vec3(position, 0.0f)) * local;
 }
-
-#define DEFINE_ENUM_TO_STRING_FUNCTION(function, array, count) \
-    static inline std::string function(s32 index)              \
-    {                                                          \
-        return enum_to_string(array, count, index);            \
-    };
 
 #define DEFINE_STRING_TO_ENUM_FUNCTION(function, enumType, stringArray, count)    \
     static inline enumType function(const std::string& string)                    \
