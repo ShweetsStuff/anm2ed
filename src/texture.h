@@ -12,14 +12,13 @@ struct Texture
 {
     GLuint id = GL_ID_NONE;
     ivec2 size{};
-    s32 channels = TEXTURE_CHANNELS;
     bool isInvalid = true;
 };
 
-bool texture_from_encoded_data_init(Texture* self, ivec2 size, s32 channels, const u8* data, u32 length);
+bool texture_from_encoded_data_init(Texture* self, ivec2 size, const u8* data, u32 length);
 bool texture_from_gl_write(Texture* self, const std::string& path);
 bool texture_from_path_init(Texture* self, const std::string& path);
-bool texture_from_rgba_init(Texture* self, ivec2 size, s32 channels, const u8* data);
+bool texture_from_rgba_init(Texture* self, ivec2 size, const u8* data);
 bool texture_from_rgba_write(const std::string& path, const u8* data, ivec2 size);
 bool texture_pixel_set(Texture* self, ivec2 position, vec4 color);
 void texture_free(Texture* self);

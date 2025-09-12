@@ -28,7 +28,7 @@
 
 #define SETTINGS_LIST \
     /* name,                  symbol,                       type,              defaultValue */ \
-    X(windowSize,             WINDOW_SIZE,                  TYPE_IVEC2_WH,     {1280, 720}) \
+    X(windowSize,             WINDOW_SIZE,                  TYPE_IVEC2_WH,     {1600, 900}) \
     X(isVsync,                IS_VSYNC,                     TYPE_BOOL,         true) \
     \
     X(hotkeyCenterView,       HOTKEY_CENTER_VIEW,           TYPE_STRING,       "Home") \
@@ -129,6 +129,9 @@
     X(bakeInterval,           BAKE_INTERVAL,                TYPE_INT,          1) \
     X(bakeIsRoundScale,       BAKE_IS_ROUND_SCALE,          TYPE_BOOL,         true) \
     X(bakeIsRoundRotation,    BAKE_IS_ROUND_ROTATION,       TYPE_BOOL,         true) \
+    \
+    X(timelineAddItemType,    TIMELINE_ADD_ITEM_TYPE,       TYPE_INT,          ANM2_LAYER) \
+    X(timelineIsShowUnused,   TIMELINE_IS_SHOW_UNUSED,      TYPE_BOOL,         true) \
     \
     X(onionskinIsEnabled,     ONIONSKIN_IS_ENABLED,         TYPE_BOOL,         false) \
     X(onionskinDrawOrder,     ONIONSKIN_DRAW_ORDER,         TYPE_INT,          ONIONSKIN_BELOW) \
@@ -262,72 +265,86 @@ Collapsed=0
 
 [Window][Tools]
 Pos=8,40
-Size=37,460
+Size=38,516
 Collapsed=0
 DockId=0x0000000B,0
 
 [Window][Animations]
-Pos=1288,284
-Size=304,216
+Pos=1289,307
+Size=303,249
 Collapsed=0
 DockId=0x0000000A,0
 
 [Window][Events]
-Pos=1007,332
-Size=279,168
+Pos=957,264
+Size=330,292
 Collapsed=0
-DockId=0x00000008,0
+DockId=0x00000008,2
 
 [Window][Spritesheets]
-Pos=1288,40
-Size=304,242
+Pos=1289,40
+Size=303,265
 Collapsed=0
 DockId=0x00000009,0
 
 [Window][Animation Preview]
-Pos=47,40
-Size=958,460
+Pos=48,40
+Size=907,516
 Collapsed=0
 DockId=0x0000000C,0
 
 [Window][Spritesheet Editor]
-Pos=47,40
-Size=958,460
+Pos=48,40
+Size=907,516
 Collapsed=0
 DockId=0x0000000C,1
 
 [Window][Timeline]
-Pos=8,502
-Size=1584,390
+Pos=8,558
+Size=1584,334
 Collapsed=0
 DockId=0x00000004,0
 
 [Window][Frame Properties]
-Pos=1007,40
-Size=279,290
+Pos=957,40
+Size=330,222
 Collapsed=0
 DockId=0x00000007,0
 
 [Window][Onionskin]
-Pos=8,502
-Size=1584,390
+Pos=957,264
+Size=330,292
 Collapsed=0
-DockId=0x00000004,1
+DockId=0x00000008,3
+
+[Window][Layers]
+Pos=957,264
+Size=330,292
+Collapsed=0
+DockId=0x00000008,0
+
+[Window][Nulls]
+Pos=957,264
+Size=330,292
+Collapsed=0
+DockId=0x00000008,1
+
 
 [Docking][Data]
 DockSpace         ID=0xFC02A410 Window=0x0E46F4F7 Pos=8,40 Size=1584,852 Split=Y
-  DockNode        ID=0x00000003 Parent=0xFC02A410 SizeRef=1902,568 Split=X
-    DockNode      ID=0x00000001 Parent=0x00000003 SizeRef=1595,1016 Split=X Selected=0x024430EF
-      DockNode    ID=0x00000005 Parent=0x00000001 SizeRef=997,654 Split=X Selected=0x024430EF
-        DockNode  ID=0x0000000B Parent=0x00000005 SizeRef=37,654 Selected=0x18A5FDB9
-        DockNode  ID=0x0000000C Parent=0x00000005 SizeRef=958,654 CentralNode=1 Selected=0x024430EF
-      DockNode    ID=0x00000006 Parent=0x00000001 SizeRef=279,654 Split=Y Selected=0x754E368F
-        DockNode  ID=0x00000007 Parent=0x00000006 SizeRef=631,359 Selected=0x754E368F
-        DockNode  ID=0x00000008 Parent=0x00000006 SizeRef=631,207 Selected=0x8A65D963
-    DockNode      ID=0x00000002 Parent=0x00000003 SizeRef=304,1016 Split=Y Selected=0x4EFD0020
-      DockNode    ID=0x00000009 Parent=0x00000002 SizeRef=634,299 Selected=0x4EFD0020
-      DockNode    ID=0x0000000A Parent=0x00000002 SizeRef=634,267 Selected=0xC1986EE2
-  DockNode        ID=0x00000004 Parent=0xFC02A410 SizeRef=1902,390 Selected=0x4F89F0DC
+  DockNode        ID=0x00000003 Parent=0xFC02A410 SizeRef=1902,680 Split=X
+    DockNode      ID=0x00000001 Parent=0x00000003 SizeRef=1017,1016 Split=X Selected=0x024430EF
+      DockNode    ID=0x00000005 Parent=0x00000001 SizeRef=1264,654 Split=X Selected=0x024430EF
+        DockNode  ID=0x0000000B Parent=0x00000005 SizeRef=38,654 Selected=0x18A5FDB9
+        DockNode  ID=0x0000000C Parent=0x00000005 SizeRef=1224,654 CentralNode=1 Selected=0x024430EF
+      DockNode    ID=0x00000006 Parent=0x00000001 SizeRef=330,654 Split=Y Selected=0x754E368F
+        DockNode  ID=0x00000007 Parent=0x00000006 SizeRef=631,293 Selected=0x754E368F
+        DockNode  ID=0x00000008 Parent=0x00000006 SizeRef=631,385 Selected=0xCD8384B1
+    DockNode      ID=0x00000002 Parent=0x00000003 SizeRef=303,1016 Split=Y Selected=0x4EFD0020
+      DockNode    ID=0x00000009 Parent=0x00000002 SizeRef=634,349 Selected=0x4EFD0020
+      DockNode    ID=0x0000000A Parent=0x00000002 SizeRef=634,329 Selected=0xC1986EE2
+  DockNode        ID=0x00000004 Parent=0xFC02A410 SizeRef=1902,334 Selected=0x4F89F0DC
+  
 )";
 
 void settings_save(Settings* self);

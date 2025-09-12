@@ -116,6 +116,8 @@ bool sdl_init(State* self, bool isTestMode = false)
 
 void init(State* self)
 {
+	log_info(STATE_INIT_INFO);
+
 	settings_init(&self->settings);
 
 	if (!sdl_init(self)) return;

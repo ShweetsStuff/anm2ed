@@ -62,6 +62,8 @@ static void _imgui_spritesheet_add(Imgui* self, const std::string& path)
 		return;
 	}
 
+	imgui_snapshot(self, IMGUI_ACTION_ADD_SPRITESHEET);
+
 	std::filesystem::path workingPath = std::filesystem::current_path();
 	std::string spritesheetPath = path;
 	std::string anm2WorkingPath = working_directory_from_file_set(self->anm2->path);
@@ -77,6 +79,16 @@ static void _imgui_spritesheet_add(Imgui* self, const std::string& path)
 static bool _imgui_is_window_hovered(void)
 {
 	return ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
+}
+
+static bool _imgui_is_window_hovered_and_click(void)
+{
+	return _imgui_is_window_hovered() && ImGui::IsMouseClicked(0);
+}
+
+static bool _imgui_is_window_hovered_and_click_no_anm2_path(Imgui* self)
+{
+	return _imgui_is_window_hovered_and_click() && self->anm2->path.empty();
 }
 
 static bool _imgui_is_no_click_on_item(void)
@@ -141,7 +153,7 @@ static void _imgui_item_pre(const ImguiItem& self, ImguiItemType type)
 		case IMGUI_WINDOW:
 		case IMGUI_DOCKSPACE:
 		case IMGUI_CHILD:
-		case IMGUI_OPTION_POPUP:
+		case IMGUI_CONFIRM_POPUP:
 			break;
 		default:
 			ImGui::BeginDisabled(self.isDisabled);
@@ -264,7 +276,7 @@ static void _imgui_item_post(const ImguiItem& self, Imgui* imgui, ImguiItemType 
 		case IMGUI_WINDOW:
 		case IMGUI_DOCKSPACE:
 		case IMGUI_CHILD:
-		case IMGUI_OPTION_POPUP:
+		case IMGUI_CONFIRM_POPUP:
 			break;
 		default:
 			ImGui::EndDisabled();
@@ -569,7 +581,7 @@ IMGUI_ITEM_ATLAS_FUNCTION(_imgui_atlas_selectable, _imgui_selectable(self, imgui
 IMGUI_ITEM_ATLAS_VALUE_FUNCTION(_imgui_atlas_selectable_input_int, s32, _imgui_selectable_input_int(self, imgui, value));
 IMGUI_ITEM_ATLAS_VALUE_FUNCTION(_imgui_atlas_selectable_input_text, std::string, _imgui_selectable_input_text(self, imgui, value));
 
-static bool _imgui_option_popup(ImguiItem self, Imgui* imgui, ImguiPopupState* state = nullptr)
+static bool _imgui_confirm_popup(ImguiItem self, Imgui* imgui, ImguiPopupState* state = nullptr, bool isOnlyConfirm = false)
 {
 	ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 	
@@ -582,26 +594,36 @@ static bool _imgui_option_popup(ImguiItem self, Imgui* imgui, ImguiPopupState* s
 		ImGui::Text(self.text_get());
 		ImGui::Separator();
 
-		if (_imgui_button(IMGUI_POPUP_OK, imgui))
+		if (_imgui_button(IMGUI_POPUP_OK.copy({.rowCount = isOnlyConfirm ? 1 : IMGUI_CONFIRM_POPUP_ROW_COUNT}), imgui))
 		{
 			imgui_close_current_popup(imgui);
 			imgui_end_popup(imgui);
-			if (state) *state = IMGUI_POPUP_STATE_CONFIRM;
+			if (state) *state = isOnlyConfirm ? IMGUI_POPUP_STATE_CANCEL : IMGUI_POPUP_STATE_CONFIRM;
 			return true;
 		}
 
 		ImGui::SameLine();
 		
-		if (_imgui_button(IMGUI_POPUP_CANCEL, imgui))
+		if (!isOnlyConfirm)
 		{
-			imgui_close_current_popup(imgui);
-			if (state) *state = IMGUI_POPUP_STATE_CANCEL;
+			if (_imgui_button(IMGUI_POPUP_CANCEL, imgui))
+			{
+				imgui_close_current_popup(imgui);
+				if (state) *state = IMGUI_POPUP_STATE_CANCEL;
+			}
 		}
 
 		imgui_end_popup(imgui);
 	}
 
 	return false;
+}
+
+static void _imgui_no_anm2_path_check(Imgui* self)
+{
+	if (_imgui_is_window_hovered_and_click_no_anm2_path(self) && !imgui_is_any_popup_open())
+		imgui_open_popup(IMGUI_NO_ANM2_PATH_CONFIRMATION.label);
+	_imgui_confirm_popup(IMGUI_NO_ANM2_PATH_CONFIRMATION, self, nullptr, true);
 }
 
 static void _imgui_context_menu(Imgui* self)
@@ -650,6 +672,7 @@ static void _imgui_timeline(Imgui* self)
 	static s32& itemID = self->reference->itemID;
 	
 	IMGUI_BEGIN_OR_RETURN(IMGUI_TIMELINE, self);
+	_imgui_no_anm2_path_check(self);
 
 	Anm2Animation* animation = anm2_animation_from_reference(self->anm2, self->reference);
 
@@ -704,12 +727,7 @@ static void _imgui_timeline(Imgui* self)
 		localMousePos = ImVec2(mousePos.x - itemMin.x + scroll.x, mousePos.y - itemMin.y);
 		frameTime = (s32)(localMousePos.x / frameSize.x);
 
-		if (ImGui::IsMouseDown(0) && _imgui_is_window_hovered()) 
-		{
-			if (!isPlayheadDrag)
-				imgui_snapshot(self, IMGUI_ACTION_MOVE_PLAYHEAD);
-			isPlayheadDrag = true;
-		}
+		if (ImGui::IsMouseDown(0) && _imgui_is_window_hovered()) isPlayheadDrag = true;
 
 		if (isPlayheadDrag)
 		{
@@ -790,12 +808,12 @@ static void _imgui_timeline(Imgui* self)
 	std::function<void(Anm2Reference, s32&)> timeline_item_child = [&](Anm2Reference reference, s32& index)
 	{
 		Anm2Item* item = anm2_item_from_reference(self->anm2, &reference);
-
+		Anm2Type& type = reference.itemType;
 		if (!item) return;
+		if (!self->settings->timelineIsShowUnused && item->frames.empty() && (type == ANM2_LAYER || type == ANM2_NULL)) return;
 
 		ImVec2 buttonSize = ImVec2(ATLAS_SIZE_NORMAL) + (defaultFramePadding * ImVec2(2, 2));
 		
-		Anm2Type& type = reference.itemType;
 		Anm2Layer* layer = nullptr;
 		Anm2Null* null = nullptr;
 		s32 buttonCount = type == ANM2_NULL ? 2 : 1;
@@ -824,13 +842,13 @@ static void _imgui_timeline(Imgui* self)
 				layer = &self->anm2->layers[reference.itemID];
 				if 
 				(
-					_imgui_atlas_selectable_input_text(IMGUI_TIMELINE_ITEM_SELECTABLES[type]->copy
+					_imgui_atlas_selectable(IMGUI_TIMELINE_ITEM_SELECTABLES[type]->copy
 					({
 						.isSelected = isSelected, 
-						.label = std::format(IMGUI_TIMELINE_ITEM_CHILD_FORMAT, reference.itemID, layer->name), 
-						.id = index
+						.label = std::format(IMGUI_TIMELINE_ITEM_CHILD_FORMAT, reference.itemID, layer->name)
 					}),	
-					self, layer->name)
+					self
+				)
 				)
 					*self->reference = reference;
 				break;
@@ -838,13 +856,12 @@ static void _imgui_timeline(Imgui* self)
 				null = &self->anm2->nulls[reference.itemID];
 				if 
 				(
-					_imgui_atlas_selectable_input_text(IMGUI_TIMELINE_ITEM_SELECTABLES[type]->copy
+					_imgui_atlas_selectable(IMGUI_TIMELINE_ITEM_SELECTABLES[type]->copy
 					({
 						.isSelected = isSelected, 
-						.label = std::format(IMGUI_TIMELINE_ITEM_CHILD_FORMAT, reference.itemID, null->name), 
-						.id = index
+						.label = std::format(IMGUI_TIMELINE_ITEM_CHILD_FORMAT, reference.itemID, null->name)
 					}),	
-					self, null->name)
+					self)
 				)
 					*self->reference = reference;
 				break;
@@ -878,13 +895,6 @@ static void _imgui_timeline(Imgui* self)
 			ImGui::EndDragDropTarget();
 		}
 
-		if (type == ANM2_LAYER)
-		{
-			ImGui::SameLine();
-			_imgui_atlas_selectable_input_int(IMGUI_TIMELINE_SPRITESHEET_ID.copy
-			({.label = std::format(IMGUI_SPRITESHEET_ID_FORMAT, layer->spritesheetID), .id = index}), self, layer->spritesheetID);
-		}
-
 		ImGui::SetCursorScreenPos({childPos.x + childSize.x - buttonAreaWidth, childPos.y + defaultWindowPadding.y});
 
 		if (type == ANM2_NULL)
@@ -916,7 +926,7 @@ static void _imgui_timeline(Imgui* self)
 
 		timeline_item_child({animationID, ANM2_ROOT}, index);
 
-		for (auto& [i, id] : std::ranges::reverse_view(self->anm2->layerMap))
+		for (auto& id : std::ranges::reverse_view(animation->layerOrder))
 			timeline_item_child({animationID, ANM2_LAYER, id}, index);
 
 		for (auto & [id, null] : animation->nullAnimations)
@@ -933,28 +943,12 @@ static void _imgui_timeline(Imgui* self)
 			switch (swapItemReference.itemType)
 			{
 				case ANM2_LAYER:
-				{
-					s32 indexA = INDEX_NONE;
-					s32 indexB = INDEX_NONE;
-
-					for (const auto& [index, id] : self->anm2->layerMap)
-					{
-						if (id == self->reference->itemID) 
-							indexA = index;
-						else if (id == swapItemReference.itemID) 
-							indexB = index;
-					}
-
-					if ((indexA != INDEX_NONE) && (indexB != INDEX_NONE))
-						std::swap(self->anm2->layerMap[indexA], self->anm2->layerMap[indexB]);
+					vector_value_swap(animation->layerOrder, self->reference->itemID, swapItemReference.itemID);
 					break;
-				}
 				case ANM2_NULL:
-					map_swap(self->anm2->nulls, self->reference->itemID, swapItemReference.itemID);
 					map_swap(animation->nullAnimations, self->reference->itemID, swapItemReference.itemID);
 					break;
-				default:
-					break;
+				default: break;
 			}
 
 			self->reference->itemID = swapItemReference.itemID;
@@ -966,7 +960,9 @@ static void _imgui_timeline(Imgui* self)
 	std::function<void(Anm2Reference, s32&)> timeline_item_frames = [&](Anm2Reference reference, s32& index)
 	{
 		Anm2Item* item = anm2_item_from_reference(self->anm2, &reference);
+		if (!item) return;
 		Anm2Type& type = reference.itemType;
+		if (!self->settings->timelineIsShowUnused && item->frames.empty() && (type == ANM2_LAYER || type == ANM2_NULL)) return;
 
 		ImGui::PushID(index);
 
@@ -1150,7 +1146,7 @@ static void _imgui_timeline(Imgui* self)
 
 		timeline_item_frames(Anm2Reference(animationID, ANM2_ROOT), index);
 
-		for (auto& [i, id] : std::ranges::reverse_view(self->anm2->layerMap))
+		for (auto& id : std::ranges::reverse_view(animation->layerOrder))
 			timeline_item_frames(Anm2Reference(animationID, ANM2_LAYER, id), index);
 
 		for (auto & [id, null] : animation->nullAnimations)
@@ -1171,7 +1167,15 @@ static void _imgui_timeline(Imgui* self)
 	timeline_frames_child();
 	ImGui::SetCursorPos(ImVec2());
 	
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, defaultItemSpacing);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, defaultWindowPadding);
+
 	_imgui_begin_child(IMGUI_TIMELINE_ITEM_CHILD, self);
+
+	const ImguiItem& unusedItem = self->settings->timelineIsShowUnused ? IMGUI_TIMELINE_SHOW_UNUSED : IMGUI_TIMELINE_HIDE_UNUSED;
+	if (_imgui_atlas_button(unusedItem, self)) self->settings->timelineIsShowUnused = !self->settings->timelineIsShowUnused;
+	ImGui::PopStyleVar(2);
+	
 	_imgui_end_child(); // IMGUI_TIMELINE_ITEM_CHILD
 	ImGui::SameLine();
 	timeline_header();
@@ -1185,12 +1189,91 @@ static void _imgui_timeline(Imgui* self)
 	Anm2Frame* frame = anm2_frame_from_reference(self->anm2, self->reference);
 	Anm2Item* item = anm2_item_from_reference(self->anm2, self->reference);
 	_imgui_begin_child(IMGUI_TIMELINE_ITEM_FOOTER_CHILD, self);
+	
 	_imgui_button(IMGUI_TIMELINE_ADD_ITEM, self);
 
-	if (imgui_begin_popup(IMGUI_TIMELINE_ADD_ITEM.popup, self))
+	if (imgui_begin_popup_modal(IMGUI_TIMELINE_ADD_ITEM.popup, self, IMGUI_TIMELINE_ADD_ITEM.popupSize))
 	{
-		if (_imgui_selectable(IMGUI_TIMELINE_ADD_ITEM_LAYER, self)) anm2_layer_add(self->anm2);
-		if (_imgui_selectable(IMGUI_TIMELINE_ADD_ITEM_NULL, self)) anm2_null_add(self->anm2);
+		static s32 selectedLayerID = ID_NONE;
+		static s32 selectedNullID = ID_NONE;
+		s32& type = self->settings->timelineAddItemType;
+
+		_imgui_begin_child(IMGUI_TIMELINE_ADD_ITEM_TYPE_CHILD, self);
+
+		_imgui_radio_button(IMGUI_TIMELINE_ADD_ITEM_LAYER, self, type);
+		_imgui_radio_button(IMGUI_TIMELINE_ADD_ITEM_NULL, self, type);
+
+		_imgui_end_child(); // IMGUI_TIMELINE_ADD_ITEM_TYPE_CHILD
+		
+		_imgui_begin_child(IMGUI_TIMELINE_ADD_ITEM_ITEMS_CHILD, self);
+		
+		switch (type)
+		{
+			case ANM2_LAYER:
+			default:
+			{
+				for (auto & [id, layer] : self->anm2->layers)
+				{
+					ImGui::PushID(id);
+
+					ImguiItem layerItem = IMGUI_LAYER.copy
+					({
+						.isSelected = selectedLayerID == id,
+						.label = std::format(IMGUI_LAYER_FORMAT, id, layer.name),
+						.id = id
+					});
+					if (_imgui_atlas_selectable(layerItem, self)) selectedLayerID = id;
+
+					ImGui::PopID();
+				};
+				break;
+			}			
+			case ANM2_NULL:
+			{
+				for (auto & [id, null] : self->anm2->nulls)
+				{
+					ImGui::PushID(id);
+
+					ImguiItem nullItem = IMGUI_NULL.copy
+					({
+						.isSelected = selectedNullID == id,
+						.label = std::format(IMGUI_NULL_FORMAT, id, null.name),
+						.id = id
+					});
+					if (_imgui_atlas_selectable(nullItem, self)) selectedNullID = id;
+
+					ImGui::PopID();
+				};
+				break;
+			}
+		}
+
+		_imgui_end_child(); // IMGUI_TIMELINE_ADD_ITEM_ITEMS_CHILD
+
+		_imgui_begin_child(IMGUI_TIMELINE_ADD_ITEM_OPTIONS_CHILD, self);
+	
+		if (self->anm2->layers.size() == 0) selectedLayerID = ID_NONE;
+		if (self->anm2->nulls.size() == 0) selectedNullID = ID_NONE;
+
+		bool isDisabled = 				 type == ANM2_NONE || 
+		(type == ANM2_LAYER && selectedLayerID == ID_NONE) || 
+		(type == ANM2_NULL && selectedNullID == ID_NONE);
+		
+		if (_imgui_button(IMGUI_TIMELINE_ADD_ITEM_ADD.copy({isDisabled}), self))
+		{
+			switch (type)
+			{
+				case ANM2_LAYER: anm2_animation_layer_animation_add(animation, selectedLayerID); break;
+				case ANM2_NULL: anm2_animation_null_animation_add(animation, selectedNullID); break;
+				default: break;
+			}
+			 
+			imgui_close_current_popup(self);
+		}
+		if (_imgui_button(IMGUI_POPUP_CANCEL, self)) imgui_close_current_popup(self);
+		
+		_imgui_end_child(); // IMGUI_TIMELINE_ADD_ITEM_OPTIONS_CHILD
+				
 		imgui_end_popup(self);
 	}
 
@@ -1198,14 +1281,9 @@ static void _imgui_timeline(Imgui* self)
 	{
 		switch (itemType)
 		{
-			case ANM2_LAYER:
-				anm2_layer_remove(self->anm2, itemID);
-				break;
-			case ANM2_NULL:
-				anm2_null_remove(self->anm2, itemID);
-				break;
-			default:
-				break;
+			case ANM2_LAYER: anm2_animation_layer_animation_remove(animation, itemID); break;
+			case ANM2_NULL:  anm2_animation_null_animation_remove(animation, itemID);  break;
+			default: break;
 		}
 
 		anm2_reference_item_clear(self->reference);
@@ -1260,8 +1338,7 @@ static void _imgui_timeline(Imgui* self)
 			imgui_close_current_popup(self);
 		}
 
-		if (_imgui_button(IMGUI_POPUP_CANCEL, self)) 
-		imgui_close_current_popup(self);
+		if (_imgui_button(IMGUI_POPUP_CANCEL, self)) imgui_close_current_popup(self);
 
 		_imgui_end_child(); //IMGUI_BAKE_CHILD)
 			
@@ -1356,14 +1433,13 @@ static void _imgui_taskbar(Imgui* self)
 
 	if (self->isTryQuit) imgui_open_popup(IMGUI_EXIT_CONFIRMATION.label);
 
-	_imgui_option_popup(IMGUI_EXIT_CONFIRMATION, self, &exitConfirmState);
+	_imgui_confirm_popup(IMGUI_EXIT_CONFIRMATION, self, &exitConfirmState);
 
 	switch (exitConfirmState)
 	{
-		case IMGUI_POPUP_STATE_CLOSED: self->isTryQuit = false; break;
-		case IMGUI_POPUP_STATE_OPEN: self->isTryQuit = true; break;
 		case IMGUI_POPUP_STATE_CONFIRM: self->isQuit = true; break;
 		case IMGUI_POPUP_STATE_CANCEL: self->isTryQuit = false; break;
+		default: break;
 	}
 
 	_imgui_selectable(IMGUI_WIZARD.copy({}), self);
@@ -1564,6 +1640,10 @@ static void _imgui_taskbar(Imgui* self)
 		_imgui_input_text(IMGUI_RENDER_ANIMATION_FORMAT, self, format);
 		_imgui_combo(IMGUI_RENDER_ANIMATION_OUTPUT, self, &type);
 
+		_imgui_end_child(); // IMGUI_RENDER_ANIMATION_CHILD
+		
+		_imgui_begin_child(IMGUI_RENDER_ANIMATION_FOOTER_CHILD, self);
+
 		if (_imgui_button(IMGUI_RENDER_ANIMATION_CONFIRM, self))
 		{
 			bool isRenderStart = true;
@@ -1609,7 +1689,7 @@ static void _imgui_taskbar(Imgui* self)
 		if (_imgui_button(IMGUI_POPUP_CANCEL, self))
 			imgui_close_current_popup(self);
 
-		_imgui_end_child(); //IMGUI_RENDER_ANIMATION_CHILD
+		_imgui_end_child(); // IMGUI_RENDER_ANIMATION_FOOTER_CHILD
 			
 		imgui_end_popup(self);
 	}
@@ -1826,9 +1906,110 @@ static void _imgui_tools(Imgui* self)
 	_imgui_end(); // IMGUI_TOOLS
 }
 
+static void _imgui_layers(Imgui* self)
+{
+	static s32 selectedLayerID = ID_NONE;
+
+	IMGUI_BEGIN_OR_RETURN(IMGUI_LAYERS, self);
+	_imgui_no_anm2_path_check(self);
+	
+	ImVec2 size = ImGui::GetContentRegionAvail();
+
+	_imgui_begin_child(IMGUI_LAYERS_CHILD.copy({.size = {size.x, size.y - IMGUI_FOOTER_CHILD.size.y}}), self);
+	ImGui::SetScrollX(0.0f);
+
+	for (auto & [id, layer] : self->anm2->layers)
+	{
+		ImGui::PushID(id);
+
+		ImguiItem layerItem = IMGUI_LAYER.copy
+		({
+			.isSelected = selectedLayerID == id,
+			.label = std::format(IMGUI_LAYER_FORMAT, id, layer.name),
+			.size = {ImGui::GetContentRegionAvail().x - (IMGUI_LAYER_SPRITESHEET_ID.size.x * 2.0f), 0},
+			.id = id
+		});
+		if (_imgui_atlas_selectable_input_text(layerItem, self, layer.name)) selectedLayerID = id;
+
+		ImGui::SameLine();
+
+		ImguiItem spritesheetItem = IMGUI_LAYER_SPRITESHEET_ID.copy
+		({
+			.isSelected = selectedLayerID == id,
+			.label = std::format(IMGUI_LAYER_FORMAT, id, layer.name),
+			.id = id
+		});	
+		_imgui_atlas_selectable_input_int(spritesheetItem, self, layer.spritesheetID);
+	
+		ImGui::PopID();
+	};
+
+	_imgui_end_child(); // layersChild
+	
+	_imgui_begin_child(IMGUI_FOOTER_CHILD, self);
+	
+	if (_imgui_button(IMGUI_LAYER_ADD.copy({self->anm2->path.empty()}), self))
+		selectedLayerID = anm2_layer_add(self->anm2);
+
+	if (_imgui_button(IMGUI_LAYER_REMOVE.copy({selectedLayerID == ID_NONE}), self))
+	{
+		anm2_layer_remove(self->anm2, selectedLayerID);
+		selectedLayerID = ID_NONE;
+	}
+	
+	_imgui_end_child(); // IMGUI_FOOTER_CHILD
+	_imgui_end(); // IMGUI_LAYERS
+}
+
+static void _imgui_nulls(Imgui* self)
+{
+	static s32 selectedNullID = ID_NONE;
+
+	IMGUI_BEGIN_OR_RETURN(IMGUI_NULLS, self);
+	_imgui_no_anm2_path_check(self);
+	
+	ImVec2 size = ImGui::GetContentRegionAvail();
+
+	_imgui_begin_child(IMGUI_NULLS_CHILD.copy({.size = {size.x, size.y - IMGUI_FOOTER_CHILD.size.y}}), self);
+
+	for (auto & [id, null] : self->anm2->nulls)
+	{
+		ImGui::PushID(id);
+
+		ImguiItem nullItem = IMGUI_NULL.copy
+		({
+			.isSelected = selectedNullID == id,
+			.label = std::format(IMGUI_NULL_FORMAT, id, null.name),
+			.id = id
+		});
+
+		if (_imgui_atlas_selectable_input_text(nullItem, self, null.name)) selectedNullID = id;
+		
+		ImGui::PopID();
+	};
+
+	_imgui_end_child(); // nullsChild
+	
+	_imgui_begin_child(IMGUI_FOOTER_CHILD, self);
+	
+	if (_imgui_button(IMGUI_NULL_ADD.copy({self->anm2->path.empty()}), self))
+		selectedNullID = anm2_null_add(self->anm2);
+
+	if (_imgui_button(IMGUI_NULL_REMOVE.copy({selectedNullID == ID_NONE}), self))
+	{
+		anm2_null_remove(self->anm2, selectedNullID);
+		selectedNullID = ID_NONE;
+	}
+	
+	_imgui_end_child(); // IMGUI_FOOTER_CHILD
+	_imgui_end(); // IMGUI_NULLS
+}
+
 static void _imgui_animations(Imgui* self)
 {
 	IMGUI_BEGIN_OR_RETURN(IMGUI_ANIMATIONS, self);
+	_imgui_no_anm2_path_check(self);
+	
 	ImVec2 size = ImGui::GetContentRegionAvail();
 
 	_imgui_begin_child(IMGUI_ANIMATIONS_CHILD.copy({.size = {size.x, size.y - IMGUI_FOOTER_CHILD.size.y}}), self);
@@ -1900,7 +2081,7 @@ static void _imgui_animations(Imgui* self)
 	}
 
 	if (_imgui_button(IMGUI_ANIMATION_DUPLICATE.copy({!animation}), self))
-		self->reference->animationID = anm2_animation_add(self->anm2, false, animation, self->reference->animationID);
+		self->reference->animationID = anm2_animation_add(self->anm2, animation, self->reference->animationID);
 
 	_imgui_button(IMGUI_ANIMATION_MERGE.copy({!animation}), self);
 	
@@ -2035,6 +2216,8 @@ static void _imgui_events(Imgui* self)
 	static s32 selectedID = ID_NONE;
 	
 	IMGUI_BEGIN_OR_RETURN(IMGUI_EVENTS, self);
+	_imgui_no_anm2_path_check(self);
+	
 	ImVec2 windowSize = ImGui::GetContentRegionAvail();
 
 	_imgui_begin_child(IMGUI_EVENTS_CHILD.copy({.size = {windowSize.x, windowSize.y - IMGUI_FOOTER_CHILD.size.y}}), self);
@@ -2091,6 +2274,7 @@ static void _imgui_spritesheets(Imgui* self)
 	static s32 highlightedID = ID_NONE;
 
 	IMGUI_BEGIN_OR_RETURN(IMGUI_SPRITESHEETS, self);
+	_imgui_no_anm2_path_check(self);
 
 	ImVec2 windowSize = ImGui::GetContentRegionAvail();
 
@@ -2170,9 +2354,6 @@ static void _imgui_spritesheets(Imgui* self)
 	
 	if (_imgui_button(IMGUI_SPRITESHEETS_RELOAD.copy({selectedIDs.empty()}), self))
 	{
-		if (selectedIDs.size() > 0) 
-			imgui_snapshot(self, IMGUI_ACTION_RELOAD_SPRITESHEET);
-
 		for (auto& id : selectedIDs)
 		{
 			std::filesystem::path workingPath = std::filesystem::current_path();
@@ -2182,6 +2363,8 @@ static void _imgui_spritesheets(Imgui* self)
 			self->anm2->spritesheets[id].texture = texture;
 			std::filesystem::current_path(workingPath);
 		}
+
+		imgui_log_push(self, IMGUI_LOG_RELOAD_SPRITESHEET);
 	}
 
 	if (_imgui_button(IMGUI_SPRITESHEETS_REPLACE.copy({highlightedID == ID_NONE}), self))
@@ -2488,6 +2671,21 @@ static void _imgui_spritesheet_editor(Imgui* self)
 	_imgui_begin_child(IMGUI_CANVAS_VIEW_CHILD, self);
 	_imgui_drag_float(IMGUI_CANVAS_ZOOM, self, zoom);
 	if (_imgui_button(IMGUI_SPRITESHEET_EDITOR_CENTER_VIEW.copy({pan == vec2()}), self)) pan = vec2();
+	if (_imgui_button(IMGUI_SPRITESHEET_EDITOR_FIT.copy({self->editor->spritesheetID == ID_NONE}), self))
+	{
+        vec4 rect = {0, 0, self->anm2->spritesheets[self->editor->spritesheetID].texture.size.x,
+        				   self->anm2->spritesheets[self->editor->spritesheetID].texture.size.y};
+
+		if ((rect.z > 0 && rect.w > 0))
+		{
+			f32 scaleX = self->editor->canvas.size.x / rect.z;
+			f32 scaleY = self->editor->canvas.size.y / rect.w;
+			f32 fitScale = std::min(scaleX, scaleY);
+
+			zoom = UNIT_TO_PERCENT(fitScale);
+			pan = {};
+		}
+	}
 	ImGui::Text(mousePositionString.c_str());
 	_imgui_end_child(); // IMGUI_CANVAS_VIEW_CHILD
 	
@@ -2558,8 +2756,8 @@ static void _imgui_spritesheet_editor(Imgui* self)
 			{
 				if (self->settings->editorIsGridSnap)
 				{
-					position.x = roundf(position.x / gridSize.x) * gridSize.x + gridOffset.x - (gridSize.x * 0.5f);
-					position.y = roundf(position.y / gridSize.y) * gridSize.y + gridOffset.y - (gridSize.y * 0.5f);
+					position.x = roundf((position.x - gridSize.x) / gridSize.x) * gridSize.x + gridOffset.x - (gridSize.x * 0.5f);
+					position.y = roundf((position.y - gridSize.y) / gridSize.y) * gridSize.y + gridOffset.y - (gridSize.y * 0.5f);
 				}	
 
 				frame->pivot = position - frame->crop;
@@ -2770,6 +2968,8 @@ static void _imgui_dock(Imgui* self)
 	_imgui_spritesheets(self);
 	_imgui_animation_preview(self);
 	_imgui_spritesheet_editor(self);
+	_imgui_layers(self);
+	_imgui_nulls(self);
 	_imgui_timeline(self);
 	_imgui_onionskin(self);
 	_imgui_frame_properties(self);
@@ -2875,20 +3075,15 @@ void imgui_update(Imgui* self)
         	{
             	const char* droppedFile = event.drop.data;
             	
-				if (path_is_extension(droppedFile, ANM2_EXTENSION))  
-					_imgui_anm2_open(self, droppedFile);
-				else if (path_is_extension(droppedFile, ANM2_SPRITESHEET_EXTENSION))
-					_imgui_spritesheet_add(self, droppedFile);
-				else
-					imgui_log_push(self, IMGUI_LOG_DRAG_DROP_ERROR);
+				if (path_is_extension(droppedFile, ANM2_EXTENSION)) _imgui_anm2_open(self, droppedFile);
+				else if (path_is_extension(droppedFile, ANM2_SPRITESHEET_EXTENSION)) _imgui_spritesheet_add(self, droppedFile);
+				else imgui_log_push(self, IMGUI_LOG_DRAG_DROP_ERROR);
             	
 				break;
 			}
 			case SDL_EVENT_QUIT:
-				if (self->isTryQuit)
-					self->isQuit = true;
-				else
-					imgui_quit(self);
+				if (self->isTryQuit) self->isQuit = true;
+				else imgui_quit(self);
 				break;
 			default:
 				break;

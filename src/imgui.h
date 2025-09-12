@@ -59,7 +59,7 @@
 #define IMGUI_TIMELINE_FRAME_MULTIPLE 5
 #define IMGUI_TIMELINE_MERGE
 #define IMGUI_TOOL_COLOR_PICKER_DURATION 0.25f
-#define IMGUI_OPTION_POPUP_ROW_COUNT 2
+#define IMGUI_CONFIRM_POPUP_ROW_COUNT 2
 #define IMGUI_CHORD_REPEAT_TIME 0.25f
 
 #define IMGUI_ACTION_FRAME_CROP "Frame Crop"
@@ -68,14 +68,13 @@
 #define IMGUI_ACTION_ANIMATION_SWAP "Animation Swap"
 #define IMGUI_ACTION_TRIGGER_MOVE "Trigger At Frame"
 #define IMGUI_ACTION_FRAME_DELAY "Frame Delay"
-#define IMGUI_ACTION_MOVE_PLAYHEAD "Move Playhead"
 #define IMGUI_ACTION_DRAW "Draw"
 #define IMGUI_ACTION_ERASE "Erase"
 #define IMGUI_ACTION_MOVE "Move"
 #define IMGUI_ACTION_SCALE "Scale"
 #define IMGUI_ACTION_ROTATE "Rotate"
 #define IMGUI_ACTION_CROP "Crop"
-#define IMGUI_ACTION_RELOAD_SPRITESHEET "Reload Spritesheet(s)"
+#define IMGUI_ACTION_ADD_SPRITESHEET "Add Spritesheet"
 #define IMGUI_ACTION_REPLACE_SPRITESHEET "Replace Spritesheet"
 #define IMGUI_ACTION_OPEN_FILE "Open File"
 
@@ -96,6 +95,9 @@
 #define IMGUI_LOG_RENDER_ANIMATION_FFMPEG_ERROR "FFmpeg could not render animation! Check paths or your FFmpeg installation."
 #define IMGUI_LOG_SPRITESHEET_SAVE_FORMAT "Saved spritesheet #{} to: {}" 
 #define IMGUI_LOG_DRAG_DROP_ERROR "Invalid file for dragging/dropping!"
+#define IMGUI_LOG_ANIMATION_PASTE_ERROR "Failed to parse clipboard text as an animation."
+#define IMGUI_LOG_FRAME_PASTE_ERROR "Failed to parse clipboard text as a frame."
+#define IMGUI_LOG_RELOAD_SPRITESHEET "Reloaded spritesheet(s)."
 
 #define IMGUI_NONE "None"
 #define IMGUI_ANIMATION_DEFAULT_FORMAT "(*) {}"
@@ -110,6 +112,8 @@
 #define IMGUI_SPRITESHEET_FORMAT "#{} {}"
 #define IMGUI_SPRITESHEET_ID_FORMAT "#{}"
 #define IMGUI_TIMELINE_ITEM_CHILD_FORMAT "#{} {}"
+#define IMGUI_LAYER_FORMAT "#{} {}"
+#define IMGUI_NULL_FORMAT "#{} {}"
 #define IMGUI_TIMELINE_FRAME_LABEL_FORMAT "## {}"
 #define IMGUI_SELECTABLE_INPUT_INT_FORMAT "#{}"
 #define IMGUI_TIMELINE_ANIMATION_NONE "Select an animation to show timeline..."
@@ -347,7 +351,15 @@ static inline void imgui_copy(Imgui* self)
 
 static inline void imgui_paste(Imgui* self)
 {
-    clipboard_paste(self->clipboard);
+    if (!clipboard_paste(self->clipboard))
+    {
+        switch (self->clipboard->type)
+        {
+            case CLIPBOARD_FRAME: imgui_log_push(self, IMGUI_LOG_FRAME_PASTE_ERROR); break;
+            case CLIPBOARD_ANIMATION: imgui_log_push(self, IMGUI_LOG_ANIMATION_PASTE_ERROR); break;
+            default: break;
+        }
+    }
 }
 
 static inline void imgui_onionskin_toggle(Imgui* self)
@@ -604,7 +616,7 @@ enum ImguiItemType
     IMGUI_DOCKSPACE,
     IMGUI_CHILD,
     IMGUI_TABLE,
-    IMGUI_OPTION_POPUP,
+    IMGUI_CONFIRM_POPUP,
     IMGUI_SELECTABLE,
     IMGUI_BUTTON,
     IMGUI_RADIO_BUTTON,
@@ -631,6 +643,7 @@ struct ImguiItemOverride
     AtlasType atlas = ATLAS_NONE;
     bool isMnemonicDisabled{};
     s32 value{};
+    s32 rowCount{};
 };
 
 struct ImguiItem;
@@ -754,6 +767,7 @@ struct ImguiItem
         if (override.size != ImVec2{}) out.size = override.size;
         if (override.max != 0) out.max = override.max;
         if (override.value != 0) out.value = override.value;
+        if (override.rowCount != 0) out.rowCount = override.rowCount;
         if (override.atlas != ATLAS_NONE) out.atlas = override.atlas;
         if (override.isMnemonicDisabled) out.isMnemonicDisabled = override.isMnemonicDisabled;
         return out;
@@ -888,6 +902,11 @@ IMGUI_ITEM(IMGUI_OPEN_CONFIRMATION,
     self.text = "Unsaved changes will be lost!\nAre you sure you open a new file?"
 );
 
+IMGUI_ITEM(IMGUI_NO_ANM2_PATH_CONFIRMATION,
+    self.label = "No Anm2 Path",
+    self.text = "You will need to load or make a new .anm2 file first!\n"
+);
+
 IMGUI_ITEM(IMGUI_WIZARD,
     self.label = "&Wizard",
     self.tooltip = "Opens the wizard menu, for neat functions related to the .anm2.",
@@ -996,7 +1015,7 @@ IMGUI_ITEM(IMGUI_GENERATE_ANIMATION_FROM_GRID_GENERATE,
     self.label = "Generate",
     self.tooltip = "Generate an animation with the used settings.",
     self.snapshotAction = "Generate Animation from Grid",
-    self.rowCount = IMGUI_OPTION_POPUP_ROW_COUNT,
+    self.rowCount = IMGUI_CONFIRM_POPUP_ROW_COUNT,
     self.isSameLine = true
 );
 
@@ -1103,7 +1122,7 @@ IMGUI_ITEM(IMGUI_SCALE_ANM2_SCALE,
     self.label = "Scale",
     self.tooltip = "Scale the anm2 with the value specified.",
     self.snapshotAction = "Scale Anm2",
-    self.rowCount = IMGUI_OPTION_POPUP_ROW_COUNT,
+    self.rowCount = IMGUI_CONFIRM_POPUP_ROW_COUNT,
     self.isSameLine = true
 );
 
@@ -1111,12 +1130,20 @@ IMGUI_ITEM(IMGUI_RENDER_ANIMATION,
     self.label = "&Render Animation",
     self.tooltip = "Renders the current animation preview; output options can be customized.",
     self.popup = "Render Animation",
-    self.popupSize = {600, 125}
+    self.popupSize = {600, 150},
+    self.popupType = IMGUI_POPUP_CENTER_WINDOW
 );
 
 IMGUI_ITEM(IMGUI_RENDER_ANIMATION_CHILD,
     self.label = "## Render Animation Child",
-    self.size = {600, 125}
+    self.size = {IMGUI_RENDER_ANIMATION.popupSize.x, IMGUI_RENDER_ANIMATION.popupSize.y - IMGUI_FOOTER_CHILD.size.y},
+    self.flags = true
+);
+
+IMGUI_ITEM(IMGUI_RENDER_ANIMATION_FOOTER_CHILD,
+    self.label = "## Render Animation Footer Child",
+    self.size = {IMGUI_RENDER_ANIMATION.popupSize.x, IMGUI_FOOTER_CHILD.size.y},
+    self.flags = true
 );
 
 IMGUI_ITEM(IMGUI_RENDER_ANIMATION_LOCATION_BROWSE,
@@ -1149,8 +1176,7 @@ IMGUI_ITEM(IMGUI_RENDER_ANIMATION_OUTPUT,
     self.label = "Output",
     self.tooltip = "Select the rendered animation output.\nIt can either be one animated image or a sequence of frames.",
     self.items = {std::begin(RENDER_TYPE_STRINGS), std::end(RENDER_TYPE_STRINGS)},
-    self.value = RENDER_PNG,
-    self.isSeparator = true
+    self.value = RENDER_PNG
 );
 
 IMGUI_ITEM(IMGUI_RENDER_ANIMATION_FORMAT,
@@ -1166,7 +1192,7 @@ IMGUI_ITEM(IMGUI_RENDER_ANIMATION_CONFIRM,
     self.popupType = IMGUI_POPUP_CENTER_WINDOW,
     self.popupSize = {300, 60},
     self.isSameLine = true,
-    self.rowCount = IMGUI_OPTION_POPUP_ROW_COUNT
+    self.rowCount = IMGUI_CONFIRM_POPUP_ROW_COUNT
 );
 
 IMGUI_ITEM(IMGUI_RENDERING_ANIMATION_CHILD, 
@@ -1257,6 +1283,73 @@ IMGUI_ITEM(IMGUI_DEFAULT_SETTINGS,
     self.label = "&Reset to Default Settings",
     self.tooltip = "Reset the program's settings to their default state.",
     self.isSizeToText = true
+);
+
+IMGUI_ITEM(IMGUI_LAYERS, 
+    self.label = "Layers",
+    self.flags = ImGuiWindowFlags_NoScrollbar       |
+                 ImGuiWindowFlags_NoScrollWithMouse
+);
+IMGUI_ITEM(IMGUI_LAYERS_CHILD, self.label = "## Layers Child", self.flags = true);
+
+IMGUI_ITEM(IMGUI_LAYER,
+    self.label = "## Layer Item",
+    self.dragDrop = "## Layer Drag Drop",
+    self.atlas = ATLAS_LAYER,
+    self.idOffset = 3000
+);
+
+IMGUI_ITEM(IMGUI_LAYER_SPRITESHEET_ID,
+    self.label = "## Spritesheet ID",
+    self.tooltip = "Change the spritesheet ID this layer uses.",
+    self.atlas = ATLAS_SPRITESHEET,
+    self.size = {50, 0}
+);
+
+#define IMGUI_LAYERS_OPTIONS_ROW_COUNT 2
+IMGUI_ITEM(IMGUI_LAYER_ADD,
+    self.label = "Add",
+    self.tooltip = "Adds a new layer.",
+    self.snapshotAction = "Add Layer",
+    self.rowCount = IMGUI_LAYERS_OPTIONS_ROW_COUNT,
+    self.isSameLine = true
+);
+
+IMGUI_ITEM(IMGUI_LAYER_REMOVE,
+    self.label = "Remove",
+    self.tooltip = "Removes the selected layer.\nThis will remove all layer animations that use this layer from all animations.",
+    self.snapshotAction = "Remove Layer",
+    self.rowCount = IMGUI_LAYERS_OPTIONS_ROW_COUNT
+);
+
+IMGUI_ITEM(IMGUI_NULLS, 
+    self.label = "Nulls",
+    self.flags = ImGuiWindowFlags_NoScrollbar       |
+                 ImGuiWindowFlags_NoScrollWithMouse
+);
+IMGUI_ITEM(IMGUI_NULLS_CHILD, self.label = "## Nulls Child", self.flags = true);
+
+IMGUI_ITEM(IMGUI_NULL,
+    self.label = "## Null Item",
+    self.dragDrop = "## Null Drag Drop",
+    self.atlas = ATLAS_NULL,
+    self.idOffset = 4000
+);
+
+#define IMGUI_NULLS_OPTIONS_ROW_COUNT 2
+IMGUI_ITEM(IMGUI_NULL_ADD,
+    self.label = "Add",
+    self.tooltip = "Adds a null layer.",
+    self.snapshotAction = "Add Null",
+    self.rowCount = IMGUI_NULLS_OPTIONS_ROW_COUNT,
+    self.isSameLine = true
+);
+
+IMGUI_ITEM(IMGUI_NULL_REMOVE,
+    self.label = "Remove",
+    self.tooltip = "Removes the selected null.\nThis will remove all null animations that use this null from all animations.",
+    self.snapshotAction = "Remove Null",
+    self.rowCount = IMGUI_NULLS_OPTIONS_ROW_COUNT
 );
 
 IMGUI_ITEM(IMGUI_ANIMATIONS, 
@@ -1354,7 +1447,7 @@ IMGUI_ITEM(IMGUI_MERGE_CONFIRM,
     self.label = "Merge",
     self.tooltip = "Merge the selected animations with the options set.",
     self.snapshotAction = "Merge Animations",
-    self.rowCount = IMGUI_OPTION_POPUP_ROW_COUNT,
+    self.rowCount = IMGUI_CONFIRM_POPUP_ROW_COUNT,
     self.isSameLine = true
 );
 
@@ -1440,15 +1533,15 @@ IMGUI_ITEM(IMGUI_SPRITESHEETS_FOOTER_CHILD,
 #define IMGUI_SPRITESHEETS_OPTIONS_SECOND_ROW_COUNT 3
 IMGUI_ITEM(IMGUI_SPRITESHEET_ADD,
     self.label = "Add",
-    self.tooltip = "Select an image to add as a spritesheet.",
+    self.tooltip = "Select a .png image to add as a spritesheet.",
     self.rowCount = IMGUI_SPRITESHEETS_OPTIONS_FIRST_ROW_COUNT,
     self.isSameLine = true
 );
 
 IMGUI_ITEM(IMGUI_SPRITESHEETS_RELOAD,
     self.label = "Reload",
-    self.tooltip = "Reload the selected spritesheet.",
-    self.snapshotAction = "Reload Spritesheet",
+    self.tooltip = "Reload the selected spritesheet(s).",
+    self.snapshotAction = "Reload Spritesheet(s)",
     self.rowCount = IMGUI_SPRITESHEETS_OPTIONS_FIRST_ROW_COUNT,
     self.isSameLine = true
 );
@@ -1490,7 +1583,9 @@ const ImVec2 IMGUI_CANVAS_CHILD_SIZE = {230, 85};
 IMGUI_ITEM(IMGUI_CANVAS_GRID_CHILD, 
     self.label = "## Canvas Grid Child",
     self.size = IMGUI_CANVAS_CHILD_SIZE,
-    self.flags = true
+    self.flags = true,
+    self.windowFlags = ImGuiWindowFlags_NoScrollbar       |
+                       ImGuiWindowFlags_NoScrollWithMouse
 );
 
 IMGUI_ITEM(IMGUI_CANVAS_GRID,
@@ -1525,7 +1620,9 @@ IMGUI_ITEM(IMGUI_CANVAS_GRID_OFFSET,
 IMGUI_ITEM(IMGUI_CANVAS_VIEW_CHILD, 
     self.label = "## View Child",
     self.size = IMGUI_CANVAS_CHILD_SIZE,
-    self.flags = true
+    self.flags = true,
+    self.windowFlags = ImGuiWindowFlags_NoScrollbar       |
+                       ImGuiWindowFlags_NoScrollWithMouse
 );
 
 IMGUI_ITEM(IMGUI_CANVAS_ZOOM, 
@@ -1537,12 +1634,12 @@ IMGUI_ITEM(IMGUI_CANVAS_ZOOM,
     self.value = CANVAS_ZOOM_DEFAULT
 );
 
-
-
 IMGUI_ITEM(IMGUI_CANVAS_VISUAL_CHILD, 
     self.label = "## Animation Preview Visual Child",
     self.size = IMGUI_CANVAS_CHILD_SIZE,
-    self.flags = true
+    self.flags = true,
+    self.windowFlags = ImGuiWindowFlags_NoScrollbar       |
+                       ImGuiWindowFlags_NoScrollWithMouse
 );
 
 IMGUI_ITEM(IMGUI_CANVAS_BACKGROUND_COLOR,
@@ -1566,7 +1663,9 @@ IMGUI_ITEM(IMGUI_CANVAS_ANIMATION_OVERLAY_TRANSPARENCY,
 IMGUI_ITEM(IMGUI_CANVAS_HELPER_CHILD, 
     self.label = "## Animation Preview Helper Child",
     self.size = IMGUI_CANVAS_CHILD_SIZE,
-    self.flags = true
+    self.flags = true,
+    self.windowFlags = ImGuiWindowFlags_NoScrollbar       |
+                       ImGuiWindowFlags_NoScrollWithMouse
 );
 
 IMGUI_ITEM(IMGUI_CANVAS_AXES,
@@ -1644,12 +1743,22 @@ IMGUI_ITEM(IMGUI_SPRITESHEET_EDITOR,
     self.flags =  ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse
 );
 
+#define IMGUI_SPRITESHEET_EDITOR_VIEW_ROW_COUNT 2
 IMGUI_ITEM(IMGUI_SPRITESHEET_EDITOR_CENTER_VIEW,
     self.label = "Center View",
     self.tooltip = "Centers the current view on the spritesheet editor.",
     self.hotkey = HOTKEY_CENTER_VIEW,
     self.focusWindow = IMGUI_SPRITESHEET_EDITOR.label,
-    self.size = {-FLT_MIN, 0}
+    self.rowCount = IMGUI_SPRITESHEET_EDITOR_VIEW_ROW_COUNT,
+    self.isSameLine = true
+);
+
+IMGUI_ITEM(IMGUI_SPRITESHEET_EDITOR_FIT,
+    self.label = "Fit",
+    self.tooltip = "Adjust the view/pan based on the size of the spritesheet, to fit the canvas' size.",
+    self.hotkey = HOTKEY_FIT,
+    self.focusWindow = IMGUI_SPRITESHEET_EDITOR.label, 
+    self.rowCount = IMGUI_SPRITESHEET_EDITOR_VIEW_ROW_COUNT
 );
 
 IMGUI_ITEM(IMGUI_FRAME_PROPERTIES, self.label = "Frame Properties");
@@ -2000,6 +2109,20 @@ const inline ImguiItem* IMGUI_TIMELINE_ITEM_SELECTABLES[ANM2_COUNT]
     &IMGUI_TIMELINE_ITEM_TRIGGERS_SELECTABLE
 };
 
+IMGUI_ITEM(IMGUI_TIMELINE_SHOW_UNUSED,
+    self.label = "## Show Unused",
+    self.tooltip = "Layers/nulls without any frames will be hidden.",
+    self.snapshotAction = "Hide Unused",
+    self.atlas = ATLAS_SHOW_UNUSED
+);
+
+IMGUI_ITEM(IMGUI_TIMELINE_HIDE_UNUSED,
+    self.label = "## Hide Unused",
+    self.tooltip = "Layers/nulls without any frames will be shown.",
+    self.snapshotAction = "Show Unused",
+    self.atlas = ATLAS_HIDE_UNUSED
+);
+
 IMGUI_ITEM(IMGUI_TIMELINE_ITEM_VISIBLE,
     self.label = "## Visible",
     self.tooltip = "The item is visible.\nPress to set to invisible.",
@@ -2028,12 +2151,6 @@ IMGUI_ITEM(IMGUI_TIMELINE_ITEM_HIDE_RECT,
     self.atlas = ATLAS_HIDE_RECT
 );
 
-IMGUI_ITEM(IMGUI_TIMELINE_SPRITESHEET_ID,
-    self.label = "## Spritesheet ID",
-    self.tooltip = "Change the spritesheet ID this item uses.",
-    self.atlas = ATLAS_SPRITESHEET,
-    self.size = {32, 0}
-);
 
 IMGUI_ITEM(IMGUI_TIMELINE_FRAMES_CHILD, 
     self.label = "## Timeline Frames Child",
@@ -2095,36 +2212,68 @@ const inline ImguiItem* IMGUI_TIMELINE_FRAMES[ANM2_COUNT]
 IMGUI_ITEM(IMGUI_TIMELINE_ITEM_FOOTER_CHILD, 
     self.label = "## Item Footer Child", 
     self.size = {IMGUI_TIMELINE_ITEM_CHILD.size.x, IMGUI_FOOTER_CHILD.size.y},
-    self.flags = true
+    self.flags = true,
+    self.windowFlags = ImGuiWindowFlags_NoScrollbar       |
+                       ImGuiWindowFlags_NoScrollWithMouse
 );
 IMGUI_ITEM(IMGUI_TIMELINE_OPTIONS_FOOTER_CHILD, 
     self.label = "## Options Footer Child",
     self.size = {0, IMGUI_FOOTER_CHILD.size.y},
-    self.flags = true
+    self.flags = true,
+    self.windowFlags = ImGuiWindowFlags_NoScrollbar       |
+                       ImGuiWindowFlags_NoScrollWithMouse
 );
 
 #define IMGUI_TIMELINE_FOOTER_ITEM_CHILD_ITEM_COUNT 2
 IMGUI_ITEM(IMGUI_TIMELINE_ADD_ITEM,
     self.label = "Add",
-    self.tooltip = "Adds an item (layer or null) to the animation.",
-    self.popup = "## Add Item Popup",
-    self.popupType = IMGUI_POPUP_BY_ITEM,
+    self.tooltip = "Adds an item (layer or null) to the animation.\nMake sure to add a Layer/Null first in the Layers or Nulls windows.",
+    self.popup = "Add Item",
+    self.popupType = IMGUI_POPUP_CENTER_WINDOW,
+    self.popupSize = {300, 350},
     self.rowCount = IMGUI_TIMELINE_FOOTER_ITEM_CHILD_ITEM_COUNT,
     self.isSameLine = true
+);
+
+IMGUI_ITEM(IMGUI_TIMELINE_ADD_ITEM_TYPE_CHILD, 
+    self.label = "## Add Item Type Child",
+    self.size = {IMGUI_TIMELINE_ADD_ITEM.popupSize.x, 35},
+    self.flags = true
 );
 
 IMGUI_ITEM(IMGUI_TIMELINE_ADD_ITEM_LAYER,
     self.label = "Layer",
     self.tooltip = "Adds a layer item.\nA layer item is a primary graphical item, using a spritesheet.",
-    self.snapshotAction = "Add Layer",
-    self.isSizeToText = true
+    self.isSizeToText = true,
+    self.value = ANM2_LAYER,
+    self.isSameLine = true
 );
 
 IMGUI_ITEM(IMGUI_TIMELINE_ADD_ITEM_NULL,
     self.label = "Null",
-    self.tooltip = "Adds a null item.\nA null item is an invisible item, often accessed by the game engine.",
-    self.snapshotAction = "Add Null",
-    self.isSizeToText = true
+    self.tooltip = "Adds a null item.\nA null item is an invisible item, often accessed by a game engine.",
+    self.isSizeToText = true,
+    self.value = ANM2_NULL
+);
+
+IMGUI_ITEM(IMGUI_TIMELINE_ADD_ITEM_ITEMS_CHILD, 
+    self.label = "## Add Item Items",
+    self.size = {IMGUI_TIMELINE_ADD_ITEM.popupSize.x, 250},
+    self.flags = true
+);
+
+IMGUI_ITEM(IMGUI_TIMELINE_ADD_ITEM_OPTIONS_CHILD, 
+    self.label = "## Add Item Options Child",
+    self.size = {IMGUI_TIMELINE_ADD_ITEM.popupSize.x, 35},
+    self.flags = true
+);
+
+IMGUI_ITEM(IMGUI_TIMELINE_ADD_ITEM_ADD,
+    self.label = "Add",
+    self.tooltip = "Add the selected item.",
+    self.snapshotAction = "Add Animation",
+    self.rowCount = IMGUI_CONFIRM_POPUP_ROW_COUNT,
+    self.isSameLine = true
 );
 
 IMGUI_ITEM(IMGUI_TIMELINE_REMOVE_ITEM,
@@ -2211,7 +2360,7 @@ IMGUI_ITEM(IMGUI_BAKE_CONFIRM,
     self.label = "Bake",
     self.tooltip = "Bake the selected frame with the options selected.",
     self.snapshotAction = "Bake Frames",
-    self.rowCount = IMGUI_OPTION_POPUP_ROW_COUNT,
+    self.rowCount = IMGUI_CONFIRM_POPUP_ROW_COUNT,
     self.isSameLine = true
 );
 
@@ -2353,17 +2502,17 @@ IMGUI_ITEM(IMGUI_CHANGE_INPUT_INT,
     self.step = 0
 );
 
-#define IMGUI_OPTION_POPUP_ROW_COUNT 2
+#define IMGUI_CONFIRM_POPUP_ROW_COUNT 2
 IMGUI_ITEM(IMGUI_POPUP_OK,
     self.label = "OK",
     self.tooltip = "Confirm the action.",
-    self.rowCount = IMGUI_OPTION_POPUP_ROW_COUNT
+    self.rowCount = IMGUI_CONFIRM_POPUP_ROW_COUNT
 );
 
 IMGUI_ITEM(IMGUI_POPUP_CANCEL,
     self.label = "Cancel",
     self.tooltip = "Cancel the action.",
-    self.rowCount = IMGUI_OPTION_POPUP_ROW_COUNT
+    self.rowCount = IMGUI_CONFIRM_POPUP_ROW_COUNT
 );
 
 IMGUI_ITEM(IMGUI_LOG_WINDOW, 

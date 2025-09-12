@@ -28,7 +28,7 @@ void clipboard_copy(Clipboard* self)
             if (!id) break;
             Anm2Animation* animation = map_find(self->anm2->animations, *id);
             if (!animation) break;
-            anm2_animation_serialize(self->anm2, animation, nullptr, nullptr, &clipboardText);
+            anm2_animation_serialize(animation, nullptr, nullptr, &clipboardText);
             clipboard_text_set();
             break;
         }
@@ -63,7 +63,7 @@ void clipboard_cut(Clipboard* self)
     }
 }
 
-void clipboard_paste(Clipboard* self)
+bool clipboard_paste(Clipboard* self)
 {
     auto clipboard_string = [&]()
     {
@@ -80,8 +80,9 @@ void clipboard_paste(Clipboard* self)
             Anm2Reference* reference = std::get_if<Anm2Reference>(&self->location);
             if (!reference) break;
             Anm2Frame frame;
-            if (anm2_frame_deserialize_from_xml(self->anm2, &frame, clipboard_string()))
+            if (anm2_frame_deserialize_from_xml(&frame, clipboard_string()))
                 anm2_frame_add(self->anm2, &frame, reference);
+            else return false;
             break;
         }
         case CLIPBOARD_ANIMATION:
@@ -89,13 +90,16 @@ void clipboard_paste(Clipboard* self)
             s32* id = std::get_if<s32>(&self->location);
             if (!id) break;
             Anm2Animation animation;
-             if (anm2_animation_deserialize_from_xml(self->anm2, &animation, clipboard_string()))
-                anm2_animation_add(self->anm2, false, &animation, *id);
+             if (anm2_animation_deserialize_from_xml(&animation, clipboard_string()))
+                anm2_animation_add(self->anm2, &animation, *id);
+            else return false;
             break;
         }
         default:
             break;
     }
+
+    return true;
 }
 
 void clipboard_init(Clipboard* self, Anm2* anm2)

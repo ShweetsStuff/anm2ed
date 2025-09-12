@@ -233,8 +233,10 @@ static inline s32 map_next_id_get(const std::map<s32, T>& map)
     return id;
 }
 
-template<typename T>
-static inline T* map_find(std::map<s32, T>& map, s32 id) 
+
+template <typename Map>
+static inline auto map_find(Map& map, typename Map::key_type id)
+    -> typename Map::mapped_type* 
 {
     if (auto it = map.find(id); it != map.end())
         return &it->second;
@@ -287,6 +289,22 @@ static inline void map_insert_shift(std::map<int, T>& map, s32 index, const T& v
         map[newKey] = std::move(val);
 
     map[insertIndex] = value;
+}
+
+template <typename T>
+void vector_value_erase(std::vector<T>& v, const T& value) 
+{
+    v.erase(std::remove(v.begin(), v.end(), value), v.end());
+}
+
+template <typename T>
+void vector_value_swap(std::vector<T>& v, const T& a, const T& b) 
+{
+    for (auto& element : v) 
+    {
+        if (element == a) element = b;
+        else if (element == b) element = a;
+    }
 }
 
 static inline mat4 quad_model_get(vec2 size = {}, vec2 position = {}, vec2 pivot = {}, vec2 scale = vec2(1.0f), f32 rotation = {})

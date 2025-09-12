@@ -64,7 +64,7 @@ void anm2_frame_serialize(Anm2Frame* frame, Anm2Type type, XMLDocument* document
 	}
 }
 
-void anm2_animation_serialize(Anm2* self, Anm2Animation* animation, XMLDocument* document = nullptr, XMLElement* addElement = nullptr, std::string* string = nullptr)
+void anm2_animation_serialize(Anm2Animation* animation, XMLDocument* document = nullptr, XMLElement* addElement = nullptr, std::string* string = nullptr)
 {
 	XMLDocument localDocument;
 	XMLDocument* useDocument = document ? document : &localDocument;
@@ -86,7 +86,7 @@ void anm2_animation_serialize(Anm2* self, Anm2Animation* animation, XMLDocument*
 	// LayerAnimations
 	XMLElement* layersElement = useDocument->NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYER_ANIMATIONS]);
 
-	for (auto& [i, id] : self->layerMap)
+	for (auto& id : animation->layerOrder)
 	{
 		// LayerAnimation
 		Anm2Item& layerAnimation = animation->layerAnimations[id];
@@ -231,7 +231,7 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 		animationsElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_DEFAULT_ANIMATION], self->animations[self->defaultAnimationID].name.c_str()); // DefaultAnimation
 	
 	for (auto& [id, animation] : self->animations)
-		anm2_animation_serialize(self, &animation, &document, animationsElement);
+		anm2_animation_serialize(&animation, &document, animationsElement);
 
 	animatedActorElement->InsertEndChild(animationsElement);
 
@@ -248,7 +248,7 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 	return true;
 }
 
-static void _anm2_frame_deserialize(Anm2* self, Anm2Frame* frame, const XMLElement* element)
+static void _anm2_frame_deserialize(Anm2Frame* frame, const XMLElement* element)
 {
 	for (const XMLAttribute* attribute = element->FirstAttribute(); attribute; attribute = attribute->Next())
 	{
@@ -276,18 +276,13 @@ static void _anm2_frame_deserialize(Anm2* self, Anm2Frame* frame, const XMLEleme
 			case ANM2_ATTRIBUTE_INTERPOLATED: frame->isInterpolated = string_to_bool(attribute->Value()); break; // Interpolated
 			case ANM2_ATTRIBUTE_AT_FRAME: frame->atFrame = std::atoi(attribute->Value()); break; // AtFrame
 			case ANM2_ATTRIBUTE_DELAY: frame->delay = std::atoi(attribute->Value()); break;	// Delay
-			case ANM2_ATTRIBUTE_EVENT_ID: // EventID
-			{
-				s32 eventID =  std::atoi(attribute->Value()); 
-				frame->eventID = map_find(self->events, eventID) ? eventID : ID_NONE;
-				break;
-			}
+			case ANM2_ATTRIBUTE_EVENT_ID: frame->eventID = std::atoi(attribute->Value()); break; // EventID
 			default: break;
 		}
 	}
 }
 
-static void _anm2_animation_deserialize(Anm2* self, Anm2Animation* animation, const XMLElement* element)
+static void _anm2_animation_deserialize(Anm2Animation* animation, const XMLElement* element)
 {
 	auto frames_deserialize = [&](const XMLElement* itemElement, Anm2Item* item)
 	{
@@ -297,7 +292,7 @@ static void _anm2_animation_deserialize(Anm2* self, Anm2Animation* animation, co
 			const XMLElement* frame = itemElement->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_FRAME]); 
 			frame; frame = frame->NextSiblingElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_FRAME])
 		)
-			_anm2_frame_deserialize(self, &item->frames.emplace_back(Anm2Frame()), frame);
+			_anm2_frame_deserialize(&item->frames.emplace_back(Anm2Frame()), frame);
 	};
 
 	s32 id{};
@@ -320,8 +315,6 @@ static void _anm2_animation_deserialize(Anm2* self, Anm2Animation* animation, co
 	// LayerAnimations
 	if (const XMLElement* layerAnimations = element->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYER_ANIMATIONS])) 
 	{
-		s32 layerMapIndex = 0;
-		
 		// LayerAnimation
 		for 
 		(
@@ -330,7 +323,6 @@ static void _anm2_animation_deserialize(Anm2* self, Anm2Animation* animation, co
 		)
 		{ 
 			Anm2Item layerAnimationItem;
-
 			
 			for (const XMLAttribute* attribute = layerAnimation->FirstAttribute(); attribute; attribute = attribute->Next())
 			{	
@@ -344,9 +336,7 @@ static void _anm2_animation_deserialize(Anm2* self, Anm2Animation* animation, co
 
 			frames_deserialize(layerAnimation, &layerAnimationItem);
 			animation->layerAnimations[id] = layerAnimationItem;
-
-			self->layerMap[id] = layerMapIndex;
-			layerMapIndex++;
+			animation->layerOrder.push_back(id);
 		}
 	}
 
@@ -386,7 +376,7 @@ static void _anm2_animation_deserialize(Anm2* self, Anm2Animation* animation, co
 			const XMLElement* trigger = triggers->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_TRIGGER]); 
 			trigger; trigger = trigger->NextSiblingElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_TRIGGER])
 		)
-			_anm2_frame_deserialize(self, &animation->triggers.frames.emplace_back(Anm2Frame()), trigger);
+			_anm2_frame_deserialize(&animation->triggers.frames.emplace_back(Anm2Frame()), trigger);
 	}
 }
 
@@ -568,7 +558,7 @@ bool anm2_deserialize(Anm2* self, const std::string& path, bool isTextures)
 			const XMLElement* animation = animations->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATION]);
 			animation; animation = animation->NextSiblingElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATION])
 		)
-			_anm2_animation_deserialize(self, &self->animations[map_next_id_get(self->animations)], animation);
+			_anm2_animation_deserialize(&self->animations[map_next_id_get(self->animations)], animation);
 	}
 
 	for (auto& [id, animation] : self->animations)
@@ -584,99 +574,68 @@ bool anm2_deserialize(Anm2* self, const std::string& path, bool isTextures)
 	return true;
 }
 
-void anm2_layer_add(Anm2* self)
+void anm2_animation_layer_animation_add(Anm2Animation* animation, s32 id)
+{
+	animation->layerAnimations[id] = Anm2Item{};
+	animation->layerOrder.push_back(id);
+}
+
+void anm2_animation_layer_animation_remove(Anm2Animation* animation, s32 id)
+{
+	animation->layerAnimations.erase(id);
+	vector_value_erase(animation->layerOrder, id);
+}
+
+void anm2_animation_null_animation_add(Anm2Animation* animation, s32 id)
+{
+	animation->nullAnimations[id] = Anm2Item{};
+}
+
+void anm2_animation_null_animation_remove(Anm2Animation* animation, s32 id)
+{
+	animation->nullAnimations.erase(id);
+}
+
+s32 anm2_layer_add(Anm2* self)
 {
 	s32 id = map_next_id_get(self->layers);
-
 	self->layers[id] = Anm2Layer{};
-	self->layerMap[self->layers.size() - 1] = id;
-	
-	for (auto& [_, animation] : self->animations)
-		animation.layerAnimations[id] = Anm2Item{};
+	return id;
 }
 
 void anm2_layer_remove(Anm2* self, s32 id)
 {
-    if (!self->layers.contains(id)) return;
-
     self->layers.erase(id);
 
-    for (auto it = self->layerMap.begin(); it != self->layerMap.end(); ++it)
-    {
-        if (it->second == id)
-        {
-            self->layerMap.erase(it);
-            break;
-        }
-    }
-
-    std::map<s32, s32> newLayerMap;
-    s32 newIndex = 0;
-
-    for (const auto& [_, layerID] : self->layerMap)
-        newLayerMap[newIndex++] = layerID;
-
-    self->layerMap = std::move(newLayerMap);
- 
 	for (auto& [_, animation] : self->animations)
-        animation.layerAnimations.erase(id);
+		anm2_animation_layer_animation_remove(&animation, id);
 }
 
-void anm2_null_add(Anm2* self)
+s32 anm2_null_add(Anm2* self)
 {
 	s32 id = map_next_id_get(self->nulls);
-
 	self->nulls[id] = Anm2Null{};
-
-	for (auto& [_, animation] : self->animations)
-		animation.nullAnimations[id] = Anm2Item{};
+	return id;
 }
 
 void anm2_null_remove(Anm2* self, s32 id)
 {
-    if (!self->nulls.contains(id))
-        return;
+    if (!self->nulls.contains(id)) return;
 
-    self->nulls.erase(id);
+	self->nulls.erase(id);
 
-    std::map<s32, Anm2Null> newNulls;
-    s32 newID = 0;
-	
-    for (const auto& [_, null] : self->nulls)
-        newNulls[newID++] = null;
-
-    self->nulls = std::move(newNulls);
-
-    for (auto& [_, animation] : self->animations)
-    {
-        if (animation.nullAnimations.contains(id))
-            animation.nullAnimations.erase(id);
-
-        std::map<s32, Anm2Item> newNullAnims;
-        s32 newAnimID = 0;
-        for (const auto& [_, nullAnim] : animation.nullAnimations)
-            newNullAnims[newAnimID++] = nullAnim;
-
-        animation.nullAnimations = std::move(newNullAnims);
-    }
+	for (auto& [_, animation] : self->animations)
+		anm2_animation_null_animation_remove(&animation, id);
 }
 
-s32 anm2_animation_add(Anm2* self, bool isAddRootFrame, Anm2Animation* animation, s32 id)
+s32 anm2_animation_add(Anm2* self, Anm2Animation* animation, s32 id)
 {
 	s32 addID = map_next_id_get(self->animations);
 
 	Anm2Animation localAnimation;
 	Anm2Animation* addAnimation = animation ? animation : &localAnimation;
 
-	for (auto& [layerID, layer] : self->layers) 
-		if (!map_find(addAnimation->layerAnimations, layerID))
-			addAnimation->layerAnimations[layerID] = Anm2Item{};
-	for (auto& [nullID, null] : self->nulls) 
-		if (!map_find(addAnimation->nullAnimations, nullID))
-			addAnimation->nullAnimations[nullID] = Anm2Item{};
-
-	if (isAddRootFrame) 
-		addAnimation->rootAnimation.frames.push_back(Anm2Frame{});
+	if (!animation)  addAnimation->rootAnimation.frames.push_back(Anm2Frame{});
 		
 	if (id != ID_NONE)
 	{
@@ -685,6 +644,7 @@ s32 anm2_animation_add(Anm2* self, bool isAddRootFrame, Anm2Animation* animation
 	}
 	else
 		self->animations[addID] = *addAnimation;
+	
 	return addID;
 }
 
@@ -1153,7 +1113,7 @@ void anm2_spritesheet_texture_pixels_download(Anm2* self)
 
         if (texture.id != GL_ID_NONE && !texture.isInvalid)
         {
-			size_t bufferSize = (size_t)texture.size.x * (size_t)texture.size.y * (size_t)texture.channels;
+			size_t bufferSize = (size_t)texture.size.x * (size_t)texture.size.y * TEXTURE_CHANNELS;
             spritesheet.pixels.resize(bufferSize);
             glBindTexture(GL_TEXTURE_2D, texture.id);
             glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, spritesheet.pixels.data());
@@ -1212,7 +1172,7 @@ vec4 anm2_animation_rect_get(Anm2* self, Anm2Reference* reference, bool isRootTr
     return {minX, minY, maxX - minX, maxY - minY};
 }
 
-bool anm2_animation_deserialize_from_xml(Anm2* self, Anm2Animation* animation, const std::string& xml)
+bool anm2_animation_deserialize_from_xml(Anm2Animation* animation, const std::string& xml)
 {
 	XMLDocument document;
 	
@@ -1225,14 +1185,15 @@ bool anm2_animation_deserialize_from_xml(Anm2* self, Anm2Animation* animation, c
 	if (document.Parse(xml.c_str()) != XML_SUCCESS) return animation_deserialize_error();
 	
 	const XMLElement* element = document.RootElement();
-	if (element && std::string(element->Name()) != std::string(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATION]))
+	if (!element) return animation_deserialize_error();
+	if (std::string(element->Name()) != std::string(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATION]))
 		return animation_deserialize_error();
 
-	_anm2_animation_deserialize(self, animation, element);
+	_anm2_animation_deserialize(animation, element);
 	return true;
 }
 
-bool anm2_frame_deserialize_from_xml(Anm2* self, Anm2Frame* frame, const std::string& xml)
+bool anm2_frame_deserialize_from_xml(Anm2Frame* frame, const std::string& xml)
 {
 	XMLDocument document;
 	
@@ -1243,18 +1204,17 @@ bool anm2_frame_deserialize_from_xml(Anm2* self, Anm2Frame* frame, const std::st
 	};
 
 	if (document.Parse(xml.c_str()) != XML_SUCCESS) return frame_deserialize_error();
-	
+
 	const XMLElement* element = document.RootElement();
+	if (!element) return frame_deserialize_error();
+
 	if 
 	(
-		element && 
-		(
-			std::string(element->Name()) == std::string(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_FRAME]) || 
-			std::string(element->Name()) == std::string(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_TRIGGER])
-		)
+		std::string(element->Name()) != std::string(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_FRAME]) &&
+		std::string(element->Name()) != std::string(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_TRIGGER])
 	)
 		return frame_deserialize_error();
 
-	_anm2_frame_deserialize(self, frame, element);
+	_anm2_frame_deserialize(frame, element);
 	return true;
 }

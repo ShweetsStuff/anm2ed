@@ -197,6 +197,7 @@ void canvas_rect_draw(Canvas* self, const GLuint& shader, const mat4& transform,
     glUseProgram(0);
 }
 
+
 void canvas_axes_draw(Canvas* self, GLuint& shader, mat4& transform, vec4& color)
 {
     vec4 originNDC = transform * vec4(0.0f, 0.0f, 0.0f, 1.0f);

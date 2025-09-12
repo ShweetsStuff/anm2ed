@@ -2,7 +2,7 @@
 
 #include "imgui.h"
 
-#define STATE_INIT_INFO "Initializing..."
+#define STATE_INIT_INFO "Initializing anm2ed (Version 1.1)"
 #define STATE_SDL_INIT_ERROR "Failed to initialize SDL! {}"
 #define STATE_SDL_INIT_INFO "Initialized SDL"
 #define STATE_MIX_INIT_WARNING "Unable to initialize SDL_mixer! {}"

@@ -142,7 +142,7 @@ struct Anm2Spritesheet
 struct Anm2Layer
 {
     std::string name = "New Layer";
-	s32 spritesheetID = ID_NONE;
+	s32 spritesheetID{};
 };
 
 struct Anm2Null
@@ -199,9 +199,9 @@ struct Anm2Animation
 	s32 frameNum = ANM2_FRAME_NUM_MIN;
     std::string name = "New Animation";
 	bool isLoop = true;
-    bool isShowUnused = true;
     Anm2Item rootAnimation;
-    std::map<s32, Anm2Item> layerAnimations;
+    std::unordered_map<s32, Anm2Item> layerAnimations;
+    std::vector<s32> layerOrder;
     std::map<s32, Anm2Item> nullAnimations;
     Anm2Item triggers;
 };
@@ -216,7 +216,6 @@ struct Anm2
 	std::map<s32, Anm2Null> nulls; 
     std::map<s32, Anm2Event> events;
 	std::map<s32, Anm2Animation> animations; 
-    std::map<s32, s32> layerMap; // index, id
     s32 defaultAnimationID = ID_NONE;
     s32 fps = ANM2_FPS_DEFAULT;
 	s32 version{};
@@ -253,38 +252,42 @@ enum OnionskinDrawOrder
     ONIONSKIN_ABOVE
 };
 
-void anm2_layer_add(Anm2* self);
-void anm2_layer_remove(Anm2* self, s32 id);
-void anm2_null_add(Anm2* self);
-void anm2_null_remove(Anm2* self, s32 id);
-bool anm2_serialize(Anm2* self, const std::string& path);
-bool anm2_deserialize(Anm2* self, const std::string& path, bool isTextures = true);
-void anm2_new(Anm2* self);
-void anm2_free(Anm2* self);
-void anm2_created_on_set(Anm2* self);
-s32 anm2_animation_add(Anm2* self, bool isAddRootFrame = true, Anm2Animation* animation = nullptr, s32 id = ID_NONE);
-void anm2_animation_remove(Anm2* self, s32 id);
 Anm2Animation* anm2_animation_from_reference(Anm2* self, Anm2Reference* reference);
-Anm2Item* anm2_item_from_reference(Anm2* self, Anm2Reference* reference);
-Anm2Frame* anm2_frame_from_reference(Anm2* self, Anm2Reference* reference);
-s32 anm2_frame_index_from_time(Anm2* self, Anm2Reference reference, f32 time);
 Anm2Frame* anm2_frame_add(Anm2* self, Anm2Frame* frame, Anm2Reference* reference);
-void anm2_frame_remove(Anm2* self, Anm2Reference* reference);
-void anm2_frame_from_time(Anm2* self, Anm2Frame* frame, Anm2Reference reference, f32 time);
-void anm2_reference_clear(Anm2Reference* self);
-void anm2_reference_item_clear(Anm2Reference* self);
-void anm2_reference_frame_clear(Anm2Reference* self);
+Anm2Frame* anm2_frame_from_reference(Anm2* self, Anm2Reference* reference);
+Anm2Item* anm2_item_from_reference(Anm2* self, Anm2Reference* reference);
+bool anm2_animation_deserialize_from_xml(Anm2Animation* animation, const std::string& xml);
+bool anm2_deserialize(Anm2* self, const std::string& path, bool isTextures = true);
+bool anm2_frame_deserialize_from_xml(Anm2Frame* frame, const std::string& xml);
+bool anm2_serialize(Anm2* self, const std::string& path);
+s32 anm2_animation_add(Anm2* self, Anm2Animation* animation = nullptr, s32 id = ID_NONE);
 s32 anm2_animation_length_get(Anm2Animation* self);
+s32 anm2_frame_index_from_time(Anm2* self, Anm2Reference reference, f32 time);
+s32 anm2_layer_add(Anm2* self);
+s32 anm2_null_add(Anm2* self);
+vec4 anm2_animation_rect_get(Anm2* anm2, Anm2Reference* reference, bool isRootTransform);
+void anm2_animation_layer_animation_add(Anm2Animation* animation, s32 id);
+void anm2_animation_layer_animation_remove(Anm2Animation* animation, s32 id);
 void anm2_animation_length_set(Anm2Animation* self);
 void anm2_animation_merge(Anm2* self, s32 animationID, const std::vector<s32>& mergeIDs, Anm2MergeType type);
+void anm2_animation_null_animation_add(Anm2Animation* animation, s32 id);
+void anm2_animation_null_animation_remove(Anm2Animation* animation, s32 id);
+void anm2_animation_remove(Anm2* self, s32 id);
+void anm2_animation_serialize(Anm2Animation* animation, XMLDocument* document, XMLElement* addElement, std::string* string);
+void anm2_created_on_set(Anm2* self);
 void anm2_frame_bake(Anm2* self, Anm2Reference* reference, s32 interval, bool isRoundScale, bool isRoundRotation);
-void anm2_item_frame_set(Anm2* self, Anm2Reference* reference, const Anm2FrameChange& change, Anm2ChangeType type, s32 start, s32 count);
-void anm2_scale(Anm2* self, f32 scale);
-void anm2_generate_from_grid(Anm2* self, Anm2Reference* reference, vec2 startPosition, vec2 size, vec2 pivot, s32 columns, s32 count, s32 delay);
-void anm2_spritesheet_texture_pixels_upload(Anm2* self);
-void anm2_spritesheet_texture_pixels_download(Anm2* self);
-vec4 anm2_animation_rect_get(Anm2* anm2, Anm2Reference* reference, bool isRootTransform);
+void anm2_frame_from_time(Anm2* self, Anm2Frame* frame, Anm2Reference reference, f32 time);
+void anm2_frame_remove(Anm2* self, Anm2Reference* reference);
 void anm2_frame_serialize(Anm2Frame* frame, Anm2Type type, XMLDocument* document, XMLElement* addElement, std::string* string);
-void anm2_animation_serialize(Anm2* self, Anm2Animation* animation, XMLDocument* document, XMLElement* addElement, std::string* string);
-bool anm2_frame_deserialize_from_xml(Anm2* self, Anm2Frame* frame, const std::string& xml);
-bool anm2_animation_deserialize_from_xml(Anm2* self, Anm2Animation* frame, const std::string& xml);
+void anm2_free(Anm2* self);
+void anm2_generate_from_grid(Anm2* self, Anm2Reference* reference, vec2 startPosition, vec2 size, vec2 pivot, s32 columns, s32 count, s32 delay);
+void anm2_item_frame_set(Anm2* self, Anm2Reference* reference, const Anm2FrameChange& change, Anm2ChangeType type, s32 start, s32 count);
+void anm2_layer_remove(Anm2* self, s32 id);
+void anm2_new(Anm2* self);
+void anm2_null_remove(Anm2* self, s32 id);
+void anm2_reference_clear(Anm2Reference* self);
+void anm2_reference_frame_clear(Anm2Reference* self);
+void anm2_reference_item_clear(Anm2Reference* self);
+void anm2_scale(Anm2* self, f32 scale);
+void anm2_spritesheet_texture_pixels_download(Anm2* self);
+void anm2_spritesheet_texture_pixels_upload(Anm2* self);

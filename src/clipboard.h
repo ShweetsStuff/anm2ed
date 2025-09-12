@@ -23,5 +23,5 @@ struct Clipboard
 bool clipboard_is_value(void);
 void clipboard_copy(Clipboard* self);
 void clipboard_cut(Clipboard* self);
-void clipboard_paste(Clipboard* self);
+bool clipboard_paste(Clipboard* self);
 void clipboard_init(Clipboard* self, Anm2* anm2);

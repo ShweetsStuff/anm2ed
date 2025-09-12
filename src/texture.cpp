@@ -17,8 +17,7 @@
 
 static void _texture_gl_set(Texture* self, const u8* data)
 {
-	if (self->id == GL_ID_NONE) 
-		glGenTextures(1, &self->id);
+	if (self->id == GL_ID_NONE) glGenTextures(1, &self->id);
 	
 	glBindTexture(GL_TEXTURE_2D, self->id);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, self->size.x, self->size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
@@ -43,7 +42,7 @@ std::vector<u8> texture_download(const Texture* self)
 
 bool texture_from_path_init(Texture* self, const std::string& path)
 {
-	u8* data = stbi_load(path.c_str(), &self->size.x, &self->size.y, &self->channels, TEXTURE_CHANNELS);
+	u8* data = stbi_load(path.c_str(), &self->size.x, &self->size.y, nullptr, TEXTURE_CHANNELS);
 	
 	if (!data)
 	{
@@ -60,13 +59,12 @@ bool texture_from_path_init(Texture* self, const std::string& path)
 	return true;
 }
 
-bool texture_from_encoded_data_init(Texture* self, ivec2 size, s32 channels, const u8* data, u32 length)
+bool texture_from_encoded_data_init(Texture* self, ivec2 size, const u8* data, u32 length)
 {
 	*self = Texture{};
 	self->size = size;
-	self->channels = channels;
 
-	u8* textureData = stbi_load_from_memory(data, length, &self->size.x, &self->size.y, &self->channels, TEXTURE_CHANNELS);
+	u8* textureData = stbi_load_from_memory(data, length, &self->size.x, &self->size.y, nullptr, TEXTURE_CHANNELS);
 
 	if (!textureData) 
 	{
@@ -79,11 +77,11 @@ bool texture_from_encoded_data_init(Texture* self, ivec2 size, s32 channels, con
 	return true;
 }
 
-bool texture_from_rgba_init(Texture* self, ivec2 size, s32 channels, const u8* data)
+bool texture_from_rgba_init(Texture* self, ivec2 size, const u8* data)
 {
 	*self = Texture{};
 	self->size = size;
-	self->channels = channels;
+	self->isInvalid = false;
 
 	_texture_gl_set(self, data);
 

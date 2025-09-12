@@ -40,7 +40,7 @@ void preview_tick(Preview* self)
                 glReadPixels(0, 0, size.x, size.y, GL_RGBA, GL_UNSIGNED_BYTE, framebufferPixels.data());
                 glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 
-                texture_from_rgba_init(&frameTexture, size, TEXTURE_CHANNELS, framebufferPixels.data());
+                texture_from_rgba_init(&frameTexture, size, framebufferPixels.data());
                 self->renderFrames.push_back(frameTexture);
             }
 
@@ -199,7 +199,7 @@ void preview_draw(Preview* self)
             if (self->settings->previewIsIcons && animation->rootAnimation.isVisible && root.isVisible)
                 root_draw(root, colorOffset, alphaOffset, isOnionskin);
 
-            for (auto [i, id] : self->anm2->layerMap)
+            for (auto id : animation->layerOrder)
                 layer_draw(rootModel, id, time, colorOffset, alphaOffset, isOnionskin);
 
             if (self->settings->previewIsIcons)
