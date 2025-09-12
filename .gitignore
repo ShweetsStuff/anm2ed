@@ -2,3 +2,8 @@ build/
 concept/
 packed/
 vcpkg_installed/
+out/
+include/imgui/
+include/glm/
+include/tinyxml2
+.vs/
