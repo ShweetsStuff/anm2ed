@@ -44,7 +44,6 @@ typedef double f64;
 #define TAU (PI * 2)
 
 using namespace glm; 
-using namespace tinyxml2;
 
 #define PREFERENCES_DIRECTORY "anm2ed"
 

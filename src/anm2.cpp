@@ -11,12 +11,12 @@ static void _anm2_created_on_set(Anm2* self)
 	self->createdOn = timeString.str();
 }
 
-void anm2_frame_serialize(Anm2Frame* frame, Anm2Type type, XMLDocument* document = nullptr, XMLElement* addElement = nullptr, std::string* string = nullptr)
+void anm2_frame_serialize(Anm2Frame* frame, Anm2Type type, tinyxml2::XMLDocument* document = nullptr, tinyxml2::XMLElement* addElement = nullptr, std::string* string = nullptr)
 {
-	XMLDocument localDocument;
-	XMLDocument* useDocument = document ? document : &localDocument;
+	tinyxml2::XMLDocument localDocument;
+	tinyxml2::XMLDocument* useDocument = document ? document : &localDocument;
 
-	XMLElement* element = type == ANM2_TRIGGERS ? useDocument->NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_TRIGGERS]) : 
+	tinyxml2::XMLElement* element = type == ANM2_TRIGGERS ? useDocument->NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_TRIGGERS]) : 
 												  useDocument->NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_FRAME]);
 	
 	if (type == ANM2_TRIGGERS)
@@ -65,19 +65,19 @@ void anm2_frame_serialize(Anm2Frame* frame, Anm2Type type, XMLDocument* document
 	}
 }
 
-void anm2_animation_serialize(Anm2Animation* animation, XMLDocument* document = nullptr, XMLElement* addElement = nullptr, std::string* string = nullptr)
+void anm2_animation_serialize(Anm2Animation* animation, tinyxml2::XMLDocument* document = nullptr, tinyxml2::XMLElement* addElement = nullptr, std::string* string = nullptr)
 {
-	XMLDocument localDocument;
-	XMLDocument* useDocument = document ? document : &localDocument;
+	tinyxml2::XMLDocument localDocument;
+	tinyxml2::XMLDocument* useDocument = document ? document : &localDocument;
 
 	// Animation
-	XMLElement* element = useDocument->NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATION]);
+	tinyxml2::XMLElement* element = useDocument->NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATION]);
 	element->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_NAME], animation->name.c_str()); // Name
 	element->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_FRAME_NUM], animation->frameNum); // FrameNum
 	element->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_LOOP], animation->isLoop); // Loop
 
 	// RootAnimation
-	XMLElement* rootElement = useDocument->NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ROOT_ANIMATION]);
+	tinyxml2::XMLElement* rootElement = useDocument->NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ROOT_ANIMATION]);
 
 	for (auto& frame : animation->rootAnimation.frames)
 		anm2_frame_serialize(&frame, ANM2_ROOT, useDocument, rootElement);
@@ -85,13 +85,13 @@ void anm2_animation_serialize(Anm2Animation* animation, XMLDocument* document = 
 	element->InsertEndChild(rootElement);
 
 	// LayerAnimations
-	XMLElement* layersElement = useDocument->NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYER_ANIMATIONS]);
+	tinyxml2::XMLElement* layersElement = useDocument->NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYER_ANIMATIONS]);
 
 	for (auto& id : animation->layerOrder)
 	{
 		// LayerAnimation
 		Anm2Item& layerAnimation = animation->layerAnimations[id];
-		XMLElement* layerElement = useDocument->NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYER_ANIMATION]);
+		tinyxml2::XMLElement* layerElement = useDocument->NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYER_ANIMATION]);
 		layerElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_LAYER_ID], id); // LayerId
 		layerElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_VISIBLE], layerAnimation.isVisible); // Visible 
 
@@ -104,12 +104,12 @@ void anm2_animation_serialize(Anm2Animation* animation, XMLDocument* document = 
 	element->InsertEndChild(layersElement);
 
 	// Nulls
-	XMLElement* nullsElement = useDocument->NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_NULL_ANIMATIONS]);
+	tinyxml2::XMLElement* nullsElement = useDocument->NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_NULL_ANIMATIONS]);
 
 	for (auto& [id, null] : animation->nullAnimations)
 	{
 		// NullAnimation
-		XMLElement* nullElement = useDocument->NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_NULL_ANIMATION]);
+		tinyxml2::XMLElement* nullElement = useDocument->NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_NULL_ANIMATION]);
 		nullElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_NULL_ID], id); // NullId
 		nullElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_VISIBLE], null.isVisible); // Visible 
 		
@@ -122,7 +122,7 @@ void anm2_animation_serialize(Anm2Animation* animation, XMLDocument* document = 
 	element->InsertEndChild(nullsElement);
 
 	// Triggers 
-	XMLElement* triggersElement = useDocument->NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_TRIGGERS]);
+	tinyxml2::XMLElement* triggersElement = useDocument->NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_TRIGGERS]);
 
 	for (auto& frame : animation->triggers.frames)
 		anm2_frame_serialize(&frame, ANM2_TRIGGERS, useDocument, triggersElement);
@@ -142,7 +142,7 @@ void anm2_animation_serialize(Anm2Animation* animation, XMLDocument* document = 
 
 bool anm2_serialize(Anm2* self, const std::string& path)
 {
-	XMLDocument document;
+	tinyxml2::XMLDocument document;
 
 	if (!self || path.empty()) return false;
 
@@ -152,11 +152,11 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 	self->version++;
 
 	// AnimatedActor
-	XMLElement* animatedActorElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATED_ACTOR]);
+	tinyxml2::XMLElement* animatedActorElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATED_ACTOR]);
 	document.InsertFirstChild(animatedActorElement);
 
 	// Info 
-	XMLElement* infoElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_INFO]);
+	tinyxml2::XMLElement* infoElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_INFO]);
 	infoElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_CREATED_BY], self->createdBy.c_str()); // CreatedBy 
 	infoElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_CREATED_ON], self->createdOn.c_str()); // CreatedOn 
 	infoElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_VERSION], self->version); // Version
@@ -164,15 +164,15 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 	animatedActorElement->InsertEndChild(infoElement);
 
 	// Content 
-	XMLElement* contentElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_CONTENT]);
+	tinyxml2::XMLElement* contentElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_CONTENT]);
 	
 	// Spritesheets 
-	XMLElement* spritesheetsElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_SPRITESHEETS]);
+	tinyxml2::XMLElement* spritesheetsElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_SPRITESHEETS]);
 
 	for (auto& [id, spritesheet] : self->spritesheets)
 	{
 		// Spritesheet 
-		XMLElement* spritesheetElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_SPRITESHEET]);
+		tinyxml2::XMLElement* spritesheetElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_SPRITESHEET]);
 		spritesheetElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_PATH], spritesheet.path.c_str()); // Path 
 		spritesheetElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ID], id); // ID 
 		spritesheetsElement->InsertEndChild(spritesheetElement);
@@ -181,12 +181,12 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 	contentElement->InsertEndChild(spritesheetsElement);
 	
 	// Layers 
-	XMLElement* layersElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYERS]);
+	tinyxml2::XMLElement* layersElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYERS]);
 
 	for (auto& [id, layer] : self->layers)
 	{
 		// Layer 
-		XMLElement* layerElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYER]);
+		tinyxml2::XMLElement* layerElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYER]);
 		layerElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_NAME], layer.name.c_str()); // Path 
 		layerElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ID], id); // ID 
 		layerElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_SPRITESHEET_ID], layer.spritesheetID); // SpritesheetId 
@@ -196,12 +196,12 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 	contentElement->InsertEndChild(layersElement);
 	
 	// Nulls 
-	XMLElement* nullsElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_NULLS]);
+	tinyxml2::XMLElement* nullsElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_NULLS]);
 
 	for (auto& [id, null] : self->nulls)
 	{
 		// Null 
-		XMLElement* nullElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_NULL]);
+		tinyxml2::XMLElement* nullElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_NULL]);
 		nullElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_NAME], null.name.c_str()); // Name 
 		nullElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ID], id); // ID 
 		if (null.isShowRect) nullElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_SHOW_RECT], null.isShowRect); // ShowRect 
@@ -211,12 +211,12 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 	contentElement->InsertEndChild(nullsElement);
 
 	// Events 
-	XMLElement* eventsElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_EVENTS]);
+	tinyxml2::XMLElement* eventsElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_EVENTS]);
 
 	for (auto& [id, event] : self->events)
 	{
 		// Event 
-		XMLElement* eventElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_EVENT]);
+		tinyxml2::XMLElement* eventElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_EVENT]);
 		eventElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_NAME], event.name.c_str()); // Name 
 		eventElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_ID], id); // ID 
 		eventsElement->InsertEndChild(eventElement);
@@ -227,7 +227,7 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 	animatedActorElement->InsertEndChild(contentElement);
 
 	// Animations
-	XMLElement* animationsElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATIONS]);
+	tinyxml2::XMLElement* animationsElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATIONS]);
 	if (self->defaultAnimationID != ID_NONE)  
 		animationsElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_DEFAULT_ANIMATION], self->animations[self->defaultAnimationID].name.c_str()); // DefaultAnimation
 	
@@ -249,9 +249,9 @@ bool anm2_serialize(Anm2* self, const std::string& path)
 	return true;
 }
 
-static void _anm2_frame_deserialize(Anm2Frame* frame, const XMLElement* element)
+static void _anm2_frame_deserialize(Anm2Frame* frame, const tinyxml2::XMLElement* element)
 {
-	for (const XMLAttribute* attribute = element->FirstAttribute(); attribute; attribute = attribute->Next())
+	for (const tinyxml2::XMLAttribute* attribute = element->FirstAttribute(); attribute; attribute = attribute->Next())
 	{
 		switch (ANM2_ATTRIBUTE_STRING_TO_ENUM(attribute->Name()))
 		{
@@ -283,14 +283,14 @@ static void _anm2_frame_deserialize(Anm2Frame* frame, const XMLElement* element)
 	}
 }
 
-static void _anm2_animation_deserialize(Anm2Animation* animation, const XMLElement* element)
+static void _anm2_animation_deserialize(Anm2Animation* animation, const tinyxml2::XMLElement* element)
 {
-	auto frames_deserialize = [&](const XMLElement* itemElement, Anm2Item* item)
+	auto frames_deserialize = [&](const tinyxml2::XMLElement* itemElement, Anm2Item* item)
 	{
 		// Frame
 		for 
 		(
-			const XMLElement* frame = itemElement->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_FRAME]); 
+			const tinyxml2::XMLElement* frame = itemElement->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_FRAME]); 
 			frame; frame = frame->NextSiblingElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_FRAME])
 		)
 			_anm2_frame_deserialize(&item->frames.emplace_back(Anm2Frame()), frame);
@@ -298,7 +298,7 @@ static void _anm2_animation_deserialize(Anm2Animation* animation, const XMLEleme
 
 	s32 id{};
 
-	for (const XMLAttribute* attribute = element->FirstAttribute(); attribute; attribute = attribute->Next())
+	for (const tinyxml2::XMLAttribute* attribute = element->FirstAttribute(); attribute; attribute = attribute->Next())
 	{
 		switch (ANM2_ATTRIBUTE_STRING_TO_ENUM(attribute->Name()))
 		{
@@ -310,22 +310,22 @@ static void _anm2_animation_deserialize(Anm2Animation* animation, const XMLEleme
 	}
 	
 	// RootAnimation
-    if (const XMLElement* rootAnimation = element->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ROOT_ANIMATION])) 
+    if (const tinyxml2::XMLElement* rootAnimation = element->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ROOT_ANIMATION])) 
 		frames_deserialize(rootAnimation, &animation->rootAnimation);
 
 	// LayerAnimations
-	if (const XMLElement* layerAnimations = element->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYER_ANIMATIONS])) 
+	if (const tinyxml2::XMLElement* layerAnimations = element->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYER_ANIMATIONS])) 
 	{
 		// LayerAnimation
 		for 
 		(
-			const XMLElement* layerAnimation = layerAnimations->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYER_ANIMATION]);
+			const tinyxml2::XMLElement* layerAnimation = layerAnimations->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYER_ANIMATION]);
 			layerAnimation; layerAnimation = layerAnimation->NextSiblingElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYER_ANIMATION])
 		)
 		{ 
 			Anm2Item layerAnimationItem;
 			
-			for (const XMLAttribute* attribute = layerAnimation->FirstAttribute(); attribute; attribute = attribute->Next())
+			for (const tinyxml2::XMLAttribute* attribute = layerAnimation->FirstAttribute(); attribute; attribute = attribute->Next())
 			{	
 				switch (ANM2_ATTRIBUTE_STRING_TO_ENUM(attribute->Name()))
 				{
@@ -342,18 +342,18 @@ static void _anm2_animation_deserialize(Anm2Animation* animation, const XMLEleme
 	}
 
 	// NullAnimations
-	if (const XMLElement* nullAnimations = element->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_NULL_ANIMATIONS])) 
+	if (const tinyxml2::XMLElement* nullAnimations = element->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_NULL_ANIMATIONS])) 
 	{
 		// NullAnimation
 		for 
 		(
-			const XMLElement* nullAnimation = nullAnimations->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_NULL_ANIMATION]);
+			const tinyxml2::XMLElement* nullAnimation = nullAnimations->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_NULL_ANIMATION]);
 			nullAnimation; nullAnimation = nullAnimation->NextSiblingElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_NULL_ANIMATION])
 		)
 		{ 
 			Anm2Item nullAnimationItem;
 			
-			for (const XMLAttribute* attribute = nullAnimation->FirstAttribute(); attribute; attribute = attribute->Next())
+			for (const tinyxml2::XMLAttribute* attribute = nullAnimation->FirstAttribute(); attribute; attribute = attribute->Next())
 			{	
 				switch (ANM2_ATTRIBUTE_STRING_TO_ENUM(attribute->Name()))
 				{
@@ -369,12 +369,12 @@ static void _anm2_animation_deserialize(Anm2Animation* animation, const XMLEleme
 	}
 
 	// Triggers
-	if (const XMLElement* triggers = element->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_TRIGGERS])) 
+	if (const tinyxml2::XMLElement* triggers = element->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_TRIGGERS])) 
 	{
 		// Trigger
 		for 
 		(
-			const XMLElement* trigger = triggers->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_TRIGGER]); 
+			const tinyxml2::XMLElement* trigger = triggers->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_TRIGGER]); 
 			trigger; trigger = trigger->NextSiblingElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_TRIGGER])
 		)
 			_anm2_frame_deserialize(&animation->triggers.frames.emplace_back(Anm2Frame()), trigger);
@@ -391,7 +391,7 @@ bool anm2_deserialize(Anm2* self, const std::string& path, bool isTextures)
 		return false;
 	}
 
-	XMLDocument document;
+	tinyxml2::XMLDocument document;
 	if (document.LoadFile(path.c_str()) != XML_SUCCESS)
 	{
 		log_error(std::format(ANM2_PARSE_ERROR, path, document.ErrorStr()));
@@ -408,12 +408,12 @@ bool anm2_deserialize(Anm2* self, const std::string& path, bool isTextures)
     std::filesystem::path workingPath = std::filesystem::current_path();
 	working_directory_from_file_set(path);
 	
-	const XMLElement* root = document.RootElement();
+	const tinyxml2::XMLElement* root = document.RootElement();
 	
 	// Info
-	if (const XMLElement* info = root->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_INFO])) 
+	if (const tinyxml2::XMLElement* info = root->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_INFO])) 
 	{
-		for (const XMLAttribute* attribute = info->FirstAttribute(); attribute; attribute = attribute->Next())
+		for (const tinyxml2::XMLAttribute* attribute = info->FirstAttribute(); attribute; attribute = attribute->Next())
 		{
 			switch (ANM2_ATTRIBUTE_STRING_TO_ENUM(attribute->Name()))
 			{
@@ -427,20 +427,20 @@ bool anm2_deserialize(Anm2* self, const std::string& path, bool isTextures)
 	}
 	
 	// Content
-	if (const XMLElement* content = root->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_CONTENT])) 
+	if (const tinyxml2::XMLElement* content = root->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_CONTENT])) 
 	{
 		// Spritesheets
-		if (const XMLElement* spritesheets = content->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_SPRITESHEETS]))
+		if (const tinyxml2::XMLElement* spritesheets = content->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_SPRITESHEETS]))
 		{
 			for 
 			(
-				const XMLElement* spritesheet = spritesheets->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_SPRITESHEET]);
+				const tinyxml2::XMLElement* spritesheet = spritesheets->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_SPRITESHEET]);
 				spritesheet; spritesheet = spritesheet->NextSiblingElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_SPRITESHEET])
 			)
 			{
 				Anm2Spritesheet addSpritesheet;
 				
-				for (const XMLAttribute* attribute = spritesheet->FirstAttribute(); attribute; attribute = attribute->Next())
+				for (const tinyxml2::XMLAttribute* attribute = spritesheet->FirstAttribute(); attribute; attribute = attribute->Next())
 				{	
 					switch (ANM2_ATTRIBUTE_STRING_TO_ENUM(attribute->Name()))
 					{
@@ -464,17 +464,17 @@ bool anm2_deserialize(Anm2* self, const std::string& path, bool isTextures)
 		}
 
 		// Layers
-		if (const XMLElement* layers = content->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYERS]))
+		if (const tinyxml2::XMLElement* layers = content->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYERS]))
 		{
 			for 
 			(
-				const XMLElement* layer = layers->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYER]);
+				const tinyxml2::XMLElement* layer = layers->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYER]);
 				layer; layer = layer->NextSiblingElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_LAYER])
 			)
 			{
 				Anm2Layer addLayer;
 
-				for (const XMLAttribute* attribute = layer->FirstAttribute(); attribute; attribute = attribute->Next())
+				for (const tinyxml2::XMLAttribute* attribute = layer->FirstAttribute(); attribute; attribute = attribute->Next())
 				{	
 					switch (ANM2_ATTRIBUTE_STRING_TO_ENUM(attribute->Name()))
 					{
@@ -490,17 +490,17 @@ bool anm2_deserialize(Anm2* self, const std::string& path, bool isTextures)
 		}
 	
 		// Nulls
-		if (const XMLElement* nulls = content->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_NULLS]))
+		if (const tinyxml2::XMLElement* nulls = content->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_NULLS]))
 		{
 			for 
 			(
-				const XMLElement* null = nulls->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_NULL]);
+				const tinyxml2::XMLElement* null = nulls->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_NULL]);
 				null; null = null->NextSiblingElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_NULL])
 			)
 			{
 				Anm2Null addNull;
 
-				for (const XMLAttribute* attribute = null->FirstAttribute(); attribute; attribute = attribute->Next())
+				for (const tinyxml2::XMLAttribute* attribute = null->FirstAttribute(); attribute; attribute = attribute->Next())
 				{	
 					switch (ANM2_ATTRIBUTE_STRING_TO_ENUM(attribute->Name()))
 					{
@@ -515,18 +515,18 @@ bool anm2_deserialize(Anm2* self, const std::string& path, bool isTextures)
 		}
 
 		// Events
-		if (const XMLElement* events = content->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_EVENTS]))
+		if (const tinyxml2::XMLElement* events = content->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_EVENTS]))
 		{
 			// Event
 			for 
 			(
-				const XMLElement* event = events->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_EVENT]);
+				const tinyxml2::XMLElement* event = events->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_EVENT]);
 				event; event = event->NextSiblingElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_EVENT])
 			)
 			{
 				Anm2Event addEvent;
 
-				for (const XMLAttribute* attribute = event->FirstAttribute(); attribute; attribute = attribute->Next())
+				for (const tinyxml2::XMLAttribute* attribute = event->FirstAttribute(); attribute; attribute = attribute->Next())
 				{	
 					switch (ANM2_ATTRIBUTE_STRING_TO_ENUM(attribute->Name()))
 					{
@@ -542,9 +542,9 @@ bool anm2_deserialize(Anm2* self, const std::string& path, bool isTextures)
 	}
 
 	// Animations
-	if (const XMLElement* animations = root->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATIONS]))
+	if (const tinyxml2::XMLElement* animations = root->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATIONS]))
 	{
-		for (const XMLAttribute* attribute = animations->FirstAttribute(); attribute; attribute = attribute->Next())
+		for (const tinyxml2::XMLAttribute* attribute = animations->FirstAttribute(); attribute; attribute = attribute->Next())
 		{	
 			switch (ANM2_ATTRIBUTE_STRING_TO_ENUM(attribute->Name()))
 			{
@@ -556,7 +556,7 @@ bool anm2_deserialize(Anm2* self, const std::string& path, bool isTextures)
 		// Animation
 		for 
 		(
-			const XMLElement* animation = animations->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATION]);
+			const tinyxml2::XMLElement* animation = animations->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATION]);
 			animation; animation = animation->NextSiblingElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATION])
 		)
 			_anm2_animation_deserialize(&self->animations[map_next_id_get(self->animations)], animation);
@@ -1175,7 +1175,7 @@ vec4 anm2_animation_rect_get(Anm2* self, Anm2Reference* reference, bool isRootTr
 
 bool anm2_animation_deserialize_from_xml(Anm2Animation* animation, const std::string& xml)
 {
-	XMLDocument document;
+	tinyxml2::XMLDocument document;
 	
 	auto animation_deserialize_error = [&]()
 	{
@@ -1185,7 +1185,7 @@ bool anm2_animation_deserialize_from_xml(Anm2Animation* animation, const std::st
 
 	if (document.Parse(xml.c_str()) != XML_SUCCESS) return animation_deserialize_error();
 	
-	const XMLElement* element = document.RootElement();
+	const tinyxml2::XMLElement* element = document.RootElement();
 	if (!element) return animation_deserialize_error();
 	if (std::string(element->Name()) != std::string(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATION]))
 		return animation_deserialize_error();
@@ -1196,7 +1196,7 @@ bool anm2_animation_deserialize_from_xml(Anm2Animation* animation, const std::st
 
 bool anm2_frame_deserialize_from_xml(Anm2Frame* frame, const std::string& xml)
 {
-	XMLDocument document;
+	tinyxml2::XMLDocument document;
 	
 	auto frame_deserialize_error = [&]()
 	{
@@ -1206,7 +1206,7 @@ bool anm2_frame_deserialize_from_xml(Anm2Frame* frame, const std::string& xml)
 
 	if (document.Parse(xml.c_str()) != XML_SUCCESS) return frame_deserialize_error();
 
-	const XMLElement* element = document.RootElement();
+	const tinyxml2::XMLElement* element = document.RootElement();
 	if (!element) return frame_deserialize_error();
 
 	if 

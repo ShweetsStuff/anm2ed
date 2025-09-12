@@ -1,6 +1,5 @@
 {
   "dependencies": [
-    "sdl3",
-    "glew"
+    "sdl3"
   ]
 }
