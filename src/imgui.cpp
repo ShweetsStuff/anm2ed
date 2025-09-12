@@ -1093,10 +1093,13 @@ static void _imgui_timeline(Imgui* self)
 
 				if (ImGui::BeginDragDropTarget())
 				{
-					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(frameButton.drag_drop_get()))
+					Anm2Reference swapReference;
+					if (const ImGuiPayload* payload = ImGui::GetDragDropPayload())
+						swapReference = *(Anm2Reference*)payload->Data;
+					
+					if (swapReference != reference && reference.itemType == swapReference.itemType)
 					{
-						Anm2Reference swapReference = *(Anm2Reference*)payload->Data;
-						if (swapReference != reference)
+						if (ImGui::AcceptDragDropPayload(frameButton.drag_drop_get()))
 						{
 							imgui_snapshot(self, IMGUI_ACTION_FRAME_SWAP);
 

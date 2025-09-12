@@ -1319,6 +1319,8 @@ IMGUI_ITEM(IMGUI_LAYER_REMOVE,
     self.label = "Remove",
     self.tooltip = "Removes the selected layer.\nThis will remove all layer animations that use this layer from all animations.",
     self.snapshotAction = "Remove Layer",
+    self.chord = ImGuiKey_Delete,
+    self.focusWindow = IMGUI_LAYERS.label,
     self.rowCount = IMGUI_LAYERS_OPTIONS_ROW_COUNT
 );
 
@@ -1349,6 +1351,8 @@ IMGUI_ITEM(IMGUI_NULL_REMOVE,
     self.label = "Remove",
     self.tooltip = "Removes the selected null.\nThis will remove all null animations that use this null from all animations.",
     self.snapshotAction = "Remove Null",
+    self.chord = ImGuiKey_Delete,
+    self.focusWindow = IMGUI_NULLS.label,
     self.rowCount = IMGUI_NULLS_OPTIONS_ROW_COUNT
 );
 

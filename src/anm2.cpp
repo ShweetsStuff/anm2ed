@@ -16,7 +16,8 @@ void anm2_frame_serialize(Anm2Frame* frame, Anm2Type type, XMLDocument* document
 	XMLDocument localDocument;
 	XMLDocument* useDocument = document ? document : &localDocument;
 
-	XMLElement* element = useDocument->NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_FRAME]);
+	XMLElement* element = type == ANM2_TRIGGERS ? useDocument->NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_TRIGGERS]) : 
+												  useDocument->NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_FRAME]);
 	
 	if (type == ANM2_TRIGGERS)
 	{
