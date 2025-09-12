@@ -18,7 +18,7 @@ void clipboard_copy(Clipboard* self)
             if (!reference) break;
             Anm2Frame* frame = anm2_frame_from_reference(self->anm2, reference);
             if (!frame) break;
-            anm2_frame_serialize(frame, reference->itemType, nullptr, nullptr, &clipboardText);
+            anm2_frame_serialize_to_string(frame, reference->itemType, &clipboardText);
             clipboard_text_set();
             break;
         }
@@ -28,7 +28,7 @@ void clipboard_copy(Clipboard* self)
             if (!id) break;
             Anm2Animation* animation = map_find(self->anm2->animations, *id);
             if (!animation) break;
-            anm2_animation_serialize(animation, nullptr, nullptr, &clipboardText);
+            anm2_animation_serialize_to_string(animation, &clipboardText);
             clipboard_text_set();
             break;
         }

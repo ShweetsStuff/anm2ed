@@ -273,12 +273,12 @@ void anm2_animation_merge(Anm2* self, s32 animationID, const std::vector<s32>& m
 void anm2_animation_null_animation_add(Anm2Animation* animation, s32 id);
 void anm2_animation_null_animation_remove(Anm2Animation* animation, s32 id);
 void anm2_animation_remove(Anm2* self, s32 id);
-void anm2_animation_serialize(Anm2Animation* animation, tinyxml2::XMLDocument* document, tinyxml2::XMLElement* addElement, std::string* string);
+void anm2_animation_serialize_to_string(Anm2Animation* animation, std::string* string);
 void anm2_created_on_set(Anm2* self);
 void anm2_frame_bake(Anm2* self, Anm2Reference* reference, s32 interval, bool isRoundScale, bool isRoundRotation);
 void anm2_frame_from_time(Anm2* self, Anm2Frame* frame, Anm2Reference reference, f32 time);
 void anm2_frame_remove(Anm2* self, Anm2Reference* reference);
-void anm2_frame_serialize(Anm2Frame* frame, Anm2Type type, tinyxml2::XMLDocument* document, tinyxml2::XMLElement* addElement, std::string* string);
+void anm2_frame_serialize_to_string(Anm2Frame* frame, Anm2Type type, std::string* string);
 void anm2_free(Anm2* self);
 void anm2_generate_from_grid(Anm2* self, Anm2Reference* reference, vec2 startPosition, vec2 size, vec2 pivot, s32 columns, s32 count, s32 delay);
 void anm2_item_frame_set(Anm2* self, Anm2Reference* reference, const Anm2FrameChange& change, Anm2ChangeType type, s32 start, s32 count);
