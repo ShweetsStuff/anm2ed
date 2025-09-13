@@ -1,5 +1,6 @@
 build/
 concept/
+release/
 packed/
 vcpkg_installed/
 out/
