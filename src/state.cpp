@@ -71,11 +71,20 @@ bool sdl_init(State* self, bool isTestMode = false)
 	}
 	else
 	{
+		ivec2 windowSize = self->settings.windowSize;
+
+		// Fix for auto-fullscreen on Windows
+		if (SDL_DisplayID* displayIDs = SDL_GetDisplays(nullptr))
+			if (displayIDs[0])
+				if (const SDL_DisplayMode* displayMode = SDL_GetDesktopDisplayMode(displayIDs[0]))
+					if (windowSize.x == displayMode->w && windowSize.y == displayMode->h)
+						windowSize -= ivec2(1, 1);
+				
 		self->window = SDL_CreateWindow
 		(
 			WINDOW_TITLE, 
-			self->settings.windowSize.x, 
-			self->settings.windowSize.y, 
+			windowSize.x,
+			windowSize.y, 
 			WINDOW_FLAGS
 		);
 	}
