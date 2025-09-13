@@ -65,6 +65,11 @@ struct Canvas
   0, 1, uvMin.x, uvMax.y  \
 }
 
+#define ATLAS_UV_MIN(type) (ATLAS_POSITION(type) / TEXTURE_ATLAS_SIZE)
+#define ATLAS_UV_MAX(type) ((ATLAS_POSITION(type) + ATLAS_SIZE(type)) / TEXTURE_ATLAS_SIZE)
+#define ATLAS_UV_ARGS(type) ATLAS_UV_MIN(type), ATLAS_UV_MAX(type)
+#define ATLAS_UV_VERTICES(type) UV_VERTICES(ATLAS_UV_MIN(type), ATLAS_UV_MAX(type))
+
 mat4 canvas_transform_get(Canvas* self, vec2 pan, f32 zoom, OriginType origin);
 void canvas_axes_draw(Canvas* self, GLuint& shader, mat4& transform, vec4& color);
 void canvas_bind(Canvas* self);

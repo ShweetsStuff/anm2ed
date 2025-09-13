@@ -38,8 +38,9 @@ void generate_preview_draw(GeneratePreview* self)
             const s32 column = index % columns;
             vec2 crop = startPosition + vec2(size.x * column, size.y * row);
 
-            vec2 uvMin = crop / vec2(texture.size);
-            vec2 uvMax = (crop + size) / vec2(texture.size);
+            vec2 textureSize = vec2(texture.size);
+            vec2 uvMin = (crop + vec2(0.5f)) / textureSize;
+            vec2 uvMax = (crop + size - vec2(0.5f)) / textureSize;
             f32 vertices[] = UV_VERTICES(uvMin, uvMax);
 
             mat4 generateTransform = transform * quad_model_get(size, {}, pivot);

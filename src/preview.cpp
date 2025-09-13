@@ -134,8 +134,9 @@ void preview_draw(Preview* self)
             Texture& texture = spritesheet->texture;
             if (texture.isInvalid) return;
             
-            vec2 uvMin = frame.crop / vec2(texture.size);
-            vec2 uvMax = (frame.crop + frame.size) / vec2(texture.size);
+            vec2 inset = 0.5f / vec2(texture.size);
+            vec2 uvMin = frame.crop / vec2(texture.size) + inset;
+            vec2 uvMax = (frame.crop + frame.size) / vec2(texture.size) - inset;
             f32 vertices[] = UV_VERTICES(uvMin, uvMax);
             canvas_texture_draw(&self->canvas, shaderTexture, texture.id, layerTransform, vertices, frameTint, frameColorOffset);
 
