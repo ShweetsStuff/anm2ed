@@ -2430,7 +2430,7 @@ IMGUI_ITEM(IMGUI_ONIONSKIN_AFTER, self.label = "-- After -- ");
 IMGUI_ITEM(IMGUI_ONIONSKIN_COUNT, 
     self.label = "Count",
     self.tooltip = "Set the number of previewed frames appearing.",
-    self.min = 1,
+    self.min = 0,
     self.max = 100,
     self.value = SETTINGS_ONIONSKIN_BEFORE_COUNT_DEFAULT,
     self.rowCount = IMGUI_ONIONSKIN_ROW_COUNT,

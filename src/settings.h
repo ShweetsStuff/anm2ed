@@ -135,8 +135,8 @@
     \
     X(onionskinIsEnabled,     ONIONSKIN_IS_ENABLED,         TYPE_BOOL,         false) \
     X(onionskinDrawOrder,     ONIONSKIN_DRAW_ORDER,         TYPE_INT,          ONIONSKIN_BELOW) \
-    X(onionskinBeforeCount,   ONIONSKIN_BEFORE_COUNT,       TYPE_INT,          1) \
-    X(onionskinAfterCount,    ONIONSKIN_AFTER_COUNT,        TYPE_INT,          1) \
+    X(onionskinBeforeCount,   ONIONSKIN_BEFORE_COUNT,       TYPE_INT,          0) \
+    X(onionskinAfterCount,    ONIONSKIN_AFTER_COUNT,        TYPE_INT,          0) \
     X(onionskinBeforeColorOffset,ONIONSKIN_BEFORE_COLOR_OFFSET,TYPE_VEC3,      COLOR_RED) \
     X(onionskinAfterColorOffset, ONIONSKIN_AFTER_COLOR_OFFSET,TYPE_VEC3,       COLOR_BLUE) \
     \
