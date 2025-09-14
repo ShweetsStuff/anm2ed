@@ -2,46 +2,47 @@
 <metadata>
     <name>Anm2Ed (Animation Editor)</name>
     <directory>anm2ed</directory>
+    <id>3567731616</id>
     <description>
-	[h1]NOTE: THIS IS NOT A MOD! SUBSCRIBING TO THIS ISN'T NECESSARY (though it's appreciated)! It's recommend you head to the download page below![/h1]
+[h1]NOTE: THIS IS NOT A MOD! SUBSCRIBING TO THIS ISN'T NECESSARY (though it's appreciated)! It's recommend you head to the download page below![/h1]
 
-	[h2]Anm2Ed[/h2]
+[h2]Anm2Ed[/h2]
 
-	[img]https://shweetz.net/files/projects/anm2ed/screenshot.png[/img]
+[img]https://files.catbox.moe/3bj6za.png[/img]
 
-	A reimplementation of [i]The Binding of Isaac: Rebirth[/i]'s proprietary animation editor. Manipulates the XML-based ".anm2" format, used for in-game tweened animations.
+A reimplementation of [i]The Binding of Isaac: Rebirth[/i]'s proprietary animation editor. Manipulates the XML-based &quot;.anm2&quot; format, used for in-game tweened animations.
 
-	[h2]Features[/h2]
-	[list]
-		[*] Extended version of the original proprietary Nicalis animation editor
-	    [*] Smooth [url=https://github.com/ocornut/imgui]Dear ImGui[/url] interface; docking, dragging and dropping, etc. You might be familiar with it from [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3127536138]Repentogon[/url].
-		[*] New to this editor:
-		    [list]
-		    [*] Can output .webm. .mp4 or *.png sequence (with FFmpeg)
-	        [*] Cutting, copying and pasting frames/animations
-		    [*] Additional wizard options
-		    [*] Robust snapshot (undo/redo) system
-	        [*] Additional hotkeys/shortcuts (rebindable!)
-	    	[*] Onionskinning
-		    [*] Settings that will preserve on exit (stored in %APPDATA% on Windows or ~/.local/share on Linux)
-		    [/list]
-	    [/list]
+[h2]Features[/h2]
+[list]
+[*] Extended version of the original proprietary Nicalis animation editor
+[*] Smooth [url=https://github.com/ocornut/imgui]Dear ImGui[/url] interface; docking, dragging and dropping, etc. You might be familiar with it from [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3127536138]Repentogon[/url].
+[*] New to this editor:
+[list]
+[*] Can output .webm. .mp4 or *.png sequence (with FFmpeg)
+[*] Cutting, copying and pasting frames/animations
+[*] Additional wizard options
+[*] Robust snapshot (undo/redo) system
+[*] Additional hotkeys/shortcuts (rebindable!)
+[*] Onionskinning
+[*] Settings that will preserve on exit (stored in %APPDATA% on Windows or ~/.local/share on Linux)
+[/list]
+[/list]
 
-	[h3]Note: Difference from Nicalis editor[/h3]
-	Layers/nulls are handled differently (in their own window) and are not on the timeline! Add a layer/null in the Layers/Nulls window, and then add a LayerAnimation/NullAnimation in the timeline!
+[h3]Note: Difference from Nicalis editor[/h3]
+Layers/nulls are handled differently (in their own window) and are not on the timeline! Add a layer/null in the Layers/Nulls window, and then add a LayerAnimation/NullAnimation in the timeline!
 
-	[h3]Note on Rendering Animations[/h3]
-	You will need FFmpeg installed! Get it from [url=https://ffmpeg.org/download.html]here[/url] and point to the downloaded ffmpeg executable within the program!
+[h3]Note on Rendering Animations[/h3]
+You will need FFmpeg installed! Get it from [url=https://ffmpeg.org/download.html]here[/url] and point to the downloaded ffmpeg executable within the program!
 
-	[h2]Download (Windows)[/h2]
-	https://github.com/ShweetsStuff/anm2ed/releases
-	Extract with 7z and run .exe. Check that you have the latest [url=https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170]Microsoft C++ redistributable[/url] (if you play a lot of games on Steam, you likely will have it).
-	Alternatively, if you have subscribed to the mod, you can find the latest release inside the "resources" folder. Once downloaded, you can put it wherever you want.
+[h2]Download (Windows)[/h2]
+https://github.com/ShweetsStuff/anm2ed/releases
+Extract with 7z and run .exe. Check that you have the latest [url=https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170]Microsoft C++ redistributable[/url] (if you play a lot of games on Steam, you likely will have it).
 
-	[h3]Happy animating![/h3]
-	[img]https://private-user-images.githubusercontent.com/129694724/482938896-b7f4c7c4-ce38-4062-81e9-bea119c66d1a.gif?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3NTc4MDY3NTIsIm5iZiI6MTc1NzgwNjQ1MiwicGF0aCI6Ii8xMjk2OTQ3MjQvNDgyOTM4ODk2LWI3ZjRjN2M0LWNlMzgtNDA2Mi04MWU5LWJlYTExOWM2NmQxYS5naWY_WC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BS0lBVkNPRFlMU0E1M1BRSzRaQSUyRjIwMjUwOTEzJTJGdXMtZWFzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI1MDkxM1QyMzM0MTJaJlgtQW16LUV4cGlyZXM9MzAwJlgtQW16LVNpZ25hdHVyZT0xZmU3YmExYWJhZjg1NGZiNTNjODM0NGYyZGI5MjM2MzIxNGM1YTEyOWM2MjAxNDQwZWJhODRhMzUxYjcyZjQ5JlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCJ9.ZROJVPS4oIyhl3kt-FQc3DjI5mci32AHwStjG0Sk8TM[/img]
+Alternatively, if you have subscribed to the mod, you can find the latest release inside the &quot;resources&quot; folder. Once downloaded, you can put it wherever you want.
 
-    </description>
+[h3]Happy animating![/h3]
+[img]https://files.catbox.moe/4auc1c.gif[/img]
+</description>
     <version>1.1</version>
     <visibility>Public</visibility>
 </metadata>
