@@ -7,4 +7,5 @@ out/
 include/imgui/
 include/glm/
 include/tinyxml2
+workshop/resources
 .vs/
