@@ -14,15 +14,15 @@
 	[h2]Features[/h2]
 	[list]
 		[*] Extended version of the original proprietary Nicalis animation editor
-	    	[*] Smooth [url=https://github.com/ocornut/imgui]Dear ImGui[/url] interface; docking, dragging and dropping, etc. You might be familiar with it from [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3127536138]Repentogon[/url].
-		[*] New features (from Nicalis editor)
+	    [*] Smooth [url=https://github.com/ocornut/imgui]Dear ImGui[/url] interface; docking, dragging and dropping, etc. You might be familiar with it from [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3127536138]Repentogon[/url].
+		[*] New to this editor:
 		    [list]
-		    [*] Can output .webm or *.png sequence (with FFmpeg)
-	            [*] Cutting, copying and pasting frames/animations
+		    [*] Can output .webm. .mp4 or *.png sequence (with FFmpeg)
+	        [*] Cutting, copying and pasting frames/animations
 		    [*] Additional wizard options
 		    [*] Robust snapshot (undo/redo) system
-	            [*] Additional hotkeys/shortcuts (rebindable!)
-	    	    [*] Onionskinning
+	        [*] Additional hotkeys/shortcuts (rebindable!)
+	    	[*] Onionskinning
 		    [*] Settings that will preserve on exit (stored in %APPDATA% on Windows or ~/.local/share on Linux)
 		    [/list]
 	    [/list]
@@ -35,7 +35,7 @@
 
 	[h2]Download (Windows)[/h2]
 	https://github.com/ShweetsStuff/anm2ed/releases
-	    Extract with 7z and run .exe. Check that you have the latest [url=https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170]Microsoft C++ redistributable[/url] (if you play a lot of games on Steam, you likely will have it).
+	Extract with 7z and run .exe. Check that you have the latest [url=https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170]Microsoft C++ redistributable[/url] (if you play a lot of games on Steam, you likely will have it).
 	Alternatively, if you have subscribed to the mod, you can find the latest release inside the "resources" folder. Once downloaded, you can put it wherever you want.
 
 	[h3]Happy animating![/h3]

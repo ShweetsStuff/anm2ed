@@ -8,7 +8,7 @@ A reimplementation of *The Binding of Isaac: Rebirth*'s proprietary animation ed
 - Extended version of the original proprietary Nicalis animation editor
 - Smooth [Dear ImGui](https://github.com/ocornut/imgui) interface; docking, dragging and dropping, etc. You might be familiar with it from You might be familiar with it from (Repentogon)
 - New features
-    - Can output .webm or *.png sequence (wih FFmpeg)
+    - Can output .webm, .mp4 or *.png sequence (wih FFmpeg)
     - Cutting, copying and pasting
     - Additional wizard options
     - Robust snapshot (undo/redo) system
