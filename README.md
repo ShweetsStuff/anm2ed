@@ -19,8 +19,8 @@ A reimplementation of *The Binding of Isaac: Rebirth*'s proprietary animation ed
 ### Note: Difference from Nicalis editor
 Layers/nulls are handled differently (in their own window) and are not on the timeline! Add a layer/null in the Layers/Nulls window, and then add a LayerAnimation/NullAnimation in the timeline!
 
-### Note on Rendering Animations
-You will need FFmpeg installed! Get it from [here](https://ffmpeg.org/download.html),] and point to the downloaded ffmpeg executable within the program!
+### Note: Rendering Animations
+You will need FFmpeg installed! Get it from [here](https://ffmpeg.org/download.html), and point to the downloaded ffmpeg executable within the program!
 
 ## Dependencies
 Download these from your package manager:
