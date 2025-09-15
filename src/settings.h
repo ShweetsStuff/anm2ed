@@ -88,7 +88,7 @@
     \
     X(previewIsAxes,          PREVIEW_IS_AXES,              TYPE_BOOL,         true) \
     X(previewIsGrid,          PREVIEW_IS_GRID,              TYPE_BOOL,         true) \
-    X(previewIsRootTransform, PREVIEW_IS_ROOT_TRANSFORM,    TYPE_BOOL,         false) \
+    X(previewIsRootTransform, PREVIEW_IS_ROOT_TRANSFORM,    TYPE_BOOL,         true) \
     X(previewIsTriggers,      PREVIEW_IS_TRIGGERS,          TYPE_BOOL,         true) \
     X(previewIsPivots,        PREVIEW_IS_PIVOTS,            TYPE_BOOL,         false) \
     X(previewIsIcons,         PREVIEW_IS_ICONS,           TYPE_BOOL,         true) \
@@ -103,7 +103,7 @@
     X(previewAxesColor,       PREVIEW_AXES_COLOR,           TYPE_VEC4,         {1.0,1.0,1.0,0.125}) \
     X(previewBackgroundColor, PREVIEW_BACKGROUND_COLOR,     TYPE_VEC4,         {0.113,0.184,0.286,1.0}) \
     \
-    X(propertiesIsRound,      PROPERTIES_IS_ROUND,          TYPE_BOOL,         true) \
+    X(propertiesIsRound,      PROPERTIES_IS_ROUND,          TYPE_BOOL,         false) \
     \
     X(generateStartPosition,  GENERATE_START_POSITION,      TYPE_IVEC2,        {}) \
     X(generateSize,           GENERATE_SIZE,                TYPE_IVEC2,        {64,64}) \
