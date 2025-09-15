@@ -706,7 +706,7 @@ static void _imgui_timeline(Imgui* self)
 
 	ImVec2 scrollDelta{};
 	
-	if (_imgui_is_window_hovered())
+	if (_imgui_is_window_hovered() && !imgui_is_any_popup_open())
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		f32 lineHeight = ImGui::GetTextLineHeight();
@@ -851,6 +851,7 @@ static void _imgui_timeline(Imgui* self)
 				)
 				)
 					*self->reference = reference;
+
 				break;
 			case ANM2_NULL:
 				null = &self->anm2->nulls[reference.itemID];
@@ -867,6 +868,117 @@ static void _imgui_timeline(Imgui* self)
 				break;
 			default:
 				break;
+		}
+
+		if (imgui_begin_popup_modal(IMGUI_POPUP_ITEM_PROPERTIES, self, IMGUI_POPUP_ITEM_PROPERTIES_SIZE))
+		{
+			static s32 selectedLayerID = ID_NONE;
+			static s32 selectedNullID = ID_NONE;
+			Anm2Type& type = reference.itemType;
+
+			_imgui_begin_child(IMGUI_TIMELINE_ITEM_PROPERTIES_TYPE_CHILD, self);
+
+			_imgui_radio_button(IMGUI_TIMELINE_ITEM_PROPERTIES_LAYER.copy({true}), self, (s32&)type);
+			_imgui_radio_button(IMGUI_TIMELINE_ITEM_PROPERTIES_NULL.copy({true}), self, (s32&)type);
+
+			_imgui_end_child(); // IMGUI_TIMELINE_ITEM_PROPERTIES_TYPE_CHILD
+			
+			_imgui_begin_child(IMGUI_TIMELINE_ITEM_PROPERTIES_ITEMS_CHILD, self);
+		
+			switch (type)
+			{
+				case ANM2_LAYER:
+				default:
+				{
+					for (auto & [id, layer] : self->anm2->layers)
+					{
+						if (id == reference.itemID) continue;
+						
+						ImGui::PushID(id);
+
+						ImguiItem layerItem = IMGUI_LAYER.copy
+						({
+							.isSelected = selectedLayerID == id,
+							.label = std::format(IMGUI_LAYER_FORMAT, id, layer.name),
+							.id = id
+						});
+						if (_imgui_atlas_selectable(layerItem, self)) selectedLayerID = id;
+
+						ImGui::PopID();
+					};
+					break;
+				}			
+				case ANM2_NULL:
+				{
+					for (auto & [id, null] : self->anm2->nulls)
+					{
+						if (id == reference.itemID) continue;
+						
+						ImGui::PushID(id);
+
+						ImguiItem nullItem = IMGUI_NULL.copy
+						({
+							.isSelected = selectedNullID == id,
+							.label = std::format(IMGUI_NULL_FORMAT, id, null.name),
+							.id = id
+						});
+						if (_imgui_atlas_selectable(nullItem, self)) selectedNullID = id;
+
+						ImGui::PopID();
+					};
+					break;
+				}
+			}
+
+			_imgui_end_child(); // IMGUI_TIMELINE_ITEM_PROPERTIES_ITEMS_CHILD
+
+			_imgui_begin_child(IMGUI_TIMELINE_ITEM_PROPERTIES_OPTIONS_CHILD, self);
+		
+			if (self->anm2->layers.size() == 0) selectedLayerID = ID_NONE;
+			if (self->anm2->nulls.size() == 0) selectedNullID = ID_NONE;
+
+			bool isDisabled = 				 type == ANM2_NONE || 
+			(type == ANM2_LAYER && selectedLayerID == ID_NONE) || 
+			(type == ANM2_NULL && selectedNullID == ID_NONE);
+			
+			if (_imgui_button(IMGUI_TIMELINE_ITEM_PROPERTIES_CONFIRM.copy({isDisabled}), self))
+			{
+				switch (type)
+				{
+					case ANM2_LAYER: 
+						if (!map_find(animation->layerAnimations, selectedLayerID))
+						{
+							anm2_animation_layer_animation_add(animation, selectedLayerID);
+							anm2_animation_layer_animation_remove(animation, reference.itemID);
+						}
+						else
+							map_swap(animation->layerAnimations, selectedLayerID, reference.itemID); 
+
+						*self->reference = {self->reference->animationID, ANM2_LAYER, selectedLayerID};
+						break;
+					case ANM2_NULL: 
+						if (!map_find(animation->nullAnimations, selectedNullID))
+						{
+							anm2_animation_null_animation_add(animation, selectedNullID);
+							anm2_animation_null_animation_remove(animation, reference.itemID);
+
+						}
+						else
+							map_swap(animation->nullAnimations, selectedNullID, reference.itemID); 
+
+						*self->reference = {self->reference->animationID, ANM2_NULL, selectedNullID};
+						break;
+					default: break;
+				}
+				 
+				imgui_close_current_popup(self);
+			}
+			
+			if (_imgui_button(IMGUI_POPUP_CANCEL, self)) imgui_close_current_popup(self);
+			
+			_imgui_end_child(); // IMGUI_TIMELINE_ITEM_PROPERTIES_OPTIONS_CHILD
+					
+			imgui_end_popup(self);
 		}
 
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2());
@@ -940,6 +1052,8 @@ static void _imgui_timeline(Imgui* self)
 		{
 			Anm2Animation* animation = anm2_animation_from_reference(self->anm2, self->reference);
 
+			imgui_snapshot(self, IMGUI_ACTION_ITEM_SWAP);
+			
 			switch (swapItemReference.itemType)
 			{
 				case ANM2_LAYER:
@@ -990,6 +1104,8 @@ static void _imgui_timeline(Imgui* self)
 					_imgui_spritesheet_editor_set(self, self->anm2->layers[self->reference->itemID].spritesheetID);
 			}
 		}
+		else
+			hoverReference.frameIndex = INDEX_NONE;
 
 		s32 start = (s32)std::floor(scroll.x / frameSize.x) - 1;
 		if (start < 0) start = 0;
@@ -1018,8 +1134,8 @@ static void _imgui_timeline(Imgui* self)
 			static s32 frameDelayStart{};
 			static f32 frameDelayTimeStart{};
 			const bool isModCtrl = ImGui::IsKeyDown(IMGUI_INPUT_CTRL);
-			static Anm2Frame* draggingFrame = nullptr;
-			static Anm2Type draggingFrameType = ANM2_NONE;
+			static bool isFrameSwap = false;
+			static bool isDrag  = false;
 
 			ImGui::PushID(i);
 			reference.frameIndex = i;
@@ -1037,90 +1153,91 @@ static void _imgui_timeline(Imgui* self)
 
 			ImGui::SetCursorPos(framePos);
 			
-			if (_imgui_atlas_button(frameButton, self)) *self->reference = reference;
-
-			if (ImGui::IsItemActivated())
+			if (_imgui_atlas_button(frameButton, self))
 			{
-				if (type == ANM2_TRIGGERS || isModCtrl)
-				{
-					draggingFrame = &frame;
-					draggingFrameType = type;
-					*self->reference = reference;
-				}
-
-				if (type == ANM2_TRIGGERS)
-					imgui_snapshot(self, IMGUI_ACTION_TRIGGER_MOVE);
-				else if (isModCtrl)
-				{
-					imgui_snapshot(self, IMGUI_ACTION_FRAME_DELAY);
-					frameDelayStart = draggingFrame->delay;
-					frameDelayTimeStart = frameTime;
-				}
+				*self->reference = reference;
+				frameDelayStart = frame.delay;
+				frameDelayTimeStart = frameTime;
 			}
 
-			if (draggingFrame)
+			if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceNoDisableHover))
 			{
-				if (draggingFrameType == ANM2_TRIGGERS)
+				if (!isDrag)
 				{
-					draggingFrame->atFrame = std::max(frameTime, 0);
-					for (auto& frameCheck : animation->triggers.frames)
+					*self->reference = reference;
+					frameDelayStart = frame.delay;
+					frameDelayTimeStart = frameTime;
+					isFrameSwap = false;
+					isDrag = true;
+				}
+
+				ImGui::SetDragDropPayload(frameButton.drag_drop_get(), &reference, sizeof(Anm2Reference));
+				if (!isModCtrl) timeline_item_frame(i, frame);
+				ImGui::EndDragDropSource();
+			}
+
+			if (isDrag)
+			{
+				if (Anm2Frame* referenceFrame = anm2_frame_from_reference(self->anm2, self->reference))
+				{
+					switch (self->reference->itemType)
 					{
-						if (draggingFrame == &frameCheck) continue;
-						if (draggingFrame->atFrame == frameCheck.atFrame)
+						case ANM2_TRIGGERS:
 						{
-							draggingFrame->atFrame++;
+							referenceFrame->atFrame = std::max(frameTime, 0);
+							for (auto& trigger : animation->triggers.frames)
+							{
+								if (&trigger == referenceFrame) continue;
+								if (trigger.atFrame == referenceFrame->atFrame) 
+								{ 
+									referenceFrame->atFrame++; break; 
+								}
+							}
 							break;
 						}
-					}
-				}
-				else if (isModCtrl)
-					draggingFrame->delay = std::max(frameDelayStart + (s32)(frameTime - frameDelayTimeStart), ANM2_FRAME_NUM_MIN);
-
-				if (ImGui::IsMouseReleased(0))
-				{
-					draggingFrame = nullptr;
-					draggingFrameType = ANM2_NONE;
-				}
-			}
-			else
-			{
-				if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
-				{
-					ImGui::SetDragDropPayload(frameButton.drag_drop_get(), &reference, sizeof(Anm2Reference));
-					timeline_item_frame(i, frame);
-					ImGui::EndDragDropSource();
-				}
-
-				if (ImGui::BeginDragDropTarget())
-				{
-					Anm2Reference swapReference;
-					if (const ImGuiPayload* payload = ImGui::GetDragDropPayload())
-						swapReference = *(Anm2Reference*)payload->Data;
-					
-					if (swapReference != reference && reference.itemType == swapReference.itemType)
-					{
-						if (ImGui::AcceptDragDropPayload(frameButton.drag_drop_get()))
+						case ANM2_ROOT:
+						case ANM2_LAYER:
+						case ANM2_NULL:
 						{
-							imgui_snapshot(self, IMGUI_ACTION_FRAME_SWAP);
-
-							Anm2Frame* swapFrame = anm2_frame_from_reference(self->anm2, &reference);
-							Anm2Frame* dragFrame = anm2_frame_from_reference(self->anm2, &swapReference);
-							
-							if (swapFrame && dragFrame)
-							{
-								Anm2Frame oldFrame = *swapFrame;
-
-								*swapFrame = *dragFrame;
-								*dragFrame = oldFrame;
-
-								*self->reference = swapReference;
-							}
+							if (isModCtrl)
+								referenceFrame->delay = std::max(frameDelayStart + (s32)(frameTime - frameDelayTimeStart), ANM2_FRAME_NUM_MIN);
+							break;
 						}
+						default: break;
 					}
-					ImGui::EndDragDropTarget();
 				}
 			}
-					
+
+			if (ImGui::BeginDragDropTarget())
+			{
+				ImGui::AcceptDragDropPayload(frameButton.drag_drop_get());
+				ImGui::EndDragDropTarget();
+			}
+
+			if (isDrag && ImGui::IsMouseReleased(0))
+			{
+				if 
+				(	!isFrameSwap &&
+					*self->reference != hoverReference &&
+					self->reference->itemType == hoverReference.itemType
+				)
+				{
+					imgui_snapshot(self, IMGUI_ACTION_FRAME_MOVE);
+					if (Anm2Frame* referenceFrame = anm2_frame_from_reference(self->anm2, self->reference))
+					{
+						Anm2Reference addReference = hoverReference;
+						addReference.frameIndex = std::min(0, addReference.frameIndex - 1);
+						Anm2Frame addFrame = *referenceFrame;
+						anm2_frame_remove(self->anm2, self->reference);
+						anm2_frame_add(self->anm2, &addFrame, &hoverReference);
+						*self->reference = hoverReference;
+						hoverReference = Anm2Reference();
+					}
+				}
+
+				isDrag = false;
+			}
+
 			if (i < (s32)item->frames.size() - 1) ImGui::SameLine();
 
 			ImGui::PopID();
@@ -1201,14 +1318,14 @@ static void _imgui_timeline(Imgui* self)
 		static s32 selectedNullID = ID_NONE;
 		s32& type = self->settings->timelineAddItemType;
 
-		_imgui_begin_child(IMGUI_TIMELINE_ADD_ITEM_TYPE_CHILD, self);
+		_imgui_begin_child(IMGUI_TIMELINE_ITEM_PROPERTIES_TYPE_CHILD, self);
 
-		_imgui_radio_button(IMGUI_TIMELINE_ADD_ITEM_LAYER, self, type);
-		_imgui_radio_button(IMGUI_TIMELINE_ADD_ITEM_NULL, self, type);
+		_imgui_radio_button(IMGUI_TIMELINE_ITEM_PROPERTIES_LAYER, self, type);
+		_imgui_radio_button(IMGUI_TIMELINE_ITEM_PROPERTIES_NULL, self, type);
 
-		_imgui_end_child(); // IMGUI_TIMELINE_ADD_ITEM_TYPE_CHILD
+		_imgui_end_child(); // IMGUI_TIMELINE_ITEM_PROPERTIES_TYPE_CHILD
 		
-		_imgui_begin_child(IMGUI_TIMELINE_ADD_ITEM_ITEMS_CHILD, self);
+		_imgui_begin_child(IMGUI_TIMELINE_ITEM_PROPERTIES_ITEMS_CHILD, self);
 		
 		switch (type)
 		{
@@ -1251,9 +1368,9 @@ static void _imgui_timeline(Imgui* self)
 			}
 		}
 
-		_imgui_end_child(); // IMGUI_TIMELINE_ADD_ITEM_ITEMS_CHILD
+		_imgui_end_child(); // IMGUI_TIMELINE_ITEM_PROPERTIES_ITEMS_CHILD
 
-		_imgui_begin_child(IMGUI_TIMELINE_ADD_ITEM_OPTIONS_CHILD, self);
+		_imgui_begin_child(IMGUI_TIMELINE_ITEM_PROPERTIES_OPTIONS_CHILD, self);
 	
 		if (self->anm2->layers.size() == 0) selectedLayerID = ID_NONE;
 		if (self->anm2->nulls.size() == 0) selectedNullID = ID_NONE;
@@ -1262,20 +1379,27 @@ static void _imgui_timeline(Imgui* self)
 		(type == ANM2_LAYER && selectedLayerID == ID_NONE) || 
 		(type == ANM2_NULL && selectedNullID == ID_NONE);
 		
-		if (_imgui_button(IMGUI_TIMELINE_ADD_ITEM_ADD.copy({isDisabled}), self))
+		if (_imgui_button(IMGUI_TIMELINE_ITEM_PROPERTIES_CONFIRM.copy({isDisabled}), self))
 		{
 			switch (type)
 			{
-				case ANM2_LAYER: anm2_animation_layer_animation_add(animation, selectedLayerID); break;
-				case ANM2_NULL: anm2_animation_null_animation_add(animation, selectedNullID); break;
+				case ANM2_LAYER: 
+					anm2_animation_layer_animation_add(animation, selectedLayerID);
+					*self->reference = {self->reference->animationID, ANM2_LAYER, selectedLayerID};
+					break;
+				case ANM2_NULL: 
+					anm2_animation_null_animation_add(animation, selectedNullID); 
+					*self->reference = {self->reference->animationID, ANM2_NULL, selectedNullID};
+					break;
 				default: break;
 			}
 			 
 			imgui_close_current_popup(self);
 		}
+
 		if (_imgui_button(IMGUI_POPUP_CANCEL, self)) imgui_close_current_popup(self);
 		
-		_imgui_end_child(); // IMGUI_TIMELINE_ADD_ITEM_OPTIONS_CHILD
+		_imgui_end_child(); // IMGUI_TIMELINE_ITEM_PROPERTIES_OPTIONS_CHILD
 				
 		imgui_end_popup(self);
 	}

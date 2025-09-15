@@ -114,6 +114,14 @@ static inline std::string string_to_lowercase(std::string string) {
     return string;
 }
 
+static inline std::string string_backslash_replace(std::string string)
+{
+    for (char& character : string)
+        if (character == '\\') 
+            character = '/';
+    return string;
+}
+
 #define FLOAT_FORMAT_MAX_DECIMALS 5
 #define FLOAT_FORMAT_EPSILON 1e-5f
 static constexpr f32 FLOAT_FORMAT_POW10[] = {

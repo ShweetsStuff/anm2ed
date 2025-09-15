@@ -63,10 +63,11 @@
 #define IMGUI_CHORD_REPEAT_TIME 0.25f
 
 #define IMGUI_ACTION_FRAME_CROP "Frame Crop"
-#define IMGUI_ACTION_FRAME_SWAP "Frame Swap"
+#define IMGUI_ACTION_FRAME_MOVE "Frame Move"
 
 #define IMGUI_ACTION_ANIMATION_SWAP "Animation Swap"
 #define IMGUI_ACTION_TRIGGER_MOVE "Trigger At Frame"
+#define IMGUI_ACTION_ITEM_SWAP "Item Swap"
 #define IMGUI_ACTION_FRAME_DELAY "Frame Delay"
 #define IMGUI_ACTION_DRAW "Draw"
 #define IMGUI_ACTION_ERASE "Erase"
@@ -78,6 +79,7 @@
 #define IMGUI_ACTION_REPLACE_SPRITESHEET "Replace Spritesheet"
 #define IMGUI_ACTION_OPEN_FILE "Open File"
 
+#define IMGUI_SET_ITEM_PROPERTIES_POPUP "Item Properties"
 #define IMGUI_POPUP_FLAGS ImGuiWindowFlags_NoMove
 #define IMGUI_POPUP_MODAL_FLAGS ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize
 
@@ -1429,20 +1431,20 @@ IMGUI_ITEM(IMGUI_MERGE_ON_CONFLICT, self.label = "On Conflict");
 IMGUI_ITEM(IMGUI_MERGE_APPEND_FRAMES,
     self.label = "Append Frames ",
     self.tooltip = "On frame conflict, the merged animation will have the selected animations' frames appended.",
-    self.value = ANM2_MERGE_APPEND_FRAMES,
+    self.value = ANM2_MERGE_APPEND,
     self.isSameLine = true
 );
 
 IMGUI_ITEM(IMGUI_MERGE_REPLACE_FRAMES,
     self.label = "Replace Frames",
     self.tooltip = "On frame conflict, the merged animation will have the latest selected animations' frames.",
-    self.value = ANM2_MERGE_REPLACE_FRAMES
+    self.value = ANM2_MERGE_REPLACE
 );
 
 IMGUI_ITEM(IMGUI_MERGE_PREPEND_FRAMES,
     self.label = "Prepend Frames",
     self.tooltip = "On frame conflict, the merged animation will have the selected animations' frames prepended.",
-    self.value = ANM2_MERGE_PREPEND_FRAMES,
+    self.value = ANM2_MERGE_PREPEND,
     self.isSameLine = true
 );
 
@@ -2085,6 +2087,51 @@ const inline ImguiItem* IMGUI_TIMELINE_ITEM_CHILDS[ANM2_COUNT]
     &IMGUI_TIMELINE_ITEM_TRIGGERS_CHILD
 };
 
+#define IMGUI_POPUP_ITEM_PROPERTIES "Item Properties"
+#define IMGUI_POPUP_ITEM_PROPERTIES_TYPE IMGUI_POPUP_CENTER_WINDOW
+const ImVec2 IMGUI_POPUP_ITEM_PROPERTIES_SIZE = {300, 350};
+
+IMGUI_ITEM(IMGUI_TIMELINE_ITEM_PROPERTIES_TYPE_CHILD, 
+    self.label = "## Item Properties Type Child",
+    self.size = {IMGUI_POPUP_ITEM_PROPERTIES_SIZE.x, 35},
+    self.flags = true
+);
+
+IMGUI_ITEM(IMGUI_TIMELINE_ITEM_PROPERTIES_LAYER,
+    self.label = "Layer",
+    self.tooltip = "The item will be a layer item.\nA layer item is a primary graphical item, using a spritesheet.",
+    self.isSizeToText = true,
+    self.value = ANM2_LAYER,
+    self.isSameLine = true
+);
+
+IMGUI_ITEM(IMGUI_TIMELINE_ITEM_PROPERTIES_NULL,
+    self.label = "Null",
+    self.tooltip = "The item will be a null item.\nA null item is an invisible item, often accessed by a game engine.",
+    self.isSizeToText = true,
+    self.value = ANM2_NULL
+);
+
+IMGUI_ITEM(IMGUI_TIMELINE_ITEM_PROPERTIES_ITEMS_CHILD, 
+    self.label = "## Item Properties Items",
+    self.size = {IMGUI_POPUP_ITEM_PROPERTIES_SIZE.x, 250},
+    self.flags = true
+);
+
+IMGUI_ITEM(IMGUI_TIMELINE_ITEM_PROPERTIES_OPTIONS_CHILD, 
+    self.label = "## Item Properties Options Child",
+    self.size = {IMGUI_POPUP_ITEM_PROPERTIES_SIZE.x, 35},
+    self.flags = true
+);
+
+IMGUI_ITEM(IMGUI_TIMELINE_ITEM_PROPERTIES_CONFIRM,
+    self.label = "Confirm",
+    self.tooltip = "Set the timeline item's properties.",
+    self.snapshotAction = "Timeline Item Change",
+    self.rowCount = IMGUI_CONFIRM_POPUP_ROW_COUNT,
+    self.isSameLine = true
+);
+
 IMGUI_ITEM(IMGUI_TIMELINE_ITEM_SELECTABLE,
     self.label = "## Selectable",
     self.size = IMGUI_TIMELINE_ITEM_SELECTABLE_SIZE
@@ -2101,6 +2148,8 @@ IMGUI_ITEM(IMGUI_TIMELINE_ITEM_LAYER_SELECTABLE,
     self.label = "## Layer Selectable",
     self.tooltip = "A layer item.\nA graphical item within the animation.",
     self.dragDrop = "## Layer Drag Drop",
+    self.popup = IMGUI_POPUP_ITEM_PROPERTIES,
+    self.popupType = IMGUI_POPUP_ITEM_PROPERTIES_TYPE,
     self.atlas = ATLAS_LAYER,
     self.size = IMGUI_TIMELINE_ITEM_SELECTABLE_SIZE
 );
@@ -2109,6 +2158,8 @@ IMGUI_ITEM(IMGUI_TIMELINE_ITEM_NULL_SELECTABLE,
     self.label = "## Null Selectable",
     self.tooltip = "A null item.\nAn invisible item within the animation that is accessible via a game engine.",
     self.dragDrop = "## Null Drag Drop",
+    self.popup = IMGUI_POPUP_ITEM_PROPERTIES,
+    self.popupType = IMGUI_POPUP_ITEM_PROPERTIES_TYPE,
     self.atlas = ATLAS_NULL,
     self.size = IMGUI_TIMELINE_ITEM_SELECTABLE_SIZE
 );
@@ -2188,6 +2239,7 @@ IMGUI_ITEM(IMGUI_TIMELINE_FRAME, self.label = "## Frame");
 static const vec4 IMGUI_FRAME_BORDER_COLOR = {1.0f, 1.0f, 1.0f, 0.25f};
 IMGUI_ITEM(IMGUI_TIMELINE_ROOT_FRAME,
     self.label = "## Root Frame",
+    self.snapshotAction = "Root Frame",
     self.color = {{0.14f, 0.27f, 0.39f, 1.0f}, {0.28f, 0.54f, 0.78f, 1.0f}, {0.36f, 0.70f, 0.95f, 1.0f}, IMGUI_FRAME_BORDER_COLOR},
     self.size = IMGUI_TIMELINE_FRAME_SIZE,
     self.atlasOffset = IMGUI_TIMELINE_FRAME_ATLAS_OFFSET,
@@ -2197,6 +2249,7 @@ IMGUI_ITEM(IMGUI_TIMELINE_ROOT_FRAME,
 IMGUI_ITEM(IMGUI_TIMELINE_LAYER_FRAME,
     self.label = "## Layer Frame",
     self.dragDrop = "## Layer Frame Drag Drop",
+    self.snapshotAction = "Layer Frame",
     self.color = {{0.45f, 0.18f, 0.07f, 1.0f}, {0.78f, 0.32f, 0.12f, 1.0f}, {0.95f, 0.40f, 0.15f, 1.0f}, IMGUI_FRAME_BORDER_COLOR},
     self.size = IMGUI_TIMELINE_FRAME_SIZE,
     self.atlasOffset = IMGUI_TIMELINE_FRAME_ATLAS_OFFSET,
@@ -2206,6 +2259,7 @@ IMGUI_ITEM(IMGUI_TIMELINE_LAYER_FRAME,
 IMGUI_ITEM(IMGUI_TIMELINE_NULL_FRAME,
     self.label = "## Null Frame",
     self.dragDrop = "## Null Frame Drag Drop",
+    self.snapshotAction = "Null Frame",
     self.color = {{0.17f, 0.33f, 0.17f, 1.0f}, {0.34f, 0.68f, 0.34f, 1.0f}, {0.44f, 0.88f, 0.44f, 1.0f}, IMGUI_FRAME_BORDER_COLOR},
     self.size = IMGUI_TIMELINE_FRAME_SIZE,
     self.atlasOffset = IMGUI_TIMELINE_FRAME_ATLAS_OFFSET,
@@ -2214,6 +2268,7 @@ IMGUI_ITEM(IMGUI_TIMELINE_NULL_FRAME,
 
 IMGUI_ITEM(IMGUI_TIMELINE_TRIGGERS_FRAME,
     self.label = "## Triggers Frame",
+    self.snapshotAction = "Trigger",
     self.color = {{0.36f, 0.14f, 0.24f, 1.0f}, {0.72f, 0.28f, 0.48f, 1.0f}, {0.92f, 0.36f, 0.60f, 1.0f}, IMGUI_FRAME_BORDER_COLOR},
     self.size = IMGUI_TIMELINE_FRAME_SIZE,
     self.atlasOffset = IMGUI_TIMELINE_FRAME_ATLAS_OFFSET,
@@ -2249,52 +2304,13 @@ IMGUI_ITEM(IMGUI_TIMELINE_ADD_ITEM,
     self.label = "Add",
     self.tooltip = "Adds an item (layer or null) to the animation.\nMake sure to add a Layer/Null first in the Layers or Nulls windows.",
     self.popup = "Add Item",
-    self.popupType = IMGUI_POPUP_CENTER_WINDOW,
+    self.popupType = IMGUI_POPUP_ITEM_PROPERTIES_TYPE,
     self.popupSize = {300, 350},
     self.rowCount = IMGUI_TIMELINE_FOOTER_ITEM_CHILD_ITEM_COUNT,
     self.isSameLine = true
 );
 
-IMGUI_ITEM(IMGUI_TIMELINE_ADD_ITEM_TYPE_CHILD, 
-    self.label = "## Add Item Type Child",
-    self.size = {IMGUI_TIMELINE_ADD_ITEM.popupSize.x, 35},
-    self.flags = true
-);
 
-IMGUI_ITEM(IMGUI_TIMELINE_ADD_ITEM_LAYER,
-    self.label = "Layer",
-    self.tooltip = "Adds a layer item.\nA layer item is a primary graphical item, using a spritesheet.",
-    self.isSizeToText = true,
-    self.value = ANM2_LAYER,
-    self.isSameLine = true
-);
-
-IMGUI_ITEM(IMGUI_TIMELINE_ADD_ITEM_NULL,
-    self.label = "Null",
-    self.tooltip = "Adds a null item.\nA null item is an invisible item, often accessed by a game engine.",
-    self.isSizeToText = true,
-    self.value = ANM2_NULL
-);
-
-IMGUI_ITEM(IMGUI_TIMELINE_ADD_ITEM_ITEMS_CHILD, 
-    self.label = "## Add Item Items",
-    self.size = {IMGUI_TIMELINE_ADD_ITEM.popupSize.x, 250},
-    self.flags = true
-);
-
-IMGUI_ITEM(IMGUI_TIMELINE_ADD_ITEM_OPTIONS_CHILD, 
-    self.label = "## Add Item Options Child",
-    self.size = {IMGUI_TIMELINE_ADD_ITEM.popupSize.x, 35},
-    self.flags = true
-);
-
-IMGUI_ITEM(IMGUI_TIMELINE_ADD_ITEM_ADD,
-    self.label = "Add",
-    self.tooltip = "Add the selected item.",
-    self.snapshotAction = "Add Animation",
-    self.rowCount = IMGUI_CONFIRM_POPUP_ROW_COUNT,
-    self.isSameLine = true
-);
 
 IMGUI_ITEM(IMGUI_TIMELINE_REMOVE_ITEM,
     self.label = "Remove",

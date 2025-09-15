@@ -37,6 +37,7 @@ void preview_tick(Preview* self)
                 glBindFramebuffer(GL_READ_FRAMEBUFFER, self->canvas.fbo);
                 glReadBuffer(GL_COLOR_ATTACHMENT0);
                 glPixelStorei(GL_PACK_ALIGNMENT, 1);
+                glPixelStorei(GL_PACK_ROW_LENGTH, 0);
                 glReadPixels(0, 0, size.x, size.y, GL_RGBA, GL_UNSIGNED_BYTE, framebufferPixels.data());
                 glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 

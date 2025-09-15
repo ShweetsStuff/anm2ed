@@ -123,7 +123,7 @@
     X(editorGridColor,        EDITOR_GRID_COLOR,            TYPE_VEC4,         {1.0,1.0,1.0,0.125}) \
     X(editorBackgroundColor,  EDITOR_BACKGROUND_COLOR,      TYPE_VEC4,         {0.113,0.184,0.286,1.0}) \
     \
-    X(mergeType,              MERGE_TYPE,                   TYPE_INT,          ANM2_MERGE_APPEND_FRAMES) \
+    X(mergeType,              MERGE_TYPE,                   TYPE_INT,          ANM2_MERGE_APPEND) \
     X(mergeIsDeleteAnimationsAfter,MERGE_IS_DELETE_ANIMATIONS_AFTER,TYPE_BOOL, false) \
     \
     X(bakeInterval,           BAKE_INTERVAL,                TYPE_INT,          1) \

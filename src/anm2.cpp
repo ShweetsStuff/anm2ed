@@ -450,9 +450,12 @@ bool anm2_deserialize(Anm2* self, const std::string& path, bool isTextures)
 							// the paths are case-insensitive (as the game was developed on Windows)
 							// However when using the resource dumper, the spritesheet paths are all lowercase (on Linux anyways)
 							// If the check doesn't work, set the spritesheet path to lowercase
+							// If the check doesn't work, replace backslashes with slashes
+							// At the minimum this should make all textures be able to be loaded on Linux
 							// If it doesn't work beyond that then that's on the user :^)
 							addSpritesheet.path = attribute->Value(); 
 							if (!path_exists(addSpritesheet.path)) addSpritesheet.path = string_to_lowercase(addSpritesheet.path);
+							if (!path_exists(addSpritesheet.path)) addSpritesheet.path = string_backslash_replace(addSpritesheet.path);
 							if (isTextures) texture_from_path_init(&addSpritesheet.texture, addSpritesheet.path);
 							break;
 						case ANM2_ATTRIBUTE_ID: id = std::atoi(attribute->Value()); break;
@@ -846,9 +849,9 @@ Anm2Frame* anm2_frame_add(Anm2* self, Anm2Frame* frame, Anm2Reference* reference
 	}
 	else
 	{
-		s32 index = reference->frameIndex + 1;
+		s32 index = reference->frameIndex;
 		
-		if (index >= (s32)item->frames.size())
+		if (index < 0 || index >= (s32)item->frames.size())
 		{
 			item->frames.push_back(frameAdd);
 			return &item->frames.back();
@@ -951,13 +954,13 @@ void anm2_animation_merge(Anm2* self, s32 animationID, const std::vector<s32>& m
     {
         switch (type)
         {
-            case ANM2_MERGE_APPEND_FRAMES:
+            case ANM2_MERGE_APPEND:
                 destinationItem.frames.insert(destinationItem.frames.end(), sourceItem.frames.begin(), sourceItem.frames.end());
                 break;
-            case ANM2_MERGE_PREPEND_FRAMES:
+            case ANM2_MERGE_PREPEND:
                 destinationItem.frames.insert(destinationItem.frames.begin(), sourceItem.frames.begin(), sourceItem.frames.end());
                 break;
-            case ANM2_MERGE_REPLACE_FRAMES:
+            case ANM2_MERGE_REPLACE:
                 if (destinationItem.frames.size() < sourceItem.frames.size())
                     destinationItem.frames.resize(sourceItem.frames.size());
                 for (s32 i = 0; i < (s32)sourceItem.frames.size(); i++)
@@ -1231,3 +1234,113 @@ bool anm2_frame_deserialize_from_xml(Anm2Frame* frame, const std::string& xml)
 	
 	return true;
 }
+
+/*
+void anm2_merge(Anm2* self, const std::string& path, Anm2MergeType type)
+{
+	Anm2 anm2;
+
+	if (anm2_deserialize(&anm2, path, false))
+	{
+		std::unordered_map<s32, s32> spritesheetMap;
+		for (auto& [id, spritesheet] : anm2.spritesheets)
+		{
+			bool isExists = false;
+			
+			for (auto& [selfID, selfSpritesheet] : self->spritesheets)
+			{
+				if (spritesheet.path == selfSpritesheet.path) isExists = true;
+				spritesheetMap[id] = selfID;
+			}
+
+			if (isExists) continue;
+
+			s32 nextID = map_next_id_get(self->spritesheets); 
+			self->spritesheet[nextID] = spritesheet;
+			spritesheetMap[id] = nextID;
+		}
+
+		std::unordered_map<s32, s32> layerMap;
+		for (auto& [id, layer] : anm2.layers)
+		{
+			bool isExists = false;
+
+			layer.spritesheetID = spritesheetMap[layer.spritesheetID];
+
+			for (auto& [selfID, selfLayer] : self->layers)
+			{
+				if (layer.name == selfLayer.name) isExists = true;
+				layerMap[id] = selfID;
+			}
+
+			if (isExists) continue;
+
+			s32 nextID = map_next_id_get(self->layers); 
+			self->layer[nextID] = layer;
+			layerMap[id] = nextID;
+		}
+
+		std::unordered_map<s32, s32> nullMap;
+		for (auto& [id, null] : anm2.nulls)
+		{
+			bool isExists = false;
+			
+			for (auto& [selfID, selfNull] : self->nulls)
+			{
+				if (null.name == selfNull.name) isExists = true;
+				nullMap[id] = selfID;
+			}
+
+			if (isExists) continue;
+
+			s32 nextID = map_next_id_get(self->nulls); 
+			self->null[nextID] = null;
+			nullMap[id] = nextID;
+		}
+
+		std::unordered_map<s32, s32> eventMap;
+		for (auto& [id, event] : anm2.events)
+		{
+			bool isExists = false;
+			
+			for (auto& [selfID, selfEvent] : self->events)
+			{
+				if (event.name == selfEvent.name) isExists = true;
+				eventMap[id] = selfID;
+			}
+
+			if (isExists) continue;
+
+			s32 nextID = map_next_id_get(self->events); 
+			self->event[nextID] = event;
+			eventMap[id] = nextID;
+		}
+
+		for (auto& [id, animation] : anm2.animations)
+		{
+			bool isExists = false;
+			
+			for (auto& [selfID, selfAnimation] : self->animations)
+			{
+				if (event.name == selfAnimation.name) isExists = true;
+				eventMap[id] = selfID;
+			}
+
+			if (isExists) continue;
+
+			for (auto& frame : animation.rootAnimation.frames)
+			{
+
+				
+			}
+
+			for (auto& [layerID, layerAnimation] : animation.layerAnimations)
+			{
+				s32 newLayerID = layerMap[layerID];
+
+
+			}
+		}
+	}
+}
+*/
