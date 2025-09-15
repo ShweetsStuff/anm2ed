@@ -1104,8 +1104,6 @@ static void _imgui_timeline(Imgui* self)
 					_imgui_spritesheet_editor_set(self, self->anm2->layers[self->reference->itemID].spritesheetID);
 			}
 		}
-		else
-			hoverReference.frameIndex = INDEX_NONE;
 
 		s32 start = (s32)std::floor(scroll.x / frameSize.x) - 1;
 		if (start < 0) start = 0;
@@ -1190,7 +1188,8 @@ static void _imgui_timeline(Imgui* self)
 								if (&trigger == referenceFrame) continue;
 								if (trigger.atFrame == referenceFrame->atFrame) 
 								{ 
-									referenceFrame->atFrame++; break; 
+									referenceFrame->atFrame++; 
+									break; 
 								}
 							}
 							break;
@@ -1226,7 +1225,9 @@ static void _imgui_timeline(Imgui* self)
 					if (Anm2Frame* referenceFrame = anm2_frame_from_reference(self->anm2, self->reference))
 					{
 						Anm2Reference addReference = hoverReference;
-						addReference.frameIndex = std::min(0, addReference.frameIndex - 1);
+						addReference.frameIndex = hoverReference.frameIndex < self->reference->frameIndex ? 
+							std::min(0, addReference.frameIndex - 2) : 
+							std::min(0, addReference.frameIndex - 1);
 						Anm2Frame addFrame = *referenceFrame;
 						anm2_frame_remove(self->anm2, self->reference);
 						anm2_frame_add(self->anm2, &addFrame, &hoverReference);
@@ -1237,6 +1238,7 @@ static void _imgui_timeline(Imgui* self)
 
 				isDrag = false;
 			}
+
 
 			if (i < (s32)item->frames.size() - 1) ImGui::SameLine();
 
