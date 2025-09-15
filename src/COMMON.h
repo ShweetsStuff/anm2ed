@@ -114,39 +114,25 @@ static inline std::string string_to_lowercase(std::string string) {
     return string;
 }
 
-
-#define FLOAT_FORMAT_MAX_DECIMALS 9
-#define FLOAT_FORMAT_EPSILON 1e-9f
+#define FLOAT_FORMAT_MAX_DECIMALS 5
+#define FLOAT_FORMAT_EPSILON 1e-5f
 static constexpr f32 FLOAT_FORMAT_POW10[] = {
     1.f,
     10.f,
     100.f,
     1000.f,
     10000.f,
-    100000.f,
-    1000000.f,
-    10000000.f,
-    100000000.f,
-    1000000000.f
+    100000.f
 };
 
 static inline s32 f32_decimals_needed(f32 value)
 {
-    f32 integerPart = 0.f;
-    f32 fractionalPart = modff(value, &integerPart);
-    fractionalPart = fabsf(fractionalPart);
-
-    if (fractionalPart < FLOAT_FORMAT_EPSILON)
-        return 0;
-
-    for (s32 decimalCount = 1; decimalCount <= FLOAT_FORMAT_MAX_DECIMALS; ++decimalCount)
+    for (s32 decimalCount = 0; decimalCount <= FLOAT_FORMAT_MAX_DECIMALS; ++decimalCount)
     {
-        f32 scaledFraction = fractionalPart * FLOAT_FORMAT_POW10[decimalCount];
-        if (fabsf(scaledFraction - roundf(scaledFraction)) <
-            FLOAT_FORMAT_EPSILON * FLOAT_FORMAT_POW10[decimalCount])
-        {
+        f32 scale = FLOAT_FORMAT_POW10[decimalCount];
+        f32 rounded = roundf(value * scale) / scale;
+        if (fabsf(value - rounded) < FLOAT_FORMAT_EPSILON)
             return decimalCount;
-        }
     }
     return FLOAT_FORMAT_MAX_DECIMALS;
 }

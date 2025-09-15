@@ -1612,8 +1612,10 @@ static void _imgui_taskbar(Imgui* self)
 		static DialogType& dialogType = self->dialog->type;
 		static bool& dialogIsSelected = self->dialog->isSelected;
 		static s32& type = self->settings->renderType;
+		static f32& scale = self->settings->renderScale;
+		static bool& isUseAnimationBounds = self->settings->renderIsUseAnimationBounds;
 		static std::string& dialogPath = self->dialog->path;
-		static std::string& ffmpegPath = self->settings->ffmpegPath;
+		static std::string& ffmpegPath = self->settings->renderFFmpegPath;
 		static std::string& format = self->settings->renderFormat;
 		static std::string& path = self->settings->renderPath;
 
@@ -1640,8 +1642,10 @@ static void _imgui_taskbar(Imgui* self)
 		}
 		
 		_imgui_input_text(IMGUI_RENDER_ANIMATION_FFMPEG_PATH, self, ffmpegPath);
-		_imgui_input_text(IMGUI_RENDER_ANIMATION_FORMAT, self, format);
 		_imgui_combo(IMGUI_RENDER_ANIMATION_OUTPUT, self, &type);
+		_imgui_input_text(IMGUI_RENDER_ANIMATION_FORMAT.copy({type != RENDER_PNG}), self, format);
+		_imgui_checkbox(IMGUI_RENDER_ANIMATION_IS_USE_ANIMATION_BOUNDS, self, isUseAnimationBounds);
+		_imgui_input_float(IMGUI_RENDER_ANIMATION_SCALE.copy({!isUseAnimationBounds}), self, scale);
 
 		_imgui_end_child(); // IMGUI_RENDER_ANIMATION_CHILD
 		
@@ -1765,7 +1769,7 @@ static void _imgui_taskbar(Imgui* self)
 				case RENDER_WEBM:
 				case RENDER_MP4:
 				{
-					std::string ffmpegPath = std::string(self->settings->ffmpegPath.c_str());
+					std::string ffmpegPath = std::string(self->settings->renderFFmpegPath.c_str());
 					path = path_extension_change(path, RENDER_EXTENSIONS[self->settings->renderType]);
 					
 					if (ffmpeg_render(ffmpegPath, path, frames, self->preview->canvas.size, self->anm2->fps, (RenderType)type))
@@ -2463,8 +2467,8 @@ static void _imgui_animation_preview(Imgui* self)
 	if (_imgui_button(IMGUI_ANIMATION_PREVIEW_CENTER_VIEW.copy({pan == vec2()}), self)) pan = vec2();
 	if (_imgui_button(IMGUI_ANIMATION_PREVIEW_FIT.copy({self->reference->animationID == ID_NONE}), self))
 	{
-        vec4 rect = anm2_animation_rect_get(self->anm2, self->reference, self->settings->previewIsRootTransform);
-
+    	vec4 rect = anm2_animation_rect_get(self->anm2, self->reference, self->settings->previewIsRootTransform);
+		
 		if (rect != vec4(-1.0f) && (rect.z > 0 && rect.w > 0))
 		{
 			f32 scaleX = self->preview->canvas.size.x / rect.z;
@@ -2527,7 +2531,9 @@ static void _imgui_animation_preview(Imgui* self)
 	_imgui_end_child(); // IMGUI_CANVAS_HELPER_CHILD
 
 	ImVec2 previewCursorScreenPos = ImGui::GetCursorScreenPos();
-	size = ivec2(vec2(ImGui::GetContentRegionAvail()));
+	
+	if (!self->preview->isRender) size = ivec2(vec2(ImGui::GetContentRegionAvail()));
+		   
 	preview_draw(self->preview);
 	ImGui::Image(self->preview->canvas.framebuffer, vec2(size));
 	

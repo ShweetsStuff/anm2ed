@@ -1132,7 +1132,7 @@ IMGUI_ITEM(IMGUI_RENDER_ANIMATION,
     self.label = "&Render Animation",
     self.tooltip = "Renders the current animation preview; output options can be customized.",
     self.popup = "Render Animation",
-    self.popupSize = {600, 150},
+    self.popupSize = {500, 170},
     self.popupType = IMGUI_POPUP_CENTER_WINDOW
 );
 
@@ -1157,7 +1157,7 @@ IMGUI_ITEM(IMGUI_RENDER_ANIMATION_LOCATION_BROWSE,
 
 IMGUI_ITEM(IMGUI_RENDER_ANIMATION_LOCATION,
     self.label = "Location",
-    self.tooltip = "Select the location of the rendered animation.",
+    self.tooltip = "Select the location of the rendered animation.\nFor PNG images, this should be a directory, otherwise, a filepath.",
     self.max = 1024
 );
 
@@ -1185,6 +1185,20 @@ IMGUI_ITEM(IMGUI_RENDER_ANIMATION_FORMAT,
     self.label = "Format",
     self.tooltip = "(PNG images only).\nSet the format of each output frame; i.e., its filename.\nThe format will only take one argument; that being the frame's index.\nFor example, a format like \"{}.png\" will export a frame of index 0 as \"0.png\".",
     self.max = UCHAR_MAX
+);
+
+IMGUI_ITEM(IMGUI_RENDER_ANIMATION_IS_USE_ANIMATION_BOUNDS,
+    self.label = "Use Animation Bounds",
+    self.tooltip = "Instead of using the animation preview's bounds, the rendered animation will use the animation's bounds.\nNOTE: If you're looking to make a transparent animation, set the preview background to be transparent\nand toggle off other drawn things.",
+    self.value = SETTINGS_RENDER_IS_USE_ANIMATION_BOUNDS_DEFAULT,
+    self.isSameLine = true
+);
+
+IMGUI_ITEM(IMGUI_RENDER_ANIMATION_SCALE,
+    self.label = "Scale",
+    self.tooltip = "Change the scale the animation will be rendered at.",
+    self.value = SETTINGS_RENDER_SCALE_DEFAULT,
+    self.size = {125, 0}
 );
 
 IMGUI_ITEM(IMGUI_RENDER_ANIMATION_CONFIRM,

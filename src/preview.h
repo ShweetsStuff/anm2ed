@@ -34,6 +34,9 @@ struct Preview
     Settings* settings = nullptr;
     s32 animationOverlayID = ID_NONE;
     Canvas canvas;
+    vec2 normalCanvasSize{};
+    vec2 normalCanvasPan{};
+    f32 normalCanvasZoom{};
     bool isPlaying = false;
     bool isRender = false;
     bool isRenderFinished = false;

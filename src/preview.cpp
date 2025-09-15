@@ -242,6 +242,25 @@ void preview_render_start(Preview* self)
     self->isPlaying = true;
     self->time = 0.0f;
     _preview_render_textures_free(self);
+    
+    self->normalCanvasSize = self->canvas.size;
+    self->normalCanvasPan = self->settings->previewPan;
+    self->normalCanvasZoom = self->settings->previewZoom;
+
+    if (self->settings->renderIsUseAnimationBounds)
+    {
+        vec4 rect = anm2_animation_rect_get(self->anm2, self->reference, self->settings->previewIsRootTransform);
+
+        self->canvas.size = ivec2
+        (
+            ceilf(rect.z * self->settings->renderScale),
+            ceilf(rect.w * self->settings->renderScale)
+        );
+
+        vec2 rectCenter = vec2(rect.x + rect.z * 0.5f, rect.y + rect.w * 0.5f);
+        self->settings->previewPan = -rectCenter * self->settings->renderScale;
+        self->settings->previewZoom = UNIT_TO_PERCENT(self->settings->renderScale);
+    }
 }
 
 void preview_render_end(Preview* self)
@@ -250,6 +269,10 @@ void preview_render_end(Preview* self)
     self->isPlaying = false;
     self->isRenderFinished = false;
     _preview_render_textures_free(self);
+ 
+    self->canvas.size = self->normalCanvasSize;
+    self->settings->previewPan = self->normalCanvasPan;
+    self->settings->previewZoom = self->normalCanvasZoom;
 }
 
 void preview_free(Preview* self)

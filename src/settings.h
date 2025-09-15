@@ -21,9 +21,9 @@
 #define SETTINGS_TEMPORARY_EXTENSION ".tmp"
 
 #ifdef _WIN32
-#define SETTINGS_FFMPEG_PATH_VALUE_DEFAULT "C:\\ffmpeg\\bin\\ffmpeg.exe"
+#define SETTINGS_RENDER_FFMPEG_PATH_VALUE_DEFAULT "C:\\ffmpeg\\bin\\ffmpeg.exe"
 #else
-#define SETTINGS_FFMPEG_PATH_VALUE_DEFAULT "/usr/bin/ffmpeg"
+#define SETTINGS_RENDER_FFMPEG_PATH_VALUE_DEFAULT "/usr/bin/ffmpeg"
 #endif
 
 #define SETTINGS_LIST \
@@ -143,10 +143,13 @@
     X(tool,                   TOOL,                         TYPE_INT,          TOOL_PAN) \
     X(toolColor,              TOOL_COLOR,                   TYPE_VEC4,         {1.0,1.0,1.0,1.0}) \
     \
-    X(renderType,             RENDER_TYPE,                  TYPE_INT,          RENDER_PNG) \
-    X(renderPath,             RENDER_PATH,                  TYPE_STRING,       ".") \
-    X(renderFormat,           RENDER_FORMAT,                TYPE_STRING,       "{}.png") \
-    X(ffmpegPath,             FFMPEG_PATH,                  TYPE_STRING,       SETTINGS_FFMPEG_PATH_VALUE_DEFAULT)
+    X(renderType,             RENDER_TYPE,                  TYPE_INT,           RENDER_PNG) \
+    X(renderPath,             RENDER_PATH,                  TYPE_STRING,        ".") \
+    X(renderFormat,           RENDER_FORMAT,                TYPE_STRING,        "{}.png") \
+    X(renderIsUseAnimationBounds,RENDER_IS_USE_ANIMATION_BOUNDS,TYPE_BOOL,          true) \
+    X(renderIsTransparent,    RENDER_IS_TRANSPARENT,        TYPE_BOOL,          true) \
+    X(renderScale,            RENDER_SCALE,                 TYPE_FLOAT,         1.0f) \
+    X(renderFFmpegPath,       RENDER_FFMPEG_PATH,           TYPE_STRING,        SETTINGS_RENDER_FFMPEG_PATH_VALUE_DEFAULT)
 
 #define X(name, symbol, type, ...) \
 const inline DATATYPE_TO_CTYPE(type) SETTINGS_##symbol##_DEFAULT = __VA_ARGS__;
