@@ -144,7 +144,7 @@ struct Anm2Spritesheet
 struct Anm2Layer
 {
     std::string name = "New Layer";
-	s32 spritesheetID{}
+	s32 spritesheetID{};
 
     auto operator<=>(const Anm2Layer&) const = default;
 };
