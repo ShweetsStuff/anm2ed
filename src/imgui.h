@@ -209,6 +209,7 @@ struct Imgui
     ImguiPopupType pendingPopupType = IMGUI_POPUP_NONE;
     ImVec2 pendingPopupPosition{};
     std::vector<ImguiLogItem> log;
+    Anm2 saveAnm2;
     SDL_SystemCursor cursor;
     SDL_SystemCursor pendingCursor;
     bool isCursorSet = false;
@@ -216,7 +217,6 @@ struct Imgui
     bool isQuit = false;
     bool isTryQuit = false;
 };
-
 
 static inline void imgui_snapshot(Imgui* self, const std::string& action = SNAPSHOT_ACTION)
 {
@@ -252,6 +252,8 @@ static inline void imgui_file_save(Imgui* self)
 		anm2_serialize(self->anm2, self->anm2->path);
         imgui_log_push(self, std::format(IMGUI_LOG_FILE_SAVE_FORMAT, self->anm2->path));
     }
+
+    self->saveAnm2 = *self->anm2;
 }
 
 static inline void imgui_file_new(Imgui* self)
@@ -269,7 +271,7 @@ static inline void imgui_file_save_as(Imgui* self)
 
 static inline void imgui_quit(Imgui* self)
 {
-    if (!self->snapshots->undoStack.is_empty())
+    if (self->saveAnm2 != *self->anm2)
         self->isTryQuit = true;
     else
         self->isQuit = true;

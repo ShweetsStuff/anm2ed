@@ -3012,6 +3012,8 @@ void imgui_init
 	self->window = window;
 	self->glContext = glContext;
 
+	self->saveAnm2 = *anm2;
+	
 	ImGui::CreateContext();
 	ImGui::StyleColorsDark();
 
@@ -3032,6 +3034,7 @@ void imgui_init
 		if (!SETTINGS_HOTKEY_MEMBERS[i]) continue;
 		imgui_hotkey_chord_registry()[i] = imgui_chord_from_string_get(*&(self->settings->*SETTINGS_HOTKEY_MEMBERS[i]));
 	}
+
 }
 
 void imgui_update(Imgui* self)

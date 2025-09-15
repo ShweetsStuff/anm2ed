@@ -13,6 +13,8 @@ struct Texture
     GLuint id = GL_ID_NONE;
     ivec2 size{};
     bool isInvalid = true;
+
+    auto operator<=>(const Texture&) const = default;
 };
 
 bool texture_from_encoded_data_init(Texture* self, ivec2 size, const u8* data, u32 length);

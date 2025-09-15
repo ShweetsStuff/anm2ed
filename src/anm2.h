@@ -137,23 +137,31 @@ struct Anm2Spritesheet
     std::string path{};
     Texture texture;
     std::vector<u8> pixels; 
+
+    auto operator<=>(const Anm2Spritesheet&) const = default;
 };
 
 struct Anm2Layer
 {
     std::string name = "New Layer";
-	s32 spritesheetID{};
+	s32 spritesheetID{}
+
+    auto operator<=>(const Anm2Layer&) const = default;
 };
 
 struct Anm2Null
 {
     std::string name = "New Null";   
     bool isShowRect = false;
+
+    auto operator<=>(const Anm2Null&) const = default;
 };
 
 struct Anm2Event
 {
     std::string name = "New Event";
+
+    auto operator<=>(const Anm2Event&) const = default;
 };
 
 struct Anm2Frame
@@ -171,27 +179,16 @@ struct Anm2Frame
 	vec2 scale = {100, 100};
 	vec3 offsetRGB = COLOR_OFFSET_NONE;
 	vec4 tintRGBA = COLOR_OPAQUE;
-};
 
-struct Anm2FrameChange
-{
-    std::optional<bool> isVisible;
-    std::optional<bool> isInterpolated;
-    std::optional<f32> rotation;
-    std::optional<s32> delay;
-    std::optional<vec2> crop;
-    std::optional<vec2> pivot;
-    std::optional<vec2> position;
-    std::optional<vec2> size;
-    std::optional<vec2> scale;
-    std::optional<vec3> offsetRGB;
-    std::optional<vec4> tintRGBA;
+    auto operator<=>(const Anm2Frame&) const = default;
 };
 
 struct Anm2Item
 {
     bool isVisible = true;
 	std::vector<Anm2Frame> frames;
+
+    auto operator<=>(const Anm2Item&) const = default;
 };
 
 struct Anm2Animation
@@ -204,6 +201,8 @@ struct Anm2Animation
     std::vector<s32> layerOrder;
     std::map<s32, Anm2Item> nullAnimations;
     Anm2Item triggers;
+    
+    auto operator<=>(const Anm2Animation&) const = default;
 };
 
 struct Anm2 
@@ -219,6 +218,8 @@ struct Anm2
     s32 defaultAnimationID = ID_NONE;
     s32 fps = ANM2_FPS_DEFAULT;
 	s32 version{};
+
+    auto operator<=>(const Anm2&) const = default;
 };
 
 struct Anm2Reference
@@ -229,6 +230,21 @@ struct Anm2Reference
     s32 frameIndex = INDEX_NONE;
     f32 time = VALUE_NONE;
     auto operator<=>(const Anm2Reference&) const = default; 
+};
+
+struct Anm2FrameChange
+{
+    std::optional<bool> isVisible;
+    std::optional<bool> isInterpolated;
+    std::optional<f32> rotation;
+    std::optional<s32> delay;
+    std::optional<vec2> crop;
+    std::optional<vec2> pivot;
+    std::optional<vec2> position;
+    std::optional<vec2> size;
+    std::optional<vec2> scale;
+    std::optional<vec3> offsetRGB;
+    std::optional<vec4> tintRGBA;
 };
 
 enum Anm2MergeType
