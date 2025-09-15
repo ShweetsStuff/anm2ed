@@ -242,15 +242,15 @@ static inline s32 map_next_id_get(const std::map<s32, T>& map)
 {
     s32 id = 0; 
     
-    for (const auto& [key, _] : map) 
+    for (const auto& [key, value] : map) 
+    {
         if (key != id) 
             break; 
-        else 
-            ++id; 
+        ++id; 
+    }
     
     return id;
 }
-
 
 template <typename Map>
 static inline auto map_find(Map& map, typename Map::key_type id)

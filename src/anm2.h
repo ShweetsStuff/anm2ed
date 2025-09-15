@@ -290,7 +290,6 @@ void anm2_animation_null_animation_add(Anm2Animation* animation, s32 id);
 void anm2_animation_null_animation_remove(Anm2Animation* animation, s32 id);
 void anm2_animation_remove(Anm2* self, s32 id);
 void anm2_animation_serialize_to_string(Anm2Animation* animation, std::string* string);
-void anm2_created_on_set(Anm2* self);
 void anm2_frame_bake(Anm2* self, Anm2Reference* reference, s32 interval, bool isRoundScale, bool isRoundRotation);
 void anm2_frame_from_time(Anm2* self, Anm2Frame* frame, Anm2Reference reference, f32 time);
 void anm2_frame_remove(Anm2* self, Anm2Reference* reference);
