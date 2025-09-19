@@ -26,235 +26,240 @@
 #define SETTINGS_RENDER_FFMPEG_PATH_VALUE_DEFAULT "/usr/bin/ffmpeg"
 #endif
 
-#define SETTINGS_LIST \
-    /* name,                  symbol,                       type,              defaultValue */ \
-    X(windowSize,             WINDOW_SIZE,                  TYPE_IVEC2_WH,     {1600, 900}) \
-    X(isVsync,                IS_VSYNC,                     TYPE_BOOL,         true) \
-    \
-    X(hotkeyCenterView,       HOTKEY_CENTER_VIEW,           TYPE_STRING,       "Home") \
-    X(hotkeyFit,              HOTKEY_FIT,                   TYPE_STRING,       "F") \
-    X(hotkeyZoomIn,           HOTKEY_ZOOM_IN,               TYPE_STRING,       "Ctrl++") \
-    X(hotkeyZoomOut,          HOTKEY_ZOOM_OUT,              TYPE_STRING,       "Ctrl+-") \
-    X(hotkeyPlayPause,        HOTKEY_PLAY_PAUSE,            TYPE_STRING,       "Space") \
-    X(hotkeyOnionskin,        HOTKEY_ONIONSKIN,             TYPE_STRING,       "O") \
-    X(hotkeyNew,              HOTKEY_NEW,                   TYPE_STRING,       "Ctrl+N") \
-    X(hotkeyOpen,             HOTKEY_OPEN,                  TYPE_STRING,       "Ctrl+O") \
-    X(hotkeySave,             HOTKEY_SAVE,                  TYPE_STRING,       "Ctrl+S") \
-    X(hotkeySaveAs,           HOTKEY_SAVE_AS,               TYPE_STRING,       "Ctrl+Shift+S") \
-    X(hotkeyExit,             HOTKEY_EXIT,                  TYPE_STRING,       "Alt+F4") \
-    X(hotkeyPan,              HOTKEY_PAN,                   TYPE_STRING,       "P") \
-    X(hotkeyMove,             HOTKEY_MOVE,                  TYPE_STRING,       "V") \
-    X(hotkeyRotate,           HOTKEY_ROTATE,                TYPE_STRING,       "R") \
-    X(hotkeyScale,            HOTKEY_SCALE,                 TYPE_STRING,       "S") \
-    X(hotkeyCrop,             HOTKEY_CROP,                  TYPE_STRING,       "C") \
-    X(hotkeyDraw,             HOTKEY_DRAW,                  TYPE_STRING,       "B") \
-    X(hotkeyErase,            HOTKEY_ERASE,                 TYPE_STRING,       "E") \
-    X(hotkeyColorPicker,      HOTKEY_COLOR_PICKER,          TYPE_STRING,       "I") \
-    X(hotkeyUndo,             HOTKEY_UNDO,                  TYPE_STRING,       "Ctrl+Z") \
-    X(hotkeyRedo,             HOTKEY_REDO,                  TYPE_STRING,       "Ctrl+Shift+Z") \
-    X(hotkeyCopy,             HOTKEY_COPY,                  TYPE_STRING,       "Ctrl+C") \
-    X(hotkeyCut,              HOTKEY_CUT,                   TYPE_STRING,       "Ctrl+X") \
-    X(hotkeyPaste,            HOTKEY_PASTE,                 TYPE_STRING,       "Ctrl+V") \
-    \
-    X(playbackIsLoop,         PLAYBACK_IS_LOOP,             TYPE_BOOL,         true) \
-    X(playbackIsClampPlayhead,PLAYBACK_IS_CLAMP_PLAYHEAD,   TYPE_BOOL,         true) \
-    \
-    X(changeIsCrop,           CHANGE_IS_CROP,               TYPE_BOOL,         false) \
-    X(changeIsSize,           CHANGE_IS_SIZE,               TYPE_BOOL,         false) \
-    X(changeIsPosition,       CHANGE_IS_POSITION,           TYPE_BOOL,         false) \
-    X(changeIsPivot,          CHANGE_IS_PIVOT,              TYPE_BOOL,         false) \
-    X(changeIsScale,          CHANGE_IS_SCALE,              TYPE_BOOL,         false) \
-    X(changeIsRotation,       CHANGE_IS_ROTATION,           TYPE_BOOL,         false) \
-    X(changeIsDelay,          CHANGE_IS_DELAY,              TYPE_BOOL,         false) \
-    X(changeIsTint,           CHANGE_IS_TINT,               TYPE_BOOL,         false) \
-    X(changeIsColorOffset,    CHANGE_IS_COLOR_OFFSET,       TYPE_BOOL,         false) \
-    X(changeIsVisibleSet,     CHANGE_IS_VISIBLE_SET,        TYPE_BOOL,         false) \
-    X(changeIsInterpolatedSet,CHANGE_IS_INTERPOLATED_SET,   TYPE_BOOL,         false) \
-    X(changeIsFromSelectedFrame,CHANGE_IS_FROM_SELECTED_FRAME,TYPE_BOOL,       false) \
-    X(changeCrop,             CHANGE_CROP,                  TYPE_VEC2,         {}) \
-    X(changeSize,             CHANGE_SIZE,                  TYPE_VEC2,         {}) \
-    X(changePosition,         CHANGE_POSITION,              TYPE_VEC2,         {}) \
-    X(changePivot,            CHANGE_PIVOT,                 TYPE_VEC2,         {}) \
-    X(changeScale,            CHANGE_SCALE,                 TYPE_VEC2,         {}) \
-    X(changeRotation,         CHANGE_ROTATION,              TYPE_FLOAT,        0.0f) \
-    X(changeDelay,            CHANGE_DELAY,                 TYPE_INT,          0) \
-    X(changeTint,             CHANGE_TINT,                  TYPE_VEC4,         {}) \
-    X(changeColorOffset,      CHANGE_COLOR_OFFSET,          TYPE_VEC3,         {}) \
-    X(changeIsVisible,        CHANGE_IS_VISIBLE,            TYPE_BOOL,         false) \
-    X(changeIsInterpolated,   CHANGE_IS_INTERPOLATED,       TYPE_BOOL,         false) \
-    X(changeNumberFrames,     CHANGE_NUMBER_FRAMES,         TYPE_INT,          1) \
-    \
-    X(scaleValue,             SCALE_VALUE,                  TYPE_FLOAT,        1.0f) \
-    \
-    X(previewIsAxes,          PREVIEW_IS_AXES,              TYPE_BOOL,         true) \
-    X(previewIsGrid,          PREVIEW_IS_GRID,              TYPE_BOOL,         true) \
-    X(previewIsRootTransform, PREVIEW_IS_ROOT_TRANSFORM,    TYPE_BOOL,         true) \
-    X(previewIsTriggers,      PREVIEW_IS_TRIGGERS,          TYPE_BOOL,         true) \
-    X(previewIsPivots,        PREVIEW_IS_PIVOTS,            TYPE_BOOL,         false) \
-    X(previewIsIcons,         PREVIEW_IS_ICONS,           TYPE_BOOL,         true) \
-    X(previewIsBorder,        PREVIEW_IS_BORDER,            TYPE_BOOL,         false) \
-    X(previewIsAltIcons,      PREVIEW_IS_ALT_ICONS,         TYPE_BOOL,         false) \
-    X(previewOverlayTransparency,PREVIEW_OVERLAY_TRANSPARENCY,TYPE_FLOAT,      255.0f) \
-    X(previewZoom,            PREVIEW_ZOOM,                 TYPE_FLOAT,        200.0f) \
-    X(previewPan,             PREVIEW_PAN,                  TYPE_VEC2,         {}) \
-    X(previewGridSize,        PREVIEW_GRID_SIZE,            TYPE_IVEC2,        {32,32}) \
-    X(previewGridOffset,      PREVIEW_GRID_OFFSET,          TYPE_IVEC2,        {}) \
-    X(previewGridColor,       PREVIEW_GRID_COLOR,           TYPE_VEC4,         {1.0,1.0,1.0,0.125}) \
-    X(previewAxesColor,       PREVIEW_AXES_COLOR,           TYPE_VEC4,         {1.0,1.0,1.0,0.125}) \
-    X(previewBackgroundColor, PREVIEW_BACKGROUND_COLOR,     TYPE_VEC4,         {0.113,0.184,0.286,1.0}) \
-    \
-    X(propertiesIsRound,      PROPERTIES_IS_ROUND,          TYPE_BOOL,         false) \
-    \
-    X(generateStartPosition,  GENERATE_START_POSITION,      TYPE_IVEC2,        {}) \
-    X(generateSize,           GENERATE_SIZE,                TYPE_IVEC2,        {64,64}) \
-    X(generatePivot,          GENERATE_PIVOT,               TYPE_IVEC2,        {32,32}) \
-    X(generateRows,           GENERATE_ROWS,                TYPE_INT,          4) \
-    X(generateColumns,        GENERATE_COLUMNS,             TYPE_INT,          4) \
-    X(generateCount,          GENERATE_COUNT,               TYPE_INT,          16) \
-    X(generateDelay,          GENERATE_DELAY,               TYPE_INT,          1) \
-    \
-    X(editorIsGrid,           EDITOR_IS_GRID,               TYPE_BOOL,         true) \
-    X(editorIsGridSnap,       EDITOR_IS_GRID_SNAP,          TYPE_BOOL,         true) \
-    X(editorIsBorder,         EDITOR_IS_BORDER,             TYPE_BOOL,         true) \
-    X(editorZoom,             EDITOR_ZOOM,                  TYPE_FLOAT,        200.0f) \
-    X(editorPan,              EDITOR_PAN,                   TYPE_VEC2,         {0.0,0.0}) \
-    X(editorGridSize,         EDITOR_GRID_SIZE,             TYPE_IVEC2,        {32,32}) \
-    X(editorGridOffset,       EDITOR_GRID_OFFSET,           TYPE_IVEC2,        {32,32}) \
-    X(editorGridColor,        EDITOR_GRID_COLOR,            TYPE_VEC4,         {1.0,1.0,1.0,0.125}) \
-    X(editorBackgroundColor,  EDITOR_BACKGROUND_COLOR,      TYPE_VEC4,         {0.113,0.184,0.286,1.0}) \
-    \
-    X(mergeType,              MERGE_TYPE,                   TYPE_INT,          ANM2_MERGE_APPEND) \
-    X(mergeIsDeleteAnimationsAfter,MERGE_IS_DELETE_ANIMATIONS_AFTER,TYPE_BOOL, false) \
-    \
-    X(bakeInterval,           BAKE_INTERVAL,                TYPE_INT,          1) \
-    X(bakeIsRoundScale,       BAKE_IS_ROUND_SCALE,          TYPE_BOOL,         true) \
-    X(bakeIsRoundRotation,    BAKE_IS_ROUND_ROTATION,       TYPE_BOOL,         true) \
-    \
-    X(timelineAddItemType,    TIMELINE_ADD_ITEM_TYPE,       TYPE_INT,          ANM2_LAYER) \
-    X(timelineIsShowUnused,   TIMELINE_IS_SHOW_UNUSED,      TYPE_BOOL,         true) \
-    \
-    X(onionskinIsEnabled,     ONIONSKIN_IS_ENABLED,         TYPE_BOOL,         false) \
-    X(onionskinDrawOrder,     ONIONSKIN_DRAW_ORDER,         TYPE_INT,          ONIONSKIN_BELOW) \
-    X(onionskinBeforeCount,   ONIONSKIN_BEFORE_COUNT,       TYPE_INT,          0) \
-    X(onionskinAfterCount,    ONIONSKIN_AFTER_COUNT,        TYPE_INT,          0) \
-    X(onionskinBeforeColorOffset,ONIONSKIN_BEFORE_COLOR_OFFSET,TYPE_VEC3,      COLOR_RED) \
-    X(onionskinAfterColorOffset, ONIONSKIN_AFTER_COLOR_OFFSET,TYPE_VEC3,       COLOR_BLUE) \
-    \
-    X(tool,                   TOOL,                         TYPE_INT,          TOOL_PAN) \
-    X(toolColor,              TOOL_COLOR,                   TYPE_VEC4,         {1.0,1.0,1.0,1.0}) \
-    \
-    X(renderType,             RENDER_TYPE,                  TYPE_INT,           RENDER_PNG) \
-    X(renderPath,             RENDER_PATH,                  TYPE_STRING,        ".") \
-    X(renderFormat,           RENDER_FORMAT,                TYPE_STRING,        "{}.png") \
-    X(renderIsUseAnimationBounds,RENDER_IS_USE_ANIMATION_BOUNDS,TYPE_BOOL,          true) \
-    X(renderIsTransparent,    RENDER_IS_TRANSPARENT,        TYPE_BOOL,          true) \
-    X(renderScale,            RENDER_SCALE,                 TYPE_FLOAT,         1.0f) \
-    X(renderFFmpegPath,       RENDER_FFMPEG_PATH,           TYPE_STRING,        SETTINGS_RENDER_FFMPEG_PATH_VALUE_DEFAULT)
+#define SETTINGS_LIST                                                                                                                                          \
+  /* Symbol / Name / Type / Default */                                                                                                                         \
+  X(WINDOW_SIZE, windowSize, TYPE_IVEC2_WH, {1600, 900})                                                                                                       \
+  X(IS_VSYNC, isVsync, TYPE_BOOL, true)                                                                                                                        \
+  X(DISPLAY_SCALE, displayScale, TYPE_FLOAT, 1.0f)                                                                                                             \
+                                                                                                                                                               \
+  X(HOTKEY_CENTER_VIEW, hotkeyCenterView, TYPE_STRING, "Home")                                                                                                 \
+  X(HOTKEY_FIT, hotkeyFit, TYPE_STRING, "F")                                                                                                                   \
+  X(HOTKEY_ZOOM_IN, hotkeyZoomIn, TYPE_STRING, "Ctrl++")                                                                                                       \
+  X(HOTKEY_ZOOM_OUT, hotkeyZoomOut, TYPE_STRING, "Ctrl+-")                                                                                                     \
+  X(HOTKEY_PLAY_PAUSE, hotkeyPlayPause, TYPE_STRING, "Space")                                                                                                  \
+  X(HOTKEY_ONIONSKIN, hotkeyOnionskin, TYPE_STRING, "O")                                                                                                       \
+  X(HOTKEY_NEW, hotkeyNew, TYPE_STRING, "Ctrl+N")                                                                                                              \
+  X(HOTKEY_OPEN, hotkeyOpen, TYPE_STRING, "Ctrl+O")                                                                                                            \
+  X(HOTKEY_SAVE, hotkeySave, TYPE_STRING, "Ctrl+S")                                                                                                            \
+  X(HOTKEY_SAVE_AS, hotkeySaveAs, TYPE_STRING, "Ctrl+Shift+S")                                                                                                 \
+  X(HOTKEY_EXIT, hotkeyExit, TYPE_STRING, "Alt+F4")                                                                                                            \
+  X(HOTKEY_SHORTEN_FRAME, hotkeyShortenFrame, TYPE_STRING, "F4")                                                                                               \
+  X(HOTKEY_EXTEND_FRAME, hotkeyExtendFrame, TYPE_STRING, "F5")                                                                                                 \
+  X(HOTKEY_INSERT_FRAME, hotkeyInsertFrame, TYPE_STRING, "F6")                                                                                                 \
+  X(HOTKEY_PREVIOUS_FRAME, hotkeyPreviousFrame, TYPE_STRING, "Comma")                                                                                          \
+  X(HOTKEY_NEXT_FRAME, hotkeyNextFrame, TYPE_STRING, "Period")                                                                                                 \
+  X(HOTKEY_PAN, hotkeyPan, TYPE_STRING, "P")                                                                                                                   \
+  X(HOTKEY_MOVE, hotkeyMove, TYPE_STRING, "V")                                                                                                                 \
+  X(HOTKEY_ROTATE, hotkeyRotate, TYPE_STRING, "R")                                                                                                             \
+  X(HOTKEY_SCALE, hotkeyScale, TYPE_STRING, "S")                                                                                                               \
+  X(HOTKEY_CROP, hotkeyCrop, TYPE_STRING, "C")                                                                                                                 \
+  X(HOTKEY_DRAW, hotkeyDraw, TYPE_STRING, "B")                                                                                                                 \
+  X(HOTKEY_ERASE, hotkeyErase, TYPE_STRING, "E")                                                                                                               \
+  X(HOTKEY_COLOR_PICKER, hotkeyColorPicker, TYPE_STRING, "I")                                                                                                  \
+  X(HOTKEY_UNDO, hotkeyUndo, TYPE_STRING, "Ctrl+Z")                                                                                                            \
+  X(HOTKEY_REDO, hotkeyRedo, TYPE_STRING, "Ctrl+Shift+Z")                                                                                                      \
+  X(HOTKEY_COPY, hotkeyCopy, TYPE_STRING, "Ctrl+C")                                                                                                            \
+  X(HOTKEY_CUT, hotkeyCut, TYPE_STRING, "Ctrl+X")                                                                                                              \
+  X(HOTKEY_PASTE, hotkeyPaste, TYPE_STRING, "Ctrl+V")                                                                                                          \
+                                                                                                                                                               \
+  X(PLAYBACK_IS_LOOP, playbackIsLoop, TYPE_BOOL, true)                                                                                                         \
+  X(PLAYBACK_IS_CLAMP_PLAYHEAD, playbackIsClampPlayhead, TYPE_BOOL, true)                                                                                      \
+                                                                                                                                                               \
+  X(CHANGE_IS_CROP, changeIsCrop, TYPE_BOOL, false)                                                                                                            \
+  X(CHANGE_IS_SIZE, changeIsSize, TYPE_BOOL, false)                                                                                                            \
+  X(CHANGE_IS_POSITION, changeIsPosition, TYPE_BOOL, false)                                                                                                    \
+  X(CHANGE_IS_PIVOT, changeIsPivot, TYPE_BOOL, false)                                                                                                          \
+  X(CHANGE_IS_SCALE, changeIsScale, TYPE_BOOL, false)                                                                                                          \
+  X(CHANGE_IS_ROTATION, changeIsRotation, TYPE_BOOL, false)                                                                                                    \
+  X(CHANGE_IS_DELAY, changeIsDelay, TYPE_BOOL, false)                                                                                                          \
+  X(CHANGE_IS_TINT, changeIsTint, TYPE_BOOL, false)                                                                                                            \
+  X(CHANGE_IS_COLOR_OFFSET, changeIsColorOffset, TYPE_BOOL, false)                                                                                             \
+  X(CHANGE_IS_VISIBLE_SET, changeIsVisibleSet, TYPE_BOOL, false)                                                                                               \
+  X(CHANGE_IS_INTERPOLATED_SET, changeIsInterpolatedSet, TYPE_BOOL, false)                                                                                     \
+  X(CHANGE_IS_FROM_SELECTED_FRAME, changeIsFromSelectedFrame, TYPE_BOOL, false)                                                                                \
+  X(CHANGE_CROP, changeCrop, TYPE_VEC2, {})                                                                                                                    \
+  X(CHANGE_SIZE, changeSize, TYPE_VEC2, {})                                                                                                                    \
+  X(CHANGE_POSITION, changePosition, TYPE_VEC2, {})                                                                                                            \
+  X(CHANGE_PIVOT, changePivot, TYPE_VEC2, {})                                                                                                                  \
+  X(CHANGE_SCALE, changeScale, TYPE_VEC2, {})                                                                                                                  \
+  X(CHANGE_ROTATION, changeRotation, TYPE_FLOAT, 0.0f)                                                                                                         \
+  X(CHANGE_DELAY, changeDelay, TYPE_INT, 0)                                                                                                                    \
+  X(CHANGE_TINT, changeTint, TYPE_VEC4, {})                                                                                                                    \
+  X(CHANGE_COLOR_OFFSET, changeColorOffset, TYPE_VEC3, {})                                                                                                     \
+  X(CHANGE_IS_VISIBLE, changeIsVisible, TYPE_BOOL, false)                                                                                                      \
+  X(CHANGE_IS_INTERPOLATED, changeIsInterpolated, TYPE_BOOL, false)                                                                                            \
+  X(CHANGE_NUMBER_FRAMES, changeNumberFrames, TYPE_INT, 1)                                                                                                     \
+                                                                                                                                                               \
+  X(SCALE_VALUE, scaleValue, TYPE_FLOAT, 1.0f)                                                                                                                 \
+                                                                                                                                                               \
+  X(PREVIEW_IS_AXES, previewIsAxes, TYPE_BOOL, true)                                                                                                           \
+  X(PREVIEW_IS_GRID, previewIsGrid, TYPE_BOOL, true)                                                                                                           \
+  X(PREVIEW_IS_ROOT_TRANSFORM, previewIsRootTransform, TYPE_BOOL, true)                                                                                        \
+  X(PREVIEW_IS_TRIGGERS, previewIsTriggers, TYPE_BOOL, true)                                                                                                   \
+  X(PREVIEW_IS_PIVOTS, previewIsPivots, TYPE_BOOL, false)                                                                                                      \
+  X(PREVIEW_IS_ICONS, previewIsIcons, TYPE_BOOL, true)                                                                                                         \
+  X(PREVIEW_IS_BORDER, previewIsBorder, TYPE_BOOL, false)                                                                                                      \
+  X(PREVIEW_IS_ALT_ICONS, previewIsAltIcons, TYPE_BOOL, false)                                                                                                 \
+  X(PREVIEW_OVERLAY_TRANSPARENCY, previewOverlayTransparency, TYPE_FLOAT, 255.0f)                                                                              \
+  X(PREVIEW_ZOOM, previewZoom, TYPE_FLOAT, 200.0f)                                                                                                             \
+  X(PREVIEW_PAN, previewPan, TYPE_VEC2, {})                                                                                                                    \
+  X(PREVIEW_GRID_SIZE, previewGridSize, TYPE_IVEC2, {32, 32})                                                                                                  \
+  X(PREVIEW_GRID_OFFSET, previewGridOffset, TYPE_IVEC2, {})                                                                                                    \
+  X(PREVIEW_GRID_COLOR, previewGridColor, TYPE_VEC4, {1.0, 1.0, 1.0, 0.125})                                                                                   \
+  X(PREVIEW_AXES_COLOR, previewAxesColor, TYPE_VEC4, {1.0, 1.0, 1.0, 0.125})                                                                                   \
+  X(PREVIEW_BACKGROUND_COLOR, previewBackgroundColor, TYPE_VEC4, {0.113, 0.184, 0.286, 1.0})                                                                   \
+                                                                                                                                                               \
+  X(PROPERTIES_IS_ROUND, propertiesIsRound, TYPE_BOOL, false)                                                                                                  \
+                                                                                                                                                               \
+  X(GENERATE_START_POSITION, generateStartPosition, TYPE_IVEC2, {})                                                                                            \
+  X(GENERATE_SIZE, generateSize, TYPE_IVEC2, {64, 64})                                                                                                         \
+  X(GENERATE_PIVOT, generatePivot, TYPE_IVEC2, {32, 32})                                                                                                       \
+  X(GENERATE_ROWS, generateRows, TYPE_INT, 4)                                                                                                                  \
+  X(GENERATE_COLUMNS, generateColumns, TYPE_INT, 4)                                                                                                            \
+  X(GENERATE_COUNT, generateCount, TYPE_INT, 16)                                                                                                               \
+  X(GENERATE_DELAY, generateDelay, TYPE_INT, 1)                                                                                                                \
+                                                                                                                                                               \
+  X(EDITOR_IS_GRID, editorIsGrid, TYPE_BOOL, true)                                                                                                             \
+  X(EDITOR_IS_GRID_SNAP, editorIsGridSnap, TYPE_BOOL, true)                                                                                                    \
+  X(EDITOR_IS_BORDER, editorIsBorder, TYPE_BOOL, true)                                                                                                         \
+  X(EDITOR_ZOOM, editorZoom, TYPE_FLOAT, 200.0f)                                                                                                               \
+  X(EDITOR_PAN, editorPan, TYPE_VEC2, {0.0, 0.0})                                                                                                              \
+  X(EDITOR_GRID_SIZE, editorGridSize, TYPE_IVEC2, {32, 32})                                                                                                    \
+  X(EDITOR_GRID_OFFSET, editorGridOffset, TYPE_IVEC2, {32, 32})                                                                                                \
+  X(EDITOR_GRID_COLOR, editorGridColor, TYPE_VEC4, {1.0, 1.0, 1.0, 0.125})                                                                                     \
+  X(EDITOR_BACKGROUND_COLOR, editorBackgroundColor, TYPE_VEC4, {0.113, 0.184, 0.286, 1.0})                                                                     \
+                                                                                                                                                               \
+  X(MERGE_TYPE, mergeType, TYPE_INT, ANM2_MERGE_APPEND)                                                                                                        \
+  X(MERGE_IS_DELETE_ANIMATIONS_AFTER, mergeIsDeleteAnimationsAfter, TYPE_BOOL, false)                                                                          \
+                                                                                                                                                               \
+  X(BAKE_INTERVAL, bakeInterval, TYPE_INT, 1)                                                                                                                  \
+  X(BAKE_IS_ROUND_SCALE, bakeIsRoundScale, TYPE_BOOL, true)                                                                                                    \
+  X(BAKE_IS_ROUND_ROTATION, bakeIsRoundRotation, TYPE_BOOL, true)                                                                                              \
+                                                                                                                                                               \
+  X(TIMELINE_ADD_ITEM_TYPE, timelineAddItemType, TYPE_INT, ANM2_LAYER)                                                                                         \
+  X(TIMELINE_IS_SHOW_UNUSED, timelineIsShowUnused, TYPE_BOOL, true)                                                                                            \
+                                                                                                                                                               \
+  X(ONIONSKIN_IS_ENABLED, onionskinIsEnabled, TYPE_BOOL, false)                                                                                                \
+  X(ONIONSKIN_DRAW_ORDER, onionskinDrawOrder, TYPE_INT, ONIONSKIN_BELOW)                                                                                       \
+  X(ONIONSKIN_BEFORE_COUNT, onionskinBeforeCount, TYPE_INT, 0)                                                                                                 \
+  X(ONIONSKIN_AFTER_COUNT, onionskinAfterCount, TYPE_INT, 0)                                                                                                   \
+  X(ONIONSKIN_BEFORE_COLOR_OFFSET, onionskinBeforeColorOffset, TYPE_VEC3, COLOR_RED)                                                                           \
+  X(ONIONSKIN_AFTER_COLOR_OFFSET, onionskinAfterColorOffset, TYPE_VEC3, COLOR_BLUE)                                                                            \
+                                                                                                                                                               \
+  X(TOOL, tool, TYPE_INT, TOOL_PAN)                                                                                                                            \
+  X(TOOL_COLOR, toolColor, TYPE_VEC4, {1.0, 1.0, 1.0, 1.0})                                                                                                    \
+                                                                                                                                                               \
+  X(RENDER_TYPE, renderType, TYPE_INT, RENDER_PNG)                                                                                                             \
+  X(RENDER_PATH, renderPath, TYPE_STRING, ".")                                                                                                                 \
+  X(RENDER_FORMAT, renderFormat, TYPE_STRING, "{}.png")                                                                                                        \
+  X(RENDER_IS_USE_ANIMATION_BOUNDS, renderIsUseAnimationBounds, TYPE_BOOL, true)                                                                               \
+  X(RENDER_IS_TRANSPARENT, renderIsTransparent, TYPE_BOOL, true)                                                                                               \
+  X(RENDER_SCALE, renderScale, TYPE_FLOAT, 1.0f)                                                                                                               \
+  X(RENDER_FFMPEG_PATH, renderFFmpegPath, TYPE_STRING, SETTINGS_RENDER_FFMPEG_PATH_VALUE_DEFAULT)
 
-#define X(name, symbol, type, ...) \
-const inline DATATYPE_TO_CTYPE(type) SETTINGS_##symbol##_DEFAULT = __VA_ARGS__;
+#define X(symbol, name, type, ...) const inline DATATYPE_TO_CTYPE(type) SETTINGS_##symbol##_DEFAULT = __VA_ARGS__;
 SETTINGS_LIST
 #undef X
 
-struct Settings 
-{
-    #define X(name, symbol, type, ...) \
-    DATATYPE_TO_CTYPE(type) name = SETTINGS_##symbol##_DEFAULT;
+struct Settings {
+#define X(symbol, name, type, ...) DATATYPE_TO_CTYPE(type) name = SETTINGS_##symbol##_DEFAULT;
+  SETTINGS_LIST
+#undef X
+};
+
+struct SettingsEntry {
+  std::string key;
+  DataType type;
+  int offset;
+};
+
+const inline SettingsEntry SETTINGS_ENTRIES[] = {
+#define X(symbol, name, type, ...) {#name, type, offsetof(Settings, name)},
     SETTINGS_LIST
-    #undef X
-};
-    
-struct SettingsEntry
-{
-    std::string key;
-    DataType type;
-    s32 offset;
+#undef X
 };
 
-const inline SettingsEntry SETTINGS_ENTRIES[] =
-{
-    #define X(name, symbol, type, ...) \
-    { #name, type, offsetof(Settings, name) },
-    SETTINGS_LIST
-    #undef X
-};
+constexpr int SETTINGS_COUNT = (int)std::size(SETTINGS_ENTRIES);
 
-constexpr s32 SETTINGS_COUNT = (s32)std::size(SETTINGS_ENTRIES);
+#define HOTKEY_LIST                                                                                                                                            \
+  X(NONE, "None")                                                                                                                                              \
+  X(CENTER_VIEW, "Center View")                                                                                                                                \
+  X(FIT, "Fit")                                                                                                                                                \
+  X(ZOOM_IN, "Zoom In")                                                                                                                                        \
+  X(ZOOM_OUT, "Zoom Out")                                                                                                                                      \
+  X(PLAY_PAUSE, "Play/Pause")                                                                                                                                  \
+  X(ONIONSKIN, "Onionskin")                                                                                                                                    \
+  X(NEW, "New")                                                                                                                                                \
+  X(OPEN, "Open")                                                                                                                                              \
+  X(SAVE, "Save")                                                                                                                                              \
+  X(SAVE_AS, "Save As")                                                                                                                                        \
+  X(EXIT, "Exit")                                                                                                                                              \
+  X(SHORTEN_FRAME, "Shorten Frame")                                                                                                                            \
+  X(EXTEND_FRAME, "Extend Frame")                                                                                                                              \
+  X(INSERT_FRAME, "Insert Frame")                                                                                                                              \
+  X(PREVIOUS_FRAME, "Previous Frame")                                                                                                                          \
+  X(NEXT_FRAME, "Next Frame")                                                                                                                                  \
+  X(PAN, "Pan")                                                                                                                                                \
+  X(MOVE, "Move")                                                                                                                                              \
+  X(ROTATE, "Rotate")                                                                                                                                          \
+  X(SCALE, "Scale")                                                                                                                                            \
+  X(CROP, "Crop")                                                                                                                                              \
+  X(DRAW, "Draw")                                                                                                                                              \
+  X(ERASE, "Erase")                                                                                                                                            \
+  X(COLOR_PICKER, "Color Picker")                                                                                                                              \
+  X(UNDO, "Undo")                                                                                                                                              \
+  X(REDO, "Redo")                                                                                                                                              \
+  X(COPY, "Copy")                                                                                                                                              \
+  X(CUT, "Cut")                                                                                                                                                \
+  X(PASTE, "Paste")
 
-#define HOTKEY_LIST \
-    X(NONE,     "None")                 \
-    X(CENTER_VIEW,     "Center View")   \
-    X(FIT,     "Fit")                   \
-    X(ZOOM_IN,     "Zoom In")           \
-    X(ZOOM_OUT,     "Zoom Out")         \
-    X(PLAY_PAUSE,     "Play/Pause")     \
-    X(ONIONSKIN,     "Onionskin")       \
-    X(NEW,     "New")                   \
-    X(OPEN,     "Open")                 \
-    X(SAVE,     "Save")                 \
-    X(SAVE_AS,     "Save As")           \
-    X(EXIT,   "Exit")                   \
-    X(PAN,     "Pan")                   \
-    X(MOVE,     "Move")                 \
-    X(ROTATE,     "Rotate")             \
-    X(SCALE,     "Scale")               \
-    X(CROP,     "Crop")                 \
-    X(DRAW,     "Draw")                 \
-    X(ERASE,     "Erase")               \
-    X(COLOR_PICKER,     "Color Picker") \
-    X(UNDO,     "Undo")                 \
-    X(REDO,     "Redo")                 \
-    X(COPY,     "Copy")                 \
-    X(CUT,     "Cut")                   \
-    X(PASTE,     "Paste")               \
-       
-typedef enum 
-{
-    #define X(name, str) HOTKEY_##name,
-    HOTKEY_LIST
-    #undef X
-    HOTKEY_COUNT
+typedef enum {
+#define X(name, str) HOTKEY_##name,
+  HOTKEY_LIST
+#undef X
+      HOTKEY_COUNT
 } HotkeyType;
 
-const inline char* HOTKEY_STRINGS[] = 
-{
-    #define X(name, str) str,
+const inline char* HOTKEY_STRINGS[] = {
+#define X(name, str) str,
     HOTKEY_LIST
-    #undef X
+#undef X
 };
 
 using HotkeyMember = std::string Settings::*;
 
-const inline HotkeyMember SETTINGS_HOTKEY_MEMBERS[HOTKEY_COUNT] =
-{
-    nullptr,
-    &Settings::hotkeyCenterView,
-    &Settings::hotkeyFit,
-    &Settings::hotkeyZoomIn,
-    &Settings::hotkeyZoomOut,
-    &Settings::hotkeyPlayPause,
-    &Settings::hotkeyOnionskin,
-    &Settings::hotkeyNew,
-    &Settings::hotkeyOpen,
-    &Settings::hotkeySave,
-    &Settings::hotkeySaveAs,
-    &Settings::hotkeyExit,
-    &Settings::hotkeyPan,
-    &Settings::hotkeyMove,
-    &Settings::hotkeyRotate,
-    &Settings::hotkeyScale,
-    &Settings::hotkeyCrop,
-    &Settings::hotkeyDraw,
-    &Settings::hotkeyErase,
-    &Settings::hotkeyColorPicker,
-    &Settings::hotkeyUndo,
-    &Settings::hotkeyRedo,
-    &Settings::hotkeyCopy,
-    &Settings::hotkeyCut,
-    &Settings::hotkeyPaste
-};
+const inline HotkeyMember SETTINGS_HOTKEY_MEMBERS[HOTKEY_COUNT] = {nullptr,
+                                                                   &Settings::hotkeyCenterView,
+                                                                   &Settings::hotkeyFit,
+                                                                   &Settings::hotkeyZoomIn,
+                                                                   &Settings::hotkeyZoomOut,
+                                                                   &Settings::hotkeyPlayPause,
+                                                                   &Settings::hotkeyOnionskin,
+                                                                   &Settings::hotkeyNew,
+                                                                   &Settings::hotkeyOpen,
+                                                                   &Settings::hotkeySave,
+                                                                   &Settings::hotkeySaveAs,
+                                                                   &Settings::hotkeyExit,
+                                                                   &Settings::hotkeyShortenFrame,
+                                                                   &Settings::hotkeyExtendFrame,
+                                                                   &Settings::hotkeyInsertFrame,
+                                                                   &Settings::hotkeyPreviousFrame,
+                                                                   &Settings::hotkeyNextFrame,
+                                                                   &Settings::hotkeyPan,
+                                                                   &Settings::hotkeyMove,
+                                                                   &Settings::hotkeyRotate,
+                                                                   &Settings::hotkeyScale,
+                                                                   &Settings::hotkeyCrop,
+                                                                   &Settings::hotkeyDraw,
+                                                                   &Settings::hotkeyErase,
+                                                                   &Settings::hotkeyColorPicker,
+                                                                   &Settings::hotkeyUndo,
+                                                                   &Settings::hotkeyRedo,
+                                                                   &Settings::hotkeyCopy,
+                                                                   &Settings::hotkeyCut,
+                                                                   &Settings::hotkeyPaste};
 
-const std::string SETTINGS_IMGUI_DEFAULT = R"(
+const inline std::string SETTINGS_IMGUI_DEFAULT = R"(
 # Dear ImGui
 [Window][## Window]
 Pos=0,32

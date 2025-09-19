@@ -4,20 +4,14 @@
 
 #define CLIPBOARD_TEXT_SET_WARNING "Unable to set clipboard text! ({})"
 
-enum ClipboardType
-{
-    CLIPBOARD_NONE,
-    CLIPBOARD_FRAME,
-    CLIPBOARD_ANIMATION
-};
+enum ClipboardType { CLIPBOARD_NONE, CLIPBOARD_FRAME, CLIPBOARD_ANIMATION };
 
-using ClipboardLocation = std::variant<std::monostate, Anm2Reference, s32>;
+using ClipboardLocation = std::variant<std::monostate, Anm2Reference, int>;
 
-struct Clipboard
-{
-    Anm2* anm2 = nullptr;
-    ClipboardType type;
-    ClipboardLocation location;
+struct Clipboard {
+  Anm2* anm2 = nullptr;
+  ClipboardType type;
+  ClipboardLocation location;
 };
 
 bool clipboard_is_value(void);

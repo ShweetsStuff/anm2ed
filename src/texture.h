@@ -8,16 +8,14 @@
 #define TEXTURE_SAVE_INFO "Saved texture to: {}"
 #define TEXTURE_SAVE_ERROR "Failed to save texture to: {}"
 
-struct Texture
-{
-    GLuint id = GL_ID_NONE;
-    ivec2 size{};
-    bool isInvalid = true;
+struct Texture {
+  GLuint id = GL_ID_NONE;
+  ivec2 size{};
+  bool isInvalid = true;
 
-    auto operator<=>(const Texture&) const = default;
+  auto operator<=>(const Texture&) const = default;
 };
 
-bool texture_from_encoded_data_init(Texture* self, ivec2 size, const u8* data, u32 length);
 bool texture_from_gl_write(Texture* self, const std::string& path);
 bool texture_from_path_init(Texture* self, const std::string& path);
 bool texture_from_rgba_init(Texture* self, ivec2 size, const u8* data);

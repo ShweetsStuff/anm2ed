@@ -41,7 +41,7 @@ add_executable(${PROJECT_NAME}
 
 if(WIN32)
     enable_language(RC)
-    target_sources(${PROJECT_NAME} PRIVATE assets/Icon.rc)
+    target_sources(${PROJECT_NAME} PRIVATE Icon.rc)
     set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
 

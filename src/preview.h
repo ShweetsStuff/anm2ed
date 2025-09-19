@@ -1,9 +1,9 @@
 #pragma once
 
 #include "anm2.h"
+#include "canvas.h"
 #include "resources.h"
 #include "settings.h"
-#include "canvas.h"
 
 const vec2 PREVIEW_SIZE = {2000, 2000};
 const vec2 PREVIEW_CANVAS_SIZE = {2000, 2000};
@@ -26,23 +26,22 @@ const vec4 PREVIEW_NULL_COLOR = COLOR_BLUE;
 const vec4 PREVIEW_NULL_SELECTED_COLOR = COLOR_RED;
 const vec4 PREVIEW_PIVOT_COLOR = COLOR_RED;
 
-struct Preview
-{
-    Anm2* anm2 = nullptr;
-    Anm2Reference* reference = nullptr;
-    Resources* resources = nullptr;
-    Settings* settings = nullptr;
-    s32 animationOverlayID = ID_NONE;
-    Canvas canvas;
-    vec2 normalCanvasSize{};
-    vec2 normalCanvasPan{};
-    f32 normalCanvasZoom{};
-    bool isPlaying = false;
-    bool isRender = false;
-    bool isRenderFinished = false;
-    bool isRenderCancelled = false;
-    std::vector<Texture> renderFrames;
-    f32 time{};
+struct Preview {
+  Anm2* anm2 = nullptr;
+  Anm2Reference* reference = nullptr;
+  Resources* resources = nullptr;
+  Settings* settings = nullptr;
+  int animationOverlayID = ID_NONE;
+  Canvas canvas;
+  vec2 normalCanvasSize{};
+  vec2 normalCanvasPan{};
+  float normalCanvasZoom{};
+  bool isPlaying = false;
+  bool isRender = false;
+  bool isRenderFinished = false;
+  bool isRenderCancelled = false;
+  std::vector<Texture> renderFrames;
+  float time{};
 };
 
 void preview_init(Preview* self, Anm2* anm2, Anm2Reference* reference, Resources* resources, Settings* settings);

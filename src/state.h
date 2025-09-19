@@ -27,29 +27,28 @@
 #define STATE_GL_VERSION_MAJOR 3
 #define STATE_GL_VERSION_MINOR 3
 
-struct State
-{
-	SDL_Window* window;
-	SDL_GLContext glContext;
-    Imgui imgui;
-	Dialog dialog;
-	Editor editor;
-	Preview preview;
-	GeneratePreview generatePreview;
-    Anm2 anm2;
-	Anm2Reference reference;
-	Resources resources;
-	Settings settings;
-	Snapshots snapshots;
-	Clipboard clipboard;
-	std::string argument{};
-	std::string lastAction{};
-	u64 lastTick{};
-	u64 tick{};
-	u64 update{};
-	u64 lastUpdate{};
-	bool isRunning = true;
-}; 
+struct State {
+  SDL_Window* window;
+  SDL_GLContext glContext;
+  Imgui imgui;
+  Dialog dialog;
+  Editor editor;
+  Preview preview;
+  GeneratePreview generatePreview;
+  Anm2 anm2;
+  Anm2Reference reference;
+  Resources resources;
+  Settings settings;
+  Snapshots snapshots;
+  Clipboard clipboard;
+  std::string argument{};
+  std::string lastAction{};
+  uint64_t lastTick{};
+  uint64_t tick{};
+  uint64_t update{};
+  uint64_t lastUpdate{};
+  bool isRunning = true;
+};
 
 bool sdl_init(State* self, bool isTestMode);
 void init(State* state);
