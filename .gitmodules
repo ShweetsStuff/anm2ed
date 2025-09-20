@@ -1,10 +1,12 @@
-[submodule "include/glm"]
-	path = include/glm
+[submodule "external/glm"]
+	path = external/glm
 	url = https://github.com/g-truc/glm
-[submodule "include/tinyxml2"]
-	path = include/tinyxml2
-	url = https://github.com/leethomason/tinyxml2
-[submodule "include/imgui"]
-	path = include/imgui
-	url = https://github.com/ocornut/imgui/tree/docking
+[submodule "external/imgui"]
+	path = external/imgui
+	url = https://github.com/ocornut/imgui
+	branch = docking
+[submodule "external/tinyxml2"]
+	path = external/tinyxml2
+	url = https://github.com/external/tinyxml2
+
 
