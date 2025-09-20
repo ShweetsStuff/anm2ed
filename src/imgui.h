@@ -116,6 +116,9 @@
 #define IMGUI_POPUP_FLAGS ImGuiWindowFlags_NoMove
 #define IMGUI_POPUP_MODAL_FLAGS ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize
 
+#define IMGUI_LOG_INIT "Initialized ImGui {}"
+#define IMGUI_LOG_FREE "Freed ImGui"
+
 #define IMGUI_LOG_NO_ANM2_PATH "Please save the .anm2 to a path first!"
 #define IMGUI_LOG_FILE_OPEN_FORMAT "Opened anm2: {}"
 #define IMGUI_LOG_FILE_SAVE_FORMAT "Saved anm2 to: {}"
@@ -1092,7 +1095,7 @@ IMGUI_ITEM(IMGUI_EVENTS_REMOVE_UNUSED, self.label = "Remove Unused",
 // Spritesheets
 IMGUI_ITEM(IMGUI_SPRITESHEET_PREVIEW, self.label = "## Spritesheet Preview", self.size = {65, 65});
 IMGUI_ITEM(IMGUI_SPRITESHEETS, self.label = "Spritesheets", self.flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-IMGUI_ITEM(IMGUI_SPRITESHEETS_CHILD, self.label = "## Spritesheets Child", self.flags = true, self.itemSpacing = vec2(), self.windowPadding = vec2());
+IMGUI_ITEM(IMGUI_SPRITESHEETS_CHILD, self.label = "## Spritesheets Child", self.flags = true, self.windowPadding = vec2());
 IMGUI_ITEM(IMGUI_SPRITESHEET_CHILD, self.label = "## Spritesheet Child", self.flags = true, self.itemSpacing = vec2(), self.windowPadding = vec2());
 IMGUI_ITEM(IMGUI_SPRITESHEET, self.label = "## Spritesheet", self.dragDrop = "## Spritesheet Drag Drop");
 IMGUI_ITEM(IMGUI_SPRITESHEET_TEXT, self.label = "## Spritesheet Text", self.atlas = ATLAS_SPRITESHEET, self.itemSpacing = vec2(8, 0));

@@ -222,12 +222,12 @@ template <typename Map, typename Key> static inline void map_swap(Map& map, cons
   }
 };
 
-template <typename T> static inline void map_insert_shift(std::map<int, T>& map, int index, const T& value) {
-  const int insertIndex = index + 1;
+template <typename T> static inline void map_insert_shift(std::map<int, T>& map, int id, const T& value) {
+  const int insertID = id + 1;
 
   std::vector<std::pair<int, T>> toShift;
   for (auto it = map.rbegin(); it != map.rend(); ++it) {
-    if (it->first < insertIndex)
+    if (it->first < insertID)
       break;
     toShift.emplace_back(it->first + 1, std::move(it->second));
   }
@@ -238,7 +238,7 @@ template <typename T> static inline void map_insert_shift(std::map<int, T>& map,
   for (auto& [newKey, val] : toShift)
     map[newKey] = std::move(val);
 
-  map[insertIndex] = value;
+  map[insertID] = value;
 }
 
 template <typename T> static inline T* vector_find(std::vector<T>& v, const T& value) {

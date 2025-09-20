@@ -15,16 +15,16 @@ set(GLAD_SRC
 )
 
 set(IMGUI_SRC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/imgui/imgui.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/imgui/imgui_draw.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/imgui/imgui_widgets.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/imgui/imgui_tables.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/imgui/backends/imgui_impl_sdl3.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/imgui/backends/imgui_impl_opengl3.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/imgui/imgui.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/imgui/imgui_draw.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/imgui/imgui_widgets.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/imgui/imgui_tables.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/imgui/backends/imgui_impl_sdl3.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/imgui/backends/imgui_impl_opengl3.cpp
 )
 
 set(TINYXML2_SRC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/tinyxml2/tinyxml2.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/tinyxml2/tinyxml2.cpp
 )
 
 file(GLOB PROJECT_SRC
@@ -50,8 +50,10 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_23)
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/include/glad
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/imgui
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/tinyxml2
+    ${CMAKE_CURRENT_SOURCE_DIR}/external
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/imgui
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/glm
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/tinyxml2
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 

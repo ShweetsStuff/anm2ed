@@ -1,0 +1,5 @@
+{
+    "C_Cpp.formatting": "clangFormat",
+    "editor.formatOnSave": true,
+    "clang-format.style": "file"
+}

@@ -52,10 +52,14 @@ static bool _imgui_chord_pressed(ImGuiKeyChord chord) {
 
 static bool _imgui_is_focus_window(const std::string& focus) {
   ImGuiContext* context = ImGui::GetCurrentContext();
-  if (!context || !context->NavWindow)
+  if (!context)
     return false;
 
-  std::string_view name(context->NavWindow->Name);
+  ImGuiWindow* window = context->NavWindow;
+  if (!window || !window->Name)
+    return false;
+
+  std::string_view name(window->Name);
   return name.find(focus) != std::string_view::npos;
 }
 
@@ -208,6 +212,7 @@ static void _imgui_item_pre(const ImguiItem& self, ImguiItemType type) {
 }
 
 static void _imgui_item_post(const ImguiItem& self, Imgui* imgui, ImguiItemType type, bool& isActivated) {
+
   if (self.is_mnemonic() && !self.isMnemonicDisabled) {
     ImVec2 position = ImGui::GetItemRectMin();
     ImFont* font = ImGui::GetFont();
@@ -387,7 +392,6 @@ IMGUI_ITEM_BOOL_FUNCTION(_imgui_button, IMGUI_BUTTON, ImGui::Button(self.label_g
 IMGUI_ITEM_BOOL_FUNCTION(_imgui_begin_table, IMGUI_TABLE, ImGui::BeginTable(self.label_get().c_str(), self.value, self.flags));
 IMGUI_ITEM_BOOL_FUNCTION(_imgui_selectable, IMGUI_SELECTABLE,
                          ImGui::Selectable(self.label_get().c_str(), self.isSelected, self.flags, _imgui_item_size_get(self, type)));
-IMGUI_ITEM_BOOL_FUNCTION(_imgui_begin, IMGUI_WINDOW, ImGui::Begin(self.label_get().c_str(), nullptr, self.flags));
 IMGUI_ITEM_VOID_FUNCTION(_imgui_image, IMGUI_IMAGE, ImGui::Image(self.textureID, _imgui_item_size_get(self, IMGUI_IMAGE), self.uvMin, self.uvMax));
 
 IMGUI_ITEM_VALUE_CLAMP_FUNCTION(_imgui_input_int, IMGUI_INPUT_INT, int,
@@ -403,8 +407,11 @@ IMGUI_ITEM_VALUE_FUNCTION(_imgui_slider_float, IMGUI_SLIDER_FLOAT, float,
 IMGUI_ITEM_STRING_FUNCTION(_imgui_input_text, IMGUI_INPUT_TEXT,
                            (value.resize(*self.max), ImGui::InputText(self.label_get().c_str(), value.data(), *self.max, self.flags)));
 
-#define IMGUI_BEGIN_OR_RETURN(item, imgui)                                                                                                                     \
-  if (!_imgui_begin(item, imgui)) {                                                                                                                            \
+static bool _imgui_begin(const ImguiItem& self) { return ImGui::Begin(self.label_get().c_str(), nullptr, self.flags); }
+static void _imgui_end(void) { ImGui::End(); }
+
+#define IMGUI_BEGIN_OR_RETURN(item)                                                                                                                            \
+  if (!_imgui_begin(item)) {                                                                                                                                   \
     _imgui_end();                                                                                                                                              \
     return;                                                                                                                                                    \
   }
@@ -431,7 +438,6 @@ IMGUI_ITEM_CHECKBOX_VALUE_FUNCTION(_imgui_checkbox_color_edit3, vec3, _imgui_col
 IMGUI_ITEM_CHECKBOX_VALUE_FUNCTION(_imgui_checkbox_color_edit4, vec4, _imgui_color_edit4(self, imgui, value));
 */
 
-static void _imgui_end(void) { ImGui::End(); }
 static void _imgui_end_table(void) { ImGui::EndTable(); }
 static void _imgui_table_setup_column(const char* text) { ImGui::TableSetupColumn(text); }
 static void _imgui_table_headers_row(void) { ImGui::TableHeadersRow(); }
@@ -633,7 +639,7 @@ static void _imgui_timeline(Imgui* self) {
   static int frameTime{};
   static int& itemID = self->reference->itemID;
 
-  IMGUI_BEGIN_OR_RETURN(IMGUI_TIMELINE, self);
+  IMGUI_BEGIN_OR_RETURN(IMGUI_TIMELINE);
   _imgui_no_anm2_path_click_check(self);
 
   Anm2Animation* animation = anm2_animation_from_reference(self->anm2, *self->reference);
@@ -744,7 +750,7 @@ static void _imgui_timeline(Imgui* self) {
 
     ImGui::SetNextWindowPos(ImGui::GetWindowPos());
     ImGui::SetNextWindowSize(ImGui::GetWindowSize());
-    _imgui_begin(IMGUI_PLAYHEAD, self);
+    _imgui_begin(IMGUI_PLAYHEAD);
 
     ImVec2& pos = playheadPos;
 
@@ -1383,7 +1389,7 @@ static void _imgui_timeline(Imgui* self) {
 }
 
 static void _imgui_onionskin(Imgui* self) {
-  IMGUI_BEGIN_OR_RETURN(IMGUI_ONIONSKIN, self);
+  IMGUI_BEGIN_OR_RETURN(IMGUI_ONIONSKIN);
 
   static auto& isEnabled = self->settings->onionskinIsEnabled;
   static auto& beforeCount = self->settings->onionskinBeforeCount;
@@ -1423,7 +1429,7 @@ static void _imgui_taskbar(Imgui* self) {
   ImguiItem taskbar = IMGUI_TASKBAR;
   ImGui::SetNextWindowSize({viewport->Size.x, IMGUI_TASKBAR.size->y * displayScale});
   ImGui::SetNextWindowPos(viewport->Pos);
-  _imgui_begin(taskbar, self);
+  _imgui_begin(taskbar);
 
   Anm2Animation* animation = anm2_animation_from_reference(self->anm2, *self->reference);
   Anm2Item* item = anm2_item_from_reference(self->anm2, *self->reference);
@@ -1888,7 +1894,7 @@ static void _imgui_taskbar(Imgui* self) {
 static void _imgui_tools(Imgui* self) {
   ImGuiStyle style = ImGui::GetStyle();
 
-  IMGUI_BEGIN_OR_RETURN(IMGUI_TOOLS, self);
+  IMGUI_BEGIN_OR_RETURN(IMGUI_TOOLS);
 
   float availableWidth = ImGui::GetContentRegionAvail().x;
   float usedWidth = style.FramePadding.x;
@@ -1928,7 +1934,7 @@ static void _imgui_tools(Imgui* self) {
 static void _imgui_layers(Imgui* self) {
   static int selectedLayerID = ID_NONE;
 
-  IMGUI_BEGIN_OR_RETURN(IMGUI_LAYERS, self);
+  IMGUI_BEGIN_OR_RETURN(IMGUI_LAYERS);
   _imgui_no_anm2_path_click_check(self);
 
   ImVec2 size = ImGui::GetContentRegionAvail();
@@ -1973,7 +1979,7 @@ static void _imgui_layers(Imgui* self) {
 static void _imgui_nulls(Imgui* self) {
   static int selectedNullID = ID_NONE;
 
-  IMGUI_BEGIN_OR_RETURN(IMGUI_NULLS, self);
+  IMGUI_BEGIN_OR_RETURN(IMGUI_NULLS);
   _imgui_no_anm2_path_click_check(self);
 
   ImVec2 size = ImGui::GetContentRegionAvail();
@@ -2008,7 +2014,7 @@ static void _imgui_nulls(Imgui* self) {
 }
 
 static void _imgui_animations(Imgui* self) {
-  IMGUI_BEGIN_OR_RETURN(IMGUI_ANIMATIONS, self);
+  IMGUI_BEGIN_OR_RETURN(IMGUI_ANIMATIONS);
   _imgui_no_anm2_path_click_check(self);
 
   ImVec2 size = ImGui::GetContentRegionAvail();
@@ -2179,7 +2185,7 @@ static void _imgui_animations(Imgui* self) {
 static void _imgui_events(Imgui* self) {
   static int selectedID = ID_NONE;
 
-  IMGUI_BEGIN_OR_RETURN(IMGUI_EVENTS, self);
+  IMGUI_BEGIN_OR_RETURN(IMGUI_EVENTS);
   _imgui_no_anm2_path_click_check(self);
 
   ImVec2 windowSize = ImGui::GetContentRegionAvail();
@@ -2230,7 +2236,7 @@ static void _imgui_events(Imgui* self) {
 */
 
 static void _imgui_spritesheets(Imgui* self) {
-  IMGUI_BEGIN_OR_RETURN(IMGUI_SPRITESHEETS, self);
+  IMGUI_BEGIN_OR_RETURN(IMGUI_SPRITESHEETS);
   _imgui_no_anm2_path_click_check(self);
 
   static std::unordered_set<int> selectedIDs;
@@ -2385,7 +2391,7 @@ static void _imgui_animation_preview(Imgui* self) {
 
   std::string mousePositionString = std::format(IMGUI_POSITION_FORMAT, (int)mousePos.x, (int)mousePos.y);
 
-  IMGUI_BEGIN_OR_RETURN(IMGUI_ANIMATION_PREVIEW, self);
+  IMGUI_BEGIN_OR_RETURN(IMGUI_ANIMATION_PREVIEW);
 
   _imgui_begin_child(IMGUI_CANVAS_GRID_CHILD, self);
   _imgui_checkbox(IMGUI_CANVAS_GRID, self, self->settings->previewIsGrid);
@@ -2598,7 +2604,7 @@ static void _imgui_spritesheet_editor(Imgui* self) {
 
   std::string mousePositionString = std::format(IMGUI_POSITION_FORMAT, (int)mousePos.x, (int)mousePos.y);
 
-  IMGUI_BEGIN_OR_RETURN(IMGUI_SPRITESHEET_EDITOR, self);
+  IMGUI_BEGIN_OR_RETURN(IMGUI_SPRITESHEET_EDITOR);
 
   _imgui_begin_child(IMGUI_CANVAS_GRID_CHILD, self);
   _imgui_checkbox(IMGUI_CANVAS_GRID, self, self->settings->editorIsGrid);
@@ -2815,7 +2821,7 @@ static void _imgui_spritesheet_editor(Imgui* self) {
 static void _imgui_frame_properties(Imgui* self) {
   static Anm2Type& type = self->reference->itemType;
 
-  IMGUI_BEGIN_OR_RETURN(IMGUI_FRAME_PROPERTIES, self);
+  IMGUI_BEGIN_OR_RETURN(IMGUI_FRAME_PROPERTIES);
 
   Anm2Frame* frame = anm2_frame_from_reference(self->anm2, *self->reference);
 
@@ -2896,7 +2902,7 @@ static void _imgui_log(Imgui* self) {
     ImGui::PushStyleColor(ImGuiCol_Text, textColor);
     ImGui::SetNextWindowBgAlpha(lifetime);
 
-    _imgui_begin(IMGUI_LOG_WINDOW.copy({.label = std::format(IMGUI_LOG_FORMAT, i)}), self);
+    _imgui_begin(IMGUI_LOG_WINDOW.copy({.label = std::format(IMGUI_LOG_FORMAT, i)}));
     ImGui::TextUnformatted(item.text.c_str());
     ImVec2 windowSize = ImGui::GetWindowSize();
     _imgui_end(); // IMGUI_LOG_WINDOW
@@ -2915,7 +2921,7 @@ static void _imgui_dock(Imgui* self) {
   ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, viewport->Size.y - IMGUI_TASKBAR.size->y));
   ImGui::SetNextWindowViewport(viewport->ID);
 
-  _imgui_begin(window, self);
+  _imgui_begin(window);
   _imgui_dockspace(IMGUI_DOCKSPACE_MAIN, self);
 
   //_imgui_tools(self);
@@ -2936,6 +2942,7 @@ static void _imgui_dock(Imgui* self) {
 void imgui_init(Imgui* self, Dialog* dialog, Resources* resources, Anm2* anm2, Anm2Reference* reference, Editor* editor, Preview* preview,
                 GeneratePreview* generatePreview, Settings* settings, Snapshots* snapshots, Clipboard* clipboard, SDL_Window* window,
                 SDL_GLContext* glContext) {
+
   self->dialog = dialog;
   self->resources = resources;
   self->anm2 = anm2;
@@ -2951,8 +2958,11 @@ void imgui_init(Imgui* self, Dialog* dialog, Resources* resources, Anm2* anm2, A
 
   self->saveAnm2 = *anm2;
 
+  IMGUI_CHECKVERSION();
   ImGui::CreateContext();
   ImGui::StyleColorsDark();
+
+  log_info(std::format(IMGUI_LOG_INIT, ImGui::GetVersion()));
 
   ImGui_ImplSDL3_InitForOpenGL(self->window, *self->glContext);
   ImGui_ImplOpenGL3_Init(IMGUI_OPENGL_VERSION);
@@ -2982,6 +2992,13 @@ void imgui_update(Imgui* self) {
   ImGui_ImplSDL3_NewFrame();
   ImGui_ImplOpenGL3_NewFrame();
   ImGui::NewFrame();
+
+  auto* ctx = ImGui::GetCurrentContext();
+  IM_ASSERT(ctx);
+  IM_ASSERT(ctx->WithinFrameScope);
+  IM_ASSERT(ctx->CurrentWindowStack.Size >= 1);
+  IM_ASSERT(ImGui::GetIO().BackendPlatformUserData && "SDL3 backend not initialized?");
+  IM_ASSERT(ImGui::GetIO().BackendRendererUserData && "OpenGL3 backend not initialized?");
 
   _imgui_taskbar(self);
   _imgui_dock(self);
@@ -3052,6 +3069,7 @@ void imgui_free(void) {
   if (!ImGui::GetCurrentContext())
     return;
 
+  log_info(IMGUI_LOG_FREE);
   ImGui_ImplSDL3_Shutdown();
   ImGui_ImplOpenGL3_Shutdown();
   ImGui::SaveIniSettingsToDisk(settings_path_get().c_str());
