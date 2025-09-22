@@ -1,4 +1,6 @@
 #include "imgui.h"
+#include "COMMON.h"
+#include "anm2.h"
 
 static void _imgui_anm2_open(Imgui* self, const std::string& path) {
   imgui_anm2_new(self);
@@ -22,13 +24,14 @@ static void _imgui_spritesheet_add(Imgui* self, const std::string& path) {
     self->anm2->spritesheets[id] = Anm2Spritesheet{};
     self->anm2->spritesheets[id].path = spritesheetPath;
     self->anm2->spritesheets[id].texture = texture;
+    imgui_log_push(self, std::format(IMGUI_LOG_ADD_SPRITESHEET, id, path));
   } else
     imgui_log_push(self, std::format(IMGUI_LOG_ADD_SPRITESHEET_ERROR, path));
 }
 
 static bool _imgui_is_window_hovered(void) { return ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem); }
 static bool _imgui_is_window_hovered_and_click(void) { return _imgui_is_window_hovered() && ImGui::IsMouseClicked(0); }
-static bool _imgui_is_no_click_on_item(void) { return ImGui::IsMouseClicked(0) && !ImGui::IsAnyItemHovered(); }
+static bool _imgui_is_no_click_on_item(void) { return ImGui::IsMouseClicked(0) && !ImGui::IsItemHovered(); }
 
 static bool _imgui_is_input_begin(void) {
   return ImGui::IsItemHovered() && (ImGui::IsKeyPressed(IMGUI_INPUT_RENAME) || ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left));
@@ -67,6 +70,10 @@ static vec2 _imgui_item_spacing_get(const ImguiItem& self) { return self.itemSpa
 static vec2 _imgui_window_padding_get(const ImguiItem& self) {
   return self.windowPadding.has_value() ? *self.windowPadding : vec2(ImGui::GetStyle().WindowPadding);
 }
+static vec2 _imgui_frame_padding_get(const ImguiItem& self) {
+  return self.framePadding.has_value() ? *self.framePadding : vec2(ImGui::GetStyle().WindowPadding);
+}
+
 static vec2 _imgui_cursor_position_get(const ImguiItem& self) { return self.cursorPosition.has_value() ? *self.cursorPosition : vec2(ImGui::GetCursorPos()); }
 
 static vec2 _imgui_item_size_get(const ImguiItem& self, ImguiItemType type) {
@@ -80,19 +87,23 @@ static vec2 _imgui_item_size_get(const ImguiItem& self, ImguiItemType type) {
     default:
       if (self.rowCount.has_value())
         size.x = (ImGui::GetWindowSize().x - (_imgui_item_spacing_get(self).x * (*self.rowCount + 1))) / *self.rowCount;
-      else if (self.isSizeToText)
+      else if (self.isWidthToText)
         size.x = (ImGui::CalcTextSize(self.label_get().c_str()).x + ImGui::GetStyle().FramePadding.x);
-      else if (self.isSizeToRegion)
+      else if (self.isWidthToRegion)
         size.x = ImGui::GetContentRegionAvail().x;
       else
         size.x = ImGui::CalcItemWidth();
 
-      if (type != IMGUI_BUTTON)
-        size.y = ImGui::GetTextLineHeight() + IMGUI_TEXT_HEIGHT_PADDING;
+      if (self.isHeightToRegion)
+        size.y = ImGui::GetContentRegionAvail().y;
+      else if (type != IMGUI_BUTTON)
+        size.y = ImGui::GetTextLineHeight() + ImGui::GetStyle().FramePadding.y;
       break;
     }
   } else
     size = *self.size;
+
+  size *= self.scale;
 
   return size;
 }
@@ -102,6 +113,8 @@ static void _imgui_item_style_push(const ImguiItem& self) {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, *self.windowPadding);
   if (self.itemSpacing.has_value())
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, *self.itemSpacing);
+  if (self.font.has_value())
+    ImGui::PushFont(*self.font, FONT_SIZE);
 }
 
 static void _imgui_item_style_pop(const ImguiItem& self) {
@@ -109,6 +122,8 @@ static void _imgui_item_style_pop(const ImguiItem& self) {
     ImGui::PopStyleVar();
   if (self.itemSpacing.has_value())
     ImGui::PopStyleVar();
+  if (self.font.has_value())
+    ImGui::PopFont();
 }
 
 static const char* _imgui_float_format_get(const ImguiItem& item, float& value) {
@@ -127,7 +142,8 @@ static void _imgui_item_pre(const ImguiItem& self, ImguiItemType type) {
   switch (type) {
   case IMGUI_ITEM:
   case IMGUI_TEXT:
-  case IMGUI_WINDOW:
+  case IMGUI_BEGIN_WINDOW:
+  case IMGUI_END_WINDOW:
   case IMGUI_DOCKSPACE:
   case IMGUI_BEGIN_CHILD:
   case IMGUI_END_CHILD:
@@ -195,6 +211,9 @@ static void _imgui_item_pre(const ImguiItem& self, ImguiItemType type) {
   }
 
   switch (type) {
+  case IMGUI_END_WINDOW:
+    _imgui_item_style_pop(self);
+    break;
   case IMGUI_END_CHILD:
     break;
   default:
@@ -203,10 +222,24 @@ static void _imgui_item_pre(const ImguiItem& self, ImguiItemType type) {
   }
 
   switch (type) {
-  case IMGUI_WINDOW:
+  case IMGUI_BEGIN_WINDOW:
+  case IMGUI_END_WINDOW:
+  case IMGUI_BEGIN_CHILD:
+  case IMGUI_END_CHILD:
     break;
   default:
     ImGui::SetCursorPos(self.cursorPosition.value_or(vec2(ImGui::GetCursorPos())) + self.cursorOffset);
+    break;
+  }
+
+  switch (type) {
+  case IMGUI_BEGIN_WINDOW:
+    if (self.position.has_value())
+      ImGui::SetNextWindowPos(*self.position);
+    if (self.size.has_value())
+      ImGui::SetNextWindowSize(*self.size);
+    break;
+  default:
     break;
   }
 }
@@ -304,7 +337,8 @@ static void _imgui_item_post(const ImguiItem& self, Imgui* imgui, ImguiItemType 
   switch (type) {
   case IMGUI_ITEM:
   case IMGUI_TEXT:
-  case IMGUI_WINDOW:
+  case IMGUI_BEGIN_WINDOW:
+  case IMGUI_END_WINDOW:
   case IMGUI_DOCKSPACE:
   case IMGUI_BEGIN_CHILD:
   case IMGUI_END_CHILD:
@@ -322,6 +356,9 @@ static void _imgui_item_post(const ImguiItem& self, Imgui* imgui, ImguiItemType 
 
   switch (type) {
   case IMGUI_BEGIN_CHILD:
+    break;
+  case IMGUI_BEGIN_WINDOW:
+    _imgui_item_style_push(self);
     break;
   default:
     _imgui_item_style_pop(self);
@@ -348,10 +385,7 @@ static void _imgui_item_post(const ImguiItem& self, Imgui* imgui, ImguiItemType 
     bool isActivated = false;                                                                                                                                  \
     do {                                                                                                                                                       \
       VALUE_TYPE value = inValue;                                                                                                                              \
-      BODY if (_imgui_is_input_default()) {                                                                                                                    \
-        value = VALUE_TYPE(self.value);                                                                                                                        \
-        isActivated = true;                                                                                                                                    \
-      }                                                                                                                                                        \
+      BODY {}                                                                                                                                                  \
       inValue = value;                                                                                                                                         \
     } while (0);                                                                                                                                               \
     _imgui_item_post(self, imgui, type, isActivated);                                                                                                          \
@@ -384,6 +418,9 @@ static void _imgui_item_post(const ImguiItem& self, Imgui* imgui, ImguiItemType 
     return isActivated;                                                                                                                                        \
   }
 
+#define IMGUI_ITEM_CUSTOM_FUNCTION(NAME, TYPE, BODY) IMGUI_ITEM_BASE(NAME, TYPE, BODY)
+#define IMGUI_ITEM_CUSTOM_VALUE_FUNCTION(NAME, TYPE, VALUE_TYPE, BODY) IMGUI_ITEM_VALUE_BASE(NAME, TYPE, VALUE_TYPE, {BODY})
+
 IMGUI_ITEM_VOID_FUNCTION(_imgui_dockspace, IMGUI_DOCKSPACE, ImGui::DockSpace(ImGui::GetID(self.label_get().c_str()), *self.size, self.flags));
 IMGUI_ITEM_VOID_FUNCTION(_imgui_begin_child, IMGUI_BEGIN_CHILD, ImGui::BeginChild(self.label_get().c_str(), *self.size, self.flags, self.windowFlags));
 IMGUI_ITEM_VOID_FUNCTION(_imgui_end_child, IMGUI_END_CHILD, ImGui::EndChild());
@@ -407,26 +444,17 @@ IMGUI_ITEM_VALUE_FUNCTION(_imgui_slider_float, IMGUI_SLIDER_FLOAT, float,
 IMGUI_ITEM_STRING_FUNCTION(_imgui_input_text, IMGUI_INPUT_TEXT,
                            (value.resize(*self.max), ImGui::InputText(self.label_get().c_str(), value.data(), *self.max, self.flags)));
 
-static bool _imgui_begin(const ImguiItem& self) { return ImGui::Begin(self.label_get().c_str(), nullptr, self.flags); }
-static void _imgui_end(void) { ImGui::End(); }
+IMGUI_ITEM_BOOL_FUNCTION(_imgui_begin, IMGUI_BEGIN_WINDOW, ImGui::Begin(self.label_get().c_str(), nullptr, self.flags));
+IMGUI_ITEM_VOID_FUNCTION(_imgui_end, IMGUI_END_WINDOW, ImGui::End());
 
-#define IMGUI_BEGIN_OR_RETURN(item)                                                                                                                            \
-  if (!_imgui_begin(item)) {                                                                                                                                   \
-    _imgui_end();                                                                                                                                              \
-    return;                                                                                                                                                    \
-  }
-
-/*
 IMGUI_ITEM_VALUE_FUNCTION(_imgui_radio_button, IMGUI_RADIO_BUTTON, int, ImGui::RadioButton(self.label_get().c_str(), &value, self.value));
 IMGUI_ITEM_VALUE_FUNCTION(_imgui_color_button, IMGUI_COLOR_BUTTON, vec4, ImGui::ColorButton(self.label_get().c_str(), ImVec4(value), self.flags));
-
 IMGUI_ITEM_VALUE_FUNCTION(_imgui_drag_float, IMGUI_DRAG_FLOAT, float,
- ImGui::DragFloat(self.label_get().c_str(), &value, self.speed, *self.min, *self.max, _imgui_float_format_get(self, value)));
+                          ImGui::DragFloat(self.label_get().c_str(), &value, self.speed, *self.min, *self.max, _imgui_float_format_get(self, value)));
 IMGUI_ITEM_VALUE_FUNCTION(_imgui_drag_float2, IMGUI_DRAG_FLOAT, vec2,
- ImGui::DragFloat2(self.label_get().c_str(), value_ptr(value), self.speed, *self.min, *self.max, _imgui_vec2_format_get(self, value)));
+                          ImGui::DragFloat2(self.label_get().c_str(), value_ptr(value), self.speed, *self.min, *self.max, _imgui_vec2_format_get(self, value)));
 IMGUI_ITEM_VALUE_FUNCTION(_imgui_color_edit3, IMGUI_COLOR_EDIT, vec3, ImGui::ColorEdit3(self.label_get().c_str(), value_ptr(value), self.flags));
 IMGUI_ITEM_VALUE_FUNCTION(_imgui_color_edit4, IMGUI_COLOR_EDIT, vec4, ImGui::ColorEdit4(self.label_get().c_str(), value_ptr(value), self.flags));
-*/
 
 /*
 IMGUI_ITEM_CHECKBOX_FUNCTION(_imgui_checkbox_selectable, _imgui_selectable(self, imgui));
@@ -438,58 +466,126 @@ IMGUI_ITEM_CHECKBOX_VALUE_FUNCTION(_imgui_checkbox_color_edit3, vec3, _imgui_col
 IMGUI_ITEM_CHECKBOX_VALUE_FUNCTION(_imgui_checkbox_color_edit4, vec4, _imgui_color_edit4(self, imgui, value));
 */
 
+IMGUI_ITEM_CUSTOM_VALUE_FUNCTION(_imgui_combo, IMGUI_COMBO, int, {
+  std::vector<const char*> cStrings;
+  cStrings.reserve(self.items.size());
+  for (auto& [id, string] : self.items)
+    cStrings.emplace_back(string.c_str());
+
+  isActivated = ImGui::Combo(self.label_get().c_str(), &value, cStrings.data(), (int)self.items.size());
+});
+
+IMGUI_ITEM_CUSTOM_VALUE_FUNCTION(_imgui_selectable_input_text, IMGUI_SELECTABLE, std::string, {
+  static std::string buffer{};
+  static int id = ID_NONE;
+  ImguiItem selectable = self;
+  ImVec2 size = _imgui_item_size_get(selectable, IMGUI_SELECTABLE);
+
+  if (id == self.id) {
+    isActivated = _imgui_input_text(IMGUI_CHANGE_INPUT_TEXT.copy({.size = size}), imgui, buffer);
+    imgui_contextual_actions_disable(imgui);
+
+    if (isActivated || _imgui_is_no_click_on_item()) {
+      value = buffer;
+      buffer.clear();
+      id = ID_NONE;
+      imgui_contextual_actions_enable(imgui);
+    }
+  } else {
+    isActivated = _imgui_selectable(selectable, imgui);
+
+    if (_imgui_is_input_begin()) {
+      buffer = value;
+      buffer.resize(*IMGUI_CHANGE_INPUT_TEXT.max);
+      id = self.id;
+      ImGui::SetKeyboardFocusHere(-1);
+    }
+  }
+});
+
+#define IMGUI_ATLAS_VOID_FUNCTION(NAME, FUNCTION)                                                                                                              \
+  static void NAME(const ImguiItem& self, Imgui* imgui) {                                                                                                      \
+    vec2 cursorPosition = _imgui_cursor_position_get(self);                                                                                                    \
+    _imgui_image(self.copy({.textureID = imgui->resources->atlas.id,                                                                                           \
+                            .size = ATLAS_SIZE(self.atlas) * imgui->settings->displayScale,                                                                    \
+                            .uvMin = ATLAS_UV_MIN(self.atlas),                                                                                                 \
+                            .uvMax = ATLAS_UV_MAX(self.atlas),                                                                                                 \
+                            .cursorPosition = cursorPosition}),                                                                                                \
+                 imgui);                                                                                                                                       \
+                                                                                                                                                               \
+    FUNCTION(self.copy({.cursorPosition =                                                                                                                      \
+                            cursorPosition + vec2(ATLAS_SIZE(self.atlas).x + (((_imgui_item_spacing_get(self).x + _imgui_frame_padding_get(self).x * 0.5f) *   \
+                                                                               imgui->settings->displayScale)),                                                \
+                                                  0.0f)}),                                                                                                     \
+             imgui);                                                                                                                                           \
+  }
+
+#define IMGUI_ATLAS_BOOL_FUNCTION(NAME, FUNCTION)                                                                                                              \
+  static bool NAME(const ImguiItem& self, Imgui* imgui) {                                                                                                      \
+    vec2 cursorPosition = _imgui_cursor_position_get(self);                                                                                                    \
+    _imgui_image(self.copy({.textureID = imgui->resources->atlas.id,                                                                                           \
+                            .size = ATLAS_SIZE(self.atlas) * imgui->settings->displayScale,                                                                    \
+                            .uvMin = ATLAS_UV_MIN(self.atlas),                                                                                                 \
+                            .uvMax = ATLAS_UV_MAX(self.atlas),                                                                                                 \
+                            .cursorPosition = cursorPosition}),                                                                                                \
+                 imgui);                                                                                                                                       \
+                                                                                                                                                               \
+    return FUNCTION(self.copy({.cursorPosition = cursorPosition + vec2(ATLAS_SIZE(self.atlas).x +                                                              \
+                                                                           (((_imgui_item_spacing_get(self).x + _imgui_frame_padding_get(self).x * 0.5f) *     \
+                                                                             imgui->settings->displayScale)),                                                  \
+                                                                       0.0f)}),                                                                                \
+                    imgui);                                                                                                                                    \
+  }
+
+#define IMGUI_ATLAS_VALUE_BOOL_FUNCTION(NAME, FUNCTION, TYPE)                                                                                                  \
+  static bool NAME(const ImguiItem& self, Imgui* imgui, TYPE& value) {                                                                                         \
+    vec2 cursorPosition = _imgui_cursor_position_get(self);                                                                                                    \
+    _imgui_image(self.copy({.textureID = imgui->resources->atlas.id,                                                                                           \
+                            .size = ATLAS_SIZE(self.atlas) * imgui->settings->displayScale,                                                                    \
+                            .uvMin = ATLAS_UV_MIN(self.atlas),                                                                                                 \
+                            .uvMax = ATLAS_UV_MAX(self.atlas),                                                                                                 \
+                            .cursorPosition = cursorPosition}),                                                                                                \
+                 imgui);                                                                                                                                       \
+                                                                                                                                                               \
+    return FUNCTION(self.copy({.cursorPosition = cursorPosition + vec2(ATLAS_SIZE(self.atlas).x +                                                              \
+                                                                           (((_imgui_item_spacing_get(self).x + _imgui_frame_padding_get(self).x * 0.5f) *     \
+                                                                             imgui->settings->displayScale)),                                                  \
+                                                                       0.0f)}),                                                                                \
+                    imgui, value);                                                                                                                             \
+  }
+
+IMGUI_ATLAS_VOID_FUNCTION(_imgui_atlas_text, _imgui_text);
+IMGUI_ATLAS_BOOL_FUNCTION(_imgui_atlas_selectable, _imgui_selectable);
+IMGUI_ATLAS_VALUE_BOOL_FUNCTION(_imgui_atlas_selectable_input_text, _imgui_selectable_input_text, std::string);
+
+#define IMGUI_BEGIN_OR_RETURN(item, imgui)                                                                                                                     \
+  if (!_imgui_begin(item, imgui)) {                                                                                                                            \
+    _imgui_end(item, imgui);                                                                                                                                   \
+    return;                                                                                                                                                    \
+  }
+
 static void _imgui_end_table(void) { ImGui::EndTable(); }
 static void _imgui_table_setup_column(const char* text) { ImGui::TableSetupColumn(text); }
 static void _imgui_table_headers_row(void) { ImGui::TableHeadersRow(); }
 static void _imgui_table_next_row(void) { ImGui::TableNextRow(); }
 static void _imgui_table_set_column_index(int index) { ImGui::TableSetColumnIndex(index); }
 
-static bool _imgui_combo(ImguiItem self, Imgui* imgui, int* value) {
-  std::vector<const char*> cStrings;
-  cStrings.reserve(self.items.size());
-  for (auto& string : self.items)
-    cStrings.emplace_back(string.c_str());
-
-  _imgui_item_pre(self, IMGUI_COMBO);
-
-  bool isActivated = ImGui::Combo(self.label_get().c_str(), value, cStrings.data(), (int)self.items.size());
-  if (_imgui_is_input_default()) {
-    *value = self.value;
-    isActivated = true;
-  }
-
-  _imgui_item_post(self, imgui, IMGUI_COMBO, isActivated);
-
-  return isActivated;
-};
-
-static void _imgui_atlas_text(const ImguiItem& self, Imgui* imgui) {
-  _imgui_image(self.copy({.textureID = imgui->resources->atlas.id,
-                          .size = ATLAS_SIZE(self.atlas) * imgui->settings->displayScale,
-                          .uvMin = ATLAS_UV_MIN(self.atlas),
-                          .uvMax = ATLAS_UV_MAX(self.atlas)}),
-               imgui);
-
-  _imgui_text(self.copy({.cursorPosition = _imgui_cursor_position_get(self) +
-                                           vec2(ATLAS_SIZE(self.atlas).x + (_imgui_item_spacing_get(self).x * imgui->settings->displayScale), 0.0f)}),
-              imgui);
-}
-
-/*
 IMGUI_ITEM_CUSTOM_FUNCTION(_imgui_atlas_button, IMGUI_ATLAS_BUTTON, {
   ImVec2 size = _imgui_item_size_get(self, type);
 
   if (self.size.has_value()) {
     isActivated = ImGui::Button(self.label_get().c_str(), size);
+    vec2 framePadding = _imgui_frame_padding_get(self) * self.scale;
 
-    ImVec2 start = ImGui::GetItemRectMin() + self.atlasOffset;
-    ImVec2 end = start + ImVec2(ATLAS_SIZE(self.atlas));
+    vec2 atlasOffset = self.atlasOffset.has_value() ? *self.atlasOffset * self.scale : framePadding;
+    vec2 start = ImGui::GetItemRectMin() + atlasOffset;
+    vec2 atlasSize = self.isAtlasStretch ? *self.size - framePadding : ATLAS_SIZE(self.atlas);
+    vec2 end = start + atlasSize;
 
     ImGui::GetWindowDrawList()->AddImage(imgui->resources->atlas.id, start, end, ATLAS_UV_ARGS(self.atlas));
   } else
     isActivated = ImGui::ImageButton(self.label_get().c_str(), imgui->resources->atlas.id, size, ATLAS_UV_ARGS(self.atlas));
 });
-*/
 
 /*
 static bool _imgui_selectable_input_int(const ImguiItem& self, Imgui* imgui, int& value) {
@@ -513,37 +609,6 @@ static bool _imgui_selectable_input_int(const ImguiItem& self, Imgui* imgui, int
 
     if (_imgui_is_input_begin()) {
       temp = value;
-      id = self.id;
-      ImGui::SetKeyboardFocusHere(-1);
-    }
-  }
-
-  return isActivated;
-};
-
-static bool _imgui_selectable_input_text(const ImguiItem& self, Imgui* imgui, std::string& value) {
-  static std::string buffer{};
-  static int id = ID_NONE;
-  ImguiItem selectable = self.copy({});
-  ImVec2 size = _imgui_item_size_get(selectable, IMGUI_SELECTABLE);
-  bool isActivated = false;
-
-  if (id == self.id) {
-    isActivated = _imgui_input_text(IMGUI_CHANGE_INPUT_TEXT.copy({.size = size}), imgui, buffer);
-    imgui_contextual_actions_disable(imgui);
-
-    if (isActivated || _imgui_is_no_click_on_item()) {
-      value = buffer;
-      buffer.clear();
-      id = ID_NONE;
-      imgui_contextual_actions_enable(imgui);
-    }
-  } else {
-    isActivated = _imgui_selectable(selectable, imgui);
-
-    if (_imgui_is_input_begin()) {
-      buffer = value;
-      buffer.resize(IMGUI_CHANGE_INPUT_TEXT.max);
       id = self.id;
       ImGui::SetKeyboardFocusHere(-1);
     }
@@ -598,6 +663,7 @@ static void _imgui_no_anm2_path_check(Imgui* self) {
 static void _imgui_no_anm2_path_click_check(Imgui* self) {
   if (_imgui_is_window_hovered_and_click() && self->anm2->path.empty() && !imgui_is_any_popup_open())
     imgui_open_popup(IMGUI_NO_ANM2_PATH_CONFIRMATION.label);
+  _imgui_confirm_popup(IMGUI_NO_ANM2_PATH_CONFIRMATION, self, nullptr, true);
 }
 
 static void _imgui_context_menu(Imgui* self) {
@@ -608,7 +674,10 @@ static void _imgui_context_menu(Imgui* self) {
     imgui_open_popup(IMGUI_CONTEXT_MENU.label_get());
 
   if (imgui_begin_popup(IMGUI_CONTEXT_MENU.label_get(), self)) {
-    _imgui_selectable(IMGUI_CUT, self);
+    if (_imgui_selectable(IMGUI_CUT, self)) {
+      if (self->clipboard->type == CLIPBOARD_ANIMATION)
+        self->selectedAnimationIndices = {};
+    }
     _imgui_selectable(IMGUI_COPY, self);
     _imgui_selectable(IMGUI_PASTE.copy({.isDisabled = !clipboard_is_value()}), self);
 
@@ -1002,7 +1071,7 @@ static void _imgui_timeline(Imgui* self) {
     if (_imgui_is_window_hovered()) {
       hoverReference = reference;
       hoverReference.frameIndex = anm2_frame_index_from_time(self->anm2, reference, frameTime);
-      self->clipboard->location = hoverReference;
+      self->clipboard->destination = hoverReference;
       self->clipboard->type = CLIPBOARD_FRAME;
 
       if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
@@ -1387,16 +1456,13 @@ static void _imgui_timeline(Imgui* self) {
 
   _imgui_end(); // IMGUI_TIMELINE
 }
+  */
 
 static void _imgui_onionskin(Imgui* self) {
-  IMGUI_BEGIN_OR_RETURN(IMGUI_ONIONSKIN);
+  IMGUI_BEGIN_OR_RETURN(IMGUI_ONIONSKIN, self);
 
-  static auto& isEnabled = self->settings->onionskinIsEnabled;
-  static auto& beforeCount = self->settings->onionskinBeforeCount;
-  static auto& afterCount = self->settings->onionskinAfterCount;
-  static auto& beforeColorOffset = self->settings->onionskinBeforeColorOffset;
-  static auto& afterColorOffset = self->settings->onionskinAfterColorOffset;
-  static auto& drawOrder = self->settings->onionskinDrawOrder;
+  bool isEnabled = self->settings->onionskinIsEnabled;
+  int drawOrder = self->settings->onionskinDrawOrder;
 
   _imgui_checkbox(IMGUI_ONIONSKIN_ENABLED, self, isEnabled);
 
@@ -1408,8 +1474,8 @@ static void _imgui_onionskin(Imgui* self) {
     ImGui::PopID();
   };
 
-  onionskin_section(IMGUI_ONIONSKIN_BEFORE, beforeCount, beforeColorOffset);
-  onionskin_section(IMGUI_ONIONSKIN_AFTER, afterCount, afterColorOffset);
+  onionskin_section(IMGUI_ONIONSKIN_BEFORE, self->settings->onionskinBeforeCount, self->settings->onionskinBeforeColorOffset);
+  onionskin_section(IMGUI_ONIONSKIN_AFTER, self->settings->onionskinAfterCount, self->settings->onionskinAfterColorOffset);
 
   ImGui::Separator();
 
@@ -1417,24 +1483,21 @@ static void _imgui_onionskin(Imgui* self) {
   _imgui_radio_button(IMGUI_ONIONSKIN_BELOW.copy({.isDisabled = !isEnabled}), self, drawOrder);
   _imgui_radio_button(IMGUI_ONIONSKIN_ABOVE.copy({.isDisabled = !isEnabled}), self, drawOrder);
 
-  _imgui_end(); // IMGUI_ONIONSKIN
+  _imgui_end(IMGUI_ONIONSKIN, self);
 }
-*/
 
 static void _imgui_taskbar(Imgui* self) {
   static ImguiPopupState exitConfirmState = IMGUI_POPUP_STATE_CLOSED;
-  static float& displayScale = self->settings->displayScale;
-
+  static float displayScale = self->settings->displayScale;
   ImGuiViewport* viewport = ImGui::GetMainViewport();
-  ImguiItem taskbar = IMGUI_TASKBAR;
-  ImGui::SetNextWindowSize({viewport->Size.x, IMGUI_TASKBAR.size->y * displayScale});
-  ImGui::SetNextWindowPos(viewport->Pos);
-  _imgui_begin(taskbar);
+
+  ImguiItem taskbar = IMGUI_TASKBAR.copy({.position = viewport->Pos, .size = vec2(viewport->Size.x, IMGUI_TASKBAR.size->y * displayScale)});
+  _imgui_begin(taskbar, self);
 
   Anm2Animation* animation = anm2_animation_from_reference(self->anm2, *self->reference);
   Anm2Item* item = anm2_item_from_reference(self->anm2, *self->reference);
 
-  _imgui_selectable(IMGUI_FILE, self);
+  _imgui_selectable(IMGUI_FILE.copy({.isSelected = imgui_is_popup_open(IMGUI_FILE.popup)}), self);
 
   if (imgui_begin_popup(IMGUI_FILE.popup, self)) {
     _imgui_selectable(IMGUI_NEW, self);
@@ -1474,7 +1537,7 @@ static void _imgui_taskbar(Imgui* self) {
     break;
   }
 
-  _imgui_selectable(IMGUI_WIZARD.copy({}), self);
+  _imgui_selectable(IMGUI_WIZARD.copy({.isSelected = imgui_is_popup_open(IMGUI_WIZARD.popup)}), self);
 
   if (imgui_begin_popup(IMGUI_WIZARD.popup, self)) {
     _imgui_selectable(IMGUI_GENERATE_ANIMATION_FROM_GRID.copy({.isDisabled = !item || (self->reference->itemType != ANM2_LAYER)}), self);
@@ -1666,7 +1729,7 @@ static void _imgui_taskbar(Imgui* self) {
     }
 
     _imgui_input_text(IMGUI_RENDER_ANIMATION_FFMPEG_PATH, self, ffmpegPath);
-    _imgui_combo(IMGUI_RENDER_ANIMATION_OUTPUT, self, &type);
+    _imgui_combo(IMGUI_RENDER_ANIMATION_OUTPUT, self, type);
     _imgui_input_text(IMGUI_RENDER_ANIMATION_FORMAT.copy({.isDisabled = type != RENDER_PNG}), self, format);
     _imgui_checkbox(IMGUI_RENDER_ANIMATION_IS_USE_ANIMATION_BOUNDS, self, isUseAnimationBounds);
     _imgui_input_float(IMGUI_RENDER_ANIMATION_SCALE.copy({.isDisabled = !isUseAnimationBounds}), self, scale);
@@ -1797,7 +1860,7 @@ static void _imgui_taskbar(Imgui* self) {
     imgui_end_popup(self);
   }
 
-  _imgui_selectable(IMGUI_PLAYBACK.copy({}), self);
+  _imgui_selectable(IMGUI_PLAYBACK.copy({.isSelected = imgui_is_popup_open(IMGUI_PLAYBACK.popup)}), self);
 
   if (imgui_begin_popup(IMGUI_PLAYBACK.popup, self, IMGUI_PLAYBACK.popupSize)) {
     /*
@@ -1807,7 +1870,7 @@ static void _imgui_taskbar(Imgui* self) {
     imgui_end_popup(self);
   }
 
-  _imgui_selectable(IMGUI_SETTINGS.copy({}), self);
+  _imgui_selectable(IMGUI_SETTINGS.copy({.isSelected = imgui_is_popup_open(IMGUI_SETTINGS.popup)}), self);
 
   /*
   if (imgui_begin_popup(IMGUI_SETTINGS.popup, self, IMGUI_SETTINGS.popupSize)) {
@@ -1887,170 +1950,170 @@ static void _imgui_taskbar(Imgui* self) {
     imgui_end_popup(self);
   }
 
-  _imgui_end();
+  _imgui_end(taskbar, self);
 }
 
-/*
 static void _imgui_tools(Imgui* self) {
-  ImGuiStyle style = ImGui::GetStyle();
+  IMGUI_BEGIN_OR_RETURN(IMGUI_TOOLS, self);
 
-  IMGUI_BEGIN_OR_RETURN(IMGUI_TOOLS);
-
+  float displayScale = self->settings->displayScale;
   float availableWidth = ImGui::GetContentRegionAvail().x;
-  float usedWidth = style.FramePadding.x;
+  float usedWidth = ImGui::GetStyle().FramePadding.x;
 
   for (int i = 0; i < TOOL_COUNT; i++) {
-    ImguiItem item = *IMGUI_TOOL_ITEMS[i];
+
+    ImguiItem item = IMGUI_TOOL_ITEMS[i]->copy(
+        {.scale = displayScale,
+         .isDisabled = (i == TOOL_UNDO && self->snapshots->undoStack.empty()) || (i == TOOL_REDO && self->snapshots->redoStack.empty()),
+         .isSelected = self->settings->tool == (ToolType)i});
 
     if (i > 0 && usedWidth + ImGui::GetItemRectSize().x < availableWidth)
       ImGui::SameLine();
     else
       usedWidth = 0;
 
-    item.isSelected = self->settings->tool == (ToolType)i;
-
-    switch ((ToolType)i) {
-    case TOOL_UNDO:
-      item.isDisabled = self->snapshots->undoStack.is_empty();
-      break;
-    case TOOL_REDO:
-      item.isDisabled = self->snapshots->redoStack.is_empty();
-      break;
-    default:
-      break;
-    }
-
-    if (i != TOOL_COLOR)
-      _imgui_atlas_button(item, self);
-    else
+    if (i == TOOL_COLOR)
       _imgui_color_edit4(item, self, self->settings->toolColor);
+    else
+      _imgui_atlas_button(item, self);
 
-    usedWidth += ImGui::GetItemRectSize().x + style.ItemSpacing.x;
+    usedWidth += ImGui::GetItemRectSize().x + ImGui::GetStyle().ItemSpacing.x;
   }
 
-  _imgui_end(); // IMGUI_TOOLS
+  _imgui_end(IMGUI_TOOLS, self);
 }
 
 static void _imgui_layers(Imgui* self) {
-  static int selectedLayerID = ID_NONE;
-
-  IMGUI_BEGIN_OR_RETURN(IMGUI_LAYERS);
+  IMGUI_BEGIN_OR_RETURN(IMGUI_LAYERS, self);
   _imgui_no_anm2_path_click_check(self);
 
-  ImVec2 size = ImGui::GetContentRegionAvail();
+  vec2 footerSize = {0, (ImGui::GetTextLineHeightWithSpacing() + ImGui::GetStyle().FramePadding.y * 2.0f + ImGui::GetStyle().WindowPadding.y * 2.0f)};
+  vec2 childSize = ImGui::GetContentRegionAvail() - footerSize;
 
-  _imgui_begin_child(IMGUI_LAYERS_CHILD.copy({.size = vec2(size.x, size.y - IMGUI_FOOTER_CHILD.size->y)}), self);
+  ImguiItem layersChild = IMGUI_LAYERS_CHILD.copy({.size = childSize});
+  _imgui_begin_child(layersChild, self);
 
   for (auto& [id, layer] : self->anm2->layers) {
     ImGui::PushID(id);
 
-    ImguiItem layerItem = IMGUI_LAYER.copy({.label = std::format(IMGUI_LAYER_FORMAT, id, layer.name),
-                                            .size = vec2(ImGui::GetContentRegionAvail().x - (IMGUI_LAYER_SPRITESHEET_ID.size->x * 2.0f), 0),
-                                            .isSelected = selectedLayerID == id,
-                                            .id = id});
+    ImguiItem layerItem = IMGUI_LAYER.copy({.label = std::format(IMGUI_LAYER_FORMAT, id, layer.name), .isSelected = self->selectedLayerID == id, .id = id});
     if (_imgui_atlas_selectable_input_text(layerItem, self, layer.name))
-      selectedLayerID = id;
+      self->selectedLayerID = id;
 
-    ImGui::SameLine();
-
+    /*
     ImguiItem spritesheetItem =
-        IMGUI_LAYER_SPRITESHEET_ID.copy({.label = std::format(IMGUI_LAYER_FORMAT, id, layer.name), .isSelected = selectedLayerID == id, .id = id});
+        IMGUI_LAYER_SPRITESHEET_ID.copy({.label = std::format(IMGUI_LAYER_FORMAT, id, layer.name), .isSelected = self->selectedLayerID == id, .id = id});
     _imgui_atlas_selectable_input_int(spritesheetItem, self, layer.spritesheetID);
+      */
 
     ImGui::PopID();
   };
 
-  _imgui_end_child(); // layersChild
+  _imgui_end_child(layersChild, self);
 
-  _imgui_begin_child(IMGUI_FOOTER_CHILD, self);
+  ImguiItem footerChild = IMGUI_FOOTER_CHILD.copy({.size = footerSize});
+  _imgui_begin_child(footerChild, self);
 
   if (_imgui_button(IMGUI_LAYER_ADD.copy({.isDisabled = self->anm2->path.empty()}), self))
-    selectedLayerID = anm2_layer_add(self->anm2);
+    self->selectedLayerID = anm2_layer_add(self->anm2);
 
-  if (_imgui_button(IMGUI_LAYER_REMOVE.copy({.isDisabled = selectedLayerID == ID_NONE}), self)) {
-    anm2_layer_remove(self->anm2, selectedLayerID);
-    selectedLayerID = ID_NONE;
+  if (_imgui_button(IMGUI_LAYER_REMOVE.copy({.isDisabled = self->selectedLayerID == ID_NONE}), self)) {
+    anm2_layer_remove(self->anm2, self->selectedLayerID);
+    self->selectedLayerID = ID_NONE;
   }
 
-  _imgui_end_child(); // IMGUI_FOOTER_CHILD
-  _imgui_end();       // IMGUI_LAYERS
+  _imgui_end_child(footerChild, self);
+  _imgui_end(IMGUI_LAYERS, self);
 }
 
 static void _imgui_nulls(Imgui* self) {
-  static int selectedNullID = ID_NONE;
-
-  IMGUI_BEGIN_OR_RETURN(IMGUI_NULLS);
+  IMGUI_BEGIN_OR_RETURN(IMGUI_NULLS, self);
   _imgui_no_anm2_path_click_check(self);
 
-  ImVec2 size = ImGui::GetContentRegionAvail();
+  vec2 footerSize = {0, (ImGui::GetTextLineHeightWithSpacing() + ImGui::GetStyle().FramePadding.y * 2.0f + ImGui::GetStyle().WindowPadding.y * 2.0f)};
+  vec2 childSize = ImGui::GetContentRegionAvail() - footerSize;
 
-  _imgui_begin_child(IMGUI_NULLS_CHILD.copy({.size = vec2(size.x, size.y - IMGUI_FOOTER_CHILD.size->y)}), self);
+  ImguiItem nullsChild = IMGUI_NULLS_CHILD.copy({.size = childSize});
+  _imgui_begin_child(nullsChild, self);
 
   for (auto& [id, null] : self->anm2->nulls) {
     ImGui::PushID(id);
 
-    ImguiItem nullItem = IMGUI_NULL.copy({.label = std::format(IMGUI_NULL_FORMAT, id, null.name), .isSelected = selectedNullID == id, .id = id});
+    ImguiItem nullItem = IMGUI_NULL.copy({.label = std::format(IMGUI_NULL_FORMAT, id, null.name), .isSelected = self->selectedNullID == id, .id = id});
 
     if (_imgui_atlas_selectable_input_text(nullItem, self, null.name))
-      selectedNullID = id;
+      self->selectedNullID = id;
 
     ImGui::PopID();
   };
 
-  _imgui_end_child(); // nullsChild
+  _imgui_end_child(nullsChild, self); // nullsChild
 
-  _imgui_begin_child(IMGUI_FOOTER_CHILD, self);
+  ImguiItem footerChild = IMGUI_FOOTER_CHILD.copy({.size = footerSize});
+  _imgui_begin_child(footerChild, self);
 
   if (_imgui_button(IMGUI_NULL_ADD.copy({.isDisabled = self->anm2->path.empty()}), self))
-    selectedNullID = anm2_null_add(self->anm2);
+    self->selectedNullID = anm2_null_add(self->anm2);
 
-  if (_imgui_button(IMGUI_NULL_REMOVE.copy({.isDisabled = selectedNullID == ID_NONE}), self)) {
-    anm2_null_remove(self->anm2, selectedNullID);
-    selectedNullID = ID_NONE;
+  if (_imgui_button(IMGUI_NULL_REMOVE.copy({.isDisabled = self->selectedNullID == ID_NONE}), self)) {
+    anm2_null_remove(self->anm2, self->selectedNullID);
+    self->selectedNullID = ID_NONE;
   }
 
-  _imgui_end_child(); // IMGUI_FOOTER_CHILD
-  _imgui_end();       // IMGUI_NULLS
+  _imgui_end_child(footerChild, self);
+  _imgui_end(IMGUI_NULLS, self);
 }
 
 static void _imgui_animations(Imgui* self) {
-  IMGUI_BEGIN_OR_RETURN(IMGUI_ANIMATIONS);
+  IMGUI_BEGIN_OR_RETURN(IMGUI_ANIMATIONS, self);
   _imgui_no_anm2_path_click_check(self);
 
-  ImVec2 size = ImGui::GetContentRegionAvail();
+  vec2 footerSize = {0, (ImGui::GetTextLineHeightWithSpacing() + ImGui::GetStyle().FramePadding.y * 2.0f + ImGui::GetStyle().WindowPadding.y * 2.0f)};
+  vec2 childSize = ImGui::GetContentRegionAvail() - footerSize;
+  ImguiItem animationsChild = IMGUI_ANIMATIONS_CHILD.copy({.size = childSize});
 
-  _imgui_begin_child(IMGUI_ANIMATIONS_CHILD.copy({.size = vec2(size.x, size.y - IMGUI_FOOTER_CHILD.size->y)}), self);
+  _imgui_begin_child(animationsChild, self);
 
-  for (auto& [id, animation] : self->anm2->animations) {
-    ImGui::PushID(id);
+  for (auto [i, animation] : std::views::enumerate(self->anm2->animations)) {
+    ImGui::PushID(i);
 
-    ImguiItem animationItem =
-        IMGUI_ANIMATION.copy({.label = self->anm2->defaultAnimationID == id ? std::format(IMGUI_ANIMATION_DEFAULT_FORMAT, animation.name) : animation.name,
-                              .isSelected = self->reference->animationID == id,
-                              .id = id});
+    bool isDefaultAnimation = self->anm2->defaultAnimation == animation.name;
+    bool isReferenceAnimation = self->reference->animationIndex == i;
 
-    if (_imgui_atlas_selectable_input_text(animationItem, self, animation.name))
-      *self->reference = {id};
+    ImguiItem animationItem = IMGUI_ANIMATION.copy({.label = animation.name,
+                                                    .tooltip = animation.name,
+                                                    .size = vec2(childSize.x, 0),
+                                                    .isSelected = self->selectedAnimationIndices.contains(i),
+                                                    .id = i,
+                                                    .font = isDefaultAnimation && isReferenceAnimation ? self->fonts[FONT_BOLD_ITALICS]
+                                                            : isDefaultAnimation                       ? self->fonts[FONT_BOLD]
+                                                            : isReferenceAnimation                     ? self->fonts[FONT_ITALICS]
+                                                                                                       : self->fonts[FONT_REGULAR]});
+
+    if (_imgui_atlas_selectable_input_text(animationItem, self, animation.name)) {
+      set_list(self->selectedAnimationIndices, (int)i, ImGui::IsKeyDown(ImGuiMod_Ctrl), ImGui::IsKeyDown(ImGuiMod_Shift), &self->lastAnimationIndex);
+      if (!ImGui::IsKeyDown(ImGuiMod_Ctrl) && !ImGui::IsKeyDown(ImGuiMod_Shift))
+        *self->reference = {(int)i};
+    }
 
     if (ImGui::IsItemHovered()) {
       self->clipboard->type = CLIPBOARD_ANIMATION;
-      self->clipboard->location = (int)id;
+      self->clipboard->destination = (int)i;
+      self->clipboard->source = self->selectedAnimationIndices;
     }
 
     if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
-      if (ImGui::IsDragDropActive())
-        ImGui::SetNextItemWidth(_imgui_item_size_get(animationItem, IMGUI_SELECTABLE).x);
-      ImGui::SetDragDropPayload(animationItem.drag_drop_get(), &id, sizeof(int));
-      _imgui_atlas_selectable(animationItem, self);
+      ImGui::SetDragDropPayload(animationItem.drag_drop_get(), &i, sizeof(int));
+      _imgui_atlas_selectable(animationItem.copy({.size = vec2(childSize.x, 0)}), self);
       ImGui::EndDragDropSource();
     }
 
     if (ImGui::BeginDragDropTarget()) {
       if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(animationItem.drag_drop_get())) {
-        int sourceID = *(int*)payload->Data;
-        if (sourceID != id) {
-          imgui_snapshot(self, IMGUI_ACTION_ANIMATION_SWAP);
-          map_swap(self->anm2->animations, sourceID, id);
+        int sourceIndex = *(int*)payload->Data;
+        if (sourceIndex != i) {
+          imgui_snapshot(self, IMGUI_ACTION_ANIMATION_MOVE);
+          vector_move(self->anm2->animations, sourceIndex, i);
         }
       }
 
@@ -2058,83 +2121,44 @@ static void _imgui_animations(Imgui* self) {
     }
 
     ImGui::PopID();
-  };
+  }
 
   _imgui_context_menu(self);
 
-  _imgui_end_child(); // animationsChild
+  _imgui_end_child(animationsChild, self);
 
   Anm2Animation* animation = anm2_animation_from_reference(self->anm2, *self->reference);
 
-  _imgui_begin_child(IMGUI_FOOTER_CHILD, self);
+  ImguiItem footerChild = IMGUI_FOOTER_CHILD.copy({.size = footerSize});
+  _imgui_begin_child(footerChild, self);
 
-  if (_imgui_button(IMGUI_ANIMATION_ADD.copy({.isDisabled = self->anm2->path.empty()}), self)) {
-    int id = anm2_animation_add(self->anm2);
-    self->reference->animationID = id;
-
-    if (self->anm2->animations.size() == 1)
-      self->anm2->defaultAnimationID = id;
-  }
+  if (_imgui_button(IMGUI_ANIMATION_ADD.copy({.isDisabled = self->anm2->path.empty()}), self))
+    self->reference->animationIndex = anm2_animation_add(self->anm2);
 
   if (_imgui_button(IMGUI_ANIMATION_DUPLICATE.copy({.isDisabled = !animation}), self))
-    self->reference->animationID = anm2_animation_add(self->anm2, animation, self->reference->animationID);
+    self->reference->animationIndex = anm2_animation_add(self->anm2, animation, self->reference->animationIndex);
 
-  _imgui_button(IMGUI_ANIMATION_MERGE.copy({.isDisabled = !animation}), self);
+  _imgui_button(IMGUI_ANIMATION_MERGE.copy({.isDisabled = !animation || self->reference->animationIndex == INDEX_NONE}), self);
 
   if (imgui_begin_popup_modal(IMGUI_ANIMATION_MERGE.popup, self, IMGUI_ANIMATION_MERGE.popupSize)) {
-    const bool isModCtrl = ImGui::IsKeyDown(IMGUI_INPUT_CTRL);
-    const bool isModShift = ImGui::IsKeyDown(IMGUI_INPUT_SHIFT);
     static bool& isDeleteAnimationsAfter = self->settings->mergeIsDeleteAnimationsAfter;
-    static int lastClickedID = ID_NONE;
     static int& mergeType = self->settings->mergeType;
-    static size_t lastAnimationCount = 0;
-    static std::vector<int> animationIDs;
-    static std::vector<int> sortedIDs;
-
-    if (self->anm2->animations.size() != lastAnimationCount) {
-      sortedIDs.clear();
-      for (const auto& [id, _] : self->anm2->animations)
-        sortedIDs.push_back(id);
-      std::sort(sortedIDs.begin(), sortedIDs.end());
-      lastAnimationCount = self->anm2->animations.size();
-    }
+    static std::set<int> selectedMergeIndices;
+    static int lastMergeAnimationIndex = INDEX_NONE;
 
     _imgui_begin_child(IMGUI_MERGE_ANIMATIONS_CHILD, self);
 
-    for (const auto& [id, animation] : self->anm2->animations) {
-      ImGui::PushID(id);
+    for (auto [i, animation] : std::views::enumerate(self->anm2->animations)) {
+      ImGui::PushID(i);
 
-      if (_imgui_atlas_selectable(IMGUI_ANIMATION.copy({.label = animation.name, .isSelected = vector_find(animationIDs, id)}), self)) {
-        if (isModCtrl) {
-          auto it = std::find(animationIDs.begin(), animationIDs.end(), id);
-          if (it != animationIDs.end())
-            animationIDs.erase(it);
-          else
-            animationIDs.push_back(id);
-
-          lastClickedID = id;
-        } else if (isModShift) {
-          auto it1 = std::find(sortedIDs.begin(), sortedIDs.end(), lastClickedID);
-          auto it2 = std::find(sortedIDs.begin(), sortedIDs.end(), id);
-          if (it1 != sortedIDs.end() && it2 != sortedIDs.end()) {
-            auto begin = std::min(it1, it2);
-            auto end = std::max(it1, it2);
-            for (auto it = begin; it <= end; ++it) {
-              if (std::find(animationIDs.begin(), animationIDs.end(), *it) == animationIDs.end())
-                animationIDs.push_back(*it);
-            }
-          }
-        } else {
-          animationIDs.clear();
-          animationIDs.push_back(id);
-          lastClickedID = id;
-        }
+      if (_imgui_atlas_selectable(IMGUI_ANIMATION.copy({.label = animation.name, .isSelected = selectedMergeIndices.contains(i)}), self)) {
+        set_list(selectedMergeIndices, (int)i, ImGui::IsKeyDown(ImGuiMod_Ctrl), ImGui::IsKeyDown(ImGuiMod_Shift), &lastMergeAnimationIndex);
       }
 
       ImGui::PopID();
     }
 
-    _imgui_end_child(); // IMGUI_MERGE_ANIMATIONS_CHILD
+    _imgui_end_child(IMGUI_MERGE_ANIMATIONS_CHILD, self);
 
     _imgui_begin_child(IMGUI_MERGE_ON_CONFLICT_CHILD, self);
     _imgui_text(IMGUI_MERGE_ON_CONFLICT, self);
@@ -2142,28 +2166,26 @@ static void _imgui_animations(Imgui* self) {
     _imgui_radio_button(IMGUI_MERGE_REPLACE_FRAMES, self, mergeType);
     _imgui_radio_button(IMGUI_MERGE_PREPEND_FRAMES, self, mergeType);
     _imgui_radio_button(IMGUI_MERGE_IGNORE, self, mergeType);
-    _imgui_end_child(); // IMGUI_MERGE_ON_CONFLICT_CHILD
+    _imgui_end_child(IMGUI_MERGE_ON_CONFLICT_CHILD, self);
 
     _imgui_begin_child(IMGUI_MERGE_OPTIONS_CHILD, self);
 
     _imgui_checkbox(IMGUI_MERGE_DELETE_ANIMATIONS_AFTER, self, isDeleteAnimationsAfter);
 
-    _imgui_end_child(); // IMGUI_MERGE_OPTIONS_CHILD
+    _imgui_end_child(IMGUI_MERGE_OPTIONS_CHILD, self);
 
-    if (_imgui_button(IMGUI_MERGE_CONFIRM.copy({.isDisabled = animationIDs.empty()}), self)) {
-      anm2_animation_merge(self->anm2, self->reference->animationID, animationIDs, (Anm2MergeType)mergeType);
+    if (_imgui_button(IMGUI_MERGE_CONFIRM.copy({.isDisabled = selectedMergeIndices.empty()}), self)) {
+      anm2_animation_merge(self->anm2, self->reference->animationIndex, self->selectedAnimationIndices, (Anm2MergeType)mergeType);
 
       if (isDeleteAnimationsAfter)
-        for (int id : animationIDs)
-          if (id != self->reference->animationID)
-            self->anm2->animations.erase(id);
+        anm2_animations_remove(self->anm2, selectedMergeIndices);
 
-      animationIDs.clear();
+      selectedMergeIndices.clear();
       imgui_close_current_popup(self);
     }
 
     if (_imgui_button(IMGUI_POPUP_CANCEL, self)) {
-      animationIDs.clear();
+      selectedMergeIndices.clear();
       imgui_close_current_popup(self);
     }
 
@@ -2171,83 +2193,84 @@ static void _imgui_animations(Imgui* self) {
   }
 
   if (_imgui_button(IMGUI_ANIMATION_REMOVE.copy({.isDisabled = !animation}), self)) {
-    anm2_animation_remove(self->anm2, self->reference->animationID);
+    anm2_animations_remove(self->anm2, self->selectedAnimationIndices);
     *self->reference = Anm2Reference();
+    self->selectedAnimationIndices = {};
   }
 
   if (_imgui_button(IMGUI_ANIMATION_DEFAULT.copy({.isDisabled = !animation}), self))
-    self->anm2->defaultAnimationID = self->reference->animationID;
+    self->anm2->defaultAnimation = animation->name;
 
-  _imgui_end_child(); // IMGUI_FOOTER_CHILD
-  _imgui_end();       // IMGUI_ANIMATIONS
+  _imgui_end_child(footerChild, self);
+  _imgui_end(IMGUI_ANIMATIONS, self);
 }
 
 static void _imgui_events(Imgui* self) {
-  static int selectedID = ID_NONE;
-
-  IMGUI_BEGIN_OR_RETURN(IMGUI_EVENTS);
+  IMGUI_BEGIN_OR_RETURN(IMGUI_EVENTS, self);
   _imgui_no_anm2_path_click_check(self);
 
-  ImVec2 windowSize = ImGui::GetContentRegionAvail();
+  vec2 footerSize = {0, (ImGui::GetTextLineHeightWithSpacing() + ImGui::GetStyle().FramePadding.y * 2.0f + ImGui::GetStyle().WindowPadding.y * 2.0f)};
+  vec2 childSize = ImGui::GetContentRegionAvail() - footerSize;
+  ImguiItem eventsChild = IMGUI_EVENTS_CHILD.copy({.size = childSize});
+  _imgui_begin_child(eventsChild, self);
 
-  _imgui_begin_child(IMGUI_EVENTS_CHILD.copy({.size = vec2(windowSize.x, windowSize.y - IMGUI_FOOTER_CHILD.size->y)}), self);
-
-  std::function<void(int, Anm2Event&)> event_item = [&](int id, Anm2Event& event) {
+  for (auto [id, event] : self->anm2->events) {
     ImGui::PushID(id);
 
-    if (_imgui_atlas_selectable_input_text(IMGUI_EVENT.copy({.label = event.name, .isSelected = id == selectedID, .id = id}), self, event.name))
-      selectedID = id;
+    ImguiItem eventItem = IMGUI_EVENT.copy({.label = event.name, .isSelected = id == self->selectedEventID, .id = id});
+
+    if (_imgui_atlas_selectable_input_text(eventItem, self, event.name))
+      self->selectedEventID = id;
 
     ImGui::PopID();
-  };
+  }
 
-  for (auto& [id, event] : self->anm2->events)
-    event_item(id, event);
+  _imgui_end_child(eventsChild, self);
 
-  _imgui_end_child(); // eventsChild
-
-  _imgui_begin_child(IMGUI_FOOTER_CHILD, self);
+  ImguiItem footerChild = IMGUI_FOOTER_CHILD.copy({.size = footerSize});
+  _imgui_begin_child(footerChild, self);
 
   if (_imgui_button(IMGUI_EVENTS_ADD.copy({.isDisabled = self->anm2->path.empty()}), self)) {
     int id = map_next_id_get(self->anm2->events);
     self->anm2->events[id] = Anm2Event{};
-    selectedID = id;
+    self->selectedEventID = id;
   }
 
-  if (_imgui_button(IMGUI_EVENTS_REMOVE_UNUSED.copy({.isDisabled = self->anm2->events.empty()}), self)) {
-    std::unordered_set<int> usedEventIDs;
+  std::unordered_set<int> eventIDs = map_keys_to_set(self->anm2->events);
 
-    for (auto& [id, animation] : self->anm2->animations)
-      for (auto& trigger : animation.triggers.frames)
-        if (trigger.eventID != ID_NONE)
-          usedEventIDs.insert(trigger.eventID);
+  std::unordered_set<int> usedEventIDs;
+  for (auto& animation : self->anm2->animations)
+    for (auto& frame : animation.triggers.frames)
+      if (frame.eventID != ID_NONE)
+        usedEventIDs.insert(frame.eventID);
 
-    for (auto it = self->anm2->events.begin(); it != self->anm2->events.end();) {
-      if (!usedEventIDs.count(it->first))
-        it = self->anm2->events.erase(it);
-      else
-        it++;
-    }
+  std::unordered_set<int> unusedEventIDs = set_symmetric_difference(eventIDs, usedEventIDs);
+
+  if (_imgui_button(IMGUI_EVENTS_REMOVE_UNUSED.copy({.isDisabled = unusedEventIDs.empty()}), self)) {
+    for (auto& id : unusedEventIDs)
+      self->anm2->events.erase(id);
+    imgui_log_push(self, IMGUI_LOG_REMOVE_UNUSED_EVENTS);
   }
 
-  _imgui_end_child(); // IMGUI_ANIMATIONS_OPTIONS_CHILD)
-  _imgui_end();       // IMGUI_EVENTS
+  _imgui_end_child(footerChild, self);
+  _imgui_end(IMGUI_EVENTS, self);
 }
-*/
 
 static void _imgui_spritesheets(Imgui* self) {
-  IMGUI_BEGIN_OR_RETURN(IMGUI_SPRITESHEETS);
+  IMGUI_BEGIN_OR_RETURN(IMGUI_SPRITESHEETS, self);
   _imgui_no_anm2_path_click_check(self);
 
-  static std::unordered_set<int> selectedIDs;
   float displayScale = self->settings->displayScale;
-  vec2 childSize = ImGui::GetContentRegionAvail() - *IMGUI_SPRITESHEETS_FOOTER_CHILD.size * displayScale;
+  vec2 footerSize = {0, ((ImGui::GetTextLineHeightWithSpacing() * 2.0f) + ImGui::GetStyle().FramePadding.y * 2.0f + ImGui::GetStyle().WindowPadding.y * 2.0f +
+                         ImGui::GetStyle().ItemSpacing.y)};
+  vec2 childSize = ImGui::GetContentRegionAvail() - footerSize;
+  vec2 spritesheetSize = *IMGUI_SPRITESHEET_PREVIEW.size * displayScale;
 
   _imgui_begin_child(IMGUI_SPRITESHEETS_CHILD.copy({.size = childSize}), self);
 
   std::function<void(int, Anm2Spritesheet&)> spritesheet_draw = [&](int id, Anm2Spritesheet& spritesheet) {
     ImGui::PushID(id);
-    vec2 itemSize = {childSize.x, IMGUI_SPRITESHEET_PREVIEW.size->y};
+    vec2 itemSize = {childSize.x, spritesheetSize.y};
     _imgui_begin_child(IMGUI_SPRITESHEET_CHILD.copy({.size = itemSize}), self);
 
     Texture& texture = spritesheet.texture;
@@ -2255,12 +2278,9 @@ static void _imgui_spritesheets(Imgui* self) {
 
     ImVec2 cursorPos = ImGui::GetCursorPos();
 
-    if (_imgui_selectable(IMGUI_SPRITESHEET.copy({.tooltip = spritesheet.path, .size = itemSize, .isSelected = selectedIDs.contains(id)}), self)) {
-      if (ImGui::IsKeyDown(ImGuiMod_Ctrl))
-        unordered_set_id_toggle(selectedIDs, id);
-      else
-        selectedIDs = {id};
-    }
+    if (_imgui_selectable(IMGUI_SPRITESHEET.copy({.tooltip = spritesheet.path, .size = itemSize, .isSelected = self->selectedSpritesheetIDs.contains(id)}),
+                          self))
+      set_list(self->selectedSpritesheetIDs, id, ImGui::IsKeyDown(ImGuiMod_Ctrl), ImGui::IsKeyDown(ImGuiMod_Shift), &self->lastSpritesheetID);
 
     if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
       ImGui::SetDragDropPayload(IMGUI_SPRITESHEET.drag_drop_get(), &id, sizeof(int));
@@ -2279,13 +2299,13 @@ static void _imgui_spritesheets(Imgui* self) {
       ImGui::EndDragDropTarget();
     }
 
-    ImVec2 spritesheetPreviewSize = *IMGUI_SPRITESHEET_PREVIEW.size;
+    vec2 spritesheetPreviewSize = spritesheetSize;
     float spritesheetAspect = (float)texture.size.x / texture.size.y;
 
-    if ((IMGUI_SPRITESHEET_PREVIEW.size->x / IMGUI_SPRITESHEET_PREVIEW.size->y) > spritesheetAspect)
-      spritesheetPreviewSize.x = IMGUI_SPRITESHEET_PREVIEW.size->y * spritesheetAspect;
+    if ((spritesheetSize.x / spritesheetSize.y) > spritesheetAspect)
+      spritesheetPreviewSize.x = spritesheetSize.y * spritesheetAspect;
     else
-      spritesheetPreviewSize.y = IMGUI_SPRITESHEET_PREVIEW.size->x / spritesheetAspect;
+      spritesheetPreviewSize.y = spritesheetSize.x / spritesheetAspect;
 
     _imgui_image(IMGUI_SPRITESHEET_PREVIEW.copy({.textureID = isInvalid ? self->resources->atlas.id : spritesheet.texture.id,
                                                  .size = spritesheetPreviewSize,
@@ -2294,10 +2314,10 @@ static void _imgui_spritesheets(Imgui* self) {
                                                  .cursorPosition = cursorPos}),
                  self);
 
-    _imgui_atlas_text(IMGUI_SPRITESHEET_TEXT.copy({.label = std::format(IMGUI_SPRITESHEET_FORMAT, id, spritesheet.path),
-                                                   .cursorPosition = vec2(IMGUI_SPRITESHEET_PREVIEW.size->x,
-                                                                          (IMGUI_SPRITESHEET_PREVIEW.size->y * 0.5f) - (ImGui::GetTextLineHeight() * 0.5f))}),
-                      self);
+    _imgui_atlas_text(
+        IMGUI_SPRITESHEET_TEXT.copy({.label = std::format(IMGUI_SPRITESHEET_FORMAT, id, spritesheet.path),
+                                     .cursorPosition = vec2(spritesheetSize.x, (spritesheetSize.y * 0.5f) - (ImGui::GetTextLineHeight() * 0.5f))}),
+        self);
 
     _imgui_end_child(IMGUI_SPRITESHEET_CHILD, self);
     ImGui::PopID();
@@ -2308,7 +2328,7 @@ static void _imgui_spritesheets(Imgui* self) {
 
   _imgui_end_child(IMGUI_SPRITESHEETS_CHILD, self);
 
-  _imgui_begin_child(IMGUI_SPRITESHEETS_FOOTER_CHILD.copy({.size = *IMGUI_SPRITESHEETS_FOOTER_CHILD.size * displayScale}), self);
+  _imgui_begin_child(IMGUI_SPRITESHEETS_FOOTER_CHILD.copy({.size = footerSize}), self);
 
   if (_imgui_button(IMGUI_SPRITESHEET_ADD.copy({.isDisabled = self->anm2->path.empty()}), self))
     dialog_spritesheet_add(self->dialog);
@@ -2318,8 +2338,8 @@ static void _imgui_spritesheets(Imgui* self) {
     dialog_reset(self->dialog);
   }
 
-  if (_imgui_button(IMGUI_SPRITESHEETS_RELOAD.copy({.isDisabled = selectedIDs.empty()}), self)) {
-    for (auto& id : selectedIDs) {
+  if (_imgui_button(IMGUI_SPRITESHEETS_RELOAD.copy({.isDisabled = self->selectedSpritesheetIDs.empty()}), self)) {
+    for (auto& id : self->selectedSpritesheetIDs) {
       WorkingDirectory workingDirectory(self->anm2->path);
       Texture texture;
       texture_from_path_init(&texture, self->anm2->spritesheets[id].path);
@@ -2328,8 +2348,8 @@ static void _imgui_spritesheets(Imgui* self) {
     imgui_log_push(self, IMGUI_LOG_RELOAD_SPRITESHEET);
   }
 
-  if (_imgui_button(IMGUI_SPRITESHEETS_REPLACE.copy({.isDisabled = selectedIDs.size() > 1}), self))
-    dialog_spritesheet_replace(self->dialog, *selectedIDs.begin());
+  if (_imgui_button(IMGUI_SPRITESHEETS_REPLACE.copy({.isDisabled = self->selectedSpritesheetIDs.size() != 1}), self))
+    dialog_spritesheet_replace(self->dialog, *self->selectedSpritesheetIDs.begin());
 
   if (self->dialog->isSelected && self->dialog->type == DIALOG_SPRITESHEET_REPLACE) {
 
@@ -2342,34 +2362,35 @@ static void _imgui_spritesheets(Imgui* self) {
     Texture texture;
     texture_from_path_init(&texture, spritesheetPath);
     self->anm2->spritesheets[self->dialog->replaceID].texture = texture;
+    imgui_log_push(self, std::format(IMGUI_LOG_REPLACE_SPRITESHEET, self->dialog->replaceID, spritesheetPath));
     dialog_reset(self->dialog);
   }
 
-  if (_imgui_button(IMGUI_SPRITESHEETS_REMOVE_UNUSED.copy({.isDisabled = self->anm2->spritesheets.empty()}), self)) {
-    std::unordered_set<int> usedSpritesheetIDs;
+  std::unordered_set<int> spritesheetIDs = map_keys_to_set(self->anm2->spritesheets);
 
-    for (auto& [layerID, layer] : self->anm2->layers)
-      if (layer.spritesheetID != ID_NONE)
-        usedSpritesheetIDs.insert(layer.spritesheetID);
+  std::unordered_set<int> usedSpritesheetIDs;
+  for (auto& [layerID, layer] : self->anm2->layers)
+    usedSpritesheetIDs.insert(layer.spritesheetID);
 
-    for (auto it = self->anm2->spritesheets.begin(); it != self->anm2->spritesheets.end();) {
-      if (!usedSpritesheetIDs.count(it->first)) {
-        texture_free(&self->anm2->spritesheets[it->first].texture);
-        it = self->anm2->spritesheets.erase(it);
-      } else
-        it++;
+  std::unordered_set<int> unusedSpritesheetIDs = set_symmetric_difference(spritesheetIDs, usedSpritesheetIDs);
+
+  if (_imgui_button(IMGUI_SPRITESHEETS_REMOVE_UNUSED.copy({.isDisabled = unusedSpritesheetIDs.empty()}), self)) {
+    for (auto& id : unusedSpritesheetIDs) {
+      texture_free(&self->anm2->spritesheets[id].texture);
+      self->anm2->spritesheets.erase(id);
     }
+    imgui_log_push(self, IMGUI_LOG_REMOVE_UNUSED_SPRITESHEETS);
   }
 
-  if (_imgui_button(IMGUI_SPRITESHEETS_SELECT_ALL.copy({.isDisabled = selectedIDs.size() == self->anm2->spritesheets.size()}), self))
+  if (_imgui_button(IMGUI_SPRITESHEETS_SELECT_ALL.copy({.isDisabled = self->selectedSpritesheetIDs.size() == self->anm2->spritesheets.size()}), self))
     for (auto [id, _] : self->anm2->spritesheets)
-      selectedIDs.insert(id);
+      self->selectedSpritesheetIDs.insert(id);
 
-  if (_imgui_button(IMGUI_SPRITESHEETS_SELECT_NONE.copy({.isDisabled = selectedIDs.empty()}), self))
-    selectedIDs.clear();
+  if (_imgui_button(IMGUI_SPRITESHEETS_SELECT_NONE.copy({.isDisabled = self->selectedSpritesheetIDs.empty()}), self))
+    self->selectedSpritesheetIDs.clear();
 
-  if (_imgui_button(IMGUI_SPRITESHEET_SAVE.copy({.isDisabled = selectedIDs.empty()}), self)) {
-    for (auto& id : selectedIDs) {
+  if (_imgui_button(IMGUI_SPRITESHEET_SAVE.copy({.isDisabled = self->selectedSpritesheetIDs.empty()}), self)) {
+    for (auto& id : self->selectedSpritesheetIDs) {
       WorkingDirectory workingDirectory(self->anm2->path);
       Anm2Spritesheet& spritesheet = self->anm2->spritesheets[id];
       texture_from_gl_write(&spritesheet.texture, spritesheet.path);
@@ -2378,7 +2399,7 @@ static void _imgui_spritesheets(Imgui* self) {
   }
 
   _imgui_end_child(IMGUI_SPRITESHEETS_FOOTER_CHILD, self);
-  _imgui_end(); // IMGUI_SPRITESHEETS
+  _imgui_end(IMGUI_SPRITESHEETS, self);
 }
 
 /*
@@ -2429,24 +2450,24 @@ static void _imgui_animation_preview(Imgui* self) {
   _imgui_begin_child(IMGUI_CANVAS_VISUAL_CHILD, self);
   _imgui_color_edit4(IMGUI_CANVAS_BACKGROUND_COLOR, self, self->settings->previewBackgroundColor);
 
-  std::vector<int> animationIDs;
+  std::vector<int> animationIndices;
   ImguiItem animationOverlayItem = IMGUI_CANVAS_ANIMATION_OVERLAY;
 
-  animationIDs.emplace_back(ID_NONE);
+  animationIndices.emplace_back(ID_NONE);
   animationOverlayItem.items.emplace_back(IMGUI_NONE);
 
   for (auto& [id, animation] : self->anm2->animations) {
-    animationIDs.emplace_back(id);
+    animationIndices.emplace_back(id);
     animationOverlayItem.items.emplace_back(animation.name);
   }
 
   int animationIndex = 0;
 
   if (self->preview->animationOverlayID != ID_NONE)
-    animationIndex = std::find(animationIDs.begin(), animationIDs.end(), self->preview->animationOverlayID) - animationIDs.begin();
+    animationIndex = std::find(animationIndices.begin(), animationIndices.end(), self->preview->animationOverlayID) - animationIndices.begin();
 
   if (_imgui_combo(animationOverlayItem, self, &animationIndex))
-    self->preview->animationOverlayID = animationIDs[animationIndex];
+    self->preview->animationOverlayID = animationIndices[animationIndex];
 
   _imgui_drag_float(IMGUI_CANVAS_ANIMATION_OVERLAY_TRANSPARENCY, self, self->settings->previewOverlayTransparency);
   _imgui_end_child(); // IMGUI_CANVAS_VISUAL_CHILD
@@ -2817,12 +2838,13 @@ static void _imgui_spritesheet_editor(Imgui* self) {
     zoom = std::clamp(ROUND_NEAREST_MULTIPLE(zoom + delta, CANVAS_ZOOM_STEP), CANVAS_ZOOM_MIN, CANVAS_ZOOM_MAX);
   }
 }
+*/
 
 static void _imgui_frame_properties(Imgui* self) {
-  static Anm2Type& type = self->reference->itemType;
+  IMGUI_BEGIN_OR_RETURN(IMGUI_FRAME_PROPERTIES, self);
+  _imgui_no_anm2_path_click_check(self);
 
-  IMGUI_BEGIN_OR_RETURN(IMGUI_FRAME_PROPERTIES);
-
+  Anm2Type type = self->reference->itemType;
   Anm2Frame* frame = anm2_frame_from_reference(self->anm2, *self->reference);
 
   bool isLayerFrame = frame && type == ANM2_LAYER;
@@ -2853,36 +2875,28 @@ static void _imgui_frame_properties(Imgui* self) {
       frame->rotation = glm::trunc(frame->rotation);
     }
   } else {
-    std::vector<int> eventIDs;
     ImguiItem eventItem = IMGUI_FRAME_PROPERTIES_EVENT.copy({.isDisabled = !frame});
 
-    eventIDs.emplace_back(ID_NONE);
-    eventItem.items.emplace_back(IMGUI_NONE);
+    eventItem.items[ID_NONE] = IMGUI_NONE;
 
-    for (auto& [id, event] : self->anm2->events) {
-      eventIDs.emplace_back(id);
-      eventItem.items.emplace_back(event.name);
-    }
+    for (auto& [id, event] : self->anm2->events)
+      eventItem.items[id] = event.name;
 
-    int eventIndex = std::find(eventIDs.begin(), eventIDs.end(), frame->eventID) - eventIDs.begin();
-
-    if (_imgui_combo(eventItem, self, &eventIndex))
-      frame->eventID = eventIDs[eventIndex];
-
+    _imgui_combo(eventItem, self, frame->eventID);
     _imgui_input_int(IMGUI_FRAME_PROPERTIES_AT_FRAME.copy({.isDisabled = !frame}), self, frame->atFrame);
   }
 
-  _imgui_end(); // IMGUI_FRAME_PROPERTIES
+  _imgui_end(IMGUI_FRAME_PROPERTIES, self);
 }
-*/
 
 static void _imgui_log(Imgui* self) {
   ImGuiIO& io = ImGui::GetIO();
   ImGuiStyle& style = ImGui::GetStyle();
   ImVec4 borderColor = style.Colors[ImGuiCol_Border];
   ImVec4 textColor = style.Colors[ImGuiCol_Text];
+  float itemSpacingHeight = ImGui::GetStyle().ItemSpacing.y;
 
-  ImVec2 position = {io.DisplaySize.x - IMGUI_LOG_PADDING, io.DisplaySize.y - IMGUI_LOG_PADDING};
+  ImVec2 position = {io.DisplaySize.x - itemSpacingHeight, io.DisplaySize.y - itemSpacingHeight};
 
   for (int i = (int)self->log.size() - 1; i >= 0; --i) {
     ImguiLogItem& item = self->log[i];
@@ -2902,41 +2916,45 @@ static void _imgui_log(Imgui* self) {
     ImGui::PushStyleColor(ImGuiCol_Text, textColor);
     ImGui::SetNextWindowBgAlpha(lifetime);
 
-    _imgui_begin(IMGUI_LOG_WINDOW.copy({.label = std::format(IMGUI_LOG_FORMAT, i)}));
+    ImguiItem logItem = IMGUI_LOG_WINDOW.copy({.label = std::format(IMGUI_LOG_FORMAT, i)});
+    _imgui_begin(logItem, self);
     ImGui::TextUnformatted(item.text.c_str());
     ImVec2 windowSize = ImGui::GetWindowSize();
-    _imgui_end(); // IMGUI_LOG_WINDOW
+    _imgui_end(logItem, self); // IMGUI_LOG_WINDOW
 
     ImGui::PopStyleColor(2);
 
-    position.y -= windowSize.y + IMGUI_LOG_PADDING;
+    position.y -= windowSize.y + ImGui::GetStyle().ItemSpacing.y;
   }
 }
 
 static void _imgui_dock(Imgui* self) {
-  ImguiItem window = IMGUI_WINDOW_MAIN;
   ImGuiViewport* viewport = ImGui::GetMainViewport();
 
-  ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + IMGUI_TASKBAR.size->y));
-  ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, viewport->Size.y - IMGUI_TASKBAR.size->y));
+  float windowOffset = IMGUI_TASKBAR.size->y * self->settings->displayScale;
+  vec2 windowPosition = {viewport->Pos.x, viewport->Pos.y + windowOffset};
+  vec2 windowSize = {viewport->Size.x, viewport->Size.y - windowOffset};
+
+  ImGui::SetNextWindowPos(windowPosition);
+  ImGui::SetNextWindowSize(windowSize);
   ImGui::SetNextWindowViewport(viewport->ID);
 
-  _imgui_begin(window);
+  _imgui_begin(IMGUI_WINDOW_MAIN, self);
   _imgui_dockspace(IMGUI_DOCKSPACE_MAIN, self);
 
-  //_imgui_tools(self);
-  //_imgui_animations(self);
-  //_imgui_events(self);
+  _imgui_tools(self);
+  _imgui_animations(self);
+  _imgui_events(self);
   _imgui_spritesheets(self);
   //_imgui_animation_preview(self);
   //_imgui_spritesheet_editor(self);
-  //_imgui_layers(self);
-  //_imgui_nulls(self);
+  _imgui_layers(self);
+  _imgui_nulls(self);
   //_imgui_timeline(self);
-  //_imgui_onionskin(self);
-  //_imgui_frame_properties(self);
+  _imgui_onionskin(self);
+  _imgui_frame_properties(self);
 
-  _imgui_end(); // IMGUI_WINDOW_MAIN
+  _imgui_end(IMGUI_WINDOW_MAIN, self);
 }
 
 void imgui_init(Imgui* self, Dialog* dialog, Resources* resources, Anm2* anm2, Anm2Reference* reference, Editor* editor, Preview* preview,
@@ -2973,9 +2991,11 @@ void imgui_init(Imgui* self, Dialog* dialog, Resources* resources, Anm2* anm2, A
   io.ConfigWindowsMoveFromTitleBarOnly = true;
 
   ImGui::GetStyle().FontScaleMain = self->settings->displayScale;
-  io.Fonts->AddFontFromFileTTF(FONT_PATH, FONT_SIZE);
+  ImFontConfig config;
+  config.FontDataOwnedByAtlas = false;
 
-  self->style = ImGui::GetStyle();
+  for (auto [i, font] : std::views::enumerate(FONTS))
+    self->fonts[i] = io.Fonts->AddFontFromMemoryTTF((void*)font.data, font.length, FONT_SIZE, &config);
 
   imgui_keyboard_nav_enable();
 
@@ -2986,6 +3006,8 @@ void imgui_init(Imgui* self, Dialog* dialog, Resources* resources, Anm2* anm2, A
       continue;
     imgui_hotkey_chord_registry()[i] = imgui_chord_from_string_get(*&(self->settings->*SETTINGS_HOTKEY_MEMBERS[i]));
   }
+
+  self->style = ImGui::GetStyle();
 }
 
 void imgui_update(Imgui* self) {
@@ -2993,25 +3015,22 @@ void imgui_update(Imgui* self) {
   ImGui_ImplOpenGL3_NewFrame();
   ImGui::NewFrame();
 
-  auto* ctx = ImGui::GetCurrentContext();
-  IM_ASSERT(ctx);
-  IM_ASSERT(ctx->WithinFrameScope);
-  IM_ASSERT(ctx->CurrentWindowStack.Size >= 1);
-  IM_ASSERT(ImGui::GetIO().BackendPlatformUserData && "SDL3 backend not initialized?");
-  IM_ASSERT(ImGui::GetIO().BackendRendererUserData && "OpenGL3 backend not initialized?");
-
   _imgui_taskbar(self);
   _imgui_dock(self);
   _imgui_log(self);
 
   if (self->isContextualActionsEnabled) {
     for (const auto& item : imgui_item_registry()) {
-      if (item->is_chord() && _imgui_chord_pressed(item->chord_get()) && !item->focusWindow.has_value()) {
-        if (item->snapshotAction.has_value())
-          imgui_snapshot(self, *item->snapshotAction);
-        if (item->function)
-          item->function(self);
-      }
+      if (!item->is_chord() || !_imgui_chord_pressed(item->chord_get()))
+        continue;
+      if (item->isAllowHotkeyWhenFocusWindow && !_imgui_is_focus_window(*item->focusWindow))
+        continue;
+      if (!item->isAllowHotkeyWhenFocusWindow && item->focusWindow.has_value())
+        continue;
+      if (item->snapshotAction)
+        imgui_snapshot(self, *item->snapshotAction);
+      if (item->function)
+        item->function(self);
     }
   }
 

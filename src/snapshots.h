@@ -17,7 +17,7 @@ struct SnapshotStack {
   Snapshot snapshots[SNAPSHOT_STACK_MAX];
   int top = 0;
 
-  bool is_empty() const { return top == 0; }
+  bool empty() const { return top == 0; }
 };
 
 struct Snapshots {

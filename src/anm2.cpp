@@ -17,7 +17,8 @@ static void _anm2_frame_serialize(Anm2Frame* frame, Anm2Type type, XMLDocument* 
   XMLDocument localDocument;
   XMLDocument* useDocument = document ? document : &localDocument;
 
-  XMLElement* element = useDocument->NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_FRAME]);
+  XMLElement* element = type == ANM2_TRIGGER ? useDocument->NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_TRIGGER])
+                                             : useDocument->NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_FRAME]);
 
   if (type == ANM2_TRIGGER) {
     element->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_EVENT_ID], frame->eventID); // EventID
@@ -118,8 +119,8 @@ static void _anm2_animation_serialize(Anm2Animation* animation, XMLDocument* doc
   // Triggers
   XMLElement* triggersElement = useDocument->NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_TRIGGERS]);
 
-  for (auto& frame : animation->triggers.frames)
-    _anm2_frame_serialize(&frame, ANM2_TRIGGER, useDocument, triggersElement);
+  for (auto& trigger : animation->triggers.frames)
+    _anm2_frame_serialize(&trigger, ANM2_TRIGGER, useDocument, triggersElement);
 
   element->InsertEndChild(triggersElement);
 
@@ -220,11 +221,9 @@ bool anm2_serialize(Anm2* self, const std::string& path) {
 
   // Animations
   XMLElement* animationsElement = document.NewElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATIONS]);
-  if (self->defaultAnimationID != ID_NONE)
-    animationsElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_DEFAULT_ANIMATION],
-                                    self->animations[self->defaultAnimationID].name.c_str()); // DefaultAnimation
+  animationsElement->SetAttribute(ANM2_ATTRIBUTE_STRINGS[ANM2_ATTRIBUTE_DEFAULT_ANIMATION], self->defaultAnimation.c_str()); // DefaultAnimation
 
-  for (auto& [id, animation] : self->animations)
+  for (auto& animation : self->animations)
     _anm2_animation_serialize(&animation, &document, animationsElement);
 
   animatedActorElement->InsertEndChild(animationsElement);
@@ -426,13 +425,9 @@ bool anm2_deserialize(Anm2* self, const std::string& path, bool isTextures) {
 
   anm2_new(self);
   self->path = path;
-  std::string defaultAnimation{};
   int id{};
 
-  // Save old working directory and then use anm2's path as directory
-  // (used for loading textures from anm2 correctly which are relative)
-  std::filesystem::path workingPath = std::filesystem::current_path();
-  working_directory_from_file_set(path);
+  WorkingDirectory workingDirectory(path);
 
   const XMLElement* root = document.RootElement();
 
@@ -506,13 +501,13 @@ bool anm2_deserialize(Anm2* self, const std::string& path, bool isTextures) {
           switch (ANM2_ATTRIBUTE_STRING_TO_ENUM(attribute->Name())) {
           case ANM2_ATTRIBUTE_NAME:
             addLayer.name = std::string(attribute->Value());
-            break; // Name
+            break;
           case ANM2_ATTRIBUTE_ID:
             id = std::atoi(attribute->Value());
-            break; // ID
+            break;
           case ANM2_ATTRIBUTE_SPRITESHEET_ID:
             addLayer.spritesheetID = std::atoi(attribute->Value());
-            break; // ID
+            break;
           default:
             break;
           }
@@ -575,7 +570,7 @@ bool anm2_deserialize(Anm2* self, const std::string& path, bool isTextures) {
     for (const XMLAttribute* attribute = animations->FirstAttribute(); attribute; attribute = attribute->Next()) {
       switch (ANM2_ATTRIBUTE_STRING_TO_ENUM(attribute->Name())) {
       case ANM2_ATTRIBUTE_DEFAULT_ANIMATION:
-        defaultAnimation = std::string(attribute->Value());
+        self->defaultAnimation = std::string(attribute->Value());
         break; // DefaultAnimation
       default:
         break;
@@ -585,17 +580,11 @@ bool anm2_deserialize(Anm2* self, const std::string& path, bool isTextures) {
     // Animation
     for (const XMLElement* animation = animations->FirstChildElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATION]); animation;
          animation = animation->NextSiblingElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATION]))
-      _anm2_animation_deserialize(&self->animations[map_next_id_get(self->animations)], animation);
+      _anm2_animation_deserialize(&self->animations.emplace_back(Anm2Animation()), animation);
   }
-
-  for (auto& [id, animation] : self->animations)
-    if (animation.name == defaultAnimation)
-      self->defaultAnimationID = id;
 
   if (isTextures)
     anm2_spritesheet_texture_pixels_download(self);
-
-  std::filesystem::current_path(workingPath);
 
   log_info(std::format(ANM2_READ_INFO, path));
 
@@ -625,7 +614,7 @@ int anm2_layer_add(Anm2* self) {
 void anm2_layer_remove(Anm2* self, int id) {
   self->layers.erase(id);
 
-  for (auto& [_, animation] : self->animations)
+  for (auto& animation : self->animations)
     anm2_animation_layer_animation_remove(&animation, id);
 }
 
@@ -641,36 +630,32 @@ void anm2_null_remove(Anm2* self, int id) {
 
   self->nulls.erase(id);
 
-  for (auto& [_, animation] : self->animations)
+  for (auto& animation : self->animations)
     anm2_animation_null_animation_remove(&animation, id);
 }
 
-int anm2_animation_add(Anm2* self, Anm2Animation* animation, int id) {
-  int addID = map_next_id_get(self->animations);
+int anm2_animation_add(Anm2* self, Anm2Animation* animation, int index) {
 
-  Anm2Animation localAnimation;
-  Anm2Animation* addAnimation = animation ? animation : &localAnimation;
+  Anm2Animation addAnimation = animation ? *animation : Anm2Animation();
 
   if (!animation)
-    addAnimation->rootAnimation.frames.push_back(Anm2Frame{});
+    addAnimation.rootAnimation.frames.push_back(Anm2Frame{});
 
-  if (id != ID_NONE) {
-    map_insert_shift(self->animations, id, *addAnimation);
-    return id + 1;
-  } else
-    self->animations[addID] = *addAnimation;
+  int addIndex = index != INDEX_NONE ? index : (int)self->animations.size() - 1;
 
-  return addID;
+  self->animations.insert(self->animations.begin() + addIndex, addAnimation);
+
+  return addIndex;
 }
 
-void anm2_animation_remove(Anm2* self, int id) { self->animations.erase(id); }
+void anm2_animations_remove(Anm2* self, const std::set<int> indices) { vector_erase_indices(self->animations, indices); };
 
 void anm2_new(Anm2* self) {
   *self = Anm2{};
   _anm2_created_on_set(self);
 }
 
-Anm2Animation* anm2_animation_from_reference(Anm2* self, Anm2Reference reference) { return map_find(self->animations, reference.animationID); }
+Anm2Animation* anm2_animation_from_reference(Anm2* self, Anm2Reference reference) { return vector_get(self->animations, reference.animationIndex); }
 
 Anm2Item* anm2_item_from_reference(Anm2* self, Anm2Reference reference) {
   if (reference.itemType == ANM2_NONE)
@@ -928,8 +913,8 @@ void anm2_item_frame_set(Anm2* self, Anm2Reference reference, const Anm2FrameCha
   }
 }
 
-void anm2_animation_merge(Anm2* self, int animationID, const std::vector<int>& mergeIDs, Anm2MergeType type) {
-  Anm2Animation newAnimation = self->animations[animationID];
+void anm2_animation_merge(Anm2* self, int animationIndex, std::set<int> mergeIndices, Anm2MergeType type) {
+  Anm2Animation newAnimation = self->animations[animationIndex];
 
   auto merge_item = [&](Anm2Item& destinationItem, const Anm2Item& sourceItem) {
     switch (type) {
@@ -950,11 +935,11 @@ void anm2_animation_merge(Anm2* self, int animationID, const std::vector<int>& m
     }
   };
 
-  for (auto mergeID : mergeIDs) {
-    if (animationID == mergeID)
+  for (auto mergeIndices : mergeIndices) {
+    if (animationIndex == mergeIndices)
       continue;
 
-    const Anm2Animation& mergeAnimation = self->animations[mergeID];
+    const Anm2Animation& mergeAnimation = self->animations[mergeIndices];
 
     merge_item(newAnimation.rootAnimation, mergeAnimation.rootAnimation);
 
@@ -967,9 +952,9 @@ void anm2_animation_merge(Anm2* self, int animationID, const std::vector<int>& m
     merge_item(newAnimation.triggers, mergeAnimation.triggers);
   }
 
-  self->animations[animationID] = newAnimation;
+  self->animations[animationIndex] = newAnimation;
 
-  anm2_animation_length_set(&self->animations[animationID]);
+  anm2_animation_length_set(&self->animations[animationIndex]);
 }
 
 void anm2_frame_bake(Anm2* self, Anm2Reference reference, int interval, bool isRoundScale, bool isRoundRotation) {
@@ -981,7 +966,7 @@ void anm2_frame_bake(Anm2* self, Anm2Reference reference, int interval, bool isR
   if (!frame)
     return;
 
-  Anm2Reference referenceNext = {reference.animationID, reference.itemType, reference.itemID, reference.frameIndex + 1};
+  Anm2Reference referenceNext = {reference.animationIndex, reference.itemType, reference.itemID, reference.frameIndex + 1};
   Anm2Frame* frameNext = anm2_frame_from_reference(self, referenceNext);
   if (!frameNext)
     frameNext = frame;
@@ -1028,7 +1013,7 @@ void anm2_scale(Anm2* self, float scale) {
     frame.pivot = vec2((int)(frame.pivot.x * scale), (int)(frame.pivot.y * scale));
   };
 
-  for (auto& [_, animation] : self->animations) {
+  for (auto& animation : self->animations) {
     for (auto& frame : animation.rootAnimation.frames)
       frame_scale(frame);
 
@@ -1112,7 +1097,7 @@ vec4 anm2_animation_rect_get(Anm2* self, Anm2Reference reference, bool isRootTra
 
   for (float t = 0.0f; t <= animation->frameNum; t += 1.0f) {
     for (const auto& [id, _] : animation->layerAnimations) {
-      anm2_frame_from_time(self, &frame, {reference.animationID, ANM2_LAYER, id}, t);
+      anm2_frame_from_time(self, &frame, {reference.animationIndex, ANM2_LAYER, id}, t);
       if (!frame.isVisible)
         continue;
       if (frame.size.x <= 0 || frame.size.y <= 0)
@@ -1120,7 +1105,7 @@ vec4 anm2_animation_rect_get(Anm2* self, Anm2Reference reference, bool isRootTra
 
       mat4 rootModel(1.0f);
       if (isRootTransform) {
-        anm2_frame_from_time(self, &root, {reference.animationID, ANM2_ROOT}, t);
+        anm2_frame_from_time(self, &root, {reference.animationIndex, ANM2_ROOT}, t);
         rootModel = quad_model_parent_get(root.position, root.pivot, PERCENT_TO_UNIT(root.scale), root.rotation);
       }
 
@@ -1149,7 +1134,7 @@ void anm2_animation_serialize_to_string(Anm2Animation* animation, std::string* s
 
 void anm2_frame_serialize_to_string(Anm2Frame* frame, Anm2Type type, std::string* string) { _anm2_frame_serialize(frame, type, nullptr, nullptr, string); }
 
-bool anm2_animation_deserialize_from_xml(Anm2Animation* animation, const std::string& xml) {
+bool anm2_animations_deserialize_from_xml(std::vector<Anm2Animation>& animations, const std::string& xml) {
   XMLDocument document;
 
   auto animation_deserialize_error = [&]() {
@@ -1160,13 +1145,12 @@ bool anm2_animation_deserialize_from_xml(Anm2Animation* animation, const std::st
   if (document.Parse(xml.c_str()) != XML_SUCCESS)
     return animation_deserialize_error();
 
-  const XMLElement* element = document.RootElement();
-  if (!element)
-    return animation_deserialize_error();
-  if (std::string(element->Name()) != std::string(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATION]))
-    return animation_deserialize_error();
+  for (const XMLElement* element = document.RootElement(); element; element = element->NextSiblingElement(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATION])) {
+    if (std::string(document.RootElement()->Name()) != std::string(ANM2_ELEMENT_STRINGS[ANM2_ELEMENT_ANIMATION]))
+      return animation_deserialize_error();
+    _anm2_animation_deserialize(&animations.emplace_back(Anm2Animation()), element);
+  }
 
-  _anm2_animation_deserialize(animation, element);
   return true;
 }
 

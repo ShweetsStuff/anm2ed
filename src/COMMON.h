@@ -1,5 +1,6 @@
 #pragma once
 
+#include <set>
 #define GLAD_GL_IMPLEMENTATION
 #include <SDL3/SDL.h>
 #include <glad/glad.h>
@@ -10,7 +11,6 @@
 
 #include <algorithm>
 #include <chrono>
-#include <climits>
 #include <cmath>
 #include <cstring>
 #include <filesystem>
@@ -241,6 +241,35 @@ template <typename T> static inline void map_insert_shift(std::map<int, T>& map,
   map[insertID] = value;
 }
 
+template <typename Map> auto map_keys_to_set(const Map& m) {
+  using Key = typename Map::key_type;
+  std::unordered_set<Key> s;
+  s.reserve(m.size());
+  for (const auto& [key, _] : m) {
+    s.insert(key);
+  }
+  return s;
+}
+
+template <typename Set> Set set_symmetric_difference(const Set& a, const Set& b) {
+  Set result;
+  result.reserve(a.size() + b.size());
+
+  for (const auto& x : a) {
+    if (!b.contains(x)) {
+      result.insert(x);
+    }
+  }
+
+  for (const auto& x : b) {
+    if (!a.contains(x)) {
+      result.insert(x);
+    }
+  }
+
+  return result;
+}
+
 template <typename T> static inline T* vector_find(std::vector<T>& v, const T& value) {
   auto it = std::find(v.begin(), v.end(), value);
   return (it != v.end()) ? &(*it) : nullptr;
@@ -257,11 +286,49 @@ template <typename T> static inline void vector_value_swap(std::vector<T>& v, co
   }
 }
 
-static inline void unordered_set_id_toggle(std::unordered_set<int>& set, int id) {
-  if (auto it = set.find(id); it != set.end())
+template <typename T> static inline T* vector_get(std::vector<T>& v, size_t index) {
+  if (index < v.size())
+    return &v[index];
+  return nullptr;
+}
+
+template <typename T> static inline void vector_move(std::vector<T>& v, size_t from, size_t to) {
+  if (from >= v.size() || to >= v.size() || from == to)
+    return;
+
+  if (from < to) {
+    std::rotate(v.begin() + from, v.begin() + from + 1, v.begin() + to + 1);
+  } else {
+    std::rotate(v.begin() + to, v.begin() + from, v.begin() + from + 1);
+  }
+}
+
+template <typename T> void vector_erase_indices(std::vector<T>& v, const std::set<int>& indices) {
+  size_t i = 0;
+  v.erase(std::remove_if(v.begin(), v.end(), [&](const T&) { return indices.count(i++) > 0; }), v.end());
+}
+
+template <typename T> static inline void set_key_toggle(std::set<T>& set, T key) {
+  if (auto it = set.find(key); it != set.end())
     set.erase(it);
   else
-    set.insert(id);
+    set.insert(key);
+}
+
+template <typename T> static inline void set_list(std::set<T>& s, const T& key, bool isCtrl, bool isShift, T* lastSelected) {
+  if (isShift && lastSelected) {
+    s.clear();
+    T a = std::min(*lastSelected, key);
+    T b = std::max(*lastSelected, key);
+    for (T i = a; i <= b; i++)
+      s.insert(i);
+  } else if (isCtrl) {
+    set_key_toggle(s, key);
+    *lastSelected = key;
+  } else {
+    s = {key};
+    *lastSelected = key;
+  }
 }
 
 static inline mat4 quad_model_get(vec2 size = {}, vec2 position = {}, vec2 pivot = {}, vec2 scale = vec2(1.0f), float rotation = {}) {

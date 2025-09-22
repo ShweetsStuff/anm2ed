@@ -4,8 +4,9 @@ release/
 packed/
 vcpkg_installed/
 out/
-include/imgui/
-include/glm/
-include/tinyxml2
+external/
+external/
+external/
+external/
 workshop/resources
 .vs/

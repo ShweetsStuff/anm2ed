@@ -61,6 +61,8 @@
   X(HOTKEY_COPY, hotkeyCopy, TYPE_STRING, "Ctrl+C")                                                                                                            \
   X(HOTKEY_CUT, hotkeyCut, TYPE_STRING, "Ctrl+X")                                                                                                              \
   X(HOTKEY_PASTE, hotkeyPaste, TYPE_STRING, "Ctrl+V")                                                                                                          \
+  X(HOTKEY_SELECT_ALL, hotkeySelectAll, TYPE_STRING, "Ctrl+A")                                                                                                 \
+  X(HOTKEY_SELECT_NONE, hotkeySelectNone, TYPE_STRING, "Ctrl+Shift+A")                                                                                         \
                                                                                                                                                                \
   X(PLAYBACK_IS_LOOP, playbackIsLoop, TYPE_BOOL, true)                                                                                                         \
   X(PLAYBACK_IS_CLAMP_PLAYHEAD, playbackIsClampPlayhead, TYPE_BOOL, true)                                                                                      \
@@ -211,7 +213,9 @@ constexpr int SETTINGS_COUNT = (int)std::size(SETTINGS_ENTRIES);
   X(REDO, "Redo")                                                                                                                                              \
   X(COPY, "Copy")                                                                                                                                              \
   X(CUT, "Cut")                                                                                                                                                \
-  X(PASTE, "Paste")
+  X(PASTE, "Paste")                                                                                                                                            \
+  X(SELECT_ALL, "Select All")                                                                                                                                  \
+  X(SELECT_NONE, "Select None")
 
 typedef enum {
 #define X(name, str) HOTKEY_##name,
@@ -257,7 +261,9 @@ const inline HotkeyMember SETTINGS_HOTKEY_MEMBERS[HOTKEY_COUNT] = {nullptr,
                                                                    &Settings::hotkeyRedo,
                                                                    &Settings::hotkeyCopy,
                                                                    &Settings::hotkeyCut,
-                                                                   &Settings::hotkeyPaste};
+                                                                   &Settings::hotkeyPaste,
+                                                                   &Settings::hotkeySelectAll,
+                                                                   &Settings::hotkeySelectNone};
 
 const inline std::string SETTINGS_IMGUI_DEFAULT = R"(
 # Dear ImGui

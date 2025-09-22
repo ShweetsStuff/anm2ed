@@ -76,6 +76,22 @@ bool texture_from_rgba_write(const std::string& path, const uint8_t* data, ivec2
   return isSuccess;
 }
 
+bool texture_from_memory_init(Texture* self, ivec2 size, const uint8_t* data, size_t length) {
+  *self = Texture{};
+  self->size = size;
+
+  u8* textureData = stbi_load_from_memory(data, length, &self->size.x, &self->size.y, nullptr, TEXTURE_CHANNELS);
+
+  if (!textureData)
+    return false;
+
+  self->isInvalid = false;
+
+  _texture_gl_set(self, textureData);
+
+  return true;
+}
+
 bool texture_from_gl_write(Texture* self, const std::string& path) { return texture_from_rgba_write(path, texture_download(self).data(), self->size); }
 
 void texture_free(Texture* self) {

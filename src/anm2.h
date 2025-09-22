@@ -23,6 +23,7 @@
 #define ANM2_WRITE_INFO "Wrote anm2 to file: {}"
 #define ANM2_CREATED_ON_FORMAT "%d-%B-%Y %I:%M:%S %p"
 
+#define ANM2_ANIMATION_DEFAULT "New Animation"
 #define ANM2_EXTENSION "anm2"
 #define ANM2_SPRITESHEET_EXTENSION "png"
 
@@ -185,7 +186,7 @@ struct Anm2Item {
 
 struct Anm2Animation {
   int frameNum = ANM2_FRAME_NUM_MIN;
-  std::string name = "New Animation";
+  std::string name = ANM2_ANIMATION_DEFAULT;
   bool isLoop = true;
   Anm2Item rootAnimation;
   std::unordered_map<int, Anm2Item> layerAnimations;
@@ -200,12 +201,12 @@ struct Anm2 {
   std::string path{};
   std::string createdBy = "robot";
   std::string createdOn{};
+  std::string defaultAnimation = ANM2_ANIMATION_DEFAULT;
   std::map<int, Anm2Spritesheet> spritesheets;
   std::map<int, Anm2Layer> layers;
   std::map<int, Anm2Null> nulls;
   std::map<int, Anm2Event> events;
-  std::map<int, Anm2Animation> animations;
-  int defaultAnimationID = ID_NONE;
+  std::vector<Anm2Animation> animations;
   int fps = ANM2_FPS_DEFAULT;
   int version{};
 
@@ -213,7 +214,7 @@ struct Anm2 {
 };
 
 struct Anm2Reference {
-  int animationID = ID_NONE;
+  int animationIndex = ID_NONE;
   Anm2Type itemType = ANM2_NONE;
   int itemID = ID_NONE;
   int frameIndex = INDEX_NONE;
@@ -231,11 +232,11 @@ Anm2Animation* anm2_animation_from_reference(Anm2* self, Anm2Reference reference
 Anm2Frame* anm2_frame_add(Anm2* self, Anm2Frame* frame, Anm2Reference reference);
 Anm2Frame* anm2_frame_from_reference(Anm2* self, Anm2Reference reference);
 Anm2Item* anm2_item_from_reference(Anm2* self, Anm2Reference reference);
-bool anm2_animation_deserialize_from_xml(Anm2Animation* animation, const std::string& xml);
+bool anm2_animations_deserialize_from_xml(std::vector<Anm2Animation>& animations, const std::string& xml);
 bool anm2_deserialize(Anm2* self, const std::string& path, bool isTextures = true);
 bool anm2_frame_deserialize_from_xml(Anm2Frame* frame, const std::string& xml);
 bool anm2_serialize(Anm2* self, const std::string& path);
-int anm2_animation_add(Anm2* self, Anm2Animation* animation = nullptr, int id = ID_NONE);
+int anm2_animation_add(Anm2* self, Anm2Animation* animation = nullptr, int index = INDEX_NONE);
 int anm2_animation_length_get(Anm2Animation* self);
 int anm2_frame_index_from_time(Anm2* self, Anm2Reference reference, float time);
 int anm2_layer_add(Anm2* self);
@@ -244,10 +245,10 @@ vec4 anm2_animation_rect_get(Anm2* anm2, Anm2Reference reference, bool isRootTra
 void anm2_animation_layer_animation_add(Anm2Animation* animation, int id);
 void anm2_animation_layer_animation_remove(Anm2Animation* animation, int id);
 void anm2_animation_length_set(Anm2Animation* self);
-void anm2_animation_merge(Anm2* self, int animationID, const std::vector<int>& mergeIDs, Anm2MergeType type);
+void anm2_animation_merge(Anm2* self, int animationID, std::set<int> mergeIndices, Anm2MergeType type);
 void anm2_animation_null_animation_add(Anm2Animation* animation, int id);
 void anm2_animation_null_animation_remove(Anm2Animation* animation, int id);
-void anm2_animation_remove(Anm2* self, int id);
+void anm2_animations_remove(Anm2* self, const std::set<int> indices);
 void anm2_animation_serialize_to_string(Anm2Animation* animation, std::string* string);
 void anm2_frame_bake(Anm2* self, Anm2Reference reference, int interval, bool isRoundScale, bool isRoundRotation);
 void anm2_frame_from_time(Anm2* self, Anm2Frame* frame, Anm2Reference reference, float time);

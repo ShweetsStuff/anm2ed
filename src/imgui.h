@@ -12,11 +12,9 @@
 #include "snapshots.h"
 #include "tool.h"
 #include "window.h"
+#include <SDL3/SDL_mouse.h>
 
-#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-#define IMGUI_DEBUG_PARANOID
 #define IMGUI_IMPL_OPENGL_LOADER_CUSTOM
-#define IMGUI_ENABLE_DOCKING
 #define IM_VEC2_CLASS_EXTRA                                                                                                                                    \
   inline bool operator==(const ImVec2& rhs) const { return x == rhs.x && y == rhs.y; }                                                                         \
   inline bool operator!=(const ImVec2& rhs) const { return !(*this == rhs); }                                                                                  \
@@ -83,7 +81,6 @@
 #define IMGUI_CHORD_NONE (ImGuiMod_None)
 #define IMGUI_FRAME_BORDER 2.0f
 #define IMGUI_LOG_DURATION 3.0f
-#define IMGUI_LOG_PADDING 10.0f
 #define IMGUI_TEXT_HEIGHT_PADDING 4.0f
 #define IMGUI_PLAYHEAD_LINE_COLOR IM_COL32(UCHAR_MAX, UCHAR_MAX, UCHAR_MAX, UCHAR_MAX)
 #define IMGUI_TRIGGERS_EVENT_COLOR IM_COL32(UCHAR_MAX, UCHAR_MAX, UCHAR_MAX, 128)
@@ -97,7 +94,7 @@
 #define IMGUI_ACTION_FRAME_CROP "Frame Crop"
 #define IMGUI_ACTION_FRAME_MOVE "Frame Move"
 
-#define IMGUI_ACTION_ANIMATION_SWAP "Animation Swap"
+#define IMGUI_ACTION_ANIMATION_MOVE "Move Animation"
 #define IMGUI_ACTION_TRIGGER_MOVE "Trigger At Frame"
 #define IMGUI_ACTION_ITEM_SWAP "Item Swap"
 #define IMGUI_ACTION_FRAME_DELAY "Frame Delay"
@@ -140,7 +137,11 @@
 #define IMGUI_LOG_ANIMATION_PASTE_ERROR "Failed to parse clipboard text as an animation."
 #define IMGUI_LOG_FRAME_PASTE_ERROR "Failed to parse clipboard text as a frame."
 #define IMGUI_LOG_RELOAD_SPRITESHEET "Reloaded spritesheet(s)."
+#define IMGUI_LOG_REMOVE_UNUSED_SPRITESHEETS "Removed unused spritesheet(s)."
+#define IMGUI_LOG_REMOVE_UNUSED_EVENTS "Removed unused event(s)."
 #define IMGUI_LOG_ADD_SPRITESHEET_ERROR "Failed to add spritesheet: {}. Make sure it's a valid PNG file."
+#define IMGUI_LOG_ADD_SPRITESHEET "Added spritesheet #{}: {}"
+#define IMGUI_LOG_REPLACE_SPRITESHEET "Replaced spritesheet #{}: {}"
 
 #define IMGUI_NONE "None"
 #define IMGUI_ANIMATION_DEFAULT_FORMAT "(*) {}"
@@ -168,6 +169,8 @@
 
 #define IMGUI_TRIGGERS_FONT_SCALE 2.0
 
+const ImVec2 IMGUI_TOOL_BUTTON_SIZE = {24, 24};
+const ImVec2 IMGUI_TOOL_COLOR_SIZE = {24, 24};
 const ImVec2 IMGUI_TIMELINE_FRAME_SIZE = {12, 36};
 const ImVec2 IMGUI_TIMELINE_FRAME_ATLAS_OFFSET = {ATLAS_SIZE_SMALL.x * 0.25f, (IMGUI_TIMELINE_FRAME_SIZE.y * 0.5f) - (ATLAS_SIZE_SMALL.y * 0.5f)};
 const ImVec2 IMGUI_TIMELINE_ITEM_SELECTABLE_SIZE = {150, 0};
@@ -198,6 +201,8 @@ const ImGuiKey IMGUI_INPUT_ZOOM_OUT = ImGuiKey_2;
 const ImGuiKey IMGUI_INPUT_ENTER = ImGuiKey_Enter;
 const ImGuiKey IMGUI_INPUT_RENAME = ImGuiKey_F2;
 const ImGuiKey IMGUI_INPUT_DEFAULT = ImGuiKey_Home;
+const ImGuiKeyChord IMGUI_CHORD_SELECT_ALL = ImGuiMod_Ctrl | ImGuiKey_A;
+const ImGuiKeyChord IMGUI_CHORD_SELECT_NONE = ImGuiKey_Escape;
 const ImGuiMouseButton IMGUI_MOUSE_DEFAULT = ImGuiMouseButton_Middle;
 
 enum ImguiPopupType { IMGUI_POPUP_NONE, IMGUI_POPUP_BY_ITEM, IMGUI_POPUP_CENTER_WINDOW };
@@ -228,14 +233,22 @@ struct Imgui {
   Clipboard* clipboard = nullptr;
   SDL_Window* window = nullptr;
   SDL_GLContext* glContext = nullptr;
+  Anm2 saveAnm2 = Anm2();
+  ImFont* fonts[FONT_COUNT] = {};
+  ImGuiStyle style;
+  std::vector<ImguiLogItem> log{};
   std::string pendingPopup{};
   ImguiPopupType pendingPopupType = IMGUI_POPUP_NONE;
   ImVec2 pendingPopupPosition{};
-  std::vector<ImguiLogItem> log;
-  ImGuiStyle style;
-  Anm2 saveAnm2;
-  SDL_SystemCursor cursor;
-  SDL_SystemCursor pendingCursor;
+  std::set<int> selectedAnimationIndices{};
+  int lastAnimationIndex = ID_NONE;
+  std::set<int> selectedSpritesheetIDs{};
+  int lastSpritesheetID = ID_NONE;
+  int selectedEventID = ID_NONE;
+  int selectedLayerID = ID_NONE;
+  int selectedNullID = ID_NONE;
+  SDL_SystemCursor cursor = SDL_SYSTEM_CURSOR_DEFAULT;
+  SDL_SystemCursor pendingCursor = SDL_SYSTEM_CURSOR_DEFAULT;
   bool isCursorSet = false;
   bool isContextualActionsEnabled = true;
   bool isQuit = false;
@@ -254,9 +267,12 @@ static void imgui_log_push(Imgui* self, const std::string& text) {
 }
 
 static inline void imgui_anm2_new(Imgui* self) {
-  *self->reference = Anm2Reference();
   anm2_free(self->anm2);
   anm2_new(self->anm2);
+
+  *self->reference = Anm2Reference();
+  self->selectedAnimationIndices = {};
+  self->selectedSpritesheetIDs = {};
 }
 
 static inline void imgui_file_open(Imgui* self) { dialog_anm2_open(self->dialog); }
@@ -576,7 +592,8 @@ enum ImguiItemType {
   IMGUI_ITEM,
   IMGUI_TEXT,
   IMGUI_IMAGE,
-  IMGUI_WINDOW,
+  IMGUI_BEGIN_WINDOW,
+  IMGUI_END_WINDOW,
   IMGUI_DOCKSPACE,
   IMGUI_BEGIN_CHILD,
   IMGUI_END_CHILD,
@@ -611,6 +628,7 @@ static ImGuiKeyChord* imgui_hotkey_chord_registry(void) {
 }
 
 typedef void (*ImguiFunction)(Imgui*);
+using IntStringMap = std::map<int, std::string>;
 
 #define IMGUI_ITEM_MEMBERS                                                                                                                                     \
   X(label, std::string, false, {})                                                                                                                             \
@@ -619,14 +637,16 @@ typedef void (*ImguiFunction)(Imgui*);
   X(popup, std::string, false, {})                                                                                                                             \
   X(dragDrop, std::string, true, {})                                                                                                                           \
   X(focusWindow, std::string, true, {})                                                                                                                        \
-  X(items, std::vector<std::string>, false, {})                                                                                                                \
+  X(items, IntStringMap, false, {})                                                                                                                            \
   X(atlas, AtlasType, false, ATLAS_NONE)                                                                                                                       \
   X(textureID, int, false, ID_NONE)                                                                                                                            \
   X(chord, ImGuiKeyChord, true, {})                                                                                                                            \
   X(hotkey, HotkeyType, true, {})                                                                                                                              \
   X(mnemonicKey, ImGuiKey, false, ImGuiKey_None)                                                                                                               \
   X(mnemonicIndex, int, false, INDEX_NONE)                                                                                                                     \
+  X(position, vec2, true, {})                                                                                                                                  \
   X(size, vec2, true, {})                                                                                                                                      \
+  X(scale, float, false, 1.0f)                                                                                                                                 \
   X(uvMin, vec2, false, vec2())                                                                                                                                \
   X(uvMax, vec2, false, vec2(1.0f))                                                                                                                            \
   X(popupSize, vec2, false, {})                                                                                                                                \
@@ -638,9 +658,12 @@ typedef void (*ImguiFunction)(Imgui*);
   X(isMnemonicDisabled, bool, false, false)                                                                                                                    \
   X(isEmptyFormat, bool, false, false)                                                                                                                         \
   X(isUseItemActivated, bool, false, false)                                                                                                                    \
-  X(isSizeToText, bool, false, false)                                                                                                                          \
-  X(isSizeToRegion, bool, false, false)                                                                                                                        \
+  X(isWidthToText, bool, false, false)                                                                                                                         \
+  X(isWidthToRegion, bool, false, false)                                                                                                                       \
+  X(isHeightToRegion, bool, false, false)                                                                                                                      \
   X(isHotkeyInLabel, bool, false, false)                                                                                                                       \
+  X(isAllowHotkeyWhenFocusWindow, bool, false, false)                                                                                                          \
+  X(isAtlasStretch, bool, false, false)                                                                                                                        \
   X(isSameLine, bool, false, false)                                                                                                                            \
   X(isSeparator, bool, false, false)                                                                                                                           \
   X(id, int, false, 0)                                                                                                                                         \
@@ -651,16 +674,19 @@ typedef void (*ImguiFunction)(Imgui*);
   X(min, int, true, {})                                                                                                                                        \
   X(max, int, true, {})                                                                                                                                        \
   X(value, int, false, {})                                                                                                                                     \
-  X(atlasOffset, vec2, false, {})                                                                                                                              \
+  X(atlasOffset, vec2, true, {})                                                                                                                               \
   X(cursorPosition, vec2, true, {})                                                                                                                            \
   X(cursorOffset, vec2, false, {})                                                                                                                             \
+  X(textPosition, vec2, true, {})                                                                                                                              \
+  X(textOffset, vec2, false, {})                                                                                                                               \
   X(itemSpacing, vec2, true, {})                                                                                                                               \
   X(windowPadding, vec2, true, {})                                                                                                                             \
   X(framePadding, vec2, true, {})                                                                                                                              \
   X(border, int, true, {})                                                                                                                                     \
   X(flags, int, false, {})                                                                                                                                     \
   X(windowFlags, int, false, {})                                                                                                                               \
-  X(rowCount, int, true, {})
+  X(rowCount, int, true, {})                                                                                                                                   \
+  X(font, ImFont*, true, {})
 
 struct ImguiItemOverride {
 #define X(name, type, isOptional, ...) std::optional<type> name = {};
@@ -714,6 +740,8 @@ struct ImguiItem {
     IMGUI_ITEM_MEMBERS
 #undef X
 
+    out.id += out.idOffset;
+
     return out;
   }
 
@@ -761,27 +789,27 @@ IMGUI_ITEM(IMGUI_TASKBAR, self.label = "Taskbar", self.size = {0, 32},
                         ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoSavedSettings);
 
 IMGUI_ITEM(IMGUI_FILE, self.label = "&File", self.tooltip = "Opens the file menu, for reading/writing anm2 files.", self.popup = "## File Popup",
-           self.popupType = IMGUI_POPUP_BY_ITEM, self.isSizeToText = true, self.isSameLine = true);
+           self.popupType = IMGUI_POPUP_BY_ITEM, self.isWidthToText = true, self.isHeightToRegion = true, self.isSameLine = true);
 
 IMGUI_ITEM(IMGUI_NEW, self.label = "&New", self.tooltip = "Load a blank .anm2 file to edit.", self.function = imgui_file_new, self.hotkey = HOTKEY_NEW,
-           self.isSizeToText = true, self.isHotkeyInLabel = true);
+           self.isWidthToRegion = true, self.isHotkeyInLabel = true);
 
 IMGUI_ITEM(IMGUI_OPEN, self.label = "&Open", self.tooltip = "Open an existing .anm2 file to edit.", self.function = imgui_file_open, self.hotkey = HOTKEY_OPEN,
-           self.isSizeToText = true, self.isHotkeyInLabel = true);
+           self.isWidthToRegion = true, self.isHotkeyInLabel = true);
 
 IMGUI_ITEM(IMGUI_SAVE, self.label = "&Save",
            self.tooltip = "Saves the current .anm2 file to its path.\nIf no "
                           "path exists, one can be chosen.",
-           self.function = imgui_file_save, self.hotkey = HOTKEY_SAVE, self.isSizeToText = true, self.isHotkeyInLabel = true);
+           self.function = imgui_file_save, self.hotkey = HOTKEY_SAVE, self.isWidthToText = true, self.isHotkeyInLabel = true);
 
 IMGUI_ITEM(IMGUI_SAVE_AS, self.label = "S&ave As", self.tooltip = "Saves the current .anm2 file to a chosen path.", self.function = imgui_file_save_as,
-           self.hotkey = HOTKEY_SAVE_AS, self.isSizeToText = true, self.isHotkeyInLabel = true);
+           self.hotkey = HOTKEY_SAVE_AS, self.isWidthToText = true, self.isHotkeyInLabel = true);
 
 IMGUI_ITEM(IMGUI_EXPLORE_ANM2_LOCATION, self.label = "E&xplore Anm2 Location", self.tooltip = "Open the system's file explorer in the anm2's path.",
-           self.function = imgui_explore, self.isSizeToText = true, self.isSeparator = true);
+           self.function = imgui_explore, self.isWidthToText = true, self.isSeparator = true);
 
 IMGUI_ITEM(IMGUI_EXIT, self.label = "&Exit", self.tooltip = "Exits the program.", self.function = imgui_quit, self.hotkey = HOTKEY_EXIT,
-           self.isSizeToText = true, self.isHotkeyInLabel = true);
+           self.isWidthToText = true, self.isHotkeyInLabel = true);
 
 IMGUI_ITEM(IMGUI_EXIT_CONFIRMATION, self.label = "Exit Confirmation", self.tooltip = "Unsaved changes will be lost!\nAre you sure you want to exit?");
 
@@ -790,7 +818,8 @@ IMGUI_ITEM(IMGUI_OPEN_CONFIRMATION, self.label = "Open Confirmation", self.toolt
 IMGUI_ITEM(IMGUI_NO_ANM2_PATH_CONFIRMATION, self.label = "No Anm2 Path", self.tooltip = "You will need to load or make a new .anm2 file first!\n");
 
 IMGUI_ITEM(IMGUI_WIZARD, self.label = "&Wizard", self.tooltip = "Opens the wizard menu, for neat functions related to the .anm2.",
-           self.popup = "## Wizard Popup", self.popupType = IMGUI_POPUP_BY_ITEM, self.isSizeToText = true, self.isSameLine = true);
+           self.popup = "## Wizard Popup", self.popupType = IMGUI_POPUP_BY_ITEM, self.isHeightToRegion = true, self.isWidthToText = true,
+           self.isSameLine = true);
 
 #define IMGUI_GENERATE_ANIMATION_FROM_GRID_PADDING 40
 IMGUI_ITEM(IMGUI_GENERATE_ANIMATION_FROM_GRID, self.label = "&Generate Animation from Grid", self.tooltip = "Generate a new animation from grid values.",
@@ -875,11 +904,10 @@ IMGUI_ITEM(IMGUI_CHANGE_ALL_FRAME_PROPERTIES_CANCEL, self.label = "Cancel", self
            self.rowCount = IMGUI_CHANGE_ALL_FRAME_PROPERTIES_OPTIONS_ROW_COUNT);
 
 IMGUI_ITEM(IMGUI_SCALE_ANM2, self.label = "S&cale Anm2", self.tooltip = "Scale up all size and position-related frame properties in the anm2.",
-           self.popup = "Scale Anm2", self.popupType = IMGUI_POPUP_CENTER_WINDOW, self.popupSize = {260, 75}, self.isSizeToText = true,
+           self.popup = "Scale Anm2", self.popupType = IMGUI_POPUP_CENTER_WINDOW, self.popupSize = {260, 75}, self.isWidthToText = true,
            self.isSeparator = true);
 
-IMGUI_ITEM(IMGUI_SCALE_ANM2_OPTIONS_CHILD, self.label = "## Scale Anm2 Options Child",
-           self.size = {IMGUI_SCALE_ANM2.popupSize.x, IMGUI_SCALE_ANM2.popupSize.y - IMGUI_FOOTER_CHILD.size->y}, self.flags = true);
+IMGUI_ITEM(IMGUI_SCALE_ANM2_OPTIONS_CHILD, self.label = "## Scale Anm2 Options Child", self.flags = true);
 
 IMGUI_ITEM(IMGUI_SCALE_ANM2_VALUE, self.label = "Value",
            self.tooltip = "The size and position-related frame properties in "
@@ -894,11 +922,9 @@ IMGUI_ITEM(IMGUI_RENDER_ANIMATION, self.label = "&Render Animation",
                           "options can be customized.",
            self.popup = "Render Animation", self.popupSize = {500, 170}, self.popupType = IMGUI_POPUP_CENTER_WINDOW);
 
-IMGUI_ITEM(IMGUI_RENDER_ANIMATION_CHILD, self.label = "## Render Animation Child",
-           self.size = {IMGUI_RENDER_ANIMATION.popupSize.x, IMGUI_RENDER_ANIMATION.popupSize.y - IMGUI_FOOTER_CHILD.size->y}, self.flags = true);
+IMGUI_ITEM(IMGUI_RENDER_ANIMATION_CHILD, self.label = "## Render Animation Child", self.flags = true);
 
-IMGUI_ITEM(IMGUI_RENDER_ANIMATION_FOOTER_CHILD, self.label = "## Render Animation Footer Child",
-           self.size = {IMGUI_RENDER_ANIMATION.popupSize.x, IMGUI_FOOTER_CHILD.size->y}, self.flags = true);
+IMGUI_ITEM(IMGUI_RENDER_ANIMATION_FOOTER_CHILD, self.label = "## Render Animation Footer Child", self.flags = true);
 
 IMGUI_ITEM(IMGUI_RENDER_ANIMATION_LOCATION_BROWSE, self.label = "## Location Browse", self.tooltip = "Open file explorer to pick rendered animation location.",
            self.atlas = ATLAS_FOLDER, self.isSameLine = true);
@@ -920,7 +946,11 @@ IMGUI_ITEM(IMGUI_RENDER_ANIMATION_FFMPEG_PATH, self.label = "FFmpeg Path",
 IMGUI_ITEM(IMGUI_RENDER_ANIMATION_OUTPUT, self.label = "Output",
            self.tooltip = "Select the rendered animation output.\nIt can either be "
                           "one animated image or a sequence of frames.",
-           self.items = {std::begin(RENDER_TYPE_STRINGS), std::end(RENDER_TYPE_STRINGS)}, self.value = RENDER_PNG);
+           self.items = {{RENDER_PNG, RENDER_TYPE_STRINGS[RENDER_PNG]},
+                         {RENDER_GIF, RENDER_TYPE_STRINGS[RENDER_GIF]},
+                         {RENDER_WEBM, RENDER_TYPE_STRINGS[RENDER_WEBM]},
+                         {RENDER_MP4, RENDER_TYPE_STRINGS[RENDER_MP4]}},
+           self.value = RENDER_PNG);
 
 IMGUI_ITEM(IMGUI_RENDER_ANIMATION_FORMAT, self.label = "Format",
            self.tooltip = "(PNG images only).\nSet the format of each output frame; i.e., "
@@ -950,28 +980,29 @@ IMGUI_ITEM(IMGUI_RENDERING_ANIMATION_INFO, self.label = "Recording frames. Once 
 IMGUI_ITEM(IMGUI_RENDERING_ANIMATION_CANCEL, self.label = "Cancel", self.tooltip = "Cancel rendering the animation.", self.rowCount = 1);
 
 IMGUI_ITEM(IMGUI_PLAYBACK, self.label = "&Playback", self.tooltip = "Opens the playback menu, for configuring playback settings.",
-           self.popup = "## Playback Popup", self.popupType = IMGUI_POPUP_BY_ITEM, self.isSizeToText = true, self.isSameLine = true);
+           self.popup = "## Playback Popup", self.popupType = IMGUI_POPUP_BY_ITEM, self.isWidthToText = true, self.isHeightToRegion = true,
+           self.isSameLine = true);
 
 IMGUI_ITEM(IMGUI_ALWAYS_LOOP, self.label = "&Always Loop",
            self.tooltip = "Sets the animation playback to always loop, "
                           "regardless of the animation's loop setting.",
-           self.isSizeToText = true);
+           self.isWidthToText = true);
 
 IMGUI_ITEM(IMGUI_CLAMP_PLAYHEAD, self.label = "&Clamp Playhead",
            self.tooltip = "The playhead (draggable icon on timeline) won't be "
                           "able to exceed the animation length.",
-           self.isSizeToText = true);
+           self.isWidthToText = true);
 
 IMGUI_ITEM(IMGUI_SETTINGS, self.label = "&Settings", self.tooltip = "Opens the setting menu, for configuring general program settings.",
-           self.popup = "## Settings Popup", self.popupType = IMGUI_POPUP_BY_ITEM, self.isSizeToText = true);
+           self.popup = "## Settings Popup", self.popupType = IMGUI_POPUP_BY_ITEM, self.isWidthToText = true, self.isHeightToRegion = true);
 
 IMGUI_ITEM(IMGUI_VSYNC, self.label = "&Vsync",
            self.tooltip = "Toggle vertical sync; synchronizes program "
                           "framerate with your monitor's refresh rate.",
-           self.isSizeToText = true, self.isSeparator = true);
+           self.isWidthToText = true, self.isSeparator = true);
 
 IMGUI_ITEM(IMGUI_HOTKEYS, self.label = "&Hotkeys", self.tooltip = "Change the program's hotkeys.", self.popup = "Hotkeys", self.popupSize = {500, 405},
-           self.isSizeToText = true, self.isSeparator = true);
+           self.isWidthToText = true, self.isSeparator = true);
 
 IMGUI_ITEM(IMGUI_HOTKEYS_CHILD, self.label = "## Hotkeys Child", self.size = {IMGUI_HOTKEYS.popupSize.x, IMGUI_HOTKEYS.popupSize.y - 35}, self.flags = true);
 
@@ -984,12 +1015,18 @@ IMGUI_ITEM(IMGUI_HOTKEYS_OPTIONS_CHILD, self.label = "## Merge Options Child", s
 IMGUI_ITEM(IMGUI_HOTKEYS_CONFIRM, self.label = "Confirm", self.tooltip = "Use these hotkeys.", self.rowCount = 1);
 
 IMGUI_ITEM(IMGUI_DEFAULT_SETTINGS, self.label = "&Reset to Default Settings", self.tooltip = "Reset the program's settings to their default state.",
-           self.isSizeToText = true);
+           self.isWidthToText = true);
+
+IMGUI_ITEM(IMGUI_ANM2S, self.label = "## Anm2s", self.size = {0, 32},
+           self.flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
+                        ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoSavedSettings);
+
+IMGUI_ITEM(IMGUI_ANM2, self.label = "## Anm2");
 
 IMGUI_ITEM(IMGUI_LAYERS, self.label = "Layers", self.flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 IMGUI_ITEM(IMGUI_LAYERS_CHILD, self.label = "## Layers Child", self.flags = true);
 
-IMGUI_ITEM(IMGUI_LAYER, self.label = "## Layer Item", self.dragDrop = "## Layer Drag Drop", self.atlas = ATLAS_LAYER, self.isSizeToRegion = true,
+IMGUI_ITEM(IMGUI_LAYER, self.label = "## Layer Item", self.dragDrop = "## Layer Drag Drop", self.atlas = ATLAS_LAYER, self.isWidthToRegion = true,
            self.idOffset = 3000);
 
 IMGUI_ITEM(IMGUI_LAYER_SPRITESHEET_ID, self.label = "## Spritesheet ID", self.tooltip = "Change the spritesheet ID this layer uses.",
@@ -1024,7 +1061,7 @@ IMGUI_ITEM(IMGUI_ANIMATIONS, self.label = "Animations", self.flags = ImGuiWindow
 IMGUI_ITEM(IMGUI_ANIMATIONS_CHILD, self.label = "## Animations Child", self.flags = true);
 
 IMGUI_ITEM(IMGUI_ANIMATION, self.label = "## Animation Item", self.dragDrop = "## Animation Drag Drop", self.atlas = ATLAS_ANIMATION,
-           self.isSizeToRegion = true, self.idOffset = 2000);
+           self.isWidthToRegion = true, self.idOffset = 2000);
 
 #define IMGUI_ANIMATIONS_OPTIONS_ROW_COUNT 5
 IMGUI_ITEM(IMGUI_ANIMATION_ADD, self.label = "Add", self.tooltip = "Adds a new animation.", self.snapshotAction = "Add Animation",
@@ -1071,11 +1108,27 @@ IMGUI_ITEM(IMGUI_MERGE_DELETE_ANIMATIONS_AFTER, self.label = "Delete Animations 
 IMGUI_ITEM(IMGUI_MERGE_CONFIRM, self.label = "Merge", self.tooltip = "Merge the selected animations with the options set.",
            self.snapshotAction = "Merge Animations", self.rowCount = IMGUI_CONFIRM_POPUP_ROW_COUNT, self.isSameLine = true);
 
-IMGUI_ITEM(IMGUI_ANIMATION_REMOVE, self.label = "Remove", self.tooltip = "Remove the selected animation.", self.snapshotAction = "Remove Animation",
+IMGUI_ITEM(IMGUI_ANIMATION_REMOVE, self.label = "Remove", self.tooltip = "Remove the selected animation(s).", self.snapshotAction = "Remove Animation(s)",
            self.rowCount = IMGUI_ANIMATIONS_OPTIONS_ROW_COUNT, self.chord = ImGuiKey_Delete, self.focusWindow = IMGUI_ANIMATIONS.label, self.isSameLine = true);
 
-IMGUI_ITEM(IMGUI_ANIMATION_DEFAULT, self.label = "Default", self.tooltip = "Set the selected animation as the default one.",
+IMGUI_ITEM(IMGUI_ANIMATION_DEFAULT, self.label = "Default", self.tooltip = "Set the referenced animation as the default one.",
            self.snapshotAction = "Default Animation", self.rowCount = IMGUI_ANIMATIONS_OPTIONS_ROW_COUNT, self.isSameLine = true);
+
+static inline void imgui_animations_select_all(Imgui* self) {
+  for (int i = 0; i < (int)self->anm2->animations.size(); i++)
+    self->selectedAnimationIndices.insert(i);
+}
+
+IMGUI_ITEM(IMGUI_ANIMATION_SELECT_ALL, self.label = "## Select None", self.hotkey = HOTKEY_SELECT_ALL, self.focusWindow = IMGUI_ANIMATIONS.label,
+           self.function = imgui_animations_select_all, self.isAllowHotkeyWhenFocusWindow = true);
+
+static inline void imgui_animations_select_none(Imgui* self) {
+  self->selectedAnimationIndices.clear();
+  *self->reference = Anm2Reference();
+}
+
+IMGUI_ITEM(IMGUI_ANIMATION_SELECT_NONE, self.label = "## Select None", self.hotkey = HOTKEY_SELECT_NONE, self.focusWindow = IMGUI_ANIMATIONS.label,
+           self.function = imgui_animations_select_none, self.isAllowHotkeyWhenFocusWindow = true);
 
 IMGUI_ITEM(IMGUI_EVENTS, self.label = "Events", self.flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
@@ -1100,8 +1153,7 @@ IMGUI_ITEM(IMGUI_SPRITESHEET_CHILD, self.label = "## Spritesheet Child", self.fl
 IMGUI_ITEM(IMGUI_SPRITESHEET, self.label = "## Spritesheet", self.dragDrop = "## Spritesheet Drag Drop");
 IMGUI_ITEM(IMGUI_SPRITESHEET_TEXT, self.label = "## Spritesheet Text", self.atlas = ATLAS_SPRITESHEET, self.itemSpacing = vec2(8, 0));
 
-IMGUI_ITEM(IMGUI_SPRITESHEETS_FOOTER_CHILD, self.label = "## Spritesheets Footer Child", self.size = {0, IMGUI_FOOTER_CHILD.size->y * 1.66f},
-           self.flags = true);
+IMGUI_ITEM(IMGUI_SPRITESHEETS_FOOTER_CHILD, self.label = "## Spritesheets Footer Child", self.flags = true);
 
 #define IMGUI_SPRITESHEETS_OPTIONS_FIRST_ROW_COUNT 4
 #define IMGUI_SPRITESHEETS_OPTIONS_SECOND_ROW_COUNT 3
@@ -1117,12 +1169,12 @@ IMGUI_ITEM(IMGUI_SPRITESHEETS_REPLACE, self.label = "Replace", self.tooltip = "R
 IMGUI_ITEM(IMGUI_SPRITESHEETS_REMOVE_UNUSED, self.label = "Remove Unused",
            self.tooltip = "Remove all unused spritesheets in the anm2 (i.e., "
                           "the spritesheet isn't used in any layer animations).",
-           self.rowCount = IMGUI_SPRITESHEETS_OPTIONS_FIRST_ROW_COUNT);
+           self.snapshotAction = "Remove Unused Spritesheets", self.rowCount = IMGUI_SPRITESHEETS_OPTIONS_FIRST_ROW_COUNT);
 
-IMGUI_ITEM(IMGUI_SPRITESHEETS_SELECT_ALL, self.label = "Select All", self.tooltip = "Select all spritesheets.", self.chord = ImGuiMod_Ctrl + ImGuiKey_A,
+IMGUI_ITEM(IMGUI_SPRITESHEETS_SELECT_ALL, self.label = "Select All", self.tooltip = "Select all spritesheets.", self.hotkey = HOTKEY_SELECT_ALL,
            self.focusWindow = IMGUI_SPRITESHEETS.label, self.rowCount = IMGUI_SPRITESHEETS_OPTIONS_SECOND_ROW_COUNT, self.isSameLine = true);
 
-IMGUI_ITEM(IMGUI_SPRITESHEETS_SELECT_NONE, self.label = "Select None", self.tooltip = "Unselect all spritesheets.", self.chord = ImGuiKey_Escape,
+IMGUI_ITEM(IMGUI_SPRITESHEETS_SELECT_NONE, self.label = "Select None", self.tooltip = "Unselect all spritesheets.", self.hotkey = HOTKEY_SELECT_NONE,
            self.focusWindow = IMGUI_SPRITESHEETS.label, self.rowCount = IMGUI_SPRITESHEETS_OPTIONS_SECOND_ROW_COUNT, self.isSameLine = true);
 
 IMGUI_ITEM(IMGUI_SPRITESHEET_SAVE, self.label = "Save", self.tooltip = "Save the selected spritesheets to their original locations.",
@@ -1274,7 +1326,7 @@ IMGUI_ITEM(IMGUI_TOOLS, self.label = "Tools");
 IMGUI_ITEM(IMGUI_TOOL_PAN, self.label = "## Pan",
            self.tooltip = "Use the pan tool.\nWill shift the view as the cursor is dragged.\nYou "
                           "can also use the middle mouse button to pan at any time.",
-           self.function = imgui_tool_pan_set, self.hotkey = HOTKEY_PAN, self.atlas = ATLAS_PAN);
+           self.function = imgui_tool_pan_set, self.hotkey = HOTKEY_PAN, self.atlas = ATLAS_PAN, self.isAtlasStretch = true);
 
 IMGUI_ITEM(IMGUI_TOOL_MOVE, self.label = "## Move",
            self.tooltip = "Use the move tool.\nAnimation Preview: Will move the position "
@@ -1374,12 +1426,12 @@ IMGUI_ITEM(IMGUI_TIMELINE_ITEM_PROPERTIES_TYPE_CHILD, self.label = "## Item Prop
 IMGUI_ITEM(IMGUI_TIMELINE_ITEM_PROPERTIES_LAYER, self.label = "Layer",
            self.tooltip = "The item will be a layer item.\nA layer item is a "
                           "primary graphical item, using a spritesheet.",
-           self.isSizeToText = true, self.value = ANM2_LAYER, self.isSameLine = true);
+           self.isWidthToText = true, self.value = ANM2_LAYER, self.isSameLine = true);
 
 IMGUI_ITEM(IMGUI_TIMELINE_ITEM_PROPERTIES_NULL, self.label = "Null",
            self.tooltip = "The item will be a null item.\nA null item is an "
                           "invisible item, often accessed by a game engine.",
-           self.isSizeToText = true, self.value = ANM2_NULL);
+           self.isWidthToText = true, self.value = ANM2_NULL);
 
 IMGUI_ITEM(IMGUI_TIMELINE_ITEM_PROPERTIES_ITEMS_CHILD, self.label = "## Item Properties Items", self.size = {IMGUI_POPUP_ITEM_PROPERTIES_SIZE.x, 250},
            self.flags = true);
@@ -1598,16 +1650,16 @@ IMGUI_ITEM(IMGUI_CONTEXT_MENU, self.label = "## Context Menu");
 IMGUI_ITEM(IMGUI_CUT, self.label = "Cut",
            self.tooltip = "Cuts the currently selected contextual element; "
                           "removing it and putting it to the clipboard.",
-           self.snapshotAction = "Cut", self.function = imgui_cut, self.hotkey = HOTKEY_CUT, self.isSizeToText = true);
+           self.snapshotAction = "Cut", self.function = imgui_cut, self.hotkey = HOTKEY_CUT, self.isWidthToText = true);
 
-IMGUI_ITEM(IMGUI_COPY, self.label = "Copy", self.tooltip = "Copies the currently selected contextual element to the clipboard.", self.snapshotAction = "Copy",
-           self.function = imgui_copy, self.hotkey = HOTKEY_COPY, self.isSizeToText = true);
+IMGUI_ITEM(IMGUI_COPY, self.label = "Copy", self.tooltip = "Copies the currently selected contextual element to the clipboard.", self.function = imgui_copy,
+           self.hotkey = HOTKEY_COPY, self.isWidthToText = true);
 
 IMGUI_ITEM(IMGUI_PASTE, self.label = "Paste", self.tooltip = "Pastes the currently selection contextual element from the clipboard.",
-           self.snapshotAction = "Paste", self.function = imgui_paste, self.hotkey = HOTKEY_PASTE, self.isSizeToText = true);
+           self.snapshotAction = "Paste", self.function = imgui_paste, self.hotkey = HOTKEY_PASTE, self.isWidthToText = true);
 
-IMGUI_ITEM(IMGUI_CHANGE_INPUT_TEXT, self.label = "## Input Text", self.tooltip = "Rename the selected item.", self.snapshotAction = "Rename Item",
-           self.flags = ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue, self.max = UCHAR_MAX);
+IMGUI_ITEM(IMGUI_CHANGE_INPUT_TEXT, self.label = "## Input Text", self.tooltip = "Rename the selected item.", self.snapshotAction = "Rename",
+           self.flags = ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue, self.max = 0xFFFF);
 
 IMGUI_ITEM(IMGUI_CHANGE_INPUT_INT, self.label = "## Input Int", self.tooltip = "Change the selected item's value.", self.snapshotAction = "Change Value",
            self.step = 0);

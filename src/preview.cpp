@@ -87,8 +87,8 @@ void preview_draw(Preview* self) {
   if (self->settings->previewIsAxes)
     canvas_axes_draw(&self->canvas, shaderAxis, transform, self->settings->previewAxesColor);
 
-  auto animation_draw = [&](int animationID) {
-    Anm2Animation* animation = map_find(self->anm2->animations, animationID);
+  auto animation_draw = [&](int animationIndex) {
+    Anm2Animation* animation = anm2_animation_from_reference(self->anm2, {animationIndex});
     if (!animation)
       return;
 
@@ -107,7 +107,7 @@ void preview_draw(Preview* self) {
         return;
 
       Anm2Frame frame;
-      anm2_frame_from_time(self->anm2, &frame, Anm2Reference{animationID, ANM2_LAYER, id}, time);
+      anm2_frame_from_time(self->anm2, &frame, Anm2Reference{animationIndex, ANM2_LAYER, id}, time);
       if (!frame.isVisible)
         return;
 
@@ -151,7 +151,7 @@ void preview_draw(Preview* self) {
         return;
 
       Anm2Frame frame;
-      anm2_frame_from_time(self->anm2, &frame, Anm2Reference{animationID, ANM2_NULL, id}, time);
+      anm2_frame_from_time(self->anm2, &frame, Anm2Reference{animationIndex, ANM2_NULL, id}, time);
       if (!frame.isVisible)
         return;
 
@@ -180,7 +180,7 @@ void preview_draw(Preview* self) {
 
     auto base_draw = [&](float time, vec3 colorOffset = {}, float alphaOffset = {}, bool isOnionskin = {}) {
       Anm2Frame root;
-      anm2_frame_from_time(self->anm2, &root, Anm2Reference{animationID, ANM2_ROOT}, time);
+      anm2_frame_from_time(self->anm2, &root, Anm2Reference{animationIndex, ANM2_ROOT}, time);
 
       mat4 rootModel =
           self->settings->previewIsRootTransform ? quad_model_parent_get(root.position, {}, PERCENT_TO_UNIT(root.scale), root.rotation) : mat4(1.0f);
@@ -218,7 +218,7 @@ void preview_draw(Preview* self) {
       onionskins_draw();
   };
 
-  animation_draw(self->reference->animationID);
+  animation_draw(self->reference->animationIndex);
   animation_draw(self->animationOverlayID);
 
   canvas_unbind();
