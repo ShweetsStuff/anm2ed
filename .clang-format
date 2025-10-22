@@ -1,4 +1,11 @@
-BasedOnStyle: LLVM
-ColumnLimit: 160
+ColumnLimit: 120
 PointerAlignment: Left
 ReferenceAlignment: Left
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: true
+CommentPragmas: '^'
+BreakBeforeBraces: Allman
+NamespaceIndentation: All
+FixNamespaceComments: false
+IndentCaseLabels: true
+IndentPPDirectives: BeforeHash

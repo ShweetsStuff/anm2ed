@@ -1,16 +1,21 @@
 #include "resources.h"
-#include "RESOURCE.h"
+#include <ranges>
 
-void resources_init(Resources* self) {
-  texture_from_memory_init(&self->atlas, TEXTURE_ATLAS_SIZE, TEXTURE_ATLAS, TEXTURE_ATLAS_LENGTH);
+using namespace anm2ed::texture;
+using namespace anm2ed::shader;
+using namespace anm2ed::font;
 
-  for (int i = 0; i < SHADER_COUNT; i++)
-    shader_init(&self->shaders[i], SHADER_DATA[i].vertex, SHADER_DATA[i].fragment);
-}
+namespace anm2ed::resources
+{
+  Resources::Resources()
+  {
+    for (auto [i, font] : std::views::enumerate(font::FONTS))
+      fonts[i] = Font((void*)font.data, font.length, font::SIZE);
 
-void resources_free(Resources* self) {
-  for (auto& shader : self->shaders)
-    shader_free(&shader);
+    for (auto [i, icon] : std::views::enumerate(icon::ICONS))
+      icons[i] = Texture(icon.data, icon.length, icon.size);
 
-  texture_free(&self->atlas);
+    for (auto [i, shader] : std::views::enumerate(shader::SHADERS))
+      shaders[i] = Shader(shader.vertex, shader.fragment);
+  };
 }

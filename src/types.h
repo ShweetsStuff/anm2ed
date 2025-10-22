@@ -1,0 +1,67 @@
+#pragma once
+
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <imgui/imgui.h>
+
+namespace anm2ed::types::merge
+{
+  enum Type
+  {
+    PREPEND,
+    APPEND,
+    REPLACE,
+    IGNORE
+  };
+}
+
+namespace anm2ed::types::color
+{
+  using namespace glm;
+
+  constexpr auto WHITE = vec4(1.0);
+  constexpr auto BLACK = vec4(0.0, 0.0, 0.0, 1.0);
+  constexpr auto RED = vec4(1.0, 0.0, 0.0, 1.0);
+  constexpr auto GREEN = vec4(0.0, 1.0, 0.0, 1.0);
+  constexpr auto BLUE = vec4(0.0, 0.0, 1.0, 1.0);
+  constexpr auto TRANSPARENT = vec4();
+}
+
+namespace anm2ed::types::step
+{
+  constexpr auto NORMAL = 1;
+  constexpr auto FAST = 10;
+}
+
+namespace anm2ed::types
+{
+  constexpr ImVec2 to_imvec2(const glm::vec2& v) noexcept
+  {
+    return {v.x, v.y};
+  }
+  constexpr glm::vec2 to_vec2(const ImVec2& v) noexcept
+  {
+    return {v.x, v.y};
+  }
+
+  constexpr glm::ivec2 to_ivec2(const ImVec2& v) noexcept
+  {
+    return {v.x, v.y};
+  }
+
+  constexpr ImVec4 to_imvec4(const glm::vec4& v) noexcept
+  {
+    return {v.x, v.y, v.z, v.w};
+  }
+
+  constexpr glm::vec4 to_vec4(const ImVec4& v) noexcept
+  {
+    return {v.x, v.y, v.z, v.w};
+  }
+
+  template <typename T> constexpr T& dummy_value()
+  {
+    static T value{};
+    return value;
+  }
+}

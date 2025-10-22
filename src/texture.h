@@ -1,26 +1,36 @@
 #pragma once
 
-#include "log.h"
+#include <string>
+#include <vector>
 
-#define TEXTURE_CHANNELS 4
-#define TEXTURE_INIT_INFO "Initialized texture from file: {}"
-#define TEXTURE_INIT_ERROR "Failed to initialize texture from file: {}"
-#define TEXTURE_SAVE_INFO "Saved texture to: {}"
-#define TEXTURE_SAVE_ERROR "Failed to save texture to: {}"
+#include <glad/glad.h>
+#include <glm/glm.hpp>
 
-struct Texture {
-  GLuint id = GL_ID_NONE;
-  ivec2 size{};
-  bool isInvalid = true;
+namespace anm2ed::texture
+{
+  constexpr auto CHANNELS = 4;
 
-  auto operator<=>(const Texture&) const = default;
-};
+  class Texture
+  {
+  public:
+    GLuint id{};
+    glm::ivec2 size{};
+    GLint filter = GL_NEAREST;
+    int channels{};
+    std::vector<uint8_t> pixels{};
 
-bool texture_from_gl_write(Texture* self, const std::string& path);
-bool texture_from_path_init(Texture* self, const std::string& path);
-bool texture_from_rgba_init(Texture* self, ivec2 size, const uint8_t* data);
-bool texture_from_rgba_write(const std::string& path, const uint8_t* data, ivec2 size);
-bool texture_pixel_set(Texture* self, ivec2 position, vec4 color);
-void texture_free(Texture* self);
-bool texture_from_memory_init(Texture* self, ivec2 size, const uint8_t* data, size_t length);
-std::vector<uint8_t> texture_download(const Texture* self);
+    bool is_valid();
+    void download(std::vector<uint8_t>& pixels);
+    void init(const uint8_t* data, bool isDownload = false);
+    Texture();
+
+    ~Texture();
+    Texture(Texture&& other);
+    Texture& operator=(Texture&& other);
+    Texture(const char* svgData, size_t svgDataLength, glm::ivec2 svgSize);
+    Texture(const std::string& pngPath, bool isDownload = false);
+    bool write_png(const std::string& path);
+    void bind(GLuint unit = 0);
+    void unbind(GLuint unit = 0);
+  };
+}

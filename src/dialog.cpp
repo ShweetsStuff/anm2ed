@@ -1,70 +1,86 @@
 #include "dialog.h"
 
 #ifdef _WIN32
-#include <windows.h>
+  #include <window.h>
 #endif
 
-static void _dialog_callback(void* userdata, const char* const* filelist, int filter) {
-  Dialog* self;
+#include <format>
 
-  self = (Dialog*)userdata;
+namespace anm2ed::dialog
+{
 
-  if (filelist && filelist[0] && strlen(filelist[0]) > 0) {
-    self->path = filelist[0];
-    self->isSelected = true;
-    self->selectedFilter = filter;
-  } else {
-    self->isSelected = false;
-    self->selectedFilter = INDEX_NONE;
+  constexpr SDL_DialogFileFilter FILE_FILTER_ANM2[] = {{"Anm2 file", "anm2;xml"}};
+  constexpr SDL_DialogFileFilter FILE_FILTER_SPRITESHEET[] = {{"PNG image", "png"}};
+
+  void callback(void* userData, const char* const* filelist, int filter)
+  {
+    auto self = (Dialog*)(userData);
+
+    if (filelist && filelist[0] && strlen(filelist[0]) > 0)
+    {
+      self->path = filelist[0];
+      self->selectedFilter = filter;
+    }
+    else
+      self->selectedFilter = -1;
   }
-}
 
-void dialog_init(Dialog* self, SDL_Window* window) { self->window = window; }
+  Dialog::Dialog() = default;
 
-void dialog_anm2_open(Dialog* self) {
-  SDL_ShowOpenFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_ANM2, std::size(DIALOG_FILE_FILTER_ANM2), nullptr, false);
-  self->type = DIALOG_ANM2_OPEN;
-}
+  Dialog::Dialog(SDL_Window* window)
+  {
+    *this = Dialog();
+    this->window = window;
+  }
 
-void dialog_anm2_save(Dialog* self) {
-  SDL_ShowSaveFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_ANM2, std::size(DIALOG_FILE_FILTER_ANM2), nullptr);
-  self->type = DIALOG_ANM2_SAVE;
-}
+  void Dialog::anm2_new()
+  {
+    SDL_ShowSaveFileDialog(callback, this, window, FILE_FILTER_ANM2, std::size(FILE_FILTER_ANM2), nullptr);
+    type = ANM2_NEW;
+  }
 
-void dialog_spritesheet_add(Dialog* self) {
-  SDL_ShowOpenFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_PNG, std::size(DIALOG_FILE_FILTER_PNG), nullptr, false);
-  self->type = DIALOG_SPRITESHEET_ADD;
-}
+  void Dialog::anm2_open()
+  {
+    SDL_ShowOpenFileDialog(callback, this, window, FILE_FILTER_ANM2, std::size(FILE_FILTER_ANM2), nullptr, false);
+    type = ANM2_OPEN;
+  }
 
-void dialog_spritesheet_replace(Dialog* self, int id) {
-  SDL_ShowOpenFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_PNG, std::size(DIALOG_FILE_FILTER_PNG), nullptr, false);
-  self->replaceID = id;
-  self->type = DIALOG_SPRITESHEET_REPLACE;
-}
+  void Dialog::anm2_save()
+  {
+    SDL_ShowSaveFileDialog(callback, this, window, FILE_FILTER_ANM2, std::size(FILE_FILTER_ANM2), nullptr);
+    type = ANM2_SAVE;
+  }
 
-void dialog_render_path_set(Dialog* self, RenderType type) {
-  SDL_DialogFileFilter filter = DIALOG_RENDER_FILE_FILTERS[type];
+  void Dialog::spritesheet_open()
+  {
+    SDL_ShowOpenFileDialog(callback, this, window, FILE_FILTER_SPRITESHEET, std::size(FILE_FILTER_SPRITESHEET), nullptr,
+                           false);
+    type = SPRITESHEET_OPEN;
+  }
 
-  if (type == RENDER_PNG)
-    SDL_ShowOpenFolderDialog(_dialog_callback, self, self->window, nullptr, false);
-  else
-    SDL_ShowSaveFileDialog(_dialog_callback, self, self->window, &filter, 1, nullptr);
-  self->type = DIALOG_RENDER_PATH_SET;
-}
+  void Dialog::spritesheet_replace()
+  {
+    SDL_ShowOpenFileDialog(callback, this, window, FILE_FILTER_SPRITESHEET, std::size(FILE_FILTER_SPRITESHEET), nullptr,
+                           false);
+    type = SPRITESHEET_REPLACE;
+  }
 
-void dialog_ffmpeg_path_set(Dialog* self) {
-  SDL_ShowOpenFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_FFMPEG, std::size(DIALOG_FILE_FILTER_FFMPEG), nullptr, false);
-  self->type = DIALOG_FFMPEG_PATH_SET;
-}
-
-void dialog_explorer_open(const std::string& path) {
+  void Dialog::file_explorer_open(const std::string& path)
+  {
 #ifdef _WIN32
-  ShellExecuteA(NULL, DIALOG_FILE_EXPLORER_COMMAND, path.c_str(), NULL, NULL, SW_SHOWNORMAL);
+    ShellExecuteA(NULL, "open", path.c_str(), NULL, NULL, SW_SHOWNORMAL);
 #else
-  char command[DIALOG_FILE_EXPLORER_COMMAND_SIZE];
-  snprintf(command, sizeof(command), DIALOG_FILE_EXPLORER_COMMAND, path.c_str());
-  system(command);
+    system(std::format("xdg-open \"{}\" &", path).c_str());
 #endif
-}
+  }
 
-void dialog_reset(Dialog* self) { *self = {self->window}; }
+  void Dialog::reset()
+  {
+    *this = Dialog(this->window);
+  }
+
+  bool Dialog::is_selected_file(Type type)
+  {
+    return this->type == type && !path.empty();
+  }
+};

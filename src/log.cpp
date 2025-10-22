@@ -1,56 +1,58 @@
 #include "log.h"
 
-inline std::ofstream logFile;
+#include <print>
 
-std::string log_path_get(void)
-{
-    return preferences_path_get() + LOG_PATH;
-}
+#include "filesystem.h"
+#include "util.h"
 
-void log_write(const std::string& string)
-{
-    std::println("{}", string);
-    
-    if (logFile.is_open())
-    {
-        logFile << string << '\n';
-        logFile.flush();
-    }
-}
+using namespace anm2ed::filesystem;
+using namespace anm2ed::util;
 
-void log_init(void)
+namespace anm2ed::log
 {
-    std::string logFilepath = log_path_get();
-    logFile.open(logFilepath, std::ios::out | std::ios::trunc);
-    if (!logFile) std::println("{}", std::format(LOG_INIT_ERROR, logFilepath));
-}
+  void Logger::write(const Level level, const std::string& message)
+  {
+    std::string formatted = std::format("{} {} {}", time::get("(%d-%B-%Y %I:%M:%S)"), LEVEL_STRINGS[level], message);
+    std::println("{}", formatted);
+    if (file.is_open()) file << formatted << '\n' << std::flush;
+  }
 
-void log_error(const std::string& error)
-{
-    log_write(LOG_ERROR_FORMAT + error);
-}
+  void Logger::info(const std::string& message)
+  {
+    write(INFO, message);
+  }
 
-void log_info(const std::string& info)
-{
-    log_write(LOG_INFO_FORMAT + info);
-}
+  void Logger::warning(const std::string& message)
+  {
+    write(WARNING, message);
+  }
 
-void log_warning(const std::string& warning)
-{
-    log_write(LOG_WARNING_FORMAT + warning);
-}
+  void Logger::error(const std::string& message)
+  {
+    write(ERROR, message);
+  }
 
-void log_imgui(const std::string& imgui)
-{
-    log_write(LOG_IMGUI_FORMAT + imgui);
-}
+  void Logger::fatal(const std::string& message)
+  {
+    write(FATAL, message);
+  }
 
-void log_command(const std::string& command)
-{
-    log_write(LOG_COMMAND_FORMAT + command);
-}
+  void Logger::open(const std::filesystem::path& path)
+  {
+    file.open(path, std::ios::out | std::ios::app);
+  }
 
-void log_free(void)
-{
-    logFile.close();
+  Logger::Logger()
+  {
+    open(path_preferences_get() + "log.txt");
+    info("Initializing Anm2Ed");
+  }
+
+  Logger::~Logger()
+  {
+    info("Exiting Anm2Ed");
+    if (file.is_open()) file.close();
+  }
+
+  Logger logger;
 }

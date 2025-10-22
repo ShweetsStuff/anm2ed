@@ -1,51 +1,19 @@
-#include "main.h"
+#include "loader.h"
+#include "state.h"
 
-static bool _anm2_rescale(const std::string& file, float scale) {
-  Anm2 anm2;
+using namespace anm2ed::loader;
+using namespace anm2ed::state;
 
-  if (!anm2_deserialize(&anm2, file, false))
-    return false;
-  anm2_scale(&anm2, scale);
-  return anm2_serialize(&anm2, file);
-}
+int main(int argc, const char** argv)
+{
+  Loader loader(argc, argv);
 
-int main(int argc, char* argv[]) {
-  State state;
+  if (loader.isError) return EXIT_FAILURE;
 
-  log_init();
+  State state(loader.window, loader.arguments);
 
-  if (argc > 0 && argv[1]) {
-    if (std::string(argv[1]) == ARGUMENT_RESCALE) {
-      if (argv[2] && argv[3]) {
-        if (_anm2_rescale(std::string(argv[2]), atof(argv[3]))) {
-          log_info(std::format(ARGUMENT_RESCALE_ANM2_INFO, argv[2], argv[3]));
-          return EXIT_SUCCESS;
-        } else
-          log_error(ARGUMENT_RESCALE_ANM2_ERROR);
-      } else
-        log_error(ARGUMENT_RESCALE_ARGUMENT_ERROR);
-
-      return EXIT_FAILURE;
-    } else if (std::string(argv[1]) == ARGUMENT_TEST && argv[2]) {
-      if (anm2_deserialize(&state.anm2, std::string(argv[2]), false))
-        return EXIT_SUCCESS;
-      return EXIT_FAILURE;
-    } else if (std::string(argv[1]) == ARGUMENT_TEST_GL && argv[2]) {
-      if (!sdl_init(&state, true))
-        return EXIT_FAILURE;
-      if (anm2_deserialize(&state.anm2, std::string(argv[2])))
-        return EXIT_SUCCESS;
-      return EXIT_FAILURE;
-    } else if (argv[1])
-      state.argument = argv[1];
-  }
-
-  init(&state);
-
-  while (state.isRunning)
-    loop(&state);
-
-  quit(&state);
+  while (!state.isQuit)
+    state.loop(loader.window, loader.settings);
 
   return EXIT_SUCCESS;
 }

@@ -1,21 +1,44 @@
 #pragma once
 
-#include "COMMON.h"
+#include <filesystem>
+#include <fstream>
 
-#define LOG_WARNING_FORMAT "[WARNING] "
-#define LOG_ERROR_FORMAT "[ERROR] "
-#define LOG_INFO_FORMAT "[INFO] "
-#define LOG_IMGUI_FORMAT "[IMGUI] "
-#define LOG_INIT_ERROR "[ERROR] Failed to open log file: {}"
-#define LOG_COMMAND_FORMAT "[COMMAND] "
-#define LOG_PATH "log.txt"
+namespace anm2ed::log
+{
+#define LEVELS                                                                                                         \
+  X(INFO, "[INFO]")                                                                                                    \
+  X(WARNING, "[WARNING]")                                                                                              \
+  X(ERROR, "[ERROR]")                                                                                                  \
+  X(FATAL, "[FATAL]")
 
-std::string log_path_get(void);
-void log_init(void);
-void log_write(const std::string& file);
-void log_error(const std::string& error);
-void log_info(const std::string& info);
-void log_warning(const std::string& warning);
-void log_imgui(const std::string& imgui);
-void log_command(const std::string& command);
-void log_free(void);
+  enum Level
+  {
+#define X(symbol, string) symbol,
+    LEVELS
+#undef X
+  };
+
+  constexpr std::string_view LEVEL_STRINGS[] = {
+#define X(symbol, string) string,
+      LEVELS
+#undef X
+  };
+#undef LEVELS
+
+  class Logger
+  {
+    std::ofstream file{};
+
+  public:
+    void write(const Level level, const std::string& message);
+    void info(const std::string& message);
+    void warning(const std::string& message);
+    void error(const std::string& message);
+    void fatal(const std::string& message);
+    void open(const std::filesystem::path& path);
+    Logger();
+    ~Logger();
+  };
+
+  extern Logger logger;
+}

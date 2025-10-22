@@ -1,49 +1,74 @@
 #include "shader.h"
 
-static bool _shader_compile(GLuint* self, const std::string& text) {
-  int isCompile;
-  const GLchar* source = text.c_str();
+#include "log.h"
 
-  glShaderSource(*self, 1, &source, nullptr);
-  glCompileShader(*self);
-  glGetShaderiv(*self, GL_COMPILE_STATUS, &isCompile);
+using namespace anm2ed::log;
 
-  if (!isCompile) {
-    std::string compileLog(SHADER_INFO_LOG_MAX, '\0');
-    glGetShaderInfoLog(*self, SHADER_INFO_LOG_MAX, nullptr, compileLog.data());
-    log_error(std::format(SHADER_INIT_ERROR, *self, compileLog.c_str()));
-    return false;
+namespace anm2ed::shader
+{
+  Shader::Shader() = default;
+
+  Shader::Shader(const char* vertex, const char* fragment)
+  {
+    id = glCreateProgram();
+
+    auto compile = [&](const GLuint& id, const char* text)
+    {
+      int isCompile{};
+      glShaderSource(id, 1, &text, nullptr);
+      glCompileShader(id);
+      glGetShaderiv(id, GL_COMPILE_STATUS, &isCompile);
+
+      if (!isCompile)
+      {
+        std::string compileLog(255, '\0');
+        glGetShaderInfoLog(id, 255, nullptr, compileLog.data());
+        logger.error(std::format("Unable to compile shader {}: {}", id, compileLog.c_str()));
+        return false;
+      }
+      return true;
+    };
+
+    auto vertexHandle = glCreateShader(GL_VERTEX_SHADER);
+    auto fragmentHandle = glCreateShader(GL_FRAGMENT_SHADER);
+
+    if (!(compile(vertexHandle, vertex) && compile(fragmentHandle, fragment))) return;
+
+    glAttachShader(id, vertexHandle);
+    glAttachShader(id, fragmentHandle);
+
+    glLinkProgram(id);
+
+    auto isLinked = GL_FALSE;
+    glGetProgramiv(id, GL_LINK_STATUS, &isLinked);
+    if (!isLinked)
+    {
+      glDeleteProgram(id);
+      id = 0;
+    }
+
+    glDeleteShader(vertexHandle);
+    glDeleteShader(fragmentHandle);
   }
 
-  return true;
-}
+  Shader& Shader::operator=(Shader&& other) noexcept
+  {
+    if (this != &other)
+    {
+      if (is_valid()) glDeleteProgram(id);
+      id = other.id;
+      other.id = 0;
+    }
+    return *this;
+  }
 
-bool shader_init(GLuint* self, const std::string& vertex, const std::string& fragment) {
-  GLuint vertexHandle;
-  GLuint fragmentHandle;
+  Shader::~Shader()
+  {
+    if (is_valid()) glDeleteProgram(id);
+  }
 
-  vertexHandle = glCreateShader(GL_VERTEX_SHADER);
-  fragmentHandle = glCreateShader(GL_FRAGMENT_SHADER);
-
-  if (!_shader_compile(&vertexHandle, vertex) || !_shader_compile(&fragmentHandle, fragment))
-    return false;
-
-  *self = glCreateProgram();
-
-  glAttachShader(*self, vertexHandle);
-  glAttachShader(*self, fragmentHandle);
-
-  glLinkProgram(*self);
-
-  glDeleteShader(vertexHandle);
-  glDeleteShader(fragmentHandle);
-
-  return true;
-}
-
-void shader_free(GLuint* self) {
-  if (*self == GL_ID_NONE)
-    return;
-
-  glDeleteProgram(*self);
+  bool Shader::is_valid() const
+  {
+    return id != 0;
+  }
 }

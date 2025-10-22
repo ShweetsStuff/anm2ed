@@ -5,8 +5,7 @@ packed/
 vcpkg_installed/
 out/
 external/
-external/
-external/
-external/
 workshop/resources
+cmake-build-debug/
 .vs/
+.idea/

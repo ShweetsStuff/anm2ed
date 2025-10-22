@@ -1,15 +1,21 @@
 #pragma once
 
-#include "RESOURCE.h"
+#include <imgui/imgui.h>
+
+#include "font.h"
+#include "icon.h"
 #include "shader.h"
 #include "texture.h"
 
-#define RESOURCES_TEXTURES_FREE_INFO "Freed texture resources"
+namespace anm2ed::resources
+{
+  class Resources
+  {
+  public:
+    font::Font fonts[font::COUNT]{};
+    texture::Texture icons[icon::COUNT]{};
+    shader::Shader shaders[shader::COUNT]{};
 
-struct Resources {
-  GLuint shaders[SHADER_COUNT];
-  Texture atlas;
-};
-
-void resources_init(Resources* self);
-void resources_free(Resources* self);
+    Resources();
+  };
+}

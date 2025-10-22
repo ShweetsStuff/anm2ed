@@ -1,0 +1,20 @@
+#pragma once
+
+#include "document_manager.h"
+#include "resources.h"
+#include "settings.h"
+
+namespace anm2ed::animations
+{
+  class Animations
+  {
+    ImGuiSelectionExternalStorage mergeStorage{};
+    ImGuiSelectionExternalStorage storage{};
+    std::set<int> mergeSelection{};
+    int mergeTarget{};
+
+  public:
+    void update(document_manager::DocumentManager& manager, settings::Settings& settings,
+                resources::Resources& resources);
+  };
+}

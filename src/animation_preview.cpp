@@ -1,0 +1,316 @@
+#include "animation_preview.h"
+
+#include <glm/gtc/type_ptr.hpp>
+
+#include "imgui.h"
+#include "math.h"
+#include "tool.h"
+#include "types.h"
+
+using namespace anm2ed::document_manager;
+using namespace anm2ed::settings;
+using namespace anm2ed::canvas;
+using namespace anm2ed::playback;
+using namespace anm2ed::resources;
+using namespace anm2ed::types;
+using namespace glm;
+
+namespace anm2ed::animation_preview
+{
+  constexpr auto TARGET_SIZE = vec2(32, 32);
+  constexpr auto PIVOT_SIZE = vec2(8, 8);
+  constexpr auto POINT_SIZE = vec2(4, 4);
+  constexpr auto NULL_RECT_SIZE = vec2(100);
+  constexpr auto TRIGGER_TEXT_COLOR = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
+
+  AnimationPreview::AnimationPreview() : Canvas(vec2())
+  {
+  }
+
+  void AnimationPreview::update(DocumentManager& manager, Settings& settings, Resources& resources, Playback& playback)
+  {
+    auto& document = *manager.get();
+    auto& anm2 = document.anm2;
+    auto& reference = document.reference;
+    auto animation = document.animation_get();
+    auto& pan = document.previewPan;
+    auto& zoom = document.previewZoom;
+    auto& backgroundColor = settings.previewBackgroundColor;
+    auto& axesColor = settings.previewAxesColor;
+    auto& gridColor = settings.previewGridColor;
+    auto& gridSize = settings.previewGridSize;
+    auto& gridOffset = settings.previewGridOffset;
+    auto& zoomStep = settings.viewZoomStep;
+    auto& isGrid = settings.previewIsGrid;
+    auto& overlayTransparency = settings.previewOverlayTransparency;
+    auto& overlayIndex = document.overlayIndex;
+    auto& isRootTransform = settings.previewIsRootTransform;
+    auto& isPivots = settings.previewIsPivots;
+    auto& isAxes = settings.previewIsAxes;
+    auto& isIcons = settings.previewIsIcons;
+    auto& isAltIcons = settings.previewIsAltIcons;
+    auto& isBorder = settings.previewIsBorder;
+    auto& tool = settings.tool;
+    auto& shaderLine = resources.shaders[shader::LINE];
+    auto& shaderAxes = resources.shaders[shader::AXIS];
+    auto& shaderGrid = resources.shaders[shader::GRID];
+    auto& shaderTexture = resources.shaders[shader::TEXTURE];
+
+    if (ImGui::Begin("Animation Preview", &settings.windowIsAnimationPreview))
+    {
+
+      auto childSize = ImVec2(imgui::row_widget_width_get(4),
+                              (ImGui::GetTextLineHeightWithSpacing() * 4) + (ImGui::GetStyle().WindowPadding.y * 2));
+
+      if (ImGui::BeginChild("##Grid Child", childSize, true, ImGuiWindowFlags_HorizontalScrollbar))
+      {
+
+        ImGui::Checkbox("Grid", &isGrid);
+        ImGui::SameLine();
+        ImGui::ColorEdit4("Color", value_ptr(gridColor), ImGuiColorEditFlags_NoInputs);
+        ImGui::InputInt2("Size", value_ptr(gridSize));
+        ImGui::InputInt2("Offset", value_ptr(gridOffset));
+      }
+      ImGui::EndChild();
+
+      ImGui::SameLine();
+
+      if (ImGui::BeginChild("##View Child", childSize, true, ImGuiWindowFlags_HorizontalScrollbar))
+      {
+        ImGui::InputFloat("Zoom", &zoom, zoomStep, zoomStep, "%.0f%%");
+
+        auto widgetSize = imgui::widget_size_with_row_get(2);
+
+        if (ImGui::Button("Center View", widgetSize)) pan = vec2();
+        ImGui::SameLine();
+        ImGui::Button("Fit", widgetSize);
+        ImGui::TextUnformatted(std::format(POSITION_FORMAT, (int)mousePos.x, (int)mousePos.y).c_str());
+      }
+      ImGui::EndChild();
+
+      ImGui::SameLine();
+
+      if (ImGui::BeginChild("##Background Child", childSize, true, ImGuiWindowFlags_HorizontalScrollbar))
+      {
+        ImGui::ColorEdit4("Background", value_ptr(backgroundColor), ImGuiColorEditFlags_NoInputs);
+        ImGui::SameLine();
+        ImGui::Checkbox("Axes", &isAxes);
+        ImGui::SameLine();
+        ImGui::ColorEdit4("Color", value_ptr(axesColor), ImGuiColorEditFlags_NoInputs);
+
+        std::vector<std::string> animationNames{};
+        animationNames.emplace_back("None");
+        for (auto& animation : anm2.animations.items)
+          animationNames.emplace_back(animation.name);
+
+        imgui::combo_strings("Overlay", &overlayIndex, animationNames);
+
+        ImGui::InputFloat("Alpha", &overlayTransparency, 0, 0, "%.0f");
+      }
+      ImGui::EndChild();
+
+      ImGui::SameLine();
+
+      if (ImGui::BeginChild("##Helpers Child", childSize, true, ImGuiWindowFlags_HorizontalScrollbar))
+      {
+        auto helpersChildSize = ImVec2(imgui::row_widget_width_get(2), ImGui::GetContentRegionAvail().y);
+
+        if (ImGui::BeginChild("##Helpers Child 1", helpersChildSize))
+        {
+          ImGui::Checkbox("Root Transform", &isRootTransform);
+          ImGui::Checkbox("Pivots", &isPivots);
+          ImGui::Checkbox("Icons", &isIcons);
+        }
+        ImGui::EndChild();
+
+        ImGui::SameLine();
+
+        if (ImGui::BeginChild("##Helpers Child 2", helpersChildSize))
+        {
+          ImGui::Checkbox("Alt Icons", &isAltIcons);
+          ImGui::Checkbox("Border", &isBorder);
+        }
+        ImGui::EndChild();
+      }
+      ImGui::EndChild();
+
+      auto cursorScreenPos = ImGui::GetCursorScreenPos();
+
+      size_set(to_vec2(ImGui::GetContentRegionAvail()));
+      bind();
+      viewport_set();
+      clear(backgroundColor);
+      if (isAxes) axes_render(shaderAxes, zoom, pan, axesColor);
+      if (isGrid) grid_render(shaderGrid, zoom, pan, gridSize, gridOffset, gridColor);
+
+      auto frameTime = reference.frameTime > -1 && !playback.isPlaying ? reference.frameTime : playback.time;
+
+      if (animation)
+      {
+        auto transform = transform_get(zoom, pan);
+        auto root = animation->rootAnimation.frame_generate(playback.time, anm2::ROOT);
+
+        if (isRootTransform)
+          transform *= math::quad_model_parent_get(root.position, {}, math::percent_to_unit(root.scale), root.rotation);
+
+        if (isIcons && root.isVisible && animation->rootAnimation.isVisible)
+        {
+          auto rootTransform = transform * math::quad_model_get(TARGET_SIZE, root.position, TARGET_SIZE * 0.5f,
+                                                                math::percent_to_unit(root.scale), root.rotation);
+
+          texture_render(shaderTexture, resources.icons[icon::TARGET].id, rootTransform, color::GREEN);
+        }
+
+        for (auto& id : animation->layerOrder)
+        {
+          auto& layerAnimation = animation->layerAnimations.at(id);
+          if (!layerAnimation.isVisible) continue;
+
+          auto& layer = anm2.content.layers.at(id);
+
+          if (auto frame = layerAnimation.frame_generate(frameTime, anm2::LAYER); frame.isVisible)
+          {
+            auto spritesheet = anm2.spritesheet_get(layer.spritesheetID);
+            if (!spritesheet) continue;
+
+            auto& texture = spritesheet->texture;
+            if (!texture.is_valid()) continue;
+
+            auto layerTransform = transform * math::quad_model_get(frame.size, frame.position, frame.pivot,
+                                                                   math::percent_to_unit(frame.scale), frame.rotation);
+
+            auto inset = 0.5f / vec2(texture.size); // needed to avoid bleed
+            auto uvMin = frame.crop / vec2(texture.size) + inset;
+            auto uvMax = (frame.crop + frame.size) / vec2(texture.size) - inset;
+            auto vertices = math::uv_vertices_get(uvMin, uvMax);
+
+            texture_render(shaderTexture, texture.id, layerTransform, frame.tint, frame.offset, vertices.data());
+
+            if (isBorder) rect_render(shaderLine, layerTransform, color::RED);
+
+            if (isPivots)
+            {
+              auto pivotTransform =
+                  transform * math::quad_model_get(PIVOT_SIZE, frame.position, PIVOT_SIZE * 0.5f,
+                                                   math::percent_to_unit(frame.scale), frame.rotation);
+              texture_render(shaderTexture, resources.icons[icon::PIVOT].id, pivotTransform, color::RED);
+            }
+          }
+        }
+
+        if (isIcons)
+        {
+          for (auto& [id, nullAnimation] : animation->nullAnimations)
+          {
+            if (!nullAnimation.isVisible) continue;
+
+            auto& isShowRect = anm2.content.nulls[id].isShowRect;
+
+            if (auto frame = nullAnimation.frame_generate(frameTime, anm2::NULL_); frame.isVisible)
+            {
+              auto icon = isShowRect ? icon::POINT : icon::TARGET;
+              auto& size = isShowRect ? POINT_SIZE : TARGET_SIZE;
+              auto& color = id == reference.itemID && reference.itemType == anm2::NULL_ ? color::RED : color::BLUE;
+
+              auto nullTransform = transform * math::quad_model_get(size, frame.position, size * 0.5f,
+                                                                    math::percent_to_unit(frame.scale), frame.rotation);
+
+              texture_render(shaderTexture, resources.icons[icon].id, nullTransform, color);
+
+              if (isShowRect)
+              {
+                auto rectTransform =
+                    transform * math::quad_model_get(NULL_RECT_SIZE, frame.position, NULL_RECT_SIZE * 0.5f,
+                                                     math::percent_to_unit(frame.scale), frame.rotation);
+
+                rect_render(shaderLine, rectTransform, color);
+              }
+            }
+          }
+        }
+      }
+
+      unbind();
+
+      ImGui::Image(texture, to_imvec2(size));
+
+      isPreviewHovered = ImGui::IsItemHovered();
+
+      if (animation && animation->triggers.isVisible)
+      {
+        if (auto trigger = animation->triggers.frame_generate(frameTime, anm2::TRIGGER); trigger.isVisible)
+        {
+          auto clipMin = ImGui::GetItemRectMin();
+          auto clipMax = ImGui::GetItemRectMax();
+          auto drawList = ImGui::GetWindowDrawList();
+          auto textPos = to_imvec2(to_vec2(cursorScreenPos) + to_vec2(ImGui::GetStyle().WindowPadding));
+
+          drawList->PushClipRect(clipMin, clipMax);
+          ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE_LARGE);
+          drawList->AddText(textPos, ImGui::GetColorU32(TRIGGER_TEXT_COLOR),
+                            anm2.content.events.at(trigger.eventID).name.c_str());
+          ImGui::PopFont();
+          drawList->PopClipRect();
+        }
+      }
+
+      if (isPreviewHovered)
+      {
+        ImGui::SetKeyboardFocusHere(-1);
+
+        mousePos = position_translate(zoom, pan, to_vec2(ImGui::GetMousePos()) - to_vec2(cursorScreenPos));
+
+        auto isRound = settings.propertiesIsRound;
+        auto isMouseDown = ImGui::IsMouseDown(ImGuiMouseButton_Left);
+        auto isMouseMiddleDown = ImGui::IsMouseDown(ImGuiMouseButton_Middle);
+        auto isLeft = imgui::chord_repeating(ImGuiKey_LeftArrow);
+        auto isRight = imgui::chord_repeating(ImGuiKey_RightArrow);
+        auto isUp = imgui::chord_repeating(ImGuiKey_UpArrow);
+        auto isDown = imgui::chord_repeating(ImGuiKey_DownArrow);
+        auto isMouseRightDown = ImGui::IsMouseDown(ImGuiMouseButton_Right);
+        auto mouseDelta = to_vec2(ImGui::GetIO().MouseDelta);
+        auto mouseWheel = ImGui::GetIO().MouseWheel;
+        auto isZoomIn = imgui::chord_repeating(imgui::string_to_chord(settings.shortcutZoomIn));
+        auto isZoomOut = imgui::chord_repeating(imgui::string_to_chord(settings.shortcutZoomOut));
+        auto isMod = ImGui::IsKeyDown(ImGuiMod_Shift);
+        auto frame = document.frame_get();
+        auto useTool = tool;
+        auto step = isMod ? step::FAST : step::NORMAL;
+        auto isClick = isMouseDown;
+
+        if (isMouseMiddleDown) useTool = tool::PAN;
+        if (tool == tool::MOVE && isMouseRightDown) useTool = tool::SCALE;
+        if (tool == tool::SCALE && isMouseRightDown) useTool = tool::MOVE;
+
+        switch (useTool)
+        {
+          case tool::PAN:
+            if (isClick || isMouseMiddleDown) pan += isRound ? vec2(ivec2(mouseDelta)) : mouseDelta;
+            break;
+          case tool::MOVE:
+            if (!frame) break;
+            if (isClick) frame->position = isRound ? vec2(ivec2(mousePos)) : mousePos;
+            if (isLeft) frame->position.x -= step;
+            if (isRight) frame->position.x += step;
+            if (isUp) frame->position.y -= step;
+            if (isDown) frame->position.y += step;
+            break;
+          case tool::SCALE:
+            if (!frame) break;
+            if (isClick) frame->scale += isRound ? vec2(ivec2(mouseDelta)) : mouseDelta;
+            break;
+          case tool::ROTATE:
+            if (!frame) break;
+            if (isClick) frame->rotation += isRound ? (int)mouseDelta.y : mouseDelta.y;
+            break;
+          default:
+            break;
+        }
+
+        if (mouseWheel != 0 || isZoomIn || isZoomOut)
+          zoom_set(zoom, pan, mousePos, (mouseWheel > 0 || isZoomIn) ? zoomStep : -zoomStep);
+      }
+    }
+    ImGui::End();
+  }
+}

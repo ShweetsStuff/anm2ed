@@ -1,224 +1,282 @@
 #include "canvas.h"
 
-static void _canvas_framebuffer_set(Canvas* self, const ivec2& size) {
-  self->size = size;
-  self->previousSize = size;
+#include "math.h"
+#include <glm/ext/matrix_clip_space.hpp>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
-  glBindFramebuffer(GL_FRAMEBUFFER, self->fbo);
+using namespace glm;
+using namespace anm2ed::shader;
 
-  glBindTexture(GL_TEXTURE_2D, self->framebuffer);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, self->size.x, self->size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+namespace anm2ed::canvas
+{
+  constexpr float AXIS_VERTICES[] = {-1.0f, 0.0f, 1.0f, 0.0f};
+  constexpr float GRID_VERTICES[] = {-1.f, -1.f, 0.f, 0.f, 3.f, -1.f, 2.f, 0.f, -1.f, 3.f, 0.f, 2.f};
+  constexpr float RECT_VERTICES[] = {0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f};
+  constexpr GLuint TEXTURE_INDICES[] = {0, 1, 2, 2, 3, 0};
 
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, self->framebuffer, 0);
+  Canvas::Canvas() = default;
 
-  glBindRenderbuffer(GL_RENDERBUFFER, self->rbo);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, self->size.x, self->size.y);
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, self->rbo);
+  Canvas::Canvas(vec2 size)
+  {
+    this->size = size;
+    previousSize = size;
 
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
+    // Axis
+    glGenVertexArrays(1, &axisVAO);
+    glGenBuffers(1, &axisVBO);
 
-void canvas_init(Canvas* self, const ivec2& size) {
-  // Axis
-  glGenVertexArrays(1, &self->axisVAO);
-  glGenBuffers(1, &self->axisVBO);
+    glBindVertexArray(axisVAO);
 
-  glBindVertexArray(self->axisVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, axisVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(AXIS_VERTICES), AXIS_VERTICES, GL_STATIC_DRAW);
 
-  glBindBuffer(GL_ARRAY_BUFFER, self->axisVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(CANVAS_AXIS_VERTICES), CANVAS_AXIS_VERTICES, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
 
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 1, GL_FLOAT, GL_FALSE, sizeof(float), (void*)0);
+    // Grid
+    glGenVertexArrays(1, &gridVAO);
+    glBindVertexArray(gridVAO);
 
-  // Grid
-  glGenVertexArrays(1, &self->gridVAO);
-  glGenBuffers(1, &self->gridVBO);
+    glGenBuffers(1, &gridVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, gridVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(GRID_VERTICES), GRID_VERTICES, GL_STATIC_DRAW);
 
-  glBindVertexArray(self->gridVAO);
-  glBindBuffer(GL_ARRAY_BUFFER, self->gridVBO);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 4, (void*)0);
 
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 4, (void*)(sizeof(float) * 2));
 
-  // Rect
-  glGenVertexArrays(1, &self->rectVAO);
-  glGenBuffers(1, &self->rectVBO);
+    glBindVertexArray(0);
 
-  glBindVertexArray(self->rectVAO);
+    // Rect
+    glGenVertexArrays(1, &rectVAO);
+    glGenBuffers(1, &rectVBO);
 
-  glBindBuffer(GL_ARRAY_BUFFER, self->rectVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(CANVAS_RECT_VERTICES), CANVAS_RECT_VERTICES, GL_STATIC_DRAW);
+    glBindVertexArray(rectVAO);
 
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+    glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(RECT_VERTICES), RECT_VERTICES, GL_STATIC_DRAW);
 
-  // Grid
-  glGenVertexArrays(1, &self->gridVAO);
-  glBindVertexArray(self->gridVAO);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
 
-  glGenBuffers(1, &self->gridVBO);
-  glBindBuffer(GL_ARRAY_BUFFER, self->gridVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(CANVAS_GRID_VERTICES), CANVAS_GRID_VERTICES, GL_STATIC_DRAW);
+    // Texture
+    glGenVertexArrays(1, &textureVAO);
+    glGenBuffers(1, &textureVBO);
+    glGenBuffers(1, &textureEBO);
 
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, (void*)0);
+    glBindVertexArray(textureVAO);
 
-  glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, textureVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * 4, nullptr, GL_DYNAMIC_DRAW);
 
-  // Texture
-  glGenVertexArrays(1, &self->textureVAO);
-  glGenBuffers(1, &self->textureVBO);
-  glGenBuffers(1, &self->textureEBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, textureEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(TEXTURE_INDICES), TEXTURE_INDICES, GL_DYNAMIC_DRAW);
 
-  glBindVertexArray(self->textureVAO);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
 
-  glBindBuffer(GL_ARRAY_BUFFER, self->textureVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * 4, nullptr, GL_DYNAMIC_DRAW);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self->textureEBO);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GL_TEXTURE_INDICES), GL_TEXTURE_INDICES, GL_DYNAMIC_DRAW);
+    glBindVertexArray(0);
 
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    // Framebuffer
+    glGenTextures(1, &texture);
+    glGenFramebuffers(1, &fbo);
+    glGenRenderbuffers(1, &rbo);
 
-  glEnableVertexAttribArray(1);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-
-  glBindVertexArray(0);
-
-  // Framebuffer
-  glGenTextures(1, &self->framebuffer);
-  glGenFramebuffers(1, &self->fbo);
-  glGenRenderbuffers(1, &self->rbo);
-  _canvas_framebuffer_set(self, size);
-
-  self->isInit = true;
-}
-
-mat4 canvas_transform_get(Canvas* self, vec2 pan, float zoom, OriginType origin) {
-  float zoomFactor = PERCENT_TO_UNIT(zoom);
-  mat4 projection = glm::ortho(0.0f, (float)self->size.x, 0.0f, (float)self->size.y, -1.0f, 1.0f);
-  mat4 view = mat4{1.0f};
-  vec2 size = vec2(self->size.x, self->size.y);
-
-  switch (origin) {
-  case ORIGIN_TOP_LEFT:
-    view = glm::translate(view, vec3(pan, 0.0f));
-    break;
-  default:
-    view = glm::translate(view, vec3((size * 0.5f) + pan, 0.0f));
-    break;
+    framebuffer_set();
   }
 
-  view = glm::scale(view, vec3(zoomFactor, zoomFactor, 1.0f));
+  Canvas::~Canvas()
+  {
+    if (!is_valid()) return;
 
-  return projection * view;
-}
+    glDeleteFramebuffers(1, &fbo);
+    glDeleteRenderbuffers(1, &rbo);
+    glDeleteTextures(1, &texture);
 
-void canvas_clear(vec4& color) {
-  glClearColor(color.r, color.g, color.b, color.a);
-  glClear(GL_COLOR_BUFFER_BIT);
-}
+    glDeleteVertexArrays(1, &axisVAO);
+    glDeleteBuffers(1, &axisVBO);
 
-void canvas_viewport_set(Canvas* self) { glViewport(0, 0, (int)self->size.x, (int)self->size.y); }
+    glDeleteVertexArrays(1, &gridVAO);
+    glDeleteBuffers(1, &gridVBO);
 
-void canvas_framebuffer_resize_check(Canvas* self) {
-  if (self->previousSize != self->size)
-    _canvas_framebuffer_set(self, self->size);
-}
+    glDeleteVertexArrays(1, &rectVAO);
+    glDeleteBuffers(1, &rectVBO);
+  }
 
-void canvas_grid_draw(Canvas* self, GLuint& shader, mat4& transform, ivec2& size, ivec2& offset, vec4& color) {
-  mat4 inverseTransform = glm::inverse(transform);
+  bool Canvas::is_valid()
+  {
+    return fbo != 0;
+  }
 
-  glUseProgram(shader);
+  void Canvas::framebuffer_set()
+  {
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
-  glUniformMatrix4fv(glGetUniformLocation(shader, SHADER_UNIFORM_MODEL), 1, GL_FALSE, glm::value_ptr(inverseTransform));
-  glUniform2f(glGetUniformLocation(shader, SHADER_UNIFORM_SIZE), size.x, size.y);
-  glUniform2f(glGetUniformLocation(shader, SHADER_UNIFORM_OFFSET), offset.x, offset.y);
-  glUniform4f(glGetUniformLocation(shader, SHADER_UNIFORM_COLOR), color.r, color.g, color.b, color.a);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-  glBindVertexArray(self->gridVAO);
-  glDrawArrays(GL_TRIANGLES, 0, 3);
-  glBindVertexArray(0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 
-  glUseProgram(0);
-}
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, size.x, size.y);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
 
-void canvas_texture_draw(Canvas* self, GLuint& shader, GLuint& texture, mat4& transform, const float* vertices, vec4 tint, vec3 colorOffset) {
-  glUseProgram(shader);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  }
 
-  glBindVertexArray(self->textureVAO);
+  void Canvas::framebuffer_resize_check()
+  {
+    if (previousSize != size)
+    {
+      framebuffer_set();
+      previousSize = size;
+    }
+  }
 
-  glBindBuffer(GL_ARRAY_BUFFER, self->textureVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(CANVAS_TEXTURE_VERTICES), vertices, GL_DYNAMIC_DRAW);
+  void Canvas::size_set(vec2 size)
+  {
+    this->size = size;
+    framebuffer_resize_check();
+  }
 
-  glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, texture);
+  mat4 Canvas::transform_get(float zoom, vec2 pan)
+  {
+    auto zoomFactor = math::percent_to_unit(zoom);
+    auto projection = glm::ortho(0.0f, (float)size.x, 0.0f, (float)size.y, -1.0f, 1.0f);
+    auto view = mat4{1.0f};
 
-  glUniform1i(glGetUniformLocation(shader, SHADER_UNIFORM_TEXTURE), 0);
-  glUniform3fv(glGetUniformLocation(shader, SHADER_UNIFORM_COLOR_OFFSET), 1, value_ptr(colorOffset));
-  glUniform4fv(glGetUniformLocation(shader, SHADER_UNIFORM_TINT), 1, value_ptr(tint));
-  glUniformMatrix4fv(glGetUniformLocation(shader, SHADER_UNIFORM_TRANSFORM), 1, GL_FALSE, value_ptr(transform));
+    view = glm::translate(view, vec3((size * 0.5f) + pan, 0.0f));
+    view = glm::scale(view, vec3(zoomFactor, zoomFactor, 1.0f));
 
-  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    return projection * view;
+  }
 
-  glBindVertexArray(0);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-  glBindTexture(GL_TEXTURE_2D, 0);
-  glUseProgram(0);
-}
+  void Canvas::axes_render(Shader& shader, float zoom, vec2 pan, vec4 color)
+  {
+    auto originNDC = transform_get(zoom, pan) * vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    originNDC /= originNDC.w;
 
-void canvas_rect_draw(Canvas* self, const GLuint& shader, const mat4& transform, const vec4& color) {
-  glUseProgram(shader);
+    glUseProgram(shader.id);
 
-  glBindVertexArray(self->rectVAO);
+    glUniform4fv(glGetUniformLocation(shader.id, shader::UNIFORM_COLOR), 1, value_ptr(color));
+    glUniform2f(glGetUniformLocation(shader.id, shader::UNIFORM_ORIGIN_NDC), originNDC.x, originNDC.y);
 
-  glUniformMatrix4fv(glGetUniformLocation(shader, SHADER_UNIFORM_TRANSFORM), 1, GL_FALSE, value_ptr(transform));
-  glUniform4fv(glGetUniformLocation(shader, SHADER_UNIFORM_COLOR), 1, value_ptr(color));
+    glBindVertexArray(axisVAO);
 
-  glDrawArrays(GL_LINE_LOOP, 0, 4);
+    glUniform1i(glGetUniformLocation(shader.id, shader::UNIFORM_AXIS), 0);
+    glDrawArrays(GL_LINES, 0, 2);
 
-  glBindVertexArray(0);
-  glUseProgram(0);
-}
+    glUniform1i(glGetUniformLocation(shader.id, shader::UNIFORM_AXIS), 1);
+    glDrawArrays(GL_LINES, 0, 2);
 
-void canvas_axes_draw(Canvas* self, GLuint& shader, mat4& transform, vec4& color) {
-  vec4 originNDC = transform * vec4(0.0f, 0.0f, 0.0f, 1.0f);
-  originNDC /= originNDC.w;
+    glBindVertexArray(0);
+    glUseProgram(0);
+  }
 
-  glUseProgram(shader);
-  glBindVertexArray(self->axisVAO);
-  glUniform4fv(glGetUniformLocation(shader, SHADER_UNIFORM_COLOR), 1, value_ptr(color));
-  glUniform2f(glGetUniformLocation(shader, SHADER_UNIFORM_ORIGIN_NDC), originNDC.x, originNDC.y);
-  glUniform1i(glGetUniformLocation(shader, SHADER_UNIFORM_AXIS), 0);
-  glDrawArrays(GL_LINES, 0, 2);
-  glUniform1i(glGetUniformLocation(shader, SHADER_UNIFORM_AXIS), 1);
-  glDrawArrays(GL_LINES, 0, 2);
-  glBindVertexArray(0);
-  glUseProgram(0);
-}
+  void Canvas::grid_render(Shader& shader, float zoom, vec2 pan, ivec2 size, ivec2 offset, vec4 color)
+  {
+    auto zoomFactor = math::percent_to_unit(zoom);
 
-void canvas_bind(Canvas* self) { glBindFramebuffer(GL_FRAMEBUFFER, self->fbo); }
+    glUseProgram(shader.id);
 
-void canvas_unbind(void) { glBindFramebuffer(GL_FRAMEBUFFER, 0); }
+    glUniform2f(glGetUniformLocation(shader.id, shader::UNIFORM_VIEW_SIZE), this->size.x, this->size.y);
+    glUniform2f(glGetUniformLocation(shader.id, shader::UNIFORM_PAN), pan.x, pan.y);
+    glUniform1f(glGetUniformLocation(shader.id, shader::UNIFORM_ZOOM), zoomFactor);
+    glUniform2f(glGetUniformLocation(shader.id, shader::UNIFORM_SIZE), (float)size.x, (float)size.y);
+    glUniform2f(glGetUniformLocation(shader.id, shader::UNIFORM_OFFSET), (float)offset.x, (float)offset.y);
+    glUniform4f(glGetUniformLocation(shader.id, shader::UNIFORM_COLOR), color.r, color.g, color.b, color.a);
 
-void canvas_free(Canvas* self) {
-  if (!self->isInit)
-    return;
+    glBindVertexArray(gridVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glBindVertexArray(0);
 
-  glDeleteFramebuffers(1, &self->fbo);
-  glDeleteRenderbuffers(1, &self->rbo);
-  glDeleteTextures(1, &self->framebuffer);
-  glDeleteVertexArrays(1, &self->axisVAO);
-  glDeleteVertexArrays(1, &self->rectVAO);
-  glDeleteVertexArrays(1, &self->gridVAO);
-  glDeleteVertexArrays(1, &self->textureVAO);
-  glDeleteBuffers(1, &self->axisVBO);
-  glDeleteBuffers(1, &self->rectVBO);
-  glDeleteBuffers(1, &self->gridVBO);
-  glDeleteBuffers(1, &self->textureVBO);
-  glDeleteBuffers(1, &self->textureEBO);
+    glUseProgram(0);
+  }
+
+  void Canvas::texture_render(Shader& shader, GLuint& texture, mat4& transform, vec4 tint, vec3 colorOffset,
+                              float* vertices)
+  {
+    glUseProgram(shader.id);
+
+    glUniform1i(glGetUniformLocation(shader.id, shader::UNIFORM_TEXTURE), 0);
+    glUniform3fv(glGetUniformLocation(shader.id, shader::UNIFORM_COLOR_OFFSET), 1, value_ptr(colorOffset));
+    glUniform4fv(glGetUniformLocation(shader.id, shader::UNIFORM_TINT), 1, value_ptr(tint));
+    glUniformMatrix4fv(glGetUniformLocation(shader.id, shader::UNIFORM_TRANSFORM), 1, GL_FALSE, value_ptr(transform));
+
+    glBindVertexArray(textureVAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, textureVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(TEXTURE_VERTICES), vertices, GL_DYNAMIC_DRAW);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glUseProgram(0);
+  }
+
+  void Canvas::rect_render(Shader& shader, mat4& transform, vec4 color)
+  {
+    glUseProgram(shader.id);
+
+    glUniformMatrix4fv(glGetUniformLocation(shader.id, shader::UNIFORM_TRANSFORM), 1, GL_FALSE, value_ptr(transform));
+    glUniform4fv(glGetUniformLocation(shader.id, shader::UNIFORM_COLOR), 1, value_ptr(color));
+
+    glBindVertexArray(rectVAO);
+    glDrawArrays(GL_LINE_LOOP, 0, 4);
+
+    glBindVertexArray(0);
+    glUseProgram(0);
+  }
+
+  void Canvas::viewport_set()
+  {
+    glViewport(0, 0, size.x, size.y);
+  }
+
+  void Canvas::clear(vec4& color)
+  {
+    glClearColor(color.r, color.g, color.b, color.a);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  }
+
+  void Canvas::bind()
+  {
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+  }
+
+  void Canvas::unbind()
+  {
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  }
+
+  void Canvas::zoom_set(float& zoom, vec2& pan, vec2& focus, float step)
+  {
+    auto zoomFactor = math::percent_to_unit(zoom);
+    float newZoom = glm::clamp(math::round_nearest_multiple(zoom + step, step), canvas::ZOOM_MIN, canvas::ZOOM_MAX);
+    if (newZoom != zoom)
+    {
+      float newZoomFactor = math::percent_to_unit(newZoom);
+      pan += focus * (zoomFactor - newZoomFactor);
+      zoom = newZoom;
+    }
+  }
+
+  vec2 Canvas::position_translate(float& zoom, vec2& pan, vec2 position)
+  {
+    auto zoomFactor = math::percent_to_unit(zoom);
+    return (position - pan - (size * 0.5f)) / zoomFactor;
+  }
 }
