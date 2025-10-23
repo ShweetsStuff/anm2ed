@@ -1,12 +1,19 @@
 #pragma once
 
 #include <imgui/imgui.h>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
+#include "types.h"
+
 namespace anm2ed::imgui
 {
+  constexpr auto POPUP_TO_CONTENT = 0.0f;
+  constexpr auto POPUP_SMALL = 0.25f;
+  constexpr auto POPUP_NORMAL = 0.5f;
+
   const std::unordered_map<std::string, ImGuiKey> KEY_MAP = {{"A", ImGuiKey_A},
                                                              {"B", ImGuiKey_B},
                                                              {"C", ImGuiKey_C},
@@ -122,17 +129,46 @@ namespace anm2ed::imgui
   float row_widget_width_get(int count, float width = ImGui::GetContentRegionAvail().x);
   ImVec2 widget_size_with_row_get(int count, float width = ImGui::GetContentRegionAvail().x);
   float footer_height_get(int itemCount = 1);
-  ImVec2 size_with_footer_get(int rowCount = 1);
-  ImVec2 child_size_get(int rowCount = 1, bool isContentRegionAvail = false);
+  ImVec2 footer_size_get(int itemCount = 1);
+  ImVec2 size_without_footer_get(int rowCount = 1);
+  ImVec2 child_size_get(int rowCount = 1);
   int input_text_callback(ImGuiInputTextCallbackData* data);
   bool input_text_string(const char* label, std::string* string, ImGuiInputTextFlags flags = 0);
   void combo_strings(const std::string& label, int* index, std::vector<std::string>& strings);
+  void combo_strings(const std::string& label, int* index, std::vector<const char*>& strings);
   bool selectable_input_text(const std::string& label, const std::string& id, std::string& text,
-                             bool isSelected = false, ImGuiSelectableFlags flags = 0);
-  void set_item_tooltip_shortcut(const std::string& tooltip, const std::string& shortcut = {});
+                             bool isSelected = false, ImGuiSelectableFlags flags = 0, bool* isRenamed = nullptr);
+  void set_item_tooltip_shortcut(const char* tooltip, const std::string& shortcut = {});
   void external_storage_set(ImGuiSelectionExternalStorage* self, int id, bool isSelected);
   ImVec2 icon_size_get();
   bool chord_held(ImGuiKeyChord chord);
   bool chord_repeating(ImGuiKeyChord chord, float delay = 0.125f, float rate = 0.025f);
-  bool shortcut(std::string string, bool isSet = false, bool isGlobal = false, bool isPopupBlock = true);
+  bool shortcut(std::string string, types::shortcut::Type type = types::shortcut::FOCUSED_SET);
+
+  class MultiSelectStorage
+  {
+  public:
+    ImGuiSelectionExternalStorage internal{};
+    std::set<int>* userData{};
+
+    MultiSelectStorage();
+    void user_data_set(std::set<int>* userData);
+    void begin(size_t size);
+    void end();
+  };
+
+  class PopupHelper
+  {
+  public:
+    const char* label{};
+    bool isOpen{};
+    bool isTriggered{};
+    bool isNoHeight{};
+    float percent{};
+
+    PopupHelper(const char* label, float percent = POPUP_NORMAL, bool isNoHeight = false);
+    void open();
+    void trigger();
+    void close();
+  };
 }

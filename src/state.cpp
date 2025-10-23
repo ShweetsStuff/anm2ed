@@ -60,9 +60,10 @@ namespace anm2ed::state
     ImGui::NewFrame();
 
     taskbar.update(settings, dialog, manager, isQuit);
-    documents.update(taskbar, manager, resources);
     dockspace.update(taskbar, documents, manager, settings, resources, dialog, playback);
     toasts.update();
+
+    documents.update(taskbar, manager, resources);
 
     ImGui::GetStyle().FontScaleMain = settings.displayScale;
     SDL_GetWindowSize(window, &settings.windowSize.x, &settings.windowSize.y);

@@ -5,6 +5,7 @@
 #include "imgui.h"
 
 using namespace anm2ed::settings;
+using namespace anm2ed::types;
 using namespace glm;
 
 namespace anm2ed::onionskin
@@ -23,7 +24,7 @@ namespace anm2ed::onionskin
         ImGui::PopID();
       };
 
-      imgui::shortcut(settings.shortcutOnionskin, true, true);
+      imgui::shortcut(settings.shortcutOnionskin);
       ImGui::Checkbox("Enabled", &settings.onionskinIsEnabled);
 
       order_configure("Before", settings.onionskinBeforeCount, settings.onionskinBeforeColor);
@@ -36,7 +37,8 @@ namespace anm2ed::onionskin
       ImGui::RadioButton("After", &settings.onionskinDrawOrder, ABOVE);
     }
 
-    if (imgui::shortcut(settings.shortcutOnionskin)) settings.onionskinIsEnabled = !settings.onionskinIsEnabled;
+    if (imgui::shortcut(settings.shortcutOnionskin), shortcut::GLOBAL)
+      settings.onionskinIsEnabled = !settings.onionskinIsEnabled;
 
     ImGui::End();
   }

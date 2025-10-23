@@ -120,6 +120,8 @@ namespace anm2ed::settings
   X(BAKE_IS_ROUND_ROTATION, bakeIsRoundRotation, "Round Rotation", BOOL, true)                                         \
                                                                                                                        \
   X(TIMELINE_ADD_ITEM_TYPE, timelineAddItemType, "Add Item Type", INT, anm2::LAYER)                                    \
+  X(TIMELINE_ADD_ITEM_LOCALITY, timelineAddItemLocale, "Add Item Locale", INT, types::locale::GLOBAL)                  \
+  X(TIMELINE_ADD_ITEM_SOURCE, timelineAddItemSource, "Add Item Source", INT, types::source::NEW)                       \
   X(TIMELINE_IS_SHOW_UNUSED, timelineIsShowUnused, "##Show Unused", BOOL, true)                                        \
                                                                                                                        \
   X(ONIONSKIN_IS_ENABLED, onionskinIsEnabled, "Enabled", BOOL, false)                                                  \

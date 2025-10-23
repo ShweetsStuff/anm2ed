@@ -32,10 +32,8 @@ namespace anm2ed::documents
         for (auto [i, document] : std::views::enumerate(manager.documents))
         {
           auto isDirty = document.is_dirty();
-          auto isRequested = i == manager.pendingSelected;
           auto isSelected = i == manager.selected;
-
-          if (isSelected) document.hash_time(ImGui::GetTime());
+          auto isRequested = i == manager.pendingSelected;
 
           auto font = isDirty ? font::ITALICS : font::REGULAR;
 
@@ -67,23 +65,18 @@ namespace anm2ed::documents
             else
               manager.close(i);
           }
+
+          if (isSelected) document.update();
         }
 
         ImGui::EndTabBar();
       }
 
-      if (isOpenCloseDocumentPopup)
-      {
-        ImGui::OpenPopup("Close Document");
-        isOpenCloseDocumentPopup = false;
-      }
+      closePopup.trigger();
 
       if (isCloseDocument)
       {
-        ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_None, ImVec2(0.5f, 0.5f));
-        ImGui::SetNextWindowSize(ImVec2(), ImGuiCond_None);
-
-        if (ImGui::BeginPopupModal("Close Document", nullptr, ImGuiWindowFlags_NoResize))
+        if (ImGui::BeginPopupModal(closePopup.label, &closePopup.isOpen, ImGuiWindowFlags_NoResize))
         {
           auto closeDocument = manager.get(closeDocumentIndex);
 
@@ -96,8 +89,7 @@ namespace anm2ed::documents
           auto close = [&]()
           {
             closeDocumentIndex = 0;
-            isCloseDocument = false;
-            ImGui::CloseCurrentPopup();
+            closePopup.close();
           };
 
           if (ImGui::Button("Yes", widgetSize))

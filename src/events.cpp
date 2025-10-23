@@ -2,8 +2,6 @@
 
 #include <ranges>
 
-#include "imgui.h"
-
 using namespace anm2ed::document_manager;
 using namespace anm2ed::settings;
 using namespace anm2ed::resources;
@@ -13,22 +11,22 @@ namespace anm2ed::events
 {
   void Events::update(DocumentManager& manager, Settings& settings, Resources& resources)
   {
+    auto& document = *manager.get();
+    auto& anm2 = document.anm2;
+    auto& selection = document.selectedEvents;
+
+    if (document.is_just_changed(change::EVENTS)) unusedEventIDs = anm2.events_unused();
+
+    storage.user_data_set(&selection);
+
     if (ImGui::Begin("Events", &settings.windowIsEvents))
     {
-      auto document = manager.get();
-      anm2::Anm2& anm2 = document->anm2;
-
-      auto& selection = document->selectedEvents;
-      storage.UserData = &selection;
-      storage.AdapterSetItemSelected = imgui::external_storage_set;
-
-      auto childSize = imgui::size_with_footer_get();
+      auto childSize = imgui::size_without_footer_get();
+      bool isRenamed{};
 
       if (ImGui::BeginChild("##Events Child", childSize, true))
       {
-        ImGuiMultiSelectIO* io =
-            ImGui::BeginMultiSelect(ImGuiMultiSelectFlags_ClearOnEscape, selection.size(), anm2.content.events.size());
-        storage.ApplyRequests(io);
+        storage.begin(anm2.content.events.size());
 
         for (auto& [id, event] : anm2.content.events)
         {
@@ -36,8 +34,9 @@ namespace anm2ed::events
 
           ImGui::PushID(id);
           ImGui::SetNextItemSelectionUserData(id);
-          imgui::selectable_input_text(event.name, std::format("###Document #{} Event #{}", manager.selected, id),
-                                       event.name, isSelected);
+          if (imgui::selectable_input_text(event.name, std::format("###Document #{} Event #{}", manager.selected, id),
+                                           event.name, isSelected, 0, &isRenamed))
+            if (isRenamed) document.change(change::EVENTS);
           if (ImGui::BeginItemTooltip())
           {
             ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
@@ -48,31 +47,33 @@ namespace anm2ed::events
           ImGui::PopID();
         }
 
-        io = ImGui::EndMultiSelect();
-        storage.ApplyRequests(io);
+        storage.end();
       }
       ImGui::EndChild();
 
       auto widgetSize = imgui::widget_size_with_row_get(2);
 
-      imgui::shortcut(settings.shortcutAdd, true);
+      imgui::shortcut(settings.shortcutAdd);
       if (ImGui::Button("Add", widgetSize))
       {
         int id{};
         anm2.event_add(id);
         selection = {id};
+        document.change(change::EVENTS);
       }
       imgui::set_item_tooltip_shortcut("Add an event.", settings.shortcutAdd);
       ImGui::SameLine();
 
-      std::set<int> unusedEventIDs = anm2.events_unused();
-
-      imgui::shortcut(settings.shortcutRemove, true);
+      imgui::shortcut(settings.shortcutRemove);
       ImGui::BeginDisabled(unusedEventIDs.empty());
       {
         if (ImGui::Button("Remove Unused", widgetSize))
+        {
           for (auto& id : unusedEventIDs)
-            anm2.content.layers.erase(id);
+            anm2.content.events.erase(id);
+          document.change(change::EVENTS);
+          unusedEventIDs.clear();
+        }
       }
       ImGui::EndDisabled();
       imgui::set_item_tooltip_shortcut("Remove unused events (i.e., ones not used by any trigger in any animation.)",

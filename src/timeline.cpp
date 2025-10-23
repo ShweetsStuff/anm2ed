@@ -68,7 +68,8 @@ namespace anm2ed::timeline
         color = isActive ? ROOT_COLOR_ACTIVE : ROOT_COLOR;
         break;
       case anm2::LAYER:
-        label = std::format("#{} {}", id, anm2.content.layers[id].name);
+        label = std::format("#{} {} (Spritesheet: #{})", id, anm2.content.layers.at(id).name,
+                            anm2.content.layers[id].spritesheetID);
         icon = icon::LAYER;
         color = isActive ? LAYER_COLOR_ACTIVE : LAYER_COLOR;
         break;
@@ -165,10 +166,12 @@ namespace anm2ed::timeline
 
         ImGui::SetCursorPos(cursorPos);
 
+        ImGui::BeginDisabled();
         ImGui::Text("(?)");
         ImGui::SetItemTooltip("%s", std::format(HELP_FORMAT, settings.shortcutNextFrame, settings.shortcutPreviousFrame,
                                                 settings.shortcutShortenFrame, settings.shortcutExtendFrame)
                                         .c_str());
+        ImGui::EndDisabled();
       }
     }
     ImGui::EndChild();
@@ -177,9 +180,11 @@ namespace anm2ed::timeline
     index++;
   }
 
-  void Timeline::items_child(anm2::Anm2& anm2, anm2::Reference& reference, anm2::Animation* animation,
-                             Settings& settings, Resources& resources)
+  void Timeline::items_child(Document& document, anm2::Animation* animation, Settings& settings, Resources& resources)
   {
+    auto& anm2 = document.anm2;
+    auto& reference = document.reference;
+
     auto itemsChildSize = ImVec2(ImGui::GetTextLineHeightWithSpacing() * 15, ImGui::GetContentRegionAvail().y);
 
     if (ImGui::BeginChild("##Items Child", itemsChildSize, ImGuiChildFlags_Borders))
@@ -250,13 +255,24 @@ namespace anm2ed::timeline
 
       auto widgetSize = imgui::widget_size_with_row_get(2);
 
+      ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
+
       ImGui::BeginDisabled(!animation);
       {
-        ImGui::Button("Add", widgetSize);
+        if (ImGui::Button("Add", widgetSize)) propertiesPopup.open();
+        ImGui::SetItemTooltip("%s", "Add a new item to the animation.");
         ImGui::SameLine();
-        ImGui::Button("Remove", widgetSize);
+
+        ImGui::BeginDisabled(document.item_get());
+        {
+          ImGui::Button("Remove", widgetSize);
+          ImGui::SetItemTooltip("%s", "Remove the selected items from the animation.");
+        }
+        ImGui::EndDisabled();
       }
       ImGui::EndDisabled();
+
+      ImGui::PopStyleVar();
     }
     ImGui::EndChild();
   }
@@ -316,10 +332,6 @@ namespace anm2ed::timeline
     colorHidden = to_imvec4(to_vec4(color) * COLOR_HIDDEN_MULTIPLIER);
     colorActiveHidden = to_imvec4(to_vec4(colorActive) * COLOR_HIDDEN_MULTIPLIER);
     colorHoveredHidden = to_imvec4(to_vec4(colorHovered) * COLOR_HIDDEN_MULTIPLIER);
-
-    ImGui::PushStyleColor(ImGuiCol_Button, isVisible ? color : colorHidden);
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, isVisible ? colorActive : colorActiveHidden);
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, isVisible ? colorHovered : colorHoveredHidden);
 
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2());
 
@@ -420,10 +432,9 @@ namespace anm2ed::timeline
         {
           anm2::Reference frameReference = {reference.animationIndex, type, id, (int)i};
           auto isSelected = baseReference == frameReference;
+          auto isFrameVisible = isVisible && frame.isVisible;
 
           frameTime += frame.delay;
-
-          if (isSelected) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
 
           ImGui::PushID(i);
           auto size = ImVec2(frameSize.x * frame.delay, frameSize.y);
@@ -435,12 +446,11 @@ namespace anm2ed::timeline
           if (type == anm2::TRIGGER)
             ImGui::SetCursorPos(ImVec2(cursorPos.x + frameSize.x * frame.atFrame, cursorPos.y));
 
-          if (!frame.isVisible)
-          {
-            ImGui::PushStyleColor(ImGuiCol_Button, colorHidden);
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, colorActiveHidden);
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, colorHoveredHidden);
-          }
+          ImGui::PushStyleColor(ImGuiCol_Button, isFrameVisible ? color : colorHidden);
+          ImGui::PushStyleColor(ImGuiCol_ButtonActive, isFrameVisible ? colorActive : colorActiveHidden);
+          ImGui::PushStyleColor(ImGuiCol_ButtonHovered, isFrameVisible ? colorHovered : colorHoveredHidden);
+
+          if (isSelected) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
 
           if (ImGui::Button("##Frame Button", size))
           {
@@ -451,7 +461,8 @@ namespace anm2ed::timeline
           }
           if (type != anm2::TRIGGER) ImGui::SameLine();
 
-          if (!frame.isVisible) ImGui::PopStyleColor(3);
+          ImGui::PopStyleColor(3);
+          if (isSelected) ImGui::PopStyleColor();
 
           auto imageMin = ImVec2(ImGui::GetItemRectMin().x,
                                  ImGui::GetItemRectMax().y - (ImGui::GetItemRectSize().y / 2) - (imageSize.y / 2));
@@ -459,15 +470,12 @@ namespace anm2ed::timeline
 
           drawList->AddImage(resources.icons[icon].id, imageMin, imageMax);
 
-          if (isSelected) ImGui::PopStyleColor();
-
           ImGui::PopID();
         }
       }
     }
     ImGui::EndChild();
     ImGui::PopStyleVar();
-    ImGui::PopStyleColor(3);
 
     index++;
     ImGui::PopID();
@@ -600,19 +608,19 @@ namespace anm2ed::timeline
         auto label = playback.isPlaying ? "Pause" : "Play";
         auto tooltip = playback.isPlaying ? "Pause the animation." : "Play the animation.";
 
-        imgui::shortcut(settings.shortcutPlayPause, true);
+        imgui::shortcut(settings.shortcutPlayPause);
         if (ImGui::Button(label, widgetSize)) playback.toggle();
         imgui::set_item_tooltip_shortcut(tooltip, settings.shortcutPlayPause);
 
         ImGui::SameLine();
 
-        imgui::shortcut(settings.shortcutAdd, true);
+        imgui::shortcut(settings.shortcutAdd);
         ImGui::Button("Insert Frame", widgetSize);
         imgui::set_item_tooltip_shortcut("Insert a frame, based on the current selection.", settings.shortcutAdd);
 
         ImGui::SameLine();
 
-        imgui::shortcut(settings.shortcutRemove, true);
+        imgui::shortcut(settings.shortcutRemove);
         ImGui::Button("Delete Frame", widgetSize);
         imgui::set_item_tooltip_shortcut("Delete the selected frames.", settings.shortcutRemove);
 
@@ -662,6 +670,187 @@ namespace anm2ed::timeline
     ImGui::SetCursorPos(cursorPos);
   }
 
+  void Timeline::popups(Document& document, anm2::Animation* animation, Settings& settings)
+  {
+    auto item_properties_reset = [&]()
+    {
+      addItemName.clear();
+      addItemSpritesheetID = {};
+      addItemID = -1;
+      isUnusedItemsSet = false;
+    };
+
+    auto& anm2 = document.anm2;
+    auto& reference = document.reference;
+
+    propertiesPopup.trigger();
+
+    if (ImGui::BeginPopupModal(propertiesPopup.label, &propertiesPopup.isOpen, ImGuiWindowFlags_NoResize))
+    {
+      auto item_properties_close = [&]()
+      {
+        item_properties_reset();
+        propertiesPopup.close();
+      };
+
+      auto& type = settings.timelineAddItemType;
+      auto& locale = settings.timelineAddItemLocale;
+      auto& source = settings.timelineAddItemSource;
+
+      if (!isUnusedItemsSet)
+      {
+        unusedItems = type == anm2::LAYER   ? anm2.layers_unused(reference)
+                      : type == anm2::NULL_ ? anm2.nulls_unused(reference)
+                                            : std::set<int>{};
+
+        isUnusedItemsSet = true;
+      }
+
+      auto footerSize = imgui::footer_size_get();
+      auto optionsSize = imgui::child_size_get(11);
+      auto itemsSize = ImVec2(0, ImGui::GetContentRegionAvail().y -
+                                     (optionsSize.y + footerSize.y + ImGui::GetStyle().ItemSpacing.y * 4));
+
+      if (ImGui::BeginChild("Options", optionsSize, ImGuiChildFlags_Borders))
+      {
+        ImGui::SeparatorText("Type");
+
+        auto size = ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, ImGui::GetFrameHeightWithSpacing());
+
+        if (ImGui::BeginChild("Type Layer", size))
+        {
+          ImGui::RadioButton("Layer", &type, anm2::LAYER);
+          ImGui::SetItemTooltip("Layers are a basic visual element in an animation, used for displaying spritesheets.");
+        }
+        ImGui::EndChild();
+
+        ImGui::SameLine();
+
+        if (ImGui::BeginChild("Type Null", size))
+        {
+          ImGui::RadioButton("Null", &type, anm2::NULL_);
+          ImGui::SetItemTooltip(
+              "Nulls are invisible elements in an animation, used for interfacing with a game engine.");
+        }
+        ImGui::EndChild();
+
+        ImGui::SeparatorText("Source");
+
+        bool isNewOnly = unusedItems.empty();
+        if (isNewOnly) source = source::NEW;
+
+        if (ImGui::BeginChild("Source New", size))
+        {
+          ImGui::RadioButton("New", &source, source::NEW);
+          ImGui::SetItemTooltip("Create a new item to be used.");
+        }
+        ImGui::EndChild();
+
+        ImGui::SameLine();
+
+        if (ImGui::BeginChild("Source Existing", size))
+        {
+          ImGui::BeginDisabled(isNewOnly);
+          ImGui::RadioButton("Existing", &source, source::EXISTING);
+          ImGui::EndDisabled();
+          ImGui::SetItemTooltip("Use a pre-existing, presently unused item.");
+        }
+        ImGui::EndChild();
+
+        ImGui::SeparatorText("Locale");
+
+        if (ImGui::BeginChild("Locale Global", size))
+        {
+          ImGui::RadioButton("Global", &locale, locale::GLOBAL);
+          ImGui::SetItemTooltip("The item will be inserted into all animations, if not already present.");
+        }
+        ImGui::EndChild();
+
+        ImGui::SameLine();
+
+        if (ImGui::BeginChild("Locale Local", size))
+        {
+          ImGui::RadioButton("Local", &locale, locale::LOCAL);
+          ImGui::SetItemTooltip("The item will only be inserted into this animation.");
+        }
+        ImGui::EndChild();
+
+        ImGui::SeparatorText("Options");
+
+        ImGui::BeginDisabled(source == source::EXISTING);
+        {
+          imgui::input_text_string("Name", &addItemName);
+          ImGui::SetItemTooltip("Set the item's name.");
+          ImGui::BeginDisabled(type != anm2::LAYER);
+          {
+            auto spritesheets = anm2.spritesheet_names_get();
+            imgui::combo_strings("Spritesheet", &addItemSpritesheetID, spritesheets);
+            ImGui::SetItemTooltip("Set the layer item's spritesheet.");
+          }
+          ImGui::EndDisabled();
+        }
+        ImGui::EndDisabled();
+      }
+      ImGui::EndChild();
+
+      if (ImGui::BeginChild("Items", itemsSize, ImGuiChildFlags_Borders))
+      {
+        if (animation && source == source::EXISTING)
+        {
+          for (auto id : unusedItems)
+          {
+            auto isSelected = addItemID == id;
+
+            ImGui::PushID(id);
+
+            if (type == anm2::LAYER)
+            {
+              auto& layer = anm2.content.layers[id];
+              if (ImGui::Selectable(
+                      std::format("#{} {} (Spritesheet: #{})", id, layer.name, layer.spritesheetID).c_str(),
+                      isSelected))
+                addItemID = id;
+            }
+            else if (type == anm2::NULL_)
+            {
+              auto& null = anm2.content.nulls[id];
+              if (ImGui::Selectable(std::format("#{} {}", id, null.name).c_str(), isSelected)) addItemID = id;
+            }
+
+            ImGui::PopID();
+          }
+        }
+      }
+      ImGui::EndChild();
+
+      auto widgetSize = imgui::widget_size_with_row_get(2);
+
+      if (ImGui::Button("Add", widgetSize))
+      {
+        anm2::Reference addReference;
+
+        if (type == anm2::LAYER)
+          addReference = anm2.layer_add({reference.animationIndex, anm2::LAYER, addItemID}, addItemName,
+                                        addItemSpritesheetID, (locale::Type)locale);
+        else if (type == anm2::NULL_)
+          addReference =
+              anm2.null_add({reference.animationIndex, anm2::LAYER, addItemID}, addItemName, (locale::Type)locale);
+
+        reference = addReference;
+
+        item_properties_close();
+      }
+      ImGui::SetItemTooltip("Add the item, with the settings specified.");
+
+      ImGui::SameLine();
+
+      if (ImGui::Button("Cancel", widgetSize)) item_properties_close();
+      ImGui::SetItemTooltip("Cancel adding an item.");
+
+      ImGui::EndPopup();
+    }
+  }
+
   void Timeline::update(DocumentManager& manager, Settings& settings, Resources& resources, Playback& playback)
   {
     auto& document = *manager.get();
@@ -676,20 +865,28 @@ namespace anm2ed::timeline
     {
       isWindowHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows);
       frames_child(document, animation, settings, resources, playback);
-      items_child(anm2, reference, animation, settings, resources);
+      items_child(document, animation, settings, resources);
     }
     ImGui::PopStyleVar();
     ImGui::End();
 
-    if (imgui::shortcut(settings.shortcutPlayPause, false, true)) playback.toggle();
+    popups(document, animation, settings);
+
+    if (imgui::shortcut(settings.shortcutPlayPause, shortcut::GLOBAL)) playback.toggle();
 
     if (animation)
     {
       if (imgui::chord_repeating(imgui::string_to_chord(settings.shortcutPreviousFrame)))
-        playback.decrement(animation->frameNum);
+      {
+        playback.decrement(settings.playbackIsClampPlayhead ? animation->frameNum : anm2::FRAME_NUM_MAX);
+        reference.frameTime = playback.time;
+      }
 
       if (imgui::chord_repeating(imgui::string_to_chord(settings.shortcutNextFrame)))
-        playback.increment(animation->frameNum);
+      {
+        playback.increment(settings.playbackIsClampPlayhead ? animation->frameNum : anm2::FRAME_NUM_MAX);
+        reference.frameTime = playback.time;
+      }
     }
 
     if (imgui::chord_repeating(imgui::string_to_chord(settings.shortcutShortenFrame)))

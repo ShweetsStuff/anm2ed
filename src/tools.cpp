@@ -55,7 +55,7 @@ namespace anm2ed::tools
 
         auto member = SHORTCUT_MEMBERS[info.shortcut];
 
-        if (imgui::shortcut(settings.*member, false, true, i == tool::COLOR ? false : true)) tool_switch((tool::Type)i);
+        if (imgui::shortcut(settings.*member, shortcut::GLOBAL_SET)) tool_switch((tool::Type)i);
 
         if (i == tool::COLOR)
         {

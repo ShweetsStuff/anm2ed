@@ -4,6 +4,50 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui/imgui.h>
 
+namespace anm2ed::types::change
+{
+  enum Type
+  {
+    LAYERS,
+    NULLS,
+    SPRITESHEETS,
+    EVENTS,
+    ANIMATIONS,
+    ITEMS,
+    FRAMES,
+    COUNT
+  };
+}
+
+namespace anm2ed::types::shortcut
+{
+  enum Type
+  {
+    FOCUSED,
+    GLOBAL,
+    FOCUSED_SET,
+    GLOBAL_SET
+  };
+}
+
+namespace anm2ed::types::locale
+{
+  enum Type
+  {
+    LOCAL,
+    GLOBAL
+  };
+}
+
+namespace anm2ed::types::source
+{
+  enum Type
+  {
+    NEW,
+    EXISTING
+  };
+}
+
 namespace anm2ed::types::merge
 {
   enum Type

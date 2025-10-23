@@ -1,8 +1,0 @@
-{
-    "C_Cpp.formatting": "clangFormat",
-    "editor.formatOnSave": true,
-    "clang-format.style": "file",
-    "clangd.arguments": [
-        "--compile-commands-dir=build"
-    ]
-}

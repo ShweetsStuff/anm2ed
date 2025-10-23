@@ -5,13 +5,21 @@
 
 using namespace anm2ed::anm2;
 using namespace anm2ed::filesystem;
+using namespace anm2ed::types;
 
 namespace anm2ed::document
 {
-  Document::Document() = default;
+  Document::Document()
+  {
+    for (auto& value : isJustChanged)
+      value = true;
+  }
 
   Document::Document(const std::string& path, bool isNew, std::string* errorString)
   {
+    for (auto& value : isJustChanged)
+      value = true;
+
     if (!path_is_exist(path)) return;
 
     if (isNew)
@@ -23,7 +31,8 @@ namespace anm2ed::document
     }
 
     this->path = path;
-    hash_set();
+    on_change();
+    clean();
   }
 
   bool Document::save(const std::string& path, std::string* errorString)
@@ -32,7 +41,7 @@ namespace anm2ed::document
 
     if (anm2.serialize(this->path, errorString))
     {
-      hash_set();
+      clean();
       return true;
     }
 
@@ -41,22 +50,29 @@ namespace anm2ed::document
 
   void Document::hash_set()
   {
+    hash = anm2.hash();
+  }
+
+  void Document::clean()
+  {
     saveHash = anm2.hash();
     hash = saveHash;
   }
 
-  void Document::hash_time(double time, double interval)
+  void Document::change(change::Type type)
   {
-    if (time - lastHashTime > interval)
-    {
-      hash = anm2.hash();
-      lastHashTime = time;
-    }
+    hash_set();
+    isJustChanged[type] = true;
   }
 
   bool Document::is_dirty()
   {
     return hash != saveHash;
+  }
+
+  bool Document::is_just_changed(types::change::Type type)
+  {
+    return isJustChanged[type];
   }
 
   std::string Document::directory_get()
@@ -79,6 +95,11 @@ namespace anm2ed::document
     return anm2.frame_get(reference);
   }
 
+  anm2::Item* Document::item_get()
+  {
+    return anm2.item_get(reference);
+  }
+
   anm2::Spritesheet* Document::spritesheet_get()
   {
     return anm2.spritesheet_get(referenceSpritesheet);
@@ -87,5 +108,24 @@ namespace anm2ed::document
   bool Document::is_valid()
   {
     return !path.empty();
+  }
+
+  void Document::on_change()
+  {
+    if (is_just_changed(change::SPRITESHEETS))
+    {
+      spritesheetNames = anm2.spritesheet_names_get();
+      spritesheetNamesCstr.clear();
+      for (auto& name : spritesheetNames)
+        spritesheetNamesCstr.push_back(name.c_str());
+    }
+  }
+
+  void Document::update()
+  {
+    on_change();
+
+    for (auto& value : isJustChanged)
+      value = false;
   }
 };

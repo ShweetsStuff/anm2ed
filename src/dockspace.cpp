@@ -33,17 +33,17 @@ namespace anm2ed::dockspace
     {
       if (ImGui::DockSpace(ImGui::GetID("##DockSpace"), ImVec2(), ImGuiDockNodeFlags_PassthruCentralNode))
       {
-        if (manager.get())
+        if (auto document = manager.get(); document)
         {
           if (settings.windowIsAnimationPreview) animationPreview.update(manager, settings, resources, playback);
-          if (settings.windowIsAnimations) animations.update(manager, settings, resources);
+          if (settings.windowIsAnimations) animations.update(*document, manager.selected, settings, resources);
           if (settings.windowIsEvents) events.update(manager, settings, resources);
           if (settings.windowIsFrameProperties) frameProperties.update(manager, settings);
-          if (settings.windowIsLayers) layers.update(manager, settings, resources);
-          if (settings.windowIsNulls) nulls.update(manager, settings, resources);
+          if (settings.windowIsLayers) layers.update(*document, settings, resources);
+          if (settings.windowIsNulls) nulls.update(*document, manager.selected, settings, resources);
           if (settings.windowIsOnionskin) onionskin.update(settings);
           if (settings.windowIsSpritesheetEditor) spritesheetEditor.update(manager, settings, resources);
-          if (settings.windowIsSpritesheets) spritesheets.update(manager, settings, resources, dialog);
+          if (settings.windowIsSpritesheets) spritesheets.update(*document, settings, resources, dialog);
           if (settings.windowIsTimeline) timeline.update(manager, settings, resources, playback);
           if (settings.windowIsTools) tools.update(settings, resources);
         }

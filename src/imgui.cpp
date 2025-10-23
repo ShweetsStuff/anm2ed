@@ -6,8 +6,12 @@
 #include <sstream>
 #include <unordered_map>
 
+using namespace anm2ed::types;
+using namespace glm;
+
 namespace anm2ed::imgui
 {
+
   std::string chord_to_string(ImGuiKeyChord chord)
   {
     std::string result;
@@ -71,14 +75,19 @@ namespace anm2ed::imgui
            ImGui::GetStyle().ItemSpacing.y * (itemCount);
   }
 
-  ImVec2 size_with_footer_get(int rowCount)
+  ImVec2 footer_size_get(int itemCount)
+  {
+    return ImVec2(ImGui::GetContentRegionAvail().x, footer_height_get(itemCount));
+  }
+
+  ImVec2 size_without_footer_get(int rowCount)
   {
     return ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y - footer_height_get(rowCount));
   }
 
-  ImVec2 child_size_get(int rowCount, bool isContentRegionAvail)
+  ImVec2 child_size_get(int rowCount)
   {
-    return ImVec2(isContentRegionAvail ? ImGui::GetContentRegionAvail().x : 0,
+    return ImVec2(ImGui::GetContentRegionAvail().x,
                   (ImGui::GetFrameHeightWithSpacing() * rowCount) + (ImGui::GetStyle().WindowPadding.y * 2.0f));
   }
 
@@ -107,8 +116,13 @@ namespace anm2ed::imgui
     ImGui::Combo(label.c_str(), index, items.data(), (int)items.size());
   }
 
+  void combo_strings(const std::string& label, int* index, std::vector<const char*>& strings)
+  {
+    ImGui::Combo(label.c_str(), index, strings.data(), (int)strings.size());
+  }
+
   bool selectable_input_text(const std::string& label, const std::string& id, std::string& text, bool isSelected,
-                             ImGuiSelectableFlags flags)
+                             ImGuiSelectableFlags flags, bool* isRenamed)
   {
     static std::string editID{};
     static bool isJustEdit{};
@@ -128,6 +142,7 @@ namespace anm2ed::imgui
       {
         editID.clear();
         isActivated = true;
+        if (isRenamed) *isRenamed = true;
       }
       if (ImGui::IsItemDeactivatedAfterEdit() || ImGui::IsKeyPressed(ImGuiKey_Escape)) editID.clear();
     }
@@ -146,10 +161,9 @@ namespace anm2ed::imgui
     return isActivated;
   }
 
-  void set_item_tooltip_shortcut(const std::string& tooltip, const std::string& shortcut)
+  void set_item_tooltip_shortcut(const char* tooltip, const std::string& shortcut)
   {
-    auto text = shortcut.empty() ? tooltip : std::format("{}\n(Shortcut: {})", tooltip, shortcut);
-    ImGui::SetItemTooltip("%s", text.c_str());
+    ImGui::SetItemTooltip("%s\n(Shortcut: %s)", tooltip, shortcut.c_str());
   }
 
   void external_storage_set(ImGuiSelectionExternalStorage* self, int id, bool isSelected)
@@ -219,17 +233,71 @@ namespace anm2ed::imgui
     return false;
   }
 
-  bool shortcut(std::string string, bool isSet, bool isGlobal, bool isPopupBlock)
+  bool shortcut(std::string string, shortcut::Type type)
   {
-    if (isPopupBlock && ImGui::GetTopMostPopupModal() != nullptr) return false;
-    auto flags = isGlobal ? ImGuiInputFlags_RouteGlobal : ImGuiInputFlags_RouteFocused;
-
-    if (isSet)
+    if (ImGui::GetTopMostPopupModal() != nullptr) return false;
+    auto flags = type == shortcut::GLOBAL || type == shortcut::GLOBAL_SET ? ImGuiInputFlags_RouteGlobal
+                                                                          : ImGuiInputFlags_RouteFocused;
+    if (type == shortcut::GLOBAL_SET || type == shortcut::FOCUSED_SET)
     {
       ImGui::SetNextItemShortcut(string_to_chord(string), flags);
-      return true;
+      return false;
     }
 
     return ImGui::Shortcut(string_to_chord(string), flags);
+  }
+
+  MultiSelectStorage::MultiSelectStorage()
+  {
+    internal.AdapterSetItemSelected = external_storage_set;
+  }
+
+  void MultiSelectStorage::user_data_set(std::set<int>* userData)
+  {
+    internal.UserData = userData;
+    this->userData = userData;
+  }
+
+  void MultiSelectStorage::begin(size_t size)
+  {
+    auto io = ImGui::BeginMultiSelect(ImGuiMultiSelectFlags_ClearOnEscape, userData ? userData->size() : 0, size);
+    internal.ApplyRequests(io);
+  }
+
+  void MultiSelectStorage::end()
+  {
+    auto io = ImGui::EndMultiSelect();
+    internal.ApplyRequests(io);
+  }
+
+  PopupHelper::PopupHelper(const char* label, float percent, bool isNoHeight)
+  {
+    this->label = label;
+    this->percent = percent;
+    this->isNoHeight = isNoHeight;
+  }
+
+  void PopupHelper::open()
+  {
+    isOpen = true;
+    isTriggered = true;
+  }
+
+  void PopupHelper::trigger()
+  {
+    if (isTriggered) ImGui::OpenPopup(label);
+    isTriggered = false;
+
+    auto viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_None, to_imvec2(vec2(0.5f)));
+    if (isNoHeight)
+      ImGui::SetNextWindowSize(ImVec2(viewport->Size.x * percent, 0));
+    else
+      ImGui::SetNextWindowSize(to_imvec2(to_vec2(viewport->Size) * percent));
+  }
+
+  void PopupHelper::close()
+  {
+    isOpen = false;
   }
 }

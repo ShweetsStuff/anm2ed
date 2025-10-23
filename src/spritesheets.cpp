@@ -1,35 +1,33 @@
 #include "spritesheets.h"
 
-#include <ranges>
-
 #include "imgui.h"
 #include "toast.h"
-#include "types.h"
+#include <ranges>
 
 using namespace anm2ed::anm2;
 using namespace anm2ed::settings;
 using namespace anm2ed::resources;
 using namespace anm2ed::dialog;
-using namespace anm2ed::document_manager;
+using namespace anm2ed::document;
 using namespace anm2ed::types;
 using namespace anm2ed::toast;
 using namespace glm;
 
 namespace anm2ed::spritesheets
 {
-  void Spritesheets::update(DocumentManager& manager, Settings& settings, Resources& resources, Dialog& dialog)
+  void Spritesheets::update(Document& document, Settings& settings, Resources& resources, Dialog& dialog)
   {
+    auto& anm2 = document.anm2;
+    auto& selection = document.selectedSpritesheets;
+
+    if (document.is_just_changed(change::SPRITESHEETS)) unusedSpritesheetIDs = anm2.spritesheets_unused();
+
     if (ImGui::Begin("Spritesheets", &settings.windowIsSpritesheets))
     {
-      auto& document = *manager.get();
-      auto& anm2 = document.anm2;
-      auto& selection = document.selectedSpritesheets;
       auto style = ImGui::GetStyle();
-      static ImGuiSelectionExternalStorage storage{};
-      storage.UserData = &selection;
-      storage.AdapterSetItemSelected = imgui::external_storage_set;
+      storage.user_data_set(&selection);
 
-      auto childSize = imgui::size_with_footer_get(2);
+      auto childSize = imgui::size_without_footer_get(2);
 
       ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2());
 
@@ -37,11 +35,9 @@ namespace anm2ed::spritesheets
       {
         auto spritesheetChildSize = ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetTextLineHeightWithSpacing() * 4);
 
-        ImGuiMultiSelectIO* io = ImGui::BeginMultiSelect(ImGuiMultiSelectFlags_ClearOnEscape, selection.size(),
-                                                         anm2.content.spritesheets.size());
-        storage.ApplyRequests(io);
-
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2());
+
+        storage.begin(anm2.content.spritesheets.size());
 
         for (auto& [id, spritesheet] : anm2.content.spritesheets)
         {
@@ -94,8 +90,8 @@ namespace anm2ed::spritesheets
                 ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
                 ImGui::TextUnformatted(spritesheet.path.c_str());
                 ImGui::PopFont();
-                ImGui::TextUnformatted(std::format("ID: {}", id).c_str());
-                ImGui::TextUnformatted(std::format("Size: {} x {}", texture.size.x, texture.size.y).c_str());
+                ImGui::Text("ID: %d", id);
+                ImGui::Text("Size: %d x %d", texture.size.x, texture.size.y);
               }
               ImGui::EndChild();
 
@@ -120,7 +116,7 @@ namespace anm2ed::spritesheets
                        spritesheetChildSize.y - spritesheetChildSize.y / 2 - ImGui::GetTextLineHeight() / 2));
 
             if (isReferenced) ImGui::PushFont(resources.fonts[font::ITALICS].get(), font::SIZE);
-            ImGui::TextUnformatted(std::format("#{} {}", id, spritesheet.path.string()).c_str());
+            ImGui::Text(SPRITESHEET_FORMAT, id, spritesheet.path.c_str());
             if (isReferenced) ImGui::PopFont();
           }
           ImGui::EndChild();
@@ -128,8 +124,7 @@ namespace anm2ed::spritesheets
           ImGui::PopID();
         }
 
-        io = ImGui::EndMultiSelect();
-        storage.ApplyRequests(io);
+        storage.end();
 
         ImGui::PopStyleVar();
       }
@@ -139,13 +134,16 @@ namespace anm2ed::spritesheets
 
       auto rowOneWidgetSize = imgui::widget_size_with_row_get(4);
 
-      imgui::shortcut(settings.shortcutAdd, true);
+      imgui::shortcut(settings.shortcutAdd);
       if (ImGui::Button("Add", rowOneWidgetSize)) dialog.spritesheet_open();
       imgui::set_item_tooltip_shortcut("Add a new spritesheet.", settings.shortcutAdd);
 
       if (dialog.is_selected_file(dialog::SPRITESHEET_OPEN))
       {
-        manager.spritesheet_add(dialog.path);
+        int id{};
+        anm2.spritesheet_add(document.directory_get(), dialog.path, id);
+        selection = {id};
+        document.change(change::SPRITESHEETS);
         dialog.reset();
       }
 
@@ -186,19 +184,19 @@ namespace anm2ed::spritesheets
 
       ImGui::SameLine();
 
-      auto unused = anm2.spritesheets_unused();
-
-      ImGui::BeginDisabled(unused.empty());
+      ImGui::BeginDisabled(unusedSpritesheetIDs.empty());
       {
-        imgui::shortcut(settings.shortcutRemove, true);
+        imgui::shortcut(settings.shortcutRemove);
         if (ImGui::Button("Remove Unused", rowOneWidgetSize))
         {
-          for (auto& id : unused)
+          for (auto& id : unusedSpritesheetIDs)
           {
             Spritesheet& spritesheet = anm2.content.spritesheets[id];
             toasts.add(std::format("Removed spritesheet #{}: {}", id, spritesheet.path.string()));
             anm2.spritesheet_remove(id);
           }
+          unusedSpritesheetIDs.clear();
+          document.change(change::SPRITESHEETS);
         }
         imgui::set_item_tooltip_shortcut("Remove all unused spritesheets (i.e., not used in any layer.).",
                                          settings.shortcutRemove);
@@ -207,7 +205,7 @@ namespace anm2ed::spritesheets
 
       auto rowTwoWidgetSize = imgui::widget_size_with_row_get(3);
 
-      imgui::shortcut(settings.shortcutSelectAll, true);
+      imgui::shortcut(settings.shortcutSelectAll);
       ImGui::BeginDisabled(selection.size() == anm2.content.spritesheets.size());
       {
         if (ImGui::Button("Select All", rowTwoWidgetSize))
@@ -219,13 +217,11 @@ namespace anm2ed::spritesheets
 
       ImGui::SameLine();
 
-      imgui::shortcut(settings.shortcutSelectNone, true);
+      imgui::shortcut(settings.shortcutSelectNone);
       ImGui::BeginDisabled(selection.empty());
-      {
-        if (ImGui::Button("Select None", rowTwoWidgetSize)) selection.clear();
-      }
-      ImGui::EndDisabled();
+      if (ImGui::Button("Select None", rowTwoWidgetSize)) selection.clear();
       imgui::set_item_tooltip_shortcut("Unselect all spritesheets.", settings.shortcutSelectNone);
+      ImGui::EndDisabled();
 
       ImGui::SameLine();
 
@@ -235,7 +231,8 @@ namespace anm2ed::spritesheets
         {
           for (auto& id : selection)
           {
-            if (Spritesheet& spritesheet = anm2.content.spritesheets[id]; spritesheet.save(document.directory_get()))
+            Spritesheet& spritesheet = anm2.content.spritesheets[id];
+            if (spritesheet.save(document.directory_get()))
               toasts.add(std::format("Saved spritesheet #{}: {}", id, spritesheet.path.string()));
             else
               toasts.add(std::format("Unable to save spritesheet #{}: {}", id, spritesheet.path.string()));

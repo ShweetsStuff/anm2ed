@@ -1,6 +1,7 @@
 #pragma once
 
 #include "document_manager.h"
+#include "imgui.h"
 #include "resources.h"
 #include "taskbar.h"
 
@@ -11,6 +12,7 @@ namespace anm2ed::documents
     bool isCloseDocument{};
     bool isOpenCloseDocumentPopup{};
     int closeDocumentIndex{};
+    imgui::PopupHelper closePopup{imgui::PopupHelper("Close Document", imgui::POPUP_TO_CONTENT)};
 
   public:
     float height{};

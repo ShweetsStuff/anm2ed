@@ -21,6 +21,10 @@ namespace anm2ed::anm2
 
   constexpr auto MERGED_STRING = "(Merged)";
 
+  constexpr auto LAYER_FORMAT = "#{} {} (Spritesheet: #{})";
+  constexpr auto NULL_FORMAT = "#{} {}";
+  constexpr auto SPRITESHEET_FORMAT = "#%d %s";
+
   enum Type
   {
     NONE,
@@ -43,6 +47,8 @@ namespace anm2ed::anm2
     void next_frame(int max = FRAME_NUM_MAX - 1);
     auto operator<=>(const Reference&) const = default;
   };
+
+  constexpr anm2::Reference REFERENCE_DEFAULT = {-1, anm2::NONE, -1, -1, -1};
 
   class Info
   {
@@ -228,11 +234,15 @@ namespace anm2ed::anm2
     Spritesheet* spritesheet_get(int id);
     void spritesheet_remove(int id);
     std::set<int> spritesheets_unused();
-    void layer_add(int& id);
-    void null_add(int& id);
+    int layer_add();
+    Reference layer_add(Reference reference = REFERENCE_DEFAULT, std::string name = {}, int spritesheetID = 0,
+                        types::locale::Type locale = types::locale::GLOBAL);
+    Reference null_add(Reference reference = REFERENCE_DEFAULT, std::string name = {},
+                       types::locale::Type locale = types::locale::GLOBAL);
     void event_add(int& id);
-    std::set<int> events_unused();
-    std::set<int> layers_unused();
-    std::set<int> nulls_unused();
+    std::set<int> events_unused(Reference reference = REFERENCE_DEFAULT);
+    std::set<int> layers_unused(Reference reference = REFERENCE_DEFAULT);
+    std::set<int> nulls_unused(Reference reference = REFERENCE_DEFAULT);
+    std::vector<std::string> spritesheet_names_get();
   };
 }

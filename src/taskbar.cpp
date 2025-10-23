@@ -4,12 +4,10 @@
 #include <ranges>
 
 #include "imgui.h"
-#include "types.h"
 
 using namespace anm2ed::settings;
 using namespace anm2ed::dialog;
 using namespace anm2ed::document_manager;
-using namespace anm2ed::imgui;
 using namespace anm2ed::types;
 
 namespace anm2ed::taskbar
@@ -91,41 +89,25 @@ namespace anm2ed::taskbar
 
       if (ImGui::BeginMenu("Settings"))
       {
-        if (ImGui::MenuItem("Configure")) isOpenConfigurePopup = true;
+        if (ImGui::MenuItem("Configure")) configurePopup.open();
 
         ImGui::EndMenu();
       }
 
       if (ImGui::BeginMenu("Help"))
       {
-        if (ImGui::MenuItem("About")) isOpenAboutPopup = true;
+        if (ImGui::MenuItem("About")) aboutPopup.open();
         ImGui::EndMenu();
       }
 
       ImGui::EndMainMenuBar();
     }
 
-    if (isOpenAboutPopup)
+    configurePopup.trigger();
+
+    if (ImGui::BeginPopupModal(configurePopup.label, &configurePopup.isOpen, ImGuiWindowFlags_NoResize))
     {
-      ImGui::OpenPopup("About");
-      isOpenAboutPopup = false;
-    }
-
-    if (isOpenConfigurePopup)
-    {
-      ImGui::OpenPopup("Configure");
-      editSettings = settings;
-      isOpenConfigurePopup = false;
-    }
-
-    auto viewport = ImGui::GetMainViewport();
-
-    ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_None, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(to_imvec2(to_vec2(viewport->Size) * 0.5f));
-
-    if (ImGui::BeginPopupModal("Configure", nullptr, ImGuiWindowFlags_NoResize))
-    {
-      auto childSize = imgui::size_with_footer_get(2);
+      auto childSize = imgui::size_without_footer_get(2);
 
       if (ImGui::BeginTabBar("##Configure Tabs"))
       {
@@ -230,7 +212,7 @@ namespace anm2ed::taskbar
       if (ImGui::Button("Save", widgetSize))
       {
         settings = editSettings;
-        ImGui::CloseCurrentPopup();
+        configurePopup.close();
       }
       ImGui::SetItemTooltip("Use the configured settings.");
 
@@ -247,12 +229,11 @@ namespace anm2ed::taskbar
       ImGui::EndPopup();
     }
 
-    ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_None, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(to_imvec2(to_vec2(viewport->Size) * 0.5f));
+    aboutPopup.trigger();
 
-    if (ImGui::BeginPopupModal("About", nullptr, ImGuiWindowFlags_NoResize))
+    if (ImGui::BeginPopupModal(aboutPopup.label, &aboutPopup.isOpen, ImGuiWindowFlags_NoResize))
     {
-      if (ImGui::Button("Close")) ImGui::CloseCurrentPopup();
+      if (ImGui::Button("Close")) aboutPopup.close();
       ImGui::EndPopup();
     }
 

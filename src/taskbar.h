@@ -2,16 +2,17 @@
 
 #include "dialog.h"
 #include "document_manager.h"
+#include "imgui.h"
 #include "settings.h"
 
 namespace anm2ed::taskbar
 {
   class Taskbar
   {
-    bool isOpenConfigurePopup{};
-    bool isOpenAboutPopup{};
-    int selectedShortcut{-1};
+    imgui::PopupHelper configurePopup{imgui::PopupHelper("Configure")};
+    imgui::PopupHelper aboutPopup{imgui::PopupHelper("About")};
     settings::Settings editSettings{};
+    int selectedShortcut{};
 
   public:
     float height{};

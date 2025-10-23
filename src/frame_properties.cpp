@@ -100,7 +100,9 @@ namespace anm2ed::frame_properties
               "%s", "Toggle the frame interpolating; i.e., blending its values into the next frame based on the time.");
 
           ImGui::SameLine();
+          ImGui::EndDisabled();
           ImGui::Checkbox("Round", &settings.propertiesIsRound);
+          ImGui::BeginDisabled(!frame);
           ImGui::SetItemTooltip(
               "%s", "When toggled, decimal values will be snapped to their nearest whole value when changed.");
 

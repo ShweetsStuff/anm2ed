@@ -16,6 +16,7 @@ using namespace anm2ed::util;
 
 namespace anm2ed::anm2
 {
+
   void Reference::previous_frame(int max)
   {
     frameIndex = glm::clamp(--frameIndex, 0, max);
@@ -211,20 +212,6 @@ namespace anm2ed::anm2
       for (auto child = eventsElement->FirstChildElement("Event"); child; child = child->NextSiblingElement("Event"))
         events[id] = Event(child, id);
     }
-  }
-
-  bool Content::spritesheet_add(const std::string& directory, const std::string& path, int& id)
-  {
-    Spritesheet spritesheet(directory, path);
-    if (!spritesheet.is_valid()) return false;
-    id = map::next_id_get(spritesheets);
-    spritesheets[id] = std::move(spritesheet);
-    return true;
-  }
-
-  void Content::spritesheet_remove(int& id)
-  {
-    spritesheets.erase(id);
   }
 
   std::set<int> Content::spritesheets_unused()
@@ -778,7 +765,16 @@ namespace anm2ed::anm2
 
   bool Anm2::spritesheet_add(const std::string& directory, const std::string& path, int& id)
   {
-    return content.spritesheet_add(directory, path, id);
+    Spritesheet spritesheet(directory, path);
+    if (!spritesheet.is_valid()) return false;
+    id = map::next_id_get(content.spritesheets);
+    content.spritesheets[id] = std::move(spritesheet);
+    return true;
+  }
+
+  void Anm2::spritesheet_remove(int id)
+  {
+    content.spritesheets.erase(id);
   }
 
   Spritesheet* Anm2::spritesheet_get(int id)
@@ -786,24 +782,60 @@ namespace anm2ed::anm2
     return map::find(content.spritesheets, id);
   }
 
-  void Anm2::spritesheet_remove(int id)
-  {
-    content.spritesheet_remove(id);
-  }
-
   std::set<int> Anm2::spritesheets_unused()
   {
     return content.spritesheets_unused();
   }
 
-  void Anm2::layer_add(int& id)
+  Reference Anm2::layer_add(Reference reference, std::string name, int spritesheetID, locale::Type locale)
   {
-    content.layer_add(id);
+    auto id = reference.itemID == -1 ? map::next_id_get(content.layers) : reference.itemID;
+    auto& layer = content.layers[id];
+
+    layer.name = !name.empty() ? name : layer.name;
+    layer.spritesheetID = content.spritesheets.contains(spritesheetID) ? spritesheetID : 0;
+
+    auto add = [&](Animation* animation, int id)
+    {
+      animation->layerAnimations[id] = Item();
+      animation->layerOrder.push_back(id);
+    };
+
+    if (locale == locale::GLOBAL)
+    {
+      for (auto& animation : animations.items)
+        if (!animation.layerAnimations.contains(id)) add(&animation, id);
+    }
+    else if (locale == locale::LOCAL)
+    {
+      if (auto animation = animation_get(reference))
+        if (!animation->layerAnimations.contains(id)) add(animation, id);
+    }
+
+    return {reference.animationIndex, LAYER, id};
   }
 
-  void Anm2::null_add(int& id)
+  Reference Anm2::null_add(Reference reference, std::string name, locale::Type locale)
   {
-    content.null_add(id);
+    auto id = reference.itemID == -1 ? map::next_id_get(content.nulls) : reference.itemID;
+    auto& null = content.nulls[id];
+
+    null.name = !name.empty() ? name : null.name;
+
+    auto add = [&](Animation* animation, int id) { animation->nullAnimations[id] = Item(); };
+
+    if (locale == locale::GLOBAL)
+    {
+      for (auto& animation : animations.items)
+        if (!animation.nullAnimations.contains(id)) add(&animation, id);
+    }
+    else if (locale == locale::LOCAL)
+    {
+      if (auto animation = animation_get(reference))
+        if (!animation->nullAnimations.contains(id)) add(animation, id);
+    }
+
+    return {reference.animationIndex, LAYER, id};
   }
 
   void Anm2::event_add(int& id)
@@ -811,45 +843,68 @@ namespace anm2ed::anm2
     content.event_add(id);
   }
 
-  std::set<int> Anm2::events_unused()
+  std::set<int> Anm2::events_unused(Reference reference)
   {
-    std::set<int> used;
-    for (auto& animation : animations.items)
-      for (auto& frame : animation.triggers.frames)
-        used.insert(frame.eventID);
+    std::set<int> used{};
+    std::set<int> unused{};
 
-    std::set<int> unused;
+    if (auto animation = animation_get(reference); animation)
+      for (auto& frame : animation->triggers.frames)
+        used.insert(frame.eventID);
+    else
+      for (auto& animation : animations.items)
+        for (auto& frame : animation.triggers.frames)
+          used.insert(frame.eventID);
+
     for (auto& id : content.events | std::views::keys)
       if (!used.contains(id)) unused.insert(id);
 
     return unused;
   }
 
-  std::set<int> Anm2::layers_unused()
+  std::set<int> Anm2::layers_unused(Reference reference)
   {
-    std::set<int> used;
-    for (auto& animation : animations.items)
-      for (auto& id : animation.layerAnimations | std::views::keys)
-        used.insert(id);
+    std::set<int> used{};
+    std::set<int> unused{};
 
-    std::set<int> unused;
+    if (auto animation = animation_get(reference); animation)
+      for (auto& id : animation->layerAnimations | std::views::keys)
+        used.insert(id);
+    else
+      for (auto& animation : animations.items)
+        for (auto& id : animation.layerAnimations | std::views::keys)
+          used.insert(id);
+
     for (auto& id : content.layers | std::views::keys)
       if (!used.contains(id)) unused.insert(id);
 
     return unused;
   }
 
-  std::set<int> Anm2::nulls_unused()
+  std::set<int> Anm2::nulls_unused(Reference reference)
   {
-    std::set<int> used;
-    for (auto& animation : animations.items)
-      for (auto& id : animation.nullAnimations | std::views::keys)
-        used.insert(id);
+    std::set<int> used{};
+    std::set<int> unused{};
 
-    std::set<int> unused;
+    if (auto animation = animation_get(reference); animation)
+      for (auto& id : animation->nullAnimations | std::views::keys)
+        used.insert(id);
+    else
+      for (auto& animation : animations.items)
+        for (auto& id : animation.nullAnimations | std::views::keys)
+          used.insert(id);
+
     for (auto& id : content.nulls | std::views::keys)
       if (!used.contains(id)) unused.insert(id);
 
     return unused;
+  }
+
+  std::vector<std::string> Anm2::spritesheet_names_get()
+  {
+    std::vector<std::string> spritesheets{};
+    for (auto& [id, spritesheet] : content.spritesheets)
+      spritesheets.push_back(std::format("#{} {}", id, spritesheet.path.c_str()));
+    return spritesheets;
   }
 }
