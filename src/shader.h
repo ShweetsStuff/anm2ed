@@ -39,19 +39,6 @@ namespace anm2ed::shader
   }
   )";
 
-  constexpr auto GRID_VERTEX = R"(
-#version 330 core
-layout (location = 0) in vec2 i_position;
-layout (location = 1) in vec2 i_uv;
-
-out vec2 i_uv_out;
-
-void main() {
-  i_uv_out = i_position;
-  gl_Position = vec4(i_position, 0.0, 1.0);
-}
-  )";
-
   constexpr auto FRAGMENT = R"(
   #version 330 core
   out vec4 o_fragColor;
@@ -78,6 +65,19 @@ void main() {
   }
   )";
 
+  constexpr auto GRID_VERTEX = R"(
+#version 330 core
+layout (location = 0) in vec2 i_position;
+layout (location = 1) in vec2 i_uv;
+
+out vec2 i_uv_out;
+
+void main() {
+  i_uv_out = i_position;
+  gl_Position = vec4(i_position, 0.0, 1.0);
+}
+  )";
+
   constexpr auto GRID_FRAGMENT = R"(
   #version 330 core
   in vec2 i_uv_out;
@@ -98,6 +98,7 @@ void main() {
       vec2 pan = u_pan;
 
       vec2 world = (i_uv_out - (2.0 * pan / viewSize)) * (viewSize / (2.0 * zoom));
+      world += vec2(0.5); // Half pixel nudge
 
       vec2 cell = max(u_size, vec2(1.0));
       vec2 grid = (world - u_offset) / cell;
@@ -148,8 +149,8 @@ void main() {
     GLuint id{};
 
     Shader();
-    Shader(const char* vertex, const char* fragment);
-    Shader& operator=(Shader&& other) noexcept;
+    Shader(const char*, const char*);
+    Shader& operator=(Shader&&) noexcept;
     ~Shader();
     bool is_valid() const;
   };

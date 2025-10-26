@@ -30,8 +30,9 @@ namespace anm2ed::state
   {
     if (auto document = manager.get())
       if (auto animation = document->animation_get())
-        if (playback.isPlaying)
-          playback.tick(document->anm2.info.fps, animation->frameNum, animation->isLoop || settings.playbackIsLoop);
+        if (document->playback.isPlaying)
+          document->playback.tick(document->anm2.info.fps, animation->frameNum,
+                                  animation->isLoop || settings.playbackIsLoop);
   }
 
   void State::update(SDL_Window*& window, Settings& settings)
@@ -44,9 +45,21 @@ namespace anm2ed::state
       switch (event.type)
       {
         case SDL_EVENT_DROP_FILE:
-          if (auto droppedFile = event.drop.data; filesystem::path_is_extension(droppedFile, "anm2"))
+        {
+          auto droppedFile = event.drop.data;
+          if (filesystem::path_is_extension(droppedFile, "anm2"))
             manager.open(std::string(droppedFile));
+          else if (filesystem::path_is_extension(droppedFile, "png"))
+          {
+            if (auto document = manager.get())
+              document->spritesheet_add(droppedFile);
+            else
+              toasts.warning(std::format("Could not open spritesheet: (open a document first!)", droppedFile));
+          }
+          else
+            toasts.warning(std::format("Could not parse file: {} (must be .anm2 or .png)", droppedFile));
           break;
+        }
         case SDL_EVENT_QUIT:
           isQuit = true;
           break;
@@ -59,8 +72,8 @@ namespace anm2ed::state
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
 
-    taskbar.update(settings, dialog, manager, isQuit);
-    dockspace.update(taskbar, documents, manager, settings, resources, dialog, playback);
+    taskbar.update(manager, settings, dialog, isQuit);
+    dockspace.update(taskbar, documents, manager, settings, resources, dialog, clipboard);
     toasts.update();
 
     documents.update(taskbar, manager, resources);

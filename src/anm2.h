@@ -21,6 +21,7 @@ namespace anm2ed::anm2
 
   constexpr auto MERGED_STRING = "(Merged)";
 
+  constexpr auto NO_PATH = "(No Path)";
   constexpr auto LAYER_FORMAT = "#{} {} (Spritesheet: #{})";
   constexpr auto NULL_FORMAT = "#{} {}";
   constexpr auto SPRITESHEET_FORMAT = "#%d %s";
@@ -43,8 +44,8 @@ namespace anm2ed::anm2
     int frameIndex{-1};
     int frameTime{-1};
 
-    void previous_frame(int max = FRAME_NUM_MAX - 1);
-    void next_frame(int max = FRAME_NUM_MAX - 1);
+    void previous_frame(int = FRAME_NUM_MAX - 1);
+    void next_frame(int = FRAME_NUM_MAX - 1);
     auto operator<=>(const Reference&) const = default;
   };
 
@@ -59,8 +60,8 @@ namespace anm2ed::anm2
     int version{};
 
     Info();
-    Info(tinyxml2::XMLElement* element);
-    void serialize(tinyxml2::XMLDocument& document, tinyxml2::XMLElement* parent);
+    Info(tinyxml2::XMLElement*);
+    void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*);
   };
 
   class Spritesheet
@@ -70,12 +71,13 @@ namespace anm2ed::anm2
     texture::Texture texture;
 
     Spritesheet();
-    Spritesheet(tinyxml2::XMLElement* element, int& id);
-    Spritesheet(const std::string& directory, const std::string& path = {});
-    bool save(const std::string& directory, const std::string& path = {});
-    void serialize(tinyxml2::XMLDocument& document, tinyxml2::XMLElement* parent, int id);
-    void reload(const std::string& directory);
+    Spritesheet(tinyxml2::XMLElement*, int&);
+    Spritesheet(const std::string&, const std::string& = {});
+    bool save(const std::string&, const std::string& = {});
+    void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*, int);
+    void reload(const std::string&);
     bool is_valid();
+    std::string to_string(int id);
   };
 
   class Layer
@@ -85,8 +87,9 @@ namespace anm2ed::anm2
     int spritesheetID{};
 
     Layer();
-    Layer(tinyxml2::XMLElement* element, int& id);
-    void serialize(tinyxml2::XMLDocument& document, tinyxml2::XMLElement* parent, int id);
+    Layer(tinyxml2::XMLElement*, int&);
+    void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*, int);
+    std::string to_string(int);
   };
 
   class Null
@@ -96,8 +99,9 @@ namespace anm2ed::anm2
     bool isShowRect{};
 
     Null();
-    Null(tinyxml2::XMLElement* element, int& id);
-    void serialize(tinyxml2::XMLDocument& document, tinyxml2::XMLElement* parent, int id);
+    Null(tinyxml2::XMLElement*, int&);
+    void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*, int);
+    std::string to_string(int);
   };
 
   class Event
@@ -106,8 +110,9 @@ namespace anm2ed::anm2
     std::string name{"New Event"};
 
     Event();
-    Event(tinyxml2::XMLElement* element, int& id);
-    void serialize(tinyxml2::XMLDocument& document, tinyxml2::XMLElement* parent, int id);
+    Event(tinyxml2::XMLElement*, int&);
+    void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*, int);
+    std::string to_string(int);
   };
 
   struct Content
@@ -119,14 +124,18 @@ namespace anm2ed::anm2
 
     Content();
 
-    void serialize(tinyxml2::XMLDocument& document, tinyxml2::XMLElement* parent);
-    Content(tinyxml2::XMLElement* element);
-    bool spritesheet_add(const std::string& directory, const std::string& path, int& id);
-    void spritesheet_remove(int& id);
+    void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*);
+    Content(tinyxml2::XMLElement*);
+    bool spritesheet_add(const std::string&, const std::string&, int&);
+    void spritesheet_remove(int&);
     std::set<int> spritesheets_unused();
-    void layer_add(int& id);
-    void null_add(int& id);
-    void event_add(int& id);
+    void layer_add(int&);
+    void null_add(int&);
+    void event_add(int&);
+    bool spritesheets_deserialize(const std::string&, const std::string&, types::merge::Type, std::string* = nullptr);
+    bool layers_deserialize(const std::string&, types::merge::Type, std::string* = nullptr);
+    bool nulls_deserialize(const std::string&, types::merge::Type, std::string* = nullptr);
+    bool events_deserialize(const std::string&, types::merge::Type, std::string* = nullptr);
   };
 
 #define MEMBERS                                                                                                        \
@@ -152,8 +161,8 @@ namespace anm2ed::anm2
 #undef X
 
     Frame();
-    Frame(tinyxml2::XMLElement* element, Type type);
-    void serialize(tinyxml2::XMLDocument& document, tinyxml2::XMLElement* parent, Type type);
+    Frame(tinyxml2::XMLElement*, Type);
+    void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*, Type);
     void shorten();
     void extend();
   };
@@ -175,10 +184,10 @@ namespace anm2ed::anm2
 
     Item();
 
-    Item(tinyxml2::XMLElement* element, Type type, int* id = nullptr);
-    void serialize(tinyxml2::XMLDocument& document, tinyxml2::XMLElement* parent, Type type, int id = -1);
-    int length(Type type);
-    Frame frame_generate(float time, Type type);
+    Item(tinyxml2::XMLElement*, Type, int* = nullptr);
+    void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*, Type, int = -1);
+    int length(Type);
+    Frame frame_generate(float, Type);
   };
 
   class Animation
@@ -194,10 +203,12 @@ namespace anm2ed::anm2
     Item triggers;
 
     Animation();
-    Animation(tinyxml2::XMLElement* element);
-    Item* item_get(Type type, int id = -1);
-    void serialize(tinyxml2::XMLDocument& document, tinyxml2::XMLElement* parent);
+    Animation(tinyxml2::XMLElement*);
+    Item* item_get(Type, int = -1);
+    void item_remove(Type, int = -1);
+    void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*);
     int length();
+    std::string to_string();
   };
 
   struct Animations
@@ -207,42 +218,41 @@ namespace anm2ed::anm2
 
     Animations();
 
-    Animations(tinyxml2::XMLElement* element);
-    void serialize(tinyxml2::XMLDocument& document, tinyxml2::XMLElement* parent);
+    Animations(tinyxml2::XMLElement*);
+    void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*);
     int length();
-    int merge(int target, std::set<int>& sources, types::merge::Type type, bool isDeleteAfter = true);
+    int merge(int, std::set<int>&, types::merge::Type = types::merge::APPEND, bool = true);
+    bool animations_deserialize(const std::string&, int, std::set<int>&, std::string* = nullptr);
   };
 
   class Anm2
   {
-    bool isValid{false};
-
   public:
     Info info{};
     Content content{};
     Animations animations{};
 
     Anm2();
-    bool serialize(const std::string& path, std::string* errorString = nullptr);
+    bool serialize(const std::string&, std::string* = nullptr);
     std::string to_string();
-    Anm2(const std::string& path, std::string* errorString = nullptr);
+    Anm2(const std::string&, std::string* = nullptr);
     uint64_t hash();
-    Animation* animation_get(Reference& reference);
-    Item* item_get(Reference& reference);
-    Frame* frame_get(Reference& reference);
-    bool spritesheet_add(const std::string& directory, const std::string& path, int& id);
-    Spritesheet* spritesheet_get(int id);
-    void spritesheet_remove(int id);
+    Animation* animation_get(Reference&);
+    Item* item_get(Reference&);
+    Frame* frame_get(Reference&);
+    bool spritesheet_add(const std::string&, const std::string&, int&);
+    Spritesheet* spritesheet_get(int);
+    void spritesheet_remove(int);
     std::set<int> spritesheets_unused();
     int layer_add();
-    Reference layer_add(Reference reference = REFERENCE_DEFAULT, std::string name = {}, int spritesheetID = 0,
-                        types::locale::Type locale = types::locale::GLOBAL);
-    Reference null_add(Reference reference = REFERENCE_DEFAULT, std::string name = {},
-                       types::locale::Type locale = types::locale::GLOBAL);
-    void event_add(int& id);
-    std::set<int> events_unused(Reference reference = REFERENCE_DEFAULT);
-    std::set<int> layers_unused(Reference reference = REFERENCE_DEFAULT);
-    std::set<int> nulls_unused(Reference reference = REFERENCE_DEFAULT);
+    Reference layer_add(Reference = REFERENCE_DEFAULT, std::string = {}, int = 0,
+                        types::locale::Type = types::locale::GLOBAL);
+    Reference null_add(Reference = REFERENCE_DEFAULT, std::string = {}, types::locale::Type = types::locale::GLOBAL);
+    void event_add(int&);
+    std::set<int> events_unused(Reference = REFERENCE_DEFAULT);
+    std::set<int> layers_unused(Reference = REFERENCE_DEFAULT);
+    std::set<int> nulls_unused(Reference = REFERENCE_DEFAULT);
     std::vector<std::string> spritesheet_names_get();
+    void bake(Reference, int = 1, bool = true, bool = true);
   };
 }

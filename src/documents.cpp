@@ -5,12 +5,12 @@
 #include "imgui.h"
 
 using namespace anm2ed::taskbar;
-using namespace anm2ed::document_manager;
+using namespace anm2ed::manager;
 using namespace anm2ed::resources;
 
 namespace anm2ed::documents
 {
-  void Documents::update(Taskbar& taskbar, DocumentManager& manager, Resources& resources)
+  void Documents::update(Taskbar& taskbar, Manager& manager, Resources& resources)
   {
     auto viewport = ImGui::GetMainViewport();
     auto windowHeight = ImGui::GetFrameHeightWithSpacing();
@@ -32,7 +32,6 @@ namespace anm2ed::documents
         for (auto [i, document] : std::views::enumerate(manager.documents))
         {
           auto isDirty = document.is_dirty();
-          auto isSelected = i == manager.selected;
           auto isRequested = i == manager.pendingSelected;
 
           auto font = isDirty ? font::ITALICS : font::REGULAR;
@@ -65,8 +64,6 @@ namespace anm2ed::documents
             else
               manager.close(i);
           }
-
-          if (isSelected) document.update();
         }
 
         ImGui::EndTabBar();

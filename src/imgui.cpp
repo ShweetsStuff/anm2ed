@@ -252,19 +252,15 @@ namespace anm2ed::imgui
     internal.AdapterSetItemSelected = external_storage_set;
   }
 
-  void MultiSelectStorage::user_data_set(std::set<int>* userData)
+  void MultiSelectStorage::start(size_t size)
   {
-    internal.UserData = userData;
-    this->userData = userData;
-  }
+    internal.UserData = this;
 
-  void MultiSelectStorage::begin(size_t size)
-  {
-    auto io = ImGui::BeginMultiSelect(ImGuiMultiSelectFlags_ClearOnEscape, userData ? userData->size() : 0, size);
+    auto io = ImGui::BeginMultiSelect(ImGuiMultiSelectFlags_ClearOnEscape, this->size(), size);
     internal.ApplyRequests(io);
   }
 
-  void MultiSelectStorage::end()
+  void MultiSelectStorage::finish()
   {
     auto io = ImGui::EndMultiSelect();
     internal.ApplyRequests(io);
@@ -281,6 +277,7 @@ namespace anm2ed::imgui
   {
     isOpen = true;
     isTriggered = true;
+    isJustOpened = true;
   }
 
   void PopupHelper::trigger()
@@ -294,6 +291,11 @@ namespace anm2ed::imgui
       ImGui::SetNextWindowSize(ImVec2(viewport->Size.x * percent, 0));
     else
       ImGui::SetNextWindowSize(to_imvec2(to_vec2(viewport->Size) * percent));
+  }
+
+  void PopupHelper::end()
+  {
+    isJustOpened = false;
   }
 
   void PopupHelper::close()

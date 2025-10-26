@@ -13,6 +13,7 @@ using namespace anm2ed::filesystem;
 using namespace anm2ed::texture;
 using namespace anm2ed::types;
 using namespace anm2ed::util;
+using namespace glm;
 
 namespace anm2ed::anm2
 {
@@ -64,14 +65,14 @@ namespace anm2ed::anm2
     // If it doesn't work beyond that then that's on the user :^)
     if (!path_is_exist(path)) path = string::to_lower(path);
     if (!path_is_exist(path)) path = string::replace_backslash(path);
-    texture = Texture(path, true);
+    texture = Texture(path);
   }
 
   Spritesheet::Spritesheet(const std::string& directory, const std::string& path)
   {
     this->path = !path.empty() ? path : this->path.string();
     WorkingDirectory workingDirectory(directory);
-    texture = Texture(this->path, true);
+    texture = Texture(this->path);
   }
 
   bool Spritesheet::save(const std::string& directory, const std::string& path)
@@ -99,6 +100,22 @@ namespace anm2ed::anm2
     return texture.is_valid();
   }
 
+  std::string Spritesheet::to_string(int id)
+  {
+    XMLDocument document{};
+
+    auto* element = document.NewElement("Spritesheet");
+
+    element->SetAttribute("Id", id);
+    element->SetAttribute("Path", path.c_str());
+
+    document.InsertFirstChild(element);
+
+    XMLPrinter printer;
+    document.Print(&printer);
+    return std::string(printer.CStr());
+  }
+
   Layer::Layer() = default;
 
   Layer::Layer(XMLElement* element, int& id)
@@ -116,6 +133,23 @@ namespace anm2ed::anm2
     element->SetAttribute("Name", name.c_str());
     element->SetAttribute("SpritesheetId", spritesheetID);
     parent->InsertEndChild(element);
+  }
+
+  std::string Layer::to_string(int id)
+  {
+    XMLDocument document{};
+
+    auto* element = document.NewElement("Layer");
+
+    element->SetAttribute("Id", id);
+    element->SetAttribute("Name", name.c_str());
+    element->SetAttribute("SpritesheetId", spritesheetID);
+
+    document.InsertFirstChild(element);
+
+    XMLPrinter printer;
+    document.Print(&printer);
+    return std::string(printer.CStr());
   }
 
   Null::Null() = default;
@@ -138,6 +172,22 @@ namespace anm2ed::anm2
     parent->InsertEndChild(element);
   }
 
+  std::string Null::to_string(int id)
+  {
+    XMLDocument document{};
+
+    auto* element = document.NewElement("Null");
+
+    element->SetAttribute("Id", id);
+    element->SetAttribute("Name", name.c_str());
+
+    document.InsertFirstChild(element);
+
+    XMLPrinter printer;
+    document.Print(&printer);
+    return std::string(printer.CStr());
+  }
+
   Event::Event() = default;
 
   Event::Event(XMLElement* element, int& id)
@@ -153,6 +203,22 @@ namespace anm2ed::anm2
     element->SetAttribute("Id", id);
     element->SetAttribute("Name", name.c_str());
     parent->InsertEndChild(element);
+  }
+
+  std::string Event::to_string(int id)
+  {
+    XMLDocument document{};
+
+    auto* element = document.NewElement("Event");
+
+    element->SetAttribute("Id", id);
+    element->SetAttribute("Name", name.c_str());
+
+    document.InsertFirstChild(element);
+
+    XMLPrinter printer;
+    document.Print(&printer);
+    return std::string(printer.CStr());
   }
 
   Content::Content() = default;
@@ -243,6 +309,134 @@ namespace anm2ed::anm2
   {
     id = map::next_id_get(events);
     events[id] = Event();
+  }
+
+  bool Content::spritesheets_deserialize(const std::string& string, const std::string& directory, merge::Type type,
+                                         std::string* errorString)
+  {
+    XMLDocument document{};
+
+    if (document.Parse(string.c_str()) == XML_SUCCESS)
+    {
+      int id{};
+
+      if (!document.FirstChildElement("Spritesheet"))
+      {
+        if (errorString) *errorString = "No valid spritesheet(s).";
+        return false;
+      }
+
+      WorkingDirectory workingDirectory(directory);
+
+      for (auto element = document.FirstChildElement("Spritesheet"); element;
+           element = element->NextSiblingElement("Spritesheet"))
+      {
+        auto spritesheet = Spritesheet(element, id);
+
+        if (type == merge::APPEND) id = map::next_id_get(spritesheets);
+
+        spritesheets[id] = std::move(spritesheet);
+      }
+
+      return true;
+    }
+    else if (errorString)
+      *errorString = document.ErrorStr();
+
+    return false;
+  }
+
+  bool Content::layers_deserialize(const std::string& string, merge::Type type, std::string* errorString)
+  {
+    XMLDocument document{};
+
+    if (document.Parse(string.c_str()) == XML_SUCCESS)
+    {
+      int id{};
+
+      if (!document.FirstChildElement("Layer"))
+      {
+        if (errorString) *errorString = "No valid layer(s).";
+        return false;
+      }
+
+      for (auto element = document.FirstChildElement("Layer"); element; element = element->NextSiblingElement("Layer"))
+      {
+        auto layer = Layer(element, id);
+
+        if (type == merge::APPEND) id = map::next_id_get(layers);
+
+        layers[id] = layer;
+      }
+
+      return true;
+    }
+    else if (errorString)
+      *errorString = document.ErrorStr();
+
+    return false;
+  }
+
+  bool Content::nulls_deserialize(const std::string& string, merge::Type type, std::string* errorString)
+  {
+    XMLDocument document{};
+
+    if (document.Parse(string.c_str()) == XML_SUCCESS)
+    {
+      int id{};
+
+      if (!document.FirstChildElement("Null"))
+      {
+        if (errorString) *errorString = "No valid null(s).";
+        return false;
+      }
+
+      for (auto element = document.FirstChildElement("Null"); element; element = element->NextSiblingElement("Null"))
+      {
+        auto layer = Null(element, id);
+
+        if (type == merge::APPEND) id = map::next_id_get(nulls);
+
+        nulls[id] = layer;
+      }
+
+      return true;
+    }
+    else if (errorString)
+      *errorString = document.ErrorStr();
+
+    return false;
+  }
+
+  bool Content::events_deserialize(const std::string& string, merge::Type type, std::string* errorString)
+  {
+    XMLDocument document{};
+
+    if (document.Parse(string.c_str()) == XML_SUCCESS)
+    {
+      int id{};
+
+      if (!document.FirstChildElement("Event"))
+      {
+        if (errorString) *errorString = "No valid event(s).";
+        return false;
+      }
+
+      for (auto element = document.FirstChildElement("Event"); element; element = element->NextSiblingElement("Event"))
+      {
+        auto layer = Event(element, id);
+
+        if (type == merge::APPEND) id = map::next_id_get(events);
+
+        events[id] = layer;
+      }
+
+      return true;
+    }
+    else if (errorString)
+      *errorString = document.ErrorStr();
+
+    return false;
   }
 
   Frame::Frame() = default;
@@ -504,6 +698,25 @@ namespace anm2ed::anm2
     return nullptr;
   }
 
+  void Animation::item_remove(Type type, int id)
+  {
+    switch (type)
+    {
+      case LAYER:
+        layerAnimations.erase(id);
+        for (auto [i, value] : std::views::enumerate(layerOrder))
+          if (value == id) layerOrder.erase(layerOrder.begin() + i);
+        break;
+      case NULL_:
+        nullAnimations.erase(id);
+        break;
+      case ROOT:
+      case TRIGGER:
+      default:
+        break;
+    }
+  }
+
   void Animation::serialize(XMLDocument& document, XMLElement* parent)
   {
     auto element = document.NewElement("Animation");
@@ -549,6 +762,39 @@ namespace anm2ed::anm2
     if (int triggersLength = triggers.length(TRIGGER); triggersLength > length) length = triggersLength;
 
     return length;
+  }
+
+  std::string Animation::to_string()
+  {
+    XMLDocument document{};
+
+    auto* element = document.NewElement("Animation");
+    document.InsertFirstChild(element);
+
+    element->SetAttribute("Name", name.c_str());
+    element->SetAttribute("FrameNum", frameNum);
+    element->SetAttribute("Loop", isLoop);
+
+    rootAnimation.serialize(document, element, ROOT);
+
+    auto layerAnimationsElement = document.NewElement("LayerAnimations");
+    for (auto& i : layerOrder)
+    {
+      Item& layerAnimation = layerAnimations.at(i);
+      layerAnimation.serialize(document, layerAnimationsElement, LAYER, i);
+    }
+    element->InsertEndChild(layerAnimationsElement);
+
+    auto nullAnimationsElement = document.NewElement("NullAnimations");
+    for (auto& [id, nullAnimation] : nullAnimations)
+      nullAnimation.serialize(document, nullAnimationsElement, NULL_, id);
+    element->InsertEndChild(nullAnimationsElement);
+
+    triggers.serialize(document, element, TRIGGER);
+
+    XMLPrinter printer;
+    document.Print(&printer);
+    return std::string(printer.CStr());
   }
 
   Animations::Animations() = default;
@@ -660,6 +906,37 @@ namespace anm2ed::anm2
     return finalIndex;
   }
 
+  bool Animations::animations_deserialize(const std::string& string, int start, std::set<int>& indices,
+                                          std::string* errorString)
+  {
+    XMLDocument document{};
+
+    if (document.Parse(string.c_str()) == XML_SUCCESS)
+    {
+      if (!document.FirstChildElement("Animation"))
+      {
+        if (errorString) *errorString = "No valid animation(s).";
+        return false;
+      }
+
+      int count{};
+      for (auto element = document.FirstChildElement("Animation"); element;
+           element = element->NextSiblingElement("Animation"))
+      {
+        auto index = start + count;
+        items.insert(items.begin() + start + count, Animation(element));
+        indices.insert(index);
+        count++;
+      }
+
+      return true;
+    }
+    else if (errorString)
+      *errorString = document.ErrorStr();
+
+    return false;
+  }
+
   Anm2::Anm2()
   {
     info.createdOn = time::get("%d-%B-%Y %I:%M:%S");
@@ -697,7 +974,7 @@ namespace anm2ed::anm2
 
     XMLPrinter printer;
     document.Print(&printer);
-    return printer.CStr();
+    return std::string(printer.CStr());
   }
 
   Anm2::Anm2(const std::string& path, std::string* errorString)
@@ -709,8 +986,6 @@ namespace anm2ed::anm2
       if (errorString) *errorString = document.ErrorStr();
       return;
     }
-
-    isValid = false;
 
     WorkingDirectory workingDirectory(path, true);
 
@@ -906,5 +1181,54 @@ namespace anm2ed::anm2
     for (auto& [id, spritesheet] : content.spritesheets)
       spritesheets.push_back(std::format("#{} {}", id, spritesheet.path.c_str()));
     return spritesheets;
+  }
+
+  void Anm2::bake(Reference reference, int interval, bool isRoundScale, bool isRoundRotation)
+  {
+    Item* item = item_get(reference);
+    if (!item) return;
+
+    Frame* frame = frame_get(reference);
+    if (!frame) return;
+
+    if (frame->delay == FRAME_DELAY_MIN) return;
+
+    Reference referenceNext = reference;
+    referenceNext.frameIndex = reference.frameIndex + 1;
+
+    Frame* frameNext = frame_get(referenceNext);
+    if (!frameNext) frameNext = frame;
+
+    Frame baseFrame = *frame;
+    Frame baseFrameNext = *frameNext;
+
+    int delay{};
+    int index = reference.frameIndex;
+
+    while (delay < baseFrame.delay)
+    {
+      float interpolation = (float)delay / baseFrame.delay;
+
+      Frame baked = baseFrame;
+      baked.delay = std::min(interval, baseFrame.delay - delay);
+      baked.isInterpolated = (index == reference.frameIndex) ? baseFrame.isInterpolated : false;
+
+      baked.rotation = glm::mix(baseFrame.rotation, baseFrameNext.rotation, interpolation);
+      baked.position = glm::mix(baseFrame.position, baseFrameNext.position, interpolation);
+      baked.scale = glm::mix(baseFrame.scale, baseFrameNext.scale, interpolation);
+      baked.offset = glm::mix(baseFrame.offset, baseFrameNext.offset, interpolation);
+      baked.tint = glm::mix(baseFrame.tint, baseFrameNext.tint, interpolation);
+
+      if (isRoundScale) baked.scale = vec2(ivec2(baked.scale));
+      if (isRoundRotation) baked.rotation = (int)baked.rotation;
+
+      if (index == reference.frameIndex)
+        item->frames[index] = baked;
+      else
+        item->frames.insert(item->frames.begin() + index, baked);
+      index++;
+
+      delay += baked.delay;
+    }
   }
 }

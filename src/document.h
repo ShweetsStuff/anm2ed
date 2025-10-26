@@ -4,6 +4,9 @@
 #include <set>
 
 #include "anm2.h"
+#include "imgui.h"
+#include "playback.h"
+#include "snapshots.h"
 #include "types.h"
 
 #include <glm/glm.hpp>
@@ -15,7 +18,9 @@ namespace anm2ed::document
   public:
     std::filesystem::path path{};
     anm2::Anm2 anm2{};
-    anm2::Reference reference{};
+    std::string message{};
+    playback::Playback playback{};
+    snapshots::Snapshots snapshots{};
 
     float previewZoom{200};
     glm::vec2 previewPan{};
@@ -23,40 +28,92 @@ namespace anm2ed::document
     float editorZoom{200};
     int overlayIndex{};
 
+    anm2::Reference reference{};
+    int hoveredAnimation{-1};
+    int mergeTarget{-1};
+    imgui::MultiSelectStorage animationMultiSelect;
+    imgui::MultiSelectStorage animationMergeMultiSelect;
+
     int referenceSpritesheet{-1};
-    int referenceLayer{-1};
-
-    std::set<int> selectedEvents{};
-    std::set<int> selectedLayers{};
-    std::set<int> selectedNulls{};
-    std::set<int> selectedAnimations{};
-    std::set<int> selectedSpritesheets{};
-
+    int hoveredSpritesheet{-1};
+    std::set<int> unusedSpritesheetIDs{};
     std::vector<std::string> spritesheetNames{};
     std::vector<const char*> spritesheetNamesCstr{};
+    imgui::MultiSelectStorage spritesheetMultiSelect;
+
+    int referenceLayer{-1};
+    int hoveredLayer{-1};
+    std::set<int> unusedLayerIDs{};
+    imgui::MultiSelectStorage layersMultiSelect;
+
+    int referenceNull{-1};
+    int hoveredNull{-1};
+    std::set<int> unusedNullIDs{};
+    imgui::MultiSelectStorage nullMultiSelect;
+
+    int referenceEvent{-1};
+    int hoveredEvent{-1};
+    std::set<int> unusedEventIDs{};
+    imgui::MultiSelectStorage eventMultiSelect;
 
     uint64_t hash{};
     uint64_t saveHash{};
-    bool isJustChanged[types::change::COUNT]{};
     bool isOpen{true};
 
-    Document();
-
-    Document(const std::string& path, bool isNew = false, std::string* errorString = nullptr);
-    bool save(const std::string& path = {}, std::string* errorString = nullptr);
+    Document(const std::string&, bool = false, std::string* = nullptr);
+    bool save(const std::string& = {}, std::string* = nullptr);
     void hash_set();
     void clean();
     void on_change();
-    void change(types::change::Type type);
-    bool is_just_changed(types::change::Type type);
+    void change(types::change::Type);
     bool is_dirty();
-    void update();
     std::string directory_get();
     std::string filename_get();
-    anm2::Animation* animation_get();
-    anm2::Frame* frame_get();
-    anm2::Item* item_get();
-    anm2::Spritesheet* spritesheet_get();
     bool is_valid();
+
+    anm2::Frame* frame_get();
+    void frames_add(anm2::Item* item);
+    void frames_delete(anm2::Item* item);
+    void frames_bake(int, bool, bool);
+
+    anm2::Item* item_get();
+    void item_add(anm2::Type, int, std::string&, types::locale::Type, int);
+    void item_remove(anm2::Animation* animation);
+
+    anm2::Spritesheet* spritesheet_get();
+    void spritesheet_add(const std::string&);
+    void spritesheets_deserialize(const std::string&, types::merge::Type);
+
+    void layer_set(anm2::Layer& layer);
+    void layers_remove_unused();
+    void layers_deserialize(const std::string&, types::merge::Type);
+
+    void null_set(anm2::Null& null);
+    void null_rect_toggle(anm2::Null& null);
+    void nulls_remove_unused();
+    void nulls_deserialize(const std::string&, types::merge::Type);
+
+    void event_add();
+    void events_remove_unused();
+    void events_deserialize(const std::string&, types::merge::Type);
+
+    void item_visible_toggle(anm2::Item*);
+
+    void animation_add();
+    void animation_duplicate();
+    void animation_default();
+    void animation_remove();
+    void animations_move(std::vector<int>&, int);
+    void animations_merge(types::merge::Type, bool);
+    void animations_merge_quick();
+    anm2::Animation* animation_get();
+    void animations_deserialize(const std::string& string);
+
+    void snapshot(const std::string& message);
+    void undo();
+    void redo();
+
+    bool is_undo();
+    bool is_redo();
   };
-};
+}

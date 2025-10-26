@@ -5,7 +5,7 @@
 #include "tool.h"
 #include "types.h"
 
-using namespace anm2ed::document_manager;
+using namespace anm2ed::manager;
 using namespace anm2ed::settings;
 using namespace anm2ed::canvas;
 using namespace anm2ed::resources;
@@ -18,7 +18,7 @@ namespace anm2ed::spritesheet_editor
   {
   }
 
-  void SpritesheetEditor::update(DocumentManager& manager, Settings& settings, Resources& resources)
+  void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& resources)
   {
     auto& document = *manager.get();
     auto& pan = document.editorPan;

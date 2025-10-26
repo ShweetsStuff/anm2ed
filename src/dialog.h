@@ -26,14 +26,14 @@ namespace anm2ed::dialog
     int replaceID{-1};
 
     Dialog();
-    Dialog(SDL_Window* window);
+    Dialog(SDL_Window*);
     void anm2_new();
     void anm2_open();
     void anm2_save();
     void spritesheet_open();
     void spritesheet_replace();
-    void file_explorer_open(const std::string& path);
+    void file_explorer_open(const std::string&);
     void reset();
-    bool is_selected_file(Type type);
+    bool is_selected_file(Type);
   };
 }

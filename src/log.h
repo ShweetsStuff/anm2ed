@@ -30,12 +30,12 @@ namespace anm2ed::log
     std::ofstream file{};
 
   public:
-    void write(const Level level, const std::string& message);
-    void info(const std::string& message);
-    void warning(const std::string& message);
-    void error(const std::string& message);
-    void fatal(const std::string& message);
-    void open(const std::filesystem::path& path);
+    void write(const Level, const std::string&);
+    void info(const std::string&);
+    void warning(const std::string&);
+    void error(const std::string&);
+    void fatal(const std::string&);
+    void open(const std::filesystem::path&);
     Logger();
     ~Logger();
   };

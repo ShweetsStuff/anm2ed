@@ -1,8 +1,7 @@
 #pragma once
 
 #include "canvas.h"
-#include "document_manager.h"
-#include "playback.h"
+#include "manager.h"
 #include "resources.h"
 #include "settings.h"
 
@@ -15,7 +14,6 @@ namespace anm2ed::animation_preview
 
   public:
     AnimationPreview();
-    void update(document_manager::DocumentManager& manager, settings::Settings& settings,
-                resources::Resources& resources, playback::Playback& playback);
+    void update(manager::Manager&, settings::Settings&, resources::Resources&);
   };
 }

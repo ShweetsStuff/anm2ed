@@ -29,7 +29,7 @@ namespace anm2ed::texture
     return id != 0;
   }
 
-  void Texture::download(std::vector<uint8_t>& pixels)
+  void Texture::download()
   {
     pixels.resize(size.x * size.y * CHANNELS);
     glBindTexture(GL_TEXTURE_2D, id);
@@ -37,9 +37,20 @@ namespace anm2ed::texture
     glBindTexture(GL_TEXTURE_2D, 0);
   }
 
-  void Texture::init(const uint8_t* data, bool isDownload)
+  void Texture::upload(const uint8_t* data)
   {
-    glGenTextures(1, &id);
+    if (!data || size.x <= 0 || size.y <= 0) return;
+
+    const size_t pixelCount = static_cast<size_t>(size.x) * static_cast<size_t>(size.y) * CHANNELS;
+    pixels.assign(data, data + pixelCount);
+    upload();
+  }
+
+  void Texture::upload()
+  {
+    if (pixels.empty() || size.x <= 0 || size.y <= 0) return;
+
+    if (!is_valid()) glGenTextures(1, &id);
 
     glBindTexture(GL_TEXTURE_2D, id);
 
@@ -48,12 +59,10 @@ namespace anm2ed::texture
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
     glGenerateMipmap(GL_TEXTURE_2D);
 
     glBindTexture(GL_TEXTURE_2D, 0);
-
-    if (isDownload) download(pixels);
   }
 
   Texture::Texture() = default;
@@ -63,9 +72,29 @@ namespace anm2ed::texture
     if (is_valid()) glDeleteTextures(1, &id);
   }
 
+  Texture::Texture(const Texture& other)
+  {
+    *this = other;
+  }
+
   Texture::Texture(Texture&& other)
   {
     *this = std::move(other);
+  }
+
+  Texture& Texture::operator=(const Texture& other)
+  {
+    if (this != &other)
+    {
+      if (is_valid()) glDeleteTextures(1, &id);
+      id = 0;
+      size = other.size;
+      filter = other.filter;
+      channels = other.channels;
+      pixels = other.pixels;
+      if (!pixels.empty()) upload();
+    }
+    return *this;
   }
 
   Texture& Texture::operator=(Texture&& other)
@@ -94,24 +123,21 @@ namespace anm2ed::texture
 
     size = svgSize;
     filter = GL_LINEAR;
-    init(bitmap.data());
+    upload(bitmap.data());
   }
 
-  Texture::Texture(const std::string& pngPath, bool isDownload)
+  Texture::Texture(const std::string& pngPath)
   {
     if (const uint8* data = stbi_load(pngPath.c_str(), &size.x, &size.y, nullptr, CHANNELS); data)
     {
-      init(data, isDownload);
+      upload(data);
       stbi_image_free((void*)data);
     }
   }
 
   bool Texture::write_png(const std::string& path)
   {
-    std::vector<uint8_t> pixels;
-    download(pixels);
-    const bool isSuccess = stbi_write_png(path.c_str(), size.x, size.y, CHANNELS, pixels.data(), size.x * CHANNELS);
-    return isSuccess;
+    return stbi_write_png(path.c_str(), size.x, size.y, CHANNELS, this->pixels.data(), size.x * CHANNELS);
   }
 
   void Texture::bind(GLuint unit)

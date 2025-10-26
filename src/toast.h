@@ -12,7 +12,7 @@ namespace anm2ed::toast
     std::string message{};
     float lifetime{};
 
-    Toast(const std::string& message);
+    Toast(const std::string&);
   };
 
   class Toasts
@@ -21,8 +21,9 @@ namespace anm2ed::toast
     std::vector<Toast> toasts{};
 
     void update();
-    void add(const std::string& message);
-    void add_error(const std::string& message);
+    void info(const std::string&);
+    void error(const std::string&);
+    void warning(const std::string&);
   };
 
   extern Toasts toasts;

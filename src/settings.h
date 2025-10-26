@@ -206,8 +206,8 @@ namespace anm2ed::settings
 
     Settings();
 
-    Settings(const std::string& path);
-    void save(const std::string& path, const std::string& imguiData);
+    Settings(const std::string&);
+    void save(const std::string&, const std::string&);
   };
 
   enum ShortcutType

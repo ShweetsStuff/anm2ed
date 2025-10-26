@@ -20,17 +20,20 @@ namespace anm2ed::texture
     std::vector<uint8_t> pixels{};
 
     bool is_valid();
-    void download(std::vector<uint8_t>& pixels);
-    void init(const uint8_t* data, bool isDownload = false);
+    void download();
+    void upload(const uint8_t*);
+    void upload();
     Texture();
 
     ~Texture();
-    Texture(Texture&& other);
-    Texture& operator=(Texture&& other);
-    Texture(const char* svgData, size_t svgDataLength, glm::ivec2 svgSize);
-    Texture(const std::string& pngPath, bool isDownload = false);
-    bool write_png(const std::string& path);
-    void bind(GLuint unit = 0);
-    void unbind(GLuint unit = 0);
+    Texture(const Texture&);
+    Texture(Texture&&);
+    Texture& operator=(const Texture&);
+    Texture& operator=(Texture&&);
+    Texture(const char*, size_t, glm::ivec2);
+    Texture(const std::string&);
+    bool write_png(const std::string&);
+    void bind(GLuint = 0);
+    void unbind(GLuint = 0);
   };
 }

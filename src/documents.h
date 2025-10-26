@@ -1,7 +1,7 @@
 #pragma once
 
-#include "document_manager.h"
 #include "imgui.h"
+#include "manager.h"
 #include "resources.h"
 #include "taskbar.h"
 
@@ -17,6 +17,6 @@ namespace anm2ed::documents
   public:
     float height{};
 
-    void update(taskbar::Taskbar& taskbar, document_manager::DocumentManager& manager, resources::Resources& resources);
+    void update(taskbar::Taskbar&, manager::Manager&, resources::Resources&);
   };
 }

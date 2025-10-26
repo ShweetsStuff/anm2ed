@@ -1,7 +1,7 @@
 #pragma once
 
-#include "document_manager.h"
-#include "imgui.h"
+#include "clipboard.h"
+#include "manager.h"
 #include "resources.h"
 #include "settings.h"
 
@@ -9,11 +9,8 @@ namespace anm2ed::events
 {
   class Events
   {
-    imgui::MultiSelectStorage storage{};
-    std::set<int> unusedEventIDs{};
 
   public:
-    void update(document_manager::DocumentManager& manager, settings::Settings& settings,
-                resources::Resources& resources);
+    void update(manager::Manager&, settings::Settings&, resources::Resources&, clipboard::Clipboard&);
   };
 }

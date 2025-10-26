@@ -8,6 +8,7 @@
 #include "types.h"
 
 using namespace anm2ed::settings;
+using namespace anm2ed::manager;
 using namespace anm2ed::resources;
 using namespace anm2ed::types;
 using namespace glm;
@@ -16,8 +17,10 @@ namespace anm2ed::tools
 {
   constexpr auto COLOR_EDIT_LABEL = "##Color Edit";
 
-  void Tools::update(Settings& settings, Resources& resources)
+  void Tools::update(Manager& manager, Settings& settings, Resources& resources)
   {
+    auto& document = *manager.get();
+
     if (ImGui::Begin("Tools", &settings.windowIsTools))
     {
       ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(2, 2));
@@ -31,8 +34,10 @@ namespace anm2ed::tools
         switch (type)
         {
           case tool::UNDO:
+            if (document.is_undo()) document.undo();
             break;
           case tool::REDO:
+            if (document.is_redo()) document.redo();
             break;
           case tool::COLOR:
             if (ImGui::IsPopupOpen(COLOR_EDIT_LABEL))
@@ -68,8 +73,12 @@ namespace anm2ed::tools
         }
         else
         {
+          if (i == tool::UNDO) ImGui::BeginDisabled(!document.is_undo());
+          if (i == tool::REDO) ImGui::BeginDisabled(!document.is_redo());
           if (ImGui::ImageButton(info.label, resources.icons[info.icon].id, to_imvec2(size)))
             tool_switch((tool::Type)i);
+          if (i == tool::UNDO) ImGui::EndDisabled();
+          if (i == tool::REDO) ImGui::EndDisabled();
         }
 
         auto widthIncrement = ImGui::GetItemRectSize().x + ImGui::GetStyle().ItemSpacing.x;

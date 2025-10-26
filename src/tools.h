@@ -1,5 +1,6 @@
 #pragma once
 
+#include "manager.h"
 #include "resources.h"
 #include "settings.h"
 
@@ -11,6 +12,6 @@ namespace anm2ed::tools
     ImVec2 colorEditPosition{};
 
   public:
-    void update(settings::Settings& settings, resources::Resources& resources);
+    void update(manager::Manager&, settings::Settings&, resources::Resources&);
   };
 }

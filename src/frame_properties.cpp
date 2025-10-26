@@ -9,7 +9,7 @@
 #include "types.h"
 
 using namespace anm2ed::settings;
-using namespace anm2ed::document_manager;
+using namespace anm2ed::manager;
 using namespace anm2ed::math;
 using namespace anm2ed::types;
 using namespace glm;
@@ -17,7 +17,7 @@ using namespace glm;
 namespace anm2ed::frame_properties
 {
 
-  void FrameProperties::update(DocumentManager& manager, Settings& settings)
+  void FrameProperties::update(Manager& manager, Settings& settings)
   {
     if (ImGui::Begin("Frame Properties", &settings.windowIsFrameProperties))
     {

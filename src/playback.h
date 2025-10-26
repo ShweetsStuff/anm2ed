@@ -10,9 +10,9 @@ namespace anm2ed::playback
     bool isFinished{};
 
     void toggle();
-    void clamp(int length);
-    void tick(int fps, int length, bool isLoop);
-    void decrement(int length);
-    void increment(int length);
+    void clamp(int);
+    void tick(int, int, bool);
+    void decrement(int);
+    void increment(int);
   };
 }

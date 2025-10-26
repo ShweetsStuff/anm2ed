@@ -32,24 +32,24 @@ namespace anm2ed::canvas
     glm::vec2 size{};
 
     Canvas();
-    Canvas(glm::vec2 size);
+    Canvas(glm::vec2);
     ~Canvas();
     bool is_valid();
     void framebuffer_set();
     void framebuffer_resize_check();
-    void size_set(glm::vec2 size);
-    glm::mat4 transform_get(float zoom, glm::vec2 pan);
-    void axes_render(shader::Shader& shader, float zoom, glm::vec2 pan, glm::vec4 color = glm::vec4(1.0f));
-    void grid_render(shader::Shader& shader, float zoom, glm::vec2 pan, glm::ivec2 size = glm::ivec2(32, 32),
-                     glm::ivec2 offset = {}, glm::vec4 color = glm::vec4(1.0f));
-    void texture_render(shader::Shader& shader, GLuint& texture, glm::mat4& transform, glm::vec4 tint = glm::vec4(1.0f),
-                        glm::vec3 colorOffset = {}, float* vertices = (float*)TEXTURE_VERTICES);
-    void rect_render(shader::Shader& shader, glm::mat4& transform, glm::vec4 color = glm::vec4(1.0f));
+    void size_set(glm::vec2);
+    glm::mat4 transform_get(float, glm::vec2);
+    void axes_render(shader::Shader&, float, glm::vec2, glm::vec4 = glm::vec4(1.0f));
+    void grid_render(shader::Shader&, float, glm::vec2, glm::ivec2 = glm::ivec2(32, 32), glm::ivec2 = {},
+                     glm::vec4 = glm::vec4(1.0f));
+    void texture_render(shader::Shader&, GLuint&, glm::mat4&, glm::vec4 = glm::vec4(1.0f), glm::vec3 = {},
+                        float* = (float*)TEXTURE_VERTICES);
+    void rect_render(shader::Shader&, glm::mat4&, glm::vec4 = glm::vec4(1.0f));
     void viewport_set();
-    void clear(glm::vec4& color);
+    void clear(glm::vec4&);
     void bind();
     void unbind();
-    void zoom_set(float& zoom, glm::vec2& pan, glm::vec2& focus, float step);
-    glm::vec2 position_translate(float& zoom, glm::vec2& pan, glm::vec2 position);
+    void zoom_set(float&, glm::vec2&, glm::vec2&, float);
+    glm::vec2 position_translate(float&, glm::vec2&, glm::vec2);
   };
 }

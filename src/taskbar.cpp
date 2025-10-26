@@ -7,12 +7,12 @@
 
 using namespace anm2ed::settings;
 using namespace anm2ed::dialog;
-using namespace anm2ed::document_manager;
+using namespace anm2ed::manager;
 using namespace anm2ed::types;
 
 namespace anm2ed::taskbar
 {
-  void Taskbar::update(Settings& settings, Dialog& dialog, DocumentManager& manager, bool& isQuit)
+  void Taskbar::update(Manager& manager, Settings& settings, Dialog& dialog, bool& isQuit)
   {
     auto document = manager.get();
     auto animation = document ? document->animation_get() : nullptr;
@@ -89,7 +89,11 @@ namespace anm2ed::taskbar
 
       if (ImGui::BeginMenu("Settings"))
       {
-        if (ImGui::MenuItem("Configure")) configurePopup.open();
+        if (ImGui::MenuItem("Configure"))
+        {
+          editSettings = settings;
+          configurePopup.open();
+        }
 
         ImGui::EndMenu();
       }

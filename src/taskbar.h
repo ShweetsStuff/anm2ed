@@ -1,8 +1,8 @@
 #pragma once
 
 #include "dialog.h"
-#include "document_manager.h"
 #include "imgui.h"
+#include "manager.h"
 #include "settings.h"
 
 namespace anm2ed::taskbar
@@ -12,12 +12,11 @@ namespace anm2ed::taskbar
     imgui::PopupHelper configurePopup{imgui::PopupHelper("Configure")};
     imgui::PopupHelper aboutPopup{imgui::PopupHelper("About")};
     settings::Settings editSettings{};
-    int selectedShortcut{};
+    int selectedShortcut{-1};
 
   public:
     float height{};
 
-    void update(settings::Settings& settings, dialog::Dialog& dialog, document_manager::DocumentManager& manager,
-                bool& isQuit);
+    void update(manager::Manager&, settings::Settings&, dialog::Dialog&, bool&);
   };
 };

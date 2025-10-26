@@ -2,9 +2,7 @@
 
 #include "anm2.h"
 #include "document.h"
-#include "document_manager.h"
-#include "imgui.h"
-#include "playback.h"
+#include "manager.h"
 #include "resources.h"
 #include "settings.h"
 
@@ -16,6 +14,7 @@ namespace anm2ed::timeline
     bool isWindowHovered{};
     bool isHorizontalScroll{};
     imgui::PopupHelper propertiesPopup{imgui::PopupHelper("Item Properties")};
+    imgui::PopupHelper bakePopup{imgui::PopupHelper("Bake", imgui::POPUP_SMALL, true)};
     std::string addItemName{};
     int addItemSpritesheetID{};
     bool addItemIsRect{};
@@ -26,20 +25,16 @@ namespace anm2ed::timeline
     ImDrawList* pickerLineDrawList{};
     ImGuiStyle style{};
 
-    void item_child(anm2::Anm2& anm2, anm2::Reference& reference, anm2::Animation* animation,
-                    settings::Settings& settings, resources::Resources& resources, anm2::Type type, int id, int& index);
-    void items_child(Document& document, anm2::Animation* animation, settings::Settings& settings,
-                     resources::Resources& resources);
-    void frame_child(document::Document& document, anm2::Animation* animation, settings::Settings& settings,
-                     resources::Resources& resources, playback::Playback& playback, anm2::Type type, int id, int& index,
-                     float width);
-    void frames_child(document::Document& document, anm2::Animation* animation, settings::Settings& settings,
-                      resources::Resources& resources, playback::Playback& playback);
+    void item_child(manager::Manager&, Document&, anm2::Animation*, settings::Settings&, resources::Resources&,
+                    anm2::Type, int, int&);
+    void items_child(manager::Manager&, Document&, anm2::Animation*, settings::Settings&, resources::Resources&);
+    void frame_child(document::Document&, anm2::Animation*, settings::Settings&, resources::Resources&, anm2::Type, int,
+                     int&, float);
+    void frames_child(document::Document&, anm2::Animation*, settings::Settings&, resources::Resources&);
 
-    void popups(document::Document& document, anm2::Animation* animation, settings::Settings& settings);
+    void popups(document::Document&, anm2::Animation*, settings::Settings&);
 
   public:
-    void update(document_manager::DocumentManager& manager, settings::Settings& settings,
-                resources::Resources& resources, playback::Playback& playback);
+    void update(manager::Manager&, settings::Settings&, resources::Resources&);
   };
 }

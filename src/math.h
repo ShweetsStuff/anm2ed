@@ -31,16 +31,15 @@ namespace anm2ed::math
             1.0f, 1.0f, uvMax.x, uvMax.y, 0.0f, 1.0f, uvMin.x, uvMax.y};
   }
 
-  float round_nearest_multiple(float value, float multiple);
+  float round_nearest_multiple(float, float);
 
-  int float_decimals_needed(float value);
+  int float_decimals_needed(float);
 
-  const char* float_format_get(float value);
+  const char* float_format_get(float);
 
-  const char* vec2_format_get(glm::vec2& value);
+  const char* vec2_format_get(glm::vec2&);
 
-  glm::mat4 quad_model_get(glm::vec2 size = {}, glm::vec2 position = {}, glm::vec2 pivot = {},
-                           glm::vec2 scale = glm::vec2(1.0f), float rotation = {});
-  glm::mat4 quad_model_parent_get(glm::vec2 position = {}, glm::vec2 pivot = {}, glm::vec2 scale = glm::vec2(1.0f),
-                                  float rotation = {});
+  glm::mat4 quad_model_get(glm::vec2 = {}, glm::vec2 = {}, glm::vec2 = {},
+                           glm::vec2 = glm::vec2(1.0f), float = {});
+  glm::mat4 quad_model_parent_get(glm::vec2 = {}, glm::vec2 = {}, glm::vec2 = glm::vec2(1.0f), float = {});
 }

@@ -31,8 +31,7 @@ namespace anm2ed::dockspace
     tools::Tools tools;
 
   public:
-    void update(taskbar::Taskbar& taskbar, documents::Documents& documents, document_manager::DocumentManager& manager,
-                settings::Settings& settings, resources::Resources& resources, dialog::Dialog& dialog,
-                playback::Playback& playback);
+    void update(taskbar::Taskbar&, documents::Documents&, manager::Manager&, settings::Settings&, resources::Resources&,
+                dialog::Dialog&, clipboard::Clipboard&);
   };
 }

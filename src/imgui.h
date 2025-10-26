@@ -124,37 +124,43 @@ namespace anm2ed::imgui
       {"Super", ImGuiMod_Super},
   };
 
-  std::string chord_to_string(ImGuiKeyChord chord);
-  ImGuiKeyChord string_to_chord(const std::string& string);
-  float row_widget_width_get(int count, float width = ImGui::GetContentRegionAvail().x);
-  ImVec2 widget_size_with_row_get(int count, float width = ImGui::GetContentRegionAvail().x);
-  float footer_height_get(int itemCount = 1);
-  ImVec2 footer_size_get(int itemCount = 1);
-  ImVec2 size_without_footer_get(int rowCount = 1);
-  ImVec2 child_size_get(int rowCount = 1);
-  int input_text_callback(ImGuiInputTextCallbackData* data);
-  bool input_text_string(const char* label, std::string* string, ImGuiInputTextFlags flags = 0);
-  void combo_strings(const std::string& label, int* index, std::vector<std::string>& strings);
-  void combo_strings(const std::string& label, int* index, std::vector<const char*>& strings);
-  bool selectable_input_text(const std::string& label, const std::string& id, std::string& text,
-                             bool isSelected = false, ImGuiSelectableFlags flags = 0, bool* isRenamed = nullptr);
-  void set_item_tooltip_shortcut(const char* tooltip, const std::string& shortcut = {});
-  void external_storage_set(ImGuiSelectionExternalStorage* self, int id, bool isSelected);
+  std::string chord_to_string(ImGuiKeyChord);
+  ImGuiKeyChord string_to_chord(const std::string&);
+  float row_widget_width_get(int, float = ImGui::GetContentRegionAvail().x);
+  ImVec2 widget_size_with_row_get(int, float = ImGui::GetContentRegionAvail().x);
+  float footer_height_get(int = 1);
+  ImVec2 footer_size_get(int = 1);
+  ImVec2 size_without_footer_get(int = 1);
+  ImVec2 child_size_get(int = 1);
+  int input_text_callback(ImGuiInputTextCallbackData*);
+  bool input_text_string(const char*, std::string*, ImGuiInputTextFlags = 0);
+  void combo_strings(const std::string&, int*, std::vector<std::string>&);
+  void combo_strings(const std::string&, int*, std::vector<const char*>&);
+  bool selectable_input_text(const std::string&, const std::string&, std::string&, bool = false,
+                             ImGuiSelectableFlags = 0, bool* = nullptr);
+  void set_item_tooltip_shortcut(const char*, const std::string& = {});
+  void external_storage_set(ImGuiSelectionExternalStorage*, int, bool);
   ImVec2 icon_size_get();
-  bool chord_held(ImGuiKeyChord chord);
-  bool chord_repeating(ImGuiKeyChord chord, float delay = 0.125f, float rate = 0.025f);
-  bool shortcut(std::string string, types::shortcut::Type type = types::shortcut::FOCUSED_SET);
+  bool chord_held(ImGuiKeyChord);
+  bool chord_repeating(ImGuiKeyChord, float = 0.125f, float = 0.025f);
+  bool shortcut(std::string, types::shortcut::Type = types::shortcut::FOCUSED_SET);
 
-  class MultiSelectStorage
+  class MultiSelectStorage : public std::set<int>
   {
   public:
     ImGuiSelectionExternalStorage internal{};
-    std::set<int>* userData{};
+    using std::set<int>::set;
+    using std::set<int>::operator=;
+    using std::set<int>::begin;
+    using std::set<int>::rbegin;
+    using std::set<int>::end;
+    using std::set<int>::size;
+    using std::set<int>::insert;
+    using std::set<int>::erase;
 
     MultiSelectStorage();
-    void user_data_set(std::set<int>* userData);
-    void begin(size_t size);
-    void end();
+    void start(size_t);
+    void finish();
   };
 
   class PopupHelper
@@ -163,12 +169,14 @@ namespace anm2ed::imgui
     const char* label{};
     bool isOpen{};
     bool isTriggered{};
+    bool isJustOpened{};
     bool isNoHeight{};
     float percent{};
 
-    PopupHelper(const char* label, float percent = POPUP_NORMAL, bool isNoHeight = false);
+    PopupHelper(const char*, float = POPUP_NORMAL, bool = false);
     void open();
     void trigger();
+    void end();
     void close();
   };
 }

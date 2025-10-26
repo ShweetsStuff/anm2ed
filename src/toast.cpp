@@ -64,16 +64,22 @@ namespace anm2ed::toast
     }
   }
 
-  void Toasts::add(const std::string& message)
+  void Toasts::info(const std::string& message)
   {
     toasts.emplace_back(Toast(message));
     logger.info(message);
   }
 
-  void Toasts::add_error(const std::string& message)
+  void Toasts::error(const std::string& message)
   {
     toasts.emplace_back(Toast(message));
     logger.error(message);
+  }
+
+  void Toasts::warning(const std::string& message)
+  {
+    toasts.emplace_back(Toast(message));
+    logger.warning(message);
   }
 
   Toasts toasts;

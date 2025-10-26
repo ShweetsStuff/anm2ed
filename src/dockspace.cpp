@@ -6,7 +6,8 @@
 
 using namespace anm2ed::animations;
 using namespace anm2ed::dialog;
-using namespace anm2ed::document_manager;
+using namespace anm2ed::clipboard;
+using namespace anm2ed::manager;
 using namespace anm2ed::documents;
 using namespace anm2ed::playback;
 using namespace anm2ed::resources;
@@ -15,8 +16,8 @@ using namespace anm2ed::taskbar;
 
 namespace anm2ed::dockspace
 {
-  void Dockspace::update(Taskbar& taskbar, Documents& documents, DocumentManager& manager, Settings& settings,
-                         Resources& resources, Dialog& dialog, Playback& playback)
+  void Dockspace::update(Taskbar& taskbar, Documents& documents, Manager& manager, Settings& settings,
+                         Resources& resources, Dialog& dialog, Clipboard& clipboard)
   {
 
     auto viewport = ImGui::GetMainViewport();
@@ -35,17 +36,17 @@ namespace anm2ed::dockspace
       {
         if (auto document = manager.get(); document)
         {
-          if (settings.windowIsAnimationPreview) animationPreview.update(manager, settings, resources, playback);
-          if (settings.windowIsAnimations) animations.update(*document, manager.selected, settings, resources);
-          if (settings.windowIsEvents) events.update(manager, settings, resources);
+          if (settings.windowIsAnimationPreview) animationPreview.update(manager, settings, resources);
+          if (settings.windowIsAnimations) animations.update(manager, settings, resources, clipboard);
+          if (settings.windowIsEvents) events.update(manager, settings, resources, clipboard);
           if (settings.windowIsFrameProperties) frameProperties.update(manager, settings);
-          if (settings.windowIsLayers) layers.update(*document, settings, resources);
-          if (settings.windowIsNulls) nulls.update(*document, manager.selected, settings, resources);
+          if (settings.windowIsLayers) layers.update(manager, settings, resources, clipboard);
+          if (settings.windowIsNulls) nulls.update(manager, settings, resources, clipboard);
           if (settings.windowIsOnionskin) onionskin.update(settings);
           if (settings.windowIsSpritesheetEditor) spritesheetEditor.update(manager, settings, resources);
-          if (settings.windowIsSpritesheets) spritesheets.update(*document, settings, resources, dialog);
-          if (settings.windowIsTimeline) timeline.update(manager, settings, resources, playback);
-          if (settings.windowIsTools) tools.update(settings, resources);
+          if (settings.windowIsSpritesheets) spritesheets.update(manager, settings, resources, dialog, clipboard);
+          if (settings.windowIsTimeline) timeline.update(manager, settings, resources);
+          if (settings.windowIsTools) tools.update(manager, settings, resources);
         }
       }
     }

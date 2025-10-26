@@ -5230,9 +5230,9 @@ namespace anm2ed::font
 
   public:
     Font();
-    Font(void* data, size_t length, int size);
+    Font(void*, size_t, int);
     ~Font();
     ImFont* get();
-    Font& operator=(Font&& other) noexcept;
+    Font& operator=(Font&&) noexcept;
   };
 };

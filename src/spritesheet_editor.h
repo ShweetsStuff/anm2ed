@@ -1,7 +1,7 @@
 #pragma once
 
 #include "canvas.h"
-#include "document_manager.h"
+#include "manager.h"
 #include "resources.h"
 #include "settings.h"
 
@@ -13,7 +13,6 @@ namespace anm2ed::spritesheet_editor
 
   public:
     SpritesheetEditor();
-    void update(document_manager::DocumentManager& manager, settings::Settings& settings,
-                resources::Resources& resources);
+    void update(manager::Manager&, settings::Settings&, resources::Resources&);
   };
 }

@@ -7,9 +7,8 @@
 
 namespace anm2ed::xml
 {
-  std::string document_to_string(tinyxml2::XMLDocument& self);
-  tinyxml2::XMLError query_string_attribute(tinyxml2::XMLElement* element, const char* attribute, std::string* out);
-  tinyxml2::XMLError query_path_attribute(tinyxml2::XMLElement* element, const char* attribute,
-                                          std::filesystem::path* out);
-  void query_color_attribute(tinyxml2::XMLElement* element, const char* attribute, float& out);
+  std::string document_to_string(tinyxml2::XMLDocument&);
+  tinyxml2::XMLError query_string_attribute(tinyxml2::XMLElement*, const char*, std::string*);
+  tinyxml2::XMLError query_path_attribute(tinyxml2::XMLElement*, const char*, std::filesystem::path*);
+  void query_color_attribute(tinyxml2::XMLElement*, const char*, float&);
 }

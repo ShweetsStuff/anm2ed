@@ -18,7 +18,7 @@ namespace anm2ed::loader
     std::vector<std::string> arguments;
     bool isError{};
 
-    Loader(int argc, const char** argv);
+    Loader(int, const char**);
     ~Loader();
   };
 }

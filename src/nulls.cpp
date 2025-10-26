@@ -2,21 +2,23 @@
 
 #include <ranges>
 
-using namespace anm2ed::document;
+using namespace anm2ed::clipboard;
+using namespace anm2ed::manager;
 using namespace anm2ed::settings;
 using namespace anm2ed::resources;
 using namespace anm2ed::types;
 
 namespace anm2ed::nulls
 {
-  void Nulls::update(Document& document, int& documentIndex, Settings& settings, Resources& resources)
+  void Nulls::update(Manager& manager, Settings& settings, Resources& resources, Clipboard& clipboard)
   {
+    auto& document = *manager.get();
     auto& anm2 = document.anm2;
-    auto& selection = document.selectedNulls;
-
-    if (document.is_just_changed(change::NULLS)) unusedNullsIDs = anm2.nulls_unused();
-
-    storage.user_data_set(&selection);
+    auto& reference = document.referenceNull;
+    auto& unused = document.unusedNullIDs;
+    auto& hovered = document.hoveredNull;
+    auto& multiSelect = document.nullMultiSelect;
+    auto& propertiesPopup = manager.nullPropertiesPopup;
 
     if (ImGui::Begin("Nulls", &settings.windowIsNulls))
     {
@@ -24,17 +26,25 @@ namespace anm2ed::nulls
 
       if (ImGui::BeginChild("##Nulls Child", childSize, true))
       {
-        storage.begin(anm2.content.nulls.size());
+        multiSelect.start(anm2.content.nulls.size());
 
         for (auto& [id, null] : anm2.content.nulls)
         {
-          auto isSelected = selection.contains(id);
+          auto isSelected = multiSelect.contains(id);
+          auto isReferenced = reference == id;
 
           ImGui::PushID(id);
           ImGui::SetNextItemSelectionUserData(id);
-          imgui::selectable_input_text(std::format("#{} {}", id, null.name),
-                                       std::format("###Document #{} Null #{}", documentIndex, id), null.name,
-                                       isSelected);
+          if (isReferenced) ImGui::PushFont(resources.fonts[font::ITALICS].get(), font::SIZE);
+          ImGui::Selectable(std::format(anm2::NULL_FORMAT, id, null.name).c_str(), isSelected);
+          if (ImGui::IsItemHovered())
+          {
+            hovered = id;
+            if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) manager.null_properties_open(id);
+          }
+
+          if (isReferenced) ImGui::PopFont();
+
           if (ImGui::BeginItemTooltip())
           {
             ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
@@ -46,29 +56,106 @@ namespace anm2ed::nulls
           ImGui::PopID();
         }
 
-        storage.end();
+        multiSelect.finish();
+
+        auto copy = [&]()
+        {
+          if (!multiSelect.empty())
+          {
+            std::string clipboardText{};
+            for (auto& id : multiSelect)
+              clipboardText += anm2.content.nulls[id].to_string(id);
+            clipboard.set(clipboardText);
+          }
+          else if (hovered > -1)
+            clipboard.set(anm2.content.nulls[hovered].to_string(hovered));
+        };
+
+        auto paste = [&](merge::Type type)
+        {
+          auto clipboardText = clipboard.get();
+          document.nulls_deserialize(clipboardText, type);
+        };
+
+        if (imgui::shortcut(settings.shortcutCopy, shortcut::FOCUSED)) copy();
+        if (imgui::shortcut(settings.shortcutPaste, shortcut::FOCUSED)) paste(merge::APPEND);
+
+        if (ImGui::BeginPopupContextWindow("##Context Menu", ImGuiPopupFlags_MouseButtonRight))
+        {
+          ImGui::BeginDisabled();
+          ImGui::MenuItem("Cut", settings.shortcutCut.c_str());
+          ImGui::EndDisabled();
+
+          ImGui::BeginDisabled(multiSelect.empty() && hovered == -1);
+          if (ImGui::MenuItem("Copy", settings.shortcutCopy.c_str())) copy();
+          ImGui::EndDisabled();
+
+          ImGui::BeginDisabled(clipboard.is_empty());
+          {
+            if (ImGui::BeginMenu("Paste"))
+            {
+              if (ImGui::MenuItem("Append", settings.shortcutPaste.c_str())) paste(merge::APPEND);
+              if (ImGui::MenuItem("Replace")) paste(merge::REPLACE);
+
+              ImGui::EndMenu();
+            }
+          }
+          ImGui::EndDisabled();
+
+          ImGui::EndPopup();
+        }
       }
       ImGui::EndChild();
 
       auto widgetSize = imgui::widget_size_with_row_get(2);
 
       imgui::shortcut(settings.shortcutAdd);
-      ImGui::Button("Add", widgetSize);
+      if (ImGui::Button("Add", widgetSize)) manager.null_properties_open();
       imgui::set_item_tooltip_shortcut("Add a null.", settings.shortcutAdd);
       ImGui::SameLine();
 
       imgui::shortcut(settings.shortcutRemove);
-      ImGui::BeginDisabled(unusedNullsIDs.empty());
-      {
-        if (ImGui::Button("Remove Unused", widgetSize))
-          for (auto& id : unusedNullsIDs)
-            anm2.content.nulls.erase(id);
-        document.change(change::NULLS);
-      }
+      ImGui::BeginDisabled(unused.empty());
+      if (ImGui::Button("Remove Unused", widgetSize)) document.nulls_remove_unused();
       ImGui::EndDisabled();
       imgui::set_item_tooltip_shortcut("Remove unused nulls (i.e., ones not used in any animation.)",
                                        settings.shortcutRemove);
     }
     ImGui::End();
+
+    manager.null_properties_trigger();
+
+    if (ImGui::BeginPopupModal(propertiesPopup.label, &propertiesPopup.isOpen, ImGuiWindowFlags_NoResize))
+    {
+      auto childSize = imgui::child_size_get(2);
+      auto& null = manager.editNull;
+
+      if (ImGui::BeginChild("Child", childSize, ImGuiChildFlags_Borders))
+      {
+        if (propertiesPopup.isJustOpened) ImGui::SetKeyboardFocusHere();
+        imgui::input_text_string("Name", &null.name);
+        ImGui::SetItemTooltip("Set the null's name.");
+
+        ImGui::Checkbox("Rect", &null.isShowRect);
+        ImGui::SetItemTooltip("The null will have a rectangle show around it.");
+      }
+      ImGui::EndChild();
+
+      auto widgetSize = imgui::widget_size_with_row_get(2);
+
+      if (ImGui::Button(reference == -1 ? "Add" : "Confirm", widgetSize))
+      {
+        document.null_set(null);
+        manager.null_properties_close();
+      }
+
+      ImGui::SameLine();
+
+      if (ImGui::Button("Cancel", widgetSize)) manager.null_properties_close();
+
+      ImGui::EndPopup();
+    }
+
+    manager.null_properties_end();
   }
 }

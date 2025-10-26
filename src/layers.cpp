@@ -2,38 +2,24 @@
 
 #include <ranges>
 
-#include "util.h"
-
 using namespace anm2ed::document;
-using namespace anm2ed::settings;
+using namespace anm2ed::clipboard;
+using namespace anm2ed::manager;
 using namespace anm2ed::resources;
+using namespace anm2ed::settings;
 using namespace anm2ed::types;
-using namespace anm2ed::util;
 
 namespace anm2ed::layers
 {
-  void Layers::update(Document& document, Settings& settings, Resources& resources)
+  void Layers::update(Manager& manager, Settings& settings, Resources& resources, Clipboard& clipboard)
   {
+    auto& document = *manager.get();
     auto& anm2 = document.anm2;
-    auto& selection = document.selectedLayers;
-    auto& referenceLayer = document.referenceLayer;
-
-    if (document.is_just_changed(change::LAYERS)) unusedLayerIDs = anm2.layers_unused();
-
-    storage.user_data_set(&selection);
-
-    auto properties_popup_open = [&](int id = -1)
-    {
-      if (id == -1)
-      {
-        isAdd = true;
-        editLayer = anm2::Layer();
-      }
-      else
-        editLayer = anm2.content.layers.at(id);
-
-      propertiesPopup.open();
-    };
+    auto& reference = document.referenceLayer;
+    auto& unused = document.unusedLayerIDs;
+    auto& hovered = document.hoveredLayer;
+    auto& multiSelect = document.layersMultiSelect;
+    auto& propertiesPopup = manager.layerPropertiesPopup;
 
     if (ImGui::Begin("Layers", &settings.windowIsLayers))
     {
@@ -41,26 +27,24 @@ namespace anm2ed::layers
 
       if (ImGui::BeginChild("##Layers Child", childSize, true))
       {
-        storage.begin(anm2.content.layers.size());
+        multiSelect.start(anm2.content.layers.size());
 
         for (auto& [id, layer] : anm2.content.layers)
         {
-          auto isSelected = selection.contains(id);
-          auto isReferenced = referenceLayer == id;
+          auto isSelected = multiSelect.contains(id);
 
           ImGui::PushID(id);
 
           ImGui::SetNextItemSelectionUserData(id);
-          if (isReferenced) ImGui::PushFont(resources.fonts[font::ITALICS].get(), font::SIZE);
-          ImGui::Selectable(std::format("#{} {} (Spritesheet: #{})", id, layer.name, layer.spritesheetID).c_str(),
-                            isSelected);
-          if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+          ImGui::Selectable(std::format(anm2::LAYER_FORMAT, id, layer.name, layer.spritesheetID).c_str(), isSelected);
+          if (ImGui::IsItemHovered())
           {
-            referenceLayer = id;
-            properties_popup_open(id);
+            hovered = id;
+            if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) manager.layer_properties_open(id);
           }
+          else
+            hovered = -1;
 
-          if (isReferenced) ImGui::PopFont();
           if (ImGui::BeginItemTooltip())
           {
             ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
@@ -73,50 +57,83 @@ namespace anm2ed::layers
           ImGui::PopID();
         }
 
-        storage.end();
+        multiSelect.finish();
+
+        auto copy = [&]()
+        {
+          if (!multiSelect.empty())
+          {
+            std::string clipboardText{};
+            for (auto& id : multiSelect)
+              clipboardText += anm2.content.layers[id].to_string(id);
+            clipboard.set(clipboardText);
+          }
+          else if (hovered > -1)
+            clipboard.set(anm2.content.layers[hovered].to_string(hovered));
+        };
+
+        auto paste = [&](merge::Type type)
+        {
+          auto clipboardText = clipboard.get();
+          document.layers_deserialize(clipboardText, type);
+        };
+
+        if (imgui::shortcut(settings.shortcutCopy, shortcut::FOCUSED)) copy();
+        if (imgui::shortcut(settings.shortcutPaste, shortcut::FOCUSED)) paste(merge::APPEND);
+
+        if (ImGui::BeginPopupContextWindow("##Context Menu", ImGuiPopupFlags_MouseButtonRight))
+        {
+          ImGui::BeginDisabled();
+          ImGui::MenuItem("Cut", settings.shortcutCut.c_str());
+          ImGui::EndDisabled();
+
+          ImGui::BeginDisabled(multiSelect.empty() && hovered == -1);
+          if (ImGui::MenuItem("Copy", settings.shortcutCopy.c_str())) copy();
+          ImGui::EndDisabled();
+
+          ImGui::BeginDisabled(clipboard.is_empty());
+          {
+            if (ImGui::BeginMenu("Paste"))
+            {
+              if (ImGui::MenuItem("Append", settings.shortcutPaste.c_str())) paste(merge::APPEND);
+              if (ImGui::MenuItem("Replace")) paste(merge::REPLACE);
+
+              ImGui::EndMenu();
+            }
+          }
+          ImGui::EndDisabled();
+
+          ImGui::EndPopup();
+        }
       }
       ImGui::EndChild();
 
       auto widgetSize = imgui::widget_size_with_row_get(2);
 
       imgui::shortcut(settings.shortcutAdd);
-      if (ImGui::Button("Add", widgetSize)) properties_popup_open();
+      if (ImGui::Button("Add", widgetSize)) manager.layer_properties_open();
       imgui::set_item_tooltip_shortcut("Add a layer.", settings.shortcutAdd);
       ImGui::SameLine();
 
       imgui::shortcut(settings.shortcutRemove);
-      ImGui::BeginDisabled(unusedLayerIDs.empty());
-      {
-        if (ImGui::Button("Remove Unused", widgetSize))
-        {
-          for (auto& id : unusedLayerIDs)
-            anm2.content.layers.erase(id);
-          document.change(change::LAYERS);
-          unusedLayerIDs.clear();
-        }
-      }
+      ImGui::BeginDisabled(unused.empty());
+      if (ImGui::Button("Remove Unused", widgetSize)) document.layers_remove_unused();
       ImGui::EndDisabled();
       imgui::set_item_tooltip_shortcut("Remove unused layers (i.e., ones not used in any animation.)",
                                        settings.shortcutRemove);
     }
     ImGui::End();
 
-    propertiesPopup.trigger();
+    manager.layer_properties_trigger();
 
     if (ImGui::BeginPopupModal(propertiesPopup.label, &propertiesPopup.isOpen, ImGuiWindowFlags_NoResize))
     {
       auto childSize = imgui::child_size_get(2);
-      auto& layer = editLayer;
-
-      auto close = [&]()
-      {
-        isAdd = false;
-        editLayer = anm2::Layer();
-        propertiesPopup.close();
-      };
+      auto& layer = manager.editLayer;
 
       if (ImGui::BeginChild("Child", childSize, ImGuiChildFlags_Borders))
       {
+        if (propertiesPopup.isJustOpened) ImGui::SetKeyboardFocusHere();
         imgui::input_text_string("Name", &layer.name);
         ImGui::SetItemTooltip("Set the item's name.");
         imgui::combo_strings("Spritesheet", &layer.spritesheetID, document.spritesheetNames);
@@ -126,27 +143,18 @@ namespace anm2ed::layers
 
       auto widgetSize = imgui::widget_size_with_row_get(2);
 
-      if (ImGui::Button(isAdd ? "Add" : "Confirm", widgetSize))
+      if (ImGui::Button(reference == -1 ? "Add" : "Confirm", widgetSize))
       {
-        if (isAdd)
-        {
-          auto id = map::next_id_get(anm2.content.layers);
-          anm2.content.layers[id] = editLayer;
-          referenceLayer = id;
-        }
-        else
-          anm2.content.layers[referenceLayer] = editLayer;
-        document.change(change::LAYERS);
-        close();
+        document.layer_set(layer);
+        manager.layer_properties_close();
       }
 
       ImGui::SameLine();
 
-      if (ImGui::Button("Cancel", widgetSize)) close();
+      if (ImGui::Button("Cancel", widgetSize)) manager.layer_properties_close();
 
+      manager.layer_properties_end();
       ImGui::EndPopup();
     }
-
-    referenceLayer = propertiesPopup.isOpen ? referenceLayer : -1;
   }
 }

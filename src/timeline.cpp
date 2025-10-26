@@ -7,7 +7,7 @@
 #include "imgui.h"
 
 using namespace anm2ed::types;
-using namespace anm2ed::document_manager;
+using namespace anm2ed::manager;
 using namespace anm2ed::resources;
 using namespace anm2ed::settings;
 using namespace anm2ed::playback;
@@ -50,9 +50,12 @@ namespace anm2ed::timeline
 - Press {} to shorten the selected frame, by one frame.
 - Hold Alt while clicking a non-trigger frame to toggle interpolation.)";
 
-  void Timeline::item_child(anm2::Anm2& anm2, anm2::Reference& reference, anm2::Animation* animation,
-                            Settings& settings, Resources& resources, anm2::Type type, int id, int& index)
+  void Timeline::item_child(Manager& manager, Document& document, anm2::Animation* animation, Settings& settings,
+                            Resources& resources, anm2::Type type, int id, int& index)
   {
+    auto& anm2 = document.anm2;
+    auto& reference = document.reference;
+
     auto item = animation ? animation->item_get(type, id) : nullptr;
     auto isVisible = item ? item->isVisible : false;
     auto isActive = reference.itemType == type && reference.itemID == id;
@@ -102,7 +105,24 @@ namespace anm2ed::timeline
       {
         anm2::Reference itemReference = {reference.animationIndex, type, id};
 
-        if (ImGui::IsWindowHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) reference = itemReference;
+        if (ImGui::IsWindowHovered())
+        {
+          if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+          {
+            switch (type)
+            {
+              case anm2::LAYER:
+                manager.layer_properties_open(id); // Handled in layers.cpp
+                break;
+              case anm2::NULL_:
+                manager.null_properties_open(id); // Handled in layers.cpp
+              default:
+                break;
+            }
+          }
+
+          if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) reference = itemReference;
+        }
 
         ImGui::Image(resources.icons[icon].id, imgui::icon_size_get());
         ImGui::SameLine();
@@ -121,7 +141,7 @@ namespace anm2ed::timeline
         int visibleIcon = isVisible ? icon::VISIBLE : icon::INVISIBLE;
 
         if (ImGui::ImageButton("##Visible Toggle", resources.icons[visibleIcon].id, imgui::icon_size_get()))
-          isVisible = !isVisible;
+          document.item_visible_toggle(item);
         ImGui::SetItemTooltip(isVisible ? "The item is shown. Press to hide." : "The item is hidden. Press to show.");
 
         if (type == anm2::NULL_)
@@ -134,7 +154,7 @@ namespace anm2ed::timeline
               ImVec2(itemSize.x - (ImGui::GetTextLineHeightWithSpacing() * 2) - ImGui::GetStyle().ItemSpacing.x,
                      (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
           if (ImGui::ImageButton("##Rect Toggle", resources.icons[rectIcon].id, imgui::icon_size_get()))
-            isShowRect = !isShowRect;
+            document.null_rect_toggle(null);
           ImGui::SetItemTooltip(isShowRect ? "The null's rect is shown. Press to hide."
                                            : "The null's rect is hidden. Press to show.");
         }
@@ -180,9 +200,9 @@ namespace anm2ed::timeline
     index++;
   }
 
-  void Timeline::items_child(Document& document, anm2::Animation* animation, Settings& settings, Resources& resources)
+  void Timeline::items_child(Manager& manager, Document& document, anm2::Animation* animation, Settings& settings,
+                             Resources& resources)
   {
-    auto& anm2 = document.anm2;
     auto& reference = document.reference;
 
     auto itemsChildSize = ImVec2(ImGui::GetTextLineHeightWithSpacing() * 15, ImGui::GetContentRegionAvail().y);
@@ -212,7 +232,7 @@ namespace anm2ed::timeline
           {
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(0);
-            item_child(anm2, reference, animation, settings, resources, type, id, index);
+            item_child(manager, document, animation, settings, resources, type, id, index);
           };
 
           item_child_row(anm2::NONE);
@@ -253,20 +273,24 @@ namespace anm2ed::timeline
       }
       ImGui::EndChild();
 
-      auto widgetSize = imgui::widget_size_with_row_get(2);
-
       ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
+
+      ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPosX() + style.WindowPadding.x, ImGui::GetCursorPosY()));
+      auto widgetSize = imgui::widget_size_with_row_get(2, ImGui::GetContentRegionAvail().x - style.WindowPadding.x);
 
       ImGui::BeginDisabled(!animation);
       {
+        imgui::shortcut(settings.shortcutAdd);
         if (ImGui::Button("Add", widgetSize)) propertiesPopup.open();
-        ImGui::SetItemTooltip("%s", "Add a new item to the animation.");
+        imgui::set_item_tooltip_shortcut("Add a new item to the animation.", settings.shortcutAdd);
         ImGui::SameLine();
 
-        ImGui::BeginDisabled(document.item_get());
+        ImGui::BeginDisabled(!document.item_get() && reference.itemType != anm2::LAYER &&
+                             reference.itemType != anm2::NULL_);
         {
-          ImGui::Button("Remove", widgetSize);
-          ImGui::SetItemTooltip("%s", "Remove the selected items from the animation.");
+          imgui::shortcut(settings.shortcutRemove);
+          if (ImGui::Button("Remove", widgetSize)) document.item_remove(animation);
+          imgui::set_item_tooltip_shortcut("Remove the selected items from the animation.", settings.shortcutRemove);
         }
         ImGui::EndDisabled();
       }
@@ -278,9 +302,10 @@ namespace anm2ed::timeline
   }
 
   void Timeline::frame_child(Document& document, anm2::Animation* animation, Settings& settings, Resources& resources,
-                             Playback& playback, anm2::Type type, int id, int& index, float width)
+                             anm2::Type type, int id, int& index, float width)
   {
     auto& anm2 = document.anm2;
+    auto& playback = document.playback;
     auto& reference = document.reference;
     auto item = animation ? animation->item_get(type, id) : nullptr;
     auto isVisible = item ? item->isVisible : false;
@@ -455,7 +480,11 @@ namespace anm2ed::timeline
           if (ImGui::Button("##Frame Button", size))
           {
             if (type != anm2::TRIGGER && ImGui::IsKeyDown(ImGuiMod_Alt)) frame.isInterpolated = !frame.isInterpolated;
-            if (type == anm2::LAYER) document.referenceSpritesheet = anm2.content.layers[id].spritesheetID;
+            if (type == anm2::LAYER)
+            {
+              document.referenceSpritesheet = anm2.content.layers[id].spritesheetID;
+              document.layersMultiSelect = {id};
+            }
             reference = frameReference;
             reference.frameTime = frameTime;
           }
@@ -481,10 +510,10 @@ namespace anm2ed::timeline
     ImGui::PopID();
   }
 
-  void Timeline::frames_child(Document& document, anm2::Animation* animation, Settings& settings, Resources& resources,
-                              Playback& playback)
+  void Timeline::frames_child(Document& document, anm2::Animation* animation, Settings& settings, Resources& resources)
   {
     auto& anm2 = document.anm2;
+    auto& playback = document.playback;
 
     auto itemsChildWidth = ImGui::GetTextLineHeightWithSpacing() * 15;
 
@@ -541,7 +570,7 @@ namespace anm2ed::timeline
           {
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(0);
-            frame_child(document, animation, settings, resources, playback, type, id, index, childWidth);
+            frame_child(document, animation, settings, resources, type, id, index, childWidth);
           };
 
           frames_child_row(anm2::NONE);
@@ -614,25 +643,35 @@ namespace anm2ed::timeline
 
         ImGui::SameLine();
 
-        imgui::shortcut(settings.shortcutAdd);
-        ImGui::Button("Insert Frame", widgetSize);
-        imgui::set_item_tooltip_shortcut("Insert a frame, based on the current selection.", settings.shortcutAdd);
+        auto item = document.item_get();
 
-        ImGui::SameLine();
+        ImGui::BeginDisabled(!item);
+        {
+          imgui::shortcut(settings.shortcutAdd);
+          if (ImGui::Button("Insert Frame", widgetSize)) document.frames_add(item);
+          imgui::set_item_tooltip_shortcut("Insert a frame, based on the current selection.", settings.shortcutAdd);
 
-        imgui::shortcut(settings.shortcutRemove);
-        ImGui::Button("Delete Frame", widgetSize);
-        imgui::set_item_tooltip_shortcut("Delete the selected frames.", settings.shortcutRemove);
+          ImGui::SameLine();
 
-        ImGui::SameLine();
+          ImGui::BeginDisabled(!document.frame_get());
+          {
+            imgui::shortcut(settings.shortcutRemove);
+            if (ImGui::Button("Delete Frame", widgetSize)) document.frames_delete(item);
+            imgui::set_item_tooltip_shortcut("Delete the selected frames.", settings.shortcutRemove);
 
-        ImGui::Button("Bake", widgetSize);
-        ImGui::SetItemTooltip("%s", "Turn interpolated frames into uninterpolated ones.");
+            ImGui::SameLine();
+
+            if (ImGui::Button("Bake", widgetSize)) bakePopup.open();
+            ImGui::SetItemTooltip("Turn interpolated frames into uninterpolated ones.");
+          }
+          ImGui::EndDisabled();
+        }
+        ImGui::EndDisabled();
 
         ImGui::SameLine();
 
         if (ImGui::Button("Fit Animation Length", widgetSize)) animation->frameNum = animation->length();
-        ImGui::SetItemTooltip("%s", "The animation length will be set to the effective length of the animation.");
+        ImGui::SetItemTooltip("The animation length will be set to the effective length of the animation.");
 
         ImGui::SameLine();
 
@@ -640,13 +679,13 @@ namespace anm2ed::timeline
         ImGui::InputInt("Animation Length", animation ? &animation->frameNum : &dummy_value<int>(), step::NORMAL,
                         step::FAST, !animation ? ImGuiInputTextFlags_DisplayEmptyRefVal : 0);
         if (animation) animation->frameNum = clamp(animation->frameNum, anm2::FRAME_NUM_MIN, anm2::FRAME_NUM_MAX);
-        ImGui::SetItemTooltip("%s", "Set the animation's length.");
+        ImGui::SetItemTooltip("Set the animation's length.");
 
         ImGui::SameLine();
 
         ImGui::SetNextItemWidth(widgetSize.x);
         ImGui::Checkbox("Loop", animation ? &animation->isLoop : &dummy_value<bool>());
-        ImGui::SetItemTooltip("%s", "Toggle the animation looping.");
+        ImGui::SetItemTooltip("Toggle the animation looping.");
       }
       ImGui::EndDisabled();
 
@@ -655,13 +694,13 @@ namespace anm2ed::timeline
       ImGui::SetNextItemWidth(widgetSize.x);
       ImGui::InputInt("FPS", &anm2.info.fps, 1, 5);
       anm2.info.fps = clamp(anm2.info.fps, anm2::FPS_MIN, anm2::FPS_MAX);
-      ImGui::SetItemTooltip("%s", "Set the FPS of all animations.");
+      ImGui::SetItemTooltip("Set the FPS of all animations.");
 
       ImGui::SameLine();
 
       ImGui::SetNextItemWidth(widgetSize.x);
       imgui::input_text_string("Author", &anm2.info.createdBy);
-      ImGui::SetItemTooltip("%s", "Set the author of the document.");
+      ImGui::SetItemTooltip("Set the author of the document.");
 
       ImGui::PopStyleVar();
     }
@@ -710,7 +749,6 @@ namespace anm2ed::timeline
       auto optionsSize = imgui::child_size_get(11);
       auto itemsSize = ImVec2(0, ImGui::GetContentRegionAvail().y -
                                      (optionsSize.y + footerSize.y + ImGui::GetStyle().ItemSpacing.y * 4));
-
       if (ImGui::BeginChild("Options", optionsSize, ImGuiChildFlags_Borders))
       {
         ImGui::SeparatorText("Type");
@@ -827,17 +865,7 @@ namespace anm2ed::timeline
 
       if (ImGui::Button("Add", widgetSize))
       {
-        anm2::Reference addReference;
-
-        if (type == anm2::LAYER)
-          addReference = anm2.layer_add({reference.animationIndex, anm2::LAYER, addItemID}, addItemName,
-                                        addItemSpritesheetID, (locale::Type)locale);
-        else if (type == anm2::NULL_)
-          addReference =
-              anm2.null_add({reference.animationIndex, anm2::LAYER, addItemID}, addItemName, (locale::Type)locale);
-
-        reference = addReference;
-
+        document.item_add((anm2::Type)type, addItemID, addItemName, (locale::Type)locale, addItemSpritesheetID);
         item_properties_close();
       }
       ImGui::SetItemTooltip("Add the item, with the settings specified.");
@@ -849,11 +877,49 @@ namespace anm2ed::timeline
 
       ImGui::EndPopup();
     }
+
+    bakePopup.trigger();
+
+    if (ImGui::BeginPopupModal(bakePopup.label, &bakePopup.isOpen, ImGuiWindowFlags_NoResize))
+    {
+      auto& interval = settings.bakeInterval;
+      auto& isRoundRotation = settings.bakeIsRoundRotation;
+      auto& isRoundScale = settings.bakeIsRoundScale;
+
+      auto frame = document.frame_get();
+
+      ImGui::InputInt("Interval", &interval, step::NORMAL, step::FAST);
+      ImGui::SetItemTooltip("Set the maximum delay of each frame that will be baked.");
+      interval = glm::clamp(interval, anm2::FRAME_DELAY_MIN, frame ? frame->delay : anm2::FRAME_DELAY_MIN);
+
+      ImGui::Checkbox("Round Rotation", &isRoundRotation);
+      ImGui::SetItemTooltip("Rotation will be rounded to the nearest whole number.");
+
+      ImGui::Checkbox("Round Scale", &isRoundScale);
+      ImGui::SetItemTooltip("Scale will be rounded to the nearest whole number.");
+
+      auto widgetSize = imgui::widget_size_with_row_get(2);
+
+      if (ImGui::Button("Bake", widgetSize))
+      {
+        document.frames_bake(interval, isRoundScale, isRoundRotation);
+        bakePopup.close();
+      }
+      ImGui::SetItemTooltip("Bake the selected frame(s) with the options selected.");
+
+      ImGui::SameLine();
+
+      if (ImGui::Button("Cancel", widgetSize)) bakePopup.close();
+      ImGui::SetItemTooltip("Cancel baking frames.");
+
+      ImGui::EndPopup();
+    }
   }
 
-  void Timeline::update(DocumentManager& manager, Settings& settings, Resources& resources, Playback& playback)
+  void Timeline::update(Manager& manager, Settings& settings, Resources& resources)
   {
     auto& document = *manager.get();
+    auto& playback = document.playback;
     auto& anm2 = document.anm2;
     auto& reference = document.reference;
     auto animation = document.animation_get();
@@ -864,8 +930,8 @@ namespace anm2ed::timeline
     if (ImGui::Begin("Timeline", &settings.windowIsTimeline))
     {
       isWindowHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows);
-      frames_child(document, animation, settings, resources, playback);
-      items_child(document, animation, settings, resources);
+      frames_child(document, animation, settings, resources);
+      items_child(manager, document, animation, settings, resources);
     }
     ImGui::PopStyleVar();
     ImGui::End();

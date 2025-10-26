@@ -15,7 +15,17 @@ namespace anm2ed::types::change
     ANIMATIONS,
     ITEMS,
     FRAMES,
+    ALL,
     COUNT
+  };
+}
+
+namespace anm2ed::types::draw_order
+{
+  enum Type
+  {
+    BELOW,
+    ABOVE
   };
 }
 
