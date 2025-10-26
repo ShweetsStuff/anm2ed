@@ -66,25 +66,24 @@ namespace anm2ed::shader
   )";
 
   constexpr auto GRID_VERTEX = R"(
-#version 330 core
-layout (location = 0) in vec2 i_position;
-layout (location = 1) in vec2 i_uv;
+  #version 330 core
+  layout (location = 0) in vec2 i_position;
+  layout (location = 1) in vec2 i_uv;
 
-out vec2 i_uv_out;
+  out vec2 i_uv_out;
 
-void main() {
-  i_uv_out = i_position;
-  gl_Position = vec4(i_position, 0.0, 1.0);
-}
+  void main()
+  {
+      i_uv_out = i_position;
+      gl_Position = vec4(i_position, 0.0, 1.0);
+  }
   )";
 
   constexpr auto GRID_FRAGMENT = R"(
   #version 330 core
   in vec2 i_uv_out;
 
-  uniform vec2 u_view_size;
-  uniform vec2 u_pan;
-  uniform float u_zoom;
+  uniform mat4 u_transform;
   uniform vec2 u_size;
   uniform vec2 u_offset;
   uniform vec4 u_color;
@@ -93,18 +92,15 @@ void main() {
 
   void main()
   {
-      vec2 viewSize = max(u_view_size, vec2(1.0));
-      float zoom = max(u_zoom, 1e-6);
-      vec2 pan = u_pan;
-
-      vec2 world = (i_uv_out - (2.0 * pan / viewSize)) * (viewSize / (2.0 * zoom));
-      world += vec2(0.5); // Half pixel nudge
+      vec4 world4 = u_transform * vec4(i_uv_out, 0.0, 1.0);
+      vec2 world = world4.xy / world4.w;
 
       vec2 cell = max(u_size, vec2(1.0));
       vec2 grid = (world - u_offset) / cell;
 
-      vec2 d = abs(fract(grid) - 0.5);
-      float distance = min(d.x, d.y);
+      vec2 frac = fract(grid);
+      vec2 distToLine = min(frac, 1.0 - frac);
+      float distance = min(distToLine.x, distToLine.y);
 
       float fw = min(fwidth(grid.x), fwidth(grid.y));
       float alpha = 1.0 - smoothstep(0.0, fw, distance);
@@ -127,9 +123,6 @@ void main() {
   constexpr auto UNIFORM_MODEL = "u_model";
   constexpr auto UNIFORM_RECT_SIZE = "u_rect_size";
   constexpr auto UNIFORM_TEXTURE = "u_texture";
-  constexpr auto UNIFORM_VIEW_SIZE = "u_view_size";
-  constexpr auto UNIFORM_PAN = "u_pan";
-  constexpr auto UNIFORM_ZOOM = "u_zoom";
 
   enum Type
   {

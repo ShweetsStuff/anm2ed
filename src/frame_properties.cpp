@@ -25,8 +25,8 @@ namespace anm2ed::frame_properties
       auto& anm2 = document.anm2;
       auto& reference = document.reference;
       auto& type = reference.itemType;
-      auto& isRound = settings.propertiesIsRound;
       auto frame = document.frame_get();
+      auto useFrame = frame ? *frame : anm2::Frame();
 
       ImGui::BeginDisabled(!frame);
       {
@@ -44,77 +44,75 @@ namespace anm2ed::frame_properties
         }
         else
         {
-
           ImGui::BeginDisabled(type == anm2::ROOT || type == anm2::NULL_);
           {
-            if (ImGui::InputFloat2("Crop", frame ? value_ptr(frame->crop) : &dummy_value<float>(),
-                                   frame ? vec2_format_get(frame->crop) : ""))
-              if (isRound) frame->crop = ivec2(frame->crop);
+            if (ImGui::InputFloat2("Crop", frame ? value_ptr(useFrame.crop) : &dummy_value<float>(),
+                                   frame ? vec2_format_get(useFrame.crop) : ""))
+              document.frame_crop_set(frame, useFrame.crop);
             ImGui::SetItemTooltip("%s", "Change the crop position the frame uses.");
 
-            if (ImGui::InputFloat2("Size", frame ? value_ptr(frame->size) : &dummy_value<float>(),
-                                   frame ? vec2_format_get(frame->size) : ""))
-              if (isRound) frame->crop = ivec2(frame->size);
+            if (ImGui::InputFloat2("Size", frame ? value_ptr(useFrame.size) : &dummy_value<float>(),
+                                   frame ? vec2_format_get(useFrame.size) : ""))
+              document.frame_size_set(frame, useFrame.size);
             ImGui::SetItemTooltip("%s", "Change the size of the crop the frame uses.");
           }
           ImGui::EndDisabled();
 
-          if (ImGui::InputFloat2("Position", frame ? value_ptr(frame->position) : &dummy_value<float>(),
-                                 frame ? vec2_format_get(frame->position) : ""))
-            if (isRound) frame->position = ivec2(frame->position);
+          if (ImGui::InputFloat2("Position", frame ? value_ptr(useFrame.position) : &dummy_value<float>(),
+                                 frame ? vec2_format_get(useFrame.position) : ""))
+            document.frame_position_set(frame, useFrame.position);
           ImGui::SetItemTooltip("%s", "Change the position of the frame.");
 
           ImGui::BeginDisabled(type == anm2::ROOT || type == anm2::NULL_);
           {
-            if (ImGui::InputFloat2("Pivot", frame ? value_ptr(frame->pivot) : &dummy_value<float>(),
-                                   frame ? vec2_format_get(frame->pivot) : ""))
-              if (isRound) frame->position = ivec2(frame->position);
+            if (ImGui::InputFloat2("Pivot", frame ? value_ptr(useFrame.pivot) : &dummy_value<float>(),
+                                   frame ? vec2_format_get(useFrame.pivot) : ""))
+              document.frame_pivot_set(frame, useFrame.pivot);
             ImGui::SetItemTooltip("%s", "Change the pivot of the frame; i.e., where it is centered.");
           }
           ImGui::EndDisabled();
 
-          if (ImGui::InputFloat2("Scale", frame ? value_ptr(frame->scale) : &dummy_value<float>(),
-                                 frame ? vec2_format_get(frame->scale) : ""))
-            if (isRound) frame->position = ivec2(frame->position);
+          if (ImGui::InputFloat2("Scale", frame ? value_ptr(useFrame.scale) : &dummy_value<float>(),
+                                 frame ? vec2_format_get(useFrame.scale) : ""))
+            document.frame_scale_set(frame, useFrame.scale);
           ImGui::SetItemTooltip("%s", "Change the scale of the frame, in percent.");
 
-          if (ImGui::InputFloat("Rotation", frame ? &frame->rotation : &dummy_value<float>(), step::NORMAL, step::FAST,
-                                frame ? float_format_get(frame->rotation) : ""))
-            if (isRound) frame->rotation = (int)frame->rotation;
+          if (ImGui::InputFloat("Rotation", frame ? &useFrame.rotation : &dummy_value<float>(), step::NORMAL,
+                                step::FAST, frame ? float_format_get(useFrame.rotation) : ""))
+            document.frame_rotation_set(frame, useFrame.rotation);
           ImGui::SetItemTooltip("%s", "Change the rotation of the frame.");
 
-          ImGui::InputInt("Duration", frame ? &frame->delay : &dummy_value<int>(), step::NORMAL, step::FAST,
-                          !frame ? ImGuiInputTextFlags_DisplayEmptyRefVal : 0);
+          if (ImGui::InputInt("Duration", frame ? &useFrame.delay : &dummy_value<int>(), step::NORMAL, step::FAST,
+                              !frame ? ImGuiInputTextFlags_DisplayEmptyRefVal : 0))
+            document.frame_delay_set(frame, useFrame.delay);
           ImGui::SetItemTooltip("%s", "Change how long the frame lasts.");
 
-          ImGui::ColorEdit4("Tint", frame ? value_ptr(frame->tint) : &dummy_value<float>());
+          if (ImGui::ColorEdit4("Tint", frame ? value_ptr(useFrame.tint) : &dummy_value<float>()))
+            document.frame_tint_set(frame, useFrame.tint);
           ImGui::SetItemTooltip("%s", "Change the tint of the frame.");
-          ImGui::ColorEdit3("Color Offset", frame ? value_ptr(frame->offset) : &dummy_value<float>());
+
+          if (ImGui::ColorEdit3("Color Offset", frame ? value_ptr(useFrame.offset) : &dummy_value<float>()))
+            document.frame_offset_set(frame, useFrame.offset);
           ImGui::SetItemTooltip("%s", "Change the color added onto the frame.");
 
-          ImGui::Checkbox("Visible", frame ? &frame->isVisible : &dummy_value<bool>());
+          if (ImGui::Checkbox("Visible", frame ? &useFrame.isVisible : &dummy_value<bool>()))
+            document.frame_is_visible_set(frame, useFrame.isVisible);
           ImGui::SetItemTooltip("%s", "Toggle the frame's visibility.");
+
           ImGui::SameLine();
-          ImGui::Checkbox("Interpolated", frame ? &frame->isInterpolated : &dummy_value<bool>());
+
+          if (ImGui::Checkbox("Interpolated", frame ? &useFrame.isInterpolated : &dummy_value<bool>()))
+            document.frame_is_interpolated_set(frame, useFrame.isInterpolated);
           ImGui::SetItemTooltip(
               "%s", "Toggle the frame interpolating; i.e., blending its values into the next frame based on the time.");
 
-          ImGui::SameLine();
-          ImGui::EndDisabled();
-          ImGui::Checkbox("Round", &settings.propertiesIsRound);
-          ImGui::BeginDisabled(!frame);
-          ImGui::SetItemTooltip(
-              "%s", "When toggled, decimal values will be snapped to their nearest whole value when changed.");
-
           auto widgetSize = imgui::widget_size_with_row_get(2);
 
-          if (ImGui::Button("Flip X", widgetSize))
-            if (frame) frame->scale.x = -frame->scale.x;
+          if (ImGui::Button("Flip X", widgetSize)) document.frame_flip_x(frame);
           ImGui::SetItemTooltip("%s", "Flip the horizontal scale of the frame, to cheat mirroring the frame "
                                       "horizontally.\n(Note: the format does not support mirroring.)");
           ImGui::SameLine();
-          if (ImGui::Button("Flip Y", widgetSize))
-            if (frame) frame->scale.y = -frame->scale.y;
+          if (ImGui::Button("Flip Y", widgetSize)) document.frame_flip_y(frame);
           ImGui::SetItemTooltip("%s", "Flip the vertical scale of the frame, to cheat mirroring the frame "
                                       "vertically.\n(Note: the format does not support mirroring.)");
         }

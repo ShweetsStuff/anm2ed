@@ -73,12 +73,27 @@ namespace anm2ed::document
 
     anm2::Frame* frame_get();
     void frames_add(anm2::Item* item);
+    void frames_change();
     void frames_delete(anm2::Item* item);
     void frames_bake(int, bool, bool);
+    void frame_crop_set(anm2::Frame*, glm::vec2);
+    void frame_size_set(anm2::Frame*, glm::vec2);
+    void frame_position_set(anm2::Frame*, glm::vec2);
+    void frame_pivot_set(anm2::Frame*, glm::vec2);
+    void frame_scale_set(anm2::Frame*, glm::vec2);
+    void frame_rotation_set(anm2::Frame*, float);
+    void frame_delay_set(anm2::Frame*, int);
+    void frame_tint_set(anm2::Frame*, glm::vec4);
+    void frame_offset_set(anm2::Frame*, glm::vec3);
+    void frame_is_visible_set(anm2::Frame*, bool);
+    void frame_is_interpolated_set(anm2::Frame*, bool);
+    void frame_flip_x(anm2::Frame* frame);
+    void frame_flip_y(anm2::Frame* frame);
 
     anm2::Item* item_get();
     void item_add(anm2::Type, int, std::string&, types::locale::Type, int);
     void item_remove(anm2::Animation* animation);
+    void item_visible_toggle(anm2::Item*);
 
     anm2::Spritesheet* spritesheet_get();
     void spritesheet_add(const std::string&);
@@ -96,8 +111,6 @@ namespace anm2ed::document
     void event_add();
     void events_remove_unused();
     void events_deserialize(const std::string&, types::merge::Type);
-
-    void item_visible_toggle(anm2::Item*);
 
     void animation_add();
     void animation_duplicate();

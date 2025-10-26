@@ -21,6 +21,9 @@ namespace anm2ed::spritesheet_editor
   void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& resources)
   {
     auto& document = *manager.get();
+    auto& anm2 = document.anm2;
+    auto& reference = document.reference;
+    auto& referenceSpritesheet = document.referenceSpritesheet;
     auto& pan = document.editorPan;
     auto& zoom = document.editorZoom;
     auto& backgroundColor = settings.editorBackgroundColor;
@@ -59,9 +62,16 @@ namespace anm2ed::spritesheet_editor
 
         auto widgetSize = ImVec2(imgui::row_widget_width_get(2), 0);
 
-        if (ImGui::Button("Center View", widgetSize)) pan = vec2();
+        imgui::shortcut(settings.shortcutCenterView);
+        if (ImGui::Button("Center View", widgetSize)) pan = -size * 0.5f;
+        imgui::set_item_tooltip_shortcut("Centers the view.", settings.shortcutCenterView);
+
         ImGui::SameLine();
-        ImGui::Button("Fit", widgetSize);
+
+        imgui::shortcut(settings.shortcutFit);
+        if (ImGui::Button("Fit", widgetSize))
+          if (spritesheet) set_to_rect(zoom, pan, {0, 0, spritesheet->texture.size.x, spritesheet->texture.size.y});
+        imgui::set_item_tooltip_shortcut("Set the view to match the extent of the spritesheet.", settings.shortcutFit);
 
         ImGui::TextUnformatted(std::format(POSITION_FORMAT, (int)mousePos.x, (int)mousePos.y).c_str());
       }
@@ -84,12 +94,27 @@ namespace anm2ed::spritesheet_editor
       viewport_set();
       clear(backgroundColor);
 
+      auto frame = document.frame_get();
+
       if (spritesheet)
       {
         auto& texture = spritesheet->texture;
-        auto transform = transform_get(zoom, pan) * math::quad_model_get(texture.size);
-        texture_render(shaderTexture, texture.id, transform);
-        if (isBorder) rect_render(lineShader, transform);
+        auto transform = transform_get(zoom, pan);
+
+        auto spritesheetTransform = transform * math::quad_model_get(texture.size);
+        texture_render(shaderTexture, texture.id, spritesheetTransform);
+        if (isBorder) rect_render(lineShader, spritesheetTransform);
+
+        if (frame && reference.itemID > -1 &&
+            anm2.content.layers.at(reference.itemID).spritesheetID == referenceSpritesheet)
+        {
+          auto cropTransform = transform * math::quad_model_get(frame->size, frame->crop);
+          rect_render(lineShader, cropTransform, color::RED);
+
+          auto pivotTransform =
+              transform * math::quad_model_get(canvas::PIVOT_SIZE, frame->crop + frame->pivot, PIVOT_SIZE * 0.5f);
+          texture_render(shaderTexture, resources.icons[icon::PIVOT].id, pivotTransform, color::RED);
+        }
       }
 
       if (isGrid) grid_render(shaderGrid, zoom, pan, gridSize, gridOffset, gridColor);
@@ -102,19 +127,78 @@ namespace anm2ed::spritesheet_editor
       {
         ImGui::SetKeyboardFocusHere(-1);
 
+        previousMousePos = mousePos;
         mousePos = position_translate(zoom, pan, to_vec2(ImGui::GetMousePos()) - to_vec2(cursorScreenPos));
 
+        auto isMouseClicked = ImGui::IsMouseClicked(ImGuiMouseButton_Left);
         auto isMouseDown = ImGui::IsMouseDown(ImGuiMouseButton_Left);
         auto isMouseMiddleDown = ImGui::IsMouseDown(ImGuiMouseButton_Middle);
-        auto mouseDelta = ImGui::GetIO().MouseDelta;
+        auto mouseDelta = to_ivec2(ImGui::GetIO().MouseDelta);
         auto mouseWheel = ImGui::GetIO().MouseWheel;
+        auto& toolColor = settings.toolColor;
         auto isZoomIn = imgui::chord_repeating(imgui::string_to_chord(settings.shortcutZoomIn));
         auto isZoomOut = imgui::chord_repeating(imgui::string_to_chord(settings.shortcutZoomOut));
+        auto isLeft = imgui::chord_repeating(ImGuiKey_LeftArrow);
+        auto isRight = imgui::chord_repeating(ImGuiKey_RightArrow);
+        auto isUp = imgui::chord_repeating(ImGuiKey_UpArrow);
+        auto isDown = imgui::chord_repeating(ImGuiKey_DownArrow);
+        auto isMod = ImGui::IsKeyDown(ImGuiMod_Shift);
+        auto step = isMod ? step::FAST : step::NORMAL;
+        auto useTool = tool;
+        auto isMouseClick = ImGui::IsMouseClicked(ImGuiMouseButton_Left);
+        auto isMouseReleased = ImGui::IsMouseReleased(ImGuiMouseButton_Left);
+        auto isLeftPressed = ImGui::IsKeyPressed(ImGuiKey_LeftArrow, false);
+        auto isRightPressed = ImGui::IsKeyPressed(ImGuiKey_RightArrow, false);
+        auto isUpPressed = ImGui::IsKeyPressed(ImGuiKey_UpArrow, false);
+        auto isDownPressed = ImGui::IsKeyPressed(ImGuiKey_DownArrow, false);
+        auto isLeftReleased = ImGui::IsKeyReleased(ImGuiKey_LeftArrow);
+        auto isRightReleased = ImGui::IsKeyReleased(ImGuiKey_RightArrow);
+        auto isUpReleased = ImGui::IsKeyReleased(ImGuiKey_UpArrow);
+        auto isDownReleased = ImGui::IsKeyReleased(ImGuiKey_DownArrow);
+        auto frame = document.frame_get();
+        auto isKeyPressed = isLeftPressed || isRightPressed || isUpPressed || isDownPressed;
+        auto isKeyReleased = isLeftReleased || isRightReleased || isUpReleased || isDownReleased;
+        auto isBegin = isMouseClick || isKeyPressed;
+        auto isEnd = isMouseReleased || isKeyReleased;
 
-        if ((tool == tool::PAN && isMouseDown) || isMouseMiddleDown) pan += vec2(mouseDelta.x, mouseDelta.y);
+        if (isMouseMiddleDown) useTool = tool::PAN;
 
-        switch (tool)
+        switch (useTool)
         {
+          case tool::PAN:
+            if (isMouseDown || isMouseMiddleDown) pan += mouseDelta;
+            break;
+          case tool::MOVE:
+            if (!frame) break;
+            if (isBegin) document.snapshot("Frame Pivot");
+            if (isMouseDown) frame->pivot = ivec2(mousePos - frame->crop);
+            if (isLeft) frame->pivot.x -= step;
+            if (isRight) frame->pivot.x += step;
+            if (isUp) frame->pivot.y -= step;
+            if (isDown) frame->pivot.y += step;
+            if (isEnd) document.change(change::FRAMES);
+            break;
+          case tool::CROP:
+            if (!frame) break;
+            if (isBegin) document.snapshot(isMod ? "Frame Size" : "Frame Crop");
+            if (isMouseClicked) frame->crop = ivec2(mousePos);
+            if (isMouseDown) frame->size = ivec2(mousePos - frame->crop);
+            if (isLeft) isMod ? frame->size.x -= step : frame->crop.x -= step;
+            if (isRight) isMod ? frame->size.x += step : frame->crop.x += step;
+            if (isUp) isMod ? frame->size.y -= step : frame->crop.y -= step;
+            if (isDown) isMod ? frame->size.y += step : frame->crop.y += step;
+            if (isEnd) document.change(change::FRAMES);
+            break;
+          case tool::DRAW:
+          case tool::ERASE:
+          {
+            if (!spritesheet) break;
+            if (isMouseClicked) document.snapshot(tool == tool::DRAW ? "Draw" : "Erase");
+            auto color = tool == tool::DRAW ? toolColor : vec4();
+            if (isMouseDown) spritesheet->texture.pixel_line(ivec2(previousMousePos), ivec2(mousePos), color);
+            if (isMouseReleased) document.change(change::FRAMES);
+            break;
+          }
           default:
             break;
         }

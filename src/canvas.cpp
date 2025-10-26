@@ -3,6 +3,7 @@
 #include "math.h"
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
+#include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 using namespace glm;
@@ -183,13 +184,11 @@ namespace anm2ed::canvas
 
   void Canvas::grid_render(Shader& shader, float zoom, vec2 pan, ivec2 size, ivec2 offset, vec4 color)
   {
-    auto zoomFactor = math::percent_to_unit(zoom);
+    auto transform = glm::inverse(transform_get(zoom, pan));
 
     glUseProgram(shader.id);
 
-    glUniform2f(glGetUniformLocation(shader.id, shader::UNIFORM_VIEW_SIZE), this->size.x, this->size.y);
-    glUniform2f(glGetUniformLocation(shader.id, shader::UNIFORM_PAN), pan.x, pan.y);
-    glUniform1f(glGetUniformLocation(shader.id, shader::UNIFORM_ZOOM), zoomFactor);
+    glUniformMatrix4fv(glGetUniformLocation(shader.id, shader::UNIFORM_TRANSFORM), 1, GL_FALSE, value_ptr(transform));
     glUniform2f(glGetUniformLocation(shader.id, shader::UNIFORM_SIZE), (float)size.x, (float)size.y);
     glUniform2f(glGetUniformLocation(shader.id, shader::UNIFORM_OFFSET), (float)offset.x, (float)offset.y);
     glUniform4f(glGetUniformLocation(shader.id, shader::UNIFORM_COLOR), color.r, color.g, color.b, color.a);
@@ -262,7 +261,7 @@ namespace anm2ed::canvas
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
   }
 
-  void Canvas::zoom_set(float& zoom, vec2& pan, vec2& focus, float step)
+  void Canvas::zoom_set(float& zoom, vec2& pan, vec2 focus, float step)
   {
     auto zoomFactor = math::percent_to_unit(zoom);
     float newZoom = glm::clamp(math::round_nearest_multiple(zoom + step, step), canvas::ZOOM_MIN, canvas::ZOOM_MAX);
@@ -278,5 +277,20 @@ namespace anm2ed::canvas
   {
     auto zoomFactor = math::percent_to_unit(zoom);
     return (position - pan - (size * 0.5f)) / zoomFactor;
+  }
+
+  void Canvas::set_to_rect(float& zoom, vec2& pan, vec4 rect)
+  {
+    if (rect != vec4(-1.0f) && (rect.z > 0 && rect.w > 0))
+    {
+      f32 scaleX = size.x / rect.z;
+      f32 scaleY = size.y / rect.w;
+      f32 fitScale = std::min(scaleX, scaleY);
+
+      zoom = math::unit_to_percent(fitScale);
+
+      vec2 rectCenter = {rect.x + rect.z * 0.5f, rect.y + rect.w * 0.5f};
+      pan = -rectCenter * fitScale;
+    }
   }
 }

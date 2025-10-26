@@ -13,6 +13,8 @@ using namespace anm2ed::toast;
 using namespace anm2ed::types;
 using namespace anm2ed::util;
 
+using namespace glm;
+
 namespace anm2ed::document
 {
   Document::Document(const std::string& path, bool isNew, std::string* errorString)
@@ -155,6 +157,110 @@ namespace anm2ed::document
     snapshot("Delete Frames");
     item->frames.erase(item->frames.begin() + reference.frameIndex);
     reference.frameIndex = glm::max(-1, --reference.frameIndex);
+    change(change::FRAMES);
+  }
+
+  void Document::frame_crop_set(anm2::Frame* frame, vec2 crop)
+  {
+    if (!frame) return;
+    snapshot("Frame Crop");
+    frame->crop = crop;
+    change(change::FRAMES);
+  }
+
+  void Document::frame_size_set(anm2::Frame* frame, vec2 size)
+  {
+    if (!frame) return;
+    snapshot("Frame Size");
+    frame->size = size;
+    change(change::FRAMES);
+  }
+
+  void Document::frame_position_set(anm2::Frame* frame, vec2 position)
+  {
+    if (!frame) return;
+    snapshot("Frame Position");
+    frame->position = position;
+    change(change::FRAMES);
+  }
+
+  void Document::frame_pivot_set(anm2::Frame* frame, vec2 pivot)
+  {
+    if (!frame) return;
+    snapshot("Frame Pivot");
+    frame->pivot = pivot;
+    change(change::FRAMES);
+  }
+
+  void Document::frame_scale_set(anm2::Frame* frame, vec2 scale)
+  {
+    if (!frame) return;
+    snapshot("Frame Scale");
+    frame->scale = scale;
+    change(change::FRAMES);
+  }
+
+  void Document::frame_rotation_set(anm2::Frame* frame, float rotation)
+  {
+    if (!frame) return;
+    snapshot("Frame Rotation");
+    frame->rotation = rotation;
+    change(change::FRAMES);
+  }
+
+  void Document::frame_delay_set(anm2::Frame* frame, int delay)
+  {
+    if (!frame) return;
+    snapshot("Frame Delay");
+    frame->delay = delay;
+    change(change::FRAMES);
+  }
+
+  void Document::frame_tint_set(anm2::Frame* frame, vec4 tint)
+  {
+    if (!frame) return;
+    snapshot("Frame Tint");
+    frame->tint = tint;
+    change(change::FRAMES);
+  }
+
+  void Document::frame_offset_set(anm2::Frame* frame, vec3 offset)
+  {
+    if (!frame) return;
+    snapshot("Frame Color Offset");
+    frame->offset = offset;
+    change(change::FRAMES);
+  }
+
+  void Document::frame_is_visible_set(anm2::Frame* frame, bool isVisible)
+  {
+    if (!frame) return;
+    snapshot("Frame Visibility");
+    frame->isVisible = isVisible;
+    change(change::FRAMES);
+  }
+
+  void Document::frame_is_interpolated_set(anm2::Frame* frame, bool isInterpolated)
+  {
+    if (!frame) return;
+    snapshot("Frame Interpolation");
+    frame->isInterpolated = isInterpolated;
+    change(change::FRAMES);
+  }
+
+  void Document::frame_flip_x(anm2::Frame* frame)
+  {
+    if (!frame) return;
+    snapshot("Frame Flip X");
+    frame->scale.x = -frame->scale.x;
+    change(change::FRAMES);
+  }
+
+  void Document::frame_flip_y(anm2::Frame* frame)
+  {
+    if (!frame) return;
+    snapshot("Frame Flip Y");
+    frame->scale.y = -frame->scale.y;
     change(change::FRAMES);
   }
 
@@ -301,16 +407,6 @@ namespace anm2ed::document
       toasts.error(std::format("Failed to deserialize event(s): {}", errorString));
   }
 
-  void Document::item_visible_toggle(anm2::Item* item)
-  {
-    if (!item) return;
-
-    snapshot("Item Visible");
-    item->isVisible = !item->isVisible;
-
-    change(change::ITEMS);
-  }
-
   void Document::item_add(anm2::Type type, int id, std::string& name, locale::Type locale, int spritesheetID)
   {
     snapshot("Add Item");
@@ -330,12 +426,18 @@ namespace anm2ed::document
 
   void Document::item_remove(anm2::Animation* animation)
   {
-    snapshot("Remove Item");
-
     if (!animation) return;
-
+    snapshot("Remove Item");
     animation->item_remove(reference.itemType, reference.itemID);
     reference = {reference.animationIndex};
+    change(change::ITEMS);
+  }
+
+  void Document::item_visible_toggle(anm2::Item* item)
+  {
+    if (!item) return;
+    snapshot("Item Visibility");
+    item->isVisible = !item->isVisible;
     change(change::ITEMS);
   }
 

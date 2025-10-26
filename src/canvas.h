@@ -9,6 +9,7 @@ namespace anm2ed::canvas
 {
   constexpr float TEXTURE_VERTICES[] = {0, 0, 0.0f, 0.0f, 1, 0, 1.0f, 0.0f, 1, 1, 1.0f, 1.0f, 0, 1, 0.0f, 1.0f};
 
+  constexpr auto PIVOT_SIZE = glm::vec2(8, 8);
   constexpr auto ZOOM_MIN = 1.0f;
   constexpr auto ZOOM_MAX = 2000.0f;
   constexpr auto POSITION_FORMAT = "Position: ({:8} {:8})";
@@ -49,7 +50,8 @@ namespace anm2ed::canvas
     void clear(glm::vec4&);
     void bind();
     void unbind();
-    void zoom_set(float&, glm::vec2&, glm::vec2&, float);
+    void zoom_set(float&, glm::vec2&, glm::vec2, float);
     glm::vec2 position_translate(float&, glm::vec2&, glm::vec2);
+    void set_to_rect(float& zoom, glm::vec2& pan, glm::vec4 rect);
   };
 }

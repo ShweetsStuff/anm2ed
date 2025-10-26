@@ -46,8 +46,8 @@ namespace anm2ed::timeline
 
   constexpr auto HELP_FORMAT = R"(- Press {} to decrement time.
 - Press {} to increment time.
-- Press {} to extend the selected frame, by one frame.
 - Press {} to shorten the selected frame, by one frame.
+- Press {} to extend the selected frame, by one frame.
 - Hold Alt while clicking a non-trigger frame to toggle interpolation.)";
 
   void Timeline::item_child(Manager& manager, Document& document, anm2::Animation* animation, Settings& settings,
@@ -479,7 +479,8 @@ namespace anm2ed::timeline
 
           if (ImGui::Button("##Frame Button", size))
           {
-            if (type != anm2::TRIGGER && ImGui::IsKeyDown(ImGuiMod_Alt)) frame.isInterpolated = !frame.isInterpolated;
+            if (type != anm2::TRIGGER && ImGui::IsKeyDown(ImGuiMod_Alt))
+              document.frame_is_interpolated_set(&frame, !frame.isInterpolated);
             if (type == anm2::LAYER)
             {
               document.referenceSpritesheet = anm2.content.layers[id].spritesheetID;

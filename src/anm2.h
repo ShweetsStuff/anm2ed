@@ -208,6 +208,7 @@ namespace anm2ed::anm2
     void item_remove(Type, int = -1);
     void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*);
     int length();
+    glm::vec4 rect(bool);
     std::string to_string();
   };
 

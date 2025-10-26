@@ -797,6 +797,50 @@ namespace anm2ed::anm2
     return std::string(printer.CStr());
   }
 
+  vec4 Animation::rect(bool isRootTransform)
+  {
+    f32 minX = std::numeric_limits<f32>::infinity();
+    f32 minY = std::numeric_limits<f32>::infinity();
+    f32 maxX = -std::numeric_limits<f32>::infinity();
+    f32 maxY = -std::numeric_limits<f32>::infinity();
+    bool any = false;
+
+    constexpr ivec2 CORNERS[4] = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
+
+    for (float t = 0.0f; t < (float)frameNum; t += 1.0f)
+    {
+      mat4 transform(1.0f);
+
+      if (isRootTransform)
+      {
+        auto root = rootAnimation.frame_generate(t, anm2::ROOT);
+        transform *= math::quad_model_parent_get(root.position, {}, math::percent_to_unit(root.scale), root.rotation);
+      }
+
+      for (auto& [id, layerAnimation] : layerAnimations)
+      {
+        auto frame = layerAnimation.frame_generate(t, anm2::LAYER);
+
+        if (frame.size == vec2() || !frame.isVisible) continue;
+
+        auto layerTransform = transform * math::quad_model_get(frame.size, frame.position, frame.pivot,
+                                                               math::percent_to_unit(frame.scale), frame.rotation);
+        for (auto& corner : CORNERS)
+        {
+          vec4 world = layerTransform * vec4(corner, 0.0f, 1.0f);
+          minX = std::min(minX, world.x);
+          minY = std::min(minY, world.y);
+          maxX = std::max(maxX, world.x);
+          maxY = std::max(maxY, world.y);
+          any = true;
+        }
+      }
+    }
+
+    if (!any) return vec4(-1.0f);
+    return {minX, minY, maxX - minX, maxY - minY};
+  }
+
   Animations::Animations() = default;
 
   Animations::Animations(XMLElement* element)

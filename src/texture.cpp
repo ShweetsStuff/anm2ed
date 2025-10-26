@@ -20,6 +20,9 @@
   #pragma GCC diagnostic pop
 #endif
 
+#include "math.h"
+
+using namespace anm2ed::math;
 using namespace glm;
 
 namespace anm2ed::texture
@@ -138,6 +141,55 @@ namespace anm2ed::texture
   bool Texture::write_png(const std::string& path)
   {
     return stbi_write_png(path.c_str(), size.x, size.y, CHANNELS, this->pixels.data(), size.x * CHANNELS);
+  }
+
+  void Texture::pixel_set(ivec2 position, vec4 color)
+  {
+    if (position.x < 0 || position.y < 0 || position.x >= size.x || position.y >= size.y) return;
+
+    uint8 rgba8[4] = {(uint8)float_to_uint8(color.r), (uint8)float_to_uint8(color.g), (uint8)float_to_uint8(color.b),
+                      (uint8)float_to_uint8(color.a)};
+
+    glBindTexture(GL_TEXTURE_2D, id);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, position.x, position.y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, rgba8);
+    glBindTexture(GL_TEXTURE_2D, 0);
+  }
+
+  void Texture::pixel_line(ivec2 start, ivec2 end, vec4 color)
+  {
+    auto plot = [&](ivec2 pos)
+    {
+      pixel_set(pos, color);
+    };
+
+    int x0 = start.x;
+    int y0 = start.y;
+    int x1 = end.x;
+    int y1 = end.y;
+
+    int dx = std::abs(x1 - x0);
+    int dy = -std::abs(y1 - y0);
+    int sx = x0 < x1 ? 1 : -1;
+    int sy = y0 < y1 ? 1 : -1;
+    int err = dx + dy;
+
+    while (true)
+    {
+      plot({x0, y0});
+      if (x0 == x1 && y0 == y1) break;
+      int e2 = 2 * err;
+      if (e2 >= dy)
+      {
+        err += dy;
+        x0 += sx;
+      }
+      if (e2 <= dx)
+      {
+        err += dx;
+        y0 += sy;
+      }
+    }
   }
 
   void Texture::bind(GLuint unit)

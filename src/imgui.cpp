@@ -236,8 +236,8 @@ namespace anm2ed::imgui
   bool shortcut(std::string string, shortcut::Type type)
   {
     if (ImGui::GetTopMostPopupModal() != nullptr) return false;
-    auto flags = type == shortcut::GLOBAL || type == shortcut::GLOBAL_SET ? ImGuiInputFlags_RouteGlobal
-                                                                          : ImGuiInputFlags_RouteFocused;
+    int flags = type == shortcut::GLOBAL || type == shortcut::GLOBAL_SET ? ImGuiInputFlags_RouteGlobal
+                                                                         : ImGuiInputFlags_RouteFocused;
     if (type == shortcut::GLOBAL_SET || type == shortcut::FOCUSED_SET)
     {
       ImGui::SetNextItemShortcut(string_to_chord(string), flags);

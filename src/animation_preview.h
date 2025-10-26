@@ -10,7 +10,7 @@ namespace anm2ed::animation_preview
   class AnimationPreview : public canvas::Canvas
   {
     bool isPreviewHovered{};
-    glm::vec2 mousePos{};
+    glm::ivec2 mousePos{};
 
   public:
     AnimationPreview();

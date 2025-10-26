@@ -19,7 +19,6 @@ namespace anm2ed::animation_preview
 {
   constexpr auto NULL_COLOR = vec4(0.0f, 0.0f, 1.0f, 0.90f);
   constexpr auto TARGET_SIZE = vec2(32, 32);
-  constexpr auto PIVOT_SIZE = vec2(8, 8);
   constexpr auto POINT_SIZE = vec2(4, 4);
   constexpr auto NULL_RECT_SIZE = vec2(100);
   constexpr auto TRIGGER_TEXT_COLOR = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
@@ -83,9 +82,17 @@ namespace anm2ed::animation_preview
 
         auto widgetSize = imgui::widget_size_with_row_get(2);
 
+        imgui::shortcut(settings.shortcutCenterView);
         if (ImGui::Button("Center View", widgetSize)) pan = vec2();
+        imgui::set_item_tooltip_shortcut("Centers the view.", settings.shortcutCenterView);
+
         ImGui::SameLine();
-        ImGui::Button("Fit", widgetSize);
+
+        imgui::shortcut(settings.shortcutFit);
+        if (ImGui::Button("Fit", widgetSize))
+          if (animation) set_to_rect(zoom, pan, animation->rect(isRootTransform));
+        imgui::set_item_tooltip_shortcut("Set the view to match the extent of the animation.", settings.shortcutFit);
+
         ImGui::TextUnformatted(std::format(POSITION_FORMAT, (int)mousePos.x, (int)mousePos.y).c_str());
       }
       ImGui::EndChild();
@@ -181,9 +188,8 @@ namespace anm2ed::animation_preview
             auto layerTransform = transform * math::quad_model_get(frame.size, frame.position, frame.pivot,
                                                                    math::percent_to_unit(frame.scale), frame.rotation);
 
-            auto inset = 0.5f / vec2(texture.size); // needed to avoid bleed
-            auto uvMin = frame.crop / vec2(texture.size) + inset;
-            auto uvMax = (frame.crop + frame.size) / vec2(texture.size) - inset;
+            auto uvMin = frame.crop / vec2(texture.size);
+            auto uvMax = (frame.crop + frame.size) / vec2(texture.size);
             auto vertices = math::uv_vertices_get(uvMin, uvMax);
             vec3 frameColorOffset = frame.offset + colorOffset;
             vec4 frameTint = frame.tint;
@@ -298,15 +304,24 @@ namespace anm2ed::animation_preview
 
         mousePos = position_translate(zoom, pan, to_vec2(ImGui::GetMousePos()) - to_vec2(cursorScreenPos));
 
-        auto isRound = settings.propertiesIsRound;
+        auto isMouseClick = ImGui::IsMouseClicked(ImGuiMouseButton_Left);
+        auto isMouseReleased = ImGui::IsMouseReleased(ImGuiMouseButton_Left);
         auto isMouseDown = ImGui::IsMouseDown(ImGuiMouseButton_Left);
         auto isMouseMiddleDown = ImGui::IsMouseDown(ImGuiMouseButton_Middle);
+        auto isLeftPressed = ImGui::IsKeyPressed(ImGuiKey_LeftArrow, false);
+        auto isRightPressed = ImGui::IsKeyPressed(ImGuiKey_RightArrow, false);
+        auto isUpPressed = ImGui::IsKeyPressed(ImGuiKey_UpArrow, false);
+        auto isDownPressed = ImGui::IsKeyPressed(ImGuiKey_DownArrow, false);
+        auto isLeftReleased = ImGui::IsKeyReleased(ImGuiKey_LeftArrow);
+        auto isRightReleased = ImGui::IsKeyReleased(ImGuiKey_RightArrow);
+        auto isUpReleased = ImGui::IsKeyReleased(ImGuiKey_UpArrow);
+        auto isDownReleased = ImGui::IsKeyReleased(ImGuiKey_DownArrow);
         auto isLeft = imgui::chord_repeating(ImGuiKey_LeftArrow);
         auto isRight = imgui::chord_repeating(ImGuiKey_RightArrow);
         auto isUp = imgui::chord_repeating(ImGuiKey_UpArrow);
         auto isDown = imgui::chord_repeating(ImGuiKey_DownArrow);
         auto isMouseRightDown = ImGui::IsMouseDown(ImGuiMouseButton_Right);
-        auto mouseDelta = to_vec2(ImGui::GetIO().MouseDelta);
+        auto mouseDelta = to_ivec2(ImGui::GetIO().MouseDelta);
         auto mouseWheel = ImGui::GetIO().MouseWheel;
         auto isZoomIn = imgui::chord_repeating(imgui::string_to_chord(settings.shortcutZoomIn));
         auto isZoomOut = imgui::chord_repeating(imgui::string_to_chord(settings.shortcutZoomOut));
@@ -314,7 +329,10 @@ namespace anm2ed::animation_preview
         auto frame = document.frame_get();
         auto useTool = tool;
         auto step = isMod ? step::FAST : step::NORMAL;
-        auto isClick = isMouseDown;
+        auto isKeyPressed = isLeftPressed || isRightPressed || isUpPressed || isDownPressed;
+        auto isKeyReleased = isLeftReleased || isRightReleased || isUpReleased || isDownReleased;
+        auto isBegin = isMouseClick || isKeyPressed;
+        auto isEnd = isMouseReleased || isKeyReleased;
 
         if (isMouseMiddleDown) useTool = tool::PAN;
         if (tool == tool::MOVE && isMouseRightDown) useTool = tool::SCALE;
@@ -323,30 +341,42 @@ namespace anm2ed::animation_preview
         switch (useTool)
         {
           case tool::PAN:
-            if (isClick || isMouseMiddleDown) pan += isRound ? vec2(ivec2(mouseDelta)) : mouseDelta;
+            if (isMouseDown || isMouseMiddleDown) pan += mouseDelta;
             break;
           case tool::MOVE:
             if (!frame) break;
-            if (isClick) frame->position = isRound ? vec2(ivec2(mousePos)) : mousePos;
+            if (isBegin) document.snapshot("Frame Position");
+            if (isMouseDown) frame->position = mousePos;
             if (isLeft) frame->position.x -= step;
             if (isRight) frame->position.x += step;
             if (isUp) frame->position.y -= step;
             if (isDown) frame->position.y += step;
+            if (isEnd) document.change(change::FRAMES);
             break;
           case tool::SCALE:
             if (!frame) break;
-            if (isClick) frame->scale += isRound ? vec2(ivec2(mouseDelta)) : mouseDelta;
+            if (isBegin) document.snapshot("Frame Scale");
+            if (isMouseDown) frame->scale += mouseDelta;
+            if (isLeft) frame->scale.x -= step;
+            if (isRight) frame->scale.x += step;
+            if (isUp) frame->scale.y -= step;
+            if (isDown) frame->scale.y += step;
+            if (isEnd) document.change(change::FRAMES);
             break;
           case tool::ROTATE:
             if (!frame) break;
-            if (isClick) frame->rotation += isRound ? (int)mouseDelta.y : mouseDelta.y;
+            if (isBegin) document.snapshot("Frame Rotation");
+            if (isMouseDown) frame->rotation += mouseDelta.y;
+            if (isLeft || isDown) frame->rotation -= step;
+            if (isUp || isRight) frame->rotation += step;
+            if (isEnd) document.change(change::FRAMES);
             break;
           default:
             break;
         }
 
         if (mouseWheel != 0 || isZoomIn || isZoomOut)
-          zoom_set(zoom, pan, mousePos, (mouseWheel > 0 || isZoomIn) ? zoomStep : -zoomStep);
+          zoom_set(zoom, pan, vec2(mousePos), (mouseWheel > 0 || isZoomIn) ? zoomStep : -zoomStep);
       }
     }
     ImGui::End();
