@@ -17,17 +17,6 @@ using namespace glm;
 
 namespace anm2ed::anm2
 {
-
-  void Reference::previous_frame(int max)
-  {
-    frameIndex = glm::clamp(--frameIndex, 0, max);
-  }
-
-  void Reference::next_frame(int max)
-  {
-    frameIndex = glm::clamp(++frameIndex, 0, max);
-  }
-
   Info::Info() = default;
 
   Info::Info(XMLElement* element)
@@ -466,9 +455,9 @@ namespace anm2ed::anm2
       xml::query_color_attribute(element, "GreenTint", tint.g);
       xml::query_color_attribute(element, "BlueTint", tint.b);
       xml::query_color_attribute(element, "AlphaTint", tint.a);
-      xml::query_color_attribute(element, "RedOffset", offset.r);
-      xml::query_color_attribute(element, "GreenOffset", offset.g);
-      xml::query_color_attribute(element, "BlueOffset", offset.b);
+      xml::query_color_attribute(element, "RedOffset", colorOffset.r);
+      xml::query_color_attribute(element, "GreenOffset", colorOffset.g);
+      xml::query_color_attribute(element, "BlueOffset", colorOffset.b);
       element->QueryFloatAttribute("Rotation", &rotation);
       element->QueryBoolAttribute("Interpolated", &isInterpolated);
     }
@@ -497,9 +486,9 @@ namespace anm2ed::anm2
         element->SetAttribute("GreenTint", math::float_to_uint8(tint.g));
         element->SetAttribute("BlueTint", math::float_to_uint8(tint.b));
         element->SetAttribute("AlphaTint", math::float_to_uint8(tint.a));
-        element->SetAttribute("RedOffset", math::float_to_uint8(offset.r));
-        element->SetAttribute("GreenOffset", math::float_to_uint8(offset.g));
-        element->SetAttribute("BlueOffset", math::float_to_uint8(offset.b));
+        element->SetAttribute("RedOffset", math::float_to_uint8(colorOffset.r));
+        element->SetAttribute("GreenOffset", math::float_to_uint8(colorOffset.g));
+        element->SetAttribute("BlueOffset", math::float_to_uint8(colorOffset.b));
         element->SetAttribute("Rotation", rotation);
         element->SetAttribute("Interpolated", isInterpolated);
         break;
@@ -520,9 +509,9 @@ namespace anm2ed::anm2
         element->SetAttribute("GreenTint", math::float_to_uint8(tint.g));
         element->SetAttribute("BlueTint", math::float_to_uint8(tint.b));
         element->SetAttribute("AlphaTint", math::float_to_uint8(tint.a));
-        element->SetAttribute("RedOffset", math::float_to_uint8(offset.r));
-        element->SetAttribute("GreenOffset", math::float_to_uint8(offset.g));
-        element->SetAttribute("BlueOffset", math::float_to_uint8(offset.b));
+        element->SetAttribute("RedOffset", math::float_to_uint8(colorOffset.r));
+        element->SetAttribute("GreenOffset", math::float_to_uint8(colorOffset.g));
+        element->SetAttribute("BlueOffset", math::float_to_uint8(colorOffset.b));
         element->SetAttribute("Rotation", rotation);
         element->SetAttribute("Interpolated", isInterpolated);
         break;
@@ -535,6 +524,69 @@ namespace anm2ed::anm2
     }
 
     parent->InsertEndChild(element);
+  }
+
+  std::string Frame::to_string(Type type)
+  {
+    XMLDocument document;
+    auto element = document.NewElement(type == TRIGGER ? "Trigger" : "Frame");
+
+    switch (type)
+    {
+      case ROOT:
+      case NULL_:
+        element->SetAttribute("XPosition", position.x);
+        element->SetAttribute("YPosition", position.y);
+        element->SetAttribute("Delay", delay);
+        element->SetAttribute("Visible", isVisible);
+        element->SetAttribute("XScale", scale.x);
+        element->SetAttribute("YScale", scale.y);
+        element->SetAttribute("RedTint", math::float_to_uint8(tint.r));
+        element->SetAttribute("GreenTint", math::float_to_uint8(tint.g));
+        element->SetAttribute("BlueTint", math::float_to_uint8(tint.b));
+        element->SetAttribute("AlphaTint", math::float_to_uint8(tint.a));
+        element->SetAttribute("RedOffset", math::float_to_uint8(colorOffset.r));
+        element->SetAttribute("GreenOffset", math::float_to_uint8(colorOffset.g));
+        element->SetAttribute("BlueOffset", math::float_to_uint8(colorOffset.b));
+        element->SetAttribute("Rotation", rotation);
+        element->SetAttribute("Interpolated", isInterpolated);
+        break;
+      case LAYER:
+        element->SetAttribute("XPosition", position.x);
+        element->SetAttribute("YPosition", position.y);
+        element->SetAttribute("XPivot", pivot.x);
+        element->SetAttribute("YPivot", pivot.y);
+        element->SetAttribute("XCrop", crop.x);
+        element->SetAttribute("YCrop", crop.y);
+        element->SetAttribute("Width", size.x);
+        element->SetAttribute("Height", size.y);
+        element->SetAttribute("XScale", scale.x);
+        element->SetAttribute("YScale", scale.y);
+        element->SetAttribute("Delay", delay);
+        element->SetAttribute("Visible", isVisible);
+        element->SetAttribute("RedTint", math::float_to_uint8(tint.r));
+        element->SetAttribute("GreenTint", math::float_to_uint8(tint.g));
+        element->SetAttribute("BlueTint", math::float_to_uint8(tint.b));
+        element->SetAttribute("AlphaTint", math::float_to_uint8(tint.a));
+        element->SetAttribute("RedOffset", math::float_to_uint8(colorOffset.r));
+        element->SetAttribute("GreenOffset", math::float_to_uint8(colorOffset.g));
+        element->SetAttribute("BlueOffset", math::float_to_uint8(colorOffset.b));
+        element->SetAttribute("Rotation", rotation);
+        element->SetAttribute("Interpolated", isInterpolated);
+        break;
+      case TRIGGER:
+        element->SetAttribute("EventId", eventID);
+        element->SetAttribute("AtFrame", atFrame);
+        break;
+      default:
+        break;
+    }
+
+    document.InsertFirstChild(element);
+
+    XMLPrinter printer;
+    document.Print(&printer);
+    return std::string(printer.CStr());
   }
 
   void Frame::shorten()
@@ -640,11 +692,96 @@ namespace anm2ed::anm2
       frame.rotation = glm::mix(frame.rotation, frameNext->rotation, interpolation);
       frame.position = glm::mix(frame.position, frameNext->position, interpolation);
       frame.scale = glm::mix(frame.scale, frameNext->scale, interpolation);
-      frame.offset = glm::mix(frame.offset, frameNext->offset, interpolation);
+      frame.colorOffset = glm::mix(frame.colorOffset, frameNext->colorOffset, interpolation);
       frame.tint = glm::mix(frame.tint, frameNext->tint, interpolation);
     }
 
     return frame;
+  }
+
+  void Item::frames_change(anm2::FrameChange& change, frame_change::Type type, int start, int numberFrames)
+  {
+    auto useStart = numberFrames > -1 ? start : 0;
+    auto end = numberFrames > -1 ? start + numberFrames : (int)frames.size();
+    vector::clamp_in_bounds(frames, useStart);
+    end = glm::clamp(end, start, (int)frames.size());
+
+    for (int i = useStart; i < end; i++)
+    {
+      Frame& frame = frames[i];
+
+      if (change.isVisible) frame.isVisible = *change.isVisible;
+      if (change.isInterpolated) frame.isInterpolated = *change.isInterpolated;
+
+      switch (type)
+      {
+        case frame_change::ADJUST:
+          if (change.rotation) frame.rotation = *change.rotation;
+          if (change.delay) frame.delay = std::max(FRAME_DELAY_MIN, *change.delay);
+          if (change.crop) frame.crop = *change.crop;
+          if (change.pivot) frame.pivot = *change.pivot;
+          if (change.position) frame.position = *change.position;
+          if (change.size) frame.size = *change.size;
+          if (change.scale) frame.scale = *change.scale;
+          if (change.colorOffset) frame.colorOffset = glm::clamp(*change.colorOffset, 0.0f, 1.0f);
+          if (change.tint) frame.tint = glm::clamp(*change.tint, 0.0f, 1.0f);
+          break;
+
+        case frame_change::ADD:
+          if (change.rotation) frame.rotation += *change.rotation;
+          if (change.delay) frame.delay = std::max(FRAME_DELAY_MIN, frame.delay + *change.delay);
+          if (change.crop) frame.crop += *change.crop;
+          if (change.pivot) frame.pivot += *change.pivot;
+          if (change.position) frame.position += *change.position;
+          if (change.size) frame.size += *change.size;
+          if (change.scale) frame.scale += *change.scale;
+          if (change.colorOffset) frame.colorOffset = glm::clamp(frame.colorOffset + *change.colorOffset, 0.0f, 1.0f);
+          if (change.tint) frame.tint = glm::clamp(frame.tint + *change.tint, 0.0f, 1.0f);
+          break;
+
+        case frame_change::SUBTRACT:
+          if (change.rotation) frame.rotation -= *change.rotation;
+          if (change.delay) frame.delay = std::max(FRAME_DELAY_MIN, frame.delay - *change.delay);
+          if (change.crop) frame.crop -= *change.crop;
+          if (change.pivot) frame.pivot -= *change.pivot;
+          if (change.position) frame.position -= *change.position;
+          if (change.size) frame.size -= *change.size;
+          if (change.scale) frame.scale -= *change.scale;
+          if (change.colorOffset) frame.colorOffset = glm::clamp(frame.colorOffset - *change.colorOffset, 0.0f, 1.0f);
+          if (change.tint) frame.tint = glm::clamp(frame.tint - *change.tint, 0.0f, 1.0f);
+          break;
+      }
+    }
+  }
+
+  bool Item::frames_deserialize(const std::string& string, Type type, int start, std::set<int>& indices,
+                                std::string* errorString)
+  {
+    XMLDocument document{};
+
+    if (document.Parse(string.c_str()) == XML_SUCCESS)
+    {
+      if (!document.FirstChildElement("Frame"))
+      {
+        if (errorString) *errorString = "No valid frame(s).";
+        return false;
+      }
+
+      int count{};
+      for (auto element = document.FirstChildElement("Frame"); element; element = element->NextSiblingElement("Frame"))
+      {
+        auto index = start + count;
+        frames.insert(frames.begin() + start + count, Frame(element, type));
+        indices.insert(index);
+        count++;
+      }
+
+      return true;
+    }
+    else if (errorString)
+      *errorString = document.ErrorStr();
+
+    return false;
   }
 
   Animation::Animation() = default;
@@ -1048,12 +1185,12 @@ namespace anm2ed::anm2
     return std::hash<std::string>{}(to_string());
   }
 
-  Animation* Anm2::animation_get(Reference& reference)
+  Animation* Anm2::animation_get(Reference reference)
   {
     return vector::find(animations.items, reference.animationIndex);
   }
 
-  Item* Anm2::item_get(Reference& reference)
+  Item* Anm2::item_get(Reference reference)
   {
     if (Animation* animation = animation_get(reference))
     {
@@ -1074,7 +1211,7 @@ namespace anm2ed::anm2
     return nullptr;
   }
 
-  Frame* Anm2::frame_get(Reference& reference)
+  Frame* Anm2::frame_get(Reference reference)
   {
     Item* item = item_get(reference);
     if (!item) return nullptr;
@@ -1260,7 +1397,7 @@ namespace anm2ed::anm2
       baked.rotation = glm::mix(baseFrame.rotation, baseFrameNext.rotation, interpolation);
       baked.position = glm::mix(baseFrame.position, baseFrameNext.position, interpolation);
       baked.scale = glm::mix(baseFrame.scale, baseFrameNext.scale, interpolation);
-      baked.offset = glm::mix(baseFrame.offset, baseFrameNext.offset, interpolation);
+      baked.colorOffset = glm::mix(baseFrame.colorOffset, baseFrameNext.colorOffset, interpolation);
       baked.tint = glm::mix(baseFrame.tint, baseFrameNext.tint, interpolation);
 
       if (isRoundScale) baked.scale = vec2(ivec2(baked.scale));
@@ -1273,6 +1410,28 @@ namespace anm2ed::anm2
       index++;
 
       delay += baked.delay;
+    }
+  }
+
+  void Anm2::generate_from_grid(Reference reference, ivec2 startPosition, ivec2 size, ivec2 pivot, int columns,
+                                int count, int delay)
+  {
+    auto item = item_get(reference);
+    if (!item) return;
+
+    for (int i = 0; i < count; i++)
+    {
+      auto row = i / columns;
+      auto column = i % columns;
+
+      Frame frame{};
+
+      frame.delay = delay;
+      frame.pivot = pivot;
+      frame.size = size;
+      frame.crop = startPosition + ivec2(size.x * column, size.y * row);
+
+      item->frames.emplace_back(frame);
     }
   }
 }

@@ -1,33 +1,73 @@
 #include "manager.h"
 
-#include "toast.h"
+#include <algorithm>
 
+#include "filesystem.h"
+#include "log.h"
+#include "toast.h"
 #include "util.h"
 
+using namespace anm2ed::log;
 using namespace anm2ed::toast;
 using namespace anm2ed::types;
 using namespace anm2ed::util;
 
 namespace anm2ed::manager
 {
+  constexpr std::size_t RECENT_LIMIT = 10;
+
+  std::filesystem::path Manager::recent_files_path_get()
+  {
+    return filesystem::path_preferences_get() + "recent.txt";
+  }
+
+  std::filesystem::path Manager::autosave_path_get()
+  {
+    return filesystem::path_preferences_get() + "autosave.txt";
+  }
+
+  std::filesystem::path Manager::autosave_directory_get()
+  {
+    return filesystem::path_preferences_get() + "autosave";
+  }
+
+  Manager::Manager()
+  {
+    recent_files_load();
+    autosave_files_load();
+  }
+
   Document* Manager::get(int index)
   {
     return vector::find(documents, index > -1 ? index : selected);
   }
 
-  void Manager::open(const std::string& path, bool isNew)
+  void Manager::open(const std::string& path, bool isNew, bool isRecent)
   {
     std::string errorString{};
-    Document document = Document(path, isNew, &errorString);
-    if (document.is_valid())
+    documents.emplace_back(path, isNew, &errorString);
+
+    auto& document = documents.back();
+    if (!document.is_valid())
     {
-      documents.emplace_back(std::move(document));
-      selected = documents.size() - 1;
-      pendingSelected = selected;
-      toasts.info(std::format("Initialized document: {}", path));
+      documents.pop_back();
+      toasts.error(std::format("Failed to open document: {} ({})", path, errorString));
+      return;
     }
-    else
-      toasts.error(std::format("Failed to initialize document: {} ({})", path, errorString));
+
+    if (isRecent)
+    {
+      recentFiles.erase(std::remove(recentFiles.begin(), recentFiles.end(), path), recentFiles.end());
+      recentFiles.insert(recentFiles.begin(), path);
+
+      if (recentFiles.size() > RECENT_LIMIT) recentFiles.resize(RECENT_LIMIT);
+
+      recent_files_write();
+    }
+
+    selected = (int)documents.size() - 1;
+    pendingSelected = selected;
+    toasts.info(std::format("Opened document: {}", path));
   }
 
   void Manager::new_(const std::string& path)
@@ -50,9 +90,53 @@ namespace anm2ed::manager
     save(selected, path);
   }
 
+  void Manager::autosave(Document& document)
+  {
+    auto filename = "." + document.filename_get().string() + ".autosave";
+    auto path = document.directory_get() / filename;
+    std::string errorString{};
+    document.autosave(path, &errorString);
+
+    autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), path), autosaveFiles.end());
+    autosaveFiles.insert(autosaveFiles.begin(), path);
+
+    autosave_files_write();
+  }
+
   void Manager::close(int index)
   {
+    if (index < 0 || index >= (int)documents.size()) return;
+
     documents.erase(documents.begin() + index);
+
+    if (documents.empty())
+    {
+      selected = -1;
+      pendingSelected = -1;
+      return;
+    }
+
+    if (selected >= index) selected = std::max(0, selected - 1);
+
+    selected = std::clamp(selected, 0, (int)documents.size() - 1);
+    pendingSelected = selected;
+
+    if (selected >= 0 && selected < (int)documents.size()) documents[selected].change(change::ALL);
+  }
+
+  void Manager::set(int index)
+  {
+    if (documents.empty())
+    {
+      selected = -1;
+      pendingSelected = -1;
+      return;
+    }
+
+    index = std::clamp(index, 0, (int)documents.size() - 1);
+    selected = index;
+
+    if (auto document = get()) document->change(change::ALL);
   }
 
   void Manager::layer_properties_open(int id)
@@ -117,4 +201,119 @@ namespace anm2ed::manager
     nullPropertiesPopup.close();
   }
 
+  void Manager::recent_files_load()
+  {
+    auto path = recent_files_path_get();
+
+    std::ifstream file(path);
+    if (!file)
+    {
+      logger.warning(std::format("Could not load recent files from: {}. Skipping...", path.string()));
+      return;
+    }
+
+    logger.info(std::format("Loading recent files from: {}", path.string()));
+
+    std::string line{};
+
+    while (std::getline(file, line))
+    {
+      if (line.empty()) continue;
+      if (std::find(recentFiles.begin(), recentFiles.end(), line) != recentFiles.end()) continue;
+      recentFiles.emplace_back(line);
+    }
+  }
+
+  void Manager::recent_files_write()
+  {
+    auto path = recent_files_path_get();
+
+    std::ofstream file;
+    file.open(path, std::ofstream::out | std::ofstream::trunc);
+
+    if (!file.is_open())
+    {
+      logger.warning(std::format("Could not write recent files to: {}. Skipping...", path.string()));
+      return;
+    }
+
+    for (auto& path : recentFiles)
+      file << path.string() << '\n';
+  }
+
+  void Manager::recent_files_clear()
+  {
+    recentFiles.clear();
+    recent_files_write();
+  }
+
+  void Manager::autosave_files_open()
+  {
+    for (auto& path : autosaveFiles)
+    {
+      auto fileName = path.filename().string();
+      if (!fileName.empty() && fileName.front() == '.') fileName.erase(fileName.begin());
+
+      auto restorePath = path.parent_path() / fileName;
+      restorePath.replace_extension("");
+      open(path.string(), false, false);
+
+      if (auto document = get())
+      {
+        document->isForceDirty = true;
+        document->path = restorePath;
+        document->change(change::ALL);
+      }
+    }
+
+    autosave_files_clear();
+  }
+
+  void Manager::autosave_files_load()
+  {
+    auto path = autosave_path_get();
+
+    std::ifstream file(path);
+    if (!file)
+    {
+      logger.warning(std::format("Could not load autosave files from: {}. Skipping...", path.string()));
+      return;
+    }
+
+    logger.info(std::format("Loading autosave files from: {}", path.string()));
+
+    std::string line{};
+
+    while (std::getline(file, line))
+    {
+      if (line.empty()) continue;
+      if (std::find(autosaveFiles.begin(), autosaveFiles.end(), line) != autosaveFiles.end()) continue;
+      autosaveFiles.emplace_back(line);
+    }
+  }
+
+  void Manager::autosave_files_write()
+  {
+    std::ofstream autosaveWriteFile;
+    autosaveWriteFile.open(autosave_path_get(), std::ofstream::out | std::ofstream::trunc);
+
+    for (auto& path : autosaveFiles)
+      autosaveWriteFile << path.string() << "\n";
+
+    autosaveWriteFile.close();
+  }
+
+  void Manager::autosave_files_clear()
+  {
+    for (auto& path : autosaveFiles)
+      std::filesystem::remove(path);
+
+    autosaveFiles.clear();
+    autosave_files_write();
+  }
+
+  Manager::~Manager()
+  {
+    autosave_files_clear();
+  }
 }

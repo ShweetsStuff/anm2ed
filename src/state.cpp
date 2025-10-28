@@ -61,7 +61,7 @@ namespace anm2ed::state
           break;
         }
         case SDL_EVENT_QUIT:
-          isQuit = true;
+          isQuitting = true;
           break;
         default:
           break;
@@ -72,14 +72,15 @@ namespace anm2ed::state
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
 
-    taskbar.update(manager, settings, dialog, isQuit);
+    taskbar.update(manager, settings, resources, dialog, isQuitting);
+    documents.update(taskbar, manager, settings, resources, isQuitting);
     dockspace.update(taskbar, documents, manager, settings, resources, dialog, clipboard);
     toasts.update();
 
-    documents.update(taskbar, manager, resources);
-
     ImGui::GetStyle().FontScaleMain = settings.displayScale;
     SDL_GetWindowSize(window, &settings.windowSize.x, &settings.windowSize.y);
+
+    if (isQuitting && manager.documents.empty()) isQuit = true;
   }
 
   void State::render(SDL_Window*& window, Settings& settings)

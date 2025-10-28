@@ -14,9 +14,10 @@ namespace anm2ed::state
 
   public:
     bool isQuit{};
-    dialog::Dialog dialog;
-    resources::Resources resources;
+    bool isQuitting{};
     manager::Manager manager;
+    resources::Resources resources;
+    dialog::Dialog dialog;
     clipboard::Clipboard clipboard;
 
     taskbar::Taskbar taskbar;

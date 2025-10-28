@@ -20,6 +20,8 @@ namespace anm2ed::nulls
     auto& multiSelect = document.nullMultiSelect;
     auto& propertiesPopup = manager.nullPropertiesPopup;
 
+    hovered = -1;
+
     if (ImGui::Begin("Nulls", &settings.windowIsNulls))
     {
       auto childSize = imgui::size_without_footer_get();

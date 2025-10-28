@@ -226,12 +226,34 @@ namespace anm2ed::canvas
     glUseProgram(0);
   }
 
-  void Canvas::rect_render(Shader& shader, mat4& transform, vec4 color)
+  void Canvas::rect_render(Shader& shader, const mat4& transform, const mat4& model, vec4 color, float dashLength,
+                           float dashGap, float dashOffset)
   {
     glUseProgram(shader.id);
 
     glUniformMatrix4fv(glGetUniformLocation(shader.id, shader::UNIFORM_TRANSFORM), 1, GL_FALSE, value_ptr(transform));
+    if (auto location = glGetUniformLocation(shader.id, shader::UNIFORM_MODEL); location != -1)
+      glUniformMatrix4fv(location, 1, GL_FALSE, value_ptr(model));
     glUniform4fv(glGetUniformLocation(shader.id, shader::UNIFORM_COLOR), 1, value_ptr(color));
+
+    auto origin = model * vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    auto edgeX = model * vec4(1.0f, 0.0f, 0.0f, 1.0f);
+    auto edgeY = model * vec4(0.0f, 1.0f, 0.0f, 1.0f);
+
+    auto axisX = vec2(edgeX - origin);
+    auto axisY = vec2(edgeY - origin);
+
+    if (auto location = glGetUniformLocation(shader.id, shader::UNIFORM_AXIS_X); location != -1)
+      glUniform2fv(location, 1, value_ptr(axisX));
+    if (auto location = glGetUniformLocation(shader.id, shader::UNIFORM_AXIS_Y); location != -1)
+      glUniform2fv(location, 1, value_ptr(axisY));
+
+    if (auto location = glGetUniformLocation(shader.id, shader::UNIFORM_DASH_LENGTH); location != -1)
+      glUniform1f(location, dashLength);
+    if (auto location = glGetUniformLocation(shader.id, shader::UNIFORM_DASH_GAP); location != -1)
+      glUniform1f(location, dashGap);
+    if (auto location = glGetUniformLocation(shader.id, shader::UNIFORM_DASH_OFFSET); location != -1)
+      glUniform1f(location, dashOffset);
 
     glBindVertexArray(rectVAO);
     glDrawArrays(GL_LINE_LOOP, 0, 4);

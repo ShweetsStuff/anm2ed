@@ -6,6 +6,11 @@
 
 namespace anm2ed::filesystem
 {
+  bool directories_create(const std::string& path)
+  {
+    return std::filesystem::create_directories(path);
+  }
+
   std::string path_preferences_get()
   {
     char* preferencesPath = SDL_GetPrefPath("", "anm2ed");

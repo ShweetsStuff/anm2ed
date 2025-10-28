@@ -44,8 +44,6 @@ namespace anm2ed::anm2
     int frameIndex{-1};
     int frameTime{-1};
 
-    void previous_frame(int = FRAME_NUM_MAX - 1);
-    void next_frame(int = FRAME_NUM_MAX - 1);
     auto operator<=>(const Reference&) const = default;
   };
 
@@ -150,7 +148,7 @@ namespace anm2ed::anm2
   X(position, glm::vec2, {})                                                                                           \
   X(size, glm::vec2, {})                                                                                               \
   X(scale, glm::vec2, glm::vec2(100.0f))                                                                               \
-  X(offset, glm::vec3, types::color::TRANSPARENT)                                                                      \
+  X(colorOffset, glm::vec3, types::color::TRANSPARENT)                                                                 \
   X(tint, glm::vec4, types::color::WHITE)
 
   class Frame
@@ -162,6 +160,7 @@ namespace anm2ed::anm2
 
     Frame();
     Frame(tinyxml2::XMLElement*, Type);
+    std::string to_string(Type type);
     void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*, Type);
     void shorten();
     void extend();
@@ -188,6 +187,8 @@ namespace anm2ed::anm2
     void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*, Type, int = -1);
     int length(Type);
     Frame frame_generate(float, Type);
+    void frames_change(anm2::FrameChange&, types::frame_change::Type, int, int = 0);
+    bool frames_deserialize(const std::string&, Type, int, std::set<int>&, std::string*);
   };
 
   class Animation
@@ -238,9 +239,9 @@ namespace anm2ed::anm2
     std::string to_string();
     Anm2(const std::string&, std::string* = nullptr);
     uint64_t hash();
-    Animation* animation_get(Reference&);
-    Item* item_get(Reference&);
-    Frame* frame_get(Reference&);
+    Animation* animation_get(Reference);
+    Item* item_get(Reference);
+    Frame* frame_get(Reference);
     bool spritesheet_add(const std::string&, const std::string&, int&);
     Spritesheet* spritesheet_get(int);
     void spritesheet_remove(int);
@@ -255,5 +256,6 @@ namespace anm2ed::anm2
     std::set<int> nulls_unused(Reference = REFERENCE_DEFAULT);
     std::vector<std::string> spritesheet_names_get();
     void bake(Reference, int = 1, bool = true, bool = true);
+    void generate_from_grid(Reference, glm::ivec2, glm::ivec2, glm::ivec2, int, int, int);
   };
 }

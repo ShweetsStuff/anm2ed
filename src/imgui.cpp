@@ -280,6 +280,11 @@ namespace anm2ed::imgui
     isJustOpened = true;
   }
 
+  bool PopupHelper::is_open()
+  {
+    return isOpen;
+  }
+
   void PopupHelper::trigger()
   {
     if (isTriggered) ImGui::OpenPopup(label);

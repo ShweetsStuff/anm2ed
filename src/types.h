@@ -69,6 +69,16 @@ namespace anm2ed::types::merge
   };
 }
 
+namespace anm2ed::types::frame_change
+{
+  enum Type
+  {
+    ADD,
+    SUBTRACT,
+    ADJUST
+  };
+}
+
 namespace anm2ed::types::color
 {
   using namespace glm;

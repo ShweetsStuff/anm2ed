@@ -10,6 +10,9 @@
 
 namespace anm2ed::util::time
 {
+  constexpr auto SECOND_S = 1.0;
+  constexpr auto SECOND_M = 60.0;
+
   std::string get(const char*);
 }
 
@@ -94,5 +97,14 @@ namespace anm2ed::util::vector
       moveIndices.insert(insertPos + i);
 
     return moveIndices;
+  }
+
+  template <typename T> bool in_bounds(std::vector<T>& v, int& index)
+  {
+    return index >= 0 || index <= (int)v.size() - 1;
+  }
+  template <typename T> void clamp_in_bounds(std::vector<T>& v, int& index)
+  {
+    index = std::clamp(index, 0, (int)v.size() - 1);
   }
 }

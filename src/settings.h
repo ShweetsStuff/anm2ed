@@ -44,6 +44,9 @@ namespace anm2ed::settings
   X(IS_VSYNC, isVsync, "Vsync", BOOL, true)                                                                            \
   X(DISPLAY_SCALE, displayScale, "Display Scale", FLOAT, 1.0f)                                                         \
                                                                                                                        \
+  X(FILE_IS_AUTOSAVE, fileIsAutosave, "Autosave", BOOL, true)                                                          \
+  X(FILE_AUTOSAVE_TIME, fileAutosaveTime, "Autosave Time", INT, 1)                                                     \
+                                                                                                                       \
   X(VIEW_ZOOM_STEP, viewZoomStep, "Zoom Step", FLOAT, 50.0f)                                                           \
                                                                                                                        \
   X(PLAYBACK_IS_LOOP, playbackIsLoop, "Loop", BOOL, true)                                                              \
@@ -60,7 +63,6 @@ namespace anm2ed::settings
   X(CHANGE_IS_COLOR_OFFSET, changeIsColorOffset, "##Is Color Offset", BOOL, false)                                     \
   X(CHANGE_IS_VISIBLE_SET, changeIsVisibleSet, "##Is Visible", BOOL, false)                                            \
   X(CHANGE_IS_INTERPOLATED_SET, changeIsInterpolatedSet, "##Is Interpolated", BOOL, false)                             \
-  X(CHANGE_IS_FROM_SELECTED_FRAME, changeIsFromSelectedFrame, "From Selected Frame", BOOL, false)                      \
   X(CHANGE_CROP, changeCrop, "Crop", VEC2, {})                                                                         \
   X(CHANGE_SIZE, changeSize, "Size", VEC2, {})                                                                         \
   X(CHANGE_POSITION, changePosition, "Position", VEC2, {})                                                             \
@@ -73,6 +75,7 @@ namespace anm2ed::settings
   X(CHANGE_IS_VISIBLE, changeIsVisible, "Visible", BOOL, false)                                                        \
   X(CHANGE_IS_INTERPOLATED, changeIsInterpolated, "Interpolated", BOOL, false)                                         \
   X(CHANGE_NUMBER_FRAMES, changeNumberFrames, "Frame Count", INT, 1)                                                   \
+  X(CHANGE_IS_FROM_SELECTED_FRAME, changeIsFromSelectedFrame, "From Selected Frame", BOOL, false)                      \
                                                                                                                        \
   X(SCALE_VALUE, scaleValue, "Scale", FLOAT, 1.0f)                                                                     \
                                                                                                                        \
@@ -80,7 +83,6 @@ namespace anm2ed::settings
   X(PREVIEW_IS_GRID, previewIsGrid, "Grid", BOOL, true)                                                                \
   X(PREVIEW_IS_ROOT_TRANSFORM, previewIsRootTransform, "Root Transform", BOOL, true)                                   \
   X(PREVIEW_IS_PIVOTS, previewIsPivots, "Pivots", BOOL, false)                                                         \
-  X(PREVIEW_IS_ICONS, previewIsIcons, "Icons", BOOL, true)                                                             \
   X(PREVIEW_IS_BORDER, previewIsBorder, "Border", BOOL, false)                                                         \
   X(PREVIEW_IS_ALT_ICONS, previewIsAltIcons, "Alt Icons", BOOL, false)                                                 \
   X(PREVIEW_OVERLAY_TRANSPARENCY, previewOverlayTransparency, "Alpha", FLOAT, 255)                                     \
@@ -101,6 +103,7 @@ namespace anm2ed::settings
   X(GENERATE_COLUMNS, generateColumns, "Columns", INT, 4)                                                              \
   X(GENERATE_COUNT, generateCount, "Count", INT, 16)                                                                   \
   X(GENERATE_DELAY, generateDelay, "Delay", INT, 1)                                                                    \
+  X(GENERATE_ZOOM, generateZoom, "Zoom", FLOAT, 100.0f)                                                                \
                                                                                                                        \
   X(EDITOR_IS_GRID, editorIsGrid, "Grid", BOOL, true)                                                                  \
   X(EDITOR_IS_GRID_SNAP, editorIsGridSnap, "Snap", BOOL, true)                                                         \
@@ -123,6 +126,7 @@ namespace anm2ed::settings
   X(TIMELINE_ADD_ITEM_LOCALITY, timelineAddItemLocale, "Add Item Locale", INT, types::locale::GLOBAL)                  \
   X(TIMELINE_ADD_ITEM_SOURCE, timelineAddItemSource, "Add Item Source", INT, types::source::NEW)                       \
   X(TIMELINE_IS_SHOW_UNUSED, timelineIsShowUnused, "##Show Unused", BOOL, true)                                        \
+  X(TIMELINE_IS_ONLY_SHOW_LAYERS, timelineIsOnlyShowLayers, "##Only Show Layers", BOOL, true)                          \
                                                                                                                        \
   X(ONIONSKIN_IS_ENABLED, onionskinIsEnabled, "Enabled", BOOL, false)                                                  \
   X(ONIONSKIN_DRAW_ORDER, onionskinDrawOrder, "Draw Order", INT, 0)                                                    \

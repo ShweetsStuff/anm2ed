@@ -174,6 +174,7 @@ namespace anm2ed::imgui
     float percent{};
 
     PopupHelper(const char*, float = POPUP_NORMAL, bool = false);
+    bool is_open();
     void open();
     void trigger();
     void end();

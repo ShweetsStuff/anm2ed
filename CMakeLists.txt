@@ -63,13 +63,14 @@ if (WIN32)
     target_link_options(${PROJECT_NAME} PRIVATE /STACK:0xffffff)
 else ()
     target_compile_options(${PROJECT_NAME} PRIVATE
-            -O2 -Wall -Wextra -pedantic
+            -Wall -Wextra -pedantic
     )
     if (CMAKE_BUILD_TYPE STREQUAL "Debug")
         target_compile_definitions(${PROJECT_NAME} PRIVATE DEBUG)
-        target_compile_options(${PROJECT_NAME} PRIVATE -pg)
+        target_compile_options(${PROJECT_NAME} PRIVATE -O0 -pg)
     else ()
         set(CMAKE_BUILD_TYPE "Release")
+        target_compile_options(${PROJECT_NAME} PRIVATE -O2)
     endif ()
 
     target_link_libraries(${PROJECT_NAME} PRIVATE m)

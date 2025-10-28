@@ -21,6 +21,8 @@ namespace anm2ed::layers
     auto& multiSelect = document.layersMultiSelect;
     auto& propertiesPopup = manager.layerPropertiesPopup;
 
+    hovered = -1;
+
     if (ImGui::Begin("Layers", &settings.windowIsLayers))
     {
       auto childSize = imgui::size_without_footer_get();

@@ -13,6 +13,7 @@
 #include "taskbar.h"
 #include "timeline.h"
 #include "tools.h"
+#include "welcome.h"
 
 namespace anm2ed::dockspace
 {
@@ -29,6 +30,7 @@ namespace anm2ed::dockspace
     spritesheets::Spritesheets spritesheets;
     timeline::Timeline timeline;
     tools::Tools tools;
+    welcome::Welcome welcome;
 
   public:
     void update(taskbar::Taskbar&, documents::Documents&, manager::Manager&, settings::Settings&, resources::Resources&,

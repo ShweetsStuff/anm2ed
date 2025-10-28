@@ -14,6 +14,10 @@ namespace anm2ed::canvas
   constexpr auto ZOOM_MAX = 2000.0f;
   constexpr auto POSITION_FORMAT = "Position: ({:8} {:8})";
 
+  constexpr auto DASH_LENGTH = 4.0f;
+  constexpr auto DASH_GAP = 1.0f;
+  constexpr auto DASH_OFFSET = 1.0f;
+
   class Canvas
   {
   public:
@@ -39,13 +43,14 @@ namespace anm2ed::canvas
     void framebuffer_set();
     void framebuffer_resize_check();
     void size_set(glm::vec2);
-    glm::mat4 transform_get(float, glm::vec2);
+    glm::mat4 transform_get(float = 100.0f, glm::vec2 = {});
     void axes_render(shader::Shader&, float, glm::vec2, glm::vec4 = glm::vec4(1.0f));
     void grid_render(shader::Shader&, float, glm::vec2, glm::ivec2 = glm::ivec2(32, 32), glm::ivec2 = {},
                      glm::vec4 = glm::vec4(1.0f));
     void texture_render(shader::Shader&, GLuint&, glm::mat4&, glm::vec4 = glm::vec4(1.0f), glm::vec3 = {},
                         float* = (float*)TEXTURE_VERTICES);
-    void rect_render(shader::Shader&, glm::mat4&, glm::vec4 = glm::vec4(1.0f));
+    void rect_render(shader::Shader&, const glm::mat4&, const glm::mat4&, glm::vec4 = glm::vec4(1.0f),
+                     float dashLength = DASH_LENGTH, float dashGap = DASH_GAP, float dashOffset = DASH_OFFSET);
     void viewport_set();
     void clear(glm::vec4&);
     void bind();

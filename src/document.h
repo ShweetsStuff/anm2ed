@@ -26,6 +26,7 @@ namespace anm2ed::document
     glm::vec2 previewPan{};
     glm::vec2 editorPan{};
     float editorZoom{200};
+
     int overlayIndex{};
 
     anm2::Reference reference{};
@@ -33,6 +34,8 @@ namespace anm2ed::document
     int mergeTarget{-1};
     imgui::MultiSelectStorage animationMultiSelect;
     imgui::MultiSelectStorage animationMergeMultiSelect;
+
+    anm2::Reference hoveredFrame{anm2::REFERENCE_DEFAULT};
 
     int referenceSpritesheet{-1};
     int hoveredSpritesheet{-1};
@@ -58,17 +61,22 @@ namespace anm2ed::document
 
     uint64_t hash{};
     uint64_t saveHash{};
+    uint64_t autosaveHash{};
+    double lastAutosaveTime{};
     bool isOpen{true};
+    bool isForceDirty{false};
 
     Document(const std::string&, bool = false, std::string* = nullptr);
     bool save(const std::string& = {}, std::string* = nullptr);
+    bool autosave(const std::string&, std::string* = nullptr);
     void hash_set();
     void clean();
     void on_change();
     void change(types::change::Type);
     bool is_dirty();
-    std::string directory_get();
-    std::string filename_get();
+    bool is_autosave_dirty();
+    std::filesystem::path directory_get();
+    std::filesystem::path filename_get();
     bool is_valid();
 
     anm2::Frame* frame_get();
@@ -84,11 +92,15 @@ namespace anm2ed::document
     void frame_rotation_set(anm2::Frame*, float);
     void frame_delay_set(anm2::Frame*, int);
     void frame_tint_set(anm2::Frame*, glm::vec4);
-    void frame_offset_set(anm2::Frame*, glm::vec3);
+    void frame_color_offset_set(anm2::Frame*, glm::vec3);
     void frame_is_visible_set(anm2::Frame*, bool);
     void frame_is_interpolated_set(anm2::Frame*, bool);
     void frame_flip_x(anm2::Frame* frame);
     void frame_flip_y(anm2::Frame* frame);
+    void frame_shorten();
+    void frame_extend();
+    void frames_change(anm2::FrameChange&, types::frame_change::Type, bool, int = -1);
+    void frames_deserialize(const std::string&);
 
     anm2::Item* item_get();
     void item_add(anm2::Type, int, std::string&, types::locale::Type, int);
@@ -113,14 +125,17 @@ namespace anm2ed::document
     void events_deserialize(const std::string&, types::merge::Type);
 
     void animation_add();
+    void animation_set(int);
     void animation_duplicate();
     void animation_default();
-    void animation_remove();
+    void animations_remove();
     void animations_move(std::vector<int>&, int);
     void animations_merge(types::merge::Type, bool);
     void animations_merge_quick();
     anm2::Animation* animation_get();
     void animations_deserialize(const std::string& string);
+
+    void generate_animation_from_grid(glm::ivec2, glm::ivec2, glm::ivec2, int, int, int);
 
     void snapshot(const std::string& message);
     void undo();

@@ -37,7 +37,7 @@ namespace anm2ed::spritesheet_editor
     auto& tool = settings.tool;
     auto& shaderGrid = resources.shaders[shader::GRID];
     auto& shaderTexture = resources.shaders[shader::TEXTURE];
-    auto& lineShader = resources.shaders[shader::LINE];
+    auto& dashedShader = resources.shaders[shader::DASHED];
 
     if (ImGui::Begin("Spritesheet Editor", &settings.windowIsSpritesheetEditor))
     {
@@ -96,20 +96,22 @@ namespace anm2ed::spritesheet_editor
 
       auto frame = document.frame_get();
 
-      if (spritesheet)
+      if (spritesheet && spritesheet->texture.is_valid())
       {
         auto& texture = spritesheet->texture;
         auto transform = transform_get(zoom, pan);
 
-        auto spritesheetTransform = transform * math::quad_model_get(texture.size);
+        auto spritesheetModel = math::quad_model_get(texture.size);
+        auto spritesheetTransform = transform * spritesheetModel;
         texture_render(shaderTexture, texture.id, spritesheetTransform);
-        if (isBorder) rect_render(lineShader, spritesheetTransform);
+        if (isBorder) rect_render(dashedShader, spritesheetTransform, spritesheetModel);
 
         if (frame && reference.itemID > -1 &&
             anm2.content.layers.at(reference.itemID).spritesheetID == referenceSpritesheet)
         {
-          auto cropTransform = transform * math::quad_model_get(frame->size, frame->crop);
-          rect_render(lineShader, cropTransform, color::RED);
+          auto cropModel = math::quad_model_get(frame->size, frame->crop);
+          auto cropTransform = transform * cropModel;
+          rect_render(dashedShader, cropTransform, cropModel, color::RED);
 
           auto pivotTransform =
               transform * math::quad_model_get(canvas::PIVOT_SIZE, frame->crop + frame->pivot, PIVOT_SIZE * 0.5f);

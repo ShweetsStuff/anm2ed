@@ -28,6 +28,8 @@ namespace anm2ed::spritesheets
     auto& hovered = document.hoveredSpritesheet;
     auto& reference = document.referenceSpritesheet;
 
+    hovered = -1;
+
     if (ImGui::Begin("Spritesheets", &settings.windowIsSpritesheets))
     {
       auto style = ImGui::GetStyle();

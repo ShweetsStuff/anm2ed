@@ -20,6 +20,8 @@ namespace anm2ed::animations
     auto& mergeMultiSelect = document.animationMergeMultiSelect;
     auto& mergeTarget = document.mergeTarget;
 
+    hovered = -1;
+
     if (ImGui::Begin("Animations", &settings.windowIsAnimations))
     {
       auto childSize = imgui::size_without_footer_get();
@@ -45,7 +47,7 @@ namespace anm2ed::animations
           if (imgui::selectable_input_text(animation.name,
                                            std::format("###Document #{} Animation #{}", manager.selected, i),
                                            animation.name, multiSelect.contains(i)))
-            reference = {(int)i};
+            document.animation_set(i);
           if (ImGui::IsItemHovered()) hovered = i;
           ImGui::PopFont();
 
@@ -113,18 +115,7 @@ namespace anm2ed::animations
         auto cut = [&]()
         {
           copy();
-
-          if (!multiSelect.empty())
-          {
-            for (auto& i : multiSelect | std::views::reverse)
-              anm2.animations.items.erase(anm2.animations.items.begin() + i);
-            multiSelect.clear();
-          }
-          else if (hovered > -1)
-          {
-            anm2.animations.items.erase(anm2.animations.items.begin() + hovered);
-            hovered = -1;
-          }
+          document.animations_remove();
         };
 
         auto paste = [&]()
@@ -191,7 +182,7 @@ namespace anm2ed::animations
         ImGui::SameLine();
 
         imgui::shortcut(settings.shortcutRemove);
-        if (ImGui::Button("Remove", widgetSize)) document.animation_remove();
+        if (ImGui::Button("Remove", widgetSize)) document.animations_remove();
         imgui::set_item_tooltip_shortcut("Remove the selected animation(s).", settings.shortcutDuplicate);
 
         ImGui::SameLine();

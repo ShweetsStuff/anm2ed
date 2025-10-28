@@ -18,6 +18,8 @@ namespace anm2ed::events
     auto& hovered = document.hoveredEvent;
     auto& multiSelect = document.eventMultiSelect;
 
+    hovered = -1;
+
     if (ImGui::Begin("Events", &settings.windowIsEvents))
     {
       auto childSize = imgui::size_without_footer_get();

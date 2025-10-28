@@ -11,6 +11,7 @@ using namespace anm2ed::manager;
 using namespace anm2ed::resources;
 using namespace anm2ed::settings;
 using namespace anm2ed::playback;
+using namespace anm2ed::clipboard;
 using namespace glm;
 
 namespace anm2ed::timeline
@@ -50,14 +51,63 @@ namespace anm2ed::timeline
 - Press {} to extend the selected frame, by one frame.
 - Hold Alt while clicking a non-trigger frame to toggle interpolation.)";
 
+  void Timeline::context_menu(Document& document, Settings& settings, Clipboard& clipboard)
+  {
+    auto& hoveredFrame = document.hoveredFrame;
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
+
+    auto copy = [&]()
+    {
+      if (auto frame = document.anm2.frame_get(hoveredFrame)) clipboard.set(frame->to_string(hoveredFrame.itemType));
+    };
+
+    auto cut = [&]()
+    {
+      if (auto frame = document.anm2.frame_get(hoveredFrame))
+      {
+        if (auto item = document.anm2.item_get(hoveredFrame))
+        {
+          clipboard.set(frame->to_string(hoveredFrame.itemType));
+          document.frames_delete(item);
+          hoveredFrame = anm2::REFERENCE_DEFAULT;
+        }
+      }
+    };
+
+    auto paste = [&]() { document.frames_deserialize(clipboard.get()); };
+
+    if (imgui::shortcut(settings.shortcutCut, shortcut::FOCUSED)) cut();
+    if (imgui::shortcut(settings.shortcutCopy, shortcut::FOCUSED)) copy();
+    if (imgui::shortcut(settings.shortcutPaste, shortcut::FOCUSED)) paste();
+
+    if (ImGui::BeginPopupContextWindow("##Context Menu", ImGuiPopupFlags_MouseButtonRight))
+    {
+      ImGui::BeginDisabled(hoveredFrame == anm2::REFERENCE_DEFAULT);
+      if (ImGui::MenuItem("Cut", settings.shortcutCut.c_str())) cut();
+      if (ImGui::MenuItem("Copy", settings.shortcutCopy.c_str())) copy();
+      ImGui::EndDisabled();
+
+      ImGui::BeginDisabled(clipboard.is_empty());
+      if (ImGui::MenuItem("Paste")) paste();
+      ImGui::EndDisabled();
+
+      ImGui::EndPopup();
+    }
+
+    ImGui::PopStyleVar(2);
+  }
+
   void Timeline::item_child(Manager& manager, Document& document, anm2::Animation* animation, Settings& settings,
-                            Resources& resources, anm2::Type type, int id, int& index)
+                            Resources& resources, Clipboard& clipboard, anm2::Type type, int id, int& index)
   {
     auto& anm2 = document.anm2;
     auto& reference = document.reference;
-
     auto item = animation ? animation->item_get(type, id) : nullptr;
+    auto& isOnlyShowLayers = settings.timelineIsOnlyShowLayers;
     auto isVisible = item ? item->isVisible : false;
+    if (isOnlyShowLayers && type != anm2::LAYER) isVisible = false;
     auto isActive = reference.itemType == type && reference.itemID == id;
     std::string label = "##None";
     icon::Type icon{};
@@ -129,7 +179,6 @@ namespace anm2ed::timeline
         ImGui::TextUnformatted(label.c_str());
 
         anm2::Item* item = animation->item_get(type, id);
-        bool& isVisible = item->isVisible;
 
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4());
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4());
@@ -138,7 +187,7 @@ namespace anm2ed::timeline
 
         ImGui::SetCursorPos(ImVec2(itemSize.x - ImGui::GetTextLineHeightWithSpacing() - ImGui::GetStyle().ItemSpacing.x,
                                    (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
-        int visibleIcon = isVisible ? icon::VISIBLE : icon::INVISIBLE;
+        int visibleIcon = item->isVisible ? icon::VISIBLE : icon::INVISIBLE;
 
         if (ImGui::ImageButton("##Visible Toggle", resources.icons[visibleIcon].id, imgui::icon_size_get()))
           document.item_visible_toggle(item);
@@ -165,21 +214,31 @@ namespace anm2ed::timeline
       else
       {
         auto cursorPos = ImGui::GetCursorPos();
-        auto& isShowUnused = settings.timelineIsShowUnused;
-
-        ImGui::SetCursorPos(ImVec2(itemSize.x - ImGui::GetTextLineHeightWithSpacing() - ImGui::GetStyle().ItemSpacing.x,
-                                   (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
 
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4());
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4());
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4());
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2());
 
+        ImGui::SetCursorPos(ImVec2(itemSize.x - ImGui::GetTextLineHeightWithSpacing() - ImGui::GetStyle().ItemSpacing.x,
+                                   (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
+        auto& isShowUnused = settings.timelineIsShowUnused;
         auto unusedIcon = isShowUnused ? icon::SHOW_UNUSED : icon::HIDE_UNUSED;
         if (ImGui::ImageButton("##Unused Toggle", resources.icons[unusedIcon].id, imgui::icon_size_get()))
           isShowUnused = !isShowUnused;
         ImGui::SetItemTooltip(isShowUnused ? "Unused layers/nulls are shown. Press to hide."
                                            : "Unused layers/nulls are hidden. Press to show.");
+
+        auto onlyShowLayersIcon = isOnlyShowLayers ? icon::SHOW_LAYERS : icon::HIDE_LAYERS;
+        ImGui::SetCursorPos(
+            ImVec2(itemSize.x - (ImGui::GetTextLineHeightWithSpacing() * 2) - ImGui::GetStyle().ItemSpacing.x,
+                   (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
+        if (ImGui::ImageButton("##Layers Visibility Toggle", resources.icons[onlyShowLayersIcon].id,
+                               imgui::icon_size_get()))
+          isOnlyShowLayers = !isOnlyShowLayers;
+        ImGui::SetItemTooltip(isOnlyShowLayers
+                                  ? "Only layers are visible. Press to toggle visibility for all items."
+                                  : "Non-layer items are visible. Press to toggle visiblity only for layers.");
 
         ImGui::PopStyleVar();
         ImGui::PopStyleColor(3);
@@ -201,7 +260,7 @@ namespace anm2ed::timeline
   }
 
   void Timeline::items_child(Manager& manager, Document& document, anm2::Animation* animation, Settings& settings,
-                             Resources& resources)
+                             Resources& resources, Clipboard& clipboard)
   {
     auto& reference = document.reference;
 
@@ -232,7 +291,7 @@ namespace anm2ed::timeline
           {
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(0);
-            item_child(manager, document, animation, settings, resources, type, id, index);
+            item_child(manager, document, animation, settings, resources, clipboard, type, id, index);
           };
 
           item_child_row(anm2::NONE);
@@ -302,13 +361,16 @@ namespace anm2ed::timeline
   }
 
   void Timeline::frame_child(Document& document, anm2::Animation* animation, Settings& settings, Resources& resources,
-                             anm2::Type type, int id, int& index, float width)
+                             Clipboard& clipboard, anm2::Type type, int id, int& index, float width)
   {
     auto& anm2 = document.anm2;
     auto& playback = document.playback;
     auto& reference = document.reference;
+    auto& hoveredFrame = document.hoveredFrame;
     auto item = animation ? animation->item_get(type, id) : nullptr;
+    auto& isOnlyShowLayers = settings.timelineIsOnlyShowLayers;
     auto isVisible = item ? item->isVisible : false;
+    if (isOnlyShowLayers && type != anm2::LAYER) isVisible = false;
 
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
@@ -489,6 +551,8 @@ namespace anm2ed::timeline
             reference = frameReference;
             reference.frameTime = frameTime;
           }
+          if (ImGui::IsItemHovered()) hoveredFrame = frameReference;
+
           if (type != anm2::TRIGGER) ImGui::SameLine();
 
           ImGui::PopStyleColor(3);
@@ -502,6 +566,8 @@ namespace anm2ed::timeline
 
           ImGui::PopID();
         }
+
+        context_menu(document, settings, clipboard);
       }
     }
     ImGui::EndChild();
@@ -511,10 +577,12 @@ namespace anm2ed::timeline
     ImGui::PopID();
   }
 
-  void Timeline::frames_child(Document& document, anm2::Animation* animation, Settings& settings, Resources& resources)
+  void Timeline::frames_child(Document& document, anm2::Animation* animation, Settings& settings, Resources& resources,
+                              Clipboard& clipboard)
   {
     auto& anm2 = document.anm2;
     auto& playback = document.playback;
+    auto& hoveredFrame = document.hoveredFrame;
 
     auto itemsChildWidth = ImGui::GetTextLineHeightWithSpacing() * 15;
 
@@ -571,10 +639,12 @@ namespace anm2ed::timeline
           {
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(0);
-            frame_child(document, animation, settings, resources, type, id, index, childWidth);
+            frame_child(document, animation, settings, resources, clipboard, type, id, index, childWidth);
           };
 
           frames_child_row(anm2::NONE);
+
+          //hoveredFrame = anm2::REFERENCE_DEFAULT;
 
           if (animation)
           {
@@ -622,6 +692,8 @@ namespace anm2ed::timeline
         pickerLineDrawList->PopClipRect();
 
         ImGui::PopStyleVar();
+
+        context_menu(document, settings, clipboard);
       }
       ImGui::EndChild();
       ImGui::PopStyleVar();
@@ -917,7 +989,7 @@ namespace anm2ed::timeline
     }
   }
 
-  void Timeline::update(Manager& manager, Settings& settings, Resources& resources)
+  void Timeline::update(Manager& manager, Settings& settings, Resources& resources, Clipboard& clipboard)
   {
     auto& document = *manager.get();
     auto& playback = document.playback;
@@ -931,8 +1003,8 @@ namespace anm2ed::timeline
     if (ImGui::Begin("Timeline", &settings.windowIsTimeline))
     {
       isWindowHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows);
-      frames_child(document, animation, settings, resources);
-      items_child(manager, document, animation, settings, resources);
+      frames_child(document, animation, settings, resources, clipboard);
+      items_child(manager, document, animation, settings, resources, clipboard);
     }
     ImGui::PopStyleVar();
     ImGui::End();
@@ -956,10 +1028,7 @@ namespace anm2ed::timeline
       }
     }
 
-    if (imgui::chord_repeating(imgui::string_to_chord(settings.shortcutShortenFrame)))
-      if (auto frame = anm2.frame_get(reference); frame) frame->shorten();
-
-    if (imgui::chord_repeating(imgui::string_to_chord(settings.shortcutExtendFrame)))
-      if (auto frame = anm2.frame_get(reference); frame) frame->extend();
+    if (imgui::chord_repeating(imgui::string_to_chord(settings.shortcutShortenFrame))) document.frame_shorten();
+    if (imgui::chord_repeating(imgui::string_to_chord(settings.shortcutExtendFrame))) document.frame_extend();
   }
 }

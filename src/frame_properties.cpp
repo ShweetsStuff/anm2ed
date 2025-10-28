@@ -91,8 +91,8 @@ namespace anm2ed::frame_properties
             document.frame_tint_set(frame, useFrame.tint);
           ImGui::SetItemTooltip("%s", "Change the tint of the frame.");
 
-          if (ImGui::ColorEdit3("Color Offset", frame ? value_ptr(useFrame.offset) : &dummy_value<float>()))
-            document.frame_offset_set(frame, useFrame.offset);
+          if (ImGui::ColorEdit3("Color Offset", frame ? value_ptr(useFrame.colorOffset) : &dummy_value<float>()))
+            document.frame_color_offset_set(frame, useFrame.colorOffset);
           ImGui::SetItemTooltip("%s", "Change the color added onto the frame.");
 
           if (ImGui::Checkbox("Visible", frame ? &useFrame.isVisible : &dummy_value<bool>()))

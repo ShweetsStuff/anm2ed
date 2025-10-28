@@ -1,17 +1,20 @@
 #include "document.h"
 
-#include "anm2.h"
-#include "filesystem.h"
-#include "toast.h"
-#include "util.h"
 #include <algorithm>
 #include <ranges>
+
+#include "anm2.h"
+#include "filesystem.h"
+#include "log.h"
+#include "toast.h"
+#include "util.h"
 
 using namespace anm2ed::anm2;
 using namespace anm2ed::filesystem;
 using namespace anm2ed::toast;
 using namespace anm2ed::types;
 using namespace anm2ed::util;
+using namespace anm2ed::log;
 
 using namespace glm;
 
@@ -40,9 +43,28 @@ namespace anm2ed::document
 
     if (anm2.serialize(this->path, errorString))
     {
+      toasts.info(std::format("Saved document to: {}", path));
       clean();
       return true;
     }
+    else if (errorString)
+      toasts.warning(std::format("Could not save document to: {} ({})", path, *errorString));
+
+    return false;
+  }
+
+  bool Document::autosave(const std::string& path, std::string* errorString)
+  {
+    if (anm2.serialize(path, errorString))
+    {
+      autosaveHash = hash;
+      lastAutosaveTime = 0.0f;
+      toasts.info("Autosaving...");
+      logger.info(std::format("Autosaved document to: {}", path));
+      return true;
+    }
+    else if (errorString)
+      toasts.warning(std::format("Could not autosave document to: {} ({})", path, *errorString));
 
     return false;
   }
@@ -56,6 +78,8 @@ namespace anm2ed::document
   {
     saveHash = anm2.hash();
     hash = saveHash;
+    lastAutosaveTime = 0.0f;
+    isForceDirty = false;
   }
 
   void Document::change(change::Type type)
@@ -88,6 +112,8 @@ namespace anm2ed::document
       case change::SPRITESHEETS:
         spritesheet_set();
         break;
+      case change::ITEMS:
+        break;
       case change::ALL:
         layer_set();
         null_set();
@@ -104,14 +130,19 @@ namespace anm2ed::document
     return hash != saveHash;
   }
 
-  std::string Document::directory_get()
+  bool Document::is_autosave_dirty()
+  {
+    return hash != autosaveHash;
+  }
+
+  std::filesystem::path Document::directory_get()
   {
     return path.parent_path();
   }
 
-  std::string Document::filename_get()
+  std::filesystem::path Document::filename_get()
   {
-    return path.filename().string();
+    return path.filename();
   }
 
   bool Document::is_valid()
@@ -224,11 +255,11 @@ namespace anm2ed::document
     change(change::FRAMES);
   }
 
-  void Document::frame_offset_set(anm2::Frame* frame, vec3 offset)
+  void Document::frame_color_offset_set(anm2::Frame* frame, vec3 colorOffset)
   {
     if (!frame) return;
     snapshot("Frame Color Offset");
-    frame->offset = offset;
+    frame->colorOffset = colorOffset;
     change(change::FRAMES);
   }
 
@@ -262,6 +293,52 @@ namespace anm2ed::document
     snapshot("Frame Flip Y");
     frame->scale.y = -frame->scale.y;
     change(change::FRAMES);
+  }
+
+  void Document::frame_shorten()
+  {
+    auto frame = frame_get();
+    if (!frame) return;
+    snapshot("Shorten Frame");
+    frame->shorten();
+    change(change::FRAMES);
+  }
+
+  void Document::frame_extend()
+  {
+    auto frame = frame_get();
+    if (!frame) return;
+    snapshot("Extend Frame");
+    frame->extend();
+    change(change::FRAMES);
+  }
+
+  void Document::frames_change(anm2::FrameChange& frameChange, frame_change::Type type, bool isFromSelectedFrame,
+                               int numberFrames)
+  {
+    auto item = item_get();
+    if (!item) return;
+    snapshot("Change All Frame Properties");
+    item->frames_change(frameChange, type, isFromSelectedFrame && frame_get() ? reference.frameIndex : 0,
+                        isFromSelectedFrame ? numberFrames : -1);
+    change(change::FRAMES);
+  }
+
+  void Document::frames_deserialize(const std::string& string)
+  {
+    if (auto item = item_get())
+    {
+      snapshot("Paste Frame(s)");
+      std::set<int> indices{};
+      std::string errorString{};
+      auto start = reference.frameIndex + 1;
+      if (item->frames_deserialize(string, reference.itemType, start, indices, &errorString))
+        change(change::FRAMES);
+      else
+        toasts.error(std::format("Failed to deserialize frame(s): {}", errorString));
+    }
+    else
+      toasts.error(std::format("Failed to deserialize frame(s): select an item first!"));
   }
 
   anm2::Item* Document::item_get()
@@ -446,6 +523,13 @@ namespace anm2ed::document
     return anm2.animation_get(reference);
   }
 
+  void Document::animation_set(int index)
+  {
+    snapshot("Select Animation");
+    reference = {index};
+    change(change::ITEMS);
+  }
+
   void Document::animation_add()
   {
     snapshot("Add Animation");
@@ -489,12 +573,21 @@ namespace anm2ed::document
     change(change::ANIMATIONS);
   }
 
-  void Document::animation_remove()
+  void Document::animations_remove()
   {
     snapshot("Remove Animation(s)");
-    for (auto& i : animationMultiSelect | std::views::reverse)
-      anm2.animations.items.erase(anm2.animations.items.begin() + i);
-    animationMultiSelect.clear();
+
+    if (!animationMultiSelect.empty())
+    {
+      for (auto& i : animationMultiSelect | std::views::reverse)
+        anm2.animations.items.erase(anm2.animations.items.begin() + i);
+      animationMultiSelect.clear();
+    }
+    else if (hoveredAnimation > -1)
+    {
+      anm2.animations.items.erase(anm2.animations.items.begin() + hoveredAnimation);
+      hoveredAnimation = -1;
+    }
 
     change(change::ANIMATIONS);
   }
@@ -508,7 +601,7 @@ namespace anm2ed::document
 
   void Document::animations_deserialize(const std::string& string)
   {
-    snapshot("Paste Animations");
+    snapshot("Paste Animation(s)");
     auto& multiSelect = animationMultiSelect;
     auto start = multiSelect.empty() ? anm2.animations.items.size() : *multiSelect.rbegin() + 1;
     std::set<int> indices{};
@@ -522,9 +615,21 @@ namespace anm2ed::document
       toasts.error(std::format("Failed to deserialize animation(s): {}", errorString));
   }
 
+  void Document::generate_animation_from_grid(ivec2 startPosition, ivec2 size, ivec2 pivot, int columns, int count,
+                                              int delay)
+  {
+    snapshot("Generate Animation from Grid");
+
+    anm2.generate_from_grid(reference, startPosition, size, pivot, columns, count, delay);
+
+    if (auto animation = animation_get()) animation->frameNum = animation->length();
+
+    change(change::ALL);
+  }
+
   void Document::animations_merge_quick()
   {
-    snapshot("Merge Animations");
+    snapshot("Merge Animation(s)");
     int merged{};
     if (animationMultiSelect.size() > 1)
       merged = anm2.animations.merge(*animationMultiSelect.begin(), animationMultiSelect);

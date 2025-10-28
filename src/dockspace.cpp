@@ -13,6 +13,7 @@ using namespace anm2ed::playback;
 using namespace anm2ed::resources;
 using namespace anm2ed::settings;
 using namespace anm2ed::taskbar;
+using namespace anm2ed::welcome;
 
 namespace anm2ed::dockspace
 {
@@ -32,9 +33,9 @@ namespace anm2ed::dockspace
                          ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
                          ImGuiWindowFlags_NoNavFocus))
     {
-      if (ImGui::DockSpace(ImGui::GetID("##DockSpace"), ImVec2(), ImGuiDockNodeFlags_PassthruCentralNode))
+      if (auto document = manager.get(); document)
       {
-        if (auto document = manager.get(); document)
+        if (ImGui::DockSpace(ImGui::GetID("##DockSpace"), ImVec2(), ImGuiDockNodeFlags_PassthruCentralNode))
         {
           if (settings.windowIsAnimationPreview) animationPreview.update(manager, settings, resources);
           if (settings.windowIsAnimations) animations.update(manager, settings, resources, clipboard);
@@ -45,10 +46,12 @@ namespace anm2ed::dockspace
           if (settings.windowIsOnionskin) onionskin.update(settings);
           if (settings.windowIsSpritesheetEditor) spritesheetEditor.update(manager, settings, resources);
           if (settings.windowIsSpritesheets) spritesheets.update(manager, settings, resources, dialog, clipboard);
-          if (settings.windowIsTimeline) timeline.update(manager, settings, resources);
+          if (settings.windowIsTimeline) timeline.update(manager, settings, resources, clipboard);
           if (settings.windowIsTools) tools.update(manager, settings, resources);
         }
       }
+      else
+        welcome.update(manager, resources, dialog, taskbar, documents);
     }
     ImGui::End();
   }
