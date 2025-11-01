@@ -24,7 +24,8 @@ namespace anm2ed::anm2
   constexpr auto NO_PATH = "(No Path)";
   constexpr auto LAYER_FORMAT = "#{} {} (Spritesheet: #{})";
   constexpr auto NULL_FORMAT = "#{} {}";
-  constexpr auto SPRITESHEET_FORMAT = "#%d %s";
+  constexpr auto SPRITESHEET_FORMAT_C = "#%d %s";
+  constexpr auto SPRITESHEET_FORMAT = "#{} {}";
 
   enum Type
   {
@@ -254,7 +255,9 @@ namespace anm2ed::anm2
     std::set<int> events_unused(Reference = REFERENCE_DEFAULT);
     std::set<int> layers_unused(Reference = REFERENCE_DEFAULT);
     std::set<int> nulls_unused(Reference = REFERENCE_DEFAULT);
+    std::vector<std::string> animation_names_get();
     std::vector<std::string> spritesheet_names_get();
+    std::vector<std::string> event_names_get();
     void bake(Reference, int = 1, bool = true, bool = true);
     void generate_from_grid(Reference, glm::ivec2, glm::ivec2, glm::ivec2, int, int, int);
   };

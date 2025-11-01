@@ -18,6 +18,9 @@ namespace anm2ed::canvas
   constexpr auto DASH_GAP = 1.0f;
   constexpr auto DASH_OFFSET = 1.0f;
 
+  constexpr auto STEP = 1.0f;
+  constexpr auto STEP_FAST = 5.0f;
+
   class Canvas
   {
   public:
@@ -43,6 +46,7 @@ namespace anm2ed::canvas
     void framebuffer_set();
     void framebuffer_resize_check();
     void size_set(glm::vec2);
+    glm::vec4 pixel_read(glm::vec2, glm::vec2);
     glm::mat4 transform_get(float = 100.0f, glm::vec2 = {});
     void axes_render(shader::Shader&, float, glm::vec2, glm::vec4 = glm::vec4(1.0f));
     void grid_render(shader::Shader&, float, glm::vec2, glm::ivec2 = glm::ivec2(32, 32), glm::ivec2 = {},
@@ -58,5 +62,6 @@ namespace anm2ed::canvas
     void zoom_set(float&, glm::vec2&, glm::vec2, float);
     glm::vec2 position_translate(float&, glm::vec2&, glm::vec2);
     void set_to_rect(float& zoom, glm::vec2& pan, glm::vec4 rect);
+    std::vector<unsigned char> pixels_get();
   };
 }

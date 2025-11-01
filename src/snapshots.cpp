@@ -2,6 +2,15 @@
 
 namespace anm2ed::snapshots
 {
+  namespace
+  {
+    void textures_ensure(anm2::Anm2& anm2)
+    {
+      for (auto& [id, spritesheet] : anm2.content.spritesheets)
+        spritesheet.texture.ensure_pixels();
+    }
+  }
+
   bool SnapshotStack::is_empty()
   {
     return top == 0;
@@ -31,6 +40,7 @@ namespace anm2ed::snapshots
 
   void Snapshots::push(const anm2::Anm2& anm2, anm2::Reference reference, const std::string& message)
   {
+    textures_ensure(const_cast<anm2::Anm2&>(anm2));
     Snapshot snapshot = {anm2, reference, message};
     undoStack.push(snapshot);
     redoStack.clear();
@@ -40,8 +50,10 @@ namespace anm2ed::snapshots
   {
     if (auto current = undoStack.pop())
     {
+      textures_ensure(anm2);
       Snapshot snapshot = {anm2, reference, message};
       redoStack.push(snapshot);
+      textures_ensure(current->anm2);
       anm2 = current->anm2;
       reference = current->reference;
       message = current->message;
@@ -52,8 +64,10 @@ namespace anm2ed::snapshots
   {
     if (auto current = redoStack.pop())
     {
+      textures_ensure(anm2);
       Snapshot snapshot = {anm2, reference, message};
       undoStack.push(snapshot);
+      textures_ensure(current->anm2);
       anm2 = current->anm2;
       reference = current->reference;
       message = current->message;

@@ -1,10 +1,14 @@
 #include "canvas.h"
 
-#include "math.h"
+#include <algorithm>
+#include <cmath>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
+#include "math.h"
+#include "texture.h"
 
 using namespace glm;
 using namespace anm2ed::shader;
@@ -283,6 +287,21 @@ namespace anm2ed::canvas
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
   }
 
+  std::vector<unsigned char> Canvas::pixels_get()
+  {
+    auto count = size.x * size.y * texture::CHANNELS;
+    std::vector<unsigned char> pixels(count);
+
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
+    glReadBuffer(GL_COLOR_ATTACHMENT0);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glPixelStorei(GL_PACK_ROW_LENGTH, 0);
+    glReadPixels(0, 0, size.x, size.y, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+
+    return pixels;
+  }
+
   void Canvas::zoom_set(float& zoom, vec2& pan, vec2 focus, float step)
   {
     auto zoomFactor = math::percent_to_unit(zoom);
@@ -293,6 +312,19 @@ namespace anm2ed::canvas
       pan += focus * (zoomFactor - newZoomFactor);
       zoom = newZoom;
     }
+  }
+
+  vec4 Canvas::pixel_read(vec2 position, vec2 framebufferSize)
+  {
+    uint8_t rgba[4]{};
+
+    glBindTexture(GL_READ_FRAMEBUFFER, fbo);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glReadPixels(position.x, framebufferSize.y - 1 - position.y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+
+    return vec4(math::uint8_to_float(rgba[0]), math::uint8_to_float(rgba[1]), math::uint8_to_float(rgba[2]),
+                math::uint8_to_float(rgba[3]));
   }
 
   vec2 Canvas::position_translate(float& zoom, vec2& pan, vec2 position)

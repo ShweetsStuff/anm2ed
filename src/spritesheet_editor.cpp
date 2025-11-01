@@ -14,6 +14,8 @@ using namespace glm;
 
 namespace anm2ed::spritesheet_editor
 {
+  constexpr auto PIVOT_COLOR = color::PINK;
+
   SpritesheetEditor::SpritesheetEditor() : Canvas(vec2())
   {
   }
@@ -115,7 +117,7 @@ namespace anm2ed::spritesheet_editor
 
           auto pivotTransform =
               transform * math::quad_model_get(canvas::PIVOT_SIZE, frame->crop + frame->pivot, PIVOT_SIZE * 0.5f);
-          texture_render(shaderTexture, resources.icons[icon::PIVOT].id, pivotTransform, color::RED);
+          texture_render(shaderTexture, resources.icons[icon::PIVOT].id, pivotTransform, PIVOT_COLOR);
         }
       }
 
@@ -145,7 +147,7 @@ namespace anm2ed::spritesheet_editor
         auto isUp = imgui::chord_repeating(ImGuiKey_UpArrow);
         auto isDown = imgui::chord_repeating(ImGuiKey_DownArrow);
         auto isMod = ImGui::IsKeyDown(ImGuiMod_Shift);
-        auto step = isMod ? step::FAST : step::NORMAL;
+        auto step = isMod ? canvas::STEP_FAST : canvas::STEP;
         auto useTool = tool;
         auto isMouseClick = ImGui::IsMouseClicked(ImGuiMouseButton_Left);
         auto isMouseReleased = ImGui::IsMouseReleased(ImGuiMouseButton_Left);
@@ -195,10 +197,24 @@ namespace anm2ed::spritesheet_editor
           case tool::ERASE:
           {
             if (!spritesheet) break;
-            if (isMouseClicked) document.snapshot(tool == tool::DRAW ? "Draw" : "Erase");
             auto color = tool == tool::DRAW ? toolColor : vec4();
+            if (isMouseClicked) document.snapshot(tool == tool::DRAW ? "Draw" : "Erase");
             if (isMouseDown) spritesheet->texture.pixel_line(ivec2(previousMousePos), ivec2(mousePos), color);
             if (isMouseReleased) document.change(change::FRAMES);
+            break;
+          }
+          case tool::COLOR_PICKER:
+          {
+            if (isMouseDown)
+            {
+              auto position = to_vec2(ImGui::GetMousePos());
+              toolColor = pixel_read(position, {settings.windowSize.x, settings.windowSize.y});
+              if (ImGui::BeginTooltip())
+              {
+                ImGui::ColorButton("##Color Picker Button", to_imvec4(toolColor));
+                ImGui::EndTooltip();
+              }
+            }
             break;
           }
           default:

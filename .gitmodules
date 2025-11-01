@@ -14,3 +14,6 @@
 [submodule "external/lunasvg"]
 	path = external/lunasvg
 	url = https://github.com/sammycage/lunasvg
+[submodule "external/SDL_mixer"]
+	path = external/SDL_mixer
+	url = https://github.com/libsdl-org/SDL_mixer

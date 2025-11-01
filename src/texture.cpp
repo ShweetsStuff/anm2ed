@@ -32,12 +32,20 @@ namespace anm2ed::texture
     return id != 0;
   }
 
+  std::vector<uint8_t> Texture::pixels_get()
+  {
+    ensure_pixels();
+    return pixels;
+  }
+
   void Texture::download()
   {
-    pixels.resize(size.x * size.y * CHANNELS);
+    if (size.x <= 0 || size.y <= 0 || !is_valid()) return;
+    pixels.resize(static_cast<size_t>(size.x) * static_cast<size_t>(size.y) * CHANNELS);
     glBindTexture(GL_TEXTURE_2D, id);
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
     glBindTexture(GL_TEXTURE_2D, 0);
+    isPixelsDirty = false;
   }
 
   void Texture::upload(const uint8_t* data)
@@ -66,6 +74,7 @@ namespace anm2ed::texture
     glGenerateMipmap(GL_TEXTURE_2D);
 
     glBindTexture(GL_TEXTURE_2D, 0);
+    isPixelsDirty = false;
   }
 
   Texture::Texture() = default;
@@ -91,6 +100,7 @@ namespace anm2ed::texture
     {
       if (is_valid()) glDeleteTextures(1, &id);
       id = 0;
+      other.ensure_pixels();
       size = other.size;
       filter = other.filter;
       channels = other.channels;
@@ -110,6 +120,9 @@ namespace anm2ed::texture
       filter = other.filter;
       channels = other.channels;
       pixels = std::move(other.pixels);
+      isPixelsDirty = other.isPixelsDirty;
+      other.isPixelsDirty = true;
+      if (!pixels.empty()) upload();
     }
     return *this;
   }
@@ -129,9 +142,15 @@ namespace anm2ed::texture
     upload(bitmap.data());
   }
 
+  Texture::Texture(const uint8_t* data, ivec2 size)
+  {
+    this->size = size;
+    upload(data);
+  }
+
   Texture::Texture(const std::string& pngPath)
   {
-    if (const uint8* data = stbi_load(pngPath.c_str(), &size.x, &size.y, nullptr, CHANNELS); data)
+    if (const uint8_t* data = stbi_load(pngPath.c_str(), &size.x, &size.y, nullptr, CHANNELS); data)
     {
       upload(data);
       stbi_image_free((void*)data);
@@ -140,6 +159,7 @@ namespace anm2ed::texture
 
   bool Texture::write_png(const std::string& path)
   {
+    ensure_pixels();
     return stbi_write_png(path.c_str(), size.x, size.y, CHANNELS, this->pixels.data(), size.x * CHANNELS);
   }
 
@@ -147,6 +167,7 @@ namespace anm2ed::texture
   {
     if (position.x < 0 || position.y < 0 || position.x >= size.x || position.y >= size.y) return;
 
+    ensure_pixels();
     uint8 rgba8[4] = {(uint8)float_to_uint8(color.r), (uint8)float_to_uint8(color.g), (uint8)float_to_uint8(color.b),
                       (uint8)float_to_uint8(color.a)};
 
@@ -154,14 +175,23 @@ namespace anm2ed::texture
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glTexSubImage2D(GL_TEXTURE_2D, 0, position.x, position.y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, rgba8);
     glBindTexture(GL_TEXTURE_2D, 0);
+    if (!pixels.empty())
+    {
+      auto index = (position.y * size.x + position.x) * CHANNELS;
+      pixels[index + 0] = rgba8[0];
+      pixels[index + 1] = rgba8[1];
+      pixels[index + 2] = rgba8[2];
+      pixels[index + 3] = rgba8[3];
+      isPixelsDirty = false;
+    }
+    else
+      isPixelsDirty = true;
   }
 
   void Texture::pixel_line(ivec2 start, ivec2 end, vec4 color)
   {
-    auto plot = [&](ivec2 pos)
-    {
-      pixel_set(pos, color);
-    };
+    ensure_pixels();
+    auto plot = [&](ivec2 pos) { pixel_set(pos, color); };
 
     int x0 = start.x;
     int y0 = start.y;
@@ -190,6 +220,13 @@ namespace anm2ed::texture
         y0 += sy;
       }
     }
+  }
+
+  void Texture::ensure_pixels() const
+  {
+    if (size.x <= 0 || size.y <= 0) return;
+    if (!pixels.empty() && !isPixelsDirty) return;
+    const_cast<Texture*>(this)->download();
   }
 
   void Texture::bind(GLuint unit)

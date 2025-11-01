@@ -1356,12 +1356,28 @@ namespace anm2ed::anm2
     return unused;
   }
 
+  std::vector<std::string> Anm2::event_names_get()
+  {
+    std::vector<std::string> names{};
+    for (auto& event : content.events | std::views::values)
+      names.push_back(event.name);
+    return names;
+  }
+
+  std::vector<std::string> Anm2::animation_names_get()
+  {
+    std::vector<std::string> names{};
+    for (auto& animation : animations.items)
+      names.push_back(animation.name);
+    return names;
+  }
+
   std::vector<std::string> Anm2::spritesheet_names_get()
   {
-    std::vector<std::string> spritesheets{};
+    std::vector<std::string> names{};
     for (auto& [id, spritesheet] : content.spritesheets)
-      spritesheets.push_back(std::format("#{} {}", id, spritesheet.path.c_str()));
-    return spritesheets;
+      names.push_back(std::format(SPRITESHEET_FORMAT, id, spritesheet.path.c_str()));
+    return names;
   }
 
   void Anm2::bake(Reference reference, int interval, bool isRoundScale, bool isRoundRotation)
