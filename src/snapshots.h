@@ -1,24 +1,27 @@
 #pragma once
 
-#include "anm2.h"
+#include "anm2/anm2.h"
 
 namespace anm2ed::snapshots
 {
   constexpr auto ACTION = "Action";
   constexpr auto MAX = 100;
+};
 
+namespace anm2ed
+{
   class Snapshot
   {
   public:
     anm2::Anm2 anm2{};
     anm2::Reference reference{};
-    std::string message = ACTION;
+    std::string message = snapshots::ACTION;
   };
 
   class SnapshotStack
   {
   public:
-    Snapshot snapshots[MAX];
+    Snapshot snapshots[snapshots::MAX];
     int top{};
 
     bool is_empty();

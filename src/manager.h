@@ -3,11 +3,8 @@
 #include <vector>
 
 #include "document.h"
-#include "imgui.h"
 
-using namespace anm2ed::document;
-
-namespace anm2ed::manager
+namespace anm2ed
 {
   constexpr auto FILE_LABEL_FORMAT = "{} [{}]";
 
@@ -24,11 +21,17 @@ namespace anm2ed::manager
     int selected{-1};
     int pendingSelected{-1};
 
+    bool isRecording{};
+    int recordingStart{};
+    int recordingEnd{};
+
     anm2::Layer editLayer{};
-    imgui::PopupHelper layerPropertiesPopup{imgui::PopupHelper("Layer Properties", imgui::POPUP_SMALL, true)};
+    imgui::PopupHelper layerPropertiesPopup{imgui::PopupHelper("Layer Properties", imgui::POPUP_SMALL_NO_HEIGHT)};
 
     anm2::Null editNull{};
-    imgui::PopupHelper nullPropertiesPopup{imgui::PopupHelper("Null Properties", imgui::POPUP_SMALL, true)};
+    imgui::PopupHelper nullPropertiesPopup{imgui::PopupHelper("Null Properties", imgui::POPUP_SMALL_NO_HEIGHT)};
+
+    imgui::PopupHelper progressPopup{imgui::PopupHelper("Rendering...", imgui::POPUP_SMALL_NO_HEIGHT)};
 
     Manager();
     ~Manager();

@@ -3,16 +3,17 @@
 #include <imgui/backends/imgui_impl_opengl3.h>
 #include <imgui/backends/imgui_impl_sdl3.h>
 
-#include "filesystem.h"
+#include <SDL3_mixer/SDL_mixer.h>
+
+#include "filesystem_.h"
 #include "log.h"
 
-using namespace anm2ed::log;
-using namespace anm2ed::settings;
 using namespace anm2ed::types;
+using namespace anm2ed::util;
 
-namespace anm2ed::loader
+namespace anm2ed
 {
-  std::string settings_path()
+  std::string Loader::settings_path()
   {
     return filesystem::path_preferences_get() + "settings.ini";
   }
@@ -22,6 +23,8 @@ namespace anm2ed::loader
     for (int i = 1; i < argc; i++)
       arguments.emplace_back(argv[i]);
 
+    settings = Settings(settings_path());
+
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
       logger.fatal(std::format("Could not initialize SDL! {}", SDL_GetError()));
@@ -29,7 +32,12 @@ namespace anm2ed::loader
       return;
     }
 
-    settings = Settings(settings_path());
+    logger.info("Initialized SDL");
+
+    if (!MIX_Init())
+      logger.warning(std::format("Could not initialize SDL_mixer! {}", SDL_GetError()));
+    else
+      logger.info("Initialized SDL_mixer");
 
     window = SDL_CreateWindow("Anm2Ed", settings.windowSize.x, settings.windowSize.y,
                               SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL | SDL_WINDOW_HIGH_PIXEL_DENSITY);
@@ -54,7 +62,7 @@ namespace anm2ed::loader
       return;
     }
 
-    logger.info(std::format("OpenGL {}", (const char*)glGetString(GL_VERSION)));
+    logger.info(std::format("Initialized OpenGL {}", (const char*)glGetString(GL_VERSION)));
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -65,7 +73,15 @@ namespace anm2ed::loader
     glClearColor(color::BLACK.r, color::BLACK.g, color::BLACK.b, color::BLACK.a);
 
     IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
+    if (!ImGui::CreateContext())
+    {
+      logger.fatal("Could not initialize Dear ImGui!");
+      isError = true;
+      return;
+    }
+
+    logger.info("Initialized Dear ImGui");
+
     ImGui::StyleColorsDark();
 
     ImGui_ImplSDL3_InitForOpenGL(window, glContext);
@@ -81,13 +97,22 @@ namespace anm2ed::loader
 
   Loader::~Loader()
   {
-    settings.save(settings_path(), ImGui::SaveIniSettingsToMemory(nullptr));
+    if (ImGui::GetCurrentContext())
+    {
+      settings.save(settings_path(), ImGui::SaveIniSettingsToMemory(nullptr));
 
-    ImGui_ImplSDL3_Shutdown();
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui::DestroyContext();
-    SDL_GL_DestroyContext(glContext);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
+      ImGui_ImplSDL3_Shutdown();
+      ImGui_ImplOpenGL3_Shutdown();
+      ImGui::DestroyContext();
+    }
+
+    MIX_Quit();
+
+    if (SDL_WasInit(0))
+    {
+      SDL_GL_DestroyContext(glContext);
+      SDL_DestroyWindow(window);
+      SDL_Quit();
+    }
   }
 }

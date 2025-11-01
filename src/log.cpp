@@ -2,13 +2,12 @@
 
 #include <print>
 
-#include "filesystem.h"
-#include "util.h"
+#include "filesystem_.h"
+#include "time_.h"
 
-using namespace anm2ed::filesystem;
 using namespace anm2ed::util;
 
-namespace anm2ed::log
+namespace anm2ed
 {
   void Logger::write(const Level level, const std::string& message)
   {
@@ -37,6 +36,11 @@ namespace anm2ed::log
     write(FATAL, message);
   }
 
+  void Logger::command(const std::string& message)
+  {
+    write(COMMAND, message);
+  }
+
   void Logger::open(const std::filesystem::path& path)
   {
     file.open(path, std::ios::out | std::ios::app);
@@ -44,7 +48,7 @@ namespace anm2ed::log
 
   Logger::Logger()
   {
-    open(path_preferences_get() + "log.txt");
+    open(filesystem::path_preferences_get() + "log.txt");
     info("Initializing Anm2Ed");
   }
 
@@ -54,5 +58,6 @@ namespace anm2ed::log
     if (file.is_open()) file.close();
   }
 
-  Logger logger;
 }
+
+anm2ed::Logger logger;

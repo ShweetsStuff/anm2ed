@@ -7,14 +7,14 @@
 #include "shader.h"
 #include "texture.h"
 
-namespace anm2ed::resources
+namespace anm2ed
 {
   class Resources
   {
   public:
-    font::Font fonts[font::COUNT]{};
-    texture::Texture icons[icon::COUNT]{};
-    shader::Shader shaders[shader::COUNT]{};
+    resource::Font fonts[resource::font::COUNT]{};
+    resource::Texture icons[resource::icon::COUNT]{};
+    resource::Shader shaders[resource::shader::COUNT]{};
 
     Resources();
   };

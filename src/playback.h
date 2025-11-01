@@ -1,6 +1,6 @@
 #pragma once
 
-namespace anm2ed::playback
+namespace anm2ed
 {
   class Playback
   {

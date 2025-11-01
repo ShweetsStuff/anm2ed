@@ -2,7 +2,7 @@
 
 #include <glm/common.hpp>
 
-namespace anm2ed::playback
+namespace anm2ed
 {
   void Playback::toggle()
   {

@@ -4,31 +4,31 @@
 
 #include "dockspace.h"
 
-namespace anm2ed::state
+namespace anm2ed
 {
   class State
   {
-    void tick(settings::Settings&);
-    void update(SDL_Window*&, settings::Settings&);
-    void render(SDL_Window*&, settings::Settings&);
+    void tick(Settings&);
+    void update(SDL_Window*&, Settings&);
+    void render(SDL_Window*&, Settings&);
 
   public:
     bool isQuit{};
     bool isQuitting{};
-    manager::Manager manager;
-    resources::Resources resources;
-    dialog::Dialog dialog;
-    clipboard::Clipboard clipboard;
+    Manager manager;
+    Resources resources;
+    Dialog dialog;
+    Clipboard clipboard;
 
-    taskbar::Taskbar taskbar;
-    documents::Documents documents;
-    dockspace::Dockspace dockspace;
+    imgui::Taskbar taskbar;
+    imgui::Documents documents;
+    imgui::Dockspace dockspace;
 
     uint64_t previousTick{};
     uint64_t previousUpdate{};
 
     State(SDL_Window*&, std::vector<std::string>&);
 
-    void loop(SDL_Window*&, settings::Settings&);
+    void loop(SDL_Window*&, Settings&);
   };
 };

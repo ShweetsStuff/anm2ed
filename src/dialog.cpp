@@ -8,10 +8,6 @@
 
 namespace anm2ed::dialog
 {
-
-  constexpr SDL_DialogFileFilter FILE_FILTER_ANM2[] = {{"Anm2 file", "anm2;xml"}};
-  constexpr SDL_DialogFileFilter FILE_FILTER_SPRITESHEET[] = {{"PNG image", "png"}};
-
   void callback(void* userData, const char* const* filelist, int filter)
   {
     auto self = (Dialog*)(userData);
@@ -24,8 +20,12 @@ namespace anm2ed::dialog
     else
       self->selectedFilter = -1;
   }
+}
 
-  Dialog::Dialog() = default;
+using namespace anm2ed::dialog;
+
+namespace anm2ed
+{
 
   Dialog::Dialog(SDL_Window* window)
   {
@@ -33,36 +33,24 @@ namespace anm2ed::dialog
     this->window = window;
   }
 
-  void Dialog::anm2_new()
+  void Dialog::file_open(dialog::Type type)
   {
-    SDL_ShowSaveFileDialog(callback, this, window, FILE_FILTER_ANM2, std::size(FILE_FILTER_ANM2), nullptr);
-    type = ANM2_NEW;
+    SDL_ShowOpenFileDialog(callback, this, window, FILTERS[TYPE_FILTERS[type]], std::size(FILTERS[TYPE_FILTERS[type]]),
+                           nullptr, false);
+    this->type = type;
   }
 
-  void Dialog::anm2_open()
+  void Dialog::file_save(dialog::Type type)
   {
-    SDL_ShowOpenFileDialog(callback, this, window, FILE_FILTER_ANM2, std::size(FILE_FILTER_ANM2), nullptr, false);
-    type = ANM2_OPEN;
+    SDL_ShowSaveFileDialog(callback, this, window, FILTERS[TYPE_FILTERS[type]], std::size(FILTERS[TYPE_FILTERS[type]]),
+                           nullptr);
+    this->type = type;
   }
 
-  void Dialog::anm2_save()
+  void Dialog::folder_open(dialog::Type type)
   {
-    SDL_ShowSaveFileDialog(callback, this, window, FILE_FILTER_ANM2, std::size(FILE_FILTER_ANM2), nullptr);
-    type = ANM2_SAVE;
-  }
-
-  void Dialog::spritesheet_open()
-  {
-    SDL_ShowOpenFileDialog(callback, this, window, FILE_FILTER_SPRITESHEET, std::size(FILE_FILTER_SPRITESHEET), nullptr,
-                           false);
-    type = SPRITESHEET_OPEN;
-  }
-
-  void Dialog::spritesheet_replace()
-  {
-    SDL_ShowOpenFileDialog(callback, this, window, FILE_FILTER_SPRITESHEET, std::size(FILE_FILTER_SPRITESHEET), nullptr,
-                           false);
-    type = SPRITESHEET_REPLACE;
+    SDL_ShowOpenFolderDialog(callback, this, window, nullptr, false);
+    this->type = type;
   }
 
   void Dialog::file_explorer_open(const std::string& path)
@@ -79,8 +67,16 @@ namespace anm2ed::dialog
     *this = Dialog(this->window);
   }
 
-  bool Dialog::is_selected_file(Type type)
+  bool Dialog::is_selected(dialog::Type type)
   {
     return this->type == type && !path.empty();
+  }
+
+  void Dialog::set_string_to_selected_path(std::string& string, dialog::Type type)
+  {
+    if (type == NONE) return;
+    if (!is_selected(type)) return;
+    string = path;
+    reset();
   }
 };

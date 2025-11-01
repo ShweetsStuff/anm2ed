@@ -20,7 +20,10 @@ namespace anm2ed::canvas
 
   constexpr auto STEP = 1.0f;
   constexpr auto STEP_FAST = 5.0f;
+}
 
+namespace anm2ed
+{
   class Canvas
   {
   public:
@@ -48,13 +51,14 @@ namespace anm2ed::canvas
     void size_set(glm::vec2);
     glm::vec4 pixel_read(glm::vec2, glm::vec2);
     glm::mat4 transform_get(float = 100.0f, glm::vec2 = {});
-    void axes_render(shader::Shader&, float, glm::vec2, glm::vec4 = glm::vec4(1.0f));
-    void grid_render(shader::Shader&, float, glm::vec2, glm::ivec2 = glm::ivec2(32, 32), glm::ivec2 = {},
+    void axes_render(resource::Shader&, float, glm::vec2, glm::vec4 = glm::vec4(1.0f));
+    void grid_render(resource::Shader&, float, glm::vec2, glm::ivec2 = glm::ivec2(32, 32), glm::ivec2 = {},
                      glm::vec4 = glm::vec4(1.0f));
-    void texture_render(shader::Shader&, GLuint&, glm::mat4&, glm::vec4 = glm::vec4(1.0f), glm::vec3 = {},
-                        float* = (float*)TEXTURE_VERTICES);
-    void rect_render(shader::Shader&, const glm::mat4&, const glm::mat4&, glm::vec4 = glm::vec4(1.0f),
-                     float dashLength = DASH_LENGTH, float dashGap = DASH_GAP, float dashOffset = DASH_OFFSET);
+    void texture_render(resource::Shader&, GLuint&, glm::mat4&, glm::vec4 = glm::vec4(1.0f), glm::vec3 = {},
+                        float* = (float*)canvas::TEXTURE_VERTICES);
+    void rect_render(resource::Shader&, const glm::mat4&, const glm::mat4&, glm::vec4 = glm::vec4(1.0f),
+                     float dashLength = canvas::DASH_LENGTH, float dashGap = canvas::DASH_GAP,
+                     float dashOffset = canvas::DASH_OFFSET);
     void viewport_set();
     void clear(glm::vec4&);
     void bind();

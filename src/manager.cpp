@@ -2,17 +2,15 @@
 
 #include <algorithm>
 
-#include "filesystem.h"
+#include "filesystem_.h"
 #include "log.h"
 #include "toast.h"
-#include "util.h"
+#include "vector_.h"
 
-using namespace anm2ed::log;
-using namespace anm2ed::toast;
 using namespace anm2ed::types;
 using namespace anm2ed::util;
 
-namespace anm2ed::manager
+namespace anm2ed
 {
   constexpr std::size_t RECENT_LIMIT = 10;
 
@@ -121,7 +119,7 @@ namespace anm2ed::manager
     selected = std::clamp(selected, 0, (int)documents.size() - 1);
     pendingSelected = selected;
 
-    if (selected >= 0 && selected < (int)documents.size()) documents[selected].change(change::ALL);
+    if (selected >= 0 && selected < (int)documents.size()) documents[selected].change(Document::ALL);
   }
 
   void Manager::set(int index)
@@ -136,7 +134,7 @@ namespace anm2ed::manager
     index = std::clamp(index, 0, (int)documents.size() - 1);
     selected = index;
 
-    if (auto document = get()) document->change(change::ALL);
+    if (auto document = get()) document->change(Document::ALL);
   }
 
   void Manager::layer_properties_open(int id)
@@ -262,7 +260,7 @@ namespace anm2ed::manager
       {
         document->isForceDirty = true;
         document->path = restorePath;
-        document->change(change::ALL);
+        document->change(Document::ALL);
       }
     }
 

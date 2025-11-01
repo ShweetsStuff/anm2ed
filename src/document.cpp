@@ -3,26 +3,24 @@
 #include <algorithm>
 #include <ranges>
 
-#include "anm2.h"
-#include "filesystem.h"
+#include "filesystem_.h"
 #include "log.h"
+#include "map_.h"
 #include "toast.h"
-#include "util.h"
+#include "vector_.h"
 
 using namespace anm2ed::anm2;
-using namespace anm2ed::filesystem;
-using namespace anm2ed::toast;
+using namespace anm2ed::imgui;
 using namespace anm2ed::types;
 using namespace anm2ed::util;
-using namespace anm2ed::log;
 
 using namespace glm;
 
-namespace anm2ed::document
+namespace anm2ed
 {
   Document::Document(const std::string& path, bool isNew, std::string* errorString)
   {
-    if (!path_is_exist(path)) return;
+    if (!filesystem::path_is_exist(path)) return;
 
     if (isNew)
       anm2 = anm2::Anm2();
@@ -34,7 +32,7 @@ namespace anm2ed::document
 
     this->path = path;
     clean();
-    change(change::ALL);
+    change(Document::ALL);
   }
 
   bool Document::save(const std::string& path, std::string* errorString)
@@ -43,12 +41,12 @@ namespace anm2ed::document
 
     if (anm2.serialize(this->path, errorString))
     {
-      toasts.info(std::format("Saved document to: {}", path));
+      toasts.info(std::format("Saved document to: {}", this->path.string()));
       clean();
       return true;
     }
     else if (errorString)
-      toasts.warning(std::format("Could not save document to: {} ({})", path, *errorString));
+      toasts.warning(std::format("Could not save document to: {} ({})", this->path.string(), *errorString));
 
     return false;
   }
@@ -82,43 +80,76 @@ namespace anm2ed::document
     isForceDirty = false;
   }
 
-  void Document::change(change::Type type)
+  void Document::change(ChangeType type)
   {
     hash_set();
 
-    auto layer_set = [&]() { unusedLayerIDs = anm2.layers_unused(); };
-    auto null_set = [&]() { unusedNullIDs = anm2.nulls_unused(); };
-    auto event_set = [&]() { unusedEventIDs = anm2.events_unused(); };
-    auto spritesheet_set = [&]()
+    auto layers_set = [&]() { unusedLayerIDs = anm2.layers_unused(); };
+    auto nulls_set = [&]() { unusedNullIDs = anm2.nulls_unused(); };
+    auto events_set = [&]()
+    {
+      unusedEventIDs = anm2.events_unused();
+      eventNames = anm2.event_names_get();
+      for (auto& name : eventNames)
+        eventNamesCStr.push_back(name.c_str());
+    };
+
+    auto animations_set = [&]()
+    {
+      animationNames = anm2.animation_names_get();
+      animationNamesCStr.clear();
+      animationNames.insert(animationNames.begin(), "None");
+      for (auto& name : animationNames)
+        animationNamesCStr.push_back(name.c_str());
+    };
+
+    auto spritesheets_set = [&]()
     {
       unusedSpritesheetIDs = anm2.spritesheets_unused();
       spritesheetNames = anm2.spritesheet_names_get();
-      spritesheetNamesCstr.clear();
+      spritesheetNamesCStr.clear();
       for (auto& name : spritesheetNames)
-        spritesheetNamesCstr.push_back(name.c_str());
+        spritesheetNamesCStr.push_back(name.c_str());
+    };
+
+    auto sounds_set = [&]()
+    {
+      unusedSoundIDs = anm2.sounds_unused();
+      soundNames = anm2.sound_names_get();
+      soundNamesCStr.clear();
+      for (auto& name : soundNames)
+        soundNamesCStr.push_back(name.c_str());
     };
 
     switch (type)
     {
-      case change::LAYERS:
-        layer_set();
+      case LAYERS:
+        layers_set();
         break;
-      case change::NULLS:
-        null_set();
+      case NULLS:
+        nulls_set();
         break;
-      case change::EVENTS:
-        event_set();
+      case EVENTS:
+        events_set();
         break;
-      case change::SPRITESHEETS:
-        spritesheet_set();
+      case ANIMATIONS:
+        animations_set();
         break;
-      case change::ITEMS:
+      case SPRITESHEETS:
+        spritesheets_set();
         break;
-      case change::ALL:
-        layer_set();
-        null_set();
-        event_set();
-        spritesheet_set();
+      case SOUNDS:
+        sounds_set();
+        break;
+      case ITEMS:
+        break;
+      case ALL:
+        layers_set();
+        nulls_set();
+        events_set();
+        animations_set();
+        spritesheets_set();
+        sounds_set();
         break;
       default:
         break;
@@ -159,7 +190,7 @@ namespace anm2ed::document
   {
     snapshot("Bake Frames");
     anm2.bake(reference, interval, isRoundScale, isRoundRotation);
-    change(change::FRAMES);
+    change(Document::FRAMES);
   }
 
   void Document::frames_add(anm2::Item* item)
@@ -188,7 +219,7 @@ namespace anm2ed::document
     snapshot("Delete Frames");
     item->frames.erase(item->frames.begin() + reference.frameIndex);
     reference.frameIndex = glm::max(-1, --reference.frameIndex);
-    change(change::FRAMES);
+    change(Document::FRAMES);
   }
 
   void Document::frame_crop_set(anm2::Frame* frame, vec2 crop)
@@ -196,7 +227,7 @@ namespace anm2ed::document
     if (!frame) return;
     snapshot("Frame Crop");
     frame->crop = crop;
-    change(change::FRAMES);
+    change(Document::FRAMES);
   }
 
   void Document::frame_size_set(anm2::Frame* frame, vec2 size)
@@ -204,7 +235,7 @@ namespace anm2ed::document
     if (!frame) return;
     snapshot("Frame Size");
     frame->size = size;
-    change(change::FRAMES);
+    change(Document::FRAMES);
   }
 
   void Document::frame_position_set(anm2::Frame* frame, vec2 position)
@@ -212,7 +243,7 @@ namespace anm2ed::document
     if (!frame) return;
     snapshot("Frame Position");
     frame->position = position;
-    change(change::FRAMES);
+    change(Document::FRAMES);
   }
 
   void Document::frame_pivot_set(anm2::Frame* frame, vec2 pivot)
@@ -220,7 +251,7 @@ namespace anm2ed::document
     if (!frame) return;
     snapshot("Frame Pivot");
     frame->pivot = pivot;
-    change(change::FRAMES);
+    change(Document::FRAMES);
   }
 
   void Document::frame_scale_set(anm2::Frame* frame, vec2 scale)
@@ -228,7 +259,7 @@ namespace anm2ed::document
     if (!frame) return;
     snapshot("Frame Scale");
     frame->scale = scale;
-    change(change::FRAMES);
+    change(Document::FRAMES);
   }
 
   void Document::frame_rotation_set(anm2::Frame* frame, float rotation)
@@ -236,7 +267,7 @@ namespace anm2ed::document
     if (!frame) return;
     snapshot("Frame Rotation");
     frame->rotation = rotation;
-    change(change::FRAMES);
+    change(Document::FRAMES);
   }
 
   void Document::frame_delay_set(anm2::Frame* frame, int delay)
@@ -244,7 +275,7 @@ namespace anm2ed::document
     if (!frame) return;
     snapshot("Frame Delay");
     frame->delay = delay;
-    change(change::FRAMES);
+    change(Document::FRAMES);
   }
 
   void Document::frame_tint_set(anm2::Frame* frame, vec4 tint)
@@ -252,7 +283,7 @@ namespace anm2ed::document
     if (!frame) return;
     snapshot("Frame Tint");
     frame->tint = tint;
-    change(change::FRAMES);
+    change(Document::FRAMES);
   }
 
   void Document::frame_color_offset_set(anm2::Frame* frame, vec3 colorOffset)
@@ -260,7 +291,7 @@ namespace anm2ed::document
     if (!frame) return;
     snapshot("Frame Color Offset");
     frame->colorOffset = colorOffset;
-    change(change::FRAMES);
+    change(Document::FRAMES);
   }
 
   void Document::frame_is_visible_set(anm2::Frame* frame, bool isVisible)
@@ -268,7 +299,7 @@ namespace anm2ed::document
     if (!frame) return;
     snapshot("Frame Visibility");
     frame->isVisible = isVisible;
-    change(change::FRAMES);
+    change(Document::FRAMES);
   }
 
   void Document::frame_is_interpolated_set(anm2::Frame* frame, bool isInterpolated)
@@ -276,7 +307,7 @@ namespace anm2ed::document
     if (!frame) return;
     snapshot("Frame Interpolation");
     frame->isInterpolated = isInterpolated;
-    change(change::FRAMES);
+    change(Document::FRAMES);
   }
 
   void Document::frame_flip_x(anm2::Frame* frame)
@@ -284,7 +315,7 @@ namespace anm2ed::document
     if (!frame) return;
     snapshot("Frame Flip X");
     frame->scale.x = -frame->scale.x;
-    change(change::FRAMES);
+    change(Document::FRAMES);
   }
 
   void Document::frame_flip_y(anm2::Frame* frame)
@@ -292,7 +323,7 @@ namespace anm2ed::document
     if (!frame) return;
     snapshot("Frame Flip Y");
     frame->scale.y = -frame->scale.y;
-    change(change::FRAMES);
+    change(Document::FRAMES);
   }
 
   void Document::frame_shorten()
@@ -301,7 +332,7 @@ namespace anm2ed::document
     if (!frame) return;
     snapshot("Shorten Frame");
     frame->shorten();
-    change(change::FRAMES);
+    change(Document::FRAMES);
   }
 
   void Document::frame_extend()
@@ -310,10 +341,10 @@ namespace anm2ed::document
     if (!frame) return;
     snapshot("Extend Frame");
     frame->extend();
-    change(change::FRAMES);
+    change(Document::FRAMES);
   }
 
-  void Document::frames_change(anm2::FrameChange& frameChange, frame_change::Type type, bool isFromSelectedFrame,
+  void Document::frames_change(anm2::FrameChange& frameChange, anm2::ChangeType type, bool isFromSelectedFrame,
                                int numberFrames)
   {
     auto item = item_get();
@@ -321,7 +352,7 @@ namespace anm2ed::document
     snapshot("Change All Frame Properties");
     item->frames_change(frameChange, type, isFromSelectedFrame && frame_get() ? reference.frameIndex : 0,
                         isFromSelectedFrame ? numberFrames : -1);
-    change(change::FRAMES);
+    change(Document::FRAMES);
   }
 
   void Document::frames_deserialize(const std::string& string)
@@ -333,7 +364,7 @@ namespace anm2ed::document
       std::string errorString{};
       auto start = reference.frameIndex + 1;
       if (item->frames_deserialize(string, reference.itemType, start, indices, &errorString))
-        change(change::FRAMES);
+        change(Document::FRAMES);
       else
         toasts.error(std::format("Failed to deserialize frame(s): {}", errorString));
     }
@@ -359,7 +390,7 @@ namespace anm2ed::document
     {
       spritesheetMultiSelect = {id};
       toasts.info(std::format("Initialized spritesheet #{}: {}", id, path));
-      change(change::SPRITESHEETS);
+      change(Document::SPRITESHEETS);
     }
     else
       toasts.error(std::format("Failed to initialize spritesheet: {}", path));
@@ -370,7 +401,7 @@ namespace anm2ed::document
     snapshot("Paste Spritesheet(s)");
     std::string errorString{};
     if (anm2.content.spritesheets_deserialize(string, directory_get(), type, &errorString))
-      change(change::SPRITESHEETS);
+      change(Document::SPRITESHEETS);
     else
       toasts.error(std::format("Failed to deserialize spritesheet(s): {}", errorString));
   }
@@ -380,7 +411,7 @@ namespace anm2ed::document
     snapshot("Paste Layer(s)");
     std::string errorString{};
     if (anm2.content.layers_deserialize(string, type, &errorString))
-      change(change::NULLS);
+      change(Document::NULLS);
     else
       toasts.error(std::format("Failed to deserialize layer(s): {}", errorString));
   }
@@ -400,7 +431,7 @@ namespace anm2ed::document
       anm2.content.layers[id] = layer;
       layersMultiSelect = {id};
     }
-    change(change::LAYERS);
+    change(Document::LAYERS);
   }
 
   void Document::layers_remove_unused()
@@ -408,7 +439,7 @@ namespace anm2ed::document
     snapshot("Remove Unused Layers");
     for (auto& id : unusedLayerIDs)
       anm2.content.layers.erase(id);
-    change(change::LAYERS);
+    change(Document::LAYERS);
     unusedLayerIDs.clear();
   }
 
@@ -427,14 +458,14 @@ namespace anm2ed::document
       anm2.content.nulls[id] = null;
       nullMultiSelect = {id};
     }
-    change(change::NULLS);
+    change(Document::NULLS);
   }
 
   void Document::null_rect_toggle(anm2::Null& null)
   {
     snapshot("Null Rect");
     null.isShowRect = !null.isShowRect;
-    change(change::NULLS);
+    change(Document::NULLS);
   }
 
   void Document::nulls_remove_unused()
@@ -442,7 +473,7 @@ namespace anm2ed::document
     snapshot("Remove Unused Nulls");
     for (auto& id : unusedNullIDs)
       anm2.content.nulls.erase(id);
-    change(change::NULLS);
+    change(Document::NULLS);
     unusedNullIDs.clear();
   }
 
@@ -451,18 +482,27 @@ namespace anm2ed::document
     snapshot("Paste Null(s)");
     std::string errorString{};
     if (anm2.content.nulls_deserialize(string, type, &errorString))
-      change(change::NULLS);
+      change(Document::NULLS);
     else
       toasts.error(std::format("Failed to deserialize null(s): {}", errorString));
   }
 
-  void Document::event_add()
+  void Document::event_set(anm2::Event& event)
   {
-    snapshot("Add Event");
-    int id{};
-    anm2.event_add(id);
-    eventMultiSelect = {id};
-    change(change::EVENTS);
+    if (referenceEvent > -1)
+    {
+      snapshot("Set Event");
+      anm2.content.events[referenceEvent] = event;
+      eventMultiSelect = {referenceEvent};
+    }
+    else
+    {
+      snapshot("Add Event");
+      auto id = map::next_id_get(anm2.content.events);
+      anm2.content.events[id] = event;
+      eventMultiSelect = {id};
+    }
+    change(Document::EVENTS);
   }
 
   void Document::events_remove_unused()
@@ -470,7 +510,7 @@ namespace anm2ed::document
     snapshot("Remove Unused Events");
     for (auto& id : unusedEventIDs)
       anm2.content.events.erase(id);
-    change(change::EVENTS);
+    change(Document::EVENTS);
     unusedEventIDs.clear();
   }
 
@@ -479,7 +519,40 @@ namespace anm2ed::document
     snapshot("Paste Event(s)");
     std::string errorString{};
     if (anm2.content.events_deserialize(string, type, &errorString))
-      change(change::EVENTS);
+      change(Document::EVENTS);
+    else
+      toasts.error(std::format("Failed to deserialize event(s): {}", errorString));
+  }
+
+  void Document::sound_add(const std::string& path)
+  {
+    int id{};
+    snapshot("Add Sound");
+    if (anm2.sound_add(directory_get(), path, id))
+    {
+      soundMultiSelect = {id};
+      toasts.info(std::format("Initialized sound #{}: {}", id, path));
+      change(Document::SOUNDS);
+    }
+    else
+      toasts.error(std::format("Failed to initialize sound: {}", path));
+  }
+
+  void Document::sounds_remove_unused()
+  {
+    snapshot("Remove Unused Sounds");
+    for (auto& id : unusedSoundIDs)
+      anm2.content.sounds.erase(id);
+    change(Document::LAYERS);
+    unusedSoundIDs.clear();
+  }
+
+  void Document::sounds_deserialize(const std::string& string, merge::Type type)
+  {
+    snapshot("Paste Sound(s)");
+    std::string errorString{};
+    if (anm2.content.sounds_deserialize(string, directory_get(), type, &errorString))
+      change(Document::EVENTS);
     else
       toasts.error(std::format("Failed to deserialize event(s): {}", errorString));
   }
@@ -498,7 +571,7 @@ namespace anm2ed::document
 
     reference = addReference;
 
-    change(change::ITEMS);
+    change(Document::ITEMS);
   }
 
   void Document::item_remove(anm2::Animation* animation)
@@ -507,7 +580,7 @@ namespace anm2ed::document
     snapshot("Remove Item");
     animation->item_remove(reference.itemType, reference.itemID);
     reference = {reference.animationIndex};
-    change(change::ITEMS);
+    change(Document::ITEMS);
   }
 
   void Document::item_visible_toggle(anm2::Item* item)
@@ -515,7 +588,7 @@ namespace anm2ed::document
     if (!item) return;
     snapshot("Item Visibility");
     item->isVisible = !item->isVisible;
-    change(change::ITEMS);
+    change(Document::ITEMS);
   }
 
   anm2::Animation* Document::animation_get()
@@ -527,7 +600,7 @@ namespace anm2ed::document
   {
     snapshot("Select Animation");
     reference = {index};
-    change(change::ITEMS);
+    change(Document::ITEMS);
   }
 
   void Document::animation_add()
@@ -549,7 +622,7 @@ namespace anm2ed::document
     anm2.animations.items.insert(anm2.animations.items.begin() + index, animation);
     animationMultiSelect = {index};
     reference = {index};
-    change(change::ANIMATIONS);
+    change(Document::ANIMATIONS);
   }
 
   void Document::animation_duplicate()
@@ -563,14 +636,14 @@ namespace anm2ed::document
       animationMultiSelect.insert(++duplicatedEnd);
       animationMultiSelect.erase(id);
     }
-    change(change::ANIMATIONS);
+    change(Document::ANIMATIONS);
   }
 
   void Document::animations_move(std::vector<int>& indices, int index)
   {
     snapshot("Move Animation(s)");
     animationMultiSelect = vector::move_indices(anm2.animations.items, indices, index);
-    change(change::ANIMATIONS);
+    change(Document::ANIMATIONS);
   }
 
   void Document::animations_remove()
@@ -589,14 +662,14 @@ namespace anm2ed::document
       hoveredAnimation = -1;
     }
 
-    change(change::ANIMATIONS);
+    change(Document::ANIMATIONS);
   }
 
   void Document::animation_default()
   {
     snapshot("Default Animation");
     anm2.animations.defaultAnimation = anm2.animations.items[*animationMultiSelect.begin()].name;
-    change(change::ANIMATIONS);
+    change(Document::ANIMATIONS);
   }
 
   void Document::animations_deserialize(const std::string& string)
@@ -609,7 +682,7 @@ namespace anm2ed::document
     if (anm2.animations.animations_deserialize(string, start, indices, &errorString))
     {
       multiSelect = indices;
-      change(change::ANIMATIONS);
+      change(Document::ANIMATIONS);
     }
     else
       toasts.error(std::format("Failed to deserialize animation(s): {}", errorString));
@@ -624,7 +697,7 @@ namespace anm2ed::document
 
     if (auto animation = animation_get()) animation->frameNum = animation->length();
 
-    change(change::ALL);
+    change(Document::ALL);
   }
 
   void Document::animations_merge_quick()
@@ -648,7 +721,7 @@ namespace anm2ed::document
 
     animationMultiSelect = {merged};
     reference = {merged};
-    change(change::ANIMATIONS);
+    change(Document::ANIMATIONS);
   }
 
   void Document::animations_merge(merge::Type type, bool isDeleteAnimationsAfter)
@@ -657,7 +730,7 @@ namespace anm2ed::document
     auto merged = anm2.animations.merge(mergeTarget, animationMergeMultiSelect, type, isDeleteAnimationsAfter);
     animationMultiSelect = {merged};
     reference = {merged};
-    change(change::ANIMATIONS);
+    change(Document::ANIMATIONS);
   }
 
   void Document::snapshot(const std::string& message)
@@ -669,22 +742,22 @@ namespace anm2ed::document
   {
     snapshots.undo(anm2, reference, message);
     toasts.info(std::format("Undo: {}", message));
-    change(change::ALL);
+    change(Document::ALL);
   }
 
   void Document::redo()
   {
     toasts.info(std::format("Redo: {}", message));
     snapshots.redo(anm2, reference, message);
-    change(change::ALL);
+    change(Document::ALL);
   }
 
-  bool Document::is_undo()
+  bool Document::is_able_to_undo()
   {
     return !snapshots.undoStack.is_empty();
   }
 
-  bool Document::is_redo()
+  bool Document::is_able_to_redo()
   {
     return !snapshots.redoStack.is_empty();
   }

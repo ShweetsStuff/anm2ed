@@ -3,13 +3,14 @@
 #include <filesystem>
 #include <fstream>
 
-namespace anm2ed::log
+namespace anm2ed
 {
 #define LEVELS                                                                                                         \
   X(INFO, "[INFO]")                                                                                                    \
   X(WARNING, "[WARNING]")                                                                                              \
   X(ERROR, "[ERROR]")                                                                                                  \
-  X(FATAL, "[FATAL]")
+  X(FATAL, "[FATAL]")                                                                                                  \
+  X(COMMAND, "[COMMAND]")
 
   enum Level
   {
@@ -35,10 +36,12 @@ namespace anm2ed::log
     void warning(const std::string&);
     void error(const std::string&);
     void fatal(const std::string&);
+    void command(const std::string&);
     void open(const std::filesystem::path&);
     Logger();
     ~Logger();
   };
 
-  extern Logger logger;
 }
+
+extern anm2ed::Logger logger;

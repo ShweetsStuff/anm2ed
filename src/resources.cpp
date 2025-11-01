@@ -1,11 +1,10 @@
 #include "resources.h"
+
 #include <ranges>
 
-using namespace anm2ed::texture;
-using namespace anm2ed::shader;
-using namespace anm2ed::font;
+using namespace anm2ed::resource;
 
-namespace anm2ed::resources
+namespace anm2ed
 {
   Resources::Resources()
   {

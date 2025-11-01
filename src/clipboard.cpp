@@ -2,7 +2,7 @@
 
 #include <SDL3/SDL.h>
 
-namespace anm2ed::clipboard
+namespace anm2ed
 {
   std::string Clipboard::get()
   {

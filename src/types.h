@@ -4,22 +4,6 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui/imgui.h>
 
-namespace anm2ed::types::change
-{
-  enum Type
-  {
-    LAYERS,
-    NULLS,
-    SPRITESHEETS,
-    EVENTS,
-    ANIMATIONS,
-    ITEMS,
-    FRAMES,
-    ALL,
-    COUNT
-  };
-}
-
 namespace anm2ed::types::draw_order
 {
   enum Type
@@ -69,16 +53,6 @@ namespace anm2ed::types::merge
   };
 }
 
-namespace anm2ed::types::frame_change
-{
-  enum Type
-  {
-    ADD,
-    SUBTRACT,
-    ADJUST
-  };
-}
-
 namespace anm2ed::types::color
 {
   using namespace glm;
@@ -88,17 +62,14 @@ namespace anm2ed::types::color
   constexpr auto RED = vec4(1.0, 0.0, 0.0, 1.0);
   constexpr auto GREEN = vec4(0.0, 1.0, 0.0, 1.0);
   constexpr auto BLUE = vec4(0.0, 0.0, 1.0, 1.0);
+  constexpr auto PINK = vec4(1.0, 0.0, 1.0, 1.0);
   constexpr auto TRANSPARENT = vec4();
-}
-
-namespace anm2ed::types::step
-{
-  constexpr auto NORMAL = 1;
-  constexpr auto FAST = 10;
 }
 
 namespace anm2ed::types
 {
+  constexpr auto ID_NONE = -1;
+
   constexpr ImVec2 to_imvec2(const glm::vec2& v) noexcept
   {
     return {v.x, v.y};

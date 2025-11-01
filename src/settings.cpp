@@ -1,13 +1,12 @@
 #include "settings.h"
 
-#include "filesystem.h"
+#include "filesystem_.h"
 #include "log.h"
 
-using namespace anm2ed::filesystem;
-using namespace anm2ed::log;
+using namespace anm2ed::util;
 using namespace glm;
 
-namespace anm2ed::settings
+namespace anm2ed
 {
   constexpr auto IMGUI_DEFAULT = R"(
 # Dear ImGui
@@ -104,11 +103,9 @@ DockSpace         ID=0xFC02A410 Window=0x0E46F4F7 Pos=8,40 Size=1584,852 Split=Y
   DockNode        ID=0x00000004 Parent=0xFC02A410 SizeRef=1902,334 Selected=0x4F89F0DC
 )";
 
-  Settings::Settings() = default;
-
   Settings::Settings(const std::string& path)
   {
-    if (path_is_exist(path))
+    if (filesystem::path_is_exist(path))
       logger.info(std::format("Using settings from: {}", path));
     else
     {

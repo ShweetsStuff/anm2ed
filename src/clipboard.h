@@ -2,7 +2,7 @@
 
 #include <string>
 
-namespace anm2ed::clipboard
+namespace anm2ed
 {
   class Clipboard
   {

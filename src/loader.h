@@ -7,14 +7,16 @@
 
 #include "settings.h"
 
-namespace anm2ed::loader
+namespace anm2ed
 {
   class Loader
   {
+    std::string settings_path();
+
   public:
     SDL_Window* window{};
     SDL_GLContext glContext{};
-    settings::Settings settings;
+    Settings settings;
     std::vector<std::string> arguments;
     bool isError{};
 

@@ -1,19 +1,20 @@
 #include "canvas.h"
 
 #include <algorithm>
-#include <cmath>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "math.h"
+#include "math_.h"
 #include "texture.h"
 
 using namespace glm;
-using namespace anm2ed::shader;
+using namespace anm2ed::resource;
+using namespace anm2ed::util;
+using namespace anm2ed::canvas;
 
-namespace anm2ed::canvas
+namespace anm2ed
 {
   constexpr float AXIS_VERTICES[] = {-1.0f, 0.0f, 1.0f, 0.0f};
   constexpr float GRID_VERTICES[] = {-1.f, -1.f, 0.f, 0.f, 3.f, -1.f, 2.f, 0.f, -1.f, 3.f, 0.f, 2.f};
@@ -305,7 +306,7 @@ namespace anm2ed::canvas
   void Canvas::zoom_set(float& zoom, vec2& pan, vec2 focus, float step)
   {
     auto zoomFactor = math::percent_to_unit(zoom);
-    float newZoom = glm::clamp(math::round_nearest_multiple(zoom + step, step), canvas::ZOOM_MIN, canvas::ZOOM_MAX);
+    float newZoom = glm::clamp(math::round_nearest_multiple(zoom + step, step), ZOOM_MIN, ZOOM_MAX);
     if (newZoom != zoom)
     {
       float newZoomFactor = math::percent_to_unit(newZoom);

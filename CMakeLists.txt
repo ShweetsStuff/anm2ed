@@ -19,9 +19,29 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+
 set(SDL_STATIC ON CACHE BOOL "" FORCE)
+set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+set(SDL_HAPTIC OFF CACHE BOOL "" FORCE)
+set(SDL_SENSOR OFF CACHE BOOL "" FORCE)
+set(SDL_HIDAPI OFF CACHE BOOL "" FORCE)
+set(SDL_CAMERA OFF CACHE BOOL "" FORCE)
+set(SDL_TRAY OFF CACHE BOOL "" FORCE)
 add_subdirectory(external/SDL EXCLUDE_FROM_ALL)
+
+set(SDLMIXER_DEPS_SHARED OFF CACHE BOOL "" FORCE)
+set(SDLMIXER_FLAC_LIBFLAC OFF CACHE BOOL "" FORCE)
+set(SDLMIXER_GME OFF CACHE BOOL "" FORCE)
+set(SDLMIXER_MOD_XMP OFF CACHE BOOL "" FORCE)
+set(SDLMIXER_MP3_MPG123 OFF CACHE BOOL "" FORCE)
+set(SDLMIXER_MIDI_FLUIDSYNTH OFF CACHE BOOL "" FORCE)
+set(SDLMIXER_OPUS OFF CACHE BOOL "" FORCE)
+set(SDLMIXER_VORBIS_VORBISFILE OFF CACHE BOOL "" FORCE)
+set(SDLMIXER_VORBIS_TREMOR OFF CACHE BOOL "" FORCE)
+set(SDLMIXER_WAVPACK OFF CACHE BOOL "" FORCE)
+set(SDLMIXER_TEST OFF CACHE BOOL "" FORCE)
+set(SDLMIXER_INSTALL OFF CACHE BOOL "" FORCE)
+add_subdirectory(external/SDL_mixer EXCLUDE_FROM_ALL)
 
 add_subdirectory(external/lunasvg)
 
@@ -39,6 +59,18 @@ set(IMGUI_SRC
 set(TINYXML2_SRC external/tinyxml2/tinyxml2.cpp)
 
 file(GLOB PROJECT_SRC CONFIGURE_DEPENDS
+        src/anm2/*.cpp
+        src/anm2/*.h
+        src/resource/*.cpp
+        src/resource/*.h
+        src/imgui/*.cpp
+        src/imgui/*.h
+        src/imgui/window/*.cpp
+        src/imgui/window/*.h
+        src/util/*.cpp
+        src/util/*.h
+        src/window/*.cpp
+        src/window/*.h
         src/*.cpp
         src/*.h
 )
@@ -88,6 +120,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         external/glm
         external/tinyxml2
         external/lunasvg
+        external/SDL
+        external/SDL_mixer
         include
         include/glad
         src
@@ -96,7 +130,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         src/util
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE GL SDL3-static lunasvg)
+target_link_libraries(${PROJECT_NAME} PRIVATE GL SDL3-static SDL3_mixer::SDL3_mixer lunasvg)
 
 message(STATUS "System: ${CMAKE_SYSTEM_NAME}")
 message(STATUS "Project: ${PROJECT_NAME}")

@@ -4,10 +4,11 @@
 
 #include <glm/glm.hpp>
 
-#include "anm2.h"
+#include "anm2/anm2.h"
+#include "render.h"
 #include "types.h"
 
-namespace anm2ed::settings
+namespace anm2ed
 {
 #ifdef _WIN32
   constexpr auto FFMPEG_PATH_DEFAULT = "C:\\ffmpeg\\bin\\ffmpeg.exe";
@@ -127,6 +128,7 @@ namespace anm2ed::settings
   X(TIMELINE_ADD_ITEM_SOURCE, timelineAddItemSource, "Add Item Source", INT, types::source::NEW)                       \
   X(TIMELINE_IS_SHOW_UNUSED, timelineIsShowUnused, "##Show Unused", BOOL, true)                                        \
   X(TIMELINE_IS_ONLY_SHOW_LAYERS, timelineIsOnlyShowLayers, "##Only Show Layers", BOOL, true)                          \
+  X(TIMELINE_IS_SOUND, timelineIsSound, "Sound", BOOL, true)                                                           \
                                                                                                                        \
   X(ONIONSKIN_IS_ENABLED, onionskinIsEnabled, "Enabled", BOOL, false)                                                  \
   X(ONIONSKIN_DRAW_ORDER, onionskinDrawOrder, "Draw Order", INT, 0)                                                    \
@@ -138,11 +140,12 @@ namespace anm2ed::settings
   X(TOOL, tool, "##Tool", INT, 0)                                                                                      \
   X(TOOL_COLOR, toolColor, "##Color", VEC4, {1.0, 1.0, 1.0, 1.0})                                                      \
                                                                                                                        \
-  X(RENDER_TYPE, renderType, "Output", INT, 0)                                                                         \
+  X(RENDER_TYPE, renderType, "Output", INT, render::PNGS)                                                              \
   X(RENDER_PATH, renderPath, "Path", STRING, ".")                                                                      \
   X(RENDER_FORMAT, renderFormat, "Format", STRING, "{}.png")                                                           \
   X(RENDER_IS_USE_ANIMATION_BOUNDS, renderIsUseAnimationBounds, "Use Animation Bounds", BOOL, true)                    \
   X(RENDER_IS_TRANSPARENT, renderIsTransparent, "Transparent", BOOL, true)                                             \
+  X(RENDER_IS_RANGE, renderIsRange, "Range", BOOL, false)                                                              \
   X(RENDER_SCALE, renderScale, "Scale", FLOAT, 1.0f)                                                                   \
   X(RENDER_FFMPEG_PATH, renderFFmpegPath, "FFmpeg Path", STRING, FFMPEG_PATH_DEFAULT)
 
@@ -197,6 +200,7 @@ namespace anm2ed::settings
   X(WINDOW_NULLS, windowIsNulls, "Nulls", BOOL, true)                                                                  \
   X(WINDOW_ONIONSKIN, windowIsOnionskin, "Onionskin", BOOL, true)                                                      \
   X(WINDOW_PREVIEW, windowIsSpritesheets, "Spritesheets", BOOL, true)                                                  \
+  X(WINDOW_SOUNDS, windowIsSounds, "Sounds", BOOL, true)                                                               \
   X(WINDOW_SPRITESHEET_EDITOR, windowIsSpritesheetEditor, "Spritesheet Editor", BOOL, true)                            \
   X(WINDOW_TIMELINE, windowIsTimeline, "Timeline", BOOL, true)                                                         \
   X(WINDOW_TOOLS, windowIsTools, "Tools", BOOL, true)
@@ -208,7 +212,7 @@ namespace anm2ed::settings
     SETTINGS_MEMBERS SETTINGS_SHORTCUTS SETTINGS_WINDOWS
 #undef X
 
-    Settings();
+    Settings() = default;
 
     Settings(const std::string&);
     void save(const std::string&, const std::string&);

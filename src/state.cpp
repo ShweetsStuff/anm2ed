@@ -3,15 +3,14 @@
 #include <imgui/backends/imgui_impl_opengl3.h>
 #include <imgui/backends/imgui_impl_sdl3.h>
 
-#include "filesystem.h"
+#include "filesystem_.h"
 #include "toast.h"
 
-using namespace anm2ed::settings;
-using namespace anm2ed::dialog;
-using namespace anm2ed::toast;
+using namespace anm2ed::imgui;
+using namespace anm2ed::util;
 using namespace anm2ed::types;
 
-namespace anm2ed::state
+namespace anm2ed
 {
   constexpr auto TICK_RATE = 30;
   constexpr auto TICK_INTERVAL = (1000 / TICK_RATE);
@@ -28,11 +27,15 @@ namespace anm2ed::state
 
   void State::tick(Settings& settings)
   {
+    dockspace.tick(manager, settings);
+
     if (auto document = manager.get())
+    {
       if (auto animation = document->animation_get())
         if (document->playback.isPlaying)
           document->playback.tick(document->anm2.info.fps, animation->frameNum,
-                                  animation->isLoop || settings.playbackIsLoop);
+                                  (animation->isLoop || settings.playbackIsLoop) && !manager.isRecording);
+    }
   }
 
   void State::update(SDL_Window*& window, Settings& settings)
