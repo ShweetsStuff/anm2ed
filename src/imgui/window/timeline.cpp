@@ -4,6 +4,8 @@
 
 #include <imgui_internal.h>
 
+#include "toast.h"
+
 using namespace anm2ed::resource;
 using namespace anm2ed::types;
 using namespace glm;
@@ -48,41 +50,59 @@ namespace anm2ed::imgui
   void Timeline::context_menu(Document& document, Settings& settings, Clipboard& clipboard)
   {
     auto& hoveredFrame = document.hoveredFrame;
+    auto& anm2 = document.anm2;
+    auto& reference = document.reference;
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
 
     auto copy = [&]()
     {
-      if (auto frame = document.anm2.frame_get(hoveredFrame))
-      {
-        clipboard.set(frame->to_string(hoveredFrame.itemType));
-      }
+      if (auto frame = anm2.frame_get(hoveredFrame)) clipboard.set(frame->to_string(hoveredFrame.itemType));
     };
 
     auto cut = [&]()
     {
       copy();
-      document.frames_delete(document.item_get());
+      auto frames_delete = [&]()
+      {
+        if (auto item = anm2.item_get(reference); item)
+        {
+          item->frames.erase(item->frames.begin() + reference.frameIndex);
+          reference.frameIndex = glm::max(-1, --reference.frameIndex);
+        }
+      };
+
+      DOCUMENT_EDIT(document, "Cut Frame(s)", Document::FRAMES, frames_delete());
     };
 
-    auto paste = [&]() { document.frames_deserialize(clipboard.get()); };
+    auto paste = [&]()
+    {
+      if (auto item = document.item_get())
+      {
+        document.snapshot("Paste Frame(s)");
+        std::set<int> indices{};
+        std::string errorString{};
+        auto start = reference.frameIndex + 1;
+        if (item->frames_deserialize(clipboard.get(), reference.itemType, start, indices, &errorString))
+          document.change(Document::FRAMES);
+        else
+          toasts.error(std::format("Failed to deserialize frame(s): {}", errorString));
+      }
+      else
+        toasts.error(std::format("Failed to deserialize frame(s): select an item first!"));
+    };
 
-    if (imgui::shortcut(settings.shortcutCut, shortcut::FOCUSED)) cut();
-    if (imgui::shortcut(settings.shortcutCopy, shortcut::FOCUSED)) copy();
-    if (imgui::shortcut(settings.shortcutPaste, shortcut::FOCUSED)) paste();
+    if (shortcut(settings.shortcutCut, shortcut::FOCUSED)) cut();
+    if (shortcut(settings.shortcutCopy, shortcut::FOCUSED)) copy();
+    if (shortcut(settings.shortcutPaste, shortcut::FOCUSED)) paste();
 
     if (ImGui::BeginPopupContextWindow("##Context Menu", ImGuiPopupFlags_MouseButtonRight))
     {
-      ImGui::BeginDisabled(hoveredFrame == anm2::REFERENCE_DEFAULT);
-      if (ImGui::MenuItem("Cut", settings.shortcutCut.c_str())) cut();
-      if (ImGui::MenuItem("Copy", settings.shortcutCopy.c_str())) copy();
-      ImGui::EndDisabled();
+      if (ImGui::MenuItem("Cut", settings.shortcutCut.c_str(), false, hoveredFrame != anm2::Reference{})) cut();
+      if (ImGui::MenuItem("Copy", settings.shortcutCopy.c_str(), false, hoveredFrame != anm2::Reference{})) copy();
 
-      ImGui::BeginDisabled(clipboard.is_empty());
-      if (ImGui::MenuItem("Paste")) paste();
-      ImGui::EndDisabled();
-
+      if (ImGui::MenuItem("Paste", nullptr, false, !clipboard.is_empty())) paste();
       ImGui::EndPopup();
     }
 
@@ -165,7 +185,7 @@ namespace anm2ed::imgui
           if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) reference = itemReference;
         }
 
-        ImGui::Image(resources.icons[icon].id, imgui::icon_size_get());
+        ImGui::Image(resources.icons[icon].id, icon_size_get());
         ImGui::SameLine();
         ImGui::TextUnformatted(label.c_str());
 
@@ -181,8 +201,8 @@ namespace anm2ed::imgui
                                    (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
         int visibleIcon = isVisible ? icon::VISIBLE : icon::INVISIBLE;
 
-        if (ImGui::ImageButton("##Visible Toggle", resources.icons[visibleIcon].id, imgui::icon_size_get()))
-          document.item_visible_toggle(item);
+        if (ImGui::ImageButton("##Visible Toggle", resources.icons[visibleIcon].id, icon_size_get()))
+          DOCUMENT_EDIT(document, "Item Visibility", Document::FRAMES, isVisible = !isVisible);
         ImGui::SetItemTooltip(isVisible ? "The item is shown. Press to hide." : "The item is hidden. Press to show.");
 
         if (type == anm2::NULL_)
@@ -194,8 +214,8 @@ namespace anm2ed::imgui
           ImGui::SetCursorPos(
               ImVec2(itemSize.x - (ImGui::GetTextLineHeightWithSpacing() * 2) - ImGui::GetStyle().ItemSpacing.x,
                      (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
-          if (ImGui::ImageButton("##Rect Toggle", resources.icons[rectIcon].id, imgui::icon_size_get()))
-            document.null_rect_toggle(null);
+          if (ImGui::ImageButton("##Rect Toggle", resources.icons[rectIcon].id, icon_size_get()))
+            DOCUMENT_EDIT(document, "Null Rect", Document::FRAMES, null.isShowRect = !null.isShowRect);
           ImGui::SetItemTooltip(isShowRect ? "The null's rect is shown. Press to hide."
                                            : "The null's rect is hidden. Press to show.");
         }
@@ -217,7 +237,7 @@ namespace anm2ed::imgui
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2());
 
         auto unusedIcon = isShowUnused ? icon::SHOW_UNUSED : icon::HIDE_UNUSED;
-        if (ImGui::ImageButton("##Unused Toggle", resources.icons[unusedIcon].id, imgui::icon_size_get()))
+        if (ImGui::ImageButton("##Unused Toggle", resources.icons[unusedIcon].id, icon_size_get()))
           isShowUnused = !isShowUnused;
         ImGui::SetItemTooltip(isShowUnused ? "Unused layers/nulls are shown. Press to hide."
                                            : "Unused layers/nulls are hidden. Press to show.");
@@ -229,7 +249,7 @@ namespace anm2ed::imgui
             ImVec2(itemSize.x - (ImGui::GetTextLineHeightWithSpacing() * 2) - ImGui::GetStyle().ItemSpacing.x,
                    (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
 
-        if (ImGui::ImageButton("##Layers Toggle", resources.icons[layersIcon].id, imgui::icon_size_get()))
+        if (ImGui::ImageButton("##Layers Toggle", resources.icons[layersIcon].id, icon_size_get()))
           isOnlyShowLayers = !isOnlyShowLayers;
         ImGui::SetItemTooltip(isOnlyShowLayers ? "Only layers are visible. Press to show all items."
                                                : "All items are visible. Press to only show layers.");
@@ -329,21 +349,30 @@ namespace anm2ed::imgui
       ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
 
       ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPosX() + style.WindowPadding.x, ImGui::GetCursorPosY()));
-      auto widgetSize = imgui::widget_size_with_row_get(2, ImGui::GetContentRegionAvail().x - style.WindowPadding.x);
+      auto widgetSize = widget_size_with_row_get(2, ImGui::GetContentRegionAvail().x - style.WindowPadding.x);
 
       ImGui::BeginDisabled(!animation);
       {
-        imgui::shortcut(settings.shortcutAdd);
+        shortcut(settings.shortcutAdd);
         if (ImGui::Button("Add", widgetSize)) propertiesPopup.open();
-        imgui::set_item_tooltip_shortcut("Add a new item to the animation.", settings.shortcutAdd);
+        set_item_tooltip_shortcut("Add a new item to the animation.", settings.shortcutAdd);
         ImGui::SameLine();
 
         ImGui::BeginDisabled(!document.item_get() && reference.itemType != anm2::LAYER &&
                              reference.itemType != anm2::NULL_);
         {
-          imgui::shortcut(settings.shortcutRemove);
-          if (ImGui::Button("Remove", widgetSize)) document.item_remove(animation);
-          imgui::set_item_tooltip_shortcut("Remove the selected items from the animation.", settings.shortcutRemove);
+          shortcut(settings.shortcutRemove);
+          if (ImGui::Button("Remove", widgetSize))
+          {
+            auto remove = [&]()
+            {
+              animation->item_remove(reference.itemType, reference.itemID);
+              reference = {reference.animationIndex};
+            };
+
+            DOCUMENT_EDIT(document, "Remove Item", Document::ITEMS, remove());
+          }
+          set_item_tooltip_shortcut("Remove the selected items from the animation.", settings.shortcutRemove);
         }
         ImGui::EndDisabled();
       }
@@ -534,11 +563,12 @@ namespace anm2ed::imgui
           if (ImGui::Button("##Frame Button", size))
           {
             if (type != anm2::TRIGGER && ImGui::IsKeyDown(ImGuiMod_Alt))
-              document.frame_is_interpolated_set(&frame, !frame.isInterpolated);
+              DOCUMENT_EDIT(document, "Frame Interpolation", Document::FRAMES,
+                            frame.isInterpolated = !frame.isInterpolated);
             if (type == anm2::LAYER)
             {
-              document.referenceSpritesheet = anm2.content.layers[id].spritesheetID;
-              document.layersMultiSelect = {id};
+              document.spritesheet.reference = anm2.content.layers[id].spritesheetID;
+              document.layer.selection = {id};
             }
             reference = frameReference;
             reference.frameTime = frameTime;
@@ -575,8 +605,8 @@ namespace anm2ed::imgui
                               Clipboard& clipboard)
   {
     auto& anm2 = document.anm2;
+    auto& reference = document.reference;
     auto& playback = document.playback;
-    auto& hoveredFrame = document.hoveredFrame;
 
     auto itemsChildWidth = ImGui::GetTextLineHeightWithSpacing() * 15;
 
@@ -697,16 +727,16 @@ namespace anm2ed::imgui
       ImGui::SetCursorPos(
           ImVec2(ImGui::GetStyle().WindowPadding.x, ImGui::GetCursorPos().y + ImGui::GetStyle().ItemSpacing.y));
 
-      auto widgetSize = imgui::widget_size_with_row_get(10);
+      auto widgetSize = widget_size_with_row_get(10);
 
       ImGui::BeginDisabled(!animation);
       {
         auto label = playback.isPlaying ? "Pause" : "Play";
         auto tooltip = playback.isPlaying ? "Pause the animation." : "Play the animation.";
 
-        imgui::shortcut(settings.shortcutPlayPause);
+        shortcut(settings.shortcutPlayPause);
         if (ImGui::Button(label, widgetSize)) playback.toggle();
-        imgui::set_item_tooltip_shortcut(tooltip, settings.shortcutPlayPause);
+        set_item_tooltip_shortcut(tooltip, settings.shortcutPlayPause);
 
         ImGui::SameLine();
 
@@ -714,17 +744,45 @@ namespace anm2ed::imgui
 
         ImGui::BeginDisabled(!item);
         {
-          imgui::shortcut(settings.shortcutAdd);
-          if (ImGui::Button("Insert Frame", widgetSize)) document.frames_add(item);
-          imgui::set_item_tooltip_shortcut("Insert a frame, based on the current selection.", settings.shortcutAdd);
+          shortcut(settings.shortcutAdd);
+          if (ImGui::Button("Insert Frame", widgetSize))
+          {
+            auto insert_frame = [&]()
+            {
+              auto frame = document.frame_get();
+              if (frame)
+              {
+                item->frames.insert(item->frames.begin() + reference.frameIndex, *frame);
+                reference.frameIndex++;
+              }
+              else if (!item->frames.empty())
+              {
+                auto frame = item->frames.back();
+                item->frames.emplace_back(frame);
+                reference.frameIndex = item->frames.size() - 1;
+              }
+            };
+
+            DOCUMENT_EDIT(document, "Insert Frame", Document::FRAMES, insert_frame());
+          }
+          set_item_tooltip_shortcut("Insert a frame, based on the current selection.", settings.shortcutAdd);
 
           ImGui::SameLine();
 
           ImGui::BeginDisabled(!document.frame_get());
           {
-            imgui::shortcut(settings.shortcutRemove);
-            if (ImGui::Button("Delete Frame", widgetSize)) document.frames_delete(item);
-            imgui::set_item_tooltip_shortcut("Delete the selected frames.", settings.shortcutRemove);
+            shortcut(settings.shortcutRemove);
+            if (ImGui::Button("Delete Frame", widgetSize))
+            {
+              auto delete_frame = [&]()
+              {
+                item->frames.erase(item->frames.begin() + reference.frameIndex);
+                reference.frameIndex = glm::max(-1, --reference.frameIndex);
+              };
+
+              DOCUMENT_EDIT(document, "Delete Frame(s)", Document::FRAMES, delete_frame());
+            }
+            set_item_tooltip_shortcut("Delete the selected frames.", settings.shortcutRemove);
 
             ImGui::SameLine();
 
@@ -743,8 +801,8 @@ namespace anm2ed::imgui
         ImGui::SameLine();
 
         ImGui::SetNextItemWidth(widgetSize.x);
-        ImGui::InputInt("Animation Length", animation ? &animation->frameNum : &dummy_value<int>(), imgui::STEP,
-                        imgui::STEP_FAST, !animation ? ImGuiInputTextFlags_DisplayEmptyRefVal : 0);
+        ImGui::InputInt("Animation Length", animation ? &animation->frameNum : &dummy_value<int>(), STEP, STEP_FAST,
+                        !animation ? ImGuiInputTextFlags_DisplayEmptyRefVal : 0);
         if (animation) animation->frameNum = clamp(animation->frameNum, anm2::FRAME_NUM_MIN, anm2::FRAME_NUM_MAX);
         ImGui::SetItemTooltip("Set the animation's length.");
 
@@ -766,7 +824,7 @@ namespace anm2ed::imgui
       ImGui::SameLine();
 
       ImGui::SetNextItemWidth(widgetSize.x);
-      imgui::input_text_string("Author", &anm2.info.createdBy);
+      input_text_string("Author", &anm2.info.createdBy);
       ImGui::SetItemTooltip("Set the author of the document.");
 
       ImGui::SameLine();
@@ -818,8 +876,8 @@ namespace anm2ed::imgui
         isUnusedItemsSet = true;
       }
 
-      auto footerSize = imgui::footer_size_get();
-      auto optionsSize = imgui::child_size_get(11);
+      auto footerSize = footer_size_get();
+      auto optionsSize = child_size_get(11);
       auto itemsSize = ImVec2(0, ImGui::GetContentRegionAvail().y -
                                      (optionsSize.y + footerSize.y + ImGui::GetStyle().ItemSpacing.y * 4));
       if (ImGui::BeginChild("Options", optionsSize, ImGuiChildFlags_Borders))
@@ -890,12 +948,11 @@ namespace anm2ed::imgui
 
         ImGui::BeginDisabled(source == source::EXISTING);
         {
-          imgui::input_text_string("Name", &addItemName);
+          input_text_string("Name", &addItemName);
           ImGui::SetItemTooltip("Set the item's name.");
           ImGui::BeginDisabled(type != anm2::LAYER);
           {
-            auto spritesheets = anm2.spritesheet_names_get();
-            imgui::combo_strings("Spritesheet", &addItemSpritesheetID, spritesheets);
+            combo_negative_one_indexed("Spritesheet", &addItemSpritesheetID, document.spritesheet.labels);
             ImGui::SetItemTooltip("Set the layer item's spritesheet.");
           }
           ImGui::EndDisabled();
@@ -934,11 +991,24 @@ namespace anm2ed::imgui
       }
       ImGui::EndChild();
 
-      auto widgetSize = imgui::widget_size_with_row_get(2);
+      auto widgetSize = widget_size_with_row_get(2);
 
       if (ImGui::Button("Add", widgetSize))
       {
-        document.item_add((anm2::Type)type, addItemID, addItemName, (locale::Type)locale, addItemSpritesheetID);
+        anm2::Reference addReference{};
+
+        document.snapshot("Add Item");
+        if (type == anm2::LAYER)
+          addReference = anm2.layer_animation_add({reference.animationIndex, anm2::LAYER, addItemID}, addItemName,
+                                                  addItemSpritesheetID - 1, (locale::Type)locale);
+        else if (type == anm2::NULL_)
+          addReference = anm2.null_animation_add({reference.animationIndex, anm2::LAYER, addItemID}, addItemName,
+                                                 (locale::Type)locale);
+
+        document.change(Document::ITEMS);
+
+        reference = addReference;
+
         item_properties_close();
       }
       ImGui::SetItemTooltip("Add the item, with the settings specified.");
@@ -961,7 +1031,7 @@ namespace anm2ed::imgui
 
       auto frame = document.frame_get();
 
-      imgui::input_int_range("Interval", interval, anm2::FRAME_DELAY_MIN, frame ? frame->delay : anm2::FRAME_DELAY_MIN);
+      input_int_range("Interval", interval, anm2::FRAME_DELAY_MIN, frame ? frame->delay : anm2::FRAME_DELAY_MIN);
       ImGui::SetItemTooltip("Set the maximum delay of each frame that will be baked.");
 
       ImGui::Checkbox("Round Rotation", &isRoundRotation);
@@ -970,11 +1040,13 @@ namespace anm2ed::imgui
       ImGui::Checkbox("Round Scale", &isRoundScale);
       ImGui::SetItemTooltip("Scale will be rounded to the nearest whole number.");
 
-      auto widgetSize = imgui::widget_size_with_row_get(2);
+      auto widgetSize = widget_size_with_row_get(2);
 
       if (ImGui::Button("Bake", widgetSize))
       {
-        document.frames_bake(interval, isRoundScale, isRoundRotation);
+        if (auto item = document.item_get())
+          DOCUMENT_EDIT(document, "Bake Frames", Document::FRAMES,
+                        item->frames_bake(reference.frameIndex, interval, isRoundScale, isRoundRotation));
         bakePopup.close();
       }
       ImGui::SetItemTooltip("Bake the selected frame(s) with the options selected.");
@@ -1009,24 +1081,41 @@ namespace anm2ed::imgui
 
     popups(document, animation, settings);
 
-    if (imgui::shortcut(settings.shortcutPlayPause, shortcut::GLOBAL)) playback.toggle();
+    if (shortcut(settings.shortcutPlayPause, shortcut::GLOBAL)) playback.toggle();
 
     if (animation)
     {
-      if (imgui::chord_repeating(imgui::string_to_chord(settings.shortcutPreviousFrame)))
+      if (chord_repeating(string_to_chord(settings.shortcutPreviousFrame)))
       {
         playback.decrement(settings.playbackIsClampPlayhead ? animation->frameNum : anm2::FRAME_NUM_MAX);
         reference.frameTime = playback.time;
       }
 
-      if (imgui::chord_repeating(imgui::string_to_chord(settings.shortcutNextFrame)))
+      if (chord_repeating(string_to_chord(settings.shortcutNextFrame)))
       {
         playback.increment(settings.playbackIsClampPlayhead ? animation->frameNum : anm2::FRAME_NUM_MAX);
         reference.frameTime = playback.time;
       }
     }
 
-    if (imgui::chord_repeating(imgui::string_to_chord(settings.shortcutShortenFrame))) document.frame_shorten();
-    if (imgui::chord_repeating(imgui::string_to_chord(settings.shortcutExtendFrame))) document.frame_extend();
+    if (ImGui::IsKeyChordPressed(string_to_chord(settings.shortcutShortenFrame))) document.snapshot("Shorten Frame");
+    if (chord_repeating(string_to_chord(settings.shortcutShortenFrame)))
+    {
+      if (auto frame = document.frame_get())
+      {
+        frame->shorten();
+        document.change(Document::FRAMES);
+      }
+    }
+
+    if (ImGui::IsKeyChordPressed(string_to_chord(settings.shortcutExtendFrame))) document.snapshot("Extend Frame");
+    if (chord_repeating(string_to_chord(settings.shortcutExtendFrame)))
+    {
+      if (auto frame = document.frame_get())
+      {
+        frame->extend();
+        document.change(Document::FRAMES);
+      }
+    }
   }
 }

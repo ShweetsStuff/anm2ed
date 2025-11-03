@@ -1,7 +1,5 @@
 #include "frame_properties.h"
 
-#include <ranges>
-
 #include <glm/gtc/type_ptr.hpp>
 
 #include "math_.h"
@@ -18,9 +16,7 @@ namespace anm2ed::imgui
     if (ImGui::Begin("Frame Properties", &settings.windowIsFrameProperties))
     {
       auto& document = *manager.get();
-      auto& anm2 = document.anm2;
-      auto& reference = document.reference;
-      auto& type = reference.itemType;
+      auto& type = document.reference.itemType;
       auto frame = document.frame_get();
       auto useFrame = frame ? *frame : anm2::Frame();
 
@@ -28,13 +24,16 @@ namespace anm2ed::imgui
       {
         if (type == anm2::TRIGGER)
         {
-          std::vector<std::string> eventNames{};
-          for (auto& event : anm2.content.events | std::views::values)
-            eventNames.emplace_back(event.name);
-
-          if (imgui::combo_strings("Event", frame ? &useFrame.eventID : &dummy_value<int>(), eventNames))
+          if (combo_negative_one_indexed("Event", frame ? &useFrame.eventID : &dummy_value<int>(),
+                                         document.event.labels))
             DOCUMENT_EDIT(document, "Trigger Event", Document::FRAMES, frame->eventID = useFrame.eventID);
           ImGui::SetItemTooltip("Change the event this trigger uses.");
+
+          if (combo_negative_one_indexed("Sound", frame ? &useFrame.soundID : &dummy_value<int>(),
+                                         document.sound.labels))
+            DOCUMENT_EDIT(document, "Trigger Sound", Document::FRAMES, frame->soundID = useFrame.soundID);
+          ImGui::SetItemTooltip("Change the sound this trigger uses.");
+
           if (ImGui::InputInt("At Frame", frame ? &useFrame.atFrame : &dummy_value<int>(), imgui::STEP,
                               imgui::STEP_FAST, !frame ? ImGuiInputTextFlags_DisplayEmptyRefVal : 0))
             DOCUMENT_EDIT(document, "Trigger At Frame", Document::FRAMES, frame->atFrame = useFrame.atFrame);

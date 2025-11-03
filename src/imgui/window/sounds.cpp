@@ -2,6 +2,8 @@
 
 #include <ranges>
 
+#include "toast.h"
+
 using namespace anm2ed::dialog;
 using namespace anm2ed::types;
 using namespace anm2ed::resource;
@@ -12,10 +14,10 @@ namespace anm2ed::imgui
   {
     auto& document = *manager.get();
     auto& anm2 = document.anm2;
-    auto& reference = document.referenceNull;
-    auto& unused = document.unusedNullIDs;
-    auto& hovered = document.hoveredNull;
-    auto& multiSelect = document.soundMultiSelect;
+    auto& reference = document.sound.reference;
+    auto& unused = document.sound.unused;
+    auto& hovered = document.null.hovered;
+    auto& selection = document.sound.selection;
 
     hovered = -1;
 
@@ -25,24 +27,18 @@ namespace anm2ed::imgui
 
       if (ImGui::BeginChild("##Sounds Child", childSize, true))
       {
-        multiSelect.start(anm2.content.sounds.size());
+        selection.start(anm2.content.sounds.size());
 
         for (auto& [id, sound] : anm2.content.sounds)
         {
-          auto isSelected = multiSelect.contains(id);
+          auto isSelected = selection.contains(id);
           auto isReferenced = reference == id;
 
           ImGui::PushID(id);
           ImGui::SetNextItemSelectionUserData(id);
           if (isReferenced) ImGui::PushFont(resources.fonts[font::ITALICS].get(), font::SIZE);
-          if (ImGui::Selectable(std::format(anm2::SOUND_FORMAT, id, sound.path.string()).c_str(), isSelected))
-            sound.audio.play();
-          if (ImGui::IsItemHovered())
-          {
-            hovered = id;
-            if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-              ;
-          }
+          if (ImGui::Selectable(sound.path.c_str(), isSelected)) sound.play();
+          if (ImGui::IsItemHovered()) hovered = id;
 
           if (isReferenced) ImGui::PopFont();
 
@@ -58,14 +54,14 @@ namespace anm2ed::imgui
           ImGui::PopID();
         }
 
-        multiSelect.finish();
+        selection.finish();
 
         auto copy = [&]()
         {
-          if (!multiSelect.empty())
+          if (!selection.empty())
           {
             std::string clipboardText{};
-            for (auto& id : multiSelect)
+            for (auto& id : selection)
               clipboardText += anm2.content.sounds[id].to_string(id);
             clipboard.set(clipboardText);
           }
@@ -75,8 +71,12 @@ namespace anm2ed::imgui
 
         auto paste = [&](merge::Type type)
         {
-          auto clipboardText = clipboard.get();
-          document.sounds_deserialize(clipboardText, type);
+          std::string errorString{};
+          document.snapshot("Paste Sound(s)");
+          if (anm2.sounds_deserialize(clipboard.get(), document.directory_get(), type, &errorString))
+            document.change(Document::SOUNDS);
+          else
+            toasts.error(std::format("Failed to deserialize sound(s): {}", errorString));
         };
 
         if (imgui::shortcut(settings.shortcutCopy, shortcut::FOCUSED)) copy();
@@ -84,25 +84,16 @@ namespace anm2ed::imgui
 
         if (ImGui::BeginPopupContextWindow("##Context Menu", ImGuiPopupFlags_MouseButtonRight))
         {
-          ImGui::BeginDisabled();
-          ImGui::MenuItem("Cut", settings.shortcutCut.c_str());
-          ImGui::EndDisabled();
+          ImGui::MenuItem("Cut", settings.shortcutCut.c_str(), false, false);
+          if (ImGui::MenuItem("Copy", settings.shortcutCopy.c_str(), !selection.empty() && hovered > -1)) copy();
 
-          ImGui::BeginDisabled(multiSelect.empty() && hovered == -1);
-          if (ImGui::MenuItem("Copy", settings.shortcutCopy.c_str())) copy();
-          ImGui::EndDisabled();
-
-          ImGui::BeginDisabled(clipboard.is_empty());
+          if (ImGui::BeginMenu("Paste", !clipboard.is_empty()))
           {
-            if (ImGui::BeginMenu("Paste"))
-            {
-              if (ImGui::MenuItem("Append", settings.shortcutPaste.c_str())) paste(merge::APPEND);
-              if (ImGui::MenuItem("Replace")) paste(merge::REPLACE);
+            if (ImGui::MenuItem("Append", settings.shortcutPaste.c_str())) paste(merge::APPEND);
+            if (ImGui::MenuItem("Replace")) paste(merge::REPLACE);
 
-              ImGui::EndMenu();
-            }
+            ImGui::EndMenu();
           }
-          ImGui::EndDisabled();
 
           ImGui::EndPopup();
         }
@@ -119,7 +110,16 @@ namespace anm2ed::imgui
       imgui::shortcut(settings.shortcutRemove);
       ImGui::BeginDisabled(unused.empty());
       if (ImGui::Button("Remove Unused", widgetSize))
-        ;
+      {
+        auto remove_unused = [&]()
+        {
+          for (auto& id : unused)
+            anm2.content.sounds.erase(id);
+          unused.clear();
+        };
+
+        DOCUMENT_EDIT(document, "Remove Unused Sounds", Document::SOUNDS, remove_unused());
+      };
       ImGui::EndDisabled();
       imgui::set_item_tooltip_shortcut("Remove unused sounds (i.e., ones not used in any trigger.)",
                                        settings.shortcutRemove);
@@ -128,7 +128,20 @@ namespace anm2ed::imgui
 
     if (dialog.is_selected(dialog::SOUND_OPEN))
     {
-      document.sound_add(dialog.path);
+      auto add = [&]()
+      {
+        int id{};
+        if (anm2.sound_add(document.directory_get(), dialog.path, id))
+        {
+          selection = {id};
+          toasts.info(std::format("Initialized sound #{}: {}", id, dialog.path));
+        }
+        else
+          toasts.error(std::format("Failed to initialize sound: {}", dialog.path));
+      };
+
+      DOCUMENT_EDIT(document, "Add Sound", Document::SOUNDS, add());
+
       dialog.reset();
     }
   }

@@ -12,7 +12,7 @@ namespace anm2ed::canvas
   constexpr auto PIVOT_SIZE = glm::vec2(8, 8);
   constexpr auto ZOOM_MIN = 1.0f;
   constexpr auto ZOOM_MAX = 2000.0f;
-  constexpr auto POSITION_FORMAT = "Position: ({:8} {:8})";
+  constexpr auto POSITION_FORMAT = "Position: ({:8}, {:8})";
 
   constexpr auto DASH_LENGTH = 4.0f;
   constexpr auto DASH_GAP = 1.0f;
@@ -20,6 +20,11 @@ namespace anm2ed::canvas
 
   constexpr auto STEP = 1.0f;
   constexpr auto STEP_FAST = 5.0f;
+
+  constexpr auto GRID_SIZE_MIN = 1;
+  constexpr auto GRID_SIZE_MAX = 10000;
+  constexpr auto GRID_OFFSET_MIN = 0;
+  constexpr auto GRID_OFFSET_MAX = 10000;
 }
 
 namespace anm2ed

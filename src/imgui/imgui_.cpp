@@ -28,23 +28,34 @@ namespace anm2ed::imgui
     return ImGui::InputText(label, string->data(), string->capacity() + 1, flags, input_text_callback, string);
   }
 
-  bool combo_strings(const std::string& label, int* index, std::vector<std::string>& strings)
+  bool combo_negative_one_indexed(const std::string& label, int* index, std::vector<const char*>& strings)
   {
-    std::vector<const char*> items{};
-    for (auto& string : strings)
-      items.push_back(string.c_str());
-    return ImGui::Combo(label.c_str(), index, items.data(), (int)items.size());
-  }
+    *index += 1;
+    bool isActivated = ImGui::Combo(label.c_str(), index, strings.data(), (int)strings.size());
+    *index -= 1;
 
-  bool combo_strings(const std::string& label, int* index, std::vector<const char*>& strings)
-  {
-    return ImGui::Combo(label.c_str(), index, strings.data(), (int)strings.size());
+    return isActivated;
   }
 
   bool input_int_range(const char* label, int& value, int min, int max, int step, int stepFast,
                        ImGuiInputTextFlags flags)
   {
     auto isActivated = ImGui::InputInt(label, &value, step, stepFast, flags);
+    value = glm::clamp(value, min, max);
+    return isActivated;
+  }
+
+  bool input_int2_range(const char* label, ivec2& value, ivec2 min, ivec2 max, ImGuiInputTextFlags flags)
+  {
+    auto isActivated = ImGui::InputInt2(label, value_ptr(value), flags);
+    value = glm::clamp(value, min, max);
+    return isActivated;
+  }
+
+  bool input_float_range(const char* label, float& value, float min, float max, float step, float stepFast,
+                         const char* format, ImGuiInputTextFlags flags)
+  {
+    auto isActivated = ImGui::InputFloat(label, &value, step, stepFast, format, flags);
     value = glm::clamp(value, min, max);
     return isActivated;
   }
@@ -263,7 +274,8 @@ namespace anm2ed::imgui
   {
     internal.UserData = this;
 
-    auto io = ImGui::BeginMultiSelect(ImGuiMultiSelectFlags_ClearOnEscape, this->size(), size);
+    auto io = ImGui::BeginMultiSelect(ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_BoxSelect2d,
+                                      this->size(), size);
     internal.ApplyRequests(io);
   }
 

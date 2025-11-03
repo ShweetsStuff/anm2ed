@@ -23,6 +23,9 @@ namespace anm2ed::imgui
   void Taskbar::update(Manager& manager, Settings& settings, Resources& resources, Dialog& dialog, bool& isQuitting)
   {
     auto document = manager.get();
+    auto reference = document ? &document->reference : nullptr;
+    auto animation = document ? document->animation_get() : nullptr;
+    auto item = document ? document->item_get() : nullptr;
 
     if (ImGui::BeginMainMenuBar())
     {
@@ -30,43 +33,31 @@ namespace anm2ed::imgui
 
       if (ImGui::BeginMenu("File"))
       {
-        if (ImGui::MenuItem("New", settings.shortcutNew.c_str())) dialog.file_open(dialog::ANM2_NEW);
-
+        if (ImGui::MenuItem("New", settings.shortcutNew.c_str())) dialog.file_save(dialog::ANM2_NEW);
         if (ImGui::MenuItem("Open", settings.shortcutOpen.c_str())) dialog.file_open(dialog::ANM2_NEW);
 
-        if (manager.recentFiles.empty())
+        if (ImGui::BeginMenu("Open Recent", !manager.recentFiles.empty()))
         {
-          ImGui::BeginDisabled();
-          ImGui::MenuItem("Open Recent");
-          ImGui::EndDisabled();
-        }
-        else
-        {
-          if (ImGui::BeginMenu("Open Recent"))
+          for (auto [i, file] : std::views::enumerate(manager.recentFiles))
           {
-            for (auto [i, file] : std::views::enumerate(manager.recentFiles))
-            {
-              auto label = std::format(FILE_LABEL_FORMAT, file.filename().string(), file.string());
+            auto label = std::format(FILE_LABEL_FORMAT, file.filename().string(), file.string());
 
-              ImGui::PushID(i);
-              if (ImGui::MenuItem(label.c_str())) manager.open(file);
-              ImGui::PopID();
-            }
-
-            if (!manager.recentFiles.empty())
-              if (ImGui::MenuItem("Clear List")) manager.recent_files_clear();
-
-            ImGui::EndMenu();
+            ImGui::PushID(i);
+            if (ImGui::MenuItem(label.c_str())) manager.open(file);
+            ImGui::PopID();
           }
+
+          if (!manager.recentFiles.empty())
+            if (ImGui::MenuItem("Clear List")) manager.recent_files_clear();
+
+          ImGui::EndMenu();
         }
 
-        ImGui::BeginDisabled(!document);
-        {
-          if (ImGui::MenuItem("Save", settings.shortcutSave.c_str())) manager.save();
-          if (ImGui::MenuItem("Save As", settings.shortcutSaveAs.c_str())) dialog.file_save(dialog::ANM2_SAVE);
-          if (ImGui::MenuItem("Explore XML Location")) dialog.file_explorer_open(document->directory_get());
-        }
-        ImGui::EndDisabled();
+        if (ImGui::MenuItem("Save", settings.shortcutSave.c_str(), false, document)) manager.save();
+        if (ImGui::MenuItem("Save As", settings.shortcutSaveAs.c_str(), false, document))
+          dialog.file_save(dialog::ANM2_SAVE);
+        if (ImGui::MenuItem("Explore XML Location", nullptr, false, document))
+          dialog.file_explorer_open(document->directory_get());
 
         ImGui::Separator();
         if (ImGui::MenuItem("Exit", settings.shortcutExit.c_str())) isQuitting = true;
@@ -92,16 +83,12 @@ namespace anm2ed::imgui
 
       if (ImGui::BeginMenu("Wizard"))
       {
-        auto animation = document ? document->animation_get() : nullptr;
-        auto item = document ? document->item_get() : nullptr;
         ImGui::BeginDisabled(!item || document->reference.itemType != anm2::LAYER);
         if (ImGui::MenuItem("Generate Animation From Grid")) generatePopup.open();
         if (ImGui::MenuItem("Change All Frame Properties")) changePopup.open();
         ImGui::EndDisabled();
         ImGui::Separator();
-        ImGui::BeginDisabled(!animation);
-        if (ImGui::MenuItem("Render Animation")) renderPopup.open();
-        ImGui::EndDisabled();
+        if (ImGui::MenuItem("Render Animation", nullptr, false, animation)) renderPopup.open();
         ImGui::EndMenu();
       }
 
@@ -158,20 +145,19 @@ namespace anm2ed::imgui
       auto& zoom = settings.generateZoom;
       auto& zoomStep = settings.viewZoomStep;
 
-      auto childSize = ImVec2(imgui::row_widget_width_get(2), imgui::size_without_footer_get().y);
+      auto childSize = ImVec2(row_widget_width_get(2), size_without_footer_get().y);
 
       if (ImGui::BeginChild("##Options Child", childSize, ImGuiChildFlags_Borders))
       {
         ImGui::InputInt2("Start Position", value_ptr(startPosition));
         ImGui::InputInt2("Frame Size", value_ptr(size));
         ImGui::InputInt2("Pivot", value_ptr(pivot));
-        ImGui::InputInt("Rows", &rows, imgui::STEP, imgui::STEP_FAST);
-        ImGui::InputInt("Columns", &columns, imgui::STEP, imgui::STEP_FAST);
+        ImGui::InputInt("Rows", &rows, STEP, STEP_FAST);
+        ImGui::InputInt("Columns", &columns, STEP, STEP_FAST);
 
-        ImGui::InputInt("Count", &count, imgui::STEP, imgui::STEP_FAST);
-        count = glm::min(count, rows * columns);
+        input_int_range("Count", count, anm2::FRAME_NUM_MIN, rows * columns);
 
-        ImGui::InputInt("Delay", &delay, imgui::STEP, imgui::STEP_FAST);
+        ImGui::InputInt("Delay", &delay, STEP, STEP_FAST);
       }
       ImGui::EndChild();
 
@@ -183,7 +169,7 @@ namespace anm2ed::imgui
         auto& time = generateTime;
         auto& shaderTexture = resources.shaders[resource::shader::TEXTURE];
 
-        auto previewSize = ImVec2(ImGui::GetContentRegionAvail().x, imgui::size_without_footer_get(2).y);
+        auto previewSize = ImVec2(ImGui::GetContentRegionAvail().x, size_without_footer_get(2).y);
 
         generate.size_set(to_vec2(previewSize));
         generate.bind();
@@ -196,7 +182,7 @@ namespace anm2ed::imgui
                               .spritesheets[document->anm2.content.layers[document->reference.itemID].spritesheetID]
                               .texture;
 
-          auto index = std::clamp((int)(time * count - 1), 0, count - 1);
+          auto index = std::clamp((int)(time * (count - 1)), 0, (count - 1));
           auto row = index / columns;
           auto column = index % columns;
           auto crop = startPosition + ivec2(size.x * column, size.y * row);
@@ -222,11 +208,18 @@ namespace anm2ed::imgui
 
       ImGui::EndChild();
 
-      auto widgetSize = imgui::widget_size_with_row_get(2);
+      auto widgetSize = widget_size_with_row_get(2);
 
       if (ImGui::Button("Generate", widgetSize))
       {
-        document->generate_animation_from_grid(startPosition, size, pivot, columns, count, delay);
+        auto generate_from_grid = [&]()
+        {
+          item->frames_generate_from_grid(startPosition, size, pivot, columns, count, delay);
+          animation->frameNum = animation->length();
+        };
+
+        DOCUMENT_EDIT_PTR(document, "Generate Animation from Grid", Document::FRAMES, generate_from_grid());
+
         generatePopup.close();
       }
 
@@ -267,59 +260,36 @@ namespace anm2ed::imgui
       auto& isFromSelectedFrame = settings.changeIsFromSelectedFrame;
       auto& numberFrames = settings.changeNumberFrames;
 
-      auto propertiesSize = imgui::child_size_get(10);
+      auto propertiesSize = child_size_get(10);
 
       if (ImGui::BeginChild("##Properties", propertiesSize, ImGuiChildFlags_Borders))
       {
-        auto start = [&](const char* checkboxLabel, bool& isEnabled)
-        {
-          ImGui::Checkbox(checkboxLabel, &isEnabled);
-          ImGui::SameLine();
-          ImGui::BeginDisabled(!isEnabled);
-        };
-        auto end = [&]() { ImGui::EndDisabled(); };
+#define PROPERTIES_WIDGET(body)                                                                                        \
+  ImGui::Checkbox(checkboxLabel, &isEnabled);                                                                          \
+  ImGui::SameLine();                                                                                                   \
+  ImGui::BeginDisabled(!isEnabled);                                                                                    \
+  body;                                                                                                                \
+  ImGui::EndDisabled();
 
         auto bool_value = [&](const char* checkboxLabel, const char* valueLabel, bool& isEnabled, bool& value)
-        {
-          start(checkboxLabel, isEnabled);
-          ImGui::Checkbox(valueLabel, &value);
-          end();
-        };
+        { PROPERTIES_WIDGET(ImGui::Checkbox(valueLabel, &value)); };
 
         auto color3_value = [&](const char* checkboxLabel, const char* valueLabel, bool& isEnabled, vec3& value)
-        {
-          start(checkboxLabel, isEnabled);
-          ImGui::ColorEdit3(valueLabel, value_ptr(value));
-          end();
-        };
+        { PROPERTIES_WIDGET(ImGui::ColorEdit3(valueLabel, value_ptr(value))); };
 
         auto color4_value = [&](const char* checkboxLabel, const char* valueLabel, bool& isEnabled, vec4& value)
-        {
-          start(checkboxLabel, isEnabled);
-          ImGui::ColorEdit4(valueLabel, value_ptr(value));
-          end();
-        };
+        { PROPERTIES_WIDGET(ImGui::ColorEdit4(valueLabel, value_ptr(value))); };
 
         auto float2_value = [&](const char* checkboxLabel, const char* valueLabel, bool& isEnabled, vec2& value)
-        {
-          start(checkboxLabel, isEnabled);
-          ImGui::InputFloat2(valueLabel, value_ptr(value), math::vec2_format_get(value));
-          end();
-        };
+        { PROPERTIES_WIDGET(ImGui::InputFloat2(valueLabel, value_ptr(value), math::vec2_format_get(value))); };
 
         auto float_value = [&](const char* checkboxLabel, const char* valueLabel, bool& isEnabled, float& value)
-        {
-          start(checkboxLabel, isEnabled);
-          ImGui::InputFloat(valueLabel, &value, imgui::STEP, imgui::STEP_FAST, math::float_format_get(value));
-          end();
-        };
+        { PROPERTIES_WIDGET(ImGui::InputFloat(valueLabel, &value, STEP, STEP_FAST, math::float_format_get(value))); };
 
         auto int_value = [&](const char* checkboxLabel, const char* valueLabel, bool& isEnabled, int& value)
-        {
-          start(checkboxLabel, isEnabled);
-          ImGui::InputInt(valueLabel, &value, imgui::STEP, imgui::STEP_FAST);
-          end();
-        };
+        { PROPERTIES_WIDGET(ImGui::InputInt(valueLabel, &value, STEP, STEP_FAST)); };
+
+#undef PROPERTIES_WIDGET
 
         float2_value("##Is Crop", "Crop", isCrop, crop);
         float2_value("##Is Size", "Size", isSize, size);
@@ -336,67 +306,53 @@ namespace anm2ed::imgui
       }
       ImGui::EndChild();
 
-      auto settingsSize = imgui::child_size_get(2);
+      auto settingsSize = child_size_get(2);
 
       if (ImGui::BeginChild("##Settings", settingsSize, ImGuiChildFlags_Borders))
       {
         ImGui::Checkbox("From Selected Frame", &isFromSelectedFrame);
         ImGui::SetItemTooltip("The frames after the currently referenced frame will be changed with these values.\nIf"
-                              "off, will use all frames.");
+                              " off, will use all frames.");
 
         ImGui::BeginDisabled(!isFromSelectedFrame);
-        ImGui::InputInt("Number of Frames", &numberFrames, imgui::STEP, imgui::STEP_FAST);
-        numberFrames = glm::clamp(numberFrames, anm2::FRAME_NUM_MIN,
-                                  (int)document->item_get()->frames.size() - document->reference.frameIndex);
+        input_int_range("Number of Frames", numberFrames, anm2::FRAME_NUM_MIN,
+                        item->frames.size() - reference->frameIndex);
         ImGui::SetItemTooltip("Set the number of frames that will be changed.");
         ImGui::EndDisabled();
       }
       ImGui::EndChild();
 
-      auto widgetSize = imgui::widget_size_with_row_get(4);
+      auto widgetSize = widget_size_with_row_get(4);
 
       auto frame_change = [&](anm2::ChangeType type)
       {
         anm2::FrameChange frameChange;
-        frameChange.crop = isCrop ? std::make_optional(crop) : std::nullopt;
-        frameChange.size = isSize ? std::make_optional(size) : std::nullopt;
-        frameChange.position = isPosition ? std::make_optional(position) : std::nullopt;
-        frameChange.pivot = isPivot ? std::make_optional(pivot) : std::nullopt;
-        frameChange.scale = isScale ? std::make_optional(scale) : std::nullopt;
-        frameChange.rotation = isRotation ? std::make_optional(rotation) : std::nullopt;
-        frameChange.delay = isDelay ? std::make_optional(delay) : std::nullopt;
-        frameChange.tint = isTint ? std::make_optional(tint) : std::nullopt;
-        frameChange.colorOffset = isColorOffset ? std::make_optional(colorOffset) : std::nullopt;
-        frameChange.isVisible = isVisibleSet ? std::make_optional(isVisible) : std::nullopt;
-        frameChange.isInterpolated = isInterpolatedSet ? std::make_optional(isInterpolated) : std::nullopt;
+        if (isCrop) frameChange.crop = std::make_optional(crop);
+        if (isSize) frameChange.size = std::make_optional(size);
+        if (isPosition) frameChange.position = std::make_optional(position);
+        if (isPivot) frameChange.pivot = std::make_optional(pivot);
+        if (isScale) frameChange.scale = std::make_optional(scale);
+        if (isRotation) frameChange.rotation = std::make_optional(rotation);
+        if (isDelay) frameChange.delay = std::make_optional(delay);
+        if (isTint) frameChange.tint = std::make_optional(tint);
+        if (isColorOffset) frameChange.colorOffset = std::make_optional(colorOffset);
+        if (isVisibleSet) frameChange.isVisible = std::make_optional(isVisible);
+        if (isInterpolatedSet) frameChange.isInterpolated = std::make_optional(isInterpolated);
 
-        document->frames_change(frameChange, type, isFromSelectedFrame, numberFrames);
+        DOCUMENT_EDIT_PTR(document, "Change Frame Properties", Document::FRAMES,
+                          item->frames_change(frameChange, type,
+                                              isFromSelectedFrame && document->frame_get() ? reference->frameIndex : 0,
+                                              isFromSelectedFrame ? numberFrames : -1));
+
+        changePopup.close();
       };
 
-      if (ImGui::Button("Add", widgetSize))
-      {
-        frame_change(anm2::ADD);
-        changePopup.close();
-      }
-
+      if (ImGui::Button("Add", widgetSize)) frame_change(anm2::ADD);
       ImGui::SameLine();
-
-      if (ImGui::Button("Subtract", widgetSize))
-      {
-        frame_change(anm2::SUBTRACT);
-        changePopup.close();
-      }
-
+      if (ImGui::Button("Subtract", widgetSize)) frame_change(anm2::SUBTRACT);
       ImGui::SameLine();
-
-      if (ImGui::Button("Adjust", widgetSize))
-      {
-        frame_change(anm2::ADJUST);
-        changePopup.close();
-      }
-
+      if (ImGui::Button("Adjust", widgetSize)) frame_change(anm2::ADJUST);
       ImGui::SameLine();
-
       if (ImGui::Button("Cancel", widgetSize)) changePopup.close();
 
       ImGui::EndPopup();
@@ -406,7 +362,7 @@ namespace anm2ed::imgui
 
     if (ImGui::BeginPopupModal(configurePopup.label, &configurePopup.isOpen, ImGuiWindowFlags_NoResize))
     {
-      auto childSize = imgui::size_without_footer_get(2);
+      auto childSize = size_without_footer_get(2);
 
       if (ImGui::BeginTabBar("##Configure Tabs"))
       {
@@ -420,23 +376,32 @@ namespace anm2ed::imgui
             ImGui::SetItemTooltip("Enables autosaving of documents.");
 
             ImGui::BeginDisabled(!editSettings.fileIsAutosave);
-            ImGui::InputInt("Autosave Time (minutes", &editSettings.fileAutosaveTime, imgui::STEP, imgui::STEP_FAST);
-            editSettings.fileAutosaveTime = glm::clamp(editSettings.fileAutosaveTime, 0, 10);
+            input_int_range("Autosave Time (minutes)", editSettings.fileAutosaveTime, 0, 10);
             ImGui::SetItemTooltip("If changed, will autosave documents using this interval.");
             ImGui::EndDisabled();
 
-            ImGui::SeparatorText("View");
+            ImGui::SeparatorText("Keyboard");
 
-            ImGui::InputFloat("Display Scale", &editSettings.displayScale, 0.25f, 0.25f, "%.2f");
-            ImGui::SetItemTooltip("Change the scale of the display.");
-            editSettings.displayScale = glm::clamp(editSettings.displayScale, 0.5f, 2.0f);
+            input_float_range("Repeat Delay (seconds)", editSettings.keyboardRepeatDelay, 0.05f, 1.0f, 0.05f, 0.05f,
+                              "%.2f");
+            ImGui::SetItemTooltip("Set how often, after repeating begins, key inputs will be fired.");
 
-            ImGui::InputFloat("Zoom Step", &editSettings.viewZoomStep, 10.0f, 10.0f, "%.2f");
-            ImGui::SetItemTooltip("When zooming in/out with mouse or shortcut, this value will be used.");
-            editSettings.viewZoomStep = glm::clamp(editSettings.viewZoomStep, 1.0f, 250.0f);
+            input_float_range("Repeat Rate (seconds)", editSettings.keyboardRepeatRate, 0.005f, 1.0f, 0.005f, 0.005f,
+                              "%.3f");
+            ImGui::SetItemTooltip("Set how often, after repeating begins, key inputs will be fired.");
+
+            ImGui::SeparatorText("UI");
+
+            input_float_range("UI Scale", editSettings.uiScale, 0.5f, 2.0f, 0.25f, 0.25f, "%.2f");
+            ImGui::SetItemTooltip("Change the scale of the UI.");
 
             ImGui::Checkbox("Vsync", &editSettings.isVsync);
             ImGui::SetItemTooltip("Toggle vertical sync; synchronizes program update rate with monitor refresh rate.");
+
+            ImGui::SeparatorText("View");
+
+            input_float_range("Zoom Step", editSettings.viewZoomStep, 10.0f, 250.0f, 10.0f, 10.0f, "%.0f");
+            ImGui::SetItemTooltip("When zooming in/out with mouse or shortcut, this value will be used.");
           }
           ImGui::EndChild();
 
@@ -445,12 +410,10 @@ namespace anm2ed::imgui
 
         if (ImGui::BeginTabItem("Shortcuts"))
         {
-
           ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2());
 
           if (ImGui::BeginChild("##Tab Child", childSize, true))
           {
-
             if (ImGui::BeginTable("Shortcuts", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY))
             {
               ImGui::TableSetupScrollFreeze(0, 1);
@@ -485,12 +448,12 @@ namespace anm2ed::imgui
                   if (ImGui::IsKeyDown(ImGuiMod_Alt)) chord |= ImGuiMod_Alt;
                   if (ImGui::IsKeyDown(ImGuiMod_Super)) chord |= ImGuiMod_Super;
 
-                  for (auto& key : imgui::KEY_MAP | std::views::values)
+                  for (auto& key : KEY_MAP | std::views::values)
                   {
                     if (ImGui::IsKeyPressed(key))
                     {
                       chord |= key;
-                      *settingString = imgui::chord_to_string(chord);
+                      *settingString = chord_to_string(chord);
                       selectedShortcut = -1;
                       break;
                     }
@@ -510,7 +473,7 @@ namespace anm2ed::imgui
         ImGui::EndTabBar();
       }
 
-      auto widgetSize = imgui::widget_size_with_row_get(3);
+      auto widgetSize = widget_size_with_row_get(3);
 
       if (ImGui::Button("Save", widgetSize))
       {
@@ -543,23 +506,42 @@ namespace anm2ed::imgui
       auto& ffmpegPath = settings.renderFFmpegPath;
       auto& path = settings.renderPath;
       auto& format = settings.renderFormat;
+      auto& scale = settings.renderScale;
+      auto& isRaw = settings.renderIsRawAnimation;
       auto& type = settings.renderType;
       auto& start = manager.recordingStart;
       auto& end = manager.recordingEnd;
-      auto& isRange = settings.renderIsRange;
-      auto widgetSize = imgui::widget_size_with_row_get(2);
+      auto& isRange = manager.isRecordingRange;
+      auto widgetSize = widget_size_with_row_get(2);
       auto dialogType = type == render::PNGS   ? dialog::PNG_DIRECTORY_SET
                         : type == render::GIF  ? dialog::GIF_PATH_SET
                         : type == render::WEBM ? dialog::WEBM_PATH_SET
                                                : dialog::NONE;
 
-      if (ImGui::ImageButton("##FFmpeg Path Set", resources.icons[icon::FOLDER].id, imgui::icon_size_get()))
+      auto replace_extension = [&]()
+      { path = std::filesystem::path(path).replace_extension(render::EXTENSIONS[type]); };
+
+      auto range_to_length = [&]()
+      {
+        start = 0;
+        end = animation->frameNum;
+      };
+
+      if (renderPopup.isJustOpened)
+      {
+        replace_extension();
+        if (!isRange) range_to_length();
+      }
+
+      if (ImGui::ImageButton("##FFmpeg Path Set", resources.icons[icon::FOLDER].id, icon_size_get()))
         dialog.file_open(dialog::FFMPEG_PATH_SET);
       ImGui::SameLine();
-      imgui::input_text_string("FFmpeg Path", &ffmpegPath);
+      input_text_string("FFmpeg Path", &ffmpegPath);
+      ImGui::SetItemTooltip("Set the path where the FFmpeg installation is located.\nFFmpeg is required to render "
+                            "animations.\nhttps://ffmpeg.org");
       dialog.set_string_to_selected_path(ffmpegPath, dialog::FFMPEG_PATH_SET);
 
-      if (ImGui::ImageButton("##Path Set", resources.icons[icon::FOLDER].id, imgui::icon_size_get()))
+      if (ImGui::ImageButton("##Path Set", resources.icons[icon::FOLDER].id, icon_size_get()))
       {
         if (dialogType == dialog::PNG_DIRECTORY_SET)
           dialog.folder_open(dialogType);
@@ -567,25 +549,44 @@ namespace anm2ed::imgui
           dialog.file_open(dialogType);
       }
       ImGui::SameLine();
-      imgui::input_text_string(type == render::PNGS ? "Directory" : "Path", &path);
+      input_text_string(type == render::PNGS ? "Directory" : "Path", &path);
+      ImGui::SetItemTooltip("Set the output path or directory for the animation.");
       dialog.set_string_to_selected_path(path, dialogType);
 
-      ImGui::Combo("Type", &type, render::STRINGS, render::COUNT);
+      if (ImGui::Combo("Type", &type, render::STRINGS, render::COUNT)) replace_extension();
+      ImGui::SetItemTooltip("Set the type of the output.");
 
       ImGui::BeginDisabled(type != render::PNGS);
-      imgui::input_text_string("Format", &format);
+      input_text_string("Format", &format);
+      ImGui::SetItemTooltip(
+          "For outputted images, each image will use this format.\n{} represents the index of each image.");
       ImGui::EndDisabled();
 
       ImGui::BeginDisabled(!isRange);
-      imgui::input_int_range("Start", start, 0, animation->frameNum - 1);
-      ImGui::InputInt("End", &end, start, animation->frameNum);
+      input_int_range("Start", start, 0, animation->frameNum - 1);
+      ImGui::SetItemTooltip("Set the starting time  of the animation.");
+      input_int_range("End", end, start + 1, animation->frameNum);
+      ImGui::SetItemTooltip("Set the ending time  of the animation.");
       ImGui::EndDisabled();
 
-      ImGui::Checkbox("Custom Range", &isRange);
+      ImGui::BeginDisabled(!isRaw);
+      input_float_range("Scale", scale, 1.0f, 100.0f, STEP, STEP_FAST, "%.1fx");
+      ImGui::SetItemTooltip("Set the output scale of the animation.");
+      ImGui::EndDisabled();
+
+      if (ImGui::Checkbox("Custom Range", &isRange))
+        if (!isRange) range_to_length();
+      ImGui::SetItemTooltip("Toggle using a custom range for the animation.");
+
+      ImGui::SameLine();
+
+      ImGui::Checkbox("Raw", &isRaw);
+      ImGui::SetItemTooltip("Record only the layers of the animation.");
 
       if (ImGui::Button("Render", widgetSize))
       {
         manager.isRecording = true;
+        manager.isRecordingStart = true;
         playback.time = start;
         playback.isPlaying = true;
         renderPopup.close();
@@ -599,6 +600,8 @@ namespace anm2ed::imgui
       ImGui::EndPopup();
     }
 
+    renderPopup.end();
+
     aboutPopup.trigger();
 
     if (ImGui::BeginPopupModal(aboutPopup.label, &aboutPopup.isOpen, ImGuiWindowFlags_NoResize))
@@ -607,10 +610,10 @@ namespace anm2ed::imgui
       ImGui::EndPopup();
     }
 
-    if (imgui::shortcut(settings.shortcutNew, shortcut::GLOBAL)) dialog.file_open(dialog::ANM2_NEW);
-    if (imgui::shortcut(settings.shortcutOpen, shortcut::GLOBAL)) dialog.file_open(dialog::ANM2_OPEN);
-    if (imgui::shortcut(settings.shortcutSave, shortcut::GLOBAL)) document->save();
-    if (imgui::shortcut(settings.shortcutSaveAs, shortcut::GLOBAL)) dialog.file_save(dialog::ANM2_SAVE);
-    if (imgui::shortcut(settings.shortcutExit, shortcut::GLOBAL)) isQuitting = true;
+    if (shortcut(settings.shortcutNew, shortcut::GLOBAL)) dialog.file_save(dialog::ANM2_NEW);
+    if (shortcut(settings.shortcutOpen, shortcut::GLOBAL)) dialog.file_open(dialog::ANM2_OPEN);
+    if (shortcut(settings.shortcutSave, shortcut::GLOBAL)) document->save();
+    if (shortcut(settings.shortcutSaveAs, shortcut::GLOBAL)) dialog.file_save(dialog::ANM2_SAVE);
+    if (shortcut(settings.shortcutExit, shortcut::GLOBAL)) isQuitting = true;
   }
 }

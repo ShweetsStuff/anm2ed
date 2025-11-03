@@ -19,13 +19,6 @@ namespace anm2ed::util::string
     return transformed;
   }
 
-  std::string backslash_replace_to_lower(const std::string& string)
-  {
-    std::string transformed = string;
-    transformed = backslash_replace(transformed);
-    return to_lower(transformed);
-  }
-
   std::string quote(const std::string& string)
   {
     return "\"" + string + "\"";

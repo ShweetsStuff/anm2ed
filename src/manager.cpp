@@ -90,20 +90,23 @@ namespace anm2ed
 
   void Manager::autosave(Document& document)
   {
-    auto filename = "." + document.filename_get().string() + ".autosave";
-    auto path = document.directory_get() / filename;
     std::string errorString{};
-    document.autosave(path, &errorString);
+    auto autosavePath = document.autosave_path_get();
+    document.autosave(&errorString);
 
-    autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), path), autosaveFiles.end());
-    autosaveFiles.insert(autosaveFiles.begin(), path);
+    autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), autosavePath), autosaveFiles.end());
+    autosaveFiles.insert(autosaveFiles.begin(), autosavePath);
 
     autosave_files_write();
   }
 
   void Manager::close(int index)
   {
-    if (index < 0 || index >= (int)documents.size()) return;
+    if (!vector::in_bounds(documents, index)) return;
+
+    autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), get()->autosave_path_get()),
+                        autosaveFiles.end());
+    autosave_files_write();
 
     documents.erase(documents.begin() + index);
 
@@ -146,7 +149,7 @@ namespace anm2ed
       else
         editLayer = document->anm2.content.layers.at(id);
 
-      document->referenceLayer = id;
+      document->layer.reference = id;
 
       layerPropertiesPopup.open();
     }
@@ -177,7 +180,7 @@ namespace anm2ed
       else
         editNull = document->anm2.content.nulls.at(id);
 
-      document->referenceNull = id;
+      document->null.reference = id;
 
       nullPropertiesPopup.open();
     }

@@ -2,7 +2,11 @@
 
 #include <ranges>
 
+#include "map_.h"
+#include "toast.h"
+
 using namespace anm2ed::resource;
+using namespace anm2ed::util;
 using namespace anm2ed::types;
 
 namespace anm2ed::imgui
@@ -11,10 +15,10 @@ namespace anm2ed::imgui
   {
     auto& document = *manager.get();
     auto& anm2 = document.anm2;
-    auto& reference = document.referenceNull;
-    auto& unused = document.unusedNullIDs;
-    auto& hovered = document.hoveredNull;
-    auto& multiSelect = document.nullMultiSelect;
+    auto& reference = document.null.reference;
+    auto& unused = document.null.unused;
+    auto& hovered = document.null.hovered;
+    auto& selection = document.null.selection;
     auto& propertiesPopup = manager.nullPropertiesPopup;
 
     hovered = -1;
@@ -25,11 +29,11 @@ namespace anm2ed::imgui
 
       if (ImGui::BeginChild("##Nulls Child", childSize, true))
       {
-        multiSelect.start(anm2.content.nulls.size());
+        selection.start(anm2.content.nulls.size());
 
         for (auto& [id, null] : anm2.content.nulls)
         {
-          auto isSelected = multiSelect.contains(id);
+          auto isSelected = selection.contains(id);
           auto isReferenced = reference == id;
 
           ImGui::PushID(id);
@@ -55,14 +59,14 @@ namespace anm2ed::imgui
           ImGui::PopID();
         }
 
-        multiSelect.finish();
+        selection.finish();
 
         auto copy = [&]()
         {
-          if (!multiSelect.empty())
+          if (!selection.empty())
           {
             std::string clipboardText{};
-            for (auto& id : multiSelect)
+            for (auto& id : selection)
               clipboardText += anm2.content.nulls[id].to_string(id);
             clipboard.set(clipboardText);
           }
@@ -72,8 +76,12 @@ namespace anm2ed::imgui
 
         auto paste = [&](merge::Type type)
         {
-          auto clipboardText = clipboard.get();
-          document.nulls_deserialize(clipboardText, type);
+          std::string errorString{};
+          document.snapshot("Paste Null(s)");
+          if (anm2.nulls_deserialize(clipboard.get(), type, &errorString))
+            document.change(Document::NULLS);
+          else
+            toasts.error(std::format("Failed to deserialize null(s): {}", errorString));
         };
 
         if (shortcut(settings.shortcutCopy, shortcut::FOCUSED)) copy();
@@ -81,25 +89,16 @@ namespace anm2ed::imgui
 
         if (ImGui::BeginPopupContextWindow("##Context Menu", ImGuiPopupFlags_MouseButtonRight))
         {
-          ImGui::BeginDisabled();
-          ImGui::MenuItem("Cut", settings.shortcutCut.c_str());
-          ImGui::EndDisabled();
+          ImGui::MenuItem("Cut", settings.shortcutCut.c_str(), false, false);
+          if (ImGui::MenuItem("Copy", settings.shortcutCopy.c_str(), false, selection.empty() || hovered > -1)) copy();
 
-          ImGui::BeginDisabled(multiSelect.empty() && hovered == -1);
-          if (ImGui::MenuItem("Copy", settings.shortcutCopy.c_str())) copy();
-          ImGui::EndDisabled();
-
-          ImGui::BeginDisabled(clipboard.is_empty());
+          if (ImGui::BeginMenu("Paste", !clipboard.is_empty()))
           {
-            if (ImGui::BeginMenu("Paste"))
-            {
-              if (ImGui::MenuItem("Append", settings.shortcutPaste.c_str())) paste(merge::APPEND);
-              if (ImGui::MenuItem("Replace")) paste(merge::REPLACE);
+            if (ImGui::MenuItem("Append", settings.shortcutPaste.c_str())) paste(merge::APPEND);
+            if (ImGui::MenuItem("Replace")) paste(merge::REPLACE);
 
-              ImGui::EndMenu();
-            }
+            ImGui::EndMenu();
           }
-          ImGui::EndDisabled();
 
           ImGui::EndPopup();
         }
@@ -115,7 +114,17 @@ namespace anm2ed::imgui
 
       shortcut(settings.shortcutRemove);
       ImGui::BeginDisabled(unused.empty());
-      if (ImGui::Button("Remove Unused", widgetSize)) document.nulls_remove_unused();
+      if (ImGui::Button("Remove Unused", widgetSize))
+      {
+        auto remove_unused = [&]()
+        {
+          for (auto& id : unused)
+            anm2.content.nulls.erase(id);
+          unused.clear();
+        };
+
+        DOCUMENT_EDIT(document, "Remove Unused Events", Document::EVENTS, remove_unused());
+      }
       ImGui::EndDisabled();
       set_item_tooltip_shortcut("Remove unused nulls (i.e., ones not used in any animation.)", settings.shortcutRemove);
     }
@@ -143,7 +152,26 @@ namespace anm2ed::imgui
 
       if (ImGui::Button(reference == -1 ? "Add" : "Confirm", widgetSize))
       {
-        document.null_set(null);
+        auto add = [&]()
+        {
+          auto id = map::next_id_get(anm2.content.nulls);
+          anm2.content.nulls[id] = null;
+          selection = {id};
+        };
+
+        auto set = [&]()
+        {
+          anm2.content.nulls[reference] = null;
+          selection = {reference};
+        };
+
+        if (reference == -1)
+        {
+          DOCUMENT_EDIT(document, "Add Null", Document::NULLS, add());
+        }
+        else
+          DOCUMENT_EDIT(document, "Set Null Properties", Document::NULLS, set());
+
         manager.null_properties_close();
       }
 

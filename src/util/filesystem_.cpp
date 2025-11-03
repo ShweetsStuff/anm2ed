@@ -4,6 +4,8 @@
 #include <SDL3/SDL_stdinc.h>
 #include <filesystem>
 
+#include "string_.h"
+
 namespace anm2ed::util::filesystem
 {
   std::string path_preferences_get()
@@ -25,6 +27,13 @@ namespace anm2ed::util::filesystem
     auto e = std::filesystem::path(path).extension().string();
     std::transform(e.begin(), e.end(), e.begin(), ::tolower);
     return e == ("." + extension);
+  }
+
+  std::filesystem::path path_lower_case_backslash_handle(std::filesystem::path& path)
+  {
+    if (path_is_exist(path)) return path;
+    if (path_is_exist(string::backslash_replace(path))) return path;
+    return string::to_lower(path);
   }
 
   WorkingDirectory::WorkingDirectory(const std::string& path, bool isFile)

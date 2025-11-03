@@ -27,7 +27,6 @@ namespace anm2ed
 
   void State::tick(Settings& settings)
   {
-    dockspace.tick(manager, settings);
 
     if (auto document = manager.get())
     {
@@ -36,6 +35,8 @@ namespace anm2ed
           document->playback.tick(document->anm2.info.fps, animation->frameNum,
                                   (animation->isLoop || settings.playbackIsLoop) && !manager.isRecording);
     }
+
+    dockspace.tick(manager, settings);
   }
 
   void State::update(SDL_Window*& window, Settings& settings)
@@ -57,10 +58,8 @@ namespace anm2ed
             if (auto document = manager.get())
               document->spritesheet_add(droppedFile);
             else
-              toasts.warning(std::format("Could not open spritesheet: (open a document first!)", droppedFile));
+              toasts.info("Failed to add spritesheet! Open a document first.");
           }
-          else
-            toasts.warning(std::format("Could not parse file: {} (must be .anm2 or .png)", droppedFile));
           break;
         }
         case SDL_EVENT_QUIT:
@@ -80,7 +79,9 @@ namespace anm2ed
     dockspace.update(taskbar, documents, manager, settings, resources, dialog, clipboard);
     toasts.update();
 
-    ImGui::GetStyle().FontScaleMain = settings.displayScale;
+    ImGui::GetStyle().FontScaleMain = settings.uiScale;
+    ImGui::GetIO().KeyRepeatDelay = settings.keyboardRepeatDelay;
+    ImGui::GetIO().KeyRepeatRate = settings.keyboardRepeatRate;
     SDL_GetWindowSize(window, &settings.windowSize.x, &settings.windowSize.y);
 
     if (isQuitting && manager.documents.empty()) isQuit = true;

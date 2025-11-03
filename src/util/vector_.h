@@ -12,6 +12,15 @@ namespace anm2ed::util::vector
     return index >= 0 && index < (int)v.size() ? &v[index] : nullptr;
   }
 
+  template <typename T> bool in_bounds(std::vector<T>& v, int index)
+  {
+    return index >= 0 && index < (int)v.size();
+  }
+  template <typename T> void clamp_in_bounds(std::vector<T>& v, int& index)
+  {
+    index = std::clamp(index, 0, (int)v.size() - 1);
+  }
+
   template <typename T> std::set<int> move_indices(std::vector<T>& v, std::vector<int>& indices, int index)
   {
     if (indices.empty()) return {};
@@ -52,12 +61,4 @@ namespace anm2ed::util::vector
     return moveIndices;
   }
 
-  template <typename T> bool in_bounds(std::vector<T>& v, int& index)
-  {
-    return index >= 0 || index <= (int)v.size() - 1;
-  }
-  template <typename T> void clamp_in_bounds(std::vector<T>& v, int& index)
-  {
-    index = std::clamp(index, 0, (int)v.size() - 1);
-  }
 }

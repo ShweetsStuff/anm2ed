@@ -9,7 +9,7 @@ namespace anm2ed::anm2
   {
   public:
     std::string name{"New Event"};
-    int soundID{};
+    int soundID{-1};
 
     Event() = default;
     Event(tinyxml2::XMLElement*, int&);

@@ -5,21 +5,27 @@
 namespace anm2ed::render
 {
 #define RENDER_LIST                                                                                                    \
-  X(PNGS, "PNGs")                                                                                                      \
-  X(GIF, "GIF")                                                                                                        \
-  X(WEBM, "WebM")                                                                                                      \
-  X(MP4, "MP4")
+  X(PNGS, "PNGs", "")                                                                                                  \
+  X(GIF, "GIF", ".gif")                                                                                                \
+  X(WEBM, "WebM", ".webm")                                                                                             \
+  X(MP4, "MP4", ".mp4")
 
   enum Type
   {
-#define X(symbol, string) symbol,
+#define X(symbol, string, extension) symbol,
     RENDER_LIST
 #undef X
         COUNT
   };
 
   constexpr const char* STRINGS[] = {
-#define X(symbol, string) string,
+#define X(symbol, string, extension) string,
+      RENDER_LIST
+#undef X
+  };
+
+  constexpr const char* EXTENSIONS[] = {
+#define X(symbol, string, extension) extension,
       RENDER_LIST
 #undef X
   };

@@ -36,4 +36,8 @@ namespace anm2ed::anm2
     return xml::document_to_string(document);
   }
 
+  bool Layer::is_spritesheet_valid()
+  {
+    return spritesheetID > -1;
+  }
 }

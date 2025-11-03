@@ -22,9 +22,9 @@ namespace anm2ed::resource
     internal = nullptr;
   }
 
-  void Audio::play()
+  void Audio::play(MIX_Mixer* mixer)
   {
-    MIX_PlayAudio(mixer_get(), internal);
+    MIX_PlayAudio(mixer ? mixer : mixer_get(), internal);
   }
 
   Audio::Audio(Audio&& other) noexcept
@@ -45,5 +45,10 @@ namespace anm2ed::resource
   Audio::~Audio()
   {
     unload();
+  }
+
+  bool Audio::is_valid()
+  {
+    return internal;
   }
 }

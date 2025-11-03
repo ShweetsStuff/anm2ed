@@ -1,10 +1,12 @@
 #include "item.h"
 #include <ranges>
 
+#include "vector_.h"
 #include "xml_.h"
 
 using namespace anm2ed::util;
 using namespace tinyxml2;
+using namespace glm;
 
 namespace anm2ed::anm2
 {
@@ -114,7 +116,7 @@ namespace anm2ed::anm2
     return frame;
   }
 
-  void Item::frames_change(anm2::FrameChange& change, ChangeType type, int start, int numberFrames)
+  void Item::frames_change(FrameChange& change, ChangeType type, int start, int numberFrames)
   {
     auto useStart = numberFrames > -1 ? start : 0;
     auto end = numberFrames > -1 ? start + numberFrames : (int)frames.size();
@@ -196,5 +198,55 @@ namespace anm2ed::anm2
       *errorString = document.ErrorStr();
 
     return false;
+  }
+
+  void Item::frames_bake(int index, int interval, bool isRoundScale, bool isRoundRotation)
+  {
+    if (!vector::in_bounds(frames, index)) return;
+
+    Frame& frame = frames[index];
+    if (frame.delay == FRAME_DELAY_MIN) return;
+
+    Frame frameNext = vector::in_bounds(frames, index + 1) ? frames[index + 1] : frame;
+
+    int delay{};
+    int i = index;
+
+    while (delay < frame.delay)
+    {
+      Frame baked = frame;
+      float interpolation = (float)delay / frame.delay;
+      baked.delay = std::min(interval, frame.delay - delay);
+      baked.isInterpolated = (i == index) ? frame.isInterpolated : false;
+      baked.rotation = glm::mix(frame.rotation, frameNext.rotation, interpolation);
+      baked.position = glm::mix(frame.position, frameNext.position, interpolation);
+      baked.scale = glm::mix(frame.scale, frameNext.scale, interpolation);
+      baked.colorOffset = glm::mix(frame.colorOffset, frameNext.colorOffset, interpolation);
+      baked.tint = glm::mix(frame.tint, frameNext.tint, interpolation);
+      if (isRoundScale) baked.scale = vec2(ivec2(baked.scale));
+      if (isRoundRotation) baked.rotation = (int)baked.rotation;
+
+      if (i == index)
+        frames[i] = baked;
+      else
+        frames.insert(frames.begin() + i, baked);
+      i++;
+
+      delay += baked.delay;
+    }
+  }
+
+  void Item::frames_generate_from_grid(ivec2 startPosition, ivec2 size, ivec2 pivot, int columns, int count, int delay)
+  {
+    for (int i = 0; i < count; i++)
+    {
+      Frame frame{};
+      frame.delay = delay;
+      frame.pivot = pivot;
+      frame.size = size;
+      frame.crop = startPosition + ivec2(size.x * (i % columns), size.y * (i / columns));
+
+      frames.emplace_back(frame);
+    }
   }
 }

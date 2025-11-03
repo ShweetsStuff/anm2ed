@@ -9,7 +9,7 @@ namespace anm2ed
     return top == 0;
   }
 
-  void SnapshotStack::push(Snapshot& snapshot)
+  void SnapshotStack::push(const Snapshot& snapshot)
   {
     if (top >= MAX)
     {
@@ -31,34 +31,27 @@ namespace anm2ed
     top = 0;
   }
 
-  void Snapshots::push(const anm2::Anm2& anm2, anm2::Reference reference, const std::string& message)
+  void Snapshots::push(const Snapshot& snapshot)
   {
-    Snapshot snapshot = {anm2, reference, message};
     undoStack.push(snapshot);
     redoStack.clear();
   }
 
-  void Snapshots::undo(anm2::Anm2& anm2, anm2::Reference& reference, std::string& message)
+  void Snapshots::undo()
   {
-    if (auto current = undoStack.pop())
+    if (auto snapshot = undoStack.pop())
     {
-      Snapshot snapshot = {anm2, reference, message};
-      redoStack.push(snapshot);
-      anm2 = current->anm2;
-      reference = current->reference;
-      message = current->message;
+      redoStack.push(current);
+      current = *snapshot;
     }
   }
 
-  void Snapshots::redo(anm2::Anm2& anm2, anm2::Reference& reference, std::string& message)
+  void Snapshots::redo()
   {
-    if (auto current = redoStack.pop())
+    if (auto snapshot = redoStack.pop())
     {
-      Snapshot snapshot = {anm2, reference, message};
-      undoStack.push(snapshot);
-      anm2 = current->anm2;
-      reference = current->reference;
-      message = current->message;
+      undoStack.push(current);
+      current = *snapshot;
     }
   }
 

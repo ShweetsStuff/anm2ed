@@ -55,6 +55,7 @@ namespace anm2ed::anm2
   X(delay, int, FRAME_DELAY_MIN)                                                                                       \
   X(atFrame, int, -1)                                                                                                  \
   X(eventID, int, -1)                                                                                                  \
+  X(soundID, int, -1)                                                                                                  \
   X(pivot, glm::vec2, {})                                                                                              \
   X(crop, glm::vec2, {})                                                                                               \
   X(position, glm::vec2, {})                                                                                           \
@@ -77,6 +78,7 @@ namespace anm2ed::anm2
     void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*, Type);
     void shorten();
     void extend();
+    bool is_visible(Type = NONE);
   };
 
   struct FrameChange

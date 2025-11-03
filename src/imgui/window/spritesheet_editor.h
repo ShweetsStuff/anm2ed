@@ -11,6 +11,7 @@ namespace anm2ed::imgui
   {
     glm::vec2 mousePos{};
     glm::vec2 previousMousePos{};
+    glm::vec2 cropAnchor{};
 
   public:
     SpritesheetEditor();

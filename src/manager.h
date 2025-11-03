@@ -22,8 +22,10 @@ namespace anm2ed
     int pendingSelected{-1};
 
     bool isRecording{};
+    bool isRecordingStart{};
     int recordingStart{};
     int recordingEnd{};
+    bool isRecordingRange{};
 
     anm2::Layer editLayer{};
     imgui::PopupHelper layerPropertiesPopup{imgui::PopupHelper("Layer Properties", imgui::POPUP_SMALL_NO_HEIGHT)};

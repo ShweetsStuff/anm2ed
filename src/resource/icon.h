@@ -129,6 +129,10 @@ namespace anm2ed::resource::icon
   <svg viewBox="0 0 24 24" fill="none" stroke="#FFF" stroke-width="0.75" xmlns="http://www.w3.org/2000/svg"> <circle cx="12" cy="12" r="2.8"/> <line x1="12" y1="5" x2="12" y2="19"/> <line x1="5" y1="12" x2="19" y2="12"/> </svg>
   )";
 
+  constexpr auto TARGET_ALT_DATA = R"(
+<svg viewBox="0 0 24 24" fill="none" stroke="#FFF" stroke-width="0.75" xmlns="http://www.w3.org/2000/svg"> <circle cx="12" cy="12" r="2.8"/> <circle cx="12" cy="12" r="0.3" fill="#FFF" stroke="none"/> </svg>
+  )";
+
   constexpr auto INTERPOLATED_DATA = R"(
   <svg viewBox="0 0 24 24" fill="#FFF" xmlns="http://www.w3.org/2000/svg"> <circle cx="12" cy="12" r="2.5"/> </svg>
   )";
@@ -185,7 +189,8 @@ namespace anm2ed::resource::icon
   X(PLAYHEAD, PLAYHEAD_DATA, SIZE_NORMAL)                                                                              \
   X(PIVOT, PIVOT_DATA, SIZE_NORMAL)                                                                                    \
   X(POINT, UNINTERPOLATED_DATA, SIZE_NORMAL)                                                                           \
-  X(TARGET, TARGET_DATA, SIZE_HUGE)
+  X(TARGET, TARGET_DATA, SIZE_HUGE)                                                                                    \
+  X(TARGET_ALT, TARGET_ALT_DATA, SIZE_HUGE)
 
   enum Type
   {

@@ -14,9 +14,7 @@ namespace anm2ed::anm2
     Animations() = default;
     Animations(tinyxml2::XMLElement*);
     tinyxml2::XMLElement* to_element(tinyxml2::XMLDocument&);
-    int length();
     void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*);
-    int merge(int, std::set<int>&, types::merge::Type = types::merge::APPEND, bool = true);
-    bool animations_deserialize(const std::string&, int, std::set<int>&, std::string* = nullptr);
+    int length();
   };
 }

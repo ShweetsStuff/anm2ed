@@ -123,4 +123,12 @@ namespace anm2ed::anm2
   {
     delay = glm::clamp(++delay, FRAME_DELAY_MIN, FRAME_DELAY_MAX);
   }
+
+  bool Frame::is_visible(Type type)
+  {
+    if (type == anm2::TRIGGER)
+      return isVisible && eventID > -1;
+    else
+      return isVisible;
+  }
 }

@@ -1,7 +1,6 @@
 #include "spritesheet.h"
 
 #include "filesystem_.h"
-#include "string_.h"
 #include "xml_.h"
 
 using namespace anm2ed::resource;
@@ -18,15 +17,15 @@ namespace anm2ed::anm2
     // Spritesheet paths from Isaac Rebirth are made with the assumption that paths are case-insensitive
     // However when using the resource dumper, the spritesheet paths are all lowercase (on Linux anyway)
     // This will handle this case and make the paths OS-agnostic
-    this->path = string::backslash_replace_to_lower(this->path);
+    path = filesystem::path_lower_case_backslash_handle(path);
     texture = Texture(path);
   }
 
   Spritesheet::Spritesheet(const std::string& directory, const std::string& path)
   {
     filesystem::WorkingDirectory workingDirectory(directory);
-    this->path = !path.empty() ? std::filesystem::relative(path).string() : this->path.string();
-    this->path = string::backslash_replace_to_lower(this->path);
+    this->path = !path.empty() ? std::filesystem::relative(path) : this->path;
+    this->path = filesystem::path_lower_case_backslash_handle(this->path);
     texture = Texture(this->path);
   }
 

@@ -43,10 +43,13 @@ namespace anm2ed
   /* Symbol / Name / String / Type / Default */                                                                        \
   X(WINDOW_SIZE, windowSize, "Window Size", IVEC2_WH, {1600, 900})                                                     \
   X(IS_VSYNC, isVsync, "Vsync", BOOL, true)                                                                            \
-  X(DISPLAY_SCALE, displayScale, "Display Scale", FLOAT, 1.0f)                                                         \
+  X(UI_SCALE, uiScale, "UI Scale", FLOAT, 1.0f)                                                                        \
                                                                                                                        \
   X(FILE_IS_AUTOSAVE, fileIsAutosave, "Autosave", BOOL, true)                                                          \
   X(FILE_AUTOSAVE_TIME, fileAutosaveTime, "Autosave Time", INT, 1)                                                     \
+                                                                                                                       \
+  X(KEYBOARD_REPEAT_DELAY, keyboardRepeatDelay, "Repeat Delay", FLOAT, 0.300f)                                         \
+  X(KEYBOARD_REPEAT_RATE, keyboardRepeatRate, "Repeat Rate", FLOAT, 0.050f)                                            \
                                                                                                                        \
   X(VIEW_ZOOM_STEP, viewZoomStep, "Zoom Step", FLOAT, 50.0f)                                                           \
                                                                                                                        \
@@ -87,8 +90,7 @@ namespace anm2ed
   X(PREVIEW_IS_BORDER, previewIsBorder, "Border", BOOL, false)                                                         \
   X(PREVIEW_IS_ALT_ICONS, previewIsAltIcons, "Alt Icons", BOOL, false)                                                 \
   X(PREVIEW_OVERLAY_TRANSPARENCY, previewOverlayTransparency, "Alpha", FLOAT, 255)                                     \
-  X(PREVIEW_ZOOM, previewZoom, "Zoom", FLOAT, 200.0f)                                                                  \
-  X(PREVIEW_PAN, previewPan, "Pan", VEC2, {})                                                                          \
+  X(PREVIEW_START_ZOOM, previewStartZoom, "Start Zoom", FLOAT, 200.0f)                                                 \
   X(PREVIEW_GRID_SIZE, previewGridSize, "Size", IVEC2, {32, 32})                                                       \
   X(PREVIEW_GRID_OFFSET, previewGridOffset, "Offset", IVEC2, {})                                                       \
   X(PREVIEW_GRID_COLOR, previewGridColor, "Color", VEC4, {1.0f, 1.0f, 1.0f, 0.125f})                                   \
@@ -109,9 +111,9 @@ namespace anm2ed
   X(EDITOR_IS_GRID, editorIsGrid, "Grid", BOOL, true)                                                                  \
   X(EDITOR_IS_GRID_SNAP, editorIsGridSnap, "Snap", BOOL, true)                                                         \
   X(EDITOR_IS_BORDER, editorIsBorder, "Border", BOOL, true)                                                            \
-  X(EDITOR_ZOOM, editorZoom, "Zoom", FLOAT, 200.0f)                                                                    \
-  X(EDITOR_PAN, editorPan, "Pan", VEC2, {0.0, 0.0})                                                                    \
-  X(EDITOR_GRID_SIZE, editorGridSize, "Size", IVEC2, {32, 32})                                                         \
+  X(EDITOR_START_ZOOM, editorStartZoom, "Zoom", FLOAT, 200.0f)                                                         \
+  X(EDITOR_SIZE, editorSize, "Size", IVEC2_WH, {1200, 600})                                                            \
+  X(EDITOR_GRID_SIZE, editorGridSize, "Grid Size", IVEC2, {32, 32})                                                    \
   X(EDITOR_GRID_OFFSET, editorGridOffset, "Offset", IVEC2, {32, 32})                                                   \
   X(EDITOR_GRID_COLOR, editorGridColor, "Color", VEC4, {1.0, 1.0, 1.0, 0.125})                                         \
   X(EDITOR_BACKGROUND_COLOR, editorBackgroundColor, "Background Color", VEC4, {0.113, 0.184, 0.286, 1.0})              \
@@ -143,9 +145,7 @@ namespace anm2ed
   X(RENDER_TYPE, renderType, "Output", INT, render::PNGS)                                                              \
   X(RENDER_PATH, renderPath, "Path", STRING, ".")                                                                      \
   X(RENDER_FORMAT, renderFormat, "Format", STRING, "{}.png")                                                           \
-  X(RENDER_IS_USE_ANIMATION_BOUNDS, renderIsUseAnimationBounds, "Use Animation Bounds", BOOL, true)                    \
-  X(RENDER_IS_TRANSPARENT, renderIsTransparent, "Transparent", BOOL, true)                                             \
-  X(RENDER_IS_RANGE, renderIsRange, "Range", BOOL, false)                                                              \
+  X(RENDER_IS_RAW_ANIMATION, renderIsRawAnimation, "Raw Animation", BOOL, true)                                        \
   X(RENDER_SCALE, renderScale, "Scale", FLOAT, 1.0f)                                                                   \
   X(RENDER_FFMPEG_PATH, renderFFmpegPath, "FFmpeg Path", STRING, FFMPEG_PATH_DEFAULT)
 

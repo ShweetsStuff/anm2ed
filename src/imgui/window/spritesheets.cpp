@@ -2,6 +2,7 @@
 
 #include <ranges>
 
+#include "document.h"
 #include "toast.h"
 
 using namespace anm2ed::types;
@@ -15,10 +16,10 @@ namespace anm2ed::imgui
   {
     auto& document = *manager.get();
     auto& anm2 = document.anm2;
-    auto& multiSelect = document.spritesheetMultiSelect;
-    auto& unused = document.unusedSpritesheetIDs;
-    auto& hovered = document.hoveredSpritesheet;
-    auto& reference = document.referenceSpritesheet;
+    auto& selection = document.spritesheet.selection;
+    auto& unused = document.spritesheet.unused;
+    auto& hovered = document.spritesheet.hovered;
+    auto& reference = document.spritesheet.reference;
 
     hovered = -1;
 
@@ -30,10 +31,10 @@ namespace anm2ed::imgui
       {
         auto copy = [&]()
         {
-          if (!multiSelect.empty())
+          if (!selection.empty())
           {
             std::string clipboardText{};
-            for (auto& id : multiSelect)
+            for (auto& id : selection)
               clipboardText += anm2.content.spritesheets[id].to_string(id);
             clipboard.set(clipboardText);
           }
@@ -43,43 +44,38 @@ namespace anm2ed::imgui
 
         auto paste = [&](merge::Type type)
         {
-          auto clipboardText = clipboard.get();
-          document.spritesheets_deserialize(clipboardText, type);
+          std::string errorString{};
+          document.snapshot("Paste Spritesheet(s)");
+          if (anm2.spritesheets_deserialize(clipboard.get(), document.directory_get(), type, &errorString))
+            document.change(Document::SPRITESHEETS);
+          else
+            toasts.error(std::format("Failed to deserialize spritesheet(s): {}", errorString));
         };
 
-        if (imgui::shortcut(settings.shortcutCopy, shortcut::FOCUSED)) copy();
-        if (imgui::shortcut(settings.shortcutPaste, shortcut::FOCUSED)) paste(merge::APPEND);
+        if (shortcut(settings.shortcutCopy, shortcut::FOCUSED)) copy();
+        if (shortcut(settings.shortcutPaste, shortcut::FOCUSED)) paste(merge::APPEND);
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
         if (ImGui::BeginPopupContextWindow("##Context Menu", ImGuiPopupFlags_MouseButtonRight))
         {
-          ImGui::BeginDisabled();
-          ImGui::MenuItem("Cut", settings.shortcutCut.c_str());
-          ImGui::EndDisabled();
+          ImGui::MenuItem("Cut", settings.shortcutCut.c_str(), false, true);
 
-          ImGui::BeginDisabled(multiSelect.empty() && hovered == -1);
-          if (ImGui::MenuItem("Copy", settings.shortcutCopy.c_str())) copy();
-          ImGui::EndDisabled();
+          if (ImGui::MenuItem("Copy", settings.shortcutCopy.c_str(), false, !selection.empty() || hovered > -1)) copy();
 
-          ImGui::BeginDisabled(clipboard.is_empty());
+          if (ImGui::BeginMenu("Paste", !clipboard.is_empty()))
           {
-            if (ImGui::BeginMenu("Paste"))
-            {
-              if (ImGui::MenuItem("Append", settings.shortcutPaste.c_str())) paste(merge::APPEND);
-              if (ImGui::MenuItem("Replace")) paste(merge::REPLACE);
+            if (ImGui::MenuItem("Append", settings.shortcutPaste.c_str())) paste(merge::APPEND);
+            if (ImGui::MenuItem("Replace")) paste(merge::REPLACE);
 
-              ImGui::EndMenu();
-            }
+            ImGui::EndMenu();
           }
-          ImGui::EndDisabled();
-
           ImGui::EndPopup();
         }
         ImGui::PopStyleVar(2);
       };
 
-      auto childSize = imgui::size_without_footer_get(2);
+      auto childSize = size_without_footer_get(2);
 
       ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2());
 
@@ -89,7 +85,7 @@ namespace anm2ed::imgui
 
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2());
 
-        multiSelect.start(anm2.content.spritesheets.size());
+        selection.start(anm2.content.spritesheets.size());
 
         for (auto& [id, spritesheet] : anm2.content.spritesheets)
         {
@@ -97,7 +93,7 @@ namespace anm2ed::imgui
 
           if (ImGui::BeginChild("##Spritesheet Child", spritesheetChildSize, ImGuiChildFlags_Borders))
           {
-            auto isSelected = multiSelect.contains(id);
+            auto isSelected = selection.contains(id);
             auto isReferenced = id == reference;
             auto cursorPos = ImGui::GetCursorPos();
             auto& texture = spritesheet.texture.is_valid() ? spritesheet.texture : resources.icons[icon::NONE];
@@ -177,7 +173,7 @@ namespace anm2ed::imgui
           ImGui::PopID();
         }
 
-        multiSelect.finish();
+        selection.finish();
 
         ImGui::PopStyleVar(2);
 
@@ -185,11 +181,11 @@ namespace anm2ed::imgui
       }
       ImGui::EndChild();
 
-      auto rowOneWidgetSize = imgui::widget_size_with_row_get(4);
+      auto rowOneWidgetSize = widget_size_with_row_get(4);
 
-      imgui::shortcut(settings.shortcutAdd);
+      shortcut(settings.shortcutAdd);
       if (ImGui::Button("Add", rowOneWidgetSize)) dialog.file_open(dialog::SPRITESHEET_OPEN);
-      imgui::set_item_tooltip_shortcut("Add a new spritesheet.", settings.shortcutAdd);
+      set_item_tooltip_shortcut("Add a new spritesheet.", settings.shortcutAdd);
 
       if (dialog.is_selected(dialog::SPRITESHEET_OPEN))
       {
@@ -199,16 +195,21 @@ namespace anm2ed::imgui
 
       ImGui::SameLine();
 
-      ImGui::BeginDisabled(multiSelect.empty());
+      ImGui::BeginDisabled(selection.empty());
       {
         if (ImGui::Button("Reload", rowOneWidgetSize))
         {
-          for (auto& id : multiSelect)
+          auto reload = [&]()
           {
-            anm2::Spritesheet& spritesheet = anm2.content.spritesheets[id];
-            spritesheet.reload(document.directory_get());
-            toasts.info(std::format("Reloaded spritesheet #{}: {}", id, spritesheet.path.string()));
-          }
+            for (auto& id : selection)
+            {
+              anm2::Spritesheet& spritesheet = anm2.content.spritesheets[id];
+              spritesheet.reload(document.directory_get());
+              toasts.info(std::format("Reloaded spritesheet #{}: {}", id, spritesheet.path.string()));
+            }
+          };
+
+          DOCUMENT_EDIT(document, "Reload Spritesheet(s)", Document::SPRITESHEETS, reload());
         }
         ImGui::SetItemTooltip("Reloads the selected spritesheets.");
       }
@@ -216,7 +217,7 @@ namespace anm2ed::imgui
 
       ImGui::SameLine();
 
-      ImGui::BeginDisabled(multiSelect.size() != 1);
+      ImGui::BeginDisabled(selection.size() != 1);
       {
         if (ImGui::Button("Replace", rowOneWidgetSize)) dialog.file_open(dialog::SPRITESHEET_REPLACE);
         ImGui::SetItemTooltip("Replace the selected spritesheet with a new one.");
@@ -225,10 +226,15 @@ namespace anm2ed::imgui
 
       if (dialog.is_selected(dialog::SPRITESHEET_REPLACE))
       {
-        auto& id = *multiSelect.begin();
-        anm2::Spritesheet& spritesheet = anm2.content.spritesheets[id];
-        spritesheet = anm2::Spritesheet(document.directory_get(), dialog.path);
-        toasts.info(std::format("Replaced spritesheet #{}: {}", id, spritesheet.path.string()));
+        auto replace = [&]()
+        {
+          auto& id = *selection.begin();
+          anm2::Spritesheet& spritesheet = anm2.content.spritesheets[id];
+          spritesheet = anm2::Spritesheet(document.directory_get(), dialog.path);
+          toasts.info(std::format("Replaced spritesheet #{}: {}", id, spritesheet.path.string()));
+        };
+
+        DOCUMENT_EDIT(document, "Replace Spritesheet", Document::SPRITESHEETS, replace());
         dialog.reset();
       }
 
@@ -236,50 +242,54 @@ namespace anm2ed::imgui
 
       ImGui::BeginDisabled(unused.empty());
       {
-        imgui::shortcut(settings.shortcutRemove);
+        shortcut(settings.shortcutRemove);
         if (ImGui::Button("Remove Unused", rowOneWidgetSize))
         {
-          for (auto& id : unused)
+          auto remove_unused = [&]()
           {
-            anm2::Spritesheet& spritesheet = anm2.content.spritesheets[id];
-            toasts.info(std::format("Removed spritesheet #{}: {}", id, spritesheet.path.string()));
-            anm2.spritesheet_remove(id);
-          }
-          unused.clear();
-          document.change(Document::SPRITESHEETS);
+            for (auto& id : unused)
+            {
+              anm2::Spritesheet& spritesheet = anm2.content.spritesheets[id];
+              toasts.info(std::format("Removed spritesheet #{}: {}", id, spritesheet.path.string()));
+              anm2.content.spritesheets.erase(id);
+            }
+            unused.clear();
+          };
+
+          DOCUMENT_EDIT(document, "Remove Unused Spritesheets", Document::SPRITESHEETS, remove_unused());
         }
-        imgui::set_item_tooltip_shortcut("Remove all unused spritesheets (i.e., not used in any layer.).",
-                                         settings.shortcutRemove);
+        set_item_tooltip_shortcut("Remove all unused spritesheets (i.e., not used in any layer.).",
+                                  settings.shortcutRemove);
       }
       ImGui::EndDisabled();
 
-      auto rowTwoWidgetSize = imgui::widget_size_with_row_get(3);
+      auto rowTwoWidgetSize = widget_size_with_row_get(3);
 
-      imgui::shortcut(settings.shortcutSelectAll);
-      ImGui::BeginDisabled(multiSelect.size() == anm2.content.spritesheets.size());
+      shortcut(settings.shortcutSelectAll);
+      ImGui::BeginDisabled(selection.size() == anm2.content.spritesheets.size());
       {
         if (ImGui::Button("Select All", rowTwoWidgetSize))
           for (auto& id : anm2.content.spritesheets | std::views::keys)
-            multiSelect.insert(id);
+            selection.insert(id);
       }
       ImGui::EndDisabled();
-      imgui::set_item_tooltip_shortcut("Select all spritesheets.", settings.shortcutSelectAll);
+      set_item_tooltip_shortcut("Select all spritesheets.", settings.shortcutSelectAll);
 
       ImGui::SameLine();
 
-      imgui::shortcut(settings.shortcutSelectNone);
-      ImGui::BeginDisabled(multiSelect.empty());
-      if (ImGui::Button("Select None", rowTwoWidgetSize)) multiSelect.clear();
-      imgui::set_item_tooltip_shortcut("Unselect all spritesheets.", settings.shortcutSelectNone);
+      shortcut(settings.shortcutSelectNone);
+      ImGui::BeginDisabled(selection.empty());
+      if (ImGui::Button("Select None", rowTwoWidgetSize)) selection.clear();
+      set_item_tooltip_shortcut("Unselect all spritesheets.", settings.shortcutSelectNone);
       ImGui::EndDisabled();
 
       ImGui::SameLine();
 
-      ImGui::BeginDisabled(multiSelect.empty());
+      ImGui::BeginDisabled(selection.empty());
       {
         if (ImGui::Button("Save", rowTwoWidgetSize))
         {
-          for (auto& id : multiSelect)
+          for (auto& id : selection)
           {
             anm2::Spritesheet& spritesheet = anm2.content.spritesheets[id];
             if (spritesheet.save(document.directory_get()))

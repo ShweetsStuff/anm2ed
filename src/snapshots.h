@@ -1,6 +1,8 @@
 #pragma once
 
 #include "anm2/anm2.h"
+#include "playback.h"
+#include "storage.h"
 
 namespace anm2ed::snapshots
 {
@@ -15,6 +17,14 @@ namespace anm2ed
   public:
     anm2::Anm2 anm2{};
     anm2::Reference reference{};
+    Playback playback{};
+    Storage animation{};
+    Storage merge{};
+    Storage event{};
+    Storage layer{};
+    Storage null{};
+    Storage sound{};
+    Storage spritesheet{};
     std::string message = snapshots::ACTION;
   };
 
@@ -25,7 +35,7 @@ namespace anm2ed
     int top{};
 
     bool is_empty();
-    void push(Snapshot& snapshot);
+    void push(const Snapshot&);
     Snapshot* pop();
     void clear();
   };
@@ -35,11 +45,12 @@ namespace anm2ed
   public:
     SnapshotStack undoStack{};
     SnapshotStack redoStack{};
+    Snapshot current{};
 
     Snapshot* get();
-    void push(const anm2::Anm2&, anm2::Reference, const std::string&);
-    void undo(anm2::Anm2& anm2, anm2::Reference& reference, std::string&);
-    void redo(anm2::Anm2& anm2, anm2::Reference& reference, std::string&);
+    void push(const Snapshot&);
+    void undo();
+    void redo();
     void reset();
   };
 }

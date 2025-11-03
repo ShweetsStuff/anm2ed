@@ -8,7 +8,6 @@
 
 using namespace anm2ed::util;
 using namespace glm;
-
 using namespace tinyxml2;
 
 namespace anm2ed::anm2
@@ -79,7 +78,7 @@ namespace anm2ed::anm2
     }
   }
 
-  void Animation::serialize(XMLDocument& document, XMLElement* parent)
+  XMLElement* Animation::to_element(XMLDocument& document)
   {
     auto element = document.NewElement("Animation");
     element->SetAttribute("Name", name.c_str());
@@ -103,7 +102,19 @@ namespace anm2ed::anm2
 
     triggers.serialize(document, element, TRIGGER);
 
-    parent->InsertEndChild(element);
+    return element;
+  }
+
+  void Animation::serialize(XMLDocument& document, XMLElement* parent)
+  {
+    parent->InsertEndChild(to_element(document));
+  }
+
+  std::string Animation::to_string()
+  {
+    XMLDocument document{};
+    document.InsertEndChild(to_element(document));
+    return xml::document_to_string(document);
   }
 
   int Animation::length()
@@ -126,48 +137,15 @@ namespace anm2ed::anm2
     return length;
   }
 
-  std::string Animation::to_string()
-  {
-    XMLDocument document{};
-
-    auto* element = document.NewElement("Animation");
-    document.InsertFirstChild(element);
-
-    element->SetAttribute("Name", name.c_str());
-    element->SetAttribute("FrameNum", frameNum);
-    element->SetAttribute("Loop", isLoop);
-
-    rootAnimation.serialize(document, element, ROOT);
-
-    auto layerAnimationsElement = document.NewElement("LayerAnimations");
-    for (auto& i : layerOrder)
-    {
-      Item& layerAnimation = layerAnimations.at(i);
-      layerAnimation.serialize(document, layerAnimationsElement, LAYER, i);
-    }
-    element->InsertEndChild(layerAnimationsElement);
-
-    auto nullAnimationsElement = document.NewElement("NullAnimations");
-    for (auto& [id, nullAnimation] : nullAnimations)
-      nullAnimation.serialize(document, nullAnimationsElement, NULL_, id);
-    element->InsertEndChild(nullAnimationsElement);
-
-    triggers.serialize(document, element, TRIGGER);
-
-    XMLPrinter printer;
-    document.Print(&printer);
-    return std::string(printer.CStr());
-  }
-
   vec4 Animation::rect(bool isRootTransform)
   {
+    constexpr ivec2 CORNERS[4] = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
+
     float minX = std::numeric_limits<float>::infinity();
     float minY = std::numeric_limits<float>::infinity();
     float maxX = -std::numeric_limits<float>::infinity();
     float maxY = -std::numeric_limits<float>::infinity();
     bool any = false;
-
-    constexpr ivec2 CORNERS[4] = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
 
     for (float t = 0.0f; t < (float)frameNum; t += 1.0f)
     {
@@ -202,5 +180,4 @@ namespace anm2ed::anm2
     if (!any) return vec4(-1.0f);
     return {minX, minY, maxX - minX, maxY - minY};
   }
-
 }

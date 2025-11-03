@@ -2,6 +2,10 @@
 
 #include <ranges>
 
+#include "map_.h"
+#include "toast.h"
+
+using namespace anm2ed::util;
 using namespace anm2ed::resource;
 using namespace anm2ed::types;
 
@@ -11,10 +15,10 @@ namespace anm2ed::imgui
   {
     auto& document = *manager.get();
     auto& anm2 = document.anm2;
-    auto& reference = document.referenceLayer;
-    auto& unused = document.unusedLayerIDs;
-    auto& hovered = document.hoveredLayer;
-    auto& multiSelect = document.layersMultiSelect;
+    auto& reference = document.layer.reference;
+    auto& unused = document.layer.unused;
+    auto& hovered = document.layer.hovered;
+    auto& selection = document.layer.selection;
     auto& propertiesPopup = manager.layerPropertiesPopup;
 
     hovered = -1;
@@ -25,11 +29,11 @@ namespace anm2ed::imgui
 
       if (ImGui::BeginChild("##Layers Child", childSize, true))
       {
-        multiSelect.start(anm2.content.layers.size());
+        selection.start(anm2.content.layers.size());
 
         for (auto& [id, layer] : anm2.content.layers)
         {
-          auto isSelected = multiSelect.contains(id);
+          auto isSelected = selection.contains(id);
 
           ImGui::PushID(id);
 
@@ -55,14 +59,14 @@ namespace anm2ed::imgui
           ImGui::PopID();
         }
 
-        multiSelect.finish();
+        selection.finish();
 
         auto copy = [&]()
         {
-          if (!multiSelect.empty())
+          if (!selection.empty())
           {
             std::string clipboardText{};
-            for (auto& id : multiSelect)
+            for (auto& id : selection)
               clipboardText += anm2.content.layers[id].to_string(id);
             clipboard.set(clipboardText);
           }
@@ -72,8 +76,12 @@ namespace anm2ed::imgui
 
         auto paste = [&](merge::Type type)
         {
-          auto clipboardText = clipboard.get();
-          document.layers_deserialize(clipboardText, type);
+          std::string errorString{};
+          document.snapshot("Paste Layer(s)");
+          if (anm2.layers_deserialize(clipboard.get(), type, &errorString))
+            document.change(Document::NULLS);
+          else
+            toasts.error(std::format("Failed to deserialize layer(s): {}", errorString));
         };
 
         if (shortcut(settings.shortcutCopy, shortcut::FOCUSED)) copy();
@@ -81,25 +89,16 @@ namespace anm2ed::imgui
 
         if (ImGui::BeginPopupContextWindow("##Context Menu", ImGuiPopupFlags_MouseButtonRight))
         {
-          ImGui::BeginDisabled();
-          ImGui::MenuItem("Cut", settings.shortcutCut.c_str());
-          ImGui::EndDisabled();
+          ImGui::MenuItem("Cut", settings.shortcutCut.c_str(), false, false);
+          if (ImGui::MenuItem("Copy", settings.shortcutCopy.c_str(), false, !selection.empty() || hovered > -1)) copy();
 
-          ImGui::BeginDisabled(multiSelect.empty() && hovered == -1);
-          if (ImGui::MenuItem("Copy", settings.shortcutCopy.c_str())) copy();
-          ImGui::EndDisabled();
-
-          ImGui::BeginDisabled(clipboard.is_empty());
+          if (ImGui::BeginMenu("Paste", !clipboard.is_empty()))
           {
-            if (ImGui::BeginMenu("Paste"))
-            {
-              if (ImGui::MenuItem("Append", settings.shortcutPaste.c_str())) paste(merge::APPEND);
-              if (ImGui::MenuItem("Replace")) paste(merge::REPLACE);
+            if (ImGui::MenuItem("Append", settings.shortcutPaste.c_str())) paste(merge::APPEND);
+            if (ImGui::MenuItem("Replace")) paste(merge::REPLACE);
 
-              ImGui::EndMenu();
-            }
+            ImGui::EndMenu();
           }
-          ImGui::EndDisabled();
 
           ImGui::EndPopup();
         }
@@ -115,7 +114,17 @@ namespace anm2ed::imgui
 
       shortcut(settings.shortcutRemove);
       ImGui::BeginDisabled(unused.empty());
-      if (ImGui::Button("Remove Unused", widgetSize)) document.layers_remove_unused();
+      if (ImGui::Button("Remove Unused", widgetSize))
+      {
+        auto remove_unused = [&]()
+        {
+          for (auto& id : unused)
+            anm2.content.layers.erase(id);
+          unused.clear();
+        };
+
+        DOCUMENT_EDIT(document, "Remove Unused Layers", Document::LAYERS, remove_unused());
+      }
       ImGui::EndDisabled();
       set_item_tooltip_shortcut("Remove unused layers (i.e., ones not used in any animation.)",
                                 settings.shortcutRemove);
@@ -134,7 +143,7 @@ namespace anm2ed::imgui
         if (propertiesPopup.isJustOpened) ImGui::SetKeyboardFocusHere();
         input_text_string("Name", &layer.name);
         ImGui::SetItemTooltip("Set the item's name.");
-        combo_strings("Spritesheet", &layer.spritesheetID, document.spritesheetNames);
+        combo_negative_one_indexed("Spritesheet", &layer.spritesheetID, document.spritesheet.labels);
         ImGui::SetItemTooltip("Set the layer item's spritesheet.");
       }
       ImGui::EndChild();
@@ -143,7 +152,26 @@ namespace anm2ed::imgui
 
       if (ImGui::Button(reference == -1 ? "Add" : "Confirm", widgetSize))
       {
-        document.layer_set(layer);
+        auto add = [&]()
+        {
+          auto id = map::next_id_get(anm2.content.layers);
+          anm2.content.layers[id] = layer;
+          selection = {id};
+        };
+
+        auto set = [&]()
+        {
+          anm2.content.layers[reference] = layer;
+          selection = {reference};
+        };
+
+        if (reference == -1)
+        {
+          DOCUMENT_EDIT(document, "Add Layer", Document::LAYERS, add());
+        }
+        else
+          DOCUMENT_EDIT(document, "Set Layer Properties", Document::LAYERS, set());
+
         manager.layer_properties_close();
       }
 

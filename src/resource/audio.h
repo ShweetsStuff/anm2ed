@@ -19,6 +19,7 @@ namespace anm2ed::resource
     Audio(const Audio&) = delete;
     Audio& operator=(const Audio&) = delete;
 
-    void play();
+    bool is_valid();
+    void play(MIX_Mixer* = nullptr);
   };
 }

@@ -31,12 +31,10 @@ namespace anm2ed::imgui
       auto widgetSize = widget_size_with_row_get(2);
 
       if (ImGui::Button("New", widgetSize)) dialog.file_open(dialog::ANM2_NEW); // handled in taskbar.cpp
-
       ImGui::SameLine();
-
       if (ImGui::Button("Open", widgetSize)) dialog.file_open(dialog::ANM2_OPEN); // handled in taskbar.cpp
 
-      if (ImGui::BeginChild("##Recent Files Child", ImVec2(), ImGuiChildFlags_Borders))
+      if (ImGui::BeginChild("##Recent Files Child", {}, ImGuiChildFlags_Borders))
       {
         for (auto [i, file] : std::views::enumerate(manager.recentFiles))
         {

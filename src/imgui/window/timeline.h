@@ -16,9 +16,9 @@ namespace anm2ed::imgui
     PopupHelper propertiesPopup{PopupHelper("Item Properties", POPUP_NORMAL)};
     PopupHelper bakePopup{PopupHelper("Bake", POPUP_TO_CONTENT)};
     std::string addItemName{};
-    int addItemSpritesheetID{};
     bool addItemIsRect{};
     int addItemID{-1};
+    int addItemSpritesheetID{-1};
     bool isUnusedItemsSet{};
     std::set<int> unusedItems{};
     glm::vec2 scroll{};
