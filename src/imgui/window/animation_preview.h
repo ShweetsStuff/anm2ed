@@ -1,5 +1,6 @@
 #pragma once
 
+#include "audio_stream.h"
 #include "canvas.h"
 #include "manager.h"
 #include "resources.h"
@@ -9,6 +10,8 @@ namespace anm2ed::imgui
 {
   class AnimationPreview : public Canvas
   {
+    MIX_Mixer* mixer = MIX_CreateMixerDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
+    AudioStream audioStream = AudioStream(mixer);
     bool isPreviewHovered{};
     bool isSizeTrySet{true};
     Settings savedSettings{};

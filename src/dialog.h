@@ -9,9 +9,7 @@ namespace anm2ed::dialog
 #if defined(_WIN32)
   #define EXECUTABLE_FILTER {"Executable", "exe"}
 #else
-  #define EXECUTABLE_FILTER                                                                                            \
-    {                                                                                                                  \
-    }
+  #define EXECUTABLE_FILTER {"Executable", "*"}
 #endif
 
 #define FILTER_LIST                                                                                                    \

@@ -52,7 +52,10 @@ namespace anm2ed
         {
           auto droppedFile = event.drop.data;
           if (filesystem::path_is_extension(droppedFile, "anm2"))
+          {
             manager.open(std::string(droppedFile));
+            SDL_FlashWindow(window, SDL_FLASH_UNTIL_FOCUSED);
+          }
           else if (filesystem::path_is_extension(droppedFile, "png"))
           {
             if (auto document = manager.get())

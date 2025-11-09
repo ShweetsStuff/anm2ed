@@ -74,12 +74,9 @@ namespace anm2ed::imgui
           }
 
           auto isRequested = i == manager.pendingSelected;
-
           auto font = isDirty ? font::ITALICS : font::REGULAR;
-
           auto string = isDirty ? std::format("[Not Saved] {}", document.filename_get().string())
                                 : document.filename_get().string();
-
           auto label = std::format("{}###Document{}", string, i);
 
           auto flags = isDirty ? ImGuiTabItemFlags_UnsavedDocument : 0;
@@ -89,7 +86,9 @@ namespace anm2ed::imgui
           if (ImGui::BeginTabItem(label.c_str(), &document.isOpen, flags))
           {
             manager.set(i);
+
             if (isRequested) manager.pendingSelected = -1;
+
             ImGui::EndTabItem();
           }
           ImGui::PopFont();

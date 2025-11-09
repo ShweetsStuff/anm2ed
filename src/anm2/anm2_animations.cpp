@@ -131,6 +131,8 @@ namespace anm2ed::anm2
       finalIndex -= numDeletedBefore;
     }
 
+    animation.frameNum = animation.length();
+
     return finalIndex;
   }
 

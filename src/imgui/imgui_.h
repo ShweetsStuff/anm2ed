@@ -190,7 +190,9 @@ namespace anm2ed::imgui
     using std::set<int>::erase;
 
     MultiSelectStorage();
-    void start(size_t);
+    void start(size_t, ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_BoxSelect2d |
+                                                     ImGuiMultiSelectFlags_ClearOnEscape |
+                                                     ImGuiMultiSelectFlags_ScopeWindow);
     void finish();
   };
 

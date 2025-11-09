@@ -24,7 +24,7 @@ namespace anm2ed::anm2
 
   XMLElement* Item::to_element(XMLDocument& document, Type type, int id)
   {
-    auto element = document.NewElement(TYPE_ANIMATION_STRINGS[type]);
+    auto element = document.NewElement(TYPE_ITEM_STRINGS[type]);
 
     if (type == LAYER) element->SetAttribute("LayerId", id);
     if (type == NULL_) element->SetAttribute("NullId", id);

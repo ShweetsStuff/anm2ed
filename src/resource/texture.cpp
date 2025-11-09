@@ -28,15 +28,9 @@ using namespace glm;
 
 namespace anm2ed::resource
 {
-  bool Texture::is_valid()
-  {
-    return id != 0;
-  }
+  bool Texture::is_valid() { return id != 0; }
 
-  size_t Texture::pixel_size_get()
-  {
-    return size.x * size.y * CHANNELS;
-  }
+  size_t Texture::pixel_size_get() { return size.x * size.y * CHANNELS; }
 
   void Texture::upload(const uint8_t* data)
   {
@@ -66,15 +60,9 @@ namespace anm2ed::resource
     if (is_valid()) glDeleteTextures(1, &id);
   }
 
-  Texture::Texture(const Texture& other)
-  {
-    *this = other;
-  }
+  Texture::Texture(const Texture& other) { *this = other; }
 
-  Texture::Texture(Texture&& other)
-  {
-    *this = std::move(other);
-  }
+  Texture::Texture(Texture&& other) { *this = std::move(other); }
 
   Texture& Texture::operator=(const Texture& other) // Copy
   {

@@ -4,10 +4,7 @@ using namespace anm2ed::snapshots;
 
 namespace anm2ed
 {
-  bool SnapshotStack::is_empty()
-  {
-    return top == 0;
-  }
+  bool SnapshotStack::is_empty() { return top == 0; }
 
   void SnapshotStack::push(const Snapshot& snapshot)
   {
@@ -26,10 +23,7 @@ namespace anm2ed
     return &snapshots[--top];
   }
 
-  void SnapshotStack::clear()
-  {
-    top = 0;
-  }
+  void SnapshotStack::clear() { top = 0; }
 
   void Snapshots::push(const Snapshot& snapshot)
   {

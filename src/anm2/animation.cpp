@@ -105,10 +105,7 @@ namespace anm2ed::anm2
     return element;
   }
 
-  void Animation::serialize(XMLDocument& document, XMLElement* parent)
-  {
-    parent->InsertEndChild(to_element(document));
-  }
+  void Animation::serialize(XMLDocument& document, XMLElement* parent) { parent->InsertEndChild(to_element(document)); }
 
   std::string Animation::to_string()
   {
@@ -153,13 +150,13 @@ namespace anm2ed::anm2
 
       if (isRootTransform)
       {
-        auto root = rootAnimation.frame_generate(t, anm2::ROOT);
+        auto root = rootAnimation.frame_generate(t, ROOT);
         transform *= math::quad_model_parent_get(root.position, {}, math::percent_to_unit(root.scale), root.rotation);
       }
 
       for (auto& [id, layerAnimation] : layerAnimations)
       {
-        auto frame = layerAnimation.frame_generate(t, anm2::LAYER);
+        auto frame = layerAnimation.frame_generate(t, LAYER);
 
         if (frame.size == vec2() || !frame.isVisible) continue;
 

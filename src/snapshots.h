@@ -25,6 +25,8 @@ namespace anm2ed
     Storage null{};
     Storage sound{};
     Storage spritesheet{};
+    Storage items{};
+    std::map<int, Storage> frames{};
     std::string message = snapshots::ACTION;
   };
 

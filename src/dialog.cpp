@@ -2,6 +2,9 @@
 
 #ifdef _WIN32
   #include <window.h>
+#elif __unix__
+#else
+  #include "toast.h"
 #endif
 
 #include <format>
@@ -57,8 +60,10 @@ namespace anm2ed
   {
 #ifdef _WIN32
     ShellExecuteA(NULL, "open", path.c_str(), NULL, NULL, SW_SHOWNORMAL);
-#else
+#elif __unix__
     system(std::format("xdg-open \"{}\" &", path).c_str());
+#else
+    toasts.info("Operation not supported.");
 #endif
   }
 

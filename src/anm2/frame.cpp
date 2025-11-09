@@ -114,19 +114,13 @@ namespace anm2ed::anm2
     return xml::document_to_string(document);
   }
 
-  void Frame::shorten()
-  {
-    delay = glm::clamp(--delay, FRAME_DELAY_MIN, FRAME_DELAY_MAX);
-  }
+  void Frame::shorten() { delay = glm::clamp(--delay, FRAME_DELAY_MIN, FRAME_DELAY_MAX); }
 
-  void Frame::extend()
-  {
-    delay = glm::clamp(++delay, FRAME_DELAY_MIN, FRAME_DELAY_MAX);
-  }
+  void Frame::extend() { delay = glm::clamp(++delay, FRAME_DELAY_MIN, FRAME_DELAY_MAX); }
 
   bool Frame::is_visible(Type type)
   {
-    if (type == anm2::TRIGGER)
+    if (type == TRIGGER)
       return isVisible && eventID > -1;
     else
       return isVisible;

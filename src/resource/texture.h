@@ -26,8 +26,8 @@ namespace anm2ed::resource
     size_t pixel_size_get();
     void upload();
     void upload(const uint8_t*);
-    Texture();
 
+    Texture();
     ~Texture();
     Texture(const Texture&);
     Texture(Texture&&);

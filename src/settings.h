@@ -153,8 +153,8 @@ namespace anm2ed
   /* Symbol / Name / String / Type / Default */                                                                        \
   X(SHORTCUT_CENTER_VIEW, shortcutCenterView, "Center View", STRING, "Home")                                           \
   X(SHORTCUT_FIT, shortcutFit, "Fit", STRING, "F")                                                                     \
-  X(SHORTCUT_ZOOM_IN, shortcutZoomIn, "Zoom In", STRING, "Ctrl++")                                                     \
-  X(SHORTCUT_ZOOM_OUT, shortcutZoomOut, "Zoom Out", STRING, "Ctrl+-")                                                  \
+  X(SHORTCUT_ZOOM_IN, shortcutZoomIn, "Zoom In", STRING, "Ctrl+Equal")                                                 \
+  X(SHORTCUT_ZOOM_OUT, shortcutZoomOut, "Zoom Out", STRING, "Ctrl+Minus")                                              \
   X(SHORTCUT_PLAY_PAUSE, shortcutPlayPause, "Play/Pause", STRING, "Space")                                             \
   X(SHORTCUT_ONIONSKIN, shortcutOnionskin, "Onionskin", STRING, "O")                                                   \
   X(SHORTCUT_NEW, shortcutNew, "New", STRING, "Ctrl+N")                                                                \

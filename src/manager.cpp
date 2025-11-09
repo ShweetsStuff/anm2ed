@@ -14,20 +14,9 @@ namespace anm2ed
 {
   constexpr std::size_t RECENT_LIMIT = 10;
 
-  std::filesystem::path Manager::recent_files_path_get()
-  {
-    return filesystem::path_preferences_get() + "recent.txt";
-  }
-
-  std::filesystem::path Manager::autosave_path_get()
-  {
-    return filesystem::path_preferences_get() + "autosave.txt";
-  }
-
-  std::filesystem::path Manager::autosave_directory_get()
-  {
-    return filesystem::path_preferences_get() + "autosave";
-  }
+  std::filesystem::path Manager::recent_files_path_get() { return filesystem::path_preferences_get() + "recent.txt"; }
+  std::filesystem::path Manager::autosave_path_get() { return filesystem::path_preferences_get() + "autosave.txt"; }
+  std::filesystem::path Manager::autosave_directory_get() { return filesystem::path_preferences_get() + "autosave"; }
 
   Manager::Manager()
   {
@@ -35,10 +24,7 @@ namespace anm2ed
     autosave_files_load();
   }
 
-  Document* Manager::get(int index)
-  {
-    return vector::find(documents, index > -1 ? index : selected);
-  }
+  Document* Manager::get(int index) { return vector::find(documents, index > -1 ? index : selected); }
 
   void Manager::open(const std::string& path, bool isNew, bool isRecent)
   {
@@ -68,10 +54,7 @@ namespace anm2ed
     toasts.info(std::format("Opened document: {}", path));
   }
 
-  void Manager::new_(const std::string& path)
-  {
-    open(path, true);
-  }
+  void Manager::new_(const std::string& path) { open(path, true); }
 
   void Manager::save(int index, const std::string& path)
   {
@@ -83,10 +66,7 @@ namespace anm2ed
     }
   }
 
-  void Manager::save(const std::string& path)
-  {
-    save(selected, path);
-  }
+  void Manager::save(const std::string& path) { save(selected, path); }
 
   void Manager::autosave(Document& document)
   {
@@ -155,15 +135,9 @@ namespace anm2ed
     }
   }
 
-  void Manager::layer_properties_trigger()
-  {
-    layerPropertiesPopup.trigger();
-  }
+  void Manager::layer_properties_trigger() { layerPropertiesPopup.trigger(); }
 
-  void Manager::layer_properties_end()
-  {
-    layerPropertiesPopup.end();
-  }
+  void Manager::layer_properties_end() { layerPropertiesPopup.end(); }
 
   void Manager::layer_properties_close()
   {
@@ -186,15 +160,9 @@ namespace anm2ed
     }
   }
 
-  void Manager::null_properties_trigger()
-  {
-    nullPropertiesPopup.trigger();
-  }
+  void Manager::null_properties_trigger() { nullPropertiesPopup.trigger(); }
 
-  void Manager::null_properties_end()
-  {
-    nullPropertiesPopup.end();
-  }
+  void Manager::null_properties_end() { nullPropertiesPopup.end(); }
 
   void Manager::null_properties_close()
   {
@@ -313,8 +281,5 @@ namespace anm2ed
     autosave_files_write();
   }
 
-  Manager::~Manager()
-  {
-    autosave_files_clear();
-  }
+  Manager::~Manager() { autosave_files_clear(); }
 }

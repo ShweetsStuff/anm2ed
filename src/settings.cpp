@@ -10,97 +10,97 @@ namespace anm2ed
 {
   constexpr auto IMGUI_DEFAULT = R"(
 # Dear ImGui
-[Window][## Window]
-Pos=0,32
-Size=1600,868
+[Window][##DockSpace]
+Pos=0,54
+Size=1918,1010
 Collapsed=0
-
-[Window][Debug##Default]
-Pos=60,60
-Size=400,400
-Collapsed=0
-
-[Window][Tools]
-Pos=8,40
-Size=38,516
-Collapsed=0
-DockId=0x0000000B,0
-
-[Window][Animations]
-Pos=1289,307
-Size=303,249
-Collapsed=0
-DockId=0x0000000A,0
-
-[Window][Events]
-Pos=957,264
-Size=330,292
-Collapsed=0
-DockId=0x00000008,2
-
-[Window][Spritesheets]
-Pos=1289,40
-Size=303,265
-Collapsed=0
-DockId=0x00000009,0
 
 [Window][Animation Preview]
-Pos=48,40
-Size=907,516
+Pos=60,62
+Size=983,691
+Collapsed=0
+DockId=0x00000003,1
+
+[Window][Animations]
+Pos=1451,494
+Size=459,259
 Collapsed=0
 DockId=0x0000000C,0
 
-[Window][Spritesheet Editor]
-Pos=48,40
-Size=907,516
-Collapsed=0
-DockId=0x0000000C,1
-
-[Window][Timeline]
-Pos=8,558
-Size=1584,334
-Collapsed=0
-DockId=0x00000004,0
-
-[Window][Frame Properties]
-Pos=957,40
-Size=330,222
-Collapsed=0
-DockId=0x00000007,0
-
-[Window][Onionskin]
-Pos=957,264
-Size=330,292
-Collapsed=0
-DockId=0x00000008,3
-
-[Window][Layers]
-Pos=957,264
-Size=330,292
+[Window][Events]
+Pos=1045,463
+Size=404,290
 Collapsed=0
 DockId=0x00000008,0
 
-[Window][Nulls]
-Pos=957,264
-Size=330,292
+[Window][Frame Properties]
+Pos=1045,62
+Size=404,399
+Collapsed=0
+DockId=0x00000007,0
+
+[Window][Layers]
+Pos=1045,463
+Size=404,290
 Collapsed=0
 DockId=0x00000008,1
 
+[Window][Nulls]
+Pos=1045,463
+Size=404,290
+Collapsed=0
+DockId=0x00000008,2
+
+[Window][Onionskin]
+Pos=8,755
+Size=1902,301
+Collapsed=0
+DockId=0x00000006,1
+
+[Window][Spritesheet Editor]
+Pos=60,62
+Size=983,691
+Collapsed=0
+DockId=0x00000003,0
+
+[Window][Spritesheets]
+Pos=1451,62
+Size=459,430
+Collapsed=0
+DockId=0x0000000B,0
+
+[Window][Tools]
+Pos=8,62
+Size=50,691
+Collapsed=0
+DockId=0x00000001,0
+
+[Window][Timeline]
+Pos=8,755
+Size=1902,301
+Collapsed=0
+DockId=0x00000006,0
+
+[Window][Sounds]
+Pos=1045,463
+Size=404,290
+Collapsed=0
+DockId=0x00000008,3
 
 [Docking][Data]
-DockSpace         ID=0xFC02A410 Window=0x0E46F4F7 Pos=8,40 Size=1584,852 Split=Y
-  DockNode        ID=0x00000003 Parent=0xFC02A410 SizeRef=1902,680 Split=X
-    DockNode      ID=0x00000001 Parent=0x00000003 SizeRef=1017,1016 Split=X Selected=0x024430EF
-      DockNode    ID=0x00000005 Parent=0x00000001 SizeRef=1264,654 Split=X Selected=0x024430EF
-        DockNode  ID=0x0000000B Parent=0x00000005 SizeRef=38,654 Selected=0x18A5FDB9
-        DockNode  ID=0x0000000C Parent=0x00000005 SizeRef=1224,654 CentralNode=1 Selected=0x024430EF
-      DockNode    ID=0x00000006 Parent=0x00000001 SizeRef=330,654 Split=Y Selected=0x754E368F
-        DockNode  ID=0x00000007 Parent=0x00000006 SizeRef=631,293 Selected=0x754E368F
-        DockNode  ID=0x00000008 Parent=0x00000006 SizeRef=631,385 Selected=0xCD8384B1
-    DockNode      ID=0x00000002 Parent=0x00000003 SizeRef=303,1016 Split=Y Selected=0x4EFD0020
-      DockNode    ID=0x00000009 Parent=0x00000002 SizeRef=634,349 Selected=0x4EFD0020
-      DockNode    ID=0x0000000A Parent=0x00000002 SizeRef=634,329 Selected=0xC1986EE2
-  DockNode        ID=0x00000004 Parent=0xFC02A410 SizeRef=1902,334 Selected=0x4F89F0DC
+DockSpace           ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,994 Split=Y Selected=0x4EFD0020
+  DockNode          ID=0x00000005 Parent=0x123F8F08 SizeRef=1910,691 Split=X
+    DockNode        ID=0x00000001 Parent=0x00000005 SizeRef=50,994 Selected=0x18A5FDB9
+    DockNode        ID=0x00000002 Parent=0x00000005 SizeRef=1850,994 Split=X Selected=0x4EFD0020
+      DockNode      ID=0x00000003 Parent=0x00000002 SizeRef=983,994 Selected=0x024430EF
+      DockNode      ID=0x00000004 Parent=0x00000002 SizeRef=865,994 Split=X Selected=0x4EFD0020
+        DockNode    ID=0x00000009 Parent=0x00000004 SizeRef=404,497 Split=Y Selected=0xCD8384B1
+          DockNode  ID=0x00000007 Parent=0x00000009 SizeRef=181,399 Selected=0x754E368F
+          DockNode  ID=0x00000008 Parent=0x00000009 SizeRef=181,290 Selected=0x8A65D963
+        DockNode    ID=0x0000000A Parent=0x00000004 SizeRef=459,497 Split=Y Selected=0x4EFD0020
+          DockNode  ID=0x0000000B Parent=0x0000000A SizeRef=710,430 CentralNode=1 Selected=0x4EFD0020
+          DockNode  ID=0x0000000C Parent=0x0000000A SizeRef=710,259 Selected=0xC1986EE2
+  DockNode          ID=0x00000006 Parent=0x123F8F08 SizeRef=1910,301 Selected=0x4F89F0DC
 )";
 
   Settings::Settings(const std::string& path)

@@ -85,7 +85,7 @@ namespace anm2ed::imgui
 
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2());
 
-        selection.start(anm2.content.spritesheets.size());
+        selection.start(anm2.content.spritesheets.size(), ImGuiMultiSelectFlags_ClearOnEscape);
 
         for (auto& [id, spritesheet] : anm2.content.spritesheets)
         {
@@ -168,16 +168,16 @@ namespace anm2ed::imgui
 
             context_menu();
           }
+
           ImGui::EndChild();
 
           ImGui::PopID();
         }
 
-        selection.finish();
-
         ImGui::PopStyleVar(2);
 
         context_menu();
+        selection.finish();
       }
       ImGui::EndChild();
 

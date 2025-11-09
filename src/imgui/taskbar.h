@@ -2,6 +2,7 @@
 
 #include "canvas.h"
 #include "dialog.h"
+#include "filesystem_.h"
 #include "imgui_.h"
 #include "manager.h"
 #include "resources.h"
@@ -20,6 +21,15 @@ namespace anm2ed::imgui
     PopupHelper aboutPopup{PopupHelper("About")};
     Settings editSettings{};
     int selectedShortcut{-1};
+
+#if defined(_WIN32) || defined(__unix__)
+    bool isAbleToAssociateAnm2 = true;
+#else
+    bool isAbleToAssociateAnm2 = false;
+#endif
+
+    bool isAnm2Association = std::filesystem::exists(util::filesystem::path_application_get());
+
     bool isQuittingMode{};
 
   public:

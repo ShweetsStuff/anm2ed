@@ -1,12 +1,22 @@
 #include "taskbar.h"
 
-#include <imgui/imgui.h>
+#include <array>
+#include <cstdint>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <ranges>
+
+#include <imgui/imgui.h>
 
 #include "math_.h"
 #include "render.h"
 #include "shader.h"
+#include "toast.h"
 #include "types.h"
+
+#include "icon.h"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::types;
@@ -16,9 +26,110 @@ using namespace glm;
 
 namespace anm2ed::imgui
 {
-  Taskbar::Taskbar() : generate(vec2())
+#ifdef __unix__
+
+  namespace
   {
+    constexpr std::array<int, 7> ICON_SIZES{16, 24, 32, 48, 64, 128, 256};
+
+    bool ensure_parent_directory_exists(const std::filesystem::path& path)
+    {
+      std::error_code ec;
+      std::filesystem::create_directories(path.parent_path(), ec);
+      if (ec)
+      {
+        toasts.warning(std::format("Could not create directory for {} ({})", path.string(), ec.message()));
+        return false;
+      }
+      return true;
+    }
+
+    bool write_binary_blob(const std::filesystem::path& path, const std::uint8_t* data, size_t size)
+    {
+      if (!ensure_parent_directory_exists(path)) return false;
+
+      std::ofstream file(path, std::ios::binary | std::ios::trunc);
+      if (!file.is_open())
+      {
+        toasts.warning(std::format("Could not open {} for writing", path.string()));
+        return false;
+      }
+
+      file.write(reinterpret_cast<const char*>(data), static_cast<std::streamsize>(size));
+      return true;
+    }
+
+    bool run_command_checked(const std::string& command, const std::string& description)
+    {
+      auto result = std::system(command.c_str());
+      if (result != 0)
+      {
+        toasts.warning(std::format("{} failed (exit code {})", description, result));
+        return false;
+      }
+      return true;
+    }
+
+    bool install_icon_set(const std::string& context, const std::string& iconName, const std::filesystem::path& path)
+    {
+      bool success = true;
+      for (auto size : ICON_SIZES)
+      {
+        auto command = std::format("xdg-icon-resource install --noupdate --novendor --context {} --size {} \"{}\" {}",
+                                   context, size, path.string(), iconName);
+        success &= run_command_checked(command, std::format("Install {} icon ({}px)", iconName, size));
+      }
+      return success;
+    }
+
+    bool uninstall_icon_set(const std::string& context, const std::string& iconName)
+    {
+      bool success = true;
+      for (auto size : ICON_SIZES)
+      {
+        auto command =
+            std::format("xdg-icon-resource uninstall --noupdate --context {} --size {} {}", context, size, iconName);
+        success &= run_command_checked(command, std::format("Remove {} icon ({}px)", iconName, size));
+      }
+      return success;
+    }
+
+    bool remove_file_if_exists(const std::filesystem::path& path)
+    {
+      std::error_code ec;
+      if (!std::filesystem::exists(path, ec)) return true;
+      std::filesystem::remove(path, ec);
+      if (ec)
+      {
+        toasts.warning(std::format("Could not remove {} ({})", path.string(), ec.message()));
+        return false;
+      }
+      return true;
+    }
   }
+
+  constexpr auto MIME_TYPE = R"(<?xml version="1.0" encoding="utf-8"?>
+<mime-type xmlns="http://www.freedesktop.org/standards/shared-mime-info" type="application/x-anm2+xml">
+  <!--Created automatically by update-mime-database. DO NOT EDIT!-->
+  <comment>Anm2 Animation</comment>
+  <glob pattern="*.anm2"/>
+</mime-type>
+)";
+
+  constexpr auto DESKTOP_ENTRY_FORMAT = R"([Desktop Entry]
+Type=Application
+Name=Anm2Ed
+Icon=anm2ed
+Comment=Animation editor for .anm2 files
+Exec={}
+Terminal=false
+Categories=Graphics;Development;
+MimeType=application/x-anm2+xml;
+)";
+
+#endif
+
+  Taskbar::Taskbar() : generate(vec2()) {}
 
   void Taskbar::update(Manager& manager, Settings& settings, Resources& resources, Dialog& dialog, bool& isQuitting)
   {
@@ -118,6 +229,141 @@ namespace anm2ed::imgui
           editSettings = settings;
           configurePopup.open();
         }
+
+        ImGui::Separator();
+
+        if (ImGui::MenuItem("Associate .anm2 Files with Editor", nullptr, false,
+                            !isAnm2Association || !isAbleToAssociateAnm2))
+        {
+#ifdef _WIN32
+
+#elif __unix__
+          auto cache_icons = []()
+          {
+            auto programIconPath = std::filesystem::path(filesystem::path_icon_get());
+            auto fileIconPath = std::filesystem::path(filesystem::path_icon_file_get());
+            auto iconBytes = std::size(resource::icon::PROGRAM);
+
+            bool isSuccess = write_binary_blob(programIconPath, resource::icon::PROGRAM, iconBytes) &&
+                             write_binary_blob(fileIconPath, resource::icon::PROGRAM, iconBytes);
+
+            if (isSuccess)
+            {
+              isSuccess = install_icon_set("apps", "anm2ed", programIconPath) &&
+                          install_icon_set("mimetypes", "application-x-anm2+xml", fileIconPath) &&
+                          run_command_checked("xdg-icon-resource forceupdate --theme hicolor", "Refresh icon cache");
+            }
+
+            remove_file_if_exists(programIconPath);
+            remove_file_if_exists(fileIconPath);
+
+            if (isSuccess) toasts.info("Cached program and file icons.");
+            return isSuccess;
+          };
+
+          auto register_mime = []()
+          {
+            auto path = std::filesystem::path(filesystem::path_mime_get());
+            if (!ensure_parent_directory_exists(path)) return false;
+
+            std::ofstream file(path, std::ofstream::out | std::ofstream::trunc);
+            if (!file.is_open())
+            {
+              toasts.warning(std::format("Could not write .anm2 MIME type: {}", path.string()));
+              return false;
+            }
+
+            file << MIME_TYPE;
+            file.close();
+            toasts.info(std::format("Wrote .anm2 MIME type to: {}", path.string()));
+
+            auto mimeRoot = path.parent_path().parent_path();
+            auto command = std::format("update-mime-database \"{}\"", mimeRoot.string());
+            return run_command_checked(command, "Update MIME database");
+          };
+
+          auto register_desktop_entry = []()
+          {
+            auto path = std::filesystem::path(filesystem::path_application_get());
+            if (!ensure_parent_directory_exists(path)) return false;
+
+            std::ofstream file(path, std::ofstream::out | std::ofstream::trunc);
+            if (!file.is_open())
+            {
+              toasts.warning(std::format("Could not write desktop entry: {}", path.string()));
+              return false;
+            }
+
+            auto desktopEntry = std::format(DESKTOP_ENTRY_FORMAT, filesystem::path_executable_get());
+            file << desktopEntry;
+            file.close();
+            toasts.info(std::format("Wrote desktop entry to: {}", path.string()));
+
+            auto desktopDir = path.parent_path();
+            auto desktopUpdate =
+                std::format("update-desktop-database \"{}\"", desktopDir.empty() ? "." : desktopDir.string());
+            auto desktopFileName = path.filename().string();
+            auto setDefault = std::format("xdg-mime default {} application/x-anm2+xml",
+                                          desktopFileName.empty() ? path.string() : desktopFileName);
+
+            auto databaseUpdated = run_command_checked(desktopUpdate, "Update desktop database");
+            auto defaultRegistered = run_command_checked(setDefault, "Set default handler for .anm2");
+            return databaseUpdated && defaultRegistered;
+          };
+
+          auto iconsCached = cache_icons();
+          auto mimeRegistered = register_mime();
+          auto desktopRegistered = register_desktop_entry();
+
+          isAnm2Association = iconsCached && mimeRegistered && desktopRegistered;
+          if (isAnm2Association)
+            toasts.info("Associated .anm2 files with the editor.");
+          else
+            toasts.warning("Association incomplete. Please review the warnings above.");
+#endif
+        }
+        ImGui::SetItemTooltip(
+            "Associate .anm2 files with the application (i.e., clicking on them in a file explorer will "
+            "open the application).");
+
+        if (ImGui::MenuItem("Remove .anm2 File Association", nullptr, false,
+                            isAnm2Association || !isAbleToAssociateAnm2))
+        {
+#ifdef _WIN32
+
+#elif __unix__
+          {
+            auto iconsRemoved =
+                uninstall_icon_set("apps", "anm2ed") && uninstall_icon_set("mimetypes", "application-x-anm2+xml") &&
+                run_command_checked("xdg-icon-resource forceupdate --theme hicolor", "Refresh icon cache");
+            if (iconsRemoved)
+              toasts.info("Removed cached icons.");
+            else
+              toasts.warning("Could not remove all cached icons.");
+          }
+
+          {
+            auto path = std::filesystem::path(filesystem::path_mime_get());
+            auto removed = remove_file_if_exists(path);
+            if (removed) toasts.info(std::format("Removed .anm2 MIME type: {}", path.string()));
+
+            auto mimeRoot = path.parent_path().parent_path();
+            run_command_checked(std::format("update-mime-database \"{}\"", mimeRoot.string()), "Update MIME database");
+          }
+
+          {
+            auto path = std::filesystem::path(filesystem::path_application_get());
+            if (remove_file_if_exists(path)) toasts.info(std::format("Removed desktop entry: {}", path.string()));
+
+            auto desktopDir = path.parent_path();
+            run_command_checked(
+                std::format("update-desktop-database \"{}\"", desktopDir.empty() ? "." : desktopDir.string()),
+                "Update desktop database");
+          }
+#endif
+          isAnm2Association = false;
+        }
+        ImGui::SetItemTooltip("Unassociate .anm2 files with the application.");
 
         ImGui::EndMenu();
       }
@@ -546,7 +792,7 @@ namespace anm2ed::imgui
         if (dialogType == dialog::PNG_DIRECTORY_SET)
           dialog.folder_open(dialogType);
         else
-          dialog.file_open(dialogType);
+          dialog.file_save(dialogType);
       }
       ImGui::SameLine();
       input_text_string(type == render::PNGS ? "Directory" : "Path", &path);
@@ -581,11 +827,16 @@ namespace anm2ed::imgui
       ImGui::SameLine();
 
       ImGui::Checkbox("Raw", &isRaw);
-      ImGui::SetItemTooltip("Record only the layers of the animation.");
+      ImGui::SetItemTooltip("Record only the raw animation; i.e., only its layers, to its bounds.");
+
+      ImGui::SameLine();
+
+      ImGui::Checkbox("Sound", &settings.timelineIsSound);
+      ImGui::SetItemTooltip("Toggle sounds playing with triggers.\nBind sounds to events in the Events window.\nThe "
+                            "output animation will use the played sounds.");
 
       if (ImGui::Button("Render", widgetSize))
       {
-        manager.isRecording = true;
         manager.isRecordingStart = true;
         playback.time = start;
         playback.isPlaying = true;

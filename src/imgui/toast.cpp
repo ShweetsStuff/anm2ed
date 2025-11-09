@@ -9,7 +9,8 @@ using namespace anm2ed::types;
 
 namespace anm2ed::imgui
 {
-  constexpr auto LIFETIME = 3.0f;
+  constexpr auto LIFETIME = 4.0f;
+  constexpr auto FADE_THRESHOLD = 1.0f;
 
   Toast::Toast(const std::string& message)
   {
@@ -30,8 +31,6 @@ namespace anm2ed::imgui
     {
       Toast& toast = toasts[i];
 
-      toast.lifetime -= ImGui::GetIO().DeltaTime;
-
       if (toast.lifetime <= 0.0f)
       {
         toasts.erase(toasts.begin() + i);
@@ -39,7 +38,9 @@ namespace anm2ed::imgui
         continue;
       }
 
-      auto alpha = toast.lifetime / LIFETIME;
+      toast.lifetime -= ImGui::GetIO().DeltaTime;
+
+      auto alpha = toast.lifetime <= FADE_THRESHOLD ? toast.lifetime / FADE_THRESHOLD : 1.0f;
       borderColor.w = alpha;
       textColor.w = alpha;
 
@@ -57,6 +58,8 @@ namespace anm2ed::imgui
       {
         ImGui::TextUnformatted(toast.message.c_str());
         position.y -= ImGui::GetWindowSize().y + ImGui::GetStyle().ItemSpacing.y;
+
+        if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) toast.lifetime = 0.0f;
       }
       ImGui::End();
       ImGui::PopStyleColor(2);

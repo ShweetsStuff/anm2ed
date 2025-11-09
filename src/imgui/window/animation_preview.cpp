@@ -42,51 +42,22 @@ namespace anm2ed::imgui
       auto& isSound = settings.timelineIsSound;
       auto& isOnlyShowLayers = settings.timelineIsOnlyShowLayers;
 
-      if (isSound && !anm2.content.sounds.empty())
-        if (auto animation = document.animation_get(); animation)
-          if (animation->triggers.isVisible && !isOnlyShowLayers)
-            if (auto trigger = animation->triggers.frame_generate(playback.time, anm2::TRIGGER);
-                trigger.is_visible(anm2::TRIGGER))
-              if (anm2.content.sounds.contains(trigger.soundID)) anm2.content.sounds[trigger.soundID].audio.play();
+      if (!anm2.content.sounds.empty() && isSound)
+      {
+        if (auto animation = document.animation_get();
+            animation && animation->triggers.isVisible && (!isOnlyShowLayers || manager.isRecording))
+        {
+          if (auto trigger = animation->triggers.frame_generate(playback.time, anm2::TRIGGER);
+              trigger.is_visible(anm2::TRIGGER))
+            if (anm2.content.sounds.contains(trigger.soundID)) anm2.content.sounds[trigger.soundID].audio.play(mixer);
+        }
+      }
 
       document.reference.frameTime = playback.time;
     }
 
     if (manager.isRecording)
     {
-      if (manager.isRecordingStart)
-      {
-        if (settings.renderIsRawAnimation)
-        {
-          savedSettings = settings;
-          settings.previewBackgroundColor = vec4();
-          settings.previewIsGrid = false;
-          settings.previewIsAxes = false;
-          settings.timelineIsOnlyShowLayers = true;
-
-          savedZoom = zoom;
-          savedPan = pan;
-
-          if (auto animation = document.animation_get())
-          {
-            auto rect = animation->rect(isRootTransform);
-            size = vec2(rect.z, rect.w) * scale;
-            set_to_rect(zoom, pan, rect);
-          }
-
-          isSizeTrySet = false;
-
-          bind();
-          viewport_set();
-          clear(settings.previewBackgroundColor);
-          unbind();
-        }
-
-        manager.isRecordingStart = false;
-
-        return; // Need to wait an additional frame. Kind of hacky, but oh well.
-      }
-
       auto pixels = pixels_get();
       renderFrames.push_back(Texture(pixels.data(), size));
 
@@ -120,7 +91,7 @@ namespace anm2ed::imgui
         }
         else
         {
-          if (animation_render(ffmpegPath, path, renderFrames, (render::Type)type, size, anm2.info.fps))
+          if (animation_render(ffmpegPath, path, renderFrames, audioStream, (render::Type)type, size, anm2.info.fps))
             toasts.info(std::format("Exported rendered animation to: {}", path));
           else
             toasts.warning(std::format("Could not output rendered animation: {}", path));
@@ -133,11 +104,48 @@ namespace anm2ed::imgui
         settings = savedSettings;
         isSizeTrySet = true;
 
+        if (settings.timelineIsSound) audioStream.capture_end(mixer);
+
         playback.isPlaying = false;
         playback.isFinished = false;
         manager.isRecording = false;
         manager.progressPopup.close();
       }
+    }
+    if (manager.isRecordingStart)
+    {
+      savedSettings = settings;
+
+      if (settings.timelineIsSound) audioStream.capture_begin(mixer);
+
+      if (settings.renderIsRawAnimation)
+      {
+        settings.previewBackgroundColor = vec4();
+        settings.previewIsGrid = false;
+        settings.previewIsAxes = false;
+        settings.timelineIsOnlyShowLayers = true;
+
+        savedZoom = zoom;
+        savedPan = pan;
+
+        if (auto animation = document.animation_get())
+        {
+          if (auto rect = animation->rect(isRootTransform); rect != vec4(-1.0f))
+          {
+            size_set(vec2(rect.w, rect.z) * scale);
+            set_to_rect(zoom, pan, rect);
+          }
+        }
+
+        isSizeTrySet = false;
+
+        bind();
+        clear(settings.previewBackgroundColor);
+        unbind();
+      }
+
+      manager.isRecordingStart = false;
+      manager.isRecording = true;
     }
   }
 
@@ -270,8 +278,8 @@ namespace anm2ed::imgui
       auto cursorScreenPos = ImGui::GetCursorScreenPos();
 
       if (isSizeTrySet) size_set(to_vec2(ImGui::GetContentRegionAvail()));
-      bind();
       viewport_set();
+      bind();
       clear(backgroundColor);
       if (isAxes) axes_render(shaderAxes, zoom, pan, axesColor);
       if (isGrid) grid_render(shaderGrid, zoom, pan, gridSize, gridOffset, gridColor);
@@ -412,7 +420,7 @@ namespace anm2ed::imgui
 
       isPreviewHovered = ImGui::IsItemHovered();
 
-      if (animation && animation->triggers.isVisible && !isOnlyShowLayers)
+      if (animation && animation->triggers.isVisible && !isOnlyShowLayers && !manager.isRecording)
       {
         if (auto trigger = animation->triggers.frame_generate(frameTime, anm2::TRIGGER);
             trigger.isVisible && trigger.eventID > -1)

@@ -166,10 +166,7 @@ namespace anm2ed::imgui
     return (width - (ImGui::GetStyle().ItemSpacing.x * (float)(count - 1))) / (float)count;
   }
 
-  ImVec2 widget_size_with_row_get(int count, float width)
-  {
-    return ImVec2(row_widget_width_get(count, width), 0);
-  }
+  ImVec2 widget_size_with_row_get(int count, float width) { return ImVec2(row_widget_width_get(count, width), 0); }
 
   float footer_height_get(int itemCount)
   {
@@ -265,17 +262,13 @@ namespace anm2ed::imgui
     return ImGui::Shortcut(string_to_chord(string), flags);
   }
 
-  MultiSelectStorage::MultiSelectStorage()
-  {
-    internal.AdapterSetItemSelected = external_storage_set;
-  }
+  MultiSelectStorage::MultiSelectStorage() { internal.AdapterSetItemSelected = external_storage_set; }
 
-  void MultiSelectStorage::start(size_t size)
+  void MultiSelectStorage::start(size_t size, ImGuiMultiSelectFlags flags)
   {
     internal.UserData = this;
 
-    auto io = ImGui::BeginMultiSelect(ImGuiMultiSelectFlags_ClearOnEscape | ImGuiMultiSelectFlags_BoxSelect2d,
-                                      this->size(), size);
+    auto io = ImGui::BeginMultiSelect(flags, this->size(), size);
     internal.ApplyRequests(io);
   }
 
@@ -299,10 +292,7 @@ namespace anm2ed::imgui
     isJustOpened = true;
   }
 
-  bool PopupHelper::is_open()
-  {
-    return isOpen;
-  }
+  bool PopupHelper::is_open() { return isOpen; }
 
   void PopupHelper::trigger()
   {
@@ -322,13 +312,7 @@ namespace anm2ed::imgui
       ImGui::SetNextWindowSize(ImVec2(viewport->Size.x * POPUP_MULTIPLIERS[type], 0));
   }
 
-  void PopupHelper::end()
-  {
-    isJustOpened = false;
-  }
+  void PopupHelper::end() { isJustOpened = false; }
 
-  void PopupHelper::close()
-  {
-    isOpen = false;
-  }
+  void PopupHelper::close() { isOpen = false; }
 }
