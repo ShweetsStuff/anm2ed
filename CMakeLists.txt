@@ -45,6 +45,9 @@ set(SDLMIXER_INSTALL OFF CACHE BOOL "" FORCE)
 add_subdirectory(external/SDL_mixer EXCLUDE_FROM_ALL)
 
 add_subdirectory(external/lunasvg)
+if (WIN32)
+    set(MATH_LIBRARY "" CACHE FILEPATH "Windows doesn't require libm for libxm" FORCE)
+endif ()
 add_subdirectory(external/libxm/src EXCLUDE_FROM_ALL)
 
 set(GLAD_SRC ${CMAKE_CURRENT_SOURCE_DIR}/include/glad/glad.cpp)
