@@ -6,7 +6,7 @@ A reimplementation of *The Binding of Isaac: Rebirth*'s proprietary animation ed
 
 ## Features
 - Extended version of the original proprietary Nicalis animation editor
-- Smooth [Dear ImGui](https://github.com/ocornut/imgui) interface; docking, dragging and dropping, etc. You might be familiar with it from You might be familiar with it from (Repentogon)
+- Smooth [Dear ImGui](https://github.com/ocornut/imgui) interface; docking, dragging and dropping, etc. You might be familiar with it from (Repentogon).
 - New features
     - Can output .webm, .mp4 or *.png sequence (wih FFmpeg)
     - Cutting, copying and pasting
@@ -15,9 +15,7 @@ A reimplementation of *The Binding of Isaac: Rebirth*'s proprietary animation ed
     - Additional hotkeys/shortcuts (rebindable!)
     - Onionskinning
     - Settings that will preserve on exit (stored in %APPDATA% on Windows or ~/.local/share on Linux)
-
-### Note: Difference from Nicalis editor
-Layers/nulls are handled differently (in their own window) and are not on the timeline! Add a layer/null in the Layers/Nulls window, and then add a LayerAnimation/NullAnimation in the timeline!
+    - Broadened sound support
 
 ### Note: Rendering Animations
 You will need FFmpeg installed! Get it from [here](https://ffmpeg.org/download.html), and point to the downloaded ffmpeg executable within the program!
@@ -40,7 +38,7 @@ Build should be straightforward from there.
 
 After cloning and enter the repository's directory, make sure to initialize the submodules:
 
-```git submodule update --init```
+```git submodule update --init --recursive```
 
 Then:
 
