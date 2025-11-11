@@ -4,7 +4,6 @@ release/
 packed/
 vcpkg_installed/
 out/
-external/
 workshop/resources
 cmake-build-debug/
 .vs/
