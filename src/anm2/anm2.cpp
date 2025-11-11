@@ -12,7 +12,7 @@ using namespace glm;
 
 namespace anm2ed::anm2
 {
-  Anm2::Anm2() { info.createdOn = time::get("%d-%B-%Y %I:%M:%S"); }
+  Anm2::Anm2() { info.createdOn = time::get("%m/%d/%Y %I:%M:%S %p"); }
 
   Anm2::Anm2(const std::string& path, std::string* errorString)
   {

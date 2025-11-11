@@ -47,6 +47,7 @@ namespace anm2ed
                                                                                                                        \
   X(FILE_IS_AUTOSAVE, fileIsAutosave, "Autosave", BOOL, true)                                                          \
   X(FILE_AUTOSAVE_TIME, fileAutosaveTime, "Autosave Time", INT, 1)                                                     \
+  X(FILE_IS_WARN_OVERWRITE, fileIsWarnOverwrite, "Warn on Overwrite", BOOL, true)                                      \
                                                                                                                        \
   X(KEYBOARD_REPEAT_DELAY, keyboardRepeatDelay, "Repeat Delay", FLOAT, 0.300f)                                         \
   X(KEYBOARD_REPEAT_RATE, keyboardRepeatRate, "Repeat Rate", FLOAT, 0.050f)                                            \

@@ -2,14 +2,12 @@
 
 #include <utility>
 
-#include "filesystem_.h"
 #include "log.h"
 #include "toast.h"
 
 using namespace anm2ed::anm2;
 using namespace anm2ed::imgui;
 using namespace anm2ed::types;
-using namespace anm2ed::util;
 
 using namespace glm;
 
@@ -17,10 +15,11 @@ namespace anm2ed
 {
   Document::Document(const std::string& path, bool isNew, std::string* errorString)
   {
-    if (!filesystem::path_is_exist(path)) return;
-
     if (isNew)
+    {
       anm2 = anm2::Anm2();
+      if (!save(path)) return;
+    }
     else
     {
       anm2 = Anm2(path, errorString);
@@ -38,7 +37,7 @@ namespace anm2ed
         merge(current.merge), event(current.event), layer(current.layer), null(current.null), sound(current.sound),
         spritesheet(current.spritesheet), frames(current.frames), message(current.message),
         previewZoom(other.previewZoom), previewPan(other.previewPan), editorPan(other.editorPan),
-        editorZoom(other.editorZoom), overlayIndex(other.overlayIndex), saveHash(other.saveHash),
+        editorZoom(other.editorZoom), overlayIndex(other.overlayIndex), hash(other.hash), saveHash(other.saveHash),
         autosaveHash(other.autosaveHash), lastAutosaveTime(other.lastAutosaveTime), isOpen(other.isOpen),
         isForceDirty(other.isForceDirty), isAnimationPreviewSet(other.isAnimationPreviewSet),
         isSpritesheetEditorSet(other.isSpritesheetEditorSet)

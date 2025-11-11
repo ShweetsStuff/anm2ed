@@ -54,10 +54,13 @@ namespace anm2ed::anm2
       event.serialize(document, eventsElement, id);
     element->InsertEndChild(eventsElement);
 
-    auto soundsElement = document.NewElement("Sounds");
-    for (auto& [id, sound] : sounds)
-      sound.serialize(document, soundsElement, id);
-    element->InsertEndChild(soundsElement);
+    if (!sounds.empty())
+    {
+      auto soundsElement = document.NewElement("Sounds");
+      for (auto& [id, sound] : sounds)
+        sound.serialize(document, soundsElement, id);
+      element->InsertEndChild(soundsElement);
+    }
 
     parent->InsertEndChild(element);
   }

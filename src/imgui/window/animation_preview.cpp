@@ -48,7 +48,8 @@ namespace anm2ed::imgui
         {
           if (auto trigger = animation->triggers.frame_generate(playback.time, anm2::TRIGGER);
               trigger.is_visible(anm2::TRIGGER))
-            if (anm2.content.sounds.contains(trigger.soundID)) anm2.content.sounds[trigger.soundID].audio.play(mixer);
+            if (anm2.content.sounds.contains(trigger.soundID))
+              anm2.content.sounds[trigger.soundID].audio.play(false, mixer);
         }
       }
 
@@ -132,7 +133,7 @@ namespace anm2ed::imgui
         {
           if (auto rect = animation->rect(isRootTransform); rect != vec4(-1.0f))
           {
-            size_set(vec2(rect.w, rect.z) * scale);
+            size_set(vec2(rect.z, rect.w) * scale);
             set_to_rect(zoom, pan, rect);
           }
         }
@@ -582,6 +583,8 @@ namespace anm2ed::imgui
       auto progress = (playback.time - start) / (end - start);
 
       ImGui::ProgressBar(progress);
+
+      ImGui::Text("Once recording is complete, rendering may take some time.\nPlease be patient...");
 
       if (ImGui::Button("Cancel", ImVec2(ImGui::GetContentRegionAvail().x, 0)))
       {

@@ -176,7 +176,17 @@ namespace anm2ed::imgui
           ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4());
           ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4());
           if (ImGui::Selectable("##Item Button", false, ImGuiSelectableFlags_None, itemSize))
+          {
+            if (type == anm2::LAYER)
+            {
+              document.spritesheet.reference = anm2.content.layers[id].spritesheetID;
+              document.layer.selection = {id};
+            }
+            else if (type == anm2::NULL_)
+              document.null.selection = {id};
+
             reference = {reference.animationIndex, type, id};
+          }
           ImGui::PopStyleColor(3);
           if (ImGui::IsItemHovered())
           {
@@ -993,10 +1003,11 @@ namespace anm2ed::imgui
 
           ImGui::SameLine();
 
+          ImGui::BeginDisabled(!animation || animation->frameNum == animation->length());
           if (ImGui::Button("Fit Animation Length", widgetSize))
-            DOCUMENT_EDIT(document, "Fit Animation Length", Document::ANIMATIONS,
-                          animation->frameNum = animation->length());
+            DOCUMENT_EDIT(document, "Fit Animation Length", Document::ANIMATIONS, animation->fit_length());
           ImGui::SetItemTooltip("The animation length will be set to the effective length of the animation.");
+          ImGui::EndDisabled();
 
           ImGui::SameLine();
 
@@ -1030,7 +1041,7 @@ namespace anm2ed::imgui
         auto createdBy = anm2.info.createdBy;
         ImGui::SetNextItemWidth(widgetSize.x);
         if (input_text_string("Author", &createdBy))
-          DOCUMENT_EDIT(document, "FPS", Document::ANIMATIONS, anm2.info.createdBy = createdBy);
+          DOCUMENT_EDIT(document, "Author", Document::ANIMATIONS, anm2.info.createdBy = createdBy);
         ImGui::SetItemTooltip("Set the author of the document.");
 
         ImGui::SameLine();
@@ -1239,9 +1250,10 @@ namespace anm2ed::imgui
 
       if (ImGui::Button("Bake", widgetSize))
       {
-        if (auto itemPtr = document.item_get())
-          DOCUMENT_EDIT(document, "Bake Frames", Document::FRAMES,
-                        itemPtr->frames_bake(reference.frameIndex, interval, isRoundScale, isRoundRotation));
+        if (auto item = document.item_get())
+          for (auto i : frames.selection | std::views::reverse)
+            DOCUMENT_EDIT(document, "Bake Frames", Document::FRAMES,
+                          item->frames_bake(i, interval, isRoundScale, isRoundRotation));
         bakePopup.close();
       }
       ImGui::SetItemTooltip("Bake the selected frame(s) with the options selected.");

@@ -66,12 +66,12 @@ namespace anm2ed::resource::icon
 )";
 
   constexpr auto SHOW_RECT_DATA = R"(
-  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"> <rect x="4" y="4" width="16" height="16" rx="0.5" stroke="#FFF" stroke-width="2" stroke-linejoin="round"/> <path d="M12 9.5v5M9.5 12h5" stroke="#FFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/> </svg>
-  )";
+<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"> <rect x="4" y="4" width="16" height="16" rx="0.5" stroke="#FFF" stroke-width="2" stroke-linejoin="round"/> <circle cx="12" cy="12" r="1" fill="#FFF" stroke="none"/> </svg>
+)";
 
   constexpr auto HIDE_RECT_DATA = R"(
-  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"> <rect x="4" y="4" width="16" height="16" rx="0.5" stroke="#FFF" stroke-width="2" stroke-linejoin="round"/> <path d="M12 9.5v5M9.5 12h5" stroke="#FFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/> <path d="M2 2L22 22" stroke="#FFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/> </svg>
-  )";
+<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"> <rect x="4" y="4" width="16" height="16" rx="0.5" stroke="#FFF" stroke-width="2" stroke-linejoin="round"/> <circle cx="12" cy="12" r="1" fill="#FFF" stroke="none"/> <path d="M2 2L22 22" stroke="#FFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/> </svg>
+)";
 
   constexpr auto ANIMATION_DATA = R"(
   <svg viewBox="0 0 24 24" fill="#FFF" xmlns="http://www.w3.org/2000/svg"><path d="M5.99807 7L8.30747 3H11.9981L9.68867 7H5.99807ZM11.9981 7L14.3075 3H17.9981L15.6887 7H11.9981ZM17.9981 7L20.3075 3H21.0082C21.556 3 22 3.44495 22 3.9934V20.0066C22 20.5552 21.5447 21 21.0082 21H2.9918C2.44405 21 2 20.5551 2 20.0066V3.9934C2 3.44476 2.45531 3 2.9918 3H5.99807L4 6.46076V19H20V7H17.9981Z"/></svg>

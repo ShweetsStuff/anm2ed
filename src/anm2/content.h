@@ -2,7 +2,6 @@
 
 #include <map>
 
-#include "anm2_type.h"
 #include "event.h"
 #include "layer.h"
 #include "null.h"

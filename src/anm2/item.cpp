@@ -240,25 +240,25 @@ namespace anm2ed::anm2
   {
     if (!vector::in_bounds(frames, index)) return;
 
-    Frame& frame = frames[index];
-    if (frame.duration == FRAME_DURATION_MIN) return;
+    auto original = frames[index];
+    if (original.duration == FRAME_DURATION_MIN) return;
 
-    Frame frameNext = vector::in_bounds(frames, index + 1) ? frames[index + 1] : frame;
+    auto nextFrame = vector::in_bounds(frames, index + 1) ? frames[index + 1] : original;
 
     int duration{};
     int i = index;
 
-    while (duration < frame.duration)
+    while (duration < original.duration)
     {
-      Frame baked = frame;
-      float interpolation = (float)duration / frame.duration;
-      baked.duration = std::min(interval, frame.duration - duration);
-      baked.isInterpolated = (i == index) ? frame.isInterpolated : false;
-      baked.rotation = glm::mix(frame.rotation, frameNext.rotation, interpolation);
-      baked.position = glm::mix(frame.position, frameNext.position, interpolation);
-      baked.scale = glm::mix(frame.scale, frameNext.scale, interpolation);
-      baked.colorOffset = glm::mix(frame.colorOffset, frameNext.colorOffset, interpolation);
-      baked.tint = glm::mix(frame.tint, frameNext.tint, interpolation);
+      Frame baked = original;
+      float interpolation = (float)duration / original.duration;
+      baked.duration = std::min(interval, original.duration - duration);
+      baked.isInterpolated = (i == index) ? original.isInterpolated : false;
+      baked.rotation = glm::mix(original.rotation, nextFrame.rotation, interpolation);
+      baked.position = glm::mix(original.position, nextFrame.position, interpolation);
+      baked.scale = glm::mix(original.scale, nextFrame.scale, interpolation);
+      baked.colorOffset = glm::mix(original.colorOffset, nextFrame.colorOffset, interpolation);
+      baked.tint = glm::mix(original.tint, nextFrame.tint, interpolation);
       if (isRoundScale) baked.scale = vec2(ivec2(baked.scale));
       if (isRoundRotation) baked.rotation = (int)baked.rotation;
 

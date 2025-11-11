@@ -17,6 +17,7 @@
 #include "types.h"
 
 #include "icon.h"
+#include "toast.h"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::types;
@@ -60,7 +61,12 @@ namespace anm2ed::imgui
           ImGui::EndMenu();
         }
 
-        if (ImGui::MenuItem("Save", settings.shortcutSave.c_str(), false, document)) manager.save();
+        if (ImGui::MenuItem("Save", settings.shortcutSave.c_str(), false, document))
+        {
+          if (settings.fileIsWarnOverwrite) overwritePopup.open();
+          manager.save();
+        }
+
         if (ImGui::MenuItem("Save As", settings.shortcutSaveAs.c_str(), false, document))
           dialog.file_save(dialog::ANM2_SAVE);
         if (ImGui::MenuItem("Explore XML Location", nullptr, false, document))
@@ -275,6 +281,11 @@ namespace anm2ed::imgui
             input_int_range("Time (minutes)", editSettings.fileAutosaveTime, 0, 10);
             ImGui::SetItemTooltip("If changed, will autosave documents using this interval.");
             ImGui::EndDisabled();
+
+            ImGui::SeparatorText("Options");
+
+            ImGui::Checkbox("Overwrite Warning", &editSettings.fileIsWarnOverwrite);
+            ImGui::SetItemTooltip("A warning will be shown when saving a file.");
           }
           ImGui::EndChild();
 
@@ -297,7 +308,7 @@ namespace anm2ed::imgui
 
             ImGui::SeparatorText("Zoom");
 
-            input_float_range("Step", editSettings.viewZoomStep, 10.0f, 250.0f, 10.0f, 10.0f, "%.0f");
+            input_float_range("Step", editSettings.viewZoomStep, 10.0f, 250.0f, 10.0f, 10.0f, "%.0f%%");
             ImGui::SetItemTooltip("When zooming in/out with mouse or shortcut, this value will be used.");
           }
           ImGui::EndChild();
@@ -494,11 +505,77 @@ namespace anm2ed::imgui
 
       if (ImGui::Button("Render", widgetSize))
       {
-        manager.isRecordingStart = true;
-        playback.time = start;
-        playback.isPlaying = true;
-        renderPopup.close();
-        manager.progressPopup.open();
+        bool canStart = true;
+        auto warn_and_close = [&](const std::string& message)
+        {
+          toasts.warning(message);
+          renderPopup.close();
+          canStart = false;
+        };
+
+        auto ffmpegPathValid = [&]() -> bool
+        {
+          if (ffmpegPath.empty()) return false;
+          std::error_code ec{};
+          std::filesystem::path ffmpeg(ffmpegPath);
+          if (!std::filesystem::exists(ffmpeg, ec) || !std::filesystem::is_regular_file(ffmpeg, ec)) return false;
+#ifdef _WIN32
+          auto ext = ffmpeg.extension().string();
+          std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+          if (ext != ".exe") return false;
+          return true;
+#else
+          auto permMask = std::filesystem::status(ffmpeg, ec).permissions();
+          using std::filesystem::perms;
+          if (permMask == perms::unknown) return true;
+          auto has_exec = [&](perms p)
+          {
+            return (perms::none != (p & perms::owner_exec)) || (perms::none != (p & perms::group_exec)) ||
+                   (perms::none != (p & perms::others_exec));
+          };
+          return has_exec(permMask);
+#endif
+        };
+
+        if (!ffmpegPathValid()) warn_and_close("Invalid FFmpeg executable. Please set a valid FFmpeg path.");
+
+        if (canStart)
+        {
+          std::error_code ec{};
+          if (type == render::PNGS)
+          {
+            if (path.empty())
+              warn_and_close("Select an output directory for PNG exports.");
+            else
+            {
+              std::filesystem::path directory(path);
+              if (!std::filesystem::exists(directory, ec) || !std::filesystem::is_directory(directory, ec))
+                warn_and_close("PNG exports require a valid directory.");
+            }
+          }
+          else
+          {
+            std::filesystem::path output(path);
+            auto parent = output.parent_path();
+            auto parentInvalid =
+                !parent.empty() && (!std::filesystem::exists(parent, ec) || !std::filesystem::is_directory(parent, ec));
+            if (path.empty() || std::filesystem::is_directory(output, ec) || parentInvalid)
+            {
+              output = std::filesystem::path("output").replace_extension(render::EXTENSIONS[type]);
+              path = output.string();
+              warn_and_close(std::format("Invalid output file. Using default path: {}", path));
+            }
+          }
+        }
+
+        if (canStart)
+        {
+          manager.isRecordingStart = true;
+          playback.time = start;
+          playback.isPlaying = true;
+          renderPopup.close();
+          manager.progressPopup.open();
+        }
       }
 
       ImGui::SameLine();
@@ -705,13 +782,38 @@ namespace anm2ed::imgui
       ImGui::EndPopup();
     }
 
+    overwritePopup.trigger();
+    if (ImGui::BeginPopupModal(overwritePopup.label, &overwritePopup.isOpen, ImGuiWindowFlags_NoResize))
+    {
+
+      ImGui::Text("Are you sure? This will overwrite the existing file.");
+
+      auto widgetSize = widget_size_with_row_get(2);
+
+      if (ImGui::Button("Yes", widgetSize))
+      {
+        manager.save();
+        overwritePopup.close();
+      }
+
+      ImGui::SameLine();
+
+      if (ImGui::Button("No", widgetSize)) overwritePopup.close();
+
+      ImGui::EndPopup();
+    }
+
     if (resources.music.is_playing() && !aboutPopup.isOpen) resources.music.stop();
 
     aboutPopup.end();
 
     if (shortcut(manager.chords[SHORTCUT_NEW], shortcut::GLOBAL)) dialog.file_save(dialog::ANM2_NEW);
     if (shortcut(manager.chords[SHORTCUT_OPEN], shortcut::GLOBAL)) dialog.file_open(dialog::ANM2_OPEN);
-    if (shortcut(manager.chords[SHORTCUT_SAVE], shortcut::GLOBAL)) manager.save();
+    if (shortcut(manager.chords[SHORTCUT_SAVE], shortcut::GLOBAL))
+    {
+      if (settings.fileIsWarnOverwrite) overwritePopup.open();
+      manager.save();
+    }
     if (shortcut(manager.chords[SHORTCUT_SAVE_AS], shortcut::GLOBAL)) dialog.file_save(dialog::ANM2_SAVE);
     if (shortcut(manager.chords[SHORTCUT_EXIT], shortcut::GLOBAL)) isQuitting = true;
   }

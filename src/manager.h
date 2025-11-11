@@ -61,6 +61,7 @@ namespace anm2ed
     void recent_files_load();
     void recent_files_write();
     void recent_files_clear();
+    void recent_file_add(const std::string&);
 
     void autosave_files_load();
     void autosave_files_open();

@@ -14,6 +14,7 @@ namespace anm2ed::imgui
     Canvas generate;
     float generateTime{};
     PopupHelper generatePopup{PopupHelper("Generate Animation from Grid")};
+    PopupHelper overwritePopup{PopupHelper("Overwrite File", imgui::POPUP_SMALL_NO_HEIGHT)};
     PopupHelper renderPopup{PopupHelper("Render Animation", imgui::POPUP_SMALL_NO_HEIGHT)};
     PopupHelper configurePopup{PopupHelper("Configure")};
     PopupHelper aboutPopup{PopupHelper("About")};

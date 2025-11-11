@@ -106,21 +106,25 @@ namespace anm2ed::imgui
 
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
+            auto viewport = ImGui::GetMainViewport();
+            auto textureSize = texture.size.x * texture.size.y > (viewport->Size.x * viewport->Size.y) * 0.5f
+                                   ? to_vec2(viewport->Size) * 0.5f
+                                   : vec2(texture.size);
+            auto aspectRatio = (float)texture.size.x / texture.size.y;
+
+            if (textureSize.x / textureSize.y > aspectRatio)
+              textureSize.x = textureSize.y * aspectRatio;
+            else
+              textureSize.y = textureSize.x / aspectRatio;
+
+            auto textWidth = ImGui::CalcTextSize(path).x;
+            auto tooltipPadding = style.WindowPadding.x * 4.0f;
+            auto minWidth = textureSize.x + style.ItemSpacing.x + textWidth + tooltipPadding;
+            ImGui::SetNextWindowSize(ImVec2(minWidth, 0), ImGuiCond_Appearing);
+
             if (ImGui::BeginItemTooltip())
             {
               ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2());
-
-              auto viewport = ImGui::GetMainViewport();
-
-              auto textureSize = texture.size.x * texture.size.y > (viewport->Size.x * viewport->Size.y) * 0.5f
-                                     ? to_vec2(viewport->Size) * 0.5f
-                                     : vec2(texture.size);
-              auto aspectRatio = (float)texture.size.x / texture.size.y;
-
-              if (textureSize.x / textureSize.y > aspectRatio)
-                textureSize.x = textureSize.y * aspectRatio;
-              else
-                textureSize.y = textureSize.x / aspectRatio;
 
               ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2());
               if (ImGui::BeginChild("##Spritesheet Tooltip Image Child", to_imvec2(textureSize),
@@ -148,7 +152,7 @@ namespace anm2ed::imgui
             ImGui::PopStyleVar(2);
 
             auto imageSize = to_imvec2(vec2(spritesheetChildSize.y));
-            auto aspectRatio = (float)texture.size.x / texture.size.y;
+            aspectRatio = (float)texture.size.x / texture.size.y;
 
             if (imageSize.x / imageSize.y > aspectRatio)
               imageSize.x = imageSize.y * aspectRatio;

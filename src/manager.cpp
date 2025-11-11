@@ -39,15 +39,7 @@ namespace anm2ed
       return;
     }
 
-    if (isRecent)
-    {
-      recentFiles.erase(std::remove(recentFiles.begin(), recentFiles.end(), path), recentFiles.end());
-      recentFiles.insert(recentFiles.begin(), path);
-
-      if (recentFiles.size() > RECENT_LIMIT) recentFiles.resize(RECENT_LIMIT);
-
-      recent_files_write();
-    }
+    if (isRecent) recent_file_add(path);
 
     selected = (int)documents.size() - 1;
     pendingSelected = selected;
@@ -63,6 +55,7 @@ namespace anm2ed
       std::string errorString{};
       document->path = !path.empty() ? path : document->path.string();
       document->save(document->path, &errorString);
+      recent_file_add(document->path);
     }
   }
 
@@ -170,6 +163,22 @@ namespace anm2ed
     nullPropertiesPopup.close();
   }
 
+  void Manager::recent_file_add(const std::string& path)
+  {
+    if (path.empty()) return;
+    std::error_code ec{};
+    if (!std::filesystem::exists(path, ec))
+    {
+      logger.warning(std::format("Skipping missing recent file: {}", path));
+      return;
+    }
+
+    recentFiles.erase(std::remove(recentFiles.begin(), recentFiles.end(), path), recentFiles.end());
+    recentFiles.insert(recentFiles.begin(), path);
+    if (recentFiles.size() > RECENT_LIMIT) recentFiles.resize(RECENT_LIMIT);
+    recent_files_write();
+  }
+
   void Manager::recent_files_load()
   {
     auto path = recent_files_path_get();
@@ -189,6 +198,12 @@ namespace anm2ed
     {
       if (line.empty()) continue;
       if (std::find(recentFiles.begin(), recentFiles.end(), line) != recentFiles.end()) continue;
+      std::error_code ec{};
+      if (!std::filesystem::exists(line, ec))
+      {
+        logger.warning(std::format("Skipping missing recent file: {}", line));
+        continue;
+      }
       recentFiles.emplace_back(line);
     }
   }

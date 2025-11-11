@@ -32,7 +32,8 @@ namespace anm2ed::util::filesystem
   std::filesystem::path path_lower_case_backslash_handle(std::filesystem::path& path)
   {
     if (path_is_exist(path)) return path;
-    if (path_is_exist(string::backslash_replace(path))) return path;
+    path = string::backslash_replace(path);
+    if (path_is_exist(path)) return path;
     return string::to_lower(path);
   }
 
