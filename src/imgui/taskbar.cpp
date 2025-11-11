@@ -9,6 +9,16 @@
 #include <vector>
 
 #include <imgui/imgui.h>
+
+#ifdef _MSC_VER
+  #ifndef __attribute__
+    #define __attribute__(x)
+  #endif
+  #ifndef restrict
+    #define restrict __restrict
+  #endif
+#endif
+
 #include <xm.h>
 
 #include "math_.h"
