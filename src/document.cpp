@@ -71,7 +71,7 @@ namespace anm2ed
   {
     this->path = !path.empty() ? path : this->path.string();
 
-    if (anm2.serialize(this->path, errorString))
+    if (anm2.serialize(this->path.string(), errorString))
     {
       toasts.info(std::format("Saved document to: {}", this->path.string()));
       clean();
@@ -212,7 +212,7 @@ namespace anm2ed
     auto add = [&]()
     {
       int id{};
-      if (anm2.spritesheet_add(directory_get(), path, id))
+      if (anm2.spritesheet_add(directory_get().string(), path, id))
       {
         anm2::Spritesheet& spritesheet = anm2.content.spritesheets[id];
         this->spritesheet.selection = {id};

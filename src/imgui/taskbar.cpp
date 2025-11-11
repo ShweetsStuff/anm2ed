@@ -68,8 +68,8 @@ namespace anm2ed::imgui
 
         if (ImGui::MenuItem("Save As", settings.shortcutSaveAs.c_str(), false, document))
           dialog.file_save(dialog::ANM2_SAVE);
-        if (ImGui::MenuItem("Explore XML Location", nullptr, false, document))
-          dialog.file_explorer_open(document->directory_get());
+      if (ImGui::MenuItem("Explore XML Location", nullptr, false, document))
+        dialog.file_explorer_open(document->directory_get().string());
 
         ImGui::Separator();
         if (ImGui::MenuItem("Exit", settings.shortcutExit.c_str())) isQuitting = true;

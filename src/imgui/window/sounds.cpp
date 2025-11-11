@@ -73,7 +73,7 @@ namespace anm2ed::imgui
         {
           std::string errorString{};
           document.snapshot("Paste Sound(s)");
-          if (anm2.sounds_deserialize(clipboard.get(), document.directory_get(), type, &errorString))
+          if (anm2.sounds_deserialize(clipboard.get(), document.directory_get().string(), type, &errorString))
             document.change(Document::SOUNDS);
           else
             toasts.error(std::format("Failed to deserialize sound(s): {}", errorString));
@@ -131,7 +131,7 @@ namespace anm2ed::imgui
       auto add = [&]()
       {
         int id{};
-        if (anm2.sound_add(document.directory_get(), dialog.path, id))
+        if (anm2.sound_add(document.directory_get().string(), dialog.path, id))
         {
           selection = {id};
           toasts.info(std::format("Initialized sound #{}: {}", id, dialog.path));

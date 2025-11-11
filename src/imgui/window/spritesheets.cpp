@@ -46,7 +46,7 @@ namespace anm2ed::imgui
         {
           std::string errorString{};
           document.snapshot("Paste Spritesheet(s)");
-          if (anm2.spritesheets_deserialize(clipboard.get(), document.directory_get(), type, &errorString))
+          if (anm2.spritesheets_deserialize(clipboard.get(), document.directory_get().string(), type, &errorString))
             document.change(Document::SPRITESHEETS);
           else
             toasts.error(std::format("Failed to deserialize spritesheet(s): {}", errorString));
@@ -208,7 +208,7 @@ namespace anm2ed::imgui
             for (auto& id : selection)
             {
               anm2::Spritesheet& spritesheet = anm2.content.spritesheets[id];
-              spritesheet.reload(document.directory_get());
+              spritesheet.reload(document.directory_get().string());
               toasts.info(std::format("Reloaded spritesheet #{}: {}", id, spritesheet.path.string()));
             }
           };
@@ -234,7 +234,7 @@ namespace anm2ed::imgui
         {
           auto& id = *selection.begin();
           anm2::Spritesheet& spritesheet = anm2.content.spritesheets[id];
-          spritesheet = anm2::Spritesheet(document.directory_get(), dialog.path);
+          spritesheet = anm2::Spritesheet(document.directory_get().string(), dialog.path);
           toasts.info(std::format("Replaced spritesheet #{}: {}", id, spritesheet.path.string()));
         };
 
@@ -276,7 +276,7 @@ namespace anm2ed::imgui
           for (auto& id : selection)
           {
             anm2::Spritesheet& spritesheet = anm2.content.spritesheets[id];
-            if (spritesheet.save(document.directory_get()))
+            if (spritesheet.save(document.directory_get().string()))
               toasts.info(std::format("Saved spritesheet #{}: {}", id, spritesheet.path.string()));
             else
               toasts.info(std::format("Unable to save spritesheet #{}: {}", id, spritesheet.path.string()));

@@ -69,7 +69,6 @@ namespace anm2ed
     bool save(const std::string& = {}, std::string* = nullptr);
     void hash_set();
     void clean();
-    void on_change();
     void change(ChangeType);
     bool is_dirty();
     bool is_autosave_dirty();
