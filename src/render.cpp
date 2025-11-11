@@ -1,6 +1,5 @@
 #include "render.h"
 
-#include <chrono>
 #include <cstring>
 #include <filesystem>
 #include <format>

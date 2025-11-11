@@ -1,8 +1,11 @@
 #pragma once
 
+#include <future>
+
 #include "audio_stream.h"
 #include "canvas.h"
 #include "manager.h"
+#include "render.h"
 #include "resources.h"
 #include "settings.h"
 
@@ -19,6 +22,9 @@ namespace anm2ed::imgui
     glm::vec2 savedPan{};
     glm::ivec2 mousePos{};
     std::vector<resource::Texture> renderFrames{};
+    std::future<bool> renderFuture{};
+    bool isRenderFutureValid{};
+    std::string renderOutputPath{};
 
   public:
     AnimationPreview();

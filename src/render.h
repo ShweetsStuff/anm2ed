@@ -34,6 +34,6 @@ namespace anm2ed::render
 
 namespace anm2ed
 {
-  bool animation_render(const std::string&, const std::string&, std::vector<resource::Texture>&, AudioStream&,
+  bool animation_render(const std::string&, const std::string&, std::vector<resource::Texture>, AudioStream,
                         render::Type, glm::ivec2, int);
 }
