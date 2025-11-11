@@ -7,7 +7,7 @@ if (WIN32 AND DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
 endif ()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-if (CMAKE_EXPORT_COMPILE_COMMANDS)
+if (CMAKE_EXPORT_COMPILE_COMMANDS AND NOT WIN32)
     execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink
             ${CMAKE_BINARY_DIR}/compile_commands.json
             ${CMAKE_SOURCE_DIR}/compile_commands.json
