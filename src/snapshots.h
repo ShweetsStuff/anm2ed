@@ -1,41 +1,58 @@
 #pragma once
 
-#include "anm2.h"
-#include "preview.h"
-#include "texture.h"
+#include "anm2/anm2.h"
+#include "playback.h"
+#include "storage.h"
 
-#define SNAPSHOT_STACK_MAX 100
-#define SNAPSHOT_ACTION "Action"
-
-struct Snapshot
+namespace anm2ed::snapshots
 {
-    Anm2 anm2;
-    Anm2Reference reference;
-    f32 time = 0.0f;
-    std::string action = SNAPSHOT_ACTION;
+  constexpr auto ACTION = "Action";
+  constexpr auto MAX = 100;
 };
 
-struct SnapshotStack
+namespace anm2ed
 {
-    Snapshot snapshots[SNAPSHOT_STACK_MAX];
-    s32 top = 0;
+  class Snapshot
+  {
+  public:
+    anm2::Anm2 anm2{};
+    anm2::Reference reference{};
+    Playback playback{};
+    Storage animation{};
+    Storage merge{};
+    Storage event{};
+    Storage layer{};
+    Storage null{};
+    Storage sound{};
+    Storage spritesheet{};
+    Storage items{};
+    std::map<int, Storage> frames{};
+    std::string message = snapshots::ACTION;
+  };
 
-    bool is_empty() const { return top == 0; }
-};
+  class SnapshotStack
+  {
+  public:
+    Snapshot snapshots[snapshots::MAX];
+    int top{};
 
-struct Snapshots
-{
-    Anm2* anm2 = nullptr;
-    Preview* preview = nullptr;
-    Anm2Reference* reference = nullptr;
-    std::string action = SNAPSHOT_ACTION;
-    SnapshotStack undoStack;
-    SnapshotStack redoStack;
-};
+    bool is_empty();
+    void push(const Snapshot&);
+    Snapshot* pop();
+    void clear();
+  };
 
-void snapshots_undo_push(Snapshots* self, Snapshot* snapshot);
-void snapshots_init(Snapshots* self, Anm2* anm2, Anm2Reference* reference, Preview* preview);
-void snapshots_undo(Snapshots* self);
-void snapshots_redo(Snapshots* self);
-void snapshots_reset(Snapshots* self);
-Snapshot snapshot_get(Snapshots* self);
+  class Snapshots
+  {
+  public:
+    SnapshotStack undoStack{};
+    SnapshotStack redoStack{};
+    Snapshot current{};
+
+    Snapshot* get();
+    void push(const Snapshot&);
+    void undo();
+    void redo();
+    void reset();
+  };
+}

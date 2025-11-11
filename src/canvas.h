@@ -1,45 +1,37 @@
 #pragma once
 
-#include "resources.h"
+#include <glad/glad.h>
+#include <glm/glm.hpp>
 
-#define CANVAS_ZOOM_MIN 1.0f
-#define CANVAS_ZOOM_MAX 2000.0f
-#define CANVAS_ZOOM_DEFAULT 100.0f
-#define CANVAS_ZOOM_STEP 100.0f
-#define CANVAS_GRID_MIN 1
-#define CANVAS_GRID_MAX 1000
-#define CANVAS_GRID_DEFAULT 32
+#include "shader.h"
 
-const inline vec2 CANVAS_PIVOT_SIZE = {4, 4};
-const inline vec2 CANVAS_SCALE_DEFAULT = {1.0f, 1.0f};
-
-const inline f32 CANVAS_AXIS_VERTICES[] = {-1.0f, 1.0f};
-
-const inline f32 CANVAS_GRID_VERTICES[] =
+namespace anm2ed::canvas
 {
-   -1.0f, -1.0f,
-    3.0f, -1.0f,
-   -1.0f,  3.0f
-};
+  constexpr float TEXTURE_VERTICES[] = {0, 0, 0.0f, 0.0f, 1, 0, 1.0f, 0.0f, 1, 1, 1.0f, 1.0f, 0, 1, 0.0f, 1.0f};
 
-const inline f32 CANVAS_RECT_VERTICES[] =
-{
-    0, 0,  
-    1, 0,  
-    1, 1,  
-    0, 1  
-};
+  constexpr auto PIVOT_SIZE = glm::vec2(8, 8);
+  constexpr auto ZOOM_MIN = 1.0f;
+  constexpr auto ZOOM_MAX = 2000.0f;
+  constexpr auto POSITION_FORMAT = "Position: ({:8}, {:8})";
 
-const inline f32 CANVAS_TEXTURE_VERTICES[] = 
-{
-    0, 0, 0.0f, 0.0f,
-    1, 0, 1.0f, 0.0f,
-    1, 1, 1.0f, 1.0f,
-    0, 1, 0.0f, 1.0f
-};
+  constexpr auto DASH_LENGTH = 4.0f;
+  constexpr auto DASH_GAP = 1.0f;
+  constexpr auto DASH_OFFSET = 1.0f;
 
-struct Canvas
+  constexpr auto STEP = 1.0f;
+  constexpr auto STEP_FAST = 5.0f;
+
+  constexpr auto GRID_SIZE_MIN = 1;
+  constexpr auto GRID_SIZE_MAX = 10000;
+  constexpr auto GRID_OFFSET_MIN = 0;
+  constexpr auto GRID_OFFSET_MAX = 10000;
+}
+
+namespace anm2ed
 {
+  class Canvas
+  {
+  public:
     GLuint fbo{};
     GLuint rbo{};
     GLuint axisVAO{};
@@ -48,48 +40,37 @@ struct Canvas
     GLuint rectVBO{};
     GLuint gridVAO{};
     GLuint gridVBO{};
-    GLuint framebuffer{};
     GLuint textureVAO{};
     GLuint textureVBO{};
     GLuint textureEBO{};
-    ivec2 size{};
-    ivec2 previousSize{};
-    bool isInit = false;
-};
+    GLuint texture{};
+    glm::vec2 previousSize{};
+    glm::vec2 size{};
 
-#define UV_VERTICES(uvMin, uvMax) \
-{ \
-  0, 0, uvMin.x, uvMin.y, \
-  1, 0, uvMax.x, uvMin.y, \
-  1, 1, uvMax.x, uvMax.y, \
-  0, 1, uvMin.x, uvMax.y  \
+    Canvas();
+    Canvas(glm::vec2);
+    ~Canvas();
+    bool is_valid();
+    void framebuffer_set();
+    void framebuffer_resize_check();
+    void size_set(glm::vec2);
+    glm::vec4 pixel_read(glm::vec2, glm::vec2);
+    glm::mat4 transform_get(float = 100.0f, glm::vec2 = {});
+    void axes_render(resource::Shader&, float, glm::vec2, glm::vec4 = glm::vec4(1.0f));
+    void grid_render(resource::Shader&, float, glm::vec2, glm::ivec2 = glm::ivec2(32, 32), glm::ivec2 = {},
+                     glm::vec4 = glm::vec4(1.0f));
+    void texture_render(resource::Shader&, GLuint&, glm::mat4&, glm::vec4 = glm::vec4(1.0f), glm::vec3 = {},
+                        float* = (float*)canvas::TEXTURE_VERTICES);
+    void rect_render(resource::Shader&, const glm::mat4&, const glm::mat4&, glm::vec4 = glm::vec4(1.0f),
+                     float dashLength = canvas::DASH_LENGTH, float dashGap = canvas::DASH_GAP,
+                     float dashOffset = canvas::DASH_OFFSET);
+    void viewport_set();
+    void clear(glm::vec4&);
+    void bind();
+    void unbind();
+    void zoom_set(float&, glm::vec2&, glm::vec2, float);
+    glm::vec2 position_translate(float&, glm::vec2&, glm::vec2);
+    void set_to_rect(float& zoom, glm::vec2& pan, glm::vec4 rect);
+    std::vector<unsigned char> pixels_get();
+  };
 }
-
-#define ATLAS_UV_MIN(type) (ATLAS_POSITION(type) / TEXTURE_ATLAS_SIZE)
-#define ATLAS_UV_MAX(type) ((ATLAS_POSITION(type) + ATLAS_SIZE(type)) / TEXTURE_ATLAS_SIZE)
-#define ATLAS_UV_ARGS(type) ATLAS_UV_MIN(type), ATLAS_UV_MAX(type)
-#define ATLAS_UV_VERTICES(type) UV_VERTICES(ATLAS_UV_MIN(type), ATLAS_UV_MAX(type))
-
-mat4 canvas_transform_get(Canvas* self, vec2 pan, f32 zoom, OriginType origin);
-void canvas_axes_draw(Canvas* self, GLuint& shader, mat4& transform, vec4& color);
-void canvas_bind(Canvas* self);
-void canvas_clear(vec4& color);
-void canvas_draw(Canvas* self);
-void canvas_free(Canvas* self);
-void canvas_grid_draw(Canvas* self, GLuint& shader, mat4& transform, ivec2& size, ivec2& offset, vec4& color);
-void canvas_init(Canvas* self, const ivec2& size);
-void canvas_rect_draw(Canvas* self, const GLuint& shader, const mat4& transform, const vec4& color);
-void canvas_framebuffer_resize_check(Canvas* self);
-void canvas_unbind(void);
-void canvas_viewport_set(Canvas* self);
-
-void canvas_texture_draw
-(
-    Canvas* self, 
-    GLuint& shader, 
-    GLuint& texture, 
-    mat4& transform, 
-    const f32* vertices = CANVAS_TEXTURE_VERTICES, 
-    vec4 tint = COLOR_OPAQUE, 
-    vec3 colorOffset = COLOR_OFFSET_NONE
-);

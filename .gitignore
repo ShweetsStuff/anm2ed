@@ -4,8 +4,8 @@ release/
 packed/
 vcpkg_installed/
 out/
-include/imgui/
-include/glm/
-include/tinyxml2
+external/
 workshop/resources
+cmake-build-debug/
 .vs/
+.idea/

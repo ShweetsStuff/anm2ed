@@ -1,0 +1,11 @@
+ColumnLimit: 120
+PointerAlignment: Left
+ReferenceAlignment: Left
+AllowShortFunctionsOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: true
+CommentPragmas: '^'
+BreakBeforeBraces: Allman
+NamespaceIndentation: All
+FixNamespaceComments: false
+IndentCaseLabels: true
+IndentPPDirectives: BeforeHash

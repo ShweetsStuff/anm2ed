@@ -1,71 +1,91 @@
 #pragma once
 
-#include "render.h"
-#include "window.h"
+#include <string>
 
-#define DIALOG_FILE_EXPLORER_COMMAND_SIZE 512
+#include <SDL3/SDL.h>
 
-#ifdef _WIN32
-#define DIALOG_FILE_EXPLORER_COMMAND "open"
-#else 
-#define DIALOG_FILE_EXPLORER_COMMAND "xdg-open \"%s\" &"
-#endif
-
-const SDL_DialogFileFilter DIALOG_FILE_FILTER_ANM2[] =
+namespace anm2ed::dialog
 {
-    {"Anm2 file", "anm2;xml"}
-};
-
-const SDL_DialogFileFilter DIALOG_FILE_FILTER_PNG[] =
-{
-    {"PNG image", "png"}
-};
-
-const SDL_DialogFileFilter DIALOG_RENDER_FILE_FILTERS[] =
-{
-    {"PNG image", "png"},
-    {"GIF image", "gif"}, 
-    {"WebM video", "webm"},
-    {"MP4 video", "mp4"}
-};
-
-const SDL_DialogFileFilter DIALOG_FILE_FILTER_FFMPEG[] =
-{
-#ifdef _WIN32
-    {"Executable", "exe"}
+#if defined(_WIN32)
+  #define EXECUTABLE_FILTER {"Executable", "exe"}
 #else
-    {"Executable", ""}
+  #define EXECUTABLE_FILTER {"Executable", "*"}
 #endif
-};
 
-enum DialogType 
-{
-    DIALOG_NONE,
-    DIALOG_ANM2_OPEN,
-    DIALOG_ANM2_SAVE,
-    DIALOG_SPRITESHEET_ADD,
-    DIALOG_SPRITESHEET_REPLACE,
-    DIALOG_RENDER_PATH_SET,
-    DIALOG_FFMPEG_PATH_SET
-};
+#define FILTER_LIST                                                                                                    \
+  X(NO_FILTER, {})                                                                                                     \
+  X(ANM2, {"Anm2 file", "anm2;xml"})                                                                                   \
+  X(PNG, {"PNG image", "png"})                                                                                         \
+  X(SOUND, {"WAV file;OGG file", "wav;ogg"})                                                                           \
+  X(GIF, {"GIF image", "gif"})                                                                                         \
+  X(WEBM, {"WebM video", "webm"})                                                                                      \
+  X(MP4, {"MP4 video", "MP4"})                                                                                         \
+  X(EXECUTABLE, EXECUTABLE_FILTER)
 
-struct Dialog
+  enum Filter
+  {
+#define X(symbol, ...) symbol,
+    FILTER_LIST
+#undef X
+  };
+
+  constexpr SDL_DialogFileFilter FILTERS[][1] = {
+#define X(symbol, ...) {__VA_ARGS__},
+      FILTER_LIST
+#undef X
+  };
+
+#undef FILTER_LIST
+
+#define DIALOG_LIST                                                                                                    \
+  X(NONE, NO_FILTER)                                                                                                   \
+  X(ANM2_NEW, ANM2)                                                                                                    \
+  X(ANM2_OPEN, ANM2)                                                                                                   \
+  X(ANM2_SAVE, ANM2)                                                                                                   \
+  X(SOUND_OPEN, SOUND)                                                                                                 \
+  X(SPRITESHEET_OPEN, PNG)                                                                                             \
+  X(SPRITESHEET_REPLACE, PNG)                                                                                          \
+  X(FFMPEG_PATH_SET, EXECUTABLE)                                                                                       \
+  X(PNG_DIRECTORY_SET, NO_FILTER)                                                                                      \
+  X(GIF_PATH_SET, GIF)                                                                                                 \
+  X(WEBM_PATH_SET, WEBM)                                                                                               \
+  X(MP4_PATH_SET, MP4)
+
+  enum Type
+  {
+#define X(symbol, filter) symbol,
+    DIALOG_LIST
+#undef X
+  };
+
+  constexpr Filter TYPE_FILTERS[] = {
+#define X(symbol, filter) filter,
+      DIALOG_LIST
+#undef X
+  };
+
+#undef DIALOG_LIST
+}
+
+namespace anm2ed
 {
-    SDL_Window* window = nullptr;
-    s32 selectedFilter = ID_NONE;
+
+  class Dialog
+  {
+  public:
+    SDL_Window* window{};
     std::string path{};
-    s32 replaceID = ID_NONE;
-    DialogType type = DIALOG_NONE;
-    bool isSelected = false;
-};
+    dialog::Type type{dialog::NONE};
+    int selectedFilter{-1};
 
-void dialog_init(Dialog* self, SDL_Window* window);
-void dialog_anm2_open(Dialog* self);
-void dialog_spritesheet_add(Dialog* self);
-void dialog_spritesheet_replace(Dialog* self, s32 id);
-void dialog_anm2_save(Dialog* self);
-void dialog_render_path_set(Dialog* self, RenderType type);
-void dialog_render_directory_set(Dialog* self);
-void dialog_ffmpeg_path_set(Dialog* self);
-void dialog_reset(Dialog* self);
-void dialog_explorer_open(const std::string& path);
+    Dialog() = default;
+    Dialog(SDL_Window*);
+    void file_open(dialog::Type type);
+    void file_save(dialog::Type type);
+    void folder_open(dialog::Type type);
+    bool is_selected(dialog::Type type);
+    void reset();
+    void file_explorer_open(const std::string&);
+    void set_string_to_selected_path(std::string& set, dialog::Type type);
+  };
+}

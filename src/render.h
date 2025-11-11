@@ -1,28 +1,39 @@
 #pragma once
 
-#include "COMMON.h"
+#include "audio_stream.h"
+#include "texture.h"
 
-enum RenderType
+namespace anm2ed::render
 {
-    RENDER_PNG,
-    RENDER_GIF,
-    RENDER_WEBM,
-    RENDER_MP4,
-    RENDER_COUNT
-};
+#define RENDER_LIST                                                                                                    \
+  X(PNGS, "PNGs", "")                                                                                                  \
+  X(GIF, "GIF", ".gif")                                                                                                \
+  X(WEBM, "WebM", ".webm")                                                                                             \
+  X(MP4, "MP4", ".mp4")
 
-const inline std::string RENDER_TYPE_STRINGS[] = 
-{
-    "PNG Images",
-    "GIF image",
-    "WebM video",
-    "MP4 video",
-};
+  enum Type
+  {
+#define X(symbol, string, extension) symbol,
+    RENDER_LIST
+#undef X
+        COUNT
+  };
 
-const inline std::string RENDER_EXTENSIONS[RENDER_COUNT] =
+  constexpr const char* STRINGS[] = {
+#define X(symbol, string, extension) string,
+      RENDER_LIST
+#undef X
+  };
+
+  constexpr const char* EXTENSIONS[] = {
+#define X(symbol, string, extension) extension,
+      RENDER_LIST
+#undef X
+  };
+}
+
+namespace anm2ed
 {
-    ".png",
-    ".gif",
-    ".webm",
-    ".mp4",
-};
+  bool animation_render(const std::string&, const std::string&, std::vector<resource::Texture>&, AudioStream&,
+                        render::Type, glm::ivec2, int);
+}

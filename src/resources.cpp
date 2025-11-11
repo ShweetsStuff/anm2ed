@@ -1,17 +1,20 @@
 #include "resources.h"
 
-void resources_init(Resources* self)
-{
-    texture_from_encoded_data_init(&self->atlas, TEXTURE_ATLAS_SIZE, (u8*)TEXTURE_ATLAS, TEXTURE_ATLAS_LENGTH);
-    
-    for (s32 i = 0; i < SHADER_COUNT; i++) 
-        shader_init(&self->shaders[i], SHADER_DATA[i].vertex, SHADER_DATA[i].fragment);
-}
+#include <ranges>
 
-void resources_free(Resources* self)
-{
-    for (auto& shader : self->shaders)
-        shader_free(&shader);
+using namespace anm2ed::resource;
 
-    texture_free(&self->atlas);
+namespace anm2ed
+{
+  Resources::Resources()
+  {
+    for (auto [i, font] : std::views::enumerate(font::FONTS))
+      fonts[i] = Font((void*)font.data, font.length, font::SIZE);
+
+    for (auto [i, icon] : std::views::enumerate(icon::ICONS))
+      icons[i] = Texture(icon.data, icon.length, icon.size);
+
+    for (auto [i, shader] : std::views::enumerate(shader::SHADERS))
+      shaders[i] = Shader(shader.vertex, shader.fragment);
+  };
 }

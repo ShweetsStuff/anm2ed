@@ -1,276 +1,311 @@
 #include "settings.h"
 
-static void _settings_setting_load(Settings* self, const std::string& line)
+#include "filesystem_.h"
+#include "log.h"
+
+using namespace anm2ed::util;
+using namespace glm;
+
+namespace anm2ed
 {
-    for (s32 i = 0; i < SETTINGS_COUNT; i++)
-    {
-        const auto& entry = SETTINGS_ENTRIES[i];
-        const std::string& key = entry.key;
-        void* target = (u8*)self + entry.offset;
+  constexpr auto IMGUI_DEFAULT = R"(
+# Dear ImGui
+[Window][##DockSpace]
+Pos=0,54
+Size=1918,1010
+Collapsed=0
 
-        auto match_key = [&](const std::string& full) -> const char*
-        {
-            if (!line.starts_with(full))
-                return nullptr;
+[Window][Animation Preview]
+Pos=60,62
+Size=983,691
+Collapsed=0
+DockId=0x00000003,1
 
-            size_t p = full.size();
-            while (p < line.size() && std::isspace((u8)line[p])) ++p;
-            if (p < line.size() && line[p] == '=') 
-                return line.c_str() + p + 1;
-            return nullptr;
-        };
+[Window][Animations]
+Pos=1451,494
+Size=459,259
+Collapsed=0
+DockId=0x0000000C,0
 
-        const char* value = nullptr;
+[Window][Events]
+Pos=1045,463
+Size=404,290
+Collapsed=0
+DockId=0x00000008,0
 
-        switch (entry.type)
-        {
-            case TYPE_INT:
-                if ((value = match_key(key))) { *(s32*)target = std::atoi(value); return; }
-                break;
-            case TYPE_BOOL:
-                if ((value = match_key(key))) { *(bool*)target = string_to_bool(value); return; }
-                break;
-            case TYPE_FLOAT:
-                if ((value = match_key(key))) { *(f32*)target = std::atof(value); return; }
-                break;
-            case TYPE_STRING:
-                if ((value = match_key(key))) { *(std::string*)target = value; return; }
-                break;
-            case TYPE_IVEC2:
-            {
-                ivec2* v = (ivec2*)target;
-                if ((value = match_key(key + "X"))) { v->x = std::atoi(value); return; }
-                if ((value = match_key(key + "Y"))) { v->y = std::atoi(value); return; }
-                break;
-            }
-            case TYPE_IVEC2_WH:
-            {
-                ivec2* v = (ivec2*)target;
-                if ((value = match_key(key + "W"))) { v->x = std::atoi(value); return; }
-                if ((value = match_key(key + "H"))) { v->y = std::atoi(value); return; }
-                break;
-            };
-            case TYPE_VEC2:
-            {
-                vec2* v = (vec2*)target;
-                if ((value = match_key(key + "X"))) { v->x = std::atof(value); return; }
-                if ((value = match_key(key + "Y"))) { v->y = std::atof(value); return; }
-                break;
-            }
-            case TYPE_VEC2_WH:
-            {
-                vec2* v = (vec2*)target;
-                if ((value = match_key(key + "W"))) { v->x = std::atof(value); return; }
-                if ((value = match_key(key + "H"))) { v->y = std::atof(value); return; }
-                break;
-            };
-            case TYPE_VEC3:
-            {
-                vec3* v = (vec3*)target;
-                if ((value = match_key(key + "R"))) { v->x = std::atof(value); return; }
-                if ((value = match_key(key + "G"))) { v->y = std::atof(value); return; }
-                if ((value = match_key(key + "B"))) { v->z = std::atof(value); return; }
-                break;
-            }
-            case TYPE_VEC4:
-            {
-                vec4* v = (vec4*)target;
-                if ((value = match_key(key + "R"))) { v->x = std::atof(value); return; }
-                if ((value = match_key(key + "G"))) { v->y = std::atof(value); return; }
-                if ((value = match_key(key + "B"))) { v->z = std::atof(value); return; }
-                if ((value = match_key(key + "A"))) { v->w = std::atof(value); return; }
-                break;
-            }
-            default:
-                break;
-        }
-    }
+[Window][Frame Properties]
+Pos=1045,62
+Size=404,399
+Collapsed=0
+DockId=0x00000007,0
 
-    log_warning(std::format(SETTINGS_VALUE_INIT_WARNING, line));
-}
+[Window][Layers]
+Pos=1045,463
+Size=404,290
+Collapsed=0
+DockId=0x00000008,1
 
-std::string settings_path_get(void)
-{
-    std::string filePath = preferences_path_get() + SETTINGS_PATH;
-    return filePath;
-}
+[Window][Nulls]
+Pos=1045,463
+Size=404,290
+Collapsed=0
+DockId=0x00000008,2
 
-static void _settings_setting_write(Settings* self, std::ostream& out, SettingsEntry entry)
-{
-    u8* selfPointer = (u8*)self;
-    std::string value;
+[Window][Onionskin]
+Pos=8,755
+Size=1902,301
+Collapsed=0
+DockId=0x00000006,1
 
-    switch (entry.type)
-    {
-        case TYPE_INT:
-            value = std::format("{}", *(s32*)(selfPointer + entry.offset));
-            out << entry.key << "=" << value << "\n";
-            break;
-        case TYPE_BOOL:
-            value = std::format("{}", *(bool*)(selfPointer + entry.offset));
-            out << entry.key << "=" << value << "\n";
-            break;
-        case TYPE_FLOAT:
-            value = std::format("{:.3f}", *(f32*)(selfPointer + entry.offset));
-            out << entry.key << "=" << value << "\n";
-            break;
-        case TYPE_STRING:
-        {
-            const std::string data = *reinterpret_cast<const std::string*>(selfPointer + entry.offset);
-            if (!data.empty())
-                out << entry.key << "=" << data.c_str() << "\n";
-            break;
-        }
-        case TYPE_IVEC2:
-        {
-            ivec2* data = (ivec2*)(selfPointer + entry.offset);
-            out << entry.key << "X=" << data->x << "\n";
-            out << entry.key << "Y=" << data->y << "\n";
-            break;
-        }
-        case TYPE_IVEC2_WH:
-        {
-            ivec2* data = (ivec2*)(selfPointer + entry.offset);
-            out << entry.key << "W=" << data->x << "\n";
-            out << entry.key << "H=" << data->y << "\n";
-            break;
-        }
-        case TYPE_VEC2:
-        {
-            vec2* data = (vec2*)(selfPointer + entry.offset);
-            out << entry.key << "X=" << std::format(SETTINGS_FLOAT_FORMAT, data->x) << "\n";
-            out << entry.key << "Y=" << std::format(SETTINGS_FLOAT_FORMAT, data->y) << "\n";
-            break;
-        }
-        case TYPE_VEC2_WH:
-        {
-            vec2* data = (vec2*)(selfPointer + entry.offset);
-            out << entry.key << "W=" << std::format(SETTINGS_FLOAT_FORMAT, data->x) << "\n";
-            out << entry.key << "H=" << std::format(SETTINGS_FLOAT_FORMAT, data->y) << "\n";
-            break;
-        }
-        case TYPE_VEC3:
-        {
-            vec3* data = (vec3*)(selfPointer + entry.offset);
-            out << entry.key << "R=" << std::format(SETTINGS_FLOAT_FORMAT, data->r) << "\n";
-            out << entry.key << "G=" << std::format(SETTINGS_FLOAT_FORMAT, data->g) << "\n";
-            out << entry.key << "B=" << std::format(SETTINGS_FLOAT_FORMAT, data->b) << "\n";
-            break;
-        }
-        case TYPE_VEC4:
-        {
-            vec4* data = (vec4*)(selfPointer + entry.offset);
-            out << entry.key << "R=" << std::format(SETTINGS_FLOAT_FORMAT, data->r) << "\n";
-            out << entry.key << "G=" << std::format(SETTINGS_FLOAT_FORMAT, data->g) << "\n";
-            out << entry.key << "B=" << std::format(SETTINGS_FLOAT_FORMAT, data->b) << "\n";
-            out << entry.key << "A=" << std::format(SETTINGS_FLOAT_FORMAT, data->a) << "\n";
-            break;
-        }
-        default:
-            break;
-    }
-}
+[Window][Spritesheet Editor]
+Pos=60,62
+Size=983,691
+Collapsed=0
+DockId=0x00000003,0
 
-void settings_save(Settings* self)
-{
-    const std::string path = settings_path_get();
-    const std::filesystem::path filesystemPath(path);
-    const std::filesystem::path directory = filesystemPath.parent_path();
+[Window][Spritesheets]
+Pos=1451,62
+Size=459,430
+Collapsed=0
+DockId=0x0000000B,0
 
-    if (!directory.empty()) 
-    {
-        std::error_code errorCode;
-        std::filesystem::create_directories(directory, errorCode);
-        if (errorCode) 
-        {
-            log_error(std::format(SETTINGS_DIRECTORY_ERROR, directory.string(), errorCode.message()));
-            return;
-        }
-    }
+[Window][Tools]
+Pos=8,62
+Size=50,691
+Collapsed=0
+DockId=0x00000001,0
 
-    std::string data;
-    if (std::filesystem::exists(filesystemPath)) 
-    {
-        if (std::ifstream in(path, std::ios::binary); in)
-            data.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
-    }
+[Window][Timeline]
+Pos=8,755
+Size=1902,301
+Collapsed=0
+DockId=0x00000006,0
 
-    std::filesystem::path temp = filesystemPath;
-    temp += SETTINGS_TEMPORARY_EXTENSION;
+[Window][Sounds]
+Pos=1045,463
+Size=404,290
+Collapsed=0
+DockId=0x00000008,3
 
-    std::ofstream out(temp, std::ios::binary | std::ios::trunc);
-    if (!out) 
-    {
-        log_error(std::format(SETTINGS_INIT_ERROR, temp.string()));
-        return;
-    }
+[Docking][Data]
+DockSpace           ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,994 Split=Y Selected=0x4EFD0020
+  DockNode          ID=0x00000005 Parent=0x123F8F08 SizeRef=1910,691 Split=X
+    DockNode        ID=0x00000001 Parent=0x00000005 SizeRef=50,994 Selected=0x18A5FDB9
+    DockNode        ID=0x00000002 Parent=0x00000005 SizeRef=1850,994 Split=X Selected=0x4EFD0020
+      DockNode      ID=0x00000003 Parent=0x00000002 SizeRef=983,994 Selected=0x024430EF
+      DockNode      ID=0x00000004 Parent=0x00000002 SizeRef=865,994 Split=X Selected=0x4EFD0020
+        DockNode    ID=0x00000009 Parent=0x00000004 SizeRef=404,497 Split=Y Selected=0xCD8384B1
+          DockNode  ID=0x00000007 Parent=0x00000009 SizeRef=181,399 Selected=0x754E368F
+          DockNode  ID=0x00000008 Parent=0x00000009 SizeRef=181,290 Selected=0x8A65D963
+        DockNode    ID=0x0000000A Parent=0x00000004 SizeRef=459,497 Split=Y Selected=0x4EFD0020
+          DockNode  ID=0x0000000B Parent=0x0000000A SizeRef=710,430 CentralNode=1 Selected=0x4EFD0020
+          DockNode  ID=0x0000000C Parent=0x0000000A SizeRef=710,259 Selected=0xC1986EE2
+  DockNode          ID=0x00000006 Parent=0x123F8F08 SizeRef=1910,301 Selected=0x4F89F0DC
+)";
 
-    out << SETTINGS_SECTION << "\n";
-    for (s32 i = 0; i < SETTINGS_COUNT; i++)
-        _settings_setting_write(self, out, SETTINGS_ENTRIES[i]);
-
-    out << "\n" << SETTINGS_SECTION_IMGUI << "\n";
-    out << data;
-
-    out.flush();
-
-    if (!out.good()) 
-    {
-        log_error(std::format(SETTINGS_SAVE_ERROR, temp.string()));
-        return;
-    }
-
-    out.close();
-
-    std::error_code errorCode;
-    std::filesystem::rename(temp, filesystemPath, errorCode);
-    if (errorCode) 
-    {
-        // Windows can block rename if target exists; try remove+rename
-        std::filesystem::remove(filesystemPath, errorCode);
-        errorCode = {};
-        std::filesystem::rename(temp, filesystemPath, errorCode);
-        if (errorCode) 
-        {
-            log_error(std::format(SETTINGS_SAVE_FINALIZE_ERROR, filesystemPath.string(), errorCode.message()));
-            std::filesystem::remove(temp);
-            return;
-        }
-    }
-
-    log_info(std::format(SETTINGS_SAVE_INFO, path));
-}
-
-void settings_init(Settings* self)
-{
-    const std::string path = settings_path_get();
-    std::ifstream file(path, std::ios::binary);
-
-    if (file)
-        log_info(std::format(SETTINGS_INIT_INFO, path));
+  Settings::Settings(const std::string& path)
+  {
+    if (filesystem::path_is_exist(path))
+      logger.info(std::format("Using settings from: {}", path));
     else
     {
-        log_warning(std::format(SETTINGS_INIT_WARNING, path));
-        settings_save(self);
-        std::ofstream out(path, std::ios::binary | std::ios::app);
-        out << SETTINGS_IMGUI_DEFAULT;
-        out.flush();
-        out.close();
-        file.open(path, std::ios::binary);
+      logger.warning("Settings file does not exist; using default");
+      save(path, IMGUI_DEFAULT);
     }
 
-    std::string line;
-    bool inSettingsSection = false;
+    std::ifstream file(path);
+    if (!file.is_open())
+    {
+      logger.error(std::format("Failed to open settings file: {}", path));
+      return;
+    }
+
+    std::string line{};
+
+    auto stream_assign = [](auto& dest, std::istringstream& ss) { ss >> dest; };
+
+    auto value_set = [&](auto& dest, std::istringstream& ss)
+    {
+      using T = std::decay_t<decltype(dest)>;
+
+      if constexpr (std::is_same_v<T, bool>)
+      {
+        std::string val;
+        stream_assign(val, ss);
+        dest = (val == "true" || val == "1");
+      }
+      else if constexpr (std::is_same_v<T, std::string>)
+        std::getline(ss, dest);
+      else
+        stream_assign(dest, ss);
+    };
+
+    auto entry_load =
+        [&](const std::string& key, std::istringstream& ss, const std::string& name, auto& value, std::string_view type)
+    {
+      using T = std::decay_t<decltype(value)>;
+
+      auto is_match = [&](const char* suffix) { return key == name + suffix; };
+
+      if constexpr (std::is_same_v<T, ivec2> || std::is_same_v<T, vec2>)
+      {
+        if (type.ends_with("_WH"))
+        {
+          if (is_match("W"))
+          {
+            stream_assign(value.x, ss);
+            return true;
+          }
+          if (is_match("H"))
+          {
+            stream_assign(value.y, ss);
+            return true;
+          }
+        }
+        else
+        {
+          if (is_match("X"))
+          {
+            stream_assign(value.x, ss);
+            return true;
+          }
+          if (is_match("Y"))
+          {
+            stream_assign(value.y, ss);
+            return true;
+          }
+        }
+      }
+      else if constexpr (std::is_same_v<T, vec3>)
+      {
+        if (is_match("R"))
+        {
+          stream_assign(value.x, ss);
+          return true;
+        }
+        if (is_match("G"))
+        {
+          stream_assign(value.y, ss);
+          return true;
+        }
+        if (is_match("B"))
+        {
+          stream_assign(value.z, ss);
+          return true;
+        }
+      }
+      else if constexpr (std::is_same_v<T, vec4>)
+      {
+        if (is_match("R"))
+        {
+          stream_assign(value.x, ss);
+          return true;
+        }
+        if (is_match("G"))
+        {
+          stream_assign(value.y, ss);
+          return true;
+        }
+        if (is_match("B"))
+        {
+          stream_assign(value.z, ss);
+          return true;
+        }
+        if (is_match("A"))
+        {
+          stream_assign(value.w, ss);
+          return true;
+        }
+      }
+      else
+      {
+        if (key == name)
+        {
+          value_set(value, ss);
+          return true;
+        }
+      }
+
+      return false;
+    };
 
     while (std::getline(file, line))
     {
-        if (line == SETTINGS_SECTION)
-        {
-            inSettingsSection = true;
-            continue;
-        }
-        if (line.empty()) continue;
-        if (line == SETTINGS_SECTION_IMGUI) break;
-        if (inSettingsSection) _settings_setting_load(self, line);
+      if (line == "[Settings]" || line.empty()) continue;
+      if (line == "# Dear ImGui") break;
+
+      auto eq = line.find('=');
+      if (eq == std::string::npos) continue;
+
+      auto key = line.substr(0, eq);
+      std::istringstream ss(line.substr(eq + 1));
+
+#define X(symbol, name, string, type, ...)                                                                             \
+  if (entry_load(key, ss, #name, name, #type)) continue;
+      SETTINGS_MEMBERS SETTINGS_SHORTCUTS SETTINGS_WINDOWS
+#undef X
     }
+
+    file.close();
+  }
+
+  void Settings::save(const std::string& path, const std::string& imguiData)
+  {
+    std::ofstream file(path, std::ios::out | std::ios::binary);
+    file << "[Settings]\n";
+
+    auto value_save = [&](const std::string& key, const auto& value)
+    {
+      using T = std::decay_t<decltype(value)>;
+
+      if constexpr (std::is_same_v<T, bool>)
+        file << key << "=" << (value ? "true" : "false") << "\n";
+      else
+        file << key << "=" << value << "\n";
+    };
+    auto entry_save = [&](const std::string& name, const auto& value, const std::string_view type)
+    {
+      using T = std::decay_t<decltype(value)>;
+
+      if constexpr (std::is_same_v<T, ivec2> || std::is_same_v<T, vec2>)
+      {
+        if (type.ends_with("_WH"))
+        {
+          value_save(name + "W", value.x);
+          value_save(name + "H", value.y);
+        }
+        else
+        {
+          value_save(name + "X", value.x);
+          value_save(name + "Y", value.y);
+        }
+      }
+      else if constexpr (std::is_same_v<T, vec3>)
+      {
+        value_save(name + "R", value.x);
+        value_save(name + "G", value.y);
+        value_save(name + "B", value.z);
+      }
+      else if constexpr (std::is_same_v<T, vec4>)
+      {
+        value_save(name + "R", value.x);
+        value_save(name + "G", value.y);
+        value_save(name + "B", value.z);
+        value_save(name + "A", value.w);
+      }
+      else
+        value_save(name, value);
+    };
+
+#define X(symbol, name, string, type, ...) entry_save(#name, name, #type);
+    SETTINGS_MEMBERS SETTINGS_SHORTCUTS SETTINGS_WINDOWS
+#undef X
+
+            file
+        << "\n# Dear ImGui\n"
+        << imguiData;
+
+    file.flush();
+    file.close();
+  }
 }

@@ -1,56 +1,63 @@
 #include "log.h"
 
-inline std::ofstream logFile;
+#include <print>
 
-std::string log_path_get(void)
+#include "filesystem_.h"
+#include "time_.h"
+
+using namespace anm2ed::util;
+
+namespace anm2ed
 {
-    return preferences_path_get() + LOG_PATH;
+  void Logger::write(const Level level, const std::string& message)
+  {
+    std::string formatted = std::format("{} {} {}", time::get("(%d-%B-%Y %I:%M:%S)"), LEVEL_STRINGS[level], message);
+    std::println("{}", formatted);
+    if (file.is_open()) file << formatted << '\n' << std::flush;
+  }
+
+  void Logger::info(const std::string& message)
+  {
+    write(INFO, message);
+  }
+
+  void Logger::warning(const std::string& message)
+  {
+    write(WARNING, message);
+  }
+
+  void Logger::error(const std::string& message)
+  {
+    write(ERROR, message);
+  }
+
+  void Logger::fatal(const std::string& message)
+  {
+    write(FATAL, message);
+  }
+
+  void Logger::command(const std::string& message)
+  {
+    write(COMMAND, message);
+  }
+
+  void Logger::open(const std::filesystem::path& path)
+  {
+    file.open(path, std::ios::out | std::ios::app);
+  }
+
+  Logger::Logger()
+  {
+    open(filesystem::path_preferences_get() + "log.txt");
+    info("Initializing Anm2Ed");
+  }
+
+  Logger::~Logger()
+  {
+    info("Exiting Anm2Ed");
+    if (file.is_open()) file.close();
+  }
+
 }
 
-void log_write(const std::string& string)
-{
-    std::println("{}", string);
-    
-    if (logFile.is_open())
-    {
-        logFile << string << '\n';
-        logFile.flush();
-    }
-}
-
-void log_init(void)
-{
-    std::string logFilepath = log_path_get();
-    logFile.open(logFilepath, std::ios::out | std::ios::trunc);
-    if (!logFile) std::println("{}", std::format(LOG_INIT_ERROR, logFilepath));
-}
-
-void log_error(const std::string& error)
-{
-    log_write(LOG_ERROR_FORMAT + error);
-}
-
-void log_info(const std::string& info)
-{
-    log_write(LOG_INFO_FORMAT + info);
-}
-
-void log_warning(const std::string& warning)
-{
-    log_write(LOG_WARNING_FORMAT + warning);
-}
-
-void log_imgui(const std::string& imgui)
-{
-    log_write(LOG_IMGUI_FORMAT + imgui);
-}
-
-void log_command(const std::string& command)
-{
-    log_write(LOG_COMMAND_FORMAT + command);
-}
-
-void log_free(void)
-{
-    logFile.close();
-}
+anm2ed::Logger logger;

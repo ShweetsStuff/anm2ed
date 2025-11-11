@@ -1,91 +1,87 @@
 #include "dialog.h"
 
 #ifdef _WIN32
-    #include <windows.h>
+  #include <window.h>
+#elif __unix__
+#else
+  #include "toast.h"
 #endif
 
-static void _dialog_callback(void* userdata, const char* const* filelist, s32 filter) 
+#include <format>
+
+namespace anm2ed::dialog
 {
-	Dialog* self;
+  void callback(void* userData, const char* const* filelist, int filter)
+  {
+    auto self = (Dialog*)(userData);
 
-	self = (Dialog*)userdata;
-
-	if (filelist && filelist[0] && strlen(filelist[0]) > 0)
-	{
-		self->path = filelist[0];
-		self->isSelected = true;
-		self->selectedFilter = filter;
-	}
-	else
-	{
-		self->isSelected = false;
-		self->selectedFilter = INDEX_NONE;
-	}
+    if (filelist && filelist[0] && strlen(filelist[0]) > 0)
+    {
+      self->path = filelist[0];
+      self->selectedFilter = filter;
+    }
+    else
+      self->selectedFilter = -1;
+  }
 }
 
-void dialog_init(Dialog* self, SDL_Window* window)
-{
-	self->window = window;
-}
+using namespace anm2ed::dialog;
 
-void dialog_anm2_open(Dialog* self)
+namespace anm2ed
 {
-	SDL_ShowOpenFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_ANM2, std::size(DIALOG_FILE_FILTER_ANM2), nullptr, false);
-	self->type = DIALOG_ANM2_OPEN;
-}
 
-void dialog_anm2_save(Dialog* self)
-{
-	SDL_ShowSaveFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_ANM2, std::size(DIALOG_FILE_FILTER_ANM2), nullptr);
-	self->type = DIALOG_ANM2_SAVE;
-}
+  Dialog::Dialog(SDL_Window* window)
+  {
+    *this = Dialog();
+    this->window = window;
+  }
 
-void dialog_spritesheet_add(Dialog* self)
-{
-	SDL_ShowOpenFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_PNG, std::size(DIALOG_FILE_FILTER_PNG), nullptr, false);
-	self->type = DIALOG_SPRITESHEET_ADD;
-}
+  void Dialog::file_open(dialog::Type type)
+  {
+    SDL_ShowOpenFileDialog(callback, this, window, FILTERS[TYPE_FILTERS[type]], std::size(FILTERS[TYPE_FILTERS[type]]),
+                           nullptr, false);
+    this->type = type;
+  }
 
-void dialog_spritesheet_replace(Dialog* self, s32 id)
-{
-	SDL_ShowOpenFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_PNG, std::size(DIALOG_FILE_FILTER_PNG), nullptr, false);
-	self->replaceID = id;
-	self->type = DIALOG_SPRITESHEET_REPLACE;
-}
+  void Dialog::file_save(dialog::Type type)
+  {
+    SDL_ShowSaveFileDialog(callback, this, window, FILTERS[TYPE_FILTERS[type]], std::size(FILTERS[TYPE_FILTERS[type]]),
+                           nullptr);
+    this->type = type;
+  }
 
-void dialog_render_path_set(Dialog* self, RenderType type)
-{
-	SDL_DialogFileFilter filter = DIALOG_RENDER_FILE_FILTERS[type];
+  void Dialog::folder_open(dialog::Type type)
+  {
+    SDL_ShowOpenFolderDialog(callback, this, window, nullptr, false);
+    this->type = type;
+  }
 
-	if (type == RENDER_PNG)
-		SDL_ShowOpenFolderDialog(_dialog_callback, self, self->window, nullptr, false);
-	else
-		SDL_ShowSaveFileDialog(_dialog_callback, self, self->window, &filter, 1, nullptr);
-	self->type = DIALOG_RENDER_PATH_SET;
-}
-
-void dialog_ffmpeg_path_set(Dialog* self)
-{
-	SDL_ShowOpenFileDialog(_dialog_callback, self, self->window, DIALOG_FILE_FILTER_FFMPEG, std::size(DIALOG_FILE_FILTER_FFMPEG), nullptr, false);
-	self->type = DIALOG_FFMPEG_PATH_SET;
-}
-
-void dialog_explorer_open(const std::string& path)
-{
+  void Dialog::file_explorer_open(const std::string& path)
+  {
 #ifdef _WIN32
-		ShellExecuteA(NULL, DIALOG_FILE_EXPLORER_COMMAND, path.c_str(), NULL, NULL, SW_SHOWNORMAL);
-#else 
-		char command[DIALOG_FILE_EXPLORER_COMMAND_SIZE];
-		snprintf(command, sizeof(command), DIALOG_FILE_EXPLORER_COMMAND, path.c_str());
-		system(command);
+    ShellExecuteA(NULL, "open", path.c_str(), NULL, NULL, SW_SHOWNORMAL);
+#elif __unix__
+    system(std::format("xdg-open \"{}\" &", path).c_str());
+#else
+    toasts.info("Operation not supported.");
 #endif
-}
+  }
 
-void
-dialog_reset(Dialog* self)
-{
-	self->replaceID = ID_NONE;
-	self->type = DIALOG_NONE;
-	self->path.clear();
-	self->isSelected = false;
-}
+  void Dialog::reset()
+  {
+    *this = Dialog(this->window);
+  }
+
+  bool Dialog::is_selected(dialog::Type type)
+  {
+    return this->type == type && !path.empty();
+  }
+
+  void Dialog::set_string_to_selected_path(std::string& string, dialog::Type type)
+  {
+    if (type == NONE) return;
+    if (!is_selected(type)) return;
+    string = path;
+    reset();
+  }
+};

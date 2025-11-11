@@ -1,10 +1,22 @@
-[submodule "include/imgui"]
-	path = include/imgui
+[submodule "external/glm"]
+	path = external/glm
+	url = https://github.com/g-truc/glm
+[submodule "external/imgui"]
+	path = external/imgui
 	url = https://github.com/ocornut/imgui
 	branch = docking
-[submodule "include/glm"]
-	path = include/glm
-	url = https://github.com/g-truc/glm
-[submodule "include/tinyxml2"]
-	path = include/tinyxml2
+[submodule "external/tinyxml2"]
+	path = external/tinyxml2
 	url = https://github.com/leethomason/tinyxml2
+[submodule "external/SDL"]
+	path = external/SDL
+	url = https://github.com/libsdl-org/SDL.git
+[submodule "external/lunasvg"]
+	path = external/lunasvg
+	url = https://github.com/sammycage/lunasvg
+[submodule "external/SDL_mixer"]
+	path = external/SDL_mixer
+	url = https://github.com/libsdl-org/SDL_mixer
+[submodule "external/libxm"]
+	path = external/libxm
+	url = https://github.com/Artefact2/libxm
