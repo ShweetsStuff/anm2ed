@@ -248,18 +248,18 @@ namespace anm2ed::imgui
     return false;
   }
 
-  bool shortcut(std::string string, shortcut::Type type)
+  bool shortcut(ImGuiKeyChord chord, shortcut::Type type)
   {
     if (ImGui::GetTopMostPopupModal() != nullptr) return false;
     int flags = type == shortcut::GLOBAL || type == shortcut::GLOBAL_SET ? ImGuiInputFlags_RouteGlobal
                                                                          : ImGuiInputFlags_RouteFocused;
     if (type == shortcut::GLOBAL_SET || type == shortcut::FOCUSED_SET)
     {
-      ImGui::SetNextItemShortcut(string_to_chord(string), flags);
+      ImGui::SetNextItemShortcut(chord, flags);
       return false;
     }
 
-    return ImGui::Shortcut(string_to_chord(string), flags);
+    return ImGui::Shortcut(chord, flags);
   }
 
   MultiSelectStorage::MultiSelectStorage() { internal.AdapterSetItemSelected = external_storage_set; }

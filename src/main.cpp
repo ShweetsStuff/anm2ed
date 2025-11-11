@@ -7,7 +7,7 @@ int main(int argc, const char** argv)
 
   if (loader.isError) return EXIT_FAILURE;
 
-  anm2ed::State state(loader.window, loader.arguments);
+  anm2ed::State state(loader.window, loader.settings, loader.arguments);
 
   while (!state.isQuit)
     state.loop(loader.window, loader.settings);

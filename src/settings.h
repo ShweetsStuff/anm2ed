@@ -4,7 +4,7 @@
 
 #include <glm/glm.hpp>
 
-#include "anm2/anm2.h"
+#include "anm2/anm2_type.h"
 #include "render.h"
 #include "types.h"
 
@@ -54,7 +54,7 @@ namespace anm2ed
   X(VIEW_ZOOM_STEP, viewZoomStep, "Zoom Step", FLOAT, 50.0f)                                                           \
                                                                                                                        \
   X(PLAYBACK_IS_LOOP, playbackIsLoop, "Loop", BOOL, true)                                                              \
-  X(PLAYBACK_IS_CLAMP_PLAYHEAD, playbackIsClampPlayhead, "Clamp Playhead", BOOL, true)                                 \
+  X(PLAYBACK_IS_CLAMP, playbackIsClamp, "Clamp", BOOL, true)                                                           \
                                                                                                                        \
   X(CHANGE_IS_CROP, changeIsCrop, "##Is Crop", BOOL, false)                                                            \
   X(CHANGE_IS_SIZE, changeIsSize, "##Is Size", BOOL, false)                                                            \
@@ -186,9 +186,7 @@ namespace anm2ed
   X(SHORTCUT_DUPLICATE, shortcutDuplicate, "Duplicate", STRING, "Ctrl+J")                                              \
   X(SHORTCUT_DEFAULT, shortcutDefault, "Default", STRING, "Home")                                                      \
   X(SHORTCUT_MERGE, shortcutMerge, "Merge", STRING, "Ctrl+E")                                                          \
-  X(SHORTCUT_PASTE, shortcutPaste, "Paste", STRING, "Ctrl+V")                                                          \
-  X(SHORTCUT_SELECT_ALL, shortcutSelectAll, "Select All", STRING, "Ctrl+A")                                            \
-  X(SHORTCUT_SELECT_NONE, shortcutSelectNone, "Select None", STRING, "Escape")
+  X(SHORTCUT_PASTE, shortcutPaste, "Paste", STRING, "Ctrl+V")
 
 #define SETTINGS_WINDOWS                                                                                               \
   /* Symbol / Name / String / Type / Default */                                                                        \
@@ -205,6 +203,14 @@ namespace anm2ed
   X(WINDOW_TIMELINE, windowIsTimeline, "Timeline", BOOL, true)                                                         \
   X(WINDOW_TOOLS, windowIsTools, "Tools", BOOL, true)
 
+  enum ShortcutType
+  {
+#define X(symbol, name, string, type, ...) symbol,
+    SETTINGS_SHORTCUTS
+#undef X
+        SHORTCUT_COUNT
+  };
+
   class Settings
   {
   public:
@@ -216,14 +222,6 @@ namespace anm2ed
 
     Settings(const std::string&);
     void save(const std::string&, const std::string&);
-  };
-
-  enum ShortcutType
-  {
-#define X(symbol, name, string, type, ...) symbol,
-    SETTINGS_SHORTCUTS
-#undef X
-        SHORTCUT_COUNT
   };
 
   constexpr const char* SHORTCUT_STRINGS[] = {

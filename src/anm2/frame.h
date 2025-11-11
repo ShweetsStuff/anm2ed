@@ -9,14 +9,14 @@
 
 namespace anm2ed::anm2
 {
-  constexpr auto FRAME_DELAY_MIN = 1;
-  constexpr auto FRAME_DELAY_MAX = 100000;
+  constexpr auto FRAME_DURATION_MIN = 1;
+  constexpr auto FRAME_DURATION_MAX = 100000;
 
 #define MEMBERS                                                                                                        \
   X(isVisible, bool, true)                                                                                             \
   X(isInterpolated, bool, false)                                                                                       \
   X(rotation, float, 0.0f)                                                                                             \
-  X(delay, int, FRAME_DELAY_MIN)                                                                                       \
+  X(duration, int, FRAME_DURATION_MIN)                                                                                 \
   X(atFrame, int, -1)                                                                                                  \
   X(eventID, int, -1)                                                                                                  \
   X(soundID, int, -1)                                                                                                  \
@@ -53,5 +53,4 @@ namespace anm2ed::anm2
   };
 
 #undef MEMBERS
-
 }

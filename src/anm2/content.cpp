@@ -24,6 +24,10 @@ namespace anm2ed::anm2
     if (auto eventsElement = element->FirstChildElement("Events"))
       for (auto child = eventsElement->FirstChildElement("Event"); child; child = child->NextSiblingElement("Event"))
         events[id] = Event(child, id);
+
+    if (auto eventsElement = element->FirstChildElement("Sounds"))
+      for (auto child = eventsElement->FirstChildElement("Sound"); child; child = child->NextSiblingElement("Sound"))
+        sounds[id] = Sound(child, id);
   }
 
   void Content::serialize(XMLDocument& document, XMLElement* parent)
@@ -49,6 +53,11 @@ namespace anm2ed::anm2
     for (auto& [id, event] : events)
       event.serialize(document, eventsElement, id);
     element->InsertEndChild(eventsElement);
+
+    auto soundsElement = document.NewElement("Sounds");
+    for (auto& [id, sound] : sounds)
+      sound.serialize(document, soundsElement, id);
+    element->InsertEndChild(soundsElement);
 
     parent->InsertEndChild(element);
   }

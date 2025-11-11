@@ -36,9 +36,9 @@ namespace anm2ed
       : path(std::move(other.path)), snapshots(std::move(other.snapshots)), current(snapshots.current),
         anm2(current.anm2), reference(current.reference), playback(current.playback), animation(current.animation),
         merge(current.merge), event(current.event), layer(current.layer), null(current.null), sound(current.sound),
-        spritesheet(current.spritesheet), message(current.message), previewZoom(other.previewZoom),
-        previewPan(other.previewPan), editorPan(other.editorPan), editorZoom(other.editorZoom),
-        overlayIndex(other.overlayIndex), hoveredFrame(other.hoveredFrame), hash(other.hash), saveHash(other.saveHash),
+        spritesheet(current.spritesheet), frames(current.frames), message(current.message),
+        previewZoom(other.previewZoom), previewPan(other.previewPan), editorPan(other.editorPan),
+        editorZoom(other.editorZoom), overlayIndex(other.overlayIndex), saveHash(other.saveHash),
         autosaveHash(other.autosaveHash), lastAutosaveTime(other.lastAutosaveTime), isOpen(other.isOpen),
         isForceDirty(other.isForceDirty), isAnimationPreviewSet(other.isAnimationPreviewSet),
         isSpritesheetEditorSet(other.isSpritesheetEditorSet)
@@ -56,7 +56,6 @@ namespace anm2ed
       editorPan = other.editorPan;
       editorZoom = other.editorZoom;
       overlayIndex = other.overlayIndex;
-      hoveredFrame = other.hoveredFrame;
       hash = other.hash;
       saveHash = other.saveHash;
       autosaveHash = other.autosaveHash;
@@ -118,10 +117,7 @@ namespace anm2ed
     return false;
   }
 
-  void Document::hash_set()
-  {
-    hash = anm2.hash();
-  }
+  void Document::hash_set() { hash = anm2.hash(); }
 
   void Document::clean()
   {
@@ -194,50 +190,23 @@ namespace anm2ed
     }
   }
 
-  bool Document::is_dirty()
-  {
-    return hash != saveHash;
-  }
-
-  bool Document::is_autosave_dirty()
-  {
-    return hash != autosaveHash;
-  }
-
-  std::filesystem::path Document::directory_get()
-  {
-    return path.parent_path();
-  }
-
-  std::filesystem::path Document::filename_get()
-  {
-    return path.filename();
-  }
-
-  bool Document::is_valid()
-  {
-    return !path.empty();
-  }
+  bool Document::is_dirty() { return hash != saveHash; }
+  bool Document::is_autosave_dirty() { return hash != autosaveHash; }
+  std::filesystem::path Document::directory_get() { return path.parent_path(); }
+  std::filesystem::path Document::filename_get() { return path.filename(); }
+  bool Document::is_valid() { return !path.empty(); }
 
   anm2::Frame* Document::frame_get()
   {
-    return anm2.frame_get(reference);
+    return anm2.frame_get(reference.animationIndex, reference.itemType, reference.frameIndex, reference.itemID);
   }
 
   anm2::Item* Document::item_get()
   {
-    return anm2.item_get(reference);
+    return anm2.item_get(reference.animationIndex, reference.itemType, reference.itemID);
   }
-
-  anm2::Animation* Document::animation_get()
-  {
-    return anm2.animation_get(reference);
-  }
-
-  anm2::Spritesheet* Document::spritesheet_get()
-  {
-    return anm2.spritesheet_get(spritesheet.reference);
-  }
+  anm2::Animation* Document::animation_get() { return anm2.animation_get(reference.animationIndex); }
+  anm2::Spritesheet* Document::spritesheet_get() { return anm2.spritesheet_get(spritesheet.reference); }
 
   void Document::spritesheet_add(const std::string& path)
   {
@@ -277,14 +246,6 @@ namespace anm2ed
     change(Document::ALL);
   }
 
-  bool Document::is_able_to_undo()
-  {
-    return !snapshots.undoStack.is_empty();
-  }
-
-  bool Document::is_able_to_redo()
-  {
-    return !snapshots.redoStack.is_empty();
-  }
-
+  bool Document::is_able_to_undo() { return !snapshots.undoStack.is_empty(); }
+  bool Document::is_able_to_redo() { return !snapshots.redoStack.is_empty(); }
 }

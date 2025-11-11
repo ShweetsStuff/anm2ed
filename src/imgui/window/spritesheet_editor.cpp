@@ -17,9 +17,7 @@ namespace anm2ed::imgui
 {
   constexpr auto PIVOT_COLOR = color::PINK;
 
-  SpritesheetEditor::SpritesheetEditor() : Canvas(vec2())
-  {
-  }
+  SpritesheetEditor::SpritesheetEditor() : Canvas(vec2()) {}
 
   void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& resources)
   {
@@ -80,13 +78,13 @@ namespace anm2ed::imgui
 
         auto widgetSize = ImVec2(imgui::row_widget_width_get(2), 0);
 
-        imgui::shortcut(settings.shortcutCenterView);
+        imgui::shortcut(manager.chords[SHORTCUT_CENTER_VIEW]);
         if (ImGui::Button("Center View", widgetSize)) center_view();
         imgui::set_item_tooltip_shortcut("Centers the view.", settings.shortcutCenterView);
 
         ImGui::SameLine();
 
-        imgui::shortcut(settings.shortcutFit);
+        imgui::shortcut(manager.chords[SHORTCUT_FIT]);
         if (ImGui::Button("Fit", widgetSize))
           if (spritesheet) set_to_rect(zoom, pan, {0, 0, spritesheet->texture.size.x, spritesheet->texture.size.y});
         imgui::set_item_tooltip_shortcut("Set the view to match the extent of the spritesheet.", settings.shortcutFit);

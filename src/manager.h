@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "document.h"
+#include "settings.h"
 
 namespace anm2ed
 {
@@ -26,6 +27,8 @@ namespace anm2ed
     int recordingStart{};
     int recordingEnd{};
     bool isRecordingRange{};
+
+    ImGuiKeyChord chords[SHORTCUT_COUNT]{};
 
     anm2::Layer editLayer{};
     imgui::PopupHelper layerPropertiesPopup{imgui::PopupHelper("Layer Properties", imgui::POPUP_SMALL_NO_HEIGHT)};
@@ -63,6 +66,8 @@ namespace anm2ed
     void autosave_files_open();
     void autosave_files_write();
     void autosave_files_clear();
+
+    void chords_set(Settings&);
 
     std::filesystem::path autosave_directory_get();
   };

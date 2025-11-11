@@ -27,7 +27,7 @@ namespace anm2ed
     uint64_t previousTick{};
     uint64_t previousUpdate{};
 
-    State(SDL_Window*&, std::vector<std::string>&);
+    State(SDL_Window*&, Settings& settings, std::vector<std::string>&);
 
     void loop(SDL_Window*&, Settings&);
   };

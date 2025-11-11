@@ -1,5 +1,8 @@
 #pragma once
 
+#include <set>
+#include <vector>
+
 #include "clipboard.h"
 #include "manager.h"
 #include "resources.h"
@@ -7,6 +10,14 @@
 
 namespace anm2ed::imgui
 {
+  struct FrameDragDrop
+  {
+    anm2::Type type{anm2::NONE};
+    int itemID{-1};
+    int animationIndex{-1};
+    std::vector<int> selection{};
+  };
+
   class Timeline
   {
     bool isDragging{};
@@ -18,7 +29,16 @@ namespace anm2ed::imgui
     bool addItemIsRect{};
     int addItemID{-1};
     int addItemSpritesheetID{-1};
-    bool isUnusedItemsSet{};
+    int hoveredTime{};
+    anm2::Frame* draggedTrigger{};
+    int draggedTriggerIndex{-1};
+    int draggedTriggerAtFrameStart{-1};
+    bool isDraggedTriggerSnapshot{};
+    FrameDragDrop frameDragDrop{};
+    std::vector<int> frameSelectionSnapshot{};
+    std::vector<int> frameSelectionLocked{};
+    bool isFrameSelectionLocked{};
+    anm2::Reference frameSelectionSnapshotReference{};
     std::set<int> unusedItems{};
     glm::vec2 scroll{};
     ImDrawList* pickerLineDrawList{};

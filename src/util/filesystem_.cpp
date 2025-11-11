@@ -8,36 +8,13 @@
 
 namespace anm2ed::util::filesystem
 {
-  std::string path_pref_get(const char* org, const char* app)
+  std::string path_preferences_get()
   {
-    auto path = SDL_GetPrefPath(org, app);
+    auto path = SDL_GetPrefPath(nullptr, "anm2ed");
     std::string string = path;
     SDL_free(path);
     return string;
   }
-
-  std::string path_preferences_get() { return path_pref_get(nullptr, "anm2ed"); }
-  std::string path_base_get() { return std::string(SDL_GetBasePath()); }
-  std::string path_executable_get() { return std::filesystem::path(path_base_get()) / "anm2ed"; }
-
-#ifdef __unix__
-  std::string path_application_get()
-  {
-    return std::filesystem::path(path_pref_get(nullptr, "applications")) / "anm2ed.desktop";
-  }
-
-  std::string path_mime_get()
-  {
-    return std::filesystem::path(path_pref_get(nullptr, "mime/application")) / "x-anm2+xml.xml";
-  }
-
-  std::string path_icon_get() { return std::filesystem::path(path_preferences_get()) / "anm2ed.png"; }
-  std::string path_icon_file_get()
-  {
-    return std::filesystem::path(path_preferences_get()) / "application-x-anm2+xml.png";
-  }
-
-#endif
 
   bool path_is_exist(const std::string& path)
   {

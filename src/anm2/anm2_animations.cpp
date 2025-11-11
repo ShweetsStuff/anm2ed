@@ -8,10 +8,7 @@ using namespace tinyxml2;
 
 namespace anm2ed::anm2
 {
-  Animation* Anm2::animation_get(Reference reference)
-  {
-    return vector::find(animations.items, reference.animationIndex);
-  }
+  Animation* Anm2::animation_get(int animationIndex) { return vector::find(animations.items, animationIndex); }
 
   std::vector<std::string> Anm2::animation_labels_get()
   {

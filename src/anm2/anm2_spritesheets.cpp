@@ -16,11 +16,6 @@ namespace anm2ed::anm2
     return map::find(content.spritesheets, id);
   }
 
-  void Anm2::spritesheet_remove(int id)
-  {
-    content.spritesheets.erase(id);
-  }
-
   bool Anm2::spritesheet_add(const std::string& directory, const std::string& path, int& id)
   {
     Spritesheet spritesheet(directory, path);

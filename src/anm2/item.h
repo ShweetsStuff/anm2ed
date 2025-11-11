@@ -24,5 +24,7 @@ namespace anm2ed::anm2
     bool frames_deserialize(const std::string&, Type, int, std::set<int>&, std::string*);
     void frames_bake(int, int, bool, bool);
     void frames_generate_from_grid(glm::ivec2, glm::ivec2, glm::ivec2, int, int, int);
+    void frames_sort_by_at_frame();
+    int frame_index_from_at_frame_get(int);
   };
 }

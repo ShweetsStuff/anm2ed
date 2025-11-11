@@ -9,18 +9,18 @@ using namespace anm2ed::util;
 
 namespace anm2ed::anm2
 {
-  Item* Anm2::item_get(Reference reference)
+  Item* Anm2::item_get(int animationIndex, Type type, int id)
   {
-    if (Animation* animation = animation_get(reference))
+    if (Animation* animation = animation_get(animationIndex))
     {
-      switch (reference.itemType)
+      switch (type)
       {
         case ROOT:
           return &animation->rootAnimation;
         case LAYER:
-          return unordered_map::find(animation->layerAnimations, reference.itemID);
+          return unordered_map::find(animation->layerAnimations, id);
         case NULL_:
-          return map::find(animation->nullAnimations, reference.itemID);
+          return map::find(animation->nullAnimations, id);
         case TRIGGER:
           return &animation->triggers;
         default:
@@ -51,7 +51,7 @@ namespace anm2ed::anm2
     }
     else if (locale == locale::LOCAL)
     {
-      if (auto animation = animation_get(reference))
+      if (auto animation = animation_get(reference.animationIndex))
         if (!animation->layerAnimations.contains(id)) add(animation, id);
     }
 
@@ -74,7 +74,7 @@ namespace anm2ed::anm2
     }
     else if (locale == locale::LOCAL)
     {
-      if (auto animation = animation_get(reference))
+      if (auto animation = animation_get(reference.animationIndex))
         if (!animation->nullAnimations.contains(id)) add(animation, id);
     }
 

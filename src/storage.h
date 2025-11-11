@@ -1,6 +1,5 @@
 #pragma once
 
-#include "anm2/anm2.h"
 #include "imgui_.h"
 
 namespace anm2ed
@@ -15,14 +14,7 @@ namespace anm2ed
     std::vector<const char*> labels{};
     imgui::MultiSelectStorage selection{};
 
+    void clear();
     void labels_set(std::vector<std::string>);
-  };
-
-  class FrameStorage
-  {
-  public:
-    anm2::Type referenceType{anm2::NONE};
-    int referenceID{-1};
-    int referenceFrameIndex{-1};
   };
 }

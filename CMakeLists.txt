@@ -44,6 +44,7 @@ set(SDLMIXER_INSTALL OFF CACHE BOOL "" FORCE)
 add_subdirectory(external/SDL_mixer EXCLUDE_FROM_ALL)
 
 add_subdirectory(external/lunasvg)
+add_subdirectory(external/libxm/src EXCLUDE_FROM_ALL)
 
 set(GLAD_SRC ${CMAKE_CURRENT_SOURCE_DIR}/include/glad/glad.cpp)
 
@@ -82,7 +83,6 @@ add_executable(${PROJECT_NAME}
         ${PROJECT_SRC}
 )
 
-
 if (WIN32)
     enable_language(RC)
     target_sources(${PROJECT_NAME} PRIVATE Icon.rc)
@@ -114,6 +114,13 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
         IMGUI_ENABLE_DOCKING
 )
 
+
+if (MSVC)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE restrict=__restrict)
+else ()
+    target_compile_definitions(${PROJECT_NAME} PRIVATE restrict=__restrict__)
+endif ()
+
 target_include_directories(${PROJECT_NAME} PRIVATE
         external
         external/imgui
@@ -130,7 +137,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         src/util
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE GL SDL3-static SDL3_mixer::SDL3_mixer lunasvg)
+target_link_libraries(${PROJECT_NAME} PRIVATE GL SDL3-static SDL3_mixer::SDL3_mixer lunasvg xm)
 
 message(STATUS "System: ${CMAKE_SYSTEM_NAME}")
 message(STATUS "Project: ${PROJECT_NAME}")

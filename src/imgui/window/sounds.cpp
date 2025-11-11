@@ -79,8 +79,8 @@ namespace anm2ed::imgui
             toasts.error(std::format("Failed to deserialize sound(s): {}", errorString));
         };
 
-        if (imgui::shortcut(settings.shortcutCopy, shortcut::FOCUSED)) copy();
-        if (imgui::shortcut(settings.shortcutPaste, shortcut::FOCUSED)) paste(merge::APPEND);
+        if (imgui::shortcut(manager.chords[SHORTCUT_COPY], shortcut::FOCUSED)) copy();
+        if (imgui::shortcut(manager.chords[SHORTCUT_PASTE], shortcut::FOCUSED)) paste(merge::APPEND);
 
         if (ImGui::BeginPopupContextWindow("##Context Menu", ImGuiPopupFlags_MouseButtonRight))
         {
@@ -102,12 +102,12 @@ namespace anm2ed::imgui
 
       auto widgetSize = imgui::widget_size_with_row_get(2);
 
-      imgui::shortcut(settings.shortcutAdd);
+      imgui::shortcut(manager.chords[SHORTCUT_ADD]);
       if (ImGui::Button("Add", widgetSize)) dialog.file_open(dialog::SOUND_OPEN);
       imgui::set_item_tooltip_shortcut("Add a sound.", settings.shortcutAdd);
       ImGui::SameLine();
 
-      imgui::shortcut(settings.shortcutRemove);
+      imgui::shortcut(manager.chords[SHORTCUT_REMOVE]);
       ImGui::BeginDisabled(unused.empty());
       if (ImGui::Button("Remove Unused", widgetSize))
       {

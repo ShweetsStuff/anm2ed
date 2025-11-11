@@ -56,14 +56,8 @@ namespace anm2ed::anm2
     return texture.write_png(this->path);
   }
 
-  void Spritesheet::reload(const std::string& directory)
-  {
-    *this = Spritesheet(directory, this->path);
-  }
+  void Spritesheet::reload(const std::string& directory) { *this = Spritesheet(directory, this->path); }
 
-  bool Spritesheet::is_valid()
-  {
-    return texture.is_valid();
-  }
+  bool Spritesheet::is_valid() { return texture.is_valid(); }
 
 }

@@ -25,7 +25,7 @@ namespace anm2ed::anm2
       }
       element->QueryFloatAttribute("XScale", &scale.x);
       element->QueryFloatAttribute("YScale", &scale.y);
-      element->QueryIntAttribute("Delay", &delay);
+      element->QueryIntAttribute("Delay", &duration);
       element->QueryBoolAttribute("Visible", &isVisible);
       xml::query_color_attribute(element, "RedTint", tint.r);
       xml::query_color_attribute(element, "GreenTint", tint.g);
@@ -40,6 +40,7 @@ namespace anm2ed::anm2
     else
     {
       element->QueryIntAttribute("EventId", &eventID);
+      element->QueryIntAttribute("SoundId", &soundID);
       element->QueryIntAttribute("AtFrame", &atFrame);
     }
   }
@@ -54,7 +55,7 @@ namespace anm2ed::anm2
       case NULL_:
         element->SetAttribute("XPosition", position.x);
         element->SetAttribute("YPosition", position.y);
-        element->SetAttribute("Delay", delay);
+        element->SetAttribute("Delay", duration);
         element->SetAttribute("Visible", isVisible);
         element->SetAttribute("XScale", scale.x);
         element->SetAttribute("YScale", scale.y);
@@ -79,7 +80,7 @@ namespace anm2ed::anm2
         element->SetAttribute("Height", size.y);
         element->SetAttribute("XScale", scale.x);
         element->SetAttribute("YScale", scale.y);
-        element->SetAttribute("Delay", delay);
+        element->SetAttribute("Delay", duration);
         element->SetAttribute("Visible", isVisible);
         element->SetAttribute("RedTint", math::float_to_uint8(tint.r));
         element->SetAttribute("GreenTint", math::float_to_uint8(tint.g));
@@ -93,6 +94,7 @@ namespace anm2ed::anm2
         break;
       case TRIGGER:
         element->SetAttribute("EventId", eventID);
+        element->SetAttribute("SoundId", soundID);
         element->SetAttribute("AtFrame", atFrame);
         break;
       default:
@@ -114,9 +116,9 @@ namespace anm2ed::anm2
     return xml::document_to_string(document);
   }
 
-  void Frame::shorten() { delay = glm::clamp(--delay, FRAME_DELAY_MIN, FRAME_DELAY_MAX); }
+  void Frame::shorten() { duration = glm::clamp(--duration, FRAME_DURATION_MIN, FRAME_DURATION_MAX); }
 
-  void Frame::extend() { delay = glm::clamp(++delay, FRAME_DELAY_MIN, FRAME_DELAY_MAX); }
+  void Frame::extend() { duration = glm::clamp(++duration, FRAME_DURATION_MIN, FRAME_DURATION_MAX); }
 
   bool Frame::is_visible(Type type)
   {

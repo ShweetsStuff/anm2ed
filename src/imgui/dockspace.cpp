@@ -34,7 +34,7 @@ namespace anm2ed::imgui
           if (settings.windowIsFrameProperties) frameProperties.update(manager, settings);
           if (settings.windowIsLayers) layers.update(manager, settings, resources, clipboard);
           if (settings.windowIsNulls) nulls.update(manager, settings, resources, clipboard);
-          if (settings.windowIsOnionskin) onionskin.update(settings);
+          if (settings.windowIsOnionskin) onionskin.update(manager, settings);
           if (settings.windowIsSounds) sounds.update(manager, settings, resources, dialog, clipboard);
           if (settings.windowIsSpritesheetEditor) spritesheetEditor.update(manager, settings, resources);
           if (settings.windowIsSpritesheets) spritesheets.update(manager, settings, resources, dialog, clipboard);

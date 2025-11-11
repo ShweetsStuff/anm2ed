@@ -174,7 +174,7 @@ namespace anm2ed::imgui
   ImVec2 icon_size_get();
   bool chord_held(ImGuiKeyChord);
   bool chord_repeating(ImGuiKeyChord, float = ImGui::GetIO().KeyRepeatDelay, float = ImGui::GetIO().KeyRepeatRate);
-  bool shortcut(std::string, types::shortcut::Type = types::shortcut::FOCUSED_SET);
+  bool shortcut(ImGuiKeyChord, types::shortcut::Type = types::shortcut::FOCUSED_SET);
 
   class MultiSelectStorage : public std::set<int>
   {

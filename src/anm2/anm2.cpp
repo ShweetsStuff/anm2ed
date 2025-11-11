@@ -12,10 +12,7 @@ using namespace glm;
 
 namespace anm2ed::anm2
 {
-  Anm2::Anm2()
-  {
-    info.createdOn = time::get("%d-%B-%Y %I:%M:%S");
-  }
+  Anm2::Anm2() { info.createdOn = time::get("%d-%B-%Y %I:%M:%S"); }
 
   Anm2::Anm2(const std::string& path, std::string* errorString)
   {
@@ -37,25 +34,6 @@ namespace anm2ed::anm2
       animations = Animations((XMLElement*)animationsElement);
   }
 
-  bool Anm2::serialize(const std::string& path, std::string* errorString)
-  {
-    XMLDocument document;
-
-    auto* element = document.NewElement("AnimatedActor");
-    document.InsertFirstChild(element);
-
-    info.serialize(document, element);
-    content.serialize(document, element);
-    animations.serialize(document, element);
-
-    if (document.SaveFile(path.c_str()) != XML_SUCCESS)
-    {
-      if (errorString) *errorString = document.ErrorStr();
-      return false;
-    }
-    return true;
-  }
-
   XMLElement* Anm2::to_element(XMLDocument& document)
   {
     auto element = document.NewElement("AnimatedActor");
@@ -68,6 +46,19 @@ namespace anm2ed::anm2
     return element;
   }
 
+  bool Anm2::serialize(const std::string& path, std::string* errorString)
+  {
+    XMLDocument document;
+    document.InsertFirstChild(to_element(document));
+
+    if (document.SaveFile(path.c_str()) != XML_SUCCESS)
+    {
+      if (errorString) *errorString = document.ErrorStr();
+      return false;
+    }
+    return true;
+  }
+
   std::string Anm2::to_string()
   {
     XMLDocument document{};
@@ -75,15 +66,12 @@ namespace anm2ed::anm2
     return xml::document_to_string(document);
   }
 
-  uint64_t Anm2::hash()
-  {
-    return std::hash<std::string>{}(to_string());
-  }
+  uint64_t Anm2::hash() { return std::hash<std::string>{}(to_string()); }
 
-  Frame* Anm2::frame_get(Reference reference)
+  Frame* Anm2::frame_get(int animationIndex, Type itemType, int frameIndex, int itemID)
   {
-    if (auto item = item_get(reference); item)
-      if (vector::in_bounds(item->frames, reference.frameIndex)) return &item->frames[reference.frameIndex];
+    if (auto item = item_get(animationIndex, itemType, itemID); item)
+      if (vector::in_bounds(item->frames, frameIndex)) return &item->frames[frameIndex];
     return nullptr;
   }
 }

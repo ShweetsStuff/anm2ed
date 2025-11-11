@@ -134,6 +134,8 @@ namespace anm2ed::anm2
     return length;
   }
 
+  void Animation::fit_length() { frameNum = length(); }
+
   vec4 Animation::rect(bool isRootTransform)
   {
     constexpr ivec2 CORNERS[4] = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};

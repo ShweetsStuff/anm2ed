@@ -16,21 +16,27 @@ namespace anm2ed::anm2
     content.nulls[id] = Null();
   }
 
-  std::set<int> Anm2::nulls_unused(Reference reference)
+  std::set<int> Anm2::nulls_unused()
   {
     std::set<int> used{};
     std::set<int> unused{};
 
-    if (auto animation = animation_get(reference); animation)
-      for (auto& id : animation->nullAnimations | std::views::keys)
+    for (auto& animation : animations.items)
+      for (auto& id : animation.nullAnimations | std::views::keys)
         used.insert(id);
-    else
-      for (auto& animation : animations.items)
-        for (auto& id : animation.nullAnimations | std::views::keys)
-          used.insert(id);
 
     for (auto& id : content.nulls | std::views::keys)
       if (!used.contains(id)) unused.insert(id);
+
+    return unused;
+  }
+
+  std::set<int> Anm2::nulls_unused(Animation& animation)
+  {
+    std::set<int> unused{};
+
+    for (auto& id : content.nulls | std::views::keys)
+      if (!animation.nullAnimations.contains(id)) unused.insert(id);
 
     return unused;
   }

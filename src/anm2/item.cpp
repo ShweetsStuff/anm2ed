@@ -1,4 +1,5 @@
 #include "item.h"
+#include <algorithm>
 #include <ranges>
 
 #include "vector_.h"
@@ -30,6 +31,8 @@ namespace anm2ed::anm2
     if (type == NULL_) element->SetAttribute("NullId", id);
     if (type == LAYER || type == NULL_) element->SetAttribute("Visible", isVisible);
 
+    if (type == TRIGGER) frames_sort_by_at_frame();
+
     for (auto& frame : frames)
       frame.serialize(document, element, type);
 
@@ -57,9 +60,14 @@ namespace anm2ed::anm2
         length = frame.atFrame > length ? frame.atFrame : length;
     else
       for (auto& frame : frames)
-        length += frame.delay;
+        length += frame.duration;
 
     return length;
+  }
+
+  void Item::frames_sort_by_at_frame()
+  {
+    std::sort(frames.begin(), frames.end(), [](const Frame& a, const Frame& b) { return a.atFrame < b.atFrame; });
   }
 
   Frame Item::frame_generate(float time, Type type)
@@ -70,8 +78,8 @@ namespace anm2ed::anm2
     if (frames.empty()) return frame;
 
     Frame* frameNext = nullptr;
-    int delayCurrent = 0;
-    int delayNext = 0;
+    int durationCurrent = 0;
+    int durationNext = 0;
 
     for (auto [i, iFrame] : std::views::enumerate(frames))
     {
@@ -87,9 +95,9 @@ namespace anm2ed::anm2
       {
         frame = iFrame;
 
-        delayNext += frame.delay;
+        durationNext += frame.duration;
 
-        if (time >= delayCurrent && time < delayNext)
+        if (time >= durationCurrent && time < durationNext)
         {
           if (i + 1 < (int)frames.size())
             frameNext = &frames[i + 1];
@@ -98,13 +106,13 @@ namespace anm2ed::anm2
           break;
         }
 
-        delayCurrent += frame.delay;
+        durationCurrent += frame.duration;
       }
     }
 
-    if (type != TRIGGER && frame.isInterpolated && frameNext && frame.delay > 1)
+    if (type != TRIGGER && frame.isInterpolated && frameNext && frame.duration > 1)
     {
-      auto interpolation = (time - delayCurrent) / (delayNext - delayCurrent);
+      auto interpolation = (time - durationCurrent) / (durationNext - durationCurrent);
 
       frame.rotation = glm::mix(frame.rotation, frameNext->rotation, interpolation);
       frame.position = glm::mix(frame.position, frameNext->position, interpolation);
@@ -133,7 +141,7 @@ namespace anm2ed::anm2
       {
         case ADJUST:
           if (change.rotation) frame.rotation = *change.rotation;
-          if (change.delay) frame.delay = std::max(FRAME_DELAY_MIN, *change.delay);
+          if (change.duration) frame.duration = std::max(FRAME_DURATION_MIN, *change.duration);
           if (change.crop) frame.crop = *change.crop;
           if (change.pivot) frame.pivot = *change.pivot;
           if (change.position) frame.position = *change.position;
@@ -145,7 +153,7 @@ namespace anm2ed::anm2
 
         case ADD:
           if (change.rotation) frame.rotation += *change.rotation;
-          if (change.delay) frame.delay = std::max(FRAME_DELAY_MIN, frame.delay + *change.delay);
+          if (change.duration) frame.duration = std::max(FRAME_DURATION_MIN, frame.duration + *change.duration);
           if (change.crop) frame.crop += *change.crop;
           if (change.pivot) frame.pivot += *change.pivot;
           if (change.position) frame.position += *change.position;
@@ -157,7 +165,7 @@ namespace anm2ed::anm2
 
         case SUBTRACT:
           if (change.rotation) frame.rotation -= *change.rotation;
-          if (change.delay) frame.delay = std::max(FRAME_DELAY_MIN, frame.delay - *change.delay);
+          if (change.duration) frame.duration = std::max(FRAME_DURATION_MIN, frame.duration - *change.duration);
           if (change.crop) frame.crop -= *change.crop;
           if (change.pivot) frame.pivot -= *change.pivot;
           if (change.position) frame.position -= *change.position;
@@ -177,22 +185,50 @@ namespace anm2ed::anm2
 
     if (document.Parse(string.c_str()) == XML_SUCCESS)
     {
-      if (!document.FirstChildElement("Frame"))
+      int count{};
+      if (document.FirstChildElement("Frame") && type != anm2::TRIGGER)
       {
-        if (errorString) *errorString = "No valid frame(s).";
+        start = std::clamp(start, 0, (int)frames.size());
+        for (auto element = document.FirstChildElement("Frame"); element;
+             element = element->NextSiblingElement("Frame"))
+        {
+          auto index = start + count;
+          frames.insert(frames.begin() + start + count, Frame(element, type));
+          indices.insert(index);
+          count++;
+        }
+
+        return true;
+      }
+      else if (document.FirstChildElement("Trigger") && type == anm2::TRIGGER)
+      {
+        auto has_conflict = [&](int value)
+        {
+          for (auto& trigger : frames)
+            if (trigger.atFrame == value) return true;
+          return false;
+        };
+
+        for (auto element = document.FirstChildElement("Trigger"); element;
+             element = element->NextSiblingElement("Trigger"))
+        {
+          Frame trigger(element, type);
+          trigger.atFrame = start + count;
+          while (has_conflict(trigger.atFrame))
+            trigger.atFrame++;
+          frames.push_back(trigger);
+          indices.insert(trigger.atFrame);
+          count++;
+        }
+
+        frames_sort_by_at_frame();
+        return true;
+      }
+      else
+      {
+        if (errorString) *errorString = type == anm2::TRIGGER ? "No valid trigger(s)." : "No valid frame(s).";
         return false;
       }
-
-      int count{};
-      for (auto element = document.FirstChildElement("Frame"); element; element = element->NextSiblingElement("Frame"))
-      {
-        auto index = start + count;
-        frames.insert(frames.begin() + start + count, Frame(element, type));
-        indices.insert(index);
-        count++;
-      }
-
-      return true;
     }
     else if (errorString)
       *errorString = document.ErrorStr();
@@ -205,18 +241,18 @@ namespace anm2ed::anm2
     if (!vector::in_bounds(frames, index)) return;
 
     Frame& frame = frames[index];
-    if (frame.delay == FRAME_DELAY_MIN) return;
+    if (frame.duration == FRAME_DURATION_MIN) return;
 
     Frame frameNext = vector::in_bounds(frames, index + 1) ? frames[index + 1] : frame;
 
-    int delay{};
+    int duration{};
     int i = index;
 
-    while (delay < frame.delay)
+    while (duration < frame.duration)
     {
       Frame baked = frame;
-      float interpolation = (float)delay / frame.delay;
-      baked.delay = std::min(interval, frame.delay - delay);
+      float interpolation = (float)duration / frame.duration;
+      baked.duration = std::min(interval, frame.duration - duration);
       baked.isInterpolated = (i == index) ? frame.isInterpolated : false;
       baked.rotation = glm::mix(frame.rotation, frameNext.rotation, interpolation);
       baked.position = glm::mix(frame.position, frameNext.position, interpolation);
@@ -232,21 +268,29 @@ namespace anm2ed::anm2
         frames.insert(frames.begin() + i, baked);
       i++;
 
-      delay += baked.delay;
+      duration += baked.duration;
     }
   }
 
-  void Item::frames_generate_from_grid(ivec2 startPosition, ivec2 size, ivec2 pivot, int columns, int count, int delay)
+  void Item::frames_generate_from_grid(ivec2 startPosition, ivec2 size, ivec2 pivot, int columns, int count,
+                                       int duration)
   {
     for (int i = 0; i < count; i++)
     {
       Frame frame{};
-      frame.delay = delay;
+      frame.duration = duration;
       frame.pivot = pivot;
       frame.size = size;
       frame.crop = startPosition + ivec2(size.x * (i % columns), size.y * (i / columns));
 
       frames.emplace_back(frame);
     }
+  }
+
+  int Item::frame_index_from_at_frame_get(int atFrame)
+  {
+    for (auto [i, frame] : std::views::enumerate(frames))
+      if (frame.atFrame == atFrame) return i;
+    return -1;
   }
 }

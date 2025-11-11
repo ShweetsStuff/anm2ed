@@ -17,12 +17,14 @@ namespace anm2ed
   constexpr auto UPDATE_RATE = 120;
   constexpr auto UPDATE_INTERVAL = (1000 / UPDATE_RATE);
 
-  State::State(SDL_Window*& window, std::vector<std::string>& arguments)
+  State::State(SDL_Window*& window, Settings& settings, std::vector<std::string>& arguments)
   {
     dialog = Dialog(window);
 
     for (auto argument : arguments)
       manager.open(argument);
+
+    manager.chords_set(settings);
   }
 
   void State::tick(Settings& settings)

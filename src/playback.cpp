@@ -11,10 +11,7 @@ namespace anm2ed
     isPlaying = !isPlaying;
   }
 
-  void Playback::clamp(int length)
-  {
-    time = glm::clamp(time, 0.0f, (float)length - 1.0f);
-  }
+  void Playback::clamp(int length) { time = glm::clamp(time, 0.0f, (float)length - 1.0f); }
 
   void Playback::tick(int fps, int length, bool isLoop)
   {

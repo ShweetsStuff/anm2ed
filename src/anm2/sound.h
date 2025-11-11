@@ -25,6 +25,7 @@ namespace anm2ed::anm2
     Sound(const std::string&, const std::string&);
     tinyxml2::XMLElement* to_element(tinyxml2::XMLDocument&, int);
     std::string to_string(int);
+    void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*, int);
     void reload(const std::string&);
     bool is_valid();
     void play();

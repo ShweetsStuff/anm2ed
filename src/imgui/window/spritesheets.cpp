@@ -52,8 +52,8 @@ namespace anm2ed::imgui
             toasts.error(std::format("Failed to deserialize spritesheet(s): {}", errorString));
         };
 
-        if (shortcut(settings.shortcutCopy, shortcut::FOCUSED)) copy();
-        if (shortcut(settings.shortcutPaste, shortcut::FOCUSED)) paste(merge::APPEND);
+        if (shortcut(manager.chords[SHORTCUT_COPY], shortcut::FOCUSED)) copy();
+        if (shortcut(manager.chords[SHORTCUT_PASTE], shortcut::FOCUSED)) paste(merge::APPEND);
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
@@ -181,9 +181,9 @@ namespace anm2ed::imgui
       }
       ImGui::EndChild();
 
-      auto rowOneWidgetSize = widget_size_with_row_get(4);
+      auto rowOneWidgetSize = widget_size_with_row_get(3);
 
-      shortcut(settings.shortcutAdd);
+      shortcut(manager.chords[SHORTCUT_ADD]);
       if (ImGui::Button("Add", rowOneWidgetSize)) dialog.file_open(dialog::SPRITESHEET_OPEN);
       set_item_tooltip_shortcut("Add a new spritesheet.", settings.shortcutAdd);
 
@@ -238,12 +238,12 @@ namespace anm2ed::imgui
         dialog.reset();
       }
 
-      ImGui::SameLine();
+      auto rowTwoWidgetSize = widget_size_with_row_get(2);
 
       ImGui::BeginDisabled(unused.empty());
       {
-        shortcut(settings.shortcutRemove);
-        if (ImGui::Button("Remove Unused", rowOneWidgetSize))
+        shortcut(manager.chords[SHORTCUT_REMOVE]);
+        if (ImGui::Button("Remove Unused", rowTwoWidgetSize))
         {
           auto remove_unused = [&]()
           {
@@ -261,26 +261,6 @@ namespace anm2ed::imgui
         set_item_tooltip_shortcut("Remove all unused spritesheets (i.e., not used in any layer.).",
                                   settings.shortcutRemove);
       }
-      ImGui::EndDisabled();
-
-      auto rowTwoWidgetSize = widget_size_with_row_get(3);
-
-      shortcut(settings.shortcutSelectAll);
-      ImGui::BeginDisabled(selection.size() == anm2.content.spritesheets.size());
-      {
-        if (ImGui::Button("Select All", rowTwoWidgetSize))
-          for (auto& id : anm2.content.spritesheets | std::views::keys)
-            selection.insert(id);
-      }
-      ImGui::EndDisabled();
-      set_item_tooltip_shortcut("Select all spritesheets.", settings.shortcutSelectAll);
-
-      ImGui::SameLine();
-
-      shortcut(settings.shortcutSelectNone);
-      ImGui::BeginDisabled(selection.empty());
-      if (ImGui::Button("Select None", rowTwoWidgetSize)) selection.clear();
-      set_item_tooltip_shortcut("Unselect all spritesheets.", settings.shortcutSelectNone);
       ImGui::EndDisabled();
 
       ImGui::SameLine();

@@ -281,5 +281,11 @@ namespace anm2ed
     autosave_files_write();
   }
 
+  void Manager::chords_set(Settings& settings)
+  {
+    for (int i = 0; i < SHORTCUT_COUNT; i++)
+      chords[i] = imgui::string_to_chord(settings.*SHORTCUT_MEMBERS[i]);
+  }
+
   Manager::~Manager() { autosave_files_clear(); }
 }

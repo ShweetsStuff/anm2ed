@@ -9,10 +9,7 @@ using namespace tinyxml2;
 
 namespace anm2ed::anm2
 {
-  Sound::Sound(const Sound& other) : path(other.path)
-  {
-    audio = path.empty() ? Audio() : Audio(path.c_str());
-  }
+  Sound::Sound(const Sound& other) : path(other.path) { audio = path.empty() ? Audio() : Audio(path.c_str()); }
 
   Sound& Sound::operator=(const Sound& other)
   {
@@ -49,6 +46,11 @@ namespace anm2ed::anm2
     return element;
   }
 
+  void Sound::serialize(XMLDocument& document, XMLElement* parent, int id)
+  {
+    parent->InsertEndChild(to_element(document, id));
+  }
+
   std::string Sound::to_string(int id)
   {
     XMLDocument document{};
@@ -56,18 +58,9 @@ namespace anm2ed::anm2
     return xml::document_to_string(document);
   }
 
-  void Sound::reload(const std::string& directory)
-  {
-    *this = Sound(directory, this->path);
-  }
+  void Sound::reload(const std::string& directory) { *this = Sound(directory, this->path); }
 
-  bool Sound::is_valid()
-  {
-    return audio.is_valid();
-  }
+  bool Sound::is_valid() { return audio.is_valid(); }
 
-  void Sound::play()
-  {
-    audio.play();
-  }
+  void Sound::play() { audio.play(); }
 }

@@ -11,7 +11,7 @@ namespace anm2ed::imgui
 {
   constexpr auto FRAMES_MAX = 100;
 
-  void Onionskin::update(Settings& settings)
+  void Onionskin::update(Manager& manager, Settings& settings)
   {
     auto& isEnabled = settings.onionskinIsEnabled;
     auto& beforeCount = settings.onionskinBeforeCount;
@@ -49,7 +49,7 @@ namespace anm2ed::imgui
     }
     ImGui::End();
 
-    if (shortcut(settings.shortcutOnionskin, shortcut::GLOBAL)) isEnabled = !isEnabled;
+    if (shortcut(manager.chords[SHORTCUT_ONIONSKIN], shortcut::GLOBAL)) isEnabled = !isEnabled;
   }
 
 }

@@ -38,9 +38,9 @@ namespace anm2ed::imgui
       if (ImGui::BeginTabBar("Documents Bar", ImGuiTabBarFlags_Reorderable))
       {
         auto documentsCount = (int)manager.documents.size();
-        bool closeShortcut = imgui::shortcut(settings.shortcutClose, shortcut::GLOBAL) && !closePopup.is_open();
+        bool isCloseShortcut = shortcut(manager.chords[SHORTCUT_CLOSE], shortcut::GLOBAL) && !closePopup.is_open();
         int closeShortcutIndex =
-            closeShortcut && manager.selected >= 0 && manager.selected < documentsCount ? manager.selected : -1;
+            isCloseShortcut && manager.selected >= 0 && manager.selected < documentsCount ? manager.selected : -1;
 
         std::vector<int> closeIndices{};
         closeIndices.reserve(documentsCount);
@@ -85,7 +85,7 @@ namespace anm2ed::imgui
           ImGui::PushFont(resources.fonts[font].get(), font::SIZE);
           if (ImGui::BeginTabItem(label.c_str(), &document.isOpen, flags))
           {
-            manager.set(i);
+            if (manager.selected != i) manager.set(i);
 
             if (isRequested) manager.pendingSelected = -1;
 

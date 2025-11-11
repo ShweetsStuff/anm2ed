@@ -17,6 +17,7 @@ namespace anm2ed
   public:
     anm2::Anm2 anm2{};
     anm2::Reference reference{};
+    float frameTime{};
     Playback playback{};
     Storage animation{};
     Storage merge{};
@@ -26,7 +27,7 @@ namespace anm2ed
     Storage sound{};
     Storage spritesheet{};
     Storage items{};
-    std::map<int, Storage> frames{};
+    Storage frames{};
     std::string message = snapshots::ACTION;
   };
 

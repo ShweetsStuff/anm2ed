@@ -14,6 +14,7 @@ namespace anm2ed
   public:
     enum ChangeType
     {
+      INFO,
       LAYERS,
       NULLS,
       SPRITESHEETS,
@@ -33,6 +34,7 @@ namespace anm2ed
 
     anm2::Anm2& anm2 = current.anm2;
     anm2::Reference& reference = current.reference;
+    float& frameTime = current.frameTime;
     Playback& playback = current.playback;
     Storage& animation = current.animation;
     Storage& merge = current.merge;
@@ -41,6 +43,7 @@ namespace anm2ed
     Storage& null = current.null;
     Storage& sound = current.sound;
     Storage& spritesheet = current.spritesheet;
+    Storage& frames = current.frames;
     std::string& message = current.message;
 
     float previewZoom{200};
@@ -48,8 +51,6 @@ namespace anm2ed
     glm::vec2 editorPan{};
     float editorZoom{200};
     int overlayIndex{-1};
-
-    anm2::Reference hoveredFrame{};
 
     uint64_t hash{};
     uint64_t saveHash{};

@@ -1,19 +1,19 @@
 #include "taskbar.h"
 
+#include <algorithm>
 #include <array>
-#include <cstdint>
-#include <cstdlib>
+#include <cfloat>
+#include <cmath>
 #include <filesystem>
-#include <fstream>
-#include <iterator>
 #include <ranges>
+#include <vector>
 
 #include <imgui/imgui.h>
+#include <xm.h>
 
 #include "math_.h"
 #include "render.h"
 #include "shader.h"
-#include "toast.h"
 #include "types.h"
 
 #include "icon.h"
@@ -26,115 +26,11 @@ using namespace glm;
 
 namespace anm2ed::imgui
 {
-#ifdef __unix__
-
-  namespace
-  {
-    constexpr std::array<int, 7> ICON_SIZES{16, 24, 32, 48, 64, 128, 256};
-
-    bool ensure_parent_directory_exists(const std::filesystem::path& path)
-    {
-      std::error_code ec;
-      std::filesystem::create_directories(path.parent_path(), ec);
-      if (ec)
-      {
-        toasts.warning(std::format("Could not create directory for {} ({})", path.string(), ec.message()));
-        return false;
-      }
-      return true;
-    }
-
-    bool write_binary_blob(const std::filesystem::path& path, const std::uint8_t* data, size_t size)
-    {
-      if (!ensure_parent_directory_exists(path)) return false;
-
-      std::ofstream file(path, std::ios::binary | std::ios::trunc);
-      if (!file.is_open())
-      {
-        toasts.warning(std::format("Could not open {} for writing", path.string()));
-        return false;
-      }
-
-      file.write(reinterpret_cast<const char*>(data), static_cast<std::streamsize>(size));
-      return true;
-    }
-
-    bool run_command_checked(const std::string& command, const std::string& description)
-    {
-      auto result = std::system(command.c_str());
-      if (result != 0)
-      {
-        toasts.warning(std::format("{} failed (exit code {})", description, result));
-        return false;
-      }
-      return true;
-    }
-
-    bool install_icon_set(const std::string& context, const std::string& iconName, const std::filesystem::path& path)
-    {
-      bool success = true;
-      for (auto size : ICON_SIZES)
-      {
-        auto command = std::format("xdg-icon-resource install --noupdate --novendor --context {} --size {} \"{}\" {}",
-                                   context, size, path.string(), iconName);
-        success &= run_command_checked(command, std::format("Install {} icon ({}px)", iconName, size));
-      }
-      return success;
-    }
-
-    bool uninstall_icon_set(const std::string& context, const std::string& iconName)
-    {
-      bool success = true;
-      for (auto size : ICON_SIZES)
-      {
-        auto command =
-            std::format("xdg-icon-resource uninstall --noupdate --context {} --size {} {}", context, size, iconName);
-        success &= run_command_checked(command, std::format("Remove {} icon ({}px)", iconName, size));
-      }
-      return success;
-    }
-
-    bool remove_file_if_exists(const std::filesystem::path& path)
-    {
-      std::error_code ec;
-      if (!std::filesystem::exists(path, ec)) return true;
-      std::filesystem::remove(path, ec);
-      if (ec)
-      {
-        toasts.warning(std::format("Could not remove {} ({})", path.string(), ec.message()));
-        return false;
-      }
-      return true;
-    }
-  }
-
-  constexpr auto MIME_TYPE = R"(<?xml version="1.0" encoding="utf-8"?>
-<mime-type xmlns="http://www.freedesktop.org/standards/shared-mime-info" type="application/x-anm2+xml">
-  <!--Created automatically by update-mime-database. DO NOT EDIT!-->
-  <comment>Anm2 Animation</comment>
-  <glob pattern="*.anm2"/>
-</mime-type>
-)";
-
-  constexpr auto DESKTOP_ENTRY_FORMAT = R"([Desktop Entry]
-Type=Application
-Name=Anm2Ed
-Icon=anm2ed
-Comment=Animation editor for .anm2 files
-Exec={}
-Terminal=false
-Categories=Graphics;Development;
-MimeType=application/x-anm2+xml;
-)";
-
-#endif
-
   Taskbar::Taskbar() : generate(vec2()) {}
 
   void Taskbar::update(Manager& manager, Settings& settings, Resources& resources, Dialog& dialog, bool& isQuitting)
   {
     auto document = manager.get();
-    auto reference = document ? &document->reference : nullptr;
     auto animation = document ? document->animation_get() : nullptr;
     auto item = document ? document->item_get() : nullptr;
 
@@ -194,10 +90,10 @@ MimeType=application/x-anm2+xml;
 
       if (ImGui::BeginMenu("Wizard"))
       {
-        ImGui::BeginDisabled(!item || document->reference.itemType != anm2::LAYER);
-        if (ImGui::MenuItem("Generate Animation From Grid")) generatePopup.open();
-        if (ImGui::MenuItem("Change All Frame Properties")) changePopup.open();
-        ImGui::EndDisabled();
+        if (ImGui::MenuItem("Generate Animation From Grid", nullptr, false,
+                            item && document->reference.itemType == anm2::LAYER))
+          generatePopup.open();
+
         ImGui::Separator();
         if (ImGui::MenuItem("Render Animation", nullptr, false, animation)) renderPopup.open();
         ImGui::EndMenu();
@@ -208,8 +104,9 @@ MimeType=application/x-anm2+xml;
         ImGui::MenuItem("Always Loop", nullptr, &settings.playbackIsLoop);
         ImGui::SetItemTooltip("%s", "Animations will always loop during playback, even if looping isn't set.");
 
-        ImGui::MenuItem("Clamp Playhead", nullptr, &settings.playbackIsClampPlayhead);
-        ImGui::SetItemTooltip("%s", "The playhead will always clamp to the animation's length.");
+        ImGui::MenuItem("Clamp", nullptr, &settings.playbackIsClamp);
+        ImGui::SetItemTooltip("%s", "Operations will always be clamped to within the animation's bounds.\nFor example, "
+                                    "dragging the playhead, or triggers.");
 
         ImGui::EndMenu();
       }
@@ -230,146 +127,12 @@ MimeType=application/x-anm2+xml;
           configurePopup.open();
         }
 
-        ImGui::Separator();
-
-        if (ImGui::MenuItem("Associate .anm2 Files with Editor", nullptr, false,
-                            !isAnm2Association || !isAbleToAssociateAnm2))
-        {
-#ifdef _WIN32
-
-#elif __unix__
-          auto cache_icons = []()
-          {
-            auto programIconPath = std::filesystem::path(filesystem::path_icon_get());
-            auto fileIconPath = std::filesystem::path(filesystem::path_icon_file_get());
-            auto iconBytes = std::size(resource::icon::PROGRAM);
-
-            bool isSuccess = write_binary_blob(programIconPath, resource::icon::PROGRAM, iconBytes) &&
-                             write_binary_blob(fileIconPath, resource::icon::PROGRAM, iconBytes);
-
-            if (isSuccess)
-            {
-              isSuccess = install_icon_set("apps", "anm2ed", programIconPath) &&
-                          install_icon_set("mimetypes", "application-x-anm2+xml", fileIconPath) &&
-                          run_command_checked("xdg-icon-resource forceupdate --theme hicolor", "Refresh icon cache");
-            }
-
-            remove_file_if_exists(programIconPath);
-            remove_file_if_exists(fileIconPath);
-
-            if (isSuccess) toasts.info("Cached program and file icons.");
-            return isSuccess;
-          };
-
-          auto register_mime = []()
-          {
-            auto path = std::filesystem::path(filesystem::path_mime_get());
-            if (!ensure_parent_directory_exists(path)) return false;
-
-            std::ofstream file(path, std::ofstream::out | std::ofstream::trunc);
-            if (!file.is_open())
-            {
-              toasts.warning(std::format("Could not write .anm2 MIME type: {}", path.string()));
-              return false;
-            }
-
-            file << MIME_TYPE;
-            file.close();
-            toasts.info(std::format("Wrote .anm2 MIME type to: {}", path.string()));
-
-            auto mimeRoot = path.parent_path().parent_path();
-            auto command = std::format("update-mime-database \"{}\"", mimeRoot.string());
-            return run_command_checked(command, "Update MIME database");
-          };
-
-          auto register_desktop_entry = []()
-          {
-            auto path = std::filesystem::path(filesystem::path_application_get());
-            if (!ensure_parent_directory_exists(path)) return false;
-
-            std::ofstream file(path, std::ofstream::out | std::ofstream::trunc);
-            if (!file.is_open())
-            {
-              toasts.warning(std::format("Could not write desktop entry: {}", path.string()));
-              return false;
-            }
-
-            auto desktopEntry = std::format(DESKTOP_ENTRY_FORMAT, filesystem::path_executable_get());
-            file << desktopEntry;
-            file.close();
-            toasts.info(std::format("Wrote desktop entry to: {}", path.string()));
-
-            auto desktopDir = path.parent_path();
-            auto desktopUpdate =
-                std::format("update-desktop-database \"{}\"", desktopDir.empty() ? "." : desktopDir.string());
-            auto desktopFileName = path.filename().string();
-            auto setDefault = std::format("xdg-mime default {} application/x-anm2+xml",
-                                          desktopFileName.empty() ? path.string() : desktopFileName);
-
-            auto databaseUpdated = run_command_checked(desktopUpdate, "Update desktop database");
-            auto defaultRegistered = run_command_checked(setDefault, "Set default handler for .anm2");
-            return databaseUpdated && defaultRegistered;
-          };
-
-          auto iconsCached = cache_icons();
-          auto mimeRegistered = register_mime();
-          auto desktopRegistered = register_desktop_entry();
-
-          isAnm2Association = iconsCached && mimeRegistered && desktopRegistered;
-          if (isAnm2Association)
-            toasts.info("Associated .anm2 files with the editor.");
-          else
-            toasts.warning("Association incomplete. Please review the warnings above.");
-#endif
-        }
-        ImGui::SetItemTooltip(
-            "Associate .anm2 files with the application (i.e., clicking on them in a file explorer will "
-            "open the application).");
-
-        if (ImGui::MenuItem("Remove .anm2 File Association", nullptr, false,
-                            isAnm2Association || !isAbleToAssociateAnm2))
-        {
-#ifdef _WIN32
-
-#elif __unix__
-          {
-            auto iconsRemoved =
-                uninstall_icon_set("apps", "anm2ed") && uninstall_icon_set("mimetypes", "application-x-anm2+xml") &&
-                run_command_checked("xdg-icon-resource forceupdate --theme hicolor", "Refresh icon cache");
-            if (iconsRemoved)
-              toasts.info("Removed cached icons.");
-            else
-              toasts.warning("Could not remove all cached icons.");
-          }
-
-          {
-            auto path = std::filesystem::path(filesystem::path_mime_get());
-            auto removed = remove_file_if_exists(path);
-            if (removed) toasts.info(std::format("Removed .anm2 MIME type: {}", path.string()));
-
-            auto mimeRoot = path.parent_path().parent_path();
-            run_command_checked(std::format("update-mime-database \"{}\"", mimeRoot.string()), "Update MIME database");
-          }
-
-          {
-            auto path = std::filesystem::path(filesystem::path_application_get());
-            if (remove_file_if_exists(path)) toasts.info(std::format("Removed desktop entry: {}", path.string()));
-
-            auto desktopDir = path.parent_path();
-            run_command_checked(
-                std::format("update-desktop-database \"{}\"", desktopDir.empty() ? "." : desktopDir.string()),
-                "Update desktop database");
-          }
-#endif
-          isAnm2Association = false;
-        }
-        ImGui::SetItemTooltip("Unassociate .anm2 files with the application.");
-
         ImGui::EndMenu();
       }
 
       if (ImGui::BeginMenu("Help"))
       {
+
         if (ImGui::MenuItem("About")) aboutPopup.open();
         ImGui::EndMenu();
       }
@@ -476,134 +239,6 @@ MimeType=application/x-anm2+xml;
       ImGui::EndPopup();
     }
 
-    changePopup.trigger();
-
-    if (ImGui::BeginPopupModal(changePopup.label, &changePopup.isOpen, ImGuiWindowFlags_NoResize))
-    {
-      auto& isCrop = settings.changeIsCrop;
-      auto& isSize = settings.changeIsSize;
-      auto& isPosition = settings.changeIsPosition;
-      auto& isPivot = settings.changeIsPivot;
-      auto& isScale = settings.changeIsScale;
-      auto& isRotation = settings.changeIsRotation;
-      auto& isDelay = settings.changeIsDelay;
-      auto& isTint = settings.changeIsTint;
-      auto& isColorOffset = settings.changeIsColorOffset;
-      auto& isVisibleSet = settings.changeIsVisibleSet;
-      auto& isInterpolatedSet = settings.changeIsInterpolatedSet;
-      auto& crop = settings.changeCrop;
-      auto& size = settings.changeSize;
-      auto& position = settings.changePosition;
-      auto& pivot = settings.changePivot;
-      auto& scale = settings.changeScale;
-      auto& rotation = settings.changeRotation;
-      auto& delay = settings.changeDelay;
-      auto& tint = settings.changeTint;
-      auto& colorOffset = settings.changeColorOffset;
-      auto& isVisible = settings.changeIsVisible;
-      auto& isInterpolated = settings.changeIsInterpolated;
-
-      auto& isFromSelectedFrame = settings.changeIsFromSelectedFrame;
-      auto& numberFrames = settings.changeNumberFrames;
-
-      auto propertiesSize = child_size_get(10);
-
-      if (ImGui::BeginChild("##Properties", propertiesSize, ImGuiChildFlags_Borders))
-      {
-#define PROPERTIES_WIDGET(body)                                                                                        \
-  ImGui::Checkbox(checkboxLabel, &isEnabled);                                                                          \
-  ImGui::SameLine();                                                                                                   \
-  ImGui::BeginDisabled(!isEnabled);                                                                                    \
-  body;                                                                                                                \
-  ImGui::EndDisabled();
-
-        auto bool_value = [&](const char* checkboxLabel, const char* valueLabel, bool& isEnabled, bool& value)
-        { PROPERTIES_WIDGET(ImGui::Checkbox(valueLabel, &value)); };
-
-        auto color3_value = [&](const char* checkboxLabel, const char* valueLabel, bool& isEnabled, vec3& value)
-        { PROPERTIES_WIDGET(ImGui::ColorEdit3(valueLabel, value_ptr(value))); };
-
-        auto color4_value = [&](const char* checkboxLabel, const char* valueLabel, bool& isEnabled, vec4& value)
-        { PROPERTIES_WIDGET(ImGui::ColorEdit4(valueLabel, value_ptr(value))); };
-
-        auto float2_value = [&](const char* checkboxLabel, const char* valueLabel, bool& isEnabled, vec2& value)
-        { PROPERTIES_WIDGET(ImGui::InputFloat2(valueLabel, value_ptr(value), math::vec2_format_get(value))); };
-
-        auto float_value = [&](const char* checkboxLabel, const char* valueLabel, bool& isEnabled, float& value)
-        { PROPERTIES_WIDGET(ImGui::InputFloat(valueLabel, &value, STEP, STEP_FAST, math::float_format_get(value))); };
-
-        auto int_value = [&](const char* checkboxLabel, const char* valueLabel, bool& isEnabled, int& value)
-        { PROPERTIES_WIDGET(ImGui::InputInt(valueLabel, &value, STEP, STEP_FAST)); };
-
-#undef PROPERTIES_WIDGET
-
-        float2_value("##Is Crop", "Crop", isCrop, crop);
-        float2_value("##Is Size", "Size", isSize, size);
-        float2_value("##Is Position", "Position", isPosition, position);
-        float2_value("##Is Pivot", "Pivot", isPivot, pivot);
-        float2_value("##Is Scale", "Scale", isScale, scale);
-        float_value("##Is Rotation", "Rotation", isRotation, rotation);
-        int_value("##Is Delay", "Delay", isDelay, delay);
-        color4_value("##Is Tint", "Tint", isTint, tint);
-        color3_value("##Is Color Offset", "Color Offset", isColorOffset, colorOffset);
-        bool_value("##Is Visible", "Visible", isVisibleSet, isVisible);
-        ImGui::SameLine();
-        bool_value("##Is Interpolated", "Interpolated", isInterpolatedSet, isInterpolated);
-      }
-      ImGui::EndChild();
-
-      auto settingsSize = child_size_get(2);
-
-      if (ImGui::BeginChild("##Settings", settingsSize, ImGuiChildFlags_Borders))
-      {
-        ImGui::Checkbox("From Selected Frame", &isFromSelectedFrame);
-        ImGui::SetItemTooltip("The frames after the currently referenced frame will be changed with these values.\nIf"
-                              " off, will use all frames.");
-
-        ImGui::BeginDisabled(!isFromSelectedFrame);
-        input_int_range("Number of Frames", numberFrames, anm2::FRAME_NUM_MIN,
-                        item->frames.size() - reference->frameIndex);
-        ImGui::SetItemTooltip("Set the number of frames that will be changed.");
-        ImGui::EndDisabled();
-      }
-      ImGui::EndChild();
-
-      auto widgetSize = widget_size_with_row_get(4);
-
-      auto frame_change = [&](anm2::ChangeType type)
-      {
-        anm2::FrameChange frameChange;
-        if (isCrop) frameChange.crop = std::make_optional(crop);
-        if (isSize) frameChange.size = std::make_optional(size);
-        if (isPosition) frameChange.position = std::make_optional(position);
-        if (isPivot) frameChange.pivot = std::make_optional(pivot);
-        if (isScale) frameChange.scale = std::make_optional(scale);
-        if (isRotation) frameChange.rotation = std::make_optional(rotation);
-        if (isDelay) frameChange.delay = std::make_optional(delay);
-        if (isTint) frameChange.tint = std::make_optional(tint);
-        if (isColorOffset) frameChange.colorOffset = std::make_optional(colorOffset);
-        if (isVisibleSet) frameChange.isVisible = std::make_optional(isVisible);
-        if (isInterpolatedSet) frameChange.isInterpolated = std::make_optional(isInterpolated);
-
-        DOCUMENT_EDIT_PTR(document, "Change Frame Properties", Document::FRAMES,
-                          item->frames_change(frameChange, type,
-                                              isFromSelectedFrame && document->frame_get() ? reference->frameIndex : 0,
-                                              isFromSelectedFrame ? numberFrames : -1));
-
-        changePopup.close();
-      };
-
-      if (ImGui::Button("Add", widgetSize)) frame_change(anm2::ADD);
-      ImGui::SameLine();
-      if (ImGui::Button("Subtract", widgetSize)) frame_change(anm2::SUBTRACT);
-      ImGui::SameLine();
-      if (ImGui::Button("Adjust", widgetSize)) frame_change(anm2::ADJUST);
-      ImGui::SameLine();
-      if (ImGui::Button("Cancel", widgetSize)) changePopup.close();
-
-      ImGui::EndPopup();
-    }
-
     configurePopup.trigger();
 
     if (ImGui::BeginPopupModal(configurePopup.label, &configurePopup.isOpen, ImGuiWindowFlags_NoResize))
@@ -612,20 +247,44 @@ MimeType=application/x-anm2+xml;
 
       if (ImGui::BeginTabBar("##Configure Tabs"))
       {
-        if (ImGui::BeginTabItem("General"))
+        if (ImGui::BeginTabItem("Display"))
         {
           if (ImGui::BeginChild("##Tab Child", childSize, true))
           {
-            ImGui::SeparatorText("File");
+            input_float_range("UI Scale", editSettings.uiScale, 0.5f, 2.0f, 0.25f, 0.25f, "%.2f");
+            ImGui::SetItemTooltip("Change the scale of the UI.");
 
-            ImGui::Checkbox("Autosaving", &editSettings.fileIsAutosave);
+            ImGui::Checkbox("Vsync", &editSettings.isVsync);
+            ImGui::SetItemTooltip("Toggle vertical sync; synchronizes program update rate with monitor refresh rate.");
+          }
+          ImGui::EndChild();
+
+          ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem("File"))
+        {
+          if (ImGui::BeginChild("##Tab Child", childSize, true))
+          {
+            ImGui::SeparatorText("Autosave");
+
+            ImGui::Checkbox("Enabled", &editSettings.fileIsAutosave);
             ImGui::SetItemTooltip("Enables autosaving of documents.");
 
             ImGui::BeginDisabled(!editSettings.fileIsAutosave);
-            input_int_range("Autosave Time (minutes)", editSettings.fileAutosaveTime, 0, 10);
+            input_int_range("Time (minutes)", editSettings.fileAutosaveTime, 0, 10);
             ImGui::SetItemTooltip("If changed, will autosave documents using this interval.");
             ImGui::EndDisabled();
+          }
+          ImGui::EndChild();
 
+          ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem("Input"))
+        {
+          if (ImGui::BeginChild("##Tab Child", childSize, true))
+          {
             ImGui::SeparatorText("Keyboard");
 
             input_float_range("Repeat Delay (seconds)", editSettings.keyboardRepeatDelay, 0.05f, 1.0f, 0.05f, 0.05f,
@@ -636,17 +295,9 @@ MimeType=application/x-anm2+xml;
                               "%.3f");
             ImGui::SetItemTooltip("Set how often, after repeating begins, key inputs will be fired.");
 
-            ImGui::SeparatorText("UI");
+            ImGui::SeparatorText("Zoom");
 
-            input_float_range("UI Scale", editSettings.uiScale, 0.5f, 2.0f, 0.25f, 0.25f, "%.2f");
-            ImGui::SetItemTooltip("Change the scale of the UI.");
-
-            ImGui::Checkbox("Vsync", &editSettings.isVsync);
-            ImGui::SetItemTooltip("Toggle vertical sync; synchronizes program update rate with monitor refresh rate.");
-
-            ImGui::SeparatorText("View");
-
-            input_float_range("Zoom Step", editSettings.viewZoomStep, 10.0f, 250.0f, 10.0f, 10.0f, "%.0f");
+            input_float_range("Step", editSettings.viewZoomStep, 10.0f, 250.0f, 10.0f, 10.0f, "%.0f");
             ImGui::SetItemTooltip("When zooming in/out with mouse or shortcut, this value will be used.");
           }
           ImGui::EndChild();
@@ -724,6 +375,7 @@ MimeType=application/x-anm2+xml;
       if (ImGui::Button("Save", widgetSize))
       {
         settings = editSettings;
+        manager.chords_set(settings);
         configurePopup.close();
       }
       ImGui::SetItemTooltip("Use the configured settings.");
@@ -745,9 +397,6 @@ MimeType=application/x-anm2+xml;
 
     if (ImGui::BeginPopupModal(renderPopup.label, &renderPopup.isOpen, ImGuiWindowFlags_NoResize))
     {
-      auto animation = document ? document->animation_get() : nullptr;
-      if (!animation) renderPopup.close();
-
       auto& playback = document->playback;
       auto& ffmpegPath = settings.renderFFmpegPath;
       auto& path = settings.renderPath;
@@ -802,38 +451,46 @@ MimeType=application/x-anm2+xml;
       if (ImGui::Combo("Type", &type, render::STRINGS, render::COUNT)) replace_extension();
       ImGui::SetItemTooltip("Set the type of the output.");
 
-      ImGui::BeginDisabled(type != render::PNGS);
-      input_text_string("Format", &format);
-      ImGui::SetItemTooltip(
-          "For outputted images, each image will use this format.\n{} represents the index of each image.");
-      ImGui::EndDisabled();
+      if (type == render::PNGS)
+      {
+        ImGui::Separator();
+        input_text_string("Format", &format);
+        ImGui::SetItemTooltip(
+            "For outputted images, each image will use this format.\n{} represents the index of each image.");
+      }
 
-      ImGui::BeginDisabled(!isRange);
-      input_int_range("Start", start, 0, animation->frameNum - 1);
-      ImGui::SetItemTooltip("Set the starting time  of the animation.");
-      input_int_range("End", end, start + 1, animation->frameNum);
-      ImGui::SetItemTooltip("Set the ending time  of the animation.");
-      ImGui::EndDisabled();
-
-      ImGui::BeginDisabled(!isRaw);
-      input_float_range("Scale", scale, 1.0f, 100.0f, STEP, STEP_FAST, "%.1fx");
-      ImGui::SetItemTooltip("Set the output scale of the animation.");
-      ImGui::EndDisabled();
+      ImGui::Separator();
 
       if (ImGui::Checkbox("Custom Range", &isRange))
         if (!isRange) range_to_length();
       ImGui::SetItemTooltip("Toggle using a custom range for the animation.");
 
-      ImGui::SameLine();
+      if (isRange)
+      {
+        input_int_range("Start", start, 0, animation->frameNum - 1);
+        ImGui::SetItemTooltip("Set the starting time  of the animation.");
+        input_int_range("End", end, start + 1, animation->frameNum);
+        ImGui::SetItemTooltip("Set the ending time  of the animation.");
+      }
+
+      ImGui::Separator();
 
       ImGui::Checkbox("Raw", &isRaw);
       ImGui::SetItemTooltip("Record only the raw animation; i.e., only its layers, to its bounds.");
 
-      ImGui::SameLine();
+      if (isRaw)
+      {
+        input_float_range("Scale", scale, 1.0f, 100.0f, STEP, STEP_FAST, "%.1fx");
+        ImGui::SetItemTooltip("Set the output scale of the animation.");
+      }
+
+      ImGui::Separator();
 
       ImGui::Checkbox("Sound", &settings.timelineIsSound);
       ImGui::SetItemTooltip("Toggle sounds playing with triggers.\nBind sounds to events in the Events window.\nThe "
                             "output animation will use the played sounds.");
+
+      ImGui::Separator();
 
       if (ImGui::Button("Render", widgetSize))
       {
@@ -857,14 +514,205 @@ MimeType=application/x-anm2+xml;
 
     if (ImGui::BeginPopupModal(aboutPopup.label, &aboutPopup.isOpen, ImGuiWindowFlags_NoResize))
     {
-      if (ImGui::Button("Close")) aboutPopup.close();
+      struct Credit
+      {
+        const char* string{};
+        font::Type font{font::REGULAR};
+      };
+
+      struct ScrollingCredit
+      {
+        int index{};
+        float offset{};
+      };
+
+      struct CreditsState
+      {
+        std::vector<ScrollingCredit> active{};
+        float spawnTimer{1.0f};
+        int nextIndex{};
+      };
+
+      static constexpr auto ANM2ED_LABEL = "Anm2Ed";
+      static constexpr auto VERSION_LABEL = "Version 2.0";
+      static constexpr auto CREDIT_DELAY = 1.0f;
+      static constexpr auto CREDIT_SCROLL_SPEED = 25.0f;
+
+      static constexpr Credit CREDITS[] = {
+          {"Anm2Ed", font::BOLD},
+          {"License: GPLv3"},
+          {""},
+          {"Designer", font::BOLD},
+          {"Shweet"},
+          {""},
+          {"Additional Help", font::BOLD},
+          {"im-tem"},
+          {""},
+          {"Based on the work of:", font::BOLD},
+          {"Adrian Gavrilita"},
+          {"Simon Parzer"},
+          {"Matt Kapuszczak"},
+          {""},
+          {"XM Music", font::BOLD},
+          {"Drozerix"},
+          {"\"Keygen Wraith\""},
+          {"https://modarchive.org/module.php?207854"},
+          {"License: CC0"},
+          {""},
+          {"Libraries", font::BOLD},
+          {"Dear ImGui"},
+          {"https://github.com/ocornut/imgui"},
+          {"License: MIT"},
+          {""},
+          {"SDL"},
+          {"https://github.com/libsdl-org/SDL"},
+          {"License: zlib"},
+          {""},
+          {"SDL_mixer"},
+          {"https://github.com/libsdl-org/SDL_mixer"},
+          {"License: zlib"},
+          {""},
+          {"tinyxml2"},
+          {"https://github.com/leethomason/tinyxml2"},
+          {"License: zlib"},
+          {""},
+          {"glm"},
+          {"https://github.com/g-truc/glm"},
+          {"License: MIT"},
+          {""},
+          {"lunasvg"},
+          {"https://github.com/sammycage/lunasvg"},
+          {"License: MIT"},
+          {""},
+          {"libxm"},
+          {"https://github.com/Artefact2/libxm"},
+          {"License: WTFPL"},
+          {""},
+          {"Icons", font::BOLD},
+          {"Remix Icons"},
+          {"remixicon.com"},
+          {"License: Apache"},
+          {""},
+          {"Font", font::BOLD},
+          {"Noto Sans"},
+          {"https://fonts.google.com/noto/specimen/Noto+Sans"},
+          {"License: OFL"},
+          {""},
+          {"Special Thanks", font::BOLD},
+          {"Edmund McMillen"},
+          {"Florian Himsl"},
+          {"Tyrone Rodriguez"},
+          {"The-Vinh Truong (_kilburn)"},
+          {"Everyone who waited patiently for this to be finished"},
+          {"Everyone else who has worked on The Binding of Isaac!"},
+          {""},
+          {""},
+          {""},
+          {""},
+          {""},
+          {"enjoy the jams :)"},
+          {""},
+          {""},
+          {""},
+          {""},
+          {""},
+      };
+      static constexpr auto CREDIT_COUNT = (int)(sizeof(CREDITS) / sizeof(Credit));
+
+      static CreditsState creditsState{};
+
+      auto credits_reset = [&]()
+      {
+        resources.music.play(true);
+        creditsState = {};
+        creditsState.spawnTimer = CREDIT_DELAY;
+      };
+
+      if (aboutPopup.isJustOpened) credits_reset();
+
+      auto size = ImGui::GetContentRegionAvail();
+
+      ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE_LARGE);
+
+      ImGui::SetCursorPosX((size.x - ImGui::CalcTextSize(ANM2ED_LABEL).x) / 2);
+      ImGui::Text(ANM2ED_LABEL);
+
+      ImGui::SetCursorPosX((size.x - ImGui::CalcTextSize(VERSION_LABEL).x) / 2);
+      ImGui::Text(VERSION_LABEL);
+
+      ImGui::PopFont();
+
+      auto creditRegionPos = ImGui::GetCursorScreenPos();
+      auto creditRegionSize = ImGui::GetContentRegionAvail();
+
+      if (creditRegionSize.y > 0.0f && creditRegionSize.x > 0.0f)
+      {
+        auto drawList = ImGui::GetWindowDrawList();
+        auto clipMax = ImVec2(creditRegionPos.x + creditRegionSize.x, creditRegionPos.y + creditRegionSize.y);
+        drawList->PushClipRect(creditRegionPos, clipMax, true);
+
+        auto delta = ImGui::GetIO().DeltaTime;
+        creditsState.spawnTimer -= delta;
+        auto maxVisible = std::max(1, (int)std::floor(creditRegionSize.y / (float)font::SIZE));
+
+        while (creditsState.active.size() < (size_t)maxVisible && creditsState.spawnTimer <= 0.0f)
+        {
+          creditsState.active.push_back({creditsState.nextIndex, 0.0f});
+          creditsState.nextIndex = (creditsState.nextIndex + 1) % CREDIT_COUNT;
+          creditsState.spawnTimer += CREDIT_DELAY;
+        }
+
+        auto baseY = clipMax.y - (float)font::SIZE;
+        auto baseColor = ImGui::GetStyleColorVec4(ImGuiCol_Text);
+        auto fadeSpan = (float)font::SIZE * 2.0f;
+
+        for (auto it = creditsState.active.begin(); it != creditsState.active.end();)
+        {
+          it->offset += CREDIT_SCROLL_SPEED * delta;
+          auto yPos = baseY - it->offset;
+          if (yPos + font::SIZE < creditRegionPos.y)
+          {
+            it = creditsState.active.erase(it);
+            continue;
+          }
+
+          const auto& credit = CREDITS[it->index];
+          auto fontPtr = resources.fonts[credit.font].get();
+          auto textSize = fontPtr->CalcTextSizeA((float)font::SIZE, FLT_MAX, 0.0f, credit.string);
+          auto xPos = creditRegionPos.x + (creditRegionSize.x - textSize.x) * 0.5f;
+
+          auto alpha = 1.0f;
+          auto topDist = yPos - creditRegionPos.y;
+          if (topDist < fadeSpan) alpha *= std::clamp(topDist / fadeSpan, 0.0f, 1.0f);
+          auto bottomDist = (creditRegionPos.y + creditRegionSize.y) - (yPos + font::SIZE);
+          if (bottomDist < fadeSpan) alpha *= std::clamp(bottomDist / fadeSpan, 0.0f, 1.0f);
+          if (alpha <= 0.0f)
+          {
+            ++it;
+            continue;
+          }
+
+          auto color = baseColor;
+          color.w *= alpha;
+
+          drawList->AddText(fontPtr, (float)font::SIZE, ImVec2(xPos, yPos), ImGui::GetColorU32(color), credit.string);
+          ++it;
+        }
+
+        drawList->PopClipRect();
+      }
+
       ImGui::EndPopup();
     }
 
-    if (shortcut(settings.shortcutNew, shortcut::GLOBAL)) dialog.file_save(dialog::ANM2_NEW);
-    if (shortcut(settings.shortcutOpen, shortcut::GLOBAL)) dialog.file_open(dialog::ANM2_OPEN);
-    if (shortcut(settings.shortcutSave, shortcut::GLOBAL)) document->save();
-    if (shortcut(settings.shortcutSaveAs, shortcut::GLOBAL)) dialog.file_save(dialog::ANM2_SAVE);
-    if (shortcut(settings.shortcutExit, shortcut::GLOBAL)) isQuitting = true;
+    if (resources.music.is_playing() && !aboutPopup.isOpen) resources.music.stop();
+
+    aboutPopup.end();
+
+    if (shortcut(manager.chords[SHORTCUT_NEW], shortcut::GLOBAL)) dialog.file_save(dialog::ANM2_NEW);
+    if (shortcut(manager.chords[SHORTCUT_OPEN], shortcut::GLOBAL)) dialog.file_open(dialog::ANM2_OPEN);
+    if (shortcut(manager.chords[SHORTCUT_SAVE], shortcut::GLOBAL)) manager.save();
+    if (shortcut(manager.chords[SHORTCUT_SAVE_AS], shortcut::GLOBAL)) dialog.file_save(dialog::ANM2_SAVE);
+    if (shortcut(manager.chords[SHORTCUT_EXIT], shortcut::GLOBAL)) isQuitting = true;
   }
 }

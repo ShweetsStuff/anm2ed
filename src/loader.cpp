@@ -61,10 +61,7 @@ namespace anm2ed
     }
   }
 
-  std::string Loader::settings_path()
-  {
-    return filesystem::path_preferences_get() + "settings.ini";
-  }
+  std::string Loader::settings_path() { return filesystem::path_preferences_get() + "settings.ini"; }
 
   Loader::Loader(int argc, const char** argv)
   {

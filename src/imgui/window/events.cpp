@@ -73,8 +73,8 @@ namespace anm2ed::imgui
             toasts.error(std::format("Failed to deserialize event(s): {}", errorString));
         };
 
-        if (shortcut(settings.shortcutCopy, shortcut::FOCUSED)) copy();
-        if (shortcut(settings.shortcutPaste, shortcut::FOCUSED)) paste(merge::APPEND);
+        if (shortcut(manager.chords[SHORTCUT_COPY], shortcut::FOCUSED)) copy();
+        if (shortcut(manager.chords[SHORTCUT_PASTE], shortcut::FOCUSED)) paste(merge::APPEND);
 
         if (ImGui::BeginPopupContextWindow("##Context Menu", ImGuiPopupFlags_MouseButtonRight))
         {
@@ -96,7 +96,7 @@ namespace anm2ed::imgui
 
       auto widgetSize = widget_size_with_row_get(2);
 
-      shortcut(settings.shortcutAdd);
+      shortcut(manager.chords[SHORTCUT_ADD]);
       if (ImGui::Button("Add", widgetSize))
       {
         auto add = [&]()
@@ -112,7 +112,7 @@ namespace anm2ed::imgui
       set_item_tooltip_shortcut("Add an event.", settings.shortcutAdd);
       ImGui::SameLine();
 
-      shortcut(settings.shortcutRemove);
+      shortcut(manager.chords[SHORTCUT_REMOVE]);
       ImGui::BeginDisabled(unused.empty());
       if (ImGui::Button("Remove Unused", widgetSize))
       {

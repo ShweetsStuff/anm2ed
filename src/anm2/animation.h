@@ -8,7 +8,7 @@
 namespace anm2ed::anm2
 {
   constexpr auto FRAME_NUM_MIN = 1;
-  constexpr auto FRAME_NUM_MAX = FRAME_DELAY_MAX;
+  constexpr auto FRAME_NUM_MAX = FRAME_DURATION_MAX;
 
   class Animation
   {
@@ -30,6 +30,7 @@ namespace anm2ed::anm2
     void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*);
     std::string to_string();
     int length();
+    void fit_length();
     glm::vec4 rect(bool);
   };
 

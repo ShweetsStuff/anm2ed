@@ -1,5 +1,7 @@
 #include "resources.h"
 
+#include "xm_music.h"
+
 #include <ranges>
 
 using namespace anm2ed::resource;
@@ -16,5 +18,7 @@ namespace anm2ed
 
     for (auto [i, shader] : std::views::enumerate(shader::SHADERS))
       shaders[i] = Shader(shader.vertex, shader.fragment);
+
+    music = Audio(xm::ABOUT, std::size(xm::ABOUT));
   };
 }

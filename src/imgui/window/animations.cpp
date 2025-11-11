@@ -48,7 +48,10 @@ namespace anm2ed::imgui
           ImGui::SetNextItemSelectionUserData((int)i);
           if (selectable_input_text(animation.name, std::format("###Document #{} Animation #{}", manager.selected, i),
                                     animation.name, selection.contains((int)i)))
+          {
             reference = {(int)i};
+            document.frames.clear();
+          }
           if (ImGui::IsItemHovered()) hovered = (int)i;
           ImGui::PopFont();
 
@@ -155,9 +158,9 @@ namespace anm2ed::imgui
           DOCUMENT_EDIT(document, "Paste Animation(s)", Document::ANIMATIONS, deserialize());
         };
 
-        if (shortcut(settings.shortcutCut, shortcut::FOCUSED)) cut();
-        if (shortcut(settings.shortcutCopy, shortcut::FOCUSED)) copy();
-        if (shortcut(settings.shortcutPaste, shortcut::FOCUSED)) paste();
+        if (shortcut(manager.chords[SHORTCUT_CUT], shortcut::FOCUSED)) cut();
+        if (shortcut(manager.chords[SHORTCUT_COPY], shortcut::FOCUSED)) copy();
+        if (shortcut(manager.chords[SHORTCUT_PASTE], shortcut::FOCUSED)) paste();
 
         if (ImGui::BeginPopupContextWindow("##Context Menu", ImGuiPopupFlags_MouseButtonRight))
         {
@@ -171,7 +174,7 @@ namespace anm2ed::imgui
 
       auto widgetSize = widget_size_with_row_get(5);
 
-      shortcut(settings.shortcutAdd);
+      shortcut(manager.chords[SHORTCUT_ADD]);
       if (ImGui::Button("Add", widgetSize))
       {
         auto add = [&]()
@@ -204,7 +207,7 @@ namespace anm2ed::imgui
 
       ImGui::BeginDisabled(selection.empty());
       {
-        shortcut(settings.shortcutDuplicate);
+        shortcut(manager.chords[SHORTCUT_DUPLICATE]);
         if (ImGui::Button("Duplicate", widgetSize))
         {
           auto duplicate = [&]()
@@ -225,7 +228,7 @@ namespace anm2ed::imgui
 
         ImGui::SameLine();
 
-        if (shortcut(settings.shortcutMerge, shortcut::FOCUSED) && !selection.empty())
+        if (shortcut(manager.chords[SHORTCUT_MERGE], shortcut::FOCUSED) && !selection.empty())
         {
           auto merge_quick = [&]()
           {
@@ -270,7 +273,7 @@ namespace anm2ed::imgui
 
         ImGui::SameLine();
 
-        shortcut(settings.shortcutRemove);
+        shortcut(manager.chords[SHORTCUT_REMOVE]);
         if (ImGui::Button("Remove", widgetSize))
         {
           auto remove = [&]()
@@ -285,11 +288,11 @@ namespace anm2ed::imgui
 
           DOCUMENT_EDIT(document, "Remove Animation(s)", Document::ANIMATIONS, remove());
         }
-        set_item_tooltip_shortcut("Remove the selected animation(s).", settings.shortcutDuplicate);
+        set_item_tooltip_shortcut("Remove the selected animation(s).", settings.shortcutRemove);
 
         ImGui::SameLine();
 
-        shortcut(settings.shortcutDefault);
+        shortcut(manager.chords[SHORTCUT_DEFAULT]);
         ImGui::BeginDisabled(selection.size() != 1);
         if (ImGui::Button("Default", widgetSize))
         {
@@ -369,21 +372,25 @@ namespace anm2ed::imgui
 
         auto widgetSize = widget_size_with_row_get(2);
 
-        if (ImGui::Button("Merge", widgetSize))
+        ImGui::BeginDisabled(mergeSelection.empty());
         {
-          auto merge = [&]()
+          if (ImGui::Button("Merge", widgetSize))
           {
-            if (mergeSelection.contains(overlayIndex)) overlayIndex = -1;
-            auto merged =
-                anm2.animations_merge(mergeReference, mergeSelection, (merge::Type)type, isDeleteAnimationsAfter);
+            auto merge = [&]()
+            {
+              if (mergeSelection.contains(overlayIndex)) overlayIndex = -1;
+              auto merged =
+                  anm2.animations_merge(mergeReference, mergeSelection, (merge::Type)type, isDeleteAnimationsAfter);
 
-            selection = {merged};
-            reference = {merged};
-          };
+              selection = {merged};
+              reference = {merged};
+            };
 
-          DOCUMENT_EDIT(document, "Merge Animations", Document::ANIMATIONS, merge());
-          merge_close();
+            DOCUMENT_EDIT(document, "Merge Animations", Document::ANIMATIONS, merge());
+            merge_close();
+          }
         }
+        ImGui::EndDisabled();
         ImGui::SameLine();
         if (ImGui::Button("Close", widgetSize)) merge_close();
 

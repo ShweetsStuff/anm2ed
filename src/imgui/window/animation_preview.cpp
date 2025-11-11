@@ -24,14 +24,13 @@ namespace anm2ed::imgui
   constexpr auto NULL_RECT_SIZE = vec2(100);
   constexpr auto TRIGGER_TEXT_COLOR = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
 
-  AnimationPreview::AnimationPreview() : Canvas(vec2())
-  {
-  }
+  AnimationPreview::AnimationPreview() : Canvas(vec2()) {}
 
   void AnimationPreview::tick(Manager& manager, Document& document, Settings& settings)
   {
     auto& anm2 = document.anm2;
     auto& playback = document.playback;
+    auto& frameTime = document.frameTime;
     auto& zoom = document.previewZoom;
     auto& pan = document.previewPan;
     auto& isRootTransform = settings.previewIsRootTransform;
@@ -53,7 +52,7 @@ namespace anm2ed::imgui
         }
       }
 
-      document.reference.frameTime = playback.time;
+      frameTime = playback.time;
     }
 
     if (manager.isRecording)
@@ -124,6 +123,7 @@ namespace anm2ed::imgui
         settings.previewIsGrid = false;
         settings.previewIsAxes = false;
         settings.timelineIsOnlyShowLayers = true;
+        settings.onionskinIsEnabled = false;
 
         savedZoom = zoom;
         savedPan = pan;
@@ -211,13 +211,13 @@ namespace anm2ed::imgui
 
         auto widgetSize = widget_size_with_row_get(2);
 
-        shortcut(settings.shortcutCenterView);
+        shortcut(manager.chords[SHORTCUT_CENTER_VIEW]);
         if (ImGui::Button("Center View", widgetSize)) pan = vec2();
         set_item_tooltip_shortcut("Centers the view.", settings.shortcutCenterView);
 
         ImGui::SameLine();
 
-        shortcut(settings.shortcutFit);
+        shortcut(manager.chords[SHORTCUT_FIT]);
         if (ImGui::Button("Fit", widgetSize))
           if (animation) set_to_rect(zoom, pan, animation->rect(isRootTransform));
         set_item_tooltip_shortcut("Set the view to match the extent of the animation.", settings.shortcutFit);
@@ -397,7 +397,7 @@ namespace anm2ed::imgui
         onionskin_render(time, settings.onionskinAfterCount, 1, settings.onionskinAfterColor);
       };
 
-      auto frameTime = reference.frameTime > -1 && !playback.isPlaying ? reference.frameTime : playback.time;
+      auto frameTime = document.frameTime > -1 && !playback.isPlaying ? document.frameTime : playback.time;
 
       if (animation)
       {
@@ -408,7 +408,7 @@ namespace anm2ed::imgui
 
         render(animation, frameTime);
 
-        if (auto overlayAnimation = anm2.animation_get({overlayIndex}))
+        if (auto overlayAnimation = anm2.animation_get(overlayIndex))
           render(overlayAnimation, frameTime, {}, 1.0f - math::uint8_to_float(overlayTransparency));
 
         if (drawOrder == draw_order::ABOVE && isEnabled) onionskins_render(frameTime);
@@ -469,8 +469,8 @@ namespace anm2ed::imgui
         auto isKeyDown = isLeftDown || isRightDown || isUpDown || isDownDown;
         auto isKeyReleased = isLeftReleased || isRightReleased || isUpReleased || isDownReleased;
 
-        auto isZoomIn = chord_repeating(string_to_chord(settings.shortcutZoomIn));
-        auto isZoomOut = chord_repeating(string_to_chord(settings.shortcutZoomOut));
+        auto isZoomIn = chord_repeating(manager.chords[SHORTCUT_ZOOM_IN]);
+        auto isZoomOut = chord_repeating(manager.chords[SHORTCUT_ZOOM_OUT]);
 
         auto isBegin = isMouseClicked || isKeyJustPressed;
         auto isDuring = isMouseDown || isKeyDown;

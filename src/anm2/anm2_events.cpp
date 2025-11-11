@@ -25,17 +25,13 @@ namespace anm2ed::anm2
     return labels;
   }
 
-  std::set<int> Anm2::events_unused(Reference reference)
+  std::set<int> Anm2::events_unused()
   {
     std::set<int> used{};
 
-    if (auto animation = animation_get(reference); animation)
-      for (auto& frame : animation->triggers.frames)
+    for (auto& animation : animations.items)
+      for (auto& frame : animation.triggers.frames)
         used.insert(frame.eventID);
-    else
-      for (auto& animation : animations.items)
-        for (auto& frame : animation.triggers.frames)
-          used.insert(frame.eventID);
 
     std::set<int> unused{};
     for (auto& id : content.events | std::views::keys)
