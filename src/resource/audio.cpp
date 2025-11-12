@@ -55,7 +55,7 @@ namespace anm2ed::resource
     auto prescan = (xm_prescan_data_t*)prescanStorage.get();
     if (!xm_prescan_module((const char*)data, (uint32_t)size, prescan)) return;
 
-    auto contextSize = xm_size_for_context(prescan);
+    const auto contextSize = static_cast<size_t>(xm_size_for_context(prescan));
     auto pool = std::make_unique<char[]>(contextSize);
     auto context = xm_create_context(pool.get(), prescan, (const char*)data, (uint32_t)size);
     if (!context) return;
@@ -64,10 +64,10 @@ namespace anm2ed::resource
     xm_set_max_loop_count(context, 1);
 
     auto pcm = std::vector<float>{};
-    pcm.reserve(XM_CHUNK_FRAMES * XM_CHANNELS * 8);
+    pcm.reserve(static_cast<size_t>(XM_CHUNK_FRAMES) * XM_CHANNELS * 8);
 
-    auto framesGenerated = (size_t)0;
-    const auto maxFrames = (size_t)XM_SAMPLE_RATE * XM_MAX_SECONDS;
+    size_t framesGenerated = 0;
+    const auto maxFrames = static_cast<size_t>(XM_SAMPLE_RATE) * XM_MAX_SECONDS;
     auto heardAudio = false;
 
     while (framesGenerated < maxFrames)

@@ -83,7 +83,7 @@ namespace anm2ed
     void file_open(dialog::Type type);
     void file_save(dialog::Type type);
     void folder_open(dialog::Type type);
-    bool is_selected(dialog::Type type);
+    bool is_selected(dialog::Type type) const;
     void reset();
     void file_explorer_open(const std::string&);
     void set_string_to_selected_path(std::string& set, dialog::Type type);

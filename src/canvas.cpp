@@ -115,12 +115,12 @@ namespace anm2ed
     glDeleteBuffers(1, &rectVBO);
   }
 
-  bool Canvas::is_valid()
+  bool Canvas::is_valid() const
   {
     return fbo != 0;
   }
 
-  void Canvas::framebuffer_set()
+  void Canvas::framebuffer_set() const
   {
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
@@ -153,7 +153,7 @@ namespace anm2ed
     framebuffer_resize_check();
   }
 
-  mat4 Canvas::transform_get(float zoom, vec2 pan)
+  mat4 Canvas::transform_get(float zoom, vec2 pan) const
   {
     auto zoomFactor = math::percent_to_unit(zoom);
     auto projection = glm::ortho(0.0f, (float)size.x, 0.0f, (float)size.y, -1.0f, 1.0f);
@@ -165,7 +165,7 @@ namespace anm2ed
     return projection * view;
   }
 
-  void Canvas::axes_render(Shader& shader, float zoom, vec2 pan, vec4 color)
+  void Canvas::axes_render(Shader& shader, float zoom, vec2 pan, vec4 color) const
   {
     auto originNDC = transform_get(zoom, pan) * vec4(0.0f, 0.0f, 0.0f, 1.0f);
     originNDC /= originNDC.w;
@@ -187,7 +187,7 @@ namespace anm2ed
     glUseProgram(0);
   }
 
-  void Canvas::grid_render(Shader& shader, float zoom, vec2 pan, ivec2 size, ivec2 offset, vec4 color)
+  void Canvas::grid_render(Shader& shader, float zoom, vec2 pan, ivec2 size, ivec2 offset, vec4 color) const
   {
     auto transform = glm::inverse(transform_get(zoom, pan));
 
@@ -206,7 +206,7 @@ namespace anm2ed
   }
 
   void Canvas::texture_render(Shader& shader, GLuint& texture, mat4& transform, vec4 tint, vec3 colorOffset,
-                              float* vertices)
+                              float* vertices) const
   {
     glUseProgram(shader.id);
 
@@ -232,7 +232,7 @@ namespace anm2ed
   }
 
   void Canvas::rect_render(Shader& shader, const mat4& transform, const mat4& model, vec4 color, float dashLength,
-                           float dashGap, float dashOffset)
+                           float dashGap, float dashOffset) const
   {
     glUseProgram(shader.id);
 
@@ -267,28 +267,28 @@ namespace anm2ed
     glUseProgram(0);
   }
 
-  void Canvas::viewport_set()
+  void Canvas::viewport_set() const
   {
     glViewport(0, 0, size.x, size.y);
   }
 
-  void Canvas::clear(vec4& color)
+  void Canvas::clear(const vec4& color) const
   {
     glClearColor(color.r, color.g, color.b, color.a);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   }
 
-  void Canvas::bind()
+  void Canvas::bind() const
   {
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
   }
 
-  void Canvas::unbind()
+  void Canvas::unbind() const
   {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
   }
 
-  std::vector<unsigned char> Canvas::pixels_get()
+  std::vector<unsigned char> Canvas::pixels_get() const
   {
     auto count = size.x * size.y * texture::CHANNELS;
     std::vector<unsigned char> pixels(count);
@@ -303,7 +303,7 @@ namespace anm2ed
     return pixels;
   }
 
-  void Canvas::zoom_set(float& zoom, vec2& pan, vec2 focus, float step)
+  void Canvas::zoom_set(float& zoom, vec2& pan, vec2 focus, float step) const
   {
     auto zoomFactor = math::percent_to_unit(zoom);
     float newZoom = glm::clamp(math::round_nearest_multiple(zoom + step, step), ZOOM_MIN, ZOOM_MAX);
@@ -315,7 +315,7 @@ namespace anm2ed
     }
   }
 
-  vec4 Canvas::pixel_read(vec2 position, vec2 framebufferSize)
+  vec4 Canvas::pixel_read(vec2 position, vec2 framebufferSize) const
   {
     uint8_t rgba[4]{};
 
@@ -328,13 +328,13 @@ namespace anm2ed
                 math::uint8_to_float(rgba[3]));
   }
 
-  vec2 Canvas::position_translate(float& zoom, vec2& pan, vec2 position)
+  vec2 Canvas::position_translate(float& zoom, vec2& pan, vec2 position) const
   {
     auto zoomFactor = math::percent_to_unit(zoom);
     return (position - pan - (size * 0.5f)) / zoomFactor;
   }
 
-  void Canvas::set_to_rect(float& zoom, vec2& pan, vec4 rect)
+  void Canvas::set_to_rect(float& zoom, vec2& pan, vec4 rect) const
   {
     if (rect != vec4(-1.0f) && (rect.z > 0 && rect.w > 0))
     {

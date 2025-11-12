@@ -189,11 +189,11 @@ namespace anm2ed
     }
   }
 
-  bool Document::is_dirty() { return hash != saveHash; }
-  bool Document::is_autosave_dirty() { return hash != autosaveHash; }
-  std::filesystem::path Document::directory_get() { return path.parent_path(); }
-  std::filesystem::path Document::filename_get() { return path.filename(); }
-  bool Document::is_valid() { return !path.empty(); }
+  bool Document::is_dirty() const { return hash != saveHash; }
+  bool Document::is_autosave_dirty() const { return hash != autosaveHash; }
+  std::filesystem::path Document::directory_get() const { return path.parent_path(); }
+  std::filesystem::path Document::filename_get() const { return path.filename(); }
+  bool Document::is_valid() const { return !path.empty(); }
 
   anm2::Frame* Document::frame_get()
   {

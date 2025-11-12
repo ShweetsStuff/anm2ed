@@ -739,7 +739,7 @@ namespace anm2ed::imgui
         }
 
         auto baseY = clipMax.y - (float)font::SIZE;
-        auto baseColor = ImGui::GetStyleColorVec4(ImGuiCol_Text);
+        const auto& baseColor = ImGui::GetStyleColorVec4(ImGuiCol_Text);
         auto fadeSpan = (float)font::SIZE * 2.0f;
 
         for (auto it = creditsState.active.begin(); it != creditsState.active.end();)

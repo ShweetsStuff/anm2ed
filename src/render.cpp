@@ -9,13 +9,13 @@
   #include "string_.h"
   #define POPEN _popen
   #define PCLOSE _pclose
-  #define PWRITE_MODE "wb"
-  #define PREAD_MODE "r"
+  constexpr auto PWRITE_MODE = "wb";
+  constexpr auto PREAD_MODE = "r";
 #elif __unix__
   #define POPEN popen
   #define PCLOSE pclose
-  #define PWRITE_MODE "w"
-  #define PREAD_MODE "r"
+  constexpr auto PWRITE_MODE = "w";
+  constexpr auto PREAD_MODE = "r";
 #endif
 
 #include "log.h"

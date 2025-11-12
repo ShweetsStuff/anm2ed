@@ -50,27 +50,27 @@ namespace anm2ed
     Canvas();
     Canvas(glm::vec2);
     ~Canvas();
-    bool is_valid();
-    void framebuffer_set();
+    bool is_valid() const;
+    void framebuffer_set() const;
     void framebuffer_resize_check();
     void size_set(glm::vec2);
-    glm::vec4 pixel_read(glm::vec2, glm::vec2);
-    glm::mat4 transform_get(float = 100.0f, glm::vec2 = {});
-    void axes_render(resource::Shader&, float, glm::vec2, glm::vec4 = glm::vec4(1.0f));
+    glm::vec4 pixel_read(glm::vec2, glm::vec2) const;
+    glm::mat4 transform_get(float = 100.0f, glm::vec2 = {}) const;
+    void axes_render(resource::Shader&, float, glm::vec2, glm::vec4 = glm::vec4(1.0f)) const;
     void grid_render(resource::Shader&, float, glm::vec2, glm::ivec2 = glm::ivec2(32, 32), glm::ivec2 = {},
-                     glm::vec4 = glm::vec4(1.0f));
+                     glm::vec4 = glm::vec4(1.0f)) const;
     void texture_render(resource::Shader&, GLuint&, glm::mat4&, glm::vec4 = glm::vec4(1.0f), glm::vec3 = {},
-                        float* = (float*)canvas::TEXTURE_VERTICES);
+                        float* = (float*)canvas::TEXTURE_VERTICES) const;
     void rect_render(resource::Shader&, const glm::mat4&, const glm::mat4&, glm::vec4 = glm::vec4(1.0f),
                      float dashLength = canvas::DASH_LENGTH, float dashGap = canvas::DASH_GAP,
-                     float dashOffset = canvas::DASH_OFFSET);
-    void viewport_set();
-    void clear(glm::vec4&);
-    void bind();
-    void unbind();
-    void zoom_set(float&, glm::vec2&, glm::vec2, float);
-    glm::vec2 position_translate(float&, glm::vec2&, glm::vec2);
-    void set_to_rect(float& zoom, glm::vec2& pan, glm::vec4 rect);
-    std::vector<unsigned char> pixels_get();
+                     float dashOffset = canvas::DASH_OFFSET) const;
+    void viewport_set() const;
+    void clear(const glm::vec4&) const;
+    void bind() const;
+    void unbind() const;
+    void zoom_set(float&, glm::vec2&, glm::vec2, float) const;
+    glm::vec2 position_translate(float&, glm::vec2&, glm::vec2) const;
+    void set_to_rect(float& zoom, glm::vec2& pan, glm::vec4 rect) const;
+    std::vector<unsigned char> pixels_get() const;
   };
 }

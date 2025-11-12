@@ -11,7 +11,7 @@
 
 namespace anm2ed::dialog
 {
-  void callback(void* userData, const char* const* filelist, int filter)
+  static void callback(void* userData, const char* const* filelist, int filter)
   {
     auto self = (Dialog*)(userData);
 
@@ -69,7 +69,7 @@ namespace anm2ed
 
   void Dialog::reset() { *this = Dialog(this->window); }
 
-  bool Dialog::is_selected(dialog::Type type) { return this->type == type && !path.empty(); }
+  bool Dialog::is_selected(dialog::Type type) const { return this->type == type && !path.empty(); }
 
   void Dialog::set_string_to_selected_path(std::string& string, dialog::Type type)
   {

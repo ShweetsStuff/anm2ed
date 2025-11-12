@@ -70,11 +70,11 @@ namespace anm2ed
     void hash_set();
     void clean();
     void change(ChangeType);
-    bool is_dirty();
-    bool is_autosave_dirty();
-    std::filesystem::path directory_get();
-    std::filesystem::path filename_get();
-    bool is_valid();
+    bool is_dirty() const;
+    bool is_autosave_dirty() const;
+    std::filesystem::path directory_get() const;
+    std::filesystem::path filename_get() const;
+    bool is_valid() const;
 
     anm2::Frame* frame_get();
     anm2::Item* item_get();

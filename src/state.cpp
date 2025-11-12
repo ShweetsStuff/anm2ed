@@ -21,7 +21,7 @@ namespace anm2ed
   {
     dialog = Dialog(window);
 
-    for (auto argument : arguments)
+    for (const auto& argument : arguments)
       manager.open(argument);
 
     manager.chords_set(settings);
