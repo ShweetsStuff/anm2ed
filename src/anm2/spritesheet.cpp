@@ -29,6 +29,11 @@ namespace anm2ed::anm2
     texture = Texture(this->path);
   }
 
+  Spritesheet::Spritesheet(const std::filesystem::path& directory, const std::filesystem::path& path)
+      : Spritesheet(directory.string(), path.string())
+  {
+  }
+
   XMLElement* Spritesheet::to_element(XMLDocument& document, int id)
   {
     auto element = document.NewElement("Spritesheet");

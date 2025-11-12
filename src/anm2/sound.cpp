@@ -29,6 +29,11 @@ namespace anm2ed::anm2
     audio = Audio(this->path.c_str());
   }
 
+  Sound::Sound(const std::filesystem::path& directory, const std::filesystem::path& path)
+      : Sound(directory.string(), path.string())
+  {
+  }
+
   Sound::Sound(XMLElement* element, int& id)
   {
     if (!element) return;

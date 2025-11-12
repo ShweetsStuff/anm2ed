@@ -1,6 +1,8 @@
 #pragma once
 
 #include <SDL3_mixer/SDL_mixer.h>
+#include <filesystem>
+#include <string>
 #include <cstddef>
 
 namespace anm2ed::resource
@@ -15,6 +17,8 @@ namespace anm2ed::resource
   public:
     Audio(const char*);
     Audio(const unsigned char*, size_t);
+    Audio(const std::string&);
+    Audio(const std::filesystem::path&);
     ~Audio();
     Audio() = default;
     Audio(Audio&&) noexcept;

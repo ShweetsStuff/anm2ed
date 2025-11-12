@@ -16,6 +16,10 @@ namespace anm2ed::resource
     if (path && *path) internal = MIX_LoadAudio(mixer_get(), path, true);
   }
 
+  Audio::Audio(const std::string& path) : Audio(path.c_str()) {}
+
+  Audio::Audio(const std::filesystem::path& path) : Audio(path.string()) {}
+
   Audio::Audio(const unsigned char* data, size_t size)
   {
     SDL_IOStream* io = SDL_IOFromConstMem(data, size);

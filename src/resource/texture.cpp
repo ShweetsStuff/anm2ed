@@ -1,5 +1,6 @@
 #include "texture.h"
 
+#include <filesystem>
 #include <lunasvg.h>
 #include <memory>
 #include <utility>
@@ -123,10 +124,14 @@ namespace anm2ed::resource
     }
   }
 
+  Texture::Texture(const std::filesystem::path& pngPath) : Texture(pngPath.string()) {}
+
   bool Texture::write_png(const std::string& path)
   {
     return stbi_write_png(path.c_str(), size.x, size.y, CHANNELS, this->pixels.data(), size.x * CHANNELS);
   }
+
+  bool Texture::write_png(const std::filesystem::path& path) { return write_png(path.string()); }
 
   void Texture::pixel_set(ivec2 position, vec4 color)
   {

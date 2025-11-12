@@ -23,6 +23,7 @@ namespace anm2ed::anm2
     Sound& operator=(const Sound&);
     Sound(tinyxml2::XMLElement*, int&);
     Sound(const std::string&, const std::string&);
+    Sound(const std::filesystem::path&, const std::filesystem::path&);
     tinyxml2::XMLElement* to_element(tinyxml2::XMLDocument&, int);
     std::string to_string(int);
     void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*, int);
