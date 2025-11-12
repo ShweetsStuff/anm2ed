@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <vector>
 
 #include "document.h"
@@ -42,10 +43,10 @@ namespace anm2ed
     ~Manager();
 
     Document* get(int = -1);
-    void open(const std::string&, bool = false, bool = true);
-    void new_(const std::string&);
-    void save(int, const std::string& = {});
-    void save(const std::string& = {});
+    void open(const std::filesystem::path&, bool = false, bool = true);
+    void new_(const std::filesystem::path&);
+    void save(int, const std::filesystem::path& = {});
+    void save(const std::filesystem::path& = {});
     void autosave(Document&);
     void set(int);
     void close(int);
@@ -61,7 +62,7 @@ namespace anm2ed
     void recent_files_load();
     void recent_files_write();
     void recent_files_clear();
-    void recent_file_add(const std::string&);
+    void recent_file_add(const std::filesystem::path&);
 
     void autosave_files_load();
     void autosave_files_open();

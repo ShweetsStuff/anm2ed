@@ -7,6 +7,10 @@
 #include "anm2_type.h"
 #include "types.h"
 
+#if defined(TRANSPARENT)
+  #undef TRANSPARENT
+#endif
+
 namespace anm2ed::anm2
 {
   constexpr auto FRAME_DURATION_MIN = 1;

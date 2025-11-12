@@ -9,14 +9,14 @@ using namespace tinyxml2;
 
 namespace anm2ed::anm2
 {
-  Sound::Sound(const Sound& other) : path(other.path) { audio = path.empty() ? Audio() : Audio(path.c_str()); }
+  Sound::Sound(const Sound& other) : path(other.path) { audio = path.empty() ? Audio() : Audio(path); }
 
   Sound& Sound::operator=(const Sound& other)
   {
     if (this != &other)
     {
       path = other.path;
-      audio = path.empty() ? Audio() : Audio(path.c_str());
+      audio = path.empty() ? Audio() : Audio(path);
     }
     return *this;
   }
@@ -26,7 +26,7 @@ namespace anm2ed::anm2
     filesystem::WorkingDirectory workingDirectory(directory);
     this->path = !path.empty() ? std::filesystem::relative(path) : this->path;
     this->path = filesystem::path_lower_case_backslash_handle(this->path);
-    audio = Audio(this->path.c_str());
+    audio = Audio(this->path);
   }
 
   Sound::Sound(const std::filesystem::path& directory, const std::filesystem::path& path)
@@ -40,14 +40,15 @@ namespace anm2ed::anm2
     element->QueryIntAttribute("Id", &id);
     xml::query_path_attribute(element, "Path", &path);
     path = filesystem::path_lower_case_backslash_handle(path);
-    audio = Audio(path.c_str());
+    audio = Audio(path);
   }
 
   XMLElement* Sound::to_element(XMLDocument& document, int id)
   {
     auto element = document.NewElement("Sound");
     element->SetAttribute("Id", id);
-    element->SetAttribute("Path", path.c_str());
+    auto pathString = path.generic_string();
+    element->SetAttribute("Path", pathString.c_str());
     return element;
   }
 
@@ -63,7 +64,7 @@ namespace anm2ed::anm2
     return xml::document_to_string(document);
   }
 
-  void Sound::reload(const std::string& directory) { *this = Sound(directory, this->path); }
+  void Sound::reload(const std::filesystem::path& directory) { *this = Sound(directory, this->path); }
 
   bool Sound::is_valid() { return audio.is_valid(); }
 

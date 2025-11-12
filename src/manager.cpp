@@ -26,16 +26,17 @@ namespace anm2ed
 
   Document* Manager::get(int index) { return vector::find(documents, index > -1 ? index : selected); }
 
-  void Manager::open(const std::string& path, bool isNew, bool isRecent)
+  void Manager::open(const std::filesystem::path& path, bool isNew, bool isRecent)
   {
+    const auto pathString = path.string();
     std::string errorString{};
-    documents.emplace_back(path, isNew, &errorString);
+    documents.emplace_back(pathString, isNew, &errorString);
 
     auto& document = documents.back();
     if (!document.is_valid())
     {
       documents.pop_back();
-      toasts.error(std::format("Failed to open document: {} ({})", path, errorString));
+      toasts.error(std::format("Failed to open document: {} ({})", pathString, errorString));
       return;
     }
 
@@ -43,23 +44,23 @@ namespace anm2ed
 
     selected = (int)documents.size() - 1;
     pendingSelected = selected;
-    toasts.info(std::format("Opened document: {}", path));
+    toasts.info(std::format("Opened document: {}", pathString));
   }
 
-  void Manager::new_(const std::string& path) { open(path, true); }
+  void Manager::new_(const std::filesystem::path& path) { open(path, true); }
 
-  void Manager::save(int index, const std::string& path)
+  void Manager::save(int index, const std::filesystem::path& path)
   {
     if (auto document = get(index); document)
     {
       std::string errorString{};
-      document->path = !path.empty() ? path : document->path.string();
+      document->path = !path.empty() ? path : document->path;
       document->save(document->path.string(), &errorString);
-      recent_file_add(document->path.string());
+      recent_file_add(document->path);
     }
   }
 
-  void Manager::save(const std::string& path) { save(selected, path); }
+  void Manager::save(const std::filesystem::path& path) { save(selected, path); }
 
   void Manager::autosave(Document& document)
   {
@@ -163,13 +164,14 @@ namespace anm2ed
     nullPropertiesPopup.close();
   }
 
-  void Manager::recent_file_add(const std::string& path)
+  void Manager::recent_file_add(const std::filesystem::path& path)
   {
     if (path.empty()) return;
+    const auto pathString = path.string();
     std::error_code ec{};
     if (!std::filesystem::exists(path, ec))
     {
-      logger.warning(std::format("Skipping missing recent file: {}", path));
+      logger.warning(std::format("Skipping missing recent file: {}", pathString));
       return;
     }
 
@@ -197,14 +199,15 @@ namespace anm2ed
     while (std::getline(file, line))
     {
       if (line.empty()) continue;
-      if (std::find(recentFiles.begin(), recentFiles.end(), line) != recentFiles.end()) continue;
+      std::filesystem::path entry = line;
+      if (std::find(recentFiles.begin(), recentFiles.end(), entry) != recentFiles.end()) continue;
       std::error_code ec{};
-      if (!std::filesystem::exists(line, ec))
+      if (!std::filesystem::exists(entry, ec))
       {
         logger.warning(std::format("Skipping missing recent file: {}", line));
         continue;
       }
-      recentFiles.emplace_back(line);
+      recentFiles.emplace_back(std::move(entry));
     }
   }
 
@@ -221,8 +224,8 @@ namespace anm2ed
       return;
     }
 
-    for (auto& path : recentFiles)
-      file << path.string() << '\n';
+    for (auto& entry : recentFiles)
+      file << entry.string() << '\n';
   }
 
   void Manager::recent_files_clear()
@@ -240,7 +243,7 @@ namespace anm2ed
 
       auto restorePath = path.parent_path() / fileName;
       restorePath.replace_extension("");
-      open(path.string(), false, false);
+      open(path, false, false);
 
       if (auto document = get())
       {
@@ -271,8 +274,9 @@ namespace anm2ed
     while (std::getline(file, line))
     {
       if (line.empty()) continue;
-      if (std::find(autosaveFiles.begin(), autosaveFiles.end(), line) != autosaveFiles.end()) continue;
-      autosaveFiles.emplace_back(line);
+      std::filesystem::path entry = line;
+      if (std::find(autosaveFiles.begin(), autosaveFiles.end(), entry) != autosaveFiles.end()) continue;
+      autosaveFiles.emplace_back(std::move(entry));
     }
   }
 

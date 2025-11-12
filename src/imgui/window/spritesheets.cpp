@@ -97,7 +97,9 @@ namespace anm2ed::imgui
             auto isReferenced = id == reference;
             auto cursorPos = ImGui::GetCursorPos();
             auto& texture = spritesheet.texture.is_valid() ? spritesheet.texture : resources.icons[icon::NONE];
-            auto path = spritesheet.path.empty() ? anm2::NO_PATH : spritesheet.path.c_str();
+            const std::string pathString =
+                spritesheet.path.empty() ? std::string{anm2::NO_PATH} : spritesheet.path.string();
+            const char* pathCStr = pathString.c_str();
 
             ImGui::SetNextItemSelectionUserData(id);
             ImGui::SetNextItemStorageID(id);
@@ -117,7 +119,7 @@ namespace anm2ed::imgui
             else
               textureSize.y = textureSize.x / aspectRatio;
 
-            auto textWidth = ImGui::CalcTextSize(path).x;
+            auto textWidth = ImGui::CalcTextSize(pathCStr).x;
             auto tooltipPadding = style.WindowPadding.x * 4.0f;
             auto minWidth = textureSize.x + style.ItemSpacing.x + textWidth + tooltipPadding;
             ImGui::SetNextWindowSize(ImVec2(minWidth, 0), ImGuiCond_Appearing);
@@ -140,7 +142,7 @@ namespace anm2ed::imgui
               if (ImGui::BeginChild("##Spritesheet Info Tooltip Child"))
               {
                 ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
-                ImGui::TextUnformatted(path);
+                ImGui::TextUnformatted(pathCStr);
                 ImGui::PopFont();
                 ImGui::Text("ID: %d", id);
                 ImGui::Text("Size: %d x %d", texture.size.x, texture.size.y);
@@ -167,7 +169,7 @@ namespace anm2ed::imgui
                        spritesheetChildSize.y - spritesheetChildSize.y / 2 - ImGui::GetTextLineHeight() / 2));
 
             if (isReferenced) ImGui::PushFont(resources.fonts[font::ITALICS].get(), font::SIZE);
-            ImGui::Text(anm2::SPRITESHEET_FORMAT_C, id, path);
+            ImGui::Text(anm2::SPRITESHEET_FORMAT_C, id, pathCStr);
             if (isReferenced) ImGui::PopFont();
 
             context_menu();
@@ -208,7 +210,7 @@ namespace anm2ed::imgui
             for (auto& id : selection)
             {
               anm2::Spritesheet& spritesheet = anm2.content.spritesheets[id];
-              spritesheet.reload(document.directory_get().string());
+              spritesheet.reload(document.directory_get());
               toasts.info(std::format("Reloaded spritesheet #{}: {}", id, spritesheet.path.string()));
             }
           };

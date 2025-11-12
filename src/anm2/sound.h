@@ -27,7 +27,7 @@ namespace anm2ed::anm2
     tinyxml2::XMLElement* to_element(tinyxml2::XMLDocument&, int);
     std::string to_string(int);
     void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*, int);
-    void reload(const std::string&);
+    void reload(const std::filesystem::path&);
     bool is_valid();
     void play();
   };

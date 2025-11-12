@@ -38,7 +38,8 @@ namespace anm2ed::anm2
   {
     auto element = document.NewElement("Spritesheet");
     element->SetAttribute("Id", id);
-    element->SetAttribute("Path", path.c_str());
+    auto pathString = path.generic_string();
+    element->SetAttribute("Path", pathString.c_str());
     return element;
   }
 
@@ -57,11 +58,11 @@ namespace anm2ed::anm2
   bool Spritesheet::save(const std::string& directory, const std::string& path)
   {
     filesystem::WorkingDirectory workingDirectory(directory);
-    this->path = !path.empty() ? std::filesystem::relative(path).string() : this->path.string();
+    this->path = !path.empty() ? std::filesystem::relative(path) : this->path;
     return texture.write_png(this->path);
   }
 
-  void Spritesheet::reload(const std::string& directory) { *this = Spritesheet(directory, this->path); }
+  void Spritesheet::reload(const std::filesystem::path& directory) { *this = Spritesheet(directory, this->path); }
 
   bool Spritesheet::is_valid() { return texture.is_valid(); }
 

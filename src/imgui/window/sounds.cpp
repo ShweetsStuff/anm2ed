@@ -33,11 +33,14 @@ namespace anm2ed::imgui
         {
           auto isSelected = selection.contains(id);
           auto isReferenced = reference == id;
+          const std::string pathString =
+              sound.path.empty() ? std::string{anm2::NO_PATH} : sound.path.string();
+          const char* pathLabel = pathString.c_str();
 
           ImGui::PushID(id);
           ImGui::SetNextItemSelectionUserData(id);
           if (isReferenced) ImGui::PushFont(resources.fonts[font::ITALICS].get(), font::SIZE);
-          if (ImGui::Selectable(sound.path.c_str(), isSelected)) sound.play();
+          if (ImGui::Selectable(pathLabel, isSelected)) sound.play();
           if (ImGui::IsItemHovered()) hovered = id;
 
           if (isReferenced) ImGui::PopFont();
@@ -45,7 +48,7 @@ namespace anm2ed::imgui
           if (ImGui::BeginItemTooltip())
           {
             ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
-            ImGui::TextUnformatted(sound.path.c_str());
+            ImGui::TextUnformatted(pathLabel);
             ImGui::PopFont();
             ImGui::Text("ID: %d", id);
             ImGui::Text("Click to play.");

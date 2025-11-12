@@ -2,9 +2,24 @@
 
 #include <filesystem>
 #include <fstream>
+#include <string>
+#include <string_view>
 
 namespace anm2ed
 {
+#if defined(INFO)
+  #undef INFO
+#endif
+#if defined(WARNING)
+  #undef WARNING
+#endif
+#if defined(ERROR)
+  #undef ERROR
+#endif
+#if defined(FATAL)
+  #undef FATAL
+#endif
+
 #define LEVELS                                                                                                         \
   X(INFO, "[INFO]")                                                                                                    \
   X(WARNING, "[WARNING]")                                                                                              \
