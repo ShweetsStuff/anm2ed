@@ -424,7 +424,7 @@ namespace anm2ed::imgui
                                                : dialog::NONE;
 
       auto replace_extension = [&]()
-      { path = std::filesystem::path(path).replace_extension(render::EXTENSIONS[type]); };
+      { path = std::filesystem::path(path).replace_extension(render::EXTENSIONS[type]).string(); };
 
       auto range_to_length = [&]()
       {

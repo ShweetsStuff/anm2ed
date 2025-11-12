@@ -18,9 +18,8 @@
 #endif
 
 #include "log.h"
-#include "string_.h"
 
-using namespace anm2ed::util;
+
 using namespace anm2ed::resource;
 using namespace glm;
 
@@ -112,7 +111,7 @@ namespace anm2ed
     }
 
 #if _WIN32
-    command = string::quote(command);
+    command = util::string::quote(command);
 #endif
 
     logger.command(command);
