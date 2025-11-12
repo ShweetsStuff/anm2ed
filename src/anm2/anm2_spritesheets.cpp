@@ -11,10 +11,7 @@ using namespace tinyxml2;
 
 namespace anm2ed::anm2
 {
-  Spritesheet* Anm2::spritesheet_get(int id)
-  {
-    return map::find(content.spritesheets, id);
-  }
+  Spritesheet* Anm2::spritesheet_get(int id) { return map::find(content.spritesheets, id); }
 
   bool Anm2::spritesheet_add(const std::string& directory, const std::string& path, int& id)
   {
@@ -43,7 +40,7 @@ namespace anm2ed::anm2
     std::vector<std::string> labels{};
     labels.emplace_back("None");
     for (auto& [id, spritesheet] : content.spritesheets)
-      labels.emplace_back(std::format(SPRITESHEET_FORMAT, id, spritesheet.path.c_str()));
+      labels.emplace_back(std::format(SPRITESHEET_FORMAT, id, spritesheet.path.string()));
     return labels;
   }
 
