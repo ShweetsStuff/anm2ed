@@ -7,7 +7,6 @@
 #include <utility>
 #include <vector>
 
-#include "libxm_compat.h"
 #include <xm.h>
 
 namespace anm2ed::resource
