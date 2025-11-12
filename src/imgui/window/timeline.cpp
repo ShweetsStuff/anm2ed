@@ -689,9 +689,17 @@ namespace anm2ed::imgui
                         if (*it >= 0 && *it < (int)sourceItem->frames.size())
                           sourceItem->frames.erase(sourceItem->frames.begin() + *it);
 
-                      int desired = std::clamp((int)i + 1, 0, (int)targetItem->frames.size());
+                      const int dropIndex = (int)i;
+                      int desired = std::clamp(dropIndex + 1, 0, (int)targetItem->frames.size());
                       if (sourceItem == targetItem)
                       {
+                        if (dropIndex < indices.front())
+                          desired = dropIndex;
+                        else if (dropIndex > indices.back())
+                          desired = dropIndex + 1;
+                        else
+                          desired = indices.front();
+
                         int removedBefore = 0;
                         for (int i : indices)
                           if (i < desired) ++removedBefore;

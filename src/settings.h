@@ -130,7 +130,7 @@ namespace anm2ed
   X(TIMELINE_ADD_ITEM_LOCALITY, timelineAddItemLocale, "Add Item Locale", INT, types::locale::GLOBAL)                  \
   X(TIMELINE_ADD_ITEM_SOURCE, timelineAddItemSource, "Add Item Source", INT, types::source::NEW)                       \
   X(TIMELINE_IS_SHOW_UNUSED, timelineIsShowUnused, "##Show Unused", BOOL, true)                                        \
-  X(TIMELINE_IS_ONLY_SHOW_LAYERS, timelineIsOnlyShowLayers, "##Only Show Layers", BOOL, true)                          \
+  X(TIMELINE_IS_ONLY_SHOW_LAYERS, timelineIsOnlyShowLayers, "##Only Show Layers", BOOL, false)                         \
   X(TIMELINE_IS_SOUND, timelineIsSound, "Sound", BOOL, true)                                                           \
                                                                                                                        \
   X(ONIONSKIN_IS_ENABLED, onionskinIsEnabled, "Enabled", BOOL, false)                                                  \
@@ -152,23 +152,25 @@ namespace anm2ed
 
 #define SETTINGS_SHORTCUTS                                                                                             \
   /* Symbol / Name / String / Type / Default */                                                                        \
-  X(SHORTCUT_CENTER_VIEW, shortcutCenterView, "Center View", STRING, "Home")                                           \
-  X(SHORTCUT_FIT, shortcutFit, "Fit", STRING, "F")                                                                     \
-  X(SHORTCUT_ZOOM_IN, shortcutZoomIn, "Zoom In", STRING, "Ctrl+Equal")                                                 \
-  X(SHORTCUT_ZOOM_OUT, shortcutZoomOut, "Zoom Out", STRING, "Ctrl+Minus")                                              \
-  X(SHORTCUT_PLAY_PAUSE, shortcutPlayPause, "Play/Pause", STRING, "Space")                                             \
-  X(SHORTCUT_ONIONSKIN, shortcutOnionskin, "Onionskin", STRING, "O")                                                   \
+  /* File */                                                                                                           \
   X(SHORTCUT_NEW, shortcutNew, "New", STRING, "Ctrl+N")                                                                \
   X(SHORTCUT_OPEN, shortcutOpen, "Open", STRING, "Ctrl+O")                                                             \
   X(SHORTCUT_CLOSE, shortcutClose, "Close", STRING, "Ctrl+W")                                                          \
   X(SHORTCUT_SAVE, shortcutSave, "Save", STRING, "Ctrl+S")                                                             \
   X(SHORTCUT_SAVE_AS, shortcutSaveAs, "Save As", STRING, "Ctrl+Shift+S")                                               \
   X(SHORTCUT_EXIT, shortcutExit, "Exit", STRING, "Alt+F4")                                                             \
-  X(SHORTCUT_SHORTEN_FRAME, shortcutShortenFrame, "Shorten Frame", STRING, "F4")                                       \
-  X(SHORTCUT_EXTEND_FRAME, shortcutExtendFrame, "Extend Frame", STRING, "F5")                                          \
-  X(SHORTCUT_INSERT_FRAME, shortcutInsertFrame, "Insert Frame", STRING, "F6")                                          \
-  X(SHORTCUT_PREVIOUS_FRAME, shortcutPreviousFrame, "Previous Frame", STRING, "Comma")                                 \
-  X(SHORTCUT_NEXT_FRAME, shortcutNextFrame, "Next Frame", STRING, "Period")                                            \
+  /* Edit */                                                                                                           \
+  X(SHORTCUT_UNDO, shortcutUndo, "Undo", STRING, "Ctrl+Z")                                                             \
+  X(SHORTCUT_REDO, shortcutRedo, "Redo", STRING, "Ctrl+Shift+Z")                                                       \
+  X(SHORTCUT_CUT, shortcutCut, "Cut", STRING, "Ctrl+X")                                                                \
+  X(SHORTCUT_COPY, shortcutCopy, "Copy", STRING, "Ctrl+C")                                                             \
+  X(SHORTCUT_PASTE, shortcutPaste, "Paste", STRING, "Ctrl+V")                                                          \
+  X(SHORTCUT_DUPLICATE, shortcutDuplicate, "Duplicate", STRING, "Ctrl+J")                                              \
+  X(SHORTCUT_ADD, shortcutAdd, "Add", STRING, "Insert")                                                                \
+  X(SHORTCUT_REMOVE, shortcutRemove, "Remove", STRING, "Delete")                                                       \
+  X(SHORTCUT_DEFAULT, shortcutDefault, "Default", STRING, "Home")                                                      \
+  X(SHORTCUT_MERGE, shortcutMerge, "Merge", STRING, "Ctrl+E")                                                          \
+  /* Tools */                                                                                                          \
   X(SHORTCUT_PAN, shortcutPan, "Pan", STRING, "P")                                                                     \
   X(SHORTCUT_MOVE, shortcutMove, "Move", STRING, "V")                                                                  \
   X(SHORTCUT_ROTATE, shortcutRotate, "Rotate", STRING, "R")                                                            \
@@ -177,17 +179,21 @@ namespace anm2ed
   X(SHORTCUT_DRAW, shortcutDraw, "Draw", STRING, "B")                                                                  \
   X(SHORTCUT_ERASE, shortcutErase, "Erase", STRING, "E")                                                               \
   X(SHORTCUT_COLOR_PICKER, shortcutColorPicker, "Color Picker", STRING, "I")                                           \
-  X(SHORTCUT_UNDO, shortcutUndo, "Undo", STRING, "Ctrl+Z")                                                             \
-  X(SHORTCUT_REDO, shortcutRedo, "Redo", STRING, "Ctrl+Shift+Z")                                                       \
   X(SHORTCUT_COLOR, shortcutColor, "Color", STRING, "X")                                                               \
-  X(SHORTCUT_COPY, shortcutCopy, "Copy", STRING, "Ctrl+C")                                                             \
-  X(SHORTCUT_CUT, shortcutCut, "Cut", STRING, "Ctrl+X")                                                                \
-  X(SHORTCUT_ADD, shortcutAdd, "Add", STRING, "Insert")                                                                \
-  X(SHORTCUT_REMOVE, shortcutRemove, "Remove", STRING, "Delete")                                                       \
-  X(SHORTCUT_DUPLICATE, shortcutDuplicate, "Duplicate", STRING, "Ctrl+J")                                              \
-  X(SHORTCUT_DEFAULT, shortcutDefault, "Default", STRING, "Home")                                                      \
-  X(SHORTCUT_MERGE, shortcutMerge, "Merge", STRING, "Ctrl+E")                                                          \
-  X(SHORTCUT_PASTE, shortcutPaste, "Paste", STRING, "Ctrl+V")
+  /* View */                                                                                                           \
+  X(SHORTCUT_CENTER_VIEW, shortcutCenterView, "Center View", STRING, "Home")                                           \
+  X(SHORTCUT_FIT, shortcutFit, "Fit", STRING, "F")                                                                     \
+  X(SHORTCUT_ZOOM_IN, shortcutZoomIn, "Zoom In", STRING, "Ctrl+Equal")                                                 \
+  X(SHORTCUT_ZOOM_OUT, shortcutZoomOut, "Zoom Out", STRING, "Ctrl+Minus")                                              \
+  /* Timeline / Playback */                                                                                            \
+  X(SHORTCUT_PLAY_PAUSE, shortcutPlayPause, "Play/Pause", STRING, "Space")                                             \
+  X(SHORTCUT_PREVIOUS_FRAME, shortcutPreviousFrame, "Previous Frame", STRING, "Comma")                                 \
+  X(SHORTCUT_NEXT_FRAME, shortcutNextFrame, "Next Frame", STRING, "Period")                                            \
+  X(SHORTCUT_INSERT_FRAME, shortcutInsertFrame, "Insert Frame", STRING, "F6")                                          \
+  X(SHORTCUT_SHORTEN_FRAME, shortcutShortenFrame, "Shorten Frame", STRING, "F4")                                       \
+  X(SHORTCUT_EXTEND_FRAME, shortcutExtendFrame, "Extend Frame", STRING, "F5")                                          \
+  /* Toggles */                                                                                                        \
+  X(SHORTCUT_ONIONSKIN, shortcutOnionskin, "Onionskin", STRING, "O")
 
 #define SETTINGS_WINDOWS                                                                                               \
   /* Symbol / Name / String / Type / Default */                                                                        \
