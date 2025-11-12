@@ -158,7 +158,11 @@ if (WIN32)
             setupapi
             legacy_stdio_definitions
     )
-    set(SDL_MAIN_TARGET SDL3::SDL3main)
+    if (TARGET SDL3::SDL3main)
+        set(SDL_MAIN_TARGET SDL3::SDL3main)
+    else ()
+        set(SDL_MAIN_TARGET)
+    endif ()
 else ()
     set(OPENGL_LIB GL)
     set(PLATFORM_LIBS)
