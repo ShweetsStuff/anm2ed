@@ -50,7 +50,7 @@ namespace anm2ed::imgui
             auto label = std::format(FILE_LABEL_FORMAT, file.filename().string(), file.string());
 
             ImGui::PushID(i);
-            if (ImGui::MenuItem(label.c_str())) manager.open(file);
+            if (ImGui::MenuItem(label.c_str())) manager.open(file.string());
             ImGui::PopID();
           }
 
@@ -68,8 +68,8 @@ namespace anm2ed::imgui
 
         if (ImGui::MenuItem("Save As", settings.shortcutSaveAs.c_str(), false, document))
           dialog.file_save(dialog::ANM2_SAVE);
-      if (ImGui::MenuItem("Explore XML Location", nullptr, false, document))
-        dialog.file_explorer_open(document->directory_get().string());
+        if (ImGui::MenuItem("Explore XML Location", nullptr, false, document))
+          dialog.file_explorer_open(document->directory_get().string());
 
         ImGui::Separator();
         if (ImGui::MenuItem("Exit", settings.shortcutExit.c_str())) isQuitting = true;

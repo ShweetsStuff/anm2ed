@@ -54,8 +54,8 @@ namespace anm2ed
     {
       std::string errorString{};
       document->path = !path.empty() ? path : document->path.string();
-      document->save(document->path, &errorString);
-      recent_file_add(document->path);
+      document->save(document->path.string(), &errorString);
+      recent_file_add(document->path.string());
     }
   }
 

@@ -1,7 +1,7 @@
 #include "dialog.h"
 
 #ifdef _WIN32
-  #include <window.h>
+  #include <windows.h>
 #elif __unix__
 #else
   #include "toast.h"
@@ -67,15 +67,9 @@ namespace anm2ed
 #endif
   }
 
-  void Dialog::reset()
-  {
-    *this = Dialog(this->window);
-  }
+  void Dialog::reset() { *this = Dialog(this->window); }
 
-  bool Dialog::is_selected(dialog::Type type)
-  {
-    return this->type == type && !path.empty();
-  }
+  bool Dialog::is_selected(dialog::Type type) { return this->type == type && !path.empty(); }
 
   void Dialog::set_string_to_selected_path(std::string& string, dialog::Type type)
   {

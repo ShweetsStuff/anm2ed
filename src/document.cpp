@@ -102,7 +102,7 @@ namespace anm2ed
   bool Document::autosave(std::string* errorString)
   {
     auto autosavePath = autosave_path_get();
-    if (anm2.serialize(autosavePath, errorString))
+    if (anm2.serialize(autosavePath.string(), errorString))
     {
       autosaveHash = hash;
       lastAutosaveTime = 0.0f;
