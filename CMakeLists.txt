@@ -143,7 +143,13 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         src/util
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE GL SDL3-static SDL3_mixer::SDL3_mixer lunasvg)
+if (WIN32)
+    set(OPENGL_LIB opengl32)
+else ()
+    set(OPENGL_LIB GL)
+endif ()
+
+target_link_libraries(${PROJECT_NAME} PRIVATE ${OPENGL_LIB} SDL3-static SDL3_mixer::SDL3_mixer lunasvg)
 
 message(STATUS "System: ${CMAKE_SYSTEM_NAME}")
 message(STATUS "Project: ${PROJECT_NAME}")
