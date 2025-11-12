@@ -781,10 +781,13 @@ namespace anm2ed::imgui
       ImGui::EndPopup();
     }
 
+    if (auto* music = resources.music_track_if_loaded())
+      if (music->is_playing() && !aboutPopup.isOpen) music->stop();
+
     overwritePopup.trigger();
+
     if (ImGui::BeginPopupModal(overwritePopup.label, &overwritePopup.isOpen, ImGuiWindowFlags_NoResize))
     {
-
       ImGui::Text("Are you sure? This will overwrite the existing file.");
 
       auto widgetSize = widget_size_with_row_get(2);
@@ -802,9 +805,6 @@ namespace anm2ed::imgui
       ImGui::EndPopup();
     }
 
-    if (auto* music = resources.music_track_if_loaded())
-      if (music->is_playing() && !aboutPopup.isOpen) music->stop();
-
     aboutPopup.end();
 
     if (shortcut(manager.chords[SHORTCUT_NEW], shortcut::GLOBAL)) dialog.file_save(dialog::ANM2_NEW);
@@ -818,3 +818,6 @@ namespace anm2ed::imgui
     if (shortcut(manager.chords[SHORTCUT_EXIT], shortcut::GLOBAL)) isQuitting = true;
   }
 }
+#ifndef ANM2ED_USE_LIBXM
+  #define ANM2ED_USE_LIBXM 1
+#endif

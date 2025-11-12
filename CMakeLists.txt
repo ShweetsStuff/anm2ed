@@ -47,7 +47,7 @@ set(SDLMIXER_GME OFF CACHE BOOL "" FORCE)
 set(SDLMIXER_MOD_XMP OFF CACHE BOOL "" FORCE)
 set(SDLMIXER_MP3_MPG123 OFF CACHE BOOL "" FORCE)
 set(SDLMIXER_MIDI_FLUIDSYNTH OFF CACHE BOOL "" FORCE)
-set(SDLMIXER_OPUS OFF CACHE BOOL "" FORCE)
+set(SDLMIXER_OPUS ON CACHE BOOL "" FORCE)
 set(SDLMIXER_VORBIS_VORBISFILE OFF CACHE BOOL "" FORCE)
 set(SDLMIXER_VORBIS_TREMOR OFF CACHE BOOL "" FORCE)
 set(SDLMIXER_WAVPACK OFF CACHE BOOL "" FORCE)
@@ -56,11 +56,7 @@ set(SDLMIXER_INSTALL OFF CACHE BOOL "" FORCE)
 add_subdirectory(external/SDL_mixer EXCLUDE_FROM_ALL)
 
 add_subdirectory(external/lunasvg)
-if (WIN32)
-    set(MATH_LIBRARY "" CACHE FILEPATH "Windows doesn't require libm for libxm" FORCE)
-endif ()
-add_subdirectory(external/libxm/src EXCLUDE_FROM_ALL)
-set(LIBXM_COMPAT_HEADER "${CMAKE_SOURCE_DIR}/include/libxm_compat.h")
+
 
 set(GLAD_SRC ${CMAKE_CURRENT_SOURCE_DIR}/include/glad/glad.cpp)
 
@@ -98,13 +94,6 @@ add_executable(${PROJECT_NAME}
         ${TINYXML2_SRC}
         ${PROJECT_SRC}
 )
-if (MSVC)
-    file(TO_NATIVE_PATH "${LIBXM_COMPAT_HEADER}" LIBXM_COMPAT_HEADER_NATIVE)
-    target_compile_options(${PROJECT_NAME} PRIVATE "/FI${LIBXM_COMPAT_HEADER_NATIVE}")
-    if (TARGET xm)
-        target_compile_options(xm PRIVATE "/FI${LIBXM_COMPAT_HEADER_NATIVE}")
-    endif ()
-endif ()
 
 if (WIN32)
     enable_language(RC)
@@ -160,7 +149,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         src/util
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE GL SDL3-static SDL3_mixer::SDL3_mixer lunasvg xm)
+target_link_libraries(${PROJECT_NAME} PRIVATE GL SDL3-static SDL3_mixer::SDL3_mixer lunasvg)
 
 message(STATUS "System: ${CMAKE_SYSTEM_NAME}")
 message(STATUS "Project: ${PROJECT_NAME}")

@@ -1,8 +1,8 @@
 #include "resources.h"
 
-#include "xm_music.h"
-
 #include <ranges>
+
+#include "music.h"
 
 using namespace anm2ed::resource;
 
@@ -24,14 +24,11 @@ namespace anm2ed
   {
     if (!isMusicLoaded)
     {
-      music = Audio(xm::ABOUT, std::size(xm::ABOUT));
+      music = Audio(music::ABOUT, std::size(music::ABOUT));
       isMusicLoaded = true;
     }
     return music;
   }
 
-  resource::Audio* Resources::music_track_if_loaded()
-  {
-    return isMusicLoaded ? &music : nullptr;
-  }
+  resource::Audio* Resources::music_track_if_loaded() { return isMusicLoaded ? &music : nullptr; }
 }
