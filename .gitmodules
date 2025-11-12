@@ -17,7 +17,6 @@
 [submodule "external/SDL_mixer"]
 	path = external/SDL_mixer
 	url = https://github.com/libsdl-org/SDL_mixer
-	
 [submodule "external/libxm"]
 	path = external/libxm
 	url = https://github.com/Artefact2/libxm

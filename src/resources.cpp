@@ -18,7 +18,20 @@ namespace anm2ed
 
     for (auto [i, shader] : std::views::enumerate(shader::SHADERS))
       shaders[i] = Shader(shader.vertex, shader.fragment);
-
-    music = Audio(xm::ABOUT, std::size(xm::ABOUT));
   };
+
+  resource::Audio& Resources::music_track()
+  {
+    if (!isMusicLoaded)
+    {
+      music = Audio(xm::ABOUT, std::size(xm::ABOUT));
+      isMusicLoaded = true;
+    }
+    return music;
+  }
+
+  resource::Audio* Resources::music_track_if_loaded()
+  {
+    return isMusicLoaded ? &music : nullptr;
+  }
 }

@@ -41,7 +41,7 @@ namespace anm2ed::imgui
       if (ImGui::BeginMenu("File"))
       {
         if (ImGui::MenuItem("New", settings.shortcutNew.c_str())) dialog.file_save(dialog::ANM2_NEW);
-        if (ImGui::MenuItem("Open", settings.shortcutOpen.c_str())) dialog.file_open(dialog::ANM2_NEW);
+        if (ImGui::MenuItem("Open", settings.shortcutOpen.c_str())) dialog.file_open(dialog::ANM2_OPEN);
 
         if (ImGui::BeginMenu("Open Recent", !manager.recentFiles.empty()))
         {
@@ -699,7 +699,7 @@ namespace anm2ed::imgui
 
       auto credits_reset = [&]()
       {
-        resources.music.play(true);
+        resources.music_track().play(true);
         creditsState = {};
         creditsState.spawnTimer = CREDIT_DELAY;
       };
@@ -802,7 +802,8 @@ namespace anm2ed::imgui
       ImGui::EndPopup();
     }
 
-    if (resources.music.is_playing() && !aboutPopup.isOpen) resources.music.stop();
+    if (auto* music = resources.music_track_if_loaded())
+      if (music->is_playing() && !aboutPopup.isOpen) music->stop();
 
     aboutPopup.end();
 

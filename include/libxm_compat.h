@@ -5,8 +5,6 @@
     #define __attribute__(x)
   #endif
   #ifndef restrict
-    #define restrict
+    #define restrict __restrict
   #endif
 #endif
-
-#include <xm.h>

@@ -19,5 +19,10 @@ namespace anm2ed
     resource::Audio music{};
 
     Resources();
+    resource::Audio& music_track();
+    resource::Audio* music_track_if_loaded();
+
+  private:
+    bool isMusicLoaded{false};
   };
 }

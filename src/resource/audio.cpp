@@ -7,13 +7,14 @@
 #include <utility>
 #include <vector>
 
-#include "xm_wrapper.h"
+#include "libxm_compat.h"
+#include <xm.h>
 
 namespace anm2ed::resource
 {
   namespace
   {
-    constexpr int XM_SAMPLE_RATE = 44100;
+    constexpr int XM_SAMPLE_RATE_ = 44100;
     constexpr uint16_t XM_CHUNK_FRAMES = 1024;
     constexpr int XM_MAX_SECONDS = 600;
     constexpr int XM_CHANNELS = 2;
@@ -51,14 +52,14 @@ namespace anm2ed::resource
     auto context = xm_create_context(pool.get(), prescan, (const char*)data, (uint32_t)size);
     if (!context) return;
 
-    xm_set_sample_rate(context, (uint16_t)XM_SAMPLE_RATE);
+    xm_set_sample_rate(context, (uint16_t)XM_SAMPLE_RATE_);
     xm_set_max_loop_count(context, 1);
 
     auto pcm = std::vector<float>{};
     pcm.reserve(static_cast<size_t>(XM_CHUNK_FRAMES) * XM_CHANNELS * 8);
 
     size_t framesGenerated = 0;
-    const auto maxFrames = static_cast<size_t>(XM_SAMPLE_RATE) * XM_MAX_SECONDS;
+    const auto maxFrames = static_cast<size_t>(XM_SAMPLE_RATE_) * XM_MAX_SECONDS;
     auto heardAudio = false;
 
     while (framesGenerated < maxFrames)
@@ -88,7 +89,7 @@ namespace anm2ed::resource
     if (pcm.empty()) return;
 
     auto spec = SDL_AudioSpec{};
-    spec.freq = XM_SAMPLE_RATE;
+    spec.freq = XM_SAMPLE_RATE_;
     spec.format = SDL_AUDIO_F32;
     spec.channels = XM_CHANNELS;
 

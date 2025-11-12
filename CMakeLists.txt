@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.27)
-project(anm2ed CXX)
+project(anm2ed LANGUAGES C CXX)
 
 if (WIN32 AND DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
     set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
@@ -22,7 +22,18 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
 set(SDL_STATIC ON CACHE BOOL "" FORCE)
 set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+if (NOT WIN32)
+    set(SDL_ALSA ON CACHE BOOL "" FORCE)
+    set(SDL_ALSA_SHARED ON CACHE BOOL "" FORCE)
+    set(SDL_JACK ON CACHE BOOL "" FORCE)
+    set(SDL_JACK_SHARED ON CACHE BOOL "" FORCE)
+    set(SDL_PIPEWIRE ON CACHE BOOL "" FORCE)
+    set(SDL_PIPEWIRE_SHARED ON CACHE BOOL "" FORCE)
+    set(SDL_SNDIO ON CACHE BOOL "" FORCE)
+    set(SDL_SNDIO_SHARED ON CACHE BOOL "" FORCE)
+endif ()
 set(SDL_HAPTIC OFF CACHE BOOL "" FORCE)
+set(SDL_JOYSTICK OFF CACHE BOOL "" FORCE)
 set(SDL_SENSOR OFF CACHE BOOL "" FORCE)
 set(SDL_HIDAPI OFF CACHE BOOL "" FORCE)
 set(SDL_CAMERA OFF CACHE BOOL "" FORCE)
@@ -49,6 +60,7 @@ if (WIN32)
     set(MATH_LIBRARY "" CACHE FILEPATH "Windows doesn't require libm for libxm" FORCE)
 endif ()
 add_subdirectory(external/libxm/src EXCLUDE_FROM_ALL)
+set(LIBXM_COMPAT_HEADER "${CMAKE_SOURCE_DIR}/include/libxm_compat.h")
 
 set(GLAD_SRC ${CMAKE_CURRENT_SOURCE_DIR}/include/glad/glad.cpp)
 
@@ -86,6 +98,13 @@ add_executable(${PROJECT_NAME}
         ${TINYXML2_SRC}
         ${PROJECT_SRC}
 )
+if (MSVC)
+    cmake_path(CONVERT "${LIBXM_COMPAT_HEADER}" TO_NATIVE_PATH LIBXM_COMPAT_HEADER_NATIVE)
+    target_compile_options(${PROJECT_NAME} PRIVATE "/FI${LIBXM_COMPAT_HEADER_NATIVE}")
+    if (TARGET xm)
+        target_compile_options(xm PRIVATE "/FI${LIBXM_COMPAT_HEADER_NATIVE}")
+    endif ()
+endif ()
 
 if (WIN32)
     enable_language(RC)
