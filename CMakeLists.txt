@@ -127,12 +127,6 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 )
 
 
-if (MSVC)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE restrict=__restrict)
-else ()
-    target_compile_definitions(${PROJECT_NAME} PRIVATE restrict=__restrict__)
-endif ()
-
 target_include_directories(${PROJECT_NAME} PRIVATE
         external
         external/imgui
