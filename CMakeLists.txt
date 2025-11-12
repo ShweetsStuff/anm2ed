@@ -18,6 +18,10 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+if (MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+endif ()
+
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
 set(SDL_STATIC ON CACHE BOOL "" FORCE)
@@ -98,11 +102,6 @@ add_executable(${PROJECT_NAME}
 if (WIN32)
     enable_language(RC)
     target_sources(${PROJECT_NAME} PRIVATE Icon.rc)
-    set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
-
-    set_property(TARGET ${PROJECT_NAME} PROPERTY
-            MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-
     target_compile_options(${PROJECT_NAME} PRIVATE /EHsc)
     target_link_options(${PROJECT_NAME} PRIVATE /STACK:0xffffff)
 else ()
@@ -145,11 +144,35 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 if (WIN32)
     set(OPENGL_LIB opengl32)
+    set(PLATFORM_LIBS
+            ws2_32
+            bcrypt
+            imm32
+            version
+            winmm
+            shell32
+            ole32
+            advapi32
+            gdi32
+            user32
+            setupapi
+            legacy_stdio_definitions
+    )
+    set(SDL_MAIN_TARGET SDL3::SDL3main)
 else ()
     set(OPENGL_LIB GL)
+    set(PLATFORM_LIBS)
+    set(SDL_MAIN_TARGET)
 endif ()
 
-target_link_libraries(${PROJECT_NAME} PRIVATE ${OPENGL_LIB} SDL3-static SDL3_mixer::SDL3_mixer lunasvg)
+target_link_libraries(${PROJECT_NAME} PRIVATE
+        ${OPENGL_LIB}
+        SDL3-static
+        ${SDL_MAIN_TARGET}
+        SDL3_mixer::SDL3_mixer
+        lunasvg
+        ${PLATFORM_LIBS}
+)
 
 message(STATUS "System: ${CMAKE_SYSTEM_NAME}")
 message(STATUS "Project: ${PROJECT_NAME}")
