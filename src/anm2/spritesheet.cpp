@@ -21,10 +21,22 @@ namespace anm2ed::anm2
     texture = Texture(path);
   }
 
+  namespace
+  {
+    std::filesystem::path make_relative_or_keep(const std::filesystem::path& input)
+    {
+      if (input.empty()) return input;
+      std::error_code ec{};
+      auto relative = std::filesystem::relative(input, ec);
+      if (!ec) return relative;
+      return input;
+    }
+  }
+
   Spritesheet::Spritesheet(const std::string& directory, const std::string& path)
   {
     filesystem::WorkingDirectory workingDirectory(directory);
-    this->path = !path.empty() ? std::filesystem::relative(path) : this->path;
+    this->path = !path.empty() ? make_relative_or_keep(path) : this->path;
     this->path = filesystem::path_lower_case_backslash_handle(this->path);
     texture = Texture(this->path);
   }
@@ -58,7 +70,7 @@ namespace anm2ed::anm2
   bool Spritesheet::save(const std::string& directory, const std::string& path)
   {
     filesystem::WorkingDirectory workingDirectory(directory);
-    this->path = !path.empty() ? std::filesystem::relative(path) : this->path;
+    this->path = !path.empty() ? make_relative_or_keep(path) : this->path;
     return texture.write_png(this->path);
   }
 
