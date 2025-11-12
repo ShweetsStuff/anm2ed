@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stddef.h>
-#include <xm.h>
+#include "xm_wrapper.h"
 
 namespace anm2ed::resource::xm
 {

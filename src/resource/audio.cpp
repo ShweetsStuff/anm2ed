@@ -7,16 +7,7 @@
 #include <utility>
 #include <vector>
 
-#ifdef _MSC_VER
-  #ifndef __attribute__
-    #define __attribute__(x)
-  #endif
-  #ifndef restrict
-    #define restrict __restrict
-  #endif
-#endif
-
-#include <xm.h>
+#include "xm_wrapper.h"
 
 namespace anm2ed::resource
 {
