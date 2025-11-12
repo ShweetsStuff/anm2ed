@@ -78,7 +78,6 @@ namespace anm2ed::imgui
       auto childSize = size_without_footer_get(2);
 
       ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2());
-
       if (ImGui::BeginChild("##Spritesheets Child", childSize, ImGuiChildFlags_Borders))
       {
         auto spritesheetChildSize = ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetTextLineHeightWithSpacing() * 4);
@@ -106,8 +105,6 @@ namespace anm2ed::imgui
             if (ImGui::Selectable("##Spritesheet Selectable", isSelected, 0, spritesheetChildSize)) reference = id;
             if (ImGui::IsItemHovered()) hovered = id;
 
-            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
             auto viewport = ImGui::GetMainViewport();
             auto textureSize = texture.size.x * texture.size.y > (viewport->Size.x * viewport->Size.y) * 0.5f
                                    ? to_vec2(viewport->Size) * 0.5f
@@ -122,19 +119,18 @@ namespace anm2ed::imgui
             auto textWidth = ImGui::CalcTextSize(pathCStr).x;
             auto tooltipPadding = style.WindowPadding.x * 4.0f;
             auto minWidth = textureSize.x + style.ItemSpacing.x + textWidth + tooltipPadding;
+
             ImGui::SetNextWindowSize(ImVec2(minWidth, 0), ImGuiCond_Appearing);
 
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
             if (ImGui::BeginItemTooltip())
             {
-              ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2());
-
               ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2());
               if (ImGui::BeginChild("##Spritesheet Tooltip Image Child", to_imvec2(textureSize),
                                     ImGuiChildFlags_Borders))
                 ImGui::Image(texture.id, ImGui::GetContentRegionAvail());
-              ImGui::PopStyleVar();
               ImGui::EndChild();
-
               ImGui::PopStyleVar();
 
               ImGui::SameLine();
@@ -180,12 +176,12 @@ namespace anm2ed::imgui
           ImGui::PopID();
         }
 
-        ImGui::PopStyleVar(2);
-
+        ImGui::PopStyleVar();
         context_menu();
         selection.finish();
       }
       ImGui::EndChild();
+      ImGui::PopStyleVar();
 
       auto rowOneWidgetSize = widget_size_with_row_get(3);
 
