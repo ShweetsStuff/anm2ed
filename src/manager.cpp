@@ -14,6 +14,19 @@ namespace anm2ed
 {
   constexpr std::size_t RECENT_LIMIT = 10;
 
+  namespace
+  {
+    void ensure_parent_directory_exists(const std::filesystem::path& path)
+    {
+      auto parent = path.parent_path();
+      if (parent.empty()) return;
+      std::error_code ec{};
+      std::filesystem::create_directories(parent, ec);
+      if (ec)
+        logger.warning(std::format("Could not create directory for {}: {}", path.string(), ec.message()));
+    }
+  }
+
   std::filesystem::path Manager::recent_files_path_get() { return filesystem::path_preferences_get() + "recent.txt"; }
   std::filesystem::path Manager::autosave_path_get() { return filesystem::path_preferences_get() + "autosave.txt"; }
   std::filesystem::path Manager::autosave_directory_get() { return filesystem::path_preferences_get() + "autosave"; }
@@ -199,6 +212,7 @@ namespace anm2ed
     while (std::getline(file, line))
     {
       if (line.empty()) continue;
+      if (!line.empty() && line.back() == '\r') line.pop_back();
       std::filesystem::path entry = line;
       if (std::find(recentFiles.begin(), recentFiles.end(), entry) != recentFiles.end()) continue;
       std::error_code ec{};
@@ -214,6 +228,7 @@ namespace anm2ed
   void Manager::recent_files_write()
   {
     auto path = recent_files_path_get();
+    ensure_parent_directory_exists(path);
 
     std::ofstream file;
     file.open(path, std::ofstream::out | std::ofstream::trunc);
@@ -274,6 +289,7 @@ namespace anm2ed
     while (std::getline(file, line))
     {
       if (line.empty()) continue;
+      if (!line.empty() && line.back() == '\r') line.pop_back();
       std::filesystem::path entry = line;
       if (std::find(autosaveFiles.begin(), autosaveFiles.end(), entry) != autosaveFiles.end()) continue;
       autosaveFiles.emplace_back(std::move(entry));
@@ -283,6 +299,7 @@ namespace anm2ed
   void Manager::autosave_files_write()
   {
     std::ofstream autosaveWriteFile;
+    ensure_parent_directory_exists(autosave_path_get());
     autosaveWriteFile.open(autosave_path_get(), std::ofstream::out | std::ofstream::trunc);
 
     for (auto& path : autosaveFiles)
