@@ -6,6 +6,7 @@
 #include <fstream>
 
 #ifdef _WIN32
+  #include "string_.h"
   #define POPEN _popen
   #define PCLOSE _pclose
   #define PWRITE_MODE "wb"
@@ -18,7 +19,6 @@
 #endif
 
 #include "log.h"
-
 
 using namespace anm2ed::resource;
 using namespace glm;
