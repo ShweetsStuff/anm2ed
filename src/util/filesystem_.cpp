@@ -31,10 +31,16 @@ namespace anm2ed::util::filesystem
 
   std::filesystem::path path_lower_case_backslash_handle(std::filesystem::path& path)
   {
-    if (path_is_exist(path)) return path;
-    path = string::backslash_replace(path);
-    if (path_is_exist(path)) return path;
-    return string::to_lower(path);
+    auto asString = path.generic_string();
+    if (path_is_exist(asString)) return path;
+
+    asString = string::backslash_replace(asString);
+    path = asString;
+    if (path_is_exist(asString)) return path;
+
+    asString = string::to_lower(asString);
+    path = asString;
+    return path;
   }
 
   WorkingDirectory::WorkingDirectory(const std::string& path, bool isFile)
