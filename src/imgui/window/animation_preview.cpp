@@ -1,5 +1,7 @@
 #include "animation_preview.h"
 
+#include <algorithm>
+#include <filesystem>
 #include <ranges>
 
 #include <glm/gtc/type_ptr.hpp>
@@ -14,6 +16,7 @@ using namespace anm2ed::canvas;
 using namespace anm2ed::types;
 using namespace anm2ed::util;
 using namespace anm2ed::resource;
+using namespace anm2ed::resource::texture;
 using namespace glm;
 
 namespace anm2ed::imgui
@@ -26,47 +29,27 @@ namespace anm2ed::imgui
 
   AnimationPreview::AnimationPreview() : Canvas(vec2()) {}
 
-  void AnimationPreview::tick(Manager& manager, Document& document, Settings& settings)
+  void AnimationPreview::tick(Manager& manager, Settings& settings)
   {
+    auto& document = *manager.get();
     auto& anm2 = document.anm2;
     auto& playback = document.playback;
     auto& frameTime = document.frameTime;
+    auto& end = manager.recordingEnd;
     auto& zoom = document.previewZoom;
     auto& pan = document.previewPan;
-    auto& isRootTransform = settings.previewIsRootTransform;
-    auto& scale = settings.renderScale;
-
-    if (playback.isPlaying)
-    {
-      auto& isSound = settings.timelineIsSound;
-      auto& isOnlyShowLayers = settings.timelineIsOnlyShowLayers;
-
-      if (!anm2.content.sounds.empty() && isSound)
-      {
-        if (auto animation = document.animation_get();
-            animation && animation->triggers.isVisible && (!isOnlyShowLayers || manager.isRecording))
-        {
-          if (auto trigger = animation->triggers.frame_generate(playback.time, anm2::TRIGGER);
-              trigger.is_visible(anm2::TRIGGER))
-            if (anm2.content.sounds.contains(trigger.soundID))
-              anm2.content.sounds[trigger.soundID].audio.play(false, mixer);
-        }
-      }
-
-      frameTime = playback.time;
-    }
 
     if (manager.isRecording)
     {
+      auto& ffmpegPath = settings.renderFFmpegPath;
+      auto& path = settings.renderPath;
+      auto& type = settings.renderType;
+
       auto pixels = pixels_get();
       renderFrames.push_back(Texture(pixels.data(), size));
 
-      if (playback.time > manager.recordingEnd || playback.isFinished)
+      if (playback.time > end || playback.isFinished)
       {
-        auto& ffmpegPath = settings.renderFFmpegPath;
-        auto& path = settings.renderPath;
-        auto& type = settings.renderType;
-
         if (type == render::PNGS)
         {
           auto& format = settings.renderFormat;
@@ -88,6 +71,53 @@ namespace anm2ed::imgui
             toasts.info(std::format("Exported rendered frames to: {}", path));
           else
             toasts.warning(std::format("Could not export frames to: {}", path));
+        }
+        else if (type == render::SPRITESHEET)
+        {
+          auto& rows = settings.renderRows;
+          auto& columns = settings.renderColumns;
+
+          if (renderFrames.empty())
+          {
+            toasts.warning("No frames captured for spritesheet export.");
+          }
+          else
+          {
+            const auto& firstFrame = renderFrames.front();
+            if (firstFrame.size.x <= 0 || firstFrame.size.y <= 0 || firstFrame.pixels.empty())
+              toasts.warning("Spritesheet export failed: captured frames are empty.");
+            else
+            {
+              auto frameWidth = firstFrame.size.x;
+              auto frameHeight = firstFrame.size.y;
+              ivec2 spritesheetSize = ivec2(frameWidth * columns, frameHeight * rows);
+
+              std::vector<uint8_t> spritesheet((size_t)(spritesheetSize.x) * spritesheetSize.y * CHANNELS);
+
+              for (auto [i, frame] : std::views::enumerate(renderFrames))
+              {
+                auto row = (int)(i / columns);
+                auto column = (int)(i % columns);
+                if (row >= rows || column >= columns) break;
+                if ((int)frame.pixels.size() < frameWidth * frameHeight * CHANNELS) continue;
+
+                for (int y = 0; y < frameHeight; ++y)
+                {
+                  auto destY = (size_t)(row * frameHeight + y);
+                  auto destX = (size_t)(column * frameWidth);
+                  auto destOffset = (destY * spritesheetSize.x + destX) * CHANNELS;
+                  auto srcOffset = (size_t)(y * frameWidth) * CHANNELS;
+                  std::copy_n(frame.pixels.data() + srcOffset, frameWidth * CHANNELS, spritesheet.data() + destOffset);
+                }
+              }
+
+              Texture spritesheetTexture(spritesheet.data(), spritesheetSize);
+              if (spritesheetTexture.write_png(path))
+                toasts.info(std::format("Exported spritesheet to: {}", path));
+              else
+                toasts.warning(std::format("Could not export spritesheet to: {}", path));
+            }
+          }
         }
         else
         {
@@ -112,41 +142,29 @@ namespace anm2ed::imgui
         manager.progressPopup.close();
       }
     }
-    if (manager.isRecordingStart)
+
+    if (playback.isPlaying)
     {
-      savedSettings = settings;
+      auto animation = document.animation_get();
+      auto& isSound = settings.timelineIsSound;
+      auto& isOnlyShowLayers = settings.timelineIsOnlyShowLayers;
 
-      if (settings.timelineIsSound) audioStream.capture_begin(mixer);
-
-      if (settings.renderIsRawAnimation)
+      if (!anm2.content.sounds.empty() && isSound)
       {
-        settings.previewBackgroundColor = vec4();
-        settings.previewIsGrid = false;
-        settings.previewIsAxes = false;
-        settings.timelineIsOnlyShowLayers = true;
-        settings.onionskinIsEnabled = false;
-
-        savedZoom = zoom;
-        savedPan = pan;
-
-        if (auto animation = document.animation_get())
+        if (auto animation = document.animation_get();
+            animation && animation->triggers.isVisible && (!isOnlyShowLayers || manager.isRecording))
         {
-          if (auto rect = animation->rect(isRootTransform); rect != vec4(-1.0f))
-          {
-            size_set(vec2(rect.z, rect.w) * scale);
-            set_to_rect(zoom, pan, rect);
-          }
+          if (auto trigger = animation->triggers.frame_generate(playback.time, anm2::TRIGGER);
+              trigger.is_visible(anm2::TRIGGER))
+            if (anm2.content.sounds.contains(trigger.soundID))
+              anm2.content.sounds[trigger.soundID].audio.play(false, mixer);
         }
-
-        isSizeTrySet = false;
-
-        bind();
-        clear(settings.previewBackgroundColor);
-        unbind();
       }
 
-      manager.isRecordingStart = false;
-      manager.isRecording = true;
+      playback.tick(anm2.info.fps, animation->frameNum,
+                    (animation->isLoop || settings.playbackIsLoop) && !manager.isRecording);
+
+      frameTime = playback.time;
     }
   }
 
@@ -277,6 +295,38 @@ namespace anm2ed::imgui
       ImGui::EndChild();
 
       auto cursorScreenPos = ImGui::GetCursorScreenPos();
+
+      if (manager.isRecordingStart)
+      {
+        savedSettings = settings;
+
+        if (settings.timelineIsSound) audioStream.capture_begin(mixer);
+
+        if (settings.renderIsRawAnimation)
+        {
+          settings.previewBackgroundColor = vec4();
+          settings.previewIsGrid = false;
+          settings.previewIsAxes = false;
+          settings.timelineIsOnlyShowLayers = true;
+          settings.onionskinIsEnabled = false;
+
+          savedZoom = zoom;
+          savedPan = pan;
+
+          if (auto rect = document.animation_get()->rect(isRootTransform); rect != vec4(-1.0f))
+          {
+            size_set(vec2(rect.z, rect.w) * settings.renderScale);
+            set_to_rect(zoom, pan, rect);
+          }
+
+          isSizeTrySet = false;
+        }
+
+        manager.isRecordingStart = false;
+        manager.isRecording = true;
+        playback.isPlaying = true;
+        playback.time = manager.recordingStart;
+      }
 
       if (isSizeTrySet) size_set(to_vec2(ImGui::GetContentRegionAvail()));
       viewport_set();

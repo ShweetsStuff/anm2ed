@@ -46,6 +46,11 @@ namespace anm2ed
     GLuint texture{};
     glm::vec2 previousSize{};
     glm::vec2 size{};
+    mutable GLint previousSrcRGB{};
+    mutable GLint previousDstRGB{};
+    mutable GLint previousSrcAlpha{};
+    mutable GLint previousDstAlpha{};
+    mutable bool previousBlendStored{};
 
     Canvas();
     Canvas(glm::vec2);

@@ -104,7 +104,6 @@ namespace anm2ed
     glDeleteFramebuffers(1, &fbo);
     glDeleteRenderbuffers(1, &rbo);
     glDeleteTextures(1, &texture);
-
     glDeleteVertexArrays(1, &axisVAO);
     glDeleteBuffers(1, &axisVBO);
 
@@ -115,10 +114,7 @@ namespace anm2ed
     glDeleteBuffers(1, &rectVBO);
   }
 
-  bool Canvas::is_valid() const
-  {
-    return fbo != 0;
-  }
+  bool Canvas::is_valid() const { return fbo != 0; }
 
   void Canvas::framebuffer_set() const
   {
@@ -229,6 +225,8 @@ namespace anm2ed
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
     glUseProgram(0);
+
+    glEnable(GL_BLEND);
   }
 
   void Canvas::rect_render(Shader& shader, const mat4& transform, const mat4& model, vec4 color, float dashLength,
@@ -267,25 +265,40 @@ namespace anm2ed
     glUseProgram(0);
   }
 
-  void Canvas::viewport_set() const
-  {
-    glViewport(0, 0, size.x, size.y);
-  }
+  void Canvas::viewport_set() const { glViewport(0, 0, size.x, size.y); }
 
   void Canvas::clear(const vec4& color) const
   {
+    glDisable(GL_BLEND);
     glClearColor(color.r, color.g, color.b, color.a);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_BLEND);
   }
 
   void Canvas::bind() const
   {
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+    GLboolean blendEnabled = glIsEnabled(GL_BLEND);
+    if (!blendEnabled) glEnable(GL_BLEND);
+
+    glGetIntegerv(GL_BLEND_SRC_RGB, &previousSrcRGB);
+    glGetIntegerv(GL_BLEND_DST_RGB, &previousDstRGB);
+    glGetIntegerv(GL_BLEND_SRC_ALPHA, &previousSrcAlpha);
+    glGetIntegerv(GL_BLEND_DST_ALPHA, &previousDstAlpha);
+    previousBlendStored = true;
+
+    glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
   }
 
   void Canvas::unbind() const
   {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    if (previousBlendStored)
+    {
+      glBlendFuncSeparate(previousSrcRGB, previousDstRGB, previousSrcAlpha, previousDstAlpha);
+      previousBlendStored = false;
+    }
   }
 
   std::vector<unsigned char> Canvas::pixels_get() const

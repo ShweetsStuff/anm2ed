@@ -151,7 +151,6 @@ namespace anm2ed
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glLineWidth(2.0f);
-    glDisable(GL_MULTISAMPLE);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_LINE_SMOOTH);
     glClearColor(color::BLACK.r, color::BLACK.g, color::BLACK.b, color::BLACK.a);

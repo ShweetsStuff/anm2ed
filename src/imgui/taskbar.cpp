@@ -5,7 +5,9 @@
 #include <cfloat>
 #include <cmath>
 #include <filesystem>
+#include <format>
 #include <ranges>
+#include <tuple>
 #include <vector>
 
 #include <imgui/imgui.h>
@@ -16,7 +18,6 @@
 #include "types.h"
 
 #include "icon.h"
-#include "toast.h"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::types;
@@ -26,6 +27,107 @@ using namespace glm;
 
 namespace anm2ed::imgui
 {
+  static constexpr auto ANM2ED_LABEL = "Anm2Ed";
+  static constexpr auto VERSION_LABEL = "Version 2.0";
+  static constexpr auto CREDIT_DELAY = 1.0f;
+  static constexpr auto CREDIT_SCROLL_SPEED = 25.0f;
+
+  struct Credit
+  {
+    const char* string{};
+    font::Type font{font::REGULAR};
+  };
+
+  struct ScrollingCredit
+  {
+    int index{};
+    float offset{};
+  };
+
+  struct CreditsState
+  {
+    std::vector<ScrollingCredit> active{};
+    float spawnTimer{1.0f};
+    int nextIndex{};
+  };
+
+  static constexpr Credit CREDITS[] = {
+      {"Anm2Ed", font::BOLD},
+      {"License: GPLv3"},
+      {""},
+      {"Designer", font::BOLD},
+      {"Shweet"},
+      {""},
+      {"Additional Help", font::BOLD},
+      {"im-tem"},
+      {""},
+      {"Based on the work of:", font::BOLD},
+      {"Adrian Gavrilita"},
+      {"Simon Parzer"},
+      {"Matt Kapuszczak"},
+      {""},
+      {"XM Music", font::BOLD},
+      {"Drozerix"},
+      {"\"Keygen Wraith\""},
+      {"https://modarchive.org/module.php?207854"},
+      {"License: CC0"},
+      {""},
+      {"Libraries", font::BOLD},
+      {"Dear ImGui"},
+      {"https://github.com/ocornut/imgui"},
+      {"License: MIT"},
+      {""},
+      {"SDL"},
+      {"https://github.com/libsdl-org/SDL"},
+      {"License: zlib"},
+      {""},
+      {"SDL_mixer"},
+      {"https://github.com/libsdl-org/SDL_mixer"},
+      {"License: zlib"},
+      {""},
+      {"tinyxml2"},
+      {"https://github.com/leethomason/tinyxml2"},
+      {"License: zlib"},
+      {""},
+      {"glm"},
+      {"https://github.com/g-truc/glm"},
+      {"License: MIT"},
+      {""},
+      {"lunasvg"},
+      {"https://github.com/sammycage/lunasvg"},
+      {"License: MIT"},
+      {""},
+      {"Icons", font::BOLD},
+      {"Remix Icons"},
+      {"remixicon.com"},
+      {"License: Apache"},
+      {""},
+      {"Font", font::BOLD},
+      {"Noto Sans"},
+      {"https://fonts.google.com/noto/specimen/Noto+Sans"},
+      {"License: OFL"},
+      {""},
+      {"Special Thanks", font::BOLD},
+      {"Edmund McMillen"},
+      {"Florian Himsl"},
+      {"Tyrone Rodriguez"},
+      {"The-Vinh Truong (_kilburn)"},
+      {"Everyone who waited patiently for this to be finished"},
+      {"Everyone else who has worked on The Binding of Isaac!"},
+      {""},
+      {""},
+      {""},
+      {""},
+      {""},
+      {"enjoy the jams :)"},
+      {""},
+      {""},
+      {""},
+      {""},
+      {""},
+  };
+  static constexpr auto CREDIT_COUNT = (int)(sizeof(CREDITS) / sizeof(Credit));
+
   Taskbar::Taskbar() : generate(vec2()) {}
 
   void Taskbar::update(Manager& manager, Settings& settings, Resources& resources, Dialog& dialog, bool& isQuitting)
@@ -43,9 +145,10 @@ namespace anm2ed::imgui
         if (ImGui::MenuItem("New", settings.shortcutNew.c_str())) dialog.file_save(dialog::ANM2_NEW);
         if (ImGui::MenuItem("Open", settings.shortcutOpen.c_str())) dialog.file_open(dialog::ANM2_OPEN);
 
-        if (ImGui::BeginMenu("Open Recent", !manager.recentFiles.empty()))
+        auto recentFiles = manager.recent_files_ordered();
+        if (ImGui::BeginMenu("Open Recent", !recentFiles.empty()))
         {
-          for (auto [i, file] : std::views::enumerate(manager.recentFiles))
+          for (auto [i, file] : std::views::enumerate(recentFiles))
           {
             auto label = std::format(FILE_LABEL_FORMAT, file.filename().string(), file.string());
 
@@ -54,7 +157,7 @@ namespace anm2ed::imgui
             ImGui::PopID();
           }
 
-          if (!manager.recentFiles.empty())
+          if (!recentFiles.empty())
             if (ImGui::MenuItem("Clear List")) manager.recent_files_clear();
 
           ImGui::EndMenu();
@@ -407,7 +510,6 @@ namespace anm2ed::imgui
 
     if (ImGui::BeginPopupModal(renderPopup.label, &renderPopup.isOpen, ImGuiWindowFlags_NoResize))
     {
-      auto& playback = document->playback;
       auto& ffmpegPath = settings.renderFFmpegPath;
       auto& path = settings.renderPath;
       auto& format = settings.renderFormat;
@@ -416,27 +518,88 @@ namespace anm2ed::imgui
       auto& type = settings.renderType;
       auto& start = manager.recordingStart;
       auto& end = manager.recordingEnd;
+      auto& rows = settings.renderRows;
+      auto& columns = settings.renderColumns;
       auto& isRange = manager.isRecordingRange;
-      auto widgetSize = widget_size_with_row_get(2);
-      auto dialogType = type == render::PNGS   ? dialog::PNG_DIRECTORY_SET
-                        : type == render::GIF  ? dialog::GIF_PATH_SET
-                        : type == render::WEBM ? dialog::WEBM_PATH_SET
-                                               : dialog::NONE;
+      auto& frames = document->frames.selection;
+      int length = std::max(1, end - start + 1);
+
+      auto range_set = [&]()
+      {
+        if (!frames.empty())
+        {
+          if (auto item = document->item_get())
+          {
+            int duration{};
+            for (auto [i, frame] : std::views::enumerate(item->frames))
+            {
+              if (i == *frames.begin())
+                start = duration;
+              else if (i == *frames.rbegin())
+              {
+                end = duration;
+                break;
+              }
+
+              duration += frame.duration;
+            }
+          }
+        }
+        else if (!isRange)
+        {
+          start = 0;
+          end = animation->frameNum - 1;
+        }
+
+        length = std::max(1, end - start + 1);
+      };
+
+      auto rows_columns_set = [&]()
+      {
+        auto framesNeeded = std::max(1, length);
+        int bestRows = 1;
+        int bestColumns = framesNeeded;
+
+        auto bestScore = std::make_tuple(bestColumns - bestRows, bestColumns * bestRows - framesNeeded, -bestColumns);
+
+        for (int candidateRows = 1; candidateRows <= framesNeeded; ++candidateRows)
+        {
+          int candidateColumns = (framesNeeded + candidateRows - 1) / candidateRows;
+          if (candidateColumns < candidateRows) break;
+
+          auto candidateScore = std::make_tuple(candidateColumns - candidateRows,
+                                                candidateColumns * candidateRows - framesNeeded, -candidateColumns);
+
+          if (candidateScore < bestScore)
+          {
+            bestScore = candidateScore;
+            bestRows = candidateRows;
+            bestColumns = candidateColumns;
+          }
+        }
+
+        rows = bestRows;
+        columns = bestColumns;
+      };
 
       auto replace_extension = [&]()
       { path = std::filesystem::path(path).replace_extension(render::EXTENSIONS[type]).string(); };
 
-      auto range_to_length = [&]()
-      {
-        start = 0;
-        end = animation->frameNum;
-      };
-
-      if (renderPopup.isJustOpened)
+      auto render_set = [&]()
       {
         replace_extension();
-        if (!isRange) range_to_length();
-      }
+        range_set();
+        rows_columns_set();
+      };
+
+      auto widgetSize = widget_size_with_row_get(2);
+      auto dialogType = type == render::PNGS          ? dialog::PNG_DIRECTORY_SET
+                        : type == render::SPRITESHEET ? dialog::PNG_PATH_SET
+                        : type == render::GIF         ? dialog::GIF_PATH_SET
+                        : type == render::WEBM        ? dialog::WEBM_PATH_SET
+                                                      : dialog::NONE;
+
+      if (renderPopup.isJustOpened) render_set();
 
       if (ImGui::ImageButton("##FFmpeg Path Set", resources.icons[icon::FOLDER].id, icon_size_get()))
         dialog.file_open(dialog::FFMPEG_PATH_SET);
@@ -458,41 +621,64 @@ namespace anm2ed::imgui
       ImGui::SetItemTooltip("Set the output path or directory for the animation.");
       dialog.set_string_to_selected_path(path, dialogType);
 
-      if (ImGui::Combo("Type", &type, render::STRINGS, render::COUNT)) replace_extension();
+      if (ImGui::Combo("Type", &type, render::STRINGS, render::COUNT)) render_set();
       ImGui::SetItemTooltip("Set the type of the output.");
+
+      if (type == render::PNGS || type == render::SPRITESHEET) ImGui::Separator();
 
       if (type == render::PNGS)
       {
-        ImGui::Separator();
-        input_text_string("Format", &format);
+        if (input_text_string("Format", &format)) format = std::filesystem::path(format).replace_extension(".png");
         ImGui::SetItemTooltip(
             "For outputted images, each image will use this format.\n{} represents the index of each image.");
+      }
+      else if (type == render::SPRITESHEET)
+      {
+        input_int_range("Rows", rows, 1, length);
+        ImGui::SetItemTooltip("Set how many rows the spritesheet will have.");
+
+        input_int_range("Columns", columns, 1, length);
+        ImGui::SetItemTooltip("Set how many columns the spritesheet will have.");
+
+        if (ImGui::Button("Set to Recommended")) rows_columns_set();
+        ImGui::SetItemTooltip("Use a recommended value for rows/columns.");
       }
 
       ImGui::Separator();
 
       if (ImGui::Checkbox("Custom Range", &isRange))
-        if (!isRange) range_to_length();
-      ImGui::SetItemTooltip("Toggle using a custom range for the animation.");
+      {
+        range_set();
+        ImGui::SetItemTooltip("Toggle using a custom range for the animation.");
+      }
 
-      if (isRange)
+      ImGui::SameLine();
+
+      ImGui::BeginDisabled(frames.empty());
+      if (ImGui::Button("To Selected Frames")) range_set();
+      ImGui::SetItemTooltip("If frames are selected, use that range for the rendered animation.");
+      ImGui::EndDisabled();
+
+      ImGui::BeginDisabled(!isRange);
       {
         input_int_range("Start", start, 0, animation->frameNum - 1);
-        ImGui::SetItemTooltip("Set the starting time  of the animation.");
+        ImGui::SetItemTooltip("Set the starting time of the animation.");
         input_int_range("End", end, start + 1, animation->frameNum);
-        ImGui::SetItemTooltip("Set the ending time  of the animation.");
+        ImGui::SetItemTooltip("Set the ending time of the animation.");
       }
+      ImGui::EndDisabled();
 
       ImGui::Separator();
 
       ImGui::Checkbox("Raw", &isRaw);
       ImGui::SetItemTooltip("Record only the raw animation; i.e., only its layers, to its bounds.");
 
-      if (isRaw)
+      ImGui::BeginDisabled(!isRaw);
       {
         input_float_range("Scale", scale, 1.0f, 100.0f, STEP, STEP_FAST, "%.1fx");
         ImGui::SetItemTooltip("Set the output scale of the animation.");
       }
+      ImGui::EndDisabled();
 
       ImGui::Separator();
 
@@ -504,78 +690,11 @@ namespace anm2ed::imgui
 
       if (ImGui::Button("Render", widgetSize))
       {
-        bool canStart = true;
-        auto warn_and_close = [&](const std::string& message)
-        {
-          toasts.warning(message);
-          renderPopup.close();
-          canStart = false;
-        };
-
-        auto ffmpegPathValid = [&]() -> bool
-        {
-          if (ffmpegPath.empty()) return false;
-          std::error_code ec{};
-          std::filesystem::path ffmpeg(ffmpegPath);
-          if (!std::filesystem::exists(ffmpeg, ec) || !std::filesystem::is_regular_file(ffmpeg, ec)) return false;
-#ifdef _WIN32
-          auto ext = ffmpeg.extension().string();
-          std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return (char)std::tolower(c); });
-          if (ext != ".exe") return false;
-          return true;
-#else
-          auto permMask = std::filesystem::status(ffmpeg, ec).permissions();
-          using std::filesystem::perms;
-          if (permMask == perms::unknown) return true;
-          auto has_exec = [&](perms p)
-          {
-            return (perms::none != (p & perms::owner_exec)) || (perms::none != (p & perms::group_exec)) ||
-                   (perms::none != (p & perms::others_exec));
-          };
-          return has_exec(permMask);
-#endif
-        };
-
-        if (!ffmpegPathValid()) warn_and_close("Invalid FFmpeg executable. Please set a valid FFmpeg path.");
-
-        if (canStart)
-        {
-          std::error_code ec{};
-          if (type == render::PNGS)
-          {
-            if (path.empty())
-              warn_and_close("Select an output directory for PNG exports.");
-            else
-            {
-              std::filesystem::path directory(path);
-              if (!std::filesystem::exists(directory, ec) || !std::filesystem::is_directory(directory, ec))
-                warn_and_close("PNG exports require a valid directory.");
-            }
-          }
-          else
-          {
-            std::filesystem::path output(path);
-            auto parent = output.parent_path();
-            auto parentInvalid =
-                !parent.empty() && (!std::filesystem::exists(parent, ec) || !std::filesystem::is_directory(parent, ec));
-            if (path.empty() || std::filesystem::is_directory(output, ec) || parentInvalid)
-            {
-              output = std::filesystem::path("output").replace_extension(render::EXTENSIONS[type]);
-              path = output.string();
-              warn_and_close(std::format("Invalid output file. Using default path: {}", path));
-            }
-          }
-        }
-
-        if (canStart)
-        {
-          manager.isRecordingStart = true;
-          playback.time = start;
-          playback.isPlaying = true;
-          renderPopup.close();
-          manager.progressPopup.open();
-        }
+        manager.isRecordingStart = true;
+        renderPopup.close();
+        manager.progressPopup.open();
       }
+      ImGui::SetItemTooltip("Render the animation using the current settings.");
 
       ImGui::SameLine();
 
@@ -590,107 +709,6 @@ namespace anm2ed::imgui
 
     if (ImGui::BeginPopupModal(aboutPopup.label, &aboutPopup.isOpen, ImGuiWindowFlags_NoResize))
     {
-      struct Credit
-      {
-        const char* string{};
-        font::Type font{font::REGULAR};
-      };
-
-      struct ScrollingCredit
-      {
-        int index{};
-        float offset{};
-      };
-
-      struct CreditsState
-      {
-        std::vector<ScrollingCredit> active{};
-        float spawnTimer{1.0f};
-        int nextIndex{};
-      };
-
-      static constexpr auto ANM2ED_LABEL = "Anm2Ed";
-      static constexpr auto VERSION_LABEL = "Version 2.0";
-      static constexpr auto CREDIT_DELAY = 1.0f;
-      static constexpr auto CREDIT_SCROLL_SPEED = 25.0f;
-
-      static constexpr Credit CREDITS[] = {
-          {"Anm2Ed", font::BOLD},
-          {"License: GPLv3"},
-          {""},
-          {"Designer", font::BOLD},
-          {"Shweet"},
-          {""},
-          {"Additional Help", font::BOLD},
-          {"im-tem"},
-          {""},
-          {"Based on the work of:", font::BOLD},
-          {"Adrian Gavrilita"},
-          {"Simon Parzer"},
-          {"Matt Kapuszczak"},
-          {""},
-          {"XM Music", font::BOLD},
-          {"Drozerix"},
-          {"\"Keygen Wraith\""},
-          {"https://modarchive.org/module.php?207854"},
-          {"License: CC0"},
-          {""},
-          {"Libraries", font::BOLD},
-          {"Dear ImGui"},
-          {"https://github.com/ocornut/imgui"},
-          {"License: MIT"},
-          {""},
-          {"SDL"},
-          {"https://github.com/libsdl-org/SDL"},
-          {"License: zlib"},
-          {""},
-          {"SDL_mixer"},
-          {"https://github.com/libsdl-org/SDL_mixer"},
-          {"License: zlib"},
-          {""},
-          {"tinyxml2"},
-          {"https://github.com/leethomason/tinyxml2"},
-          {"License: zlib"},
-          {""},
-          {"glm"},
-          {"https://github.com/g-truc/glm"},
-          {"License: MIT"},
-          {""},
-          {"lunasvg"},
-          {"https://github.com/sammycage/lunasvg"},
-          {"License: MIT"},
-          {""},
-          {"Icons", font::BOLD},
-          {"Remix Icons"},
-          {"remixicon.com"},
-          {"License: Apache"},
-          {""},
-          {"Font", font::BOLD},
-          {"Noto Sans"},
-          {"https://fonts.google.com/noto/specimen/Noto+Sans"},
-          {"License: OFL"},
-          {""},
-          {"Special Thanks", font::BOLD},
-          {"Edmund McMillen"},
-          {"Florian Himsl"},
-          {"Tyrone Rodriguez"},
-          {"The-Vinh Truong (_kilburn)"},
-          {"Everyone who waited patiently for this to be finished"},
-          {"Everyone else who has worked on The Binding of Isaac!"},
-          {""},
-          {""},
-          {""},
-          {""},
-          {""},
-          {"enjoy the jams :)"},
-          {""},
-          {""},
-          {""},
-          {""},
-          {""},
-      };
-      static constexpr auto CREDIT_COUNT = (int)(sizeof(CREDITS) / sizeof(Credit));
-
       static CreditsState creditsState{};
 
       auto credits_reset = [&]()
