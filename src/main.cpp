@@ -1,6 +1,10 @@
 #include "loader.h"
 #include "state.h"
 
+#ifdef _WIN32
+  #include <windows.h>
+#endif
+
 int main(int argc, const char** argv)
 {
   anm2ed::Loader loader(argc, argv);
@@ -14,3 +18,7 @@ int main(int argc, const char** argv)
 
   return EXIT_SUCCESS;
 }
+
+#ifdef _WIN32
+int APIENTRY WinMain(HINSTANCE, HINSTANCE, LPSTR, int) { return main(__argc, __argv); }
+#endif
