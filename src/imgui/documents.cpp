@@ -193,13 +193,16 @@ namespace anm2ed::imgui
           {
             if (document)
             {
-              DOCUMENT_EDIT_PTR(document, "Merge Anm2", Document::ALL, {
+              auto merge_anm2s = [&]()
+              {
                 for (auto& path : manager.anm2DragDropPaths)
                 {
-                  anm2::Anm2 source(path);
+                  anm2::Anm2 source(path.string());
                   document->anm2.merge(source, document->directory_get(), path.parent_path());
                 }
-              });
+              };
+
+              DOCUMENT_EDIT_PTR(document, "Merge Anm2", Document::ALL, merge_anm2s());
               drag_drop_reset();
             }
           }

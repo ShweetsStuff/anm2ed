@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <array>
 #include <cfloat>
-#include <cstddef>
 #include <cmath>
+#include <cstddef>
 #include <filesystem>
 #include <format>
 #include <system_error>
@@ -693,7 +693,8 @@ namespace anm2ed::imgui
 
       if (type == render::PNGS)
       {
-        if (input_text_string("Format", &format)) format = std::filesystem::path(format).replace_extension(".png");
+        if (input_text_string("Format", &format))
+          format = std::filesystem::path(format).replace_extension(".png").string();
         ImGui::SetItemTooltip(
             "For outputted images, each image will use this format.\n{} represents the index of each image.");
       }
