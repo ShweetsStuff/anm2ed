@@ -19,11 +19,11 @@ Collapsed=0
 Pos=60,62
 Size=983,691
 Collapsed=0
-DockId=0x00000003,1
+DockId=0x00000003,0
 
 [Window][Animations]
-Pos=1451,494
-Size=459,259
+Pos=1451,463
+Size=459,290
 Collapsed=0
 DockId=0x0000000C,0
 
@@ -61,11 +61,11 @@ DockId=0x00000006,1
 Pos=60,62
 Size=983,691
 Collapsed=0
-DockId=0x00000003,0
+DockId=0x00000003,1
 
 [Window][Spritesheets]
 Pos=1451,62
-Size=459,430
+Size=459,399
 Collapsed=0
 DockId=0x0000000B,0
 
@@ -98,8 +98,8 @@ DockSpace           ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,994 Split
           DockNode  ID=0x00000007 Parent=0x00000009 SizeRef=181,399 Selected=0x754E368F
           DockNode  ID=0x00000008 Parent=0x00000009 SizeRef=181,290 Selected=0x8A65D963
         DockNode    ID=0x0000000A Parent=0x00000004 SizeRef=459,497 Split=Y Selected=0x4EFD0020
-          DockNode  ID=0x0000000B Parent=0x0000000A SizeRef=710,430 CentralNode=1 Selected=0x4EFD0020
-          DockNode  ID=0x0000000C Parent=0x0000000A SizeRef=710,259 Selected=0xC1986EE2
+          DockNode  ID=0x0000000B Parent=0x0000000A SizeRef=710,399 CentralNode=1 Selected=0x4EFD0020
+          DockNode  ID=0x0000000C Parent=0x0000000A SizeRef=710,290 Selected=0xC1986EE2
   DockNode          ID=0x00000006 Parent=0x123F8F08 SizeRef=1910,301 Selected=0x4F89F0DC
 )";
 

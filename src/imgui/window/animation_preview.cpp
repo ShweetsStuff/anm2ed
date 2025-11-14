@@ -650,7 +650,18 @@ namespace anm2ed::imgui
 
       if (ImGui::Button("Cancel", ImVec2(ImGui::GetContentRegionAvail().x, 0)))
       {
+        renderFrames.clear();
+
+        pan = savedPan;
+        zoom = savedZoom;
+        settings = savedSettings;
+        overlayIndex = savedOverlayIndex;
+        isSizeTrySet = true;
+
+        if (settings.timelineIsSound) audioStream.capture_end(mixer);
+
         playback.isPlaying = false;
+        playback.isFinished = false;
         manager.isRecording = false;
         manager.progressPopup.close();
       }
