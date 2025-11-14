@@ -96,7 +96,7 @@ namespace anm2ed
   X(PREVIEW_GRID_OFFSET, previewGridOffset, "Offset", IVEC2, {})                                                       \
   X(PREVIEW_GRID_COLOR, previewGridColor, "Color", VEC4, {1.0f, 1.0f, 1.0f, 0.125f})                                   \
   X(PREVIEW_AXES_COLOR, previewAxesColor, "Color", VEC4, {1.0f, 1.0f, 1.0f, 0.125f})                                   \
-  X(PREVIEW_BACKGROUND_COLOR, previewBackgroundColor, "Background Color", VEC4, {0.113f, 0.184f, 0.286f, 1.0f})        \
+  X(PREVIEW_BACKGROUND_COLOR, previewBackgroundColor, "Background Color", VEC3, {0.113f, 0.184f, 0.286f})              \
                                                                                                                        \
   X(PROPERTIES_IS_ROUND, propertiesIsRound, "Round", BOOL, false)                                                      \
                                                                                                                        \
@@ -112,12 +112,13 @@ namespace anm2ed
   X(EDITOR_IS_GRID, editorIsGrid, "Grid", BOOL, true)                                                                  \
   X(EDITOR_IS_GRID_SNAP, editorIsGridSnap, "Snap", BOOL, true)                                                         \
   X(EDITOR_IS_BORDER, editorIsBorder, "Border", BOOL, true)                                                            \
+  X(EDITOR_IS_TRANSPARENT, editorIsTransparent, "Transparent", BOOL, true)                                             \
   X(EDITOR_START_ZOOM, editorStartZoom, "Zoom", FLOAT, 200.0f)                                                         \
   X(EDITOR_SIZE, editorSize, "Size", IVEC2_WH, {1200, 600})                                                            \
   X(EDITOR_GRID_SIZE, editorGridSize, "Grid Size", IVEC2, {32, 32})                                                    \
   X(EDITOR_GRID_OFFSET, editorGridOffset, "Offset", IVEC2, {32, 32})                                                   \
   X(EDITOR_GRID_COLOR, editorGridColor, "Color", VEC4, {1.0, 1.0, 1.0, 0.125})                                         \
-  X(EDITOR_BACKGROUND_COLOR, editorBackgroundColor, "Background Color", VEC4, {0.113, 0.184, 0.286, 1.0})              \
+  X(EDITOR_BACKGROUND_COLOR, editorBackgroundColor, "Background Color", VEC3, {0.113, 0.184, 0.286})                   \
                                                                                                                        \
   X(MERGE_TYPE, mergeType, "Type", INT, 0)                                                                             \
   X(MERGE_IS_DELETE_ANIMATIONS_AFTER, mergeIsDeleteAnimationsAfter, "Delete Animations After", BOOL, false)            \
@@ -143,8 +144,10 @@ namespace anm2ed
   X(TOOL, tool, "##Tool", INT, 0)                                                                                      \
   X(TOOL_COLOR, toolColor, "##Color", VEC4, {1.0, 1.0, 1.0, 1.0})                                                      \
                                                                                                                        \
-  X(RENDER_TYPE, renderType, "Output", INT, render::PNGS)                                                              \
-  X(RENDER_PATH, renderPath, "Path", STRING, ".")                                                                      \
+  X(RENDER_TYPE, renderType, "Output", INT, render::GIF)                                                               \
+  X(RENDER_PATH, renderPath, "Path", STRING, "./output.gif")                                                           \
+  X(RENDER_ROWS, renderRows, "Rows", INT, 0)                                                                           \
+  X(RENDER_COLUMNS, renderColumns, "Columns", INT, 0)                                                                  \
   X(RENDER_FORMAT, renderFormat, "Format", STRING, "{}.png")                                                           \
   X(RENDER_IS_RAW_ANIMATION, renderIsRawAnimation, "Raw Animation", BOOL, true)                                        \
   X(RENDER_SCALE, renderScale, "Scale", FLOAT, 1.0f)                                                                   \
@@ -224,6 +227,8 @@ namespace anm2ed
 #define X(symbol, name, string, type, ...) TYPE_##type name = __VA_ARGS__;
     SETTINGS_MEMBERS SETTINGS_SHORTCUTS SETTINGS_WINDOWS
 #undef X
+
+        bool isDefault{};
 
     Settings() = default;
 

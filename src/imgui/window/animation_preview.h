@@ -1,7 +1,5 @@
 #pragma once
 
-#include <future>
-
 #include "audio_stream.h"
 #include "canvas.h"
 #include "manager.h"
@@ -19,15 +17,13 @@ namespace anm2ed::imgui
     Settings savedSettings{};
     float savedZoom{};
     glm::vec2 savedPan{};
+    int savedOverlayIndex{};
     glm::ivec2 mousePos{};
     std::vector<resource::Texture> renderFrames{};
-    std::future<bool> renderFuture{};
-    bool isRenderFutureValid{};
-    std::string renderOutputPath{};
 
   public:
     AnimationPreview();
-    void tick(Manager&, Document&, Settings&);
+    void tick(Manager&, Settings&);
     void update(Manager&, Settings&, Resources&);
   };
 }

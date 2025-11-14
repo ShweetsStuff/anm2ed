@@ -77,6 +77,8 @@ namespace anm2ed::anm2
 
     if (frames.empty()) return frame;
 
+    time = time < 0.0f ? 0.0f : time;
+
     Frame* frameNext = nullptr;
     int durationCurrent = 0;
     int durationNext = 0;

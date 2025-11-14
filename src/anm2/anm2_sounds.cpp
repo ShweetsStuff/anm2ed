@@ -1,7 +1,5 @@
 #include "anm2.h"
 
-#include <ranges>
-
 #include "filesystem_.h"
 #include "map_.h"
 
@@ -35,8 +33,11 @@ namespace anm2ed::anm2
         if (content.sounds.contains(trigger.soundID)) used.insert(trigger.soundID);
 
     std::set<int> unused;
-    for (auto& id : content.sounds | std::views::keys)
+    for (const auto& [id, sound] : content.sounds)
+    {
+      (void)sound;
       if (!used.contains(id)) unused.insert(id);
+    }
 
     return unused;
   }

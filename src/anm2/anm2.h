@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <string>
 #include <tinyxml2/tinyxml2.h>
 
@@ -74,5 +75,7 @@ namespace anm2ed::anm2
     Reference null_animation_add(Reference = {}, std::string = {}, types::locale::Type = types::locale::GLOBAL);
 
     Frame* frame_get(int, Type, int, int = -1);
+    void merge(const Anm2& source, const std::filesystem::path& destinationDirectory = {},
+               const std::filesystem::path& sourceDirectory = {});
   };
 }

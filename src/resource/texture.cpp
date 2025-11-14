@@ -29,9 +29,9 @@ using namespace glm;
 
 namespace anm2ed::resource
 {
-  bool Texture::is_valid() { return id != 0; }
+  bool Texture::is_valid() const { return id != 0; }
 
-  size_t Texture::pixel_size_get() { return size.x * size.y * CHANNELS; }
+  size_t Texture::pixel_size_get() const { return size.x * size.y * CHANNELS; }
 
   void Texture::upload(const uint8_t* data)
   {
@@ -132,6 +132,20 @@ namespace anm2ed::resource
   }
 
   bool Texture::write_png(const std::filesystem::path& path) { return write_png(path.string()); }
+
+  vec4 Texture::pixel_read(vec2 position) const
+  {
+    if (pixels.size() < CHANNELS || size.x <= 0 || size.y <= 0) return vec4(0.0f);
+
+    int x = glm::clamp((int)(position.x), 0, size.x - 1);
+    int y = glm::clamp((int)(position.y), 0, size.y - 1);
+
+    auto index = ((size_t)(y) * (size_t)(size.x) + (size_t)(x)) * CHANNELS;
+    if (index + CHANNELS > pixels.size()) return vec4(0.0f);
+
+    return vec4(uint8_to_float(pixels[index + 0]), uint8_to_float(pixels[index + 1]), uint8_to_float(pixels[index + 2]),
+                uint8_to_float(pixels[index + 3]));
+  }
 
   void Texture::pixel_set(ivec2 position, vec4 color)
   {

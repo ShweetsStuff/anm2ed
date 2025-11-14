@@ -111,6 +111,7 @@ DockSpace           ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,994 Split
     {
       logger.warning("Settings file does not exist; using default");
       save(path, IMGUI_DEFAULT);
+      isDefault = true;
     }
 
     std::ifstream file(path);

@@ -3,10 +3,11 @@
 #include <algorithm>
 #include <array>
 #include <cfloat>
+#include <cstddef>
 #include <cmath>
 #include <filesystem>
 #include <format>
-#include <ranges>
+#include <system_error>
 #include <tuple>
 #include <vector>
 
@@ -18,6 +19,7 @@
 #include "types.h"
 
 #include "icon.h"
+#include "toast.h"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::types;
@@ -148,11 +150,12 @@ namespace anm2ed::imgui
         auto recentFiles = manager.recent_files_ordered();
         if (ImGui::BeginMenu("Open Recent", !recentFiles.empty()))
         {
-          for (auto [i, file] : std::views::enumerate(recentFiles))
+          for (std::size_t index = 0; index < recentFiles.size(); ++index)
           {
+            const auto& file = recentFiles[index];
             auto label = std::format(FILE_LABEL_FORMAT, file.filename().string(), file.string());
 
-            ImGui::PushID(i);
+            ImGui::PushID((int)index);
             if (ImGui::MenuItem(label.c_str())) manager.open(file.string());
             ImGui::PopID();
           }
@@ -218,8 +221,11 @@ namespace anm2ed::imgui
 
       if (ImGui::BeginMenu("Window"))
       {
-        for (auto [i, member] : std::views::enumerate(WINDOW_MEMBERS))
-          ImGui::MenuItem(WINDOW_STRINGS[i], nullptr, &(settings.*member));
+        for (std::size_t index = 0; index < WINDOW_COUNT; ++index)
+        {
+          auto member = WINDOW_MEMBERS[index];
+          ImGui::MenuItem(WINDOW_STRINGS[index], nullptr, &(settings.*member));
+        }
 
         ImGui::EndMenu();
       }
@@ -288,7 +294,7 @@ namespace anm2ed::imgui
         generate.size_set(to_vec2(previewSize));
         generate.bind();
         generate.viewport_set();
-        generate.clear(backgroundColor);
+        generate.clear(vec4(backgroundColor, 1.0f));
 
         if (document && document->reference.itemType == anm2::LAYER)
         {
@@ -455,8 +461,9 @@ namespace anm2ed::imgui
                   if (ImGui::IsKeyDown(ImGuiMod_Alt)) chord |= ImGuiMod_Alt;
                   if (ImGui::IsKeyDown(ImGuiMod_Super)) chord |= ImGuiMod_Super;
 
-                  for (auto& key : KEY_MAP | std::views::values)
+                  for (const auto& entry : KEY_MAP)
                   {
+                    auto key = entry.second;
                     if (ImGui::IsKeyPressed(key))
                     {
                       chord |= key;
@@ -521,34 +528,95 @@ namespace anm2ed::imgui
       auto& frames = document->frames.selection;
       int length = std::max(1, end - start + 1);
 
+      auto ffmpeg_is_executable = [](const std::string& pathString)
+      {
+        if (pathString.empty()) return false;
+
+        std::error_code ec{};
+        auto status = std::filesystem::status(pathString, ec);
+        if (ec || !std::filesystem::is_regular_file(status)) return false;
+
+#ifndef _WIN32
+        constexpr auto EXEC_PERMS = std::filesystem::perms::owner_exec | std::filesystem::perms::group_exec |
+                                    std::filesystem::perms::others_exec;
+        if ((status.permissions() & EXEC_PERMS) == std::filesystem::perms::none) return false;
+#endif
+        return true;
+      };
+
+      auto png_directory_ensure = [](const std::string& directory)
+      {
+        if (directory.empty())
+        {
+          toasts.error("PNG output directory must be set.");
+          return false;
+        }
+
+        std::error_code ec{};
+        auto pathValue = std::filesystem::path(directory);
+        auto exists = std::filesystem::exists(pathValue, ec);
+
+        if (ec)
+        {
+          toasts.error(std::format("Could not access directory: {} ({})", directory, ec.message()));
+          return false;
+        }
+
+        if (exists)
+        {
+          if (!std::filesystem::is_directory(pathValue, ec) || ec)
+          {
+            toasts.error(std::format("PNG output path must be a directory: {}", directory));
+            return false;
+          }
+          return true;
+        }
+
+        if (!std::filesystem::create_directories(pathValue, ec) || ec)
+        {
+          toasts.error(std::format("Could not create directory: {} ({})", directory, ec.message()));
+          return false;
+        }
+
+        return true;
+      };
+
+      auto range_to_frames_set = [&]()
+      {
+        if (auto item = document->item_get())
+        {
+          int duration{};
+          for (std::size_t index = 0; index < item->frames.size(); ++index)
+          {
+            const auto& frame = item->frames[index];
+
+            if ((int)index == *frames.begin())
+              start = duration;
+            else if ((int)index == *frames.rbegin())
+            {
+              end = duration;
+              break;
+            }
+
+            duration += frame.duration;
+          }
+        }
+      };
+
+      auto range_to_animation_set = [&]()
+      {
+        start = 0;
+        end = animation->frameNum - 1;
+      };
+
       auto range_set = [&]()
       {
         if (!frames.empty())
-        {
-          if (auto item = document->item_get())
-          {
-            int duration{};
-            for (auto [i, frame] : std::views::enumerate(item->frames))
-            {
-              if (i == *frames.begin())
-                start = duration;
-              else if (i == *frames.rbegin())
-              {
-                end = duration;
-                break;
-              }
-
-              duration += frame.duration;
-            }
-          }
-        }
+          range_to_frames_set();
         else if (!isRange)
-        {
-          start = 0;
-          end = animation->frameNum - 1;
-        }
+          range_to_animation_set();
 
-        length = std::max(1, end - start + 1);
+        length = std::max(1, end - (start + 1));
       };
 
       auto rows_columns_set = [&]()
@@ -652,15 +720,20 @@ namespace anm2ed::imgui
       ImGui::SameLine();
 
       ImGui::BeginDisabled(frames.empty());
-      if (ImGui::Button("To Selected Frames")) range_set();
+      if (ImGui::Button("To Selected Frames")) range_to_frames_set();
       ImGui::SetItemTooltip("If frames are selected, use that range for the rendered animation.");
       ImGui::EndDisabled();
 
+      ImGui::SameLine();
+
+      if (ImGui::Button("To Animation Range")) range_to_animation_set();
+      ImGui::SetItemTooltip("Set the range to the normal range of the animation.");
+
       ImGui::BeginDisabled(!isRange);
       {
-        input_int_range("Start", start, 0, animation->frameNum - 1);
+        input_int_range("Start", start, 0, animation->frameNum);
         ImGui::SetItemTooltip("Set the starting time of the animation.");
-        input_int_range("End", end, start + 1, animation->frameNum);
+        input_int_range("End", end, start, animation->frameNum);
         ImGui::SetItemTooltip("Set the ending time of the animation.");
       }
       ImGui::EndDisabled();
@@ -687,9 +760,22 @@ namespace anm2ed::imgui
 
       if (ImGui::Button("Render", widgetSize))
       {
-        manager.isRecordingStart = true;
+        bool isRender = true;
+        if (!ffmpeg_is_executable(ffmpegPath))
+        {
+          toasts.error("FFmpeg path must point to a valid executable file.");
+          isRender = false;
+        }
+
+        if (isRender && type == render::PNGS) isRender = png_directory_ensure(path);
+
+        if (isRender)
+        {
+          manager.isRecordingStart = true;
+          manager.progressPopup.open();
+        }
+
         renderPopup.close();
-        manager.progressPopup.open();
       }
       ImGui::SetItemTooltip("Render the animation using the current settings.");
 

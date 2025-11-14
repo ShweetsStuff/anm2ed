@@ -47,6 +47,7 @@ namespace anm2ed::dialog
   X(SPRITESHEET_REPLACE, PNG)                                                                                          \
   X(FFMPEG_PATH_SET, EXECUTABLE)                                                                                       \
   X(PNG_DIRECTORY_SET, NO_FILTER)                                                                                      \
+  X(PNG_PATH_SET, PNG)                                                                                                 \
   X(GIF_PATH_SET, GIF)                                                                                                 \
   X(WEBM_PATH_SET, WEBM)                                                                                               \
   X(MP4_PATH_SET, MP4)

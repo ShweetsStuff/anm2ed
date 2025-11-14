@@ -61,6 +61,7 @@ namespace anm2ed
     bool isAnimationPreviewSet{false};
     bool isSpritesheetEditorSet{false};
 
+    Document(anm2::Anm2& anm2, const std::string&);
     Document(const std::string&, bool = false, std::string* = nullptr);
     Document(const Document&) = delete;
     Document& operator=(const Document&) = delete;

@@ -7,6 +7,7 @@ namespace anm2ed::render
 {
 #define RENDER_LIST                                                                                                    \
   X(PNGS, "PNGs", "")                                                                                                  \
+  X(SPRITESHEET, "Spritesheet (PNG)", ".png")                                                                          \
   X(GIF, "GIF", ".gif")                                                                                                \
   X(WEBM, "WebM", ".webm")                                                                                             \
   X(MP4, "MP4", ".mp4")

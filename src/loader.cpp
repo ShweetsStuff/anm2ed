@@ -118,6 +118,22 @@ namespace anm2ed
 
     logger.info("Initialized SDL");
 
+    if (settings.isDefault)
+    {
+      if (auto display = SDL_GetPrimaryDisplay(); display != 0)
+      {
+        if (auto mode = SDL_GetCurrentDisplayMode(display))
+        {
+          if (mode->w >= 3840 || mode->h >= 2160)
+            settings.uiScale = 1.5f;
+          else
+            logger.warning(std::format("Failed to query primary display mode: {}", SDL_GetError()));
+        }
+      }
+      else
+        logger.warning("Failed to detect primary display for UI scaling.");
+    }
+
     if (!MIX_Init())
       logger.warning(std::format("Could not initialize SDL_mixer! {}", SDL_GetError()));
     else
@@ -149,11 +165,10 @@ namespace anm2ed
     logger.info(std::format("Initialized OpenGL {}", (const char*)glGetString(GL_VERSION)));
 
     glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glLineWidth(2.0f);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_LINE_SMOOTH);
-    glClearColor(color::BLACK.r, color::BLACK.g, color::BLACK.b, color::BLACK.a);
 
     IMGUI_CHECKVERSION();
     if (!ImGui::CreateContext())

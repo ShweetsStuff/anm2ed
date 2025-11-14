@@ -120,11 +120,4 @@ namespace anm2ed::anm2
 
   void Frame::extend() { duration = glm::clamp(++duration, FRAME_DURATION_MIN, FRAME_DURATION_MAX); }
 
-  bool Frame::is_visible(Type type)
-  {
-    if (type == TRIGGER)
-      return isVisible && eventID > -1;
-    else
-      return isVisible;
-  }
 }

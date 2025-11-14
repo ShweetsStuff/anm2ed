@@ -2,6 +2,7 @@
 
 #include <imgui/imgui_internal.h>
 
+#include <cmath>
 #include <set>
 #include <sstream>
 #include <unordered_map>
@@ -103,6 +104,50 @@ namespace anm2ed::imgui
   void set_item_tooltip_shortcut(const char* tooltip, const std::string& shortcut)
   {
     ImGui::SetItemTooltip("%s\n(Shortcut: %s)", tooltip, shortcut.c_str());
+  }
+
+  namespace
+  {
+    struct CheckerStart
+    {
+      float position{};
+      long long index{};
+    };
+
+    CheckerStart checker_start(float minCoord, float offset, float step)
+    {
+      float world = minCoord + offset;
+      long long idx = static_cast<long long>(std::floor(world / step));
+      float first = minCoord - (world - static_cast<float>(idx) * step);
+      return {first, idx};
+    }
+  }
+
+  void render_checker_background(ImDrawList* drawList, ImVec2 min, ImVec2 max, vec2 offset, float step)
+  {
+    if (!drawList || step <= 0.0f) return;
+
+    const ImU32 colorLight = IM_COL32(204, 204, 204, 255);
+    const ImU32 colorDark = IM_COL32(128, 128, 128, 255);
+
+    auto [startY, rowIndex] = checker_start(min.y, offset.y, step);
+    for (float y = startY; y < max.y; y += step, ++rowIndex)
+    {
+      float y1 = glm::max(y, min.y);
+      float y2 = glm::min(y + step, max.y);
+      if (y2 <= y1) continue;
+
+      auto [startX, columnIndex] = checker_start(min.x, offset.x, step);
+      for (float x = startX; x < max.x; x += step, ++columnIndex)
+      {
+        float x1 = glm::max(x, min.x);
+        float x2 = glm::min(x + step, max.x);
+        if (x2 <= x1) continue;
+
+        bool isDark = ((rowIndex + columnIndex) & 1LL) != 0;
+        drawList->AddRectFilled(ImVec2(x1, y1), ImVec2(x2, y2), isDark ? colorDark : colorLight);
+      }
+    }
   }
 
   void external_storage_set(ImGuiSelectionExternalStorage* self, int id, bool isSelected)
@@ -248,9 +293,12 @@ namespace anm2ed::imgui
     return false;
   }
 
-  bool shortcut(ImGuiKeyChord chord, shortcut::Type type)
+  bool shortcut(ImGuiKeyChord chord, shortcut::Type type, bool isRepeat)
   {
     if (ImGui::GetTopMostPopupModal() != nullptr) return false;
+
+    if (isRepeat && (type == shortcut::GLOBAL || type == shortcut::FOCUSED)) return chord_repeating(chord);
+
     int flags = type == shortcut::GLOBAL || type == shortcut::GLOBAL_SET ? ImGuiInputFlags_RouteGlobal
                                                                          : ImGuiInputFlags_RouteFocused;
     if (type == shortcut::GLOBAL_SET || type == shortcut::FOCUSED_SET)
@@ -301,15 +349,21 @@ namespace anm2ed::imgui
 
     auto viewport = ImGui::GetMainViewport();
 
-    if (position == POPUP_CENTER)
-      ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_None, to_imvec2(vec2(0.5f)));
-    else
-      ImGui::SetNextWindowPos(ImGui::GetItemRectMin(), ImGuiCond_None);
-
-    if (POPUP_IS_HEIGHT_SET[type])
-      ImGui::SetNextWindowSize(to_imvec2(to_vec2(viewport->Size) * POPUP_MULTIPLIERS[type]));
-    else
-      ImGui::SetNextWindowSize(ImVec2(viewport->Size.x * POPUP_MULTIPLIERS[type], 0));
+    switch (position)
+    {
+      case POPUP_CENTER:
+        ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_None, to_imvec2(vec2(0.5f)));
+        if (POPUP_IS_HEIGHT_SET[type])
+          ImGui::SetNextWindowSize(to_imvec2(to_vec2(viewport->Size) * POPUP_MULTIPLIERS[type]));
+        else
+          ImGui::SetNextWindowSize(ImVec2(viewport->Size.x * POPUP_MULTIPLIERS[type], 0));
+        break;
+      case POPUP_BY_ITEM:
+        ImGui::SetNextWindowPos(ImGui::GetItemRectMin(), ImGuiCond_None);
+      case POPUP_BY_CURSOR:
+      default:
+        break;
+    }
   }
 
   void PopupHelper::end() { isJustOpened = false; }

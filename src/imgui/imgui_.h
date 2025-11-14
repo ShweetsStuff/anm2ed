@@ -1,6 +1,7 @@
 #pragma once
 
 #include <imgui/imgui.h>
+#include <glm/glm.hpp>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -31,7 +32,8 @@ namespace anm2ed::imgui
   enum PopupPosition
   {
     POPUP_CENTER,
-    POPUP_BY_ITEM
+    POPUP_BY_ITEM,
+    POPUP_BY_CURSOR
   };
 
   constexpr float POPUP_MULTIPLIERS[] = {
@@ -171,10 +173,11 @@ namespace anm2ed::imgui
                              ImGuiSelectableFlags = 0, bool* = nullptr);
   void set_item_tooltip_shortcut(const char*, const std::string& = {});
   void external_storage_set(ImGuiSelectionExternalStorage*, int, bool);
+  void render_checker_background(ImDrawList*, ImVec2, ImVec2, glm::vec2, float);
   ImVec2 icon_size_get();
   bool chord_held(ImGuiKeyChord);
   bool chord_repeating(ImGuiKeyChord, float = ImGui::GetIO().KeyRepeatDelay, float = ImGui::GetIO().KeyRepeatRate);
-  bool shortcut(ImGuiKeyChord, types::shortcut::Type = types::shortcut::FOCUSED_SET);
+  bool shortcut(ImGuiKeyChord, types::shortcut::Type = types::shortcut::FOCUSED_SET, bool = false);
 
   class MultiSelectStorage : public std::set<int>
   {

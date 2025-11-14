@@ -1,5 +1,7 @@
 #include "state.h"
 
+#include <algorithm>
+
 #include <imgui/backends/imgui_impl_opengl3.h>
 #include <imgui/backends/imgui_impl_sdl3.h>
 
@@ -27,19 +29,7 @@ namespace anm2ed
     manager.chords_set(settings);
   }
 
-  void State::tick(Settings& settings)
-  {
-
-    if (auto document = manager.get())
-    {
-      if (auto animation = document->animation_get())
-        if (document->playback.isPlaying)
-          document->playback.tick(document->anm2.info.fps, animation->frameNum,
-                                  (animation->isLoop || settings.playbackIsLoop) && !manager.isRecording);
-    }
-
-    dockspace.tick(manager, settings);
-  }
+  void State::tick(Settings& settings) { dockspace.tick(manager, settings); }
 
   void State::update(SDL_Window*& window, Settings& settings)
   {
@@ -55,7 +45,16 @@ namespace anm2ed
           auto droppedFile = event.drop.data;
           if (filesystem::path_is_extension(droppedFile, "anm2"))
           {
-            manager.open(std::string(droppedFile));
+            std::filesystem::path droppedPath{droppedFile};
+            if (manager.documents.empty())
+              manager.open(droppedPath);
+            else
+            {
+              if (std::find(manager.anm2DragDropPaths.begin(), manager.anm2DragDropPaths.end(), droppedPath) ==
+                  manager.anm2DragDropPaths.end())
+                manager.anm2DragDropPaths.push_back(droppedPath);
+              manager.isAnm2DragDrop = true;
+            }
             SDL_FlashWindow(window, SDL_FLASH_UNTIL_FOCUSED);
           }
           else if (filesystem::path_is_extension(droppedFile, "png"))
@@ -96,6 +95,7 @@ namespace anm2ed
   {
     glViewport(0, 0, settings.windowSize.x, settings.windowSize.y);
     glClear(GL_COLOR_BUFFER_BIT);
+
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     SDL_GL_SwapWindow(window);
@@ -107,17 +107,17 @@ namespace anm2ed
     auto currentTick = SDL_GetTicks();
     auto currentUpdate = SDL_GetTicks();
 
-    if (currentTick - previousTick >= TICK_INTERVAL)
-    {
-      tick(settings);
-      previousTick = currentTick;
-    }
-
     if (currentUpdate - previousUpdate >= UPDATE_INTERVAL)
     {
       update(window, settings);
       render(window, settings);
       previousUpdate = currentUpdate;
+    }
+
+    if (currentTick - previousTick >= TICK_INTERVAL)
+    {
+      tick(settings);
+      previousTick = currentTick;
     }
 
     SDL_Delay(1);

@@ -1,6 +1,6 @@
 #include "resources.h"
 
-#include <ranges>
+#include <cstddef>
 
 #include "music.h"
 
@@ -10,14 +10,23 @@ namespace anm2ed
 {
   Resources::Resources()
   {
-    for (auto [i, font] : std::views::enumerate(font::FONTS))
-      fonts[i] = Font((void*)font.data, font.length, font::SIZE);
+    for (std::size_t i = 0; i < font::COUNT; ++i)
+    {
+      const auto& fontInfo = font::FONTS[i];
+      fonts[i] = Font((void*)fontInfo.data, fontInfo.length, font::SIZE);
+    }
 
-    for (auto [i, icon] : std::views::enumerate(icon::ICONS))
-      icons[i] = Texture(icon.data, icon.length, icon.size);
+    for (std::size_t i = 0; i < icon::COUNT; ++i)
+    {
+      const auto& iconInfo = icon::ICONS[i];
+      icons[i] = Texture(iconInfo.data, iconInfo.length, iconInfo.size);
+    }
 
-    for (auto [i, shader] : std::views::enumerate(shader::SHADERS))
-      shaders[i] = Shader(shader.vertex, shader.fragment);
+    for (std::size_t i = 0; i < shader::COUNT; ++i)
+    {
+      const auto& shaderInfo = shader::SHADERS[i];
+      shaders[i] = Shader(shaderInfo.vertex, shaderInfo.fragment);
+    }
   };
 
   resource::Audio& Resources::music_track()

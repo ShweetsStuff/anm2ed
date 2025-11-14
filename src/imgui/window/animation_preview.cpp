@@ -1,12 +1,12 @@
 #include "animation_preview.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <filesystem>
-#include <ranges>
 
 #include <glm/gtc/type_ptr.hpp>
 
-#include "imgui_internal.h"
+#include "imgui_.h"
 #include "log.h"
 #include "math_.h"
 #include "toast.h"
@@ -38,6 +38,7 @@ namespace anm2ed::imgui
     auto& frameTime = document.frameTime;
     auto& end = manager.recordingEnd;
     auto& zoom = document.previewZoom;
+    auto& overlayIndex = document.overlayIndex;
     auto& pan = document.previewPan;
 
     if (manager.isRecording)
@@ -46,19 +47,17 @@ namespace anm2ed::imgui
       auto& path = settings.renderPath;
       auto& type = settings.renderType;
 
-      auto pixels = pixels_get();
-      renderFrames.push_back(Texture(pixels.data(), size));
-
       if (playback.time > end || playback.isFinished)
       {
         if (type == render::PNGS)
         {
           auto& format = settings.renderFormat;
           bool isSuccess{true};
-          for (auto [i, frame] : std::views::enumerate(renderFrames))
+          for (std::size_t index = 0; index < renderFrames.size(); ++index)
           {
+            auto& frame = renderFrames[index];
             std::filesystem::path outputPath =
-                std::filesystem::path(path) / std::vformat(format, std::make_format_args(i));
+                std::filesystem::path(path) / std::vformat(format, std::make_format_args(index));
 
             if (!frame.write_png(outputPath))
             {
@@ -93,10 +92,11 @@ namespace anm2ed::imgui
 
               std::vector<uint8_t> spritesheet((size_t)(spritesheetSize.x) * spritesheetSize.y * CHANNELS);
 
-              for (auto [i, frame] : std::views::enumerate(renderFrames))
+              for (std::size_t index = 0; index < renderFrames.size(); ++index)
               {
-                auto row = (int)(i / columns);
-                auto column = (int)(i % columns);
+                const auto& frame = renderFrames[index];
+                auto row = (int)(index / columns);
+                auto column = (int)(index % columns);
                 if (row >= rows || column >= columns) break;
                 if ((int)frame.pixels.size() < frameWidth * frameHeight * CHANNELS) continue;
 
@@ -131,6 +131,7 @@ namespace anm2ed::imgui
         pan = savedPan;
         zoom = savedZoom;
         settings = savedSettings;
+        overlayIndex = savedOverlayIndex;
         isSizeTrySet = true;
 
         if (settings.timelineIsSound) audioStream.capture_end(mixer);
@@ -139,6 +140,13 @@ namespace anm2ed::imgui
         playback.isFinished = false;
         manager.isRecording = false;
         manager.progressPopup.close();
+      }
+      else
+      {
+
+        bind();
+        auto pixels = pixels_get();
+        renderFrames.push_back(Texture(pixels.data(), size));
       }
     }
 
@@ -247,7 +255,7 @@ namespace anm2ed::imgui
 
       if (ImGui::BeginChild("##Background Child", childSize, true, ImGuiWindowFlags_HorizontalScrollbar))
       {
-        ImGui::ColorEdit4("Background", value_ptr(backgroundColor), ImGuiColorEditFlags_NoInputs);
+        ImGui::ColorEdit3("Background", value_ptr(backgroundColor), ImGuiColorEditFlags_NoInputs);
         ImGui::SetItemTooltip("Change the background color.");
         ImGui::SameLine();
         ImGui::Checkbox("Axes", &isAxes);
@@ -311,6 +319,7 @@ namespace anm2ed::imgui
           settings.timelineIsOnlyShowLayers = true;
           settings.onionskinIsEnabled = false;
 
+          savedOverlayIndex = overlayIndex;
           savedZoom = zoom;
           savedPan = pan;
 
@@ -329,10 +338,12 @@ namespace anm2ed::imgui
         playback.time = manager.recordingStart;
       }
 
-      if (isSizeTrySet) size_set(to_vec2(ImGui::GetContentRegionAvail()));
-      viewport_set();
+      size_set(to_vec2(ImGui::GetContentRegionAvail()));
+
       bind();
-      clear();
+      viewport_set();
+      clear(manager.isRecording && settings.renderIsRawAnimation ? vec4() : vec4(backgroundColor, 1.0f));
+
       if (isAxes) axes_render(shaderAxes, zoom, pan, axesColor);
       if (isGrid) grid_render(shaderGrid, zoom, pan, gridSize, gridOffset, gridColor);
 
@@ -468,9 +479,7 @@ namespace anm2ed::imgui
 
       unbind();
 
-      ImGui::RenderColorRectWithAlphaCheckerboard(ImGui::GetWindowDrawList(), min, max, 0, CHECKER_SIZE,
-                                                  to_imvec2(-size + pan));
-      ImGui::GetCurrentWindow()->DrawList->AddRectFilled(min, max, ImGui::GetColorU32(to_imvec4(backgroundColor)));
+      render_checker_background(ImGui::GetWindowDrawList(), min, max, -size - pan, CHECKER_SIZE);
       ImGui::Image(texture, to_imvec2(size));
 
       isPreviewHovered = ImGui::IsItemHovered();

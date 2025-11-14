@@ -7,7 +7,6 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "math_.h"
-#include "texture.h"
 
 using namespace glm;
 using namespace anm2ed::resource;
@@ -25,8 +24,7 @@ namespace anm2ed
 
   Canvas::Canvas(vec2 size)
   {
-    this->size = size;
-    previousSize = size;
+    Framebuffer::size_set(size);
 
     // Axis
     glGenVertexArrays(1, &axisVAO);
@@ -88,24 +86,12 @@ namespace anm2ed
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 
     glBindVertexArray(0);
-
-    // Framebuffer(s)
-    glGenFramebuffers(1, &fbo);
-    glGenRenderbuffers(1, &rbo);
-
-    // Framebuffer(s) Texture
-    glGenTextures(1, &texture);
-
-    framebuffer_set();
   }
 
   Canvas::~Canvas()
   {
-    if (!is_valid()) return;
+    if (!Framebuffer::is_valid()) return;
 
-    glDeleteFramebuffers(1, &fbo);
-    glDeleteRenderbuffers(1, &rbo);
-    glDeleteTextures(1, &texture);
     glDeleteVertexArrays(1, &axisVAO);
     glDeleteBuffers(1, &axisVBO);
 
@@ -114,41 +100,6 @@ namespace anm2ed
 
     glDeleteVertexArrays(1, &rectVAO);
     glDeleteBuffers(1, &rectVBO);
-  }
-
-  bool Canvas::is_valid() const { return fbo != 0; }
-
-  void Canvas::framebuffer_set() const
-  {
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
-
-    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, size.x, size.y);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  }
-
-  void Canvas::framebuffer_resize_check()
-  {
-    if (previousSize != size)
-    {
-      framebuffer_set();
-      previousSize = size;
-    }
-  }
-
-  void Canvas::size_set(vec2 size)
-  {
-    this->size = size;
-    framebuffer_resize_check();
   }
 
   mat4 Canvas::transform_get(float zoom, vec2 pan) const
@@ -203,7 +154,7 @@ namespace anm2ed
     glUseProgram(0);
   }
 
-  void Canvas::texture_render(Shader& shader, GLuint& texture, mat4& transform, vec4 tint, vec3 colorOffset,
+  void Canvas::texture_render(Shader& shader, GLuint& texture, mat4 transform, vec4 tint, vec3 colorOffset,
                               float* vertices) const
   {
     glUseProgram(shader.id);
@@ -267,33 +218,6 @@ namespace anm2ed
     glUseProgram(0);
   }
 
-  void Canvas::viewport_set() const { glViewport(0, 0, size.x, size.y); }
-
-  void Canvas::clear(vec4 color) const
-  {
-    glClearColor(color.r, color.g, color.b, color.a);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  }
-
-  void Canvas::bind() const { glBindFramebuffer(GL_FRAMEBUFFER, fbo); }
-
-  void Canvas::unbind() const { glBindFramebuffer(GL_FRAMEBUFFER, 0); }
-
-  std::vector<unsigned char> Canvas::pixels_get() const
-  {
-    auto count = size.x * size.y * texture::CHANNELS;
-    std::vector<unsigned char> pixels(count);
-
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
-    glReadBuffer(GL_COLOR_ATTACHMENT0);
-    glPixelStorei(GL_PACK_ALIGNMENT, 1);
-    glPixelStorei(GL_PACK_ROW_LENGTH, 0);
-    glReadPixels(0, 0, size.x, size.y, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-
-    return pixels;
-  }
-
   void Canvas::zoom_set(float& zoom, vec2& pan, vec2 focus, float step) const
   {
     auto zoomFactor = math::percent_to_unit(zoom);
@@ -304,17 +228,6 @@ namespace anm2ed
       pan += focus * (zoomFactor - newZoomFactor);
       zoom = newZoom;
     }
-  }
-
-  vec4 Canvas::pixel_read(vec2 position, vec2 framebufferSize) const
-  {
-    uint8_t rgba[4]{};
-
-    glPixelStorei(GL_PACK_ALIGNMENT, 1);
-    glReadPixels(position.x, framebufferSize.y - 1 - position.y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
-
-    return vec4(math::uint8_to_float(rgba[0]), math::uint8_to_float(rgba[1]), math::uint8_to_float(rgba[2]),
-                math::uint8_to_float(rgba[3]));
   }
 
   vec2 Canvas::position_translate(float& zoom, vec2& pan, vec2 position) const

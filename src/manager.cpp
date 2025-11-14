@@ -1,6 +1,7 @@
 #include "manager.h"
 
 #include <algorithm>
+#include <unordered_set>
 
 #include "filesystem_.h"
 #include "log.h"
@@ -22,9 +23,35 @@ namespace anm2ed
       if (parent.empty()) return;
       std::error_code ec{};
       std::filesystem::create_directories(parent, ec);
-      if (ec)
-        logger.warning(std::format("Could not create directory for {}: {}", path.string(), ec.message()));
+      if (ec) logger.warning(std::format("Could not create directory for {}: {}", path.string(), ec.message()));
     }
+  }
+
+  void Manager::selection_history_push(int index)
+  {
+    if (index < 0 || index >= (int)documents.size()) return;
+    selectionHistory.erase(std::remove(selectionHistory.begin(), selectionHistory.end(), index),
+                           selectionHistory.end());
+    selectionHistory.push_back(index);
+  }
+
+  void Manager::selection_history_cleanup(int removedIndex)
+  {
+    if (removedIndex >= 0)
+    {
+      for (auto& entry : selectionHistory)
+      {
+        if (entry == removedIndex)
+          entry = -1;
+        else if (entry > removedIndex)
+          --entry;
+      }
+    }
+
+    selectionHistory.erase(std::remove_if(selectionHistory.begin(), selectionHistory.end(),
+                                          [&](int idx) { return idx < 0 || idx >= (int)documents.size(); }),
+                           selectionHistory.end());
+    if (documents.empty()) selectionHistory.clear();
   }
 
   std::filesystem::path Manager::recent_files_path_get() { return filesystem::path_preferences_get() + "recent.txt"; }
@@ -57,6 +84,7 @@ namespace anm2ed
 
     selected = (int)documents.size() - 1;
     pendingSelected = selected;
+    selection_history_push(selected);
     toasts.info(std::format("Opened document: {}", pathString));
   }
 
@@ -96,6 +124,7 @@ namespace anm2ed
     autosave_files_write();
 
     documents.erase(documents.begin() + index);
+    selection_history_cleanup(index);
 
     if (documents.empty())
     {
@@ -104,7 +133,13 @@ namespace anm2ed
       return;
     }
 
-    if (selected >= index) selected = std::max(0, selected - 1);
+    if (!selectionHistory.empty())
+    {
+      selected = selectionHistory.back();
+      selectionHistory.pop_back();
+    }
+    else if (selected >= index)
+      selected = std::max(0, selected - 1);
 
     selected = std::clamp(selected, 0, (int)documents.size() - 1);
     pendingSelected = selected;
@@ -123,6 +158,7 @@ namespace anm2ed
 
     index = std::clamp(index, 0, (int)documents.size() - 1);
     selected = index;
+    selection_history_push(selected);
 
     if (auto document = get()) document->change(Document::ALL);
   }
@@ -177,20 +213,42 @@ namespace anm2ed
     nullPropertiesPopup.close();
   }
 
+  void Manager::recent_files_trim()
+  {
+    while (recentFiles.size() > RECENT_LIMIT)
+    {
+      auto oldest = std::min_element(recentFiles.begin(), recentFiles.end(),
+                                     [](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
+      if (oldest == recentFiles.end()) break;
+      recentFiles.erase(oldest);
+    }
+  }
+
+  std::vector<std::filesystem::path> Manager::recent_files_ordered() const
+  {
+    std::vector<std::pair<std::string, std::size_t>> orderedEntries(recentFiles.begin(), recentFiles.end());
+    std::sort(orderedEntries.begin(), orderedEntries.end(),
+              [](const auto& lhs, const auto& rhs) { return lhs.second > rhs.second; });
+
+    std::vector<std::filesystem::path> ordered;
+    ordered.reserve(orderedEntries.size());
+    for (const auto& [pathString, _] : orderedEntries)
+      ordered.emplace_back(pathString);
+    return ordered;
+  }
+
   void Manager::recent_file_add(const std::filesystem::path& path)
   {
     if (path.empty()) return;
-    const auto pathString = path.string();
     std::error_code ec{};
     if (!std::filesystem::exists(path, ec))
     {
-      logger.warning(std::format("Skipping missing recent file: {}", pathString));
+      logger.warning(std::format("Skipping missing recent file: {}", path.string()));
       return;
     }
 
-    recentFiles.erase(std::remove(recentFiles.begin(), recentFiles.end(), path), recentFiles.end());
-    recentFiles.insert(recentFiles.begin(), path);
-    if (recentFiles.size() > RECENT_LIMIT) recentFiles.resize(RECENT_LIMIT);
+    recentFiles[path.string()] = ++recentFilesCounter;
+    recent_files_trim();
     recent_files_write();
   }
 
@@ -208,21 +266,32 @@ namespace anm2ed
     logger.info(std::format("Loading recent files from: {}", path.string()));
 
     std::string line{};
+    std::vector<std::string> loaded{};
+    std::unordered_set<std::string> seen{};
 
     while (std::getline(file, line))
     {
       if (line.empty()) continue;
       if (!line.empty() && line.back() == '\r') line.pop_back();
       std::filesystem::path entry = line;
-      if (std::find(recentFiles.begin(), recentFiles.end(), entry) != recentFiles.end()) continue;
       std::error_code ec{};
       if (!std::filesystem::exists(entry, ec))
       {
         logger.warning(std::format("Skipping missing recent file: {}", line));
         continue;
       }
-      recentFiles.emplace_back(std::move(entry));
+      auto entryString = entry.string();
+      if (!seen.insert(entryString).second) continue;
+      loaded.emplace_back(std::move(entryString));
     }
+
+    recentFiles.clear();
+    recentFilesCounter = 0;
+    for (auto it = loaded.rbegin(); it != loaded.rend(); ++it)
+    {
+      recentFiles[*it] = ++recentFilesCounter;
+    }
+    recent_files_trim();
   }
 
   void Manager::recent_files_write()
@@ -239,13 +308,15 @@ namespace anm2ed
       return;
     }
 
-    for (auto& entry : recentFiles)
+    auto ordered = recent_files_ordered();
+    for (auto& entry : ordered)
       file << entry.string() << '\n';
   }
 
   void Manager::recent_files_clear()
   {
     recentFiles.clear();
+    recentFilesCounter = 0;
     recent_files_write();
   }
 

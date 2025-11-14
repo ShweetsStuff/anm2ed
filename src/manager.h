@@ -1,6 +1,8 @@
 #pragma once
 
 #include <filesystem>
+#include <map>
+#include <string>
 #include <vector>
 
 #include "document.h"
@@ -14,10 +16,14 @@ namespace anm2ed
   {
     std::filesystem::path recent_files_path_get();
     std::filesystem::path autosave_path_get();
+    void selection_history_push(int);
+    void selection_history_cleanup(int removedIndex);
+    void recent_files_trim();
 
   public:
     std::vector<Document> documents{};
-    std::vector<std::filesystem::path> recentFiles{};
+    std::map<std::string, std::size_t, std::less<>> recentFiles{};
+    std::size_t recentFilesCounter{};
     std::vector<std::filesystem::path> autosaveFiles{};
 
     int selected{-1};
@@ -31,6 +37,14 @@ namespace anm2ed
 
     ImGuiKeyChord chords[SHORTCUT_COUNT]{};
 
+    std::vector<std::filesystem::path> anm2DragDropPaths{};
+    bool isAnm2DragDrop{};
+    imgui::PopupHelper anm2DragDropPopup{
+        imgui::PopupHelper("Anm2 Drag Drop", imgui::POPUP_NORMAL, imgui::POPUP_BY_CURSOR)};
+
+    std::filesystem::path spritesheetDragDropPath{};
+    bool isSpritesheetDragDrop{};
+
     anm2::Layer editLayer{};
     imgui::PopupHelper layerPropertiesPopup{imgui::PopupHelper("Layer Properties", imgui::POPUP_SMALL_NO_HEIGHT)};
 
@@ -38,6 +52,8 @@ namespace anm2ed
     imgui::PopupHelper nullPropertiesPopup{imgui::PopupHelper("Null Properties", imgui::POPUP_SMALL_NO_HEIGHT)};
 
     imgui::PopupHelper progressPopup{imgui::PopupHelper("Rendering...", imgui::POPUP_SMALL_NO_HEIGHT)};
+
+    std::vector<int> selectionHistory{};
 
     Manager();
     ~Manager();
@@ -63,6 +79,7 @@ namespace anm2ed
     void recent_files_write();
     void recent_files_clear();
     void recent_file_add(const std::filesystem::path&);
+    std::vector<std::filesystem::path> recent_files_ordered() const;
 
     void autosave_files_load();
     void autosave_files_open();

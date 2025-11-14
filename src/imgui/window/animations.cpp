@@ -1,6 +1,6 @@
 #include "animations.h"
 
-#include <ranges>
+#include <cstddef>
 
 #include "toast.h"
 #include "vector_.h"
@@ -24,6 +24,21 @@ namespace anm2ed::imgui
 
     hovered = -1;
 
+    auto animations_remove = [&]()
+    {
+      if (!selection.empty())
+      {
+        for (auto it = selection.rbegin(); it != selection.rend(); ++it)
+        {
+          auto i = *it;
+          if (overlayIndex == i) overlayIndex = -1;
+          if (reference.animationIndex == i) reference.animationIndex = -1;
+          anm2.animations.items.erase(anm2.animations.items.begin() + i);
+        }
+        selection.clear();
+      }
+    };
+
     if (ImGui::Begin("Animations", &settings.windowIsAnimations))
     {
       auto childSize = size_without_footer_get();
@@ -32,12 +47,13 @@ namespace anm2ed::imgui
       {
         selection.start(anm2.animations.items.size());
 
-        for (auto [i, animation] : std::views::enumerate(anm2.animations.items))
+        for (std::size_t index = 0; index < anm2.animations.items.size(); ++index)
         {
-          ImGui::PushID(i);
+          auto& animation = anm2.animations.items[index];
+          ImGui::PushID((int)index);
 
           auto isDefault = anm2.animations.defaultAnimation == animation.name;
-          auto isReferenced = reference.animationIndex == i;
+          auto isReferenced = reference.animationIndex == (int)index;
 
           auto font = isDefault && isReferenced ? font::BOLD_ITALICS
                       : isDefault               ? font::BOLD
@@ -45,14 +61,14 @@ namespace anm2ed::imgui
                                                 : font::REGULAR;
 
           ImGui::PushFont(resources.fonts[font].get(), font::SIZE);
-          ImGui::SetNextItemSelectionUserData((int)i);
-          if (selectable_input_text(animation.name, std::format("###Document #{} Animation #{}", manager.selected, i),
-                                    animation.name, selection.contains((int)i)))
+          ImGui::SetNextItemSelectionUserData((int)index);
+          if (selectable_input_text(animation.name, std::format("###Document #{} Animation #{}", manager.selected, index),
+                                    animation.name, selection.contains((int)index)))
           {
-            reference = {(int)i};
+            reference = {(int)index};
             document.frames.clear();
           }
-          if (ImGui::IsItemHovered()) hovered = (int)i;
+          if (ImGui::IsItemHovered()) hovered = (int)index;
           ImGui::PopFont();
 
           if (ImGui::BeginItemTooltip())
@@ -121,23 +137,7 @@ namespace anm2ed::imgui
         auto cut = [&]()
         {
           copy();
-
-          auto remove = [&]()
-          {
-            if (!selection.empty())
-            {
-              for (auto& i : selection | std::views::reverse)
-                anm2.animations.items.erase(anm2.animations.items.begin() + i);
-              selection.clear();
-            }
-            else if (hovered > -1)
-            {
-              anm2.animations.items.erase(anm2.animations.items.begin() + hovered);
-              hovered = -1;
-            }
-          };
-
-          DOCUMENT_EDIT(document, "Cut Animation(s)", Document::ANIMATIONS, remove());
+          DOCUMENT_EDIT(document, "Cut Animation(s)", Document::ANIMATIONS, animations_remove());
         };
 
         auto paste = [&]()
@@ -275,19 +275,7 @@ namespace anm2ed::imgui
 
         shortcut(manager.chords[SHORTCUT_REMOVE]);
         if (ImGui::Button("Remove", widgetSize))
-        {
-          auto remove = [&]()
-          {
-            for (auto& i : selection | std::views::reverse)
-            {
-              if (i == overlayIndex) overlayIndex = -1;
-              anm2.animations.items.erase(anm2.animations.items.begin() + i);
-            }
-            selection.clear();
-          };
-
-          DOCUMENT_EDIT(document, "Remove Animation(s)", Document::ANIMATIONS, remove());
-        }
+          DOCUMENT_EDIT(document, "Remove Animation(s)", Document::ANIMATIONS, animations_remove());
         set_item_tooltip_shortcut("Remove the selected animation(s).", settings.shortcutRemove);
 
         ImGui::SameLine();
@@ -328,14 +316,16 @@ namespace anm2ed::imgui
         {
           mergeSelection.start(anm2.animations.items.size());
 
-          for (auto [i, animation] : std::views::enumerate(anm2.animations.items))
+          for (std::size_t index = 0; index < anm2.animations.items.size(); ++index)
           {
-            if (i == mergeReference) continue;
+            if ((int)index == mergeReference) continue;
 
-            ImGui::PushID(i);
+            auto& animation = anm2.animations.items[index];
 
-            ImGui::SetNextItemSelectionUserData(i);
-            ImGui::Selectable(animation.name.c_str(), mergeSelection.contains(i));
+            ImGui::PushID((int)index);
+
+            ImGui::SetNextItemSelectionUserData((int)index);
+            ImGui::Selectable(animation.name.c_str(), mergeSelection.contains((int)index));
 
             ImGui::PopID();
           }

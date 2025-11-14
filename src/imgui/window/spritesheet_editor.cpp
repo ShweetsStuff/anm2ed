@@ -1,8 +1,10 @@
 #include "spritesheet_editor.h"
 
 #include <cmath>
+#include <format>
 #include <utility>
 
+#include "imgui_.h"
 #include "imgui_internal.h"
 #include "math_.h"
 #include "tool.h"
@@ -41,6 +43,7 @@ namespace anm2ed::imgui
     auto& isGridSnap = settings.editorIsGridSnap;
     auto& zoomStep = settings.viewZoomStep;
     auto& isBorder = settings.editorIsBorder;
+    auto& isTransparent = settings.editorIsTransparent;
     auto spritesheet = document.spritesheet_get();
     auto& tool = settings.tool;
     auto& shaderGrid = resources.shaders[shader::GRID];
@@ -101,22 +104,40 @@ namespace anm2ed::imgui
 
       if (ImGui::BeginChild("##Background Child", childSize, true, ImGuiWindowFlags_HorizontalScrollbar))
       {
-        ImGui::ColorEdit4("Background", value_ptr(backgroundColor), ImGuiColorEditFlags_NoInputs);
-        ImGui::SetItemTooltip("Change the background color.");
+        auto subChildSize = ImVec2(row_widget_width_get(2), ImGui::GetContentRegionAvail().y);
 
-        ImGui::Checkbox("Border", &isBorder);
-        ImGui::SetItemTooltip("Toggle a border appearing around the spritesheet.");
+        if (ImGui::BeginChild("##Background Child 1", subChildSize))
+        {
+          ImGui::ColorEdit3("Background", value_ptr(backgroundColor), ImGuiColorEditFlags_NoInputs);
+          ImGui::SetItemTooltip("Change the background color.");
+
+          ImGui::Checkbox("Border", &isBorder);
+          ImGui::SetItemTooltip("Toggle a border appearing around the spritesheet.");
+        }
+        ImGui::EndChild();
+
+        ImGui::SameLine();
+
+        if (ImGui::BeginChild("##Background Child 2", subChildSize))
+        {
+          ImGui::Checkbox("Transparent", &isTransparent);
+          ImGui::SetItemTooltip("Toggle the spritesheet editor being transparent.");
+        }
+
+        ImGui::EndChild();
       }
       ImGui::EndChild();
 
+      auto drawList = ImGui::GetCurrentWindow()->DrawList;
       auto cursorScreenPos = ImGui::GetCursorScreenPos();
       auto min = ImGui::GetCursorScreenPos();
       auto max = to_imvec2(to_vec2(min) + size);
 
       size_set(to_vec2(ImGui::GetContentRegionAvail()));
+
       bind();
       viewport_set();
-      clear();
+      clear(isTransparent ? vec4() : vec4(backgroundColor, 1.0f));
 
       auto frame = document.frame_get();
 
@@ -127,7 +148,11 @@ namespace anm2ed::imgui
 
         auto spritesheetModel = math::quad_model_get(texture.size);
         auto spritesheetTransform = transform * spritesheetModel;
+
         texture_render(shaderTexture, texture.id, spritesheetTransform);
+
+        if (isGrid) grid_render(shaderGrid, zoom, pan, gridSize, gridOffset, gridColor);
+
         if (isBorder)
           rect_render(dashedShader, spritesheetTransform, spritesheetModel, color::WHITE, BORDER_DASH_LENGTH,
                       BORDER_DASH_GAP, BORDER_DASH_OFFSET);
@@ -145,14 +170,12 @@ namespace anm2ed::imgui
         }
       }
 
-      if (isGrid) grid_render(shaderGrid, zoom, pan, gridSize, gridOffset, gridColor);
-
       unbind();
 
-      ImGui::RenderColorRectWithAlphaCheckerboard(ImGui::GetWindowDrawList(), min, max, 0, CHECKER_SIZE,
-                                                  to_imvec2(-size * 0.5f + pan));
-      ImGui::GetCurrentWindow()->DrawList->AddRectFilled(min, max, ImGui::GetColorU32(to_imvec4(backgroundColor)));
-      ImGui::Image(texture, to_imvec2(size));
+      render_checker_background(drawList, min, max, -size * 0.5f - pan, CHECKER_SIZE);
+      if (!isTransparent) drawList->AddRectFilled(min, max, ImGui::GetColorU32(to_imvec4(vec4(backgroundColor, 1.0f))));
+      drawList->AddImage(texture, min, max);
+      ImGui::InvisibleButton("##Spritesheet Editor", to_imvec2(size));
 
       if (ImGui::IsItemHovered())
       {
@@ -325,13 +348,18 @@ namespace anm2ed::imgui
           }
           case tool::COLOR_PICKER:
           {
-            if (isDuring)
+            if (spritesheet && isDuring)
             {
-              auto position = to_vec2(ImGui::GetMousePos());
-              toolColor = pixel_read(position, {settings.windowSize.x, settings.windowSize.y});
+              toolColor = spritesheet->texture.pixel_read(mousePos);
               if (ImGui::BeginTooltip())
               {
                 ImGui::ColorButton("##Color Picker Button", to_imvec4(toolColor));
+                ImGui::SameLine();
+                auto rgba8 = glm::clamp(ivec4(toolColor * 255.0f + 0.5f), ivec4(0), ivec4(255));
+                auto hex = std::format("#{:02X}{:02X}{:02X}{:02X}", rgba8.r, rgba8.g, rgba8.b, rgba8.a);
+                ImGui::TextUnformatted(hex.c_str());
+                ImGui::SameLine();
+                ImGui::Text("(%d, %d, %d, %d)", rgba8.r, rgba8.g, rgba8.b, rgba8.a);
                 ImGui::EndTooltip();
               }
             }

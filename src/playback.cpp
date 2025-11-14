@@ -19,7 +19,7 @@ namespace anm2ed
 
     time += (float)fps / 30.0f;
 
-    if (time >= (float)length)
+    if (time > (float)length - 1.0f)
     {
       if (isLoop)
         time = 0.0f;

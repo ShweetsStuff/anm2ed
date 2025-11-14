@@ -13,6 +13,14 @@ using namespace glm;
 
 namespace anm2ed
 {
+  Document::Document(Anm2& anm2, const std::string& path)
+  {
+    this->anm2 = std::move(anm2);
+    this->path = path;
+    clean();
+    change(Document::ALL);
+  }
+
   Document::Document(const std::string& path, bool isNew, std::string* errorString)
   {
     if (isNew)
@@ -175,6 +183,10 @@ namespace anm2ed
         break;
       case ANIMATIONS:
         animations_set();
+        break;
+      case FRAMES:
+        events_set();
+        sounds_set();
         break;
       case ALL:
         layers_set();

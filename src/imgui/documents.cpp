@@ -22,9 +22,11 @@ namespace anm2ed::imgui
     for (auto& document : manager.documents)
     {
       auto isDirty = document.is_dirty() && document.is_autosave_dirty();
-      document.lastAutosaveTime += ImGui::GetIO().DeltaTime;
-
-      if (isDirty && document.lastAutosaveTime > settings.fileAutosaveTime * time::SECOND_M) manager.autosave(document);
+      if (isDirty)
+      {
+        document.lastAutosaveTime += ImGui::GetIO().DeltaTime;
+        if (document.lastAutosaveTime > settings.fileAutosaveTime * time::SECOND_M) manager.autosave(document);
+      }
     }
 
     if (ImGui::Begin("##Documents", nullptr,
@@ -157,5 +159,60 @@ namespace anm2ed::imgui
     }
 
     ImGui::End();
+
+    if (manager.isAnm2DragDrop)
+    {
+      auto drag_drop_reset = [&]()
+      {
+        manager.isAnm2DragDrop = false;
+        manager.anm2DragDropPaths.clear();
+        manager.anm2DragDropPopup.close();
+      };
+
+      if (manager.anm2DragDropPaths.empty())
+        drag_drop_reset();
+      else
+      {
+        if (!manager.anm2DragDropPopup.is_open()) manager.anm2DragDropPopup.open();
+
+        bool wasOpen = manager.anm2DragDropPopup.is_open();
+        manager.anm2DragDropPopup.trigger();
+
+        if (ImGui::BeginPopupContextWindow(manager.anm2DragDropPopup.label, ImGuiPopupFlags_None))
+        {
+          auto document = manager.get();
+          if (ImGui::MenuItem(manager.anm2DragDropPaths.size() > 1 ? "Open Many Documents" : "Open New Document"))
+          {
+            for (auto& path : manager.anm2DragDropPaths)
+              manager.open(path);
+            drag_drop_reset();
+          }
+
+          if (ImGui::MenuItem("Merge into Current Document", nullptr, false,
+                              document && !manager.anm2DragDropPaths.empty()))
+          {
+            if (document)
+            {
+              DOCUMENT_EDIT_PTR(document, "Merge Anm2", Document::ALL, {
+                for (auto& path : manager.anm2DragDropPaths)
+                {
+                  anm2::Anm2 source(path);
+                  document->anm2.merge(source, document->directory_get(), path.parent_path());
+                }
+              });
+              drag_drop_reset();
+            }
+          }
+
+          if (ImGui::MenuItem("Cancel")) drag_drop_reset();
+
+          manager.anm2DragDropPopup.end();
+          ImGui::EndPopup();
+        }
+        else if (wasOpen && !manager.anm2DragDropPopup.is_open())
+          drag_drop_reset();
+      }
+    }
   }
+
 }

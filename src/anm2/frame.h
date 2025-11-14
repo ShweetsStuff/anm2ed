@@ -46,7 +46,6 @@ namespace anm2ed::anm2
     void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*, Type);
     void shorten();
     void extend();
-    bool is_visible(Type = NONE);
   };
 
   struct FrameChange

@@ -36,7 +36,8 @@ namespace anm2ed::imgui
 
       if (ImGui::BeginChild("##Recent Files Child", {}, ImGuiChildFlags_Borders))
       {
-        for (auto [i, file] : std::views::enumerate(manager.recentFiles))
+        auto recentFiles = manager.recent_files_ordered();
+        for (auto [i, file] : std::views::enumerate(recentFiles))
         {
           ImGui::PushID(i);
 
