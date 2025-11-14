@@ -34,6 +34,7 @@ namespace anm2ed
   void State::update(SDL_Window*& window, Settings& settings)
   {
     SDL_Event event{};
+    bool openDroppedDocumentsImmediately = manager.documents.empty();
 
     while (SDL_PollEvent(&event))
     {
@@ -46,8 +47,10 @@ namespace anm2ed
           if (filesystem::path_is_extension(droppedFile, "anm2"))
           {
             std::filesystem::path droppedPath{droppedFile};
-            if (manager.documents.empty())
+            if (openDroppedDocumentsImmediately)
+            {
               manager.open(droppedPath);
+            }
             else
             {
               if (std::find(manager.anm2DragDropPaths.begin(), manager.anm2DragDropPaths.end(), droppedPath) ==

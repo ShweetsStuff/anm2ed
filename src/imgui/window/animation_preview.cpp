@@ -363,8 +363,10 @@ namespace anm2ed::imgui
 
         if (!isOnlyShowLayers && root.isVisible && animation->rootAnimation.isVisible)
         {
-          auto rootTransform = baseTransform * math::quad_model_get(TARGET_SIZE, root.position, TARGET_SIZE * 0.5f,
-                                                                    math::percent_to_unit(root.scale), root.rotation);
+          auto rootTransform =
+              isRootTransform ? baseTransform * math::quad_model_get(TARGET_SIZE, root.position, TARGET_SIZE * 0.5f,
+                                                                     math::percent_to_unit(root.scale), root.rotation)
+                              : baseTransform * math::quad_model_get(TARGET_SIZE, {}, TARGET_SIZE * 0.5f);
 
           vec4 color = isOnionskin ? vec4(colorOffset, alphaOffset) : color::GREEN;
 

@@ -1,7 +1,6 @@
 #include "timeline.h"
 
 #include <algorithm>
-#include <cstddef>
 
 #include <imgui_internal.h>
 

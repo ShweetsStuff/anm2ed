@@ -175,7 +175,6 @@ namespace anm2ed::imgui
       {
         if (!manager.anm2DragDropPopup.is_open()) manager.anm2DragDropPopup.open();
 
-        bool wasOpen = manager.anm2DragDropPopup.is_open();
         manager.anm2DragDropPopup.trigger();
 
         if (ImGui::BeginPopupContextWindow(manager.anm2DragDropPopup.label, ImGuiPopupFlags_None))
@@ -212,7 +211,7 @@ namespace anm2ed::imgui
           manager.anm2DragDropPopup.end();
           ImGui::EndPopup();
         }
-        else if (wasOpen && !manager.anm2DragDropPopup.is_open())
+        else if (!ImGui::IsPopupOpen(manager.anm2DragDropPopup.label))
           drag_drop_reset();
       }
     }

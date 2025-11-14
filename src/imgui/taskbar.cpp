@@ -909,8 +909,10 @@ namespace anm2ed::imgui
     if (shortcut(manager.chords[SHORTCUT_OPEN], shortcut::GLOBAL)) dialog.file_open(dialog::ANM2_OPEN);
     if (shortcut(manager.chords[SHORTCUT_SAVE], shortcut::GLOBAL))
     {
-      if (settings.fileIsWarnOverwrite) overwritePopup.open();
-      manager.save();
+      if (settings.fileIsWarnOverwrite)
+        overwritePopup.open();
+      else
+        manager.save();
     }
     if (shortcut(manager.chords[SHORTCUT_SAVE_AS], shortcut::GLOBAL)) dialog.file_save(dialog::ANM2_SAVE);
     if (shortcut(manager.chords[SHORTCUT_EXIT], shortcut::GLOBAL)) isQuitting = true;
