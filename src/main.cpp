@@ -2,6 +2,9 @@
 #include "state.h"
 
 #ifdef _WIN32
+
+  #include <SDL3/SDL_main.h>
+  #include <vector>
   #include <windows.h>
 #endif
 
@@ -20,5 +23,11 @@ int main(int argc, const char** argv)
 }
 
 #ifdef _WIN32
-int APIENTRY WinMain(HINSTANCE, HINSTANCE, LPSTR, int) { return main(__argc, __argv); }
+int APIENTRY WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
+{
+  std::vector<const char*> args(__argc);
+  for (int i = 0; i < __argc; ++i)
+    args[i] = __argv[i];
+  return main(__argc, args.data());
+}
 #endif
