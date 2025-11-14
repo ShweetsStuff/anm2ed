@@ -2,7 +2,7 @@
 #include "state.h"
 
 #ifdef _WIN32
-
+  #define SDL_MAIN_HANDLED
   #include <SDL3/SDL_main.h>
   #include <vector>
   #include <windows.h>
