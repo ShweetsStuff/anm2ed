@@ -1,8 +1,8 @@
 #include "animation_preview.h"
 
 #include <algorithm>
-#include <cstddef>
 #include <filesystem>
+#include <ranges>
 
 #include <glm/gtc/type_ptr.hpp>
 
@@ -53,11 +53,10 @@ namespace anm2ed::imgui
         {
           auto& format = settings.renderFormat;
           bool isSuccess{true};
-          for (std::size_t index = 0; index < renderFrames.size(); ++index)
+          for (auto [i, frame] : std::views::enumerate(renderFrames))
           {
-            auto& frame = renderFrames[index];
             std::filesystem::path outputPath =
-                std::filesystem::path(path) / std::vformat(format, std::make_format_args(index));
+                std::filesystem::path(path) / std::vformat(format, std::make_format_args(i));
 
             if (!frame.write_png(outputPath))
             {

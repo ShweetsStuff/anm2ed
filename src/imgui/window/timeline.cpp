@@ -552,16 +552,15 @@ namespace anm2ed::imgui
 
           frames.selection.start(item->frames.size(), ImGuiMultiSelectFlags_ClearOnEscape);
 
-          for (std::size_t frameIndex = 0; frameIndex < item->frames.size(); ++frameIndex)
+          for (auto [i, frame] : std::views::enumerate(item->frames))
           {
-            auto& frame = item->frames[frameIndex];
-            ImGui::PushID((int)frameIndex);
+            ImGui::PushID((int)i);
 
-            auto frameReference = anm2::Reference{reference.animationIndex, type, id, (int)frameIndex};
+            auto frameReference = anm2::Reference{reference.animationIndex, type, id, (int)i};
             auto isFrameVisible = isVisible && frame.isVisible;
             auto isReferenced = reference == frameReference;
             auto isSelected =
-                (frames.selection.contains((int)frameIndex) && reference.itemType == type && reference.itemID == id) ||
+                (frames.selection.contains((int)i) && reference.itemType == type && reference.itemID == id) ||
                 isReferenced;
 
             if (type == anm2::TRIGGER) frameTime = frame.atFrame;
@@ -579,7 +578,7 @@ namespace anm2ed::imgui
             ImGui::PushStyleColor(ImGuiCol_HeaderHovered, isFrameVisible ? colorHovered : colorHoveredHidden);
 
             ImGui::SetNextItemAllowOverlap();
-            ImGui::SetNextItemSelectionUserData((int)frameIndex);
+            ImGui::SetNextItemSelectionUserData((int)i);
             if (ImGui::Selectable("##Frame Button", true, ImGuiSelectableFlags_None, buttonSize))
             {
               if (type == anm2::LAYER)

@@ -15,7 +15,6 @@ namespace anm2ed
   public:
     resource::Font fonts[resource::font::COUNT]{};
     resource::Texture icons[resource::icon::COUNT]{};
-    resource::Texture backgroundTexture{};
     resource::Shader shaders[resource::shader::COUNT]{};
     resource::Audio music{};
 

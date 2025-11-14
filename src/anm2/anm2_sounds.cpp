@@ -33,11 +33,8 @@ namespace anm2ed::anm2
         if (content.sounds.contains(trigger.soundID)) used.insert(trigger.soundID);
 
     std::set<int> unused;
-    for (const auto& [id, sound] : content.sounds)
-    {
-      (void)sound;
+    for (auto& [id, sound] : content.sounds)
       if (!used.contains(id)) unused.insert(id);
-    }
 
     return unused;
   }

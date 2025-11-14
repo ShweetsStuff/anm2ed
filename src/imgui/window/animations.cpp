@@ -1,6 +1,7 @@
 #include "animations.h"
 
 #include <cstddef>
+#include <ranges>
 
 #include "toast.h"
 #include "vector_.h"
@@ -47,13 +48,12 @@ namespace anm2ed::imgui
       {
         selection.start(anm2.animations.items.size());
 
-        for (std::size_t index = 0; index < anm2.animations.items.size(); ++index)
+        for (auto [i, animation] : std::views::enumerate(anm2.animations.items))
         {
-          auto& animation = anm2.animations.items[index];
-          ImGui::PushID((int)index);
+          ImGui::PushID((int)i);
 
           auto isDefault = anm2.animations.defaultAnimation == animation.name;
-          auto isReferenced = reference.animationIndex == (int)index;
+          auto isReferenced = reference.animationIndex == (int)i;
 
           auto font = isDefault && isReferenced ? font::BOLD_ITALICS
                       : isDefault               ? font::BOLD
@@ -61,14 +61,14 @@ namespace anm2ed::imgui
                                                 : font::REGULAR;
 
           ImGui::PushFont(resources.fonts[font].get(), font::SIZE);
-          ImGui::SetNextItemSelectionUserData((int)index);
-          if (selectable_input_text(animation.name, std::format("###Document #{} Animation #{}", manager.selected, index),
-                                    animation.name, selection.contains((int)index)))
+          ImGui::SetNextItemSelectionUserData((int)i);
+          if (selectable_input_text(animation.name, std::format("###Document #{} Animation #{}", manager.selected, i),
+                                    animation.name, selection.contains((int)i)))
           {
-            reference = {(int)index};
+            reference = {(int)i};
             document.frames.clear();
           }
-          if (ImGui::IsItemHovered()) hovered = (int)index;
+          if (ImGui::IsItemHovered()) hovered = (int)i;
           ImGui::PopFont();
 
           if (ImGui::BeginItemTooltip())
