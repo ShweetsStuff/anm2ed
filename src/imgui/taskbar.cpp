@@ -821,13 +821,14 @@ namespace anm2ed::imgui
 
       if (creditRegionSize.y > 0.0f && creditRegionSize.x > 0.0f)
       {
+        auto fontSize = ImGui::GetFontSize();
         auto drawList = ImGui::GetWindowDrawList();
         auto clipMax = ImVec2(creditRegionPos.x + creditRegionSize.x, creditRegionPos.y + creditRegionSize.y);
         drawList->PushClipRect(creditRegionPos, clipMax, true);
 
         auto delta = ImGui::GetIO().DeltaTime;
         creditsState.spawnTimer -= delta;
-        auto maxVisible = std::max(1, (int)std::floor(creditRegionSize.y / (float)font::SIZE));
+        auto maxVisible = std::max(1, (int)std::floor(creditRegionSize.y / (float)fontSize));
 
         while (creditsState.active.size() < (size_t)maxVisible && creditsState.spawnTimer <= 0.0f)
         {
@@ -836,15 +837,15 @@ namespace anm2ed::imgui
           creditsState.spawnTimer += CREDIT_DELAY;
         }
 
-        auto baseY = clipMax.y - (float)font::SIZE;
+        auto baseY = clipMax.y - (float)fontSize;
         const auto& baseColor = ImGui::GetStyleColorVec4(ImGuiCol_Text);
-        auto fadeSpan = (float)font::SIZE * 2.0f;
+        auto fadeSpan = (float)fontSize * 2.0f;
 
         for (auto it = creditsState.active.begin(); it != creditsState.active.end();)
         {
           it->offset += CREDIT_SCROLL_SPEED * delta;
           auto yPos = baseY - it->offset;
-          if (yPos + font::SIZE < creditRegionPos.y)
+          if (yPos + fontSize < creditRegionPos.y)
           {
             it = creditsState.active.erase(it);
             continue;
@@ -852,13 +853,13 @@ namespace anm2ed::imgui
 
           const auto& credit = CREDITS[it->index];
           auto fontPtr = resources.fonts[credit.font].get();
-          auto textSize = fontPtr->CalcTextSizeA((float)font::SIZE, FLT_MAX, 0.0f, credit.string);
+          auto textSize = fontPtr->CalcTextSizeA((float)fontSize, FLT_MAX, 0.0f, credit.string);
           auto xPos = creditRegionPos.x + (creditRegionSize.x - textSize.x) * 0.5f;
 
           auto alpha = 1.0f;
           auto topDist = yPos - creditRegionPos.y;
           if (topDist < fadeSpan) alpha *= std::clamp(topDist / fadeSpan, 0.0f, 1.0f);
-          auto bottomDist = (creditRegionPos.y + creditRegionSize.y) - (yPos + font::SIZE);
+          auto bottomDist = (creditRegionPos.y + creditRegionSize.y) - (yPos + fontSize);
           if (bottomDist < fadeSpan) alpha *= std::clamp(bottomDist / fadeSpan, 0.0f, 1.0f);
           if (alpha <= 0.0f)
           {
@@ -869,7 +870,7 @@ namespace anm2ed::imgui
           auto color = baseColor;
           color.w *= alpha;
 
-          drawList->AddText(fontPtr, (float)font::SIZE, ImVec2(xPos, yPos), ImGui::GetColorU32(color), credit.string);
+          drawList->AddText(fontPtr, fontSize, ImVec2(xPos, yPos), ImGui::GetColorU32(color), credit.string);
           ++it;
         }
 
