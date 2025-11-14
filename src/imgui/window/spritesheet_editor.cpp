@@ -54,6 +54,7 @@ namespace anm2ed::imgui
 
     if (ImGui::Begin("Spritesheet Editor", &settings.windowIsSpritesheetEditor))
     {
+
       auto childSize = ImVec2(imgui::row_widget_width_get(3),
                               (ImGui::GetTextLineHeightWithSpacing() * 4) + (ImGui::GetStyle().WindowPadding.y * 2));
 
@@ -385,6 +386,7 @@ namespace anm2ed::imgui
     {
       size = settings.editorSize;
       zoom = settings.editorStartZoom;
+      set();
       center_view();
       document.isSpritesheetEditorSet = true;
     }

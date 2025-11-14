@@ -8,9 +8,7 @@
 
 [h2]Anm2Ed[/h2]
 
-[img]https://shweetz.net/files/projects/anm2ed/preview2.png[/img]
-
-A reimplementation of [i]The Binding of Isaac: Rebirth[/i]'s proprietary animation editor. Manipulates the XML-based &quot;.anm2&quot; format, used for in-game tweened animations.
+A reimplementation of [i]The Binding of Isaac: Rebirth[/i]'s proprietary animation editor. Manipulates the XML-based ".anm2" format, used for in-game tweened animations.
 
 [h2]Features[/h2]
 [list]
@@ -28,6 +26,8 @@ A reimplementation of [i]The Binding of Isaac: Rebirth[/i]'s proprietary animati
 [*] Robust snapshot (undo/redo) system
 [*] Selecting multiple frames at a time
 [*] Settings that will preserve on exit (stored in %APPDATA% on Windows or ~/.local/share on Linux)
+[/list]
+[/list]
 
 [h3]Note on Rendering Animations[/h3]
 You will need FFmpeg installed! Get it from [url=https://ffmpeg.org/download.html]here[/url] and point to the downloaded ffmpeg executable within the program!
@@ -35,11 +35,11 @@ You will need FFmpeg installed! Get it from [url=https://ffmpeg.org/download.htm
 [h2]Download (Windows)[/h2]
 https://github.com/ShweetsStuff/anm2ed/releases
 
-Alternatively, if you have subscribed to the mod, you can find the latest release inside the &quot;resources&quot; folder. Once downloaded, you can put it wherever you want.
+Alternatively, if you have subscribed to the mod, you can find the latest release inside the "resources" folder. Once downloaded, you can put it wherever you want.
 
 [h3]Happy animating![/h3]
 [img]https://files.catbox.moe/4auc1c.gif[/img]
 </description>
-    <version>2.0</version>
+    <version>2.1</version>
     <visibility>Public</visibility>
 </metadata>
