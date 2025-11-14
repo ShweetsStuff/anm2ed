@@ -127,11 +127,16 @@ namespace anm2ed::imgui
 
         renderFrames.clear();
 
-        pan = savedPan;
-        zoom = savedZoom;
-        settings = savedSettings;
-        overlayIndex = savedOverlayIndex;
-        isSizeTrySet = true;
+        if (settings.renderIsRawAnimation)
+        {
+
+          settings = savedSettings;
+
+          pan = savedPan;
+          zoom = savedZoom;
+          overlayIndex = savedOverlayIndex;
+          isSizeTrySet = true;
+        }
 
         if (settings.timelineIsSound) audioStream.capture_end(mixer);
 
