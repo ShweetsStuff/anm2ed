@@ -337,7 +337,7 @@ namespace anm2ed::imgui
         playback.time = manager.recordingStart;
       }
 
-      size_set(to_vec2(ImGui::GetContentRegionAvail()));
+      if (isSizeTrySet) size_set(to_vec2(ImGui::GetContentRegionAvail()));
 
       bind();
       viewport_set();
