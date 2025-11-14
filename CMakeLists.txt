@@ -104,6 +104,10 @@ if (WIN32)
     target_sources(${PROJECT_NAME} PRIVATE Icon.rc)
     target_compile_options(${PROJECT_NAME} PRIVATE /EHsc)
     target_link_options(${PROJECT_NAME} PRIVATE /STACK:0xffffff)
+    target_link_options(${PROJECT_NAME} PRIVATE
+            "$<$<AND:$<CONFIG:Release>,$<CXX_COMPILER_ID:MSVC>>:/SUBSYSTEM:WINDOWS>"
+            "$<$<AND:$<CONFIG:Release>,$<NOT:$<CXX_COMPILER_ID:MSVC>>>:-mwindows>"
+    )
 else ()
     target_compile_options(${PROJECT_NAME} PRIVATE
             -Wall -Wextra -pedantic
