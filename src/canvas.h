@@ -25,6 +25,8 @@ namespace anm2ed::canvas
   constexpr auto GRID_SIZE_MAX = 10000;
   constexpr auto GRID_OFFSET_MIN = 0;
   constexpr auto GRID_OFFSET_MAX = 10000;
+
+  constexpr auto CHECKER_SIZE = 32.0f;
 }
 
 namespace anm2ed
@@ -46,11 +48,6 @@ namespace anm2ed
     GLuint texture{};
     glm::vec2 previousSize{};
     glm::vec2 size{};
-    mutable GLint previousSrcRGB{};
-    mutable GLint previousDstRGB{};
-    mutable GLint previousSrcAlpha{};
-    mutable GLint previousDstAlpha{};
-    mutable bool previousBlendStored{};
 
     Canvas();
     Canvas(glm::vec2);
@@ -70,7 +67,7 @@ namespace anm2ed
                      float dashLength = canvas::DASH_LENGTH, float dashGap = canvas::DASH_GAP,
                      float dashOffset = canvas::DASH_OFFSET) const;
     void viewport_set() const;
-    void clear(const glm::vec4&) const;
+    void clear(glm::vec4 = glm::vec4()) const;
     void bind() const;
     void unbind() const;
     void zoom_set(float&, glm::vec2&, glm::vec2, float) const;

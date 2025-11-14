@@ -89,10 +89,12 @@ namespace anm2ed
 
     glBindVertexArray(0);
 
-    // Framebuffer
-    glGenTextures(1, &texture);
+    // Framebuffer(s)
     glGenFramebuffers(1, &fbo);
     glGenRenderbuffers(1, &rbo);
+
+    // Framebuffer(s) Texture
+    glGenTextures(1, &texture);
 
     framebuffer_set();
   }
@@ -267,39 +269,15 @@ namespace anm2ed
 
   void Canvas::viewport_set() const { glViewport(0, 0, size.x, size.y); }
 
-  void Canvas::clear(const vec4& color) const
+  void Canvas::clear(vec4 color) const
   {
-    glDisable(GL_BLEND);
     glClearColor(color.r, color.g, color.b, color.a);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glEnable(GL_BLEND);
   }
 
-  void Canvas::bind() const
-  {
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+  void Canvas::bind() const { glBindFramebuffer(GL_FRAMEBUFFER, fbo); }
 
-    GLboolean blendEnabled = glIsEnabled(GL_BLEND);
-    if (!blendEnabled) glEnable(GL_BLEND);
-
-    glGetIntegerv(GL_BLEND_SRC_RGB, &previousSrcRGB);
-    glGetIntegerv(GL_BLEND_DST_RGB, &previousDstRGB);
-    glGetIntegerv(GL_BLEND_SRC_ALPHA, &previousSrcAlpha);
-    glGetIntegerv(GL_BLEND_DST_ALPHA, &previousDstAlpha);
-    previousBlendStored = true;
-
-    glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-  }
-
-  void Canvas::unbind() const
-  {
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    if (previousBlendStored)
-    {
-      glBlendFuncSeparate(previousSrcRGB, previousDstRGB, previousSrcAlpha, previousDstAlpha);
-      previousBlendStored = false;
-    }
-  }
+  void Canvas::unbind() const { glBindFramebuffer(GL_FRAMEBUFFER, 0); }
 
   std::vector<unsigned char> Canvas::pixels_get() const
   {
@@ -332,10 +310,8 @@ namespace anm2ed
   {
     uint8_t rgba[4]{};
 
-    glBindTexture(GL_READ_FRAMEBUFFER, fbo);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
     glReadPixels(position.x, framebufferSize.y - 1 - position.y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 
     return vec4(math::uint8_to_float(rgba[0]), math::uint8_to_float(rgba[1]), math::uint8_to_float(rgba[2]),
                 math::uint8_to_float(rgba[3]));

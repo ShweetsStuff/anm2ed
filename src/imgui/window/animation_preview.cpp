@@ -6,6 +6,7 @@
 
 #include <glm/gtc/type_ptr.hpp>
 
+#include "imgui_internal.h"
 #include "log.h"
 #include "math_.h"
 #include "toast.h"
@@ -78,9 +79,7 @@ namespace anm2ed::imgui
           auto& columns = settings.renderColumns;
 
           if (renderFrames.empty())
-          {
             toasts.warning("No frames captured for spritesheet export.");
-          }
           else
           {
             const auto& firstFrame = renderFrames.front();
@@ -154,8 +153,7 @@ namespace anm2ed::imgui
         if (auto animation = document.animation_get();
             animation && animation->triggers.isVisible && (!isOnlyShowLayers || manager.isRecording))
         {
-          if (auto trigger = animation->triggers.frame_generate(playback.time, anm2::TRIGGER);
-              trigger.is_visible(anm2::TRIGGER))
+          if (auto trigger = animation->triggers.frame_generate(playback.time, anm2::TRIGGER); trigger.isVisible)
             if (anm2.content.sounds.contains(trigger.soundID))
               anm2.content.sounds[trigger.soundID].audio.play(false, mixer);
         }
@@ -295,6 +293,8 @@ namespace anm2ed::imgui
       ImGui::EndChild();
 
       auto cursorScreenPos = ImGui::GetCursorScreenPos();
+      auto min = cursorScreenPos;
+      auto max = to_imvec2(to_vec2(min) + size);
 
       if (manager.isRecordingStart)
       {
@@ -307,6 +307,7 @@ namespace anm2ed::imgui
           settings.previewBackgroundColor = vec4();
           settings.previewIsGrid = false;
           settings.previewIsAxes = false;
+          settings.previewIsBorder = false;
           settings.timelineIsOnlyShowLayers = true;
           settings.onionskinIsEnabled = false;
 
@@ -331,7 +332,7 @@ namespace anm2ed::imgui
       if (isSizeTrySet) size_set(to_vec2(ImGui::GetContentRegionAvail()));
       viewport_set();
       bind();
-      clear(backgroundColor);
+      clear();
       if (isAxes) axes_render(shaderAxes, zoom, pan, axesColor);
       if (isGrid) grid_render(shaderGrid, zoom, pan, gridSize, gridOffset, gridColor);
 
@@ -362,7 +363,7 @@ namespace anm2ed::imgui
 
           auto& layer = anm2.content.layers.at(id);
 
-          if (auto frame = layerAnimation.frame_generate(time, anm2::LAYER); frame.is_visible())
+          if (auto frame = layerAnimation.frame_generate(time, anm2::LAYER); frame.isVisible)
           {
             auto spritesheet = anm2.spritesheet_get(layer.spritesheetID);
             if (!spritesheet || !spritesheet->is_valid()) continue;
@@ -467,6 +468,9 @@ namespace anm2ed::imgui
 
       unbind();
 
+      ImGui::RenderColorRectWithAlphaCheckerboard(ImGui::GetWindowDrawList(), min, max, 0, CHECKER_SIZE,
+                                                  to_imvec2(-size + pan));
+      ImGui::GetCurrentWindow()->DrawList->AddRectFilled(min, max, ImGui::GetColorU32(to_imvec4(backgroundColor)));
       ImGui::Image(texture, to_imvec2(size));
 
       isPreviewHovered = ImGui::IsItemHovered();

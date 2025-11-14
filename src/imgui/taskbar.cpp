@@ -164,10 +164,7 @@ namespace anm2ed::imgui
         }
 
         if (ImGui::MenuItem("Save", settings.shortcutSave.c_str(), false, document))
-        {
           if (settings.fileIsWarnOverwrite) overwritePopup.open();
-          manager.save();
-        }
 
         if (ImGui::MenuItem("Save As", settings.shortcutSaveAs.c_str(), false, document))
           dialog.file_save(dialog::ANM2_SAVE);

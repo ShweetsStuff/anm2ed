@@ -3,6 +3,7 @@
 #include <cmath>
 #include <utility>
 
+#include "imgui_internal.h"
 #include "math_.h"
 #include "tool.h"
 #include "types.h"
@@ -15,13 +16,16 @@ using namespace glm;
 
 namespace anm2ed::imgui
 {
+  constexpr auto BORDER_DASH_LENGTH = 1.0f;
+  constexpr auto BORDER_DASH_GAP = 0.5f;
+  constexpr auto BORDER_DASH_OFFSET = 0.0f;
+
   constexpr auto PIVOT_COLOR = color::PINK;
 
   SpritesheetEditor::SpritesheetEditor() : Canvas(vec2()) {}
 
   void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& resources)
   {
-
     auto& document = *manager.get();
     auto& anm2 = document.anm2;
     auto& reference = document.reference;
@@ -106,11 +110,13 @@ namespace anm2ed::imgui
       ImGui::EndChild();
 
       auto cursorScreenPos = ImGui::GetCursorScreenPos();
+      auto min = ImGui::GetCursorScreenPos();
+      auto max = to_imvec2(to_vec2(min) + size);
 
       size_set(to_vec2(ImGui::GetContentRegionAvail()));
       bind();
       viewport_set();
-      clear(backgroundColor);
+      clear();
 
       auto frame = document.frame_get();
 
@@ -122,7 +128,9 @@ namespace anm2ed::imgui
         auto spritesheetModel = math::quad_model_get(texture.size);
         auto spritesheetTransform = transform * spritesheetModel;
         texture_render(shaderTexture, texture.id, spritesheetTransform);
-        if (isBorder) rect_render(dashedShader, spritesheetTransform, spritesheetModel);
+        if (isBorder)
+          rect_render(dashedShader, spritesheetTransform, spritesheetModel, color::WHITE, BORDER_DASH_LENGTH,
+                      BORDER_DASH_GAP, BORDER_DASH_OFFSET);
 
         if (frame && reference.itemID > -1 &&
             anm2.content.layers.at(reference.itemID).spritesheetID == referenceSpritesheet)
@@ -141,6 +149,9 @@ namespace anm2ed::imgui
 
       unbind();
 
+      ImGui::RenderColorRectWithAlphaCheckerboard(ImGui::GetWindowDrawList(), min, max, 0, CHECKER_SIZE,
+                                                  to_imvec2(-size * 0.5f + pan));
+      ImGui::GetCurrentWindow()->DrawList->AddRectFilled(min, max, ImGui::GetColorU32(to_imvec4(backgroundColor)));
       ImGui::Image(texture, to_imvec2(size));
 
       if (ImGui::IsItemHovered())
@@ -233,11 +244,12 @@ namespace anm2ed::imgui
           case tool::MOVE:
             if (!frame) break;
             if (isBegin) document.snapshot("Frame Pivot");
-            if (isMouseDown) frame->pivot = ivec2(mousePos - frame->crop);
+            if (isMouseDown) frame->pivot = vec2(ivec2(mousePos - frame->crop));
             if (isLeftPressed) frame->pivot.x -= step;
             if (isRightPressed) frame->pivot.x += step;
             if (isUpPressed) frame->pivot.y -= step;
             if (isDownPressed) frame->pivot.y += step;
+            frame->pivot = vec2(ivec2(frame->pivot));
             if (isDuring)
             {
               if (ImGui::BeginTooltip())
@@ -258,27 +270,29 @@ namespace anm2ed::imgui
             if (isMouseClicked)
             {
               cropAnchor = mousePos;
-              frame->crop = cropAnchor;
+              frame->crop = vec2(ivec2(cropAnchor));
               frame->size = vec2();
             }
             if (isMouseDown)
             {
               auto [minPoint, maxPoint] = snap_rect(glm::min(cropAnchor, mousePos), glm::max(cropAnchor, mousePos));
-              frame->crop = minPoint;
-              frame->size = maxPoint - minPoint;
+              frame->crop = vec2(ivec2(minPoint));
+              frame->size = vec2(ivec2(maxPoint - minPoint));
             }
             if (isLeftPressed) frame->crop.x -= stepX;
             if (isRightPressed) frame->crop.x += stepX;
             if (isUpPressed) frame->crop.y -= stepY;
             if (isDownPressed) frame->crop.y += stepY;
+            frame->crop = vec2(ivec2(frame->crop));
+            frame->size = vec2(ivec2(frame->size));
             if (isDuring)
             {
               if (!isMouseDown)
               {
                 auto minPoint = glm::min(frame->crop, frame->crop + frame->size);
                 auto maxPoint = glm::max(frame->crop, frame->crop + frame->size);
-                frame->crop = minPoint;
-                frame->size = maxPoint - minPoint;
+                frame->crop = vec2(ivec2(minPoint));
+                frame->size = vec2(ivec2(maxPoint - minPoint));
                 if (isGridSnap)
                 {
                   auto [snapMin, snapMax] = snap_rect(frame->crop, frame->crop + frame->size);
