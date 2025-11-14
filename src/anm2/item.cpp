@@ -295,4 +295,18 @@ namespace anm2ed::anm2
       if (frame.atFrame == atFrame) return i;
     return -1;
   }
+
+  float Item::frame_time_from_index_get(int index)
+  {
+    if (!vector::in_bounds(frames, index)) return 0.0f;
+
+    float time{};
+    for (auto [i, frame] : std::views::enumerate(frames))
+    {
+      if (i == index) return time;
+      time += frame.duration;
+    }
+
+    return time;
+  }
 }

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <imgui/imgui.h>
 #include <glm/glm.hpp>
+#include <imgui/imgui.h>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -170,7 +170,7 @@ namespace anm2ed::imgui
                          ImGuiInputTextFlags = 0);
   bool combo_negative_one_indexed(const std::string&, int*, std::vector<const char*>&);
   bool selectable_input_text(const std::string&, const std::string&, std::string&, bool = false,
-                             ImGuiSelectableFlags = 0, bool* = nullptr);
+                             ImGuiSelectableFlags = 0, bool* = nullptr, bool = false);
   void set_item_tooltip_shortcut(const char*, const std::string& = {});
   void external_storage_set(ImGuiSelectionExternalStorage*, int, bool);
   void render_checker_background(ImDrawList*, ImVec2, ImVec2, glm::vec2, float);

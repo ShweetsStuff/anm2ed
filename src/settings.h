@@ -190,11 +190,13 @@ namespace anm2ed
   X(SHORTCUT_ZOOM_OUT, shortcutZoomOut, "Zoom Out", STRING, "Ctrl+Minus")                                              \
   /* Timeline / Playback */                                                                                            \
   X(SHORTCUT_PLAY_PAUSE, shortcutPlayPause, "Play/Pause", STRING, "Space")                                             \
-  X(SHORTCUT_PREVIOUS_FRAME, shortcutPreviousFrame, "Previous Frame", STRING, "Comma")                                 \
-  X(SHORTCUT_NEXT_FRAME, shortcutNextFrame, "Next Frame", STRING, "Period")                                            \
-  X(SHORTCUT_INSERT_FRAME, shortcutInsertFrame, "Insert Frame", STRING, "F6")                                          \
+  X(SHORTCUT_MOVE_PLAYHEAD_BACK, shortcutMovePlayheadBack, "Playhead Back", STRING, "Comma")                           \
+  X(SHORTCUT_MOVE_PLAYHEAD_FORWARD, shortcutMovePlayheadForward, "Playhead Forward", STRING, "Period")                 \
   X(SHORTCUT_SHORTEN_FRAME, shortcutShortenFrame, "Shorten Frame", STRING, "F4")                                       \
   X(SHORTCUT_EXTEND_FRAME, shortcutExtendFrame, "Extend Frame", STRING, "F5")                                          \
+  X(SHORTCUT_INSERT_FRAME, shortcutInsertFrame, "Insert Frame", STRING, "F6")                                          \
+  X(SHORTCUT_PREVIOUS_FRAME, shortcutPreviousFrame, "Previous Frame", STRING, "F7")                                    \
+  X(SHORTCUT_NEXT_FRAME, shortcutNextFrame, "Next Frame", STRING, "F8")                                                \
   /* Toggles */                                                                                                        \
   X(SHORTCUT_ONIONSKIN, shortcutOnionskin, "Onionskin", STRING, "O")
 

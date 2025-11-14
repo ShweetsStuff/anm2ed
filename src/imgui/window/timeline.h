@@ -30,10 +30,11 @@ namespace anm2ed::imgui
     int addItemID{-1};
     int addItemSpritesheetID{-1};
     int hoveredTime{};
-    anm2::Frame* draggedTrigger{};
-    int draggedTriggerIndex{-1};
-    int draggedTriggerAtFrameStart{-1};
-    bool isDraggedTriggerSnapshot{};
+    anm2::Frame* draggedFrame{};
+    int draggedFrameIndex{-1};
+    int draggedFrameStart{-1};
+    int draggedFrameStartDuration{-1};
+    bool isDraggedFrameSnapshot{};
     FrameDragDrop frameDragDrop{};
     std::vector<int> frameSelectionSnapshot{};
     std::vector<int> frameSelectionLocked{};

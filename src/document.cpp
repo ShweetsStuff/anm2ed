@@ -228,6 +228,7 @@ namespace anm2ed
       {
         anm2::Spritesheet& spritesheet = anm2.content.spritesheets[id];
         this->spritesheet.selection = {id};
+        this->spritesheet.reference = id;
         toasts.info(std::format("Initialized spritesheet #{}: {}", id, spritesheet.path.string()));
       }
       else

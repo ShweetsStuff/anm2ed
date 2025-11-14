@@ -39,6 +39,11 @@ namespace anm2ed::imgui
 
           ImGui::SetNextItemSelectionUserData(id);
           ImGui::Selectable(std::format(anm2::LAYER_FORMAT, id, layer.name, layer.spritesheetID).c_str(), isSelected);
+          if (newLayerId == id)
+          {
+            ImGui::SetScrollHereY(0.5f);
+            newLayerId = -1;
+          }
           if (ImGui::IsItemHovered())
           {
             hovered = id;
@@ -152,25 +157,28 @@ namespace anm2ed::imgui
 
       if (ImGui::Button(reference == -1 ? "Add" : "Confirm", widgetSize))
       {
-        auto add = [&]()
-        {
-          auto id = map::next_id_get(anm2.content.layers);
-          anm2.content.layers[id] = layer;
-          selection = {id};
-        };
-
-        auto set = [&]()
-        {
-          anm2.content.layers[reference] = layer;
-          selection = {reference};
-        };
-
         if (reference == -1)
         {
+          auto add = [&]()
+          {
+            auto id = map::next_id_get(anm2.content.layers);
+            anm2.content.layers[id] = layer;
+            selection = {id};
+            newLayerId = id;
+          };
+
           DOCUMENT_EDIT(document, "Add Layer", Document::LAYERS, add());
         }
         else
+        {
+          auto set = [&]()
+          {
+            anm2.content.layers[reference] = layer;
+            selection = {reference};
+          };
+
           DOCUMENT_EDIT(document, "Set Layer Properties", Document::LAYERS, set());
+        }
 
         manager.layer_properties_close();
       }

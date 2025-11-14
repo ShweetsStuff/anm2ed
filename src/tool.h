@@ -54,7 +54,7 @@ namespace anm2ed::tool
 
       {ImGuiMouseCursor_ResizeNESW, resource::icon::SCALE, SHORTCUT_SCALE, ANIMATION_PREVIEW, "##Scale",
        "Use the scale tool.\nWill scale the selected item as the cursor is dragged, or directional keys are "
-       "pressed.\n(Animation Preview only.)"},
+       "pressed.\nHold SHIFT to lock scaling to one dimension.\n(Animation Preview only.)"},
 
       {ImGuiMouseCursor_Arrow, resource::icon::CROP, SHORTCUT_CROP, SPRITESHEET_EDITOR, "##Crop",
        "Use the crop tool.\nWill produce a crop rectangle based on how the cursor is dragged, or directional keys are "

@@ -10,6 +10,8 @@ namespace anm2ed::imgui
 {
   class Sounds
   {
+    int newSoundId{-1};
+
   public:
     void update(Manager&, Settings&, Resources&, Dialog&, Clipboard&);
   };

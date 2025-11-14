@@ -42,6 +42,11 @@ namespace anm2ed::imgui
           if (isReferenced) ImGui::PushFont(resources.fonts[font::ITALICS].get(), font::SIZE);
           if (ImGui::Selectable(pathLabel, isSelected)) sound.play();
           if (ImGui::IsItemHovered()) hovered = id;
+          if (newSoundId == id)
+          {
+            ImGui::SetScrollHereY(0.5f);
+            newSoundId = -1;
+          }
 
           if (isReferenced) ImGui::PopFont();
 
@@ -137,6 +142,7 @@ namespace anm2ed::imgui
         if (anm2.sound_add(document.directory_get().string(), dialog.path, id))
         {
           selection = {id};
+          newSoundId = id;
           toasts.info(std::format("Initialized sound #{}: {}", id, dialog.path));
         }
         else

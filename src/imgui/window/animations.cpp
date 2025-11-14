@@ -54,6 +54,7 @@ namespace anm2ed::imgui
 
           auto isDefault = anm2.animations.defaultAnimation == animation.name;
           auto isReferenced = reference.animationIndex == (int)i;
+          auto isNewSelection = newAnimationSelectedIndex == (int)i;
 
           auto font = isDefault && isReferenced ? font::BOLD_ITALICS
                       : isDefault               ? font::BOLD
@@ -62,13 +63,20 @@ namespace anm2ed::imgui
 
           ImGui::PushFont(resources.fonts[font].get(), font::SIZE);
           ImGui::SetNextItemSelectionUserData((int)i);
+
           if (selectable_input_text(animation.name, std::format("###Document #{} Animation #{}", manager.selected, i),
-                                    animation.name, selection.contains((int)i)))
+                                    animation.name, selection.contains((int)i), ImGuiSelectableFlags_None, nullptr,
+                                    isNewSelection))
           {
             reference = {(int)i};
             document.frames.clear();
           }
           if (ImGui::IsItemHovered()) hovered = (int)i;
+          if (isNewSelection)
+          {
+            ImGui::SetScrollHereY(0.5f);
+            newAnimationSelectedIndex = -1;
+          }
           ImGui::PopFont();
 
           if (ImGui::BeginItemTooltip())
@@ -190,13 +198,17 @@ namespace anm2ed::imgui
           }
           animation.rootAnimation.frames.emplace_back(anm2::Frame());
 
-          auto index = 0;
-          if (!anm2.animations.items.empty())
-            index = selection.empty() ? (int)anm2.animations.items.size() - 1 : *selection.rbegin() + 1;
+          auto index = (int)anm2.animations.items.size();
+          if (!selection.empty())
+          {
+            index = *selection.rbegin() + 1;
+            index = std::min(index, (int)anm2.animations.items.size());
+          }
 
           anm2.animations.items.insert(anm2.animations.items.begin() + index, animation);
           selection = {index};
           reference = {index};
+          newAnimationSelectedIndex = index;
         };
 
         DOCUMENT_EDIT(document, "Add Animation", Document::ANIMATIONS, add());

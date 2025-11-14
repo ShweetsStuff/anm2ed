@@ -62,7 +62,7 @@ namespace anm2ed::imgui
   }
 
   bool selectable_input_text(const std::string& label, const std::string& id, std::string& text, bool isSelected,
-                             ImGuiSelectableFlags flags, bool* isRenamed)
+                             ImGuiSelectableFlags flags, bool* isRenamed, bool isBeginEditing)
   {
     static std::string editID{};
     static bool isJustEdit{};
@@ -90,7 +90,8 @@ namespace anm2ed::imgui
     {
       if (ImGui::Selectable(label.c_str(), isSelected, flags)) isActivated = true;
 
-      if ((ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_F2) && isSelected) ||
+      if (isBeginEditing ||
+          (ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_F2) && isSelected) ||
           (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)))
       {
         editID = id;

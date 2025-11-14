@@ -354,7 +354,8 @@ namespace anm2ed::imgui
       auto render = [&](anm2::Animation* animation, float time, vec3 colorOffset = {}, float alphaOffset = {},
                         bool isOnionskin = false)
       {
-        auto transform = transform_get(zoom, pan);
+        auto baseTransform = transform_get(zoom, pan);
+        auto transform = baseTransform;
         auto root = animation->rootAnimation.frame_generate(time, anm2::ROOT);
 
         if (isRootTransform)
@@ -362,8 +363,8 @@ namespace anm2ed::imgui
 
         if (!isOnlyShowLayers && root.isVisible && animation->rootAnimation.isVisible)
         {
-          auto rootTransform = transform * math::quad_model_get(TARGET_SIZE, root.position, TARGET_SIZE * 0.5f,
-                                                                math::percent_to_unit(root.scale), root.rotation);
+          auto rootTransform = baseTransform * math::quad_model_get(TARGET_SIZE, root.position, TARGET_SIZE * 0.5f,
+                                                                    math::percent_to_unit(root.scale), root.rotation);
 
           vec4 color = isOnionskin ? vec4(colorOffset, alphaOffset) : color::GREEN;
 
@@ -511,9 +512,10 @@ namespace anm2ed::imgui
       {
         auto isMouseClicked = ImGui::IsMouseClicked(ImGuiMouseButton_Left);
         auto isMouseReleased = ImGui::IsMouseReleased(ImGuiMouseButton_Left);
-        auto isMouseDown = ImGui::IsMouseDown(ImGuiMouseButton_Left);
+        auto isMouseLeftDown = ImGui::IsMouseDown(ImGuiMouseButton_Left);
         auto isMouseMiddleDown = ImGui::IsMouseDown(ImGuiMouseButton_Middle);
         auto isMouseRightDown = ImGui::IsMouseDown(ImGuiMouseButton_Right);
+        auto isMouseDown = isMouseLeftDown || isMouseMiddleDown || isMouseRightDown;
         auto mouseDelta = to_ivec2(ImGui::GetIO().MouseDelta);
         auto mouseWheel = ImGui::GetIO().MouseWheel;
 
@@ -589,7 +591,11 @@ namespace anm2ed::imgui
           case tool::SCALE:
             if (!frame) break;
             if (isBegin) document.snapshot("Frame Scale");
-            if (isMouseDown) frame->scale += mouseDelta;
+            if (isMouseDown)
+            {
+              frame->scale += mouseDelta;
+              if (isMod) frame->scale = {frame->scale.x, frame->scale.x};
+            }
             if (isLeftPressed) frame->scale.x -= step;
             if (isRightPressed) frame->scale.x += step;
             if (isUpPressed) frame->scale.y -= step;

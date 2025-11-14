@@ -36,6 +36,10 @@ namespace anm2ed::imgui
 - Press {} to increment time.
 - Press {} to shorten the selected frame, by one frame.
 - Press {} to extend the selected frame, by one frame.
+- Press {} to go to the previous frame.
+- Press {} to go to the next frame.
+- Click and hold on a frame while holding CTRL to change its duration.
+- Click and hold on a trigger to change its At Frame.
 - Hold Alt while clicking a non-trigger frame to toggle interpolation.)";
 
   void Timeline::update(Manager& manager, Settings& settings, Resources& resources, Clipboard& clipboard)
@@ -313,10 +317,11 @@ namespace anm2ed::imgui
 
           ImGui::BeginDisabled();
           ImGui::Text("(?)");
-          ImGui::SetItemTooltip("%s",
-                                std::format(HELP_FORMAT, settings.shortcutNextFrame, settings.shortcutPreviousFrame,
-                                            settings.shortcutShortenFrame, settings.shortcutExtendFrame)
-                                    .c_str());
+          ImGui::SetItemTooltip("%s", std::format(HELP_FORMAT, settings.shortcutMovePlayheadBack,
+                                                  settings.shortcutMovePlayheadForward, settings.shortcutShortenFrame,
+                                                  settings.shortcutExtendFrame, settings.shortcutPreviousFrame,
+                                                  settings.shortcutNextFrame)
+                                          .c_str());
           ImGui::EndDisabled();
         }
       }
@@ -600,12 +605,15 @@ namespace anm2ed::imgui
 
               reference = frameReference;
             }
-            if (type == anm2::TRIGGER && ImGui::IsItemHovered() && ImGui::IsMouseDown(ImGuiMouseButton_Left) &&
-                !draggedTrigger)
+            if (ImGui::IsItemHovered() && ImGui::IsMouseDown(ImGuiMouseButton_Left))
             {
-              draggedTrigger = &frame;
-              draggedTriggerIndex = (int)i;
-              draggedTriggerAtFrameStart = hoveredTime;
+              if (type == anm2::TRIGGER || ImGui::IsKeyDown(ImGuiMod_Ctrl))
+              {
+                draggedFrame = &frame;
+                draggedFrameIndex = (int)i;
+                draggedFrameStart = hoveredTime;
+                if (type != anm2::TRIGGER) draggedFrameStartDuration = draggedFrame->duration;
+              }
             }
 
             ImGui::PopStyleColor(3);
@@ -781,33 +789,42 @@ namespace anm2ed::imgui
             frameSelectionSnapshotReference = reference;
           }
 
-          if (draggedTrigger)
+          if (draggedFrame)
           {
             ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
 
-            if (!isDraggedTriggerSnapshot && hoveredTime != draggedTriggerAtFrameStart)
+            if (!isDraggedFrameSnapshot && hoveredTime != draggedFrameStart)
             {
-              isDraggedTriggerSnapshot = true;
-              document.snapshot("Trigger At Frame");
+              isDraggedFrameSnapshot = true;
+              document.snapshot(type == anm2::TRIGGER ? "Trigger At Frame" : "Frame Duration");
             }
 
-            draggedTrigger->atFrame = glm::clamp(
-                hoveredTime, 0, settings.playbackIsClamp ? animation->frameNum - 1 : anm2::FRAME_NUM_MAX - 1);
-
-            for (std::size_t triggerIndex = 0; triggerIndex < animation->triggers.frames.size(); ++triggerIndex)
+            if (type == anm2::TRIGGER)
             {
-              if ((int)triggerIndex == draggedTriggerIndex) continue;
-              auto& trigger = animation->triggers.frames[triggerIndex];
-              if (trigger.atFrame == draggedTrigger->atFrame) draggedTrigger->atFrame--;
+              draggedFrame->atFrame = glm::clamp(
+                  hoveredTime, 0, settings.playbackIsClamp ? animation->frameNum - 1 : anm2::FRAME_NUM_MAX - 1);
+
+              for (auto [i, trigger] : std::views::enumerate(animation->triggers.frames))
+              {
+                if ((int)i == draggedFrameIndex) continue;
+                if (trigger.atFrame == draggedFrame->atFrame) draggedFrame->atFrame--;
+              }
             }
+            else
+            {
+              draggedFrame->duration = glm::clamp(draggedFrameStartDuration + (hoveredTime - draggedFrameStart),
+                                                  anm2::FRAME_DURATION_MIN, anm2::FRAME_DURATION_MAX);
+            }
+
             if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
             {
               document.change(Document::FRAMES);
-              draggedTrigger = nullptr;
-              draggedTriggerIndex = -1;
-              draggedTriggerAtFrameStart = -1;
-              isDraggedTriggerSnapshot = false;
-              item->frames_sort_by_at_frame();
+              draggedFrame = nullptr;
+              draggedFrameIndex = -1;
+              draggedFrameStart = -1;
+              draggedFrameStartDuration = -1;
+              isDraggedFrameSnapshot = false;
+              if (type == anm2::TRIGGER) item->frames_sort_by_at_frame();
             }
           }
         }
@@ -958,6 +975,7 @@ namespace anm2ed::imgui
           ImGui::BeginDisabled(!item);
           {
             shortcut(manager.chords[SHORTCUT_ADD]);
+            shortcut(manager.chords[SHORTCUT_INSERT_FRAME]);
             if (ImGui::Button("Insert", widgetSize))
             {
               auto insert_frame = [&]()
@@ -1000,7 +1018,7 @@ namespace anm2ed::imgui
 
               DOCUMENT_EDIT(document, "Insert Frame", Document::FRAMES, insert_frame());
             }
-            set_item_tooltip_shortcut("Insert a frame, based on the current selection.", settings.shortcutAdd);
+            set_item_tooltip_shortcut("Insert a frame, based on the current selection.", settings.shortcutInsertFrame);
 
             ImGui::SameLine();
 
@@ -1292,13 +1310,13 @@ namespace anm2ed::imgui
     {
       if (shortcut(manager.chords[SHORTCUT_PLAY_PAUSE], shortcut::GLOBAL)) playback.toggle();
 
-      if (shortcut(manager.chords[SHORTCUT_PREVIOUS_FRAME], shortcut::GLOBAL, true))
+      if (shortcut(manager.chords[SHORTCUT_MOVE_PLAYHEAD_BACK], shortcut::GLOBAL, true))
       {
         playback.decrement(settings.playbackIsClamp ? animation->frameNum : anm2::FRAME_NUM_MAX);
         document.frameTime = playback.time;
       }
 
-      if (shortcut(manager.chords[SHORTCUT_NEXT_FRAME], shortcut::GLOBAL, true))
+      if (shortcut(manager.chords[SHORTCUT_MOVE_PLAYHEAD_FORWARD], shortcut::GLOBAL, true))
       {
         playback.increment(settings.playbackIsClamp ? animation->frameNum : anm2::FRAME_NUM_MAX);
         document.frameTime = playback.time;
@@ -1323,6 +1341,28 @@ namespace anm2ed::imgui
         {
           frame->extend();
           document.change(Document::FRAMES);
+        }
+      }
+
+      if (shortcut(manager.chords[SHORTCUT_PREVIOUS_FRAME], shortcut::GLOBAL, true))
+      {
+        if (auto item = document.item_get())
+        {
+          reference.frameIndex--;
+          reference.frameIndex = glm::clamp(reference.frameIndex--, -1, (int)item->frames.size() - 1);
+          frames.selection = {reference.frameIndex};
+          document.frameTime = item->frame_time_from_index_get(reference.frameIndex);
+        }
+      }
+
+      if (shortcut(manager.chords[SHORTCUT_NEXT_FRAME], shortcut::GLOBAL, true))
+      {
+        if (auto item = document.item_get())
+        {
+          reference.frameIndex++;
+          reference.frameIndex = glm::clamp(reference.frameIndex, -1, (int)item->frames.size() - 1);
+          frames.selection = {reference.frameIndex};
+          document.frameTime = item->frame_time_from_index_get(reference.frameIndex);
         }
       }
     }

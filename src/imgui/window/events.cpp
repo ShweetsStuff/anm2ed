@@ -34,9 +34,15 @@ namespace anm2ed::imgui
         {
           ImGui::PushID(id);
           ImGui::SetNextItemSelectionUserData(id);
+          const bool isNewEvent = (newEventId == id);
           if (selectable_input_text(event.name, std::format("###Document #{} Event #{}", manager.selected, id),
-                                    event.name, selection.contains(id)))
+                                    event.name, selection.contains(id), ImGuiSelectableFlags_None, nullptr, isNewEvent))
             if (ImGui::IsItemHovered()) hovered = id;
+          if (isNewEvent)
+          {
+            ImGui::SetScrollHereY(0.5f);
+            newEventId = -1;
+          }
 
           if (ImGui::BeginItemTooltip())
           {
@@ -105,6 +111,7 @@ namespace anm2ed::imgui
           anm2.content.events[id] = anm2::Event();
           selection = {id};
           reference = {id};
+          newEventId = id;
         };
 
         DOCUMENT_EDIT(document, "Add Event", Document::EVENTS, add());

@@ -40,6 +40,11 @@ namespace anm2ed::imgui
           ImGui::SetNextItemSelectionUserData(id);
           if (isReferenced) ImGui::PushFont(resources.fonts[font::ITALICS].get(), font::SIZE);
           ImGui::Selectable(std::format(anm2::NULL_FORMAT, id, null.name).c_str(), isSelected);
+          if (newNullId == id)
+          {
+            ImGui::SetScrollHereY(0.5f);
+            newNullId = -1;
+          }
           if (ImGui::IsItemHovered())
           {
             hovered = id;
@@ -152,25 +157,28 @@ namespace anm2ed::imgui
 
       if (ImGui::Button(reference == -1 ? "Add" : "Confirm", widgetSize))
       {
-        auto add = [&]()
-        {
-          auto id = map::next_id_get(anm2.content.nulls);
-          anm2.content.nulls[id] = null;
-          selection = {id};
-        };
-
-        auto set = [&]()
-        {
-          anm2.content.nulls[reference] = null;
-          selection = {reference};
-        };
-
         if (reference == -1)
         {
+          auto add = [&]()
+          {
+            auto id = map::next_id_get(anm2.content.nulls);
+            anm2.content.nulls[id] = null;
+            selection = {id};
+            newNullId = id;
+          };
+
           DOCUMENT_EDIT(document, "Add Null", Document::NULLS, add());
         }
         else
+        {
+          auto set = [&]()
+          {
+            anm2.content.nulls[reference] = null;
+            selection = {reference};
+          };
+
           DOCUMENT_EDIT(document, "Set Null Properties", Document::NULLS, set());
+        }
 
         manager.null_properties_close();
       }

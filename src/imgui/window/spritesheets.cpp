@@ -104,6 +104,11 @@ namespace anm2ed::imgui
             ImGui::SetNextItemStorageID(id);
             if (ImGui::Selectable("##Spritesheet Selectable", isSelected, 0, spritesheetChildSize)) reference = id;
             if (ImGui::IsItemHovered()) hovered = id;
+            if (newSpritesheetId == id)
+            {
+              ImGui::SetScrollHereY(0.5f);
+              newSpritesheetId = -1;
+            }
 
             auto viewport = ImGui::GetMainViewport();
             auto textureSize = texture.size.x * texture.size.y > (viewport->Size.x * viewport->Size.y) * 0.5f
@@ -192,6 +197,7 @@ namespace anm2ed::imgui
       if (dialog.is_selected(dialog::SPRITESHEET_OPEN))
       {
         document.spritesheet_add(dialog.path);
+        newSpritesheetId = document.spritesheet.reference;
         dialog.reset();
       }
 
