@@ -1287,13 +1287,17 @@ namespace anm2ed::imgui
 
       if (ImGui::Button("Bake", widgetSize))
       {
-        if (auto item = document.item_get())
-          for (auto it = frames.selection.rbegin(); it != frames.selection.rend(); ++it)
-          {
-            auto i = *it;
-            DOCUMENT_EDIT(document, "Bake Frames", Document::FRAMES,
-                          item->frames_bake(i, interval, isRoundScale, isRoundRotation));
-          }
+        auto frames_bake = [&]()
+        {
+          if (auto item = document.item_get())
+            for (auto i : frames.selection | std::views::reverse)
+              item->frames_bake(i, interval, isRoundScale, isRoundRotation);
+
+          frames.clear();
+        };
+
+        DOCUMENT_EDIT(document, "Bake Frames", Document::FRAMES, frames_bake());
+
         bakePopup.close();
       }
       ImGui::SetItemTooltip("Bake the selected frame(s) with the options selected.");
