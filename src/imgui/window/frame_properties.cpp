@@ -216,16 +216,24 @@ namespace anm2ed::imgui
                         document.item_get()->frames_change(frameChange, type, *frames.begin(), (int)frames.size()));
         };
 
-        auto widgetSize = widget_size_with_row_get(3);
+        auto rowOneWidgetSize = widget_size_with_row_get(1);
 
-        if (ImGui::Button("Adjust", widgetSize)) frame_change(anm2::ADJUST);
+        if (ImGui::Button("Adjust", rowOneWidgetSize)) frame_change(anm2::ADJUST);
         ImGui::SetItemTooltip("Set the value of each specified value onto the frame's equivalent.");
-        ImGui::SameLine();
-        if (ImGui::Button("Add", widgetSize)) frame_change(anm2::ADD);
+
+        auto rowTwoWidgetSize = widget_size_with_row_get(4);
+
+        if (ImGui::Button("Add", rowTwoWidgetSize)) frame_change(anm2::ADD);
         ImGui::SetItemTooltip("Add the specified values onto each frame.\n(Boolean values will simply be set.)");
         ImGui::SameLine();
-        if (ImGui::Button("Subtract", widgetSize)) frame_change(anm2::SUBTRACT);
+        if (ImGui::Button("Subtract", rowTwoWidgetSize)) frame_change(anm2::SUBTRACT);
         ImGui::SetItemTooltip("Subtract the specified values from each frame.\n(Boolean values will simply be set.)");
+        ImGui::SameLine();
+        if (ImGui::Button("Multiply", rowTwoWidgetSize)) frame_change(anm2::MULTIPLY);
+        ImGui::SetItemTooltip("Multiply the specified values for each frame.\n(Boolean values will simply be set.)");
+        ImGui::SameLine();
+        if (ImGui::Button("Divide", rowTwoWidgetSize)) frame_change(anm2::DIVIDE);
+        ImGui::SetItemTooltip("Divide the specified values for each frame.\n(Boolean values will simply be set.)");
       }
     }
     ImGui::End();

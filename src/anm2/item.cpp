@@ -176,6 +176,31 @@ namespace anm2ed::anm2
           if (change.colorOffset) frame.colorOffset = glm::clamp(frame.colorOffset - *change.colorOffset, 0.0f, 1.0f);
           if (change.tint) frame.tint = glm::clamp(frame.tint - *change.tint, 0.0f, 1.0f);
           break;
+
+        case MULTIPLY:
+          if (change.rotation) frame.rotation *= *change.rotation;
+          if (change.duration) frame.duration = std::max(FRAME_DURATION_MIN, frame.duration * *change.duration);
+          if (change.crop) frame.crop *= *change.crop;
+          if (change.pivot) frame.pivot *= *change.pivot;
+          if (change.position) frame.position *= *change.position;
+          if (change.size) frame.size *= *change.size;
+          if (change.scale) frame.scale *= *change.scale;
+          if (change.colorOffset) frame.colorOffset = glm::clamp(frame.colorOffset * *change.colorOffset, 0.0f, 1.0f);
+          if (change.tint) frame.tint = glm::clamp(frame.tint * *change.tint, 0.0f, 1.0f);
+          break;
+
+        case DIVIDE:
+          if (change.rotation && *change.rotation != 0.0f) frame.rotation /= *change.rotation;
+          if (change.duration && *change.duration != 0)
+            frame.duration = std::max(FRAME_DURATION_MIN, frame.duration / *change.duration);
+          if (change.crop) frame.crop /= *change.crop;
+          if (change.pivot) frame.pivot /= *change.pivot;
+          if (change.position) frame.position /= *change.position;
+          if (change.size) frame.size /= *change.size;
+          if (change.scale) frame.scale /= *change.scale;
+          if (change.colorOffset) frame.colorOffset = glm::clamp(frame.colorOffset / *change.colorOffset, 0.0f, 1.0f);
+          if (change.tint) frame.tint = glm::clamp(frame.tint / *change.tint, 0.0f, 1.0f);
+          break;
       }
     }
   }

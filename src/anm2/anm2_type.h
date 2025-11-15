@@ -77,8 +77,10 @@ namespace anm2ed::anm2
 
   enum ChangeType
   {
+    ADJUST,
     ADD,
     SUBTRACT,
-    ADJUST
+    MULTIPLY,
+    DIVIDE
   };
 }
