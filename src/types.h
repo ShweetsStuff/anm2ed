@@ -87,7 +87,6 @@ namespace anm2ed::types::color
   constexpr auto GREEN = vec4(0.0, 1.0, 0.0, 1.0);
   constexpr auto BLUE = vec4(0.0, 0.0, 1.0, 1.0);
   constexpr auto PINK = vec4(1.0, 0.0, 1.0, 1.0);
-  constexpr auto TRANSPARENT = vec4();
 }
 
 namespace anm2ed::types

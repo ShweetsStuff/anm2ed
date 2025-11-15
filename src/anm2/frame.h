@@ -25,7 +25,7 @@ namespace anm2ed::anm2
   X(position, glm::vec2, {})                                                                                           \
   X(size, glm::vec2, {})                                                                                               \
   X(scale, glm::vec2, glm::vec2(100.0f))                                                                               \
-  X(colorOffset, glm::vec3, types::color::TRANSPARENT)                                                                 \
+  X(colorOffset, glm::vec3, glm::vec3())                                                                               \
   X(tint, glm::vec4, types::color::WHITE)
 
   class Frame
