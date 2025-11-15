@@ -154,6 +154,7 @@ namespace anm2ed::imgui
       {"Super", ImGuiMod_Super},
   };
 
+  void theme_set(types::theme::Type theme);
   std::string chord_to_string(ImGuiKeyChord);
   ImGuiKeyChord string_to_chord(const std::string&);
   float row_widget_width_get(int, float = ImGui::GetContentRegionAvail().x);

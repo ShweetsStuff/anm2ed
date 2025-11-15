@@ -28,15 +28,15 @@ namespace anm2ed::anm2
       for (auto child = layerAnimationsElement->FirstChildElement("LayerAnimation"); child;
            child = child->NextSiblingElement("LayerAnimation"))
       {
-        layerAnimations[id] = Item(child, LAYER, &id);
-        layerOrder.push_back(id);
+        layerAnimations.emplace(id, Item(child, LAYER, &id));
+        layerOrder.emplace_back(id);
       }
     }
 
     if (auto nullAnimationsElement = element->FirstChildElement("NullAnimations"))
       for (auto child = nullAnimationsElement->FirstChildElement("NullAnimation"); child;
            child = child->NextSiblingElement("NullAnimation"))
-        nullAnimations[id] = Item(child, NULL_, &id);
+        nullAnimations.emplace(id, Item(child, NULL_, &id));
 
     if (auto triggersElement = element->FirstChildElement("Triggers")) triggers = Item(triggersElement, TRIGGER);
   }

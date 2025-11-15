@@ -258,7 +258,7 @@ namespace anm2ed::imgui
         auto cursor = areaType == tool::SPRITESHEET_EDITOR || areaType == tool::ALL ? tool::INFO[useTool].cursor
                                                                                     : ImGuiMouseCursor_NotAllowed;
         ImGui::SetMouseCursor(cursor);
-        ImGui::SetKeyboardFocusHere(-1);
+        ImGui::SetKeyboardFocusHere();
 
         switch (useTool)
         {

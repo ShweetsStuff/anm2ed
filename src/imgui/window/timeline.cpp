@@ -16,7 +16,6 @@ using namespace glm;
 namespace anm2ed::imgui
 {
   constexpr auto COLOR_HIDDEN_MULTIPLIER = vec4(0.5f, 0.5f, 0.5f, 1.000f);
-  constexpr auto FRAME_TIMELINE_COLOR = ImVec4(0.106f, 0.184f, 0.278f, 1.000f);
   constexpr auto FRAME_BORDER_COLOR = ImVec4(1.0f, 1.0f, 1.0f, 0.15f);
   constexpr auto FRAME_BORDER_COLOR_REFERENCED = ImVec4(1.0f, 1.0f, 1.0f, 0.50f);
   constexpr auto FRAME_MULTIPLE_OVERLAY_COLOR = ImVec4(1.0f, 1.0f, 1.0f, 0.05f);
@@ -249,7 +248,9 @@ namespace anm2ed::imgui
           ImGui::Image(resources.icons[icon].id, icon_size_get());
           ImGui::SameLine();
           if (isReferenced) ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
+          ImGui::PushStyleColor(ImGuiCol_Text, to_imvec4(color::WHITE));
           ImGui::TextUnformatted(label.c_str());
+          ImGui::PopStyleColor();
           if (isReferenced) ImGui::PopFont();
 
           ImGui::PushStyleColor(ImGuiCol_Button, ImVec4());
@@ -483,7 +484,7 @@ namespace anm2ed::imgui
         {
           drawList->AddRectFilled(cursorScreenPos,
                                   ImVec2(cursorScreenPos.x + framesSize.x, cursorScreenPos.y + framesSize.y),
-                                  ImGui::GetColorU32(FRAME_TIMELINE_COLOR));
+                                  ImGui::GetColorU32(ImGui::GetStyleColorVec4(ImGuiCol_Header)));
 
           for (int i = frameMin; i < frameMax; i++)
           {

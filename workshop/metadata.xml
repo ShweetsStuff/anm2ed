@@ -13,7 +13,7 @@ A reimplementation of [i]The Binding of Isaac: Rebirth[/i]'s proprietary animati
 [h2]Features[/h2]
 [list]
 [*] Extended version of the original proprietary Nicalis animation editor
-[*] Smooth [Dear ImGui](https://github.com/ocornut/imgui) interface; docking, dragging and dropping, etc. You might be familiar with it from [Repentogon](https://repentogon.com/).
+[*] Smooth [url=https://github.com/ocornut/imgui]Dear ImGui[/url] interface; docking, dragging and dropping, etc. You might be familiar with it from [url=https://repentogon.com/]Repentogon[/url].
 [*] Greatly polished in many areas, to assist with all your animating needs
 [*]New features:
 [list]
@@ -40,6 +40,6 @@ Alternatively, if you have subscribed to the mod, you can find the latest releas
 [h3]Happy animating![/h3]
 [img]https://files.catbox.moe/4auc1c.gif[/img]
 </description>
-    <version>2.2</version>
+    <version>2.3</version>
     <visibility>Public</visibility>
 </metadata>

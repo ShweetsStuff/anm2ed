@@ -367,6 +367,15 @@ namespace anm2ed::imgui
 
             ImGui::Checkbox("Vsync", &editSettings.isVsync);
             ImGui::SetItemTooltip("Toggle vertical sync; synchronizes program update rate with monitor refresh rate.");
+
+            ImGui::SeparatorText("Theme");
+
+            for (int i = 0; i < theme::COUNT; i++)
+            {
+              if (i == theme::LIGHT) continue; // TODO; light mode is jank rn so i am soft disabling it
+              ImGui::RadioButton(theme::STRINGS[i], &editSettings.theme, i);
+              ImGui::SameLine();
+            }
           }
           ImGui::EndChild();
 
@@ -492,6 +501,7 @@ namespace anm2ed::imgui
       if (ImGui::Button("Save", widgetSize))
       {
         settings = editSettings;
+        imgui::theme_set((theme::Type)editSettings.theme);
         manager.chords_set(settings);
         configurePopup.close();
       }

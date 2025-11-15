@@ -7,27 +7,26 @@ namespace anm2ed::anm2
   Content::Content(XMLElement* element)
   {
     int id{};
-
     if (auto spritesheetsElement = element->FirstChildElement("Spritesheets"))
       for (auto child = spritesheetsElement->FirstChildElement("Spritesheet"); child;
            child = child->NextSiblingElement("Spritesheet"))
-        spritesheets[id] = Spritesheet(child, id);
+        spritesheets.emplace(id, Spritesheet(child, id));
 
     if (auto layersElement = element->FirstChildElement("Layers"))
       for (auto child = layersElement->FirstChildElement("Layer"); child; child = child->NextSiblingElement("Layer"))
-        layers[id] = Layer(child, id);
+        layers.emplace(id, Layer(child, id));
 
     if (auto nullsElement = element->FirstChildElement("Nulls"))
       for (auto child = nullsElement->FirstChildElement("Null"); child; child = child->NextSiblingElement("Null"))
-        nulls[id] = Null(child, id);
+        nulls.emplace(id, Null(child, id));
 
     if (auto eventsElement = element->FirstChildElement("Events"))
       for (auto child = eventsElement->FirstChildElement("Event"); child; child = child->NextSiblingElement("Event"))
-        events[id] = Event(child, id);
+        events.emplace(id, Event(child, id));
 
-    if (auto eventsElement = element->FirstChildElement("Sounds"))
-      for (auto child = eventsElement->FirstChildElement("Sound"); child; child = child->NextSiblingElement("Sound"))
-        sounds[id] = Sound(child, id);
+    if (auto soundsElement = element->FirstChildElement("Sounds"))
+      for (auto child = soundsElement->FirstChildElement("Sound"); child; child = child->NextSiblingElement("Sound"))
+        sounds.emplace(id, Sound(child, id));
   }
 
   void Content::serialize(XMLDocument& document, XMLElement* parent)

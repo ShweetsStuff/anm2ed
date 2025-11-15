@@ -44,6 +44,7 @@ namespace anm2ed
   X(WINDOW_SIZE, windowSize, "Window Size", IVEC2_WH, {1600, 900})                                                     \
   X(IS_VSYNC, isVsync, "Vsync", BOOL, true)                                                                            \
   X(UI_SCALE, uiScale, "UI Scale", FLOAT, 1.0f)                                                                        \
+  X(THEME, theme, "Theme", INT, types::theme::DARK)                                                                    \
                                                                                                                        \
   X(FILE_IS_AUTOSAVE, fileIsAutosave, "Autosave", BOOL, true)                                                          \
   X(FILE_AUTOSAVE_TIME, fileAutosaveTime, "Autosave Time", INT, 1)                                                     \

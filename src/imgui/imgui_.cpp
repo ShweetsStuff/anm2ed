@@ -12,6 +12,23 @@ using namespace glm;
 
 namespace anm2ed::imgui
 {
+  void theme_set(theme::Type theme)
+  {
+    switch (theme)
+    {
+      case theme::LIGHT:
+        ImGui::StyleColorsLight();
+        break;
+      case theme::DARK:
+      default:
+        ImGui::StyleColorsDark();
+        break;
+      case theme::CLASSIC:
+        ImGui::StyleColorsClassic();
+        break;
+    }
+  }
+
   int input_text_callback(ImGuiInputTextCallbackData* data)
   {
     if (data->EventFlag == ImGuiInputTextFlags_CallbackResize)
@@ -90,8 +107,7 @@ namespace anm2ed::imgui
     {
       if (ImGui::Selectable(label.c_str(), isSelected, flags)) isActivated = true;
 
-      if (isBeginEditing ||
-          (ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_F2) && isSelected) ||
+      if (isBeginEditing || (ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_F2) && isSelected) ||
           (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)))
       {
         editID = id;
@@ -298,7 +314,7 @@ namespace anm2ed::imgui
   {
     if (ImGui::GetTopMostPopupModal() != nullptr) return false;
 
-    if (isRepeat && (type == shortcut::GLOBAL || type == shortcut::FOCUSED)) return chord_repeating(chord);
+    if (isRepeat) return chord_repeating(chord);
 
     int flags = type == shortcut::GLOBAL || type == shortcut::GLOBAL_SET ? ImGuiInputFlags_RouteGlobal
                                                                          : ImGuiInputFlags_RouteFocused;

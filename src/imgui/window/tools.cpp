@@ -50,7 +50,7 @@ namespace anm2ed::imgui
 
         if (isSelected) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
 
-        if (shortcut(manager.chords[info.shortcut], shortcut::GLOBAL_SET)) tool_use((tool::Type)i);
+        if (shortcut(manager.chords[info.shortcut], shortcut::GLOBAL_SET, true)) tool_use((tool::Type)i);
 
         if (i == tool::COLOR)
         {

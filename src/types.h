@@ -13,6 +13,30 @@ namespace anm2ed::types::draw_order
   };
 }
 
+namespace anm2ed::types::theme
+{
+#define THEMES                                                                                                         \
+  X(LIGHT, "Light")                                                                                                    \
+  X(DARK, "Dark")                                                                                                      \
+  X(CLASSIC, "ImGui Classic")
+
+  enum Type
+  {
+#define X(symbol, string) symbol,
+    THEMES
+#undef X
+        COUNT
+  };
+
+  constexpr const char* STRINGS[] = {
+#define X(symbol, string) string,
+      THEMES
+#undef X
+  };
+
+#undef THEMES
+}
+
 namespace anm2ed::types::shortcut
 {
   enum Type

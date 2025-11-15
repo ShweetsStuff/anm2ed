@@ -10,6 +10,8 @@
 #include "filesystem_.h"
 #include "log.h"
 
+#include "imgui_.h"
+
 #include "socket.h"
 
 using namespace anm2ed::types;
@@ -180,7 +182,12 @@ namespace anm2ed
 
     logger.info("Initialized Dear ImGui");
 
-    ImGui::StyleColorsDark();
+    imgui::theme_set((theme::Type)settings.theme);
+
+    if (settings.theme == theme::DARK)
+      ImGui::StyleColorsDark();
+    else if (settings.theme == theme::LIGHT)
+      ImGui::StyleColorsClassic();
 
     ImGui_ImplSDL3_InitForOpenGL(window, glContext);
     ImGui_ImplOpenGL3_Init("#version 330");

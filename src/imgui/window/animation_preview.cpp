@@ -563,7 +563,7 @@ namespace anm2ed::imgui
         auto cursor = areaType == tool::ANIMATION_PREVIEW || areaType == tool::ALL ? tool::INFO[useTool].cursor
                                                                                    : ImGuiMouseCursor_NotAllowed;
         ImGui::SetMouseCursor(cursor);
-        ImGui::SetKeyboardFocusHere(-1);
+        ImGui::SetKeyboardFocusHere();
 
         switch (useTool)
         {
