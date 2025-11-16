@@ -74,7 +74,10 @@ namespace anm2ed::imgui
             if (renameState == RENAME_BEGIN)
               document.snapshot("Rename Animation");
             else if (renameState == RENAME_FINISHED)
+            {
+              if (anm2.animations.items.size() == 1) anm2.animations.defaultAnimation = animation.name;
               document.change(Document::ANIMATIONS);
+            }
           }
           if (ImGui::IsItemHovered()) hovered = (int)i;
 
@@ -210,6 +213,8 @@ namespace anm2ed::imgui
             index = *selection.rbegin() + 1;
             index = std::min(index, (int)anm2.animations.items.size());
           }
+
+          if (anm2.animations.items.empty()) anm2.animations.defaultAnimation = animation.name;
 
           anm2.animations.items.insert(anm2.animations.items.begin() + index, animation);
           selection = {index};
