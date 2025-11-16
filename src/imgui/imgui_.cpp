@@ -12,6 +12,7 @@ using namespace glm;
 
 namespace anm2ed::imgui
 {
+
   void theme_set(theme::Type theme)
   {
     switch (theme)
@@ -79,39 +80,42 @@ namespace anm2ed::imgui
   }
 
   bool selectable_input_text(const std::string& label, const std::string& id, std::string& text, bool isSelected,
-                             ImGuiSelectableFlags flags, bool* isRenamed, bool isBeginEditing)
+                             ImGuiSelectableFlags flags, RenameState& state)
   {
     static std::string editID{};
-    static bool isJustEdit{};
-    const bool isEditing = editID == id;
+    auto isRename = editID == id;
     bool isActivated{};
 
-    if (isEditing)
+    if (isRename)
     {
-      if (isJustEdit)
+      auto finish = [&]()
+      {
+        editID.clear();
+        isActivated = true;
+        state = RENAME_FINISHED;
+      };
+
+      if (state == RENAME_BEGIN)
       {
         ImGui::SetKeyboardFocusHere();
-        isJustEdit = false;
+        state = RENAME_EDITING;
       }
 
       ImGui::SetNextItemWidth(-FLT_MIN);
       if (input_text_string("##Edit", &text, ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
-      {
-        editID.clear();
-        isActivated = true;
-        if (isRenamed) *isRenamed = true;
-      }
-      if (ImGui::IsItemDeactivatedAfterEdit() || ImGui::IsKeyPressed(ImGuiKey_Escape)) editID.clear();
+        finish();
+      if (ImGui::IsItemDeactivatedAfterEdit() || ImGui::IsKeyPressed(ImGuiKey_Escape)) finish();
     }
     else
     {
       if (ImGui::Selectable(label.c_str(), isSelected, flags)) isActivated = true;
 
-      if (isBeginEditing || (ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_F2) && isSelected) ||
+      if (state == RENAME_FORCE_EDIT || (ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_F2)) ||
           (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)))
       {
+        state = RENAME_BEGIN;
         editID = id;
-        isJustEdit = true;
+        isActivated = true;
       }
     }
 

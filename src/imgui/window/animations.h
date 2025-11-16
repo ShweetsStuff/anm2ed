@@ -11,6 +11,7 @@ namespace anm2ed::imgui
   {
     PopupHelper mergePopup{PopupHelper("Merge Animations")};
     int newAnimationSelectedIndex{-1};
+    RenameState renameState{RENAME_SELECTABLE};
 
   public:
     void update(Manager&, Settings&, Resources&, Clipboard&);

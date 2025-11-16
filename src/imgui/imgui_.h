@@ -36,6 +36,15 @@ namespace anm2ed::imgui
     POPUP_BY_CURSOR
   };
 
+  enum RenameState
+  {
+    RENAME_SELECTABLE,
+    RENAME_BEGIN,
+    RENAME_EDITING,
+    RENAME_FINISHED,
+    RENAME_FORCE_EDIT
+  };
+
   constexpr float POPUP_MULTIPLIERS[] = {
 #define X(name, multiplier, isHeightSet) multiplier,
       POPUP_LIST
@@ -170,8 +179,8 @@ namespace anm2ed::imgui
   bool input_float_range(const char*, float&, float, float, float = STEP, float = STEP_FAST, const char* = "%.3f",
                          ImGuiInputTextFlags = 0);
   bool combo_negative_one_indexed(const std::string&, int*, std::vector<const char*>&);
-  bool selectable_input_text(const std::string&, const std::string&, std::string&, bool = false,
-                             ImGuiSelectableFlags = 0, bool* = nullptr, bool = false);
+  bool selectable_input_text(const std::string& label, const std::string& id, std::string& text, bool isSelected,
+                             ImGuiSelectableFlags flags, RenameState& state);
   void set_item_tooltip_shortcut(const char*, const std::string& = {});
   void external_storage_set(ImGuiSelectionExternalStorage*, int, bool);
   void render_checker_background(ImDrawList*, ImVec2, ImVec2, glm::vec2, float);

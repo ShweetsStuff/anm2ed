@@ -32,12 +32,21 @@ namespace anm2ed::imgui
 
         for (auto& [id, event] : anm2.content.events)
         {
+          auto isNewEvent = (newEventId == id);
+
           ImGui::PushID(id);
           ImGui::SetNextItemSelectionUserData(id);
-          const bool isNewEvent = (newEventId == id);
+          if (isNewEvent) renameState = RENAME_FORCE_EDIT;
           if (selectable_input_text(event.name, std::format("###Document #{} Event #{}", manager.selected, id),
-                                    event.name, selection.contains(id), ImGuiSelectableFlags_None, nullptr, isNewEvent))
-            if (ImGui::IsItemHovered()) hovered = id;
+                                    event.name, selection.contains(id), ImGuiSelectableFlags_None, renameState))
+          {
+            if (renameState == RENAME_BEGIN)
+              document.snapshot("Rename Event");
+            else if (renameState == RENAME_FINISHED)
+              document.change(Document::EVENTS);
+          }
+          if (ImGui::IsItemHovered()) hovered = id;
+
           if (isNewEvent)
           {
             ImGui::SetScrollHereY(0.5f);

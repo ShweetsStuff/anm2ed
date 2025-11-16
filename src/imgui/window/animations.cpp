@@ -54,7 +54,7 @@ namespace anm2ed::imgui
 
           auto isDefault = anm2.animations.defaultAnimation == animation.name;
           auto isReferenced = reference.animationIndex == (int)i;
-          auto isNewSelection = newAnimationSelectedIndex == (int)i;
+          auto isNewAnimation = newAnimationSelectedIndex == (int)i;
 
           auto font = isDefault && isReferenced ? font::BOLD_ITALICS
                       : isDefault               ? font::BOLD
@@ -64,15 +64,21 @@ namespace anm2ed::imgui
           ImGui::PushFont(resources.fonts[font].get(), font::SIZE);
           ImGui::SetNextItemSelectionUserData((int)i);
 
+          if (isNewAnimation) renameState = RENAME_FORCE_EDIT;
           if (selectable_input_text(animation.name, std::format("###Document #{} Animation #{}", manager.selected, i),
-                                    animation.name, selection.contains((int)i), ImGuiSelectableFlags_None, nullptr,
-                                    isNewSelection))
+                                    animation.name, selection.contains((int)i), ImGuiSelectableFlags_None, renameState))
           {
             reference = {(int)i};
             document.frames.clear();
+
+            if (renameState == RENAME_BEGIN)
+              document.snapshot("Rename Animation");
+            else if (renameState == RENAME_FINISHED)
+              document.change(Document::ANIMATIONS);
           }
           if (ImGui::IsItemHovered()) hovered = (int)i;
-          if (isNewSelection)
+
+          if (isNewAnimation)
           {
             ImGui::SetScrollHereY(0.5f);
             newAnimationSelectedIndex = -1;

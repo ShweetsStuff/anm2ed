@@ -138,6 +138,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         external/lunasvg
         external/SDL
         external/SDL_mixer
+        external/SDL_mixer/include
         include
         include/glad
         src
