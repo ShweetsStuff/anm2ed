@@ -1020,7 +1020,6 @@ namespace anm2ed::imgui
 
           ImGui::BeginDisabled(!item);
           {
-            shortcut(manager.chords[SHORTCUT_ADD]);
             shortcut(manager.chords[SHORTCUT_INSERT_FRAME]);
             if (ImGui::Button("Insert", widgetSize))
             {

@@ -236,13 +236,17 @@ namespace anm2ed::imgui
           {
             if (gridSize.x != 0)
             {
-              minPoint.x = std::floor(minPoint.x / gridSize.x) * gridSize.x;
-              maxPoint.x = std::ceil(maxPoint.x / gridSize.x) * gridSize.x;
+              auto offsetX = static_cast<float>(gridOffset.x);
+              auto sizeX = static_cast<float>(gridSize.x);
+              minPoint.x = std::floor((minPoint.x - offsetX) / sizeX) * sizeX + offsetX;
+              maxPoint.x = std::ceil((maxPoint.x - offsetX) / sizeX) * sizeX + offsetX;
             }
             if (gridSize.y != 0)
             {
-              minPoint.y = std::floor(minPoint.y / gridSize.y) * gridSize.y;
-              maxPoint.y = std::ceil(maxPoint.y / gridSize.y) * gridSize.y;
+              auto offsetY = static_cast<float>(gridOffset.y);
+              auto sizeY = static_cast<float>(gridSize.y);
+              minPoint.y = std::floor((minPoint.y - offsetY) / sizeY) * sizeY + offsetY;
+              maxPoint.y = std::ceil((maxPoint.y - offsetY) / sizeY) * sizeY + offsetY;
             }
           }
           return std::pair{minPoint, maxPoint};
