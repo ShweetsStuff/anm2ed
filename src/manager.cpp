@@ -119,8 +119,16 @@ namespace anm2ed
   {
     if (!vector::in_bounds(documents, index)) return;
 
-    autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), get()->autosave_path_get()),
-                        autosaveFiles.end());
+    const auto autosavePath = documents[index].autosave_path_get();
+    autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), autosavePath), autosaveFiles.end());
+
+    if (!autosavePath.empty())
+    {
+      std::error_code ec{};
+      std::filesystem::remove(autosavePath, ec);
+      if (ec) logger.warning(std::format("Could not remove autosave file {}: {}", autosavePath.string(), ec.message()));
+    }
+
     autosave_files_write();
 
     documents.erase(documents.begin() + index);
