@@ -35,6 +35,8 @@ namespace anm2ed::imgui
     int draggedFrameStart{-1};
     int draggedFrameStartDuration{-1};
     bool isDraggedFrameSnapshot{};
+    bool frameFocusRequested{};
+    int frameFocusIndex{-1};
     FrameDragDrop frameDragDrop{};
     std::vector<int> frameSelectionSnapshot{};
     std::vector<int> frameSelectionLocked{};

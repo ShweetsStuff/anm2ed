@@ -51,6 +51,18 @@ namespace anm2ed::imgui
 
     style = ImGui::GetStyle();
 
+    auto frames_selection_set_reference = [&]()
+    {
+      frames.selection.clear();
+      if (reference.frameIndex >= 0) frames.selection.insert(reference.frameIndex);
+      frameSelectionSnapshot.assign(frames.selection.begin(), frames.selection.end());
+      frameSelectionSnapshotReference = reference;
+      frameSelectionLocked.clear();
+      isFrameSelectionLocked = false;
+      frameFocusIndex = reference.frameIndex;
+      frameFocusRequested = reference.frameIndex >= 0;
+    };
+
     auto frames_delete = [&]()
     {
       if (auto item = animation->item_get(reference.itemType, reference.itemID); item)
@@ -61,9 +73,32 @@ namespace anm2ed::imgui
           item->frames.erase(item->frames.begin() + i);
         }
 
-        reference.frameIndex = -1;
-        frames.clear();
+        reference.frameIndex = glm::clamp(--reference.frameIndex, -1, (int)item->frames.size() - 1);
+        frames_selection_set_reference();
       }
+    };
+
+    auto frames_selection_reset = [&]()
+    {
+      frames.clear();
+      frameSelectionSnapshot.clear();
+      frameSelectionLocked.clear();
+      isFrameSelectionLocked = false;
+      frameFocusRequested = false;
+      frameFocusIndex = -1;
+      frameSelectionSnapshotReference = reference;
+    };
+
+    auto reference_clear = [&]()
+    {
+      reference = {reference.animationIndex};
+      frames_selection_reset();
+    };
+
+    auto reference_set_item = [&](anm2::Type type, int id)
+    {
+      reference = {reference.animationIndex, type, id};
+      frames_selection_reset();
     };
 
     auto context_menu = [&]()
@@ -185,7 +220,7 @@ namespace anm2ed::imgui
           ImGui::PushStyleColor(ImGuiCol_Header, ImVec4());
           ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4());
           ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4());
-          if (ImGui::Selectable("##Item Button", false, ImGuiSelectableFlags_None, itemSize))
+          if (ImGui::Selectable("##Item Button", false, ImGuiSelectableFlags_SelectOnNav, itemSize))
           {
             if (type == anm2::LAYER)
             {
@@ -195,7 +230,7 @@ namespace anm2ed::imgui
             else if (type == anm2::NULL_)
               document.null.selection = {id};
 
-            reference = {reference.animationIndex, type, id};
+            reference_set_item(type, id);
           }
           ImGui::PopStyleColor(3);
           if (ImGui::IsItemHovered())
@@ -424,7 +459,7 @@ namespace anm2ed::imgui
               auto remove = [&]()
               {
                 animation->item_remove(reference.itemType, reference.itemID);
-                reference = {reference.animationIndex};
+                reference_clear();
               };
 
               DOCUMENT_EDIT(document, "Remove Item", Document::ITEMS, remove());
@@ -537,11 +572,9 @@ namespace anm2ed::imgui
         {
           float frameTime{};
 
-          if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) &&
-              ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+          if (ImGui::IsWindowHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Left) && !ImGui::IsAnyItemHovered())
           {
-            frames.clear();
-            reference = {reference.animationIndex, type, id};
+            reference_set_item(type, id);
           }
 
           for (int i = frameMin; i < frameMax; i++)
@@ -565,8 +598,7 @@ namespace anm2ed::imgui
             auto isFrameVisible = isVisible && frame.isVisible;
             auto isReferenced = reference == frameReference;
             auto isSelected =
-                (frames.selection.contains((int)i) && reference.itemType == type && reference.itemID == id) ||
-                isReferenced;
+                (frames.selection.contains((int)i) && reference.itemType == type && reference.itemID == id);
 
             if (type == anm2::TRIGGER) frameTime = frame.atFrame;
 
@@ -574,17 +606,29 @@ namespace anm2ed::imgui
                 type == anm2::TRIGGER ? frameSize : to_imvec2(vec2(frameSize.x * frame.duration, frameSize.y));
             auto buttonPos = ImVec2(cursorPos.x + (frameTime * frameSize.x), cursorPos.y);
 
+            if (frameFocusRequested && frameFocusIndex == (int)i && reference == frameReference)
+            {
+              ImGui::SetKeyboardFocusHere();
+              frameFocusRequested = false;
+            }
+
             ImGui::SetCursorPos(buttonPos);
-            ImGui::PushStyleColor(ImGuiCol_Header, isFrameVisible && isSelected ? colorActive
-                                                   : isSelected                 ? colorActiveHidden
-                                                   : isFrameVisible             ? color
-                                                                                : colorHidden);
+
+            auto buttonScreenPos = ImGui::GetCursorScreenPos();
+            auto fillColor = isSelected ? (isFrameVisible ? colorActive : colorActiveHidden)
+                                        : (isFrameVisible ? color : colorHidden);
+            drawList->AddRectFilled(buttonScreenPos,
+                                    ImVec2(buttonScreenPos.x + buttonSize.x, buttonScreenPos.y + buttonSize.y),
+                                    ImGui::GetColorU32(fillColor));
+
+            ImGui::PushStyleColor(ImGuiCol_Header, isFrameVisible ? colorActive : colorActiveHidden);
             ImGui::PushStyleColor(ImGuiCol_HeaderActive, isFrameVisible ? colorActive : colorActiveHidden);
             ImGui::PushStyleColor(ImGuiCol_HeaderHovered, isFrameVisible ? colorHovered : colorHoveredHidden);
+            ImGui::PushStyleColor(ImGuiCol_NavCursor, isFrameVisible ? colorHovered : colorHoveredHidden);
 
             ImGui::SetNextItemAllowOverlap();
             ImGui::SetNextItemSelectionUserData((int)i);
-            if (ImGui::Selectable("##Frame Button", true, ImGuiSelectableFlags_None, buttonSize))
+            if (ImGui::Selectable("##Frame Button", isSelected, ImGuiSelectableFlags_None, buttonSize))
             {
               if (type == anm2::LAYER)
               {
@@ -604,7 +648,11 @@ namespace anm2ed::imgui
               }
 
               reference = frameReference;
+              isReferenced = true;
             }
+
+            ImGui::PopStyleColor(4);
+
             if (ImGui::IsItemHovered() && ImGui::IsMouseDown(ImGuiMouseButton_Left))
             {
               if (type == anm2::TRIGGER || ImGui::IsKeyDown(ImGuiMod_Ctrl))
@@ -615,8 +663,6 @@ namespace anm2ed::imgui
                 if (type != anm2::TRIGGER) draggedFrameStartDuration = draggedFrame->duration;
               }
             }
-
-            ImGui::PopStyleColor(3);
 
             if (type != anm2::TRIGGER)
             {
@@ -1013,7 +1059,7 @@ namespace anm2ed::imgui
                   }
                 }
 
-                frames.selection = {reference.frameIndex};
+                frames_selection_set_reference();
               };
 
               DOCUMENT_EDIT(document, "Insert Frame", Document::FRAMES, insert_frame());
@@ -1350,22 +1396,20 @@ namespace anm2ed::imgui
 
       if (shortcut(manager.chords[SHORTCUT_PREVIOUS_FRAME], shortcut::GLOBAL, true))
       {
-        if (auto item = document.item_get())
+        if (auto item = document.item_get(); !item->frames.empty())
         {
-          reference.frameIndex--;
-          reference.frameIndex = glm::clamp(reference.frameIndex--, -1, (int)item->frames.size() - 1);
-          frames.selection = {reference.frameIndex};
+          reference.frameIndex = glm::clamp(--reference.frameIndex, 0, (int)item->frames.size() - 1);
+          frames_selection_set_reference();
           document.frameTime = item->frame_time_from_index_get(reference.frameIndex);
         }
       }
 
       if (shortcut(manager.chords[SHORTCUT_NEXT_FRAME], shortcut::GLOBAL, true))
       {
-        if (auto item = document.item_get())
+        if (auto item = document.item_get(); !item->frames.empty())
         {
-          reference.frameIndex++;
-          reference.frameIndex = glm::clamp(reference.frameIndex, -1, (int)item->frames.size() - 1);
-          frames.selection = {reference.frameIndex};
+          reference.frameIndex = glm::clamp(++reference.frameIndex, 0, (int)item->frames.size() - 1);
+          frames_selection_set_reference();
           document.frameTime = item->frame_time_from_index_get(reference.frameIndex);
         }
       }

@@ -337,14 +337,16 @@ namespace anm2ed::imgui
   {
     internal.UserData = this;
 
-    auto io = ImGui::BeginMultiSelect(flags, this->size(), size);
-    internal.ApplyRequests(io);
+    io = ImGui::BeginMultiSelect(flags, this->size(), size);
+    apply();
   }
+
+  void MultiSelectStorage::apply() { internal.ApplyRequests(io); }
 
   void MultiSelectStorage::finish()
   {
-    auto io = ImGui::EndMultiSelect();
-    internal.ApplyRequests(io);
+    io = ImGui::EndMultiSelect();
+    apply();
   }
 
   PopupHelper::PopupHelper(const char* label, PopupType type, PopupPosition position)

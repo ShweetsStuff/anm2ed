@@ -193,6 +193,8 @@ namespace anm2ed::imgui
   {
   public:
     ImGuiSelectionExternalStorage internal{};
+    ImGuiMultiSelectIO* io{};
+
     using std::set<int>::set;
     using std::set<int>::operator=;
     using std::set<int>::begin;
@@ -206,6 +208,7 @@ namespace anm2ed::imgui
     void start(size_t, ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_BoxSelect2d |
                                                      ImGuiMultiSelectFlags_ClearOnEscape |
                                                      ImGuiMultiSelectFlags_ScopeWindow);
+    void apply();
     void finish();
   };
 
