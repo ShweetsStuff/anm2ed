@@ -7,7 +7,7 @@
 namespace anm2ed::snapshots
 {
   constexpr auto ACTION = "Action";
-  constexpr auto MAX = 100;
+  constexpr auto MAX = 20;
 };
 
 namespace anm2ed

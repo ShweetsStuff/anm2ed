@@ -49,7 +49,6 @@ namespace anm2ed::resource
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
-    glGenerateMipmap(GL_TEXTURE_2D);
 
     glBindTexture(GL_TEXTURE_2D, 0);
   }
