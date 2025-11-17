@@ -392,12 +392,19 @@ namespace anm2ed::imgui
                                                    math::percent_to_unit(frame.scale), frame.rotation);
             auto layerTransform = transform * layerModel;
 
-            auto uvMin = frame.crop / vec2(texture.size);
-            auto uvMax = (frame.crop + frame.size) / vec2(texture.size);
-            auto vertices = math::uv_vertices_get(uvMin, uvMax);
+            auto texSize = vec2(texture.size);
+            if (texSize.x <= 0.0f || texSize.y <= 0.0f) continue;
+
+            auto uvMin = frame.crop / texSize;
+            auto uvMax = (frame.crop + frame.size) / texSize;
             vec3 frameColorOffset = frame.colorOffset + colorOffset;
             vec4 frameTint = frame.tint;
             frameTint.a = std::max(0.0f, frameTint.a - alphaOffset);
+
+            auto inset = vec2(0.5f) / texSize;
+            uvMin += inset;
+            uvMax -= inset;
+            auto vertices = math::uv_vertices_get(uvMin, uvMax);
 
             texture_render(shaderTexture, texture.id, layerTransform, frameTint, frameColorOffset, vertices.data());
 
