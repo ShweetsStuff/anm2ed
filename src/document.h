@@ -18,6 +18,7 @@ namespace anm2ed
       LAYERS,
       NULLS,
       SPRITESHEETS,
+      TEXTURES,
       EVENTS,
       ANIMATIONS,
       ITEMS,

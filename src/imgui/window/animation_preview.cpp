@@ -648,20 +648,32 @@ namespace anm2ed::imgui
                                                                                    : ImGuiMouseCursor_NotAllowed;
         ImGui::SetMouseCursor(cursor);
         ImGui::SetKeyboardFocusHere();
-
+        if (useTool != tool::MOVE) isMoveDragging = false;
         switch (useTool)
         {
           case tool::PAN:
-            if (isMouseDown || isMouseMiddleDown) pan += mouseDelta;
+            if (isMouseDown || isMouseMiddleDown) pan += vec2(mouseDelta.x, mouseDelta.y);
             break;
           case tool::MOVE:
             if (!frame) break;
-            if (isBegin) document.snapshot("Frame Position");
-            if (isMouseDown) frame->position = mousePos;
+            if (isBegin)
+            {
+              document.snapshot("Frame Position");
+              if (isMouseClicked)
+              {
+                moveOffset = mousePos - frame->position;
+                isMoveDragging = true;
+              }
+            }
+            if (isMouseDown && isMoveDragging)
+            {
+              frame->position = ivec2(mousePos - moveOffset);
+            }
             if (isLeftPressed) frame->position.x -= step;
             if (isRightPressed) frame->position.x += step;
             if (isUpPressed) frame->position.y -= step;
             if (isDownPressed) frame->position.y += step;
+            if (isMouseReleased) isMoveDragging = false;
             if (isEnd) document.change(Document::FRAMES);
             if (isDuring)
             {
@@ -679,7 +691,7 @@ namespace anm2ed::imgui
             if (isBegin) document.snapshot("Frame Scale");
             if (isMouseDown)
             {
-              frame->scale += mouseDelta;
+              frame->scale += vec2(mouseDelta.x, mouseDelta.y);
               if (isMod) frame->scale = {frame->scale.x, frame->scale.x};
             }
             if (isLeftPressed) frame->scale.x -= step;

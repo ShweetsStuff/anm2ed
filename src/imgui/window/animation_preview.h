@@ -18,12 +18,14 @@ namespace anm2ed::imgui
     float savedZoom{};
     glm::vec2 savedPan{};
     int savedOverlayIndex{};
-    glm::ivec2 mousePos{};
+    glm::vec2 mousePos{};
     glm::vec2 checkerPan{};
     glm::vec2 checkerSyncPan{};
     float checkerSyncZoom{};
     bool isCheckerPanInitialized{};
     bool hasPendingZoomPanAdjust{};
+    bool isMoveDragging{};
+    glm::vec2 moveOffset{};
     std::vector<resource::Texture> renderFrames{};
 
   public:

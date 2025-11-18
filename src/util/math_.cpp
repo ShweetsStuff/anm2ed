@@ -11,10 +11,7 @@ namespace anm2ed::util::math
   constexpr auto FLOAT_FORMAT_EPSILON = 1e-7f;
   constexpr float FLOAT_FORMAT_POW10[] = {1.f, 10.f, 100.f, 1000.f, 10000.f, 100000.f, 1000000.f, 10000000.f};
 
-  float round_nearest_multiple(float value, float multiple)
-  {
-    return (roundf((value) / (multiple)) * (multiple));
-  }
+  float round_nearest_multiple(float value, float multiple) { return (roundf((value) / (multiple)) * (multiple)); }
 
   int float_decimals_needed(float value)
   {
@@ -51,12 +48,13 @@ namespace anm2ed::util::math
     vec2 scaleSign = glm::sign(scale);
     vec2 pivotScaled = pivot * scaleAbsolute;
     vec2 sizeScaled = size * scaleAbsolute;
+    float handedness = (scaleSign.x * scaleSign.y) < 0.0f ? -1.0f : 1.0f;
 
     mat4 model(1.0f);
     model = glm::translate(model, vec3(position - pivotScaled, 0.0f));
     model = glm::translate(model, vec3(pivotScaled, 0.0f));
     model = glm::scale(model, vec3(scaleSign, 1.0f));
-    model = glm::rotate(model, glm::radians(rotation), vec3(0, 0, 1));
+    model = glm::rotate(model, glm::radians(rotation) * handedness, vec3(0, 0, 1));
     model = glm::translate(model, vec3(-pivotScaled, 0.0f));
     model = glm::scale(model, vec3(sizeScaled, 1.0f));
     return model;
