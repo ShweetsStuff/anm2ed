@@ -1,6 +1,7 @@
 #include "timeline.h"
 
 #include <algorithm>
+#include <cstdint>
 
 #include <imgui_internal.h>
 
@@ -16,16 +17,56 @@ using namespace glm;
 namespace anm2ed::imgui
 {
   constexpr auto COLOR_HIDDEN_MULTIPLIER = vec4(0.5f, 0.5f, 0.5f, 1.000f);
-  constexpr auto FRAME_BORDER_COLOR = ImVec4(1.0f, 1.0f, 1.0f, 0.15f);
-  constexpr auto FRAME_BORDER_COLOR_REFERENCED = ImVec4(1.0f, 1.0f, 1.0f, 0.50f);
-  constexpr auto FRAME_MULTIPLE_OVERLAY_COLOR = ImVec4(1.0f, 1.0f, 1.0f, 0.05f);
+  constexpr auto FRAME_BORDER_COLOR_DARK = ImVec4(1.0f, 1.0f, 1.0f, 0.15f);
+  constexpr auto FRAME_BORDER_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 0.25f);
+  constexpr auto FRAME_BORDER_COLOR_REFERENCED_DARK = ImVec4(1.0f, 1.0f, 1.0f, 0.50f);
+  constexpr auto FRAME_BORDER_COLOR_REFERENCED_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 0.60f);
+  constexpr auto FRAME_BORDER_THICKNESS = 1.0f;
+  constexpr auto FRAME_BORDER_THICKNESS_REFERENCED = 2.0f;
+  constexpr auto FRAME_MULTIPLE_OVERLAY_COLOR_DARK = ImVec4(1.0f, 1.0f, 1.0f, 0.05f);
+  constexpr auto FRAME_MULTIPLE_OVERLAY_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 0.1f);
+  constexpr auto FRAME_ROUNDING = 3.0f;
+  constexpr auto ICON_TINT_DEFAULT_DARK = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+  constexpr auto ICON_TINT_DEFAULT_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+  constexpr auto ITEM_TEXT_COLOR_DARK = to_imvec4(color::WHITE);
+  constexpr auto ITEM_TEXT_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+  constexpr auto PLAYHEAD_ICON_TINT_LIGHT = ImVec4(0.3922f, 0.7843f, 0.5882f, 1.0f);
+  constexpr auto PLAYHEAD_LINE_COLOR_DARK = to_imvec4(color::WHITE);
+  constexpr auto PLAYHEAD_LINE_COLOR_LIGHT = ImVec4(0.1961f, 0.5882f, 0.3922f, 1.0f);
   constexpr auto PLAYHEAD_LINE_THICKNESS = 4.0f;
+  constexpr auto TEXT_MULTIPLE_COLOR_DARK = to_imvec4(color::WHITE);
+  constexpr auto TEXT_MULTIPLE_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+  constexpr auto TIMELINE_BACKGROUND_COLOR_LIGHT = ImVec4(0.5490f, 0.5490f, 0.5882f, 1.0f);
+  constexpr auto TIMELINE_PLAYHEAD_RECT_COLOR_DARK = ImVec4(0.60f, 0.45f, 0.30f, 1.0f);
+  constexpr auto TIMELINE_PLAYHEAD_RECT_COLOR_LIGHT = ImVec4(0.8353f, 0.8353f, 0.7294f, 1.0f);
+  constexpr auto TIMELINE_TICK_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+  constexpr auto TIMELINE_TEXT_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
 
-  constexpr auto FRAME_BORDER_THICKNESS = 2.5f;
-  constexpr auto FRAME_BORDER_THICKNESS_REFERENCED = 5.0f;
-
-  constexpr auto TEXT_MULTIPLE_COLOR = to_imvec4(color::WHITE);
-  constexpr auto PLAYHEAD_LINE_COLOR = to_imvec4(color::WHITE);
+  constexpr glm::vec4 FRAME_COLOR_LIGHT_BASE[] = {{0.80f, 0.80f, 0.80f, 1.0f},
+                                                  {0.5216f, 0.7333f, 1.0f, 1.0f},
+                                                  {1.0f, 0.9961f, 0.5882f, 1.0f},
+                                                  {0.6157f, 1.0f, 0.5882f, 1.0f},
+                                                  {1.0f, 0.5882f, 0.8314f, 1.0f}};
+  constexpr glm::vec4 FRAME_COLOR_LIGHT_ACTIVE[] = {{0.74f, 0.74f, 0.74f, 1.0f},
+                                                    {0.4700f, 0.6830f, 0.95f, 1.0f},
+                                                    {0.96f, 0.956f, 0.548f, 1.0f},
+                                                    {0.5757f, 0.95f, 0.5482f, 1.0f},
+                                                    {0.94f, 0.5482f, 0.7814f, 1.0f}};
+  constexpr glm::vec4 FRAME_COLOR_LIGHT_HOVERED[] = {{0.84f, 0.84f, 0.84f, 1.0f},
+                                                     {0.5616f, 0.7733f, 1.0f, 1.0f},
+                                                     {1.0f, 0.9361f, 0.5482f, 1.0f},
+                                                     {0.6557f, 1.0f, 0.6282f, 1.0f},
+                                                     {1.0f, 0.6282f, 0.8714f, 1.0f}};
+  constexpr glm::vec4 ITEM_COLOR_LIGHT_BASE[] = {{0.3059f, 0.3255f, 0.5412f, 1.0f},
+                                                 {0.3333f, 0.5725f, 0.8392f, 1.0f},
+                                                 {0.8706f, 0.4549f, 0.2353f, 1.0f},
+                                                 {0.5255f, 0.8471f, 0.4588f, 1.0f},
+                                                 {0.7961f, 0.3882f, 0.5412f, 1.0f}};
+  constexpr glm::vec4 ITEM_COLOR_LIGHT_ACTIVE[] = {{0.3459f, 0.3655f, 0.5812f, 1.0f},
+                                                   {0.3733f, 0.6125f, 0.8792f, 1.0f},
+                                                   {0.9106f, 0.4949f, 0.2753f, 1.0f},
+                                                   {0.5655f, 0.8871f, 0.4988f, 1.0f},
+                                                   {0.8361f, 0.4282f, 0.5812f, 1.0f}};
 
   constexpr auto FRAME_MULTIPLE = 5;
   constexpr auto FRAME_DRAG_PAYLOAD_ID = "Frame Drag Drop";
@@ -50,6 +91,68 @@ namespace anm2ed::imgui
     auto animation = document.animation_get();
 
     style = ImGui::GetStyle();
+    auto isLightTheme = settings.theme == theme::LIGHT;
+    bool isTextPushed = false;
+    if (isLightTheme)
+    {
+      ImGui::PushStyleColor(ImGuiCol_Text, TIMELINE_TEXT_COLOR_LIGHT);
+      isTextPushed = true;
+    }
+
+    auto type_index = [](anm2::Type type) { return std::clamp((int)type, 0, (int)anm2::TRIGGER); };
+
+    auto type_color_base_vec = [&](anm2::Type type)
+    { return isLightTheme ? FRAME_COLOR_LIGHT_BASE[type_index(type)] : anm2::TYPE_COLOR[type]; };
+
+    auto type_color_active_vec = [&](anm2::Type type)
+    {
+      if (isLightTheme) return FRAME_COLOR_LIGHT_ACTIVE[type_index(type)];
+      return anm2::TYPE_COLOR_ACTIVE[type];
+    };
+
+    auto type_color_hovered_vec = [&](anm2::Type type)
+    {
+      if (isLightTheme) return FRAME_COLOR_LIGHT_HOVERED[type_index(type)];
+      return anm2::TYPE_COLOR_HOVERED[type];
+    };
+
+    auto item_color_vec = [&](anm2::Type type)
+    {
+      if (!isLightTheme) return anm2::TYPE_COLOR[type];
+      return ITEM_COLOR_LIGHT_BASE[type_index(type)];
+    };
+
+    auto item_color_active_vec = [&](anm2::Type type)
+    {
+      if (!isLightTheme) return anm2::TYPE_COLOR_ACTIVE[type];
+      return ITEM_COLOR_LIGHT_ACTIVE[type_index(type)];
+    };
+
+    auto iconTintDefault = isLightTheme ? ICON_TINT_DEFAULT_LIGHT : ICON_TINT_DEFAULT_DARK;
+    auto itemIconTint = isLightTheme ? ICON_TINT_DEFAULT_LIGHT : iconTintDefault;
+    auto frameBorderColor = isLightTheme ? FRAME_BORDER_COLOR_LIGHT : FRAME_BORDER_COLOR_DARK;
+    auto frameBorderColorReferenced =
+        isLightTheme ? FRAME_BORDER_COLOR_REFERENCED_LIGHT : FRAME_BORDER_COLOR_REFERENCED_DARK;
+    auto frameMultipleOverlayColor =
+        isLightTheme ? FRAME_MULTIPLE_OVERLAY_COLOR_LIGHT : FRAME_MULTIPLE_OVERLAY_COLOR_DARK;
+    auto textMultipleColor = isLightTheme ? TEXT_MULTIPLE_COLOR_LIGHT : TEXT_MULTIPLE_COLOR_DARK;
+    auto playheadLineColor = isLightTheme ? PLAYHEAD_LINE_COLOR_LIGHT : PLAYHEAD_LINE_COLOR_DARK;
+    auto playheadIconTint = isLightTheme ? PLAYHEAD_ICON_TINT_LIGHT : iconTintDefault;
+    auto timelineBackgroundColor =
+        isLightTheme ? TIMELINE_BACKGROUND_COLOR_LIGHT : ImGui::GetStyleColorVec4(ImGuiCol_Header);
+    auto timelinePlayheadRectColor =
+        isLightTheme ? TIMELINE_PLAYHEAD_RECT_COLOR_LIGHT : TIMELINE_PLAYHEAD_RECT_COLOR_DARK;
+    auto timelineTickColor = isLightTheme ? TIMELINE_TICK_COLOR_LIGHT : frameBorderColor;
+    auto itemTextColor = isLightTheme ? ITEM_TEXT_COLOR_LIGHT : ITEM_TEXT_COLOR_DARK;
+
+    auto overlay_icon = [&](GLuint textureId, ImVec4 tint, bool isForced = false)
+    {
+      if (!isForced && !isLightTheme) return;
+      auto min = ImGui::GetItemRectMin();
+      auto max = ImGui::GetItemRectMax();
+      ImGui::GetWindowDrawList()->AddImage((ImTextureID)(intptr_t)textureId, min, max, ImVec2(0, 0), ImVec2(1, 1),
+                                           ImGui::GetColorU32(tint));
+    };
 
     auto frames_selection_set_reference = [&]()
     {
@@ -196,8 +299,12 @@ namespace anm2ed::imgui
                    : type == anm2::NULL_ ? std::format(anm2::NULL_FORMAT, id, anm2.content.nulls[id].name)
                                          : anm2::TYPE_STRINGS[type];
       auto icon = anm2::TYPE_ICONS[type];
-      auto color = to_imvec4(isActive ? anm2::TYPE_COLOR_ACTIVE[type] : anm2::TYPE_COLOR[type]);
-      color = !isVisible ? to_imvec4(to_vec4(color) * COLOR_HIDDEN_MULTIPLIER) : color;
+      auto iconTintCurrent = isLightTheme && type == anm2::NONE ? ImVec4(1.0f, 1.0f, 1.0f, 1.0f) : itemIconTint;
+      auto baseColorVec = item_color_vec(type);
+      auto activeColorVec = item_color_active_vec(type);
+      auto colorVec = isActive ? activeColorVec : baseColorVec;
+      auto color = to_imvec4(colorVec);
+      color = !isVisible ? to_imvec4(colorVec * COLOR_HIDDEN_MULTIPLIER) : color;
       ImGui::PushStyleColor(ImGuiCol_ChildBg, color);
 
       ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
@@ -281,9 +388,10 @@ namespace anm2ed::imgui
           ImGui::SetCursorPos(cursorPos);
 
           ImGui::Image(resources.icons[icon].id, icon_size_get());
+          overlay_icon(resources.icons[icon].id, iconTintCurrent);
           ImGui::SameLine();
           if (isReferenced) ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
-          ImGui::PushStyleColor(ImGuiCol_Text, to_imvec4(color::WHITE));
+          ImGui::PushStyleColor(ImGuiCol_Text, itemTextColor);
           ImGui::TextUnformatted(label.c_str());
           ImGui::PopStyleColor();
           if (isReferenced) ImGui::PopFont();
@@ -292,6 +400,7 @@ namespace anm2ed::imgui
           ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4());
           ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4());
           ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2());
+          ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
 
           ImGui::SetCursorPos(
               ImVec2(itemSize.x - ImGui::GetTextLineHeightWithSpacing() - ImGui::GetStyle().ItemSpacing.x,
@@ -299,6 +408,7 @@ namespace anm2ed::imgui
           int visibleIcon = item->isVisible ? icon::VISIBLE : icon::INVISIBLE;
           if (ImGui::ImageButton("##Visible Toggle", resources.icons[visibleIcon].id, icon_size_get()))
             DOCUMENT_EDIT(document, "Item Visibility", Document::FRAMES, item->isVisible = !item->isVisible);
+          overlay_icon(resources.icons[visibleIcon].id, iconTintCurrent);
           ImGui::SetItemTooltip(isVisible ? "The item is shown. Press to hide." : "The item is hidden. Press to show.");
 
           if (type == anm2::NULL_)
@@ -311,11 +421,12 @@ namespace anm2ed::imgui
                        (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
             if (ImGui::ImageButton("##Rect Toggle", resources.icons[rectIcon].id, icon_size_get()))
               DOCUMENT_EDIT(document, "Null Rect", Document::FRAMES, null.isShowRect = !null.isShowRect);
+            overlay_icon(resources.icons[rectIcon].id, iconTintCurrent);
             ImGui::SetItemTooltip(isShowRect ? "The null's rect is shown. Press to hide."
                                              : "The null's rect is hidden. Press to show.");
           }
 
-          ImGui::PopStyleVar();
+          ImGui::PopStyleVar(2);
           ImGui::PopStyleColor(3);
         }
         else
@@ -325,6 +436,7 @@ namespace anm2ed::imgui
           ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4());
           ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4());
           ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2());
+          ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
           ImGui::SetCursorPos(
               ImVec2(itemSize.x - ImGui::GetTextLineHeightWithSpacing() - ImGui::GetStyle().ItemSpacing.x,
                      (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
@@ -333,6 +445,7 @@ namespace anm2ed::imgui
           auto unusedIcon = isShowUnused ? icon::SHOW_UNUSED : icon::HIDE_UNUSED;
           if (ImGui::ImageButton("##Unused Toggle", resources.icons[unusedIcon].id, icon_size_get()))
             isShowUnused = !isShowUnused;
+          overlay_icon(resources.icons[unusedIcon].id, iconTintCurrent);
           ImGui::SetItemTooltip(isShowUnused ? "Unused layers/nulls are shown. Press to hide."
                                              : "Unused layers/nulls are hidden. Press to show.");
 
@@ -343,15 +456,18 @@ namespace anm2ed::imgui
                      (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
           if (ImGui::ImageButton("##Layers Toggle", resources.icons[layersIcon].id, icon_size_get()))
             showLayersOnly = !showLayersOnly;
+          overlay_icon(resources.icons[layersIcon].id, iconTintCurrent);
           ImGui::SetItemTooltip(showLayersOnly ? "Only layers are visible. Press to show all items."
                                                : "All items are visible. Press to only show layers.");
-          ImGui::PopStyleVar();
+          ImGui::PopStyleVar(2);
           ImGui::PopStyleColor(3);
 
           ImGui::SetCursorPos(cursorPos);
 
           ImGui::BeginDisabled();
+          ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
           ImGui::Text("(?)");
+          ImGui::PopStyleColor();
           ImGui::SetItemTooltip("%s", std::format(HELP_FORMAT, settings.shortcutMovePlayheadBack,
                                                   settings.shortcutMovePlayheadForward, settings.shortcutShortenFrame,
                                                   settings.shortcutExtendFrame, settings.shortcutPreviousFrame,
@@ -482,12 +598,15 @@ namespace anm2ed::imgui
       auto& isOnlyShowLayers = settings.timelineIsOnlyShowLayers;
       if (isOnlyShowLayers && type != anm2::LAYER) isVisible = false;
 
-      auto color = to_imvec4(anm2::TYPE_COLOR[type]);
-      auto colorActive = to_imvec4(anm2::TYPE_COLOR_ACTIVE[type]);
-      auto colorHovered = to_imvec4(anm2::TYPE_COLOR_HOVERED[type]);
-      auto colorHidden = to_imvec4(to_vec4(color) * COLOR_HIDDEN_MULTIPLIER);
-      auto colorActiveHidden = to_imvec4(to_vec4(colorActive) * COLOR_HIDDEN_MULTIPLIER);
-      auto colorHoveredHidden = to_imvec4(to_vec4(colorHovered) * COLOR_HIDDEN_MULTIPLIER);
+      auto colorVec = type_color_base_vec(type);
+      auto colorActiveVec = type_color_active_vec(type);
+      auto colorHoveredVec = type_color_hovered_vec(type);
+      auto color = to_imvec4(colorVec);
+      auto colorActive = to_imvec4(colorActiveVec);
+      auto colorHovered = to_imvec4(colorHoveredVec);
+      auto colorHidden = to_imvec4(colorVec * COLOR_HIDDEN_MULTIPLIER);
+      auto colorActiveHidden = to_imvec4(colorActiveVec * COLOR_HIDDEN_MULTIPLIER);
+      auto colorHoveredHidden = to_imvec4(colorHoveredVec * COLOR_HIDDEN_MULTIPLIER);
 
       ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
       ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
@@ -517,20 +636,32 @@ namespace anm2ed::imgui
 
         if (type == anm2::NONE)
         {
-          drawList->AddRectFilled(cursorScreenPos,
-                                  ImVec2(cursorScreenPos.x + framesSize.x, cursorScreenPos.y + framesSize.y),
-                                  ImGui::GetColorU32(ImGui::GetStyleColorVec4(ImGuiCol_Header)));
+          if (isLightTheme)
+          {
+            auto totalMax = ImVec2(cursorScreenPos.x + framesSize.x, cursorScreenPos.y + framesSize.y);
+            drawList->AddRectFilled(cursorScreenPos, totalMax, ImGui::GetColorU32(timelineBackgroundColor));
+            float animationWidth = std::min(framesSize.x, frameSize.x * (float)length);
+            drawList->AddRectFilled(cursorScreenPos,
+                                    ImVec2(cursorScreenPos.x + animationWidth, cursorScreenPos.y + framesSize.y),
+                                    ImGui::GetColorU32(timelinePlayheadRectColor));
+          }
+          else
+          {
+            drawList->AddRectFilled(cursorScreenPos,
+                                    ImVec2(cursorScreenPos.x + framesSize.x, cursorScreenPos.y + framesSize.y),
+                                    ImGui::GetColorU32(ImGui::GetStyleColorVec4(ImGuiCol_Header)));
+          }
 
           for (int i = frameMin; i < frameMax; i++)
           {
             auto frameScreenPos = ImVec2(cursorScreenPos.x + frameSize.x * (float)i, cursorScreenPos.y);
 
             drawList->AddRect(frameScreenPos, ImVec2(frameScreenPos.x + border, frameScreenPos.y + borderLineLength),
-                              ImGui::GetColorU32(FRAME_BORDER_COLOR));
+                              ImGui::GetColorU32(timelineTickColor));
 
             drawList->AddRect(ImVec2(frameScreenPos.x, frameScreenPos.y + frameSize.y - borderLineLength),
                               ImVec2(frameScreenPos.x + border, frameScreenPos.y + frameSize.y),
-                              ImGui::GetColorU32(FRAME_BORDER_COLOR));
+                              ImGui::GetColorU32(timelineTickColor));
 
             if (i % FRAME_MULTIPLE == 0)
             {
@@ -541,9 +672,9 @@ namespace anm2ed::imgui
 
               drawList->AddRectFilled(frameScreenPos,
                                       ImVec2(frameScreenPos.x + frameSize.x, frameScreenPos.y + frameSize.y),
-                                      ImGui::GetColorU32(FRAME_MULTIPLE_OVERLAY_COLOR));
+                                      ImGui::GetColorU32(frameMultipleOverlayColor));
 
-              drawList->AddText(textPos, ImGui::GetColorU32(TEXT_MULTIPLE_COLOR), string.c_str());
+              drawList->AddText(textPos, ImGui::GetColorU32(textMultipleColor), string.c_str());
             }
           }
 
@@ -567,6 +698,7 @@ namespace anm2ed::imgui
 
           ImGui::SetCursorPos(ImVec2(cursorPos.x + frameSize.x * floorf(playback.time), cursorPos.y));
           ImGui::Image(resources.icons[icon::PLAYHEAD].id, frameSize);
+          overlay_icon(resources.icons[icon::PLAYHEAD].id, playheadIconTint, true);
         }
         else if (animation)
         {
@@ -582,10 +714,10 @@ namespace anm2ed::imgui
             auto frameScreenPos = ImVec2(cursorScreenPos.x + frameSize.x * (float)i, cursorScreenPos.y);
             auto frameRectMax = ImVec2(frameScreenPos.x + frameSize.x, frameScreenPos.y + frameSize.y);
 
-            drawList->AddRect(frameScreenPos, frameRectMax, ImGui::GetColorU32(FRAME_BORDER_COLOR));
+            drawList->AddRect(frameScreenPos, frameRectMax, ImGui::GetColorU32(frameBorderColor));
 
             if (i % FRAME_MULTIPLE == 0)
-              drawList->AddRectFilled(frameScreenPos, frameRectMax, ImGui::GetColorU32(FRAME_MULTIPLE_OVERLAY_COLOR));
+              drawList->AddRectFilled(frameScreenPos, frameRectMax, ImGui::GetColorU32(frameMultipleOverlayColor));
           }
 
           frames.selection.start(item->frames.size(), ImGuiMultiSelectFlags_ClearOnEscape);
@@ -604,6 +736,14 @@ namespace anm2ed::imgui
 
             auto buttonSize =
                 type == anm2::TRIGGER ? frameSize : to_imvec2(vec2(frameSize.x * frame.duration, frameSize.y));
+            auto frameStart = type == anm2::TRIGGER ? frame.atFrame : frameTime;
+            auto frameEnd = type == anm2::TRIGGER ? frameStart + 1.0f : frameStart + frame.duration;
+            if (frameEnd <= (float)frameMin || frameStart >= (float)frameMax)
+            {
+              if (type != anm2::TRIGGER) frameTime += frame.duration;
+              ImGui::PopID();
+              continue;
+            }
             auto buttonPos = ImVec2(cursorPos.x + (frameTime * frameSize.x), cursorPos.y);
 
             if (frameFocusRequested && frameFocusIndex == (int)i && reference == frameReference)
@@ -619,7 +759,7 @@ namespace anm2ed::imgui
                                         : (isFrameVisible ? color : colorHidden);
             drawList->AddRectFilled(buttonScreenPos,
                                     ImVec2(buttonScreenPos.x + buttonSize.x, buttonScreenPos.y + buttonSize.y),
-                                    ImGui::GetColorU32(fillColor));
+                                    ImGui::GetColorU32(fillColor), FRAME_ROUNDING);
 
             ImGui::PushStyleColor(ImGuiCol_Header, isFrameVisible ? colorActive : colorActiveHidden);
             ImGui::PushStyleColor(ImGuiCol_HeaderActive, isFrameVisible ? colorActive : colorActiveHidden);
@@ -627,6 +767,7 @@ namespace anm2ed::imgui
             ImGui::PushStyleColor(ImGuiCol_NavCursor, isFrameVisible ? colorHovered : colorHoveredHidden);
 
             ImGui::SetNextItemAllowOverlap();
+            ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, FRAME_ROUNDING);
             ImGui::SetNextItemSelectionUserData((int)i);
             if (ImGui::Selectable("##Frame Button", isSelected, ImGuiSelectableFlags_None, buttonSize))
             {
@@ -650,6 +791,7 @@ namespace anm2ed::imgui
               reference = frameReference;
               isReferenced = true;
             }
+            ImGui::PopStyleVar();
 
             ImGui::PopStyleColor(4);
 
@@ -802,10 +944,9 @@ namespace anm2ed::imgui
 
             auto rectMin = ImGui::GetItemRectMin();
             auto rectMax = ImGui::GetItemRectMax();
-            auto borderColor = isReferenced ? FRAME_BORDER_COLOR_REFERENCED : FRAME_BORDER_COLOR;
+            auto borderColor = isReferenced ? frameBorderColorReferenced : frameBorderColor;
             auto borderThickness = isReferenced ? FRAME_BORDER_THICKNESS_REFERENCED : FRAME_BORDER_THICKNESS;
-            drawList->AddRect(rectMin, rectMax, ImGui::GetColorU32(borderColor), ImGui::GetStyle().FrameRounding, 0,
-                              borderThickness);
+            drawList->AddRect(rectMin, rectMax, ImGui::GetColorU32(borderColor), FRAME_ROUNDING, 0, borderThickness);
 
             auto icon = type == anm2::TRIGGER  ? icon::TRIGGER
                         : frame.isInterpolated ? icon::INTERPOLATED
@@ -814,6 +955,7 @@ namespace anm2ed::imgui
                                   cursorPos.y + (frameSize.y / 2) - (icon_size_get().y / 2));
             ImGui::SetCursorPos(iconPos);
             ImGui::Image(resources.icons[icon].id, icon_size_get());
+            overlay_icon(resources.icons[icon].id, iconTintDefault);
 
             if (type != anm2::TRIGGER) frameTime += frame.duration;
 
@@ -980,17 +1122,20 @@ namespace anm2ed::imgui
 
           auto frameSize = ImVec2(ImGui::GetTextLineHeight(),
                                   ImGui::GetTextLineHeightWithSpacing() + (ImGui::GetStyle().WindowPadding.y * 2));
-          auto linePos = ImVec2(cursorScreenPos.x + frameSize.x * floorf(playback.time) + (frameSize.x / 2) - scroll.x,
-                                cursorScreenPos.y + frameSize.y);
-          auto lineSize =
-              ImVec2((PLAYHEAD_LINE_THICKNESS / 2.0f),
-                     viewListChildSize.y - frameSize.y - (isHorizontalScroll ? ImGui::GetStyle().ScrollbarSize : 0.0f));
+          auto playheadIndex = std::floor(playback.time);
+          auto lineCenterX = cursorScreenPos.x + frameSize.x * (playheadIndex + 0.6f) - scroll.x;
+          float lineOffsetY = frameSize.y;
+          auto linePos =
+              ImVec2(lineCenterX - (PLAYHEAD_LINE_THICKNESS * 0.5f), cursorScreenPos.y + frameSize.y + lineOffsetY);
+          auto lineSize = ImVec2((PLAYHEAD_LINE_THICKNESS / 2.0f),
+                                 viewListChildSize.y - frameSize.y - lineOffsetY -
+                                     (isHorizontalScroll ? ImGui::GetStyle().ScrollbarSize : 0.0f));
 
           auto rectMin = windowDrawList->GetClipRectMin();
           auto rectMax = windowDrawList->GetClipRectMax();
           pickerLineDrawList->PushClipRect(rectMin, rectMax);
           pickerLineDrawList->AddRectFilled(linePos, ImVec2(linePos.x + lineSize.x, linePos.y + lineSize.y),
-                                            ImGui::GetColorU32(PLAYHEAD_LINE_COLOR));
+                                            ImGui::GetColorU32(playheadLineColor));
           pickerLineDrawList->PopClipRect();
 
           ImGui::PopStyleVar();
@@ -1413,5 +1558,7 @@ namespace anm2ed::imgui
         }
       }
     }
+
+    if (isTextPushed) ImGui::PopStyleColor();
   }
 }
