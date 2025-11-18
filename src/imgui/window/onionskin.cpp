@@ -18,7 +18,6 @@ namespace anm2ed::imgui
     auto& beforeColor = settings.onionskinBeforeColor;
     auto& afterCount = settings.onionskinAfterCount;
     auto& afterColor = settings.onionskinAfterColor;
-    auto& drawOrder = settings.onionskinDrawOrder;
 
     if (ImGui::Begin("Onionskin", &settings.windowIsOnionskin))
     {
@@ -38,14 +37,6 @@ namespace anm2ed::imgui
 
       configure_widgets("Before", beforeCount, beforeColor);
       configure_widgets("After", afterCount, afterColor);
-
-      ImGui::Text("Draw Order");
-      ImGui::SameLine();
-      ImGui::RadioButton("Below", &drawOrder, draw_order::BELOW);
-      ImGui::SetItemTooltip("The onionskin frames will draw below the original frames.");
-      ImGui::SameLine();
-      ImGui::RadioButton("Above", &drawOrder, draw_order::ABOVE);
-      ImGui::SetItemTooltip("The onionskin frames will draw above the original frames.");
     }
     ImGui::End();
 

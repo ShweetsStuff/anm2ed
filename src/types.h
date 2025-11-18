@@ -4,15 +4,6 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui/imgui.h>
 
-namespace anm2ed::types::draw_order
-{
-  enum Type
-  {
-    BELOW,
-    ABOVE
-  };
-}
-
 namespace anm2ed::types::theme
 {
 #define THEMES                                                                                                         \

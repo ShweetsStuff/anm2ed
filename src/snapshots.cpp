@@ -1,29 +1,51 @@
 #include "snapshots.h"
 
+#include <algorithm>
+
 using namespace anm2ed::snapshots;
 
 namespace anm2ed
 {
-  bool SnapshotStack::is_empty() { return top == 0; }
+  int SnapshotStack::maxSize = snapshots::MAX;
+
+  bool SnapshotStack::is_empty() { return stack.empty(); }
 
   void SnapshotStack::push(const Snapshot& snapshot)
   {
-    if (top >= MAX)
+    if (maxSize <= 0)
     {
-      for (int i = 0; i < MAX - 1; i++)
-        snapshots[i] = snapshots[i + 1];
-      top = MAX - 1;
+      stack.clear();
+      return;
     }
-    snapshots[top++] = snapshot;
+    if ((int)stack.size() >= maxSize) stack.pop_front();
+    stack.push_back(snapshot);
   }
 
-  Snapshot* SnapshotStack::pop()
+  std::optional<Snapshot> SnapshotStack::pop()
   {
-    if (is_empty()) return nullptr;
-    return &snapshots[--top];
+    if (is_empty()) return std::nullopt;
+    auto snapshot = stack.back();
+    stack.pop_back();
+    return snapshot;
   }
 
-  void SnapshotStack::clear() { top = 0; }
+  void SnapshotStack::clear() { stack.clear(); }
+
+  void SnapshotStack::trim_to_limit()
+  {
+    if (maxSize <= 0)
+    {
+      clear();
+      return;
+    }
+
+    while ((int)stack.size() > maxSize)
+      stack.pop_front();
+  }
+
+  void SnapshotStack::max_size_set(int value) { maxSize = std::max(0, value); }
+
+  int SnapshotStack::max_size_get() { return maxSize; }
 
   void Snapshots::push(const Snapshot& snapshot)
   {
@@ -53,5 +75,11 @@ namespace anm2ed
   {
     undoStack.clear();
     redoStack.clear();
+  }
+
+  void Snapshots::apply_limit()
+  {
+    undoStack.trim_to_limit();
+    redoStack.trim_to_limit();
   }
 };

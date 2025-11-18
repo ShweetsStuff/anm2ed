@@ -43,6 +43,8 @@ namespace anm2ed::imgui
         }
       };
 
+      auto iconTint = settings.theme == theme::LIGHT ? ImVec4(0.0f, 0.0f, 0.0f, 1.0f) : ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+
       for (int i = 0; i < tool::COUNT; i++)
       {
         auto& info = tool::INFO[i];
@@ -65,7 +67,9 @@ namespace anm2ed::imgui
         {
           if (i == tool::UNDO) ImGui::BeginDisabled(!document.is_able_to_undo());
           if (i == tool::REDO) ImGui::BeginDisabled(!document.is_able_to_redo());
-          if (ImGui::ImageButton(info.label, resources.icons[info.icon].id, to_imvec2(size))) tool_use((tool::Type)i);
+          if (ImGui::ImageButton(info.label, resources.icons[info.icon].id, to_imvec2(size), ImVec2(0, 0), ImVec2(1, 1),
+                                 ImVec4(0, 0, 0, 0), iconTint))
+            tool_use((tool::Type)i);
           if (i == tool::UNDO) ImGui::EndDisabled();
           if (i == tool::REDO) ImGui::EndDisabled();
         }

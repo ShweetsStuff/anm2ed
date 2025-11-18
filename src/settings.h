@@ -49,6 +49,7 @@ namespace anm2ed
   X(FILE_IS_AUTOSAVE, fileIsAutosave, "Autosave", BOOL, true)                                                          \
   X(FILE_AUTOSAVE_TIME, fileAutosaveTime, "Autosave Time", INT, 1)                                                     \
   X(FILE_IS_WARN_OVERWRITE, fileIsWarnOverwrite, "Warn on Overwrite", BOOL, true)                                      \
+  X(FILE_SNAPSHOT_STACK_SIZE, fileSnapshotStackSize, "Snapshot Stack Size", INT, 50)                                   \
                                                                                                                        \
   X(KEYBOARD_REPEAT_DELAY, keyboardRepeatDelay, "Repeat Delay", FLOAT, 0.300f)                                         \
   X(KEYBOARD_REPEAT_RATE, keyboardRepeatRate, "Repeat Rate", FLOAT, 0.050f)                                            \
@@ -136,7 +137,6 @@ namespace anm2ed
   X(TIMELINE_IS_SOUND, timelineIsSound, "Sound", BOOL, true)                                                           \
                                                                                                                        \
   X(ONIONSKIN_IS_ENABLED, onionskinIsEnabled, "Enabled", BOOL, false)                                                  \
-  X(ONIONSKIN_DRAW_ORDER, onionskinDrawOrder, "Draw Order", INT, 0)                                                    \
   X(ONIONSKIN_BEFORE_COUNT, onionskinBeforeCount, "Frames", INT, 0)                                                    \
   X(ONIONSKIN_AFTER_COUNT, onionskinAfterCount, "Frames", INT, 0)                                                      \
   X(ONIONSKIN_BEFORE_COLOR, onionskinBeforeColor, "Color", VEC3, types::color::RED)                                    \

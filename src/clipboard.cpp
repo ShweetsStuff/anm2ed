@@ -4,6 +4,8 @@
 
 namespace anm2ed
 {
+  Clipboard::Clipboard() { set(""); }
+
   std::string Clipboard::get()
   {
     auto text = SDL_GetClipboardText();
@@ -13,13 +15,7 @@ namespace anm2ed
     return string;
   }
 
-  bool Clipboard::is_empty()
-  {
-    return get().empty();
-  }
+  bool Clipboard::is_empty() { return get().empty(); }
 
-  void Clipboard::set(const std::string& string)
-  {
-    SDL_SetClipboardText(string.data());
-  }
+  void Clipboard::set(const std::string& string) { SDL_SetClipboardText(string.data()); }
 }

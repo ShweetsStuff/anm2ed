@@ -50,6 +50,33 @@ namespace anm2ed::imgui
     auto& shaderTexture = resources.shaders[shader::TEXTURE];
     auto& dashedShader = resources.shaders[shader::DASHED];
 
+    auto reset_checker_pan = [&]()
+    {
+      checkerPan = pan;
+      checkerSyncPan = pan;
+      checkerSyncZoom = zoom;
+      isCheckerPanInitialized = true;
+      hasPendingZoomPanAdjust = false;
+    };
+
+    auto sync_checker_pan = [&]()
+    {
+      if (!isCheckerPanInitialized)
+      {
+        reset_checker_pan();
+        return;
+      }
+
+      if (pan != checkerSyncPan || zoom != checkerSyncZoom)
+      {
+        bool ignorePanDelta = hasPendingZoomPanAdjust && zoom != checkerSyncZoom;
+        if (!ignorePanDelta) checkerPan += pan - checkerSyncPan;
+        checkerSyncPan = pan;
+        checkerSyncZoom = zoom;
+        if (ignorePanDelta) hasPendingZoomPanAdjust = false;
+      }
+    };
+
     auto center_view = [&]() { pan = -size * 0.5f; };
 
     if (ImGui::Begin("Spritesheet Editor", &settings.windowIsSpritesheetEditor))
@@ -173,7 +200,8 @@ namespace anm2ed::imgui
 
       unbind();
 
-      render_checker_background(drawList, min, max, -size * 0.5f - pan, CHECKER_SIZE);
+      sync_checker_pan();
+      render_checker_background(drawList, min, max, -size * 0.5f - checkerPan, CHECKER_SIZE);
       if (!isTransparent) drawList->AddRectFilled(min, max, ImGui::GetColorU32(to_imvec4(vec4(backgroundColor, 1.0f))));
       drawList->AddImage(texture, min, max);
       ImGui::InvisibleButton("##Spritesheet Editor", to_imvec2(size));
@@ -236,15 +264,15 @@ namespace anm2ed::imgui
           {
             if (gridSize.x != 0)
             {
-              auto offsetX = static_cast<float>(gridOffset.x);
-              auto sizeX = static_cast<float>(gridSize.x);
+              auto offsetX = (float)(gridOffset.x);
+              auto sizeX = (float)(gridSize.x);
               minPoint.x = std::floor((minPoint.x - offsetX) / sizeX) * sizeX + offsetX;
               maxPoint.x = std::ceil((maxPoint.x - offsetX) / sizeX) * sizeX + offsetX;
             }
             if (gridSize.y != 0)
             {
-              auto offsetY = static_cast<float>(gridOffset.y);
-              auto sizeY = static_cast<float>(gridSize.y);
+              auto offsetY = (float)(gridOffset.y);
+              auto sizeY = (float)(gridSize.y);
               minPoint.y = std::floor((minPoint.y - offsetY) / sizeY) * sizeY + offsetY;
               maxPoint.y = std::ceil((maxPoint.y - offsetY) / sizeY) * sizeY + offsetY;
             }
@@ -380,7 +408,9 @@ namespace anm2ed::imgui
           if (auto spritesheet = document.spritesheet_get(); spritesheet && mouseWheel == 0)
             focus = spritesheet->texture.size / 2;
 
+          auto previousZoom = zoom;
           zoom_set(zoom, pan, focus, (mouseWheel > 0 || isZoomIn) ? zoomStep : -zoomStep);
+          if (zoom != previousZoom) hasPendingZoomPanAdjust = true;
         }
       }
     }
@@ -392,6 +422,7 @@ namespace anm2ed::imgui
       zoom = settings.editorStartZoom;
       set();
       center_view();
+      reset_checker_pan();
       document.isSpritesheetEditorSet = true;
     }
 

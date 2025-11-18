@@ -10,7 +10,7 @@
 namespace anm2ed::anm2
 {
   constexpr auto FRAME_DURATION_MIN = 1;
-  constexpr auto FRAME_DURATION_MAX = 100000;
+  constexpr auto FRAME_DURATION_MAX = 1000000;
 
 #define MEMBERS                                                                                                        \
   X(isVisible, bool, true)                                                                                             \

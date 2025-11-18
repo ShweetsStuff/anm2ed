@@ -1,5 +1,8 @@
 #pragma once
 
+#include <deque>
+#include <optional>
+
 #include "anm2/anm2.h"
 #include "playback.h"
 #include "storage.h"
@@ -34,13 +37,20 @@ namespace anm2ed
   class SnapshotStack
   {
   public:
-    Snapshot snapshots[snapshots::MAX];
-    int top{};
+    SnapshotStack() = default;
 
     bool is_empty();
     void push(const Snapshot&);
-    Snapshot* pop();
+    std::optional<Snapshot> pop();
     void clear();
+    void trim_to_limit();
+
+    static void max_size_set(int);
+    static int max_size_get();
+
+  private:
+    static int maxSize;
+    std::deque<Snapshot> stack;
   };
 
   class Snapshots
@@ -55,5 +65,6 @@ namespace anm2ed
     void undo();
     void redo();
     void reset();
+    void apply_limit();
   };
 }

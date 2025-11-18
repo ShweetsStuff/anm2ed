@@ -14,10 +14,17 @@ namespace anm2ed::imgui
   {
     auto viewport = ImGui::GetMainViewport();
     auto windowHeight = ImGui::GetFrameHeightWithSpacing();
+    bool isLightTheme = settings.theme == theme::LIGHT;
+    bool pushedStyle = false;
 
     ImGui::SetNextWindowViewport(viewport->ID);
     ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + taskbar.height));
     ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, windowHeight));
+    if (isLightTheme)
+    {
+      ImGui::PushStyleColor(ImGuiCol_WindowBg, ImGui::GetStyleColorVec4(ImGuiCol_TitleBgActive));
+      pushedStyle = true;
+    }
 
     for (auto& document : manager.documents)
     {
@@ -159,6 +166,7 @@ namespace anm2ed::imgui
     }
 
     ImGui::End();
+    if (pushedStyle) ImGui::PopStyleColor();
 
     if (manager.isAnm2DragDrop)
     {

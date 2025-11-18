@@ -1,6 +1,7 @@
 #include "timeline.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 
 #include <imgui_internal.h>
@@ -40,6 +41,7 @@ namespace anm2ed::imgui
   constexpr auto TIMELINE_PLAYHEAD_RECT_COLOR_DARK = ImVec4(0.60f, 0.45f, 0.30f, 1.0f);
   constexpr auto TIMELINE_PLAYHEAD_RECT_COLOR_LIGHT = ImVec4(0.8353f, 0.8353f, 0.7294f, 1.0f);
   constexpr auto TIMELINE_TICK_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+  constexpr auto TIMELINE_CHILD_BG_COLOR_LIGHT = ImVec4(0.5490f, 0.5490f, 0.5882f, 1.0f);
   constexpr auto TIMELINE_TEXT_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
 
   constexpr glm::vec4 FRAME_COLOR_LIGHT_BASE[] = {{0.80f, 0.80f, 0.80f, 1.0f},
@@ -48,18 +50,18 @@ namespace anm2ed::imgui
                                                   {0.6157f, 1.0f, 0.5882f, 1.0f},
                                                   {1.0f, 0.5882f, 0.8314f, 1.0f}};
   constexpr glm::vec4 FRAME_COLOR_LIGHT_ACTIVE[] = {{0.74f, 0.74f, 0.74f, 1.0f},
-                                                    {0.4700f, 0.6830f, 0.95f, 1.0f},
-                                                    {0.96f, 0.956f, 0.548f, 1.0f},
-                                                    {0.5757f, 0.95f, 0.5482f, 1.0f},
-                                                    {0.94f, 0.5482f, 0.7814f, 1.0f}};
+                                                    {0.0980f, 0.3765f, 0.6431f, 1.0f},
+                                                    {1.0f, 0.5255f, 0.3333f, 1.0f},
+                                                    {0.3686f, 0.5765f, 0.2353f, 1.0f},
+                                                    {0.6118f, 0.2039f, 0.2745f, 1.0f}};
   constexpr glm::vec4 FRAME_COLOR_LIGHT_HOVERED[] = {{0.84f, 0.84f, 0.84f, 1.0f},
-                                                     {0.5616f, 0.7733f, 1.0f, 1.0f},
-                                                     {1.0f, 0.9361f, 0.5482f, 1.0f},
-                                                     {0.6557f, 1.0f, 0.6282f, 1.0f},
-                                                     {1.0f, 0.6282f, 0.8714f, 1.0f}};
+                                                     {0.0752f, 0.2887f, 0.4931f, 1.0f},
+                                                     {0.85f, 0.4467f, 0.2833f, 1.0f},
+                                                     {0.2727f, 0.4265f, 0.1741f, 1.0f},
+                                                     {0.4618f, 0.1539f, 0.2072f, 1.0f}};
   constexpr glm::vec4 ITEM_COLOR_LIGHT_BASE[] = {{0.3059f, 0.3255f, 0.5412f, 1.0f},
                                                  {0.3333f, 0.5725f, 0.8392f, 1.0f},
-                                                 {0.8706f, 0.4549f, 0.2353f, 1.0f},
+                                                 {1.0f, 0.5412f, 0.3412f, 1.0f},
                                                  {0.5255f, 0.8471f, 0.4588f, 1.0f},
                                                  {0.7961f, 0.3882f, 0.5412f, 1.0f}};
   constexpr glm::vec4 ITEM_COLOR_LIGHT_ACTIVE[] = {{0.3459f, 0.3655f, 0.5812f, 1.0f},
@@ -67,6 +69,11 @@ namespace anm2ed::imgui
                                                    {0.9106f, 0.4949f, 0.2753f, 1.0f},
                                                    {0.5655f, 0.8871f, 0.4988f, 1.0f},
                                                    {0.8361f, 0.4282f, 0.5812f, 1.0f}};
+  constexpr glm::vec4 ITEM_COLOR_LIGHT_SELECTED[] = {{0.74f, 0.74f, 0.74f, 1.0f},
+                                                     {0.2039f, 0.4549f, 0.7176f, 1.0f},
+                                                     {0.8745f, 0.4392f, 0.2275f, 1.0f},
+                                                     {0.3765f, 0.6784f, 0.2980f, 1.0f},
+                                                     {0.6353f, 0.2235f, 0.3647f, 1.0f}};
 
   constexpr auto FRAME_MULTIPLE = 5;
   constexpr auto FRAME_DRAG_PAYLOAD_ID = "Frame Drag Drop";
@@ -302,7 +309,15 @@ namespace anm2ed::imgui
       auto iconTintCurrent = isLightTheme && type == anm2::NONE ? ImVec4(1.0f, 1.0f, 1.0f, 1.0f) : itemIconTint;
       auto baseColorVec = item_color_vec(type);
       auto activeColorVec = item_color_active_vec(type);
-      auto colorVec = isActive ? activeColorVec : baseColorVec;
+      bool isTypeNone = type == anm2::NONE;
+      auto colorVec = baseColorVec;
+      if (isActive && !isTypeNone)
+      {
+        if (isLightTheme)
+          colorVec = ITEM_COLOR_LIGHT_SELECTED[type_index(type)];
+        else
+          colorVec = activeColorVec;
+      }
       auto color = to_imvec4(colorVec);
       color = !isVisible ? to_imvec4(colorVec * COLOR_HIDDEN_MULTIPLIER) : color;
       ImGui::PushStyleColor(ImGuiCol_ChildBg, color);
@@ -319,7 +334,7 @@ namespace anm2ed::imgui
 
         auto cursorPos = ImGui::GetCursorPos();
 
-        if (type != anm2::NONE)
+        if (!isTypeNone)
         {
           ImGui::SetCursorPos(to_imvec2(to_vec2(cursorPos) - to_vec2(style.ItemSpacing)));
 
@@ -618,6 +633,8 @@ namespace anm2ed::imgui
       ImGui::PushID(index);
 
       ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2());
+      bool isDefaultChild = type == anm2::NONE;
+      if (isLightTheme && isDefaultChild) ImGui::PushStyleColor(ImGuiCol_ChildBg, TIMELINE_CHILD_BG_COLOR_LIGHT);
 
       if (ImGui::BeginChild("##Frames Child", childSize, ImGuiChildFlags_Borders))
       {
@@ -628,7 +645,7 @@ namespace anm2ed::imgui
         auto framesSize = ImVec2(frameSize.x * length, frameSize.y);
         auto cursorPos = ImGui::GetCursorPos();
         auto cursorScreenPos = ImGui::GetCursorScreenPos();
-        auto border = ImGui::GetStyle().FrameBorderSize;
+        auto border = glm::max(0.5f, ImGui::GetStyle().FrameBorderSize * 0.5f);
         auto borderLineLength = frameSize.y / 5;
         auto frameMin = std::max(0, (int)std::floor(scroll.x / frameSize.x) - 1);
         auto frameMax = std::min(anm2::FRAME_NUM_MAX, (int)std::ceil((scroll.x + clipMax.x) / frameSize.x) + 1);
@@ -657,11 +674,11 @@ namespace anm2ed::imgui
             auto frameScreenPos = ImVec2(cursorScreenPos.x + frameSize.x * (float)i, cursorScreenPos.y);
 
             drawList->AddRect(frameScreenPos, ImVec2(frameScreenPos.x + border, frameScreenPos.y + borderLineLength),
-                              ImGui::GetColorU32(timelineTickColor));
+                              ImGui::GetColorU32(timelineTickColor), 0, 0, 0.5f);
 
             drawList->AddRect(ImVec2(frameScreenPos.x, frameScreenPos.y + frameSize.y - borderLineLength),
                               ImVec2(frameScreenPos.x + border, frameScreenPos.y + frameSize.y),
-                              ImGui::GetColorU32(timelineTickColor));
+                              ImGui::GetColorU32(timelineTickColor), 0, 0, 0.5);
 
             if (i % FRAME_MULTIPLE == 0)
             {
@@ -1021,6 +1038,7 @@ namespace anm2ed::imgui
       context_menu();
 
       ImGui::EndChild();
+      if (isLightTheme && isDefaultChild) ImGui::PopStyleColor();
       ImGui::PopStyleVar();
 
       index++;

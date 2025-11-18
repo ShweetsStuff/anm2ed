@@ -12,6 +12,11 @@ namespace anm2ed::imgui
     glm::vec2 mousePos{};
     glm::vec2 previousMousePos{};
     glm::vec2 cropAnchor{};
+    glm::vec2 checkerPan{};
+    glm::vec2 checkerSyncPan{};
+    float checkerSyncZoom{};
+    bool isCheckerPanInitialized{};
+    bool hasPendingZoomPanAdjust{};
 
   public:
     SpritesheetEditor();

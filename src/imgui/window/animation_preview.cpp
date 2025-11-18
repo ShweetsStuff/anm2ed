@@ -26,7 +26,8 @@ namespace anm2ed::imgui
   constexpr auto TARGET_SIZE = vec2(32, 32);
   constexpr auto POINT_SIZE = vec2(4, 4);
   constexpr auto NULL_RECT_SIZE = vec2(100);
-  constexpr auto TRIGGER_TEXT_COLOR = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
+  constexpr auto TRIGGER_TEXT_COLOR_DARK = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
+  constexpr auto TRIGGER_TEXT_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 0.5f);
 
   AnimationPreview::AnimationPreview() : Canvas(vec2()) {}
 
@@ -136,6 +137,8 @@ namespace anm2ed::imgui
           zoom = savedZoom;
           overlayIndex = savedOverlayIndex;
           isSizeTrySet = true;
+          hasPendingZoomPanAdjust = false;
+          isCheckerPanInitialized = false;
         }
 
         if (settings.timelineIsSound) audioStream.capture_end(mixer);
@@ -204,9 +207,37 @@ namespace anm2ed::imgui
     auto& tool = settings.tool;
     auto& isOnlyShowLayers = settings.timelineIsOnlyShowLayers;
     auto& shaderLine = resources.shaders[shader::LINE];
+    bool isLightTheme = settings.theme == theme::LIGHT;
     auto& shaderAxes = resources.shaders[shader::AXIS];
     auto& shaderGrid = resources.shaders[shader::GRID];
     auto& shaderTexture = resources.shaders[shader::TEXTURE];
+
+    auto reset_checker_pan = [&]()
+    {
+      checkerPan = pan;
+      checkerSyncPan = pan;
+      checkerSyncZoom = zoom;
+      isCheckerPanInitialized = true;
+      hasPendingZoomPanAdjust = false;
+    };
+
+    auto sync_checker_pan = [&]()
+    {
+      if (!isCheckerPanInitialized)
+      {
+        reset_checker_pan();
+        return;
+      }
+
+      if (pan != checkerSyncPan || zoom != checkerSyncZoom)
+      {
+        bool ignorePanDelta = hasPendingZoomPanAdjust && zoom != checkerSyncZoom;
+        if (!ignorePanDelta) checkerPan += pan - checkerSyncPan;
+        checkerSyncPan = pan;
+        checkerSyncZoom = zoom;
+        if (ignorePanDelta) hasPendingZoomPanAdjust = false;
+      }
+    };
 
     auto center_view = [&]() { pan = vec2(); };
 
@@ -351,28 +382,77 @@ namespace anm2ed::imgui
       if (isAxes) axes_render(shaderAxes, zoom, pan, axesColor);
       if (isGrid) grid_render(shaderGrid, zoom, pan, gridSize, gridOffset, gridColor);
 
-      auto render = [&](anm2::Animation* animation, float time, vec3 colorOffset = {}, float alphaOffset = {},
-                        bool isOnionskin = false)
+      auto baseTransform = transform_get(zoom, pan);
+      auto frameTime = document.frameTime > -1 && !playback.isPlaying ? document.frameTime : playback.time;
+
+      struct OnionskinSample
       {
-        auto baseTransform = transform_get(zoom, pan);
+        float time{};
+        vec3 colorOffset{};
+        float alphaOffset{};
+        glm::mat4 transform{1.0f};
+        anm2::Frame root{};
+      };
+
+      std::vector<OnionskinSample> onionskinSamples;
+
+      if (animation && settings.onionskinIsEnabled)
+      {
+        auto add_samples = [&](int count, int direction, vec3 color)
+        {
+          for (int i = 1; i <= count; ++i)
+          {
+            float useTime = frameTime + (float)(direction * i);
+            if (useTime < 0.0f || useTime > animation->frameNum) continue;
+
+            float alphaOffset = (1.0f / (count + 1)) * i;
+            OnionskinSample sample{};
+            sample.time = useTime;
+            sample.colorOffset = color;
+            sample.alphaOffset = alphaOffset;
+            sample.root = animation->rootAnimation.frame_generate(sample.time, anm2::ROOT);
+            sample.transform = baseTransform;
+            if (isRootTransform)
+              sample.transform *= math::quad_model_parent_get(
+                  sample.root.position, {}, math::percent_to_unit(sample.root.scale), sample.root.rotation);
+            onionskinSamples.push_back(sample);
+          }
+        };
+
+        add_samples(settings.onionskinBeforeCount, -1, settings.onionskinBeforeColor);
+        add_samples(settings.onionskinAfterCount, 1, settings.onionskinAfterColor);
+      }
+
+      auto render = [&](anm2::Animation* animation, float time, vec3 colorOffset = {}, float alphaOffset = {},
+                        const std::vector<OnionskinSample>* layeredOnions = nullptr)
+      {
         auto transform = baseTransform;
         auto root = animation->rootAnimation.frame_generate(time, anm2::ROOT);
 
         if (isRootTransform)
           transform *= math::quad_model_parent_get(root.position, {}, math::percent_to_unit(root.scale), root.rotation);
 
-        if (!isOnlyShowLayers && root.isVisible && animation->rootAnimation.isVisible)
+        auto draw_root = [&](const anm2::Frame& rootFrame, vec3 sampleColor, float sampleAlpha, bool isOnion)
         {
-          auto rootTransform =
-              isRootTransform ? baseTransform * math::quad_model_get(TARGET_SIZE, root.position, TARGET_SIZE * 0.5f,
-                                                                     math::percent_to_unit(root.scale), root.rotation)
-                              : baseTransform * math::quad_model_get(TARGET_SIZE, {}, TARGET_SIZE * 0.5f);
+          if (isOnlyShowLayers || !rootFrame.isVisible || !animation->rootAnimation.isVisible) return;
 
-          vec4 color = isOnionskin ? vec4(colorOffset, alphaOffset) : color::GREEN;
+          auto rootTransform =
+              isRootTransform
+                  ? baseTransform * math::quad_model_get(TARGET_SIZE, rootFrame.position, TARGET_SIZE * 0.5f,
+                                                         math::percent_to_unit(rootFrame.scale), rootFrame.rotation)
+                  : baseTransform * math::quad_model_get(TARGET_SIZE, {}, TARGET_SIZE * 0.5f);
+
+          vec4 color = isOnion ? vec4(sampleColor, sampleAlpha) : color::GREEN;
 
           auto icon = isAltIcons ? icon::TARGET_ALT : icon::TARGET;
           texture_render(shaderTexture, resources.icons[icon].id, rootTransform, color);
-        }
+        };
+
+        if (layeredOnions)
+          for (auto& sample : *layeredOnions)
+            draw_root(sample.root, sample.colorOffset, sample.alphaOffset, true);
+
+        draw_root(root, {}, 0.0f, false);
 
         for (auto& id : animation->layerOrder)
         {
@@ -381,46 +461,56 @@ namespace anm2ed::imgui
 
           auto& layer = anm2.content.layers.at(id);
 
-          if (auto frame = layerAnimation.frame_generate(time, anm2::LAYER); frame.isVisible)
+          auto spritesheet = anm2.spritesheet_get(layer.spritesheetID);
+          if (!spritesheet || !spritesheet->is_valid()) continue;
+
+          auto draw_layer =
+              [&](float sampleTime, const glm::mat4& sampleTransform, vec3 sampleColor, float sampleAlpha, bool isOnion)
           {
-            auto spritesheet = anm2.spritesheet_get(layer.spritesheetID);
-            if (!spritesheet || !spritesheet->is_valid()) continue;
-
-            auto& texture = spritesheet->texture;
-
-            auto layerModel = math::quad_model_get(frame.size, frame.position, frame.pivot,
-                                                   math::percent_to_unit(frame.scale), frame.rotation);
-            auto layerTransform = transform * layerModel;
-
-            auto texSize = vec2(texture.size);
-            if (texSize.x <= 0.0f || texSize.y <= 0.0f) continue;
-
-            auto uvMin = frame.crop / texSize;
-            auto uvMax = (frame.crop + frame.size) / texSize;
-            vec3 frameColorOffset = frame.colorOffset + colorOffset;
-            vec4 frameTint = frame.tint;
-            frameTint.a = std::max(0.0f, frameTint.a - alphaOffset);
-
-            auto inset = vec2(0.5f) / texSize;
-            uvMin += inset;
-            uvMax -= inset;
-            auto vertices = math::uv_vertices_get(uvMin, uvMax);
-
-            texture_render(shaderTexture, texture.id, layerTransform, frameTint, frameColorOffset, vertices.data());
-
-            auto color = isOnionskin ? vec4(colorOffset, 1.0f - alphaOffset) : color::RED;
-
-            if (isBorder) rect_render(shaderLine, layerTransform, layerModel, color);
-
-            if (isPivots)
+            if (auto frame = layerAnimation.frame_generate(sampleTime, anm2::LAYER); frame.isVisible)
             {
-              auto pivotModel = math::quad_model_get(PIVOT_SIZE, frame.position, PIVOT_SIZE * 0.5f,
-                                                     math::percent_to_unit(frame.scale), frame.rotation);
-              auto pivotTransform = transform * pivotModel;
+              auto& texture = spritesheet->texture;
 
-              texture_render(shaderTexture, resources.icons[icon::PIVOT].id, pivotTransform, color);
+              auto layerModel = math::quad_model_get(frame.size, frame.position, frame.pivot,
+                                                     math::percent_to_unit(frame.scale), frame.rotation);
+              auto layerTransform = sampleTransform * layerModel;
+
+              auto texSize = vec2(texture.size);
+              if (texSize.x <= 0.0f || texSize.y <= 0.0f) return;
+
+              auto uvMin = frame.crop / texSize;
+              auto uvMax = (frame.crop + frame.size) / texSize;
+              vec3 frameColorOffset = frame.colorOffset + colorOffset + sampleColor;
+              vec4 frameTint = frame.tint;
+              frameTint.a = std::max(0.0f, frameTint.a - (alphaOffset + sampleAlpha));
+
+              auto inset = vec2(0.5f) / texSize;
+              uvMin += inset;
+              uvMax -= inset;
+              auto vertices = math::uv_vertices_get(uvMin, uvMax);
+
+              texture_render(shaderTexture, texture.id, layerTransform, frameTint, frameColorOffset, vertices.data());
+
+              auto color = isOnion ? vec4(sampleColor, 1.0f - sampleAlpha) : color::RED;
+
+              if (isBorder) rect_render(shaderLine, layerTransform, layerModel, color);
+
+              if (isPivots)
+              {
+                auto pivotModel = math::quad_model_get(PIVOT_SIZE, frame.position, PIVOT_SIZE * 0.5f,
+                                                       math::percent_to_unit(frame.scale), frame.rotation);
+                auto pivotTransform = sampleTransform * pivotModel;
+
+                texture_render(shaderTexture, resources.icons[icon::PIVOT].id, pivotTransform, color);
+              }
             }
-          }
+          };
+
+          if (layeredOnions)
+            for (auto& sample : *layeredOnions)
+              draw_layer(sample.time, sample.transform, sample.colorOffset, sample.alphaOffset, true);
+
+          draw_layer(time, transform, {}, 0.0f, false);
         }
 
         for (auto& [id, nullAnimation] : animation->nullAnimations)
@@ -429,71 +519,57 @@ namespace anm2ed::imgui
 
           auto& isShowRect = anm2.content.nulls[id].isShowRect;
 
-          if (auto frame = nullAnimation.frame_generate(time, anm2::NULL_); frame.isVisible)
+          auto draw_null =
+              [&](float sampleTime, const glm::mat4& sampleTransform, vec3 sampleColor, float sampleAlpha, bool isOnion)
           {
-            auto icon = isShowRect ? icon::POINT : isAltIcons ? icon::TARGET_ALT : icon::TARGET;
-
-            auto& size = isShowRect ? POINT_SIZE : TARGET_SIZE;
-            auto color = isOnionskin ? vec4(colorOffset, 1.0f - alphaOffset)
-                         : id == reference.itemID && reference.itemType == anm2::NULL_ ? color::RED
-                                                                                       : NULL_COLOR;
-
-            auto nullModel = math::quad_model_get(size, frame.position, size * 0.5f, math::percent_to_unit(frame.scale),
-                                                  frame.rotation);
-            auto nullTransform = transform * nullModel;
-
-            texture_render(shaderTexture, resources.icons[icon].id, nullTransform, color);
-
-            if (isShowRect)
+            if (auto frame = nullAnimation.frame_generate(sampleTime, anm2::NULL_); frame.isVisible)
             {
-              auto rectModel = math::quad_model_get(NULL_RECT_SIZE, frame.position, NULL_RECT_SIZE * 0.5f,
+              auto icon = isShowRect ? icon::POINT : isAltIcons ? icon::TARGET_ALT : icon::TARGET;
+
+              auto& size = isShowRect ? POINT_SIZE : TARGET_SIZE;
+              auto color = isOnion ? vec4(sampleColor, 1.0f - sampleAlpha)
+                           : id == reference.itemID && reference.itemType == anm2::NULL_ ? color::RED
+                                                                                         : NULL_COLOR;
+
+              auto nullModel = math::quad_model_get(size, frame.position, size * 0.5f,
                                                     math::percent_to_unit(frame.scale), frame.rotation);
-              auto rectTransform = transform * rectModel;
+              auto nullTransform = sampleTransform * nullModel;
 
-              rect_render(shaderLine, rectTransform, rectModel, color);
+              texture_render(shaderTexture, resources.icons[icon].id, nullTransform, color);
+
+              if (isShowRect)
+              {
+                auto rectModel = math::quad_model_get(NULL_RECT_SIZE, frame.position, NULL_RECT_SIZE * 0.5f,
+                                                      math::percent_to_unit(frame.scale), frame.rotation);
+                auto rectTransform = sampleTransform * rectModel;
+
+                rect_render(shaderLine, rectTransform, rectModel, color);
+              }
             }
-          }
+          };
+
+          if (layeredOnions)
+            for (auto& sample : *layeredOnions)
+              draw_null(sample.time, sample.transform, sample.colorOffset, sample.alphaOffset, true);
+
+          draw_null(time, transform, {}, 0.0f, false);
         }
       };
-
-      auto onionskin_render = [&](float time, int count, int direction, vec3 color)
-      {
-        for (int i = 1; i <= count; i++)
-        {
-          float useTime = time + (float)(direction * i);
-          if (useTime < 0.0f || useTime > animation->frameNum) continue;
-
-          float alphaOffset = (1.0f / (count + 1)) * i;
-          render(animation, useTime, color, alphaOffset, true);
-        }
-      };
-
-      auto onionskins_render = [&](float time)
-      {
-        onionskin_render(time, settings.onionskinBeforeCount, -1, settings.onionskinBeforeColor);
-        onionskin_render(time, settings.onionskinAfterCount, 1, settings.onionskinAfterColor);
-      };
-
-      auto frameTime = document.frameTime > -1 && !playback.isPlaying ? document.frameTime : playback.time;
 
       if (animation)
       {
-        auto& drawOrder = settings.onionskinDrawOrder;
-        auto& isEnabled = settings.onionskinIsEnabled;
+        auto layeredOnions = settings.onionskinIsEnabled ? &onionskinSamples : nullptr;
 
-        if (drawOrder == draw_order::BELOW && isEnabled) onionskins_render(frameTime);
-
-        render(animation, frameTime);
+        render(animation, frameTime, {}, 0.0f, layeredOnions);
 
         if (auto overlayAnimation = anm2.animation_get(overlayIndex))
           render(overlayAnimation, frameTime, {}, 1.0f - math::uint8_to_float(overlayTransparency));
-
-        if (drawOrder == draw_order::ABOVE && isEnabled) onionskins_render(frameTime);
       }
 
       unbind();
 
-      render_checker_background(ImGui::GetWindowDrawList(), min, max, -size - pan, CHECKER_SIZE);
+      sync_checker_pan();
+      render_checker_background(ImGui::GetWindowDrawList(), min, max, -size - checkerPan, CHECKER_SIZE);
       ImGui::Image(texture, to_imvec2(size));
 
       isPreviewHovered = ImGui::IsItemHovered();
@@ -510,7 +586,8 @@ namespace anm2ed::imgui
 
           drawList->PushClipRect(clipMin, clipMax);
           ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE_LARGE);
-          drawList->AddText(textPos, ImGui::GetColorU32(TRIGGER_TEXT_COLOR),
+          auto triggerTextColor = isLightTheme ? TRIGGER_TEXT_COLOR_LIGHT : TRIGGER_TEXT_COLOR_DARK;
+          drawList->AddText(textPos, ImGui::GetColorU32(triggerTextColor),
                             anm2.content.events.at(trigger.eventID).name.c_str());
           ImGui::PopFont();
           drawList->PopClipRect();
@@ -648,8 +725,12 @@ namespace anm2ed::imgui
         }
 
         if (mouseWheel != 0 || isZoomIn || isZoomOut)
+        {
+          auto previousZoom = zoom;
           zoom_set(zoom, pan, mouseWheel != 0 ? vec2(mousePos) : vec2(),
                    (mouseWheel > 0 || isZoomIn) ? zoomStep : -zoomStep);
+          if (zoom != previousZoom) hasPendingZoomPanAdjust = true;
+        }
       }
     }
     ImGui::End();
@@ -677,6 +758,8 @@ namespace anm2ed::imgui
         settings = savedSettings;
         overlayIndex = savedOverlayIndex;
         isSizeTrySet = true;
+        hasPendingZoomPanAdjust = false;
+        isCheckerPanInitialized = false;
 
         if (settings.timelineIsSound) audioStream.capture_end(mixer);
 
@@ -693,6 +776,7 @@ namespace anm2ed::imgui
     {
       center_view();
       zoom = settings.previewStartZoom;
+      reset_checker_pan();
       document.isAnimationPreviewSet = true;
     }
 

@@ -16,6 +16,7 @@
 #include "math_.h"
 #include "render.h"
 #include "shader.h"
+#include "snapshots.h"
 #include "types.h"
 
 #include "icon.h"
@@ -372,7 +373,6 @@ namespace anm2ed::imgui
 
             for (int i = 0; i < theme::COUNT; i++)
             {
-              if (i == theme::LIGHT) continue; // TODO; light mode is jank rn so i am soft disabling it
               ImGui::RadioButton(theme::STRINGS[i], &editSettings.theme, i);
               ImGui::SameLine();
             }
@@ -400,6 +400,11 @@ namespace anm2ed::imgui
 
             ImGui::Checkbox("Overwrite Warning", &editSettings.fileIsWarnOverwrite);
             ImGui::SetItemTooltip("A warning will be shown when saving a file.");
+
+            ImGui::SeparatorText("Snapshots");
+            input_int_range("Stack Size", editSettings.fileSnapshotStackSize, 0, 1000);
+            ImGui::SetItemTooltip("Set the maximum snapshot stack size of a document\n(i.e., how many undo/redos are "
+                                  "preserved at a time).");
           }
           ImGui::EndChild();
 
@@ -503,6 +508,9 @@ namespace anm2ed::imgui
         settings = editSettings;
         imgui::theme_set((theme::Type)editSettings.theme);
         manager.chords_set(settings);
+        SnapshotStack::max_size_set(settings.fileSnapshotStackSize);
+        for (auto& document : manager.documents)
+          document.snapshots.apply_limit();
         configurePopup.close();
       }
       ImGui::SetItemTooltip("Use the configured settings.");
