@@ -825,12 +825,12 @@ namespace anm2ed::imgui
 
             if (type != anm2::TRIGGER)
             {
-              if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceNoPreviewTooltip))
-              {
-                frameDragDrop = {};
-                frameDragDrop.type = type;
-                frameDragDrop.itemID = id;
-                frameDragDrop.animationIndex = reference.animationIndex;
+            if (!draggedFrame && ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceNoPreviewTooltip))
+            {
+              frameDragDrop = {};
+              frameDragDrop.type = type;
+              frameDragDrop.itemID = id;
+              frameDragDrop.animationIndex = reference.animationIndex;
 
                 auto append_valid_indices = [&](const auto& container)
                 {
@@ -870,8 +870,8 @@ namespace anm2ed::imgui
                 ImGui::EndDragDropSource();
               }
 
-              if (ImGui::BeginDragDropTarget())
-              {
+            if (!draggedFrame && ImGui::BeginDragDropTarget())
+            {
                 if (auto payload = ImGui::AcceptDragDropPayload(FRAME_DRAG_PAYLOAD_ID))
                 {
                   auto source = static_cast<const FrameDragDrop*>(payload->Data);
