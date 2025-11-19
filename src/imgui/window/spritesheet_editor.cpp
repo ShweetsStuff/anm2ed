@@ -41,7 +41,7 @@ namespace anm2ed::imgui
     auto& toolColor = settings.toolColor;
     auto& isGrid = settings.editorIsGrid;
     auto& isGridSnap = settings.editorIsGridSnap;
-    auto& zoomStep = settings.viewZoomStep;
+    auto& zoomStep = settings.inputZoomStep;
     auto& isBorder = settings.editorIsBorder;
     auto& isTransparent = settings.editorIsTransparent;
     auto spritesheet = document.spritesheet_get();

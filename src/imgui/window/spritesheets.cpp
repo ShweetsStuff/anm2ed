@@ -95,7 +95,11 @@ namespace anm2ed::imgui
             auto isSelected = selection.contains(id);
             auto isReferenced = id == reference;
             auto cursorPos = ImGui::GetCursorPos();
-            auto& texture = spritesheet.texture.is_valid() ? spritesheet.texture : resources.icons[icon::NONE];
+            bool isTextureValid = spritesheet.texture.is_valid();
+            auto& texture = isTextureValid ? spritesheet.texture : resources.icons[icon::NONE];
+            auto textureRef = ImTextureRef(texture.id);
+            auto tintColor =
+                !isTextureValid ? ImVec4(1.0f, 0.25f, 0.25f, 1.0f) : ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
             const std::string pathString =
                 spritesheet.path.empty() ? std::string{anm2::NO_PATH} : spritesheet.path.string();
             const char* pathCStr = pathString.c_str();
@@ -134,14 +138,14 @@ namespace anm2ed::imgui
               auto noScrollFlags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
               if (ImGui::BeginChild("##Spritesheet Tooltip Image Child", to_imvec2(textureSize), childFlags,
                                     noScrollFlags))
-                ImGui::Image(texture.id, to_imvec2(textureSize));
+                ImGui::ImageWithBg(textureRef, to_imvec2(textureSize), ImVec2(), ImVec2(1, 1), ImVec4(), tintColor);
               ImGui::EndChild();
               ImGui::PopStyleVar();
 
               ImGui::SameLine();
 
               auto infoChildFlags = ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY;
-              if (ImGui::BeginChild("##Spritesheet Info Tooltip Child", ImVec2(0, 0), infoChildFlags, noScrollFlags))
+              if (ImGui::BeginChild("##Spritesheet Info Tooltip Child", ImVec2(), infoChildFlags, noScrollFlags))
               {
                 ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
                 ImGui::TextUnformatted(pathCStr);
@@ -149,7 +153,7 @@ namespace anm2ed::imgui
 
                 ImGui::Text("ID: %d", id);
 
-                if (!spritesheet.texture.is_valid())
+                if (!isTextureValid)
                   ImGui::Text("This spritesheet isn't valid!\nLoad an existing, valid texture.");
                 else
                   ImGui::Text("Size: %d x %d", texture.size.x, texture.size.y);
@@ -169,7 +173,7 @@ namespace anm2ed::imgui
               imageSize.y = imageSize.x / aspectRatio;
 
             ImGui::SetCursorPos(cursorPos);
-            ImGui::Image(texture.id, imageSize);
+            ImGui::ImageWithBg(textureRef, imageSize, ImVec2(), ImVec2(1, 1), ImVec4(), tintColor);
 
             ImGui::SetCursorPos(
                 ImVec2(spritesheetChildSize.y + style.ItemSpacing.x,

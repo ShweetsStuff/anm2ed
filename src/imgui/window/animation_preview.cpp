@@ -195,7 +195,7 @@ namespace anm2ed::imgui
     auto& gridColor = settings.previewGridColor;
     auto& gridSize = settings.previewGridSize;
     auto& gridOffset = settings.previewGridOffset;
-    auto& zoomStep = settings.viewZoomStep;
+    auto& zoomStep = settings.inputZoomStep;
     auto& isGrid = settings.previewIsGrid;
     auto& overlayTransparency = settings.previewOverlayTransparency;
     auto& overlayIndex = document.overlayIndex;
@@ -661,14 +661,11 @@ namespace anm2ed::imgui
               document.snapshot("Frame Position");
               if (isMouseClicked)
               {
-                moveOffset = mousePos - frame->position;
+                moveOffset = settings.inputIsMoveToolSnapToMouse ? vec2() : mousePos - frame->position;
                 isMoveDragging = true;
               }
             }
-            if (isMouseDown && isMoveDragging)
-            {
-              frame->position = ivec2(mousePos - moveOffset);
-            }
+            if (isMouseDown && isMoveDragging) frame->position = ivec2(mousePos - moveOffset);
             if (isLeftPressed) frame->position.x -= step;
             if (isRightPressed) frame->position.x += step;
             if (isUpPressed) frame->position.y -= step;

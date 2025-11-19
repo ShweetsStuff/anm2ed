@@ -264,7 +264,7 @@ namespace anm2ed::imgui
       auto& count = settings.generateCount;
       auto& delay = settings.generateDelay;
       auto& zoom = settings.generateZoom;
-      auto& zoomStep = settings.viewZoomStep;
+      auto& zoomStep = settings.inputZoomStep;
 
       auto childSize = ImVec2(row_widget_width_get(2), size_without_footer_get().y);
 
@@ -396,15 +396,14 @@ namespace anm2ed::imgui
             ImGui::SetItemTooltip("If changed, will autosave documents using this interval.");
             ImGui::EndDisabled();
 
-            ImGui::SeparatorText("Options");
-
-            ImGui::Checkbox("Overwrite Warning", &editSettings.fileIsWarnOverwrite);
-            ImGui::SetItemTooltip("A warning will be shown when saving a file.");
-
             ImGui::SeparatorText("Snapshots");
             input_int_range("Stack Size", editSettings.fileSnapshotStackSize, 0, 1000);
-            ImGui::SetItemTooltip("Set the maximum snapshot stack size of a document\n(i.e., how many undo/redos are "
+            ImGui::SetItemTooltip("Set the maximum snapshot stack size of a document (i.e., how many undo/redos are "
                                   "preserved at a time).");
+
+            ImGui::SeparatorText("Options");
+            ImGui::Checkbox("Overwrite Warning", &editSettings.fileIsWarnOverwrite);
+            ImGui::SetItemTooltip("A warning will be shown when saving/overwriting a file.");
           }
           ImGui::EndChild();
 
@@ -427,8 +426,14 @@ namespace anm2ed::imgui
 
             ImGui::SeparatorText("Zoom");
 
-            input_float_range("Step", editSettings.viewZoomStep, 10.0f, 250.0f, 10.0f, 10.0f, "%.0f%%");
+            input_float_range("Step", editSettings.inputZoomStep, 10.0f, 250.0f, 10.0f, 10.0f, "%.0f%%");
             ImGui::SetItemTooltip("When zooming in/out with mouse or shortcut, this value will be used.");
+
+            ImGui::SeparatorText("Tool");
+
+            ImGui::Checkbox("Move Tool: Snap to Mouse", &editSettings.inputIsMoveToolSnapToMouse);
+            ImGui::SetItemTooltip("In Animation Preview, the Move tool will snap the frame's position right to the "
+                                  "cursor, instead of being moved at a distance.");
           }
           ImGui::EndChild();
 

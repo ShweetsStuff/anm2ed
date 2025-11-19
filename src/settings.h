@@ -54,7 +54,8 @@ namespace anm2ed
   X(KEYBOARD_REPEAT_DELAY, keyboardRepeatDelay, "Repeat Delay", FLOAT, 0.300f)                                         \
   X(KEYBOARD_REPEAT_RATE, keyboardRepeatRate, "Repeat Rate", FLOAT, 0.050f)                                            \
                                                                                                                        \
-  X(VIEW_ZOOM_STEP, viewZoomStep, "Zoom Step", FLOAT, 50.0f)                                                           \
+  X(INPUT_ZOOM_STEP, inputZoomStep, "Zoom Step", FLOAT, 50.0f)                                                         \
+  X(INPUT_IS_MOVE_TOOL_SNAP_TO_MOUSE, inputIsMoveToolSnapToMouse, "Move Tool: Snap to Mouse", BOOL, false)             \
                                                                                                                        \
   X(PLAYBACK_IS_LOOP, playbackIsLoop, "Loop", BOOL, true)                                                              \
   X(PLAYBACK_IS_CLAMP, playbackIsClamp, "Clamp", BOOL, true)                                                           \
