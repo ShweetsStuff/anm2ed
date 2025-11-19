@@ -94,13 +94,7 @@ namespace anm2ed::imgui
             ImGui::TextUnformatted(animation.name.c_str());
             ImGui::PopFont();
 
-            if (isDefault)
-            {
-
-              ImGui::PushFont(resources.fonts[font::ITALICS].get(), font::SIZE);
-              ImGui::TextUnformatted("(Default Animation)");
-              ImGui::PopFont();
-            }
+            if (isDefault) ImGui::TextUnformatted("(Default Animation)");
 
             ImGui::Text("Length: %d", animation.frameNum);
             ImGui::Text("Loop: %s", animation.isLoop ? "true" : "false");

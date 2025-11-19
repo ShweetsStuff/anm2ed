@@ -111,15 +111,13 @@ namespace anm2ed::imgui
             }
 
             auto viewport = ImGui::GetMainViewport();
-            auto textureSize = texture.size.x * texture.size.y > (viewport->Size.x * viewport->Size.y) * 0.5f
-                                   ? to_vec2(viewport->Size) * 0.5f
-                                   : vec2(texture.size);
-            auto aspectRatio = (float)texture.size.x / texture.size.y;
-
-            if (textureSize.x / textureSize.y > aspectRatio)
-              textureSize.x = textureSize.y * aspectRatio;
-            else
-              textureSize.y = textureSize.x / aspectRatio;
+            auto maxPreviewSize = to_vec2(viewport->Size) * 0.5f;
+            vec2 textureSize = vec2(glm::max(texture.size.x, 1), glm::max(texture.size.y, 1));
+            if (textureSize.x > maxPreviewSize.x || textureSize.y > maxPreviewSize.y)
+            {
+              auto scale = glm::min(maxPreviewSize.x / textureSize.x, maxPreviewSize.y / textureSize.y);
+              textureSize *= scale;
+            }
 
             auto textWidth = ImGui::CalcTextSize(pathCStr).x;
             auto tooltipPadding = style.WindowPadding.x * 4.0f;
@@ -132,21 +130,29 @@ namespace anm2ed::imgui
             if (ImGui::BeginItemTooltip())
             {
               ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2());
-              if (ImGui::BeginChild("##Spritesheet Tooltip Image Child", to_imvec2(textureSize),
-                                    ImGuiChildFlags_Borders))
-                ImGui::Image(texture.id, ImGui::GetContentRegionAvail());
+              auto childFlags = ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY;
+              auto noScrollFlags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
+              if (ImGui::BeginChild("##Spritesheet Tooltip Image Child", to_imvec2(textureSize), childFlags,
+                                    noScrollFlags))
+                ImGui::Image(texture.id, to_imvec2(textureSize));
               ImGui::EndChild();
               ImGui::PopStyleVar();
 
               ImGui::SameLine();
 
-              if (ImGui::BeginChild("##Spritesheet Info Tooltip Child"))
+              auto infoChildFlags = ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY;
+              if (ImGui::BeginChild("##Spritesheet Info Tooltip Child", ImVec2(0, 0), infoChildFlags, noScrollFlags))
               {
                 ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
                 ImGui::TextUnformatted(pathCStr);
                 ImGui::PopFont();
+
                 ImGui::Text("ID: %d", id);
-                ImGui::Text("Size: %d x %d", texture.size.x, texture.size.y);
+
+                if (!spritesheet.texture.is_valid())
+                  ImGui::Text("This spritesheet isn't valid!\nLoad an existing, valid texture.");
+                else
+                  ImGui::Text("Size: %d x %d", texture.size.x, texture.size.y);
               }
               ImGui::EndChild();
 
@@ -155,7 +161,7 @@ namespace anm2ed::imgui
             ImGui::PopStyleVar(2);
 
             auto imageSize = to_imvec2(vec2(spritesheetChildSize.y));
-            aspectRatio = (float)texture.size.x / texture.size.y;
+            auto aspectRatio = (float)texture.size.x / texture.size.y;
 
             if (imageSize.x / imageSize.y > aspectRatio)
               imageSize.x = imageSize.y * aspectRatio;

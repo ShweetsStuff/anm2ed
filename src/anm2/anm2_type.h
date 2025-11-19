@@ -26,10 +26,10 @@ namespace anm2ed::anm2
 
 #define TYPE_LIST                                                                                                      \
   X(NONE, "", "", resource::icon::NONE, glm::vec4(), glm::vec4(), glm::vec4())                                         \
-  X(ROOT, "Root", "RootAnimation", resource::icon::ROOT, ROOT_COLOR, ROOT_COLOR_ACTIVE, ROOT_COLOR_HOVERED)            \
-  X(LAYER, "Layer", "LayerAnimation", resource::icon::LAYER, LAYER_COLOR, LAYER_COLOR_ACTIVE, LAYER_COLOR_HOVERED)     \
-  X(NULL_, "Null", "NullAnimation", resource::icon::NULL_, NULL_COLOR, NULL_COLOR_ACTIVE, NULL_COLOR_HOVERED)          \
-  X(TRIGGER, "Triggers", "Triggers", resource::icon::TRIGGERS, TRIGGER_COLOR, TRIGGER_COLOR_ACTIVE,                    \
+  X(ROOT, "Root", "Root", resource::icon::ROOT, ROOT_COLOR, ROOT_COLOR_ACTIVE, ROOT_COLOR_HOVERED)                     \
+  X(LAYER, "Layer", "Layer Animation", resource::icon::LAYER, LAYER_COLOR, LAYER_COLOR_ACTIVE, LAYER_COLOR_HOVERED)    \
+  X(NULL_, "Null", "Null Animation", resource::icon::NULL_, NULL_COLOR, NULL_COLOR_ACTIVE, NULL_COLOR_HOVERED)         \
+  X(TRIGGER, "Trigger", "Triggers", resource::icon::TRIGGERS, TRIGGER_COLOR, TRIGGER_COLOR_ACTIVE,                     \
     TRIGGER_COLOR_HOVERED)
 
   enum Type

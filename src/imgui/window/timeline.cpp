@@ -6,6 +6,7 @@
 
 #include <imgui_internal.h>
 
+#include "math_.h"
 #include "toast.h"
 
 #include "vector_.h"
@@ -77,6 +78,7 @@ namespace anm2ed::imgui
 
   constexpr auto FRAME_MULTIPLE = 5;
   constexpr auto FRAME_DRAG_PAYLOAD_ID = "Frame Drag Drop";
+  constexpr auto FRAME_TOOLTIP_HOVER_DELAY = 0.75f; // Extra delay for frame info tooltip.
 
   constexpr auto HELP_FORMAT = R"(- Press {} to decrement time.
 - Press {} to increment time.
@@ -812,25 +814,102 @@ namespace anm2ed::imgui
 
             ImGui::PopStyleColor(4);
 
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
+            auto& imguiStyle = ImGui::GetStyle();
+            auto previousTooltipFlags = imguiStyle.HoverFlagsForTooltipMouse;
+            auto previousTooltipDelay = imguiStyle.HoverDelayNormal;
+            imguiStyle.HoverFlagsForTooltipMouse = ImGuiHoveredFlags_Stationary | ImGuiHoveredFlags_DelayNormal |
+                                                   ImGuiHoveredFlags_AllowWhenDisabled |
+                                                   ImGuiHoveredFlags_NoSharedDelay;
+            imguiStyle.HoverDelayNormal = FRAME_TOOLTIP_HOVER_DELAY;
+            bool showFrameTooltip = ImGui::BeginItemTooltip();
+            imguiStyle.HoverFlagsForTooltipMouse = previousTooltipFlags;
+            imguiStyle.HoverDelayNormal = previousTooltipDelay;
+
+            if (showFrameTooltip)
+            {
+
+              if (type != anm2::TRIGGER)
+              {
+                ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
+                ImGui::Text("%s Frame", anm2::TYPE_STRINGS[type]);
+                ImGui::PopFont();
+
+                auto float_text = [&](std::string label, float& value)
+                {
+                  std::string useFormat = math::float_format_get(value);
+                  std::string format(label + ": " + useFormat);
+                  ImGui::Text(format.c_str(), value);
+                };
+
+                auto vec2_text = [&](std::string label, vec2& value)
+                {
+                  std::string useFormat = math::vec2_format_get(value);
+                  std::string format(label + ": " + useFormat + ", " + useFormat);
+                  ImGui::Text(format.c_str(), value.x, value.y);
+                };
+
+                ImGui::Text("Index: %i", (int)i);
+
+                if (type == anm2::LAYER)
+                {
+                  vec2_text("Crop", frame.crop);
+                  vec2_text("Size", frame.size);
+                }
+
+                vec2_text("Position", frame.size);
+
+                if (type == anm2::LAYER) vec2_text("Pivot", frame.pivot);
+
+                vec2_text("Scale", frame.scale);
+                float_text("Rotation", frame.rotation);
+                ImGui::Text("Duration: %i", frame.duration);
+                ImGui::Text("Tint: %i, %i, %i, %i", math::float_to_uint8(frame.tint.r),
+                            math::float_to_uint8(frame.tint.g), math::float_to_uint8(frame.tint.b),
+                            math::float_to_uint8(frame.tint.a));
+                ImGui::Text("Color Offset: %i, %i, %i", math::float_to_uint8(frame.tint.r),
+                            math::float_to_uint8(frame.tint.g), math::float_to_uint8(frame.tint.b));
+                ImGui::Text("Visible: %s", frame.isVisible ? "true" : "false");
+                ImGui::Text("Interpolated: %s", frame.isInterpolated ? "true" : "false");
+              }
+              else
+              {
+                ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
+                ImGui::Text("%s", anm2::TYPE_STRINGS[type]);
+                ImGui::PopFont();
+
+                ImGui::Text("At Frame: %i", frame.atFrame);
+                ImGui::Text("Event: %s", document.event.labels[frame.eventID + 1]);
+                ImGui::Text("Sound: %s", document.sound.labels[frame.soundID + 1]);
+              }
+
+              ImGui::EndTooltip();
+            }
+            ImGui::PopStyleVar(2);
+
             if (ImGui::IsItemHovered() && ImGui::IsMouseDown(ImGuiMouseButton_Left))
             {
-              if (type == anm2::TRIGGER || ImGui::IsKeyDown(ImGuiMod_Ctrl))
+              if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
               {
-                draggedFrame = &frame;
-                draggedFrameIndex = (int)i;
-                draggedFrameStart = hoveredTime;
-                if (type != anm2::TRIGGER) draggedFrameStartDuration = draggedFrame->duration;
+                if (type == anm2::TRIGGER || ImGui::IsKeyDown(ImGuiMod_Ctrl))
+                {
+                  draggedFrame = &frame;
+                  draggedFrameIndex = (int)i;
+                  draggedFrameStart = hoveredTime;
+                  if (type != anm2::TRIGGER) draggedFrameStartDuration = draggedFrame->duration;
+                }
               }
             }
 
             if (type != anm2::TRIGGER)
             {
-            if (!draggedFrame && ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceNoPreviewTooltip))
-            {
-              frameDragDrop = {};
-              frameDragDrop.type = type;
-              frameDragDrop.itemID = id;
-              frameDragDrop.animationIndex = reference.animationIndex;
+              if (!draggedFrame && ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceNoPreviewTooltip))
+              {
+                frameDragDrop = {};
+                frameDragDrop.type = type;
+                frameDragDrop.itemID = id;
+                frameDragDrop.animationIndex = reference.animationIndex;
 
                 auto append_valid_indices = [&](const auto& container)
                 {
@@ -870,8 +949,8 @@ namespace anm2ed::imgui
                 ImGui::EndDragDropSource();
               }
 
-            if (!draggedFrame && ImGui::BeginDragDropTarget())
-            {
+              if (!draggedFrame && ImGui::BeginDragDropTarget())
+              {
                 if (auto payload = ImGui::AcceptDragDropPayload(FRAME_DRAG_PAYLOAD_ID))
                 {
                   auto source = static_cast<const FrameDragDrop*>(payload->Data);
