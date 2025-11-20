@@ -262,7 +262,7 @@ namespace anm2ed::imgui
       auto& rows = settings.generateRows;
       auto& columns = settings.generateColumns;
       auto& count = settings.generateCount;
-      auto& delay = settings.generateDelay;
+      auto& delay = settings.generateDuration;
       auto& zoom = settings.generateZoom;
       auto& zoomStep = settings.inputZoomStep;
 
@@ -278,7 +278,7 @@ namespace anm2ed::imgui
 
         input_int_range("Count", count, anm2::FRAME_NUM_MIN, rows * columns);
 
-        ImGui::InputInt("Delay", &delay, STEP, STEP_FAST);
+        ImGui::InputInt("Duration", &delay, STEP, STEP_FAST);
       }
       ImGui::EndChild();
 
@@ -513,6 +513,11 @@ namespace anm2ed::imgui
         settings = editSettings;
         imgui::theme_set((theme::Type)editSettings.theme);
         manager.chords_set(settings);
+
+        ImGui::GetIO().KeyRepeatDelay = settings.keyboardRepeatDelay;
+        ImGui::GetIO().KeyRepeatRate = settings.keyboardRepeatRate;
+        ImGui::GetStyle().FontScaleMain = settings.uiScale;
+
         SnapshotStack::max_size_set(settings.fileSnapshotStackSize);
         for (auto& document : manager.documents)
           document.snapshots.apply_limit();

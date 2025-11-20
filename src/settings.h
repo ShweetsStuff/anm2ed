@@ -66,7 +66,7 @@ namespace anm2ed
   X(CHANGE_IS_PIVOT, changeIsPivot, "##Is Pivot", BOOL, false)                                                         \
   X(CHANGE_IS_SCALE, changeIsScale, "##Is Scale", BOOL, false)                                                         \
   X(CHANGE_IS_ROTATION, changeIsRotation, "##Is Rotation", BOOL, false)                                                \
-  X(CHANGE_IS_DELAY, changeIsDelay, "##Is Delay", BOOL, false)                                                         \
+  X(CHANGE_IS_DURATION, changeIsDuration, "##Is Duration", BOOL, false)                                                \
   X(CHANGE_IS_TINT, changeIsTint, "##Is Tint", BOOL, false)                                                            \
   X(CHANGE_IS_COLOR_OFFSET, changeIsColorOffset, "##Is Color Offset", BOOL, false)                                     \
   X(CHANGE_IS_VISIBLE_SET, changeIsVisibleSet, "##Is Visible", BOOL, false)                                            \
@@ -77,7 +77,7 @@ namespace anm2ed
   X(CHANGE_PIVOT, changePivot, "Pivot", VEC2, {})                                                                      \
   X(CHANGE_SCALE, changeScale, "Scale", VEC2, {})                                                                      \
   X(CHANGE_ROTATION, changeRotation, "Rotation", FLOAT, 0.0f)                                                          \
-  X(CHANGE_DELAY, changeDelay, "Delay", INT, 0)                                                                        \
+  X(CHANGE_DURATION, changeDuration, "Duration", INT, 0)                                                               \
   X(CHANGE_TINT, changeTint, "Tint", VEC4, {})                                                                         \
   X(CHANGE_COLOR_OFFSET, changeColorOffset, "Color Offset", VEC3, {})                                                  \
   X(CHANGE_IS_VISIBLE, changeIsVisible, "Visible", BOOL, false)                                                        \
@@ -109,7 +109,7 @@ namespace anm2ed
   X(GENERATE_ROWS, generateRows, "Rows", INT, 4)                                                                       \
   X(GENERATE_COLUMNS, generateColumns, "Columns", INT, 4)                                                              \
   X(GENERATE_COUNT, generateCount, "Count", INT, 16)                                                                   \
-  X(GENERATE_DELAY, generateDelay, "Delay", INT, 1)                                                                    \
+  X(GENERATE_DURATION, generateDuration, "Duration", INT, 1)                                                           \
   X(GENERATE_ZOOM, generateZoom, "Zoom", FLOAT, 100.0f)                                                                \
                                                                                                                        \
   X(EDITOR_IS_GRID, editorIsGrid, "Grid", BOOL, true)                                                                  \

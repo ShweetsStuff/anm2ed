@@ -193,6 +193,9 @@ namespace anm2ed
     io.IniFilename = nullptr;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.KeyRepeatDelay = settings.keyboardRepeatDelay;
+    io.KeyRepeatRate = settings.keyboardRepeatRate;
+    ImGui::GetStyle().FontScaleMain = settings.uiScale;
     io.ConfigWindowsMoveFromTitleBarOnly = true;
 
     ImGui::LoadIniSettingsFromDisk(settings_path().c_str());

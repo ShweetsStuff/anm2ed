@@ -86,9 +86,6 @@ namespace anm2ed
     dockspace.update(taskbar, documents, manager, settings, resources, dialog, clipboard);
     toasts.update();
 
-    ImGui::GetStyle().FontScaleMain = settings.uiScale;
-    ImGui::GetIO().KeyRepeatDelay = settings.keyboardRepeatDelay;
-    ImGui::GetIO().KeyRepeatRate = settings.keyboardRepeatRate;
     SDL_GetWindowSize(window, &settings.windowSize.x, &settings.windowSize.y);
 
     if (isQuitting && manager.documents.empty()) isQuit = true;

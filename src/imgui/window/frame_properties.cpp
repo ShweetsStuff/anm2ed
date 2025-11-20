@@ -137,7 +137,7 @@ namespace anm2ed::imgui
         auto& isPivot = settings.changeIsPivot;
         auto& isScale = settings.changeIsScale;
         auto& isRotation = settings.changeIsRotation;
-        auto& isDelay = settings.changeIsDelay;
+        auto& isDuration = settings.changeIsDuration;
         auto& isTint = settings.changeIsTint;
         auto& isColorOffset = settings.changeIsColorOffset;
         auto& isVisibleSet = settings.changeIsVisibleSet;
@@ -148,7 +148,7 @@ namespace anm2ed::imgui
         auto& pivot = settings.changePivot;
         auto& scale = settings.changeScale;
         auto& rotation = settings.changeRotation;
-        auto& duration = settings.changeDelay;
+        auto& duration = settings.changeDuration;
         auto& tint = settings.changeTint;
         auto& colorOffset = settings.changeColorOffset;
         auto& isVisible = settings.changeIsVisible;
@@ -190,7 +190,7 @@ namespace anm2ed::imgui
         float2_value("##Is Pivot", "Pivot", isPivot, pivot);
         float2_value("##Is Scale", "Scale", isScale, scale);
         float_value("##Is Rotation", "Rotation", isRotation, rotation);
-        duration_value("##Is Delay", "Delay", isDelay, duration);
+        duration_value("##Is Duration", "Duration", isDuration, duration);
         color4_value("##Is Tint", "Tint", isTint, tint);
         color3_value("##Is Color Offset", "Color Offset", isColorOffset, colorOffset);
         bool_value("##Is Visible", "Visible", isVisibleSet, isVisible);
@@ -206,7 +206,7 @@ namespace anm2ed::imgui
           if (isPivot) frameChange.pivot = std::make_optional(pivot);
           if (isScale) frameChange.scale = std::make_optional(scale);
           if (isRotation) frameChange.rotation = std::make_optional(rotation);
-          if (isDelay) frameChange.duration = std::make_optional(duration);
+          if (isDuration) frameChange.duration = std::make_optional(duration);
           if (isTint) frameChange.tint = std::make_optional(tint);
           if (isColorOffset) frameChange.colorOffset = std::make_optional(colorOffset);
           if (isVisibleSet) frameChange.isVisible = std::make_optional(isVisible);
