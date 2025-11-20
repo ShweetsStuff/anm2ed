@@ -203,7 +203,6 @@ namespace anm2ed::imgui
     auto item_selection_clear = [&]()
     {
       itemSelection.clear();
-      items.reference = -1;
     };
 
     auto item_selection_sync = [&]()
@@ -240,7 +239,6 @@ namespace anm2ed::imgui
     {
       if (itemSelection.empty())
       {
-        items.reference = -1;
         return;
       }
 
@@ -356,6 +354,7 @@ namespace anm2ed::imgui
     {
       reference = {reference.animationIndex, type, id};
       frames_selection_reset();
+      if (type == anm2::LAYER || type == anm2::NULL_) items.reference = (int)type;
     };
 
     auto context_menu = [&]()
@@ -461,7 +460,6 @@ namespace anm2ed::imgui
     {
       if (!animation) return false;
       auto& showUnused = settings.timelineIsShowUnused;
-      auto& showLayersOnly = settings.timelineIsOnlyShowLayers;
       if (type == anm2::LAYER)
       {
         for (auto id : animation->layerOrder)
@@ -473,7 +471,6 @@ namespace anm2ed::imgui
       }
       if (type == anm2::NULL_)
       {
-        if (showLayersOnly) return false;
         for (auto& [id, nullAnimation] : animation->nullAnimations)
         {
           if (!showUnused && nullAnimation.frames.empty()) continue;
@@ -489,7 +486,6 @@ namespace anm2ed::imgui
       if (!animation || (type != anm2::LAYER && type != anm2::NULL_)) return;
 
       auto& showUnused = settings.timelineIsShowUnused;
-      auto& showLayersOnly = settings.timelineIsOnlyShowLayers;
 
       itemSelection.clear();
       bool hasInserted = false;
@@ -508,7 +504,7 @@ namespace anm2ed::imgui
           try_insert(id);
         }
       }
-      else if (type == anm2::NULL_ && !showLayersOnly)
+      else if (type == anm2::NULL_)
       {
         for (auto& [id, nullAnimation] : animation->nullAnimations)
         {
