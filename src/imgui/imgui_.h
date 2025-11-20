@@ -194,6 +194,7 @@ namespace anm2ed::imgui
   public:
     ImGuiSelectionExternalStorage internal{};
     ImGuiMultiSelectIO* io{};
+    std::vector<int>* indexMap{};
 
     using std::set<int>::set;
     using std::set<int>::operator=;
@@ -210,6 +211,8 @@ namespace anm2ed::imgui
                                                      ImGuiMultiSelectFlags_ScopeWindow);
     void apply();
     void finish();
+    void set_index_map(std::vector<int>*);
+    int resolve_index(int) const;
   };
 
   class PopupHelper

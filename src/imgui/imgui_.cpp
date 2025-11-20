@@ -12,6 +12,8 @@ using namespace glm;
 
 namespace anm2ed::imgui
 {
+  static auto isRenaming = false;
+
   constexpr ImVec4 COLOR_LIGHT_BUTTON{0.98f, 0.98f, 0.98f, 1.0f};
   constexpr ImVec4 COLOR_LIGHT_TITLE_BG{0.78f, 0.78f, 0.78f, 1.0f};
   constexpr ImVec4 COLOR_LIGHT_TITLE_BG_ACTIVE{0.64f, 0.64f, 0.64f, 1.0f};
@@ -127,6 +129,7 @@ namespace anm2ed::imgui
         editID.clear();
         isActivated = true;
         state = RENAME_FINISHED;
+        isRenaming = false;
       };
 
       if (state == RENAME_BEGIN)
@@ -150,6 +153,7 @@ namespace anm2ed::imgui
         state = RENAME_BEGIN;
         editID = id;
         isActivated = true;
+        isRenaming = true;
       }
     }
 
@@ -207,11 +211,12 @@ namespace anm2ed::imgui
 
   void external_storage_set(ImGuiSelectionExternalStorage* self, int id, bool isSelected)
   {
-    auto* set = (std::set<int>*)self->UserData;
+    auto* storage = static_cast<MultiSelectStorage*>(self->UserData);
+    auto value = storage ? storage->resolve_index(id) : id;
     if (isSelected)
-      set->insert(id);
+      storage->insert(value);
     else
-      set->erase(id);
+      storage->erase(value);
   };
 
   std::string chord_to_string(ImGuiKeyChord chord)
@@ -351,8 +356,7 @@ namespace anm2ed::imgui
   bool shortcut(ImGuiKeyChord chord, shortcut::Type type, bool isRepeat)
   {
     if (ImGui::GetTopMostPopupModal() != nullptr) return false;
-
-    if (isRepeat) return chord_repeating(chord);
+    if (isRepeat && !isRenaming) return chord_repeating(chord);
 
     int flags = type == shortcut::GLOBAL || type == shortcut::GLOBAL_SET ? ImGuiInputFlags_RouteGlobal
                                                                          : ImGuiInputFlags_RouteFocused;
@@ -381,6 +385,15 @@ namespace anm2ed::imgui
   {
     io = ImGui::EndMultiSelect();
     apply();
+  }
+
+  void MultiSelectStorage::set_index_map(std::vector<int>* map) { indexMap = map; }
+
+  int MultiSelectStorage::resolve_index(int index) const
+  {
+    if (!indexMap) return index;
+    if (index < 0 || index >= (int)indexMap->size()) return index;
+    return (*indexMap)[index];
   }
 
   PopupHelper::PopupHelper(const char* label, PopupType type, PopupPosition position)

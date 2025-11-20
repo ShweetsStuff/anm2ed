@@ -42,6 +42,9 @@ namespace anm2ed::imgui
 
     if (ImGui::Begin("Animations", &settings.windowIsAnimations))
     {
+      if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImGui::IsKeyPressed(ImGuiKey_Escape))
+        reference = {};
+
       auto childSize = size_without_footer_get();
 
       if (ImGui::BeginChild("##Animations Child", childSize, ImGuiChildFlags_Borders))

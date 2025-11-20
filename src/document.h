@@ -44,6 +44,7 @@ namespace anm2ed
     Storage& null = current.null;
     Storage& sound = current.sound;
     Storage& spritesheet = current.spritesheet;
+    Storage& items = current.items;
     Storage& frames = current.frames;
     std::string& message = current.message;
 

@@ -24,7 +24,7 @@ namespace anm2ed::imgui
     bool isWindowHovered{};
     bool isHorizontalScroll{};
     PopupHelper propertiesPopup{PopupHelper("Item Properties", POPUP_NORMAL)};
-    PopupHelper bakePopup{PopupHelper("Bake", POPUP_TO_CONTENT)};
+    PopupHelper bakePopup{PopupHelper("Bake", POPUP_SMALL_NO_HEIGHT)};
     std::string addItemName{};
     bool addItemIsRect{};
     int addItemID{-1};
@@ -42,7 +42,6 @@ namespace anm2ed::imgui
     std::vector<int> frameSelectionLocked{};
     bool isFrameSelectionLocked{};
     anm2::Reference frameSelectionSnapshotReference{};
-    std::set<int> unusedItems{};
     glm::vec2 scroll{};
     ImDrawList* pickerLineDrawList{};
     ImGuiStyle style{};

@@ -98,8 +98,7 @@ namespace anm2ed::imgui
             bool isTextureValid = spritesheet.texture.is_valid();
             auto& texture = isTextureValid ? spritesheet.texture : resources.icons[icon::NONE];
             auto textureRef = ImTextureRef(texture.id);
-            auto tintColor =
-                !isTextureValid ? ImVec4(1.0f, 0.25f, 0.25f, 1.0f) : ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+            auto tintColor = !isTextureValid ? ImVec4(1.0f, 0.25f, 0.25f, 1.0f) : ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
             const std::string pathString =
                 spritesheet.path.empty() ? std::string{anm2::NO_PATH} : spritesheet.path.string();
             const char* pathCStr = pathString.c_str();
