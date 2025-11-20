@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <optional>
 #include <ranges>
 
 #include <glm/gtc/type_ptr.hpp>
@@ -388,10 +389,9 @@ namespace anm2ed::imgui
       struct OnionskinSample
       {
         float time{};
+        int indexOffset{};
         vec3 colorOffset{};
         float alphaOffset{};
-        glm::mat4 transform{1.0f};
-        anm2::Frame root{};
       };
 
       std::vector<OnionskinSample> onionskinSamples;
@@ -403,18 +403,13 @@ namespace anm2ed::imgui
           for (int i = 1; i <= count; ++i)
           {
             float useTime = frameTime + (float)(direction * i);
-            if (useTime < 0.0f || useTime > animation->frameNum) continue;
 
             float alphaOffset = (1.0f / (count + 1)) * i;
             OnionskinSample sample{};
             sample.time = useTime;
             sample.colorOffset = color;
             sample.alphaOffset = alphaOffset;
-            sample.root = animation->rootAnimation.frame_generate(sample.time, anm2::ROOT);
-            sample.transform = baseTransform;
-            if (isRootTransform)
-              sample.transform *= math::quad_model_parent_get(
-                  sample.root.position, {}, math::percent_to_unit(sample.root.scale), sample.root.rotation);
+            sample.indexOffset = direction * i;
             onionskinSamples.push_back(sample);
           }
         };
@@ -424,23 +419,48 @@ namespace anm2ed::imgui
       }
 
       auto render = [&](anm2::Animation* animation, float time, vec3 colorOffset = {}, float alphaOffset = {},
-                        const std::vector<OnionskinSample>* layeredOnions = nullptr)
+                        const std::vector<OnionskinSample>* layeredOnions = nullptr, bool isIndexMode = false)
       {
-        auto transform = baseTransform;
-        auto root = animation->rootAnimation.frame_generate(time, anm2::ROOT);
-
-        if (isRootTransform)
-          transform *= math::quad_model_parent_get(root.position, {}, math::percent_to_unit(root.scale), root.rotation);
-
-        auto draw_root = [&](const anm2::Frame& rootFrame, vec3 sampleColor, float sampleAlpha, bool isOnion)
+        auto sample_time_for_item = [&](anm2::Item& item, const OnionskinSample& sample) -> std::optional<float>
         {
+          if (!isIndexMode)
+          {
+            if (sample.time < 0.0f || sample.time > animation->frameNum) return std::nullopt;
+            return sample.time;
+          }
+          if (item.frames.empty()) return std::nullopt;
+          int baseIndex = item.frame_index_from_time_get(frameTime);
+          if (baseIndex < 0) return std::nullopt;
+          int sampleIndex = baseIndex + sample.indexOffset;
+          if (sampleIndex < 0 || sampleIndex >= (int)item.frames.size()) return std::nullopt;
+          return item.frame_time_from_index_get(sampleIndex);
+        };
+
+        auto transform_for_time = [&](anm2::Animation* anim, float t)
+        {
+          auto sampleTransform = baseTransform;
+          if (isRootTransform)
+          {
+            auto rootFrame = anim->rootAnimation.frame_generate(t, anm2::ROOT);
+            sampleTransform *= math::quad_model_parent_get(rootFrame.position, {},
+                                                           math::percent_to_unit(rootFrame.scale), rootFrame.rotation);
+          }
+          return sampleTransform;
+        };
+
+        auto transform = transform_for_time(animation, time);
+
+        auto draw_root =
+            [&](float sampleTime, const glm::mat4& sampleTransform, vec3 sampleColor, float sampleAlpha, bool isOnion)
+        {
+          auto rootFrame = animation->rootAnimation.frame_generate(sampleTime, anm2::ROOT);
           if (isOnlyShowLayers || !rootFrame.isVisible || !animation->rootAnimation.isVisible) return;
 
-          auto rootTransform =
-              isRootTransform
-                  ? baseTransform * math::quad_model_get(TARGET_SIZE, rootFrame.position, TARGET_SIZE * 0.5f,
-                                                         math::percent_to_unit(rootFrame.scale), rootFrame.rotation)
-                  : baseTransform * math::quad_model_get(TARGET_SIZE, {}, TARGET_SIZE * 0.5f);
+          auto rootModel = isRootTransform
+                               ? math::quad_model_get(TARGET_SIZE, {}, TARGET_SIZE * 0.5f)
+                               : math::quad_model_get(TARGET_SIZE, rootFrame.position, TARGET_SIZE * 0.5f,
+                                                      math::percent_to_unit(rootFrame.scale), rootFrame.rotation);
+          auto rootTransform = sampleTransform * rootModel;
 
           vec4 color = isOnion ? vec4(sampleColor, sampleAlpha) : color::GREEN;
 
@@ -450,9 +470,13 @@ namespace anm2ed::imgui
 
         if (layeredOnions)
           for (auto& sample : *layeredOnions)
-            draw_root(sample.root, sample.colorOffset, sample.alphaOffset, true);
+            if (auto sampleTime = sample_time_for_item(animation->rootAnimation, sample))
+            {
+              auto sampleTransform = transform_for_time(animation, *sampleTime);
+              draw_root(*sampleTime, sampleTransform, sample.colorOffset, sample.alphaOffset, true);
+            }
 
-        draw_root(root, {}, 0.0f, false);
+        draw_root(time, transform, {}, 0.0f, false);
 
         for (auto& id : animation->layerOrder)
         {
@@ -508,7 +532,11 @@ namespace anm2ed::imgui
 
           if (layeredOnions)
             for (auto& sample : *layeredOnions)
-              draw_layer(sample.time, sample.transform, sample.colorOffset, sample.alphaOffset, true);
+              if (auto sampleTime = sample_time_for_item(layerAnimation, sample))
+              {
+                auto sampleTransform = transform_for_time(animation, *sampleTime);
+                draw_layer(*sampleTime, sampleTransform, sample.colorOffset, sample.alphaOffset, true);
+              }
 
           draw_layer(time, transform, {}, 0.0f, false);
         }
@@ -550,7 +578,11 @@ namespace anm2ed::imgui
 
           if (layeredOnions)
             for (auto& sample : *layeredOnions)
-              draw_null(sample.time, sample.transform, sample.colorOffset, sample.alphaOffset, true);
+              if (auto sampleTime = sample_time_for_item(nullAnimation, sample))
+              {
+                auto sampleTransform = transform_for_time(animation, *sampleTime);
+                draw_null(*sampleTime, sampleTransform, sample.colorOffset, sample.alphaOffset, true);
+              }
 
           draw_null(time, transform, {}, 0.0f, false);
         }
@@ -560,10 +592,12 @@ namespace anm2ed::imgui
       {
         auto layeredOnions = settings.onionskinIsEnabled ? &onionskinSamples : nullptr;
 
-        render(animation, frameTime, {}, 0.0f, layeredOnions);
+        render(animation, frameTime, {}, 0.0f, layeredOnions,
+               settings.onionskinMode == static_cast<int>(OnionskinMode::INDEX));
 
         if (auto overlayAnimation = anm2.animation_get(overlayIndex))
-          render(overlayAnimation, frameTime, {}, 1.0f - math::uint8_to_float(overlayTransparency));
+          render(overlayAnimation, frameTime, {}, 1.0f - math::uint8_to_float(overlayTransparency), layeredOnions,
+                 settings.onionskinMode == static_cast<int>(OnionskinMode::INDEX));
       }
 
       unbind();

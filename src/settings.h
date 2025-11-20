@@ -142,6 +142,7 @@ namespace anm2ed
   X(ONIONSKIN_AFTER_COUNT, onionskinAfterCount, "Frames", INT, 0)                                                      \
   X(ONIONSKIN_BEFORE_COLOR, onionskinBeforeColor, "Color", VEC3, types::color::RED)                                    \
   X(ONIONSKIN_AFTER_COLOR, onionskinAfterColor, "Color", VEC3, types::color::BLUE)                                     \
+  X(ONIONSKIN_MODE, onionskinMode, "Mode", INT, (int)types::OnionskinMode::TIME)                                       \
                                                                                                                        \
   X(TOOL, tool, "##Tool", INT, 0)                                                                                      \
   X(TOOL_COLOR, toolColor, "##Color", VEC4, {1.0, 1.0, 1.0, 1.0})                                                      \

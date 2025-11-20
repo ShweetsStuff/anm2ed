@@ -82,6 +82,12 @@ namespace anm2ed::types::color
 
 namespace anm2ed::types
 {
+  enum class OnionskinMode
+  {
+    TIME,
+    INDEX
+  };
+
   constexpr auto ID_NONE = -1;
 
   constexpr ImVec2 to_imvec2(const glm::vec2& v) noexcept { return {v.x, v.y}; }

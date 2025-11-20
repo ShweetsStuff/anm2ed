@@ -18,6 +18,7 @@ namespace anm2ed::imgui
     auto& beforeColor = settings.onionskinBeforeColor;
     auto& afterCount = settings.onionskinAfterCount;
     auto& afterColor = settings.onionskinAfterColor;
+    auto& mode = settings.onionskinMode;
 
     if (ImGui::Begin("Onionskin", &settings.windowIsOnionskin))
     {
@@ -37,6 +38,12 @@ namespace anm2ed::imgui
 
       configure_widgets("Before", beforeCount, beforeColor);
       configure_widgets("After", afterCount, afterColor);
+      ImGui::SeparatorText("Mode");
+      ImGui::RadioButton("Time", &mode, (int)OnionskinMode::TIME);
+      ImGui::SetItemTooltip("The onionskinned frames will be based on frame time.");
+      ImGui::SameLine();
+      ImGui::RadioButton("Index", &mode, (int)OnionskinMode::INDEX);
+      ImGui::SetItemTooltip("The onionskinned frames will be based on frame index.");
     }
     ImGui::End();
 

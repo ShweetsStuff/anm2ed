@@ -334,4 +334,19 @@ namespace anm2ed::anm2
 
     return time;
   }
+
+  int Item::frame_index_from_time_get(float time)
+  {
+    if (frames.empty()) return -1;
+    if (time <= 0.0f) return 0;
+
+    float duration{};
+    for (auto [i, frame] : std::views::enumerate(frames))
+    {
+      duration += frame.duration;
+      if (time < duration) return (int)i;
+    }
+
+    return (int)frames.size() - 1;
+  }
 }
