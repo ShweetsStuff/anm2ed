@@ -185,9 +185,7 @@ namespace anm2ed::imgui
   void external_storage_set(ImGuiSelectionExternalStorage*, int, bool);
   void render_checker_background(ImDrawList*, ImVec2, ImVec2, glm::vec2, float);
   ImVec2 icon_size_get();
-  bool chord_held(ImGuiKeyChord);
-  bool chord_repeating(ImGuiKeyChord, float = ImGui::GetIO().KeyRepeatDelay, float = ImGui::GetIO().KeyRepeatRate);
-  bool shortcut(ImGuiKeyChord, types::shortcut::Type = types::shortcut::FOCUSED_SET, bool = false);
+  bool shortcut(ImGuiKeyChord, types::shortcut::Type = types::shortcut::FOCUSED_SET);
 
   class MultiSelectStorage : public std::set<int>
   {

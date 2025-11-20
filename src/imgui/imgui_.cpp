@@ -3,7 +3,6 @@
 #include <imgui/imgui_internal.h>
 
 #include <cmath>
-#include <set>
 #include <sstream>
 #include <unordered_map>
 
@@ -300,66 +299,14 @@ namespace anm2ed::imgui
     return ImVec2(ImGui::GetTextLineHeightWithSpacing(), ImGui::GetTextLineHeightWithSpacing());
   }
 
-  bool chord_held(ImGuiKeyChord chord)
-  {
-    auto& io = ImGui::GetIO();
-
-    for (constexpr ImGuiKey mods[] = {ImGuiMod_Ctrl, ImGuiMod_Shift, ImGuiMod_Alt, ImGuiMod_Super}; ImGuiKey mod : mods)
-    {
-      bool required = (chord & mod) != 0;
-      if (bool held = io.KeyMods & mod; required && !held) return false;
-    }
-
-    auto main_key = (ImGuiKey)(chord & ~ImGuiMod_Mask_);
-    if (main_key == ImGuiKey_None) return false;
-
-    return ImGui::IsKeyDown(main_key);
-  }
-
-  bool chord_repeating(ImGuiKeyChord chord, float delay, float rate)
-  {
-    struct State
-    {
-      float timeHeld = 0.f;
-      float nextRepeat = 0.f;
-    };
-    static std::unordered_map<ImGuiKeyChord, State> stateMap;
-
-    auto& io = ImGui::GetIO();
-    auto& state = stateMap[chord];
-
-    if (chord_held(chord))
-    {
-      state.timeHeld += io.DeltaTime;
-
-      if (state.timeHeld <= io.DeltaTime)
-      {
-        state.nextRepeat = delay;
-        return true;
-      }
-
-      if (state.timeHeld >= state.nextRepeat)
-      {
-        state.nextRepeat += rate;
-        return true;
-      }
-    }
-    else
-    {
-      state.timeHeld = 0.f;
-      state.nextRepeat = 0.f;
-    }
-
-    return false;
-  }
-
-  bool shortcut(ImGuiKeyChord chord, shortcut::Type type, bool isRepeat)
+  bool shortcut(ImGuiKeyChord chord, shortcut::Type type)
   {
     if (ImGui::GetTopMostPopupModal() != nullptr) return false;
-    if (isRepeat && !isRenaming) return chord_repeating(chord);
 
     int flags = type == shortcut::GLOBAL || type == shortcut::GLOBAL_SET ? ImGuiInputFlags_RouteGlobal
                                                                          : ImGuiInputFlags_RouteFocused;
+    flags |= ImGuiInputFlags_Repeat;
+
     if (type == shortcut::GLOBAL_SET || type == shortcut::FOCUSED_SET)
     {
       ImGui::SetNextItemShortcut(chord, flags);

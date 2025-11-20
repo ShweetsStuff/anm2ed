@@ -659,8 +659,8 @@ namespace anm2ed::imgui
         auto isKeyDown = isLeftDown || isRightDown || isUpDown || isDownDown;
         auto isKeyReleased = isLeftReleased || isRightReleased || isUpReleased || isDownReleased;
 
-        auto isZoomIn = chord_repeating(manager.chords[SHORTCUT_ZOOM_IN]);
-        auto isZoomOut = chord_repeating(manager.chords[SHORTCUT_ZOOM_OUT]);
+        auto isZoomIn = shortcut(manager.chords[SHORTCUT_ZOOM_IN], shortcut::GLOBAL);
+        auto isZoomOut = shortcut(manager.chords[SHORTCUT_ZOOM_OUT], shortcut::GLOBAL);
 
         auto isBegin = isMouseClicked || isKeyJustPressed;
         auto isDuring = isMouseDown || isKeyDown;

@@ -200,10 +200,7 @@ namespace anm2ed::imgui
       return anm2::NONE;
     };
 
-    auto item_selection_clear = [&]()
-    {
-      itemSelection.clear();
-    };
+    auto item_selection_clear = [&]() { itemSelection.clear(); };
 
     auto item_selection_sync = [&]()
     {
@@ -1928,20 +1925,23 @@ namespace anm2ed::imgui
     {
       if (shortcut(manager.chords[SHORTCUT_PLAY_PAUSE], shortcut::GLOBAL)) playback.toggle();
 
-      if (shortcut(manager.chords[SHORTCUT_MOVE_PLAYHEAD_BACK], shortcut::GLOBAL, true))
+      if (shortcut(manager.chords[SHORTCUT_MOVE_PLAYHEAD_BACK], shortcut::GLOBAL))
       {
         playback.decrement(settings.playbackIsClamp ? animation->frameNum : anm2::FRAME_NUM_MAX);
         document.frameTime = playback.time;
       }
 
-      if (shortcut(manager.chords[SHORTCUT_MOVE_PLAYHEAD_FORWARD], shortcut::GLOBAL, true))
+      if (shortcut(manager.chords[SHORTCUT_MOVE_PLAYHEAD_FORWARD], shortcut::GLOBAL))
       {
         playback.increment(settings.playbackIsClamp ? animation->frameNum : anm2::FRAME_NUM_MAX);
         document.frameTime = playback.time;
       }
 
-      if (shortcut(manager.chords[SHORTCUT_SHORTEN_FRAME], shortcut::GLOBAL)) document.snapshot("Shorten Frame");
-      if (shortcut(manager.chords[SHORTCUT_SHORTEN_FRAME], shortcut::GLOBAL, true))
+      static bool isShortenChordHeld = false;
+      auto isShortenFrame = shortcut(manager.chords[SHORTCUT_SHORTEN_FRAME], shortcut::GLOBAL);
+
+      if (isShortenFrame && !isShortenChordHeld) document.snapshot("Shorten Frame");
+      if (isShortenFrame)
       {
 
         if (auto frame = document.frame_get())
@@ -1950,9 +1950,12 @@ namespace anm2ed::imgui
           document.change(Document::FRAMES);
         }
       }
+      isShortenChordHeld = isShortenFrame;
 
-      if (shortcut(manager.chords[SHORTCUT_EXTEND_FRAME], shortcut::GLOBAL)) document.snapshot("Extend Frame");
-      if (shortcut(manager.chords[SHORTCUT_EXTEND_FRAME], shortcut::GLOBAL, true))
+      static bool isExtendChordHeld = false;
+      auto isExtendFrame = shortcut(manager.chords[SHORTCUT_EXTEND_FRAME], shortcut::GLOBAL);
+      if (isExtendFrame && !isExtendChordHeld) document.snapshot("Extend Frame");
+      if (isExtendFrame)
       {
 
         if (auto frame = document.frame_get())
@@ -1961,8 +1964,9 @@ namespace anm2ed::imgui
           document.change(Document::FRAMES);
         }
       }
+      isExtendChordHeld = isExtendFrame;
 
-      if (shortcut(manager.chords[SHORTCUT_PREVIOUS_FRAME], shortcut::GLOBAL, true))
+      if (shortcut(manager.chords[SHORTCUT_PREVIOUS_FRAME], shortcut::GLOBAL))
       {
         if (auto item = document.item_get(); !item->frames.empty())
         {
@@ -1972,7 +1976,7 @@ namespace anm2ed::imgui
         }
       }
 
-      if (shortcut(manager.chords[SHORTCUT_NEXT_FRAME], shortcut::GLOBAL, true))
+      if (shortcut(manager.chords[SHORTCUT_NEXT_FRAME], shortcut::GLOBAL))
       {
         if (auto item = document.item_get(); !item->frames.empty())
         {
