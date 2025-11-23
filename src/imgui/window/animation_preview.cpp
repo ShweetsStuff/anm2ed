@@ -770,8 +770,7 @@ namespace anm2ed::imgui
         if (mouseWheel != 0 || isZoomIn || isZoomOut)
         {
           auto previousZoom = zoom;
-          zoom_set(zoom, pan, mouseWheel != 0 ? vec2(mousePos) : vec2(),
-                   (mouseWheel > 0 || isZoomIn) ? zoomStep : -zoomStep);
+          zoom_set(zoom, pan, vec2(mousePos), (mouseWheel > 0 || isZoomIn) ? zoomStep : -zoomStep);
           if (zoom != previousZoom) hasPendingZoomPanAdjust = true;
         }
       }

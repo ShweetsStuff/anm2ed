@@ -389,7 +389,8 @@ namespace anm2ed::imgui
             ImGui::SeparatorText("Autosave");
 
             ImGui::Checkbox("Enabled", &editSettings.fileIsAutosave);
-            ImGui::SetItemTooltip("Enables autosaving of documents.");
+            ImGui::SetItemTooltip(
+                "Enables autosaving of documents.\n(Does not overwrite files; makes copies to restore later.)");
 
             ImGui::BeginDisabled(!editSettings.fileIsAutosave);
             input_int_range("Time (minutes)", editSettings.fileAutosaveTime, 0, 10);
@@ -397,7 +398,7 @@ namespace anm2ed::imgui
             ImGui::EndDisabled();
 
             ImGui::SeparatorText("Snapshots");
-            input_int_range("Stack Size", editSettings.fileSnapshotStackSize, 0, 1000);
+            input_int_range("Stack Size", editSettings.fileSnapshotStackSize, 0, 100);
             ImGui::SetItemTooltip("Set the maximum snapshot stack size of a document (i.e., how many undo/redos are "
                                   "preserved at a time).");
 

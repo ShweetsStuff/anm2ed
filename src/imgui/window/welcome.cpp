@@ -30,7 +30,7 @@ namespace anm2ed::imgui
 
       auto widgetSize = widget_size_with_row_get(2);
 
-      if (ImGui::Button("New", widgetSize)) dialog.file_open(dialog::ANM2_NEW); // handled in taskbar.cpp
+      if (ImGui::Button("New", widgetSize)) dialog.file_save(dialog::ANM2_NEW); // handled in taskbar.cpp
       ImGui::SameLine();
       if (ImGui::Button("Open", widgetSize)) dialog.file_open(dialog::ANM2_OPEN); // handled in taskbar.cpp
 

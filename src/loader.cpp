@@ -215,6 +215,8 @@ namespace anm2ed
                 continue;
               }
 
+              SDL_FlashWindow(window, SDL_FLASH_UNTIL_FOCUSED);
+
               auto paths = socket_paths_receive(client);
               for (auto& path : paths)
               {
