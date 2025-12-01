@@ -17,9 +17,6 @@ endif ()
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-if (MSVC)
-    add_compile_options(/std:c++latest)
-endif()
 
 if (MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
@@ -109,6 +106,9 @@ add_executable(${PROJECT_NAME}
         ${TINYXML2_SRC}
         ${PROJECT_SRC}
 )
+if (MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:/std:c++latest>")
+endif()
 
 if (WIN32)
     enable_language(RC)
