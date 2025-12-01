@@ -2,6 +2,7 @@
 
 #include <ranges>
 
+#include "strings.h"
 #include "toast.h"
 
 using namespace anm2ed::dialog;
@@ -21,7 +22,7 @@ namespace anm2ed::imgui
 
     hovered = -1;
 
-    if (ImGui::Begin("Sounds", &settings.windowIsSounds))
+    if (ImGui::Begin(localize.get(LABEL_SOUNDS), &settings.windowIsSounds))
     {
       auto childSize = imgui::size_without_footer_get();
 
@@ -33,8 +34,7 @@ namespace anm2ed::imgui
         {
           auto isSelected = selection.contains(id);
           auto isReferenced = reference == id;
-          const std::string pathString =
-              sound.path.empty() ? std::string{anm2::NO_PATH} : sound.path.string();
+          const std::string pathString = sound.path.empty() ? std::string{anm2::NO_PATH} : sound.path.string();
           const char* pathLabel = pathString.c_str();
 
           ImGui::PushID(id);
@@ -55,8 +55,8 @@ namespace anm2ed::imgui
             ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
             ImGui::TextUnformatted(pathLabel);
             ImGui::PopFont();
-            ImGui::Text("ID: %d", id);
-            ImGui::Text("Click to play.");
+            ImGui::Text("%s: %d", localize.get(BASIC_ID), id);
+            ImGui::Text("%s", localize.get(TOOLTIP_SOUNDS_PLAY));
             ImGui::EndTooltip();
           }
           ImGui::PopID();
@@ -80,11 +80,11 @@ namespace anm2ed::imgui
         auto paste = [&](merge::Type type)
         {
           std::string errorString{};
-          document.snapshot("Paste Sound(s)");
+          document.snapshot(localize.get(TOAST_SOUNDS_PASTE));
           if (anm2.sounds_deserialize(clipboard.get(), document.directory_get().string(), type, &errorString))
             document.change(Document::SOUNDS);
           else
-            toasts.error(std::format("Failed to deserialize sound(s): {}", errorString));
+            toasts.error(std::format("{}: {}", localize.get(TOAST_SOUNDS_PASTE_ERROR), errorString));
         };
 
         if (imgui::shortcut(manager.chords[SHORTCUT_COPY], shortcut::FOCUSED)) copy();
@@ -92,10 +92,12 @@ namespace anm2ed::imgui
 
         if (ImGui::BeginPopupContextWindow("##Context Menu", ImGuiPopupFlags_MouseButtonRight))
         {
-          ImGui::MenuItem("Cut", settings.shortcutCut.c_str(), false, false);
-          if (ImGui::MenuItem("Copy", settings.shortcutCopy.c_str(), !selection.empty() && hovered > -1)) copy();
+          ImGui::MenuItem(localize.get(BASIC_CUT), settings.shortcutCut.c_str(), false, false);
+          if (ImGui::MenuItem(localize.get(BASIC_COPY), settings.shortcutCopy.c_str(),
+                              !selection.empty() && hovered > -1))
+            copy();
 
-          if (ImGui::BeginMenu("Paste", !clipboard.is_empty()))
+          if (ImGui::BeginMenu(localize.get(BASIC_PASTE), !clipboard.is_empty()))
           {
             if (ImGui::MenuItem("Append", settings.shortcutPaste.c_str())) paste(merge::APPEND);
             if (ImGui::MenuItem("Replace")) paste(merge::REPLACE);
