@@ -56,5 +56,10 @@ namespace anm2ed::util::filesystem
       std::filesystem::current_path(path);
   }
 
+  WorkingDirectory::WorkingDirectory(const std::filesystem::path& path, bool isFile)
+    : WorkingDirectory(path.string(), isFile)
+  {
+  }
+
   WorkingDirectory::~WorkingDirectory() { std::filesystem::current_path(previous); }
 }

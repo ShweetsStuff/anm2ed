@@ -122,7 +122,7 @@ namespace anm2ed::imgui
             {
               if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
               {
-                filesystem::WorkingDirectory workingDirectory(document.directory_get());
+                filesystem::WorkingDirectory workingDirectory(document.directory_get().string());
                 dialog.file_explorer_open(spritesheet.path.parent_path().string());
               }
               hovered = id;

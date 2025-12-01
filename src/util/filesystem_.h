@@ -18,6 +18,7 @@ namespace anm2ed::util::filesystem
     std::filesystem::path previous;
 
     WorkingDirectory(const std::string&, bool = false);
+    WorkingDirectory(const std::filesystem::path&, bool = false);
     ~WorkingDirectory();
   };
 }

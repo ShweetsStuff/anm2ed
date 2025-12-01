@@ -4,8 +4,6 @@
 
 #include <format>
 
-#include <format>
-
 #include "log.h"
 #include "strings.h"
 #include "toast.h"
@@ -88,15 +86,15 @@ namespace anm2ed
     if (anm2.serialize(absolutePath, errorString))
     {
       toasts.push(std::vformat(localize.get(TOAST_SAVE_DOCUMENT), std::make_format_args(absolutePath)));
-      logger.info(std::vformat(localize.get(TOAST_SAVE_DOCUMENT, anm2ed::ENGLISH),
-                               std::make_format_args(absolutePath)));
+      logger.info(
+          std::vformat(localize.get(TOAST_SAVE_DOCUMENT, anm2ed::ENGLISH), std::make_format_args(absolutePath)));
       clean();
       return true;
     }
     else if (errorString)
     {
-      toasts.push(std::vformat(localize.get(TOAST_SAVE_DOCUMENT_FAILED),
-                               std::make_format_args(absolutePath, *errorString)));
+      toasts.push(
+          std::vformat(localize.get(TOAST_SAVE_DOCUMENT_FAILED), std::make_format_args(absolutePath, *errorString)));
       logger.error(std::vformat(localize.get(TOAST_SAVE_DOCUMENT_FAILED, anm2ed::ENGLISH),
                                 std::make_format_args(absolutePath, *errorString)));
     }
@@ -135,8 +133,8 @@ namespace anm2ed
     }
     else if (errorString)
     {
-      toasts.push(std::vformat(localize.get(TOAST_AUTOSAVE_FAILED),
-                               std::make_format_args(autosavePathString, *errorString)));
+      toasts.push(
+          std::vformat(localize.get(TOAST_AUTOSAVE_FAILED), std::make_format_args(autosavePathString, *errorString)));
       logger.error(std::vformat(localize.get(TOAST_AUTOSAVE_FAILED, anm2ed::ENGLISH),
                                 std::make_format_args(autosavePathString, *errorString)));
     }
@@ -279,8 +277,8 @@ namespace anm2ed
         sound.selection = {id};
         sound.reference = id;
         toasts.push(std::vformat(localize.get(TOAST_SOUND_INITIALIZED), std::make_format_args(id, soundPath)));
-        logger.info(std::vformat(localize.get(TOAST_SOUND_INITIALIZED, anm2ed::ENGLISH),
-                                 std::make_format_args(id, soundPath)));
+        logger.info(
+            std::vformat(localize.get(TOAST_SOUND_INITIALIZED, anm2ed::ENGLISH), std::make_format_args(id, soundPath)));
       }
       else
       {
