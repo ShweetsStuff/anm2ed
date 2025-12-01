@@ -8,7 +8,7 @@ namespace anm2ed::anm2
   class Event
   {
   public:
-    std::string name{"New Event"};
+    std::string name{};
     int soundID{-1};
 
     Event() = default;

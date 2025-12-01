@@ -6,6 +6,7 @@
 #include "manager.h"
 #include "resources.h"
 #include "settings.h"
+#include "strings.h"
 
 namespace anm2ed::imgui
 {
@@ -13,11 +14,13 @@ namespace anm2ed::imgui
   {
     Canvas generate;
     float generateTime{};
-    PopupHelper generatePopup{PopupHelper("Generate Animation from Grid")};
-    PopupHelper overwritePopup{PopupHelper("Overwrite File", imgui::POPUP_SMALL_NO_HEIGHT)};
-    PopupHelper renderPopup{PopupHelper("Render Animation", imgui::POPUP_SMALL_NO_HEIGHT)};
-    PopupHelper configurePopup{PopupHelper("Configure")};
-    PopupHelper aboutPopup{PopupHelper("About")};
+    PopupHelper generatePopup{PopupHelper(LABEL_TASKBAR_GENERATE_ANIMATION_FROM_GRID)};
+    PopupHelper overwritePopup{
+        PopupHelper(LABEL_TASKBAR_OVERWRITE_FILE, imgui::POPUP_SMALL_NO_HEIGHT)};
+    PopupHelper renderPopup{
+        PopupHelper(LABEL_TASKBAR_RENDER_ANIMATION, imgui::POPUP_SMALL_NO_HEIGHT)};
+    PopupHelper configurePopup{PopupHelper(LABEL_TASKBAR_CONFIGURE)};
+    PopupHelper aboutPopup{PopupHelper(LABEL_TASKBAR_ABOUT)};
     Settings editSettings{};
     int selectedShortcut{-1};
     int creditsIndex{};

@@ -5,13 +5,10 @@
 
 namespace anm2ed::anm2
 {
-  constexpr auto LAYER_FORMAT = "#{} {} (Spritesheet: #{})";
-  constexpr auto LAYER_NO_SPRITESHEET_FORMAT = "#{} {} (No Spritesheet)";
-
   class Layer
   {
   public:
-    std::string name{"New Layer"};
+    std::string name{};
     int spritesheetID{};
 
     Layer() = default;

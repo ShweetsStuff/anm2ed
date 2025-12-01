@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <format>
 #include <optional>
 #include <ranges>
 
@@ -10,6 +11,7 @@
 #include "imgui_.h"
 #include "log.h"
 #include "math_.h"
+#include "strings.h"
 #include "toast.h"
 #include "tool.h"
 #include "types.h"
@@ -69,9 +71,18 @@ namespace anm2ed::imgui
           }
 
           if (isSuccess)
-            toasts.info(std::format("Exported rendered frames to: {}", path));
+          {
+            toasts.push(std::vformat(localize.get(TOAST_EXPORT_RENDERED_FRAMES), std::make_format_args(path)));
+            logger.info(std::vformat(localize.get(TOAST_EXPORT_RENDERED_FRAMES, anm2ed::ENGLISH),
+                                     std::make_format_args(path)));
+          }
           else
-            toasts.warning(std::format("Could not export frames to: {}", path));
+          {
+            toasts.push(std::vformat(localize.get(TOAST_EXPORT_RENDERED_FRAMES_FAILED),
+                                     std::make_format_args(path)));
+            logger.error(std::vformat(localize.get(TOAST_EXPORT_RENDERED_FRAMES_FAILED, anm2ed::ENGLISH),
+                                      std::make_format_args(path)));
+          }
         }
         else if (type == render::SPRITESHEET)
         {
@@ -79,12 +90,18 @@ namespace anm2ed::imgui
           auto& columns = settings.renderColumns;
 
           if (renderFrames.empty())
-            toasts.warning("No frames captured for spritesheet export.");
+          {
+            toasts.push(localize.get(TOAST_SPRITESHEET_NO_FRAMES));
+            logger.warning(localize.get(TOAST_SPRITESHEET_NO_FRAMES, anm2ed::ENGLISH));
+          }
           else
           {
-            const auto& firstFrame = renderFrames.front();
+            auto& firstFrame = renderFrames.front();
             if (firstFrame.size.x <= 0 || firstFrame.size.y <= 0 || firstFrame.pixels.empty())
-              toasts.warning("Spritesheet export failed: captured frames are empty.");
+            {
+              toasts.push(localize.get(TOAST_SPRITESHEET_EMPTY));
+              logger.error(localize.get(TOAST_SPRITESHEET_EMPTY, anm2ed::ENGLISH));
+            }
             else
             {
               auto frameWidth = firstFrame.size.x;
@@ -113,18 +130,36 @@ namespace anm2ed::imgui
 
               Texture spritesheetTexture(spritesheet.data(), spritesheetSize);
               if (spritesheetTexture.write_png(path))
-                toasts.info(std::format("Exported spritesheet to: {}", path));
+              {
+                toasts.push(std::vformat(localize.get(TOAST_EXPORT_SPRITESHEET), std::make_format_args(path)));
+                logger.info(std::vformat(localize.get(TOAST_EXPORT_SPRITESHEET, anm2ed::ENGLISH),
+                                         std::make_format_args(path)));
+              }
               else
-                toasts.warning(std::format("Could not export spritesheet to: {}", path));
+              {
+                toasts.push(std::vformat(localize.get(TOAST_EXPORT_SPRITESHEET_FAILED),
+                                         std::make_format_args(path)));
+                logger.error(std::vformat(localize.get(TOAST_EXPORT_SPRITESHEET_FAILED, anm2ed::ENGLISH),
+                                          std::make_format_args(path)));
+              }
             }
           }
         }
         else
         {
           if (animation_render(ffmpegPath, path, renderFrames, audioStream, (render::Type)type, size, anm2.info.fps))
-            toasts.info(std::format("Exported rendered animation to: {}", path));
+          {
+            toasts.push(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION), std::make_format_args(path)));
+            logger.info(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION, anm2ed::ENGLISH),
+                                     std::make_format_args(path)));
+          }
           else
-            toasts.warning(std::format("Could not output rendered animation: {}", path));
+          {
+            toasts.push(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED),
+                                     std::make_format_args(path)));
+            logger.error(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED, anm2ed::ENGLISH),
+                                      std::make_format_args(path)));
+          }
         }
 
         renderFrames.clear();
@@ -242,24 +277,24 @@ namespace anm2ed::imgui
 
     auto center_view = [&]() { pan = vec2(); };
 
-    if (ImGui::Begin("Animation Preview", &settings.windowIsAnimationPreview))
+    if (ImGui::Begin(localize.get(LABEL_ANIMATION_PREVIEW_WINDOW), &settings.windowIsAnimationPreview))
     {
       auto childSize = ImVec2(row_widget_width_get(4),
                               (ImGui::GetTextLineHeightWithSpacing() * 4) + (ImGui::GetStyle().WindowPadding.y * 2));
 
       if (ImGui::BeginChild("##Grid Child", childSize, true, ImGuiWindowFlags_HorizontalScrollbar))
       {
-        ImGui::Checkbox("Grid", &isGrid);
-        ImGui::SetItemTooltip("Toggle the visibility of the grid.");
+        ImGui::Checkbox(localize.get(BASIC_GRID), &isGrid);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_VISIBILITY));
         ImGui::SameLine();
-        ImGui::ColorEdit4("Color", value_ptr(gridColor), ImGuiColorEditFlags_NoInputs);
-        ImGui::SetItemTooltip("Change the grid's color.");
+        ImGui::ColorEdit4(localize.get(BASIC_COLOR), value_ptr(gridColor), ImGuiColorEditFlags_NoInputs);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_COLOR));
 
-        input_int2_range("Size", gridSize, ivec2(GRID_SIZE_MIN), ivec2(GRID_SIZE_MAX));
-        ImGui::SetItemTooltip("Change the size of all cells in the grid.");
+        input_int2_range(localize.get(BASIC_SIZE), gridSize, ivec2(GRID_SIZE_MIN), ivec2(GRID_SIZE_MAX));
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_SIZE));
 
-        input_int2_range("Offset", gridOffset, ivec2(GRID_OFFSET_MIN), ivec2(GRID_OFFSET_MAX));
-        ImGui::SetItemTooltip("Change the offset of the grid.");
+        input_int2_range(localize.get(BASIC_OFFSET), gridOffset, ivec2(GRID_OFFSET_MIN), ivec2(GRID_OFFSET_MAX));
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_OFFSET));
       }
       ImGui::EndChild();
 
@@ -267,23 +302,26 @@ namespace anm2ed::imgui
 
       if (ImGui::BeginChild("##View Child", childSize, true, ImGuiWindowFlags_HorizontalScrollbar))
       {
-        ImGui::InputFloat("Zoom", &zoom, zoomStep, zoomStep, "%.0f%%");
-        ImGui::SetItemTooltip("Change the zoom of the preview.");
+        ImGui::InputFloat(localize.get(BASIC_ZOOM), &zoom, zoomStep, zoomStep, "%.0f%%");
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_PREVIEW_ZOOM));
 
         auto widgetSize = widget_size_with_row_get(2);
 
         shortcut(manager.chords[SHORTCUT_CENTER_VIEW]);
-        if (ImGui::Button("Center View", widgetSize)) pan = vec2();
-        set_item_tooltip_shortcut("Centers the view.", settings.shortcutCenterView);
+        if (ImGui::Button(localize.get(LABEL_CENTER_VIEW), widgetSize)) pan = vec2();
+        set_item_tooltip_shortcut(localize.get(TOOLTIP_CENTER_VIEW), settings.shortcutCenterView);
 
         ImGui::SameLine();
 
         shortcut(manager.chords[SHORTCUT_FIT]);
-        if (ImGui::Button("Fit", widgetSize))
+        if (ImGui::Button(localize.get(LABEL_FIT), widgetSize))
           if (animation) set_to_rect(zoom, pan, animation->rect(isRootTransform));
-        set_item_tooltip_shortcut("Set the view to match the extent of the animation.", settings.shortcutFit);
+        set_item_tooltip_shortcut(localize.get(TOOLTIP_FIT), settings.shortcutFit);
 
-        ImGui::TextUnformatted(std::format(POSITION_FORMAT, (int)mousePos.x, (int)mousePos.y).c_str());
+        auto mousePosInt = ivec2(mousePos);
+        ImGui::TextUnformatted(
+            std::vformat(localize.get(FORMAT_POSITION_SPACED), std::make_format_args(mousePosInt.x, mousePosInt.y))
+                .c_str());
       }
       ImGui::EndChild();
 
@@ -291,20 +329,21 @@ namespace anm2ed::imgui
 
       if (ImGui::BeginChild("##Background Child", childSize, true, ImGuiWindowFlags_HorizontalScrollbar))
       {
-        ImGui::ColorEdit3("Background", value_ptr(backgroundColor), ImGuiColorEditFlags_NoInputs);
-        ImGui::SetItemTooltip("Change the background color.");
+        ImGui::ColorEdit3(localize.get(LABEL_BACKGROUND_COLOR), value_ptr(backgroundColor),
+                          ImGuiColorEditFlags_NoInputs);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BACKGROUND_COLOR));
         ImGui::SameLine();
-        ImGui::Checkbox("Axes", &isAxes);
-        ImGui::SetItemTooltip("Toggle the axes' visbility.");
+        ImGui::Checkbox(localize.get(LABEL_AXES), &isAxes);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_AXES));
         ImGui::SameLine();
-        ImGui::ColorEdit4("Color", value_ptr(axesColor), ImGuiColorEditFlags_NoInputs);
-        ImGui::SetItemTooltip("Set the color of the axes.");
+        ImGui::ColorEdit4(localize.get(BASIC_COLOR), value_ptr(axesColor), ImGuiColorEditFlags_NoInputs);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_AXES_COLOR));
 
-        combo_negative_one_indexed("Overlay", &overlayIndex, document.animation.labels);
-        ImGui::SetItemTooltip("Set an animation to be drawn over the current animation.");
+        combo_negative_one_indexed(localize.get(LABEL_OVERLAY), &overlayIndex, document.animation.labels);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OVERLAY));
 
-        ImGui::InputFloat("Alpha", &overlayTransparency, 0, 0, "%.0f");
-        ImGui::SetItemTooltip("Set the alpha of the overlayed animation.");
+        ImGui::InputFloat(localize.get(BASIC_ALPHA), &overlayTransparency, 0, 0, "%.0f");
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OVERLAY_ALPHA));
       }
       ImGui::EndChild();
 
@@ -316,10 +355,10 @@ namespace anm2ed::imgui
 
         if (ImGui::BeginChild("##Helpers Child 1", helpersChildSize))
         {
-          ImGui::Checkbox("Root Transform", &isRootTransform);
-          ImGui::SetItemTooltip("Root frames will transform the rest of the animation.");
-          ImGui::Checkbox("Pivots", &isPivots);
-          ImGui::SetItemTooltip("Toggle the visibility of the animation's pivots.");
+          ImGui::Checkbox(localize.get(LABEL_ROOT_TRANSFORM), &isRootTransform);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ROOT_TRANSFORM));
+          ImGui::Checkbox(localize.get(LABEL_PIVOTS), &isPivots);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_PIVOTS));
         }
         ImGui::EndChild();
 
@@ -327,10 +366,10 @@ namespace anm2ed::imgui
 
         if (ImGui::BeginChild("##Helpers Child 2", helpersChildSize))
         {
-          ImGui::Checkbox("Alt Icons", &isAltIcons);
-          ImGui::SetItemTooltip("Toggle a different appearance of the target icons.");
-          ImGui::Checkbox("Border", &isBorder);
-          ImGui::SetItemTooltip("Toggle the visibility of borders around layers.");
+          ImGui::Checkbox(localize.get(LABEL_ALT_ICONS), &isAltIcons);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ALT_ICONS));
+          ImGui::Checkbox(localize.get(LABEL_BORDER), &isBorder);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BORDER));
         }
         ImGui::EndChild();
       }
@@ -592,12 +631,11 @@ namespace anm2ed::imgui
       {
         auto layeredOnions = settings.onionskinIsEnabled ? &onionskinSamples : nullptr;
 
-        render(animation, frameTime, {}, 0.0f, layeredOnions,
-               settings.onionskinMode == static_cast<int>(OnionskinMode::INDEX));
+        render(animation, frameTime, {}, 0.0f, layeredOnions, settings.onionskinMode == (int)OnionskinMode::INDEX);
 
         if (auto overlayAnimation = anm2.animation_get(overlayIndex))
           render(overlayAnimation, frameTime, {}, 1.0f - math::uint8_to_float(overlayTransparency), layeredOnions,
-                 settings.onionskinMode == static_cast<int>(OnionskinMode::INDEX));
+                 settings.onionskinMode == (int)OnionskinMode::INDEX);
       }
 
       unbind();
@@ -692,7 +730,7 @@ namespace anm2ed::imgui
             if (!frame) break;
             if (isBegin)
             {
-              document.snapshot("Frame Position");
+              document.snapshot(localize.get(EDIT_FRAME_POSITION));
               if (isMouseClicked)
               {
                 moveOffset = settings.inputIsMoveToolSnapToMouse ? vec2() : mousePos - frame->position;
@@ -710,16 +748,16 @@ namespace anm2ed::imgui
             {
               if (ImGui::BeginTooltip())
               {
-                auto positionFormat = math::vec2_format_get(frame->position);
-                auto positionString = std::format("Position: ({}, {})", positionFormat, positionFormat);
-                ImGui::Text(positionString.c_str(), frame->position.x, frame->position.y);
+                ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_POSITION),
+                                                    std::make_format_args(frame->position.x, frame->position.y))
+                                           .c_str());
                 ImGui::EndTooltip();
               }
             }
             break;
           case tool::SCALE:
             if (!frame) break;
-            if (isBegin) document.snapshot("Frame Scale");
+            if (isBegin) document.snapshot(localize.get(EDIT_FRAME_SCALE));
             if (isMouseDown)
             {
               frame->scale += vec2(mouseDelta.x, mouseDelta.y);
@@ -734,9 +772,9 @@ namespace anm2ed::imgui
             {
               if (ImGui::BeginTooltip())
               {
-                auto scaleFormat = math::vec2_format_get(frame->scale);
-                auto scaleString = std::format("Scale: ({}, {})", scaleFormat, scaleFormat);
-                ImGui::Text(scaleString.c_str(), frame->scale.x, frame->scale.y);
+                ImGui::TextUnformatted(
+                    std::vformat(localize.get(FORMAT_SCALE), std::make_format_args(frame->scale.x, frame->scale.y))
+                        .c_str());
                 ImGui::EndTooltip();
               }
             }
@@ -745,7 +783,7 @@ namespace anm2ed::imgui
             break;
           case tool::ROTATE:
             if (!frame) break;
-            if (isBegin) document.snapshot("Frame Rotation");
+            if (isBegin) document.snapshot(localize.get(EDIT_FRAME_ROTATION));
             if (isMouseDown) frame->rotation += mouseDelta.y;
             if (isLeftPressed || isDownPressed) frame->rotation -= step;
             if (isUpPressed || isRightPressed) frame->rotation += step;
@@ -754,9 +792,8 @@ namespace anm2ed::imgui
             {
               if (ImGui::BeginTooltip())
               {
-                auto rotationFormat = math::float_format_get(frame->rotation);
-                auto rotationString = std::format("Rotation: {}", rotationFormat);
-                ImGui::Text(rotationString.c_str(), frame->rotation);
+                ImGui::TextUnformatted(
+                    std::vformat(localize.get(FORMAT_ROTATION), std::make_format_args(frame->rotation)).c_str());
                 ImGui::EndTooltip();
               }
             }
@@ -779,7 +816,7 @@ namespace anm2ed::imgui
 
     manager.progressPopup.trigger();
 
-    if (ImGui::BeginPopupModal(manager.progressPopup.label, &manager.progressPopup.isOpen, ImGuiWindowFlags_NoResize))
+    if (ImGui::BeginPopupModal(manager.progressPopup.label(), &manager.progressPopup.isOpen, ImGuiWindowFlags_NoResize))
     {
       if (!animation) return;
 
@@ -789,9 +826,9 @@ namespace anm2ed::imgui
 
       ImGui::ProgressBar(progress);
 
-      ImGui::Text("Once recording is complete, rendering may take some time.\nPlease be patient...");
+      ImGui::TextUnformatted(localize.get(TEXT_RECORDING_PROGRESS));
 
-      if (ImGui::Button("Cancel", ImVec2(ImGui::GetContentRegionAvail().x, 0)))
+      if (ImGui::Button(localize.get(BASIC_CANCEL), ImVec2(ImGui::GetContentRegionAvail().x, 0)))
       {
         renderFrames.clear();
 

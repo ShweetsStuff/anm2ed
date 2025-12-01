@@ -3,8 +3,11 @@
 #include <algorithm>
 #include <unordered_set>
 
+#include <format>
+
 #include "filesystem_.h"
 #include "log.h"
+#include "strings.h"
 #include "toast.h"
 #include "vector_.h"
 
@@ -76,7 +79,10 @@ namespace anm2ed
     if (!document.is_valid())
     {
       documents.pop_back();
-      toasts.error(std::format("Failed to open document: {} ({})", pathString, errorString));
+      toasts.push(std::vformat(localize.get(TOAST_OPEN_DOCUMENT_FAILED),
+                               std::make_format_args(pathString, errorString)));
+      logger.error(std::vformat(localize.get(TOAST_OPEN_DOCUMENT_FAILED, anm2ed::ENGLISH),
+                                std::make_format_args(pathString, errorString)));
       return;
     }
 
@@ -85,7 +91,9 @@ namespace anm2ed
     selected = (int)documents.size() - 1;
     pendingSelected = selected;
     selection_history_push(selected);
-    toasts.info(std::format("Opened document: {}", pathString));
+    toasts.push(std::vformat(localize.get(TOAST_OPEN_DOCUMENT), std::make_format_args(pathString)));
+    logger.info(std::vformat(localize.get(TOAST_OPEN_DOCUMENT, anm2ed::ENGLISH),
+                             std::make_format_args(pathString)));
   }
 
   void Manager::new_(const std::filesystem::path& path) { open(path, true); }
@@ -96,6 +104,7 @@ namespace anm2ed
     {
       std::string errorString{};
       document->path = !path.empty() ? path : document->path;
+      document->path.replace_extension(".anm2");
       document->save(document->path.string(), &errorString);
       recent_file_add(document->path);
     }

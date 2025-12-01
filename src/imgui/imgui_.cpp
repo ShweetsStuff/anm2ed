@@ -1,4 +1,5 @@
 #include "imgui_.h"
+#include "strings.h"
 
 #include <imgui/imgui_internal.h>
 
@@ -161,7 +162,8 @@ namespace anm2ed::imgui
 
   void set_item_tooltip_shortcut(const char* tooltip, const std::string& shortcut)
   {
-    ImGui::SetItemTooltip("%s\n(Shortcut: %s)", tooltip, shortcut.c_str());
+    ImGui::SetItemTooltip(
+        "%s", std::vformat(localize.get(FORMAT_TOOLTIP_SHORTCUT), std::make_format_args(tooltip, shortcut)).c_str());
   }
 
   namespace
@@ -343,9 +345,9 @@ namespace anm2ed::imgui
     return (*indexMap)[index];
   }
 
-  PopupHelper::PopupHelper(const char* label, PopupType type, PopupPosition position)
+  PopupHelper::PopupHelper(StringType labelId, PopupType type, PopupPosition position)
   {
-    this->label = label;
+    this->labelId = labelId;
     this->type = type;
     this->position = position;
   }
@@ -361,7 +363,7 @@ namespace anm2ed::imgui
 
   void PopupHelper::trigger()
   {
-    if (isTriggered) ImGui::OpenPopup(label);
+    if (isTriggered) ImGui::OpenPopup(localize.get(labelId));
     isTriggered = false;
 
     auto viewport = ImGui::GetMainViewport();

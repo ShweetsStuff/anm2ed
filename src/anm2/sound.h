@@ -7,8 +7,6 @@
 
 namespace anm2ed::anm2
 {
-  constexpr auto SOUND_FORMAT = "{}";
-
   class Sound
   {
   public:

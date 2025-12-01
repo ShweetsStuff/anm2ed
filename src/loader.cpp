@@ -112,6 +112,7 @@ namespace anm2ed
 
     settings = Settings(settings_path());
     SnapshotStack::max_size_set(settings.fileSnapshotStackSize);
+    localize.language = (Language)settings.language;
 
     if (!SDL_Init(SDL_INIT_VIDEO))
     {

@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "strings.h"
 #include "types.h"
 
 namespace anm2ed::imgui
@@ -216,14 +217,15 @@ namespace anm2ed::imgui
   class PopupHelper
   {
   public:
-    const char* label{};
+    StringType labelId{};
     PopupType type{};
     PopupPosition position{};
     bool isOpen{};
     bool isTriggered{};
     bool isJustOpened{};
 
-    PopupHelper(const char*, PopupType = POPUP_NORMAL, PopupPosition = POPUP_CENTER);
+    PopupHelper(StringType, PopupType = POPUP_NORMAL, PopupPosition = POPUP_CENTER);
+    const char* label() const { return localize.get(labelId); }
     bool is_open();
     void open();
     void trigger();

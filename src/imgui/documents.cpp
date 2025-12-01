@@ -1,7 +1,9 @@
 #include "documents.h"
 
+#include <format>
 #include <vector>
 
+#include "strings.h"
 #include "time_.h"
 
 using namespace anm2ed::resource;
@@ -44,7 +46,7 @@ namespace anm2ed::imgui
     {
       height = ImGui::GetWindowSize().y;
 
-      if (ImGui::BeginTabBar("Documents Bar", ImGuiTabBarFlags_Reorderable))
+      if (ImGui::BeginTabBar("##Documents Bar", ImGuiTabBarFlags_Reorderable))
       {
         auto documentsCount = (int)manager.documents.size();
         bool isCloseShortcut = shortcut(manager.chords[SHORTCUT_CLOSE], shortcut::GLOBAL) && !closePopup.is_open();
@@ -84,8 +86,9 @@ namespace anm2ed::imgui
 
           auto isRequested = i == manager.pendingSelected;
           auto font = isDirty ? font::ITALICS : font::REGULAR;
-          auto string = isDirty ? std::format("[Not Saved] {}", document.filename_get().string())
-                                : document.filename_get().string();
+          auto filename = document.filename_get().string();
+          auto string =
+              isDirty ? std::vformat(localize.get(FORMAT_NOT_SAVED), std::make_format_args(filename)) : filename;
           auto label = std::format("{}###Document{}", string, i);
 
           auto flags = isDirty ? ImGuiTabItemFlags_UnsavedDocument : 0;
@@ -116,15 +119,15 @@ namespace anm2ed::imgui
 
       closePopup.trigger();
 
-      if (ImGui::BeginPopupModal(closePopup.label, &closePopup.isOpen, ImGuiWindowFlags_NoResize))
+      if (ImGui::BeginPopupModal(closePopup.label(), &closePopup.isOpen, ImGuiWindowFlags_NoResize))
       {
         if (closeDocumentIndex >= 0 && closeDocumentIndex < (int)manager.documents.size())
         {
           auto& closeDocument = manager.documents[closeDocumentIndex];
 
-          ImGui::TextUnformatted(std::format("The document \"{}\" has been modified.\nDo you want to save it?",
-                                             closeDocument.filename_get().string())
-                                     .c_str());
+          auto filename = closeDocument.filename_get().string();
+          auto prompt = std::vformat(localize.get(LABEL_DOCUMENT_MODIFIED_PROMPT), std::make_format_args(filename));
+          ImGui::TextUnformatted(prompt.c_str());
 
           auto widgetSize = imgui::widget_size_with_row_get(3);
 
@@ -134,7 +137,7 @@ namespace anm2ed::imgui
             closePopup.close();
           };
 
-          if (ImGui::Button("Yes", widgetSize))
+          if (ImGui::Button(localize.get(BASIC_YES), widgetSize))
           {
             manager.save(closeDocumentIndex);
             manager.close(closeDocumentIndex);
@@ -143,7 +146,7 @@ namespace anm2ed::imgui
 
           ImGui::SameLine();
 
-          if (ImGui::Button("No", widgetSize))
+          if (ImGui::Button(localize.get(BASIC_NO), widgetSize))
           {
             manager.close(closeDocumentIndex);
             close();
@@ -151,7 +154,7 @@ namespace anm2ed::imgui
 
           ImGui::SameLine();
 
-          if (ImGui::Button("Cancel", widgetSize))
+          if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize))
           {
             isQuitting = false;
             close();
@@ -187,17 +190,18 @@ namespace anm2ed::imgui
 
         manager.anm2DragDropPopup.trigger();
 
-        if (ImGui::BeginPopupContextWindow(manager.anm2DragDropPopup.label, ImGuiPopupFlags_None))
+        if (ImGui::BeginPopupContextWindow(manager.anm2DragDropPopup.label(), ImGuiPopupFlags_None))
         {
           auto document = manager.get();
-          if (ImGui::MenuItem(manager.anm2DragDropPaths.size() > 1 ? "Open Many Documents" : "Open New Document"))
+          if (ImGui::MenuItem(manager.anm2DragDropPaths.size() > 1 ? localize.get(LABEL_DOCUMENTS_OPEN_MANY)
+                                                                   : localize.get(LABEL_DOCUMENTS_OPEN_NEW)))
           {
             for (auto& path : manager.anm2DragDropPaths)
               manager.open(path);
             drag_drop_reset();
           }
 
-          if (ImGui::MenuItem("Merge into Current Document", nullptr, false,
+          if (ImGui::MenuItem(localize.get(LABEL_DOCUMENTS_MERGE_INTO_CURRENT), nullptr, false,
                               document && !manager.anm2DragDropPaths.empty()))
           {
             if (document)
@@ -211,17 +215,19 @@ namespace anm2ed::imgui
                 }
               };
 
-              DOCUMENT_EDIT_PTR(document, "Merge Anm2", Document::ALL, merge_anm2s());
+              DOCUMENT_EDIT_PTR(document, localize.get(EDIT_MERGE_ANM2), Document::ALL, merge_anm2s());
               drag_drop_reset();
             }
           }
 
-          if (ImGui::MenuItem("Cancel")) drag_drop_reset();
+          ImGui::Separator();
+
+          if (ImGui::MenuItem(localize.get(BASIC_CANCEL))) drag_drop_reset();
 
           manager.anm2DragDropPopup.end();
           ImGui::EndPopup();
         }
-        else if (!ImGui::IsPopupOpen(manager.anm2DragDropPopup.label))
+        else if (!ImGui::IsPopupOpen(manager.anm2DragDropPopup.label()))
           drag_drop_reset();
       }
     }

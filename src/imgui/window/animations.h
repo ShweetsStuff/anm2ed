@@ -4,12 +4,13 @@
 #include "manager.h"
 #include "resources.h"
 #include "settings.h"
+#include "strings.h"
 
 namespace anm2ed::imgui
 {
   class Animations
   {
-    PopupHelper mergePopup{PopupHelper("Merge Animations")};
+    PopupHelper mergePopup{PopupHelper(LABEL_ANIMATIONS_MERGE_POPUP)};
     int newAnimationSelectedIndex{-1};
     RenameState renameState{RENAME_SELECTABLE};
 

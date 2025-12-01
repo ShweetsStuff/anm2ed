@@ -5,12 +5,10 @@
 
 namespace anm2ed::anm2
 {
-  constexpr auto NULL_FORMAT = "#{} {}";
-
   class Null
   {
   public:
-    std::string name{"New Null"};
+    std::string name{};
     bool isShowRect{};
 
     Null() = default;

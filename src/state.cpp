@@ -6,6 +6,8 @@
 #include <imgui/backends/imgui_impl_sdl3.h>
 
 #include "filesystem_.h"
+#include "log.h"
+#include "strings.h"
 #include "toast.h"
 
 using namespace anm2ed::imgui;
@@ -65,7 +67,21 @@ namespace anm2ed
             if (auto document = manager.get())
               document->spritesheet_add(droppedFile);
             else
-              toasts.info("Failed to add spritesheet! Open a document first.");
+            {
+              toasts.push(localize.get(TOAST_ADD_SPRITESHEET_FAILED));
+              logger.warning(localize.get(TOAST_ADD_SPRITESHEET_FAILED, anm2ed::ENGLISH));
+            }
+          }
+          else if (filesystem::path_is_extension(droppedFile, "wav") ||
+                   filesystem::path_is_extension(droppedFile, "ogg"))
+          {
+            if (auto document = manager.get())
+              document->sound_add(droppedFile);
+            else
+            {
+              toasts.push(localize.get(TOAST_ADD_SOUND_FAILED));
+              logger.warning(localize.get(TOAST_ADD_SOUND_FAILED, anm2ed::ENGLISH));
+            }
           }
           break;
         }

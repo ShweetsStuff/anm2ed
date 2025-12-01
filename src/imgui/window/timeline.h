@@ -1,12 +1,12 @@
 #pragma once
 
-#include <set>
 #include <vector>
 
 #include "clipboard.h"
 #include "manager.h"
 #include "resources.h"
 #include "settings.h"
+#include "strings.h"
 
 namespace anm2ed::imgui
 {
@@ -23,9 +23,9 @@ namespace anm2ed::imgui
     bool isDragging{};
     bool isWindowHovered{};
     bool isHorizontalScroll{};
-    PopupHelper propertiesPopup{PopupHelper("Item Properties", POPUP_NORMAL)};
-    PopupHelper bakePopup{PopupHelper("Bake", POPUP_SMALL_NO_HEIGHT)};
-    std::string addItemName{};
+    PopupHelper propertiesPopup{PopupHelper(LABEL_TIMELINE_PROPERTIES_POPUP, POPUP_NORMAL)};
+    PopupHelper bakePopup{PopupHelper(LABEL_TIMELINE_BAKE_POPUP, POPUP_SMALL_NO_HEIGHT)};
+    std::string addItemName{"New Item"};
     bool addItemIsRect{};
     int addItemID{-1};
     int addItemSpritesheetID{-1};

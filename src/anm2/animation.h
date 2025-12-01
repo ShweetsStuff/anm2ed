@@ -13,7 +13,7 @@ namespace anm2ed::anm2
   class Animation
   {
   public:
-    std::string name{"New Animation"};
+    std::string name{};
     int frameNum{FRAME_NUM_MIN};
     bool isLoop{true};
     Item rootAnimation;

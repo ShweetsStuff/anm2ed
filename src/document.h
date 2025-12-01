@@ -85,6 +85,7 @@ namespace anm2ed
     anm2::Animation* animation_get();
 
     void spritesheet_add(const std::string&);
+    void sound_add(const std::string&);
 
     bool autosave(std::string* = nullptr);
     std::filesystem::path autosave_path_get();

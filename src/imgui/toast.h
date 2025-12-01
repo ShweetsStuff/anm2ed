@@ -20,9 +20,7 @@ namespace anm2ed::imgui
     std::vector<Toast> toasts{};
 
     void update();
-    void info(const std::string&);
-    void error(const std::string&);
-    void warning(const std::string&);
+    void push(const std::string&);
   };
 
 }

@@ -4,6 +4,8 @@
   #include <windows.h>
 #elif __unix__
 #else
+  #include "log.h"
+  #include "strings.h"
   #include "toast.h"
 #endif
 
@@ -63,7 +65,8 @@ namespace anm2ed
 #elif __unix__
     system(std::format("xdg-open \"{}\" &", path).c_str());
 #else
-    toasts.info("Operation not supported.");
+    toasts.push(localize.get(TOAST_NOT_SUPPORTED));
+    logger.warning(localize.get(TOAST_NOT_SUPPORTED, anm2ed::ENGLISH));
 #endif
   }
 

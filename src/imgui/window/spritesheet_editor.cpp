@@ -7,6 +7,7 @@
 #include "imgui_.h"
 #include "imgui_internal.h"
 #include "math_.h"
+#include "strings.h"
 #include "tool.h"
 #include "types.h"
 
@@ -79,7 +80,7 @@ namespace anm2ed::imgui
 
     auto center_view = [&]() { pan = -size * 0.5f; };
 
-    if (ImGui::Begin("Spritesheet Editor", &settings.windowIsSpritesheetEditor))
+    if (ImGui::Begin(localize.get(LABEL_SPRITESHEET_EDITOR_WINDOW), &settings.windowIsSpritesheetEditor))
     {
 
       auto childSize = ImVec2(imgui::row_widget_width_get(3),
@@ -87,20 +88,20 @@ namespace anm2ed::imgui
 
       if (ImGui::BeginChild("##Grid Child", childSize, true, ImGuiWindowFlags_HorizontalScrollbar))
       {
-        ImGui::Checkbox("Grid", &isGrid);
-        ImGui::SetItemTooltip("Toggle the visibility of the grid.");
+        ImGui::Checkbox(localize.get(BASIC_GRID), &isGrid);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_VISIBILITY));
         ImGui::SameLine();
-        ImGui::Checkbox("Snap", &isGridSnap);
-        ImGui::SetItemTooltip("Cropping will snap points to the grid.");
+        ImGui::Checkbox(localize.get(LABEL_SNAP), &isGridSnap);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_SNAP));
         ImGui::SameLine();
-        ImGui::ColorEdit4("Color", value_ptr(gridColor), ImGuiColorEditFlags_NoInputs);
-        ImGui::SetItemTooltip("Change the grid's color.");
+        ImGui::ColorEdit4(localize.get(BASIC_COLOR), value_ptr(gridColor), ImGuiColorEditFlags_NoInputs);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_COLOR));
 
-        input_int2_range("Size", gridSize, ivec2(GRID_SIZE_MIN), ivec2(GRID_SIZE_MAX));
-        ImGui::SetItemTooltip("Change the size of all cells in the grid.");
+        input_int2_range(localize.get(BASIC_SIZE), gridSize, ivec2(GRID_SIZE_MIN), ivec2(GRID_SIZE_MAX));
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_SIZE));
 
-        input_int2_range("Offset", gridOffset, ivec2(GRID_OFFSET_MIN), ivec2(GRID_OFFSET_MAX));
-        ImGui::SetItemTooltip("Change the offset of the grid.");
+        input_int2_range(localize.get(BASIC_OFFSET), gridOffset, ivec2(GRID_OFFSET_MIN), ivec2(GRID_OFFSET_MAX));
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_OFFSET));
       }
       ImGui::EndChild();
 
@@ -108,23 +109,26 @@ namespace anm2ed::imgui
 
       if (ImGui::BeginChild("##View Child", childSize, true, ImGuiWindowFlags_HorizontalScrollbar))
       {
-        ImGui::InputFloat("Zoom", &zoom, zoomStep, zoomStep, "%.0f%%");
-        ImGui::SetItemTooltip("Change the zoom of the editor.");
+        ImGui::InputFloat(localize.get(BASIC_ZOOM), &zoom, zoomStep, zoomStep, "%.0f%%");
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_EDITOR_ZOOM));
 
         auto widgetSize = ImVec2(imgui::row_widget_width_get(2), 0);
 
         imgui::shortcut(manager.chords[SHORTCUT_CENTER_VIEW]);
-        if (ImGui::Button("Center View", widgetSize)) center_view();
-        imgui::set_item_tooltip_shortcut("Centers the view.", settings.shortcutCenterView);
+        if (ImGui::Button(localize.get(LABEL_CENTER_VIEW), widgetSize)) center_view();
+        imgui::set_item_tooltip_shortcut(localize.get(TOOLTIP_CENTER_VIEW), settings.shortcutCenterView);
 
         ImGui::SameLine();
 
         imgui::shortcut(manager.chords[SHORTCUT_FIT]);
-        if (ImGui::Button("Fit", widgetSize))
+        if (ImGui::Button(localize.get(LABEL_FIT), widgetSize))
           if (spritesheet) set_to_rect(zoom, pan, {0, 0, spritesheet->texture.size.x, spritesheet->texture.size.y});
-        imgui::set_item_tooltip_shortcut("Set the view to match the extent of the spritesheet.", settings.shortcutFit);
+        imgui::set_item_tooltip_shortcut(localize.get(TOOLTIP_FIT), settings.shortcutFit);
 
-        ImGui::TextUnformatted(std::format(POSITION_FORMAT, (int)mousePos.x, (int)mousePos.y).c_str());
+        auto mousePosInt = ivec2(mousePos);
+        ImGui::TextUnformatted(
+            std::vformat(localize.get(FORMAT_POSITION_SPACED), std::make_format_args(mousePosInt.x, mousePosInt.y))
+                .c_str());
       }
       ImGui::EndChild();
 
@@ -136,11 +140,16 @@ namespace anm2ed::imgui
 
         if (ImGui::BeginChild("##Background Child 1", subChildSize))
         {
-          ImGui::ColorEdit3("Background", value_ptr(backgroundColor), ImGuiColorEditFlags_NoInputs);
-          ImGui::SetItemTooltip("Change the background color.");
+          ImGui::BeginDisabled(isTransparent);
+          {
+            ImGui::ColorEdit3(localize.get(LABEL_BACKGROUND_COLOR), value_ptr(backgroundColor),
+                              ImGuiColorEditFlags_NoInputs);
+            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BACKGROUND_COLOR));
+          }
+          ImGui::EndDisabled();
 
-          ImGui::Checkbox("Border", &isBorder);
-          ImGui::SetItemTooltip("Toggle a border appearing around the spritesheet.");
+          ImGui::Checkbox(localize.get(LABEL_BORDER), &isBorder);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SPRITESHEET_BORDER));
         }
         ImGui::EndChild();
 
@@ -148,8 +157,8 @@ namespace anm2ed::imgui
 
         if (ImGui::BeginChild("##Background Child 2", subChildSize))
         {
-          ImGui::Checkbox("Transparent", &isTransparent);
-          ImGui::SetItemTooltip("Toggle the spritesheet editor being transparent.");
+          ImGui::Checkbox(localize.get(LABEL_TRANSPARENT), &isTransparent);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TRANSPARENT));
         }
 
         ImGui::EndChild();
@@ -201,10 +210,11 @@ namespace anm2ed::imgui
       unbind();
 
       sync_checker_pan();
-      render_checker_background(drawList, min, max, -size * 0.5f - checkerPan, CHECKER_SIZE);
-      if (!isTransparent) drawList->AddRectFilled(min, max, ImGui::GetColorU32(to_imvec4(vec4(backgroundColor, 1.0f))));
-      drawList->AddImage(texture, min, max);
-      ImGui::InvisibleButton("##Spritesheet Editor", to_imvec2(size));
+      if (isTransparent)
+        render_checker_background(drawList, min, max, -size * 0.5f - checkerPan, CHECKER_SIZE);
+      else
+        drawList->AddRectFilled(min, max, ImGui::GetColorU32(to_imvec4(vec4(backgroundColor, 1.0f))));
+      ImGui::Image(texture, to_imvec2(size));
 
       if (ImGui::IsItemHovered())
       {
@@ -299,7 +309,7 @@ namespace anm2ed::imgui
             break;
           case tool::MOVE:
             if (!frame) break;
-            if (isBegin) document.snapshot("Frame Pivot");
+            if (isBegin) document.snapshot(localize.get(EDIT_FRAME_PIVOT));
             if (isMouseDown) frame->pivot = vec2(ivec2(mousePos - frame->crop));
             if (isLeftPressed) frame->pivot.x -= step;
             if (isRightPressed) frame->pivot.x += step;
@@ -310,9 +320,9 @@ namespace anm2ed::imgui
             {
               if (ImGui::BeginTooltip())
               {
-                auto pivotFormat = math::vec2_format_get(frame->pivot);
-                auto pivotString = std::format("Pivot: ({}, {})", pivotFormat, pivotFormat);
-                ImGui::Text(pivotString.c_str(), frame->pivot.x, frame->pivot.y);
+                ImGui::TextUnformatted(
+                    std::vformat(localize.get(FORMAT_PIVOT), std::make_format_args(frame->pivot.x, frame->pivot.y))
+                        .c_str());
                 ImGui::EndTooltip();
               }
             }
@@ -321,7 +331,7 @@ namespace anm2ed::imgui
             break;
           case tool::CROP:
             if (!frame) break;
-            if (isBegin) document.snapshot("Frame Crop");
+            if (isBegin) document.snapshot(localize.get(EDIT_FRAME_CROP));
 
             if (isMouseClicked)
             {
@@ -358,12 +368,12 @@ namespace anm2ed::imgui
               }
               if (ImGui::BeginTooltip())
               {
-                auto cropFormat = math::vec2_format_get(frame->crop);
-                auto sizeFormat = math::vec2_format_get(frame->size);
-                auto cropString = std::format("Crop: ({}, {})", cropFormat, cropFormat);
-                auto sizeString = std::format("Size: ({}, {})", sizeFormat, sizeFormat);
-                ImGui::Text(cropString.c_str(), frame->crop.x, frame->crop.y);
-                ImGui::Text(sizeString.c_str(), frame->size.x, frame->size.y);
+                ImGui::TextUnformatted(
+                    std::vformat(localize.get(FORMAT_CROP), std::make_format_args(frame->crop.x, frame->crop.y))
+                        .c_str());
+                ImGui::TextUnformatted(
+                    std::vformat(localize.get(FORMAT_SIZE), std::make_format_args(frame->size.x, frame->size.y))
+                        .c_str());
                 ImGui::EndTooltip();
               }
             }
@@ -374,7 +384,8 @@ namespace anm2ed::imgui
           {
             if (!spritesheet) break;
             auto color = useTool == tool::DRAW ? toolColor : vec4();
-            if (isMouseClicked) document.snapshot(useTool == tool::DRAW ? "Draw" : "Erase");
+            if (isMouseClicked)
+              document.snapshot(useTool == tool::DRAW ? localize.get(EDIT_DRAW) : localize.get(EDIT_ERASE));
             if (isMouseDown) spritesheet->texture.pixel_line(ivec2(previousMousePos), ivec2(mousePos), color);
             if (isMouseReleased) document.change(Document::SPRITESHEETS);
             break;

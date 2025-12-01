@@ -2,7 +2,12 @@
 
 #include <utility>
 
+#include <format>
+
+#include <format>
+
 #include "log.h"
+#include "strings.h"
 #include "toast.h"
 
 using namespace anm2ed::anm2;
@@ -79,14 +84,22 @@ namespace anm2ed
   {
     this->path = !path.empty() ? path : this->path.string();
 
-    if (anm2.serialize(this->path.string(), errorString))
+    auto absolutePath = this->path.string();
+    if (anm2.serialize(absolutePath, errorString))
     {
-      toasts.info(std::format("Saved document to: {}", this->path.string()));
+      toasts.push(std::vformat(localize.get(TOAST_SAVE_DOCUMENT), std::make_format_args(absolutePath)));
+      logger.info(std::vformat(localize.get(TOAST_SAVE_DOCUMENT, anm2ed::ENGLISH),
+                               std::make_format_args(absolutePath)));
       clean();
       return true;
     }
     else if (errorString)
-      toasts.warning(std::format("Could not save document to: {} ({})", this->path.string(), *errorString));
+    {
+      toasts.push(std::vformat(localize.get(TOAST_SAVE_DOCUMENT_FAILED),
+                               std::make_format_args(absolutePath, *errorString)));
+      logger.error(std::vformat(localize.get(TOAST_SAVE_DOCUMENT_FAILED, anm2ed::ENGLISH),
+                                std::make_format_args(absolutePath, *errorString)));
+    }
 
     return false;
   }
@@ -110,16 +123,23 @@ namespace anm2ed
   bool Document::autosave(std::string* errorString)
   {
     auto autosavePath = autosave_path_get();
-    if (anm2.serialize(autosavePath.string(), errorString))
+    auto autosavePathString = autosavePath.string();
+    if (anm2.serialize(autosavePathString, errorString))
     {
       autosaveHash = hash;
       lastAutosaveTime = 0.0f;
-      toasts.info("Autosaving...");
+      toasts.push(localize.get(TOAST_AUTOSAVING));
+      logger.info(localize.get(TOAST_AUTOSAVING, anm2ed::ENGLISH));
       logger.info(std::format("Autosaved document to: {}", autosavePath.string()));
       return true;
     }
     else if (errorString)
-      toasts.warning(std::format("Could not autosave document to: {} ({})", autosavePath.string(), *errorString));
+    {
+      toasts.push(std::vformat(localize.get(TOAST_AUTOSAVE_FAILED),
+                               std::make_format_args(autosavePathString, *errorString)));
+      logger.error(std::vformat(localize.get(TOAST_AUTOSAVE_FAILED, anm2ed::ENGLISH),
+                                std::make_format_args(autosavePathString, *errorString)));
+    }
 
     return false;
   }
@@ -224,18 +244,53 @@ namespace anm2ed
     auto add = [&]()
     {
       int id{};
+      auto pathCopy = path;
       if (anm2.spritesheet_add(directory_get().string(), path, id))
       {
         anm2::Spritesheet& spritesheet = anm2.content.spritesheets[id];
+        auto path = spritesheet.path.string();
         this->spritesheet.selection = {id};
         this->spritesheet.reference = id;
-        toasts.info(std::format("Initialized spritesheet #{}: {}", id, spritesheet.path.string()));
+        toasts.push(std::vformat(localize.get(TOAST_SPRITESHEET_INITIALIZED), std::make_format_args(id, path)));
+        logger.info(std::vformat(localize.get(TOAST_SPRITESHEET_INITIALIZED, anm2ed::ENGLISH),
+                                 std::make_format_args(id, path)));
       }
       else
-        toasts.error(std::format("Failed to initialize spritesheet: {}", path));
+      {
+        toasts.push(std::vformat(localize.get(TOAST_SPRITESHEET_INIT_FAILED), std::make_format_args(pathCopy)));
+        logger.error(std::vformat(localize.get(TOAST_SPRITESHEET_INIT_FAILED, anm2ed::ENGLISH),
+                                  std::make_format_args(pathCopy)));
+      }
     };
 
-    DOCUMENT_EDIT_PTR(this, "Add Spritesheet", Document::SPRITESHEETS, add());
+    DOCUMENT_EDIT_PTR(this, localize.get(EDIT_ADD_SPRITESHEET), Document::SPRITESHEETS, add());
+  }
+
+  void Document::sound_add(const std::string& path)
+  {
+    auto add = [&]()
+    {
+      int id{};
+      auto pathCopy = path;
+      if (anm2.sound_add(directory_get().string(), path, id))
+      {
+        auto& soundInfo = anm2.content.sounds[id];
+        auto soundPath = soundInfo.path.string();
+        sound.selection = {id};
+        sound.reference = id;
+        toasts.push(std::vformat(localize.get(TOAST_SOUND_INITIALIZED), std::make_format_args(id, soundPath)));
+        logger.info(std::vformat(localize.get(TOAST_SOUND_INITIALIZED, anm2ed::ENGLISH),
+                                 std::make_format_args(id, soundPath)));
+      }
+      else
+      {
+        toasts.push(std::vformat(localize.get(TOAST_SOUND_INITIALIZE_FAILED), std::make_format_args(pathCopy)));
+        logger.error(std::vformat(localize.get(TOAST_SOUND_INITIALIZE_FAILED, anm2ed::ENGLISH),
+                                  std::make_format_args(pathCopy)));
+      }
+    };
+
+    DOCUMENT_EDIT_PTR(this, localize.get(EDIT_ADD_SOUND), Document::SOUNDS, add());
   }
 
   void Document::snapshot(const std::string& message)
@@ -247,14 +302,16 @@ namespace anm2ed
   void Document::undo()
   {
     snapshots.undo();
-    toasts.info(std::format("Undo: {}", message));
+    toasts.push(std::vformat(localize.get(TOAST_UNDO), std::make_format_args(message)));
+    logger.info(std::vformat(localize.get(TOAST_UNDO, anm2ed::ENGLISH), std::make_format_args(message)));
     change(Document::ALL);
   }
 
   void Document::redo()
   {
     snapshots.redo();
-    toasts.info(std::format("Redo: {}", message));
+    toasts.push(std::vformat(localize.get(TOAST_REDO), std::make_format_args(message)));
+    logger.info(std::vformat(localize.get(TOAST_REDO, anm2ed::ENGLISH), std::make_format_args(message)));
     change(Document::ALL);
   }
 

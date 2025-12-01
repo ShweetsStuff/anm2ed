@@ -66,24 +66,7 @@ namespace anm2ed::imgui
     }
   }
 
-  void Toasts::info(const std::string& message)
-  {
-    toasts.emplace_back(Toast(message));
-    logger.info(message);
-  }
-
-  void Toasts::error(const std::string& message)
-  {
-    toasts.emplace_back(Toast(message));
-    logger.error(message);
-  }
-
-  void Toasts::warning(const std::string& message)
-  {
-    toasts.emplace_back(Toast(message));
-    logger.warning(message);
-  }
-
+  void Toasts::push(const std::string& message) { toasts.emplace_back(Toast(message)); }
 }
 
 anm2ed::imgui::Toasts toasts;

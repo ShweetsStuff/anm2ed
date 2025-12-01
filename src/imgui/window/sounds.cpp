@@ -2,6 +2,7 @@
 
 #include <ranges>
 
+#include "log.h"
 #include "strings.h"
 #include "toast.h"
 
@@ -22,7 +23,7 @@ namespace anm2ed::imgui
 
     hovered = -1;
 
-    if (ImGui::Begin(localize.get(LABEL_SOUNDS), &settings.windowIsSounds))
+    if (ImGui::Begin(localize.get(LABEL_SOUNDS_WINDOW), &settings.windowIsSounds))
     {
       auto childSize = imgui::size_without_footer_get();
 
@@ -57,6 +58,11 @@ namespace anm2ed::imgui
             ImGui::PopFont();
             ImGui::Text("%s: %d", localize.get(BASIC_ID), id);
             ImGui::Text("%s", localize.get(TOOLTIP_SOUNDS_PLAY));
+            if (!sound.is_valid())
+            {
+              ImGui::Spacing();
+              ImGui::TextWrapped("%s", localize.get(TOOLTIP_SOUND_INVALID));
+            }
             ImGui::EndTooltip();
           }
           ImGui::PopID();
@@ -84,7 +90,11 @@ namespace anm2ed::imgui
           if (anm2.sounds_deserialize(clipboard.get(), document.directory_get().string(), type, &errorString))
             document.change(Document::SOUNDS);
           else
-            toasts.error(std::format("{}: {}", localize.get(TOAST_SOUNDS_PASTE_ERROR), errorString));
+          {
+            toasts.push(std::vformat(localize.get(TOAST_SOUNDS_DESERIALIZE_ERROR), std::make_format_args(errorString)));
+            logger.error(std::vformat(localize.get(TOAST_SOUNDS_DESERIALIZE_ERROR, anm2ed::ENGLISH),
+                                      std::make_format_args(errorString)));
+          }
         };
 
         if (imgui::shortcut(manager.chords[SHORTCUT_COPY], shortcut::FOCUSED)) copy();
@@ -99,8 +109,8 @@ namespace anm2ed::imgui
 
           if (ImGui::BeginMenu(localize.get(BASIC_PASTE), !clipboard.is_empty()))
           {
-            if (ImGui::MenuItem("Append", settings.shortcutPaste.c_str())) paste(merge::APPEND);
-            if (ImGui::MenuItem("Replace")) paste(merge::REPLACE);
+            if (ImGui::MenuItem(localize.get(BASIC_APPEND), settings.shortcutPaste.c_str())) paste(merge::APPEND);
+            if (ImGui::MenuItem(localize.get(BASIC_REPLACE))) paste(merge::REPLACE);
 
             ImGui::EndMenu();
           }
@@ -113,13 +123,13 @@ namespace anm2ed::imgui
       auto widgetSize = imgui::widget_size_with_row_get(2);
 
       imgui::shortcut(manager.chords[SHORTCUT_ADD]);
-      if (ImGui::Button("Add", widgetSize)) dialog.file_open(dialog::SOUND_OPEN);
-      imgui::set_item_tooltip_shortcut("Add a sound.", settings.shortcutAdd);
+      if (ImGui::Button(localize.get(BASIC_ADD), widgetSize)) dialog.file_open(dialog::SOUND_OPEN);
+      imgui::set_item_tooltip_shortcut(localize.get(TOOLTIP_SOUND_ADD), settings.shortcutAdd);
       ImGui::SameLine();
 
       imgui::shortcut(manager.chords[SHORTCUT_REMOVE]);
       ImGui::BeginDisabled(unused.empty());
-      if (ImGui::Button("Remove Unused", widgetSize))
+      if (ImGui::Button(localize.get(BASIC_REMOVE_UNUSED), widgetSize))
       {
         auto remove_unused = [&]()
         {
@@ -128,11 +138,10 @@ namespace anm2ed::imgui
           unused.clear();
         };
 
-        DOCUMENT_EDIT(document, "Remove Unused Sounds", Document::SOUNDS, remove_unused());
+        DOCUMENT_EDIT(document, localize.get(EDIT_REMOVE_UNUSED_SOUNDS), Document::SOUNDS, remove_unused());
       };
       ImGui::EndDisabled();
-      imgui::set_item_tooltip_shortcut("Remove unused sounds (i.e., ones not used in any trigger.)",
-                                       settings.shortcutRemove);
+      imgui::set_item_tooltip_shortcut(localize.get(TOOLTIP_REMOVE_UNUSED_SOUNDS), settings.shortcutRemove);
     }
     ImGui::End();
 
@@ -145,13 +154,19 @@ namespace anm2ed::imgui
         {
           selection = {id};
           newSoundId = id;
-          toasts.info(std::format("Initialized sound #{}: {}", id, dialog.path));
+          toasts.push(std::vformat(localize.get(TOAST_SOUND_INITIALIZED), std::make_format_args(id, dialog.path)));
+          logger.info(std::vformat(localize.get(TOAST_SOUND_INITIALIZED, anm2ed::ENGLISH),
+                                   std::make_format_args(id, dialog.path)));
         }
         else
-          toasts.error(std::format("Failed to initialize sound: {}", dialog.path));
+        {
+          toasts.push(std::vformat(localize.get(TOAST_SOUND_INITIALIZE_FAILED), std::make_format_args(dialog.path)));
+          logger.error(std::vformat(localize.get(TOAST_SOUND_INITIALIZE_FAILED, anm2ed::ENGLISH),
+                                    std::make_format_args(dialog.path)));
+        }
       };
 
-      DOCUMENT_EDIT(document, "Add Sound", Document::SOUNDS, add());
+      DOCUMENT_EDIT(document, localize.get(EDIT_ADD_SOUND), Document::SOUNDS, add());
 
       dialog.reset();
     }

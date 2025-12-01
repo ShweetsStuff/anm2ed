@@ -8,9 +8,6 @@
 
 namespace anm2ed::anm2
 {
-  constexpr auto SPRITESHEET_FORMAT_C = "#%d %s";
-  constexpr auto SPRITESHEET_FORMAT = "#{} {}";
-
   class Spritesheet
   {
   public:

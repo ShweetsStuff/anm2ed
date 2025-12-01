@@ -2,6 +2,8 @@
 
 #include <ranges>
 
+#include "strings.h"
+
 using namespace anm2ed::resource;
 
 namespace anm2ed::imgui
@@ -15,24 +17,23 @@ namespace anm2ed::imgui
     ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + taskbar.height + documents.height));
     ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, windowHeight));
 
-    if (ImGui::Begin("Welcome", nullptr,
+    if (ImGui::Begin(localize.get(LABEL_WELCOME_WINDOW), nullptr,
                      ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
                          ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoScrollbar |
                          ImGuiWindowFlags_NoScrollWithMouse))
     {
 
       ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE_LARGE);
-      ImGui::TextUnformatted("Anm2Ed");
+      ImGui::TextUnformatted(localize.get(LABEL_APPLICATION_NAME));
       ImGui::PopFont();
 
-      ImGui::TextUnformatted("Select a recent file or open a new or existing document. You can also drag and drop "
-                             "files into the window to open them.");
+      ImGui::TextUnformatted(localize.get(LABEL_WELCOME_DESCRIPTION));
 
       auto widgetSize = widget_size_with_row_get(2);
 
-      if (ImGui::Button("New", widgetSize)) dialog.file_save(dialog::ANM2_NEW); // handled in taskbar.cpp
+      if (ImGui::Button(localize.get(BASIC_NEW), widgetSize)) dialog.file_save(dialog::ANM2_NEW); // handled in taskbar.cpp
       ImGui::SameLine();
-      if (ImGui::Button("Open", widgetSize)) dialog.file_open(dialog::ANM2_OPEN); // handled in taskbar.cpp
+      if (ImGui::Button(localize.get(BASIC_OPEN), widgetSize)) dialog.file_open(dialog::ANM2_OPEN); // handled in taskbar.cpp
 
       if (ImGui::BeginChild("##Recent Files Child", {}, ImGuiChildFlags_Borders))
       {
@@ -61,9 +62,9 @@ namespace anm2ed::imgui
 
     restorePopup.trigger();
 
-    if (ImGui::BeginPopupModal(restorePopup.label, &restorePopup.isOpen, ImGuiWindowFlags_NoResize))
+    if (ImGui::BeginPopupModal(restorePopup.label(), &restorePopup.isOpen, ImGuiWindowFlags_NoResize))
     {
-      ImGui::TextUnformatted("Autosaved documents detected. Would you like to restore them?");
+      ImGui::TextUnformatted(localize.get(LABEL_RESTORE_AUTOSAVES_PROMPT));
 
       auto childSize = child_size_get(5);
 
@@ -80,7 +81,7 @@ namespace anm2ed::imgui
 
       auto widgetSize = widget_size_with_row_get(2);
 
-      if (ImGui::Button("Yes", widgetSize))
+      if (ImGui::Button(localize.get(BASIC_YES), widgetSize))
       {
         manager.autosave_files_open();
         restorePopup.close();
@@ -88,7 +89,7 @@ namespace anm2ed::imgui
 
       ImGui::SameLine();
 
-      if (ImGui::Button("No", widgetSize))
+      if (ImGui::Button(localize.get(BASIC_NO), widgetSize))
       {
         manager.autosave_files_clear();
         restorePopup.close();

@@ -3,6 +3,7 @@
 #include "manager.h"
 #include "resources.h"
 #include "settings.h"
+#include "strings.h"
 
 namespace anm2ed::imgui
 {
@@ -11,7 +12,8 @@ namespace anm2ed::imgui
     bool isOpenColorEdit{};
     ImVec2 colorEditPosition{};
 
-    PopupHelper colorEditPopup{PopupHelper("##Color Edit", POPUP_TO_CONTENT, POPUP_BY_ITEM)};
+    PopupHelper colorEditPopup{
+        PopupHelper(LABEL_TOOLS_COLOR_EDIT_POPUP, POPUP_TO_CONTENT, POPUP_BY_ITEM)};
 
   public:
     void update(Manager&, Settings&, Resources&);

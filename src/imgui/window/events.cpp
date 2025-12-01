@@ -2,7 +2,9 @@
 
 #include <ranges>
 
+#include "log.h"
 #include "map_.h"
+#include "strings.h"
 #include "toast.h"
 
 using namespace anm2ed::util;
@@ -22,7 +24,7 @@ namespace anm2ed::imgui
 
     hovered = -1;
 
-    if (ImGui::Begin("Events", &settings.windowIsEvents))
+    if (ImGui::Begin(localize.get(LABEL_EVENTS_WINDOW), &settings.windowIsEvents))
     {
       auto childSize = size_without_footer_get();
 
@@ -41,7 +43,7 @@ namespace anm2ed::imgui
                                     event.name, selection.contains(id), ImGuiSelectableFlags_None, renameState))
           {
             if (renameState == RENAME_BEGIN)
-              document.snapshot("Rename Event");
+              document.snapshot(localize.get(EDIT_RENAME_EVENT));
             else if (renameState == RENAME_FINISHED)
               document.change(Document::EVENTS);
           }
@@ -58,6 +60,7 @@ namespace anm2ed::imgui
             ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
             ImGui::TextUnformatted(event.name.c_str());
             ImGui::PopFont();
+            ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_ID), std::make_format_args(id)).c_str());
             ImGui::EndTooltip();
           }
           ImGui::PopID();
@@ -81,11 +84,16 @@ namespace anm2ed::imgui
         auto paste = [&](merge::Type type)
         {
           std::string errorString{};
-          document.snapshot("Paste Event(s)");
+          document.snapshot(localize.get(EDIT_PASTE_EVENTS));
           if (anm2.events_deserialize(clipboard.get(), type, &errorString))
             document.change(Document::EVENTS);
           else
-            toasts.error(std::format("Failed to deserialize event(s): {}", errorString));
+          {
+            toasts.push(std::vformat(localize.get(TOAST_DESERIALIZE_EVENTS_FAILED),
+                                     std::make_format_args(errorString)));
+            logger.error(std::vformat(localize.get(TOAST_DESERIALIZE_EVENTS_FAILED, anm2ed::ENGLISH),
+                                      std::make_format_args(errorString)));
+          }
         };
 
         if (shortcut(manager.chords[SHORTCUT_COPY], shortcut::FOCUSED)) copy();
@@ -93,13 +101,15 @@ namespace anm2ed::imgui
 
         if (ImGui::BeginPopupContextWindow("##Context Menu", ImGuiPopupFlags_MouseButtonRight))
         {
-          ImGui::MenuItem("Cut", settings.shortcutCut.c_str(), false, false);
-          if (ImGui::MenuItem("Copy", settings.shortcutCopy.c_str(), false, !selection.empty() || hovered > -1)) copy();
+          ImGui::MenuItem(localize.get(BASIC_CUT), settings.shortcutCut.c_str(), false, false);
+          if (ImGui::MenuItem(localize.get(BASIC_COPY), settings.shortcutCopy.c_str(), false,
+                              !selection.empty() || hovered > -1))
+            copy();
 
-          if (ImGui::BeginMenu("Paste", !clipboard.is_empty()))
+          if (ImGui::BeginMenu(localize.get(BASIC_PASTE), !clipboard.is_empty()))
           {
-            if (ImGui::MenuItem("Append", settings.shortcutPaste.c_str())) paste(merge::APPEND);
-            if (ImGui::MenuItem("Replace")) paste(merge::REPLACE);
+            if (ImGui::MenuItem(localize.get(BASIC_APPEND), settings.shortcutPaste.c_str())) paste(merge::APPEND);
+            if (ImGui::MenuItem(localize.get(BASIC_REPLACE))) paste(merge::REPLACE);
 
             ImGui::EndMenu();
           }
@@ -112,7 +122,7 @@ namespace anm2ed::imgui
       auto widgetSize = widget_size_with_row_get(2);
 
       shortcut(manager.chords[SHORTCUT_ADD]);
-      if (ImGui::Button("Add", widgetSize))
+      if (ImGui::Button(localize.get(BASIC_ADD), widgetSize))
       {
         auto add = [&]()
         {
@@ -123,14 +133,14 @@ namespace anm2ed::imgui
           newEventId = id;
         };
 
-        DOCUMENT_EDIT(document, "Add Event", Document::EVENTS, add());
+        DOCUMENT_EDIT(document, localize.get(EDIT_ADD_EVENT), Document::EVENTS, add());
       }
-      set_item_tooltip_shortcut("Add an event.", settings.shortcutAdd);
+      set_item_tooltip_shortcut(localize.get(TOOLTIP_ADD_EVENT), settings.shortcutAdd);
       ImGui::SameLine();
 
       shortcut(manager.chords[SHORTCUT_REMOVE]);
       ImGui::BeginDisabled(unused.empty());
-      if (ImGui::Button("Remove Unused", widgetSize))
+      if (ImGui::Button(localize.get(BASIC_REMOVE_UNUSED), widgetSize))
       {
         auto remove_unused = [&]()
         {
@@ -139,11 +149,10 @@ namespace anm2ed::imgui
           unused.clear();
         };
 
-        DOCUMENT_EDIT(document, "Remove Unused Events", Document::EVENTS, remove_unused());
+        DOCUMENT_EDIT(document, localize.get(EDIT_REMOVE_UNUSED_EVENTS), Document::EVENTS, remove_unused());
       }
       ImGui::EndDisabled();
-      set_item_tooltip_shortcut("Remove unused events (i.e., ones not used by any trigger in any animation.)",
-                                settings.shortcutRemove);
+      set_item_tooltip_shortcut(localize.get(TOOLTIP_REMOVE_UNUSED_EVENTS), settings.shortcutRemove);
     }
     ImGui::End();
   }

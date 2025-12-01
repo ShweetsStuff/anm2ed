@@ -1,8 +1,11 @@
 #include "animations.h"
 
 #include <cstddef>
+#include <format>
 #include <ranges>
 
+#include "log.h"
+#include "strings.h"
 #include "toast.h"
 #include "vector_.h"
 
@@ -40,7 +43,7 @@ namespace anm2ed::imgui
       }
     };
 
-    if (ImGui::Begin("Animations", &settings.windowIsAnimations))
+    if (ImGui::Begin(localize.get(LABEL_ANIMATIONS_WINDOW), &settings.windowIsAnimations))
     {
       if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImGui::IsKeyPressed(ImGuiKey_Escape))
         reference = {};
@@ -75,7 +78,7 @@ namespace anm2ed::imgui
             document.frames.clear();
 
             if (renameState == RENAME_BEGIN)
-              document.snapshot("Rename Animation");
+              document.snapshot(localize.get(SNAPSHOT_RENAME_ANIMATION));
             else if (renameState == RENAME_FINISHED)
             {
               if (anm2.animations.items.size() == 1) anm2.animations.defaultAnimation = animation.name;
@@ -97,10 +100,17 @@ namespace anm2ed::imgui
             ImGui::TextUnformatted(animation.name.c_str());
             ImGui::PopFont();
 
-            if (isDefault) ImGui::TextUnformatted("(Default Animation)");
+            if (isDefault)
+            {
+              ImGui::PushFont(resources.fonts[font::ITALICS].get(), font::SIZE);
+              ImGui::TextUnformatted(localize.get(BASIC_DEFAULT));
+              ImGui::PopFont();
+            }
 
-            ImGui::Text("Length: %d", animation.frameNum);
-            ImGui::Text("Loop: %s", animation.isLoop ? "true" : "false");
+            ImGui::TextUnformatted(
+                std::vformat(localize.get(FORMAT_LENGTH), std::make_format_args(animation.frameNum)).c_str());
+            auto loopLabel = animation.isLoop ? localize.get(BASIC_YES) : localize.get(BASIC_NO);
+            ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_LOOP), std::make_format_args(loopLabel)).c_str());
 
             ImGui::EndTooltip();
           }
@@ -124,7 +134,7 @@ namespace anm2ed::imgui
               auto payloadCount = payload->DataSize / sizeof(int);
               std::vector<int> indices(payloadIndices, payloadIndices + payloadCount);
               std::sort(indices.begin(), indices.end());
-              DOCUMENT_EDIT(document, "Move Animation(s)", Document::ANIMATIONS,
+              DOCUMENT_EDIT(document, localize.get(EDIT_MOVE_ANIMATIONS), Document::ANIMATIONS,
                             selection = vector::move_indices(anm2.animations.items, indices, i));
             }
             ImGui::EndDragDropTarget();
@@ -151,7 +161,7 @@ namespace anm2ed::imgui
         auto cut = [&]()
         {
           copy();
-          DOCUMENT_EDIT(document, "Cut Animation(s)", Document::ANIMATIONS, animations_remove());
+          DOCUMENT_EDIT(document, localize.get(EDIT_CUT_ANIMATIONS), Document::ANIMATIONS, animations_remove());
         };
 
         auto paste = [&]()
@@ -163,13 +173,18 @@ namespace anm2ed::imgui
             auto start = selection.empty() ? anm2.animations.items.size() : *selection.rbegin() + 1;
             std::set<int> indices{};
             std::string errorString{};
-            if (anm2.animations_deserialize(clipboardText, start, indices, &errorString))
-              selection = indices;
-            else
-              toasts.error(std::format("Failed to deserialize animation(s): {}", errorString));
+          if (anm2.animations_deserialize(clipboardText, start, indices, &errorString))
+            selection = indices;
+          else
+          {
+            toasts.push(std::vformat(localize.get(TOAST_DESERIALIZE_ANIMATIONS_FAILED),
+                                     std::make_format_args(errorString)));
+            logger.error(std::vformat(localize.get(TOAST_DESERIALIZE_ANIMATIONS_FAILED, anm2ed::ENGLISH),
+                                      std::make_format_args(errorString)));
+          }
           };
 
-          DOCUMENT_EDIT(document, "Paste Animation(s)", Document::ANIMATIONS, deserialize());
+          DOCUMENT_EDIT(document, localize.get(EDIT_PASTE_ANIMATIONS), Document::ANIMATIONS, deserialize());
         };
 
         if (shortcut(manager.chords[SHORTCUT_CUT], shortcut::FOCUSED)) cut();
@@ -178,9 +193,20 @@ namespace anm2ed::imgui
 
         if (ImGui::BeginPopupContextWindow("##Context Menu", ImGuiPopupFlags_MouseButtonRight))
         {
-          if (ImGui::MenuItem("Cut", settings.shortcutCut.c_str(), false, !selection.empty() || hovered > -1)) cut();
-          if (ImGui::MenuItem("Copy", settings.shortcutCopy.c_str(), false, !selection.empty() || hovered > -1)) copy();
-          if (ImGui::MenuItem("Paste", settings.shortcutPaste.c_str(), false, !clipboard.is_empty())) paste();
+          if (ImGui::MenuItem(localize.get(BASIC_CUT), settings.shortcutCut.c_str(), false,
+                              !selection.empty() || hovered > -1))
+          {
+            cut();
+          }
+          if (ImGui::MenuItem(localize.get(BASIC_COPY), settings.shortcutCopy.c_str(), false,
+                              !selection.empty() || hovered > -1))
+          {
+            copy();
+          }
+          if (ImGui::MenuItem(localize.get(BASIC_PASTE), settings.shortcutPaste.c_str(), false, !clipboard.is_empty()))
+          {
+            paste();
+          }
           ImGui::EndPopup();
         }
       }
@@ -189,7 +215,7 @@ namespace anm2ed::imgui
       auto widgetSize = widget_size_with_row_get(5);
 
       shortcut(manager.chords[SHORTCUT_ADD]);
-      if (ImGui::Button("Add", widgetSize))
+      if (ImGui::Button(localize.get(BASIC_ADD), widgetSize))
       {
         auto add = [&]()
         {
@@ -219,16 +245,16 @@ namespace anm2ed::imgui
           newAnimationSelectedIndex = index;
         };
 
-        DOCUMENT_EDIT(document, "Add Animation", Document::ANIMATIONS, add());
+        DOCUMENT_EDIT(document, localize.get(EDIT_ADD_ANIMATION), Document::ANIMATIONS, add());
       }
-      set_item_tooltip_shortcut("Add a new animation.", settings.shortcutAdd);
+      set_item_tooltip_shortcut(localize.get(TOOLTIP_ADD_ANIMATION), settings.shortcutAdd);
 
       ImGui::SameLine();
 
       ImGui::BeginDisabled(selection.empty());
       {
         shortcut(manager.chords[SHORTCUT_DUPLICATE]);
-        if (ImGui::Button("Duplicate", widgetSize))
+        if (ImGui::Button(localize.get(BASIC_DUPLICATE), widgetSize))
         {
           auto duplicate = [&]()
           {
@@ -242,9 +268,9 @@ namespace anm2ed::imgui
             }
           };
 
-          DOCUMENT_EDIT(document, "Duplicate Animation(s)", Document::ANIMATIONS, duplicate());
+          DOCUMENT_EDIT(document, localize.get(EDIT_DUPLICATE_ANIMATIONS), Document::ANIMATIONS, duplicate());
         }
-        set_item_tooltip_shortcut("Duplicate the selected animation(s).", settings.shortcutDuplicate);
+        set_item_tooltip_shortcut(localize.get(TOOLTIP_DUPLICATE_ANIMATION), settings.shortcutDuplicate);
 
         ImGui::SameLine();
 
@@ -274,12 +300,12 @@ namespace anm2ed::imgui
             reference = {merged};
           };
 
-          DOCUMENT_EDIT(document, "Merge Animations", Document::ANIMATIONS, merge_quick())
+          DOCUMENT_EDIT(document, localize.get(EDIT_MERGE_ANIMATIONS), Document::ANIMATIONS, merge_quick())
         }
 
         ImGui::BeginDisabled(selection.size() != 1);
         {
-          if (ImGui::Button("Merge", widgetSize))
+          if (ImGui::Button(localize.get(LABEL_MERGE), widgetSize))
           {
             mergePopup.open();
             mergeSelection.clear();
@@ -287,34 +313,32 @@ namespace anm2ed::imgui
           }
         }
         ImGui::EndDisabled();
-        set_item_tooltip_shortcut("Open the merge popup.\nUsing the shortcut will merge the animations with\nthe last "
-                                  "configured merge settings.",
-                                  settings.shortcutMerge);
+        set_item_tooltip_shortcut(localize.get(TOOLTIP_OPEN_MERGE_POPUP), settings.shortcutMerge);
 
         ImGui::SameLine();
 
         shortcut(manager.chords[SHORTCUT_REMOVE]);
-        if (ImGui::Button("Remove", widgetSize))
-          DOCUMENT_EDIT(document, "Remove Animation(s)", Document::ANIMATIONS, animations_remove());
-        set_item_tooltip_shortcut("Remove the selected animation(s).", settings.shortcutRemove);
+        if (ImGui::Button(localize.get(BASIC_REMOVE), widgetSize))
+          DOCUMENT_EDIT(document, localize.get(EDIT_REMOVE_ANIMATIONS), Document::ANIMATIONS, animations_remove());
+        set_item_tooltip_shortcut(localize.get(TOOLTIP_REMOVE_ANIMATION), settings.shortcutRemove);
 
         ImGui::SameLine();
 
         shortcut(manager.chords[SHORTCUT_DEFAULT]);
         ImGui::BeginDisabled(selection.size() != 1);
-        if (ImGui::Button("Default", widgetSize))
+        if (ImGui::Button(localize.get(BASIC_DEFAULT), widgetSize))
         {
-          DOCUMENT_EDIT(document, "Default Animation", Document::ANIMATIONS,
+          DOCUMENT_EDIT(document, localize.get(EDIT_DEFAULT_ANIMATION), Document::ANIMATIONS,
                         anm2.animations.defaultAnimation = anm2.animations.items[*selection.begin()].name);
         }
         ImGui::EndDisabled();
-        set_item_tooltip_shortcut("Set the selected animation as the default.", settings.shortcutDefault);
+        set_item_tooltip_shortcut(localize.get(TOOLTIP_SET_DEFAULT_ANIMATION), settings.shortcutDefault);
       }
       ImGui::EndDisabled();
 
       mergePopup.trigger();
 
-      if (ImGui::BeginPopupModal(mergePopup.label, &mergePopup.isOpen, ImGuiWindowFlags_NoResize))
+      if (ImGui::BeginPopupModal(mergePopup.label(), &mergePopup.isOpen, ImGuiWindowFlags_NoResize))
       {
         auto merge_close = [&]()
         {
@@ -332,7 +356,7 @@ namespace anm2ed::imgui
             ImVec2(0, ImGui::GetContentRegionAvail().y -
                           (optionsSize.y + deleteAfterSize.y + footerSize.y + ImGui::GetStyle().ItemSpacing.y * 3));
 
-        if (ImGui::BeginChild("Animations", animationsSize, ImGuiChildFlags_Borders))
+        if (ImGui::BeginChild(localize.get(LABEL_ANIMATIONS_CHILD), animationsSize, ImGuiChildFlags_Borders))
         {
           mergeSelection.start(anm2.animations.items.size());
 
@@ -354,37 +378,37 @@ namespace anm2ed::imgui
         }
         ImGui::EndChild();
 
-        if (ImGui::BeginChild("Merge Options", optionsSize, ImGuiChildFlags_Borders))
+        if (ImGui::BeginChild("##Merge Options", optionsSize, ImGuiChildFlags_Borders))
         {
           auto size = ImVec2(optionsSize.x * 0.5f, optionsSize.y - ImGui::GetStyle().WindowPadding.y * 2);
 
-          if (ImGui::BeginChild("Merge Options 1", size))
+          if (ImGui::BeginChild("##Merge Options 1", size))
           {
-            ImGui::RadioButton("Append Frames", &type, merge::APPEND);
-            ImGui::RadioButton("Prepend Frames", &type, merge::PREPEND);
+            ImGui::RadioButton(localize.get(LABEL_APPEND_FRAMES), &type, merge::APPEND);
+            ImGui::RadioButton(localize.get(LABEL_PREPEND_FRAMES), &type, merge::PREPEND);
           }
           ImGui::EndChild();
 
           ImGui::SameLine();
 
-          if (ImGui::BeginChild("Merge Options 2", size))
+          if (ImGui::BeginChild("##Merge Options 2", size))
           {
-            ImGui::RadioButton("Replace Frames", &type, merge::REPLACE);
-            ImGui::RadioButton("Ignore Frames", &type, merge::IGNORE);
+            ImGui::RadioButton(localize.get(LABEL_REPLACE_FRAMES), &type, merge::REPLACE);
+            ImGui::RadioButton(localize.get(LABEL_IGNORE_FRAMES), &type, merge::IGNORE);
           }
           ImGui::EndChild();
         }
         ImGui::EndChild();
 
-        if (ImGui::BeginChild("Merge Delete After", deleteAfterSize, ImGuiChildFlags_Borders))
-          ImGui::Checkbox("Delete Animations After", &isDeleteAnimationsAfter);
+        if (ImGui::BeginChild("##Merge Delete After", deleteAfterSize, ImGuiChildFlags_Borders))
+          ImGui::Checkbox(localize.get(LABEL_DELETE_ANIMATIONS_AFTER), &isDeleteAnimationsAfter);
         ImGui::EndChild();
 
         auto widgetSize = widget_size_with_row_get(2);
 
         ImGui::BeginDisabled(mergeSelection.empty());
         {
-          if (ImGui::Button("Merge", widgetSize))
+          if (ImGui::Button(localize.get(LABEL_MERGE), widgetSize))
           {
             auto merge = [&]()
             {
@@ -396,13 +420,13 @@ namespace anm2ed::imgui
               reference = {merged};
             };
 
-            DOCUMENT_EDIT(document, "Merge Animations", Document::ANIMATIONS, merge());
+            DOCUMENT_EDIT(document, localize.get(EDIT_MERGE_ANIMATIONS), Document::ANIMATIONS, merge());
             merge_close();
           }
         }
         ImGui::EndDisabled();
         ImGui::SameLine();
-        if (ImGui::Button("Close", widgetSize)) merge_close();
+        if (ImGui::Button(localize.get(LABEL_CLOSE), widgetSize)) merge_close();
 
         ImGui::EndPopup();
       }

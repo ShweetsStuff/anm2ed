@@ -2,7 +2,9 @@
 
 #include <ranges>
 
+#include "log.h"
 #include "map_.h"
+#include "strings.h"
 #include "toast.h"
 
 using namespace anm2ed::util;
@@ -23,7 +25,7 @@ namespace anm2ed::imgui
 
     hovered = -1;
 
-    if (ImGui::Begin("Layers", &settings.windowIsLayers))
+    if (ImGui::Begin(localize.get(LABEL_LAYERS_WINDOW), &settings.windowIsLayers))
     {
       auto childSize = size_without_footer_get();
 
@@ -38,7 +40,10 @@ namespace anm2ed::imgui
           ImGui::PushID(id);
 
           ImGui::SetNextItemSelectionUserData(id);
-          ImGui::Selectable(std::format(anm2::LAYER_FORMAT, id, layer.name, layer.spritesheetID).c_str(), isSelected);
+          ImGui::Selectable(
+              std::vformat(localize.get(FORMAT_LAYER), std::make_format_args(id, layer.name, layer.spritesheetID))
+                  .c_str(),
+              isSelected);
           if (newLayerId == id)
           {
             ImGui::SetScrollHereY(0.5f);
@@ -57,8 +62,9 @@ namespace anm2ed::imgui
             ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
             ImGui::TextUnformatted(layer.name.c_str());
             ImGui::PopFont();
-            ImGui::Text("ID: %d", id);
-            ImGui::Text("Spritesheet ID: %d", layer.spritesheetID);
+            ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_ID), std::make_format_args(id)).c_str());
+            ImGui::TextUnformatted(
+                std::vformat(localize.get(FORMAT_SPRITESHEET_ID), std::make_format_args(layer.spritesheetID)).c_str());
             ImGui::EndTooltip();
           }
           ImGui::PopID();
@@ -82,11 +88,16 @@ namespace anm2ed::imgui
         auto paste = [&](merge::Type type)
         {
           std::string errorString{};
-          document.snapshot("Paste Layer(s)");
+          document.snapshot(localize.get(EDIT_PASTE_LAYERS));
           if (anm2.layers_deserialize(clipboard.get(), type, &errorString))
             document.change(Document::NULLS);
           else
-            toasts.error(std::format("Failed to deserialize layer(s): {}", errorString));
+          {
+            toasts.push(std::vformat(localize.get(TOAST_DESERIALIZE_LAYERS_FAILED),
+                                     std::make_format_args(errorString)));
+            logger.error(std::vformat(localize.get(TOAST_DESERIALIZE_LAYERS_FAILED, anm2ed::ENGLISH),
+                                      std::make_format_args(errorString)));
+          }
         };
 
         if (shortcut(manager.chords[SHORTCUT_COPY], shortcut::FOCUSED)) copy();
@@ -94,13 +105,15 @@ namespace anm2ed::imgui
 
         if (ImGui::BeginPopupContextWindow("##Context Menu", ImGuiPopupFlags_MouseButtonRight))
         {
-          ImGui::MenuItem("Cut", settings.shortcutCut.c_str(), false, false);
-          if (ImGui::MenuItem("Copy", settings.shortcutCopy.c_str(), false, !selection.empty() || hovered > -1)) copy();
+          ImGui::MenuItem(localize.get(BASIC_CUT), settings.shortcutCut.c_str(), false, false);
+          if (ImGui::MenuItem(localize.get(BASIC_COPY), settings.shortcutCopy.c_str(), false,
+                              !selection.empty() || hovered > -1))
+            copy();
 
-          if (ImGui::BeginMenu("Paste", !clipboard.is_empty()))
+          if (ImGui::BeginMenu(localize.get(BASIC_PASTE), !clipboard.is_empty()))
           {
-            if (ImGui::MenuItem("Append", settings.shortcutPaste.c_str())) paste(merge::APPEND);
-            if (ImGui::MenuItem("Replace")) paste(merge::REPLACE);
+            if (ImGui::MenuItem(localize.get(BASIC_APPEND), settings.shortcutPaste.c_str())) paste(merge::APPEND);
+            if (ImGui::MenuItem(localize.get(BASIC_REPLACE))) paste(merge::REPLACE);
 
             ImGui::EndMenu();
           }
@@ -113,13 +126,13 @@ namespace anm2ed::imgui
       auto widgetSize = widget_size_with_row_get(2);
 
       shortcut(manager.chords[SHORTCUT_ADD]);
-      if (ImGui::Button("Add", widgetSize)) manager.layer_properties_open();
-      set_item_tooltip_shortcut("Add a layer.", settings.shortcutAdd);
+      if (ImGui::Button(localize.get(BASIC_ADD), widgetSize)) manager.layer_properties_open();
+      set_item_tooltip_shortcut(localize.get(TOOLTIP_ADD_LAYER), settings.shortcutAdd);
       ImGui::SameLine();
 
       shortcut(manager.chords[SHORTCUT_REMOVE]);
       ImGui::BeginDisabled(unused.empty());
-      if (ImGui::Button("Remove Unused", widgetSize))
+      if (ImGui::Button(localize.get(BASIC_REMOVE_UNUSED), widgetSize))
       {
         auto remove_unused = [&]()
         {
@@ -128,34 +141,33 @@ namespace anm2ed::imgui
           unused.clear();
         };
 
-        DOCUMENT_EDIT(document, "Remove Unused Layers", Document::LAYERS, remove_unused());
+        DOCUMENT_EDIT(document, localize.get(EDIT_REMOVE_UNUSED_LAYERS), Document::LAYERS, remove_unused());
       }
       ImGui::EndDisabled();
-      set_item_tooltip_shortcut("Remove unused layers (i.e., ones not used in any animation.)",
-                                settings.shortcutRemove);
+      set_item_tooltip_shortcut(localize.get(TOOLTIP_REMOVE_UNUSED_LAYERS), settings.shortcutRemove);
     }
     ImGui::End();
 
     manager.layer_properties_trigger();
 
-    if (ImGui::BeginPopupModal(propertiesPopup.label, &propertiesPopup.isOpen, ImGuiWindowFlags_NoResize))
+    if (ImGui::BeginPopupModal(propertiesPopup.label(), &propertiesPopup.isOpen, ImGuiWindowFlags_NoResize))
     {
       auto childSize = child_size_get(2);
       auto& layer = manager.editLayer;
 
-      if (ImGui::BeginChild("Child", childSize, ImGuiChildFlags_Borders))
+      if (ImGui::BeginChild("##Child", childSize, ImGuiChildFlags_Borders))
       {
         if (propertiesPopup.isJustOpened) ImGui::SetKeyboardFocusHere();
-        input_text_string("Name", &layer.name);
-        ImGui::SetItemTooltip("Set the item's name.");
-        combo_negative_one_indexed("Spritesheet", &layer.spritesheetID, document.spritesheet.labels);
-        ImGui::SetItemTooltip("Set the layer item's spritesheet.");
+        input_text_string(localize.get(BASIC_NAME), &layer.name);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ITEM_NAME));
+        combo_negative_one_indexed(localize.get(LABEL_SPRITESHEET), &layer.spritesheetID, document.spritesheet.labels);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_SPRITESHEET));
       }
       ImGui::EndChild();
 
       auto widgetSize = widget_size_with_row_get(2);
 
-      if (ImGui::Button(reference == -1 ? "Add" : "Confirm", widgetSize))
+      if (ImGui::Button(reference == -1 ? localize.get(BASIC_ADD) : localize.get(BASIC_CONFIRM), widgetSize))
       {
         if (reference == -1)
         {
@@ -167,7 +179,7 @@ namespace anm2ed::imgui
             newLayerId = id;
           };
 
-          DOCUMENT_EDIT(document, "Add Layer", Document::LAYERS, add());
+          DOCUMENT_EDIT(document, localize.get(EDIT_ADD_LAYER), Document::LAYERS, add());
         }
         else
         {
@@ -177,7 +189,7 @@ namespace anm2ed::imgui
             selection = {reference};
           };
 
-          DOCUMENT_EDIT(document, "Set Layer Properties", Document::LAYERS, set());
+          DOCUMENT_EDIT(document, localize.get(EDIT_SET_LAYER_PROPERTIES), Document::LAYERS, set());
         }
 
         manager.layer_properties_close();
@@ -185,7 +197,7 @@ namespace anm2ed::imgui
 
       ImGui::SameLine();
 
-      if (ImGui::Button("Cancel", widgetSize)) manager.layer_properties_close();
+      if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize)) manager.layer_properties_close();
 
       manager.layer_properties_end();
       ImGui::EndPopup();

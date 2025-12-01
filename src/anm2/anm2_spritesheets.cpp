@@ -38,9 +38,12 @@ namespace anm2ed::anm2
   std::vector<std::string> Anm2::spritesheet_labels_get()
   {
     std::vector<std::string> labels{};
-    labels.emplace_back("None");
+    labels.emplace_back(localize.get(BASIC_NONE));
     for (auto& [id, spritesheet] : content.spritesheets)
-      labels.emplace_back(std::format(SPRITESHEET_FORMAT, id, spritesheet.path.string()));
+    {
+      auto string = spritesheet.path.string();
+      labels.emplace_back(std::vformat(localize.get(FORMAT_SPRITESHEET), std::make_format_args(id, string)));
+    }
     return labels;
   }
 

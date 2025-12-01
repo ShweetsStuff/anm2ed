@@ -4,12 +4,14 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui/imgui.h>
 
+#include "strings.h"
+
 namespace anm2ed::types::theme
 {
 #define THEMES                                                                                                         \
-  X(LIGHT, "Light")                                                                                                    \
-  X(DARK, "Dark")                                                                                                      \
-  X(CLASSIC, "ImGui Classic")
+  X(LIGHT, LABEL_THEME_LIGHT)                                                                                          \
+  X(DARK, LABEL_THEME_DARK)                                                                                            \
+  X(CLASSIC, LABEL_THEME_CLASSIC)
 
   enum Type
   {
@@ -19,7 +21,7 @@ namespace anm2ed::types::theme
         COUNT
   };
 
-  constexpr const char* STRINGS[] = {
+  constexpr StringType STRINGS[] = {
 #define X(symbol, string) string,
       THEMES
 #undef X

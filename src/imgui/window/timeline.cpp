@@ -7,6 +7,7 @@
 
 #include <imgui_internal.h>
 
+#include "log.h"
 #include "math_.h"
 #include "toast.h"
 
@@ -81,16 +82,6 @@ namespace anm2ed::imgui
   constexpr auto FRAME_DRAG_PAYLOAD_ID = "Frame Drag Drop";
   constexpr auto FRAME_TOOLTIP_HOVER_DELAY = 0.75f; // Extra delay for frame info tooltip.
   constexpr int ITEM_SELECTION_NULL_FLAG = 1 << 30;
-
-  constexpr auto HELP_FORMAT = R"(- Press {} to decrement time.
-- Press {} to increment time.
-- Press {} to shorten the selected frame, by one frame.
-- Press {} to extend the selected frame, by one frame.
-- Press {} to go to the previous frame.
-- Press {} to go to the next frame.
-- Click and hold on a frame while holding CTRL to change its duration.
-- Click and hold on a trigger to change its At Frame.
-- Hold Alt while clicking a non-trigger frame to toggle interpolation.)";
 
   void Timeline::update(Manager& manager, Settings& settings, Resources& resources, Clipboard& clipboard)
   {
@@ -325,7 +316,10 @@ namespace anm2ed::imgui
           item->frames.erase(item->frames.begin() + i);
         }
 
-        reference.frameIndex = glm::clamp(--reference.frameIndex, -1, (int)item->frames.size() - 1);
+        if (item->frames.empty())
+          reference.frameIndex = -1;
+        else
+          reference.frameIndex = glm::clamp(--reference.frameIndex, 0, (int)item->frames.size() - 1);
         frames_selection_set_reference();
       }
     };
@@ -376,14 +370,14 @@ namespace anm2ed::imgui
       auto cut = [&]()
       {
         copy();
-        DOCUMENT_EDIT(document, "Cut Frame(s)", Document::FRAMES, frames_delete());
+        DOCUMENT_EDIT(document, localize.get(EDIT_CUT_FRAMES), Document::FRAMES, frames_delete());
       };
 
       auto paste = [&]()
       {
         if (auto item = animation->item_get(reference.itemType, reference.itemID))
         {
-          document.snapshot("Paste Frame(s)");
+          document.snapshot(localize.get(EDIT_PASTE_FRAMES));
           std::set<int> indices{};
           std::string errorString{};
           int insertIndex = (int)item->frames.size();
@@ -403,10 +397,17 @@ namespace anm2ed::imgui
             document.change(Document::FRAMES);
           }
           else
-            toasts.error(std::format("Failed to deserialize frame(s): {}", errorString));
+          {
+            toasts.push(std::format("{} {}", localize.get(TOAST_DESERIALIZE_FRAMES_FAILED), errorString));
+            logger.error(std::format("{} {}", localize.get(TOAST_DESERIALIZE_FRAMES_FAILED, anm2ed::ENGLISH),
+                                     errorString));
+          }
         }
         else
-          toasts.error(std::format("Failed to deserialize frame(s): select an item first!"));
+        {
+          toasts.push(localize.get(TOAST_DESERIALIZE_FRAMES_NO_SELECTION));
+          logger.warning(localize.get(TOAST_DESERIALIZE_FRAMES_NO_SELECTION, anm2ed::ENGLISH));
+        }
       };
 
       if (shortcut(manager.chords[SHORTCUT_CUT], shortcut::FOCUSED)) cut();
@@ -415,9 +416,11 @@ namespace anm2ed::imgui
 
       if (ImGui::BeginPopupContextWindow("##Context Menu", ImGuiPopupFlags_MouseButtonRight))
       {
-        if (ImGui::MenuItem("Cut", settings.shortcutCut.c_str(), false, !frames.selection.empty())) cut();
-        if (ImGui::MenuItem("Copy", settings.shortcutCopy.c_str(), false, !frames.selection.empty())) copy();
-        if (ImGui::MenuItem("Paste", nullptr, false, !clipboard.is_empty())) paste();
+        if (ImGui::MenuItem(localize.get(BASIC_CUT), settings.shortcutCut.c_str(), false, !frames.selection.empty()))
+          cut();
+        if (ImGui::MenuItem(localize.get(BASIC_COPY), settings.shortcutCopy.c_str(), false, !frames.selection.empty()))
+          copy();
+        if (ImGui::MenuItem(localize.get(BASIC_PASTE), nullptr, false, !clipboard.is_empty())) paste();
         ImGui::EndPopup();
       }
 
@@ -529,10 +532,12 @@ namespace anm2ed::imgui
       if (isOnlyShowLayers && type != anm2::LAYER) isVisible = false;
       auto isActive = reference.itemType == type && reference.itemID == id;
 
-      auto label = type == anm2::LAYER   ? std::format(anm2::LAYER_FORMAT, id, anm2.content.layers[id].name,
-                                                       anm2.content.layers[id].spritesheetID)
-                   : type == anm2::NULL_ ? std::format(anm2::NULL_FORMAT, id, anm2.content.nulls[id].name)
-                                         : anm2::TYPE_STRINGS[type];
+      auto label = type == anm2::LAYER ? std::vformat(localize.get(FORMAT_LAYER),
+                                                      std::make_format_args(id, anm2.content.layers[id].name,
+                                                                            anm2.content.layers[id].spritesheetID))
+                   : type == anm2::NULL_
+                       ? std::vformat(localize.get(FORMAT_NULL), std::make_format_args(id, anm2.content.nulls[id].name))
+                       : localize.get(anm2::TYPE_STRINGS[type]);
       auto icon = anm2::TYPE_ICONS[type];
       auto iconTintCurrent = isLightTheme && type == anm2::NONE ? ImVec4(1.0f, 1.0f, 1.0f, 1.0f) : itemIconTint;
       auto baseColorVec = item_color_vec(type);
@@ -605,8 +610,9 @@ namespace anm2ed::imgui
             reference_set_item(type, id);
           }
           ImGui::PopStyleColor(3);
-          if (ImGui::IsItemHovered()) items.hovered = id;
-          if (ImGui::IsItemHovered())
+          bool isItemHovered = ImGui::IsItemHovered();
+          if (isItemHovered) items.hovered = id;
+          if (isItemHovered)
           {
             if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
             {
@@ -620,6 +626,98 @@ namespace anm2ed::imgui
                 default:
                   break;
               }
+            }
+          }
+
+          if (isItemHovered)
+          {
+            auto& imguiStyle = ImGui::GetStyle();
+            auto previousTooltipFlags = imguiStyle.HoverFlagsForTooltipMouse;
+            auto previousTooltipDelay = imguiStyle.HoverDelayNormal;
+            imguiStyle.HoverFlagsForTooltipMouse = ImGuiHoveredFlags_Stationary | ImGuiHoveredFlags_DelayNormal |
+                                                   ImGuiHoveredFlags_AllowWhenDisabled |
+                                                   ImGuiHoveredFlags_NoSharedDelay;
+            imguiStyle.HoverDelayNormal = FRAME_TOOLTIP_HOVER_DELAY;
+            bool showItemTooltip = ImGui::BeginItemTooltip();
+            imguiStyle.HoverFlagsForTooltipMouse = previousTooltipFlags;
+            imguiStyle.HoverDelayNormal = previousTooltipDelay;
+
+            if (showItemTooltip)
+            {
+              auto yesNoLabel = [&](bool value) { return value ? localize.get(BASIC_YES) : localize.get(BASIC_NO); };
+              auto visibleLabel = yesNoLabel(isVisible);
+              auto framesCount = item ? (int)item->frames.size() : 0;
+
+              switch (type)
+              {
+                case anm2::ROOT:
+                {
+                  ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
+                  ImGui::TextUnformatted(localize.get(BASIC_ROOT));
+                  ImGui::PopFont();
+
+                  ImGui::TextUnformatted(
+                      std::vformat(localize.get(FORMAT_VISIBLE), std::make_format_args(visibleLabel)).c_str());
+                  auto transformLabel = yesNoLabel(settings.previewIsRootTransform);
+                  ImGui::TextUnformatted(
+                      std::vformat(localize.get(FORMAT_TRANSFORM), std::make_format_args(transformLabel)).c_str());
+                  ImGui::TextUnformatted(
+                      std::vformat(localize.get(FORMAT_FRAMES_COUNT), std::make_format_args(framesCount)).c_str());
+                  break;
+                }
+                case anm2::LAYER:
+                {
+                  auto& layer = anm2.content.layers[id];
+                  ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
+                  ImGui::TextUnformatted(layer.name.c_str());
+                  ImGui::PopFont();
+
+                  ImGui::TextUnformatted(
+                      std::vformat(localize.get(FORMAT_ID), std::make_format_args(id)).c_str());
+                  ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_SPRITESHEET_ID),
+                                                      std::make_format_args(layer.spritesheetID))
+                                             .c_str());
+                  ImGui::TextUnformatted(
+                      std::vformat(localize.get(FORMAT_VISIBLE), std::make_format_args(visibleLabel)).c_str());
+                  ImGui::TextUnformatted(
+                      std::vformat(localize.get(FORMAT_FRAMES_COUNT), std::make_format_args(framesCount)).c_str());
+                  break;
+                }
+                case anm2::NULL_:
+                {
+                  auto& nullInfo = anm2.content.nulls[id];
+                  ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
+                  ImGui::TextUnformatted(nullInfo.name.c_str());
+                  ImGui::PopFont();
+
+                  auto rectLabel = yesNoLabel(nullInfo.isShowRect);
+                  ImGui::TextUnformatted(
+                      std::vformat(localize.get(FORMAT_ID), std::make_format_args(id)).c_str());
+                  ImGui::TextUnformatted(
+                      std::vformat(localize.get(FORMAT_RECT), std::make_format_args(rectLabel)).c_str());
+                  ImGui::TextUnformatted(
+                      std::vformat(localize.get(FORMAT_VISIBLE), std::make_format_args(visibleLabel)).c_str());
+                  ImGui::TextUnformatted(
+                      std::vformat(localize.get(FORMAT_FRAMES_COUNT), std::make_format_args(framesCount)).c_str());
+                  break;
+                }
+                case anm2::TRIGGER:
+                {
+                  ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
+                  ImGui::TextUnformatted(localize.get(BASIC_TRIGGERS));
+                  ImGui::PopFont();
+
+                  ImGui::TextUnformatted(
+                      std::vformat(localize.get(FORMAT_VISIBLE), std::make_format_args(visibleLabel)).c_str());
+                  ImGui::TextUnformatted(
+                      std::vformat(localize.get(FORMAT_TRIGGERS_COUNT), std::make_format_args(framesCount)).c_str());
+                  break;
+                }
+                default:
+                  break;
+              }
+
+              ImGui::EndTooltip();
             }
           }
 
@@ -645,7 +743,7 @@ namespace anm2ed::imgui
                   if (source != -1 && destination != -1) vector::move_index(animation->layerOrder, source, destination);
                 };
 
-                DOCUMENT_EDIT(document, "Move Layer Animation", Document::ITEMS, layer_order_move());
+                DOCUMENT_EDIT(document, localize.get(EDIT_MOVE_LAYER_ANIMATION), Document::ITEMS, layer_order_move());
               }
               ImGui::EndDragDropTarget();
             }
@@ -673,9 +771,11 @@ namespace anm2ed::imgui
                      (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
           int visibleIcon = item->isVisible ? icon::VISIBLE : icon::INVISIBLE;
           if (ImGui::ImageButton("##Visible Toggle", resources.icons[visibleIcon].id, icon_size_get()))
-            DOCUMENT_EDIT(document, "Item Visibility", Document::FRAMES, item->isVisible = !item->isVisible);
+            DOCUMENT_EDIT(document, localize.get(EDIT_TOGGLE_ITEM_VISIBILITY), Document::FRAMES,
+                          item->isVisible = !item->isVisible);
           overlay_icon(resources.icons[visibleIcon].id, iconTintCurrent);
-          ImGui::SetItemTooltip(isVisible ? "The item is shown. Press to hide." : "The item is hidden. Press to show.");
+          ImGui::SetItemTooltip("%s", isVisible ? localize.get(TOOLTIP_ITEM_VISIBILITY_SHOWN)
+                                                : localize.get(TOOLTIP_ITEM_VISIBILITY_HIDDEN));
 
           if (type == anm2::NULL_)
           {
@@ -686,10 +786,11 @@ namespace anm2ed::imgui
                 ImVec2(itemSize.x - (ImGui::GetTextLineHeightWithSpacing() * 2) - ImGui::GetStyle().ItemSpacing.x,
                        (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
             if (ImGui::ImageButton("##Rect Toggle", resources.icons[rectIcon].id, icon_size_get()))
-              DOCUMENT_EDIT(document, "Null Rect", Document::FRAMES, null.isShowRect = !null.isShowRect);
+              DOCUMENT_EDIT(document, localize.get(EDIT_TOGGLE_NULL_RECT), Document::FRAMES,
+                            null.isShowRect = !null.isShowRect);
             overlay_icon(resources.icons[rectIcon].id, iconTintCurrent);
-            ImGui::SetItemTooltip(isShowRect ? "The null's rect is shown. Press to hide."
-                                             : "The null's rect is hidden. Press to show.");
+            ImGui::SetItemTooltip("%s", isShowRect ? localize.get(TOOLTIP_NULL_RECT_SHOWN)
+                                                   : localize.get(TOOLTIP_NULL_RECT_HIDDEN));
           }
 
           ImGui::PopStyleVar(2);
@@ -712,8 +813,8 @@ namespace anm2ed::imgui
           if (ImGui::ImageButton("##Unused Toggle", resources.icons[unusedIcon].id, icon_size_get()))
             isShowUnused = !isShowUnused;
           overlay_icon(resources.icons[unusedIcon].id, iconTintCurrent);
-          ImGui::SetItemTooltip(isShowUnused ? "Unused layers/nulls are shown. Press to hide."
-                                             : "Unused layers/nulls are hidden. Press to show.");
+          ImGui::SetItemTooltip("%s", isShowUnused ? localize.get(TOOLTIP_UNUSED_ITEMS_SHOWN)
+                                                   : localize.get(TOOLTIP_UNUSED_ITEMS_HIDDEN));
 
           auto& showLayersOnly = settings.timelineIsOnlyShowLayers;
           auto layersIcon = showLayersOnly ? icon::SHOW_LAYERS : icon::HIDE_LAYERS;
@@ -723,8 +824,8 @@ namespace anm2ed::imgui
           if (ImGui::ImageButton("##Layers Toggle", resources.icons[layersIcon].id, icon_size_get()))
             showLayersOnly = !showLayersOnly;
           overlay_icon(resources.icons[layersIcon].id, iconTintCurrent);
-          ImGui::SetItemTooltip(showLayersOnly ? "Only layers are visible. Press to show all items."
-                                               : "All items are visible. Press to only show layers.");
+          ImGui::SetItemTooltip("%s", showLayersOnly ? localize.get(TOOLTIP_ONLY_LAYERS_VISIBLE)
+                                                     : localize.get(TOOLTIP_ALL_ITEMS_VISIBLE));
           ImGui::PopStyleVar(2);
           ImGui::PopStyleColor(3);
 
@@ -734,11 +835,12 @@ namespace anm2ed::imgui
           ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
           ImGui::Text("(?)");
           ImGui::PopStyleColor();
-          ImGui::SetItemTooltip("%s", std::format(HELP_FORMAT, settings.shortcutMovePlayheadBack,
-                                                  settings.shortcutMovePlayheadForward, settings.shortcutShortenFrame,
-                                                  settings.shortcutExtendFrame, settings.shortcutPreviousFrame,
-                                                  settings.shortcutNextFrame)
-                                          .c_str());
+          auto tooltipShortcuts = std::vformat(
+              localize.get(TOOLTIP_TIMELINE_SHORTCUTS),
+              std::make_format_args(settings.shortcutMovePlayheadBack, settings.shortcutMovePlayheadForward,
+                                    settings.shortcutShortenFrame, settings.shortcutExtendFrame,
+                                    settings.shortcutPreviousFrame, settings.shortcutNextFrame));
+          ImGui::SetItemTooltip("%s", tooltipShortcuts.c_str());
           ImGui::EndDisabled();
         }
       }
@@ -863,12 +965,12 @@ namespace anm2ed::imgui
         ImGui::BeginDisabled(!animation);
         {
           shortcut(manager.chords[SHORTCUT_ADD]);
-          if (ImGui::Button("Add", widgetSize))
+          if (ImGui::Button(localize.get(BASIC_ADD), widgetSize))
           {
             item_properties_reset();
             propertiesPopup.open();
           }
-          set_item_tooltip_shortcut("Add a new item to the animation.", settings.shortcutAdd);
+          set_item_tooltip_shortcut(localize.get(TOOLTIP_ADD_ITEM), settings.shortcutAdd);
           ImGui::SameLine();
 
           auto selectionType = item_selection_type_get();
@@ -877,7 +979,7 @@ namespace anm2ed::imgui
           ImGui::BeginDisabled(!hasSelection && !hasReferenceItem);
           {
             shortcut(manager.chords[SHORTCUT_REMOVE]);
-            if (ImGui::Button("Remove", widgetSize))
+            if (ImGui::Button(localize.get(BASIC_REMOVE), widgetSize))
             {
               auto remove = [&]()
               {
@@ -897,9 +999,9 @@ namespace anm2ed::imgui
                 reference_clear();
               };
 
-              DOCUMENT_EDIT(document, "Remove Item(s)", Document::ITEMS, remove());
+              DOCUMENT_EDIT(document, localize.get(EDIT_REMOVE_ITEMS), Document::ITEMS, remove());
             }
-            set_item_tooltip_shortcut("Remove the selected item(s) from the animation.", settings.shortcutRemove);
+            set_item_tooltip_shortcut(localize.get(TOOLTIP_REMOVE_ITEMS), settings.shortcutRemove);
           }
           ImGui::EndDisabled();
         }
@@ -956,7 +1058,7 @@ namespace anm2ed::imgui
 
         auto drawList = ImGui::GetWindowDrawList();
         auto clipMax = drawList->GetClipRectMax();
-        auto length = animation ? animation->frameNum : anm2.animations.length();
+        auto length = animation ? animation->frameNum : 0;
         auto frameSize = ImVec2(ImGui::GetTextLineHeight(), ImGui::GetContentRegionAvail().y);
         auto framesSize = ImVec2(frameSize.x * length, frameSize.y);
         auto cursorPos = ImGui::GetCursorPos();
@@ -969,20 +1071,23 @@ namespace anm2ed::imgui
 
         if (type == anm2::NONE)
         {
-          if (isLightTheme)
+          if (length > 0)
           {
-            auto totalMax = ImVec2(cursorScreenPos.x + framesSize.x, cursorScreenPos.y + framesSize.y);
-            drawList->AddRectFilled(cursorScreenPos, totalMax, ImGui::GetColorU32(timelineBackgroundColor));
-            float animationWidth = std::min(framesSize.x, frameSize.x * (float)length);
-            drawList->AddRectFilled(cursorScreenPos,
-                                    ImVec2(cursorScreenPos.x + animationWidth, cursorScreenPos.y + framesSize.y),
-                                    ImGui::GetColorU32(timelinePlayheadRectColor));
-          }
-          else
-          {
-            drawList->AddRectFilled(cursorScreenPos,
-                                    ImVec2(cursorScreenPos.x + framesSize.x, cursorScreenPos.y + framesSize.y),
-                                    ImGui::GetColorU32(ImGui::GetStyleColorVec4(ImGuiCol_Header)));
+            if (isLightTheme)
+            {
+              auto totalMax = ImVec2(cursorScreenPos.x + framesSize.x, cursorScreenPos.y + framesSize.y);
+              drawList->AddRectFilled(cursorScreenPos, totalMax, ImGui::GetColorU32(timelineBackgroundColor));
+              float animationWidth = std::min(framesSize.x, frameSize.x * (float)length);
+              drawList->AddRectFilled(cursorScreenPos,
+                                      ImVec2(cursorScreenPos.x + animationWidth, cursorScreenPos.y + framesSize.y),
+                                      ImGui::GetColorU32(timelinePlayheadRectColor));
+            }
+            else
+            {
+              drawList->AddRectFilled(cursorScreenPos,
+                                      ImVec2(cursorScreenPos.x + framesSize.x, cursorScreenPos.y + framesSize.y),
+                                      ImGui::GetColorU32(ImGui::GetStyleColorVec4(ImGuiCol_Header)));
+            }
           }
 
           for (int i = frameMin; i < frameMax; i++)
@@ -1029,9 +1134,12 @@ namespace anm2ed::imgui
 
           if (ImGui::IsMouseReleased(0)) isDragging = false;
 
-          ImGui::SetCursorPos(ImVec2(cursorPos.x + frameSize.x * floorf(playback.time), cursorPos.y));
-          ImGui::Image(resources.icons[icon::PLAYHEAD].id, frameSize);
-          overlay_icon(resources.icons[icon::PLAYHEAD].id, playheadIconTint, true);
+          if (length > 0)
+          {
+            ImGui::SetCursorPos(ImVec2(cursorPos.x + frameSize.x * floorf(playback.time), cursorPos.y));
+            ImGui::Image(resources.icons[icon::PLAYHEAD].id, frameSize);
+            overlay_icon(resources.icons[icon::PLAYHEAD].id, playheadIconTint, true);
+          }
         }
         else if (animation)
         {
@@ -1116,7 +1224,7 @@ namespace anm2ed::imgui
               if (type != anm2::TRIGGER)
               {
                 if (ImGui::IsKeyDown(ImGuiMod_Alt))
-                  DOCUMENT_EDIT(document, "Frame Interpolation", Document::FRAMES,
+                  DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_INTERPOLATION), Document::FRAMES,
                                 frame.isInterpolated = !frame.isInterpolated);
 
                 document.frameTime = frameTime;
@@ -1145,59 +1253,80 @@ namespace anm2ed::imgui
 
             if (showFrameTooltip)
             {
-
               if (type != anm2::TRIGGER)
               {
+                auto cropX = frame.crop.x;
+                auto cropY = frame.crop.y;
+                auto sizeX = frame.size.x;
+                auto sizeY = frame.size.y;
+                auto pivotX = frame.pivot.x;
+                auto pivotY = frame.pivot.y;
+                auto scaleX = frame.scale.x;
+                auto scaleY = frame.scale.y;
+                auto rotationValue = frame.rotation;
+                auto durationValue = frame.duration;
+                auto tintR = math::float_to_uint8(frame.tint.r);
+                auto tintG = math::float_to_uint8(frame.tint.g);
+                auto tintB = math::float_to_uint8(frame.tint.b);
+                auto tintA = math::float_to_uint8(frame.tint.a);
+                auto visibleLabel = frame.isVisible ? localize.get(BASIC_YES) : localize.get(BASIC_NO);
+                auto interpolatedLabel = frame.isInterpolated ? localize.get(BASIC_YES) : localize.get(BASIC_NO);
+
                 ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
-                ImGui::Text("%s Frame", anm2::TYPE_STRINGS[type]);
+                ImGui::Text("%s %s", localize.get(anm2::TYPE_STRINGS[type]), localize.get(BASIC_FRAME));
                 ImGui::PopFont();
 
-                auto float_text = [&](std::string label, float& value)
-                {
-                  std::string useFormat = math::float_format_get(value);
-                  std::string format(label + ": " + useFormat);
-                  ImGui::Text(format.c_str(), value);
-                };
-
-                auto vec2_text = [&](std::string label, vec2& value)
-                {
-                  std::string useFormat = math::vec2_format_get(value);
-                  std::string format(label + ": " + useFormat + ", " + useFormat);
-                  ImGui::Text(format.c_str(), value.x, value.y);
-                };
-
-                ImGui::Text("Index: %i", (int)i);
+                auto indexValue = (int)i;
+                ImGui::TextUnformatted(
+                    std::vformat(localize.get(FORMAT_INDEX), std::make_format_args(indexValue)).c_str());
 
                 if (type == anm2::LAYER)
                 {
-                  vec2_text("Crop", frame.crop);
-                  vec2_text("Size", frame.size);
+
+                  ImGui::TextUnformatted(
+                      std::vformat(localize.get(FORMAT_CROP), std::make_format_args(cropX, cropY)).c_str());
+                  ImGui::TextUnformatted(
+                      std::vformat(localize.get(FORMAT_SIZE), std::make_format_args(sizeX, sizeY)).c_str());
                 }
 
-                vec2_text("Position", frame.size);
+                ImGui::TextUnformatted(
+                    std::vformat(localize.get(FORMAT_POSITION), std::make_format_args(sizeX, sizeY)).c_str());
 
-                if (type == anm2::LAYER) vec2_text("Pivot", frame.pivot);
+                ImGui::TextUnformatted(
+                    std::vformat(localize.get(FORMAT_PIVOT), std::make_format_args(pivotX, pivotY)).c_str());
 
-                vec2_text("Scale", frame.scale);
-                float_text("Rotation", frame.rotation);
-                ImGui::Text("Duration: %i", frame.duration);
-                ImGui::Text("Tint: %i, %i, %i, %i", math::float_to_uint8(frame.tint.r),
-                            math::float_to_uint8(frame.tint.g), math::float_to_uint8(frame.tint.b),
-                            math::float_to_uint8(frame.tint.a));
-                ImGui::Text("Color Offset: %i, %i, %i", math::float_to_uint8(frame.tint.r),
-                            math::float_to_uint8(frame.tint.g), math::float_to_uint8(frame.tint.b));
-                ImGui::Text("Visible: %s", frame.isVisible ? "true" : "false");
-                ImGui::Text("Interpolated: %s", frame.isInterpolated ? "true" : "false");
+                ImGui::TextUnformatted(
+                    std::vformat(localize.get(FORMAT_SCALE), std::make_format_args(scaleX, scaleY)).c_str());
+                ImGui::TextUnformatted(
+                    std::vformat(localize.get(FORMAT_ROTATION), std::make_format_args(rotationValue)).c_str());
+                ImGui::TextUnformatted(
+                    std::vformat(localize.get(FORMAT_DURATION), std::make_format_args(durationValue)).c_str());
+                ImGui::TextUnformatted(
+                    std::vformat(localize.get(FORMAT_TINT), std::make_format_args(tintR, tintG, tintB, tintA)).c_str());
+                ImGui::TextUnformatted(
+                    std::vformat(localize.get(FORMAT_COLOR_OFFSET), std::make_format_args(tintR, tintG, tintB))
+                        .c_str());
+                ImGui::TextUnformatted(
+                    std::vformat(localize.get(FORMAT_VISIBLE), std::make_format_args(visibleLabel)).c_str());
+                ImGui::TextUnformatted(
+                    std::vformat(localize.get(FORMAT_INTERPOLATED), std::make_format_args(interpolatedLabel)).c_str());
               }
               else
               {
+                auto atFrameValue = frame.atFrame;
+                auto eventLabel = document.event.labels[frame.eventID + 1];
+                auto soundLabel = document.sound.labels[frame.soundID + 1];
+
                 ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
-                ImGui::Text("%s", anm2::TYPE_STRINGS[type]);
+                ImGui::Text("%s %s", localize.get(anm2::TYPE_STRINGS[type]), localize.get(BASIC_FRAME));
                 ImGui::PopFont();
 
-                ImGui::Text("At Frame: %i", frame.atFrame);
-                ImGui::Text("Event: %s", document.event.labels[frame.eventID + 1]);
-                ImGui::Text("Sound: %s", document.sound.labels[frame.soundID + 1]);
+                ImGui::TextUnformatted(
+                    std::vformat(localize.get(FORMAT_AT_FRAME), std::make_format_args(atFrameValue)).c_str());
+                ImGui::TextUnformatted(
+                    std::vformat(localize.get(FORMAT_EVENT_LABEL), std::make_format_args(eventLabel)).c_str());
+                ImGui::TextUnformatted(
+                    std::vformat(localize.get(FORMAT_SOUND_LABEL), std::make_format_args(soundLabel)).c_str());
               }
 
               ImGui::EndTooltip();
@@ -1294,7 +1423,7 @@ namespace anm2ed::imgui
 
                     int insertPosResult = -1;
                     int insertedCount = 0;
-                    DOCUMENT_EDIT(document, "Move Frame(s)", Document::FRAMES, {
+                    DOCUMENT_EDIT(document, localize.get(EDIT_MOVE_FRAMES), Document::FRAMES, {
                       std::vector<anm2::Frame> movedFrames;
                       movedFrames.reserve(indices.size());
 
@@ -1393,7 +1522,8 @@ namespace anm2ed::imgui
             if (!isDraggedFrameSnapshot && hoveredTime != draggedFrameStart)
             {
               isDraggedFrameSnapshot = true;
-              document.snapshot(type == anm2::TRIGGER ? "Trigger At Frame" : "Frame Duration");
+              document.snapshot(type == anm2::TRIGGER ? localize.get(EDIT_TRIGGER_AT_FRAME)
+                                                      : localize.get(EDIT_FRAME_DURATION));
             }
 
             if (type == anm2::TRIGGER)
@@ -1562,8 +1692,9 @@ namespace anm2ed::imgui
 
         ImGui::BeginDisabled(!animation);
         {
-          auto label = playback.isPlaying ? "Pause" : "Play";
-          auto tooltip = playback.isPlaying ? "Pause the animation." : "Play the animation.";
+          auto label = playback.isPlaying ? localize.get(LABEL_PAUSE) : localize.get(LABEL_PLAY);
+          auto tooltip =
+              playback.isPlaying ? localize.get(TOOLTIP_PAUSE_ANIMATION) : localize.get(TOOLTIP_PLAY_ANIMATION);
 
           shortcut(manager.chords[SHORTCUT_PLAY_PAUSE]);
           if (ImGui::Button(label, widgetSize)) playback.toggle();
@@ -1576,7 +1707,7 @@ namespace anm2ed::imgui
           ImGui::BeginDisabled(!item);
           {
             shortcut(manager.chords[SHORTCUT_INSERT_FRAME]);
-            if (ImGui::Button("Insert", widgetSize))
+            if (ImGui::Button(localize.get(LABEL_INSERT), widgetSize))
             {
               auto insert_frame = [&]()
               {
@@ -1616,23 +1747,23 @@ namespace anm2ed::imgui
                 frames_selection_set_reference();
               };
 
-              DOCUMENT_EDIT(document, "Insert Frame", Document::FRAMES, insert_frame());
+              DOCUMENT_EDIT(document, localize.get(EDIT_INSERT_FRAME), Document::FRAMES, insert_frame());
             }
-            set_item_tooltip_shortcut("Insert a frame, based on the current selection.", settings.shortcutInsertFrame);
+            set_item_tooltip_shortcut(localize.get(TOOLTIP_INSERT_FRAME), settings.shortcutInsertFrame);
 
             ImGui::SameLine();
 
             ImGui::BeginDisabled(!document.frame_get());
             {
               shortcut(manager.chords[SHORTCUT_REMOVE]);
-              if (ImGui::Button("Delete", widgetSize))
-                DOCUMENT_EDIT(document, "Delete Frame(s)", Document::FRAMES, frames_delete());
-              set_item_tooltip_shortcut("Delete the selected frames.", settings.shortcutRemove);
+              if (ImGui::Button(localize.get(LABEL_DELETE), widgetSize))
+                DOCUMENT_EDIT(document, localize.get(EDIT_DELETE_FRAMES), Document::FRAMES, frames_delete());
+              set_item_tooltip_shortcut(localize.get(TOOLTIP_DELETE_FRAMES), settings.shortcutRemove);
 
               ImGui::SameLine();
 
-              if (ImGui::Button("Bake", widgetSize)) bakePopup.open();
-              ImGui::SetItemTooltip("Turn interpolated frames into uninterpolated ones.");
+              if (ImGui::Button(localize.get(LABEL_BAKE), widgetSize)) bakePopup.open();
+              ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BAKE_FRAMES));
             }
             ImGui::EndDisabled();
           }
@@ -1641,27 +1772,29 @@ namespace anm2ed::imgui
           ImGui::SameLine();
 
           ImGui::BeginDisabled(!animation || animation->frameNum == animation->length());
-          if (ImGui::Button("Fit Animation Length", widgetSize))
-            DOCUMENT_EDIT(document, "Fit Animation Length", Document::ANIMATIONS, animation->fit_length());
-          ImGui::SetItemTooltip("The animation length will be set to the effective length of the animation.");
+          if (ImGui::Button(localize.get(LABEL_FIT_ANIMATION_LENGTH), widgetSize))
+            DOCUMENT_EDIT(document, localize.get(EDIT_FIT_ANIMATION_LENGTH), Document::ANIMATIONS,
+                          animation->fit_length());
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FIT_ANIMATION_LENGTH));
           ImGui::EndDisabled();
 
           ImGui::SameLine();
 
           auto frameNum = animation ? animation->frameNum : dummy_value<int>();
           ImGui::SetNextItemWidth(widgetSize.x);
-          if (input_int_range("Animation Length", frameNum, anm2::FRAME_NUM_MIN, anm2::FRAME_NUM_MAX, STEP, STEP_FAST,
-                              !animation ? ImGuiInputTextFlags_DisplayEmptyRefVal : 0))
-            DOCUMENT_EDIT(document, "Animation Length", Document::ANIMATIONS, animation->frameNum = frameNum);
-          ImGui::SetItemTooltip("Set the animation's length.");
+          if (input_int_range(localize.get(LABEL_ANIMATION_LENGTH), frameNum, anm2::FRAME_NUM_MIN, anm2::FRAME_NUM_MAX,
+                              STEP, STEP_FAST, !animation ? ImGuiInputTextFlags_DisplayEmptyRefVal : 0))
+            DOCUMENT_EDIT(document, localize.get(EDIT_ANIMATION_LENGTH), Document::ANIMATIONS,
+                          animation->frameNum = frameNum);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ANIMATION_LENGTH));
 
           ImGui::SameLine();
 
           auto isLoop = animation ? animation->isLoop : dummy_value<bool>();
           ImGui::SetNextItemWidth(widgetSize.x);
-          if (ImGui::Checkbox("Loop", &isLoop))
-            DOCUMENT_EDIT(document, "Loop", Document::ANIMATIONS, animation->isLoop = isLoop);
-          ImGui::SetItemTooltip("Toggle the animation looping.");
+          if (ImGui::Checkbox(localize.get(LABEL_LOOP), &isLoop))
+            DOCUMENT_EDIT(document, localize.get(EDIT_LOOP), Document::ANIMATIONS, animation->isLoop = isLoop);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LOOP_ANIMATION));
         }
         ImGui::EndDisabled();
 
@@ -1669,23 +1802,23 @@ namespace anm2ed::imgui
 
         auto fps = anm2.info.fps;
         ImGui::SetNextItemWidth(widgetSize.x);
-        if (input_int_range("FPS", fps, anm2::FPS_MIN, anm2::FPS_MAX))
-          DOCUMENT_EDIT(document, "FPS", Document::ANIMATIONS, anm2.info.fps = fps);
-        ImGui::SetItemTooltip("Set the FPS of all animations.");
+        if (input_int_range(localize.get(LABEL_FPS), fps, anm2::FPS_MIN, anm2::FPS_MAX))
+          DOCUMENT_EDIT(document, localize.get(EDIT_FPS), Document::ANIMATIONS, anm2.info.fps = fps);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FPS));
 
         ImGui::SameLine();
 
         auto createdBy = anm2.info.createdBy;
         ImGui::SetNextItemWidth(widgetSize.x);
-        if (input_text_string("Author", &createdBy))
-          DOCUMENT_EDIT(document, "Author", Document::ANIMATIONS, anm2.info.createdBy = createdBy);
-        ImGui::SetItemTooltip("Set the author of the document.");
+        if (input_text_string(localize.get(LABEL_AUTHOR), &createdBy))
+          DOCUMENT_EDIT(document, localize.get(EDIT_AUTHOR), Document::ANIMATIONS, anm2.info.createdBy = createdBy);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_AUTHOR));
 
         ImGui::SameLine();
 
         ImGui::SetNextItemWidth(widgetSize.x);
-        ImGui::Checkbox("Sound", &settings.timelineIsSound);
-        ImGui::SetItemTooltip("Toggle sounds playing with triggers.\nBind sounds to events in the Events window.");
+        ImGui::Checkbox(localize.get(LABEL_SOUND), &settings.timelineIsSound);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SOUND));
 
         ImGui::PopStyleVar();
       }
@@ -1695,7 +1828,7 @@ namespace anm2ed::imgui
     };
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2());
-    if (ImGui::Begin("Timeline", &settings.windowIsTimeline))
+    if (ImGui::Begin(localize.get(LABEL_TIMELINE_WINDOW), &settings.windowIsTimeline))
     {
       isWindowHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows);
       frames_child();
@@ -1706,7 +1839,7 @@ namespace anm2ed::imgui
 
     propertiesPopup.trigger();
 
-    if (ImGui::BeginPopupModal(propertiesPopup.label, &propertiesPopup.isOpen, ImGuiWindowFlags_NoResize))
+    if (ImGui::BeginPopupModal(propertiesPopup.label(), &propertiesPopup.isOpen, ImGuiWindowFlags_NoResize))
     {
       auto item_properties_close = [&]()
       {
@@ -1722,80 +1855,79 @@ namespace anm2ed::imgui
       auto optionsSize = child_size_get(11);
       auto itemsSize = ImVec2(0, ImGui::GetContentRegionAvail().y -
                                      (optionsSize.y + footerSize.y + ImGui::GetStyle().ItemSpacing.y * 4));
-      if (ImGui::BeginChild("Options", optionsSize, ImGuiChildFlags_Borders))
+      if (ImGui::BeginChild("##Options", optionsSize, ImGuiChildFlags_Borders))
       {
-        ImGui::SeparatorText("Type");
+        ImGui::SeparatorText(localize.get(LABEL_TYPE));
 
         auto size = ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, ImGui::GetFrameHeightWithSpacing());
 
-        if (ImGui::BeginChild("Type Layer", size))
+        if (ImGui::BeginChild("##Type 1", size))
         {
-          ImGui::RadioButton("Layer", &type, anm2::LAYER);
-          ImGui::SetItemTooltip("Layers are a basic visual element in an animation, used for displaying spritesheets.");
+          ImGui::RadioButton(localize.get(LABEL_LAYER), &type, anm2::LAYER);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_TYPE));
         }
         ImGui::EndChild();
 
         ImGui::SameLine();
 
-        if (ImGui::BeginChild("Type Null", size))
+        if (ImGui::BeginChild("##Type 2", size))
         {
-          ImGui::RadioButton("Null", &type, anm2::NULL_);
-          ImGui::SetItemTooltip(
-              "Nulls are invisible elements in an animation, used for interfacing with a game engine.");
+          ImGui::RadioButton(localize.get(LABEL_NULL), &type, anm2::NULL_);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_NULL_TYPE));
         }
         ImGui::EndChild();
 
-        ImGui::SeparatorText("Source");
+        ImGui::SeparatorText(localize.get(LABEL_SOURCE));
 
-        if (ImGui::BeginChild("Source New", size))
+        if (ImGui::BeginChild("##Source 1", size))
         {
-          ImGui::RadioButton("New", &source, source::NEW);
-          ImGui::SetItemTooltip("Create a new item to be used.");
+          ImGui::RadioButton(localize.get(LABEL_NEW), &source, source::NEW);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_NEW_ITEM));
         }
         ImGui::EndChild();
 
         ImGui::SameLine();
 
-        if (ImGui::BeginChild("Source Existing", size))
+        if (ImGui::BeginChild("##Source 2", size))
         {
-          auto hasUnusedItems = animation && !unused_items_get((anm2::Type)type).empty();
-          ImGui::BeginDisabled(!hasUnusedItems);
-          ImGui::RadioButton("Existing", &source, source::EXISTING);
+          auto isUnusedItems = animation && !unused_items_get((anm2::Type)type).empty();
+          ImGui::BeginDisabled(!isUnusedItems);
+          ImGui::RadioButton(localize.get(LABEL_EXISTING), &source, source::EXISTING);
           ImGui::EndDisabled();
-          auto tooltip =
-              hasUnusedItems ? "Use a pre-existing, presently unused item." : "No unused items are available.";
-          ImGui::SetItemTooltip("%s", tooltip);
+          ImGui::SetItemTooltip("%s", isUnusedItems ? localize.get(TOOLTIP_USE_EXISTING_ITEM)
+                                                    : localize.get(TOOLTIP_NO_UNUSED_ITEMS));
         }
         ImGui::EndChild();
 
-        ImGui::SeparatorText("Locale");
+        ImGui::SeparatorText(localize.get(LABEL_LOCALE));
 
-        if (ImGui::BeginChild("Locale Global", size))
+        if (ImGui::BeginChild("##Locale 1", size))
         {
-          ImGui::RadioButton("Global", &locale, locale::GLOBAL);
-          ImGui::SetItemTooltip("The item will be inserted into all animations, if not already present.");
+          ImGui::RadioButton(localize.get(LABEL_GLOBAL), &locale, locale::GLOBAL);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GLOBAL_LOCALE));
         }
         ImGui::EndChild();
 
         ImGui::SameLine();
 
-        if (ImGui::BeginChild("Locale Local", size))
+        if (ImGui::BeginChild("##Locale 2", size))
         {
-          ImGui::RadioButton("Local", &locale, locale::LOCAL);
-          ImGui::SetItemTooltip("The item will only be inserted into this animation.");
+          ImGui::RadioButton(localize.get(LABEL_LOCAL), &locale, locale::LOCAL);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LOCAL_LOCALE));
         }
         ImGui::EndChild();
 
-        ImGui::SeparatorText("Options");
+        ImGui::SeparatorText(localize.get(LABEL_OPTIONS));
 
         ImGui::BeginDisabled(source == source::EXISTING);
         {
-          input_text_string("Name", &addItemName);
-          ImGui::SetItemTooltip("Set the item's name.");
+          input_text_string(localize.get(BASIC_NAME), &addItemName);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ITEM_NAME));
           ImGui::BeginDisabled(type != anm2::LAYER);
           {
-            combo_negative_one_indexed("Spritesheet", &addItemSpritesheetID, document.spritesheet.labels);
-            ImGui::SetItemTooltip("Set the layer item's spritesheet.");
+            combo_negative_one_indexed(localize.get(LABEL_SPRITESHEET), &addItemSpritesheetID,
+                                       document.spritesheet.labels);
+            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_SPRITESHEET));
           }
           ImGui::EndDisabled();
         }
@@ -1803,7 +1935,7 @@ namespace anm2ed::imgui
       }
       ImGui::EndChild();
 
-      if (ImGui::BeginChild("Items", itemsSize, ImGuiChildFlags_Borders))
+      if (ImGui::BeginChild("##Items", itemsSize, ImGuiChildFlags_Borders))
       {
         if (animation && source == source::EXISTING)
         {
@@ -1819,15 +1951,15 @@ namespace anm2ed::imgui
             if (type == anm2::LAYER)
             {
               auto& layer = anm2.content.layers[id];
-              if (ImGui::Selectable(
-                      std::format("#{} {} (Spritesheet: #{})", id, layer.name, layer.spritesheetID).c_str(),
-                      isSelected))
-                addItemID = id;
+              auto label =
+                  std::vformat(localize.get(FORMAT_LAYER), std::make_format_args(id, layer.name, layer.spritesheetID));
+              if (ImGui::Selectable(label.c_str(), isSelected)) addItemID = id;
             }
             else if (type == anm2::NULL_)
             {
               auto& null = anm2.content.nulls[id];
-              if (ImGui::Selectable(std::format("#{} {}", id, null.name).c_str(), isSelected)) addItemID = id;
+              auto label = std::vformat(localize.get(FORMAT_NULL), std::make_format_args(id, null.name));
+              if (ImGui::Selectable(label.c_str(), isSelected)) addItemID = id;
             }
 
             ImGui::PopID();
@@ -1839,11 +1971,11 @@ namespace anm2ed::imgui
       auto widgetSize = widget_size_with_row_get(2);
 
       ImGui::BeginDisabled(source == source::EXISTING && addItemID == -1);
-      if (ImGui::Button("Add", widgetSize))
+      if (ImGui::Button(localize.get(BASIC_ADD), widgetSize))
       {
         anm2::Reference addReference{};
 
-        document.snapshot("Add Item");
+        document.snapshot(localize.get(EDIT_ADD_ITEM));
         if (type == anm2::LAYER)
           addReference = anm2.layer_animation_add({reference.animationIndex, anm2::LAYER, addItemID}, addItemName,
                                                   addItemSpritesheetID - 1, (locale::Type)locale);
@@ -1864,19 +1996,19 @@ namespace anm2ed::imgui
         item_properties_close();
       }
       ImGui::EndDisabled();
-      ImGui::SetItemTooltip("Add the item, with the settings specified.");
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ADD_ITEM));
 
       ImGui::SameLine();
 
-      if (ImGui::Button("Cancel", widgetSize)) item_properties_close();
-      ImGui::SetItemTooltip("Cancel adding an item.");
+      if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize)) item_properties_close();
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CANCEL_ADD_ITEM));
 
       ImGui::EndPopup();
     }
 
     bakePopup.trigger();
 
-    if (ImGui::BeginPopupModal(bakePopup.label, &bakePopup.isOpen, ImGuiWindowFlags_NoResize))
+    if (ImGui::BeginPopupModal(bakePopup.label(), &bakePopup.isOpen, ImGuiWindowFlags_NoResize))
     {
       auto& interval = settings.bakeInterval;
       auto& isRoundRotation = settings.bakeIsRoundRotation;
@@ -1884,19 +2016,19 @@ namespace anm2ed::imgui
 
       auto frame = document.frame_get();
 
-      input_int_range("Interval", interval, anm2::FRAME_DURATION_MIN,
+      input_int_range(localize.get(LABEL_INTERVAL), interval, anm2::FRAME_DURATION_MIN,
                       frame ? frame->duration : anm2::FRAME_DURATION_MIN);
-      ImGui::SetItemTooltip("Set the maximum duration of each frame that will be baked.");
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_INTERVAL));
 
-      ImGui::Checkbox("Round Rotation", &isRoundRotation);
-      ImGui::SetItemTooltip("Rotation will be rounded to the nearest whole number.");
+      ImGui::Checkbox(localize.get(LABEL_ROUND_ROTATION), &isRoundRotation);
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ROUND_ROTATION));
 
-      ImGui::Checkbox("Round Scale", &isRoundScale);
-      ImGui::SetItemTooltip("Scale will be rounded to the nearest whole number.");
+      ImGui::Checkbox(localize.get(LABEL_ROUND_SCALE), &isRoundScale);
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ROUND_SCALE));
 
       auto widgetSize = widget_size_with_row_get(2);
 
-      if (ImGui::Button("Bake", widgetSize))
+      if (ImGui::Button(localize.get(LABEL_BAKE), widgetSize))
       {
         auto frames_bake = [&]()
         {
@@ -1907,16 +2039,16 @@ namespace anm2ed::imgui
           frames.clear();
         };
 
-        DOCUMENT_EDIT(document, "Bake Frames", Document::FRAMES, frames_bake());
+        DOCUMENT_EDIT(document, localize.get(EDIT_BAKE_FRAMES), Document::FRAMES, frames_bake());
 
         bakePopup.close();
       }
-      ImGui::SetItemTooltip("Bake the selected frame(s) with the options selected.");
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BAKE_FRAMES_OPTIONS));
 
       ImGui::SameLine();
 
-      if (ImGui::Button("Cancel", widgetSize)) bakePopup.close();
-      ImGui::SetItemTooltip("Cancel baking frames.");
+      if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize)) bakePopup.close();
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CANCEL_BAKE_FRAMES));
 
       ImGui::EndPopup();
     }
@@ -1940,7 +2072,7 @@ namespace anm2ed::imgui
       static bool isShortenChordHeld = false;
       auto isShortenFrame = shortcut(manager.chords[SHORTCUT_SHORTEN_FRAME], shortcut::GLOBAL);
 
-      if (isShortenFrame && !isShortenChordHeld) document.snapshot("Shorten Frame");
+      if (isShortenFrame && !isShortenChordHeld) document.snapshot(localize.get(EDIT_SHORTEN_FRAME));
       if (isShortenFrame)
       {
 
@@ -1954,7 +2086,7 @@ namespace anm2ed::imgui
 
       static bool isExtendChordHeld = false;
       auto isExtendFrame = shortcut(manager.chords[SHORTCUT_EXTEND_FRAME], shortcut::GLOBAL);
-      if (isExtendFrame && !isExtendChordHeld) document.snapshot("Extend Frame");
+      if (isExtendFrame && !isExtendChordHeld) document.snapshot(localize.get(EDIT_EXTEND_FRAME));
       if (isExtendFrame)
       {
 

@@ -7,6 +7,7 @@
 
 #include "document.h"
 #include "settings.h"
+#include "strings.h"
 
 namespace anm2ed
 {
@@ -40,18 +41,21 @@ namespace anm2ed
     std::vector<std::filesystem::path> anm2DragDropPaths{};
     bool isAnm2DragDrop{};
     imgui::PopupHelper anm2DragDropPopup{
-        imgui::PopupHelper("Anm2 Drag Drop", imgui::POPUP_NORMAL, imgui::POPUP_BY_CURSOR)};
+        imgui::PopupHelper(LABEL_MANAGER_ANM2_DRAG_DROP, imgui::POPUP_NORMAL, imgui::POPUP_BY_CURSOR)};
 
     std::filesystem::path spritesheetDragDropPath{};
     bool isSpritesheetDragDrop{};
 
     anm2::Layer editLayer{};
-    imgui::PopupHelper layerPropertiesPopup{imgui::PopupHelper("Layer Properties", imgui::POPUP_SMALL_NO_HEIGHT)};
+    imgui::PopupHelper layerPropertiesPopup{
+        imgui::PopupHelper(LABEL_MANAGER_LAYER_PROPERTIES, imgui::POPUP_SMALL_NO_HEIGHT)};
 
     anm2::Null editNull{};
-    imgui::PopupHelper nullPropertiesPopup{imgui::PopupHelper("Null Properties", imgui::POPUP_SMALL_NO_HEIGHT)};
+    imgui::PopupHelper nullPropertiesPopup{
+        imgui::PopupHelper(LABEL_MANAGER_NULL_PROPERTIES, imgui::POPUP_SMALL_NO_HEIGHT)};
 
-    imgui::PopupHelper progressPopup{imgui::PopupHelper("Rendering...", imgui::POPUP_SMALL_NO_HEIGHT)};
+    imgui::PopupHelper progressPopup{
+        imgui::PopupHelper(LABEL_MANAGER_RENDERING_PROGRESS, imgui::POPUP_SMALL_NO_HEIGHT)};
 
     std::vector<int> selectionHistory{};
 

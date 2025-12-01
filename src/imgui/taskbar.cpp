@@ -13,6 +13,7 @@
 
 #include <imgui/imgui.h>
 
+#include "log.h"
 #include "math_.h"
 #include "render.h"
 #include "shader.h"
@@ -22,6 +23,8 @@
 #include "icon.h"
 #include "toast.h"
 
+#include "strings.h"
+
 using namespace anm2ed::resource;
 using namespace anm2ed::types;
 using namespace anm2ed::canvas;
@@ -30,8 +33,76 @@ using namespace glm;
 
 namespace anm2ed::imgui
 {
-  static constexpr auto ANM2ED_LABEL = "Anm2Ed";
-  static constexpr auto VERSION_LABEL = "Version 2.0";
+  namespace
+  {
+#ifndef _WIN32
+    constexpr auto EXEC_PERMS =
+        std::filesystem::perms::owner_exec | std::filesystem::perms::group_exec | std::filesystem::perms::others_exec;
+#endif
+
+    bool ffmpeg_is_executable(const std::string& pathString)
+    {
+      if (pathString.empty()) return false;
+
+      std::error_code ec{};
+      auto status = std::filesystem::status(pathString, ec);
+      if (ec || !std::filesystem::is_regular_file(status)) return false;
+
+#ifndef _WIN32
+      if ((status.permissions() & EXEC_PERMS) == std::filesystem::perms::none) return false;
+#endif
+      return true;
+    }
+
+    bool png_directory_ensure(const std::string& directory)
+    {
+      if (directory.empty())
+      {
+        toasts.push(localize.get(TOAST_PNG_DIRECTORY_NOT_SET));
+        logger.warning(localize.get(TOAST_PNG_DIRECTORY_NOT_SET, anm2ed::ENGLISH));
+        return false;
+      }
+
+      std::error_code ec{};
+      auto pathValue = std::filesystem::path(directory);
+      auto exists = std::filesystem::exists(pathValue, ec);
+
+      if (ec)
+      {
+        auto errorMessage = ec.message();
+        toasts.push(std::vformat(localize.get(TOAST_PNG_DIRECTORY_ACCESS_ERROR),
+                                 std::make_format_args(directory, errorMessage)));
+        logger.error(std::vformat(localize.get(TOAST_PNG_DIRECTORY_ACCESS_ERROR, anm2ed::ENGLISH),
+                                  std::make_format_args(directory, errorMessage)));
+        return false;
+      }
+
+      if (exists)
+      {
+        if (!std::filesystem::is_directory(pathValue, ec) || ec)
+        {
+          toasts.push(std::vformat(localize.get(TOAST_PNG_DIRECTORY_NOT_DIRECTORY), std::make_format_args(directory)));
+          logger.warning(std::vformat(localize.get(TOAST_PNG_DIRECTORY_NOT_DIRECTORY, anm2ed::ENGLISH),
+                                      std::make_format_args(directory)));
+          return false;
+        }
+        return true;
+      }
+
+      if (!std::filesystem::create_directories(pathValue, ec) || ec)
+      {
+        auto errorMessage = ec.message();
+        toasts.push(std::vformat(localize.get(TOAST_PNG_DIRECTORY_CREATE_ERROR),
+                                 std::make_format_args(directory, errorMessage)));
+        logger.error(std::vformat(localize.get(TOAST_PNG_DIRECTORY_CREATE_ERROR, anm2ed::ENGLISH),
+                                  std::make_format_args(directory, errorMessage)));
+        return false;
+      }
+
+      return true;
+    }
+  }
+
   static constexpr auto CREDIT_DELAY = 1.0f;
   static constexpr auto CREDIT_SCROLL_SPEED = 25.0f;
 
@@ -63,6 +134,10 @@ namespace anm2ed::imgui
       {""},
       {"Additional Help", font::BOLD},
       {"im-tem"},
+      {""},
+      {"Localization", font::BOLD},
+      {"ExtremeThreat (Russian)"},
+      {"sawalk/사왈이 (Korean)"},
       {""},
       {"Based on the work of:", font::BOLD},
       {"Adrian Gavrilita"},
@@ -122,7 +197,16 @@ namespace anm2ed::imgui
       {""},
       {""},
       {""},
+      {""},
+      {""},
+      {""},
+      {""},
       {"enjoy the jams :)"},
+      {""},
+      {""},
+      {""},
+      {""},
+      {""},
       {""},
       {""},
       {""},
@@ -143,13 +227,14 @@ namespace anm2ed::imgui
     {
       height = ImGui::GetWindowSize().y;
 
-      if (ImGui::BeginMenu("File"))
+      if (ImGui::BeginMenu(localize.get(LABEL_FILE_MENU)))
       {
-        if (ImGui::MenuItem("New", settings.shortcutNew.c_str())) dialog.file_save(dialog::ANM2_NEW);
-        if (ImGui::MenuItem("Open", settings.shortcutOpen.c_str())) dialog.file_open(dialog::ANM2_OPEN);
+        if (ImGui::MenuItem(localize.get(BASIC_NEW), settings.shortcutNew.c_str())) dialog.file_save(dialog::ANM2_NEW);
+        if (ImGui::MenuItem(localize.get(BASIC_OPEN), settings.shortcutOpen.c_str()))
+          dialog.file_open(dialog::ANM2_OPEN);
 
         auto recentFiles = manager.recent_files_ordered();
-        if (ImGui::BeginMenu("Open Recent", !recentFiles.empty()))
+        if (ImGui::BeginMenu(localize.get(LABEL_OPEN_RECENT), !recentFiles.empty()))
         {
           for (std::size_t index = 0; index < recentFiles.size(); ++index)
           {
@@ -162,21 +247,26 @@ namespace anm2ed::imgui
           }
 
           if (!recentFiles.empty())
-            if (ImGui::MenuItem("Clear List")) manager.recent_files_clear();
+            if (ImGui::MenuItem(localize.get(LABEL_CLEAR_LIST))) manager.recent_files_clear();
 
           ImGui::EndMenu();
         }
 
-        if (ImGui::MenuItem("Save", settings.shortcutSave.c_str(), false, document))
-          if (settings.fileIsWarnOverwrite) overwritePopup.open();
+        if (ImGui::MenuItem(localize.get(BASIC_SAVE), settings.shortcutSave.c_str(), false, document))
+        {
+          if (settings.fileIsWarnOverwrite)
+            overwritePopup.open();
+          else
+            manager.save(document->path);
+        }
 
-        if (ImGui::MenuItem("Save As", settings.shortcutSaveAs.c_str(), false, document))
+        if (ImGui::MenuItem(localize.get(LABEL_SAVE_AS), settings.shortcutSaveAs.c_str(), false, document))
           dialog.file_save(dialog::ANM2_SAVE);
-        if (ImGui::MenuItem("Explore XML Location", nullptr, false, document))
+        if (ImGui::MenuItem(localize.get(LABEL_EXPLORE_XML_LOCATION), nullptr, false, document))
           dialog.file_explorer_open(document->directory_get().string());
 
         ImGui::Separator();
-        if (ImGui::MenuItem("Exit", settings.shortcutExit.c_str())) isQuitting = true;
+        if (ImGui::MenuItem(localize.get(LABEL_EXIT), settings.shortcutExit.c_str())) isQuitting = true;
         ImGui::EndMenu();
       }
       if (dialog.is_selected(dialog::ANM2_NEW))
@@ -197,43 +287,43 @@ namespace anm2ed::imgui
         dialog.reset();
       }
 
-      if (ImGui::BeginMenu("Wizard"))
+      if (ImGui::BeginMenu(localize.get(LABEL_WIZARD_MENU)))
       {
-        if (ImGui::MenuItem("Generate Animation From Grid", nullptr, false,
+        if (ImGui::MenuItem(localize.get(LABEL_TASKBAR_GENERATE_ANIMATION_FROM_GRID), nullptr, false,
                             item && document->reference.itemType == anm2::LAYER))
           generatePopup.open();
 
         ImGui::Separator();
-        if (ImGui::MenuItem("Render Animation", nullptr, false, animation)) renderPopup.open();
+        if (ImGui::MenuItem(localize.get(LABEL_TASKBAR_RENDER_ANIMATION), nullptr, false, animation))
+          renderPopup.open();
         ImGui::EndMenu();
       }
 
-      if (ImGui::BeginMenu("Playback"))
+      if (ImGui::BeginMenu(localize.get(LABEL_PLAYBACK_MENU)))
       {
-        ImGui::MenuItem("Always Loop", nullptr, &settings.playbackIsLoop);
-        ImGui::SetItemTooltip("%s", "Animations will always loop during playback, even if looping isn't set.");
+        ImGui::MenuItem(localize.get(LABEL_PLAYBACK_ALWAYS_LOOP), nullptr, &settings.playbackIsLoop);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_PLAYBACK_ALWAYS_LOOP));
 
-        ImGui::MenuItem("Clamp", nullptr, &settings.playbackIsClamp);
-        ImGui::SetItemTooltip("%s", "Operations will always be clamped to within the animation's bounds.\nFor example, "
-                                    "dragging the playhead, or triggers.");
+        ImGui::MenuItem(localize.get(LABEL_CLAMP), nullptr, &settings.playbackIsClamp);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_PLAYBACK_CLAMP));
 
         ImGui::EndMenu();
       }
 
-      if (ImGui::BeginMenu("Window"))
+      if (ImGui::BeginMenu(localize.get(LABEL_WINDOW_MENU)))
       {
         for (std::size_t index = 0; index < WINDOW_COUNT; ++index)
         {
           auto member = WINDOW_MEMBERS[index];
-          ImGui::MenuItem(WINDOW_STRINGS[index], nullptr, &(settings.*member));
+          ImGui::MenuItem(localize.get(::anm2ed::WINDOW_STRING_TYPES[index]), nullptr, &(settings.*member));
         }
 
         ImGui::EndMenu();
       }
 
-      if (ImGui::BeginMenu("Settings"))
+      if (ImGui::BeginMenu(localize.get(LABEL_SETTINGS_MENU)))
       {
-        if (ImGui::MenuItem("Configure"))
+        if (ImGui::MenuItem(localize.get(LABEL_TASKBAR_CONFIGURE)))
         {
           editSettings = settings;
           configurePopup.open();
@@ -242,10 +332,10 @@ namespace anm2ed::imgui
         ImGui::EndMenu();
       }
 
-      if (ImGui::BeginMenu("Help"))
+      if (ImGui::BeginMenu(localize.get(LABEL_HELP_MENU)))
       {
 
-        if (ImGui::MenuItem("About")) aboutPopup.open();
+        if (ImGui::MenuItem(localize.get(LABEL_TASKBAR_ABOUT))) aboutPopup.open();
         ImGui::EndMenu();
       }
 
@@ -254,7 +344,7 @@ namespace anm2ed::imgui
 
     generatePopup.trigger();
 
-    if (ImGui::BeginPopupModal(generatePopup.label, &generatePopup.isOpen, ImGuiWindowFlags_NoResize))
+    if (ImGui::BeginPopupModal(generatePopup.label(), &generatePopup.isOpen, ImGuiWindowFlags_NoResize))
     {
       auto& startPosition = settings.generateStartPosition;
       auto& size = settings.generateSize;
@@ -270,15 +360,15 @@ namespace anm2ed::imgui
 
       if (ImGui::BeginChild("##Options Child", childSize, ImGuiChildFlags_Borders))
       {
-        ImGui::InputInt2("Start Position", value_ptr(startPosition));
-        ImGui::InputInt2("Frame Size", value_ptr(size));
-        ImGui::InputInt2("Pivot", value_ptr(pivot));
-        ImGui::InputInt("Rows", &rows, STEP, STEP_FAST);
-        ImGui::InputInt("Columns", &columns, STEP, STEP_FAST);
+        ImGui::InputInt2(localize.get(LABEL_GENERATE_START_POSITION), value_ptr(startPosition));
+        ImGui::InputInt2(localize.get(LABEL_GENERATE_FRAME_SIZE), value_ptr(size));
+        ImGui::InputInt2(localize.get(BASIC_PIVOT), value_ptr(pivot));
+        ImGui::InputInt(localize.get(LABEL_GENERATE_ROWS), &rows, STEP, STEP_FAST);
+        ImGui::InputInt(localize.get(LABEL_GENERATE_COLUMNS), &columns, STEP, STEP_FAST);
 
-        input_int_range("Count", count, anm2::FRAME_NUM_MIN, rows * columns);
+        input_int_range(localize.get(LABEL_GENERATE_COUNT), count, anm2::FRAME_NUM_MIN, rows * columns);
 
-        ImGui::InputInt("Duration", &delay, STEP, STEP_FAST);
+        ImGui::InputInt(localize.get(BASIC_DURATION), &delay, STEP, STEP_FAST);
       }
       ImGui::EndChild();
 
@@ -331,7 +421,7 @@ namespace anm2ed::imgui
 
       auto widgetSize = widget_size_with_row_get(2);
 
-      if (ImGui::Button("Generate", widgetSize))
+      if (ImGui::Button(localize.get(LABEL_GENERATE), widgetSize))
       {
         auto generate_from_grid = [&]()
         {
@@ -339,41 +429,46 @@ namespace anm2ed::imgui
           animation->frameNum = animation->length();
         };
 
-        DOCUMENT_EDIT_PTR(document, "Generate Animation from Grid", Document::FRAMES, generate_from_grid());
+        DOCUMENT_EDIT_PTR(document, localize.get(EDIT_GENERATE_ANIMATION_FROM_GRID), Document::FRAMES,
+                          generate_from_grid());
 
         generatePopup.close();
       }
 
       ImGui::SameLine();
 
-      if (ImGui::Button("Cancel", widgetSize)) generatePopup.close();
+      if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize)) generatePopup.close();
 
       ImGui::EndPopup();
     }
 
     configurePopup.trigger();
 
-    if (ImGui::BeginPopupModal(configurePopup.label, &configurePopup.isOpen, ImGuiWindowFlags_NoResize))
+    if (ImGui::BeginPopupModal(configurePopup.label(), &configurePopup.isOpen, ImGuiWindowFlags_NoResize))
     {
       auto childSize = size_without_footer_get(2);
 
       if (ImGui::BeginTabBar("##Configure Tabs"))
       {
-        if (ImGui::BeginTabItem("Display"))
+        if (ImGui::BeginTabItem(localize.get(LABEL_DISPLAY)))
         {
           if (ImGui::BeginChild("##Tab Child", childSize, true))
           {
-            input_float_range("UI Scale", editSettings.uiScale, 0.5f, 2.0f, 0.25f, 0.25f, "%.2f");
-            ImGui::SetItemTooltip("Change the scale of the UI.");
+            ImGui::SeparatorText(localize.get(LABEL_WINDOW_MENU));
+            input_float_range(localize.get(LABEL_UI_SCALE), editSettings.uiScale, 0.5f, 2.0f, 0.25f, 0.25f, "%.2f");
+            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_UI_SCALE));
+            ImGui::Checkbox(localize.get(LABEL_VSYNC), &editSettings.isVsync);
+            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_VSYNC));
 
-            ImGui::Checkbox("Vsync", &editSettings.isVsync);
-            ImGui::SetItemTooltip("Toggle vertical sync; synchronizes program update rate with monitor refresh rate.");
+            ImGui::SeparatorText(localize.get(LABEL_LOCALIZATION));
+            ImGui::Combo(localize.get(LABEL_LANGUAGE), &editSettings.language, LANGUAGE_STRINGS, LANGUAGE_COUNT);
+            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LANGUAGE));
 
-            ImGui::SeparatorText("Theme");
+            ImGui::SeparatorText(localize.get(LABEL_THEME));
 
             for (int i = 0; i < theme::COUNT; i++)
             {
-              ImGui::RadioButton(theme::STRINGS[i], &editSettings.theme, i);
+              ImGui::RadioButton(localize.get(theme::STRINGS[i]), &editSettings.theme, i);
               ImGui::SameLine();
             }
           }
@@ -382,76 +477,75 @@ namespace anm2ed::imgui
           ImGui::EndTabItem();
         }
 
-        if (ImGui::BeginTabItem("File"))
+        if (ImGui::BeginTabItem(localize.get(LABEL_FILE_MENU)))
         {
           if (ImGui::BeginChild("##Tab Child", childSize, true))
           {
-            ImGui::SeparatorText("Autosave");
+            ImGui::SeparatorText(localize.get(LABEL_AUTOSAVE));
 
-            ImGui::Checkbox("Enabled", &editSettings.fileIsAutosave);
-            ImGui::SetItemTooltip(
-                "Enables autosaving of documents.\n(Does not overwrite files; makes copies to restore later.)");
+            ImGui::Checkbox(localize.get(BASIC_ENABLED), &editSettings.fileIsAutosave);
+            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_AUTOSAVE_ENABLED));
 
             ImGui::BeginDisabled(!editSettings.fileIsAutosave);
-            input_int_range("Time (minutes)", editSettings.fileAutosaveTime, 0, 10);
-            ImGui::SetItemTooltip("If changed, will autosave documents using this interval.");
+            input_int_range(localize.get(LABEL_TIME_MINUTES), editSettings.fileAutosaveTime, 0, 10);
+            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_AUTOSAVE_INTERVAL));
             ImGui::EndDisabled();
 
-            ImGui::SeparatorText("Snapshots");
-            input_int_range("Stack Size", editSettings.fileSnapshotStackSize, 0, 100);
-            ImGui::SetItemTooltip("Set the maximum snapshot stack size of a document (i.e., how many undo/redos are "
-                                  "preserved at a time).");
+            ImGui::SeparatorText(localize.get(LABEL_SNAPSHOTS));
+            input_int_range(localize.get(LABEL_STACK_SIZE), editSettings.fileSnapshotStackSize, 0, 100);
+            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_STACK_SIZE));
 
-            ImGui::SeparatorText("Options");
-            ImGui::Checkbox("Overwrite Warning", &editSettings.fileIsWarnOverwrite);
-            ImGui::SetItemTooltip("A warning will be shown when saving/overwriting a file.");
+            ImGui::SeparatorText(localize.get(LABEL_OPTIONS));
+            ImGui::Checkbox(localize.get(LABEL_OVERWRITE_WARNING), &editSettings.fileIsWarnOverwrite);
+            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OVERWRITE_WARNING));
           }
           ImGui::EndChild();
 
           ImGui::EndTabItem();
         }
 
-        if (ImGui::BeginTabItem("Input"))
+        if (ImGui::BeginTabItem(localize.get(LABEL_INPUT)))
         {
           if (ImGui::BeginChild("##Tab Child", childSize, true))
           {
-            ImGui::SeparatorText("Keyboard");
+            ImGui::SeparatorText(localize.get(LABEL_KEYBOARD));
 
-            input_float_range("Repeat Delay (seconds)", editSettings.keyboardRepeatDelay, 0.05f, 1.0f, 0.05f, 0.05f,
-                              "%.2f");
-            ImGui::SetItemTooltip("Set how often, after repeating begins, key inputs will be fired.");
+            input_float_range(localize.get(LABEL_REPEAT_DELAY), editSettings.keyboardRepeatDelay, 0.05f, 1.0f, 0.05f,
+                              0.05f, "%.2f");
+            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_REPEAT_DELAY));
 
-            input_float_range("Repeat Rate (seconds)", editSettings.keyboardRepeatRate, 0.005f, 1.0f, 0.005f, 0.005f,
-                              "%.3f");
-            ImGui::SetItemTooltip("Set how often, after repeating begins, key inputs will be fired.");
+            input_float_range(localize.get(LABEL_REPEAT_RATE), editSettings.keyboardRepeatRate, 0.005f, 1.0f, 0.005f,
+                              0.005f, "%.3f");
+            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_REPEAT_DELAY));
 
-            ImGui::SeparatorText("Zoom");
+            ImGui::SeparatorText(localize.get(LABEL_ZOOM));
 
-            input_float_range("Step", editSettings.inputZoomStep, 10.0f, 250.0f, 10.0f, 10.0f, "%.0f%%");
-            ImGui::SetItemTooltip("When zooming in/out with mouse or shortcut, this value will be used.");
+            input_float_range(localize.get(LABEL_ZOOM_STEP), editSettings.inputZoomStep, 10.0f, 250.0f, 10.0f, 10.0f,
+                              "%.0f%%");
+            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ZOOM_STEP));
 
-            ImGui::SeparatorText("Tool");
+            ImGui::SeparatorText(localize.get(LABEL_TOOL));
 
-            ImGui::Checkbox("Move Tool: Snap to Mouse", &editSettings.inputIsMoveToolSnapToMouse);
-            ImGui::SetItemTooltip("In Animation Preview, the Move tool will snap the frame's position right to the "
-                                  "cursor, instead of being moved at a distance.");
+            ImGui::Checkbox(localize.get(LABEL_MOVE_TOOL_SNAP), &editSettings.inputIsMoveToolSnapToMouse);
+            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_MOVE_TOOL_SNAP));
           }
           ImGui::EndChild();
 
           ImGui::EndTabItem();
         }
 
-        if (ImGui::BeginTabItem("Shortcuts"))
+        if (ImGui::BeginTabItem(localize.get(LABEL_SHORTCUTS_TAB)))
         {
           ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2());
 
           if (ImGui::BeginChild("##Tab Child", childSize, true))
           {
-            if (ImGui::BeginTable("Shortcuts", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY))
+            if (ImGui::BeginTable(localize.get(LABEL_SHORTCUTS_TAB), 2,
+                                  ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY))
             {
               ImGui::TableSetupScrollFreeze(0, 1);
-              ImGui::TableSetupColumn("Shortcut");
-              ImGui::TableSetupColumn("Value");
+              ImGui::TableSetupColumn(localize.get(LABEL_SHORTCUT_COLUMN));
+              ImGui::TableSetupColumn(localize.get(LABEL_VALUE_COLUMN));
               ImGui::TableHeadersRow();
 
               for (int i = 0; i < SHORTCUT_COUNT; ++i)
@@ -465,7 +559,7 @@ namespace anm2ed::imgui
                 ImGui::PushID(i);
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
-                ImGui::TextUnformatted(SHORTCUT_STRINGS[i]);
+                ImGui::TextUnformatted(localize.get(::anm2ed::SHORTCUT_STRING_TYPES[i]));
                 ImGui::TableSetColumnIndex(1);
 
                 if (ImGui::Selectable(chordString.c_str(), isSelected)) selectedShortcut = i;
@@ -509,39 +603,41 @@ namespace anm2ed::imgui
 
       auto widgetSize = widget_size_with_row_get(3);
 
-      if (ImGui::Button("Save", widgetSize))
+      if (ImGui::Button(localize.get(BASIC_SAVE), widgetSize))
       {
         settings = editSettings;
-        imgui::theme_set((theme::Type)editSettings.theme);
-        manager.chords_set(settings);
 
         ImGui::GetIO().KeyRepeatDelay = settings.keyboardRepeatDelay;
         ImGui::GetIO().KeyRepeatRate = settings.keyboardRepeatRate;
         ImGui::GetStyle().FontScaleMain = settings.uiScale;
-
         SnapshotStack::max_size_set(settings.fileSnapshotStackSize);
+        imgui::theme_set((theme::Type)settings.theme);
+        localize.language = (Language)settings.language;
+        manager.chords_set(settings);
+
         for (auto& document : manager.documents)
           document.snapshots.apply_limit();
+
         configurePopup.close();
       }
-      ImGui::SetItemTooltip("Use the configured settings.");
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SETTINGS_SAVE));
 
       ImGui::SameLine();
 
-      if (ImGui::Button("Use Default Settings", widgetSize)) editSettings = Settings();
-      ImGui::SetItemTooltip("Reset the settings to their defaults.");
+      if (ImGui::Button(localize.get(LABEL_USE_DEFAULT_SETTINGS), widgetSize)) editSettings = Settings();
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_USE_DEFAULT_SETTINGS));
 
       ImGui::SameLine();
 
-      if (ImGui::Button("Close", widgetSize)) configurePopup.close();
-      ImGui::SetItemTooltip("Close without updating settings.");
+      if (ImGui::Button(localize.get(LABEL_CLOSE), widgetSize)) configurePopup.close();
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CLOSE_SETTINGS));
 
       ImGui::EndPopup();
     }
 
     renderPopup.trigger();
 
-    if (ImGui::BeginPopupModal(renderPopup.label, &renderPopup.isOpen, ImGuiWindowFlags_NoResize))
+    if (ImGui::BeginPopupModal(renderPopup.label(), &renderPopup.isOpen, ImGuiWindowFlags_NoResize))
     {
       auto& ffmpegPath = settings.renderFFmpegPath;
       auto& path = settings.renderPath;
@@ -556,59 +652,6 @@ namespace anm2ed::imgui
       auto& isRange = manager.isRecordingRange;
       auto& frames = document->frames.selection;
       int length = std::max(1, end - start + 1);
-
-      auto ffmpeg_is_executable = [](const std::string& pathString)
-      {
-        if (pathString.empty()) return false;
-
-        std::error_code ec{};
-        auto status = std::filesystem::status(pathString, ec);
-        if (ec || !std::filesystem::is_regular_file(status)) return false;
-
-#ifndef _WIN32
-        constexpr auto EXEC_PERMS = std::filesystem::perms::owner_exec | std::filesystem::perms::group_exec |
-                                    std::filesystem::perms::others_exec;
-        if ((status.permissions() & EXEC_PERMS) == std::filesystem::perms::none) return false;
-#endif
-        return true;
-      };
-
-      auto png_directory_ensure = [](const std::string& directory)
-      {
-        if (directory.empty())
-        {
-          toasts.error("PNG output directory must be set.");
-          return false;
-        }
-
-        std::error_code ec{};
-        auto pathValue = std::filesystem::path(directory);
-        auto exists = std::filesystem::exists(pathValue, ec);
-
-        if (ec)
-        {
-          toasts.error(std::format("Could not access directory: {} ({})", directory, ec.message()));
-          return false;
-        }
-
-        if (exists)
-        {
-          if (!std::filesystem::is_directory(pathValue, ec) || ec)
-          {
-            toasts.error(std::format("PNG output path must be a directory: {}", directory));
-            return false;
-          }
-          return true;
-        }
-
-        if (!std::filesystem::create_directories(pathValue, ec) || ec)
-        {
-          toasts.error(std::format("Could not create directory: {} ({})", directory, ec.message()));
-          return false;
-        }
-
-        return true;
-      };
 
       auto range_to_frames_set = [&]()
       {
@@ -640,11 +683,7 @@ namespace anm2ed::imgui
 
       auto range_set = [&]()
       {
-        if (!frames.empty())
-          range_to_frames_set();
-        else if (!isRange)
-          range_to_animation_set();
-
+        if (!isRange) range_to_animation_set();
         length = std::max(1, end - (start + 1));
       };
 
@@ -698,9 +737,8 @@ namespace anm2ed::imgui
       if (ImGui::ImageButton("##FFmpeg Path Set", resources.icons[icon::FOLDER].id, icon_size_get()))
         dialog.file_open(dialog::FFMPEG_PATH_SET);
       ImGui::SameLine();
-      input_text_string("FFmpeg Path", &ffmpegPath);
-      ImGui::SetItemTooltip("Set the path where the FFmpeg installation is located.\nFFmpeg is required to render "
-                            "animations.\nhttps://ffmpeg.org");
+      input_text_string(localize.get(LABEL_FFMPEG_PATH), &ffmpegPath);
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FFMPEG_PATH));
       dialog.set_string_to_selected_path(ffmpegPath, dialog::FFMPEG_PATH_SET);
 
       if (ImGui::ImageButton("##Path Set", resources.icons[icon::FOLDER].id, icon_size_get()))
@@ -711,89 +749,89 @@ namespace anm2ed::imgui
           dialog.file_save(dialogType);
       }
       ImGui::SameLine();
-      input_text_string(type == render::PNGS ? "Directory" : "Path", &path);
-      ImGui::SetItemTooltip("Set the output path or directory for the animation.");
+      auto pathLabel = type == render::PNGS ? LABEL_OUTPUT_DIRECTORY : LABEL_OUTPUT_PATH;
+      input_text_string(localize.get(pathLabel), &path);
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OUTPUT_PATH));
       dialog.set_string_to_selected_path(path, dialogType);
 
-      if (ImGui::Combo("Type", &type, render::STRINGS, render::COUNT)) render_set();
-      ImGui::SetItemTooltip("Set the type of the output.");
+      if (ImGui::Combo(localize.get(LABEL_TYPE), &type, render::STRINGS, render::COUNT)) render_set();
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_RENDER_TYPE));
 
       if (type == render::PNGS || type == render::SPRITESHEET) ImGui::Separator();
 
       if (type == render::PNGS)
       {
-        if (input_text_string("Format", &format))
+        if (input_text_string(localize.get(LABEL_FORMAT), &format))
           format = std::filesystem::path(format).replace_extension(".png").string();
-        ImGui::SetItemTooltip(
-            "For outputted images, each image will use this format.\n{} represents the index of each image.");
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FORMAT));
       }
       else if (type == render::SPRITESHEET)
       {
-        input_int_range("Rows", rows, 1, length);
-        ImGui::SetItemTooltip("Set how many rows the spritesheet will have.");
+        input_int_range(localize.get(LABEL_GENERATE_ROWS), rows, 1, length);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ROWS));
 
-        input_int_range("Columns", columns, 1, length);
-        ImGui::SetItemTooltip("Set how many columns the spritesheet will have.");
+        input_int_range(localize.get(LABEL_GENERATE_COLUMNS), columns, 1, length);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_COLUMNS));
 
-        if (ImGui::Button("Set to Recommended")) rows_columns_set();
-        ImGui::SetItemTooltip("Use a recommended value for rows/columns.");
+        if (ImGui::Button(localize.get(LABEL_SET_TO_RECOMMENDED))) rows_columns_set();
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SET_TO_RECOMMENDED));
       }
 
       ImGui::Separator();
 
-      if (ImGui::Checkbox("Custom Range", &isRange))
+      if (ImGui::Checkbox(localize.get(LABEL_CUSTOM_RANGE), &isRange))
       {
         range_set();
-        ImGui::SetItemTooltip("Toggle using a custom range for the animation.");
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CUSTOM_RANGE));
       }
 
       ImGui::SameLine();
 
       ImGui::BeginDisabled(frames.empty());
-      if (ImGui::Button("To Selected Frames")) range_to_frames_set();
-      ImGui::SetItemTooltip("If frames are selected, use that range for the rendered animation.");
+      if (ImGui::Button(localize.get(LABEL_TO_SELECTED_FRAMES))) range_to_frames_set();
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TO_SELECTED_FRAMES));
       ImGui::EndDisabled();
 
       ImGui::SameLine();
 
-      if (ImGui::Button("To Animation Range")) range_to_animation_set();
-      ImGui::SetItemTooltip("Set the range to the normal range of the animation.");
+      if (ImGui::Button(localize.get(LABEL_TO_ANIMATION_RANGE))) range_to_animation_set();
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TO_ANIMATION_RANGE));
 
       ImGui::BeginDisabled(!isRange);
       {
-        input_int_range("Start", start, 0, animation->frameNum);
-        ImGui::SetItemTooltip("Set the starting time of the animation.");
-        input_int_range("End", end, start, animation->frameNum);
-        ImGui::SetItemTooltip("Set the ending time of the animation.");
+        input_int_range(localize.get(LABEL_START), start, 0, animation->frameNum);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_START));
+        input_int_range(localize.get(LABEL_END), end, start, animation->frameNum);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_END));
       }
       ImGui::EndDisabled();
 
       ImGui::Separator();
 
-      ImGui::Checkbox("Raw", &isRaw);
-      ImGui::SetItemTooltip("Record only the raw animation; i.e., only its layers, to its bounds.");
+      ImGui::Checkbox(localize.get(LABEL_RAW), &isRaw);
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_RAW));
 
       ImGui::BeginDisabled(!isRaw);
       {
-        input_float_range("Scale", scale, 1.0f, 100.0f, STEP, STEP_FAST, "%.1fx");
-        ImGui::SetItemTooltip("Set the output scale of the animation.");
+        input_float_range(localize.get(BASIC_SCALE), scale, 1.0f, 100.0f, STEP, STEP_FAST, "%.1fx");
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SCALE_OUTPUT));
       }
       ImGui::EndDisabled();
 
       ImGui::Separator();
 
-      ImGui::Checkbox("Sound", &settings.timelineIsSound);
-      ImGui::SetItemTooltip("Toggle sounds playing with triggers.\nBind sounds to events in the Events window.\nThe "
-                            "output animation will use the played sounds.");
+      ImGui::Checkbox(localize.get(LABEL_SOUND), &settings.timelineIsSound);
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SOUND));
 
       ImGui::Separator();
 
-      if (ImGui::Button("Render", widgetSize))
+      if (ImGui::Button(localize.get(LABEL_RENDER), widgetSize))
       {
         bool isRender = true;
         if (!ffmpeg_is_executable(ffmpegPath))
         {
-          toasts.error("FFmpeg path must point to a valid executable file.");
+          toasts.push(localize.get(TOAST_INVALID_FFMPEG_PATH));
+          logger.error(localize.get(TOAST_INVALID_FFMPEG_PATH, anm2ed::ENGLISH));
           isRender = false;
         }
 
@@ -807,11 +845,11 @@ namespace anm2ed::imgui
 
         renderPopup.close();
       }
-      ImGui::SetItemTooltip("Render the animation using the current settings.");
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_RENDER_BUTTON));
 
       ImGui::SameLine();
 
-      if (ImGui::Button("Cancel", widgetSize)) renderPopup.close();
+      if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize)) renderPopup.close();
 
       ImGui::EndPopup();
     }
@@ -820,7 +858,7 @@ namespace anm2ed::imgui
 
     aboutPopup.trigger();
 
-    if (ImGui::BeginPopupModal(aboutPopup.label, &aboutPopup.isOpen, ImGuiWindowFlags_NoResize))
+    if (ImGui::BeginPopupModal(aboutPopup.label(), &aboutPopup.isOpen, ImGuiWindowFlags_NoResize))
     {
       static CreditsState creditsState{};
 
@@ -834,14 +872,16 @@ namespace anm2ed::imgui
       if (aboutPopup.isJustOpened) credits_reset();
 
       auto size = ImGui::GetContentRegionAvail();
+      auto applicationLabel = localize.get(LABEL_APPLICATION_NAME);
+      auto versionLabel = localize.get(LABEL_APPLICATION_VERSION);
 
       ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE_LARGE);
 
-      ImGui::SetCursorPosX((size.x - ImGui::CalcTextSize(ANM2ED_LABEL).x) / 2);
-      ImGui::Text(ANM2ED_LABEL);
+      ImGui::SetCursorPosX((size.x - ImGui::CalcTextSize(applicationLabel).x) / 2);
+      ImGui::TextUnformatted(applicationLabel);
 
-      ImGui::SetCursorPosX((size.x - ImGui::CalcTextSize(VERSION_LABEL).x) / 2);
-      ImGui::Text(VERSION_LABEL);
+      ImGui::SetCursorPosX((size.x - ImGui::CalcTextSize(versionLabel).x) / 2);
+      ImGui::TextUnformatted(versionLabel);
 
       ImGui::PopFont();
 
@@ -914,13 +954,13 @@ namespace anm2ed::imgui
 
     overwritePopup.trigger();
 
-    if (ImGui::BeginPopupModal(overwritePopup.label, &overwritePopup.isOpen, ImGuiWindowFlags_NoResize))
+    if (ImGui::BeginPopupModal(overwritePopup.label(), &overwritePopup.isOpen, ImGuiWindowFlags_NoResize))
     {
-      ImGui::Text("Are you sure? This will overwrite the existing file.");
+      ImGui::TextUnformatted(localize.get(LABEL_OVERWRITE_CONFIRMATION));
 
       auto widgetSize = widget_size_with_row_get(2);
 
-      if (ImGui::Button("Yes", widgetSize))
+      if (ImGui::Button(localize.get(BASIC_YES), widgetSize))
       {
         manager.save();
         overwritePopup.close();
@@ -928,7 +968,7 @@ namespace anm2ed::imgui
 
       ImGui::SameLine();
 
-      if (ImGui::Button("No", widgetSize)) overwritePopup.close();
+      if (ImGui::Button(localize.get(BASIC_NO), widgetSize)) overwritePopup.close();
 
       ImGui::EndPopup();
     }
@@ -948,6 +988,3 @@ namespace anm2ed::imgui
     if (shortcut(manager.chords[SHORTCUT_EXIT], shortcut::GLOBAL)) isQuitting = true;
   }
 }
-#ifndef ANM2ED_USE_LIBXM
-  #define ANM2ED_USE_LIBXM 1
-#endif

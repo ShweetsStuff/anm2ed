@@ -3,6 +3,7 @@
 
 #include <glm/gtc/type_ptr.hpp>
 
+#include "strings.h"
 #include "tool.h"
 #include "types.h"
 
@@ -16,7 +17,7 @@ namespace anm2ed::imgui
   {
     auto& document = *manager.get();
 
-    if (ImGui::Begin("Tools", &settings.windowIsTools))
+    if (ImGui::Begin(localize.get(LABEL_TOOLS_WINDOW), &settings.windowIsTools))
     {
       ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(2, 2));
 
@@ -54,10 +55,11 @@ namespace anm2ed::imgui
 
         if (shortcut(manager.chords[info.shortcut], shortcut::GLOBAL)) tool_use((tool::Type)i);
 
+        auto labelText = info.label;
         if (i == tool::COLOR)
         {
           size += to_vec2(ImGui::GetStyle().FramePadding) * 2.0f;
-          if (ImGui::ColorButton(info.label, to_imvec4(settings.toolColor), ImGuiColorEditFlags_NoTooltip,
+          if (ImGui::ColorButton(labelText, to_imvec4(settings.toolColor), ImGuiColorEditFlags_NoTooltip,
                                  to_imvec2(size)))
             tool_use((tool::Type)i);
 
@@ -67,7 +69,7 @@ namespace anm2ed::imgui
         {
           if (i == tool::UNDO) ImGui::BeginDisabled(!document.is_able_to_undo());
           if (i == tool::REDO) ImGui::BeginDisabled(!document.is_able_to_redo());
-          if (ImGui::ImageButton(info.label, resources.icons[info.icon].id, to_imvec2(size), ImVec2(0, 0), ImVec2(1, 1),
+          if (ImGui::ImageButton(labelText, resources.icons[info.icon].id, to_imvec2(size), ImVec2(0, 0), ImVec2(1, 1),
                                  ImVec4(0, 0, 0, 0), iconTint))
             tool_use((tool::Type)i);
           if (i == tool::UNDO) ImGui::EndDisabled();
@@ -81,7 +83,7 @@ namespace anm2ed::imgui
           ImGui::SameLine();
         else
           usedWidth = ImGui::GetStyle().WindowPadding.x;
-        set_item_tooltip_shortcut(info.tooltip, settings.*SHORTCUT_MEMBERS[info.shortcut]);
+        set_item_tooltip_shortcut(localize.get(info.tooltip), settings.*SHORTCUT_MEMBERS[info.shortcut]);
 
         if (isSelected) ImGui::PopStyleColor();
       }
@@ -90,9 +92,9 @@ namespace anm2ed::imgui
 
       colorEditPopup.trigger();
 
-      if (ImGui::BeginPopup(colorEditPopup.label))
+      if (ImGui::BeginPopup(colorEditPopup.label()))
       {
-        ImGui::ColorPicker4(colorEditPopup.label, value_ptr(settings.toolColor));
+        ImGui::ColorPicker4(colorEditPopup.label(), value_ptr(settings.toolColor));
         ImGui::EndPopup();
       }
     }
