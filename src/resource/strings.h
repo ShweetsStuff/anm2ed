@@ -530,7 +530,7 @@ namespace anm2ed
   X(TOOLTIP_SOUND_INVALID, "This sound could not be loaded. Replace the file.", "Этот звук не удалось загрузить. Замените файл.", "이 사운드를 불러올 수 없습니다. 파일을 교체하세요.") \
   X(TOOLTIP_SOUND_ADD, "Add a sound.", "Добавить звук.", "사운드를 추가합니다.") \
   X(TOOLTIP_SPRITESHEET_BORDER, "Toggle a border appearing around the spritesheet.", "Переключить показ границ около спрайт-листа.", "스프라이트 시트 주변에 경계선을 표시하거나 숨깁니다.") \
-  X(TOOLTIP_SPRITESHEET_INVALID, "This spritesheet isn't valid!\\nLoad an existing, valid texture.", "Этот спрайт-лист невалиден!\nЗагрузите существующую, валидную текстуру.", "이 스프라이트 시트는 유효하지 않습니다!\n유효한 텍스처를 불러오세요.") \
+  X(TOOLTIP_SPRITESHEET_INVALID, "This spritesheet isn't valid!\nLoad an existing, valid texture.", "Этот спрайт-лист невалиден!\nЗагрузите существующую, валидную текстуру.", "이 스프라이트 시트는 유효하지 않습니다!\n유효한 텍스처를 불러오세요.") \
   X(TOOLTIP_STACK_SIZE, "Set the maximum snapshot stack size of a document (i.e., how many undo/redos are preserved at a time).", "Установить максимальный размер стека снимков документа (т. е. количество отмен/повторов, сохраняемых одновременно).", "파일의 최대 스냅숏 스택 크기(즉 한 번에 보존되는 실행 취소/다시 실행 수)를 설정합니다.") \
   X(TOOLTIP_START, "Set the starting time of the animation.", "Установить начальное время анимации.", "애니메이션의 시작 시간을 설정합니다.") \
   X(TOOLTIP_SUBTRACT_VALUES, "Subtract the specified values from each frame.\\n(Boolean values will simply be set.)", "Вычтить указанные значения из каждого кадра.\n(Булевы значения будут просто указаны.)", "각 프레임의 속성에 지정한 값을 뺍니다.\n(참/거짓 값은 그냥 설정됩니다.)") \
