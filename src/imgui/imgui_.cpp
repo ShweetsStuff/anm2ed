@@ -3,6 +3,7 @@
 
 #include <imgui/imgui_internal.h>
 
+#include <format>
 #include <cmath>
 #include <sstream>
 #include <unordered_map>
