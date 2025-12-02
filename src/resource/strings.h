@@ -189,7 +189,7 @@ namespace anm2ed
   X(LABEL_ANIMATION_PREVIEW_WINDOW, "Animation Preview###Animation Preview", "Предпросмотр анимации###Animation Preview", "动画预放###Animation Preview", "애니메이션 프리뷰###Animation Preview") \
   X(LABEL_APPEND_FRAMES, "Append Frames", "Добавить кадры к концу", "在后面添加帧", "뒷프레임에 추가") \
   X(LABEL_APPLICATION_NAME, "Anm2Ed", "Anm2Ed", "Anm2Ed", "Anm2Ed") \
-  X(LABEL_APPLICATION_VERSION, "Version 2.1", "Версия 2.1", "2.0版本", "버전 2.0") \
+  X(LABEL_APPLICATION_VERSION, "Version 2.1", "Версия 2.1", "2.1版本", "버전 2.1") \
   X(LABEL_AUTHOR, "Author", "Автор", "制作者", "작성자") \
   X(LABEL_AUTOSAVE, "Autosave", "Автосохранение", "自动保存", "자동저장") \
   X(LABEL_AXES, "Axes", "Оси", "坐标轴", "가로/세로 축") \
