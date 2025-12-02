@@ -1,4 +1,7 @@
 #include <windows.h>
 
 IDI_ICON1                 ICON          DISCARDABLE    "Icon.ico"
+
+#ifndef DISABLE_APP_MANIFEST_RESOURCE
 CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST        "app.manifest"
+#endif

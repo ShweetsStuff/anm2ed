@@ -113,11 +113,14 @@ endif()
 if (WIN32)
     enable_language(RC)
     target_sources(${PROJECT_NAME} PRIVATE anm2ed.rc)
+    if (MSVC)
+        set_source_files_properties(anm2ed.rc PROPERTIES COMPILE_DEFINITIONS DISABLE_APP_MANIFEST_RESOURCE)
+        set(APP_MANIFEST "${CMAKE_CURRENT_SOURCE_DIR}/app.manifest")
+        file(TO_NATIVE_PATH "${APP_MANIFEST}" APP_MANIFEST_NATIVE)
+        target_link_options(${PROJECT_NAME} PRIVATE "/MANIFESTINPUT:${APP_MANIFEST_NATIVE}")
+    endif ()
     target_compile_options(${PROJECT_NAME} PRIVATE /EHsc)
     target_link_options(${PROJECT_NAME} PRIVATE /STACK:0xffffff)
-    target_link_options(${PROJECT_NAME} PRIVATE
-            "$<$<CXX_COMPILER_ID:MSVC>:/MANIFEST:NO>"
-    )
     target_link_options(${PROJECT_NAME} PRIVATE
             "$<$<AND:$<CONFIG:Release>,$<CXX_COMPILER_ID:MSVC>>:/SUBSYSTEM:WINDOWS>"
             "$<$<AND:$<CONFIG:Release>,$<NOT:$<CXX_COMPILER_ID:MSVC>>>:-mwindows>"
