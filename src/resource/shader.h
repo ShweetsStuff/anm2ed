@@ -10,7 +10,7 @@ namespace anm2ed::resource::shader
     const char* fragment;
   };
 
-  constexpr auto VERTEX = R"(
+  inline constexpr auto VERTEX = R"(
   #version 330 core
   layout (location = 0) in vec2 i_position;
   layout (location = 1) in vec2 i_uv;
@@ -23,7 +23,7 @@ namespace anm2ed::resource::shader
   }
   )";
 
-  constexpr auto AXIS_VERTEX = R"(
+  inline constexpr auto AXIS_VERTEX = R"(
   #version 330 core
   layout (location = 0) in vec2 i_position; // full screen line segment: -1..1
   uniform vec2 u_origin_ndc; // world origin in NDC
@@ -39,7 +39,7 @@ namespace anm2ed::resource::shader
   }
   )";
 
-  constexpr auto FRAGMENT = R"(
+  inline constexpr auto FRAGMENT = R"(
   #version 330 core
   out vec4 o_fragColor;
   uniform vec4 u_color;
@@ -49,7 +49,7 @@ namespace anm2ed::resource::shader
   }
   )";
 
-  constexpr auto TEXTURE_FRAGMENT = R"(
+  inline constexpr auto TEXTURE_FRAGMENT = R"(
   #version 330 core
   in vec2 i_uv_out;
   uniform sampler2D u_texture;
@@ -65,7 +65,7 @@ namespace anm2ed::resource::shader
   }
   )";
 
-  constexpr auto GRID_VERTEX = R"(
+  inline constexpr auto GRID_VERTEX = R"(
   #version 330 core
   layout (location = 0) in vec2 i_position;
   layout (location = 1) in vec2 i_uv;
@@ -79,7 +79,7 @@ namespace anm2ed::resource::shader
   }
   )";
 
-  constexpr auto GRID_FRAGMENT = R"(
+  inline constexpr auto GRID_FRAGMENT = R"(
   #version 330 core
   in vec2 i_uv_out;
 
@@ -112,7 +112,7 @@ namespace anm2ed::resource::shader
   }
   )";
 
-  constexpr auto DASHED_VERTEX = R"(
+  inline constexpr auto DASHED_VERTEX = R"(
   #version 330 core
   layout (location = 0) in vec2 i_position;
 
@@ -127,7 +127,7 @@ namespace anm2ed::resource::shader
   }
   )";
 
-  constexpr auto DASHED_FRAGMENT = R"(
+  inline constexpr auto DASHED_FRAGMENT = R"(
   #version 330 core
   in vec2 v_local;
 
