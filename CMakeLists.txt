@@ -112,7 +112,7 @@ endif()
 
 if (WIN32)
     enable_language(RC)
-    target_sources(${PROJECT_NAME} PRIVATE Icon.rc)
+    target_sources(${PROJECT_NAME} PRIVATE anm2ed.rc)
     target_compile_options(${PROJECT_NAME} PRIVATE /EHsc)
     target_link_options(${PROJECT_NAME} PRIVATE /STACK:0xffffff)
     target_link_options(${PROJECT_NAME} PRIVATE
