@@ -103,7 +103,7 @@ namespace anm2ed::imgui
 
             ImGui::EndTabItem();
           }
-          ImGui::SetItemTooltip("%s", document.path.c_str());
+          ImGui::SetItemTooltip("%s", document.path.string().c_str());
 
           ImGui::PopFont();
         }
