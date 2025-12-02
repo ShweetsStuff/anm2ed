@@ -137,6 +137,7 @@ namespace anm2ed::imgui
       {""},
       {"Localization", font::BOLD},
       {"ExtremeThreat (Russian)"},
+      {"CxRedix (Chinese)"},
       {"sawalk/사왈이 (Korean)"},
       {""},
       {"Based on the work of:", font::BOLD},
