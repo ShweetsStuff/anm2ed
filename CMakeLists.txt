@@ -113,13 +113,6 @@ endif()
 if (WIN32)
     enable_language(RC)
     target_sources(${PROJECT_NAME} PRIVATE anm2ed.rc)
-    set(APP_MANIFEST "${CMAKE_CURRENT_SOURCE_DIR}/app.manifest")
-    file(TO_NATIVE_PATH "${APP_MANIFEST}" APP_MANIFEST_NATIVE)
-    set(APP_MANIFEST_DEF "APP_MANIFEST_FILE=\\\"${APP_MANIFEST_NATIVE}\\\"")
-    set_source_files_properties(anm2ed.rc PROPERTIES
-            COMPILE_DEFINITIONS "${APP_MANIFEST_DEF}"
-            OBJECT_DEPENDS "${APP_MANIFEST}"
-    )
     target_compile_options(${PROJECT_NAME} PRIVATE /EHsc)
     target_link_options(${PROJECT_NAME} PRIVATE /STACK:0xffffff)
     target_link_options(${PROJECT_NAME} PRIVATE

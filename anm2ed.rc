@@ -1,8 +1,1 @@
-#include <windows.h>
-
-#ifndef APP_MANIFEST_FILE
-#define APP_MANIFEST_FILE "app.manifest"
-#endif
-
-1 RT_MANIFEST                      APP_MANIFEST_FILE
 IDI_ICON1                 ICON     DISCARDABLE    "Icon.ico"
