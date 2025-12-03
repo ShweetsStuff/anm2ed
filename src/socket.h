@@ -36,6 +36,7 @@ namespace anm2ed
   private:
     socket_handle handle;
     SocketRole role{};
+    int lastError{};
 
   public:
     Socket();
@@ -57,5 +58,6 @@ namespace anm2ed
 
     void close();
     bool is_valid() const;
+    int last_error() const;
   };
 }

@@ -1,5 +1,6 @@
 #include "loader.h"
 
+#include <cerrno>
 #include <cstdint>
 
 #include <imgui/backends/imgui_impl_opengl3.h>
@@ -22,6 +23,12 @@ namespace anm2ed
 {
   constexpr auto SOCKET_ADDRESS = "127.0.0.1";
   constexpr auto SOCKET_PORT = 11414;
+
+#ifdef _WIN32
+  constexpr int SOCKET_ERROR_ADDRESS_IN_USE = WSAEADDRINUSE;
+#else
+  constexpr int SOCKET_ERROR_ADDRESS_IN_USE = EADDRINUSE;
+#endif
 
   namespace
   {
@@ -75,8 +82,6 @@ namespace anm2ed
     if (!testSocket.open(SERVER))
       logger.warning(std::format("Failed to open socket; single instancing will not work."));
 
-    bool isPrimaryInstance = false;
-
     if (testSocket.bind({SOCKET_ADDRESS, SOCKET_PORT}))
     {
       socket = std::move(testSocket);
@@ -85,13 +90,19 @@ namespace anm2ed
         logger.warning("Could not listen on socket; single instancing disabled.");
       else
       {
-        isPrimaryInstance = true;
         isSocketThread = true;
         logger.info(std::format("Opened socket at {}:{}", SOCKET_ADDRESS, SOCKET_PORT));
       }
     }
     else
     {
+      if (testSocket.last_error() != SOCKET_ERROR_ADDRESS_IN_USE)
+      {
+        logger.fatal(std::format("Failed to bind single-instance socket (error {}).", testSocket.last_error()));
+        isError = true;
+        return;
+      }
+
       logger.info(std::format("Existing instance of program exists; passing arguments..."));
       Socket clientSocket;
       if (!clientSocket.open(CLIENT))
@@ -103,11 +114,8 @@ namespace anm2ed
       else
         logger.info("Sent arguments to existing instance. Exiting.");
 
-      if (!isPrimaryInstance)
-      {
-        isError = true;
-        return;
-      }
+      isError = true;
+      return;
     }
 
     settings = Settings(settings_path());
