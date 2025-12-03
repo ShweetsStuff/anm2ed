@@ -10,7 +10,7 @@ namespace anm2ed
 #define LANGUAGES(X)                                                                                                   \
   X(ENGLISH, "English", SELECT_ENGLISH)                                                                                \
   X(RUSSIAN, "Pусский (Russian)", SELECT_RUSSIAN)                                                                      \
-  X(CHINESE, "中文 (Chinese)", SELECT_CHINESE)                                                                          \
+  X(CHINESE, "中文 (Chinese)", SELECT_CHINESE)                                                                         \
   X(KOREAN, "한국어 (Korean)", SELECT_KOREAN)
 
   enum Language
@@ -300,7 +300,7 @@ namespace anm2ed
   X(LABEL_STACK_SIZE, "Stack Size", "Размер стека", "栈内存大小", "스택 크기") \
   X(LABEL_START, "Start", "Старт", "开始", "시작") \
   X(LABEL_SUBTRACT, "Subtract", "Вычетание", "减去", "빼기") \
-  X(LABEL_TASKBAR_ABOUT, "About", "Около", "关于", "정보") \
+  X(LABEL_TASKBAR_ABOUT, "About", "О", "关于", "정보") \
   X(LABEL_TASKBAR_CONFIGURE, "Configure", "Конфигурация", "配置", "구성 설정") \
   X(LABEL_TASKBAR_GENERATE_ANIMATION_FROM_GRID, "Generate Animation from Grid", "Создать анимацию с сетки", "从网格转换为动画", "격자로 애니메이션 생성") \
   X(LABEL_TASKBAR_OVERWRITE_FILE, "Overwrite File", "Перезапись файла", "覆盖文件", "파일 덮어쓰기") \
