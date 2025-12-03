@@ -220,6 +220,7 @@ namespace anm2ed::imgui
         auto add = [&]()
         {
           anm2::Animation animation;
+          animation.name = localize.get(TEXT_NEW_ANIMATION);
           if (anm2::Animation* referenceAnimation = document.animation_get())
           {
             for (auto [id, layerAnimation] : referenceAnimation->layerAnimations)

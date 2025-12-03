@@ -31,9 +31,11 @@ namespace anm2ed::imgui
 
       auto widgetSize = widget_size_with_row_get(2);
 
-      if (ImGui::Button(localize.get(BASIC_NEW), widgetSize)) dialog.file_save(dialog::ANM2_NEW); // handled in taskbar.cpp
+      if (ImGui::Button(localize.get(BASIC_NEW), widgetSize))
+        dialog.file_save(dialog::ANM2_NEW); // handled in taskbar.cpp
       ImGui::SameLine();
-      if (ImGui::Button(localize.get(BASIC_OPEN), widgetSize)) dialog.file_open(dialog::ANM2_OPEN); // handled in taskbar.cpp
+      if (ImGui::Button(localize.get(BASIC_OPEN), widgetSize))
+        dialog.file_open(dialog::ANM2_OPEN); // handled in taskbar.cpp
 
       if (ImGui::BeginChild("##Recent Files Child", {}, ImGuiChildFlags_Borders))
       {
@@ -97,6 +99,8 @@ namespace anm2ed::imgui
 
       ImGui::EndPopup();
     }
+
+    selectable_input_text_id() = {};
   }
 
 }

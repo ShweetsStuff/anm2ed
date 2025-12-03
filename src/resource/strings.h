@@ -370,6 +370,8 @@ namespace anm2ed
   X(SHORTCUT_STRING_ZOOM_IN, "Zoom In", "Увеличить", "视图放大", "확대") \
   X(SHORTCUT_STRING_ZOOM_OUT, "Zoom Out", "Уменьшить", "视图缩小", "축소") \
   X(SNAPSHOT_RENAME_ANIMATION, "Rename Animation", "Переименовать анимацию", "重命名动画", "애니메이션 이름 바꾸기") \
+  X(TEXT_NEW_ANIMATION, "New Animation", "Новая анимация", "新动画", "새 애니메이션") \
+  X(TEXT_NEW_EVENT, "New Event", "Новое событие", "新事件", "새 이벤트") \
   X(TEXT_RECORDING_PROGRESS, "Once recording is complete, rendering may take some time.\nPlease be patient...", "Когда запись завершена, рендеринг может занять некоторое время.\nПожалуйста потерпите...", "录制完成时，渲染可能会花一些时间.\n请耐心等待...", "녹화가 완료되면 렌더링에 시간이 걸릴 수 있습니다.\n잠시만 기다려 주세요...") \
   X(TEXT_OPEN_DIRECTORY, "Double-click to open directory in file explorer.", "Дважды нажмите, чтобы открыть директорию в проводнике.", "双击以在文件管理器中打开目录。", "더블 클릭하여 파일 탐색기로 디렉터리를 엽니다.") \
   X(TOAST_AUTOSAVE_FAILED, "Could not autosave document to: {0} ({1})", "Не получилось автосохранить документ в: {0} ({1})", "自动保存到 {0} ({1}) 失败", "{0}에 파일을 자동저장할 수 없습니다. ({1})") \

@@ -169,7 +169,7 @@ namespace anm2ed
   X(SHORTCUT_EXIT, shortcutExit, SHORTCUT_STRING_EXIT, STRING, "Alt+F4")                                               \
   /* Edit */                                                                                                           \
   X(SHORTCUT_UNDO, shortcutUndo, SHORTCUT_STRING_UNDO, STRING, "Ctrl+Z")                                               \
-  X(SHORTCUT_REDO, shortcutRedo, SHORTCUT_STRING_REDO, STRING, "Ctrl+Shift+Z")                                         \
+  X(SHORTCUT_REDO, shortcutRedo, SHORTCUT_STRING_REDO, STRING, "Ctrl+Y")                                         \
   X(SHORTCUT_CUT, shortcutCut, SHORTCUT_STRING_CUT, STRING, "Ctrl+X")                                                  \
   X(SHORTCUT_COPY, shortcutCopy, SHORTCUT_STRING_COPY, STRING, "Ctrl+C")                                               \
   X(SHORTCUT_PASTE, shortcutPaste, SHORTCUT_STRING_PASTE, STRING, "Ctrl+V")                                            \

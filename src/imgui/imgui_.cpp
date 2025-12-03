@@ -3,8 +3,8 @@
 
 #include <imgui/imgui_internal.h>
 
-#include <format>
 #include <cmath>
+#include <format>
 #include <sstream>
 #include <unordered_map>
 
@@ -116,10 +116,16 @@ namespace anm2ed::imgui
     return isActivated;
   }
 
+  std::string& selectable_input_text_id()
+  {
+    static std::string editID{};
+    return editID;
+  }
+
   bool selectable_input_text(const std::string& label, const std::string& id, std::string& text, bool isSelected,
                              ImGuiSelectableFlags flags, RenameState& state)
   {
-    static std::string editID{};
+    auto& editID = selectable_input_text_id();
     auto isRename = editID == id;
     bool isActivated{};
 

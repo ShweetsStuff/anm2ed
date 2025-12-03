@@ -127,7 +127,9 @@ namespace anm2ed::imgui
         auto add = [&]()
         {
           auto id = map::next_id_get(anm2.content.events);
-          anm2.content.events[id] = anm2::Event();
+          anm2::Event event{};
+          event.name = localize.get(TEXT_NEW_EVENT);
+          anm2.content.events[id] = event;
           selection = {id};
           reference = {id};
           newEventId = id;

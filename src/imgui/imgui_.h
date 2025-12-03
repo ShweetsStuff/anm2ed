@@ -180,6 +180,7 @@ namespace anm2ed::imgui
   bool input_float_range(const char*, float&, float, float, float = STEP, float = STEP_FAST, const char* = "%.3f",
                          ImGuiInputTextFlags = 0);
   bool combo_negative_one_indexed(const std::string&, int*, std::vector<const char*>&);
+  std::string& selectable_input_text_id();
   bool selectable_input_text(const std::string& label, const std::string& id, std::string& text, bool isSelected,
                              ImGuiSelectableFlags flags, RenameState& state);
   void set_item_tooltip_shortcut(const char*, const std::string& = {});
