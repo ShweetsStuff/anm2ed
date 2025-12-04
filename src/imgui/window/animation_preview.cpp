@@ -73,13 +73,12 @@ namespace anm2ed::imgui
           if (isSuccess)
           {
             toasts.push(std::vformat(localize.get(TOAST_EXPORT_RENDERED_FRAMES), std::make_format_args(path)));
-            logger.info(std::vformat(localize.get(TOAST_EXPORT_RENDERED_FRAMES, anm2ed::ENGLISH),
-                                     std::make_format_args(path)));
+            logger.info(
+                std::vformat(localize.get(TOAST_EXPORT_RENDERED_FRAMES, anm2ed::ENGLISH), std::make_format_args(path)));
           }
           else
           {
-            toasts.push(std::vformat(localize.get(TOAST_EXPORT_RENDERED_FRAMES_FAILED),
-                                     std::make_format_args(path)));
+            toasts.push(std::vformat(localize.get(TOAST_EXPORT_RENDERED_FRAMES_FAILED), std::make_format_args(path)));
             logger.error(std::vformat(localize.get(TOAST_EXPORT_RENDERED_FRAMES_FAILED, anm2ed::ENGLISH),
                                       std::make_format_args(path)));
           }
@@ -132,13 +131,12 @@ namespace anm2ed::imgui
               if (spritesheetTexture.write_png(path))
               {
                 toasts.push(std::vformat(localize.get(TOAST_EXPORT_SPRITESHEET), std::make_format_args(path)));
-                logger.info(std::vformat(localize.get(TOAST_EXPORT_SPRITESHEET, anm2ed::ENGLISH),
-                                         std::make_format_args(path)));
+                logger.info(
+                    std::vformat(localize.get(TOAST_EXPORT_SPRITESHEET, anm2ed::ENGLISH), std::make_format_args(path)));
               }
               else
               {
-                toasts.push(std::vformat(localize.get(TOAST_EXPORT_SPRITESHEET_FAILED),
-                                         std::make_format_args(path)));
+                toasts.push(std::vformat(localize.get(TOAST_EXPORT_SPRITESHEET_FAILED), std::make_format_args(path)));
                 logger.error(std::vformat(localize.get(TOAST_EXPORT_SPRITESHEET_FAILED, anm2ed::ENGLISH),
                                           std::make_format_args(path)));
               }
@@ -155,8 +153,8 @@ namespace anm2ed::imgui
           }
           else
           {
-            toasts.push(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED),
-                                     std::make_format_args(path)));
+            toasts.push(
+                std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED), std::make_format_args(path)));
             logger.error(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED, anm2ed::ENGLISH),
                                       std::make_format_args(path)));
           }
@@ -640,8 +638,11 @@ namespace anm2ed::imgui
 
       unbind();
 
-      sync_checker_pan();
-      render_checker_background(ImGui::GetWindowDrawList(), min, max, -size - checkerPan, CHECKER_SIZE);
+      if (manager.isRecording && settings.renderIsRawAnimation)
+      {
+        sync_checker_pan();
+        render_checker_background(ImGui::GetWindowDrawList(), min, max, -size - checkerPan, CHECKER_SIZE);
+      }
       ImGui::Image(texture, to_imvec2(size));
 
       isPreviewHovered = ImGui::IsItemHovered();

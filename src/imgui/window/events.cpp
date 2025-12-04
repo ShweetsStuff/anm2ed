@@ -89,8 +89,8 @@ namespace anm2ed::imgui
             document.change(Document::EVENTS);
           else
           {
-            toasts.push(std::vformat(localize.get(TOAST_DESERIALIZE_EVENTS_FAILED),
-                                     std::make_format_args(errorString)));
+            toasts.push(
+                std::vformat(localize.get(TOAST_DESERIALIZE_EVENTS_FAILED), std::make_format_args(errorString)));
             logger.error(std::vformat(localize.get(TOAST_DESERIALIZE_EVENTS_FAILED, anm2ed::ENGLISH),
                                       std::make_format_args(errorString)));
           }

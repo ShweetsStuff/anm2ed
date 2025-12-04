@@ -143,6 +143,7 @@ namespace anm2ed
   X(EDIT_REPLACE_SPRITESHEET, "Replace Spritesheet", "Заменить спрайт-лист", "替换图集", "스프라이트 시트 교체") \
   X(EDIT_SET_LAYER_PROPERTIES, "Set Layer Properties", "Установить свойства слоя", "更改动画层属性", "레이어 속성 설정") \
   X(EDIT_SET_NULL_PROPERTIES, "Set Null Properties", "Установить свойства нуля", "更改Null属性", "Null 속성 설정") \
+  X(EDIT_SPLIT_FRAME, "Split Frame", "Разделить кадр", "拆分帧", "프레임 분할") \
   X(EDIT_SHORTEN_FRAME, "Shorten Frame", "Укоротить кадр", "缩短帧时长", "프레임 단축") \
   X(EDIT_TOGGLE_ITEM_VISIBILITY, "Toggle Item Visibility", "Переключить видимость предмета", "物品可见", "항목 표시/숨기기") \
   X(EDIT_TOGGLE_NULL_RECT, "Toggle Null Rectangle", "Переключить прямоугольник нуля", "Null框可见", "Null 사각형 표시/숨기기") \
@@ -195,6 +196,7 @@ namespace anm2ed
   X(LABEL_AXES, "Axes", "Оси", "坐标轴", "가로/세로 축") \
   X(LABEL_BACKGROUND_COLOR, "Background", "Фон", "背景", "배경색") \
   X(LABEL_BAKE, "Bake", "Запечь", "提前渲染", "베이크") \
+  X(LABEL_SPLIT, "Split", "Разделить", "拆分", "분할") \
   X(LABEL_BORDER, "Border", "Границы", "边框", "경계선") \
   X(LABEL_CENTER_VIEW, "Center View", "Центрировать вид", "视角中心", "가운데서 보기") \
   X(LABEL_CLAMP, "Clamp", "Ограничить", "限制数值范围", "작업 영역 제한") \
@@ -365,6 +367,8 @@ namespace anm2ed
   X(SHORTCUT_STRING_SAVE, "Save", "Сохранить", "保存", "저장") \
   X(SHORTCUT_STRING_SAVE_AS, "Save As", "Сохранить как", "保存为", "다른 이름으로 저장") \
   X(SHORTCUT_STRING_SCALE, "Scale", "Изменить масштаб", "缩放", "비율") \
+  X(SHORTCUT_STRING_SPLIT, "Split", "", "", "") \
+  X(SHORTCUT_STRING_BAKE, "Bake", "Запечь", "提前渲染", "베이크") \
   X(SHORTCUT_STRING_SHORTEN_FRAME, "Shorten Frame", "Укоротить кадр", "缩短帧时长", "프레임 단축") \
   X(SHORTCUT_STRING_UNDO, "Undo", "Отменить", "撤销", "실행 취소") \
   X(SHORTCUT_STRING_ZOOM_IN, "Zoom In", "Увеличить", "视图放大", "확대") \
@@ -433,7 +437,7 @@ namespace anm2ed
   X(TOOLTIP_AXES, "Toggle the axes' visibility.", "Переключить видимость осей.", "切换坐标轴是否可见.", "가로/세로 축을 표시하거나 숨깁니다.") \
   X(TOOLTIP_AXES_COLOR, "Set the color of the axes.", "Установить цвет осей.", "设置坐标轴的颜色.", "가로/세로 축의 색상을 설정합니다.") \
   X(TOOLTIP_BACKGROUND_COLOR, "Change the background color.", "Изменить цвет фона.", "更改背景颜色.", "배경색을 변경합니다.") \
-  X(TOOLTIP_BAKE_FRAMES, "Turn interpolated frames into uninterpolated ones.", "Превратить интерполированные кадры в неинтерполированных.", "转换线性插值的帧为正常(未线性插值)的帧.", "연결된 프레임을 연결되지 않은 프레임으로 고정화합니다.") \
+  X(TOOLTIP_BAKE_FRAMES, "Turn interpolated frames into uninterpolated ones.\nUse the shortcut to bake frames quickly.", "Превратить интерполированные кадры в неинтерполированные.\nИспользуйте горячую клавишу, чтобы быстро запечь кадры.", "将线性插值的帧转换为普通帧。\n使用快捷键可快速烘焙帧.", "연결된 프레임을 연결되지 않은 프레임으로 고정화합니다.\n단축키를 사용하면 프레임을 빠르게 베이크할 수 있습니다.") \
   X(TOOLTIP_BAKE_FRAMES_OPTIONS, "Bake the selected frame(s) with the options selected.", "Запечь выбранные кадры с выбранными настройками.", "替换所选旧图集为新图集.", "선택된 프레임을 선택한 옵션으로 베이킹합니다.") \
   X(TOOLTIP_BORDER, "Toggle the visibility of borders around layers.", "Переключить видимость границ около слоев.", "切换动画层边框是否可见.", "레이어 주변 경계선을 표시하거나 숨깁니다.") \
   X(TOOLTIP_CANCEL_ADD_ITEM, "Cancel adding an item.", "Отменить добавление предмета.", "取消添加物品.", "항목 추가를 취소합니다.") \
@@ -491,7 +495,7 @@ namespace anm2ed
   X(TOOLTIP_ONIONSKIN_INDEX, "The onionskinned frames will be based on frame index.", "Кадры оньонскина будут основаны на индексе кадров.", "洋葱皮预览的帧会基于帧下标.", "프레임 비교를 프레임 인덱스를 기준으로 합니다.") \
   X(TOOLTIP_ONIONSKIN_TIME, "The onionskinned frames will be based on frame time.", "Кадры оньонскина будут основаны на времени кадров.", "洋葱皮预览的帧会基于帧时间.", "프레임 비교를 프레임 시간을 기준으로 합니다.") \
   X(TOOLTIP_ONLY_LAYERS_VISIBLE, "Only layers are visible. Press to show all items.", "Только слои видимы. Нажмите, чтобы показать все предметы.", "当前仅有动画层可见. 点击以显示所有物品.", "레이어만 표시합니다. 모두 보려면 누르세요.") \
-  X(TOOLTIP_OPEN_MERGE_POPUP, "Open merge popup.", "Открыть всплывающее окно соединения.", "打开合并弹窗.", "병합 팝업을 엽습니다.") \
+  X(TOOLTIP_OPEN_MERGE_POPUP, "Open merge popup.\nUse the shortcut to merge quickly.", "Открыть всплывающее окно соединения.\nИспользуйте горячую клавишу, чтобы быстро выполнить слияние.", "打开合并弹窗。\n使用快捷键可快速合并。", "병합 팝업을 엽니다.\n단축키로 빠르게 병합하세요.") \
   X(TOOLTIP_OUTPUT_PATH, "Set the output path or directory for the animation.", "Установить путь или директорию вывода для анимации.", "更改动画的输出路径/目录.", "애니메이션의 출력 경로 또는 디렉터리를 설정합니다.") \
   X(TOOLTIP_OVERLAY, "Set an animation to be drawn over the current animation.", "Установить анимацию, которая будет выведена над текущей анимацией.", "设置一个当前动画的覆盖动画.", "현재 애니메이션 위에 그려질 애니메이션을 설정합니다.") \
   X(TOOLTIP_OVERLAY_ALPHA, "Set the alpha of the overlayed animation.", "Установить прозрачность наложенной анимации.", "更改覆盖动画的透明度.", "오버레이된 애니메이션의 불투명도를 설정합니다.") \
@@ -528,6 +532,7 @@ namespace anm2ed
   X(TOOLTIP_SETTINGS_SAVE, "Use the configured settings.", "Использовать настроенные настройки.", "应用更改的设置.", "구성된 설정을 사용합니다.") \
   X(TOOLTIP_SET_DEFAULT_ANIMATION, "Set the selected animation as the default.", "Установить выбранную анимацию как анимацию по умолчанию.", "把当前所选动画设置为默认动画.", "선택한 애니메이션을 기본 애니메이션으로 설정합니다.") \
   X(TOOLTIP_SET_TO_RECOMMENDED, "Use a recommended value for rows/columns.", "Использовать рекомендованное значение для рядов/колонн.", "应用列/行的推荐值.", "행/열에 권장값을 사용합니다.") \
+  X(TOOLTIP_SPLIT, "Based on the playhead time, split the selected frame into two.", "С учётом позиции ползунка воспроизведения разделяет выбранный кадр на два.", "根据播放头位置，将所选帧拆分成两个。", "재생 헤드 시간에 따라 선택한 프레임을 두 개로 분할합니다.") \
   X(TOOLTIP_SIZE, "Change the crop size the frame uses.", "Изменить размер обрезки, который использует этот кадр.", "更改此帧的裁剪大小.", "프레임에 대응되는 스프라이트 시트의 사용 영역의 크기를 변경합니다.") \
   X(TOOLTIP_SOUND, "Toggle sounds playing with triggers.\nBind sounds to events in the Events window.", "Переключить воспроизведения звуков с помощью триггеров.\nПривязывайте звуки к событиям в окне событий.", "切换是否在触发器触发时播放声音.\n可以在事件窗口里链接声音与事件.", "트리거와 함께 사운드를 재생할지 정합니다.\n사운드는 이벤트 창에서 이벤트에 연결하세요.") \
   X(TOOLTIP_SOUNDS_PLAY, "Click to play.", "Нажмите, чтобы возпроизвести.", "点击播放.", "클릭하여 재생합니다.") \

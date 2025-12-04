@@ -169,7 +169,7 @@ namespace anm2ed
   X(SHORTCUT_EXIT, shortcutExit, SHORTCUT_STRING_EXIT, STRING, "Alt+F4")                                               \
   /* Edit */                                                                                                           \
   X(SHORTCUT_UNDO, shortcutUndo, SHORTCUT_STRING_UNDO, STRING, "Ctrl+Z")                                               \
-  X(SHORTCUT_REDO, shortcutRedo, SHORTCUT_STRING_REDO, STRING, "Ctrl+Y")                                         \
+  X(SHORTCUT_REDO, shortcutRedo, SHORTCUT_STRING_REDO, STRING, "Ctrl+Y")                                               \
   X(SHORTCUT_CUT, shortcutCut, SHORTCUT_STRING_CUT, STRING, "Ctrl+X")                                                  \
   X(SHORTCUT_COPY, shortcutCopy, SHORTCUT_STRING_COPY, STRING, "Ctrl+C")                                               \
   X(SHORTCUT_PASTE, shortcutPaste, SHORTCUT_STRING_PASTE, STRING, "Ctrl+V")                                            \
@@ -194,6 +194,8 @@ namespace anm2ed
   X(SHORTCUT_ZOOM_IN, shortcutZoomIn, SHORTCUT_STRING_ZOOM_IN, STRING, "Ctrl+Equal")                                   \
   X(SHORTCUT_ZOOM_OUT, shortcutZoomOut, SHORTCUT_STRING_ZOOM_OUT, STRING, "Ctrl+Minus")                                \
   /* Timeline / Playback */                                                                                            \
+  X(SHORTCUT_BAKE, shortcutBake, SHORTCUT_STRING_BAKE, STRING, "Ctrl+B")                                               \
+  X(SHORTCUT_SPLIT, shortcutSplit, SHORTCUT_STRING_SPLIT, STRING, "Ctrl+P")                                            \
   X(SHORTCUT_PLAY_PAUSE, shortcutPlayPause, SHORTCUT_STRING_PLAY_PAUSE, STRING, "Space")                               \
   X(SHORTCUT_MOVE_PLAYHEAD_BACK, shortcutMovePlayheadBack, SHORTCUT_STRING_PLAYHEAD_BACK, STRING, "Comma")             \
   X(SHORTCUT_MOVE_PLAYHEAD_FORWARD, shortcutMovePlayheadForward, SHORTCUT_STRING_PLAYHEAD_FORWARD, STRING, "Period")   \

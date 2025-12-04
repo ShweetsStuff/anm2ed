@@ -324,6 +324,55 @@ namespace anm2ed::imgui
       }
     };
 
+    auto frames_bake = [&]()
+    {
+      if (auto item = document.item_get())
+        for (auto i : frames.selection | std::views::reverse)
+          item->frames_bake(i, settings.bakeInterval, settings.bakeIsRoundScale, settings.bakeIsRoundRotation);
+
+      frames.clear();
+    };
+
+    auto frame_split = [&]()
+    {
+      if (reference.itemType == anm2::TRIGGER) return;
+
+      auto item = document.item_get();
+      auto frame = document.frame_get();
+
+      if (!item || !frame) return;
+
+      auto originalDuration = frame->duration;
+      if (originalDuration <= 1) return;
+
+      auto frameStartTime = item->frame_time_from_index_get(reference.frameIndex);
+      int frameStart = (int)std::round(frameStartTime);
+      int playheadTime = (int)std::floor(playback.time);
+      int firstDuration = playheadTime - frameStart + 1;
+
+      if (firstDuration <= 0 || firstDuration >= originalDuration) return;
+
+      int secondDuration = originalDuration - firstDuration;
+      anm2::Frame splitFrame = *frame;
+      splitFrame.duration = secondDuration;
+
+      auto nextFrame =
+          vector::in_bounds(item->frames, reference.frameIndex + 1) ? &item->frames[reference.frameIndex + 1] : nullptr;
+      if (frame->isInterpolated && nextFrame)
+      {
+        float interpolation = (float)firstDuration / (float)originalDuration;
+        splitFrame.rotation = glm::mix(frame->rotation, nextFrame->rotation, interpolation);
+        splitFrame.position = glm::mix(frame->position, nextFrame->position, interpolation);
+        splitFrame.scale = glm::mix(frame->scale, nextFrame->scale, interpolation);
+        splitFrame.colorOffset = glm::mix(frame->colorOffset, nextFrame->colorOffset, interpolation);
+        splitFrame.tint = glm::mix(frame->tint, nextFrame->tint, interpolation);
+      }
+
+      frame->duration = firstDuration;
+      item->frames.insert(item->frames.begin() + reference.frameIndex + 1, splitFrame);
+      frames_selection_set_reference();
+    };
+
     auto frames_selection_reset = [&]()
     {
       frames.clear();
@@ -399,8 +448,8 @@ namespace anm2ed::imgui
           else
           {
             toasts.push(std::format("{} {}", localize.get(TOAST_DESERIALIZE_FRAMES_FAILED), errorString));
-            logger.error(std::format("{} {}", localize.get(TOAST_DESERIALIZE_FRAMES_FAILED, anm2ed::ENGLISH),
-                                     errorString));
+            logger.error(
+                std::format("{} {}", localize.get(TOAST_DESERIALIZE_FRAMES_FAILED, anm2ed::ENGLISH), errorString));
           }
         }
         else
@@ -420,7 +469,20 @@ namespace anm2ed::imgui
           cut();
         if (ImGui::MenuItem(localize.get(BASIC_COPY), settings.shortcutCopy.c_str(), false, !frames.selection.empty()))
           copy();
-        if (ImGui::MenuItem(localize.get(BASIC_PASTE), nullptr, false, !clipboard.is_empty())) paste();
+        if (ImGui::MenuItem(localize.get(BASIC_PASTE), settings.shortcutPaste.c_str(), false, !clipboard.is_empty()))
+          paste();
+
+        ImGui::Separator();
+
+        if (ImGui::MenuItem(localize.get(LABEL_BAKE), settings.shortcutBake.c_str(), false, !frames.selection.empty()))
+          DOCUMENT_EDIT(document, localize.get(EDIT_BAKE_FRAMES), Document::FRAMES, frames_bake());
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BAKE_FRAMES_OPTIONS));
+
+        if (ImGui::MenuItem(localize.get(LABEL_SPLIT), settings.shortcutSplit.c_str(), false,
+                            !frames.selection.empty()))
+          DOCUMENT_EDIT(document, localize.get(EDIT_SPLIT_FRAME), Document::FRAMES, frame_split());
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SPLIT));
+
         ImGui::EndPopup();
       }
 
@@ -672,11 +734,10 @@ namespace anm2ed::imgui
                   ImGui::TextUnformatted(layer.name.c_str());
                   ImGui::PopFont();
 
+                  ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_ID), std::make_format_args(id)).c_str());
                   ImGui::TextUnformatted(
-                      std::vformat(localize.get(FORMAT_ID), std::make_format_args(id)).c_str());
-                  ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_SPRITESHEET_ID),
-                                                      std::make_format_args(layer.spritesheetID))
-                                             .c_str());
+                      std::vformat(localize.get(FORMAT_SPRITESHEET_ID), std::make_format_args(layer.spritesheetID))
+                          .c_str());
                   ImGui::TextUnformatted(
                       std::vformat(localize.get(FORMAT_VISIBLE), std::make_format_args(visibleLabel)).c_str());
                   ImGui::TextUnformatted(
@@ -691,8 +752,7 @@ namespace anm2ed::imgui
                   ImGui::PopFont();
 
                   auto rectLabel = yesNoLabel(nullInfo.isShowRect);
-                  ImGui::TextUnformatted(
-                      std::vformat(localize.get(FORMAT_ID), std::make_format_args(id)).c_str());
+                  ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_ID), std::make_format_args(id)).c_str());
                   ImGui::TextUnformatted(
                       std::vformat(localize.get(FORMAT_RECT), std::make_format_args(rectLabel)).c_str());
                   ImGui::TextUnformatted(
@@ -1763,7 +1823,7 @@ namespace anm2ed::imgui
               ImGui::SameLine();
 
               if (ImGui::Button(localize.get(LABEL_BAKE), widgetSize)) bakePopup.open();
-              ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BAKE_FRAMES));
+              set_item_tooltip_shortcut(localize.get(TOOLTIP_BAKE_FRAMES), settings.shortcutBake);
             }
             ImGui::EndDisabled();
           }
@@ -2030,17 +2090,7 @@ namespace anm2ed::imgui
 
       if (ImGui::Button(localize.get(LABEL_BAKE), widgetSize))
       {
-        auto frames_bake = [&]()
-        {
-          if (auto item = document.item_get())
-            for (auto i : frames.selection | std::views::reverse)
-              item->frames_bake(i, interval, isRoundScale, isRoundRotation);
-
-          frames.clear();
-        };
-
         DOCUMENT_EDIT(document, localize.get(EDIT_BAKE_FRAMES), Document::FRAMES, frames_bake());
-
         bakePopup.close();
       }
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BAKE_FRAMES_OPTIONS));
@@ -2117,6 +2167,12 @@ namespace anm2ed::imgui
           document.frameTime = item->frame_time_from_index_get(reference.frameIndex);
         }
       }
+
+      if (shortcut(manager.chords[SHORTCUT_SPLIT], shortcut::GLOBAL))
+        DOCUMENT_EDIT(document, localize.get(EDIT_BAKE_FRAMES), Document::FRAMES, frame_split());
+
+      if (shortcut(manager.chords[SHORTCUT_BAKE], shortcut::GLOBAL))
+        DOCUMENT_EDIT(document, localize.get(EDIT_BAKE_FRAMES), Document::FRAMES, frames_bake());
     }
 
     if (isTextPushed) ImGui::PopStyleColor();
