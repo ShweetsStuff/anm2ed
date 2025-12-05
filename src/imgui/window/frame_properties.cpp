@@ -31,25 +31,29 @@ namespace anm2ed::imgui
           {
             if (combo_negative_one_indexed(localize.get(BASIC_EVENT),
                                            frame ? &useFrame.eventID : &dummy_value_negative<int>(),
-                                           document.event.labels))
+                                           document.event.labels) &&
+                frame)
               DOCUMENT_EDIT(document, localize.get(EDIT_TRIGGER_EVENT), Document::FRAMES,
                             frame->eventID = useFrame.eventID);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TRIGGER_EVENT));
 
             if (combo_negative_one_indexed(localize.get(BASIC_SOUND),
                                            frame ? &useFrame.soundID : &dummy_value_negative<int>(),
-                                           document.sound.labels))
+                                           document.sound.labels) &&
+                frame)
               DOCUMENT_EDIT(document, localize.get(EDIT_TRIGGER_SOUND), Document::FRAMES,
                             frame->soundID = useFrame.soundID);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TRIGGER_SOUND));
 
             if (ImGui::InputInt(localize.get(BASIC_AT_FRAME), frame ? &useFrame.atFrame : &dummy_value<int>(), STEP,
-                                STEP_FAST, !frame ? ImGuiInputTextFlags_DisplayEmptyRefVal : 0))
+                                STEP_FAST, !frame ? ImGuiInputTextFlags_DisplayEmptyRefVal : 0) &&
+                frame)
               DOCUMENT_EDIT(document, localize.get(EDIT_TRIGGER_AT_FRAME), Document::FRAMES,
                             frame->atFrame = useFrame.atFrame);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TRIGGER_AT_FRAME));
 
-            if (ImGui::Checkbox(localize.get(BASIC_VISIBLE), frame ? &useFrame.isVisible : &dummy_value<bool>()))
+            if (ImGui::Checkbox(localize.get(BASIC_VISIBLE), frame ? &useFrame.isVisible : &dummy_value<bool>()) &&
+                frame)
               DOCUMENT_EDIT(document, localize.get(EDIT_TRIGGER_VISIBILITY), Document::FRAMES,
                             frame->isVisible = useFrame.isVisible);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TRIGGER_VISIBILITY));
@@ -59,12 +63,14 @@ namespace anm2ed::imgui
             ImGui::BeginDisabled(type == anm2::ROOT || type == anm2::NULL_);
             {
               if (ImGui::InputFloat2(localize.get(BASIC_CROP), frame ? value_ptr(useFrame.crop) : &dummy_value<float>(),
-                                     frame ? vec2_format_get(useFrame.crop) : ""))
+                                     frame ? vec2_format_get(useFrame.crop) : "") &&
+                  frame)
                 DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_CROP), Document::FRAMES, frame->crop = useFrame.crop);
               ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CROP));
 
               if (ImGui::InputFloat2(localize.get(BASIC_SIZE), frame ? value_ptr(useFrame.size) : &dummy_value<float>(),
-                                     frame ? vec2_format_get(useFrame.size) : ""))
+                                     frame ? vec2_format_get(useFrame.size) : "") &&
+                  frame)
                 DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_SIZE), Document::FRAMES, frame->size = useFrame.size);
               ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SIZE));
             }
@@ -72,7 +78,8 @@ namespace anm2ed::imgui
 
             if (ImGui::InputFloat2(localize.get(BASIC_POSITION),
                                    frame ? value_ptr(useFrame.position) : &dummy_value<float>(),
-                                   frame ? vec2_format_get(useFrame.position) : ""))
+                                   frame ? vec2_format_get(useFrame.position) : "") &&
+                frame)
               DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_POSITION), Document::FRAMES,
                             frame->position = useFrame.position);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_POSITION));
@@ -81,7 +88,8 @@ namespace anm2ed::imgui
             {
               if (ImGui::InputFloat2(localize.get(BASIC_PIVOT),
                                      frame ? value_ptr(useFrame.pivot) : &dummy_value<float>(),
-                                     frame ? vec2_format_get(useFrame.pivot) : ""))
+                                     frame ? vec2_format_get(useFrame.pivot) : "") &&
+                  frame)
                 DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_PIVOT), Document::FRAMES,
                               frame->pivot = useFrame.pivot);
               ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_PIVOT));
@@ -89,34 +97,40 @@ namespace anm2ed::imgui
             ImGui::EndDisabled();
 
             if (ImGui::InputFloat2(localize.get(BASIC_SCALE), frame ? value_ptr(useFrame.scale) : &dummy_value<float>(),
-                                   frame ? vec2_format_get(useFrame.scale) : ""))
+                                   frame ? vec2_format_get(useFrame.scale) : "") &&
+                frame)
               DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_SCALE), Document::FRAMES, frame->scale = useFrame.scale);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SCALE));
 
             if (ImGui::InputFloat(localize.get(BASIC_ROTATION), frame ? &useFrame.rotation : &dummy_value<float>(),
-                                  STEP, STEP_FAST, frame ? float_format_get(useFrame.rotation) : ""))
+                                  STEP, STEP_FAST, frame ? float_format_get(useFrame.rotation) : "") &&
+                frame)
               DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_ROTATION), Document::FRAMES,
                             frame->rotation = useFrame.rotation);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ROTATION));
 
             if (input_int_range(localize.get(BASIC_DURATION), frame ? useFrame.duration : dummy_value<int>(),
                                 frame ? anm2::FRAME_DURATION_MIN : 0, anm2::FRAME_DURATION_MAX, STEP, STEP_FAST,
-                                !frame ? ImGuiInputTextFlags_DisplayEmptyRefVal : 0))
+                                !frame ? ImGuiInputTextFlags_DisplayEmptyRefVal : 0) &&
+                frame)
               DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_DURATION), Document::FRAMES,
                             frame->duration = useFrame.duration);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_DURATION));
 
-            if (ImGui::ColorEdit4(localize.get(BASIC_TINT), frame ? value_ptr(useFrame.tint) : &dummy_value<float>()))
+            if (ImGui::ColorEdit4(localize.get(BASIC_TINT), frame ? value_ptr(useFrame.tint) : &dummy_value<float>()) &&
+                frame)
               DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_TINT), Document::FRAMES, frame->tint = useFrame.tint);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TINT));
 
             if (ImGui::ColorEdit3(localize.get(BASIC_COLOR_OFFSET),
-                                  frame ? value_ptr(useFrame.colorOffset) : &dummy_value<float>()))
+                                  frame ? value_ptr(useFrame.colorOffset) : &dummy_value<float>()) &&
+                frame)
               DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_COLOR_OFFSET), Document::FRAMES,
                             frame->colorOffset = useFrame.colorOffset);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_COLOR_OFFSET));
 
-            if (ImGui::Checkbox(localize.get(BASIC_VISIBLE), frame ? &useFrame.isVisible : &dummy_value<bool>()))
+            if (ImGui::Checkbox(localize.get(BASIC_VISIBLE), frame ? &useFrame.isVisible : &dummy_value<bool>()) &&
+                frame)
               DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_VISIBILITY), Document::FRAMES,
                             frame->isVisible = useFrame.isVisible);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FRAME_VISIBILITY));
@@ -124,19 +138,20 @@ namespace anm2ed::imgui
             ImGui::SameLine();
 
             if (ImGui::Checkbox(localize.get(BASIC_INTERPOLATED),
-                                frame ? &useFrame.isInterpolated : &dummy_value<bool>()))
+                                frame ? &useFrame.isInterpolated : &dummy_value<bool>()) &&
+                frame)
               DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_INTERPOLATION), Document::FRAMES,
                             frame->isInterpolated = useFrame.isInterpolated);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FRAME_INTERPOLATION));
 
             auto widgetSize = widget_size_with_row_get(2);
 
-            if (ImGui::Button(localize.get(LABEL_FLIP_X), widgetSize))
+            if (ImGui::Button(localize.get(LABEL_FLIP_X), widgetSize) && frame)
               DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_FLIP_X), Document::FRAMES,
                             frame->scale.x = -frame->scale.x);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FLIP_X));
             ImGui::SameLine();
-            if (ImGui::Button(localize.get(LABEL_FLIP_Y), widgetSize))
+            if (ImGui::Button(localize.get(LABEL_FLIP_Y), widgetSize) && frame)
               DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_FLIP_Y), Document::FRAMES,
                             frame->scale.y = -frame->scale.y);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FLIP_Y));
