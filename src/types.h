@@ -41,12 +41,12 @@ namespace anm2ed::types::shortcut
   };
 }
 
-namespace anm2ed::types::locale
+namespace anm2ed::types::destination
 {
   enum Type
   {
-    LOCAL,
-    GLOBAL
+    ALL,
+    THIS
   };
 }
 

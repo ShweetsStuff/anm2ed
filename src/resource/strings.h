@@ -233,7 +233,7 @@ namespace anm2ed
   X(LABEL_GENERATE_FRAME_SIZE, "Frame Size", "Размер кадра", "单帧大小", "프레임 크기") \
   X(LABEL_GENERATE_ROWS, "Rows", "Ряды", "行", "행") \
   X(LABEL_GENERATE_START_POSITION, "Start Position", "Начальная позиция", "起始位置", "시작 위치") \
-  X(LABEL_GLOBAL, "Global", "Глобальный", "全局", "전역 추가") \
+  X(LABEL_ALL_ANIMATIONS, "All Animations", "Все анимации", "所有动画", "모든 애니메이션") \
   X(LABEL_HELP_MENU, "Help", "Помощь", "帮助", "도움말") \
   X(LABEL_IGNORE_FRAMES, "Ignore Frames", "Игнорировать кадры", "忽略帧", "프레임 무시") \
   X(LABEL_INPUT, "Input", "Ввод", "输入", "입력") \
@@ -245,8 +245,8 @@ namespace anm2ed
   X(LABEL_LAYERS_CHILD, "Layers List", "", "动画层列表", "레이어 목록") \
   X(LABEL_LAYERS_WINDOW, "Layers###Layers", "Слои###Layers", "动画层###Layers", "레이어###Layers") \
   X(LABEL_LENGTH, "Length", "", "长度", "길이") \
-  X(LABEL_LOCAL, "Local", "Локальный", "局部", "지역 추가") \
-  X(LABEL_LOCALE, "Locale", "Локаль", "局部", "추가할 위치") \
+  X(LABEL_THIS_ANIMATION, "This Animation", "Эта анимация", "此动画", "이 애니메이션") \
+  X(LABEL_DESTINATION, "Destination", "Назначение", "目标", "대상") \
   X(LABEL_LOCALIZATION, "Localization", "Локализация", "本地化", "현지화") \
   X(LABEL_LOOP, "Loop", "Цикл", "循环", "반복") \
   X(LABEL_MANAGER_ANM2_DRAG_DROP, "Anm2 Drag Drop", "Anm2 Drag Drop", "Anm2 拖放", "Anm2 드래그 앤 드롭") \
@@ -464,7 +464,7 @@ namespace anm2ed
   X(TOOLTIP_FPS, "Set the FPS of all animations.", "Установить сколько кадров в секунде для всех анимаций.", "设置所有动画的FPS(帧数每秒)", "모든 애니메이션의 FPS를 설정합니다.") \
   X(TOOLTIP_FRAME_INTERPOLATION, "Toggle the frame interpolating; i.e., blending its values into the next frame based on the time.", "Переключить интерполяцию кадра; т. е. смешать его значения в следующий кадр на основе времени.", "切换帧的线性插值; 也就是利用时间来\"渐变\"两帧之间的数值.", "프레임 보간(시간이 따라 속성 값이 다음 프레임의 값으로 변함) 여부를 정합니다.") \
   X(TOOLTIP_FRAME_VISIBILITY, "Toggle the frame's visibility.", "Переключить видимость кадра.", "切换此帧是否可见.", "프레임을 표시하거나 숨깁니다.") \
-  X(TOOLTIP_GLOBAL_LOCALE, "Use the document's global locale.", "Использовать глобальный локаль документа.", "使用当前文件的全局本地化.", "파일의 전역 경로를 사용합니다.") \
+  X(TOOLTIP_ITEM_ALL_ANIMATIONS, "The item will be placed into all animations.", "Предмет будет добавлен во все анимации.", "该物体将被放入所有动画中。", "항목이 모든 애니메이션에 배치됩니다.") \
   X(TOOLTIP_GRID_COLOR, "Change the grid's color.", "Изменить цвет сетки.", "更改网格的颜色.", "격자 색을 변경합니다.") \
   X(TOOLTIP_GRID_OFFSET, "Change the offset of the grid.", "Изменить смещение сетки.", "更改网格的偏移量.", "격자의 오프셋을 변경합니다.") \
   X(TOOLTIP_GRID_SIZE, "Change the size of all cells in the grid.", "Изменить размер всех клеток в сетке.", "更改网格中所有单元格的大小。", "격자의 간격을 변경합니다.") \
@@ -478,7 +478,7 @@ namespace anm2ed
   X(TOOLTIP_LANGUAGE, "Change the language of the program.", "Изменить язык программы.", "修改程序的语言.", "프로그램의 언어를 변경합니다.") \
   X(TOOLTIP_LAYER_SPRITESHEET, "Set the layer item's spritesheet.", "Установить спрайт-лист слоевого предмета.", "设置层物品的图集.", "레이어 항목의 스프라이트 시트를 설정합니다.") \
   X(TOOLTIP_LAYER_TYPE, "Add a layer item.", "Использовать размер обрезки, который использует кадр.", "添加层物品.", "레이어 항목을 추가합니다.") \
-  X(TOOLTIP_LOCAL_LOCALE, "Use a local locale for the item.", "Изпользовать локальный локаль для предмета.", "让此物品使用局部本地化.", "항목에 지역 경로를 사용합니다.") \
+  X(TOOLTIP_ITEM_THIS_ANIMATION, "The item will be placed into only this animation.", "Предмет будет добавлен только в эту анимацию.", "该物体将仅放入此动画中。", "항목이 이 애니메이션에만 배치됩니다.") \
   X(TOOLTIP_LOOP_ANIMATION, "Toggle the animation looping.", "Переключить цикличное возпроизведение анимации.", "切换动画是否循环.", "애니메이션을 반복할지 정합니다.") \
   X(TOOLTIP_MOVE_TOOL_SNAP, "In Animation Preview, the Move tool will snap the frame's position right to the cursor, instead of being moved at a distance.", "В предпросмотре анимации, инструмент передвижения привяжет позицию кадра прямо к курсору, а не перемещает его на расстоянии.", "在动画预览时, 移动工具会使帧的位置直接吸附与光标上，而不是按距离移动.", "애니메이션 미리보기에서 이동 도구로 프레임을 이동시킬 때 프레임을 마우스 커서 바로 옆에 정렬되게 합니다.") \
   X(TOOLTIP_MULTIPLY_VALUES, "Multiply the specified values for each frame.\n(Boolean values will simply be set.)", "Умножить указанные значения для каждого кадра.\n(Булевы значения будут просто установлены.)", "将每一帧的指定值进行相乘操作. (布尔值将直接被设置.)", "각 프레임의 속성에 지정한 값을 곱합니다.\n(참/거짓 값은 그대로 설정됩니다.)") \

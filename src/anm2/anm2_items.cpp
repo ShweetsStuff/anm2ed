@@ -30,7 +30,8 @@ namespace anm2ed::anm2
     return nullptr;
   }
 
-  Reference Anm2::layer_animation_add(Reference reference, std::string name, int spritesheetID, locale::Type locale)
+  Reference Anm2::layer_animation_add(Reference reference, std::string name, int spritesheetID,
+                                      destination::Type locale)
   {
     auto id = reference.itemID == -1 ? map::next_id_get(content.layers) : reference.itemID;
     auto& layer = content.layers[id];
@@ -44,12 +45,12 @@ namespace anm2ed::anm2
       animation->layerOrder.push_back(id);
     };
 
-    if (locale == locale::GLOBAL)
+    if (locale == destination::ALL)
     {
       for (auto& animation : animations.items)
         if (!animation.layerAnimations.contains(id)) add(&animation, id);
     }
-    else if (locale == locale::LOCAL)
+    else if (locale == destination::THIS)
     {
       if (auto animation = animation_get(reference.animationIndex))
         if (!animation->layerAnimations.contains(id)) add(animation, id);
@@ -58,7 +59,7 @@ namespace anm2ed::anm2
     return {reference.animationIndex, LAYER, id};
   }
 
-  Reference Anm2::null_animation_add(Reference reference, std::string name, locale::Type locale)
+  Reference Anm2::null_animation_add(Reference reference, std::string name, destination::Type locale)
   {
     auto id = reference.itemID == -1 ? map::next_id_get(content.nulls) : reference.itemID;
     auto& null = content.nulls[id];
@@ -67,12 +68,12 @@ namespace anm2ed::anm2
 
     auto add = [&](Animation* animation, int id) { animation->nullAnimations[id] = Item(); };
 
-    if (locale == locale::GLOBAL)
+    if (locale == destination::ALL)
     {
       for (auto& animation : animations.items)
         if (!animation.nullAnimations.contains(id)) add(&animation, id);
     }
-    else if (locale == locale::LOCAL)
+    else if (locale == destination::THIS)
     {
       if (auto animation = animation_get(reference.animationIndex))
         if (!animation->nullAnimations.contains(id)) add(animation, id);

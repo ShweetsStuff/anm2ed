@@ -133,7 +133,7 @@ namespace anm2ed
   X(BAKE_IS_ROUND_ROTATION, bakeIsRoundRotation, STRING_UNDEFINED, BOOL, true)                                         \
                                                                                                                        \
   X(TIMELINE_ADD_ITEM_TYPE, timelineAddItemType, STRING_UNDEFINED, INT, anm2::LAYER)                                   \
-  X(TIMELINE_ADD_ITEM_LOCALITY, timelineAddItemLocale, STRING_UNDEFINED, INT, types::locale::GLOBAL)                   \
+  X(TIMELINE_ADD_ITEM_DESTINATION, timelineAddItemDestination, STRING_UNDEFINED, INT, types::destination::ALL)         \
   X(TIMELINE_ADD_ITEM_SOURCE, timelineAddItemSource, STRING_UNDEFINED, INT, types::source::NEW)                        \
   X(TIMELINE_IS_SHOW_UNUSED, timelineIsShowUnused, STRING_UNDEFINED, BOOL, true)                                       \
   X(TIMELINE_IS_ONLY_SHOW_LAYERS, timelineIsOnlyShowLayers, STRING_UNDEFINED, BOOL, false)                             \

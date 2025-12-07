@@ -71,8 +71,8 @@ namespace anm2ed::anm2
 
     Item* item_get(int, Type, int = -1);
     Reference layer_animation_add(Reference = {}, std::string = {}, int = 0,
-                                  types::locale::Type = types::locale::GLOBAL);
-    Reference null_animation_add(Reference = {}, std::string = {}, types::locale::Type = types::locale::GLOBAL);
+                                  types::destination::Type = types::destination::ALL);
+    Reference null_animation_add(Reference = {}, std::string = {}, types::destination::Type = types::destination::ALL);
 
     Frame* frame_get(int, Type, int, int = -1);
     void merge(const Anm2& source, const std::filesystem::path& destinationDirectory = {},

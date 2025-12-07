@@ -1908,7 +1908,7 @@ namespace anm2ed::imgui
       };
 
       auto& type = settings.timelineAddItemType;
-      auto& locale = settings.timelineAddItemLocale;
+      auto& destination = settings.timelineAddItemDestination;
       auto& source = settings.timelineAddItemSource;
 
       auto footerSize = footer_size_get();
@@ -1959,21 +1959,21 @@ namespace anm2ed::imgui
         }
         ImGui::EndChild();
 
-        ImGui::SeparatorText(localize.get(LABEL_LOCALE));
+        ImGui::SeparatorText(localize.get(LABEL_DESTINATION));
 
-        if (ImGui::BeginChild("##Locale 1", size))
+        if (ImGui::BeginChild("##Destination 1", size))
         {
-          ImGui::RadioButton(localize.get(LABEL_GLOBAL), &locale, locale::GLOBAL);
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GLOBAL_LOCALE));
+          ImGui::RadioButton(localize.get(LABEL_ALL_ANIMATIONS), &destination, destination::ALL);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ITEM_ALL_ANIMATIONS));
         }
         ImGui::EndChild();
 
         ImGui::SameLine();
 
-        if (ImGui::BeginChild("##Locale 2", size))
+        if (ImGui::BeginChild("##Destination 2", size))
         {
-          ImGui::RadioButton(localize.get(LABEL_LOCAL), &locale, locale::LOCAL);
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LOCAL_LOCALE));
+          ImGui::RadioButton(localize.get(LABEL_THIS_ANIMATION), &destination, destination::THIS);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ITEM_THIS_ANIMATION));
         }
         ImGui::EndChild();
 
@@ -2038,10 +2038,10 @@ namespace anm2ed::imgui
         document.snapshot(localize.get(EDIT_ADD_ITEM));
         if (type == anm2::LAYER)
           addReference = anm2.layer_animation_add({reference.animationIndex, anm2::LAYER, addItemID}, addItemName,
-                                                  addItemSpritesheetID - 1, (locale::Type)locale);
+                                                  addItemSpritesheetID - 1, (destination::Type)destination);
         else if (type == anm2::NULL_)
           addReference = anm2.null_animation_add({reference.animationIndex, anm2::LAYER, addItemID}, addItemName,
-                                                 (locale::Type)locale);
+                                                 (destination::Type)destination);
 
         document.change(Document::ITEMS);
 
