@@ -36,7 +36,6 @@ namespace anm2ed
   void State::update(SDL_Window*& window, Settings& settings)
   {
     SDL_Event event{};
-    bool openDroppedDocumentsImmediately = manager.documents.empty();
 
     while (SDL_PollEvent(&event))
     {
@@ -49,10 +48,8 @@ namespace anm2ed
           if (filesystem::path_is_extension(droppedFile, "anm2"))
           {
             std::filesystem::path droppedPath{droppedFile};
-            if (openDroppedDocumentsImmediately)
-            {
+            if (manager.documents.empty())
               manager.open(droppedPath);
-            }
             else
             {
               if (std::find(manager.anm2DragDropPaths.begin(), manager.anm2DragDropPaths.end(), droppedPath) ==
@@ -83,6 +80,12 @@ namespace anm2ed
               logger.warning(localize.get(TOAST_ADD_SOUND_FAILED, anm2ed::ENGLISH));
             }
           }
+          break;
+        }
+        case SDL_EVENT_USER:
+        {
+          auto droppedFile = event.drop.data;
+          if (filesystem::path_is_extension(droppedFile, "anm2")) manager.open(droppedFile);
           break;
         }
         case SDL_EVENT_QUIT:

@@ -231,7 +231,7 @@ namespace anm2ed
               {
                 if (path.empty()) continue;
                 SDL_Event event{};
-                event.type = SDL_EVENT_DROP_FILE;
+                event.type = SDL_EVENT_USER;
                 event.drop.data = SDL_strdup(path.c_str());
                 event.drop.windowID = window ? SDL_GetWindowID(window) : 0;
                 SDL_PushEvent(&event);
