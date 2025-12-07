@@ -82,10 +82,14 @@ namespace anm2ed
           }
           break;
         }
-        case SDL_EVENT_USER:
+        case SDL_EVENT_USER: // Opening files
         {
           auto droppedFile = event.drop.data;
-          if (filesystem::path_is_extension(droppedFile, "anm2")) manager.open(droppedFile);
+          if (filesystem::path_is_extension(droppedFile, "anm2"))
+          {
+            manager.open(droppedFile);
+            SDL_FlashWindow(window, SDL_FLASH_UNTIL_FOCUSED);
+          }
           break;
         }
         case SDL_EVENT_QUIT:
