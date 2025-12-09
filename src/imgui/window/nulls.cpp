@@ -90,8 +90,7 @@ namespace anm2ed::imgui
             document.change(Document::NULLS);
           else
           {
-            toasts.push(std::vformat(localize.get(TOAST_DESERIALIZE_NULLS_FAILED),
-                                     std::make_format_args(errorString)));
+            toasts.push(std::vformat(localize.get(TOAST_DESERIALIZE_NULLS_FAILED), std::make_format_args(errorString)));
             logger.error(std::vformat(localize.get(TOAST_DESERIALIZE_NULLS_FAILED, anm2ed::ENGLISH),
                                       std::make_format_args(errorString)));
           }
@@ -129,7 +128,7 @@ namespace anm2ed::imgui
 
       shortcut(manager.chords[SHORTCUT_REMOVE]);
       ImGui::BeginDisabled(unused.empty());
-      if (ImGui::Button(localize.get(LABEL_REMOVE_UNUSED_NULLS), widgetSize))
+      if (ImGui::Button(localize.get(BASIC_REMOVE_UNUSED), widgetSize))
       {
         auto remove_unused = [&]()
         {
