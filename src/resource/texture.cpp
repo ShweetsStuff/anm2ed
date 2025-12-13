@@ -116,7 +116,7 @@ namespace anm2ed::resource
 
   Texture::Texture(const std::filesystem::path& pngPath)
   {
-    if (const uint8_t* data = stbi_load(pngPath.c_str(), &size.x, &size.y, nullptr, CHANNELS); data)
+    if (const uint8_t* data = stbi_load(pngPath.string().c_str(), &size.x, &size.y, nullptr, CHANNELS); data)
     {
       upload(data);
       stbi_image_free((void*)data);
@@ -125,7 +125,7 @@ namespace anm2ed::resource
 
   bool Texture::write_png(const std::filesystem::path& path)
   {
-    return stbi_write_png(path.c_str(), size.x, size.y, CHANNELS, this->pixels.data(), size.x * CHANNELS);
+    return stbi_write_png(path.string().c_str(), size.x, size.y, CHANNELS, this->pixels.data(), size.x * CHANNELS);
   }
 
   vec4 Texture::pixel_read(vec2 position) const

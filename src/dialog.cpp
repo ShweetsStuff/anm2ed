@@ -61,7 +61,7 @@ namespace anm2ed
   void Dialog::file_explorer_open(const std::filesystem::path& path)
   {
 #ifdef _WIN32
-    ShellExecuteA(NULL, "open", path.c_str(), NULL, NULL, SW_SHOWNORMAL);
+    ShellExecuteA(NULL, "open", path.string().c_str(), NULL, NULL, SW_SHOWNORMAL);
 #elif __unix__
     system(std::format("xdg-open \"{}\" &", path.c_str()).c_str());
 #else

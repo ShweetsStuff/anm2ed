@@ -210,7 +210,7 @@ namespace anm2ed::imgui
             bool isValid = sound.is_valid();
             auto& soundIcon = isValid ? resources.icons[icon::SOUND] : resources.icons[icon::NONE];
             auto tintColor = !isValid ? ImVec4(1.0f, 0.25f, 0.25f, 1.0f) : ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-            auto pathCStr = sound.path.c_str();
+            auto pathCStr = sound.path.string().c_str();
 
             ImGui::SetNextItemSelectionUserData(id);
             ImGui::SetNextItemStorageID(id);
@@ -236,7 +236,7 @@ namespace anm2ed::imgui
             if (ImGui::BeginItemTooltip())
             {
               ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
-              ImGui::TextUnformatted(sound.path.c_str());
+              ImGui::TextUnformatted(pathCStr);
               ImGui::PopFont();
               ImGui::Text("%s: %d", localize.get(BASIC_ID), id);
               if (!isValid)

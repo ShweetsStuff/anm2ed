@@ -23,7 +23,7 @@ namespace anm2ed::anm2
   {
     XMLDocument document;
 
-    if (document.LoadFile(path.c_str()) != XML_SUCCESS)
+    if (document.LoadFile(path.string().c_str()) != XML_SUCCESS)
     {
       if (errorString) *errorString = document.ErrorStr();
       return;
@@ -56,7 +56,7 @@ namespace anm2ed::anm2
     XMLDocument document;
     document.InsertFirstChild(to_element(document));
 
-    if (document.SaveFile(path.c_str()) != XML_SUCCESS)
+    if (document.SaveFile(path.string().c_str()) != XML_SUCCESS)
     {
       if (errorString) *errorString = document.ErrorStr();
       return false;

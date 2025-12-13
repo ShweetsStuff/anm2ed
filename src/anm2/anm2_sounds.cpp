@@ -22,8 +22,8 @@ namespace anm2ed::anm2
     labels.emplace_back(localize.get(BASIC_NONE));
     for (auto& [id, sound] : content.sounds)
     {
-      auto pathCStr = sound.path.c_str();
-      labels.emplace_back(std::vformat(localize.get(FORMAT_SOUND), std::make_format_args(id, pathCStr)));
+      auto pathString = sound.path.string();
+      labels.emplace_back(std::vformat(localize.get(FORMAT_SOUND), std::make_format_args(id, pathString)));
     }
     return labels;
   }

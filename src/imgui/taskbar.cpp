@@ -745,7 +745,7 @@ namespace anm2ed::imgui
 
       if (dialog.is_selected(dialog::FFMPEG_PATH_SET))
       {
-        ffmpegPath = dialog.path;
+        ffmpegPath = dialog.path.string();
         dialog.reset();
       }
 
@@ -763,7 +763,7 @@ namespace anm2ed::imgui
 
       if (dialog.is_selected(dialogType))
       {
-        path = dialog.path;
+        path = dialog.path.string();
         dialog.reset();
       }
 
