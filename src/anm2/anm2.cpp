@@ -23,9 +23,13 @@ namespace anm2ed::anm2
   {
     XMLDocument document;
 
-    filesystem::File file{path, "rb"};
+#ifdef _WIN32
+    auto file = _wfopen(path.string().c_str(), L"rb");
+#else
+    auto file = fopen(path.c_str(), "rb");
+#endif
 
-    if (!file.get() || document.LoadFile(file.get()) != XML_SUCCESS)
+    if (!file || document.LoadFile(file) != XML_SUCCESS)
     {
       if (errorString) *errorString = document.ErrorStr();
       return;
@@ -58,9 +62,13 @@ namespace anm2ed::anm2
     XMLDocument document;
     document.InsertFirstChild(to_element(document));
 
-    filesystem::File file{path, "w"};
+#ifdef _WIN32
+    auto file = _wfopen(path.string().c_str(), L"w");
+#else
+    auto file = fopen(path.c_str(), "w");
+#endif
 
-    if (!file.get() || document.SaveFile(file.get()) != XML_SUCCESS)
+    if (!file || document.SaveFile(file) != XML_SUCCESS)
     {
       if (errorString) *errorString = document.ErrorStr();
       return false;

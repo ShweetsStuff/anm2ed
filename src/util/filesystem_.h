@@ -25,13 +25,4 @@ namespace anm2ed::util::filesystem
     ~WorkingDirectory();
   };
 
-  class File
-  {
-  public:
-    FILE* internal{};
-
-    File(const std::filesystem::path&, const char*);
-    ~File();
-    FILE* get();
-  };
 }
