@@ -306,6 +306,51 @@ namespace anm2ed::imgui
       frameFocusRequested = reference.frameIndex >= 0;
     };
 
+    auto frame_insert = [&](anm2::Item* item)
+    {
+      if (!item) return;
+
+      auto behavior = [&, item]()
+      {
+        if (reference.itemType == anm2::TRIGGER)
+        {
+          for (auto& trigger : animation->triggers.frames)
+            if (document.frameTime == trigger.atFrame) return;
+
+          anm2::Frame addFrame{};
+          addFrame.atFrame = document.frameTime;
+          item->frames.push_back(addFrame);
+          item->frames_sort_by_at_frame();
+          reference.frameIndex = item->frame_index_from_at_frame_get(addFrame.atFrame);
+        }
+        else
+        {
+          auto frame = document.frame_get();
+          if (frame)
+          {
+            auto addFrame = *frame;
+            item->frames.insert(item->frames.begin() + reference.frameIndex, addFrame);
+            reference.frameIndex++;
+          }
+          else if (!item->frames.empty())
+          {
+            auto addFrame = item->frames.back();
+            item->frames.emplace_back(addFrame);
+            reference.frameIndex = (int)(item->frames.size()) - 1;
+          }
+          else
+          {
+            item->frames.emplace_back(anm2::Frame());
+            reference.frameIndex = 0;
+          }
+        }
+
+        frames_selection_set_reference();
+      };
+
+      DOCUMENT_EDIT(document, localize.get(EDIT_INSERT_FRAME), Document::FRAMES, behavior());
+    };
+
     auto frames_delete = [&]()
     {
       if (auto item = animation->item_get(reference.itemType, reference.itemID); item)
@@ -324,53 +369,70 @@ namespace anm2ed::imgui
       }
     };
 
+    auto frames_delete_action = [&]()
+    {
+      if (!document.frame_get()) return;
+      DOCUMENT_EDIT(document, localize.get(EDIT_DELETE_FRAMES), Document::FRAMES, frames_delete());
+    };
+
     auto frames_bake = [&]()
     {
-      if (auto item = document.item_get())
-        for (auto i : frames.selection | std::views::reverse)
-          item->frames_bake(i, settings.bakeInterval, settings.bakeIsRoundScale, settings.bakeIsRoundRotation);
+      auto behavior = [&]()
+      {
+        if (auto item = document.item_get())
+          for (auto i : frames.selection | std::views::reverse)
+            item->frames_bake(i, settings.bakeInterval, settings.bakeIsRoundScale, settings.bakeIsRoundRotation);
 
-      frames.clear();
+        frames.clear();
+      };
+
+      DOCUMENT_EDIT(document, localize.get(EDIT_BAKE_FRAMES), Document::FRAMES, behavior());
     };
 
     auto frame_split = [&]()
     {
-      if (reference.itemType == anm2::TRIGGER) return;
-
-      auto item = document.item_get();
-      auto frame = document.frame_get();
-
-      if (!item || !frame) return;
-
-      auto originalDuration = frame->duration;
-      if (originalDuration <= 1) return;
-
-      auto frameStartTime = item->frame_time_from_index_get(reference.frameIndex);
-      int frameStart = (int)std::round(frameStartTime);
-      int playheadTime = (int)std::floor(playback.time);
-      int firstDuration = playheadTime - frameStart + 1;
-
-      if (firstDuration <= 0 || firstDuration >= originalDuration) return;
-
-      int secondDuration = originalDuration - firstDuration;
-      anm2::Frame splitFrame = *frame;
-      splitFrame.duration = secondDuration;
-
-      auto nextFrame =
-          vector::in_bounds(item->frames, reference.frameIndex + 1) ? &item->frames[reference.frameIndex + 1] : nullptr;
-      if (frame->isInterpolated && nextFrame)
+      auto behavior = [&]()
       {
-        float interpolation = (float)firstDuration / (float)originalDuration;
-        splitFrame.rotation = glm::mix(frame->rotation, nextFrame->rotation, interpolation);
-        splitFrame.position = glm::mix(frame->position, nextFrame->position, interpolation);
-        splitFrame.scale = glm::mix(frame->scale, nextFrame->scale, interpolation);
-        splitFrame.colorOffset = glm::mix(frame->colorOffset, nextFrame->colorOffset, interpolation);
-        splitFrame.tint = glm::mix(frame->tint, nextFrame->tint, interpolation);
-      }
+        if (reference.itemType == anm2::TRIGGER) return;
 
-      frame->duration = firstDuration;
-      item->frames.insert(item->frames.begin() + reference.frameIndex + 1, splitFrame);
-      frames_selection_set_reference();
+        auto item = document.item_get();
+        auto frame = document.frame_get();
+
+        if (!item || !frame) return;
+
+        auto originalDuration = frame->duration;
+        if (originalDuration <= 1) return;
+
+        auto frameStartTime = item->frame_time_from_index_get(reference.frameIndex);
+        int frameStart = (int)std::round(frameStartTime);
+        int playheadTime = (int)std::floor(playback.time);
+        int firstDuration = playheadTime - frameStart + 1;
+
+        if (firstDuration <= 0 || firstDuration >= originalDuration) return;
+
+        int secondDuration = originalDuration - firstDuration;
+        anm2::Frame splitFrame = *frame;
+        splitFrame.duration = secondDuration;
+
+        auto nextFrame = vector::in_bounds(item->frames, reference.frameIndex + 1)
+                             ? &item->frames[reference.frameIndex + 1]
+                             : nullptr;
+        if (frame->isInterpolated && nextFrame)
+        {
+          float interpolation = (float)firstDuration / (float)originalDuration;
+          splitFrame.rotation = glm::mix(frame->rotation, nextFrame->rotation, interpolation);
+          splitFrame.position = glm::mix(frame->position, nextFrame->position, interpolation);
+          splitFrame.scale = glm::mix(frame->scale, nextFrame->scale, interpolation);
+          splitFrame.colorOffset = glm::mix(frame->colorOffset, nextFrame->colorOffset, interpolation);
+          splitFrame.tint = glm::mix(frame->tint, nextFrame->tint, interpolation);
+        }
+
+        frame->duration = firstDuration;
+        item->frames.insert(item->frames.begin() + reference.frameIndex + 1, splitFrame);
+        frames_selection_set_reference();
+      };
+
+      DOCUMENT_EDIT(document, localize.get(EDIT_SPLIT_FRAME), Document::FRAMES, behavior());
     };
 
     auto frames_selection_reset = [&]()
@@ -397,6 +459,15 @@ namespace anm2ed::imgui
       if (type == anm2::LAYER || type == anm2::NULL_) items.reference = (int)type;
     };
 
+    auto fit_animation_length = [&]()
+    {
+      if (!animation) return;
+
+      auto behavior = [&]() { animation->fit_length(); };
+
+      DOCUMENT_EDIT(document, localize.get(EDIT_FIT_ANIMATION_LENGTH), Document::ANIMATIONS, behavior());
+    };
+
     auto context_menu = [&]()
     {
       ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
@@ -404,6 +475,8 @@ namespace anm2ed::imgui
 
       auto copy = [&]()
       {
+        if (frames.selection.empty()) return;
+
         if (auto item = animation->item_get(reference.itemType, reference.itemID); item)
         {
           std::string clipboardString{};
@@ -424,64 +497,96 @@ namespace anm2ed::imgui
 
       auto paste = [&]()
       {
-        if (auto item = animation->item_get(reference.itemType, reference.itemID))
-        {
-          document.snapshot(localize.get(EDIT_PASTE_FRAMES));
-          std::set<int> indices{};
-          std::string errorString{};
-          int insertIndex = (int)item->frames.size();
-          if (!frames.selection.empty())
-            insertIndex = std::min((int)item->frames.size(), *frames.selection.rbegin() + 1);
-          else if (reference.frameIndex >= 0 && reference.frameIndex < (int)item->frames.size())
-            insertIndex = reference.frameIndex + 1;
+        if (clipboard.is_empty()) return;
 
-          auto start = reference.itemType == anm2::TRIGGER ? hoveredTime : insertIndex;
-          if (item->frames_deserialize(clipboard.get(), reference.itemType, start, indices, &errorString))
+        auto behavior = [&]()
+        {
+          if (auto item = animation->item_get(reference.itemType, reference.itemID))
           {
-            frames.selection.clear();
-            for (auto i : indices)
-              frames.selection.insert(i);
-            reference.frameIndex = *indices.begin();
-            animation->fit_length();
-            document.change(Document::FRAMES);
+            document.snapshot(localize.get(EDIT_PASTE_FRAMES));
+            std::set<int> indices{};
+            std::string errorString{};
+            int insertIndex = (int)item->frames.size();
+            if (!frames.selection.empty())
+              insertIndex = std::min((int)item->frames.size(), *frames.selection.rbegin() + 1);
+            else if (reference.frameIndex >= 0 && reference.frameIndex < (int)item->frames.size())
+              insertIndex = reference.frameIndex + 1;
+
+            auto start = reference.itemType == anm2::TRIGGER ? hoveredTime : insertIndex;
+            if (item->frames_deserialize(clipboard.get(), reference.itemType, start, indices, &errorString))
+            {
+              frames.selection.clear();
+              for (auto i : indices)
+                frames.selection.insert(i);
+              reference.frameIndex = *indices.begin();
+              document.change(Document::FRAMES);
+            }
+            else
+            {
+              toasts.push(std::format("{} {}", localize.get(TOAST_DESERIALIZE_FRAMES_FAILED), errorString));
+              logger.error(
+                  std::format("{} {}", localize.get(TOAST_DESERIALIZE_FRAMES_FAILED, anm2ed::ENGLISH), errorString));
+            }
           }
           else
           {
-            toasts.push(std::format("{} {}", localize.get(TOAST_DESERIALIZE_FRAMES_FAILED), errorString));
-            logger.error(
-                std::format("{} {}", localize.get(TOAST_DESERIALIZE_FRAMES_FAILED, anm2ed::ENGLISH), errorString));
+            toasts.push(localize.get(TOAST_DESERIALIZE_FRAMES_NO_SELECTION));
+            logger.warning(localize.get(TOAST_DESERIALIZE_FRAMES_NO_SELECTION, anm2ed::ENGLISH));
           }
-        }
-        else
-        {
-          toasts.push(localize.get(TOAST_DESERIALIZE_FRAMES_NO_SELECTION));
-          logger.warning(localize.get(TOAST_DESERIALIZE_FRAMES_NO_SELECTION, anm2ed::ENGLISH));
-        }
+        };
+
+        DOCUMENT_EDIT(document, localize.get(EDIT_PASTE_FRAMES), Document::FRAMES, behavior());
       };
 
       if (shortcut(manager.chords[SHORTCUT_CUT], shortcut::FOCUSED)) cut();
       if (shortcut(manager.chords[SHORTCUT_COPY], shortcut::FOCUSED)) copy();
       if (shortcut(manager.chords[SHORTCUT_PASTE], shortcut::FOCUSED)) paste();
+      if (shortcut(manager.chords[SHORTCUT_SPLIT], shortcut::FOCUSED)) frame_split();
+      if (shortcut(manager.chords[SHORTCUT_BAKE], shortcut::FOCUSED)) frames_bake();
+      if (shortcut(manager.chords[SHORTCUT_FIT], shortcut::FOCUSED)) fit_animation_length();
 
       if (ImGui::BeginPopupContextWindow("##Context Menu", ImGuiPopupFlags_MouseButtonRight))
       {
+        auto item = animation ? animation->item_get(reference.itemType, reference.itemID) : nullptr;
+
+        if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_UNDO), settings.shortcutUndo.c_str(), false,
+                            document.is_able_to_undo()))
+          document.undo();
+
+        if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_REDO), settings.shortcutRedo.c_str(), false,
+                            document.is_able_to_redo()))
+          document.redo();
+
+        ImGui::Separator();
+
+        auto label = playback.isPlaying ? localize.get(LABEL_PAUSE) : localize.get(LABEL_PLAY);
+        if (ImGui::MenuItem(label, settings.shortcutPlayPause.c_str())) playback.toggle();
+
+        if (ImGui::MenuItem(localize.get(LABEL_INSERT), settings.shortcutInsertFrame.c_str(), false, item))
+          frame_insert(item);
+
+        if (ImGui::MenuItem(localize.get(LABEL_DELETE), settings.shortcutRemove.c_str(), false, document.frame_get()))
+          frames_delete_action();
+
+        if (ImGui::MenuItem(localize.get(LABEL_BAKE), settings.shortcutBake.c_str(), false, !frames.selection.empty()))
+          frames_bake();
+
+        if (ImGui::MenuItem(localize.get(LABEL_FIT_ANIMATION_LENGTH), settings.shortcutFit.c_str(), false,
+                            animation && animation->frameNum != animation->length()))
+          fit_animation_length();
+
+        if (ImGui::MenuItem(localize.get(LABEL_SPLIT), settings.shortcutSplit.c_str(), false,
+                            frames.selection.size() == 1))
+          frame_split();
+
+        ImGui::Separator();
+
         if (ImGui::MenuItem(localize.get(BASIC_CUT), settings.shortcutCut.c_str(), false, !frames.selection.empty()))
           cut();
         if (ImGui::MenuItem(localize.get(BASIC_COPY), settings.shortcutCopy.c_str(), false, !frames.selection.empty()))
           copy();
         if (ImGui::MenuItem(localize.get(BASIC_PASTE), settings.shortcutPaste.c_str(), false, !clipboard.is_empty()))
           paste();
-
-        ImGui::Separator();
-
-        if (ImGui::MenuItem(localize.get(LABEL_BAKE), settings.shortcutBake.c_str(), false, !frames.selection.empty()))
-          DOCUMENT_EDIT(document, localize.get(EDIT_BAKE_FRAMES), Document::FRAMES, frames_bake());
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BAKE_FRAMES_OPTIONS));
-
-        if (ImGui::MenuItem(localize.get(LABEL_SPLIT), settings.shortcutSplit.c_str(), false,
-                            !frames.selection.empty()))
-          DOCUMENT_EDIT(document, localize.get(EDIT_SPLIT_FRAME), Document::FRAMES, frame_split());
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SPLIT));
 
         ImGui::EndPopup();
       }
@@ -1192,7 +1297,7 @@ namespace anm2ed::imgui
 
           playback.clamp(settings.playbackIsClamp ? length : anm2::FRAME_NUM_MAX);
 
-          if (ImGui::IsMouseReleased(0)) isDragging = false;
+          if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) isDragging = false;
 
           if (length > 0)
           {
@@ -1206,9 +1311,7 @@ namespace anm2ed::imgui
           float frameTime{};
 
           if (ImGui::IsWindowHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Left) && !ImGui::IsAnyItemHovered())
-          {
             reference_set_item(type, id);
-          }
 
           for (int i = frameMin; i < frameMax; i++)
           {
@@ -1440,10 +1543,7 @@ namespace anm2ed::imgui
                   isFrameSelectionLocked = true;
                 }
 
-                if (frameDragDrop.selection.empty())
-                {
-                  frameDragDrop.selection.push_back((int)i);
-                }
+                if (frameDragDrop.selection.empty()) frameDragDrop.selection.push_back((int)i);
 
                 std::sort(frameDragDrop.selection.begin(), frameDragDrop.selection.end());
                 frameDragDrop.selection.erase(
@@ -1733,10 +1833,13 @@ namespace anm2ed::imgui
 
           auto rectMin = windowDrawList->GetClipRectMin();
           auto rectMax = windowDrawList->GetClipRectMax();
-          pickerLineDrawList->PushClipRect(rectMin, rectMax);
-          pickerLineDrawList->AddRectFilled(linePos, ImVec2(linePos.x + lineSize.x, linePos.y + lineSize.y),
-                                            ImGui::GetColorU32(playheadLineColor));
-          pickerLineDrawList->PopClipRect();
+          if (pickerLineDrawList)
+          {
+            pickerLineDrawList->PushClipRect(rectMin, rectMax);
+            pickerLineDrawList->AddRectFilled(linePos, ImVec2(linePos.x + lineSize.x, linePos.y + lineSize.y),
+                                              ImGui::GetColorU32(playheadLineColor));
+            pickerLineDrawList->PopClipRect();
+          }
 
           ImGui::PopStyleVar();
         }
@@ -1767,48 +1870,7 @@ namespace anm2ed::imgui
           ImGui::BeginDisabled(!item);
           {
             shortcut(manager.chords[SHORTCUT_INSERT_FRAME]);
-            if (ImGui::Button(localize.get(LABEL_INSERT), widgetSize))
-            {
-              auto insert_frame = [&]()
-              {
-                if (reference.itemType == anm2::TRIGGER)
-                {
-                  for (auto& trigger : animation->triggers.frames)
-                    if (document.frameTime == trigger.atFrame) return;
-
-                  auto addFrame = anm2::Frame();
-                  addFrame.atFrame = document.frameTime;
-                  item->frames.push_back(addFrame);
-                  item->frames_sort_by_at_frame();
-                  reference.frameIndex = item->frame_index_from_at_frame_get(addFrame.atFrame);
-                }
-                else
-                {
-                  auto frame = document.frame_get();
-                  if (frame)
-                  {
-                    auto addFrame = *frame;
-                    item->frames.insert(item->frames.begin() + reference.frameIndex, addFrame);
-                    reference.frameIndex++;
-                  }
-                  else if (!item->frames.empty())
-                  {
-                    auto addFrame = item->frames.back();
-                    item->frames.emplace_back(addFrame);
-                    reference.frameIndex = (int)(item->frames.size()) - 1;
-                  }
-                  else
-                  {
-                    item->frames.emplace_back(anm2::Frame());
-                    reference.frameIndex = 0;
-                  }
-                }
-
-                frames_selection_set_reference();
-              };
-
-              DOCUMENT_EDIT(document, localize.get(EDIT_INSERT_FRAME), Document::FRAMES, insert_frame());
-            }
+            if (ImGui::Button(localize.get(LABEL_INSERT), widgetSize)) frame_insert(item);
             set_item_tooltip_shortcut(localize.get(TOOLTIP_INSERT_FRAME), settings.shortcutInsertFrame);
 
             ImGui::SameLine();
@@ -1816,8 +1878,7 @@ namespace anm2ed::imgui
             ImGui::BeginDisabled(!document.frame_get());
             {
               shortcut(manager.chords[SHORTCUT_REMOVE]);
-              if (ImGui::Button(localize.get(LABEL_DELETE), widgetSize))
-                DOCUMENT_EDIT(document, localize.get(EDIT_DELETE_FRAMES), Document::FRAMES, frames_delete());
+              if (ImGui::Button(localize.get(LABEL_DELETE), widgetSize)) frames_delete_action();
               set_item_tooltip_shortcut(localize.get(TOOLTIP_DELETE_FRAMES), settings.shortcutRemove);
 
               ImGui::SameLine();
@@ -1832,10 +1893,9 @@ namespace anm2ed::imgui
           ImGui::SameLine();
 
           ImGui::BeginDisabled(!animation || animation->frameNum == animation->length());
-          if (ImGui::Button(localize.get(LABEL_FIT_ANIMATION_LENGTH), widgetSize))
-            DOCUMENT_EDIT(document, localize.get(EDIT_FIT_ANIMATION_LENGTH), Document::ANIMATIONS,
-                          animation->fit_length());
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FIT_ANIMATION_LENGTH));
+          shortcut(manager.chords[SHORTCUT_FIT]);
+          if (ImGui::Button(localize.get(LABEL_FIT_ANIMATION_LENGTH), widgetSize)) fit_animation_length();
+          set_item_tooltip_shortcut(localize.get(TOOLTIP_FIT_ANIMATION_LENGTH), settings.shortcutFit);
           ImGui::EndDisabled();
 
           ImGui::SameLine();
@@ -2090,7 +2150,7 @@ namespace anm2ed::imgui
 
       if (ImGui::Button(localize.get(LABEL_BAKE), widgetSize))
       {
-        DOCUMENT_EDIT(document, localize.get(EDIT_BAKE_FRAMES), Document::FRAMES, frames_bake());
+        frames_bake();
         bakePopup.close();
       }
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BAKE_FRAMES_OPTIONS));
@@ -2167,12 +2227,6 @@ namespace anm2ed::imgui
           document.frameTime = item->frame_time_from_index_get(reference.frameIndex);
         }
       }
-
-      if (shortcut(manager.chords[SHORTCUT_SPLIT], shortcut::GLOBAL))
-        DOCUMENT_EDIT(document, localize.get(EDIT_BAKE_FRAMES), Document::FRAMES, frame_split());
-
-      if (shortcut(manager.chords[SHORTCUT_BAKE], shortcut::GLOBAL))
-        DOCUMENT_EDIT(document, localize.get(EDIT_BAKE_FRAMES), Document::FRAMES, frames_bake());
     }
 
     if (isTextPushed) ImGui::PopStyleColor();
