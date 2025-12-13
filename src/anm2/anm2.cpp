@@ -19,7 +19,7 @@ namespace anm2ed::anm2
 {
   Anm2::Anm2() { info.createdOn = time::get("%m/%d/%Y %I:%M:%S %p"); }
 
-  Anm2::Anm2(const std::string& path, std::string* errorString)
+  Anm2::Anm2(const std::filesystem::path& path, std::string* errorString)
   {
     XMLDocument document;
 
@@ -51,7 +51,7 @@ namespace anm2ed::anm2
     return element;
   }
 
-  bool Anm2::serialize(const std::string& path, std::string* errorString)
+  bool Anm2::serialize(const std::filesystem::path& path, std::string* errorString)
   {
     XMLDocument document;
     document.InsertFirstChild(to_element(document));
@@ -326,7 +326,8 @@ namespace anm2ed::anm2
         animations.items.push_back(std::move(processed));
     }
 
-    if (animations.defaultAnimation.empty() && !source.animations.defaultAnimation.empty()) {
+    if (animations.defaultAnimation.empty() && !source.animations.defaultAnimation.empty())
+    {
       animations.defaultAnimation = source.animations.defaultAnimation;
     }
   }

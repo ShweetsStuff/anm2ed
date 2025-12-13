@@ -1,6 +1,5 @@
 #include "animations.h"
 
-#include <cstddef>
 #include <format>
 #include <ranges>
 
@@ -20,27 +19,185 @@ namespace anm2ed::imgui
     auto& document = *manager.get();
     auto& anm2 = document.anm2;
     auto& reference = document.reference;
-    auto& hovered = document.animation.hovered;
     auto& selection = document.animation.selection;
     auto& mergeSelection = document.merge.selection;
     auto& mergeReference = document.merge.reference;
     auto& overlayIndex = document.overlayIndex;
 
-    hovered = -1;
+    auto rename_format_get = [&](int index)
+    { return std::format("###Document #{} Animation #{}", manager.selected, index); };
 
-    auto animations_remove = [&]()
+    auto rename = [&]()
     {
-      if (!selection.empty())
+      if (!selection.empty()) renameQueued = *selection.begin();
+    };
+
+    auto add = [&]()
+    {
+      auto behavior = [&]()
       {
-        for (auto it = selection.rbegin(); it != selection.rend(); ++it)
+        anm2::Animation animation;
+        animation.name = localize.get(TEXT_NEW_ANIMATION);
+        if (anm2::Animation* referenceAnimation = document.animation_get())
         {
-          auto i = *it;
-          if (overlayIndex == i) overlayIndex = -1;
-          if (reference.animationIndex == i) reference.animationIndex = -1;
-          anm2.animations.items.erase(anm2.animations.items.begin() + i);
+          for (auto [id, layerAnimation] : referenceAnimation->layerAnimations)
+            animation.layerAnimations[id] = anm2::Item();
+          animation.layerOrder = referenceAnimation->layerOrder;
+          for (auto [id, nullAnimation] : referenceAnimation->nullAnimations)
+            animation.nullAnimations[id] = anm2::Item();
         }
-        selection.clear();
-      }
+        animation.rootAnimation.frames.emplace_back(anm2::Frame());
+
+        auto index = (int)anm2.animations.items.size();
+        if (!selection.empty())
+        {
+          index = *selection.rbegin() + 1;
+          index = std::min(index, (int)anm2.animations.items.size());
+        }
+
+        if (anm2.animations.items.empty()) anm2.animations.defaultAnimation = animation.name;
+
+        anm2.animations.items.insert(anm2.animations.items.begin() + index, animation);
+        selection = {index};
+        reference = {index};
+        newAnimationSelectedIndex = index;
+      };
+
+      DOCUMENT_EDIT(document, localize.get(EDIT_ADD_ANIMATION), Document::ANIMATIONS, behavior());
+    };
+
+    auto remove = [&]()
+    {
+      auto behavior = [&]()
+      {
+        if (!selection.empty())
+        {
+          for (auto it = selection.rbegin(); it != selection.rend(); ++it)
+          {
+            auto i = *it;
+            if (overlayIndex == i) overlayIndex = -1;
+            if (reference.animationIndex == i) reference.animationIndex = -1;
+            anm2.animations.items.erase(anm2.animations.items.begin() + i);
+          }
+          selection.clear();
+        }
+      };
+
+      DOCUMENT_EDIT(document, localize.get(EDIT_REMOVE_ANIMATIONS), Document::ANIMATIONS, behavior());
+    };
+
+    auto duplicate = [&]()
+    {
+      auto behavior = [&]()
+      {
+        auto duplicated = selection;
+        auto end = std::ranges::max(duplicated);
+        for (auto& id : duplicated)
+        {
+          anm2.animations.items.insert(anm2.animations.items.begin() + end, anm2.animations.items[id]);
+          selection.insert(++end);
+          selection.erase(id);
+        }
+      };
+
+      DOCUMENT_EDIT(document, localize.get(EDIT_REMOVE_ANIMATIONS), Document::ANIMATIONS, behavior());
+    };
+
+    auto merge = [&]()
+    {
+      auto behavior = [&]()
+      {
+        if (mergeSelection.contains(overlayIndex)) overlayIndex = -1;
+        auto merged = anm2.animations_merge(mergeReference, mergeSelection, (merge::Type)settings.mergeType,
+                                            settings.mergeIsDeleteAnimationsAfter);
+
+        selection = {merged};
+        reference = {merged};
+      };
+
+      DOCUMENT_EDIT(document, localize.get(EDIT_MERGE_ANIMATIONS), Document::ANIMATIONS, behavior());
+    };
+
+    auto merge_popup_open = [&]()
+    {
+      mergePopup.open();
+      mergeSelection.clear();
+      mergeReference = *selection.begin();
+    };
+
+    auto merge_quick = [&]()
+    {
+      auto behavior = [&]()
+      {
+        int merged{};
+        if (selection.contains(overlayIndex)) overlayIndex = -1;
+
+        if (selection.size() > 1)
+          merged = anm2.animations_merge(*selection.begin(), selection);
+        else if (selection.size() == 1 && *selection.begin() != (int)anm2.animations.items.size() - 1)
+        {
+          auto start = *selection.begin();
+          auto next = *selection.begin() + 1;
+          std::set<int> animationSet{};
+          animationSet.insert(start);
+          animationSet.insert(next);
+
+          merged = anm2.animations_merge(start, animationSet);
+        }
+        else
+          return;
+
+        selection = {merged};
+        reference = {merged};
+      };
+
+      DOCUMENT_EDIT(document, localize.get(EDIT_MERGE_ANIMATIONS), Document::ANIMATIONS, behavior());
+    };
+
+    auto default_set = [&]()
+    {
+      DOCUMENT_EDIT(document, localize.get(EDIT_DEFAULT_ANIMATION), Document::ANIMATIONS,
+                    anm2.animations.defaultAnimation = anm2.animations.items[*selection.begin()].name);
+    };
+
+    auto copy = [&]()
+    {
+      if (selection.empty()) return;
+
+      std::string clipboardText{};
+      for (auto& i : selection)
+        clipboardText += anm2.animations.items[i].to_string();
+      clipboard.set(clipboardText);
+    };
+
+    auto cut = [&]()
+    {
+      copy();
+      DOCUMENT_EDIT(document, localize.get(EDIT_CUT_ANIMATIONS), Document::ANIMATIONS, remove());
+    };
+
+    auto paste = [&]()
+    {
+      if (clipboard.is_empty()) return;
+
+      auto behavior = [&]()
+      {
+        auto clipboardText = clipboard.get();
+        auto start = selection.empty() ? anm2.animations.items.size() : *selection.rbegin() + 1;
+        std::set<int> indices{};
+        std::string errorString{};
+        if (anm2.animations_deserialize(clipboardText, start, indices, &errorString))
+          selection = indices;
+        else
+        {
+          toasts.push(
+              std::vformat(localize.get(TOAST_DESERIALIZE_ANIMATIONS_FAILED), std::make_format_args(errorString)));
+          logger.error(std::vformat(localize.get(TOAST_DESERIALIZE_ANIMATIONS_FAILED, anm2ed::ENGLISH),
+                                    std::make_format_args(errorString)));
+        }
+      };
+
+      DOCUMENT_EDIT(document, localize.get(EDIT_PASTE_ANIMATIONS), Document::ANIMATIONS, behavior());
     };
 
     if (ImGui::Begin(localize.get(LABEL_ANIMATIONS_WINDOW), &settings.windowIsAnimations))
@@ -70,9 +227,13 @@ namespace anm2ed::imgui
           ImGui::PushFont(resources.fonts[font].get(), font::SIZE);
           ImGui::SetNextItemSelectionUserData((int)i);
 
-          if (isNewAnimation) renameState = RENAME_FORCE_EDIT;
-          if (selectable_input_text(animation.name, std::format("###Document #{} Animation #{}", manager.selected, i),
-                                    animation.name, selection.contains((int)i), ImGuiSelectableFlags_None, renameState))
+          if (isNewAnimation || renameQueued == i)
+          {
+            renameState = RENAME_FORCE_EDIT;
+            renameQueued = -1;
+          }
+          if (selectable_input_text(animation.name, rename_format_get(i), animation.name, selection.contains((int)i),
+                                    ImGuiSelectableFlags_None, renameState))
           {
             reference = {(int)i};
             document.frames.clear();
@@ -85,7 +246,6 @@ namespace anm2ed::imgui
               document.change(Document::ANIMATIONS);
             }
           }
-          if (ImGui::IsItemHovered()) hovered = (int)i;
 
           if (isNewAnimation)
           {
@@ -145,68 +305,42 @@ namespace anm2ed::imgui
 
         selection.finish();
 
-        auto copy = [&]()
-        {
-          if (!selection.empty())
-          {
-            std::string clipboardText{};
-            for (auto& i : selection)
-              clipboardText += anm2.animations.items[i].to_string();
-            clipboard.set(clipboardText);
-          }
-          else if (hovered > -1)
-            clipboard.set(anm2.animations.items[hovered].to_string());
-        };
-
-        auto cut = [&]()
-        {
-          copy();
-          DOCUMENT_EDIT(document, localize.get(EDIT_CUT_ANIMATIONS), Document::ANIMATIONS, animations_remove());
-        };
-
-        auto paste = [&]()
-        {
-          auto clipboardText = clipboard.get();
-
-          auto deserialize = [&]()
-          {
-            auto start = selection.empty() ? anm2.animations.items.size() : *selection.rbegin() + 1;
-            std::set<int> indices{};
-            std::string errorString{};
-          if (anm2.animations_deserialize(clipboardText, start, indices, &errorString))
-            selection = indices;
-          else
-          {
-            toasts.push(std::vformat(localize.get(TOAST_DESERIALIZE_ANIMATIONS_FAILED),
-                                     std::make_format_args(errorString)));
-            logger.error(std::vformat(localize.get(TOAST_DESERIALIZE_ANIMATIONS_FAILED, anm2ed::ENGLISH),
-                                      std::make_format_args(errorString)));
-          }
-          };
-
-          DOCUMENT_EDIT(document, localize.get(EDIT_PASTE_ANIMATIONS), Document::ANIMATIONS, deserialize());
-        };
-
+        if (shortcut(manager.chords[SHORTCUT_RENAME], shortcut::FOCUSED)) rename();
+        if (shortcut(manager.chords[SHORTCUT_MERGE], shortcut::FOCUSED)) merge_quick();
         if (shortcut(manager.chords[SHORTCUT_CUT], shortcut::FOCUSED)) cut();
         if (shortcut(manager.chords[SHORTCUT_COPY], shortcut::FOCUSED)) copy();
         if (shortcut(manager.chords[SHORTCUT_PASTE], shortcut::FOCUSED)) paste();
 
         if (ImGui::BeginPopupContextWindow("##Context Menu", ImGuiPopupFlags_MouseButtonRight))
         {
-          if (ImGui::MenuItem(localize.get(BASIC_CUT), settings.shortcutCut.c_str(), false,
-                              !selection.empty() || hovered > -1))
-          {
-            cut();
-          }
-          if (ImGui::MenuItem(localize.get(BASIC_COPY), settings.shortcutCopy.c_str(), false,
-                              !selection.empty() || hovered > -1))
-          {
+          if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_UNDO), settings.shortcutUndo.c_str(), false,
+                              document.is_able_to_undo()))
+            document.undo();
+
+          if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_REDO), settings.shortcutRedo.c_str(), false,
+                              document.is_able_to_redo()))
+            document.redo();
+
+          ImGui::Separator();
+
+          if (ImGui::MenuItem(localize.get(BASIC_RENAME), settings.shortcutRename.c_str(), false,
+                              selection.size() == 1))
+            rename();
+          if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_ADD), settings.shortcutAdd.c_str())) add();
+          if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_DUPLICATE), settings.shortcutDuplicate.c_str())) duplicate();
+          if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_MERGE), settings.shortcutMerge.c_str())) merge_quick();
+          if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_REMOVE), settings.shortcutRemove.c_str())) remove();
+          if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_DEFAULT), settings.shortcutDefault.c_str(), false,
+                              selection.size() == 1))
+            default_set();
+
+          ImGui::Separator();
+
+          if (ImGui::MenuItem(localize.get(BASIC_CUT), settings.shortcutCut.c_str(), false, !selection.empty())) cut();
+          if (ImGui::MenuItem(localize.get(BASIC_COPY), settings.shortcutCopy.c_str(), false, !selection.empty()))
             copy();
-          }
           if (ImGui::MenuItem(localize.get(BASIC_PASTE), settings.shortcutPaste.c_str(), false, !clipboard.is_empty()))
-          {
             paste();
-          }
           ImGui::EndPopup();
         }
       }
@@ -215,133 +349,45 @@ namespace anm2ed::imgui
       auto widgetSize = widget_size_with_row_get(5);
 
       shortcut(manager.chords[SHORTCUT_ADD]);
-      if (ImGui::Button(localize.get(BASIC_ADD), widgetSize))
-      {
-        auto add = [&]()
-        {
-          anm2::Animation animation;
-          animation.name = localize.get(TEXT_NEW_ANIMATION);
-          if (anm2::Animation* referenceAnimation = document.animation_get())
-          {
-            for (auto [id, layerAnimation] : referenceAnimation->layerAnimations)
-              animation.layerAnimations[id] = anm2::Item();
-            animation.layerOrder = referenceAnimation->layerOrder;
-            for (auto [id, nullAnimation] : referenceAnimation->nullAnimations)
-              animation.nullAnimations[id] = anm2::Item();
-          }
-          animation.rootAnimation.frames.emplace_back(anm2::Frame());
-
-          auto index = (int)anm2.animations.items.size();
-          if (!selection.empty())
-          {
-            index = *selection.rbegin() + 1;
-            index = std::min(index, (int)anm2.animations.items.size());
-          }
-
-          if (anm2.animations.items.empty()) anm2.animations.defaultAnimation = animation.name;
-
-          anm2.animations.items.insert(anm2.animations.items.begin() + index, animation);
-          selection = {index};
-          reference = {index};
-          newAnimationSelectedIndex = index;
-        };
-
-        DOCUMENT_EDIT(document, localize.get(EDIT_ADD_ANIMATION), Document::ANIMATIONS, add());
-      }
+      if (ImGui::Button(localize.get(BASIC_ADD), widgetSize)) add();
       set_item_tooltip_shortcut(localize.get(TOOLTIP_ADD_ANIMATION), settings.shortcutAdd);
 
       ImGui::SameLine();
 
       ImGui::BeginDisabled(selection.empty());
-      {
-        shortcut(manager.chords[SHORTCUT_DUPLICATE]);
-        if (ImGui::Button(localize.get(BASIC_DUPLICATE), widgetSize))
-        {
-          auto duplicate = [&]()
-          {
-            auto duplicated = selection;
-            auto end = std::ranges::max(duplicated);
-            for (auto& id : duplicated)
-            {
-              anm2.animations.items.insert(anm2.animations.items.begin() + end, anm2.animations.items[id]);
-              selection.insert(++end);
-              selection.erase(id);
-            }
-          };
-
-          DOCUMENT_EDIT(document, localize.get(EDIT_DUPLICATE_ANIMATIONS), Document::ANIMATIONS, duplicate());
-        }
-        set_item_tooltip_shortcut(localize.get(TOOLTIP_DUPLICATE_ANIMATION), settings.shortcutDuplicate);
-
-        ImGui::SameLine();
-
-        if (shortcut(manager.chords[SHORTCUT_MERGE], shortcut::FOCUSED) && !selection.empty())
-        {
-          auto merge_quick = [&]()
-          {
-            int merged{};
-            if (selection.contains(overlayIndex)) overlayIndex = -1;
-
-            if (selection.size() > 1)
-              merged = anm2.animations_merge(*selection.begin(), selection);
-            else if (selection.size() == 1 && *selection.begin() != (int)anm2.animations.items.size() - 1)
-            {
-              auto start = *selection.begin();
-              auto next = *selection.begin() + 1;
-              std::set<int> animationSet{};
-              animationSet.insert(start);
-              animationSet.insert(next);
-
-              merged = anm2.animations_merge(start, animationSet);
-            }
-            else
-              return;
-
-            selection = {merged};
-            reference = {merged};
-          };
-
-          DOCUMENT_EDIT(document, localize.get(EDIT_MERGE_ANIMATIONS), Document::ANIMATIONS, merge_quick())
-        }
-
-        ImGui::BeginDisabled(selection.size() != 1);
-        {
-          if (ImGui::Button(localize.get(LABEL_MERGE), widgetSize))
-          {
-            mergePopup.open();
-            mergeSelection.clear();
-            mergeReference = *selection.begin();
-          }
-        }
-        ImGui::EndDisabled();
-        set_item_tooltip_shortcut(localize.get(TOOLTIP_OPEN_MERGE_POPUP), settings.shortcutMerge);
-
-        ImGui::SameLine();
-
-        shortcut(manager.chords[SHORTCUT_REMOVE]);
-        if (ImGui::Button(localize.get(BASIC_REMOVE), widgetSize))
-          DOCUMENT_EDIT(document, localize.get(EDIT_REMOVE_ANIMATIONS), Document::ANIMATIONS, animations_remove());
-        set_item_tooltip_shortcut(localize.get(TOOLTIP_REMOVE_ANIMATION), settings.shortcutRemove);
-
-        ImGui::SameLine();
-
-        shortcut(manager.chords[SHORTCUT_DEFAULT]);
-        ImGui::BeginDisabled(selection.size() != 1);
-        if (ImGui::Button(localize.get(BASIC_DEFAULT), widgetSize))
-        {
-          DOCUMENT_EDIT(document, localize.get(EDIT_DEFAULT_ANIMATION), Document::ANIMATIONS,
-                        anm2.animations.defaultAnimation = anm2.animations.items[*selection.begin()].name);
-        }
-        ImGui::EndDisabled();
-        set_item_tooltip_shortcut(localize.get(TOOLTIP_SET_DEFAULT_ANIMATION), settings.shortcutDefault);
-      }
+      shortcut(manager.chords[SHORTCUT_DUPLICATE]);
+      if (ImGui::Button(localize.get(BASIC_DUPLICATE), widgetSize)) duplicate();
       ImGui::EndDisabled();
+      set_item_tooltip_shortcut(localize.get(TOOLTIP_DUPLICATE_ANIMATION), settings.shortcutDuplicate);
+
+      ImGui::SameLine();
+
+      ImGui::BeginDisabled(selection.size() != 1);
+      if (ImGui::Button(localize.get(LABEL_MERGE), widgetSize)) merge_popup_open();
+      ImGui::EndDisabled();
+      set_item_tooltip_shortcut(localize.get(TOOLTIP_OPEN_MERGE_POPUP), settings.shortcutMerge);
+
+      ImGui::SameLine();
+
+      ImGui::BeginDisabled(selection.empty());
+      shortcut(manager.chords[SHORTCUT_REMOVE]);
+      if (ImGui::Button(localize.get(BASIC_REMOVE), widgetSize)) remove();
+      ImGui::EndDisabled();
+      set_item_tooltip_shortcut(localize.get(TOOLTIP_REMOVE_ANIMATION), settings.shortcutRemove);
+
+      ImGui::SameLine();
+
+      ImGui::BeginDisabled(selection.size() != 1);
+      shortcut(manager.chords[SHORTCUT_DEFAULT]);
+      if (ImGui::Button(localize.get(BASIC_DEFAULT), widgetSize)) default_set();
+      ImGui::EndDisabled();
+      set_item_tooltip_shortcut(localize.get(TOOLTIP_SET_DEFAULT_ANIMATION), settings.shortcutDefault);
 
       mergePopup.trigger();
 
       if (ImGui::BeginPopupModal(mergePopup.label(), &mergePopup.isOpen, ImGuiWindowFlags_NoResize))
       {
-        auto merge_close = [&]()
+        auto close = [&]()
         {
           mergeSelection.clear();
           mergePopup.close();
@@ -361,16 +407,16 @@ namespace anm2ed::imgui
         {
           mergeSelection.start(anm2.animations.items.size());
 
-          for (std::size_t index = 0; index < anm2.animations.items.size(); ++index)
+          for (int i = 0; i < (int)anm2.animations.items.size(); i++)
           {
-            if ((int)index == mergeReference) continue;
+            if (i == mergeReference) continue;
 
-            auto& animation = anm2.animations.items[index];
+            auto& animation = anm2.animations.items[i];
 
-            ImGui::PushID((int)index);
+            ImGui::PushID(i);
 
-            ImGui::SetNextItemSelectionUserData((int)index);
-            ImGui::Selectable(animation.name.c_str(), mergeSelection.contains((int)index));
+            ImGui::SetNextItemSelectionUserData(i);
+            ImGui::Selectable(animation.name.c_str(), mergeSelection.contains(i));
 
             ImGui::PopID();
           }
@@ -408,30 +454,19 @@ namespace anm2ed::imgui
         auto widgetSize = widget_size_with_row_get(2);
 
         ImGui::BeginDisabled(mergeSelection.empty());
+        if (ImGui::Button(localize.get(LABEL_MERGE), widgetSize))
         {
-          if (ImGui::Button(localize.get(LABEL_MERGE), widgetSize))
-          {
-            auto merge = [&]()
-            {
-              if (mergeSelection.contains(overlayIndex)) overlayIndex = -1;
-              auto merged =
-                  anm2.animations_merge(mergeReference, mergeSelection, (merge::Type)type, isDeleteAnimationsAfter);
-
-              selection = {merged};
-              reference = {merged};
-            };
-
-            DOCUMENT_EDIT(document, localize.get(EDIT_MERGE_ANIMATIONS), Document::ANIMATIONS, merge());
-            merge_close();
-          }
+          merge();
+          close();
         }
         ImGui::EndDisabled();
+
         ImGui::SameLine();
-        if (ImGui::Button(localize.get(LABEL_CLOSE), widgetSize)) merge_close();
+        if (ImGui::Button(localize.get(LABEL_CLOSE), widgetSize)) close();
 
         ImGui::EndPopup();
       }
+      ImGui::End();
     }
-    ImGui::End();
   }
 }

@@ -742,7 +742,12 @@ namespace anm2ed::imgui
       ImGui::SameLine();
       input_text_string(localize.get(LABEL_FFMPEG_PATH), &ffmpegPath);
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FFMPEG_PATH));
-      dialog.set_string_to_selected_path(ffmpegPath, dialog::FFMPEG_PATH_SET);
+
+      if (dialog.is_selected(dialog::FFMPEG_PATH_SET))
+      {
+        ffmpegPath = dialog.path;
+        dialog.reset();
+      }
 
       if (ImGui::ImageButton("##Path Set", resources.icons[icon::FOLDER].id, icon_size_get()))
       {
@@ -755,7 +760,12 @@ namespace anm2ed::imgui
       auto pathLabel = type == render::PNGS ? LABEL_OUTPUT_DIRECTORY : LABEL_OUTPUT_PATH;
       input_text_string(localize.get(pathLabel), &path);
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OUTPUT_PATH));
-      dialog.set_string_to_selected_path(path, dialogType);
+
+      if (dialog.is_selected(dialogType))
+      {
+        path = dialog.path;
+        dialog.reset();
+      }
 
       if (ImGui::Combo(localize.get(LABEL_TYPE), &type, render::STRINGS, render::COUNT)) render_set();
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_RENDER_TYPE));

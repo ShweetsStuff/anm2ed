@@ -154,8 +154,7 @@ namespace anm2ed::imgui
     {
       if (ImGui::Selectable(label.c_str(), isSelected, flags)) isActivated = true;
 
-      if (state == RENAME_FORCE_EDIT || (ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_F2)) ||
-          (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)))
+      if (state == RENAME_FORCE_EDIT || (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)))
       {
         state = RENAME_BEGIN;
         editID = id;

@@ -2,48 +2,76 @@
 
 #include <SDL3/SDL_filesystem.h>
 #include <SDL3/SDL_stdinc.h>
+#include <cctype>
+#include <cwctype>
 #include <filesystem>
-
-#include "string_.h"
+#include <type_traits>
 
 namespace anm2ed::util::filesystem
 {
-  std::string path_preferences_get()
+  namespace
   {
-    auto path = SDL_GetPrefPath(nullptr, "anm2ed");
-    std::string string = path;
-    SDL_free(path);
-    return string;
+    template <typename CharT> CharT to_lower_char(CharT character)
+    {
+      if constexpr (std::is_same_v<CharT, wchar_t>)
+        return static_cast<CharT>(std::towlower(static_cast<wint_t>(character)));
+      else
+        return static_cast<CharT>(std::tolower(static_cast<unsigned char>(character)));
+    }
   }
 
-  bool path_is_exist(const std::string& path)
+  std::filesystem::path path_preferences_get()
+  {
+    auto path = SDL_GetPrefPath(nullptr, "anm2ed");
+    auto filePath = std::filesystem::path(path);
+    SDL_free(path);
+    return filePath;
+  }
+
+  std::filesystem::path path_to_lower(const std::filesystem::path& path)
+  {
+    auto native = path.native();
+    for (auto& character : native)
+      character = to_lower_char(character);
+    return std::filesystem::path(native);
+  }
+
+  std::filesystem::path path_backslash_replace(const std::filesystem::path& path)
+  {
+    auto native = path.native();
+    constexpr auto backslash = static_cast<std::filesystem::path::value_type>('\\');
+    constexpr auto slash = static_cast<std::filesystem::path::value_type>('/');
+    for (auto& character : native)
+      if (character == backslash) character = slash;
+    return std::filesystem::path(native);
+  }
+
+  bool path_is_exist(const std::filesystem::path& path)
   {
     std::error_code errorCode;
     return std::filesystem::exists(path, errorCode) && ((void)std::filesystem::status(path, errorCode), !errorCode);
   }
 
-  bool path_is_extension(const std::string& path, const std::string& extension)
+  bool path_is_extension(const std::filesystem::path& path, const std::string& extension)
   {
     auto e = std::filesystem::path(path).extension().string();
     std::transform(e.begin(), e.end(), e.begin(), ::tolower);
     return e == ("." + extension);
   }
 
-  std::filesystem::path path_lower_case_backslash_handle(std::filesystem::path& path)
+  std::filesystem::path path_lower_case_backslash_handle(const std::filesystem::path& path)
   {
-    auto asString = path.generic_string();
-    if (path_is_exist(asString)) return path;
+    auto newPath = path;
+    if (path_is_exist(newPath)) return newPath;
 
-    asString = string::backslash_replace(asString);
-    path = asString;
-    if (path_is_exist(asString)) return path;
+    newPath = path_backslash_replace(newPath);
+    if (path_is_exist(newPath)) return newPath;
 
-    asString = string::to_lower(asString);
-    path = asString;
-    return path;
+    newPath = path_to_lower(newPath);
+    return newPath;
   }
 
-  WorkingDirectory::WorkingDirectory(const std::string& path, bool isFile)
+  WorkingDirectory::WorkingDirectory(const std::filesystem::path& path, bool isFile)
   {
     previous = std::filesystem::current_path();
     if (isFile)
@@ -54,11 +82,6 @@ namespace anm2ed::util::filesystem
     }
     else
       std::filesystem::current_path(path);
-  }
-
-  WorkingDirectory::WorkingDirectory(const std::filesystem::path& path, bool isFile)
-    : WorkingDirectory(path.string(), isFile)
-  {
   }
 
   WorkingDirectory::~WorkingDirectory() { std::filesystem::current_path(previous); }

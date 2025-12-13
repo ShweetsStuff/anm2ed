@@ -1,6 +1,8 @@
 #include "audio.h"
 
+#include <SDL3/SDL_filesystem.h>
 #include <SDL3/SDL_properties.h>
+#include <SDL3/SDL_stdinc.h>
 #include <utility>
 
 namespace anm2ed::resource
@@ -11,20 +13,42 @@ namespace anm2ed::resource
     return mixer;
   }
 
-  Audio::Audio(const char* path)
+  Audio::Audio(const std::filesystem::path& path)
   {
-    if (path && *path) internal = MIX_LoadAudio(mixer_get(), path, true);
+    if (path.empty()) return;
+
+    size_t fileSize = 0;
+    void* fileData = SDL_LoadFile(path.string().c_str(), &fileSize);
+    if (!fileData || fileSize == 0)
+    {
+      if (fileData) SDL_free(fileData);
+      return;
+    }
+
+    data.assign(static_cast<unsigned char*>(fileData), static_cast<unsigned char*>(fileData) + fileSize);
+    SDL_free(fileData);
+
+    SDL_IOStream* io = SDL_IOFromConstMem(data.data(), data.size());
+    if (!io) data.clear();
+    else
+    {
+      internal = MIX_LoadAudio_IO(mixer_get(), io, true, true);
+      if (!internal) data.clear();
+    }
   }
 
-  Audio::Audio(const std::string& path) : Audio(path.c_str()) {}
-
-  Audio::Audio(const std::filesystem::path& path) : Audio(path.string()) {}
-
-  Audio::Audio(const unsigned char* data, size_t size)
+  Audio::Audio(const unsigned char* memory, size_t size)
   {
-    SDL_IOStream* io = SDL_IOFromConstMem(data, size);
-    if (!io) return;
-    internal = MIX_LoadAudio_IO(mixer_get(), io, true, true);
+    if (!memory || size == 0) return;
+    data.assign(memory, memory + size);
+
+    SDL_IOStream* io = SDL_IOFromConstMem(data.data(), data.size());
+    if (!io) data.clear();
+    else
+    {
+      internal = MIX_LoadAudio_IO(mixer_get(), io, true, true);
+      if (!internal) data.clear();
+    }
   }
 
   void Audio::unload()
@@ -82,10 +106,25 @@ namespace anm2ed::resource
 
   bool Audio::is_playing() const { return track && MIX_TrackPlaying(track); }
 
+  Audio::Audio(const Audio& other)
+  {
+    if (other.data.empty()) return;
+
+    data = other.data;
+    SDL_IOStream* io = SDL_IOFromConstMem(data.data(), data.size());
+    if (!io) data.clear();
+    else
+    {
+      internal = MIX_LoadAudio_IO(mixer_get(), io, true, true);
+      if (!internal) data.clear();
+    }
+  }
+
   Audio::Audio(Audio&& other) noexcept
   {
     internal = std::exchange(other.internal, nullptr);
     track = std::exchange(other.track, nullptr);
+    data = std::move(other.data);
   }
 
   Audio& Audio::operator=(Audio&& other) noexcept
@@ -95,6 +134,28 @@ namespace anm2ed::resource
       unload();
       internal = std::exchange(other.internal, nullptr);
       track = std::exchange(other.track, nullptr);
+      data = std::move(other.data);
+    }
+    return *this;
+  }
+
+  Audio& Audio::operator=(const Audio& other)
+  {
+    if (this != &other)
+    {
+      unload();
+      data.clear();
+      if (!other.data.empty())
+      {
+        data = other.data;
+        SDL_IOStream* io = SDL_IOFromConstMem(data.data(), data.size());
+        if (!io) data.clear();
+        else
+        {
+          internal = MIX_LoadAudio_IO(mixer_get(), io, true, true);
+          if (!internal) data.clear();
+        }
+      }
     }
     return *this;
   }

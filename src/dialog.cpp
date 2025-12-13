@@ -58,12 +58,12 @@ namespace anm2ed
     this->type = type;
   }
 
-  void Dialog::file_explorer_open(const std::string& path)
+  void Dialog::file_explorer_open(const std::filesystem::path& path)
   {
 #ifdef _WIN32
     ShellExecuteA(NULL, "open", path.c_str(), NULL, NULL, SW_SHOWNORMAL);
 #elif __unix__
-    system(std::format("xdg-open \"{}\" &", path).c_str());
+    system(std::format("xdg-open \"{}\" &", path.c_str()).c_str());
 #else
     toasts.push(localize.get(TOAST_NOT_SUPPORTED));
     logger.warning(localize.get(TOAST_NOT_SUPPORTED, anm2ed::ENGLISH));
@@ -74,11 +74,4 @@ namespace anm2ed
 
   bool Dialog::is_selected(dialog::Type type) const { return this->type == type && !path.empty(); }
 
-  void Dialog::set_string_to_selected_path(std::string& string, dialog::Type type)
-  {
-    if (type == NONE) return;
-    if (!is_selected(type)) return;
-    string = path;
-    reset();
-  }
 };

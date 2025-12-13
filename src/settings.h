@@ -17,6 +17,12 @@ namespace anm2ed
   constexpr auto FFMPEG_PATH_DEFAULT = "/usr/bin/ffmpeg";
 #endif
 
+#ifdef _WIN32
+  constexpr auto OUTPUT_PATH_DEFAULT = ".\\output.gif";
+#else
+  constexpr auto OUTPUT_PATH_DEFAULT = "./output.gif";
+#endif
+
 #define SETTINGS_TYPES                                                                                                 \
   X(INT, int)                                                                                                          \
   X(BOOL, bool)                                                                                                        \
@@ -42,7 +48,7 @@ namespace anm2ed
 
 #define SETTINGS_MEMBERS                                                                                               \
   /* Symbol / Name / String / Type / Default */                                                                        \
-  X(WINDOW_SIZE, windowSize, STRING_UNDEFINED, IVEC2_WH, {1600, 900})                                                  \
+  X(WINDOW_SIZE, windowSize, STRING_UNDEFINED, IVEC2_WH, {1200, 720})                                                  \
   X(IS_VSYNC, isVsync, STRING_UNDEFINED, BOOL, true)                                                                   \
   X(UI_SCALE, uiScale, STRING_UNDEFINED, FLOAT, 1.0f)                                                                  \
   X(THEME, theme, STRING_UNDEFINED, INT, types::theme::DARK)                                                           \
@@ -150,7 +156,7 @@ namespace anm2ed
   X(TOOL_COLOR, toolColor, STRING_UNDEFINED, VEC4, {1.0, 1.0, 1.0, 1.0})                                               \
                                                                                                                        \
   X(RENDER_TYPE, renderType, STRING_UNDEFINED, INT, render::GIF)                                                       \
-  X(RENDER_PATH, renderPath, STRING_UNDEFINED, STRING, "./output.gif")                                                 \
+  X(RENDER_PATH, renderPath, STRING_UNDEFINED, STRING, OUTPUT_PATH_DEFAULT)                                            \
   X(RENDER_ROWS, renderRows, STRING_UNDEFINED, INT, 0)                                                                 \
   X(RENDER_COLUMNS, renderColumns, STRING_UNDEFINED, INT, 0)                                                           \
   X(RENDER_FORMAT, renderFormat, STRING_UNDEFINED, STRING, "{}.png")                                                   \
@@ -176,6 +182,7 @@ namespace anm2ed
   X(SHORTCUT_DUPLICATE, shortcutDuplicate, SHORTCUT_STRING_DUPLICATE, STRING, "Ctrl+J")                                \
   X(SHORTCUT_ADD, shortcutAdd, SHORTCUT_STRING_ADD, STRING, "Insert")                                                  \
   X(SHORTCUT_REMOVE, shortcutRemove, SHORTCUT_STRING_REMOVE, STRING, "Delete")                                         \
+  X(SHORTCUT_RENAME, shortcutRename, SHORTCUT_STRING_RENAME, STRING, "F2")                                             \
   X(SHORTCUT_DEFAULT, shortcutDefault, SHORTCUT_STRING_DEFAULT, STRING, "Home")                                        \
   X(SHORTCUT_MERGE, shortcutMerge, SHORTCUT_STRING_MERGE, STRING, "Ctrl+E")                                            \
   /* Tools */                                                                                                          \
@@ -241,8 +248,8 @@ namespace anm2ed
 
     Settings() = default;
 
-    Settings(const std::string&);
-    void save(const std::string&, const std::string&);
+    Settings(const std::filesystem::path&);
+    void save(const std::filesystem::path&, const std::string&);
   };
 
   constexpr StringType SHORTCUT_STRING_TYPES[] = {

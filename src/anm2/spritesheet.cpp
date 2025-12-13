@@ -33,17 +33,12 @@ namespace anm2ed::anm2
     }
   }
 
-  Spritesheet::Spritesheet(const std::string& directory, const std::string& path)
+  Spritesheet::Spritesheet(const std::filesystem::path& directory, const std::filesystem::path& path)
   {
     filesystem::WorkingDirectory workingDirectory(directory);
     this->path = !path.empty() ? make_relative_or_keep(path) : this->path;
     this->path = filesystem::path_lower_case_backslash_handle(this->path);
     texture = Texture(this->path);
-  }
-
-  Spritesheet::Spritesheet(const std::filesystem::path& directory, const std::filesystem::path& path)
-      : Spritesheet(directory.string(), path.string())
-  {
   }
 
   XMLElement* Spritesheet::to_element(XMLDocument& document, int id)
@@ -67,7 +62,7 @@ namespace anm2ed::anm2
     return xml::document_to_string(document);
   }
 
-  bool Spritesheet::save(const std::string& directory, const std::string& path)
+  bool Spritesheet::save(const std::filesystem::path& directory, const std::filesystem::path& path)
   {
     filesystem::WorkingDirectory workingDirectory(directory);
     this->path = !path.empty() ? make_relative_or_keep(path) : this->path;

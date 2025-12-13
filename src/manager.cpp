@@ -57,9 +57,8 @@ namespace anm2ed
     if (documents.empty()) selectionHistory.clear();
   }
 
-  std::filesystem::path Manager::recent_files_path_get() { return filesystem::path_preferences_get() + "recent.txt"; }
-  std::filesystem::path Manager::autosave_path_get() { return filesystem::path_preferences_get() + "autosave.txt"; }
-  std::filesystem::path Manager::autosave_directory_get() { return filesystem::path_preferences_get() + "autosave"; }
+  std::filesystem::path Manager::recent_files_path_get() { return filesystem::path_preferences_get() / "recent.txt"; }
+  std::filesystem::path Manager::autosave_path_get() { return filesystem::path_preferences_get() / "autosave.txt"; }
 
   Manager::Manager()
   {
@@ -79,8 +78,8 @@ namespace anm2ed
     if (!document.is_valid())
     {
       documents.pop_back();
-      toasts.push(std::vformat(localize.get(TOAST_OPEN_DOCUMENT_FAILED),
-                               std::make_format_args(pathString, errorString)));
+      toasts.push(
+          std::vformat(localize.get(TOAST_OPEN_DOCUMENT_FAILED), std::make_format_args(pathString, errorString)));
       logger.error(std::vformat(localize.get(TOAST_OPEN_DOCUMENT_FAILED, anm2ed::ENGLISH),
                                 std::make_format_args(pathString, errorString)));
       return;
@@ -92,8 +91,7 @@ namespace anm2ed
     pendingSelected = selected;
     selection_history_push(selected);
     toasts.push(std::vformat(localize.get(TOAST_OPEN_DOCUMENT), std::make_format_args(pathString)));
-    logger.info(std::vformat(localize.get(TOAST_OPEN_DOCUMENT, anm2ed::ENGLISH),
-                             std::make_format_args(pathString)));
+    logger.info(std::vformat(localize.get(TOAST_OPEN_DOCUMENT, anm2ed::ENGLISH), std::make_format_args(pathString)));
   }
 
   void Manager::new_(const std::filesystem::path& path) { open(path, true); }

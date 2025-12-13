@@ -19,13 +19,7 @@ namespace anm2ed::util::string
     return transformed;
   }
 
-  std::string quote(const std::string& string)
-  {
-    return "\"" + string + "\"";
-  }
+  std::string quote(const std::string& string) { return "\"" + string + "\""; }
 
-  bool to_bool(const std::string& string)
-  {
-    return to_lower(string) == "true";
-  }
+  bool to_bool(const std::string& string) { return to_lower(string) == "true"; }
 }

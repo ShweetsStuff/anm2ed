@@ -48,7 +48,7 @@ namespace anm2ed
 
   Logger::Logger()
   {
-    open(filesystem::path_preferences_get() + "log.txt");
+    open(filesystem::path_preferences_get() / "log.txt");
     info("Initializing Anm2Ed");
   }
 

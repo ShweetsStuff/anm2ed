@@ -1,6 +1,6 @@
 #pragma once
 
-#include <string>
+#include <filesystem>
 
 #include <SDL3/SDL.h>
 
@@ -43,6 +43,7 @@ namespace anm2ed::dialog
   X(ANM2_OPEN, ANM2)                                                                                                   \
   X(ANM2_SAVE, ANM2)                                                                                                   \
   X(SOUND_OPEN, SOUND)                                                                                                 \
+  X(SOUND_REPLACE, SOUND)                                                                                              \
   X(SPRITESHEET_OPEN, PNG)                                                                                             \
   X(SPRITESHEET_REPLACE, PNG)                                                                                          \
   X(FFMPEG_PATH_SET, EXECUTABLE)                                                                                       \
@@ -75,7 +76,7 @@ namespace anm2ed
   {
   public:
     SDL_Window* window{};
-    std::string path{};
+    std::filesystem::path path{};
     dialog::Type type{dialog::NONE};
     int selectedFilter{-1};
 
@@ -86,7 +87,6 @@ namespace anm2ed
     void folder_open(dialog::Type type);
     bool is_selected(dialog::Type type) const;
     void reset();
-    void file_explorer_open(const std::string&);
-    void set_string_to_selected_path(std::string& set, dialog::Type type);
+    void file_explorer_open(const std::filesystem::path&);
   };
 }

@@ -21,6 +21,9 @@ using namespace anm2ed::util;
 
 namespace anm2ed
 {
+  constexpr auto WINDOW_4K_SIZE = glm::ivec2(3840, 2160);
+  constexpr auto UI_SCALE_4K_DEFAULT = 1.5f;
+
   constexpr auto SOCKET_ADDRESS = "127.0.0.1";
   constexpr auto SOCKET_PORT = 11414;
 
@@ -71,7 +74,7 @@ namespace anm2ed
     }
   }
 
-  std::string Loader::settings_path() { return filesystem::path_preferences_get() + "settings.ini"; }
+  std::filesystem::path Loader::settings_path() { return filesystem::path_preferences_get() / "settings.ini"; }
 
   Loader::Loader(int argc, const char** argv)
   {
@@ -137,11 +140,11 @@ namespace anm2ed
       {
         if (auto mode = SDL_GetCurrentDisplayMode(display))
         {
-          if (mode->w >= 3840 || mode->h >= 2160)
-            settings.uiScale = 1.5f;
-          else
-            logger.warning(std::format("Failed to query primary display mode: {}", SDL_GetError()));
+          if (mode->w >= WINDOW_4K_SIZE.x || mode->h >= WINDOW_4K_SIZE.y) settings.uiScale = UI_SCALE_4K_DEFAULT;
+          SDL_SetWindowSize(window, mode->w - 1, mode->h - 1);
         }
+        else
+          logger.warning(std::format("Failed to query primary display mode: {}", SDL_GetError()));
       }
       else
         logger.warning("Failed to detect primary display for UI scaling.");

@@ -457,6 +457,7 @@ namespace anm2ed::imgui
       reference = {reference.animationIndex, type, id};
       frames_selection_reset();
       if (type == anm2::LAYER || type == anm2::NULL_) items.reference = (int)type;
+      items.selection = {(int)id};
     };
 
     auto fit_animation_length = [&]()
@@ -687,6 +688,67 @@ namespace anm2ed::imgui
       }
 
       item_selection_sync();
+    };
+
+    auto item_context_menu = [&]()
+    {
+      ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
+      ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
+
+      auto selectionType = item_selection_type_get();
+      bool hasSelection = !itemSelection.empty() && (selectionType == anm2::LAYER || selectionType == anm2::NULL_);
+      auto currentItem = document.item_get();
+
+      if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlappedByWindow) &&
+          ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+        ImGui::OpenPopup("##Items Context Menu");
+
+      if (ImGui::BeginPopup("##Items Context Menu"))
+      {
+        if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_UNDO), settings.shortcutUndo.c_str(), false,
+                            document.is_able_to_undo()))
+          document.undo();
+
+        if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_REDO), settings.shortcutRedo.c_str(), false,
+                            document.is_able_to_redo()))
+          document.redo();
+
+        ImGui::Separator();
+
+        if (ImGui::MenuItem(localize.get(BASIC_ADD), settings.shortcutAdd.c_str(), false, animation))
+        {
+          item_properties_reset();
+          propertiesPopup.open();
+        }
+
+        if (ImGui::MenuItem(localize.get(BASIC_REMOVE), settings.shortcutRemove.c_str(), false,
+                            hasSelection || currentItem))
+        {
+          auto remove = [&]()
+          {
+            if (hasSelection)
+            {
+              std::vector<int> ids{};
+              ids.reserve(itemSelection.size());
+              for (auto value : itemSelection)
+                ids.push_back(item_selection_decode(value));
+              std::sort(ids.begin(), ids.end());
+              for (auto id : ids)
+                animation->item_remove(selectionType, id);
+              item_selection_clear();
+            }
+            else if (reference.itemType == anm2::LAYER || reference.itemType == anm2::NULL_)
+              animation->item_remove(reference.itemType, reference.itemID);
+            reference_clear();
+          };
+
+          DOCUMENT_EDIT(document, localize.get(EDIT_REMOVE_ITEMS), Document::ITEMS, remove());
+        }
+
+        ImGui::EndPopup();
+      }
+
+      ImGui::PopStyleVar(2);
     };
 
     auto item_child = [&](anm2::Type type, int id, int& index)
@@ -1118,6 +1180,8 @@ namespace anm2ed::imgui
             ImGui::EndTable();
           }
           ImGui::PopStyleVar(2);
+
+          item_context_menu();
         }
         ImGui::PopStyleVar(2);
         ImGui::EndChild();
@@ -1310,7 +1374,9 @@ namespace anm2ed::imgui
         {
           float frameTime{};
 
-          if (ImGui::IsWindowHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Left) && !ImGui::IsAnyItemHovered())
+          if (ImGui::IsWindowHovered() &&
+              (ImGui::IsMouseReleased(ImGuiMouseButton_Left) || ImGui::IsMouseReleased(ImGuiMouseButton_Right)) &&
+              !ImGui::IsAnyItemHovered())
             reference_set_item(type, id);
 
           for (int i = frameMin; i < frameMax; i++)
@@ -1503,6 +1569,7 @@ namespace anm2ed::imgui
                 if (type == anm2::TRIGGER || ImGui::IsKeyDown(ImGuiMod_Ctrl))
                 {
                   draggedFrame = &frame;
+                  draggedFrameType = type;
                   draggedFrameIndex = (int)i;
                   draggedFrameStart = hoveredTime;
                   if (type != anm2::TRIGGER) draggedFrameStartDuration = draggedFrame->duration;
@@ -1674,46 +1741,47 @@ namespace anm2ed::imgui
             frameSelectionSnapshot.assign(frames.selection.begin(), frames.selection.end());
             frameSelectionSnapshotReference = reference;
           }
+        }
+      }
 
-          if (draggedFrame)
+      if (draggedFrame)
+      {
+        ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+
+        if (!isDraggedFrameSnapshot && hoveredTime != draggedFrameStart)
+        {
+          isDraggedFrameSnapshot = true;
+          document.snapshot(draggedFrameType == anm2::TRIGGER ? localize.get(EDIT_TRIGGER_AT_FRAME)
+                                                              : localize.get(EDIT_FRAME_DURATION));
+        }
+
+        if (draggedFrameType == anm2::TRIGGER)
+        {
+          draggedFrame->atFrame =
+              glm::clamp(hoveredTime, 0, settings.playbackIsClamp ? animation->frameNum - 1 : anm2::FRAME_NUM_MAX - 1);
+
+          for (auto [i, trigger] : std::views::enumerate(animation->triggers.frames))
           {
-            ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-
-            if (!isDraggedFrameSnapshot && hoveredTime != draggedFrameStart)
-            {
-              isDraggedFrameSnapshot = true;
-              document.snapshot(type == anm2::TRIGGER ? localize.get(EDIT_TRIGGER_AT_FRAME)
-                                                      : localize.get(EDIT_FRAME_DURATION));
-            }
-
-            if (type == anm2::TRIGGER)
-            {
-              draggedFrame->atFrame = glm::clamp(
-                  hoveredTime, 0, settings.playbackIsClamp ? animation->frameNum - 1 : anm2::FRAME_NUM_MAX - 1);
-
-              for (auto [i, trigger] : std::views::enumerate(animation->triggers.frames))
-              {
-                if ((int)i == draggedFrameIndex) continue;
-                if (trigger.atFrame == draggedFrame->atFrame) draggedFrame->atFrame--;
-              }
-            }
-            else
-            {
-              draggedFrame->duration = glm::clamp(draggedFrameStartDuration + (hoveredTime - draggedFrameStart),
-                                                  anm2::FRAME_DURATION_MIN, anm2::FRAME_DURATION_MAX);
-            }
-
-            if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
-            {
-              document.change(Document::FRAMES);
-              draggedFrame = nullptr;
-              draggedFrameIndex = -1;
-              draggedFrameStart = -1;
-              draggedFrameStartDuration = -1;
-              isDraggedFrameSnapshot = false;
-              if (type == anm2::TRIGGER) item->frames_sort_by_at_frame();
-            }
+            if ((int)i == draggedFrameIndex) continue;
+            if (trigger.atFrame == draggedFrame->atFrame) draggedFrame->atFrame--;
           }
+        }
+        else
+        {
+          draggedFrame->duration = glm::clamp(draggedFrameStartDuration + (hoveredTime - draggedFrameStart),
+                                              anm2::FRAME_DURATION_MIN, anm2::FRAME_DURATION_MAX);
+        }
+
+        if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+        {
+          document.change(Document::FRAMES);
+          draggedFrame = nullptr;
+          draggedFrameType = anm2::NONE;
+          draggedFrameIndex = -1;
+          draggedFrameStart = -1;
+          draggedFrameStartDuration = -1;
+          isDraggedFrameSnapshot = false;
+          if (type == anm2::TRIGGER) item->frames_sort_by_at_frame();
         }
       }
 

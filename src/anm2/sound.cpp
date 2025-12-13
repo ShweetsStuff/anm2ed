@@ -9,14 +9,14 @@ using namespace tinyxml2;
 
 namespace anm2ed::anm2
 {
-  Sound::Sound(const Sound& other) : path(other.path) { audio = path.empty() ? Audio() : Audio(path); }
+  Sound::Sound(const Sound& other) : path(other.path), audio(other.audio) {}
 
   Sound& Sound::operator=(const Sound& other)
   {
     if (this != &other)
     {
       path = other.path;
-      audio = path.empty() ? Audio() : Audio(path);
+      audio = other.audio;
     }
     return *this;
   }
@@ -33,17 +33,12 @@ namespace anm2ed::anm2
     }
   }
 
-  Sound::Sound(const std::string& directory, const std::string& path)
+  Sound::Sound(const std::filesystem::path& directory, const std::filesystem::path& path)
   {
     filesystem::WorkingDirectory workingDirectory(directory);
     this->path = !path.empty() ? make_relative_or_keep(path) : this->path;
     this->path = filesystem::path_lower_case_backslash_handle(this->path);
     audio = Audio(this->path);
-  }
-
-  Sound::Sound(const std::filesystem::path& directory, const std::filesystem::path& path)
-      : Sound(directory.string(), path.string())
-  {
   }
 
   Sound::Sound(XMLElement* element, int& id)

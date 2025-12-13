@@ -80,6 +80,23 @@ namespace anm2ed::imgui
 
     auto center_view = [&]() { pan = -size * 0.5f; };
 
+    auto fit_view = [&]()
+    {
+      if (spritesheet && spritesheet->texture.is_valid())
+        set_to_rect(zoom, pan, {0, 0, (float)spritesheet->texture.size.x, (float)spritesheet->texture.size.y});
+    };
+
+    auto zoom_adjust = [&](float delta)
+    {
+      auto focus = position_translate(zoom, pan, size * 0.5f);
+      auto previousZoom = zoom;
+      zoom_set(zoom, pan, focus, delta);
+      if (zoom != previousZoom) hasPendingZoomPanAdjust = true;
+    };
+
+    auto zoom_in = [&]() { zoom_adjust(zoomStep); };
+    auto zoom_out = [&]() { zoom_adjust(-zoomStep); };
+
     if (ImGui::Begin(localize.get(LABEL_SPRITESHEET_EDITOR_WINDOW), &settings.windowIsSpritesheetEditor))
     {
 
@@ -121,8 +138,7 @@ namespace anm2ed::imgui
         ImGui::SameLine();
 
         imgui::shortcut(manager.chords[SHORTCUT_FIT]);
-        if (ImGui::Button(localize.get(LABEL_FIT), widgetSize))
-          if (spritesheet) set_to_rect(zoom, pan, {0, 0, spritesheet->texture.size.x, spritesheet->texture.size.y});
+        if (ImGui::Button(localize.get(LABEL_FIT), widgetSize)) fit_view();
         imgui::set_item_tooltip_shortcut(localize.get(TOOLTIP_FIT), settings.shortcutFit);
 
         auto mousePosInt = ivec2(mousePos);
@@ -424,6 +440,32 @@ namespace anm2ed::imgui
           if (zoom != previousZoom) hasPendingZoomPanAdjust = true;
         }
       }
+    }
+
+    if (ImGui::BeginPopupContextWindow("##Spritesheet Editor Context Menu", ImGuiMouseButton_Right))
+    {
+      if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_UNDO), settings.shortcutUndo.c_str(), false,
+                          document.is_able_to_undo()))
+        document.undo();
+
+      if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_REDO), settings.shortcutRedo.c_str(), false,
+                          document.is_able_to_redo()))
+        document.redo();
+
+      ImGui::Separator();
+
+      if (ImGui::MenuItem(localize.get(LABEL_CENTER_VIEW), settings.shortcutCenterView.c_str())) center_view();
+
+      if (ImGui::MenuItem(localize.get(LABEL_FIT), settings.shortcutFit.c_str(), false,
+                          spritesheet && spritesheet->texture.is_valid()))
+        fit_view();
+
+      ImGui::Separator();
+
+      if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_ZOOM_IN), settings.shortcutZoomIn.c_str())) zoom_in();
+      if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_ZOOM_OUT), settings.shortcutZoomOut.c_str())) zoom_out();
+
+      ImGui::EndPopup();
     }
     ImGui::End();
 

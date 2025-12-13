@@ -19,11 +19,56 @@ namespace anm2ed::imgui
     auto& anm2 = document.anm2;
     auto& reference = document.layer.reference;
     auto& unused = document.layer.unused;
-    auto& hovered = document.layer.hovered;
     auto& selection = document.layer.selection;
     auto& propertiesPopup = manager.layerPropertiesPopup;
 
-    hovered = -1;
+    auto add = [&]() { manager.layer_properties_open(); };
+
+    auto remove_unused = [&]()
+    {
+      if (unused.empty()) return;
+      auto behavior = [&]()
+      {
+        for (auto& id : unused)
+          anm2.content.layers.erase(id);
+        unused.clear();
+      };
+
+      DOCUMENT_EDIT(document, localize.get(EDIT_REMOVE_UNUSED_LAYERS), Document::LAYERS, behavior());
+    };
+
+    auto copy = [&]()
+    {
+      if (selection.empty()) return;
+
+      std::string clipboardText{};
+      for (auto& id : selection)
+        clipboardText += anm2.content.layers[id].to_string(id);
+      clipboard.set(clipboardText);
+    };
+
+    auto paste = [&]()
+    {
+      if (clipboard.is_empty()) return;
+
+      auto behavior = [&]()
+      {
+        std::string errorString{};
+        document.snapshot(localize.get(EDIT_PASTE_LAYERS));
+        if (anm2.layers_deserialize(clipboard.get(), merge::APPEND, &errorString))
+          document.change(Document::NULLS);
+        else
+        {
+          toasts.push(std::vformat(localize.get(TOAST_DESERIALIZE_LAYERS_FAILED), std::make_format_args(errorString)));
+          logger.error(std::vformat(localize.get(TOAST_DESERIALIZE_LAYERS_FAILED, anm2ed::ENGLISH),
+                                    std::make_format_args(errorString)));
+        }
+      };
+
+      DOCUMENT_EDIT(document, localize.get(EDIT_PASTE_LAYERS), Document::LAYERS, behavior());
+    };
+
+    auto properties = [&](int id) { manager.layer_properties_open(id); };
 
     if (ImGui::Begin(localize.get(LABEL_LAYERS_WINDOW), &settings.windowIsLayers))
     {
@@ -49,13 +94,7 @@ namespace anm2ed::imgui
             ImGui::SetScrollHereY(0.5f);
             newLayerId = -1;
           }
-          if (ImGui::IsItemHovered())
-          {
-            hovered = id;
-            if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) manager.layer_properties_open(id);
-          }
-          else
-            hovered = -1;
+          if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) properties(id);
 
           if (ImGui::BeginItemTooltip())
           {
@@ -72,51 +111,37 @@ namespace anm2ed::imgui
 
         selection.finish();
 
-        auto copy = [&]()
-        {
-          if (!selection.empty())
-          {
-            std::string clipboardText{};
-            for (auto& id : selection)
-              clipboardText += anm2.content.layers[id].to_string(id);
-            clipboard.set(clipboardText);
-          }
-          else if (hovered > -1)
-            clipboard.set(anm2.content.layers[hovered].to_string(hovered));
-        };
-
-        auto paste = [&](merge::Type type)
-        {
-          std::string errorString{};
-          document.snapshot(localize.get(EDIT_PASTE_LAYERS));
-          if (anm2.layers_deserialize(clipboard.get(), type, &errorString))
-            document.change(Document::NULLS);
-          else
-          {
-            toasts.push(std::vformat(localize.get(TOAST_DESERIALIZE_LAYERS_FAILED),
-                                     std::make_format_args(errorString)));
-            logger.error(std::vformat(localize.get(TOAST_DESERIALIZE_LAYERS_FAILED, anm2ed::ENGLISH),
-                                      std::make_format_args(errorString)));
-          }
-        };
-
+        if (shortcut(manager.chords[SHORTCUT_ADD], shortcut::FOCUSED)) add();
+        if (shortcut(manager.chords[SHORTCUT_REMOVE], shortcut::FOCUSED)) remove_unused();
         if (shortcut(manager.chords[SHORTCUT_COPY], shortcut::FOCUSED)) copy();
-        if (shortcut(manager.chords[SHORTCUT_PASTE], shortcut::FOCUSED)) paste(merge::APPEND);
+        if (shortcut(manager.chords[SHORTCUT_PASTE], shortcut::FOCUSED)) paste();
 
         if (ImGui::BeginPopupContextWindow("##Context Menu", ImGuiPopupFlags_MouseButtonRight))
         {
-          ImGui::MenuItem(localize.get(BASIC_CUT), settings.shortcutCut.c_str(), false, false);
-          if (ImGui::MenuItem(localize.get(BASIC_COPY), settings.shortcutCopy.c_str(), false,
-                              !selection.empty() || hovered > -1))
+          if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_UNDO), settings.shortcutUndo.c_str(), false,
+                              document.is_able_to_undo()))
+            document.undo();
+
+          if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_REDO), settings.shortcutRedo.c_str(), false,
+                              document.is_able_to_redo()))
+            document.redo();
+
+          ImGui::Separator();
+
+          if (ImGui::MenuItem(localize.get(BASIC_PROPERTIES), nullptr, false, selection.size() == 1))
+            properties(*selection.begin());
+          if (ImGui::MenuItem(localize.get(BASIC_ADD), settings.shortcutAdd.c_str())) add();
+          if (ImGui::MenuItem(localize.get(BASIC_REMOVE_UNUSED), settings.shortcutRemove.c_str(), false,
+                              !unused.empty()))
+            remove_unused();
+
+          ImGui::Separator();
+
+          if (ImGui::MenuItem(localize.get(BASIC_COPY), settings.shortcutCopy.c_str(), false, !selection.empty()))
             copy();
 
-          if (ImGui::BeginMenu(localize.get(BASIC_PASTE), !clipboard.is_empty()))
-          {
-            if (ImGui::MenuItem(localize.get(BASIC_APPEND), settings.shortcutPaste.c_str())) paste(merge::APPEND);
-            if (ImGui::MenuItem(localize.get(BASIC_REPLACE))) paste(merge::REPLACE);
-
-            ImGui::EndMenu();
-          }
+          if (ImGui::MenuItem(localize.get(BASIC_PASTE), settings.shortcutPaste.c_str(), false, !clipboard.is_empty()))
+            paste();
 
           ImGui::EndPopup();
         }
@@ -126,23 +151,13 @@ namespace anm2ed::imgui
       auto widgetSize = widget_size_with_row_get(2);
 
       shortcut(manager.chords[SHORTCUT_ADD]);
-      if (ImGui::Button(localize.get(BASIC_ADD), widgetSize)) manager.layer_properties_open();
+      if (ImGui::Button(localize.get(BASIC_ADD), widgetSize)) add();
       set_item_tooltip_shortcut(localize.get(TOOLTIP_ADD_LAYER), settings.shortcutAdd);
       ImGui::SameLine();
 
-      shortcut(manager.chords[SHORTCUT_REMOVE]);
       ImGui::BeginDisabled(unused.empty());
-      if (ImGui::Button(localize.get(BASIC_REMOVE_UNUSED), widgetSize))
-      {
-        auto remove_unused = [&]()
-        {
-          for (auto& id : unused)
-            anm2.content.layers.erase(id);
-          unused.clear();
-        };
-
-        DOCUMENT_EDIT(document, localize.get(EDIT_REMOVE_UNUSED_LAYERS), Document::LAYERS, remove_unused());
-      }
+      shortcut(manager.chords[SHORTCUT_REMOVE]);
+      if (ImGui::Button(localize.get(BASIC_REMOVE_UNUSED), widgetSize)) remove_unused();
       ImGui::EndDisabled();
       set_item_tooltip_shortcut(localize.get(TOOLTIP_REMOVE_UNUSED_LAYERS), settings.shortcutRemove);
     }
@@ -171,7 +186,7 @@ namespace anm2ed::imgui
       {
         if (reference == -1)
         {
-          auto add = [&]()
+          auto layer_add = [&]()
           {
             auto id = map::next_id_get(anm2.content.layers);
             anm2.content.layers[id] = layer;
@@ -179,17 +194,17 @@ namespace anm2ed::imgui
             newLayerId = id;
           };
 
-          DOCUMENT_EDIT(document, localize.get(EDIT_ADD_LAYER), Document::LAYERS, add());
+          DOCUMENT_EDIT(document, localize.get(EDIT_ADD_LAYER), Document::LAYERS, layer_add());
         }
         else
         {
-          auto set = [&]()
+          auto layer_set = [&]()
           {
             anm2.content.layers[reference] = layer;
             selection = {reference};
           };
 
-          DOCUMENT_EDIT(document, localize.get(EDIT_SET_LAYER_PROPERTIES), Document::LAYERS, set());
+          DOCUMENT_EDIT(document, localize.get(EDIT_SET_LAYER_PROPERTIES), Document::LAYERS, layer_set());
         }
 
         manager.layer_properties_close();

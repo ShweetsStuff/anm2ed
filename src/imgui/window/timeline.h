@@ -31,6 +31,7 @@ namespace anm2ed::imgui
     int addItemSpritesheetID{-1};
     int hoveredTime{};
     anm2::Frame* draggedFrame{};
+    anm2::Type draggedFrameType{};
     int draggedFrameIndex{-1};
     int draggedFrameStart{-1};
     int draggedFrameStartDuration{-1};

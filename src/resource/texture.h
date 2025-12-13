@@ -1,7 +1,6 @@
 #pragma once
 
 #include <filesystem>
-#include <string>
 #include <vector>
 
 #include <glad/glad.h>
@@ -37,9 +36,7 @@ namespace anm2ed::resource
     Texture& operator=(Texture&&);
     Texture(const uint8_t*, glm::ivec2);
     Texture(const char*, size_t, glm::ivec2);
-    Texture(const std::string&);
     Texture(const std::filesystem::path&);
-    bool write_png(const std::string&);
     bool write_png(const std::filesystem::path&);
     static bool write_pixels_png(const std::filesystem::path&, glm::ivec2, const uint8_t*);
     void pixel_set(glm::ivec2, glm::vec4);

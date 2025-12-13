@@ -275,6 +275,22 @@ namespace anm2ed::imgui
 
     auto center_view = [&]() { pan = vec2(); };
 
+    auto fit_view = [&]()
+    {
+      if (animation) set_to_rect(zoom, pan, animation->rect(isRootTransform));
+    };
+
+    auto zoom_adjust = [&](float delta)
+    {
+      auto focus = position_translate(zoom, pan, size * 0.5f);
+      auto previousZoom = zoom;
+      zoom_set(zoom, pan, focus, delta);
+      if (zoom != previousZoom) hasPendingZoomPanAdjust = true;
+    };
+
+    auto zoom_in = [&]() { zoom_adjust(zoomStep); };
+    auto zoom_out = [&]() { zoom_adjust(-zoomStep); };
+
     if (ImGui::Begin(localize.get(LABEL_ANIMATION_PREVIEW_WINDOW), &settings.windowIsAnimationPreview))
     {
       auto childSize = ImVec2(row_widget_width_get(4),
@@ -306,14 +322,13 @@ namespace anm2ed::imgui
         auto widgetSize = widget_size_with_row_get(2);
 
         shortcut(manager.chords[SHORTCUT_CENTER_VIEW]);
-        if (ImGui::Button(localize.get(LABEL_CENTER_VIEW), widgetSize)) pan = vec2();
+        if (ImGui::Button(localize.get(LABEL_CENTER_VIEW), widgetSize)) center_view();
         set_item_tooltip_shortcut(localize.get(TOOLTIP_CENTER_VIEW), settings.shortcutCenterView);
 
         ImGui::SameLine();
 
         shortcut(manager.chords[SHORTCUT_FIT]);
-        if (ImGui::Button(localize.get(LABEL_FIT), widgetSize))
-          if (animation) set_to_rect(zoom, pan, animation->rect(isRootTransform));
+        if (ImGui::Button(localize.get(LABEL_FIT), widgetSize)) fit_view();
         set_item_tooltip_shortcut(localize.get(TOOLTIP_FIT), settings.shortcutFit);
 
         auto mousePosInt = ivec2(mousePos);
@@ -812,6 +827,29 @@ namespace anm2ed::imgui
           if (zoom != previousZoom) hasPendingZoomPanAdjust = true;
         }
       }
+    }
+
+    if (ImGui::BeginPopupContextWindow("##Animation Preview Context Menu", ImGuiMouseButton_Right))
+    {
+      if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_UNDO), settings.shortcutUndo.c_str(), false,
+                          document.is_able_to_undo()))
+        document.undo();
+
+      if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_REDO), settings.shortcutRedo.c_str(), false,
+                          document.is_able_to_redo()))
+        document.redo();
+
+      ImGui::Separator();
+
+      if (ImGui::MenuItem(localize.get(LABEL_CENTER_VIEW), settings.shortcutCenterView.c_str())) center_view();
+      if (ImGui::MenuItem(localize.get(LABEL_FIT), settings.shortcutFit.c_str(), false, animation)) fit_view();
+
+      ImGui::Separator();
+
+      if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_ZOOM_IN), settings.shortcutZoomIn.c_str())) zoom_in();
+      if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_ZOOM_OUT), settings.shortcutZoomOut.c_str())) zoom_out();
+
+      ImGui::EndPopup();
     }
     ImGui::End();
 

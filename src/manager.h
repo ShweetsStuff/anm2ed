@@ -91,7 +91,5 @@ namespace anm2ed
     void autosave_files_clear();
 
     void chords_set(Settings&);
-
-    std::filesystem::path autosave_directory_get();
   };
 }

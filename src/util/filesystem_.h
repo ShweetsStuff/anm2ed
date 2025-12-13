@@ -5,19 +5,20 @@
 
 namespace anm2ed::util::filesystem
 {
-  std::string path_preferences_get();
+  std::filesystem::path path_preferences_get();
+  std::filesystem::path path_to_lower(const std::filesystem::path&);
+  std::filesystem::path path_backslash_replace(const std::filesystem::path&);
 
-  bool path_is_exist(const std::string&);
-  bool path_is_extension(const std::string&, const std::string&);
+  bool path_is_exist(const std::filesystem::path&);
+  bool path_is_extension(const std::filesystem::path&, const std::string&);
 
-  std::filesystem::path path_lower_case_backslash_handle(std::filesystem::path&);
+  std::filesystem::path path_lower_case_backslash_handle(const std::filesystem::path&);
 
   class WorkingDirectory
   {
   public:
     std::filesystem::path previous;
 
-    WorkingDirectory(const std::string&, bool = false);
     WorkingDirectory(const std::filesystem::path&, bool = false);
     ~WorkingDirectory();
   };

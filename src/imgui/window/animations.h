@@ -12,6 +12,8 @@ namespace anm2ed::imgui
   {
     PopupHelper mergePopup{PopupHelper(LABEL_ANIMATIONS_MERGE_POPUP)};
     int newAnimationSelectedIndex{-1};
+    int renameQueued{-1};
+    bool isInContextMenu{};
     RenameState renameState{RENAME_SELECTABLE};
 
   public:

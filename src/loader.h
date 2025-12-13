@@ -14,7 +14,7 @@ namespace anm2ed
 {
   class Loader
   {
-    std::string settings_path();
+    std::filesystem::path settings_path();
 
   public:
     Socket socket{};

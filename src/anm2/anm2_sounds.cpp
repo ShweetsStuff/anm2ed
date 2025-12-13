@@ -9,7 +9,7 @@ using namespace tinyxml2;
 
 namespace anm2ed::anm2
 {
-  bool Anm2::sound_add(const std::string& directory, const std::string& path, int& id)
+  bool Anm2::sound_add(const std::filesystem::path& directory, const std::filesystem::path& path, int& id)
   {
     id = map::next_id_get(content.sounds);
     content.sounds[id] = Sound(directory, path);
@@ -19,9 +19,12 @@ namespace anm2ed::anm2
   std::vector<std::string> Anm2::sound_labels_get()
   {
     std::vector<std::string> labels{};
-    labels.emplace_back("None");
+    labels.emplace_back(localize.get(BASIC_NONE));
     for (auto& [id, sound] : content.sounds)
-      labels.emplace_back(sound.path.string());
+    {
+      auto pathCStr = sound.path.c_str();
+      labels.emplace_back(std::vformat(localize.get(FORMAT_SOUND), std::make_format_args(id, pathCStr)));
+    }
     return labels;
   }
 
@@ -39,7 +42,7 @@ namespace anm2ed::anm2
     return unused;
   }
 
-  bool Anm2::sounds_deserialize(const std::string& string, const std::string& directory, merge::Type type,
+  bool Anm2::sounds_deserialize(const std::string& string, const std::filesystem::path& directory, merge::Type type,
                                 std::string* errorString)
   {
     XMLDocument document{};

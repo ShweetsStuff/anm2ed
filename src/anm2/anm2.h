@@ -33,16 +33,17 @@ namespace anm2ed::anm2
 
     Anm2();
     tinyxml2::XMLElement* to_element(tinyxml2::XMLDocument&);
-    bool serialize(const std::string&, std::string* = nullptr);
+    bool serialize(const std::filesystem::path&, std::string* = nullptr);
     std::string to_string();
-    Anm2(const std::string&, std::string* = nullptr);
+    Anm2(const std::filesystem::path&, std::string* = nullptr);
     uint64_t hash();
 
     Spritesheet* spritesheet_get(int);
-    bool spritesheet_add(const std::string&, const std::string&, int&);
+    bool spritesheet_add(const std::filesystem::path&, const std::filesystem::path&, int&);
     std::vector<std::string> spritesheet_labels_get();
     std::set<int> spritesheets_unused();
-    bool spritesheets_deserialize(const std::string&, const std::string&, types::merge::Type type, std::string*);
+    bool spritesheets_deserialize(const std::string&, const std::filesystem::path&, types::merge::Type type,
+                                  std::string*);
 
     void layer_add(int&);
     std::set<int> layers_unused();
@@ -59,10 +60,10 @@ namespace anm2ed::anm2
     std::set<int> events_unused();
     bool events_deserialize(const std::string&, types::merge::Type, std::string*);
 
-    bool sound_add(const std::string& directory, const std::string& path, int& id);
+    bool sound_add(const std::filesystem::path& directory, const std::filesystem::path& path, int& id);
     std::vector<std::string> sound_labels_get();
     std::set<int> sounds_unused();
-    bool sounds_deserialize(const std::string&, const std::string&, types::merge::Type, std::string*);
+    bool sounds_deserialize(const std::string&, const std::filesystem::path&, types::merge::Type, std::string*);
 
     Animation* animation_get(int);
     std::vector<std::string> animation_labels_get();
@@ -75,7 +76,6 @@ namespace anm2ed::anm2
     Reference null_animation_add(Reference = {}, std::string = {}, types::destination::Type = types::destination::ALL);
 
     Frame* frame_get(int, Type, int, int = -1);
-    void merge(const Anm2& source, const std::filesystem::path& destinationDirectory = {},
-               const std::filesystem::path& sourceDirectory = {});
+    void merge(const Anm2&, const std::filesystem::path&, const std::filesystem::path&);
   };
 }

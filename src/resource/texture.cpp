@@ -64,7 +64,7 @@ namespace anm2ed::resource
 
   Texture::Texture(Texture&& other) { *this = std::move(other); }
 
-  Texture& Texture::operator=(const Texture& other) // Copy
+  Texture& Texture::operator=(const Texture& other)
   {
     if (this != &other)
     {
@@ -78,7 +78,7 @@ namespace anm2ed::resource
     return *this;
   }
 
-  Texture& Texture::operator=(Texture&& other) // Move
+  Texture& Texture::operator=(Texture&& other)
   {
     if (this != &other)
     {
@@ -114,7 +114,7 @@ namespace anm2ed::resource
     upload(data);
   }
 
-  Texture::Texture(const std::string& pngPath)
+  Texture::Texture(const std::filesystem::path& pngPath)
   {
     if (const uint8_t* data = stbi_load(pngPath.c_str(), &size.x, &size.y, nullptr, CHANNELS); data)
     {
@@ -123,14 +123,10 @@ namespace anm2ed::resource
     }
   }
 
-  Texture::Texture(const std::filesystem::path& pngPath) : Texture(pngPath.string()) {}
-
-  bool Texture::write_png(const std::string& path)
+  bool Texture::write_png(const std::filesystem::path& path)
   {
     return stbi_write_png(path.c_str(), size.x, size.y, CHANNELS, this->pixels.data(), size.x * CHANNELS);
   }
-
-  bool Texture::write_png(const std::filesystem::path& path) { return write_png(path.string()); }
 
   vec4 Texture::pixel_read(vec2 position) const
   {

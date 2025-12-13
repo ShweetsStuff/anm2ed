@@ -18,11 +18,75 @@ namespace anm2ed::imgui
     auto& document = *manager.get();
     auto& anm2 = document.anm2;
     auto& unused = document.event.unused;
-    auto& hovered = document.event.hovered;
     auto& reference = document.event.reference;
     auto& selection = document.event.selection;
 
-    hovered = -1;
+    auto rename_format_get = [&](int id) { return std::format("###Document #{} Event #{}", manager.selected, id); };
+    auto rename = [&]()
+    {
+      if (!selection.empty()) renameQueued = *selection.begin();
+    };
+
+    auto add = [&]()
+    {
+      auto behavior = [&]()
+      {
+        auto id = map::next_id_get(anm2.content.events);
+        anm2::Event event{};
+        event.name = localize.get(TEXT_NEW_EVENT);
+        anm2.content.events[id] = event;
+        selection = {id};
+        reference = {id};
+        newEventId = id;
+      };
+
+      DOCUMENT_EDIT(document, localize.get(EDIT_ADD_EVENT), Document::EVENTS, behavior());
+    };
+
+    auto remove_unused = [&]()
+    {
+      if (unused.empty()) return;
+
+      auto behavior = [&]()
+      {
+        for (auto& id : unused)
+          anm2.content.events.erase(id);
+        unused.clear();
+      };
+
+      DOCUMENT_EDIT(document, localize.get(EDIT_REMOVE_UNUSED_EVENTS), Document::EVENTS, behavior());
+    };
+
+    auto copy = [&]()
+    {
+      if (selection.empty()) return;
+
+      std::string clipboardText{};
+      for (auto& id : selection)
+        clipboardText += anm2.content.events[id].to_string(id);
+      clipboard.set(clipboardText);
+    };
+
+    auto paste = [&]()
+    {
+      if (clipboard.is_empty()) return;
+
+      auto behavior = [&]()
+      {
+        std::string errorString{};
+        document.snapshot(localize.get(EDIT_PASTE_EVENTS));
+        if (anm2.events_deserialize(clipboard.get(), merge::APPEND, &errorString))
+          document.change(Document::EVENTS);
+        else
+        {
+          toasts.push(std::vformat(localize.get(TOAST_DESERIALIZE_EVENTS_FAILED), std::make_format_args(errorString)));
+          logger.error(std::vformat(localize.get(TOAST_DESERIALIZE_EVENTS_FAILED, anm2ed::ENGLISH),
+                                    std::make_format_args(errorString)));
+        }
+      };
+
+      DOCUMENT_EDIT(document, localize.get(EDIT_PASTE_EVENTS), Document::EVENTS, behavior());
+    };
 
     if (ImGui::Begin(localize.get(LABEL_EVENTS_WINDOW), &settings.windowIsEvents))
     {
@@ -38,16 +102,19 @@ namespace anm2ed::imgui
 
           ImGui::PushID(id);
           ImGui::SetNextItemSelectionUserData(id);
-          if (isNewEvent) renameState = RENAME_FORCE_EDIT;
-          if (selectable_input_text(event.name, std::format("###Document #{} Event #{}", manager.selected, id),
-                                    event.name, selection.contains(id), ImGuiSelectableFlags_None, renameState))
+          if (isNewEvent || renameQueued == id)
+          {
+            renameState = RENAME_FORCE_EDIT;
+            renameQueued = -1;
+          }
+          if (selectable_input_text(event.name, rename_format_get(id), event.name, selection.contains(id),
+                                    ImGuiSelectableFlags_None, renameState))
           {
             if (renameState == RENAME_BEGIN)
               document.snapshot(localize.get(EDIT_RENAME_EVENT));
             else if (renameState == RENAME_FINISHED)
               document.change(Document::EVENTS);
           }
-          if (ImGui::IsItemHovered()) hovered = id;
 
           if (isNewEvent)
           {
@@ -68,51 +135,39 @@ namespace anm2ed::imgui
 
         selection.finish();
 
-        auto copy = [&]()
-        {
-          if (!selection.empty())
-          {
-            std::string clipboardText{};
-            for (auto& id : selection)
-              clipboardText += anm2.content.events[id].to_string(id);
-            clipboard.set(clipboardText);
-          }
-          else if (hovered > -1)
-            clipboard.set(anm2.content.events[hovered].to_string(hovered));
-        };
-
-        auto paste = [&](merge::Type type)
-        {
-          std::string errorString{};
-          document.snapshot(localize.get(EDIT_PASTE_EVENTS));
-          if (anm2.events_deserialize(clipboard.get(), type, &errorString))
-            document.change(Document::EVENTS);
-          else
-          {
-            toasts.push(
-                std::vformat(localize.get(TOAST_DESERIALIZE_EVENTS_FAILED), std::make_format_args(errorString)));
-            logger.error(std::vformat(localize.get(TOAST_DESERIALIZE_EVENTS_FAILED, anm2ed::ENGLISH),
-                                      std::make_format_args(errorString)));
-          }
-        };
-
+        if (shortcut(manager.chords[SHORTCUT_RENAME], shortcut::FOCUSED)) rename();
+        if (shortcut(manager.chords[SHORTCUT_ADD], shortcut::FOCUSED)) add();
+        if (shortcut(manager.chords[SHORTCUT_REMOVE], shortcut::FOCUSED)) remove_unused();
         if (shortcut(manager.chords[SHORTCUT_COPY], shortcut::FOCUSED)) copy();
-        if (shortcut(manager.chords[SHORTCUT_PASTE], shortcut::FOCUSED)) paste(merge::APPEND);
+        if (shortcut(manager.chords[SHORTCUT_PASTE], shortcut::FOCUSED)) paste();
 
         if (ImGui::BeginPopupContextWindow("##Context Menu", ImGuiPopupFlags_MouseButtonRight))
         {
-          ImGui::MenuItem(localize.get(BASIC_CUT), settings.shortcutCut.c_str(), false, false);
-          if (ImGui::MenuItem(localize.get(BASIC_COPY), settings.shortcutCopy.c_str(), false,
-                              !selection.empty() || hovered > -1))
+          if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_UNDO), settings.shortcutUndo.c_str(), false,
+                              document.is_able_to_undo()))
+            document.undo();
+
+          if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_REDO), settings.shortcutRedo.c_str(), false,
+                              document.is_able_to_redo()))
+            document.redo();
+
+          ImGui::Separator();
+
+          if (ImGui::MenuItem(localize.get(BASIC_RENAME), settings.shortcutRename.c_str(), false,
+                              selection.size() == 1))
+            rename();
+          if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_ADD), settings.shortcutAdd.c_str())) add();
+          if (ImGui::MenuItem(localize.get(BASIC_REMOVE_UNUSED), settings.shortcutRemove.c_str(), false,
+                              !unused.empty()))
+            remove_unused();
+
+          ImGui::Separator();
+
+          if (ImGui::MenuItem(localize.get(BASIC_COPY), settings.shortcutCopy.c_str(), false, !selection.empty()))
             copy();
 
-          if (ImGui::BeginMenu(localize.get(BASIC_PASTE), !clipboard.is_empty()))
-          {
-            if (ImGui::MenuItem(localize.get(BASIC_APPEND), settings.shortcutPaste.c_str())) paste(merge::APPEND);
-            if (ImGui::MenuItem(localize.get(BASIC_REPLACE))) paste(merge::REPLACE);
-
-            ImGui::EndMenu();
-          }
+          if (ImGui::MenuItem(localize.get(BASIC_PASTE), settings.shortcutPaste.c_str(), false, !clipboard.is_empty()))
+            paste();
 
           ImGui::EndPopup();
         }
@@ -122,37 +177,13 @@ namespace anm2ed::imgui
       auto widgetSize = widget_size_with_row_get(2);
 
       shortcut(manager.chords[SHORTCUT_ADD]);
-      if (ImGui::Button(localize.get(BASIC_ADD), widgetSize))
-      {
-        auto add = [&]()
-        {
-          auto id = map::next_id_get(anm2.content.events);
-          anm2::Event event{};
-          event.name = localize.get(TEXT_NEW_EVENT);
-          anm2.content.events[id] = event;
-          selection = {id};
-          reference = {id};
-          newEventId = id;
-        };
-
-        DOCUMENT_EDIT(document, localize.get(EDIT_ADD_EVENT), Document::EVENTS, add());
-      }
+      if (ImGui::Button(localize.get(BASIC_ADD), widgetSize)) add();
       set_item_tooltip_shortcut(localize.get(TOOLTIP_ADD_EVENT), settings.shortcutAdd);
       ImGui::SameLine();
 
-      shortcut(manager.chords[SHORTCUT_REMOVE]);
       ImGui::BeginDisabled(unused.empty());
-      if (ImGui::Button(localize.get(BASIC_REMOVE_UNUSED), widgetSize))
-      {
-        auto remove_unused = [&]()
-        {
-          for (auto& id : unused)
-            anm2.content.events.erase(id);
-          unused.clear();
-        };
-
-        DOCUMENT_EDIT(document, localize.get(EDIT_REMOVE_UNUSED_EVENTS), Document::EVENTS, remove_unused());
-      }
+      shortcut(manager.chords[SHORTCUT_REMOVE]);
+      if (ImGui::Button(localize.get(BASIC_REMOVE_UNUSED), widgetSize)) remove_unused();
       ImGui::EndDisabled();
       set_item_tooltip_shortcut(localize.get(TOOLTIP_REMOVE_UNUSED_EVENTS), settings.shortcutRemove);
     }

@@ -13,7 +13,7 @@ namespace anm2ed::anm2
 {
   Spritesheet* Anm2::spritesheet_get(int id) { return map::find(content.spritesheets, id); }
 
-  bool Anm2::spritesheet_add(const std::string& directory, const std::string& path, int& id)
+  bool Anm2::spritesheet_add(const std::filesystem::path& directory, const std::filesystem::path& path, int& id)
   {
     Spritesheet spritesheet(directory, path);
     if (!spritesheet.is_valid()) return false;
@@ -41,14 +41,14 @@ namespace anm2ed::anm2
     labels.emplace_back(localize.get(BASIC_NONE));
     for (auto& [id, spritesheet] : content.spritesheets)
     {
-      auto string = spritesheet.path.string();
-      labels.emplace_back(std::vformat(localize.get(FORMAT_SPRITESHEET), std::make_format_args(id, string)));
+      auto pathCStr = spritesheet.path.c_str();
+      labels.emplace_back(std::vformat(localize.get(FORMAT_SPRITESHEET), std::make_format_args(id, pathCStr)));
     }
     return labels;
   }
 
-  bool Anm2::spritesheets_deserialize(const std::string& string, const std::string& directory, merge::Type type,
-                                      std::string* errorString)
+  bool Anm2::spritesheets_deserialize(const std::string& string, const std::filesystem::path& directory,
+                                      merge::Type type, std::string* errorString)
   {
     XMLDocument document{};
 

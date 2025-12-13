@@ -119,10 +119,10 @@ DockSpace             ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,994 Spl
   DockNode            ID=0x00000006 Parent=0x123F8F08 SizeRef=1910,268 Selected=0x597925B7
 )";
 
-  Settings::Settings(const std::string& path)
+  Settings::Settings(const std::filesystem::path& path)
   {
     if (filesystem::path_is_exist(path))
-      logger.info(std::format("Using settings from: {}", path));
+      logger.info(std::format("Using settings from: {}", path.string()));
     else
     {
       logger.warning("Settings file does not exist; using default");
@@ -133,7 +133,7 @@ DockSpace             ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,994 Spl
     std::ifstream file(path);
     if (!file.is_open())
     {
-      logger.error(std::format("Failed to open settings file: {}", path));
+      logger.error(std::format("Failed to open settings file: {}", path.string()));
       return;
     }
 
@@ -266,7 +266,7 @@ DockSpace             ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,994 Spl
     file.close();
   }
 
-  void Settings::save(const std::string& path, const std::string& imguiData)
+  void Settings::save(const std::filesystem::path& path, const std::string& imguiData)
   {
     std::ofstream file(path, std::ios::out | std::ios::binary);
     file << "[Settings]\n";
