@@ -20,6 +20,19 @@ namespace anm2ed::util::filesystem
     }
   }
 
+  File::File(const std::filesystem::path& path, const char* mode)
+  {
+#ifdef _WIN32
+    _wfopen_s(&this->internal, path.c_str(), mode);
+#else
+    this->internal = fopen(path.c_str(), mode);
+#endif
+  }
+
+  File::~File() { fclose(this->internal); }
+
+  FILE* File::get() { return internal; }
+
   std::filesystem::path path_preferences_get()
   {
     auto path = SDL_GetPrefPath(nullptr, "anm2ed");

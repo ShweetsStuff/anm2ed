@@ -23,7 +23,9 @@ namespace anm2ed::anm2
   {
     XMLDocument document;
 
-    if (document.LoadFile(path.string().c_str()) != XML_SUCCESS)
+    filesystem::File file{path, "rb"};
+
+    if (!file.get() || document.LoadFile(file.get()) != XML_SUCCESS)
     {
       if (errorString) *errorString = document.ErrorStr();
       return;
@@ -56,7 +58,9 @@ namespace anm2ed::anm2
     XMLDocument document;
     document.InsertFirstChild(to_element(document));
 
-    if (document.SaveFile(path.string().c_str()) != XML_SUCCESS)
+    filesystem::File file{path, "w"};
+
+    if (!file.get() || document.SaveFile(file.get()) != XML_SUCCESS)
     {
       if (errorString) *errorString = document.ErrorStr();
       return false;

@@ -14,6 +14,8 @@ namespace anm2ed::util::filesystem
 
   std::filesystem::path path_lower_case_backslash_handle(const std::filesystem::path&);
 
+  FILE* open(const std::filesystem::path&, const char*);
+
   class WorkingDirectory
   {
   public:
@@ -21,5 +23,15 @@ namespace anm2ed::util::filesystem
 
     WorkingDirectory(const std::filesystem::path&, bool = false);
     ~WorkingDirectory();
+  };
+
+  class File
+  {
+  public:
+    FILE* internal{};
+
+    File(const std::filesystem::path&, const char*);
+    ~File();
+    FILE* get();
   };
 }
