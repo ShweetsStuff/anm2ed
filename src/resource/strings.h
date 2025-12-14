@@ -415,6 +415,7 @@ namespace anm2ed
   X(TOAST_PNG_DIRECTORY_NOT_DIRECTORY, "PNG output path must be a directory: {0}", "La ruta de salida de PNG debe ser un directorio: {0}", "Выходной путь для PNG должен быть директорией: {0}", "PNG输出路径必须是一个目录: {0}", "PNG를 출력할 경로는 디렉터리여야 합니다. {0}") \
   X(TOAST_PNG_DIRECTORY_NOT_SET, "PNG output directory must be set.", "El directorio de salida de PNG debe ser ajustado.", "Директория для вывода PNG должна быть установлена.", "必须设置PNG输出目录.", "PNG를 출력할 경로를 설정해야 합니다.") \
   X(TOAST_REDO, "Redo: {0}", "Rehacer: {0}", "Повтор: {0}", "重做: {0}", "다시 실행: {0}") \
+  X(ERROR_FILE_NOT_FOUND, "File not found!", "¡Archivo no encontrado!", "Файл не найден!", "找不到文件！", "파일을 찾을 수 없습니다!") \
   X(TOAST_RELOAD_SPRITESHEET, "Reloaded spritesheet #{0}: {1}", "Se ha recargado spritesheet #{0}: {1}", "Спрайт-лист #{0} перезагружен: {1}", "重新加载了图集 #{0}: {1}", "{0}번 스프라이트 시트 다시 불러옴: {1}") \
   X(TOAST_RELOAD_SOUND, "Reloaded sound #{0}: {1}", "Se ha recargado sonido #{0}: {1}", "Звук #{0} перезагружен: {1}", "重新加载了声音 #{0}: {1}", "{0}번 사운드 다시 불러옴: {1}") \
   X(TOAST_REMOVE_SPRITESHEET, "Removed spritesheet #{0}: {1}", "Se ha removido spritesheet #{0}: {1}", "Спрайт-лист #{0} удален: {1}", "去除了图集 #{0}: {1}", "{0}번 스프라이트 시트 제거됨: {1}") \

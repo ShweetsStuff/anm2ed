@@ -24,12 +24,18 @@ namespace anm2ed::anm2
     XMLDocument document;
 
 #ifdef _WIN32
-    auto file = _wfopen(path.wstring().c_str(), L"rb");
+    FILE* file = _wfopen(path.native().c_str(), L"wb");
 #else
-    auto file = fopen(path.c_str(), "rb");
+    FILE* file = fopen(path.c_str(), "wb");
 #endif
 
-    if (!file || document.LoadFile(file) != XML_SUCCESS)
+    if (!file)
+    {
+      if (errorString) *errorString = localize.get(ERROR_FILE_NOT_FOUND);
+      return;
+    }
+
+    if (document.LoadFile(file) != XML_SUCCESS)
     {
       if (errorString) *errorString = document.ErrorStr();
       return;
@@ -63,12 +69,18 @@ namespace anm2ed::anm2
     document.InsertFirstChild(to_element(document));
 
 #ifdef _WIN32
-    auto file = _wfopen(path.wstring().c_str(), L"w");
+    FILE* file = _wfopen(path.native().c_str(), L"wb");
 #else
-    auto file = fopen(path.c_str(), "w");
+    FILE* file = fopen(path.c_str(), "wb");
 #endif
 
-    if (!file || document.SaveFile(file) != XML_SUCCESS)
+    if (!file)
+    {
+      if (errorString) *errorString = localize.get(ERROR_FILE_NOT_FOUND);
+      return false;
+    }
+
+    if (document.SaveFile(file) != XML_SUCCESS)
     {
       if (errorString) *errorString = document.ErrorStr();
       return false;
