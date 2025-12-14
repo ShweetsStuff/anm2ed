@@ -29,7 +29,8 @@ namespace anm2ed::resource
     SDL_free(fileData);
 
     SDL_IOStream* io = SDL_IOFromConstMem(data.data(), data.size());
-    if (!io) data.clear();
+    if (!io)
+      data.clear();
     else
     {
       internal = MIX_LoadAudio_IO(mixer_get(), io, true, true);
@@ -43,7 +44,8 @@ namespace anm2ed::resource
     data.assign(memory, memory + size);
 
     SDL_IOStream* io = SDL_IOFromConstMem(data.data(), data.size());
-    if (!io) data.clear();
+    if (!io)
+      data.clear();
     else
     {
       internal = MIX_LoadAudio_IO(mixer_get(), io, true, true);
@@ -112,7 +114,8 @@ namespace anm2ed::resource
 
     data = other.data;
     SDL_IOStream* io = SDL_IOFromConstMem(data.data(), data.size());
-    if (!io) data.clear();
+    if (!io)
+      data.clear();
     else
     {
       internal = MIX_LoadAudio_IO(mixer_get(), io, true, true);
@@ -149,7 +152,8 @@ namespace anm2ed::resource
       {
         data = other.data;
         SDL_IOStream* io = SDL_IOFromConstMem(data.data(), data.size());
-        if (!io) data.clear();
+        if (!io)
+          data.clear();
         else
         {
           internal = MIX_LoadAudio_IO(mixer_get(), io, true, true);

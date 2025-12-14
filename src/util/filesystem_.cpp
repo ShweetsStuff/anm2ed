@@ -3,6 +3,8 @@
 #include <SDL3/SDL_filesystem.h>
 #include <SDL3/SDL_stdinc.h>
 #include <cctype>
+#include <cstdio>
+#include <cstring>
 #include <cwctype>
 #include <filesystem>
 #include <type_traits>
@@ -58,6 +60,20 @@ namespace anm2ed::util::filesystem
     return std::filesystem::path(std::u8string(utf8.begin(), utf8.end()));
   }
 
+  FILE* open(const std::filesystem::path& path, const char* mode)
+  {
+#ifdef _WIN32
+    std::wstring wideMode{};
+    if (mode)
+      wideMode.assign(mode, mode + std::strlen(mode));
+    else
+      wideMode = L"rb";
+    return _wfopen(path.native().c_str(), wideMode.c_str());
+#else
+    return std::fopen(path.string().c_str(), mode);
+#endif
+  }
+
   bool path_is_exist(const std::filesystem::path& path)
   {
     std::error_code errorCode;
@@ -97,4 +113,28 @@ namespace anm2ed::util::filesystem
   }
 
   WorkingDirectory::~WorkingDirectory() { std::filesystem::current_path(previous); }
+
+  File::File(const std::filesystem::path& path, const char* mode) { open(path, mode); }
+
+  File::~File() { close(); }
+
+  bool File::open(const std::filesystem::path& path, const char* mode)
+  {
+    close();
+    handle = filesystem::open(path, mode);
+    return handle != nullptr;
+  }
+
+  void File::close()
+  {
+    if (handle)
+    {
+      std::fclose(handle);
+      handle = nullptr;
+    }
+  }
+
+  FILE* File::get() const { return handle; }
+
+  File::operator bool() const { return handle != nullptr; }
 }

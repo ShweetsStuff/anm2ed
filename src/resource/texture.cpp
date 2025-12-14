@@ -1,5 +1,6 @@
 #include "texture.h"
 
+#include <cstdio>
 #include <filesystem>
 #include <lunasvg.h>
 #include <memory>
@@ -118,18 +119,31 @@ namespace anm2ed::resource
 
   Texture::Texture(const std::filesystem::path& pngPath)
   {
-    auto pngPathUtf8 = filesystem::path_to_utf8(pngPath);
-    if (const uint8_t* data = stbi_load(pngPathUtf8.c_str(), &size.x, &size.y, nullptr, CHANNELS); data)
+    filesystem::File file(pngPath, "rb");
+    if (auto handle = file.get())
     {
-      upload(data);
-      stbi_image_free((void*)data);
+      if (const uint8_t* data = stbi_load_from_file(handle, &size.x, &size.y, nullptr, CHANNELS); data)
+      {
+        upload(data);
+        stbi_image_free((void*)data);
+      }
     }
   }
 
   bool Texture::write_png(const std::filesystem::path& path)
   {
-    auto pathUtf8 = filesystem::path_to_utf8(path);
-    return stbi_write_png(pathUtf8.c_str(), size.x, size.y, CHANNELS, this->pixels.data(), size.x * CHANNELS);
+    if (pixels.empty()) return false;
+
+    filesystem::File file(path, "wb");
+    if (auto handle = file.get())
+    {
+      auto write_func = [](void* context, void* data, int size) { fwrite(data, 1, size, static_cast<FILE*>(context)); };
+
+      auto result =
+          stbi_write_png_to_func(write_func, handle, size.x, size.y, CHANNELS, this->pixels.data(), size.x * CHANNELS);
+      return result != 0;
+    }
+    return false;
   }
 
   vec4 Texture::pixel_read(vec2 position) const
