@@ -9,7 +9,10 @@
   #include "toast.h"
 #endif
 
+#include <cstdlib>
 #include <format>
+
+#include "filesystem_.h"
 
 namespace anm2ed::dialog
 {
@@ -28,6 +31,7 @@ namespace anm2ed::dialog
 }
 
 using namespace anm2ed::dialog;
+namespace filesystem = anm2ed::util::filesystem;
 
 namespace anm2ed
 {
@@ -60,10 +64,12 @@ namespace anm2ed
 
   void Dialog::file_explorer_open(const std::filesystem::path& path)
   {
+    if (path.empty()) return;
 #ifdef _WIN32
-    ShellExecuteA(NULL, "open", path.string().c_str(), NULL, NULL, SW_SHOWNORMAL);
+    ShellExecuteW(nullptr, L"open", path.native().c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 #elif __unix__
-    system(std::format("xdg-open \"{}\" &", path.c_str()).c_str());
+    auto pathUtf8 = filesystem::path_to_utf8(path);
+    system(std::format("xdg-open \"{}\" &", pathUtf8).c_str());
 #else
     toasts.push(localize.get(TOAST_NOT_SUPPORTED));
     logger.warning(localize.get(TOAST_NOT_SUPPORTED, anm2ed::ENGLISH));

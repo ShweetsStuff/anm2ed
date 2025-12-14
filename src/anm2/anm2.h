@@ -12,8 +12,6 @@
 
 namespace anm2ed::anm2
 {
-  constexpr auto NO_PATH = "[No Path]";
-
   struct Reference
   {
     int animationIndex{-1};
