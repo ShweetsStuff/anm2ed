@@ -41,7 +41,7 @@ namespace anm2ed::anm2
     labels.emplace_back(localize.get(BASIC_NONE));
     for (auto& [id, spritesheet] : content.spritesheets)
     {
-      auto pathString = spritesheet.path.string();
+      auto pathString = filesystem::path_to_utf8(spritesheet.path);
       labels.emplace_back(std::vformat(localize.get(FORMAT_SPRITESHEET), std::make_format_args(id, pathString)));
     }
     return labels;

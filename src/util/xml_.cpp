@@ -1,8 +1,10 @@
 #include "xml_.h"
 
+#include "filesystem_.h"
 #include "math_.h"
 
 using namespace tinyxml2;
+namespace filesystem = anm2ed::util::filesystem;
 
 namespace anm2ed::util::xml
 {
@@ -25,7 +27,7 @@ namespace anm2ed::util::xml
   {
     std::string temp{};
     auto result = query_string_attribute(element, attribute, &temp);
-    if (result == XML_SUCCESS) *out = temp;
+    if (result == XML_SUCCESS) *out = filesystem::path_from_utf8(temp);
     return result;
   }
 

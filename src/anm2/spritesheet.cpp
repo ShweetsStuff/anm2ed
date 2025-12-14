@@ -45,7 +45,7 @@ namespace anm2ed::anm2
   {
     auto element = document.NewElement("Spritesheet");
     element->SetAttribute("Id", id);
-    auto pathString = path.generic_string();
+    auto pathString = filesystem::path_to_utf8(path);
     element->SetAttribute("Path", pathString.c_str());
     return element;
   }
