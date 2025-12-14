@@ -24,7 +24,7 @@ namespace anm2ed::anm2
     XMLDocument document;
 
 #ifdef _WIN32
-    auto file = _wfopen(path.string().c_str(), L"rb");
+    auto file = _wfopen(path.wstring().c_str(), L"rb");
 #else
     auto file = fopen(path.c_str(), "rb");
 #endif
@@ -63,7 +63,7 @@ namespace anm2ed::anm2
     document.InsertFirstChild(to_element(document));
 
 #ifdef _WIN32
-    auto file = _wfopen(path.string().c_str(), L"w");
+    auto file = _wfopen(path.wstring().c_str(), L"w");
 #else
     auto file = fopen(path.c_str(), "w");
 #endif

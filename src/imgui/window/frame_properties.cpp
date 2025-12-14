@@ -1,6 +1,7 @@
 #include "frame_properties.h"
 
 #include <glm/gtc/type_ptr.hpp>
+#include <limits>
 
 #include "math_.h"
 #include "strings.h"
@@ -12,6 +13,7 @@ using namespace glm;
 
 namespace anm2ed::imgui
 {
+
   void FrameProperties::update(Manager& manager, Settings& settings)
   {
     if (ImGui::Begin(localize.get(LABEL_FRAME_PROPERTIES_WINDOW), &settings.windowIsFrameProperties))
@@ -45,8 +47,9 @@ namespace anm2ed::imgui
                             frame->soundID = useFrame.soundID);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TRIGGER_SOUND));
 
-            if (ImGui::InputInt(localize.get(BASIC_AT_FRAME), frame ? &useFrame.atFrame : &dummy_value<int>(), STEP,
-                                STEP_FAST, !frame ? ImGuiInputTextFlags_DisplayEmptyRefVal : 0) &&
+            if (input_int_range(localize.get(BASIC_AT_FRAME), frame ? useFrame.atFrame : dummy_value<int>(), 0,
+                                std::numeric_limits<int>::max(), STEP, STEP_FAST,
+                                !frame ? ImGuiInputTextFlags_DisplayEmptyRefVal : 0) &&
                 frame)
               DOCUMENT_EDIT(document, localize.get(EDIT_TRIGGER_AT_FRAME), Document::FRAMES,
                             frame->atFrame = useFrame.atFrame);
@@ -62,52 +65,65 @@ namespace anm2ed::imgui
           {
             ImGui::BeginDisabled(type == anm2::ROOT || type == anm2::NULL_);
             {
-              if (ImGui::InputFloat2(localize.get(BASIC_CROP), frame ? value_ptr(useFrame.crop) : &dummy_value<float>(),
-                                     frame ? vec2_format_get(useFrame.crop) : "") &&
-                  frame)
-                DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_CROP), Document::FRAMES, frame->crop = useFrame.crop);
+              auto cropEdit =
+                  drag_float2_persistent(localize.get(BASIC_CROP), frame ? &frame->crop : &dummy_value<vec2>(),
+                                         DRAG_SPEED, 0.0f, 0.0f, frame ? vec2_format_get(frame->crop) : "");
+              if (cropEdit == edit::START)
+                document.snapshot(localize.get(EDIT_FRAME_CROP));
+              else if (cropEdit == edit::END)
+                document.change(Document::FRAMES);
               ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CROP));
 
-              if (ImGui::InputFloat2(localize.get(BASIC_SIZE), frame ? value_ptr(useFrame.size) : &dummy_value<float>(),
-                                     frame ? vec2_format_get(useFrame.size) : "") &&
-                  frame)
-                DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_SIZE), Document::FRAMES, frame->size = useFrame.size);
+              auto sizeEdit =
+                  drag_float2_persistent(localize.get(BASIC_SIZE), frame ? &frame->size : &dummy_value<vec2>(),
+                                         DRAG_SPEED, 0.0f, 0.0f, frame ? vec2_format_get(frame->size) : "");
+              if (sizeEdit == edit::START)
+                document.snapshot(localize.get(EDIT_FRAME_SIZE));
+              else if (sizeEdit == edit::END)
+                document.change(Document::FRAMES);
               ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SIZE));
             }
             ImGui::EndDisabled();
 
-            if (ImGui::InputFloat2(localize.get(BASIC_POSITION),
-                                   frame ? value_ptr(useFrame.position) : &dummy_value<float>(),
-                                   frame ? vec2_format_get(useFrame.position) : "") &&
-                frame)
-              DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_POSITION), Document::FRAMES,
-                            frame->position = useFrame.position);
+            auto positionEdit =
+                drag_float2_persistent(localize.get(BASIC_POSITION), frame ? &frame->position : &dummy_value<vec2>(),
+                                       DRAG_SPEED, 0.0f, 0.0f, frame ? vec2_format_get(frame->position) : "");
+            if (positionEdit == edit::START)
+              document.snapshot(localize.get(EDIT_FRAME_POSITION));
+            else if (positionEdit == edit::END)
+              document.change(Document::FRAMES);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_POSITION));
 
             ImGui::BeginDisabled(type == anm2::ROOT || type == anm2::NULL_);
             {
-              if (ImGui::InputFloat2(localize.get(BASIC_PIVOT),
-                                     frame ? value_ptr(useFrame.pivot) : &dummy_value<float>(),
-                                     frame ? vec2_format_get(useFrame.pivot) : "") &&
-                  frame)
-                DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_PIVOT), Document::FRAMES,
-                              frame->pivot = useFrame.pivot);
+              auto pivotEdit =
+                  drag_float2_persistent(localize.get(BASIC_PIVOT), frame ? &frame->pivot : &dummy_value<vec2>(),
+                                         DRAG_SPEED, 0.0f, 0.0f, frame ? vec2_format_get(frame->pivot) : "");
+              if (pivotEdit == edit::START)
+                document.snapshot(localize.get(EDIT_FRAME_PIVOT));
+              else if (pivotEdit == edit::END)
+                document.change(Document::FRAMES);
               ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_PIVOT));
             }
             ImGui::EndDisabled();
 
-            if (ImGui::InputFloat2(localize.get(BASIC_SCALE), frame ? value_ptr(useFrame.scale) : &dummy_value<float>(),
-                                   frame ? vec2_format_get(useFrame.scale) : "") &&
-                frame)
-              DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_SCALE), Document::FRAMES, frame->scale = useFrame.scale);
+            auto scaleEdit =
+                drag_float2_persistent(localize.get(BASIC_SCALE), frame ? &frame->scale : &dummy_value<vec2>(),
+                                       DRAG_SPEED, 0.0f, 0.0f, frame ? vec2_format_get(frame->scale) : "");
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SCALE));
+            if (scaleEdit == edit::START)
+              document.snapshot(localize.get(EDIT_FRAME_SCALE));
+            else if (scaleEdit == edit::END)
+              document.change(Document::FRAMES);
 
-            if (ImGui::InputFloat(localize.get(BASIC_ROTATION), frame ? &useFrame.rotation : &dummy_value<float>(),
-                                  STEP, STEP_FAST, frame ? float_format_get(useFrame.rotation) : "") &&
-                frame)
-              DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_ROTATION), Document::FRAMES,
-                            frame->rotation = useFrame.rotation);
+            auto rotationEdit =
+                drag_float_persistent(localize.get(BASIC_ROTATION), frame ? &frame->rotation : &dummy_value<float>(),
+                                      DRAG_SPEED, 0.0f, 0.0f, frame ? float_format_get(frame->rotation) : "");
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ROTATION));
+            if (rotationEdit == edit::START)
+              document.snapshot(localize.get(EDIT_FRAME_ROTATION));
+            else if (rotationEdit == edit::END)
+              document.change(Document::FRAMES);
 
             if (input_int_range(localize.get(BASIC_DURATION), frame ? useFrame.duration : dummy_value<int>(),
                                 frame ? anm2::FRAME_DURATION_MIN : 0, anm2::FRAME_DURATION_MAX, STEP, STEP_FAST,
@@ -117,17 +133,21 @@ namespace anm2ed::imgui
                             frame->duration = useFrame.duration);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_DURATION));
 
-            if (ImGui::ColorEdit4(localize.get(BASIC_TINT), frame ? value_ptr(useFrame.tint) : &dummy_value<float>()) &&
-                frame)
-              DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_TINT), Document::FRAMES, frame->tint = useFrame.tint);
+            auto tintEdit =
+                color_edit4_persistent(localize.get(BASIC_TINT), frame ? &frame->tint : &dummy_value<vec4>());
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TINT));
+            if (tintEdit == edit::START)
+              document.snapshot(localize.get(EDIT_FRAME_TINT));
+            else if (tintEdit == edit::END)
+              document.change(Document::FRAMES);
 
-            if (ImGui::ColorEdit3(localize.get(BASIC_COLOR_OFFSET),
-                                  frame ? value_ptr(useFrame.colorOffset) : &dummy_value<float>()) &&
-                frame)
-              DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_COLOR_OFFSET), Document::FRAMES,
-                            frame->colorOffset = useFrame.colorOffset);
+            auto colorOffsetEdit = color_edit3_persistent(localize.get(BASIC_COLOR_OFFSET),
+                                                          frame ? &frame->colorOffset : &dummy_value<vec3>());
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_COLOR_OFFSET));
+            if (colorOffsetEdit == edit::START)
+              document.snapshot(localize.get(EDIT_FRAME_COLOR_OFFSET));
+            else if (colorOffsetEdit == edit::END)
+              document.change(Document::FRAMES);
 
             if (ImGui::Checkbox(localize.get(BASIC_VISIBLE), frame ? &useFrame.isVisible : &dummy_value<bool>()) &&
                 frame)
@@ -246,24 +266,39 @@ namespace anm2ed::imgui
                         document.item_get()->frames_change(frameChange, type, *frames.begin(), (int)frames.size()));
         };
 
-        auto rowOneWidgetSize = widget_size_with_row_get(1);
+        ImGui::Separator();
 
-        if (ImGui::Button(localize.get(LABEL_ADJUST), rowOneWidgetSize)) frame_change(anm2::ADJUST);
+        bool isAnyProperty = isCrop || isSize || isPosition || isPivot || isScale || isRotation || isDuration ||
+                             isTint || isColorOffset || isVisibleSet || isInterpolatedSet;
+
+        auto rowWidgetSize = widget_size_with_row_get(5);
+
+        ImGui::BeginDisabled(!isAnyProperty);
+
+        if (ImGui::Button(localize.get(LABEL_ADJUST), rowWidgetSize)) frame_change(anm2::ADJUST);
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ADJUST));
 
-        auto rowTwoWidgetSize = widget_size_with_row_get(4);
+        ImGui::SameLine();
 
-        if (ImGui::Button(localize.get(BASIC_ADD), rowTwoWidgetSize)) frame_change(anm2::ADD);
+        if (ImGui::Button(localize.get(BASIC_ADD), rowWidgetSize)) frame_change(anm2::ADD);
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ADD_VALUES));
+
         ImGui::SameLine();
-        if (ImGui::Button(localize.get(LABEL_SUBTRACT), rowTwoWidgetSize)) frame_change(anm2::SUBTRACT);
+
+        if (ImGui::Button(localize.get(LABEL_SUBTRACT), rowWidgetSize)) frame_change(anm2::SUBTRACT);
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SUBTRACT_VALUES));
+
         ImGui::SameLine();
-        if (ImGui::Button(localize.get(LABEL_MULTIPLY), rowTwoWidgetSize)) frame_change(anm2::MULTIPLY);
+
+        if (ImGui::Button(localize.get(LABEL_MULTIPLY), rowWidgetSize)) frame_change(anm2::MULTIPLY);
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_MULTIPLY_VALUES));
+
         ImGui::SameLine();
-        if (ImGui::Button(localize.get(LABEL_DIVIDE), rowTwoWidgetSize)) frame_change(anm2::DIVIDE);
+
+        if (ImGui::Button(localize.get(LABEL_DIVIDE), rowWidgetSize)) frame_change(anm2::DIVIDE);
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_DIVIDE_VALUES));
+
+        ImGui::EndDisabled();
       }
     }
     ImGui::End();

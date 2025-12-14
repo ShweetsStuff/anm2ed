@@ -190,7 +190,7 @@ namespace anm2ed::imgui
 
       bind();
       viewport_set();
-      clear(isTransparent ? vec4() : vec4(backgroundColor, 1.0f));
+      clear(isTransparent ? vec4(0) : vec4(backgroundColor, 1.0f));
 
       auto frame = document.frame_get();
 
@@ -312,8 +312,15 @@ namespace anm2ed::imgui
         if (tool == tool::DRAW && isMouseRightDown) useTool = tool::ERASE;
         if (tool == tool::ERASE && isMouseRightDown) useTool = tool::DRAW;
 
-        auto& areaType = tool::INFO[useTool].areaType;
-        auto cursor = areaType == tool::SPRITESHEET_EDITOR || areaType == tool::ALL ? tool::INFO[useTool].cursor
+        auto& toolInfo = tool::INFO[useTool];
+        auto& areaType = toolInfo.areaType;
+        bool isAreaAllowed = areaType == tool::ALL || areaType == tool::SPRITESHEET_EDITOR;
+        bool isFrameRequired =
+            !(useTool == tool::PAN || useTool == tool::DRAW || useTool == tool::ERASE || useTool == tool::COLOR_PICKER);
+        bool isFrameAvailable = !isFrameRequired || frame;
+        bool isSpritesheetRequired = useTool == tool::DRAW || useTool == tool::ERASE || useTool == tool::COLOR_PICKER;
+        bool isSpritesheetAvailable = !isSpritesheetRequired || (spritesheet && spritesheet->texture.is_valid());
+        auto cursor = (isAreaAllowed && isFrameAvailable && isSpritesheetAvailable) ? toolInfo.cursor
                                                                                     : ImGuiMouseCursor_NotAllowed;
         ImGui::SetMouseCursor(cursor);
         ImGui::SetKeyboardFocusHere();
@@ -429,6 +436,34 @@ namespace anm2ed::imgui
             break;
         }
 
+        if ((isMouseDown || isKeyDown) && useTool != tool::PAN)
+        {
+          if (!isAreaAllowed && areaType == tool::ANIMATION_PREVIEW)
+          {
+            if (ImGui::BeginTooltip())
+            {
+              ImGui::TextUnformatted(localize.get(TEXT_TOOL_ANIMATION_PREVIEW));
+              ImGui::EndTooltip();
+            }
+          }
+          else if (isSpritesheetRequired && !isSpritesheetAvailable)
+          {
+            if (ImGui::BeginTooltip())
+            {
+              ImGui::TextUnformatted(localize.get(TEXT_SELECT_SPRITESHEET));
+              ImGui::EndTooltip();
+            }
+          }
+          else if (isFrameRequired && !isFrameAvailable)
+          {
+            if (ImGui::BeginTooltip())
+            {
+              ImGui::TextUnformatted(localize.get(TEXT_SELECT_FRAME));
+              ImGui::EndTooltip();
+            }
+          }
+        }
+
         if (mouseWheel != 0 || isZoomIn || isZoomOut)
         {
           auto focus = mouseWheel != 0 ? vec2(mousePos) : vec2();
@@ -442,7 +477,8 @@ namespace anm2ed::imgui
       }
     }
 
-    if (ImGui::BeginPopupContextWindow("##Spritesheet Editor Context Menu", ImGuiMouseButton_Right))
+    if (tool == tool::PAN &&
+        ImGui::BeginPopupContextWindow("##Spritesheet Editor Context Menu", ImGuiMouseButton_Right))
     {
       if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_UNDO), settings.shortcutUndo.c_str(), false,
                           document.is_able_to_undo()))

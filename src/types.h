@@ -70,6 +70,17 @@ namespace anm2ed::types::merge
   };
 }
 
+namespace anm2ed::types::edit
+{
+  enum Type
+  {
+    NONE,
+    START,
+    DURING,
+    END
+  };
+}
+
 namespace anm2ed::types::color
 {
   using namespace glm;

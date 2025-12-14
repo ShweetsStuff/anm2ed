@@ -93,6 +93,159 @@ namespace anm2ed::imgui
     return isActivated;
   }
 
+  edit::Type drag_int_persistent(const char* label, int* value, float speed, int min, int max, const char* format,
+                                 ImGuiSliderFlags flags)
+  {
+    static bool isEditing{};
+    static int start{INT_MAX};
+    auto persistent = value ? *value : 0;
+
+    ImGui::DragInt(label, &persistent, speed, min, max, format, flags);
+    if (!value) return edit::NONE;
+    if (ImGui::IsItemActivated() && persistent != start)
+    {
+      isEditing = true;
+      start = *value;
+      return edit::START;
+    }
+    else if (ImGui::IsItemDeactivatedAfterEdit())
+    {
+      isEditing = false;
+      *value = persistent;
+      start = INT_MAX;
+      return edit::END;
+    }
+    else if (isEditing)
+    {
+      *value = persistent;
+      return edit::DURING;
+    }
+
+    return edit::NONE;
+  }
+
+  edit::Type drag_float_persistent(const char* label, float* value, float speed, float min, float max,
+                                   const char* format, ImGuiSliderFlags flags)
+  {
+    static bool isEditing{};
+    static float start{NAN};
+    auto persistent = value ? *value : 0;
+
+    ImGui::DragFloat(label, &persistent, speed, min, max, format, flags);
+    if (!value) return edit::NONE;
+    if (ImGui::IsItemActivated() && persistent != start)
+    {
+      isEditing = true;
+      start = *value;
+      return edit::START;
+    }
+    else if (ImGui::IsItemDeactivatedAfterEdit())
+    {
+      isEditing = false;
+      *value = persistent;
+      start = NAN;
+      return edit::END;
+    }
+    else if (isEditing)
+    {
+      *value = persistent;
+      return edit::DURING;
+    }
+
+    return edit::NONE;
+  }
+
+  edit::Type drag_float2_persistent(const char* label, vec2* value, float speed, float min, float max,
+                                    const char* format, ImGuiSliderFlags flags)
+  {
+    static bool isEditing{};
+    static vec2 start{NAN};
+    auto persistent = value ? *value : vec2();
+
+    ImGui::DragFloat2(label, value_ptr(persistent), speed, min, max, format, flags);
+    if (!value) return edit::NONE;
+    if (ImGui::IsItemActivated() && persistent != start)
+    {
+      isEditing = true;
+      start = *value;
+      return edit::START;
+    }
+    else if (ImGui::IsItemDeactivatedAfterEdit())
+    {
+      isEditing = false;
+      *value = persistent;
+      start = vec2{NAN};
+      return edit::END;
+    }
+    else if (isEditing)
+    {
+      *value = persistent;
+      return edit::DURING;
+    }
+
+    return edit::NONE;
+  }
+
+  edit::Type color_edit3_persistent(const char* label, vec3* value, ImGuiColorEditFlags flags)
+  {
+    static bool isEditing{};
+    static vec3 start{NAN};
+    auto persistent = value ? *value : vec4();
+
+    ImGui::ColorEdit3(label, value_ptr(persistent), flags);
+    if (!value) return edit::NONE;
+    if (ImGui::IsItemActivated() && persistent != start)
+    {
+      isEditing = true;
+      start = *value;
+      return edit::START;
+    }
+    else if (ImGui::IsItemDeactivatedAfterEdit())
+    {
+      isEditing = false;
+      *value = persistent;
+      start = vec4{NAN};
+      return edit::END;
+    }
+    else if (isEditing)
+    {
+      *value = persistent;
+      return edit::DURING;
+    }
+
+    return edit::NONE;
+  }
+
+  edit::Type color_edit4_persistent(const char* label, vec4* value, ImGuiColorEditFlags flags)
+  {
+    static bool isEditing{};
+    static vec4 start{NAN};
+    auto persistent = value ? *value : vec4();
+
+    ImGui::ColorEdit4(label, value_ptr(persistent), flags);
+    if (!value) return edit::NONE;
+    if (ImGui::IsItemActivated() && persistent != start)
+    {
+      isEditing = true;
+      start = *value;
+      return edit::START;
+    }
+    else if (ImGui::IsItemDeactivatedAfterEdit())
+    {
+      isEditing = false;
+      *value = persistent;
+      start = vec4{NAN};
+      return edit::END;
+    }
+    else if (isEditing)
+    {
+      *value = persistent;
+      return edit::DURING;
+    }
+
+    return edit::NONE;
+  }
+
   bool input_int_range(const char* label, int& value, int min, int max, int step, int stepFast,
                        ImGuiInputTextFlags flags)
   {

@@ -138,8 +138,11 @@ namespace anm2ed::resource
     auto index = ((size_t)(y) * (size_t)(size.x) + (size_t)(x)) * CHANNELS;
     if (index + CHANNELS > pixels.size()) return vec4(0.0f);
 
-    return vec4(uint8_to_float(pixels[index + 0]), uint8_to_float(pixels[index + 1]), uint8_to_float(pixels[index + 2]),
-                uint8_to_float(pixels[index + 3]));
+    vec4 color{uint8_to_float(pixels[index + 0]), uint8_to_float(pixels[index + 1]), uint8_to_float(pixels[index + 2]),
+               uint8_to_float(pixels[index + 3])};
+
+    if (color.a <= 0.0f) color = vec4(0.0f);
+    return color;
   }
 
   void Texture::pixel_set(ivec2 position, vec4 color)

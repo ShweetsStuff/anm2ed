@@ -199,7 +199,7 @@ namespace anm2ed
   X(LABEL_ANIMATION_PREVIEW_WINDOW, "Animation Preview###Animation Preview", "Vista Previa de Animacion###Animation Preview", "Предпросмотр анимации###Animation Preview", "动画预放###Animation Preview", "애니메이션 프리뷰###Animation Preview") \
   X(LABEL_APPEND_FRAMES, "Append Frames", "Anteponer Frames", "Добавить кадры к концу", "在后面添加帧", "뒷프레임에 추가") \
   X(LABEL_APPLICATION_NAME, "Anm2Ed", "Anm2Ed", "Anm2Ed", "Anm2Ed", "Anm2Ed") \
-  X(LABEL_APPLICATION_VERSION, "Version 2.1", "Version 2.1", "Версия 2.1", "2.1版本", "버전 2.1") \
+  X(LABEL_APPLICATION_VERSION, "Version 2.2", "Version 2.2", "Версия 2.2", "2.2版本", "버전 2.2") \
   X(LABEL_AUTHOR, "Author", "Autor", "Автор", "制作者", "작성자") \
   X(LABEL_AUTOSAVE, "Autosave", "Autoguardado", "Автосохранение", "自动保存", "자동저장") \
   X(LABEL_AXES, "Axes", "Ejes", "Оси", "坐标轴", "가로/세로 축") \
@@ -207,6 +207,7 @@ namespace anm2ed
   X(LABEL_BAKE, "Bake", "Bake", "Запечь", "提前渲染", "베이크") \
   X(LABEL_SPLIT, "Split", "Dividir", "Разделить", "拆分", "분할") \
   X(LABEL_BORDER, "Border", "Borde", "Границы", "边框", "경계선") \
+  X(LABEL_CHANGE_ALL_FRAME_PROPERTIES, "Change All Frame Properties", "Cambiar todas las propiedades de frame", "Изменить все свойства кадра", "更改所有帧属性", "모든 프레임 속성 변경") \
   X(LABEL_CENTER_VIEW, "Center View", "Vista de Centro", "Центрировать вид", "视角中心", "가운데서 보기") \
   X(LABEL_CLAMP, "Clamp", "Clamp", "Ограничить", "限制数值范围", "작업 영역 제한") \
   X(LABEL_CLEAR_LIST, "Clear List", "Limpiar Lista", "Стереть список", "清除列表", "기록 삭제") \
@@ -380,6 +381,10 @@ namespace anm2ed
   X(SHORTCUT_STRING_ZOOM_IN, "Zoom In", "Zoom In", "Увеличить", "视图放大", "확대") \
   X(SHORTCUT_STRING_ZOOM_OUT, "Zoom Out", "Zoom Out", "Уменьшить", "视图缩小", "축소") \
   X(SNAPSHOT_RENAME_ANIMATION, "Rename Animation", "Renombrar Animacion", "Переименовать анимацию", "重命名动画", "애니메이션 이름 바꾸기") \
+  X(TEXT_SELECT_FRAME, "Select a frame first!", "¡Selecciona primero un frame!", "Сначала выберите кадр!", "请先选择帧！", "먼저 프레임을 선택하세요!") \
+  X(TEXT_SELECT_SPRITESHEET, "Select a spritesheet first!", "¡Selecciona primero un spritesheet!", "Сначала выберите спрайт-лист!", "请先选择图集！", "먼저 스프라이트 시트를 선택하세요!") \
+  X(TEXT_TOOL_ANIMATION_PREVIEW, "This tool can only be used in Animation Preview!", "¡Esta herramienta solo se puede usar en Vista previa de animación!", "Этот инструмент можно использовать только в \"Предпросмотре анимации\"!", "该工具只能在“动画预放”中使用！", "이 도구는 애니메이션 프리뷰에서만 사용할 수 있습니다!") \
+  X(TEXT_TOOL_SPRITESHEET_EDITOR, "This tool can only be used in Spritesheet Editor!", "¡Esta herramienta solo se puede usar en el Editor de spritesheets!", "Этот инструмент можно использовать только в \"Редакторе спрайт-листов\"!", "该工具只能在“图集编辑器”中使用！", "이 도구는 스프라이트 시트 편집기에서만 사용할 수 있습니다!") \
   X(TEXT_NEW_ANIMATION, "New Animation", "Nueva Animacion", "Новая анимация", "新动画", "새 애니메이션") \
   X(TEXT_NEW_EVENT, "New Event", "Nuevo Evento", "Новое событие", "新事件", "새 이벤트") \
   X(TEXT_RECORDING_PROGRESS, "Once recording is complete, rendering may take some time.\nPlease be patient...", "Una vez que el grabado este completo, renderizar puede tomar algo de tiempo. \nPor favor se paciente...", "Когда запись завершена, рендеринг может занять некоторое время.\nПожалуйста потерпите...", "录制完成时，渲染可能会花一些时间.\n请耐心等待...", "녹화가 완료되면 렌더링에 시간이 걸릴 수 있습니다.\n잠시만 기다려 주세요...") \

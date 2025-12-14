@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
-#include <unordered_map>
 
 #include <imgui_internal.h>
 
@@ -81,7 +80,6 @@ namespace anm2ed::imgui
   constexpr auto FRAME_MULTIPLE = 5;
   constexpr auto FRAME_DRAG_PAYLOAD_ID = "Frame Drag Drop";
   constexpr auto FRAME_TOOLTIP_HOVER_DELAY = 0.75f; // Extra delay for frame info tooltip.
-  constexpr int ITEM_SELECTION_NULL_FLAG = 1 << 30;
 
   void Timeline::update(Manager& manager, Settings& settings, Resources& resources, Clipboard& clipboard)
   {
@@ -90,38 +88,7 @@ namespace anm2ed::imgui
     auto& playback = document.playback;
     auto& reference = document.reference;
     auto& frames = document.frames;
-    auto& items = document.items;
-    auto& itemSelection = items.selection;
     auto animation = document.animation_get();
-    auto item_selection_encode = [&](anm2::Type type, int id) -> int
-    {
-      if (type == anm2::NULL_) return id | ITEM_SELECTION_NULL_FLAG;
-      return id;
-    };
-    auto item_selection_decode = [&](int value) -> int { return value & ~ITEM_SELECTION_NULL_FLAG; };
-    auto item_selection_value_type = [&](int value) -> anm2::Type
-    { return (value & ITEM_SELECTION_NULL_FLAG) ? anm2::NULL_ : anm2::LAYER; };
-    std::vector<int> itemSelectionIndexMap{};
-    std::unordered_map<int, int> layerSelectionIndex{};
-    std::unordered_map<int, int> nullSelectionIndex{};
-    if (animation)
-    {
-      itemSelectionIndexMap.reserve(animation->layerOrder.size() + animation->nullAnimations.size());
-      for (auto id : animation->layerOrder)
-      {
-        layerSelectionIndex[id] = (int)itemSelectionIndexMap.size();
-        itemSelectionIndexMap.push_back(item_selection_encode(anm2::LAYER, id));
-      }
-      for (auto& [id, nullAnimation] : animation->nullAnimations)
-      {
-        (void)nullAnimation;
-        nullSelectionIndex[id] = (int)itemSelectionIndexMap.size();
-        itemSelectionIndexMap.push_back(item_selection_encode(anm2::NULL_, id));
-      }
-      itemSelection.set_index_map(&itemSelectionIndexMap);
-    }
-    else
-      itemSelection.set_index_map(nullptr);
 
     style = ImGui::GetStyle();
     auto isLightTheme = settings.theme == theme::LIGHT;
@@ -160,113 +127,6 @@ namespace anm2ed::imgui
       if (!isLightTheme) return anm2::TYPE_COLOR_ACTIVE[type];
       return ITEM_COLOR_LIGHT_ACTIVE[type_index(type)];
     };
-
-    items.hovered = -1;
-
-    auto item_selection_type_get = [&](anm2::Type preferredType = anm2::NONE) -> anm2::Type
-    {
-      if (itemSelection.empty() || !animation) return anm2::NONE;
-
-      bool hasLayer = false;
-      bool hasNull = false;
-
-      for (auto encoded : itemSelection)
-      {
-        auto valueType = item_selection_value_type(encoded);
-        auto valueID = item_selection_decode(encoded);
-        if (valueType == anm2::LAYER && animation->layerAnimations.contains(valueID)) hasLayer = true;
-        if (valueType == anm2::NULL_ && animation->nullAnimations.contains(valueID)) hasNull = true;
-      }
-
-      auto type_available = [&](anm2::Type type)
-      {
-        if (type == anm2::LAYER) return hasLayer;
-        if (type == anm2::NULL_) return hasNull;
-        return false;
-      };
-
-      if (preferredType != anm2::NONE && type_available(preferredType)) return preferredType;
-      if (hasLayer) return anm2::LAYER;
-      if (hasNull) return anm2::NULL_;
-      return anm2::NONE;
-    };
-
-    auto item_selection_clear = [&]() { itemSelection.clear(); };
-
-    auto item_selection_sync = [&]()
-    {
-      if (itemSelection.empty())
-      {
-        item_selection_clear();
-        return;
-      }
-
-      auto preferredType = items.reference == (int)anm2::LAYER || items.reference == (int)anm2::NULL_
-                               ? (anm2::Type)items.reference
-                               : anm2::NONE;
-      auto type = item_selection_type_get(preferredType);
-
-      if (type == anm2::NONE)
-      {
-        item_selection_clear();
-        return;
-      }
-
-      for (auto it = itemSelection.begin(); it != itemSelection.end();)
-      {
-        if (item_selection_value_type(*it) != type)
-          it = itemSelection.erase(it);
-        else
-          ++it;
-      }
-
-      items.reference = (int)type;
-    };
-
-    auto item_selection_prune = [&]()
-    {
-      if (itemSelection.empty())
-      {
-        return;
-      }
-
-      if (!animation)
-      {
-        item_selection_clear();
-        return;
-      }
-
-      auto type = item_selection_type_get();
-      if (type != anm2::LAYER && type != anm2::NULL_)
-      {
-        item_selection_clear();
-        return;
-      }
-
-      for (auto it = itemSelection.begin(); it != itemSelection.end();)
-      {
-        if (item_selection_value_type(*it) != type)
-        {
-          it = itemSelection.erase(it);
-          continue;
-        }
-
-        auto valueID = item_selection_decode(*it);
-        bool exists = type == anm2::LAYER ? animation->layerAnimations.contains(valueID)
-                                          : animation->nullAnimations.contains(valueID);
-        if (!exists)
-          it = itemSelection.erase(it);
-        else
-          ++it;
-      }
-
-      if (itemSelection.empty())
-        item_selection_clear();
-      else
-        item_selection_sync();
-    };
-
-    item_selection_prune();
 
     auto iconTintDefault = isLightTheme ? ICON_TINT_DEFAULT_LIGHT : ICON_TINT_DEFAULT_DARK;
     auto itemIconTint = isLightTheme ? ICON_TINT_DEFAULT_LIGHT : iconTintDefault;
@@ -456,8 +316,19 @@ namespace anm2ed::imgui
     {
       reference = {reference.animationIndex, type, id};
       frames_selection_reset();
-      if (type == anm2::LAYER || type == anm2::NULL_) items.reference = (int)type;
-      items.selection = {(int)id};
+    };
+
+    auto item_remove = [&]()
+    {
+      auto behavior = [&]()
+      {
+        if (!animation) return;
+        if (reference.itemType == anm2::LAYER || reference.itemType == anm2::NULL_)
+          animation->item_remove(reference.itemType, reference.itemID);
+        reference_clear();
+      };
+
+      DOCUMENT_EDIT(document, localize.get(EDIT_REMOVE_ITEMS), Document::ITEMS, behavior());
     };
 
     auto fit_animation_length = [&]()
@@ -595,6 +466,20 @@ namespace anm2ed::imgui
       ImGui::PopStyleVar(2);
     };
 
+    auto item_base_properties_open = [&](anm2::Type type, int id)
+    {
+      switch (type)
+      {
+        case anm2::LAYER:
+          manager.layer_properties_open(id);
+          break;
+        case anm2::NULL_:
+          manager.null_properties_open(id);
+        default:
+          break;
+      };
+    };
+
     auto item_properties_reset = [&]()
     {
       addItemName.clear();
@@ -610,94 +495,14 @@ namespace anm2ed::imgui
       return std::set<int>{};
     };
 
-    auto item_selection_index_get = [&](anm2::Type type, int id)
-    {
-      if (type == anm2::LAYER)
-      {
-        if (auto it = layerSelectionIndex.find(id); it != layerSelectionIndex.end()) return it->second;
-      }
-      else if (type == anm2::NULL_)
-      {
-        if (auto it = nullSelectionIndex.find(id); it != nullSelectionIndex.end()) return it->second;
-      }
-
-      return -1;
-    };
-
-    auto item_type_has_visible = [&](anm2::Type type)
-    {
-      if (!animation) return false;
-      auto& showUnused = settings.timelineIsShowUnused;
-      if (type == anm2::LAYER)
-      {
-        for (auto id : animation->layerOrder)
-        {
-          if (!showUnused && animation->layerAnimations[id].frames.empty()) continue;
-          return true;
-        }
-        return false;
-      }
-      if (type == anm2::NULL_)
-      {
-        for (auto& [id, nullAnimation] : animation->nullAnimations)
-        {
-          if (!showUnused && nullAnimation.frames.empty()) continue;
-          return true;
-        }
-        return false;
-      }
-      return false;
-    };
-
-    auto item_selection_select_all = [&](anm2::Type type)
-    {
-      if (!animation || (type != anm2::LAYER && type != anm2::NULL_)) return;
-
-      auto& showUnused = settings.timelineIsShowUnused;
-
-      itemSelection.clear();
-      bool hasInserted = false;
-
-      auto try_insert = [&](int id)
-      {
-        itemSelection.insert(item_selection_encode(type, id));
-        hasInserted = true;
-      };
-
-      if (type == anm2::LAYER)
-      {
-        for (auto id : animation->layerOrder)
-        {
-          if (!showUnused && animation->layerAnimations[id].frames.empty()) continue;
-          try_insert(id);
-        }
-      }
-      else if (type == anm2::NULL_)
-      {
-        for (auto& [id, nullAnimation] : animation->nullAnimations)
-        {
-          if (!showUnused && nullAnimation.frames.empty()) continue;
-          try_insert(id);
-        }
-      }
-
-      if (!hasInserted)
-      {
-        item_selection_clear();
-        return;
-      }
-
-      item_selection_sync();
-    };
-
     auto item_context_menu = [&]()
     {
       ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
       ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
 
-      auto selectionType = item_selection_type_get();
-      bool hasSelection = !itemSelection.empty() && (selectionType == anm2::LAYER || selectionType == anm2::NULL_);
-      auto currentItem = document.item_get();
+      auto& type = reference.itemType;
+      auto& id = reference.itemID;
+      auto item = document.item_get();
 
       if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlappedByWindow) &&
           ImGui::IsMouseClicked(ImGuiMouseButton_Right))
@@ -715,35 +520,17 @@ namespace anm2ed::imgui
 
         ImGui::Separator();
 
+        if (ImGui::MenuItem(localize.get(BASIC_PROPERTIES), nullptr, false,
+                            item && (type == anm2::LAYER || type == anm2::NULL_)))
+          item_base_properties_open(type, id);
+
         if (ImGui::MenuItem(localize.get(BASIC_ADD), settings.shortcutAdd.c_str(), false, animation))
         {
           item_properties_reset();
           propertiesPopup.open();
         }
 
-        if (ImGui::MenuItem(localize.get(BASIC_REMOVE), settings.shortcutRemove.c_str(), false,
-                            hasSelection || currentItem))
-        {
-          auto remove = [&]()
-          {
-            if (hasSelection)
-            {
-              std::vector<int> ids{};
-              ids.reserve(itemSelection.size());
-              for (auto value : itemSelection)
-                ids.push_back(item_selection_decode(value));
-              std::sort(ids.begin(), ids.end());
-              for (auto id : ids)
-                animation->item_remove(selectionType, id);
-              item_selection_clear();
-            }
-            else if (reference.itemType == anm2::LAYER || reference.itemType == anm2::NULL_)
-              animation->item_remove(reference.itemType, reference.itemID);
-            reference_clear();
-          };
-
-          DOCUMENT_EDIT(document, localize.get(EDIT_REMOVE_ITEMS), Document::ITEMS, remove());
-        }
+        if (ImGui::MenuItem(localize.get(BASIC_REMOVE), settings.shortcutRemove.c_str(), false, item)) item_remove();
 
         ImGui::EndPopup();
       }
@@ -751,7 +538,7 @@ namespace anm2ed::imgui
       ImGui::PopStyleVar(2);
     };
 
-    auto item_child = [&](anm2::Type type, int id, int& index)
+    auto item_child = [&](anm2::Type type, int id, int index)
     {
       ImGui::PushID(index);
 
@@ -759,7 +546,7 @@ namespace anm2ed::imgui
       auto isVisible = item ? item->isVisible : false;
       auto& isOnlyShowLayers = settings.timelineIsOnlyShowLayers;
       if (isOnlyShowLayers && type != anm2::LAYER) isVisible = false;
-      auto isActive = reference.itemType == type && reference.itemID == id;
+      auto isReferenced = reference.itemType == type && reference.itemID == id;
 
       auto label = type == anm2::LAYER ? std::vformat(localize.get(FORMAT_LAYER),
                                                       std::make_format_args(id, anm2.content.layers[id].name,
@@ -771,14 +558,8 @@ namespace anm2ed::imgui
       auto iconTintCurrent = isLightTheme && type == anm2::NONE ? ImVec4(1.0f, 1.0f, 1.0f, 1.0f) : itemIconTint;
       auto baseColorVec = item_color_vec(type);
       auto activeColorVec = item_color_active_vec(type);
-      auto selectionType = item_selection_type_get();
-      bool isSelectableItem = type == anm2::LAYER || type == anm2::NULL_;
-      auto selectionIndex = item_selection_index_get(type, id);
-      int selectionValue = item_selection_encode(type, id);
-      bool isMultiSelected = isSelectableItem && selectionType == type && itemSelection.contains(selectionValue);
-      bool isTypeNone = type == anm2::NONE;
       auto colorVec = baseColorVec;
-      if ((isActive || isMultiSelected) && !isTypeNone)
+      if (isReferenced && type != anm2::NONE)
       {
         if (isLightTheme)
           colorVec = ITEM_COLOR_LIGHT_SELECTED[type_index(type)];
@@ -789,12 +570,6 @@ namespace anm2ed::imgui
       color = !isVisible ? to_imvec4(colorVec * COLOR_HIDDEN_MULTIPLIER) : color;
       ImGui::PushStyleColor(ImGuiCol_ChildBg, color);
 
-      if (index == 1 && type != anm2::NONE)
-      {
-        auto cursor = ImGui::GetCursorPos();
-        ImGui::SetCursorPos(ImVec2(cursor.x, cursor.y - style.ItemSpacing.y));
-      }
-
       ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
       ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
 
@@ -803,63 +578,26 @@ namespace anm2ed::imgui
 
       if (ImGui::BeginChild(label.c_str(), itemSize, ImGuiChildFlags_Borders, ImGuiWindowFlags_NoScrollWithMouse))
       {
-        auto isReferenced = reference.itemType == type && reference.itemID == id;
-
         auto cursorPos = ImGui::GetCursorPos();
 
-        if (!isTypeNone)
+        if (type != anm2::NONE)
         {
           ImGui::SetCursorPos(to_imvec2(to_vec2(cursorPos) - to_vec2(style.ItemSpacing)));
-
           ImGui::SetNextItemAllowOverlap();
           ImGui::PushStyleColor(ImGuiCol_Header, ImVec4());
           ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4());
           ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4());
-          if (isSelectableItem && selectionIndex != -1) ImGui::SetNextItemSelectionUserData(selectionIndex);
-          bool isRootLike = type == anm2::ROOT || type == anm2::TRIGGER;
-          if (ImGui::Selectable("##Item Button", isSelectableItem && isMultiSelected, ImGuiSelectableFlags_SelectOnNav,
-                                itemSize))
+          ImGui::SetNextItemStorageID(id);
+          if (ImGui::Selectable("##Item Button", isReferenced, ImGuiSelectableFlags_SelectOnClick, itemSize))
           {
-            if (isSelectableItem)
-            {
-              auto previousType = item_selection_type_get();
-              bool typeMismatch = !itemSelection.empty() && previousType != anm2::NONE && previousType != type;
-              if (typeMismatch)
-              {
-                itemSelection.clear();
-                itemSelection.insert(selectionValue);
-              }
-              item_selection_sync();
-            }
-            else if (isRootLike)
-              item_selection_clear();
-
             if (type == anm2::LAYER) document.spritesheet.reference = anm2.content.layers[id].spritesheetID;
-
             reference_set_item(type, id);
           }
           ImGui::PopStyleColor(3);
-          bool isItemHovered = ImGui::IsItemHovered();
-          if (isItemHovered) items.hovered = id;
-          if (isItemHovered)
+          if (ImGui::IsItemHovered())
           {
-            if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-            {
-              switch (type)
-              {
-                case anm2::LAYER:
-                  manager.layer_properties_open(id);
-                  break;
-                case anm2::NULL_:
-                  manager.null_properties_open(id);
-                default:
-                  break;
-              }
-            }
-          }
+            if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) item_base_properties_open(type, id);
 
-          if (isItemHovered)
-          {
             auto& imguiStyle = ImGui::GetStyle();
             auto previousTooltipFlags = imguiStyle.HoverFlagsForTooltipMouse;
             auto previousTooltipDelay = imguiStyle.HoverDelayNormal;
@@ -1074,7 +812,6 @@ namespace anm2ed::imgui
       ImGui::EndChild();
       ImGui::PopStyleColor();
       ImGui::PopStyleVar(2);
-      index++;
 
       ImGui::PopID();
     };
@@ -1099,44 +836,15 @@ namespace anm2ed::imgui
         {
           ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2());
           ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 0.0f);
-          if (animation && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
-              ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_A, ImGuiInputFlags_RouteFocused))
-          {
-            auto preferredType = reference.itemType == anm2::LAYER || reference.itemType == anm2::NULL_
-                                     ? reference.itemType
-                                     : (items.reference == (int)anm2::LAYER || items.reference == (int)anm2::NULL_
-                                            ? (anm2::Type)items.reference
-                                            : item_selection_type_get());
-            auto targetType = preferredType;
-            if (targetType == anm2::NONE || !item_type_has_visible(targetType))
-            {
-              if (item_type_has_visible(anm2::LAYER))
-                targetType = anm2::LAYER;
-              else if (item_type_has_visible(anm2::NULL_))
-                targetType = anm2::NULL_;
-              else
-                targetType = anm2::NONE;
-            }
-
-            if (targetType != anm2::NONE) item_selection_select_all(targetType);
-          }
-          if (animation && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
-              ImGui::Shortcut(ImGuiKey_Escape, ImGuiInputFlags_RouteFocused))
-          {
-            item_selection_clear();
-            reference_clear();
-          }
           if (ImGui::BeginTable("##Item Table", 1, ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY))
           {
             ImGui::GetCurrentWindow()->Flags |= ImGuiWindowFlags_NoScrollWithMouse;
             ImGui::SetScrollY(scroll.y);
 
-            int index{};
-
             ImGui::TableSetupScrollFreeze(0, 1);
             ImGui::TableSetupColumn("##Items");
 
-            auto item_child_row = [&](anm2::Type type, int id = -1)
+            auto item_child_row = [&](anm2::Type type, int id = -1, int index = 0)
             {
               ImGui::TableNextRow();
               ImGui::TableSetColumnIndex(0);
@@ -1145,29 +853,24 @@ namespace anm2ed::imgui
 
             item_child_row(anm2::NONE);
 
+            int index{};
             if (animation)
             {
-              item_selection_prune();
-              itemSelection.start(itemSelectionIndexMap.size());
+              item_child_row(anm2::ROOT, -1, index++);
 
-              item_child_row(anm2::ROOT);
-
-              for (auto& id : animation->layerOrder)
+              for (auto& id : animation->layerOrder | std::views::reverse)
               {
                 if (!settings.timelineIsShowUnused && animation->layerAnimations[id].frames.empty()) continue;
-                item_child_row(anm2::LAYER, id);
+                item_child_row(anm2::LAYER, id, index++);
               }
 
               for (auto& [id, nullAnimation] : animation->nullAnimations)
               {
                 if (!settings.timelineIsShowUnused && nullAnimation.frames.empty()) continue;
-                item_child_row(anm2::NULL_, id);
+                item_child_row(anm2::NULL_, id, index++);
               }
 
               item_child_row(anm2::TRIGGER);
-
-              itemSelection.finish();
-              item_selection_sync();
             }
 
             if (isHorizontalScroll && ImGui::GetCurrentWindow()->ScrollbarY)
@@ -1202,36 +905,10 @@ namespace anm2ed::imgui
           set_item_tooltip_shortcut(localize.get(TOOLTIP_ADD_ITEM), settings.shortcutAdd);
           ImGui::SameLine();
 
-          auto selectionType = item_selection_type_get();
-          bool hasSelection = !itemSelection.empty() && (selectionType == anm2::LAYER || selectionType == anm2::NULL_);
-          bool hasReferenceItem = document.item_get() != nullptr;
-          ImGui::BeginDisabled(!hasSelection && !hasReferenceItem);
-          {
-            shortcut(manager.chords[SHORTCUT_REMOVE]);
-            if (ImGui::Button(localize.get(BASIC_REMOVE), widgetSize))
-            {
-              auto remove = [&]()
-              {
-                if (hasSelection)
-                {
-                  std::vector<int> ids{};
-                  ids.reserve(itemSelection.size());
-                  for (auto value : itemSelection)
-                    ids.push_back(item_selection_decode(value));
-                  std::sort(ids.begin(), ids.end());
-                  for (auto id : ids)
-                    animation->item_remove(selectionType, id);
-                  item_selection_clear();
-                }
-                else if (reference.itemType == anm2::LAYER || reference.itemType == anm2::NULL_)
-                  animation->item_remove(reference.itemType, reference.itemID);
-                reference_clear();
-              };
-
-              DOCUMENT_EDIT(document, localize.get(EDIT_REMOVE_ITEMS), Document::ITEMS, remove());
-            }
-            set_item_tooltip_shortcut(localize.get(TOOLTIP_REMOVE_ITEMS), settings.shortcutRemove);
-          }
+          ImGui::BeginDisabled(!document.item_get());
+          shortcut(manager.chords[SHORTCUT_REMOVE]);
+          if (ImGui::Button(localize.get(BASIC_REMOVE), widgetSize)) item_remove();
+          set_item_tooltip_shortcut(localize.get(TOOLTIP_REMOVE_ITEMS), settings.shortcutRemove);
           ImGui::EndDisabled();
         }
         ImGui::EndDisabled();
@@ -1443,12 +1120,6 @@ namespace anm2ed::imgui
             if (ImGui::Selectable("##Frame Button", isSelected, ImGuiSelectableFlags_None, buttonSize))
             {
               if (type == anm2::LAYER) document.spritesheet.reference = anm2.content.layers[id].spritesheetID;
-              if (type == anm2::LAYER || type == anm2::NULL_)
-              {
-                itemSelection.clear();
-                itemSelection.insert(item_selection_encode(type, id));
-                item_selection_sync();
-              }
 
               if (type != anm2::TRIGGER)
               {
@@ -1863,7 +1534,7 @@ namespace anm2ed::imgui
 
               frames_child_row(anm2::ROOT);
 
-              for (auto& id : animation->layerOrder)
+              for (auto& id : animation->layerOrder | std::views::reverse)
               {
                 if (auto item = animation->item_get(anm2::LAYER, id); item)
                   if (!settings.timelineIsShowUnused && item->frames.empty()) continue;
@@ -2173,13 +1844,7 @@ namespace anm2ed::imgui
 
         document.change(Document::ITEMS);
 
-        reference = addReference;
-        itemSelection.clear();
-        if (addReference.itemType == anm2::LAYER || addReference.itemType == anm2::NULL_)
-        {
-          itemSelection.insert(item_selection_encode(addReference.itemType, addReference.itemID));
-          item_selection_sync();
-        }
+        reference_set_item(addReference.itemType, addReference.itemID);
 
         item_properties_close();
       }

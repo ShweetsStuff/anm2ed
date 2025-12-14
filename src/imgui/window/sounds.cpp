@@ -210,7 +210,7 @@ namespace anm2ed::imgui
             bool isValid = sound.is_valid();
             auto& soundIcon = isValid ? resources.icons[icon::SOUND] : resources.icons[icon::NONE];
             auto tintColor = !isValid ? ImVec4(1.0f, 0.25f, 0.25f, 1.0f) : ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-            auto pathCStr = sound.path.string().c_str();
+            auto pathString = sound.path.string();
 
             ImGui::SetNextItemSelectionUserData(id);
             ImGui::SetNextItemStorageID(id);
@@ -226,7 +226,7 @@ namespace anm2ed::imgui
               newSoundId = -1;
             }
 
-            auto textWidth = ImGui::CalcTextSize(pathCStr).x;
+            auto textWidth = ImGui::CalcTextSize(pathString.c_str()).x;
             auto tooltipPadding = style.WindowPadding.x * 4.0f;
             auto minWidth = textWidth + style.ItemSpacing.x + tooltipPadding;
 
@@ -236,7 +236,7 @@ namespace anm2ed::imgui
             if (ImGui::BeginItemTooltip())
             {
               ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
-              ImGui::TextUnformatted(pathCStr);
+              ImGui::TextUnformatted(pathString.c_str());
               ImGui::PopFont();
               ImGui::Text("%s: %d", localize.get(BASIC_ID), id);
               if (!isValid)
@@ -261,7 +261,7 @@ namespace anm2ed::imgui
                                        soundChildSize.y - soundChildSize.y / 2 - ImGui::GetTextLineHeight() / 2));
 
             ImGui::TextUnformatted(
-                std::vformat(localize.get(FORMAT_SOUND), std::make_format_args(id, pathCStr)).c_str());
+                std::vformat(localize.get(FORMAT_SOUND), std::make_format_args(id, pathString)).c_str());
           }
 
           ImGui::EndChild();

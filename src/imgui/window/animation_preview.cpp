@@ -430,7 +430,7 @@ namespace anm2ed::imgui
 
       bind();
       viewport_set();
-      clear(manager.isRecording && settings.renderIsRawAnimation ? vec4() : vec4(backgroundColor, 1.0f));
+      clear(manager.isRecording && settings.renderIsRawAnimation ? vec4(0) : vec4(backgroundColor, 1.0f));
 
       if (isAxes) axes_render(shaderAxes, zoom, pan, axesColor);
       if (isGrid) grid_render(shaderGrid, zoom, pan, gridSize, gridOffset, gridColor);
@@ -731,9 +731,13 @@ namespace anm2ed::imgui
         if (tool == tool::MOVE && isMouseRightDown) useTool = tool::SCALE;
         if (tool == tool::SCALE && isMouseRightDown) useTool = tool::MOVE;
 
-        auto& areaType = tool::INFO[useTool].areaType;
-        auto cursor = areaType == tool::ANIMATION_PREVIEW || areaType == tool::ALL ? tool::INFO[useTool].cursor
-                                                                                   : ImGuiMouseCursor_NotAllowed;
+        auto& toolInfo = tool::INFO[useTool];
+        auto& areaType = toolInfo.areaType;
+        bool isAreaAllowed = areaType == tool::ALL || areaType == tool::ANIMATION_PREVIEW;
+        bool isFrameRequired =
+            !(useTool == tool::PAN || useTool == tool::DRAW || useTool == tool::ERASE || useTool == tool::COLOR_PICKER);
+        bool isFrameAvailable = !isFrameRequired || frame;
+        auto cursor = (isAreaAllowed && isFrameAvailable) ? toolInfo.cursor : ImGuiMouseCursor_NotAllowed;
         ImGui::SetMouseCursor(cursor);
         ImGui::SetKeyboardFocusHere();
         if (useTool != tool::MOVE) isMoveDragging = false;
@@ -820,6 +824,26 @@ namespace anm2ed::imgui
             break;
         }
 
+        if ((isMouseDown || isKeyDown) && useTool != tool::PAN)
+        {
+          if (!isAreaAllowed && areaType == tool::SPRITESHEET_EDITOR)
+          {
+            if (ImGui::BeginTooltip())
+            {
+              ImGui::TextUnformatted(localize.get(TEXT_TOOL_SPRITESHEET_EDITOR));
+              ImGui::EndTooltip();
+            }
+          }
+          else if (isFrameRequired && !isFrameAvailable)
+          {
+            if (ImGui::BeginTooltip())
+            {
+              ImGui::TextUnformatted(localize.get(TEXT_SELECT_FRAME));
+              ImGui::EndTooltip();
+            }
+          }
+        }
+
         if (mouseWheel != 0 || isZoomIn || isZoomOut)
         {
           auto previousZoom = zoom;
@@ -829,7 +853,7 @@ namespace anm2ed::imgui
       }
     }
 
-    if (ImGui::BeginPopupContextWindow("##Animation Preview Context Menu", ImGuiMouseButton_Right))
+    if (tool == tool::PAN && ImGui::BeginPopupContextWindow("##Animation Preview Context Menu", ImGuiMouseButton_Right))
     {
       if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_UNDO), settings.shortcutUndo.c_str(), false,
                           document.is_able_to_undo()))
