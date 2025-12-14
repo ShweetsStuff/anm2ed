@@ -26,7 +26,9 @@ namespace anm2ed
       if (parent.empty()) return;
       std::error_code ec{};
       std::filesystem::create_directories(parent, ec);
-      if (ec) logger.warning(std::format("Could not create directory for {}: {}", path.string(), ec.message()));
+      if (ec)
+        logger.warning(
+            std::format("Could not create directory for {}: {}", filesystem::path_to_utf8(path), ec.message()));
     }
   }
 
@@ -70,9 +72,9 @@ namespace anm2ed
 
   void Manager::open(const std::filesystem::path& path, bool isNew, bool isRecent)
   {
-    const auto pathString = path.string();
     std::string errorString{};
-    documents.emplace_back(pathString, isNew, &errorString);
+    documents.emplace_back(path, isNew, &errorString);
+    auto pathString = filesystem::path_to_utf8(path);
 
     auto& document = documents.back();
     if (!document.is_valid())
@@ -103,7 +105,7 @@ namespace anm2ed
       std::string errorString{};
       document->path = !path.empty() ? path : document->path;
       document->path.replace_extension(".anm2");
-      document->save(document->path.string(), &errorString);
+      document->save(document->path, &errorString);
       recent_file_add(document->path);
     }
   }
@@ -133,7 +135,9 @@ namespace anm2ed
     {
       std::error_code ec{};
       std::filesystem::remove(autosavePath, ec);
-      if (ec) logger.warning(std::format("Could not remove autosave file {}: {}", autosavePath.string(), ec.message()));
+      if (ec)
+        logger.warning(std::format("Could not remove autosave file {}: {}", filesystem::path_to_utf8(autosavePath),
+                                   ec.message()));
     }
 
     autosave_files_write();
@@ -248,7 +252,7 @@ namespace anm2ed
     std::vector<std::filesystem::path> ordered;
     ordered.reserve(orderedEntries.size());
     for (const auto& [pathString, _] : orderedEntries)
-      ordered.emplace_back(pathString);
+      ordered.emplace_back(filesystem::path_from_utf8(pathString));
     return ordered;
   }
 
@@ -258,11 +262,11 @@ namespace anm2ed
     std::error_code ec{};
     if (!std::filesystem::exists(path, ec))
     {
-      logger.warning(std::format("Skipping missing recent file: {}", path.string()));
+      logger.warning(std::format("Skipping missing recent file: {}", filesystem::path_to_utf8(path)));
       return;
     }
 
-    recentFiles[path.string()] = ++recentFilesCounter;
+    recentFiles[filesystem::path_to_utf8(path)] = ++recentFilesCounter;
     recent_files_trim();
     recent_files_write();
   }
@@ -274,11 +278,12 @@ namespace anm2ed
     std::ifstream file(path);
     if (!file)
     {
-      logger.warning(std::format("Could not load recent files from: {}. Skipping...", path.string()));
+      logger.warning(
+          std::format("Could not load recent files from: {}. Skipping...", filesystem::path_to_utf8(path)));
       return;
     }
 
-    logger.info(std::format("Loading recent files from: {}", path.string()));
+    logger.info(std::format("Loading recent files from: {}", filesystem::path_to_utf8(path)));
 
     std::string line{};
     std::vector<std::string> loaded{};
@@ -288,14 +293,14 @@ namespace anm2ed
     {
       if (line.empty()) continue;
       if (!line.empty() && line.back() == '\r') line.pop_back();
-      std::filesystem::path entry = line;
+      auto entry = filesystem::path_from_utf8(line);
       std::error_code ec{};
       if (!std::filesystem::exists(entry, ec))
       {
         logger.warning(std::format("Skipping missing recent file: {}", line));
         continue;
       }
-      auto entryString = entry.string();
+      auto entryString = filesystem::path_to_utf8(entry);
       if (!seen.insert(entryString).second) continue;
       loaded.emplace_back(std::move(entryString));
     }
@@ -319,13 +324,14 @@ namespace anm2ed
 
     if (!file.is_open())
     {
-      logger.warning(std::format("Could not write recent files to: {}. Skipping...", path.string()));
+      logger.warning(
+          std::format("Could not write recent files to: {}. Skipping...", filesystem::path_to_utf8(path)));
       return;
     }
 
     auto ordered = recent_files_ordered();
     for (auto& entry : ordered)
-      file << entry.string() << '\n';
+      file << filesystem::path_to_utf8(entry) << '\n';
   }
 
   void Manager::recent_files_clear()
@@ -339,10 +345,12 @@ namespace anm2ed
   {
     for (auto& path : autosaveFiles)
     {
-      auto fileName = path.filename().string();
-      if (!fileName.empty() && fileName.front() == '.') fileName.erase(fileName.begin());
+      auto fileNamePath = path.filename();
+      auto fileNameUtf8 = filesystem::path_to_utf8(fileNamePath);
+      if (!fileNameUtf8.empty() && fileNameUtf8.front() == '.') fileNameUtf8.erase(fileNameUtf8.begin());
+      fileNamePath = filesystem::path_from_utf8(fileNameUtf8);
 
-      auto restorePath = path.parent_path() / fileName;
+      auto restorePath = path.parent_path() / fileNamePath;
       restorePath.replace_extension("");
       open(path, false, false);
 
@@ -364,11 +372,12 @@ namespace anm2ed
     std::ifstream file(path);
     if (!file)
     {
-      logger.warning(std::format("Could not load autosave files from: {}. Skipping...", path.string()));
+      logger.warning(
+          std::format("Could not load autosave files from: {}. Skipping...", filesystem::path_to_utf8(path)));
       return;
     }
 
-    logger.info(std::format("Loading autosave files from: {}", path.string()));
+    logger.info(std::format("Loading autosave files from: {}", filesystem::path_to_utf8(path)));
 
     std::string line{};
 
@@ -376,7 +385,7 @@ namespace anm2ed
     {
       if (line.empty()) continue;
       if (!line.empty() && line.back() == '\r') line.pop_back();
-      std::filesystem::path entry = line;
+      auto entry = filesystem::path_from_utf8(line);
       if (std::find(autosaveFiles.begin(), autosaveFiles.end(), entry) != autosaveFiles.end()) continue;
       autosaveFiles.emplace_back(std::move(entry));
     }
@@ -389,7 +398,7 @@ namespace anm2ed
     autosaveWriteFile.open(autosave_path_get(), std::ofstream::out | std::ofstream::trunc);
 
     for (auto& path : autosaveFiles)
-      autosaveWriteFile << path.string() << "\n";
+      autosaveWriteFile << filesystem::path_to_utf8(path) << "\n";
 
     autosaveWriteFile.close();
   }

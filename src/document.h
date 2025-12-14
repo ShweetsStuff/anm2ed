@@ -58,18 +58,19 @@ namespace anm2ed
     uint64_t saveHash{};
     uint64_t autosaveHash{};
     double lastAutosaveTime{};
+    bool isValid{true};
     bool isOpen{true};
     bool isForceDirty{false};
     bool isAnimationPreviewSet{false};
     bool isSpritesheetEditorSet{false};
 
-    Document(anm2::Anm2& anm2, const std::string&);
-    Document(const std::string&, bool = false, std::string* = nullptr);
+    Document(anm2::Anm2& anm2, const std::filesystem::path&);
+    Document(const std::filesystem::path&, bool = false, std::string* = nullptr);
     Document(const Document&) = delete;
     Document& operator=(const Document&) = delete;
     Document(Document&&) noexcept;
     Document& operator=(Document&&) noexcept;
-    bool save(const std::string& = {}, std::string* = nullptr);
+    bool save(const std::filesystem::path& = {}, std::string* = nullptr);
     void hash_set();
     void clean();
     void change(ChangeType);
@@ -84,8 +85,8 @@ namespace anm2ed
     anm2::Spritesheet* spritesheet_get();
     anm2::Animation* animation_get();
 
-    void spritesheet_add(const std::string&);
-    void sound_add(const std::string&);
+    void spritesheet_add(const std::filesystem::path&);
+    void sound_add(const std::filesystem::path&);
 
     bool autosave(std::string* = nullptr);
     std::filesystem::path autosave_path_get();

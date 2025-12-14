@@ -5,6 +5,7 @@
 
 using namespace anm2ed::util;
 using namespace glm;
+namespace filesystem = anm2ed::util::filesystem;
 
 namespace anm2ed
 {
@@ -121,8 +122,9 @@ DockSpace             ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,994 Spl
 
   Settings::Settings(const std::filesystem::path& path)
   {
+    auto pathUtf8 = filesystem::path_to_utf8(path);
     if (filesystem::path_is_exist(path))
-      logger.info(std::format("Using settings from: {}", path.string()));
+      logger.info(std::format("Using settings from: {}", pathUtf8));
     else
     {
       logger.warning("Settings file does not exist; using default");
@@ -133,7 +135,7 @@ DockSpace             ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,994 Spl
     std::ifstream file(path);
     if (!file.is_open())
     {
-      logger.error(std::format("Failed to open settings file: {}", path.string()));
+      logger.error(std::format("Failed to open settings file: {}", pathUtf8));
       return;
     }
 

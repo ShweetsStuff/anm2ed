@@ -34,7 +34,7 @@ namespace anm2ed::imgui
     auto add = [&](const std::filesystem::path& path)
     {
       if (path.empty()) return;
-      document.spritesheet_add(path.string());
+      document.spritesheet_add(path);
       newSpritesheetId = document.spritesheet.reference;
     };
 
@@ -87,7 +87,7 @@ namespace anm2ed::imgui
       {
         auto& id = *selection.begin();
         anm2::Spritesheet& spritesheet = anm2.content.spritesheets[id];
-        spritesheet = anm2::Spritesheet(document.directory_get().string(), path);
+        spritesheet = anm2::Spritesheet(document.directory_get(), path);
         auto pathString = spritesheet.path.string();
         toasts.push(std::vformat(localize.get(TOAST_REPLACE_SPRITESHEET), std::make_format_args(id, pathString)));
         logger.info(std::vformat(localize.get(TOAST_REPLACE_SPRITESHEET, anm2ed::ENGLISH),
@@ -105,7 +105,7 @@ namespace anm2ed::imgui
       {
         anm2::Spritesheet& spritesheet = anm2.content.spritesheets[id];
         auto pathString = spritesheet.path.string();
-        if (spritesheet.save(document.directory_get().string()))
+        if (spritesheet.save(document.directory_get()))
         {
           toasts.push(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET), std::make_format_args(id, pathString)));
           logger.info(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET, anm2ed::ENGLISH),
@@ -145,7 +145,7 @@ namespace anm2ed::imgui
       {
         std::string errorString{};
         document.snapshot(localize.get(EDIT_PASTE_SPRITESHEETS));
-        if (anm2.spritesheets_deserialize(clipboard.get(), document.directory_get().string(), merge::APPEND,
+        if (anm2.spritesheets_deserialize(clipboard.get(), document.directory_get(), merge::APPEND,
                                           &errorString))
           document.change(Document::SPRITESHEETS);
         else

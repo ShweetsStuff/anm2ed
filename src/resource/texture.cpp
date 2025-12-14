@@ -21,11 +21,13 @@
   #pragma GCC diagnostic pop
 #endif
 
+#include "filesystem_.h"
 #include "math_.h"
 
 using namespace anm2ed::resource::texture;
 using namespace anm2ed::util::math;
 using namespace glm;
+namespace filesystem = anm2ed::util::filesystem;
 
 namespace anm2ed::resource
 {
@@ -116,7 +118,8 @@ namespace anm2ed::resource
 
   Texture::Texture(const std::filesystem::path& pngPath)
   {
-    if (const uint8_t* data = stbi_load(pngPath.string().c_str(), &size.x, &size.y, nullptr, CHANNELS); data)
+    auto pngPathUtf8 = filesystem::path_to_utf8(pngPath);
+    if (const uint8_t* data = stbi_load(pngPathUtf8.c_str(), &size.x, &size.y, nullptr, CHANNELS); data)
     {
       upload(data);
       stbi_image_free((void*)data);
@@ -125,7 +128,8 @@ namespace anm2ed::resource
 
   bool Texture::write_png(const std::filesystem::path& path)
   {
-    return stbi_write_png(path.string().c_str(), size.x, size.y, CHANNELS, this->pixels.data(), size.x * CHANNELS);
+    auto pathUtf8 = filesystem::path_to_utf8(path);
+    return stbi_write_png(pathUtf8.c_str(), size.x, size.y, CHANNELS, this->pixels.data(), size.x * CHANNELS);
   }
 
   vec4 Texture::pixel_read(vec2 position) const

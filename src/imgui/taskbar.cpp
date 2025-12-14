@@ -268,7 +268,7 @@ namespace anm2ed::imgui
         if (ImGui::MenuItem(localize.get(LABEL_SAVE_AS), settings.shortcutSaveAs.c_str(), false, document))
           dialog.file_save(dialog::ANM2_SAVE);
         if (ImGui::MenuItem(localize.get(LABEL_EXPLORE_XML_LOCATION), nullptr, false, document))
-          dialog.file_explorer_open(document->directory_get().string());
+          dialog.file_explorer_open(document->directory_get());
 
         ImGui::Separator();
         if (ImGui::MenuItem(localize.get(LABEL_EXIT), settings.shortcutExit.c_str())) isQuitting = true;

@@ -27,6 +27,7 @@ namespace anm2ed::anm2
   class Anm2
   {
   public:
+    bool isValid{true};
     Info info{};
     Content content{};
     Animations animations{};

@@ -26,7 +26,7 @@ namespace anm2ed
     dialog = Dialog(window);
 
     for (const auto& argument : arguments)
-      manager.open(argument);
+      manager.open(filesystem::path_from_utf8(argument));
 
     manager.chords_set(settings);
   }
@@ -44,10 +44,11 @@ namespace anm2ed
       {
         case SDL_EVENT_DROP_FILE:
         {
-          auto droppedFile = event.drop.data;
-          if (filesystem::path_is_extension(droppedFile, "anm2"))
+          std::string droppedFile = event.drop.data ? event.drop.data : "";
+          if (droppedFile.empty()) break;
+          auto droppedPath = filesystem::path_from_utf8(droppedFile);
+          if (filesystem::path_is_extension(droppedPath, "anm2"))
           {
-            std::filesystem::path droppedPath{droppedFile};
             if (manager.documents.empty())
               manager.open(droppedPath);
             else
@@ -59,21 +60,21 @@ namespace anm2ed
             }
             SDL_FlashWindow(window, SDL_FLASH_UNTIL_FOCUSED);
           }
-          else if (filesystem::path_is_extension(droppedFile, "png"))
+          else if (filesystem::path_is_extension(droppedPath, "png"))
           {
             if (auto document = manager.get())
-              document->spritesheet_add(droppedFile);
+              document->spritesheet_add(droppedPath);
             else
             {
               toasts.push(localize.get(TOAST_ADD_SPRITESHEET_FAILED));
               logger.warning(localize.get(TOAST_ADD_SPRITESHEET_FAILED, anm2ed::ENGLISH));
             }
           }
-          else if (filesystem::path_is_extension(droppedFile, "wav") ||
-                   filesystem::path_is_extension(droppedFile, "ogg"))
+          else if (filesystem::path_is_extension(droppedPath, "wav") ||
+                   filesystem::path_is_extension(droppedPath, "ogg"))
           {
             if (auto document = manager.get())
-              document->sound_add(droppedFile);
+              document->sound_add(droppedPath);
             else
             {
               toasts.push(localize.get(TOAST_ADD_SOUND_FAILED));
@@ -84,10 +85,12 @@ namespace anm2ed
         }
         case SDL_EVENT_USER: // Opening files
         {
-          auto droppedFile = event.drop.data;
-          if (filesystem::path_is_extension(droppedFile, "anm2"))
+          std::string droppedFile = event.drop.data ? event.drop.data : "";
+          if (droppedFile.empty()) break;
+          auto droppedPath = filesystem::path_from_utf8(droppedFile);
+          if (filesystem::path_is_extension(droppedPath, "anm2"))
           {
-            manager.open(droppedFile);
+            manager.open(droppedPath);
             SDL_FlashWindow(window, SDL_FLASH_UNTIL_FOCUSED);
           }
           break;

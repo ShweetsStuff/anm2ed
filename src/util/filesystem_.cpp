@@ -22,9 +22,10 @@ namespace anm2ed::util::filesystem
 
   std::filesystem::path path_preferences_get()
   {
-    auto path = SDL_GetPrefPath(nullptr, "anm2ed");
-    auto filePath = std::filesystem::path(path);
-    SDL_free(path);
+    auto sdlPath = SDL_GetPrefPath(nullptr, "anm2ed");
+    if (!sdlPath) return {};
+    auto filePath = path_from_utf8(sdlPath);
+    SDL_free(sdlPath);
     return filePath;
   }
 
@@ -46,6 +47,17 @@ namespace anm2ed::util::filesystem
     return std::filesystem::path(native);
   }
 
+  std::string path_to_utf8(const std::filesystem::path& path)
+  {
+    auto u8 = path.u8string();
+    return std::string(u8.begin(), u8.end());
+  }
+
+  std::filesystem::path path_from_utf8(const std::string& utf8)
+  {
+    return std::filesystem::path(std::u8string(utf8.begin(), utf8.end()));
+  }
+
   bool path_is_exist(const std::filesystem::path& path)
   {
     std::error_code errorCode;
@@ -54,9 +66,9 @@ namespace anm2ed::util::filesystem
 
   bool path_is_extension(const std::filesystem::path& path, const std::string& extension)
   {
-    auto e = std::filesystem::path(path).extension().string();
-    std::transform(e.begin(), e.end(), e.begin(), ::tolower);
-    return e == ("." + extension);
+    auto extensionUtf8 = path_to_utf8(std::filesystem::path(path).extension());
+    std::transform(extensionUtf8.begin(), extensionUtf8.end(), extensionUtf8.begin(), ::tolower);
+    return extensionUtf8 == ("." + extension);
   }
 
   std::filesystem::path path_lower_case_backslash_handle(const std::filesystem::path& path)

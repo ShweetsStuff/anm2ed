@@ -24,20 +24,22 @@ namespace anm2ed::anm2
     XMLDocument document;
 
 #ifdef _WIN32
-    FILE* file = _wfopen(path.native().c_str(), L"wb");
+    FILE* file = _wfopen(path.native().c_str(), L"rb");
 #else
-    FILE* file = fopen(path.c_str(), "wb");
+    FILE* file = fopen(path.c_str(), "rb");
 #endif
 
     if (!file)
     {
       if (errorString) *errorString = localize.get(ERROR_FILE_NOT_FOUND);
+      isValid = false;
       return;
     }
 
     if (document.LoadFile(file) != XML_SUCCESS)
     {
       if (errorString) *errorString = document.ErrorStr();
+      isValid = false;
       return;
     }
 

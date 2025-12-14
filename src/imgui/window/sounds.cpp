@@ -94,7 +94,7 @@ namespace anm2ed::imgui
       {
         auto& id = *selection.begin();
         anm2::Sound& sound = anm2.content.sounds[id];
-        sound = anm2::Sound(document.directory_get().string(), path);
+        sound = anm2::Sound(document.directory_get(), path);
         auto pathString = sound.path.string();
         toasts.push(std::vformat(localize.get(TOAST_REPLACE_SOUND), std::make_format_args(id, pathString)));
         logger.info(
@@ -129,7 +129,7 @@ namespace anm2ed::imgui
       {
         std::string errorString{};
         document.snapshot(localize.get(TOAST_SOUNDS_PASTE));
-        if (anm2.sounds_deserialize(clipboard.get(), document.directory_get().string(), merge::APPEND, &errorString))
+        if (anm2.sounds_deserialize(clipboard.get(), document.directory_get(), merge::APPEND, &errorString))
           document.change(Document::SOUNDS);
         else
         {

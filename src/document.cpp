@@ -4,6 +4,7 @@
 
 #include <format>
 
+#include "filesystem_.h"
 #include "log.h"
 #include "strings.h"
 #include "toast.h"
@@ -11,33 +12,47 @@
 using namespace anm2ed::anm2;
 using namespace anm2ed::imgui;
 using namespace anm2ed::types;
-
 using namespace glm;
+
+namespace filesystem = anm2ed::util::filesystem;
 
 namespace anm2ed
 {
-  Document::Document(Anm2& anm2, const std::string& path)
+  Document::Document(Anm2& anm2, const std::filesystem::path& path)
   {
     this->anm2 = std::move(anm2);
     this->path = path;
+    isValid = this->anm2.isValid;
+    if (!isValid) return;
     clean();
     change(Document::ALL);
   }
 
-  Document::Document(const std::string& path, bool isNew, std::string* errorString)
+  Document::Document(const std::filesystem::path& path, bool isNew, std::string* errorString)
   {
     if (isNew)
     {
       anm2 = anm2::Anm2();
-      if (!save(path)) return;
+      if (!save(path, errorString))
+      {
+        isValid = false;
+        this->path.clear();
+        return;
+      }
     }
     else
     {
       anm2 = Anm2(path, errorString);
-      if (errorString && !errorString->empty()) return;
+      if (!anm2.isValid)
+      {
+        isValid = false;
+        this->path.clear();
+        return;
+      }
     }
 
     this->path = path;
+    isValid = anm2.isValid;
     clean();
     change(Document::ALL);
   }
@@ -49,8 +64,8 @@ namespace anm2ed
         spritesheet(current.spritesheet), frames(current.frames), message(current.message),
         previewZoom(other.previewZoom), previewPan(other.previewPan), editorPan(other.editorPan),
         editorZoom(other.editorZoom), overlayIndex(other.overlayIndex), hash(other.hash), saveHash(other.saveHash),
-        autosaveHash(other.autosaveHash), lastAutosaveTime(other.lastAutosaveTime), isOpen(other.isOpen),
-        isForceDirty(other.isForceDirty), isAnimationPreviewSet(other.isAnimationPreviewSet),
+        autosaveHash(other.autosaveHash), lastAutosaveTime(other.lastAutosaveTime), isValid(other.isValid),
+        isOpen(other.isOpen), isForceDirty(other.isForceDirty), isAnimationPreviewSet(other.isAnimationPreviewSet),
         isSpritesheetEditorSet(other.isSpritesheetEditorSet)
   {
   }
@@ -70,6 +85,7 @@ namespace anm2ed
       saveHash = other.saveHash;
       autosaveHash = other.autosaveHash;
       lastAutosaveTime = other.lastAutosaveTime;
+      isValid = other.isValid;
       isOpen = other.isOpen;
       isForceDirty = other.isForceDirty;
       isAnimationPreviewSet = other.isAnimationPreviewSet;
@@ -78,25 +94,26 @@ namespace anm2ed
     return *this;
   }
 
-  bool Document::save(const std::string& path, std::string* errorString)
+  bool Document::save(const std::filesystem::path& path, std::string* errorString)
   {
-    this->path = !path.empty() ? path : this->path.string();
+    this->path = !path.empty() ? path : this->path;
 
-    auto absolutePath = this->path.string();
+    auto absolutePath = this->path;
+    auto absolutePathUtf8 = filesystem::path_to_utf8(absolutePath);
     if (anm2.serialize(absolutePath, errorString))
     {
-      toasts.push(std::vformat(localize.get(TOAST_SAVE_DOCUMENT), std::make_format_args(absolutePath)));
-      logger.info(
-          std::vformat(localize.get(TOAST_SAVE_DOCUMENT, anm2ed::ENGLISH), std::make_format_args(absolutePath)));
+      toasts.push(std::vformat(localize.get(TOAST_SAVE_DOCUMENT), std::make_format_args(absolutePathUtf8)));
+      logger.info(std::vformat(localize.get(TOAST_SAVE_DOCUMENT, anm2ed::ENGLISH),
+                               std::make_format_args(absolutePathUtf8)));
       clean();
       return true;
     }
     else if (errorString)
     {
-      toasts.push(
-          std::vformat(localize.get(TOAST_SAVE_DOCUMENT_FAILED), std::make_format_args(absolutePath, *errorString)));
+      toasts.push(std::vformat(localize.get(TOAST_SAVE_DOCUMENT_FAILED),
+                               std::make_format_args(absolutePathUtf8, *errorString)));
       logger.error(std::vformat(localize.get(TOAST_SAVE_DOCUMENT_FAILED, anm2ed::ENGLISH),
-                                std::make_format_args(absolutePath, *errorString)));
+                                std::make_format_args(absolutePathUtf8, *errorString)));
     }
 
     return false;
@@ -104,39 +121,41 @@ namespace anm2ed
 
   std::filesystem::path Document::autosave_path_get()
   {
-    return directory_get() / std::string("." + filename_get().string() + ".autosave");
+    auto fileNameUtf8 = filesystem::path_to_utf8(filename_get());
+    auto autosaveNameUtf8 = "." + fileNameUtf8 + ".autosave";
+    return directory_get() / filesystem::path_from_utf8(autosaveNameUtf8);
   }
 
   std::filesystem::path Document::path_from_autosave_get(std::filesystem::path& path)
   {
-    auto fileName = path.filename().string();
+    auto fileName = path.filename().u8string();
     if (!fileName.empty() && fileName.front() == '.') fileName.erase(fileName.begin());
 
-    auto restorePath = path.parent_path() / fileName;
+    auto restorePath = path.parent_path() / std::filesystem::path(std::u8string(fileName.begin(), fileName.end()));
     restorePath.replace_extension("");
 
-    return path;
+    return restorePath;
   }
 
   bool Document::autosave(std::string* errorString)
   {
     auto autosavePath = autosave_path_get();
-    auto autosavePathString = autosavePath.string();
-    if (anm2.serialize(autosavePathString, errorString))
+    auto autosavePathUtf8 = filesystem::path_to_utf8(autosavePath);
+    if (anm2.serialize(autosavePath, errorString))
     {
       autosaveHash = hash;
       lastAutosaveTime = 0.0f;
       toasts.push(localize.get(TOAST_AUTOSAVING));
       logger.info(localize.get(TOAST_AUTOSAVING, anm2ed::ENGLISH));
-      logger.info(std::format("Autosaved document to: {}", autosavePath.string()));
+      logger.info(std::format("Autosaved document to: {}", autosavePathUtf8));
       return true;
     }
     else if (errorString)
     {
-      toasts.push(
-          std::vformat(localize.get(TOAST_AUTOSAVE_FAILED), std::make_format_args(autosavePathString, *errorString)));
+      toasts.push(std::vformat(localize.get(TOAST_AUTOSAVE_FAILED),
+                               std::make_format_args(autosavePathUtf8, *errorString)));
       logger.error(std::vformat(localize.get(TOAST_AUTOSAVE_FAILED, anm2ed::ENGLISH),
-                                std::make_format_args(autosavePathString, *errorString)));
+                                std::make_format_args(autosavePathUtf8, *errorString)));
     }
 
     return false;
@@ -223,7 +242,7 @@ namespace anm2ed
   bool Document::is_autosave_dirty() const { return hash != autosaveHash; }
   std::filesystem::path Document::directory_get() const { return path.parent_path(); }
   std::filesystem::path Document::filename_get() const { return path.filename(); }
-  bool Document::is_valid() const { return !path.empty(); }
+  bool Document::is_valid() const { return isValid && !path.empty(); }
 
   anm2::Frame* Document::frame_get()
   {
@@ -237,43 +256,45 @@ namespace anm2ed
   anm2::Animation* Document::animation_get() { return anm2.animation_get(reference.animationIndex); }
   anm2::Spritesheet* Document::spritesheet_get() { return anm2.spritesheet_get(spritesheet.reference); }
 
-  void Document::spritesheet_add(const std::string& path)
+  void Document::spritesheet_add(const std::filesystem::path& path)
   {
     auto add = [&]()
     {
       int id{};
       auto pathCopy = path;
-      if (anm2.spritesheet_add(directory_get().string(), path, id))
+      if (anm2.spritesheet_add(directory_get(), path, id))
       {
         anm2::Spritesheet& spritesheet = anm2.content.spritesheets[id];
-        auto path = spritesheet.path.string();
+        auto pathString = filesystem::path_to_utf8(spritesheet.path);
         this->spritesheet.selection = {id};
         this->spritesheet.reference = id;
-        toasts.push(std::vformat(localize.get(TOAST_SPRITESHEET_INITIALIZED), std::make_format_args(id, path)));
+        toasts.push(
+            std::vformat(localize.get(TOAST_SPRITESHEET_INITIALIZED), std::make_format_args(id, pathString)));
         logger.info(std::vformat(localize.get(TOAST_SPRITESHEET_INITIALIZED, anm2ed::ENGLISH),
-                                 std::make_format_args(id, path)));
+                                 std::make_format_args(id, pathString)));
       }
       else
       {
-        toasts.push(std::vformat(localize.get(TOAST_SPRITESHEET_INIT_FAILED), std::make_format_args(pathCopy)));
+        auto pathUtf8 = filesystem::path_to_utf8(pathCopy);
+        toasts.push(std::vformat(localize.get(TOAST_SPRITESHEET_INIT_FAILED), std::make_format_args(pathUtf8)));
         logger.error(std::vformat(localize.get(TOAST_SPRITESHEET_INIT_FAILED, anm2ed::ENGLISH),
-                                  std::make_format_args(pathCopy)));
+                                  std::make_format_args(pathUtf8)));
       }
     };
 
     DOCUMENT_EDIT_PTR(this, localize.get(EDIT_ADD_SPRITESHEET), Document::SPRITESHEETS, add());
   }
 
-  void Document::sound_add(const std::string& path)
+  void Document::sound_add(const std::filesystem::path& path)
   {
     auto add = [&]()
     {
       int id{};
       auto pathCopy = path;
-      if (anm2.sound_add(directory_get().string(), path, id))
+      if (anm2.sound_add(directory_get(), path, id))
       {
         auto& soundInfo = anm2.content.sounds[id];
-        auto soundPath = soundInfo.path.string();
+        auto soundPath = filesystem::path_to_utf8(soundInfo.path);
         sound.selection = {id};
         sound.reference = id;
         toasts.push(std::vformat(localize.get(TOAST_SOUND_INITIALIZED), std::make_format_args(id, soundPath)));
@@ -282,9 +303,10 @@ namespace anm2ed
       }
       else
       {
-        toasts.push(std::vformat(localize.get(TOAST_SOUND_INITIALIZE_FAILED), std::make_format_args(pathCopy)));
+        auto pathUtf8 = filesystem::path_to_utf8(pathCopy);
+        toasts.push(std::vformat(localize.get(TOAST_SOUND_INITIALIZE_FAILED), std::make_format_args(pathUtf8)));
         logger.error(std::vformat(localize.get(TOAST_SOUND_INITIALIZE_FAILED, anm2ed::ENGLISH),
-                                  std::make_format_args(pathCopy)));
+                                  std::make_format_args(pathUtf8)));
       }
     };
 
