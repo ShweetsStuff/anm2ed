@@ -14,6 +14,7 @@
 
 #include <imgui/imgui.h>
 
+#include "filesystem_.h"
 #include "log.h"
 #include "math_.h"
 #include "render.h"
@@ -31,6 +32,7 @@ using namespace anm2ed::types;
 using namespace anm2ed::canvas;
 using namespace anm2ed::util;
 using namespace glm;
+namespace filesystem = anm2ed::util::filesystem;
 
 namespace anm2ed::imgui
 {
@@ -874,7 +876,7 @@ namespace anm2ed::imgui
 
       if (dialog.is_selected(dialog::FFMPEG_PATH_SET))
       {
-        ffmpegPath = dialog.path.string();
+        ffmpegPath = filesystem::path_to_utf8(dialog.path);
         dialog.reset();
       }
 
@@ -892,7 +894,7 @@ namespace anm2ed::imgui
 
       if (dialog.is_selected(dialogType))
       {
-        path = dialog.path.string();
+        path = filesystem::path_to_utf8(dialog.path);
         dialog.reset();
       }
 

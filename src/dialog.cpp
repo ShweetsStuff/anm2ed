@@ -10,6 +10,7 @@
 #endif
 
 #include <cstdlib>
+#include <cstring>
 #include <format>
 
 #include "filesystem_.h"
@@ -22,11 +23,14 @@ namespace anm2ed::dialog
 
     if (filelist && filelist[0] && strlen(filelist[0]) > 0)
     {
-      self->path = filelist[0];
+      self->path = anm2ed::util::filesystem::path_from_utf8(filelist[0]);
       self->selectedFilter = filter;
     }
     else
+    {
       self->selectedFilter = -1;
+      self->path.clear();
+    }
   }
 }
 

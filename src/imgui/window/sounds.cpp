@@ -34,7 +34,7 @@ namespace anm2ed::imgui
       auto behavior = [&]()
       {
         int id{};
-        auto pathString = path.string();
+        auto pathString = filesystem::path_to_utf8(path);
         if (anm2.sound_add(document.directory_get(), path, id))
         {
           selection = {id};
@@ -76,7 +76,7 @@ namespace anm2ed::imgui
         {
           anm2::Sound& sound = anm2.content.sounds[id];
           sound.reload(document.directory_get());
-          auto pathString = sound.path.string();
+          auto pathString = filesystem::path_to_utf8(sound.path);
           toasts.push(std::vformat(localize.get(TOAST_RELOAD_SOUND), std::make_format_args(id, pathString)));
           logger.info(
               std::vformat(localize.get(TOAST_RELOAD_SOUND, anm2ed::ENGLISH), std::make_format_args(id, pathString)));
@@ -95,7 +95,7 @@ namespace anm2ed::imgui
         auto& id = *selection.begin();
         anm2::Sound& sound = anm2.content.sounds[id];
         sound = anm2::Sound(document.directory_get(), path);
-        auto pathString = sound.path.string();
+        auto pathString = filesystem::path_to_utf8(sound.path);
         toasts.push(std::vformat(localize.get(TOAST_REPLACE_SOUND), std::make_format_args(id, pathString)));
         logger.info(
             std::vformat(localize.get(TOAST_REPLACE_SOUND, anm2ed::ENGLISH), std::make_format_args(id, pathString)));
@@ -215,7 +215,7 @@ namespace anm2ed::imgui
             bool isValid = sound.is_valid();
             auto& soundIcon = isValid ? resources.icons[icon::SOUND] : resources.icons[icon::NONE];
             auto tintColor = !isValid ? ImVec4(1.0f, 0.25f, 0.25f, 1.0f) : ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-            auto pathString = sound.path.string();
+            auto pathString = filesystem::path_to_utf8(sound.path);
 
             ImGui::SetNextItemSelectionUserData(id);
             ImGui::SetNextItemStorageID(id);

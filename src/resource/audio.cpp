@@ -3,7 +3,12 @@
 #include <SDL3/SDL_filesystem.h>
 #include <SDL3/SDL_properties.h>
 #include <SDL3/SDL_stdinc.h>
+#include <cstdio>
 #include <utility>
+
+#include "filesystem_.h"
+
+namespace filesystem = anm2ed::util::filesystem;
 
 namespace anm2ed::resource
 {
@@ -17,16 +22,25 @@ namespace anm2ed::resource
   {
     if (path.empty()) return;
 
-    size_t fileSize = 0;
-    void* fileData = SDL_LoadFile(path.string().c_str(), &fileSize);
-    if (!fileData || fileSize == 0)
+    filesystem::File file(path, "rb");
+    if (!file) return;
+
+    if (std::fseek(file.get(), 0, SEEK_END) != 0) return;
+    auto size = std::ftell(file.get());
+    if (size <= 0)
     {
-      if (fileData) SDL_free(fileData);
       return;
     }
+    std::rewind(file.get());
 
-    data.assign(static_cast<unsigned char*>(fileData), static_cast<unsigned char*>(fileData) + fileSize);
-    SDL_free(fileData);
+    data.resize(static_cast<std::size_t>(size));
+    auto read = std::fread(data.data(), 1, data.size(), file.get());
+    if (read == 0)
+    {
+      data.clear();
+      return;
+    }
+    data.resize(read);
 
     SDL_IOStream* io = SDL_IOFromConstMem(data.data(), data.size());
     if (!io)
