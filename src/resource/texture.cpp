@@ -1,7 +1,6 @@
 #include "texture.h"
 
 #include <filesystem>
-#include <fstream>
 #include <lunasvg.h>
 #include <memory>
 #include <utility>
@@ -22,30 +21,13 @@
   #pragma GCC diagnostic pop
 #endif
 
+#include "filesystem_.h"
 #include "math_.h"
 
 using namespace anm2ed::resource::texture;
 using namespace anm2ed::util::math;
 using namespace glm;
-
-namespace
-{
-  std::vector<uint8_t> file_read_all(const std::filesystem::path& path)
-  {
-    std::ifstream file(path, std::ios::binary);
-    if (!file) return {};
-
-    file.seekg(0, std::ios::end);
-    auto size = file.tellg();
-    if (size <= 0) return {};
-
-    std::vector<uint8_t> buffer(static_cast<std::size_t>(size));
-    file.seekg(0, std::ios::beg);
-    if (!file.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(size))) return {};
-
-    return buffer;
-  }
-}
+namespace filesystem = anm2ed::util::filesystem;
 
 namespace anm2ed::resource
 {
@@ -136,13 +118,8 @@ namespace anm2ed::resource
 
   Texture::Texture(const std::filesystem::path& pngPath)
   {
-    auto fileData = file_read_all(pngPath);
-    if (fileData.empty()) return;
-
-    if (const uint8_t* data =
-            stbi_load_from_memory(fileData.data(), static_cast<int>(fileData.size()), &size.x, &size.y, nullptr,
-                                  CHANNELS);
-        data)
+    auto pngPathUtf8 = filesystem::path_to_utf8(pngPath);
+    if (const uint8_t* data = stbi_load(pngPathUtf8.c_str(), &size.x, &size.y, nullptr, CHANNELS); data)
     {
       upload(data);
       stbi_image_free((void*)data);
@@ -151,20 +128,8 @@ namespace anm2ed::resource
 
   bool Texture::write_png(const std::filesystem::path& path)
   {
-    if (pixels.empty()) return false;
-
-    std::ofstream file(path, std::ios::binary);
-    if (!file) return false;
-
-    auto write_func = [](void* context, void* data, int size) {
-      auto* stream = static_cast<std::ofstream*>(context);
-      stream->write(static_cast<char*>(data), size);
-    };
-
-    auto result = stbi_write_png_to_func(write_func, &file, size.x, size.y, CHANNELS, this->pixels.data(),
-                                         size.x * CHANNELS);
-    file.flush();
-    return result != 0;
+    auto pathUtf8 = filesystem::path_to_utf8(path);
+    return stbi_write_png(pathUtf8.c_str(), size.x, size.y, CHANNELS, this->pixels.data(), size.x * CHANNELS);
   }
 
   vec4 Texture::pixel_read(vec2 position) const
