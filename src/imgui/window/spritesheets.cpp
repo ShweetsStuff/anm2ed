@@ -123,8 +123,14 @@ namespace anm2ed::imgui
     auto open_directory = [&](anm2::Spritesheet& spritesheet)
     {
       if (spritesheet.path.empty()) return;
-      filesystem::WorkingDirectory workingDirectory(document.directory_get());
-      dialog.file_explorer_open(spritesheet.path.parent_path());
+      std::error_code ec{};
+      auto absolutePath = std::filesystem::weakly_canonical(document.directory_get() / spritesheet.path, ec);
+      if (ec) absolutePath = document.directory_get() / spritesheet.path;
+      auto target = std::filesystem::is_directory(absolutePath)
+                        ? absolutePath
+                        : std::filesystem::is_directory(absolutePath.parent_path()) ? absolutePath.parent_path()
+                                                                                      : document.directory_get();
+      dialog.file_explorer_open(target);
     };
 
     auto copy = [&]()
