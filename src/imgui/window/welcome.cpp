@@ -2,9 +2,11 @@
 
 #include <ranges>
 
+#include "filesystem_.h"
 #include "strings.h"
 
 using namespace anm2ed::resource;
+namespace filesystem = anm2ed::util::filesystem;
 
 namespace anm2ed::imgui
 {
@@ -44,7 +46,8 @@ namespace anm2ed::imgui
         {
           ImGui::PushID(i);
 
-          auto label = std::format(FILE_LABEL_FORMAT, file.filename().string(), file.string());
+          auto label = std::format(FILE_LABEL_FORMAT, filesystem::path_to_utf8(file.filename()),
+                                   filesystem::path_to_utf8(file));
 
           if (ImGui::Selectable(label.c_str()))
           {
@@ -75,7 +78,8 @@ namespace anm2ed::imgui
       {
         for (auto& file : manager.autosaveFiles)
         {
-          auto label = std::format(FILE_LABEL_FORMAT, file.filename().string(), file.string());
+          auto label = std::format(FILE_LABEL_FORMAT, filesystem::path_to_utf8(file.filename()),
+                                   filesystem::path_to_utf8(file));
           ImGui::TextUnformatted(label.c_str());
         }
       }

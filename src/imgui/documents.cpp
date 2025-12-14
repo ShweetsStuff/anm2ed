@@ -3,12 +3,14 @@
 #include <format>
 #include <vector>
 
+#include "filesystem_.h"
 #include "strings.h"
 #include "time_.h"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::types;
 using namespace anm2ed::util;
+namespace filesystem = anm2ed::util::filesystem;
 
 namespace anm2ed::imgui
 {
@@ -86,7 +88,7 @@ namespace anm2ed::imgui
 
           auto isRequested = i == manager.pendingSelected;
           auto font = isDirty ? font::ITALICS : font::REGULAR;
-          auto filename = document.filename_get().string();
+          auto filename = filesystem::path_to_utf8(document.filename_get());
           auto string =
               isDirty ? std::vformat(localize.get(FORMAT_NOT_SAVED), std::make_format_args(filename)) : filename;
           auto label = std::format("{}###Document{}", string, i);
@@ -103,7 +105,8 @@ namespace anm2ed::imgui
 
             ImGui::EndTabItem();
           }
-          ImGui::SetItemTooltip("%s", document.path.string().c_str());
+          auto pathUtf8 = filesystem::path_to_utf8(document.path);
+          ImGui::SetItemTooltip("%s", pathUtf8.c_str());
 
           ImGui::PopFont();
         }
@@ -126,7 +129,7 @@ namespace anm2ed::imgui
         {
           auto& closeDocument = manager.documents[closeDocumentIndex];
 
-          auto filename = closeDocument.filename_get().string();
+          auto filename = filesystem::path_to_utf8(closeDocument.filename_get());
           auto prompt = std::vformat(localize.get(LABEL_DOCUMENT_MODIFIED_PROMPT), std::make_format_args(filename));
           ImGui::TextUnformatted(prompt.c_str());
 
@@ -213,7 +216,7 @@ namespace anm2ed::imgui
               {
                 for (auto& path : manager.anm2DragDropPaths)
                 {
-                  anm2::Anm2 source(path.string());
+                  anm2::Anm2 source(path);
                   document->anm2.merge(source, document->directory_get(), path.parent_path());
                 }
               };
