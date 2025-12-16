@@ -1,5 +1,8 @@
 #include "settings.h"
 
+#include <fstream>
+#include <sstream>
+
 #include "filesystem_.h"
 #include "log.h"
 
@@ -9,9 +12,7 @@ namespace filesystem = anm2ed::util::filesystem;
 
 namespace anm2ed
 {
-  constexpr auto IMGUI_DEFAULT = R"(
-# Dear ImGui
-[Window][##DockSpace]
+  constexpr auto IMGUI_DEFAULT = R"([Window][##DockSpace]
 Pos=0,54
 Size=1918,1010
 Collapsed=0
@@ -266,6 +267,51 @@ DockSpace             ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,994 Spl
     }
 
     file.close();
+  }
+
+  std::string Settings::imgui_data_load(const std::filesystem::path& path)
+  {
+    auto pathUtf8 = filesystem::path_to_utf8(path);
+    std::ifstream file(path, std::ios::in | std::ios::binary);
+    if (!file.is_open())
+    {
+      logger.error(
+          std::format("Failed to open settings file for Dear ImGui data: {}; using Dear ImGui defaults", pathUtf8));
+      return {};
+    }
+
+    std::string line{};
+    std::ostringstream dataStream;
+    bool isImGuiSection = false;
+    bool isContent = false;
+
+    while (std::getline(file, line))
+    {
+      if (!isImGuiSection)
+      {
+        if (line == "# Dear ImGui") isImGuiSection = true;
+        continue;
+      }
+
+      if (isContent) dataStream << "\n";
+      dataStream << line;
+      isContent = true;
+    }
+
+    if (!isImGuiSection)
+    {
+      logger.warning(
+          std::format("Dear ImGui section missing from settings file: {}; using Dear ImGui defaults", pathUtf8));
+      return {};
+    }
+
+    if (!isContent)
+    {
+      logger.warning(std::format("Dear ImGui section empty in settings file: {}; using Dear ImGui defaults", pathUtf8));
+      return {};
+    }
+
+    return dataStream.str();
   }
 
   void Settings::save(const std::filesystem::path& path, const std::string& imguiData)

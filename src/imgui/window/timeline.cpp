@@ -81,6 +81,9 @@ namespace anm2ed::imgui
   constexpr auto FRAME_DRAG_PAYLOAD_ID = "Frame Drag Drop";
   constexpr auto FRAME_TOOLTIP_HOVER_DELAY = 0.75f; // Extra delay for frame info tooltip.
 
+#define ITEM_FRAME_CHILD_HEIGHT ImGui::GetTextLineHeightWithSpacing() + (ImGui::GetStyle().WindowPadding.y * 1.5)
+#define ITEM_CHILD_WIDTH ImGui::GetTextLineHeightWithSpacing() * 12.5
+
   void Timeline::update(Manager& manager, Settings& settings, Resources& resources, Clipboard& clipboard)
   {
     auto& document = *manager.get();
@@ -573,8 +576,7 @@ namespace anm2ed::imgui
       ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
       ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
 
-      auto itemSize = ImVec2(ImGui::GetContentRegionAvail().x,
-                             ImGui::GetTextLineHeightWithSpacing() + (ImGui::GetStyle().WindowPadding.y * 2));
+      auto itemSize = ImVec2(ImGui::GetContentRegionAvail().x, ITEM_FRAME_CHILD_HEIGHT);
 
       if (ImGui::BeginChild(label.c_str(), itemSize, ImGuiChildFlags_Borders, ImGuiWindowFlags_NoScrollWithMouse))
       {
@@ -818,7 +820,7 @@ namespace anm2ed::imgui
 
     auto items_child = [&]()
     {
-      auto itemsChildSize = ImVec2(ImGui::GetTextLineHeightWithSpacing() * 15, ImGui::GetContentRegionAvail().y);
+      auto itemsChildSize = ImVec2(ITEM_CHILD_WIDTH, ImGui::GetContentRegionAvail().y);
 
       ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2());
       bool isItemsChildOpen = ImGui::BeginChild("##Items Child", itemsChildSize, ImGuiChildFlags_Borders);
@@ -938,7 +940,7 @@ namespace anm2ed::imgui
       ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
       ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
 
-      auto childSize = ImVec2(width, ImGui::GetTextLineHeightWithSpacing() + (ImGui::GetStyle().WindowPadding.y * 2));
+      auto childSize = ImVec2(width, ITEM_FRAME_CHILD_HEIGHT);
 
       ImGui::PopStyleVar(2);
 
@@ -1468,10 +1470,8 @@ namespace anm2ed::imgui
 
     auto frames_child = [&]()
     {
-      auto itemsChildWidth = ImGui::GetTextLineHeightWithSpacing() * 15;
-
       auto cursorPos = ImGui::GetCursorPos();
-      ImGui::SetCursorPos(ImVec2(cursorPos.x + itemsChildWidth, cursorPos.y));
+      ImGui::SetCursorPos(ImVec2(cursorPos.x + ITEM_CHILD_WIDTH, cursorPos.y));
 
       auto framesChildSize = ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y);
 

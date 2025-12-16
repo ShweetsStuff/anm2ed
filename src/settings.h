@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <string>
 
 #include <glm/glm.hpp>
 
@@ -250,6 +251,7 @@ namespace anm2ed
 
     Settings(const std::filesystem::path&);
     void save(const std::filesystem::path&, const std::string&);
+    static std::string imgui_data_load(const std::filesystem::path&);
   };
 
   constexpr StringType SHORTCUT_STRING_TYPES[] = {

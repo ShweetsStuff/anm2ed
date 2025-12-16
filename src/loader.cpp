@@ -212,7 +212,8 @@ namespace anm2ed
     ImGui::GetStyle().FontScaleMain = settings.uiScale;
     io.ConfigWindowsMoveFromTitleBarOnly = true;
 
-    ImGui::LoadIniSettingsFromDisk(settings_path().string().c_str());
+    if (auto imguiData = Settings::imgui_data_load(settings_path()); !imguiData.empty())
+      ImGui::LoadIniSettingsFromMemory(imguiData.c_str(), imguiData.size());
 
     if (isSocketThread)
     {
