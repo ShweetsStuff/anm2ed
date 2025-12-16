@@ -122,7 +122,6 @@ namespace anm2ed::imgui
 
       closePopup.trigger();
 
-      bool isClosePopupOpenPrevious = closePopup.isOpen;
       if (ImGui::BeginPopupModal(closePopup.label(), &closePopup.isOpen, ImGuiWindowFlags_NoResize))
       {
         if (closeDocumentIndex >= 0 && closeDocumentIndex < (int)manager.documents.size())
@@ -172,8 +171,6 @@ namespace anm2ed::imgui
 
         ImGui::EndPopup();
       }
-
-      if ((isClosePopupOpenPrevious != closePopup.isOpen) && isQuitting) isQuitting = false;
     }
 
     ImGui::End();

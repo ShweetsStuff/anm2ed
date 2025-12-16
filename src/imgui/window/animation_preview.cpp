@@ -28,7 +28,6 @@ namespace anm2ed::imgui
   constexpr auto NULL_COLOR = vec4(0.0f, 0.0f, 1.0f, 0.90f);
   constexpr auto TARGET_SIZE = vec2(32, 32);
   constexpr auto POINT_SIZE = vec2(4, 4);
-  constexpr auto NULL_RECT_SIZE = vec2(100);
   constexpr auto TRIGGER_TEXT_COLOR_DARK = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
   constexpr auto TRIGGER_TEXT_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 0.5f);
 
@@ -547,12 +546,12 @@ namespace anm2ed::imgui
             {
               auto& texture = spritesheet->texture;
 
+              auto texSize = vec2(texture.size);
+              if (texSize.x <= 0.0f || texSize.y <= 0.0f) return;
+
               auto layerModel = math::quad_model_get(frame.size, frame.position, frame.pivot,
                                                      math::percent_to_unit(frame.scale), frame.rotation);
               auto layerTransform = sampleTransform * layerModel;
-
-              auto texSize = vec2(texture.size);
-              if (texSize.x <= 0.0f || texSize.y <= 0.0f) return;
 
               auto uvMin = frame.crop / texSize;
               auto uvMax = (frame.crop + frame.size) / texSize;
@@ -560,9 +559,6 @@ namespace anm2ed::imgui
               vec4 frameTint = frame.tint;
               frameTint.a = std::max(0.0f, frameTint.a - (alphaOffset + sampleAlpha));
 
-              auto inset = vec2(0.5f) / texSize;
-              uvMin += inset;
-              uvMax -= inset;
               auto vertices = math::uv_vertices_get(uvMin, uvMax);
 
               texture_render(shaderTexture, texture.id, layerTransform, frameTint, frameColorOffset, vertices.data());
@@ -619,8 +615,8 @@ namespace anm2ed::imgui
 
               if (isShowRect)
               {
-                auto rectModel = math::quad_model_get(NULL_RECT_SIZE, frame.position, NULL_RECT_SIZE * 0.5f,
-                                                      math::percent_to_unit(frame.scale), frame.rotation);
+                auto rectModel =
+                    math::quad_model_get(frame.scale, frame.position, frame.scale * 0.5f, vec2(1.0f), frame.rotation);
                 auto rectTransform = sampleTransform * rectModel;
 
                 rect_render(shaderLine, rectTransform, rectModel, color);

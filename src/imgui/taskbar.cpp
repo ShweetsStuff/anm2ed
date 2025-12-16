@@ -971,6 +971,8 @@ namespace anm2ed::imgui
 
       if (ImGui::Button(localize.get(LABEL_RENDER), widgetSize))
       {
+        replace_extension();
+
         bool isRender = true;
         if (!ffmpeg_is_executable(ffmpegPath))
         {
