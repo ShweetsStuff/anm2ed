@@ -555,9 +555,17 @@ namespace anm2ed::imgui
 
               auto uvMin = frame.crop / texSize;
               auto uvMax = (frame.crop + frame.size) / texSize;
-              auto rootFrame = animation->rootAnimation.frame_generate(sampleTime, anm2::ROOT);
-              vec3 frameColorOffset = frame.colorOffset + rootFrame.colorOffset + colorOffset + sampleColor;
-              vec4 frameTint = frame.tint * rootFrame.tint;
+
+              vec3 frameColorOffset = frame.colorOffset + colorOffset + sampleColor;
+              vec4 frameTint = frame.tint;
+
+              if (isRootTransform)
+              {
+                auto rootFrame = animation->rootAnimation.frame_generate(sampleTime, anm2::ROOT);
+                frameColorOffset += rootFrame.colorOffset;
+                frameTint *= rootFrame.tint;
+              }
+
               frameTint.a = std::max(0.0f, frameTint.a - (alphaOffset + sampleAlpha));
 
               auto vertices = math::uv_vertices_get(uvMin, uvMax);
