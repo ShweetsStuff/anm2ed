@@ -70,10 +70,20 @@ namespace anm2ed
   X(PLAYBACK_IS_CLAMP, playbackIsClamp, STRING_UNDEFINED, BOOL, true)                                                  \
                                                                                                                        \
   X(CHANGE_IS_CROP, changeIsCrop, STRING_UNDEFINED, BOOL, false)                                                       \
+  X(CHANGE_IS_CROP_X, changeIsCropX, STRING_UNDEFINED, BOOL, false)                                                    \
+  X(CHANGE_IS_CROP_Y, changeIsCropY, STRING_UNDEFINED, BOOL, false)                                                    \
   X(CHANGE_IS_SIZE, changeIsSize, STRING_UNDEFINED, BOOL, false)                                                       \
+  X(CHANGE_IS_SIZE_X, changeIsSizeX, STRING_UNDEFINED, BOOL, false)                                                    \
+  X(CHANGE_IS_SIZE_Y, changeIsSizeY, STRING_UNDEFINED, BOOL, false)                                                    \
   X(CHANGE_IS_POSITION, changeIsPosition, STRING_UNDEFINED, BOOL, false)                                               \
+  X(CHANGE_IS_POSITION_X, changeIsPositionX, STRING_UNDEFINED, BOOL, false)                                            \
+  X(CHANGE_IS_POSITION_Y, changeIsPositionY, STRING_UNDEFINED, BOOL, false)                                            \
   X(CHANGE_IS_PIVOT, changeIsPivot, STRING_UNDEFINED, BOOL, false)                                                     \
+  X(CHANGE_IS_PIVOT_X, changeIsPivotX, STRING_UNDEFINED, BOOL, false)                                                  \
+  X(CHANGE_IS_PIVOT_Y, changeIsPivotY, STRING_UNDEFINED, BOOL, false)                                                  \
   X(CHANGE_IS_SCALE, changeIsScale, STRING_UNDEFINED, BOOL, false)                                                     \
+  X(CHANGE_IS_SCALE_X, changeIsScaleX, STRING_UNDEFINED, BOOL, false)                                                  \
+  X(CHANGE_IS_SCALE_Y, changeIsScaleY, STRING_UNDEFINED, BOOL, false)                                                  \
   X(CHANGE_IS_ROTATION, changeIsRotation, STRING_UNDEFINED, BOOL, false)                                               \
   X(CHANGE_IS_DURATION, changeIsDuration, STRING_UNDEFINED, BOOL, false)                                               \
   X(CHANGE_IS_TINT, changeIsTint, STRING_UNDEFINED, BOOL, false)                                                       \

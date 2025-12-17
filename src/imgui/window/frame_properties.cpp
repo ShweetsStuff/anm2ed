@@ -182,6 +182,8 @@ namespace anm2ed::imgui
       else
       {
         auto& isCrop = settings.changeIsCrop;
+        auto& isCropX = settings.changeIsCropX;
+        auto& isCropY = settings.changeIsCropY;
         auto& isSize = settings.changeIsSize;
         auto& isPosition = settings.changeIsPosition;
         auto& isPivot = settings.changeIsPivot;
@@ -204,7 +206,7 @@ namespace anm2ed::imgui
         auto& isVisible = settings.changeIsVisible;
         auto& isInterpolated = settings.changeIsInterpolated;
 
-#define PROPERTIES_WIDGET(body)                                                                                        \
+#define PROPERTIES_WIDGET(body, checkboxLabel, isEnabled)                                                              \
   ImGui::Checkbox(checkboxLabel, &isEnabled);                                                                          \
   ImGui::SameLine();                                                                                                   \
   ImGui::BeginDisabled(!isEnabled);                                                                                    \
@@ -212,29 +214,51 @@ namespace anm2ed::imgui
   ImGui::EndDisabled();
 
         auto bool_value = [&](const char* checkboxLabel, const char* valueLabel, bool& isEnabled, bool& value)
-        { PROPERTIES_WIDGET(ImGui::Checkbox(valueLabel, &value)); };
+        { PROPERTIES_WIDGET(ImGui::Checkbox(valueLabel, &value), checkboxLabel, isEnabled) };
 
         auto color3_value = [&](const char* checkboxLabel, const char* valueLabel, bool& isEnabled, vec3& value)
-        { PROPERTIES_WIDGET(ImGui::ColorEdit3(valueLabel, value_ptr(value))); };
+        { PROPERTIES_WIDGET(ImGui::ColorEdit3(valueLabel, value_ptr(value)), checkboxLabel, isEnabled); };
 
         auto color4_value = [&](const char* checkboxLabel, const char* valueLabel, bool& isEnabled, vec4& value)
-        { PROPERTIES_WIDGET(ImGui::ColorEdit4(valueLabel, value_ptr(value))); };
+        { PROPERTIES_WIDGET(ImGui::ColorEdit4(valueLabel, value_ptr(value)), checkboxLabel, isEnabled); };
 
         auto float2_value = [&](const char* checkboxLabel, const char* valueLabel, bool& isEnabled, vec2& value)
-        { PROPERTIES_WIDGET(ImGui::InputFloat2(valueLabel, value_ptr(value), vec2_format_get(value))); };
+        {
+          PROPERTIES_WIDGET(ImGui::InputFloat2(valueLabel, value_ptr(value), vec2_format_get(value)), checkboxLabel,
+                            isEnabled);
+        };
+
+        auto float2_value_new = [&](const char* checkboxXLabel, const char* checkboxYLabel, const char* valueXLabel,
+                                    const char* valueYLabel, bool& isXEnabled, bool& isYEnabled, vec2& value)
+        {
+          auto width =
+              (ImGui::CalcItemWidth() - ImGui::GetTextLineHeight() - (ImGui::GetStyle().ItemInnerSpacing.x * 6)) / 2;
+
+          PROPERTIES_WIDGET(ImGui::PushItemWidth(width);
+                            ImGui::DragFloat(valueXLabel, &value.x, DRAG_SPEED, 0.0f, 0.0f, float_format_get(value.x));
+                            ImGui::PopItemWidth(), checkboxXLabel, isXEnabled);
+          ImGui::SameLine();
+          PROPERTIES_WIDGET(ImGui::PushItemWidth(width);
+                            ImGui::DragFloat(valueYLabel, &value.y, DRAG_SPEED, 0.0f, 0.0f, float_format_get(value.y));
+                            ImGui::PopItemWidth(), checkboxYLabel, isYEnabled);
+        };
 
         auto float_value = [&](const char* checkboxLabel, const char* valueLabel, bool& isEnabled, float& value)
-        { PROPERTIES_WIDGET(ImGui::InputFloat(valueLabel, &value, STEP, STEP_FAST, float_format_get(value))); };
+        {
+          PROPERTIES_WIDGET(ImGui::InputFloat(valueLabel, &value, STEP, STEP_FAST, float_format_get(value)),
+                            checkboxLabel, isEnabled);
+        };
 
         auto duration_value = [&](const char* checkboxLabel, const char* valueLabel, bool& isEnabled, int& value)
         {
           PROPERTIES_WIDGET(
-              input_int_range(valueLabel, value, anm2::FRAME_DURATION_MIN, anm2::FRAME_DURATION_MAX, STEP, STEP_FAST));
+              input_int_range(valueLabel, value, anm2::FRAME_DURATION_MIN, anm2::FRAME_DURATION_MAX, STEP, STEP_FAST),
+              checkboxLabel, isEnabled);
         };
 
 #undef PROPERTIES_WIDGET
 
-        float2_value("##Is Crop", localize.get(BASIC_CROP), isCrop, crop);
+        float2_value_new("##Is Crop X", "##Is Crop Y", "##Crop X", localize.get(BASIC_CROP), isCropX, isCropY, crop);
         float2_value("##Is Size", localize.get(BASIC_SIZE), isSize, size);
         float2_value("##Is Position", localize.get(BASIC_POSITION), isPosition, position);
         float2_value("##Is Pivot", localize.get(BASIC_PIVOT), isPivot, pivot);
