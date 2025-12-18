@@ -4,6 +4,8 @@
 #include <imgui.h>
 #include <vector>
 
+#include "strings.h"
+
 using namespace anm2ed::resource;
 
 namespace anm2ed::imgui::wizard
