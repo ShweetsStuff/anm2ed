@@ -113,23 +113,8 @@ namespace anm2ed
         return false;
     }
 
-    command += " 2>&1";
-
 #if _WIN32
-    auto script = std::string("& ") + command + " | Tee-Object -FilePath " + string::quote(ffmpegTempPathString) +
-                  " -Append";
-    auto scriptEscaped = std::string();
-    scriptEscaped.reserve(script.size() * 2);
-    for (auto character : script)
-    {
-      if (character == '"')
-        scriptEscaped += "\"\"";
-      else
-        scriptEscaped += character;
-    }
-    command = "powershell -Command \"" + scriptEscaped + "\"";
-#else
-    command += " | tee -a " + string::quote(loggerPathString);
+    command = util::string::quote(command);
 #endif
 
     logger.command(command);
@@ -154,23 +139,6 @@ namespace anm2ed
     }
 
     process.close();
-#if _WIN32
-    {
-      std::ifstream ffmpegLog(ffmpegTempPath, std::ios::binary);
-      if (ffmpegLog)
-      {
-        std::string line;
-        while (std::getline(ffmpegLog, line))
-        {
-          if (!line.empty() && line.back() == '\r') line.pop_back();
-          logger.write_raw(line);
-        }
-      }
-      ffmpegLog.close();
-      std::error_code removeLogError;
-      std::filesystem::remove(ffmpegTempPath, removeLogError);
-    }
-#endif
 
     audio_remove();
     return true;
