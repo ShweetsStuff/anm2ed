@@ -9,6 +9,7 @@
 #include "process_.h"
 #include "sdl.h"
 #include "string_.h"
+#include "path_.h"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::util;
@@ -20,6 +21,10 @@ namespace anm2ed
                         std::vector<Texture>& frames, AudioStream& audioStream, render::Type type, ivec2 size, int fps)
   {
     if (frames.empty() || size.x <= 0 || size.y <= 0 || fps <= 0 || ffmpegPath.empty() || path.empty()) return false;
+
+    auto pathString = path::to_utf8(path);
+    auto ffmpegPathString = path::to_utf8(ffmpegPath);
+    auto loggerPathString = path::to_utf8(Logger::path());
 
     std::filesystem::path audioPath{};
     std::string audioInputArguments{};
@@ -38,7 +43,8 @@ namespace anm2ed
     if (type != render::GIF && !audioStream.stream.empty() && audioStream.spec.freq > 0 &&
         audioStream.spec.channels > 0)
     {
-      audioPath = std::filesystem::temp_directory_path() / std::format("{}.f32", path.string());
+      auto tempFilenameUtf8 = std::format("{}.f32", pathString);
+      audioPath = std::filesystem::temp_directory_path() / path::from_utf8(tempFilenameUtf8);
 
       std::ofstream audioFile(audioPath, std::ios::binary);
 
@@ -50,7 +56,7 @@ namespace anm2ed
         audioFile.close();
 
         audioInputArguments = std::format("-f f32le -ar {0} -ac {1} -i \"{2}\"", audioStream.spec.freq,
-                                          audioStream.spec.channels, audioPath.string());
+                                          audioStream.spec.channels, path::to_utf8(audioPath));
 
         switch (type)
         {
@@ -71,7 +77,7 @@ namespace anm2ed
       }
     }
 
-    command = std::format("\"{0}\" -y -f rawvideo -pix_fmt rgba -s {1}x{2} -r {3} -i pipe:0", ffmpegPath.string(),
+    command = std::format("\"{0}\" -y -f rawvideo -pix_fmt rgba -s {1}x{2} -r {3} -i pipe:0", ffmpegPathString,
                           size.x, size.y, fps);
 
     if (!audioInputArguments.empty()) command += " " + audioInputArguments;
@@ -82,18 +88,18 @@ namespace anm2ed
         command +=
             " -lavfi \"split[s0][s1];[s0]palettegen=stats_mode=full[p];[s1][p]paletteuse=dither=floyd_steinberg\""
             " -loop 0";
-        command += std::format(" \"{}\"", path.string());
+        command += std::format(" \"{}\"", pathString);
         break;
       case render::WEBM:
         command += " -c:v libvpx-vp9 -crf 30 -b:v 0 -pix_fmt yuva420p -row-mt 1 -threads 0 -speed 2 -auto-alt-ref 0";
         if (!audioOutputArguments.empty()) command += " " + audioOutputArguments;
-        command += std::format(" \"{}\"", path.string());
+        command += std::format(" \"{}\"", pathString);
         break;
       case render::MP4:
         command += " -vf \"format=yuv420p,scale=trunc(iw/2)*2:trunc(ih/2)*2\" -c:v libx265 -crf 20 -preset slow"
                    " -tag:v hvc1 -movflags +faststart";
         if (!audioOutputArguments.empty()) command += " " + audioOutputArguments;
-        command += std::format(" \"{}\"", path.string());
+        command += std::format(" \"{}\"", pathString);
         break;
       default:
         return false;
@@ -103,9 +109,9 @@ namespace anm2ed
 
 #if _WIN32
     command = "powershell -Command \"& " + command + "\"";
-    command += " | Tee-Object -FilePath " + string::quote(Logger::path().string()) + " -Append";
+    command += " | Tee-Object -FilePath " + string::quote(loggerPathString) + " -Append";
 #else
-    command += " | tee -a " + string::quote(Logger::path().string());
+    command += " | tee -a " + string::quote(loggerPathString);
 #endif
 
     logger.command(command);
