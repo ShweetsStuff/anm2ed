@@ -31,7 +31,35 @@ namespace anm2ed
 
     auto pathString = path::to_utf8(path);
     auto ffmpegPathString = path::to_utf8(ffmpegPath);
-    auto loggerPathString = path::to_utf8(Logger::path());
+    auto loggerPath = Logger::path();
+    auto loggerPathString = path::to_utf8(loggerPath);
+#if _WIN32
+    auto ffmpegOutputPath = loggerPath.parent_path() / "ffmpeg-output.log";
+    auto ffmpegOutputPathString = path::to_utf8(ffmpegOutputPath);
+    std::error_code ffmpegOutputRemoveError;
+    std::filesystem::remove(ffmpegOutputPath, ffmpegOutputRemoveError);
+    auto flush_ffmpeg_output = [&]()
+    {
+      std::ifstream teeFile(ffmpegOutputPath, std::ios::binary);
+      if (!teeFile) return;
+
+      std::string line;
+      bool isFirstLine = true;
+      while (std::getline(teeFile, line))
+      {
+        if (isFirstLine && line.size() >= 3 && static_cast<unsigned char>(line[0]) == 0xEF &&
+            static_cast<unsigned char>(line[1]) == 0xBB && static_cast<unsigned char>(line[2]) == 0xBF)
+          line.erase(0, 3);
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        logger.write_raw(line);
+        isFirstLine = false;
+      }
+
+      teeFile.close();
+      std::error_code removeEc;
+      std::filesystem::remove(ffmpegOutputPath, removeEc);
+    };
+#endif
 
     std::filesystem::path audioPath{};
     std::string audioInputArguments{};
@@ -115,8 +143,8 @@ namespace anm2ed
     command += " 2>&1";
 
 #if _WIN32
-    auto logCommand =
-        std::string("& ") + command + " | Tee-Object -FilePath " + string::quote(loggerPathString) + " -Append";
+    auto logCommand = std::string("& ") + command + " | Tee-Object -FilePath " + string::quote(ffmpegOutputPathString) +
+                      " -Encoding UTF8 -Append";
     logger.command(logCommand);
 
     auto utf8_to_wstring = [](const std::string& value)
@@ -185,6 +213,9 @@ namespace anm2ed
     }
 
     process.close();
+#if _WIN32
+    flush_ffmpeg_output();
+#endif
 
     audio_remove();
     return true;
