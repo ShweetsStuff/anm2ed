@@ -114,7 +114,7 @@ namespace anm2ed
     }
 
 #if _WIN32
-    command = util::string::quote(command);
+    command = string::quote(command);
 #endif
 
     logger.command(command);
