@@ -1,13 +1,12 @@
 #include "render_animation.h"
 
 #include <ranges>
+#include <string>
 
 #include "log.h"
 #include "path_.h"
 #include "process_.h"
 #include "toast.h"
-
-#include <ranges>
 
 using namespace anm2ed::resource;
 using namespace anm2ed::util;
@@ -86,7 +85,7 @@ namespace anm2ed::imgui::wizard
 
     if (dialog.is_selected(Dialog::FFMPEG_PATH_SET))
     {
-      ffmpegPath = path::to_utf8(dialog.path);
+      ffmpegPath = dialog.path;
       dialog.reset();
     }
 
@@ -104,7 +103,7 @@ namespace anm2ed::imgui::wizard
 
     if (dialog.is_selected(dialogType))
     {
-      path = path::to_utf8(dialog.path);
+      path = dialog.path;
       dialog.reset();
     }
 
@@ -184,7 +183,7 @@ namespace anm2ed::imgui::wizard
         {
           if (!path::is_executable(ffmpegPath)) return false;
 
-          auto testCommand = ffmpegPath.string() + " -version";
+          auto testCommand = std::string("\"") + path::to_utf8(ffmpegPath) + "\" -version";
           Process process(testCommand.c_str(), "r");
           auto result = process.output_get_and_close();
 
@@ -206,7 +205,8 @@ namespace anm2ed::imgui::wizard
 
         auto png_format_valid_check = [&]()
         {
-          if (!format.string().contains("{}"))
+          auto formatString = path::to_utf8(format);
+          if (!formatString.contains("{}"))
           {
             toasts.push(localize.get(TOAST_PNG_FORMAT_INVALID));
             logger.error(localize.get(TOAST_PNG_FORMAT_INVALID, anm2ed::ENGLISH));
