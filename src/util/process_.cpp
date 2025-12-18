@@ -8,26 +8,6 @@
 
 namespace anm2ed::util
 {
-#ifdef WIN32
-  namespace
-  {
-    std::wstring utf8_to_wstring(const char* string)
-    {
-      if (!string) return {};
-
-      auto requiredSize = MultiByteToWideChar(CP_UTF8, 0, string, -1, nullptr, 0);
-      if (requiredSize <= 0) return {};
-
-      std::wstring wide(static_cast<std::size_t>(requiredSize), L'\0');
-      MultiByteToWideChar(CP_UTF8, 0, string, -1, wide.data(), requiredSize);
-
-      if (!wide.empty() && wide.back() == L'\0') wide.pop_back();
-
-      return wide;
-    }
-  }
-#endif
-
   Process::Process(const char* command, const char* mode) { open(command, mode); }
 
   Process::~Process() { close(); }
@@ -37,9 +17,7 @@ namespace anm2ed::util
     close();
 
 #ifdef WIN32
-    auto wideCommand = utf8_to_wstring(command);
-    auto wideMode = utf8_to_wstring(mode);
-    pipe = _wpopen(wideCommand.c_str(), wideMode.c_str());
+    pipe = _popen(command.c_str(), mode.c_str());
 #else
     pipe = popen(command, mode);
 #endif
