@@ -16,8 +16,8 @@ using namespace glm;
 
 namespace anm2ed
 {
-  bool animation_render(const std::string& ffmpegPath, const std::string& path, std::vector<Texture>& frames,
-                        AudioStream& audioStream, render::Type type, ivec2 size, int fps)
+  bool animation_render(const std::filesystem::path& ffmpegPath, const std::filesystem::path& path,
+                        std::vector<Texture>& frames, AudioStream& audioStream, render::Type type, ivec2 size, int fps)
   {
     if (frames.empty() || size.x <= 0 || size.y <= 0 || fps <= 0 || ffmpegPath.empty() || path.empty()) return false;
 
@@ -38,7 +38,7 @@ namespace anm2ed
     if (type != render::GIF && !audioStream.stream.empty() && audioStream.spec.freq > 0 &&
         audioStream.spec.channels > 0)
     {
-      audioPath = std::filesystem::temp_directory_path() / std::format("{}.f32", path);
+      audioPath = std::filesystem::temp_directory_path() / std::format("{}.f32", path.string());
 
       std::ofstream audioFile(audioPath, std::ios::binary);
 
@@ -71,8 +71,8 @@ namespace anm2ed
       }
     }
 
-    command = std::format("\"{0}\" -y -f rawvideo -pix_fmt rgba -s {1}x{2} -r {3} -i pipe:0", ffmpegPath, size.x,
-                          size.y, fps);
+    command = std::format("\"{0}\" -y -f rawvideo -pix_fmt rgba -s {1}x{2} -r {3} -i pipe:0", ffmpegPath.string(),
+                          size.x, size.y, fps);
 
     if (!audioInputArguments.empty()) command += " " + audioInputArguments;
 
@@ -82,18 +82,18 @@ namespace anm2ed
         command +=
             " -lavfi \"split[s0][s1];[s0]palettegen=stats_mode=full[p];[s1][p]paletteuse=dither=floyd_steinberg\""
             " -loop 0";
-        command += std::format(" \"{}\"", path);
+        command += std::format(" \"{}\"", path.string());
         break;
       case render::WEBM:
         command += " -c:v libvpx-vp9 -crf 30 -b:v 0 -pix_fmt yuva420p -row-mt 1 -threads 0 -speed 2 -auto-alt-ref 0";
         if (!audioOutputArguments.empty()) command += " " + audioOutputArguments;
-        command += std::format(" \"{}\"", path);
+        command += std::format(" \"{}\"", path.string());
         break;
       case render::MP4:
         command += " -vf \"format=yuv420p,scale=trunc(iw/2)*2:trunc(ih/2)*2\" -c:v libx265 -crf 20 -preset slow"
                    " -tag:v hvc1 -movflags +faststart";
         if (!audioOutputArguments.empty()) command += " " + audioOutputArguments;
-        command += std::format(" \"{}\"", path);
+        command += std::format(" \"{}\"", path.string());
         break;
       default:
         return false;
