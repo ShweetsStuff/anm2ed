@@ -17,7 +17,7 @@ namespace anm2ed::util
     close();
 
 #ifdef WIN32
-    pipe = _popen(command.c_str(), mode.c_str());
+    pipe = _popen(command, mode);
 #else
     pipe = popen(command, mode);
 #endif
