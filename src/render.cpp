@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <format>
 #include <fstream>
+#include <string>
 
 #include "log.h"
 #include "process_.h"
@@ -108,8 +109,23 @@ namespace anm2ed
     command += " 2>&1";
 
 #if _WIN32
-    command = "powershell -Command \"& { " + command + " | Tee-Object -FilePath " + string::quote(loggerPathString) +
-              " -Append }\"";
+    auto escape_double_quotes_for_cmd = [](const std::string& input)
+    {
+      std::string escaped{};
+      escaped.reserve(input.size() * 2);
+      for (char character : input)
+      {
+        if (character == '"')
+          escaped += "\"\"";
+        else
+          escaped += character;
+      }
+      return escaped;
+    };
+
+    auto powershellScript =
+        std::string("& { & ") + command + " | Tee-Object -FilePath " + string::quote(loggerPathString) + " -Append }";
+    command = "powershell -Command \"" + escape_double_quotes_for_cmd(powershellScript) + "\"";
 #else
     command += " | tee -a " + string::quote(loggerPathString);
 #endif
