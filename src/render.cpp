@@ -116,8 +116,18 @@ namespace anm2ed
     command += " 2>&1";
 
 #if _WIN32
-    command = "powershell -Command '& " + command + " | Tee-Object -FilePath " +
-              string::quote(ffmpegTempPathString) + " -Append'";
+    auto script = std::string("& ") + command + " | Tee-Object -FilePath " + string::quote(ffmpegTempPathString) +
+                  " -Append";
+    auto scriptEscaped = std::string();
+    scriptEscaped.reserve(script.size() * 2);
+    for (auto character : script)
+    {
+      if (character == '"')
+        scriptEscaped += "\"\"";
+      else
+        scriptEscaped += character;
+    }
+    command = "powershell -Command \"" + scriptEscaped + "\"";
 #else
     command += " | tee -a " + string::quote(loggerPathString);
 #endif
