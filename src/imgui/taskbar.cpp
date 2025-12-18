@@ -7,11 +7,13 @@
 
 #include <imgui/imgui.h>
 
+#include "path_.h"
 #include "strings.h"
 #include "types.h"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::types;
+using namespace anm2ed::util;
 using namespace glm;
 
 namespace anm2ed::imgui
@@ -39,8 +41,10 @@ namespace anm2ed::imgui
           for (auto [i, file] : std::views::enumerate(recentFiles))
           {
             ImGui::PushID((int)i);
-            auto label = std::format(FILE_LABEL_FORMAT, file.filename().string(), file.string());
-            if (ImGui::MenuItem(label.c_str())) manager.open(file.string());
+            auto fileNameUtf8 = path::to_utf8(file.filename());
+            auto filePathUtf8 = path::to_utf8(file);
+            auto label = std::format(FILE_LABEL_FORMAT, fileNameUtf8, filePathUtf8);
+            if (ImGui::MenuItem(label.c_str())) manager.open(file);
             ImGui::PopID();
           }
 
