@@ -108,8 +108,8 @@ namespace anm2ed
     command += " 2>&1";
 
 #if _WIN32
-    command = "powershell -Command \"& " + command + "\"";
-    command += " | Tee-Object -FilePath " + string::quote(loggerPathString) + " -Append";
+    command = "powershell -Command \"& { " + command + " | Tee-Object -FilePath " + string::quote(loggerPathString) +
+              " -Append }\"";
 #else
     command += " | tee -a " + string::quote(loggerPathString);
 #endif
