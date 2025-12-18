@@ -1,6 +1,3 @@
-#include "imgui_.h"
-#include "strings.h"
-
 #include <imgui/imgui_internal.h>
 
 #include <cmath>
@@ -8,7 +5,12 @@
 #include <sstream>
 #include <unordered_map>
 
+#include "imgui_.h"
+#include "path_.h"
+#include "strings.h"
+
 using namespace anm2ed::types;
+using namespace anm2ed::util;
 using namespace glm;
 
 namespace anm2ed::imgui
@@ -82,6 +84,17 @@ namespace anm2ed::imgui
   {
     flags |= ImGuiInputTextFlags_CallbackResize;
     return ImGui::InputText(label, string->data(), string->capacity() + 1, flags, input_text_callback, string);
+  }
+
+  bool input_text_path(const char* label, std::filesystem::path* path, ImGuiInputTextFlags flags)
+  {
+    if (!path) return false;
+
+    auto pathUtf8 = path::to_utf8(*path);
+    auto edited = input_text_string(label, &pathUtf8, flags);
+    if (edited) *path = path::from_utf8(pathUtf8);
+
+    return edited;
   }
 
   bool combo_negative_one_indexed(const std::string& label, int* index, std::vector<const char*>& strings)

@@ -29,6 +29,7 @@ namespace anm2ed
   X(BOOL, bool)                                                                                                        \
   X(FLOAT, float)                                                                                                      \
   X(STRING, std::string)                                                                                               \
+  X(PATH, std::filesystem::path)                                                                                       \
   X(IVEC2, glm::ivec2)                                                                                                 \
   X(IVEC2_WH, glm::ivec2)                                                                                              \
   X(VEC2, glm::vec2)                                                                                                   \
@@ -69,25 +70,26 @@ namespace anm2ed
   X(PLAYBACK_IS_LOOP, playbackIsLoop, STRING_UNDEFINED, BOOL, true)                                                    \
   X(PLAYBACK_IS_CLAMP, playbackIsClamp, STRING_UNDEFINED, BOOL, true)                                                  \
                                                                                                                        \
-  X(CHANGE_IS_CROP, changeIsCrop, STRING_UNDEFINED, BOOL, false)                                                       \
   X(CHANGE_IS_CROP_X, changeIsCropX, STRING_UNDEFINED, BOOL, false)                                                    \
   X(CHANGE_IS_CROP_Y, changeIsCropY, STRING_UNDEFINED, BOOL, false)                                                    \
-  X(CHANGE_IS_SIZE, changeIsSize, STRING_UNDEFINED, BOOL, false)                                                       \
   X(CHANGE_IS_SIZE_X, changeIsSizeX, STRING_UNDEFINED, BOOL, false)                                                    \
   X(CHANGE_IS_SIZE_Y, changeIsSizeY, STRING_UNDEFINED, BOOL, false)                                                    \
-  X(CHANGE_IS_POSITION, changeIsPosition, STRING_UNDEFINED, BOOL, false)                                               \
   X(CHANGE_IS_POSITION_X, changeIsPositionX, STRING_UNDEFINED, BOOL, false)                                            \
   X(CHANGE_IS_POSITION_Y, changeIsPositionY, STRING_UNDEFINED, BOOL, false)                                            \
-  X(CHANGE_IS_PIVOT, changeIsPivot, STRING_UNDEFINED, BOOL, false)                                                     \
   X(CHANGE_IS_PIVOT_X, changeIsPivotX, STRING_UNDEFINED, BOOL, false)                                                  \
   X(CHANGE_IS_PIVOT_Y, changeIsPivotY, STRING_UNDEFINED, BOOL, false)                                                  \
-  X(CHANGE_IS_SCALE, changeIsScale, STRING_UNDEFINED, BOOL, false)                                                     \
   X(CHANGE_IS_SCALE_X, changeIsScaleX, STRING_UNDEFINED, BOOL, false)                                                  \
   X(CHANGE_IS_SCALE_Y, changeIsScaleY, STRING_UNDEFINED, BOOL, false)                                                  \
   X(CHANGE_IS_ROTATION, changeIsRotation, STRING_UNDEFINED, BOOL, false)                                               \
   X(CHANGE_IS_DURATION, changeIsDuration, STRING_UNDEFINED, BOOL, false)                                               \
-  X(CHANGE_IS_TINT, changeIsTint, STRING_UNDEFINED, BOOL, false)                                                       \
-  X(CHANGE_IS_COLOR_OFFSET, changeIsColorOffset, STRING_UNDEFINED, BOOL, false)                                        \
+  X(CHANGE_IS_TINT_R, changeIsTintR, STRING_UNDEFINED, BOOL, false)                                                    \
+  X(CHANGE_IS_TINT_G, changeIsTintG, STRING_UNDEFINED, BOOL, false)                                                    \
+  X(CHANGE_IS_TINT_B, changeIsTintB, STRING_UNDEFINED, BOOL, false)                                                    \
+  X(CHANGE_IS_TINT_A, changeIsTintA, STRING_UNDEFINED, BOOL, false)                                                    \
+  X(CHANGE_IS_COLOR_OFFSET_R, changeIsColorOffsetR, STRING_UNDEFINED, BOOL, false)                                     \
+  X(CHANGE_IS_COLOR_OFFSET_G, changeIsColorOffsetG, STRING_UNDEFINED, BOOL, false)                                     \
+  X(CHANGE_IS_COLOR_OFFSET_B, changeIsColorOffsetB, STRING_UNDEFINED, BOOL, false)                                     \
+  X(CHANGE_IS_COLOR_OFFSET_A, changeIsColorOffsetA, STRING_UNDEFINED, BOOL, false)                                     \
   X(CHANGE_IS_VISIBLE_SET, changeIsVisibleSet, STRING_UNDEFINED, BOOL, false)                                          \
   X(CHANGE_IS_INTERPOLATED_SET, changeIsInterpolatedSet, STRING_UNDEFINED, BOOL, false)                                \
   X(CHANGE_CROP, changeCrop, STRING_UNDEFINED, VEC2, {})                                                               \
@@ -101,8 +103,6 @@ namespace anm2ed
   X(CHANGE_COLOR_OFFSET, changeColorOffset, STRING_UNDEFINED, VEC3, {})                                                \
   X(CHANGE_IS_VISIBLE, changeIsVisible, STRING_UNDEFINED, BOOL, false)                                                 \
   X(CHANGE_IS_INTERPOLATED, changeIsInterpolated, STRING_UNDEFINED, BOOL, false)                                       \
-  X(CHANGE_NUMBER_FRAMES, changeNumberFrames, STRING_UNDEFINED, INT, 1)                                                \
-  X(CHANGE_IS_FROM_SELECTED_FRAME, changeIsFromSelectedFrame, STRING_UNDEFINED, BOOL, false)                           \
                                                                                                                        \
   X(SCALE_VALUE, scaleValue, STRING_UNDEFINED, FLOAT, 1.0f)                                                            \
                                                                                                                        \
@@ -167,13 +167,13 @@ namespace anm2ed
   X(TOOL_COLOR, toolColor, STRING_UNDEFINED, VEC4, {1.0, 1.0, 1.0, 1.0})                                               \
                                                                                                                        \
   X(RENDER_TYPE, renderType, STRING_UNDEFINED, INT, render::GIF)                                                       \
-  X(RENDER_PATH, renderPath, STRING_UNDEFINED, STRING, OUTPUT_PATH_DEFAULT)                                            \
+  X(RENDER_PATH, renderPath, STRING_UNDEFINED, PATH, OUTPUT_PATH_DEFAULT)                                              \
   X(RENDER_ROWS, renderRows, STRING_UNDEFINED, INT, 0)                                                                 \
   X(RENDER_COLUMNS, renderColumns, STRING_UNDEFINED, INT, 0)                                                           \
-  X(RENDER_FORMAT, renderFormat, STRING_UNDEFINED, STRING, "{}.png")                                                   \
+  X(RENDER_FORMAT, renderFormat, STRING_UNDEFINED, PATH, "{}.png")                                                     \
   X(RENDER_IS_RAW_ANIMATION, renderIsRawAnimation, STRING_UNDEFINED, BOOL, true)                                       \
   X(RENDER_SCALE, renderScale, STRING_UNDEFINED, FLOAT, 1.0f)                                                          \
-  X(RENDER_FFMPEG_PATH, renderFFmpegPath, STRING_UNDEFINED, STRING, FFMPEG_PATH_DEFAULT)
+  X(RENDER_FFMPEG_PATH, renderFFmpegPath, STRING_UNDEFINED, PATH, FFMPEG_PATH_DEFAULT)
 
 #define SETTINGS_SHORTCUTS                                                                                             \
   /* Symbol / Name / String / Type / Default */                                                                        \

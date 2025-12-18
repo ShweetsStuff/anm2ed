@@ -1,14 +1,11 @@
 #include "audio.h"
 
-#include <SDL3/SDL_filesystem.h>
-#include <SDL3/SDL_properties.h>
-#include <SDL3/SDL_stdinc.h>
 #include <cstdio>
 #include <utility>
 
-#include "filesystem_.h"
+#include "file_.h"
 
-namespace filesystem = anm2ed::util::filesystem;
+using namespace anm2ed::util;
 
 namespace anm2ed::resource
 {
@@ -22,7 +19,7 @@ namespace anm2ed::resource
   {
     if (path.empty()) return;
 
-    filesystem::File file(path, "rb");
+    File file(path, "rb");
     if (!file) return;
 
     if (std::fseek(file.get(), 0, SEEK_END) != 0) return;

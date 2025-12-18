@@ -35,6 +35,8 @@ namespace anm2ed::anm2
     MEMBERS
 #undef X
 
+#undef MEMBERS
+
     Frame() = default;
     Frame(tinyxml2::XMLElement*, Type);
     tinyxml2::XMLElement* to_element(tinyxml2::XMLDocument&, Type);
@@ -46,10 +48,29 @@ namespace anm2ed::anm2
 
   struct FrameChange
   {
-#define X(name, type, ...) std::optional<type> name{};
-    MEMBERS
-#undef X
+    std::optional<bool> isVisible{};
+    std::optional<bool> isInterpolated{};
+    std::optional<float> rotation{};
+    std::optional<int> duration{};
+    std::optional<int> atFrame{};
+    std::optional<int> eventID{};
+    std::optional<float> pivotX{};
+    std::optional<float> pivotY{};
+    std::optional<float> cropX{};
+    std::optional<float> cropY{};
+    std::optional<float> positionX{};
+    std::optional<float> positionY{};
+    std::optional<float> sizeX{};
+    std::optional<float> sizeY{};
+    std::optional<float> scaleX{};
+    std::optional<float> scaleY{};
+    std::optional<float> colorOffsetR{};
+    std::optional<float> colorOffsetG{};
+    std::optional<float> colorOffsetB{};
+    std::optional<float> tintR{};
+    std::optional<float> tintG{};
+    std::optional<float> tintB{};
+    std::optional<float> tintA{};
   };
 
-#undef MEMBERS
 }

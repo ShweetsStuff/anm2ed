@@ -8,12 +8,23 @@
 #include "settings.h"
 #include "strings.h"
 
+#include "wizard/about.h"
+#include "wizard/change_all_frame_properties.h"
+#include "wizard/configure.h"
+#include "wizard/generate_animation_from_grid.h"
+#include "wizard/render_animation.h"
+
 namespace anm2ed::imgui
 {
   class Taskbar
   {
+    wizard::ChangeAllFrameProperties changeAllFrameProperties{};
+    wizard::About about{};
+    wizard::Configure configure{};
+    wizard::GenerateAnimationFromGrid generateAnimationFromGrid{};
+    wizard::RenderAnimation renderAnimation{};
+
     Canvas generate;
-    float generateTime{};
     PopupHelper generatePopup{PopupHelper(LABEL_TASKBAR_GENERATE_ANIMATION_FROM_GRID)};
     PopupHelper changePopup{PopupHelper(LABEL_CHANGE_ALL_FRAME_PROPERTIES, imgui::POPUP_NORMAL_NO_HEIGHT)};
     PopupHelper overwritePopup{PopupHelper(LABEL_TASKBAR_OVERWRITE_FILE, imgui::POPUP_SMALL_NO_HEIGHT)};
@@ -21,14 +32,11 @@ namespace anm2ed::imgui
     PopupHelper configurePopup{PopupHelper(LABEL_TASKBAR_CONFIGURE)};
     PopupHelper aboutPopup{PopupHelper(LABEL_TASKBAR_ABOUT)};
     Settings editSettings{};
-    int selectedShortcut{-1};
-    int creditsIndex{};
     bool isQuittingMode{};
 
   public:
     float height{};
 
-    Taskbar();
     void update(Manager&, Settings&, Resources&, Dialog&, bool&);
   };
 };

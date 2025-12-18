@@ -13,7 +13,6 @@ using namespace glm;
 
 namespace anm2ed::imgui
 {
-
   void FrameProperties::update(Manager& manager, Settings& settings)
   {
     if (ImGui::Begin(localize.get(LABEL_FRAME_PROPERTIES_WINDOW), &settings.windowIsFrameProperties))
@@ -180,151 +179,16 @@ namespace anm2ed::imgui
         ImGui::EndDisabled();
       }
       else
-      {
-        auto& isCrop = settings.changeIsCrop;
-        auto& isCropX = settings.changeIsCropX;
-        auto& isCropY = settings.changeIsCropY;
-        auto& isSize = settings.changeIsSize;
-        auto& isPosition = settings.changeIsPosition;
-        auto& isPivot = settings.changeIsPivot;
-        auto& isScale = settings.changeIsScale;
-        auto& isRotation = settings.changeIsRotation;
-        auto& isDuration = settings.changeIsDuration;
-        auto& isTint = settings.changeIsTint;
-        auto& isColorOffset = settings.changeIsColorOffset;
-        auto& isVisibleSet = settings.changeIsVisibleSet;
-        auto& isInterpolatedSet = settings.changeIsInterpolatedSet;
-        auto& crop = settings.changeCrop;
-        auto& size = settings.changeSize;
-        auto& position = settings.changePosition;
-        auto& pivot = settings.changePivot;
-        auto& scale = settings.changeScale;
-        auto& rotation = settings.changeRotation;
-        auto& duration = settings.changeDuration;
-        auto& tint = settings.changeTint;
-        auto& colorOffset = settings.changeColorOffset;
-        auto& isVisible = settings.changeIsVisible;
-        auto& isInterpolated = settings.changeIsInterpolated;
-
-#define PROPERTIES_WIDGET(body, checkboxLabel, isEnabled)                                                              \
-  ImGui::Checkbox(checkboxLabel, &isEnabled);                                                                          \
-  ImGui::SameLine();                                                                                                   \
-  ImGui::BeginDisabled(!isEnabled);                                                                                    \
-  body;                                                                                                                \
-  ImGui::EndDisabled();
-
-        auto bool_value = [&](const char* checkboxLabel, const char* valueLabel, bool& isEnabled, bool& value)
-        { PROPERTIES_WIDGET(ImGui::Checkbox(valueLabel, &value), checkboxLabel, isEnabled) };
-
-        auto color3_value = [&](const char* checkboxLabel, const char* valueLabel, bool& isEnabled, vec3& value)
-        { PROPERTIES_WIDGET(ImGui::ColorEdit3(valueLabel, value_ptr(value)), checkboxLabel, isEnabled); };
-
-        auto color4_value = [&](const char* checkboxLabel, const char* valueLabel, bool& isEnabled, vec4& value)
-        { PROPERTIES_WIDGET(ImGui::ColorEdit4(valueLabel, value_ptr(value)), checkboxLabel, isEnabled); };
-
-        auto float2_value = [&](const char* checkboxLabel, const char* valueLabel, bool& isEnabled, vec2& value)
-        {
-          PROPERTIES_WIDGET(ImGui::InputFloat2(valueLabel, value_ptr(value), vec2_format_get(value)), checkboxLabel,
-                            isEnabled);
-        };
-
-        auto float2_value_new = [&](const char* checkboxXLabel, const char* checkboxYLabel, const char* valueXLabel,
-                                    const char* valueYLabel, bool& isXEnabled, bool& isYEnabled, vec2& value)
-        {
-          auto width =
-              (ImGui::CalcItemWidth() - ImGui::GetTextLineHeight() - (ImGui::GetStyle().ItemInnerSpacing.x * 6)) / 2;
-
-          PROPERTIES_WIDGET(ImGui::PushItemWidth(width);
-                            ImGui::DragFloat(valueXLabel, &value.x, DRAG_SPEED, 0.0f, 0.0f, float_format_get(value.x));
-                            ImGui::PopItemWidth(), checkboxXLabel, isXEnabled);
-          ImGui::SameLine();
-          PROPERTIES_WIDGET(ImGui::PushItemWidth(width);
-                            ImGui::DragFloat(valueYLabel, &value.y, DRAG_SPEED, 0.0f, 0.0f, float_format_get(value.y));
-                            ImGui::PopItemWidth(), checkboxYLabel, isYEnabled);
-        };
-
-        auto float_value = [&](const char* checkboxLabel, const char* valueLabel, bool& isEnabled, float& value)
-        {
-          PROPERTIES_WIDGET(ImGui::InputFloat(valueLabel, &value, STEP, STEP_FAST, float_format_get(value)),
-                            checkboxLabel, isEnabled);
-        };
-
-        auto duration_value = [&](const char* checkboxLabel, const char* valueLabel, bool& isEnabled, int& value)
-        {
-          PROPERTIES_WIDGET(
-              input_int_range(valueLabel, value, anm2::FRAME_DURATION_MIN, anm2::FRAME_DURATION_MAX, STEP, STEP_FAST),
-              checkboxLabel, isEnabled);
-        };
-
-#undef PROPERTIES_WIDGET
-
-        float2_value_new("##Is Crop X", "##Is Crop Y", "##Crop X", localize.get(BASIC_CROP), isCropX, isCropY, crop);
-        float2_value("##Is Size", localize.get(BASIC_SIZE), isSize, size);
-        float2_value("##Is Position", localize.get(BASIC_POSITION), isPosition, position);
-        float2_value("##Is Pivot", localize.get(BASIC_PIVOT), isPivot, pivot);
-        float2_value("##Is Scale", localize.get(BASIC_SCALE), isScale, scale);
-        float_value("##Is Rotation", localize.get(BASIC_ROTATION), isRotation, rotation);
-        duration_value("##Is Duration", localize.get(BASIC_DURATION), isDuration, duration);
-        color4_value("##Is Tint", localize.get(BASIC_TINT), isTint, tint);
-        color3_value("##Is Color Offset", localize.get(BASIC_COLOR_OFFSET), isColorOffset, colorOffset);
-        bool_value("##Is Visible", localize.get(BASIC_VISIBLE), isVisibleSet, isVisible);
-        ImGui::SameLine();
-        bool_value("##Is Interpolated", localize.get(BASIC_INTERPOLATED), isInterpolatedSet, isInterpolated);
-
-        auto frame_change = [&](anm2::ChangeType type)
-        {
-          anm2::FrameChange frameChange;
-          if (isCrop) frameChange.crop = std::make_optional(crop);
-          if (isSize) frameChange.size = std::make_optional(size);
-          if (isPosition) frameChange.position = std::make_optional(position);
-          if (isPivot) frameChange.pivot = std::make_optional(pivot);
-          if (isScale) frameChange.scale = std::make_optional(scale);
-          if (isRotation) frameChange.rotation = std::make_optional(rotation);
-          if (isDuration) frameChange.duration = std::make_optional(duration);
-          if (isTint) frameChange.tint = std::make_optional(tint);
-          if (isColorOffset) frameChange.colorOffset = std::make_optional(colorOffset);
-          if (isVisibleSet) frameChange.isVisible = std::make_optional(isVisible);
-          if (isInterpolatedSet) frameChange.isInterpolated = std::make_optional(isInterpolated);
-
-          DOCUMENT_EDIT(document, localize.get(EDIT_CHANGE_FRAME_PROPERTIES), Document::FRAMES,
-                        document.item_get()->frames_change(frameChange, type, *frames.begin(), (int)frames.size()));
-        };
-
-        ImGui::Separator();
-
-        bool isAnyProperty = isCrop || isSize || isPosition || isPivot || isScale || isRotation || isDuration ||
-                             isTint || isColorOffset || isVisibleSet || isInterpolatedSet;
-
-        auto rowWidgetSize = widget_size_with_row_get(5);
-
-        ImGui::BeginDisabled(!isAnyProperty);
-
-        if (ImGui::Button(localize.get(LABEL_ADJUST), rowWidgetSize)) frame_change(anm2::ADJUST);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ADJUST));
-
-        ImGui::SameLine();
-
-        if (ImGui::Button(localize.get(BASIC_ADD), rowWidgetSize)) frame_change(anm2::ADD);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ADD_VALUES));
-
-        ImGui::SameLine();
-
-        if (ImGui::Button(localize.get(LABEL_SUBTRACT), rowWidgetSize)) frame_change(anm2::SUBTRACT);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SUBTRACT_VALUES));
-
-        ImGui::SameLine();
-
-        if (ImGui::Button(localize.get(LABEL_MULTIPLY), rowWidgetSize)) frame_change(anm2::MULTIPLY);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_MULTIPLY_VALUES));
-
-        ImGui::SameLine();
-
-        if (ImGui::Button(localize.get(LABEL_DIVIDE), rowWidgetSize)) frame_change(anm2::DIVIDE);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_DIVIDE_VALUES));
-
-        ImGui::EndDisabled();
-      }
+        changeAllFrameProperties.update(document, settings);
     }
     ImGui::End();
+
+    dummy_value_negative<int>() = -1;
+    dummy_value<float>() = 0;
+    dummy_value<int>() = 0;
+    dummy_value<bool>() = 0;
+    dummy_value<vec2>() = vec2();
+    dummy_value<vec3>() = vec3();
+    dummy_value<vec4>() = vec4();
   }
 }

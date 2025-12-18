@@ -5,26 +5,17 @@
 #include <format>
 #include <fstream>
 
-#ifdef _WIN32
-  #include "string_.h"
-  #define POPEN _popen
-  #define PCLOSE _pclose
-constexpr auto PWRITE_MODE = "wb";
-#elif __unix__
-  #define POPEN popen
-  #define PCLOSE pclose
-constexpr auto PWRITE_MODE = "w";
-#endif
-
 #include "log.h"
+#include "process_.h"
+#include "sdl.h"
+#include "string_.h"
 
 using namespace anm2ed::resource;
+using namespace anm2ed::util;
 using namespace glm;
 
 namespace anm2ed
 {
-  constexpr auto FFMPEG_POPEN_ERROR = "popen() (for FFmpeg) failed!\n{}";
-
   bool animation_render(const std::string& ffmpegPath, const std::string& path, std::vector<Texture>& frames,
                         AudioStream& audioStream, render::Type type, ivec2 size, int fps)
   {
@@ -35,7 +26,7 @@ namespace anm2ed
     std::string audioOutputArguments{"-an"};
     std::string command{};
 
-    auto remove_audio_file = [&]()
+    auto audio_remove = [&]()
     {
       if (!audioPath.empty())
       {
@@ -76,7 +67,7 @@ namespace anm2ed
       else
       {
         logger.warning("Failed to open temporary audio file; exporting video without audio.");
-        remove_audio_file();
+        audio_remove();
       }
     }
 
@@ -108,18 +99,22 @@ namespace anm2ed
         return false;
     }
 
+    command += " 2>&1";
+
 #if _WIN32
-    command = util::string::quote(command);
+    command = "powershell -Command \"& " + command + "\"";
+    command += " | Tee-Object -FilePath " + string::quote(Logger::path().string()) + " -Append";
+#else
+    command += " | tee -a " + string::quote(Logger::path().string());
 #endif
 
     logger.command(command);
 
-    FILE* fp = POPEN(command.c_str(), PWRITE_MODE);
+    Process process(command.c_str(), "w");
 
-    if (!fp)
+    if (!process.get())
     {
-      remove_audio_file();
-      logger.error(std::format(FFMPEG_POPEN_ERROR, strerror(errno)));
+      audio_remove();
       return false;
     }
 
@@ -127,16 +122,16 @@ namespace anm2ed
     {
       auto frameSize = frame.pixel_size_get();
 
-      if (fwrite(frame.pixels.data(), 1, frameSize, fp) != frameSize)
+      if (fwrite(frame.pixels.data(), 1, frameSize, process.get()) != frameSize)
       {
-        remove_audio_file();
-        PCLOSE(fp);
+        audio_remove();
         return false;
       }
     }
 
-    auto code = PCLOSE(fp);
-    remove_audio_file();
-    return (code == 0);
+    process.close();
+
+    audio_remove();
+    return true;
   }
 }

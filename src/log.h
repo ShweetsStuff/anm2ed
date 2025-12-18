@@ -46,6 +46,8 @@ namespace anm2ed
     std::ofstream file{};
 
   public:
+    static std::filesystem::path path();
+    void write_raw(const std::string&);
     void write(const Level, const std::string&);
     void info(const std::string&);
     void warning(const std::string&);

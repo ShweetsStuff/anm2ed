@@ -22,13 +22,13 @@
   #pragma GCC diagnostic pop
 #endif
 
-#include "filesystem_.h"
+#include "file_.h"
 #include "math_.h"
 
 using namespace anm2ed::resource::texture;
 using namespace anm2ed::util::math;
+using namespace anm2ed::util;
 using namespace glm;
-namespace filesystem = anm2ed::util::filesystem;
 
 namespace anm2ed::resource
 {
@@ -119,10 +119,10 @@ namespace anm2ed::resource
 
   Texture::Texture(const std::filesystem::path& pngPath)
   {
-    filesystem::File file(pngPath, "rb");
+    File file(pngPath, "rb");
     if (auto handle = file.get())
     {
-      if (const uint8_t* data = stbi_load_from_file(handle, &size.x, &size.y, nullptr, CHANNELS); data)
+      if (auto data = stbi_load_from_file(handle, &size.x, &size.y, nullptr, CHANNELS); data)
       {
         upload(data);
         stbi_image_free((void*)data);
@@ -134,7 +134,7 @@ namespace anm2ed::resource
   {
     if (pixels.empty()) return false;
 
-    filesystem::File file(path, "wb");
+    File file(path, "wb");
     if (auto handle = file.get())
     {
       auto write_func = [](void* context, void* data, int size) { fwrite(data, 1, size, static_cast<FILE*>(context)); };

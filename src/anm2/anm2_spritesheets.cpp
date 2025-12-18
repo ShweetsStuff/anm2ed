@@ -2,8 +2,9 @@
 
 #include <ranges>
 
-#include "filesystem_.h"
 #include "map_.h"
+#include "path_.h"
+#include "working_directory.h"
 
 using namespace anm2ed::types;
 using namespace anm2ed::util;
@@ -41,7 +42,7 @@ namespace anm2ed::anm2
     labels.emplace_back(localize.get(BASIC_NONE));
     for (auto& [id, spritesheet] : content.spritesheets)
     {
-      auto pathString = filesystem::path_to_utf8(spritesheet.path);
+      auto pathString = path::to_utf8(spritesheet.path);
       labels.emplace_back(std::vformat(localize.get(FORMAT_SPRITESHEET), std::make_format_args(id, pathString)));
     }
     return labels;
@@ -62,7 +63,7 @@ namespace anm2ed::anm2
         return false;
       }
 
-      filesystem::WorkingDirectory workingDirectory(directory);
+      WorkingDirectory workingDirectory(directory);
 
       for (auto element = document.FirstChildElement("Spritesheet"); element;
            element = element->NextSiblingElement("Spritesheet"))

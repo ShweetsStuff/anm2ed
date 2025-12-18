@@ -11,12 +11,12 @@
 #include "imgui_.h"
 #include "log.h"
 #include "math_.h"
+#include "path_.h"
 #include "strings.h"
 #include "toast.h"
 #include "tool.h"
 #include "types.h"
 
-using namespace anm2ed::canvas;
 using namespace anm2ed::types;
 using namespace anm2ed::util;
 using namespace anm2ed::resource;
@@ -48,6 +48,7 @@ namespace anm2ed::imgui
     {
       auto& ffmpegPath = settings.renderFFmpegPath;
       auto& path = settings.renderPath;
+      auto pathString = path::to_utf8(path);
       auto& type = settings.renderType;
 
       if (playback.time > end || playback.isFinished)
@@ -55,11 +56,11 @@ namespace anm2ed::imgui
         if (type == render::PNGS)
         {
           auto& format = settings.renderFormat;
+          auto formatString = path::to_utf8(format);
           bool isSuccess{true};
           for (auto [i, frame] : std::views::enumerate(renderFrames))
           {
-            std::filesystem::path outputPath =
-                std::filesystem::path(path) / std::vformat(format, std::make_format_args(i));
+            auto outputPath = path / std::vformat(formatString, std::make_format_args(i));
 
             if (!frame.write_png(outputPath))
             {
@@ -71,15 +72,16 @@ namespace anm2ed::imgui
 
           if (isSuccess)
           {
-            toasts.push(std::vformat(localize.get(TOAST_EXPORT_RENDERED_FRAMES), std::make_format_args(path)));
-            logger.info(
-                std::vformat(localize.get(TOAST_EXPORT_RENDERED_FRAMES, anm2ed::ENGLISH), std::make_format_args(path)));
+            toasts.push(std::vformat(localize.get(TOAST_EXPORT_RENDERED_FRAMES), std::make_format_args(pathString)));
+            logger.info(std::vformat(localize.get(TOAST_EXPORT_RENDERED_FRAMES, anm2ed::ENGLISH),
+                                     std::make_format_args(pathString)));
           }
           else
           {
-            toasts.push(std::vformat(localize.get(TOAST_EXPORT_RENDERED_FRAMES_FAILED), std::make_format_args(path)));
+            toasts.push(
+                std::vformat(localize.get(TOAST_EXPORT_RENDERED_FRAMES_FAILED), std::make_format_args(pathString)));
             logger.error(std::vformat(localize.get(TOAST_EXPORT_RENDERED_FRAMES_FAILED, anm2ed::ENGLISH),
-                                      std::make_format_args(path)));
+                                      std::make_format_args(pathString)));
           }
         }
         else if (type == render::SPRITESHEET)
@@ -129,15 +131,16 @@ namespace anm2ed::imgui
               Texture spritesheetTexture(spritesheet.data(), spritesheetSize);
               if (spritesheetTexture.write_png(path))
               {
-                toasts.push(std::vformat(localize.get(TOAST_EXPORT_SPRITESHEET), std::make_format_args(path)));
-                logger.info(
-                    std::vformat(localize.get(TOAST_EXPORT_SPRITESHEET, anm2ed::ENGLISH), std::make_format_args(path)));
+                toasts.push(std::vformat(localize.get(TOAST_EXPORT_SPRITESHEET), std::make_format_args(pathString)));
+                logger.info(std::vformat(localize.get(TOAST_EXPORT_SPRITESHEET, anm2ed::ENGLISH),
+                                         std::make_format_args(pathString)));
               }
               else
               {
-                toasts.push(std::vformat(localize.get(TOAST_EXPORT_SPRITESHEET_FAILED), std::make_format_args(path)));
+                toasts.push(
+                    std::vformat(localize.get(TOAST_EXPORT_SPRITESHEET_FAILED), std::make_format_args(pathString)));
                 logger.error(std::vformat(localize.get(TOAST_EXPORT_SPRITESHEET_FAILED, anm2ed::ENGLISH),
-                                          std::make_format_args(path)));
+                                          std::make_format_args(pathString)));
               }
             }
           }
@@ -146,16 +149,16 @@ namespace anm2ed::imgui
         {
           if (animation_render(ffmpegPath, path, renderFrames, audioStream, (render::Type)type, size, anm2.info.fps))
           {
-            toasts.push(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION), std::make_format_args(path)));
+            toasts.push(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION), std::make_format_args(pathString)));
             logger.info(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION, anm2ed::ENGLISH),
-                                     std::make_format_args(path)));
+                                     std::make_format_args(pathString)));
           }
           else
           {
             toasts.push(
-                std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED), std::make_format_args(path)));
+                std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED), std::make_format_args(pathString)));
             logger.error(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED, anm2ed::ENGLISH),
-                                      std::make_format_args(path)));
+                                      std::make_format_args(pathString)));
           }
         }
 
@@ -163,7 +166,6 @@ namespace anm2ed::imgui
 
         if (settings.renderIsRawAnimation)
         {
-
           settings = savedSettings;
 
           pan = savedPan;
@@ -290,8 +292,12 @@ namespace anm2ed::imgui
     auto zoom_in = [&]() { zoom_adjust(zoomStep); };
     auto zoom_out = [&]() { zoom_adjust(-zoomStep); };
 
+    manager.isAbleToRecord = false;
+
     if (ImGui::Begin(localize.get(LABEL_ANIMATION_PREVIEW_WINDOW), &settings.windowIsAnimationPreview))
     {
+      manager.isAbleToRecord = true;
+
       auto childSize = ImVec2(row_widget_width_get(4),
                               (ImGui::GetTextLineHeightWithSpacing() * 4) + (ImGui::GetStyle().WindowPadding.y * 2));
 
@@ -402,6 +408,7 @@ namespace anm2ed::imgui
           settings.previewBackgroundColor = vec4();
           settings.previewIsGrid = false;
           settings.previewIsAxes = false;
+          settings.previewIsPivots = false;
           settings.previewIsBorder = false;
           settings.timelineIsOnlyShowLayers = true;
           settings.onionskinIsEnabled = false;
@@ -729,7 +736,7 @@ namespace anm2ed::imgui
 
         auto frame = document.frame_get();
         auto useTool = tool;
-        auto step = isMod ? canvas::STEP_FAST : canvas::STEP;
+        auto step = isMod ? STEP_FAST : STEP;
         mousePos = position_translate(zoom, pan, to_vec2(ImGui::GetMousePos()) - to_vec2(cursorScreenPos));
 
         if (isMouseMiddleDown) useTool = tool::PAN;

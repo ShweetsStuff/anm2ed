@@ -1069,7 +1069,7 @@ namespace anm2ed::imgui
               drawList->AddRectFilled(frameScreenPos, frameRectMax, ImGui::GetColorU32(frameMultipleOverlayColor));
           }
 
-          frames.selection.start(item->frames.size(), ImGuiMultiSelectFlags_ClearOnEscape);
+          if (type != anm2::TRIGGER) frames.selection.start(item->frames.size(), ImGuiMultiSelectFlags_ClearOnEscape);
 
           for (auto [i, frame] : std::views::enumerate(item->frames))
           {
@@ -1400,7 +1400,8 @@ namespace anm2ed::imgui
             ImGui::PopID();
           }
 
-          frames.selection.finish();
+          if (type != anm2::TRIGGER) frames.selection.finish();
+
           if (isFrameSelectionLocked)
           {
             frames.selection.clear();

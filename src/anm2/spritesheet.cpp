@@ -1,6 +1,7 @@
 #include "spritesheet.h"
 
-#include "filesystem_.h"
+#include "path_.h"
+#include "working_directory.h"
 #include "xml_.h"
 
 using namespace anm2ed::resource;
@@ -17,27 +18,15 @@ namespace anm2ed::anm2
     // Spritesheet paths from Isaac Rebirth are made with the assumption that paths are case-insensitive
     // However when using the resource dumper, the spritesheet paths are all lowercase (on Linux anyway)
     // This will handle this case and make the paths OS-agnostic
-    path = filesystem::path_lower_case_backslash_handle(path);
+    path = path::lower_case_backslash_handle(path);
     texture = Texture(path);
-  }
-
-  namespace
-  {
-    std::filesystem::path make_relative_or_keep(const std::filesystem::path& input)
-    {
-      if (input.empty()) return input;
-      std::error_code ec{};
-      auto relative = std::filesystem::relative(input, ec);
-      if (!ec) return relative;
-      return input;
-    }
   }
 
   Spritesheet::Spritesheet(const std::filesystem::path& directory, const std::filesystem::path& path)
   {
-    filesystem::WorkingDirectory workingDirectory(directory);
-    this->path = !path.empty() ? make_relative_or_keep(path) : this->path;
-    this->path = filesystem::path_lower_case_backslash_handle(this->path);
+    WorkingDirectory workingDirectory(directory);
+    this->path = !path.empty() ? path::make_relative(path) : this->path;
+    this->path = path::lower_case_backslash_handle(this->path);
     texture = Texture(this->path);
   }
 
@@ -45,7 +34,7 @@ namespace anm2ed::anm2
   {
     auto element = document.NewElement("Spritesheet");
     element->SetAttribute("Id", id);
-    auto pathString = filesystem::path_to_utf8(path);
+    auto pathString = path::to_utf8(path);
     element->SetAttribute("Path", pathString.c_str());
     return element;
   }
@@ -64,8 +53,8 @@ namespace anm2ed::anm2
 
   bool Spritesheet::save(const std::filesystem::path& directory, const std::filesystem::path& path)
   {
-    filesystem::WorkingDirectory workingDirectory(directory);
-    this->path = !path.empty() ? make_relative_or_keep(path) : this->path;
+    WorkingDirectory workingDirectory(directory);
+    this->path = !path.empty() ? path::make_relative(path) : this->path;
     return texture.write_png(this->path);
   }
 

@@ -1,6 +1,7 @@
 #include "sound.h"
 
-#include "filesystem_.h"
+#include "path_.h"
+#include "working_directory.h"
 #include "xml_.h"
 
 using namespace anm2ed::resource;
@@ -21,23 +22,11 @@ namespace anm2ed::anm2
     return *this;
   }
 
-  namespace
-  {
-    std::filesystem::path make_relative_or_keep(const std::filesystem::path& input)
-    {
-      if (input.empty()) return input;
-      std::error_code ec{};
-      auto relative = std::filesystem::relative(input, ec);
-      if (!ec) return relative;
-      return input;
-    }
-  }
-
   Sound::Sound(const std::filesystem::path& directory, const std::filesystem::path& path)
   {
-    filesystem::WorkingDirectory workingDirectory(directory);
-    this->path = !path.empty() ? make_relative_or_keep(path) : this->path;
-    this->path = filesystem::path_lower_case_backslash_handle(this->path);
+    WorkingDirectory workingDirectory(directory);
+    this->path = !path.empty() ? path::make_relative(path) : this->path;
+    this->path = path::lower_case_backslash_handle(this->path);
     audio = Audio(this->path);
   }
 
@@ -46,7 +35,7 @@ namespace anm2ed::anm2
     if (!element) return;
     element->QueryIntAttribute("Id", &id);
     xml::query_path_attribute(element, "Path", &path);
-    path = filesystem::path_lower_case_backslash_handle(path);
+    path = path::lower_case_backslash_handle(path);
     audio = Audio(path);
   }
 
@@ -54,7 +43,7 @@ namespace anm2ed::anm2
   {
     auto element = document.NewElement("Sound");
     element->SetAttribute("Id", id);
-    auto pathString = filesystem::path_to_utf8(path);
+    auto pathString = path::to_utf8(path);
     element->SetAttribute("Path", pathString.c_str());
     return element;
   }
@@ -72,8 +61,6 @@ namespace anm2ed::anm2
   }
 
   void Sound::reload(const std::filesystem::path& directory) { *this = Sound(directory, this->path); }
-
   bool Sound::is_valid() { return audio.is_valid(); }
-
   void Sound::play() { audio.play(); }
 }

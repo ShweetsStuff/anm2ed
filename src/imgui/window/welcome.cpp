@@ -2,11 +2,11 @@
 
 #include <ranges>
 
-#include "filesystem_.h"
+#include "path_.h"
 #include "strings.h"
 
+using namespace anm2ed::util;
 using namespace anm2ed::resource;
-namespace filesystem = anm2ed::util::filesystem;
 
 namespace anm2ed::imgui
 {
@@ -34,10 +34,10 @@ namespace anm2ed::imgui
       auto widgetSize = widget_size_with_row_get(2);
 
       if (ImGui::Button(localize.get(BASIC_NEW), widgetSize))
-        dialog.file_save(dialog::ANM2_NEW); // handled in taskbar.cpp
+        dialog.file_save(Dialog::ANM2_NEW); // handled in taskbar.cpp
       ImGui::SameLine();
       if (ImGui::Button(localize.get(BASIC_OPEN), widgetSize))
-        dialog.file_open(dialog::ANM2_OPEN); // handled in taskbar.cpp
+        dialog.file_open(Dialog::ANM2_OPEN); // handled in taskbar.cpp
 
       if (ImGui::BeginChild("##Recent Files Child", {}, ImGuiChildFlags_Borders))
       {
@@ -46,8 +46,7 @@ namespace anm2ed::imgui
         {
           ImGui::PushID(i);
 
-          auto label = std::format(FILE_LABEL_FORMAT, filesystem::path_to_utf8(file.filename()),
-                                   filesystem::path_to_utf8(file));
+          auto label = std::format(FILE_LABEL_FORMAT, path::to_utf8(file.filename()), path::to_utf8(file));
 
           if (ImGui::Selectable(label.c_str()))
           {
@@ -78,8 +77,7 @@ namespace anm2ed::imgui
       {
         for (auto& file : manager.autosaveFiles)
         {
-          auto label = std::format(FILE_LABEL_FORMAT, filesystem::path_to_utf8(file.filename()),
-                                   filesystem::path_to_utf8(file));
+          auto label = std::format(FILE_LABEL_FORMAT, path::to_utf8(file.filename()), path::to_utf8(file));
           ImGui::TextUnformatted(label.c_str());
         }
       }

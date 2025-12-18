@@ -8,8 +8,8 @@
 
 #include <SDL3_mixer/SDL_mixer.h>
 
-#include "filesystem_.h"
 #include "log.h"
+#include "sdl.h"
 
 #include "imgui_.h"
 
@@ -75,7 +75,7 @@ namespace anm2ed
     }
   }
 
-  std::filesystem::path Loader::settings_path() { return filesystem::path_preferences_get() / "settings.ini"; }
+  std::filesystem::path Loader::settings_path() { return sdl::preferences_directory_get() / "settings.ini"; }
 
   Loader::Loader(int argc, const char** argv)
   {

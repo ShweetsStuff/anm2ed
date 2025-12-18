@@ -2,12 +2,11 @@
 
 #include <ranges>
 
-#include "filesystem_.h"
 #include "log.h"
+#include "path_.h"
 #include "strings.h"
 #include "toast.h"
 
-using namespace anm2ed::dialog;
 using namespace anm2ed::util;
 using namespace anm2ed::types;
 using namespace anm2ed::resource;
@@ -24,8 +23,8 @@ namespace anm2ed::imgui
     auto& selection = document.sound.selection;
     auto style = ImGui::GetStyle();
 
-    auto add_open = [&]() { dialog.file_open(dialog::SOUND_OPEN); };
-    auto replace_open = [&]() { dialog.file_open(dialog::SOUND_REPLACE); };
+    auto add_open = [&]() { dialog.file_open(Dialog::SOUND_OPEN); };
+    auto replace_open = [&]() { dialog.file_open(Dialog::SOUND_REPLACE); };
 
     auto play = [&](anm2::Sound& sound) { sound.play(); };
 
@@ -34,7 +33,7 @@ namespace anm2ed::imgui
       auto behavior = [&]()
       {
         int id{};
-        auto pathString = filesystem::path_to_utf8(path);
+        auto pathString = path::to_utf8(path);
         if (anm2.sound_add(document.directory_get(), path, id))
         {
           selection = {id};
@@ -76,7 +75,7 @@ namespace anm2ed::imgui
         {
           anm2::Sound& sound = anm2.content.sounds[id];
           sound.reload(document.directory_get());
-          auto pathString = filesystem::path_to_utf8(sound.path);
+          auto pathString = path::to_utf8(sound.path);
           toasts.push(std::vformat(localize.get(TOAST_RELOAD_SOUND), std::make_format_args(id, pathString)));
           logger.info(
               std::vformat(localize.get(TOAST_RELOAD_SOUND, anm2ed::ENGLISH), std::make_format_args(id, pathString)));
@@ -95,7 +94,7 @@ namespace anm2ed::imgui
         auto& id = *selection.begin();
         anm2::Sound& sound = anm2.content.sounds[id];
         sound = anm2::Sound(document.directory_get(), path);
-        auto pathString = filesystem::path_to_utf8(sound.path);
+        auto pathString = path::to_utf8(sound.path);
         toasts.push(std::vformat(localize.get(TOAST_REPLACE_SOUND), std::make_format_args(id, pathString)));
         logger.info(
             std::vformat(localize.get(TOAST_REPLACE_SOUND, anm2ed::ENGLISH), std::make_format_args(id, pathString)));
@@ -215,7 +214,7 @@ namespace anm2ed::imgui
             bool isValid = sound.is_valid();
             auto& soundIcon = isValid ? resources.icons[icon::SOUND] : resources.icons[icon::NONE];
             auto tintColor = !isValid ? ImVec4(1.0f, 0.25f, 0.25f, 1.0f) : ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-            auto pathString = filesystem::path_to_utf8(sound.path);
+            auto pathString = path::to_utf8(sound.path);
 
             ImGui::SetNextItemSelectionUserData(id);
             ImGui::SetNextItemStorageID(id);
@@ -271,9 +270,9 @@ namespace anm2ed::imgui
 
           ImGui::EndChild();
           ImGui::PopID();
-        }
 
-        context_menu();
+          context_menu();
+        }
 
         ImGui::PopStyleVar();
         selection.finish();
@@ -288,7 +287,7 @@ namespace anm2ed::imgui
       if (ImGui::Button(localize.get(BASIC_ADD), widgetSize)) add_open();
       imgui::set_item_tooltip_shortcut(localize.get(TOOLTIP_SOUND_ADD), settings.shortcutAdd);
 
-      if (dialog.is_selected(dialog::SOUND_OPEN))
+      if (dialog.is_selected(Dialog::SOUND_OPEN))
       {
         add(dialog.path);
         dialog.reset();
@@ -316,7 +315,7 @@ namespace anm2ed::imgui
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_REPLACE_SOUND));
       ImGui::EndDisabled();
 
-      if (dialog.is_selected(dialog::SOUND_REPLACE))
+      if (dialog.is_selected(Dialog::SOUND_REPLACE))
       {
         replace(dialog.path);
         dialog.reset();

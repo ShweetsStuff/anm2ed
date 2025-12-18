@@ -11,15 +11,9 @@
 using namespace glm;
 using namespace anm2ed::resource;
 using namespace anm2ed::util;
-using namespace anm2ed::canvas;
 
 namespace anm2ed
 {
-  constexpr float AXIS_VERTICES[] = {-1.0f, 0.0f, 1.0f, 0.0f};
-  constexpr float GRID_VERTICES[] = {-1.f, -1.f, 0.f, 0.f, 3.f, -1.f, 2.f, 0.f, -1.f, 3.f, 0.f, 2.f};
-  constexpr float RECT_VERTICES[] = {0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f};
-  constexpr GLuint TEXTURE_INDICES[] = {0, 1, 2, 2, 3, 0};
-
   Canvas::Canvas() = default;
 
   Canvas::Canvas(vec2 size)

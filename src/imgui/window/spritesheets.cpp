@@ -6,8 +6,8 @@
 #include <format>
 
 #include "document.h"
-#include "filesystem_.h"
 #include "log.h"
+#include "path_.h"
 #include "strings.h"
 #include "toast.h"
 
@@ -28,8 +28,8 @@ namespace anm2ed::imgui
     auto& reference = document.spritesheet.reference;
     auto style = ImGui::GetStyle();
 
-    auto add_open = [&]() { dialog.file_open(dialog::SPRITESHEET_OPEN); };
-    auto replace_open = [&]() { dialog.file_open(dialog::SPRITESHEET_REPLACE); };
+    auto add_open = [&]() { dialog.file_open(Dialog::SPRITESHEET_OPEN); };
+    auto replace_open = [&]() { dialog.file_open(Dialog::SPRITESHEET_REPLACE); };
 
     auto add = [&](const std::filesystem::path& path)
     {
@@ -47,7 +47,7 @@ namespace anm2ed::imgui
         for (auto& id : unused)
         {
           anm2::Spritesheet& spritesheet = anm2.content.spritesheets[id];
-          auto pathString = filesystem::path_to_utf8(spritesheet.path);
+          auto pathString = path::to_utf8(spritesheet.path);
           toasts.push(std::vformat(localize.get(TOAST_REMOVE_SPRITESHEET), std::make_format_args(id, pathString)));
           logger.info(std::vformat(localize.get(TOAST_REMOVE_SPRITESHEET, anm2ed::ENGLISH),
                                    std::make_format_args(id, pathString)));
@@ -69,7 +69,7 @@ namespace anm2ed::imgui
         {
           anm2::Spritesheet& spritesheet = anm2.content.spritesheets[id];
           spritesheet.reload(document.directory_get());
-          auto pathString = filesystem::path_to_utf8(spritesheet.path);
+          auto pathString = path::to_utf8(spritesheet.path);
           toasts.push(std::vformat(localize.get(TOAST_RELOAD_SPRITESHEET), std::make_format_args(id, pathString)));
           logger.info(std::vformat(localize.get(TOAST_RELOAD_SPRITESHEET, anm2ed::ENGLISH),
                                    std::make_format_args(id, pathString)));
@@ -88,7 +88,7 @@ namespace anm2ed::imgui
         auto& id = *selection.begin();
         anm2::Spritesheet& spritesheet = anm2.content.spritesheets[id];
         spritesheet = anm2::Spritesheet(document.directory_get(), path);
-        auto pathString = filesystem::path_to_utf8(spritesheet.path);
+        auto pathString = path::to_utf8(spritesheet.path);
         toasts.push(std::vformat(localize.get(TOAST_REPLACE_SPRITESHEET), std::make_format_args(id, pathString)));
         logger.info(std::vformat(localize.get(TOAST_REPLACE_SPRITESHEET, anm2ed::ENGLISH),
                                  std::make_format_args(id, pathString)));
@@ -104,7 +104,7 @@ namespace anm2ed::imgui
       for (auto& id : selection)
       {
         anm2::Spritesheet& spritesheet = anm2.content.spritesheets[id];
-        auto pathString = filesystem::path_to_utf8(spritesheet.path);
+        auto pathString = path::to_utf8(spritesheet.path);
         if (spritesheet.save(document.directory_get()))
         {
           toasts.push(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET), std::make_format_args(id, pathString)));
@@ -126,10 +126,9 @@ namespace anm2ed::imgui
       std::error_code ec{};
       auto absolutePath = std::filesystem::weakly_canonical(document.directory_get() / spritesheet.path, ec);
       if (ec) absolutePath = document.directory_get() / spritesheet.path;
-      auto target = std::filesystem::is_directory(absolutePath)
-                        ? absolutePath
-                        : std::filesystem::is_directory(absolutePath.parent_path()) ? absolutePath.parent_path()
-                                                                                      : document.directory_get();
+      auto target = std::filesystem::is_directory(absolutePath)                 ? absolutePath
+                    : std::filesystem::is_directory(absolutePath.parent_path()) ? absolutePath.parent_path()
+                                                                                : document.directory_get();
       dialog.file_explorer_open(target);
     };
 
@@ -232,7 +231,7 @@ namespace anm2ed::imgui
             bool isValid = spritesheet.texture.is_valid();
             auto& texture = isValid ? spritesheet.texture : resources.icons[icon::NONE];
             auto tintColor = !isValid ? ImVec4(1.0f, 0.25f, 0.25f, 1.0f) : ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-            auto pathString = filesystem::path_to_utf8(spritesheet.path);
+            auto pathString = path::to_utf8(spritesheet.path);
             auto pathCStr = pathString.c_str();
 
             ImGui::SetNextItemSelectionUserData(id);
@@ -322,12 +321,12 @@ namespace anm2ed::imgui
           }
 
           ImGui::EndChild();
-
           ImGui::PopID();
+
+          context_menu();
         }
 
         ImGui::PopStyleVar();
-        context_menu();
         selection.finish();
       }
       ImGui::EndChild();
@@ -339,7 +338,7 @@ namespace anm2ed::imgui
       if (ImGui::Button(localize.get(BASIC_ADD), rowOneWidgetSize)) add_open();
       set_item_tooltip_shortcut(localize.get(TOOLTIP_ADD_SPRITESHEET), settings.shortcutAdd);
 
-      if (dialog.is_selected(dialog::SPRITESHEET_OPEN))
+      if (dialog.is_selected(Dialog::SPRITESHEET_OPEN))
       {
         add(dialog.path);
         dialog.reset();
@@ -359,7 +358,7 @@ namespace anm2ed::imgui
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_REPLACE_SPRITESHEET));
       ImGui::EndDisabled();
 
-      if (dialog.is_selected(dialog::SPRITESHEET_REPLACE))
+      if (dialog.is_selected(Dialog::SPRITESHEET_REPLACE))
       {
         replace(dialog.path);
         dialog.reset();

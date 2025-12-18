@@ -4,8 +4,11 @@
 
 #include <SDL3/SDL.h>
 
-namespace anm2ed::dialog
+namespace anm2ed
 {
+  class Dialog
+  {
+  public:
 #if defined(_WIN32)
   #define EXECUTABLE_FILTER {"Executable", "exe"}
 #else
@@ -22,18 +25,18 @@ namespace anm2ed::dialog
   X(MP4, {"MP4 video", "MP4"})                                                                                         \
   X(EXECUTABLE, EXECUTABLE_FILTER)
 
-  enum Filter
-  {
+    enum Filter
+    {
 #define X(symbol, ...) symbol,
-    FILTER_LIST
-#undef X
-  };
-
-  constexpr SDL_DialogFileFilter FILTERS[][1] = {
-#define X(symbol, ...) {__VA_ARGS__},
       FILTER_LIST
 #undef X
-  };
+    };
+
+    static constexpr SDL_DialogFileFilter FILTERS[][1] = {
+#define X(symbol, ...) {__VA_ARGS__},
+        FILTER_LIST
+#undef X
+    };
 
 #undef FILTER_LIST
 
@@ -53,39 +56,32 @@ namespace anm2ed::dialog
   X(WEBM_PATH_SET, WEBM)                                                                                               \
   X(MP4_PATH_SET, MP4)
 
-  enum Type
-  {
+    enum Type
+    {
 #define X(symbol, filter) symbol,
-    DIALOG_LIST
-#undef X
-  };
-
-  constexpr Filter TYPE_FILTERS[] = {
-#define X(symbol, filter) filter,
       DIALOG_LIST
 #undef X
-  };
+    };
+
+    static constexpr Filter TYPE_FILTERS[] = {
+#define X(symbol, filter) filter,
+        DIALOG_LIST
+#undef X
+    };
 
 #undef DIALOG_LIST
-}
 
-namespace anm2ed
-{
-
-  class Dialog
-  {
-  public:
     SDL_Window* window{};
     std::filesystem::path path{};
-    dialog::Type type{dialog::NONE};
+    Type type{NONE};
     int selectedFilter{-1};
 
     Dialog() = default;
     Dialog(SDL_Window*);
-    void file_open(dialog::Type type);
-    void file_save(dialog::Type type);
-    void folder_open(dialog::Type type);
-    bool is_selected(dialog::Type type) const;
+    void file_open(Type type);
+    void file_save(Type type);
+    void folder_open(Type type);
+    bool is_selected(Type type) const;
     void reset();
     void file_explorer_open(const std::filesystem::path&);
   };

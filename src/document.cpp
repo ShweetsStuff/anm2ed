@@ -4,17 +4,16 @@
 
 #include <format>
 
-#include "filesystem_.h"
 #include "log.h"
+#include "path_.h"
 #include "strings.h"
 #include "toast.h"
 
 using namespace anm2ed::anm2;
 using namespace anm2ed::imgui;
 using namespace anm2ed::types;
+using namespace anm2ed::util;
 using namespace glm;
-
-namespace filesystem = anm2ed::util::filesystem;
 
 namespace anm2ed
 {
@@ -99,12 +98,12 @@ namespace anm2ed
     this->path = !path.empty() ? path : this->path;
 
     auto absolutePath = this->path;
-    auto absolutePathUtf8 = filesystem::path_to_utf8(absolutePath);
+    auto absolutePathUtf8 = path::to_utf8(absolutePath);
     if (anm2.serialize(absolutePath, errorString))
     {
       toasts.push(std::vformat(localize.get(TOAST_SAVE_DOCUMENT), std::make_format_args(absolutePathUtf8)));
-      logger.info(std::vformat(localize.get(TOAST_SAVE_DOCUMENT, anm2ed::ENGLISH),
-                               std::make_format_args(absolutePathUtf8)));
+      logger.info(
+          std::vformat(localize.get(TOAST_SAVE_DOCUMENT, anm2ed::ENGLISH), std::make_format_args(absolutePathUtf8)));
       clean();
       return true;
     }
@@ -121,14 +120,14 @@ namespace anm2ed
 
   std::filesystem::path Document::autosave_path_get()
   {
-    auto fileNameUtf8 = filesystem::path_to_utf8(filename_get());
+    auto fileNameUtf8 = path::to_utf8(filename_get());
     auto autosaveNameUtf8 = "." + fileNameUtf8 + ".autosave";
-    return directory_get() / filesystem::path_from_utf8(autosaveNameUtf8);
+    return directory_get() / path::from_utf8(autosaveNameUtf8);
   }
 
   std::filesystem::path Document::path_from_autosave_get(std::filesystem::path& path)
   {
-    auto fileName = path.filename().u8string();
+    auto fileName = path::to_utf8(path.filename());
     if (!fileName.empty() && fileName.front() == '.') fileName.erase(fileName.begin());
 
     auto restorePath = path.parent_path() / std::filesystem::path(std::u8string(fileName.begin(), fileName.end()));
@@ -140,7 +139,7 @@ namespace anm2ed
   bool Document::autosave(std::string* errorString)
   {
     auto autosavePath = autosave_path_get();
-    auto autosavePathUtf8 = filesystem::path_to_utf8(autosavePath);
+    auto autosavePathUtf8 = path::to_utf8(autosavePath);
     if (anm2.serialize(autosavePath, errorString))
     {
       autosaveHash = hash;
@@ -152,8 +151,8 @@ namespace anm2ed
     }
     else if (errorString)
     {
-      toasts.push(std::vformat(localize.get(TOAST_AUTOSAVE_FAILED),
-                               std::make_format_args(autosavePathUtf8, *errorString)));
+      toasts.push(
+          std::vformat(localize.get(TOAST_AUTOSAVE_FAILED), std::make_format_args(autosavePathUtf8, *errorString)));
       logger.error(std::vformat(localize.get(TOAST_AUTOSAVE_FAILED, anm2ed::ENGLISH),
                                 std::make_format_args(autosavePathUtf8, *errorString)));
     }
@@ -265,17 +264,16 @@ namespace anm2ed
       if (anm2.spritesheet_add(directory_get(), path, id))
       {
         anm2::Spritesheet& spritesheet = anm2.content.spritesheets[id];
-        auto pathString = filesystem::path_to_utf8(spritesheet.path);
+        auto pathString = path::to_utf8(spritesheet.path);
         this->spritesheet.selection = {id};
         this->spritesheet.reference = id;
-        toasts.push(
-            std::vformat(localize.get(TOAST_SPRITESHEET_INITIALIZED), std::make_format_args(id, pathString)));
+        toasts.push(std::vformat(localize.get(TOAST_SPRITESHEET_INITIALIZED), std::make_format_args(id, pathString)));
         logger.info(std::vformat(localize.get(TOAST_SPRITESHEET_INITIALIZED, anm2ed::ENGLISH),
                                  std::make_format_args(id, pathString)));
       }
       else
       {
-        auto pathUtf8 = filesystem::path_to_utf8(pathCopy);
+        auto pathUtf8 = path::to_utf8(pathCopy);
         toasts.push(std::vformat(localize.get(TOAST_SPRITESHEET_INIT_FAILED), std::make_format_args(pathUtf8)));
         logger.error(std::vformat(localize.get(TOAST_SPRITESHEET_INIT_FAILED, anm2ed::ENGLISH),
                                   std::make_format_args(pathUtf8)));
@@ -294,7 +292,7 @@ namespace anm2ed
       if (anm2.sound_add(directory_get(), path, id))
       {
         auto& soundInfo = anm2.content.sounds[id];
-        auto soundPath = filesystem::path_to_utf8(soundInfo.path);
+        auto soundPath = path::to_utf8(soundInfo.path);
         sound.selection = {id};
         sound.reference = id;
         toasts.push(std::vformat(localize.get(TOAST_SOUND_INITIALIZED), std::make_format_args(id, soundPath)));
@@ -303,7 +301,7 @@ namespace anm2ed
       }
       else
       {
-        auto pathUtf8 = filesystem::path_to_utf8(pathCopy);
+        auto pathUtf8 = path::to_utf8(pathCopy);
         toasts.push(std::vformat(localize.get(TOAST_SOUND_INITIALIZE_FAILED), std::make_format_args(pathUtf8)));
         logger.error(std::vformat(localize.get(TOAST_SOUND_INITIALIZE_FAILED, anm2ed::ENGLISH),
                                   std::make_format_args(pathUtf8)));

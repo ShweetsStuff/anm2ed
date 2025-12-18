@@ -3,12 +3,11 @@
 #include <fstream>
 #include <sstream>
 
-#include "filesystem_.h"
 #include "log.h"
+#include "path_.h"
 
 using namespace anm2ed::util;
 using namespace glm;
-namespace filesystem = anm2ed::util::filesystem;
 
 namespace anm2ed
 {
@@ -123,8 +122,8 @@ DockSpace             ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,994 Spl
 
   Settings::Settings(const std::filesystem::path& path)
   {
-    auto pathUtf8 = filesystem::path_to_utf8(path);
-    if (filesystem::path_is_exist(path))
+    auto pathUtf8 = path::to_utf8(path);
+    if (path::is_exist(path))
       logger.info(std::format("Using settings from: {}", pathUtf8));
     else
     {
@@ -271,7 +270,7 @@ DockSpace             ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,994 Spl
 
   std::string Settings::imgui_data_load(const std::filesystem::path& path)
   {
-    auto pathUtf8 = filesystem::path_to_utf8(path);
+    auto pathUtf8 = path::to_utf8(path);
     std::ifstream file(path, std::ios::in | std::ios::binary);
     if (!file.is_open())
     {

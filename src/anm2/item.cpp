@@ -132,6 +132,39 @@ namespace anm2ed::anm2
     auto end = numberFrames > -1 ? start + numberFrames : (int)frames.size();
     end = glm::clamp(end, start, (int)frames.size());
 
+    const auto clamp_identity = [](auto value) { return value; };
+    const auto clamp01 = [](auto value) { return glm::clamp(value, 0.0f, 1.0f); };
+    const auto clamp_duration = [](int value) { return std::max(FRAME_DURATION_MIN, value); };
+
+    auto apply_scalar_with_clamp = [&](auto& target, const auto& optionalValue, auto clampFunc)
+    {
+      if (!optionalValue) return;
+      auto value = *optionalValue;
+
+      switch (type)
+      {
+        case ADJUST:
+          target = clampFunc(value);
+          break;
+        case ADD:
+          target = clampFunc(target + value);
+          break;
+        case SUBTRACT:
+          target = clampFunc(target - value);
+          break;
+        case MULTIPLY:
+          target = clampFunc(target * value);
+          break;
+        case DIVIDE:
+          if (value == decltype(value){}) return;
+          target = clampFunc(target / value);
+          break;
+      }
+    };
+
+    auto apply_scalar = [&](auto& target, const auto& optionalValue)
+    { apply_scalar_with_clamp(target, optionalValue, clamp_identity); };
+
     for (int i = useStart; i < end; i++)
     {
       Frame& frame = frames[i];
@@ -139,69 +172,32 @@ namespace anm2ed::anm2
       if (change.isVisible) frame.isVisible = *change.isVisible;
       if (change.isInterpolated) frame.isInterpolated = *change.isInterpolated;
 
-      switch (type)
-      {
-        case ADJUST:
-          if (change.rotation) frame.rotation = *change.rotation;
-          if (change.duration) frame.duration = std::max(FRAME_DURATION_MIN, *change.duration);
-          if (change.crop) frame.crop = *change.crop;
-          if (change.pivot) frame.pivot = *change.pivot;
-          if (change.position) frame.position = *change.position;
-          if (change.size) frame.size = *change.size;
-          if (change.scale) frame.scale = *change.scale;
-          if (change.colorOffset) frame.colorOffset = glm::clamp(*change.colorOffset, 0.0f, 1.0f);
-          if (change.tint) frame.tint = glm::clamp(*change.tint, 0.0f, 1.0f);
-          break;
+      apply_scalar(frame.rotation, change.rotation);
+      apply_scalar_with_clamp(frame.duration, change.duration, clamp_duration);
 
-        case ADD:
-          if (change.rotation) frame.rotation += *change.rotation;
-          if (change.duration) frame.duration = std::max(FRAME_DURATION_MIN, frame.duration + *change.duration);
-          if (change.crop) frame.crop += *change.crop;
-          if (change.pivot) frame.pivot += *change.pivot;
-          if (change.position) frame.position += *change.position;
-          if (change.size) frame.size += *change.size;
-          if (change.scale) frame.scale += *change.scale;
-          if (change.colorOffset) frame.colorOffset = glm::clamp(frame.colorOffset + *change.colorOffset, 0.0f, 1.0f);
-          if (change.tint) frame.tint = glm::clamp(frame.tint + *change.tint, 0.0f, 1.0f);
-          break;
+      apply_scalar(frame.crop.x, change.cropX);
+      apply_scalar(frame.crop.y, change.cropY);
 
-        case SUBTRACT:
-          if (change.rotation) frame.rotation -= *change.rotation;
-          if (change.duration) frame.duration = std::max(FRAME_DURATION_MIN, frame.duration - *change.duration);
-          if (change.crop) frame.crop -= *change.crop;
-          if (change.pivot) frame.pivot -= *change.pivot;
-          if (change.position) frame.position -= *change.position;
-          if (change.size) frame.size -= *change.size;
-          if (change.scale) frame.scale -= *change.scale;
-          if (change.colorOffset) frame.colorOffset = glm::clamp(frame.colorOffset - *change.colorOffset, 0.0f, 1.0f);
-          if (change.tint) frame.tint = glm::clamp(frame.tint - *change.tint, 0.0f, 1.0f);
-          break;
+      apply_scalar(frame.pivot.x, change.pivotX);
+      apply_scalar(frame.pivot.y, change.pivotY);
 
-        case MULTIPLY:
-          if (change.rotation) frame.rotation *= *change.rotation;
-          if (change.duration) frame.duration = std::max(FRAME_DURATION_MIN, frame.duration * *change.duration);
-          if (change.crop) frame.crop *= *change.crop;
-          if (change.pivot) frame.pivot *= *change.pivot;
-          if (change.position) frame.position *= *change.position;
-          if (change.size) frame.size *= *change.size;
-          if (change.scale) frame.scale *= *change.scale;
-          if (change.colorOffset) frame.colorOffset = glm::clamp(frame.colorOffset * *change.colorOffset, 0.0f, 1.0f);
-          if (change.tint) frame.tint = glm::clamp(frame.tint * *change.tint, 0.0f, 1.0f);
-          break;
+      apply_scalar(frame.position.x, change.positionX);
+      apply_scalar(frame.position.y, change.positionY);
 
-        case DIVIDE:
-          if (change.rotation && *change.rotation != 0.0f) frame.rotation /= *change.rotation;
-          if (change.duration && *change.duration != 0)
-            frame.duration = std::max(FRAME_DURATION_MIN, frame.duration / *change.duration);
-          if (change.crop) frame.crop /= *change.crop;
-          if (change.pivot) frame.pivot /= *change.pivot;
-          if (change.position) frame.position /= *change.position;
-          if (change.size) frame.size /= *change.size;
-          if (change.scale) frame.scale /= *change.scale;
-          if (change.colorOffset) frame.colorOffset = glm::clamp(frame.colorOffset / *change.colorOffset, 0.0f, 1.0f);
-          if (change.tint) frame.tint = glm::clamp(frame.tint / *change.tint, 0.0f, 1.0f);
-          break;
-      }
+      apply_scalar(frame.size.x, change.sizeX);
+      apply_scalar(frame.size.y, change.sizeY);
+
+      apply_scalar(frame.scale.x, change.scaleX);
+      apply_scalar(frame.scale.y, change.scaleY);
+
+      apply_scalar_with_clamp(frame.colorOffset.x, change.colorOffsetR, clamp01);
+      apply_scalar_with_clamp(frame.colorOffset.y, change.colorOffsetG, clamp01);
+      apply_scalar_with_clamp(frame.colorOffset.z, change.colorOffsetB, clamp01);
+
+      apply_scalar_with_clamp(frame.tint.x, change.tintR, clamp01);
+      apply_scalar_with_clamp(frame.tint.y, change.tintG, clamp01);
+      apply_scalar_with_clamp(frame.tint.z, change.tintB, clamp01);
+      apply_scalar_with_clamp(frame.tint.w, change.tintA, clamp01);
     }
   }
 

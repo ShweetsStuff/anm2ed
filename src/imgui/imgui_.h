@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <glm/glm.hpp>
 #include <imgui/imgui.h>
 #include <set>
@@ -176,6 +177,7 @@ namespace anm2ed::imgui
   ImVec2 child_size_get(int = 1);
   int input_text_callback(ImGuiInputTextCallbackData*);
   bool input_text_string(const char*, std::string*, ImGuiInputTextFlags = 0);
+  bool input_text_path(const char*, std::filesystem::path*, ImGuiInputTextFlags = 0);
   bool input_int_range(const char*, int&, int, int, int = STEP, int = STEP_FAST, ImGuiInputTextFlags = 0);
   bool input_int2_range(const char*, glm::ivec2&, glm::ivec2, glm::ivec2, ImGuiInputTextFlags = 0);
   bool input_float_range(const char*, float&, float, float, float = STEP, float = STEP_FAST, const char* = "%.3f",

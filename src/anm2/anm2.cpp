@@ -4,10 +4,11 @@
 #include <filesystem>
 #include <unordered_map>
 
-#include "filesystem_.h"
+#include "file_.h"
 #include "map_.h"
 #include "time_.h"
 #include "vector_.h"
+#include "working_directory.h"
 #include "xml_.h"
 
 using namespace tinyxml2;
@@ -23,7 +24,7 @@ namespace anm2ed::anm2
   {
     XMLDocument document;
 
-    filesystem::File file(path, "rb");
+    File file(path, "rb");
     if (!file)
     {
       if (errorString) *errorString = localize.get(ERROR_FILE_NOT_FOUND);
@@ -38,7 +39,7 @@ namespace anm2ed::anm2
       return;
     }
 
-    filesystem::WorkingDirectory workingDirectory(path, true);
+    WorkingDirectory workingDirectory(path, WorkingDirectory::FILE);
 
     const XMLElement* element = document.RootElement();
 
@@ -65,7 +66,7 @@ namespace anm2ed::anm2
     XMLDocument document;
     document.InsertFirstChild(to_element(document));
 
-    filesystem::File file(path, "wb");
+    File file(path, "wb");
     if (!file)
     {
       if (errorString) *errorString = localize.get(ERROR_FILE_NOT_FOUND);

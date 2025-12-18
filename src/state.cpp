@@ -5,8 +5,8 @@
 #include <imgui/backends/imgui_impl_opengl3.h>
 #include <imgui/backends/imgui_impl_sdl3.h>
 
-#include "filesystem_.h"
 #include "log.h"
+#include "path_.h"
 #include "strings.h"
 #include "toast.h"
 
@@ -26,7 +26,7 @@ namespace anm2ed
     dialog = Dialog(window);
 
     for (const auto& argument : arguments)
-      manager.open(filesystem::path_from_utf8(argument));
+      manager.open(path::from_utf8(argument));
 
     manager.chords_set(settings);
   }
@@ -46,8 +46,8 @@ namespace anm2ed
         {
           std::string droppedFile = event.drop.data ? event.drop.data : "";
           if (droppedFile.empty()) break;
-          auto droppedPath = filesystem::path_from_utf8(droppedFile);
-          if (filesystem::path_is_extension(droppedPath, "anm2"))
+          auto droppedPath = path::from_utf8(droppedFile);
+          if (path::is_extension(droppedPath, "anm2"))
           {
             if (manager.documents.empty())
               manager.open(droppedPath);
@@ -60,7 +60,7 @@ namespace anm2ed
             }
             SDL_FlashWindow(window, SDL_FLASH_UNTIL_FOCUSED);
           }
-          else if (filesystem::path_is_extension(droppedPath, "png"))
+          else if (path::is_extension(droppedPath, "png"))
           {
             if (auto document = manager.get())
               document->spritesheet_add(droppedPath);
@@ -70,8 +70,7 @@ namespace anm2ed
               logger.warning(localize.get(TOAST_ADD_SPRITESHEET_FAILED, anm2ed::ENGLISH));
             }
           }
-          else if (filesystem::path_is_extension(droppedPath, "wav") ||
-                   filesystem::path_is_extension(droppedPath, "ogg"))
+          else if (path::is_extension(droppedPath, "wav") || path::is_extension(droppedPath, "ogg"))
           {
             if (auto document = manager.get())
               document->sound_add(droppedPath);
@@ -87,8 +86,8 @@ namespace anm2ed
         {
           std::string droppedFile = event.drop.data ? event.drop.data : "";
           if (droppedFile.empty()) break;
-          auto droppedPath = filesystem::path_from_utf8(droppedFile);
-          if (filesystem::path_is_extension(droppedPath, "anm2"))
+          auto droppedPath = path::from_utf8(droppedFile);
+          if (path::is_extension(droppedPath, "anm2"))
           {
             manager.open(droppedPath);
             SDL_FlashWindow(window, SDL_FLASH_UNTIL_FOCUSED);

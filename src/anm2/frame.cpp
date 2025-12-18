@@ -117,7 +117,5 @@ namespace anm2ed::anm2
   }
 
   void Frame::shorten() { duration = glm::clamp(--duration, FRAME_DURATION_MIN, FRAME_DURATION_MAX); }
-
   void Frame::extend() { duration = glm::clamp(++duration, FRAME_DURATION_MIN, FRAME_DURATION_MAX); }
-
 }

@@ -3,23 +3,15 @@
 #include <glm/vec2.hpp>
 
 #include "manager.h"
-#include "settings.h"
-
-namespace anm2
-{
-  struct Frame;
-}
+#include "wizard/change_all_frame_properties.h"
 
 namespace anm2ed::imgui
 {
   class FrameProperties
   {
+    wizard::ChangeAllFrameProperties changeAllFrameProperties{};
+
   public:
     void update(Manager&, Settings&);
-
-  private:
-    glm::vec2 cropEditingValue{};
-    const anm2::Frame* cropEditingFrame{};
-    bool isCropEditing{};
   };
 }

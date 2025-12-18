@@ -11,7 +11,6 @@
 #include "tool.h"
 #include "types.h"
 
-using namespace anm2ed::canvas;
 using namespace anm2ed::types;
 using namespace anm2ed::resource;
 using namespace anm2ed::util;
@@ -19,12 +18,6 @@ using namespace glm;
 
 namespace anm2ed::imgui
 {
-  constexpr auto BORDER_DASH_LENGTH = 1.0f;
-  constexpr auto BORDER_DASH_GAP = 0.5f;
-  constexpr auto BORDER_DASH_OFFSET = 0.0f;
-
-  constexpr auto PIVOT_COLOR = color::PINK;
-
   SpritesheetEditor::SpritesheetEditor() : Canvas(vec2()) {}
 
   void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& resources)
@@ -218,7 +211,7 @@ namespace anm2ed::imgui
           rect_render(dashedShader, cropTransform, cropModel, color::RED);
 
           auto pivotTransform =
-              transform * math::quad_model_get(canvas::PIVOT_SIZE, frame->crop + frame->pivot, PIVOT_SIZE * 0.5f);
+              transform * math::quad_model_get(PIVOT_SIZE, frame->crop + frame->pivot, PIVOT_SIZE * 0.5f);
           texture_render(shaderTexture, resources.icons[icon::PIVOT].id, pivotTransform, PIVOT_COLOR);
         }
       }
@@ -278,7 +271,7 @@ namespace anm2ed::imgui
 
         auto frame = document.frame_get();
         auto useTool = tool;
-        auto step = isMod ? canvas::STEP_FAST : canvas::STEP;
+        auto step = isMod ? STEP_FAST : STEP;
         auto stepX = isGridSnap ? step * gridSize.x : step;
         auto stepY = isGridSnap ? step * gridSize.y : step;
         previousMousePos = mousePos;

@@ -35,6 +35,7 @@ namespace anm2ed
     int recordingStart{};
     int recordingEnd{};
     bool isRecordingRange{};
+    bool isAbleToRecord{};
 
     ImGuiKeyChord chords[SHORTCUT_COUNT]{};
 
