@@ -154,9 +154,19 @@ DockSpace             ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,994 Spl
         dest = (val == "true" || val == "1");
       }
       else if constexpr (std::is_same_v<T, std::string>)
+      {
         std::getline(ss, dest);
+      }
+      else if constexpr (std::is_same_v<T, std::filesystem::path>)
+      {
+        std::string value;
+        std::getline(ss, value);
+        dest = path::from_utf8(value);
+      }
       else
+      {
         stream_assign(dest, ss);
+      }
     };
 
     auto entry_load =
@@ -324,6 +334,8 @@ DockSpace             ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,994 Spl
 
       if constexpr (std::is_same_v<T, bool>)
         file << key << "=" << (value ? "true" : "false") << "\n";
+      else if constexpr (std::is_same_v<T, std::filesystem::path>)
+        file << key << "=" << path::to_utf8(value) << "\n";
       else
         file << key << "=" << value << "\n";
     };
