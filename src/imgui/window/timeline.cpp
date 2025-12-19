@@ -1783,13 +1783,16 @@ namespace anm2ed::imgui
         {
           input_text_string(localize.get(BASIC_NAME), &addItemName);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ITEM_NAME));
-          ImGui::BeginDisabled(type != anm2::LAYER);
+          if (type == anm2::LAYER)
           {
-            combo_negative_one_indexed(localize.get(LABEL_SPRITESHEET), &addItemSpritesheetID,
-                                       document.spritesheet.labels);
+            ImGui::Combo(localize.get(LABEL_SPRITESHEET), &addItemSpritesheetID, document.spritesheet.labels.data(), (int)document.spritesheet.labels.size());
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_SPRITESHEET));
           }
-          ImGui::EndDisabled();
+          else if (type == anm2::NULL_)
+          {
+            ImGui::Checkbox(localize.get(LABEL_RECT), &addItemIsShowRect);
+            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_NULL_RECT));
+          }
         }
         ImGui::EndDisabled();
       }
@@ -1838,9 +1841,9 @@ namespace anm2ed::imgui
         document.snapshot(localize.get(EDIT_ADD_ITEM));
         if (type == anm2::LAYER)
           addReference = anm2.layer_animation_add({reference.animationIndex, anm2::LAYER, addItemID}, addItemName,
-                                                  addItemSpritesheetID - 1, (destination::Type)destination);
+                                                  addItemSpritesheetID, (destination::Type)destination);
         else if (type == anm2::NULL_)
-          addReference = anm2.null_animation_add({reference.animationIndex, anm2::LAYER, addItemID}, addItemName,
+          addReference = anm2.null_animation_add({reference.animationIndex, anm2::NULL_, addItemID}, addItemName, addItemIsShowRect,
                                                  (destination::Type)destination);
 
         document.change(Document::ITEMS);

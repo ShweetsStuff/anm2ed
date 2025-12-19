@@ -498,7 +498,7 @@ namespace anm2ed
   X(TOOLTIP_NEW_ITEM, "Create a new item.", "Crea un nuevo item.", "Создать новый предмет.", "创造一个新物品.", "새 항목을 만듭니다.") \
   X(TOOLTIP_NO_UNUSED_ITEMS, "There are no unused items to use.", "No hay items sin utilizar para usar.", "Нет неиспользуемых предметов, которые использовать.", "没有可用的未使用物品.", "사용하지 않는 항목이 없습니다.") \
   X(TOOLTIP_NULL_NAME, "Set the null's name.", "Ajusta el nombre del Null.", "Назвать этот нуль.", "更改Null的名字.", "Null의 이름을 설정합니다.") \
-  X(TOOLTIP_NULL_RECT, "The null will have a rectangle show around it.", "Null tendra una guia de rectangulo alrededor.", "Около этого нуля будет прямоугольник.", "此Null周围会显示一个方框.", "Null의 주변에 사각형이 표시됩니다.") \
+  X(TOOLTIP_NULL_RECT, "Toggle to show the null as a rectangle.", "Alterna para mostrar el null como un rectangulo.", "Переключите, чтобы показывать null как прямоугольник.", "切换以将此Null显示为方框.", "Null을 사각형으로 표시하도록 전환합니다.") \
   X(TOOLTIP_NULL_RECT_HIDDEN, "The null's rectangle is hidden. Press to show it.", "La guia de rectangulo de Null esta oculta. Presiona para mostrarla.", "Прямоугольник этого нуля скрыт. Нажмите, чтобы его показать.", "此Null的方框已隐藏. 点击以显示.", "Null의 사각형이 숨겨져 있습니다. 표시하려면 누르세요.") \
   X(TOOLTIP_NULL_RECT_SHOWN, "The null's rectangle is shown. Press to hide it.", "La guia de rectangulo de Null esta visible. Presiona para ocultarla.", "Прямоугольник этого нуля видим. Нажмите, чтобы его скрыть.", "此Null的方框当前可见. 点击以隐藏.", "Null의 사각형이 표시되어 있습니다. 숨기려면 누르세요.") \
   X(TOOLTIP_NULL_TYPE, "Add a null item.", "Añade un item Null.", "Добавить нулевой предмет.", "添加一个Null物品.", "Null 항목을 추가합니다.") \

@@ -26,7 +26,7 @@ namespace anm2ed::imgui
     PopupHelper propertiesPopup{PopupHelper(LABEL_TIMELINE_PROPERTIES_POPUP, POPUP_NORMAL)};
     PopupHelper bakePopup{PopupHelper(LABEL_TIMELINE_BAKE_POPUP, POPUP_SMALL_NO_HEIGHT)};
     std::string addItemName{"New Item"};
-    bool addItemIsRect{};
+    bool addItemIsShowRect{};
     int addItemID{-1};
     int addItemSpritesheetID{-1};
     int hoveredTime{};

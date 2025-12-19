@@ -39,7 +39,6 @@ namespace anm2ed::anm2
   std::vector<std::string> Anm2::spritesheet_labels_get()
   {
     std::vector<std::string> labels{};
-    labels.emplace_back(localize.get(BASIC_NONE));
     for (auto& [id, spritesheet] : content.spritesheets)
     {
       auto pathString = path::to_utf8(spritesheet.path);
