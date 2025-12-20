@@ -135,6 +135,15 @@ namespace anm2ed
 
     logger.info("Initialized SDL");
 
+    auto windowProperties = SDL_CreateProperties();
+
+    if (windowProperties == 0)
+    {
+      logger.fatal(std::format("Could not initialize window properties! {}", SDL_GetError()));
+      isError = true;
+      return;
+    }
+
     if (settings.isDefault)
     {
       if (auto display = SDL_GetPrimaryDisplay(); display != 0)
@@ -157,8 +166,27 @@ namespace anm2ed
     else
       logger.info("Initialized SDL_mixer");
 
-    window = SDL_CreateWindow("Anm2Ed", settings.windowSize.x, settings.windowSize.y,
-                              SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+    SDL_SetStringProperty(windowProperties, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "Anm2Ed");
+    SDL_SetNumberProperty(windowProperties, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, settings.windowSize.x);
+    SDL_SetNumberProperty(windowProperties, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, settings.windowSize.y);
+
+    SDL_SetNumberProperty(windowProperties, SDL_PROP_WINDOW_CREATE_X_NUMBER,
+                          settings.isDefault ? SDL_WINDOWPOS_CENTERED : settings.windowPosition.x);
+    SDL_SetNumberProperty(windowProperties, SDL_PROP_WINDOW_CREATE_Y_NUMBER,
+                          settings.isDefault ? SDL_WINDOWPOS_CENTERED : settings.windowPosition.y);
+
+    SDL_SetBooleanProperty(windowProperties, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
+    SDL_SetBooleanProperty(windowProperties, SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN, true);
+    SDL_SetBooleanProperty(windowProperties, SDL_PROP_WINDOW_CREATE_HIGH_PIXEL_DENSITY_BOOLEAN, true);
+
+    window = SDL_CreateWindowWithProperties(windowProperties);
+
+    if (!window)
+    {
+      logger.fatal(std::format("Could not initialize window! {}", SDL_GetError()));
+      isError = true;
+      return;
+    }
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);

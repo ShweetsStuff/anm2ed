@@ -51,6 +51,7 @@ namespace anm2ed
 #define SETTINGS_MEMBERS                                                                                               \
   /* Symbol / Name / String / Type / Default */                                                                        \
   X(WINDOW_SIZE, windowSize, STRING_UNDEFINED, IVEC2_WH, {1200, 720})                                                  \
+  X(WINDOW_POSITION, windowPosition, STRING_UNDEFINED, IVEC2, glm::ivec2())                                            \
   X(IS_VSYNC, isVsync, STRING_UNDEFINED, BOOL, true)                                                                   \
   X(UI_SCALE, uiScale, STRING_UNDEFINED, FLOAT, 1.0f)                                                                  \
   X(THEME, theme, STRING_UNDEFINED, INT, types::theme::DARK)                                                           \

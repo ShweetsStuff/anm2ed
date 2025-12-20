@@ -1035,11 +1035,12 @@ namespace anm2ed::imgui
           if (isDragging)
           {
             playback.time = hoveredTime;
+            playback.clamp(settings.playbackIsClamp ? length : anm2::FRAME_NUM_MAX);
             document.frameTime = playback.time;
           }
 
           playback.clamp(settings.playbackIsClamp ? length : anm2::FRAME_NUM_MAX);
-
+          
           if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) isDragging = false;
 
           if (length > 0)

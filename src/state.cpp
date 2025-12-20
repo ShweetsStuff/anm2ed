@@ -112,6 +112,7 @@ namespace anm2ed
     toasts.update();
 
     SDL_GetWindowSize(window, &settings.windowSize.x, &settings.windowSize.y);
+    SDL_GetWindowPosition(window, &settings.windowPosition.x, &settings.windowPosition.y);
 
     if (isQuitting && manager.documents.empty()) isQuit = true;
   }
