@@ -27,7 +27,16 @@ A reimplementation of [i]The Binding of Isaac: Rebirth[/i]'s proprietary animati
 [*] Selecting multiple frames at a time
 [*] Settings that will preserve on exit (stored in %APPDATA% on Windows or ~/.local/share on Linux)
 [/list]
+
+[h3]Supported Languages[/h3] 
+[list]
+[*] English
+[*] Español (Latinoamérica) (Spanish (Latin America))
+[*] Pусский (Russian)
+[*] 中文 (Chinese)
+[*] 한국어 (Korean)
 [/list]
+[b]If you want to help localize for your language, feel free to get in touch to contribute![/b]
 
 [h3]Note on Rendering Animations[/h3]
 You will need FFmpeg installed! Get it from [url=https://ffmpeg.org/download.html]here[/url] and point to the downloaded ffmpeg executable within the program!

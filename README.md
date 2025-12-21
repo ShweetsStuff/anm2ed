@@ -19,6 +19,14 @@ A reimplementation of *The Binding of Isaac: Rebirth*'s proprietary animation ed
     - Selecting multiple frames at a time
     - Settings that will preserve on exit (stored in %APPDATA% on Windows or ~/.local/share on Linux)
 
+### Supported Languages
+- English
+- Español (Latinoamérica) (Spanish (Latin America))
+- Pусский (Russian)
+- 中文 (Chinese)
+- 한국어 (Korean)
+**If you want to help localize for your language, feel free to get in touch to contribute!**
+
 ### Note: Rendering Animations
 You will need FFmpeg installed to output GIF/video! Get it from [here](https://ffmpeg.org/download.html), and point to the downloaded ffmpeg executable within the program!
 
