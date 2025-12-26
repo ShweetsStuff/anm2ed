@@ -1040,7 +1040,7 @@ namespace anm2ed::imgui
           }
 
           playback.clamp(settings.playbackIsClamp ? length : anm2::FRAME_NUM_MAX);
-          
+
           if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) isDragging = false;
 
           if (length > 0)
@@ -1786,7 +1786,8 @@ namespace anm2ed::imgui
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ITEM_NAME));
           if (type == anm2::LAYER)
           {
-            ImGui::Combo(localize.get(LABEL_SPRITESHEET), &addItemSpritesheetID, document.spritesheet.labels.data(), (int)document.spritesheet.labels.size());
+            ImGui::Combo(localize.get(LABEL_SPRITESHEET), &addItemSpritesheetID, document.spritesheet.labels.data(),
+                         (int)document.spritesheet.labels.size());
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_SPRITESHEET));
           }
           else if (type == anm2::NULL_)
@@ -1817,13 +1818,21 @@ namespace anm2ed::imgui
               auto& layer = anm2.content.layers[id];
               auto label =
                   std::vformat(localize.get(FORMAT_LAYER), std::make_format_args(id, layer.name, layer.spritesheetID));
-              if (ImGui::Selectable(label.c_str(), isSelected)) addItemID = id;
+              if (ImGui::Selectable(label.c_str(), isSelected))
+              {
+                addItemID = id;
+                addItemSpritesheetID = layer.spritesheetID;
+              }
             }
             else if (type == anm2::NULL_)
             {
               auto& null = anm2.content.nulls[id];
               auto label = std::vformat(localize.get(FORMAT_NULL), std::make_format_args(id, null.name));
-              if (ImGui::Selectable(label.c_str(), isSelected)) addItemID = id;
+              if (ImGui::Selectable(label.c_str(), isSelected))
+              {
+                addItemID = id;
+                addItemIsShowRect = null.isShowRect;
+              }
             }
 
             ImGui::PopID();
@@ -1844,8 +1853,8 @@ namespace anm2ed::imgui
           addReference = anm2.layer_animation_add({reference.animationIndex, anm2::LAYER, addItemID}, addItemName,
                                                   addItemSpritesheetID, (destination::Type)destination);
         else if (type == anm2::NULL_)
-          addReference = anm2.null_animation_add({reference.animationIndex, anm2::NULL_, addItemID}, addItemName, addItemIsShowRect,
-                                                 (destination::Type)destination);
+          addReference = anm2.null_animation_add({reference.animationIndex, anm2::NULL_, addItemID}, addItemName,
+                                                 addItemIsShowRect, (destination::Type)destination);
 
         document.change(Document::ITEMS);
 
