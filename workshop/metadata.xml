@@ -27,6 +27,7 @@ A reimplementation of [i]The Binding of Isaac: Rebirth[/i]'s proprietary animati
 [*] Selecting multiple frames at a time
 [*] Settings that will preserve on exit (stored in %APPDATA% on Windows or ~/.local/share on Linux)
 [/list]
+[/list]
 
 [h3]Supported Languages[/h3] 
 [list]
@@ -50,6 +51,6 @@ Alternatively, if you have subscribed to the mod, you can find the latest releas
 [h3]Happy animating![/h3]
 [img]https://files.catbox.moe/4auc1c.gif[/img]
 </description>
-    <version>2.10</version>
+    <version>2.11</version>
     <visibility>Public</visibility>
 </metadata>
