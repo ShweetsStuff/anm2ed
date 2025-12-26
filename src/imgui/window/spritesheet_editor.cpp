@@ -43,6 +43,7 @@ namespace anm2ed::imgui
     auto& shaderGrid = resources.shaders[shader::GRID];
     auto& shaderTexture = resources.shaders[shader::TEXTURE];
     auto& dashedShader = resources.shaders[shader::DASHED];
+    auto& frames = document.frames.selection;
 
     auto reset_checker_pan = [&]()
     {
@@ -186,6 +187,7 @@ namespace anm2ed::imgui
       clear(isTransparent ? vec4(0) : vec4(backgroundColor, 1.0f));
 
       auto frame = document.frame_get();
+      auto item = document.item_get();
 
       if (spritesheet && spritesheet->texture.is_valid())
       {
@@ -299,6 +301,9 @@ namespace anm2ed::imgui
           return std::pair{minPoint, maxPoint};
         };
 
+        auto frame_change_apply = [&](anm2::FrameChange frameChange, anm2::ChangeType changeType = anm2::ADJUST)
+        { item->frames_change(frameChange, changeType, *frames.begin(), frames.size()); };
+
         if (isMouseMiddleDown) useTool = tool::PAN;
         if (tool == tool::MOVE && isMouseRightDown) useTool = tool::CROP;
         if (tool == tool::CROP && isMouseRightDown) useTool = tool::MOVE;
@@ -324,14 +329,17 @@ namespace anm2ed::imgui
             if (isMouseDown || isMouseMiddleDown) pan += mouseDelta;
             break;
           case tool::MOVE:
-            if (!frame) break;
+            if (!item || frames.empty()) break;
             if (isBegin) document.snapshot(localize.get(EDIT_FRAME_PIVOT));
-            if (isMouseDown) frame->pivot = vec2(ivec2(mousePos - frame->crop));
-            if (isLeftPressed) frame->pivot.x -= step;
-            if (isRightPressed) frame->pivot.x += step;
-            if (isUpPressed) frame->pivot.y -= step;
-            if (isDownPressed) frame->pivot.y += step;
-            frame->pivot = vec2(ivec2(frame->pivot));
+            if (isMouseDown)
+              frame_change_apply({.pivotX = mousePos.x - frame->crop.x, .pivotY = mousePos.y - frame->crop.y});
+            if (isLeftPressed) frame_change_apply({.pivotX = step}, anm2::SUBTRACT);
+            if (isRightPressed) frame_change_apply({.pivotX = step}, anm2::ADD);
+            if (isUpPressed) frame_change_apply({.pivotY = step}, anm2::SUBTRACT);
+            if (isDownPressed) frame_change_apply({.pivotY = step}, anm2::ADD);
+
+            frame_change_apply({.pivotX = (int)frame->pivot.x, .pivotY = (int)frame->pivot.y});
+
             if (isDuring)
             {
               if (ImGui::BeginTooltip())
@@ -346,40 +354,52 @@ namespace anm2ed::imgui
             if (isEnd) document.change(Document::FRAMES);
             break;
           case tool::CROP:
-            if (!frame) break;
+            if (!item || frames.empty()) break;
             if (isBegin) document.snapshot(localize.get(EDIT_FRAME_CROP));
 
             if (isMouseClicked)
             {
               cropAnchor = mousePos;
-              frame->crop = vec2(ivec2(cropAnchor));
-              frame->size = vec2();
+              frame_change_apply({.cropX = cropAnchor.x, .cropY = cropAnchor.y, .sizeX = {}, .sizeY = {}});
             }
             if (isMouseDown)
             {
               auto [minPoint, maxPoint] = snap_rect(glm::min(cropAnchor, mousePos), glm::max(cropAnchor, mousePos));
-              frame->crop = vec2(ivec2(minPoint));
-              frame->size = vec2(ivec2(maxPoint - minPoint));
+              frame_change_apply({.cropX = (int)minPoint.x,
+                                  .cropY = (int)minPoint.y,
+                                  .sizeX = (int)maxPoint.x - minPoint.x,
+                                  .sizeY = (int)maxPoint.y - minPoint.y});
             }
-            if (isLeftPressed) frame->crop.x -= stepX;
-            if (isRightPressed) frame->crop.x += stepX;
-            if (isUpPressed) frame->crop.y -= stepY;
-            if (isDownPressed) frame->crop.y += stepY;
-            frame->crop = vec2(ivec2(frame->crop));
-            frame->size = vec2(ivec2(frame->size));
+            if (isLeftPressed) frame_change_apply({.cropX = stepX}, anm2::SUBTRACT);
+            if (isRightPressed) frame_change_apply({.cropX = stepX}, anm2::ADD);
+            if (isUpPressed) frame_change_apply({.cropY = stepY}, anm2::SUBTRACT);
+            if (isDownPressed) frame_change_apply({.cropY = stepY}, anm2::ADD);
+
+            frame_change_apply({.cropX = (int)frame->crop.x,
+                                .cropY = (int)frame->crop.y,
+                                .sizeX = (int)frame->size.x,
+                                .sizeY = (int)frame->size.y});
+
             if (isDuring)
             {
               if (!isMouseDown)
               {
                 auto minPoint = glm::min(frame->crop, frame->crop + frame->size);
                 auto maxPoint = glm::max(frame->crop, frame->crop + frame->size);
-                frame->crop = vec2(ivec2(minPoint));
-                frame->size = vec2(ivec2(maxPoint - minPoint));
+
+                frame_change_apply({.cropX = (int)minPoint.x,
+                                    .cropY = (int)minPoint.y,
+                                    .sizeX = (int)maxPoint.x - minPoint.x,
+                                    .sizeY = (int)maxPoint.y - minPoint.y});
+
                 if (isGridSnap)
                 {
                   auto [snapMin, snapMax] = snap_rect(frame->crop, frame->crop + frame->size);
-                  frame->crop = snapMin;
-                  frame->size = snapMax - snapMin;
+
+                  frame_change_apply({.cropX = (int)snapMin.x,
+                                      .cropY = (int)snapMin.y,
+                                      .sizeX = (int)snapMax.x - snapMin.x,
+                                      .sizeY = (int)snapMax.y - snapMin.y});
                 }
               }
               if (ImGui::BeginTooltip())

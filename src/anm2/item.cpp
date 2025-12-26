@@ -126,7 +126,7 @@ namespace anm2ed::anm2
     return frame;
   }
 
-  void Item::frames_change(FrameChange& change, ChangeType type, int start, int numberFrames)
+  void Item::frames_change(FrameChange change, ChangeType type, int start, int numberFrames)
   {
     auto useStart = numberFrames > -1 ? start : 0;
     auto end = numberFrames > -1 ? start + numberFrames : (int)frames.size();

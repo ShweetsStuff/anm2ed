@@ -246,6 +246,7 @@ namespace anm2ed::imgui
     auto& shaderAxes = resources.shaders[shader::AXIS];
     auto& shaderGrid = resources.shaders[shader::GRID];
     auto& shaderTexture = resources.shaders[shader::TEXTURE];
+    auto& frames = document.frames.selection;
 
     auto reset_checker_pan = [&]()
     {
@@ -735,6 +736,7 @@ namespace anm2ed::imgui
         auto isMod = ImGui::IsKeyDown(ImGuiMod_Shift);
 
         auto frame = document.frame_get();
+        auto item = document.item_get();
         auto useTool = tool;
         auto step = isMod ? STEP_FAST : STEP;
         mousePos = position_translate(zoom, pan, to_vec2(ImGui::GetMousePos()) - to_vec2(cursorScreenPos));
@@ -742,6 +744,9 @@ namespace anm2ed::imgui
         if (isMouseMiddleDown) useTool = tool::PAN;
         if (tool == tool::MOVE && isMouseRightDown) useTool = tool::SCALE;
         if (tool == tool::SCALE && isMouseRightDown) useTool = tool::MOVE;
+
+        auto frame_change_apply = [&](anm2::FrameChange frameChange, anm2::ChangeType changeType = anm2::ADJUST)
+        { item->frames_change(frameChange, changeType, *frames.begin(), frames.size()); };
 
         auto& toolInfo = tool::INFO[useTool];
         auto& areaType = toolInfo.areaType;
@@ -759,7 +764,7 @@ namespace anm2ed::imgui
             if (isMouseDown || isMouseMiddleDown) pan += vec2(mouseDelta.x, mouseDelta.y);
             break;
           case tool::MOVE:
-            if (!frame) break;
+            if (!item || frames.empty()) break;
             if (isBegin)
             {
               document.snapshot(localize.get(EDIT_FRAME_POSITION));
@@ -769,11 +774,15 @@ namespace anm2ed::imgui
                 isMoveDragging = true;
               }
             }
-            if (isMouseDown && isMoveDragging) frame->position = ivec2(mousePos - moveOffset);
-            if (isLeftPressed) frame->position.x -= step;
-            if (isRightPressed) frame->position.x += step;
-            if (isUpPressed) frame->position.y -= step;
-            if (isDownPressed) frame->position.y += step;
+            if (isMouseDown && isMoveDragging)
+              frame_change_apply(
+                  {.positionX = (int)mousePos.x - moveOffset.x, .positionY = (int)mousePos.y - moveOffset.y});
+
+            if (isLeftPressed) frame_change_apply({.positionX = step}, anm2::SUBTRACT);
+            if (isRightPressed) frame_change_apply({.positionX = step}, anm2::ADD);
+            if (isUpPressed) frame_change_apply({.positionY = step}, anm2::SUBTRACT);
+            if (isDownPressed) frame_change_apply({.positionY = step}, anm2::ADD);
+
             if (isMouseReleased) isMoveDragging = false;
             if (isEnd) document.change(Document::FRAMES);
             if (isDuring)
@@ -788,17 +797,20 @@ namespace anm2ed::imgui
             }
             break;
           case tool::SCALE:
-            if (!frame) break;
+            if (!item || frames.empty()) break;
             if (isBegin) document.snapshot(localize.get(EDIT_FRAME_SCALE));
             if (isMouseDown)
             {
               frame->scale += vec2(mouseDelta.x, mouseDelta.y);
               if (isMod) frame->scale = {frame->scale.x, frame->scale.x};
+
+              frame_change_apply({.scaleX = (int)frame->scale.x, .scaleY = (int)frame->scale.y});
             }
-            if (isLeftPressed) frame->scale.x -= step;
-            if (isRightPressed) frame->scale.x += step;
-            if (isUpPressed) frame->scale.y -= step;
-            if (isDownPressed) frame->scale.y += step;
+
+            if (isLeftPressed) frame_change_apply({.scaleX = step}, anm2::SUBTRACT);
+            if (isRightPressed) frame_change_apply({.scaleX = step}, anm2::ADD);
+            if (isUpPressed) frame_change_apply({.scaleY = step}, anm2::SUBTRACT);
+            if (isDownPressed) frame_change_apply({.scaleY = step}, anm2::ADD);
 
             if (isDuring)
             {
@@ -814,11 +826,11 @@ namespace anm2ed::imgui
             if (isEnd) document.change(Document::FRAMES);
             break;
           case tool::ROTATE:
-            if (!frame) break;
+            if (!item || frames.empty()) break;
             if (isBegin) document.snapshot(localize.get(EDIT_FRAME_ROTATION));
-            if (isMouseDown) frame->rotation += mouseDelta.y;
-            if (isLeftPressed || isDownPressed) frame->rotation -= step;
-            if (isUpPressed || isRightPressed) frame->rotation += step;
+            if (isMouseDown) frame_change_apply({.rotation = mouseDelta.x}, anm2::ADD);
+            if (isLeftPressed || isDownPressed) frame_change_apply({.rotation = step}, anm2::SUBTRACT);
+            if (isUpPressed || isRightPressed) frame_change_apply({.rotation = step}, anm2::ADD);
 
             if (isDuring)
             {

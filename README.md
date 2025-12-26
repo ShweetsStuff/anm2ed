@@ -25,6 +25,7 @@ A reimplementation of *The Binding of Isaac: Rebirth*'s proprietary animation ed
 - Pусский (Russian)
 - 中文 (Chinese)
 - 한국어 (Korean)
+
 **If you want to help localize for your language, feel free to get in touch to contribute!**
 
 ### Note: Rendering Animations

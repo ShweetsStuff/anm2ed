@@ -1,7 +1,5 @@
 #include "change_all_frame_properties.h"
 
-#include <algorithm>
-#include <cmath>
 #include <string>
 
 #include "math_.h"
