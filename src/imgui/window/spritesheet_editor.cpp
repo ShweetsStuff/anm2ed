@@ -332,7 +332,8 @@ namespace anm2ed::imgui
             if (!item || frames.empty()) break;
             if (isBegin) document.snapshot(localize.get(EDIT_FRAME_PIVOT));
             if (isMouseDown)
-              frame_change_apply({.pivotX = mousePos.x - frame->crop.x, .pivotY = mousePos.y - frame->crop.y});
+              frame_change_apply(
+                  {.pivotX = (int)(mousePos.x - frame->crop.x), .pivotY = (int)(mousePos.y - frame->crop.y)});
             if (isLeftPressed) frame_change_apply({.pivotX = step}, anm2::SUBTRACT);
             if (isRightPressed) frame_change_apply({.pivotX = step}, anm2::ADD);
             if (isUpPressed) frame_change_apply({.pivotY = step}, anm2::SUBTRACT);

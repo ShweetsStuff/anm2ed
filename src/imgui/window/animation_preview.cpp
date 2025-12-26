@@ -776,7 +776,7 @@ namespace anm2ed::imgui
             }
             if (isMouseDown && isMoveDragging)
               frame_change_apply(
-                  {.positionX = (int)mousePos.x - moveOffset.x, .positionY = (int)mousePos.y - moveOffset.y});
+                  {.positionX = (int)(mousePos.x - moveOffset.x), .positionY = (int)(mousePos.y - moveOffset.y)});
 
             if (isLeftPressed) frame_change_apply({.positionX = step}, anm2::SUBTRACT);
             if (isRightPressed) frame_change_apply({.positionX = step}, anm2::ADD);
@@ -828,7 +828,7 @@ namespace anm2ed::imgui
           case tool::ROTATE:
             if (!item || frames.empty()) break;
             if (isBegin) document.snapshot(localize.get(EDIT_FRAME_ROTATION));
-            if (isMouseDown) frame_change_apply({.rotation = mouseDelta.x}, anm2::ADD);
+            if (isMouseDown) frame_change_apply({.rotation = (int)mouseDelta.x}, anm2::ADD);
             if (isLeftPressed || isDownPressed) frame_change_apply({.rotation = step}, anm2::SUBTRACT);
             if (isUpPressed || isRightPressed) frame_change_apply({.rotation = step}, anm2::ADD);
 
