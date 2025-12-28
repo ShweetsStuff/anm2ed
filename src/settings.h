@@ -93,6 +93,8 @@ namespace anm2ed
   X(CHANGE_IS_COLOR_OFFSET_A, changeIsColorOffsetA, STRING_UNDEFINED, BOOL, false)                                     \
   X(CHANGE_IS_VISIBLE_SET, changeIsVisibleSet, STRING_UNDEFINED, BOOL, false)                                          \
   X(CHANGE_IS_INTERPOLATED_SET, changeIsInterpolatedSet, STRING_UNDEFINED, BOOL, false)                                \
+  X(CHANGE_IS_FLIP_X_SET, changeIsFlipXSet, STRING_UNDEFINED, BOOL, false)                                             \
+  X(CHANGE_IS_FLIP_Y_SET, changeIsFlipYSet, STRING_UNDEFINED, BOOL, false)                                             \
   X(CHANGE_CROP, changeCrop, STRING_UNDEFINED, VEC2, {})                                                               \
   X(CHANGE_SIZE, changeSize, STRING_UNDEFINED, VEC2, {})                                                               \
   X(CHANGE_POSITION, changePosition, STRING_UNDEFINED, VEC2, {})                                                       \
@@ -104,6 +106,8 @@ namespace anm2ed
   X(CHANGE_COLOR_OFFSET, changeColorOffset, STRING_UNDEFINED, VEC3, {})                                                \
   X(CHANGE_IS_VISIBLE, changeIsVisible, STRING_UNDEFINED, BOOL, false)                                                 \
   X(CHANGE_IS_INTERPOLATED, changeIsInterpolated, STRING_UNDEFINED, BOOL, false)                                       \
+  X(CHANGE_IS_FLIP_X, changeIsFlipX, STRING_UNDEFINED, BOOL, false)                                                    \
+  X(CHANGE_IS_FLIP_Y, changeIsFlipY, STRING_UNDEFINED, BOOL, false)                                                    \
                                                                                                                        \
   X(SCALE_VALUE, scaleValue, STRING_UNDEFINED, FLOAT, 1.0f)                                                            \
                                                                                                                        \

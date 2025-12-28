@@ -126,15 +126,13 @@ namespace anm2ed::anm2
     return frame;
   }
 
-  void Item::frames_change(FrameChange change, ChangeType type, int start, int numberFrames)
+  void Item::frames_change(FrameChange change, ChangeType type, std::set<int>& selection)
   {
-    auto useStart = numberFrames > -1 ? start : 0;
-    auto end = numberFrames > -1 ? start + numberFrames : (int)frames.size();
-    end = glm::clamp(end, start, (int)frames.size());
-
     const auto clamp_identity = [](auto value) { return value; };
     const auto clamp01 = [](auto value) { return glm::clamp(value, 0.0f, 1.0f); };
     const auto clamp_duration = [](int value) { return std::max(FRAME_DURATION_MIN, value); };
+
+    if (selection.empty()) return;
 
     auto apply_scalar_with_clamp = [&](auto& target, const auto& optionalValue, auto clampFunc)
     {
@@ -165,12 +163,15 @@ namespace anm2ed::anm2
     auto apply_scalar = [&](auto& target, const auto& optionalValue)
     { apply_scalar_with_clamp(target, optionalValue, clamp_identity); };
 
-    for (int i = useStart; i < end; i++)
+    for (auto i : selection)
     {
+      if (!vector::in_bounds(frames, i)) continue;
       Frame& frame = frames[i];
 
       if (change.isVisible) frame.isVisible = *change.isVisible;
       if (change.isInterpolated) frame.isInterpolated = *change.isInterpolated;
+      if (change.isFlipX) frame.scale.x = -frame.scale.y;
+      if (change.isFlipY) frame.scale.y = -frame.scale.y;
 
       apply_scalar(frame.rotation, change.rotation);
       apply_scalar_with_clamp(frame.duration, change.duration, clamp_duration);

@@ -35,6 +35,8 @@ namespace anm2ed::imgui::wizard
     auto& isColorOffsetB = settings.changeIsColorOffsetB;
     auto& isVisibleSet = settings.changeIsVisibleSet;
     auto& isInterpolatedSet = settings.changeIsInterpolatedSet;
+    auto& isFlipXSet = settings.changeIsFlipXSet;
+    auto& isFlipYSet = settings.changeIsFlipYSet;
     auto& crop = settings.changeCrop;
     auto& size = settings.changeSize;
     auto& position = settings.changePosition;
@@ -46,6 +48,8 @@ namespace anm2ed::imgui::wizard
     auto& colorOffset = settings.changeColorOffset;
     auto& isVisible = settings.changeIsVisible;
     auto& isInterpolated = settings.changeIsInterpolated;
+    auto& isFlipX = settings.changeIsFlipX;
+    auto& isFlipY = settings.changeIsFlipY;
 
 #define PROPERTIES_WIDGET(body, checkboxLabel, isEnabled)                                                              \
   ImGui::Checkbox(checkboxLabel, &isEnabled);                                                                          \
@@ -196,6 +200,10 @@ namespace anm2ed::imgui::wizard
     ImGui::SameLine();
     bool_value("##Is Interpolated", localize.get(BASIC_INTERPOLATED), isInterpolatedSet, isInterpolated);
 
+    bool_value("##Is Flip X", localize.get(LABEL_FLIP_X), isFlipXSet, isFlipX);
+    ImGui::SameLine();
+    bool_value("##Is Flip Y", localize.get(LABEL_FLIP_Y), isFlipYSet, isFlipY);
+
     ImGui::PopStyleVar();
 
     auto frame_change = [&](anm2::ChangeType type)
@@ -222,9 +230,11 @@ namespace anm2ed::imgui::wizard
       if (isColorOffsetB) frameChange.colorOffsetB = colorOffset.b;
       if (isVisibleSet) frameChange.isVisible = std::make_optional(isVisible);
       if (isInterpolatedSet) frameChange.isInterpolated = std::make_optional(isInterpolated);
+      if (isFlipXSet) frameChange.isFlipX = std::make_optional(isFlipX);
+      if (isFlipYSet) frameChange.isFlipY = std::make_optional(isFlipY);
 
       DOCUMENT_EDIT(document, localize.get(EDIT_CHANGE_FRAME_PROPERTIES), Document::FRAMES,
-                    document.item_get()->frames_change(frameChange, type, *frames.begin(), (int)frames.size()));
+                    document.item_get()->frames_change(frameChange, type, frames));
 
       isChanged = true;
     };

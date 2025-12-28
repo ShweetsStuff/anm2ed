@@ -71,6 +71,8 @@ namespace anm2ed::anm2
     std::optional<float> tintG{};
     std::optional<float> tintB{};
     std::optional<float> tintA{};
+    std::optional<bool> isFlipX{};
+    std::optional<bool> isFlipY{};
   };
 
 }

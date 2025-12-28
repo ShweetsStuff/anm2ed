@@ -20,7 +20,7 @@ namespace anm2ed::anm2
     std::string to_string(Type, int = -1);
     int length(Type);
     Frame frame_generate(float, Type);
-    void frames_change(FrameChange, ChangeType, int, int = 0);
+    void frames_change(FrameChange, ChangeType, std::set<int>&);
     bool frames_deserialize(const std::string&, Type, int, std::set<int>&, std::string*);
     void frames_bake(int, int, bool, bool);
     void frames_generate_from_grid(glm::ivec2, glm::ivec2, glm::ivec2, int, int, int);
