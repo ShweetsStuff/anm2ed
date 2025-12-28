@@ -7,7 +7,6 @@
 #include <imgui_internal.h>
 
 #include "log.h"
-#include "math_.h"
 #include "toast.h"
 
 #include "vector_.h"

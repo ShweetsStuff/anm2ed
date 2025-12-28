@@ -69,7 +69,6 @@ add_subdirectory(external/SDL_mixer EXCLUDE_FROM_ALL)
 
 add_subdirectory(external/lunasvg)
 
-
 set(GLAD_SRC ${CMAKE_CURRENT_SOURCE_DIR}/include/glad/glad.cpp)
 
 set(IMGUI_SRC
@@ -142,8 +141,9 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
         IMGUI_ENABLE_DOCKING
 )
 
-
 target_include_directories(${PROJECT_NAME} PRIVATE
+        include
+        include/glad
         external
         external/imgui
         external/glm
@@ -152,8 +152,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         external/SDL
         external/SDL_mixer
         external/SDL_mixer/include
-        include
-        include/glad
         src
         src/imgui
         src/resource

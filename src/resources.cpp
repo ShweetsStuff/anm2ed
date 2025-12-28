@@ -13,7 +13,8 @@ namespace anm2ed
     for (auto [i, fontInfo] : std::views::enumerate(font::FONTS))
     {
       fonts[i] = Font((void*)fontInfo.data, fontInfo.length, font::SIZE);
-      fonts[i].append((void*)font::CJK_INFO.data, font::CJK_INFO.length, font::SIZE);
+      fonts[i].append((void*)font::CHINESE_INFO.data, font::CHINESE_INFO.length, font::SIZE);
+      fonts[i].append((void*)font::KOREAN_INFO.data, font::KOREAN_INFO.length, font::SIZE);
     }
 
     for (auto [i, iconInfo] : std::views::enumerate(icon::ICONS))
