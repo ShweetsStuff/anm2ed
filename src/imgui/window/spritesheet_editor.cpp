@@ -277,7 +277,7 @@ namespace anm2ed::imgui
         auto stepX = isGridSnap ? step * gridSize.x : step;
         auto stepY = isGridSnap ? step * gridSize.y : step;
         previousMousePos = mousePos;
-        mousePos = position_translate(zoom, pan, to_vec2(ImGui::GetMousePos()) - to_vec2(cursorScreenPos));
+        mousePos = position_translate(zoom, pan, to_ivec2(ImGui::GetMousePos()) - to_ivec2(cursorScreenPos));
 
         auto snap_rect = [&](glm::vec2 minPoint, glm::vec2 maxPoint)
         {
@@ -332,14 +332,17 @@ namespace anm2ed::imgui
             if (!item || frames.empty()) break;
             if (isBegin) document.snapshot(localize.get(EDIT_FRAME_PIVOT));
             if (isMouseDown)
-              frame_change_apply(
-                  {.pivotX = (int)(mousePos.x - frame->crop.x), .pivotY = (int)(mousePos.y - frame->crop.y)});
+            {
+              frame->crop = ivec2(frame->crop);
+              frame_change_apply({.pivotX = mousePos.x - frame->crop.x, .pivotY = mousePos.y - frame->crop.y});
+            }
             if (isLeftPressed) frame_change_apply({.pivotX = step}, anm2::SUBTRACT);
             if (isRightPressed) frame_change_apply({.pivotX = step}, anm2::ADD);
             if (isUpPressed) frame_change_apply({.pivotY = step}, anm2::SUBTRACT);
             if (isDownPressed) frame_change_apply({.pivotY = step}, anm2::ADD);
 
-            frame_change_apply({.pivotX = (int)frame->pivot.x, .pivotY = (int)frame->pivot.y});
+            frame->pivot = ivec2(frame->pivot);
+            frame_change_apply({.pivotX = frame->pivot.x, .pivotY = frame->pivot.y});
 
             if (isDuring)
             {
@@ -366,20 +369,18 @@ namespace anm2ed::imgui
             if (isMouseDown)
             {
               auto [minPoint, maxPoint] = snap_rect(glm::min(cropAnchor, mousePos), glm::max(cropAnchor, mousePos));
-              frame_change_apply({.cropX = (int)minPoint.x,
-                                  .cropY = (int)minPoint.y,
-                                  .sizeX = (int)maxPoint.x - minPoint.x,
-                                  .sizeY = (int)maxPoint.y - minPoint.y});
+              frame_change_apply({.cropX = minPoint.x,
+                                  .cropY = minPoint.y,
+                                  .sizeX = maxPoint.x - minPoint.x,
+                                  .sizeY = maxPoint.y - minPoint.y});
             }
             if (isLeftPressed) frame_change_apply({.cropX = stepX}, anm2::SUBTRACT);
             if (isRightPressed) frame_change_apply({.cropX = stepX}, anm2::ADD);
             if (isUpPressed) frame_change_apply({.cropY = stepY}, anm2::SUBTRACT);
             if (isDownPressed) frame_change_apply({.cropY = stepY}, anm2::ADD);
 
-            frame_change_apply({.cropX = (int)frame->crop.x,
-                                .cropY = (int)frame->crop.y,
-                                .sizeX = (int)frame->size.x,
-                                .sizeY = (int)frame->size.y});
+            frame_change_apply(
+                {.cropX = frame->crop.x, .cropY = frame->crop.y, .sizeX = frame->size.x, .sizeY = frame->size.y});
 
             if (isDuring)
             {
@@ -388,19 +389,19 @@ namespace anm2ed::imgui
                 auto minPoint = glm::min(frame->crop, frame->crop + frame->size);
                 auto maxPoint = glm::max(frame->crop, frame->crop + frame->size);
 
-                frame_change_apply({.cropX = (int)minPoint.x,
-                                    .cropY = (int)minPoint.y,
-                                    .sizeX = (int)maxPoint.x - minPoint.x,
-                                    .sizeY = (int)maxPoint.y - minPoint.y});
+                frame_change_apply({.cropX = minPoint.x,
+                                    .cropY = minPoint.y,
+                                    .sizeX = maxPoint.x - minPoint.x,
+                                    .sizeY = maxPoint.y - minPoint.y});
 
                 if (isGridSnap)
                 {
                   auto [snapMin, snapMax] = snap_rect(frame->crop, frame->crop + frame->size);
 
-                  frame_change_apply({.cropX = (int)snapMin.x,
-                                      .cropY = (int)snapMin.y,
-                                      .sizeX = (int)snapMax.x - snapMin.x,
-                                      .sizeY = (int)snapMax.y - snapMin.y});
+                  frame_change_apply({.cropX = snapMin.x,
+                                      .cropY = snapMin.y,
+                                      .sizeX = snapMax.x - snapMin.x,
+                                      .sizeY = snapMax.y - snapMin.y});
                 }
               }
               if (ImGui::BeginTooltip())

@@ -739,7 +739,7 @@ namespace anm2ed::imgui
         auto item = document.item_get();
         auto useTool = tool;
         auto step = isMod ? STEP_FAST : STEP;
-        mousePos = position_translate(zoom, pan, to_vec2(ImGui::GetMousePos()) - to_vec2(cursorScreenPos));
+        mousePos = position_translate(zoom, pan, to_ivec2(ImGui::GetMousePos()) - to_ivec2(cursorScreenPos));
 
         if (isMouseMiddleDown) useTool = tool::PAN;
         if (tool == tool::MOVE && isMouseRightDown) useTool = tool::SCALE;
@@ -771,12 +771,12 @@ namespace anm2ed::imgui
               if (isMouseClicked)
               {
                 moveOffset = settings.inputIsMoveToolSnapToMouse ? vec2() : mousePos - frame->position;
+                moveOffset = ivec2(moveOffset);
                 isMoveDragging = true;
               }
             }
             if (isMouseDown && isMoveDragging)
-              frame_change_apply(
-                  {.positionX = (int)(mousePos.x - moveOffset.x), .positionY = (int)(mousePos.y - moveOffset.y)});
+              frame_change_apply({.positionX = mousePos.x - moveOffset.x, .positionY = mousePos.y - moveOffset.y});
 
             if (isLeftPressed) frame_change_apply({.positionX = step}, anm2::SUBTRACT);
             if (isRightPressed) frame_change_apply({.positionX = step}, anm2::ADD);
@@ -803,8 +803,8 @@ namespace anm2ed::imgui
             {
               frame->scale += vec2(mouseDelta.x, mouseDelta.y);
               if (isMod) frame->scale = {frame->scale.x, frame->scale.x};
-
-              frame_change_apply({.scaleX = (int)frame->scale.x, .scaleY = (int)frame->scale.y});
+              frame->scale = ivec2(frame->scale);
+              frame_change_apply({.scaleX = frame->scale.x, .scaleY = frame->scale.y});
             }
 
             if (isLeftPressed) frame_change_apply({.scaleX = step}, anm2::SUBTRACT);
