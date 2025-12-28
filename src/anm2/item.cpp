@@ -126,7 +126,7 @@ namespace anm2ed::anm2
     return frame;
   }
 
-  void Item::frames_change(FrameChange change, ChangeType type, std::set<int>& selection)
+  void Item::frames_change(FrameChange change, anm2::Type itemType, ChangeType changeType, std::set<int>& selection)
   {
     const auto clamp_identity = [](auto value) { return value; };
     const auto clamp01 = [](auto value) { return glm::clamp(value, 0.0f, 1.0f); };
@@ -139,7 +139,7 @@ namespace anm2ed::anm2
       if (!optionalValue) return;
       auto value = *optionalValue;
 
-      switch (type)
+      switch (changeType)
       {
         case ADJUST:
           target = clampFunc(value);
@@ -176,17 +176,20 @@ namespace anm2ed::anm2
       apply_scalar(frame.rotation, change.rotation);
       apply_scalar_with_clamp(frame.duration, change.duration, clamp_duration);
 
-      apply_scalar(frame.crop.x, change.cropX);
-      apply_scalar(frame.crop.y, change.cropY);
+      if (itemType == LAYER)
+      {
+        apply_scalar(frame.crop.x, change.cropX);
+        apply_scalar(frame.crop.y, change.cropY);
 
-      apply_scalar(frame.pivot.x, change.pivotX);
-      apply_scalar(frame.pivot.y, change.pivotY);
+        apply_scalar(frame.pivot.x, change.pivotX);
+        apply_scalar(frame.pivot.y, change.pivotY);
+
+        apply_scalar(frame.size.x, change.sizeX);
+        apply_scalar(frame.size.y, change.sizeY);
+      }
 
       apply_scalar(frame.position.x, change.positionX);
       apply_scalar(frame.position.y, change.positionY);
-
-      apply_scalar(frame.size.x, change.sizeX);
-      apply_scalar(frame.size.y, change.sizeY);
 
       apply_scalar(frame.scale.x, change.scaleX);
       apply_scalar(frame.scale.y, change.scaleY);

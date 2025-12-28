@@ -746,7 +746,7 @@ namespace anm2ed::imgui
         if (tool == tool::SCALE && isMouseRightDown) useTool = tool::MOVE;
 
         auto frame_change_apply = [&](anm2::FrameChange frameChange, anm2::ChangeType changeType = anm2::ADJUST)
-        { item->frames_change(frameChange, changeType, frames); };
+        { item->frames_change(frameChange, reference.itemType, changeType, frames); };
 
         auto& toolInfo = tool::INFO[useTool];
         auto& areaType = toolInfo.areaType;

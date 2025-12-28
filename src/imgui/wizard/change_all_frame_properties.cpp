@@ -50,6 +50,7 @@ namespace anm2ed::imgui::wizard
     auto& isInterpolated = settings.changeIsInterpolated;
     auto& isFlipX = settings.changeIsFlipX;
     auto& isFlipY = settings.changeIsFlipY;
+    auto& itemType = document.reference.itemType;
 
 #define PROPERTIES_WIDGET(body, checkboxLabel, isEnabled)                                                              \
   ImGui::Checkbox(checkboxLabel, &isEnabled);                                                                          \
@@ -183,30 +184,46 @@ namespace anm2ed::imgui::wizard
 
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImGui::GetStyle().ItemInnerSpacing);
 
+    ImGui::BeginDisabled(itemType != anm2::LAYER);
     float2_value("##Is Crop X", "##Is Crop Y", "##Crop X", localize.get(BASIC_CROP), isCropX, isCropY, crop);
     float2_value("##Is Size X", "##Is Size Y", "##Size X", localize.get(BASIC_SIZE), isSizeX, isSizeY, size);
+    ImGui::EndDisabled();
+
     float2_value("##Is Position X", "##Is Position Y", "##Position X", localize.get(BASIC_POSITION), isPositionX,
                  isPositionY, position);
+
+    ImGui::BeginDisabled(itemType != anm2::LAYER);
     float2_value("##Is Pivot X", "##Is Pivot Y", "##Pivot X", localize.get(BASIC_PIVOT), isPivotX, isPivotY, pivot);
+    ImGui::EndDisabled();
+
     float2_value("##Is Scale X", "##Is Scale Y", "##Scale X", localize.get(BASIC_SCALE), isScaleX, isScaleY, scale);
+
     float_value("##Is Rotation", localize.get(BASIC_ROTATION), isRotation, rotation);
+
     duration_value("##Is Duration", localize.get(BASIC_DURATION), isDuration, duration);
+
     color4_value("##Is Tint R", "##Is Tint G", "##Is Tint B", "##Is Tint A", "##Tint R", "##Tint G", "##Tint B",
                  "##Tint A", localize.get(BASIC_TINT), isTintR, isTintG, isTintB, isTintA, tint);
+
     color3_value("##Is Color Offset R", "##Is Color Offset G", "##Is Color Offset B", "##Color Offset R",
                  "##Color Offset B", "##Color Offset G", localize.get(BASIC_COLOR_OFFSET), isColorOffsetR,
                  isColorOffsetG, isColorOffsetB, colorOffset);
+
     bool_value("##Is Visible", localize.get(BASIC_VISIBLE), isVisibleSet, isVisible);
+
     ImGui::SameLine();
+
     bool_value("##Is Interpolated", localize.get(BASIC_INTERPOLATED), isInterpolatedSet, isInterpolated);
 
     bool_value("##Is Flip X", localize.get(LABEL_FLIP_X), isFlipXSet, isFlipX);
+
     ImGui::SameLine();
+
     bool_value("##Is Flip Y", localize.get(LABEL_FLIP_Y), isFlipYSet, isFlipY);
 
     ImGui::PopStyleVar();
 
-    auto frame_change = [&](anm2::ChangeType type)
+    auto frame_change = [&](anm2::ChangeType changeType)
     {
       anm2::FrameChange frameChange;
       if (isCropX) frameChange.cropX = crop.x;
@@ -234,7 +251,7 @@ namespace anm2ed::imgui::wizard
       if (isFlipYSet) frameChange.isFlipY = std::make_optional(isFlipY);
 
       DOCUMENT_EDIT(document, localize.get(EDIT_CHANGE_FRAME_PROPERTIES), Document::FRAMES,
-                    document.item_get()->frames_change(frameChange, type, frames));
+                    document.item_get()->frames_change(frameChange, itemType, changeType, frames));
 
       isChanged = true;
     };

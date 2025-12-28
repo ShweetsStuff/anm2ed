@@ -302,7 +302,7 @@ namespace anm2ed::imgui
         };
 
         auto frame_change_apply = [&](anm2::FrameChange frameChange, anm2::ChangeType changeType = anm2::ADJUST)
-        { item->frames_change(frameChange, changeType, frames); };
+        { item->frames_change(frameChange, reference.itemType, changeType, frames); };
 
         if (isMouseMiddleDown) useTool = tool::PAN;
         if (tool == tool::MOVE && isMouseRightDown) useTool = tool::CROP;
