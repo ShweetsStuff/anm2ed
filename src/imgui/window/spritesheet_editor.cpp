@@ -334,15 +334,15 @@ namespace anm2ed::imgui
             if (isMouseDown)
             {
               frame->crop = ivec2(frame->crop);
-              frame_change_apply({.pivotX = mousePos.x - frame->crop.x, .pivotY = mousePos.y - frame->crop.y});
+              frame_change_apply(
+                  {.pivotX = (int)(mousePos.x - frame->crop.x), .pivotY = (int)(mousePos.y - frame->crop.y)});
             }
             if (isLeftPressed) frame_change_apply({.pivotX = step}, anm2::SUBTRACT);
             if (isRightPressed) frame_change_apply({.pivotX = step}, anm2::ADD);
             if (isUpPressed) frame_change_apply({.pivotY = step}, anm2::SUBTRACT);
             if (isDownPressed) frame_change_apply({.pivotY = step}, anm2::ADD);
 
-            frame->pivot = ivec2(frame->pivot);
-            frame_change_apply({.pivotX = frame->pivot.x, .pivotY = frame->pivot.y});
+            frame_change_apply({.pivotX = (int)frame->pivot.x, .pivotY = (int)frame->pivot.y});
 
             if (isDuring)
             {
@@ -364,7 +364,7 @@ namespace anm2ed::imgui
             if (isMouseClicked)
             {
               cropAnchor = mousePos;
-              frame_change_apply({.cropX = cropAnchor.x, .cropY = cropAnchor.y, .sizeX = {}, .sizeY = {}});
+              frame_change_apply({.cropX = (int)cropAnchor.x, .cropY = (int)cropAnchor.y, .sizeX = {}, .sizeY = {}});
             }
             if (isMouseDown)
             {
