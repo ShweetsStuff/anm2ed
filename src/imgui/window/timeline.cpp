@@ -1388,9 +1388,11 @@ namespace anm2ed::imgui
             ImVec2(ImGui::GetContentRegionAvail().x,
                    ImGui::GetContentRegionAvail().y - ImGui::GetTextLineHeightWithSpacing() - style.ItemSpacing.y * 2);
 
-        auto childWidth = ImGui::GetContentRegionAvail().x > anm2.animations.length() * ImGui::GetTextLineHeight()
-                              ? ImGui::GetContentRegionAvail().x
-                              : anm2.animations.length() * ImGui::GetTextLineHeight();
+        auto childWidth = anm2.animations.length() * ImGui::GetTextLineHeight();
+        if (animation && animation->frameNum > anm2.animations.length())
+          childWidth = animation->frameNum * ImGui::GetTextLineHeight();
+        else if (ImGui::GetContentRegionAvail().x > childWidth)
+          childWidth = ImGui::GetContentRegionAvail().x;
 
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2());
         if (ImGui::BeginChild("##Frames List Child", viewListChildSize, true, ImGuiWindowFlags_HorizontalScrollbar))
