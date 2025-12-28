@@ -18,6 +18,9 @@ using namespace glm;
 
 namespace anm2ed::imgui
 {
+
+  constexpr auto WIDTH_MULTIPLIER = 1.25f;
+
   constexpr auto COLOR_HIDDEN_MULTIPLIER = vec4(0.5f, 0.5f, 0.5f, 1.000f);
   constexpr auto FRAME_BORDER_COLOR_DARK = ImVec4(1.0f, 1.0f, 1.0f, 0.15f);
   constexpr auto FRAME_BORDER_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 0.25f);
@@ -1392,6 +1395,8 @@ namespace anm2ed::imgui
           childWidth = animation->frameNum * ImGui::GetTextLineHeight();
         else if (ImGui::GetContentRegionAvail().x > childWidth)
           childWidth = ImGui::GetContentRegionAvail().x;
+
+        childWidth *= WIDTH_MULTIPLIER;
 
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2());
         if (ImGui::BeginChild("##Frames List Child", viewListChildSize, true, ImGuiWindowFlags_HorizontalScrollbar))
