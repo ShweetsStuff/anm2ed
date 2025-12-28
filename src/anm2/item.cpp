@@ -170,7 +170,7 @@ namespace anm2ed::anm2
 
       if (change.isVisible) frame.isVisible = *change.isVisible;
       if (change.isInterpolated) frame.isInterpolated = *change.isInterpolated;
-      if (change.isFlipX) frame.scale.x = -frame.scale.y;
+      if (change.isFlipX) frame.scale.x = -frame.scale.x;
       if (change.isFlipY) frame.scale.y = -frame.scale.y;
 
       apply_scalar(frame.rotation, change.rotation);
