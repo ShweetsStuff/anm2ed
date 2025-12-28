@@ -244,7 +244,7 @@ namespace anm2ed::imgui::wizard
     bool isAnyProperty = isCropX || isCropY || isSizeX || isSizeY || isPositionX || isPositionY || isPivotX ||
                          isPivotY || isScaleX || isScaleY || isRotation || isDuration || isTintR || isTintG ||
                          isTintB || isTintA || isColorOffsetR || isColorOffsetG || isColorOffsetB || isVisibleSet ||
-                         isInterpolatedSet;
+                         isInterpolatedSet || isFlipXSet || isFlipYSet;
 
     auto rowWidgetSize = widget_size_with_row_get(5);
 
