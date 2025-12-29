@@ -43,6 +43,7 @@ namespace anm2ed
 
   void Dialog::file_open(Type type)
   {
+    if (type == Dialog::NONE) return;
     SDL_ShowOpenFileDialog(callback, this, window, FILTERS[TYPE_FILTERS[type]], std::size(FILTERS[TYPE_FILTERS[type]]),
                            nullptr, false);
     this->type = type;
@@ -50,6 +51,7 @@ namespace anm2ed
 
   void Dialog::file_save(Type type)
   {
+    if (type == Dialog::NONE) return;
     SDL_ShowSaveFileDialog(callback, this, window, FILTERS[TYPE_FILTERS[type]], std::size(FILTERS[TYPE_FILTERS[type]]),
                            nullptr);
     this->type = type;
@@ -57,6 +59,7 @@ namespace anm2ed
 
   void Dialog::folder_open(Type type)
   {
+    if (type == Dialog::NONE) return;
     SDL_ShowOpenFolderDialog(callback, this, window, nullptr, false);
     this->type = type;
   }

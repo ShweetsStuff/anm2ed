@@ -71,11 +71,29 @@ namespace anm2ed::imgui::wizard
     auto& frameNum = animation->frameNum;
 
     auto widgetSize = widget_size_with_row_get(2);
-    auto dialogType = type == render::PNGS          ? Dialog::PNG_DIRECTORY_SET
-                      : type == render::SPRITESHEET ? Dialog::PNG_PATH_SET
-                      : type == render::GIF         ? Dialog::GIF_PATH_SET
-                      : type == render::WEBM        ? Dialog::WEBM_PATH_SET
-                                                    : Dialog::NONE;
+
+    Dialog::Type dialogType{Dialog::NONE};
+    switch (type)
+    {
+      case render::PNGS:
+        dialogType = Dialog::PNG_DIRECTORY_SET;
+        break;
+      case render::SPRITESHEET:
+        dialogType = Dialog::PNG_PATH_SET;
+        break;
+      case render::GIF:
+        dialogType = Dialog::GIF_PATH_SET;
+        break;
+      case render::WEBM:
+        dialogType = Dialog::WEBM_PATH_SET;
+        break;
+      case render::MP4:
+        dialogType = Dialog::MP4_PATH_SET;
+        break;
+      default:
+        dialogType = Dialog::NONE;
+        break;
+    }
 
     if (ImGui::ImageButton("##FFmpeg Path Set", resources.icons[icon::FOLDER].id, icon_size_get()))
       dialog.file_open(Dialog::FFMPEG_PATH_SET);
@@ -96,6 +114,7 @@ namespace anm2ed::imgui::wizard
       else
         dialog.file_save(dialogType);
     }
+
     ImGui::SameLine();
     auto pathLabel = type == render::PNGS ? LABEL_OUTPUT_DIRECTORY : LABEL_OUTPUT_PATH;
     input_text_path(localize.get(pathLabel), &path);
