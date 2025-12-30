@@ -217,13 +217,16 @@ namespace anm2ed
       case SOUNDS:
         sounds_set();
         break;
-      case ANIMATIONS:
-        animations_set();
-        break;
       case FRAMES:
         events_set();
         sounds_set();
         break;
+      case ITEMS:
+        layers_set();
+        nulls_set();
+        spritesheets_set();
+        break;
+      case ANIMATIONS:
       case ALL:
         layers_set();
         nulls_set();

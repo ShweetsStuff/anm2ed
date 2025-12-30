@@ -56,7 +56,7 @@ namespace anm2ed::imgui
         unused.clear();
       };
 
-      DOCUMENT_EDIT(document, localize.get(EDIT_REMOVE_UNUSED_SPRITESHEETS), Document::SPRITESHEETS, behavior());
+      DOCUMENT_EDIT(document, localize.get(EDIT_REMOVE_UNUSED_SPRITESHEETS), Document::ALL, behavior());
     };
 
     auto reload = [&]()

@@ -176,7 +176,8 @@ namespace anm2ed::imgui
         input_text_string(localize.get(BASIC_NAME), &layer.name);
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ITEM_NAME));
 
-        ImGui::Combo(localize.get(LABEL_SPRITESHEET), &layer.spritesheetID, document.spritesheet.labels.data(), (int)document.spritesheet.labels.size());
+        ImGui::Combo(localize.get(LABEL_SPRITESHEET), &layer.spritesheetID, document.spritesheet.labels.data(),
+                     (int)document.spritesheet.labels.size());
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_SPRITESHEET));
       }
       ImGui::EndChild();
