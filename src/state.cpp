@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include <imgui/imgui_internal.h>
+
 #include <imgui/backends/imgui_impl_opengl3.h>
 #include <imgui/backends/imgui_impl_sdl3.h>
 

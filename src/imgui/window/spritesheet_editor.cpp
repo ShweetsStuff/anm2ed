@@ -518,7 +518,6 @@ namespace anm2ed::imgui
 
       ImGui::EndPopup();
     }
-    ImGui::End();
 
     if (!document.isSpritesheetEditorSet)
     {
@@ -532,5 +531,6 @@ namespace anm2ed::imgui
 
     settings.editorSize = size;
     settings.editorStartZoom = zoom;
+    ImGui::End();
   }
 }

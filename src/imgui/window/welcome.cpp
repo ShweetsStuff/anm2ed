@@ -14,6 +14,8 @@ namespace anm2ed::imgui
   {
     auto viewport = ImGui::GetMainViewport();
     auto windowHeight = viewport->Size.y - taskbar.height - documents.height;
+    if (windowHeight < 1.0f)
+      windowHeight = 1.0f;
 
     ImGui::SetNextWindowViewport(viewport->ID);
     ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + taskbar.height + documents.height));

@@ -898,14 +898,11 @@ namespace anm2ed::imgui
 
       ImGui::EndPopup();
     }
-    ImGui::End();
 
     manager.progressPopup.trigger();
 
     if (ImGui::BeginPopupModal(manager.progressPopup.label(), &manager.progressPopup.isOpen, ImGuiWindowFlags_NoResize))
     {
-      if (!animation) return;
-
       auto& start = manager.recordingStart;
       auto& end = manager.recordingEnd;
       auto progress = (playback.time - start) / (end - start);
@@ -946,5 +943,6 @@ namespace anm2ed::imgui
     }
 
     settings.previewStartZoom = zoom;
+    ImGui::End();
   }
 }

@@ -466,7 +466,7 @@ namespace anm2ed::imgui
 
         ImGui::EndPopup();
       }
-      ImGui::End();
     }
+    ImGui::End();
   }
 }
