@@ -209,6 +209,7 @@ namespace anm2ed::imgui
 
       if (ImGui::BeginChild("##Animations Child", childSize, ImGuiChildFlags_Borders))
       {
+
         selection.start(anm2.animations.items.size());
 
         for (auto [i, animation] : std::views::enumerate(anm2.animations.items))
@@ -249,10 +250,16 @@ namespace anm2ed::imgui
 
           if (isNewAnimation)
           {
-            ImGui::SetScrollHereY(0.5f);
+            isUpdateScroll = true;
             newAnimationSelectedIndex = -1;
           }
           ImGui::PopFont();
+
+          if (isUpdateScroll && isReferenced)
+          {
+            ImGui::SetScrollHereY(0.5f);
+            isUpdateScroll = false;
+          }
 
           if (ImGui::BeginItemTooltip())
           {
@@ -468,5 +475,19 @@ namespace anm2ed::imgui
       }
     }
     ImGui::End();
+
+    auto isNextAnimation = shortcut(manager.chords[SHORTCUT_NEXT_ANIMATION], shortcut::GLOBAL);
+    auto isPreviousAnimation = shortcut(manager.chords[SHORTCUT_PREVIOUS_ANIMATION], shortcut::GLOBAL);
+
+    if ((isPreviousAnimation || isNextAnimation) && !anm2.animations.items.empty())
+    {
+      if (isPreviousAnimation)
+        reference.animationIndex = glm::clamp(--reference.animationIndex, 0, (int)anm2.animations.items.size() - 1);
+      if (isNextAnimation)
+        reference.animationIndex = glm::clamp(++reference.animationIndex, 0, (int)anm2.animations.items.size() - 1);
+
+      selection = {reference.animationIndex};
+      isUpdateScroll = true;
+    }
   }
 }

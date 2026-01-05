@@ -115,7 +115,7 @@ namespace anm2ed
   {
     std::string errorString{};
     auto autosavePath = document.autosave_path_get();
-    document.autosave(&errorString);
+    if (!document.autosave(&errorString)) return;
 
     autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), autosavePath), autosaveFiles.end());
     autosaveFiles.insert(autosaveFiles.begin(), autosavePath);
@@ -392,16 +392,25 @@ namespace anm2ed
     ensure_parent_directory_exists(autosave_path_get());
     autosaveWriteFile.open(autosave_path_get(), std::ofstream::out | std::ofstream::trunc);
 
+    if (!autosaveWriteFile.is_open())
+    {
+      logger.warning(std::format("Could not write autosave files to: {}. Skipping...", path::to_utf8(autosave_path_get())));
+      return;
+    }
+
     for (auto& path : autosaveFiles)
       autosaveWriteFile << path::to_utf8(path) << "\n";
-
-    autosaveWriteFile.close();
   }
 
   void Manager::autosave_files_clear()
   {
     for (auto& path : autosaveFiles)
-      std::filesystem::remove(path);
+    {
+      std::error_code ec{};
+      std::filesystem::remove(path, ec);
+      if (ec)
+        logger.warning(std::format("Could not remove autosave file {}: {}", path::to_utf8(path), ec.message()));
+    }
 
     autosaveFiles.clear();
     autosave_files_write();

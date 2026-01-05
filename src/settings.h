@@ -227,6 +227,9 @@ namespace anm2ed
   X(SHORTCUT_INSERT_FRAME, shortcutInsertFrame, SHORTCUT_STRING_INSERT_FRAME, STRING, "F6")                            \
   X(SHORTCUT_PREVIOUS_FRAME, shortcutPreviousFrame, SHORTCUT_STRING_PREVIOUS_FRAME, STRING, "F7")                      \
   X(SHORTCUT_NEXT_FRAME, shortcutNextFrame, SHORTCUT_STRING_NEXT_FRAME, STRING, "F8")                                  \
+  /* Animations */                                                                                                     \
+  X(SHORTCUT_PREVIOUS_ANIMATION, shortcutPreviousAnimation, SHORTCUT_STRING_PREVIOUS_ANIMATION, STRING, "F9")          \
+  X(SHORTCUT_NEXT_ANIMATION, shortcutNextAnimation, SHORTCUT_STRING_NEXT_ANIMATION, STRING, "F10")                     \
   /* Toggles */                                                                                                        \
   X(SHORTCUT_ONIONSKIN, shortcutOnionskin, SHORTCUT_STRING_ONIONSKIN, STRING, "O")
 

@@ -14,6 +14,7 @@ namespace anm2ed::imgui
     int newAnimationSelectedIndex{-1};
     int renameQueued{-1};
     bool isInContextMenu{};
+    bool isUpdateScroll{};
     RenameState renameState{RENAME_SELECTABLE};
 
   public:

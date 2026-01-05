@@ -1866,21 +1866,21 @@ namespace anm2ed::imgui
       }
       isExtendChordHeld = isExtendFrame;
 
-      if (shortcut(manager.chords[SHORTCUT_PREVIOUS_FRAME], shortcut::GLOBAL))
-      {
-        if (auto item = document.item_get(); !item->frames.empty())
-        {
-          reference.frameIndex = glm::clamp(--reference.frameIndex, 0, (int)item->frames.size() - 1);
-          frames_selection_set_reference();
-          document.frameTime = item->frame_time_from_index_get(reference.frameIndex);
-        }
-      }
+      auto isPreviousFrame = shortcut(manager.chords[SHORTCUT_PREVIOUS_FRAME], shortcut::GLOBAL);
+      auto isNextFrame = shortcut(manager.chords[SHORTCUT_NEXT_FRAME], shortcut::GLOBAL);
 
-      if (shortcut(manager.chords[SHORTCUT_NEXT_FRAME], shortcut::GLOBAL))
+      if (isPreviousFrame)
+        if (auto item = document.item_get(); !item->frames.empty())
+          reference.frameIndex = glm::clamp(--reference.frameIndex, 0, (int)item->frames.size() - 1);
+
+      if (isNextFrame)
+        if (auto item = document.item_get(); !item->frames.empty())
+          reference.frameIndex = glm::clamp(++reference.frameIndex, 0, (int)item->frames.size() - 1);
+
+      if (isPreviousFrame || isNextFrame)
       {
         if (auto item = document.item_get(); !item->frames.empty())
         {
-          reference.frameIndex = glm::clamp(++reference.frameIndex, 0, (int)item->frames.size() - 1);
           frames_selection_set_reference();
           document.frameTime = item->frame_time_from_index_get(reference.frameIndex);
         }

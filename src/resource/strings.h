@@ -358,6 +358,7 @@ namespace anm2ed
   X(SHORTCUT_STRING_MERGE, "Merge", "Combinar", "Соединить", "合并", "병합") \
   X(SHORTCUT_STRING_MOVE, "Move", "Mover", "Передвинуть", "移动", "이동") \
   X(SHORTCUT_STRING_NEW, "New", "Nuevo", "Новый", "新", "새 파일") \
+  X(SHORTCUT_STRING_NEXT_ANIMATION, "Next Animation", "Siguiente Animacion", "Следующая анимация", "下一动画", "다음 애니메이션") \
   X(SHORTCUT_STRING_NEXT_FRAME, "Next Frame", "Siguiente Frame", "Следующий кадр", "下一帧", "다음 프레임") \
   X(SHORTCUT_STRING_ONIONSKIN, "Onionskin", "Papel Cebolla", "Оньонскин", "洋葱皮预览", "전후 비교") \
   X(SHORTCUT_STRING_OPEN, "Open", "Abrir", "Открыть", "打开", "열기") \
@@ -366,6 +367,7 @@ namespace anm2ed
   X(SHORTCUT_STRING_PLAYHEAD_BACK, "Playhead Back", "Cabezal Atras", "Назад воспроизводящей головкой", "播放指针往后", "플레이헤드 뒤로") \
   X(SHORTCUT_STRING_PLAYHEAD_FORWARD, "Playhead Forward", "Cabezal Adelante", "Вперед воспроизводящей головкой", "播放指针往前", "플레이헤드 앞으로") \
   X(SHORTCUT_STRING_PLAY_PAUSE, "Play/Pause", "Reproducir/Pausar", "Возпроизвести/Пауза", "播放/暂停", "재생/일시정지") \
+  X(SHORTCUT_STRING_PREVIOUS_ANIMATION, "Previous Animation", "Animacion Anterior", "Предыдущая анимация", "上一动画", "이전 애니메이션") \
   X(SHORTCUT_STRING_PREVIOUS_FRAME, "Previous Frame", "Frame Anterior", "Предыдущий кадр", "前一帧", "이전 프레임") \
   X(SHORTCUT_STRING_REDO, "Redo", "Rehacer", "Повторить", "重做", "다시 실행") \
   X(SHORTCUT_STRING_RENAME, "Rename", "Renombrar", "Переименовать", "重命名", "이름 변경") \
