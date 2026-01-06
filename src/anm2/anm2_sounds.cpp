@@ -34,7 +34,8 @@ namespace anm2ed::anm2
     std::set<int> used;
     for (auto& animation : animations.items)
       for (auto& trigger : animation.triggers.frames)
-        if (content.sounds.contains(trigger.soundID)) used.insert(trigger.soundID);
+        for (auto& soundID : trigger.soundIDs)
+          if (content.sounds.contains(soundID)) used.insert(soundID);
 
     std::set<int> unused;
     for (auto& [id, sound] : content.sounds)

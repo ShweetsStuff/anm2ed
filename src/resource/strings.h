@@ -95,6 +95,8 @@ namespace anm2ed
   X(EDIT_ADD_NULL, "Add Null", "Añadir Null", "Добавить нуль", "添加Null", "Null 추가") \
   X(EDIT_ADD_SPRITESHEET, "Add Spritesheet", "Añadir Spritesheet", "Добавить спрайт-лист", "添加图集", "스프라이트 시트 추가") \
   X(EDIT_ADD_SOUND, "Add Sound", "Añadir Sonido", "Добавить звук", "添加声音", "사운드 추가") \
+  X(EDIT_ADD_TRIGGER_SOUND, "Add Trigger Sound", "Añadir Sonido del Trigger", "Добавить звук триггера", "添加事件触发器声音", "트리거 사운드 추가") \
+  X(EDIT_REMOVE_TRIGGER_SOUND, "Remove Trigger Sound", "Remover Sonido del Trigger", "Удалить звук триггера", "移除事件触发器声音", "트리거 사운드 제거") \
   X(EDIT_ANIMATION_LENGTH, "Animation Length", "Duracion De Animacion", "Длина анимации", "动画时长", "애니메이션 길이") \
   X(EDIT_AUTHOR, "Author", "Autor", "Автор", "制作者", "작성자") \
   X(EDIT_BAKE_FRAMES, "Bake Frames", "Hacer Bake de Frames", "Запечь кадры", "烘培/提前渲染", "프레임 베이크") \
@@ -300,6 +302,7 @@ namespace anm2ed
   X(LABEL_SNAP, "Snap", "Ajustar", "Привязка", "吸附", "맞추기") \
   X(LABEL_SNAPSHOTS, "Snapshots", "Snapshots", "Снапшоты", "快照", "스냅숏") \
   X(LABEL_SOUND, "Sound", "Sonido", "Звук", "声音", "사운드") \
+  X(LABEL_SOUNDS, "Sounds", "Sonidos", "Звук", "声音", "사운드") \
   X(LABEL_SOUNDS_WINDOW, "Sounds###Sounds", "Sonidos###Sounds", "Звук###Sounds", "声音###Sounds", "사운드###Sounds") \
   X(LABEL_SOURCE, "Source", "Fuente", "Източник", "动画层来源", "소스") \
   X(LABEL_SPRITESHEET, "Spritesheet", "Spritesheet", "Спрайт-лист", "图集", "스프라이트 시트") \
@@ -579,6 +582,8 @@ namespace anm2ed
   X(TOOLTIP_TRIGGER_AT_FRAME, "Change the frame the trigger will be activated at.", "Cambia el Frame en el que el trigger sera activado.", "Изменить кадр, на котором будет активироваться триггер.", "更改此触发器的触发帧.", "트리거가 활성화될 프레임을 변경합니다.") \
   X(TOOLTIP_TRIGGER_EVENT, "Change the event this trigger uses.", "Cambia el evento que usa este trigger.", "Изменить событие, которое использует этот триггер.", "更改此触发器使用的事件.", "이 트리거가 사용할 이벤트를 변경합니다.") \
   X(TOOLTIP_TRIGGER_SOUND, "Change the sound this trigger uses.", "Cambia el sonido que usa este trigger.", "Изменить звук, который использует этот триггер.", "更改此触发器使用的声音.", "이 트리거가 사용할 사운드를 변경합니다.") \
+  X(TOOLTIP_ADD_TRIGGER_SOUND, "Add a new sound to the trigger.\nIf multiple sounds exist, one will be chosen to play randomly.", "Añadir un nuevo sonido al trigger.\nSi existen múltiples sonidos, uno se elegirá al azar para reproducirse.", "Добавить новый звук к триггеру.\nЕсли существует несколько звуков, один будет выбран случайным образом для воспроизведения.", "为此事件触发器添加一个新声音.\n如果存在多个声音, 将随机选择一个进行播放.", "트리거에 새 사운드를 추가합니다.\n여러 사운드가 있으면 재생할 사운드가 무작위로 선택됩니다.") \
+  X(TOOLTIP_REMOVE_TRIGGER_SOUND, "Remove the last trigger sound.", "Remover el último sonido del trigger.", "Удалить последний звук триггера.", "移除最后一个事件触发器声音.", "마지막 트리거 사운드를 제거합니다.") \
   X(TOOLTIP_TRIGGER_VISIBILITY, "Toggle the trigger's visibility.", "Alterna la visibilidad del trigger.", "Переключить видимость триггера.", "切换触发器是否可见.", "트리거를 표시하거나 숨깁니다.") \
   X(TOOLTIP_UI_SCALE, "Change the scale of the UI.", "Cambia la escala de la interfaz de usuario.", "Изменить масштаб пользовательского интерфейса.", "更改界面(UI)的缩放.", "UI 비율을 변경합니다.") \
   X(TOOLTIP_UNUSED_ITEMS_HIDDEN, "Unused layers/nulls are hidden. Press to show them.", "Las capas/nulls no utilizados estan ocultos. Presiona para hacerlos visibles", "Неиспользуемые слои/нули скрыты. Нажмите, чтобы их показать.", "正在隐藏未使用的动画层/Null. 点击以显示它们.", "사용되지 않는 레이어/Null이 숨겨져 있습니다. 표시하려면 누르세요.") \

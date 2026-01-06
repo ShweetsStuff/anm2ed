@@ -40,7 +40,17 @@ namespace anm2ed::anm2
     else
     {
       element->QueryIntAttribute("EventId", &eventID);
-      element->QueryIntAttribute("SoundId", &soundID);
+
+      int soundID{};
+      // Backwards compatibility with old formats
+      if (element->QueryIntAttribute("SoundId", &soundID) == XML_SUCCESS) soundIDs.push_back(soundID);
+
+      for (auto child = element->FirstChildElement("Sound"); child; child = child->NextSiblingElement("Sound"))
+      {
+        child->QueryIntAttribute("Id", &soundID);
+        soundIDs.push_back(soundID);
+      }
+
       element->QueryIntAttribute("AtFrame", &atFrame);
     }
   }
@@ -94,7 +104,13 @@ namespace anm2ed::anm2
         break;
       case TRIGGER:
         element->SetAttribute("EventId", eventID);
-        element->SetAttribute("SoundId", soundID);
+
+        for (auto& id : soundIDs)
+        {
+          auto soundChild = element->InsertNewChildElement("Sound");
+          soundChild->SetAttribute("Id", id);
+        }
+
         element->SetAttribute("AtFrame", atFrame);
         break;
       default:

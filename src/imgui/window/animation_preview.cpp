@@ -204,8 +204,13 @@ namespace anm2ed::imgui
             animation && animation->triggers.isVisible && (!isOnlyShowLayers || manager.isRecording))
         {
           if (auto trigger = animation->triggers.frame_generate(playback.time, anm2::TRIGGER); trigger.isVisible)
-            if (anm2.content.sounds.contains(trigger.soundID))
-              anm2.content.sounds[trigger.soundID].audio.play(false, mixer);
+          {
+            auto soundID = trigger.soundIDs.size() > 1
+                               ? (int)trigger.soundIDs[math::random_in_range(0, trigger.soundIDs.size())]
+                               : (int)trigger.soundIDs.front();
+
+            if (anm2.content.sounds.contains(soundID)) anm2.content.sounds[soundID].audio.play(false, mixer);
+          }
         }
       }
 

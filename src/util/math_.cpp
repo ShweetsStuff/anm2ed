@@ -1,5 +1,6 @@
 #include "math.h"
 
+#include <ctime>
 #include <glm/ext/matrix_transform.hpp>
 #include <string>
 
@@ -76,4 +77,7 @@ namespace anm2ed::util::math
     return glm::translate(mat4(1.0f), vec3(position, 0.0f)) * local;
   }
 
+  float random() { return (float)rand() / RAND_MAX; }
+  float random_in_range(float min, float max) { return min + random() * (max - min); }
+  void random_seed_set() { srand(std::time(nullptr)); }
 }

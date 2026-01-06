@@ -12,30 +12,23 @@ namespace anm2ed::anm2
   constexpr auto FRAME_DURATION_MIN = 1;
   constexpr auto FRAME_DURATION_MAX = 1000000;
 
-#define MEMBERS                                                                                                        \
-  X(isVisible, bool, true)                                                                                             \
-  X(isInterpolated, bool, false)                                                                                       \
-  X(rotation, float, 0.0f)                                                                                             \
-  X(duration, int, FRAME_DURATION_MIN)                                                                                 \
-  X(atFrame, int, -1)                                                                                                  \
-  X(eventID, int, -1)                                                                                                  \
-  X(soundID, int, -1)                                                                                                  \
-  X(pivot, glm::vec2, {})                                                                                              \
-  X(crop, glm::vec2, {})                                                                                               \
-  X(position, glm::vec2, {})                                                                                           \
-  X(size, glm::vec2, {})                                                                                               \
-  X(scale, glm::vec2, glm::vec2(100.0f))                                                                               \
-  X(colorOffset, glm::vec3, glm::vec3())                                                                               \
-  X(tint, glm::vec4, types::color::WHITE)
-
   class Frame
   {
   public:
-#define X(name, type, ...) type name = __VA_ARGS__;
-    MEMBERS
-#undef X
-
-#undef MEMBERS
+    bool isVisible{true};
+    bool isInterpolated{false};
+    float rotation{};
+    int duration{FRAME_DURATION_MIN};
+    int atFrame{-1};
+    int eventID{-1};
+    std::vector<int> soundIDs{};
+    glm::vec2 pivot{};
+    glm::vec2 crop{};
+    glm::vec2 position{};
+    glm::vec2 size{};
+    glm::vec2 scale{};
+    glm::vec3 colorOffset{};
+    glm::vec4 tint{types::color::WHITE};
 
     Frame() = default;
     Frame(tinyxml2::XMLElement*, Type);
@@ -52,8 +45,6 @@ namespace anm2ed::anm2
     std::optional<bool> isInterpolated{};
     std::optional<float> rotation{};
     std::optional<int> duration{};
-    std::optional<int> atFrame{};
-    std::optional<int> eventID{};
     std::optional<float> pivotX{};
     std::optional<float> pivotY{};
     std::optional<float> cropX{};

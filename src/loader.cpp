@@ -16,6 +16,8 @@
 #include "snapshots.h"
 #include "socket.h"
 
+#include "util/math_.h"
+
 using namespace anm2ed::types;
 using namespace anm2ed::util;
 
@@ -215,6 +217,8 @@ namespace anm2ed
     glLineWidth(2.0f);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_LINE_SMOOTH);
+
+    math::random_seed_set();
 
     IMGUI_CHECKVERSION();
     if (!ImGui::CreateContext())

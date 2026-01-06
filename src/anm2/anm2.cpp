@@ -236,7 +236,6 @@ namespace anm2ed::anm2
     for (auto& [sourceID, sourceEvent] : source.content.events)
     {
       auto event = sourceEvent;
-      event.soundID = remap_id(soundRemap, event.soundID);
 
       int destinationID = find_by_name(content.events, event.name);
       if (destinationID != -1)
@@ -253,7 +252,8 @@ namespace anm2ed::anm2
     {
       for (auto& frame : item.frames)
       {
-        frame.soundID = remap_id(soundRemap, frame.soundID);
+        for (auto& soundID : frame.soundIDs)
+          soundID = remap_id(soundRemap, soundID);
         frame.eventID = remap_id(eventRemap, frame.eventID);
       }
     };

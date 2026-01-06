@@ -194,10 +194,6 @@ namespace anm2ed
     {
       sound.unused = anm2.sounds_unused();
       sound.labels_set(anm2.sound_labels_get());
-
-      for (auto& animation : anm2.animations.items)
-        for (auto& trigger : animation.triggers.frames)
-          if (!anm2.content.sounds.contains(trigger.soundID)) trigger.soundID = -1;
     };
 
     switch (type)

@@ -5,25 +5,13 @@
 
 namespace anm2ed::util::math
 {
-  template <typename T> constexpr T percent_to_unit(T value)
-  {
-    return value / 100.0f;
-  }
+  template <typename T> constexpr T percent_to_unit(T value) { return value / 100.0f; }
 
-  template <typename T> constexpr T unit_to_percent(T value)
-  {
-    return value * 100.0f;
-  }
+  template <typename T> constexpr T unit_to_percent(T value) { return value * 100.0f; }
 
-  constexpr float uint8_to_float(int value)
-  {
-    return (float)(value / 255.0f);
-  }
+  constexpr float uint8_to_float(int value) { return (float)(value / 255.0f); }
 
-  constexpr int float_to_uint8(float value)
-  {
-    return (int)(value * 255);
-  }
+  constexpr int float_to_uint8(float value) { return (int)(value * 255); }
 
   constexpr std::array<float, 16> uv_vertices_get(glm::vec2 uvMin, glm::vec2 uvMax)
   {
@@ -41,4 +29,8 @@ namespace anm2ed::util::math
 
   glm::mat4 quad_model_get(glm::vec2 = {}, glm::vec2 = {}, glm::vec2 = {}, glm::vec2 = glm::vec2(1.0f), float = {});
   glm::mat4 quad_model_parent_get(glm::vec2 = {}, glm::vec2 = {}, glm::vec2 = glm::vec2(1.0f), float = {});
+
+  float random();
+  float random_in_range(float min, float max);
+  void random_seed_set();
 }
