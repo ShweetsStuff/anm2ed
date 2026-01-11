@@ -7,10 +7,10 @@
 #include <string>
 
 #include "log.h"
+#include "path_.h"
 #include "process_.h"
 #include "sdl.h"
 #include "string_.h"
-#include "path_.h"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::util;
@@ -85,8 +85,8 @@ namespace anm2ed
       }
     }
 
-    command = std::format("\"{0}\" -y -f rawvideo -pix_fmt rgba -s {1}x{2} -r {3} -i pipe:0", ffmpegPathString,
-                          size.x, size.y, fps);
+    command = std::format("\"{0}\" -y -f rawvideo -pix_fmt rgba -s {1}x{2} -r {3} -i pipe:0", ffmpegPathString, size.x,
+                          size.y, fps);
 
     if (!audioInputArguments.empty()) command += " " + audioInputArguments;
 
@@ -119,7 +119,7 @@ namespace anm2ed
 
     logger.command(command);
 
-    Process process(command.c_str(), "w");
+    Process process(command.c_str(), "wb");
 
     if (!process.get())
     {
