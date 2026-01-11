@@ -26,7 +26,7 @@ namespace anm2ed::anm2
     glm::vec2 crop{};
     glm::vec2 position{};
     glm::vec2 size{};
-    glm::vec2 scale{};
+    glm::vec2 scale{100, 100};
     glm::vec3 colorOffset{};
     glm::vec4 tint{types::color::WHITE};
 

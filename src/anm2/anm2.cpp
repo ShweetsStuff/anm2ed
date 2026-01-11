@@ -65,12 +65,6 @@ namespace anm2ed::anm2
     XMLDocument document;
     document.InsertFirstChild(to_element(document));
 
-    if (!std::filesystem::exists(path))
-    {
-      if (errorString) *errorString = localize.get(ERROR_FILE_NOT_FOUND);
-      return false;
-    }
-
     File file(path, "wb");
     if (!file)
     {
