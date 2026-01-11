@@ -125,21 +125,26 @@ target_include_directories(
           src/resource
           src/util)
 
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Release")
+endif()
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  target_compile_definitions(${PROJECT_NAME} PRIVATE DEBUG)
+endif()
+
 if(WIN32)
-  enable_language(RC)
-  target_sources(${PROJECT_NAME} PRIVATE anm2ed.rc)
-
-  target_compile_options(${PROJECT_NAME} PRIVATE /EHsc)
-  target_link_options(${PROJECT_NAME} PRIVATE /STACK:0xffffff)
-
-  target_link_options(
-    ${PROJECT_NAME}
-    PRIVATE "$<$<AND:$<CONFIG:Release>,$<CXX_COMPILER_ID:MSVC>>:/SUBSYSTEM:WINDOWS>"
-            "$<$<AND:$<CONFIG:Release>,$<NOT:$<CXX_COMPILER_ID:MSVC>>>:-mwindows>")
+  # Keep Release as a GUI app (no console window).
+  if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    if(MSVC)
+      target_link_options(${PROJECT_NAME} PRIVATE /SUBSYSTEM:WINDOWS)
+    else()
+      target_link_options(${PROJECT_NAME} PRIVATE -mwindows)
+    endif()
+  endif()
 else()
   target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -pedantic)
   if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_definitions(${PROJECT_NAME} PRIVATE DEBUG)
     target_compile_options(${PROJECT_NAME} PRIVATE -O0 -pg)
   else()
     set(CMAKE_BUILD_TYPE "Release")
@@ -148,10 +153,20 @@ else()
   target_link_libraries(${PROJECT_NAME} PRIVATE m)
 endif()
 
+if(WIN32)
+  enable_language(RC)
+  target_sources(${PROJECT_NAME} PRIVATE anm2ed.rc)
+endif()
+
 if(MSVC)
   target_compile_options(${PROJECT_NAME} PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:/std:c++latest>")
-  target_compile_options(${PROJECT_NAME} PRIVATE "$<$<CONFIG:Debug>:/Zi>")
-  target_link_options(${PROJECT_NAME} PRIVATE "$<$<CONFIG:Debug>:/DEBUG>")
+  target_compile_options(${PROJECT_NAME} PRIVATE /EHsc)
+  target_link_options(${PROJECT_NAME} PRIVATE /STACK:0xffffff)
+
+  if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_options(${PROJECT_NAME} PRIVATE /Zi)
+    target_link_options(${PROJECT_NAME} PRIVATE /DEBUG)
+  endif()
 endif()
 
 if(WIN32)
