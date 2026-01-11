@@ -56,7 +56,7 @@ namespace anm2ed
       if (prefDir.empty()) return;
 
       std::error_code ec{};
-      auto dumpDir = prefDir / "CrashDumps";
+      auto dumpDir = prefDir / "crash";
       std::filesystem::create_directories(dumpDir, ec);
       if (ec)
       {
@@ -116,7 +116,7 @@ namespace anm2ed
       if (status != ERROR_SUCCESS) logger.warning(std::format("Failed to set WER DumpCount (status {}).", (int)status));
 
       closeKey();
-      logger.info(std::format("WER LocalDumps enabled (Debug) -> {}", path::to_utf8(dumpDir)));
+      logger.info(std::format("Crash dumps enabled: {}", path::to_utf8(dumpDir)));
     }
 #endif
 
