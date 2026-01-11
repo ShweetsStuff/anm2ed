@@ -10,6 +10,8 @@
 #include <SDL3_mixer/SDL_mixer.h>
 
 #ifdef _WIN32
+  #include "util/path_.h"
+  #include <format>
   #include <windows.h>
 #endif
 
