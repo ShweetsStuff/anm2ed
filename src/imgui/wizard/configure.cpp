@@ -52,11 +52,6 @@ namespace anm2ed::imgui::wizard
           ImGui::Checkbox(localize.get(BASIC_ENABLED), &temporary.fileIsAutosave);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_AUTOSAVE_ENABLED));
 
-          ImGui::BeginDisabled(!temporary.fileIsAutosave);
-          input_int_range(localize.get(LABEL_TIME_MINUTES), temporary.fileAutosaveTime, 0, 10);
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_AUTOSAVE_INTERVAL));
-          ImGui::EndDisabled();
-
           ImGui::SeparatorText(localize.get(LABEL_SNAPSHOTS));
           input_int_range(localize.get(LABEL_STACK_SIZE), temporary.fileSnapshotStackSize, 0, 100);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_STACK_SIZE));

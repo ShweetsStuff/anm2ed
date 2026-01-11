@@ -58,7 +58,6 @@ namespace anm2ed
   X(LANGUAGE, language, STRING_UNDEFINED, INT, ENGLISH)                                                                \
                                                                                                                        \
   X(FILE_IS_AUTOSAVE, fileIsAutosave, STRING_UNDEFINED, BOOL, true)                                                    \
-  X(FILE_AUTOSAVE_TIME, fileAutosaveTime, STRING_UNDEFINED, INT, 1)                                                    \
   X(FILE_IS_WARN_OVERWRITE, fileIsWarnOverwrite, STRING_UNDEFINED, BOOL, true)                                         \
   X(FILE_SNAPSHOT_STACK_SIZE, fileSnapshotStackSize, STRING_UNDEFINED, INT, 50)                                        \
                                                                                                                        \

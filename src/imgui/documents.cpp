@@ -35,7 +35,7 @@ namespace anm2ed::imgui
       if (isDirty)
       {
         document.lastAutosaveTime += ImGui::GetIO().DeltaTime;
-        if (document.lastAutosaveTime > settings.fileAutosaveTime * time::SECOND_M) manager.autosave(document);
+        if (document.lastAutosaveTime > time::SECOND_M) manager.autosave(document);
       }
     }
 

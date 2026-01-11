@@ -46,9 +46,7 @@ namespace anm2ed
 #ifdef _WIN32
     void windows_wer_localdumps_configure()
     {
-      // Only configure crash dumps for debug builds.
-      // (Writing per-user registry keys is still intrusive; avoid in release builds.)
-  #if !defined(_DEBUG)
+  #ifndef DEBUG
       return;
   #endif
 
@@ -82,21 +80,22 @@ namespace anm2ed
       auto subkey = std::wstring(L"Software\\Microsoft\\Windows Error Reporting\\LocalDumps\\") + exeName;
 
       HKEY key{};
-      auto status = RegCreateKeyExW(HKEY_CURRENT_USER, subkey.c_str(), 0, nullptr, 0, KEY_SET_VALUE, nullptr, &key,
-                                    nullptr);
+      auto status =
+          RegCreateKeyExW(HKEY_CURRENT_USER, subkey.c_str(), 0, nullptr, 0, KEY_SET_VALUE, nullptr, &key, nullptr);
       if (status != ERROR_SUCCESS)
       {
         logger.warning(std::format("Failed to create/open WER LocalDumps key (status {}).", (int)status));
         return;
       }
 
-      auto closeKey = [&]() {
+      auto closeKey = [&]()
+      {
         if (key) RegCloseKey(key);
         key = nullptr;
       };
 
       auto dumpDirW = dumpDir.wstring();
-      const DWORD dumpType = 2;  // full dump
+      const DWORD dumpType = 2; // full dump
       const DWORD dumpCount = 10;
 
       status = RegSetValueExW(key, L"DumpFolder", 0, REG_EXPAND_SZ, (const BYTE*)dumpDirW.c_str(),
@@ -109,12 +108,10 @@ namespace anm2ed
       }
 
       status = RegSetValueExW(key, L"DumpType", 0, REG_DWORD, (const BYTE*)&dumpType, sizeof(dumpType));
-      if (status != ERROR_SUCCESS)
-        logger.warning(std::format("Failed to set WER DumpType (status {}).", (int)status));
+      if (status != ERROR_SUCCESS) logger.warning(std::format("Failed to set WER DumpType (status {}).", (int)status));
 
       status = RegSetValueExW(key, L"DumpCount", 0, REG_DWORD, (const BYTE*)&dumpCount, sizeof(dumpCount));
-      if (status != ERROR_SUCCESS)
-        logger.warning(std::format("Failed to set WER DumpCount (status {}).", (int)status));
+      if (status != ERROR_SUCCESS) logger.warning(std::format("Failed to set WER DumpCount (status {}).", (int)status));
 
       closeKey();
       logger.info(std::format("WER LocalDumps enabled (Debug) -> {}", path::to_utf8(dumpDir)));

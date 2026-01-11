@@ -452,7 +452,6 @@ namespace anm2ed
   X(TOOLTIP_ANIMATION_LENGTH, "Set the animation's length.", "Ajusta la duracion de la animacion.", "Установить продолжительность анимации.", "设置动画时长.", "애니메이션의 길이를 설정합니다.") \
   X(TOOLTIP_AUTHOR, "Set the author of the document.", "Ajusta el autor del documento.", "Установить автора документа.", "设置文件的制作者.", "파일의 작성자를 설정합니다.") \
   X(TOOLTIP_AUTOSAVE_ENABLED, "Enables autosaving of documents.\n(Does not overwrite files; makes copies to restore later.)", "Activa el autoguardado de documentos.\n(No sobreescribe archivos; solo hace copias para restaurar mas tarde.)", "Включает автосохранение документов.\n(Не заменяет файлы; создает копии для последующего восстановления.)", "开启自动保存文件.\n(并不会覆盖原本的文件, 反而会创造出可重新恢复的新文件)", "파일 자동저장을 활성화합니다.\n(파일을 덮어쓰지 않습니다; 나중에 복원할 복사본을 만듭니다.)") \
-  X(TOOLTIP_AUTOSAVE_INTERVAL, "If changed, will autosave documents using this interval.", "Si es cambiado, se autoguardara documentos usando este intervalo.", "Если изменено, будет автосохранять документы используя этот промежуток.", "如果更改了, 那么会使自动保存使用这个时间区间.", "이 간격으로 파일을 자동저장합니다.") \
   X(TOOLTIP_AXES, "Toggle the axes' visibility.", "Alterna la visibilidad de los ejes.", "Переключить видимость осей.", "切换坐标轴是否可见.", "가로/세로 축을 표시하거나 숨깁니다.") \
   X(TOOLTIP_AXES_COLOR, "Set the color of the axes.", "Ajusta el color de los ejes.", "Установить цвет осей.", "设置坐标轴的颜色.", "가로/세로 축의 색상을 설정합니다.") \
   X(TOOLTIP_BACKGROUND_COLOR, "Change the background color.", "Cambia el color del fondo.", "Изменить цвет фона.", "更改背景颜色.", "배경색을 변경합니다.") \
