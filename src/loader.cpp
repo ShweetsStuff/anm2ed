@@ -11,6 +11,7 @@
 
 #ifdef _WIN32
   #include "util/path_.h"
+  #include <DbgHelp.h>
   #include <format>
   #include <windows.h>
 #endif
@@ -46,6 +47,78 @@ namespace anm2ed
   namespace
   {
 #ifdef _WIN32
+    namespace
+    {
+      std::filesystem::path g_minidump_dir{};
+      PVOID g_vectored_handler{};
+      LONG g_dump_in_progress{};
+
+      void windows_minidump_write(EXCEPTION_POINTERS* exceptionPointers)
+      {
+        if (g_minidump_dir.empty()) return;
+        if (InterlockedExchange(&g_dump_in_progress, 1) != 0) return;
+
+        SYSTEMTIME st{};
+        GetLocalTime(&st);
+
+        auto pid = GetCurrentProcessId();
+        auto code = exceptionPointers && exceptionPointers->ExceptionRecord ? exceptionPointers->ExceptionRecord->ExceptionCode : 0u;
+
+        auto filename =
+            std::format("anm2ed_{:04}{:02}{:02}_{:02}{:02}{:02}_pid{:08x}_code{:08x}.dmp", st.wYear, st.wMonth,
+                        st.wDay, st.wHour, st.wMinute, st.wSecond, pid, code);
+        auto dumpPath = g_minidump_dir / path::from_utf8(filename);
+
+        auto dumpPathW = dumpPath.wstring();
+        HANDLE file =
+            CreateFileW(dumpPathW.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (file == INVALID_HANDLE_VALUE) return;
+
+        MINIDUMP_EXCEPTION_INFORMATION mei{};
+        mei.ThreadId = GetCurrentThreadId();
+        mei.ExceptionPointers = exceptionPointers;
+        mei.ClientPointers = FALSE;
+
+        // Full memory is large but most useful for user-submitted dumps.
+        const MINIDUMP_TYPE dumpType = MiniDumpWithFullMemory;
+        MiniDumpWriteDump(GetCurrentProcess(), pid, file, dumpType, exceptionPointers ? &mei : nullptr, nullptr, nullptr);
+
+        FlushFileBuffers(file);
+        CloseHandle(file);
+      }
+
+      LONG WINAPI windows_unhandled_exception_filter(EXCEPTION_POINTERS* exceptionPointers)
+      {
+        windows_minidump_write(exceptionPointers);
+        return EXCEPTION_EXECUTE_HANDLER;
+      }
+
+      LONG CALLBACK windows_vectored_exception_handler(EXCEPTION_POINTERS* exceptionPointers)
+      {
+        windows_minidump_write(exceptionPointers);
+        return EXCEPTION_CONTINUE_SEARCH;
+      }
+    } // namespace
+
+    void windows_minidumps_configure()
+    {
+      auto prefDir = sdl::preferences_directory_get();
+      if (prefDir.empty()) return;
+
+      std::error_code ec{};
+      auto dumpDir = prefDir / "crash";
+      std::filesystem::create_directories(dumpDir, ec);
+      if (ec) return;
+
+      g_minidump_dir = dumpDir;
+
+      // Install both: vectored handler (more reliable) and unhandled filter (fallback).
+      if (!g_vectored_handler) g_vectored_handler = AddVectoredExceptionHandler(1, windows_vectored_exception_handler);
+      SetUnhandledExceptionFilter(windows_unhandled_exception_filter);
+
+      logger.info(std::format("MiniDumpWriteDump enabled: {}", path::to_utf8(dumpDir)));
+    }
+
     void windows_wer_localdumps_configure()
     {
   #ifndef DEBUG
@@ -220,6 +293,7 @@ namespace anm2ed
     logger.info("Initialized SDL");
 
 #ifdef _WIN32
+    windows_minidumps_configure();
     windows_wer_localdumps_configure();
 #endif
 

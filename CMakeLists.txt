@@ -174,6 +174,7 @@ if(WIN32)
   set(PLATFORM_LIBS
       ws2_32
       bcrypt
+      dbghelp
       imm32
       version
       winmm
