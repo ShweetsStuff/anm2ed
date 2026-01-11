@@ -69,7 +69,7 @@ namespace anm2ed
 
   Document* Manager::get(int index) { return vector::find(documents, index > -1 ? index : selected); }
 
-  void Manager::open(const std::filesystem::path& path, bool isNew, bool isRecent)
+  Document* Manager::open(const std::filesystem::path& path, bool isNew, bool isRecent)
   {
     std::string errorString{};
     documents.emplace_back(path, isNew, &errorString);
@@ -83,7 +83,7 @@ namespace anm2ed
           std::vformat(localize.get(TOAST_OPEN_DOCUMENT_FAILED), std::make_format_args(pathString, errorString)));
       logger.error(std::vformat(localize.get(TOAST_OPEN_DOCUMENT_FAILED, anm2ed::ENGLISH),
                                 std::make_format_args(pathString, errorString)));
-      return;
+      return nullptr;
     }
 
     if (isRecent) recent_file_add(path);
@@ -93,6 +93,8 @@ namespace anm2ed
     selection_history_push(selected);
     toasts.push(std::vformat(localize.get(TOAST_OPEN_DOCUMENT), std::make_format_args(pathString)));
     logger.info(std::vformat(localize.get(TOAST_OPEN_DOCUMENT, anm2ed::ENGLISH), std::make_format_args(pathString)));
+
+    return &document;
   }
 
   void Manager::new_(const std::filesystem::path& path) { open(path, true); }
@@ -102,6 +104,7 @@ namespace anm2ed
     if (auto document = get(index); document)
     {
       std::string errorString{};
+      ensure_parent_directory_exists(path);
       document->path = !path.empty() ? path : document->path;
       document->path.replace_extension(".anm2");
       document->save(document->path, &errorString);
@@ -348,9 +351,8 @@ namespace anm2ed
 
       auto restorePath = path.parent_path() / fileNamePath;
       restorePath.replace_extension("");
-      open(path, false, false);
 
-      if (auto document = get())
+      if (auto document = open(path, false, false))
       {
         document->isForceDirty = true;
         document->path = restorePath;
@@ -394,7 +396,8 @@ namespace anm2ed
 
     if (!autosaveWriteFile.is_open())
     {
-      logger.warning(std::format("Could not write autosave files to: {}. Skipping...", path::to_utf8(autosave_path_get())));
+      logger.warning(
+          std::format("Could not write autosave files to: {}. Skipping...", path::to_utf8(autosave_path_get())));
       return;
     }
 
@@ -408,8 +411,7 @@ namespace anm2ed
     {
       std::error_code ec{};
       std::filesystem::remove(path, ec);
-      if (ec)
-        logger.warning(std::format("Could not remove autosave file {}: {}", path::to_utf8(path), ec.message()));
+      if (ec) logger.warning(std::format("Could not remove autosave file {}: {}", path::to_utf8(path), ec.message()));
     }
 
     autosaveFiles.clear();

@@ -64,7 +64,7 @@ namespace anm2ed
     ~Manager();
 
     Document* get(int = -1);
-    void open(const std::filesystem::path&, bool = false, bool = true);
+    Document* open(const std::filesystem::path&, bool = false, bool = true);
     void new_(const std::filesystem::path&);
     void save(int, const std::filesystem::path& = {});
     void save(const std::filesystem::path& = {});

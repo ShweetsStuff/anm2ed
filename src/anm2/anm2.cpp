@@ -52,7 +52,6 @@ namespace anm2ed::anm2
   XMLElement* Anm2::to_element(XMLDocument& document)
   {
     auto element = document.NewElement("AnimatedActor");
-    document.InsertFirstChild(element);
 
     info.serialize(document, element);
     content.serialize(document, element);
