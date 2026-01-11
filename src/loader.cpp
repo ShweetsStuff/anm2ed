@@ -2,11 +2,16 @@
 
 #include <cerrno>
 #include <cstdint>
+#include <filesystem>
 
 #include <imgui/backends/imgui_impl_opengl3.h>
 #include <imgui/backends/imgui_impl_sdl3.h>
 
 #include <SDL3_mixer/SDL_mixer.h>
+
+#ifdef _WIN32
+  #include <windows.h>
+#endif
 
 #include "log.h"
 #include "sdl.h"
@@ -38,6 +43,84 @@ namespace anm2ed
 
   namespace
   {
+#ifdef _WIN32
+    void windows_wer_localdumps_configure()
+    {
+      // Only configure crash dumps for debug builds.
+      // (Writing per-user registry keys is still intrusive; avoid in release builds.)
+  #if !defined(_DEBUG)
+      return;
+  #endif
+
+      auto prefDir = sdl::preferences_directory_get();
+      if (prefDir.empty()) return;
+
+      std::error_code ec{};
+      auto dumpDir = prefDir / "CrashDumps";
+      std::filesystem::create_directories(dumpDir, ec);
+      if (ec)
+      {
+        logger.warning(std::format("Failed to create dump directory {}: {}", path::to_utf8(dumpDir), ec.message()));
+        return;
+      }
+
+      wchar_t modulePath[MAX_PATH]{};
+      auto charsWritten = GetModuleFileNameW(nullptr, modulePath, MAX_PATH);
+      if (charsWritten == 0 || charsWritten >= MAX_PATH)
+      {
+        logger.warning(std::format("Failed to get module filename for WER LocalDumps (error {}).", GetLastError()));
+        return;
+      }
+
+      auto exeName = std::filesystem::path(modulePath).filename().wstring();
+      if (exeName.empty())
+      {
+        logger.warning("Failed to determine executable name for WER LocalDumps.");
+        return;
+      }
+
+      auto subkey = std::wstring(L"Software\\Microsoft\\Windows Error Reporting\\LocalDumps\\") + exeName;
+
+      HKEY key{};
+      auto status = RegCreateKeyExW(HKEY_CURRENT_USER, subkey.c_str(), 0, nullptr, 0, KEY_SET_VALUE, nullptr, &key,
+                                    nullptr);
+      if (status != ERROR_SUCCESS)
+      {
+        logger.warning(std::format("Failed to create/open WER LocalDumps key (status {}).", (int)status));
+        return;
+      }
+
+      auto closeKey = [&]() {
+        if (key) RegCloseKey(key);
+        key = nullptr;
+      };
+
+      auto dumpDirW = dumpDir.wstring();
+      const DWORD dumpType = 2;  // full dump
+      const DWORD dumpCount = 10;
+
+      status = RegSetValueExW(key, L"DumpFolder", 0, REG_EXPAND_SZ, (const BYTE*)dumpDirW.c_str(),
+                              (DWORD)((dumpDirW.size() + 1) * sizeof(wchar_t)));
+      if (status != ERROR_SUCCESS)
+      {
+        logger.warning(std::format("Failed to set WER DumpFolder (status {}).", (int)status));
+        closeKey();
+        return;
+      }
+
+      status = RegSetValueExW(key, L"DumpType", 0, REG_DWORD, (const BYTE*)&dumpType, sizeof(dumpType));
+      if (status != ERROR_SUCCESS)
+        logger.warning(std::format("Failed to set WER DumpType (status {}).", (int)status));
+
+      status = RegSetValueExW(key, L"DumpCount", 0, REG_DWORD, (const BYTE*)&dumpCount, sizeof(dumpCount));
+      if (status != ERROR_SUCCESS)
+        logger.warning(std::format("Failed to set WER DumpCount (status {}).", (int)status));
+
+      closeKey();
+      logger.info(std::format("WER LocalDumps enabled (Debug) -> {}", path::to_utf8(dumpDir)));
+    }
+#endif
+
     bool socket_paths_send(Socket& socket, const std::vector<std::string>& paths)
     {
       uint32_t count = htonl(static_cast<uint32_t>(paths.size()));
@@ -136,6 +219,10 @@ namespace anm2ed
     }
 
     logger.info("Initialized SDL");
+
+#ifdef _WIN32
+    windows_wer_localdumps_configure();
+#endif
 
     auto windowProperties = SDL_CreateProperties();
 
