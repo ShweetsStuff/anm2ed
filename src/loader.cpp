@@ -47,58 +47,55 @@ namespace anm2ed
   namespace
   {
 #ifdef _WIN32
-    namespace
+    std::filesystem::path g_minidump_dir{};
+    PVOID g_vectored_handler{};
+    LONG g_dump_in_progress{};
+
+    void windows_minidump_write(EXCEPTION_POINTERS* exceptionPointers)
     {
-      std::filesystem::path g_minidump_dir{};
-      PVOID g_vectored_handler{};
-      LONG g_dump_in_progress{};
+      if (g_minidump_dir.empty()) return;
+      if (InterlockedExchange(&g_dump_in_progress, 1) != 0) return;
 
-      void windows_minidump_write(EXCEPTION_POINTERS* exceptionPointers)
-      {
-        if (g_minidump_dir.empty()) return;
-        if (InterlockedExchange(&g_dump_in_progress, 1) != 0) return;
+      SYSTEMTIME st{};
+      GetLocalTime(&st);
 
-        SYSTEMTIME st{};
-        GetLocalTime(&st);
+      auto pid = GetCurrentProcessId();
+      auto code = exceptionPointers && exceptionPointers->ExceptionRecord
+                      ? exceptionPointers->ExceptionRecord->ExceptionCode
+                      : 0u;
 
-        auto pid = GetCurrentProcessId();
-        auto code = exceptionPointers && exceptionPointers->ExceptionRecord ? exceptionPointers->ExceptionRecord->ExceptionCode : 0u;
+      auto filename = std::format("anm2ed_{:04}{:02}{:02}_{:02}{:02}{:02}_pid{:08x}_code{:08x}.dmp", st.wYear,
+                                  st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, pid, code);
+      auto dumpPath = g_minidump_dir / path::from_utf8(filename);
 
-        auto filename =
-            std::format("anm2ed_{:04}{:02}{:02}_{:02}{:02}{:02}_pid{:08x}_code{:08x}.dmp", st.wYear, st.wMonth,
-                        st.wDay, st.wHour, st.wMinute, st.wSecond, pid, code);
-        auto dumpPath = g_minidump_dir / path::from_utf8(filename);
+      auto dumpPathW = dumpPath.wstring();
+      HANDLE file = CreateFileW(dumpPathW.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS,
+                                FILE_ATTRIBUTE_NORMAL, nullptr);
+      if (file == INVALID_HANDLE_VALUE) return;
 
-        auto dumpPathW = dumpPath.wstring();
-        HANDLE file =
-            CreateFileW(dumpPathW.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-        if (file == INVALID_HANDLE_VALUE) return;
+      MINIDUMP_EXCEPTION_INFORMATION mei{};
+      mei.ThreadId = GetCurrentThreadId();
+      mei.ExceptionPointers = exceptionPointers;
+      mei.ClientPointers = FALSE;
 
-        MINIDUMP_EXCEPTION_INFORMATION mei{};
-        mei.ThreadId = GetCurrentThreadId();
-        mei.ExceptionPointers = exceptionPointers;
-        mei.ClientPointers = FALSE;
+      const MINIDUMP_TYPE dumpType = MiniDumpWithFullMemory;
+      MiniDumpWriteDump(GetCurrentProcess(), pid, file, dumpType, exceptionPointers ? &mei : nullptr, nullptr, nullptr);
 
-        // Full memory is large but most useful for user-submitted dumps.
-        const MINIDUMP_TYPE dumpType = MiniDumpWithFullMemory;
-        MiniDumpWriteDump(GetCurrentProcess(), pid, file, dumpType, exceptionPointers ? &mei : nullptr, nullptr, nullptr);
+      FlushFileBuffers(file);
+      CloseHandle(file);
+    }
 
-        FlushFileBuffers(file);
-        CloseHandle(file);
-      }
+    LONG WINAPI windows_unhandled_exception_filter(EXCEPTION_POINTERS* exceptionPointers)
+    {
+      windows_minidump_write(exceptionPointers);
+      return EXCEPTION_EXECUTE_HANDLER;
+    }
 
-      LONG WINAPI windows_unhandled_exception_filter(EXCEPTION_POINTERS* exceptionPointers)
-      {
-        windows_minidump_write(exceptionPointers);
-        return EXCEPTION_EXECUTE_HANDLER;
-      }
-
-      LONG CALLBACK windows_vectored_exception_handler(EXCEPTION_POINTERS* exceptionPointers)
-      {
-        windows_minidump_write(exceptionPointers);
-        return EXCEPTION_CONTINUE_SEARCH;
-      }
-    } // namespace
+    LONG CALLBACK windows_vectored_exception_handler(EXCEPTION_POINTERS* exceptionPointers)
+    {
+      windows_minidump_write(exceptionPointers);
+      return EXCEPTION_CONTINUE_SEARCH;
+    }
 
     void windows_minidumps_configure()
     {
@@ -112,84 +109,10 @@ namespace anm2ed
 
       g_minidump_dir = dumpDir;
 
-      // Install both: vectored handler (more reliable) and unhandled filter (fallback).
       if (!g_vectored_handler) g_vectored_handler = AddVectoredExceptionHandler(1, windows_vectored_exception_handler);
       SetUnhandledExceptionFilter(windows_unhandled_exception_filter);
 
       logger.info(std::format("MiniDumpWriteDump enabled: {}", path::to_utf8(dumpDir)));
-    }
-
-    void windows_wer_localdumps_configure()
-    {
-  #ifndef DEBUG
-      return;
-  #endif
-
-      auto prefDir = sdl::preferences_directory_get();
-      if (prefDir.empty()) return;
-
-      std::error_code ec{};
-      auto dumpDir = prefDir / "crash";
-      std::filesystem::create_directories(dumpDir, ec);
-      if (ec)
-      {
-        logger.warning(std::format("Failed to create dump directory {}: {}", path::to_utf8(dumpDir), ec.message()));
-        return;
-      }
-
-      wchar_t modulePath[MAX_PATH]{};
-      auto charsWritten = GetModuleFileNameW(nullptr, modulePath, MAX_PATH);
-      if (charsWritten == 0 || charsWritten >= MAX_PATH)
-      {
-        logger.warning(std::format("Failed to get module filename for WER LocalDumps (error {}).", GetLastError()));
-        return;
-      }
-
-      auto exeName = std::filesystem::path(modulePath).filename().wstring();
-      if (exeName.empty())
-      {
-        logger.warning("Failed to determine executable name for WER LocalDumps.");
-        return;
-      }
-
-      auto subkey = std::wstring(L"Software\\Microsoft\\Windows Error Reporting\\LocalDumps\\") + exeName;
-
-      HKEY key{};
-      auto status =
-          RegCreateKeyExW(HKEY_CURRENT_USER, subkey.c_str(), 0, nullptr, 0, KEY_SET_VALUE, nullptr, &key, nullptr);
-      if (status != ERROR_SUCCESS)
-      {
-        logger.warning(std::format("Failed to create/open WER LocalDumps key (status {}).", (int)status));
-        return;
-      }
-
-      auto closeKey = [&]()
-      {
-        if (key) RegCloseKey(key);
-        key = nullptr;
-      };
-
-      auto dumpDirW = dumpDir.wstring();
-      const DWORD dumpType = 2; // full dump
-      const DWORD dumpCount = 10;
-
-      status = RegSetValueExW(key, L"DumpFolder", 0, REG_EXPAND_SZ, (const BYTE*)dumpDirW.c_str(),
-                              (DWORD)((dumpDirW.size() + 1) * sizeof(wchar_t)));
-      if (status != ERROR_SUCCESS)
-      {
-        logger.warning(std::format("Failed to set WER DumpFolder (status {}).", (int)status));
-        closeKey();
-        return;
-      }
-
-      status = RegSetValueExW(key, L"DumpType", 0, REG_DWORD, (const BYTE*)&dumpType, sizeof(dumpType));
-      if (status != ERROR_SUCCESS) logger.warning(std::format("Failed to set WER DumpType (status {}).", (int)status));
-
-      status = RegSetValueExW(key, L"DumpCount", 0, REG_DWORD, (const BYTE*)&dumpCount, sizeof(dumpCount));
-      if (status != ERROR_SUCCESS) logger.warning(std::format("Failed to set WER DumpCount (status {}).", (int)status));
-
-      closeKey();
-      logger.info(std::format("Crash dumps enabled: {}", path::to_utf8(dumpDir)));
     }
 #endif
 
