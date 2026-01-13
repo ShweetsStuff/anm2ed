@@ -40,6 +40,7 @@ namespace anm2ed::anm2
     Spritesheet* spritesheet_get(int);
     bool spritesheet_add(const std::filesystem::path&, const std::filesystem::path&, int&);
     std::vector<std::string> spritesheet_labels_get();
+    std::vector<int> spritesheet_ids_get();
     std::set<int> spritesheets_unused();
     bool spritesheets_deserialize(const std::string&, const std::filesystem::path&, types::merge::Type type,
                                   std::string*);
@@ -56,11 +57,13 @@ namespace anm2ed::anm2
 
     void event_add(int&);
     std::vector<std::string> event_labels_get();
+    std::vector<int> event_ids_get();
     std::set<int> events_unused();
     bool events_deserialize(const std::string&, types::merge::Type, std::string*);
 
     bool sound_add(const std::filesystem::path& directory, const std::filesystem::path& path, int& id);
     std::vector<std::string> sound_labels_get();
+    std::vector<int> sound_ids_get();
     std::set<int> sounds_unused();
     bool sounds_deserialize(const std::string&, const std::filesystem::path&, types::merge::Type, std::string*);
 

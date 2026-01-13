@@ -47,6 +47,14 @@ namespace anm2ed::anm2
     return labels;
   }
 
+  std::vector<int> Anm2::spritesheet_ids_get()
+  {
+    std::vector<int> ids{};
+    for (auto& [id, spritesheet] : content.spritesheets)
+      ids.emplace_back(id);
+    return ids;
+  }
+
   bool Anm2::spritesheets_deserialize(const std::string& string, const std::filesystem::path& directory,
                                       merge::Type type, std::string* errorString)
   {

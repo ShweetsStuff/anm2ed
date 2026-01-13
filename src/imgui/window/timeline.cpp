@@ -1697,8 +1697,8 @@ namespace anm2ed::imgui
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ITEM_NAME));
           if (type == anm2::LAYER)
           {
-            ImGui::Combo(localize.get(LABEL_SPRITESHEET), &addItemSpritesheetID, document.spritesheet.labels.data(),
-                         (int)document.spritesheet.labels.size());
+            combo_id_mapped(localize.get(LABEL_SPRITESHEET), &addItemSpritesheetID, document.spritesheet.ids,
+                            document.spritesheet.labels);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_SPRITESHEET));
           }
           else if (type == anm2::NULL_)

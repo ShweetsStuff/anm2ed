@@ -25,6 +25,15 @@ namespace anm2ed::anm2
     return labels;
   }
 
+  std::vector<int> Anm2::event_ids_get()
+  {
+    std::vector<int> ids{};
+    ids.emplace_back(-1);
+    for (auto& id : content.events | std::views::keys)
+      ids.emplace_back(id);
+    return ids;
+  }
+
   std::set<int> Anm2::events_unused()
   {
     std::set<int> used{};

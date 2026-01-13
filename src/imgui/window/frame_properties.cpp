@@ -31,9 +31,8 @@ namespace anm2ed::imgui
         {
           if (type == anm2::TRIGGER)
           {
-            if (combo_negative_one_indexed(localize.get(BASIC_EVENT),
-                                           frame ? &useFrame.eventID : &dummy_value_negative<int>(),
-                                           document.event.labels) &&
+            if (combo_id_mapped(localize.get(BASIC_EVENT), frame ? &useFrame.eventID : &dummy_value_negative<int>(),
+                                document.event.ids, document.event.labels) &&
                 frame)
               DOCUMENT_EDIT(document, localize.get(EDIT_TRIGGER_EVENT), Document::FRAMES,
                             frame->eventID = useFrame.eventID);
@@ -64,8 +63,8 @@ namespace anm2ed::imgui
                 for (auto [i, id] : std::views::enumerate(useFrame.soundIDs))
                 {
                   ImGui::PushID(i);
-                  if (combo_negative_one_indexed("##Sound", frame ? &id : &dummy_value_negative<int>(),
-                                                 document.sound.labels) &&
+                  if (combo_id_mapped("##Sound", frame ? &id : &dummy_value_negative<int>(), document.sound.ids,
+                                      document.sound.labels) &&
                       frame)
                     DOCUMENT_EDIT(document, localize.get(EDIT_TRIGGER_SOUND), Document::FRAMES,
                                   frame->soundIDs[i] = id);

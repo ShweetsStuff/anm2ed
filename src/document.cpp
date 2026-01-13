@@ -179,7 +179,7 @@ namespace anm2ed
     auto events_set = [&]()
     {
       event.unused = anm2.events_unused();
-      event.labels_set(anm2.event_labels_get());
+      event.labels_set(anm2.event_labels_get(), anm2.event_ids_get());
     };
 
     auto animations_set = [&]() { animation.labels_set(anm2.animation_labels_get()); };
@@ -187,13 +187,13 @@ namespace anm2ed
     auto spritesheets_set = [&]()
     {
       spritesheet.unused = anm2.spritesheets_unused();
-      spritesheet.labels_set(anm2.spritesheet_labels_get());
+      spritesheet.labels_set(anm2.spritesheet_labels_get(), anm2.spritesheet_ids_get());
     };
 
     auto sounds_set = [&]()
     {
       sound.unused = anm2.sounds_unused();
-      sound.labels_set(anm2.sound_labels_get());
+      sound.labels_set(anm2.sound_labels_get(), anm2.sound_ids_get());
     };
 
     switch (type)

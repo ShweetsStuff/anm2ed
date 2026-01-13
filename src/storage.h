@@ -12,9 +12,11 @@ namespace anm2ed
     std::set<int> unused{};
     std::vector<std::string> labelsString{};
     std::vector<const char*> labels{};
+    std::vector<int> ids{};
     imgui::MultiSelectStorage selection{};
 
     void clear();
     void labels_set(std::vector<std::string>);
+    void labels_set(std::vector<std::string>, std::vector<int>);
   };
 }

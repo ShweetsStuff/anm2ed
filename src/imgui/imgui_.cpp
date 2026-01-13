@@ -1,5 +1,6 @@
 #include <imgui/imgui_internal.h>
 
+#include <algorithm>
 #include <cmath>
 #include <format>
 #include <sstream>
@@ -102,6 +103,29 @@ namespace anm2ed::imgui
     *index += 1;
     bool isActivated = ImGui::Combo(label.c_str(), index, strings.data(), (int)strings.size());
     *index -= 1;
+
+    return isActivated;
+  }
+
+  bool combo_id_mapped(const std::string& label, int* id, const std::vector<int>& ids, std::vector<const char*>& labels)
+  {
+    if (!id) return false;
+
+    int index = -1;
+    if (!ids.empty())
+    {
+      auto it = std::find(ids.begin(), ids.end(), *id);
+      if (it != ids.end()) index = (int)std::distance(ids.begin(), it);
+    }
+
+    bool isActivated = ImGui::Combo(label.c_str(), &index, labels.data(), (int)labels.size());
+    if (isActivated)
+    {
+      if (index >= 0 && index < (int)ids.size())
+        *id = ids[index];
+      else
+        *id = -1;
+    }
 
     return isActivated;
   }

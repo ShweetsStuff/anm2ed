@@ -103,10 +103,11 @@ namespace anm2ed::anm2
         element->SetAttribute("Interpolated", isInterpolated);
         break;
       case TRIGGER:
-        element->SetAttribute("EventId", eventID);
+        if (eventID != -1) element->SetAttribute("EventId", eventID);
 
         for (auto& id : soundIDs)
         {
+          if (id == -1) continue;
           auto soundChild = element->InsertNewChildElement("Sound");
           soundChild->SetAttribute("Id", id);
         }

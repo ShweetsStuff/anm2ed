@@ -191,6 +191,7 @@ namespace anm2ed::imgui
   types::edit::Type color_edit3_persistent(const char*, glm::vec3*, ImGuiColorEditFlags = 0);
   types::edit::Type color_edit4_persistent(const char*, glm::vec4*, ImGuiColorEditFlags = 0);
   bool combo_negative_one_indexed(const std::string&, int*, std::vector<const char*>&);
+  bool combo_id_mapped(const std::string&, int*, const std::vector<int>&, std::vector<const char*>&);
   std::string& selectable_input_text_id();
   bool selectable_input_text(const std::string& label, const std::string& id, std::string& text, bool isSelected,
                              ImGuiSelectableFlags flags, RenameState& state);
