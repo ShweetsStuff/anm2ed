@@ -50,7 +50,13 @@ namespace anm2ed::imgui
       auto behavior = [&]()
       {
         for (auto& id : unused)
+        {
+          for (auto& animation : anm2.animations.items)
+            for (auto& trigger : animation.triggers.frames)
+              if (trigger.eventID == id) trigger.eventID = -1;
+
           anm2.content.events.erase(id);
+        }
         unused.clear();
       };
 
