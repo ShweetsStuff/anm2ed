@@ -219,7 +219,6 @@ namespace anm2ed
 
 #ifdef _WIN32
     windows_minidumps_configure();
-    windows_wer_localdumps_configure();
 #endif
 
     auto windowProperties = SDL_CreateProperties();

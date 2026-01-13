@@ -322,8 +322,6 @@ namespace anm2ed::imgui
 
           ImGui::EndChild();
           ImGui::PopID();
-
-          context_menu();
         }
 
         ImGui::PopStyleVar();
@@ -331,6 +329,8 @@ namespace anm2ed::imgui
       }
       ImGui::EndChild();
       ImGui::PopStyleVar();
+
+      context_menu();
 
       auto rowOneWidgetSize = widget_size_with_row_get(3);
 
@@ -378,6 +378,11 @@ namespace anm2ed::imgui
       if (ImGui::Button(localize.get(BASIC_SAVE), rowTwoWidgetSize)) save();
       ImGui::EndDisabled();
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SAVE_SPRITESHEETS));
+
+      if (imgui::shortcut(manager.chords[SHORTCUT_ADD], shortcut::FOCUSED)) add_open();
+      if (imgui::shortcut(manager.chords[SHORTCUT_REMOVE], shortcut::FOCUSED)) remove_unused();
+      if (imgui::shortcut(manager.chords[SHORTCUT_COPY], shortcut::FOCUSED)) copy();
+      if (imgui::shortcut(manager.chords[SHORTCUT_PASTE], shortcut::FOCUSED)) paste();
     }
     ImGui::End();
   }

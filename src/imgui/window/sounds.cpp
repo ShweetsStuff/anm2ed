@@ -221,7 +221,7 @@ namespace anm2ed::imgui
             if (ImGui::Selectable("##Sound Selectable", isSelected, 0, soundChildSize))
             {
               reference = id;
-              play(sound);
+              if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) play(sound);
             }
             if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) open_directory(sound);
             if (newSoundId == id)
@@ -270,8 +270,6 @@ namespace anm2ed::imgui
 
           ImGui::EndChild();
           ImGui::PopID();
-
-          context_menu();
         }
 
         ImGui::PopStyleVar();
@@ -280,6 +278,8 @@ namespace anm2ed::imgui
 
       ImGui::EndChild();
       ImGui::PopStyleVar();
+
+      context_menu();
 
       auto widgetSize = imgui::widget_size_with_row_get(4);
 
@@ -320,12 +320,12 @@ namespace anm2ed::imgui
         replace(dialog.path);
         dialog.reset();
       }
+
+      if (imgui::shortcut(manager.chords[SHORTCUT_ADD], shortcut::FOCUSED)) add_open();
+      if (imgui::shortcut(manager.chords[SHORTCUT_REMOVE], shortcut::FOCUSED)) remove_unused();
+      if (imgui::shortcut(manager.chords[SHORTCUT_COPY], shortcut::FOCUSED)) copy();
+      if (imgui::shortcut(manager.chords[SHORTCUT_PASTE], shortcut::FOCUSED)) paste();
     }
     ImGui::End();
-
-    if (imgui::shortcut(manager.chords[SHORTCUT_ADD], shortcut::FOCUSED)) add_open();
-    if (imgui::shortcut(manager.chords[SHORTCUT_REMOVE], shortcut::FOCUSED)) remove_unused();
-    if (imgui::shortcut(manager.chords[SHORTCUT_COPY], shortcut::FOCUSED)) copy();
-    if (imgui::shortcut(manager.chords[SHORTCUT_PASTE], shortcut::FOCUSED)) paste();
   }
 }
