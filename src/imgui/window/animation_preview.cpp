@@ -147,7 +147,7 @@ namespace anm2ed::imgui
         }
         else
         {
-          if (animation_render(ffmpegPath, path, renderFrames, audioStream, (render::Type)type, size, anm2.info.fps))
+          if (animation_render(ffmpegPath, path, renderFrames, audioStream, (render::Type)type, size))
           {
             toasts.push(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION), std::make_format_args(pathString)));
             logger.info(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION, anm2ed::ENGLISH),

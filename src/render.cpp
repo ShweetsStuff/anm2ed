@@ -19,9 +19,9 @@ using namespace glm;
 namespace anm2ed
 {
   bool animation_render(const std::filesystem::path& ffmpegPath, const std::filesystem::path& path,
-                        std::vector<Texture>& frames, AudioStream& audioStream, render::Type type, ivec2 size, int fps)
+                        std::vector<Texture>& frames, AudioStream& audioStream, render::Type type, ivec2 size)
   {
-    if (frames.empty() || size.x <= 0 || size.y <= 0 || fps <= 0 || ffmpegPath.empty() || path.empty()) return false;
+    if (frames.empty() || size.x <= 0 || size.y <= 0 || ffmpegPath.empty() || path.empty()) return false;
 
     auto pathString = path::to_utf8(path);
     auto ffmpegPathString = path::to_utf8(ffmpegPath);
@@ -85,8 +85,8 @@ namespace anm2ed
       }
     }
 
-    command = std::format("\"{0}\" -y -f rawvideo -pix_fmt rgba -s {1}x{2} -r {3} -i pipe:0", ffmpegPathString, size.x,
-                          size.y, fps);
+    command = std::format("\"{0}\" -y -f rawvideo -pix_fmt rgba -s {1}x{2} -r 30 -i pipe:0", ffmpegPathString, size.x,
+                          size.y);
 
     if (!audioInputArguments.empty()) command += " " + audioInputArguments;
 
