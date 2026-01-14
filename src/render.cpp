@@ -119,7 +119,11 @@ namespace anm2ed
 
     logger.command(command);
 
+#if _WIN32
     Process process(command.c_str(), "wb");
+#else
+    Process process(command.c_str(), "w");
+#endif
 
     if (!process.get())
     {
