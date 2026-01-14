@@ -197,13 +197,35 @@ namespace anm2ed::imgui
             auto widgetSize = widget_size_with_row_get(2);
 
             if (ImGui::Button(localize.get(LABEL_FLIP_X), widgetSize) && frame)
-              DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_FLIP_X), Document::FRAMES,
-                            frame->scale.x = -frame->scale.x);
+            {
+              if (ImGui::IsKeyDown(ImGuiMod_Ctrl))
+              {
+                DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_FLIP_X), Document::FRAMES,
+                              frame->scale.x = -frame->scale.x;
+                              frame->position.x = -frame->position.x);
+              }
+              else
+              {
+                DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_FLIP_X), Document::FRAMES,
+                              frame->scale.x = -frame->scale.x);
+              }
+            }
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FLIP_X));
             ImGui::SameLine();
             if (ImGui::Button(localize.get(LABEL_FLIP_Y), widgetSize) && frame)
-              DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_FLIP_Y), Document::FRAMES,
-                            frame->scale.y = -frame->scale.y);
+            {
+              if (ImGui::IsKeyDown(ImGuiMod_Ctrl))
+              {
+                DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_FLIP_Y), Document::FRAMES,
+                              frame->scale.y = -frame->scale.y;
+                              frame->position.y = -frame->position.y);
+              }
+              else
+              {
+                DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_FLIP_Y), Document::FRAMES,
+                              frame->scale.y = -frame->scale.y);
+              }
+            }
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FLIP_Y));
           }
         }
