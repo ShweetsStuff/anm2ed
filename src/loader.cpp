@@ -19,6 +19,13 @@
 
 #include "util/math_.h"
 
+#ifdef _WIN32
+  #include "util/path_.h"
+  #include <DbgHelp.h>
+  #include <format>
+  #include <windows.h>
+#endif
+
 using namespace anm2ed::types;
 using namespace anm2ed::util;
 
