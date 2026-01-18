@@ -18,7 +18,6 @@ namespace anm2ed::imgui
     auto& document = *manager.get();
     auto& anm2 = document.anm2;
     auto& reference = document.layer.reference;
-    auto& unused = document.layer.unused;
     auto& selection = document.layer.selection;
     auto& propertiesPopup = manager.layerPropertiesPopup;
 
@@ -26,12 +25,13 @@ namespace anm2ed::imgui
 
     auto remove_unused = [&]()
     {
+      auto unused = anm2.layers_unused();
       if (unused.empty()) return;
+
       auto behavior = [&]()
       {
         for (auto& id : unused)
           anm2.content.layers.erase(id);
-        unused.clear();
       };
 
       DOCUMENT_EDIT(document, localize.get(EDIT_REMOVE_UNUSED_LAYERS), Document::LAYERS, behavior());
@@ -131,9 +131,7 @@ namespace anm2ed::imgui
           if (ImGui::MenuItem(localize.get(BASIC_PROPERTIES), nullptr, false, selection.size() == 1))
             properties(*selection.begin());
           if (ImGui::MenuItem(localize.get(BASIC_ADD), settings.shortcutAdd.c_str())) add();
-          if (ImGui::MenuItem(localize.get(BASIC_REMOVE_UNUSED), settings.shortcutRemove.c_str(), false,
-                              !unused.empty()))
-            remove_unused();
+          if (ImGui::MenuItem(localize.get(BASIC_REMOVE_UNUSED), settings.shortcutRemove.c_str())) remove_unused();
 
           ImGui::Separator();
 
@@ -155,10 +153,8 @@ namespace anm2ed::imgui
       set_item_tooltip_shortcut(localize.get(TOOLTIP_ADD_LAYER), settings.shortcutAdd);
       ImGui::SameLine();
 
-      ImGui::BeginDisabled(unused.empty());
       shortcut(manager.chords[SHORTCUT_REMOVE]);
       if (ImGui::Button(localize.get(BASIC_REMOVE_UNUSED), widgetSize)) remove_unused();
-      ImGui::EndDisabled();
       set_item_tooltip_shortcut(localize.get(TOOLTIP_REMOVE_UNUSED_LAYERS), settings.shortcutRemove);
     }
     ImGui::End();

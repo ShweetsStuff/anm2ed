@@ -19,7 +19,6 @@ namespace anm2ed::imgui
     auto& document = *manager.get();
     auto& anm2 = document.anm2;
     auto& reference = document.sound.reference;
-    auto& unused = document.sound.unused;
     auto& selection = document.sound.selection;
     auto style = ImGui::GetStyle();
 
@@ -55,13 +54,13 @@ namespace anm2ed::imgui
 
     auto remove_unused = [&]()
     {
+      auto unused = anm2.sounds_unused();
       if (unused.empty()) return;
 
       auto behavior = [&]()
       {
         for (auto& id : unused)
           anm2.content.sounds.erase(id);
-        unused.clear();
       };
 
       DOCUMENT_EDIT(document, localize.get(EDIT_REMOVE_UNUSED_SOUNDS), Document::SOUNDS, behavior());
@@ -173,8 +172,7 @@ namespace anm2ed::imgui
           open_directory(anm2.content.sounds[*selection.begin()]);
 
         if (ImGui::MenuItem(localize.get(BASIC_ADD), settings.shortcutAdd.c_str())) add_open();
-        if (ImGui::MenuItem(localize.get(BASIC_REMOVE_UNUSED), settings.shortcutRemove.c_str(), false, !unused.empty()))
-          remove_unused();
+        if (ImGui::MenuItem(localize.get(BASIC_REMOVE_UNUSED), settings.shortcutRemove.c_str())) remove_unused();
 
         if (ImGui::MenuItem(localize.get(BASIC_RELOAD), nullptr, false, !selection.empty())) reload();
         if (ImGui::MenuItem(localize.get(BASIC_REPLACE), nullptr, false, selection.size() == 1)) replace_open();
@@ -295,11 +293,9 @@ namespace anm2ed::imgui
 
       ImGui::SameLine();
 
-      ImGui::BeginDisabled(unused.empty());
       imgui::shortcut(manager.chords[SHORTCUT_REMOVE]);
       if (ImGui::Button(localize.get(BASIC_REMOVE_UNUSED), widgetSize)) remove_unused();
       imgui::set_item_tooltip_shortcut(localize.get(TOOLTIP_REMOVE_UNUSED_SOUNDS), settings.shortcutRemove);
-      ImGui::EndDisabled();
 
       ImGui::SameLine();
 

@@ -9,7 +9,6 @@ namespace anm2ed
   public:
     int reference{-1};
     int hovered{-1};
-    std::set<int> unused{};
     std::vector<std::string> labelsString{};
     std::vector<const char*> labels{};
     std::vector<int> ids{};

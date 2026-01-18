@@ -24,7 +24,6 @@ namespace anm2ed::imgui
     auto& document = *manager.get();
     auto& anm2 = document.anm2;
     auto& selection = document.spritesheet.selection;
-    auto& unused = document.spritesheet.unused;
     auto& reference = document.spritesheet.reference;
     auto style = ImGui::GetStyle();
 
@@ -40,6 +39,7 @@ namespace anm2ed::imgui
 
     auto remove_unused = [&]()
     {
+      auto unused = anm2.spritesheets_unused();
       if (unused.empty()) return;
 
       auto behavior = [&]()
@@ -53,7 +53,6 @@ namespace anm2ed::imgui
                                    std::make_format_args(id, pathString)));
           anm2.content.spritesheets.erase(id);
         }
-        unused.clear();
       };
 
       DOCUMENT_EDIT(document, localize.get(EDIT_REMOVE_UNUSED_SPRITESHEETS), Document::ALL, behavior());
@@ -189,8 +188,7 @@ namespace anm2ed::imgui
           open_directory(anm2.content.spritesheets[*selection.begin()]);
 
         if (ImGui::MenuItem(localize.get(BASIC_ADD), settings.shortcutAdd.c_str())) add_open();
-        if (ImGui::MenuItem(localize.get(BASIC_REMOVE_UNUSED), settings.shortcutRemove.c_str(), false, !unused.empty()))
-          remove_unused();
+        if (ImGui::MenuItem(localize.get(BASIC_REMOVE_UNUSED), settings.shortcutRemove.c_str())) remove_unused();
 
         if (ImGui::MenuItem(localize.get(BASIC_RELOAD), nullptr, false, !selection.empty())) reload();
         if (ImGui::MenuItem(localize.get(BASIC_REPLACE), nullptr, false, selection.size() == 1)) replace_open();
@@ -366,11 +364,9 @@ namespace anm2ed::imgui
 
       auto rowTwoWidgetSize = widget_size_with_row_get(2);
 
-      ImGui::BeginDisabled(unused.empty());
       shortcut(manager.chords[SHORTCUT_REMOVE]);
       if (ImGui::Button(localize.get(BASIC_REMOVE_UNUSED), rowTwoWidgetSize)) remove_unused();
       set_item_tooltip_shortcut(localize.get(TOOLTIP_REMOVE_UNUSED_SPRITESHEETS), settings.shortcutRemove);
-      ImGui::EndDisabled();
 
       ImGui::SameLine();
 

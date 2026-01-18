@@ -17,7 +17,6 @@ namespace anm2ed::imgui
   {
     auto& document = *manager.get();
     auto& anm2 = document.anm2;
-    auto& unused = document.event.unused;
     auto& reference = document.event.reference;
     auto& selection = document.event.selection;
 
@@ -45,6 +44,7 @@ namespace anm2ed::imgui
 
     auto remove_unused = [&]()
     {
+      auto unused = anm2.events_unused();
       if (unused.empty()) return;
 
       auto behavior = [&]()
@@ -57,7 +57,6 @@ namespace anm2ed::imgui
 
           anm2.content.events.erase(id);
         }
-        unused.clear();
       };
 
       DOCUMENT_EDIT(document, localize.get(EDIT_REMOVE_UNUSED_EVENTS), Document::EVENTS, behavior());
@@ -163,9 +162,7 @@ namespace anm2ed::imgui
                               selection.size() == 1))
             rename();
           if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_ADD), settings.shortcutAdd.c_str())) add();
-          if (ImGui::MenuItem(localize.get(BASIC_REMOVE_UNUSED), settings.shortcutRemove.c_str(), false,
-                              !unused.empty()))
-            remove_unused();
+          if (ImGui::MenuItem(localize.get(BASIC_REMOVE_UNUSED), settings.shortcutRemove.c_str())) remove_unused();
 
           ImGui::Separator();
 
@@ -187,10 +184,8 @@ namespace anm2ed::imgui
       set_item_tooltip_shortcut(localize.get(TOOLTIP_ADD_EVENT), settings.shortcutAdd);
       ImGui::SameLine();
 
-      ImGui::BeginDisabled(unused.empty());
       shortcut(manager.chords[SHORTCUT_REMOVE]);
       if (ImGui::Button(localize.get(BASIC_REMOVE_UNUSED), widgetSize)) remove_unused();
-      ImGui::EndDisabled();
       set_item_tooltip_shortcut(localize.get(TOOLTIP_REMOVE_UNUSED_EVENTS), settings.shortcutRemove);
     }
     ImGui::End();

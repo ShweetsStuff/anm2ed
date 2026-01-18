@@ -18,7 +18,6 @@ namespace anm2ed::imgui
     auto& document = *manager.get();
     auto& anm2 = document.anm2;
     auto& reference = document.null.reference;
-    auto& unused = document.null.unused;
     auto& selection = document.null.selection;
     auto& propertiesPopup = manager.nullPropertiesPopup;
 
@@ -26,12 +25,12 @@ namespace anm2ed::imgui
 
     auto remove_unused = [&]()
     {
+      auto unused = anm2.nulls_unused();
       if (unused.empty()) return;
       auto behavior = [&]()
       {
         for (auto& id : unused)
           anm2.content.nulls.erase(id);
-        unused.clear();
       };
 
       DOCUMENT_EDIT(document, localize.get(EDIT_REMOVE_UNUSED_NULLS), Document::NULLS, behavior());
@@ -130,9 +129,7 @@ namespace anm2ed::imgui
           if (ImGui::MenuItem(localize.get(BASIC_PROPERTIES), nullptr, false, selection.size() == 1))
             properties(*selection.begin());
           if (ImGui::MenuItem(localize.get(BASIC_ADD), settings.shortcutAdd.c_str())) add();
-          if (ImGui::MenuItem(localize.get(BASIC_REMOVE_UNUSED), settings.shortcutRemove.c_str(), false,
-                              !unused.empty()))
-            remove_unused();
+          if (ImGui::MenuItem(localize.get(BASIC_REMOVE_UNUSED), settings.shortcutRemove.c_str())) remove_unused();
 
           ImGui::Separator();
 
@@ -154,10 +151,8 @@ namespace anm2ed::imgui
       set_item_tooltip_shortcut(localize.get(TOOLTIP_ADD_NULL), settings.shortcutAdd);
       ImGui::SameLine();
 
-      ImGui::BeginDisabled(unused.empty());
       shortcut(manager.chords[SHORTCUT_REMOVE]);
       if (ImGui::Button(localize.get(BASIC_REMOVE_UNUSED), widgetSize)) remove_unused();
-      ImGui::EndDisabled();
       set_item_tooltip_shortcut(localize.get(TOOLTIP_REMOVE_UNUSED_NULLS), settings.shortcutRemove);
     }
     ImGui::End();

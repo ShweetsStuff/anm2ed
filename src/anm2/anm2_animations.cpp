@@ -37,11 +37,14 @@ namespace anm2ed::anm2
            element = element->NextSiblingElement("Animation"))
       {
         auto index = start + count;
-        animations.items.insert(animations.items.begin() + start + count, Animation(element));
+        auto& animation = *animations.items.insert(animations.items.begin() + start + count, Animation(element));
+
+        for (auto& trigger : animation.triggers.frames)
+          if (!content.events.contains(trigger.eventID)) content.events[trigger.eventID];
+
         indices.insert(index);
         count++;
       }
-
       return true;
     }
     else if (errorString)

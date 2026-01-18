@@ -174,35 +174,20 @@ namespace anm2ed
   {
     hash_set();
 
-    auto layers_set = [&]() { layer.unused = anm2.layers_unused(); };
-    auto nulls_set = [&]() { null.unused = anm2.nulls_unused(); };
-    auto events_set = [&]()
-    {
-      event.unused = anm2.events_unused();
-      event.labels_set(anm2.event_labels_get(), anm2.event_ids_get());
-    };
+    auto events_set = [&]() { event.labels_set(anm2.event_labels_get(), anm2.event_ids_get()); };
 
     auto animations_set = [&]() { animation.labels_set(anm2.animation_labels_get()); };
 
     auto spritesheets_set = [&]()
-    {
-      spritesheet.unused = anm2.spritesheets_unused();
-      spritesheet.labels_set(anm2.spritesheet_labels_get(), anm2.spritesheet_ids_get());
-    };
+    { spritesheet.labels_set(anm2.spritesheet_labels_get(), anm2.spritesheet_ids_get()); };
 
-    auto sounds_set = [&]()
-    {
-      sound.unused = anm2.sounds_unused();
-      sound.labels_set(anm2.sound_labels_get(), anm2.sound_ids_get());
-    };
+    auto sounds_set = [&]() { sound.labels_set(anm2.sound_labels_get(), anm2.sound_ids_get()); };
 
     switch (type)
     {
       case LAYERS:
-        layers_set();
         break;
       case NULLS:
-        nulls_set();
         break;
       case EVENTS:
         events_set();
@@ -218,14 +203,10 @@ namespace anm2ed
         sounds_set();
         break;
       case ITEMS:
-        layers_set();
-        nulls_set();
         spritesheets_set();
         break;
       case ANIMATIONS:
       case ALL:
-        layers_set();
-        nulls_set();
         events_set();
         spritesheets_set();
         animations_set();
