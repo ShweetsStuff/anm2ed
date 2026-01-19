@@ -40,7 +40,7 @@ namespace anm2ed::anm2
         auto& animation = *animations.items.insert(animations.items.begin() + start + count, Animation(element));
 
         for (auto& trigger : animation.triggers.frames)
-          if (!content.events.contains(trigger.eventID)) content.events[trigger.eventID].name = localize.get(L);
+          if (!content.events.contains(trigger.eventID)) trigger.eventID = -1;
 
         indices.insert(index);
         count++;

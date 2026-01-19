@@ -693,8 +693,9 @@ namespace anm2ed::imgui
           drawList->PushClipRect(clipMin, clipMax);
           ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE_LARGE);
           auto triggerTextColor = isLightTheme ? TRIGGER_TEXT_COLOR_LIGHT : TRIGGER_TEXT_COLOR_DARK;
-          drawList->AddText(textPos, ImGui::GetColorU32(triggerTextColor),
-                            anm2.content.events.at(trigger.eventID).name.c_str());
+          if (anm2.content.events.contains(trigger.eventID))
+            drawList->AddText(textPos, ImGui::GetColorU32(triggerTextColor),
+                              anm2.content.events.at(trigger.eventID).name.c_str());
           ImGui::PopFont();
           drawList->PopClipRect();
         }

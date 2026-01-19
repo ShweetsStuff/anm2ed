@@ -76,9 +76,27 @@ namespace anm2ed
     mei.ExceptionPointers = exceptionPointers;
     mei.ClientPointers = FALSE;
 
-    const MINIDUMP_TYPE dumpType = static_cast<MINIDUMP_TYPE>(MiniDumpNormal | MiniDumpWithIndirectlyReferencedMemory |
-                                                              MiniDumpWithThreadInfo | MiniDumpWithUnloadedModules);
-    MiniDumpWriteDump(GetCurrentProcess(), pid, file, dumpType, exceptionPointers ? &mei : nullptr, nullptr, nullptr);
+    DWORD dumpType = MiniDumpWithFullMemory | MiniDumpWithFullMemoryInfo | MiniDumpWithHandleData |
+                     MiniDumpWithThreadInfo | MiniDumpWithUnloadedModules | MiniDumpWithProcessThreadData |
+                     MiniDumpWithPrivateReadWriteMemory | MiniDumpWithDataSegs | MiniDumpWithCodeSegs |
+                     MiniDumpWithIndirectlyReferencedMemory;
+#ifdef MiniDumpWithModuleHeaders
+    dumpType |= MiniDumpWithModuleHeaders;
+#endif
+#ifdef MiniDumpWithTokenInformation
+    dumpType |= MiniDumpWithTokenInformation;
+#endif
+#ifdef MiniDumpWithFullAuxiliaryState
+    dumpType |= MiniDumpWithFullAuxiliaryState;
+#endif
+#ifdef MiniDumpWithAvxXStateContext
+    dumpType |= MiniDumpWithAvxXStateContext;
+#endif
+#ifdef MiniDumpWithIptTrace
+    dumpType |= MiniDumpWithIptTrace;
+#endif
+    MiniDumpWriteDump(GetCurrentProcess(), pid, file, static_cast<MINIDUMP_TYPE>(dumpType),
+                      exceptionPointers ? &mei : nullptr, nullptr, nullptr);
 
     FlushFileBuffers(file);
     CloseHandle(file);
