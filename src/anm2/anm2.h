@@ -44,6 +44,9 @@ namespace anm2ed::anm2
     std::set<int> spritesheets_unused();
     bool spritesheets_deserialize(const std::string&, const std::filesystem::path&, types::merge::Type type,
                                   std::string*);
+    std::vector<std::string> region_labels_get(Spritesheet&);
+    std::vector<int> region_ids_get(Spritesheet&);
+    std::set<int> regions_unused(Spritesheet&);
 
     void layer_add(int&);
     std::set<int> layers_unused();
@@ -75,7 +78,8 @@ namespace anm2ed::anm2
     Item* item_get(int, Type, int = -1);
     Reference layer_animation_add(Reference = {}, std::string = {}, int = 0,
                                   types::destination::Type = types::destination::ALL);
-    Reference null_animation_add(Reference = {}, std::string = {}, bool = false, types::destination::Type = types::destination::ALL);
+    Reference null_animation_add(Reference = {}, std::string = {}, bool = false,
+                                 types::destination::Type = types::destination::ALL);
 
     Frame* frame_get(int, Type, int, int = -1);
     void merge(const Anm2&, const std::filesystem::path&, const std::filesystem::path&);

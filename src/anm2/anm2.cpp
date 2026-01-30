@@ -16,6 +16,37 @@ using namespace anm2ed::types;
 using namespace anm2ed::util;
 using namespace glm;
 
+namespace
+{
+  void region_frames_sync(anm2ed::anm2::Anm2& anm2, bool clearInvalid)
+  {
+    for (auto& animation : anm2.animations.items)
+    {
+      for (auto& [layerId, layerAnimation] : animation.layerAnimations)
+      {
+        if (!anm2.content.layers.contains(layerId)) continue;
+        auto& layer = anm2.content.layers.at(layerId);
+        auto spritesheet = anm2.spritesheet_get(layer.spritesheetID);
+        if (!spritesheet) continue;
+
+        for (auto& frame : layerAnimation.frames)
+        {
+          if (frame.regionID == -1) continue;
+          auto regionIt = spritesheet->regions.find(frame.regionID);
+          if (regionIt == spritesheet->regions.end())
+          {
+            if (clearInvalid) frame.regionID = -1;
+            continue;
+          }
+          frame.crop = regionIt->second.crop;
+          frame.size = regionIt->second.size;
+          frame.pivot = regionIt->second.pivot;
+        }
+      }
+    }
+  }
+}
+
 namespace anm2ed::anm2
 {
   Anm2::Anm2() { info.createdOn = time::get("%m/%d/%Y %I:%M:%S %p"); }
@@ -47,10 +78,13 @@ namespace anm2ed::anm2
     if (auto contentElement = element->FirstChildElement("Content")) content = Content((XMLElement*)contentElement);
     if (auto animationsElement = element->FirstChildElement("Animations"))
       animations = Animations((XMLElement*)animationsElement);
+
+    region_frames_sync(*this, true);
   }
 
   XMLElement* Anm2::to_element(XMLDocument& document)
   {
+    region_frames_sync(*this, true);
     auto element = document.NewElement("AnimatedActor");
 
     info.serialize(document, element);

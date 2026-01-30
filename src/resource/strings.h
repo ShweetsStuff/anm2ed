@@ -71,6 +71,7 @@ namespace anm2ed
   X(BASIC_PIVOT, "Pivot", "Pivote", "Точка вращения", "枢轴", "중심점") \
   X(BASIC_POSITION, "Position", "Posicion", "Позиция", "位置", "위치") \
   X(BASIC_PROPERTIES, "Properties", "Propiedades", "Свойства", "属性", "속성") \
+  X(BASIC_REGION, "Region", "Región", "Регион", "区域", "영역") \
   X(BASIC_RENAME, "Rename", "Renombrar", "Переименовать", "重命名", "이름 변경") \
   X(BASIC_RELOAD, "Reload", "Recargar", "Перезагрузить", "重新加载", "다시 불러오기") \
   X(BASIC_REMOVE, "Remove", "Remover", "Удалить", "删除", "제거") \
@@ -89,6 +90,7 @@ namespace anm2ed
   X(BASIC_YES, "Yes", "Si", "Да", "是", "예") \
   X(BASIC_ZOOM, "Zoom", "Zoom", "Масштаб", "缩放", "확대") \
   X(EDIT_ADD_ANIMATION, "Add Animation", "Añadir Animacion", "Добавить анимацию", "添加动画", "애니메이션 추가") \
+  X(EDIT_ADD_REGION, "Add Region", "Añadir Región", "Добавить регион", "添加区域", "영역 추가") \
   X(EDIT_ADD_EVENT, "Add Event", "Añadir Evento", "Добавить событие", "添加事件", "이벤트 추가") \
   X(EDIT_ADD_ITEM, "Add Item", "Añadir Item", "Добавить предмет", "添加物品", "항목 추가") \
   X(EDIT_ADD_LAYER, "Add Layer", "Añadir Capa", "Добавить слой", "添加动画层", "레이어 추가") \
@@ -136,6 +138,7 @@ namespace anm2ed
   X(EDIT_PASTE_EVENTS, "Paste Event(s)", "Pegar Eventos", "Вставить события", "粘贴事件", "이벤트 붙여넣기") \
   X(EDIT_PASTE_FRAMES, "Paste Frame(s)", "Pegar Frames", "Вставить кадры", "粘贴帧", "프레임 붙여넣기") \
   X(EDIT_PASTE_LAYERS, "Paste Layer(s)", "Pegar Capa(s)", "Вставить слои", "粘贴动画层", "레이어 붙여넣기") \
+  X(EDIT_PASTE_REGIONS, "Paste Region(s)", "Pegar Región(es)", "Вставить регионы", "粘贴区域", "영역 붙여넣기") \
   X(EDIT_PASTE_NULLS, "Paste Null(s)", "Pegar Null(s)", "Вставить нули", "粘贴Null", "Null 붙여넣기") \
   X(EDIT_PASTE_SOUNDS, "Paste Sound(s)", "Pegar Sonido(s)", "Вставить звук(и)", "粘贴声音", "사운드 붙여넣기") \
   X(EDIT_PASTE_SPRITESHEETS, "Paste Spritesheet(s)", "Pegar Spritesheet(s)", "Вставить спрайт-листы", "粘贴图集", "스프라이트 시트 붙여넣기") \
@@ -144,6 +147,7 @@ namespace anm2ed
   X(EDIT_REMOVE_ANIMATIONS, "Remove Animation(s)", "Remover Animacion(es)", "Удалить анимации", "删除动画层", "애니메이션 제거") \
   X(EDIT_REMOVE_ITEMS, "Remove Item(s)", "Remover Item(s)", "Удалить предметы", "删除物品", "항목 제거") \
   X(EDIT_REMOVE_UNUSED_EVENTS, "Remove Unused Events", "Remover Eventos No Utilizados", "Удалить неизпользуемые события", "删除未使用的事件", "미사용 이벤트 제거") \
+  X(EDIT_REMOVE_UNUSED_REGIONS, "Remove Unused Regions", "Remover Regiones No Utilizadas", "Удалить неиспользуемые регионы", "删除未使用的区域", "미사용 영역 제거") \
   X(EDIT_REMOVE_UNUSED_LAYERS, "Remove Unused Layers", "Remover Capas No Utilizadas", "Удалить неизпользуемые слои", "删除未使用的动画层", "미사용 레이어 제거") \
   X(EDIT_REMOVE_UNUSED_NULLS, "Remove Unused Nulls", "Remover Nulls No Utilizados", "Удалить неизпользуемые нули", "删除未使用的Null", "미사용 Null 제거") \
   X(EDIT_REMOVE_UNUSED_SOUNDS, "Remove Unused Sounds", "Remover Sonidos No Utilizados", "Удалить неизпользуемые звуки", "删除未使用的声音", "미사용 사운드 제거") \
@@ -152,7 +156,10 @@ namespace anm2ed
   X(EDIT_REPLACE_SPRITESHEET, "Replace Spritesheet", "Reemplazar Spritesheet", "Заменить спрайт-лист", "替换图集", "스프라이트 시트 교체") \
   X(EDIT_REPLACE_SOUND, "Replace Sound", "Reemplazar Sonido", "Заменить звук", "替换声音", "사운드 교체") \
   X(EDIT_SET_LAYER_PROPERTIES, "Set Layer Properties", "Establecer Propiedades de Capa", "Установить свойства слоя", "更改动画层属性", "레이어 속성 설정") \
+  X(EDIT_SET_REGION_PROPERTIES, "Set Region Properties", "Establecer propiedades de región", "Установить свойства региона", "更改区域属性", "영역 속성 설정") \
   X(EDIT_SET_NULL_PROPERTIES, "Set Null Properties", "Establecer Propiedades Null", "Установить свойства нуля", "更改Null属性", "Null 속성 설정") \
+  X(EDIT_REGION_CROP, "Region Crop", "Recorte de región", "Обрезка региона", "区域裁剪", "영역 자르기") \
+  X(EDIT_REGION_MOVE, "Region Pivot", "Pivote de región", "Пивот региона", "区域枢轴", "영역 피벗") \
   X(EDIT_SPLIT_FRAME, "Split Frame", "Dividir Frame", "Разделить кадр", "拆分帧", "프레임 분할") \
   X(EDIT_SHORTEN_FRAME, "Shorten Frame", "Acortar Frame", "Укоротить кадр", "缩短帧时长", "프레임 단축") \
   X(EDIT_TOGGLE_ITEM_VISIBILITY, "Toggle Item Visibility", "Alternar Visibilidad de item", "Переключить видимость предмета", "物品可见", "항목 표시/숨기기") \
@@ -197,6 +204,7 @@ namespace anm2ed
   X(LABEL_ANIMATIONS_CHILD, "Animations", "Animaciones", "", "动画", "애니메이션") \
   X(LABEL_ANIMATIONS_MERGE_POPUP, "Merge Animations", "Combinar Animaciones", "Соединить анимации", "合并多个动画", "애니메이션 병합") \
   X(LABEL_ANIMATIONS_WINDOW, "Animations###Animations", "Animaciones###Animations", "Анимации###Animations", "动画###Animations", "애니메이션###Animations") \
+  X(LABEL_REGIONS_WINDOW, "Regions###Regions", "Regiones###Regions", "Регионы###Regions", "区域###Regions", "영역###Regions") \
   X(LABEL_ANIMATION_LENGTH, "Animation Length", "Duracion de Animacion", "Длина анимации", "动画时长", "애니메이션 길이") \
   X(LABEL_ANIMATION_PREVIEW_WINDOW, "Animation Preview###Animation Preview", "Vista Previa de Animacion###Animation Preview", "Предпросмотр анимации###Animation Preview", "动画预放###Animation Preview", "애니메이션 프리뷰###Animation Preview") \
   X(LABEL_APPEND_FRAMES, "Append Frames", "Anteponer Frames", "Добавить кадры к концу", "在后面添加帧", "뒷프레임에 추가") \
@@ -261,6 +269,7 @@ namespace anm2ed
   X(LABEL_LOCALIZATION, "Localization", "Localizacion", "Локализация", "本地化", "현지화") \
   X(LABEL_LOOP, "Loop", "Loop", "Цикл", "循环", "반복") \
   X(LABEL_MANAGER_ANM2_DRAG_DROP, "Anm2 Drag Drop", "Arrastrar y Soltar Anm2", "Anm2 Drag Drop", "Anm2 拖放", "Anm2 드래그 앤 드롭") \
+  X(LABEL_REGION_PROPERTIES, "Region Properties", "Propiedades de región", "Свойства региона", "区域属性", "영역 속성") \
   X(LABEL_MANAGER_LAYER_PROPERTIES, "Layer Properties", "Propiedades de Capa", "Свойства слоя", "动画层属性", "레이어 속성") \
   X(LABEL_MANAGER_NULL_PROPERTIES, "Null Properties", "Propiedades Null", "Свойства нуля", "Null属性", "Null 속성") \
   X(LABEL_MANAGER_RENDERING_PROGRESS, "Rendering...", "Renderizando...", "Рендеринг...", "渲染中...", "렌더링 중...") \
@@ -387,11 +396,14 @@ namespace anm2ed
   X(SHORTCUT_STRING_ZOOM_OUT, "Zoom Out", "Zoom Out", "Уменьшить", "视图缩小", "축소") \
   X(SNAPSHOT_RENAME_ANIMATION, "Rename Animation", "Renombrar Animacion", "Переименовать анимацию", "重命名动画", "애니메이션 이름 바꾸기") \
   X(TEXT_SELECT_FRAME, "Select a frame first!", "¡Selecciona primero un frame!", "Сначала выберите кадр!", "请先选择帧！", "먼저 프레임을 선택하세요!") \
+  X(TEXT_SELECT_FRAME_OR_REGION, "Select a frame or region first!", "¡Selecciona primero un frame o región!", "Сначала выберите кадр или регион!", "请先选择帧或区域！", "먼저 프레임 또는 영역을 선택하세요!") \
   X(TEXT_SELECT_SPRITESHEET, "Select a spritesheet first!", "¡Selecciona primero un spritesheet!", "Сначала выберите спрайт-лист!", "请先选择图集！", "먼저 스프라이트 시트를 선택하세요!") \
   X(TEXT_TOOL_ANIMATION_PREVIEW, "This tool can only be used in Animation Preview!", "¡Esta herramienta solo se puede usar en Vista previa de animación!", "Этот инструмент можно использовать только в \"Предпросмотре анимации\"!", "该工具只能在“动画预放”中使用！", "이 도구는 애니메이션 프리뷰에서만 사용할 수 있습니다!") \
   X(TEXT_TOOL_SPRITESHEET_EDITOR, "This tool can only be used in Spritesheet Editor!", "¡Esta herramienta solo se puede usar en el Editor de spritesheets!", "Этот инструмент можно использовать только в \"Редакторе спрайт-листов\"!", "该工具只能在“图集编辑器”中使用！", "이 도구는 스프라이트 시트 편집기에서만 사용할 수 있습니다!") \
   X(TEXT_NEW_ANIMATION, "New Animation", "Nueva Animacion", "Новая анимация", "新动画", "새 애니메이션") \
   X(TEXT_NEW_EVENT, "New Event", "Nuevo Evento", "Новое событие", "新事件", "새 이벤트") \
+  X(TEXT_NEW_REGION, "New Region", "Nueva Región", "Новый регион", "新区域", "새 영역") \
+  X(TEXT_REGION_IN_USE, "A spritesheet region is in use; remove region to edit.", "Se está usando una región del spritesheet; elimina la región para editar.", "Регион спрайт-листа используется; удалите регион для редактирования.", "图集中有区域正在使用；移除区域后才能编辑。", "스프라이트 시트 영역이 사용 중입니다. 편집하려면 영역을 제거하세요.") \
   X(TEXT_RECORDING_PROGRESS, "Once recording is complete, rendering may take some time.\nPlease be patient...", "Una vez que el grabado este completo, renderizar puede tomar algo de tiempo. \nPor favor se paciente...", "Когда запись завершена, рендеринг может занять некоторое время.\nПожалуйста потерпите...", "录制完成时，渲染可能会花一些时间.\n请耐心等待...", "녹화가 완료되면 렌더링에 시간이 걸릴 수 있습니다.\n잠시만 기다려 주세요...") \
   X(TEXT_OPEN_DIRECTORY, "Double-click to open directory in file explorer.", "Haz doble click para abrir el directiorio en el buscador de archivos.", "Дважды нажмите, чтобы открыть директорию в проводнике.", "双击以在文件管理器中打开目录。", "더블 클릭하여 파일 탐색기로 디렉터리를 엽니다.") \
   X(TOAST_AUTOSAVE_FAILED, "Could not autosave document to: {0} ({1})", "No se pudo autoguardar el documento en: {0} ({1})", "Не получилось автосохранить документ в: {0} ({1})", "自动保存到 {0} ({1}) 失败", "{0}에 파일을 자동저장할 수 없습니다. ({1})") \
@@ -401,6 +413,7 @@ namespace anm2ed
   X(TOAST_DESERIALIZE_FRAMES_FAILED, "Failed to deserialize frames:", "Falla al deserializar Frames:", "Не удалось десериализировать кадры: {0}", "反序列化帧失败: {0}", "프레임 역직렬화 실패: {0}") \
   X(TOAST_DESERIALIZE_FRAMES_NO_SELECTION, "Failed to deserialize frames: no selection.", "Falla al deserializar Frames: sin seleccion.", "Не удалось десериализировать кадры: ничего не выбрано.", "到所选帧", "프레임 역직렬화 실패. 선택한 것이 없습니다.") \
   X(TOAST_DESERIALIZE_LAYERS_FAILED, "Failed to deserialize layer(s):", "Falla al deserializar capas(s):", "Не удалось десериализировать слои: {0}", "反序列化动画层失败: {0}", "레이어 역직렬화 실패: {0}") \
+  X(TOAST_DESERIALIZE_REGIONS_FAILED, "Failed to deserialize region(s): {0}", "Falla al deserializar región(es): {0}", "Не удалось десериализировать регионы: {0}", "反序列化区域失败: {0}", "영역 역직렬화 실패: {0}") \
   X(TOAST_DESERIALIZE_NULLS_FAILED, "Failed to deserialize null(s): {0}", "Falla al deserializar null(s): {0}", "Не удалось десериализировать нули: {0}", "反序列化Null失败: {0}", "Null 역직렬화 실패: {0}") \
   X(TOAST_DESERIALIZE_SPRITESHEETS_FAILED, "Failed to deserialize spritesheet(s): {0}", "Falla al deserializar spritesheet(s): {0}", "Не удалось десериализировать спрайт-листы: {0}", "反序列化图集失败: {0}", "스프라이트 시트 역직렬화 실패: {0}") \
   X(TOAST_EXPORT_RENDERED_ANIMATION, "Exported rendered animation to: {0}", "Se ha exportado la animacion renderizada a: {0}", "Рендерированные анимации экспортированы в: {0}", "渲染动画导出至: {0}", "{0}에 렌더링 된 애니메이션을 내보내기 했습니다.") \
@@ -440,6 +453,7 @@ namespace anm2ed
   X(TOAST_SPRITESHEET_NO_FRAMES, "No frames captured for spritesheet export.", "No hay Frames capturados para exportar spritesheet.", "Ни один кадр не захвачен для экспорта спрайт-листа.", "导出图集需要捕获至少一帧.", "스프라이트 시트 내보내기용으로 캡처된 프레임이 없습니다.") \
   X(TOAST_UNDO, "Undo: {0}", "Deshacer: {0}", "Отмена: {0}", "撤销: {0}", "실행 취소: {0}") \
   X(TOOLTIP_ADD_ANIMATION, "Add a new animation.", "Añadir nueva animacion.", "Добавить новую анимацию.", "添加一个新动画.", "새 애니메이션을 추가합니다.") \
+  X(TOOLTIP_ADD_REGION, "Add a new region to the spritesheet.\nRegions are parts of a spritesheet that can be defined and labeled to be reused in frames.", "Añadir una nueva región al spritesheet.\nLas regiones son partes de un spritesheet que pueden definirse y etiquetarse para reutilizarse en frames.", "Добавить новый регион в спрайт-лист.\nРегионы — это части спрайт-листа, которые можно определить и подписать, чтобы повторно использовать их в кадрах.", "添加一个新的区域到图集。\n区域是图集的一部分，可以被定义并标记以便在帧中重复使用。", "스프라이트 시트에 새 영역을 추가합니다.\n영역은 스프라이트 시트의 일부로, 정의하고 라벨을 붙여 프레임에서 재사용할 수 있습니다.") \
   X(TOOLTIP_ADD_EVENT, "Add an event.", "Añadir un evento.", "Добавить событие.", "添加一个事件.", "이벤트를 추가합니다.") \
   X(TOOLTIP_ADD_ITEM, "Add the item, with the settings specified.", "Añadir el Item, con las configuraciones especificadas.", "Добавить предмет с указанными настройками.", "按照指定的设置添加物品.", "지정된 설정으로 항목을 추가합니다.") \
   X(TOOLTIP_ADD_LAYER, "Add a layer.", "Añadir una capa.", "Добавить слой.", "添加一个动画层.", "레이어를 추가합니다.") \
@@ -463,6 +477,7 @@ namespace anm2ed
   X(TOOLTIP_CENTER_VIEW, "Centers the view.", "Centra la vista.", "Центрирует вид.", "居中视角.", "미리보기 화면을 가운데에 맞춥니다.") \
   X(TOOLTIP_CLOSE_SETTINGS, "Close without updating settings.", "Cerrar sin actualizar las configuraciones.", "Закрыть без обновления настройки.", "关闭但不保存设置.", "설정을 갱신하지 않고 닫습니다.") \
   X(TOOLTIP_COLOR_OFFSET, "Change the color added onto the frame.", "Cambia el color añadido al Frame.", "Изменить цвет, который добавлен на кадр.", "更改覆盖在帧上的颜色.", "프레임에 더해지는 색을 변경합니다.") \
+  X(TOOLTIP_REGION, "Set the spritesheet region the frame will use.", "Establece la región del spritesheet que usará el frame.", "Установить регион спрайт-листа, который будет использовать кадр.", "设置帧将使用的图集区域.", "프레임이 사용할 스프라이트 시트 영역을 설정합니다.") \
   X(TOOLTIP_COLUMNS, "Set how many columns the spritesheet will have.", "Ajusta cuantas columnas va a tener el spritesheet.", "Установить сколько колонн будет иметь спрайт-лист.", "设置图集有多少列.", "스프라이트 시트의 열 수를 설정합니다.") \
   X(TOOLTIP_CROP, "Change the crop position the frame uses.", "Cambiar la poscicion de recortado que usa el Frame.", "Изменить позицию обрезки, которую использует кадр.", "更改当前帧的裁剪位置.", "프레임에 대응되는 스프라이트 시트를 어느 지점부터 사용할지 변경합니다.") \
   X(TOOLTIP_CUSTOM_RANGE, "Toggle using a custom range for the animation.", "Alterna usando un rango personalizado para la animacion.", "Переключить использование пользовательского диапазона для анимации.", "切换是否让动画使用自定义区间.", "애니메이션에 사용자 지정 길이를 사용할지 정합니다.") \
@@ -531,6 +546,7 @@ namespace anm2ed
   X(TOOLTIP_RELOAD_SOUNDS, "Reloads the selected sounds.", "Recarga los sonidos seleccionados.", "Перезагружает выбранные звуки.", "重新加载所选声音.", "선택한 사운드를 다시 불러옵니다.") \
   X(TOOLTIP_REMOVE_ANIMATION, "Remove the selected animation(s).", "Remueve la(s) animacion(es) seleccionada(s).", "Удалить выбранные анимации.", "去除所选动画.", "선택한 애니메이션을 제거합니다.") \
   X(TOOLTIP_REMOVE_ITEMS, "Remove the selected item(s).", "Remueve el/los item(s) seleccionado(s).", "Удалить выбранные предметы.", "去除所选物品.", "선택한 항목을 제거합니다.") \
+  X(TOOLTIP_REMOVE_UNUSED_REGIONS, "Remove unused regions (i.e., ones not used by any frame in any animation.)", "Remueve regiones no utilizadas (es decir, aquellas no usadas por ningun frame en ninguna animacion.)", "Удалить неиспользуемые регионы (т. е. те, которые не используются ни одним кадром ни в одной анимации.)", "移除未使用的区域（即未被任何动画中的任何帧使用的区域。）", "사용되지 않는 영역(어떤 애니메이션의 어떤 프레임에서도 사용되지 않는 것)를 제거합니다.") \
   X(TOOLTIP_REMOVE_UNUSED_EVENTS, "Remove unused events (i.e., ones not used by any trigger in any animation.)", "Remueve eventos no utilizados (i. e., aquellos no usados por algun trigger en ninguna animacion.)", "Удалить неиспользуемые события (т. е. события, которые не использует ни один триггер в ни одной анимации.)", "去除未使用的事件 (未被任何动画触发的事件.)", "사용되지 않는 이벤트(어떤 애니메이션의 트리거에서도 사용되지 않는 것)를 제거합니다.") \
   X(TOOLTIP_REMOVE_UNUSED_LAYERS, "Remove unused layers (i.e., ones not used in any animation.)", "Remueve capas no utilizadas (i. e., aquellos no usados en ninguna animacion.)", "Удалить неиспользуемые слои (т. е. слои, которые не используются ни одной анимацией.)", "去除未使用的动画层 (未被任何动画使用的那些)", "사용되지 않는 레이어(어떤 애니메이션에서도 사용되지 않는 것)를 제거합니다.") \
   X(TOOLTIP_REMOVE_UNUSED_NULLS, "Remove unused nulls (i.e., ones not used in any animation.)", "Remueve nulls no utilizados (i. e., aquellos no usados en ninguna animacion.)", "Удалить неиспользуемые нули (т. е. нули, которые не используются ни одной анимацией.)", "去除未使用的Null (未被任何动画使用的那些.)", "사용되지 않는 Null(어떤 애니메이션에서도 사용되지 않는 것)을 제거합니다.") \

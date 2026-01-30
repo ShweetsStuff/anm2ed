@@ -10,48 +10,69 @@ namespace anm2ed::anm2
 {
   Frame::Frame(XMLElement* element, Type type)
   {
-    if (type != TRIGGER)
+    switch (type)
     {
-      element->QueryFloatAttribute("XPosition", &position.x);
-      element->QueryFloatAttribute("YPosition", &position.y);
-      if (type == LAYER)
-      {
+      case ROOT:
+      case NULL_:
+        element->QueryFloatAttribute("XPosition", &position.x);
+        element->QueryFloatAttribute("YPosition", &position.y);
+        element->QueryFloatAttribute("XScale", &scale.x);
+        element->QueryFloatAttribute("YScale", &scale.y);
+        element->QueryIntAttribute("Delay", &duration);
+        element->QueryBoolAttribute("Visible", &isVisible);
+        xml::query_color_attribute(element, "RedTint", tint.r);
+        xml::query_color_attribute(element, "GreenTint", tint.g);
+        xml::query_color_attribute(element, "BlueTint", tint.b);
+        xml::query_color_attribute(element, "AlphaTint", tint.a);
+        xml::query_color_attribute(element, "RedOffset", colorOffset.r);
+        xml::query_color_attribute(element, "GreenOffset", colorOffset.g);
+        xml::query_color_attribute(element, "BlueOffset", colorOffset.b);
+        element->QueryFloatAttribute("Rotation", &rotation);
+        element->QueryBoolAttribute("Interpolated", &isInterpolated);
+        break;
+      case LAYER:
+        element->QueryIntAttribute("RegionId", &regionID);
+        element->QueryFloatAttribute("XPosition", &position.x);
+        element->QueryFloatAttribute("YPosition", &position.y);
         element->QueryFloatAttribute("XPivot", &pivot.x);
         element->QueryFloatAttribute("YPivot", &pivot.y);
         element->QueryFloatAttribute("XCrop", &crop.x);
         element->QueryFloatAttribute("YCrop", &crop.y);
         element->QueryFloatAttribute("Width", &size.x);
         element->QueryFloatAttribute("Height", &size.y);
-      }
-      element->QueryFloatAttribute("XScale", &scale.x);
-      element->QueryFloatAttribute("YScale", &scale.y);
-      element->QueryIntAttribute("Delay", &duration);
-      element->QueryBoolAttribute("Visible", &isVisible);
-      xml::query_color_attribute(element, "RedTint", tint.r);
-      xml::query_color_attribute(element, "GreenTint", tint.g);
-      xml::query_color_attribute(element, "BlueTint", tint.b);
-      xml::query_color_attribute(element, "AlphaTint", tint.a);
-      xml::query_color_attribute(element, "RedOffset", colorOffset.r);
-      xml::query_color_attribute(element, "GreenOffset", colorOffset.g);
-      xml::query_color_attribute(element, "BlueOffset", colorOffset.b);
-      element->QueryFloatAttribute("Rotation", &rotation);
-      element->QueryBoolAttribute("Interpolated", &isInterpolated);
-    }
-    else
-    {
-      element->QueryIntAttribute("EventId", &eventID);
-
-      int soundID{};
-      // Backwards compatibility with old formats
-      if (element->QueryIntAttribute("SoundId", &soundID) == XML_SUCCESS) soundIDs.push_back(soundID);
-
-      for (auto child = element->FirstChildElement("Sound"); child; child = child->NextSiblingElement("Sound"))
+        element->QueryFloatAttribute("XScale", &scale.x);
+        element->QueryFloatAttribute("YScale", &scale.y);
+        element->QueryIntAttribute("Delay", &duration);
+        element->QueryBoolAttribute("Visible", &isVisible);
+        xml::query_color_attribute(element, "RedTint", tint.r);
+        xml::query_color_attribute(element, "GreenTint", tint.g);
+        xml::query_color_attribute(element, "BlueTint", tint.b);
+        xml::query_color_attribute(element, "AlphaTint", tint.a);
+        xml::query_color_attribute(element, "RedOffset", colorOffset.r);
+        xml::query_color_attribute(element, "GreenOffset", colorOffset.g);
+        xml::query_color_attribute(element, "BlueOffset", colorOffset.b);
+        element->QueryFloatAttribute("Rotation", &rotation);
+        element->QueryBoolAttribute("Interpolated", &isInterpolated);
+        break;
+      case TRIGGER:
       {
-        child->QueryIntAttribute("Id", &soundID);
-        soundIDs.push_back(soundID);
-      }
+        element->QueryIntAttribute("EventId", &eventID);
 
-      element->QueryIntAttribute("AtFrame", &atFrame);
+        int soundID{};
+        // Backwards compatibility with old formats
+        if (element->QueryIntAttribute("SoundId", &soundID) == XML_SUCCESS) soundIDs.push_back(soundID);
+
+        for (auto child = element->FirstChildElement("Sound"); child; child = child->NextSiblingElement("Sound"))
+        {
+          child->QueryIntAttribute("Id", &soundID);
+          soundIDs.push_back(soundID);
+        }
+
+        element->QueryIntAttribute("AtFrame", &atFrame);
+        break;
+      }
+      default:
+        break;
     }
   }
 
@@ -80,6 +101,7 @@ namespace anm2ed::anm2
         element->SetAttribute("Interpolated", isInterpolated);
         break;
       case LAYER:
+        if (regionID != -1) element->SetAttribute("RegionId", regionID);
         element->SetAttribute("XPosition", position.x);
         element->SetAttribute("YPosition", position.y);
         element->SetAttribute("XPivot", pivot.x);

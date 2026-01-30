@@ -21,6 +21,7 @@ namespace anm2ed::anm2
     int duration{FRAME_DURATION_MIN};
     int atFrame{-1};
     int eventID{-1};
+    int regionID{-1};
     std::vector<int> soundIDs{};
     glm::vec2 pivot{};
     glm::vec2 crop{};
@@ -45,6 +46,7 @@ namespace anm2ed::anm2
     std::optional<bool> isInterpolated{};
     std::optional<float> rotation{};
     std::optional<int> duration{};
+    std::optional<int> regionID{};
     std::optional<float> pivotX{};
     std::optional<float> pivotY{};
     std::optional<float> cropX{};

@@ -18,19 +18,20 @@ namespace anm2ed
   class Snapshot
   {
   public:
+    Playback playback{};
+    Storage animation{};
+    Storage event{};
+    Storage frames{};
+    Storage items{};
+    Storage layer{};
+    Storage merge{};
+    Storage null{};
+    Storage region{};
+    Storage sound{};
+    Storage spritesheet{};
     anm2::Anm2 anm2{};
     anm2::Reference reference{};
     float frameTime{};
-    Playback playback{};
-    Storage animation{};
-    Storage merge{};
-    Storage event{};
-    Storage layer{};
-    Storage null{};
-    Storage sound{};
-    Storage spritesheet{};
-    Storage items{};
-    Storage frames{};
     std::string message = snapshots::ACTION;
   };
 

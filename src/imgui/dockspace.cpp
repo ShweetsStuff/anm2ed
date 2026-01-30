@@ -31,6 +31,7 @@ namespace anm2ed::imgui
         {
           if (settings.windowIsAnimationPreview) animationPreview.update(manager, settings, resources);
           if (settings.windowIsAnimations) animations.update(manager, settings, resources, clipboard);
+          if (settings.windowIsRegions) regions.update(manager, settings, resources, clipboard);
           if (settings.windowIsEvents) events.update(manager, settings, resources, clipboard);
           if (settings.windowIsFrameProperties) frameProperties.update(manager, settings);
           if (settings.windowIsLayers) layers.update(manager, settings, resources, clipboard);

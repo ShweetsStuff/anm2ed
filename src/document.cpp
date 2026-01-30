@@ -58,9 +58,10 @@ namespace anm2ed
 
   Document::Document(Document&& other) noexcept
       : path(std::move(other.path)), snapshots(std::move(other.snapshots)), current(snapshots.current),
-        anm2(current.anm2), reference(current.reference), playback(current.playback), animation(current.animation),
-        merge(current.merge), event(current.event), layer(current.layer), null(current.null), sound(current.sound),
-        spritesheet(current.spritesheet), frames(current.frames), message(current.message),
+        playback(current.playback), animation(current.animation), event(current.event), frames(current.frames),
+        items(current.items), layer(current.layer), merge(current.merge), null(current.null), region(current.region),
+        sound(current.sound), spritesheet(current.spritesheet), anm2(current.anm2), reference(current.reference),
+        frameTime(current.frameTime), message(current.message), regionBySpritesheet(std::move(other.regionBySpritesheet)),
         previewZoom(other.previewZoom), previewPan(other.previewPan), editorPan(other.editorPan),
         editorZoom(other.editorZoom), overlayIndex(other.overlayIndex), hash(other.hash), saveHash(other.saveHash),
         autosaveHash(other.autosaveHash), lastAutosaveTime(other.lastAutosaveTime), isValid(other.isValid),
@@ -80,6 +81,7 @@ namespace anm2ed
       editorPan = other.editorPan;
       editorZoom = other.editorZoom;
       overlayIndex = other.overlayIndex;
+      regionBySpritesheet = std::move(other.regionBySpritesheet);
       hash = other.hash;
       saveHash = other.saveHash;
       autosaveHash = other.autosaveHash;
@@ -183,6 +185,17 @@ namespace anm2ed
 
     auto sounds_set = [&]() { sound.labels_set(anm2.sound_labels_get(), anm2.sound_ids_get()); };
 
+    auto regions_set = [&]()
+    {
+      regionBySpritesheet.clear();
+      for (auto& [id, spritesheet] : anm2.content.spritesheets)
+      {
+        Storage storage{};
+        storage.labels_set(anm2.region_labels_get(spritesheet), anm2.region_ids_get(spritesheet));
+        regionBySpritesheet.emplace(id, std::move(storage));
+      }
+    };
+
     switch (type)
     {
       case LAYERS:
@@ -194,6 +207,7 @@ namespace anm2ed
         break;
       case SPRITESHEETS:
         spritesheets_set();
+        regions_set();
         break;
       case SOUNDS:
         sounds_set();
@@ -209,6 +223,7 @@ namespace anm2ed
       case ALL:
         events_set();
         spritesheets_set();
+        regions_set();
         animations_set();
         sounds_set();
         break;

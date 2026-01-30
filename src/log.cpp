@@ -17,7 +17,7 @@ namespace anm2ed
 
   void Logger::write(const Level level, const std::string& message)
   {
-    std::string formatted = std::format("{} {} {}", time::get("(%d-%B-%Y %I:%M:%S)"), LEVEL_STRINGS[level], message);
+    std::string formatted = std::format("{} {} {}", LEVEL_STRINGS[level], time::get("(%d-%B-%Y %I:%M:%S)"), message);
     write_raw(formatted);
   }
 

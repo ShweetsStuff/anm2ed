@@ -562,12 +562,26 @@ namespace anm2ed::imgui
               auto texSize = vec2(texture.size);
               if (texSize.x <= 0.0f || texSize.y <= 0.0f) return;
 
-              auto layerModel = math::quad_model_get(frame.size, frame.position, frame.pivot,
+              auto crop = frame.crop;
+              auto size = frame.size;
+              auto pivot = frame.pivot;
+              if (frame.regionID != -1)
+              {
+                auto regionIt = spritesheet->regions.find(frame.regionID);
+                if (regionIt != spritesheet->regions.end())
+                {
+                  crop = regionIt->second.crop;
+                  size = regionIt->second.size;
+                  pivot = regionIt->second.pivot;
+                }
+              }
+
+              auto layerModel = math::quad_model_get(size, frame.position, pivot,
                                                      math::percent_to_unit(frame.scale), frame.rotation);
               auto layerTransform = sampleTransform * layerModel;
 
-              auto uvMin = frame.crop / texSize;
-              auto uvMax = (frame.crop + frame.size) / texSize;
+              auto uvMin = crop / texSize;
+              auto uvMax = (crop + size) / texSize;
 
               vec3 frameColorOffset = frame.colorOffset + colorOffset + sampleColor;
               vec4 frameTint = frame.tint;

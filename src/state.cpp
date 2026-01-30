@@ -86,7 +86,8 @@ namespace anm2ed
         }
         case SDL_EVENT_USER: // Opening files
         {
-          std::string droppedFile = event.drop.data ? event.drop.data : "";
+          std::string droppedFile = event.user.data1 ? static_cast<const char*>(event.user.data1) : "";
+          if (event.user.data1) SDL_free(event.user.data1);
           if (droppedFile.empty()) break;
           auto droppedPath = path::from_utf8(droppedFile);
           if (path::is_extension(droppedPath, "anm2"))

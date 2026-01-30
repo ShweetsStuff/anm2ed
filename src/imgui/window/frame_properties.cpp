@@ -3,6 +3,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <limits>
 #include <ranges>
+#include <vector>
 
 #include "math_.h"
 #include "strings.h"
@@ -21,6 +22,21 @@ namespace anm2ed::imgui
       auto& document = *manager.get();
       auto& frames = document.frames.selection;
       auto& type = document.reference.itemType;
+      auto regionLabelsString = std::vector<std::string>{localize.get(BASIC_NONE)};
+      auto regionLabels = std::vector<const char*>{regionLabelsString[0].c_str()};
+      auto regionIds = std::vector<int>{-1};
+
+      if (type == anm2::LAYER && document.reference.itemID != -1)
+      {
+        auto spritesheetID = document.anm2.content.layers.at(document.reference.itemID).spritesheetID;
+        auto regionIt = document.regionBySpritesheet.find(spritesheetID);
+        if (regionIt != document.regionBySpritesheet.end() && !regionIt->second.ids.empty() &&
+            !regionIt->second.labels.empty())
+        {
+          regionLabels = regionIt->second.labels;
+          regionIds = regionIt->second.ids;
+        }
+      }
 
       if (frames.size() <= 1)
       {
@@ -93,7 +109,8 @@ namespace anm2ed::imgui
           }
           else
           {
-            ImGui::BeginDisabled(type == anm2::ROOT || type == anm2::NULL_);
+            bool isRegionSet = frame && frame->regionID != -1;
+            ImGui::BeginDisabled(type == anm2::ROOT || type == anm2::NULL_ || isRegionSet);
             {
               auto cropEdit =
                   drag_float2_persistent(localize.get(BASIC_CROP), frame ? &frame->crop : &dummy_value<vec2>(),
@@ -124,7 +141,7 @@ namespace anm2ed::imgui
               document.change(Document::FRAMES);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_POSITION));
 
-            ImGui::BeginDisabled(type == anm2::ROOT || type == anm2::NULL_);
+            ImGui::BeginDisabled(type == anm2::ROOT || type == anm2::NULL_ || isRegionSet);
             {
               auto pivotEdit =
                   drag_float2_persistent(localize.get(BASIC_PIVOT), frame ? &frame->pivot : &dummy_value<vec2>(),
@@ -178,6 +195,15 @@ namespace anm2ed::imgui
               document.snapshot(localize.get(EDIT_FRAME_COLOR_OFFSET));
             else if (colorOffsetEdit == edit::END)
               document.change(Document::FRAMES);
+
+            ImGui::BeginDisabled(type != anm2::LAYER);
+            if (combo_id_mapped(localize.get(BASIC_REGION), frame ? &useFrame.regionID : &dummy_value_negative<int>(),
+                                regionIds, regionLabels) &&
+                frame)
+              DOCUMENT_EDIT(document, localize.get(EDIT_SET_REGION_PROPERTIES), Document::FRAMES,
+                            frame->regionID = useFrame.regionID);
+            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_REGION));
+            ImGui::EndDisabled();
 
             if (ImGui::Checkbox(localize.get(BASIC_VISIBLE), frame ? &useFrame.isVisible : &dummy_value<bool>()) &&
                 frame)

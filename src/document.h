@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <map>
 
 #include "snapshots.h"
 
@@ -33,20 +34,22 @@ namespace anm2ed
     Snapshots snapshots{};
     Snapshot& current = snapshots.current;
 
+    Playback& playback = current.playback;
+    Storage& animation = current.animation;
+    Storage& event = current.event;
+    Storage& frames = current.frames;
+    Storage& items = current.items;
+    Storage& layer = current.layer;
+    Storage& merge = current.merge;
+    Storage& null = current.null;
+    Storage& region = current.region;
+    Storage& sound = current.sound;
+    Storage& spritesheet = current.spritesheet;
     anm2::Anm2& anm2 = current.anm2;
     anm2::Reference& reference = current.reference;
     float& frameTime = current.frameTime;
-    Playback& playback = current.playback;
-    Storage& animation = current.animation;
-    Storage& merge = current.merge;
-    Storage& event = current.event;
-    Storage& layer = current.layer;
-    Storage& null = current.null;
-    Storage& sound = current.sound;
-    Storage& spritesheet = current.spritesheet;
-    Storage& items = current.items;
-    Storage& frames = current.frames;
     std::string& message = current.message;
+    std::map<int, Storage> regionBySpritesheet{};
 
     float previewZoom{200};
     glm::vec2 previewPan{};

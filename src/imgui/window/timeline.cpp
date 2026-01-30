@@ -93,6 +93,7 @@ namespace anm2ed::imgui
     auto& playback = document.playback;
     auto& reference = document.reference;
     auto& frames = document.frames;
+    auto& region = document.region;
     auto animation = document.animation_get();
 
     style = ImGui::GetStyle();
@@ -392,6 +393,22 @@ namespace anm2ed::imgui
             auto start = reference.itemType == anm2::TRIGGER ? hoveredTime : insertIndex;
             if (item->frames_deserialize(clipboard.get(), reference.itemType, start, indices, &errorString))
             {
+              if (reference.itemType == anm2::LAYER && reference.itemID != -1)
+              {
+                auto& layer = anm2.content.layers.at(reference.itemID);
+                auto spritesheet = anm2.spritesheet_get(layer.spritesheetID);
+                if (spritesheet)
+                {
+                  for (auto i : indices)
+                  {
+                    if (!vector::in_bounds(item->frames, i)) continue;
+                    auto& frame = item->frames[i];
+                    if (frame.regionID != -1 && !spritesheet->regions.contains(frame.regionID))
+                      frame.regionID = -1;
+                  }
+                }
+              }
+
               frames.selection.clear();
               for (auto i : indices)
                 frames.selection.insert(i);
@@ -1137,6 +1154,8 @@ namespace anm2ed::imgui
 
               reference = frameReference;
               isReferenced = true;
+              region.reference = -1;
+              region.selection.clear();
               if (isDifferentItem) frames_selection_set_reference();
             }
             ImGui::PopStyleVar();

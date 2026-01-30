@@ -25,6 +25,7 @@ namespace anm2ed::imgui
     auto& anm2 = document.anm2;
     auto& selection = document.spritesheet.selection;
     auto& reference = document.spritesheet.reference;
+    auto& region = document.region;
     auto style = ImGui::GetStyle();
 
     auto add_open = [&]() { dialog.file_open(Dialog::SPRITESHEET_OPEN); };
@@ -234,7 +235,12 @@ namespace anm2ed::imgui
 
             ImGui::SetNextItemSelectionUserData(id);
             ImGui::SetNextItemStorageID(id);
-            if (ImGui::Selectable("##Spritesheet Selectable", isSelected, 0, spritesheetChildSize)) reference = id;
+            if (ImGui::Selectable("##Spritesheet Selectable", isSelected, 0, spritesheetChildSize))
+            {
+              reference = id;
+              region.reference = -1;
+              region.selection.clear();
+            }
             if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
               open_directory(spritesheet);
             if (newSpritesheetId == id)

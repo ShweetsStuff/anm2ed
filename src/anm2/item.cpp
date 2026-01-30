@@ -186,6 +186,8 @@ namespace anm2ed::anm2
 
         apply_scalar(frame.size.x, change.sizeX);
         apply_scalar(frame.size.y, change.sizeY);
+
+        if (change.regionID) frame.regionID = *change.regionID;
       }
 
       apply_scalar(frame.position.x, change.positionX);

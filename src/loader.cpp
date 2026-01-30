@@ -37,6 +37,8 @@ namespace anm2ed
 
   constexpr auto SOCKET_ADDRESS = "127.0.0.1";
   constexpr auto SOCKET_PORT = 11414;
+  constexpr uint32_t SOCKET_MAX_PATHS = 128;
+  constexpr uint32_t SOCKET_MAX_PATH_LENGTH = 32768;
 
 #ifdef _WIN32
   constexpr int SOCKET_ERROR_ADDRESS_IN_USE = WSAEADDRINUSE;
@@ -80,21 +82,21 @@ namespace anm2ed
                      MiniDumpWithThreadInfo | MiniDumpWithUnloadedModules | MiniDumpWithProcessThreadData |
                      MiniDumpWithPrivateReadWriteMemory | MiniDumpWithDataSegs | MiniDumpWithCodeSegs |
                      MiniDumpWithIndirectlyReferencedMemory;
-#ifdef MiniDumpWithModuleHeaders
+  #ifdef MiniDumpWithModuleHeaders
     dumpType |= MiniDumpWithModuleHeaders;
-#endif
-#ifdef MiniDumpWithTokenInformation
+  #endif
+  #ifdef MiniDumpWithTokenInformation
     dumpType |= MiniDumpWithTokenInformation;
-#endif
-#ifdef MiniDumpWithFullAuxiliaryState
+  #endif
+  #ifdef MiniDumpWithFullAuxiliaryState
     dumpType |= MiniDumpWithFullAuxiliaryState;
-#endif
-#ifdef MiniDumpWithAvxXStateContext
+  #endif
+  #ifdef MiniDumpWithAvxXStateContext
     dumpType |= MiniDumpWithAvxXStateContext;
-#endif
-#ifdef MiniDumpWithIptTrace
+  #endif
+  #ifdef MiniDumpWithIptTrace
     dumpType |= MiniDumpWithIptTrace;
-#endif
+  #endif
     MiniDumpWriteDump(GetCurrentProcess(), pid, file, static_cast<MINIDUMP_TYPE>(dumpType),
                       exceptionPointers ? &mei : nullptr, nullptr, nullptr);
 
@@ -153,6 +155,7 @@ namespace anm2ed
     uint32_t count{};
     if (!socket.receive(&count, sizeof(count))) return {};
     count = ntohl(count);
+    if (count > SOCKET_MAX_PATHS) return {};
 
     std::vector<std::string> paths;
     paths.reserve(count);
@@ -162,6 +165,7 @@ namespace anm2ed
       uint32_t length{};
       if (!socket.receive(&length, sizeof(length))) return {};
       length = ntohl(length);
+      if (length > SOCKET_MAX_PATH_LENGTH) return {};
 
       std::string path(length, '\0');
       if (length > 0 && !socket.receive(path.data(), length)) return {};
@@ -353,24 +357,35 @@ namespace anm2ed
           {
             while (isSocketRunning)
             {
-              auto client = socket.accept();
-              if (!client.is_valid())
+              try
               {
-                if (!isSocketRunning) break;
-                continue;
+                auto client = socket.accept();
+                if (!client.is_valid())
+                {
+                  if (!isSocketRunning) break;
+                  continue;
+                }
+
+                auto paths = socket_paths_receive(client);
+                for (auto& path : paths)
+                {
+                  if (path.empty()) continue;
+                  SDL_Event event{};
+                  event.type = SDL_EVENT_USER;
+                  event.user.code = 0;
+                  event.user.data1 = SDL_strdup(path.c_str());
+                  event.user.data2 = nullptr;
+                  event.user.windowID = 0;
+                  SDL_PushEvent(&event);
+                }
               }
-
-              SDL_FlashWindow(window, SDL_FLASH_UNTIL_FOCUSED);
-
-              auto paths = socket_paths_receive(client);
-              for (auto& path : paths)
+              catch (const std::exception& ex)
               {
-                if (path.empty()) continue;
-                SDL_Event event{};
-                event.type = SDL_EVENT_USER;
-                event.drop.data = SDL_strdup(path.c_str());
-                event.drop.windowID = window ? SDL_GetWindowID(window) : 0;
-                SDL_PushEvent(&event);
+                logger.error(std::format("Socket thread error: {}", ex.what()));
+              }
+              catch (...)
+              {
+                logger.error("Socket thread error: unknown exception");
               }
             }
           });

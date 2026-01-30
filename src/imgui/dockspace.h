@@ -4,6 +4,7 @@
 #include "taskbar.h"
 #include "window/animation_preview.h"
 #include "window/animations.h"
+#include "window/regions.h"
 #include "window/events.h"
 #include "window/frame_properties.h"
 #include "window/layers.h"
@@ -22,6 +23,7 @@ namespace anm2ed::imgui
   {
     AnimationPreview animationPreview;
     Animations animations;
+    Regions regions;
     Events events;
     FrameProperties frameProperties;
     Layers layers;

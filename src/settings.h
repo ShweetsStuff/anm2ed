@@ -94,6 +94,7 @@ namespace anm2ed
   X(CHANGE_IS_INTERPOLATED_SET, changeIsInterpolatedSet, STRING_UNDEFINED, BOOL, false)                                \
   X(CHANGE_IS_FLIP_X_SET, changeIsFlipXSet, STRING_UNDEFINED, BOOL, false)                                             \
   X(CHANGE_IS_FLIP_Y_SET, changeIsFlipYSet, STRING_UNDEFINED, BOOL, false)                                             \
+  X(CHANGE_IS_REGION, changeIsRegion, STRING_UNDEFINED, BOOL, false)                                                   \
   X(CHANGE_CROP, changeCrop, STRING_UNDEFINED, VEC2, {})                                                               \
   X(CHANGE_SIZE, changeSize, STRING_UNDEFINED, VEC2, {})                                                               \
   X(CHANGE_POSITION, changePosition, STRING_UNDEFINED, VEC2, {})                                                       \
@@ -103,6 +104,7 @@ namespace anm2ed
   X(CHANGE_DURATION, changeDuration, STRING_UNDEFINED, INT, 0)                                                         \
   X(CHANGE_TINT, changeTint, STRING_UNDEFINED, VEC4, {})                                                               \
   X(CHANGE_COLOR_OFFSET, changeColorOffset, STRING_UNDEFINED, VEC3, {})                                                \
+  X(CHANGE_REGION_ID, changeRegionId, STRING_UNDEFINED, INT, -1)                                                       \
   X(CHANGE_IS_VISIBLE, changeIsVisible, STRING_UNDEFINED, BOOL, false)                                                 \
   X(CHANGE_IS_INTERPOLATED, changeIsInterpolated, STRING_UNDEFINED, BOOL, false)                                       \
   X(CHANGE_IS_FLIP_X, changeIsFlipX, STRING_UNDEFINED, BOOL, false)                                                    \
@@ -236,6 +238,7 @@ namespace anm2ed
   /* Symbol / Name / String / Type / Default */                                                                        \
   X(WINDOW_ANIMATIONS, windowIsAnimations, LABEL_ANIMATIONS_WINDOW, BOOL, true)                                        \
   X(WINDOW_ANIMATION_PREVIEW, windowIsAnimationPreview, LABEL_ANIMATION_PREVIEW_WINDOW, BOOL, true)                    \
+  X(WINDOW_REGIONS, windowIsRegions, LABEL_REGIONS_WINDOW, BOOL, true)                                        \
   X(WINDOW_EVENTS, windowIsEvents, LABEL_EVENTS_WINDOW, BOOL, true)                                                    \
   X(WINDOW_FRAME_PROPERTIES, windowIsFrameProperties, LABEL_FRAME_PROPERTIES_WINDOW, BOOL, true)                       \
   X(WINDOW_LAYERS, windowIsLayers, LABEL_LAYERS_WINDOW, BOOL, true)                                                    \

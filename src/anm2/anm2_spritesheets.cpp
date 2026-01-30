@@ -55,6 +55,44 @@ namespace anm2ed::anm2
     return ids;
   }
 
+  std::vector<std::string> Anm2::region_labels_get(Spritesheet& spritesheet)
+  {
+    std::vector<std::string> labels{};
+    labels.emplace_back(localize.get(BASIC_NONE));
+    for (auto& region : spritesheet.regions | std::views::values)
+      labels.emplace_back(region.name);
+    return labels;
+  }
+
+  std::vector<int> Anm2::region_ids_get(Spritesheet& spritesheet)
+  {
+    std::vector<int> ids{};
+    ids.emplace_back(-1);
+    for (auto& id : spritesheet.regions | std::views::keys)
+      ids.emplace_back(id);
+    return ids;
+  }
+
+  std::set<int> Anm2::regions_unused(Spritesheet& spritesheet)
+  {
+    std::set<int> used{};
+
+    for (auto& animation : animations.items)
+    {
+      for (auto& layerAnimation : animation.layerAnimations | std::views::values)
+      {
+        for (auto& frame : layerAnimation.frames)
+          if (frame.regionID != -1) used.insert(frame.regionID);
+      }
+    }
+
+    std::set<int> unused{};
+    for (auto& id : spritesheet.regions | std::views::keys)
+      if (!used.contains(id)) unused.insert(id);
+
+    return unused;
+  }
+
   bool Anm2::spritesheets_deserialize(const std::string& string, const std::filesystem::path& directory,
                                       merge::Type type, std::string* errorString)
   {

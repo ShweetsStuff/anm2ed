@@ -19,7 +19,7 @@ namespace anm2ed::anm2
   std::vector<std::string> Anm2::event_labels_get()
   {
     std::vector<std::string> labels{};
-    labels.emplace_back("None");
+    labels.emplace_back(localize.get(BASIC_NONE));
     for (auto& event : content.events | std::views::values)
       labels.emplace_back(event.name);
     return labels;
@@ -40,7 +40,7 @@ namespace anm2ed::anm2
 
     for (auto& animation : animations.items)
       for (auto& frame : animation.triggers.frames)
-        used.insert(frame.eventID);
+        if (frame.eventID != -1) used.insert(frame.eventID);
 
     std::set<int> unused{};
     for (auto& id : content.events | std::views::keys)

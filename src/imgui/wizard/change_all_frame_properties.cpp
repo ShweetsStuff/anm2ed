@@ -1,6 +1,7 @@
 #include "change_all_frame_properties.h"
 
 #include <string>
+#include <vector>
 
 #include "math_.h"
 
@@ -37,6 +38,7 @@ namespace anm2ed::imgui::wizard
     auto& isInterpolatedSet = settings.changeIsInterpolatedSet;
     auto& isFlipXSet = settings.changeIsFlipXSet;
     auto& isFlipYSet = settings.changeIsFlipYSet;
+    auto& isRegion = settings.changeIsRegion;
     auto& crop = settings.changeCrop;
     auto& size = settings.changeSize;
     auto& position = settings.changePosition;
@@ -46,6 +48,7 @@ namespace anm2ed::imgui::wizard
     auto& duration = settings.changeDuration;
     auto& tint = settings.changeTint;
     auto& colorOffset = settings.changeColorOffset;
+    auto& regionId = settings.changeRegionId;
     auto& isVisible = settings.changeIsVisible;
     auto& isInterpolated = settings.changeIsInterpolated;
     auto& isFlipX = settings.changeIsFlipX;
@@ -180,20 +183,18 @@ namespace anm2ed::imgui::wizard
           checkboxLabel, isEnabled);
     };
 
-#undef PROPERTIES_WIDGET
-
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImGui::GetStyle().ItemInnerSpacing);
-
-    ImGui::BeginDisabled(itemType != anm2::LAYER);
-    float2_value("##Is Crop X", "##Is Crop Y", "##Crop X", localize.get(BASIC_CROP), isCropX, isCropY, crop);
-    float2_value("##Is Size X", "##Is Size Y", "##Size X", localize.get(BASIC_SIZE), isSizeX, isSizeY, size);
-    ImGui::EndDisabled();
 
     float2_value("##Is Position X", "##Is Position Y", "##Position X", localize.get(BASIC_POSITION), isPositionX,
                  isPositionY, position);
 
     ImGui::BeginDisabled(itemType != anm2::LAYER);
     float2_value("##Is Pivot X", "##Is Pivot Y", "##Pivot X", localize.get(BASIC_PIVOT), isPivotX, isPivotY, pivot);
+    ImGui::EndDisabled();
+
+    ImGui::BeginDisabled(itemType != anm2::LAYER);
+    float2_value("##Is Crop X", "##Is Crop Y", "##Crop X", localize.get(BASIC_CROP), isCropX, isCropY, crop);
+    float2_value("##Is Size X", "##Is Size Y", "##Size X", localize.get(BASIC_SIZE), isSizeX, isSizeY, size);
     ImGui::EndDisabled();
 
     float2_value("##Is Scale X", "##Is Scale Y", "##Scale X", localize.get(BASIC_SCALE), isScaleX, isScaleY, scale);
@@ -209,6 +210,24 @@ namespace anm2ed::imgui::wizard
                  "##Color Offset B", "##Color Offset G", localize.get(BASIC_COLOR_OFFSET), isColorOffsetR,
                  isColorOffsetG, isColorOffsetB, colorOffset);
 
+    std::vector<int> fallbackIds{-1};
+    std::vector<std::string> fallbackLabelsString{localize.get(BASIC_NONE)};
+    std::vector<const char*> fallbackLabels{fallbackLabelsString[0].c_str()};
+
+    const Storage* regionStorage = nullptr;
+    if (itemType == anm2::LAYER && document.reference.itemID != -1)
+    {
+      auto spritesheetID = document.anm2.content.layers.at(document.reference.itemID).spritesheetID;
+      auto regionIt = document.regionBySpritesheet.find(spritesheetID);
+      if (regionIt != document.regionBySpritesheet.end()) regionStorage = &regionIt->second;
+    }
+
+    auto regionIds = regionStorage && !regionStorage->ids.empty() ? regionStorage->ids : fallbackIds;
+    auto regionLabels = regionStorage && !regionStorage->labels.empty() ? regionStorage->labels : fallbackLabels;
+
+    PROPERTIES_WIDGET(combo_id_mapped(localize.get(BASIC_REGION), &regionId, regionIds, regionLabels), "##Is Region",
+                      isRegion);
+
     bool_value("##Is Visible", localize.get(BASIC_VISIBLE), isVisibleSet, isVisible);
 
     ImGui::SameLine();
@@ -222,6 +241,8 @@ namespace anm2ed::imgui::wizard
     bool_value("##Is Flip Y", localize.get(LABEL_FLIP_Y), isFlipYSet, isFlipY);
 
     ImGui::PopStyleVar();
+
+#undef PROPERTIES_WIDGET
 
     auto frame_change = [&](anm2::ChangeType changeType)
     {
@@ -238,6 +259,7 @@ namespace anm2ed::imgui::wizard
       if (isScaleY) frameChange.scaleY = scale.y;
       if (isRotation) frameChange.rotation = std::make_optional(rotation);
       if (isDuration) frameChange.duration = std::make_optional(duration);
+      if (isRegion) frameChange.regionID = std::make_optional(regionId);
       if (isTintR) frameChange.tintR = tint.r;
       if (isTintG) frameChange.tintG = tint.g;
       if (isTintB) frameChange.tintB = tint.b;
@@ -260,8 +282,8 @@ namespace anm2ed::imgui::wizard
 
     bool isAnyProperty = isCropX || isCropY || isSizeX || isSizeY || isPositionX || isPositionY || isPivotX ||
                          isPivotY || isScaleX || isScaleY || isRotation || isDuration || isTintR || isTintG ||
-                         isTintB || isTintA || isColorOffsetR || isColorOffsetG || isColorOffsetB || isVisibleSet ||
-                         isInterpolatedSet || isFlipXSet || isFlipYSet;
+                         isTintB || isTintA || isColorOffsetR || isColorOffsetG || isColorOffsetB || isRegion ||
+                         isVisibleSet || isInterpolatedSet || isFlipXSet || isFlipYSet;
 
     auto rowWidgetSize = widget_size_with_row_get(5);
 
