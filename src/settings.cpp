@@ -28,6 +28,12 @@ Size=949,583
 Collapsed=0
 DockId=0x00000013,0
 
+[Window][###Onionskin]
+Pos=8,647
+Size=1496,275
+Collapsed=0
+DockId=0x00000006,1
+
 [Window][###Sounds]
 Pos=1364,62
 Size=140,128
