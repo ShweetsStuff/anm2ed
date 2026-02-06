@@ -53,10 +53,23 @@ namespace anm2ed::imgui
 
       auto behavior = [&]()
       {
+        auto maxLayerIdBefore = anm2.content.layers.empty() ? -1 : anm2.content.layers.rbegin()->first;
         std::string errorString{};
         document.snapshot(localize.get(EDIT_PASTE_LAYERS));
         if (anm2.layers_deserialize(clipboard.get(), merge::APPEND, &errorString))
+        {
+          if (!anm2.content.layers.empty())
+          {
+            auto maxLayerIdAfter = anm2.content.layers.rbegin()->first;
+            if (maxLayerIdAfter > maxLayerIdBefore)
+            {
+              newLayerId = maxLayerIdAfter;
+              selection = {maxLayerIdAfter};
+              reference = maxLayerIdAfter;
+            }
+          }
           document.change(Document::NULLS);
+        }
         else
         {
           toasts.push(std::vformat(localize.get(TOAST_DESERIALIZE_LAYERS_FAILED), std::make_format_args(errorString)));
@@ -180,6 +193,7 @@ namespace anm2ed::imgui
 
       auto widgetSize = widget_size_with_row_get(2);
 
+      shortcut(manager.chords[SHORTCUT_CONFIRM]);
       if (ImGui::Button(reference == -1 ? localize.get(BASIC_ADD) : localize.get(BASIC_CONFIRM), widgetSize))
       {
         if (reference == -1)
@@ -210,6 +224,7 @@ namespace anm2ed::imgui
 
       ImGui::SameLine();
 
+      shortcut(manager.chords[SHORTCUT_CANCEL]);
       if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize)) manager.layer_properties_close();
 
       manager.layer_properties_end();

@@ -73,7 +73,7 @@ namespace anm2ed
     Document& operator=(const Document&) = delete;
     Document(Document&&) noexcept;
     Document& operator=(Document&&) noexcept;
-    bool save(const std::filesystem::path& = {}, std::string* = nullptr);
+    bool save(const std::filesystem::path& = {}, std::string* = nullptr, anm2::Compatibility = anm2::ANM2ED);
     void hash_set();
     void clean();
     void change(ChangeType);
@@ -91,7 +91,7 @@ namespace anm2ed
     void spritesheet_add(const std::filesystem::path&);
     void sound_add(const std::filesystem::path&);
 
-    bool autosave(std::string* = nullptr);
+    bool autosave(std::string* = nullptr, anm2::Compatibility = anm2::ANM2ED);
     std::filesystem::path autosave_path_get();
     std::filesystem::path path_from_autosave_get(std::filesystem::path&);
 

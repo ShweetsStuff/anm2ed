@@ -1,5 +1,6 @@
 #include "regions.h"
 
+#include <algorithm>
 #include <ranges>
 
 #include <filesystem>
@@ -12,6 +13,7 @@
 #include "path_.h"
 #include "strings.h"
 #include "toast.h"
+#include "vector_.h"
 
 #include "../../util/map_.h"
 
@@ -51,10 +53,30 @@ namespace anm2ed::imgui
                 if (frame.regionID == id) frame.regionID = -1;
 
           spritesheet->regions.erase(id);
+          auto& order = spritesheet->regionOrder;
+          order.erase(std::remove(order.begin(), order.end(), id), order.end());
         }
       };
 
       DOCUMENT_EDIT(document, localize.get(EDIT_REMOVE_UNUSED_REGIONS), Document::SPRITESHEETS, behavior());
+    };
+
+    auto trim = [&]()
+    {
+      if (!spritesheet || selection.empty()) return;
+
+      auto behavior = [&]()
+      {
+        if (anm2.regions_trim(spritesheetReference, selection))
+        {
+          if (reference != -1 && !selection.contains(reference)) reference = *selection.begin();
+          document.reference = {document.reference.animationIndex};
+          frame.reference = -1;
+          frame.selection.clear();
+        }
+      };
+
+      DOCUMENT_EDIT(document, localize.get(EDIT_TRIM_REGIONS), Document::SPRITESHEETS, behavior());
     };
 
     auto copy = [&]()
@@ -73,10 +95,23 @@ namespace anm2ed::imgui
 
       auto behavior = [&]()
       {
+        auto maxRegionIdBefore = spritesheet->regions.empty() ? -1 : spritesheet->regions.rbegin()->first;
         std::string errorString{};
         document.snapshot(localize.get(EDIT_PASTE_REGIONS));
         if (spritesheet->regions_deserialize(clipboard.get(), merge::APPEND, &errorString))
+        {
+          if (!spritesheet->regions.empty())
+          {
+            auto maxRegionIdAfter = spritesheet->regions.rbegin()->first;
+            if (maxRegionIdAfter > maxRegionIdBefore)
+            {
+              newRegionId = maxRegionIdAfter;
+              selection = {maxRegionIdAfter};
+              reference = maxRegionIdAfter;
+            }
+          }
           document.change(Document::SPRITESHEETS);
+        }
         else
         {
           toasts.push(std::vformat(localize.get(TOAST_DESERIALIZE_REGIONS_FAILED), std::make_format_args(errorString)));
@@ -127,6 +162,8 @@ namespace anm2ed::imgui
           properties_open(*selection.begin());
         if (ImGui::MenuItem(localize.get(BASIC_ADD), settings.shortcutAdd.c_str())) add_open();
         if (ImGui::MenuItem(localize.get(BASIC_REMOVE_UNUSED), settings.shortcutRemove.c_str())) remove_unused();
+        if (ImGui::MenuItem(localize.get(BASIC_TRIM), nullptr, false, !selection.empty())) trim();
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TRIM_REGIONS));
 
         ImGui::Separator();
 
@@ -153,17 +190,51 @@ namespace anm2ed::imgui
       ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2());
       if (ImGui::BeginChild("##Regions Child", childSize, ImGuiChildFlags_Borders))
       {
-        auto regionChildSize = ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetTextLineHeightWithSpacing() * 4);
+        auto regionChildSize = ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetTextLineHeightWithSpacing() * 2);
 
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2());
 
-        selection.start(spritesheet->regions.size());
+        auto rebuild_order = [&]()
+        {
+          spritesheet->regionOrder.clear();
+          spritesheet->regionOrder.reserve(spritesheet->regions.size());
+          for (auto id : spritesheet->regions | std::views::keys)
+            spritesheet->regionOrder.push_back(id);
+        };
+        if (spritesheet->regionOrder.size() != spritesheet->regions.size())
+          rebuild_order();
+        else
+        {
+          bool isOrderValid = true;
+          for (auto id : spritesheet->regionOrder)
+            if (!spritesheet->regions.contains(id))
+            {
+              isOrderValid = false;
+              break;
+            }
+          if (!isOrderValid) rebuild_order();
+        }
+
+        selection.set_index_map(&spritesheet->regionOrder);
+        selection.start(spritesheet->regionOrder.size());
+        if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_A, ImGuiInputFlags_RouteFocused))
+        {
+          selection.clear();
+          for (auto& id : spritesheet->regionOrder)
+            selection.insert(id);
+        }
+        if (ImGui::Shortcut(ImGuiKey_Escape, ImGuiInputFlags_RouteFocused)) selection.clear();
         bool isValid = spritesheet->is_valid();
         auto& texture = isValid ? spritesheet->texture : resources.icons[icon::NONE];
         auto tintColor = !isValid ? ImVec4(1.0f, 0.25f, 0.25f, 1.0f) : ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
 
-        for (auto& [id, region] : spritesheet->regions)
+        for (int i = 0; i < (int)spritesheet->regionOrder.size(); i++)
         {
+          int id = spritesheet->regionOrder[i];
+          auto regionIt = spritesheet->regions.find(id);
+          if (regionIt == spritesheet->regions.end()) continue;
+          auto& region = regionIt->second;
+          auto isNewRegion = newRegionId == id;
           auto nameCStr = region.name.c_str();
           auto isSelected = selection.contains(id);
           auto isReferenced = id == reference;
@@ -174,7 +245,7 @@ namespace anm2ed::imgui
           {
             auto cursorPos = ImGui::GetCursorPos();
 
-            ImGui::SetNextItemSelectionUserData(id);
+            ImGui::SetNextItemSelectionUserData(i);
             ImGui::SetNextItemStorageID(id);
             if (ImGui::Selectable("##Region Selectable", isSelected, 0, regionChildSize))
             {
@@ -194,8 +265,13 @@ namespace anm2ed::imgui
               auto scale = glm::min(maxPreviewSize.x / previewSize.x, maxPreviewSize.y / previewSize.y);
               previewSize *= scale;
             }
-            auto uvMin = region.crop / vec2(texture.size);
-            auto uvMax = (region.crop + region.size) / vec2(texture.size);
+            vec2 uvMin{};
+            vec2 uvMax{1.0f, 1.0f};
+            if (isValid)
+            {
+              uvMin = region.crop / vec2(texture.size);
+              uvMax = (region.crop + region.size) / vec2(texture.size);
+            }
 
             auto textWidth = ImGui::CalcTextSize(nameCStr).x;
             auto tooltipPadding = style.WindowPadding.x * 4.0f;
@@ -233,14 +309,69 @@ namespace anm2ed::imgui
                 ImGui::TextUnformatted(
                     std::vformat(localize.get(FORMAT_SIZE), std::make_format_args(region.size.x, region.size.y))
                         .c_str());
-                ImGui::TextUnformatted(
-                    std::vformat(localize.get(FORMAT_PIVOT), std::make_format_args(region.pivot.x, region.pivot.y))
-                        .c_str());
+                if (region.origin == anm2::Spritesheet::Region::CUSTOM)
+                {
+                  ImGui::TextUnformatted(
+                      std::vformat(localize.get(FORMAT_PIVOT), std::make_format_args(region.pivot.x, region.pivot.y))
+                          .c_str());
+                }
+                else
+                {
+                  StringType originString = LABEL_REGION_ORIGIN_CENTER;
+                  if (region.origin == anm2::Spritesheet::Region::TOP_LEFT) originString = LABEL_REGION_ORIGIN_TOP_LEFT;
+                  auto originLabel = localize.get(originString);
+                  ImGui::TextUnformatted(
+                      std::vformat(localize.get(FORMAT_ORIGIN), std::make_format_args(originLabel)).c_str());
+                }
               }
               ImGui::EndChild();
               ImGui::EndTooltip();
             }
             ImGui::PopStyleVar(2);
+
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
+            if (ImGui::BeginDragDropSource())
+            {
+              static std::vector<int> dragDropSelection{};
+              dragDropSelection.assign(selection.begin(), selection.end());
+              ImGui::SetDragDropPayload("Region Drag Drop", dragDropSelection.data(),
+                                        dragDropSelection.size() * sizeof(int));
+
+              for (auto regionId : dragDropSelection)
+              {
+                auto dragIt = spritesheet->regions.find(regionId);
+                if (dragIt == spritesheet->regions.end()) continue;
+                ImGui::TextUnformatted(dragIt->second.name.c_str());
+              }
+              ImGui::EndDragDropSource();
+            }
+
+            ImGui::PopStyleVar(2);
+
+            if (ImGui::BeginDragDropTarget())
+            {
+              if (auto payload = ImGui::AcceptDragDropPayload("Region Drag Drop"))
+              {
+                auto payloadIds = (int*)(payload->Data);
+                int payloadCount = (int)(payload->DataSize / sizeof(int));
+                std::vector<int> indices{};
+                indices.reserve(payloadCount);
+                for (int payloadIndex = 0; payloadIndex < payloadCount; payloadIndex++)
+                {
+                  int payloadId = payloadIds[payloadIndex];
+                  int index = vector::find_index(spritesheet->regionOrder, payloadId);
+                  if (index != -1) indices.push_back(index);
+                }
+                if (!indices.empty())
+                {
+                  std::sort(indices.begin(), indices.end());
+                  DOCUMENT_EDIT(document, localize.get(EDIT_MOVE_REGIONS), Document::SPRITESHEETS,
+                                vector::move_indices(spritesheet->regionOrder, indices, i));
+                }
+              }
+              ImGui::EndDragDropTarget();
+            }
 
             auto imageSize = to_imvec2(vec2(regionChildSize.y));
             auto aspectRatio = region.size.y != 0.0f ? (float)region.size.x / region.size.y : 1.0f;
@@ -257,12 +388,18 @@ namespace anm2ed::imgui
                                        regionChildSize.y - regionChildSize.y / 2 - ImGui::GetTextLineHeight() / 2));
 
             if (isReferenced) ImGui::PushFont(resources.fonts[font::ITALICS].get(), font::SIZE);
-            ImGui::TextUnformatted(
-                std::vformat(localize.get(FORMAT_SPRITESHEET), std::make_format_args(id, nameCStr)).c_str());
+            ImGui::TextUnformatted(nameCStr);
             if (isReferenced) ImGui::PopFont();
           }
 
           ImGui::EndChild();
+
+          if (isNewRegion)
+          {
+            ImGui::SetScrollHereY(0.5f);
+            newRegionId = -1;
+          }
+
           ImGui::PopID();
         }
 
@@ -298,28 +435,43 @@ namespace anm2ed::imgui
 
     if (ImGui::BeginPopupModal(propertiesPopup.label(), &propertiesPopup.isOpen, ImGuiWindowFlags_NoResize))
     {
-      auto childSize = child_size_get(4);
+      auto childSize = child_size_get(5);
       auto& region = reference == -1 ? editRegion : spritesheet->regions.at(reference);
 
       if (propertiesPopup.isJustOpened) editRegion = anm2::Spritesheet::Region{};
 
       if (ImGui::BeginChild("##Child", childSize, ImGuiChildFlags_Borders))
       {
+        const char* originOptions[] = {localize.get(LABEL_REGION_ORIGIN_TOP_LEFT),
+                                       localize.get(LABEL_REGION_ORIGIN_CENTER),
+                                       localize.get(LABEL_REGION_ORIGIN_CUSTOM)};
+
         if (propertiesPopup.isJustOpened) ImGui::SetKeyboardFocusHere();
         input_text_string(localize.get(BASIC_NAME), &region.name);
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ITEM_NAME));
-
         ImGui::DragFloat2(localize.get(BASIC_CROP), value_ptr(region.crop), DRAG_SPEED, 0.0f, 0.0f,
                           math::vec2_format_get(region.crop));
         ImGui::DragFloat2(localize.get(BASIC_SIZE), value_ptr(region.size), DRAG_SPEED, 0.0f, 0.0f,
                           math::vec2_format_get(region.size));
+        ImGui::BeginDisabled(region.origin != anm2::Spritesheet::Region::CUSTOM);
         ImGui::DragFloat2(localize.get(BASIC_PIVOT), value_ptr(region.pivot), DRAG_SPEED, 0.0f, 0.0f,
                           math::vec2_format_get(region.pivot));
+        ImGui::EndDisabled();
+
+        if (ImGui::Combo(localize.get(LABEL_REGION_PROPERTIES_ORIGIN), (int*)&region.origin, originOptions,
+                         IM_ARRAYSIZE(originOptions)))
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_REGION_PROPERTIES_ORIGIN));
+
+        if (region.origin == anm2::Spritesheet::Region::TOP_LEFT)
+          region.pivot = {};
+        else if (region.origin == anm2::Spritesheet::Region::ORIGIN_CENTER)
+          region.pivot = {(int)(region.size.x / 2.0f), (int)(region.size.y / 2.0f)};
       }
       ImGui::EndChild();
 
       auto widgetSize = widget_size_with_row_get(2);
 
+      shortcut(manager.chords[SHORTCUT_CONFIRM]);
       if (ImGui::Button(reference == -1 ? localize.get(BASIC_ADD) : localize.get(BASIC_CONFIRM), widgetSize))
       {
         if (reference == -1)
@@ -328,6 +480,7 @@ namespace anm2ed::imgui
           {
             auto id = map::next_id_get(spritesheet->regions);
             spritesheet->regions[id] = region;
+            spritesheet->regionOrder.push_back(id);
             selection = {id};
             newRegionId = id;
           };
@@ -353,6 +506,7 @@ namespace anm2ed::imgui
 
       ImGui::SameLine();
 
+      shortcut(manager.chords[SHORTCUT_CANCEL]);
       if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize)) propertiesPopup.close();
 
       ImGui::EndPopup();

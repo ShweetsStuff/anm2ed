@@ -395,17 +395,19 @@ namespace anm2ed::imgui
             {
               if (reference.itemType == anm2::LAYER && reference.itemID != -1)
               {
-                auto& layer = anm2.content.layers.at(reference.itemID);
-                auto spritesheet = anm2.spritesheet_get(layer.spritesheetID);
-                if (spritesheet)
+                anm2::Spritesheet* spritesheet = nullptr;
+                if (anm2.content.layers.contains(reference.itemID))
                 {
-                  for (auto i : indices)
-                  {
-                    if (!vector::in_bounds(item->frames, i)) continue;
-                    auto& frame = item->frames[i];
-                    if (frame.regionID != -1 && !spritesheet->regions.contains(frame.regionID))
-                      frame.regionID = -1;
-                  }
+                  auto& layer = anm2.content.layers.at(reference.itemID);
+                  spritesheet = anm2.spritesheet_get(layer.spritesheetID);
+                }
+
+                for (auto i : indices)
+                {
+                  if (!vector::in_bounds(item->frames, i)) continue;
+                  auto& frame = item->frames[i];
+                  if (frame.regionID == -1) continue;
+                  if (!spritesheet || !spritesheet->regions.contains(frame.regionID)) frame.regionID = -1;
                 }
               }
 
@@ -1774,6 +1776,7 @@ namespace anm2ed::imgui
       auto widgetSize = widget_size_with_row_get(2);
 
       ImGui::BeginDisabled(source == source::EXISTING && addItemID == -1);
+      shortcut(manager.chords[SHORTCUT_CONFIRM]);
       if (ImGui::Button(localize.get(BASIC_ADD), widgetSize))
       {
         anm2::Reference addReference{};
@@ -1797,6 +1800,7 @@ namespace anm2ed::imgui
 
       ImGui::SameLine();
 
+      shortcut(manager.chords[SHORTCUT_CANCEL]);
       if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize)) item_properties_close();
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CANCEL_ADD_ITEM));
 
@@ -1825,6 +1829,7 @@ namespace anm2ed::imgui
 
       auto widgetSize = widget_size_with_row_get(2);
 
+      shortcut(manager.chords[SHORTCUT_CONFIRM]);
       if (ImGui::Button(localize.get(LABEL_BAKE), widgetSize))
       {
         frames_bake();
@@ -1834,6 +1839,7 @@ namespace anm2ed::imgui
 
       ImGui::SameLine();
 
+      shortcut(manager.chords[SHORTCUT_CANCEL]);
       if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize)) bakePopup.close();
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CANCEL_BAKE_FRAMES));
 

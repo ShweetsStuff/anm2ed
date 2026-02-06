@@ -82,22 +82,22 @@ namespace anm2ed::anm2
     region_frames_sync(*this, true);
   }
 
-  XMLElement* Anm2::to_element(XMLDocument& document)
+  XMLElement* Anm2::to_element(XMLDocument& document, Flags flags)
   {
     region_frames_sync(*this, true);
     auto element = document.NewElement("AnimatedActor");
 
     info.serialize(document, element);
-    content.serialize(document, element);
-    animations.serialize(document, element);
+    content.serialize(document, element, flags);
+    animations.serialize(document, element, flags);
 
     return element;
   }
 
-  bool Anm2::serialize(const std::filesystem::path& path, std::string* errorString)
+  bool Anm2::serialize(const std::filesystem::path& path, std::string* errorString, Flags flags)
   {
     XMLDocument document;
-    document.InsertFirstChild(to_element(document));
+    document.InsertFirstChild(to_element(document, flags));
 
     File file(path, "wb");
     if (!file)
@@ -114,10 +114,10 @@ namespace anm2ed::anm2
     return true;
   }
 
-  std::string Anm2::to_string()
+  std::string Anm2::to_string(Flags flags)
   {
     XMLDocument document{};
-    document.InsertEndChild(to_element(document));
+    document.InsertEndChild(to_element(document, flags));
     return xml::document_to_string(document);
   }
 

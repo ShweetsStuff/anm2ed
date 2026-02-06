@@ -7,8 +7,11 @@
 
 #include <imgui/imgui.h>
 
+#include "document.h"
+#include "log.h"
 #include "path_.h"
 #include "strings.h"
+#include "toast.h"
 #include "types.h"
 
 using namespace anm2ed::resource;
@@ -24,6 +27,18 @@ namespace anm2ed::imgui
     auto animation = document ? document->animation_get() : nullptr;
     auto item = document ? document->item_get() : nullptr;
     auto frames = document ? &document->frames : nullptr;
+    bool hasRegions = false;
+    if (document)
+    {
+      for (auto& spritesheet : document->anm2.content.spritesheets | std::views::values)
+      {
+        if (!spritesheet.regions.empty())
+        {
+          hasRegions = true;
+          break;
+        }
+      }
+    }
 
     if (ImGui::BeginMainMenuBar())
     {
@@ -59,7 +74,7 @@ namespace anm2ed::imgui
           if (settings.fileIsWarnOverwrite)
             overwritePopup.open();
           else
-            manager.save(document->path);
+            manager.save(document->path, (anm2::Compatibility)settings.fileCompatibility);
         }
 
         if (ImGui::MenuItem(localize.get(LABEL_SAVE_AS), settings.shortcutSaveAs.c_str(), false, document))
@@ -85,7 +100,7 @@ namespace anm2ed::imgui
 
       if (dialog.is_selected(Dialog::ANM2_SAVE))
       {
-        manager.save(dialog.path);
+        manager.save(dialog.path, (anm2::Compatibility)settings.fileCompatibility);
         dialog.reset();
       }
 
@@ -94,16 +109,29 @@ namespace anm2ed::imgui
         if (ImGui::MenuItem(localize.get(LABEL_TASKBAR_GENERATE_ANIMATION_FROM_GRID), nullptr, false,
                             item && document->reference.itemType == anm2::LAYER))
           generatePopup.open();
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_WIZARD_GENERATE_ANIMATION_FROM_GRID));
 
         if (ImGui::MenuItem(localize.get(LABEL_CHANGE_ALL_FRAME_PROPERTIES), nullptr, false,
                             frames && !frames->selection.empty() && document->reference.itemType != anm2::TRIGGER))
           changePopup.open();
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_WIZARD_CHANGE_ALL_FRAME_PROPERTIES));
+
+        if (ImGui::MenuItem(localize.get(LABEL_SCAN_AND_SET_REGIONS), nullptr, false, document && hasRegions))
+        {
+          DOCUMENT_EDIT_PTR(document, localize.get(EDIT_SCAN_AND_SET_REGIONS), Document::FRAMES,
+                            document->anm2.scan_and_set_regions());
+          toasts.push(localize.get(TOAST_SCAN_AND_SET_REGIONS));
+          logger.info(localize.get(TOAST_SCAN_AND_SET_REGIONS, anm2ed::ENGLISH));
+        }
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_WIZARD_SCAN_AND_SET_REGIONS));
 
         ImGui::Separator();
 
         if (ImGui::MenuItem(localize.get(LABEL_TASKBAR_RENDER_ANIMATION), nullptr, false,
                             animation && manager.isAbleToRecord))
           renderPopup.open();
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_WIZARD_RENDER_ANIMATION));
+
         ImGui::EndMenu();
       }
 
@@ -212,7 +240,7 @@ namespace anm2ed::imgui
 
       if (ImGui::Button(localize.get(BASIC_YES), widgetSize))
       {
-        manager.save();
+        manager.save({}, (anm2::Compatibility)settings.fileCompatibility);
         overwritePopup.close();
       }
 
@@ -232,7 +260,7 @@ namespace anm2ed::imgui
       if (settings.fileIsWarnOverwrite)
         overwritePopup.open();
       else
-        manager.save();
+        manager.save({}, (anm2::Compatibility)settings.fileCompatibility);
     }
     if (shortcut(manager.chords[SHORTCUT_SAVE_AS], shortcut::GLOBAL)) dialog.file_save(Dialog::ANM2_SAVE);
     if (shortcut(manager.chords[SHORTCUT_EXIT], shortcut::GLOBAL)) isQuitting = true;

@@ -17,6 +17,7 @@ namespace anm2ed::imgui
     float checkerSyncZoom{};
     bool isCheckerPanInitialized{};
     bool hasPendingZoomPanAdjust{};
+    int hoveredRegionId{-1};
 
   public:
     SpritesheetEditor();

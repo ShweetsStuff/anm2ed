@@ -565,6 +565,7 @@ namespace anm2ed::imgui
               auto crop = frame.crop;
               auto size = frame.size;
               auto pivot = frame.pivot;
+
               if (frame.regionID != -1)
               {
                 auto regionIt = spritesheet->regions.find(frame.regionID);
@@ -576,8 +577,8 @@ namespace anm2ed::imgui
                 }
               }
 
-              auto layerModel = math::quad_model_get(size, frame.position, pivot,
-                                                     math::percent_to_unit(frame.scale), frame.rotation);
+              auto layerModel =
+                  math::quad_model_get(size, frame.position, pivot, math::percent_to_unit(frame.scale), frame.rotation);
               auto layerTransform = sampleTransform * layerModel;
 
               auto uvMin = crop / texSize;
@@ -931,6 +932,7 @@ namespace anm2ed::imgui
 
       ImGui::TextUnformatted(localize.get(TEXT_RECORDING_PROGRESS));
 
+      shortcut(manager.chords[SHORTCUT_CANCEL]);
       if (ImGui::Button(localize.get(BASIC_CANCEL), ImVec2(ImGui::GetContentRegionAvail().x, 0)))
       {
         renderFrames.clear();

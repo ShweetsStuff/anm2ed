@@ -42,6 +42,7 @@ namespace anm2ed::imgui
     auto& tool = settings.tool;
     auto& shaderGrid = resources.shaders[shader::GRID];
     auto& shaderTexture = resources.shaders[shader::TEXTURE];
+    auto& shaderLine = resources.shaders[shader::LINE];
     auto& dashedShader = resources.shaders[shader::DASHED];
     auto& frames = document.frames.selection;
     auto& regionReference = document.region.reference;
@@ -178,11 +179,18 @@ namespace anm2ed::imgui
       ImGui::EndChild();
 
       auto drawList = ImGui::GetCurrentWindow()->DrawList;
+      size_set(to_vec2(ImGui::GetContentRegionAvail()));
+
       auto cursorScreenPos = ImGui::GetCursorScreenPos();
       auto min = ImGui::GetCursorScreenPos();
       auto max = to_imvec2(to_vec2(min) + size);
 
-      size_set(to_vec2(ImGui::GetContentRegionAvail()));
+      auto mouseScreenPos = ImGui::GetIO().MousePos;
+      bool isMouseOverCanvas = mouseScreenPos.x >= min.x && mouseScreenPos.x <= max.x && mouseScreenPos.y >= min.y &&
+                               mouseScreenPos.y <= max.y;
+      auto hoverMousePos = vec2();
+      if (isMouseOverCanvas)
+        hoverMousePos = position_translate(zoom, pan, to_ivec2(mouseScreenPos) - to_ivec2(cursorScreenPos));
 
       bind();
       viewport_set();
@@ -207,31 +215,72 @@ namespace anm2ed::imgui
           rect_render(dashedShader, spritesheetTransform, spritesheetModel, color::WHITE, BORDER_DASH_LENGTH,
                       BORDER_DASH_GAP, BORDER_DASH_OFFSET);
 
-        if (frame && reference.itemID > -1 &&
-            anm2.content.layers.at(reference.itemID).spritesheetID == referenceSpritesheet)
+        if (hoveredRegionId != -1)
         {
-          auto cropModel = math::quad_model_get(frame->size, frame->crop);
-          auto cropTransform = transform * cropModel;
-          rect_render(dashedShader, cropTransform, cropModel, color::RED);
-
-          auto pivotTransform =
-              transform * math::quad_model_get(PIVOT_SIZE, frame->crop + frame->pivot, PIVOT_SIZE * 0.5f);
-          texture_render(shaderTexture, resources.icons[icon::PIVOT].id, pivotTransform, PIVOT_COLOR);
-        }
-        else if (regionReference != -1)
-        {
-          auto regionIt = spritesheet->regions.find(regionReference);
+          auto regionIt = spritesheet->regions.find(hoveredRegionId);
           if (regionIt != spritesheet->regions.end())
           {
             auto& region = regionIt->second;
             auto cropModel = math::quad_model_get(region.size, region.crop);
             auto cropTransform = transform * cropModel;
-            rect_render(dashedShader, cropTransform, cropModel, color::RED);
+            rect_fill_render(shaderLine, cropTransform, cropModel, vec4(1.0f, 1.0f, 1.0f, 0.5f));
+          }
+        }
+
+        int highlightedRegionId = -1;
+        if (frame && reference.itemID > -1 &&
+            anm2.content.layers.at(reference.itemID).spritesheetID == referenceSpritesheet && frame->regionID != -1 &&
+            spritesheet->regions.contains(frame->regionID))
+        {
+          highlightedRegionId = frame->regionID;
+        }
+        else if (regionReference != -1 && spritesheet->regions.contains(regionReference))
+        {
+          highlightedRegionId = regionReference;
+        }
+
+        auto draw_region_rect = [&](anm2::Spritesheet::Region& region, vec4 regionColor)
+        {
+          auto cropModel = math::quad_model_get(region.size, region.crop);
+          auto cropTransform = transform * cropModel;
+          rect_render(dashedShader, cropTransform, cropModel, regionColor, BORDER_DASH_LENGTH, BORDER_DASH_GAP,
+                      BORDER_DASH_OFFSET);
+        };
+
+        for (auto& [id, region] : spritesheet->regions)
+        {
+          if (id == highlightedRegionId) continue;
+          draw_region_rect(region, color::WHITE);
+
+          auto pivotTransform =
+              transform * math::quad_model_get(PIVOT_SIZE, region.crop + region.pivot, PIVOT_SIZE * 0.5f);
+          texture_render(shaderTexture, resources.icons[icon::PIVOT].id, pivotTransform, color::WHITE);
+        }
+
+        if (highlightedRegionId != -1)
+        {
+          auto regionIt = spritesheet->regions.find(highlightedRegionId);
+          if (regionIt != spritesheet->regions.end())
+          {
+            auto& region = regionIt->second;
+            draw_region_rect(region, color::RED);
 
             auto pivotTransform =
                 transform * math::quad_model_get(PIVOT_SIZE, region.crop + region.pivot, PIVOT_SIZE * 0.5f);
             texture_render(shaderTexture, resources.icons[icon::PIVOT].id, pivotTransform, PIVOT_COLOR);
           }
+        }
+
+        bool isFrameOnSpritesheet =
+            frame && reference.itemID > -1 && anm2.content.layers.at(reference.itemID).spritesheetID == referenceSpritesheet;
+        if (isFrameOnSpritesheet && frame->regionID == -1)
+        {
+          auto frameModel = math::quad_model_get(frame->size, frame->crop);
+          auto frameTransform = transform * frameModel;
+          rect_render(shaderLine, frameTransform, frameModel, color::RED);
+
+          auto pivotTransform = transform * math::quad_model_get(PIVOT_SIZE, frame->crop + frame->pivot, PIVOT_SIZE * 0.5f);
+          texture_render(shaderTexture, resources.icons[icon::PIVOT].id, pivotTransform, PIVOT_COLOR);
         }
       }
 
@@ -320,6 +369,8 @@ namespace anm2ed::imgui
 
         auto frame_change_apply = [&](anm2::FrameChange frameChange, anm2::ChangeType changeType = anm2::ADJUST)
         { item->frames_change(frameChange, reference.itemType, changeType, frames); };
+        auto clamp_vec2_to_int = [](const vec2& value)
+        { return vec2(ivec2(value)); };
         auto region_set_all = [&](const vec2& crop, const vec2& size)
         {
           if (!spritesheet) return;
@@ -327,8 +378,8 @@ namespace anm2ed::imgui
           {
             auto it = spritesheet->regions.find(id);
             if (it == spritesheet->regions.end()) continue;
-            it->second.crop = crop;
-            it->second.size = size;
+            it->second.crop = clamp_vec2_to_int(crop);
+            it->second.size = clamp_vec2_to_int(size);
           }
         };
         auto region_offset_all = [&](const vec2& delta)
@@ -338,7 +389,8 @@ namespace anm2ed::imgui
           {
             auto it = spritesheet->regions.find(id);
             if (it == spritesheet->regions.end()) continue;
-            it->second.crop += delta;
+            it->second.crop = clamp_vec2_to_int(it->second.crop + delta);
+            it->second.size = clamp_vec2_to_int(it->second.size);
           }
         };
 
@@ -348,18 +400,32 @@ namespace anm2ed::imgui
         if (tool == tool::DRAW && isMouseRightDown) useTool = tool::ERASE;
         if (tool == tool::ERASE && isMouseRightDown) useTool = tool::DRAW;
 
+        hoveredRegionId = -1;
+
+        if (useTool == tool::PAN && spritesheet && spritesheet->texture.is_valid() && isMouseOverCanvas)
+        {
+          for (auto& [id, region] : spritesheet->regions)
+          {
+            auto minPoint = glm::min(region.crop, region.crop + region.size);
+            auto maxPoint = glm::max(region.crop, region.crop + region.size);
+            if (hoverMousePos.x >= minPoint.x && hoverMousePos.x <= maxPoint.x && hoverMousePos.y >= minPoint.y &&
+                hoverMousePos.y <= maxPoint.y)
+            {
+              hoveredRegionId = id;
+              break;
+            }
+          }
+        }
+
         auto& toolInfo = tool::INFO[useTool];
         auto& areaType = toolInfo.areaType;
         bool isAreaAllowed = areaType == tool::ALL || areaType == tool::SPRITESHEET_EDITOR;
         bool isFrameRequired =
             !(useTool == tool::PAN || useTool == tool::DRAW || useTool == tool::ERASE || useTool == tool::COLOR_PICKER);
-        bool isRegionInUse =
-            frame && frame->regionID != -1 && (useTool == tool::CROP || useTool == tool::MOVE);
-        bool isFrameAvailable =
-            !isFrameRequired ||
-            (frame && !isRegionInUse) ||
-            (useTool == tool::CROP && !frame && !regionSelection.empty()) ||
-            (useTool == tool::MOVE && !frame && regionReference != -1);
+        bool isRegionInUse = frame && frame->regionID != -1 && (useTool == tool::CROP || useTool == tool::MOVE);
+        bool isFrameAvailable = !isFrameRequired || (frame && !isRegionInUse) ||
+                                (useTool == tool::CROP && !frame && !regionSelection.empty()) ||
+                                (useTool == tool::MOVE && !frame && regionReference != -1);
         bool isSpritesheetRequired = useTool == tool::DRAW || useTool == tool::ERASE || useTool == tool::COLOR_PICKER;
         bool isSpritesheetAvailable = !isSpritesheetRequired || (spritesheet && spritesheet->texture.is_valid());
         auto cursor = (isAreaAllowed && isFrameAvailable && isSpritesheetAvailable) ? toolInfo.cursor
@@ -370,6 +436,29 @@ namespace anm2ed::imgui
         switch (useTool)
         {
           case tool::PAN:
+            if (isMouseLeftClicked && hoveredRegionId != -1)
+            {
+              regionReference = hoveredRegionId;
+              regionSelection = {hoveredRegionId};
+              if (frame && reference.itemID > -1 &&
+                  anm2.content.layers.at(reference.itemID).spritesheetID == referenceSpritesheet)
+              {
+                DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_REGION), Document::FRAMES,
+                              {
+                                frame->regionID = hoveredRegionId;
+                                if (spritesheet)
+                                {
+                                  auto regionIt = spritesheet->regions.find(hoveredRegionId);
+                                  if (regionIt != spritesheet->regions.end())
+                                  {
+                                    frame->crop = regionIt->second.crop;
+                                    frame->size = regionIt->second.size;
+                                    frame->pivot = regionIt->second.pivot;
+                                  }
+                                }
+                              });
+              }
+            }
             if (isMouseDown || isMouseMiddleDown) pan += mouseDelta;
             break;
           case tool::MOVE:
@@ -382,8 +471,9 @@ namespace anm2ed::imgui
 
               auto& region = regionIt->second;
               if (isBegin) document.snapshot(localize.get(EDIT_REGION_MOVE));
-              if (isMouseDown)
-                region.pivot = ivec2(mousePos) - ivec2(region.crop);
+              bool isPivotEdited = isMouseDown || isLeftPressed || isRightPressed || isUpPressed || isDownPressed;
+              if (isPivotEdited) region.origin = anm2::Spritesheet::Region::CUSTOM;
+              if (isMouseDown) region.pivot = ivec2(mousePos) - ivec2(region.crop);
               if (isLeftPressed) region.pivot.x -= step;
               if (isRightPressed) region.pivot.x += step;
               if (isUpPressed) region.pivot.y -= step;
@@ -466,14 +556,14 @@ namespace anm2ed::imgui
                     auto& region = it->second;
                     auto minPoint = glm::min(region.crop, region.crop + region.size);
                     auto maxPoint = glm::max(region.crop, region.crop + region.size);
-                    region.crop = minPoint;
-                    region.size = maxPoint - minPoint;
+                    region.crop = clamp_vec2_to_int(minPoint);
+                    region.size = clamp_vec2_to_int(maxPoint - minPoint);
 
                     if (isGridSnap)
                     {
                       auto [snapMin, snapMax] = snap_rect(region.crop, region.crop + region.size);
-                      region.crop = snapMin;
-                      region.size = snapMax - snapMin;
+                      region.crop = clamp_vec2_to_int(snapMin);
+                      region.size = clamp_vec2_to_int(snapMax - snapMin);
                     }
                   }
                 }
@@ -483,14 +573,12 @@ namespace anm2ed::imgui
                   auto it = spritesheet->regions.find(*regionSelection.begin());
                   if (it != spritesheet->regions.end())
                   {
-                    ImGui::TextUnformatted(
-                        std::vformat(localize.get(FORMAT_CROP),
-                                     std::make_format_args(it->second.crop.x, it->second.crop.y))
-                            .c_str());
-                    ImGui::TextUnformatted(
-                        std::vformat(localize.get(FORMAT_SIZE),
-                                     std::make_format_args(it->second.size.x, it->second.size.y))
-                            .c_str());
+                    ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_CROP),
+                                                        std::make_format_args(it->second.crop.x, it->second.crop.y))
+                                               .c_str());
+                    ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_SIZE),
+                                                        std::make_format_args(it->second.size.x, it->second.size.y))
+                                               .c_str());
                   }
                   ImGui::EndTooltip();
                 }
@@ -593,6 +681,42 @@ namespace anm2ed::imgui
             break;
         }
 
+        if (tool == tool::PAN && hoveredRegionId != -1 && spritesheet)
+        {
+          auto regionIt = spritesheet->regions.find(hoveredRegionId);
+          if (regionIt != spritesheet->regions.end())
+          {
+            if (ImGui::BeginTooltip())
+            {
+              auto& region = regionIt->second;
+              ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
+              ImGui::TextUnformatted(region.name.c_str());
+              ImGui::PopFont();
+              ImGui::TextUnformatted(
+                  std::vformat(localize.get(FORMAT_ID), std::make_format_args(hoveredRegionId)).c_str());
+              ImGui::TextUnformatted(
+                  std::vformat(localize.get(FORMAT_CROP), std::make_format_args(region.crop.x, region.crop.y)).c_str());
+              ImGui::TextUnformatted(
+                  std::vformat(localize.get(FORMAT_SIZE), std::make_format_args(region.size.x, region.size.y)).c_str());
+              if (region.origin == anm2::Spritesheet::Region::CUSTOM)
+              {
+                ImGui::TextUnformatted(
+                    std::vformat(localize.get(FORMAT_PIVOT), std::make_format_args(region.pivot.x, region.pivot.y))
+                        .c_str());
+              }
+              else
+              {
+                StringType originString = LABEL_REGION_ORIGIN_CENTER;
+                if (region.origin == anm2::Spritesheet::Region::TOP_LEFT) originString = LABEL_REGION_ORIGIN_TOP_LEFT;
+                auto originLabel = localize.get(originString);
+                ImGui::TextUnformatted(
+                    std::vformat(localize.get(FORMAT_ORIGIN), std::make_format_args(originLabel)).c_str());
+              }
+              ImGui::EndTooltip();
+            }
+          }
+        }
+
         if ((isMouseDown || isKeyDown) && useTool != tool::PAN)
         {
           if (!isAreaAllowed && areaType == tool::ANIMATION_PREVIEW)
@@ -617,8 +741,7 @@ namespace anm2ed::imgui
             {
               if (isRegionInUse)
                 ImGui::TextUnformatted(localize.get(TEXT_REGION_IN_USE));
-              else
-              if (useTool == tool::CROP)
+              else if (useTool == tool::CROP)
                 ImGui::TextUnformatted(localize.get(TEXT_SELECT_FRAME_OR_REGION));
               else
                 ImGui::TextUnformatted(localize.get(TEXT_SELECT_FRAME));
@@ -681,4 +804,5 @@ namespace anm2ed::imgui
     settings.editorStartZoom = zoom;
     ImGui::End();
   }
+
 }

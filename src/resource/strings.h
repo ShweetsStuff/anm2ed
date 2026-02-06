@@ -58,6 +58,7 @@ namespace anm2ed
   X(BASIC_INDEX, "Index", "Indice", "Индекс", "下标", "인덱스") \
   X(BASIC_INTERPOLATED, "Interpolated", "Interpolado", "Интерполировано", "线性插值", "매끄럽게 연결") \
   X(BASIC_LAYER_ANIMATION, "Layer", "Capa", "Слой", "动画层", "레이어") \
+  X(BASIC_MERGE, "Merge", "Combinar", "Соединить", "合并", "병합") \
   X(BASIC_MODE, "Mode", "Modo", "Режим", "模式", "모드") \
   X(BASIC_NAME, "Name", "Nombre", "Имя", "名字", "이름") \
   X(BASIC_NEW, "New", "Nuevo", "Новый", "新建", "새 파일") \
@@ -67,6 +68,7 @@ namespace anm2ed
   X(BASIC_OFFSET, "Offset", "Offset", "Смещение", "偏移", "오프셋") \
   X(BASIC_OPEN, "Open", "Abrir", "Открыть", "打开", "열기") \
   X(BASIC_OPEN_DIRECTORY, "Open Directory", "Abrir Directorio", "Открыть директорию", "打开目录", "디렉터리 열기") \
+  X(BASIC_PACK, "Pack", "Empaquetar", "Упаковать", "打包", "패킹") \
   X(BASIC_PASTE, "Paste", "Pegar", "Вставить", "粘贴", "붙여넣기") \
   X(BASIC_PIVOT, "Pivot", "Pivote", "Точка вращения", "枢轴", "중심점") \
   X(BASIC_POSITION, "Position", "Posicion", "Позиция", "位置", "위치") \
@@ -83,6 +85,7 @@ namespace anm2ed
   X(BASIC_SCALE, "Scale", "Escalar", "Масштаб", "缩放", "크기") \
   X(BASIC_SIZE, "Size", "Tamaño", "Размер", "大小", "비율") \
   X(BASIC_SOUND, "Sound", "Sonido", "Звук", "声音", "사운드") \
+  X(BASIC_TRIM, "Trim", "Recortar contenido", "Обрезать по содержимому", "修剪", "내용으로 자르기") \
   X(BASIC_TIME, "Time", "Tiempo", "Время", "时间", "시간") \
   X(BASIC_TINT, "Tint", "Matiz", "Оттенок", "色调", "색조") \
   X(BASIC_TRIGGERS, "Triggers", "Triggers", "Триггер", "事件触发器", "트리거") \
@@ -116,6 +119,7 @@ namespace anm2ed
   X(EDIT_FRAME_COLOR_OFFSET, "Frame Color Offset", "Offset de color de Frame", "Смещение цвета кадра", "帧颜色偏移", "프레임 색상 오프셋") \
   X(EDIT_FRAME_CROP, "Frame Crop", "Recorte de Frame", "Обрезка кадра", "帧裁剪", "프레임 자르기") \
   X(EDIT_FRAME_DURATION, "Frame Duration", "Duracion de Frame", "Продолжительность кадра", "帧时长", "프레임 유지 시간") \
+  X(EDIT_FRAME_REGION, "Frame Region", "Region de Frame", "Регион кадра", "帧区域", "프레임 영역") \
   X(EDIT_FRAME_FLIP_X, "Frame Flip X", "Invertir X de Frame", "Отразить кадр по X", "X轴翻转", "프레임 수평 뒤집기") \
   X(EDIT_FRAME_FLIP_Y, "Frame Flip Y", "Invertir Y de Frame", "Отразить кадр по Y", "Y轴翻转", "프레임 수직 뒤집기") \
   X(EDIT_FRAME_INTERPOLATION, "Frame Interpolation", "Interpolacion de Frame", "Интерполяция кадра", "帧线性插值", "매끄럽게 프레임 연결") \
@@ -131,8 +135,11 @@ namespace anm2ed
   X(EDIT_LOOP, "Loop", "Loop", "Цикл", "循环", "반복") \
   X(EDIT_MERGE_ANIMATIONS, "Merge Animations", "Combinar Animaciones", "Соединить анимации", "合并多个动画", "애니메이션 병합") \
   X(EDIT_MERGE_ANM2, "Merge Anm2", "Combinar Anm2", "Соединить Anm2", "合并多个Anm2", "Anm2 병합") \
+  X(EDIT_MERGE_SPRITESHEETS, "Merge Spritesheets", "Combinar Spritesheets", "Объединить спрайт-листы", "合并图集", "스프라이트 시트 병합") \
+  X(EDIT_PACK_SPRITESHEET, "Pack Spritesheet", "Empaquetar spritesheet", "Упаковать спрайт-лист", "打包图集", "스프라이트 시트 패킹") \
   X(EDIT_MOVE_ANIMATIONS, "Move Animation(s)", "Mover Animacion(es)", "Переместить анимации", "移动动画", "애니메이션 이동") \
   X(EDIT_MOVE_FRAMES, "Move Frame(s)", "Mover Frame(s)", "Перемесить кадры", "移动多个/单个帧", "프레임 이동") \
+  X(EDIT_MOVE_REGIONS, "Move Regions", "Mover regiones", "Переместить регионы", "移动区域", "영역 이동") \
   X(EDIT_MOVE_LAYER_ANIMATION, "Move Layer Animation", "Mover Animacion de Capa", "Переместить анимацию слоя", "移动动画层", "레이어 애니메이션 이동") \
   X(EDIT_PASTE_ANIMATIONS, "Paste Animation(s)", "Pegar Animacion(es)", "Вставить анимации", "粘贴动画", "애니메이션 붙여넣기") \
   X(EDIT_PASTE_EVENTS, "Paste Event(s)", "Pegar Eventos", "Вставить события", "粘贴事件", "이벤트 붙여넣기") \
@@ -157,7 +164,9 @@ namespace anm2ed
   X(EDIT_REPLACE_SOUND, "Replace Sound", "Reemplazar Sonido", "Заменить звук", "替换声音", "사운드 교체") \
   X(EDIT_SET_LAYER_PROPERTIES, "Set Layer Properties", "Establecer Propiedades de Capa", "Установить свойства слоя", "更改动画层属性", "레이어 속성 설정") \
   X(EDIT_SET_REGION_PROPERTIES, "Set Region Properties", "Establecer propiedades de región", "Установить свойства региона", "更改区域属性", "영역 속성 설정") \
+  X(EDIT_TRIM_REGIONS, "Trim Regions", "Recortar regiones", "Обрезать регионы", "修剪区域", "영역 트리밍") \
   X(EDIT_SET_NULL_PROPERTIES, "Set Null Properties", "Establecer Propiedades Null", "Установить свойства нуля", "更改Null属性", "Null 속성 설정") \
+  X(EDIT_SCAN_AND_SET_REGIONS, "Scan and Set Regions", "Escanear y establecer regiones", "Сканировать и установить регионы", "扫描并设置区域", "영역 스캔 및 설정") \
   X(EDIT_REGION_CROP, "Region Crop", "Recorte de región", "Обрезка региона", "区域裁剪", "영역 자르기") \
   X(EDIT_REGION_MOVE, "Region Pivot", "Pivote de región", "Пивот региона", "区域枢轴", "영역 피벗") \
   X(EDIT_SPLIT_FRAME, "Split Frame", "Dividir Frame", "Разделить кадр", "拆分帧", "프레임 분할") \
@@ -174,6 +183,7 @@ namespace anm2ed
   X(FORMAT_DURATION, "Duration: {0}", "Duracion: {0}", "Продолжительность: {0}", "时长: {0}", "유지 시간: {0}") \
   X(FORMAT_EVENT_LABEL, "Event: {0}", "Evento: {0}", "Событие: {0}", "事件: {0}", "이벤트: {0}") \
   X(FORMAT_ID, "ID: {0}", "ID: {0}", "ID: {0}", "ID: {0}", "ID: {0}") \
+  X(FORMAT_ORIGIN, "Origin: {0}", "Origen: {0}", "Точка отсчета: {0}", "原点: {0}", "원점: {0}") \
   X(FORMAT_SPRITESHEET_ID, "Spritesheet ID: {0}", "ID de Spritesheet: {0}", "", "图集 ID: {0}", "스프라이트 시트 ID: {0}") \
   X(FORMAT_INDEX, "Index: {0}", "Indice: {0}", "Индекс: {0}", "下标: {0}", "인덱스: {0}") \
   X(FORMAT_INTERPOLATED, "Interpolated: {0}", "Interpolado: {0}", "Интерполировано: {0}", "线性插值: {0}", "매끄럽게 연결: {0}") \
@@ -191,6 +201,7 @@ namespace anm2ed
   X(FORMAT_SOUND_LABEL, "Sound: {0}", "Sonido: {0}", "Звук: {0}", "声音: {0}", "사운드: {0}") \
   X(FORMAT_SPRITESHEET, "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}") \
   X(FORMAT_SOUND, "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}") \
+  X(FORMAT_REGION, "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}") \
   X(FORMAT_TRANSFORM, "Transform: {0}", "Transformar: {0}", "Трансформация: {0}", "变换: {0}", "변환: {0}") \
   X(FORMAT_RECT, "Rect: {0}", "Rect: {0}", "Прямоугольник: {0}", "矩形: {0}", "사각형: {0}") \
   X(FORMAT_FRAMES_COUNT, "Frames: {0}", "Frames: {0}", "Кадры: {0}", "帧: {0}", "프레임: {0}") \
@@ -203,13 +214,15 @@ namespace anm2ed
   X(LABEL_ALT_ICONS, "Alt Icons", "Iconos Alternos", "Альт-иконки", "替代图标", "대체 아이콘") \
   X(LABEL_ANIMATIONS_CHILD, "Animations", "Animaciones", "", "动画", "애니메이션") \
   X(LABEL_ANIMATIONS_MERGE_POPUP, "Merge Animations", "Combinar Animaciones", "Соединить анимации", "合并多个动画", "애니메이션 병합") \
+  X(LABEL_SPRITESHEETS_PACK_POPUP, "Pack Spritesheet", "Empaquetar spritesheet", "Упаковать спрайт-лист", "打包图集", "스프라이트 시트 패킹") \
+  X(LABEL_SPRITESHEETS_MERGE_POPUP, "Merge Spritesheets", "Combinar Spritesheets", "Объединить спрайт-листы", "合并图集", "스프라이트 시트 병합") \
   X(LABEL_ANIMATIONS_WINDOW, "Animations###Animations", "Animaciones###Animations", "Анимации###Animations", "动画###Animations", "애니메이션###Animations") \
   X(LABEL_REGIONS_WINDOW, "Regions###Regions", "Regiones###Regions", "Регионы###Regions", "区域###Regions", "영역###Regions") \
   X(LABEL_ANIMATION_LENGTH, "Animation Length", "Duracion de Animacion", "Длина анимации", "动画时长", "애니메이션 길이") \
   X(LABEL_ANIMATION_PREVIEW_WINDOW, "Animation Preview###Animation Preview", "Vista Previa de Animacion###Animation Preview", "Предпросмотр анимации###Animation Preview", "动画预放###Animation Preview", "애니메이션 프리뷰###Animation Preview") \
   X(LABEL_APPEND_FRAMES, "Append Frames", "Anteponer Frames", "Добавить кадры к концу", "在后面添加帧", "뒷프레임에 추가") \
   X(LABEL_APPLICATION_NAME, "Anm2Ed", "Anm2Ed", "Anm2Ed", "Anm2Ed", "Anm2Ed") \
-  X(LABEL_APPLICATION_VERSION, "Version 2.2", "Version 2.2", "Версия 2.2", "2.2版本", "버전 2.2") \
+  X(LABEL_APPLICATION_VERSION, "Version 2.3", "Version 2.3", "Версия 2.3", "2.3版本", "버전 2.3") \
   X(LABEL_AUTHOR, "Author", "Autor", "Автор", "制作者", "작성자") \
   X(LABEL_AUTOSAVE, "Autosave", "Autoguardado", "Автосохранение", "自动保存", "자동저장") \
   X(LABEL_AXES, "Axes", "Ejes", "Оси", "坐标轴", "가로/세로 축") \
@@ -222,6 +235,7 @@ namespace anm2ed
   X(LABEL_CLAMP, "Clamp", "Clamp", "Ограничить", "限制数值范围", "작업 영역 제한") \
   X(LABEL_CLEAR_LIST, "Clear List", "Limpiar Lista", "Стереть список", "清除列表", "기록 삭제") \
   X(LABEL_CLOSE, "Close", "Cerrar", "Закрыть", "关闭", "닫기") \
+  X(LABEL_COMPATIBILITY, "Compatibility", "Compatibilidad", "Совместимость", "兼容性", "호환성") \
   X(LABEL_CUSTOM_RANGE, "Custom Range", "Rango Personalizado", "Пользовательский диапазон", "自定义范围", "길이 맞춤설정") \
   X(LABEL_DELETE, "Delete", "Borrar", "Удалить", "删除", "삭제") \
   X(LABEL_DELETE_ANIMATIONS_AFTER, "Delete Animations After", "Borrar Animaciones Despues", "Удалить анимации после", "删除之后的动画", "기존 애니메이션 삭제") \
@@ -265,15 +279,25 @@ namespace anm2ed
   X(LABEL_LAYERS_CHILD, "Layers List", "Lista de Capas", "", "动画层列表", "레이어 목록") \
   X(LABEL_LAYERS_WINDOW, "Layers###Layers", "Capas###Layers", "Слои###Layers", "动画层###Layers", "레이어###Layers") \
   X(LABEL_THIS_ANIMATION, "This Animation", "Esta Animacion", "Эта анимация", "此动画", "이 애니메이션") \
+  X(LABEL_ISAAC, "Isaac", "Isaac", "Isaac", "Isaac", "Isaac") \
+  X(LABEL_ANM2ED, "Anm2Ed", "Anm2Ed", "Anm2Ed", "Anm2Ed", "Anm2Ed") \
+  X(LABEL_ANM2ED_LIMITED, "Anm2Ed Limited", "Anm2Ed Limitado", "Anm2Ed Ограниченный", "Anm2Ed 限制版", "Anm2Ed 제한") \
   X(LABEL_DESTINATION, "Destination", "Destino", "Назначение", "目标", "대상") \
   X(LABEL_LOCALIZATION, "Localization", "Localizacion", "Локализация", "本地化", "현지화") \
   X(LABEL_LOOP, "Loop", "Loop", "Цикл", "循环", "반복") \
   X(LABEL_MANAGER_ANM2_DRAG_DROP, "Anm2 Drag Drop", "Arrastrar y Soltar Anm2", "Anm2 Drag Drop", "Anm2 拖放", "Anm2 드래그 앤 드롭") \
   X(LABEL_REGION_PROPERTIES, "Region Properties", "Propiedades de región", "Свойства региона", "区域属性", "영역 속성") \
+  X(LABEL_REGION_PROPERTIES_ORIGIN, "Origin", "Origen", "Точка отсчета", "原点", "원점") \
+  X(LABEL_REGION_ORIGIN_TOP_LEFT, "Top Left", "Superior izquierda", "Верхний левый", "左上", "왼쪽 위") \
+  X(LABEL_REGION_ORIGIN_CENTER, "Center", "Centro", "Центр", "中心", "중앙") \
+  X(LABEL_REGION_ORIGIN_CUSTOM, "Custom", "Personalizado", "Пользовательский", "自定义", "사용자 지정") \
   X(LABEL_MANAGER_LAYER_PROPERTIES, "Layer Properties", "Propiedades de Capa", "Свойства слоя", "动画层属性", "레이어 속성") \
   X(LABEL_MANAGER_NULL_PROPERTIES, "Null Properties", "Propiedades Null", "Свойства нуля", "Null属性", "Null 속성") \
   X(LABEL_MANAGER_RENDERING_PROGRESS, "Rendering...", "Renderizando...", "Рендеринг...", "渲染中...", "렌더링 중...") \
   X(LABEL_MERGE, "Merge", "Combinar", "Соединить", "合并", "병합") \
+  X(LABEL_MERGE_SPRITESHEETS_APPEND_RIGHT, "Top Right", "Arriba a la derecha", "Сверху справа", "右上", "우측 상단") \
+  X(LABEL_MERGE_SPRITESHEETS_APPEND_BOTTOM, "Bottom Left", "Abajo a la izquierda", "Снизу слева", "左下", "좌측 하단") \
+  X(LABEL_MERGE_MAKE_SPRITESHEET_REGIONS, "Make Spritesheet Regions", "Crear regiones de spritesheet", "Создать регионы спрайт-листа", "生成图集区域", "스프라이트 시트 영역 만들기") \
   X(LABEL_MOVE_TOOL_SNAP, "Move Tool: Snap to Mouse", "Herramienta Mover: Ajustar al Mouse", "Инструмент перемещения: Привязка к мыши", "移动工具: 吸附到鼠标指针", "이동 도구: 마우스에 맞추기") \
   X(LABEL_MULTIPLY, "Multiply", "Multiplicar", "Умножить", "乘", "곱하기") \
   X(LABEL_NEW, "New", "Nuevo", "Новый", "新", "새로") \
@@ -317,6 +341,7 @@ namespace anm2ed
   X(LABEL_SPRITESHEET, "Spritesheet", "Spritesheet", "Спрайт-лист", "图集", "스프라이트 시트") \
   X(LABEL_SPRITESHEETS_WINDOW, "Spritesheets###Spritesheets", "Spritesheets###Spritesheets", "Спрайт-листы###Spritesheets", "图集###Spritesheets", "스프라이트 시트###Spritesheets") \
   X(LABEL_SPRITESHEET_EDITOR_WINDOW, "Spritesheet Editor###Spritesheet Editor", "Editor de Spritesheet###Spritesheet Editor", "Редактор спрайт-листов###Spritesheet Editor", "图集编辑器###Spritesheet Editor", "스프라이트 편집기###Spritesheet Editor") \
+  X(LABEL_SCAN_AND_SET_REGIONS, "Scan and Set Regions", "Escanear y establecer regiones", "Сканировать и установить регионы", "扫描并设置区域", "영역 스캔 및 설정") \
   X(LABEL_STACK_SIZE, "Stack Size", "Tamaño de Stack", "Размер стека", "栈内存大小", "스택 크기") \
   X(LABEL_START, "Start", "Empezar", "Старт", "开始", "시작") \
   X(LABEL_SUBTRACT, "Subtract", "Substraer", "Вычетание", "减去", "빼기") \
@@ -359,6 +384,8 @@ namespace anm2ed
   X(SHORTCUT_STRING_COPY, "Copy", "Copiar", "Копировать", "复制", "복사") \
   X(SHORTCUT_STRING_CROP, "Crop", "Recortar", "Обрезать", "裁剪", "자르기") \
   X(SHORTCUT_STRING_CUT, "Cut", "Cortar", "Вырезать", "剪切", "잘라내기") \
+  X(SHORTCUT_STRING_CONFIRM, "Confirm", "Confirmar", "Подтвердить", "确定", "확인") \
+  X(SHORTCUT_STRING_CANCEL, "Cancel", "Cancelar", "Отмена", "取消", "취소") \
   X(SHORTCUT_STRING_DEFAULT, "Default", "Predeterminado", "По умолчанию", "默认", "기본값") \
   X(SHORTCUT_STRING_DRAW, "Draw", "Dibujar", "Рисовать", "绘画", "그리기") \
   X(SHORTCUT_STRING_DUPLICATE, "Duplicate", "Duplicar", "Дублировать", "拷贝", "복제") \
@@ -397,6 +424,8 @@ namespace anm2ed
   X(SNAPSHOT_RENAME_ANIMATION, "Rename Animation", "Renombrar Animacion", "Переименовать анимацию", "重命名动画", "애니메이션 이름 바꾸기") \
   X(TEXT_SELECT_FRAME, "Select a frame first!", "¡Selecciona primero un frame!", "Сначала выберите кадр!", "请先选择帧！", "먼저 프레임을 선택하세요!") \
   X(TEXT_SELECT_FRAME_OR_REGION, "Select a frame or region first!", "¡Selecciona primero un frame o región!", "Сначала выберите кадр или регион!", "请先选择帧或区域！", "먼저 프레임 또는 영역을 선택하세요!") \
+  X(TEXT_MERGE_SPRITESHEETS_DESCRIPTION, "Merge selected spritesheets into the first selected spritesheet.", "Combina los spritesheets seleccionados en el primer spritesheet seleccionado.", "Объединить выбранные спрайт-листы в первый выбранный спрайт-лист.", "将所选图集合并到第一个选中的图集中。", "선택된 스프라이트 시트를 첫 번째 선택된 스프라이트 시트로 병합합니다.") \
+  X(TEXT_PACK_SPRITESHEET_DESCRIPTION, "Pack this spritesheet using its region rectangles and rebuild the texture from packed regions.", "Empaqueta este spritesheet usando sus rectángulos de región y reconstruye la textura con las regiones empaquetadas.", "Упаковать этот спрайт-лист, используя прямоугольники его регионов, и пересобрать текстуру из упакованных регионов.", "使用该图集的区域矩形进行打包，并用打包后的区域重建纹理。", "이 스프라이트 시트의 영역 사각형을 기준으로 패킹하고, 패킹된 영역으로 텍스처를 다시 만듭니다.") \
   X(TEXT_SELECT_SPRITESHEET, "Select a spritesheet first!", "¡Selecciona primero un spritesheet!", "Сначала выберите спрайт-лист!", "请先选择图集！", "먼저 스프라이트 시트를 선택하세요!") \
   X(TEXT_TOOL_ANIMATION_PREVIEW, "This tool can only be used in Animation Preview!", "¡Esta herramienta solo se puede usar en Vista previa de animación!", "Этот инструмент можно использовать только в \"Предпросмотре анимации\"!", "该工具只能在“动画预放”中使用！", "이 도구는 애니메이션 프리뷰에서만 사용할 수 있습니다!") \
   X(TEXT_TOOL_SPRITESHEET_EDITOR, "This tool can only be used in Spritesheet Editor!", "¡Esta herramienta solo se puede usar en el Editor de spritesheets!", "Этот инструмент можно использовать только в \"Редакторе спрайт-листов\"!", "该工具只能在“图集编辑器”中使用！", "이 도구는 스프라이트 시트 편집기에서만 사용할 수 있습니다!") \
@@ -434,7 +463,12 @@ namespace anm2ed
   X(ERROR_FILE_NOT_FOUND, "File not found!", "¡Archivo no encontrado!", "Файл не найден!", "找不到文件！", "파일을 찾을 수 없습니다!") \
   X(ERROR_FILE_PERMISSIONS, "File does not have write permissions!", "¡El archivo no tiene permisos de escritura!", "У файла нет прав на запись!", "文件没有写入权限！", "파일에 쓰기 권한이 없습니다!") \
   X(TOAST_RELOAD_SPRITESHEET, "Reloaded spritesheet #{0}: {1}", "Se ha recargado spritesheet #{0}: {1}", "Спрайт-лист #{0} перезагружен: {1}", "重新加载了图集 #{0}: {1}", "{0}번 스프라이트 시트 다시 불러옴: {1}") \
+  X(TOAST_MERGE_SPRITESHEETS, "Merged selected spritesheets.", "Spritesheets seleccionados combinados.", "Выбранные спрайт-листы объединены.", "已合并所选图集。", "선택된 스프라이트 시트를 병합했습니다.") \
+  X(TOAST_MERGE_SPRITESHEETS_FAILED, "Failed to merge selected spritesheets.", "No se pudieron combinar los spritesheets seleccionados.", "Не удалось объединить выбранные спрайт-листы.", "合并所选图集失败。", "선택된 스프라이트 시트 병합에 실패했습니다.") \
+  X(TOAST_PACK_SPRITESHEET, "Packed spritesheet.", "Spritesheet empaquetado.", "Спрайт-лист упакован.", "图集已打包。", "스프라이트 시트를 패킹했습니다.") \
+  X(TOAST_PACK_SPRITESHEET_FAILED, "Failed to pack spritesheet.", "No se pudo empaquetar el spritesheet.", "Не удалось упаковать спрайт-лист.", "图集打包失败。", "스프라이트 시트 패킹에 실패했습니다.") \
   X(TOAST_RELOAD_SOUND, "Reloaded sound #{0}: {1}", "Se ha recargado sonido #{0}: {1}", "Звук #{0} перезагружен: {1}", "重新加载了声音 #{0}: {1}", "{0}번 사운드 다시 불러옴: {1}") \
+  X(TOAST_SCAN_AND_SET_REGIONS, "Matched regionless frames to candidate regions.", "Se emparejaron frames sin region con regiones candidatas.", "Кадры без региона сопоставлены с подходящими регионами.", "已将无区域帧匹配到候选区域。", "영역이 없는 프레임을 후보 영역에 매칭했습니다.") \
   X(TOAST_REMOVE_SPRITESHEET, "Removed spritesheet #{0}: {1}", "Se ha removido spritesheet #{0}: {1}", "Спрайт-лист #{0} удален: {1}", "去除了图集 #{0}: {1}", "{0}번 스프라이트 시트 제거됨: {1}") \
   X(TOAST_REPLACE_SPRITESHEET, "Replaced spritesheet #{0}: {1}", "Se ha reemplazado spritesheet #{0}: {1}", "Спрайт-лист #{0} заменен: {1}", "替换了图集 #{0}: {1}", "{0}번 스프라이트 시트 교체됨: {1}") \
   X(TOAST_REPLACE_SOUND, "Replaced sound #{0}: {1}", "Se ha reemplazado sonido #{0}: {1}", "Звук #{0} заменен: {1}", "已替换声音 #{0}: {1}", "{0}번 사운드 교체됨: {1}") \
@@ -459,7 +493,7 @@ namespace anm2ed
   X(TOOLTIP_ADD_LAYER, "Add a layer.", "Añadir una capa.", "Добавить слой.", "添加一个动画层.", "레이어를 추가합니다.") \
   X(TOOLTIP_ADD_NULL, "Add a null.", "Añadir Null.", "Добавить нуль.", "添加一个Null.", "Null을 추가합니다.") \
   X(TOOLTIP_ADD_SPRITESHEET, "Add a new spritesheet.", "Añadir nueva spritesheet.", "Добавить новый спрайт-лист.", "添加一个新图集.", "새 스프라이트 시트를 추가합니다.") \
-  X(TOOLTIP_ADD_VALUES, "Add the specified values onto each frame.\n(Boolean values will simply be set.)", "Añadir los valores especifiados a cada Frame.\n(los valores booleanos seran ajustados.)", "Добавить указанные значения к каждому кадру.\n(Булевы значения будут просто установлены.)", "将指定的数值添加到每一帧上. (任何布尔值[真假值]将直接被设置.)", "각 프레임의 속성에 지정한 값을 더합니다.\n(참/거짓 값은 그대로 설정됩니다.)") \
+  X(TOOLTIP_ADD_VALUES, "Add the specified values onto each frame.\n(Boolean/mapped values will simply be set.)", "Añadir los valores especifiados a cada Frame.\n(Los valores booleanos/mapeados simplemente se estableceran.)", "Добавить указанные значения к каждому кадру.\n(Булевы/сопоставленные значения будут просто установлены.)", "将指定的数值添加到每一帧上. (布尔/映射值将直接被设置.)", "각 프레임의 속성에 지정한 값을 더합니다.\n(불리언/매핑 값은 그대로 설정됩니다.)") \
   X(TOOLTIP_ADJUST, "Set the value of each specified value onto the frame's equivalent.", "Ajustar el valor de cada valor especificado a el equivalente del Frame.", "Установить значение каждого указанного значения к эквиваленту кадра.", "将每个指定的数值设置到对应帧的相等的属性上.", "지정된 각 값을 프레임의 대응 값으로 설정합니다.") \
   X(TOOLTIP_ALL_ITEMS_VISIBLE, "All items are visible. Press to only show layers.", "Todos los items son visibles. Presiona solo para mostrar capas.", "Все предметы видимы. Нажмите, чтобы только показать слои.", "所有物品均可见. 点击即可仅显示动画层.", "모든 항목이 표시됩니다. 레이어만 표시하려면 누르세요.") \
   X(TOOLTIP_ALT_ICONS, "Toggle a different appearance of the target icons.", "Alterna una apariencia diferente de los iconos de objetivo", "Переключить альтернативный вид иконок-перекрестий.", "切换指定图标为另一个样式.", "대상 아이콘을 다른 외형으로 전환합니다.") \
@@ -476,14 +510,18 @@ namespace anm2ed
   X(TOOLTIP_CANCEL_BAKE_FRAMES, "Cancel baking frames.", "Cancelar hacer bake de Frames.", "Отменить запечку кадров.", "取消提前渲染.", "프레임 베이킹을 취소합니다.") \
   X(TOOLTIP_CENTER_VIEW, "Centers the view.", "Centra la vista.", "Центрирует вид.", "居中视角.", "미리보기 화면을 가운데에 맞춥니다.") \
   X(TOOLTIP_CLOSE_SETTINGS, "Close without updating settings.", "Cerrar sin actualizar las configuraciones.", "Закрыть без обновления настройки.", "关闭但不保存设置.", "설정을 갱신하지 않고 닫습니다.") \
+  X(TOOLTIP_COMPATIBILITY_ISAAC, "Sets the output file format to that of The Binding of Isaac: Rebirth's.\nThis removes the following:\n- Sounds\n- Regions\nNOTE: This will not serialize this data and it won't be able to be recovered.", "Establece el formato del archivo de salida al de The Binding of Isaac: Rebirth.\nEsto elimina lo siguiente:\n- Sonidos\n- Regiones\nNOTA: Estos datos no se serializaran y no podran recuperarse.", "Устанавливает формат выходного файла как у The Binding of Isaac: Rebirth.\nЭто удаляет следующее:\n- Звуки\n- Регионы\nПРИМЕЧАНИЕ: Эти данные не будут сериализованы, и их нельзя будет восстановить.", "将输出文件格式设置为 The Binding of Isaac: Rebirth 的格式。\n这会移除以下内容：\n- 声音\n- 区域\n注意：这些数据不会被序列化，且无法恢复。", "출력 파일 형식을 The Binding of Isaac: Rebirth의 형식으로 설정합니다.\n다음 항목이 제거됩니다:\n- 사운드\n- 영역\n참고: 이 데이터는 직렬화되지 않으며 복구할 수 없습니다.") \
+  X(TOOLTIP_COMPATIBILITY_ANM2ED, "Sets the output file format to that of this editor.\nAll features will be serialized, including Sounds and Regions.", "Establece el formato del archivo de salida al de este editor.\nTodas las funciones se serializaran, incluyendo Sonidos y Regiones.", "Устанавливает формат выходного файла как у этого редактора.\nВсе возможности будут сериализованы, включая звуки и регионы.", "将输出文件格式设置为本编辑器的格式。\n所有功能都会被序列化，包括声音和区域。", "출력 파일 형식을 이 편집기의 형식으로 설정합니다.\n사운드와 영역을 포함한 모든 기능이 직렬화됩니다.") \
+  X(TOOLTIP_COMPATIBILITY_ANM2ED_LIMITED, "Sets the output file format to that of this editor.\nThis will additionally remove redundant Region-specific information in frames.", "Establece el formato del archivo de salida al de este editor.\nEsto ademas eliminara informacion redundante especifica de Region en los frames.", "Устанавливает формат выходного файла как у этого редактора.\nДополнительно это удалит избыточную информацию, связанную с регионами, в кадрах.", "将输出文件格式设置为本编辑器的格式。\n此外，这还会移除帧中冗余的区域专用信息。", "출력 파일 형식을 이 편집기의 형식으로 설정합니다.\n추가로 프레임 내 중복된 영역 관련 정보를 제거합니다.") \
   X(TOOLTIP_COLOR_OFFSET, "Change the color added onto the frame.", "Cambia el color añadido al Frame.", "Изменить цвет, который добавлен на кадр.", "更改覆盖在帧上的颜色.", "프레임에 더해지는 색을 변경합니다.") \
   X(TOOLTIP_REGION, "Set the spritesheet region the frame will use.", "Establece la región del spritesheet que usará el frame.", "Установить регион спрайт-листа, который будет использовать кадр.", "设置帧将使用的图集区域.", "프레임이 사용할 스프라이트 시트 영역을 설정합니다.") \
+  X(TOOLTIP_REGION_PROPERTIES_ORIGIN, "Use a preset origin for the region.", "Usa un origen predefinido para la región.", "Использовать предустановленную точку отсчета для региона.", "为区域使用预设原点。", "영역에 사전 설정된 원점을 사용합니다.") \
   X(TOOLTIP_COLUMNS, "Set how many columns the spritesheet will have.", "Ajusta cuantas columnas va a tener el spritesheet.", "Установить сколько колонн будет иметь спрайт-лист.", "设置图集有多少列.", "스프라이트 시트의 열 수를 설정합니다.") \
   X(TOOLTIP_CROP, "Change the crop position the frame uses.", "Cambiar la poscicion de recortado que usa el Frame.", "Изменить позицию обрезки, которую использует кадр.", "更改当前帧的裁剪位置.", "프레임에 대응되는 스프라이트 시트를 어느 지점부터 사용할지 변경합니다.") \
   X(TOOLTIP_CUSTOM_RANGE, "Toggle using a custom range for the animation.", "Alterna usando un rango personalizado para la animacion.", "Переключить использование пользовательского диапазона для анимации.", "切换是否让动画使用自定义区间.", "애니메이션에 사용자 지정 길이를 사용할지 정합니다.") \
   X(TOOLTIP_DELETE_ANIMATIONS_AFTER, "Delete animations after merging them.", "Borrar animaciones despues de combinarlas.", "Удалить анимации после их соединения.", "合并动画后，删除其他动画。", "병합 후 기존 애니메이션을 삭제합니다.") \
   X(TOOLTIP_DELETE_FRAMES, "Delete the selected frames.", "Borrar los Frames seleccionados.", "Удалить выбранные кадры.", "删除所选帧.", "선택된 프레임을 삭제합니다.") \
-  X(TOOLTIP_DIVIDE_VALUES, "Divide the specified values for each frame.\n(Boolean values will simply be set.)", "Dividir los valores especificos para cada Frame.\n(Los valores booleanos seran ajustados. )", "Разделить указанные значения для каждого кадра.\n(Булевы значения будут просто установлены.)", "将每一帧的指定值进行除法操作. (布尔值将直接被设置.)", "각 프레임의 속성을 지정된 값으로 나눕니다.\n(참/거짓 값은 그대로 설정됩니다.)") \
+  X(TOOLTIP_DIVIDE_VALUES, "Divide the specified values for each frame.\n(Boolean/mapped values will simply be set.)", "Dividir los valores especificos para cada Frame.\n(Los valores booleanos/mapeados simplemente se estableceran.)", "Разделить указанные значения для каждого кадра.\n(Булевы/сопоставленные значения будут просто установлены.)", "将每一帧的指定值进行除法操作. (布尔/映射值将直接被设置.)", "각 프레임의 속성을 지정된 값으로 나눕니다.\n(불리언/매핑 값은 그대로 설정됩니다.)") \
   X(TOOLTIP_DUPLICATE_ANIMATION, "Duplicate the selected animation(s).", "Duplica la(s) animacion(es) seleccionada.", "Дублировать выбранные анимации.", "拷贝所选动画.", "선택된 애니메이션을 복제합니다.") \
   X(TOOLTIP_DURATION, "Change how long the frame lasts.", "Cambia la duracion de el último Frame.", "Изменить сколько длится кадр.", "更改此帧的时长.", "프레임의 지속 시간을 변경합니다.") \
   X(TOOLTIP_EDITOR_ZOOM, "Change the zoom of the editor.", "Cambia el zoom del editor.", "Изменить масштаб редактора.", "更改编辑器的视角缩放.", "편집기의 줌을 변경합니다.") \
@@ -514,7 +552,7 @@ namespace anm2ed
   X(TOOLTIP_ITEM_THIS_ANIMATION, "The item will be placed into only this animation.", "El item sera aplicado solo a esta animacion.", "Предмет будет добавлен только в эту анимацию.", "该物体将仅放入此动画中。", "항목이 이 애니메이션에만 배치됩니다.") \
   X(TOOLTIP_LOOP_ANIMATION, "Toggle the animation looping.", "Alterna el looping de la animacion.", "Переключить цикличное возпроизведение анимации.", "切换动画是否循环.", "애니메이션을 반복할지 정합니다.") \
   X(TOOLTIP_MOVE_TOOL_SNAP, "In Animation Preview, the Move tool will snap the frame's position right to the cursor, instead of being moved at a distance.", "En la vista previa de la animacion, la herramienta Mover ajustara la posicion del Frame al puntero, en vez de moverse a distancia.", "В предпросмотре анимации, инструмент передвижения привяжет позицию кадра прямо к курсору, а не перемещает его на расстоянии.", "在动画预览时, 移动工具会使帧的位置直接吸附与光标上，而不是按距离移动.", "애니메이션 미리보기에서 이동 도구로 프레임을 이동시킬 때 프레임을 마우스 커서 바로 옆에 정렬되게 합니다.") \
-  X(TOOLTIP_MULTIPLY_VALUES, "Multiply the specified values for each frame.\n(Boolean values will simply be set.)", "Multiplica los valores especificados para cada Frame.\n(Los valores booleanos seran ajustados).", "Умножить указанные значения для каждого кадра.\n(Булевы значения будут просто установлены.)", "将每一帧的指定值进行相乘操作. (布尔值将直接被设置.)", "각 프레임의 속성에 지정한 값을 곱합니다.\n(참/거짓 값은 그대로 설정됩니다.)") \
+  X(TOOLTIP_MULTIPLY_VALUES, "Multiply the specified values for each frame.\n(Boolean/mapped values will simply be set.)", "Multiplica los valores especificados para cada Frame.\n(Los valores booleanos/mapeados simplemente se estableceran.)", "Умножить указанные значения для каждого кадра.\n(Булевы/сопоставленные значения будут просто установлены.)", "将每一帧的指定值进行相乘操作. (布尔/映射值将直接被设置.)", "각 프레임의 속성에 지정한 값을 곱합니다.\n(불리언/매핑 값은 그대로 설정됩니다.)") \
   X(TOOLTIP_NEW_ITEM, "Create a new item.", "Crea un nuevo item.", "Создать новый предмет.", "创造一个新物品.", "새 항목을 만듭니다.") \
   X(TOOLTIP_NO_UNUSED_ITEMS, "There are no unused items to use.", "No hay items sin utilizar para usar.", "Нет неиспользуемых предметов, которые использовать.", "没有可用的未使用物品.", "사용하지 않는 항목이 없습니다.") \
   X(TOOLTIP_NULL_NAME, "Set the null's name.", "Ajusta el nombre del Null.", "Назвать этот нуль.", "更改Null的名字.", "Null의 이름을 설정합니다.") \
@@ -529,6 +567,10 @@ namespace anm2ed
   X(TOOLTIP_ONIONSKIN_TIME, "The onionskinned frames will be based on frame time.", "Los Frames de papel de cebolla seran basados al tiempo del Frame.", "Кадры оньонскина будут основаны на времени кадров.", "洋葱皮预览的帧会基于帧时间.", "프레임 비교를 프레임 시간을 기준으로 합니다.") \
   X(TOOLTIP_ONLY_LAYERS_VISIBLE, "Only layers are visible. Press to show all items.", "Solo las capas estan visibles. Presiona para mostrar todos los items.", "Только слои видимы. Нажмите, чтобы показать все предметы.", "当前仅有动画层可见. 点击以显示所有物品.", "레이어만 표시합니다. 모두 보려면 누르세요.") \
   X(TOOLTIP_OPEN_MERGE_POPUP, "Open merge popup.\nUse the shortcut to merge quickly.", "Abre el popup de combinacion.\n Usa este atajo para combinar mas rapido.", "Открыть всплывающее окно соединения.\nИспользуйте горячую клавишу, чтобы быстро выполнить слияние.", "打开合并弹窗。\n使用快捷键可快速合并。", "병합 팝업을 엽니다.\n단축키로 빠르게 병합하세요.") \
+  X(TOOLTIP_MERGE_SPRITESHEETS_BOTTOM_LEFT, "The merged spritesheets will be joined at the bottom left of the previous spritesheet.", "Los spritesheets fusionados se unirán en la parte inferior izquierda del spritesheet anterior.", "Объединяемые спрайт-листы будут стыковаться в нижнем левом углу предыдущего спрайт-листа.", "合并的图集将拼接在前一个图集的左下方。", "병합된 스프라이트 시트는 이전 스프라이트 시트의 좌하단에 이어 붙습니다.") \
+  X(TOOLTIP_MERGE_SPRITESHEETS_TOP_RIGHT, "The merged spritesheets will be joined at the top right of the previous spritesheet.", "Los spritesheets fusionados se unirán en la parte superior derecha del spritesheet anterior.", "Объединяемые спрайт-листы будут стыковаться в верхнем правом углу предыдущего спрайт-листа.", "合并的图集将拼接在前一个图集的右上方。", "병합된 스프라이트 시트는 이전 스프라이트 시트의 우상단에 이어 붙습니다.") \
+  X(TOOLTIP_MERGE_MAKE_SPRITESHEET_REGIONS, "The respective spritesheets will be added as regions.", "Los spritesheets correspondientes se agregarán como regiones.", "Соответствующие спрайт-листы будут добавлены как регионы.", "对应图集将作为区域添加。", "해당 스프라이트 시트가 영역으로 추가됩니다.") \
+  X(TOOLTIP_PACK_SPRITESHEET, "Pack the spritesheet by its regions and rebuild the texture.", "Empaqueta el spritesheet por sus regiones y reconstruye la textura.", "Упаковать спрайт-лист по его регионам и пересобрать текстуру.", "按区域打包图集并重建纹理。", "영역 기준으로 스프라이트 시트를 패킹하고 텍스처를 다시 만듭니다.") \
   X(TOOLTIP_OUTPUT_PATH, "Set the output path or directory for the animation.", "Ajusta la ruta de salida o el directiorio de la animacion.", "Установить путь или директорию вывода для анимации.", "更改动画的输出路径/目录.", "애니메이션의 출력 경로 또는 디렉터리를 설정합니다.") \
   X(TOOLTIP_OVERLAY, "Set an animation to be drawn over the current animation.", "Ajusta una animacion para ser dibujada sobre la animacion actual.", "Установить анимацию, которая будет выведена над текущей анимацией.", "设置一个当前动画的覆盖动画.", "현재 애니메이션 위에 그려질 애니메이션을 설정합니다.") \
   X(TOOLTIP_OVERLAY_ALPHA, "Set the alpha of the overlayed animation.", "Ajusta el alpha de la animacion en Overlay", "Установить прозрачность наложенной анимации.", "更改覆盖动画的透明度.", "오버레이된 애니메이션의 불투명도를 설정합니다.") \
@@ -547,6 +589,7 @@ namespace anm2ed
   X(TOOLTIP_REMOVE_ANIMATION, "Remove the selected animation(s).", "Remueve la(s) animacion(es) seleccionada(s).", "Удалить выбранные анимации.", "去除所选动画.", "선택한 애니메이션을 제거합니다.") \
   X(TOOLTIP_REMOVE_ITEMS, "Remove the selected item(s).", "Remueve el/los item(s) seleccionado(s).", "Удалить выбранные предметы.", "去除所选物品.", "선택한 항목을 제거합니다.") \
   X(TOOLTIP_REMOVE_UNUSED_REGIONS, "Remove unused regions (i.e., ones not used by any frame in any animation.)", "Remueve regiones no utilizadas (es decir, aquellas no usadas por ningun frame en ninguna animacion.)", "Удалить неиспользуемые регионы (т. е. те, которые не используются ни одним кадром ни в одной анимации.)", "移除未使用的区域（即未被任何动画中的任何帧使用的区域。）", "사용되지 않는 영역(어떤 애니메이션의 어떤 프레임에서도 사용되지 않는 것)를 제거합니다.") \
+  X(TOOLTIP_TRIM_REGIONS, "Trim region to non-transparent content.", "Recorta la región al contenido no transparente.", "Обрезать регион до непрозрачного содержимого.", "将区域裁剪到非透明内容。", "영역을 불투명 콘텐츠에 맞게 자릅니다.") \
   X(TOOLTIP_REMOVE_UNUSED_EVENTS, "Remove unused events (i.e., ones not used by any trigger in any animation.)", "Remueve eventos no utilizados (i. e., aquellos no usados por algun trigger en ninguna animacion.)", "Удалить неиспользуемые события (т. е. события, которые не использует ни один триггер в ни одной анимации.)", "去除未使用的事件 (未被任何动画触发的事件.)", "사용되지 않는 이벤트(어떤 애니메이션의 트리거에서도 사용되지 않는 것)를 제거합니다.") \
   X(TOOLTIP_REMOVE_UNUSED_LAYERS, "Remove unused layers (i.e., ones not used in any animation.)", "Remueve capas no utilizadas (i. e., aquellos no usados en ninguna animacion.)", "Удалить неиспользуемые слои (т. е. слои, которые не используются ни одной анимацией.)", "去除未使用的动画层 (未被任何动画使用的那些)", "사용되지 않는 레이어(어떤 애니메이션에서도 사용되지 않는 것)를 제거합니다.") \
   X(TOOLTIP_REMOVE_UNUSED_NULLS, "Remove unused nulls (i.e., ones not used in any animation.)", "Remueve nulls no utilizados (i. e., aquellos no usados en ninguna animacion.)", "Удалить неиспользуемые нули (т. е. нули, которые не используются ни одной анимацией.)", "去除未使用的Null (未被任何动画使用的那些.)", "사용되지 않는 Null(어떤 애니메이션에서도 사용되지 않는 것)을 제거합니다.") \
@@ -578,7 +621,7 @@ namespace anm2ed
   X(TOOLTIP_SPRITESHEET_INVALID, "This spritesheet isn't valid!\nLoad an existing, valid texture.", "¡Este spritesheet no es valido!\nCarga una textura que exista y sea valida.", "Этот спрайт-лист невалиден!\nЗагрузите существующую, валидную текстуру.", "此图集无效!\n请加载一个已存在并有效的纹理/图集.", "이 스프라이트 시트는 유효하지 않습니다!\n유효한 텍스처를 불러오세요.") \
   X(TOOLTIP_STACK_SIZE, "Set the maximum snapshot stack size of a document (i.e., how many undo/redos are preserved at a time).", "Ajusta el tamaño maximo del stack de snapshot de un documento (i. e., cuantos deshacer/rehacer se preservan a lo largo del tiempo.", "Установить максимальный размер стека снимков документа (т. е. количество отмен/повторов, сохраняемых одновременно).", "设置文件的快照栈的最大存储空间. (也就是最大可以存储多少撤销与重做)", "파일의 최대 스냅숏 스택 크기(즉 한 번에 보존되는 실행 취소/다시 실행 수)를 설정합니다.") \
   X(TOOLTIP_START, "Set the starting time of the animation.", "Ajusta el tiempo de inicio de la animacion.", "Установить начальное время анимации.", "设置动画的起始时间.", "애니메이션의 시작 시간을 설정합니다.") \
-  X(TOOLTIP_SUBTRACT_VALUES, "Subtract the specified values from each frame.\n(Boolean values will simply be set.)", "Subtrae los valores especificos de cada Frame.\n(Los valores booleanos seran ajustados.)", "Вычтить указанные значения из каждого кадра.\n(Булевы значения будут просто указаны.)", "将每一帧的指定值进行相减操作. (布尔值将直接被设置.)", "각 프레임의 속성에 지정한 값을 뺍니다.\n(참/거짓 값은 그냥 설정됩니다.)") \
+  X(TOOLTIP_SUBTRACT_VALUES, "Subtract the specified values from each frame.\n(Boolean/mapped values will simply be set.)", "Subtrae los valores especificos de cada Frame.\n(Los valores booleanos/mapeados simplemente se estableceran.)", "Вычтить указанные значения из каждого кадра.\n(Булевы/сопоставленные значения будут просто установлены.)", "将每一帧的指定值进行相减操作. (布尔/映射值将直接被设置.)", "각 프레임의 속성에 지정한 값을 뺍니다.\n(불리언/매핑 값은 그대로 설정됩니다.)") \
   X(TOOLTIP_TIMELINE_SHORTCUTS, "- Press {0} to decrement time.\n- Press {1} to increment time.\n- Press {2} to shorten the selected frame, by one frame.\n- Press {3} to extend the selected frame, by one frame.\n- Press {4} to go to the previous frame.\n- Press {5} to go to the next frame.\n- Click and hold on a frame while holding CTRL to change its duration.\n- Click and hold on a trigger to change its At Frame.\n- Hold Alt while clicking a non-trigger frame to toggle interpolation.", "- Presiona{0} para reducir el tiempo.\n- Presiona {1} para incrementar el tiempo.\n- Presiona {2} para acortar el Frame selecionado, por uno.\n- Presiona {3} para extender el Frame seleccionado, por uno.\n- Presiona {4} para ir al Frame anterior.\n- Presiona {5} para ir al siguiente Frame.\n- Haz click y mantiene en un Frame mientras apretas CTRL para cambiar su duracion.\n- Haz click y mantiene en un trigger para cambiar su \"En Frame\".\n- Manten Alt mientras haces click en un frame sin trigger para alternar la interpolacion.", "- Нажмите {0}, чтобы уменьшить время.\n- Нажмите {1}, чтобы увеличить время.\n- Нажмите {2}, чтобы укоротить выбранный кадр одной мерной единицей.\n- Нажмите {3}, чтобы продлить выбранный кадр на одну мерную единицу.\n- Нажмите {4}, чтобы перейти к предыдущему кадру.\n- Нажмите {5}, чтобы перейти к следующему кадру.\n- Удерживайте нажатой кнопку мыши по кадру, удерживая CTRL, чтобы изменить его длительность.\n- Нажмите и удерживайте кнопку мыши по триггеру, чтобы изменить параметр «На кадре».\n- Удерживайте Alt и нажмите по кадру, который не является триггером, чтобы переключить интерполяцию.", "- 按下 {0} 减少时间.\n- 按下 {1} 增加时间.\n- 按下 {2} 将所选帧缩短一帧.\n- 按下 {3} 将所选帧延长一帧.\n- 按下 {4} 跳到上一帧.\n- 按下 {5} 跳到下一帧.\n- 在按住 CTRL 的同时点击并按住某一帧以更改其持续时间.\n- 点击并按住触发器即可更改其触发帧.\n- 按住 Alt 并点击任何无触发器的帧以切换线性插值的使用.", "- {0} 키: 플레이헤드를 뒤로 보냅니다.\n- {1} 키: 플레이헤드를 앞으로 보냅니다.\n- {2} 키: 선택한 프레임을 한 프레임 단축합니다.\n- {3} 키: 선택한 프레임을 한 프레임 연장합니다.\n- {4} 키: 이전 프레임을 선택합니다.\n- {5} 키: 다음 프레임을 선택합니다.\n- CTRL 키를 누른 채 프레임을 클릭하고 드래그하면 프레임의 유지 시간을 변경할 수 있습니다.\n- 트리거를 클릭하고 드래그하면 트리거의 시작 프레임을 변경할 수 있습니다.\n- Alt 키를 누른 채 트리거를 제외한 프레임을 클릭하면 매끄럽게 연결 설정을 켤 수 있습니다.") \
   X(TOOLTIP_TINT, "Change the tint of the frame.", "Cambia el matiz del Frame", "Изменить оттенок кадра.", "更改此帧的色调.", "프레임의 색조를 변경합니다.") \
   X(TOOLTIP_TOOL_COLOR, "Selects the color to be used for drawing.\n(Spritesheet Editor only.)", "Selecciona el color que se usara para dibujar.\n(Solo en el Editor de Spritesheet.)", "Выбирает цвет, который будет использоваться для рисования.\n(Только в редакторе спрайт-листов.)", "选择用于绘画的颜色.\n(仅应用于图集编辑器.)", "그리기용으로 사용할 색을 선택합니다.\n(스프라이트 시트 편집기 전용)") \
@@ -605,6 +648,10 @@ namespace anm2ed
   X(TOOLTIP_UNUSED_ITEMS_HIDDEN, "Unused layers/nulls are hidden. Press to show them.", "Las capas/nulls no utilizados estan ocultos. Presiona para hacerlos visibles", "Неиспользуемые слои/нули скрыты. Нажмите, чтобы их показать.", "正在隐藏未使用的动画层/Null. 点击以显示它们.", "사용되지 않는 레이어/Null이 숨겨져 있습니다. 표시하려면 누르세요.") \
   X(TOOLTIP_UNUSED_ITEMS_SHOWN, "Unused layers/nulls are shown. Press to hide them.", "Las capas/nulls no utilizados estan visibles. Presiona para ocultarlos", "Неиспользуемые слои/нули видимы. Нажмите, чтобы их скрыть.", "正在显示未使用的动画层/Null. 点击以隐藏它们.", "사용되지 않는 레이어/Null이 표시되어 있습니다. 숨기려면 누르세요.") \
   X(TOOLTIP_USE_DEFAULT_SETTINGS, "Reset the settings to their defaults.", "Reinicia las configuraciones a sus predeterminados.", "Сбросить настройки на настройки по умолчанию.", "重设所有设置为默认.", "설정을 기본값으로 재설정합니다.") \
+  X(TOOLTIP_WIZARD_GENERATE_ANIMATION_FROM_GRID, "Generate frames in the current selected animation item from grid values.", "Genera frames en el item de animacion seleccionado actualmente a partir de valores de la cuadricula.", "Создает кадры в текущем выбранном элементе анимации на основе значений сетки.", "根据网格值在当前选中的动画项目中生成帧。", "현재 선택된 애니메이션 항목에서 그리드 값으로 프레임을 생성합니다.") \
+  X(TOOLTIP_WIZARD_CHANGE_ALL_FRAME_PROPERTIES, "Change certain properties of selected frames.\n(Note: this will also appear in Frame Properties when multiselecting frames.)", "Cambia ciertas propiedades de los frames seleccionados.\n(Nota: esto tambien aparecera en Propiedades de Frame al seleccionar multiples frames.)", "Изменить некоторые свойства выбранных кадров.\n(Примечание: это также появится в \"Свойствах кадра\" при выборе нескольких кадров.)", "更改所选帧的某些属性。\n(注意：在多选帧时，这也会显示在“帧属性”中。)", "선택한 프레임의 일부 속성을 변경합니다.\n(참고: 프레임을 여러 개 선택하면 프레임 속성에도 표시됩니다.)") \
+  X(TOOLTIP_WIZARD_RENDER_ANIMATION, "Render the animation into a media format.\n(Note: this requires FFmpeg!)", "Renderiza la animacion a un formato multimedia.\n(Nota: esto requiere FFmpeg!)", "Рендерит анимацию в медиаформат.\n(Примечание: требуется FFmpeg!)", "将动画渲染为媒体格式。\n(注意：需要 FFmpeg！)", "애니메이션을 미디어 형식으로 렌더링합니다.\n(참고: FFmpeg가 필요합니다!)") \
+  X(TOOLTIP_WIZARD_SCAN_AND_SET_REGIONS, "Match all regionless frames in all animations in the document to a region, if a matching region exists and matches the frame's relevant values.", "Empareja todos los frames sin region de todas las animaciones del documento con una region, si existe una region coincidente y coincide con los valores relevantes del frame.", "Сопоставляет все кадры без региона во всех анимациях документа с регионом, если существует подходящий регион и его релевантные значения совпадают со значениями кадра.", "将文档中所有动画里无区域的帧与区域进行匹配；若存在匹配区域且其相关值与帧一致，则进行设置。", "문서의 모든 애니메이션에서 영역이 없는 프레임을 영역과 매칭합니다. 일치하는 영역이 있고 프레임의 관련 값이 일치하면 설정합니다.") \
   X(TOOLTIP_USE_EXISTING_ITEM, "Reuse an unused item instead of creating a new one.", "Reusa un item no utilizado en vez de crear uno nuevo.", "Использовать неиспользуемый предмет, а не создавать новый.", "重用未使用的物品，而不是创建新物品。", "새로 만들지 않고 사용되지 않는 항목을 재사용합니다.") \
   X(TOOLTIP_VSYNC, "Toggle vertical sync; synchronizes program update rate with monitor refresh rate.", "Alterna la Sincronizacion Vertical; Sincroniza la tasa de actualizacion del programa con la tasa de refresco del monitor.", "Переключить вертикальную синхронизацию; синхронизирует частоту обновления программы с частотой обновления монитора.", "切换垂直同步; 同步程序的更新频率与屏幕的刷新频率.", "수직 동기화를 켜거나 끕니다. 프로그램의 업데이트 속도를 모니터의 새로고침 속도와 동기화합니다.") \
   X(TOOLTIP_ZOOM_STEP, "When zooming in/out with mouse or shortcut, this value will be used.", "Cuando se haga zoom in/out con el mouse o atajo, este valor sera usado.", "При масштабировании мышью или горячей клавишей будет использоваться это значение.", "当通过鼠标或快捷键放大/缩小视图时, 此数值会被使用.", "마우스나 단축키로 확대/축소할 때 이 값이 사용됩니다.")

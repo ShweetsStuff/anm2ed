@@ -78,10 +78,23 @@ namespace anm2ed::imgui
 
       auto behavior = [&]()
       {
+        auto maxEventIdBefore = anm2.content.events.empty() ? -1 : anm2.content.events.rbegin()->first;
         std::string errorString{};
         document.snapshot(localize.get(EDIT_PASTE_EVENTS));
         if (anm2.events_deserialize(clipboard.get(), merge::APPEND, &errorString))
+        {
+          if (!anm2.content.events.empty())
+          {
+            auto maxEventIdAfter = anm2.content.events.rbegin()->first;
+            if (maxEventIdAfter > maxEventIdBefore)
+            {
+              newEventId = maxEventIdAfter;
+              selection = {maxEventIdAfter};
+              reference = maxEventIdAfter;
+            }
+          }
           document.change(Document::EVENTS);
+        }
         else
         {
           toasts.push(std::vformat(localize.get(TOAST_DESERIALIZE_EVENTS_FAILED), std::make_format_args(errorString)));

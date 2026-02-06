@@ -130,10 +130,23 @@ namespace anm2ed::imgui
 
       auto behavior = [&]()
       {
+        auto maxSoundIdBefore = anm2.content.sounds.empty() ? -1 : anm2.content.sounds.rbegin()->first;
         std::string errorString{};
         document.snapshot(localize.get(TOAST_SOUNDS_PASTE));
         if (anm2.sounds_deserialize(clipboard.get(), document.directory_get(), merge::APPEND, &errorString))
+        {
+          if (!anm2.content.sounds.empty())
+          {
+            auto maxSoundIdAfter = anm2.content.sounds.rbegin()->first;
+            if (maxSoundIdAfter > maxSoundIdBefore)
+            {
+              newSoundId = maxSoundIdAfter;
+              selection = {maxSoundIdAfter};
+              reference = maxSoundIdAfter;
+            }
+          }
           document.change(Document::SOUNDS);
+        }
         else
         {
           toasts.push(std::vformat(localize.get(TOAST_SOUNDS_DESERIALIZE_ERROR), std::make_format_args(errorString)));
@@ -200,9 +213,17 @@ namespace anm2ed::imgui
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2());
 
         selection.start(anm2.content.sounds.size());
+        if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_A, ImGuiInputFlags_RouteFocused))
+        {
+          selection.clear();
+          for (auto& id : anm2.content.sounds | std::views::keys)
+            selection.insert(id);
+        }
+        if (ImGui::Shortcut(ImGuiKey_Escape, ImGuiInputFlags_RouteFocused)) selection.clear();
 
         for (auto& [id, sound] : anm2.content.sounds)
         {
+          auto isNewSound = newSoundId == id;
           ImGui::PushID(id);
 
           if (ImGui::BeginChild("##Sound Child", soundChildSize, ImGuiChildFlags_Borders))
@@ -222,11 +243,6 @@ namespace anm2ed::imgui
               if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) play(sound);
             }
             if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) open_directory(sound);
-            if (newSoundId == id)
-            {
-              ImGui::SetScrollHereY(0.5f);
-              newSoundId = -1;
-            }
 
             auto textWidth = ImGui::CalcTextSize(pathString.c_str()).x;
             auto tooltipPadding = style.WindowPadding.x * 4.0f;
@@ -267,6 +283,13 @@ namespace anm2ed::imgui
           }
 
           ImGui::EndChild();
+
+          if (isNewSound)
+          {
+            ImGui::SetScrollHereY(0.5f);
+            newSoundId = -1;
+          }
+
           ImGui::PopID();
         }
 

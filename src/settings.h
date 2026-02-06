@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 
 #include "anm2/anm2_type.h"
+#include "origin.h"
 #include "render.h"
 #include "strings.h"
 #include "types.h"
@@ -60,6 +61,7 @@ namespace anm2ed
   X(FILE_IS_AUTOSAVE, fileIsAutosave, STRING_UNDEFINED, BOOL, true)                                                    \
   X(FILE_IS_WARN_OVERWRITE, fileIsWarnOverwrite, STRING_UNDEFINED, BOOL, true)                                         \
   X(FILE_SNAPSHOT_STACK_SIZE, fileSnapshotStackSize, STRING_UNDEFINED, INT, 50)                                        \
+  X(FILE_COMPATIBILITY, fileCompatibility, STRING_UNDEFINED, INT, anm2::ANM2ED)                                        \
                                                                                                                        \
   X(KEYBOARD_REPEAT_DELAY, keyboardRepeatDelay, STRING_UNDEFINED, FLOAT, 0.300f)                                       \
   X(KEYBOARD_REPEAT_RATE, keyboardRepeatRate, STRING_UNDEFINED, FLOAT, 0.050f)                                         \
@@ -150,6 +152,9 @@ namespace anm2ed
                                                                                                                        \
   X(MERGE_TYPE, mergeType, STRING_UNDEFINED, INT, 0)                                                                   \
   X(MERGE_IS_DELETE_ANIMATIONS_AFTER, mergeIsDeleteAnimationsAfter, STRING_UNDEFINED, BOOL, false)                     \
+  X(MERGE_SPRITESHEETS_ORIGIN, mergeSpritesheetsOrigin, STRING_UNDEFINED, INT, anm2::APPEND_RIGHT)                     \
+  X(MERGE_SPRITESHEETS_IS_MAKE_REGIONS, mergeSpritesheetsIsMakeRegions, STRING_UNDEFINED, BOOL, true)                  \
+  X(MERGE_SPRITESHEETS_REGION_ORIGIN, mergeSpritesheetsRegionOrigin, STRING_UNDEFINED, INT, origin::TOP_LEFT)          \
                                                                                                                        \
   X(BAKE_INTERVAL, bakeInterval, STRING_UNDEFINED, INT, 1)                                                             \
   X(BAKE_IS_ROUND_SCALE, bakeIsRoundScale, STRING_UNDEFINED, BOOL, true)                                               \
@@ -202,6 +207,8 @@ namespace anm2ed
   X(SHORTCUT_RENAME, shortcutRename, SHORTCUT_STRING_RENAME, STRING, "F2")                                             \
   X(SHORTCUT_DEFAULT, shortcutDefault, SHORTCUT_STRING_DEFAULT, STRING, "Home")                                        \
   X(SHORTCUT_MERGE, shortcutMerge, SHORTCUT_STRING_MERGE, STRING, "Ctrl+E")                                            \
+  X(SHORTCUT_CONFIRM, shortcutConfirm, SHORTCUT_STRING_CONFIRM, STRING, "Enter")                                       \
+  X(SHORTCUT_CANCEL, shortcutCancel, SHORTCUT_STRING_CANCEL, STRING, "Escape")                                         \
   /* Tools */                                                                                                          \
   X(SHORTCUT_PAN, shortcutPan, SHORTCUT_STRING_PAN, STRING, "P")                                                       \
   X(SHORTCUT_MOVE, shortcutMove, SHORTCUT_STRING_MOVE, STRING, "V")                                                    \
@@ -238,7 +245,7 @@ namespace anm2ed
   /* Symbol / Name / String / Type / Default */                                                                        \
   X(WINDOW_ANIMATIONS, windowIsAnimations, LABEL_ANIMATIONS_WINDOW, BOOL, true)                                        \
   X(WINDOW_ANIMATION_PREVIEW, windowIsAnimationPreview, LABEL_ANIMATION_PREVIEW_WINDOW, BOOL, true)                    \
-  X(WINDOW_REGIONS, windowIsRegions, LABEL_REGIONS_WINDOW, BOOL, true)                                        \
+  X(WINDOW_REGIONS, windowIsRegions, LABEL_REGIONS_WINDOW, BOOL, true)                                                 \
   X(WINDOW_EVENTS, windowIsEvents, LABEL_EVENTS_WINDOW, BOOL, true)                                                    \
   X(WINDOW_FRAME_PROPERTIES, windowIsFrameProperties, LABEL_FRAME_PROPERTIES_WINDOW, BOOL, true)                       \
   X(WINDOW_LAYERS, windowIsLayers, LABEL_LAYERS_WINDOW, BOOL, true)                                                    \

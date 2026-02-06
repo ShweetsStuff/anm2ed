@@ -1,6 +1,7 @@
 #include "texture.h"
 
 #include <cstdio>
+#include <cstring>
 #include <filesystem>
 #include <lunasvg.h>
 #include <memory>
@@ -144,6 +145,35 @@ namespace anm2ed::resource
       return result != 0;
     }
     return false;
+  }
+
+  Texture Texture::merge_append(const Texture& base, const Texture& append, bool isAppendRight)
+  {
+    if (base.size.x <= 0 || base.size.y <= 0) return append;
+    if (append.size.x <= 0 || append.size.y <= 0) return base;
+    if (base.pixels.empty()) return append;
+    if (append.pixels.empty()) return base;
+
+    auto resultSize =
+        isAppendRight ? ivec2(base.size.x + append.size.x, std::max(base.size.y, append.size.y))
+                      : ivec2(std::max(base.size.x, append.size.x), base.size.y + append.size.y);
+    auto resultPixelsSize = (size_t)resultSize.x * (size_t)resultSize.y * CHANNELS;
+    std::vector<uint8_t> resultPixels(resultPixelsSize, 0);
+
+    auto blit = [&](const Texture& texture, ivec2 offset)
+    {
+      for (int y = 0; y < texture.size.y; y++)
+      {
+        auto src = (size_t)y * (size_t)texture.size.x * CHANNELS;
+        auto dst = ((size_t)(offset.y + y) * (size_t)resultSize.x + (size_t)offset.x) * CHANNELS;
+        std::memcpy(resultPixels.data() + dst, texture.pixels.data() + src, (size_t)texture.size.x * CHANNELS);
+      }
+    };
+
+    blit(base, {0, 0});
+    blit(append, isAppendRight ? ivec2(base.size.x, 0) : ivec2(0, base.size.y));
+
+    return Texture(resultPixels.data(), resultSize);
   }
 
   vec4 Texture::pixel_read(vec2 position) const

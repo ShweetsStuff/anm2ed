@@ -3,6 +3,7 @@
 #include <ranges>
 #include <string>
 
+#include "imgui_.h"
 #include "log.h"
 #include "path_.h"
 #include "process_.h"
@@ -192,6 +193,7 @@ namespace anm2ed::imgui::wizard
 
     ImGui::Separator();
 
+    imgui::shortcut(manager.chords[SHORTCUT_CONFIRM]);
     if (ImGui::Button(localize.get(LABEL_RENDER), widgetSize))
     {
       path.replace_extension(render::EXTENSIONS[type]);
@@ -304,6 +306,7 @@ namespace anm2ed::imgui::wizard
 
     ImGui::SameLine();
 
+    imgui::shortcut(manager.chords[SHORTCUT_CANCEL]);
     if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize)) isEnd = true;
   }
 }

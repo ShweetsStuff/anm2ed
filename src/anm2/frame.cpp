@@ -76,7 +76,7 @@ namespace anm2ed::anm2
     }
   }
 
-  XMLElement* Frame::to_element(XMLDocument& document, Type type)
+  XMLElement* Frame::to_element(XMLDocument& document, Type type, Flags flags)
   {
     auto element = document.NewElement(type == TRIGGER ? "Trigger" : "Frame");
 
@@ -101,15 +101,23 @@ namespace anm2ed::anm2
         element->SetAttribute("Interpolated", isInterpolated);
         break;
       case LAYER:
-        if (regionID != -1) element->SetAttribute("RegionId", regionID);
+      {
+        bool noRegions = has_flag(flags, NO_REGIONS);
+        bool frameNoRegionValues = has_flag(flags, FRAME_NO_REGION_VALUES);
+        bool writeRegionValues = !frameNoRegionValues || noRegions;
+
+        if (!noRegions && regionID != -1) element->SetAttribute("RegionId", regionID);
         element->SetAttribute("XPosition", position.x);
         element->SetAttribute("YPosition", position.y);
-        element->SetAttribute("XPivot", pivot.x);
-        element->SetAttribute("YPivot", pivot.y);
-        element->SetAttribute("XCrop", crop.x);
-        element->SetAttribute("YCrop", crop.y);
-        element->SetAttribute("Width", size.x);
-        element->SetAttribute("Height", size.y);
+        if (writeRegionValues)
+        {
+          element->SetAttribute("XPivot", pivot.x);
+          element->SetAttribute("YPivot", pivot.y);
+          element->SetAttribute("XCrop", crop.x);
+          element->SetAttribute("YCrop", crop.y);
+          element->SetAttribute("Width", size.x);
+          element->SetAttribute("Height", size.y);
+        }
         element->SetAttribute("XScale", scale.x);
         element->SetAttribute("YScale", scale.y);
         element->SetAttribute("Delay", duration);
@@ -124,15 +132,17 @@ namespace anm2ed::anm2
         element->SetAttribute("Rotation", rotation);
         element->SetAttribute("Interpolated", isInterpolated);
         break;
+      }
       case TRIGGER:
         if (eventID != -1) element->SetAttribute("EventId", eventID);
 
-        for (auto& id : soundIDs)
-        {
-          if (id == -1) continue;
-          auto soundChild = element->InsertNewChildElement("Sound");
-          soundChild->SetAttribute("Id", id);
-        }
+        if (!has_flag(flags, NO_SOUNDS))
+          for (auto& id : soundIDs)
+          {
+            if (id == -1) continue;
+            auto soundChild = element->InsertNewChildElement("Sound");
+            soundChild->SetAttribute("Id", id);
+          }
 
         element->SetAttribute("AtFrame", atFrame);
         break;
@@ -143,15 +153,15 @@ namespace anm2ed::anm2
     return element;
   }
 
-  void Frame::serialize(XMLDocument& document, XMLElement* parent, Type type)
+  void Frame::serialize(XMLDocument& document, XMLElement* parent, Type type, Flags flags)
   {
-    parent->InsertEndChild(to_element(document, type));
+    parent->InsertEndChild(to_element(document, type, flags));
   }
 
-  std::string Frame::to_string(Type type)
+  std::string Frame::to_string(Type type, Flags flags)
   {
     XMLDocument document{};
-    document.InsertEndChild(to_element(document, type));
+    document.InsertEndChild(to_element(document, type, flags));
     return xml::document_to_string(document);
   }
 

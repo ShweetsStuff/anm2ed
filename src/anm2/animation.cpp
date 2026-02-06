@@ -78,34 +78,37 @@ namespace anm2ed::anm2
     }
   }
 
-  XMLElement* Animation::to_element(XMLDocument& document)
+  XMLElement* Animation::to_element(XMLDocument& document, Flags flags)
   {
     auto element = document.NewElement("Animation");
     element->SetAttribute("Name", name.c_str());
     element->SetAttribute("FrameNum", frameNum);
     element->SetAttribute("Loop", isLoop);
 
-    rootAnimation.serialize(document, element, ROOT);
+    rootAnimation.serialize(document, element, ROOT, -1, flags);
 
     auto layerAnimationsElement = document.NewElement("LayerAnimations");
     for (auto& i : layerOrder)
     {
       Item& layerAnimation = layerAnimations.at(i);
-      layerAnimation.serialize(document, layerAnimationsElement, LAYER, i);
+      layerAnimation.serialize(document, layerAnimationsElement, LAYER, i, flags);
     }
     element->InsertEndChild(layerAnimationsElement);
 
     auto nullAnimationsElement = document.NewElement("NullAnimations");
     for (auto& [id, nullAnimation] : nullAnimations)
-      nullAnimation.serialize(document, nullAnimationsElement, NULL_, id);
+      nullAnimation.serialize(document, nullAnimationsElement, NULL_, id, flags);
     element->InsertEndChild(nullAnimationsElement);
 
-    triggers.serialize(document, element, TRIGGER);
+    triggers.serialize(document, element, TRIGGER, -1, flags);
 
     return element;
   }
 
-  void Animation::serialize(XMLDocument& document, XMLElement* parent) { parent->InsertEndChild(to_element(document)); }
+  void Animation::serialize(XMLDocument& document, XMLElement* parent, Flags flags)
+  {
+    parent->InsertEndChild(to_element(document, flags));
+  }
 
   std::string Animation::to_string()
   {
@@ -158,6 +161,8 @@ namespace anm2ed::anm2
 
       for (auto& [id, layerAnimation] : layerAnimations)
       {
+        if (!layerAnimation.isVisible) continue;
+
         auto frame = layerAnimation.frame_generate(t, LAYER);
 
         if (frame.size == vec2() || !frame.isVisible) continue;

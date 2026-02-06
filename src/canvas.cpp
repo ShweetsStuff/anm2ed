@@ -212,6 +212,22 @@ namespace anm2ed
     glUseProgram(0);
   }
 
+  void Canvas::rect_fill_render(Shader& shader, const mat4& transform, const mat4& model, vec4 color) const
+  {
+    glUseProgram(shader.id);
+
+    glUniformMatrix4fv(glGetUniformLocation(shader.id, shader::UNIFORM_TRANSFORM), 1, GL_FALSE, value_ptr(transform));
+    if (auto location = glGetUniformLocation(shader.id, shader::UNIFORM_MODEL); location != -1)
+      glUniformMatrix4fv(location, 1, GL_FALSE, value_ptr(model));
+    glUniform4fv(glGetUniformLocation(shader.id, shader::UNIFORM_COLOR), 1, value_ptr(color));
+
+    glBindVertexArray(rectVAO);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+    glBindVertexArray(0);
+    glUseProgram(0);
+  }
+
   void Canvas::zoom_set(float& zoom, vec2& pan, vec2 focus, float step) const
   {
     auto zoomFactor = math::percent_to_unit(zoom);

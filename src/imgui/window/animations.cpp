@@ -187,7 +187,15 @@ namespace anm2ed::imgui
         std::set<int> indices{};
         std::string errorString{};
         if (anm2.animations_deserialize(clipboardText, start, indices, &errorString))
-          selection = indices;
+        {
+          if (!indices.empty())
+          {
+            auto index = *indices.rbegin();
+            selection = {index};
+            reference = {index};
+            newAnimationSelectedIndex = index;
+          }
+        }
         else
         {
           toasts.push(

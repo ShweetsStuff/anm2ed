@@ -33,9 +33,9 @@ namespace anm2ed::anm2
 
     Frame() = default;
     Frame(tinyxml2::XMLElement*, Type);
-    tinyxml2::XMLElement* to_element(tinyxml2::XMLDocument&, Type);
-    std::string to_string(Type type);
-    void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*, Type);
+    tinyxml2::XMLElement* to_element(tinyxml2::XMLDocument&, Type, Flags = 0);
+    std::string to_string(Type type, Flags = 0);
+    void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*, Type, Flags = 0);
     void shorten();
     void extend();
   };

@@ -66,9 +66,9 @@ namespace anm2ed
     Document* get(int = -1);
     Document* open(const std::filesystem::path&, bool = false, bool = true);
     void new_(const std::filesystem::path&);
-    void save(int, const std::filesystem::path& = {});
-    void save(const std::filesystem::path& = {});
-    void autosave(Document&);
+    void save(int, const std::filesystem::path& = {}, anm2::Compatibility = anm2::ANM2ED);
+    void save(const std::filesystem::path& = {}, anm2::Compatibility = anm2::ANM2ED);
+    void autosave(Document&, anm2::Compatibility = anm2::ANM2ED);
     void set(int);
     void close(int);
     void layer_properties_open(int = -1);

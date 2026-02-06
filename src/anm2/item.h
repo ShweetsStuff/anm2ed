@@ -15,9 +15,9 @@ namespace anm2ed::anm2
 
     Item() = default;
     Item(tinyxml2::XMLElement*, Type, int* = nullptr);
-    tinyxml2::XMLElement* to_element(tinyxml2::XMLDocument&, Type, int);
-    void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*, Type, int = -1);
-    std::string to_string(Type, int = -1);
+    tinyxml2::XMLElement* to_element(tinyxml2::XMLDocument&, Type, int, Flags = 0);
+    void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*, Type, int = -1, Flags = 0);
+    std::string to_string(Type, int = -1, Flags = 0);
     int length(Type);
     Frame frame_generate(float, Type);
     void frames_change(FrameChange, anm2::Type, ChangeType, std::set<int>&);

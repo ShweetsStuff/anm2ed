@@ -20,7 +20,7 @@ namespace anm2ed::anm2
 
     Content() = default;
 
-    void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*);
+    void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*, Flags = 0);
     Content(tinyxml2::XMLElement*);
   };
 }

@@ -26,8 +26,8 @@ namespace anm2ed::anm2
     Animation(tinyxml2::XMLElement*);
     Item* item_get(Type, int = -1);
     void item_remove(Type, int = -1);
-    tinyxml2::XMLElement* to_element(tinyxml2::XMLDocument&);
-    void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*);
+    tinyxml2::XMLElement* to_element(tinyxml2::XMLDocument&, Flags = 0);
+    void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*, Flags = 0);
     std::string to_string();
     int length();
     void fit_length();

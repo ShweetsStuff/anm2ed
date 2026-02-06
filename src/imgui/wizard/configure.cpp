@@ -56,6 +56,16 @@ namespace anm2ed::imgui::wizard
           input_int_range(localize.get(LABEL_STACK_SIZE), temporary.fileSnapshotStackSize, 0, 100);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_STACK_SIZE));
 
+          ImGui::SeparatorText(localize.get(LABEL_COMPATIBILITY));
+          ImGui::RadioButton(localize.get(LABEL_ISAAC), &temporary.fileCompatibility, anm2::ISAAC);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_COMPATIBILITY_ISAAC));
+          ImGui::SameLine();
+          ImGui::RadioButton(localize.get(LABEL_ANM2ED), &temporary.fileCompatibility, anm2::ANM2ED);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_COMPATIBILITY_ANM2ED));
+          ImGui::SameLine();
+          ImGui::RadioButton(localize.get(LABEL_ANM2ED_LIMITED), &temporary.fileCompatibility, anm2::ANM2ED_LIMITED);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_COMPATIBILITY_ANM2ED_LIMITED));
+
           ImGui::SeparatorText(localize.get(LABEL_OPTIONS));
           ImGui::Checkbox(localize.get(LABEL_OVERWRITE_WARNING), &temporary.fileIsWarnOverwrite);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OVERWRITE_WARNING));
@@ -164,6 +174,7 @@ namespace anm2ed::imgui::wizard
 
     auto widgetSize = widget_size_with_row_get(3);
 
+    shortcut(manager.chords[SHORTCUT_CONFIRM]);
     if (ImGui::Button(localize.get(BASIC_SAVE), widgetSize))
     {
       settings = temporary;
@@ -190,6 +201,7 @@ namespace anm2ed::imgui::wizard
 
     ImGui::SameLine();
 
+    shortcut(manager.chords[SHORTCUT_CLOSE]);
     if (ImGui::Button(localize.get(LABEL_CLOSE), widgetSize)) isSet = true;
     ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CLOSE_SETTINGS));
   }

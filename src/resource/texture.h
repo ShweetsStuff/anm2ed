@@ -39,6 +39,7 @@ namespace anm2ed::resource
     Texture(const std::filesystem::path&);
     bool write_png(const std::filesystem::path&);
     static bool write_pixels_png(const std::filesystem::path&, glm::ivec2, const uint8_t*);
+    static Texture merge_append(const Texture&, const Texture&, bool);
     void pixel_set(glm::ivec2, glm::vec4);
     void pixel_line(glm::ivec2, glm::ivec2, glm::vec4);
   };

@@ -29,13 +29,13 @@ namespace anm2ed::anm2
         sounds.emplace(id, Sound(child, id));
   }
 
-  void Content::serialize(XMLDocument& document, XMLElement* parent)
+  void Content::serialize(XMLDocument& document, XMLElement* parent, Flags flags)
   {
     auto element = document.NewElement("Content");
 
     auto spritesheetsElement = document.NewElement("Spritesheets");
     for (auto& [id, spritesheet] : spritesheets)
-      spritesheet.serialize(document, spritesheetsElement, id);
+      spritesheet.serialize(document, spritesheetsElement, id, flags);
     element->InsertEndChild(spritesheetsElement);
 
     auto layersElement = document.NewElement("Layers");
@@ -53,7 +53,7 @@ namespace anm2ed::anm2
       event.serialize(document, eventsElement, id);
     element->InsertEndChild(eventsElement);
 
-    if (!sounds.empty())
+    if (!has_flag(flags, NO_SOUNDS) && !sounds.empty())
     {
       auto soundsElement = document.NewElement("Sounds");
       for (auto& [id, sound] : sounds)

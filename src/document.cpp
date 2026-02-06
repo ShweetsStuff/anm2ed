@@ -17,6 +17,16 @@ using namespace glm;
 
 namespace anm2ed
 {
+  namespace
+  {
+    anm2::Flags serialize_flags_get(anm2::Compatibility compatibility)
+    {
+      if (auto it = anm2::COMPATIBILITY_FLAGS.find(compatibility); it != anm2::COMPATIBILITY_FLAGS.end())
+        return it->second;
+      return 0;
+    }
+  }
+
   Document::Document(Anm2& anm2, const std::filesystem::path& path)
   {
     this->anm2 = std::move(anm2);
@@ -95,13 +105,13 @@ namespace anm2ed
     return *this;
   }
 
-  bool Document::save(const std::filesystem::path& path, std::string* errorString)
+  bool Document::save(const std::filesystem::path& path, std::string* errorString, anm2::Compatibility compatibility)
   {
     this->path = !path.empty() ? path : this->path;
 
     auto absolutePath = this->path;
     auto absolutePathUtf8 = path::to_utf8(absolutePath);
-    if (anm2.serialize(absolutePath, errorString))
+    if (anm2.serialize(absolutePath, errorString, serialize_flags_get(compatibility)))
     {
       toasts.push(std::vformat(localize.get(TOAST_SAVE_DOCUMENT), std::make_format_args(absolutePathUtf8)));
       logger.info(
@@ -138,11 +148,11 @@ namespace anm2ed
     return restorePath;
   }
 
-  bool Document::autosave(std::string* errorString)
+  bool Document::autosave(std::string* errorString, anm2::Compatibility compatibility)
   {
     auto autosavePath = autosave_path_get();
     auto autosavePathUtf8 = path::to_utf8(autosavePath);
-    if (anm2.serialize(autosavePath, errorString))
+    if (anm2.serialize(autosavePath, errorString, serialize_flags_get(compatibility)))
     {
       autosaveHash = hash;
       lastAutosaveTime = 0.0f;

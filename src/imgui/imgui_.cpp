@@ -499,7 +499,9 @@ namespace anm2ed::imgui
 
   bool shortcut(ImGuiKeyChord chord, shortcut::Type type)
   {
-    if (ImGui::GetTopMostPopupModal() != nullptr) return false;
+    if (ImGui::GetTopMostPopupModal() != nullptr &&
+        (type == shortcut::GLOBAL || type == shortcut::GLOBAL_SET))
+      return false;
 
     int flags = type == shortcut::GLOBAL || type == shortcut::GLOBAL_SET ? ImGuiInputFlags_RouteGlobal
                                                                          : ImGuiInputFlags_RouteFocused;

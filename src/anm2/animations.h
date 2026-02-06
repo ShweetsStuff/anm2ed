@@ -13,8 +13,8 @@ namespace anm2ed::anm2
 
     Animations() = default;
     Animations(tinyxml2::XMLElement*);
-    tinyxml2::XMLElement* to_element(tinyxml2::XMLDocument&);
-    void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*);
+    tinyxml2::XMLElement* to_element(tinyxml2::XMLDocument&, Flags = 0);
+    void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*, Flags = 0);
     int length();
   };
 }

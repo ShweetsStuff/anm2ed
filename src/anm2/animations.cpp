@@ -16,18 +16,18 @@ namespace anm2ed::anm2
       items.push_back(Animation(child));
   }
 
-  XMLElement* Animations::to_element(XMLDocument& document)
+  XMLElement* Animations::to_element(XMLDocument& document, Flags flags)
   {
     auto element = document.NewElement("Animations");
     element->SetAttribute("DefaultAnimation", defaultAnimation.c_str());
     for (auto& animation : items)
-      animation.serialize(document, element);
+      animation.serialize(document, element, flags);
     return element;
   }
 
-  void Animations::serialize(XMLDocument& document, XMLElement* parent)
+  void Animations::serialize(XMLDocument& document, XMLElement* parent, Flags flags)
   {
-    parent->InsertEndChild(to_element(document));
+    parent->InsertEndChild(to_element(document, flags));
   }
 
   int Animations::length()

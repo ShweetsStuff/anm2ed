@@ -35,7 +35,8 @@ namespace anm2ed::imgui
       if (isDirty)
       {
         document.lastAutosaveTime += ImGui::GetIO().DeltaTime;
-        if (document.lastAutosaveTime > time::SECOND_M) manager.autosave(document);
+        if (document.lastAutosaveTime > time::SECOND_M)
+          manager.autosave(document, (anm2::Compatibility)settings.fileCompatibility);
       }
     }
 
@@ -139,9 +140,10 @@ namespace anm2ed::imgui
             closePopup.close();
           };
 
+          shortcut(manager.chords[SHORTCUT_CONFIRM]);
           if (ImGui::Button(localize.get(BASIC_YES), widgetSize))
           {
-            manager.save(closeDocumentIndex);
+            manager.save(closeDocumentIndex, {}, (anm2::Compatibility)settings.fileCompatibility);
             manager.close(closeDocumentIndex);
             close();
           }
@@ -156,6 +158,7 @@ namespace anm2ed::imgui
 
           ImGui::SameLine();
 
+          shortcut(manager.chords[SHORTCUT_CANCEL]);
           if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize))
           {
             isQuitting = false;

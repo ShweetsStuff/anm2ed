@@ -56,6 +56,8 @@ namespace anm2ed
                      glm::vec4 = glm::vec4(1.0f)) const;
     void texture_render(resource::Shader&, GLuint&, glm::mat4 = {1.0f}, glm::vec4 = glm::vec4(1.0f), glm::vec3 = {},
                         float* = (float*)TEXTURE_VERTICES) const;
+    void rect_fill_render(resource::Shader&, const glm::mat4&, const glm::mat4&,
+                          glm::vec4 = glm::vec4(1.0f)) const;
     void rect_render(resource::Shader&, const glm::mat4&, const glm::mat4&, glm::vec4 = glm::vec4(1.0f),
                      float dashLength = DASH_LENGTH, float dashGap = DASH_GAP, float dashOffset = DASH_OFFSET) const;
     void zoom_set(float&, glm::vec2&, glm::vec2, float) const;

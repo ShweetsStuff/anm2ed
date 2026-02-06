@@ -23,7 +23,7 @@ namespace anm2ed::anm2
       frames.push_back(Frame(child, type));
   }
 
-  XMLElement* Item::to_element(XMLDocument& document, Type type, int id)
+  XMLElement* Item::to_element(XMLDocument& document, Type type, int id, Flags flags)
   {
     auto element = document.NewElement(TYPE_ITEM_STRINGS[type]);
 
@@ -34,20 +34,20 @@ namespace anm2ed::anm2
     if (type == TRIGGER) frames_sort_by_at_frame();
 
     for (auto& frame : frames)
-      frame.serialize(document, element, type);
+      frame.serialize(document, element, type, flags);
 
     return element;
   }
 
-  void Item::serialize(XMLDocument& document, XMLElement* parent, Type type, int id)
+  void Item::serialize(XMLDocument& document, XMLElement* parent, Type type, int id, Flags flags)
   {
-    parent->InsertEndChild(to_element(document, type, id));
+    parent->InsertEndChild(to_element(document, type, id, flags));
   }
 
-  std::string Item::to_string(Type type, int id)
+  std::string Item::to_string(Type type, int id, Flags flags)
   {
     XMLDocument document{};
-    document.InsertEndChild(to_element(document, type, id));
+    document.InsertEndChild(to_element(document, type, id, flags));
     return xml::document_to_string(document);
   }
 

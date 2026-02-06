@@ -52,10 +52,23 @@ namespace anm2ed::imgui
 
       auto behavior = [&]()
       {
+        auto maxNullIdBefore = anm2.content.nulls.empty() ? -1 : anm2.content.nulls.rbegin()->first;
         std::string errorString{};
         document.snapshot(localize.get(EDIT_PASTE_NULLS));
         if (anm2.nulls_deserialize(clipboard.get(), merge::APPEND, &errorString))
+        {
+          if (!anm2.content.nulls.empty())
+          {
+            auto maxNullIdAfter = anm2.content.nulls.rbegin()->first;
+            if (maxNullIdAfter > maxNullIdBefore)
+            {
+              newNullId = maxNullIdAfter;
+              selection = {maxNullIdAfter};
+              reference = maxNullIdAfter;
+            }
+          }
           document.change(Document::NULLS);
+        }
         else
         {
           toasts.push(std::vformat(localize.get(TOAST_DESERIALIZE_NULLS_FAILED), std::make_format_args(errorString)));
@@ -177,6 +190,7 @@ namespace anm2ed::imgui
 
       auto widgetSize = widget_size_with_row_get(2);
 
+      shortcut(manager.chords[SHORTCUT_CONFIRM]);
       if (ImGui::Button(reference == -1 ? localize.get(BASIC_ADD) : localize.get(BASIC_CONFIRM), widgetSize))
       {
         if (reference == -1)
@@ -207,6 +221,7 @@ namespace anm2ed::imgui
 
       ImGui::SameLine();
 
+      shortcut(manager.chords[SHORTCUT_CANCEL]);
       if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize)) manager.null_properties_close();
 
       ImGui::EndPopup();

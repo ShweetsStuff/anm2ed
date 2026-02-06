@@ -31,22 +31,26 @@ namespace anm2ed::anm2
     Animations animations{};
 
     Anm2();
-    tinyxml2::XMLElement* to_element(tinyxml2::XMLDocument&);
-    bool serialize(const std::filesystem::path&, std::string* = nullptr);
-    std::string to_string();
+    tinyxml2::XMLElement* to_element(tinyxml2::XMLDocument&, Flags = 0);
+    bool serialize(const std::filesystem::path&, std::string* = nullptr, Flags = 0);
+    std::string to_string(Flags = 0);
     Anm2(const std::filesystem::path&, std::string* = nullptr);
     uint64_t hash();
 
     Spritesheet* spritesheet_get(int);
     bool spritesheet_add(const std::filesystem::path&, const std::filesystem::path&, int&);
+    bool spritesheet_pack(int);
+    bool regions_trim(int, const std::set<int>&);
     std::vector<std::string> spritesheet_labels_get();
     std::vector<int> spritesheet_ids_get();
     std::set<int> spritesheets_unused();
+    bool spritesheets_merge(const std::set<int>&, SpritesheetMergeOrigin, bool, origin::Type);
     bool spritesheets_deserialize(const std::string&, const std::filesystem::path&, types::merge::Type type,
                                   std::string*);
     std::vector<std::string> region_labels_get(Spritesheet&);
     std::vector<int> region_ids_get(Spritesheet&);
     std::set<int> regions_unused(Spritesheet&);
+    void scan_and_set_regions();
 
     void layer_add(int&);
     std::set<int> layers_unused();
