@@ -75,8 +75,10 @@ namespace anm2ed
         previewZoom(other.previewZoom), previewPan(other.previewPan), editorPan(other.editorPan),
         editorZoom(other.editorZoom), overlayIndex(other.overlayIndex), hash(other.hash), saveHash(other.saveHash),
         autosaveHash(other.autosaveHash), lastAutosaveTime(other.lastAutosaveTime), isValid(other.isValid),
-        isOpen(other.isOpen), isForceDirty(other.isForceDirty), isAnimationPreviewSet(other.isAnimationPreviewSet),
-        isSpritesheetEditorSet(other.isSpritesheetEditorSet)
+        isOpen(other.isOpen), isForceDirty(other.isForceDirty),
+        spritesheetHashes(std::move(other.spritesheetHashes)),
+        spritesheetSaveHashes(std::move(other.spritesheetSaveHashes)),
+        isAnimationPreviewSet(other.isAnimationPreviewSet), isSpritesheetEditorSet(other.isSpritesheetEditorSet)
   {
   }
 
@@ -99,6 +101,8 @@ namespace anm2ed
       isValid = other.isValid;
       isOpen = other.isOpen;
       isForceDirty = other.isForceDirty;
+      spritesheetHashes = std::move(other.spritesheetHashes);
+      spritesheetSaveHashes = std::move(other.spritesheetSaveHashes);
       isAnimationPreviewSet = other.isAnimationPreviewSet;
       isSpritesheetEditorSet = other.isSpritesheetEditorSet;
     }
@@ -182,6 +186,44 @@ namespace anm2ed
     isForceDirty = false;
   }
 
+  void Document::spritesheet_hashes_reset()
+  {
+    spritesheetHashes.clear();
+    spritesheetSaveHashes.clear();
+    for (auto& [id, spritesheet] : anm2.content.spritesheets)
+    {
+      auto currentHash = spritesheet.hash();
+      spritesheetHashes[id] = currentHash;
+      spritesheetSaveHashes[id] = currentHash;
+    }
+  }
+
+  void Document::spritesheet_hashes_sync()
+  {
+    for (auto it = spritesheetHashes.begin(); it != spritesheetHashes.end();)
+    {
+      if (!anm2.content.spritesheets.contains(it->first))
+        it = spritesheetHashes.erase(it);
+      else
+        ++it;
+    }
+
+    for (auto it = spritesheetSaveHashes.begin(); it != spritesheetSaveHashes.end();)
+    {
+      if (!anm2.content.spritesheets.contains(it->first))
+        it = spritesheetSaveHashes.erase(it);
+      else
+        ++it;
+    }
+
+    for (auto& [id, spritesheet] : anm2.content.spritesheets)
+    {
+      auto currentHash = spritesheet.hash();
+      spritesheetHashes[id] = currentHash;
+      if (!spritesheetSaveHashes.contains(id)) spritesheetSaveHashes[id] = currentHash;
+    }
+  }
+
   void Document::change(ChangeType type)
   {
     hash_set();
@@ -191,7 +233,10 @@ namespace anm2ed
     auto animations_set = [&]() { animation.labels_set(anm2.animation_labels_get()); };
 
     auto spritesheets_set = [&]()
-    { spritesheet.labels_set(anm2.spritesheet_labels_get(), anm2.spritesheet_ids_get()); };
+    {
+      spritesheet.labels_set(anm2.spritesheet_labels_get(), anm2.spritesheet_ids_get());
+      spritesheet_hashes_sync();
+    };
 
     auto sounds_set = [&]() { sound.labels_set(anm2.sound_labels_get(), anm2.sound_ids_get()); };
 
@@ -244,6 +289,37 @@ namespace anm2ed
 
   bool Document::is_dirty() const { return hash != saveHash; }
   bool Document::is_autosave_dirty() const { return hash != autosaveHash; }
+  void Document::spritesheet_hash_update(int id)
+  {
+    if (!anm2.content.spritesheets.contains(id)) return;
+    spritesheetHashes[id] = anm2.content.spritesheets.at(id).hash();
+  }
+
+  void Document::spritesheet_hash_set_saved(int id)
+  {
+    if (!anm2.content.spritesheets.contains(id)) return;
+    auto currentHash = anm2.content.spritesheets.at(id).hash();
+    spritesheetHashes[id] = currentHash;
+    spritesheetSaveHashes[id] = currentHash;
+  }
+
+  bool Document::spritesheet_is_dirty(int id)
+  {
+    if (!anm2.content.spritesheets.contains(id)) return false;
+    if (!spritesheetHashes.contains(id)) spritesheet_hash_update(id);
+    auto saveIt = spritesheetSaveHashes.find(id);
+    if (saveIt == spritesheetSaveHashes.end()) return false;
+    return spritesheetHashes.at(id) != saveIt->second;
+  }
+
+  bool Document::spritesheet_any_dirty()
+  {
+    for (auto& [id, spritesheet] : anm2.content.spritesheets)
+    {
+      if (spritesheet_is_dirty(id)) return true;
+    }
+    return false;
+  }
   std::filesystem::path Document::directory_get() const { return path.parent_path(); }
   std::filesystem::path Document::filename_get() const { return path.filename(); }
   bool Document::is_valid() const { return isValid && !path.empty(); }
@@ -272,6 +348,7 @@ namespace anm2ed
         auto pathString = path::to_utf8(spritesheet.path);
         this->spritesheet.selection = {id};
         this->spritesheet.reference = id;
+        spritesheet_hash_set_saved(id);
         toasts.push(std::vformat(localize.get(TOAST_SPRITESHEET_INITIALIZED), std::make_format_args(id, pathString)));
         logger.info(std::vformat(localize.get(TOAST_SPRITESHEET_INITIALIZED, anm2ed::ENGLISH),
                                  std::make_format_args(id, pathString)));

@@ -5,6 +5,7 @@
 #include <set>
 #include <vector>
 #include <string>
+#include <cstdint>
 #include <tinyxml2/tinyxml2.h>
 
 #include "texture.h"
@@ -48,5 +49,6 @@ namespace anm2ed::anm2
     void serialize(tinyxml2::XMLDocument&, tinyxml2::XMLElement*, int, Flags = 0);
     void reload(const std::filesystem::path&, const std::filesystem::path& = {});
     bool is_valid();
+    uint64_t hash() const;
   };
 }

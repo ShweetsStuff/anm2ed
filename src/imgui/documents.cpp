@@ -6,6 +6,8 @@
 #include "path_.h"
 #include "strings.h"
 #include "time_.h"
+#include "toast.h"
+#include "log.h"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::types;
@@ -61,7 +63,9 @@ namespace anm2ed::imgui
         for (int i = 0; i < documentsCount; ++i)
         {
           auto& document = manager.documents[i];
-          auto isDirty = document.is_dirty() || document.isForceDirty;
+          auto isDocumentDirty = document.is_dirty() || document.isForceDirty;
+          auto isSpritesheetDirty = document.spritesheet_any_dirty();
+          auto isDirty = isDocumentDirty || isSpritesheetDirty;
 
           if (!closePopup.is_open())
           {
@@ -87,13 +91,13 @@ namespace anm2ed::imgui
           }
 
           auto isRequested = i == manager.pendingSelected;
-          auto font = isDirty ? font::ITALICS : font::REGULAR;
+          auto font = isDocumentDirty ? font::ITALICS : font::REGULAR;
           auto filename = path::to_utf8(document.filename_get());
           auto string =
-              isDirty ? std::vformat(localize.get(FORMAT_NOT_SAVED), std::make_format_args(filename)) : filename;
+              isDocumentDirty ? std::vformat(localize.get(FORMAT_NOT_SAVED), std::make_format_args(filename)) : filename;
           auto label = std::format("{}###Document{}", string, i);
 
-          auto flags = isDirty ? ImGuiTabItemFlags_UnsavedDocument : 0;
+          auto flags = isDocumentDirty ? ImGuiTabItemFlags_UnsavedDocument : 0;
           if (isRequested) flags |= ImGuiTabItemFlags_SetSelected;
 
           ImGui::PushFont(resources.fonts[font].get(), font::SIZE);
@@ -129,7 +133,13 @@ namespace anm2ed::imgui
           auto& closeDocument = manager.documents[closeDocumentIndex];
 
           auto filename = path::to_utf8(closeDocument.filename_get());
-          auto prompt = std::vformat(localize.get(LABEL_DOCUMENT_MODIFIED_PROMPT), std::make_format_args(filename));
+          auto isDocumentDirty = closeDocument.is_dirty() || closeDocument.isForceDirty;
+          auto isSpritesheetDirty = closeDocument.spritesheet_any_dirty();
+          auto promptLabel = isDocumentDirty && isSpritesheetDirty
+                                 ? LABEL_DOCUMENT_AND_SPRITESHEETS_MODIFIED_PROMPT
+                                 : (isDocumentDirty ? LABEL_DOCUMENT_MODIFIED_PROMPT
+                                                    : LABEL_SPRITESHEETS_MODIFIED_PROMPT);
+          auto prompt = std::vformat(localize.get(promptLabel), std::make_format_args(filename));
           ImGui::TextUnformatted(prompt.c_str());
 
           auto widgetSize = imgui::widget_size_with_row_get(3);
@@ -143,7 +153,31 @@ namespace anm2ed::imgui
           shortcut(manager.chords[SHORTCUT_CONFIRM]);
           if (ImGui::Button(localize.get(BASIC_YES), widgetSize))
           {
-            manager.save(closeDocumentIndex, {}, (anm2::Compatibility)settings.fileCompatibility);
+            if (isDocumentDirty)
+              manager.save(closeDocumentIndex, {}, (anm2::Compatibility)settings.fileCompatibility);
+
+            if (isSpritesheetDirty)
+            {
+              for (auto& [id, spritesheet] : closeDocument.anm2.content.spritesheets)
+              {
+                if (!closeDocument.spritesheet_is_dirty(id)) continue;
+                auto pathString = path::to_utf8(spritesheet.path);
+                if (spritesheet.save(closeDocument.directory_get()))
+                {
+                  closeDocument.spritesheet_hash_set_saved(id);
+                  toasts.push(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET), std::make_format_args(id, pathString)));
+                  logger.info(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET, anm2ed::ENGLISH),
+                                           std::make_format_args(id, pathString)));
+                }
+                else
+                {
+                  toasts.push(
+                      std::vformat(localize.get(TOAST_SAVE_SPRITESHEET_FAILED), std::make_format_args(id, pathString)));
+                  logger.error(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET_FAILED, anm2ed::ENGLISH),
+                                            std::make_format_args(id, pathString)));
+                }
+              }
+            }
             manager.close(closeDocumentIndex);
             close();
           }

@@ -655,7 +655,10 @@ namespace anm2ed::imgui
             if (isMouseClicked)
               document.snapshot(useTool == tool::DRAW ? localize.get(EDIT_DRAW) : localize.get(EDIT_ERASE));
             if (isMouseDown) spritesheet->texture.pixel_line(ivec2(previousMousePos), ivec2(mousePos), color);
-            if (isMouseReleased) document.change(Document::SPRITESHEETS);
+            if (isMouseReleased)
+            {
+              document.change(Document::SPRITESHEETS);
+            }
             break;
           }
           case tool::COLOR_PICKER:

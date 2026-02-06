@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <map>
+#include <unordered_map>
 
 #include "snapshots.h"
 
@@ -64,6 +65,8 @@ namespace anm2ed
     bool isValid{true};
     bool isOpen{true};
     bool isForceDirty{false};
+    std::unordered_map<int, uint64_t> spritesheetHashes{};
+    std::unordered_map<int, uint64_t> spritesheetSaveHashes{};
     bool isAnimationPreviewSet{false};
     bool isSpritesheetEditorSet{false};
 
@@ -82,6 +85,12 @@ namespace anm2ed
     std::filesystem::path directory_get() const;
     std::filesystem::path filename_get() const;
     bool is_valid() const;
+    void spritesheet_hash_update(int);
+    void spritesheet_hash_set_saved(int);
+    bool spritesheet_is_dirty(int);
+    bool spritesheet_any_dirty();
+    void spritesheet_hashes_reset();
+    void spritesheet_hashes_sync();
 
     anm2::Frame* frame_get();
     anm2::Item* item_get();

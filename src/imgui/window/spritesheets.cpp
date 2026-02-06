@@ -1,6 +1,8 @@
 #include "spritesheets.h"
 
+#include <algorithm>
 #include <ranges>
+#include <vector>
 
 #include <filesystem>
 #include <format>
@@ -19,6 +21,8 @@ using namespace glm;
 
 namespace anm2ed::imgui
 {
+  static constexpr auto PADDING_MAX = 100;
+
   void Spritesheets::update(Manager& manager, Settings& settings, Resources& resources, Dialog& dialog,
                             Clipboard& clipboard)
   {
@@ -44,7 +48,8 @@ namespace anm2ed::imgui
       auto id = *selection.begin();
       if (!anm2.content.spritesheets.contains(id)) return;
       if (anm2.content.spritesheets.at(id).regions.empty()) return;
-      if (pack) pack();
+      packId = id;
+      packPopup.open();
     };
 
     auto add = [&](const std::filesystem::path& path)
@@ -85,6 +90,7 @@ namespace anm2ed::imgui
         {
           anm2::Spritesheet& spritesheet = anm2.content.spritesheets[id];
           spritesheet.reload(document.directory_get());
+          document.spritesheet_hash_set_saved(id);
           auto pathString = path::to_utf8(spritesheet.path);
           toasts.push(std::vformat(localize.get(TOAST_RELOAD_SPRITESHEET), std::make_format_args(id, pathString)));
           logger.info(std::vformat(localize.get(TOAST_RELOAD_SPRITESHEET, anm2ed::ENGLISH),
@@ -104,6 +110,7 @@ namespace anm2ed::imgui
         auto& id = *selection.begin();
         anm2::Spritesheet& spritesheet = anm2.content.spritesheets[id];
         spritesheet.reload(document.directory_get(), path);
+        document.spritesheet_hash_set_saved(id);
         auto pathString = path::to_utf8(spritesheet.path);
         toasts.push(std::vformat(localize.get(TOAST_REPLACE_SPRITESHEET), std::make_format_args(id, pathString)));
         logger.info(std::vformat(localize.get(TOAST_REPLACE_SPRITESHEET, anm2ed::ENGLISH),
@@ -113,16 +120,18 @@ namespace anm2ed::imgui
       DOCUMENT_EDIT(document, localize.get(EDIT_REPLACE_SPRITESHEET), Document::SPRITESHEETS, behavior());
     };
 
-    auto save = [&]()
+    auto save = [&](const std::set<int>& ids)
     {
-      if (selection.empty()) return;
+      if (ids.empty()) return;
 
-      for (auto& id : selection)
+      for (auto& id : ids)
       {
+        if (!anm2.content.spritesheets.contains(id)) continue;
         anm2::Spritesheet& spritesheet = anm2.content.spritesheets[id];
         auto pathString = path::to_utf8(spritesheet.path);
         if (spritesheet.save(document.directory_get()))
         {
+          document.spritesheet_hash_set_saved(id);
           toasts.push(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET), std::make_format_args(id, pathString)));
           logger.info(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET, anm2ed::ENGLISH),
                                    std::make_format_args(id, pathString)));
@@ -133,6 +142,20 @@ namespace anm2ed::imgui
           logger.error(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET_FAILED, anm2ed::ENGLISH),
                                     std::make_format_args(id, pathString)));
         }
+      }
+    };
+
+    auto save_open = [&]()
+    {
+      if (selection.empty()) return;
+      if (settings.fileIsWarnOverwrite)
+      {
+        saveSelection = selection;
+        overwritePopup.open();
+      }
+      else
+      {
+        save(selection);
       }
     };
 
@@ -165,12 +188,15 @@ namespace anm2ed::imgui
     };
     pack = [&]()
     {
-      if (selection.size() != 1) return;
+      int id = packId != -1 ? packId : (selection.size() == 1 ? *selection.begin() : -1);
+      if (id == -1) return;
+      if (!anm2.content.spritesheets.contains(id)) return;
+      if (anm2.content.spritesheets.at(id).regions.empty()) return;
 
       auto behavior = [&]()
       {
-        auto id = *selection.begin();
-        if (anm2.spritesheet_pack(id))
+        auto padding = std::max(0, settings.packPadding);
+        if (anm2.spritesheet_pack(id, padding))
         {
           toasts.push(localize.get(TOAST_PACK_SPRITESHEET));
           logger.info(localize.get(TOAST_PACK_SPRITESHEET, anm2ed::ENGLISH));
@@ -213,7 +239,8 @@ namespace anm2ed::imgui
 
       auto behavior = [&]()
       {
-        auto maxSpritesheetIdBefore = anm2.content.spritesheets.empty() ? -1 : anm2.content.spritesheets.rbegin()->first;
+        auto maxSpritesheetIdBefore =
+            anm2.content.spritesheets.empty() ? -1 : anm2.content.spritesheets.rbegin()->first;
         std::string errorString{};
         document.snapshot(localize.get(EDIT_PASTE_SPRITESHEETS));
         if (anm2.spritesheets_deserialize(clipboard.get(), document.directory_get(), merge::APPEND, &errorString))
@@ -271,9 +298,8 @@ namespace anm2ed::imgui
         if (ImGui::MenuItem(localize.get(BASIC_ADD), settings.shortcutAdd.c_str())) add_open();
         if (ImGui::MenuItem(localize.get(BASIC_REMOVE_UNUSED), settings.shortcutRemove.c_str())) remove_unused();
 
-        bool isPackable =
-            selection.size() == 1 && anm2.content.spritesheets.contains(*selection.begin()) &&
-            !anm2.content.spritesheets.at(*selection.begin()).regions.empty();
+        bool isPackable = selection.size() == 1 && anm2.content.spritesheets.contains(*selection.begin()) &&
+                          !anm2.content.spritesheets.at(*selection.begin()).regions.empty();
 
         if (ImGui::MenuItem(localize.get(BASIC_RELOAD), nullptr, false, !selection.empty())) reload();
         if (ImGui::MenuItem(localize.get(BASIC_REPLACE), nullptr, false, selection.size() == 1)) replace_open();
@@ -282,7 +308,7 @@ namespace anm2ed::imgui
         if (ImGui::MenuItem(localize.get(BASIC_PACK), nullptr, false, isPackable)) pack_open();
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_PACK_SPRITESHEET));
-        if (ImGui::MenuItem(localize.get(BASIC_SAVE), nullptr, false, !selection.empty())) save();
+        if (ImGui::MenuItem(localize.get(BASIC_SAVE), nullptr, false, !selection.empty())) save_open();
 
         ImGui::Separator();
 
@@ -313,11 +339,50 @@ namespace anm2ed::imgui
             selection.insert(id);
         }
         if (ImGui::Shortcut(ImGuiKey_Escape, ImGuiInputFlags_RouteFocused)) selection.clear();
+        auto scroll_to_item = [&](float itemHeight, bool isTarget)
+        {
+          if (!isTarget) return;
+          auto windowHeight = ImGui::GetWindowHeight();
+          auto targetTop = ImGui::GetCursorPosY();
+          auto targetBottom = targetTop + itemHeight;
+          auto visibleTop = ImGui::GetScrollY();
+          auto visibleBottom = visibleTop + windowHeight;
+          if (targetTop < visibleTop)
+            ImGui::SetScrollY(targetTop);
+          else if (targetBottom > visibleBottom)
+            ImGui::SetScrollY(targetBottom - windowHeight);
+        };
+        int scrollTargetId = -1;
+        if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+            (ImGui::IsKeyPressed(ImGuiKey_UpArrow, true) || ImGui::IsKeyPressed(ImGuiKey_DownArrow, true)))
+        {
+          std::vector<int> ids{};
+          ids.reserve(anm2.content.spritesheets.size());
+          for (auto& [id, sheet] : anm2.content.spritesheets)
+            ids.push_back(id);
+          if (!ids.empty())
+          {
+            int delta = ImGui::IsKeyPressed(ImGuiKey_UpArrow, true) ? -1 : 1;
+            int current = reference;
+            if (current == -1 && !selection.empty()) current = *selection.begin();
+            auto it = std::find(ids.begin(), ids.end(), current);
+            int index = it == ids.end() ? 0 : (int)std::distance(ids.begin(), it);
+            index = std::clamp(index + delta, 0, (int)ids.size() - 1);
+            int nextId = ids[index];
+            selection = {nextId};
+            reference = nextId;
+            region.reference = -1;
+            region.selection.clear();
+            scrollTargetId = nextId;
+          }
+        }
 
         for (auto& [id, spritesheet] : anm2.content.spritesheets)
         {
           auto isNewSpritesheet = newSpritesheetId == id;
           ImGui::PushID(id);
+
+          scroll_to_item(spritesheetChildSize.y, scrollTargetId == id);
 
           if (ImGui::BeginChild("##Spritesheet Child", spritesheetChildSize, ImGuiChildFlags_Borders))
           {
@@ -338,6 +403,7 @@ namespace anm2ed::imgui
               region.reference = -1;
               region.selection.clear();
             }
+            if (scrollTargetId == id) ImGui::SetItemDefaultFocus();
             if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
               open_directory(spritesheet);
 
@@ -411,8 +477,11 @@ namespace anm2ed::imgui
                        spritesheetChildSize.y - spritesheetChildSize.y / 2 - ImGui::GetTextLineHeight() / 2));
 
             if (isReferenced) ImGui::PushFont(resources.fonts[font::ITALICS].get(), font::SIZE);
-            ImGui::TextUnformatted(
-                std::vformat(localize.get(FORMAT_SPRITESHEET), std::make_format_args(id, pathCStr)).c_str());
+            auto spritesheetLabel = std::vformat(localize.get(FORMAT_SPRITESHEET), std::make_format_args(id, pathCStr));
+            if (document.spritesheet_is_dirty(id))
+              spritesheetLabel =
+                  std::vformat(localize.get(FORMAT_SPRITESHEET_NOT_SAVED), std::make_format_args(spritesheetLabel));
+            ImGui::TextUnformatted(spritesheetLabel.c_str());
             if (isReferenced) ImGui::PopFont();
           }
 
@@ -476,7 +545,7 @@ namespace anm2ed::imgui
       ImGui::SameLine();
 
       ImGui::BeginDisabled(selection.empty());
-      if (ImGui::Button(localize.get(BASIC_SAVE), rowTwoWidgetSize)) save();
+      if (ImGui::Button(localize.get(BASIC_SAVE), rowTwoWidgetSize)) save_open();
       ImGui::EndDisabled();
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SAVE_SPRITESHEETS));
 
@@ -543,5 +612,68 @@ namespace anm2ed::imgui
     }
     mergePopup.end();
 
+    packPopup.trigger();
+    if (ImGui::BeginPopupModal(packPopup.label(), &packPopup.isOpen, ImGuiWindowFlags_NoResize))
+    {
+      settings.packPadding = std::max(0, settings.packPadding);
+
+      auto close = [&]()
+      {
+        packId = -1;
+        packPopup.close();
+      };
+
+      auto optionsSize = child_size_get(1);
+      if (ImGui::BeginChild("##Pack Spritesheet Options", optionsSize, ImGuiChildFlags_Borders))
+      {
+        ImGui::DragInt(localize.get(LABEL_PACK_PADDING), &settings.packPadding, DRAG_SPEED, 0, PADDING_MAX);
+      }
+      ImGui::EndChild();
+
+      auto widgetSize = widget_size_with_row_get(2);
+      shortcut(manager.chords[SHORTCUT_CONFIRM]);
+      bool isPackable = packId != -1 && anm2.content.spritesheets.contains(packId) &&
+                        !anm2.content.spritesheets.at(packId).regions.empty();
+      ImGui::BeginDisabled(!isPackable);
+      if (ImGui::Button(localize.get(BASIC_PACK), widgetSize))
+      {
+        if (pack) pack();
+        close();
+      }
+      ImGui::EndDisabled();
+
+      ImGui::SameLine();
+      shortcut(manager.chords[SHORTCUT_CANCEL]);
+      if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize)) close();
+
+      ImGui::EndPopup();
+    }
+    packPopup.end();
+
+    overwritePopup.trigger();
+    if (ImGui::BeginPopupModal(overwritePopup.label(), &overwritePopup.isOpen, ImGuiWindowFlags_NoResize))
+    {
+      ImGui::TextUnformatted(localize.get(LABEL_OVERWRITE_CONFIRMATION));
+
+      auto widgetSize = widget_size_with_row_get(2);
+
+      if (ImGui::Button(localize.get(BASIC_YES), widgetSize))
+      {
+        save(saveSelection);
+        saveSelection.clear();
+        overwritePopup.close();
+      }
+
+      ImGui::SameLine();
+
+      if (ImGui::Button(localize.get(BASIC_NO), widgetSize))
+      {
+        saveSelection.clear();
+        overwritePopup.close();
+      }
+
+      ImGui::EndPopup();
+    }
+    overwritePopup.end();
   }
 }

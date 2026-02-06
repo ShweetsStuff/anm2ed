@@ -39,7 +39,7 @@ namespace anm2ed::anm2
 
     Spritesheet* spritesheet_get(int);
     bool spritesheet_add(const std::filesystem::path&, const std::filesystem::path&, int&);
-    bool spritesheet_pack(int);
+    bool spritesheet_pack(int, int);
     bool regions_trim(int, const std::set<int>&);
     std::vector<std::string> spritesheet_labels_get();
     std::vector<int> spritesheet_ids_get();

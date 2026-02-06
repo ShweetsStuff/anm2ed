@@ -224,6 +224,41 @@ namespace anm2ed::imgui
             selection.insert(id);
         }
         if (ImGui::Shortcut(ImGuiKey_Escape, ImGuiInputFlags_RouteFocused)) selection.clear();
+        auto scroll_to_item = [&](float itemHeight, bool isTarget)
+        {
+          if (!isTarget) return;
+          auto windowHeight = ImGui::GetWindowHeight();
+          auto targetTop = ImGui::GetCursorPosY();
+          auto targetBottom = targetTop + itemHeight;
+          auto visibleTop = ImGui::GetScrollY();
+          auto visibleBottom = visibleTop + windowHeight;
+          if (targetTop < visibleTop)
+            ImGui::SetScrollY(targetTop);
+          else if (targetBottom > visibleBottom)
+            ImGui::SetScrollY(targetBottom - windowHeight);
+        };
+        int scrollTargetId = -1;
+        if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+            (ImGui::IsKeyPressed(ImGuiKey_UpArrow, true) || ImGui::IsKeyPressed(ImGuiKey_DownArrow, true)))
+        {
+          auto& order = spritesheet->regionOrder;
+          if (!order.empty())
+          {
+            int delta = ImGui::IsKeyPressed(ImGuiKey_UpArrow, true) ? -1 : 1;
+            int current = reference;
+            if (current == -1 && !selection.empty()) current = *selection.begin();
+            auto it = std::find(order.begin(), order.end(), current);
+            int index = it == order.end() ? 0 : (int)std::distance(order.begin(), it);
+            index = std::clamp(index + delta, 0, (int)order.size() - 1);
+            int nextId = order[index];
+            selection = {nextId};
+            reference = nextId;
+            document.reference = {document.reference.animationIndex};
+            frame.reference = -1;
+            frame.selection.clear();
+            scrollTargetId = nextId;
+          }
+        }
         bool isValid = spritesheet->is_valid();
         auto& texture = isValid ? spritesheet->texture : resources.icons[icon::NONE];
         auto tintColor = !isValid ? ImVec4(1.0f, 0.25f, 0.25f, 1.0f) : ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -241,6 +276,8 @@ namespace anm2ed::imgui
 
           ImGui::PushID(id);
 
+          scroll_to_item(regionChildSize.y, scrollTargetId == id);
+
           if (ImGui::BeginChild("##Region Child", regionChildSize, ImGuiChildFlags_Borders))
           {
             auto cursorPos = ImGui::GetCursorPos();
@@ -254,6 +291,7 @@ namespace anm2ed::imgui
               frame.reference = -1;
               frame.selection.clear();
             }
+            if (scrollTargetId == id) ImGui::SetItemDefaultFocus();
             if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) propertiesPopup.open();
 
             auto viewport = ImGui::GetMainViewport();

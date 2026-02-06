@@ -155,6 +155,7 @@ namespace anm2ed
   X(MERGE_SPRITESHEETS_ORIGIN, mergeSpritesheetsOrigin, STRING_UNDEFINED, INT, anm2::APPEND_RIGHT)                     \
   X(MERGE_SPRITESHEETS_IS_MAKE_REGIONS, mergeSpritesheetsIsMakeRegions, STRING_UNDEFINED, BOOL, true)                  \
   X(MERGE_SPRITESHEETS_REGION_ORIGIN, mergeSpritesheetsRegionOrigin, STRING_UNDEFINED, INT, origin::TOP_LEFT)          \
+  X(PACK_PADDING, packPadding, STRING_UNDEFINED, INT, 1)                                                               \
                                                                                                                        \
   X(BAKE_INTERVAL, bakeInterval, STRING_UNDEFINED, INT, 1)                                                             \
   X(BAKE_IS_ROUND_SCALE, bakeIsRoundScale, STRING_UNDEFINED, BOOL, true)                                               \

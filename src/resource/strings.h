@@ -200,6 +200,7 @@ namespace anm2ed
   X(FORMAT_SIZE, "Size: ({0}, {1})", "Tamaño: ({0}, {1})", "Размер: ({0}, {1})", "大小: ({0}, {1})", "크기: ({0}, {1})") \
   X(FORMAT_SOUND_LABEL, "Sound: {0}", "Sonido: {0}", "Звук: {0}", "声音: {0}", "사운드: {0}") \
   X(FORMAT_SPRITESHEET, "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}") \
+  X(FORMAT_SPRITESHEET_NOT_SAVED, "{0} (Not Saved)", "{0} (No guardado)", "{0} (Не сохранено)", "{0} (未保存)", "{0} (저장되지 않음)") \
   X(FORMAT_SOUND, "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}") \
   X(FORMAT_REGION, "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}") \
   X(FORMAT_TRANSFORM, "Transform: {0}", "Transformar: {0}", "Трансформация: {0}", "变换: {0}", "변환: {0}") \
@@ -216,6 +217,7 @@ namespace anm2ed
   X(LABEL_ANIMATIONS_MERGE_POPUP, "Merge Animations", "Combinar Animaciones", "Соединить анимации", "合并多个动画", "애니메이션 병합") \
   X(LABEL_SPRITESHEETS_PACK_POPUP, "Pack Spritesheet", "Empaquetar spritesheet", "Упаковать спрайт-лист", "打包图集", "스프라이트 시트 패킹") \
   X(LABEL_SPRITESHEETS_MERGE_POPUP, "Merge Spritesheets", "Combinar Spritesheets", "Объединить спрайт-листы", "合并图集", "스프라이트 시트 병합") \
+  X(LABEL_PACK_PADDING, "Padding", "Relleno", "Отступ", "填充", "패딩") \
   X(LABEL_ANIMATIONS_WINDOW, "Animations###Animations", "Animaciones###Animations", "Анимации###Animations", "动画###Animations", "애니메이션###Animations") \
   X(LABEL_REGIONS_WINDOW, "Regions###Regions", "Regiones###Regions", "Регионы###Regions", "区域###Regions", "영역###Regions") \
   X(LABEL_ANIMATION_LENGTH, "Animation Length", "Duracion de Animacion", "Длина анимации", "动画时长", "애니메이션 길이") \
@@ -246,6 +248,8 @@ namespace anm2ed
   X(LABEL_DOCUMENTS_OPEN_NEW, "Open New Document", "Abrir Nuevo Documento", "Открыть новый документ", "打开新文件", "새 파일로 열기") \
   X(LABEL_DOCUMENT_CLOSE, "Close Document", "Cerrar Documento", "Закрыть документ", "关闭文件", "파일 닫기") \
   X(LABEL_DOCUMENT_MODIFIED_PROMPT, "The document \"{0}\" has been modified.\nDo you want to save it?", "El Documento \"{0}\" ha sido modificado.\n¿Quieres Guardarlo?", "Документ \"{0}\" был изменен. \nХотите сохранить его?", "此文件\"{0}\"已被更改.\n要保存吗？", "\"{0}\" 파일이 수정되었습니다.\n저장하시겠습니까?") \
+  X(LABEL_DOCUMENT_AND_SPRITESHEETS_MODIFIED_PROMPT, "The document \"{0}\" and its spritesheets have been modified.\nDo you want to save them?", "El Documento \"{0}\" y sus spritesheets han sido modificados.\n¿Quieres guardarlos?", "Документ \"{0}\" и его спрайт-листы были изменены.\nХотите сохранить их?", "此文件\"{0}\"及其图集已被更改。\n要保存吗？", "\"{0}\" 파일과 스프라이트 시트가 수정되었습니다.\n저장하시겠습니까?") \
+  X(LABEL_SPRITESHEETS_MODIFIED_PROMPT, "Spritesheets in \"{0}\" have been modified.\nDo you want to save them?", "Los spritesheets en \"{0}\" han sido modificados.\n¿Quieres guardarlos?", "Спрайт-листы в \"{0}\" были изменены.\nХотите сохранить их?", "\"{0}\" 中的图集已被修改。\n要保存吗？", "\"{0}\"의 스프라이트 시트가 수정되었습니다.\n저장하시겠습니까?") \
   X(LABEL_END, "End", "Fin", "Конец", "结尾", "끝") \
   X(LABEL_EVENT, "Event", "Evento", "Событие", "事件", "이벤트") \
   X(LABEL_EVENTS_WINDOW, "Events###Events", "Eventos###Events", "События###Events", "事件###Events", "이벤트###Events") \
@@ -424,8 +428,7 @@ namespace anm2ed
   X(SNAPSHOT_RENAME_ANIMATION, "Rename Animation", "Renombrar Animacion", "Переименовать анимацию", "重命名动画", "애니메이션 이름 바꾸기") \
   X(TEXT_SELECT_FRAME, "Select a frame first!", "¡Selecciona primero un frame!", "Сначала выберите кадр!", "请先选择帧！", "먼저 프레임을 선택하세요!") \
   X(TEXT_SELECT_FRAME_OR_REGION, "Select a frame or region first!", "¡Selecciona primero un frame o región!", "Сначала выберите кадр или регион!", "请先选择帧或区域！", "먼저 프레임 또는 영역을 선택하세요!") \
-  X(TEXT_MERGE_SPRITESHEETS_DESCRIPTION, "Merge selected spritesheets into the first selected spritesheet.", "Combina los spritesheets seleccionados en el primer spritesheet seleccionado.", "Объединить выбранные спрайт-листы в первый выбранный спрайт-лист.", "将所选图集合并到第一个选中的图集中。", "선택된 스프라이트 시트를 첫 번째 선택된 스프라이트 시트로 병합합니다.") \
-  X(TEXT_PACK_SPRITESHEET_DESCRIPTION, "Pack this spritesheet using its region rectangles and rebuild the texture from packed regions.", "Empaqueta este spritesheet usando sus rectángulos de región y reconstruye la textura con las regiones empaquetadas.", "Упаковать этот спрайт-лист, используя прямоугольники его регионов, и пересобрать текстуру из упакованных регионов.", "使用该图集的区域矩形进行打包，并用打包后的区域重建纹理。", "이 스프라이트 시트의 영역 사각형을 기준으로 패킹하고, 패킹된 영역으로 텍스처를 다시 만듭니다.") \
+  X(TOOLTIP_MERGE_SPRITESHEETS, "Merge selected spritesheets into the first selected spritesheet.", "Combina los spritesheets seleccionados en el primer spritesheet seleccionado.", "Объединить выбранные спрайт-листы в первый выбранный спрайт-лист.", "将所选图集合并到第一个选中的图集中。", "선택된 스프라이트 시트를 첫 번째 선택된 스프라이트 시트로 병합합니다.") \
   X(TEXT_SELECT_SPRITESHEET, "Select a spritesheet first!", "¡Selecciona primero un spritesheet!", "Сначала выберите спрайт-лист!", "请先选择图集！", "먼저 스프라이트 시트를 선택하세요!") \
   X(TEXT_TOOL_ANIMATION_PREVIEW, "This tool can only be used in Animation Preview!", "¡Esta herramienta solo se puede usar en Vista previa de animación!", "Этот инструмент можно использовать только в \"Предпросмотре анимации\"!", "该工具只能在“动画预放”中使用！", "이 도구는 애니메이션 프리뷰에서만 사용할 수 있습니다!") \
   X(TEXT_TOOL_SPRITESHEET_EDITOR, "This tool can only be used in Spritesheet Editor!", "¡Esta herramienta solo se puede usar en el Editor de spritesheets!", "Этот инструмент можно использовать только в \"Редакторе спрайт-листов\"!", "该工具只能在“图集编辑器”中使用！", "이 도구는 스프라이트 시트 편집기에서만 사용할 수 있습니다!") \

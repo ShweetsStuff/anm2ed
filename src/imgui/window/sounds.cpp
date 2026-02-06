@@ -1,6 +1,8 @@
 #include "sounds.h"
 
+#include <algorithm>
 #include <ranges>
+#include <vector>
 
 #include "log.h"
 #include "path_.h"
@@ -220,11 +222,48 @@ namespace anm2ed::imgui
             selection.insert(id);
         }
         if (ImGui::Shortcut(ImGuiKey_Escape, ImGuiInputFlags_RouteFocused)) selection.clear();
+        auto scroll_to_item = [&](float itemHeight, bool isTarget)
+        {
+          if (!isTarget) return;
+          auto windowHeight = ImGui::GetWindowHeight();
+          auto targetTop = ImGui::GetCursorPosY();
+          auto targetBottom = targetTop + itemHeight;
+          auto visibleTop = ImGui::GetScrollY();
+          auto visibleBottom = visibleTop + windowHeight;
+          if (targetTop < visibleTop)
+            ImGui::SetScrollY(targetTop);
+          else if (targetBottom > visibleBottom)
+            ImGui::SetScrollY(targetBottom - windowHeight);
+        };
+        int scrollTargetId = -1;
+        if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+            (ImGui::IsKeyPressed(ImGuiKey_UpArrow, true) || ImGui::IsKeyPressed(ImGuiKey_DownArrow, true)))
+        {
+          std::vector<int> ids{};
+          ids.reserve(anm2.content.sounds.size());
+          for (auto& [id, sound] : anm2.content.sounds)
+            ids.push_back(id);
+          if (!ids.empty())
+          {
+            int delta = ImGui::IsKeyPressed(ImGuiKey_UpArrow, true) ? -1 : 1;
+            int current = reference;
+            if (current == -1 && !selection.empty()) current = *selection.begin();
+            auto it = std::find(ids.begin(), ids.end(), current);
+            int index = it == ids.end() ? 0 : (int)std::distance(ids.begin(), it);
+            index = std::clamp(index + delta, 0, (int)ids.size() - 1);
+            int nextId = ids[index];
+            selection = {nextId};
+            reference = nextId;
+            scrollTargetId = nextId;
+          }
+        }
 
         for (auto& [id, sound] : anm2.content.sounds)
         {
           auto isNewSound = newSoundId == id;
           ImGui::PushID(id);
+
+          scroll_to_item(soundChildSize.y, scrollTargetId == id);
 
           if (ImGui::BeginChild("##Sound Child", soundChildSize, ImGuiChildFlags_Borders))
           {
@@ -242,6 +281,7 @@ namespace anm2ed::imgui
               reference = id;
               if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) play(sound);
             }
+            if (scrollTargetId == id) ImGui::SetItemDefaultFocus();
             if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) open_directory(sound);
 
             auto textWidth = ImGui::CalcTextSize(pathString.c_str()).x;

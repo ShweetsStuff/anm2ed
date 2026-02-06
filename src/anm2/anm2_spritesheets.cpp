@@ -29,9 +29,9 @@ namespace anm2ed::anm2
     return true;
   }
 
-  bool Anm2::spritesheet_pack(int id)
+  bool Anm2::spritesheet_pack(int id, int padding)
   {
-    constexpr int PACKING_PADDING = 1;
+    const int packingPadding = std::max(0, padding);
 
     struct RectI
     {
@@ -256,8 +256,8 @@ namespace anm2ed::anm2
       auto minPoint = glm::ivec2(glm::min(region.crop, region.crop + region.size));
       auto maxPoint = glm::ivec2(glm::max(region.crop, region.crop + region.size));
       auto size = glm::max(maxPoint - minPoint, glm::ivec2(1));
-      int packWidth = size.x + PACKING_PADDING * 2;
-      int packHeight = size.y + PACKING_PADDING * 2;
+      int packWidth = size.x + packingPadding * 2;
+      int packHeight = size.y + packingPadding * 2;
       items.push_back({regionID, minPoint.x, minPoint.y, size.x, size.y, packWidth, packHeight});
     }
 
@@ -290,8 +290,8 @@ namespace anm2ed::anm2
         {
           int sourceX = item.srcX + x;
           int sourceY = item.srcY + y;
-          int destinationX = destinationRect.x + PACKING_PADDING + x;
-          int destinationY = destinationRect.y + PACKING_PADDING + y;
+          int destinationX = destinationRect.x + packingPadding + x;
+          int destinationY = destinationRect.y + packingPadding + y;
 
           if (sourceX < 0 || sourceY < 0 || sourceX >= textureSize.x || sourceY >= textureSize.y) continue;
           if (destinationX < 0 || destinationY < 0 || destinationX >= packedWidth || destinationY >= packedHeight)
@@ -312,7 +312,7 @@ namespace anm2ed::anm2
       if (packedRects.contains(regionID))
       {
         auto& rect = packedRects.at(regionID);
-        region.crop = {rect.x + PACKING_PADDING, rect.y + PACKING_PADDING};
+        region.crop = {rect.x + packingPadding, rect.y + packingPadding};
       }
 
     return true;

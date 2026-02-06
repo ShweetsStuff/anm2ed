@@ -1,7 +1,9 @@
 #include "spritesheet.h"
 
 #include <algorithm>
+#include <functional>
 #include <ranges>
+#include <string_view>
 #include <vector>
 
 #include "map_.h"
@@ -52,6 +54,7 @@ namespace anm2ed::anm2
     path = path::lower_case_backslash_handle(path);
     texture = Texture(path);
 
+    regionOrder.clear();
     for (auto child = element->FirstChildElement("Region"); child; child = child->NextSiblingElement("Region"))
     {
       Region region{};
@@ -73,12 +76,16 @@ namespace anm2ed::anm2
         child->QueryFloatAttribute("YPivot", &region.pivot.y);
       }
       regions.emplace(id, std::move(region));
+      regionOrder.push_back(id);
     }
 
-    regionOrder.clear();
-    regionOrder.reserve(regions.size());
-    for (auto id : regions | std::views::keys)
-      regionOrder.push_back(id);
+    if (regionOrder.size() != regions.size())
+    {
+      regionOrder.clear();
+      regionOrder.reserve(regions.size());
+      for (auto id : regions | std::views::keys)
+        regionOrder.push_back(id);
+    }
   }
 
   Spritesheet::Spritesheet(const std::filesystem::path& directory, const std::filesystem::path& path)
@@ -230,5 +237,44 @@ namespace anm2ed::anm2
     texture = Texture(this->path);
   }
   bool Spritesheet::is_valid() { return texture.is_valid(); }
+
+  uint64_t Spritesheet::hash() const
+  {
+    auto hash_combine = [](std::size_t& seed, std::size_t value)
+    {
+      seed ^= value + 0x9e3779b97f4a7c15ULL + (seed << 6) + (seed >> 2);
+    };
+
+    std::size_t seed{};
+    hash_combine(seed, std::hash<int>{}(texture.size.x));
+    hash_combine(seed, std::hash<int>{}(texture.size.y));
+    hash_combine(seed, std::hash<int>{}(texture.channels));
+    hash_combine(seed, std::hash<int>{}(texture.filter));
+
+    if (!texture.pixels.empty())
+    {
+      std::string_view bytes(reinterpret_cast<const char*>(texture.pixels.data()), texture.pixels.size());
+      hash_combine(seed, std::hash<std::string_view>{}(bytes));
+    }
+    else
+    {
+      hash_combine(seed, 0);
+    }
+
+    for (const auto& [id, region] : regions)
+    {
+      hash_combine(seed, std::hash<int>{}(id));
+      hash_combine(seed, std::hash<std::string>{}(region.name));
+      hash_combine(seed, std::hash<float>{}(region.crop.x));
+      hash_combine(seed, std::hash<float>{}(region.crop.y));
+      hash_combine(seed, std::hash<float>{}(region.size.x));
+      hash_combine(seed, std::hash<float>{}(region.size.y));
+      hash_combine(seed, std::hash<float>{}(region.pivot.x));
+      hash_combine(seed, std::hash<float>{}(region.pivot.y));
+      hash_combine(seed, std::hash<int>{}(static_cast<int>(region.origin)));
+    }
+
+    return static_cast<uint64_t>(seed);
+  }
 
 }
