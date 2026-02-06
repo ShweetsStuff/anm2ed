@@ -15,9 +15,11 @@ A reimplementation of *The Binding of Isaac: Rebirth*'s proprietary animation ed
     - Can output .webm, .mp4 or *.png sequence (wih FFmpeg)
     - Cutting, copying and pasting
     - Onionskinning
+    - Spritesheet "regions"; pre-set areas to be reused
     - Robust snapshot (undo/redo) system
     - Selecting multiple frames at a time
     - Settings that will preserve on exit (stored in %APPDATA% on Windows or ~/.local/share on Linux)
+    - Texture packing
 
 ### Supported Languages
 - English
