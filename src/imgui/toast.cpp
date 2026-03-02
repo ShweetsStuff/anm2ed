@@ -5,6 +5,8 @@
 
 #include "types.h"
 
+#include <format>
+
 using namespace anm2ed::types;
 
 namespace anm2ed::imgui

@@ -1,6 +1,7 @@
 #include "layers.h"
 
 #include <ranges>
+#include <format>
 
 #include "log.h"
 #include "map_.h"

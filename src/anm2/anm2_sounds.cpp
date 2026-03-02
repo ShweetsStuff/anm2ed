@@ -4,6 +4,8 @@
 #include "path_.h"
 #include "working_directory.h"
 
+#include <format>
+
 using namespace anm2ed::types;
 using namespace anm2ed::util;
 using namespace tinyxml2;

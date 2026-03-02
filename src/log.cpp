@@ -1,6 +1,7 @@
 #include "log.h"
 
 #include <print>
+#include <format>
 
 #include "sdl.h"
 #include "time_.h"

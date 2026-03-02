@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <ranges>
 #include <vector>
+#include <format>
 
 #include "log.h"
 #include "path_.h"

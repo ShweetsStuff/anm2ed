@@ -1,6 +1,7 @@
 #include "welcome.h"
 
 #include <ranges>
+#include <format>
 
 #include "path_.h"
 #include "strings.h"
