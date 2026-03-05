@@ -18,7 +18,7 @@ namespace anm2ed
 #define FILTER_LIST                                                                                                    \
   X(NO_FILTER, {})                                                                                                     \
   X(ANM2, {"Anm2 file", "anm2;xml"})                                                                                   \
-  X(PNG, {"PNG image", "png"})                                                                                         \
+  X(PNG, {"PNG image", "png;PNG"})                                                                                     \
   X(SOUND, {"WAV file;OGG file", "wav;ogg"})                                                                           \
   X(GIF, {"GIF image", "gif"})                                                                                         \
   X(WEBM, {"WebM video", "webm"})                                                                                      \
@@ -49,6 +49,7 @@ namespace anm2ed
   X(SOUND_REPLACE, SOUND)                                                                                              \
   X(SPRITESHEET_OPEN, PNG)                                                                                             \
   X(SPRITESHEET_REPLACE, PNG)                                                                                          \
+  X(SPRITESHEET_PATH_SET, PNG)                                                                                         \
   X(FFMPEG_PATH_SET, EXECUTABLE)                                                                                       \
   X(PNG_DIRECTORY_SET, NO_FILTER)                                                                                      \
   X(PNG_PATH_SET, PNG)                                                                                                 \

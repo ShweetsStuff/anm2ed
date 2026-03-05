@@ -147,6 +147,20 @@ namespace anm2ed::resource
     return false;
   }
 
+  bool Texture::write_pixels_png(const std::filesystem::path& path, ivec2 size, const uint8_t* data)
+  {
+    if (!data || size.x <= 0 || size.y <= 0) return false;
+
+    File file(path, "wb");
+    if (auto handle = file.get())
+    {
+      auto write_func = [](void* context, void* bytes, int count)
+      { fwrite(bytes, 1, count, static_cast<FILE*>(context)); };
+      return stbi_write_png_to_func(write_func, handle, size.x, size.y, CHANNELS, data, size.x * CHANNELS) != 0;
+    }
+    return false;
+  }
+
   Texture Texture::merge_append(const Texture& base, const Texture& append, bool isAppendRight)
   {
     if (base.size.x <= 0 || base.size.y <= 0) return append;

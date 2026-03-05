@@ -1,10 +1,12 @@
 #include "animation_preview.h"
 
 #include <algorithm>
+#include <chrono>
 #include <filesystem>
 #include <format>
 #include <optional>
 #include <ranges>
+#include <system_error>
 
 #include <glm/gtc/type_ptr.hpp>
 
@@ -30,6 +32,57 @@ namespace anm2ed::imgui
   constexpr auto POINT_SIZE = vec2(4, 4);
   constexpr auto TRIGGER_TEXT_COLOR_DARK = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
   constexpr auto TRIGGER_TEXT_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 0.5f);
+  constexpr auto PLAYBACK_TICK_RATE = 30.0f;
+
+  namespace
+  {
+    std::filesystem::path render_destination_directory(const std::filesystem::path& path, int type)
+    {
+      if (type == render::PNGS) return path;
+      auto directory = path.parent_path();
+      if (directory.empty()) directory = std::filesystem::current_path();
+      return directory;
+    }
+
+    std::filesystem::path render_frame_filename(const std::filesystem::path& format, int index)
+    {
+      auto formatString = path::to_utf8(format);
+      try
+      {
+        auto name = std::vformat(formatString, std::make_format_args(index));
+        auto filename = path::from_utf8(name).filename();
+        if (filename.empty()) return path::from_utf8(std::format("frame_{:06}.png", index));
+        if (filename.extension().empty()) filename.replace_extension(render::EXTENSIONS[render::SPRITESHEET]);
+        return filename;
+      }
+      catch (...)
+      {
+        return path::from_utf8(std::format("frame_{:06}.png", index));
+      }
+    }
+
+    std::filesystem::path render_temp_directory_create(const std::filesystem::path& directory)
+    {
+      auto timestamp = (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                           std::chrono::system_clock::now().time_since_epoch())
+                           .count();
+      for (int suffix = 0; suffix < 1000; ++suffix)
+      {
+        auto tempDirectory = directory / path::from_utf8(std::format(".anm2ed_render_tmp_{}_{}", timestamp, suffix));
+        std::error_code ec;
+        if (std::filesystem::create_directories(tempDirectory, ec)) return tempDirectory;
+      }
+      return {};
+    }
+
+    void render_temp_cleanup(std::filesystem::path& directory, std::vector<std::filesystem::path>& frames)
+    {
+      std::error_code ec;
+      if (!directory.empty()) std::filesystem::remove_all(directory, ec);
+      directory.clear();
+      frames.clear();
+    }
+  }
 
   AnimationPreview::AnimationPreview() : Canvas(vec2()) {}
 
@@ -55,22 +108,7 @@ namespace anm2ed::imgui
       {
         if (type == render::PNGS)
         {
-          auto& format = settings.renderFormat;
-          auto formatString = path::to_utf8(format);
-          bool isSuccess{true};
-          for (auto [i, frame] : std::views::enumerate(renderFrames))
-          {
-            auto outputPath = path / std::vformat(formatString, std::make_format_args(i));
-
-            if (!frame.write_png(outputPath))
-            {
-              isSuccess = false;
-              break;
-            }
-            logger.info(std::format("Saved frame to: {}", outputPath.string()));
-          }
-
-          if (isSuccess)
+          if (!renderTempFrames.empty())
           {
             toasts.push(std::vformat(localize.get(TOAST_EXPORT_RENDERED_FRAMES), std::make_format_args(pathString)));
             logger.info(std::vformat(localize.get(TOAST_EXPORT_RENDERED_FRAMES, anm2ed::ENGLISH),
@@ -89,14 +127,14 @@ namespace anm2ed::imgui
           auto& rows = settings.renderRows;
           auto& columns = settings.renderColumns;
 
-          if (renderFrames.empty())
+          if (renderTempFrames.empty())
           {
             toasts.push(localize.get(TOAST_SPRITESHEET_NO_FRAMES));
             logger.warning(localize.get(TOAST_SPRITESHEET_NO_FRAMES, anm2ed::ENGLISH));
           }
           else
           {
-            auto& firstFrame = renderFrames.front();
+            auto firstFrame = Texture(renderTempFrames.front());
             if (firstFrame.size.x <= 0 || firstFrame.size.y <= 0 || firstFrame.pixels.empty())
             {
               toasts.push(localize.get(TOAST_SPRITESHEET_EMPTY));
@@ -110,9 +148,9 @@ namespace anm2ed::imgui
 
               std::vector<uint8_t> spritesheet((size_t)(spritesheetSize.x) * spritesheetSize.y * CHANNELS);
 
-              for (std::size_t index = 0; index < renderFrames.size(); ++index)
+              for (std::size_t index = 0; index < renderTempFrames.size(); ++index)
               {
-                const auto& frame = renderFrames[index];
+                auto frame = Texture(renderTempFrames[index]);
                 auto row = (int)(index / columns);
                 auto column = (int)(index % columns);
                 if (row >= rows || column >= columns) break;
@@ -147,7 +185,7 @@ namespace anm2ed::imgui
         }
         else
         {
-          if (animation_render(ffmpegPath, path, renderFrames, audioStream, (render::Type)type, size))
+          if (animation_render(ffmpegPath, path, renderTempFrames, audioStream, (render::Type)type, anm2.info.fps))
           {
             toasts.push(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION), std::make_format_args(pathString)));
             logger.info(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION, anm2ed::ENGLISH),
@@ -162,7 +200,13 @@ namespace anm2ed::imgui
           }
         }
 
-        renderFrames.clear();
+        if (type == render::PNGS)
+        {
+          renderTempDirectory.clear();
+          renderTempFrames.clear();
+        }
+        else
+          render_temp_cleanup(renderTempDirectory, renderTempFrames);
 
         if (settings.renderIsRawAnimation)
         {
@@ -188,7 +232,23 @@ namespace anm2ed::imgui
 
         bind();
         auto pixels = pixels_get();
-        renderFrames.push_back(Texture(pixels.data(), size));
+        auto frameIndex = (int)renderTempFrames.size();
+        auto framePath = renderTempDirectory / render_frame_filename(settings.renderFormat, frameIndex);
+        if (Texture::write_pixels_png(framePath, size, pixels.data()))
+        {
+          renderTempFrames.push_back(framePath);
+        }
+        else
+        {
+          toasts.push(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED), std::make_format_args(pathString)));
+          logger.error(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED, anm2ed::ENGLISH),
+                                    std::make_format_args(pathString)));
+          if (type != render::PNGS) render_temp_cleanup(renderTempDirectory, renderTempFrames);
+          playback.isPlaying = false;
+          playback.isFinished = false;
+          manager.isRecording = false;
+          manager.progressPopup.close();
+        }
       }
     }
 
@@ -214,8 +274,10 @@ namespace anm2ed::imgui
         }
       }
 
-      playback.tick(anm2.info.fps, animation->frameNum,
-                    (animation->isLoop || settings.playbackIsLoop) && !manager.isRecording);
+      auto fps = std::max(anm2.info.fps, 1);
+      auto deltaSeconds = manager.isRecording ? (1.0f / (float)fps) : (1.0f / PLAYBACK_TICK_RATE);
+      playback.tick(fps, animation->frameNum, (animation->isLoop || settings.playbackIsLoop) && !manager.isRecording,
+                    deltaSeconds);
 
       frameTime = playback.time;
     }
@@ -366,7 +428,7 @@ namespace anm2ed::imgui
         combo_negative_one_indexed(localize.get(LABEL_OVERLAY), &overlayIndex, document.animation.labels);
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OVERLAY));
 
-        ImGui::InputFloat(localize.get(BASIC_ALPHA), &overlayTransparency, 0, 0, "%.0f");
+        ImGui::DragFloat(localize.get(BASIC_ALPHA), &overlayTransparency, DRAG_SPEED, 0, 255, "%.0f");
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OVERLAY_ALPHA));
       }
       ImGui::EndChild();
@@ -434,7 +496,34 @@ namespace anm2ed::imgui
 
         manager.isRecordingStart = false;
         manager.isRecording = true;
+        renderTempFrames.clear();
+        if (settings.renderType == render::PNGS)
+        {
+          renderTempDirectory = settings.renderPath;
+          std::error_code ec;
+          std::filesystem::create_directories(renderTempDirectory, ec);
+        }
+        else
+        {
+          auto destinationDirectory = render_destination_directory(settings.renderPath, settings.renderType);
+          std::error_code ec;
+          std::filesystem::create_directories(destinationDirectory, ec);
+          renderTempDirectory = render_temp_directory_create(destinationDirectory);
+        }
+        if (renderTempDirectory.empty())
+        {
+          auto pathString = path::to_utf8(settings.renderPath);
+          toasts.push(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED), std::make_format_args(pathString)));
+          logger.error(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED, anm2ed::ENGLISH),
+                                    std::make_format_args(pathString)));
+          manager.isRecording = false;
+          manager.progressPopup.close();
+          playback.isPlaying = false;
+          playback.isFinished = false;
+          return;
+        }
         playback.isPlaying = true;
+        playback.timing_reset();
         playback.time = manager.recordingStart;
       }
 
@@ -935,7 +1024,13 @@ namespace anm2ed::imgui
       shortcut(manager.chords[SHORTCUT_CANCEL]);
       if (ImGui::Button(localize.get(BASIC_CANCEL), ImVec2(ImGui::GetContentRegionAvail().x, 0)))
       {
-        renderFrames.clear();
+        if (settings.renderType == render::PNGS)
+        {
+          renderTempDirectory.clear();
+          renderTempFrames.clear();
+        }
+        else
+          render_temp_cleanup(renderTempDirectory, renderTempFrames);
 
         pan = savedPan;
         zoom = savedZoom;

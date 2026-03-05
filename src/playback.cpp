@@ -1,5 +1,8 @@
 #include "playback.h"
 
+#include <algorithm>
+#include <cmath>
+
 #include <glm/common.hpp>
 
 namespace anm2ed
@@ -9,24 +12,38 @@ namespace anm2ed
     if (isFinished) time = 0.0f;
     isFinished = false;
     isPlaying = !isPlaying;
+    timing_reset();
   }
+
+  void Playback::timing_reset() { tickAccumulator = 0.0f; }
 
   void Playback::clamp(int length) { time = glm::clamp(time, 0.0f, (float)length - 1.0f); }
 
-  void Playback::tick(int fps, int length, bool isLoop)
+  void Playback::tick(int fps, int length, bool isLoop, float deltaSeconds)
   {
-    if (isFinished) return;
+    if (isFinished || !isPlaying || fps <= 0 || length <= 0) return;
+    if (deltaSeconds <= 0.0f) return;
 
-    time += (float)fps / 30.0f;
+    auto frameDuration = 1.0f / (float)fps;
+    tickAccumulator += deltaSeconds;
+    auto steps = (int)std::floor(tickAccumulator / frameDuration);
+    if (steps <= 0) return;
+    tickAccumulator -= frameDuration * (float)steps;
+
+    time += (float)steps;
 
     if (time > (float)length - 1.0f)
     {
       if (isLoop)
-        time = 0.0f;
+      {
+        time = std::fmod(time, (float)length);
+      }
       else
       {
+        time = (float)length - 1.0f;
         isPlaying = false;
         isFinished = true;
+        timing_reset();
       }
     }
   }
@@ -35,11 +52,13 @@ namespace anm2ed
   {
     --time;
     clamp(length);
+    timing_reset();
   }
 
   void Playback::increment(int length)
   {
     ++time;
     clamp(length);
+    timing_reset();
   }
 }

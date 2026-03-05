@@ -445,17 +445,22 @@ namespace anm2ed::imgui
               {
                 DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_REGION), Document::FRAMES,
                               {
-                                frame->regionID = hoveredRegionId;
+                                anm2::FrameChange change{};
+                                change.regionID = hoveredRegionId;
                                 if (spritesheet)
                                 {
                                   auto regionIt = spritesheet->regions.find(hoveredRegionId);
                                   if (regionIt != spritesheet->regions.end())
                                   {
-                                    frame->crop = regionIt->second.crop;
-                                    frame->size = regionIt->second.size;
-                                    frame->pivot = regionIt->second.pivot;
+                                    change.cropX = regionIt->second.crop.x;
+                                    change.cropY = regionIt->second.crop.y;
+                                    change.sizeX = regionIt->second.size.x;
+                                    change.sizeY = regionIt->second.size.y;
+                                    change.pivotX = regionIt->second.pivot.x;
+                                    change.pivotY = regionIt->second.pivot.y;
                                   }
                                 }
+                                frame_change_apply(change);
                               });
               }
             }

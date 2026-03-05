@@ -83,6 +83,7 @@ namespace anm2ed
   X(BASIC_ROTATION, "Rotation", "Rotacion", "Поворот", "旋转", "회전") \
   X(BASIC_SAVE, "Save", "Guardar", "Сохранить", "保存", "저장") \
   X(BASIC_SCALE, "Scale", "Escalar", "Масштаб", "缩放", "크기") \
+  X(BASIC_SET_FILE_PATH, "Set File Path", "Set File Path", "Set File Path", "Set File Path", "Set File Path") \
   X(BASIC_SIZE, "Size", "Tamaño", "Размер", "大小", "비율") \
   X(BASIC_SOUND, "Sound", "Sonido", "Звук", "声音", "사운드") \
   X(BASIC_TRIM, "Trim", "Recortar contenido", "Обрезать по содержимому", "修剪", "내용으로 자르기") \
@@ -162,6 +163,7 @@ namespace anm2ed
   X(EDIT_RENAME_EVENT, "Rename Event", "Renombrar Evento", "Переименовать событие", "重命名事件", "이벤트 이름 바꾸기") \
   X(EDIT_REPLACE_SPRITESHEET, "Replace Spritesheet", "Reemplazar Spritesheet", "Заменить спрайт-лист", "替换图集", "스프라이트 시트 교체") \
   X(EDIT_REPLACE_SOUND, "Replace Sound", "Reemplazar Sonido", "Заменить звук", "替换声音", "사운드 교체") \
+  X(EDIT_SET_SPRITESHEET_FILE_PATH, "Set Spritesheet File Path", "Set Spritesheet File Path", "Set Spritesheet File Path", "Set Spritesheet File Path", "Set Spritesheet File Path") \
   X(EDIT_SET_LAYER_PROPERTIES, "Set Layer Properties", "Establecer Propiedades de Capa", "Установить свойства слоя", "更改动画层属性", "레이어 속성 설정") \
   X(EDIT_SET_REGION_PROPERTIES, "Set Region Properties", "Establecer propiedades de región", "Установить свойства региона", "更改区域属性", "영역 속성 설정") \
   X(EDIT_TRIM_REGIONS, "Trim Regions", "Recortar regiones", "Обрезать регионы", "修剪区域", "영역 트리밍") \

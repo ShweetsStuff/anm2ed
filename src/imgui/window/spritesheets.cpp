@@ -13,6 +13,7 @@
 #include "path_.h"
 #include "strings.h"
 #include "toast.h"
+#include "working_directory.h"
 
 using namespace anm2ed::types;
 using namespace anm2ed::resource;
@@ -36,6 +37,7 @@ namespace anm2ed::imgui
 
     auto add_open = [&]() { dialog.file_open(Dialog::SPRITESHEET_OPEN); };
     auto replace_open = [&]() { dialog.file_open(Dialog::SPRITESHEET_REPLACE); };
+    auto set_file_path_open = [&]() { dialog.file_save(Dialog::SPRITESHEET_PATH_SET); };
     auto merge_open = [&]()
     {
       if (selection.size() <= 1) return;
@@ -118,6 +120,21 @@ namespace anm2ed::imgui
       };
 
       DOCUMENT_EDIT(document, localize.get(EDIT_REPLACE_SPRITESHEET), Document::SPRITESHEETS, behavior());
+    };
+
+    auto set_file_path = [&](const std::filesystem::path& path)
+    {
+      if (selection.size() != 1 || path.empty()) return;
+
+      auto behavior = [&]()
+      {
+        auto id = *selection.begin();
+        if (!anm2.content.spritesheets.contains(id)) return;
+        WorkingDirectory workingDirectory(document.directory_get());
+        anm2.content.spritesheets[id].path = path::make_relative(path);
+      };
+
+      DOCUMENT_EDIT(document, localize.get(EDIT_SET_SPRITESHEET_FILE_PATH), Document::SPRITESHEETS, behavior());
     };
 
     auto save = [&](const std::set<int>& ids)
@@ -294,6 +311,8 @@ namespace anm2ed::imgui
 
         if (ImGui::MenuItem(localize.get(BASIC_OPEN_DIRECTORY), nullptr, false, selection.size() == 1))
           open_directory(anm2.content.spritesheets[*selection.begin()]);
+        if (ImGui::MenuItem(localize.get(BASIC_SET_FILE_PATH), nullptr, false, selection.size() == 1))
+          set_file_path_open();
 
         if (ImGui::MenuItem(localize.get(BASIC_ADD), settings.shortcutAdd.c_str())) add_open();
         if (ImGui::MenuItem(localize.get(BASIC_REMOVE_UNUSED), settings.shortcutRemove.c_str())) remove_unused();
@@ -533,6 +552,12 @@ namespace anm2ed::imgui
       if (dialog.is_selected(Dialog::SPRITESHEET_REPLACE))
       {
         replace(dialog.path);
+        dialog.reset();
+      }
+
+      if (dialog.is_selected(Dialog::SPRITESHEET_PATH_SET))
+      {
+        set_file_path(dialog.path);
         dialog.reset();
       }
 

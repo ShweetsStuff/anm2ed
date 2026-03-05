@@ -1,5 +1,7 @@
 #pragma once
 
+#include <filesystem>
+
 #include "audio_stream.h"
 #include "canvas.h"
 #include "manager.h"
@@ -26,7 +28,8 @@ namespace anm2ed::imgui
     bool hasPendingZoomPanAdjust{};
     bool isMoveDragging{};
     glm::vec2 moveOffset{};
-    std::vector<resource::Texture> renderFrames{};
+    std::filesystem::path renderTempDirectory{};
+    std::vector<std::filesystem::path> renderTempFrames{};
 
   public:
     AnimationPreview();

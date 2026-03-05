@@ -231,6 +231,7 @@ namespace anm2ed::imgui::wizard
           {
             toasts.push(localize.get(TOAST_PNG_FORMAT_INVALID));
             logger.error(localize.get(TOAST_PNG_FORMAT_INVALID, anm2ed::ENGLISH));
+            return false;
           }
           return true;
         };
@@ -269,12 +270,12 @@ namespace anm2ed::imgui::wizard
         };
 
         if (!path_valid_check()) return false;
+        if (!png_format_valid_check()) return false;
 
         switch (type)
         {
           case render::PNGS:
             if (!png_directory_valid_check()) return false;
-            if (!png_format_valid_check()) return false;
             format.replace_extension(render::EXTENSIONS[render::SPRITESHEET]);
             break;
           case render::SPRITESHEET:

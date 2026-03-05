@@ -1,8 +1,10 @@
 #include "render.h"
 
+#include <algorithm>
 #include <cstring>
 #include <filesystem>
 #include <format>
+#include <functional>
 #include <fstream>
 #include <string>
 
@@ -12,16 +14,32 @@
 #include "sdl.h"
 #include "string_.h"
 
-using namespace anm2ed::resource;
 using namespace anm2ed::util;
-using namespace glm;
 
 namespace anm2ed
 {
-  bool animation_render(const std::filesystem::path& ffmpegPath, const std::filesystem::path& path,
-                        std::vector<Texture>& frames, AudioStream& audioStream, render::Type type, ivec2 size)
+  namespace
   {
-    if (frames.empty() || size.x <= 0 || size.y <= 0 || ffmpegPath.empty() || path.empty()) return false;
+    std::string ffmpeg_concat_escape(const std::string& value)
+    {
+      std::string escaped{};
+      escaped.reserve(value.size());
+      for (auto character : value)
+      {
+        if (character == '\'') escaped += "'\\''";
+        else
+          escaped += character;
+      }
+      return escaped;
+    }
+  }
+
+  bool animation_render(const std::filesystem::path& ffmpegPath, const std::filesystem::path& path,
+                        const std::vector<std::filesystem::path>& framePaths, AudioStream& audioStream,
+                        render::Type type, int fps)
+  {
+    if (framePaths.empty() || ffmpegPath.empty() || path.empty()) return false;
+    fps = std::max(fps, 1);
 
     auto pathString = path::to_utf8(path);
     auto ffmpegPathString = path::to_utf8(ffmpegPath);
@@ -85,8 +103,29 @@ namespace anm2ed
       }
     }
 
-    command = std::format("\"{0}\" -y -f rawvideo -pix_fmt rgba -s {1}x{2} -r 30 -i pipe:0", ffmpegPathString, size.x,
-                          size.y);
+    auto framesListPath = std::filesystem::temp_directory_path() / path::from_utf8(std::format(
+                             "anm2ed_frames_{}_{}.txt", std::hash<std::string>{}(pathString), SDL_GetTicks())) ;
+    std::ofstream framesListFile(framesListPath);
+    if (!framesListFile)
+    {
+      audio_remove();
+      return false;
+    }
+
+    auto frameDuration = 1.0 / (double)fps;
+    for (const auto& framePath : framePaths)
+    {
+      auto framePathString = path::to_utf8(framePath);
+      framesListFile << "file '" << ffmpeg_concat_escape(framePathString) << "'\n";
+      framesListFile << "duration " << std::format("{:.9f}", frameDuration) << "\n";
+    }
+    auto lastFramePathString = path::to_utf8(framePaths.back());
+    framesListFile << "file '" << ffmpeg_concat_escape(lastFramePathString) << "'\n";
+    framesListFile.close();
+
+    auto framesListPathString = path::to_utf8(framesListPath);
+    command = std::format("\"{0}\" -y -f concat -safe 0 -i \"{1}\"", ffmpegPathString, framesListPathString);
+    command += std::format(" -fps_mode cfr -r {}", fps);
 
     if (!audioInputArguments.empty()) command += " " + audioInputArguments;
 
@@ -110,7 +149,11 @@ namespace anm2ed
         command += std::format(" \"{}\"", pathString);
         break;
       default:
+      {
+        std::error_code ec;
+        std::filesystem::remove(framesListPath, ec);
         return false;
+      }
     }
 
 #if _WIN32
@@ -127,23 +170,16 @@ namespace anm2ed
 
     if (!process.get())
     {
+      std::error_code ec;
+      std::filesystem::remove(framesListPath, ec);
       audio_remove();
       return false;
     }
 
-    for (auto& frame : frames)
-    {
-      auto frameSize = frame.pixel_size_get();
-
-      if (fwrite(frame.pixels.data(), 1, frameSize, process.get()) != frameSize)
-      {
-        audio_remove();
-        return false;
-      }
-    }
-
     process.close();
 
+    std::error_code ec;
+    std::filesystem::remove(framesListPath, ec);
     audio_remove();
     return true;
   }

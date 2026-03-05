@@ -210,6 +210,7 @@ namespace anm2ed::imgui::wizard
                  "##Color Offset B", "##Color Offset G", localize.get(BASIC_COLOR_OFFSET), isColorOffsetR,
                  isColorOffsetG, isColorOffsetB, colorOffset);
 
+    ImGui::BeginDisabled(itemType != anm2::LAYER);
     std::vector<int> fallbackIds{-1};
     std::vector<std::string> fallbackLabelsString{localize.get(BASIC_NONE)};
     std::vector<const char*> fallbackLabels{fallbackLabelsString[0].c_str()};
@@ -221,12 +222,11 @@ namespace anm2ed::imgui::wizard
       auto regionIt = document.regionBySpritesheet.find(spritesheetID);
       if (regionIt != document.regionBySpritesheet.end()) regionStorage = &regionIt->second;
     }
-
     auto regionIds = regionStorage && !regionStorage->ids.empty() ? regionStorage->ids : fallbackIds;
     auto regionLabels = regionStorage && !regionStorage->labels.empty() ? regionStorage->labels : fallbackLabels;
-
     PROPERTIES_WIDGET(combo_id_mapped(localize.get(BASIC_REGION), &regionId, regionIds, regionLabels), "##Is Region",
                       isRegion);
+    ImGui::EndDisabled();
 
     bool_value("##Is Visible", localize.get(BASIC_VISIBLE), isVisibleSet, isVisible);
 

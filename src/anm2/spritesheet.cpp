@@ -226,6 +226,8 @@ namespace anm2ed::anm2
   {
     WorkingDirectory workingDirectory(directory);
     this->path = !path.empty() ? path::make_relative(path) : this->path;
+    if (this->path.empty()) return false;
+    path::ensure_directory(this->path.parent_path());
     return texture.write_png(this->path);
   }
 
@@ -250,6 +252,7 @@ namespace anm2ed::anm2
     hash_combine(seed, std::hash<int>{}(texture.size.y));
     hash_combine(seed, std::hash<int>{}(texture.channels));
     hash_combine(seed, std::hash<int>{}(texture.filter));
+    hash_combine(seed, std::hash<std::string>{}(path::to_utf8(path)));
 
     if (!texture.pixels.empty())
     {
@@ -259,19 +262,6 @@ namespace anm2ed::anm2
     else
     {
       hash_combine(seed, 0);
-    }
-
-    for (const auto& [id, region] : regions)
-    {
-      hash_combine(seed, std::hash<int>{}(id));
-      hash_combine(seed, std::hash<std::string>{}(region.name));
-      hash_combine(seed, std::hash<float>{}(region.crop.x));
-      hash_combine(seed, std::hash<float>{}(region.crop.y));
-      hash_combine(seed, std::hash<float>{}(region.size.x));
-      hash_combine(seed, std::hash<float>{}(region.size.y));
-      hash_combine(seed, std::hash<float>{}(region.pivot.x));
-      hash_combine(seed, std::hash<float>{}(region.pivot.y));
-      hash_combine(seed, std::hash<int>{}(static_cast<int>(region.origin)));
     }
 
     return static_cast<uint64_t>(seed);
