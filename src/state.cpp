@@ -1,4 +1,4 @@
-#include "state.h"
+#include "state.hpp"
 
 #include <algorithm>
 
@@ -7,10 +7,10 @@
 #include <imgui/backends/imgui_impl_opengl3.h>
 #include <imgui/backends/imgui_impl_sdl3.h>
 
-#include "log.h"
-#include "path_.h"
-#include "strings.h"
-#include "toast.h"
+#include "log.hpp"
+#include "path_.hpp"
+#include "strings.hpp"
+#include "toast.hpp"
 
 using namespace anm2ed::imgui;
 using namespace anm2ed::util;
@@ -37,6 +37,30 @@ namespace anm2ed
 
   void State::update(SDL_Window*& window, Settings& settings)
   {
+    /*
+    ImGui_ImplSDL3_NewFrame();
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui::NewFrame();
+
+    SDL_GetWindowSize(window, &settings.windowSize.x, &settings.windowSize.y);
+    SDL_GetWindowPosition(window, &settings.windowPosition.x, &settings.windowPosition.y);
+
+    SDL_Event event{};
+
+    while (SDL_PollEvent(&event))
+    {
+      switch (event.type)
+      {
+        case SDL_EVENT_QUIT:
+          isQuit = true;
+        default:
+          break;
+      }
+    }
+
+    dockspace.update(taskbar, documents, manager, settings, resources, dialog, clipboard);
+    */
+
     SDL_Event event{};
 
     while (SDL_PollEvent(&event))

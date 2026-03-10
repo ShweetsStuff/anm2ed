@@ -8,8 +8,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "strings.h"
-#include "types.h"
+#include "strings.hpp"
+#include "types.hpp"
 
 namespace anm2ed::imgui
 {

@@ -1,4 +1,4 @@
-#include "canvas.h"
+#include "canvas.hpp"
 
 #include <algorithm>
 #include <glm/ext/matrix_clip_space.hpp>
@@ -6,7 +6,7 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "math_.h"
+#include "math_.hpp"
 
 using namespace glm;
 using namespace anm2ed::resource;

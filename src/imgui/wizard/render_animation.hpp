@@ -1,8 +1,8 @@
 #pragma once
 
-#include "dialog.h"
-#include "manager.h"
-#include "resources.h"
+#include "dialog.hpp"
+#include "manager.hpp"
+#include "resources.hpp"
 
 namespace anm2ed::imgui::wizard
 {

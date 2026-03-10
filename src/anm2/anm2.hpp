@@ -4,11 +4,11 @@
 #include <string>
 #include <tinyxml2/tinyxml2.h>
 
-#include "types.h"
+#include "types.hpp"
 
-#include "animations.h"
-#include "content.h"
-#include "info.h"
+#include "animations.hpp"
+#include "content.hpp"
+#include "info.hpp"
 
 namespace anm2ed::anm2
 {

@@ -1,10 +1,10 @@
-#include "about.h"
+#include "about.hpp"
 
 #include <cmath>
 #include <imgui.h>
 #include <vector>
 
-#include "strings.h"
+#include "strings.hpp"
 
 using namespace anm2ed::resource;
 

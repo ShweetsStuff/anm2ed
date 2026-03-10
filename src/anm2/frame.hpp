@@ -4,8 +4,8 @@
 #include <string>
 #include <tinyxml2/tinyxml2.h>
 
-#include "anm2_type.h"
-#include "types.h"
+#include "anm2_type.hpp"
+#include "types.hpp"
 
 namespace anm2ed::anm2
 {

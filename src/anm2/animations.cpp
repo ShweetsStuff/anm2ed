@@ -1,6 +1,6 @@
-#include "animations.h"
+#include "animations.hpp"
 
-#include "xml_.h"
+#include "xml_.hpp"
 
 using namespace tinyxml2;
 using namespace anm2ed::types;

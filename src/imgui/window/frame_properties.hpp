@@ -2,8 +2,8 @@
 
 #include <glm/vec2.hpp>
 
-#include "manager.h"
-#include "wizard/change_all_frame_properties.h"
+#include "manager.hpp"
+#include "wizard/change_all_frame_properties.hpp"
 
 namespace anm2ed::imgui
 {

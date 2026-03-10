@@ -5,9 +5,9 @@
 #include <string>
 #include <vector>
 
-#include "document.h"
-#include "settings.h"
-#include "strings.h"
+#include "document.hpp"
+#include "settings.hpp"
+#include "strings.hpp"
 
 namespace anm2ed
 {

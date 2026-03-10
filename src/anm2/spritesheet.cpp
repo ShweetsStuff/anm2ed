@@ -1,4 +1,4 @@
-#include "spritesheet.h"
+#include "spritesheet.hpp"
 
 #include <algorithm>
 #include <functional>
@@ -6,10 +6,10 @@
 #include <string_view>
 #include <vector>
 
-#include "map_.h"
-#include "path_.h"
-#include "working_directory.h"
-#include "xml_.h"
+#include "map_.hpp"
+#include "path_.hpp"
+#include "working_directory.hpp"
+#include "xml_.hpp"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::util;

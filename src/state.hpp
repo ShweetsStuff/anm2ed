@@ -2,7 +2,7 @@
 
 #include <SDL3/SDL.h>
 
-#include "dockspace.h"
+#include "dockspace.hpp"
 
 namespace anm2ed
 {

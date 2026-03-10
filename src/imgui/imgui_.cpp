@@ -6,9 +6,9 @@
 #include <sstream>
 #include <unordered_map>
 
-#include "imgui_.h"
-#include "path_.h"
-#include "strings.h"
+#include "imgui_.hpp"
+#include "path_.hpp"
+#include "strings.hpp"
 
 using namespace anm2ed::types;
 using namespace anm2ed::util;

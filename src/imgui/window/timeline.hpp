@@ -2,11 +2,11 @@
 
 #include <vector>
 
-#include "clipboard.h"
-#include "manager.h"
-#include "resources.h"
-#include "settings.h"
-#include "strings.h"
+#include "clipboard.hpp"
+#include "manager.hpp"
+#include "resources.hpp"
+#include "settings.hpp"
+#include "strings.hpp"
 
 namespace anm2ed::imgui
 {

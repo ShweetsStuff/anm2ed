@@ -2,11 +2,11 @@
 
 #include <filesystem>
 
-#include "audio_stream.h"
-#include "canvas.h"
-#include "manager.h"
-#include "resources.h"
-#include "settings.h"
+#include "audio_stream.hpp"
+#include "canvas.hpp"
+#include "manager.hpp"
+#include "resources.hpp"
+#include "settings.hpp"
 
 namespace anm2ed::imgui
 {

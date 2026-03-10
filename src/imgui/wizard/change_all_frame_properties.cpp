@@ -1,9 +1,9 @@
-#include "change_all_frame_properties.h"
+#include "change_all_frame_properties.hpp"
 
 #include <string>
 #include <vector>
 
-#include "math_.h"
+#include "math_.hpp"
 
 using namespace anm2ed::util::math;
 using namespace glm;

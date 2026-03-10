@@ -1,7 +1,7 @@
 #pragma once
 
-#include "icon.h"
-#include "strings.h"
+#include "icon.hpp"
+#include "strings.hpp"
 
 #include <glm/glm/vec2.hpp>
 #include <glm/glm/vec3.hpp>

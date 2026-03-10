@@ -1,9 +1,9 @@
-#include "log.h"
+#include "log.hpp"
 
 #include <print>
 
-#include "sdl.h"
-#include "time_.h"
+#include "sdl.hpp"
+#include "time_.hpp"
 
 using namespace anm2ed::util;
 

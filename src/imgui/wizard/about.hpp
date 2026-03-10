@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../resources.h"
+#include "../../resources.hpp"
 
 namespace anm2ed::imgui::wizard
 {

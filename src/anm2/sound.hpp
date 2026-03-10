@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <tinyxml2/tinyxml2.h>
 
-#include "audio.h"
+#include "audio.hpp"
 
 namespace anm2ed::anm2
 {

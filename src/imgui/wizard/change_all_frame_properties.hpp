@@ -1,7 +1,7 @@
 #pragma once
 
-#include "document.h"
-#include "settings.h"
+#include "document.hpp"
+#include "settings.hpp"
 
 namespace anm2ed::imgui::wizard
 {

@@ -1,11 +1,11 @@
-#include "events.h"
+#include "events.hpp"
 
 #include <ranges>
 
-#include "log.h"
-#include "map_.h"
-#include "strings.h"
-#include "toast.h"
+#include "log.hpp"
+#include "map_.hpp"
+#include "strings.hpp"
+#include "toast.hpp"
 
 using namespace anm2ed::util;
 using namespace anm2ed::resource;

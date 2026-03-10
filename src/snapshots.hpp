@@ -3,9 +3,9 @@
 #include <deque>
 #include <optional>
 
-#include "anm2/anm2.h"
-#include "playback.h"
-#include "storage.h"
+#include "anm2/anm2.hpp"
+#include "playback.hpp"
+#include "storage.hpp"
 
 namespace anm2ed::snapshots
 {

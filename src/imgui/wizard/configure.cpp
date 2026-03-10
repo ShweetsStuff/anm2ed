@@ -1,6 +1,6 @@
-#include "configure.h"
+#include "configure.hpp"
 
-#include "imgui_.h"
+#include "imgui_.hpp"
 
 using namespace anm2ed::types;
 

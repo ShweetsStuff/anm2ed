@@ -1,8 +1,8 @@
 #pragma once
 
-#include "icon.h"
-#include "settings.h"
-#include "strings.h"
+#include "icon.hpp"
+#include "settings.hpp"
+#include "strings.hpp"
 
 namespace anm2ed::tool
 {

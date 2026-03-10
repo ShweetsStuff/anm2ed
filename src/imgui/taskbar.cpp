@@ -1,4 +1,4 @@
-#include "taskbar.h"
+#include "taskbar.hpp"
 
 #include <filesystem>
 #include <format>
@@ -7,12 +7,12 @@
 
 #include <imgui/imgui.h>
 
-#include "document.h"
-#include "log.h"
-#include "path_.h"
-#include "strings.h"
-#include "toast.h"
-#include "types.h"
+#include "document.hpp"
+#include "log.hpp"
+#include "path_.hpp"
+#include "strings.hpp"
+#include "toast.hpp"
+#include "types.hpp"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::types;

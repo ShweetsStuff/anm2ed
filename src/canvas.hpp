@@ -3,10 +3,10 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 
-#include "framebuffer.h"
-#include "shader.h"
+#include "framebuffer.hpp"
+#include "shader.hpp"
 
-#include "types.h"
+#include "types.hpp"
 
 namespace anm2ed
 {

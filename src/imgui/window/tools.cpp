@@ -1,11 +1,11 @@
 
-#include "tools.h"
+#include "tools.hpp"
 
 #include <glm/gtc/type_ptr.hpp>
 
-#include "strings.h"
-#include "tool.h"
-#include "types.h"
+#include "strings.hpp"
+#include "tool.hpp"
+#include "types.hpp"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::types;

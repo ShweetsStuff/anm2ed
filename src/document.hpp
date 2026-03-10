@@ -4,7 +4,7 @@
 #include <map>
 #include <unordered_map>
 
-#include "snapshots.h"
+#include "snapshots.hpp"
 
 #include <glm/glm.hpp>
 

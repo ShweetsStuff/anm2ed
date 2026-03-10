@@ -1,13 +1,13 @@
-#include "sounds.h"
+#include "sounds.hpp"
 
 #include <algorithm>
 #include <ranges>
 #include <vector>
 
-#include "log.h"
-#include "path_.h"
-#include "strings.h"
-#include "toast.h"
+#include "log.hpp"
+#include "path_.hpp"
+#include "strings.hpp"
+#include "toast.hpp"
 
 using namespace anm2ed::util;
 using namespace anm2ed::types;

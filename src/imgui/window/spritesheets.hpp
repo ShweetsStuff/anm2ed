@@ -1,10 +1,10 @@
 #pragma once
 
-#include "clipboard.h"
-#include "dialog.h"
-#include "manager.h"
-#include "resources.h"
-#include "settings.h"
+#include "clipboard.hpp"
+#include "dialog.hpp"
+#include "manager.hpp"
+#include "resources.hpp"
+#include "settings.hpp"
 
 namespace anm2ed::imgui
 {

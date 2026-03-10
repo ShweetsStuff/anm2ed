@@ -1,4 +1,4 @@
-#include "timeline.h"
+#include "timeline.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -6,10 +6,10 @@
 
 #include <imgui_internal.h>
 
-#include "log.h"
-#include "toast.h"
+#include "log.hpp"
+#include "toast.hpp"
 
-#include "vector_.h"
+#include "vector_.hpp"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::types;

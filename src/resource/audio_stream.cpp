@@ -1,4 +1,4 @@
-#include "audio_stream.h"
+#include "audio_stream.hpp"
 
 #if defined(__clang__) || defined(__GNUC__)
   #pragma GCC diagnostic push

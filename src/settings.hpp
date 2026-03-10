@@ -5,11 +5,11 @@
 
 #include <glm/glm.hpp>
 
-#include "anm2/anm2_type.h"
-#include "origin.h"
-#include "render.h"
-#include "strings.h"
-#include "types.h"
+#include "anm2/anm2_type.hpp"
+#include "origin.hpp"
+#include "render.hpp"
+#include "strings.hpp"
+#include "types.hpp"
 
 namespace anm2ed
 {

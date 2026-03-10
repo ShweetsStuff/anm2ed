@@ -1,7 +1,7 @@
 #pragma once
 
-#include "audio_stream.h"
-#include "texture.h"
+#include "audio_stream.hpp"
+#include "texture.hpp"
 
 namespace anm2ed::render
 {

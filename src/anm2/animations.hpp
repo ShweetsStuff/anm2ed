@@ -1,6 +1,6 @@
 #pragma once
 
-#include "animation.h"
+#include "animation.hpp"
 
 namespace anm2ed::anm2
 {

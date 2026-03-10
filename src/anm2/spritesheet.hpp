@@ -8,10 +8,10 @@
 #include <cstdint>
 #include <tinyxml2/tinyxml2.h>
 
-#include "texture.h"
-#include "anm2_type.h"
-#include "types.h"
-#include "origin.h"
+#include "texture.hpp"
+#include "anm2_type.hpp"
+#include "types.hpp"
+#include "origin.hpp"
 
 namespace anm2ed::anm2
 {

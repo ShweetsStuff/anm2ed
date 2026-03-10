@@ -87,23 +87,30 @@ set(TINYXML2_SRC external/tinyxml2/tinyxml2.cpp)
 
 file(GLOB PROJECT_SRC CONFIGURE_DEPENDS
      src/anm2/*.cpp
-     src/anm2/*.h
+     src/anm2/*.hpp
      src/resource/*.cpp
-     src/resource/*.h
+     src/resource/*.hpp
      src/imgui/*.cpp
-     src/imgui/*.h
+     src/imgui/*.hpp
      src/imgui/window/*.cpp
-     src/imgui/window/*.h
+     src/imgui/window/*.hpp
      src/imgui/wizard/*.cpp
-     src/imgui/wizard/*.h
+     src/imgui/wizard/*.hpp
      src/util/*.cpp
-     src/util/*.h
+     src/util/*.hpp
      src/window/*.cpp
-     src/window/*.h
+     src/window/*.hpp
      src/*.cpp
-     src/*.h)
+     src/*.hpp)
 
 add_executable(${PROJECT_NAME} ${GLAD_SRC} ${IMGUI_SRC} ${TINYXML2_SRC} ${PROJECT_SRC})
+set_target_properties(
+  ${PROJECT_NAME}
+  PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+             RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/bin"
+             RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/bin"
+             RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_BINARY_DIR}/bin"
+             RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_BINARY_DIR}/bin")
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE IMGUI_DISABLE_OBSOLETE_FUNCTIONS IMGUI_DEBUG_PARANOID
                                                IMGUI_ENABLE_DOCKING)

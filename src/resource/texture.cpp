@@ -1,4 +1,4 @@
-#include "texture.h"
+#include "texture.hpp"
 
 #include <cstdio>
 #include <cstring>
@@ -23,8 +23,8 @@
   #pragma GCC diagnostic pop
 #endif
 
-#include "file_.h"
-#include "math_.h"
+#include "file_.hpp"
+#include "math_.hpp"
 
 using namespace anm2ed::resource::texture;
 using namespace anm2ed::util::math;

@@ -1,9 +1,9 @@
-#include "resources.h"
+#include "resources.hpp"
 
 #include <ranges>
 
-#include "log.h"
-#include "music.h"
+#include "log.hpp"
+#include "music.hpp"
 
 using namespace anm2ed::resource;
 

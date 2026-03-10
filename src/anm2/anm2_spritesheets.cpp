@@ -1,4 +1,4 @@
-#include "anm2.h"
+#include "anm2.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -8,9 +8,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include "map_.h"
-#include "path_.h"
-#include "working_directory.h"
+#include "map_.hpp"
+#include "path_.hpp"
+#include "working_directory.hpp"
 
 using namespace anm2ed::types;
 using namespace anm2ed::util;

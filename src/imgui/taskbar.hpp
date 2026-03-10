@@ -1,18 +1,18 @@
 #pragma once
 
-#include "canvas.h"
-#include "dialog.h"
-#include "imgui_.h"
-#include "manager.h"
-#include "resources.h"
-#include "settings.h"
-#include "strings.h"
+#include "canvas.hpp"
+#include "dialog.hpp"
+#include "imgui_.hpp"
+#include "manager.hpp"
+#include "resources.hpp"
+#include "settings.hpp"
+#include "strings.hpp"
 
-#include "wizard/about.h"
-#include "wizard/change_all_frame_properties.h"
-#include "wizard/configure.h"
-#include "wizard/generate_animation_from_grid.h"
-#include "wizard/render_animation.h"
+#include "wizard/about.hpp"
+#include "wizard/change_all_frame_properties.hpp"
+#include "wizard/configure.hpp"
+#include "wizard/generate_animation_from_grid.hpp"
+#include "wizard/render_animation.hpp"
 
 namespace anm2ed::imgui
 {

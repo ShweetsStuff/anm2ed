@@ -2,11 +2,11 @@
 
 #include <map>
 
-#include "event.h"
-#include "layer.h"
-#include "null.h"
-#include "sound.h"
-#include "spritesheet.h"
+#include "event.hpp"
+#include "layer.hpp"
+#include "null.hpp"
+#include "sound.hpp"
+#include "spritesheet.hpp"
 
 namespace anm2ed::anm2
 {

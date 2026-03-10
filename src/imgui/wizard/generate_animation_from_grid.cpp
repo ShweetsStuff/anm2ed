@@ -1,7 +1,7 @@
-#include "generate_animation_from_grid.h"
+#include "generate_animation_from_grid.hpp"
 
-#include "math_.h"
-#include "types.h"
+#include "math_.hpp"
+#include "types.hpp"
 
 using namespace anm2ed::types;
 using namespace anm2ed::util;

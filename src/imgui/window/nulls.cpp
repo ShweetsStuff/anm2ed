@@ -1,11 +1,11 @@
-#include "nulls.h"
+#include "nulls.hpp"
 
 #include <ranges>
 
-#include "log.h"
-#include "map_.h"
-#include "strings.h"
-#include "toast.h"
+#include "log.hpp"
+#include "map_.hpp"
+#include "strings.hpp"
+#include "toast.hpp"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::util;

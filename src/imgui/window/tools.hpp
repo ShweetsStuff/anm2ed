@@ -1,9 +1,9 @@
 #pragma once
 
-#include "manager.h"
-#include "resources.h"
-#include "settings.h"
-#include "strings.h"
+#include "manager.hpp"
+#include "resources.hpp"
+#include "settings.hpp"
+#include "strings.hpp"
 
 namespace anm2ed::imgui
 {

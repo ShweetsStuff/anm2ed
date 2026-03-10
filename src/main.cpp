@@ -1,5 +1,5 @@
-#include "loader.h"
-#include "state.h"
+#include "loader.hpp"
+#include "state.hpp"
 
 #ifdef _WIN32
   #define SDL_MAIN_HANDLED

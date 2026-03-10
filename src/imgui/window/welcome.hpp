@@ -1,9 +1,9 @@
 #pragma once
 
-#include "documents.h"
-#include "manager.h"
-#include "strings.h"
-#include "taskbar.h"
+#include "documents.hpp"
+#include "manager.hpp"
+#include "strings.hpp"
+#include "taskbar.hpp"
 
 namespace anm2ed::imgui
 {

@@ -1,4 +1,4 @@
-#include "render.h"
+#include "render.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -8,11 +8,11 @@
 #include <fstream>
 #include <string>
 
-#include "log.h"
-#include "path_.h"
-#include "process_.h"
-#include "sdl.h"
-#include "string_.h"
+#include "log.hpp"
+#include "path_.hpp"
+#include "process_.hpp"
+#include "sdl.hpp"
+#include "string_.hpp"
 
 using namespace anm2ed::util;
 
@@ -56,6 +56,8 @@ namespace anm2ed
     std::string audioInputArguments{};
     std::string audioOutputArguments{"-an"};
     std::string command{};
+    auto temporaryDirectory = framePaths.front().parent_path();
+    if (temporaryDirectory.empty()) temporaryDirectory = std::filesystem::temp_directory_path();
 
     auto audio_remove = [&]()
     {
@@ -69,8 +71,8 @@ namespace anm2ed
     if (type != render::GIF && !audioStream.stream.empty() && audioStream.spec.freq > 0 &&
         audioStream.spec.channels > 0)
     {
-      auto tempFilenameUtf8 = std::format("{}.f32", pathString);
-      audioPath = std::filesystem::temp_directory_path() / path::from_utf8(tempFilenameUtf8);
+      auto tempFilenameUtf8 = std::format("anm2ed_audio_{}_{}.f32", std::hash<std::string>{}(pathString), SDL_GetTicks());
+      audioPath = temporaryDirectory / path::from_utf8(tempFilenameUtf8);
 
       std::ofstream audioFile(audioPath, std::ios::binary);
 
@@ -103,7 +105,7 @@ namespace anm2ed
       }
     }
 
-    auto framesListPath = std::filesystem::temp_directory_path() / path::from_utf8(std::format(
+    auto framesListPath = temporaryDirectory / path::from_utf8(std::format(
                              "anm2ed_frames_{}_{}.txt", std::hash<std::string>{}(pathString), SDL_GetTicks())) ;
     std::ofstream framesListFile(framesListPath);
     if (!framesListFile)
@@ -176,7 +178,15 @@ namespace anm2ed
       return false;
     }
 
-    process.close();
+    auto ffmpegExitCode = process.close();
+    if (ffmpegExitCode != 0)
+    {
+      logger.error(std::format("FFmpeg exited with code {} while exporting {}", ffmpegExitCode, pathString));
+      std::error_code ec;
+      std::filesystem::remove(framesListPath, ec);
+      audio_remove();
+      return false;
+    }
 
     std::error_code ec;
     std::filesystem::remove(framesListPath, ec);

@@ -1,6 +1,6 @@
-#include "shader.h"
+#include "shader.hpp"
 
-#include "log.h"
+#include "log.hpp"
 
 namespace anm2ed::resource
 {

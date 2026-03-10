@@ -4,7 +4,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui/imgui.h>
 
-#include "strings.h"
+#include "strings.hpp"
 
 namespace anm2ed::types::theme
 {

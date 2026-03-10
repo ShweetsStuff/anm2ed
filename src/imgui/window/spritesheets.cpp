@@ -1,4 +1,4 @@
-#include "spritesheets.h"
+#include "spritesheets.hpp"
 
 #include <algorithm>
 #include <ranges>
@@ -8,12 +8,12 @@
 #include <format>
 #include <functional>
 
-#include "document.h"
-#include "log.h"
-#include "path_.h"
-#include "strings.h"
-#include "toast.h"
-#include "working_directory.h"
+#include "document.hpp"
+#include "log.hpp"
+#include "path_.hpp"
+#include "strings.hpp"
+#include "toast.hpp"
+#include "working_directory.hpp"
 
 using namespace anm2ed::types;
 using namespace anm2ed::resource;

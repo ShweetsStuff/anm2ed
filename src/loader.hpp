@@ -7,8 +7,8 @@
 
 #include <SDL3/SDL.h>
 
-#include "settings.h"
-#include "socket.h"
+#include "settings.hpp"
+#include "socket.hpp"
 
 namespace anm2ed
 {

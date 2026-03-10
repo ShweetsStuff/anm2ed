@@ -1,4 +1,4 @@
-#include "animation_preview.h"
+#include "animation_preview.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -10,14 +10,14 @@
 
 #include <glm/gtc/type_ptr.hpp>
 
-#include "imgui_.h"
-#include "log.h"
-#include "math_.h"
-#include "path_.h"
-#include "strings.h"
-#include "toast.h"
-#include "tool.h"
-#include "types.h"
+#include "imgui_.hpp"
+#include "log.hpp"
+#include "math_.hpp"
+#include "path_.hpp"
+#include "strings.hpp"
+#include "toast.hpp"
+#include "tool.hpp"
+#include "types.hpp"
 
 using namespace anm2ed::types;
 using namespace anm2ed::util;
@@ -265,11 +265,16 @@ namespace anm2ed::imgui
         {
           if (auto trigger = animation->triggers.frame_generate(playback.time, anm2::TRIGGER); trigger.isVisible)
           {
-            auto soundID = trigger.soundIDs.size() > 1
-                               ? (int)trigger.soundIDs[math::random_in_range(0, trigger.soundIDs.size())]
-                               : (int)trigger.soundIDs.front();
+            if (!trigger.soundIDs.empty())
+            {
+              auto soundIndex = trigger.soundIDs.size() > 1
+                                    ? (size_t)math::random_in_range(0.0f, (float)trigger.soundIDs.size())
+                                    : (size_t)0;
+              soundIndex = std::min(soundIndex, trigger.soundIDs.size() - 1);
+              auto soundID = trigger.soundIDs[soundIndex];
 
-            if (anm2.content.sounds.contains(soundID)) anm2.content.sounds[soundID].audio.play(false, mixer);
+              if (anm2.content.sounds.contains(soundID)) anm2.content.sounds[soundID].audio.play(false, mixer);
+            }
           }
         }
       }

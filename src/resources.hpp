@@ -2,11 +2,11 @@
 
 #include <imgui/imgui.h>
 
-#include "audio.h"
-#include "font.h"
-#include "icon.h"
-#include "shader.h"
-#include "texture.h"
+#include "audio.hpp"
+#include "font.hpp"
+#include "icon.hpp"
+#include "shader.hpp"
+#include "texture.hpp"
 
 namespace anm2ed
 {

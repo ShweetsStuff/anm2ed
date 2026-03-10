@@ -1,9 +1,9 @@
-#include "audio.h"
+#include "audio.hpp"
 
 #include <cstdio>
 #include <utility>
 
-#include "file_.h"
+#include "file_.hpp"
 
 using namespace anm2ed::util;
 
