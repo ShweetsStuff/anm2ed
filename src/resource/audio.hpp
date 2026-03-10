@@ -28,6 +28,7 @@ namespace anm2ed::resource
     bool is_valid();
     void play(bool loop = false, MIX_Mixer* = nullptr);
     void stop(MIX_Mixer* = nullptr);
+    void track_detach(MIX_Mixer* = nullptr);
     bool is_playing() const;
   };
 }

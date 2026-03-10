@@ -30,6 +30,9 @@ namespace anm2ed::imgui
     glm::vec2 moveOffset{};
     std::filesystem::path renderTempDirectory{};
     std::vector<std::filesystem::path> renderTempFrames{};
+    std::vector<double> renderTempFrameDurations{};
+    std::vector<int> renderFrameSoundIDs{};
+    Uint64 renderCaptureCounterPrev{};
 
   public:
     AnimationPreview();

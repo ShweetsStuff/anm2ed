@@ -4,6 +4,8 @@
 #include <fstream>
 #include <string>
 #include <string_view>
+#include <mutex>
+#include <thread>
 
 namespace anm2ed
 {
@@ -44,6 +46,16 @@ namespace anm2ed
   class Logger
   {
     std::ofstream file{};
+    std::mutex mutex{};
+    std::thread stderrThread{};
+    bool isStderrRedirecting{};
+    int stderrPipeReadFd{-1};
+    int stderrPipeWriteFd{-1};
+    int stderrOriginalFd{-1};
+
+    void stderr_redirect_start();
+    void stderr_redirect_stop();
+    void stderr_pump();
 
   public:
     static std::filesystem::path path();

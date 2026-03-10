@@ -26,6 +26,8 @@ namespace anm2ed
 
     uint64_t previousTick{};
     uint64_t previousUpdate{};
+    double tickAccumulatorMs{};
+    bool wasRecording{};
 
     State(SDL_Window*&, Settings& settings, std::vector<std::string>&);
 

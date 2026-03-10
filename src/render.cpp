@@ -35,10 +35,11 @@ namespace anm2ed
   }
 
   bool animation_render(const std::filesystem::path& ffmpegPath, const std::filesystem::path& path,
-                        const std::vector<std::filesystem::path>& framePaths, AudioStream& audioStream,
-                        render::Type type, int fps)
+                        const std::vector<std::filesystem::path>& framePaths,
+                        const std::vector<double>& frameDurations, AudioStream& audioStream, render::Type type, int fps)
   {
     if (framePaths.empty() || ffmpegPath.empty() || path.empty()) return false;
+    (void)frameDurations;
     fps = std::max(fps, 1);
 
     auto pathString = path::to_utf8(path);
@@ -83,8 +84,16 @@ namespace anm2ed
         audioFile.write(data, byteCount);
         audioFile.close();
 
-        audioInputArguments = std::format("-f f32le -ar {0} -ac {1} -i \"{2}\"", audioStream.spec.freq,
-                                          audioStream.spec.channels, path::to_utf8(audioPath));
+        auto sampleRate = std::max(audioStream.spec.freq, 1);
+        auto channels = std::max(audioStream.spec.channels, 1);
+        auto audioDurationFilter = std::string{};
+        auto frameCount = (double)std::max((int)framePaths.size(), 1);
+        auto expectedDurationSeconds = frameCount / (double)fps;
+        if (expectedDurationSeconds > 0.0)
+          audioDurationFilter += std::format("apad,atrim=duration={:.9f}", expectedDurationSeconds);
+
+        audioInputArguments =
+            std::format("-f f32le -ar {0} -ac {1} -i \"{2}\"", sampleRate, channels, path::to_utf8(audioPath));
 
         switch (type)
         {
@@ -97,6 +106,9 @@ namespace anm2ed
           default:
             break;
         }
+
+        if (!audioDurationFilter.empty())
+          audioOutputArguments = std::format("-af \"{}\" {}", audioDurationFilter, audioOutputArguments);
       }
       else
       {
@@ -114,10 +126,12 @@ namespace anm2ed
       return false;
     }
 
-    auto frameDuration = 1.0 / (double)fps;
-    for (const auto& framePath : framePaths)
+    auto defaultFrameDuration = 1.0 / (double)fps;
+    for (std::size_t index = 0; index < framePaths.size(); ++index)
     {
+      auto framePath = framePaths[index];
       auto framePathString = path::to_utf8(framePath);
+      auto frameDuration = defaultFrameDuration;
       framesListFile << "file '" << ffmpeg_concat_escape(framePathString) << "'\n";
       framesListFile << "duration " << std::format("{:.9f}", frameDuration) << "\n";
     }
@@ -127,9 +141,9 @@ namespace anm2ed
 
     auto framesListPathString = path::to_utf8(framesListPath);
     command = std::format("\"{0}\" -y -f concat -safe 0 -i \"{1}\"", ffmpegPathString, framesListPathString);
-    command += std::format(" -fps_mode cfr -r {}", fps);
 
     if (!audioInputArguments.empty()) command += " " + audioInputArguments;
+    command += std::format(" -fps_mode cfr -r {}", fps);
 
     switch (type)
     {

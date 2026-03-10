@@ -37,5 +37,6 @@ namespace anm2ed
 {
   std::filesystem::path ffmpeg_log_path();
   bool animation_render(const std::filesystem::path&, const std::filesystem::path&,
-                        const std::vector<std::filesystem::path>&, AudioStream&, render::Type, int);
+                        const std::vector<std::filesystem::path>&, const std::vector<double>&, AudioStream&,
+                        render::Type, int);
 }

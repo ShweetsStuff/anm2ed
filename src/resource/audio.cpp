@@ -117,6 +117,14 @@ namespace anm2ed::resource
     MIX_StopTrack(track, 0);
   }
 
+  void Audio::track_detach(MIX_Mixer* mixer)
+  {
+    if (!track) return;
+    if (mixer && MIX_GetTrackMixer(track) != mixer) return;
+    MIX_DestroyTrack(track);
+    track = nullptr;
+  }
+
   bool Audio::is_playing() const { return track && MIX_TrackPlaying(track); }
 
   Audio::Audio(const Audio& other)
