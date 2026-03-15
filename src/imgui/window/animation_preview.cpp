@@ -82,6 +82,27 @@ namespace anm2ed::imgui
       directory.clear();
       frames.clear();
     }
+
+    void pixels_unpremultiply_alpha(std::vector<uint8_t>& pixels)
+    {
+      for (size_t index = 0; index + 3 < pixels.size(); index += 4)
+      {
+        auto alpha = pixels[index + 3];
+        if (alpha == 0)
+        {
+          pixels[index + 0] = 0;
+          pixels[index + 1] = 0;
+          pixels[index + 2] = 0;
+          continue;
+        }
+        if (alpha == 255) continue;
+
+        float alphaUnit = (float)alpha / 255.0f;
+        pixels[index + 0] = (uint8_t)glm::clamp((float)std::round((float)pixels[index + 0] / alphaUnit), 0.0f, 255.0f);
+        pixels[index + 1] = (uint8_t)glm::clamp((float)std::round((float)pixels[index + 1] / alphaUnit), 0.0f, 255.0f);
+        pixels[index + 2] = (uint8_t)glm::clamp((float)std::round((float)pixels[index + 2] / alphaUnit), 0.0f, 255.0f);
+      }
+    }
   }
 
   AnimationPreview::AnimationPreview() : Canvas(vec2()) {}
@@ -232,6 +253,7 @@ namespace anm2ed::imgui
 
         bind();
         auto pixels = pixels_get();
+        if (settings.renderIsRawAnimation) pixels_unpremultiply_alpha(pixels);
         auto frameIndex = (int)renderTempFrames.size();
         auto framePath = renderTempDirectory / render_frame_filename(settings.renderFormat, frameIndex);
         if (Texture::write_pixels_png(framePath, size, pixels.data()))
@@ -240,7 +262,8 @@ namespace anm2ed::imgui
         }
         else
         {
-          toasts.push(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED), std::make_format_args(pathString)));
+          toasts.push(
+              std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED), std::make_format_args(pathString)));
           logger.error(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED, anm2ed::ENGLISH),
                                     std::make_format_args(pathString)));
           if (type != render::PNGS) render_temp_cleanup(renderTempDirectory, renderTempFrames);
@@ -513,7 +536,8 @@ namespace anm2ed::imgui
         if (renderTempDirectory.empty())
         {
           auto pathString = path::to_utf8(settings.renderPath);
-          toasts.push(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED), std::make_format_args(pathString)));
+          toasts.push(
+              std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED), std::make_format_args(pathString)));
           logger.error(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED, anm2ed::ENGLISH),
                                     std::make_format_args(pathString)));
           manager.isRecording = false;

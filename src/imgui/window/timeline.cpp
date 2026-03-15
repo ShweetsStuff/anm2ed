@@ -1780,11 +1780,12 @@ namespace anm2ed::imgui
       if (ImGui::Button(localize.get(BASIC_ADD), widgetSize))
       {
         anm2::Reference addReference{};
+        int insertBeforeID = reference.itemType == anm2::LAYER ? reference.itemID : -1;
 
         document.snapshot(localize.get(EDIT_ADD_ITEM));
         if (type == anm2::LAYER)
-          addReference = anm2.layer_animation_add({reference.animationIndex, anm2::LAYER, addItemID}, addItemName,
-                                                  addItemSpritesheetID, (destination::Type)destination);
+          addReference = anm2.layer_animation_add({reference.animationIndex, anm2::LAYER, addItemID}, insertBeforeID,
+                                                  addItemName, addItemSpritesheetID, (destination::Type)destination);
         else if (type == anm2::NULL_)
           addReference = anm2.null_animation_add({reference.animationIndex, anm2::NULL_, addItemID}, addItemName,
                                                  addItemIsShowRect, (destination::Type)destination);

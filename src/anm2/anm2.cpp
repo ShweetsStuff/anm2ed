@@ -18,6 +18,13 @@ using namespace glm;
 
 namespace
 {
+  int remap_id(const std::unordered_map<int, int>& table, int value)
+  {
+    if (value < 0) return value;
+    if (auto it = table.find(value); it != table.end()) return it->second;
+    return value;
+  }
+
   void region_frames_sync(anm2ed::anm2::Anm2& anm2, bool clearInvalid)
   {
     for (auto& animation : anm2.animations.items)
@@ -84,12 +91,13 @@ namespace anm2ed::anm2
 
   XMLElement* Anm2::to_element(XMLDocument& document, Flags flags)
   {
-    region_frames_sync(*this, true);
+    auto normalized = normalized_for_serialize();
+    region_frames_sync(normalized, true);
     auto element = document.NewElement("AnimatedActor");
 
-    info.serialize(document, element);
-    content.serialize(document, element, flags);
-    animations.serialize(document, element, flags);
+    normalized.info.serialize(document, element);
+    normalized.content.serialize(document, element, flags);
+    normalized.animations.serialize(document, element, flags);
 
     return element;
   }
@@ -122,6 +130,46 @@ namespace anm2ed::anm2
   }
 
   uint64_t Anm2::hash() { return std::hash<std::string>{}(to_string()); }
+
+  Anm2 Anm2::normalized_for_serialize() const
+  {
+    auto normalized = *this;
+    std::unordered_map<int, int> layerRemap{};
+
+    int normalizedID = 0;
+    for (auto& [layerID, layer] : content.layers)
+    {
+      layerRemap[layerID] = normalizedID;
+      ++normalizedID;
+    }
+
+    normalized.content.layers.clear();
+    for (auto& [layerID, layer] : content.layers)
+      normalized.content.layers[remap_id(layerRemap, layerID)] = layer;
+
+    for (auto& animation : normalized.animations.items)
+    {
+      std::unordered_map<int, Item> layerAnimations{};
+      std::vector<int> layerOrder{};
+
+      for (auto layerID : animation.layerOrder)
+      {
+        auto mappedID = remap_id(layerRemap, layerID);
+        if (mappedID >= 0) layerOrder.push_back(mappedID);
+      }
+
+      for (auto& [layerID, item] : animation.layerAnimations)
+      {
+        auto mappedID = remap_id(layerRemap, layerID);
+        if (mappedID >= 0) layerAnimations[mappedID] = item;
+      }
+
+      animation.layerAnimations = std::move(layerAnimations);
+      animation.layerOrder = std::move(layerOrder);
+    }
+
+    return normalized;
+  }
 
   Frame* Anm2::frame_get(int animationIndex, Type itemType, int frameIndex, int itemID)
   {
@@ -175,13 +223,6 @@ namespace anm2ed::anm2
         return original.empty() ? absolute : original;
       }
       return original;
-    };
-
-    auto remap_id = [](const auto& table, int value)
-    {
-      if (value < 0) return value;
-      if (auto it = table.find(value); it != table.end()) return it->second;
-      return value;
     };
 
     std::unordered_map<int, int> spritesheetRemap{};

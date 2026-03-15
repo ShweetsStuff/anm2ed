@@ -104,9 +104,10 @@ namespace anm2ed::anm2
       {
         bool noRegions = has_flag(flags, NO_REGIONS);
         bool frameNoRegionValues = has_flag(flags, FRAME_NO_REGION_VALUES);
-        bool writeRegionValues = !frameNoRegionValues || noRegions;
+        bool hasValidRegion = !noRegions && regionID != -1;
+        bool writeRegionValues = !frameNoRegionValues || !hasValidRegion;
 
-        if (!noRegions && regionID != -1) element->SetAttribute("RegionId", regionID);
+        if (hasValidRegion) element->SetAttribute("RegionId", regionID);
         element->SetAttribute("XPosition", position.x);
         element->SetAttribute("YPosition", position.y);
         if (writeRegionValues)

@@ -3,14 +3,12 @@
 #include <algorithm>
 #include <ranges>
 
-#include <filesystem>
 #include <format>
 
 #include "document.h"
 #include "log.h"
 #include "map_.h"
 #include "math_.h"
-#include "path_.h"
 #include "strings.h"
 #include "toast.h"
 #include "vector_.h"

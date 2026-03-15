@@ -36,6 +36,7 @@ namespace anm2ed::anm2
     std::string to_string(Flags = 0);
     Anm2(const std::filesystem::path&, std::string* = nullptr);
     uint64_t hash();
+    Anm2 normalized_for_serialize() const;
 
     Spritesheet* spritesheet_get(int);
     bool spritesheet_add(const std::filesystem::path&, const std::filesystem::path&, int&);
@@ -80,7 +81,7 @@ namespace anm2ed::anm2
     bool animations_deserialize(const std::string&, int, std::set<int>&, std::string* = nullptr);
 
     Item* item_get(int, Type, int = -1);
-    Reference layer_animation_add(Reference = {}, std::string = {}, int = 0,
+    Reference layer_animation_add(Reference = {}, int = -1, std::string = {}, int = 0,
                                   types::destination::Type = types::destination::ALL);
     Reference null_animation_add(Reference = {}, std::string = {}, bool = false,
                                  types::destination::Type = types::destination::ALL);
