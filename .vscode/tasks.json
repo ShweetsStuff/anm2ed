@@ -3,6 +3,7 @@
     "tasks": [
         {
             "label": "run-debug",
+<<<<<<< HEAD
             "type": "shell",
             "command": "cmake",
             "args": [
@@ -27,6 +28,18 @@
                 "anm2ed"
             ],
             "dependsOn": "run-debug",
+=======
+            "type": "shell",
+            "command": "cmake -S . -B out/build/linux-debug -DCMAKE_BUILD_TYPE=Debug && cmake --build out/build/linux-debug --parallel 8 --target anm2ed && ./out/build/linux-debug/anm2ed",
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "cmake -S . -B out/build/linux-debug -DCMAKE_BUILD_TYPE=Debug && cmake --build out/build/linux-debug --parallel 8 --target anm2ed",
+>>>>>>> f58d894 (Render animation fixes, vs code tasks)
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -38,6 +51,7 @@
         {
             "label": "run-release",
             "type": "shell",
+<<<<<<< HEAD
             "command": "cmake",
             "args": [
                 "-S",
@@ -46,6 +60,9 @@
                 "out/build/linux-release",
                 "-DCMAKE_BUILD_TYPE=Release"
             ],
+=======
+            "command": "cmake -S . -B out/build/linux-release -DCMAKE_BUILD_TYPE=Release && cmake --build out/build/linux-release --parallel 8 --target anm2ed && ./out/build/linux-release/anm2ed",
+>>>>>>> f58d894 (Render animation fixes, vs code tasks)
             "problemMatcher": [
                 "$gcc"
             ]
@@ -53,6 +70,7 @@
         {
             "label": "build-release",
             "type": "shell",
+<<<<<<< HEAD
             "command": "cmake",
             "args": [
                 "--build",
@@ -61,6 +79,9 @@
                 "anm2ed"
             ],
             "dependsOn": "run-release",
+=======
+            "command": "cmake -S . -B out/build/linux-release -DCMAKE_BUILD_TYPE=Release && cmake --build out/build/linux-release --parallel 8 --target anm2ed",
+>>>>>>> f58d894 (Render animation fixes, vs code tasks)
             "group": "build",
             "problemMatcher": [
                 "$gcc"

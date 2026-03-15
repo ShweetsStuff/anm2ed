@@ -105,6 +105,7 @@ namespace anm2ed::imgui
         pixels[index + 2] = (uint8_t)glm::clamp((float)std::round((float)pixels[index + 2] / alphaUnit), 0.0f, 255.0f);
       }
     }
+<<<<<<< HEAD
 
     bool render_audio_stream_generate(AudioStream& audioStream, std::map<int, anm2::Sound>& sounds,
                                       const std::vector<int>& frameSoundIDs, int fps)
@@ -150,6 +151,8 @@ namespace anm2ed::imgui
       MIX_DestroyMixer(mixer);
       return true;
     }
+=======
+>>>>>>> f58d894 (Render animation fixes, vs code tasks)
   }
 
   AnimationPreview::AnimationPreview() : Canvas(vec2()) {}
@@ -368,7 +371,8 @@ namespace anm2ed::imgui
         }
         else
         {
-          toasts.push(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED), std::make_format_args(pathString)));
+          toasts.push(
+              std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED), std::make_format_args(pathString)));
           logger.error(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED, anm2ed::ENGLISH),
                                     std::make_format_args(pathString)));
           if (type != render::PNGS) render_temp_cleanup(renderTempDirectory, renderTempFrames);
@@ -649,7 +653,8 @@ namespace anm2ed::imgui
         if (renderTempDirectory.empty())
         {
           auto pathString = path::to_utf8(settings.renderPath);
-          toasts.push(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED), std::make_format_args(pathString)));
+          toasts.push(
+              std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED), std::make_format_args(pathString)));
           logger.error(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED, anm2ed::ENGLISH),
                                     std::make_format_args(pathString)));
           manager.isRecording = false;

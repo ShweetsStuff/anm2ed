@@ -36,6 +36,7 @@ namespace anm2ed::anm2
     std::string to_string(Flags = 0);
     Anm2(const std::filesystem::path&, std::string* = nullptr);
     uint64_t hash();
+    Anm2 normalized_for_serialize() const;
 
     Spritesheet* spritesheet_get(int);
     bool spritesheet_add(const std::filesystem::path&, const std::filesystem::path&, int&);
