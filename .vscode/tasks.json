@@ -2,9 +2,31 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "run-debug",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "-S",
+                ".",
+                "-B",
+                "out/build/linux-debug",
+                "-DCMAKE_BUILD_TYPE=Debug"
+            ],
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
             "label": "build-debug",
             "type": "shell",
-            "command": "cmake -S . -B out/build/linux-debug -DCMAKE_BUILD_TYPE=Debug && cmake --build out/build/linux-debug --target anm2ed",
+            "command": "cmake",
+            "args": [
+                "--build",
+                "out/build/linux-debug",
+                "--target",
+                "anm2ed"
+            ],
+            "dependsOn": "run-debug",
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -14,9 +36,31 @@
             ]
         },
         {
+            "label": "run-release",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "-S",
+                ".",
+                "-B",
+                "out/build/linux-release",
+                "-DCMAKE_BUILD_TYPE=Release"
+            ],
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
             "label": "build-release",
             "type": "shell",
-            "command": "cmake -S . -B out/build/linux-release -DCMAKE_BUILD_TYPE=Release && cmake --build out/build/linux-release --target anm2ed",
+            "command": "cmake",
+            "args": [
+                "--build",
+                "out/build/linux-release",
+                "--target",
+                "anm2ed"
+            ],
+            "dependsOn": "run-release",
             "group": "build",
             "problemMatcher": [
                 "$gcc"

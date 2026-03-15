@@ -30,7 +30,7 @@ namespace anm2ed::anm2
     return nullptr;
   }
 
-  Reference Anm2::layer_animation_add(Reference reference, std::string name, int spritesheetID,
+  Reference Anm2::layer_animation_add(Reference reference, int insertBeforeID, std::string name, int spritesheetID,
                                       destination::Type destination)
   {
     auto id = reference.itemID == -1 ? map::next_id_get(content.layers) : reference.itemID;
@@ -39,21 +39,35 @@ namespace anm2ed::anm2
     layer.name = !name.empty() ? name : layer.name;
     layer.spritesheetID = content.spritesheets.contains(spritesheetID) ? spritesheetID : 0;
 
-    auto add = [&](Animation* animation, int id)
+    auto add = [&](Animation* animation, int id, bool insertBeforeReference)
     {
       animation->layerAnimations[id] = Item();
+
+      if (insertBeforeReference && insertBeforeID != -1)
+      {
+        auto it = std::find(animation->layerOrder.begin(), animation->layerOrder.end(), insertBeforeID);
+        if (it != animation->layerOrder.end())
+        {
+          animation->layerOrder.insert(it, id);
+          return;
+        }
+      }
+
       animation->layerOrder.push_back(id);
     };
 
     if (destination == destination::ALL)
     {
-      for (auto& animation : animations.items)
-        if (!animation.layerAnimations.contains(id)) add(&animation, id);
+      for (size_t index = 0; index < animations.items.size(); ++index)
+      {
+        auto& animation = animations.items[index];
+        if (!animation.layerAnimations.contains(id)) add(&animation, id, true);
+      }
     }
     else if (destination == destination::THIS)
     {
       if (auto animation = animation_get(reference.animationIndex))
-        if (!animation->layerAnimations.contains(id)) add(animation, id);
+        if (!animation->layerAnimations.contains(id)) add(animation, id, true);
     }
 
     return {reference.animationIndex, LAYER, id};

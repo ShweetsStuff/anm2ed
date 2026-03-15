@@ -85,6 +85,27 @@ namespace anm2ed::imgui
       frames.clear();
     }
 
+    void pixels_unpremultiply_alpha(std::vector<uint8_t>& pixels)
+    {
+      for (size_t index = 0; index + 3 < pixels.size(); index += 4)
+      {
+        auto alpha = pixels[index + 3];
+        if (alpha == 0)
+        {
+          pixels[index + 0] = 0;
+          pixels[index + 1] = 0;
+          pixels[index + 2] = 0;
+          continue;
+        }
+        if (alpha == 255) continue;
+
+        float alphaUnit = (float)alpha / 255.0f;
+        pixels[index + 0] = (uint8_t)glm::clamp((float)std::round((float)pixels[index + 0] / alphaUnit), 0.0f, 255.0f);
+        pixels[index + 1] = (uint8_t)glm::clamp((float)std::round((float)pixels[index + 1] / alphaUnit), 0.0f, 255.0f);
+        pixels[index + 2] = (uint8_t)glm::clamp((float)std::round((float)pixels[index + 2] / alphaUnit), 0.0f, 255.0f);
+      }
+    }
+
     bool render_audio_stream_generate(AudioStream& audioStream, std::map<int, anm2::Sound>& sounds,
                                       const std::vector<int>& frameSoundIDs, int fps)
     {
@@ -320,6 +341,7 @@ namespace anm2ed::imgui
 
         bind();
         auto pixels = pixels_get();
+        if (settings.renderIsRawAnimation) pixels_unpremultiply_alpha(pixels);
         auto frameIndex = (int)renderTempFrames.size();
         auto framePath = renderTempDirectory / render_frame_filename(settings.renderFormat, frameIndex);
         if (Texture::write_pixels_png(framePath, size, pixels.data()))

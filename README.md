@@ -4,6 +4,9 @@
 
 A reimplementation of *The Binding of Isaac: Rebirth*'s proprietary animation editor. Manipulates the XML-based ".anm2" format, used for in-game tweened animations.
 
+### Clarification
+This application was partly vibe-coded by an LLM (let's say 70% me/30% AI sloppa). Sorry not sorry, I'm just lazy. 
+
 ## Features
 - Extended version of the original proprietary Nicalis animation editor
 - Smooth [Dear ImGui](https://github.com/ocornut/imgui) interface; docking, dragging and dropping, etc. You might be familiar with it from [Repentogon](https://repentogon.com/).

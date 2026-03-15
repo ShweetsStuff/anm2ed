@@ -149,7 +149,8 @@ namespace anm2ed
     {
       case render::GIF:
         command +=
-            " -lavfi \"split[s0][s1];[s0]palettegen=stats_mode=full[p];[s1][p]paletteuse=dither=floyd_steinberg\""
+            " -lavfi \"split[s0][s1];[s0]palettegen=stats_mode=full:reserve_transparent=1[p];"
+            "[s1][p]paletteuse=dither=floyd_steinberg:alpha_threshold=128\""
             " -loop 0";
         command += std::format(" \"{}\"", pathString);
         break;
