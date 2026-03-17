@@ -1,8 +1,8 @@
 #include "animation_preview.hpp"
 
 #include <algorithm>
-#include <cmath>
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <format>
 #include <map>
@@ -105,7 +105,6 @@ namespace anm2ed::imgui
         pixels[index + 2] = (uint8_t)glm::clamp((float)std::round((float)pixels[index + 2] / alphaUnit), 0.0f, 255.0f);
       }
     }
-<<<<<<< HEAD
 
     bool render_audio_stream_generate(AudioStream& audioStream, std::map<int, anm2::Sound>& sounds,
                                       const std::vector<int>& frameSoundIDs, int fps)
@@ -151,8 +150,6 @@ namespace anm2ed::imgui
       MIX_DestroyMixer(mixer);
       return true;
     }
-=======
->>>>>>> f58d894 (Render animation fixes, vs code tasks)
   }
 
   AnimationPreview::AnimationPreview() : Canvas(vec2()) {}
