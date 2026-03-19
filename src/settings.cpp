@@ -1,10 +1,10 @@
-#include "settings.h"
+#include "settings.hpp"
 
 #include <fstream>
 #include <sstream>
 
-#include "log.h"
-#include "path_.h"
+#include "log.hpp"
+#include "path_.hpp"
 
 using namespace anm2ed::util;
 using namespace glm;

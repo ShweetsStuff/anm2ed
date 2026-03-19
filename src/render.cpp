@@ -1,4 +1,4 @@
-#include "render.h"
+#include "render.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -8,11 +8,11 @@
 #include <fstream>
 #include <string>
 
-#include "log.h"
-#include "path_.h"
-#include "process_.h"
-#include "sdl.h"
-#include "string_.h"
+#include "log.hpp"
+#include "path_.hpp"
+#include "process_.hpp"
+#include "sdl.hpp"
+#include "string_.hpp"
 
 using namespace anm2ed::util;
 
@@ -35,10 +35,11 @@ namespace anm2ed
   }
 
   bool animation_render(const std::filesystem::path& ffmpegPath, const std::filesystem::path& path,
-                        const std::vector<std::filesystem::path>& framePaths, AudioStream& audioStream,
-                        render::Type type, int fps)
+                        const std::vector<std::filesystem::path>& framePaths,
+                        const std::vector<double>& frameDurations, AudioStream& audioStream, render::Type type, int fps)
   {
     if (framePaths.empty() || ffmpegPath.empty() || path.empty()) return false;
+    (void)frameDurations;
     fps = std::max(fps, 1);
 
     auto pathString = path::to_utf8(path);
@@ -56,6 +57,8 @@ namespace anm2ed
     std::string audioInputArguments{};
     std::string audioOutputArguments{"-an"};
     std::string command{};
+    auto temporaryDirectory = framePaths.front().parent_path();
+    if (temporaryDirectory.empty()) temporaryDirectory = std::filesystem::temp_directory_path();
 
     auto audio_remove = [&]()
     {
@@ -69,8 +72,8 @@ namespace anm2ed
     if (type != render::GIF && !audioStream.stream.empty() && audioStream.spec.freq > 0 &&
         audioStream.spec.channels > 0)
     {
-      auto tempFilenameUtf8 = std::format("{}.f32", pathString);
-      audioPath = std::filesystem::temp_directory_path() / path::from_utf8(tempFilenameUtf8);
+      auto tempFilenameUtf8 = std::format("anm2ed_audio_{}_{}.f32", std::hash<std::string>{}(pathString), SDL_GetTicks());
+      audioPath = temporaryDirectory / path::from_utf8(tempFilenameUtf8);
 
       std::ofstream audioFile(audioPath, std::ios::binary);
 
@@ -81,8 +84,16 @@ namespace anm2ed
         audioFile.write(data, byteCount);
         audioFile.close();
 
-        audioInputArguments = std::format("-f f32le -ar {0} -ac {1} -i \"{2}\"", audioStream.spec.freq,
-                                          audioStream.spec.channels, path::to_utf8(audioPath));
+        auto sampleRate = std::max(audioStream.spec.freq, 1);
+        auto channels = std::max(audioStream.spec.channels, 1);
+        auto audioDurationFilter = std::string{};
+        auto frameCount = (double)std::max((int)framePaths.size(), 1);
+        auto expectedDurationSeconds = frameCount / (double)fps;
+        if (expectedDurationSeconds > 0.0)
+          audioDurationFilter += std::format("apad,atrim=duration={:.9f}", expectedDurationSeconds);
+
+        audioInputArguments =
+            std::format("-f f32le -ar {0} -ac {1} -i \"{2}\"", sampleRate, channels, path::to_utf8(audioPath));
 
         switch (type)
         {
@@ -95,6 +106,9 @@ namespace anm2ed
           default:
             break;
         }
+
+        if (!audioDurationFilter.empty())
+          audioOutputArguments = std::format("-af \"{}\" {}", audioDurationFilter, audioOutputArguments);
       }
       else
       {
@@ -103,7 +117,7 @@ namespace anm2ed
       }
     }
 
-    auto framesListPath = std::filesystem::temp_directory_path() / path::from_utf8(std::format(
+    auto framesListPath = temporaryDirectory / path::from_utf8(std::format(
                              "anm2ed_frames_{}_{}.txt", std::hash<std::string>{}(pathString), SDL_GetTicks())) ;
     std::ofstream framesListFile(framesListPath);
     if (!framesListFile)
@@ -112,10 +126,12 @@ namespace anm2ed
       return false;
     }
 
-    auto frameDuration = 1.0 / (double)fps;
-    for (const auto& framePath : framePaths)
+    auto defaultFrameDuration = 1.0 / (double)fps;
+    for (std::size_t index = 0; index < framePaths.size(); ++index)
     {
+      auto framePath = framePaths[index];
       auto framePathString = path::to_utf8(framePath);
+      auto frameDuration = defaultFrameDuration;
       framesListFile << "file '" << ffmpeg_concat_escape(framePathString) << "'\n";
       framesListFile << "duration " << std::format("{:.9f}", frameDuration) << "\n";
     }
@@ -125,9 +141,9 @@ namespace anm2ed
 
     auto framesListPathString = path::to_utf8(framesListPath);
     command = std::format("\"{0}\" -y -f concat -safe 0 -i \"{1}\"", ffmpegPathString, framesListPathString);
-    command += std::format(" -fps_mode cfr -r {}", fps);
 
     if (!audioInputArguments.empty()) command += " " + audioInputArguments;
+    command += std::format(" -fps_mode cfr -r {}", fps);
 
     switch (type)
     {
@@ -177,7 +193,15 @@ namespace anm2ed
       return false;
     }
 
-    process.close();
+    auto ffmpegExitCode = process.close();
+    if (ffmpegExitCode != 0)
+    {
+      logger.error(std::format("FFmpeg exited with code {} while exporting {}", ffmpegExitCode, pathString));
+      std::error_code ec;
+      std::filesystem::remove(framesListPath, ec);
+      audio_remove();
+      return false;
+    }
 
     std::error_code ec;
     std::filesystem::remove(framesListPath, ec);

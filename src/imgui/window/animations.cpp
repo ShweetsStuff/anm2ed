@@ -1,12 +1,12 @@
-#include "animations.h"
+#include "animations.hpp"
 
 #include <format>
 #include <ranges>
 
-#include "log.h"
-#include "strings.h"
-#include "toast.h"
-#include "vector_.h"
+#include "log.hpp"
+#include "strings.hpp"
+#include "toast.hpp"
+#include "vector_.hpp"
 
 using namespace anm2ed::util;
 using namespace anm2ed::resource;

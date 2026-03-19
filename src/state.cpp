@@ -1,4 +1,4 @@
-#include "state.h"
+#include "state.hpp"
 
 #include <algorithm>
 
@@ -7,10 +7,10 @@
 #include <imgui/backends/imgui_impl_opengl3.h>
 #include <imgui/backends/imgui_impl_sdl3.h>
 
-#include "log.h"
-#include "path_.h"
-#include "strings.h"
-#include "toast.h"
+#include "log.hpp"
+#include "path_.hpp"
+#include "strings.hpp"
+#include "toast.hpp"
 
 using namespace anm2ed::imgui;
 using namespace anm2ed::util;
@@ -37,6 +37,30 @@ namespace anm2ed
 
   void State::update(SDL_Window*& window, Settings& settings)
   {
+    /*
+    ImGui_ImplSDL3_NewFrame();
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui::NewFrame();
+
+    SDL_GetWindowSize(window, &settings.windowSize.x, &settings.windowSize.y);
+    SDL_GetWindowPosition(window, &settings.windowPosition.x, &settings.windowPosition.y);
+
+    SDL_Event event{};
+
+    while (SDL_PollEvent(&event))
+    {
+      switch (event.type)
+      {
+        case SDL_EVENT_QUIT:
+          isQuit = true;
+        default:
+          break;
+      }
+    }
+
+    dockspace.update(taskbar, documents, manager, settings, resources, dialog, clipboard);
+    */
+
     SDL_Event event{};
 
     while (SDL_PollEvent(&event))
@@ -135,6 +159,31 @@ namespace anm2ed
   {
     auto currentTick = SDL_GetTicks();
     auto currentUpdate = SDL_GetTicks();
+    auto isRecording = manager.isRecording;
+    auto tickIntervalMs = (double)TICK_INTERVAL;
+
+    if (isRecording)
+    {
+      if (auto document = manager.get())
+      {
+        auto fps = std::max(document->anm2.info.fps, 1);
+        tickIntervalMs = std::max(1.0, 1000.0 / (double)fps);
+      }
+    }
+
+    if (isRecording != wasRecording)
+    {
+      // Drop any accumulated backlog when entering/leaving recording mode.
+      tickAccumulatorMs = 0.0;
+      previousTick = currentTick;
+      wasRecording = isRecording;
+    }
+
+    if (previousTick == 0) previousTick = currentTick;
+    auto tickDeltaMs = currentTick - previousTick;
+    tickDeltaMs = std::min<Uint64>(tickDeltaMs, 250);
+    tickAccumulatorMs += (double)tickDeltaMs;
+    previousTick = currentTick;
 
     if (currentUpdate - previousUpdate >= UPDATE_INTERVAL)
     {
@@ -143,10 +192,10 @@ namespace anm2ed
       previousUpdate = currentUpdate;
     }
 
-    if (currentTick - previousTick >= TICK_INTERVAL)
+    if (tickAccumulatorMs >= tickIntervalMs)
     {
       tick(settings);
-      previousTick = currentTick;
+      tickAccumulatorMs -= tickIntervalMs;
     }
 
     SDL_Delay(1);

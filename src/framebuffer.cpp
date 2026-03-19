@@ -1,6 +1,6 @@
-#include "framebuffer.h"
+#include "framebuffer.hpp"
 
-#include "texture.h"
+#include "texture.hpp"
 
 using namespace anm2ed::resource;
 using namespace glm;

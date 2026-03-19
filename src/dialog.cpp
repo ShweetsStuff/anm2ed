@@ -1,19 +1,19 @@
-#include "dialog.h"
+#include "dialog.hpp"
 
 #ifdef _WIN32
   #include <windows.h>
 #elif __unix__
 #else
-  #include "log.h"
-  #include "strings.h"
-  #include "toast.h"
+  #include "log.hpp"
+  #include "strings.hpp"
+  #include "toast.hpp"
 #endif
 
 #include <cstdlib>
 #include <cstring>
 #include <format>
 
-#include "path_.h"
+#include "path_.hpp"
 
 using namespace anm2ed::util;
 

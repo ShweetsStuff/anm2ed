@@ -1,15 +1,15 @@
-#include "anm2.h"
+#include "anm2.hpp"
 
 #include <algorithm>
 #include <filesystem>
 #include <unordered_map>
 
-#include "file_.h"
-#include "map_.h"
-#include "time_.h"
-#include "vector_.h"
-#include "working_directory.h"
-#include "xml_.h"
+#include "file_.hpp"
+#include "map_.hpp"
+#include "time_.hpp"
+#include "vector_.hpp"
+#include "working_directory.hpp"
+#include "xml_.hpp"
 
 using namespace tinyxml2;
 using namespace anm2ed::types;

@@ -1,4 +1,4 @@
-#include "math.h"
+#include "math_.hpp"
 
 #include <ctime>
 #include <glm/ext/matrix_transform.hpp>

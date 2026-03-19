@@ -1,9 +1,9 @@
-#include "audio.h"
+#include "audio.hpp"
 
 #include <cstdio>
 #include <utility>
 
-#include "file_.h"
+#include "file_.hpp"
 
 using namespace anm2ed::util;
 
@@ -115,6 +115,14 @@ namespace anm2ed::resource
     if (!track) return;
     if (mixer && MIX_GetTrackMixer(track) != mixer) return;
     MIX_StopTrack(track, 0);
+  }
+
+  void Audio::track_detach(MIX_Mixer* mixer)
+  {
+    if (!track) return;
+    if (mixer && MIX_GetTrackMixer(track) != mixer) return;
+    MIX_DestroyTrack(track);
+    track = nullptr;
   }
 
   bool Audio::is_playing() const { return track && MIX_TrackPlaying(track); }

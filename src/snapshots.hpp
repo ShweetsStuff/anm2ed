@@ -1,0 +1,71 @@
+#pragma once
+
+#include <deque>
+#include <optional>
+
+#include "anm2/anm2.hpp"
+#include "playback.hpp"
+#include "storage.hpp"
+
+namespace anm2ed::snapshots
+{
+  constexpr auto ACTION = "Action";
+  constexpr auto MAX = 20;
+};
+
+namespace anm2ed
+{
+  class Snapshot
+  {
+  public:
+    Playback playback{};
+    Storage animation{};
+    Storage event{};
+    Storage frames{};
+    Storage items{};
+    Storage layer{};
+    Storage merge{};
+    Storage null{};
+    Storage region{};
+    Storage sound{};
+    Storage spritesheet{};
+    anm2::Anm2 anm2{};
+    anm2::Reference reference{};
+    float frameTime{};
+    std::string message = snapshots::ACTION;
+  };
+
+  class SnapshotStack
+  {
+  public:
+    SnapshotStack() = default;
+
+    bool is_empty();
+    void push(const Snapshot&);
+    std::optional<Snapshot> pop();
+    void clear();
+    void trim_to_limit();
+
+    static void max_size_set(int);
+    static int max_size_get();
+
+  private:
+    static int maxSize;
+    std::deque<Snapshot> stack;
+  };
+
+  class Snapshots
+  {
+  public:
+    SnapshotStack undoStack{};
+    SnapshotStack redoStack{};
+    Snapshot current{};
+
+    Snapshot* get();
+    void push(const Snapshot&);
+    void undo();
+    void redo();
+    void reset();
+    void apply_limit();
+  };
+}

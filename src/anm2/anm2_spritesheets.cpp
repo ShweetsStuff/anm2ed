@@ -1,4 +1,4 @@
-#include "anm2.h"
+#include "anm2.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -8,9 +8,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include "map_.h"
-#include "path_.h"
-#include "working_directory.h"
+#include "map_.hpp"
+#include "path_.hpp"
+#include "working_directory.hpp"
 
 using namespace anm2ed::types;
 using namespace anm2ed::util;
@@ -419,6 +419,7 @@ namespace anm2ed::anm2
     std::unordered_map<int, glm::ivec2> offsets{};
     offsets[baseId] = {};
 
+    auto baseTextureSize = base.texture.size;
     auto mergedTexture = base.texture;
     for (auto id : ids)
     {
@@ -445,6 +446,20 @@ namespace anm2ed::anm2
         for (auto id : base.regions | std::views::keys)
           base.regionOrder.push_back(id);
       }
+
+      auto baseLocationRegionID = map::next_id_get(base.regions);
+      auto baseFilename = path::to_utf8(base.path.stem());
+      auto baseLocationRegionName = baseFilename.empty() ? std::format("#{}", baseId) : baseFilename;
+      auto baseLocationRegionPivot =
+          regionOrigin == origin::ORIGIN_CENTER ? glm::vec2(baseTextureSize) * 0.5f : glm::vec2();
+      base.regions[baseLocationRegionID] = {
+          .name = baseLocationRegionName,
+          .crop = {},
+          .pivot = glm::ivec2(baseLocationRegionPivot),
+          .size = baseTextureSize,
+          .origin = regionOrigin,
+      };
+      base.regionOrder.push_back(baseLocationRegionID);
 
       for (auto id : ids)
       {

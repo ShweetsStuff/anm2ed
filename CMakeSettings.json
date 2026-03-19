@@ -1,7 +1,7 @@
 {
     "configurations": [
         {
-            "name": "x64-Debug",
+            "name": "windows-debug",
             "generator": "Ninja",
             "configurationType": "Debug",
             "inheritEnvironments": [
@@ -12,7 +12,7 @@
             "cmakeCommandArgs": "-DCMAKE_BUILD_TYPE=\"Debug\""
         },
         {
-            "name": "x64-Release",
+            "name": "windows-release",
             "generator": "Ninja",
             "configurationType": "Release",
             "inheritEnvironments": [

@@ -1,6 +1,6 @@
-#include "null.h"
+#include "null.hpp"
 
-#include "xml_.h"
+#include "xml_.hpp"
 
 using namespace anm2ed::util;
 using namespace tinyxml2;

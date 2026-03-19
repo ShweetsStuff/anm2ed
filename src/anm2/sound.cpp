@@ -1,8 +1,8 @@
-#include "sound.h"
+#include "sound.hpp"
 
-#include "path_.h"
-#include "working_directory.h"
-#include "xml_.h"
+#include "path_.hpp"
+#include "working_directory.hpp"
+#include "xml_.hpp"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::util;

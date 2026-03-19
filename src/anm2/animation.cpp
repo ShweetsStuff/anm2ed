@@ -1,9 +1,9 @@
-#include "animation.h"
+#include "animation.hpp"
 
-#include "map_.h"
-#include "math_.h"
-#include "unordered_map_.h"
-#include "xml_.h"
+#include "map_.hpp"
+#include "math_.hpp"
+#include "unordered_map_.hpp"
+#include "xml_.hpp"
 #include <ranges>
 
 using namespace anm2ed::util;

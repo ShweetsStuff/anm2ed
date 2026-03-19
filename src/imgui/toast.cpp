@@ -1,9 +1,9 @@
-#include "toast.h"
+#include "toast.hpp"
 
-#include "log.h"
+#include "log.hpp"
 #include <imgui/imgui.h>
 
-#include "types.h"
+#include "types.hpp"
 
 using namespace anm2ed::types;
 

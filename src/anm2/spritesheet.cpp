@@ -1,4 +1,4 @@
-#include "spritesheet.h"
+#include "spritesheet.hpp"
 
 #include <algorithm>
 #include <functional>
@@ -6,10 +6,10 @@
 #include <string_view>
 #include <vector>
 
-#include "map_.h"
-#include "path_.h"
-#include "working_directory.h"
-#include "xml_.h"
+#include "map_.hpp"
+#include "path_.hpp"
+#include "working_directory.hpp"
+#include "xml_.hpp"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::util;
@@ -91,9 +91,10 @@ namespace anm2ed::anm2
   Spritesheet::Spritesheet(const std::filesystem::path& directory, const std::filesystem::path& path)
   {
     WorkingDirectory workingDirectory(directory);
+    auto loadPath = !path.empty() ? path::lower_case_backslash_handle(path) : this->path;
     this->path = !path.empty() ? path::make_relative(path) : this->path;
     this->path = path::lower_case_backslash_handle(this->path);
-    texture = Texture(this->path);
+    texture = Texture(!loadPath.empty() ? loadPath : this->path);
   }
 
   XMLElement* Spritesheet::to_element(XMLDocument& document, int id, Flags flags)
@@ -234,9 +235,10 @@ namespace anm2ed::anm2
   void Spritesheet::reload(const std::filesystem::path& directory, const std::filesystem::path& path)
   {
     WorkingDirectory workingDirectory(directory);
+    auto loadPath = !path.empty() ? path::lower_case_backslash_handle(path) : this->path;
     this->path = !path.empty() ? path::make_relative(path) : this->path;
     this->path = path::lower_case_backslash_handle(this->path);
-    texture = Texture(this->path);
+    texture = Texture(!loadPath.empty() ? loadPath : this->path);
   }
   bool Spritesheet::is_valid() { return texture.is_valid(); }
 

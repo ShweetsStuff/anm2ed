@@ -1,13 +1,13 @@
-#include "document.h"
+#include "document.hpp"
 
 #include <utility>
 
 #include <format>
 
-#include "log.h"
-#include "path_.h"
-#include "strings.h"
-#include "toast.h"
+#include "log.hpp"
+#include "path_.hpp"
+#include "strings.hpp"
+#include "toast.hpp"
 
 using namespace anm2ed::anm2;
 using namespace anm2ed::imgui;

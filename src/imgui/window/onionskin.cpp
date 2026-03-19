@@ -1,9 +1,9 @@
-#include "onionskin.h"
+#include "onionskin.hpp"
 
 #include <glm/gtc/type_ptr.hpp>
 
-#include "imgui_.h"
-#include "strings.h"
+#include "imgui_.hpp"
+#include "strings.hpp"
 
 using namespace anm2ed::types;
 using namespace glm;

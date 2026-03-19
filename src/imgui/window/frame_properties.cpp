@@ -1,13 +1,13 @@
-#include "frame_properties.h"
+#include "frame_properties.hpp"
 
 #include <glm/gtc/type_ptr.hpp>
 #include <limits>
 #include <ranges>
 #include <vector>
 
-#include "math_.h"
-#include "strings.h"
-#include "types.h"
+#include "math_.hpp"
+#include "strings.hpp"
+#include "types.hpp"
 
 using namespace anm2ed::util::math;
 using namespace anm2ed::types;

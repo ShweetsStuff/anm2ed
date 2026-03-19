@@ -1,16 +1,16 @@
-#include "manager.h"
+#include "manager.hpp"
 
 #include <algorithm>
 #include <unordered_set>
 
 #include <format>
 
-#include "log.h"
-#include "path_.h"
-#include "sdl.h"
-#include "strings.h"
-#include "toast.h"
-#include "vector_.h"
+#include "log.hpp"
+#include "path_.hpp"
+#include "sdl.hpp"
+#include "strings.hpp"
+#include "toast.hpp"
+#include "vector_.hpp"
 
 using namespace anm2ed::types;
 using namespace anm2ed::util;

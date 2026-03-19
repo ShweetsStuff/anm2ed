@@ -1,13 +1,13 @@
-#include "render_animation.h"
+#include "render_animation.hpp"
 
 #include <ranges>
 #include <string>
 
-#include "imgui_.h"
-#include "log.h"
-#include "path_.h"
-#include "process_.h"
-#include "toast.h"
+#include "imgui_.hpp"
+#include "log.hpp"
+#include "path_.hpp"
+#include "process_.hpp"
+#include "toast.hpp"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::util;

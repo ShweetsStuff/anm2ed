@@ -1,15 +1,15 @@
-#include "spritesheet_editor.h"
+#include "spritesheet_editor.hpp"
 
 #include <cmath>
 #include <format>
 #include <utility>
 
-#include "imgui_.h"
+#include "imgui_.hpp"
 #include "imgui_internal.h"
-#include "math_.h"
-#include "strings.h"
-#include "tool.h"
-#include "types.h"
+#include "math_.hpp"
+#include "strings.hpp"
+#include "tool.hpp"
+#include "types.hpp"
 
 using namespace anm2ed::types;
 using namespace anm2ed::resource;

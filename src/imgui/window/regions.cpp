@@ -1,19 +1,19 @@
-#include "regions.h"
+#include "regions.hpp"
 
 #include <algorithm>
 #include <ranges>
 
 #include <format>
 
-#include "document.h"
-#include "log.h"
-#include "map_.h"
-#include "math_.h"
-#include "strings.h"
-#include "toast.h"
-#include "vector_.h"
+#include "document.hpp"
+#include "log.hpp"
+#include "map_.hpp"
+#include "math_.hpp"
+#include "strings.hpp"
+#include "toast.hpp"
+#include "vector_.hpp"
 
-#include "../../util/map_.h"
+#include "../../util/map_.hpp"
 
 using namespace anm2ed::types;
 using namespace anm2ed::resource;

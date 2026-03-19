@@ -1,9 +1,9 @@
-#include "item.h"
+#include "item.hpp"
 #include <algorithm>
 #include <ranges>
 
-#include "vector_.h"
-#include "xml_.h"
+#include "vector_.hpp"
+#include "xml_.hpp"
 
 using namespace anm2ed::util;
 using namespace tinyxml2;

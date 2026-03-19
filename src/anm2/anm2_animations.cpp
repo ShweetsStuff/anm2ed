@@ -1,6 +1,6 @@
-#include "anm2.h"
+#include "anm2.hpp"
 
-#include "vector_.h"
+#include "vector_.hpp"
 
 using namespace anm2ed::util;
 using namespace anm2ed::types;

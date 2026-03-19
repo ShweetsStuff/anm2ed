@@ -1,8 +1,8 @@
-#include "sdl.h"
+#include "sdl.hpp"
 
 #include <SDL3/SDL.h>
 
-#include "path_.h"
+#include "path_.hpp"
 
 namespace anm2ed::util::sdl
 {

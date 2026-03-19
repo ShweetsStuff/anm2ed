@@ -1,9 +1,9 @@
-#include "welcome.h"
+#include "welcome.hpp"
 
 #include <ranges>
 
-#include "path_.h"
-#include "strings.h"
+#include "path_.hpp"
+#include "strings.hpp"
 
 using namespace anm2ed::util;
 using namespace anm2ed::resource;

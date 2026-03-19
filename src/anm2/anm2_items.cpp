@@ -1,8 +1,8 @@
-#include "anm2.h"
+#include "anm2.hpp"
 
-#include "map_.h"
-#include "types.h"
-#include "unordered_map_.h"
+#include "map_.hpp"
+#include "types.hpp"
+#include "unordered_map_.hpp"
 
 using namespace anm2ed::types;
 using namespace anm2ed::util;

@@ -1,4 +1,4 @@
-#include "path_.h"
+#include "path_.hpp"
 
 #include <SDL3/SDL_filesystem.h>
 #include <SDL3/SDL_stdinc.h>

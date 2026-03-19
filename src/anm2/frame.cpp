@@ -1,7 +1,7 @@
-#include "frame.h"
+#include "frame.hpp"
 
-#include "math_.h"
-#include "xml_.h"
+#include "math_.hpp"
+#include "xml_.hpp"
 
 using namespace anm2ed::util;
 using namespace tinyxml2;

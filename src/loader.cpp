@@ -1,4 +1,4 @@
-#include "loader.h"
+#include "loader.hpp"
 
 #include <cerrno>
 #include <cstdint>
@@ -9,18 +9,18 @@
 
 #include <SDL3_mixer/SDL_mixer.h>
 
-#include "log.h"
-#include "sdl.h"
+#include "log.hpp"
+#include "sdl.hpp"
 
-#include "imgui_.h"
+#include "imgui_.hpp"
 
-#include "snapshots.h"
-#include "socket.h"
+#include "snapshots.hpp"
+#include "socket.hpp"
 
-#include "util/math_.h"
+#include "util/math_.hpp"
 
 #ifdef _WIN32
-  #include "util/path_.h"
+  #include "util/path_.hpp"
   #include <DbgHelp.h>
   #include <format>
   #include <windows.h>
