@@ -5,12 +5,8 @@
             "name": "Debug",
             "type": "cppdbg",
             "request": "launch",
-<<<<<<< HEAD
             "preLaunchTask": "build-debug",
             "program": "${workspaceFolder}/out/build/linux-debug/bin/anm2ed",
-=======
-            "program": "${workspaceFolder}/out/build/linux-debug/anm2ed",
->>>>>>> f58d894 (Render animation fixes, vs code tasks)
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -33,12 +29,8 @@
             "name": "Release",
             "type": "cppdbg",
             "request": "launch",
-<<<<<<< HEAD
             "preLaunchTask": "build-release",
             "program": "${workspaceFolder}/out/build/linux-release/bin/anm2ed",
-=======
-            "program": "${workspaceFolder}/out/build/linux-release/anm2ed",
->>>>>>> f58d894 (Render animation fixes, vs code tasks)
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

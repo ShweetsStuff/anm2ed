@@ -55,6 +55,7 @@ namespace anm2ed
   X(WINDOW_POSITION, windowPosition, STRING_UNDEFINED, IVEC2, glm::ivec2())                                            \
   X(IS_VSYNC, isVsync, STRING_UNDEFINED, BOOL, true)                                                                   \
   X(UI_SCALE, uiScale, STRING_UNDEFINED, FLOAT, 1.0f)                                                                  \
+  X(TIMELINE_ITEM_HEIGHT, timelineItemHeight, STRING_UNDEFINED, FLOAT, 1.0f)                                           \
   X(THEME, theme, STRING_UNDEFINED, INT, types::theme::DARK)                                                           \
   X(LANGUAGE, language, STRING_UNDEFINED, INT, ENGLISH)                                                                \
                                                                                                                        \

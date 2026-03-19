@@ -14,6 +14,7 @@ namespace anm2ed::imgui
   {
     MIX_Mixer* mixer = MIX_CreateMixerDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
     AudioStream audioStream = AudioStream(mixer);
+    bool wasPlaybackPlaying{};
     bool isPreviewHovered{};
     bool isSizeTrySet{true};
     Settings savedSettings{};

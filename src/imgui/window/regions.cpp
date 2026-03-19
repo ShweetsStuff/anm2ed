@@ -5,7 +5,6 @@
 
 #include <format>
 
-<<<<<<< HEAD
 #include "document.hpp"
 #include "log.hpp"
 #include "map_.hpp"
@@ -13,15 +12,6 @@
 #include "strings.hpp"
 #include "toast.hpp"
 #include "vector_.hpp"
-=======
-#include "document.h"
-#include "log.h"
-#include "map_.h"
-#include "math_.h"
-#include "strings.h"
-#include "toast.h"
-#include "vector_.h"
->>>>>>> f58d894 (Render animation fixes, vs code tasks)
 
 #include "../../util/map_.hpp"
 

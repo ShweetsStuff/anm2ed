@@ -2,8 +2,7 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "run-debug",
-<<<<<<< HEAD
+            "label": "configure-debug",
             "type": "shell",
             "command": "cmake",
             "args": [
@@ -24,22 +23,12 @@
             "args": [
                 "--build",
                 "out/build/linux-debug",
+                "--parallel",
+                "8",
                 "--target",
                 "anm2ed"
             ],
-            "dependsOn": "run-debug",
-=======
-            "type": "shell",
-            "command": "cmake -S . -B out/build/linux-debug -DCMAKE_BUILD_TYPE=Debug && cmake --build out/build/linux-debug --parallel 8 --target anm2ed && ./out/build/linux-debug/anm2ed",
-            "problemMatcher": [
-                "$gcc"
-            ]
-        },
-        {
-            "label": "build",
-            "type": "shell",
-            "command": "cmake -S . -B out/build/linux-debug -DCMAKE_BUILD_TYPE=Debug && cmake --build out/build/linux-debug --parallel 8 --target anm2ed",
->>>>>>> f58d894 (Render animation fixes, vs code tasks)
+            "dependsOn": "configure-debug",
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -49,9 +38,15 @@
             ]
         },
         {
-            "label": "run-release",
+            "label": "run-debug",
             "type": "shell",
-<<<<<<< HEAD
+            "command": "./out/build/linux-debug/bin/anm2ed",
+            "dependsOn": "build-debug",
+            "problemMatcher": []
+        },
+        {
+            "label": "configure-release",
+            "type": "shell",
             "command": "cmake",
             "args": [
                 "-S",
@@ -60,9 +55,6 @@
                 "out/build/linux-release",
                 "-DCMAKE_BUILD_TYPE=Release"
             ],
-=======
-            "command": "cmake -S . -B out/build/linux-release -DCMAKE_BUILD_TYPE=Release && cmake --build out/build/linux-release --parallel 8 --target anm2ed && ./out/build/linux-release/anm2ed",
->>>>>>> f58d894 (Render animation fixes, vs code tasks)
             "problemMatcher": [
                 "$gcc"
             ]
@@ -70,27 +62,26 @@
         {
             "label": "build-release",
             "type": "shell",
-<<<<<<< HEAD
             "command": "cmake",
             "args": [
                 "--build",
                 "out/build/linux-release",
+                "--parallel",
+                "8",
                 "--target",
                 "anm2ed"
             ],
-            "dependsOn": "run-release",
-=======
-            "command": "cmake -S . -B out/build/linux-release -DCMAKE_BUILD_TYPE=Release && cmake --build out/build/linux-release --parallel 8 --target anm2ed",
->>>>>>> f58d894 (Render animation fixes, vs code tasks)
+            "dependsOn": "configure-release",
             "group": "build",
             "problemMatcher": [
                 "$gcc"
             ]
         },
         {
-            "label": "build",
-            "dependsOn": "build-debug",
-            "group": "build",
+            "label": "run-release",
+            "type": "shell",
+            "command": "./out/build/linux-release/bin/anm2ed",
+            "dependsOn": "build-release",
             "problemMatcher": []
         }
     ]

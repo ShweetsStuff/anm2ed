@@ -372,6 +372,7 @@ namespace anm2ed
   X(LABEL_TRANSPARENT, "Transparent", "Transparentes", "Прозрачный", "透明", "투명도") \
   X(LABEL_TYPE, "Type", "Tipo", "Тип", "类型", "유형") \
   X(LABEL_UI_SCALE, "UI Scale", "Escala de la Interfaz", "Размер UI", "界面缩放", "UI 비율") \
+  X(LABEL_ITEM_HEIGHT, "Item Height", "Altura del Item", "Высота элемента", "项目高度", "항목 높이") \
   X(LABEL_USE_DEFAULT_SETTINGS, "Use Default Settings", "Usar Opciones Predeterminadas", "Изпользовать настройки по умолчанию", "使用默认设置", "기본값으로 사용") \
   X(LABEL_VALUE_COLUMN, "Value", "Valor", "Значение", "数值", "값") \
   X(LABEL_VSYNC, "Vsync", "Vsync", "Вертикальная синхронизация (V-sync)", "垂直同步", "수직 동기화") \
@@ -618,7 +619,7 @@ namespace anm2ed
   X(TOOLTIP_SET_TO_RECOMMENDED, "Use a recommended value for rows/columns.", "Usa un valor recomendado para las filas/columnas.", "Использовать рекомендованное значение для рядов/колонн.", "应用列/行的推荐值.", "행/열에 권장값을 사용합니다.") \
   X(TOOLTIP_SPLIT, "Based on the playhead time, split the selected frame into two.", "Basado en tiempo del encabezado de reproduccion, divide el Frame seleccionado en dos.", "С учётом позиции ползунка воспроизведения разделяет выбранный кадр на два.", "根据播放头位置，将所选帧拆分成两个。", "재생 헤드 시간에 따라 선택한 프레임을 두 개로 분할합니다.") \
   X(TOOLTIP_SIZE, "Change the crop size the frame uses.", "Cambia el tamaño de recorte que usa el Frame.", "Изменить размер обрезки, который использует этот кадр.", "更改此帧的裁剪大小.", "프레임에 대응되는 스프라이트 시트의 사용 영역의 크기를 변경합니다.") \
-  X(TOOLTIP_SOUND, "Toggle sounds playing with triggers.\nBind sounds to events in the Events window.", "Alterna los sonidos reproduciendoce con triggers.\nEnlaza sonidos a eventos en la Ventana de Eventos.", "Переключить воспроизведения звуков с помощью триггеров.\nПривязывайте звуки к событиям в окне событий.", "切换是否在触发器触发时播放声音.\n可以在事件窗口里链接声音与事件.", "트리거와 함께 사운드를 재생할지 정합니다.\n사운드는 이벤트 창에서 이벤트에 연결하세요.") \
+  X(TOOLTIP_SOUND, "Toggle sounds playing with triggers.\nSet a trigger's sounds in Frame Properties.", "Alterna los sonidos reproducidos con triggers.\nConfigura los sonidos de un trigger en Propiedades de Frame.", "Переключить воспроизведение звуков у триггеров.\nНастраивайте звуки триггера в свойствах кадра.", "切换是否在触发器触发时播放声音.\n可在帧属性中设置触发器的声音.", "트리거와 함께 사운드를 재생할지 정합니다.\n트리거 사운드는 프레임 속성에서 설정하세요.") \
   X(TEXT_SOUND_PLAY, "Click to play.", "Click para reproducir.", "Нажмите, чтобы возпроизвести.", "点击播放.", "클릭하여 재생합니다.") \
   X(TOOLTIP_SOUND_INVALID, "This sound could not be loaded. Replace the file.", "Este sonido no se pudo cargar. Reemplaza el archivo.", "Этот звук не удалось загрузить. Замените файл.", "无法加载此声音。请替换文件。", "이 사운드를 불러올 수 없습니다. 파일을 교체하세요.") \
   X(TOOLTIP_SOUND_ADD, "Add a sound.", "Añadir un sonido.", "Добавить звук.", "添加一个声音.", "사운드를 추가합니다.") \
@@ -650,6 +651,7 @@ namespace anm2ed
   X(TOOLTIP_REMOVE_TRIGGER_SOUND, "Remove the last trigger sound.", "Remover el último sonido del trigger.", "Удалить последний звук триггера.", "移除最后一个事件触发器声音.", "마지막 트리거 사운드를 제거합니다.") \
   X(TOOLTIP_TRIGGER_VISIBILITY, "Toggle the trigger's visibility.", "Alterna la visibilidad del trigger.", "Переключить видимость триггера.", "切换触发器是否可见.", "트리거를 표시하거나 숨깁니다.") \
   X(TOOLTIP_UI_SCALE, "Change the scale of the UI.", "Cambia la escala de la interfaz de usuario.", "Изменить масштаб пользовательского интерфейса.", "更改界面(UI)的缩放.", "UI 비율을 변경합니다.") \
+  X(TOOLTIP_ITEM_HEIGHT, "Set the height of items in Timeline.", "Establece la altura de los items en la Línea de tiempo.", "Установить высоту элементов на таймлайне.", "设置时间轴中项目的高度.", "타임라인 항목의 높이를 설정합니다.") \
   X(TOOLTIP_UNUSED_ITEMS_HIDDEN, "Unused layers/nulls are hidden. Press to show them.", "Las capas/nulls no utilizados estan ocultos. Presiona para hacerlos visibles", "Неиспользуемые слои/нули скрыты. Нажмите, чтобы их показать.", "正在隐藏未使用的动画层/Null. 点击以显示它们.", "사용되지 않는 레이어/Null이 숨겨져 있습니다. 표시하려면 누르세요.") \
   X(TOOLTIP_UNUSED_ITEMS_SHOWN, "Unused layers/nulls are shown. Press to hide them.", "Las capas/nulls no utilizados estan visibles. Presiona para ocultarlos", "Неиспользуемые слои/нули видимы. Нажмите, чтобы их скрыть.", "正在显示未使用的动画层/Null. 点击以隐藏它们.", "사용되지 않는 레이어/Null이 표시되어 있습니다. 숨기려면 누르세요.") \
   X(TOOLTIP_USE_DEFAULT_SETTINGS, "Reset the settings to their defaults.", "Reinicia las configuraciones a sus predeterminados.", "Сбросить настройки на настройки по умолчанию.", "重设所有设置为默认.", "설정을 기본값으로 재설정합니다.") \

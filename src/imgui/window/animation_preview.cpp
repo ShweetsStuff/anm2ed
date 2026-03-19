@@ -165,6 +165,12 @@ namespace anm2ed::imgui
     auto& overlayIndex = document.overlayIndex;
     auto& pan = document.previewPan;
 
+    auto stop_all_sounds = [&]()
+    {
+      for (auto& sound : anm2.content.sounds | std::views::values)
+        sound.audio.stop(mixer);
+    };
+
     if (manager.isRecording)
     {
       auto& ffmpegPath = settings.renderFFmpegPath;
@@ -417,6 +423,9 @@ namespace anm2ed::imgui
 
       frameTime = playback.time;
     }
+
+    if (wasPlaybackPlaying && !playback.isPlaying) stop_all_sounds();
+    wasPlaybackPlaying = playback.isPlaying;
   }
 
   void AnimationPreview::update(Manager& manager, Settings& settings, Resources& resources)

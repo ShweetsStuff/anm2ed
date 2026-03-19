@@ -83,7 +83,6 @@ namespace anm2ed::imgui
   constexpr auto FRAME_DRAG_PAYLOAD_ID = "Frame Drag Drop";
   constexpr auto FRAME_TOOLTIP_HOVER_DELAY = 0.75f; // Extra delay for frame info tooltip.
 
-#define ITEM_FRAME_CHILD_HEIGHT ImGui::GetTextLineHeightWithSpacing() + (ImGui::GetStyle().WindowPadding.y * 1.5)
 #define ITEM_CHILD_WIDTH ImGui::GetTextLineHeightWithSpacing() * 12.5
 
   void Timeline::update(Manager& manager, Settings& settings, Resources& resources, Clipboard& clipboard)
@@ -95,6 +94,8 @@ namespace anm2ed::imgui
     auto& frames = document.frames;
     auto& region = document.region;
     auto animation = document.animation_get();
+    auto itemFrameChildHeight = (ImGui::GetTextLineHeightWithSpacing() + ImGui::GetStyle().WindowPadding.y * 1.5f) *
+                                settings.timelineItemHeight;
 
     style = ImGui::GetStyle();
     auto isLightTheme = settings.theme == theme::LIGHT;
@@ -170,6 +171,13 @@ namespace anm2ed::imgui
       isFrameSelectionLocked = false;
       frameFocusIndex = reference.frameIndex;
       frameFocusRequested = reference.frameIndex >= 0;
+    };
+
+    auto playback_stop = [&]()
+    {
+      playback.isPlaying = false;
+      playback.isFinished = false;
+      playback.timing_reset();
     };
 
     auto frame_insert = [&](anm2::Item* item)
@@ -597,7 +605,7 @@ namespace anm2ed::imgui
       ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
       ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
 
-      auto itemSize = ImVec2(ImGui::GetContentRegionAvail().x, ITEM_FRAME_CHILD_HEIGHT);
+      auto itemSize = ImVec2(ImGui::GetContentRegionAvail().x, itemFrameChildHeight);
 
       if (ImGui::BeginChild(label.c_str(), itemSize, ImGuiChildFlags_Borders, ImGuiWindowFlags_NoScrollWithMouse))
       {
@@ -961,7 +969,7 @@ namespace anm2ed::imgui
       ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
       ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
 
-      auto childSize = ImVec2(width, ITEM_FRAME_CHILD_HEIGHT);
+      auto childSize = ImVec2(width, itemFrameChildHeight);
 
       ImGui::PopStyleVar(2);
 
@@ -1046,7 +1054,10 @@ namespace anm2ed::imgui
           }
 
           if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) && ImGui::IsMouseDown(0))
+          {
+            if (!isDragging) playback_stop();
             isDragging = true;
+          }
 
           auto childPos = ImGui::GetWindowPos();
           auto mousePos = ImGui::GetIO().MousePos;
@@ -1497,12 +1508,11 @@ namespace anm2ed::imgui
                                   ImGui::GetTextLineHeightWithSpacing() + (ImGui::GetStyle().WindowPadding.y * 2));
           auto playheadIndex = std::floor(playback.time);
           auto lineCenterX = cursorScreenPos.x + frameSize.x * (playheadIndex + 0.6f) - scroll.x;
-          float lineOffsetY = frameSize.y;
           auto linePos =
-              ImVec2(lineCenterX - (PLAYHEAD_LINE_THICKNESS * 0.5f), cursorScreenPos.y + frameSize.y + lineOffsetY);
+              ImVec2(lineCenterX - (PLAYHEAD_LINE_THICKNESS * 0.5f), cursorScreenPos.y + (frameSize.y * 2.0f));
           auto lineSize = ImVec2((PLAYHEAD_LINE_THICKNESS / 2.0f),
-                                 viewListChildSize.y - frameSize.y - lineOffsetY -
-                                     (isHorizontalScroll ? ImGui::GetStyle().ScrollbarSize : 0.0f));
+                                 viewListChildSize.y - frameSize.y -
+                                     (isHorizontalScroll ? ImGui::GetStyle().ScrollbarSize * 2.0f : 0.0f));
 
           auto rectMin = windowDrawList->GetClipRectMin();
           auto rectMax = windowDrawList->GetClipRectMax();
@@ -1623,7 +1633,8 @@ namespace anm2ed::imgui
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2());
     if (ImGui::Begin(localize.get(LABEL_TIMELINE_WINDOW), &settings.windowIsTimeline))
     {
-      isWindowHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows);
+      isWindowHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows |
+                                               ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
       frames_child();
       items_child();
     }
@@ -1853,12 +1864,14 @@ namespace anm2ed::imgui
 
       if (shortcut(manager.chords[SHORTCUT_MOVE_PLAYHEAD_BACK], shortcut::GLOBAL))
       {
+        playback_stop();
         playback.decrement(settings.playbackIsClamp ? animation->frameNum : anm2::FRAME_NUM_MAX);
         document.frameTime = playback.time;
       }
 
       if (shortcut(manager.chords[SHORTCUT_MOVE_PLAYHEAD_FORWARD], shortcut::GLOBAL))
       {
+        playback_stop();
         playback.increment(settings.playbackIsClamp ? animation->frameNum : anm2::FRAME_NUM_MAX);
         document.frameTime = playback.time;
       }
