@@ -181,7 +181,7 @@ namespace anm2ed::imgui::wizard
 
     ImGui::BeginDisabled(!isRaw);
     {
-      input_float_range(localize.get(BASIC_SCALE), scale, 1.0f, 100.0f, STEP, STEP_FAST, "%.1fx");
+      input_float_range(localize.get(BASIC_SCALE), scale, 0.1f, 100.0f, 0.1f, STEP_FAST, "%.1fx");
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SCALE_OUTPUT));
     }
     ImGui::EndDisabled();

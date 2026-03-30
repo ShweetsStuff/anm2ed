@@ -42,6 +42,9 @@ namespace anm2ed::imgui
       {
         auto frame = document.frame_get();
         auto useFrame = frame ? *frame : anm2::Frame();
+        auto displayFrame = frame && type == anm2::LAYER && document.reference.itemID != -1
+                                ? document.anm2.frame_effective(document.reference.itemID, *frame)
+                                : useFrame;
 
         ImGui::BeginDisabled(!frame);
         {
@@ -112,18 +115,20 @@ namespace anm2ed::imgui
             bool isRegionSet = frame && frame->regionID != -1;
             ImGui::BeginDisabled(type == anm2::ROOT || type == anm2::NULL_ || isRegionSet);
             {
+              auto cropDisplay = frame ? displayFrame.crop : vec2();
               auto cropEdit =
-                  drag_float2_persistent(localize.get(BASIC_CROP), frame ? &frame->crop : &dummy_value<vec2>(),
-                                         DRAG_SPEED, 0.0f, 0.0f, frame ? vec2_format_get(frame->crop) : "");
+                  drag_float2_persistent(localize.get(BASIC_CROP), frame ? &cropDisplay : &dummy_value<vec2>(),
+                                         DRAG_SPEED, 0.0f, 0.0f, frame ? vec2_format_get(displayFrame.crop) : "");
               if (cropEdit == edit::START)
                 document.snapshot(localize.get(EDIT_FRAME_CROP));
               else if (cropEdit == edit::END)
                 document.change(Document::FRAMES);
               ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CROP));
 
+              auto sizeDisplay = frame ? displayFrame.size : vec2();
               auto sizeEdit =
-                  drag_float2_persistent(localize.get(BASIC_SIZE), frame ? &frame->size : &dummy_value<vec2>(),
-                                         DRAG_SPEED, 0.0f, 0.0f, frame ? vec2_format_get(frame->size) : "");
+                  drag_float2_persistent(localize.get(BASIC_SIZE), frame ? &sizeDisplay : &dummy_value<vec2>(),
+                                         DRAG_SPEED, 0.0f, 0.0f, frame ? vec2_format_get(displayFrame.size) : "");
               if (sizeEdit == edit::START)
                 document.snapshot(localize.get(EDIT_FRAME_SIZE));
               else if (sizeEdit == edit::END)
@@ -143,9 +148,10 @@ namespace anm2ed::imgui
 
             ImGui::BeginDisabled(type == anm2::ROOT || type == anm2::NULL_ || isRegionSet);
             {
+              auto pivotDisplay = frame ? displayFrame.pivot : vec2();
               auto pivotEdit =
-                  drag_float2_persistent(localize.get(BASIC_PIVOT), frame ? &frame->pivot : &dummy_value<vec2>(),
-                                         DRAG_SPEED, 0.0f, 0.0f, frame ? vec2_format_get(frame->pivot) : "");
+                  drag_float2_persistent(localize.get(BASIC_PIVOT), frame ? &pivotDisplay : &dummy_value<vec2>(),
+                                         DRAG_SPEED, 0.0f, 0.0f, frame ? vec2_format_get(displayFrame.pivot) : "");
               if (pivotEdit == edit::START)
                 document.snapshot(localize.get(EDIT_FRAME_PIVOT));
               else if (pivotEdit == edit::END)
@@ -201,7 +207,11 @@ namespace anm2ed::imgui
                                 regionIds, regionLabels) &&
                 frame)
               DOCUMENT_EDIT(document, localize.get(EDIT_SET_REGION_PROPERTIES), Document::FRAMES,
-                            frame->regionID = useFrame.regionID);
+                            frame->regionID = useFrame.regionID;
+                            auto effectiveFrame = document.anm2.frame_effective(document.reference.itemID, *frame);
+                            frame->crop = effectiveFrame.crop;
+                            frame->size = effectiveFrame.size;
+                            frame->pivot = effectiveFrame.pivot);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_REGION));
             ImGui::EndDisabled();
 

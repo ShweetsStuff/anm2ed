@@ -404,7 +404,7 @@ namespace anm2ed::anm2
   }
 
   bool Anm2::spritesheets_merge(const std::set<int>& ids, SpritesheetMergeOrigin mergeOrigin, bool isMakeRegions,
-                                origin::Type regionOrigin)
+                                bool isMakePrimaryRegion, origin::Type regionOrigin)
   {
     if (ids.size() < 2) return false;
 
@@ -447,19 +447,22 @@ namespace anm2ed::anm2
           base.regionOrder.push_back(id);
       }
 
-      auto baseLocationRegionID = map::next_id_get(base.regions);
-      auto baseFilename = path::to_utf8(base.path.stem());
-      auto baseLocationRegionName = baseFilename.empty() ? std::format("#{}", baseId) : baseFilename;
-      auto baseLocationRegionPivot =
-          regionOrigin == origin::ORIGIN_CENTER ? glm::vec2(baseTextureSize) * 0.5f : glm::vec2();
-      base.regions[baseLocationRegionID] = {
-          .name = baseLocationRegionName,
-          .crop = {},
-          .pivot = glm::ivec2(baseLocationRegionPivot),
-          .size = baseTextureSize,
-          .origin = regionOrigin,
-      };
-      base.regionOrder.push_back(baseLocationRegionID);
+      if (isMakePrimaryRegion)
+      {
+        auto baseLocationRegionID = map::next_id_get(base.regions);
+        auto baseFilename = path::to_utf8(base.path.stem());
+        auto baseLocationRegionName = baseFilename.empty() ? std::format("#{}", baseId) : baseFilename;
+        auto baseLocationRegionPivot =
+            regionOrigin == origin::ORIGIN_CENTER ? glm::vec2(baseTextureSize) * 0.5f : glm::vec2();
+        base.regions[baseLocationRegionID] = {
+            .name = baseLocationRegionName,
+            .crop = {},
+            .pivot = glm::ivec2(baseLocationRegionPivot),
+            .size = baseTextureSize,
+            .origin = regionOrigin,
+        };
+        base.regionOrder.push_back(baseLocationRegionID);
+      }
 
       for (auto id : ids)
       {

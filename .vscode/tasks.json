@@ -24,7 +24,7 @@
                 "--build",
                 "out/build/linux-debug",
                 "--parallel",
-                "8",
+                "16",
                 "--target",
                 "anm2ed"
             ],
@@ -67,7 +67,7 @@
                 "--build",
                 "out/build/linux-release",
                 "--parallel",
-                "8",
+                "16",
                 "--target",
                 "anm2ed"
             ],

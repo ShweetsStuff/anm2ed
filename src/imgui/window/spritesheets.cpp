@@ -185,6 +185,7 @@ namespace anm2ed::imgui
         auto baseID = *mergeSelection.begin();
         if (anm2.spritesheets_merge(mergeSelection, (anm2::SpritesheetMergeOrigin)settings.mergeSpritesheetsOrigin,
                                     settings.mergeSpritesheetsIsMakeRegions,
+                                    settings.mergeSpritesheetsIsMakePrimaryRegion,
                                     (origin::Type)settings.mergeSpritesheetsRegionOrigin))
         {
           selection = {baseID};
@@ -610,9 +611,13 @@ namespace anm2ed::imgui
         ImGui::Checkbox(localize.get(LABEL_MERGE_MAKE_SPRITESHEET_REGIONS), &settings.mergeSpritesheetsIsMakeRegions);
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_MERGE_MAKE_SPRITESHEET_REGIONS));
 
+        ImGui::BeginDisabled(!settings.mergeSpritesheetsIsMakeRegions);
+        ImGui::Checkbox(localize.get(LABEL_MERGE_MAKE_PRIMARY_SPRITESHEET_REGION),
+                        &settings.mergeSpritesheetsIsMakePrimaryRegion);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_MERGE_MAKE_PRIMARY_SPRITESHEET_REGION));
+
         const char* regionOriginOptions[] = {localize.get(LABEL_REGION_ORIGIN_TOP_LEFT),
                                              localize.get(LABEL_REGION_ORIGIN_CENTER)};
-        ImGui::BeginDisabled(!settings.mergeSpritesheetsIsMakeRegions);
         ImGui::Combo(localize.get(LABEL_REGION_PROPERTIES_ORIGIN), &settings.mergeSpritesheetsRegionOrigin,
                      regionOriginOptions, IM_ARRAYSIZE(regionOriginOptions));
         ImGui::EndDisabled();

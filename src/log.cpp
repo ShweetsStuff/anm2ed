@@ -3,6 +3,7 @@
 #include <array>
 #include <print>
 
+#include "file_.hpp"
 #include "path_.hpp"
 #include "sdl.hpp"
 #include "time_.hpp"
@@ -22,7 +23,7 @@ namespace anm2ed
   {
     std::lock_guard lock(mutex);
     std::println("{}", message);
-    if (file.is_open()) file << message << '\n' << std::flush;
+    if (!logPath.empty()) file::write_string(logPath, message + '\n', "ab");
   }
 
   void Logger::write(const Level level, const std::string& message)
@@ -132,7 +133,7 @@ namespace anm2ed
 
   void Logger::open(const std::filesystem::path& path)
   {
-    file.open(path, std::ios::out | std::ios::app);
+    logPath = path;
     stderr_redirect_start();
   }
 
@@ -148,7 +149,6 @@ namespace anm2ed
   {
     info("Exiting Anm2Ed");
     stderr_redirect_stop();
-    if (file.is_open()) file.close();
   }
 }
 
