@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <limits>
+#include <set>
 #include <unordered_map>
 
 #include "file_.hpp"
@@ -199,6 +200,28 @@ namespace anm2ed::anm2
   Anm2 Anm2::normalized_for_serialize() const
   {
     auto normalized = *this;
+    auto sanitize_layer_order = [](Animation& animation)
+    {
+      std::vector<int> sanitized{};
+      sanitized.reserve(animation.layerAnimations.size());
+      std::set<int> seen{};
+
+      for (auto id : animation.layerOrder)
+      {
+        if (!animation.layerAnimations.contains(id)) continue;
+        if (!seen.insert(id).second) continue;
+        sanitized.push_back(id);
+      }
+
+      std::vector<int> missing{};
+      missing.reserve(animation.layerAnimations.size());
+      for (auto& id : animation.layerAnimations | std::views::keys)
+        if (!seen.contains(id)) missing.push_back(id);
+
+      std::sort(missing.begin(), missing.end());
+      sanitized.insert(sanitized.end(), missing.begin(), missing.end());
+      animation.layerOrder = std::move(sanitized);
+    };
     std::unordered_map<int, int> layerRemap{};
 
     int normalizedID = 0;
@@ -214,6 +237,7 @@ namespace anm2ed::anm2
 
     for (auto& animation : normalized.animations.items)
     {
+      sanitize_layer_order(animation);
       std::unordered_map<int, Item> layerAnimations{};
       std::vector<int> layerOrder{};
 
@@ -231,6 +255,7 @@ namespace anm2ed::anm2
 
       animation.layerAnimations = std::move(layerAnimations);
       animation.layerOrder = std::move(layerOrder);
+      sanitize_layer_order(animation);
     }
 
     return normalized;

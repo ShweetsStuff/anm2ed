@@ -1,5 +1,7 @@
 #include "toast.hpp"
 
+#include <format>
+
 #include "log.hpp"
 #include <imgui/imgui.h>
 

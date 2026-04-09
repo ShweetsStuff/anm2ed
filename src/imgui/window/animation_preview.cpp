@@ -780,9 +780,11 @@ namespace anm2ed::imgui
 
         for (auto& id : animation->layerOrder)
         {
+          if (!animation->layerAnimations.contains(id)) continue;
           auto& layerAnimation = animation->layerAnimations[id];
           if (!layerAnimation.isVisible) continue;
 
+          if (!anm2.content.layers.contains(id)) continue;
           auto& layer = anm2.content.layers.at(id);
 
           auto spritesheet = anm2.spritesheet_get(layer.spritesheetID);

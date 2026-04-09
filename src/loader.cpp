@@ -3,6 +3,7 @@
 #include <cerrno>
 #include <cstdint>
 #include <filesystem>
+#include <format>
 
 #include <imgui/backends/imgui_impl_opengl3.h>
 #include <imgui/backends/imgui_impl_sdl3.h>
@@ -22,7 +23,6 @@
 #ifdef _WIN32
   #include "util/path_.hpp"
   #include <DbgHelp.h>
-  #include <format>
   #include <windows.h>
 #endif
 

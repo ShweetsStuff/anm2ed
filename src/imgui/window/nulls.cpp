@@ -1,5 +1,6 @@
 #include "nulls.hpp"
 
+#include <format>
 #include <ranges>
 
 #include "log.hpp"

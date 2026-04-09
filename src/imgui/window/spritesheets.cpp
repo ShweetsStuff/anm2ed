@@ -595,7 +595,7 @@ namespace anm2ed::imgui
         mergePopup.close();
       };
 
-      auto optionsSize = child_size_get(5);
+      auto optionsSize = child_size_get(6);
       if (ImGui::BeginChild("##Merge Spritesheets Options", optionsSize, ImGuiChildFlags_Borders))
       {
         ImGui::SeparatorText(localize.get(LABEL_REGION_PROPERTIES_ORIGIN));

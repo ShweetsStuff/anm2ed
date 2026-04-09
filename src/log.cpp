@@ -1,6 +1,7 @@
 #include "log.hpp"
 
 #include <array>
+#include <format>
 #include <print>
 
 #include "file_.hpp"
