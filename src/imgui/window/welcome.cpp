@@ -1,5 +1,6 @@
 #include "welcome.hpp"
 
+#include <format>
 #include <ranges>
 
 #include "path_.hpp"

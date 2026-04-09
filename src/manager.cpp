@@ -5,6 +5,7 @@
 
 #include <format>
 
+#include "file_.hpp"
 #include "log.hpp"
 #include "path_.hpp"
 #include "sdl.hpp"
@@ -279,12 +280,13 @@ namespace anm2ed
   {
     auto path = recent_files_path_get();
 
-    std::ifstream file(path);
-    if (!file)
+    std::string fileData{};
+    if (!file::read_to_string(path, &fileData, "rb"))
     {
       logger.warning(std::format("Could not load recent files from: {}. Skipping...", path::to_utf8(path)));
       return;
     }
+    std::istringstream file(fileData);
 
     logger.info(std::format("Loading recent files from: {}", path::to_utf8(path)));
 
@@ -322,18 +324,12 @@ namespace anm2ed
     auto path = recent_files_path_get();
     ensure_parent_directory_exists(path);
 
-    std::ofstream file;
-    file.open(path, std::ofstream::out | std::ofstream::trunc);
-
-    if (!file.is_open())
-    {
-      logger.warning(std::format("Could not write recent files to: {}. Skipping...", path::to_utf8(path)));
-      return;
-    }
-
+    std::ostringstream file;
     auto ordered = recent_files_ordered();
     for (auto& entry : ordered)
       file << path::to_utf8(entry) << '\n';
+    if (!file::write_string(path, file.str(), "wb"))
+      logger.warning(std::format("Could not write recent files to: {}. Skipping...", path::to_utf8(path)));
   }
 
   void Manager::recent_files_clear()
@@ -370,12 +366,13 @@ namespace anm2ed
   {
     auto path = autosave_path_get();
 
-    std::ifstream file(path);
-    if (!file)
+    std::string fileData{};
+    if (!file::read_to_string(path, &fileData, "rb"))
     {
       logger.warning(std::format("Could not load autosave files from: {}. Skipping...", path::to_utf8(path)));
       return;
     }
+    std::istringstream file(fileData);
 
     logger.info(std::format("Loading autosave files from: {}", path::to_utf8(path)));
 
@@ -393,19 +390,13 @@ namespace anm2ed
 
   void Manager::autosave_files_write()
   {
-    std::ofstream autosaveWriteFile;
     ensure_parent_directory_exists(autosave_path_get());
-    autosaveWriteFile.open(autosave_path_get(), std::ofstream::out | std::ofstream::trunc);
-
-    if (!autosaveWriteFile.is_open())
-    {
-      logger.warning(
-          std::format("Could not write autosave files to: {}. Skipping...", path::to_utf8(autosave_path_get())));
-      return;
-    }
-
+    std::ostringstream autosaveWriteFile;
     for (auto& path : autosaveFiles)
       autosaveWriteFile << path::to_utf8(path) << "\n";
+    if (!file::write_string(autosave_path_get(), autosaveWriteFile.str(), "wb"))
+      logger.warning(
+          std::format("Could not write autosave files to: {}. Skipping...", path::to_utf8(autosave_path_get())));
   }
 
   void Manager::autosave_files_clear()

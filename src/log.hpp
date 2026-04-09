@@ -1,7 +1,6 @@
 #pragma once
 
 #include <filesystem>
-#include <fstream>
 #include <string>
 #include <string_view>
 #include <mutex>
@@ -45,7 +44,7 @@ namespace anm2ed
 
   class Logger
   {
-    std::ofstream file{};
+    std::filesystem::path logPath{};
     std::mutex mutex{};
     std::thread stderrThread{};
     bool isStderrRedirecting{};

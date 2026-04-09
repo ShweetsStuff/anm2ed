@@ -338,7 +338,15 @@ DockSpace               ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1496,860 S
 
   void Settings::save(const std::filesystem::path& path, const std::string& imguiData)
   {
+    auto pathUtf8 = path::to_utf8(path);
+    logger.info(std::format("Saving settings to: {}", pathUtf8));
     std::ofstream file(path, std::ios::out | std::ios::binary);
+    if (!file.is_open())
+    {
+      logger.error(std::format("Failed to save settings file: {}", pathUtf8));
+      return;
+    }
+
     file << "[Settings]\n";
 
     auto value_save = [&](const std::string& key, const auto& value)
@@ -395,6 +403,12 @@ DockSpace               ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1496,860 S
         << imguiData;
 
     file.flush();
+    if (file.fail())
+    {
+      logger.error(std::format("Failed while writing settings file: {}", pathUtf8));
+      return;
+    }
     file.close();
+    logger.info(std::format("Saved settings to: {}", pathUtf8));
   }
 }

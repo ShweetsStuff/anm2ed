@@ -1,6 +1,8 @@
 #pragma once
 
 #include <filesystem>
+#include <string>
+#include <string_view>
 
 namespace anm2ed::util
 {
@@ -19,4 +21,10 @@ namespace anm2ed::util
   private:
     FILE* handle{};
   };
+
+  namespace file
+  {
+    bool read_to_string(const std::filesystem::path&, std::string*, const char* mode = "rb");
+    bool write_string(const std::filesystem::path&, std::string_view, const char* mode = "wb");
+  }
 }

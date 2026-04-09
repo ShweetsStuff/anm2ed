@@ -2,10 +2,13 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <limits>
+#include <set>
 #include <unordered_map>
 
 #include "file_.hpp"
 #include "map_.hpp"
+#include "math_.hpp"
 #include "time_.hpp"
 #include "vector_.hpp"
 #include "working_directory.hpp"
@@ -57,6 +60,69 @@ namespace
 namespace anm2ed::anm2
 {
   Anm2::Anm2() { info.createdOn = time::get("%m/%d/%Y %I:%M:%S %p"); }
+
+  Frame Anm2::frame_effective(int layerId, const Frame& frame) const
+  {
+    auto resolved = frame;
+    if (frame.regionID == -1) return resolved;
+    if (!content.layers.contains(layerId)) return resolved;
+
+    auto spritesheet = const_cast<Anm2*>(this)->spritesheet_get(content.layers.at(layerId).spritesheetID);
+    if (!spritesheet) return resolved;
+
+    auto regionIt = spritesheet->regions.find(frame.regionID);
+    if (regionIt == spritesheet->regions.end()) return resolved;
+
+    resolved.crop = regionIt->second.crop;
+    resolved.size = regionIt->second.size;
+    resolved.pivot = regionIt->second.pivot;
+    return resolved;
+  }
+
+  vec4 Anm2::animation_rect(Animation& animation, bool isRootTransform) const
+  {
+    constexpr ivec2 CORNERS[4] = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
+
+    float minX = std::numeric_limits<float>::infinity();
+    float minY = std::numeric_limits<float>::infinity();
+    float maxX = -std::numeric_limits<float>::infinity();
+    float maxY = -std::numeric_limits<float>::infinity();
+    bool any = false;
+
+    for (float t = 0.0f; t < (float)animation.frameNum; t += 1.0f)
+    {
+      mat4 transform(1.0f);
+
+      if (isRootTransform)
+      {
+        auto root = animation.rootAnimation.frame_generate(t, ROOT);
+        transform *= math::quad_model_parent_get(root.position, {}, math::percent_to_unit(root.scale), root.rotation);
+      }
+
+      for (auto& [id, layerAnimation] : animation.layerAnimations)
+      {
+        if (!layerAnimation.isVisible) continue;
+
+        auto frame = frame_effective(id, layerAnimation.frame_generate(t, LAYER));
+        if (frame.size == vec2() || !frame.isVisible) continue;
+
+        auto layerTransform = transform * math::quad_model_get(frame.size, frame.position, frame.pivot,
+                                                               math::percent_to_unit(frame.scale), frame.rotation);
+        for (auto& corner : CORNERS)
+        {
+          vec4 world = layerTransform * vec4(corner, 0.0f, 1.0f);
+          minX = std::min(minX, world.x);
+          minY = std::min(minY, world.y);
+          maxX = std::max(maxX, world.x);
+          maxY = std::max(maxY, world.y);
+          any = true;
+        }
+      }
+    }
+
+    if (!any) return vec4(-1.0f);
+    return {minX, minY, maxX - minX, maxY - minY};
+  }
 
   Anm2::Anm2(const std::filesystem::path& path, std::string* errorString)
   {
@@ -134,6 +200,28 @@ namespace anm2ed::anm2
   Anm2 Anm2::normalized_for_serialize() const
   {
     auto normalized = *this;
+    auto sanitize_layer_order = [](Animation& animation)
+    {
+      std::vector<int> sanitized{};
+      sanitized.reserve(animation.layerAnimations.size());
+      std::set<int> seen{};
+
+      for (auto id : animation.layerOrder)
+      {
+        if (!animation.layerAnimations.contains(id)) continue;
+        if (!seen.insert(id).second) continue;
+        sanitized.push_back(id);
+      }
+
+      std::vector<int> missing{};
+      missing.reserve(animation.layerAnimations.size());
+      for (auto& id : animation.layerAnimations | std::views::keys)
+        if (!seen.contains(id)) missing.push_back(id);
+
+      std::sort(missing.begin(), missing.end());
+      sanitized.insert(sanitized.end(), missing.begin(), missing.end());
+      animation.layerOrder = std::move(sanitized);
+    };
     std::unordered_map<int, int> layerRemap{};
 
     int normalizedID = 0;
@@ -149,6 +237,7 @@ namespace anm2ed::anm2
 
     for (auto& animation : normalized.animations.items)
     {
+      sanitize_layer_order(animation);
       std::unordered_map<int, Item> layerAnimations{};
       std::vector<int> layerOrder{};
 
@@ -166,6 +255,7 @@ namespace anm2ed::anm2
 
       animation.layerAnimations = std::move(layerAnimations);
       animation.layerOrder = std::move(layerOrder);
+      sanitize_layer_order(animation);
     }
 
     return normalized;

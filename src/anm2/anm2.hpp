@@ -45,7 +45,7 @@ namespace anm2ed::anm2
     std::vector<std::string> spritesheet_labels_get();
     std::vector<int> spritesheet_ids_get();
     std::set<int> spritesheets_unused();
-    bool spritesheets_merge(const std::set<int>&, SpritesheetMergeOrigin, bool, origin::Type);
+    bool spritesheets_merge(const std::set<int>&, SpritesheetMergeOrigin, bool, bool, origin::Type);
     bool spritesheets_deserialize(const std::string&, const std::filesystem::path&, types::merge::Type type,
                                   std::string*);
     std::vector<std::string> region_labels_get(Spritesheet&);
@@ -79,6 +79,8 @@ namespace anm2ed::anm2
     std::vector<std::string> animation_labels_get();
     int animations_merge(int, std::set<int>&, types::merge::Type = types::merge::APPEND, bool = true);
     bool animations_deserialize(const std::string&, int, std::set<int>&, std::string* = nullptr);
+    Frame frame_effective(int, const Frame&) const;
+    glm::vec4 animation_rect(Animation&, bool) const;
 
     Item* item_get(int, Type, int = -1);
     Reference layer_animation_add(Reference = {}, int = -1, std::string = {}, int = 0,

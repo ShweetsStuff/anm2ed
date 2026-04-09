@@ -488,10 +488,10 @@ namespace anm2ed::imgui
 
     auto center_view = [&]() { pan = vec2(); };
 
-    auto fit_view = [&]()
-    {
-      if (animation) set_to_rect(zoom, pan, animation->rect(isRootTransform));
-    };
+      auto fit_view = [&]()
+      {
+        if (animation) set_to_rect(zoom, pan, anm2.animation_rect(*animation, isRootTransform));
+      };
 
     auto zoom_adjust = [&](float delta)
     {
@@ -627,7 +627,7 @@ namespace anm2ed::imgui
           savedZoom = zoom;
           savedPan = pan;
 
-          if (auto rect = document.animation_get()->rect(isRootTransform); rect != vec4(-1.0f))
+          if (auto rect = anm2.animation_rect(*document.animation_get(), isRootTransform); rect != vec4(-1.0f))
           {
             size_set(vec2(rect.z, rect.w) * settings.renderScale);
             set_to_rect(zoom, pan, rect);
@@ -779,9 +779,11 @@ namespace anm2ed::imgui
 
         for (auto& id : animation->layerOrder)
         {
+          if (!animation->layerAnimations.contains(id)) continue;
           auto& layerAnimation = animation->layerAnimations[id];
           if (!layerAnimation.isVisible) continue;
 
+          if (!anm2.content.layers.contains(id)) continue;
           auto& layer = anm2.content.layers.at(id);
 
           auto spritesheet = anm2.spritesheet_get(layer.spritesheetID);
@@ -797,20 +799,10 @@ namespace anm2ed::imgui
               auto texSize = vec2(texture.size);
               if (texSize.x <= 0.0f || texSize.y <= 0.0f) return;
 
+              frame = anm2.frame_effective(id, frame);
               auto crop = frame.crop;
               auto size = frame.size;
               auto pivot = frame.pivot;
-
-              if (frame.regionID != -1)
-              {
-                auto regionIt = spritesheet->regions.find(frame.regionID);
-                if (regionIt != spritesheet->regions.end())
-                {
-                  crop = regionIt->second.crop;
-                  size = regionIt->second.size;
-                  pivot = regionIt->second.pivot;
-                }
-              }
 
               auto layerModel =
                   math::quad_model_get(size, frame.position, pivot, math::percent_to_unit(frame.scale), frame.rotation);

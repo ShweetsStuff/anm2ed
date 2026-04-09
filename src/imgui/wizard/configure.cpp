@@ -1,6 +1,9 @@
 #include "configure.hpp"
 
 #include "imgui_.hpp"
+#include "log.hpp"
+#include "path_.hpp"
+#include "sdl.hpp"
 
 using namespace anm2ed::types;
 
@@ -180,6 +183,7 @@ namespace anm2ed::imgui::wizard
     shortcut(manager.chords[SHORTCUT_CONFIRM]);
     if (ImGui::Button(localize.get(BASIC_SAVE), widgetSize))
     {
+      auto settingsPath = util::sdl::preferences_directory_get() / "settings.ini";
       settings = temporary;
 
       ImGui::GetIO().KeyRepeatDelay = settings.keyboardRepeatDelay;
@@ -192,6 +196,8 @@ namespace anm2ed::imgui::wizard
 
       for (auto& document : manager.documents)
         document.snapshots.apply_limit();
+
+      settings.save(settingsPath, ImGui::SaveIniSettingsToMemory(nullptr));
 
       isSet = true;
     }
