@@ -112,7 +112,8 @@ namespace anm2ed::imgui
           }
           else
           {
-            bool isRegionSet = frame && frame->regionID != -1;
+            bool isRegionSet = frame && displayFrame.regionID != -1 && displayFrame.crop == frame->crop &&
+                               displayFrame.size == frame->size && displayFrame.pivot == frame->pivot;
             ImGui::BeginDisabled(type == anm2::ROOT || type == anm2::NULL_ || isRegionSet);
             {
               auto cropDisplay = frame ? displayFrame.crop : vec2();
@@ -121,7 +122,8 @@ namespace anm2ed::imgui
                                          DRAG_SPEED, 0.0f, 0.0f, frame ? vec2_format_get(displayFrame.crop) : "");
               if (cropEdit == edit::START)
                 document.snapshot(localize.get(EDIT_FRAME_CROP));
-              else if (cropEdit == edit::END)
+              if (frame && cropEdit != edit::NONE) frame->crop = cropDisplay;
+              if (cropEdit == edit::END)
                 document.change(Document::FRAMES);
               ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CROP));
 
@@ -131,7 +133,8 @@ namespace anm2ed::imgui
                                          DRAG_SPEED, 0.0f, 0.0f, frame ? vec2_format_get(displayFrame.size) : "");
               if (sizeEdit == edit::START)
                 document.snapshot(localize.get(EDIT_FRAME_SIZE));
-              else if (sizeEdit == edit::END)
+              if (frame && sizeEdit != edit::NONE) frame->size = sizeDisplay;
+              if (sizeEdit == edit::END)
                 document.change(Document::FRAMES);
               ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SIZE));
             }
@@ -154,7 +157,8 @@ namespace anm2ed::imgui
                                          DRAG_SPEED, 0.0f, 0.0f, frame ? vec2_format_get(displayFrame.pivot) : "");
               if (pivotEdit == edit::START)
                 document.snapshot(localize.get(EDIT_FRAME_PIVOT));
-              else if (pivotEdit == edit::END)
+              if (frame && pivotEdit != edit::NONE) frame->pivot = pivotDisplay;
+              if (pivotEdit == edit::END)
                 document.change(Document::FRAMES);
               ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_PIVOT));
             }
