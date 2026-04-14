@@ -292,9 +292,27 @@ namespace anm2ed::imgui
         auto nextFrame = vector::in_bounds(item->frames, reference.frameIndex + 1)
                              ? &item->frames[reference.frameIndex + 1]
                              : nullptr;
-        if (frame->isInterpolated && nextFrame)
+        if (frame->interpolation != anm2::Frame::Interpolation::NONE && nextFrame)
         {
           float interpolation = (float)firstDuration / (float)originalDuration;
+          switch (frame->interpolation)
+          {
+            case anm2::Frame::Interpolation::EASE_IN:
+              interpolation *= interpolation;
+              break;
+            case anm2::Frame::Interpolation::EASE_OUT:
+              interpolation = 1.0f - ((1.0f - interpolation) * (1.0f - interpolation));
+              break;
+            case anm2::Frame::Interpolation::EASE_IN_OUT:
+              interpolation = interpolation < 0.5f ? (2.0f * interpolation * interpolation)
+                                                   : (1.0f - std::pow(-2.0f * interpolation + 2.0f, 2.0f) * 0.5f);
+              break;
+            case anm2::Frame::Interpolation::LINEAR:
+            case anm2::Frame::Interpolation::NONE:
+            default:
+              break;
+          }
+
           splitFrame.rotation = glm::mix(frame->rotation, nextFrame->rotation, interpolation);
           splitFrame.position = glm::mix(frame->position, nextFrame->position, interpolation);
           splitFrame.scale = glm::mix(frame->scale, nextFrame->scale, interpolation);
@@ -450,9 +468,37 @@ namespace anm2ed::imgui
       if (shortcut(manager.chords[SHORTCUT_BAKE], shortcut::FOCUSED)) frames_bake();
       if (shortcut(manager.chords[SHORTCUT_FIT], shortcut::FOCUSED)) fit_animation_length();
 
+      auto make_region = [&]()
+      {
+        auto frame = document.frame_get();
+        if (!frame || reference.itemType != anm2::LAYER || reference.itemID == -1) return;
+        if (frame->regionID != -1) return;
+        if (!anm2.content.layers.contains(reference.itemID)) return;
+
+        auto spritesheetID = anm2.content.layers.at(reference.itemID).spritesheetID;
+        if (!anm2.content.spritesheets.contains(spritesheetID)) return;
+
+        anm2::Spritesheet::Region region{};
+        region.crop = frame->crop;
+        region.size = frame->size;
+        region.pivot = frame->pivot;
+        region.origin = anm2::Spritesheet::Region::CUSTOM;
+
+        document.spritesheet.reference = spritesheetID;
+        settings.windowIsRegions = true;
+        manager.makeRegionSpritesheetId = spritesheetID;
+        manager.makeRegion = region;
+        manager.isMakeRegionRequested = true;
+      };
+
       if (ImGui::BeginPopupContextWindow("##Context Menu", ImGuiPopupFlags_MouseButtonRight))
       {
         auto item = animation ? animation->item_get(reference.itemType, reference.itemID) : nullptr;
+        auto frame = document.frame_get();
+        bool isMakeRegion =
+            frame && reference.itemType == anm2::LAYER && reference.itemID != -1 && frame->regionID == -1 &&
+            anm2.content.layers.contains(reference.itemID) &&
+            anm2.content.spritesheets.contains(anm2.content.layers.at(reference.itemID).spritesheetID);
 
         if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_UNDO), settings.shortcutUndo.c_str(), false,
                             document.is_able_to_undo()))
@@ -483,6 +529,8 @@ namespace anm2ed::imgui
         if (ImGui::MenuItem(localize.get(LABEL_SPLIT), settings.shortcutSplit.c_str(), false,
                             frames.selection.size() == 1))
           frame_split();
+
+        if (ImGui::MenuItem(localize.get(LABEL_MAKE_REGION), nullptr, false, isMakeRegion)) make_region();
 
         ImGui::Separator();
 
@@ -1130,10 +1178,7 @@ namespace anm2ed::imgui
             auto buttonPos = ImVec2(cursorPos.x + (frameTime * frameSize.x), cursorPos.y);
 
             if (frameFocusRequested && frameFocusIndex == (int)i && reference == frameReference)
-            {
-              ImGui::SetKeyboardFocusHere();
               frameFocusRequested = false;
-            }
 
             ImGui::SetCursorPos(buttonPos);
 
@@ -1161,7 +1206,9 @@ namespace anm2ed::imgui
               {
                 if (ImGui::IsKeyDown(ImGuiMod_Alt))
                   DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_INTERPOLATION), Document::FRAMES,
-                                frame.isInterpolated = !frame.isInterpolated);
+                                frame.interpolation = frame.interpolation == anm2::Frame::Interpolation::NONE
+                                                          ? anm2::Frame::Interpolation::LINEAR
+                                                          : anm2::Frame::Interpolation::NONE);
 
                 document.frameTime = frameTime;
               }
@@ -1327,9 +1374,33 @@ namespace anm2ed::imgui
             auto borderThickness = isReferenced ? FRAME_BORDER_THICKNESS_REFERENCED : FRAME_BORDER_THICKNESS;
             drawList->AddRect(rectMin, rectMax, ImGui::GetColorU32(borderColor), FRAME_ROUNDING, 0, borderThickness);
 
-            auto icon = type == anm2::TRIGGER  ? icon::TRIGGER
-                        : frame.isInterpolated ? icon::INTERPOLATED
-                                               : icon::UNINTERPOLATED;
+            auto icon = icon::UNINTERPOLATED;
+            if (type == anm2::TRIGGER)
+              icon = icon::TRIGGER;
+            else
+            {
+              switch (frame.interpolation)
+              {
+                case anm2::Frame::Interpolation::NONE:
+                  icon = icon::UNINTERPOLATED;
+                  break;
+                case anm2::Frame::Interpolation::LINEAR:
+                  icon = icon::INTERPOLATED;
+                  break;
+                case anm2::Frame::Interpolation::EASE_IN:
+                  icon = icon::EASE_IN;
+                  break;
+                case anm2::Frame::Interpolation::EASE_OUT:
+                  icon = icon::EASE_OUT;
+                  break;
+                case anm2::Frame::Interpolation::EASE_IN_OUT:
+                  icon = icon::EASE_IN_OUT;
+                  break;
+                default:
+                  icon = icon::UNINTERPOLATED;
+                  break;
+              }
+            }
             auto iconPos = ImVec2(cursorPos.x + (frameTime * frameSize.x),
                                   cursorPos.y + (frameSize.y / 2) - (icon_size_get().y / 2));
             ImGui::SetCursorPos(iconPos);
@@ -1426,8 +1497,7 @@ namespace anm2ed::imgui
         auto childWidth = anm2.animations.length() * ImGui::GetTextLineHeight();
         if (animation && animation->frameNum > anm2.animations.length())
           childWidth = animation->frameNum * ImGui::GetTextLineHeight();
-        else if (ImGui::GetContentRegionAvail().x > childWidth)
-          childWidth = ImGui::GetContentRegionAvail().x;
+        childWidth = std::max(childWidth, ImGui::GetContentRegionAvail().x);
 
         childWidth *= WIDTH_MULTIPLIER;
 

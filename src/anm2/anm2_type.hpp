@@ -106,7 +106,8 @@ namespace anm2ed::anm2
   {
     NO_SOUNDS = 1 << 0,
     NO_REGIONS = 1 << 1,
-    FRAME_NO_REGION_VALUES = 1 << 2
+    FRAME_NO_REGION_VALUES = 1 << 2,
+    INTERPOLATION_BOOL_ONLY = 1 << 3
   };
 
   typedef int Flags;
@@ -114,5 +115,7 @@ namespace anm2ed::anm2
   inline bool has_flag(Flags flags, Flag flag) { return (flags & flag) != 0; }
 
   inline const std::unordered_map<Compatibility, Flags> COMPATIBILITY_FLAGS = {
-      {ISAAC, NO_SOUNDS | NO_REGIONS | FRAME_NO_REGION_VALUES}, {ANM2ED, 0}, {ANM2ED_LIMITED, FRAME_NO_REGION_VALUES}};
+      {ISAAC, NO_SOUNDS | NO_REGIONS | FRAME_NO_REGION_VALUES | INTERPOLATION_BOOL_ONLY},
+      {ANM2ED, 0},
+      {ANM2ED_LIMITED, FRAME_NO_REGION_VALUES}};
 }

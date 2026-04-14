@@ -35,7 +35,7 @@ namespace anm2ed::imgui::wizard
     auto& isColorOffsetG = settings.changeIsColorOffsetG;
     auto& isColorOffsetB = settings.changeIsColorOffsetB;
     auto& isVisibleSet = settings.changeIsVisibleSet;
-    auto& isInterpolatedSet = settings.changeIsInterpolatedSet;
+    auto& isInterpolationSet = settings.changeIsInterpolationSet;
     auto& isFlipXSet = settings.changeIsFlipXSet;
     auto& isFlipYSet = settings.changeIsFlipYSet;
     auto& isRegion = settings.changeIsRegion;
@@ -50,7 +50,7 @@ namespace anm2ed::imgui::wizard
     auto& colorOffset = settings.changeColorOffset;
     auto& regionId = settings.changeRegionId;
     auto& isVisible = settings.changeIsVisible;
-    auto& isInterpolated = settings.changeIsInterpolated;
+    auto& interpolation = settings.changeInterpolation;
     auto& isFlipX = settings.changeIsFlipX;
     auto& isFlipY = settings.changeIsFlipY;
     auto& itemType = document.reference.itemType;
@@ -64,6 +64,10 @@ namespace anm2ed::imgui::wizard
 
     auto bool_value = [&](const char* checkboxLabel, const char* valueLabel, bool& isEnabled, bool& value)
     { PROPERTIES_WIDGET(ImGui::Checkbox(valueLabel, &value), checkboxLabel, isEnabled) };
+
+    auto enum_value = [&](const char* checkboxLabel, const char* valueLabel, bool& isEnabled, int& value,
+                          const std::vector<int>& ids, std::vector<const char*>& labels)
+    { PROPERTIES_WIDGET(combo_id_mapped(valueLabel, &value, ids, labels), checkboxLabel, isEnabled) };
 
     auto color3_value = [&](const char* checkboxRLabel, const char* checkboxGLabel, const char* checkboxBLabel,
                             const char* valueRLabel, const char* valueGLabel, const char* valueBLabel,
@@ -214,6 +218,17 @@ namespace anm2ed::imgui::wizard
     std::vector<int> fallbackIds{-1};
     std::vector<std::string> fallbackLabelsString{localize.get(BASIC_NONE)};
     std::vector<const char*> fallbackLabels{fallbackLabelsString[0].c_str()};
+    std::vector<int> interpolationIds{anm2::Frame::Interpolation::NONE, anm2::Frame::Interpolation::LINEAR,
+                                      anm2::Frame::Interpolation::EASE_IN, anm2::Frame::Interpolation::EASE_OUT,
+                                      anm2::Frame::Interpolation::EASE_IN_OUT};
+    std::vector<std::string> interpolationLabelsString{
+        localize.get(BASIC_NONE), localize.get(BASIC_LINEAR), localize.get(BASIC_EASE_IN),
+        localize.get(BASIC_EASE_OUT), localize.get(BASIC_EASE_IN_OUT)};
+    std::vector<const char*> interpolationLabels{interpolationLabelsString[0].c_str(),
+                                                 interpolationLabelsString[1].c_str(),
+                                                 interpolationLabelsString[2].c_str(),
+                                                 interpolationLabelsString[3].c_str(),
+                                                 interpolationLabelsString[4].c_str()};
 
     const Storage* regionStorage = nullptr;
     if (itemType == anm2::LAYER && document.reference.itemID != -1)
@@ -228,11 +243,10 @@ namespace anm2ed::imgui::wizard
                       isRegion);
     ImGui::EndDisabled();
 
+    enum_value("##Is Interpolation", localize.get(BASIC_INTERPOLATED), isInterpolationSet, interpolation,
+               interpolationIds, interpolationLabels);
+
     bool_value("##Is Visible", localize.get(BASIC_VISIBLE), isVisibleSet, isVisible);
-
-    ImGui::SameLine();
-
-    bool_value("##Is Interpolated", localize.get(BASIC_INTERPOLATED), isInterpolatedSet, isInterpolated);
 
     bool_value("##Is Flip X", localize.get(LABEL_FLIP_X), isFlipXSet, isFlipX);
 
@@ -268,7 +282,8 @@ namespace anm2ed::imgui::wizard
       if (isColorOffsetG) frameChange.colorOffsetG = colorOffset.g;
       if (isColorOffsetB) frameChange.colorOffsetB = colorOffset.b;
       if (isVisibleSet) frameChange.isVisible = std::make_optional(isVisible);
-      if (isInterpolatedSet) frameChange.isInterpolated = std::make_optional(isInterpolated);
+      if (isInterpolationSet)
+        frameChange.interpolation = std::make_optional(static_cast<anm2::Frame::Interpolation>(interpolation));
       if (isFlipXSet) frameChange.isFlipX = std::make_optional(isFlipX);
       if (isFlipYSet) frameChange.isFlipY = std::make_optional(isFlipY);
 
@@ -283,7 +298,7 @@ namespace anm2ed::imgui::wizard
     bool isAnyProperty = isCropX || isCropY || isSizeX || isSizeY || isPositionX || isPositionY || isPivotX ||
                          isPivotY || isScaleX || isScaleY || isRotation || isDuration || isTintR || isTintG ||
                          isTintB || isTintA || isColorOffsetR || isColorOffsetG || isColorOffsetB || isRegion ||
-                         isVisibleSet || isInterpolatedSet || isFlipXSet || isFlipYSet;
+                         isVisibleSet || isInterpolationSet || isFlipXSet || isFlipYSet;
 
     auto rowWidgetSize = widget_size_with_row_get(5);
 

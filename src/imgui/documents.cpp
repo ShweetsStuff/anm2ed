@@ -38,7 +38,9 @@ namespace anm2ed::imgui
       {
         document.lastAutosaveTime += ImGui::GetIO().DeltaTime;
         if (document.lastAutosaveTime > time::SECOND_M)
-          manager.autosave(document, (anm2::Compatibility)settings.fileCompatibility);
+          manager.autosave(document, (anm2::Compatibility)settings.fileCompatibility,
+                           settings.fileBakeSpecialInterpolatedFramesOnSave, settings.bakeIsRoundScale,
+                           settings.bakeIsRoundRotation);
       }
     }
 
@@ -154,7 +156,9 @@ namespace anm2ed::imgui
           if (ImGui::Button(localize.get(BASIC_YES), widgetSize))
           {
             if (isDocumentDirty)
-              manager.save(closeDocumentIndex, {}, (anm2::Compatibility)settings.fileCompatibility);
+              manager.save(closeDocumentIndex, {}, (anm2::Compatibility)settings.fileCompatibility,
+                           settings.fileBakeSpecialInterpolatedFramesOnSave, settings.bakeIsRoundScale,
+                           settings.bakeIsRoundRotation);
 
             if (isSpritesheetDirty)
             {

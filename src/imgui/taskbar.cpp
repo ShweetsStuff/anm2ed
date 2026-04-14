@@ -74,7 +74,9 @@ namespace anm2ed::imgui
           if (settings.fileIsWarnOverwrite)
             overwritePopup.open();
           else
-            manager.save(document->path, (anm2::Compatibility)settings.fileCompatibility);
+            manager.save(document->path, (anm2::Compatibility)settings.fileCompatibility,
+                         settings.fileBakeSpecialInterpolatedFramesOnSave, settings.bakeIsRoundScale,
+                         settings.bakeIsRoundRotation);
         }
 
         if (ImGui::MenuItem(localize.get(LABEL_SAVE_AS), settings.shortcutSaveAs.c_str(), false, document))
@@ -100,7 +102,9 @@ namespace anm2ed::imgui
 
       if (dialog.is_selected(Dialog::ANM2_SAVE))
       {
-        manager.save(dialog.path, (anm2::Compatibility)settings.fileCompatibility);
+        manager.save(dialog.path, (anm2::Compatibility)settings.fileCompatibility,
+                     settings.fileBakeSpecialInterpolatedFramesOnSave, settings.bakeIsRoundScale,
+                     settings.bakeIsRoundRotation);
         dialog.reset();
       }
 
@@ -240,7 +244,9 @@ namespace anm2ed::imgui
 
       if (ImGui::Button(localize.get(BASIC_YES), widgetSize))
       {
-        manager.save({}, (anm2::Compatibility)settings.fileCompatibility);
+        manager.save({}, (anm2::Compatibility)settings.fileCompatibility,
+                     settings.fileBakeSpecialInterpolatedFramesOnSave, settings.bakeIsRoundScale,
+                     settings.bakeIsRoundRotation);
         overwritePopup.close();
       }
 
@@ -260,7 +266,9 @@ namespace anm2ed::imgui
       if (settings.fileIsWarnOverwrite)
         overwritePopup.open();
       else
-        manager.save({}, (anm2::Compatibility)settings.fileCompatibility);
+        manager.save({}, (anm2::Compatibility)settings.fileCompatibility,
+                     settings.fileBakeSpecialInterpolatedFramesOnSave, settings.bakeIsRoundScale,
+                     settings.bakeIsRoundRotation);
     }
     if (shortcut(manager.chords[SHORTCUT_SAVE_AS], shortcut::GLOBAL)) dialog.file_save(Dialog::ANM2_SAVE);
     if (shortcut(manager.chords[SHORTCUT_EXIT], shortcut::GLOBAL)) isQuitting = true;

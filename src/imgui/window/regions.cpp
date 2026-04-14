@@ -34,6 +34,17 @@ namespace anm2ed::imgui
 
     auto spritesheet = map::find(anm2.content.spritesheets, spritesheetReference);
 
+    if (manager.isMakeRegionRequested)
+    {
+      spritesheetReference = manager.makeRegionSpritesheetId;
+      reference = -1;
+      editRegion = manager.makeRegion;
+      isPreserveEditRegionOnOpen = true;
+      propertiesPopup.open();
+      manager.isMakeRegionRequested = false;
+      spritesheet = map::find(anm2.content.spritesheets, spritesheetReference);
+    }
+
     auto remove_unused = [&]()
     {
       if (!spritesheet) return;
@@ -474,7 +485,12 @@ namespace anm2ed::imgui
       auto childSize = child_size_get(5);
       auto& region = reference == -1 ? editRegion : spritesheet->regions.at(reference);
 
-      if (propertiesPopup.isJustOpened) editRegion = anm2::Spritesheet::Region{};
+      if (propertiesPopup.isJustOpened)
+      {
+        if (!isPreserveEditRegionOnOpen)
+          editRegion = anm2::Spritesheet::Region{};
+        isPreserveEditRegionOnOpen = false;
+      }
 
       if (ImGui::BeginChild("##Child", childSize, ImGuiChildFlags_Borders))
       {

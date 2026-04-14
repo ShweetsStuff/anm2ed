@@ -15,8 +15,17 @@ namespace anm2ed::anm2
   class Frame
   {
   public:
+    enum Interpolation
+    {
+      NONE,
+      LINEAR,
+      EASE_IN,
+      EASE_OUT,
+      EASE_IN_OUT
+    };
+
     bool isVisible{true};
-    bool isInterpolated{false};
+    Interpolation interpolation{NONE};
     float rotation{};
     int duration{FRAME_DURATION_MIN};
     int atFrame{-1};
@@ -43,7 +52,7 @@ namespace anm2ed::anm2
   struct FrameChange
   {
     std::optional<bool> isVisible{};
-    std::optional<bool> isInterpolated{};
+    std::optional<Frame::Interpolation> interpolation{};
     std::optional<float> rotation{};
     std::optional<int> duration{};
     std::optional<int> regionID{};

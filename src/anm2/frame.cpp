@@ -1,5 +1,7 @@
 #include "frame.hpp"
 
+#include <cstring>
+
 #include "math_.hpp"
 #include "xml_.hpp"
 
@@ -8,8 +10,40 @@ using namespace tinyxml2;
 
 namespace anm2ed::anm2
 {
+  namespace
+  {
+    Frame::Interpolation interpolation_from_xml(const char* value, bool fallback)
+    {
+      if (value)
+      {
+        if (std::strcmp(value, "EaseIn") == 0) return Frame::Interpolation::EASE_IN;
+        if (std::strcmp(value, "EaseOut") == 0) return Frame::Interpolation::EASE_OUT;
+        if (std::strcmp(value, "EaseInOut") == 0) return Frame::Interpolation::EASE_IN_OUT;
+      }
+      return fallback ? Frame::Interpolation::LINEAR : Frame::Interpolation::NONE;
+    }
+
+    const char* interpolation_to_xml(Frame::Interpolation interpolation)
+    {
+      switch (interpolation)
+      {
+        case Frame::Interpolation::EASE_IN:
+          return "EaseIn";
+        case Frame::Interpolation::EASE_OUT:
+          return "EaseOut";
+        case Frame::Interpolation::EASE_IN_OUT:
+          return "EaseInOut";
+        default:
+          return nullptr;
+      }
+    }
+  }
+
   Frame::Frame(XMLElement* element, Type type)
   {
+    bool isInterpolatedBool{};
+    const char* interpolationValue = element->Attribute("Interpolated");
+
     switch (type)
     {
       case ROOT:
@@ -28,7 +62,8 @@ namespace anm2ed::anm2
         xml::query_color_attribute(element, "GreenOffset", colorOffset.g);
         xml::query_color_attribute(element, "BlueOffset", colorOffset.b);
         element->QueryFloatAttribute("Rotation", &rotation);
-        element->QueryBoolAttribute("Interpolated", &isInterpolated);
+        element->QueryBoolAttribute("Interpolated", &isInterpolatedBool);
+        if (interpolationValue) interpolation = interpolation_from_xml(interpolationValue, isInterpolatedBool);
         break;
       case LAYER:
         element->QueryIntAttribute("RegionId", &regionID);
@@ -52,7 +87,8 @@ namespace anm2ed::anm2
         xml::query_color_attribute(element, "GreenOffset", colorOffset.g);
         xml::query_color_attribute(element, "BlueOffset", colorOffset.b);
         element->QueryFloatAttribute("Rotation", &rotation);
-        element->QueryBoolAttribute("Interpolated", &isInterpolated);
+        element->QueryBoolAttribute("Interpolated", &isInterpolatedBool);
+        if (interpolationValue) interpolation = interpolation_from_xml(interpolationValue, isInterpolatedBool);
         break;
       case TRIGGER:
       {
@@ -98,7 +134,11 @@ namespace anm2ed::anm2
         element->SetAttribute("GreenOffset", math::float_to_uint8(colorOffset.g));
         element->SetAttribute("BlueOffset", math::float_to_uint8(colorOffset.b));
         element->SetAttribute("Rotation", rotation);
-        element->SetAttribute("Interpolated", isInterpolated);
+        if (has_flag(flags, INTERPOLATION_BOOL_ONLY) || interpolation == Interpolation::NONE ||
+            interpolation == Interpolation::LINEAR)
+          element->SetAttribute("Interpolated", interpolation == Interpolation::LINEAR);
+        else if (const char* interpolationValue = interpolation_to_xml(interpolation))
+          element->SetAttribute("Interpolated", interpolationValue);
         break;
       case LAYER:
       {
@@ -131,7 +171,11 @@ namespace anm2ed::anm2
         element->SetAttribute("GreenOffset", math::float_to_uint8(colorOffset.g));
         element->SetAttribute("BlueOffset", math::float_to_uint8(colorOffset.b));
         element->SetAttribute("Rotation", rotation);
-        element->SetAttribute("Interpolated", isInterpolated);
+        if (has_flag(flags, INTERPOLATION_BOOL_ONLY) || interpolation == Interpolation::NONE ||
+            interpolation == Interpolation::LINEAR)
+          element->SetAttribute("Interpolated", interpolation == Interpolation::LINEAR);
+        else if (const char* interpolationValue = interpolation_to_xml(interpolation))
+          element->SetAttribute("Interpolated", interpolationValue);
         break;
       }
       case TRIGGER:

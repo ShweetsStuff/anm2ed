@@ -50,13 +50,17 @@ namespace anm2ed
   X(BASIC_DUPLICATE, "Duplicate", "Duplicar", "Дублировать", "拷贝", "복제") \
   X(BASIC_DURATION, "Duration", "Duracion", "Продолжительность", "时长", "유지 시간") \
   X(BASIC_ENABLED, "Enabled", "Activado", "Включено", "开启", "활성화") \
+  X(BASIC_EASE_IN, "Ease In", "Aceleración de Entrada", "Плавный вход", "缓入", "천천히 시작") \
+  X(BASIC_EASE_OUT, "Ease Out", "Desaceleración de Salida", "Плавный выход", "缓出", "천천히 끝남") \
+  X(BASIC_EASE_IN_OUT, "Ease In Out", "Aceleración y Desaceleración", "Плавный вход/выход", "缓入缓出", "천천히 시작/끝") \
   X(BASIC_EVENT, "Event", "Evento", "Событие", "事件", "이벤트") \
   X(BASIC_FRAME, "Frame", "Frame", "Кадр", "帧", "프레임") \
   X(BASIC_FRAMES, "Frames", "Frames", "Кадры", "帧", "프레임") \
   X(BASIC_GRID, "Grid", "Cuadricula", "Сетка", "网格", "격자") \
   X(BASIC_ID, "ID", "ID", "ID", "ID", "ID") \
   X(BASIC_INDEX, "Index", "Indice", "Индекс", "下标", "인덱스") \
-  X(BASIC_INTERPOLATED, "Interpolated", "Interpolado", "Интерполировано", "线性插值", "매끄럽게 연결") \
+  X(BASIC_INTERPOLATED, "Interpolation", "Interpolación", "Интерполяция", "插值", "보간") \
+  X(BASIC_LINEAR, "Linear", "Lineal", "Линейная", "线性", "선형") \
   X(BASIC_LAYER_ANIMATION, "Layer", "Capa", "Слой", "动画层", "레이어") \
   X(BASIC_MERGE, "Merge", "Combinar", "Соединить", "合并", "병합") \
   X(BASIC_MODE, "Mode", "Modo", "Режим", "模式", "모드") \
@@ -188,7 +192,7 @@ namespace anm2ed
   X(FORMAT_ORIGIN, "Origin: {0}", "Origen: {0}", "Точка отсчета: {0}", "原点: {0}", "원점: {0}") \
   X(FORMAT_SPRITESHEET_ID, "Spritesheet ID: {0}", "ID de Spritesheet: {0}", "", "图集 ID: {0}", "스프라이트 시트 ID: {0}") \
   X(FORMAT_INDEX, "Index: {0}", "Indice: {0}", "Индекс: {0}", "下标: {0}", "인덱스: {0}") \
-  X(FORMAT_INTERPOLATED, "Interpolated: {0}", "Interpolado: {0}", "Интерполировано: {0}", "线性插值: {0}", "매끄럽게 연결: {0}") \
+  X(FORMAT_INTERPOLATED, "Interpolation: {0}", "Interpolación: {0}", "Интерполяция: {0}", "插值: {0}", "보간: {0}") \
   X(FORMAT_LAYER, "#{0} {1} (Spritesheet: #{2})", "#{0} {1} (Spritesheet: #{2})", "#{0} {1} (Спрайт-лист: #{2})", "#{0} {1} (图集: #{2})", "#{0} {1} (스프라이트 시트: #{2})") \
   X(FORMAT_LENGTH, "Length: {0}", "Largo: {0}", "Длина: {0}", "长度: {0}", "길이: {0}") \
   X(FORMAT_LOOP, "Loop: {0}", "Loop: {0}", "Цикл: {0}", "循环: {0}", "반복: {0}") \
@@ -226,7 +230,7 @@ namespace anm2ed
   X(LABEL_ANIMATION_PREVIEW_WINDOW, "Animation Preview###Animation Preview", "Vista Previa de Animacion###Animation Preview", "Предпросмотр анимации###Animation Preview", "动画预放###Animation Preview", "애니메이션 프리뷰###Animation Preview") \
   X(LABEL_APPEND_FRAMES, "Append Frames", "Anteponer Frames", "Добавить кадры к концу", "在后面添加帧", "뒷프레임에 추가") \
   X(LABEL_APPLICATION_NAME, "Anm2Ed", "Anm2Ed", "Anm2Ed", "Anm2Ed", "Anm2Ed") \
-  X(LABEL_APPLICATION_VERSION, "Version 2.3", "Version 2.3", "Версия 2.3", "2.3版本", "버전 2.3") \
+  X(LABEL_APPLICATION_VERSION, "Version 2.4", "Version 2.4", "Версия 2.4", "2.4版本", "버전 2.4") \
   X(LABEL_AUTHOR, "Author", "Autor", "Автор", "制作者", "작성자") \
   X(LABEL_AUTOSAVE, "Autosave", "Autoguardado", "Автосохранение", "自动保存", "자동저장") \
   X(LABEL_AXES, "Axes", "Ejes", "Оси", "坐标轴", "가로/세로 축") \
@@ -240,6 +244,7 @@ namespace anm2ed
   X(LABEL_CLEAR_LIST, "Clear List", "Limpiar Lista", "Стереть список", "清除列表", "기록 삭제") \
   X(LABEL_CLOSE, "Close", "Cerrar", "Закрыть", "关闭", "닫기") \
   X(LABEL_COMPATIBILITY, "Compatibility", "Compatibilidad", "Совместимость", "兼容性", "호환성") \
+  X(LABEL_BAKE_SPECIAL_INTERPOLATED_FRAMES_ON_SAVE, "Bake Special Interpolated Frames On Saving", "Hornear frames con interpolación especial al guardar", "Запекать кадры со специальной интерполяцией при сохранении", "保存时烘焙特殊插值帧", "저장 시 특수 보간 프레임 베이크") \
   X(LABEL_CUSTOM_RANGE, "Custom Range", "Rango Personalizado", "Пользовательский диапазон", "自定义范围", "길이 맞춤설정") \
   X(LABEL_DELETE, "Delete", "Borrar", "Удалить", "删除", "삭제") \
   X(LABEL_DELETE_ANIMATIONS_AFTER, "Delete Animations After", "Borrar Animaciones Despues", "Удалить анимации после", "删除之后的动画", "기존 애니메이션 삭제") \
@@ -290,6 +295,7 @@ namespace anm2ed
   X(LABEL_ANM2ED_LIMITED, "Anm2Ed Limited", "Anm2Ed Limitado", "Anm2Ed Ограниченный", "Anm2Ed 限制版", "Anm2Ed 제한") \
   X(LABEL_DESTINATION, "Destination", "Destino", "Назначение", "目标", "대상") \
   X(LABEL_LOCALIZATION, "Localization", "Localizacion", "Локализация", "本地化", "현지화") \
+  X(LABEL_MAKE_REGION, "Make Region", "Crear Región", "Создать регион", "创建区域", "영역 만들기") \
   X(LABEL_LOOP, "Loop", "Loop", "Цикл", "循环", "반복") \
   X(LABEL_MANAGER_ANM2_DRAG_DROP, "Anm2 Drag Drop", "Arrastrar y Soltar Anm2", "Anm2 Drag Drop", "Anm2 拖放", "Anm2 드래그 앤 드롭") \
   X(LABEL_REGION_PROPERTIES, "Region Properties", "Propiedades de región", "Свойства региона", "区域属性", "영역 속성") \
@@ -517,9 +523,10 @@ namespace anm2ed
   X(TOOLTIP_CANCEL_BAKE_FRAMES, "Cancel baking frames.", "Cancelar hacer bake de Frames.", "Отменить запечку кадров.", "取消提前渲染.", "프레임 베이킹을 취소합니다.") \
   X(TOOLTIP_CENTER_VIEW, "Centers the view.", "Centra la vista.", "Центрирует вид.", "居中视角.", "미리보기 화면을 가운데에 맞춥니다.") \
   X(TOOLTIP_CLOSE_SETTINGS, "Close without updating settings.", "Cerrar sin actualizar las configuraciones.", "Закрыть без обновления настройки.", "关闭但不保存设置.", "설정을 갱신하지 않고 닫습니다.") \
-  X(TOOLTIP_COMPATIBILITY_ISAAC, "Sets the output file format to that of The Binding of Isaac: Rebirth's.\nThis removes the following:\n- Sounds\n- Regions\nNOTE: This will not serialize this data and it won't be able to be recovered.", "Establece el formato del archivo de salida al de The Binding of Isaac: Rebirth.\nEsto elimina lo siguiente:\n- Sonidos\n- Regiones\nNOTA: Estos datos no se serializaran y no podran recuperarse.", "Устанавливает формат выходного файла как у The Binding of Isaac: Rebirth.\nЭто удаляет следующее:\n- Звуки\n- Регионы\nПРИМЕЧАНИЕ: Эти данные не будут сериализованы, и их нельзя будет восстановить.", "将输出文件格式设置为 The Binding of Isaac: Rebirth 的格式。\n这会移除以下内容：\n- 声音\n- 区域\n注意：这些数据不会被序列化，且无法恢复。", "출력 파일 형식을 The Binding of Isaac: Rebirth의 형식으로 설정합니다.\n다음 항목이 제거됩니다:\n- 사운드\n- 영역\n참고: 이 데이터는 직렬화되지 않으며 복구할 수 없습니다.") \
-  X(TOOLTIP_COMPATIBILITY_ANM2ED, "Sets the output file format to that of this editor.\nAll features will be serialized, including Sounds and Regions.", "Establece el formato del archivo de salida al de este editor.\nTodas las funciones se serializaran, incluyendo Sonidos y Regiones.", "Устанавливает формат выходного файла как у этого редактора.\nВсе возможности будут сериализованы, включая звуки и регионы.", "将输出文件格式设置为本编辑器的格式。\n所有功能都会被序列化，包括声音和区域。", "출력 파일 형식을 이 편집기의 형식으로 설정합니다.\n사운드와 영역을 포함한 모든 기능이 직렬화됩니다.") \
+  X(TOOLTIP_COMPATIBILITY_ISAAC, "Sets the output file format to that of The Binding of Isaac: Rebirth's.\nThis removes the following:\n- Sounds\n- Regions\n- Special interpolation modes\nNOTE: This will not serialize this data and it won't be able to be recovered.", "Establece el formato del archivo de salida al de The Binding of Isaac: Rebirth.\nEsto elimina lo siguiente:\n- Sonidos\n- Regiones\n- Modos especiales de interpolación\nNOTA: Estos datos no se serializaran y no podran recuperarse.", "Устанавливает формат выходного файла как у The Binding of Isaac: Rebirth.\nЭто удаляет следующее:\n- Звуки\n- Регионы\n- Специальные режимы интерполяции\nПРИМЕЧАНИЕ: Эти данные не будут сериализованы, и их нельзя будет восстановить.", "将输出文件格式设置为 The Binding of Isaac: Rebirth 的格式。\n这会移除以下内容：\n- 声音\n- 区域\n- 特殊插值模式\n注意：这些数据不会被序列化，且无法恢复。", "출력 파일 형식을 The Binding of Isaac: Rebirth의 형식으로 설정합니다.\n다음 항목이 제거됩니다:\n- 사운드\n- 영역\n- 특수 보간 모드\n참고: 이 데이터는 직렬화되지 않으며 복구할 수 없습니다.") \
+  X(TOOLTIP_COMPATIBILITY_ANM2ED, "Sets the output file format to that of this editor.\nAll features will be serialized, including:\n- Sounds\n- Regions\n- Special interpolation modes", "Establece el formato del archivo de salida al de este editor.\nTodas las funciones se serializaran, incluyendo:\n- Sonidos\n- Regiones\n- Modos especiales de interpolación", "Устанавливает формат выходного файла как у этого редактора.\nВсе возможности будут сериализованы, включая:\n- Звуки\n- Регионы\n- Специальные режимы интерполяции", "将输出文件格式设置为本编辑器的格式。\n所有功能都会被序列化，包括：\n- 声音\n- 区域\n- 特殊插值模式", "출력 파일 형식을 이 편집기의 형식으로 설정합니다.\n다음 기능을 포함한 모든 기능이 직렬화됩니다:\n- 사운드\n- 영역\n- 특수 보간 모드") \
   X(TOOLTIP_COMPATIBILITY_ANM2ED_LIMITED, "Sets the output file format to that of this editor.\nThis will additionally remove redundant Region-specific information in frames.", "Establece el formato del archivo de salida al de este editor.\nEsto ademas eliminara informacion redundante especifica de Region en los frames.", "Устанавливает формат выходного файла как у этого редактора.\nДополнительно это удалит избыточную информацию, связанную с регионами, в кадрах.", "将输出文件格式设置为本编辑器的格式。\n此外，这还会移除帧中冗余的区域专用信息。", "출력 파일 형식을 이 편집기의 형식으로 설정합니다.\n추가로 프레임 내 중복된 영역 관련 정보를 제거합니다.") \
+  X(TOOLTIP_BAKE_SPECIAL_INTERPOLATED_FRAMES_ON_SAVE, "When saving, frames that do not use the None or Linear interpolation modes will automatically be baked in-place when saving the file.\nThe Binding of Isaac: Rebirth does not support extended interpolation features.", "Al guardar, los frames que no usen los modos de interpolación None o Linear se hornearán automáticamente en su lugar al guardar el archivo.\nThe Binding of Isaac: Rebirth no soporta funciones extendidas de interpolación.", "При сохранении кадры, которые не используют режимы интерполяции None или Linear, будут автоматически запекаться на месте при сохранении файла.\nThe Binding of Isaac: Rebirth не поддерживает расширенные возможности интерполяции.", "保存文件时，不使用 None 或 Linear 插值模式的帧将自动在保存时原地烘焙。\nThe Binding of Isaac: Rebirth 不支持扩展插值功能。", "저장할 때 None 또는 Linear 보간 모드를 사용하지 않는 프레임은 파일 저장 시 자동으로 제자리 베이크됩니다.\nThe Binding of Isaac: Rebirth는 확장 보간 기능을 지원하지 않습니다.") \
   X(TOOLTIP_COLOR_OFFSET, "Change the color added onto the frame.", "Cambia el color añadido al Frame.", "Изменить цвет, который добавлен на кадр.", "更改覆盖在帧上的颜色.", "프레임에 더해지는 색을 변경합니다.") \
   X(TOOLTIP_REGION, "Set the spritesheet region the frame will use.", "Establece la región del spritesheet que usará el frame.", "Установить регион спрайт-листа, который будет использовать кадр.", "设置帧将使用的图集区域.", "프레임이 사용할 스프라이트 시트 영역을 설정합니다.") \
   X(TOOLTIP_REGION_PROPERTIES_ORIGIN, "Use a preset origin for the region.", "Usa un origen predefinido para la región.", "Использовать предустановленную точку отсчета для региона.", "为区域使用预设原点。", "영역에 사전 설정된 원점을 사용합니다.") \
@@ -540,7 +547,7 @@ namespace anm2ed
   X(TOOLTIP_FLIP_Y, "Flip the frame's Y scale to fake a vertical mirror.\nHold Ctrl to also flip the Y position.", "Invierte la escala Y del Frame, para trampear hacer mirroring de el Frame verticalmente.\n(Nota: el formato no soporta mirroring. )", "Отразить масштаб кадра по оси Y, вместо отражения кадра вертикально.\n(Примечание: формат не поддерживает нормальное отражение.)", "通过翻转Y轴的缩放，使此帧看起来像Y轴翻转了.\n(注: 此格式不支持镜像.)", "프레임의 세로 비율을 반전시켜 프레임이 수직으로 뒤집은 것처럼 보이게 합니다.\n(참고: 완전한 뒤집기 기능을 지원하지 않습니다.)") \
   X(TOOLTIP_FORMAT, "For outputted images, each image will use this format.\n{0} represents the index of each image.", "Para las imagenes de salida, Cada imagen usara este formato.\n{0} representa el indice de cada imagen.", "Для выведенных изображений, каждое будет использовать этот формат.\n{} представляет индекс каждого изображения.", "用于输出的图像, 每一个图像都会使用这个格式.\n{} 代表每一个图像的下标.", "출력되는 이미지들은 이 형식을 사용합니다.\n{}는 각 이미지의 인덱스를 나타냅니다.") \
   X(TOOLTIP_FPS, "Set the FPS of all animations.", "Ajusta los FPS de todas las animaciones.", "Установить сколько кадров в секунде для всех анимаций.", "设置所有动画的FPS(帧数每秒)", "모든 애니메이션의 FPS를 설정합니다.") \
-  X(TOOLTIP_FRAME_INTERPOLATION, "Toggle the frame interpolating; i.e., blending its values into the next frame based on the time.", "Alterna la interpolacion de Frames; i. e., combinando sus valores hacia el siguiente Frame basado en tiempo.", "Переключить интерполяцию кадра; т. е. смешать его значения в следующий кадр на основе времени.", "切换帧的线性插值; 也就是利用时间来\"渐变\"两帧之间的数值.", "프레임 보간(시간이 따라 속성 값이 다음 프레임의 값으로 변함) 여부를 정합니다.") \
+  X(TOOLTIP_FRAME_INTERPOLATION, "Set how the frame blends its values into the next frame over time.", "Establece como el frame interpola sus valores hacia el siguiente frame con el tiempo.", "Задает, как кадр смешивает свои значения со следующим кадром во времени.", "设置该帧的数值如何随时间过渡到下一帧。", "프레임 속성 값이 시간에 따라 다음 프레임 값으로 어떻게 보간될지 설정합니다.") \
   X(TOOLTIP_FRAME_VISIBILITY, "Toggle the frame's visibility.", "Alterna la visibilidad del Frame.", "Переключить видимость кадра.", "切换此帧是否可见.", "프레임을 표시하거나 숨깁니다.") \
   X(TOOLTIP_ITEM_ALL_ANIMATIONS, "The item will be placed into all animations.", "El item sera aplicado a todas las animaciones.", "Предмет будет добавлен во все анимации.", "该物体将被放入所有动画中。", "항목이 모든 애니메이션에 배치됩니다.") \
   X(TOOLTIP_GRID_COLOR, "Change the grid's color.", "Cambiar el color de la cuadricula.", "Изменить цвет сетки.", "更改网格的颜色.", "격자 색을 변경합니다.") \

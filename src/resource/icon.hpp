@@ -141,6 +141,18 @@ namespace anm2ed::resource::icon
   <svg viewBox="0 0 24 24" fill="#FFF" xmlns="http://www.w3.org/2000/svg"> <rect x="9.5" y="9.5" width="5" height="5"/> </svg>
   )";
 
+  inline constexpr auto EASE_IN_DATA = R"(
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"> <path d="M9 8L16 12L9 16V8Z" stroke="#FFF" stroke-width="2" stroke-linejoin="round"/> </svg>
+  )";
+
+  inline constexpr auto EASE_OUT_DATA = R"(
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"> <path d="M15 8L8 12L15 16V8Z" stroke="#FFF" stroke-width="2" stroke-linejoin="round"/> </svg>
+  )";
+
+  inline constexpr auto EASE_IN_OUT_DATA = R"(
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"> <path d="M6.5 8L11.5 12L6.5 16V8Z" stroke="#FFF" stroke-width="2" stroke-linejoin="round"/> <path d="M17.5 8L12.5 12L17.5 16V8Z" stroke="#FFF" stroke-width="2" stroke-linejoin="round"/> </svg>
+  )";
+
   inline constexpr auto PIVOT_DATA = R"(
   <svg viewBox="0 0 24 24" fill="#FFF" xmlns="http://www.w3.org/2000/svg"><path d="M11 11V5H13V11H19V13H13V19H11V13H5V11H11Z"/></svg>
   )";
@@ -190,6 +202,9 @@ namespace anm2ed::resource::icon
   X(EVENT, EVENT_DATA, SIZE_NORMAL)                                                                                    \
   X(INTERPOLATED, INTERPOLATED_DATA, SIZE_NORMAL)                                                                      \
   X(UNINTERPOLATED, UNINTERPOLATED_DATA, SIZE_NORMAL)                                                                  \
+  X(EASE_IN, EASE_IN_DATA, SIZE_NORMAL)                                                                                \
+  X(EASE_OUT, EASE_OUT_DATA, SIZE_NORMAL)                                                                              \
+  X(EASE_IN_OUT, EASE_IN_OUT_DATA, SIZE_NORMAL)                                                                        \
   X(TRIGGER, TRIGGER_DATA, SIZE_NORMAL)                                                                                \
   X(PLAYHEAD, PLAYHEAD_DATA, SIZE_NORMAL)                                                                              \
   X(PIVOT, PIVOT_DATA, SIZE_NORMAL)                                                                                    \

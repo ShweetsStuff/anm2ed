@@ -100,7 +100,8 @@ namespace anm2ed
 
   void Manager::new_(const std::filesystem::path& path) { open(path, true); }
 
-  void Manager::save(int index, const std::filesystem::path& path, anm2::Compatibility compatibility)
+  void Manager::save(int index, const std::filesystem::path& path, anm2::Compatibility compatibility,
+                     bool isBakeSpecialInterpolatedFramesOnSave, bool isRoundScale, bool isRoundRotation)
   {
     if (auto document = get(index); document)
     {
@@ -108,21 +109,26 @@ namespace anm2ed
       ensure_parent_directory_exists(path);
       document->path = !path.empty() ? path : document->path;
       document->path.replace_extension(".anm2");
-      document->save(document->path, &errorString, compatibility);
+      document->save(document->path, &errorString, compatibility, isBakeSpecialInterpolatedFramesOnSave, isRoundScale,
+                     isRoundRotation);
       recent_file_add(document->path);
     }
   }
 
-  void Manager::save(const std::filesystem::path& path, anm2::Compatibility compatibility)
+  void Manager::save(const std::filesystem::path& path, anm2::Compatibility compatibility,
+                     bool isBakeSpecialInterpolatedFramesOnSave, bool isRoundScale, bool isRoundRotation)
   {
-    save(selected, path, compatibility);
+    save(selected, path, compatibility, isBakeSpecialInterpolatedFramesOnSave, isRoundScale, isRoundRotation);
   }
 
-  void Manager::autosave(Document& document, anm2::Compatibility compatibility)
+  void Manager::autosave(Document& document, anm2::Compatibility compatibility,
+                         bool isBakeSpecialInterpolatedFramesOnSave, bool isRoundScale, bool isRoundRotation)
   {
     std::string errorString{};
     auto autosavePath = document.autosave_path_get();
-    if (!document.autosave(&errorString, compatibility)) return;
+    if (!document.autosave(&errorString, compatibility, isBakeSpecialInterpolatedFramesOnSave, isRoundScale,
+                           isRoundRotation))
+      return;
 
     autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), autosavePath), autosaveFiles.end());
     autosaveFiles.insert(autosaveFiles.begin(), autosavePath);

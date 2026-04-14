@@ -124,6 +124,28 @@ namespace anm2ed::anm2
     return {minX, minY, maxX - minX, maxY - minY};
   }
 
+  void Anm2::bake_special_interpolated_frames(int interval, bool isRoundScale, bool isRoundRotation)
+  {
+    auto bake_item = [&](Item& item)
+    {
+      for (int i = (int)item.frames.size() - 1; i >= 0; --i)
+      {
+        auto interpolation = item.frames[i].interpolation;
+        if (interpolation == Frame::Interpolation::NONE || interpolation == Frame::Interpolation::LINEAR) continue;
+        item.frames_bake(i, interval, isRoundScale, isRoundRotation);
+      }
+    };
+
+    for (auto& animation : animations.items)
+    {
+      bake_item(animation.rootAnimation);
+      for (auto& item : animation.layerAnimations | std::views::values)
+        bake_item(item);
+      for (auto& item : animation.nullAnimations | std::views::values)
+        bake_item(item);
+    }
+  }
+
   Anm2::Anm2(const std::filesystem::path& path, std::string* errorString)
   {
     XMLDocument document;
@@ -168,10 +190,13 @@ namespace anm2ed::anm2
     return element;
   }
 
-  bool Anm2::serialize(const std::filesystem::path& path, std::string* errorString, Flags flags)
+  bool Anm2::serialize(const std::filesystem::path& path, std::string* errorString, Flags flags,
+                       bool isBakeSpecialInterpolatedFramesOnSave, bool isRoundScale, bool isRoundRotation)
   {
     XMLDocument document;
-    document.InsertFirstChild(to_element(document, flags));
+    auto serialized = *this;
+    if (isBakeSpecialInterpolatedFramesOnSave) serialized.bake_special_interpolated_frames(1, isRoundScale, isRoundRotation);
+    document.InsertFirstChild(serialized.to_element(document, flags));
 
     File file(path, "wb");
     if (!file)

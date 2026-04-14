@@ -1,5 +1,6 @@
 #include "item.hpp"
 #include <algorithm>
+#include <cmath>
 #include <ranges>
 
 #include "vector_.hpp"
@@ -11,6 +12,29 @@ using namespace glm;
 
 namespace anm2ed::anm2
 {
+  namespace
+  {
+    float interpolation_factor(Frame::Interpolation interpolation, float value)
+    {
+      value = glm::clamp(value, 0.0f, 1.0f);
+
+      switch (interpolation)
+      {
+        case Frame::Interpolation::LINEAR:
+          return value;
+        case Frame::Interpolation::EASE_IN:
+          return value * value;
+        case Frame::Interpolation::EASE_OUT:
+          return 1.0f - ((1.0f - value) * (1.0f - value));
+        case Frame::Interpolation::EASE_IN_OUT:
+          return value < 0.5f ? (2.0f * value * value) : (1.0f - std::pow(-2.0f * value + 2.0f, 2.0f) * 0.5f);
+        case Frame::Interpolation::NONE:
+        default:
+          return 0.0f;
+      }
+    }
+  }
+
   Item::Item(XMLElement* element, Type type, int* id)
   {
     if (type == LAYER && id) element->QueryIntAttribute("LayerId", id);
@@ -112,9 +136,10 @@ namespace anm2ed::anm2
       }
     }
 
-    if (type != TRIGGER && frame.isInterpolated && frameNext && frame.duration > 1)
+    if (type != TRIGGER && frame.interpolation != Frame::Interpolation::NONE && frameNext && frame.duration > 1)
     {
-      auto interpolation = (time - durationCurrent) / (durationNext - durationCurrent);
+      auto interpolation =
+          interpolation_factor(frame.interpolation, (time - durationCurrent) / (durationNext - durationCurrent));
 
       frame.rotation = glm::mix(frame.rotation, frameNext->rotation, interpolation);
       frame.position = glm::mix(frame.position, frameNext->position, interpolation);
@@ -169,7 +194,7 @@ namespace anm2ed::anm2
       Frame& frame = frames[i];
 
       if (change.isVisible) frame.isVisible = *change.isVisible;
-      if (change.isInterpolated) frame.isInterpolated = *change.isInterpolated;
+      if (change.interpolation) frame.interpolation = *change.interpolation;
       if (change.isFlipX) frame.scale.x = -frame.scale.x;
       if (change.isFlipY) frame.scale.y = -frame.scale.y;
 
@@ -280,9 +305,9 @@ namespace anm2ed::anm2
     while (duration < original.duration)
     {
       Frame baked = original;
-      float interpolation = (float)duration / original.duration;
+      float interpolation = interpolation_factor(original.interpolation, (float)duration / original.duration);
       baked.duration = std::min(interval, original.duration - duration);
-      baked.isInterpolated = (i == index) ? original.isInterpolated : false;
+      baked.interpolation = (i == index) ? original.interpolation : Frame::Interpolation::NONE;
       baked.rotation = glm::mix(original.rotation, nextFrame.rotation, interpolation);
       baked.position = glm::mix(original.position, nextFrame.position, interpolation);
       baked.scale = glm::mix(original.scale, nextFrame.scale, interpolation);

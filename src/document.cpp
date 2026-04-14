@@ -109,13 +109,15 @@ namespace anm2ed
     return *this;
   }
 
-  bool Document::save(const std::filesystem::path& path, std::string* errorString, anm2::Compatibility compatibility)
+  bool Document::save(const std::filesystem::path& path, std::string* errorString, anm2::Compatibility compatibility,
+                      bool isBakeSpecialInterpolatedFramesOnSave, bool isRoundScale, bool isRoundRotation)
   {
     this->path = !path.empty() ? path : this->path;
 
     auto absolutePath = this->path;
     auto absolutePathUtf8 = path::to_utf8(absolutePath);
-    if (anm2.serialize(absolutePath, errorString, serialize_flags_get(compatibility)))
+    if (anm2.serialize(absolutePath, errorString, serialize_flags_get(compatibility),
+                       isBakeSpecialInterpolatedFramesOnSave, isRoundScale, isRoundRotation))
     {
       toasts.push(std::vformat(localize.get(TOAST_SAVE_DOCUMENT), std::make_format_args(absolutePathUtf8)));
       logger.info(
@@ -152,11 +154,13 @@ namespace anm2ed
     return restorePath;
   }
 
-  bool Document::autosave(std::string* errorString, anm2::Compatibility compatibility)
+  bool Document::autosave(std::string* errorString, anm2::Compatibility compatibility,
+                          bool isBakeSpecialInterpolatedFramesOnSave, bool isRoundScale, bool isRoundRotation)
   {
     auto autosavePath = autosave_path_get();
     auto autosavePathUtf8 = path::to_utf8(autosavePath);
-    if (anm2.serialize(autosavePath, errorString, serialize_flags_get(compatibility)))
+    if (anm2.serialize(autosavePath, errorString, serialize_flags_get(compatibility),
+                       isBakeSpecialInterpolatedFramesOnSave, isRoundScale, isRoundRotation))
     {
       autosaveHash = hash;
       lastAutosaveTime = 0.0f;

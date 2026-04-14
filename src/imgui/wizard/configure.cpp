@@ -72,6 +72,10 @@ namespace anm2ed::imgui::wizard
           ImGui::RadioButton(localize.get(LABEL_ANM2ED_LIMITED), &temporary.fileCompatibility, anm2::ANM2ED_LIMITED);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_COMPATIBILITY_ANM2ED_LIMITED));
 
+          ImGui::Checkbox(localize.get(LABEL_BAKE_SPECIAL_INTERPOLATED_FRAMES_ON_SAVE),
+                          &temporary.fileBakeSpecialInterpolatedFramesOnSave);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BAKE_SPECIAL_INTERPOLATED_FRAMES_ON_SAVE));
+
           ImGui::SeparatorText(localize.get(LABEL_OPTIONS));
           ImGui::Checkbox(localize.get(LABEL_OVERWRITE_WARNING), &temporary.fileIsWarnOverwrite);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OVERWRITE_WARNING));

@@ -12,6 +12,7 @@ namespace anm2ed::imgui
   public:
     anm2::Spritesheet::Region editRegion{};
     int newRegionId{-1};
+    bool isPreserveEditRegionOnOpen{};
     imgui::PopupHelper propertiesPopup{imgui::PopupHelper(LABEL_REGION_PROPERTIES, imgui::POPUP_SMALL_NO_HEIGHT)};
 
     void update(Manager&, Settings&, Resources&, Clipboard&);

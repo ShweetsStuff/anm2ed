@@ -61,6 +61,7 @@ namespace anm2ed
                                                                                                                        \
   X(FILE_IS_AUTOSAVE, fileIsAutosave, STRING_UNDEFINED, BOOL, true)                                                    \
   X(FILE_IS_WARN_OVERWRITE, fileIsWarnOverwrite, STRING_UNDEFINED, BOOL, true)                                         \
+  X(FILE_BAKE_SPECIAL_INTERPOLATED_FRAMES_ON_SAVE, fileBakeSpecialInterpolatedFramesOnSave, STRING_UNDEFINED, BOOL, true) \
   X(FILE_SNAPSHOT_STACK_SIZE, fileSnapshotStackSize, STRING_UNDEFINED, INT, 50)                                        \
   X(FILE_COMPATIBILITY, fileCompatibility, STRING_UNDEFINED, INT, anm2::ANM2ED)                                        \
                                                                                                                        \
@@ -94,7 +95,7 @@ namespace anm2ed
   X(CHANGE_IS_COLOR_OFFSET_B, changeIsColorOffsetB, STRING_UNDEFINED, BOOL, false)                                     \
   X(CHANGE_IS_COLOR_OFFSET_A, changeIsColorOffsetA, STRING_UNDEFINED, BOOL, false)                                     \
   X(CHANGE_IS_VISIBLE_SET, changeIsVisibleSet, STRING_UNDEFINED, BOOL, false)                                          \
-  X(CHANGE_IS_INTERPOLATED_SET, changeIsInterpolatedSet, STRING_UNDEFINED, BOOL, false)                                \
+  X(CHANGE_IS_INTERPOLATION_SET, changeIsInterpolationSet, STRING_UNDEFINED, BOOL, false)                              \
   X(CHANGE_IS_FLIP_X_SET, changeIsFlipXSet, STRING_UNDEFINED, BOOL, false)                                             \
   X(CHANGE_IS_FLIP_Y_SET, changeIsFlipYSet, STRING_UNDEFINED, BOOL, false)                                             \
   X(CHANGE_IS_REGION, changeIsRegion, STRING_UNDEFINED, BOOL, false)                                                   \
@@ -109,7 +110,7 @@ namespace anm2ed
   X(CHANGE_COLOR_OFFSET, changeColorOffset, STRING_UNDEFINED, VEC3, {})                                                \
   X(CHANGE_REGION_ID, changeRegionId, STRING_UNDEFINED, INT, -1)                                                       \
   X(CHANGE_IS_VISIBLE, changeIsVisible, STRING_UNDEFINED, BOOL, false)                                                 \
-  X(CHANGE_IS_INTERPOLATED, changeIsInterpolated, STRING_UNDEFINED, BOOL, false)                                       \
+  X(CHANGE_INTERPOLATION, changeInterpolation, STRING_UNDEFINED, INT, 0)                                               \
   X(CHANGE_IS_FLIP_X, changeIsFlipX, STRING_UNDEFINED, BOOL, false)                                                    \
   X(CHANGE_IS_FLIP_Y, changeIsFlipY, STRING_UNDEFINED, BOOL, false)                                                    \
                                                                                                                        \

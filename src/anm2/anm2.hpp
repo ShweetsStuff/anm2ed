@@ -32,7 +32,8 @@ namespace anm2ed::anm2
 
     Anm2();
     tinyxml2::XMLElement* to_element(tinyxml2::XMLDocument&, Flags = 0);
-    bool serialize(const std::filesystem::path&, std::string* = nullptr, Flags = 0);
+    bool serialize(const std::filesystem::path&, std::string* = nullptr, Flags = 0, bool = false, bool = true,
+                   bool = true);
     std::string to_string(Flags = 0);
     Anm2(const std::filesystem::path&, std::string* = nullptr);
     uint64_t hash();
@@ -81,6 +82,7 @@ namespace anm2ed::anm2
     bool animations_deserialize(const std::string&, int, std::set<int>&, std::string* = nullptr);
     Frame frame_effective(int, const Frame&) const;
     glm::vec4 animation_rect(Animation&, bool) const;
+    void bake_special_interpolated_frames(int, bool, bool);
 
     Item* item_get(int, Type, int = -1);
     Reference layer_animation_add(Reference = {}, int = -1, std::string = {}, int = 0,

@@ -25,6 +25,17 @@ namespace anm2ed::imgui
       auto regionLabelsString = std::vector<std::string>{localize.get(BASIC_NONE)};
       auto regionLabels = std::vector<const char*>{regionLabelsString[0].c_str()};
       auto regionIds = std::vector<int>{-1};
+      auto interpolationLabelsString =
+          std::vector<std::string>{localize.get(BASIC_NONE), localize.get(BASIC_LINEAR), localize.get(BASIC_EASE_IN),
+                                   localize.get(BASIC_EASE_OUT), localize.get(BASIC_EASE_IN_OUT)};
+      auto interpolationLabels =
+          std::vector<const char*>{interpolationLabelsString[0].c_str(), interpolationLabelsString[1].c_str(),
+                                   interpolationLabelsString[2].c_str(), interpolationLabelsString[3].c_str(),
+                                   interpolationLabelsString[4].c_str()};
+      auto interpolationValues =
+          std::vector<int>{anm2::Frame::Interpolation::NONE, anm2::Frame::Interpolation::LINEAR,
+                           anm2::Frame::Interpolation::EASE_IN, anm2::Frame::Interpolation::EASE_OUT,
+                           anm2::Frame::Interpolation::EASE_IN_OUT};
 
       if (type == anm2::LAYER && document.reference.itemID != -1)
       {
@@ -219,20 +230,19 @@ namespace anm2ed::imgui
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_REGION));
             ImGui::EndDisabled();
 
+            auto interpolationValue = frame ? static_cast<int>(useFrame.interpolation) : dummy_value<int>();
+            if (combo_id_mapped(localize.get(BASIC_INTERPOLATED), &interpolationValue, interpolationValues,
+                                interpolationLabels) &&
+                frame)
+              DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_INTERPOLATION), Document::FRAMES,
+                            frame->interpolation = static_cast<anm2::Frame::Interpolation>(interpolationValue));
+            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FRAME_INTERPOLATION));
+
             if (ImGui::Checkbox(localize.get(BASIC_VISIBLE), frame ? &useFrame.isVisible : &dummy_value<bool>()) &&
                 frame)
               DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_VISIBILITY), Document::FRAMES,
                             frame->isVisible = useFrame.isVisible);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FRAME_VISIBILITY));
-
-            ImGui::SameLine();
-
-            if (ImGui::Checkbox(localize.get(BASIC_INTERPOLATED),
-                                frame ? &useFrame.isInterpolated : &dummy_value<bool>()) &&
-                frame)
-              DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_INTERPOLATION), Document::FRAMES,
-                            frame->isInterpolated = useFrame.isInterpolated);
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FRAME_INTERPOLATION));
 
             auto widgetSize = widget_size_with_row_get(2);
 

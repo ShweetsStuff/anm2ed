@@ -55,6 +55,10 @@ namespace anm2ed
     imgui::PopupHelper nullPropertiesPopup{
         imgui::PopupHelper(LABEL_MANAGER_NULL_PROPERTIES, imgui::POPUP_SMALL_NO_HEIGHT)};
 
+    anm2::Spritesheet::Region makeRegion{};
+    int makeRegionSpritesheetId{-1};
+    bool isMakeRegionRequested{};
+
     imgui::PopupHelper progressPopup{
         imgui::PopupHelper(LABEL_MANAGER_RENDERING_PROGRESS, imgui::POPUP_SMALL_NO_HEIGHT)};
 
@@ -66,9 +70,11 @@ namespace anm2ed
     Document* get(int = -1);
     Document* open(const std::filesystem::path&, bool = false, bool = true);
     void new_(const std::filesystem::path&);
-    void save(int, const std::filesystem::path& = {}, anm2::Compatibility = anm2::ANM2ED);
-    void save(const std::filesystem::path& = {}, anm2::Compatibility = anm2::ANM2ED);
-    void autosave(Document&, anm2::Compatibility = anm2::ANM2ED);
+    void save(int, const std::filesystem::path& = {}, anm2::Compatibility = anm2::ANM2ED, bool = false, bool = true,
+              bool = true);
+    void save(const std::filesystem::path& = {}, anm2::Compatibility = anm2::ANM2ED, bool = false, bool = true,
+              bool = true);
+    void autosave(Document&, anm2::Compatibility = anm2::ANM2ED, bool = false, bool = true, bool = true);
     void set(int);
     void close(int);
     void layer_properties_open(int = -1);

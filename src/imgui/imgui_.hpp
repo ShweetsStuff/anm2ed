@@ -115,6 +115,7 @@ namespace anm2ed::imgui
       {"NumDivide", ImGuiKey_KeypadDivide},
       {"NumEnter", ImGuiKey_KeypadEnter},
       {"NumDecimal", ImGuiKey_KeypadDecimal},
+      {"NumEqual", ImGuiKey_KeypadEqual},
 
       {"F1", ImGuiKey_F1},
       {"F2", ImGuiKey_F2},
@@ -157,6 +158,29 @@ namespace anm2ed::imgui
       {"Slash", ImGuiKey_Slash},
       {"Backslash", ImGuiKey_Backslash},
       {"GraveAccent", ImGuiKey_GraveAccent},
+
+      // Legacy aliases for older saved shortcut strings.
+      {"Keypad0", ImGuiKey_Keypad0},
+      {"Keypad1", ImGuiKey_Keypad1},
+      {"Keypad2", ImGuiKey_Keypad2},
+      {"Keypad3", ImGuiKey_Keypad3},
+      {"Keypad4", ImGuiKey_Keypad4},
+      {"Keypad5", ImGuiKey_Keypad5},
+      {"Keypad6", ImGuiKey_Keypad6},
+      {"Keypad7", ImGuiKey_Keypad7},
+      {"Keypad8", ImGuiKey_Keypad8},
+      {"Keypad9", ImGuiKey_Keypad9},
+      {"KeypadAdd", ImGuiKey_KeypadAdd},
+      {"KeypadSubtract", ImGuiKey_KeypadSubtract},
+      {"KeypadMultiply", ImGuiKey_KeypadMultiply},
+      {"KeypadDivide", ImGuiKey_KeypadDivide},
+      {"KeypadEnter", ImGuiKey_KeypadEnter},
+      {"KeypadDecimal", ImGuiKey_KeypadDecimal},
+      {"KeypadEqual", ImGuiKey_KeypadEqual},
+      {"UpArrow", ImGuiKey_UpArrow},
+      {"DownArrow", ImGuiKey_DownArrow},
+      {"LeftArrow", ImGuiKey_LeftArrow},
+      {"RightArrow", ImGuiKey_RightArrow},
   };
 
   const std::unordered_map<std::string, ImGuiKey> MOD_MAP = {
