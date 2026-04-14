@@ -257,8 +257,12 @@ namespace anm2ed::imgui
         if (auto item = document.item_get())
         {
           std::set<int> bakedSelection{};
-          for (auto i : frames.selection | std::views::reverse)
+          std::vector<int> selectedIndices(frames.selection.begin(), frames.selection.end());
+          int insertedBefore = 0;
+
+          for (auto originalIndex : selectedIndices)
           {
+            auto i = originalIndex + insertedBefore;
             if (!vector::in_bounds(item->frames, i)) continue;
 
             auto originalDuration = item->frames[i].duration;
@@ -269,6 +273,8 @@ namespace anm2ed::imgui
                                   : (int)std::ceil((float)originalDuration / settings.bakeInterval);
             for (int offset = 0; offset < bakedCount; ++offset)
               bakedSelection.insert(i + offset);
+
+            insertedBefore += bakedCount - 1;
           }
 
           frames.selection = std::move(bakedSelection);
