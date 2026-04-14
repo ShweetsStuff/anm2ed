@@ -255,10 +255,34 @@ namespace anm2ed::imgui
       auto behavior = [&]()
       {
         if (auto item = document.item_get())
+        {
+          std::set<int> bakedSelection{};
           for (auto i : frames.selection | std::views::reverse)
+          {
+            if (!vector::in_bounds(item->frames, i)) continue;
+
+            auto originalDuration = item->frames[i].duration;
             item->frames_bake(i, settings.bakeInterval, settings.bakeIsRoundScale, settings.bakeIsRoundRotation);
 
-        frames.clear();
+            auto bakedCount = originalDuration <= anm2::FRAME_DURATION_MIN
+                                  ? 1
+                                  : (int)std::ceil((float)originalDuration / settings.bakeInterval);
+            for (int offset = 0; offset < bakedCount; ++offset)
+              bakedSelection.insert(i + offset);
+          }
+
+          frames.selection = std::move(bakedSelection);
+          if (!frames.selection.empty())
+          {
+            reference.frameIndex = *frames.selection.begin();
+            frameSelectionSnapshot.assign(frames.selection.begin(), frames.selection.end());
+            frameSelectionSnapshotReference = reference;
+            frameSelectionLocked.clear();
+            isFrameSelectionLocked = false;
+            frameFocusIndex = reference.frameIndex;
+            frameFocusRequested = true;
+          }
+        }
       };
 
       DOCUMENT_EDIT(document, localize.get(EDIT_BAKE_FRAMES), Document::FRAMES, behavior());
@@ -495,10 +519,9 @@ namespace anm2ed::imgui
       {
         auto item = animation ? animation->item_get(reference.itemType, reference.itemID) : nullptr;
         auto frame = document.frame_get();
-        bool isMakeRegion =
-            frame && reference.itemType == anm2::LAYER && reference.itemID != -1 && frame->regionID == -1 &&
-            anm2.content.layers.contains(reference.itemID) &&
-            anm2.content.spritesheets.contains(anm2.content.layers.at(reference.itemID).spritesheetID);
+        bool isMakeRegion = frame && reference.itemType == anm2::LAYER && reference.itemID != -1 &&
+                            frame->regionID == -1 && anm2.content.layers.contains(reference.itemID) &&
+                            anm2.content.spritesheets.contains(anm2.content.layers.at(reference.itemID).spritesheetID);
 
         if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_UNDO), settings.shortcutUndo.c_str(), false,
                             document.is_able_to_undo()))
