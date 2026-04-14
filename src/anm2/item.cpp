@@ -307,7 +307,7 @@ namespace anm2ed::anm2
       Frame baked = original;
       float interpolation = interpolation_factor(original.interpolation, (float)duration / original.duration);
       baked.duration = std::min(interval, original.duration - duration);
-      baked.interpolation = (i == index) ? original.interpolation : Frame::Interpolation::NONE;
+      baked.interpolation = Frame::Interpolation::NONE;
       baked.rotation = glm::mix(original.rotation, nextFrame.rotation, interpolation);
       baked.position = glm::mix(original.position, nextFrame.position, interpolation);
       baked.scale = glm::mix(original.scale, nextFrame.scale, interpolation);
