@@ -21,6 +21,13 @@ using namespace glm;
 
 namespace anm2ed::imgui
 {
+  bool Taskbar::save_requires_special_prompt(Manager& manager, Settings& settings, int index) const
+  {
+    auto* document = manager.get(index);
+    return document && settings.fileIsSpecialInterpolatedFramesOnSaveReminder &&
+           document->anm2.has_special_interpolated_frames();
+  }
+
   void Taskbar::save_execute(Manager& manager, Settings& settings, const PendingSave& request, bool bakeFrames)
   {
     manager.save(request.index, request.path, (anm2::Compatibility)settings.fileCompatibility, bakeFrames,
@@ -104,7 +111,9 @@ namespace anm2ed::imgui
 
         if (ImGui::MenuItem(localize.get(BASIC_SAVE), settings.shortcutSave.c_str(), false, document))
         {
-          if (settings.fileIsWarnOverwrite)
+          if (save_requires_special_prompt(manager, settings, manager.selected))
+            save_request(manager, settings, manager.selected, document->path);
+          else if (settings.fileIsWarnOverwrite)
             overwritePopup.open();
           else
             save_request(manager, settings, manager.selected, document->path);
@@ -332,7 +341,9 @@ namespace anm2ed::imgui
     if (shortcut(manager.chords[SHORTCUT_OPEN], shortcut::GLOBAL)) dialog.file_open(Dialog::ANM2_OPEN);
     if (shortcut(manager.chords[SHORTCUT_SAVE], shortcut::GLOBAL))
     {
-      if (settings.fileIsWarnOverwrite)
+      if (save_requires_special_prompt(manager, settings))
+        save_request(manager, settings);
+      else if (settings.fileIsWarnOverwrite)
         overwritePopup.open();
       else
         save_request(manager, settings);

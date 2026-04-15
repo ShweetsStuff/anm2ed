@@ -48,6 +48,7 @@ namespace anm2ed::imgui
     bool isQuittingMode{};
     PendingSave pendingSave{};
 
+    bool save_requires_special_prompt(Manager&, Settings&, int = -1) const;
     void save_execute(Manager&, Settings&, const PendingSave&, bool);
     bool save_request(Manager&, Settings&, int = -1, const std::filesystem::path& = {});
 
