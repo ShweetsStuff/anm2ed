@@ -21,6 +21,39 @@ using namespace glm;
 
 namespace anm2ed::imgui
 {
+  void Taskbar::save_execute(Manager& manager, Settings& settings, const PendingSave& request, bool bakeFrames)
+  {
+    manager.save(request.index, request.path, (anm2::Compatibility)settings.fileCompatibility, bakeFrames,
+                 settings.bakeIsRoundScale, settings.bakeIsRoundRotation);
+  }
+
+  bool Taskbar::save_request(Manager& manager, Settings& settings, int index, const std::filesystem::path& path)
+  {
+    auto* document = manager.get(index);
+    if (!document) return false;
+
+    if (settings.fileIsSpecialInterpolatedFramesOnSaveReminder && document->anm2.has_special_interpolated_frames())
+    {
+      pendingSave = {.index = index,
+                     .path = path,
+                     .isOpen = true,
+                     .disableReminder = false,
+                     .autoBakeFrames = settings.fileBakeSpecialInterpolatedFramesOnSave};
+      specialInterpolatedFramesReminderPopup.open();
+      return false;
+    }
+
+    PendingSave request{.index = index, .path = path};
+    auto bakeFrames = settings.fileBakeSpecialInterpolatedFramesOnSave;
+    save_execute(manager, settings, request, bakeFrames);
+    return true;
+  }
+
+  bool Taskbar::save_manual(Manager& manager, Settings& settings, int index, const std::filesystem::path& path)
+  {
+    return save_request(manager, settings, index, path);
+  }
+
   void Taskbar::update(Manager& manager, Settings& settings, Resources& resources, Dialog& dialog, bool& isQuitting)
   {
     auto document = manager.get();
@@ -74,9 +107,7 @@ namespace anm2ed::imgui
           if (settings.fileIsWarnOverwrite)
             overwritePopup.open();
           else
-            manager.save(document->path, (anm2::Compatibility)settings.fileCompatibility,
-                         settings.fileBakeSpecialInterpolatedFramesOnSave, settings.bakeIsRoundScale,
-                         settings.bakeIsRoundRotation);
+            save_request(manager, settings, manager.selected, document->path);
         }
 
         if (ImGui::MenuItem(localize.get(LABEL_SAVE_AS), settings.shortcutSaveAs.c_str(), false, document))
@@ -102,9 +133,7 @@ namespace anm2ed::imgui
 
       if (dialog.is_selected(Dialog::ANM2_SAVE))
       {
-        manager.save(dialog.path, (anm2::Compatibility)settings.fileCompatibility,
-                     settings.fileBakeSpecialInterpolatedFramesOnSave, settings.bakeIsRoundScale,
-                     settings.bakeIsRoundRotation);
+        save_request(manager, settings, manager.selected, dialog.path);
         dialog.reset();
       }
 
@@ -244,9 +273,7 @@ namespace anm2ed::imgui
 
       if (ImGui::Button(localize.get(BASIC_YES), widgetSize))
       {
-        manager.save({}, (anm2::Compatibility)settings.fileCompatibility,
-                     settings.fileBakeSpecialInterpolatedFramesOnSave, settings.bakeIsRoundScale,
-                     settings.bakeIsRoundRotation);
+        save_request(manager, settings);
         overwritePopup.close();
       }
 
@@ -257,6 +284,48 @@ namespace anm2ed::imgui
       ImGui::EndPopup();
     }
 
+    specialInterpolatedFramesReminderPopup.trigger();
+    if (ImGui::BeginPopupModal(specialInterpolatedFramesReminderPopup.label(),
+                               &specialInterpolatedFramesReminderPopup.isOpen, ImGuiWindowFlags_NoResize))
+    {
+      ImGui::TextWrapped("%s", localize.get(LABEL_SPECIAL_INTERPOLATED_FRAMES_REMINDER_PROMPT));
+      ImGui::Spacing();
+      ImGui::Checkbox(localize.get(LABEL_DONT_NOTIFY_ME_AGAIN), &pendingSave.disableReminder);
+      ImGui::BeginDisabled(!pendingSave.disableReminder);
+      ImGui::Checkbox(localize.get(LABEL_AUTOMATICALLY_BAKE_THESE_FRAMES_ON_SAVE), &pendingSave.autoBakeFrames);
+      ImGui::EndDisabled();
+
+      auto widgetSize = widget_size_with_row_get(3);
+      if (ImGui::Button(localize.get(LABEL_SAVE_BAKE_FRAMES), widgetSize))
+      {
+        if (pendingSave.disableReminder) settings.fileIsSpecialInterpolatedFramesOnSaveReminder = false;
+        settings.fileBakeSpecialInterpolatedFramesOnSave = pendingSave.autoBakeFrames;
+        save_execute(manager, settings, pendingSave, true);
+        pendingSave = {};
+        specialInterpolatedFramesReminderPopup.close();
+      }
+
+      ImGui::SameLine();
+      if (ImGui::Button(localize.get(LABEL_SAVE_DONT_BAKE_FRAMES), widgetSize))
+      {
+        if (pendingSave.disableReminder) settings.fileIsSpecialInterpolatedFramesOnSaveReminder = false;
+        settings.fileBakeSpecialInterpolatedFramesOnSave = pendingSave.autoBakeFrames;
+        save_execute(manager, settings, pendingSave, false);
+        pendingSave = {};
+        specialInterpolatedFramesReminderPopup.close();
+      }
+
+      ImGui::SameLine();
+      if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize))
+      {
+        pendingSave = {};
+        specialInterpolatedFramesReminderPopup.close();
+      }
+
+      ImGui::EndPopup();
+    }
+    specialInterpolatedFramesReminderPopup.end();
+
     aboutPopup.end();
 
     if (shortcut(manager.chords[SHORTCUT_NEW], shortcut::GLOBAL)) dialog.file_save(Dialog::ANM2_NEW);
@@ -266,9 +335,7 @@ namespace anm2ed::imgui
       if (settings.fileIsWarnOverwrite)
         overwritePopup.open();
       else
-        manager.save({}, (anm2::Compatibility)settings.fileCompatibility,
-                     settings.fileBakeSpecialInterpolatedFramesOnSave, settings.bakeIsRoundScale,
-                     settings.bakeIsRoundRotation);
+        save_request(manager, settings);
     }
     if (shortcut(manager.chords[SHORTCUT_SAVE_AS], shortcut::GLOBAL)) dialog.file_save(Dialog::ANM2_SAVE);
     if (shortcut(manager.chords[SHORTCUT_EXIT], shortcut::GLOBAL)) isQuitting = true;

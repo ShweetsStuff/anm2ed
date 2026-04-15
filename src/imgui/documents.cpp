@@ -155,10 +155,15 @@ namespace anm2ed::imgui
           shortcut(manager.chords[SHORTCUT_CONFIRM]);
           if (ImGui::Button(localize.get(BASIC_YES), widgetSize))
           {
+            bool isSaved = true;
             if (isDocumentDirty)
-              manager.save(closeDocumentIndex, {}, (anm2::Compatibility)settings.fileCompatibility,
-                           settings.fileBakeSpecialInterpolatedFramesOnSave, settings.bakeIsRoundScale,
-                           settings.bakeIsRoundRotation);
+              isSaved = taskbar.save_manual(manager, settings, closeDocumentIndex);
+
+            if (!isSaved)
+            {
+              ImGui::EndPopup();
+              return;
+            }
 
             if (isSpritesheetDirty)
             {

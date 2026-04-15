@@ -51,6 +51,7 @@ namespace anm2ed
     float& frameTime = current.frameTime;
     std::string& message = current.message;
     std::map<int, Storage> regionBySpritesheet{};
+    int changeAllFramePropertiesRegionId{-1};
 
     float previewZoom{200};
     glm::vec2 previewPan{};

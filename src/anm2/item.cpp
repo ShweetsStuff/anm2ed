@@ -295,7 +295,11 @@ namespace anm2ed::anm2
     if (!vector::in_bounds(frames, index)) return;
 
     auto original = frames[index];
-    if (original.duration == FRAME_DURATION_MIN) return;
+    if (original.duration == FRAME_DURATION_MIN)
+    {
+      frames[index].interpolation = Frame::Interpolation::NONE;
+      return;
+    }
 
     auto nextFrame = vector::in_bounds(frames, index + 1) ? frames[index + 1] : original;
 

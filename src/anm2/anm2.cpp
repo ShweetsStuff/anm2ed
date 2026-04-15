@@ -146,6 +146,30 @@ namespace anm2ed::anm2
     }
   }
 
+  bool Anm2::has_special_interpolated_frames() const
+  {
+    auto item_has_special_frames = [](const Item& item)
+    {
+      for (const auto& frame : item.frames)
+      {
+        auto interpolation = frame.interpolation;
+        if (interpolation != Frame::Interpolation::NONE && interpolation != Frame::Interpolation::LINEAR) return true;
+      }
+      return false;
+    };
+
+    for (const auto& animation : animations.items)
+    {
+      if (item_has_special_frames(animation.rootAnimation)) return true;
+      for (const auto& item : animation.layerAnimations | std::views::values)
+        if (item_has_special_frames(item)) return true;
+      for (const auto& item : animation.nullAnimations | std::views::values)
+        if (item_has_special_frames(item)) return true;
+    }
+
+    return false;
+  }
+
   Anm2::Anm2(const std::filesystem::path& path, std::string* errorString)
   {
     XMLDocument document;

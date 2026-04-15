@@ -82,6 +82,7 @@ namespace anm2ed::anm2
     bool animations_deserialize(const std::string&, int, std::set<int>&, std::string* = nullptr);
     Frame frame_effective(int, const Frame&) const;
     glm::vec4 animation_rect(Animation&, bool) const;
+    bool has_special_interpolated_frames() const;
     void bake_special_interpolated_frames(int, bool, bool);
 
     Item* item_get(int, Type, int = -1);

@@ -61,6 +61,7 @@ namespace anm2ed
                                                                                                                        \
   X(FILE_IS_AUTOSAVE, fileIsAutosave, STRING_UNDEFINED, BOOL, true)                                                    \
   X(FILE_IS_WARN_OVERWRITE, fileIsWarnOverwrite, STRING_UNDEFINED, BOOL, true)                                         \
+  X(FILE_IS_SPECIAL_INTERPOLATED_FRAMES_ON_SAVE_REMINDER, fileIsSpecialInterpolatedFramesOnSaveReminder, STRING_UNDEFINED, BOOL, true) \
   X(FILE_BAKE_SPECIAL_INTERPOLATED_FRAMES_ON_SAVE, fileBakeSpecialInterpolatedFramesOnSave, STRING_UNDEFINED, BOOL, true) \
   X(FILE_SNAPSHOT_STACK_SIZE, fileSnapshotStackSize, STRING_UNDEFINED, INT, 50)                                        \
   X(FILE_COMPATIBILITY, fileCompatibility, STRING_UNDEFINED, INT, anm2::ANM2ED)                                        \

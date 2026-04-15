@@ -1,5 +1,6 @@
 #include "change_all_frame_properties.hpp"
 
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -48,7 +49,7 @@ namespace anm2ed::imgui::wizard
     auto& duration = settings.changeDuration;
     auto& tint = settings.changeTint;
     auto& colorOffset = settings.changeColorOffset;
-    auto& regionId = settings.changeRegionId;
+    auto& regionId = document.changeAllFramePropertiesRegionId;
     auto& isVisible = settings.changeIsVisible;
     auto& interpolation = settings.changeInterpolation;
     auto& isFlipX = settings.changeIsFlipX;
@@ -239,6 +240,7 @@ namespace anm2ed::imgui::wizard
     }
     auto regionIds = regionStorage && !regionStorage->ids.empty() ? regionStorage->ids : fallbackIds;
     auto regionLabels = regionStorage && !regionStorage->labels.empty() ? regionStorage->labels : fallbackLabels;
+    if (itemType != anm2::LAYER || std::find(regionIds.begin(), regionIds.end(), regionId) == regionIds.end()) regionId = -1;
     PROPERTIES_WIDGET(combo_id_mapped(localize.get(BASIC_REGION), &regionId, regionIds, regionLabels), "##Is Region",
                       isRegion);
     ImGui::EndDisabled();

@@ -72,6 +72,7 @@ namespace anm2ed
         items(current.items), layer(current.layer), merge(current.merge), null(current.null), region(current.region),
         sound(current.sound), spritesheet(current.spritesheet), anm2(current.anm2), reference(current.reference),
         frameTime(current.frameTime), message(current.message), regionBySpritesheet(std::move(other.regionBySpritesheet)),
+        changeAllFramePropertiesRegionId(other.changeAllFramePropertiesRegionId),
         previewZoom(other.previewZoom), previewPan(other.previewPan), editorPan(other.editorPan),
         editorZoom(other.editorZoom), overlayIndex(other.overlayIndex), hash(other.hash), saveHash(other.saveHash),
         autosaveHash(other.autosaveHash), lastAutosaveTime(other.lastAutosaveTime), isValid(other.isValid),
@@ -94,6 +95,7 @@ namespace anm2ed
       editorZoom = other.editorZoom;
       overlayIndex = other.overlayIndex;
       regionBySpritesheet = std::move(other.regionBySpritesheet);
+      changeAllFramePropertiesRegionId = other.changeAllFramePropertiesRegionId;
       hash = other.hash;
       saveHash = other.saveHash;
       autosaveHash = other.autosaveHash;
