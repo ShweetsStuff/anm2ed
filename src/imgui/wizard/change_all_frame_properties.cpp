@@ -190,16 +190,16 @@ namespace anm2ed::imgui::wizard
 
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImGui::GetStyle().ItemInnerSpacing);
 
+    ImGui::BeginDisabled(itemType != anm2::LAYER);
+    float2_value("##Is Crop X", "##Is Crop Y", "##Crop X", localize.get(BASIC_CROP), isCropX, isCropY, crop);
+    float2_value("##Is Size X", "##Is Size Y", "##Size X", localize.get(BASIC_SIZE), isSizeX, isSizeY, size);
+    ImGui::EndDisabled();
+
     float2_value("##Is Position X", "##Is Position Y", "##Position X", localize.get(BASIC_POSITION), isPositionX,
                  isPositionY, position);
 
     ImGui::BeginDisabled(itemType != anm2::LAYER);
     float2_value("##Is Pivot X", "##Is Pivot Y", "##Pivot X", localize.get(BASIC_PIVOT), isPivotX, isPivotY, pivot);
-    ImGui::EndDisabled();
-
-    ImGui::BeginDisabled(itemType != anm2::LAYER);
-    float2_value("##Is Crop X", "##Is Crop Y", "##Crop X", localize.get(BASIC_CROP), isCropX, isCropY, crop);
-    float2_value("##Is Size X", "##Is Size Y", "##Size X", localize.get(BASIC_SIZE), isSizeX, isSizeY, size);
     ImGui::EndDisabled();
 
     float2_value("##Is Scale X", "##Is Scale Y", "##Scale X", localize.get(BASIC_SCALE), isScaleX, isScaleY, scale);
