@@ -39,13 +39,17 @@ namespace anm2ed::imgui
 
       if (type == anm2::LAYER && document.reference.itemID != -1)
       {
-        auto spritesheetID = document.anm2.content.layers.at(document.reference.itemID).spritesheetID;
-        auto regionIt = document.regionBySpritesheet.find(spritesheetID);
-        if (regionIt != document.regionBySpritesheet.end() && !regionIt->second.ids.empty() &&
-            !regionIt->second.labels.empty())
+        if (auto layerIt = document.anm2.content.layers.find(document.reference.itemID);
+            layerIt != document.anm2.content.layers.end())
         {
-          regionLabels = regionIt->second.labels;
-          regionIds = regionIt->second.ids;
+          auto spritesheetID = layerIt->second.spritesheetID;
+          auto regionIt = document.regionBySpritesheet.find(spritesheetID);
+          if (regionIt != document.regionBySpritesheet.end() && !regionIt->second.ids.empty() &&
+              !regionIt->second.labels.empty())
+          {
+            regionLabels = regionIt->second.labels;
+            regionIds = regionIt->second.ids;
+          }
         }
       }
 

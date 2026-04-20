@@ -1,6 +1,7 @@
 #include "socket.hpp"
 
 #include <cerrno>
+#include <climits>
 
 namespace anm2ed
 {
@@ -203,7 +204,12 @@ namespace anm2ed
 
     while (totalSent < size)
     {
-      auto sent = ::send(handle, bytes + totalSent, static_cast<int>(size - totalSent), 0);
+      auto chunkSize = static_cast<int>(std::min<size_t>(size - totalSent, static_cast<size_t>(INT_MAX)));
+#ifdef MSG_NOSIGNAL
+      auto sent = ::send(handle, bytes + totalSent, chunkSize, MSG_NOSIGNAL);
+#else
+      auto sent = ::send(handle, bytes + totalSent, chunkSize, 0);
+#endif
       if (sent <= 0)
       {
         lastError = socket_last_error();
@@ -229,7 +235,8 @@ namespace anm2ed
 
     while (totalReceived < size)
     {
-      auto received = ::recv(handle, bytes + totalReceived, static_cast<int>(size - totalReceived), 0);
+      auto chunkSize = static_cast<int>(std::min<size_t>(size - totalReceived, static_cast<size_t>(INT_MAX)));
+      auto received = ::recv(handle, bytes + totalReceived, chunkSize, 0);
       if (received <= 0)
       {
         lastError = socket_last_error();

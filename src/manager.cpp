@@ -199,8 +199,10 @@ namespace anm2ed
     {
       if (id == -1)
         editLayer = anm2::Layer();
+      else if (auto it = document->anm2.content.layers.find(id); it != document->anm2.content.layers.end())
+        editLayer = it->second;
       else
-        editLayer = document->anm2.content.layers.at(id);
+        return;
 
       document->layer.reference = id;
 
@@ -224,8 +226,10 @@ namespace anm2ed
     {
       if (id == -1)
         editNull = anm2::Null();
+      else if (auto it = document->anm2.content.nulls.find(id); it != document->anm2.content.nulls.end())
+        editNull = it->second;
       else
-        editNull = document->anm2.content.nulls.at(id);
+        return;
 
       document->null.reference = id;
 

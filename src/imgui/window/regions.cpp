@@ -482,6 +482,13 @@ namespace anm2ed::imgui
 
     if (ImGui::BeginPopupModal(propertiesPopup.label(), &propertiesPopup.isOpen, ImGuiWindowFlags_NoResize))
     {
+      if (!spritesheet || (reference != -1 && !spritesheet->regions.contains(reference)))
+      {
+        propertiesPopup.close();
+        ImGui::EndPopup();
+        return;
+      }
+
       auto childSize = child_size_get(5);
       auto& region = reference == -1 ? editRegion : spritesheet->regions.at(reference);
 

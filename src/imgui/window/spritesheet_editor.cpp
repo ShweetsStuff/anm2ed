@@ -227,10 +227,13 @@ namespace anm2ed::imgui
           }
         }
 
+        auto layerIt = anm2.content.layers.find(reference.itemID);
+        bool isReferenceLayerOnSpritesheet =
+            frame && reference.itemID > -1 && layerIt != anm2.content.layers.end() &&
+            layerIt->second.spritesheetID == referenceSpritesheet;
+
         int highlightedRegionId = -1;
-        if (frame && reference.itemID > -1 &&
-            anm2.content.layers.at(reference.itemID).spritesheetID == referenceSpritesheet && frame->regionID != -1 &&
-            spritesheet->regions.contains(frame->regionID))
+        if (isReferenceLayerOnSpritesheet && frame->regionID != -1 && spritesheet->regions.contains(frame->regionID))
         {
           highlightedRegionId = frame->regionID;
         }
@@ -271,8 +274,7 @@ namespace anm2ed::imgui
           }
         }
 
-        bool isFrameOnSpritesheet =
-            frame && reference.itemID > -1 && anm2.content.layers.at(reference.itemID).spritesheetID == referenceSpritesheet;
+        bool isFrameOnSpritesheet = isReferenceLayerOnSpritesheet;
         if (isFrameOnSpritesheet && frame->regionID == -1)
         {
           auto frameModel = math::quad_model_get(frame->size, frame->crop);
@@ -338,6 +340,10 @@ namespace anm2ed::imgui
         auto isMod = ImGui::IsKeyDown(ImGuiMod_Shift);
 
         auto frame = document.frame_get();
+        auto layerIt = anm2.content.layers.find(reference.itemID);
+        bool isReferenceLayerOnSpritesheet =
+            frame && reference.itemID > -1 && layerIt != anm2.content.layers.end() &&
+            layerIt->second.spritesheetID == referenceSpritesheet;
         auto useTool = tool;
         auto step = isMod ? STEP_FAST : STEP;
         auto stepX = isGridSnap ? step * gridSize.x : step;
@@ -440,8 +446,7 @@ namespace anm2ed::imgui
             {
               regionReference = hoveredRegionId;
               regionSelection = {hoveredRegionId};
-              if (frame && reference.itemID > -1 &&
-                  anm2.content.layers.at(reference.itemID).spritesheetID == referenceSpritesheet)
+              if (isReferenceLayerOnSpritesheet)
               {
                 DOCUMENT_EDIT(document, localize.get(EDIT_FRAME_REGION), Document::FRAMES,
                               {

@@ -653,17 +653,33 @@ namespace anm2ed::imgui
       ImGui::PushID(index);
 
       auto item = animation ? animation->item_get(type, id) : nullptr;
+      if (type != anm2::NONE && !item)
+      {
+        ImGui::PopID();
+        return;
+      }
       auto isVisible = item ? item->isVisible : false;
       auto& isOnlyShowLayers = settings.timelineIsOnlyShowLayers;
       if (isOnlyShowLayers && type != anm2::LAYER) isVisible = false;
       auto isReferenced = reference.itemType == type && reference.itemID == id;
 
-      auto label = type == anm2::LAYER ? std::vformat(localize.get(FORMAT_LAYER),
-                                                      std::make_format_args(id, anm2.content.layers[id].name,
-                                                                            anm2.content.layers[id].spritesheetID))
-                   : type == anm2::NULL_
-                       ? std::vformat(localize.get(FORMAT_NULL), std::make_format_args(id, anm2.content.nulls[id].name))
-                       : localize.get(anm2::TYPE_STRINGS[type]);
+      auto label = [&]() -> std::string
+      {
+        if (type == anm2::LAYER)
+        {
+          auto it = anm2.content.layers.find(id);
+          if (it == anm2.content.layers.end()) return localize.get(anm2::TYPE_STRINGS[type]);
+          return std::vformat(localize.get(FORMAT_LAYER),
+                              std::make_format_args(id, it->second.name, it->second.spritesheetID));
+        }
+        if (type == anm2::NULL_)
+        {
+          auto it = anm2.content.nulls.find(id);
+          if (it == anm2.content.nulls.end()) return localize.get(anm2::TYPE_STRINGS[type]);
+          return std::vformat(localize.get(FORMAT_NULL), std::make_format_args(id, it->second.name));
+        }
+        return localize.get(anm2::TYPE_STRINGS[type]);
+      }();
       auto icon = anm2::TYPE_ICONS[type];
       auto iconTintCurrent = isLightTheme && type == anm2::NONE ? ImVec4(1.0f, 1.0f, 1.0f, 1.0f) : itemIconTint;
       auto baseColorVec = item_color_vec(type);
@@ -699,7 +715,9 @@ namespace anm2ed::imgui
           ImGui::SetNextItemStorageID(id);
           if (ImGui::Selectable("##Item Button", isReferenced, ImGuiSelectableFlags_SelectOnClick, itemSize))
           {
-            if (type == anm2::LAYER) document.spritesheet.reference = anm2.content.layers[id].spritesheetID;
+            if (type == anm2::LAYER)
+              if (auto it = anm2.content.layers.find(id); it != anm2.content.layers.end())
+                document.spritesheet.reference = it->second.spritesheetID;
             reference_set_item(type, id);
           }
           ImGui::PopStyleColor(3);
@@ -743,7 +761,9 @@ namespace anm2ed::imgui
                 }
                 case anm2::LAYER:
                 {
-                  auto& layer = anm2.content.layers[id];
+                  auto it = anm2.content.layers.find(id);
+                  if (it == anm2.content.layers.end()) break;
+                  auto& layer = it->second;
                   ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
                   ImGui::TextUnformatted(layer.name.c_str());
                   ImGui::PopFont();
@@ -760,7 +780,9 @@ namespace anm2ed::imgui
                 }
                 case anm2::NULL_:
                 {
-                  auto& nullInfo = anm2.content.nulls[id];
+                  auto it = anm2.content.nulls.find(id);
+                  if (it == anm2.content.nulls.end()) break;
+                  auto& nullInfo = it->second;
                   ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
                   ImGui::TextUnformatted(nullInfo.name.c_str());
                   ImGui::PopFont();
@@ -853,18 +875,21 @@ namespace anm2ed::imgui
 
           if (type == anm2::NULL_)
           {
-            auto& null = anm2.content.nulls.at(id);
-            auto& isShowRect = null.isShowRect;
-            auto rectIcon = isShowRect ? icon::SHOW_RECT : icon::HIDE_RECT;
-            ImGui::SetCursorPos(
-                ImVec2(itemSize.x - (ImGui::GetTextLineHeightWithSpacing() * 2) - ImGui::GetStyle().ItemSpacing.x,
-                       (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
-            if (ImGui::ImageButton("##Rect Toggle", resources.icons[rectIcon].id, icon_size_get()))
-              DOCUMENT_EDIT(document, localize.get(EDIT_TOGGLE_NULL_RECT), Document::FRAMES,
-                            null.isShowRect = !null.isShowRect);
-            overlay_icon(resources.icons[rectIcon].id, iconTintCurrent);
-            ImGui::SetItemTooltip("%s", isShowRect ? localize.get(TOOLTIP_NULL_RECT_SHOWN)
-                                                   : localize.get(TOOLTIP_NULL_RECT_HIDDEN));
+            if (auto it = anm2.content.nulls.find(id); it != anm2.content.nulls.end())
+            {
+              auto& null = it->second;
+              auto& isShowRect = null.isShowRect;
+              auto rectIcon = isShowRect ? icon::SHOW_RECT : icon::HIDE_RECT;
+              ImGui::SetCursorPos(
+                  ImVec2(itemSize.x - (ImGui::GetTextLineHeightWithSpacing() * 2) - ImGui::GetStyle().ItemSpacing.x,
+                         (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
+              if (ImGui::ImageButton("##Rect Toggle", resources.icons[rectIcon].id, icon_size_get()))
+                DOCUMENT_EDIT(document, localize.get(EDIT_TOGGLE_NULL_RECT), Document::FRAMES,
+                              null.isShowRect = !null.isShowRect);
+              overlay_icon(resources.icons[rectIcon].id, iconTintCurrent);
+              ImGui::SetItemTooltip("%s", isShowRect ? localize.get(TOOLTIP_NULL_RECT_SHOWN)
+                                                     : localize.get(TOOLTIP_NULL_RECT_HIDDEN));
+            }
           }
 
           ImGui::PopStyleVar(2);
@@ -1229,7 +1254,9 @@ namespace anm2ed::imgui
             bool isDifferentItem = reference.itemType != type || reference.itemID != id;
             if (ImGui::Selectable("##Frame Button", isSelected, ImGuiSelectableFlags_None, buttonSize))
             {
-              if (type == anm2::LAYER) document.spritesheet.reference = anm2.content.layers[id].spritesheetID;
+              if (type == anm2::LAYER)
+                if (auto it = anm2.content.layers.find(id); it != anm2.content.layers.end())
+                  document.spritesheet.reference = it->second.spritesheetID;
 
               if (type != anm2::TRIGGER)
               {
@@ -1275,11 +1302,12 @@ namespace anm2ed::imgui
                 frameDragDrop.type = type;
                 frameDragDrop.itemID = id;
                 frameDragDrop.animationIndex = reference.animationIndex;
+                frameSelectionLocked.clear();
 
                 auto append_valid_indices = [&](const auto& container)
                 {
                   for (auto idx : container)
-                    if (idx >= 0 && idx < (int)item->frames.size()) frameDragDrop.selection.push_back(idx);
+                    if (idx >= 0 && idx < (int)item->frames.size()) frameSelectionLocked.push_back(idx);
                 };
 
                 if (isReferenced) append_valid_indices(frames.selection);
@@ -1287,27 +1315,26 @@ namespace anm2ed::imgui
                 auto contains_index = [&](const std::vector<int>& container, int index)
                 { return std::find(container.begin(), container.end(), index) != container.end(); };
 
-                if ((!contains_index(frameDragDrop.selection, (int)i) || frameDragDrop.selection.size() <= 1) &&
+                if ((!contains_index(frameSelectionLocked, (int)i) || frameSelectionLocked.size() <= 1) &&
                     frameSelectionSnapshotReference.animationIndex == reference.animationIndex &&
                     frameSelectionSnapshotReference.itemType == type && frameSelectionSnapshotReference.itemID == id &&
                     contains_index(frameSelectionSnapshot, (int)i))
                 {
-                  frameDragDrop.selection = frameSelectionSnapshot;
+                  frameSelectionLocked = frameSelectionSnapshot;
                   frames.selection.clear();
                   for (int idx : frameSelectionSnapshot)
                     if (idx >= 0 && idx < (int)item->frames.size()) frames.selection.insert(idx);
-                  frameSelectionLocked = frameDragDrop.selection;
                   isFrameSelectionLocked = true;
                 }
 
-                if (frameDragDrop.selection.empty()) frameDragDrop.selection.push_back((int)i);
+                if (frameSelectionLocked.empty()) frameSelectionLocked.push_back((int)i);
 
-                std::sort(frameDragDrop.selection.begin(), frameDragDrop.selection.end());
-                frameDragDrop.selection.erase(
-                    std::unique(frameDragDrop.selection.begin(), frameDragDrop.selection.end()),
-                    frameDragDrop.selection.end());
+                std::sort(frameSelectionLocked.begin(), frameSelectionLocked.end());
+                frameSelectionLocked.erase(std::unique(frameSelectionLocked.begin(), frameSelectionLocked.end()),
+                                           frameSelectionLocked.end());
 
-                ImGui::SetDragDropPayload(FRAME_DRAG_PAYLOAD_ID, &frameDragDrop, sizeof(FrameDragDrop));
+                frameDragDropPayload = {type, id, reference.animationIndex};
+                ImGui::SetDragDropPayload(FRAME_DRAG_PAYLOAD_ID, &frameDragDropPayload, sizeof(frameDragDropPayload));
                 ImGui::EndDragDropSource();
               }
 
@@ -1315,7 +1342,7 @@ namespace anm2ed::imgui
               {
                 if (auto payload = ImGui::AcceptDragDropPayload(FRAME_DRAG_PAYLOAD_ID))
                 {
-                  auto source = static_cast<const FrameDragDrop*>(payload->Data);
+                  auto source = static_cast<const FrameDragDropPayload*>(payload->Data);
                   auto sameAnimation = source && source->animationIndex == reference.animationIndex;
                   auto sourceItem =
                       sameAnimation && animation ? animation->item_get(source->type, source->itemID) : nullptr;
@@ -1333,7 +1360,7 @@ namespace anm2ed::imgui
 
                   if (source && sourceItem && targetItem && source->type != anm2::TRIGGER && type != anm2::TRIGGER)
                   {
-                    std::vector<int> indices = source->selection;
+                    std::vector<int> indices = frameSelectionLocked;
                     if (indices.empty()) indices.push_back((int)i);
                     std::sort(indices.begin(), indices.end());
                     indices.erase(std::unique(indices.begin(), indices.end()), indices.end());
@@ -1387,7 +1414,8 @@ namespace anm2ed::imgui
                       document.frameTime = time_from_index(targetItem, reference.frameIndex);
                       if (type == anm2::LAYER)
                       {
-                        document.spritesheet.reference = anm2.content.layers[id].spritesheetID;
+                        if (auto it = anm2.content.layers.find(id); it != anm2.content.layers.end())
+                          document.spritesheet.reference = it->second.spritesheetID;
                       }
                     }
                   }
@@ -1496,6 +1524,7 @@ namespace anm2ed::imgui
           draggedFrameStart = -1;
           draggedFrameStartDuration = -1;
           isDraggedFrameSnapshot = false;
+          frameSelectionLocked.clear();
           if (type == anm2::TRIGGER) item->frames_sort_by_at_frame();
         }
       }
@@ -1858,23 +1887,29 @@ namespace anm2ed::imgui
 
             if (type == anm2::LAYER)
             {
-              auto& layer = anm2.content.layers[id];
-              auto label =
-                  std::vformat(localize.get(FORMAT_LAYER), std::make_format_args(id, layer.name, layer.spritesheetID));
-              if (ImGui::Selectable(label.c_str(), isSelected))
+              if (auto it = anm2.content.layers.find(id); it != anm2.content.layers.end())
               {
-                addItemID = id;
-                addItemSpritesheetID = layer.spritesheetID;
+                auto& layer = it->second;
+                auto label = std::vformat(localize.get(FORMAT_LAYER),
+                                          std::make_format_args(id, layer.name, layer.spritesheetID));
+                if (ImGui::Selectable(label.c_str(), isSelected))
+                {
+                  addItemID = id;
+                  addItemSpritesheetID = layer.spritesheetID;
+                }
               }
             }
             else if (type == anm2::NULL_)
             {
-              auto& null = anm2.content.nulls[id];
-              auto label = std::vformat(localize.get(FORMAT_NULL), std::make_format_args(id, null.name));
-              if (ImGui::Selectable(label.c_str(), isSelected))
+              if (auto it = anm2.content.nulls.find(id); it != anm2.content.nulls.end())
               {
-                addItemID = id;
-                addItemIsShowRect = null.isShowRect;
+                auto& null = it->second;
+                auto label = std::vformat(localize.get(FORMAT_NULL), std::make_format_args(id, null.name));
+                if (ImGui::Selectable(label.c_str(), isSelected))
+                {
+                  addItemID = id;
+                  addItemIsShowRect = null.isShowRect;
+                }
               }
             }
 
@@ -2009,16 +2044,16 @@ namespace anm2ed::imgui
       auto isNextFrame = shortcut(manager.chords[SHORTCUT_NEXT_FRAME], shortcut::GLOBAL);
 
       if (isPreviousFrame)
-        if (auto item = document.item_get(); !item->frames.empty())
+        if (auto item = document.item_get(); item && !item->frames.empty())
           reference.frameIndex = glm::clamp(--reference.frameIndex, 0, (int)item->frames.size() - 1);
 
       if (isNextFrame)
-        if (auto item = document.item_get(); !item->frames.empty())
+        if (auto item = document.item_get(); item && !item->frames.empty())
           reference.frameIndex = glm::clamp(++reference.frameIndex, 0, (int)item->frames.size() - 1);
 
       if (isPreviousFrame || isNextFrame)
       {
-        if (auto item = document.item_get(); !item->frames.empty())
+        if (auto item = document.item_get(); item && !item->frames.empty())
         {
           frames_selection_set_reference();
           document.frameTime = item->frame_time_from_index_get(reference.frameIndex);

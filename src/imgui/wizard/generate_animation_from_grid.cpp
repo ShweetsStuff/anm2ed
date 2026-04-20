@@ -57,21 +57,27 @@ namespace anm2ed::imgui::wizard
 
       if (document.reference.itemType == anm2::LAYER)
       {
-        auto& texture =
-            document.anm2.content.spritesheets[document.anm2.content.layers[document.reference.itemID].spritesheetID]
-                .texture;
+        auto layerIt = document.anm2.content.layers.find(document.reference.itemID);
+        if (layerIt != document.anm2.content.layers.end())
+        {
+          auto spritesheetIt = document.anm2.content.spritesheets.find(layerIt->second.spritesheetID);
+          if (spritesheetIt != document.anm2.content.spritesheets.end())
+          {
+            auto& texture = spritesheetIt->second.texture;
 
-        auto index = std::clamp((int)(time * (count - 1)), 0, (count - 1));
-        auto row = index / columns;
-        auto column = index % columns;
-        auto crop = startPosition + ivec2(size.x * column, size.y * row);
-        auto uvMin = (vec2(crop) + vec2(0.5f)) / vec2(texture.size);
-        auto uvMax = (vec2(crop) + vec2(size) - vec2(0.5f)) / vec2(texture.size);
+            auto index = std::clamp((int)(time * (count - 1)), 0, (count - 1));
+            auto row = index / columns;
+            auto column = index % columns;
+            auto crop = startPosition + ivec2(size.x * column, size.y * row);
+            auto uvMin = (vec2(crop) + vec2(0.5f)) / vec2(texture.size);
+            auto uvMax = (vec2(crop) + vec2(size) - vec2(0.5f)) / vec2(texture.size);
 
-        mat4 transform = transform_get(zoom) * math::quad_model_get(size, {}, pivot);
+            mat4 transform = transform_get(zoom) * math::quad_model_get(size, {}, pivot);
 
-        texture_render(shaderTexture, texture.id, transform, vec4(1.0f), {},
-                       math::uv_vertices_get(uvMin, uvMax).data());
+            texture_render(shaderTexture, texture.id, transform, vec4(1.0f), {},
+                           math::uv_vertices_get(uvMin, uvMax).data());
+          }
+        }
       }
 
       unbind();

@@ -234,9 +234,13 @@ namespace anm2ed::imgui::wizard
     const Storage* regionStorage = nullptr;
     if (itemType == anm2::LAYER && document.reference.itemID != -1)
     {
-      auto spritesheetID = document.anm2.content.layers.at(document.reference.itemID).spritesheetID;
-      auto regionIt = document.regionBySpritesheet.find(spritesheetID);
-      if (regionIt != document.regionBySpritesheet.end()) regionStorage = &regionIt->second;
+      if (auto layerIt = document.anm2.content.layers.find(document.reference.itemID);
+          layerIt != document.anm2.content.layers.end())
+      {
+        auto spritesheetID = layerIt->second.spritesheetID;
+        auto regionIt = document.regionBySpritesheet.find(spritesheetID);
+        if (regionIt != document.regionBySpritesheet.end()) regionStorage = &regionIt->second;
+      }
     }
     auto regionIds = regionStorage && !regionStorage->ids.empty() ? regionStorage->ids : fallbackIds;
     auto regionLabels = regionStorage && !regionStorage->labels.empty() ? regionStorage->labels : fallbackLabels;
@@ -289,10 +293,13 @@ namespace anm2ed::imgui::wizard
       if (isFlipXSet) frameChange.isFlipX = std::make_optional(isFlipX);
       if (isFlipYSet) frameChange.isFlipY = std::make_optional(isFlipY);
 
-      DOCUMENT_EDIT(document, localize.get(EDIT_CHANGE_FRAME_PROPERTIES), Document::FRAMES,
-                    document.item_get()->frames_change(frameChange, itemType, changeType, frames));
+      if (auto item = document.item_get())
+      {
+        DOCUMENT_EDIT(document, localize.get(EDIT_CHANGE_FRAME_PROPERTIES), Document::FRAMES,
+                      item->frames_change(frameChange, itemType, changeType, frames));
 
-      isChanged = true;
+        isChanged = true;
+      }
     };
 
     ImGui::Separator();

@@ -1,5 +1,6 @@
 #include "document.hpp"
 
+#include <new>
 #include <utility>
 
 #include <format>
@@ -86,28 +87,8 @@ namespace anm2ed
   Document& Document::operator=(Document&& other) noexcept
   {
     if (this != &other)
-    {
-      path = std::move(other.path);
-      snapshots = std::move(other.snapshots);
-      previewZoom = other.previewZoom;
-      previewPan = other.previewPan;
-      editorPan = other.editorPan;
-      editorZoom = other.editorZoom;
-      overlayIndex = other.overlayIndex;
-      regionBySpritesheet = std::move(other.regionBySpritesheet);
-      changeAllFramePropertiesRegionId = other.changeAllFramePropertiesRegionId;
-      hash = other.hash;
-      saveHash = other.saveHash;
-      autosaveHash = other.autosaveHash;
-      lastAutosaveTime = other.lastAutosaveTime;
-      isValid = other.isValid;
-      isOpen = other.isOpen;
-      isForceDirty = other.isForceDirty;
-      spritesheetHashes = std::move(other.spritesheetHashes);
-      spritesheetSaveHashes = std::move(other.spritesheetSaveHashes);
-      isAnimationPreviewSet = other.isAnimationPreviewSet;
-      isSpritesheetEditorSet = other.isSpritesheetEditorSet;
-    }
+      this->~Document();
+    new (this) Document(std::move(other));
     return *this;
   }
 
