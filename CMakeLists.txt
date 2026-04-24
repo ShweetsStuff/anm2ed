@@ -88,6 +88,8 @@ set(TINYXML2_SRC external/tinyxml2/tinyxml2.cpp)
 file(GLOB PROJECT_SRC CONFIGURE_DEPENDS
      src/anm2/*.cpp
      src/anm2/*.hpp
+     src/anm2_new/*.cpp
+     src/anm2_new/*.hpp
      src/resource/*.cpp
      src/resource/*.hpp
      src/imgui/*.cpp
