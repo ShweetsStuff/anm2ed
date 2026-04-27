@@ -950,6 +950,8 @@ namespace anm2ed::imgui
         auto isMouseLeftDown = ImGui::IsMouseDown(ImGuiMouseButton_Left);
         auto isMouseMiddleDown = ImGui::IsMouseDown(ImGuiMouseButton_Middle);
         auto isMouseRightDown = ImGui::IsMouseDown(ImGuiMouseButton_Right);
+        auto isMouseRightClicked = ImGui::IsMouseClicked(ImGuiMouseButton_Right);
+        auto isMouseRightReleased = ImGui::IsMouseReleased(ImGuiMouseButton_Right);
         auto isMouseDown = isMouseLeftDown || isMouseMiddleDown || isMouseRightDown;
         auto mouseDelta = to_ivec2(ImGui::GetIO().MouseDelta);
         auto mouseWheel = ImGui::GetIO().MouseWheel;
@@ -977,10 +979,6 @@ namespace anm2ed::imgui
         auto isZoomIn = shortcut(manager.chords[SHORTCUT_ZOOM_IN], shortcut::GLOBAL);
         auto isZoomOut = shortcut(manager.chords[SHORTCUT_ZOOM_OUT], shortcut::GLOBAL);
 
-        auto isBegin = isMouseClicked || isKeyJustPressed;
-        auto isDuring = isMouseDown || isKeyDown;
-        auto isEnd = isMouseReleased || isKeyReleased;
-
         auto isMod = ImGui::IsKeyDown(ImGuiMod_Shift);
 
         auto frame = document.frame_get();
@@ -992,6 +990,21 @@ namespace anm2ed::imgui
         if (isMouseMiddleDown) useTool = tool::PAN;
         if (tool == tool::MOVE && isMouseRightDown) useTool = tool::SCALE;
         if (tool == tool::SCALE && isMouseRightDown) useTool = tool::MOVE;
+
+        bool isToolMouseClicked = isMouseClicked;
+        bool isToolMouseReleased = isMouseReleased;
+        bool isToolMouseDown = isMouseLeftDown;
+
+        if ((tool == tool::MOVE && useTool == tool::SCALE) || (tool == tool::SCALE && useTool == tool::MOVE))
+        {
+          isToolMouseClicked = isMouseRightClicked;
+          isToolMouseReleased = isMouseRightReleased;
+          isToolMouseDown = isMouseRightDown;
+        }
+
+        auto isToolBegin = isToolMouseClicked || isKeyJustPressed;
+        auto isToolDuring = isToolMouseDown || isKeyDown;
+        auto isToolEnd = isToolMouseReleased || isKeyReleased;
 
         auto frame_change_apply = [&](anm2::FrameChange frameChange, anm2::ChangeType changeType = anm2::ADJUST)
         { item->frames_change(frameChange, reference.itemType, changeType, frames); };
@@ -1012,17 +1025,17 @@ namespace anm2ed::imgui
             if (isMouseDown || isMouseMiddleDown) pan += vec2(mouseDelta.x, mouseDelta.y);
             break;
           case tool::MOVE:
-            if (!item || frames.empty()) break;
-            if (isBegin)
+            if (!item || !frame || frames.empty()) break;
+            if (isToolBegin)
             {
               document.snapshot(localize.get(EDIT_FRAME_POSITION));
-              if (isMouseClicked)
+              if (isToolMouseClicked)
               {
                 moveOffset = settings.inputIsMoveToolSnapToMouse ? vec2() : mousePos - frame->position;
                 isMoveDragging = true;
               }
             }
-            if (isMouseDown && isMoveDragging)
+            if (isToolMouseDown && isMoveDragging)
               frame_change_apply(
                   {.positionX = (int)(mousePos.x - moveOffset.x), .positionY = (int)(mousePos.y - moveOffset.y)});
 
@@ -1031,9 +1044,9 @@ namespace anm2ed::imgui
             if (isUpPressed) frame_change_apply({.positionY = step}, anm2::SUBTRACT);
             if (isDownPressed) frame_change_apply({.positionY = step}, anm2::ADD);
 
-            if (isMouseReleased) isMoveDragging = false;
-            if (isEnd) document.change(Document::FRAMES);
-            if (isDuring)
+            if (isToolMouseReleased) isMoveDragging = false;
+            if (isToolEnd) document.change(Document::FRAMES);
+            if (isToolDuring)
             {
               if (ImGui::BeginTooltip())
               {
@@ -1045,13 +1058,13 @@ namespace anm2ed::imgui
             }
             break;
           case tool::SCALE:
-            if (!item || frames.empty()) break;
-            if (isBegin) document.snapshot(localize.get(EDIT_FRAME_SCALE));
-            if (isMouseDown)
+            if (!item || !frame || frames.empty()) break;
+            if (isToolBegin) document.snapshot(localize.get(EDIT_FRAME_SCALE));
+            if (isToolMouseDown)
             {
-              frame->scale += vec2(mouseDelta.x, mouseDelta.y);
-              if (isMod) frame->scale = {frame->scale.x, frame->scale.x};
-              frame_change_apply({.scaleX = (int)frame->scale.x, .scaleY = (int)frame->scale.y});
+              auto scale = frame->scale + vec2(mouseDelta.x, mouseDelta.y);
+              if (isMod) scale = {scale.x, scale.x};
+              frame_change_apply({.scaleX = scale.x, .scaleY = scale.y});
             }
 
             if (isLeftPressed) frame_change_apply({.scaleX = step}, anm2::SUBTRACT);
@@ -1059,7 +1072,7 @@ namespace anm2ed::imgui
             if (isUpPressed) frame_change_apply({.scaleY = step}, anm2::SUBTRACT);
             if (isDownPressed) frame_change_apply({.scaleY = step}, anm2::ADD);
 
-            if (isDuring)
+            if (isToolDuring)
             {
               if (ImGui::BeginTooltip())
               {
@@ -1070,16 +1083,16 @@ namespace anm2ed::imgui
               }
             }
 
-            if (isEnd) document.change(Document::FRAMES);
+            if (isToolEnd) document.change(Document::FRAMES);
             break;
           case tool::ROTATE:
-            if (!item || frames.empty()) break;
-            if (isBegin) document.snapshot(localize.get(EDIT_FRAME_ROTATION));
-            if (isMouseDown) frame_change_apply({.rotation = (int)mouseDelta.x}, anm2::ADD);
+            if (!item || !frame || frames.empty()) break;
+            if (isToolBegin) document.snapshot(localize.get(EDIT_FRAME_ROTATION));
+            if (isToolMouseDown) frame_change_apply({.rotation = (int)mouseDelta.x}, anm2::ADD);
             if (isLeftPressed || isDownPressed) frame_change_apply({.rotation = step}, anm2::SUBTRACT);
             if (isUpPressed || isRightPressed) frame_change_apply({.rotation = step}, anm2::ADD);
 
-            if (isDuring)
+            if (isToolDuring)
             {
               if (ImGui::BeginTooltip())
               {
@@ -1089,7 +1102,7 @@ namespace anm2ed::imgui
               }
             }
 
-            if (isEnd) document.change(Document::FRAMES);
+            if (isToolEnd) document.change(Document::FRAMES);
             break;
           default:
             break;
