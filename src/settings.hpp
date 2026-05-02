@@ -240,7 +240,10 @@ namespace anm2ed
   X(SHORTCUT_INSERT_FRAME, shortcutInsertFrame, SHORTCUT_STRING_INSERT_FRAME, STRING, "F6")                            \
   X(SHORTCUT_PREVIOUS_FRAME, shortcutPreviousFrame, SHORTCUT_STRING_PREVIOUS_FRAME, STRING, "F7")                      \
   X(SHORTCUT_NEXT_FRAME, shortcutNextFrame, SHORTCUT_STRING_NEXT_FRAME, STRING, "F8")                                  \
-  /* Animations */                                                                                                     \
+  /* Item */                                                                                                           \
+  X(SHORTCUT_PREVIOUS_ITEM, shortcutPreviousItem, SHORTCUT_STRING_PREVIOUS_ITEM, STRING, "Shift+F7")                   \
+  X(SHORTCUT_NEXT_ITEM, shortcutNextItem, SHORTCUT_STRING_NEXT_ITEM, STRING, "Shift+F8")                               \
+  /* Animation */                                                                                                      \
   X(SHORTCUT_PREVIOUS_ANIMATION, shortcutPreviousAnimation, SHORTCUT_STRING_PREVIOUS_ANIMATION, STRING, "F9")          \
   X(SHORTCUT_NEXT_ANIMATION, shortcutNextAnimation, SHORTCUT_STRING_NEXT_ANIMATION, STRING, "F10")                     \
   /* Toggles */                                                                                                        \

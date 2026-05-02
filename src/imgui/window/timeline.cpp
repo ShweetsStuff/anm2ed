@@ -381,6 +381,55 @@ namespace anm2ed::imgui
       frames_selection_reset();
     };
 
+    auto reference_set_timeline_item = [&](anm2::Type type, int id)
+    {
+      if (type == anm2::LAYER)
+        if (auto it = anm2.content.layers.find(id); it != anm2.content.layers.end())
+          document.spritesheet.reference = it->second.spritesheetID;
+      reference_set_item(type, id);
+    };
+
+    auto timeline_item_references_get = [&]()
+    {
+      std::vector<anm2::Reference> itemReferences;
+      if (!animation) return itemReferences;
+
+      itemReferences.push_back({reference.animationIndex, anm2::ROOT});
+
+      for (auto& id : animation->layerOrder | std::views::reverse)
+      {
+        auto item = animation->item_get(anm2::LAYER, id);
+        if (!item || (!settings.timelineIsShowUnused && item->frames.empty())) continue;
+        itemReferences.push_back({reference.animationIndex, anm2::LAYER, id});
+      }
+
+      for (auto& [id, item] : animation->nullAnimations)
+      {
+        if (!settings.timelineIsShowUnused && item.frames.empty()) continue;
+        itemReferences.push_back({reference.animationIndex, anm2::NULL_, id});
+      }
+
+      itemReferences.push_back({reference.animationIndex, anm2::TRIGGER});
+      return itemReferences;
+    };
+
+    auto reference_set_adjacent_item = [&](int direction)
+    {
+      auto itemReferences = timeline_item_references_get();
+      if (itemReferences.empty()) return;
+
+      auto it = std::find_if(itemReferences.begin(), itemReferences.end(), [&](const anm2::Reference& itemReference) {
+        return itemReference.itemType == reference.itemType && itemReference.itemID == reference.itemID;
+      });
+
+      int index = direction > 0 ? 0 : (int)itemReferences.size() - 1;
+      if (it != itemReferences.end()) index = (int)std::distance(itemReferences.begin(), it) + direction;
+      index = std::clamp(index, 0, (int)itemReferences.size() - 1);
+
+      auto& itemReference = itemReferences[index];
+      reference_set_timeline_item(itemReference.itemType, itemReference.itemID);
+    };
+
     auto item_remove = [&]()
     {
       auto behavior = [&]()
@@ -715,10 +764,7 @@ namespace anm2ed::imgui
           ImGui::SetNextItemStorageID(id);
           if (ImGui::Selectable("##Item Button", isReferenced, ImGuiSelectableFlags_SelectOnClick, itemSize))
           {
-            if (type == anm2::LAYER)
-              if (auto it = anm2.content.layers.find(id); it != anm2.content.layers.end())
-                document.spritesheet.reference = it->second.spritesheetID;
-            reference_set_item(type, id);
+            reference_set_timeline_item(type, id);
           }
           ImGui::PopStyleColor(3);
           if (ImGui::IsItemHovered())
@@ -934,11 +980,13 @@ namespace anm2ed::imgui
           ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
           ImGui::Text("(?)");
           ImGui::PopStyleColor();
-          auto tooltipShortcuts = std::vformat(
-              localize.get(TOOLTIP_TIMELINE_SHORTCUTS),
-              std::make_format_args(settings.shortcutMovePlayheadBack, settings.shortcutMovePlayheadForward,
-                                    settings.shortcutShortenFrame, settings.shortcutExtendFrame,
-                                    settings.shortcutPreviousFrame, settings.shortcutNextFrame));
+          auto tooltipShortcuts =
+              std::vformat(localize.get(TOOLTIP_TIMELINE_SHORTCUTS),
+                           std::make_format_args(settings.shortcutMovePlayheadBack,
+                                                 settings.shortcutMovePlayheadForward, settings.shortcutShortenFrame,
+                                                 settings.shortcutExtendFrame, settings.shortcutPreviousFrame,
+                                                 settings.shortcutNextFrame, settings.shortcutPreviousItem,
+                                                 settings.shortcutNextItem));
           ImGui::SetItemTooltip("%s", tooltipShortcuts.c_str());
           ImGui::EndDisabled();
         }
@@ -2042,6 +2090,8 @@ namespace anm2ed::imgui
 
       auto isPreviousFrame = shortcut(manager.chords[SHORTCUT_PREVIOUS_FRAME], shortcut::GLOBAL);
       auto isNextFrame = shortcut(manager.chords[SHORTCUT_NEXT_FRAME], shortcut::GLOBAL);
+      auto isPreviousItem = shortcut(manager.chords[SHORTCUT_PREVIOUS_ITEM], shortcut::GLOBAL);
+      auto isNextItem = shortcut(manager.chords[SHORTCUT_NEXT_ITEM], shortcut::GLOBAL);
 
       if (isPreviousFrame)
         if (auto item = document.item_get(); item && !item->frames.empty())
@@ -2059,6 +2109,9 @@ namespace anm2ed::imgui
           document.frameTime = item->frame_time_from_index_get(reference.frameIndex);
         }
       }
+
+      if (isPreviousItem) reference_set_adjacent_item(-1);
+      if (isNextItem) reference_set_adjacent_item(1);
     }
 
     if (isTextPushed) ImGui::PopStyleColor();
