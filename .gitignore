@@ -8,3 +8,4 @@ workshop/resources
 cmake-build-debug/
 .vs/
 .idea/
+.codex

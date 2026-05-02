@@ -81,7 +81,6 @@ namespace anm2ed::imgui
                                                      {0.6353f, 0.2235f, 0.3647f, 1.0f}};
 
   constexpr auto FRAME_MULTIPLE = 5;
-  constexpr auto FRAME_DRAG_PAYLOAD_ID = "Frame Drag Drop";
   constexpr auto FRAME_TOOLTIP_HOVER_DELAY = 0.75f; // Extra delay for frame info tooltip.
 
 #define ITEM_CHILD_WIDTH ImGui::GetTextLineHeightWithSpacing() * 12.5
@@ -1100,6 +1099,96 @@ namespace anm2ed::imgui
       ImGui::EndChild();
     };
 
+    anm2::Type frameMoveDropType = anm2::NONE;
+    int frameMoveDropItemID = -1;
+    int frameMoveDropIndex = -1;
+    bool isFrameMoveDropTarget = false;
+
+    auto frame_move_drag_clear = [&]()
+    {
+      frameMoveDrag = {};
+      frameSelectionLocked.clear();
+    };
+
+    auto time_from_index = [](anm2::Item* target, int index)
+    {
+      if (!target || target->frames.empty()) return 0.0f;
+      index = std::clamp(index, 0, (int)target->frames.size());
+      float timeAccum = 0.0f;
+      for (int n = 0; n < index && n < (int)target->frames.size(); ++n)
+        timeAccum += target->frames[n].duration;
+      return timeAccum;
+    };
+
+    auto frames_move_to = [&](anm2::Type targetType, int targetID, int insertIndex)
+    {
+      if (!frameMoveDrag.isActive || !animation || frameMoveDrag.animationIndex != reference.animationIndex) return;
+      if (frameMoveDrag.type == anm2::TRIGGER || targetType == anm2::TRIGGER) return;
+
+      auto sourceItem = animation->item_get(frameMoveDrag.type, frameMoveDrag.itemID);
+      auto targetItem = animation->item_get(targetType, targetID);
+      if (!sourceItem || !targetItem) return;
+
+      std::vector<int> indices = frameMoveDrag.indices;
+      if (indices.empty() && frameMoveDrag.frameIndex >= 0) indices.push_back(frameMoveDrag.frameIndex);
+      std::sort(indices.begin(), indices.end());
+      indices.erase(std::unique(indices.begin(), indices.end()), indices.end());
+      indices.erase(std::remove_if(indices.begin(), indices.end(),
+                                   [&](int i) { return i < 0 || i >= (int)sourceItem->frames.size(); }),
+                    indices.end());
+      if (indices.empty()) return;
+
+      int insertPosResult = -1;
+      int insertedCount = 0;
+      DOCUMENT_EDIT(document, localize.get(EDIT_MOVE_FRAMES), Document::FRAMES, {
+        std::vector<anm2::Frame> movedFrames;
+        movedFrames.reserve(indices.size());
+
+        for (int i : indices)
+          movedFrames.push_back(std::move(sourceItem->frames[i]));
+
+        for (auto it = indices.rbegin(); it != indices.rend(); ++it)
+          sourceItem->frames.erase(sourceItem->frames.begin() + *it);
+
+        int desired = std::clamp(insertIndex, 0, (int)targetItem->frames.size());
+        if (sourceItem == targetItem)
+        {
+          int removedBefore = 0;
+          for (int i : indices)
+            if (i < desired) ++removedBefore;
+          desired -= removedBefore;
+        }
+        desired = std::clamp(desired, 0, (int)targetItem->frames.size());
+
+        insertPosResult = desired;
+        insertedCount = (int)movedFrames.size();
+        targetItem->frames.insert(targetItem->frames.begin() + insertPosResult,
+                                  std::make_move_iterator(movedFrames.begin()),
+                                  std::make_move_iterator(movedFrames.end()));
+      });
+
+      if (insertedCount > 0)
+      {
+        frames.selection.clear();
+        for (int offset = 0; offset < insertedCount; ++offset)
+          frames.selection.insert(insertPosResult + offset);
+
+        reference = {reference.animationIndex, targetType, targetID, insertPosResult};
+        document.frameTime = time_from_index(targetItem, reference.frameIndex);
+        frameSelectionSnapshot.assign(frames.selection.begin(), frames.selection.end());
+        frameSelectionSnapshotReference = reference;
+        frameSelectionLocked.clear();
+        isFrameSelectionLocked = false;
+        frameFocusIndex = reference.frameIndex;
+        frameFocusRequested = true;
+        if (targetType == anm2::LAYER)
+        {
+          if (auto it = anm2.content.layers.find(targetID); it != anm2.content.layers.end())
+            document.spritesheet.reference = it->second.spritesheetID;
+        }
+      }
+    };
+
     auto frame_child = [&](anm2::Type type, int id, int& index, float width)
     {
       auto item = animation ? animation->item_get(type, id) : nullptr;
@@ -1237,7 +1326,7 @@ namespace anm2ed::imgui
         {
           float frameTime{};
 
-          if (ImGui::IsWindowHovered() &&
+          if (!frameMoveDrag.isActive && ImGui::IsWindowHovered() &&
               (ImGui::IsMouseReleased(ImGuiMouseButton_Left) || ImGui::IsMouseReleased(ImGuiMouseButton_Right)) &&
               !ImGui::IsAnyItemHovered())
             reference_set_item(type, id);
@@ -1253,7 +1342,65 @@ namespace anm2ed::imgui
               drawList->AddRectFilled(frameScreenPos, frameRectMax, ImGui::GetColorU32(frameMultipleOverlayColor));
           }
 
-          if (type != anm2::TRIGGER) frames.selection.start(item->frames.size(), ImGuiMultiSelectFlags_ClearOnEscape);
+          bool isFrameSelectionStarted = type != anm2::TRIGGER && !frameMoveDrag.isActive;
+          if (isFrameSelectionStarted) frames.selection.start(item->frames.size(), ImGuiMultiSelectFlags_ClearOnEscape);
+
+          bool isFrameMovePreview = false;
+          ImVec2 frameMovePreviewMin{};
+          ImVec2 frameMovePreviewMax{};
+          bool isFrameMoveHoveredFrame = false;
+          ImVec2 frameMoveHoveredFrameMin{};
+          ImVec2 frameMoveHoveredFrameMax{};
+
+          if (frameMoveDrag.isActive && type != anm2::TRIGGER)
+          {
+            auto mousePos = ImGui::GetIO().MousePos;
+            auto rowMin = cursorScreenPos;
+            auto rowMax = ImVec2(cursorScreenPos.x + width, cursorScreenPos.y + frameSize.y);
+            if (mousePos.x >= rowMin.x && mousePos.x < rowMax.x && mousePos.y >= rowMin.y && mousePos.y < rowMax.y)
+            {
+              auto mouseX = mousePos.x - cursorScreenPos.x;
+              auto targetTime = glm::max(0.0f, mouseX / frameSize.x);
+              int dropIndex = (int)item->frames.size();
+              float dropFrameTime{};
+              float frameTime{};
+
+              for (auto [i, frame] : std::views::enumerate(item->frames))
+              {
+                auto frameStart = frameTime;
+                auto frameEnd = frameStart + frame.duration;
+                if (!isFrameMoveHoveredFrame && targetTime >= frameStart && targetTime < frameEnd)
+                {
+                  isFrameMoveHoveredFrame = true;
+                  frameMoveHoveredFrameMin = ImVec2(cursorScreenPos.x + frameStart * frameSize.x, cursorScreenPos.y);
+                  frameMoveHoveredFrameMax = ImVec2(cursorScreenPos.x + frameEnd * frameSize.x,
+                                                    cursorScreenPos.y + frameSize.y);
+                }
+
+                auto midpoint = frameStart + ((float)frame.duration * 0.5f);
+                if (targetTime < midpoint)
+                {
+                  dropIndex = (int)i;
+                  dropFrameTime = frameStart;
+                  break;
+                }
+
+                frameTime = frameEnd;
+                dropFrameTime = frameTime;
+              }
+
+              frameMoveDropType = type;
+              frameMoveDropItemID = id;
+              frameMoveDropIndex = dropIndex;
+              isFrameMoveDropTarget = true;
+
+              auto dropX = cursorScreenPos.x + dropFrameTime * frameSize.x;
+              auto previewWidth = glm::max(frameSize.x, (float)frameMoveDrag.duration * frameSize.x);
+              frameMovePreviewMin = ImVec2(dropX, cursorScreenPos.y);
+              frameMovePreviewMax = ImVec2(dropX + previewWidth, cursorScreenPos.y + frameSize.y);
+              isFrameMovePreview = true;
+            }
+          }
 
           for (auto [i, frame] : std::views::enumerate(item->frames))
           {
@@ -1344,12 +1491,9 @@ namespace anm2ed::imgui
 
             if (type != anm2::TRIGGER)
             {
-              if (!draggedFrame && ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceNoPreviewTooltip))
+              if (!draggedFrame && !frameMoveDrag.isActive && ImGui::IsItemActive() &&
+                  ImGui::IsMouseDragging(ImGuiMouseButton_Left))
               {
-                frameDragDrop = {};
-                frameDragDrop.type = type;
-                frameDragDrop.itemID = id;
-                frameDragDrop.animationIndex = reference.animationIndex;
                 frameSelectionLocked.clear();
 
                 auto append_valid_indices = [&](const auto& container)
@@ -1358,7 +1502,13 @@ namespace anm2ed::imgui
                     if (idx >= 0 && idx < (int)item->frames.size()) frameSelectionLocked.push_back(idx);
                 };
 
-                if (isReferenced) append_valid_indices(frames.selection);
+                if (frameSelectionSnapshotReference.animationIndex == reference.animationIndex &&
+                    frameSelectionSnapshotReference.itemType == type && frameSelectionSnapshotReference.itemID == id &&
+                    std::find(frameSelectionSnapshot.begin(), frameSelectionSnapshot.end(), (int)i) !=
+                        frameSelectionSnapshot.end())
+                  append_valid_indices(frameSelectionSnapshot);
+                else if (isReferenced)
+                  append_valid_indices(frames.selection);
 
                 auto contains_index = [&](const std::vector<int>& container, int index)
                 { return std::find(container.begin(), container.end(), index) != container.end(); };
@@ -1381,95 +1531,20 @@ namespace anm2ed::imgui
                 frameSelectionLocked.erase(std::unique(frameSelectionLocked.begin(), frameSelectionLocked.end()),
                                            frameSelectionLocked.end());
 
-                frameDragDropPayload = {type, id, reference.animationIndex};
-                ImGui::SetDragDropPayload(FRAME_DRAG_PAYLOAD_ID, &frameDragDropPayload, sizeof(frameDragDropPayload));
-                ImGui::EndDragDropSource();
-              }
+                int dragDuration = 0;
+                for (int idx : frameSelectionLocked)
+                  if (idx >= 0 && idx < (int)item->frames.size()) dragDuration += item->frames[idx].duration;
+                dragDuration = glm::max(1, dragDuration);
 
-              if (!draggedFrame && ImGui::BeginDragDropTarget())
-              {
-                if (auto payload = ImGui::AcceptDragDropPayload(FRAME_DRAG_PAYLOAD_ID))
-                {
-                  auto source = static_cast<const FrameDragDropPayload*>(payload->Data);
-                  auto sameAnimation = source && source->animationIndex == reference.animationIndex;
-                  auto sourceItem =
-                      sameAnimation && animation ? animation->item_get(source->type, source->itemID) : nullptr;
-                  auto targetItem = animation ? animation->item_get(type, id) : nullptr;
-
-                  auto time_from_index = [&](anm2::Item* target, int index)
-                  {
-                    if (!target || target->frames.empty()) return 0.0f;
-                    index = std::clamp(index, 0, (int)target->frames.size());
-                    float timeAccum = 0.0f;
-                    for (int n = 0; n < index && n < (int)target->frames.size(); ++n)
-                      timeAccum += target->frames[n].duration;
-                    return timeAccum;
-                  };
-
-                  if (source && sourceItem && targetItem && source->type != anm2::TRIGGER && type != anm2::TRIGGER)
-                  {
-                    std::vector<int> indices = frameSelectionLocked;
-                    if (indices.empty()) indices.push_back((int)i);
-                    std::sort(indices.begin(), indices.end());
-                    indices.erase(std::unique(indices.begin(), indices.end()), indices.end());
-
-                    int insertPosResult = -1;
-                    int insertedCount = 0;
-                    DOCUMENT_EDIT(document, localize.get(EDIT_MOVE_FRAMES), Document::FRAMES, {
-                      std::vector<anm2::Frame> movedFrames;
-                      movedFrames.reserve(indices.size());
-
-                      for (int i : indices)
-                        if (i >= 0 && i < (int)sourceItem->frames.size())
-                          movedFrames.push_back(std::move(sourceItem->frames[i]));
-
-                      for (auto it = indices.rbegin(); it != indices.rend(); ++it)
-                        if (*it >= 0 && *it < (int)sourceItem->frames.size())
-                          sourceItem->frames.erase(sourceItem->frames.begin() + *it);
-
-                      const int dropIndex = (int)i;
-                      int desired = std::clamp(dropIndex + 1, 0, (int)targetItem->frames.size());
-                      if (sourceItem == targetItem)
-                      {
-                        if (dropIndex < indices.front())
-                          desired = dropIndex;
-                        else if (dropIndex > indices.back())
-                          desired = dropIndex + 1;
-                        else
-                          desired = indices.front();
-
-                        int removedBefore = 0;
-                        for (int i : indices)
-                          if (i < desired) ++removedBefore;
-                        desired -= removedBefore;
-                      }
-                      desired = std::clamp(desired, 0, (int)targetItem->frames.size());
-
-                      insertPosResult = desired;
-                      insertedCount = (int)movedFrames.size();
-                      targetItem->frames.insert(targetItem->frames.begin() + insertPosResult,
-                                                std::make_move_iterator(movedFrames.begin()),
-                                                std::make_move_iterator(movedFrames.end()));
-                    });
-
-                    if (insertedCount > 0)
-                    {
-                      frames.selection.clear();
-                      for (int offset = 0; offset < insertedCount; ++offset)
-                        frames.selection.insert(insertPosResult + offset);
-
-                      reference = {reference.animationIndex, type, id, insertPosResult};
-                      document.frameTime = time_from_index(targetItem, reference.frameIndex);
-                      if (type == anm2::LAYER)
-                      {
-                        if (auto it = anm2.content.layers.find(id); it != anm2.content.layers.end())
-                          document.spritesheet.reference = it->second.spritesheetID;
-                      }
-                    }
-                  }
-                }
-
-                ImGui::EndDragDropTarget();
+                frameMoveDrag = {
+                    .type = type,
+                    .itemID = id,
+                    .animationIndex = reference.animationIndex,
+                    .frameIndex = (int)i,
+                    .duration = dragDuration,
+                    .indices = frameSelectionLocked,
+                    .isActive = true,
+                };
               }
             }
 
@@ -1517,7 +1592,20 @@ namespace anm2ed::imgui
             ImGui::PopID();
           }
 
-          if (type != anm2::TRIGGER) frames.selection.finish();
+          if (isFrameMovePreview)
+          {
+            drawList->AddRectFilled(frameMovePreviewMin, frameMovePreviewMax,
+                                    ImGui::GetColorU32(ImGuiCol_DragDropTargetBg), FRAME_ROUNDING);
+            drawList->AddRect(frameMovePreviewMin, frameMovePreviewMax, ImGui::GetColorU32(ImGuiCol_DragDropTarget),
+                              FRAME_ROUNDING, 0, ImGui::GetStyle().DragDropTargetBorderSize);
+          }
+
+          if (isFrameMoveHoveredFrame)
+            drawList->AddRect(frameMoveHoveredFrameMin, frameMoveHoveredFrameMax,
+                              ImGui::GetColorU32(ImGuiCol_DragDropTarget), FRAME_ROUNDING, 0,
+                              ImGui::GetStyle().DragDropTargetBorderSize * 1.5f);
+
+          if (isFrameSelectionStarted) frames.selection.finish();
 
           if (isFrameSelectionLocked)
           {
@@ -1813,6 +1901,11 @@ namespace anm2ed::imgui
       isWindowHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows |
                                                ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
       frames_child();
+      if (frameMoveDrag.isActive && ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+      {
+        if (isFrameMoveDropTarget) frames_move_to(frameMoveDropType, frameMoveDropItemID, frameMoveDropIndex);
+        frame_move_drag_clear();
+      }
       items_child();
     }
     ImGui::PopStyleVar();

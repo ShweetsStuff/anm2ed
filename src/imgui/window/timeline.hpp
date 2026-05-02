@@ -10,18 +10,15 @@
 
 namespace anm2ed::imgui
 {
-  struct FrameDragDrop
+  struct FrameMoveDrag
   {
     anm2::Type type{anm2::NONE};
     int itemID{-1};
     int animationIndex{-1};
-  };
-
-  struct FrameDragDropPayload
-  {
-    anm2::Type type{anm2::NONE};
-    int itemID{-1};
-    int animationIndex{-1};
+    int frameIndex{-1};
+    int duration{1};
+    std::vector<int> indices{};
+    bool isActive{};
   };
 
   class Timeline
@@ -44,8 +41,7 @@ namespace anm2ed::imgui
     bool isDraggedFrameSnapshot{};
     bool frameFocusRequested{};
     int frameFocusIndex{-1};
-    FrameDragDrop frameDragDrop{};
-    FrameDragDropPayload frameDragDropPayload{};
+    FrameMoveDrag frameMoveDrag{};
     std::vector<int> frameSelectionSnapshot{};
     std::vector<int> frameSelectionLocked{};
     bool isFrameSelectionLocked{};
