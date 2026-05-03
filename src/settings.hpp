@@ -123,6 +123,7 @@ namespace anm2ed
   X(PREVIEW_IS_PIVOTS, previewIsPivots, STRING_UNDEFINED, BOOL, false)                                                 \
   X(PREVIEW_IS_BORDER, previewIsBorder, STRING_UNDEFINED, BOOL, false)                                                 \
   X(PREVIEW_IS_ALT_ICONS, previewIsAltIcons, STRING_UNDEFINED, BOOL, false)                                            \
+  X(PREVIEW_IS_TRANSPARENT, animationPreviewTransparent, STRING_UNDEFINED, BOOL, false)                                \
   X(PREVIEW_OVERLAY_TRANSPARENCY, previewOverlayTransparency, STRING_UNDEFINED, FLOAT, 255)                            \
   X(PREVIEW_START_ZOOM, previewStartZoom, STRING_UNDEFINED, FLOAT, 200.0f)                                             \
   X(PREVIEW_GRID_SIZE, previewGridSize, STRING_UNDEFINED, IVEC2, {32, 32})                                             \

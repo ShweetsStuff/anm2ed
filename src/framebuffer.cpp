@@ -78,7 +78,7 @@ namespace anm2ed
     glClearColor(color.r, color.g, color.b, color.a);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    if (color.a == 0.0f) glDisable(GL_BLEND);
+    if (color.a <= 0.0f) glDisable(GL_BLEND);
   }
 
   bool Framebuffer::is_valid() const { return fbo != 0; }

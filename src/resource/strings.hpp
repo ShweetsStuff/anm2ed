@@ -200,7 +200,8 @@ namespace anm2ed
   X(FORMAT_NULL, "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}") \
   X(FORMAT_PIVOT, "Pivot: ({0}, {1})", "Pivote", "Точка вращения: ({0}, {1})", "枢轴: ({0}, {1})", "중심점: ({0}, {1})") \
   X(FORMAT_POSITION, "Position: ({0}, {1})", "Posicion: ({0}, {1})", "Позиция: ({0}, {1})", "位置: ({0}, {1})", "위치: ({0}, {1})") \
-  X(FORMAT_POSITION_SPACED, "Position: ({0:8}, {1:8})", "Posicion: ({0:8}, {1:8})", "Позиция: ({0:8}, {1:8})", "位置: ({0:8}, {1:8})", "위치: ({0:8}, {1:8})") \
+  X(FORMAT_POSITION_SPACED, "Position: ({0:3}, {1:3})", "Posicion: ({0:3}, {1:3})", "Позиция: ({0:3}, {1:3})", "位置: ({0:3}, {1:3})", "위치: ({0:3}, {1:3})") \
+  X(FORMAT_SIZE_SPACED, "Size: ({0:3}, {1:3})", "Tamaño: ({0:3}, {1:3})", "Размер: ({0:3}, {1:3})", "大小: ({0:3}, {1:3})", "크기: ({0:3}, {1:3})") \
   X(FORMAT_ROTATION, "Rotation: {0}", "Rotacion: {0}", "Поворот: {0}", "旋转: {0}", "회전: {0}") \
   X(FORMAT_SCALE, "Scale: ({0}, {1})", "Escalar: ({0}, {1})", "Масштаб: ({0}, {1})", "缩放: ({0}, {1})", "비율: ({0}, {1})") \
   X(FORMAT_SIZE, "Size: ({0}, {1})", "Tamaño: ({0}, {1})", "Размер: ({0}, {1})", "大小: ({0}, {1})", "크기: ({0}, {1})") \
@@ -608,6 +609,7 @@ namespace anm2ed
   X(TOOLTIP_PLAY_ANIMATION, "Play the animation.", "Reproduce la animacion.", "Возпроизвести анимацию.", "播放动画.", "애니메이션을 재생합니다.") \
   X(TOOLTIP_POSITION, "Change the position of the frame.", "Cambia la posicion del Frame.", "Изменить позицию кадра.", "更改此帧的位置.", "프레임의 위치를 변경합니다.") \
   X(TOOLTIP_PREVIEW_ZOOM, "Change the zoom of the preview.", "Cambia el zoom de la vista previa.", "Изменить масштаб предпросмотра.", "更改预览视图的缩放.", "미리보기의 줌을 변경합니다.") \
+  X(TOOLTIP_PREVIEW_TRANSPARENT, "Toggle the animation preview background being transparent.", "Alterna la transparencia del fondo de la vista previa de animacion.", "Переключить прозрачность фона предпросмотра анимации.", "切换动画预览背景是否透明.", "애니메이션 미리보기 배경을 투명하게 전환합니다.") \
   X(TOOLTIP_RAW, "Record only the raw animation; i.e., only its layers, to its bounds.", "Graba solo la animacion cruda; i. e., Solo sus capas.", "Записывать только «сырую» анимацию, т. е. только ее слои.", "仅保存原生动画; 比如只保存动画层.", "Raw 애니메이션만 녹화합니다. 즉, 레이어만 녹화합니다.") \
   X(TOOLTIP_RELOAD_SPRITESHEETS, "Reloads the selected spritesheets.", "Recarga la spritesheet seleccionada.", "Перезагружает выбранные спрайт-листы.", "重新加载所选图集.", "선택한 스프라이트 시트를 다시 불러옵니다.") \
   X(TOOLTIP_RELOAD_SOUNDS, "Reloads the selected sounds.", "Recarga los sonidos seleccionados.", "Перезагружает выбранные звуки.", "重新加载所选声音.", "선택한 사운드를 다시 불러옵니다.") \

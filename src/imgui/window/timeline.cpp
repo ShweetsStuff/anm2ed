@@ -1293,9 +1293,10 @@ namespace anm2ed::imgui
             }
           }
 
-          if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) && ImGui::IsMouseDown(0))
+          if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) &&
+              ImGui::IsMouseClicked(ImGuiMouseButton_Left))
           {
-            if (!isDragging) playback_stop();
+            playback_stop();
             isDragging = true;
           }
 

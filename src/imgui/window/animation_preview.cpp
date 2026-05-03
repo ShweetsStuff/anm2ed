@@ -437,6 +437,7 @@ namespace anm2ed::imgui
     auto& pan = document.previewPan;
     auto& zoom = document.previewZoom;
     auto& backgroundColor = settings.previewBackgroundColor;
+    auto& isTransparent = settings.animationPreviewTransparent;
     auto& axesColor = settings.previewAxesColor;
     auto& gridColor = settings.previewGridColor;
     auto& gridSize = settings.previewGridSize;
@@ -488,10 +489,10 @@ namespace anm2ed::imgui
 
     auto center_view = [&]() { pan = vec2(); };
 
-      auto fit_view = [&]()
-      {
-        if (animation) set_to_rect(zoom, pan, anm2.animation_rect(*animation, isRootTransform));
-      };
+    auto fit_view = [&]()
+    {
+      if (animation) set_to_rect(zoom, pan, anm2.animation_rect(*animation, isRootTransform));
+    };
 
     auto zoom_adjust = [&](float delta)
     {
@@ -548,10 +549,27 @@ namespace anm2ed::imgui
         if (ImGui::Button(localize.get(LABEL_FIT), widgetSize)) fit_view();
         set_item_tooltip_shortcut(localize.get(TOOLTIP_FIT), settings.shortcutFit);
 
+        auto readoutSize = ImVec2(row_widget_width_get(2), ImGui::GetTextLineHeightWithSpacing());
         auto mousePosInt = ivec2(mousePos);
-        ImGui::TextUnformatted(
-            std::vformat(localize.get(FORMAT_POSITION_SPACED), std::make_format_args(mousePosInt.x, mousePosInt.y))
-                .c_str());
+        auto positionText =
+            std::vformat(localize.get(FORMAT_POSITION_SPACED), std::make_format_args(mousePosInt.x, mousePosInt.y));
+        if (ImGui::BeginChild("##Position Readout", readoutSize, false, ImGuiWindowFlags_NoScrollbar))
+        {
+          ImGui::TextUnformatted(positionText.c_str());
+          if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", positionText.c_str());
+        }
+        ImGui::EndChild();
+
+        ImGui::SameLine();
+
+        auto sizeInt = ivec2(size);
+        auto sizeText = std::vformat(localize.get(FORMAT_SIZE_SPACED), std::make_format_args(sizeInt.x, sizeInt.y));
+        if (ImGui::BeginChild("##Size Readout", readoutSize, false, ImGuiWindowFlags_NoScrollbar))
+        {
+          ImGui::TextUnformatted(sizeText.c_str());
+          if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", sizeText.c_str());
+        }
+        ImGui::EndChild();
       }
       ImGui::EndChild();
 
@@ -559,9 +577,13 @@ namespace anm2ed::imgui
 
       if (ImGui::BeginChild("##Background Child", childSize, true, ImGuiWindowFlags_HorizontalScrollbar))
       {
-        ImGui::ColorEdit3(localize.get(LABEL_BACKGROUND_COLOR), value_ptr(backgroundColor),
-                          ImGuiColorEditFlags_NoInputs);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BACKGROUND_COLOR));
+        ImGui::BeginDisabled(isTransparent);
+        {
+          ImGui::ColorEdit3(localize.get(LABEL_BACKGROUND_COLOR), value_ptr(backgroundColor),
+                            ImGuiColorEditFlags_NoInputs);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BACKGROUND_COLOR));
+        }
+        ImGui::EndDisabled();
         ImGui::SameLine();
         ImGui::Checkbox(localize.get(LABEL_AXES), &isAxes);
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_AXES));
@@ -589,6 +611,8 @@ namespace anm2ed::imgui
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ROOT_TRANSFORM));
           ImGui::Checkbox(localize.get(LABEL_PIVOTS), &isPivots);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_PIVOTS));
+          ImGui::Checkbox(localize.get(LABEL_TRANSPARENT), &isTransparent);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_PREVIEW_TRANSPARENT));
         }
         ImGui::EndChild();
 
@@ -615,14 +639,6 @@ namespace anm2ed::imgui
 
         if (settings.renderIsRawAnimation)
         {
-          settings.previewBackgroundColor = vec4();
-          settings.previewIsGrid = false;
-          settings.previewIsAxes = false;
-          settings.previewIsPivots = false;
-          settings.previewIsBorder = false;
-          settings.timelineIsOnlyShowLayers = true;
-          settings.onionskinIsEnabled = false;
-
           savedOverlayIndex = overlayIndex;
           savedZoom = zoom;
           savedPan = pan;
@@ -673,11 +689,23 @@ namespace anm2ed::imgui
         playback.time = manager.recordingStart;
       }
 
-      if (isSizeTrySet) size_set(to_vec2(ImGui::GetContentRegionAvail()));
+      if (isSizeTrySet)
+      {
+        auto nextSize = to_vec2(ImGui::GetContentRegionAvail());
+        bool isCanvasResized = ivec2(nextSize) != ivec2(size);
+        size_set(nextSize);
+        if (isCanvasResized && ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+        {
+          auto resizeSizeInt = ivec2(size);
+          auto resizeSizeText =
+              std::vformat(localize.get(FORMAT_SIZE_SPACED), std::make_format_args(resizeSizeInt.x, resizeSizeInt.y));
+          ImGui::SetTooltip("%s", resizeSizeText.c_str());
+        }
+      }
 
       bind();
       viewport_set();
-      clear(manager.isRecording && settings.renderIsRawAnimation ? vec4(0) : vec4(backgroundColor, 1.0f));
+      clear(isTransparent ? vec4(0) : vec4(backgroundColor, 1.0f));
 
       if (isAxes) axes_render(shaderAxes, zoom, pan, axesColor);
       if (isGrid) grid_render(shaderGrid, zoom, pan, gridSize, gridOffset, gridColor);
@@ -913,7 +941,7 @@ namespace anm2ed::imgui
 
       unbind();
 
-      if (manager.isRecording && settings.renderIsRawAnimation)
+      if (isTransparent)
       {
         sync_checker_pan();
         render_checker_background(ImGui::GetWindowDrawList(), min, max, -size - checkerPan, CHECKER_SIZE);

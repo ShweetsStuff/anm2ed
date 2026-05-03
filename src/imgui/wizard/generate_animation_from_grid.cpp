@@ -46,14 +46,17 @@ namespace anm2ed::imgui::wizard
     if (ImGui::BeginChild("##Preview Child", childSize, ImGuiChildFlags_Borders))
     {
       auto& backgroundColor = settings.previewBackgroundColor;
+      auto& isTransparent = settings.animationPreviewTransparent;
       auto& shaderTexture = resources.shaders[resource::shader::TEXTURE];
 
       auto previewSize = ImVec2(ImGui::GetContentRegionAvail().x, size_without_footer_get(2).y);
+      auto previewMin = ImGui::GetCursorScreenPos();
+      auto previewMax = to_imvec2(to_vec2(previewMin) + to_vec2(previewSize));
 
       bind();
       size_set(to_vec2(previewSize));
       viewport_set();
-      clear(vec4(backgroundColor, 1.0f));
+      clear(isTransparent ? vec4(0) : vec4(backgroundColor, 1.0f));
 
       if (document.reference.itemType == anm2::LAYER)
       {
@@ -82,6 +85,9 @@ namespace anm2ed::imgui::wizard
 
       unbind();
 
+      if (isTransparent)
+        render_checker_background(ImGui::GetWindowDrawList(), previewMin, previewMax, -to_vec2(previewSize) * 0.5f,
+                                  CHECKER_SIZE);
       ImGui::Image(texture, previewSize);
 
       ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
