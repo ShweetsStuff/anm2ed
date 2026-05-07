@@ -10,6 +10,6 @@ namespace anm2ed::imgui::wizard
   public:
     bool isChanged{};
 
-    void update(Document&, Settings&);
+    void update(Document&, Settings&, bool = false);
   };
 }

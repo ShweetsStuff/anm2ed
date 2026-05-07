@@ -153,8 +153,11 @@ namespace anm2ed::imgui
           generatePopup.open();
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_WIZARD_GENERATE_ANIMATION_FROM_GRID));
 
+        bool isChangeAllFramesAvailable =
+            frames && !frames->selection.empty() && document->reference.itemType != anm2::TRIGGER;
+        bool isChangeAllAnimationsAvailable = document && !document->animation.selection.empty();
         if (ImGui::MenuItem(localize.get(LABEL_CHANGE_ALL_FRAME_PROPERTIES), nullptr, false,
-                            frames && !frames->selection.empty() && document->reference.itemType != anm2::TRIGGER))
+                            isChangeAllFramesAvailable || isChangeAllAnimationsAvailable))
           changePopup.open();
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_WIZARD_CHANGE_ALL_FRAME_PROPERTIES));
 
@@ -232,7 +235,7 @@ namespace anm2ed::imgui
     {
       if (document)
       {
-        changeAllFrameProperties.update(*document, settings);
+        changeAllFrameProperties.update(*document, settings, true);
         if (changeAllFrameProperties.isChanged) changePopup.close();
       }
       ImGui::EndPopup();

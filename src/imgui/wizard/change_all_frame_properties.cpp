@@ -1,6 +1,7 @@
 #include "change_all_frame_properties.hpp"
 
 #include <algorithm>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -11,11 +12,21 @@ using namespace glm;
 
 namespace anm2ed::imgui::wizard
 {
-  void ChangeAllFrameProperties::update(Document& document, Settings& settings)
+  namespace
+  {
+    enum ChangeDestination
+    {
+      CHANGE_DESTINATION_FRAMES,
+      CHANGE_DESTINATION_ANIMATIONS,
+    };
+  }
+
+  void ChangeAllFrameProperties::update(Document& document, Settings& settings, bool isFromWizard)
   {
     isChanged = false;
 
     auto& frames = document.frames.selection;
+    auto& animations = document.animation.selection;
     auto& isCropX = settings.changeIsCropX;
     auto& isCropY = settings.changeIsCropY;
     auto& isSizeX = settings.changeIsSizeX;
@@ -54,7 +65,25 @@ namespace anm2ed::imgui::wizard
     auto& interpolation = settings.changeInterpolation;
     auto& isFlipX = settings.changeIsFlipX;
     auto& isFlipY = settings.changeIsFlipY;
+    auto& destination = settings.changeDestination;
+    auto& isRoot = settings.changeIsRoot;
+    auto& isLayers = settings.changeIsLayers;
+    auto& isNulls = settings.changeIsNulls;
     auto& itemType = document.reference.itemType;
+
+    bool isFramesDestination = !isFromWizard || destination == CHANGE_DESTINATION_FRAMES;
+    bool isSelectedFramesAvailable = !frames.empty() && itemType != anm2::TRIGGER;
+    bool isSelectedAnimationsAvailable = !animations.empty();
+    if (isFromWizard)
+    {
+      if (destination == CHANGE_DESTINATION_FRAMES && !isSelectedFramesAvailable && isSelectedAnimationsAvailable)
+        destination = CHANGE_DESTINATION_ANIMATIONS;
+      if (destination == CHANGE_DESTINATION_ANIMATIONS && !isSelectedAnimationsAvailable && isSelectedFramesAvailable)
+        destination = CHANGE_DESTINATION_FRAMES;
+      isFramesDestination = destination == CHANGE_DESTINATION_FRAMES;
+    }
+
+    bool isLayerPropertyAvailable = isFramesDestination ? itemType == anm2::LAYER : isLayers;
 
 #define PROPERTIES_WIDGET(body, checkboxLabel, isEnabled)                                                              \
   ImGui::Checkbox(checkboxLabel, &isEnabled);                                                                          \
@@ -190,7 +219,7 @@ namespace anm2ed::imgui::wizard
 
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImGui::GetStyle().ItemInnerSpacing);
 
-    ImGui::BeginDisabled(itemType != anm2::LAYER);
+    ImGui::BeginDisabled(!isLayerPropertyAvailable);
     float2_value("##Is Crop X", "##Is Crop Y", "##Crop X", localize.get(BASIC_CROP), isCropX, isCropY, crop);
     float2_value("##Is Size X", "##Is Size Y", "##Size X", localize.get(BASIC_SIZE), isSizeX, isSizeY, size);
     ImGui::EndDisabled();
@@ -198,7 +227,7 @@ namespace anm2ed::imgui::wizard
     float2_value("##Is Position X", "##Is Position Y", "##Position X", localize.get(BASIC_POSITION), isPositionX,
                  isPositionY, position);
 
-    ImGui::BeginDisabled(itemType != anm2::LAYER);
+    ImGui::BeginDisabled(!isLayerPropertyAvailable);
     float2_value("##Is Pivot X", "##Is Pivot Y", "##Pivot X", localize.get(BASIC_PIVOT), isPivotX, isPivotY, pivot);
     ImGui::EndDisabled();
 
@@ -215,7 +244,7 @@ namespace anm2ed::imgui::wizard
                  "##Color Offset B", "##Color Offset G", localize.get(BASIC_COLOR_OFFSET), isColorOffsetR,
                  isColorOffsetG, isColorOffsetB, colorOffset);
 
-    ImGui::BeginDisabled(itemType != anm2::LAYER);
+    ImGui::BeginDisabled(!isLayerPropertyAvailable);
     std::vector<int> fallbackIds{-1};
     std::vector<std::string> fallbackLabelsString{localize.get(BASIC_NONE)};
     std::vector<const char*> fallbackLabels{fallbackLabelsString[0].c_str()};
@@ -244,7 +273,8 @@ namespace anm2ed::imgui::wizard
     }
     auto regionIds = regionStorage && !regionStorage->ids.empty() ? regionStorage->ids : fallbackIds;
     auto regionLabels = regionStorage && !regionStorage->labels.empty() ? regionStorage->labels : fallbackLabels;
-    if (itemType != anm2::LAYER || std::find(regionIds.begin(), regionIds.end(), regionId) == regionIds.end()) regionId = -1;
+    if (!isLayerPropertyAvailable || std::find(regionIds.begin(), regionIds.end(), regionId) == regionIds.end())
+      regionId = -1;
     PROPERTIES_WIDGET(combo_id_mapped(localize.get(BASIC_REGION), &regionId, regionIds, regionLabels), "##Is Region",
                       isRegion);
     ImGui::EndDisabled();
@@ -293,25 +323,106 @@ namespace anm2ed::imgui::wizard
       if (isFlipXSet) frameChange.isFlipX = std::make_optional(isFlipX);
       if (isFlipYSet) frameChange.isFlipY = std::make_optional(isFlipY);
 
-      if (auto item = document.item_get())
+      auto all_frames_selection = [](anm2::Item& item)
       {
-        DOCUMENT_EDIT(document, localize.get(EDIT_CHANGE_FRAME_PROPERTIES), Document::FRAMES,
-                      item->frames_change(frameChange, itemType, changeType, frames));
+        std::set<int> selection{};
+        for (int i = 0; i < (int)item.frames.size(); ++i)
+          selection.insert(i);
+        return selection;
+      };
 
+      if (isFramesDestination)
+      {
+        if (auto item = document.item_get())
+        {
+          DOCUMENT_EDIT(document, localize.get(EDIT_CHANGE_FRAME_PROPERTIES), Document::FRAMES,
+                        item->frames_change(frameChange, itemType, changeType, frames));
+
+          isChanged = true;
+        }
+      }
+      else
+      {
+        auto behavior = [&]()
+        {
+          for (auto animationIndex : animations)
+          {
+            if (animationIndex < 0 || animationIndex >= (int)document.anm2.animations.items.size()) continue;
+            auto& animation = document.anm2.animations.items[animationIndex];
+
+            if (isRoot)
+            {
+              auto selection = all_frames_selection(animation.rootAnimation);
+              animation.rootAnimation.frames_change(frameChange, anm2::ROOT, changeType, selection);
+            }
+
+            if (isLayers)
+            {
+              for (auto& [_, item] : animation.layerAnimations)
+              {
+                auto selection = all_frames_selection(item);
+                item.frames_change(frameChange, anm2::LAYER, changeType, selection);
+              }
+            }
+
+            if (isNulls)
+            {
+              for (auto& [_, item] : animation.nullAnimations)
+              {
+                auto selection = all_frames_selection(item);
+                item.frames_change(frameChange, anm2::NULL_, changeType, selection);
+              }
+            }
+          }
+        };
+
+        DOCUMENT_EDIT(document, localize.get(EDIT_CHANGE_FRAME_PROPERTIES), Document::FRAMES, behavior());
         isChanged = true;
       }
     };
 
     ImGui::Separator();
 
+    if (isFromWizard)
+    {
+      ImGui::SeparatorText(localize.get(LABEL_DESTINATION));
+
+      ImGui::BeginDisabled(!isSelectedFramesAvailable);
+      ImGui::RadioButton(localize.get(BASIC_FRAMES), &destination, CHANGE_DESTINATION_FRAMES);
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHANGE_ALL_DESTINATION_FRAMES));
+      ImGui::EndDisabled();
+
+      ImGui::SameLine();
+
+      ImGui::BeginDisabled(!isSelectedAnimationsAvailable);
+      ImGui::RadioButton(localize.get(LABEL_ANIMATIONS_CHILD), &destination, CHANGE_DESTINATION_ANIMATIONS);
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHANGE_ALL_DESTINATION_ANIMATIONS));
+      ImGui::EndDisabled();
+
+      ImGui::BeginDisabled(isFramesDestination);
+      ImGui::Checkbox(localize.get(LABEL_ROOT), &isRoot);
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHANGE_ALL_ROOT));
+      ImGui::SameLine();
+      ImGui::Checkbox(localize.get(LABEL_LAYERS), &isLayers);
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHANGE_ALL_LAYERS));
+      ImGui::SameLine();
+      ImGui::Checkbox(localize.get(LABEL_NULLS), &isNulls);
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHANGE_ALL_NULLS));
+      ImGui::EndDisabled();
+
+      ImGui::Separator();
+    }
+
     bool isAnyProperty = isCropX || isCropY || isSizeX || isSizeY || isPositionX || isPositionY || isPivotX ||
                          isPivotY || isScaleX || isScaleY || isRotation || isDuration || isTintR || isTintG ||
                          isTintB || isTintA || isColorOffsetR || isColorOffsetG || isColorOffsetB || isRegion ||
                          isVisibleSet || isInterpolationSet || isFlipXSet || isFlipYSet;
+    bool isDestinationValid = isFramesDestination ? isSelectedFramesAvailable
+                                                  : isSelectedAnimationsAvailable && (isRoot || isLayers || isNulls);
 
     auto rowWidgetSize = widget_size_with_row_get(5);
 
-    ImGui::BeginDisabled(!isAnyProperty);
+    ImGui::BeginDisabled(!isAnyProperty || !isDestinationValid);
 
     if (ImGui::Button(localize.get(LABEL_ADJUST), rowWidgetSize)) frame_change(anm2::ADJUST);
     ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ADJUST));

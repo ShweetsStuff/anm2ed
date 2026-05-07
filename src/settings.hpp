@@ -115,6 +115,10 @@ namespace anm2ed
   X(CHANGE_INTERPOLATION, changeInterpolation, STRING_UNDEFINED, INT, 0)                                               \
   X(CHANGE_IS_FLIP_X, changeIsFlipX, STRING_UNDEFINED, BOOL, false)                                                    \
   X(CHANGE_IS_FLIP_Y, changeIsFlipY, STRING_UNDEFINED, BOOL, false)                                                    \
+  X(CHANGE_DESTINATION, changeDestination, STRING_UNDEFINED, INT, 0)                                                   \
+  X(CHANGE_IS_ROOT, changeIsRoot, STRING_UNDEFINED, BOOL, true)                                                        \
+  X(CHANGE_IS_LAYERS, changeIsLayers, STRING_UNDEFINED, BOOL, true)                                                    \
+  X(CHANGE_IS_NULLS, changeIsNulls, STRING_UNDEFINED, BOOL, true)                                                      \
                                                                                                                        \
   X(SCALE_VALUE, scaleValue, STRING_UNDEFINED, FLOAT, 1.0f)                                                            \
                                                                                                                        \

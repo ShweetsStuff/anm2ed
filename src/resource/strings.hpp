@@ -311,6 +311,9 @@ namespace anm2ed
   X(LABEL_REGION_ORIGIN_TOP_LEFT, "Top Left", "Superior izquierda", "Верхний левый", "左上", "왼쪽 위") \
   X(LABEL_REGION_ORIGIN_CENTER, "Center", "Centro", "Центр", "中心", "중앙") \
   X(LABEL_REGION_ORIGIN_CUSTOM, "Custom", "Personalizado", "Пользовательский", "自定义", "사용자 지정") \
+  X(LABEL_ROOT, "Root", "Root", "Корень", "根", "Root") \
+  X(LABEL_LAYERS, "Layers", "Capas", "Слои", "动画层", "레이어") \
+  X(LABEL_NULLS, "Nulls", "Nulls", "Нули", "Nulls", "Null") \
   X(LABEL_MANAGER_LAYER_PROPERTIES, "Layer Properties", "Propiedades de Capa", "Свойства слоя", "动画层属性", "레이어 속성") \
   X(LABEL_MANAGER_NULL_PROPERTIES, "Null Properties", "Propiedades Null", "Свойства нуля", "Null属性", "Null 속성") \
   X(LABEL_MANAGER_RENDERING_PROGRESS, "Rendering...", "Renderizando...", "Рендеринг...", "渲染中...", "렌더링 중...") \
@@ -531,6 +534,11 @@ namespace anm2ed
   X(TOOLTIP_BORDER, "Toggle the visibility of borders around layers.", "Alterna la visibilidad de los bordes alrededor de las capas.", "Переключить видимость границ около слоев.", "切换动画层边框是否可见.", "레이어 주변 경계선을 표시하거나 숨깁니다.") \
   X(TOOLTIP_CANCEL_ADD_ITEM, "Cancel adding an item.", "Cancelar añadir un item.", "Отменить добавление предмета.", "取消添加物品.", "항목 추가를 취소합니다.") \
   X(TOOLTIP_CANCEL_BAKE_FRAMES, "Cancel baking frames.", "Cancelar hacer bake de Frames.", "Отменить запечку кадров.", "取消提前渲染.", "프레임 베이킹을 취소합니다.") \
+  X(TOOLTIP_CHANGE_ALL_DESTINATION_FRAMES, "Apply specified frame properties to selected frames.", "Aplica las propiedades de frame especificadas a los frames seleccionados.", "Применить указанные свойства кадра к выбранным кадрам.", "将指定的帧属性应用到所选帧。", "지정한 프레임 속성을 선택한 프레임에 적용합니다.") \
+  X(TOOLTIP_CHANGE_ALL_DESTINATION_ANIMATIONS, "Apply specified frame properties to the specified items in the selected animations.", "Aplica las propiedades de frame especificadas a los items indicados en las animaciones seleccionadas.", "Применить указанные свойства кадра к указанным элементам в выбранных анимациях.", "将指定的帧属性应用到所选动画中的指定项目。", "지정한 프레임 속성을 선택한 애니메이션의 지정 항목에 적용합니다.") \
+  X(TOOLTIP_CHANGE_ALL_ROOT, "The frame property changes will apply to root frames.", "Los cambios de propiedades de frame se aplicaran a los frames root.", "Изменения свойств кадра будут применены к корневым кадрам.", "帧属性更改将应用于根帧。", "프레임 속성 변경 사항을 Root 프레임에 적용합니다.") \
+  X(TOOLTIP_CHANGE_ALL_LAYERS, "The frame property changes will apply to layer frames.", "Los cambios de propiedades de frame se aplicaran a los frames de capa.", "Изменения свойств кадра будут применены к кадрам слоев.", "帧属性更改将应用于图层帧。", "프레임 속성 변경 사항을 레이어 프레임에 적용합니다.") \
+  X(TOOLTIP_CHANGE_ALL_NULLS, "The frame property changes will apply to null frames.", "Los cambios de propiedades de frame se aplicaran a los frames null.", "Изменения свойств кадра будут применены к нулевым кадрам.", "帧属性更改将应用于 Null 帧。", "프레임 속성 변경 사항을 Null 프레임에 적용합니다.") \
   X(TOOLTIP_CENTER_VIEW, "Centers the view.", "Centra la vista.", "Центрирует вид.", "居中视角.", "미리보기 화면을 가운데에 맞춥니다.") \
   X(TOOLTIP_CLOSE_SETTINGS, "Close without updating settings.", "Cerrar sin actualizar las configuraciones.", "Закрыть без обновления настройки.", "关闭但不保存设置.", "설정을 갱신하지 않고 닫습니다.") \
   X(TOOLTIP_COMPATIBILITY_ISAAC, "Sets the output file format to that of The Binding of Isaac: Rebirth's.\nThis removes the following:\n- Sounds\n- Regions\n- Special interpolation modes\nNOTE: This will not serialize this data and it won't be able to be recovered.", "Establece el formato del archivo de salida al de The Binding of Isaac: Rebirth.\nEsto elimina lo siguiente:\n- Sonidos\n- Regiones\n- Modos especiales de interpolación\nNOTA: Estos datos no se serializaran y no podran recuperarse.", "Устанавливает формат выходного файла как у The Binding of Isaac: Rebirth.\nЭто удаляет следующее:\n- Звуки\n- Регионы\n- Специальные режимы интерполяции\nПРИМЕЧАНИЕ: Эти данные не будут сериализованы, и их нельзя будет восстановить.", "将输出文件格式设置为 The Binding of Isaac: Rebirth 的格式。\n这会移除以下内容：\n- 声音\n- 区域\n- 特殊插值模式\n注意：这些数据不会被序列化，且无法恢复。", "출력 파일 형식을 The Binding of Isaac: Rebirth의 형식으로 설정합니다.\n다음 항목이 제거됩니다:\n- 사운드\n- 영역\n- 특수 보간 모드\n참고: 이 데이터는 직렬화되지 않으며 복구할 수 없습니다.") \
