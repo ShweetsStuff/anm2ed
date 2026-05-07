@@ -34,8 +34,6 @@ namespace anm2ed::imgui
   constexpr auto POINT_SIZE = vec2(4, 4);
   constexpr auto TRIGGER_TEXT_COLOR_DARK = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
   constexpr auto TRIGGER_TEXT_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 0.5f);
-  constexpr auto PLAYBACK_TICK_RATE = 30.0f;
-
   namespace
   {
     std::filesystem::path render_destination_directory(const std::filesystem::path& path, int type)
@@ -153,7 +151,7 @@ namespace anm2ed::imgui
 
   AnimationPreview::AnimationPreview() : Canvas(vec2()) {}
 
-  void AnimationPreview::tick(Manager& manager, Settings& settings)
+  void AnimationPreview::tick(Manager& manager, Settings& settings, float deltaSeconds)
   {
     auto& document = *manager.get();
     auto& anm2 = document.anm2;
@@ -176,8 +174,9 @@ namespace anm2ed::imgui
       auto& path = settings.renderPath;
       auto pathString = path::to_utf8(path);
       auto& type = settings.renderType;
+      auto renderFrameRate = std::max(settings.playbackTickRate, 1);
 
-      if (playback.time > end || playback.isFinished)
+      if (playback.time >= (float)end + 1.0f || playback.isFinished)
       {
         if (settings.timelineIsSound) audioStream.capture_end(mixer);
 
@@ -262,7 +261,7 @@ namespace anm2ed::imgui
         {
           if (settings.timelineIsSound && type != render::GIF)
           {
-            if (!render_audio_stream_generate(audioStream, anm2.content.sounds, renderFrameSoundIDs, anm2.info.fps))
+            if (!render_audio_stream_generate(audioStream, anm2.content.sounds, renderFrameSoundIDs, renderFrameRate))
             {
               toasts.push(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED));
               logger.error("Failed to generate deterministic render audio stream; exporting without audio.");
@@ -273,7 +272,7 @@ namespace anm2ed::imgui
             audioStream.stream.clear();
 
           if (animation_render(ffmpegPath, path, renderTempFrames, renderTempFrameDurations, audioStream,
-                               (render::Type)type, anm2.info.fps))
+                               (render::Type)type, renderFrameRate))
           {
             toasts.push(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION), std::make_format_args(pathString)));
             logger.info(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION, anm2ed::ENGLISH),
@@ -325,8 +324,10 @@ namespace anm2ed::imgui
         auto frameSoundID = -1;
         if (settings.timelineIsSound && !anm2.content.sounds.empty())
         {
-          if (auto animation = document.animation_get();
-              animation && animation->triggers.isVisible && (!settings.timelineIsOnlyShowLayers || manager.isRecording))
+          auto soundTime = (int)std::floor(playback.time);
+          if (auto animation = document.animation_get(); soundTime != renderFrameSoundTimePrev && animation &&
+                                                animation->triggers.isVisible &&
+                                                (!settings.timelineIsOnlyShowLayers || manager.isRecording))
           {
             if (auto trigger = animation->triggers.frame_generate(playback.time, anm2::TRIGGER); trigger.isVisible)
             {
@@ -341,6 +342,7 @@ namespace anm2ed::imgui
               }
             }
           }
+          renderFrameSoundTimePrev = soundTime;
         }
         renderFrameSoundIDs.push_back(frameSoundID);
 
@@ -352,24 +354,8 @@ namespace anm2ed::imgui
         if (Texture::write_pixels_png(framePath, size, pixels.data()))
         {
           renderTempFrames.push_back(framePath);
-          auto nowCounter = SDL_GetPerformanceCounter();
-          auto counterFrequency = SDL_GetPerformanceFrequency();
-          auto fallbackDuration = 1.0 / (double)std::max(anm2.info.fps, 1);
-
-          if (renderTempFrames.size() == 1)
-          {
-            renderCaptureCounterPrev = nowCounter;
-            renderTempFrameDurations.push_back(fallbackDuration);
-          }
-          else
-          {
-            auto elapsedCounter = nowCounter - renderCaptureCounterPrev;
-            auto frameDuration = counterFrequency > 0 ? (double)elapsedCounter / (double)counterFrequency : 0.0;
-            frameDuration = std::max(frameDuration, 1.0 / 1000.0);
-            renderTempFrameDurations.back() = frameDuration;
-            renderTempFrameDurations.push_back(frameDuration);
-            renderCaptureCounterPrev = nowCounter;
-          }
+          auto fallbackDuration = 1.0 / (double)renderFrameRate;
+          renderTempFrameDurations.push_back(fallbackDuration);
         }
         else
         {
@@ -416,7 +402,6 @@ namespace anm2ed::imgui
       }
 
       auto fps = std::max(anm2.info.fps, 1);
-      auto deltaSeconds = manager.isRecording ? (1.0f / (float)fps) : (1.0f / PLAYBACK_TICK_RATE);
       playback.tick(fps, animation->frameNum, (animation->isLoop || settings.playbackIsLoop) && !manager.isRecording,
                     deltaSeconds);
 
@@ -657,7 +642,7 @@ namespace anm2ed::imgui
         renderTempFrames.clear();
         renderTempFrameDurations.clear();
         renderFrameSoundIDs.clear();
-        renderCaptureCounterPrev = 0;
+        renderFrameSoundTimePrev = -1;
         if (settings.renderType == render::PNGS)
         {
           renderTempDirectory = settings.renderPath;

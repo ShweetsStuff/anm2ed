@@ -33,11 +33,11 @@ namespace anm2ed::imgui
     std::vector<std::filesystem::path> renderTempFrames{};
     std::vector<double> renderTempFrameDurations{};
     std::vector<int> renderFrameSoundIDs{};
-    Uint64 renderCaptureCounterPrev{};
+    int renderFrameSoundTimePrev{-1};
 
   public:
     AnimationPreview();
-    void tick(Manager&, Settings&);
+    void tick(Manager&, Settings&, float);
     void update(Manager&, Settings&, Resources&);
   };
 }

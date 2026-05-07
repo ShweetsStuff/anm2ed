@@ -1312,7 +1312,7 @@ namespace anm2ed::imgui
             document.frameTime = playback.time;
           }
 
-          playback.clamp(settings.playbackIsClamp ? length : anm2::FRAME_NUM_MAX);
+          if (!playback.isPlaying) playback.clamp(settings.playbackIsClamp ? length : anm2::FRAME_NUM_MAX);
 
           if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) isDragging = false;
 

@@ -74,6 +74,7 @@ namespace anm2ed
                                                                                                                        \
   X(PLAYBACK_IS_LOOP, playbackIsLoop, STRING_UNDEFINED, BOOL, true)                                                    \
   X(PLAYBACK_IS_CLAMP, playbackIsClamp, STRING_UNDEFINED, BOOL, true)                                                  \
+  X(PLAYBACK_TICK_RATE, playbackTickRate, STRING_UNDEFINED, INT, 30)                                                   \
                                                                                                                        \
   X(CHANGE_IS_CROP_X, changeIsCropX, STRING_UNDEFINED, BOOL, false)                                                    \
   X(CHANGE_IS_CROP_Y, changeIsCropY, STRING_UNDEFINED, BOOL, false)                                                    \

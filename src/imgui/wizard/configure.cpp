@@ -32,6 +32,13 @@ namespace anm2ed::imgui::wizard
           ImGui::Checkbox(localize.get(LABEL_VSYNC), &temporary.isVsync);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_VSYNC));
 
+          ImGui::SeparatorText(localize.get(LABEL_PLAYBACK_MENU));
+          ImGui::RadioButton("30 Hz", &temporary.playbackTickRate, 30);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_PLAYBACK_TICK_RATE));
+          ImGui::SameLine();
+          ImGui::RadioButton("60 Hz", &temporary.playbackTickRate, 60);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_PLAYBACK_TICK_RATE));
+
           ImGui::SeparatorText(localize.get(LABEL_LOCALIZATION));
           ImGui::Combo(localize.get(LABEL_LANGUAGE), &temporary.language, LANGUAGE_STRINGS, LANGUAGE_COUNT);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LANGUAGE));

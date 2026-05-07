@@ -2,10 +2,10 @@
 
 namespace anm2ed::imgui
 {
-  void Dockspace::tick(Manager& manager, Settings& settings)
+  void Dockspace::tick(Manager& manager, Settings& settings, float deltaSeconds)
   {
     if (auto document = manager.get(); document)
-      if (settings.windowIsAnimationPreview) animationPreview.tick(manager, settings);
+      if (settings.windowIsAnimationPreview) animationPreview.tick(manager, settings, deltaSeconds);
   }
 
   void Dockspace::update(Taskbar& taskbar, Documents& documents, Manager& manager, Settings& settings,

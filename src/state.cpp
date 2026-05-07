@@ -18,8 +18,6 @@ using namespace anm2ed::types;
 
 namespace anm2ed
 {
-  constexpr auto TICK_RATE = 30;
-  constexpr auto TICK_INTERVAL = (1000 / TICK_RATE);
   constexpr auto UPDATE_RATE = 120;
   constexpr auto UPDATE_INTERVAL = (1000 / UPDATE_RATE);
 
@@ -33,7 +31,7 @@ namespace anm2ed
     manager.chords_set(settings);
   }
 
-  void State::tick(Settings& settings) { dockspace.tick(manager, settings); }
+  void State::tick(Settings& settings, float deltaSeconds) { dockspace.tick(manager, settings, deltaSeconds); }
 
   void State::update(SDL_Window*& window, Settings& settings)
   {
@@ -160,16 +158,8 @@ namespace anm2ed
     auto currentTick = SDL_GetTicks();
     auto currentUpdate = SDL_GetTicks();
     auto isRecording = manager.isRecording;
-    auto tickIntervalMs = (double)TICK_INTERVAL;
-
-    if (isRecording)
-    {
-      if (auto document = manager.get())
-      {
-        auto fps = std::max(document->anm2.info.fps, 1);
-        tickIntervalMs = std::max(1.0, 1000.0 / (double)fps);
-      }
-    }
+    auto tickRate = std::max(settings.playbackTickRate, 1);
+    auto tickIntervalMs = 1000.0 / (double)tickRate;
 
     if (isRecording != wasRecording)
     {
@@ -194,7 +184,7 @@ namespace anm2ed
 
     if (tickAccumulatorMs >= tickIntervalMs)
     {
-      tick(settings);
+      tick(settings, (float)(tickIntervalMs / 1000.0));
       tickAccumulatorMs -= tickIntervalMs;
     }
 

@@ -37,7 +37,7 @@ namespace anm2ed::imgui
     Welcome welcome;
 
   public:
-    void tick(Manager&, Settings&);
+    void tick(Manager&, Settings&, float);
     void update(Taskbar&, Documents&, Manager&, Settings&, Resources&, Dialog&, Clipboard&);
   };
 }

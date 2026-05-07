@@ -8,7 +8,7 @@ namespace anm2ed
 {
   class State
   {
-    void tick(Settings&);
+    void tick(Settings&, float);
     void update(SDL_Window*&, Settings&);
     void render(SDL_Window*&, Settings&);
 

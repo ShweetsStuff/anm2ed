@@ -39,7 +39,6 @@ namespace anm2ed
                         const std::vector<double>& frameDurations, AudioStream& audioStream, render::Type type, int fps)
   {
     if (framePaths.empty() || ffmpegPath.empty() || path.empty()) return false;
-    (void)frameDurations;
     fps = std::max(fps, 1);
 
     auto pathString = path::to_utf8(path);
@@ -132,6 +131,7 @@ namespace anm2ed
       auto framePath = framePaths[index];
       auto framePathString = path::to_utf8(framePath);
       auto frameDuration = defaultFrameDuration;
+      if (index < frameDurations.size() && frameDurations[index] > 0.0) frameDuration = frameDurations[index];
       framesListFile << "file '" << ffmpeg_concat_escape(framePathString) << "'\n";
       framesListFile << "duration " << std::format("{:.9f}", frameDuration) << "\n";
     }
@@ -143,11 +143,12 @@ namespace anm2ed
     command = std::format("\"{0}\" -y -f concat -safe 0 -i \"{1}\"", ffmpegPathString, framesListPathString);
 
     if (!audioInputArguments.empty()) command += " " + audioInputArguments;
-    command += std::format(" -fps_mode cfr -r {}", fps);
+    if (type != render::GIF) command += std::format(" -fps_mode cfr -r {}", fps);
 
     switch (type)
     {
       case render::GIF:
+        command += " -fps_mode vfr";
         command +=
             " -lavfi \"split[s0][s1];[s0]palettegen=stats_mode=full:reserve_transparent=1[p];"
             "[s1][p]paletteuse=dither=floyd_steinberg:alpha_threshold=128\""
