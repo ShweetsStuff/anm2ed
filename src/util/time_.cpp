@@ -1,6 +1,9 @@
 #include "time_.hpp"
 
 #include <chrono>
+#include <ctime>
+#include <iomanip>
+#include <sstream>
 
 namespace anm2ed::util::time
 {
