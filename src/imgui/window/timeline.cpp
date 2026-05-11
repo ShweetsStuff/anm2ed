@@ -203,7 +203,7 @@ namespace anm2ed::imgui
           if (frame)
           {
             auto addFrame = *frame;
-            item->frames.insert(item->frames.begin() + reference.frameIndex, addFrame);
+            item->frames.insert(item->frames.begin() + reference.frameIndex + 1, addFrame);
             reference.frameIndex++;
           }
           else if (!item->frames.empty())
@@ -220,6 +220,8 @@ namespace anm2ed::imgui
         }
 
         frames_selection_set_reference();
+        if (reference.itemType != anm2::TRIGGER)
+          document.frameTime = item->frame_time_from_index_get(reference.frameIndex);
       };
 
       DOCUMENT_EDIT(document, localize.get(EDIT_INSERT_FRAME), Document::FRAMES, behavior());
