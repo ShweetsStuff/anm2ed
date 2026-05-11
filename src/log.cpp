@@ -1,6 +1,7 @@
 #include "log.hpp"
 
 #include <array>
+#include <exception>
 #include <format>
 #include <print>
 
@@ -150,6 +151,24 @@ namespace anm2ed
   {
     info("Exiting Anm2Ed");
     stderr_redirect_stop();
+  }
+
+  int log_exceptions(const std::function<int()>& callback)
+  {
+    try
+    {
+      return callback();
+    }
+    catch (const std::exception& e)
+    {
+      logger.fatal(std::format("Unhandled exception: {}", e.what()));
+    }
+    catch (...)
+    {
+      logger.fatal("Unhandled non-standard exception");
+    }
+
+    return EXIT_FAILURE;
   }
 }
 

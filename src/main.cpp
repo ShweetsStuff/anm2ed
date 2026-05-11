@@ -1,4 +1,5 @@
 #include "loader.hpp"
+#include "log.hpp"
 #include "state.hpp"
 
 #ifdef _WIN32
@@ -10,16 +11,19 @@
 
 int main(int argc, const char** argv)
 {
-  anm2ed::Loader loader(argc, argv);
+  return anm2ed::log_exceptions([&]()
+  {
+    anm2ed::Loader loader(argc, argv);
 
-  if (loader.isError) return EXIT_FAILURE;
+    if (loader.isError) return EXIT_FAILURE;
 
-  anm2ed::State state(loader.window, loader.settings, loader.arguments);
+    anm2ed::State state(loader.window, loader.settings, loader.arguments);
 
-  while (!state.isQuit)
-    state.loop(loader.window, loader.settings);
+    while (!state.isQuit)
+      state.loop(loader.window, loader.settings);
 
-  return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
+  });
 }
 
 #ifdef _WIN32

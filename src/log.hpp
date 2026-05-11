@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <functional>
 #include <string>
 #include <string_view>
 #include <mutex>
@@ -69,6 +70,8 @@ namespace anm2ed
     Logger();
     ~Logger();
   };
+
+  int log_exceptions(const std::function<int()>&);
 
 }
 
