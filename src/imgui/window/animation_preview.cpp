@@ -380,32 +380,40 @@ namespace anm2ed::imgui
       auto& isSound = settings.timelineIsSound;
       auto& isOnlyShowLayers = settings.timelineIsOnlyShowLayers;
 
-      if (!manager.isRecording && !anm2.content.sounds.empty() && isSound)
+      if (!animation)
       {
-        if (auto animation = document.animation_get();
-            animation && animation->triggers.isVisible && (!isOnlyShowLayers || manager.isRecording))
+        playback.isPlaying = false;
+        playback.isFinished = false;
+        playback.timing_reset();
+      }
+      else
+      {
+        if (!manager.isRecording && !anm2.content.sounds.empty() && isSound)
         {
-          if (auto trigger = animation->triggers.frame_generate(playback.time, anm2::TRIGGER); trigger.isVisible)
+          if (animation->triggers.isVisible && (!isOnlyShowLayers || manager.isRecording))
           {
-            if (!trigger.soundIDs.empty())
+            if (auto trigger = animation->triggers.frame_generate(playback.time, anm2::TRIGGER); trigger.isVisible)
             {
-              auto soundIndex = trigger.soundIDs.size() > 1
-                                    ? (size_t)math::random_in_range(0.0f, (float)trigger.soundIDs.size())
-                                    : (size_t)0;
-              soundIndex = std::min(soundIndex, trigger.soundIDs.size() - 1);
-              auto soundID = trigger.soundIDs[soundIndex];
+              if (!trigger.soundIDs.empty())
+              {
+                auto soundIndex = trigger.soundIDs.size() > 1
+                                      ? (size_t)math::random_in_range(0.0f, (float)trigger.soundIDs.size())
+                                      : (size_t)0;
+                soundIndex = std::min(soundIndex, trigger.soundIDs.size() - 1);
+                auto soundID = trigger.soundIDs[soundIndex];
 
-              if (anm2.content.sounds.contains(soundID)) anm2.content.sounds[soundID].audio.play(false, mixer);
+                if (anm2.content.sounds.contains(soundID)) anm2.content.sounds[soundID].audio.play(false, mixer);
+              }
             }
           }
         }
+
+        auto fps = std::max(anm2.info.fps, 1);
+        playback.tick(fps, animation->frameNum, (animation->isLoop || settings.playbackIsLoop) && !manager.isRecording,
+                      deltaSeconds);
+
+        frameTime = playback.time;
       }
-
-      auto fps = std::max(anm2.info.fps, 1);
-      playback.tick(fps, animation->frameNum, (animation->isLoop || settings.playbackIsLoop) && !manager.isRecording,
-                    deltaSeconds);
-
-      frameTime = playback.time;
     }
 
     if (wasPlaybackPlaying && !playback.isPlaying) stop_all_sounds();
@@ -870,7 +878,9 @@ namespace anm2ed::imgui
         {
           if (!nullAnimation.isVisible || isOnlyShowLayers) continue;
 
-          auto& isShowRect = anm2.content.nulls[id].isShowRect;
+          auto nullInfo = anm2.content.nulls.find(id);
+          if (nullInfo == anm2.content.nulls.end()) continue;
+          auto& isShowRect = nullInfo->second.isShowRect;
 
           auto draw_null =
               [&](float sampleTime, const glm::mat4& sampleTransform, vec3 sampleColor, float sampleAlpha, bool isOnion)

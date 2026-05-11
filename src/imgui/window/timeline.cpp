@@ -182,7 +182,7 @@ namespace anm2ed::imgui
 
     auto frame_insert = [&](anm2::Item* item)
     {
-      if (!item) return;
+      if (!animation || !item) return;
 
       auto behavior = [&, item]()
       {
@@ -229,6 +229,7 @@ namespace anm2ed::imgui
 
     auto frames_delete = [&]()
     {
+      if (!animation) return;
       if (auto item = animation->item_get(reference.itemType, reference.itemID); item)
       {
         for (auto it = frames.selection.rbegin(); it != frames.selection.rend(); ++it)
@@ -460,6 +461,7 @@ namespace anm2ed::imgui
 
       auto copy = [&]()
       {
+        if (!animation) return;
         if (frames.selection.empty()) return;
 
         if (auto item = animation->item_get(reference.itemType, reference.itemID); item)
@@ -486,6 +488,7 @@ namespace anm2ed::imgui
 
         auto behavior = [&]()
         {
+          if (!animation) return;
           if (auto item = animation->item_get(reference.itemType, reference.itemID))
           {
             document.snapshot(localize.get(EDIT_PASTE_FRAMES));
@@ -1043,7 +1046,9 @@ namespace anm2ed::imgui
 
               for (auto& id : animation->layerOrder | std::views::reverse)
               {
-                if (!settings.timelineIsShowUnused && animation->layerAnimations[id].frames.empty()) continue;
+                auto item = animation->item_get(anm2::LAYER, id);
+                if (!item) continue;
+                if (!settings.timelineIsShowUnused && item->frames.empty()) continue;
                 item_child_row(anm2::LAYER, id, index++);
               }
 
@@ -1194,6 +1199,8 @@ namespace anm2ed::imgui
     auto frame_child = [&](anm2::Type type, int id, int& index, float width)
     {
       auto item = animation ? animation->item_get(type, id) : nullptr;
+      if (type != anm2::NONE && !item) return;
+
       auto isVisible = item ? item->isVisible : false;
       auto& isOnlyShowLayers = settings.timelineIsOnlyShowLayers;
       if (isOnlyShowLayers && type != anm2::LAYER) isVisible = false;
@@ -1816,7 +1823,7 @@ namespace anm2ed::imgui
 
           ImGui::SameLine();
 
-          auto item = animation->item_get(reference.itemType, reference.itemID);
+          auto item = animation ? animation->item_get(reference.itemType, reference.itemID) : nullptr;
 
           ImGui::BeginDisabled(!item);
           {
@@ -1854,7 +1861,8 @@ namespace anm2ed::imgui
           auto frameNum = animation ? animation->frameNum : dummy_value<int>();
           ImGui::SetNextItemWidth(widgetSize.x);
           if (input_int_range(localize.get(LABEL_ANIMATION_LENGTH), frameNum, anm2::FRAME_NUM_MIN, anm2::FRAME_NUM_MAX,
-                              STEP, STEP_FAST, !animation ? ImGuiInputTextFlags_DisplayEmptyRefVal : 0))
+                              STEP, STEP_FAST, !animation ? ImGuiInputTextFlags_DisplayEmptyRefVal : 0) &&
+              animation)
             DOCUMENT_EDIT(document, localize.get(EDIT_ANIMATION_LENGTH), Document::ANIMATIONS,
                           animation->frameNum = frameNum);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ANIMATION_LENGTH));
@@ -1863,7 +1871,7 @@ namespace anm2ed::imgui
 
           auto isLoop = animation ? animation->isLoop : dummy_value<bool>();
           ImGui::SetNextItemWidth(widgetSize.x);
-          if (ImGui::Checkbox(localize.get(LABEL_LOOP), &isLoop))
+          if (ImGui::Checkbox(localize.get(LABEL_LOOP), &isLoop) && animation)
             DOCUMENT_EDIT(document, localize.get(EDIT_LOOP), Document::ANIMATIONS, animation->isLoop = isLoop);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LOOP_ANIMATION));
         }
