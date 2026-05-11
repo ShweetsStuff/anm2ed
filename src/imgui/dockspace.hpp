@@ -1,5 +1,6 @@
 #pragma once
 
+#include "autosave_restore.hpp"
 #include "documents.hpp"
 #include "taskbar.hpp"
 #include "window/animation_preview.hpp"
@@ -35,6 +36,7 @@ namespace anm2ed::imgui
     Timeline timeline;
     Tools tools;
     Welcome welcome;
+    AutosaveRestore autosaveRestore;
 
   public:
     void tick(Manager&, Settings&, float);

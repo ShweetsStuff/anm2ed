@@ -65,46 +65,6 @@ namespace anm2ed::imgui
     }
     ImGui::End();
 
-    if (!manager.autosaveFiles.empty() && !restorePopup.is_open()) restorePopup.open();
-
-    restorePopup.trigger();
-
-    if (ImGui::BeginPopupModal(restorePopup.label(), &restorePopup.isOpen, ImGuiWindowFlags_NoResize))
-    {
-      ImGui::TextUnformatted(localize.get(LABEL_RESTORE_AUTOSAVES_PROMPT));
-
-      auto childSize = child_size_get(5);
-
-      if (ImGui::BeginChild("##Restore Files Child", childSize, ImGuiChildFlags_Borders,
-                            ImGuiWindowFlags_HorizontalScrollbar))
-      {
-        for (auto& file : manager.autosaveFiles)
-        {
-          auto label = std::format(FILE_LABEL_FORMAT, path::to_utf8(file.filename()), path::to_utf8(file));
-          ImGui::TextUnformatted(label.c_str());
-        }
-      }
-      ImGui::EndChild();
-
-      auto widgetSize = widget_size_with_row_get(2);
-
-      if (ImGui::Button(localize.get(BASIC_YES), widgetSize))
-      {
-        manager.autosave_files_open();
-        restorePopup.close();
-      }
-
-      ImGui::SameLine();
-
-      if (ImGui::Button(localize.get(BASIC_NO), widgetSize))
-      {
-        manager.autosave_files_clear();
-        restorePopup.close();
-      }
-
-      ImGui::EndPopup();
-    }
-
     selectable_input_text_id() = {};
   }
 

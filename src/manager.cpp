@@ -353,18 +353,10 @@ namespace anm2ed
   {
     for (auto& path : autosaveFiles)
     {
-      auto fileNamePath = path.filename();
-      auto fileNameUtf8 = path::to_utf8(fileNamePath);
-      if (!fileNameUtf8.empty() && fileNameUtf8.front() == '.') fileNameUtf8.erase(fileNameUtf8.begin());
-      fileNamePath = path::from_utf8(fileNameUtf8);
-
-      auto restorePath = path.parent_path() / fileNamePath;
-      restorePath.replace_extension("");
-
       if (auto document = open(path, false, false))
       {
         document->isForceDirty = true;
-        document->path = restorePath;
+        document->path = document->path_from_autosave_get(path);
         document->change(Document::ALL);
       }
     }

@@ -46,6 +46,8 @@ namespace anm2ed::imgui
       }
       else
         welcome.update(manager, resources, dialog, taskbar, documents);
+
+      autosaveRestore.update(manager);
     }
     ImGui::End();
   }

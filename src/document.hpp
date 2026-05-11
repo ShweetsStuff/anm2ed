@@ -105,7 +105,7 @@ namespace anm2ed
     bool autosave(std::string* = nullptr, anm2::Compatibility = anm2::ANM2ED, bool = false, bool = true,
                   bool = true);
     std::filesystem::path autosave_path_get();
-    std::filesystem::path path_from_autosave_get(std::filesystem::path&);
+    std::filesystem::path path_from_autosave_get(const std::filesystem::path&);
 
     void snapshot(const std::string& message);
     void undo();

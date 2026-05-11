@@ -126,13 +126,15 @@ namespace anm2ed
     return directory_get() / path::from_utf8(autosaveNameUtf8);
   }
 
-  std::filesystem::path Document::path_from_autosave_get(std::filesystem::path& path)
+  std::filesystem::path Document::path_from_autosave_get(const std::filesystem::path& path)
   {
     auto fileName = path::to_utf8(path.filename());
     if (!fileName.empty() && fileName.front() == '.') fileName.erase(fileName.begin());
+    constexpr std::string_view autosaveExtension = ".autosave";
+    if (fileName.ends_with(autosaveExtension))
+      fileName.erase(fileName.size() - autosaveExtension.size());
 
     auto restorePath = path.parent_path() / std::filesystem::path(std::u8string(fileName.begin(), fileName.end()));
-    restorePath.replace_extension("");
 
     return restorePath;
   }
