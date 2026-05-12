@@ -643,21 +643,6 @@ namespace anm2ed::imgui
       };
     };
 
-    auto item_properties_reset = [&]()
-    {
-      addItemName.clear();
-      addItemSpritesheetID = {};
-      addItemID = -1;
-    };
-
-    auto unused_items_get = [&](anm2::Type type)
-    {
-      if (!animation) return std::set<int>{};
-      if (type == anm2::LAYER) return anm2.layers_unused(*animation);
-      if (type == anm2::NULL_) return anm2.nulls_unused(*animation);
-      return std::set<int>{};
-    };
-
     auto item_context_menu = [&]()
     {
       ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
@@ -688,10 +673,7 @@ namespace anm2ed::imgui
           item_base_properties_open(type, id);
 
         if (ImGui::MenuItem(localize.get(BASIC_ADD), settings.shortcutAdd.c_str(), false, animation))
-        {
-          item_properties_reset();
-          propertiesPopup.open();
-        }
+          itemProperties.open();
 
         if (ImGui::MenuItem(localize.get(BASIC_REMOVE), settings.shortcutRemove.c_str(), false, item)) item_remove();
 
@@ -1086,10 +1068,7 @@ namespace anm2ed::imgui
         {
           shortcut(manager.chords[SHORTCUT_ADD]);
           if (ImGui::Button(localize.get(BASIC_ADD), widgetSize))
-          {
-            item_properties_reset();
-            propertiesPopup.open();
-          }
+            itemProperties.open();
           set_item_tooltip_shortcut(localize.get(TOOLTIP_ADD_ITEM), settings.shortcutAdd);
           ImGui::SameLine();
 
@@ -1922,189 +1901,7 @@ namespace anm2ed::imgui
     ImGui::PopStyleVar();
     ImGui::End();
 
-    propertiesPopup.trigger();
-
-    if (ImGui::BeginPopupModal(propertiesPopup.label(), &propertiesPopup.isOpen, ImGuiWindowFlags_NoResize))
-    {
-      auto item_properties_close = [&]()
-      {
-        item_properties_reset();
-        propertiesPopup.close();
-      };
-
-      auto& type = settings.timelineAddItemType;
-      auto& destination = settings.timelineAddItemDestination;
-      auto& source = settings.timelineAddItemSource;
-
-      auto footerSize = footer_size_get();
-      auto optionsSize = child_size_get(11);
-      auto itemsSize = ImVec2(0, ImGui::GetContentRegionAvail().y -
-                                     (optionsSize.y + footerSize.y + ImGui::GetStyle().ItemSpacing.y * 4));
-      if (ImGui::BeginChild("##Options", optionsSize, ImGuiChildFlags_Borders))
-      {
-        ImGui::SeparatorText(localize.get(LABEL_TYPE));
-
-        auto size = ImVec2(ImGui::GetContentRegionAvail().x * 0.5f, ImGui::GetFrameHeightWithSpacing());
-
-        if (ImGui::BeginChild("##Type 1", size))
-        {
-          ImGui::RadioButton(localize.get(LABEL_LAYER), &type, anm2::LAYER);
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_TYPE));
-        }
-        ImGui::EndChild();
-
-        ImGui::SameLine();
-
-        if (ImGui::BeginChild("##Type 2", size))
-        {
-          ImGui::RadioButton(localize.get(LABEL_NULL), &type, anm2::NULL_);
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_NULL_TYPE));
-        }
-        ImGui::EndChild();
-
-        ImGui::SeparatorText(localize.get(LABEL_SOURCE));
-
-        if (ImGui::BeginChild("##Source 1", size))
-        {
-          ImGui::RadioButton(localize.get(LABEL_NEW), &source, source::NEW);
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_NEW_ITEM));
-        }
-        ImGui::EndChild();
-
-        ImGui::SameLine();
-
-        if (ImGui::BeginChild("##Source 2", size))
-        {
-          auto isUnusedItems = animation && !unused_items_get((anm2::Type)type).empty();
-          ImGui::BeginDisabled(!isUnusedItems);
-          ImGui::RadioButton(localize.get(LABEL_EXISTING), &source, source::EXISTING);
-          ImGui::EndDisabled();
-          ImGui::SetItemTooltip("%s", isUnusedItems ? localize.get(TOOLTIP_USE_EXISTING_ITEM)
-                                                    : localize.get(TOOLTIP_NO_UNUSED_ITEMS));
-        }
-        ImGui::EndChild();
-
-        ImGui::SeparatorText(localize.get(LABEL_DESTINATION));
-
-        if (ImGui::BeginChild("##Destination 1", size))
-        {
-          ImGui::RadioButton(localize.get(LABEL_ALL_ANIMATIONS), &destination, destination::ALL);
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ITEM_ALL_ANIMATIONS));
-        }
-        ImGui::EndChild();
-
-        ImGui::SameLine();
-
-        if (ImGui::BeginChild("##Destination 2", size))
-        {
-          ImGui::RadioButton(localize.get(LABEL_THIS_ANIMATION), &destination, destination::THIS);
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ITEM_THIS_ANIMATION));
-        }
-        ImGui::EndChild();
-
-        ImGui::SeparatorText(localize.get(LABEL_OPTIONS));
-
-        ImGui::BeginDisabled(source == source::EXISTING);
-        {
-          input_text_string(localize.get(BASIC_NAME), &addItemName);
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ITEM_NAME));
-          if (type == anm2::LAYER)
-          {
-            combo_id_mapped(localize.get(LABEL_SPRITESHEET), &addItemSpritesheetID, document.spritesheet.ids,
-                            document.spritesheet.labels);
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_SPRITESHEET));
-          }
-          else if (type == anm2::NULL_)
-          {
-            ImGui::Checkbox(localize.get(LABEL_RECT), &addItemIsShowRect);
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_NULL_RECT));
-          }
-        }
-        ImGui::EndDisabled();
-      }
-      ImGui::EndChild();
-
-      if (ImGui::BeginChild("##Items", itemsSize, ImGuiChildFlags_Borders))
-      {
-        if (animation && source == source::EXISTING)
-        {
-          auto unusedItems = unused_items_get((anm2::Type)type);
-          if (addItemID != -1 && !unusedItems.contains(addItemID)) addItemID = -1;
-
-          for (auto id : unusedItems)
-          {
-            auto isSelected = addItemID == id;
-
-            ImGui::PushID(id);
-
-            if (type == anm2::LAYER)
-            {
-              if (auto it = anm2.content.layers.find(id); it != anm2.content.layers.end())
-              {
-                auto& layer = it->second;
-                auto label = std::vformat(localize.get(FORMAT_LAYER),
-                                          std::make_format_args(id, layer.name, layer.spritesheetID));
-                if (ImGui::Selectable(label.c_str(), isSelected))
-                {
-                  addItemID = id;
-                  addItemSpritesheetID = layer.spritesheetID;
-                }
-              }
-            }
-            else if (type == anm2::NULL_)
-            {
-              if (auto it = anm2.content.nulls.find(id); it != anm2.content.nulls.end())
-              {
-                auto& null = it->second;
-                auto label = std::vformat(localize.get(FORMAT_NULL), std::make_format_args(id, null.name));
-                if (ImGui::Selectable(label.c_str(), isSelected))
-                {
-                  addItemID = id;
-                  addItemIsShowRect = null.isShowRect;
-                }
-              }
-            }
-
-            ImGui::PopID();
-          }
-        }
-      }
-      ImGui::EndChild();
-
-      auto widgetSize = widget_size_with_row_get(2);
-
-      ImGui::BeginDisabled(source == source::EXISTING && addItemID == -1);
-      shortcut(manager.chords[SHORTCUT_CONFIRM]);
-      if (ImGui::Button(localize.get(BASIC_ADD), widgetSize))
-      {
-        anm2::Reference addReference{};
-        int insertBeforeID = reference.itemType == anm2::LAYER ? reference.itemID : -1;
-
-        document.snapshot(localize.get(EDIT_ADD_ITEM));
-        if (type == anm2::LAYER)
-          addReference = anm2.layer_animation_add({reference.animationIndex, anm2::LAYER, addItemID}, insertBeforeID,
-                                                  addItemName, addItemSpritesheetID, (destination::Type)destination);
-        else if (type == anm2::NULL_)
-          addReference = anm2.null_animation_add({reference.animationIndex, anm2::NULL_, addItemID}, addItemName,
-                                                 addItemIsShowRect, (destination::Type)destination);
-
-        document.change(Document::ITEMS);
-
-        reference_set_item(addReference.itemType, addReference.itemID);
-
-        item_properties_close();
-      }
-      ImGui::EndDisabled();
-      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ADD_ITEM));
-
-      ImGui::SameLine();
-
-      shortcut(manager.chords[SHORTCUT_CANCEL]);
-      if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize)) item_properties_close();
-      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CANCEL_ADD_ITEM));
-
-      ImGui::EndPopup();
-    }
+    itemProperties.update(manager, settings, document, animation, reference, reference_set_item);
 
     bakePopup.trigger();
 

@@ -1009,6 +1009,10 @@ namespace anm2ed::imgui
         auto useTool = tool;
         auto step = isMod ? STEP_FAST : STEP;
         mousePos = position_translate(zoom, pan, to_vec2(ImGui::GetMousePos()) - to_vec2(cursorScreenPos));
+        auto selectedNullIt = reference.itemType == anm2::NULL_ ? anm2.content.nulls.find(reference.itemID)
+                                                                : anm2.content.nulls.end();
+        bool isSelectedNullRect = selectedNullIt != anm2.content.nulls.end() && selectedNullIt->second.isShowRect;
+        auto null_rect_top_left = [](const anm2::Frame& frame) { return frame.position - (frame.scale * 0.5f); };
 
         if (isMouseMiddleDown) useTool = tool::PAN;
         if (tool == tool::MOVE && isMouseRightDown) useTool = tool::SCALE;
@@ -1031,6 +1035,15 @@ namespace anm2ed::imgui
 
         auto frame_change_apply = [&](anm2::FrameChange frameChange, anm2::ChangeType changeType = anm2::ADJUST)
         { item->frames_change(frameChange, reference.itemType, changeType, frames); };
+        auto null_rect_change = [&](vec2 topLeft, vec2 rectSize)
+        {
+          topLeft = vec2(ivec2(topLeft));
+          rectSize = vec2(ivec2(rectSize));
+          frame_change_apply({.positionX = topLeft.x + rectSize.x * 0.5f,
+                              .positionY = topLeft.y + rectSize.y * 0.5f,
+                              .scaleX = rectSize.x,
+                              .scaleY = rectSize.y});
+        };
 
         auto& toolInfo = tool::INFO[useTool];
         auto& areaType = toolInfo.areaType;
@@ -1054,13 +1067,20 @@ namespace anm2ed::imgui
               document.snapshot(localize.get(EDIT_FRAME_POSITION));
               if (isToolMouseClicked)
               {
-                moveOffset = settings.inputIsMoveToolSnapToMouse ? vec2() : mousePos - frame->position;
+                auto origin = isSelectedNullRect ? null_rect_top_left(*frame) : frame->position;
+                moveOffset = settings.inputIsMoveToolSnapToMouse ? vec2() : mousePos - origin;
                 isMoveDragging = true;
               }
             }
             if (isToolMouseDown && isMoveDragging)
-              frame_change_apply(
-                  {.positionX = (int)(mousePos.x - moveOffset.x), .positionY = (int)(mousePos.y - moveOffset.y)});
+            {
+              auto position = mousePos - moveOffset;
+              if (isSelectedNullRect)
+                frame_change_apply({.positionX = (int)(position.x + frame->scale.x * 0.5f),
+                                    .positionY = (int)(position.y + frame->scale.y * 0.5f)});
+              else
+                frame_change_apply({.positionX = (int)position.x, .positionY = (int)position.y});
+            }
 
             if (isLeftPressed) frame_change_apply({.positionX = step}, anm2::SUBTRACT);
             if (isRightPressed) frame_change_apply({.positionX = step}, anm2::ADD);
@@ -1082,12 +1102,34 @@ namespace anm2ed::imgui
             break;
           case tool::SCALE:
             if (!item || !frame || frames.empty()) break;
-            if (isToolBegin) document.snapshot(localize.get(EDIT_FRAME_SCALE));
+            if (isToolBegin)
+            {
+              document.snapshot(localize.get(EDIT_FRAME_SCALE));
+              if (isToolMouseClicked && isSelectedNullRect) nullRectScaleAnchor = null_rect_top_left(*frame);
+            }
             if (isToolMouseDown)
             {
-              auto scale = frame->scale + vec2(mouseDelta.x, mouseDelta.y);
-              if (isMod) scale = {scale.x, scale.x};
-              frame_change_apply({.scaleX = scale.x, .scaleY = scale.y});
+              if (isSelectedNullRect)
+              {
+                auto size = mousePos - nullRectScaleAnchor;
+                if (isMod)
+                {
+                  auto squareSize = std::max(std::abs(size.x), std::abs(size.y));
+                  size = {std::copysign(squareSize, size.x), std::copysign(squareSize, size.y)};
+                }
+
+                auto minPoint = glm::min(nullRectScaleAnchor, nullRectScaleAnchor + size);
+                auto maxPoint = glm::max(nullRectScaleAnchor, nullRectScaleAnchor + size);
+                minPoint = vec2(ivec2(minPoint));
+                maxPoint = vec2(ivec2(maxPoint));
+                null_rect_change(minPoint, maxPoint - minPoint);
+              }
+              else
+              {
+                auto scale = frame->scale + vec2(mouseDelta.x, mouseDelta.y);
+                if (isMod) scale = {scale.x, scale.x};
+                frame_change_apply({.scaleX = scale.x, .scaleY = scale.y});
+              }
             }
 
             if (isLeftPressed) frame_change_apply({.scaleX = step}, anm2::SUBTRACT);
@@ -1106,7 +1148,19 @@ namespace anm2ed::imgui
               }
             }
 
-            if (isToolEnd) document.change(Document::FRAMES);
+            if (isToolEnd)
+            {
+              if (isSelectedNullRect)
+              {
+                auto topLeft = null_rect_top_left(*frame);
+                auto minPoint = glm::min(topLeft, topLeft + frame->scale);
+                auto maxPoint = glm::max(topLeft, topLeft + frame->scale);
+                minPoint = vec2(ivec2(minPoint));
+                maxPoint = vec2(ivec2(maxPoint));
+                null_rect_change(minPoint, maxPoint - minPoint);
+              }
+              document.change(Document::FRAMES);
+            }
             break;
           case tool::ROTATE:
             if (!item || !frame || frames.empty()) break;

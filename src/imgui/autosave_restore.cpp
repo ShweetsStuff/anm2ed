@@ -11,11 +11,16 @@ namespace anm2ed::imgui
 {
   void AutosaveRestore::update(Manager& manager)
   {
-    if (!manager.autosaveFiles.empty() && !popup.is_open()) popup.open();
+    if (!isInitialized)
+    {
+      isInitialized = true;
+      isRestoreAvailable = !manager.autosaveFiles.empty();
+      if (isRestoreAvailable) popup.open();
+    }
 
     popup.trigger();
 
-    if (ImGui::BeginPopupModal(popup.label(), &popup.isOpen, ImGuiWindowFlags_NoResize))
+    if (isRestoreAvailable && ImGui::BeginPopupModal(popup.label(), &popup.isOpen, ImGuiWindowFlags_NoResize))
     {
       ImGui::TextUnformatted(localize.get(LABEL_RESTORE_AUTOSAVES_PROMPT));
 
@@ -37,6 +42,7 @@ namespace anm2ed::imgui
       if (ImGui::Button(localize.get(BASIC_YES), widgetSize))
       {
         manager.autosave_files_open();
+        isRestoreAvailable = false;
         popup.close();
       }
 
@@ -45,6 +51,7 @@ namespace anm2ed::imgui
       if (ImGui::Button(localize.get(BASIC_NO), widgetSize))
       {
         manager.autosave_files_clear();
+        isRestoreAvailable = false;
         popup.close();
       }
 

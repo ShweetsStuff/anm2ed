@@ -96,6 +96,8 @@ file(GLOB PROJECT_SRC CONFIGURE_DEPENDS
      src/imgui/*.hpp
      src/imgui/window/*.cpp
      src/imgui/window/*.hpp
+     src/imgui/popup/*.cpp
+     src/imgui/popup/*.hpp
      src/imgui/wizard/*.cpp
      src/imgui/wizard/*.hpp
      src/util/*.cpp

@@ -4,6 +4,7 @@
 
 #include "clipboard.hpp"
 #include "manager.hpp"
+#include "popup/item_properties.hpp"
 #include "resources.hpp"
 #include "settings.hpp"
 #include "strings.hpp"
@@ -26,12 +27,8 @@ namespace anm2ed::imgui
     bool isDragging{};
     bool isWindowHovered{};
     bool isHorizontalScroll{};
-    PopupHelper propertiesPopup{PopupHelper(LABEL_TIMELINE_PROPERTIES_POPUP, POPUP_NORMAL)};
+    popup::ItemProperties itemProperties{};
     PopupHelper bakePopup{PopupHelper(LABEL_TIMELINE_BAKE_POPUP, POPUP_SMALL_NO_HEIGHT)};
-    std::string addItemName{"New Item"};
-    bool addItemIsShowRect{};
-    int addItemID{-1};
-    int addItemSpritesheetID{-1};
     int hoveredTime{};
     anm2::Frame* draggedFrame{};
     anm2::Type draggedFrameType{};

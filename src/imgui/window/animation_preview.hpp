@@ -29,6 +29,7 @@ namespace anm2ed::imgui
     bool hasPendingZoomPanAdjust{};
     bool isMoveDragging{};
     glm::vec2 moveOffset{};
+    glm::vec2 nullRectScaleAnchor{};
     std::filesystem::path renderTempDirectory{};
     std::vector<std::filesystem::path> renderTempFrames{};
     std::vector<double> renderTempFrameDurations{};
