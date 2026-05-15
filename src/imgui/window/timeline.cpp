@@ -491,7 +491,6 @@ namespace anm2ed::imgui
           if (!animation) return;
           if (auto item = animation->item_get(reference.itemType, reference.itemID))
           {
-            document.snapshot(localize.get(EDIT_PASTE_FRAMES));
             std::set<int> indices{};
             std::string errorString{};
             int insertIndex = (int)item->frames.size();

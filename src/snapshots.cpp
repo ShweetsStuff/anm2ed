@@ -53,22 +53,26 @@ namespace anm2ed
     redoStack.clear();
   }
 
-  void Snapshots::undo()
+  bool Snapshots::undo()
   {
     if (auto snapshot = undoStack.pop())
     {
       redoStack.push(current);
       current = *snapshot;
+      return true;
     }
+    return false;
   }
 
-  void Snapshots::redo()
+  bool Snapshots::redo()
   {
     if (auto snapshot = redoStack.pop())
     {
       undoStack.push(current);
       current = *snapshot;
+      return true;
     }
+    return false;
   }
 
   void Snapshots::reset()

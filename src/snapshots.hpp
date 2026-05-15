@@ -63,8 +63,8 @@ namespace anm2ed
 
     Snapshot* get();
     void push(const Snapshot&);
-    void undo();
-    void redo();
+    bool undo();
+    bool redo();
     void reset();
     void apply_limit();
   };

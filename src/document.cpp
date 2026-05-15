@@ -1,5 +1,6 @@
 #include "document.hpp"
 
+#include <algorithm>
 #include <new>
 #include <utility>
 
@@ -25,6 +26,63 @@ namespace anm2ed
       if (auto it = anm2::COMPATIBILITY_FLAGS.find(compatibility); it != anm2::COMPATIBILITY_FLAGS.end())
         return it->second;
       return 0;
+    }
+
+    void restored_snapshot_sanitize(Document& document)
+    {
+      auto& reference = document.reference;
+      auto& documentAnm2 = document.anm2;
+      auto& selection = document.frames.selection;
+
+      auto animationCount = (int)documentAnm2.animations.items.size();
+      if (animationCount <= 0)
+      {
+        reference = {};
+        selection.clear();
+        document.frameTime = 0.0f;
+        return;
+      }
+
+      if (reference.animationIndex < 0 || reference.animationIndex >= animationCount)
+        reference.animationIndex = std::clamp(reference.animationIndex, 0, animationCount - 1);
+
+      auto item = documentAnm2.item_get(reference.animationIndex, reference.itemType, reference.itemID);
+      if (!item)
+      {
+        reference.itemType = ROOT;
+        reference.itemID = -1;
+        item = documentAnm2.item_get(reference.animationIndex, reference.itemType, reference.itemID);
+      }
+
+      if (!item)
+      {
+        reference.frameIndex = -1;
+        selection.clear();
+        document.frameTime = 0.0f;
+        return;
+      }
+
+      auto frameCount = (int)item->frames.size();
+      for (auto it = selection.begin(); it != selection.end();)
+      {
+        if (*it < 0 || *it >= frameCount)
+          it = selection.erase(it);
+        else
+          ++it;
+      }
+
+      if (frameCount <= 0)
+      {
+        reference.frameIndex = -1;
+        document.frameTime = 0.0f;
+        return;
+      }
+
+      if (reference.frameIndex < 0 || reference.frameIndex >= frameCount)
+        reference.frameIndex = selection.empty() ? std::clamp(reference.frameIndex, 0, frameCount - 1)
+                                                : *selection.begin();
+
+      document.frameTime = item->frame_time_from_index_get(reference.frameIndex);
     }
   }
 
@@ -390,7 +448,8 @@ namespace anm2ed
 
   void Document::undo()
   {
-    snapshots.undo();
+    if (!snapshots.undo()) return;
+    restored_snapshot_sanitize(*this);
     toasts.push(std::vformat(localize.get(TOAST_UNDO), std::make_format_args(message)));
     logger.info(std::vformat(localize.get(TOAST_UNDO, anm2ed::ENGLISH), std::make_format_args(message)));
     change(Document::ALL);
@@ -398,7 +457,8 @@ namespace anm2ed
 
   void Document::redo()
   {
-    snapshots.redo();
+    if (!snapshots.redo()) return;
+    restored_snapshot_sanitize(*this);
     toasts.push(std::vformat(localize.get(TOAST_REDO), std::make_format_args(message)));
     logger.info(std::vformat(localize.get(TOAST_REDO, anm2ed::ENGLISH), std::make_format_args(message)));
     change(Document::ALL);

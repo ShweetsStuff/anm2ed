@@ -1132,10 +1132,24 @@ namespace anm2ed::imgui
               }
             }
 
-            if (isLeftPressed) frame_change_apply({.scaleX = step}, anm2::SUBTRACT);
-            if (isRightPressed) frame_change_apply({.scaleX = step}, anm2::ADD);
-            if (isUpPressed) frame_change_apply({.scaleY = step}, anm2::SUBTRACT);
-            if (isDownPressed) frame_change_apply({.scaleY = step}, anm2::ADD);
+            if (isSelectedNullRect)
+            {
+              if (isLeftPressed)
+                frame_change_apply({.positionX = step * 0.5f, .scaleX = step}, anm2::SUBTRACT);
+              if (isRightPressed)
+                frame_change_apply({.positionX = step * 0.5f, .scaleX = step}, anm2::ADD);
+              if (isUpPressed)
+                frame_change_apply({.positionY = step * 0.5f, .scaleY = step}, anm2::SUBTRACT);
+              if (isDownPressed)
+                frame_change_apply({.positionY = step * 0.5f, .scaleY = step}, anm2::ADD);
+            }
+            else
+            {
+              if (isLeftPressed) frame_change_apply({.scaleX = step}, anm2::SUBTRACT);
+              if (isRightPressed) frame_change_apply({.scaleX = step}, anm2::ADD);
+              if (isUpPressed) frame_change_apply({.scaleY = step}, anm2::SUBTRACT);
+              if (isDownPressed) frame_change_apply({.scaleY = step}, anm2::ADD);
+            }
 
             if (isToolDuring)
             {
