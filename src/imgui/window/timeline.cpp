@@ -1174,6 +1174,10 @@ namespace anm2ed::imgui
       }
     };
 
+    float playheadLineCenterX{};
+    float playheadLineTopY{};
+    bool isPlayheadLineSet{};
+
     auto frame_child = [&](anm2::Type type, int id, int& index, float width)
     {
       auto item = animation ? animation->item_get(type, id) : nullptr;
@@ -1307,6 +1311,11 @@ namespace anm2ed::imgui
           {
             ImGui::SetCursorPos(ImVec2(cursorPos.x + frameSize.x * floorf(playback.time), cursorPos.y));
             ImGui::Image(resources.icons[icon::PLAYHEAD].id, frameSize);
+            auto playheadMin = ImGui::GetItemRectMin();
+            auto playheadMax = ImGui::GetItemRectMax();
+            playheadLineCenterX = (playheadMin.x + playheadMax.x) * 0.5f;
+            playheadLineTopY = playheadMax.y;
+            isPlayheadLineSet = true;
             overlay_icon(resources.icons[icon::PLAYHEAD].id, playheadIconTint, true);
           }
         }
@@ -1686,7 +1695,9 @@ namespace anm2ed::imgui
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2());
         if (ImGui::BeginChild("##Frames List Child", viewListChildSize, true, ImGuiWindowFlags_HorizontalScrollbar))
         {
-          auto cursorScreenPos = ImGui::GetCursorScreenPos();
+          playheadLineCenterX = 0.0f;
+          playheadLineTopY = 0.0f;
+          isPlayheadLineSet = false;
 
           ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2());
           if (ImGui::BeginTable("##Frames List Table", 1,
@@ -1757,20 +1768,17 @@ namespace anm2ed::imgui
 
           ImDrawList* windowDrawList = ImGui::GetWindowDrawList();
 
-          auto frameSize = ImVec2(ImGui::GetTextLineHeight(),
-                                  ImGui::GetTextLineHeightWithSpacing() + (ImGui::GetStyle().WindowPadding.y * 2));
-          auto playheadIndex = std::floor(playback.time);
-          auto lineCenterX = cursorScreenPos.x + frameSize.x * (playheadIndex + 0.6f) - scroll.x;
-          auto linePos =
-              ImVec2(lineCenterX - (PLAYHEAD_LINE_THICKNESS * 0.5f), cursorScreenPos.y + (frameSize.y * 2.0f));
-          auto lineSize = ImVec2((PLAYHEAD_LINE_THICKNESS / 2.0f),
-                                 viewListChildSize.y - frameSize.y -
-                                     (isHorizontalScroll ? ImGui::GetStyle().ScrollbarSize * 2.0f : 0.0f));
+          auto lineBottomY = ImGui::GetWindowPos().y + ImGui::GetWindowSize().y;
+          if (isHorizontalScroll) lineBottomY -= ImGui::GetStyle().ScrollbarSize;
 
           auto rectMin = windowDrawList->GetClipRectMin();
           auto rectMax = windowDrawList->GetClipRectMax();
-          if (pickerLineDrawList)
+          if (pickerLineDrawList && isPlayheadLineSet && lineBottomY > playheadLineTopY)
           {
+            auto linePos =
+                ImVec2(playheadLineCenterX - (PLAYHEAD_LINE_THICKNESS * 0.5f), playheadLineTopY);
+            auto lineSize =
+                ImVec2((PLAYHEAD_LINE_THICKNESS / 2.0f), std::max(0.0f, lineBottomY - playheadLineTopY));
             pickerLineDrawList->PushClipRect(rectMin, rectMax);
             pickerLineDrawList->AddRectFilled(linePos, ImVec2(linePos.x + lineSize.x, linePos.y + lineSize.y),
                                               ImGui::GetColorU32(playheadLineColor));

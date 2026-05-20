@@ -271,6 +271,8 @@ namespace anm2ed::imgui
         bool isValid = spritesheet->is_valid();
         auto& texture = isValid ? spritesheet->texture : resources.icons[icon::NONE];
         auto tintColor = !isValid ? ImVec4(1.0f, 0.25f, 0.25f, 1.0f) : ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+        static std::vector<int> dragDropSelection{};
+        bool isRegionDragDropSourceSubmitted = false;
 
         for (int i = 0; i < (int)spritesheet->regionOrder.size(); i++)
         {
@@ -324,77 +326,74 @@ namespace anm2ed::imgui
             auto tooltipPadding = style.WindowPadding.x * 4.0f;
             auto minWidth = previewSize.x + style.ItemSpacing.x + textWidth + tooltipPadding;
 
-            ImGui::SetNextWindowSize(ImVec2(minWidth, 0), ImGuiCond_Appearing);
-
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
-            if (ImGui::BeginItemTooltip())
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip) && !ImGui::IsMouseDragging(ImGuiMouseButton_Left))
             {
-              ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2());
-              auto childFlags = ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY;
-              auto noScrollFlags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
-
-              if (ImGui::BeginChild("##Region Tooltip Image Child", to_imvec2(previewSize), childFlags, noScrollFlags))
-                ImGui::ImageWithBg(texture.id, to_imvec2(previewSize), to_imvec2(uvMin), to_imvec2(uvMax), ImVec4(),
-                                   tintColor);
-              ImGui::EndChild();
-              ImGui::PopStyleVar();
-
-              ImGui::SameLine();
-
-              auto infoChildFlags = ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY;
-              if (ImGui::BeginChild("##Region Info Tooltip Child", ImVec2(), infoChildFlags, noScrollFlags))
+              ImGui::SetNextWindowSize(ImVec2(minWidth, 0), ImGuiCond_Appearing);
+              if (ImGui::BeginItemTooltip())
               {
-                ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
-                ImGui::TextUnformatted(nameCStr);
-                ImGui::PopFont();
+                ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2());
+                auto childFlags = ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY;
+                auto noScrollFlags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
 
-                ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_ID), std::make_format_args(id)).c_str());
-                ImGui::TextUnformatted(
-                    std::vformat(localize.get(FORMAT_CROP), std::make_format_args(region.crop.x, region.crop.y))
-                        .c_str());
-                ImGui::TextUnformatted(
-                    std::vformat(localize.get(FORMAT_SIZE), std::make_format_args(region.size.x, region.size.y))
-                        .c_str());
-                if (region.origin == anm2::Spritesheet::Region::CUSTOM)
+                if (ImGui::BeginChild("##Region Tooltip Image Child", to_imvec2(previewSize), childFlags,
+                                      noScrollFlags))
+                  ImGui::ImageWithBg(texture.id, to_imvec2(previewSize), to_imvec2(uvMin), to_imvec2(uvMax), ImVec4(),
+                                     tintColor);
+                ImGui::EndChild();
+                ImGui::PopStyleVar();
+
+                ImGui::SameLine();
+
+                auto infoChildFlags = ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY;
+                if (ImGui::BeginChild("##Region Info Tooltip Child", ImVec2(), infoChildFlags, noScrollFlags))
                 {
+                  ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
+                  ImGui::TextUnformatted(nameCStr);
+                  ImGui::PopFont();
+
+                  ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_ID), std::make_format_args(id)).c_str());
                   ImGui::TextUnformatted(
-                      std::vformat(localize.get(FORMAT_PIVOT), std::make_format_args(region.pivot.x, region.pivot.y))
+                      std::vformat(localize.get(FORMAT_CROP), std::make_format_args(region.crop.x, region.crop.y))
                           .c_str());
-                }
-                else
-                {
-                  StringType originString = LABEL_REGION_ORIGIN_CENTER;
-                  if (region.origin == anm2::Spritesheet::Region::TOP_LEFT) originString = LABEL_REGION_ORIGIN_TOP_LEFT;
-                  auto originLabel = localize.get(originString);
                   ImGui::TextUnformatted(
-                      std::vformat(localize.get(FORMAT_ORIGIN), std::make_format_args(originLabel)).c_str());
+                      std::vformat(localize.get(FORMAT_SIZE), std::make_format_args(region.size.x, region.size.y))
+                          .c_str());
+                  if (region.origin == anm2::Spritesheet::Region::CUSTOM)
+                  {
+                    ImGui::TextUnformatted(
+                        std::vformat(localize.get(FORMAT_PIVOT), std::make_format_args(region.pivot.x, region.pivot.y))
+                            .c_str());
+                  }
+                  else
+                  {
+                    StringType originString = LABEL_REGION_ORIGIN_CENTER;
+                    if (region.origin == anm2::Spritesheet::Region::TOP_LEFT)
+                      originString = LABEL_REGION_ORIGIN_TOP_LEFT;
+                    auto originLabel = localize.get(originString);
+                    ImGui::TextUnformatted(
+                        std::vformat(localize.get(FORMAT_ORIGIN), std::make_format_args(originLabel)).c_str());
+                  }
                 }
+                ImGui::EndChild();
+                ImGui::EndTooltip();
               }
-              ImGui::EndChild();
-              ImGui::EndTooltip();
             }
             ImGui::PopStyleVar(2);
 
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
-            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
-            if (ImGui::BeginDragDropSource())
+            if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceNoPreviewTooltip))
             {
-              static std::vector<int> dragDropSelection{};
-              dragDropSelection.assign(selection.begin(), selection.end());
+              isRegionDragDropSourceSubmitted = true;
+              if (selection.contains(id))
+                dragDropSelection.assign(selection.begin(), selection.end());
+              else
+                dragDropSelection = {id};
+
               ImGui::SetDragDropPayload("Region Drag Drop", dragDropSelection.data(),
                                         dragDropSelection.size() * sizeof(int));
-
-              for (auto regionId : dragDropSelection)
-              {
-                auto dragIt = spritesheet->regions.find(regionId);
-                if (dragIt == spritesheet->regions.end()) continue;
-                ImGui::TextUnformatted(dragIt->second.name.c_str());
-              }
               ImGui::EndDragDropSource();
             }
-
-            ImGui::PopStyleVar(2);
 
             if (ImGui::BeginDragDropTarget())
             {
@@ -448,6 +447,36 @@ namespace anm2ed::imgui
           }
 
           ImGui::PopID();
+        }
+
+        auto regionDragPayload = ImGui::GetDragDropPayload();
+        bool isRegionDragActive = regionDragPayload && regionDragPayload->IsDataType("Region Drag Drop");
+        if (isRegionDragActive && !isRegionDragDropSourceSubmitted && !dragDropSelection.empty() &&
+            ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceExtern | ImGuiDragDropFlags_SourceNoPreviewTooltip))
+        {
+          ImGui::SetDragDropPayload("Region Drag Drop", dragDropSelection.data(),
+                                    dragDropSelection.size() * sizeof(int));
+          ImGui::EndDragDropSource();
+        }
+
+        if (isRegionDragActive && !dragDropSelection.empty())
+        {
+          auto mousePos = ImGui::GetIO().MousePos;
+          auto tooltipOffset = ImVec2(16.0f, 16.0f);
+          ImGui::SetNextWindowPos(ImVec2(mousePos.x + tooltipOffset.x, mousePos.y + tooltipOffset.y));
+          ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
+          ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
+          if (ImGui::BeginTooltip())
+          {
+            for (auto regionId : dragDropSelection)
+            {
+              auto dragIt = spritesheet->regions.find(regionId);
+              if (dragIt == spritesheet->regions.end()) continue;
+              ImGui::TextUnformatted(dragIt->second.name.c_str());
+            }
+            ImGui::EndTooltip();
+          }
+          ImGui::PopStyleVar(2);
         }
 
         ImGui::PopStyleVar();

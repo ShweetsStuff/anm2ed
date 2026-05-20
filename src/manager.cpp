@@ -30,6 +30,15 @@ namespace anm2ed
       std::filesystem::create_directories(parent, ec);
       if (ec) logger.warning(std::format("Could not create directory for {}: {}", path::to_utf8(path), ec.message()));
     }
+
+    void autosave_file_remove(const std::filesystem::path& path)
+    {
+      if (path.empty()) return;
+
+      std::error_code ec{};
+      std::filesystem::remove(path, ec);
+      if (ec) logger.warning(std::format("Could not remove autosave file {}: {}", path::to_utf8(path), ec.message()));
+    }
   }
 
   void Manager::selection_history_push(int index)
@@ -107,10 +116,22 @@ namespace anm2ed
     {
       std::string errorString{};
       ensure_parent_directory_exists(path);
+      const auto previousAutosavePath = document->autosave_path_get();
       document->path = !path.empty() ? path : document->path;
       document->path.replace_extension(".anm2");
-      document->save(document->path, &errorString, compatibility, isBakeSpecialInterpolatedFramesOnSave, isRoundScale,
-                     isRoundRotation);
+      const auto autosavePath = document->autosave_path_get();
+      if (document->save(document->path, &errorString, compatibility, isBakeSpecialInterpolatedFramesOnSave,
+                         isRoundScale, isRoundRotation))
+      {
+        autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), previousAutosavePath),
+                            autosaveFiles.end());
+        if (autosavePath != previousAutosavePath)
+          autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), autosavePath),
+                              autosaveFiles.end());
+        autosave_file_remove(previousAutosavePath);
+        autosave_file_remove(autosavePath);
+        autosave_files_write();
+      }
       recent_file_add(document->path);
     }
   }
@@ -142,15 +163,6 @@ namespace anm2ed
 
     const auto autosavePath = documents[index].autosave_path_get();
     autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), autosavePath), autosaveFiles.end());
-
-    if (!autosavePath.empty())
-    {
-      std::error_code ec{};
-      std::filesystem::remove(autosavePath, ec);
-      if (ec)
-        logger.warning(std::format("Could not remove autosave file {}: {}", path::to_utf8(autosavePath), ec.message()));
-    }
-
     autosave_files_write();
 
     documents.erase(documents.begin() + index);
@@ -351,6 +363,8 @@ namespace anm2ed
 
   void Manager::autosave_files_open()
   {
+    std::vector<std::filesystem::path> restoredFiles{};
+
     for (auto& path : autosaveFiles)
     {
       if (auto document = open(path, false, false))
@@ -358,10 +372,16 @@ namespace anm2ed
         document->isForceDirty = true;
         document->path = document->path_from_autosave_get(path);
         document->change(Document::ALL);
+        restoredFiles.emplace_back(path);
       }
     }
 
-    autosave_files_clear();
+    for (auto& path : restoredFiles)
+    {
+      autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), path), autosaveFiles.end());
+      autosave_file_remove(path);
+    }
+    autosave_files_write();
   }
 
   void Manager::autosave_files_load()
@@ -401,14 +421,11 @@ namespace anm2ed
           std::format("Could not write autosave files to: {}. Skipping...", path::to_utf8(autosave_path_get())));
   }
 
-  void Manager::autosave_files_clear()
+  void Manager::autosave_files_clear(bool removeFiles)
   {
-    for (auto& path : autosaveFiles)
-    {
-      std::error_code ec{};
-      std::filesystem::remove(path, ec);
-      if (ec) logger.warning(std::format("Could not remove autosave file {}: {}", path::to_utf8(path), ec.message()));
-    }
+    if (removeFiles)
+      for (auto& path : autosaveFiles)
+        autosave_file_remove(path);
 
     autosaveFiles.clear();
     autosave_files_write();
@@ -420,5 +437,5 @@ namespace anm2ed
       chords[i] = imgui::string_to_chord(settings.*SHORTCUT_MEMBERS[i]);
   }
 
-  Manager::~Manager() { autosave_files_clear(); }
+  Manager::~Manager() = default;
 }
