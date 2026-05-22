@@ -8,6 +8,7 @@
 #include "file.hpp"
 #include "path.hpp"
 #include "sdl.hpp"
+#include "strings.hpp"
 #include "time.hpp"
 
 #if _WIN32
@@ -24,8 +25,23 @@ namespace anm2ed
   void Logger::write_raw(const std::string& message)
   {
     std::lock_guard lock(mutex);
-    std::println("{}", message);
-    if (!logPath.empty()) file::write_string(logPath, message + '\n', "ab");
+    try
+    {
+      std::println("{}", message);
+    }
+    catch (...)
+    {
+    }
+    if (!logPath.empty())
+    {
+      try
+      {
+        file::write_string(logPath, message + '\n', "ab");
+      }
+      catch (...)
+      {
+      }
+    }
   }
 
   void Logger::write(const Level level, const std::string& message)
@@ -144,7 +160,7 @@ namespace anm2ed
   Logger::Logger()
   {
     open(path());
-    info("Initializing Anm2Ed");
+    info(std::format("Initializing {}", localize.get(LABEL_APPLICATION_NAME, ENGLISH)));
   }
 
   Logger::~Logger()

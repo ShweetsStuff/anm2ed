@@ -8,6 +8,28 @@ namespace anm2ed
 {
   int SnapshotStack::maxSize = snapshots::MAX;
 
+  Snapshot Snapshot::stack_copy_get() const
+  {
+    Snapshot out{};
+    out.playback = playback;
+    out.animation = animation;
+    out.event = event;
+    out.frames = frames;
+    out.items = items;
+    out.layer = layer;
+    out.merge = merge;
+    out.null = null;
+    out.region = region;
+    out.sound = sound;
+    out.spritesheet = spritesheet;
+    out.textures = textures;
+    out.anm2 = anm2;
+    out.reference = reference;
+    out.frameTime = frameTime;
+    out.message = message;
+    return out;
+  }
+
   bool SnapshotStack::is_empty() { return stack.empty(); }
 
   void SnapshotStack::push(const Snapshot& snapshot)
@@ -18,7 +40,7 @@ namespace anm2ed
       return;
     }
     if ((int)stack.size() >= maxSize) stack.pop_front();
-    stack.push_back(snapshot);
+    stack.push_back(snapshot.stack_copy_get());
   }
 
   std::optional<Snapshot> SnapshotStack::pop()

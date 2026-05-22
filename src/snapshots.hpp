@@ -38,6 +38,8 @@ namespace anm2ed
     Reference reference{};
     float frameTime{};
     std::string message = snapshots::ACTION;
+
+    Snapshot stack_copy_get() const;
   };
 
   class SnapshotStack
