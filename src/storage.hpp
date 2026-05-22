@@ -1,6 +1,9 @@
 #pragma once
 
-#include "imgui_.hpp"
+#include <set>
+
+#include "anm2/anm2.hpp"
+#include "util/imgui/multiselect.hpp"
 
 namespace anm2ed
 {
@@ -13,6 +16,7 @@ namespace anm2ed
     std::vector<const char*> labels{};
     std::vector<int> ids{};
     imgui::MultiSelectStorage selection{};
+    std::set<Reference> references{};
 
     void clear();
     void labels_set(std::vector<std::string>);

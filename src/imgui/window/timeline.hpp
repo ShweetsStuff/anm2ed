@@ -1,5 +1,7 @@
 #pragma once
 
+#include <set>
+#include <string>
 #include <vector>
 
 #include "clipboard.hpp"
@@ -8,17 +10,41 @@
 #include "resources.hpp"
 #include "settings.hpp"
 #include "strings.hpp"
+#include "util/imgui/popup.hpp"
 
 namespace anm2ed::imgui
 {
+  struct TimelineGroupReference
+  {
+    int documentIndex{-1};
+    int animationIndex{-1};
+    int type{NONE};
+    int id{-1};
+
+    auto operator<=>(const TimelineGroupReference&) const = default;
+  };
+
+  struct TimelineRowReference
+  {
+    int documentIndex{-1};
+    int animationIndex{-1};
+    int type{NONE};
+    int id{-1};
+    int index{-1};
+    bool isGroup{};
+
+    auto operator<=>(const TimelineRowReference&) const = default;
+  };
+
   struct FrameMoveDrag
   {
-    anm2::Type type{anm2::NONE};
+    int type{NONE};
     int itemID{-1};
     int animationIndex{-1};
     int frameIndex{-1};
     int duration{1};
     std::vector<int> indices{};
+    std::vector<Reference> references{};
     bool isActive{};
   };
 
@@ -30,8 +56,22 @@ namespace anm2ed::imgui
     popup::ItemProperties itemProperties{};
     PopupHelper bakePopup{PopupHelper(LABEL_TIMELINE_BAKE_POPUP, POPUP_SMALL_NO_HEIGHT)};
     int hoveredTime{};
-    anm2::Frame* draggedFrame{};
-    anm2::Type draggedFrameType{};
+    bool isFrameBoxSelecting{};
+    bool isFrameBoxAdditive{};
+    ImVec2 frameBoxStart{};
+    ImVec2 frameBoxEnd{};
+    std::set<Reference> frameBoxSelection{};
+    std::set<TimelineGroupReference> groupReferences{};
+    TimelineRowReference rowSelectionAnchor{};
+    bool isRowSelectionAnchorSet{};
+    PopupHelper groupPropertiesPopup{PopupHelper(LABEL_GROUP_PROPERTIES, POPUP_SMALL_NO_HEIGHT)};
+    std::string groupName{};
+    int groupAnimationIndex{-1};
+    int groupType{NONE};
+    int groupId{-1};
+    Reference draggedFrameReference{};
+    bool isDraggedFrameActive{};
+    int draggedFrameType{};
     int draggedFrameIndex{-1};
     int draggedFrameStart{-1};
     int draggedFrameStartDuration{-1};
@@ -42,7 +82,10 @@ namespace anm2ed::imgui
     std::vector<int> frameSelectionSnapshot{};
     std::vector<int> frameSelectionLocked{};
     bool isFrameSelectionLocked{};
-    anm2::Reference frameSelectionSnapshotReference{};
+    Reference frameSelectionSnapshotReference{};
+    Reference frameSelectionAnchor{};
+    bool isFrameSelectionAnchorSet{};
+    std::vector<TimelineRowReference> rowDragReferences{};
     glm::vec2 scroll{};
     ImDrawList* pickerLineDrawList{};
     ImGuiStyle style{};

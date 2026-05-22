@@ -23,8 +23,8 @@
   #pragma GCC diagnostic pop
 #endif
 
-#include "file_.hpp"
-#include "math_.hpp"
+#include "file.hpp"
+#include "math.hpp"
 
 using namespace anm2ed::resource::texture;
 using namespace anm2ed::util::math;

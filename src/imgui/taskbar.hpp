@@ -4,7 +4,7 @@
 
 #include "canvas.hpp"
 #include "dialog.hpp"
-#include "imgui_.hpp"
+#include "util/imgui/imgui.hpp"
 #include "manager.hpp"
 #include "resources.hpp"
 #include "settings.hpp"
@@ -27,6 +27,7 @@ namespace anm2ed::imgui
       bool isOpen{};
       bool disableReminder{};
       bool autoBakeFrames{};
+      bool isQueued{};
     };
 
     wizard::ChangeAllFrameProperties changeAllFrameProperties{};
@@ -49,8 +50,9 @@ namespace anm2ed::imgui
     PendingSave pendingSave{};
 
     bool save_requires_special_prompt(Manager&, Settings&, int = -1) const;
-    void save_execute(Manager&, Settings&, const PendingSave&, bool);
-    bool save_request(Manager&, Settings&, int = -1, const std::filesystem::path& = {});
+    bool save_execute(Manager&, Settings&, const PendingSave&, bool);
+    void save_enqueue(Manager&, Settings&, const PendingSave&, bool);
+    bool save_request(Manager&, Settings&, int = -1, const std::filesystem::path& = {}, bool = false);
 
   public:
     float height{};

@@ -1,7 +1,10 @@
 #include "generate_animation_from_grid.hpp"
 
-#include "math_.hpp"
+#include <algorithm>
+
+#include "math.hpp"
 #include "types.hpp"
+#include "util/imgui/imgui.hpp"
 
 using namespace anm2ed::types;
 using namespace anm2ed::util;
@@ -11,10 +14,12 @@ namespace anm2ed::imgui::wizard
 {
   GenerateAnimationFromGrid::GenerateAnimationFromGrid() : Canvas(vec2()) {}
 
-  void GenerateAnimationFromGrid::update(Document& document, Resources& resources, Settings& settings)
+  void GenerateAnimationFromGrid::update(Manager& manager, Document& document, Resources& resources, Settings& settings)
   {
     isEnd = false;
 
+    auto& anm2 = document.anm2;
+    auto& reference = document.reference;
     auto& startPosition = settings.generateStartPosition;
     auto& size = settings.generateSize;
     auto& pivot = settings.generatePivot;
@@ -35,11 +40,16 @@ namespace anm2ed::imgui::wizard
       ImGui::InputInt(localize.get(LABEL_GENERATE_ROWS), &rows, STEP, STEP_FAST);
       ImGui::InputInt(localize.get(LABEL_GENERATE_COLUMNS), &columns, STEP, STEP_FAST);
 
-      input_int_range(localize.get(LABEL_GENERATE_COUNT), count, anm2::FRAME_NUM_MIN, rows * columns);
+      input_int_range(localize.get(LABEL_GENERATE_COUNT), count, FRAME_NUM_MIN, rows * columns);
 
       ImGui::InputInt(localize.get(BASIC_DURATION), &delay, STEP, STEP_FAST);
     }
     ImGui::EndChild();
+
+    rows = std::max(rows, 1);
+    columns = std::max(columns, 1);
+    count = std::clamp(count, FRAME_NUM_MIN, rows * columns);
+    delay = std::max(delay, FRAME_DURATION_MIN);
 
     ImGui::SameLine();
 
@@ -58,28 +68,23 @@ namespace anm2ed::imgui::wizard
       viewport_set();
       clear(isTransparent ? vec4(0) : vec4(backgroundColor, 1.0f));
 
-      if (document.reference.itemType == anm2::LAYER)
+      if (reference.itemType == LAYER)
       {
-        auto layerIt = document.anm2.content.layers.find(document.reference.itemID);
-        if (layerIt != document.anm2.content.layers.end())
+        auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, reference.itemID);
+        auto sourceTexture = layer ? document.texture_get(layer->spritesheetId) : nullptr;
+        if (sourceTexture)
         {
-          auto spritesheetIt = document.anm2.content.spritesheets.find(layerIt->second.spritesheetID);
-          if (spritesheetIt != document.anm2.content.spritesheets.end())
-          {
-            auto& texture = spritesheetIt->second.texture;
+          auto index = std::clamp((int)(time * (count - 1)), 0, (count - 1));
+          auto row = index / columns;
+          auto column = index % columns;
+          auto crop = startPosition + ivec2(size.x * column, size.y * row);
+          auto uvMin = (vec2(crop) + vec2(0.5f)) / vec2(sourceTexture->size);
+          auto uvMax = (vec2(crop) + vec2(size) - vec2(0.5f)) / vec2(sourceTexture->size);
 
-            auto index = std::clamp((int)(time * (count - 1)), 0, (count - 1));
-            auto row = index / columns;
-            auto column = index % columns;
-            auto crop = startPosition + ivec2(size.x * column, size.y * row);
-            auto uvMin = (vec2(crop) + vec2(0.5f)) / vec2(texture.size);
-            auto uvMax = (vec2(crop) + vec2(size) - vec2(0.5f)) / vec2(texture.size);
+          mat4 transform = transform_get(zoom) * math::quad_model_get(size, {}, pivot);
 
-            mat4 transform = transform_get(zoom) * math::quad_model_get(size, {}, pivot);
-
-            texture_render(shaderTexture, texture.id, transform, vec4(1.0f), {},
-                           math::uv_vertices_get(uvMin, uvMax).data());
-          }
+          texture_render(shaderTexture, sourceTexture->id, transform, vec4(1.0f), {},
+                         math::uv_vertices_get(uvMin, uvMax).data());
         }
       }
 
@@ -104,19 +109,32 @@ namespace anm2ed::imgui::wizard
 
     if (ImGui::Button(localize.get(LABEL_GENERATE), widgetSize))
     {
-      auto generate_from_grid = [&]()
-      {
-        auto item = document.item_get();
-        auto animation = document.animation_get();
+      auto queuedReference = reference;
+      auto queuedStartPosition = startPosition;
+      auto queuedSize = size;
+      auto queuedPivot = pivot;
+      auto queuedColumns = columns;
+      auto queuedCount = count;
+      auto queuedDelay = delay;
 
-        if (item && animation)
-        {
-          item->frames_generate_from_grid(startPosition, size, pivot, columns, count, delay);
-          animation->frameNum = animation->length();
-        }
-      };
+      manager.command_push({manager.selected,
+                            [=](Manager&, Document& document)
+                            {
+                              auto itemType = static_cast<ItemType>(queuedReference.itemType);
+                              auto item = document.anm2.element_get(queuedReference.animationIndex, itemType,
+                                                                    queuedReference.itemID);
+                              auto animation =
+                                  document.anm2.element_get(ElementType::ANIMATION, queuedReference.animationIndex);
 
-      DOCUMENT_EDIT(document, localize.get(EDIT_GENERATE_ANIMATION_FROM_GRID), Document::FRAMES, generate_from_grid());
+                              if (item && animation)
+                              {
+                                document.snapshot(localize.get(EDIT_GENERATE_ANIMATION_FROM_GRID));
+                                frames_generate_from_grid(*item, queuedStartPosition, queuedSize, queuedPivot,
+                                                          queuedColumns, queuedCount, queuedDelay);
+                                animation->frameNum = animation_length_get(*animation);
+                                document.anm2_change(Document::FRAMES);
+                              }
+                            }});
       isEnd = true;
     }
 

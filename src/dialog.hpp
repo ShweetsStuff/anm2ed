@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <vector>
 
 #include <SDL3/SDL.h>
 
@@ -42,7 +43,7 @@ namespace anm2ed
 
 #define DIALOG_LIST                                                                                                    \
   X(NONE, NO_FILTER)                                                                                                   \
-  X(ANM2_NEW, ANM2)                                                                                                    \
+  X(ANM2_CREATE, ANM2)                                                                                                 \
   X(ANM2_OPEN, ANM2)                                                                                                   \
   X(ANM2_SAVE, ANM2)                                                                                                   \
   X(SOUND_OPEN, SOUND)                                                                                                 \
@@ -74,12 +75,13 @@ namespace anm2ed
 
     SDL_Window* window{};
     std::filesystem::path path{};
+    std::vector<std::filesystem::path> paths{};
     Type type{NONE};
     int selectedFilter{-1};
 
     Dialog() = default;
     Dialog(SDL_Window*);
-    void file_open(Type type);
+    void file_open(Type type, bool isMany = false);
     void file_save(Type type);
     void folder_open(Type type);
     bool is_selected(Type type) const;

@@ -2,7 +2,7 @@
 
 #include <format>
 
-#include "imgui_.hpp"
+#include "util/imgui/imgui.hpp"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::types;
@@ -16,11 +16,11 @@ namespace anm2ed::imgui::popup
     addItemSpritesheetID = {};
   }
 
-  std::set<int> ItemProperties::unused_items_get(anm2::Anm2& anm2, anm2::Animation* animation, anm2::Type type)
+  std::set<int> ItemProperties::unused_items_get(Anm2& anm2, const Element* animation, int type)
   {
     if (!animation) return {};
-    if (type == anm2::LAYER) return anm2.layers_unused(*animation);
-    if (type == anm2::NULL_) return anm2.nulls_unused(*animation);
+    if (type == LAYER) return anm2.element_unused(ElementType::LAYER_ELEMENT, *animation);
+    if (type == NULL_) return anm2.element_unused(ElementType::NULL_ELEMENT, *animation);
     return {};
   }
 
@@ -30,11 +30,11 @@ namespace anm2ed::imgui::popup
     popup.open();
   }
 
-  void ItemProperties::update(Manager& manager, Settings& settings, Document& document, anm2::Animation* animation,
-                              anm2::Reference& reference,
-                              const std::function<void(anm2::Type, int)>& referenceSetItem)
+  void ItemProperties::update(Manager& manager, Settings& settings, Document& document, Reference& reference,
+                              const std::function<void(int, int)>& referenceSetItem)
   {
     auto& anm2 = document.anm2;
+    auto animation = anm2.element_get(ElementType::ANIMATION, reference.animationIndex);
 
     popup.trigger();
 
@@ -70,18 +70,18 @@ namespace anm2ed::imgui::popup
         spaced_pair(
             [&]()
             {
-              ImGui::RadioButton(localize.get(LABEL_LAYER), &type, anm2::LAYER);
+              ImGui::RadioButton(localize.get(LABEL_LAYER), &type, LAYER);
               ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_TYPE));
             },
             [&]()
             {
-              ImGui::RadioButton(localize.get(LABEL_NULL), &type, anm2::NULL_);
+              ImGui::RadioButton(localize.get(LABEL_NULL), &type, NULL_);
               ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_NULL_TYPE));
             });
 
         ImGui::SeparatorText(localize.get(LABEL_SOURCE));
 
-        auto isUnusedItems = animation && !unused_items_get(anm2, animation, (anm2::Type)type).empty();
+        auto isUnusedItems = animation && !unused_items_get(anm2, animation, (int)type).empty();
         spaced_pair(
             [&]()
             {
@@ -117,13 +117,13 @@ namespace anm2ed::imgui::popup
 
           input_text_string(localize.get(BASIC_NAME), &addItemName);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ITEM_NAME));
-          if (type == anm2::LAYER)
+          if (type == LAYER)
           {
             combo_id_mapped(localize.get(LABEL_SPRITESHEET), &addItemSpritesheetID, document.spritesheet.ids,
                             document.spritesheet.labels);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_SPRITESHEET));
           }
-          else if (type == anm2::NULL_)
+          else if (type == NULL_)
           {
             ImGui::Checkbox(localize.get(LABEL_RECT), &addItemIsShowRect);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_NULL_RECT));
@@ -131,11 +131,11 @@ namespace anm2ed::imgui::popup
         }
         else if (animation)
         {
-          ImGui::SeparatorText(localize.get(type == anm2::LAYER ? LABEL_LAYER : LABEL_NULL));
+          ImGui::SeparatorText(localize.get(type == LAYER ? LABEL_LAYER : LABEL_NULL));
 
           if (ImGui::BeginChild("##Existing Items", ImVec2(0, 0)))
           {
-            auto unusedItems = unused_items_get(anm2, animation, (anm2::Type)type);
+            auto unusedItems = unused_items_get(anm2, animation, (int)type);
             if (addItemID != -1 && !unusedItems.contains(addItemID)) addItemID = -1;
 
             for (auto id : unusedItems)
@@ -144,30 +144,30 @@ namespace anm2ed::imgui::popup
 
               ImGui::PushID(id);
 
-              if (type == anm2::LAYER)
+              if (type == LAYER)
               {
-                if (auto it = anm2.content.layers.find(id); it != anm2.content.layers.end())
+                if (auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, id))
                 {
-                  auto& layer = it->second;
                   auto label = std::vformat(localize.get(FORMAT_LAYER),
-                                            std::make_format_args(id, layer.name, layer.spritesheetID));
+                                            std::make_format_args(id, layer->name, layer->spritesheetId));
                   if (ImGui::Selectable(label.c_str(), isSelected))
                   {
                     addItemID = id;
-                    addItemSpritesheetID = layer.spritesheetID;
+                    addItemSpritesheetID = layer->spritesheetId;
                   }
                 }
               }
-              else if (type == anm2::NULL_)
+              else if (type == NULL_)
               {
-                if (auto it = anm2.content.nulls.find(id); it != anm2.content.nulls.end())
+                auto nulls = anm2.element_get(ElementType::NULLS);
+                auto null = nulls ? element_child_id_get(*nulls, ElementType::NULL_ELEMENT, id) : nullptr;
+                if (null)
                 {
-                  auto& null = it->second;
-                  auto label = std::vformat(localize.get(FORMAT_NULL), std::make_format_args(id, null.name));
+                  auto label = std::vformat(localize.get(FORMAT_NULL), std::make_format_args(id, null->name));
                   if (ImGui::Selectable(label.c_str(), isSelected))
                   {
                     addItemID = id;
-                    addItemIsShowRect = null.isShowRect;
+                    addItemIsShowRect = null->isShowRect;
                   }
                 }
               }
@@ -186,20 +186,35 @@ namespace anm2ed::imgui::popup
       shortcut(manager.chords[SHORTCUT_CONFIRM]);
       if (ImGui::Button(localize.get(BASIC_ADD), widgetSize))
       {
-        anm2::Reference addReference{};
-        int insertBeforeID = reference.itemType == anm2::LAYER ? reference.itemID : -1;
+        auto queuedType = type;
+        auto queuedDestination = destination;
+        auto queuedAnimationIndex = reference.animationIndex;
+        auto queuedInsertBeforeID = reference.itemType == LAYER ? reference.itemID : -1;
+        auto queuedAddItemID = addItemID;
+        auto queuedAddItemName = addItemName;
+        auto queuedAddItemSpritesheetID = addItemSpritesheetID;
+        auto queuedAddItemIsShowRect = addItemIsShowRect;
+        auto queuedReferenceSetItem = referenceSetItem;
 
-        document.snapshot(localize.get(EDIT_ADD_ITEM));
-        if (type == anm2::LAYER)
-          addReference = anm2.layer_animation_add({reference.animationIndex, anm2::LAYER, addItemID}, insertBeforeID,
-                                                  addItemName, addItemSpritesheetID, (destination::Type)destination);
-        else if (type == anm2::NULL_)
-          addReference = anm2.null_animation_add({reference.animationIndex, anm2::NULL_, addItemID}, addItemName,
-                                                 addItemIsShowRect, (destination::Type)destination);
+        manager.command_push({manager.selected,
+                              [=](Manager&, Document& document)
+                              {
+                                int addId{-1};
 
-        document.change(Document::ITEMS);
+                                document.snapshot(localize.get(EDIT_ADD_ITEM));
+                                if (queuedType == LAYER)
+                                  addId = document.anm2.layer_animation_add(
+                                      queuedAnimationIndex, queuedAddItemID, queuedInsertBeforeID, queuedAddItemName,
+                                      queuedAddItemSpritesheetID, (destination::Type)queuedDestination);
+                                else if (queuedType == NULL_)
+                                  addId = document.anm2.null_animation_add(queuedAnimationIndex, queuedAddItemID,
+                                                                           queuedAddItemName, queuedAddItemIsShowRect,
+                                                                           (destination::Type)queuedDestination);
 
-        referenceSetItem(addReference.itemType, addReference.itemID);
+                                document.anm2_change(Document::ITEMS);
+
+                                if (addId != -1) queuedReferenceSetItem((int)queuedType, addId);
+                              }});
 
         close();
       }

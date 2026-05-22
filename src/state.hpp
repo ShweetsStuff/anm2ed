@@ -2,6 +2,9 @@
 
 #include <SDL3/SDL.h>
 
+#include <filesystem>
+#include <vector>
+
 #include "dockspace.hpp"
 
 namespace anm2ed
@@ -28,6 +31,8 @@ namespace anm2ed
     uint64_t previousUpdate{};
     double tickAccumulatorMs{};
     bool wasRecording{};
+    std::vector<std::filesystem::path> spritesheetDropPaths{};
+    std::vector<std::filesystem::path> soundDropPaths{};
 
     State(SDL_Window*&, Settings& settings, std::vector<std::string>&);
 

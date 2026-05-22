@@ -2,7 +2,7 @@
 
 #include <SDL3/SDL.h>
 
-#include "path_.hpp"
+#include "path.hpp"
 
 namespace anm2ed::util::sdl
 {

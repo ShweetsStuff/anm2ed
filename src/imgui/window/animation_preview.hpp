@@ -15,6 +15,7 @@ namespace anm2ed::imgui
     MIX_Mixer* mixer = MIX_CreateMixerDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
     AudioStream audioStream = AudioStream(mixer);
     bool wasPlaybackPlaying{};
+    bool isFocused{};
     bool isPreviewHovered{};
     bool isSizeTrySet{true};
     Settings savedSettings{};
@@ -38,6 +39,7 @@ namespace anm2ed::imgui
 
   public:
     AnimationPreview();
+    bool is_focused_get() const;
     void tick(Manager&, Settings&, float);
     void update(Manager&, Settings&, Resources&);
   };

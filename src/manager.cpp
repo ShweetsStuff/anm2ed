@@ -5,13 +5,14 @@
 
 #include <format>
 
-#include "file_.hpp"
+#include "file.hpp"
 #include "log.hpp"
-#include "path_.hpp"
+#include "path.hpp"
 #include "sdl.hpp"
 #include "strings.hpp"
 #include "toast.hpp"
-#include "vector_.hpp"
+#include "util/imgui/shortcut.hpp"
+#include "vector.hpp"
 
 using namespace anm2ed::types;
 using namespace anm2ed::util;
@@ -79,6 +80,28 @@ namespace anm2ed
 
   Document* Manager::get(int index) { return vector::find(documents, index > -1 ? index : selected); }
 
+  void Manager::command_push(Command command)
+  {
+    if (command.documentIndex == -1) command.documentIndex = selected;
+    commands.push_back(std::move(command));
+  }
+
+  void Manager::commands_run()
+  {
+    auto queued = std::move(commands);
+    commands.clear();
+
+    for (auto& command : queued)
+    {
+      if (command.runManager) continue;
+
+      if (auto document = get(command.documentIndex); document) document->command_run(*this, command);
+    }
+
+    for (auto& command : queued)
+      if (command.runManager) command.runManager(*this);
+  }
+
   Document* Manager::open(const std::filesystem::path& path, bool isNew, bool isRecent)
   {
     std::string errorString{};
@@ -109,41 +132,44 @@ namespace anm2ed
 
   void Manager::new_(const std::filesystem::path& path) { open(path, true); }
 
-  void Manager::save(int index, const std::filesystem::path& path, anm2::Compatibility compatibility,
+  bool Manager::save(int index, const std::filesystem::path& path, Compatibility compatibility,
                      bool isBakeSpecialInterpolatedFramesOnSave, bool isRoundScale, bool isRoundRotation)
   {
     if (auto document = get(index); document)
     {
       std::string errorString{};
-      ensure_parent_directory_exists(path);
       const auto previousAutosavePath = document->autosave_path_get();
-      document->path = !path.empty() ? path : document->path;
-      document->path.replace_extension(".anm2");
+      auto savePath = !path.empty() ? path : document->path;
+      savePath.replace_extension(".anm2");
+      ensure_parent_directory_exists(savePath);
+
+      if (!document->save(savePath, &errorString, compatibility, isBakeSpecialInterpolatedFramesOnSave, isRoundScale,
+                          isRoundRotation))
+        return false;
+
       const auto autosavePath = document->autosave_path_get();
-      if (document->save(document->path, &errorString, compatibility, isBakeSpecialInterpolatedFramesOnSave,
-                         isRoundScale, isRoundRotation))
-      {
-        autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), previousAutosavePath),
-                            autosaveFiles.end());
-        if (autosavePath != previousAutosavePath)
-          autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), autosavePath),
-                              autosaveFiles.end());
-        autosave_file_remove(previousAutosavePath);
-        autosave_file_remove(autosavePath);
-        autosave_files_write();
-      }
+      autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), previousAutosavePath),
+                          autosaveFiles.end());
+      if (autosavePath != previousAutosavePath)
+        autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), autosavePath), autosaveFiles.end());
+      autosave_file_remove(previousAutosavePath);
+      autosave_file_remove(autosavePath);
+      autosave_files_write();
       recent_file_add(document->path);
+      return true;
     }
+
+    return false;
   }
 
-  void Manager::save(const std::filesystem::path& path, anm2::Compatibility compatibility,
+  bool Manager::save(const std::filesystem::path& path, Compatibility compatibility,
                      bool isBakeSpecialInterpolatedFramesOnSave, bool isRoundScale, bool isRoundRotation)
   {
-    save(selected, path, compatibility, isBakeSpecialInterpolatedFramesOnSave, isRoundScale, isRoundRotation);
+    return save(selected, path, compatibility, isBakeSpecialInterpolatedFramesOnSave, isRoundScale, isRoundRotation);
   }
 
-  void Manager::autosave(Document& document, anm2::Compatibility compatibility,
-                         bool isBakeSpecialInterpolatedFramesOnSave, bool isRoundScale, bool isRoundRotation)
+  void Manager::autosave(Document& document, Compatibility compatibility, bool isBakeSpecialInterpolatedFramesOnSave,
+                         bool isRoundScale, bool isRoundRotation)
   {
     std::string errorString{};
     auto autosavePath = document.autosave_path_get();
@@ -210,9 +236,9 @@ namespace anm2ed
     if (auto document = get(); document)
     {
       if (id == -1)
-        editLayer = anm2::Layer();
-      else if (auto it = document->anm2.content.layers.find(id); it != document->anm2.content.layers.end())
-        editLayer = it->second;
+        editLayer = element_make(ElementType::LAYER_ELEMENT);
+      else if (auto layer = document->anm2.element_get(ElementType::LAYER_ELEMENT, id); layer)
+        editLayer = *layer;
       else
         return;
 
@@ -228,7 +254,7 @@ namespace anm2ed
 
   void Manager::layer_properties_close()
   {
-    editLayer = anm2::Layer();
+    editLayer = element_make(ElementType::LAYER_ELEMENT);
     layerPropertiesPopup.close();
   }
 
@@ -236,10 +262,11 @@ namespace anm2ed
   {
     if (auto document = get(); document)
     {
+      auto nulls = document->anm2.element_get(ElementType::NULLS);
       if (id == -1)
-        editNull = anm2::Null();
-      else if (auto it = document->anm2.content.nulls.find(id); it != document->anm2.content.nulls.end())
-        editNull = it->second;
+        editNull = element_make(ElementType::NULL_ELEMENT);
+      else if (auto null = nulls ? element_child_id_get(*nulls, ElementType::NULL_ELEMENT, id) : nullptr; null)
+        editNull = *null;
       else
         return;
 
@@ -255,7 +282,7 @@ namespace anm2ed
 
   void Manager::null_properties_close()
   {
-    editNull = anm2::Null();
+    editNull = element_make(ElementType::NULL_ELEMENT);
     nullPropertiesPopup.close();
   }
 

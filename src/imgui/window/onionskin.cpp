@@ -2,7 +2,7 @@
 
 #include <glm/gtc/type_ptr.hpp>
 
-#include "imgui_.hpp"
+#include "util/imgui/imgui.hpp"
 #include "strings.hpp"
 
 using namespace anm2ed::types;

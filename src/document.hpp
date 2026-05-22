@@ -2,14 +2,21 @@
 
 #include <filesystem>
 #include <map>
+#include <set>
 #include <unordered_map>
+#include <vector>
 
 #include "snapshots.hpp"
 
 #include <glm/glm.hpp>
 
+#include "origin.hpp"
+#include "types.hpp"
+
 namespace anm2ed
 {
+  class Manager;
+  struct Command;
 
   class Document
   {
@@ -46,8 +53,10 @@ namespace anm2ed
     Storage& region = current.region;
     Storage& sound = current.sound;
     Storage& spritesheet = current.spritesheet;
-    anm2::Anm2& anm2 = current.anm2;
-    anm2::Reference& reference = current.reference;
+    std::map<int, resource::Texture>& textures = current.textures;
+    std::map<int, resource::Audio>& sounds = current.sounds;
+    Anm2& anm2 = current.anm2;
+    Reference& reference = current.reference;
     float& frameTime = current.frameTime;
     std::string& message = current.message;
     std::map<int, Storage> regionBySpritesheet{};
@@ -68,17 +77,30 @@ namespace anm2ed
     bool isForceDirty{false};
     std::unordered_map<int, uint64_t> spritesheetHashes{};
     std::unordered_map<int, uint64_t> spritesheetSaveHashes{};
+    std::unordered_map<int, std::filesystem::path> texturePaths{};
+    std::unordered_map<int, std::filesystem::path> soundPaths{};
     bool isAnimationPreviewSet{false};
     bool isSpritesheetEditorSet{false};
 
-    Document(anm2::Anm2& anm2, const std::filesystem::path&);
     Document(const std::filesystem::path&, bool = false, std::string* = nullptr);
     Document(const Document&) = delete;
     Document& operator=(const Document&) = delete;
     Document(Document&&) noexcept;
     Document& operator=(Document&&) noexcept;
-    bool save(const std::filesystem::path& = {}, std::string* = nullptr, anm2::Compatibility = anm2::ANM2ED,
+    bool save(const std::filesystem::path& = {}, std::string* = nullptr, Compatibility = Compatibility::ANM2ED,
               bool = false, bool = true, bool = true);
+    void anm2_change(ChangeType);
+    void assets_sync(ChangeType = ALL);
+    void texture_change(int);
+    resource::Texture* texture_get(int);
+    const resource::Texture* texture_get(int) const;
+    resource::Audio* sound_get(int);
+    const resource::Audio* sound_get(int) const;
+    bool regions_trim(int, const std::set<int>&);
+    bool spritesheet_pack(int, int);
+    bool spritesheets_merge(const std::set<int>&, bool, bool, bool, origin::Type);
+    void scan_and_set_regions();
+    bool file_merge(const std::filesystem::path&);
     void hash_set();
     void clean();
     void change(ChangeType);
@@ -87,6 +109,7 @@ namespace anm2ed
     std::filesystem::path directory_get() const;
     std::filesystem::path filename_get() const;
     bool is_valid() const;
+    void command_run(Manager&, Command&);
     void spritesheet_hash_update(int);
     void spritesheet_hash_set_saved(int);
     bool spritesheet_is_dirty(int);
@@ -94,15 +117,17 @@ namespace anm2ed
     void spritesheet_hashes_reset();
     void spritesheet_hashes_sync();
 
-    anm2::Frame* frame_get();
-    anm2::Item* item_get();
-    anm2::Spritesheet* spritesheet_get();
-    anm2::Animation* animation_get();
+    Element* frame_get();
+    Element* item_get();
+    Element* spritesheet_get();
+    Element* animation_get();
 
     void spritesheet_add(const std::filesystem::path&);
+    void spritesheets_add(const std::vector<std::filesystem::path>&);
     void sound_add(const std::filesystem::path&);
+    void sounds_add(const std::vector<std::filesystem::path>&);
 
-    bool autosave(std::string* = nullptr, anm2::Compatibility = anm2::ANM2ED, bool = false, bool = true,
+    bool autosave(std::string* = nullptr, Compatibility = Compatibility::ANM2ED, bool = false, bool = true,
                   bool = true);
     std::filesystem::path autosave_path_get();
     std::filesystem::path path_from_autosave_get(const std::filesystem::path&);

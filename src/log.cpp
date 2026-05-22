@@ -5,10 +5,10 @@
 #include <format>
 #include <print>
 
-#include "file_.hpp"
-#include "path_.hpp"
+#include "file.hpp"
+#include "path.hpp"
 #include "sdl.hpp"
-#include "time_.hpp"
+#include "time.hpp"
 
 #if _WIN32
   #include <fcntl.h>

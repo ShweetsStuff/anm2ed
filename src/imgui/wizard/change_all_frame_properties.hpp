@@ -1,6 +1,7 @@
 #pragma once
 
 #include "document.hpp"
+#include "manager.hpp"
 #include "settings.hpp"
 
 namespace anm2ed::imgui::wizard
@@ -10,6 +11,6 @@ namespace anm2ed::imgui::wizard
   public:
     bool isChanged{};
 
-    void update(Document&, Settings&, bool = false);
+    void update(Manager&, Document&, Settings&, bool = false);
   };
 }

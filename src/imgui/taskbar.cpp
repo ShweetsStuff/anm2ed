@@ -9,7 +9,7 @@
 
 #include "document.hpp"
 #include "log.hpp"
-#include "path_.hpp"
+#include "path.hpp"
 #include "strings.hpp"
 #include "toast.hpp"
 #include "types.hpp"
@@ -25,35 +25,54 @@ namespace anm2ed::imgui
   {
     auto* document = manager.get(index);
     return document && settings.fileIsSpecialInterpolatedFramesOnSaveReminder &&
-           document->anm2.has_special_interpolated_frames();
+           document->anm2.is_special_interpolated_frames();
   }
 
-  void Taskbar::save_execute(Manager& manager, Settings& settings, const PendingSave& request, bool bakeFrames)
+  bool Taskbar::save_execute(Manager& manager, Settings& settings, const PendingSave& request, bool bakeFrames)
   {
-    manager.save(request.index, request.path, (anm2::Compatibility)settings.fileCompatibility, bakeFrames,
-                 settings.bakeIsRoundScale, settings.bakeIsRoundRotation);
+    return manager.save(request.index, request.path, (Compatibility)settings.fileCompatibility, bakeFrames,
+                        settings.bakeIsRoundScale, settings.bakeIsRoundRotation);
   }
 
-  bool Taskbar::save_request(Manager& manager, Settings& settings, int index, const std::filesystem::path& path)
+  void Taskbar::save_enqueue(Manager& manager, Settings& settings, const PendingSave& request, bool bakeFrames)
+  {
+    auto index = request.index;
+    auto path = request.path;
+    auto compatibility = (Compatibility)settings.fileCompatibility;
+    auto isRoundScale = settings.bakeIsRoundScale;
+    auto isRoundRotation = settings.bakeIsRoundRotation;
+
+    manager.command_push({.runManager =
+                              [=](Manager& manager)
+                              { manager.save(index, path, compatibility, bakeFrames, isRoundScale, isRoundRotation); }});
+  }
+
+  bool Taskbar::save_request(Manager& manager, Settings& settings, int index, const std::filesystem::path& path,
+                             bool isQueued)
   {
     auto* document = manager.get(index);
     if (!document) return false;
 
-    if (settings.fileIsSpecialInterpolatedFramesOnSaveReminder && document->anm2.has_special_interpolated_frames())
+    if (settings.fileIsSpecialInterpolatedFramesOnSaveReminder && document->anm2.is_special_interpolated_frames())
     {
       pendingSave = {.index = index,
                      .path = path,
                      .isOpen = true,
                      .disableReminder = false,
-                     .autoBakeFrames = settings.fileBakeSpecialInterpolatedFramesOnSave};
+                     .autoBakeFrames = settings.fileBakeSpecialInterpolatedFramesOnSave,
+                     .isQueued = isQueued};
       specialInterpolatedFramesReminderPopup.open();
       return false;
     }
 
     PendingSave request{.index = index, .path = path};
     auto bakeFrames = settings.fileBakeSpecialInterpolatedFramesOnSave;
-    save_execute(manager, settings, request, bakeFrames);
-    return true;
+    if (isQueued)
+    {
+      save_enqueue(manager, settings, request, bakeFrames);
+      return true;
+    }
+    return save_execute(manager, settings, request, bakeFrames);
   }
 
   bool Taskbar::save_manual(Manager& manager, Settings& settings, int index, const std::filesystem::path& path)
@@ -64,19 +83,25 @@ namespace anm2ed::imgui
   void Taskbar::update(Manager& manager, Settings& settings, Resources& resources, Dialog& dialog, bool& isQuitting)
   {
     auto document = manager.get();
-    auto animation = document ? document->animation_get() : nullptr;
-    auto item = document ? document->item_get() : nullptr;
+    auto itemType = document ? (ItemType)document->reference.itemType : ItemType::NONE;
+    auto animation =
+        document ? document->anm2.element_get(ElementType::ANIMATION, document->reference.animationIndex) : nullptr;
+    auto item =
+        document ? document->anm2.element_get(document->reference.animationIndex, itemType, document->reference.itemID)
+                 : nullptr;
     auto frames = document ? &document->frames : nullptr;
     bool hasRegions = false;
     if (document)
     {
-      for (auto& spritesheet : document->anm2.content.spritesheets | std::views::values)
+      if (auto spritesheets = document->anm2.element_get(ElementType::SPRITESHEETS))
       {
-        if (!spritesheet.regions.empty())
-        {
-          hasRegions = true;
-          break;
-        }
+        for (auto& spritesheet : spritesheets->children)
+          for (auto& child : spritesheet.children)
+            if (spritesheet.type == ElementType::SPRITESHEET && child.type == ElementType::REGION)
+            {
+              hasRegions = true;
+              break;
+            }
       }
     }
 
@@ -86,9 +111,10 @@ namespace anm2ed::imgui
 
       if (ImGui::BeginMenu(localize.get(LABEL_FILE_MENU)))
       {
-        if (ImGui::MenuItem(localize.get(BASIC_NEW), settings.shortcutNew.c_str())) dialog.file_save(Dialog::ANM2_NEW);
+        if (ImGui::MenuItem(localize.get(BASIC_NEW), settings.shortcutNew.c_str()))
+          dialog.file_save(Dialog::ANM2_CREATE);
         if (ImGui::MenuItem(localize.get(BASIC_OPEN), settings.shortcutOpen.c_str()))
-          dialog.file_open(Dialog::ANM2_OPEN);
+          dialog.file_open(Dialog::ANM2_OPEN, true);
 
         auto recentFiles = manager.recent_files_ordered();
         if (ImGui::BeginMenu(localize.get(LABEL_OPEN_RECENT), !recentFiles.empty()))
@@ -99,7 +125,8 @@ namespace anm2ed::imgui
             auto fileNameUtf8 = path::to_utf8(file.filename());
             auto filePathUtf8 = path::to_utf8(file);
             auto label = std::format(FILE_LABEL_FORMAT, fileNameUtf8, filePathUtf8);
-            if (ImGui::MenuItem(label.c_str())) manager.open(file);
+            if (ImGui::MenuItem(label.c_str()))
+              manager.command_push({.runManager = [file](Manager& manager) { manager.open(file); }});
             ImGui::PopID();
           }
 
@@ -112,11 +139,11 @@ namespace anm2ed::imgui
         if (ImGui::MenuItem(localize.get(BASIC_SAVE), settings.shortcutSave.c_str(), false, document))
         {
           if (save_requires_special_prompt(manager, settings, manager.selected))
-            save_request(manager, settings, manager.selected, document->path);
+            save_request(manager, settings, manager.selected, document->path, true);
           else if (settings.fileIsWarnOverwrite)
             overwritePopup.open();
           else
-            save_request(manager, settings, manager.selected, document->path);
+            save_request(manager, settings, manager.selected, document->path, true);
         }
 
         if (ImGui::MenuItem(localize.get(LABEL_SAVE_AS), settings.shortcutSaveAs.c_str(), false, document))
@@ -128,33 +155,38 @@ namespace anm2ed::imgui
         if (ImGui::MenuItem(localize.get(LABEL_EXIT), settings.shortcutExit.c_str())) isQuitting = true;
         ImGui::EndMenu();
       }
-      if (dialog.is_selected(Dialog::ANM2_NEW))
+      if (dialog.is_selected(Dialog::ANM2_CREATE))
       {
-        manager.new_(dialog.path);
+        auto path = dialog.path;
+        manager.command_push({.runManager = [path](Manager& manager) { manager.new_(path); }});
         dialog.reset();
       }
 
       if (dialog.is_selected(Dialog::ANM2_OPEN))
       {
-        manager.open(dialog.path);
+        auto paths = dialog.paths;
+        manager.command_push({.runManager =
+                                  [paths](Manager& manager)
+                                  {
+                                    for (auto& path : paths) manager.open(path);
+                                  }});
         dialog.reset();
       }
 
       if (dialog.is_selected(Dialog::ANM2_SAVE))
       {
-        save_request(manager, settings, manager.selected, dialog.path);
+        save_request(manager, settings, manager.selected, dialog.path, true);
         dialog.reset();
       }
 
       if (ImGui::BeginMenu(localize.get(LABEL_WIZARD_MENU)))
       {
         if (ImGui::MenuItem(localize.get(LABEL_TASKBAR_GENERATE_ANIMATION_FROM_GRID), nullptr, false,
-                            item && document->reference.itemType == anm2::LAYER))
+                            item && itemType == ItemType::LAYER))
           generatePopup.open();
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_WIZARD_GENERATE_ANIMATION_FROM_GRID));
 
-        bool isChangeAllFramesAvailable =
-            frames && !frames->selection.empty() && document->reference.itemType != anm2::TRIGGER;
+        bool isChangeAllFramesAvailable = frames && !frames->selection.empty() && itemType != ItemType::TRIGGER;
         bool isChangeAllAnimationsAvailable = document && !document->animation.selection.empty();
         if (ImGui::MenuItem(localize.get(LABEL_CHANGE_ALL_FRAME_PROPERTIES), nullptr, false,
                             isChangeAllFramesAvailable || isChangeAllAnimationsAvailable))
@@ -163,8 +195,13 @@ namespace anm2ed::imgui
 
         if (ImGui::MenuItem(localize.get(LABEL_SCAN_AND_SET_REGIONS), nullptr, false, document && hasRegions))
         {
-          DOCUMENT_EDIT_PTR(document, localize.get(EDIT_SCAN_AND_SET_REGIONS), Document::FRAMES,
-                            document->anm2.scan_and_set_regions());
+          manager.command_push({manager.selected,
+                                [](Manager&, Document& document)
+                                {
+                                  document.snapshot(localize.get(EDIT_SCAN_AND_SET_REGIONS));
+                                  document.scan_and_set_regions();
+                                  document.change(Document::FRAMES);
+                                }});
           toasts.push(localize.get(TOAST_SCAN_AND_SET_REGIONS));
           logger.info(localize.get(TOAST_SCAN_AND_SET_REGIONS, anm2ed::ENGLISH));
         }
@@ -223,7 +260,7 @@ namespace anm2ed::imgui
     {
       if (document)
       {
-        generateAnimationFromGrid.update(*document, resources, settings);
+        generateAnimationFromGrid.update(manager, *document, resources, settings);
         if (generateAnimationFromGrid.isEnd) generatePopup.close();
       }
       ImGui::EndPopup();
@@ -235,7 +272,7 @@ namespace anm2ed::imgui
     {
       if (document)
       {
-        changeAllFrameProperties.update(*document, settings, true);
+        changeAllFrameProperties.update(manager, *document, settings, true);
         if (changeAllFrameProperties.isChanged) changePopup.close();
       }
       ImGui::EndPopup();
@@ -285,7 +322,7 @@ namespace anm2ed::imgui
 
       if (ImGui::Button(localize.get(BASIC_YES), widgetSize))
       {
-        save_request(manager, settings);
+        save_request(manager, settings, manager.selected, {}, true);
         overwritePopup.close();
       }
 
@@ -312,7 +349,10 @@ namespace anm2ed::imgui
       {
         if (pendingSave.disableReminder) settings.fileIsSpecialInterpolatedFramesOnSaveReminder = false;
         settings.fileBakeSpecialInterpolatedFramesOnSave = pendingSave.autoBakeFrames;
-        save_execute(manager, settings, pendingSave, true);
+        if (pendingSave.isQueued)
+          save_enqueue(manager, settings, pendingSave, true);
+        else
+          save_execute(manager, settings, pendingSave, true);
         pendingSave = {};
         specialInterpolatedFramesReminderPopup.close();
       }
@@ -322,7 +362,10 @@ namespace anm2ed::imgui
       {
         if (pendingSave.disableReminder) settings.fileIsSpecialInterpolatedFramesOnSaveReminder = false;
         settings.fileBakeSpecialInterpolatedFramesOnSave = pendingSave.autoBakeFrames;
-        save_execute(manager, settings, pendingSave, false);
+        if (pendingSave.isQueued)
+          save_enqueue(manager, settings, pendingSave, false);
+        else
+          save_execute(manager, settings, pendingSave, false);
         pendingSave = {};
         specialInterpolatedFramesReminderPopup.close();
       }
@@ -340,16 +383,16 @@ namespace anm2ed::imgui
 
     aboutPopup.end();
 
-    if (shortcut(manager.chords[SHORTCUT_NEW], shortcut::GLOBAL)) dialog.file_save(Dialog::ANM2_NEW);
-    if (shortcut(manager.chords[SHORTCUT_OPEN], shortcut::GLOBAL)) dialog.file_open(Dialog::ANM2_OPEN);
+    if (shortcut(manager.chords[SHORTCUT_NEW], shortcut::GLOBAL)) dialog.file_save(Dialog::ANM2_CREATE);
+    if (shortcut(manager.chords[SHORTCUT_OPEN], shortcut::GLOBAL)) dialog.file_open(Dialog::ANM2_OPEN, true);
     if (shortcut(manager.chords[SHORTCUT_SAVE], shortcut::GLOBAL))
     {
       if (save_requires_special_prompt(manager, settings))
-        save_request(manager, settings);
+        save_request(manager, settings, manager.selected, {}, true);
       else if (settings.fileIsWarnOverwrite)
         overwritePopup.open();
       else
-        save_request(manager, settings);
+        save_request(manager, settings, manager.selected, {}, true);
     }
     if (shortcut(manager.chords[SHORTCUT_SAVE_AS], shortcut::GLOBAL)) dialog.file_save(Dialog::ANM2_SAVE);
     if (shortcut(manager.chords[SHORTCUT_EXIT], shortcut::GLOBAL)) isQuitting = true;

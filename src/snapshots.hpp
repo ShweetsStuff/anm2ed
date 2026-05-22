@@ -1,11 +1,14 @@
 #pragma once
 
 #include <deque>
+#include <map>
 #include <optional>
 
 #include "anm2/anm2.hpp"
+#include "audio.hpp"
 #include "playback.hpp"
 #include "storage.hpp"
+#include "texture.hpp"
 
 namespace anm2ed::snapshots
 {
@@ -29,8 +32,10 @@ namespace anm2ed
     Storage region{};
     Storage sound{};
     Storage spritesheet{};
-    anm2::Anm2 anm2{};
-    anm2::Reference reference{};
+    std::map<int, resource::Texture> textures{};
+    std::map<int, resource::Audio> sounds{};
+    Anm2 anm2{};
+    Reference reference{};
     float frameTime{};
     std::string message = snapshots::ACTION;
   };

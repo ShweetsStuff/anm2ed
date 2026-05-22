@@ -6,7 +6,7 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "math_.hpp"
+#include "math.hpp"
 
 using namespace glm;
 using namespace anm2ed::resource;

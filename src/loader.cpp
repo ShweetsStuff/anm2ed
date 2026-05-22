@@ -13,12 +13,12 @@
 #include "log.hpp"
 #include "sdl.hpp"
 
-#include "imgui_.hpp"
+#include "util/imgui/imgui.hpp"
 
 #include "snapshots.hpp"
 #include "socket.hpp"
 
-#include "util/math_.hpp"
+#include "util/math.hpp"
 
 #ifdef _WIN32
   #include <windows.h>

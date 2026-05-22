@@ -13,7 +13,7 @@
 #include <cstring>
 #include <format>
 
-#include "path_.hpp"
+#include "path.hpp"
 
 using namespace anm2ed::util;
 
@@ -25,13 +25,17 @@ namespace anm2ed
 
     if (filelist && filelist[0] && strlen(filelist[0]) > 0)
     {
-      self->path = path::from_utf8(filelist[0]);
+      self->paths.clear();
+      for (int i = 0; filelist[i] && strlen(filelist[i]) > 0; ++i)
+        self->paths.push_back(path::from_utf8(filelist[i]));
+      self->path = self->paths.empty() ? std::filesystem::path{} : self->paths.front();
       self->selectedFilter = filter;
     }
     else
     {
       self->selectedFilter = -1;
       self->path.clear();
+      self->paths.clear();
     }
   }
 
@@ -41,17 +45,21 @@ namespace anm2ed
     this->window = window;
   }
 
-  void Dialog::file_open(Type type)
+  void Dialog::file_open(Type type, bool isMany)
   {
     if (type == Dialog::NONE) return;
+    path.clear();
+    paths.clear();
     SDL_ShowOpenFileDialog(callback, this, window, FILTERS[TYPE_FILTERS[type]], std::size(FILTERS[TYPE_FILTERS[type]]),
-                           nullptr, false);
+                           nullptr, isMany);
     this->type = type;
   }
 
   void Dialog::file_save(Type type)
   {
     if (type == Dialog::NONE) return;
+    path.clear();
+    paths.clear();
     SDL_ShowSaveFileDialog(callback, this, window, FILTERS[TYPE_FILTERS[type]], std::size(FILTERS[TYPE_FILTERS[type]]),
                            nullptr);
     this->type = type;
@@ -60,6 +68,8 @@ namespace anm2ed
   void Dialog::folder_open(Type type)
   {
     if (type == Dialog::NONE) return;
+    path.clear();
+    paths.clear();
     SDL_ShowOpenFolderDialog(callback, this, window, nullptr, false);
     this->type = type;
   }
@@ -80,6 +90,6 @@ namespace anm2ed
 
   void Dialog::reset() { *this = Dialog(this->window); }
 
-  bool Dialog::is_selected(Type type) const { return this->type == type && !path.empty(); }
+  bool Dialog::is_selected(Type type) const { return this->type == type && !paths.empty(); }
 
 };

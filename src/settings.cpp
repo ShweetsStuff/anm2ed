@@ -4,7 +4,7 @@
 #include <sstream>
 
 #include "log.hpp"
-#include "path_.hpp"
+#include "path.hpp"
 
 using namespace anm2ed::util;
 using namespace glm;

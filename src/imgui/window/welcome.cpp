@@ -3,7 +3,7 @@
 #include <format>
 #include <ranges>
 
-#include "path_.hpp"
+#include "path.hpp"
 #include "strings.hpp"
 
 using namespace anm2ed::util;
@@ -15,8 +15,7 @@ namespace anm2ed::imgui
   {
     auto viewport = ImGui::GetMainViewport();
     auto windowHeight = viewport->Size.y - taskbar.height - documents.height;
-    if (windowHeight < 1.0f)
-      windowHeight = 1.0f;
+    if (windowHeight < 1.0f) windowHeight = 1.0f;
 
     ImGui::SetNextWindowViewport(viewport->ID);
     ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + taskbar.height + documents.height));
@@ -37,10 +36,10 @@ namespace anm2ed::imgui
       auto widgetSize = widget_size_with_row_get(2);
 
       if (ImGui::Button(localize.get(BASIC_NEW), widgetSize))
-        dialog.file_save(Dialog::ANM2_NEW); // handled in taskbar.cpp
+        dialog.file_save(Dialog::ANM2_CREATE); // handled in taskbar.cpp
       ImGui::SameLine();
       if (ImGui::Button(localize.get(BASIC_OPEN), widgetSize))
-        dialog.file_open(Dialog::ANM2_OPEN); // handled in taskbar.cpp
+        dialog.file_open(Dialog::ANM2_OPEN, true); // handled in taskbar.cpp
 
       if (ImGui::BeginChild("##Recent Files Child", {}, ImGuiChildFlags_Borders))
       {
@@ -53,7 +52,7 @@ namespace anm2ed::imgui
 
           if (ImGui::Selectable(label.c_str()))
           {
-            manager.open(file);
+            manager.command_push({.runManager = [file](Manager& manager) { manager.open(file); }});
             ImGui::PopID();
             break;
           }

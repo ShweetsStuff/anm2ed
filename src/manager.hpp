@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <functional>
 #include <map>
 #include <string>
 #include <vector>
@@ -8,10 +9,20 @@
 #include "document.hpp"
 #include "settings.hpp"
 #include "strings.hpp"
+#include "util/imgui/popup.hpp"
 
 namespace anm2ed
 {
   constexpr auto FILE_LABEL_FORMAT = "{} [{}]";
+
+  class Manager;
+
+  struct Command
+  {
+    int documentIndex{-1};
+    std::function<void(Manager&, Document&)> run{};
+    std::function<void(Manager&)> runManager{};
+  };
 
   class Manager
   {
@@ -23,6 +34,7 @@ namespace anm2ed
 
   public:
     std::vector<Document> documents{};
+    std::vector<Command> commands{};
     std::map<std::string, std::size_t, std::less<>> recentFiles{};
     std::size_t recentFilesCounter{};
     std::vector<std::filesystem::path> autosaveFiles{};
@@ -47,15 +59,15 @@ namespace anm2ed
     std::filesystem::path spritesheetDragDropPath{};
     bool isSpritesheetDragDrop{};
 
-    anm2::Layer editLayer{};
+    Element editLayer{element_make(ElementType::LAYER_ELEMENT)};
     imgui::PopupHelper layerPropertiesPopup{
         imgui::PopupHelper(LABEL_MANAGER_LAYER_PROPERTIES, imgui::POPUP_SMALL_NO_HEIGHT)};
 
-    anm2::Null editNull{};
+    Element editNull{element_make(ElementType::NULL_ELEMENT)};
     imgui::PopupHelper nullPropertiesPopup{
         imgui::PopupHelper(LABEL_MANAGER_NULL_PROPERTIES, imgui::POPUP_SMALL_NO_HEIGHT)};
 
-    anm2::Spritesheet::Region makeRegion{};
+    Element makeRegion{element_make(ElementType::REGION)};
     int makeRegionSpritesheetId{-1};
     bool isMakeRegionRequested{};
 
@@ -68,13 +80,15 @@ namespace anm2ed
     ~Manager();
 
     Document* get(int = -1);
+    void command_push(Command);
+    void commands_run();
     Document* open(const std::filesystem::path&, bool = false, bool = true);
     void new_(const std::filesystem::path&);
-    void save(int, const std::filesystem::path& = {}, anm2::Compatibility = anm2::ANM2ED, bool = false, bool = true,
+    bool save(int, const std::filesystem::path& = {}, Compatibility = Compatibility::ANM2ED, bool = false, bool = true,
               bool = true);
-    void save(const std::filesystem::path& = {}, anm2::Compatibility = anm2::ANM2ED, bool = false, bool = true,
+    bool save(const std::filesystem::path& = {}, Compatibility = Compatibility::ANM2ED, bool = false, bool = true,
               bool = true);
-    void autosave(Document&, anm2::Compatibility = anm2::ANM2ED, bool = false, bool = true, bool = true);
+    void autosave(Document&, Compatibility = Compatibility::ANM2ED, bool = false, bool = true, bool = true);
     void set(int);
     void close(int);
     void layer_properties_open(int = -1);

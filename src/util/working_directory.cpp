@@ -3,7 +3,7 @@
 #include <format>
 
 #include "log.hpp"
-#include "path_.hpp"
+#include "path.hpp"
 
 namespace anm2ed::util
 {

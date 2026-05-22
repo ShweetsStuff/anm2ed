@@ -3,10 +3,10 @@
 #include <ranges>
 #include <string>
 
-#include "imgui_.hpp"
+#include "util/imgui/imgui.hpp"
 #include "log.hpp"
-#include "path_.hpp"
-#include "process_.hpp"
+#include "path.hpp"
+#include "process.hpp"
 #include "toast.hpp"
 
 using namespace anm2ed::resource;
@@ -16,7 +16,7 @@ namespace anm2ed::imgui::wizard
 {
   void RenderAnimation::range_to_animation_set(Manager& manager, Document& document)
   {
-    if (auto animation = document.animation_get())
+    if (auto animation = document.anm2.element_get(ElementType::ANIMATION, document.reference.animationIndex))
     {
       manager.recordingStart = 0;
       manager.recordingEnd = animation->frameNum - 1;
@@ -28,10 +28,12 @@ namespace anm2ed::imgui::wizard
     auto& frames = document.frames.selection;
     if (!frames.empty())
     {
-      if (auto item = document.item_get())
+      auto& reference = document.reference;
+      auto itemType = static_cast<ItemType>(reference.itemType);
+      if (auto item = document.anm2.element_get(reference.animationIndex, itemType, reference.itemID))
       {
         int duration{};
-        for (auto [i, frame] : std::views::enumerate(item->frames))
+        for (auto [i, frame] : std::views::enumerate(item->children))
         {
           if ((int)i == *frames.begin()) manager.recordingStart = duration;
           if ((int)i == *frames.rbegin()) manager.recordingEnd = duration + frame.duration - 1;
@@ -53,7 +55,7 @@ namespace anm2ed::imgui::wizard
   {
     isEnd = false;
 
-    auto animation = document.animation_get();
+    auto animation = document.anm2.element_get(ElementType::ANIMATION, document.reference.animationIndex);
     if (!animation) return;
 
     auto& ffmpegPath = settings.renderFFmpegPath;
@@ -155,7 +157,7 @@ namespace anm2ed::imgui::wizard
 
     ImGui::SameLine();
 
-    ImGui::BeginDisabled(frames.empty() || reference.itemID == anm2::TRIGGER);
+    ImGui::BeginDisabled(frames.empty() || reference.itemType == TRIGGER);
     if (ImGui::Button(localize.get(LABEL_TO_SELECTED_FRAMES))) range_to_frames_set(manager, document);
     ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TO_SELECTED_FRAMES));
     ImGui::EndDisabled();

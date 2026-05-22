@@ -6,6 +6,7 @@
 #include "strings.hpp"
 #include "tool.hpp"
 #include "types.hpp"
+#include "util/imgui/imgui.hpp"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::types;
@@ -30,10 +31,12 @@ namespace anm2ed::imgui
         switch (type)
         {
           case tool::UNDO:
-            if (document.is_able_to_undo()) document.undo();
+            if (document.is_able_to_undo())
+              manager.command_push({manager.selected, [](Manager&, Document& document) { document.undo(); }});
             break;
           case tool::REDO:
-            if (document.is_able_to_redo()) document.redo();
+            if (document.is_able_to_redo())
+              manager.command_push({manager.selected, [](Manager&, Document& document) { document.redo(); }});
             break;
           case tool::COLOR:
             colorEditPopup.open();

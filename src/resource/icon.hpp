@@ -21,6 +21,10 @@ namespace anm2ed::resource::icon
   <svg viewBox="0 0 24 24" fill="#FFF" xmlns="http://www.w3.org/2000/svg"><path d="M3 3C2.44772 3 2 3.44772 2 4V7H9.58579L12 4.58579L10.4142 3H3ZM14.4142 5L10.4142 9H2V20C2 20.5523 2.44772 21 3 21H21C21.5523 21 22 20.5523 22 20V6C22 5.44772 21.5523 5 21 5H14.4142Z"/></svg>
   )";
 
+  inline constexpr auto FOLDER_OPEN_DATA = R"(
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FFF"><path d="M3 21C2.44772 21 2 20.5523 2 20V4C2 3.44772 2.44772 3 3 3H10.4142L12.4142 5H20C20.5523 5 21 5.44772 21 6V9H4V18.996L6 11H22.5L20.1894 20.2425C20.0781 20.6877 19.6781 21 19.2192 21H3Z"></path></svg>
+)";
+
   inline constexpr auto CLOSE_DATA = R"(
   <svg viewBox="0 0 24 24" fill="#FFF" xmlns="http://www.w3.org/2000/svg"><path d="M11.9997 10.5865L16.9495 5.63672L18.3637 7.05093L13.4139 12.0007L18.3637 16.9504L16.9495 18.3646L11.9997 13.4149L7.04996 18.3646L5.63574 16.9504L10.5855 12.0007L5.63574 7.05093L7.04996 5.63672L11.9997 10.5865Z"/></svg>
   )";
@@ -173,6 +177,7 @@ namespace anm2ed::resource::icon
   X(NONE, NONE_DATA, SIZE_SMALL)                                                                                       \
   X(FILE, FILE_DATA, SIZE_NORMAL)                                                                                      \
   X(FOLDER, FOLDER_DATA, SIZE_NORMAL)                                                                                  \
+  X(FOLDER_OPEN, FOLDER_OPEN_DATA, SIZE_NORMAL)                                                                        \
   X(CLOSE, CLOSE_DATA, SIZE_NORMAL)                                                                                    \
   X(ROOT, ROOT_DATA, SIZE_NORMAL)                                                                                      \
   X(LAYER, LAYER_DATA, SIZE_NORMAL)                                                                                    \

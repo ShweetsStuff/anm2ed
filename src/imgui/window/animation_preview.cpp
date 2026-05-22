@@ -7,15 +7,15 @@
 #include <format>
 #include <map>
 #include <optional>
-#include <ranges>
 #include <system_error>
 
 #include <glm/gtc/type_ptr.hpp>
 
-#include "imgui_.hpp"
+#include "actions.hpp"
+#include "util/imgui/imgui.hpp"
 #include "log.hpp"
-#include "math_.hpp"
-#include "path_.hpp"
+#include "math.hpp"
+#include "path.hpp"
 #include "strings.hpp"
 #include "toast.hpp"
 #include "tool.hpp"
@@ -103,7 +103,7 @@ namespace anm2ed::imgui
         pixels[index + 2] = (uint8_t)glm::clamp((float)std::round((float)pixels[index + 2] / alphaUnit), 0.0f, 255.0f);
       }
     }
-    bool render_audio_stream_generate(AudioStream& audioStream, std::map<int, anm2::Sound>& sounds,
+    bool render_audio_stream_generate(AudioStream& audioStream, std::map<int, Audio>& sounds,
                                       const std::vector<int>& frameSoundIDs, int fps)
     {
       audioStream.stream.clear();
@@ -122,7 +122,7 @@ namespace anm2ed::imgui
 
       for (auto soundID : frameSoundIDs)
       {
-        if (soundID != -1 && sounds.contains(soundID)) sounds.at(soundID).audio.play(false, mixer);
+        if (soundID != -1 && sounds.contains(soundID)) sounds.at(soundID).play(false, mixer);
 
         sampleFrameAccumulator += framesPerStep;
         auto sampleFramesToGenerate = (int)std::floor(sampleFrameAccumulator);
@@ -133,7 +133,7 @@ namespace anm2ed::imgui
         if (!MIX_Generate(mixer, frameBuffer.data(), (int)(frameBuffer.size() * sizeof(float))))
         {
           for (auto& [_, sound] : sounds)
-            sound.audio.track_detach(mixer);
+            sound.track_detach(mixer);
           MIX_DestroyMixer(mixer);
           audioStream.stream.clear();
           return false;
@@ -143,13 +143,15 @@ namespace anm2ed::imgui
       }
 
       for (auto& [_, sound] : sounds)
-        sound.audio.track_detach(mixer);
+        sound.track_detach(mixer);
       MIX_DestroyMixer(mixer);
       return true;
     }
   }
 
   AnimationPreview::AnimationPreview() : Canvas(vec2()) {}
+
+  bool AnimationPreview::is_focused_get() const { return isFocused; }
 
   void AnimationPreview::tick(Manager& manager, Settings& settings, float deltaSeconds)
   {
@@ -164,8 +166,24 @@ namespace anm2ed::imgui
 
     auto stop_all_sounds = [&]()
     {
-      for (auto& sound : anm2.content.sounds | std::views::values)
-        sound.audio.stop(mixer);
+      for (auto& [_, sound] : document.sounds)
+        sound.stop(mixer);
+    };
+
+    auto trigger_sound_id_get = [&](Element* animation, float time)
+    {
+      if (!animation) return -1;
+      auto triggers = animation_item_get(*animation, ItemType::TRIGGER);
+      if (!triggers || !triggers->isVisible) return -1;
+
+      auto trigger = frame_generate(*triggers, time);
+      if (!trigger.isVisible || trigger.soundIds.empty()) return -1;
+
+      auto soundIndex =
+          trigger.soundIds.size() > 1 ? (size_t)math::random_in_range(0.0f, (float)trigger.soundIds.size()) : (size_t)0;
+      soundIndex = std::min(soundIndex, trigger.soundIds.size() - 1);
+      auto soundID = trigger.soundIds[soundIndex];
+      return document.sound_get(soundID) ? soundID : -1;
     };
 
     if (manager.isRecording)
@@ -261,7 +279,7 @@ namespace anm2ed::imgui
         {
           if (settings.timelineIsSound && type != render::GIF)
           {
-            if (!render_audio_stream_generate(audioStream, anm2.content.sounds, renderFrameSoundIDs, renderFrameRate))
+            if (!render_audio_stream_generate(audioStream, document.sounds, renderFrameSoundIDs, renderFrameRate))
             {
               toasts.push(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED));
               logger.error("Failed to generate deterministic render audio stream; exporting without audio.");
@@ -322,26 +340,13 @@ namespace anm2ed::imgui
       {
         if (settings.timelineIsSound && renderTempFrames.empty()) audioStream.capture_begin(mixer);
         auto frameSoundID = -1;
-        if (settings.timelineIsSound && !anm2.content.sounds.empty())
+        if (settings.timelineIsSound && !document.sounds.empty())
         {
           auto soundTime = (int)std::floor(playback.time);
-          if (auto animation = document.animation_get(); soundTime != renderFrameSoundTimePrev && animation &&
-                                                animation->triggers.isVisible &&
-                                                (!settings.timelineIsOnlyShowLayers || manager.isRecording))
-          {
-            if (auto trigger = animation->triggers.frame_generate(playback.time, anm2::TRIGGER); trigger.isVisible)
-            {
-              if (!trigger.soundIDs.empty())
-              {
-                auto soundIndex = trigger.soundIDs.size() > 1
-                                      ? (size_t)math::random_in_range(0.0f, (float)trigger.soundIDs.size())
-                                      : (size_t)0;
-                soundIndex = std::min(soundIndex, trigger.soundIDs.size() - 1);
-                auto soundID = trigger.soundIDs[soundIndex];
-                if (anm2.content.sounds.contains(soundID)) frameSoundID = soundID;
-              }
-            }
-          }
+          auto animation = anm2.element_get(ElementType::ANIMATION, document.reference.animationIndex);
+          if (soundTime != renderFrameSoundTimePrev && animation &&
+              (!settings.timelineIsOnlyShowLayers || manager.isRecording))
+            frameSoundID = trigger_sound_id_get(animation, playback.time);
           renderFrameSoundTimePrev = soundTime;
         }
         renderFrameSoundIDs.push_back(frameSoundID);
@@ -376,7 +381,7 @@ namespace anm2ed::imgui
 
     if (playback.isPlaying)
     {
-      auto animation = document.animation_get();
+      auto animation = anm2.element_get(ElementType::ANIMATION, document.reference.animationIndex);
       auto& isSound = settings.timelineIsSound;
       auto& isOnlyShowLayers = settings.timelineIsOnlyShowLayers;
 
@@ -388,27 +393,15 @@ namespace anm2ed::imgui
       }
       else
       {
-        if (!manager.isRecording && !anm2.content.sounds.empty() && isSound)
+        if (!manager.isRecording && !document.sounds.empty() && isSound)
         {
-          if (animation->triggers.isVisible && (!isOnlyShowLayers || manager.isRecording))
-          {
-            if (auto trigger = animation->triggers.frame_generate(playback.time, anm2::TRIGGER); trigger.isVisible)
-            {
-              if (!trigger.soundIDs.empty())
-              {
-                auto soundIndex = trigger.soundIDs.size() > 1
-                                      ? (size_t)math::random_in_range(0.0f, (float)trigger.soundIDs.size())
-                                      : (size_t)0;
-                soundIndex = std::min(soundIndex, trigger.soundIDs.size() - 1);
-                auto soundID = trigger.soundIDs[soundIndex];
-
-                if (anm2.content.sounds.contains(soundID)) anm2.content.sounds[soundID].audio.play(false, mixer);
-              }
-            }
-          }
+          if (!isOnlyShowLayers || manager.isRecording)
+            if (auto soundID = trigger_sound_id_get(animation, playback.time); soundID != -1)
+              if (auto sound = document.sound_get(soundID)) sound->play(false, mixer);
         }
 
-        auto fps = std::max(anm2.info.fps, 1);
+        auto info = element_first_get(anm2.root, ElementType::INFO);
+        auto fps = std::max(info ? info->fps : 30, 1);
         playback.tick(fps, animation->frameNum, (animation->isLoop || settings.playbackIsLoop) && !manager.isRecording,
                       deltaSeconds);
 
@@ -422,11 +415,13 @@ namespace anm2ed::imgui
 
   void AnimationPreview::update(Manager& manager, Settings& settings, Resources& resources)
   {
+    isFocused = false;
+
     auto& document = *manager.get();
     auto& anm2 = document.anm2;
     auto& playback = document.playback;
     auto& reference = document.reference;
-    auto animation = document.animation_get();
+    auto animation = anm2.element_get(ElementType::ANIMATION, reference.animationIndex);
     auto& pan = document.previewPan;
     auto& zoom = document.previewZoom;
     auto& backgroundColor = settings.previewBackgroundColor;
@@ -502,6 +497,7 @@ namespace anm2ed::imgui
 
     if (ImGui::Begin(localize.get(LABEL_ANIMATION_PREVIEW_WINDOW), &settings.windowIsAnimationPreview))
     {
+      isFocused = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
       manager.isAbleToRecord = true;
 
       auto childSize = ImVec2(row_widget_width_get(4),
@@ -636,11 +632,12 @@ namespace anm2ed::imgui
           savedZoom = zoom;
           savedPan = pan;
 
-          if (auto rect = anm2.animation_rect(*document.animation_get(), isRootTransform); rect != vec4(-1.0f))
-          {
-            size_set(vec2(rect.z, rect.w) * settings.renderScale);
-            set_to_rect(zoom, pan, rect);
-          }
+          if (animation)
+            if (auto rect = anm2.animation_rect(*animation, isRootTransform); rect != vec4(-1.0f))
+            {
+              size_set(vec2(rect.z, rect.w) * settings.renderScale);
+              set_to_rect(zoom, pan, rect);
+            }
 
           isSizeTrySet = false;
         }
@@ -738,43 +735,56 @@ namespace anm2ed::imgui
         add_samples(settings.onionskinAfterCount, 1, settings.onionskinAfterColor);
       }
 
-      auto render = [&](anm2::Animation* animation, float time, vec3 colorOffset = {}, float alphaOffset = {},
+      auto referenceItemType = static_cast<ItemType>(reference.itemType);
+
+      auto render = [&](Element* animation, float time, vec3 colorOffset = {}, float alphaOffset = {},
                         const std::vector<OnionskinSample>* layeredOnions = nullptr, bool isIndexMode = false)
       {
-        auto sample_time_for_item = [&](anm2::Item& item, const OnionskinSample& sample) -> std::optional<float>
+        auto sample_time_for_item = [&](Element& item, const OnionskinSample& sample) -> std::optional<float>
         {
           if (!isIndexMode)
           {
             if (sample.time < 0.0f || sample.time > animation->frameNum) return std::nullopt;
             return sample.time;
           }
-          if (item.frames.empty()) return std::nullopt;
-          int baseIndex = item.frame_index_from_time_get(frameTime);
+          if (item.children.empty()) return std::nullopt;
+          int baseIndex = frame_index_from_time_get(item, frameTime);
           if (baseIndex < 0) return std::nullopt;
           int sampleIndex = baseIndex + sample.indexOffset;
-          if (sampleIndex < 0 || sampleIndex >= (int)item.frames.size()) return std::nullopt;
-          return item.frame_time_from_index_get(sampleIndex);
+          if (!track_frame_get(item, sampleIndex)) return std::nullopt;
+          return frame_time_from_index_get(item, sampleIndex);
         };
 
-        auto transform_for_time = [&](anm2::Animation* anim, float t)
+        auto root = animation_item_get(*animation, ItemType::ROOT);
+
+        auto transform_for_time = [&](float t)
         {
           auto sampleTransform = baseTransform;
-          if (isRootTransform)
+          if (isRootTransform && root)
           {
-            auto rootFrame = anim->rootAnimation.frame_generate(t, anm2::ROOT);
+            auto rootFrame = frame_generate(*root, t);
             sampleTransform *= math::quad_model_parent_get(rootFrame.position, {},
                                                            math::percent_to_unit(rootFrame.scale), rootFrame.rotation);
           }
           return sampleTransform;
         };
 
-        auto transform = transform_for_time(animation, time);
+        auto transform = transform_for_time(time);
+
+        auto is_track_group_visible = [](const Element& container, const Element& track)
+        {
+          if (track.groupId == -1) return true;
+          for (const auto& child : container.children)
+            if (child.type == ElementType::GROUP && child.id == track.groupId) return child.isVisible;
+          return true;
+        };
 
         auto draw_root =
             [&](float sampleTime, const glm::mat4& sampleTransform, vec3 sampleColor, float sampleAlpha, bool isOnion)
         {
-          auto rootFrame = animation->rootAnimation.frame_generate(sampleTime, anm2::ROOT);
-          if (isOnlyShowLayers || !rootFrame.isVisible || !animation->rootAnimation.isVisible) return;
+          if (!root) return;
+          auto rootFrame = frame_generate(*root, sampleTime);
+          if (isOnlyShowLayers || !rootFrame.isVisible || !root->isVisible) return;
 
           auto rootModel = isRootTransform
                                ? math::quad_model_get(TARGET_SIZE, {}, TARGET_SIZE * 0.5f)
@@ -788,34 +798,45 @@ namespace anm2ed::imgui
           texture_render(shaderTexture, resources.icons[icon].id, rootTransform, color);
         };
 
-        if (layeredOnions)
+        if (layeredOnions && root)
           for (auto& sample : *layeredOnions)
-            if (auto sampleTime = sample_time_for_item(animation->rootAnimation, sample))
+            if (auto sampleTime = sample_time_for_item(*root, sample))
             {
-              auto sampleTransform = transform_for_time(animation, *sampleTime);
+              auto sampleTransform = transform_for_time(*sampleTime);
               draw_root(*sampleTime, sampleTransform, sample.colorOffset, sample.alphaOffset, true);
             }
 
         draw_root(time, transform, {}, 0.0f, false);
 
-        for (auto& id : animation->layerOrder)
+        if (auto layerAnimations = element_child_first_get(*animation, ElementType::LAYER_ANIMATIONS))
         {
-          if (!animation->layerAnimations.contains(id)) continue;
-          auto& layerAnimation = animation->layerAnimations[id];
-          if (!layerAnimation.isVisible) continue;
-
-          if (!anm2.content.layers.contains(id)) continue;
-          auto& layer = anm2.content.layers.at(id);
-
-          auto spritesheet = anm2.spritesheet_get(layer.spritesheetID);
-          if (!spritesheet || !spritesheet->is_valid()) continue;
-
-          auto draw_layer =
-              [&](float sampleTime, const glm::mat4& sampleTransform, vec3 sampleColor, float sampleAlpha, bool isOnion)
+          auto layer_animation_draw = [&](auto&& self, Element& layerAnimation, bool isParentVisible = true) -> void
           {
-            if (auto frame = layerAnimation.frame_generate(sampleTime, anm2::LAYER); frame.isVisible)
+            if (layerAnimation.type == ElementType::GROUP)
             {
-              auto& texture = spritesheet->texture;
+              for (auto& child : layerAnimation.children)
+                self(self, child, isParentVisible && layerAnimation.isVisible);
+              return;
+            }
+            if (layerAnimation.type != ElementType::LAYER_ANIMATION || !isParentVisible ||
+                !layerAnimation.isVisible || !is_track_group_visible(*layerAnimations, layerAnimation))
+              return;
+
+            auto id = layerAnimation.layerId;
+            auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, id);
+            if (!layer) return;
+
+            auto spritesheet = anm2.element_get(ElementType::SPRITESHEET, layer->spritesheetId);
+            auto textureInfo = document.texture_get(layer->spritesheetId);
+            if (!spritesheet || !textureInfo || !textureInfo->is_valid()) return;
+
+            auto draw_layer = [&](float sampleTime, const glm::mat4& sampleTransform, vec3 sampleColor,
+                                  float sampleAlpha, bool isOnion)
+            {
+              auto frame = frame_generate(layerAnimation, sampleTime);
+              if (!frame.isVisible) return;
+
+              auto& texture = *textureInfo;
 
               auto texSize = vec2(texture.size);
               if (texSize.x <= 0.0f || texSize.y <= 0.0f) return;
@@ -835,9 +856,9 @@ namespace anm2ed::imgui
               vec3 frameColorOffset = frame.colorOffset + colorOffset + sampleColor;
               vec4 frameTint = frame.tint;
 
-              if (isRootTransform)
+              if (isRootTransform && root)
               {
-                auto rootFrame = animation->rootAnimation.frame_generate(sampleTime, anm2::ROOT);
+                auto rootFrame = frame_generate(*root, sampleTime);
                 frameColorOffset += rootFrame.colorOffset;
                 frameTint *= rootFrame.tint;
               }
@@ -860,39 +881,54 @@ namespace anm2ed::imgui
 
                 texture_render(shaderTexture, resources.icons[icon::PIVOT].id, pivotTransform, color);
               }
-            }
+            };
+
+            if (layeredOnions)
+              for (auto& sample : *layeredOnions)
+                if (auto sampleTime = sample_time_for_item(layerAnimation, sample))
+                {
+                  auto sampleTransform = transform_for_time(*sampleTime);
+                  draw_layer(*sampleTime, sampleTransform, sample.colorOffset, sample.alphaOffset, true);
+                }
+
+            draw_layer(time, transform, {}, 0.0f, false);
           };
-
-          if (layeredOnions)
-            for (auto& sample : *layeredOnions)
-              if (auto sampleTime = sample_time_for_item(layerAnimation, sample))
-              {
-                auto sampleTransform = transform_for_time(animation, *sampleTime);
-                draw_layer(*sampleTime, sampleTransform, sample.colorOffset, sample.alphaOffset, true);
-              }
-
-          draw_layer(time, transform, {}, 0.0f, false);
+          for (auto& layerAnimation : layerAnimations->children)
+            layer_animation_draw(layer_animation_draw, layerAnimation);
         }
 
-        for (auto& [id, nullAnimation] : animation->nullAnimations)
+        if (auto nullAnimations = element_child_first_get(*animation, ElementType::NULL_ANIMATIONS))
         {
-          if (!nullAnimation.isVisible || isOnlyShowLayers) continue;
-
-          auto nullInfo = anm2.content.nulls.find(id);
-          if (nullInfo == anm2.content.nulls.end()) continue;
-          auto& isShowRect = nullInfo->second.isShowRect;
-
-          auto draw_null =
-              [&](float sampleTime, const glm::mat4& sampleTransform, vec3 sampleColor, float sampleAlpha, bool isOnion)
+          auto null_animation_draw = [&](auto&& self, Element& nullAnimation, bool isParentVisible = true) -> void
           {
-            if (auto frame = nullAnimation.frame_generate(sampleTime, anm2::NULL_); frame.isVisible)
+            if (nullAnimation.type == ElementType::GROUP)
             {
+              for (auto& child : nullAnimation.children)
+                self(self, child, isParentVisible && nullAnimation.isVisible);
+              return;
+            }
+            if (nullAnimation.type != ElementType::NULL_ANIMATION || !isParentVisible || !nullAnimation.isVisible ||
+                !is_track_group_visible(*nullAnimations, nullAnimation) || isOnlyShowLayers)
+              return;
+
+            auto id = nullAnimation.nullId;
+            auto nulls = anm2.element_get(ElementType::NULLS);
+            auto nullInfo = nulls ? element_child_id_get(*nulls, ElementType::NULL_ELEMENT, id) : nullptr;
+            if (!nullInfo) return;
+            auto isShowRect = nullInfo->isShowRect;
+
+            auto draw_null = [&](float sampleTime, const glm::mat4& sampleTransform, vec3 sampleColor,
+                                 float sampleAlpha, bool isOnion)
+            {
+              auto frame = frame_generate(nullAnimation, sampleTime);
+              if (!frame.isVisible) return;
+
               auto icon = isShowRect ? icon::POINT : isAltIcons ? icon::TARGET_ALT : icon::TARGET;
 
               auto& size = isShowRect ? POINT_SIZE : TARGET_SIZE;
               auto color = isOnion ? vec4(sampleColor, 1.0f - sampleAlpha)
-                           : id == reference.itemID && reference.itemType == anm2::NULL_ ? color::RED
-                                                                                         : NULL_COLOR;
+                           : id == reference.itemID && referenceItemType == ItemType::NULL_ ? color::RED
+                                                                                            : NULL_COLOR;
 
               auto nullModel = math::quad_model_get(size, frame.position, size * 0.5f,
                                                     math::percent_to_unit(frame.scale), frame.rotation);
@@ -908,18 +944,20 @@ namespace anm2ed::imgui
 
                 rect_render(shaderLine, rectTransform, rectModel, color);
               }
-            }
+            };
+
+            if (layeredOnions)
+              for (auto& sample : *layeredOnions)
+                if (auto sampleTime = sample_time_for_item(nullAnimation, sample))
+                {
+                  auto sampleTransform = transform_for_time(*sampleTime);
+                  draw_null(*sampleTime, sampleTransform, sample.colorOffset, sample.alphaOffset, true);
+                }
+
+            draw_null(time, transform, {}, 0.0f, false);
           };
-
-          if (layeredOnions)
-            for (auto& sample : *layeredOnions)
-              if (auto sampleTime = sample_time_for_item(nullAnimation, sample))
-              {
-                auto sampleTransform = transform_for_time(animation, *sampleTime);
-                draw_null(*sampleTime, sampleTransform, sample.colorOffset, sample.alphaOffset, true);
-              }
-
-          draw_null(time, transform, {}, 0.0f, false);
+          for (auto& nullAnimation : nullAnimations->children)
+            null_animation_draw(null_animation_draw, nullAnimation);
         }
       };
 
@@ -929,7 +967,7 @@ namespace anm2ed::imgui
 
         render(animation, frameTime, {}, 0.0f, layeredOnions, settings.onionskinMode == (int)OnionskinMode::INDEX);
 
-        if (auto overlayAnimation = anm2.animation_get(overlayIndex))
+        if (auto overlayAnimation = anm2.element_get(ElementType::ANIMATION, overlayIndex))
           render(overlayAnimation, frameTime, {}, 1.0f - math::uint8_to_float(overlayTransparency), layeredOnions,
                  settings.onionskinMode == (int)OnionskinMode::INDEX);
       }
@@ -945,10 +983,10 @@ namespace anm2ed::imgui
 
       isPreviewHovered = ImGui::IsItemHovered();
 
-      if (animation && animation->triggers.isVisible && !isOnlyShowLayers && !manager.isRecording)
+      auto triggers = animation ? animation_item_get(*animation, ItemType::TRIGGER) : nullptr;
+      if (animation && triggers && triggers->isVisible && !isOnlyShowLayers && !manager.isRecording)
       {
-        if (auto trigger = animation->triggers.frame_generate(frameTime, anm2::TRIGGER);
-            trigger.isVisible && trigger.eventID > -1)
+        if (auto trigger = frame_generate(*triggers, frameTime); trigger.isVisible && trigger.eventId > -1)
         {
           auto clipMin = ImGui::GetItemRectMin();
           auto clipMax = ImGui::GetItemRectMax();
@@ -958,9 +996,9 @@ namespace anm2ed::imgui
           drawList->PushClipRect(clipMin, clipMax);
           ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE_LARGE);
           auto triggerTextColor = isLightTheme ? TRIGGER_TEXT_COLOR_LIGHT : TRIGGER_TEXT_COLOR_DARK;
-          if (anm2.content.events.contains(trigger.eventID))
-            drawList->AddText(textPos, ImGui::GetColorU32(triggerTextColor),
-                              anm2.content.events.at(trigger.eventID).name.c_str());
+          auto events = anm2.element_get(ElementType::EVENTS);
+          auto event = events ? element_child_id_get(*events, ElementType::EVENT_ELEMENT, trigger.eventId) : nullptr;
+          if (event) drawList->AddText(textPos, ImGui::GetColorU32(triggerTextColor), event->name.c_str());
           ImGui::PopFont();
           drawList->PopClipRect();
         }
@@ -999,20 +1037,23 @@ namespace anm2ed::imgui
         auto isKeyDown = isLeftDown || isRightDown || isUpDown || isDownDown;
         auto isKeyReleased = isLeftReleased || isRightReleased || isUpReleased || isDownReleased;
 
-        auto isZoomIn = shortcut(manager.chords[SHORTCUT_ZOOM_IN], shortcut::GLOBAL);
-        auto isZoomOut = shortcut(manager.chords[SHORTCUT_ZOOM_OUT], shortcut::GLOBAL);
+        auto isZoomIn = isFocused && shortcut(manager.chords[SHORTCUT_ZOOM_IN], shortcut::GLOBAL);
+        auto isZoomOut = isFocused && shortcut(manager.chords[SHORTCUT_ZOOM_OUT], shortcut::GLOBAL);
 
         auto isMod = ImGui::IsKeyDown(ImGuiMod_Shift);
 
-        auto frame = document.frame_get();
-        auto item = document.item_get();
+        auto frame =
+            anm2.element_get(reference.animationIndex, referenceItemType, reference.frameIndex, reference.itemID);
+        auto item = anm2.element_get(reference.animationIndex, referenceItemType, reference.itemID);
         auto useTool = tool;
         auto step = isMod ? STEP_FAST : STEP;
         mousePos = position_translate(zoom, pan, to_vec2(ImGui::GetMousePos()) - to_vec2(cursorScreenPos));
-        auto selectedNullIt = reference.itemType == anm2::NULL_ ? anm2.content.nulls.find(reference.itemID)
-                                                                : anm2.content.nulls.end();
-        bool isSelectedNullRect = selectedNullIt != anm2.content.nulls.end() && selectedNullIt->second.isShowRect;
-        auto null_rect_top_left = [](const anm2::Frame& frame) { return frame.position - (frame.scale * 0.5f); };
+        auto nulls = anm2.element_get(ElementType::NULLS);
+        auto selectedNull = referenceItemType == ItemType::NULL_ && nulls
+                                ? element_child_id_get(*nulls, ElementType::NULL_ELEMENT, reference.itemID)
+                                : nullptr;
+        bool isSelectedNullRect = selectedNull && selectedNull->isShowRect;
+        auto null_rect_top_left = [](const Element& frame) { return frame.position - (frame.scale * 0.5f); };
 
         if (isMouseMiddleDown) useTool = tool::PAN;
         if (tool == tool::MOVE && isMouseRightDown) useTool = tool::SCALE;
@@ -1033,8 +1074,31 @@ namespace anm2ed::imgui
         auto isToolDuring = isToolMouseDown || isKeyDown;
         auto isToolEnd = isToolMouseReleased || isKeyReleased;
 
-        auto frame_change_apply = [&](anm2::FrameChange frameChange, anm2::ChangeType changeType = anm2::ADJUST)
-        { item->frames_change(frameChange, reference.itemType, changeType, frames); };
+        auto frame_snapshot = [&](auto message)
+        {
+          manager.command_push({manager.selected,
+                                [message](Manager&, Document& document) { document.snapshot(localize.get(message)); }});
+        };
+        auto frame_change_apply = [&](FrameChange frameChange, ChangeType changeType = ChangeType::ADJUST)
+        {
+          auto queuedReference = reference;
+          auto queuedReferenceItemType = referenceItemType;
+          auto queuedFrames = frames;
+          manager.command_push({manager.selected,
+                                [=](Manager&, Document& document)
+                                {
+                                  auto item = document.anm2.element_get(queuedReference.animationIndex,
+                                                                        queuedReferenceItemType,
+                                                                        queuedReference.itemID);
+                                  if (!item) return;
+                                  frames_change(*item, frameChange, queuedReferenceItemType, changeType, queuedFrames);
+                                }});
+        };
+        auto frames_changed = [&]()
+        {
+          manager.command_push(
+              {manager.selected, [](Manager&, Document& document) { document.anm2_change(Document::FRAMES); }});
+        };
         auto null_rect_change = [&](vec2 topLeft, vec2 rectSize)
         {
           topLeft = vec2(ivec2(topLeft));
@@ -1064,7 +1128,7 @@ namespace anm2ed::imgui
             if (!item || !frame || frames.empty()) break;
             if (isToolBegin)
             {
-              document.snapshot(localize.get(EDIT_FRAME_POSITION));
+              frame_snapshot(EDIT_FRAME_POSITION);
               if (isToolMouseClicked)
               {
                 auto origin = isSelectedNullRect ? null_rect_top_left(*frame) : frame->position;
@@ -1082,13 +1146,13 @@ namespace anm2ed::imgui
                 frame_change_apply({.positionX = (int)position.x, .positionY = (int)position.y});
             }
 
-            if (isLeftPressed) frame_change_apply({.positionX = step}, anm2::SUBTRACT);
-            if (isRightPressed) frame_change_apply({.positionX = step}, anm2::ADD);
-            if (isUpPressed) frame_change_apply({.positionY = step}, anm2::SUBTRACT);
-            if (isDownPressed) frame_change_apply({.positionY = step}, anm2::ADD);
+            if (isLeftPressed) frame_change_apply({.positionX = step}, ChangeType::SUBTRACT);
+            if (isRightPressed) frame_change_apply({.positionX = step}, ChangeType::ADD);
+            if (isUpPressed) frame_change_apply({.positionY = step}, ChangeType::SUBTRACT);
+            if (isDownPressed) frame_change_apply({.positionY = step}, ChangeType::ADD);
 
             if (isToolMouseReleased) isMoveDragging = false;
-            if (isToolEnd) document.change(Document::FRAMES);
+            if (isToolEnd) frames_changed();
             if (isToolDuring)
             {
               if (ImGui::BeginTooltip())
@@ -1104,7 +1168,7 @@ namespace anm2ed::imgui
             if (!item || !frame || frames.empty()) break;
             if (isToolBegin)
             {
-              document.snapshot(localize.get(EDIT_FRAME_SCALE));
+              frame_snapshot(EDIT_FRAME_SCALE);
               if (isToolMouseClicked && isSelectedNullRect) nullRectScaleAnchor = null_rect_top_left(*frame);
             }
             if (isToolMouseDown)
@@ -1134,21 +1198,17 @@ namespace anm2ed::imgui
 
             if (isSelectedNullRect)
             {
-              if (isLeftPressed)
-                frame_change_apply({.positionX = step * 0.5f, .scaleX = step}, anm2::SUBTRACT);
-              if (isRightPressed)
-                frame_change_apply({.positionX = step * 0.5f, .scaleX = step}, anm2::ADD);
-              if (isUpPressed)
-                frame_change_apply({.positionY = step * 0.5f, .scaleY = step}, anm2::SUBTRACT);
-              if (isDownPressed)
-                frame_change_apply({.positionY = step * 0.5f, .scaleY = step}, anm2::ADD);
+              if (isLeftPressed) frame_change_apply({.positionX = step * 0.5f, .scaleX = step}, ChangeType::SUBTRACT);
+              if (isRightPressed) frame_change_apply({.positionX = step * 0.5f, .scaleX = step}, ChangeType::ADD);
+              if (isUpPressed) frame_change_apply({.positionY = step * 0.5f, .scaleY = step}, ChangeType::SUBTRACT);
+              if (isDownPressed) frame_change_apply({.positionY = step * 0.5f, .scaleY = step}, ChangeType::ADD);
             }
             else
             {
-              if (isLeftPressed) frame_change_apply({.scaleX = step}, anm2::SUBTRACT);
-              if (isRightPressed) frame_change_apply({.scaleX = step}, anm2::ADD);
-              if (isUpPressed) frame_change_apply({.scaleY = step}, anm2::SUBTRACT);
-              if (isDownPressed) frame_change_apply({.scaleY = step}, anm2::ADD);
+              if (isLeftPressed) frame_change_apply({.scaleX = step}, ChangeType::SUBTRACT);
+              if (isRightPressed) frame_change_apply({.scaleX = step}, ChangeType::ADD);
+              if (isUpPressed) frame_change_apply({.scaleY = step}, ChangeType::SUBTRACT);
+              if (isDownPressed) frame_change_apply({.scaleY = step}, ChangeType::ADD);
             }
 
             if (isToolDuring)
@@ -1173,15 +1233,15 @@ namespace anm2ed::imgui
                 maxPoint = vec2(ivec2(maxPoint));
                 null_rect_change(minPoint, maxPoint - minPoint);
               }
-              document.change(Document::FRAMES);
+              frames_changed();
             }
             break;
           case tool::ROTATE:
             if (!item || !frame || frames.empty()) break;
-            if (isToolBegin) document.snapshot(localize.get(EDIT_FRAME_ROTATION));
-            if (isToolMouseDown) frame_change_apply({.rotation = (int)mouseDelta.x}, anm2::ADD);
-            if (isLeftPressed || isDownPressed) frame_change_apply({.rotation = step}, anm2::SUBTRACT);
-            if (isUpPressed || isRightPressed) frame_change_apply({.rotation = step}, anm2::ADD);
+            if (isToolBegin) frame_snapshot(EDIT_FRAME_ROTATION);
+            if (isToolMouseDown) frame_change_apply({.rotation = (int)mouseDelta.x}, ChangeType::ADD);
+            if (isLeftPressed || isDownPressed) frame_change_apply({.rotation = step}, ChangeType::SUBTRACT);
+            if (isUpPressed || isRightPressed) frame_change_apply({.rotation = step}, ChangeType::ADD);
 
             if (isToolDuring)
             {
@@ -1193,7 +1253,7 @@ namespace anm2ed::imgui
               }
             }
 
-            if (isToolEnd) document.change(Document::FRAMES);
+            if (isToolEnd) frames_changed();
             break;
           default:
             break;
@@ -1228,27 +1288,17 @@ namespace anm2ed::imgui
       }
     }
 
-    if (tool == tool::PAN && ImGui::BeginPopupContextWindow("##Animation Preview Context Menu", ImGuiMouseButton_Right))
+    if (tool == tool::PAN)
     {
-      if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_UNDO), settings.shortcutUndo.c_str(), false,
-                          document.is_able_to_undo()))
-        document.undo();
-
-      if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_REDO), settings.shortcutRedo.c_str(), false,
-                          document.is_able_to_redo()))
-        document.redo();
-
-      ImGui::Separator();
-
-      if (ImGui::MenuItem(localize.get(LABEL_CENTER_VIEW), settings.shortcutCenterView.c_str())) center_view();
-      if (ImGui::MenuItem(localize.get(LABEL_FIT), settings.shortcutFit.c_str(), false, animation)) fit_view();
-
-      ImGui::Separator();
-
-      if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_ZOOM_IN), settings.shortcutZoomIn.c_str())) zoom_in();
-      if (ImGui::MenuItem(localize.get(SHORTCUT_STRING_ZOOM_OUT), settings.shortcutZoomOut.c_str())) zoom_out();
-
-      ImGui::EndPopup();
+      Actions actions{};
+      actions_undo_redo_add(actions, manager, document);
+      actions.separator();
+      actions.add(ACTION_CENTER_VIEW, []() { return true; }, center_view);
+      actions.add(ACTION_FIT_VIEW, [&]() { return animation; }, fit_view);
+      actions.separator();
+      actions.add(ACTION_ZOOM_IN, []() { return true; }, zoom_in);
+      actions.add(ACTION_ZOOM_OUT, []() { return true; }, zoom_out);
+      actions_context_window_draw("##Animation Preview Context Menu", actions, settings);
     }
 
     manager.progressPopup.trigger();

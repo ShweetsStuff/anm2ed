@@ -2,6 +2,7 @@
 
 #include "canvas.hpp"
 #include "document.hpp"
+#include "manager.hpp"
 #include "resources.hpp"
 #include "settings.hpp"
 
@@ -15,6 +16,6 @@ namespace anm2ed::imgui::wizard
     bool isEnd{};
 
     GenerateAnimationFromGrid();
-    void update(Document&, Resources&, Settings&);
+    void update(Manager&, Document&, Resources&, Settings&);
   };
 }

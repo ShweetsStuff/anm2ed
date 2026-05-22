@@ -3,11 +3,11 @@
 #include <format>
 #include <vector>
 
-#include "path_.hpp"
-#include "strings.hpp"
-#include "time_.hpp"
-#include "toast.hpp"
 #include "log.hpp"
+#include "path.hpp"
+#include "strings.hpp"
+#include "time.hpp"
+#include "toast.hpp"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::types;
@@ -31,16 +31,24 @@ namespace anm2ed::imgui
       pushedStyle = true;
     }
 
-    for (auto& document : manager.documents)
+    for (auto i = 0; i < (int)manager.documents.size(); ++i)
     {
+      auto& document = manager.documents[i];
       auto isDirty = document.is_dirty() && document.is_autosave_dirty();
       if (isDirty)
       {
         document.lastAutosaveTime += ImGui::GetIO().DeltaTime;
         if (document.lastAutosaveTime > time::SECOND_M)
-          manager.autosave(document, (anm2::Compatibility)settings.fileCompatibility,
-                           settings.fileBakeSpecialInterpolatedFramesOnSave, settings.bakeIsRoundScale,
-                           settings.bakeIsRoundRotation);
+        {
+          auto compatibility = (Compatibility)settings.fileCompatibility;
+          auto bakeFrames = settings.fileBakeSpecialInterpolatedFramesOnSave;
+          auto isRoundScale = settings.bakeIsRoundScale;
+          auto isRoundRotation = settings.bakeIsRoundRotation;
+          manager.command_push({i,
+                                [compatibility, bakeFrames, isRoundScale, isRoundRotation](Manager& manager,
+                                                                                           Document& document)
+                                { manager.autosave(document, compatibility, bakeFrames, isRoundScale, isRoundRotation); }});
+        }
       }
     }
 
@@ -95,8 +103,8 @@ namespace anm2ed::imgui
           auto isRequested = i == manager.pendingSelected;
           auto font = isDocumentDirty ? font::ITALICS : font::REGULAR;
           auto filename = path::to_utf8(document.filename_get());
-          auto string =
-              isDocumentDirty ? std::vformat(localize.get(FORMAT_NOT_SAVED), std::make_format_args(filename)) : filename;
+          auto string = isDocumentDirty ? std::vformat(localize.get(FORMAT_NOT_SAVED), std::make_format_args(filename))
+                                        : filename;
           auto label = std::format("{}###Document{}", string, i);
 
           auto flags = isDocumentDirty ? ImGuiTabItemFlags_UnsavedDocument : 0;
@@ -120,7 +128,8 @@ namespace anm2ed::imgui
         for (auto it = closeIndices.rbegin(); it != closeIndices.rend(); ++it)
         {
           if (closePopup.is_open() && closeDocumentIndex > *it) --closeDocumentIndex;
-          manager.close(*it);
+          auto index = *it;
+          manager.command_push({.runManager = [index](Manager& manager) { manager.close(index); }});
         }
 
         ImGui::EndTabBar();
@@ -137,10 +146,10 @@ namespace anm2ed::imgui
           auto filename = path::to_utf8(closeDocument.filename_get());
           auto isDocumentDirty = closeDocument.is_dirty() || closeDocument.isForceDirty;
           auto isSpritesheetDirty = closeDocument.spritesheet_any_dirty();
-          auto promptLabel = isDocumentDirty && isSpritesheetDirty
-                                 ? LABEL_DOCUMENT_AND_SPRITESHEETS_MODIFIED_PROMPT
-                                 : (isDocumentDirty ? LABEL_DOCUMENT_MODIFIED_PROMPT
-                                                    : LABEL_SPRITESHEETS_MODIFIED_PROMPT);
+          auto promptLabel =
+              isDocumentDirty && isSpritesheetDirty
+                  ? LABEL_DOCUMENT_AND_SPRITESHEETS_MODIFIED_PROMPT
+                  : (isDocumentDirty ? LABEL_DOCUMENT_MODIFIED_PROMPT : LABEL_SPRITESHEETS_MODIFIED_PROMPT);
           auto prompt = std::vformat(localize.get(promptLabel), std::make_format_args(filename));
           ImGui::TextUnformatted(prompt.c_str());
 
@@ -156,8 +165,7 @@ namespace anm2ed::imgui
           if (ImGui::Button(localize.get(BASIC_YES), widgetSize))
           {
             bool isSaved = true;
-            if (isDocumentDirty)
-              isSaved = taskbar.save_manual(manager, settings, closeDocumentIndex);
+            if (isDocumentDirty) isSaved = taskbar.save_manual(manager, settings, closeDocumentIndex);
 
             if (!isSaved)
             {
@@ -167,27 +175,38 @@ namespace anm2ed::imgui
 
             if (isSpritesheetDirty)
             {
-              for (auto& [id, spritesheet] : closeDocument.anm2.content.spritesheets)
+              auto spritesheets = closeDocument.anm2.element_get(ElementType::SPRITESHEETS);
+              if (spritesheets)
               {
-                if (!closeDocument.spritesheet_is_dirty(id)) continue;
-                auto pathString = path::to_utf8(spritesheet.path);
-                if (spritesheet.save(closeDocument.directory_get()))
+                for (auto& spritesheet : spritesheets->children)
                 {
-                  closeDocument.spritesheet_hash_set_saved(id);
-                  toasts.push(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET), std::make_format_args(id, pathString)));
-                  logger.info(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET, anm2ed::ENGLISH),
-                                           std::make_format_args(id, pathString)));
-                }
-                else
-                {
-                  toasts.push(
-                      std::vformat(localize.get(TOAST_SAVE_SPRITESHEET_FAILED), std::make_format_args(id, pathString)));
-                  logger.error(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET_FAILED, anm2ed::ENGLISH),
-                                            std::make_format_args(id, pathString)));
+                  if (spritesheet.type != ElementType::SPRITESHEET) continue;
+                  auto id = spritesheet.id;
+                  auto texture = closeDocument.texture_get(id);
+                  if (!texture || !closeDocument.spritesheet_is_dirty(id)) continue;
+                  auto pathString = path::to_utf8(spritesheet.path);
+                  auto savePath = closeDocument.directory_get() / spritesheet.path;
+                  path::ensure_directory(savePath.parent_path());
+                  if (texture->write_png(savePath))
+                  {
+                    closeDocument.spritesheet_hash_set_saved(id);
+                    toasts.push(
+                        std::vformat(localize.get(TOAST_SAVE_SPRITESHEET), std::make_format_args(id, pathString)));
+                    logger.info(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET, anm2ed::ENGLISH),
+                                             std::make_format_args(id, pathString)));
+                  }
+                  else
+                  {
+                    toasts.push(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET_FAILED),
+                                             std::make_format_args(id, pathString)));
+                    logger.error(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET_FAILED, anm2ed::ENGLISH),
+                                              std::make_format_args(id, pathString)));
+                  }
                 }
               }
             }
-            manager.close(closeDocumentIndex);
+            auto index = closeDocumentIndex;
+            manager.command_push({.runManager = [index](Manager& manager) { manager.close(index); }});
             close();
           }
 
@@ -195,7 +214,8 @@ namespace anm2ed::imgui
 
           if (ImGui::Button(localize.get(BASIC_NO), widgetSize))
           {
-            manager.close(closeDocumentIndex);
+            auto index = closeDocumentIndex;
+            manager.command_push({.runManager = [index](Manager& manager) { manager.close(index); }});
             close();
           }
 
@@ -244,8 +264,12 @@ namespace anm2ed::imgui
           if (ImGui::MenuItem(manager.anm2DragDropPaths.size() > 1 ? localize.get(LABEL_DOCUMENTS_OPEN_MANY)
                                                                    : localize.get(LABEL_DOCUMENTS_OPEN_NEW)))
           {
-            for (auto& path : manager.anm2DragDropPaths)
-              manager.open(path);
+            auto paths = manager.anm2DragDropPaths;
+            manager.command_push({.runManager =
+                                      [paths](Manager& manager)
+                                      {
+                                        for (auto& path : paths) manager.open(path);
+                                      }});
             drag_drop_reset();
           }
 
@@ -254,16 +278,14 @@ namespace anm2ed::imgui
           {
             if (document)
             {
-              auto merge_anm2s = [&]()
-              {
-                for (auto& path : manager.anm2DragDropPaths)
-                {
-                  anm2::Anm2 source(path);
-                  document->anm2.merge(source, document->directory_get(), path.parent_path());
-                }
-              };
-
-              DOCUMENT_EDIT_PTR(document, localize.get(EDIT_MERGE_ANM2), Document::ALL, merge_anm2s());
+              auto paths = manager.anm2DragDropPaths;
+              manager.command_push({manager.selected,
+                                    [paths](Manager&, Document& document)
+                                    {
+                                      document.snapshot(localize.get(EDIT_MERGE_ANM2));
+                                      for (auto& path : paths) document.file_merge(path);
+                                      document.change(Document::ALL);
+                                    }});
               drag_drop_reset();
             }
           }

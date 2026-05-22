@@ -20,11 +20,10 @@ namespace anm2ed::imgui::popup
     int addItemSpritesheetID{-1};
 
     void reset();
-    std::set<int> unused_items_get(anm2::Anm2&, anm2::Animation*, anm2::Type);
+    std::set<int> unused_items_get(Anm2&, const Element*, int);
 
   public:
     void open();
-    void update(Manager&, Settings&, Document&, anm2::Animation*, anm2::Reference&,
-                const std::function<void(anm2::Type, int)>&);
+    void update(Manager&, Settings&, Document&, Reference&, const std::function<void(int, int)>&);
   };
 }

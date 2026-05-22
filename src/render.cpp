@@ -9,10 +9,10 @@
 #include <string>
 
 #include "log.hpp"
-#include "path_.hpp"
-#include "process_.hpp"
+#include "path.hpp"
+#include "process.hpp"
 #include "sdl.hpp"
-#include "string_.hpp"
+#include "string.hpp"
 
 using namespace anm2ed::util;
 

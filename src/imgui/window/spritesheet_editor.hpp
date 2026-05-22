@@ -17,10 +17,12 @@ namespace anm2ed::imgui
     float checkerSyncZoom{};
     bool isCheckerPanInitialized{};
     bool hasPendingZoomPanAdjust{};
+    bool isFocused{};
     int hoveredRegionId{-1};
 
   public:
     SpritesheetEditor();
+    bool is_focused_get() const;
     void update(Manager&, Settings&, Resources&);
   };
 }

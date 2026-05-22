@@ -5,7 +5,7 @@
 
 #include <glm/glm.hpp>
 
-#include "anm2/anm2_type.hpp"
+#include "anm2/anm2.hpp"
 #include "origin.hpp"
 #include "render.hpp"
 #include "strings.hpp"
@@ -24,6 +24,10 @@ namespace anm2ed
 #else
   constexpr auto OUTPUT_PATH_DEFAULT = "./output.gif";
 #endif
+
+  constexpr auto UI_SCALE_MIN = 0.5f;
+  constexpr auto UI_SCALE_MAX = 2.0f;
+  constexpr auto UI_SCALE_STEP = 0.25f;
 
 #define SETTINGS_TYPES                                                                                                 \
   X(INT, int)                                                                                                          \
@@ -55,16 +59,17 @@ namespace anm2ed
   X(WINDOW_POSITION, windowPosition, STRING_UNDEFINED, IVEC2, glm::ivec2())                                            \
   X(IS_VSYNC, isVsync, STRING_UNDEFINED, BOOL, true)                                                                   \
   X(UI_SCALE, uiScale, STRING_UNDEFINED, FLOAT, 1.0f)                                                                  \
-  X(TIMELINE_ITEM_HEIGHT, timelineItemHeight, STRING_UNDEFINED, FLOAT, 1.0f)                                           \
   X(THEME, theme, STRING_UNDEFINED, INT, types::theme::DARK)                                                           \
   X(LANGUAGE, language, STRING_UNDEFINED, INT, ENGLISH)                                                                \
                                                                                                                        \
   X(FILE_IS_AUTOSAVE, fileIsAutosave, STRING_UNDEFINED, BOOL, true)                                                    \
   X(FILE_IS_WARN_OVERWRITE, fileIsWarnOverwrite, STRING_UNDEFINED, BOOL, true)                                         \
-  X(FILE_IS_SPECIAL_INTERPOLATED_FRAMES_ON_SAVE_REMINDER, fileIsSpecialInterpolatedFramesOnSaveReminder, STRING_UNDEFINED, BOOL, true) \
-  X(FILE_BAKE_SPECIAL_INTERPOLATED_FRAMES_ON_SAVE, fileBakeSpecialInterpolatedFramesOnSave, STRING_UNDEFINED, BOOL, true) \
+  X(FILE_IS_SPECIAL_INTERPOLATED_FRAMES_ON_SAVE_REMINDER, fileIsSpecialInterpolatedFramesOnSaveReminder,               \
+    STRING_UNDEFINED, BOOL, true)                                                                                      \
+  X(FILE_BAKE_SPECIAL_INTERPOLATED_FRAMES_ON_SAVE, fileBakeSpecialInterpolatedFramesOnSave, STRING_UNDEFINED, BOOL,    \
+    true)                                                                                                              \
   X(FILE_SNAPSHOT_STACK_SIZE, fileSnapshotStackSize, STRING_UNDEFINED, INT, 50)                                        \
-  X(FILE_COMPATIBILITY, fileCompatibility, STRING_UNDEFINED, INT, anm2::ANM2ED)                                        \
+  X(FILE_COMPATIBILITY, fileCompatibility, STRING_UNDEFINED, INT, ANM2ED)                                              \
                                                                                                                        \
   X(KEYBOARD_REPEAT_DELAY, keyboardRepeatDelay, STRING_UNDEFINED, FLOAT, 0.300f)                                       \
   X(KEYBOARD_REPEAT_RATE, keyboardRepeatRate, STRING_UNDEFINED, FLOAT, 0.050f)                                         \
@@ -161,7 +166,7 @@ namespace anm2ed
                                                                                                                        \
   X(MERGE_TYPE, mergeType, STRING_UNDEFINED, INT, 0)                                                                   \
   X(MERGE_IS_DELETE_ANIMATIONS_AFTER, mergeIsDeleteAnimationsAfter, STRING_UNDEFINED, BOOL, false)                     \
-  X(MERGE_SPRITESHEETS_ORIGIN, mergeSpritesheetsOrigin, STRING_UNDEFINED, INT, anm2::APPEND_RIGHT)                     \
+  X(MERGE_SPRITESHEETS_ORIGIN, mergeSpritesheetsOrigin, STRING_UNDEFINED, INT, APPEND_RIGHT)                           \
   X(MERGE_SPRITESHEETS_IS_MAKE_REGIONS, mergeSpritesheetsIsMakeRegions, STRING_UNDEFINED, BOOL, true)                  \
   X(MERGE_SPRITESHEETS_IS_MAKE_PRIMARY_REGION, mergeSpritesheetsIsMakePrimaryRegion, STRING_UNDEFINED, BOOL, true)     \
   X(MERGE_SPRITESHEETS_REGION_ORIGIN, mergeSpritesheetsRegionOrigin, STRING_UNDEFINED, INT, origin::TOP_LEFT)          \
@@ -171,7 +176,7 @@ namespace anm2ed
   X(BAKE_IS_ROUND_SCALE, bakeIsRoundScale, STRING_UNDEFINED, BOOL, true)                                               \
   X(BAKE_IS_ROUND_ROTATION, bakeIsRoundRotation, STRING_UNDEFINED, BOOL, true)                                         \
                                                                                                                        \
-  X(TIMELINE_ADD_ITEM_TYPE, timelineAddItemType, STRING_UNDEFINED, INT, anm2::LAYER)                                   \
+  X(TIMELINE_ADD_ITEM_TYPE, timelineAddItemType, STRING_UNDEFINED, INT, LAYER)                                         \
   X(TIMELINE_ADD_ITEM_DESTINATION, timelineAddItemDestination, STRING_UNDEFINED, INT, types::destination::ALL)         \
   X(TIMELINE_ADD_ITEM_SOURCE, timelineAddItemSource, STRING_UNDEFINED, INT, types::source::NEW)                        \
   X(TIMELINE_IS_SHOW_UNUSED, timelineIsShowUnused, STRING_UNDEFINED, BOOL, true)                                       \
@@ -218,6 +223,7 @@ namespace anm2ed
   X(SHORTCUT_RENAME, shortcutRename, SHORTCUT_STRING_RENAME, STRING, "F2")                                             \
   X(SHORTCUT_DEFAULT, shortcutDefault, SHORTCUT_STRING_DEFAULT, STRING, "Home")                                        \
   X(SHORTCUT_MERGE, shortcutMerge, SHORTCUT_STRING_MERGE, STRING, "Ctrl+E")                                            \
+  X(SHORTCUT_GROUP, shortcutGroup, SHORTCUT_STRING_GROUP, STRING, "Ctrl+G")                                            \
   X(SHORTCUT_CONFIRM, shortcutConfirm, SHORTCUT_STRING_CONFIRM, STRING, "Enter")                                       \
   X(SHORTCUT_CANCEL, shortcutCancel, SHORTCUT_STRING_CANCEL, STRING, "Escape")                                         \
   /* Tools */                                                                                                          \

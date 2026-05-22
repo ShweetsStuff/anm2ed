@@ -10,6 +10,7 @@ namespace anm2ed::imgui
   class FrameProperties
   {
     wizard::ChangeAllFrameProperties changeAllFrameProperties{};
+    bool isBatchMode{};
 
   public:
     void update(Manager&, Settings&);

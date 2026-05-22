@@ -1,9 +1,9 @@
 #include "configure.hpp"
 
-#include "imgui_.hpp"
 #include "log.hpp"
-#include "path_.hpp"
+#include "path.hpp"
 #include "sdl.hpp"
+#include "util/imgui/imgui.hpp"
 
 using namespace anm2ed::types;
 
@@ -24,11 +24,9 @@ namespace anm2ed::imgui::wizard
         if (ImGui::BeginChild("##Tab Child", childSize, true))
         {
           ImGui::SeparatorText(localize.get(LABEL_WINDOW_MENU));
-          input_float_range(localize.get(LABEL_UI_SCALE), temporary.uiScale, 0.5f, 2.0f, 0.25f, 0.25f, "%.2f");
+          input_float_range(localize.get(LABEL_UI_SCALE), temporary.uiScale, UI_SCALE_MIN, UI_SCALE_MAX,
+                            UI_SCALE_STEP, UI_SCALE_STEP, "%.2fx");
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_UI_SCALE));
-          input_float_range(localize.get(LABEL_ITEM_HEIGHT), temporary.timelineItemHeight, 0.75f, 1.25f, 0.05f, 0.05f,
-                            "%.2f");
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ITEM_HEIGHT));
           ImGui::Checkbox(localize.get(LABEL_VSYNC), &temporary.isVsync);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_VSYNC));
 
@@ -70,13 +68,13 @@ namespace anm2ed::imgui::wizard
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_STACK_SIZE));
 
           ImGui::SeparatorText(localize.get(LABEL_COMPATIBILITY));
-          ImGui::RadioButton(localize.get(LABEL_ISAAC), &temporary.fileCompatibility, anm2::ISAAC);
+          ImGui::RadioButton(localize.get(LABEL_ISAAC), &temporary.fileCompatibility, ISAAC);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_COMPATIBILITY_ISAAC));
           ImGui::SameLine();
-          ImGui::RadioButton(localize.get(LABEL_ANM2ED), &temporary.fileCompatibility, anm2::ANM2ED);
+          ImGui::RadioButton(localize.get(LABEL_ANM2ED), &temporary.fileCompatibility, ANM2ED);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_COMPATIBILITY_ANM2ED));
           ImGui::SameLine();
-          ImGui::RadioButton(localize.get(LABEL_ANM2ED_LIMITED), &temporary.fileCompatibility, anm2::ANM2ED_LIMITED);
+          ImGui::RadioButton(localize.get(LABEL_ANM2ED_LIMITED), &temporary.fileCompatibility, ANM2ED_LIMITED);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_COMPATIBILITY_ANM2ED_LIMITED));
 
           ImGui::Checkbox(localize.get(LABEL_SPECIAL_INTERPOLATED_FRAMES_REMINDER_ON_SAVE),
