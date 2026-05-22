@@ -1493,6 +1493,37 @@ namespace anm2ed
     if (command.run) command.run(manager, *this);
   }
 
+  std::vector<Reference> Document::layer_references_get()
+  {
+    std::set<Reference> selectedReferences = items.references;
+    if (selectedReferences.empty())
+      for (auto frameReference : frames.references)
+      {
+        frameReference.frameIndex = -1;
+        selectedReferences.insert(frameReference);
+      }
+    if (selectedReferences.empty() && !frames.selection.empty())
+      selectedReferences.insert({reference.animationIndex, reference.itemType, reference.itemID});
+    if (selectedReferences.empty() && reference.itemType != NONE)
+      selectedReferences.insert({reference.animationIndex, reference.itemType, reference.itemID});
+
+    std::vector<Reference> result{};
+    for (auto itemReference : selectedReferences)
+    {
+      itemReference.frameIndex = -1;
+      if (itemReference.itemType != LAYER) return {};
+      if (!anm2.element_get(itemReference.animationIndex, ItemType::LAYER, itemReference.itemID))
+      {
+        if (reference.animationIndex == itemReference.animationIndex ||
+            !anm2.element_get(reference.animationIndex, ItemType::LAYER, itemReference.itemID))
+          return {};
+        itemReference.animationIndex = reference.animationIndex;
+      }
+      result.push_back(itemReference);
+    }
+    return result;
+  }
+
   Element* Document::frame_get()
   {
     return anm2.element_get(reference.animationIndex, document::item_type_get(reference.itemType), reference.frameIndex,

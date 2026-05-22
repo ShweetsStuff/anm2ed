@@ -118,6 +118,7 @@ namespace anm2ed
     bool spritesheet_any_dirty();
     void spritesheet_hashes_reset();
     void spritesheet_hashes_sync();
+    std::vector<Reference> layer_references_get();
 
     Element* frame_get();
     Element* item_get();

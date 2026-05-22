@@ -86,10 +86,9 @@ namespace anm2ed::imgui
     auto itemType = document ? (ItemType)document->reference.itemType : ItemType::NONE;
     auto animation =
         document ? document->anm2.element_get(ElementType::ANIMATION, document->reference.animationIndex) : nullptr;
-    auto item =
-        document ? document->anm2.element_get(document->reference.animationIndex, itemType, document->reference.itemID)
-                 : nullptr;
     auto frames = document ? &document->frames : nullptr;
+    auto layerReferences = document ? document->layer_references_get() : std::vector<Reference>{};
+    bool isGenerateAnimationFromGridAvailable = !layerReferences.empty();
     bool hasRegions = false;
     if (document)
     {
@@ -182,7 +181,7 @@ namespace anm2ed::imgui
       if (ImGui::BeginMenu(localize.get(LABEL_WIZARD_MENU)))
       {
         if (ImGui::MenuItem(localize.get(LABEL_TASKBAR_GENERATE_ANIMATION_FROM_GRID), nullptr, false,
-                            item && itemType == ItemType::LAYER))
+                            isGenerateAnimationFromGridAvailable))
           generatePopup.open();
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_WIZARD_GENERATE_ANIMATION_FROM_GRID));
 
