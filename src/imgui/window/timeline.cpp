@@ -973,15 +973,14 @@ namespace anm2ed::imgui
     auto row_drag_references_get = [&](const TimelineItemRow& row)
     {
       auto clicked = row_reference_get(row);
+      if (clicked.type != LAYER && clicked.type != NULL_) return std::vector<TimelineRowReference>{clicked};
+
       auto rows = selected_row_references_get();
       if (!is_row_reference_selected(clicked)) rows = {clicked};
       if (rows.empty()) rows = {clicked};
 
-      auto type = rows.front().type;
-      if (type != LAYER && type != NULL_) return std::vector<TimelineRowReference>{clicked};
-      for (auto rowReference : rows)
-        if (rowReference.type != type || (rowReference.type != LAYER && rowReference.type != NULL_))
-          return std::vector<TimelineRowReference>{clicked};
+      std::erase_if(rows, [&](const TimelineRowReference& rowReference) { return rowReference.type != clicked.type; });
+      if (rows.empty()) rows = {clicked};
       return rows;
     };
 
@@ -1289,7 +1288,8 @@ namespace anm2ed::imgui
           auto item = item_get(frameReference.itemType, frameReference.itemID);
           auto frame = item ? track_frame_get(*item, frameReference.frameIndex) : nullptr;
           if (!frame) continue;
-          clipboardString += element_to_string(*frame);
+          auto parentType = item_type_to_track_type_get(item_type_get(frameReference.itemType));
+          clipboardString += element_to_string(*frame, parentType);
         }
         if (!clipboardString.empty()) clipboard.set(clipboardString);
       };
@@ -2334,6 +2334,38 @@ namespace anm2ed::imgui
       return leftMin.x <= rightMax.x && leftMax.x >= rightMin.x && leftMin.y <= rightMax.y &&
              leftMax.y >= rightMin.y;
     };
+    auto frame_overlay_draw = [&](ImDrawList* drawList, ImVec2 clipMin, ImVec2 clipMax)
+    {
+      if (isFrameBoxSelecting && isFrameBoxClipSet)
+      {
+        auto boxContentMin =
+            ImVec2(std::min(frameBoxStart.x, frameBoxEnd.x), std::min(frameBoxStart.y, frameBoxEnd.y));
+        auto boxContentMax =
+            ImVec2(std::max(frameBoxStart.x, frameBoxEnd.x), std::max(frameBoxStart.y, frameBoxEnd.y));
+        auto boxMin = frame_box_screen_point_get(boxContentMin);
+        auto boxMax = frame_box_screen_point_get(boxContentMax);
+        auto boxClipMin = clipMin;
+        if (isPlayheadLineSet) boxClipMin.y = std::max(boxClipMin.y, playheadLineTopY);
+        drawList->PushClipRect(boxClipMin, clipMax, true);
+        drawList->AddRectFilled(boxMin, boxMax, ImGui::GetColorU32(ImGuiCol_DragDropTargetBg));
+        drawList->AddRect(boxMin, boxMax, ImGui::GetColorU32(ImGuiCol_DragDropTarget));
+        drawList->PopClipRect();
+      }
+
+      if (isPlayheadLineSet)
+      {
+        auto lineTopY = std::max(clipMin.y, playheadLineTopY);
+        if (clipMax.y > lineTopY)
+        {
+          auto linePos = ImVec2(playheadLineCenterX - (PLAYHEAD_LINE_THICKNESS * 0.5f), lineTopY);
+          auto lineSize = ImVec2(PLAYHEAD_LINE_THICKNESS * 0.5f, clipMax.y - lineTopY);
+          drawList->PushClipRect(clipMin, clipMax, true);
+          drawList->AddRectFilled(linePos, ImVec2(linePos.x + lineSize.x, linePos.y + lineSize.y),
+                                  ImGui::GetColorU32(playheadLineColor));
+          drawList->PopClipRect();
+        }
+      }
+    };
 
     auto frame_child = [&](const TimelineItemRow& row, int& index, float width)
     {
@@ -2382,7 +2414,40 @@ namespace anm2ed::imgui
       bool isDefaultChild = type == NONE;
       if (isLightTheme && isDefaultChild) ImGui::PushStyleColor(ImGuiCol_ChildBg, TIMELINE_CHILD_BG_COLOR_LIGHT);
 
-      if (ImGui::BeginChild("##Frames Child", childSize, ImGuiChildFlags_Borders))
+      bool isFramesChildVisible = ImGui::BeginChild("##Frames Child", childSize, ImGuiChildFlags_Borders);
+      auto drawList = ImGui::GetWindowDrawList();
+      auto clipMax = drawList->GetClipRectMax();
+      auto length = animation ? animation->frameNum : 0;
+      auto frameSize = ImVec2(ImGui::GetTextLineHeight(), ImGui::GetContentRegionAvail().y);
+      auto framesSize = ImVec2(frameSize.x * length, frameSize.y);
+      auto cursorPos = ImGui::GetCursorPos();
+      auto cursorScreenPos = ImGui::GetCursorScreenPos();
+      auto border = glm::max(0.5f, ImGui::GetStyle().FrameBorderSize * 0.5f);
+      auto borderLineLength = frameSize.y / 5;
+      auto frameMin = std::max(0, (int)std::floor(scroll.x / frameSize.x) - 1);
+      auto frameMax = std::min(FRAME_NUM_MAX, (int)std::ceil((scroll.x + clipMax.x) / frameSize.x) + 1);
+
+      if (isFrameBoxSelecting && isFrameBoxClipSet && type != NONE && animation && item)
+      {
+        auto boxMin = ImVec2(std::min(frameBoxStart.x, frameBoxEnd.x), std::min(frameBoxStart.y, frameBoxEnd.y));
+        auto boxMax = ImVec2(std::max(frameBoxStart.x, frameBoxEnd.x), std::max(frameBoxStart.y, frameBoxEnd.y));
+        auto rowMinY = cursorScreenPos.y + scroll.y - frameBoxClipMin.y;
+        auto rowMaxY = rowMinY + childSize.y;
+        float selectionFrameTime{};
+        for (auto [i, frame] : std::views::enumerate(item->children))
+        {
+          auto frameReference = Reference{reference.animationIndex, type, id, (int)i};
+          auto frameStart = type == TRIGGER ? frame.atFrame : selectionFrameTime;
+          auto frameEnd = type == TRIGGER ? frameStart + 1.0f : frameStart + frame.duration;
+          auto frameContentMin = ImVec2(frameStart * frameSize.x, rowMinY);
+          auto frameContentMax = ImVec2(frameEnd * frameSize.x, rowMaxY);
+          if (is_frame_box_overlapping(frameContentMin, frameContentMax, boxMin, boxMax))
+            frameBoxSelection.insert(frameReference);
+          if (type != TRIGGER) selectionFrameTime += frame.duration;
+        }
+      }
+
+      if (isFramesChildVisible)
       {
         if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
             ImGui::Shortcut(ImGuiKey_Escape, ImGuiInputFlags_RouteFocused))
@@ -2395,19 +2460,6 @@ namespace anm2ed::imgui
           else if (reference.itemType != NONE || reference.itemID != -1)
             reference_clear();
         }
-
-        auto drawList = ImGui::GetWindowDrawList();
-        auto clipMax = drawList->GetClipRectMax();
-        auto length = animation ? animation->frameNum : 0;
-        auto frameSize = ImVec2(ImGui::GetTextLineHeight(), ImGui::GetContentRegionAvail().y);
-        auto framesSize = ImVec2(frameSize.x * length, frameSize.y);
-        auto cursorPos = ImGui::GetCursorPos();
-        auto cursorScreenPos = ImGui::GetCursorScreenPos();
-        auto border = glm::max(0.5f, ImGui::GetStyle().FrameBorderSize * 0.5f);
-        auto borderLineLength = frameSize.y / 5;
-        auto frameMin = std::max(0, (int)std::floor(scroll.x / frameSize.x) - 1);
-        auto frameMax = std::min(FRAME_NUM_MAX, (int)std::ceil((scroll.x + clipMax.x) / frameSize.x) + 1);
-        pickerLineDrawList = drawList;
 
         if (type == NONE)
         {
@@ -2495,7 +2547,7 @@ namespace anm2ed::imgui
         {
           float frameTime{};
 
-          if (!isFrameBoxSelecting && !frameMoveDrag.isActive && ImGui::IsWindowHovered() &&
+          if (!isFrameBoxPending && !isFrameBoxSelecting && !frameMoveDrag.isActive && ImGui::IsWindowHovered() &&
               (ImGui::IsMouseReleased(ImGuiMouseButton_Left) || ImGui::IsMouseReleased(ImGuiMouseButton_Right)) &&
               !ImGui::IsAnyItemHovered())
             reference_set_item(type, id);
@@ -2515,7 +2567,7 @@ namespace anm2ed::imgui
               ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) &&
               ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGui::IsAnyItemHovered())
           {
-            isFrameBoxSelecting = true;
+            isFrameBoxPending = true;
             isFrameBoxAdditive = ImGui::IsKeyDown(ImGuiMod_Ctrl);
             frameBoxStart = frame_box_content_point_get();
             frameBoxEnd = frameBoxStart;
@@ -2595,16 +2647,6 @@ namespace anm2ed::imgui
             auto buttonSize = type == TRIGGER ? frameSize : to_imvec2(vec2(frameSize.x * frame.duration, frameSize.y));
             auto frameStart = type == TRIGGER ? frame.atFrame : frameTime;
             auto frameEnd = type == TRIGGER ? frameStart + 1.0f : frameStart + frame.duration;
-            if (isFrameBoxSelecting && isFrameBoxClipSet)
-            {
-              auto boxMin = ImVec2(std::min(frameBoxStart.x, frameBoxEnd.x), std::min(frameBoxStart.y, frameBoxEnd.y));
-              auto boxMax = ImVec2(std::max(frameBoxStart.x, frameBoxEnd.x), std::max(frameBoxStart.y, frameBoxEnd.y));
-              auto rowMinY = cursorScreenPos.y + scroll.y - frameBoxClipMin.y;
-              auto frameContentMin = ImVec2(frameStart * frameSize.x, rowMinY);
-              auto frameContentMax = ImVec2(frameEnd * frameSize.x, rowMinY + frameSize.y);
-              if (is_frame_box_overlapping(frameContentMin, frameContentMax, boxMin, boxMax))
-                frameBoxSelection.insert(frameReference);
-            }
             if (frameEnd <= (float)frameMin || frameStart >= (float)frameMax)
             {
               if (type != TRIGGER) frameTime += frame.duration;
@@ -2692,7 +2734,7 @@ namespace anm2ed::imgui
 
             ImGui::PopStyleColor(4);
 
-            if (ImGui::IsItemHovered() && ImGui::IsMouseDown(ImGuiMouseButton_Left))
+            if (!isDraggedFrameActive && ImGui::IsItemHovered() && ImGui::IsMouseDown(ImGuiMouseButton_Left))
             {
               if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
               {
@@ -2704,6 +2746,8 @@ namespace anm2ed::imgui
                   draggedFrameIndex = (int)i;
                   draggedFrameStart = hoveredTime;
                   if (type != TRIGGER) draggedFrameStartDuration = frame.duration;
+                  draggedFrameStartMouseX = ImGui::GetIO().MousePos.x;
+                  draggedFrameWidth = frameSize.x;
                 }
               }
             }
@@ -2816,13 +2860,20 @@ namespace anm2ed::imgui
             frameSelectionSnapshotReference = reference;
           }
         }
+
       }
 
       if (isDraggedFrameActive)
       {
         ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+        auto durationDelta = draggedFrameWidth > 0.0f
+                                 ? static_cast<int>((ImGui::GetIO().MousePos.x - draggedFrameStartMouseX) /
+                                                    draggedFrameWidth)
+                                 : hoveredTime - draggedFrameStart;
+        auto isDraggedFrameChanged =
+            draggedFrameType == TRIGGER ? hoveredTime != draggedFrameStart : durationDelta != 0;
 
-        if (!isDraggedFrameSnapshot && hoveredTime != draggedFrameStart)
+        if (!isDraggedFrameSnapshot && isDraggedFrameChanged)
         {
           isDraggedFrameSnapshot = true;
           snapshot_command_push(draggedFrameType == TRIGGER ? EDIT_TRIGGER_AT_FRAME : EDIT_FRAME_DURATION);
@@ -2833,9 +2884,9 @@ namespace anm2ed::imgui
           auto targetReference = draggedFrameReference;
           auto targetType = draggedFrameType;
           auto targetIndex = draggedFrameIndex;
-          auto targetStart = draggedFrameStart;
           auto targetStartDuration = draggedFrameStartDuration;
           auto targetHoveredTime = hoveredTime;
+          auto targetDurationDelta = durationDelta;
           auto isPlaybackClamp = settings.playbackIsClamp;
           auto animationLength = animation ? animation->frameNum : FRAME_NUM_MAX;
           command_push([=](Manager&, Document& document)
@@ -2859,8 +2910,8 @@ namespace anm2ed::imgui
                          }
                          else
                          {
-                           frame->duration = glm::clamp(targetStartDuration + (targetHoveredTime - targetStart),
-                                                        FRAME_DURATION_MIN, FRAME_DURATION_MAX);
+                           frame->duration = glm::clamp(targetStartDuration + targetDurationDelta, FRAME_DURATION_MIN,
+                                                        FRAME_DURATION_MAX);
                          }
                        });
         }
@@ -2882,6 +2933,8 @@ namespace anm2ed::imgui
           draggedFrameIndex = -1;
           draggedFrameStart = -1;
           draggedFrameStartDuration = -1;
+          draggedFrameStartMouseX = 0.0f;
+          draggedFrameWidth = 0.0f;
           isDraggedFrameSnapshot = false;
           frameSelectionLocked.clear();
         }
@@ -2971,23 +3024,34 @@ namespace anm2ed::imgui
             frameBoxClipMin = frameBoxDrawList->GetClipRectMin();
             frameBoxClipMax = frameBoxDrawList->GetClipRectMax();
             isFrameBoxClipSet = true;
-            if (isFrameBoxSelecting)
+            if (isFrameBoxPending || isFrameBoxSelecting)
             {
               auto& io = ImGui::GetIO();
+              auto threshold = ImGui::GetTextLineHeightWithSpacing() * 0.125f;
+              frameBoxEnd = frame_box_content_point_get();
+              auto distance = ImVec2(frameBoxEnd.x - frameBoxStart.x, frameBoxEnd.y - frameBoxStart.y);
+              if (isFrameBoxPending && distance.x * distance.x + distance.y * distance.y >= threshold * threshold)
+              {
+                isFrameBoxPending = false;
+                isFrameBoxSelecting = true;
+              }
               auto edgeSize = ImGui::GetTextLineHeightWithSpacing();
               auto scrollStep = edgeSize * 0.5f;
-              if (io.MousePos.x < frameBoxClipMin.x + edgeSize)
-                scroll.x -= scrollStep;
-              else if (io.MousePos.x > frameBoxClipMax.x - edgeSize)
-                scroll.x += scrollStep;
-              if (io.MousePos.y < frameBoxClipMin.y + edgeSize)
-                scroll.y -= scrollStep;
-              else if (io.MousePos.y > frameBoxClipMax.y - edgeSize)
-                scroll.y += scrollStep;
-              ImGui::SetScrollX(scroll.x);
-              ImGui::SetScrollY(scroll.y);
-              frameBoxEnd = frame_box_content_point_get();
-              frameBoxSelection.clear();
+              if (isFrameBoxSelecting)
+              {
+                if (io.MousePos.x < frameBoxClipMin.x + edgeSize)
+                  scroll.x -= scrollStep;
+                else if (io.MousePos.x > frameBoxClipMax.x - edgeSize)
+                  scroll.x += scrollStep;
+                if (io.MousePos.y < frameBoxClipMin.y + edgeSize)
+                  scroll.y -= scrollStep;
+                else if (io.MousePos.y > frameBoxClipMax.y - edgeSize)
+                  scroll.y += scrollStep;
+                ImGui::SetScrollX(scroll.x);
+                ImGui::SetScrollY(scroll.y);
+                frameBoxEnd = frame_box_content_point_get();
+                frameBoxSelection.clear();
+              }
             }
 
             int index{};
@@ -3016,53 +3080,39 @@ namespace anm2ed::imgui
             ImGui::EndTable();
           }
 
-          ImDrawList* windowDrawList = ImGui::GetWindowDrawList();
-          ImDrawList* foregroundDrawList = ImGui::GetForegroundDrawList();
-          auto lineBottomY = ImGui::GetWindowPos().y + ImGui::GetWindowSize().y;
-          if (isHorizontalScroll) lineBottomY -= ImGui::GetStyle().ScrollbarSize;
-
-          auto rectMin = windowDrawList->GetClipRectMin();
-          auto rectMax = windowDrawList->GetClipRectMax();
-          if (isFrameBoxSelecting && isFrameBoxClipSet)
+          if (isFrameBoxClipSet)
           {
-            auto boxContentMin =
-                ImVec2(std::min(frameBoxStart.x, frameBoxEnd.x), std::min(frameBoxStart.y, frameBoxEnd.y));
-            auto boxContentMax =
-                ImVec2(std::max(frameBoxStart.x, frameBoxEnd.x), std::max(frameBoxStart.y, frameBoxEnd.y));
-            auto boxMin = frame_box_screen_point_get(boxContentMin);
-            auto boxMax = frame_box_screen_point_get(boxContentMax);
-            auto boxClipMin = rectMin;
-            if (isPlayheadLineSet) boxClipMin.y = std::max(boxClipMin.y, playheadLineTopY);
-            foregroundDrawList->PushClipRect(boxClipMin, rectMax, true);
-            foregroundDrawList->AddRectFilled(boxMin, boxMax, ImGui::GetColorU32(ImGuiCol_DragDropTargetBg));
-            foregroundDrawList->AddRect(boxMin, boxMax, ImGui::GetColorU32(ImGuiCol_DragDropTarget));
-            foregroundDrawList->PopClipRect();
+            auto overlayCursor = ImGui::GetCursorScreenPos();
+            auto overlayPos = ImGui::GetWindowPos();
+            auto overlaySize = ImGui::GetWindowSize();
+            ImGui::SetCursorScreenPos(overlayPos);
+            if (ImGui::BeginChild("##Frames Overlay Child", overlaySize, ImGuiChildFlags_None,
+                                  ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoBackground |
+                                      ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse |
+                                      ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoNavInputs))
+              frame_overlay_draw(ImGui::GetWindowDrawList(), frameBoxClipMin, frameBoxClipMax);
+            ImGui::EndChild();
+            ImGui::SetCursorScreenPos(overlayCursor);
           }
 
-          if (pickerLineDrawList && isPlayheadLineSet && lineBottomY > playheadLineTopY)
-          {
-            auto linePos = ImVec2(playheadLineCenterX - (PLAYHEAD_LINE_THICKNESS * 0.5f), playheadLineTopY);
-            auto lineSize = ImVec2((PLAYHEAD_LINE_THICKNESS / 2.0f), std::max(0.0f, lineBottomY - playheadLineTopY));
-            foregroundDrawList->PushClipRect(rectMin, rectMax, true);
-            foregroundDrawList->AddRectFilled(linePos, ImVec2(linePos.x + lineSize.x, linePos.y + lineSize.y),
-                                              ImGui::GetColorU32(playheadLineColor));
-            foregroundDrawList->PopClipRect();
-          }
-
-          if (isFrameBoxSelecting)
+          if (isFrameBoxPending || isFrameBoxSelecting)
           {
             if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
             {
-              group_selection_reset();
-              if (isFrameBoxAdditive)
-                document.frames.references.insert(frameBoxSelection.begin(), frameBoxSelection.end());
-              else
-                document.frames.references = frameBoxSelection;
-              document.items.references.clear();
-              for (auto frameReference : document.frames.references)
-                document.items.references.insert(item_reference_from_frame_get(frameReference));
-              if (!document.frames.references.empty()) reference = *document.frames.references.begin();
-              frames_selection_sync_for(document);
+              if (isFrameBoxSelecting)
+              {
+                group_selection_reset();
+                if (isFrameBoxAdditive)
+                  document.frames.references.insert(frameBoxSelection.begin(), frameBoxSelection.end());
+                else
+                  document.frames.references = frameBoxSelection;
+                document.items.references.clear();
+                for (auto frameReference : document.frames.references)
+                  document.items.references.insert(item_reference_from_frame_get(frameReference));
+                if (!document.frames.references.empty()) reference = *document.frames.references.begin();
+                frames_selection_sync_for(document);
+              }
+              isFrameBoxPending = false;
               isFrameBoxSelecting = false;
               frameBoxSelection.clear();
             }
@@ -3240,7 +3290,7 @@ namespace anm2ed::imgui
     ImGui::PopStyleVar();
     ImGui::End();
 
-    itemProperties.update(manager, settings, document, reference, reference_set_item);
+    if (itemProperties.update(manager, settings, document, reference)) group_selection_reset();
     group_properties_update();
 
     bakePopup.trigger();

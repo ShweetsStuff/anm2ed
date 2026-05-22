@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <filesystem>
 #include <vector>
 
@@ -35,6 +36,7 @@ namespace anm2ed::resource
     Texture& operator=(const Texture&);
     Texture& operator=(Texture&&);
     Texture(const uint8_t*, glm::ivec2);
+    Texture(const unsigned char*, size_t);
     Texture(const char*, size_t, glm::ivec2);
     Texture(const std::filesystem::path&);
     bool write_png(const std::filesystem::path&);

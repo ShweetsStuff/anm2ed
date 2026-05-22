@@ -385,6 +385,28 @@ namespace anm2ed
     change(SPRITESHEETS);
   }
 
+  bool Document::texture_reload(int id)
+  {
+    auto spritesheet = anm2.element_get(ElementType::SPRITESHEET, id);
+    if (!spritesheet) return false;
+
+    util::WorkingDirectory workingDirectory(directory_get());
+    textures[id] = resource::Texture(spritesheet->path);
+    texturePaths[id] = spritesheet->path;
+    return true;
+  }
+
+  bool Document::sound_reload(int id)
+  {
+    auto sound = anm2.element_get(ElementType::SOUND_ELEMENT, id);
+    if (!sound) return false;
+
+    util::WorkingDirectory workingDirectory(directory_get());
+    sounds[id] = resource::Audio(sound->path);
+    soundPaths[id] = sound->path;
+    return true;
+  }
+
   void Document::assets_sync(ChangeType type)
   {
     if (type == ALL || type == SPRITESHEETS || type == TEXTURES)
@@ -1493,19 +1515,19 @@ namespace anm2ed
   {
     struct LoadedSpritesheet
     {
-      std::filesystem::path path{};
+      std::filesystem::path relativePath{};
       resource::Texture texture{};
     };
 
     auto items = anm2.element_get(ElementType::SPRITESHEETS);
     if (!items) return;
+    auto directory = directory_get();
 
     std::vector<LoadedSpritesheet> loaded{};
     for (auto& path : paths)
     {
       auto pathCopy = path;
-      WorkingDirectory workingDirectory(directory_get());
-      auto loadPath = path::lower_case_backslash_handle(path);
+      auto loadPath = path::lower_case_backslash_handle(pathCopy);
       auto texture = resource::Texture(loadPath);
       if (!texture.is_valid())
       {
@@ -1516,7 +1538,8 @@ namespace anm2ed
         continue;
       }
 
-      loaded.push_back({.path = pathCopy, .texture = std::move(texture)});
+      loaded.push_back({.relativePath = path::backslash_replace(path::make_relative(loadPath, directory)),
+                        .texture = std::move(texture)});
     }
     if (loaded.empty()) return;
 
@@ -1528,7 +1551,7 @@ namespace anm2ed
       auto id = element_child_next_id_get(*items, ElementType::SPRITESHEET);
       auto spritesheet = element_make(ElementType::SPRITESHEET);
       spritesheet.id = id;
-      spritesheet.path = path::lower_case_backslash_handle(path::make_relative(loadedSpritesheet.path));
+      spritesheet.path = loadedSpritesheet.relativePath;
       auto pathString = path::to_utf8(spritesheet.path);
       items->children.push_back(spritesheet);
       textures[id] = std::move(loadedSpritesheet.texture);
@@ -1553,6 +1576,7 @@ namespace anm2ed
   {
     auto items = anm2.element_get(ElementType::SOUNDS);
     if (!items) return;
+    auto directory = directory_get();
 
     std::vector<std::filesystem::path> validPaths{};
     for (auto& path : paths)
@@ -1567,9 +1591,11 @@ namespace anm2ed
       auto id = element_child_next_id_get(*items, ElementType::SOUND_ELEMENT);
       auto soundElement = element_make(ElementType::SOUND_ELEMENT);
       soundElement.id = id;
+      auto loadPath = path::lower_case_backslash_handle(path);
+      auto relativePath = path::backslash_replace(path::make_relative(loadPath, directory));
       {
         WorkingDirectory workingDirectory(directory_get());
-        soundElement.path = path::lower_case_backslash_handle(path::make_relative(path));
+        soundElement.path = relativePath;
         sounds[id] = resource::Audio(soundElement.path);
         soundPaths[id] = soundElement.path;
       }

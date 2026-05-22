@@ -92,6 +92,8 @@ namespace anm2ed
     void anm2_change(ChangeType);
     void assets_sync(ChangeType = ALL);
     void texture_change(int);
+    bool texture_reload(int);
+    bool sound_reload(int);
     resource::Texture* texture_get(int);
     const resource::Texture* texture_get(int) const;
     resource::Audio* sound_get(int);

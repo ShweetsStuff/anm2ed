@@ -118,6 +118,20 @@ namespace anm2ed::resource
     upload(data);
   }
 
+  Texture::Texture(const unsigned char* pngData, size_t pngSize)
+  {
+    if (!pngData || pngSize == 0) return;
+
+    auto sizeInt = static_cast<int>(pngSize);
+    if (sizeInt <= 0) return;
+
+    if (auto data = stbi_load_from_memory(pngData, sizeInt, &size.x, &size.y, nullptr, CHANNELS); data)
+    {
+      upload(data);
+      stbi_image_free((void*)data);
+    }
+  }
+
   Texture::Texture(const std::filesystem::path& pngPath)
   {
     File file(pngPath, "rb");

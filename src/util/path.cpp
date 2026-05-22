@@ -100,8 +100,21 @@ namespace anm2ed::util::path
   std::filesystem::path make_relative(const std::filesystem::path& path)
   {
     if (path.empty()) return path;
+    if (!path.is_absolute()) return path;
+
     std::error_code ec{};
     auto relative = std::filesystem::relative(path, ec);
+    if (!ec) return relative;
+    return path;
+  }
+
+  std::filesystem::path make_relative(const std::filesystem::path& path, const std::filesystem::path& base)
+  {
+    if (path.empty()) return path;
+    if (base.empty() || !path.is_absolute()) return path;
+
+    std::error_code ec{};
+    auto relative = std::filesystem::relative(path, base, ec);
     if (!ec) return relative;
     return path;
   }

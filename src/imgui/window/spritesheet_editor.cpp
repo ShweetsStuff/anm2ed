@@ -355,7 +355,7 @@ namespace anm2ed::imgui
         bool isReferenceLayerOnSpritesheet =
             frame && reference.itemID > -1 && layer && layer->spritesheetId == referenceSpritesheet;
         auto useTool = tool;
-        auto step = isMod ? STEP_FAST : STEP;
+        auto step = (float)(isMod ? STEP_FAST : STEP);
         auto stepX = isGridSnap ? step * gridSize.x : step;
         auto stepY = isGridSnap ? step * gridSize.y : step;
         previousMousePos = mousePos;
@@ -692,10 +692,10 @@ namespace anm2ed::imgui
             if (isMouseDown)
             {
               auto frameCrop = ivec2(frame->crop);
-              frame_change_apply({.pivotX = (int)(mousePos.x - frameCrop.x),
-                                  .pivotY = (int)(mousePos.y - frameCrop.y),
-                                  .cropX = frameCrop.x,
-                                  .cropY = frameCrop.y});
+              frame_change_apply({.pivotX = (float)(int)(mousePos.x - frameCrop.x),
+                                  .pivotY = (float)(int)(mousePos.y - frameCrop.y),
+                                  .cropX = (float)frameCrop.x,
+                                  .cropY = (float)frameCrop.y});
             }
             if (isLeftPressed) frame_change_apply({.pivotX = step}, ChangeType::SUBTRACT);
             if (isRightPressed) frame_change_apply({.pivotX = step}, ChangeType::ADD);
@@ -703,7 +703,8 @@ namespace anm2ed::imgui
             if (isDownPressed) frame_change_apply({.pivotY = step}, ChangeType::ADD);
 
             frame_change_from_current_apply(
-                [](const Element& frame) { return FrameChange{.pivotX = (int)frame.pivot.x, .pivotY = (int)frame.pivot.y}; });
+                [](const Element& frame)
+                { return FrameChange{.pivotX = (float)(int)frame.pivot.x, .pivotY = (float)(int)frame.pivot.y}; });
 
             if (isDuring)
             {
@@ -770,7 +771,8 @@ namespace anm2ed::imgui
             if (isMouseClicked)
             {
               cropAnchor = mousePos;
-              frame_change_apply({.cropX = (int)cropAnchor.x, .cropY = (int)cropAnchor.y, .sizeX = {}, .sizeY = {}});
+              frame_change_apply(
+                  {.cropX = (float)(int)cropAnchor.x, .cropY = (float)(int)cropAnchor.y, .sizeX = {}, .sizeY = {}});
             }
             if (isMouseDown)
             {

@@ -30,9 +30,9 @@ namespace anm2ed::imgui::popup
     popup.open();
   }
 
-  void ItemProperties::update(Manager& manager, Settings& settings, Document& document, Reference& reference,
-                              const std::function<void(int, int)>& referenceSetItem)
+  bool ItemProperties::update(Manager& manager, Settings& settings, Document& document, Reference& reference)
   {
+    bool isAdded{};
     auto& anm2 = document.anm2;
     auto animation = anm2.element_get(ElementType::ANIMATION, reference.animationIndex);
 
@@ -55,7 +55,7 @@ namespace anm2ed::imgui::popup
 
       if (ImGui::BeginChild("##Content", ImVec2(0, contentHeight), ImGuiChildFlags_Borders))
       {
-        auto spaced_pair = [](const std::function<void()>& left, const std::function<void()>& right)
+        auto spaced_pair = [](auto left, auto right)
         {
           auto startX = ImGui::GetCursorPosX();
           auto secondX = startX + ImGui::GetContentRegionAvail().x * 0.5f;
@@ -194,7 +194,6 @@ namespace anm2ed::imgui::popup
         auto queuedAddItemName = addItemName;
         auto queuedAddItemSpritesheetID = addItemSpritesheetID;
         auto queuedAddItemIsShowRect = addItemIsShowRect;
-        auto queuedReferenceSetItem = referenceSetItem;
 
         manager.command_push({manager.selected,
                               [=](Manager&, Document& document)
@@ -213,9 +212,19 @@ namespace anm2ed::imgui::popup
 
                                 document.anm2_change(Document::ITEMS);
 
-                                if (addId != -1) queuedReferenceSetItem((int)queuedType, addId);
+                                if (addId != -1)
+                                {
+                                  document.reference = {queuedAnimationIndex, (int)queuedType, addId};
+                                  document.items.references = {document.reference};
+                                  document.frames.selection.clear();
+                                  document.frames.references.clear();
+                                  if (queuedType == LAYER)
+                                    if (auto layer = document.anm2.element_get(ElementType::LAYER_ELEMENT, addId))
+                                      document.spritesheet.reference = layer->spritesheetId;
+                                }
                               }});
 
+        isAdded = true;
         close();
       }
       ImGui::EndDisabled();
@@ -229,5 +238,7 @@ namespace anm2ed::imgui::popup
 
       ImGui::EndPopup();
     }
+
+    return isAdded;
   }
 }

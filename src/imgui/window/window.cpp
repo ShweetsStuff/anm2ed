@@ -292,8 +292,8 @@ namespace anm2ed::imgui
 
   std::filesystem::path window_asset_path_get(Document& document, const std::filesystem::path& path)
   {
-    WorkingDirectory workingDirectory(document.directory_get());
-    return path::lower_case_backslash_handle(path::make_relative(path));
+    auto loadPath = path::lower_case_backslash_handle(path);
+    return path::backslash_replace(path::make_relative(loadPath, document.directory_get()));
   }
 
   void window_directory_open(Dialog& dialog, Document& document, const std::filesystem::path& path)
@@ -1900,7 +1900,12 @@ namespace anm2ed::imgui
     window.reload = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
     {
       auto selected = document.spritesheet.selection;
-      window_edit(window, document, localize.get(EDIT_RELOAD_SPRITESHEETS), []() {});
+      window_edit(window, document, localize.get(EDIT_RELOAD_SPRITESHEETS),
+                  [&]()
+                  {
+                    for (auto& id : selected)
+                      document.texture_reload(id);
+                  });
 
       for (auto& id : selected)
       {
@@ -2286,6 +2291,7 @@ namespace anm2ed::imgui
                                     auto spritesheet = document.anm2.element_get(ElementType::SPRITESHEET, id);
                                     if (!spritesheet) return;
                                     spritesheet->path = window_asset_path_get(document, dialogPath);
+                                    document.texture_reload(id);
                                   };
 
                                   window_edit(document, Document::SPRITESHEETS, localize.get(EDIT_REPLACE_SPRITESHEET),
@@ -2544,6 +2550,7 @@ namespace anm2ed::imgui
         {
           auto sound = window_element_get(window, document.anm2, id);
           if (!sound) continue;
+          document.sound_reload(id);
           auto pathString = path::to_utf8(sound->path);
           toasts.push(std::vformat(localize.get(TOAST_RELOAD_SOUND), std::make_format_args(id, pathString)));
           logger.info(
@@ -2850,6 +2857,7 @@ namespace anm2ed::imgui
                    auto sound = document.anm2.element_get(ElementType::SOUND_ELEMENT, id);
                    if (!sound) return;
                    sound->path = window_asset_path_get(document, dialogPath);
+                   document.sound_reload(id);
                    auto pathString = path::to_utf8(sound->path);
                    toasts.push(std::vformat(localize.get(TOAST_REPLACE_SOUND), std::make_format_args(id, pathString)));
                    logger.info(std::vformat(localize.get(TOAST_REPLACE_SOUND, anm2ed::ENGLISH),

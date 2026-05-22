@@ -1041,16 +1041,37 @@ namespace anm2ed::imgui
         auto isZoomOut = isFocused && shortcut(manager.chords[SHORTCUT_ZOOM_OUT], shortcut::GLOBAL);
 
         auto isMod = ImGui::IsKeyDown(ImGuiMod_Shift);
+        auto useTool = tool;
+        auto step = (float)(isMod ? STEP_FAST : STEP);
+        mousePos = position_translate(zoom, pan, to_vec2(ImGui::GetMousePos()) - to_vec2(cursorScreenPos));
+        auto selected_frame_references_get = [&]()
+        {
+          std::set<Reference> result = document.frames.references;
+          if (result.empty())
+            for (auto frameIndex : frames)
+              result.insert({reference.animationIndex, reference.itemType, reference.itemID, frameIndex});
+          if (result.empty() && reference.itemType != NONE && reference.frameIndex != -1) result.insert(reference);
+          std::erase_if(result,
+                        [](const Reference& frameReference)
+                        { return frameReference.itemType == NONE || frameReference.itemType == TRIGGER; });
+          return result;
+        };
+        auto selectedFrameReferences = selected_frame_references_get();
+        auto editReference = reference;
+        auto editItemType = referenceItemType;
+        if ((referenceItemType == ItemType::TRIGGER || !selectedFrameReferences.contains(reference)) &&
+            !selectedFrameReferences.empty())
+        {
+          editReference = *selectedFrameReferences.begin();
+          editItemType = static_cast<ItemType>(editReference.itemType);
+        }
 
         auto frame =
-            anm2.element_get(reference.animationIndex, referenceItemType, reference.frameIndex, reference.itemID);
-        auto item = anm2.element_get(reference.animationIndex, referenceItemType, reference.itemID);
-        auto useTool = tool;
-        auto step = isMod ? STEP_FAST : STEP;
-        mousePos = position_translate(zoom, pan, to_vec2(ImGui::GetMousePos()) - to_vec2(cursorScreenPos));
+            anm2.element_get(editReference.animationIndex, editItemType, editReference.frameIndex, editReference.itemID);
+        auto item = anm2.element_get(editReference.animationIndex, editItemType, editReference.itemID);
         auto nulls = anm2.element_get(ElementType::NULLS);
-        auto selectedNull = referenceItemType == ItemType::NULL_ && nulls
-                                ? element_child_id_get(*nulls, ElementType::NULL_ELEMENT, reference.itemID)
+        auto selectedNull = editItemType == ItemType::NULL_ && nulls
+                                ? element_child_id_get(*nulls, ElementType::NULL_ELEMENT, editReference.itemID)
                                 : nullptr;
         bool isSelectedNullRect = selectedNull && selectedNull->isShowRect;
         auto null_rect_top_left = [](const Element& frame) { return frame.position - (frame.scale * 0.5f); };
@@ -1081,18 +1102,36 @@ namespace anm2ed::imgui
         };
         auto frame_change_apply = [&](FrameChange frameChange, ChangeType changeType = ChangeType::ADJUST)
         {
-          auto queuedReference = reference;
-          auto queuedReferenceItemType = referenceItemType;
-          auto queuedFrames = frames;
+          auto queuedFrameReferences = selectedFrameReferences;
           manager.command_push({manager.selected,
                                 [=](Manager&, Document& document)
                                 {
-                                  auto item = document.anm2.element_get(queuedReference.animationIndex,
-                                                                        queuedReferenceItemType,
-                                                                        queuedReference.itemID);
-                                  if (!item) return;
-                                  frames_change(*item, frameChange, queuedReferenceItemType, changeType, queuedFrames);
+                                  std::map<Reference, std::set<int>> groupedFrames{};
+                                  for (auto frameReference : queuedFrameReferences)
+                                    groupedFrames[{frameReference.animationIndex, frameReference.itemType,
+                                                   frameReference.itemID, -1}]
+                                        .insert(frameReference.frameIndex);
+
+                                  for (auto& [itemReference, itemFrames] : groupedFrames)
+                                  {
+                                    auto itemType = static_cast<ItemType>(itemReference.itemType);
+                                    auto item = document.anm2.element_get(itemReference.animationIndex, itemType,
+                                                                          itemReference.itemID);
+                                    if (!item) continue;
+                                    frames_change(*item, frameChange, itemType, changeType, itemFrames);
+                                  }
                                 }});
+        };
+        auto frame_position_apply = [&](vec2 position)
+        {
+          if (!frame) return;
+          frame_change_apply({.positionX = position.x - frame->position.x, .positionY = position.y - frame->position.y},
+                             ChangeType::ADD);
+        };
+        auto frame_scale_apply = [&](vec2 scale)
+        {
+          if (!frame) return;
+          frame_change_apply({.scaleX = scale.x - frame->scale.x, .scaleY = scale.y - frame->scale.y}, ChangeType::ADD);
         };
         auto frames_changed = [&]()
         {
@@ -1103,10 +1142,11 @@ namespace anm2ed::imgui
         {
           topLeft = vec2(ivec2(topLeft));
           rectSize = vec2(ivec2(rectSize));
-          frame_change_apply({.positionX = topLeft.x + rectSize.x * 0.5f,
-                              .positionY = topLeft.y + rectSize.y * 0.5f,
-                              .scaleX = rectSize.x,
-                              .scaleY = rectSize.y});
+          frame_change_apply({.positionX = topLeft.x + rectSize.x * 0.5f - frame->position.x,
+                              .positionY = topLeft.y + rectSize.y * 0.5f - frame->position.y,
+                              .scaleX = rectSize.x - frame->scale.x,
+                              .scaleY = rectSize.y - frame->scale.y},
+                             ChangeType::ADD);
         };
 
         auto& toolInfo = tool::INFO[useTool];
@@ -1125,7 +1165,7 @@ namespace anm2ed::imgui
             if (isMouseDown || isMouseMiddleDown) pan += vec2(mouseDelta.x, mouseDelta.y);
             break;
           case tool::MOVE:
-            if (!item || !frame || frames.empty()) break;
+            if (!item || !frame || selectedFrameReferences.empty()) break;
             if (isToolBegin)
             {
               frame_snapshot(EDIT_FRAME_POSITION);
@@ -1140,10 +1180,10 @@ namespace anm2ed::imgui
             {
               auto position = mousePos - moveOffset;
               if (isSelectedNullRect)
-                frame_change_apply({.positionX = (int)(position.x + frame->scale.x * 0.5f),
-                                    .positionY = (int)(position.y + frame->scale.y * 0.5f)});
+                frame_position_apply(vec2((float)(int)(position.x + frame->scale.x * 0.5f),
+                                          (float)(int)(position.y + frame->scale.y * 0.5f)));
               else
-                frame_change_apply({.positionX = (int)position.x, .positionY = (int)position.y});
+                frame_position_apply(vec2((float)(int)position.x, (float)(int)position.y));
             }
 
             if (isLeftPressed) frame_change_apply({.positionX = step}, ChangeType::SUBTRACT);
@@ -1165,7 +1205,7 @@ namespace anm2ed::imgui
             }
             break;
           case tool::SCALE:
-            if (!item || !frame || frames.empty()) break;
+            if (!item || !frame || selectedFrameReferences.empty()) break;
             if (isToolBegin)
             {
               frame_snapshot(EDIT_FRAME_SCALE);
@@ -1192,7 +1232,7 @@ namespace anm2ed::imgui
               {
                 auto scale = frame->scale + vec2(mouseDelta.x, mouseDelta.y);
                 if (isMod) scale = {scale.x, scale.x};
-                frame_change_apply({.scaleX = scale.x, .scaleY = scale.y});
+                frame_scale_apply(scale);
               }
             }
 
@@ -1237,9 +1277,9 @@ namespace anm2ed::imgui
             }
             break;
           case tool::ROTATE:
-            if (!item || !frame || frames.empty()) break;
+            if (!item || !frame || selectedFrameReferences.empty()) break;
             if (isToolBegin) frame_snapshot(EDIT_FRAME_ROTATION);
-            if (isToolMouseDown) frame_change_apply({.rotation = (int)mouseDelta.x}, ChangeType::ADD);
+            if (isToolMouseDown) frame_change_apply({.rotation = (float)(int)mouseDelta.x}, ChangeType::ADD);
             if (isLeftPressed || isDownPressed) frame_change_apply({.rotation = step}, ChangeType::SUBTRACT);
             if (isUpPressed || isRightPressed) frame_change_apply({.rotation = step}, ChangeType::ADD);
 

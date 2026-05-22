@@ -5,6 +5,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <glm/glm.hpp>
@@ -289,7 +290,9 @@ namespace anm2ed
   Element element_make(ElementType);
   Element element_read(const tinyxml2::XMLElement*);
   std::string element_to_string(const Element&, Flags = 0);
+  std::string element_to_string(const Element&, ElementType, Flags = 0);
   tinyxml2::XMLElement* element_to_xml(tinyxml2::XMLDocument&, const Element&, Flags = 0);
+  tinyxml2::XMLElement* element_to_xml(tinyxml2::XMLDocument&, const Element&, ElementType, Flags = 0);
   Element* element_child_first_get(Element&, ElementType);
   const Element* element_child_first_get(const Element&, ElementType);
   Element* element_child_id_get(Element&, ElementType, int);
@@ -301,6 +304,7 @@ namespace anm2ed
   const Element* element_first_get(const Element&, ElementType);
   Element* animation_item_get(Element&, ItemType, int = -1);
   const Element* animation_item_get(const Element&, ItemType, int = -1);
+  ElementType item_type_to_track_type_get(ItemType);
   Element* track_frame_get(Element&, int);
   const Element* track_frame_get(const Element&, int);
   Element frame_generate(const Element&, float);
@@ -325,6 +329,7 @@ namespace anm2ed
     Anm2(const std::filesystem::path&, std::string* = nullptr);
 
     bool load(const std::filesystem::path&, std::string* = nullptr);
+    bool load_string(std::string_view, std::string* = nullptr);
     bool save(const std::filesystem::path&, std::string* = nullptr, Options = {}) const;
     std::string to_string(Options = {}) const;
     tinyxml2::XMLElement* to_element(tinyxml2::XMLDocument&, Options = {}) const;

@@ -91,6 +91,25 @@ namespace anm2ed
       NO_SOUNDS | NO_REGIONS | NO_GROUPS | FRAME_NO_REGION_VALUES | INTERPOLATION_BOOL_ONLY, 0,
       NO_GROUPS | FRAME_NO_REGION_VALUES};
 
+  void groups_flatten(Element&);
+
+  bool anm2_document_load(Anm2& anm2, XMLDocument& document, std::string* errorString)
+  {
+    auto rootElement = document.RootElement();
+    if (!rootElement)
+    {
+      if (errorString) *errorString = "No root element.";
+      anm2.isValid = false;
+      return false;
+    }
+
+    anm2.root = element_read(rootElement);
+    groups_flatten(anm2.root);
+    anm2.region_frames_sync(true);
+    anm2.isValid = true;
+    return true;
+  }
+
   Flags flags_for(Compatibility compatibility)
   {
     auto index = (std::size_t)compatibility;
@@ -437,11 +456,16 @@ namespace anm2ed
     return element_to_xml(document, element, ElementType::UNKNOWN, flags);
   }
 
-  std::string element_to_string(const Element& element, Flags flags)
+  std::string element_to_string(const Element& element, ElementType parentType, Flags flags)
   {
     XMLDocument document{};
-    document.InsertEndChild(element_to_xml(document, element, flags));
+    document.InsertEndChild(element_to_xml(document, element, parentType, flags));
     return xml::document_to_string(document);
+  }
+
+  std::string element_to_string(const Element& element, Flags flags)
+  {
+    return element_to_string(element, ElementType::UNKNOWN, flags);
   }
 
   void groups_flatten(Element& element)
@@ -1145,19 +1169,20 @@ namespace anm2ed
       return false;
     }
 
-    auto rootElement = document.RootElement();
-    if (!rootElement)
+    return anm2_document_load(*this, document, errorString);
+  }
+
+  bool Anm2::load_string(std::string_view string, std::string* errorString)
+  {
+    XMLDocument document{};
+    if (document.Parse(string.data(), string.size()) != XML_SUCCESS)
     {
-      if (errorString) *errorString = "No root element.";
+      if (errorString) *errorString = document.ErrorStr();
       isValid = false;
       return false;
     }
 
-    root = element_read(rootElement);
-    groups_flatten(root);
-    region_frames_sync(true);
-    isValid = true;
-    return true;
+    return anm2_document_load(*this, document, errorString);
   }
 
   bool Anm2::save(const std::filesystem::path& path, std::string* errorString, Options options) const

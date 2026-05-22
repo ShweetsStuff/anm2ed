@@ -1,6 +1,5 @@
 #pragma once
 
-#include <functional>
 #include <set>
 #include <string>
 
@@ -24,6 +23,6 @@ namespace anm2ed::imgui::popup
 
   public:
     void open();
-    void update(Manager&, Settings&, Document&, Reference&, const std::function<void(int, int)>&);
+    bool update(Manager&, Settings&, Document&, Reference&);
   };
 }

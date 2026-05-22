@@ -56,6 +56,7 @@ namespace anm2ed::imgui
     popup::ItemProperties itemProperties{};
     PopupHelper bakePopup{PopupHelper(LABEL_TIMELINE_BAKE_POPUP, POPUP_SMALL_NO_HEIGHT)};
     int hoveredTime{};
+    bool isFrameBoxPending{};
     bool isFrameBoxSelecting{};
     bool isFrameBoxAdditive{};
     ImVec2 frameBoxStart{};
@@ -75,6 +76,8 @@ namespace anm2ed::imgui
     int draggedFrameIndex{-1};
     int draggedFrameStart{-1};
     int draggedFrameStartDuration{-1};
+    float draggedFrameStartMouseX{};
+    float draggedFrameWidth{};
     bool isDraggedFrameSnapshot{};
     bool frameFocusRequested{};
     int frameFocusIndex{-1};
@@ -87,7 +90,6 @@ namespace anm2ed::imgui
     bool isFrameSelectionAnchorSet{};
     std::vector<TimelineRowReference> rowDragReferences{};
     glm::vec2 scroll{};
-    ImDrawList* pickerLineDrawList{};
     ImGuiStyle style{};
 
   public:
