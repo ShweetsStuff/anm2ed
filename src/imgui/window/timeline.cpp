@@ -57,6 +57,13 @@ namespace anm2ed::imgui
   constexpr auto TIMELINE_CHILD_BG_COLOR_LIGHT = ImVec4(0.5490f, 0.5490f, 0.5882f, 1.0f);
   constexpr auto TIMELINE_TEXT_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
 
+  enum class DropZone
+  {
+    BEFORE,
+    INSIDE,
+    AFTER
+  };
+
   constexpr glm::vec4 FRAME_COLOR_LIGHT_BASE[] = {{0.80f, 0.80f, 0.80f, 1.0f},
                                                   {0.5216f, 0.7333f, 1.0f, 1.0f},
                                                   {1.0f, 0.9961f, 0.5882f, 1.0f},
@@ -220,9 +227,9 @@ namespace anm2ed::imgui
       return left.animationIndex == right.animationIndex && left.itemType == right.itemType &&
              left.itemID == right.itemID;
     };
-    auto group_selection_reset = [this]()
+    auto group_selection_reset_for = [this](Document& targetDocument)
     {
-      groupReferences.clear();
+      targetDocument.groupReferences.clear();
       isRowSelectionAnchorSet = false;
     };
     auto frame_references_for_current_get = [&]()
@@ -256,7 +263,7 @@ namespace anm2ed::imgui
     };
     auto frame_selection_set_for = [&](Document& targetDocument, Reference frameReference)
     {
-      group_selection_reset();
+      group_selection_reset_for(targetDocument);
       targetDocument.frames.references = {frameReference};
       targetDocument.reference = frameReference;
       item_selection_set_for(targetDocument, item_reference_from_frame_get(frameReference));
@@ -264,7 +271,7 @@ namespace anm2ed::imgui
     };
     auto frame_selection_toggle_for = [&](Document& targetDocument, Reference frameReference)
     {
-      group_selection_reset();
+      group_selection_reset_for(targetDocument);
       auto& selection = targetDocument.frames.references;
       auto itemReference = item_reference_from_frame_get(frameReference);
       if (selection.contains(frameReference))
@@ -287,7 +294,7 @@ namespace anm2ed::imgui
     auto frame_selection_range_set_for = [&](Document& targetDocument, Reference firstReference,
                                              Reference lastReference, bool isAdditive) -> bool
     {
-      group_selection_reset();
+      group_selection_reset_for(targetDocument);
       if (!is_same_item(firstReference, lastReference) || firstReference.frameIndex < 0 || lastReference.frameIndex < 0)
         return false;
 
@@ -714,13 +721,13 @@ namespace anm2ed::imgui
 
     auto reference_clear = [&]()
     {
-      group_selection_reset();
+      group_selection_reset_for(document);
       reference_clear_for(document);
     };
 
     auto reference_set_timeline_item = [&](int type, int id)
     {
-      group_selection_reset();
+      group_selection_reset_for(document);
       reference_set_timeline_item_for(document, type, id);
     };
 
@@ -821,7 +828,7 @@ namespace anm2ed::imgui
     };
 
     auto group_reference_get = [&](const TimelineItemRow& row)
-    { return TimelineGroupReference{manager.selected, reference.animationIndex, row.type, row.id}; };
+    { return Reference{reference.animationIndex, row.type, row.id}; };
 
     auto row_reference_get = [&](const TimelineItemRow& row)
     {
@@ -844,7 +851,7 @@ namespace anm2ed::imgui
 
     auto is_group_selected = [&](const TimelineItemRow& row)
     {
-      return groupReferences.contains(group_reference_get(row));
+      return document.groupReferences.contains(group_reference_get(row));
     };
 
     auto is_row_selected = [&](const TimelineItemRow& row)
@@ -853,19 +860,19 @@ namespace anm2ed::imgui
       auto itemReference = item_reference_get(row.type, row.id);
       auto isReferenced = reference.itemType == row.type && reference.itemID == row.id;
       return document.items.references.contains(itemReference) ||
-             (document.items.references.empty() && groupReferences.empty() && isReferenced);
+             (document.items.references.empty() && document.groupReferences.empty() && isReferenced);
     };
 
     auto row_selection_clear = [&]()
     {
       document.items.references.clear();
-      groupReferences.clear();
+      document.groupReferences.clear();
     };
 
     auto row_selection_insert = [&](const TimelineRowReference& row)
     {
       if (row.isGroup)
-        groupReferences.insert({row.documentIndex, row.animationIndex, row.type, row.id});
+        document.groupReferences.insert({row.animationIndex, row.type, row.id});
       else
         document.items.references.insert(row_item_reference_get(row));
     };
@@ -873,18 +880,18 @@ namespace anm2ed::imgui
     auto row_selection_erase = [&](const TimelineRowReference& row)
     {
       if (row.isGroup)
-        groupReferences.erase({row.documentIndex, row.animationIndex, row.type, row.id});
+        document.groupReferences.erase({row.animationIndex, row.type, row.id});
       else
         document.items.references.erase(row_item_reference_get(row));
     };
 
     auto is_row_reference_selected = [&](const TimelineRowReference& row)
     {
-      if (row.isGroup) return groupReferences.contains({row.documentIndex, row.animationIndex, row.type, row.id});
+      if (row.isGroup) return document.groupReferences.contains({row.animationIndex, row.type, row.id});
       return document.items.references.contains(row_item_reference_get(row));
     };
 
-    auto row_selection_count_get = [&]() { return document.items.references.size() + groupReferences.size(); };
+    auto row_selection_count_get = [&]() { return document.items.references.size() + document.groupReferences.size(); };
 
     auto row_selection_set = [&](const TimelineItemRow& row)
     {
@@ -1060,13 +1067,13 @@ namespace anm2ed::imgui
                             }
                           }
                           reference_clear_for(document);
-                          group_selection_reset();
+                          group_selection_reset_for(document);
                         });
     };
 
     auto item_references_groupable_get = [&]()
     {
-      if (!groupReferences.empty()) return std::vector<Reference>{};
+      if (!document.groupReferences.empty()) return std::vector<Reference>{};
       auto selectedItems = item_references_for_current_get();
       std::erase_if(selectedItems, [](const Reference& itemReference)
                     { return itemReference.itemType != LAYER && itemReference.itemType != NULL_; });
@@ -1139,7 +1146,7 @@ namespace anm2ed::imgui
     };
 
     auto rows_move_to_row = [&](std::vector<TimelineRowReference> draggedRows, TimelineItemRow targetRow,
-                                bool isDropAfter)
+                                bool isDropAfter, bool isDropIntoGroup = false)
     {
       if (draggedRows.empty()) return;
       auto targetType = draggedRows.front().type;
@@ -1224,7 +1231,7 @@ namespace anm2ed::imgui
                           }
 
                           auto targetGroupId = -1;
-                          if (targetRow.isGroup && isDropAfter)
+                          if (targetRow.isGroup && isDropIntoGroup)
                             targetGroupId = targetRow.id;
                           else if (targetRow.type == targetType)
                             targetGroupId = targetRow.groupId;
@@ -1239,12 +1246,12 @@ namespace anm2ed::imgui
                                                      movedItems.end());
 
                           document.items.references.clear();
-                          groupReferences.clear();
+                          document.groupReferences.clear();
                           for (const auto& draggedRow : draggedRows)
                           {
                             if (draggedRow.isGroup)
-                              groupReferences.insert({draggedRow.documentIndex, draggedRow.animationIndex,
-                                                      draggedRow.type, draggedRow.id});
+                              document.groupReferences.insert(
+                                  {draggedRow.animationIndex, draggedRow.type, draggedRow.id});
                             else
                               document.items.references.insert(row_item_reference_get(draggedRow));
                           }
@@ -1334,7 +1341,18 @@ namespace anm2ed::imgui
                          auto start = targetReference.itemType == TRIGGER ? targetHoveredTime : insertIndex;
                          if (frames_deserialize(*item, clipboardString, start, indices, &errorString))
                          {
-                           if (targetReference.itemType == LAYER && targetReference.itemID != -1)
+                           if (targetReference.itemType != LAYER)
+                           {
+                             for (auto i : indices)
+                               if (auto frame = track_frame_get(*item, i); frame)
+                               {
+                                 frame->regionId = -1;
+                                 frame->crop = {};
+                                 frame->size = {};
+                                 frame->pivot = {};
+                               }
+                           }
+                           else if (targetReference.itemID != -1)
                            {
                              auto layer = command_layer_get(document, targetReference.itemID);
                              auto spritesheet =
@@ -1693,11 +1711,17 @@ namespace anm2ed::imgui
                     "Timeline Row Drag Drop",
                     ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect))
             {
-              auto isDropAfter = is_drop_after(groupButtonMin, groupButtonMax);
+              auto groupDropThird = (groupButtonMax.y - groupButtonMin.y) / 3.0f;
+              auto dropZone = DropZone::BEFORE;
+              if (mousePos.y >= groupButtonMax.y - groupDropThird)
+                dropZone = DropZone::AFTER;
+              else if (mousePos.y >= groupButtonMin.y + groupDropThird)
+                dropZone = DropZone::INSIDE;
+              auto isDropAfter = dropZone != DropZone::BEFORE;
               auto payloadRows = (TimelineRowReference*)payload->Data;
               auto payloadCount = payload->DataSize / sizeof(TimelineRowReference);
               std::vector<TimelineRowReference> draggedRows(payloadRows, payloadRows + payloadCount);
-              auto isDropIntoGroup = isDropAfter && (row.type == LAYER || row.type == NULL_);
+              auto isDropIntoGroup = dropZone == DropZone::INSIDE && (row.type == LAYER || row.type == NULL_);
               for (auto draggedRow : draggedRows)
                 if (draggedRow.isGroup || draggedRow.type != row.type) isDropIntoGroup = false;
 
@@ -1706,7 +1730,7 @@ namespace anm2ed::imgui
               else
                 drop_line_draw(ImGui::GetWindowDrawList(), groupChildMin, groupChildMax, isDropAfter);
 
-              if (payload->IsDelivery()) rows_move_to_row(draggedRows, row, isDropAfter);
+              if (payload->IsDelivery()) rows_move_to_row(draggedRows, row, isDropAfter, isDropIntoGroup);
             }
             ImGui::EndDragDropTarget();
           }
@@ -2985,7 +3009,7 @@ namespace anm2ed::imgui
           isFrameBoxClipSet = false;
           if (animation && ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_A, ImGuiInputFlags_RouteFocused))
           {
-            group_selection_reset();
+            group_selection_reset_for(document);
             document.frames.references = all_frame_references_for_items_get();
             if (!document.frames.references.empty())
             {
@@ -3099,7 +3123,7 @@ namespace anm2ed::imgui
             {
               if (isFrameBoxSelecting)
               {
-                group_selection_reset();
+                group_selection_reset_for(document);
                 if (isFrameBoxAdditive)
                   document.frames.references.insert(frameBoxSelection.begin(), frameBoxSelection.end());
                 else
@@ -3288,7 +3312,7 @@ namespace anm2ed::imgui
     ImGui::PopStyleVar();
     ImGui::End();
 
-    if (itemProperties.update(manager, settings, document, reference)) group_selection_reset();
+    if (itemProperties.update(manager, settings, document, reference)) group_selection_reset_for(document);
     group_properties_update();
 
     bakePopup.trigger();

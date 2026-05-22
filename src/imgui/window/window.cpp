@@ -2721,7 +2721,6 @@ namespace anm2ed::imgui
               }
               else
               {
-                ImGui::Text("%s", localize.get(TEXT_SOUND_PLAY));
                 ImGui::Text("%s", localize.get(TEXT_OPEN_DIRECTORY));
               }
               ImGui::EndTooltip();

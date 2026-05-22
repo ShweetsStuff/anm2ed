@@ -51,7 +51,7 @@ namespace anm2ed::imgui
 
       if (ImGui::Button(localize.get(BASIC_NO), widgetSize))
       {
-        manager.autosave_files_clear();
+        manager.autosave_files_clear(true);
         isRestoreAvailable = false;
         popup.close();
       }

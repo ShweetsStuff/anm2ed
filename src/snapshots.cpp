@@ -23,8 +23,10 @@ namespace anm2ed
     out.sound = sound;
     out.spritesheet = spritesheet;
     out.textures = textures;
+    out.sounds = sounds;
     out.anm2 = anm2;
     out.reference = reference;
+    out.groupReferences = groupReferences;
     out.frameTime = frameTime;
     out.message = message;
     return out;

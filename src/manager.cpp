@@ -187,10 +187,6 @@ namespace anm2ed
   {
     if (!vector::in_bounds(documents, index)) return;
 
-    const auto autosavePath = documents[index].autosave_path_get();
-    autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), autosavePath), autosaveFiles.end());
-    autosave_files_write();
-
     documents.erase(documents.begin() + index);
     selection_history_cleanup(index);
 
@@ -390,8 +386,6 @@ namespace anm2ed
 
   void Manager::autosave_files_open()
   {
-    std::vector<std::filesystem::path> restoredFiles{};
-
     for (auto& path : autosaveFiles)
     {
       if (auto document = open(path, false, false))
@@ -399,16 +393,8 @@ namespace anm2ed
         document->isForceDirty = true;
         document->path = document->path_from_autosave_get(path);
         document->change(Document::ALL);
-        restoredFiles.emplace_back(path);
       }
     }
-
-    for (auto& path : restoredFiles)
-    {
-      autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), path), autosaveFiles.end());
-      autosave_file_remove(path);
-    }
-    autosave_files_write();
   }
 
   void Manager::autosave_files_load()

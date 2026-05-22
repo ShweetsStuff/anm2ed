@@ -159,6 +159,7 @@ namespace anm2ed::document
     auto& selection = document.frames.selection;
     auto& frameReferences = document.frames.references;
     auto& itemReferences = document.items.references;
+    auto& groupReferences = document.groupReferences;
 
     auto animationCount = animation_count_get(document.anm2);
     if (animationCount <= 0)
@@ -167,6 +168,7 @@ namespace anm2ed::document
       selection.clear();
       frameReferences.clear();
       itemReferences.clear();
+      groupReferences.clear();
       document.frameTime = 0.0f;
       return;
     }
@@ -188,6 +190,7 @@ namespace anm2ed::document
       reference.frameIndex = -1;
       selection.clear();
       frameReferences.clear();
+      groupReferences.clear();
       document.frameTime = 0.0f;
       return;
     }
@@ -197,6 +200,21 @@ namespace anm2ed::document
       auto item = document.anm2.element_get(it->animationIndex, item_type_get(it->itemType), it->itemID);
       if (!item)
         it = itemReferences.erase(it);
+      else
+        ++it;
+    }
+
+    for (auto it = groupReferences.begin(); it != groupReferences.end();)
+    {
+      auto animation = document.anm2.element_get(ElementType::ANIMATION, it->animationIndex);
+      Element* container{};
+      if (animation && it->itemType == LAYER)
+        container = element_child_first_get(*animation, ElementType::LAYER_ANIMATIONS);
+      else if (animation && it->itemType == NULL_)
+        container = element_child_first_get(*animation, ElementType::NULL_ANIMATIONS);
+      auto group = container ? element_child_id_get(*container, ElementType::GROUP, it->itemID) : nullptr;
+      if (!group)
+        it = groupReferences.erase(it);
       else
         ++it;
     }
@@ -282,8 +300,8 @@ namespace anm2ed
         playback(current.playback), animation(current.animation), event(current.event), frames(current.frames),
         items(current.items), layer(current.layer), merge(current.merge), null(current.null), region(current.region),
         sound(current.sound), spritesheet(current.spritesheet), textures(current.textures), sounds(current.sounds),
-        anm2(current.anm2), reference(current.reference), frameTime(current.frameTime), message(current.message),
-        regionBySpritesheet(std::move(other.regionBySpritesheet)),
+        anm2(current.anm2), reference(current.reference), groupReferences(current.groupReferences),
+        frameTime(current.frameTime), message(current.message), regionBySpritesheet(std::move(other.regionBySpritesheet)),
         changeAllFramePropertiesRegionId(other.changeAllFramePropertiesRegionId), previewZoom(other.previewZoom),
         previewPan(other.previewPan), editorPan(other.editorPan), editorZoom(other.editorZoom),
         overlayIndex(other.overlayIndex), hash(other.hash), saveHash(other.saveHash), autosaveHash(other.autosaveHash),

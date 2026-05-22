@@ -14,16 +14,6 @@
 
 namespace anm2ed::imgui
 {
-  struct TimelineGroupReference
-  {
-    int documentIndex{-1};
-    int animationIndex{-1};
-    int type{NONE};
-    int id{-1};
-
-    auto operator<=>(const TimelineGroupReference&) const = default;
-  };
-
   struct TimelineRowReference
   {
     int documentIndex{-1};
@@ -62,7 +52,6 @@ namespace anm2ed::imgui
     ImVec2 frameBoxStart{};
     ImVec2 frameBoxEnd{};
     std::set<Reference> frameBoxSelection{};
-    std::set<TimelineGroupReference> groupReferences{};
     TimelineRowReference rowSelectionAnchor{};
     bool isRowSelectionAnchorSet{};
     PopupHelper groupPropertiesPopup{PopupHelper(LABEL_GROUP_PROPERTIES, POPUP_SMALL_NO_HEIGHT)};

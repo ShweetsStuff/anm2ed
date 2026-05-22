@@ -57,6 +57,7 @@ namespace anm2ed
     std::map<int, resource::Audio>& sounds = current.sounds;
     Anm2& anm2 = current.anm2;
     Reference& reference = current.reference;
+    std::set<Reference>& groupReferences = current.groupReferences;
     float& frameTime = current.frameTime;
     std::string& message = current.message;
     std::map<int, Storage> regionBySpritesheet{};

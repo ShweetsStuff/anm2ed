@@ -36,7 +36,7 @@ namespace anm2ed::imgui
     for (auto i = 0; i < (int)manager.documents.size(); ++i)
     {
       auto& document = manager.documents[i];
-      auto isDirty = document.is_dirty() && document.is_autosave_dirty();
+      auto isDirty = (document.is_dirty() || document.isForceDirty) && document.is_autosave_dirty();
       if (isDirty)
       {
         document.lastAutosaveTime += ImGui::GetIO().DeltaTime;

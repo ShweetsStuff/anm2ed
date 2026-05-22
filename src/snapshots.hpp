@@ -3,6 +3,7 @@
 #include <deque>
 #include <map>
 #include <optional>
+#include <set>
 
 #include "anm2/anm2.hpp"
 #include "audio.hpp"
@@ -36,6 +37,7 @@ namespace anm2ed
     std::map<int, resource::Audio> sounds{};
     Anm2 anm2{};
     Reference reference{};
+    std::set<Reference> groupReferences{};
     float frameTime{};
     std::string message = snapshots::ACTION;
 
