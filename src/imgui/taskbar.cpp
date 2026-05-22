@@ -13,6 +13,8 @@
 #include "strings.hpp"
 #include "toast.hpp"
 #include "types.hpp"
+#include "util/imgui/layout.hpp"
+#include "util/imgui/shortcut.hpp"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::types;

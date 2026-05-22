@@ -6,7 +6,6 @@
 #include <print>
 
 #include "file.hpp"
-#include "path.hpp"
 #include "sdl.hpp"
 #include "strings.hpp"
 #include "time.hpp"

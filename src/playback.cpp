@@ -1,6 +1,5 @@
 #include "playback.hpp"
 
-#include <algorithm>
 #include <cmath>
 
 #include <glm/common.hpp>

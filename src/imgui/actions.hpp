@@ -3,7 +3,8 @@
 #include <functional>
 #include <vector>
 
-#include "util/imgui/imgui.hpp"
+#include <imgui/imgui.h>
+
 #include "manager.hpp"
 #include "settings.hpp"
 

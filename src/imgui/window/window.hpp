@@ -7,11 +7,12 @@
 
 #include "clipboard.hpp"
 #include "dialog.hpp"
-#include "util/imgui/imgui.hpp"
 #include "manager.hpp"
 #include "resources.hpp"
 #include "settings.hpp"
 #include "storage.hpp"
+#include "util/imgui/popup.hpp"
+#include "util/imgui/selectable.hpp"
 
 namespace anm2ed::imgui
 {

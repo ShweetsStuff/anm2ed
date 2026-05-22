@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <limits>
 #include <new>
-#include <optional>
 #include <set>
 #include <string_view>
 #include <unordered_map>

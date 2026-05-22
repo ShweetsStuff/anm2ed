@@ -1,9 +1,10 @@
 #include "configure.hpp"
 
-#include "log.hpp"
-#include "path.hpp"
 #include "sdl.hpp"
-#include "util/imgui/imgui.hpp"
+#include "util/imgui/input.hpp"
+#include "util/imgui/layout.hpp"
+#include "util/imgui/shortcut.hpp"
+#include "util/imgui/theme.hpp"
 
 using namespace anm2ed::types;
 

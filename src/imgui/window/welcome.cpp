@@ -5,6 +5,8 @@
 
 #include "path.hpp"
 #include "strings.hpp"
+#include "util/imgui/layout.hpp"
+#include "util/imgui/selectable.hpp"
 
 using namespace anm2ed::util;
 using namespace anm2ed::resource;

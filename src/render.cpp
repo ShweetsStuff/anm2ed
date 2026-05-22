@@ -8,11 +8,15 @@
 #include <fstream>
 #include <string>
 
+#include <SDL3/SDL_timer.h>
+
 #include "log.hpp"
 #include "path.hpp"
 #include "process.hpp"
-#include "sdl.hpp"
-#include "string.hpp"
+
+#if _WIN32
+  #include "string.hpp"
+#endif
 
 using namespace anm2ed::util;
 

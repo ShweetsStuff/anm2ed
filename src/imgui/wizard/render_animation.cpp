@@ -3,11 +3,13 @@
 #include <ranges>
 #include <string>
 
-#include "util/imgui/imgui.hpp"
 #include "log.hpp"
 #include "path.hpp"
 #include "process.hpp"
 #include "toast.hpp"
+#include "util/imgui/input.hpp"
+#include "util/imgui/layout.hpp"
+#include "util/imgui/shortcut.hpp"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::util;

@@ -4,11 +4,11 @@
 
 #include "canvas.hpp"
 #include "dialog.hpp"
-#include "util/imgui/imgui.hpp"
 #include "manager.hpp"
 #include "resources.hpp"
 #include "settings.hpp"
 #include "strings.hpp"
+#include "util/imgui/popup.hpp"
 
 #include "wizard/about.hpp"
 #include "wizard/change_all_frame_properties.hpp"

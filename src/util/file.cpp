@@ -1,7 +1,6 @@
 #include "file.hpp"
 
 #include <array>
-#include <cstring>
 
 namespace anm2ed::util
 {
@@ -16,7 +15,8 @@ namespace anm2ed::util
 #ifdef _WIN32
     std::wstring wideMode{};
     if (mode)
-      wideMode.assign(mode, mode + std::strlen(mode));
+      for (auto character = mode; *character; ++character)
+        wideMode.push_back((wchar_t)*character);
     else
       wideMode = L"rb";
     handle = _wfopen(path.native().c_str(), wideMode.c_str());

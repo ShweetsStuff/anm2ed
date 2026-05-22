@@ -2,7 +2,6 @@
 
 #include <format>
 
-#include "log.hpp"
 #include <imgui/imgui.h>
 
 #include "types.hpp"

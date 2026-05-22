@@ -6,12 +6,16 @@
 #include <utility>
 
 #include "actions.hpp"
-#include "util/imgui/imgui.hpp"
 #include "imgui_internal.h"
 #include "math.hpp"
 #include "strings.hpp"
 #include "tool.hpp"
 #include "types.hpp"
+#include "util/imgui/draw.hpp"
+#include "util/imgui/input.hpp"
+#include "util/imgui/layout.hpp"
+#include "util/imgui/shortcut.hpp"
+#include "util/imgui/tooltip.hpp"
 
 using namespace anm2ed::types;
 using namespace anm2ed::resource;

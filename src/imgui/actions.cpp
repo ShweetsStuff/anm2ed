@@ -2,6 +2,9 @@
 
 #include <utility>
 
+#include "util/imgui/shortcut.hpp"
+#include "util/imgui/tooltip.hpp"
+
 namespace anm2ed::imgui
 {
   bool is_action_shortcut_valid(int shortcutType) { return shortcutType >= 0 && shortcutType < SHORTCUT_COUNT; }

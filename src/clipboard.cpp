@@ -1,6 +1,7 @@
 #include "clipboard.hpp"
 
-#include <SDL3/SDL.h>
+#include <SDL3/SDL_clipboard.h>
+#include <SDL3/SDL_stdinc.h>
 
 namespace anm2ed
 {

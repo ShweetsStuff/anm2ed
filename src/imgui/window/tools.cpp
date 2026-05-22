@@ -6,7 +6,8 @@
 #include "strings.hpp"
 #include "tool.hpp"
 #include "types.hpp"
-#include "util/imgui/imgui.hpp"
+#include "util/imgui/shortcut.hpp"
+#include "util/imgui/tooltip.hpp"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::types;

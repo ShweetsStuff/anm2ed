@@ -8,6 +8,8 @@
 #include "strings.hpp"
 #include "time.hpp"
 #include "toast.hpp"
+#include "util/imgui/layout.hpp"
+#include "util/imgui/shortcut.hpp"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::types;

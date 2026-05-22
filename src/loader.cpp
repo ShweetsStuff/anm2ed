@@ -14,11 +14,10 @@
 #include "sdl.hpp"
 #include "texture.hpp"
 
-#include "util/imgui/imgui.hpp"
-
 #include "snapshots.hpp"
 #include "socket.hpp"
 
+#include "util/imgui/theme.hpp"
 #include "util/math.hpp"
 
 #ifdef _WIN32

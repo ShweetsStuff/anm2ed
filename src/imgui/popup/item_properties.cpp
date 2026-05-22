@@ -2,7 +2,9 @@
 
 #include <format>
 
-#include "util/imgui/imgui.hpp"
+#include "util/imgui/input.hpp"
+#include "util/imgui/layout.hpp"
+#include "util/imgui/shortcut.hpp"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::types;

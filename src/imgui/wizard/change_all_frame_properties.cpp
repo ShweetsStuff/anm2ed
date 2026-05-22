@@ -7,7 +7,8 @@
 #include <vector>
 
 #include "math.hpp"
-#include "util/imgui/imgui.hpp"
+#include "util/imgui/input.hpp"
+#include "util/imgui/layout.hpp"
 
 using namespace anm2ed::util::math;
 using namespace glm;

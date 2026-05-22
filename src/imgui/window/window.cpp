@@ -13,6 +13,11 @@
 #include "path.hpp"
 #include "strings.hpp"
 #include "toast.hpp"
+#include "util/imgui/draw.hpp"
+#include "util/imgui/input.hpp"
+#include "util/imgui/layout.hpp"
+#include "util/imgui/shortcut.hpp"
+#include "util/imgui/tooltip.hpp"
 #include "vector.hpp"
 #include "working_directory.hpp"
 

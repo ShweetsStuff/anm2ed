@@ -1,7 +1,6 @@
 #include "path.hpp"
 
-#include <SDL3/SDL_filesystem.h>
-#include <SDL3/SDL_stdinc.h>
+#include <algorithm>
 #include <cctype>
 #include <cwctype>
 #include <filesystem>
