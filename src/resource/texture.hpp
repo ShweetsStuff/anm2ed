@@ -25,6 +25,7 @@ namespace anm2ed::resource
 
     bool is_valid() const;
     size_t pixel_size_get() const;
+    void release();
     void upload();
     void upload(const uint8_t*);
     glm::vec4 pixel_read(glm::vec2) const;
@@ -40,6 +41,7 @@ namespace anm2ed::resource
     Texture(const char*, size_t, glm::ivec2);
     Texture(const std::filesystem::path&);
     bool write_png(const std::filesystem::path&);
+    static void garbage_collect();
     static bool write_pixels_png(const std::filesystem::path&, glm::ivec2, const uint8_t*);
     static Texture merge_append(const Texture&, const Texture&, bool);
     void pixel_set(glm::ivec2, glm::vec4);

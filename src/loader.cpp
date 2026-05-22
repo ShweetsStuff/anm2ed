@@ -12,6 +12,7 @@
 
 #include "log.hpp"
 #include "sdl.hpp"
+#include "texture.hpp"
 
 #include "util/imgui/imgui.hpp"
 
@@ -317,6 +318,7 @@ namespace anm2ed
     if (ImGui::GetCurrentContext())
     {
       settings.save(settings_path(), ImGui::SaveIniSettingsToMemory(nullptr));
+      resource::Texture::garbage_collect();
 
       ImGui_ImplSDL3_Shutdown();
       ImGui_ImplOpenGL3_Shutdown();

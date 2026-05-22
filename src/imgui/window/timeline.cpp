@@ -714,12 +714,6 @@ namespace anm2ed::imgui
       reference_clear_for(document);
     };
 
-    auto reference_set_item = [&](int type, int id)
-    {
-      group_selection_reset();
-      reference_set_item_for(document, type, id);
-    };
-
     auto reference_set_timeline_item = [&](int type, int id)
     {
       group_selection_reset();
@@ -2547,11 +2541,6 @@ namespace anm2ed::imgui
         {
           float frameTime{};
 
-          if (!isFrameBoxPending && !isFrameBoxSelecting && !frameMoveDrag.isActive && ImGui::IsWindowHovered() &&
-              (ImGui::IsMouseReleased(ImGuiMouseButton_Left) || ImGui::IsMouseReleased(ImGuiMouseButton_Right)) &&
-              !ImGui::IsAnyItemHovered())
-            reference_set_item(type, id);
-
           for (int i = frameMin; i < frameMax; i++)
           {
             auto frameScreenPos = ImVec2(cursorScreenPos.x + frameSize.x * (float)i, cursorScreenPos.y);
@@ -2841,6 +2830,11 @@ namespace anm2ed::imgui
             drawList->AddRect(frameMoveHoveredFrameMin, frameMoveHoveredFrameMax,
                               ImGui::GetColorU32(ImGuiCol_DragDropTarget), FRAME_ROUNDING, 0,
                               ImGui::GetStyle().DragDropTargetBorderSize * 1.5f);
+
+          if (!isFrameBoxSelecting && !frameMoveDrag.isActive && !isDraggedFrameActive && ImGui::IsWindowHovered() &&
+              (ImGui::IsMouseReleased(ImGuiMouseButton_Left) || ImGui::IsMouseReleased(ImGuiMouseButton_Right)) &&
+              !ImGui::IsAnyItemHovered())
+            row_selection_set(row);
 
           if (isFrameSelectionLocked)
           {

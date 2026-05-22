@@ -31,11 +31,23 @@ using namespace anm2ed::util::math;
 using namespace anm2ed::util;
 using namespace glm;
 
+namespace anm2ed::resource::texture
+{
+  std::vector<GLuint> retiredTextureIds{};
+}
+
 namespace anm2ed::resource
 {
   bool Texture::is_valid() const { return id != 0; }
 
   size_t Texture::pixel_size_get() const { return size.x * size.y * CHANNELS; }
+
+  void Texture::release()
+  {
+    if (!is_valid()) return;
+    texture::retiredTextureIds.push_back(id);
+    id = 0;
+  }
 
   void Texture::upload(const uint8_t* data)
   {
@@ -59,10 +71,7 @@ namespace anm2ed::resource
 
   Texture::Texture() = default;
 
-  Texture::~Texture()
-  {
-    if (is_valid()) glDeleteTextures(1, &id);
-  }
+  Texture::~Texture() { release(); }
 
   Texture::Texture(const Texture& other) { *this = other; }
 
@@ -72,7 +81,7 @@ namespace anm2ed::resource
   {
     if (this != &other)
     {
-      if (is_valid()) glDeleteTextures(1, &id);
+      release();
       size = other.size;
       filter = other.filter;
       channels = other.channels;
@@ -86,7 +95,7 @@ namespace anm2ed::resource
   {
     if (this != &other)
     {
-      if (is_valid()) glDeleteTextures(1, &id);
+      release();
       id = other.id;
       size = other.size;
       filter = other.filter;
@@ -95,6 +104,13 @@ namespace anm2ed::resource
       other.id = 0;
     }
     return *this;
+  }
+
+  void Texture::garbage_collect()
+  {
+    if (texture::retiredTextureIds.empty()) return;
+    glDeleteTextures((GLsizei)texture::retiredTextureIds.size(), texture::retiredTextureIds.data());
+    texture::retiredTextureIds.clear();
   }
 
   Texture::Texture(const char* svgData, size_t svgDataLength, ivec2 svgSize)

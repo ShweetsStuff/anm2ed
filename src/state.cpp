@@ -10,6 +10,7 @@
 #include "log.hpp"
 #include "path.hpp"
 #include "strings.hpp"
+#include "texture.hpp"
 #include "toast.hpp"
 #include "util/imgui/shortcut.hpp"
 
@@ -207,6 +208,7 @@ namespace anm2ed
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     SDL_GL_SwapWindow(window);
+    resource::Texture::garbage_collect();
     SDL_GL_SetSwapInterval(settings.isVsync);
   }
 
