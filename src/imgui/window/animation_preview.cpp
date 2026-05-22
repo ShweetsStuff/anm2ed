@@ -1051,13 +1051,17 @@ namespace anm2ed::imgui
         auto selected_frame_references_get = [&]()
         {
           std::set<Reference> result = document.frames.references;
-          if (result.empty())
-            for (auto frameIndex : frames)
-              result.insert({reference.animationIndex, reference.itemType, reference.itemID, frameIndex});
-          if (result.empty() && reference.itemType != NONE && reference.frameIndex != -1) result.insert(reference);
+          for (auto frameIndex : frames)
+            result.insert({reference.animationIndex, reference.itemType, reference.itemID, frameIndex});
           std::erase_if(result,
                         [](const Reference& frameReference)
-                        { return frameReference.itemType == NONE || frameReference.itemType == TRIGGER; });
+                        {
+                          return frameReference.itemType == NONE || frameReference.itemType == TRIGGER ||
+                                 frameReference.frameIndex < 0;
+                        });
+          if (result.empty() && reference.itemType != NONE && reference.itemType != TRIGGER &&
+              reference.frameIndex != -1)
+            result.insert(reference);
           return result;
         };
         auto selectedFrameReferences = selected_frame_references_get();

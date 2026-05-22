@@ -56,7 +56,6 @@ namespace anm2ed::imgui
     auto& shaderTexture = resources.shaders[shader::TEXTURE];
     auto& shaderLine = resources.shaders[shader::LINE];
     auto& dashedShader = resources.shaders[shader::DASHED];
-    auto& frames = document.frames.selection;
     auto& regionReference = document.region.reference;
     auto& regionSelection = document.region.selection;
 
@@ -358,6 +357,18 @@ namespace anm2ed::imgui
         auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, reference.itemID);
         bool isReferenceLayerOnSpritesheet =
             frame && reference.itemID > -1 && layer && layer->spritesheetId == referenceSpritesheet;
+        auto selectedFrameReferences = document.frames.references;
+        for (auto frameIndex : document.frames.selection)
+          selectedFrameReferences.insert({reference.animationIndex, reference.itemType, reference.itemID, frameIndex});
+        std::erase_if(selectedFrameReferences, [&](const Reference& frameReference)
+                      {
+                        if (frameReference.frameIndex < 0) return true;
+                        if (frameReference.itemType != LAYER) return true;
+                        auto frameLayer = document.anm2.element_get(ElementType::LAYER_ELEMENT, frameReference.itemID);
+                        return !frameLayer || frameLayer->spritesheetId != referenceSpritesheet;
+                      });
+        if (selectedFrameReferences.empty() && reference.frameIndex != -1 && isReferenceLayerOnSpritesheet)
+          selectedFrameReferences.insert(reference);
         auto useTool = tool;
         auto step = (float)(isMod ? STEP_FAST : STEP);
         auto stepX = isGridSnap ? step * gridSize.x : step;
@@ -384,6 +395,8 @@ namespace anm2ed::imgui
               maxPoint.y = std::ceil((maxPoint.y - offsetY) / sizeY) * sizeY + offsetY;
             }
           }
+          minPoint = vec2(ivec2(minPoint));
+          maxPoint = vec2(ivec2(maxPoint));
           return std::pair{minPoint, maxPoint};
         };
 
@@ -401,37 +414,54 @@ namespace anm2ed::imgui
         };
         auto frame_change_apply = [&](FrameChange frameChange, ChangeType changeType = ChangeType::ADJUST)
         {
-          auto queuedReference = reference;
-          auto queuedReferenceItemType = referenceItemType;
-          std::set<int> queuedFrames(frames.begin(), frames.end());
+          auto queuedFrameReferences = selectedFrameReferences;
           manager.command_push({manager.selected,
                                 [=](Manager&, Document& document)
                                 {
-                                  auto item = document.anm2.element_get(queuedReference.animationIndex,
-                                                                        queuedReferenceItemType,
-                                                                        queuedReference.itemID);
-                                  if (!item) return;
-                                  frames_change(*item, frameChange, queuedReferenceItemType, changeType, queuedFrames);
+                                  std::map<Reference, std::set<int>> groupedFrames{};
+                                  for (auto frameReference : queuedFrameReferences)
+                                    groupedFrames[{frameReference.animationIndex, frameReference.itemType,
+                                                   frameReference.itemID, -1}]
+                                        .insert(frameReference.frameIndex);
+
+                                  for (auto& [itemReference, itemFrames] : groupedFrames)
+                                  {
+                                    auto itemType = static_cast<ItemType>(itemReference.itemType);
+                                    auto item = document.anm2.element_get(itemReference.animationIndex, itemType,
+                                                                          itemReference.itemID);
+                                    if (!item) continue;
+                                    frames_change(*item, frameChange, itemType, changeType, itemFrames);
+                                  }
                                 }});
         };
         auto frame_change_from_current_apply = [&](auto frameChangeGet, ChangeType changeType = ChangeType::ADJUST)
         {
           auto queuedReference = reference;
           auto queuedReferenceItemType = referenceItemType;
-          std::set<int> queuedFrames(frames.begin(), frames.end());
+          auto queuedFrameReferences = selectedFrameReferences;
           manager.command_push({manager.selected,
                                 [=](Manager&, Document& document)
                                 {
-                                  auto item = document.anm2.element_get(queuedReference.animationIndex,
-                                                                        queuedReferenceItemType,
-                                                                        queuedReference.itemID);
                                   auto frame = document.anm2.element_get(queuedReference.animationIndex,
                                                                          queuedReferenceItemType,
                                                                          queuedReference.frameIndex,
                                                                          queuedReference.itemID);
-                                  if (!item || !frame) return;
-                                  frames_change(*item, frameChangeGet(*frame), queuedReferenceItemType, changeType,
-                                                queuedFrames);
+                                  if (!frame) return;
+
+                                  std::map<Reference, std::set<int>> groupedFrames{};
+                                  for (auto frameReference : queuedFrameReferences)
+                                    groupedFrames[{frameReference.animationIndex, frameReference.itemType,
+                                                   frameReference.itemID, -1}]
+                                        .insert(frameReference.frameIndex);
+
+                                  for (auto& [itemReference, itemFrames] : groupedFrames)
+                                  {
+                                    auto itemType = static_cast<ItemType>(itemReference.itemType);
+                                    auto item = document.anm2.element_get(itemReference.animationIndex, itemType,
+                                                                          itemReference.itemID);
+                                    if (!item) continue;
+                                    frames_change(*item, frameChangeGet(*frame), itemType, changeType, itemFrames);
+                                  }
                                 }});
         };
         auto frame_crop_normalize_apply = [&](bool isSnap, ivec2 snapGridSize, ivec2 snapGridOffset)
@@ -625,9 +655,9 @@ namespace anm2ed::imgui
         bool isFrameRequired =
             !(useTool == tool::PAN || useTool == tool::DRAW || useTool == tool::ERASE || useTool == tool::COLOR_PICKER);
         bool isRegionInUse = frame && frame->regionId != -1 && (useTool == tool::CROP || useTool == tool::MOVE);
-        bool isFrameAvailable = !isFrameRequired || (frame && !isRegionInUse) ||
-                                (useTool == tool::CROP && !frame && !regionSelection.empty()) ||
-                                (useTool == tool::MOVE && !frame && regionReference != -1);
+        bool isFrameAvailable = !isFrameRequired || (frame && !isRegionInUse && !selectedFrameReferences.empty()) ||
+                                (useTool == tool::CROP && !regionSelection.empty()) ||
+                                (useTool == tool::MOVE && regionReference != -1);
         bool isSpritesheetRequired = useTool == tool::DRAW || useTool == tool::ERASE || useTool == tool::COLOR_PICKER;
         bool isSpritesheetAvailable = !isSpritesheetRequired || (texture && texture->is_valid());
         auto cursor = (isAreaAllowed && isFrameAvailable && isSpritesheetAvailable) ? toolInfo.cursor
@@ -662,8 +692,7 @@ namespace anm2ed::imgui
             if (isMouseDown || isMouseMiddleDown) pan += mouseDelta;
             break;
           case tool::MOVE:
-            if (isRegionInUse) break;
-            if (!frame && regionReference != -1)
+            if ((isRegionInUse || selectedFrameReferences.empty()) && regionReference != -1)
             {
               if (!spritesheet) break;
               auto region = region_get(regionReference);
@@ -691,7 +720,7 @@ namespace anm2ed::imgui
               break;
             }
 
-            if (!item || frames.empty()) break;
+            if (!item || !frame || selectedFrameReferences.empty() || isRegionInUse) break;
             if (isBegin) snapshot_push(EDIT_FRAME_PIVOT);
             if (isMouseDown)
             {
@@ -724,8 +753,7 @@ namespace anm2ed::imgui
             if (isEnd) document_change_push(Document::FRAMES);
             break;
           case tool::CROP:
-            if (isRegionInUse) break;
-            if (frames.empty())
+            if ((isRegionInUse || selectedFrameReferences.empty()) && !regionSelection.empty())
             {
               if (!spritesheet || regionSelection.empty()) break;
               if (isBegin) snapshot_push(EDIT_REGION_CROP);
@@ -769,7 +797,7 @@ namespace anm2ed::imgui
               break;
             }
 
-            if (!item) break;
+            if (!item || !frame || selectedFrameReferences.empty() || isRegionInUse) break;
             if (isBegin) snapshot_push(EDIT_FRAME_CROP);
 
             if (isMouseClicked)
@@ -790,9 +818,6 @@ namespace anm2ed::imgui
             if (isRightPressed) frame_change_apply({.cropX = stepX}, ChangeType::ADD);
             if (isUpPressed) frame_change_apply({.cropY = stepY}, ChangeType::SUBTRACT);
             if (isDownPressed) frame_change_apply({.cropY = stepY}, ChangeType::ADD);
-
-            frame_change_apply(
-                {.cropX = frame->crop.x, .cropY = frame->crop.y, .sizeX = frame->size.x, .sizeY = frame->size.y});
 
             if (isDuring)
             {
