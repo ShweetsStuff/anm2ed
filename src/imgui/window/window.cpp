@@ -297,7 +297,7 @@ namespace anm2ed::imgui
 
   std::filesystem::path window_asset_path_get(Document& document, const std::filesystem::path& path)
   {
-    auto loadPath = path::lower_case_backslash_handle(path);
+    auto loadPath = path::backslash_handle(path);
     return path::backslash_replace(path::make_relative(loadPath, document.directory_get()));
   }
 
@@ -2326,8 +2326,28 @@ namespace anm2ed::imgui
                                   auto behavior = [&]()
                                   {
                                     auto spritesheet = document.anm2.element_get(ElementType::SPRITESHEET, id);
-                                    if (!spritesheet) return;
-                                    spritesheet->path = window_asset_path_get(document, dialogPath);
+                                    auto texture = document.texture_get(id);
+                                    if (!spritesheet || !texture) return;
+                                    auto newPath = window_asset_path_get(document, dialogPath);
+                                    auto pathString = path::to_utf8(newPath);
+                                    WorkingDirectory workingDirectory(document.directory_get());
+                                    path::ensure_directory(newPath.parent_path());
+                                    if (!texture->write_png(newPath))
+                                    {
+                                      toasts.push(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET_FAILED),
+                                                               std::make_format_args(id, pathString)));
+                                      logger.error(
+                                          std::vformat(localize.get(TOAST_SAVE_SPRITESHEET_FAILED, anm2ed::ENGLISH),
+                                                       std::make_format_args(id, pathString)));
+                                      return;
+                                    }
+                                    spritesheet->path = newPath;
+                                    document.texturePaths[id] = spritesheet->path;
+                                    document.spritesheet_hash_set_saved(id);
+                                    toasts.push(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET),
+                                                             std::make_format_args(id, pathString)));
+                                    logger.info(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET, anm2ed::ENGLISH),
+                                                             std::make_format_args(id, pathString)));
                                   };
 
                                   window_edit(document, Document::SPRITESHEETS,

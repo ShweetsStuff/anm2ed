@@ -18,5 +18,6 @@ namespace anm2ed::util::path
 
   bool ensure_directory(const std::filesystem::path&);
 
-  std::filesystem::path lower_case_backslash_handle(const std::filesystem::path&);
+  std::filesystem::path backslash_handle(const std::filesystem::path&);
+  std::filesystem::path case_insensitive_find(const std::filesystem::path&);
 }

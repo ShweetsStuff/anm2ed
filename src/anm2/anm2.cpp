@@ -1546,7 +1546,7 @@ namespace anm2ed
       else
         element_child_id_erase(*container, type, element.id);
       if (type == ElementType::SOUND_ELEMENT || type == ElementType::SPRITESHEET)
-        element.path = path::lower_case_backslash_handle(element.path);
+        element.path = path::backslash_handle(element.path);
       container->children.push_back(element);
     }
 

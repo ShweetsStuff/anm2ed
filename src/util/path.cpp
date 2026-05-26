@@ -118,15 +118,55 @@ namespace anm2ed::util::path
     return path;
   }
 
-  std::filesystem::path lower_case_backslash_handle(const std::filesystem::path& path)
+  std::filesystem::path backslash_handle(const std::filesystem::path& path)
   {
     auto newPath = path;
     if (is_exist(newPath)) return newPath;
 
     newPath = backslash_replace(newPath);
-    if (is_exist(newPath)) return newPath;
-
-    newPath = to_lower(newPath);
     return newPath;
+  }
+
+  std::filesystem::path case_insensitive_find(const std::filesystem::path& path)
+  {
+    auto handledPath = backslash_handle(path);
+    if (is_exist(handledPath)) return handledPath;
+
+    auto resolvedPath = handledPath.root_path();
+    for (const auto& part : handledPath.relative_path())
+    {
+      auto candidate = resolvedPath / part;
+      if (is_exist(candidate))
+      {
+        resolvedPath = candidate;
+        continue;
+      }
+
+      auto parent = resolvedPath.empty() ? std::filesystem::path(".") : resolvedPath;
+      std::error_code ec{};
+      bool isFound{};
+      if (std::filesystem::is_directory(parent, ec))
+      {
+        auto partLower = to_lower(part);
+        std::filesystem::directory_iterator it(parent, ec);
+        std::filesystem::directory_iterator end{};
+        for (; !ec && it != end; it.increment(ec))
+          if (to_lower(it->path().filename()) == partLower)
+          {
+            resolvedPath /= it->path().filename();
+            isFound = true;
+            break;
+          }
+      }
+
+      if (!isFound) resolvedPath = candidate;
+    }
+
+    if (is_exist(resolvedPath)) return resolvedPath;
+
+    auto lowerPath = to_lower(handledPath);
+    if (is_exist(lowerPath)) return lowerPath;
+
+    return handledPath;
   }
 }

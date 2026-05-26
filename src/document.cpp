@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <limits>
 #include <new>
+#include <optional>
 #include <set>
 #include <string_view>
 #include <unordered_map>
@@ -408,7 +409,7 @@ namespace anm2ed
     if (!spritesheet) return false;
 
     util::WorkingDirectory workingDirectory(directory_get());
-    textures[id] = resource::Texture(spritesheet->path);
+    textures[id] = resource::Texture(path::case_insensitive_find(spritesheet->path));
     texturePaths[id] = spritesheet->path;
     return true;
   }
@@ -419,7 +420,7 @@ namespace anm2ed
     if (!sound) return false;
 
     util::WorkingDirectory workingDirectory(directory_get());
-    sounds[id] = resource::Audio(sound->path);
+    sounds[id] = resource::Audio(path::case_insensitive_find(sound->path));
     soundPaths[id] = sound->path;
     return true;
   }
@@ -439,7 +440,7 @@ namespace anm2ed
                           texturePaths.at(spritesheet.id) != spritesheet.path;
           if (isReload)
           {
-            textures[spritesheet.id] = resource::Texture(spritesheet.path);
+            textures[spritesheet.id] = resource::Texture(path::case_insensitive_find(spritesheet.path));
             texturePaths[spritesheet.id] = spritesheet.path;
           }
         }
@@ -469,7 +470,7 @@ namespace anm2ed
               !sounds.contains(sound.id) || !soundPaths.contains(sound.id) || soundPaths.at(sound.id) != sound.path;
           if (isReload)
           {
-            sounds[sound.id] = resource::Audio(sound.path);
+            sounds[sound.id] = resource::Audio(path::case_insensitive_find(sound.path));
             soundPaths[sound.id] = sound.path;
           }
         }
@@ -1575,7 +1576,10 @@ namespace anm2ed
     for (auto& path : paths)
     {
       auto pathCopy = path;
-      auto loadPath = path::lower_case_backslash_handle(pathCopy);
+      auto storagePath = path::backslash_handle(pathCopy);
+      std::optional<WorkingDirectory> workingDirectory{};
+      if (!storagePath.is_absolute()) workingDirectory.emplace(directory);
+      auto loadPath = path::case_insensitive_find(storagePath);
       auto texture = resource::Texture(loadPath);
       if (!texture.is_valid())
       {
@@ -1586,7 +1590,7 @@ namespace anm2ed
         continue;
       }
 
-      loaded.push_back({.relativePath = path::backslash_replace(path::make_relative(loadPath, directory)),
+      loaded.push_back({.relativePath = path::backslash_replace(path::make_relative(storagePath, directory)),
                         .texture = std::move(texture)});
     }
     if (loaded.empty()) return;
@@ -1639,12 +1643,12 @@ namespace anm2ed
       auto id = element_child_next_id_get(*items, ElementType::SOUND_ELEMENT);
       auto soundElement = element_make(ElementType::SOUND_ELEMENT);
       soundElement.id = id;
-      auto loadPath = path::lower_case_backslash_handle(path);
+      auto loadPath = path::backslash_handle(path);
       auto relativePath = path::backslash_replace(path::make_relative(loadPath, directory));
       {
         WorkingDirectory workingDirectory(directory_get());
         soundElement.path = relativePath;
-        sounds[id] = resource::Audio(soundElement.path);
+        sounds[id] = resource::Audio(path::case_insensitive_find(soundElement.path));
         soundPaths[id] = soundElement.path;
       }
       auto soundPath = path::to_utf8(soundElement.path);
