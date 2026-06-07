@@ -265,19 +265,18 @@ namespace anm2ed
     if (out.type == ElementType::REGION && out.origin == Origin::CENTER) out.pivot = glm::ivec2(out.size / 2.0f);
   }
 
-  bool bake_attributes_read(const XMLElement* element, Interpolation& interpolation, int& originalDelay, int& bakeCount)
+  bool bake_attributes_read(const XMLElement* element, Interpolation& interpolation, int& bakeDelay)
   {
     if (!element || !element->Attribute("BakeInterpolation")) return false;
 
     interpolation = interpolation_read(element, "BakeInterpolation");
-    element->QueryIntAttribute("OriginalDelay", &originalDelay);
-    element->QueryIntAttribute("BakeCount", &bakeCount);
-    return bakeCount > 0 && originalDelay >= FRAME_DURATION_MIN;
+    element->QueryIntAttribute("BakeDelay", &bakeDelay);
+    return bakeDelay >= FRAME_DURATION_MIN;
   }
 
-  const XMLElement* bake_frames_skip(const XMLElement* element, int bakeCount)
+  const XMLElement* bake_frames_skip(const XMLElement* element, int bakeDelay)
   {
-    for (int i = 0; element && i < bakeCount; ++i)
+    for (int i = 0; element && i < bakeDelay; ++i)
       element = element->NextSiblingElement();
     return element;
   }
@@ -291,15 +290,14 @@ namespace anm2ed
       if (childType == ElementType::FRAME && is_track(out))
       {
         Interpolation bakeInterpolation{};
-        int originalDelay{};
-        int bakeCount{};
-        if (bake_attributes_read(child, bakeInterpolation, originalDelay, bakeCount))
+        int bakeDelay{};
+        if (bake_attributes_read(child, bakeInterpolation, bakeDelay))
         {
           auto restored = element_read(child);
           restored.interpolation = bakeInterpolation;
-          restored.duration = originalDelay;
+          restored.duration = bakeDelay;
           out.children.push_back(std::move(restored));
-          child = bake_frames_skip(child, bakeCount);
+          child = bake_frames_skip(child, bakeDelay);
           continue;
         }
       }
@@ -471,12 +469,11 @@ namespace anm2ed
     }
   }
 
-  void bake_attributes_write(XMLElement* out, Interpolation interpolation, int bakeCount, int originalDelay)
+  void bake_attributes_write(XMLElement* out, Interpolation interpolation, int bakeDelay)
   {
     auto value = INTERPOLATION_VALUES[(std::size_t)interpolation];
     if (!value.empty()) out->SetAttribute("BakeInterpolation", value.data());
-    out->SetAttribute("BakeCount", bakeCount);
-    out->SetAttribute("OriginalDelay", originalDelay);
+    out->SetAttribute("BakeDelay", bakeDelay);
   }
 
   bool is_frame_bake_serialized(const Element& frame, Flags flags)
@@ -493,12 +490,12 @@ namespace anm2ed
     auto nextFrame = index + 1 < (int)track.children.size() && track.children[index + 1].type == ElementType::FRAME
                          ? track.children[index + 1]
                          : original;
-    auto bakeCount = std::max(original.duration, FRAME_DURATION_MIN);
+    auto bakeDelay = std::max(original.duration, FRAME_DURATION_MIN);
 
-    for (int bakeIndex = 0; bakeIndex < bakeCount; ++bakeIndex)
+    for (int bakeIndex = 0; bakeIndex < bakeDelay; ++bakeIndex)
     {
       auto baked = original;
-      auto amount = interpolation_factor(original.interpolation, (float)bakeIndex / (float)bakeCount);
+      auto amount = interpolation_factor(original.interpolation, (float)bakeIndex / (float)bakeDelay);
       baked.duration = FRAME_DURATION_MIN;
       baked.interpolation = Interpolation::NONE;
       baked.rotation = glm::mix(original.rotation, nextFrame.rotation, amount);
@@ -507,7 +504,7 @@ namespace anm2ed
       baked.colorOffset = glm::mix(original.colorOffset, nextFrame.colorOffset, amount);
       baked.tint = glm::mix(original.tint, nextFrame.tint, amount);
       auto frame = element_to_xml(document, baked, track.type, flags);
-      if (bakeIndex == 0) bake_attributes_write(frame, original.interpolation, bakeCount, original.duration);
+      if (bakeIndex == 0) bake_attributes_write(frame, original.interpolation, bakeDelay);
       out->InsertEndChild(frame);
     }
   }
