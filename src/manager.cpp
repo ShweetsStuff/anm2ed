@@ -132,8 +132,7 @@ namespace anm2ed
 
   void Manager::new_(const std::filesystem::path& path) { open(path, true); }
 
-  bool Manager::save(int index, const std::filesystem::path& path, Compatibility compatibility,
-                     bool isBakeSpecialInterpolatedFramesOnSave, bool isRoundScale, bool isRoundRotation)
+  bool Manager::save(int index, const std::filesystem::path& path, Options options)
   {
     if (auto document = get(index); document)
     {
@@ -143,8 +142,7 @@ namespace anm2ed
       savePath.replace_extension(".anm2");
       ensure_parent_directory_exists(savePath);
 
-      if (!document->save(savePath, &errorString, compatibility, isBakeSpecialInterpolatedFramesOnSave, isRoundScale,
-                          isRoundRotation))
+      if (!document->save(savePath, &errorString, options))
         return false;
 
       const auto autosavePath = document->autosave_path_get();
@@ -162,19 +160,16 @@ namespace anm2ed
     return false;
   }
 
-  bool Manager::save(const std::filesystem::path& path, Compatibility compatibility,
-                     bool isBakeSpecialInterpolatedFramesOnSave, bool isRoundScale, bool isRoundRotation)
+  bool Manager::save(const std::filesystem::path& path, Options options)
   {
-    return save(selected, path, compatibility, isBakeSpecialInterpolatedFramesOnSave, isRoundScale, isRoundRotation);
+    return save(selected, path, options);
   }
 
-  void Manager::autosave(Document& document, Compatibility compatibility, bool isBakeSpecialInterpolatedFramesOnSave,
-                         bool isRoundScale, bool isRoundRotation)
+  void Manager::autosave(Document& document, Options options)
   {
     std::string errorString{};
     auto autosavePath = document.autosave_path_get();
-    if (!document.autosave(&errorString, compatibility, isBakeSpecialInterpolatedFramesOnSave, isRoundScale,
-                           isRoundRotation))
+    if (!document.autosave(&errorString, options))
       return;
 
     autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), autosavePath), autosaveFiles.end());

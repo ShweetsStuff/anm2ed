@@ -84,11 +84,9 @@ namespace anm2ed
     void commands_run();
     Document* open(const std::filesystem::path&, bool = false, bool = true);
     void new_(const std::filesystem::path&);
-    bool save(int, const std::filesystem::path& = {}, Compatibility = Compatibility::ANM2ED, bool = false, bool = true,
-              bool = true);
-    bool save(const std::filesystem::path& = {}, Compatibility = Compatibility::ANM2ED, bool = false, bool = true,
-              bool = true);
-    void autosave(Document&, Compatibility = Compatibility::ANM2ED, bool = false, bool = true, bool = true);
+    bool save(int, const std::filesystem::path& = {}, Options = {});
+    bool save(const std::filesystem::path& = {}, Options = {});
+    void autosave(Document&, Options = {});
     void set(int);
     void close(int);
     void layer_properties_open(int = -1);

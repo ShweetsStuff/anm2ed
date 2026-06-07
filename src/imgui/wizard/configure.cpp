@@ -68,25 +68,23 @@ namespace anm2ed::imgui::wizard
           input_int_range(localize.get(LABEL_STACK_SIZE), temporary.fileSnapshotStackSize, 0, 100);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_STACK_SIZE));
 
-          ImGui::SeparatorText(localize.get(LABEL_COMPATIBILITY));
-          ImGui::RadioButton(localize.get(LABEL_ISAAC), &temporary.fileCompatibility, ISAAC);
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_COMPATIBILITY_ISAAC));
+          ImGui::SeparatorText(localize.get(LABEL_SERIALIZATION));
+          ImGui::Checkbox(localize.get(LABEL_GROUPS), &temporary.fileIsSerializeGroups);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SERIALIZE_GROUPS));
           ImGui::SameLine();
-          ImGui::RadioButton(localize.get(LABEL_ANM2ED), &temporary.fileCompatibility, ANM2ED);
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_COMPATIBILITY_ANM2ED));
+          ImGui::Checkbox(localize.get(LABEL_REGIONS), &temporary.fileIsSerializeRegions);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SERIALIZE_REGIONS));
           ImGui::SameLine();
-          ImGui::RadioButton(localize.get(LABEL_ANM2ED_LIMITED), &temporary.fileCompatibility, ANM2ED_LIMITED);
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_COMPATIBILITY_ANM2ED_LIMITED));
+          ImGui::Checkbox(localize.get(LABEL_SOUNDS), &temporary.fileIsSerializeSounds);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SERIALIZE_SOUNDS));
 
-          ImGui::Checkbox(localize.get(LABEL_SPECIAL_INTERPOLATED_FRAMES_REMINDER_ON_SAVE),
-                          &temporary.fileIsSpecialInterpolatedFramesOnSaveReminder);
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SPECIAL_INTERPOLATED_FRAMES_REMINDER_ON_SAVE));
+          ImGui::Checkbox(localize.get(LABEL_KEEP_REDUNDANT_FRAME_REGION_VALUES),
+                          &temporary.fileIsKeepRedundantFrameRegionValues);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_KEEP_REDUNDANT_FRAME_REGION_VALUES));
 
-          ImGui::BeginDisabled(temporary.fileIsSpecialInterpolatedFramesOnSaveReminder);
           ImGui::Checkbox(localize.get(LABEL_BAKE_SPECIAL_INTERPOLATED_FRAMES_ON_SAVE),
-                          &temporary.fileBakeSpecialInterpolatedFramesOnSave);
+                          &temporary.fileIsBakeSpecialInterpolatedFrames);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BAKE_SPECIAL_INTERPOLATED_FRAMES_ON_SAVE));
-          ImGui::EndDisabled();
 
           ImGui::SeparatorText(localize.get(LABEL_OPTIONS));
           ImGui::Checkbox(localize.get(LABEL_OVERWRITE_WARNING), &temporary.fileIsWarnOverwrite);

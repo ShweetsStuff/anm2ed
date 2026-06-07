@@ -1530,14 +1530,16 @@ namespace anm2ed::imgui
             ImGui::EndDragDropSource();
           }
 
+          bool isDropLineActive{};
+          bool isDropLineAfter{};
           if (ImGui::BeginDragDropTarget())
           {
             if (auto payload = ImGui::AcceptDragDropPayload(
                     "Region Drag Drop",
                     ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect))
             {
-              auto isDropAfter = is_drop_after(regionRowMin, regionRowMax);
-              drop_line_draw(ImGui::GetWindowDrawList(), regionChildMin, regionChildMax, isDropAfter);
+              isDropLineActive = true;
+              isDropLineAfter = is_drop_after(regionRowMin, regionRowMax);
 
               auto payloadIds = (int*)(payload->Data);
               int payloadCount = (int)(payload->DataSize / sizeof(int));
@@ -1553,7 +1555,7 @@ namespace anm2ed::imgui
               {
                 std::sort(indices.begin(), indices.end());
                 auto movedIds = window.dragSelection;
-                auto targetIndex = i + (isDropAfter ? 1 : 0);
+                auto targetIndex = i + (isDropLineAfter ? 1 : 0);
                 auto targetSpritesheetReference = spritesheetReference;
                 manager.command_push(
                     {manager.selected, [&window, indices, movedIds, targetIndex,
@@ -1595,6 +1597,9 @@ namespace anm2ed::imgui
           if (isReferenced) ImGui::PushFont(resources.fonts[font::ITALICS].get(), font::SIZE);
           ImGui::TextUnformatted(nameCStr);
           if (isReferenced) ImGui::PopFont();
+
+          if (isDropLineActive)
+            drop_line_draw(ImGui::GetWindowDrawList(), regionChildMin, regionChildMax, isDropLineAfter);
         }
 
         ImGui::EndChild();

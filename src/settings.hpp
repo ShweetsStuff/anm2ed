@@ -64,12 +64,12 @@ namespace anm2ed
                                                                                                                        \
   X(FILE_IS_AUTOSAVE, fileIsAutosave, STRING_UNDEFINED, BOOL, true)                                                    \
   X(FILE_IS_WARN_OVERWRITE, fileIsWarnOverwrite, STRING_UNDEFINED, BOOL, true)                                         \
-  X(FILE_IS_SPECIAL_INTERPOLATED_FRAMES_ON_SAVE_REMINDER, fileIsSpecialInterpolatedFramesOnSaveReminder,               \
-    STRING_UNDEFINED, BOOL, true)                                                                                      \
-  X(FILE_BAKE_SPECIAL_INTERPOLATED_FRAMES_ON_SAVE, fileBakeSpecialInterpolatedFramesOnSave, STRING_UNDEFINED, BOOL,    \
-    true)                                                                                                              \
   X(FILE_SNAPSHOT_STACK_SIZE, fileSnapshotStackSize, STRING_UNDEFINED, INT, 50)                                        \
-  X(FILE_COMPATIBILITY, fileCompatibility, STRING_UNDEFINED, INT, ANM2ED)                                              \
+  X(FILE_IS_SERIALIZE_GROUPS, fileIsSerializeGroups, STRING_UNDEFINED, BOOL, true)                                     \
+  X(FILE_IS_SERIALIZE_REGIONS, fileIsSerializeRegions, STRING_UNDEFINED, BOOL, true)                                   \
+  X(FILE_IS_SERIALIZE_SOUNDS, fileIsSerializeSounds, STRING_UNDEFINED, BOOL, true)                                     \
+  X(FILE_IS_KEEP_REDUNDANT_FRAME_REGION_VALUES, fileIsKeepRedundantFrameRegionValues, STRING_UNDEFINED, BOOL, true)    \
+  X(FILE_IS_BAKE_SPECIAL_INTERPOLATED_FRAMES, fileIsBakeSpecialInterpolatedFrames, STRING_UNDEFINED, BOOL, true)       \
                                                                                                                        \
   X(KEYBOARD_REPEAT_DELAY, keyboardRepeatDelay, STRING_UNDEFINED, FLOAT, 0.300f)                                       \
   X(KEYBOARD_REPEAT_RATE, keyboardRepeatRate, STRING_UNDEFINED, FLOAT, 0.050f)                                         \

@@ -28,15 +28,6 @@ using namespace glm;
 
 namespace anm2ed::document
 {
-  Options save_options_get(Compatibility compatibility, bool isBakeSpecialInterpolatedFrames, bool isRoundScale,
-                           bool isRoundRotation)
-  {
-    return {.compatibility = compatibility,
-            .isBakeSpecialInterpolatedFrames = isBakeSpecialInterpolatedFrames,
-            .isRoundScale = isRoundScale,
-            .isRoundRotation = isRoundRotation};
-  }
-
   ItemType item_type_get(int type) { return static_cast<ItemType>(type); }
 
   int animation_count_get(const Anm2& data)
@@ -321,14 +312,11 @@ namespace anm2ed
     return *this;
   }
 
-  bool Document::save(const std::filesystem::path& path, std::string* errorString, Compatibility compatibility,
-                      bool isBakeSpecialInterpolatedFramesOnSave, bool isRoundScale, bool isRoundRotation)
+  bool Document::save(const std::filesystem::path& path, std::string* errorString, Options options)
   {
     auto absolutePath = !path.empty() ? path : this->path;
     auto absolutePathUtf8 = path::to_utf8(absolutePath);
-    if (anm2.save(absolutePath, errorString,
-                  document::save_options_get(compatibility, isBakeSpecialInterpolatedFramesOnSave, isRoundScale,
-                                             isRoundRotation)))
+    if (anm2.save(absolutePath, errorString, options))
     {
       this->path = absolutePath;
       toasts.push(std::vformat(localize.get(TOAST_SAVE_DOCUMENT), std::make_format_args(absolutePathUtf8)));
@@ -367,14 +355,11 @@ namespace anm2ed
     return restorePath;
   }
 
-  bool Document::autosave(std::string* errorString, Compatibility compatibility,
-                          bool isBakeSpecialInterpolatedFramesOnSave, bool isRoundScale, bool isRoundRotation)
+  bool Document::autosave(std::string* errorString, Options options)
   {
     auto autosavePath = autosave_path_get();
     auto autosavePathUtf8 = path::to_utf8(autosavePath);
-    if (anm2.save(autosavePath, errorString,
-                  document::save_options_get(compatibility, isBakeSpecialInterpolatedFramesOnSave, isRoundScale,
-                                             isRoundRotation)))
+    if (anm2.save(autosavePath, errorString, options))
     {
       autosaveHash = hash;
       lastAutosaveTime = 0.0f;

@@ -71,14 +71,6 @@ namespace anm2ed
     COUNT
   };
 
-  enum class Compatibility
-  {
-    ISAAC,
-    ANM2ED,
-    ANM2ED_LIMITED,
-    COUNT
-  };
-
   enum class ItemType
   {
     NONE,
@@ -101,10 +93,6 @@ namespace anm2ed
   inline constexpr int FRAME_NUM_MAX = FRAME_DURATION_MAX;
   inline constexpr int FPS_MIN = 1;
   inline constexpr int FPS_MAX = 120;
-
-  inline constexpr int ISAAC = (int)Compatibility::ISAAC;
-  inline constexpr int ANM2ED = (int)Compatibility::ANM2ED;
-  inline constexpr int ANM2ED_LIMITED = (int)Compatibility::ANM2ED_LIMITED;
 
   enum class SpritesheetMergeOrigin
   {
@@ -189,23 +177,23 @@ namespace anm2ed
 
   enum Flag
   {
-    NO_SOUNDS = 1 << 0,
-    NO_REGIONS = 1 << 1,
-    FRAME_NO_REGION_VALUES = 1 << 2,
-    INTERPOLATION_BOOL_ONLY = 1 << 3,
-    NO_GROUPS = 1 << 4
+    SERIALIZE_GROUPS = 1 << 0,
+    SERIALIZE_REGIONS = 1 << 1,
+    SERIALIZE_SOUNDS = 1 << 2,
+    SERIALIZE_REDUNDANT_FRAME_REGION_VALUES = 1 << 3,
+    SERIALIZE_BAKE_SPECIAL_INTERPOLATED_FRAMES = 1 << 4
   };
 
   using Flags = int;
 
   constexpr bool has_flag(Flags flags, Flag flag) { return (flags & flag) != 0; }
+  constexpr Flags SERIALIZE_EDITOR_DEFAULT =
+      SERIALIZE_GROUPS | SERIALIZE_REGIONS | SERIALIZE_SOUNDS | SERIALIZE_REDUNDANT_FRAME_REGION_VALUES;
+  constexpr Flags SERIALIZE_DEFAULT = SERIALIZE_EDITOR_DEFAULT | SERIALIZE_BAKE_SPECIAL_INTERPOLATED_FRAMES;
 
   struct Options
   {
-    Compatibility compatibility{Compatibility::ANM2ED};
-    bool isBakeSpecialInterpolatedFrames{};
-    bool isRoundScale{true};
-    bool isRoundRotation{true};
+    Flags flags{SERIALIZE_DEFAULT};
   };
 
   struct FrameChange
@@ -286,13 +274,13 @@ namespace anm2ed
     auto operator<=>(const Reference&) const = default;
   };
 
-  Flags flags_for(Compatibility);
   Element element_make(ElementType);
   Element element_read(const tinyxml2::XMLElement*);
-  std::string element_to_string(const Element&, Flags = 0);
-  std::string element_to_string(const Element&, ElementType, Flags = 0);
-  tinyxml2::XMLElement* element_to_xml(tinyxml2::XMLDocument&, const Element&, Flags = 0);
-  tinyxml2::XMLElement* element_to_xml(tinyxml2::XMLDocument&, const Element&, ElementType, Flags = 0);
+  std::string element_to_string(const Element&, Flags = SERIALIZE_EDITOR_DEFAULT);
+  std::string element_to_string(const Element&, ElementType, Flags = SERIALIZE_EDITOR_DEFAULT);
+  tinyxml2::XMLElement* element_to_xml(tinyxml2::XMLDocument&, const Element&, Flags = SERIALIZE_EDITOR_DEFAULT);
+  tinyxml2::XMLElement* element_to_xml(tinyxml2::XMLDocument&, const Element&, ElementType,
+                                       Flags = SERIALIZE_EDITOR_DEFAULT);
   Element* element_child_first_get(Element&, ElementType);
   const Element* element_child_first_get(const Element&, ElementType);
   Element* element_child_id_get(Element&, ElementType, int);

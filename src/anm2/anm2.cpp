@@ -87,11 +87,9 @@ namespace anm2ed
 
   constexpr std::array<std::string_view, (std::size_t)Origin::COUNT> ORIGIN_VALUES = {"", "TopLeft", "Center"};
 
-  constexpr std::array<Flags, (std::size_t)Compatibility::COUNT> COMPATIBILITY_FLAGS = {
-      NO_SOUNDS | NO_REGIONS | NO_GROUPS | FRAME_NO_REGION_VALUES | INTERPOLATION_BOOL_ONLY, 0,
-      NO_GROUPS | FRAME_NO_REGION_VALUES};
-
   void groups_flatten(Element&);
+  bool is_track(const Element&);
+  float interpolation_factor(Interpolation, float);
 
   bool anm2_document_load(Anm2& anm2, XMLDocument& document, std::string* errorString)
   {
@@ -108,13 +106,6 @@ namespace anm2ed
     anm2.region_frames_sync(true);
     anm2.isValid = true;
     return true;
-  }
-
-  Flags flags_for(Compatibility compatibility)
-  {
-    auto index = (std::size_t)compatibility;
-    if (index >= COMPATIBILITY_FLAGS.size()) return 0;
-    return COMPATIBILITY_FLAGS[index];
   }
 
   ElementType element_type_get(std::string_view tag)
@@ -195,12 +186,12 @@ namespace anm2ed
 
   int color_write(float value) { return math::float_to_uint8(glm::clamp(value, 0.0f, 1.0f)); }
 
-  Interpolation interpolation_read(const XMLElement* element)
+  Interpolation interpolation_read(const XMLElement* element, const char* attribute)
   {
     bool isFallback{};
-    if (element) element->QueryBoolAttribute("Interpolated", &isFallback);
+    if (element) element->QueryBoolAttribute(attribute, &isFallback);
 
-    auto value = element ? element->Attribute("Interpolated") : nullptr;
+    auto value = element ? element->Attribute(attribute) : nullptr;
     if (!value) return Interpolation::NONE;
 
     for (std::size_t i = 0; i < INTERPOLATION_VALUES.size(); ++i)
@@ -209,10 +200,11 @@ namespace anm2ed
     return isFallback ? Interpolation::LINEAR : Interpolation::NONE;
   }
 
-  void interpolation_write(XMLElement* element, Interpolation interpolation, Flags flags)
+  Interpolation interpolation_read(const XMLElement* element) { return interpolation_read(element, "Interpolated"); }
+
+  void interpolation_write(XMLElement* element, Interpolation interpolation)
   {
-    if (has_flag(flags, INTERPOLATION_BOOL_ONLY) || interpolation == Interpolation::NONE ||
-        interpolation == Interpolation::LINEAR)
+    if (interpolation == Interpolation::NONE || interpolation == Interpolation::LINEAR)
     {
       element->SetAttribute("Interpolated", interpolation == Interpolation::LINEAR);
       return;
@@ -273,6 +265,50 @@ namespace anm2ed
     if (out.type == ElementType::REGION && out.origin == Origin::CENTER) out.pivot = glm::ivec2(out.size / 2.0f);
   }
 
+  bool bake_attributes_read(const XMLElement* element, Interpolation& interpolation, int& originalDelay, int& bakeCount)
+  {
+    if (!element || !element->Attribute("BakeInterpolation")) return false;
+
+    interpolation = interpolation_read(element, "BakeInterpolation");
+    element->QueryIntAttribute("OriginalDelay", &originalDelay);
+    element->QueryIntAttribute("BakeCount", &bakeCount);
+    return bakeCount > 0 && originalDelay >= FRAME_DURATION_MIN;
+  }
+
+  const XMLElement* bake_frames_skip(const XMLElement* element, int bakeCount)
+  {
+    for (int i = 0; element && i < bakeCount; ++i)
+      element = element->NextSiblingElement();
+    return element;
+  }
+
+  void element_children_read(Element& out, const XMLElement* element)
+  {
+    auto child = element->FirstChildElement();
+    while (child)
+    {
+      auto childType = element_type_get(child->Name() ? child->Name() : "");
+      if (childType == ElementType::FRAME && is_track(out))
+      {
+        Interpolation bakeInterpolation{};
+        int originalDelay{};
+        int bakeCount{};
+        if (bake_attributes_read(child, bakeInterpolation, originalDelay, bakeCount))
+        {
+          auto restored = element_read(child);
+          restored.interpolation = bakeInterpolation;
+          restored.duration = originalDelay;
+          out.children.push_back(std::move(restored));
+          child = bake_frames_skip(child, bakeCount);
+          continue;
+        }
+      }
+
+      out.children.push_back(element_read(child));
+      child = child->NextSiblingElement();
+    }
+  }
+
   Element element_read(const XMLElement* element)
   {
     Element out{};
@@ -282,8 +318,7 @@ namespace anm2ed
     out.type = element_type_get(out.tag);
     element_attributes_read(out, element);
 
-    for (auto child = element->FirstChildElement(); child; child = child->NextSiblingElement())
-      out.children.push_back(element_read(child));
+    element_children_read(out, element);
 
     if (out.type == ElementType::TRIGGER && out.soundId != -1)
     {
@@ -308,11 +343,13 @@ namespace anm2ed
 
   bool element_write_skip(const Element& element, ElementType parentType, Flags flags)
   {
-    if (element.type == ElementType::SOUNDS && (has_flag(flags, NO_SOUNDS) || element.children.empty())) return true;
-    if (element.type == ElementType::SOUND_ELEMENT && parentType == ElementType::TRIGGER && has_flag(flags, NO_SOUNDS))
+    if (element.type == ElementType::SOUNDS && (!has_flag(flags, SERIALIZE_SOUNDS) || element.children.empty()))
       return true;
-    if (element.type == ElementType::REGION && has_flag(flags, NO_REGIONS)) return true;
-    if (element.type == ElementType::GROUP && has_flag(flags, NO_GROUPS)) return true;
+    if (element.type == ElementType::SOUND_ELEMENT && parentType == ElementType::TRIGGER &&
+        !has_flag(flags, SERIALIZE_SOUNDS))
+      return true;
+    if (element.type == ElementType::REGION && !has_flag(flags, SERIALIZE_REGIONS)) return true;
+    if (element.type == ElementType::GROUP && !has_flag(flags, SERIALIZE_GROUPS)) return true;
     return false;
   }
 
@@ -320,10 +357,8 @@ namespace anm2ed
   {
     if (parentType == ElementType::LAYER_ANIMATION)
     {
-      bool isNoRegions = has_flag(flags, NO_REGIONS);
-      bool isFrameNoRegionValues = has_flag(flags, FRAME_NO_REGION_VALUES);
-      bool isHasValidRegion = !isNoRegions && element.regionId != -1;
-      bool isWriteRegionValues = !isFrameNoRegionValues || !isHasValidRegion;
+      bool isHasValidRegion = has_flag(flags, SERIALIZE_REGIONS) && element.regionId != -1;
+      bool isWriteRegionValues = has_flag(flags, SERIALIZE_REDUNDANT_FRAME_REGION_VALUES) || !isHasValidRegion;
 
       if (isHasValidRegion) out->SetAttribute("RegionId", element.regionId);
       if (isWriteRegionValues)
@@ -351,7 +386,7 @@ namespace anm2ed
     out->SetAttribute("GreenOffset", color_write(element.colorOffset.g));
     out->SetAttribute("BlueOffset", color_write(element.colorOffset.b));
     out->SetAttribute("Rotation", element.rotation);
-    interpolation_write(out, element.interpolation, flags);
+    interpolation_write(out, element.interpolation);
   }
 
   void element_attributes_write(XMLElement* out, const Element& element, ElementType parentType, Flags flags)
@@ -419,13 +454,13 @@ namespace anm2ed
     {
       out->SetAttribute("LayerId", element.layerId);
       out->SetAttribute("Visible", element.isVisible);
-      if (element.groupId != -1 && !has_flag(flags, NO_GROUPS)) out->SetAttribute("GroupId", element.groupId);
+      if (element.groupId != -1 && has_flag(flags, SERIALIZE_GROUPS)) out->SetAttribute("GroupId", element.groupId);
     }
     else if (element.type == ElementType::NULL_ANIMATION)
     {
       out->SetAttribute("NullId", element.nullId);
       out->SetAttribute("Visible", element.isVisible);
-      if (element.groupId != -1 && !has_flag(flags, NO_GROUPS)) out->SetAttribute("GroupId", element.groupId);
+      if (element.groupId != -1 && has_flag(flags, SERIALIZE_GROUPS)) out->SetAttribute("GroupId", element.groupId);
     }
     else if (element.type == ElementType::FRAME)
       frame_attributes_write(out, element, parentType, flags);
@@ -436,15 +471,61 @@ namespace anm2ed
     }
   }
 
+  void bake_attributes_write(XMLElement* out, Interpolation interpolation, int bakeCount, int originalDelay)
+  {
+    auto value = INTERPOLATION_VALUES[(std::size_t)interpolation];
+    if (!value.empty()) out->SetAttribute("BakeInterpolation", value.data());
+    out->SetAttribute("BakeCount", bakeCount);
+    out->SetAttribute("OriginalDelay", originalDelay);
+  }
+
+  bool is_frame_bake_serialized(const Element& frame, Flags flags)
+  {
+    return has_flag(flags, SERIALIZE_BAKE_SPECIAL_INTERPOLATED_FRAMES) && frame.type == ElementType::FRAME &&
+           frame.interpolation != Interpolation::NONE && frame.interpolation != Interpolation::LINEAR;
+  }
+
+  XMLElement* element_to_xml(XMLDocument& document, const Element& element, ElementType parentType, Flags flags);
+
+  void baked_frames_insert(XMLDocument& document, XMLElement* out, const Element& track, int index, Flags flags)
+  {
+    const auto& original = track.children[index];
+    auto nextFrame = index + 1 < (int)track.children.size() && track.children[index + 1].type == ElementType::FRAME
+                         ? track.children[index + 1]
+                         : original;
+    auto bakeCount = std::max(original.duration, FRAME_DURATION_MIN);
+
+    for (int bakeIndex = 0; bakeIndex < bakeCount; ++bakeIndex)
+    {
+      auto baked = original;
+      auto amount = interpolation_factor(original.interpolation, (float)bakeIndex / (float)bakeCount);
+      baked.duration = FRAME_DURATION_MIN;
+      baked.interpolation = Interpolation::NONE;
+      baked.rotation = glm::mix(original.rotation, nextFrame.rotation, amount);
+      baked.position = glm::mix(original.position, nextFrame.position, amount);
+      baked.scale = glm::mix(original.scale, nextFrame.scale, amount);
+      baked.colorOffset = glm::mix(original.colorOffset, nextFrame.colorOffset, amount);
+      baked.tint = glm::mix(original.tint, nextFrame.tint, amount);
+      auto frame = element_to_xml(document, baked, track.type, flags);
+      if (bakeIndex == 0) bake_attributes_write(frame, original.interpolation, bakeCount, original.duration);
+      out->InsertEndChild(frame);
+    }
+  }
+
   XMLElement* element_to_xml(XMLDocument& document, const Element& element, ElementType parentType, Flags flags)
   {
     auto tag = element.type == ElementType::UNKNOWN ? std::string_view(element.tag) : element_tag_get(element.type);
     auto out = document.NewElement(tag.empty() ? element.tag.c_str() : tag.data());
     element_attributes_write(out, element, parentType, flags);
 
-    for (const auto& child : element.children)
+    for (int i = 0; i < (int)element.children.size(); ++i)
     {
-      if (!element_write_skip(child, element.type, flags))
+      const auto& child = element.children[i];
+      if (element_write_skip(child, element.type, flags)) continue;
+
+      if (is_track(element) && is_frame_bake_serialized(child, flags))
+        baked_frames_insert(document, out, element, i, flags);
+      else
         out->InsertEndChild(element_to_xml(document, child, element.type, flags));
     }
 
@@ -1216,10 +1297,8 @@ namespace anm2ed
   XMLElement* Anm2::to_element(XMLDocument& document, Options options) const
   {
     auto serialized = normalized_for_serialize();
-    if (options.isBakeSpecialInterpolatedFrames)
-      serialized.special_interpolated_frames_bake(1, options.isRoundScale, options.isRoundRotation);
     serialized.region_frames_sync(true);
-    return element_to_xml(document, serialized.root, flags_for(options.compatibility));
+    return element_to_xml(document, serialized.root, ElementType::UNKNOWN, options.flags);
   }
 
   std::uint64_t Anm2::hash(Options options) const { return std::hash<std::string>{}(to_string(options)); }

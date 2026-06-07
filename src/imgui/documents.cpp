@@ -17,6 +17,17 @@ using namespace anm2ed::util;
 
 namespace anm2ed::imgui
 {
+  Options save_options_get(const Settings& settings)
+  {
+    Flags flags{};
+    if (settings.fileIsSerializeGroups) flags |= SERIALIZE_GROUPS;
+    if (settings.fileIsSerializeRegions) flags |= SERIALIZE_REGIONS;
+    if (settings.fileIsSerializeSounds) flags |= SERIALIZE_SOUNDS;
+    if (settings.fileIsKeepRedundantFrameRegionValues) flags |= SERIALIZE_REDUNDANT_FRAME_REGION_VALUES;
+    if (settings.fileIsBakeSpecialInterpolatedFrames) flags |= SERIALIZE_BAKE_SPECIAL_INTERPOLATED_FRAMES;
+    return {.flags = flags};
+  }
+
   void Documents::update(Taskbar& taskbar, Manager& manager, Settings& settings, Resources& resources, bool& isQuitting)
   {
     auto viewport = ImGui::GetMainViewport();
@@ -42,14 +53,10 @@ namespace anm2ed::imgui
         document.lastAutosaveTime += ImGui::GetIO().DeltaTime;
         if (document.lastAutosaveTime > time::SECOND_M)
         {
-          auto compatibility = (Compatibility)settings.fileCompatibility;
-          auto bakeFrames = settings.fileBakeSpecialInterpolatedFramesOnSave;
-          auto isRoundScale = settings.bakeIsRoundScale;
-          auto isRoundRotation = settings.bakeIsRoundRotation;
+          auto options = save_options_get(settings);
           manager.command_push({i,
-                                [compatibility, bakeFrames, isRoundScale, isRoundRotation](Manager& manager,
-                                                                                           Document& document)
-                                { manager.autosave(document, compatibility, bakeFrames, isRoundScale, isRoundRotation); }});
+                                [options](Manager& manager, Document& document)
+                                { manager.autosave(document, options); }});
         }
       }
     }
