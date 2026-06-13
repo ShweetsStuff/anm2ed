@@ -66,6 +66,19 @@ namespace anm2ed::imgui
     return container ? element_child_id_get(*container, window.elementType, key) : nullptr;
   }
 
+  int region_insert_index_get(const Element& spritesheet, const Storage& storage)
+  {
+    int index = (int)spritesheet.children.size();
+    for (int i = 0; i < (int)spritesheet.children.size(); i++)
+    {
+      const auto& child = spritesheet.children[i];
+      if (child.type != ElementType::REGION) continue;
+      if (storage.selection.contains(child.id) || (storage.selection.empty() && storage.reference == child.id))
+        index = i + 1;
+    }
+    return index;
+  }
+
   int window_track_id_get(const Element& item, ElementType trackType)
   {
     return trackType == ElementType::LAYER_ANIMATION ? item.layerId : item.nullId;
@@ -1294,9 +1307,9 @@ namespace anm2ed::imgui
       if (!spritesheet || selection.empty()) return;
 
       std::string clipboardText{};
-      for (auto& id : selection)
-        if (auto region = element_child_id_get(*spritesheet, ElementType::REGION, id))
-          clipboardText += element_to_string(*region);
+      for (auto& region : spritesheet->children)
+        if (region.type == ElementType::REGION && selection.contains(region.id))
+          clipboardText += element_to_string(region);
       clipboard.set(clipboardText);
     };
     window.paste = [](Window& window, Manager&, Settings&, Document& document, Clipboard& clipboard)
@@ -1309,6 +1322,7 @@ namespace anm2ed::imgui
       auto& selection = document.region.selection;
       auto& reference = document.region.reference;
       auto maxRegionIdBefore = element_child_max_id_get(*spritesheet, ElementType::REGION);
+      auto insertIndex = region_insert_index_get(*spritesheet, document.region);
       auto pasted = anm2;
       std::string errorString{};
       if (pasted.regions_deserialize(spritesheetReference, clipboard.get(), true, &errorString))
@@ -1320,6 +1334,12 @@ namespace anm2ed::imgui
           auto maxRegionIdAfter = element_child_max_id_get(*pastedSpritesheet, ElementType::REGION);
           if (maxRegionIdAfter > maxRegionIdBefore)
           {
+            std::vector<int> pastedIndices{};
+            for (int i = 0; i < (int)pastedSpritesheet->children.size(); i++)
+              if (pastedSpritesheet->children[i].type == ElementType::REGION &&
+                  pastedSpritesheet->children[i].id > maxRegionIdBefore)
+                pastedIndices.push_back(i);
+            vector::move_indices_to_position(pastedSpritesheet->children, pastedIndices, insertIndex);
             window.newElementId = maxRegionIdAfter;
             selection = {maxRegionIdAfter};
             reference = maxRegionIdAfter;
@@ -1770,7 +1790,7 @@ namespace anm2ed::imgui
           if (region.origin == Origin::TOP_LEFT)
             region.pivot = {};
           else if (region.origin == Origin::CENTER)
-            region.pivot = {(int)(region.size.x / 2.0f), (int)(region.size.y / 2.0f)};
+            region.pivot = region.size * 0.5f;
         }
         ImGui::EndChild();
 
@@ -1802,7 +1822,8 @@ namespace anm2ed::imgui
                                       added.type = ElementType::REGION;
                                       added.tag = "Region";
                                       added.id = id;
-                                      spritesheet->children.push_back(added);
+                                      auto insertIndex = region_insert_index_get(*spritesheet, document.region);
+                                      spritesheet->children.insert(spritesheet->children.begin() + insertIndex, added);
                                       selection = {id};
                                       reference = id;
                                       window.newElementId = id;

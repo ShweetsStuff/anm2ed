@@ -224,7 +224,12 @@ namespace anm2ed::imgui
           if (ImGui::Button(localize.get(BASIC_NO), widgetSize))
           {
             auto index = closeDocumentIndex;
-            manager.command_push({.runManager = [index](Manager& manager) { manager.close(index); }});
+            manager.command_push({.runManager =
+                                      [index](Manager& manager)
+                                      {
+                                        manager.autosave_file_clear(index);
+                                        manager.close(index);
+                                      }});
             close();
           }
 

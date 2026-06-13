@@ -87,6 +87,7 @@ namespace anm2ed
     bool save(int, const std::filesystem::path& = {}, Options = {});
     bool save(const std::filesystem::path& = {}, Options = {});
     void autosave(Document&, Options = {});
+    void autosave_file_clear(int);
     void set(int);
     void close(int);
     void layer_properties_open(int = -1);

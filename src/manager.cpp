@@ -178,6 +178,17 @@ namespace anm2ed
     autosave_files_write();
   }
 
+  void Manager::autosave_file_clear(int index)
+  {
+    auto document = get(index);
+    if (!document) return;
+
+    auto autosavePath = document->autosave_path_get();
+    autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), autosavePath), autosaveFiles.end());
+    autosave_file_remove(autosavePath);
+    autosave_files_write();
+  }
+
   void Manager::close(int index)
   {
     if (!vector::in_bounds(documents, index)) return;

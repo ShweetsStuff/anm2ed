@@ -552,7 +552,7 @@ namespace anm2ed
       if (region->origin == Origin::TOP_LEFT)
         region->pivot = {};
       else if (region->origin == Origin::CENTER)
-        region->pivot = {static_cast<int>(region->size.x / 2.0f), static_cast<int>(region->size.y / 2.0f)};
+        region->pivot = region->size * 0.5f;
       else
         region->pivot -= region->crop - previousCrop;
       isChanged = true;

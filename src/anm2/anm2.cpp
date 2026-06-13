@@ -262,7 +262,7 @@ namespace anm2ed
     out.interpolation = interpolation_read(element);
     out.origin = origin_read(element);
     if (out.type == ElementType::REGION && out.origin == Origin::TOP_LEFT) out.pivot = {};
-    if (out.type == ElementType::REGION && out.origin == Origin::CENTER) out.pivot = glm::ivec2(out.size / 2.0f);
+    if (out.type == ElementType::REGION && out.origin == Origin::CENTER) out.pivot = out.size * 0.5f;
   }
 
   bool bake_attributes_read(const XMLElement* element, Interpolation& interpolation, int& bakeDelay)

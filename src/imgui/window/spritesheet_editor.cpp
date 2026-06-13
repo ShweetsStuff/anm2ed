@@ -725,8 +725,10 @@ namespace anm2ed::imgui
             if (isMouseDown)
             {
               auto frameCrop = ivec2(frame->crop);
-              frame_change_apply({.pivotX = (float)(int)(mousePos.x - frameCrop.x),
-                                  .pivotY = (float)(int)(mousePos.y - frameCrop.y),
+              auto pivot = mousePos - vec2(frameCrop);
+              if (isGridSnap) pivot = vec2(ivec2(pivot));
+              frame_change_apply({.pivotX = pivot.x,
+                                  .pivotY = pivot.y,
                                   .cropX = (float)frameCrop.x,
                                   .cropY = (float)frameCrop.y});
             }
@@ -734,10 +736,6 @@ namespace anm2ed::imgui
             if (isRightPressed) frame_change_apply({.pivotX = step}, ChangeType::ADD);
             if (isUpPressed) frame_change_apply({.pivotY = step}, ChangeType::SUBTRACT);
             if (isDownPressed) frame_change_apply({.pivotY = step}, ChangeType::ADD);
-
-            frame_change_from_current_apply(
-                [](const Element& frame)
-                { return FrameChange{.pivotX = (float)(int)frame.pivot.x, .pivotY = (float)(int)frame.pivot.y}; });
 
             if (isDuring)
             {
