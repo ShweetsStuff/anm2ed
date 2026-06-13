@@ -401,6 +401,12 @@ namespace anm2ed::imgui
         };
 
         auto clamp_vec2_to_int = [](const vec2& value) { return vec2(ivec2(value)); };
+        auto pivot_snap = [&](vec2 value, vec2 current)
+        {
+          if (isGridSnap) return clamp_vec2_to_int(value);
+          auto fraction = current - glm::floor(current);
+          return glm::floor(value) + fraction;
+        };
         auto snapshot_push = [&](StringType messageType)
         {
           auto message = std::string(localize.get(messageType));
@@ -607,7 +613,7 @@ namespace anm2ed::imgui
         };
         auto region_pivot_set = [&](int id, vec2 pivot)
         {
-          auto queuedPivot = clamp_vec2_to_int(pivot);
+          auto queuedPivot = pivot;
           region_update(id,
                         [=](Element& region)
                         {
@@ -621,7 +627,8 @@ namespace anm2ed::imgui
                         [=](Element& region)
                         {
                           region.origin = Origin::CUSTOM;
-                          region.pivot = clamp_vec2_to_int(region.pivot + delta);
+                          region.pivot += delta;
+                          if (isGridSnap) region.pivot = clamp_vec2_to_int(region.pivot);
                         });
         };
 
@@ -699,7 +706,7 @@ namespace anm2ed::imgui
               if (!region) break;
 
               if (isBegin) snapshot_push(EDIT_REGION_MOVE);
-              if (isMouseDown) region_pivot_set(regionReference, ivec2(mousePos) - ivec2(region->crop));
+              if (isMouseDown) region_pivot_set(regionReference, pivot_snap(mousePos - region->crop, region->pivot));
               if (isLeftPressed) region_pivot_offset(regionReference, vec2(-step, 0));
               if (isRightPressed) region_pivot_offset(regionReference, vec2(step, 0));
               if (isUpPressed) region_pivot_offset(regionReference, vec2(0, -step));
@@ -724,13 +731,8 @@ namespace anm2ed::imgui
             if (isBegin) snapshot_push(EDIT_FRAME_PIVOT);
             if (isMouseDown)
             {
-              auto frameCrop = ivec2(frame->crop);
-              auto pivot = mousePos - vec2(frameCrop);
-              if (isGridSnap) pivot = vec2(ivec2(pivot));
-              frame_change_apply({.pivotX = pivot.x,
-                                  .pivotY = pivot.y,
-                                  .cropX = (float)frameCrop.x,
-                                  .cropY = (float)frameCrop.y});
+              auto pivot = pivot_snap(mousePos - frame->crop, frame->pivot);
+              frame_change_apply({.pivotX = pivot.x, .pivotY = pivot.y});
             }
             if (isLeftPressed) frame_change_apply({.pivotX = step}, ChangeType::SUBTRACT);
             if (isRightPressed) frame_change_apply({.pivotX = step}, ChangeType::ADD);
