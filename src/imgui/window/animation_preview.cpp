@@ -1350,8 +1350,11 @@ namespace anm2ed::imgui
 
         if (mouseWheel != 0 || isZoomIn || isZoomOut)
         {
+          auto wheelZoomStep = mouseWheel != 0 && ImGui::IsKeyDown(ImGuiMod_Ctrl)
+                                   ? zoomStep * ZOOM_STEP_FAST_MULTIPLIER
+                                   : zoomStep;
           auto previousZoom = zoom;
-          zoom_set(zoom, pan, vec2(mousePos), (mouseWheel > 0 || isZoomIn) ? zoomStep : -zoomStep);
+          zoom_set(zoom, pan, vec2(mousePos), (mouseWheel > 0 || isZoomIn) ? wheelZoomStep : -wheelZoomStep);
           if (zoom != previousZoom) hasPendingZoomPanAdjust = true;
         }
       }

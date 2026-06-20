@@ -23,6 +23,7 @@ namespace anm2ed
     static constexpr auto DASH_OFFSET = 1.0f;
     static constexpr auto STEP = 1.0f;
     static constexpr auto STEP_FAST = 5.0f;
+    static constexpr auto ZOOM_STEP_FAST_MULTIPLIER = 5.0f;
     static constexpr auto GRID_SIZE_MIN = 1;
     static constexpr auto GRID_SIZE_MAX = 10000;
     static constexpr auto GRID_OFFSET_MIN = 0;

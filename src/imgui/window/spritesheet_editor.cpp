@@ -954,8 +954,11 @@ namespace anm2ed::imgui
           auto focus = mouseWheel != 0 ? vec2(mousePos) : vec2();
           if (texture && mouseWheel == 0) focus = texture->size / 2;
 
+          auto wheelZoomStep = mouseWheel != 0 && ImGui::IsKeyDown(ImGuiMod_Ctrl)
+                                   ? zoomStep * ZOOM_STEP_FAST_MULTIPLIER
+                                   : zoomStep;
           auto previousZoom = zoom;
-          zoom_set(zoom, pan, focus, (mouseWheel > 0 || isZoomIn) ? zoomStep : -zoomStep);
+          zoom_set(zoom, pan, focus, (mouseWheel > 0 || isZoomIn) ? wheelZoomStep : -wheelZoomStep);
           if (zoom != previousZoom) hasPendingZoomPanAdjust = true;
         }
       }
