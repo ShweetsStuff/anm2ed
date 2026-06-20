@@ -11,6 +11,7 @@
 
 #include "actions.hpp"
 #include "log.hpp"
+#include "math.hpp"
 #include "toast.hpp"
 #include "util/imgui/draw.hpp"
 #include "util/imgui/input.hpp"
@@ -108,6 +109,12 @@ namespace anm2ed::imgui
     int groupId{-1};
     int depth{};
     bool isGroup{};
+  };
+
+  struct RootFrameSpan
+  {
+    int start{};
+    int end{};
   };
 
   void Timeline::update(Manager& manager, Settings& settings, Resources& resources, Clipboard& clipboard)
@@ -227,6 +234,13 @@ namespace anm2ed::imgui
       return left.animationIndex == right.animationIndex && left.itemType == right.itemType &&
              left.itemID == right.itemID;
     };
+    auto is_frame_reference_valid_for = [&](Document& targetDocument, const Reference& frameReference)
+    {
+      if (frameReference.itemType == NONE || frameReference.frameIndex < 0) return false;
+      auto item = command_item_get(targetDocument, frameReference.animationIndex, frameReference.itemType,
+                                   frameReference.itemID);
+      return item && track_frame_get(*item, frameReference.frameIndex);
+    };
     auto group_selection_reset_for = [this](Document& targetDocument)
     {
       targetDocument.groupReferences.clear();
@@ -235,9 +249,15 @@ namespace anm2ed::imgui
     auto frame_references_for_current_get = [&]()
     {
       std::set<Reference> result = frames.references;
+      std::erase_if(result, [&](const Reference& frameReference)
+                    { return !is_frame_reference_valid_for(document, frameReference); });
       if (result.empty())
+      {
         for (auto frameIndex : frames.selection)
           result.insert({reference.animationIndex, reference.itemType, reference.itemID, frameIndex});
+        std::erase_if(result, [&](const Reference& frameReference)
+                      { return !is_frame_reference_valid_for(document, frameReference); });
+      }
       return result;
     };
     auto item_references_for_current_get = [&]()
@@ -376,6 +396,38 @@ namespace anm2ed::imgui
       frameFocusIndex = targetReference.frameIndex;
       frameFocusRequested = targetReference.frameIndex >= 0;
     };
+    auto frames_reference_normalize_for = [&](Document& targetDocument)
+    {
+      std::erase_if(targetDocument.frames.references, [&](const Reference& frameReference)
+                    { return !is_frame_reference_valid_for(targetDocument, frameReference); });
+
+      if (targetDocument.frames.references.empty() && !targetDocument.frames.selection.empty())
+      {
+        for (auto frameIndex : targetDocument.frames.selection)
+          targetDocument.frames.references.insert(
+              {targetDocument.reference.animationIndex, targetDocument.reference.itemType,
+               targetDocument.reference.itemID, frameIndex});
+        std::erase_if(targetDocument.frames.references, [&](const Reference& frameReference)
+                      { return !is_frame_reference_valid_for(targetDocument, frameReference); });
+      }
+
+      if (!targetDocument.frames.references.empty())
+      {
+        targetDocument.items.references.clear();
+        for (auto frameReference : targetDocument.frames.references)
+          targetDocument.items.references.insert(item_reference_from_frame_get(frameReference));
+        if (!targetDocument.frames.references.contains(targetDocument.reference) ||
+            !is_frame_reference_valid_for(targetDocument, targetDocument.reference))
+          targetDocument.reference = *targetDocument.frames.references.begin();
+        frames_selection_sync_for(targetDocument);
+        return;
+      }
+
+      if (targetDocument.reference.frameIndex >= 0 &&
+          !is_frame_reference_valid_for(targetDocument, targetDocument.reference))
+        targetDocument.reference.frameIndex = -1;
+    };
+    frames_reference_normalize_for(document);
     auto reference_clear_for = [=](Document& targetDocument)
     {
       targetDocument.reference = {targetDocument.reference.animationIndex};
@@ -647,6 +699,171 @@ namespace anm2ed::imgui
                           }
                           else
                             frames_selection_reset_for(document);
+                        });
+    };
+
+    auto selected_root_frame_references_get = [&]()
+    {
+      auto selectedFrames = frame_references_for_current_get();
+      std::erase_if(selectedFrames,
+                    [](const Reference& frameReference) { return frameReference.itemType != ROOT; });
+      return selectedFrames;
+    };
+
+    auto item_references_for_bake_into_other_frames_get = [](const Document& targetDocument,
+                                                             const Element& targetAnimation,
+                                                             BakeIntoOtherFramesTarget target, bool isLayers,
+                                                             bool isNulls)
+    {
+      std::set<Reference> result{};
+      auto animationIndex = targetDocument.reference.animationIndex;
+      if (target == BakeIntoOtherFramesTarget::CURRENT_SELECTION)
+      {
+        for (auto itemReference : targetDocument.items.references)
+        {
+          itemReference.frameIndex = -1;
+          if (itemReference.itemType == LAYER || itemReference.itemType == NULL_) result.insert(itemReference);
+        }
+        return result;
+      }
+
+      auto add_items = [&](const Element& container, int itemType)
+      {
+        auto trackType = item_type_to_track_type_get(static_cast<ItemType>(itemType));
+        auto add_item = [&](auto&& self, const Element& item) -> void
+        {
+          if (item.type == ElementType::GROUP)
+          {
+            for (const auto& child : item.children)
+              self(self, child);
+            return;
+          }
+          if (item.type != trackType) return;
+          auto itemID = itemType == LAYER ? item.layerId : item.nullId;
+          result.insert({animationIndex, itemType, itemID, -1});
+        };
+        for (const auto& item : container.children)
+          add_item(add_item, item);
+      };
+
+      if (isLayers)
+        if (auto layerAnimations = element_child_first_get(targetAnimation, ElementType::LAYER_ANIMATIONS))
+          add_items(*layerAnimations, LAYER);
+      if (isNulls)
+        if (auto nullAnimations = element_child_first_get(targetAnimation, ElementType::NULL_ANIMATIONS))
+          add_items(*nullAnimations, NULL_);
+      return result;
+    };
+
+    auto is_bake_into_other_frames_ready = [&]()
+    {
+      auto selectedRootFrames = selected_root_frame_references_get();
+      if (selectedRootFrames.empty() || !animation) return false;
+      auto targetItems = item_references_for_bake_into_other_frames_get(
+          document, *animation, bakeIntoOtherFramesTarget, isBakeIntoOtherFramesLayers, isBakeIntoOtherFramesNulls);
+      return !targetItems.empty();
+    };
+
+    auto frame_root_transform_apply = [](Element& frame, const Element& rootFrame, bool isRoundScale,
+                                         bool isRoundRotation, bool isUseRootPivot)
+    {
+      auto rootScale = math::percent_to_unit(rootFrame.scale);
+      auto pivot = isUseRootPivot ? rootFrame.position : glm::vec2();
+      auto offset = (frame.position - pivot) * rootScale;
+      auto radians = glm::radians(rootFrame.rotation);
+      auto cos = std::cos(radians);
+      auto sin = std::sin(radians);
+
+      frame.position =
+          rootFrame.position + glm::vec2(offset.x * cos - offset.y * sin, offset.x * sin + offset.y * cos);
+      frame.scale *= rootScale;
+      frame.rotation += rootFrame.rotation;
+
+      if (isRoundScale) frame.scale = glm::round(frame.scale);
+      if (isRoundRotation) frame.rotation = std::round(frame.rotation);
+    };
+
+    auto bake_into_other_frames = [&]()
+    {
+      auto selectedRootFrames = selected_root_frame_references_get();
+      if (selectedRootFrames.empty()) return;
+      auto target = bakeIntoOtherFramesTarget;
+      auto isLayers = isBakeIntoOtherFramesLayers;
+      auto isNulls = isBakeIntoOtherFramesNulls;
+      auto isRoundScale = settings.bakeIsRoundScale;
+      auto isRoundRotation = settings.bakeIsRoundRotation;
+      auto isMatchRootInterpolation = settings.bakeIsMatchRootInterpolation;
+      auto isUseRootPivot = settings.bakeIsUseRootPivot;
+      edit_command_push(EDIT_BAKE_INTO_OTHER_FRAMES, Document::FRAMES,
+                        [=](Manager&, Document& document) mutable
+                        {
+                          auto animation = command_animation_get(document, document.reference.animationIndex);
+                          if (!animation) return;
+                          auto root = command_item_get(document, document.reference.animationIndex, ROOT, -1);
+                          if (!root) return;
+
+                          std::vector<RootFrameSpan> spans{};
+                          for (auto rootReference : selectedRootFrames)
+                          {
+                            auto rootFrame = command_frame_get(document, rootReference);
+                            if (!rootFrame) continue;
+                            auto start = (int)frame_time_from_index_get(*root, rootReference.frameIndex);
+                            spans.push_back({start, start + rootFrame->duration});
+                          }
+                          if (spans.empty()) return;
+
+                          auto targetItems = item_references_for_bake_into_other_frames_get(
+                              document, *animation, target, isLayers, isNulls);
+                          if (targetItems.empty()) return;
+
+                          for (auto itemReference : targetItems)
+                          {
+                            auto item = command_item_get(document, itemReference.animationIndex,
+                                                         itemReference.itemType, itemReference.itemID);
+                            if (!item) continue;
+
+                            if (isMatchRootInterpolation)
+                            {
+                              std::vector<int> bakeIndices{};
+                              for (auto [i, frame] : std::views::enumerate(item->children))
+                              {
+                                auto frameStart = (int)frame_time_from_index_get(*item, (int)i);
+                                for (auto span : spans)
+                                  if (frameStart >= span.start && frameStart < span.end)
+                                  {
+                                    bakeIndices.push_back((int)i);
+                                    break;
+                                  }
+                              }
+                              for (auto it = bakeIndices.rbegin(); it != bakeIndices.rend(); ++it)
+                                frame_bake(*item, *it, FRAME_DURATION_MIN, isRoundScale, isRoundRotation);
+                            }
+
+                            for (auto [i, frame] : std::views::enumerate(item->children))
+                            {
+                              auto frameStart = (int)frame_time_from_index_get(*item, (int)i);
+                              bool isInsideSpan{};
+                              for (auto span : spans)
+                                if (frameStart >= span.start && frameStart < span.end)
+                                {
+                                  isInsideSpan = true;
+                                  break;
+                                }
+                              if (!isInsideSpan) continue;
+                              auto rootFrame = frame_generate(*root, (float)frameStart);
+                              frame_root_transform_apply(frame, rootFrame, isRoundScale, isRoundRotation,
+                                                         isUseRootPivot);
+                            }
+                          }
+
+                          for (auto rootReference : selectedRootFrames)
+                          {
+                            auto rootFrame = command_frame_get(document, rootReference);
+                            if (!rootFrame) continue;
+                            rootFrame->position = {};
+                            rootFrame->scale = {100.0f, 100.0f};
+                            rootFrame->rotation = {};
+                          }
                         });
     };
 
@@ -1448,6 +1665,7 @@ namespace anm2ed::imgui
       auto selectedBakeFrames = selectedFrames;
       std::erase_if(selectedBakeFrames,
                     [](const Reference& frameReference) { return frameReference.itemType == TRIGGER; });
+      auto selectedRootFrames = selected_root_frame_references_get();
       bool isMakeRegion = frame && reference.itemType == LAYER && reference.itemID != -1 && frame->regionId == -1 &&
                           layer_get(reference.itemID) && spritesheet_get(layer_get(reference.itemID)->spritesheetId);
       Actions actions{};
@@ -1469,6 +1687,10 @@ namespace anm2ed::imgui
                    .shortcut = SHORTCUT_BAKE,
                    .isEnabled = [=]() { return !selectedBakeFrames.empty(); },
                    .run = [&]() { frames_bake(); }});
+      actions.add({.label = LABEL_BAKE_INTO_OTHER_FRAMES,
+                   .shortcut = -1,
+                   .isEnabled = [=]() { return !selectedRootFrames.empty(); },
+                   .run = [&]() { bakeIntoOtherFramesPopup.open(); }});
       actions.add({.label = LABEL_FIT_ANIMATION_LENGTH,
                    .shortcut = SHORTCUT_FIT,
                    .isEnabled = [&]() { return animation && animation->frameNum != animation_length_get(*animation); },
@@ -2763,6 +2985,23 @@ namespace anm2ed::imgui
                   draggedFrameIndex = (int)i;
                   draggedFrameStart = hoveredTime;
                   if (type != TRIGGER) draggedFrameStartDuration = frame.duration;
+                  draggedFrameStartDurations.clear();
+                  if (type != TRIGGER)
+                  {
+                    auto selectedReferences = frame_references_for_current_get();
+                    if (!selectedReferences.contains(frameReference)) selectedReferences = {frameReference};
+                    std::erase_if(selectedReferences, [](const Reference& selectedReference)
+                                  { return selectedReference.itemType == TRIGGER; });
+                    if (selectedReferences.empty()) selectedReferences = {frameReference};
+                    for (auto selectedReference : selectedReferences)
+                    {
+                      auto selectedItem = item_get(selectedReference.itemType, selectedReference.itemID);
+                      auto selectedFrame =
+                          selectedItem ? track_frame_get(*selectedItem, selectedReference.frameIndex) : nullptr;
+                      if (selectedFrame)
+                        draggedFrameStartDurations.push_back({selectedReference, selectedFrame->duration});
+                    }
+                  }
                   draggedFrameStartMouseX = ImGui::GetIO().MousePos.x;
                   draggedFrameWidth = frameSize.x;
                 }
@@ -2907,6 +3146,7 @@ namespace anm2ed::imgui
           auto targetType = draggedFrameType;
           auto targetIndex = draggedFrameIndex;
           auto targetStartDuration = draggedFrameStartDuration;
+          auto targetStartDurations = draggedFrameStartDurations;
           auto targetHoveredTime = hoveredTime;
           auto targetDurationDelta = durationDelta;
           auto isPlaybackClamp = settings.playbackIsClamp;
@@ -2932,8 +3172,20 @@ namespace anm2ed::imgui
                          }
                          else
                          {
-                           frame->duration = glm::clamp(targetStartDuration + targetDurationDelta, FRAME_DURATION_MIN,
-                                                        FRAME_DURATION_MAX);
+                           if (targetStartDurations.empty())
+                           {
+                             frame->duration = glm::clamp(targetStartDuration + targetDurationDelta,
+                                                          FRAME_DURATION_MIN, FRAME_DURATION_MAX);
+                             return;
+                           }
+
+                           for (auto frameDuration : targetStartDurations)
+                           {
+                             auto targetFrame = command_frame_get(document, frameDuration.reference);
+                             if (!targetFrame) continue;
+                             targetFrame->duration = glm::clamp(frameDuration.duration + targetDurationDelta,
+                                                                FRAME_DURATION_MIN, FRAME_DURATION_MAX);
+                           }
                          }
                        });
         }
@@ -2955,6 +3207,7 @@ namespace anm2ed::imgui
           draggedFrameIndex = -1;
           draggedFrameStart = -1;
           draggedFrameStartDuration = -1;
+          draggedFrameStartDurations.clear();
           draggedFrameStartMouseX = 0.0f;
           draggedFrameWidth = 0.0f;
           isDraggedFrameSnapshot = false;
@@ -3349,6 +3602,63 @@ namespace anm2ed::imgui
 
       shortcut(manager.chords[SHORTCUT_CANCEL]);
       if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize)) bakePopup.close();
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CANCEL_BAKE_FRAMES));
+
+      ImGui::EndPopup();
+    }
+
+    bakeIntoOtherFramesPopup.trigger();
+
+    if (ImGui::BeginPopupModal(bakeIntoOtherFramesPopup.label(), &bakeIntoOtherFramesPopup.isOpen,
+                               ImGuiWindowFlags_NoResize))
+    {
+      auto& isRoundRotation = settings.bakeIsRoundRotation;
+      auto& isRoundScale = settings.bakeIsRoundScale;
+      auto& isMatchRootInterpolation = settings.bakeIsMatchRootInterpolation;
+      auto& isUseRootPivot = settings.bakeIsUseRootPivot;
+      int target = (int)bakeIntoOtherFramesTarget;
+      ImGui::RadioButton(localize.get(LABEL_CURRENT_SELECTION), &target,
+                         (int)BakeIntoOtherFramesTarget::CURRENT_SELECTION);
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BAKE_INTO_OTHER_FRAMES_CURRENT_SELECTION));
+      ImGui::SameLine();
+      ImGui::RadioButton(localize.get(LABEL_ALL), &target, (int)BakeIntoOtherFramesTarget::ALL);
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BAKE_INTO_OTHER_FRAMES_ALL));
+      bakeIntoOtherFramesTarget = (BakeIntoOtherFramesTarget)target;
+
+      auto isCurrentSelection = bakeIntoOtherFramesTarget == BakeIntoOtherFramesTarget::CURRENT_SELECTION;
+      ImGui::BeginDisabled(isCurrentSelection);
+      ImGui::Checkbox(localize.get(LABEL_LAYERS), &isBakeIntoOtherFramesLayers);
+      ImGui::SameLine();
+      ImGui::Checkbox(localize.get(LABEL_NULLS), &isBakeIntoOtherFramesNulls);
+      ImGui::EndDisabled();
+
+      ImGui::Checkbox(localize.get(LABEL_ROUND_ROTATION), &isRoundRotation);
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ROUND_ROTATION));
+
+      ImGui::Checkbox(localize.get(LABEL_ROUND_SCALE), &isRoundScale);
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ROUND_SCALE));
+
+      ImGui::Checkbox(localize.get(LABEL_BAKE_MATCH_ROOT_INTERPOLATION), &isMatchRootInterpolation);
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BAKE_MATCH_ROOT_INTERPOLATION));
+
+      ImGui::Checkbox(localize.get(LABEL_BAKE_USE_ROOT_PIVOT), &isUseRootPivot);
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BAKE_USE_ROOT_PIVOT));
+
+      auto widgetSize = widget_size_with_row_get(2);
+
+      shortcut(manager.chords[SHORTCUT_CONFIRM]);
+      ImGui::BeginDisabled(!is_bake_into_other_frames_ready());
+      if (ImGui::Button(localize.get(LABEL_BAKE), widgetSize))
+      {
+        bake_into_other_frames();
+        bakeIntoOtherFramesPopup.close();
+      }
+      ImGui::EndDisabled();
+
+      ImGui::SameLine();
+
+      shortcut(manager.chords[SHORTCUT_CANCEL]);
+      if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize)) bakeIntoOtherFramesPopup.close();
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CANCEL_BAKE_FRAMES));
 
       ImGui::EndPopup();

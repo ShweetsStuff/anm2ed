@@ -34,6 +34,7 @@ using namespace glm;
 namespace anm2ed::imgui
 {
   constexpr auto NULL_COLOR = vec4(0.0f, 0.0f, 1.0f, 0.90f);
+  constexpr auto SELECTED_LAYER_BORDER_COLOR = vec4(1.0f, 0.1059f, 0.5882f, 1.0f);
   constexpr auto TARGET_SIZE = vec2(32, 32);
   constexpr auto POINT_SIZE = vec2(4, 4);
   constexpr auto TRIGGER_TEXT_COLOR_DARK = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
@@ -740,6 +741,21 @@ namespace anm2ed::imgui
       }
 
       auto referenceItemType = static_cast<ItemType>(reference.itemType);
+      auto is_layer_animation_selected = [&](int id)
+      {
+        if (reference.animationIndex != -1 && referenceItemType == ItemType::LAYER && reference.itemID == id)
+          return true;
+        for (auto itemReference : document.items.references)
+          if (itemReference.animationIndex == reference.animationIndex && itemReference.itemType == LAYER &&
+              itemReference.itemID == id)
+            return true;
+        for (auto frameReference : document.frames.references)
+          if (frameReference.animationIndex == reference.animationIndex && frameReference.itemType == LAYER &&
+              frameReference.itemID == id)
+            return true;
+        return document.frames.references.empty() && !frames.empty() && referenceItemType == ItemType::LAYER &&
+               reference.itemID == id;
+      };
 
       auto render = [&](Element* animation, float time, vec3 colorOffset = {}, float alphaOffset = {},
                         const std::vector<OnionskinSample>* layeredOnions = nullptr, bool isIndexMode = false)
@@ -873,7 +889,9 @@ namespace anm2ed::imgui
 
               texture_render(shaderTexture, texture.id, layerTransform, frameTint, frameColorOffset, vertices.data());
 
-              auto color = isOnion ? vec4(sampleColor, 1.0f - sampleAlpha) : color::RED;
+              auto color = isOnion ? vec4(sampleColor, 1.0f - sampleAlpha)
+                           : is_layer_animation_selected(id) ? SELECTED_LAYER_BORDER_COLOR
+                                                             : color::RED;
 
               if (isBorder) rect_render(shaderLine, layerTransform, layerModel, color);
 
@@ -1048,19 +1066,22 @@ namespace anm2ed::imgui
         auto useTool = tool;
         auto step = (float)(isMod ? STEP_FAST : STEP);
         mousePos = position_translate(zoom, pan, to_vec2(ImGui::GetMousePos()) - to_vec2(cursorScreenPos));
+        auto is_frame_reference_valid = [&](const Reference& frameReference)
+        {
+          if (frameReference.itemType == NONE || frameReference.itemType == TRIGGER || frameReference.frameIndex < 0)
+            return false;
+          auto itemType = static_cast<ItemType>(frameReference.itemType);
+          auto item = anm2.element_get(frameReference.animationIndex, itemType, frameReference.itemID);
+          return item && track_frame_get(*item, frameReference.frameIndex);
+        };
         auto selected_frame_references_get = [&]()
         {
           std::set<Reference> result = document.frames.references;
           for (auto frameIndex : frames)
             result.insert({reference.animationIndex, reference.itemType, reference.itemID, frameIndex});
           std::erase_if(result,
-                        [](const Reference& frameReference)
-                        {
-                          return frameReference.itemType == NONE || frameReference.itemType == TRIGGER ||
-                                 frameReference.frameIndex < 0;
-                        });
-          if (result.empty() && reference.itemType != NONE && reference.itemType != TRIGGER &&
-              reference.frameIndex != -1)
+                        [&](const Reference& frameReference) { return !is_frame_reference_valid(frameReference); });
+          if (result.empty() && is_frame_reference_valid(reference))
             result.insert(reference);
           return result;
         };

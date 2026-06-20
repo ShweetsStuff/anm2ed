@@ -38,6 +38,18 @@ namespace anm2ed::imgui
     bool isActive{};
   };
 
+  struct FrameDurationDrag
+  {
+    Reference reference{};
+    int duration{1};
+  };
+
+  enum class BakeIntoOtherFramesTarget
+  {
+    CURRENT_SELECTION,
+    ALL
+  };
+
   class Timeline
   {
     bool isDragging{};
@@ -45,6 +57,10 @@ namespace anm2ed::imgui
     bool isHorizontalScroll{};
     popup::ItemProperties itemProperties{};
     PopupHelper bakePopup{PopupHelper(LABEL_TIMELINE_BAKE_POPUP, POPUP_SMALL_NO_HEIGHT)};
+    PopupHelper bakeIntoOtherFramesPopup{PopupHelper(LABEL_BAKE_INTO_OTHER_FRAMES, POPUP_SMALL_NO_HEIGHT)};
+    BakeIntoOtherFramesTarget bakeIntoOtherFramesTarget{BakeIntoOtherFramesTarget::CURRENT_SELECTION};
+    bool isBakeIntoOtherFramesLayers{true};
+    bool isBakeIntoOtherFramesNulls{true};
     int hoveredTime{};
     bool isFrameBoxPending{};
     bool isFrameBoxSelecting{};
@@ -65,6 +81,7 @@ namespace anm2ed::imgui
     int draggedFrameIndex{-1};
     int draggedFrameStart{-1};
     int draggedFrameStartDuration{-1};
+    std::vector<FrameDurationDrag> draggedFrameStartDurations{};
     float draggedFrameStartMouseX{};
     float draggedFrameWidth{};
     bool isDraggedFrameSnapshot{};

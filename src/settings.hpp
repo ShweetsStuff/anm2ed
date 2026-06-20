@@ -146,11 +146,13 @@ namespace anm2ed
                                                                                                                        \
   X(GENERATE_START_POSITION, generateStartPosition, STRING_UNDEFINED, IVEC2, {})                                       \
   X(GENERATE_SIZE, generateSize, STRING_UNDEFINED, IVEC2, {64, 64})                                                    \
-  X(GENERATE_PIVOT, generatePivot, STRING_UNDEFINED, IVEC2, {32, 32})                                                  \
+  X(GENERATE_PIVOT, generatePivot, STRING_UNDEFINED, VEC2, {32, 32})                                                   \
   X(GENERATE_ROWS, generateRows, STRING_UNDEFINED, INT, 4)                                                             \
   X(GENERATE_COLUMNS, generateColumns, STRING_UNDEFINED, INT, 4)                                                       \
   X(GENERATE_COUNT, generateCount, STRING_UNDEFINED, INT, 16)                                                          \
   X(GENERATE_DURATION, generateDuration, STRING_UNDEFINED, INT, 1)                                                     \
+  X(GENERATE_IS_MAKE_REGIONS, generateIsMakeRegions, STRING_UNDEFINED, BOOL, false)                                    \
+  X(GENERATE_REGION_NAME_FORMAT, generateRegionNameFormat, STRING_UNDEFINED, STRING, "Frame {}")                       \
   X(GENERATE_ZOOM, generateZoom, STRING_UNDEFINED, FLOAT, 100.0f)                                                      \
                                                                                                                        \
   X(EDITOR_IS_GRID, editorIsGrid, STRING_UNDEFINED, BOOL, true)                                                        \
@@ -175,6 +177,8 @@ namespace anm2ed
   X(BAKE_INTERVAL, bakeInterval, STRING_UNDEFINED, INT, 1)                                                             \
   X(BAKE_IS_ROUND_SCALE, bakeIsRoundScale, STRING_UNDEFINED, BOOL, true)                                               \
   X(BAKE_IS_ROUND_ROTATION, bakeIsRoundRotation, STRING_UNDEFINED, BOOL, true)                                         \
+  X(BAKE_IS_MATCH_ROOT_INTERPOLATION, bakeIsMatchRootInterpolation, STRING_UNDEFINED, BOOL, false)                     \
+  X(BAKE_IS_USE_ROOT_PIVOT, bakeIsUseRootPivot, STRING_UNDEFINED, BOOL, true)                                          \
                                                                                                                        \
   X(TIMELINE_ADD_ITEM_TYPE, timelineAddItemType, STRING_UNDEFINED, INT, LAYER)                                         \
   X(TIMELINE_ADD_ITEM_DESTINATION, timelineAddItemDestination, STRING_UNDEFINED, INT, types::destination::ALL)         \

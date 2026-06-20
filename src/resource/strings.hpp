@@ -113,6 +113,7 @@ namespace anm2ed
   X(EDIT_ANIMATION_LENGTH, "Animation Length", "Duracion De Animacion", "Длина анимации", "动画时长", "애니메이션 길이") \
   X(EDIT_AUTHOR, "Author", "Autor", "Автор", "制作者", "작성자") \
   X(EDIT_BAKE_FRAMES, "Bake Frames", "Hacer Bake de Frames", "Запечь кадры", "烘培/提前渲染", "프레임 베이크") \
+  X(EDIT_BAKE_INTO_OTHER_FRAMES, "Bake into Other Frames", "Hacer bake en otros frames", "Запечь в другие кадры", "烘焙到其他帧", "다른 프레임에 베이크") \
   X(EDIT_CHANGE_FRAME_PROPERTIES, "Change Frame Properties", "Cambiar Propiedades de Frame", "Изменить свойства кадров", "更改帧属性", "프레임 속성 변경") \
   X(EDIT_CUT_ANIMATIONS, "Cut Animation(s)", "Cortar Animacion(es)", "Вырезать анимации", "剪切动画", "애니메이션 잘라내기") \
   X(EDIT_CUT_FRAMES, "Cut Frame(s)", "Cortar Frame(s)", "Вырезать кадры", "剪切多个/单个帧", "프레임 잘라내기") \
@@ -244,6 +245,9 @@ namespace anm2ed
   X(LABEL_AXES, "Axes", "Ejes", "Оси", "坐标轴", "가로/세로 축") \
   X(LABEL_BACKGROUND_COLOR, "Background", "Fondo", "Фон", "背景", "배경색") \
   X(LABEL_BAKE, "Bake", "Bake", "Запечь", "提前渲染", "베이크") \
+  X(LABEL_BAKE_INTO_OTHER_FRAMES, "Bake into Other Frames", "Bake en otros frames", "Запечь в другие кадры", "烘焙到其他帧", "다른 프레임에 베이크") \
+  X(LABEL_BAKE_MATCH_ROOT_INTERPOLATION, "Bake other frames to match interpolation", "Bake otros frames para coincidir con interpolación", "Запечь другие кадры для соответствия интерполяции", "烘焙其他帧以匹配插值", "보간에 맞게 다른 프레임 베이크") \
+  X(LABEL_BAKE_USE_ROOT_PIVOT, "Use root pivot", "Usar pivote root", "Использовать корневой пивот", "使用根枢轴", "Root 중심점 사용") \
   X(LABEL_SPLIT, "Split", "Dividir", "Разделить", "拆分", "분할") \
   X(LABEL_BORDER, "Border", "Borde", "Границы", "边框", "경계선") \
   X(LABEL_CHANGE_ALL_FRAME_PROPERTIES, "Change All Frame Properties", "Cambiar todas las propiedades de frame", "Изменить все свойства кадра", "更改所有帧属性", "모든 프레임 속성 변경") \
@@ -251,6 +255,7 @@ namespace anm2ed
   X(LABEL_CLAMP, "Clamp", "Clamp", "Ограничить", "限制数值范围", "작업 영역 제한") \
   X(LABEL_CLEAR_LIST, "Clear List", "Limpiar Lista", "Стереть список", "清除列表", "기록 삭제") \
   X(LABEL_CLOSE, "Close", "Cerrar", "Закрыть", "关闭", "닫기") \
+  X(LABEL_CURRENT_SELECTION, "Current Selection", "Selección actual", "Текущее выделение", "当前选择", "현재 선택") \
   X(LABEL_SERIALIZATION, "Serialization", "Serialización", "Сериализация", "序列化", "직렬화") \
   X(LABEL_GROUPS, "Groups", "Grupos", "Группы", "组", "그룹") \
   X(LABEL_REGIONS, "Regions", "Regiones", "Регионы", "区域", "영역") \
@@ -287,8 +292,10 @@ namespace anm2ed
   X(LABEL_GENERATE_COLUMNS, "Columns", "Columnas", "Колонны", "列", "열") \
   X(LABEL_GENERATE_COUNT, "Count", "Conteo", "Кол-во", "数量", "프레임 수") \
   X(LABEL_GENERATE_FRAME_SIZE, "Frame Size", "Tamaño de Frame", "Размер кадра", "单帧大小", "프레임 크기") \
+  X(LABEL_GENERATE_MAKE_REGIONS, "Make Regions", "Crear Regiones", "Создать регионы", "创建区域", "영역 만들기") \
   X(LABEL_GENERATE_ROWS, "Rows", "Filas", "Ряды", "行", "행") \
   X(LABEL_GENERATE_START_POSITION, "Start Position", "Poscicion de Inicio", "Начальная позиция", "起始位置", "시작 위치") \
+  X(LABEL_ALL, "All", "Todo", "Все", "全部", "전체") \
   X(LABEL_ALL_ANIMATIONS, "All Animations", "Todas las Animaciones", "Все анимации", "所有动画", "모든 애니메이션") \
   X(LABEL_HELP_MENU, "Help", "Ayuda", "Помощь", "帮助", "도움말") \
   X(LABEL_IGNORE_FRAMES, "Ignore Frames", "Ignorar Frames", "Игнорировать кадры", "忽略帧", "프레임 무시") \
@@ -534,6 +541,10 @@ namespace anm2ed
   X(TOOLTIP_BACKGROUND_COLOR, "Change the background color.", "Cambia el color del fondo.", "Изменить цвет фона.", "更改背景颜色.", "배경색을 변경합니다.") \
   X(TOOLTIP_BAKE_FRAMES, "Turn interpolated frames into uninterpolated ones.\nUse the shortcut to bake frames quickly.", "Cambia Frames interpolados a no interpolados.\n usa el atajo para hacer bake de Frames mas rapido.", "Превратить интерполированные кадры в неинтерполированные.\nИспользуйте горячую клавишу, чтобы быстро запечь кадры.", "将线性插值的帧转换为普通帧。\n使用快捷键可快速烘焙帧.", "연결된 프레임을 연결되지 않은 프레임으로 고정화합니다.\n단축키를 사용하면 프레임을 빠르게 베이크할 수 있습니다.") \
   X(TOOLTIP_BAKE_FRAMES_OPTIONS, "Bake the selected frame(s) with the options selected.", "Hacer bake el Frame(s) seleccionado con las opciones seleccionadas.", "Запечь выбранные кадры с выбранными настройками.", "替换所选旧图集为新图集.", "선택된 프레임을 선택한 옵션으로 베이킹합니다.") \
+  X(TOOLTIP_BAKE_INTO_OTHER_FRAMES_CURRENT_SELECTION, "The frames inside the currently selected items will have the selected root frames' transformation applied to them.", "Los frames dentro de los items seleccionados tendrán aplicada la transformación de los root frames seleccionados.", "Кадры внутри выбранных элементов получат трансформацию выбранных корневых кадров.", "当前所选物品中的帧会应用所选根帧的变换.", "현재 선택된 항목 안의 프레임에 선택된 Root 프레임의 변환을 적용합니다.") \
+  X(TOOLTIP_BAKE_INTO_OTHER_FRAMES_ALL, "All layer/null frames will have the selected root frames' transformations applied to them.", "Todos los frames de capas/nulls tendrán aplicadas las transformaciones de los root frames seleccionados.", "Все кадры слоев/нулей получат трансформации выбранных корневых кадров.", "所有图层/Null帧会应用所选根帧的变换.", "모든 레이어/Null 프레임에 선택된 Root 프레임의 변환을 적용합니다.") \
+  X(TOOLTIP_BAKE_MATCH_ROOT_INTERPOLATION, "Bake affected layer/null frames to duration 1 before applying root transforms, so they match the selected root frames' interpolation.", "Hornea los frames de capas/nulls afectados a duración 1 antes de aplicar transformaciones root, para coincidir con la interpolación root seleccionada.", "Запечь затронутые кадры слоев/нулей до длительности 1 перед применением корневых трансформаций, чтобы соответствовать интерполяции выбранных корневых кадров.", "应用根变换前，将受影响的图层/Null帧烘焙为时长1，以匹配所选根帧的插值.", "선택된 Root 프레임의 보간에 맞도록 Root 변환 적용 전에 영향받는 레이어/Null 프레임을 지속시간 1로 베이크합니다.") \
+  X(TOOLTIP_BAKE_USE_ROOT_PIVOT, "Scale and rotate other frames around the root frame position instead of the animation origin.", "Escala y rota otros frames alrededor de la posición del root frame en vez del origen de la animación.", "Масштабировать и вращать другие кадры вокруг позиции корневого кадра, а не начала координат анимации.", "围绕根帧位置而不是动画原点缩放和旋转其他帧.", "애니메이션 원점 대신 Root 프레임 위치를 중심으로 다른 프레임을 확대/회전합니다.") \
   X(TOOLTIP_BORDER, "Toggle the visibility of borders around layers.", "Alterna la visibilidad de los bordes alrededor de las capas.", "Переключить видимость границ около слоев.", "切换动画层边框是否可见.", "레이어 주변 경계선을 표시하거나 숨깁니다.") \
   X(TOOLTIP_CANCEL_ADD_ITEM, "Cancel adding an item.", "Cancelar añadir un item.", "Отменить добавление предмета.", "取消添加物品.", "항목 추가를 취소합니다.") \
   X(TOOLTIP_CANCEL_BAKE_FRAMES, "Cancel baking frames.", "Cancelar hacer bake de Frames.", "Отменить запечку кадров.", "取消提前渲染.", "프레임 베이킹을 취소합니다.") \
@@ -608,6 +619,8 @@ namespace anm2ed
   X(TOOLTIP_MERGE_SPRITESHEETS_TOP_RIGHT, "The merged spritesheets will be joined at the top right of the previous spritesheet.", "Los spritesheets fusionados se unirán en la parte superior derecha del spritesheet anterior.", "Объединяемые спрайт-листы будут стыковаться в верхнем правом углу предыдущего спрайт-листа.", "合并的图集将拼接在前一个图集的右上方。", "병합된 스프라이트 시트는 이전 스프라이트 시트의 우상단에 이어 붙습니다.") \
   X(TOOLTIP_MERGE_MAKE_SPRITESHEET_REGIONS, "The respective spritesheets will be added as regions.", "Los spritesheets correspondientes se agregarán como regiones.", "Соответствующие спрайт-листы будут добавлены как регионы.", "对应图集将作为区域添加。", "해당 스프라이트 시트가 영역으로 추가됩니다.") \
   X(TOOLTIP_MERGE_MAKE_PRIMARY_SPRITESHEET_REGION, "If disabled, the base spritesheet will not be added as a region in the merged spritesheet.", "Si se desactiva, el spritesheet base no se agregará como región en el spritesheet combinado.", "Если отключено, базовый спрайт-лист не будет добавлен как регион в объединённый спрайт-лист.", "禁用后，基础图集不会作为区域添加到合并后的图集中。", "비활성화하면 기본 스프라이트 시트가 병합된 스프라이트 시트에 영역으로 추가되지 않습니다.") \
+  X(TOOLTIP_GENERATE_MAKE_REGIONS, "Will create spritesheet regions for each frame generated for the current layer's spritesheet.", "Creará regiones de spritesheet para cada frame generado para el spritesheet de la capa actual.", "Создаст регионы спрайт-листа для каждого кадра, созданного для спрайт-листа текущего слоя.", "会为当前动画层图集生成的每个帧创建图集区域。", "현재 레이어의 스프라이트 시트에 생성된 각 프레임마다 영역을 만듭니다.") \
+  X(TOOLTIP_GENERATE_REGION_NAME_FORMAT, "Set the names of the generated regions.\n{} is the frame number.", "Define los nombres de las regiones generadas.\n{} es el número de frame.", "Задаёт имена создаваемых регионов.\n{} — номер кадра.", "设置生成区域的名称。\n{} 是帧编号。", "생성된 영역의 이름을 설정합니다.\n{}는 프레임 번호입니다.") \
   X(TOOLTIP_PACK_SPRITESHEET, "Pack the spritesheet by its regions and rebuild the texture.", "Empaqueta el spritesheet por sus regiones y reconstruye la textura.", "Упаковать спрайт-лист по его регионам и пересобрать текстуру.", "按区域打包图集并重建纹理。", "영역 기준으로 스프라이트 시트를 패킹하고 텍스처를 다시 만듭니다.") \
   X(TOOLTIP_OUTPUT_PATH, "Set the output path or directory for the animation.", "Ajusta la ruta de salida o el directiorio de la animacion.", "Установить путь или директорию вывода для анимации.", "更改动画的输出路径/目录.", "애니메이션의 출력 경로 또는 디렉터리를 설정합니다.") \
   X(TOOLTIP_OVERLAY, "Set an animation to be drawn over the current animation.", "Ajusta una animacion para ser dibujada sobre la animacion actual.", "Установить анимацию, которая будет выведена над текущей анимацией.", "设置一个当前动画的覆盖动画.", "현재 애니메이션 위에 그려질 애니메이션을 설정합니다.") \

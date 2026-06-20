@@ -1057,7 +1057,7 @@ namespace anm2ed::imgui
             auto index = *indices.rbegin();
             selection = {index};
             reference = {index};
-            window.newElementId = index;
+            window.newElementId = indices.size() == 1 ? index : -1;
             window.scrollQueued = index;
           }
         }

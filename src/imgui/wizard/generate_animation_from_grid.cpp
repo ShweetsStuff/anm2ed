@@ -1,6 +1,7 @@
 #include "generate_animation_from_grid.hpp"
 
 #include <algorithm>
+#include <format>
 #include "math.hpp"
 #include "types.hpp"
 #include "util/imgui/draw.hpp"
@@ -28,6 +29,8 @@ namespace anm2ed::imgui::wizard
     auto& columns = settings.generateColumns;
     auto& count = settings.generateCount;
     auto& delay = settings.generateDuration;
+    auto& isMakeRegions = settings.generateIsMakeRegions;
+    auto& regionNameFormat = settings.generateRegionNameFormat;
     auto& zoom = settings.generateZoom;
     auto& zoomStep = settings.inputZoomStep;
     auto layerReferences = document.layer_references_get();
@@ -43,13 +46,20 @@ namespace anm2ed::imgui::wizard
     {
       ImGui::InputInt2(localize.get(LABEL_GENERATE_START_POSITION), value_ptr(startPosition));
       ImGui::InputInt2(localize.get(LABEL_GENERATE_FRAME_SIZE), value_ptr(size));
-      ImGui::InputInt2(localize.get(BASIC_PIVOT), value_ptr(pivot));
+      ImGui::InputFloat2(localize.get(BASIC_PIVOT), value_ptr(pivot), math::vec2_format_get(pivot));
       ImGui::InputInt(localize.get(LABEL_GENERATE_ROWS), &rows, STEP, STEP_FAST);
       ImGui::InputInt(localize.get(LABEL_GENERATE_COLUMNS), &columns, STEP, STEP_FAST);
 
       input_int_range(localize.get(LABEL_GENERATE_COUNT), count, FRAME_NUM_MIN, rows * columns);
 
       ImGui::InputInt(localize.get(BASIC_DURATION), &delay, STEP, STEP_FAST);
+      ImGui::Separator();
+      ImGui::Checkbox(localize.get(LABEL_GENERATE_MAKE_REGIONS), &isMakeRegions);
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GENERATE_MAKE_REGIONS));
+      ImGui::BeginDisabled(!isMakeRegions);
+      input_text_string(localize.get(LABEL_FORMAT), &regionNameFormat);
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GENERATE_REGION_NAME_FORMAT));
+      ImGui::EndDisabled();
     }
     ImGui::EndChild();
 
@@ -132,17 +142,37 @@ namespace anm2ed::imgui::wizard
       auto queuedColumns = columns;
       auto queuedCount = count;
       auto queuedDelay = delay;
+      auto queuedIsMakeRegions = isMakeRegions;
+      auto queuedRegionNameFormat = regionNameFormat;
 
       manager.command_push({manager.selected,
                             [=](Manager&, Document& document)
                             {
+                              auto region_name_get = [](const std::string& format, int frameNumber)
+                              {
+                                try
+                                {
+                                  return std::vformat(format, std::make_format_args(frameNumber));
+                                }
+                                catch (const std::format_error&)
+                                {
+                                  return format;
+                                }
+                              };
+
                               bool isChanged{};
+                              bool isRegionsChanged{};
                               for (auto queuedReference : queuedLayerReferences)
                               {
                                 auto item = document.anm2.element_get(queuedReference.animationIndex, ItemType::LAYER,
                                                                       queuedReference.itemID);
                                 auto animation =
                                     document.anm2.element_get(ElementType::ANIMATION, queuedReference.animationIndex);
+                                auto layer = document.anm2.element_get(ElementType::LAYER_ELEMENT,
+                                                                       queuedReference.itemID);
+                                auto spritesheet = layer ? document.anm2.element_get(ElementType::SPRITESHEET,
+                                                                                     layer->spritesheetId)
+                                                         : nullptr;
                                 if (!item || !animation) continue;
 
                                 if (!isChanged)
@@ -150,11 +180,29 @@ namespace anm2ed::imgui::wizard
                                   document.snapshot(localize.get(EDIT_GENERATE_ANIMATION_FROM_GRID));
                                   isChanged = true;
                                 }
+                                auto frameIndexStart = (int)item->children.size();
                                 frames_generate_from_grid(*item, queuedStartPosition, queuedSize, queuedPivot,
                                                           queuedColumns, queuedCount, queuedDelay);
+                                if (queuedIsMakeRegions && spritesheet)
+                                  for (int frameIndex = frameIndexStart; frameIndex < (int)item->children.size();
+                                       ++frameIndex)
+                                  {
+                                    auto& frame = item->children[frameIndex];
+                                    if (frame.type != ElementType::FRAME) continue;
+
+                                    auto region = element_make(ElementType::REGION);
+                                    region.id = element_child_next_id_get(*spritesheet, ElementType::REGION);
+                                    region.name = region_name_get(queuedRegionNameFormat, frameIndex - frameIndexStart);
+                                    region.crop = frame.crop;
+                                    region.size = frame.size;
+                                    region.pivot = frame.pivot;
+                                    frame.regionId = region.id;
+                                    spritesheet->children.push_back(region);
+                                    isRegionsChanged = true;
+                                  }
                                 animation->frameNum = animation_length_get(*animation);
                               }
-                              if (isChanged) document.anm2_change(Document::FRAMES);
+                              if (isChanged) document.anm2_change(isRegionsChanged ? Document::ALL : Document::FRAMES);
                             }});
       isEnd = true;
     }

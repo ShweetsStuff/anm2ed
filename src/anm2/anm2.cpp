@@ -962,8 +962,8 @@ namespace anm2ed
       baked.scale = glm::mix(original.scale, next.scale, amount);
       baked.colorOffset = glm::mix(original.colorOffset, next.colorOffset, amount);
       baked.tint = glm::mix(original.tint, next.tint, amount);
-      if (isRoundScale) baked.scale = glm::vec2(glm::ivec2(baked.scale));
-      if (isRoundRotation) baked.rotation = (int)baked.rotation;
+      if (isRoundScale) baked.scale = glm::round(baked.scale);
+      if (isRoundRotation) baked.rotation = std::round(baked.rotation);
 
       if (insertIndex == index)
         track.children[insertIndex] = baked;
@@ -975,7 +975,7 @@ namespace anm2ed
     }
   }
 
-  void frames_generate_from_grid(Element& track, glm::ivec2 startPosition, glm::ivec2 size, glm::ivec2 pivot,
+  void frames_generate_from_grid(Element& track, glm::ivec2 startPosition, glm::ivec2 size, glm::vec2 pivot,
                                  int columns, int count, int duration)
   {
     for (int i = 0; i < count; ++i)
@@ -1174,8 +1174,8 @@ namespace anm2ed
         baked.scale = glm::mix(original.scale, nextFrame.scale, amount);
         baked.colorOffset = glm::mix(original.colorOffset, nextFrame.colorOffset, amount);
         baked.tint = glm::mix(original.tint, nextFrame.tint, amount);
-        if (isRoundScale) baked.scale = glm::vec2(glm::ivec2(baked.scale));
-        if (isRoundRotation) baked.rotation = (int)baked.rotation;
+        if (isRoundScale) baked.scale = glm::round(baked.scale);
+        if (isRoundRotation) baked.rotation = std::round(baked.rotation);
 
         if (insertIndex == index)
           track.children[insertIndex] = baked;

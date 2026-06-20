@@ -351,24 +351,32 @@ namespace anm2ed::imgui
 
         auto isMod = ImGui::IsKeyDown(ImGuiMod_Shift);
 
-        auto frame =
-            anm2.element_get(reference.animationIndex, referenceItemType, reference.frameIndex, reference.itemID);
-        auto item = anm2.element_get(reference.animationIndex, referenceItemType, reference.itemID);
-        auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, reference.itemID);
-        bool isReferenceLayerOnSpritesheet =
-            frame && reference.itemID > -1 && layer && layer->spritesheetId == referenceSpritesheet;
+        auto is_frame_reference_valid = [&](const Reference& frameReference)
+        {
+          if (frameReference.frameIndex < 0 || frameReference.itemType != LAYER) return false;
+          auto frameLayer = anm2.element_get(ElementType::LAYER_ELEMENT, frameReference.itemID);
+          if (!frameLayer || frameLayer->spritesheetId != referenceSpritesheet) return false;
+          auto frameItem = anm2.element_get(frameReference.animationIndex, ItemType::LAYER, frameReference.itemID);
+          return frameItem && track_frame_get(*frameItem, frameReference.frameIndex);
+        };
         auto selectedFrameReferences = document.frames.references;
         for (auto frameIndex : document.frames.selection)
           selectedFrameReferences.insert({reference.animationIndex, reference.itemType, reference.itemID, frameIndex});
         std::erase_if(selectedFrameReferences, [&](const Reference& frameReference)
-                      {
-                        if (frameReference.frameIndex < 0) return true;
-                        if (frameReference.itemType != LAYER) return true;
-                        auto frameLayer = document.anm2.element_get(ElementType::LAYER_ELEMENT, frameReference.itemID);
-                        return !frameLayer || frameLayer->spritesheetId != referenceSpritesheet;
-                      });
-        if (selectedFrameReferences.empty() && reference.frameIndex != -1 && isReferenceLayerOnSpritesheet)
+                      { return !is_frame_reference_valid(frameReference); });
+        if (selectedFrameReferences.empty() && is_frame_reference_valid(reference))
           selectedFrameReferences.insert(reference);
+        auto editReference = reference;
+        if (!selectedFrameReferences.contains(reference) && !selectedFrameReferences.empty())
+          editReference = *selectedFrameReferences.begin();
+        auto editReferenceItemType = static_cast<ItemType>(editReference.itemType);
+        auto frame =
+            anm2.element_get(editReference.animationIndex, editReferenceItemType, editReference.frameIndex,
+                             editReference.itemID);
+        auto item = anm2.element_get(editReference.animationIndex, editReferenceItemType, editReference.itemID);
+        auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, editReference.itemID);
+        bool isReferenceLayerOnSpritesheet =
+            frame && editReference.itemID > -1 && layer && layer->spritesheetId == referenceSpritesheet;
         auto useTool = tool;
         auto step = (float)(isMod ? STEP_FAST : STEP);
         auto stepX = isGridSnap ? step * gridSize.x : step;
@@ -442,8 +450,8 @@ namespace anm2ed::imgui
         };
         auto frame_change_from_current_apply = [&](auto frameChangeGet, ChangeType changeType = ChangeType::ADJUST)
         {
-          auto queuedReference = reference;
-          auto queuedReferenceItemType = referenceItemType;
+          auto queuedReference = editReference;
+          auto queuedReferenceItemType = editReferenceItemType;
           auto queuedFrameReferences = selectedFrameReferences;
           manager.command_push({manager.selected,
                                 [=](Manager&, Document& document)

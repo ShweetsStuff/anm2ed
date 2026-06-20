@@ -300,7 +300,7 @@ namespace anm2ed
   int frame_index_from_time_get(const Element&, float);
   float frame_time_from_index_get(const Element&, int);
   void frame_bake(Element&, int, int, bool, bool);
-  void frames_generate_from_grid(Element&, glm::ivec2, glm::ivec2, glm::ivec2, int, int, int);
+  void frames_generate_from_grid(Element&, glm::ivec2, glm::ivec2, glm::vec2, int, int, int);
   bool frames_deserialize(Element&, const std::string&, int, std::set<int>&, std::string* = nullptr);
   void frames_sort_by_at_frame(Element&);
   void frames_change(Element&, FrameChange, ItemType, ChangeType, const std::set<int>&);
