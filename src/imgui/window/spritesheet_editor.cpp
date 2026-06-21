@@ -49,6 +49,29 @@ namespace anm2ed::imgui
     auto& zoomStep = settings.inputZoomStep;
     auto& isBorder = settings.editorIsBorder;
     auto& isTransparent = settings.editorIsTransparent;
+    auto selected_layer_spritesheet_get = [&]()
+    {
+      auto is_valid_layer_frame = [&](const Reference& frameReference)
+      {
+        if (frameReference.frameIndex < 0 || frameReference.itemType != LAYER) return false;
+        auto frameItem = anm2.element_get(frameReference.animationIndex, ItemType::LAYER, frameReference.itemID);
+        return frameItem && track_frame_get(*frameItem, frameReference.frameIndex);
+      };
+      if (is_valid_layer_frame(reference))
+        if (auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, reference.itemID))
+          return layer->spritesheetId;
+
+      auto frameReferences = document.frames.references;
+      for (auto frameIndex : document.frames.selection)
+        frameReferences.insert({reference.animationIndex, reference.itemType, reference.itemID, frameIndex});
+      for (auto frameReference : frameReferences)
+        if (is_valid_layer_frame(frameReference))
+          if (auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, frameReference.itemID))
+            return layer->spritesheetId;
+      return -1;
+    };
+    if (auto selectedLayerSpritesheet = selected_layer_spritesheet_get(); selectedLayerSpritesheet != -1)
+      referenceSpritesheet = selectedLayerSpritesheet;
     auto spritesheet = anm2.element_get(ElementType::SPRITESHEET, referenceSpritesheet);
     auto texture = document.texture_get(referenceSpritesheet);
     auto& tool = settings.tool;
@@ -360,8 +383,9 @@ namespace anm2ed::imgui
           return frameItem && track_frame_get(*frameItem, frameReference.frameIndex);
         };
         auto selectedFrameReferences = document.frames.references;
-        for (auto frameIndex : document.frames.selection)
-          selectedFrameReferences.insert({reference.animationIndex, reference.itemType, reference.itemID, frameIndex});
+        if (selectedFrameReferences.empty())
+          for (auto frameIndex : document.frames.selection)
+            selectedFrameReferences.insert({reference.animationIndex, reference.itemType, reference.itemID, frameIndex});
         std::erase_if(selectedFrameReferences, [&](const Reference& frameReference)
                       { return !is_frame_reference_valid(frameReference); });
         if (selectedFrameReferences.empty() && is_frame_reference_valid(reference))
@@ -377,6 +401,8 @@ namespace anm2ed::imgui
         auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, editReference.itemID);
         bool isReferenceLayerOnSpritesheet =
             frame && editReference.itemID > -1 && layer && layer->spritesheetId == referenceSpritesheet;
+        if (selectedFrameReferences.empty() && isReferenceLayerOnSpritesheet)
+          selectedFrameReferences.insert(editReference);
         auto useTool = tool;
         auto step = (float)(isMod ? STEP_FAST : STEP);
         auto stepX = isGridSnap ? step * gridSize.x : step;
