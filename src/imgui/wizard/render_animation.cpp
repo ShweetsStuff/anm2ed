@@ -1,6 +1,7 @@
 #include "render_animation.hpp"
 
 #include <ranges>
+#include <set>
 #include <string>
 
 #include "log.hpp"
@@ -27,20 +28,29 @@ namespace anm2ed::imgui::wizard
 
   void RenderAnimation::range_to_frames_set(Manager& manager, Document& document)
   {
-    auto& frames = document.frames.selection;
-    if (!frames.empty())
+    auto frameReferences = document.frame_references_get(Document::FrameReferenceFallback::NONE);
+    auto& reference = document.reference;
+    std::erase_if(frameReferences,
+                  [&](const Reference& frameReference)
+                  {
+                    return frameReference.animationIndex != reference.animationIndex ||
+                           frameReference.itemType != reference.itemType || frameReference.itemID != reference.itemID;
+                  });
+    if (!frameReferences.empty())
     {
-      auto& reference = document.reference;
       auto itemType = static_cast<ItemType>(reference.itemType);
       if (auto item = document.anm2.element_get(reference.animationIndex, itemType, reference.itemID))
       {
         int duration{};
-        for (auto [i, frame] : std::views::enumerate(item->children))
+        int frameIndex{};
+        for (auto& frame : item->children)
         {
-          if ((int)i == *frames.begin()) manager.recordingStart = duration;
-          if ((int)i == *frames.rbegin()) manager.recordingEnd = duration + frame.duration - 1;
+          if (frame.type != ElementType::FRAME && frame.type != ElementType::TRIGGER) continue;
+          if (frameIndex == frameReferences.begin()->frameIndex) manager.recordingStart = duration;
+          if (frameIndex == frameReferences.rbegin()->frameIndex) manager.recordingEnd = duration + frame.duration - 1;
 
           duration += frame.duration;
+          ++frameIndex;
         }
       }
     }
@@ -71,7 +81,6 @@ namespace anm2ed::imgui::wizard
     auto& rows = settings.renderRows;
     auto& columns = settings.renderColumns;
     auto& isRange = manager.isRecordingRange;
-    auto& frames = document.frames.selection;
     auto& reference = document.reference;
     auto& frameNum = animation->frameNum;
 
@@ -159,7 +168,8 @@ namespace anm2ed::imgui::wizard
 
     ImGui::SameLine();
 
-    ImGui::BeginDisabled(frames.empty() || reference.itemType == TRIGGER);
+    ImGui::BeginDisabled(document.frame_references_get(Document::FrameReferenceFallback::NONE).empty() ||
+                         reference.itemType == TRIGGER);
     if (ImGui::Button(localize.get(LABEL_TO_SELECTED_FRAMES))) range_to_frames_set(manager, document);
     ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TO_SELECTED_FRAMES));
     ImGui::EndDisabled();

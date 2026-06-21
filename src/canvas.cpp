@@ -227,10 +227,32 @@ namespace anm2ed
     glUseProgram(0);
   }
 
-  void Canvas::zoom_set(float& zoom, vec2& pan, vec2 focus, float step) const
+  float Canvas::zoom_level_get(float zoom, int levelDelta) const
+  {
+    if (levelDelta == 0) return zoom;
+    if (zoom < ZOOM_LEVELS.front()) return ZOOM_LEVELS.front();
+    if (zoom > ZOOM_LEVELS.back()) return ZOOM_LEVELS.back();
+
+    auto levelCount = (int)ZOOM_LEVELS.size();
+    int levelIndex{};
+    if (levelDelta > 0)
+    {
+      auto it = std::upper_bound(ZOOM_LEVELS.begin(), ZOOM_LEVELS.end(), zoom);
+      levelIndex = (int)std::distance(ZOOM_LEVELS.begin(), it) + levelDelta - 1;
+    }
+    else
+    {
+      auto it = std::lower_bound(ZOOM_LEVELS.begin(), ZOOM_LEVELS.end(), zoom);
+      levelIndex = (int)std::distance(ZOOM_LEVELS.begin(), it) + levelDelta;
+    }
+
+    return ZOOM_LEVELS[std::clamp(levelIndex, 0, levelCount - 1)];
+  }
+
+  void Canvas::zoom_level_adjust(float& zoom, vec2& pan, vec2 focus, int levelDelta) const
   {
     auto zoomFactor = math::percent_to_unit(zoom);
-    float newZoom = glm::clamp(math::round_nearest_multiple(zoom + step, step), ZOOM_MIN, ZOOM_MAX);
+    float newZoom = zoom_level_get(zoom, levelDelta);
     if (newZoom != zoom)
     {
       float newZoomFactor = math::percent_to_unit(newZoom);

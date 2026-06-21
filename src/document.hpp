@@ -37,6 +37,12 @@ namespace anm2ed
       COUNT
     };
 
+    enum class FrameReferenceFallback
+    {
+      NONE,
+      CURRENT,
+    };
+
     std::filesystem::path path{};
 
     Snapshots snapshots{};
@@ -118,6 +124,12 @@ namespace anm2ed
     bool spritesheet_any_dirty();
     void spritesheet_hashes_reset();
     void spritesheet_hashes_sync();
+    bool is_frame_reference_valid(Reference) const;
+    std::set<Reference> item_frame_references_get(Reference) const;
+    std::set<Reference> selected_item_frame_references_get() const;
+    std::set<Reference> frame_references_get(FrameReferenceFallback = FrameReferenceFallback::CURRENT) const;
+    void frame_references_set(std::set<Reference>);
+    void frame_references_clear();
     std::vector<Reference> layer_references_get();
 
     Element* frame_get();

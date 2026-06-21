@@ -407,8 +407,6 @@ namespace anm2ed
   X(LABEL_WELCOME_WINDOW, "Welcome###Welcome", "Bienvenido###Welcome", "Добро пожаловать###Welcome", "欢迎###Welcome", "환영합니다###Welcome") \
   X(LABEL_WINDOW_MENU, "Window", "Ventana", "Окно", "窗口", "창") \
   X(LABEL_WIZARD_MENU, "Wizard", "Wizard", "Помощник", "向导", "보조 도구") \
-  X(LABEL_ZOOM, "Zoom", "Zoom", "Масштаб", "视角缩放", "확대") \
-  X(LABEL_ZOOM_STEP, "Step", "Step", "Шаг", "步长", "단계") \
   X(SHORTCUT_STRING_ADD, "Add", "Añadir", "Добавить", "添加", "추가") \
   X(SHORTCUT_STRING_CENTER_VIEW, "Center View", "Vista de Centro", "Центрировать вид", "视角居中", "가운데서 보기") \
   X(SHORTCUT_STRING_CLOSE, "Close", "Cerrar", "Закрыть", "关闭", "닫기") \
@@ -706,8 +704,7 @@ namespace anm2ed
   X(TOOLTIP_WIZARD_RENDER_ANIMATION, "Render the animation into a media format.\n(Note: this requires FFmpeg!)", "Renderiza la animacion a un formato multimedia.\n(Nota: esto requiere FFmpeg!)", "Рендерит анимацию в медиаформат.\n(Примечание: требуется FFmpeg!)", "将动画渲染为媒体格式。\n(注意：需要 FFmpeg！)", "애니메이션을 미디어 형식으로 렌더링합니다.\n(참고: FFmpeg가 필요합니다!)") \
   X(TOOLTIP_WIZARD_SCAN_AND_SET_REGIONS, "Match all regionless frames in all animations in the document to a region, if a matching region exists and matches the frame's relevant values.", "Empareja todos los frames sin region de todas las animaciones del documento con una region, si existe una region coincidente y coincide con los valores relevantes del frame.", "Сопоставляет все кадры без региона во всех анимациях документа с регионом, если существует подходящий регион и его релевантные значения совпадают со значениями кадра.", "将文档中所有动画里无区域的帧与区域进行匹配；若存在匹配区域且其相关值与帧一致，则进行设置。", "문서의 모든 애니메이션에서 영역이 없는 프레임을 영역과 매칭합니다. 일치하는 영역이 있고 프레임의 관련 값이 일치하면 설정합니다.") \
   X(TOOLTIP_USE_EXISTING_ITEM, "Reuse an unused item instead of creating a new one.", "Reusa un item no utilizado en vez de crear uno nuevo.", "Использовать неиспользуемый предмет, а не создавать новый.", "重用未使用的物品，而不是创建新物品。", "새로 만들지 않고 사용되지 않는 항목을 재사용합니다.") \
-  X(TOOLTIP_VSYNC, "Toggle vertical sync; synchronizes program update rate with monitor refresh rate.", "Alterna la Sincronizacion Vertical; Sincroniza la tasa de actualizacion del programa con la tasa de refresco del monitor.", "Переключить вертикальную синхронизацию; синхронизирует частоту обновления программы с частотой обновления монитора.", "切换垂直同步; 同步程序的更新频率与屏幕的刷新频率.", "수직 동기화를 켜거나 끕니다. 프로그램의 업데이트 속도를 모니터의 새로고침 속도와 동기화합니다.") \
-  X(TOOLTIP_ZOOM_STEP, "When zooming in/out with mouse or shortcut, this value will be used.", "Cuando se haga zoom in/out con el mouse o atajo, este valor sera usado.", "При масштабировании мышью или горячей клавишей будет использоваться это значение.", "当通过鼠标或快捷键放大/缩小视图时, 此数值会被使用.", "마우스나 단축키로 확대/축소할 때 이 값이 사용됩니다.")
+  X(TOOLTIP_VSYNC, "Toggle vertical sync; synchronizes program update rate with monitor refresh rate.", "Alterna la Sincronizacion Vertical; Sincroniza la tasa de actualizacion del programa con la tasa de refresco del monitor.", "Переключить вертикальную синхронизацию; синхронизирует частоту обновления программы с частотой обновления монитора.", "切换垂直同步; 同步程序的更新频率与屏幕的刷新频率.", "수직 동기화를 켜거나 끕니다. 프로그램의 업데이트 속도를 모니터의 새로고침 속도와 동기화합니다.")
   // clang-format on
 
   enum StringType

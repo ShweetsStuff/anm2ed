@@ -435,7 +435,6 @@ namespace anm2ed::imgui
     auto& gridColor = settings.previewGridColor;
     auto& gridSize = settings.previewGridSize;
     auto& gridOffset = settings.previewGridOffset;
-    auto& zoomStep = settings.inputZoomStep;
     auto& isGrid = settings.previewIsGrid;
     auto& overlayTransparency = settings.previewOverlayTransparency;
     auto& overlayIndex = document.overlayIndex;
@@ -451,8 +450,6 @@ namespace anm2ed::imgui
     auto& shaderAxes = resources.shaders[shader::AXIS];
     auto& shaderGrid = resources.shaders[shader::GRID];
     auto& shaderTexture = resources.shaders[shader::TEXTURE];
-    auto& frames = document.frames.selection;
-
     auto reset_checker_pan = [&]()
     {
       checkerPan = pan;
@@ -487,16 +484,16 @@ namespace anm2ed::imgui
       if (animation) set_to_rect(zoom, pan, anm2.animation_rect(*animation, isRootTransform));
     };
 
-    auto zoom_adjust = [&](float delta)
+    auto zoom_adjust = [&](int levelDelta)
     {
       auto focus = position_translate(zoom, pan, size * 0.5f);
       auto previousZoom = zoom;
-      zoom_set(zoom, pan, focus, delta);
+      zoom_level_adjust(zoom, pan, focus, levelDelta);
       if (zoom != previousZoom) hasPendingZoomPanAdjust = true;
     };
 
-    auto zoom_in = [&]() { zoom_adjust(zoomStep); };
-    auto zoom_out = [&]() { zoom_adjust(-zoomStep); };
+    auto zoom_in = [&]() { zoom_adjust(ZOOM_LEVEL_STEP); };
+    auto zoom_out = [&]() { zoom_adjust(-ZOOM_LEVEL_STEP); };
 
     manager.isAbleToRecord = false;
 
@@ -528,7 +525,7 @@ namespace anm2ed::imgui
 
       if (ImGui::BeginChild("##View Child", childSize, true, ImGuiWindowFlags_HorizontalScrollbar))
       {
-        ImGui::InputFloat(localize.get(BASIC_ZOOM), &zoom, zoomStep, zoomStep, "%.0f%%");
+        ImGui::InputFloat(localize.get(BASIC_ZOOM), &zoom, 0.0f, 0.0f, "%.0f%%");
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_PREVIEW_ZOOM));
 
         auto widgetSize = widget_size_with_row_get(2);
@@ -749,12 +746,11 @@ namespace anm2ed::imgui
           if (itemReference.animationIndex == reference.animationIndex && itemReference.itemType == LAYER &&
               itemReference.itemID == id)
             return true;
-        for (auto frameReference : document.frames.references)
+        for (auto frameReference : document.frame_references_get(Document::FrameReferenceFallback::NONE))
           if (frameReference.animationIndex == reference.animationIndex && frameReference.itemType == LAYER &&
               frameReference.itemID == id)
             return true;
-        return document.frames.references.empty() && !frames.empty() && referenceItemType == ItemType::LAYER &&
-               reference.itemID == id;
+        return false;
       };
 
       auto render = [&](Element* animation, float time, vec3 colorOffset = {}, float alphaOffset = {},
@@ -1066,26 +1062,9 @@ namespace anm2ed::imgui
         auto useTool = tool;
         auto step = (float)(isMod ? STEP_FAST : STEP);
         mousePos = position_translate(zoom, pan, to_vec2(ImGui::GetMousePos()) - to_vec2(cursorScreenPos));
-        auto is_frame_reference_valid = [&](const Reference& frameReference)
-        {
-          if (frameReference.itemType == NONE || frameReference.itemType == TRIGGER || frameReference.frameIndex < 0)
-            return false;
-          auto itemType = static_cast<ItemType>(frameReference.itemType);
-          auto item = anm2.element_get(frameReference.animationIndex, itemType, frameReference.itemID);
-          return item && track_frame_get(*item, frameReference.frameIndex);
-        };
-        auto selected_frame_references_get = [&]()
-        {
-          std::set<Reference> result = document.frames.references;
-          for (auto frameIndex : frames)
-            result.insert({reference.animationIndex, reference.itemType, reference.itemID, frameIndex});
-          std::erase_if(result,
-                        [&](const Reference& frameReference) { return !is_frame_reference_valid(frameReference); });
-          if (result.empty() && is_frame_reference_valid(reference))
-            result.insert(reference);
-          return result;
-        };
-        auto selectedFrameReferences = selected_frame_references_get();
+        auto selectedFrameReferences = document.frame_references_get();
+        std::erase_if(selectedFrameReferences, [](const Reference& frameReference)
+                      { return frameReference.itemType == NONE || frameReference.itemType == TRIGGER; });
         auto editReference = reference;
         auto editItemType = referenceItemType;
         if ((referenceItemType == ItemType::TRIGGER || !selectedFrameReferences.contains(reference)) &&
@@ -1350,11 +1329,9 @@ namespace anm2ed::imgui
 
         if (mouseWheel != 0 || isZoomIn || isZoomOut)
         {
-          auto wheelZoomStep = mouseWheel != 0 && ImGui::IsKeyDown(ImGuiMod_Ctrl)
-                                   ? zoomStep * ZOOM_STEP_FAST_MULTIPLIER
-                                   : zoomStep;
           auto previousZoom = zoom;
-          zoom_set(zoom, pan, vec2(mousePos), (mouseWheel > 0 || isZoomIn) ? wheelZoomStep : -wheelZoomStep);
+          zoom_level_adjust(zoom, pan, vec2(mousePos),
+                            (mouseWheel > 0 || isZoomIn) ? ZOOM_LEVEL_STEP : -ZOOM_LEVEL_STEP);
           if (zoom != previousZoom) hasPendingZoomPanAdjust = true;
         }
       }

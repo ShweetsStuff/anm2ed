@@ -109,12 +109,6 @@ namespace anm2ed::imgui::wizard
                             "%.3f");
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_REPEAT_DELAY));
 
-          ImGui::SeparatorText(localize.get(LABEL_ZOOM));
-
-          input_float_range(localize.get(LABEL_ZOOM_STEP), temporary.inputZoomStep, 10.0f, 250.0f, 10.0f, 10.0f,
-                            "%.0f%%");
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ZOOM_STEP));
-
           ImGui::SeparatorText(localize.get(LABEL_TOOL));
 
           ImGui::Checkbox(localize.get(LABEL_MOVE_TOOL_SNAP), &temporary.inputIsMoveToolSnapToMouse);

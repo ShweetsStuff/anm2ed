@@ -8,7 +8,7 @@ namespace anm2ed
   class Framebuffer
   {
   public:
-    enum Type
+    enum class Type
     {
       UNDERLAY,
       LAYER,

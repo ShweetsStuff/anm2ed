@@ -20,8 +20,8 @@ namespace anm2ed::imgui
   void FrameProperties::update(Manager& manager, Settings& settings)
   {
     auto& document = *manager.get();
-    auto frameSelectionCount =
-        document.frames.references.empty() ? document.frames.selection.size() : document.frames.references.size();
+    auto frameSelectionCount = document.frame_references_get(Document::FrameReferenceFallback::NONE).size();
+    if (frameSelectionCount == 0 && document.reference.frameIndex >= 0) frameSelectionCount = 1;
     auto isSingleFrameSelection = frameSelectionCount == 1;
     auto isMultiFrameSelection = frameSelectionCount > 1;
     auto isSingleFrameBatchMode =
@@ -161,8 +161,7 @@ namespace anm2ed::imgui
                            if (!item) return;
                            frames_sort_by_at_frame(*item);
                            document.reference.frameIndex = frame_index_from_at_frame_get(*item, atFrame);
-                           document.frames.selection = {document.reference.frameIndex};
-                           document.frames.references = {document.reference};
+                           document.frame_references_set({document.reference});
                          });
             }
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TRIGGER_AT_FRAME));

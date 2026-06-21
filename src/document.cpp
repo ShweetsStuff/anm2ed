@@ -1496,17 +1496,114 @@ namespace anm2ed
     if (command.run) command.run(manager, *this);
   }
 
+  bool Document::is_frame_reference_valid(Reference frameReference) const
+  {
+    if (frameReference.itemType == NONE || frameReference.frameIndex < 0) return false;
+    auto itemType = static_cast<ItemType>(frameReference.itemType);
+    auto item = anm2.element_get(frameReference.animationIndex, itemType, frameReference.itemID);
+    return item && track_frame_get(*item, frameReference.frameIndex);
+  }
+
+  std::set<Reference> Document::item_frame_references_get(Reference itemReference) const
+  {
+    std::set<Reference> result{};
+    itemReference.frameIndex = -1;
+    if (itemReference.itemType == NONE) return result;
+
+    auto itemType = static_cast<ItemType>(itemReference.itemType);
+    auto item = anm2.element_get(itemReference.animationIndex, itemType, itemReference.itemID);
+    if (!item) return result;
+
+    auto frameType = itemType == ItemType::TRIGGER ? ElementType::TRIGGER : ElementType::FRAME;
+    int frameIndex{};
+    for (auto& child : item->children)
+    {
+      if (child.type != frameType) continue;
+      result.insert({itemReference.animationIndex, itemReference.itemType, itemReference.itemID, frameIndex});
+      ++frameIndex;
+    }
+    return result;
+  }
+
+  std::set<Reference> Document::selected_item_frame_references_get() const
+  {
+    auto selectedItems = items.references;
+    if (selectedItems.empty() && reference.itemType != NONE)
+      selectedItems.insert({reference.animationIndex, reference.itemType, reference.itemID});
+
+    std::set<Reference> result{};
+    for (auto itemReference : selectedItems)
+    {
+      auto itemFrames = item_frame_references_get(itemReference);
+      result.insert(itemFrames.begin(), itemFrames.end());
+    }
+    return result;
+  }
+
+  std::set<Reference> Document::frame_references_get(FrameReferenceFallback fallback) const
+  {
+    auto result = frames.references;
+    for (auto frameIndex : frames.selection)
+      result.insert({reference.animationIndex, reference.itemType, reference.itemID, frameIndex});
+
+    bool isMultiFrameSelection = frames.references.size() > 1 || frames.selection.size() > 1;
+    std::erase_if(result, [&](const Reference& frameReference) { return !is_frame_reference_valid(frameReference); });
+
+    if (isMultiFrameSelection && result.size() <= 1)
+    {
+      auto itemFrames = selected_item_frame_references_get();
+      std::erase_if(itemFrames,
+                    [&](const Reference& frameReference) { return !is_frame_reference_valid(frameReference); });
+      if (itemFrames.size() > result.size()) result = std::move(itemFrames);
+    }
+
+    if (result.empty() && fallback == FrameReferenceFallback::CURRENT && is_frame_reference_valid(reference))
+      result.insert(reference);
+
+    return result;
+  }
+
+  void Document::frame_references_set(std::set<Reference> frameReferences)
+  {
+    std::erase_if(frameReferences,
+                  [&](const Reference& frameReference) { return !is_frame_reference_valid(frameReference); });
+
+    frames.references = std::move(frameReferences);
+    frames.selection.clear();
+    items.references.clear();
+
+    if (frames.references.empty()) return;
+
+    if (!frames.references.contains(reference) || !is_frame_reference_valid(reference))
+      reference = *frames.references.begin();
+
+    for (auto frameReference : frames.references)
+    {
+      frameReference.frameIndex = -1;
+      items.references.insert(frameReference);
+    }
+
+    for (auto frameReference : frames.references)
+      if (frameReference.animationIndex == reference.animationIndex && frameReference.itemType == reference.itemType &&
+          frameReference.itemID == reference.itemID && frameReference.frameIndex >= 0)
+        frames.selection.insert(frameReference.frameIndex);
+  }
+
+  void Document::frame_references_clear()
+  {
+    frames.references.clear();
+    frames.selection.clear();
+  }
+
   std::vector<Reference> Document::layer_references_get()
   {
     std::set<Reference> selectedReferences = items.references;
     if (selectedReferences.empty())
-      for (auto frameReference : frames.references)
+      for (auto frameReference : frame_references_get(FrameReferenceFallback::NONE))
       {
         frameReference.frameIndex = -1;
         selectedReferences.insert(frameReference);
       }
-    if (selectedReferences.empty() && !frames.selection.empty())
-      selectedReferences.insert({reference.animationIndex, reference.itemType, reference.itemID});
     if (selectedReferences.empty() && reference.itemType != NONE)
       selectedReferences.insert({reference.animationIndex, reference.itemType, reference.itemID});
 

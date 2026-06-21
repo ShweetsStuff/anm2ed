@@ -32,7 +32,6 @@ namespace anm2ed::imgui::wizard
     auto& isMakeRegions = settings.generateIsMakeRegions;
     auto& regionNameFormat = settings.generateRegionNameFormat;
     auto& zoom = settings.generateZoom;
-    auto& zoomStep = settings.inputZoomStep;
     auto layerReferences = document.layer_references_get();
     auto previewReference = layerReferences.empty() ? Reference{} : layerReferences.front();
     for (auto itemReference : layerReferences)
@@ -124,8 +123,7 @@ namespace anm2ed::imgui::wizard
       ImGui::SliderFloat("##Time", &time, 0.0f, 1.0f, "");
 
       ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-      ImGui::InputFloat("##Zoom", &zoom, zoomStep, zoomStep, "%.0f%%");
-      zoom = glm::clamp(zoom, ZOOM_MIN, ZOOM_MAX);
+      ImGui::InputFloat("##Zoom", &zoom, 0.0f, 0.0f, "%.0f%%");
     }
 
     ImGui::EndChild();

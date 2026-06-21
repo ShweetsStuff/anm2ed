@@ -74,7 +74,6 @@ namespace anm2ed
   X(KEYBOARD_REPEAT_DELAY, keyboardRepeatDelay, STRING_UNDEFINED, FLOAT, 0.300f)                                       \
   X(KEYBOARD_REPEAT_RATE, keyboardRepeatRate, STRING_UNDEFINED, FLOAT, 0.050f)                                         \
                                                                                                                        \
-  X(INPUT_ZOOM_STEP, inputZoomStep, STRING_UNDEFINED, FLOAT, 50.0f)                                                    \
   X(INPUT_IS_MOVE_TOOL_SNAP_TO_MOUSE, inputIsMoveToolSnapToMouse, STRING_UNDEFINED, BOOL, false)                       \
                                                                                                                        \
   X(PLAYBACK_IS_LOOP, playbackIsLoop, STRING_UNDEFINED, BOOL, true)                                                    \

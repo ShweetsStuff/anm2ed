@@ -218,8 +218,7 @@ namespace anm2ed::imgui::popup
                                 {
                                   document.reference = {queuedAnimationIndex, (int)queuedType, addId};
                                   document.items.references = {document.reference};
-                                  document.frames.selection.clear();
-                                  document.frames.references.clear();
+                                  document.frame_references_clear();
                                   if (queuedType == LAYER)
                                     if (auto layer = document.anm2.element_get(ElementType::LAYER_ELEMENT, addId))
                                       document.spritesheet.reference = layer->spritesheetId;

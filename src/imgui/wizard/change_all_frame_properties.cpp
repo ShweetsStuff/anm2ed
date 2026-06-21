@@ -27,8 +27,6 @@ namespace anm2ed::imgui::wizard
     isChanged = false;
 
     auto& anm2 = document.anm2;
-    auto& frames = document.frames.selection;
-    auto& frameReferences = document.frames.references;
     auto& itemReferences = document.items.references;
     auto& animations = document.animation.selection;
     auto& isCropX = settings.changeIsCropX;
@@ -73,24 +71,20 @@ namespace anm2ed::imgui::wizard
     auto& isRoot = settings.changeIsRoot;
     auto& isLayers = settings.changeIsLayers;
     auto& isNulls = settings.changeIsNulls;
-    auto& itemType = document.reference.itemType;
 
     auto is_frame_reference_changeable = [](const Reference& reference) { return reference.itemType != TRIGGER; };
     auto is_item_reference_changeable = [](const Reference& reference) { return reference.itemType != TRIGGER; };
     auto selected_frame_references_get = [&]()
     {
-      std::set<Reference> result = frameReferences;
-      if (result.empty())
-        for (auto frameIndex : frames)
-          result.insert({document.reference.animationIndex, itemType, document.reference.itemID, frameIndex});
+      std::set<Reference> result = document.frame_references_get(Document::FrameReferenceFallback::NONE);
       std::erase_if(result, [&](const Reference& reference) { return !is_frame_reference_changeable(reference); });
       return result;
     };
     auto selected_item_references_get = [&]()
     {
       std::set<Reference> result = itemReferences;
-      if (result.empty() && itemType != NONE)
-        result.insert({document.reference.animationIndex, itemType, document.reference.itemID});
+      if (result.empty() && document.reference.itemType != NONE)
+        result.insert({document.reference.animationIndex, document.reference.itemType, document.reference.itemID});
       std::erase_if(result, [&](const Reference& reference) { return !is_item_reference_changeable(reference); });
       return result;
     };
@@ -299,7 +293,7 @@ namespace anm2ed::imgui::wizard
         interpolationLabelsString[4].c_str()};
 
     const Storage* regionStorage = nullptr;
-    if (itemType == LAYER && document.reference.itemID != -1)
+    if (document.reference.itemType == LAYER && document.reference.itemID != -1)
     {
       if (auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, document.reference.itemID))
       {

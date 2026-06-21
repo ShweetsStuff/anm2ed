@@ -235,31 +235,14 @@ namespace anm2ed::imgui
              left.itemID == right.itemID;
     };
     auto is_frame_reference_valid_for = [&](Document& targetDocument, const Reference& frameReference)
-    {
-      if (frameReference.itemType == NONE || frameReference.frameIndex < 0) return false;
-      auto item = command_item_get(targetDocument, frameReference.animationIndex, frameReference.itemType,
-                                   frameReference.itemID);
-      return item && track_frame_get(*item, frameReference.frameIndex);
-    };
+    { return targetDocument.is_frame_reference_valid(frameReference); };
     auto group_selection_reset_for = [this](Document& targetDocument)
     {
       targetDocument.groupReferences.clear();
       isRowSelectionAnchorSet = false;
     };
     auto frame_references_for_current_get = [&]()
-    {
-      std::set<Reference> result = frames.references;
-      std::erase_if(result, [&](const Reference& frameReference)
-                    { return !is_frame_reference_valid_for(document, frameReference); });
-      if (result.empty())
-      {
-        for (auto frameIndex : frames.selection)
-          result.insert({reference.animationIndex, reference.itemType, reference.itemID, frameIndex});
-        std::erase_if(result, [&](const Reference& frameReference)
-                      { return !is_frame_reference_valid_for(document, frameReference); });
-      }
-      return result;
-    };
+    { return document.frame_references_get(Document::FrameReferenceFallback::NONE); };
     auto item_references_for_current_get = [&]()
     {
       std::set<Reference> result = document.items.references;
@@ -269,10 +252,8 @@ namespace anm2ed::imgui
     };
     auto frames_selection_sync_for = [&](Document& targetDocument)
     {
-      targetDocument.frames.selection.clear();
-      for (const auto& frameReference : targetDocument.frames.references)
-        if (is_same_item(frameReference, targetDocument.reference) && frameReference.frameIndex >= 0)
-          targetDocument.frames.selection.insert(frameReference.frameIndex);
+      auto selectedFrames = targetDocument.frame_references_get(Document::FrameReferenceFallback::NONE);
+      targetDocument.frame_references_set(std::move(selectedFrames));
       frameSelectionSnapshot.assign(targetDocument.frames.selection.begin(), targetDocument.frames.selection.end());
       frameSelectionSnapshotReference = targetDocument.reference;
     };
@@ -284,15 +265,13 @@ namespace anm2ed::imgui
     auto frame_selection_set_for = [&](Document& targetDocument, Reference frameReference)
     {
       group_selection_reset_for(targetDocument);
-      targetDocument.frames.references = {frameReference};
-      targetDocument.reference = frameReference;
-      item_selection_set_for(targetDocument, item_reference_from_frame_get(frameReference));
+      targetDocument.frame_references_set({frameReference});
       frames_selection_sync_for(targetDocument);
     };
     auto frame_selection_toggle_for = [&](Document& targetDocument, Reference frameReference)
     {
       group_selection_reset_for(targetDocument);
-      auto& selection = targetDocument.frames.references;
+      auto selection = targetDocument.frame_references_get(Document::FrameReferenceFallback::NONE);
       auto itemReference = item_reference_from_frame_get(frameReference);
       if (selection.contains(frameReference))
       {
@@ -308,7 +287,7 @@ namespace anm2ed::imgui
         selection.insert(frameReference);
         targetDocument.items.references.insert(itemReference);
       }
-      targetDocument.reference = frameReference;
+      targetDocument.frame_references_set(std::move(selection));
       frames_selection_sync_for(targetDocument);
     };
     auto frame_selection_range_set_for = [&](Document& targetDocument, Reference firstReference,
@@ -328,49 +307,22 @@ namespace anm2ed::imgui
       auto firstIndex = firstReference.frameIndex;
       auto lastIndex = lastReference.frameIndex;
       if (firstIndex > lastIndex) std::swap(firstIndex, lastIndex);
-      auto itemReference = item_reference_from_frame_get(lastReference);
-      if (!isAdditive)
-      {
-        targetDocument.frames.references.clear();
-        item_selection_set_for(targetDocument, itemReference);
-      }
-      else
-        targetDocument.items.references.insert(itemReference);
+      auto selectedFrames = isAdditive ? targetDocument.frame_references_get(Document::FrameReferenceFallback::NONE)
+                                       : std::set<Reference>{};
 
       for (int i = firstIndex; i <= lastIndex; ++i)
-        targetDocument.frames.references.insert(
-            {lastReference.animationIndex, lastReference.itemType, lastReference.itemID, i});
+        selectedFrames.insert({lastReference.animationIndex, lastReference.itemType, lastReference.itemID, i});
 
       targetDocument.reference = lastReference;
+      targetDocument.frame_references_set(std::move(selectedFrames));
       frames_selection_sync_for(targetDocument);
       return true;
     };
-    auto all_frame_references_for_item_get = [&](const Reference& itemReference)
-    {
-      std::set<Reference> result{};
-      auto item = item_get(itemReference.itemType, itemReference.itemID);
-      if (!item) return result;
-      for (int i = 0; i < (int)item->children.size(); ++i)
-        result.insert({itemReference.animationIndex, itemReference.itemType, itemReference.itemID, i});
-      return result;
-    };
     auto all_frame_references_for_items_get = [&]()
-    {
-      std::set<Reference> result{};
-      auto itemReferences = item_references_for_current_get();
-      if (itemReferences.empty())
-        itemReferences.insert(item_reference_get(reference.itemType, reference.itemID));
-      for (auto itemReference : itemReferences)
-      {
-        auto itemFrames = all_frame_references_for_item_get(itemReference);
-        result.insert(itemFrames.begin(), itemFrames.end());
-      }
-      return result;
-    };
+    { return document.selected_item_frame_references_get(); };
     auto frames_selection_reset_for = [this](Document& targetDocument)
     {
-      targetDocument.frames.selection.clear();
-      targetDocument.frames.references.clear();
+      targetDocument.frame_references_clear();
       frameSelectionSnapshot.clear();
       frameSelectionLocked.clear();
       isFrameSelectionLocked = false;
@@ -380,16 +332,12 @@ namespace anm2ed::imgui
     };
     auto frames_selection_set_reference_for = [this](Document& targetDocument)
     {
-      auto& targetFrames = targetDocument.frames;
       auto& targetReference = targetDocument.reference;
-      targetFrames.selection.clear();
-      targetFrames.references.clear();
       if (targetReference.frameIndex >= 0)
-      {
-        targetFrames.selection.insert(targetReference.frameIndex);
-        targetFrames.references.insert(targetReference);
-      }
-      frameSelectionSnapshot.assign(targetFrames.selection.begin(), targetFrames.selection.end());
+        targetDocument.frame_references_set({targetReference});
+      else
+        targetDocument.frame_references_clear();
+      frameSelectionSnapshot.assign(targetDocument.frames.selection.begin(), targetDocument.frames.selection.end());
       frameSelectionSnapshotReference = targetReference;
       frameSelectionLocked.clear();
       isFrameSelectionLocked = false;
@@ -398,27 +346,10 @@ namespace anm2ed::imgui
     };
     auto frames_reference_normalize_for = [&](Document& targetDocument)
     {
-      std::erase_if(targetDocument.frames.references, [&](const Reference& frameReference)
-                    { return !is_frame_reference_valid_for(targetDocument, frameReference); });
-
-      if (targetDocument.frames.references.empty() && !targetDocument.frames.selection.empty())
+      auto selectedFrames = targetDocument.frame_references_get(Document::FrameReferenceFallback::NONE);
+      if (!selectedFrames.empty())
       {
-        for (auto frameIndex : targetDocument.frames.selection)
-          targetDocument.frames.references.insert(
-              {targetDocument.reference.animationIndex, targetDocument.reference.itemType,
-               targetDocument.reference.itemID, frameIndex});
-        std::erase_if(targetDocument.frames.references, [&](const Reference& frameReference)
-                      { return !is_frame_reference_valid_for(targetDocument, frameReference); });
-      }
-
-      if (!targetDocument.frames.references.empty())
-      {
-        targetDocument.items.references.clear();
-        for (auto frameReference : targetDocument.frames.references)
-          targetDocument.items.references.insert(item_reference_from_frame_get(frameReference));
-        if (!targetDocument.frames.references.contains(targetDocument.reference) ||
-            !is_frame_reference_valid_for(targetDocument, targetDocument.reference))
-          targetDocument.reference = *targetDocument.frames.references.begin();
+        targetDocument.frame_references_set(std::move(selectedFrames));
         frames_selection_sync_for(targetDocument);
         return;
       }
@@ -686,10 +617,9 @@ namespace anm2ed::imgui
                             }
                           }
 
-                          document.frames.references = std::move(bakedSelection);
+                          document.frame_references_set(std::move(bakedSelection));
                           if (!document.frames.references.empty())
                           {
-                            document.reference = *document.frames.references.begin();
                             frames_selection_sync_for(document);
                             frameSelectionSnapshotReference = document.reference;
                             frameSelectionLocked.clear();
@@ -1586,16 +1516,13 @@ namespace anm2ed::imgui
                              }
                            }
 
-                           document.reference = targetReference;
-                           document.frames.selection.clear();
-                           document.frames.references.clear();
+                           std::set<Reference> pastedSelection{};
                            for (auto i : indices)
-                           {
-                             document.frames.selection.insert(i);
-                             document.frames.references.insert(
+                             pastedSelection.insert(
                                  {targetReference.animationIndex, targetReference.itemType, targetReference.itemID, i});
-                           }
-                           document.reference.frameIndex = *indices.begin();
+                           document.reference = {targetReference.animationIndex, targetReference.itemType,
+                                                 targetReference.itemID, *indices.begin()};
+                           document.frame_references_set(std::move(pastedSelection));
                            document.anm2_change(Document::FRAMES);
                          }
                          else
@@ -2536,16 +2463,12 @@ namespace anm2ed::imgui
 
                           if (insertedCount <= 0) return;
 
-                          document.frames.selection.clear();
-                          document.frames.references.clear();
+                          std::set<Reference> movedSelection{};
                           for (int offset = 0; offset < insertedCount; ++offset)
-                          {
-                            document.frames.selection.insert(insertPosResult + offset);
-                            document.frames.references.insert(
-                                {drag.animationIndex, targetType, targetID, insertPosResult + offset});
-                          }
+                            movedSelection.insert({drag.animationIndex, targetType, targetID, insertPosResult + offset});
 
                           document.reference = {drag.animationIndex, targetType, targetID, insertPosResult};
+                          document.frame_references_set(std::move(movedSelection));
                           document.frameTime = frame_time_from_index_get(*targetItem, document.reference.frameIndex);
                           frameSelectionSnapshot.assign(document.frames.selection.begin(),
                                                         document.frames.selection.end());
@@ -3105,13 +3028,10 @@ namespace anm2ed::imgui
 
           if (isFrameSelectionLocked)
           {
-            frames.selection.clear();
-            frames.references.clear();
+            std::set<Reference> lockedSelection{};
             for (int idx : frameSelectionLocked)
-            {
-              frames.selection.insert(idx);
-              frames.references.insert({reference.animationIndex, type, id, idx});
-            }
+              lockedSelection.insert({reference.animationIndex, type, id, idx});
+            document.frame_references_set(std::move(lockedSelection));
             isFrameSelectionLocked = false;
             frameSelectionLocked.clear();
           }
@@ -3263,12 +3183,9 @@ namespace anm2ed::imgui
           if (animation && ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_A, ImGuiInputFlags_RouteFocused))
           {
             group_selection_reset_for(document);
-            document.frames.references = all_frame_references_for_items_get();
+            document.frame_references_set(all_frame_references_for_items_get());
             if (!document.frames.references.empty())
-            {
-              reference = *document.frames.references.begin();
               frames_selection_sync_for(document);
-            }
           }
 
           ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2());
@@ -3378,13 +3295,13 @@ namespace anm2ed::imgui
               {
                 group_selection_reset_for(document);
                 if (isFrameBoxAdditive)
-                  document.frames.references.insert(frameBoxSelection.begin(), frameBoxSelection.end());
+                {
+                  auto selectedFrames = document.frame_references_get(Document::FrameReferenceFallback::NONE);
+                  selectedFrames.insert(frameBoxSelection.begin(), frameBoxSelection.end());
+                  document.frame_references_set(std::move(selectedFrames));
+                }
                 else
-                  document.frames.references = frameBoxSelection;
-                document.items.references.clear();
-                for (auto frameReference : document.frames.references)
-                  document.items.references.insert(item_reference_from_frame_get(frameReference));
-                if (!document.frames.references.empty()) reference = *document.frames.references.begin();
+                  document.frame_references_set(frameBoxSelection);
                 frames_selection_sync_for(document);
               }
               isFrameBoxPending = false;
