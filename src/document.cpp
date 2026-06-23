@@ -28,6 +28,12 @@ using namespace glm;
 
 namespace anm2ed::document
 {
+  uint64_t document_tab_id_next()
+  {
+    static uint64_t next{1};
+    return next++;
+  }
+
   ItemType item_type_get(int type) { return static_cast<ItemType>(type); }
 
   int animation_count_get(const Anm2& data)
@@ -260,6 +266,8 @@ namespace anm2ed
 {
   Document::Document(const std::filesystem::path& path, bool isNew, std::string* errorString)
   {
+    tabId = document::document_tab_id_next();
+
     if (isNew)
     {
       anm2 = Anm2();
@@ -288,7 +296,7 @@ namespace anm2ed
   }
 
   Document::Document(Document&& other) noexcept
-      : path(std::move(other.path)), snapshots(std::move(other.snapshots)), current(snapshots.current),
+      : path(std::move(other.path)), tabId(other.tabId), snapshots(std::move(other.snapshots)), current(snapshots.current),
         playback(current.playback), animation(current.animation), event(current.event), frames(current.frames),
         items(current.items), layer(current.layer), merge(current.merge), null(current.null), region(current.region),
         sound(current.sound), spritesheet(current.spritesheet), textures(current.textures), sounds(current.sounds),

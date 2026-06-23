@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <filesystem>
 #include <map>
 #include <set>
@@ -44,6 +45,7 @@ namespace anm2ed
     };
 
     std::filesystem::path path{};
+    uint64_t tabId{};
 
     Snapshots snapshots{};
     Snapshot& current = snapshots.current;

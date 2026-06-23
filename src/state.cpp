@@ -159,6 +159,8 @@ namespace anm2ed
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
 
+    documents.pending_document_order_apply(manager);
+
     if (ImGui::GetTopMostPopupModal() == nullptr)
     {
       constexpr ImGuiKey DOCUMENT_SHORTCUT_KEYS[] = {ImGuiKey_1, ImGuiKey_2, ImGuiKey_3, ImGuiKey_4, ImGuiKey_5,

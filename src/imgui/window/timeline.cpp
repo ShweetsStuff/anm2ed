@@ -708,6 +708,8 @@ namespace anm2ed::imgui
           rootFrame.position + glm::vec2(offset.x * cos - offset.y * sin, offset.x * sin + offset.y * cos);
       frame.scale *= rootScale;
       frame.rotation += rootFrame.rotation;
+      frame.tint *= rootFrame.tint;
+      frame.colorOffset += rootFrame.colorOffset;
 
       if (isRoundScale) frame.scale = glm::round(frame.scale);
       if (isRoundRotation) frame.rotation = std::round(frame.rotation);
@@ -793,6 +795,8 @@ namespace anm2ed::imgui
                             rootFrame->position = {};
                             rootFrame->scale = {100.0f, 100.0f};
                             rootFrame->rotation = {};
+                            rootFrame->tint = types::color::WHITE;
+                            rootFrame->colorOffset = {};
                           }
                         });
     };

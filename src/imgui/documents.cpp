@@ -1,7 +1,10 @@
 #include "documents.hpp"
 
 #include <format>
+#include <ranges>
 #include <vector>
+
+#include <imgui_internal.h>
 
 #include "log.hpp"
 #include "path.hpp"
@@ -17,6 +20,12 @@ using namespace anm2ed::util;
 
 namespace anm2ed::imgui
 {
+  struct DocumentTab
+  {
+    ImGuiID imguiId{};
+    uint64_t documentId{};
+  };
+
   Options save_options_get(const Settings& settings)
   {
     Flags flags{};
@@ -28,8 +37,75 @@ namespace anm2ed::imgui
     return {.flags = flags};
   }
 
+  void Documents::pending_document_order_apply(Manager& manager)
+  {
+    if (pendingDocumentTabIds.size() != manager.documents.size())
+    {
+      pendingDocumentTabIds.clear();
+      return;
+    }
+
+    std::vector<int> order{};
+    order.reserve(manager.documents.size());
+    for (auto documentId : pendingDocumentTabIds)
+    {
+      auto it = std::ranges::find_if(manager.documents, [documentId](const Document& document)
+                                     { return document.tabId == documentId; });
+      if (it == manager.documents.end())
+      {
+        pendingDocumentTabIds.clear();
+        return;
+      }
+      order.push_back((int)std::distance(manager.documents.begin(), it));
+    }
+
+    bool isOrdered = true;
+    for (auto [i, index] : std::views::enumerate(order))
+      if ((int)i != index)
+      {
+        isOrdered = false;
+        break;
+      }
+
+    if (isOrdered)
+    {
+      pendingDocumentTabIds.clear();
+      return;
+    }
+
+    std::vector<int> remap(manager.documents.size(), -1);
+    std::vector<Document> documents{};
+    documents.reserve(manager.documents.size());
+    for (auto [i, index] : std::views::enumerate(order))
+    {
+      remap[index] = (int)i;
+      documents.push_back(std::move(manager.documents[index]));
+    }
+
+    auto index_remap = [&](int& index)
+    {
+      if (index < 0 || index >= (int)remap.size())
+        index = -1;
+      else
+        index = remap[index];
+    };
+
+    manager.documents = std::move(documents);
+    index_remap(manager.selected);
+    index_remap(manager.pendingSelected);
+    index_remap(closeDocumentIndex);
+    for (auto& index : manager.selectionHistory) index_remap(index);
+    for (auto& command : manager.commands)
+      if (!command.runManager) index_remap(command.documentIndex);
+    std::erase(manager.selectionHistory, -1);
+
+    pendingDocumentTabIds.clear();
+  }
+
   void Documents::update(Taskbar& taskbar, Manager& manager, Settings& settings, Resources& resources, bool& isQuitting)
   {
+    pending_document_order_apply(manager);
+
     auto viewport = ImGui::GetMainViewport();
     auto windowHeight = ImGui::GetFrameHeightWithSpacing();
     bool isLightTheme = settings.theme == theme::LIGHT;
@@ -78,6 +154,8 @@ namespace anm2ed::imgui
 
         std::vector<int> closeIndices{};
         closeIndices.reserve(documentsCount);
+        std::vector<DocumentTab> documentTabs{};
+        documentTabs.reserve(documentsCount);
 
         for (int i = 0; i < documentsCount; ++i)
         {
@@ -114,7 +192,9 @@ namespace anm2ed::imgui
           auto filename = path::to_utf8(document.filename_get());
           auto string = isDocumentDirty ? std::vformat(localize.get(FORMAT_NOT_SAVED), std::make_format_args(filename))
                                         : filename;
-          auto label = std::format("{}###Document{}", string, i);
+          auto label = std::format("{}###Document{}", string, document.tabId);
+          auto imguiId = ImGui::GetCurrentWindow()->GetID(label.c_str());
+          documentTabs.push_back({imguiId, document.tabId});
 
           auto flags = isDocumentDirty ? ImGuiTabItemFlags_UnsavedDocument : 0;
           if (isRequested) flags |= ImGuiTabItemFlags_SetSelected;
@@ -132,6 +212,30 @@ namespace anm2ed::imgui
           ImGui::SetItemTooltip("%s", pathUtf8.c_str());
 
           ImGui::PopFont();
+        }
+
+        if (auto tabBar = ImGui::GetCurrentTabBar(); tabBar && documentTabs.size() == manager.documents.size())
+        {
+          std::vector<uint64_t> documentTabIds{};
+          documentTabIds.reserve(manager.documents.size());
+          for (auto& tab : tabBar->Tabs)
+          {
+            auto it = std::ranges::find_if(documentTabs, [&](const DocumentTab& documentTab)
+                                           { return documentTab.imguiId == tab.ID; });
+            if (it != documentTabs.end()) documentTabIds.push_back(it->documentId);
+          }
+
+          if (documentTabIds.size() == manager.documents.size())
+          {
+            bool isOrdered = true;
+            for (auto [i, documentId] : std::views::enumerate(documentTabIds))
+              if (manager.documents[i].tabId != documentId)
+              {
+                isOrdered = false;
+                break;
+              }
+            if (!isOrdered) pendingDocumentTabIds = std::move(documentTabIds);
+          }
         }
 
         for (auto it = closeIndices.rbegin(); it != closeIndices.rend(); ++it)
