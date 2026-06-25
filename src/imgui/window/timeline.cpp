@@ -287,6 +287,7 @@ namespace anm2ed::imgui
         selection.insert(frameReference);
         targetDocument.items.references.insert(itemReference);
       }
+      targetDocument.reference = frameReference;
       targetDocument.frame_references_set(std::move(selection));
       frames_selection_sync_for(targetDocument);
     };

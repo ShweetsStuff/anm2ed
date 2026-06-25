@@ -148,17 +148,17 @@ namespace anm2ed::imgui::wizard
 
       ImGui::PushItemWidth(width);
 
-      PROPERTIES_WIDGET(ImGui::DragInt(valueRLabel, &valueAlt.r, DRAG_SPEED, 0, 255, "R:%d"), checkboxRLabel,
+      PROPERTIES_WIDGET(ImGui::DragInt(valueRLabel, &valueAlt.r, DRAG_SPEED, 0, 0, "R:%d"), checkboxRLabel,
                         isREnabled);
 
       ImGui::SameLine();
 
-      PROPERTIES_WIDGET(ImGui::DragInt(valueGLabel, &valueAlt.g, DRAG_SPEED, 0, 255, "G:%d"), checkboxGLabel,
+      PROPERTIES_WIDGET(ImGui::DragInt(valueGLabel, &valueAlt.g, DRAG_SPEED, 0, 0, "G:%d"), checkboxGLabel,
                         isGEnabled);
 
       ImGui::SameLine();
 
-      PROPERTIES_WIDGET(ImGui::DragInt(valueBLabel, &valueAlt.b, DRAG_SPEED, 0, 255, "B:%d"), checkboxBLabel,
+      PROPERTIES_WIDGET(ImGui::DragInt(valueBLabel, &valueAlt.b, DRAG_SPEED, 0, 0, "B:%d"), checkboxBLabel,
                         isBEnabled);
 
       ImGui::PopItemWidth();
@@ -167,7 +167,9 @@ namespace anm2ed::imgui::wizard
 
       value = vec3(uint8_to_float(valueAlt.r), uint8_to_float(valueAlt.g), uint8_to_float(valueAlt.b));
 
-      ImVec4 buttonColor = {isREnabled ? value.r : 0, isGEnabled ? value.g : 0, isBEnabled ? value.b : 0, 1};
+      ImVec4 buttonColor = {isREnabled ? glm::clamp(value.r, 0.0f, 1.0f) : 0,
+                            isGEnabled ? glm::clamp(value.g, 0.0f, 1.0f) : 0,
+                            isBEnabled ? glm::clamp(value.b, 0.0f, 1.0f) : 0, 1};
 
       ImGui::ColorButton(label, buttonColor);
 
@@ -190,21 +192,21 @@ namespace anm2ed::imgui::wizard
 
       ImGui::PushItemWidth(width);
 
-      PROPERTIES_WIDGET(ImGui::DragInt(valueRLabel, &valueAlt.r, DRAG_SPEED, 0, 255, "R:%d"), checkboxRLabel,
+      PROPERTIES_WIDGET(ImGui::DragInt(valueRLabel, &valueAlt.r, DRAG_SPEED, 0, 0, "R:%d"), checkboxRLabel,
                         isREnabled);
       ImGui::SameLine();
 
-      PROPERTIES_WIDGET(ImGui::DragInt(valueGLabel, &valueAlt.g, DRAG_SPEED, 0, 255, "G:%d"), checkboxGLabel,
+      PROPERTIES_WIDGET(ImGui::DragInt(valueGLabel, &valueAlt.g, DRAG_SPEED, 0, 0, "G:%d"), checkboxGLabel,
                         isGEnabled);
 
       ImGui::SameLine();
 
-      PROPERTIES_WIDGET(ImGui::DragInt(valueBLabel, &valueAlt.b, DRAG_SPEED, 0, 255, "B:%d"), checkboxBLabel,
+      PROPERTIES_WIDGET(ImGui::DragInt(valueBLabel, &valueAlt.b, DRAG_SPEED, 0, 0, "B:%d"), checkboxBLabel,
                         isBEnabled);
 
       ImGui::SameLine();
 
-      PROPERTIES_WIDGET(ImGui::DragInt(valueALabel, &valueAlt.a, DRAG_SPEED, 0, 255, "A:%d"), checkboxALabel,
+      PROPERTIES_WIDGET(ImGui::DragInt(valueALabel, &valueAlt.a, DRAG_SPEED, 0, 0, "A:%d"), checkboxALabel,
                         isAEnabled);
 
       ImGui::PopItemWidth();
@@ -214,8 +216,10 @@ namespace anm2ed::imgui::wizard
       value = vec4(uint8_to_float(valueAlt.r), uint8_to_float(valueAlt.g), uint8_to_float(valueAlt.b),
                    uint8_to_float(valueAlt.a));
 
-      ImVec4 buttonColor = {isREnabled ? value.r : 0, isGEnabled ? value.g : 0, isBEnabled ? value.b : 0,
-                            isAEnabled ? value.a : 1};
+      ImVec4 buttonColor = {isREnabled ? glm::clamp(value.r, 0.0f, 1.0f) : 0,
+                            isGEnabled ? glm::clamp(value.g, 0.0f, 1.0f) : 0,
+                            isBEnabled ? glm::clamp(value.b, 0.0f, 1.0f) : 0,
+                            isAEnabled ? glm::clamp(value.a, 0.0f, 1.0f) : 1};
       ImGui::ColorButton(label, buttonColor);
 
       ImGui::SameLine();

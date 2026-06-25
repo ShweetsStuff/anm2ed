@@ -184,7 +184,7 @@ namespace anm2ed
     return math::uint8_to_float(value);
   }
 
-  int color_write(float value) { return math::float_to_uint8(glm::clamp(value, 0.0f, 1.0f)); }
+  int color_write(float value) { return math::float_to_uint8(value); }
 
   Interpolation interpolation_read(const XMLElement* element, const char* attribute)
   {
@@ -1060,7 +1060,6 @@ namespace anm2ed
                      const std::set<int>& selection)
   {
     const auto clamp_identity = [](auto value) { return value; };
-    const auto clamp01 = [](auto value) { return glm::clamp(value, 0.0f, 1.0f); };
     const auto clamp_duration = [](int value) { return std::max(FRAME_DURATION_MIN, value); };
 
     if (selection.empty()) return;
@@ -1122,13 +1121,13 @@ namespace anm2ed
       apply_scalar(frame->position.y, change.positionY);
       apply_scalar(frame->scale.x, change.scaleX);
       apply_scalar(frame->scale.y, change.scaleY);
-      apply_scalar_with_clamp(frame->colorOffset.x, change.colorOffsetR, clamp01);
-      apply_scalar_with_clamp(frame->colorOffset.y, change.colorOffsetG, clamp01);
-      apply_scalar_with_clamp(frame->colorOffset.z, change.colorOffsetB, clamp01);
-      apply_scalar_with_clamp(frame->tint.x, change.tintR, clamp01);
-      apply_scalar_with_clamp(frame->tint.y, change.tintG, clamp01);
-      apply_scalar_with_clamp(frame->tint.z, change.tintB, clamp01);
-      apply_scalar_with_clamp(frame->tint.w, change.tintA, clamp01);
+      apply_scalar(frame->colorOffset.x, change.colorOffsetR);
+      apply_scalar(frame->colorOffset.y, change.colorOffsetG);
+      apply_scalar(frame->colorOffset.z, change.colorOffsetB);
+      apply_scalar(frame->tint.x, change.tintR);
+      apply_scalar(frame->tint.y, change.tintG);
+      apply_scalar(frame->tint.z, change.tintB);
+      apply_scalar(frame->tint.w, change.tintA);
     }
   }
 
