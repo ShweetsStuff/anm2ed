@@ -13,6 +13,18 @@ using namespace anm2ed::util;
 
 namespace anm2ed
 {
+  void canvas_blend_premultiplied_set()
+  {
+    glEnable(GL_BLEND);
+    glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+  }
+
+  void canvas_blend_straight_set()
+  {
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_BLEND);
+  }
+
   Canvas::Canvas() = default;
 
   Canvas::Canvas(vec2 size)
@@ -109,6 +121,8 @@ namespace anm2ed
 
   void Canvas::axes_render(Shader& shader, float zoom, vec2 pan, vec4 color) const
   {
+    canvas_blend_premultiplied_set();
+
     auto originNDC = transform_get(zoom, pan) * vec4(0.0f, 0.0f, 0.0f, 1.0f);
     originNDC /= originNDC.w;
 
@@ -127,10 +141,13 @@ namespace anm2ed
 
     glBindVertexArray(0);
     glUseProgram(0);
+    canvas_blend_straight_set();
   }
 
   void Canvas::grid_render(Shader& shader, float zoom, vec2 pan, ivec2 size, ivec2 offset, vec4 color) const
   {
+    canvas_blend_premultiplied_set();
+
     auto transform = glm::inverse(transform_get(zoom, pan));
 
     glUseProgram(shader.id);
@@ -145,11 +162,14 @@ namespace anm2ed
     glBindVertexArray(0);
 
     glUseProgram(0);
+    canvas_blend_straight_set();
   }
 
   void Canvas::texture_render(Shader& shader, GLuint& texture, mat4 transform, vec4 tint, vec3 colorOffset,
                               float* vertices) const
   {
+    canvas_blend_premultiplied_set();
+
     glUseProgram(shader.id);
 
     glUniform1i(glGetUniformLocation(shader.id, shader::UNIFORM_TEXTURE), 0);
@@ -172,12 +192,14 @@ namespace anm2ed
     glBindTexture(GL_TEXTURE_2D, 0);
     glUseProgram(0);
 
-    glEnable(GL_BLEND);
+    canvas_blend_straight_set();
   }
 
   void Canvas::rect_render(Shader& shader, const mat4& transform, const mat4& model, vec4 color, float dashLength,
                            float dashGap, float dashOffset) const
   {
+    canvas_blend_premultiplied_set();
+
     glUseProgram(shader.id);
 
     glUniformMatrix4fv(glGetUniformLocation(shader.id, shader::UNIFORM_TRANSFORM), 1, GL_FALSE, value_ptr(transform));
@@ -209,10 +231,13 @@ namespace anm2ed
 
     glBindVertexArray(0);
     glUseProgram(0);
+    canvas_blend_straight_set();
   }
 
   void Canvas::rect_fill_render(Shader& shader, const mat4& transform, const mat4& model, vec4 color) const
   {
+    canvas_blend_premultiplied_set();
+
     glUseProgram(shader.id);
 
     glUniformMatrix4fv(glGetUniformLocation(shader.id, shader::UNIFORM_TRANSFORM), 1, GL_FALSE, value_ptr(transform));
@@ -225,6 +250,7 @@ namespace anm2ed
 
     glBindVertexArray(0);
     glUseProgram(0);
+    canvas_blend_straight_set();
   }
 
   float Canvas::zoom_level_get(float zoom, int levelDelta) const

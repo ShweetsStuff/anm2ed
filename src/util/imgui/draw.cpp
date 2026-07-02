@@ -2,6 +2,8 @@
 
 #include <cmath>
 
+#include <glad/glad.h>
+
 namespace anm2ed::imgui
 {
   constexpr ImU32 DROP_LINE_COLOR = IM_COL32(255, 255, 0, 255);
@@ -40,6 +42,27 @@ namespace anm2ed::imgui
     auto offset = DROP_LINE_THICKNESS * 0.5f;
     auto y = std::floor(isAfter ? max.y - offset : min.y + offset) + 0.5f;
     drawList->AddLine(ImVec2(min.x, y), ImVec2(max.x, y), DROP_LINE_COLOR, DROP_LINE_THICKNESS);
+  }
+
+  void image_premultiplied_blend_set(const ImDrawList*, const ImDrawCmd*)
+  {
+    glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+  }
+
+  void image_premultiplied_draw(ImTextureID texture, ImVec2 size)
+  {
+    auto drawList = ImGui::GetWindowDrawList();
+    drawList->AddCallback(image_premultiplied_blend_set, nullptr);
+    ImGui::Image(texture, size);
+    drawList->AddCallback(ImDrawCallback_ResetRenderState, nullptr);
+  }
+
+  void image_premultiplied_draw(ImDrawList* drawList, ImTextureID texture, ImVec2 min, ImVec2 max)
+  {
+    if (!drawList) return;
+    drawList->AddCallback(image_premultiplied_blend_set, nullptr);
+    drawList->AddImage(texture, min, max);
+    drawList->AddCallback(ImDrawCallback_ResetRenderState, nullptr);
   }
 
   void render_checker_background(ImDrawList* drawList, ImVec2 min, ImVec2 max, glm::vec2 offset, float step)

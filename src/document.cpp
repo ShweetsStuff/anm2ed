@@ -309,7 +309,7 @@ namespace anm2ed
         isForceDirty(other.isForceDirty), spritesheetHashes(std::move(other.spritesheetHashes)),
         spritesheetSaveHashes(std::move(other.spritesheetSaveHashes)), texturePaths(std::move(other.texturePaths)),
         soundPaths(std::move(other.soundPaths)), isAnimationPreviewSet(other.isAnimationPreviewSet),
-        isSpritesheetEditorSet(other.isSpritesheetEditorSet)
+        isSpritesheetEditorSet(other.isSpritesheetEditorSet), editTarget(other.editTarget)
   {
   }
 

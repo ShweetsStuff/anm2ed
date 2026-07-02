@@ -45,7 +45,7 @@ namespace anm2ed::resource::shader
   uniform vec4 u_color;
   void main()
   {
-      o_fragColor = u_color;
+      o_fragColor = vec4(u_color.rgb * u_color.a, u_color.a);
   }
   )";
 
@@ -61,6 +61,7 @@ namespace anm2ed::resource::shader
       vec4 texColor = texture(u_texture, i_uv_out);
       texColor *= u_tint;
       texColor.rgb += u_color_offset;
+      texColor.rgb *= texColor.a;
       o_fragColor = texColor;
   }
   )";
@@ -108,7 +109,7 @@ namespace anm2ed::resource::shader
       if (alpha <= 0.0)
           discard;
 
-      o_fragColor = vec4(u_color.rgb, u_color.a * alpha);
+      o_fragColor = vec4(u_color.rgb * u_color.a * alpha, u_color.a * alpha);
   }
   )";
 
@@ -181,7 +182,7 @@ namespace anm2ed::resource::shader
       if (alpha <= 0.0)
           discard;
 
-      o_fragColor = vec4(u_color.rgb, u_color.a * alpha);
+      o_fragColor = vec4(u_color.rgb * u_color.a * alpha, u_color.a * alpha);
   }
   )";
 

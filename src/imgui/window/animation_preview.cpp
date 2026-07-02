@@ -997,7 +997,7 @@ namespace anm2ed::imgui
         sync_checker_pan();
         render_checker_background(ImGui::GetWindowDrawList(), min, max, -size - checkerPan, CHECKER_SIZE);
       }
-      ImGui::Image(texture, to_imvec2(size));
+      image_premultiplied_draw(texture, to_imvec2(size));
 
       isPreviewHovered = ImGui::IsItemHovered();
 

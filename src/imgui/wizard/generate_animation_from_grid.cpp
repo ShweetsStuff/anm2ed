@@ -117,7 +117,7 @@ namespace anm2ed::imgui::wizard
       if (isTransparent)
         render_checker_background(ImGui::GetWindowDrawList(), previewMin, previewMax, -to_vec2(previewSize) * 0.5f,
                                   CHECKER_SIZE);
-      ImGui::Image(texture, previewSize);
+      image_premultiplied_draw(texture, previewSize);
 
       ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
       ImGui::SliderFloat("##Time", &time, 0.0f, 1.0f, "");

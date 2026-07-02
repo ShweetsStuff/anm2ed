@@ -22,6 +22,7 @@ namespace anm2ed::imgui
   X(ACTION_DEFAULT, BASIC_DEFAULT, SHORTCUT_DEFAULT)                                                                   \
   X(ACTION_RENAME, BASIC_RENAME, SHORTCUT_RENAME)                                                                      \
   X(ACTION_PROPERTIES, BASIC_PROPERTIES, -1)                                                                           \
+  X(ACTION_REVERSE, BASIC_REVERSE, -1)                                                                                 \
   X(ACTION_CUT, BASIC_CUT, SHORTCUT_CUT)                                                                               \
   X(ACTION_COPY, BASIC_COPY, SHORTCUT_COPY)                                                                            \
   X(ACTION_PASTE, BASIC_PASTE, SHORTCUT_PASTE)                                                                         \

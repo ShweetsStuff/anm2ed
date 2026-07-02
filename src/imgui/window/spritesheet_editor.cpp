@@ -60,7 +60,9 @@ namespace anm2ed::imgui
         if (auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, reference.itemID)) return layer->spritesheetId;
       return -1;
     };
-    if (auto selectedLayerSpritesheet = selected_layer_spritesheet_get(); selectedLayerSpritesheet != -1)
+    if (auto selectedLayerSpritesheet = selected_layer_spritesheet_get();
+        selectedLayerSpritesheet != -1 && document.editTarget != Document::EditTarget::REGION &&
+        document.editTarget != Document::EditTarget::SPRITESHEET)
       referenceSpritesheet = selectedLayerSpritesheet;
     auto spritesheet = anm2.element_get(ElementType::SPRITESHEET, referenceSpritesheet);
     auto texture = document.texture_get(referenceSpritesheet);
@@ -257,7 +259,11 @@ namespace anm2ed::imgui
             frame && reference.itemID > -1 && layer && layer->spritesheetId == referenceSpritesheet;
 
         int highlightedRegionId = -1;
-        if (isReferenceLayerOnSpritesheet && frame->regionId != -1 && region_get(frame->regionId))
+        if (document.editTarget == Document::EditTarget::REGION && regionReference != -1 && region_get(regionReference))
+        {
+          highlightedRegionId = regionReference;
+        }
+        else if (isReferenceLayerOnSpritesheet && frame->regionId != -1 && region_get(frame->regionId))
         {
           highlightedRegionId = frame->regionId;
         }
@@ -318,7 +324,7 @@ namespace anm2ed::imgui
         render_checker_background(drawList, min, max, -size * 0.5f - checkerPan, CHECKER_SIZE);
       else
         drawList->AddRectFilled(min, max, ImGui::GetColorU32(to_imvec4(vec4(backgroundColor, 1.0f))));
-      ImGui::Image(this->texture, to_imvec2(size));
+      image_premultiplied_draw(this->texture, to_imvec2(size));
 
       if (ImGui::IsItemHovered())
       {
@@ -612,8 +618,12 @@ namespace anm2ed::imgui
 
         auto region_selection_set = [&](int id)
         {
+          document.editTarget = Document::EditTarget::REGION;
+          regionReference = id;
+          regionSelection = {id};
           manager.command_push({manager.selected, [=](Manager&, Document& document)
                                 {
+                                  document.editTarget = Document::EditTarget::REGION;
                                   document.region.reference = id;
                                   document.region.selection = {id};
                                 }});
@@ -665,12 +675,13 @@ namespace anm2ed::imgui
 
         auto& toolInfo = tool::INFO[useTool];
         auto& areaType = toolInfo.areaType;
-        auto selectedFrameToolReferences = selectedFrameReferences;
+        auto isRegionEditTarget = document.editTarget == Document::EditTarget::REGION;
+        auto selectedFrameToolReferences = isRegionEditTarget ? std::set<Reference>{} : selectedFrameReferences;
         bool isAreaAllowed = areaType == tool::ALL || areaType == tool::SPRITESHEET_EDITOR;
         bool isFrameRequired =
             !(useTool == tool::PAN || useTool == tool::DRAW || useTool == tool::ERASE || useTool == tool::COLOR_PICKER);
         bool isMultiFrameToolSelection = selectedFrameToolReferences.size() > 1;
-        bool isRegionInUse = !isMultiFrameToolSelection && frame && frame->regionId != -1 &&
+        bool isRegionInUse = !isRegionEditTarget && !isMultiFrameToolSelection && frame && frame->regionId != -1 &&
                              (useTool == tool::CROP || useTool == tool::MOVE);
         bool isFrameAvailable = !isFrameRequired || (frame && !isRegionInUse && !selectedFrameToolReferences.empty()) ||
                                 (useTool == tool::CROP && !regionSelection.empty()) ||
@@ -709,7 +720,7 @@ namespace anm2ed::imgui
             if (isMouseDown || isMouseMiddleDown) pan += mouseDelta;
             break;
           case tool::MOVE:
-            if ((isRegionInUse || selectedFrameReferences.empty()) && regionReference != -1)
+            if ((isRegionEditTarget || isRegionInUse || selectedFrameToolReferences.empty()) && regionReference != -1)
             {
               if (!spritesheet) break;
               auto region = region_get(regionReference);
@@ -770,7 +781,7 @@ namespace anm2ed::imgui
             if (isEnd) document_change_push(Document::FRAMES);
             break;
           case tool::CROP:
-            if ((isRegionInUse || selectedFrameReferences.empty()) && !regionSelection.empty())
+            if ((isRegionEditTarget || isRegionInUse || selectedFrameToolReferences.empty()) && !regionSelection.empty())
             {
               if (!spritesheet || regionSelection.empty()) break;
               if (isBegin) snapshot_push(EDIT_REGION_CROP);

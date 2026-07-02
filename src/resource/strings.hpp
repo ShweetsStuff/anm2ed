@@ -85,6 +85,7 @@ namespace anm2ed
   X(BASIC_REMOVE, "Remove", "Remover", "Удалить", "删除", "제거") \
   X(BASIC_REMOVE_UNUSED, "Remove Unused", "Remover no utilizados", "Удалить неизпользуемые", "删除未使用", "미사용 시트 제거") \
   X(BASIC_REPLACE, "Replace", "Reemplazar", "Заменить", "替换", "교체") \
+  X(BASIC_REVERSE, "Reverse", "Invertir", "Развернуть", "反转", "역순") \
   X(BASIC_ROOT, "Root", "Root", "Корень", "根", "Root") \
   X(BASIC_ROTATION, "Rotation", "Rotacion", "Поворот", "旋转", "회전") \
   X(BASIC_SAVE, "Save", "Guardar", "Сохранить", "保存", "저장") \
@@ -121,6 +122,7 @@ namespace anm2ed
   X(EDIT_DELETE_FRAMES, "Delete Frame(s)", "Eliminar Frame(s)", "Удалить кадры", "删除多个/单个帧", "프레임 삭제하기") \
   X(EDIT_DRAW, "Draw", "Dibujar", "Рисовать", "画笔", "그리기") \
   X(EDIT_DUPLICATE_ANIMATIONS, "Duplicate Animation(s)", "Duplicar Animacion(es)", "Дублировать кадры", "复制动画", "애니메이션 복제") \
+  X(EDIT_DUPLICATE_FRAMES, "Duplicate Frame(s)", "Duplicar Frame(s)", "Дублировать кадры", "复制帧", "프레임 복제") \
   X(EDIT_ERASE, "Erase", "Borrar", "Стереть", "擦除", "지우기") \
   X(EDIT_EXTEND_FRAME, "Extend Frame", "Extender Frame", "Удлиннить кадр", "延长帧时长", "프레임 확장") \
   X(EDIT_FIT_ANIMATION_LENGTH, "Fit Animation Length", "Encajar Largo de animacion", "Подогнать к длине анимации", "匹配动画时长", "애니메이션 길이 맞추기") \
@@ -164,6 +166,7 @@ namespace anm2ed
   X(EDIT_RELOAD_SPRITESHEETS, "Reload Spritesheet(s)", "Recargar Spritesheet(s)", "Перезагрузить спрайт-листы", "重新加载图集", "스프라이트 시트 다시 불러오기") \
   X(EDIT_RELOAD_SOUNDS, "Reload Sound(s)", "Recargar Sonido(s)", "Перезагрузить звук(и)", "重新加载声音", "사운드 다시 불러오기") \
   X(EDIT_REMOVE_ANIMATIONS, "Remove Animation(s)", "Remover Animacion(es)", "Удалить анимации", "删除动画层", "애니메이션 제거") \
+  X(EDIT_REVERSE_FRAMES, "Reverse Frame(s)", "Invertir Frame(s)", "Развернуть кадры", "反转帧", "프레임 역순") \
   X(EDIT_REMOVE_ITEMS, "Remove Item(s)", "Remover Item(s)", "Удалить предметы", "删除物品", "항목 제거") \
   X(EDIT_REMOVE_UNUSED_EVENTS, "Remove Unused Events", "Remover Eventos No Utilizados", "Удалить неизпользуемые события", "删除未使用的事件", "미사용 이벤트 제거") \
   X(EDIT_REMOVE_UNUSED_REGIONS, "Remove Unused Regions", "Remover Regiones No Utilizadas", "Удалить неиспользуемые регионы", "删除未使用的区域", "미사용 영역 제거") \
@@ -662,7 +665,7 @@ namespace anm2ed
   X(TOOLTIP_SETTINGS_SAVE, "Use the configured settings.", "Usa las opciones configuradas.", "Использовать настроенные настройки.", "应用更改的设置.", "구성된 설정을 사용합니다.") \
   X(TOOLTIP_SET_DEFAULT_ANIMATION, "Set the selected animation as the default.", "Ajusta la animacion seleccionada como predeterminada.", "Установить выбранную анимацию как анимацию по умолчанию.", "把当前所选动画设置为默认动画.", "선택한 애니메이션을 기본 애니메이션으로 설정합니다.") \
   X(TOOLTIP_SET_TO_RECOMMENDED, "Use a recommended value for rows/columns.", "Usa un valor recomendado para las filas/columnas.", "Использовать рекомендованное значение для рядов/колонн.", "应用列/行的推荐值.", "행/열에 권장값을 사용합니다.") \
-  X(TOOLTIP_SPLIT, "Based on the playhead time, split the selected frame into two.", "Basado en tiempo del encabezado de reproduccion, divide el Frame seleccionado en dos.", "С учётом позиции ползунка воспроизведения разделяет выбранный кадр на два.", "根据播放头位置，将所选帧拆分成两个。", "재생 헤드 시간에 따라 선택한 프레임을 두 개로 분할합니다.") \
+  X(TOOLTIP_SPLIT, "Based on the cursor position, split the selected frame into two.", "Basado en la posicion del cursor, divide el Frame seleccionado en dos.", "С учётом позиции курсора разделяет выбранный кадр на два.", "根据光标位置，将所选帧拆分成两个。", "커서 위치에 따라 선택한 프레임을 두 개로 분할합니다.") \
   X(TOOLTIP_SIZE, "Change the crop size the frame uses.", "Cambia el tamaño de recorte que usa el Frame.", "Изменить размер обрезки, который использует этот кадр.", "更改此帧的裁剪大小.", "프레임에 대응되는 스프라이트 시트의 사용 영역의 크기를 변경합니다.") \
   X(TOOLTIP_SOUND, "Toggle sounds playing with triggers.\nSet a trigger's sounds in Frame Properties.", "Alterna los sonidos reproducidos con triggers.\nConfigura los sonidos de un trigger en Propiedades de Frame.", "Переключить воспроизведение звуков у триггеров.\nНастраивайте звуки триггера в свойствах кадра.", "切换是否在触发器触发时播放声音.\n可在帧属性中设置触发器的声音.", "트리거와 함께 사운드를 재생할지 정합니다.\n트리거 사운드는 프레임 속성에서 설정하세요.") \
   X(TEXT_SOUND_PLAY, "Click to play.", "Click para reproducir.", "Нажмите, чтобы возпроизвести.", "点击播放.", "클릭하여 재생합니다.") \

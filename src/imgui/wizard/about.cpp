@@ -10,6 +10,7 @@
 #include "log.hpp"
 #include "math.hpp"
 #include "strings.hpp"
+#include "util/imgui/draw.hpp"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::util;
@@ -310,7 +311,7 @@ namespace anm2ed::imgui::wizard
       auto size = friendSizes[index];
       auto min = ImVec2(centerX - size.x * 0.5f, rowMin.y + (rowHeight - size.y) * 0.5f);
       auto max = ImVec2(min.x + size.x, min.y + size.y);
-      drawList->AddImage((ImTextureID)(intptr_t)about.friendStates[index].canvas->texture, min, max);
+      image_premultiplied_draw(drawList, (ImTextureID)(intptr_t)about.friendStates[index].canvas->texture, min, max);
     };
 
     drawList->PushClipRect(rowMin, rowMax, true);

@@ -6,6 +6,7 @@
 #include <format>
 #include <functional>
 #include <limits>
+#include <map>
 #include <optional>
 #include <set>
 #include <string_view>
@@ -1346,6 +1347,60 @@ namespace anm2ed
     }
   }
 
+  void Anm2::region_ids_remap()
+  {
+    auto content = child_first_get(root, ElementType::CONTENT);
+    auto spritesheets = content ? child_first_get(*content, ElementType::SPRITESHEETS) : nullptr;
+    if (!spritesheets) return;
+
+    std::map<int, std::map<int, int>> remaps{};
+    for (auto& spritesheet : spritesheets->children)
+    {
+      if (spritesheet.type != ElementType::SPRITESHEET) continue;
+
+      int nextId{};
+      std::map<int, int> remap{};
+      for (auto& region : spritesheet.children)
+      {
+        if (region.type != ElementType::REGION) continue;
+        remap[region.id] = nextId;
+        if (region.id != nextId)
+        {
+          region.id = nextId;
+        }
+        ++nextId;
+      }
+      if (!remap.empty()) remaps[spritesheet.id] = std::move(remap);
+    }
+
+    auto layers = content ? child_first_get(*content, ElementType::LAYERS) : nullptr;
+    auto animations = element_first_get(root, ElementType::ANIMATIONS);
+    if (remaps.empty() || !layers || !animations) return;
+
+    for (auto& animation : animations->children)
+    {
+      if (animation.type != ElementType::ANIMATION) continue;
+      auto layerAnimations = child_first_get(animation, ElementType::LAYER_ANIMATIONS);
+      if (!layerAnimations) continue;
+
+      tracks_each(*layerAnimations, ElementType::LAYER_ANIMATION, [&](Element& layerAnimation)
+      {
+        auto layer = child_id_get(*layers, ElementType::LAYER_ELEMENT, layerAnimation.layerId);
+        auto remapIt = layer ? remaps.find(layer->spritesheetId) : remaps.end();
+        if (remapIt == remaps.end()) return;
+
+        for (auto& frame : layerAnimation.children)
+        {
+          if (frame.type != ElementType::FRAME || frame.regionId == -1) continue;
+          auto regionIt = remapIt->second.find(frame.regionId);
+          if (regionIt == remapIt->second.end()) continue;
+          if (frame.regionId == regionIt->second) continue;
+          frame.regionId = regionIt->second;
+        }
+      });
+    }
+  }
+
   Anm2 Anm2::normalized_for_serialize() const
   {
     auto normalized = *this;
@@ -1353,19 +1408,20 @@ namespace anm2ed
 
     auto content = child_first_get(normalized.root, ElementType::CONTENT);
     if (content) std::erase_if(content->children, [](const Element& element) { return element.tag == "Groups"; });
-    auto layers = content ? child_first_get(*content, ElementType::LAYERS) : nullptr;
-    if (!layers) return normalized;
-
-    std::unordered_map<int, int> remap{};
-    int nextId{};
-    for (auto& layer : layers->children)
+    if (auto layers = content ? child_first_get(*content, ElementType::LAYERS) : nullptr)
     {
-      if (layer.type != ElementType::LAYER_ELEMENT) continue;
-      remap[layer.id] = nextId;
-      layer.id = nextId++;
+      std::unordered_map<int, int> remap{};
+      int nextId{};
+      for (auto& layer : layers->children)
+      {
+        if (layer.type != ElementType::LAYER_ELEMENT) continue;
+        remap[layer.id] = nextId;
+        layer.id = nextId++;
+      }
+      layer_animation_ids_remap(normalized.root, remap);
     }
 
-    layer_animation_ids_remap(normalized.root, remap);
+    normalized.region_ids_remap();
     return normalized;
   }
 

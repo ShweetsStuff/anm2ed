@@ -325,6 +325,7 @@ namespace anm2ed
     bool is_special_interpolated_frames() const;
     void special_interpolated_frames_bake(int, bool, bool);
     void region_frames_sync(bool);
+    void region_ids_remap();
     Anm2 normalized_for_serialize() const;
 
     Element* element_get(ElementType);

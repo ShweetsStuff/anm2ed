@@ -44,6 +44,14 @@ namespace anm2ed
       CURRENT,
     };
 
+    enum class EditTarget
+    {
+      NONE,
+      FRAME,
+      REGION,
+      SPRITESHEET
+    };
+
     std::filesystem::path path{};
     uint64_t tabId{};
 
@@ -90,6 +98,7 @@ namespace anm2ed
     std::unordered_map<int, std::filesystem::path> soundPaths{};
     bool isAnimationPreviewSet{false};
     bool isSpritesheetEditorSet{false};
+    EditTarget editTarget{EditTarget::NONE};
 
     Document(const std::filesystem::path&, bool = false, std::string* = nullptr);
     Document(const Document&) = delete;

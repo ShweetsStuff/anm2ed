@@ -1454,6 +1454,7 @@ namespace anm2ed::imgui
           ImGui::SetNextItemStorageID(id);
           if (ImGui::Selectable("##Region Selectable", isSelected, 0, regionChildSize))
           {
+            document.editTarget = Document::EditTarget::REGION;
             reference = id;
             document.reference = {document.reference.animationIndex};
             frame.reference = -1;
@@ -1511,7 +1512,6 @@ namespace anm2ed::imgui
                 ImGui::TextUnformatted(nameCStr);
                 ImGui::PopFont();
 
-                ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_ID), std::make_format_args(id)).c_str());
                 ImGui::TextUnformatted(
                     std::vformat(localize.get(FORMAT_CROP), std::make_format_args(region->crop.x, region->crop.y))
                         .c_str());
@@ -2106,6 +2106,7 @@ namespace anm2ed::imgui
             ImGui::SetNextItemStorageID(id);
             if (ImGui::Selectable("##Spritesheet Selectable", isSelected, 0, spritesheetChildSize))
             {
+              document.editTarget = Document::EditTarget::SPRITESHEET;
               reference = id;
               region.reference = -1;
               region.selection.clear();
