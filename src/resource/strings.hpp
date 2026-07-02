@@ -144,6 +144,7 @@ namespace anm2ed
   X(EDIT_FRAME_TINT, "Frame Tint", "Matiz de Frame", "Оттенок кадра", "帧色调", "프레임 색조") \
   X(EDIT_FRAME_VISIBILITY, "Frame Visibility", "Visibilidad de Frame", "Видимость кадра", "帧可见", "프레임 표시") \
   X(EDIT_GENERATE_ANIMATION_FROM_GRID, "Generate Animation from Grid", "Generar Animacion Desde Cuadricula", "Создать анимацию с сетки", "从网格转换为动画", "격자로 애니메이션 생성") \
+  X(EDIT_GENERATE_REGIONS_FROM_ANIMATIONS, "Generate Regions from Animations", "Generar regiones desde animaciones", "Создать регионы из анимаций", "从动画生成区域", "애니메이션에서 영역 생성") \
   X(EDIT_INSERT_FRAME, "Insert Frame", "Insertar Frame", "Вставить кадр", "插入帧", "프레임 삽입하기") \
   X(EDIT_LOOP, "Loop", "Loop", "Цикл", "循环", "반복") \
   X(EDIT_MERGE_ANIMATIONS, "Merge Animations", "Combinar Animaciones", "Соединить анимации", "合并多个动画", "애니메이션 병합") \
@@ -296,6 +297,7 @@ namespace anm2ed
   X(LABEL_GENERATE_COUNT, "Count", "Conteo", "Кол-во", "数量", "프레임 수") \
   X(LABEL_GENERATE_FRAME_SIZE, "Frame Size", "Tamaño de Frame", "Размер кадра", "单帧大小", "프레임 크기") \
   X(LABEL_GENERATE_MAKE_REGIONS, "Make Regions", "Crear Regiones", "Создать регионы", "创建区域", "영역 만들기") \
+  X(LABEL_GENERATE_REGIONS_FROM_ANIMATIONS, "Generate Regions from Animations", "Generar regiones desde animaciones", "Создать регионы из анимаций", "从动画生成区域", "애니메이션에서 영역 생성") \
   X(LABEL_GENERATE_ROWS, "Rows", "Filas", "Ряды", "行", "행") \
   X(LABEL_GENERATE_START_POSITION, "Start Position", "Poscicion de Inicio", "Начальная позиция", "起始位置", "시작 위치") \
   X(LABEL_ALL, "All", "Todo", "Все", "全部", "전체") \
@@ -315,6 +317,8 @@ namespace anm2ed
   X(LABEL_ITEMS, "Items", "Items", "Предметы", "物品", "항목") \
   X(LABEL_LOCALIZATION, "Localization", "Localizacion", "Локализация", "本地化", "현지화") \
   X(LABEL_MAKE_REGION, "Make Region", "Crear Región", "Создать регион", "创建区域", "영역 만들기") \
+  X(LABEL_MAKE_MANY_REGIONS, "Make Many Regions", "Crear varias regiones", "Создать несколько регионов", "创建多个区域", "여러 영역 만들기") \
+  X(LABEL_MAP_FRAMES_TO_REGIONS, "Set frames to use generated regions", "Configurar frames para usar regiones generadas", "Настроить кадры на использование созданных регионов", "设置帧使用生成的区域", "프레임이 생성된 영역을 사용하도록 설정") \
   X(LABEL_LOOP, "Loop", "Loop", "Цикл", "循环", "반복") \
   X(LABEL_MANAGER_ANM2_DRAG_DROP, "Anm2 Drag Drop", "Arrastrar y Soltar Anm2", "Anm2 Drag Drop", "Anm2 拖放", "Anm2 드래그 앤 드롭") \
   X(LABEL_GROUP_PROPERTIES, "Group Properties", "Propiedades de grupo", "Свойства группы", "组属性", "그룹 속성") \
@@ -384,6 +388,7 @@ namespace anm2ed
   X(LABEL_TASKBAR_ABOUT, "About", "Sobre", "О", "关于", "정보") \
   X(LABEL_TASKBAR_CONFIGURE, "Configure", "Configurar", "Конфигурация", "配置", "구성 설정") \
   X(LABEL_TASKBAR_GENERATE_ANIMATION_FROM_GRID, "Generate Animation from Grid", "Generar Animacion desde Cuadricula", "Создать анимацию с сетки", "从网格转换为动画", "격자로 애니메이션 생성") \
+  X(LABEL_TASKBAR_GENERATE_REGIONS_FROM_ANIMATIONS, "Generate Regions from Animations", "Generar regiones desde animaciones", "Создать регионы из анимаций", "从动画生成区域", "애니메이션에서 영역 생성") \
   X(LABEL_TASKBAR_OVERWRITE_FILE, "Overwrite File", "Sobreescribir Archivo", "Перезапись файла", "覆盖文件", "파일 덮어쓰기") \
   X(LABEL_TASKBAR_RENDER_ANIMATION, "Render Animation", "Renderizar Animacion", "Рендер анимации", "生成动画", "애니메이션 렌더링") \
   X(LABEL_THEME, "Theme", "Tema", "Тема", "主题", "테마") \
@@ -703,6 +708,7 @@ namespace anm2ed
   X(TOOLTIP_UNUSED_ITEMS_SHOWN, "Unused layers/nulls are shown. Press to hide them.", "Las capas/nulls no utilizados estan visibles. Presiona para ocultarlos", "Неиспользуемые слои/нули видимы. Нажмите, чтобы их скрыть.", "正在显示未使用的动画层/Null. 点击以隐藏它们.", "사용되지 않는 레이어/Null이 표시되어 있습니다. 숨기려면 누르세요.") \
   X(TOOLTIP_USE_DEFAULT_SETTINGS, "Reset the settings to their defaults.", "Reinicia las configuraciones a sus predeterminados.", "Сбросить настройки на настройки по умолчанию.", "重设所有设置为默认.", "설정을 기본값으로 재설정합니다.") \
   X(TOOLTIP_WIZARD_GENERATE_ANIMATION_FROM_GRID, "Generate frames in the current selected animation item from grid values.", "Genera frames en el item de animacion seleccionado actualmente a partir de valores de la cuadricula.", "Создает кадры в текущем выбранном элементе анимации на основе значений сетки.", "根据网格值在当前选中的动画项目中生成帧。", "현재 선택된 애니메이션 항목에서 그리드 값으로 프레임을 생성합니다.") \
+  X(TOOLTIP_WIZARD_GENERATE_REGIONS_FROM_ANIMATIONS, "Create spritesheet regions from layer frames in selected animations.", "Crea regiones de spritesheet desde frames de capas en las animaciones seleccionadas.", "Создает регионы спрайт-листа из кадров слоев выбранных анимаций.", "从所选动画的图层帧创建图集区域。", "선택한 애니메이션의 레이어 프레임에서 스프라이트 시트 영역을 만듭니다.") \
   X(TOOLTIP_WIZARD_CHANGE_ALL_FRAME_PROPERTIES, "Change certain properties of selected frames.\n(Note: this will also appear in Frame Properties when multiselecting frames.)", "Cambia ciertas propiedades de los frames seleccionados.\n(Nota: esto tambien aparecera en Propiedades de Frame al seleccionar multiples frames.)", "Изменить некоторые свойства выбранных кадров.\n(Примечание: это также появится в \"Свойствах кадра\" при выборе нескольких кадров.)", "更改所选帧的某些属性。\n(注意：在多选帧时，这也会显示在“帧属性”中。)", "선택한 프레임의 일부 속성을 변경합니다.\n(참고: 프레임을 여러 개 선택하면 프레임 속성에도 표시됩니다.)") \
   X(TOOLTIP_WIZARD_RENDER_ANIMATION, "Render the animation into a media format.\n(Note: this requires FFmpeg!)", "Renderiza la animacion a un formato multimedia.\n(Nota: esto requiere FFmpeg!)", "Рендерит анимацию в медиаформат.\n(Примечание: требуется FFmpeg!)", "将动画渲染为媒体格式。\n(注意：需要 FFmpeg！)", "애니메이션을 미디어 형식으로 렌더링합니다.\n(참고: FFmpeg가 필요합니다!)") \
   X(TOOLTIP_WIZARD_SCAN_AND_SET_REGIONS, "Match all regionless frames in all animations in the document to a region, if a matching region exists and matches the frame's relevant values.", "Empareja todos los frames sin region de todas las animaciones del documento con una region, si existe una region coincidente y coincide con los valores relevantes del frame.", "Сопоставляет все кадры без региона во всех анимациях документа с регионом, если существует подходящий регион и его релевантные значения совпадают со значениями кадра.", "将文档中所有动画里无区域的帧与区域进行匹配；若存在匹配区域且其相关值与帧一致，则进行设置。", "문서의 모든 애니메이션에서 영역이 없는 프레임을 영역과 매칭합니다. 일치하는 영역이 있고 프레임의 관련 값이 일치하면 설정합니다.") \

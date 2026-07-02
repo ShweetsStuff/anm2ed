@@ -52,6 +52,12 @@ namespace anm2ed
       SPRITESHEET
     };
 
+    enum class RegionFrameMapping
+    {
+      PRESERVE,
+      SET
+    };
+
     std::filesystem::path path{};
     uint64_t tabId{};
 
@@ -116,6 +122,8 @@ namespace anm2ed
     resource::Audio* sound_get(int);
     const resource::Audio* sound_get(int) const;
     bool regions_trim(int, const std::set<int>&);
+    bool regions_generate_from_animations(const std::set<int>&, const std::string&, RegionFrameMapping);
+    bool regions_generate_from_frames(const std::set<Reference>&, const std::string&, RegionFrameMapping);
     bool spritesheet_pack(int, int);
     bool spritesheets_merge(const std::set<int>&, bool, bool, bool, origin::Type);
     void scan_and_set_regions();

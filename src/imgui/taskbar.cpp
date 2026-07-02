@@ -13,6 +13,7 @@
 #include "strings.hpp"
 #include "toast.hpp"
 #include "types.hpp"
+#include "util/imgui/input.hpp"
 #include "util/imgui/layout.hpp"
 #include "util/imgui/shortcut.hpp"
 
@@ -23,6 +24,9 @@ using namespace glm;
 
 namespace anm2ed::imgui
 {
+  constexpr auto GENERATE_REGIONS_TARGET_SELECTION = 0;
+  constexpr auto GENERATE_REGIONS_TARGET_ALL = 1;
+
   Options save_options_get(Settings& settings)
   {
     Flags flags{};
@@ -173,12 +177,9 @@ namespace anm2ed::imgui
           generatePopup.open();
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_WIZARD_GENERATE_ANIMATION_FROM_GRID));
 
-        bool isChangeAllFramesAvailable = frames && !frames->selection.empty() && itemType != ItemType::TRIGGER;
-        bool isChangeAllAnimationsAvailable = document && !document->animation.selection.empty();
-        if (ImGui::MenuItem(localize.get(LABEL_CHANGE_ALL_FRAME_PROPERTIES), nullptr, false,
-                            isChangeAllFramesAvailable || isChangeAllAnimationsAvailable))
-          changePopup.open();
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_WIZARD_CHANGE_ALL_FRAME_PROPERTIES));
+        if (ImGui::MenuItem(localize.get(LABEL_TASKBAR_GENERATE_REGIONS_FROM_ANIMATIONS), nullptr, false, document))
+          generateRegionsPopup.open();
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_WIZARD_GENERATE_REGIONS_FROM_ANIMATIONS));
 
         if (ImGui::MenuItem(localize.get(LABEL_SCAN_AND_SET_REGIONS), nullptr, false, document && hasRegions))
         {
@@ -193,6 +194,15 @@ namespace anm2ed::imgui
           logger.info(localize.get(TOAST_SCAN_AND_SET_REGIONS, anm2ed::ENGLISH));
         }
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_WIZARD_SCAN_AND_SET_REGIONS));
+
+        ImGui::Separator();
+
+        bool isChangeAllFramesAvailable = frames && !frames->selection.empty() && itemType != ItemType::TRIGGER;
+        bool isChangeAllAnimationsAvailable = document && !document->animation.selection.empty();
+        if (ImGui::MenuItem(localize.get(LABEL_CHANGE_ALL_FRAME_PROPERTIES), nullptr, false,
+                            isChangeAllFramesAvailable || isChangeAllAnimationsAvailable))
+          changePopup.open();
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_WIZARD_CHANGE_ALL_FRAME_PROPERTIES));
 
         ImGui::Separator();
 
@@ -252,6 +262,62 @@ namespace anm2ed::imgui
       }
       ImGui::EndPopup();
     }
+
+    generateRegionsPopup.trigger();
+    if (ImGui::BeginPopupModal(generateRegionsPopup.label(), &generateRegionsPopup.isOpen, ImGuiWindowFlags_NoResize))
+    {
+      if (document)
+      {
+        ImGui::RadioButton(localize.get(LABEL_CURRENT_SELECTION), &generateRegionsTarget,
+                           GENERATE_REGIONS_TARGET_SELECTION);
+        ImGui::SameLine();
+        ImGui::RadioButton(localize.get(LABEL_ALL), &generateRegionsTarget, GENERATE_REGIONS_TARGET_ALL);
+
+        input_text_string(localize.get(LABEL_FORMAT), &settings.generateRegionNameFormat);
+        ImGui::Checkbox(localize.get(LABEL_MAP_FRAMES_TO_REGIONS), &isGenerateRegionsMapFrames);
+
+        auto widgetSize = widget_size_with_row_get(2);
+        if (ImGui::Button(localize.get(LABEL_GENERATE), widgetSize))
+        {
+          std::set<int> animationIndices{};
+          if (generateRegionsTarget == GENERATE_REGIONS_TARGET_ALL)
+          {
+            if (auto animations = document->anm2.element_get(ElementType::ANIMATIONS))
+              for (auto [i, animation] : std::views::enumerate(animations->children))
+                if (animation.type == ElementType::ANIMATION) animationIndices.insert((int)i);
+          }
+          else
+          {
+            animationIndices.insert(document->animation.selection.begin(), document->animation.selection.end());
+            if (animationIndices.empty() && document->reference.animationIndex >= 0)
+              animationIndices.insert(document->reference.animationIndex);
+          }
+
+          auto queuedAnimationIndices = animationIndices;
+          auto queuedFormat = settings.generateRegionNameFormat;
+          auto queuedMapping = isGenerateRegionsMapFrames ? Document::RegionFrameMapping::SET
+                                                          : Document::RegionFrameMapping::PRESERVE;
+          manager.command_push({manager.selected,
+                                [=](Manager&, Document& document)
+                                {
+                                  if (queuedAnimationIndices.empty()) return;
+                                  document.snapshot(localize.get(EDIT_GENERATE_REGIONS_FROM_ANIMATIONS));
+                                  if (document.regions_generate_from_animations(queuedAnimationIndices, queuedFormat,
+                                                                                queuedMapping))
+                                    document.anm2_change(queuedMapping == Document::RegionFrameMapping::SET
+                                                             ? Document::ALL
+                                                             : Document::SPRITESHEETS);
+                                }});
+          generateRegionsPopup.close();
+        }
+
+        ImGui::SameLine();
+
+        if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize)) generateRegionsPopup.close();
+      }
+      ImGui::EndPopup();
+    }
+    generateRegionsPopup.end();
 
     changePopup.trigger();
 

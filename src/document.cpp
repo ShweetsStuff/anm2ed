@@ -45,6 +45,30 @@ namespace anm2ed::document
     return count;
   }
 
+  std::string region_name_get(const std::string& format, int number)
+  {
+    try
+    {
+      return std::vformat(format, std::make_format_args(number));
+    }
+    catch (const std::format_error&)
+    {
+      return format;
+    }
+  }
+
+  Element* frame_region_match_get(Element& spritesheet, const Element& frame)
+  {
+    auto frameCrop = glm::ivec2(frame.crop);
+    auto frameSize = glm::ivec2(frame.size);
+    auto framePivot = glm::ivec2(frame.pivot);
+    for (auto& region : spritesheet.children)
+      if (region.type == ElementType::REGION && glm::ivec2(region.crop) == frameCrop &&
+          glm::ivec2(region.size) == frameSize && glm::ivec2(region.pivot) == framePivot)
+        return &region;
+    return nullptr;
+  }
+
   int frame_count_get(const Element& item)
   {
     auto frameType = item.type == ElementType::TRIGGERS ? ElementType::TRIGGER : ElementType::FRAME;
@@ -564,6 +588,109 @@ namespace anm2ed
       else
         region->pivot -= region->crop - previousCrop;
       isChanged = true;
+    }
+
+    return isChanged;
+  }
+
+  bool Document::regions_generate_from_animations(const std::set<int>& animationIndices, const std::string& format,
+                                                  RegionFrameMapping mapping)
+  {
+    if (animationIndices.empty()) return false;
+
+    int regionNumber{};
+    bool isChanged{};
+    for (auto animationIndex : animationIndices)
+    {
+      auto animation = anm2.element_get(ElementType::ANIMATION, animationIndex);
+      if (!animation) continue;
+
+      auto layerAnimations = element_child_first_get(*animation, ElementType::LAYER_ANIMATIONS);
+      if (!layerAnimations) continue;
+
+      auto layer_animation_regions_generate = [&](auto&& self, Element& layerAnimation) -> void
+      {
+        if (layerAnimation.type == ElementType::GROUP)
+        {
+          for (auto& child : layerAnimation.children)
+            self(self, child);
+          return;
+        }
+        if (layerAnimation.type != ElementType::LAYER_ANIMATION) return;
+
+        auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, layerAnimation.layerId);
+        auto spritesheet = layer ? anm2.element_get(ElementType::SPRITESHEET, layer->spritesheetId) : nullptr;
+        if (!spritesheet) return;
+
+        for (auto& frame : layerAnimation.children)
+        {
+          if (frame.type != ElementType::FRAME) continue;
+
+          auto region = document::frame_region_match_get(*spritesheet, frame);
+          if (!region)
+          {
+            auto generated = element_make(ElementType::REGION);
+            generated.id = element_child_next_id_get(*spritesheet, ElementType::REGION);
+            generated.name = document::region_name_get(format, regionNumber++);
+            generated.crop = frame.crop;
+            generated.size = frame.size;
+            generated.pivot = frame.pivot;
+            generated.origin = Origin::CUSTOM;
+            spritesheet->children.push_back(generated);
+            region = &spritesheet->children.back();
+            isChanged = true;
+          }
+          if (mapping == RegionFrameMapping::SET && frame.regionId != region->id)
+          {
+            frame.regionId = region->id;
+            isChanged = true;
+          }
+        }
+      };
+
+      for (auto& layerAnimation : layerAnimations->children)
+        layer_animation_regions_generate(layer_animation_regions_generate, layerAnimation);
+    }
+
+    return isChanged;
+  }
+
+  bool Document::regions_generate_from_frames(const std::set<Reference>& frameReferences, const std::string& format,
+                                              RegionFrameMapping mapping)
+  {
+    int regionNumber{};
+    bool isChanged{};
+    for (auto frameReference : frameReferences)
+    {
+      if (frameReference.itemType != LAYER || frameReference.frameIndex < 0) continue;
+
+      auto frame = anm2.element_get(frameReference.animationIndex, ItemType::LAYER, frameReference.itemID,
+                                    frameReference.frameIndex);
+      if (!frame || frame->type != ElementType::FRAME || frame->regionId != -1) continue;
+
+      auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, frameReference.itemID);
+      auto spritesheet = layer ? anm2.element_get(ElementType::SPRITESHEET, layer->spritesheetId) : nullptr;
+      if (!spritesheet) continue;
+
+      auto region = document::frame_region_match_get(*spritesheet, *frame);
+      if (!region)
+      {
+        auto generated = element_make(ElementType::REGION);
+        generated.id = element_child_next_id_get(*spritesheet, ElementType::REGION);
+        generated.name = document::region_name_get(format, regionNumber++);
+        generated.crop = frame->crop;
+        generated.size = frame->size;
+        generated.pivot = frame->pivot;
+        generated.origin = Origin::CUSTOM;
+        spritesheet->children.push_back(generated);
+        region = &spritesheet->children.back();
+        isChanged = true;
+      }
+      if (mapping == RegionFrameMapping::SET && frame->regionId != region->id)
+      {
+        frame->regionId = region->id;
+        isChanged = true;
+      }
     }
 
     return isChanged;

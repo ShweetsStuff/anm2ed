@@ -58,9 +58,12 @@ namespace anm2ed::imgui
     popup::ItemProperties itemProperties{};
     PopupHelper bakePopup{PopupHelper(LABEL_TIMELINE_BAKE_POPUP, POPUP_SMALL_NO_HEIGHT)};
     PopupHelper bakeIntoOtherFramesPopup{PopupHelper(LABEL_BAKE_INTO_OTHER_FRAMES, POPUP_SMALL_NO_HEIGHT)};
+    PopupHelper makeManyRegionsPopup{PopupHelper(LABEL_MAKE_MANY_REGIONS, POPUP_SMALL_NO_HEIGHT)};
     BakeIntoOtherFramesTarget bakeIntoOtherFramesTarget{BakeIntoOtherFramesTarget::CURRENT_SELECTION};
     bool isBakeIntoOtherFramesLayers{true};
     bool isBakeIntoOtherFramesNulls{true};
+    bool isMakeManyRegionsMapFrames{true};
+    std::set<Reference> makeManyRegionReferences{};
     int hoveredTime{};
     bool isFrameBoxPending{};
     bool isFrameBoxSelecting{};

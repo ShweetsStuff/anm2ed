@@ -600,10 +600,30 @@ namespace anm2ed::imgui
     auto container = window_container_get(window, document.anm2);
     auto& storage = window.storage_get(document);
     auto& selection = storage.selection;
-    auto count = window_element_count_get(window, container);
+    std::vector<int> ids{};
+    if (container)
+      for (auto& element : container->children)
+        if (element.type == window.elementType)
+        {
+          auto key = window.element_key_get ? window.element_key_get(element, (int)ids.size()) : element.id;
+          ids.push_back(key);
+        }
+    auto count = (int)ids.size();
     int index{};
+    int scrollTargetId = -1;
+    int arrowSelectionId = -1;
 
     selection.start(count);
+    if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+        (ImGui::IsKeyPressed(ImGuiKey_UpArrow, true) || ImGui::IsKeyPressed(ImGuiKey_DownArrow, true)))
+    {
+      auto nextId = window_arrow_selection_get(ids, storage.reference, selection);
+      if (nextId != -1)
+      {
+        arrowSelectionId = nextId;
+        scrollTargetId = nextId;
+      }
+    }
 
     if (container)
     {
@@ -611,8 +631,9 @@ namespace anm2ed::imgui
       {
         if (element.type != window.elementType) continue;
         auto key = window.element_key_get ? window.element_key_get(element, index) : element.id;
-        auto isSelected = selection.contains(key);
-        auto isReferenced = window_flag_has(window.flags, WINDOW_REFERENCE_ITALIC) && storage.reference == key;
+        auto isSelected = selection.contains(key) || arrowSelectionId == key;
+        auto isReferenced = window_flag_has(window.flags, WINDOW_REFERENCE_ITALIC) &&
+                            (storage.reference == key || arrowSelectionId == key);
         auto font = window.row_font_get ? window.row_font_get(document, element, key)
                     : isReferenced      ? resource::font::ITALICS
                                         : resource::font::REGULAR;
@@ -622,6 +643,7 @@ namespace anm2ed::imgui
         ImGui::SetNextItemSelectionUserData(key);
         auto label = window.row_label_get ? window.row_label_get(document, element) : element.name;
         if (isFontPushed) ImGui::PushFont(resources.fonts[font].get(), resource::font::SIZE);
+        if (scrollTargetId == key) ImGui::SetKeyboardFocusHere();
 
         if (window_flag_has(window.flags, WINDOW_RENAME))
         {
@@ -658,7 +680,7 @@ namespace anm2ed::imgui
 
         if (isFontPushed) ImGui::PopFont();
 
-        if (window.newElementId == key || window.scrollQueued == key)
+        if (window.newElementId == key || window.scrollQueued == key || scrollTargetId == key)
         {
           ImGui::SetScrollHereY(0.5f);
           if (window.newElementId == key) window.newElementId = -1;
@@ -693,6 +715,15 @@ namespace anm2ed::imgui
     }
 
     selection.finish();
+    if (arrowSelectionId != -1)
+    {
+      selection = {arrowSelectionId};
+      storage.reference = arrowSelectionId;
+      if (window.row_select) window.row_select(window, document, arrowSelectionId);
+    }
+    if (shortcut(manager.chords[SHORTCUT_CONFIRM], shortcut::FOCUSED) &&
+        window_flag_has(window.flags, WINDOW_PROPERTIES) && selection.size() == 1)
+      window_properties(window, manager, *selection.begin());
   }
 
   void window_update(Window& window, Manager& manager, Settings& settings, Resources& resources, Dialog& dialog,
@@ -1407,17 +1438,14 @@ namespace anm2ed::imgui
       }
 
       int scrollTargetId = -1;
+      int arrowSelectionId = -1;
       if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
           (ImGui::IsKeyPressed(ImGuiKey_UpArrow, true) || ImGui::IsKeyPressed(ImGuiKey_DownArrow, true)))
       {
         auto nextId = window_arrow_selection_get(window.order, reference, selection);
         if (nextId != -1)
         {
-          selection = {nextId};
-          reference = nextId;
-          document.reference = {document.reference.animationIndex};
-          frame.reference = -1;
-          frame.selection.clear();
+          arrowSelectionId = nextId;
           scrollTargetId = nextId;
         }
       }
@@ -1436,12 +1464,13 @@ namespace anm2ed::imgui
         if (!region) continue;
         auto isNewRegion = window.newElementId == id;
         auto nameCStr = region->name.c_str();
-        auto isSelected = selection.contains(id);
-        auto isReferenced = id == reference;
+        auto isSelected = selection.contains(id) || arrowSelectionId == id;
+        auto isReferenced = id == reference || arrowSelectionId == id;
 
         ImGui::PushID(id);
 
         window_scroll_to_item(regionChildSize.y, scrollTargetId == id);
+        if (scrollTargetId == id) ImGui::SetNextWindowFocus();
 
         if (ImGui::BeginChild("##Region Child", regionChildSize, ImGuiChildFlags_Borders))
         {
@@ -1452,6 +1481,7 @@ namespace anm2ed::imgui
 
           ImGui::SetNextItemSelectionUserData(i);
           ImGui::SetNextItemStorageID(id);
+          if (scrollTargetId == id) ImGui::SetKeyboardFocusHere();
           if (ImGui::Selectable("##Region Selectable", isSelected, 0, regionChildSize))
           {
             document.editTarget = Document::EditTarget::REGION;
@@ -1666,6 +1696,15 @@ namespace anm2ed::imgui
       ImGui::PopStyleVar();
       selection.finish();
       selection.set_index_map(nullptr);
+      if (arrowSelectionId != -1)
+      {
+        document.editTarget = Document::EditTarget::REGION;
+        selection = {arrowSelectionId};
+        reference = arrowSelectionId;
+        document.reference = {document.reference.animationIndex};
+        frame.reference = -1;
+        frame.selection.clear();
+      }
 
       if (shortcut(manager.chords[SHORTCUT_ADD], shortcut::FOCUSED) && window.add)
         window_command_run(window, manager, settings, document, clipboard, window.add);
@@ -1675,6 +1714,8 @@ namespace anm2ed::imgui
         window_command_run(window, manager, settings, document, clipboard, window.copy);
       if (shortcut(manager.chords[SHORTCUT_PASTE], shortcut::FOCUSED) && window.paste)
         window_command_run(window, manager, settings, document, clipboard, window.paste);
+      if (shortcut(manager.chords[SHORTCUT_CONFIRM], shortcut::FOCUSED) && selection.size() == 1 && window.properties)
+        window_command_run(window, manager, settings, document, clipboard, window.properties);
     };
     window.context_update =
         [](Window& window, Manager& manager, Settings& settings, Resources&, Clipboard& clipboard, Document& document)
@@ -2028,7 +2069,7 @@ namespace anm2ed::imgui
       }
     };
     window.rows_update =
-        [](Window& window, Manager&, Settings&, Resources& resources, Clipboard&, Document& document, ImVec2)
+        [](Window& window, Manager& manager, Settings&, Resources& resources, Clipboard&, Document& document, ImVec2)
     {
       auto& selection = document.spritesheet.selection;
       auto& reference = document.spritesheet.reference;
@@ -2065,16 +2106,14 @@ namespace anm2ed::imgui
       }
 
       int scrollTargetId = -1;
+      int arrowSelectionId = -1;
       if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
           (ImGui::IsKeyPressed(ImGuiKey_UpArrow, true) || ImGui::IsKeyPressed(ImGuiKey_DownArrow, true)))
       {
         auto nextId = window_arrow_selection_get(ids, reference, selection);
         if (nextId != -1)
         {
-          selection = {nextId};
-          reference = nextId;
-          region.reference = -1;
-          region.selection.clear();
+          arrowSelectionId = nextId;
           scrollTargetId = nextId;
         }
       }
@@ -2089,11 +2128,12 @@ namespace anm2ed::imgui
           ImGui::PushID(id);
 
           window_scroll_to_item(spritesheetChildSize.y, scrollTargetId == id);
+          if (scrollTargetId == id) ImGui::SetNextWindowFocus();
 
           if (ImGui::BeginChild("##Spritesheet Child", spritesheetChildSize, ImGuiChildFlags_Borders))
           {
-            auto isSelected = selection.contains(id);
-            auto isReferenced = id == reference;
+            auto isSelected = selection.contains(id) || arrowSelectionId == id;
+            auto isReferenced = id == reference || arrowSelectionId == id;
             auto cursorPos = ImGui::GetCursorPos();
             auto textureInfo = document.texture_get(id);
             bool isValid = textureInfo && textureInfo->is_valid();
@@ -2104,6 +2144,7 @@ namespace anm2ed::imgui
 
             ImGui::SetNextItemSelectionUserData(id);
             ImGui::SetNextItemStorageID(id);
+            if (scrollTargetId == id) ImGui::SetKeyboardFocusHere();
             if (ImGui::Selectable("##Spritesheet Selectable", isSelected, 0, spritesheetChildSize))
             {
               document.editTarget = Document::EditTarget::SPRITESHEET;
@@ -2207,6 +2248,17 @@ namespace anm2ed::imgui
 
       ImGui::PopStyleVar();
       selection.finish();
+      if (arrowSelectionId != -1)
+      {
+        document.editTarget = Document::EditTarget::SPRITESHEET;
+        selection = {arrowSelectionId};
+        reference = arrowSelectionId;
+        region.reference = -1;
+        region.selection.clear();
+      }
+      if (shortcut(manager.chords[SHORTCUT_CONFIRM], shortcut::FOCUSED) && reference != -1 && window.dialog)
+        if (auto spritesheet = document.anm2.element_get(ElementType::SPRITESHEET, reference))
+          window_directory_open(*window.dialog, document, spritesheet->path);
     };
     window.context_update =
         [](Window& window, Manager& manager, Settings& settings, Resources&, Clipboard& clipboard, Document& document)
@@ -2704,14 +2756,14 @@ namespace anm2ed::imgui
       if (ImGui::Shortcut(ImGuiKey_Escape, ImGuiInputFlags_RouteFocused)) selection.clear();
 
       int scrollTargetId = -1;
+      int arrowSelectionId = -1;
       if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
           (ImGui::IsKeyPressed(ImGuiKey_UpArrow, true) || ImGui::IsKeyPressed(ImGuiKey_DownArrow, true)))
       {
         auto nextId = window_arrow_selection_get(ids, reference, selection);
         if (nextId != -1)
         {
-          selection = {nextId};
-          reference = nextId;
+          arrowSelectionId = nextId;
           scrollTargetId = nextId;
         }
       }
@@ -2726,10 +2778,11 @@ namespace anm2ed::imgui
           ImGui::PushID(id);
 
           window_scroll_to_item(soundChildSize.y, scrollTargetId == id);
+          if (scrollTargetId == id) ImGui::SetNextWindowFocus();
 
           if (ImGui::BeginChild("##Sound Child", soundChildSize, ImGuiChildFlags_Borders))
           {
-            auto isSelected = selection.contains(id);
+            auto isSelected = selection.contains(id) || arrowSelectionId == id;
             auto cursorPos = ImGui::GetCursorPos();
             auto audio = document.sound_get(id);
             bool isValid = audio && audio->is_valid();
@@ -2739,6 +2792,7 @@ namespace anm2ed::imgui
 
             ImGui::SetNextItemSelectionUserData(id);
             ImGui::SetNextItemStorageID(id);
+            if (scrollTargetId == id) ImGui::SetKeyboardFocusHere();
             if (ImGui::Selectable("##Sound Selectable", isSelected, 0, soundChildSize))
             {
               reference = id;
@@ -2799,6 +2853,14 @@ namespace anm2ed::imgui
 
       ImGui::PopStyleVar();
       selection.finish();
+      if (arrowSelectionId != -1)
+      {
+        selection = {arrowSelectionId};
+        reference = arrowSelectionId;
+      }
+      if (shortcut(manager.chords[SHORTCUT_CONFIRM], shortcut::FOCUSED) && reference != -1 && window.dialog)
+        if (auto sound = document.anm2.element_get(ElementType::SOUND_ELEMENT, reference))
+          window_directory_open(*window.dialog, document, sound->path);
 
       if (shortcut(manager.chords[SHORTCUT_ADD], shortcut::FOCUSED) && window.add)
         window_command_run(window, manager, settings, document, clipboard, window.add);

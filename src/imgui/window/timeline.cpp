@@ -1807,6 +1807,24 @@ namespace anm2ed::imgui
                      });
       };
 
+      auto make_many_regions = [&]()
+      {
+        auto targetFrames = frame_references_for_current_get();
+        std::erase_if(targetFrames,
+                      [&](const Reference& frameReference)
+                      {
+                        if (frameReference.itemType != LAYER || frameReference.frameIndex < 0) return true;
+                        auto item = item_get(frameReference.itemType, frameReference.itemID);
+                        auto frame = item ? track_frame_get(*item, frameReference.frameIndex) : nullptr;
+                        auto layer = layer_get(frameReference.itemID);
+                        return !frame || frame->regionId != -1 || !layer || !spritesheet_get(layer->spritesheetId);
+                      });
+        if (targetFrames.size() < 2) return;
+
+        makeManyRegionReferences = targetFrames;
+        makeManyRegionsPopup.open();
+      };
+
       auto item = item_get(reference.itemType, reference.itemID);
       auto frame = frame_get();
       auto selectedFrames = frame_references_for_current_get();
@@ -1814,6 +1832,17 @@ namespace anm2ed::imgui
       std::erase_if(selectedBakeFrames,
                     [](const Reference& frameReference) { return frameReference.itemType == TRIGGER; });
       auto isReverseFrames = is_frames_reverse_available(selectedFrames);
+      auto selectedRegionFrames = selectedFrames;
+      std::erase_if(selectedRegionFrames,
+                    [&](const Reference& frameReference)
+                    {
+                      if (frameReference.itemType != LAYER || frameReference.frameIndex < 0) return true;
+                      auto item = item_get(frameReference.itemType, frameReference.itemID);
+                      auto frame = item ? track_frame_get(*item, frameReference.frameIndex) : nullptr;
+                      auto layer = layer_get(frameReference.itemID);
+                      return !frame || frame->regionId != -1 || !layer || !spritesheet_get(layer->spritesheetId);
+                    });
+      bool isMakeManyRegions = selectedRegionFrames.size() > 1;
       auto selectedRootFrames = selected_root_frame_references_get();
       bool isMakeRegion = frame && reference.itemType == LAYER && reference.itemID != -1 && frame->regionId == -1 &&
                           layer_get(reference.itemID) && spritesheet_get(layer_get(reference.itemID)->spritesheetId);
@@ -1848,10 +1877,16 @@ namespace anm2ed::imgui
                    .isEnabled = [&]() { return animation && animation->frameNum != animation_length_get(*animation); },
                    .run = [&]() { fit_animation_length(); }});
       actions.separator();
-      actions.add({.label = LABEL_MAKE_REGION,
+      actions.add({.label = isMakeManyRegions ? LABEL_MAKE_MANY_REGIONS : LABEL_MAKE_REGION,
                    .shortcut = -1,
-                   .isEnabled = [&]() { return isMakeRegion; },
-                   .run = [&]() { make_region(); }});
+                   .isEnabled = [=]() { return isMakeManyRegions || isMakeRegion; },
+                   .run = [&]()
+                   {
+                     if (isMakeManyRegions)
+                       make_many_regions();
+                     else
+                       make_region();
+                   }});
       actions.separator();
       actions.add({.label = LABEL_DELETE,
                    .shortcut = SHORTCUT_REMOVE,
@@ -3716,6 +3751,33 @@ namespace anm2ed::imgui
 
     if (itemProperties.update(manager, settings, document, reference)) group_selection_reset_for(document);
     group_properties_update();
+
+    makeManyRegionsPopup.trigger();
+    if (ImGui::BeginPopupModal(makeManyRegionsPopup.label(), &makeManyRegionsPopup.isOpen, ImGuiWindowFlags_NoResize))
+    {
+      input_text_string(localize.get(LABEL_FORMAT), &settings.generateRegionNameFormat);
+      ImGui::Checkbox(localize.get(LABEL_MAP_FRAMES_TO_REGIONS), &isMakeManyRegionsMapFrames);
+
+      auto widgetSize = widget_size_with_row_get(2);
+      if (ImGui::Button(localize.get(LABEL_MAKE_MANY_REGIONS), widgetSize))
+      {
+        auto targetFrames = makeManyRegionReferences;
+        auto format = settings.generateRegionNameFormat;
+        auto mapping = isMakeManyRegionsMapFrames ? Document::RegionFrameMapping::SET
+                                                  : Document::RegionFrameMapping::PRESERVE;
+        edit_command_push(EDIT_GENERATE_REGIONS_FROM_ANIMATIONS, Document::ALL,
+                          [=](Manager&, Document& document) mutable
+                          { document.regions_generate_from_frames(targetFrames, format, mapping); });
+        makeManyRegionsPopup.close();
+      }
+
+      ImGui::SameLine();
+
+      if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize)) makeManyRegionsPopup.close();
+
+      ImGui::EndPopup();
+    }
+    makeManyRegionsPopup.end();
 
     bakePopup.trigger();
 
