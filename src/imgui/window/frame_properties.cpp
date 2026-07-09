@@ -36,29 +36,26 @@ namespace anm2ed::imgui
       auto& anm2 = document.anm2;
       auto& reference = document.reference;
       auto& type = reference.itemType;
-      auto itemType = static_cast<ItemType>(type);
-      auto frame = anm2.element_get(reference.animationIndex, itemType, reference.frameIndex, reference.itemID);
+      auto frame = reference.frameIndex >= 0 ? anm2.element_get(reference) : nullptr;
 
-      auto frame_edit = [&](auto message, auto behavior)
-      {
-        auto queuedReference = reference;
-        manager.command_push({manager.selected,
+        auto frame_edit = [&](auto message, auto behavior)
+        {
+          auto queuedReference = reference;
+          manager.command_push({manager.selected,
                               [=](Manager&, Document& document) mutable
                               {
-                                auto itemType = static_cast<ItemType>(queuedReference.itemType);
-                                auto frame = document.anm2.element_get(queuedReference.animationIndex, itemType,
-                                                                       queuedReference.frameIndex,
-                                                                       queuedReference.itemID);
-                                auto item =
-                                    document.anm2.element_get(queuedReference.animationIndex, itemType,
-                                                              queuedReference.itemID);
+                                if (queuedReference.frameIndex < 0) return;
+                                auto frame = document.anm2.element_get(queuedReference);
+                                auto itemReference = queuedReference;
+                                itemReference.frameIndex = -1;
+                                auto item = document.anm2.element_get(itemReference);
                                 if (!frame) return;
 
-                                document.snapshot(localize.get(message));
+                                document.frames_snapshot(localize.get(message), {queuedReference});
                                 behavior(document, *frame, item, queuedReference);
                                 document.anm2_change(Document::FRAMES);
                               }});
-      };
+        };
 
       auto persistent_edit = [&](auto state, auto message, auto behavior)
       {
@@ -68,20 +65,18 @@ namespace anm2ed::imgui
         manager.command_push({manager.selected,
                               [=](Manager&, Document& document) mutable
                               {
-                                auto itemType = static_cast<ItemType>(queuedReference.itemType);
-                                auto frame = document.anm2.element_get(queuedReference.animationIndex, itemType,
-                                                                       queuedReference.frameIndex,
-                                                                       queuedReference.itemID);
-                                auto item =
-                                    document.anm2.element_get(queuedReference.animationIndex, itemType,
-                                                              queuedReference.itemID);
+                                if (queuedReference.frameIndex < 0) return;
+                                auto frame = document.anm2.element_get(queuedReference);
+                                auto itemReference = queuedReference;
+                                itemReference.frameIndex = -1;
+                                auto item = document.anm2.element_get(itemReference);
                                 if (!frame) return;
 
-                                if (state == edit::START) document.snapshot(localize.get(message));
+                                if (state == edit::START) document.frames_snapshot(localize.get(message), {queuedReference});
                                 behavior(document, *frame, item, queuedReference);
                                 if (state == edit::END) document.anm2_change(Document::FRAMES);
                               }});
-      };
+        };
 
       auto regionLabelsString = std::vector<std::string>{localize.get(BASIC_NONE)};
       auto regionLabels = std::vector<const char*>{regionLabelsString[0].c_str()};

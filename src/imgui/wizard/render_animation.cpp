@@ -1,5 +1,6 @@
 #include "render_animation.hpp"
 
+#include <algorithm>
 #include <ranges>
 #include <set>
 #include <string>
@@ -34,12 +35,14 @@ namespace anm2ed::imgui::wizard
                   [&](const Reference& frameReference)
                   {
                     return frameReference.animationIndex != reference.animationIndex ||
-                           frameReference.itemType != reference.itemType || frameReference.itemID != reference.itemID;
+                           frameReference.itemType != reference.itemType || frameReference.itemID != reference.itemID ||
+                           frameReference.groupType != reference.groupType || frameReference.groupId != reference.groupId;
                   });
     if (!frameReferences.empty())
     {
-      auto itemType = static_cast<ItemType>(reference.itemType);
-      if (auto item = document.anm2.element_get(reference.animationIndex, itemType, reference.itemID))
+      auto itemReference = reference;
+      itemReference.frameIndex = -1;
+      if (auto item = document.anm2.element_get(itemReference))
       {
         int duration{};
         int frameIndex{};
@@ -74,7 +77,8 @@ namespace anm2ed::imgui::wizard
     auto& path = settings.renderPath;
     auto& format = settings.renderFormat;
     auto& scale = settings.renderScale;
-    auto& isRaw = settings.renderIsRawAnimation;
+    auto& isUseAnimationBounds = settings.renderIsUseAnimationBounds;
+    auto& isUseIsolatedAnimation = settings.renderIsUseIsolatedAnimation;
     auto& type = settings.renderType;
     auto& start = manager.recordingStart;
     auto& end = manager.recordingEnd;
@@ -83,6 +87,11 @@ namespace anm2ed::imgui::wizard
     auto& isRange = manager.isRecordingRange;
     auto& reference = document.reference;
     auto& frameNum = animation->frameNum;
+    auto animationFrameNum = std::max(frameNum, 1);
+    auto frameMax = animationFrameNum - 1;
+    start = std::clamp(start, 0, frameMax);
+    end = std::clamp(end, start, frameMax);
+    auto renderFrameNum = isRange ? render::frame_count_get(start, end) : animationFrameNum;
 
     auto widgetSize = widget_size_with_row_get(2);
 
@@ -154,10 +163,10 @@ namespace anm2ed::imgui::wizard
     }
     else if (type == render::SPRITESHEET)
     {
-      input_int_range(localize.get(LABEL_GENERATE_ROWS), rows, 1, frameNum - 1);
+      input_int_range(localize.get(LABEL_GENERATE_ROWS), rows, 1, renderFrameNum);
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ROWS));
 
-      input_int_range(localize.get(LABEL_GENERATE_COLUMNS), columns, 1, frameNum - 1);
+      input_int_range(localize.get(LABEL_GENERATE_COLUMNS), columns, 1, renderFrameNum);
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_COLUMNS));
     }
 
@@ -181,19 +190,32 @@ namespace anm2ed::imgui::wizard
 
     ImGui::BeginDisabled(!isRange);
     {
-      input_int_range(localize.get(LABEL_START), start, 0, frameNum - 1);
+      input_int_range(localize.get(LABEL_START), start, 0, frameMax);
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_START));
-      input_int_range(localize.get(LABEL_END), end, start, frameNum - 1);
+      input_int_range(localize.get(LABEL_END), end, start, frameMax);
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_END));
     }
     ImGui::EndDisabled();
+    renderFrameNum = isRange ? render::frame_count_get(start, end) : animationFrameNum;
+
+    if (type == render::SPRITESHEET)
+    {
+      auto layout = render::spritesheet_layout_get(rows, columns, renderFrameNum);
+      rows = layout.rows;
+      columns = layout.columns;
+    }
 
     ImGui::Separator();
 
-    ImGui::Checkbox(localize.get(LABEL_RAW), &isRaw);
-    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_RAW));
+    ImGui::Checkbox(localize.get(LABEL_USE_ANIMATION_BOUNDS), &isUseAnimationBounds);
+    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_USE_ANIMATION_BOUNDS));
 
-    ImGui::BeginDisabled(!isRaw);
+    ImGui::SameLine();
+
+    ImGui::Checkbox(localize.get(LABEL_USE_ISOLATED_ANIMATION), &isUseIsolatedAnimation);
+    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_USE_ISOLATED_ANIMATION));
+
+    ImGui::BeginDisabled(!isUseAnimationBounds);
     {
       input_float_range(localize.get(BASIC_SCALE), scale, 0.1f, 100.0f, 1.0f, STEP_FAST, "%.1fx");
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SCALE_OUTPUT));

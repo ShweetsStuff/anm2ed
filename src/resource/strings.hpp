@@ -48,6 +48,7 @@ namespace anm2ed
   X(BASIC_CROP, "Crop", "Recortar", "Обрезать", "裁剪", "자르기") \
   X(BASIC_CUT, "Cut", "Cortar", "Вырезать", "剪切", "잘라내기") \
   X(BASIC_DEFAULT, "Default", "Predeterminado", "По умолчанию", "默认", "기본값") \
+  X(BASIC_DISABLED, "Disabled", "Desactivado", "Отключено", "禁用", "비활성화") \
   X(BASIC_DUPLICATE, "Duplicate", "Duplicar", "Дублировать", "拷贝", "복제") \
   X(BASIC_DURATION, "Duration", "Duracion", "Продолжительность", "时长", "유지 시간") \
   X(BASIC_ENABLED, "Enabled", "Activado", "Включено", "开启", "활성화") \
@@ -107,6 +108,7 @@ namespace anm2ed
   X(EDIT_ADD_ITEM, "Add Item", "Añadir Item", "Добавить предмет", "添加物品", "항목 추가") \
   X(EDIT_ADD_LAYER, "Add Layer", "Añadir Capa", "Добавить слой", "添加动画层", "레이어 추가") \
   X(EDIT_ADD_NULL, "Add Null", "Añadir Null", "Добавить нуль", "添加Null", "Null 추가") \
+  X(EDIT_ADD_OVERLAY, "Add Overlay", "Add Overlay", "Add Overlay", "Add Overlay", "Add Overlay") \
   X(EDIT_ADD_SPRITESHEET, "Add Spritesheet", "Añadir Spritesheet", "Добавить спрайт-лист", "添加图集", "스프라이트 시트 추가") \
   X(EDIT_ADD_SOUND, "Add Sound", "Añadir Sonido", "Добавить звук", "添加声音", "사운드 추가") \
   X(EDIT_ADD_TRIGGER_SOUND, "Add Trigger Sound", "Añadir Sonido del Trigger", "Добавить звук триггера", "添加事件触发器声音", "트리거 사운드 추가") \
@@ -128,6 +130,7 @@ namespace anm2ed
   X(EDIT_FIT_ANIMATION_LENGTH, "Fit Animation Length", "Encajar Largo de animacion", "Подогнать к длине анимации", "匹配动画时长", "애니메이션 길이 맞추기") \
   X(EDIT_FPS, "FPS", "FPS", "FPS", "每秒帧数(FPS)", "FPS") \
   X(EDIT_GROUP_ITEMS, "Group Item(s)", "Agrupar item(s)", "Сгруппировать элементы", "将项目分组", "항목 그룹화") \
+  X(EDIT_REMOVE_GROUP, "Remove Group", "Eliminar grupo", "Удалить группу", "删除组", "그룹 삭제") \
   X(EDIT_TOGGLE_GROUP_EXPANDED, "Toggle Group Expanded", "Alternar grupo expandido", "Развернуть/свернуть группу", "展开/折叠组", "그룹 펼침 전환") \
   X(EDIT_FRAME_COLOR_OFFSET, "Frame Color Offset", "Offset de color de Frame", "Смещение цвета кадра", "帧颜色偏移", "프레임 색상 오프셋") \
   X(EDIT_FRAME_CROP, "Frame Crop", "Recorte de Frame", "Обрезка кадра", "帧裁剪", "프레임 자르기") \
@@ -162,8 +165,10 @@ namespace anm2ed
   X(EDIT_PASTE_LAYERS, "Paste Layer(s)", "Pegar Capa(s)", "Вставить слои", "粘贴动画层", "레이어 붙여넣기") \
   X(EDIT_PASTE_REGIONS, "Paste Region(s)", "Pegar Región(es)", "Вставить регионы", "粘贴区域", "영역 붙여넣기") \
   X(EDIT_PASTE_NULLS, "Paste Null(s)", "Pegar Null(s)", "Вставить нули", "粘贴Null", "Null 붙여넣기") \
+  X(EDIT_PASTE_OVERLAYS, "Paste Overlay(s)", "Paste Overlay(s)", "Paste Overlay(s)", "Paste Overlay(s)", "Paste Overlay(s)") \
   X(EDIT_PASTE_SOUNDS, "Paste Sound(s)", "Pegar Sonido(s)", "Вставить звук(и)", "粘贴声音", "사운드 붙여넣기") \
   X(EDIT_PASTE_SPRITESHEETS, "Paste Spritesheet(s)", "Pegar Spritesheet(s)", "Вставить спрайт-листы", "粘贴图集", "스프라이트 시트 붙여넣기") \
+  X(EDIT_RELOAD_OVERLAYS, "Reload Overlay(s)", "Reload Overlay(s)", "Reload Overlay(s)", "Reload Overlay(s)", "Reload Overlay(s)") \
   X(EDIT_RELOAD_SPRITESHEETS, "Reload Spritesheet(s)", "Recargar Spritesheet(s)", "Перезагрузить спрайт-листы", "重新加载图集", "스프라이트 시트 다시 불러오기") \
   X(EDIT_RELOAD_SOUNDS, "Reload Sound(s)", "Recargar Sonido(s)", "Перезагрузить звук(и)", "重新加载声音", "사운드 다시 불러오기") \
   X(EDIT_REMOVE_ANIMATIONS, "Remove Animation(s)", "Remover Animacion(es)", "Удалить анимации", "删除动画层", "애니메이션 제거") \
@@ -175,10 +180,13 @@ namespace anm2ed
   X(EDIT_REMOVE_UNUSED_NULLS, "Remove Unused Nulls", "Remover Nulls No Utilizados", "Удалить неизпользуемые нули", "删除未使用的Null", "미사용 Null 제거") \
   X(EDIT_REMOVE_UNUSED_SOUNDS, "Remove Unused Sounds", "Remover Sonidos No Utilizados", "Удалить неизпользуемые звуки", "删除未使用的声音", "미사용 사운드 제거") \
   X(EDIT_REMOVE_UNUSED_SPRITESHEETS, "Remove Unused Spritesheets", "Remover Spritesheets No Utilizadas", "Удалить неизпользуемые спрайт-листы", "删除未使用的图集", "미사용 스프라이트 시트 제거") \
+  X(EDIT_REMOVE_OVERLAYS, "Remove Overlay(s)", "Remove Overlay(s)", "Remove Overlay(s)", "Remove Overlay(s)", "Remove Overlay(s)") \
   X(EDIT_RENAME_GROUP, "Rename Group", "Renombrar grupo", "Переименовать группу", "重命名组", "그룹 이름 바꾸기") \
   X(EDIT_RENAME_EVENT, "Rename Event", "Renombrar Evento", "Переименовать событие", "重命名事件", "이벤트 이름 바꾸기") \
   X(EDIT_REPLACE_SPRITESHEET, "Replace Spritesheet", "Reemplazar Spritesheet", "Заменить спрайт-лист", "替换图集", "스프라이트 시트 교체") \
+  X(EDIT_REPLACE_OVERLAY, "Replace Overlay", "Replace Overlay", "Replace Overlay", "Replace Overlay", "Replace Overlay") \
   X(EDIT_REPLACE_SOUND, "Replace Sound", "Reemplazar Sonido", "Заменить звук", "替换声音", "사운드 교체") \
+  X(EDIT_SET_OVERLAY_FILE_PATH, "Set Overlay File Path", "Set Overlay File Path", "Set Overlay File Path", "Set Overlay File Path", "Set Overlay File Path") \
   X(EDIT_SET_SPRITESHEET_FILE_PATH, "Set Spritesheet File Path", "Set Spritesheet File Path", "Set Spritesheet File Path", "Set Spritesheet File Path", "Set Spritesheet File Path") \
   X(EDIT_SET_LAYER_PROPERTIES, "Set Layer Properties", "Establecer Propiedades de Capa", "Установить свойства слоя", "更改动画层属性", "레이어 속성 설정") \
   X(EDIT_SET_REGION_PROPERTIES, "Set Region Properties", "Establecer propiedades de región", "Установить свойства региона", "更改区域属性", "영역 속성 설정") \
@@ -211,6 +219,7 @@ namespace anm2ed
   X(FORMAT_LOOP, "Loop: {0}", "Loop: {0}", "Цикл: {0}", "循环: {0}", "반복: {0}") \
   X(FORMAT_NOT_SAVED, "{0} [Not Saved]", "{0} [Not Saved]", "{0} [Не сохранено]", "{0} [未保存]", "{0} [저장되지 않음]") \
   X(FORMAT_NULL, "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}") \
+  X(FORMAT_OVERLAY, "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}") \
   X(FORMAT_PIVOT, "Pivot: ({0}, {1})", "Pivote", "Точка вращения: ({0}, {1})", "枢轴: ({0}, {1})", "중심점: ({0}, {1})") \
   X(FORMAT_POSITION, "Position: ({0}, {1})", "Posicion: ({0}, {1})", "Позиция: ({0}, {1})", "位置: ({0}, {1})", "위치: ({0}, {1})") \
   X(FORMAT_POSITION_SPACED, "Position: ({0:3}, {1:3})", "Posicion: ({0:3}, {1:3})", "Позиция: ({0:3}, {1:3})", "位置: ({0:3}, {1:3})", "위치: ({0:3}, {1:3})") \
@@ -243,7 +252,7 @@ namespace anm2ed
   X(LABEL_ANIMATION_LENGTH, "Animation Length", "Duracion de Animacion", "Длина анимации", "动画时长", "애니메이션 길이") \
   X(LABEL_ANIMATION_PREVIEW_WINDOW, "Animation Preview###Animation Preview", "Vista Previa de Animacion###Animation Preview", "Предпросмотр анимации###Animation Preview", "动画预放###Animation Preview", "애니메이션 프리뷰###Animation Preview") \
   X(LABEL_APPEND_FRAMES, "Append Frames", "Anteponer Frames", "Добавить кадры к концу", "在后面添加帧", "뒷프레임에 추가") \
-  X(LABEL_APPLICATION_NAME, "Anm2Ed Version 2.5", "Anm2Ed Version 2.5", "Anm2Ed Версия 2.5", "Anm2Ed 2.5版本", "Anm2Ed 버전 2.5") \
+  X(LABEL_APPLICATION_NAME, "Anm2Ed", "Anm2Ed", "Anm2Ed", "Anm2Ed", "Anm2Ed") \
   X(LABEL_AUTHOR, "Author", "Autor", "Автор", "制作者", "작성자") \
   X(LABEL_AUTOSAVE, "Autosave", "Autoguardado", "Автосохранение", "自动保存", "자동저장") \
   X(LABEL_AXES, "Axes", "Ejes", "Оси", "坐标轴", "가로/세로 축") \
@@ -252,6 +261,7 @@ namespace anm2ed
   X(LABEL_BAKE_INTO_OTHER_FRAMES, "Bake into Other Frames", "Bake en otros frames", "Запечь в другие кадры", "烘焙到其他帧", "다른 프레임에 베이크") \
   X(LABEL_BAKE_MATCH_ROOT_INTERPOLATION, "Bake other frames to match interpolation", "Bake otros frames para coincidir con interpolación", "Запечь другие кадры для соответствия интерполяции", "烘焙其他帧以匹配插值", "보간에 맞게 다른 프레임 베이크") \
   X(LABEL_BAKE_USE_ROOT_PIVOT, "Use root pivot", "Usar pivote root", "Использовать корневой пивот", "使用根枢轴", "Root 중심점 사용") \
+  X(LABEL_BINDING, "Binding", "Binding", "Binding", "Binding", "Binding") \
   X(LABEL_SPLIT, "Split", "Dividir", "Разделить", "拆分", "분할") \
   X(LABEL_BORDER, "Border", "Borde", "Границы", "边框", "경계선") \
   X(LABEL_CHANGE_ALL_FRAME_PROPERTIES, "Change All Frame Properties", "Cambiar todas las propiedades de frame", "Изменить все свойства кадра", "更改所有帧属性", "모든 프레임 속성 변경") \
@@ -265,6 +275,7 @@ namespace anm2ed
   X(LABEL_REGIONS, "Regions", "Regiones", "Регионы", "区域", "영역") \
   X(LABEL_KEEP_REDUNDANT_FRAME_REGION_VALUES, "Keep redundant frame information for frames with regions", "Mantener información redundante en frames con regiones", "Сохранять избыточные данные кадров с регионами", "保留带区域帧的冗余信息", "영역이 있는 프레임의 중복 정보 유지") \
   X(LABEL_BAKE_SPECIAL_INTERPOLATED_FRAMES_ON_SAVE, "Automatically bake frames with special interpolation modes", "Hornear frames con interpolación especial al guardar", "Запекать кадры со специальной интерполяцией при сохранении", "保存时烘焙特殊插值帧", "저장 시 특수 보간 프레임 베이크") \
+  X(LABEL_BAKE_GROUP_FRAMES_ON_SAVE, "Bake frames inside groups if applicable", "Hornear frames dentro de grupos si corresponde", "Запекать кадры внутри групп при необходимости", "适用时烘焙组内帧", "필요 시 그룹 안의 프레임 베이크") \
   X(LABEL_CUSTOM_RANGE, "Custom Range", "Rango Personalizado", "Пользовательский диапазон", "自定义范围", "길이 맞춤설정") \
   X(LABEL_DELETE, "Delete", "Borrar", "Удалить", "删除", "삭제") \
   X(LABEL_DELETE_ANIMATIONS_AFTER, "Delete Animations After", "Borrar Animaciones Despues", "Удалить анимации после", "删除之后的动画", "기존 애니메이션 삭제") \
@@ -285,11 +296,13 @@ namespace anm2ed
   X(LABEL_EXPLORE_XML_LOCATION, "Explore XML Location", "Explorar Localizacion de XML", "Открыть местоположение XML", "探索XML位置", "XML 경로로 탐색기 열기") \
   X(LABEL_FFMPEG_PATH, "FFmpeg Path", "Localizacion de FFmpeg", "Путь к FFmpeg", "FFmpeg路径", "FFmpeg 경로") \
   X(LABEL_FILE_MENU, "File", "Archivo", "Файл", "文件", "파일") \
+  X(LABEL_FILES, "Files", "Archivos", "Файлы", "文件", "파일") \
   X(LABEL_FIT, "Fit", "Encajar", "Подогнать по размеру", "匹配", "맞추기") \
   X(LABEL_FIT_ANIMATION_LENGTH, "Fit Animation Length", "Encajar Largo de animacion", "Подогнать к длине анимации", "匹配动画时长", "애니메이션 길이 맞추기") \
   X(LABEL_FLIP_X, "Flip X", "Invertir X", "Отразить по X", "X轴翻转", "수평 뒤집기") \
   X(LABEL_FLIP_Y, "Flip Y", "Invertir Y", "Отразить по Y", "Y轴翻转", "수직 뒤집기") \
   X(LABEL_FORMAT, "Format", "Formato", "Формат", "格式", "파일 포맷") \
+  X(LABEL_FRAGMENT, "Fragment", "Fragment", "Fragment", "Fragment", "Fragment") \
   X(LABEL_FPS, "FPS", "FPS", "FPS", "FPS", "FPS") \
   X(LABEL_FRAME_PROPERTIES_WINDOW, "Frame Properties###Frame Properties", "Propiedades de Frame###Frame Properties", "Свойства кадра###Frame Properties", "帧属性###Frame Properties", "프레임 속성###Frame Properties") \
   X(LABEL_GENERATE, "Generate", "Generar", "Сгенерировать", "生成", "생성") \
@@ -300,6 +313,7 @@ namespace anm2ed
   X(LABEL_GENERATE_REGIONS_FROM_ANIMATIONS, "Generate Regions from Animations", "Generar regiones desde animaciones", "Создать регионы из анимаций", "从动画生成区域", "애니메이션에서 영역 생성") \
   X(LABEL_GENERATE_ROWS, "Rows", "Filas", "Ряды", "行", "행") \
   X(LABEL_GENERATE_START_POSITION, "Start Position", "Poscicion de Inicio", "Начальная позиция", "起始位置", "시작 위치") \
+  X(LABEL_GENERAL, "General", "General", "General", "General", "General") \
   X(LABEL_ALL, "All", "Todo", "Все", "全部", "전체") \
   X(LABEL_ALL_ANIMATIONS, "All Animations", "Todas las Animaciones", "Все анимации", "所有动画", "모든 애니메이션") \
   X(LABEL_HELP_MENU, "Help", "Ayuda", "Помощь", "帮助", "도움말") \
@@ -334,6 +348,10 @@ namespace anm2ed
   X(LABEL_MANAGER_NULL_PROPERTIES, "Null Properties", "Propiedades Null", "Свойства нуля", "Null属性", "Null 속성") \
   X(LABEL_MANAGER_RENDERING_PROGRESS, "Rendering...", "Renderizando...", "Рендеринг...", "渲染中...", "렌더링 중...") \
   X(LABEL_MERGE, "Merge", "Combinar", "Соединить", "合并", "병합") \
+  X(LABEL_MERGE_PRESET, "Preset", "Preset", "Preset", "Preset", "Preset") \
+  X(LABEL_MERGE_PRESET_APPEND_AS_NEW, "Append as New", "Append as New", "Append as New", "Append as New", "Append as New") \
+  X(LABEL_MERGE_PRESET_MERGE_BY_NAME, "Merge by Name", "Merge by Name", "Merge by Name", "Merge by Name", "Merge by Name") \
+  X(LABEL_MERGE_PRESET_REPLACE_MATCHING, "Replace Matching", "Replace Matching", "Replace Matching", "Replace Matching", "Replace Matching") \
   X(LABEL_MERGE_SPRITESHEETS_APPEND_RIGHT, "Top Right", "Arriba a la derecha", "Сверху справа", "右上", "우측 상단") \
   X(LABEL_MERGE_SPRITESHEETS_APPEND_BOTTOM, "Bottom Left", "Abajo a la izquierda", "Снизу слева", "左下", "좌측 하단") \
   X(LABEL_MERGE_MAKE_SPRITESHEET_REGIONS, "Make Spritesheet Regions", "Crear regiones de spritesheet", "Создать регионы спрайт-листа", "生成图集区域", "스프라이트 시트 영역 만들기") \
@@ -349,6 +367,7 @@ namespace anm2ed
   X(LABEL_OUTPUT_DIRECTORY, "Directory", "Directorio", "Директория", "目录", "디렉터리") \
   X(LABEL_OUTPUT_PATH, "Path", "Ruta", "Путь", "路径", "경로") \
   X(LABEL_OVERLAY, "Overlay", "Overlay", "Наложение", "动画叠加", "오버레이") \
+  X(LABEL_OVERLAYS_WINDOW, "Overlays###Overlays", "Overlays###Overlays", "Overlays###Overlays", "Overlays###Overlays", "Overlays###Overlays") \
   X(LABEL_OVERWRITE_CONFIRMATION, "Are you sure? This will overwrite the existing file.", "¿Estas Seguro? Esto sobreescribira el archivo existente.", "Вы уверены? Это перезапишет существующий файл.", "你确定吗? 这样会覆盖原本的文件.", "저장하시겠습니까? 기존 파일을 덮어쓰게 됩니다.") \
   X(LABEL_OVERWRITE_WARNING, "Overwrite Warning", "Alerta de Sobreescribir", "Предупреждение о перезаписи", "覆盖提醒", "덮어쓰기 경고") \
   X(LABEL_PAUSE, "Pause", "Pausar", "Пауза", "暂停", "일시정지") \
@@ -357,7 +376,6 @@ namespace anm2ed
   X(LABEL_PLAYBACK_ALWAYS_LOOP, "Always Loop", "Siempre Loopear", "Всегда воспроизводить циклично", "持续循环", "항상 반복") \
   X(LABEL_PLAYBACK_MENU, "Playback", "Reproduccion", "Возпроизведение", "回放", "재생") \
   X(LABEL_PREPEND_FRAMES, "Prepend Frames", "Anteponer Frames", "Добавить кадры", "在前面插入帧", "뒷프레임에 추가") \
-  X(LABEL_RAW, "Raw", "En Crudo", "Необработанный", "原始", "Raw만") \
   X(LABEL_RECT, "Rect", "Rect", "Прямоугольник", "矩形", "사각형") \
   X(LABEL_RENDER, "Render", "Renderizar", "Рендер", "渲染", "렌더링") \
   X(LABEL_REPEAT_DELAY, "Repeat Delay (seconds)", "Repetir Delay (segundos)", "Задержка повторения (секунды)", "键盘按键重复延迟 (秒)", "반복 입력 지연 시간 (초)") \
@@ -377,6 +395,14 @@ namespace anm2ed
   X(LABEL_SOUND, "Sound", "Sonido", "Звук", "声音", "사운드") \
   X(LABEL_SOUNDS, "Sounds", "Sonidos", "Звук", "声音", "사운드") \
   X(LABEL_SOUNDS_WINDOW, "Sounds###Sounds", "Sonidos###Sounds", "Звук###Sounds", "声音###Sounds", "사운드###Sounds") \
+  X(LABEL_SHADERS_WINDOW, "Shaders###Shaders", "Shaders###Shaders", "Shaders###Shaders", "Shaders###Shaders", "Shaders###Shaders") \
+  X(LABEL_SHADER_COMPILE_FAILED, "Shader compilation failed.", "Shader compilation failed.", "Shader compilation failed.", "Shader compilation failed.", "Shader compilation failed.") \
+  X(LABEL_SHADER_COMPILE_SUCCEEDED, "Shader compilation succeeded.", "Shader compilation succeeded.", "Shader compilation succeeded.", "Shader compilation succeeded.", "Shader compilation succeeded.") \
+  X(LABEL_SHADER_LINK_FAILED, "Shader linking failed.", "Shader linking failed.", "Shader linking failed.", "Shader linking failed.", "Shader linking failed.") \
+  X(LABEL_SHADER_LINK_SUCCEEDED, "Shader linking succeeded.", "Shader linking succeeded.", "Shader linking succeeded.", "Shader linking succeeded.", "Shader linking succeeded.") \
+  X(LABEL_SHADER_PATH_EMPTY, "Shader path is empty: {0}", "Shader path is empty: {0}", "Shader path is empty: {0}", "Shader path is empty: {0}", "Shader path is empty: {0}") \
+  X(LABEL_SHADER_READ_FAILED, "Failed to read shader file: {0}", "Failed to read shader file: {0}", "Failed to read shader file: {0}", "Failed to read shader file: {0}", "Failed to read shader file: {0}") \
+  X(LABEL_SHADER_RELOAD_NEEDED, "Shader changed; reload to apply.", "Shader changed; reload to apply.", "Shader changed; reload to apply.", "Shader changed; reload to apply.", "Shader changed; reload to apply.") \
   X(LABEL_SOURCE, "Source", "Fuente", "Източник", "动画层来源", "소스") \
   X(LABEL_SPRITESHEET, "Spritesheet", "Spritesheet", "Спрайт-лист", "图集", "스프라이트 시트") \
   X(LABEL_SPRITESHEETS_WINDOW, "Spritesheets###Spritesheets", "Spritesheets###Spritesheets", "Спрайт-листы###Spritesheets", "图集###Spritesheets", "스프라이트 시트###Spritesheets") \
@@ -406,9 +432,13 @@ namespace anm2ed
   X(LABEL_TO_SELECTED_FRAMES, "To Selected Frames", "A Frames Selecionados", "К выбранным кадрам", "跳到所选的帧", "선택한 프레임에 맞춤") \
   X(LABEL_TRANSPARENT, "Transparent", "Transparentes", "Прозрачный", "透明", "투명도") \
   X(LABEL_TYPE, "Type", "Tipo", "Тип", "类型", "유형") \
+  X(LABEL_UNIFORMS, "Uniforms", "Uniforms", "Uniforms", "Uniforms", "Uniforms") \
   X(LABEL_UI_SCALE, "UI Scale", "Escala de la Interfaz", "Размер UI", "界面缩放", "UI 비율") \
+  X(LABEL_USE_ANIMATION_BOUNDS, "Use Animation Bounds", "Use Animation Bounds", "Use Animation Bounds", "Use Animation Bounds", "Use Animation Bounds") \
   X(LABEL_USE_DEFAULT_SETTINGS, "Use Default Settings", "Usar Opciones Predeterminadas", "Изпользовать настройки по умолчанию", "使用默认设置", "기본값으로 사용") \
+  X(LABEL_USE_ISOLATED_ANIMATION, "Use Isolated Animation", "Use Isolated Animation", "Use Isolated Animation", "Use Isolated Animation", "Use Isolated Animation") \
   X(LABEL_VALUE_COLUMN, "Value", "Valor", "Значение", "数值", "값") \
+  X(LABEL_VERTEX, "Vertex", "Vertex", "Vertex", "Vertex", "Vertex") \
   X(LABEL_VSYNC, "Vsync", "Vsync", "Вертикальная синхронизация (V-sync)", "垂直同步", "수직 동기화") \
   X(LABEL_WELCOME_DESCRIPTION, "Select a recent file or open a new or existing document. You can also drag and drop files into the window to open them.", "Selecciona un archivo reciente o abre un documento existente o nuevo. También puedes arrastrar y soltar archivos a la ventana para abrirlos.", "Выберите недавний файл или откройте новый или существующий документ. Вы также можете перетащить файлы в это окно, чтобы их открыть.", "选择最近的文件, 或打开新的/已有的文档. 你也可以将文件拖拽到窗口中以打开它们.", "최근 파일을 선택하거나 새 파일 또는 기존 파일을 엽니다. 파일을 여기로 드래그하여 열 수 있습니다.") \
   X(LABEL_WELCOME_RESTORE_POPUP, "Restore", "Restaurar", "Восстановиь", "恢复", "복원") \
@@ -486,6 +516,7 @@ namespace anm2ed
   X(TOAST_DESERIALIZE_LAYERS_FAILED, "Failed to deserialize layer(s):", "Falla al deserializar capas(s):", "Не удалось десериализировать слои: {0}", "反序列化动画层失败: {0}", "레이어 역직렬화 실패: {0}") \
   X(TOAST_DESERIALIZE_REGIONS_FAILED, "Failed to deserialize region(s): {0}", "Falla al deserializar región(es): {0}", "Не удалось десериализировать регионы: {0}", "反序列化区域失败: {0}", "영역 역직렬화 실패: {0}") \
   X(TOAST_DESERIALIZE_NULLS_FAILED, "Failed to deserialize null(s): {0}", "Falla al deserializar null(s): {0}", "Не удалось десериализировать нули: {0}", "反序列化Null失败: {0}", "Null 역직렬화 실패: {0}") \
+  X(TOAST_DESERIALIZE_OVERLAYS_FAILED, "Failed to deserialize overlay(s): {0}", "Failed to deserialize overlay(s): {0}", "Failed to deserialize overlay(s): {0}", "Failed to deserialize overlay(s): {0}", "Failed to deserialize overlay(s): {0}") \
   X(TOAST_DESERIALIZE_SPRITESHEETS_FAILED, "Failed to deserialize spritesheet(s): {0}", "Falla al deserializar spritesheet(s): {0}", "Не удалось десериализировать спрайт-листы: {0}", "反序列化图集失败: {0}", "스프라이트 시트 역직렬화 실패: {0}") \
   X(TOAST_EXPORT_RENDERED_ANIMATION, "Exported rendered animation to: {0}", "Se ha exportado la animacion renderizada a: {0}", "Рендерированные анимации экспортированы в: {0}", "渲染动画导出至: {0}", "{0}에 렌더링 된 애니메이션을 내보내기 했습니다.") \
   X(TOAST_EXPORT_RENDERED_ANIMATION_FAILED, "Could not output rendered animation: {0}", "No se pudo emitir la animacion renderizada: {0}", "Не удалось вывести рендерированную анимацию: {0}", "无法输出渲染动画: {0}", "{0}에 렌더링 된 애니메이션을 내보내기 할 수 없습니다.") \
@@ -493,6 +524,8 @@ namespace anm2ed
   X(TOAST_EXPORT_RENDERED_FRAMES_FAILED, "Could not export frames to: {0}", "No se pdo exportar Frames a: {0}", "Не удалось экспортировать кадры в: {0}", "无法导出帧至: {0}", "프레임을 내보내기 할 수 없습니다. {0}") \
   X(TOAST_EXPORT_SPRITESHEET, "Exported spritesheet to: {0}", "Se ha exportado spritesheet a: {0}", "Спрайт-лист экспортирован в: {0}", "导出图集至: {0}", "{0}에 스프라이트 시트를 내보내기 했습니다.") \
   X(TOAST_EXPORT_SPRITESHEET_FAILED, "Could not export spritesheet to: {0}", "No se pudo exportar spritesheet a: {0}", "Не удалось экспортировать спрайт-лист в: {0}", "无法导出图集至: {0}", "{0}에 스프라이트 시트를 내보내기 할 수 없습니다.") \
+  X(TOAST_OVERLAY_INIT_FAILED, "Failed to initialize overlay: {0}", "Failed to initialize overlay: {0}", "Failed to initialize overlay: {0}", "Failed to initialize overlay: {0}", "Failed to initialize overlay: {0}") \
+  X(TOAST_OVERLAY_INITIALIZED, "Initialized overlay #{0}: {1}", "Initialized overlay #{0}: {1}", "Initialized overlay #{0}: {1}", "Initialized overlay #{0}: {1}", "Initialized overlay #{0}: {1}") \
   X(TOAST_ADD_SPRITESHEET_FAILED, "Failed to add spritesheet! Open a document first.", "¡Error a añadir spritesheet! Abre un documento primero.", "Не удалось добавить спрайт-лист! Сначала откройте документ.", "无法添加图集！请先打开文档。", "스프라이트 시트를 추가할 수 없습니다! 먼저 문서를 여세요.") \
   X(TOAST_ADD_SOUND_FAILED, "Failed to add sound! Open a document first.", "¡Error al añadir sonido! Abre un documento primero.", "Не удалось добавить звук! Сначала откройте документ.", "无法添加声音！请先打开文档。", "사운드를 추가할 수 없습니다! 먼저 문서를 여세요.") \
   X(TOAST_INVALID_FFMPEG, "Unable to run FFmpeg. Make sure the executable exists, has the proper permissions, and is a valid FFmpeg executable.", "No se pudo ejecutar FFmpeg. Asegúrate de que el ejecutable exista, tenga los permisos adecuados y sea un FFmpeg válido.", "Не удалось запустить FFmpeg. Убедитесь, что исполняемый файл существует, имеет нужные права и является корректным исполняемым FFmpeg.", "无法运行 FFmpeg。请确保可执行文件存在，具有正确的权限，并且是有效的 FFmpeg 可执行文件。", "FFmpeg을 실행할 수 없습니다. 실행 파일이 존재하고 올바른 권한을 가지며 유효한 FFmpeg 실행 파일인지 확인하세요.") \
@@ -504,6 +537,7 @@ namespace anm2ed
   X(TOAST_REDO, "Redo: {0}", "Rehacer: {0}", "Повтор: {0}", "重做: {0}", "다시 실행: {0}") \
   X(ERROR_FILE_NOT_FOUND, "File not found!", "¡Archivo no encontrado!", "Файл не найден!", "找不到文件！", "파일을 찾을 수 없습니다!") \
   X(ERROR_FILE_PERMISSIONS, "File does not have write permissions!", "¡El archivo no tiene permisos de escritura!", "У файла нет прав на запись!", "文件没有写入权限！", "파일에 쓰기 권한이 없습니다!") \
+  X(TOAST_RELOAD_OVERLAY, "Reloaded overlay #{0}: {1}", "Reloaded overlay #{0}: {1}", "Reloaded overlay #{0}: {1}", "Reloaded overlay #{0}: {1}", "Reloaded overlay #{0}: {1}") \
   X(TOAST_RELOAD_SPRITESHEET, "Reloaded spritesheet #{0}: {1}", "Se ha recargado spritesheet #{0}: {1}", "Спрайт-лист #{0} перезагружен: {1}", "重新加载了图集 #{0}: {1}", "{0}번 스프라이트 시트 다시 불러옴: {1}") \
   X(TOAST_MERGE_SPRITESHEETS, "Merged selected spritesheets.", "Spritesheets seleccionados combinados.", "Выбранные спрайт-листы объединены.", "已合并所选图集。", "선택된 스프라이트 시트를 병합했습니다.") \
   X(TOAST_MERGE_SPRITESHEETS_FAILED, "Failed to merge selected spritesheets.", "No se pudieron combinar los spritesheets seleccionados.", "Не удалось объединить выбранные спрайт-листы.", "合并所选图集失败。", "선택된 스프라이트 시트 병합에 실패했습니다.") \
@@ -511,11 +545,15 @@ namespace anm2ed
   X(TOAST_PACK_SPRITESHEET_FAILED, "Failed to pack spritesheet.", "No se pudo empaquetar el spritesheet.", "Не удалось упаковать спрайт-лист.", "图集打包失败。", "스프라이트 시트 패킹에 실패했습니다.") \
   X(TOAST_RELOAD_SOUND, "Reloaded sound #{0}: {1}", "Se ha recargado sonido #{0}: {1}", "Звук #{0} перезагружен: {1}", "重新加载了声音 #{0}: {1}", "{0}번 사운드 다시 불러옴: {1}") \
   X(TOAST_SCAN_AND_SET_REGIONS, "Matched regionless frames to candidate regions.", "Se emparejaron frames sin region con regiones candidatas.", "Кадры без региона сопоставлены с подходящими регионами.", "已将无区域帧匹配到候选区域。", "영역이 없는 프레임을 후보 영역에 매칭했습니다.") \
+  X(TOAST_REMOVE_OVERLAY, "Removed overlay #{0}: {1}", "Removed overlay #{0}: {1}", "Removed overlay #{0}: {1}", "Removed overlay #{0}: {1}", "Removed overlay #{0}: {1}") \
   X(TOAST_REMOVE_SPRITESHEET, "Removed spritesheet #{0}: {1}", "Se ha removido spritesheet #{0}: {1}", "Спрайт-лист #{0} удален: {1}", "去除了图集 #{0}: {1}", "{0}번 스프라이트 시트 제거됨: {1}") \
+  X(TOAST_REPLACE_OVERLAY, "Replaced overlay #{0}: {1}", "Replaced overlay #{0}: {1}", "Replaced overlay #{0}: {1}", "Replaced overlay #{0}: {1}", "Replaced overlay #{0}: {1}") \
   X(TOAST_REPLACE_SPRITESHEET, "Replaced spritesheet #{0}: {1}", "Se ha reemplazado spritesheet #{0}: {1}", "Спрайт-лист #{0} заменен: {1}", "替换了图集 #{0}: {1}", "{0}번 스프라이트 시트 교체됨: {1}") \
   X(TOAST_REPLACE_SOUND, "Replaced sound #{0}: {1}", "Se ha reemplazado sonido #{0}: {1}", "Звук #{0} заменен: {1}", "已替换声音 #{0}: {1}", "{0}번 사운드 교체됨: {1}") \
   X(TOAST_SAVE_DOCUMENT, "Saved document to: {0}", "Documento Guardado en: {0}", "Документ сохранен в: {0}", "保存文件至: {0}", "{0}에 파일을 저장했습니다.") \
   X(TOAST_SAVE_DOCUMENT_FAILED, "Could not save document to: {0} ({1})", "No se pudo guardar el documento en: {0} ({1})", "Не удалось сохранить документ в: {0} ({1})", "无法保存文件至: {0} ({1})", "{0}에 파일을 저장할 수 없습니다.") \
+  X(TOAST_SAVE_OVERLAY, "Saved overlay #{0}: {1}", "Saved overlay #{0}: {1}", "Saved overlay #{0}: {1}", "Saved overlay #{0}: {1}", "Saved overlay #{0}: {1}") \
+  X(TOAST_SAVE_OVERLAY_FAILED, "Unable to save overlay #{0}: {1}", "Unable to save overlay #{0}: {1}", "Unable to save overlay #{0}: {1}", "Unable to save overlay #{0}: {1}", "Unable to save overlay #{0}: {1}") \
   X(TOAST_SAVE_SPRITESHEET, "Saved spritesheet #{0}: {1}", "Spritesheet Guardada #{0}: {1}", "Спрайт-лист #{0} сохранен: {1}", "已保存图集 #{0}: {1}", "{1}에 {0}번 스프라이트 시트를 저장했습니다.") \
   X(TOAST_SAVE_SPRITESHEET_FAILED, "Unable to save spritesheet #{0}: {1}", "No se pudo guardar spritesheet #{0}: {1}", "Не удалось сохранить спрайт-лист #{0}: {1}", "无法保存图集 #{0}: {1}", "{0}번 스프라이트 시트를 저장할 수 없습니다. {1}") \
   X(TOAST_SOUNDS_DESERIALIZE_ERROR, "Failed to deserialize sound(s): {0}", "Error al deserializar sonido(s): {0}", "Не удалось десериализировать звуки: {0}", "反序列化声音失败: {0}", "사운드 역직렬화 실패: {0}") \
@@ -535,6 +573,7 @@ namespace anm2ed
   X(TOOLTIP_ADD_LAYER, "Add a layer.", "Añadir una capa.", "Добавить слой.", "添加一个动画层.", "레이어를 추가합니다.") \
   X(TOOLTIP_ADD_NULL, "Add a null.", "Añadir Null.", "Добавить нуль.", "添加一个Null.", "Null을 추가합니다.") \
   X(TOOLTIP_ADD_SPRITESHEET, "Add a new spritesheet.", "Añadir nueva spritesheet.", "Добавить новый спрайт-лист.", "添加一个新图集.", "새 스프라이트 시트를 추가합니다.") \
+  X(TOOLTIP_ADD_OVERLAY, "Add a new overlay to the selected spritesheet.", "Add a new overlay to the selected spritesheet.", "Add a new overlay to the selected spritesheet.", "Add a new overlay to the selected spritesheet.", "Add a new overlay to the selected spritesheet.") \
   X(TOOLTIP_ADD_VALUES, "Add the specified values onto each frame.\n(Boolean/mapped values will simply be set.)", "Añadir los valores especifiados a cada Frame.\n(Los valores booleanos/mapeados simplemente se estableceran.)", "Добавить указанные значения к каждому кадру.\n(Булевы/сопоставленные значения будут просто установлены.)", "将指定的数值添加到每一帧上. (布尔/映射值将直接被设置.)", "각 프레임의 속성에 지정한 값을 더합니다.\n(불리언/매핑 값은 그대로 설정됩니다.)") \
   X(TOOLTIP_ADJUST, "Set the value of each specified value onto the frame's equivalent.", "Ajustar el valor de cada valor especificado a el equivalente del Frame.", "Установить значение каждого указанного значения к эквиваленту кадра.", "将每个指定的数值设置到对应帧的相等的属性上.", "지정된 각 값을 프레임의 대응 값으로 설정합니다.") \
   X(TOOLTIP_ALL_ITEMS_VISIBLE, "All items are visible. Press to only show layers.", "Todos los items son visibles. Presiona solo para mostrar capas.", "Все предметы видимы. Нажмите, чтобы только показать слои.", "所有物品均可见. 点击即可仅显示动画层.", "모든 항목이 표시됩니다. 레이어만 표시하려면 누르세요.") \
@@ -562,14 +601,15 @@ namespace anm2ed
   X(TOOLTIP_CHANGE_ALL_NULLS, "The frame property changes will apply to null frames.", "Los cambios de propiedades de frame se aplicaran a los frames null.", "Изменения свойств кадра будут применены к нулевым кадрам.", "帧属性更改将应用于 Null 帧。", "프레임 속성 변경 사항을 Null 프레임에 적용합니다.") \
   X(TOOLTIP_CENTER_VIEW, "Centers the view.", "Centra la vista.", "Центрирует вид.", "居中视角.", "미리보기 화면을 가운데에 맞춥니다.") \
   X(TOOLTIP_CLOSE_SETTINGS, "Close without updating settings.", "Cerrar sin actualizar las configuraciones.", "Закрыть без обновления настройки.", "关闭但不保存设置.", "설정을 갱신하지 않고 닫습니다.") \
-  X(TOOLTIP_SERIALIZE_GROUPS, "Serialize animation groups.\nThe Binding of Isaac: Rebirth does not support groups.", "Serializa grupos de animación.\nThe Binding of Isaac: Rebirth no admite grupos.", "Сериализует группы анимации.\nThe Binding of Isaac: Rebirth не поддерживает группы.", "序列化动画组。\nThe Binding of Isaac: Rebirth 不支持组。", "애니메이션 그룹을 직렬화합니다.\nThe Binding of Isaac: Rebirth는 그룹을 지원하지 않습니다.") \
-  X(TOOLTIP_SERIALIZE_REGIONS, "Serialize spritesheet regions.\nThe Binding of Isaac: Rebirth does not support regions.", "Serializa regiones de spritesheet.\nThe Binding of Isaac: Rebirth no admite regiones.", "Сериализует регионы спрайт-листа.\nThe Binding of Isaac: Rebirth не поддерживает регионы.", "序列化图集区域。\nThe Binding of Isaac: Rebirth 不支持区域。", "스프라이트 시트 영역을 직렬화합니다.\nThe Binding of Isaac: Rebirth는 영역을 지원하지 않습니다.") \
-  X(TOOLTIP_SERIALIZE_SOUNDS, "Serialize sounds.\nThe Binding of Isaac: Rebirth does not support sounds in Anm2 files.", "Serializa sonidos.\nThe Binding of Isaac: Rebirth no admite sonidos en archivos Anm2.", "Сериализует звуки.\nThe Binding of Isaac: Rebirth не поддерживает звуки в Anm2-файлах.", "序列化声音。\nThe Binding of Isaac: Rebirth 不支持 Anm2 文件中的声音。", "사운드를 직렬화합니다.\nThe Binding of Isaac: Rebirth는 Anm2 파일의 사운드를 지원하지 않습니다.") \
-  X(TOOLTIP_KEEP_REDUNDANT_FRAME_REGION_VALUES, "Keep crop, size, and pivot values on frames with regions.\nThis saves information; The Binding of Isaac: Rebirth still needs these values.", "Mantiene los valores de recorte, tamaño y pivote en frames con regiones.\nEsto guarda información; The Binding of Isaac: Rebirth todavía necesita estos valores.", "Сохраняет значения обрезки, размера и точки вращения в кадрах с регионами.\nЭто сохраняет информацию; The Binding of Isaac: Rebirth всё равно нужны эти значения.", "保留带区域帧的裁剪、大小和枢轴值。\n这会保存信息；The Binding of Isaac: Rebirth 仍然需要这些值。", "영역이 있는 프레임의 자르기, 크기, 중심점 값을 유지합니다.\n이 정보는 저장됩니다; The Binding of Isaac: Rebirth에도 이 값들이 필요합니다.") \
-  X(TOOLTIP_BAKE_SPECIAL_INTERPOLATED_FRAMES_ON_SAVE, "Bake frames with special interpolation modes only in the saved file.\nAnm2Ed restores them when loading, and the file works in The Binding of Isaac: Rebirth as-is.", "Hornea frames con modos de interpolación especial solo en el archivo guardado.\nAnm2Ed los restaura al cargar, y el archivo funciona en The Binding of Isaac: Rebirth tal cual.", "Запекает кадры со специальными режимами интерполяции только в сохраняемом файле.\nAnm2Ed восстанавливает их при загрузке, а файл сразу работает в The Binding of Isaac: Rebirth.", "仅在保存的文件中烘焙带特殊插值模式的帧。\nAnm2Ed 加载时会还原它们，文件可直接用于 The Binding of Isaac: Rebirth。", "저장되는 파일에서만 특수 보간 모드 프레임을 베이크합니다.\nAnm2Ed는 로드할 때 이를 복원하며, 파일은 The Binding of Isaac: Rebirth에서 그대로 작동합니다.") \
+  X(TOOLTIP_KEEP_REDUNDANT_FRAME_REGION_VALUES, "Keep crop, size, and pivot values on frames with regions.\nIf disabled, The Binding of Isaac: Rebirth may have parsing or playback issues.", "Mantiene los valores de recorte, tamaño y pivote en frames con regiones.\nSi se desactiva, The Binding of Isaac: Rebirth puede tener problemas de análisis o reproducción.", "Сохраняет значения обрезки, размера и точки вращения в кадрах с регионами.\nЕсли отключить, в The Binding of Isaac: Rebirth возможны проблемы разбора или воспроизведения.", "保留带区域帧的裁剪、大小和枢轴值。\n如果禁用，The Binding of Isaac: Rebirth 可能出现解析或播放问题。", "영역이 있는 프레임의 자르기, 크기, 중심점 값을 유지합니다.\n끄면 The Binding of Isaac: Rebirth에서 파싱 또는 재생 문제가 생길 수 있습니다.") \
+  X(TOOLTIP_BAKE_SPECIAL_INTERPOLATED_FRAMES_ON_SAVE, "Bake frames with special interpolation modes only in the saved file.\nIf disabled, The Binding of Isaac: Rebirth may have parsing or playback issues.", "Hornea frames con modos de interpolación especial solo en el archivo guardado.\nSi se desactiva, The Binding of Isaac: Rebirth puede tener problemas de análisis o reproducción.", "Запекает кадры со специальными режимами интерполяции только в сохраняемом файле.\nЕсли отключить, в The Binding of Isaac: Rebirth возможны проблемы разбора или воспроизведения.", "仅在保存的文件中烘焙带特殊插值模式的帧。\n如果禁用，The Binding of Isaac: Rebirth 可能出现解析或播放问题。", "저장되는 파일에서만 특수 보간 모드 프레임을 베이크합니다.\n끄면 The Binding of Isaac: Rebirth에서 파싱 또는 재생 문제가 생길 수 있습니다.") \
+  X(TOOLTIP_BAKE_GROUP_FRAMES_ON_SAVE, "Bake child layer/null frames when their group root has non-default transform or color values.\nIf disabled, The Binding of Isaac: Rebirth may have parsing or playback issues.", "Hornea frames de capas/null hijos cuando la raíz del grupo tenga transformaciones o valores de color no predeterminados.\nSi se desactiva, The Binding of Isaac: Rebirth puede tener problemas de análisis o reproducción.", "Запекает дочерние кадры слоев/null, когда корень группы имеет нестандартные преобразования или цветовые значения.\nЕсли отключить, в The Binding of Isaac: Rebirth возможны проблемы разбора или воспроизведения.", "当组根具有非默认变换或颜色值时，烘焙子图层/null 帧。\n如果禁用，The Binding of Isaac: Rebirth 可能出现解析或播放问题。", "그룹 루트에 기본값이 아닌 변형 또는 색상 값이 있을 때 하위 레이어/null 프레임을 베이크합니다.\n끄면 The Binding of Isaac: Rebirth에서 파싱 또는 재생 문제가 생길 수 있습니다.") \
   X(TOOLTIP_COLOR_OFFSET, "Change the color added onto the frame.", "Cambia el color añadido al Frame.", "Изменить цвет, который добавлен на кадр.", "更改覆盖在帧上的颜色.", "프레임에 더해지는 색을 변경합니다.") \
   X(TOOLTIP_REGION, "Set the spritesheet region the frame will use.", "Establece la región del spritesheet que usará el frame.", "Установить регион спрайт-листа, который будет использовать кадр.", "设置帧将使用的图集区域.", "프레임이 사용할 스프라이트 시트 영역을 설정합니다.") \
   X(TOOLTIP_REGION_PROPERTIES_ORIGIN, "Use a preset origin for the region.", "Usa un origen predefinido para la región.", "Использовать предустановленную точку отсчета для региона.", "为区域使用预设原点。", "영역에 사전 설정된 원점을 사용합니다.") \
+  X(TOOLTIP_MERGE_PRESET_APPEND_AS_NEW, "Add incoming content as new entries. Matching names are renamed before import.", "Add incoming content as new entries. Matching names are renamed before import.", "Add incoming content as new entries. Matching names are renamed before import.", "Add incoming content as new entries. Matching names are renamed before import.", "Add incoming content as new entries. Matching names are renamed before import.") \
+  X(TOOLTIP_MERGE_PRESET_MERGE_BY_NAME, "Keep existing content and update matching names with incoming definitions and tracks.", "Keep existing content and update matching names with incoming definitions and tracks.", "Keep existing content and update matching names with incoming definitions and tracks.", "Keep existing content and update matching names with incoming definitions and tracks.", "Keep existing content and update matching names with incoming definitions and tracks.") \
+  X(TOOLTIP_MERGE_PRESET_REPLACE_MATCHING, "Replace same-named animations and definitions with incoming content, and add anything missing.", "Replace same-named animations and definitions with incoming content, and add anything missing.", "Replace same-named animations and definitions with incoming content, and add anything missing.", "Replace same-named animations and definitions with incoming content, and add anything missing.", "Replace same-named animations and definitions with incoming content, and add anything missing.") \
   X(TOOLTIP_COLUMNS, "Set how many columns the spritesheet will have.", "Ajusta cuantas columnas va a tener el spritesheet.", "Установить сколько колонн будет иметь спрайт-лист.", "设置图集有多少列.", "스프라이트 시트의 열 수를 설정합니다.") \
   X(TOOLTIP_CROP, "Change the crop position the frame uses.", "Cambiar la poscicion de recortado que usa el Frame.", "Изменить позицию обрезки, которую использует кадр.", "更改当前帧的裁剪位置.", "프레임에 대응되는 스프라이트 시트를 어느 지점부터 사용할지 변경합니다.") \
   X(TOOLTIP_CUSTOM_RANGE, "Toggle using a custom range for the animation.", "Alterna usando un rango personalizado para la animacion.", "Переключить использование пользовательского диапазона для анимации.", "切换是否让动画使用自定义区间.", "애니메이션에 사용자 지정 길이를 사용할지 정합니다.") \
@@ -642,7 +682,9 @@ namespace anm2ed
   X(TOOLTIP_POSITION, "Change the position of the frame.", "Cambia la posicion del Frame.", "Изменить позицию кадра.", "更改此帧的位置.", "프레임의 위치를 변경합니다.") \
   X(TOOLTIP_PREVIEW_ZOOM, "Change the zoom of the preview.", "Cambia el zoom de la vista previa.", "Изменить масштаб предпросмотра.", "更改预览视图的缩放.", "미리보기의 줌을 변경합니다.") \
   X(TOOLTIP_PREVIEW_TRANSPARENT, "Toggle the animation preview background being transparent.", "Alterna la transparencia del fondo de la vista previa de animacion.", "Переключить прозрачность фона предпросмотра анимации.", "切换动画预览背景是否透明.", "애니메이션 미리보기 배경을 투명하게 전환합니다.") \
-  X(TOOLTIP_RAW, "Record only the raw animation; i.e., only its layers, to its bounds.", "Graba solo la animacion cruda; i. e., Solo sus capas.", "Записывать только «сырую» анимацию, т. е. только ее слои.", "仅保存原生动画; 比如只保存动画层.", "Raw 애니메이션만 녹화합니다. 즉, 레이어만 녹화합니다.") \
+  X(TOOLTIP_USE_ANIMATION_BOUNDS, "Render using the animation's bounds instead of the preview viewport.", "Render using the animation's bounds instead of the preview viewport.", "Render using the animation's bounds instead of the preview viewport.", "Render using the animation's bounds instead of the preview viewport.", "Render using the animation's bounds instead of the preview viewport.") \
+  X(TOOLTIP_USE_ISOLATED_ANIMATION, "Render only animation layers with a transparent background and preview helpers hidden.", "Render only animation layers with a transparent background and preview helpers hidden.", "Render only animation layers with a transparent background and preview helpers hidden.", "Render only animation layers with a transparent background and preview helpers hidden.", "Render only animation layers with a transparent background and preview helpers hidden.") \
+  X(TOOLTIP_RELOAD_OVERLAYS, "Reloads the selected overlays.", "Reloads the selected overlays.", "Reloads the selected overlays.", "Reloads the selected overlays.", "Reloads the selected overlays.") \
   X(TOOLTIP_RELOAD_SPRITESHEETS, "Reloads the selected spritesheets.", "Recarga la spritesheet seleccionada.", "Перезагружает выбранные спрайт-листы.", "重新加载所选图集.", "선택한 스프라이트 시트를 다시 불러옵니다.") \
   X(TOOLTIP_RELOAD_SOUNDS, "Reloads the selected sounds.", "Recarga los sonidos seleccionados.", "Перезагружает выбранные звуки.", "重新加载所选声音.", "선택한 사운드를 다시 불러옵니다.") \
   X(TOOLTIP_REMOVE_ANIMATION, "Remove the selected animation(s).", "Remueve la(s) animacion(es) seleccionada(s).", "Удалить выбранные анимации.", "去除所选动画.", "선택한 애니메이션을 제거합니다.") \
@@ -654,10 +696,12 @@ namespace anm2ed
   X(TOOLTIP_REMOVE_UNUSED_NULLS, "Remove unused nulls (i.e., ones not used in any animation.)", "Remueve nulls no utilizados (i. e., aquellos no usados en ninguna animacion.)", "Удалить неиспользуемые нули (т. е. нули, которые не используются ни одной анимацией.)", "去除未使用的Null (未被任何动画使用的那些.)", "사용되지 않는 Null(어떤 애니메이션에서도 사용되지 않는 것)을 제거합니다.") \
   X(TOOLTIP_REMOVE_UNUSED_SOUNDS, "Remove unused sounds (i.e., ones not used in any trigger.)", "Remueve sonidos no utilizados (i. e., aquellos no usados en ningun trigger.)", "Удалить неиспользуемые звуки (т. е. звуки, которые не используются ни одным триггером.)", "去除未使用的声音 (未被任何触发器使用的那些.)", "사용되지 않는 사운드(어떤 트리거에서도 사용되지 않는 것)를 제거합니다.") \
   X(TOOLTIP_REMOVE_UNUSED_SPRITESHEETS, "Remove all unused spritesheets (i.e., not used in any layer.).", "Remueve todos los spritesheets no utilizados (i. e., aquellos no usados en ninguna capa.)", "Удалить неиспользуемые спрайт-листы (т. е. те, которые не используются ни одним слоем.)", "去除未使用的图集 (未被任何动画层使用的那些.)", "사용되지 않는 모든 스프라이트 시트(어떤 레이어에서도 사용되지 않는 것)를 제거합니다.") \
+  X(TOOLTIP_REMOVE_OVERLAYS, "Remove the selected overlays.", "Remove the selected overlays.", "Remove the selected overlays.", "Remove the selected overlays.", "Remove the selected overlays.") \
   X(TOOLTIP_RENDER_BUTTON, "Render the animation using the current settings.", "Renderiza la animacion usando la configuracion actual", "Рендерировать анимацию, используя текущие настройки.", "应用当前设置去渲染动画.", "현재 설정으로 애니메이션을 렌더링합니다.") \
   X(TOOLTIP_RENDER_TYPE, "Set the type of the output.", "Ajusta el tipo de la salida", "Установить тип вывода.", "设置输出的类型.", "출력 유형을 설정합니다.") \
   X(TOOLTIP_REPEAT_DELAY, "Set how often, after repeating begins, key inputs will be fired.", "Ajusta que tanto, despues de que empieza la repeticion, seran disparadas las entradas clave.", "Установить, как часто после начала повторения будут срабатывать нажатия клавиш.", "更改键盘按键开启重复时, 重复的速率.", "반복 입력이 시작된 후 입력이 얼마나 자주 들어갈지 설정합니다.") \
   X(TOOLTIP_REPLACE_SPRITESHEET, "Replace the selected spritesheet with a new one.", "Reemplaza la spritesheet seleccionada con una nueva.", "Заменить выбранный спрайт-лист на новый.", "替换所选旧图集为新图集.", "선택된 스프라이트 시트를 새 시트로 교체합니다.") \
+  X(TOOLTIP_REPLACE_OVERLAY, "Replace the selected overlay with a new one.", "Replace the selected overlay with a new one.", "Replace the selected overlay with a new one.", "Replace the selected overlay with a new one.", "Replace the selected overlay with a new one.") \
   X(TOOLTIP_REPLACE_SOUND, "Replace the selected sound with a new one.", "Reemplaza el sonido seleccionado con uno nuevo.", "Заменяет выбранный звук новым.", "用新的声音替换所选声音.", "선택한 사운드를 새 사운드로 교체합니다.") \
   X(TOOLTIP_ROOT_TRANSFORM, "Root frames will transform the rest of the animation.", "Los Frames root transformaran el resto de la animacion.", "Корневые кадры трансформируют остаток анимации.", "与“根”有关的帧会跟随整个动画而变换.", "Root 프레임이 나머지 애니메이션을 변형합니다.") \
   X(TOOLTIP_ROTATION, "Change the rotation of the frame.", "Cambia la rotacion del Frame.", "Изменить поворот кадра.", "更改此帧的旋转.", "프레임의 회전값을 변경합니다.") \
@@ -665,6 +709,7 @@ namespace anm2ed
   X(TOOLTIP_ROUND_SCALE, "Scale will be rounded to the nearest whole number.", "La escala sera aproximada al numero entero mas cercano.", "Масштаб будет округлен к самому близкому целому числу.", "缩放数值会被取整.", "비율을 가장 가까운 정수로 반올림합니다.") \
   X(TOOLTIP_ROWS, "Set how many rows the spritesheet will have.", "Ajusta cuantas filas tendra el spritsheet.", "Установить сколько рядов будет иметь спрайт-лист.", "设置图集的行数量.", "스프라이트 시트의 행 수를 설정합니다.") \
   X(TOOLTIP_SAVE_SPRITESHEETS, "Save the selected spritesheets.", "Guarda los spritesheets seleccionados.", "Сохранить выбранные спрайт-листы.", "保存所选图集.", "선택한 스프라이트 시트를 저장합니다.") \
+  X(TOOLTIP_SAVE_OVERLAYS, "Save the selected overlays.", "Save the selected overlays.", "Save the selected overlays.", "Save the selected overlays.", "Save the selected overlays.") \
   X(TOOLTIP_SCALE, "Change the scale of the frame, in percent.", "Cambia la escala del Frame, en porcentaje.", "Изменить масштаб кадра.", "修改此帧的缩放.", "프레임의 비율을 변경합니다.") \
   X(TOOLTIP_SCALE_OUTPUT, "Set the output scale of the animation.", "Ajusta la escala de salida de la animacion.", "Установить масштаб анимации при выводе.", "设置输出动画的缩放.", "애니메이션의 출력 비율을 설정합니다.") \
   X(TOOLTIP_SETTINGS_SAVE, "Use the configured settings.", "Usa las opciones configuradas.", "Использовать настроенные настройки.", "应用更改的设置.", "구성된 설정을 사용합니다.") \

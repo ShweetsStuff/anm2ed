@@ -36,7 +36,6 @@ namespace anm2ed::imgui
     auto& anm2 = document.anm2;
     auto& reference = document.reference;
     auto& referenceSpritesheet = document.spritesheet.reference;
-    auto referenceItemType = static_cast<ItemType>(reference.itemType);
     auto& pan = document.editorPan;
     auto& zoom = document.editorZoom;
     auto& backgroundColor = settings.editorBackgroundColor;
@@ -62,10 +61,17 @@ namespace anm2ed::imgui
     };
     if (auto selectedLayerSpritesheet = selected_layer_spritesheet_get();
         selectedLayerSpritesheet != -1 && document.editTarget != Document::EditTarget::REGION &&
-        document.editTarget != Document::EditTarget::SPRITESHEET)
+        document.editTarget != Document::EditTarget::OVERLAY && document.editTarget != Document::EditTarget::SPRITESHEET)
       referenceSpritesheet = selectedLayerSpritesheet;
     auto spritesheet = anm2.element_get(ElementType::SPRITESHEET, referenceSpritesheet);
-    auto texture = document.texture_get(referenceSpritesheet);
+    auto baseTexture = document.texture_get(referenceSpritesheet);
+    auto activeOverlayId = -1;
+    auto activeOverlay = document.editTarget == Document::EditTarget::OVERLAY ? document.overlay_get() : nullptr;
+    if (activeOverlay && document.overlay_spritesheet_id_get(activeOverlay->id) == referenceSpritesheet)
+      activeOverlayId = activeOverlay->id;
+    else
+      activeOverlay = nullptr;
+    auto texture = activeOverlayId != -1 ? document.overlay_texture_get(activeOverlayId) : baseTexture;
     auto& tool = settings.tool;
     auto& shaderGrid = resources.shaders[shader::GRID];
     auto& shaderTexture = resources.shaders[shader::TEXTURE];
@@ -226,17 +232,28 @@ namespace anm2ed::imgui
       viewport_set();
       clear(isTransparent ? vec4(0) : vec4(backgroundColor, 1.0f));
 
-      auto frame =
-          anm2.element_get(reference.animationIndex, referenceItemType, reference.frameIndex, reference.itemID);
+      auto frame = reference.frameIndex >= 0 ? anm2.element_get(reference) : nullptr;
 
-      if (spritesheet && texture && texture->is_valid())
+      auto viewTexture = baseTexture && baseTexture->is_valid() ? baseTexture : texture;
+
+      if (spritesheet && viewTexture && viewTexture->is_valid())
       {
         auto transform = transform_get(zoom, pan);
 
-        auto spritesheetModel = math::quad_model_get(texture->size);
+        auto spritesheetModel = math::quad_model_get(viewTexture->size);
         auto spritesheetTransform = transform * spritesheetModel;
 
-        texture_render(shaderTexture, texture->id, spritesheetTransform);
+        if (baseTexture && baseTexture->is_valid()) texture_render(shaderTexture, baseTexture->id, spritesheetTransform);
+
+        for (auto& overlay : spritesheet->children)
+        {
+          if (overlay.type != ElementType::OVERLAY) continue;
+          if (!overlay.isVisible) continue;
+          auto overlayTexture = document.overlay_texture_get(overlay.id);
+          if (!overlayTexture || !overlayTexture->is_valid()) continue;
+          auto overlayTransform = transform * math::quad_model_get(overlayTexture->size);
+          texture_render(shaderTexture, overlayTexture->id, overlayTransform);
+        }
 
         if (isGrid) grid_render(shaderGrid, zoom, pan, gridSize, gridOffset, gridColor);
 
@@ -376,10 +393,10 @@ namespace anm2ed::imgui
         auto editReference = reference;
         if (!selectedFrameReferences.contains(reference) && !selectedFrameReferences.empty())
           editReference = *selectedFrameReferences.begin();
-        auto editReferenceItemType = static_cast<ItemType>(editReference.itemType);
-        auto frame = anm2.element_get(editReference.animationIndex, editReferenceItemType, editReference.frameIndex,
-                                      editReference.itemID);
-        auto item = anm2.element_get(editReference.animationIndex, editReferenceItemType, editReference.itemID);
+        auto frame = editReference.frameIndex >= 0 ? anm2.element_get(editReference) : nullptr;
+        auto itemReference = editReference;
+        itemReference.frameIndex = -1;
+        auto item = anm2.element_get(itemReference);
         auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, editReference.itemID);
         bool isReferenceLayerOnSpritesheet =
             frame && editReference.itemID > -1 && layer && layer->spritesheetId == referenceSpritesheet;
@@ -423,11 +440,28 @@ namespace anm2ed::imgui
           auto fraction = current - glm::floor(current);
           return glm::floor(value) + fraction;
         };
-        auto snapshot_push = [&](StringType messageType)
+        auto frame_snapshot_push = [&](StringType messageType, const std::set<Reference>& frameReferences)
+        {
+          auto message = std::string(localize.get(messageType));
+          auto queuedFrameReferences = frameReferences;
+          manager.command_push({manager.selected,
+                                [message, queuedFrameReferences](Manager&, Document& document)
+                                { document.frames_snapshot(message, queuedFrameReferences); }});
+        };
+        auto region_snapshot_push = [&](StringType messageType, const std::set<int>& regionIds)
+        {
+          auto message = std::string(localize.get(messageType));
+          auto queuedSpritesheet = referenceSpritesheet;
+          auto queuedRegionIds = regionIds;
+          manager.command_push({manager.selected,
+                                [message, queuedSpritesheet, queuedRegionIds](Manager&, Document& document)
+                                { document.regions_snapshot(message, queuedSpritesheet, queuedRegionIds); }});
+        };
+        auto texture_snapshot_push = [&](StringType messageType)
         {
           auto message = std::string(localize.get(messageType));
           manager.command_push(
-              {manager.selected, [message](Manager&, Document& document) { document.snapshot(message); }});
+              {manager.selected, [message](Manager&, Document& document) { document.textures_snapshot(message); }});
         };
         auto document_change_push = [&](Document::ChangeType changeType)
         {
@@ -443,13 +477,16 @@ namespace anm2ed::imgui
                {
                  std::map<Reference, std::set<int>> groupedFrames{};
                  for (auto frameReference : queuedFrameReferences)
-                   groupedFrames[{frameReference.animationIndex, frameReference.itemType, frameReference.itemID, -1}]
-                       .insert(frameReference.frameIndex);
+                 {
+                   auto itemReference = frameReference;
+                   itemReference.frameIndex = -1;
+                   groupedFrames[itemReference].insert(frameReference.frameIndex);
+                 }
 
                  for (auto& [itemReference, itemFrames] : groupedFrames)
                  {
                    auto itemType = static_cast<ItemType>(itemReference.itemType);
-                   auto item = document.anm2.element_get(itemReference.animationIndex, itemType, itemReference.itemID);
+                   auto item = document.anm2.element_get(itemReference);
                    if (!item) continue;
                    frames_change(*item, frameChange, itemType, changeType, itemFrames);
                  }
@@ -461,24 +498,26 @@ namespace anm2ed::imgui
                                                       ChangeType changeType = ChangeType::ADJUST)
         {
           auto queuedReference = editReference;
-          auto queuedReferenceItemType = editReferenceItemType;
           auto queuedFrameReferences = frameReferences;
           manager.command_push(
               {manager.selected, [=](Manager&, Document& document)
                {
-                 auto frame = document.anm2.element_get(queuedReference.animationIndex, queuedReferenceItemType,
-                                                        queuedReference.frameIndex, queuedReference.itemID);
+                 if (queuedReference.frameIndex < 0) return;
+                 auto frame = document.anm2.element_get(queuedReference);
                  if (!frame) return;
 
                  std::map<Reference, std::set<int>> groupedFrames{};
                  for (auto frameReference : queuedFrameReferences)
-                   groupedFrames[{frameReference.animationIndex, frameReference.itemType, frameReference.itemID, -1}]
-                       .insert(frameReference.frameIndex);
+                 {
+                   auto itemReference = frameReference;
+                   itemReference.frameIndex = -1;
+                   groupedFrames[itemReference].insert(frameReference.frameIndex);
+                 }
 
                  for (auto& [itemReference, itemFrames] : groupedFrames)
                  {
                    auto itemType = static_cast<ItemType>(itemReference.itemType);
-                   auto item = document.anm2.element_get(itemReference.animationIndex, itemType, itemReference.itemID);
+                   auto item = document.anm2.element_get(itemReference);
                    if (!item) continue;
                    frames_change(*item, frameChangeGet(*frame), itemType, changeType, itemFrames);
                  }
@@ -602,9 +641,11 @@ namespace anm2ed::imgui
         auto texture_line_apply = [&](ivec2 start, ivec2 end, vec4 color)
         {
           auto queuedSpritesheet = referenceSpritesheet;
+          auto queuedOverlay = activeOverlayId;
           manager.command_push({manager.selected, [=](Manager&, Document& document)
                                 {
-                                  auto texture = document.texture_get(queuedSpritesheet);
+                                  auto texture = queuedOverlay != -1 ? document.overlay_texture_get(queuedOverlay)
+                                                                     : document.texture_get(queuedSpritesheet);
                                   if (!texture) return;
                                   texture->pixel_line(start, end, color);
                                 }});
@@ -612,8 +653,15 @@ namespace anm2ed::imgui
         auto texture_change_push = [&]()
         {
           auto queuedSpritesheet = referenceSpritesheet;
+          auto queuedOverlay = activeOverlayId;
           manager.command_push(
-              {manager.selected, [=](Manager&, Document& document) { document.texture_change(queuedSpritesheet); }});
+              {manager.selected, [=](Manager&, Document& document)
+               {
+                 if (queuedOverlay != -1)
+                   document.overlay_texture_change(queuedOverlay);
+                 else
+                   document.texture_change(queuedSpritesheet);
+               }});
         };
 
         auto region_selection_set = [&](int id)
@@ -701,7 +749,7 @@ namespace anm2ed::imgui
               region_selection_set(hoveredRegionId);
               if (isReferenceLayerOnSpritesheet)
               {
-                snapshot_push(EDIT_FRAME_REGION);
+                frame_snapshot_push(EDIT_FRAME_REGION, selectedFrameReferences);
                 FrameChange change{};
                 change.regionId = hoveredRegionId;
                 if (auto region = region_get(hoveredRegionId))
@@ -726,7 +774,7 @@ namespace anm2ed::imgui
               auto region = region_get(regionReference);
               if (!region) break;
 
-              if (isBegin) snapshot_push(EDIT_REGION_MOVE);
+              if (isBegin) region_snapshot_push(EDIT_REGION_MOVE, {regionReference});
               if (isMouseDown) region_pivot_set(regionReference, pivot_snap(mousePos - region->crop, region->pivot));
               if (isLeftPressed) region_pivot_offset(regionReference, vec2(-step, 0));
               if (isRightPressed) region_pivot_offset(regionReference, vec2(step, 0));
@@ -749,7 +797,7 @@ namespace anm2ed::imgui
             }
 
             if (!item || !frame || selectedFrameToolReferences.empty() || isRegionInUse) break;
-            if (isBegin) snapshot_push(EDIT_FRAME_PIVOT);
+            if (isBegin) frame_snapshot_push(EDIT_FRAME_PIVOT, selectedFrameToolReferences);
             if (isMouseDown)
             {
               auto pivot = pivot_snap(mousePos - frame->crop, frame->pivot);
@@ -784,7 +832,7 @@ namespace anm2ed::imgui
             if ((isRegionEditTarget || isRegionInUse || selectedFrameToolReferences.empty()) && !regionSelection.empty())
             {
               if (!spritesheet || regionSelection.empty()) break;
-              if (isBegin) snapshot_push(EDIT_REGION_CROP);
+              if (isBegin) region_snapshot_push(EDIT_REGION_CROP, regionSelection);
 
               if (isMouseClicked)
               {
@@ -825,7 +873,7 @@ namespace anm2ed::imgui
             }
 
             if (!item || !frame || selectedFrameToolReferences.empty() || isRegionInUse) break;
-            if (isBegin) snapshot_push(EDIT_FRAME_CROP);
+            if (isBegin) frame_snapshot_push(EDIT_FRAME_CROP, selectedFrameToolReferences);
 
             if (isMouseClicked)
             {
@@ -880,7 +928,7 @@ namespace anm2ed::imgui
           {
             if (!texture) break;
             auto color = useTool == tool::DRAW ? toolColor : vec4();
-            if (isMouseClicked) snapshot_push(useTool == tool::DRAW ? EDIT_DRAW : EDIT_ERASE);
+            if (isMouseClicked) texture_snapshot_push(useTool == tool::DRAW ? EDIT_DRAW : EDIT_ERASE);
             if (isMouseDown) texture_line_apply(ivec2(previousMousePos), ivec2(mousePos), color);
             if (isMouseReleased) texture_change_push();
             break;

@@ -16,7 +16,7 @@ namespace anm2ed
     return string;
   }
 
-  bool Clipboard::is_empty() { return get().empty(); }
+  bool Clipboard::is_empty() { return !SDL_HasClipboardText(); }
 
-  void Clipboard::set(const std::string& string) { SDL_SetClipboardText(string.data()); }
+  void Clipboard::set(const std::string& string) { SDL_SetClipboardText(string.c_str()); }
 }

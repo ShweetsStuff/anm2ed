@@ -12,6 +12,7 @@
 #include <glm/glm.hpp>
 
 #include "origin.hpp"
+#include "shader.hpp"
 #include "types.hpp"
 
 namespace anm2ed
@@ -49,6 +50,7 @@ namespace anm2ed
       NONE,
       FRAME,
       REGION,
+      OVERLAY,
       SPRITESHEET
     };
 
@@ -56,6 +58,14 @@ namespace anm2ed
     {
       PRESERVE,
       SET
+    };
+
+    enum FileMergePreset
+    {
+      FILE_MERGE_PRESET_MERGE_BY_NAME,
+      FILE_MERGE_PRESET_APPEND_AS_NEW,
+      FILE_MERGE_PRESET_REPLACE_MATCHING,
+      FILE_MERGE_PRESET_COUNT
     };
 
     std::filesystem::path path{};
@@ -72,10 +82,12 @@ namespace anm2ed
     Storage& layer = current.layer;
     Storage& merge = current.merge;
     Storage& null = current.null;
+    Storage& overlay = current.overlay;
     Storage& region = current.region;
     Storage& sound = current.sound;
     Storage& spritesheet = current.spritesheet;
     std::map<int, resource::Texture>& textures = current.textures;
+    std::map<int, resource::Texture>& overlayTextures = current.overlayTextures;
     std::map<int, resource::Audio>& sounds = current.sounds;
     Anm2& anm2 = current.anm2;
     Reference& reference = current.reference;
@@ -100,8 +112,14 @@ namespace anm2ed
     bool isForceDirty{false};
     std::unordered_map<int, uint64_t> spritesheetHashes{};
     std::unordered_map<int, uint64_t> spritesheetSaveHashes{};
+    std::unordered_map<int, uint64_t> overlayHashes{};
+    std::unordered_map<int, uint64_t> overlaySaveHashes{};
     std::unordered_map<int, std::filesystem::path> texturePaths{};
+    std::unordered_map<int, std::filesystem::path> overlayTexturePaths{};
     std::unordered_map<int, std::filesystem::path> soundPaths{};
+    std::unordered_map<int, std::filesystem::path> shaderVertexPaths{};
+    std::unordered_map<int, std::filesystem::path> shaderFragmentPaths{};
+    std::map<int, resource::Shader> shaders{};
     bool isAnimationPreviewSet{false};
     bool isSpritesheetEditorSet{false};
     EditTarget editTarget{EditTarget::NONE};
@@ -115,19 +133,26 @@ namespace anm2ed
     void anm2_change(ChangeType);
     void assets_sync(ChangeType = ALL);
     void texture_change(int);
+    void overlay_texture_change(int);
     bool texture_reload(int);
+    bool overlay_texture_reload(int);
     bool sound_reload(int);
+    bool shader_reload(int, std::string* = nullptr);
     resource::Texture* texture_get(int);
     const resource::Texture* texture_get(int) const;
+    resource::Texture* overlay_texture_get(int);
+    const resource::Texture* overlay_texture_get(int) const;
     resource::Audio* sound_get(int);
     const resource::Audio* sound_get(int) const;
+    resource::Shader* shader_get(int);
+    const resource::Shader* shader_get(int) const;
     bool regions_trim(int, const std::set<int>&);
     bool regions_generate_from_animations(const std::set<int>&, const std::string&, RegionFrameMapping);
     bool regions_generate_from_frames(const std::set<Reference>&, const std::string&, RegionFrameMapping);
     bool spritesheet_pack(int, int);
     bool spritesheets_merge(const std::set<int>&, bool, bool, bool, origin::Type);
     void scan_and_set_regions();
-    bool file_merge(const std::filesystem::path&);
+    bool file_merge(const std::filesystem::path&, FileMergePreset = FILE_MERGE_PRESET_MERGE_BY_NAME);
     void hash_set();
     void clean();
     void change(ChangeType);
@@ -143,6 +168,12 @@ namespace anm2ed
     bool spritesheet_any_dirty();
     void spritesheet_hashes_reset();
     void spritesheet_hashes_sync();
+    void overlay_hash_update(int);
+    void overlay_hash_set_saved(int);
+    bool overlay_is_dirty(int);
+    bool overlay_any_dirty();
+    void overlay_hashes_reset();
+    void overlay_hashes_sync();
     bool is_frame_reference_valid(Reference) const;
     std::set<Reference> item_frame_references_get(Reference) const;
     std::set<Reference> selected_item_frame_references_get() const;
@@ -154,10 +185,15 @@ namespace anm2ed
     Element* frame_get();
     Element* item_get();
     Element* spritesheet_get();
+    Element* overlay_get(int = -1);
+    const Element* overlay_get(int = -1) const;
+    int overlay_spritesheet_id_get(int) const;
     Element* animation_get();
 
     void spritesheet_add(const std::filesystem::path&);
     void spritesheets_add(const std::vector<std::filesystem::path>&);
+    void overlay_add(int, const std::filesystem::path&);
+    void overlays_add(int, const std::vector<std::filesystem::path>&);
     void sound_add(const std::filesystem::path&);
     void sounds_add(const std::vector<std::filesystem::path>&);
 
@@ -165,7 +201,11 @@ namespace anm2ed
     std::filesystem::path autosave_path_get();
     std::filesystem::path path_from_autosave_get(const std::filesystem::path&);
 
-    void snapshot(const std::string& message);
+    void anm2_snapshot(const std::string& message);
+    void frames_snapshot(const std::string& message, const std::set<Reference>&);
+    void regions_snapshot(const std::string& message, int, const std::set<int>&);
+    void textures_snapshot(const std::string& message);
+    void anm2_textures_snapshot(const std::string& message);
     void undo();
     void redo();
     bool is_able_to_undo();
@@ -174,14 +214,14 @@ namespace anm2ed
 
 #define DOCUMENT_EDIT(document, message, changeType, body)                                                             \
   {                                                                                                                    \
-    document.snapshot(message);                                                                                        \
+    document.anm2_snapshot(message);                                                                                   \
     body;                                                                                                              \
     document.change(changeType);                                                                                       \
   }
 
 #define DOCUMENT_EDIT_PTR(document, message, changeType, body)                                                         \
   {                                                                                                                    \
-    document->snapshot(message);                                                                                       \
+    document->anm2_snapshot(message);                                                                                  \
     body;                                                                                                              \
     document->change(changeType);                                                                                      \
   }

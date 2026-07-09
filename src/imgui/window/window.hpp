@@ -29,7 +29,8 @@ namespace anm2ed::imgui
     WINDOW_PASTE = 1 << 8,
     WINDOW_RENAME = 1 << 9,
     WINDOW_PROPERTIES = 1 << 10,
-    WINDOW_REFERENCE_ITALIC = 1 << 11
+    WINDOW_REFERENCE_ITALIC = 1 << 11,
+    WINDOW_GROUP = 1 << 12
   };
 
   using WindowFlags = int;
@@ -108,6 +109,7 @@ namespace anm2ed::imgui
     Command duplicate{};
     Command merge{};
     Command merge_open{};
+    Command group{};
     Command default_set{};
     Command cut{};
     Command copy{};
@@ -137,5 +139,6 @@ namespace anm2ed::imgui
   Window layers_window_register();
   Window nulls_window_register();
   Window events_window_register();
+  Window overlays_window_register();
   void window_update(Window&, Manager&, Settings&, Resources&, Dialog&, Clipboard&);
 }

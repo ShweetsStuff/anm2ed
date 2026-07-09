@@ -202,7 +202,7 @@ namespace anm2ed::imgui::popup
                               {
                                 int addId{-1};
 
-                                document.snapshot(localize.get(EDIT_ADD_ITEM));
+                                document.anm2_snapshot(localize.get(EDIT_ADD_ITEM));
                                 if (queuedType == LAYER)
                                   addId = document.anm2.layer_animation_add(
                                       queuedAnimationIndex, queuedAddItemID, queuedInsertBeforeID, queuedAddItemName,

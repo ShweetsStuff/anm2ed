@@ -29,12 +29,10 @@ namespace anm2ed::imgui
 
   Options save_options_get(Settings& settings)
   {
-    Flags flags{};
-    if (settings.fileIsSerializeGroups) flags |= SERIALIZE_GROUPS;
-    if (settings.fileIsSerializeRegions) flags |= SERIALIZE_REGIONS;
-    if (settings.fileIsSerializeSounds) flags |= SERIALIZE_SOUNDS;
+    Flags flags{SERIALIZE_GROUPS | SERIALIZE_REGIONS | SERIALIZE_SOUNDS};
     if (settings.fileIsKeepRedundantFrameRegionValues) flags |= SERIALIZE_REDUNDANT_FRAME_REGION_VALUES;
     if (settings.fileIsBakeSpecialInterpolatedFrames) flags |= SERIALIZE_BAKE_SPECIAL_INTERPOLATED_FRAMES;
+    if (settings.isFileBakeGroupFrames) flags |= SERIALIZE_BAKE_GROUP_FRAMES;
     return {.flags = flags};
   }
 
@@ -186,7 +184,7 @@ namespace anm2ed::imgui
           manager.command_push({manager.selected,
                                 [](Manager&, Document& document)
                                 {
-                                  document.snapshot(localize.get(EDIT_SCAN_AND_SET_REGIONS));
+                                  document.anm2_snapshot(localize.get(EDIT_SCAN_AND_SET_REGIONS));
                                   document.scan_and_set_regions();
                                   document.change(Document::FRAMES);
                                 }});
@@ -301,7 +299,7 @@ namespace anm2ed::imgui
                                 [=](Manager&, Document& document)
                                 {
                                   if (queuedAnimationIndices.empty()) return;
-                                  document.snapshot(localize.get(EDIT_GENERATE_REGIONS_FROM_ANIMATIONS));
+                                  document.anm2_snapshot(localize.get(EDIT_GENERATE_REGIONS_FROM_ANIMATIONS));
                                   if (document.regions_generate_from_animations(queuedAnimationIndices, queuedFormat,
                                                                                 queuedMapping))
                                     document.anm2_change(queuedMapping == Document::RegionFrameMapping::SET

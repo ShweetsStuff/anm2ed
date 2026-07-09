@@ -65,11 +65,9 @@ namespace anm2ed
   X(FILE_IS_AUTOSAVE, fileIsAutosave, STRING_UNDEFINED, BOOL, true)                                                    \
   X(FILE_IS_WARN_OVERWRITE, fileIsWarnOverwrite, STRING_UNDEFINED, BOOL, true)                                         \
   X(FILE_SNAPSHOT_STACK_SIZE, fileSnapshotStackSize, STRING_UNDEFINED, INT, 50)                                        \
-  X(FILE_IS_SERIALIZE_GROUPS, fileIsSerializeGroups, STRING_UNDEFINED, BOOL, true)                                     \
-  X(FILE_IS_SERIALIZE_REGIONS, fileIsSerializeRegions, STRING_UNDEFINED, BOOL, true)                                   \
-  X(FILE_IS_SERIALIZE_SOUNDS, fileIsSerializeSounds, STRING_UNDEFINED, BOOL, true)                                     \
   X(FILE_IS_KEEP_REDUNDANT_FRAME_REGION_VALUES, fileIsKeepRedundantFrameRegionValues, STRING_UNDEFINED, BOOL, true)    \
   X(FILE_IS_BAKE_SPECIAL_INTERPOLATED_FRAMES, fileIsBakeSpecialInterpolatedFrames, STRING_UNDEFINED, BOOL, true)       \
+  X(IS_FILE_BAKE_GROUP_FRAMES, isFileBakeGroupFrames, STRING_UNDEFINED, BOOL, true)                                    \
                                                                                                                        \
   X(KEYBOARD_REPEAT_DELAY, keyboardRepeatDelay, STRING_UNDEFINED, FLOAT, 0.300f)                                       \
   X(KEYBOARD_REPEAT_RATE, keyboardRepeatRate, STRING_UNDEFINED, FLOAT, 0.050f)                                         \
@@ -201,7 +199,8 @@ namespace anm2ed
   X(RENDER_ROWS, renderRows, STRING_UNDEFINED, INT, 0)                                                                 \
   X(RENDER_COLUMNS, renderColumns, STRING_UNDEFINED, INT, 0)                                                           \
   X(RENDER_FORMAT, renderFormat, STRING_UNDEFINED, PATH, "{}.png")                                                     \
-  X(RENDER_IS_RAW_ANIMATION, renderIsRawAnimation, STRING_UNDEFINED, BOOL, true)                                       \
+  X(RENDER_IS_USE_ANIMATION_BOUNDS, renderIsUseAnimationBounds, STRING_UNDEFINED, BOOL, true)                         \
+  X(RENDER_IS_USE_ISOLATED_ANIMATION, renderIsUseIsolatedAnimation, STRING_UNDEFINED, BOOL, false)                    \
   X(RENDER_SCALE, renderScale, STRING_UNDEFINED, FLOAT, 1.0f)                                                          \
   X(RENDER_FFMPEG_PATH, renderFFmpegPath, STRING_UNDEFINED, PATH, FFMPEG_PATH_DEFAULT)
 
@@ -274,7 +273,9 @@ namespace anm2ed
   X(WINDOW_LAYERS, windowIsLayers, LABEL_LAYERS_WINDOW, BOOL, true)                                                    \
   X(WINDOW_NULLS, windowIsNulls, LABEL_NULLS_WINDOW, BOOL, true)                                                       \
   X(WINDOW_ONIONSKIN, windowIsOnionskin, LABEL_ONIONSKIN_WINDOW, BOOL, true)                                           \
+  X(WINDOW_OVERLAYS, windowIsOverlays, LABEL_OVERLAYS_WINDOW, BOOL, true)                                              \
   X(WINDOW_PREVIEW, windowIsSpritesheets, LABEL_SPRITESHEETS_WINDOW, BOOL, true)                                       \
+  X(WINDOW_SHADERS, windowIsShaders, LABEL_SHADERS_WINDOW, BOOL, true)                                                  \
   X(WINDOW_SOUNDS, windowIsSounds, LABEL_SOUNDS_WINDOW, BOOL, true)                                                    \
   X(WINDOW_SPRITESHEET_EDITOR, windowIsSpritesheetEditor, LABEL_SPRITESHEET_EDITOR_WINDOW, BOOL, true)                 \
   X(WINDOW_TIMELINE, windowIsTimeline, LABEL_TIMELINE_WINDOW, BOOL, true)                                              \

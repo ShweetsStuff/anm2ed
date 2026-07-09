@@ -20,6 +20,7 @@ namespace anm2ed
   X(NO_FILTER, {})                                                                                                     \
   X(ANM2, {"Anm2 file", "anm2;xml"})                                                                                   \
   X(PNG, {"PNG image", "png;PNG"})                                                                                     \
+  X(SHADER, {"Shader file", "fs;vs;FS;VS"})                                                                            \
   X(SOUND, {"WAV file;OGG file", "wav;ogg"})                                                                           \
   X(GIF, {"GIF image", "gif"})                                                                                         \
   X(WEBM, {"WebM video", "webm"})                                                                                      \
@@ -48,9 +49,14 @@ namespace anm2ed
   X(ANM2_SAVE, ANM2)                                                                                                   \
   X(SOUND_OPEN, SOUND)                                                                                                 \
   X(SOUND_REPLACE, SOUND)                                                                                              \
+  X(OVERLAY_OPEN, PNG)                                                                                                 \
+  X(OVERLAY_REPLACE, PNG)                                                                                              \
+  X(OVERLAY_PATH_SET, PNG)                                                                                             \
   X(SPRITESHEET_OPEN, PNG)                                                                                             \
   X(SPRITESHEET_REPLACE, PNG)                                                                                          \
   X(SPRITESHEET_PATH_SET, PNG)                                                                                         \
+  X(SHADER_FRAGMENT_PATH_SET, SHADER)                                                                                   \
+  X(SHADER_VERTEX_PATH_SET, SHADER)                                                                                     \
   X(FFMPEG_PATH_SET, EXECUTABLE)                                                                                       \
   X(PNG_DIRECTORY_SET, NO_FILTER)                                                                                      \
   X(PNG_PATH_SET, PNG)                                                                                                 \

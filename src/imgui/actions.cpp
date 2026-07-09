@@ -79,7 +79,11 @@ namespace anm2ed::imgui
 
   bool actions_context_window_draw(const char* label, Actions& actions, Settings& settings, ImGuiPopupFlags flags)
   {
-    if (!ImGui::BeginPopupContextWindow(label, flags)) return false;
+    auto mouseButton = flags & ImGuiPopupFlags_MouseButtonMask_;
+    if (ImGui::IsMouseReleased(mouseButton) && ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
+      if (!(flags & ImGuiPopupFlags_NoOpenOverItems) || !ImGui::IsAnyItemHovered()) ImGui::OpenPopup(label, flags);
+
+    if (!ImGui::BeginPopup(label, ImGuiWindowFlags_NoMove)) return false;
     actions_menu_draw(actions, settings);
     ImGui::EndPopup();
     return true;
@@ -87,7 +91,7 @@ namespace anm2ed::imgui
 
   bool actions_popup_draw(const char* label, Actions& actions, Settings& settings)
   {
-    if (!ImGui::BeginPopup(label)) return false;
+    if (!ImGui::BeginPopup(label, ImGuiWindowFlags_NoMove)) return false;
     actions_menu_draw(actions, settings);
     ImGui::EndPopup();
     return true;

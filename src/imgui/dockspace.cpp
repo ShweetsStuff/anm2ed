@@ -40,6 +40,8 @@ namespace anm2ed::imgui
           if (settings.windowIsLayers) window_update(layers, manager, settings, resources, dialog, clipboard);
           if (settings.windowIsNulls) window_update(nulls, manager, settings, resources, dialog, clipboard);
           if (settings.windowIsOnionskin) onionskin.update(manager, settings);
+          if (settings.windowIsOverlays) window_update(overlays, manager, settings, resources, dialog, clipboard);
+          if (settings.windowIsShaders) shaders.update(manager, settings, resources, dialog);
           if (settings.windowIsSounds) window_update(sounds, manager, settings, resources, dialog, clipboard);
           if (settings.windowIsSpritesheetEditor) spritesheetEditor.update(manager, settings, resources);
           if (settings.windowIsSpritesheets)

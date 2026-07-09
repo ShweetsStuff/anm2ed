@@ -1,5 +1,6 @@
 #include "documents.hpp"
 
+#include <algorithm>
 #include <format>
 #include <ranges>
 #include <vector>
@@ -26,15 +27,44 @@ namespace anm2ed::imgui
     uint64_t documentId{};
   };
 
+#define ANM2_DRAG_DROP_MERGE_PRESETS                                                                                    \
+  X(FILE_MERGE_PRESET_MERGE_BY_NAME, BASIC_MERGE, TOOLTIP_MERGE_PRESET_MERGE_BY_NAME)                                  \
+  X(FILE_MERGE_PRESET_APPEND_AS_NEW, BASIC_APPEND, TOOLTIP_MERGE_PRESET_APPEND_AS_NEW)                                  \
+  X(FILE_MERGE_PRESET_REPLACE_MATCHING, BASIC_REPLACE, TOOLTIP_MERGE_PRESET_REPLACE_MATCHING)
+
+  constexpr StringType ANM2_DRAG_DROP_MERGE_PRESET_LABELS[Document::FILE_MERGE_PRESET_COUNT] = {
+#define X(preset, label, tooltip) label,
+      ANM2_DRAG_DROP_MERGE_PRESETS
+#undef X
+  };
+
+  constexpr StringType ANM2_DRAG_DROP_MERGE_PRESET_TOOLTIPS[Document::FILE_MERGE_PRESET_COUNT] = {
+#define X(preset, label, tooltip) tooltip,
+      ANM2_DRAG_DROP_MERGE_PRESETS
+#undef X
+  };
+
+#undef ANM2_DRAG_DROP_MERGE_PRESETS
+
   Options save_options_get(const Settings& settings)
   {
-    Flags flags{};
-    if (settings.fileIsSerializeGroups) flags |= SERIALIZE_GROUPS;
-    if (settings.fileIsSerializeRegions) flags |= SERIALIZE_REGIONS;
-    if (settings.fileIsSerializeSounds) flags |= SERIALIZE_SOUNDS;
+    Flags flags{SERIALIZE_GROUPS | SERIALIZE_REGIONS | SERIALIZE_SOUNDS};
     if (settings.fileIsKeepRedundantFrameRegionValues) flags |= SERIALIZE_REDUNDANT_FRAME_REGION_VALUES;
     if (settings.fileIsBakeSpecialInterpolatedFrames) flags |= SERIALIZE_BAKE_SPECIAL_INTERPOLATED_FRAMES;
+    if (settings.isFileBakeGroupFrames) flags |= SERIALIZE_BAKE_GROUP_FRAMES;
     return {.flags = flags};
+  }
+
+  void anm2_drag_drop_merge_queue(Manager& manager, const std::vector<std::filesystem::path>& paths,
+                                  Document::FileMergePreset preset)
+  {
+    manager.command_push({manager.selected,
+                          [paths, preset](Manager&, Document& document)
+                          {
+                            document.anm2_snapshot(localize.get(EDIT_MERGE_ANM2));
+                            for (auto& path : paths) document.file_merge(path, preset);
+                            document.change(Document::ALL);
+                          }});
   }
 
   void Documents::pending_document_order_apply(Manager& manager)
@@ -161,7 +191,7 @@ namespace anm2ed::imgui
         {
           auto& document = manager.documents[i];
           auto isDocumentDirty = document.is_dirty() || document.isForceDirty;
-          auto isSpritesheetDirty = document.spritesheet_any_dirty();
+          auto isSpritesheetDirty = document.spritesheet_any_dirty() || document.overlay_any_dirty();
           auto isDirty = isDocumentDirty || isSpritesheetDirty;
 
           if (!closePopup.is_open())
@@ -258,7 +288,7 @@ namespace anm2ed::imgui
 
           auto filename = path::to_utf8(closeDocument.filename_get());
           auto isDocumentDirty = closeDocument.is_dirty() || closeDocument.isForceDirty;
-          auto isSpritesheetDirty = closeDocument.spritesheet_any_dirty();
+          auto isSpritesheetDirty = closeDocument.spritesheet_any_dirty() || closeDocument.overlay_any_dirty();
           auto promptLabel =
               isDocumentDirty && isSpritesheetDirty
                   ? LABEL_DOCUMENT_AND_SPRITESHEETS_MODIFIED_PROMPT
@@ -296,24 +326,51 @@ namespace anm2ed::imgui
                   if (spritesheet.type != ElementType::SPRITESHEET) continue;
                   auto id = spritesheet.id;
                   auto texture = closeDocument.texture_get(id);
-                  if (!texture || !closeDocument.spritesheet_is_dirty(id)) continue;
-                  auto pathString = path::to_utf8(spritesheet.path);
-                  auto savePath = closeDocument.directory_get() / spritesheet.path;
-                  path::ensure_directory(savePath.parent_path());
-                  if (texture->write_png(savePath))
+                  if (texture && closeDocument.spritesheet_is_dirty(id))
                   {
-                    closeDocument.spritesheet_hash_set_saved(id);
-                    toasts.push(
-                        std::vformat(localize.get(TOAST_SAVE_SPRITESHEET), std::make_format_args(id, pathString)));
-                    logger.info(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET, anm2ed::ENGLISH),
-                                             std::make_format_args(id, pathString)));
+                    auto pathString = path::to_utf8(spritesheet.path);
+                    auto savePath = closeDocument.directory_get() / spritesheet.path;
+                    path::ensure_directory(savePath.parent_path());
+                    if (texture->write_png(savePath))
+                    {
+                      closeDocument.spritesheet_hash_set_saved(id);
+                      toasts.push(
+                          std::vformat(localize.get(TOAST_SAVE_SPRITESHEET), std::make_format_args(id, pathString)));
+                      logger.info(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET, anm2ed::ENGLISH),
+                                               std::make_format_args(id, pathString)));
+                    }
+                    else
+                    {
+                      toasts.push(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET_FAILED),
+                                               std::make_format_args(id, pathString)));
+                      logger.error(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET_FAILED, anm2ed::ENGLISH),
+                                                std::make_format_args(id, pathString)));
+                    }
                   }
-                  else
+
+                  for (auto& overlay : spritesheet.children)
                   {
-                    toasts.push(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET_FAILED),
-                                             std::make_format_args(id, pathString)));
-                    logger.error(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET_FAILED, anm2ed::ENGLISH),
-                                              std::make_format_args(id, pathString)));
+                    if (overlay.type != ElementType::OVERLAY) continue;
+                    auto overlayTexture = closeDocument.overlay_texture_get(overlay.id);
+                    if (!overlayTexture || !closeDocument.overlay_is_dirty(overlay.id)) continue;
+                    auto pathString = path::to_utf8(overlay.path);
+                    auto savePath = closeDocument.directory_get() / overlay.path;
+                    path::ensure_directory(savePath.parent_path());
+                    if (overlayTexture->write_png(savePath))
+                    {
+                      closeDocument.overlay_hash_set_saved(overlay.id);
+                      toasts.push(std::vformat(localize.get(TOAST_SAVE_OVERLAY),
+                                               std::make_format_args(overlay.id, pathString)));
+                      logger.info(std::vformat(localize.get(TOAST_SAVE_OVERLAY, anm2ed::ENGLISH),
+                                               std::make_format_args(overlay.id, pathString)));
+                    }
+                    else
+                    {
+                      toasts.push(std::vformat(localize.get(TOAST_SAVE_OVERLAY_FAILED),
+                                               std::make_format_args(overlay.id, pathString)));
+                      logger.error(std::vformat(localize.get(TOAST_SAVE_OVERLAY_FAILED, anm2ed::ENGLISH),
+                                                std::make_format_args(overlay.id, pathString)));
+                    }
                   }
                 }
               }
@@ -366,17 +423,62 @@ namespace anm2ed::imgui
         manager.isAnm2DragDrop = false;
         manager.anm2DragDropPaths.clear();
         manager.anm2DragDropPopup.close();
+        manager.anm2DragDropMergePopup.close();
+        manager.anm2DragDropMergePreset = Document::FILE_MERGE_PRESET_MERGE_BY_NAME;
       };
 
       if (manager.anm2DragDropPaths.empty())
         drag_drop_reset();
+      else if (manager.anm2DragDropMergePopup.is_open())
+      {
+        manager.anm2DragDropMergePopup.trigger();
+
+        if (ImGui::BeginPopupModal(manager.anm2DragDropMergePopup.label(), &manager.anm2DragDropMergePopup.isOpen,
+                                   ImGuiWindowFlags_NoResize))
+        {
+          auto document = manager.get();
+          manager.anm2DragDropMergePreset =
+              std::clamp(manager.anm2DragDropMergePreset, 0, Document::FILE_MERGE_PRESET_COUNT - 1);
+
+          for (int preset = 0; preset < Document::FILE_MERGE_PRESET_COUNT; ++preset)
+          {
+            ImGui::RadioButton(localize.get(ANM2_DRAG_DROP_MERGE_PRESET_LABELS[preset]),
+                               &manager.anm2DragDropMergePreset, preset);
+            ImGui::SetItemTooltip("%s", localize.get(ANM2_DRAG_DROP_MERGE_PRESET_TOOLTIPS[preset]));
+          }
+
+          auto widgetSize = widget_size_with_row_get(2);
+          shortcut(manager.chords[SHORTCUT_CONFIRM]);
+          ImGui::BeginDisabled(!document);
+          if (ImGui::Button(localize.get(BASIC_MERGE), widgetSize))
+          {
+            auto paths = manager.anm2DragDropPaths;
+            auto preset = (Document::FileMergePreset)manager.anm2DragDropMergePreset;
+            anm2_drag_drop_merge_queue(manager, paths, preset);
+            drag_drop_reset();
+          }
+          ImGui::EndDisabled();
+
+          ImGui::SameLine();
+
+          shortcut(manager.chords[SHORTCUT_CANCEL]);
+          if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize)) drag_drop_reset();
+
+          manager.anm2DragDropMergePopup.end();
+          ImGui::EndPopup();
+
+          if (manager.isAnm2DragDrop && !manager.anm2DragDropMergePopup.is_open()) drag_drop_reset();
+        }
+        else if (!ImGui::IsPopupOpen(manager.anm2DragDropMergePopup.label()))
+          drag_drop_reset();
+      }
       else
       {
         if (!manager.anm2DragDropPopup.is_open()) manager.anm2DragDropPopup.open();
 
         manager.anm2DragDropPopup.trigger();
 
-        if (ImGui::BeginPopupContextWindow(manager.anm2DragDropPopup.label(), ImGuiPopupFlags_None))
+        if (ImGui::BeginPopup(manager.anm2DragDropPopup.label(), ImGuiWindowFlags_NoMove))
         {
           auto document = manager.get();
           if (ImGui::MenuItem(manager.anm2DragDropPaths.size() > 1 ? localize.get(LABEL_DOCUMENTS_OPEN_MANY)
@@ -396,15 +498,9 @@ namespace anm2ed::imgui
           {
             if (document)
             {
-              auto paths = manager.anm2DragDropPaths;
-              manager.command_push({manager.selected,
-                                    [paths](Manager&, Document& document)
-                                    {
-                                      document.snapshot(localize.get(EDIT_MERGE_ANM2));
-                                      for (auto& path : paths) document.file_merge(path);
-                                      document.change(Document::ALL);
-                                    }});
-              drag_drop_reset();
+              manager.anm2DragDropPopup.close();
+              manager.anm2DragDropMergePopup.open();
+              ImGui::CloseCurrentPopup();
             }
           }
 

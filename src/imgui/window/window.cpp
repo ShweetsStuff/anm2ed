@@ -18,6 +18,7 @@
 #include "util/imgui/layout.hpp"
 #include "util/imgui/shortcut.hpp"
 #include "util/imgui/tooltip.hpp"
+#include "util/imgui/tree.hpp"
 #include "vector.hpp"
 #include "working_directory.hpp"
 
@@ -100,6 +101,13 @@ namespace anm2ed::imgui
     destination.children.push_back(item);
   }
 
+  void window_group_root_push(Element& group)
+  {
+    auto root = element_make(ElementType::ROOT_ANIMATION);
+    root.children.push_back(element_make(ElementType::FRAME));
+    group.children.push_back(root);
+  }
+
   Element window_track_container_shell_copy(const Element* source, ElementType containerType, ElementType trackType)
   {
     auto destination = element_make(containerType);
@@ -120,6 +128,7 @@ namespace anm2ed::imgui
       group.name = sourceItem.name;
       group.isExpanded = sourceItem.isExpanded;
       group.isVisible = sourceItem.isVisible;
+      window_group_root_push(group);
       destination.children.push_back(group);
 
       for (const auto& child : sourceItem.children)
@@ -130,14 +139,14 @@ namespace anm2ed::imgui
 
   void window_edit(Window& window, Document& document, const std::string& message, auto behavior)
   {
-    document.snapshot(message);
+    document.anm2_snapshot(message);
     behavior();
     document.anm2_change(window.changeType);
   }
 
   void window_edit(Document& document, Document::ChangeType changeType, const std::string& message, auto behavior)
   {
-    document.snapshot(message);
+    document.anm2_snapshot(message);
     behavior();
     document.anm2_change(changeType);
   }
@@ -160,7 +169,7 @@ namespace anm2ed::imgui
                                 element = element_child_id_get(*container, elementType, key);
                             if (!element || element->name == name) return;
 
-                            document.snapshot(localize.get(renameEdit));
+                            document.anm2_snapshot(localize.get(renameEdit));
                             element->name = name;
                             if (renameFinish) renameFinish(document, *element, key, count);
                             document.anm2_change(changeType);
@@ -214,7 +223,7 @@ namespace anm2ed::imgui
 
       if (pasted.deserialize(window.elementType, clipboard.get(), true, &errorString, document.directory_get()))
       {
-        document.snapshot(localize.get(window.pasteEdit));
+        document.anm2_snapshot(localize.get(window.pasteEdit));
         document.anm2 = std::move(pasted);
         container = window_container_get(window, document.anm2);
         auto maxIdAfter = container ? element_child_max_id_get(*container, window.elementType) : -1;
@@ -336,7 +345,199 @@ namespace anm2ed::imgui
     return count;
   }
 
-  int window_animations_merge(Document& document, const AnimationMergeOptions& options)
+  int window_animation_child_index_get(const Element& animations, int animationIndex)
+  {
+    int current{};
+    for (int i = 0; i < (int)animations.children.size(); ++i)
+    {
+      if (animations.children[i].type != ElementType::ANIMATION) continue;
+      if (current == animationIndex) return i;
+      ++current;
+    }
+    return -1;
+  }
+
+  int window_animation_child_insert_index_get(const Element& animations, int animationIndex)
+  {
+    if (animationIndex <= 0)
+    {
+      for (int i = 0; i < (int)animations.children.size(); ++i)
+        if (animations.children[i].type == ElementType::ANIMATION) return i;
+      return (int)animations.children.size();
+    }
+    int current{};
+    for (int i = 0; i < (int)animations.children.size(); ++i)
+    {
+      if (animations.children[i].type != ElementType::ANIMATION) continue;
+      if (current == animationIndex) return i;
+      ++current;
+    }
+    return (int)animations.children.size();
+  }
+
+  int window_animation_index_from_child_index_get(const Element& animations, int childIndex)
+  {
+    int current{};
+    for (int i = 0; i < (int)animations.children.size(); ++i)
+    {
+      if (animations.children[i].type != ElementType::ANIMATION) continue;
+      if (i == childIndex) return current;
+      ++current;
+    }
+    return -1;
+  }
+
+  std::set<int> window_animation_group_ids_get(const Element& animations)
+  {
+    std::set<int> result{};
+    for (const auto& item : animations.children)
+      if (item.type == ElementType::GROUP) result.insert(item.id);
+    return result;
+  }
+
+  bool is_window_animation_grouped(const std::set<int>& groupIds, const Element& animation)
+  {
+    return animation.groupId != -1 && groupIds.contains(animation.groupId);
+  }
+
+  std::vector<int> window_animation_groupable_indices_get(Document& document)
+  {
+    std::vector<int> result{};
+    auto animations = document.anm2.element_get(ElementType::ANIMATIONS);
+    if (!animations || document.animation.selection.empty()) return result;
+
+    auto groupIds = window_animation_group_ids_get(*animations);
+    int index{};
+    for (const auto& animation : animations->children)
+    {
+      if (animation.type != ElementType::ANIMATION) continue;
+      if (document.animation.selection.contains(index))
+      {
+        if (is_window_animation_grouped(groupIds, animation)) return {};
+        result.push_back(index);
+      }
+      ++index;
+    }
+    if (result.size() != document.animation.selection.size()) return {};
+    return result;
+  }
+
+  int window_animation_group_key_get(int groupId) { return -groupId - 2; }
+
+  bool is_window_animation_group_key(int key) { return key <= -2; }
+
+  int window_animation_group_id_from_key_get(int key) { return -key - 2; }
+
+  bool is_window_animation_group_selected(const Window& window)
+  {
+    return window.elementType == ElementType::ANIMATION && !window.selection.empty();
+  }
+
+  std::set<int> window_animation_group_indices_get(const Element& animations, int groupId)
+  {
+    std::set<int> result{};
+    int animationIndex{};
+    for (const auto& animation : animations.children)
+    {
+      if (animation.type != ElementType::ANIMATION) continue;
+      if (animation.groupId == groupId) result.insert(animationIndex);
+      ++animationIndex;
+    }
+    return result;
+  }
+
+  std::set<int> window_animation_selected_indices_get(Document& document, const Window& window)
+  {
+    std::set<int> result(document.animation.selection.begin(), document.animation.selection.end());
+    auto animations = document.anm2.element_get(ElementType::ANIMATIONS);
+    if (!animations || window.elementType != ElementType::ANIMATION) return result;
+
+    for (auto groupId : window.selection)
+    {
+      auto indices = window_animation_group_indices_get(*animations, groupId);
+      result.insert(indices.begin(), indices.end());
+    }
+    return result;
+  }
+
+  std::set<int> window_animation_merge_indices_get(Document& document, const std::set<int>& keys, int reference)
+  {
+    std::set<int> result{};
+    auto animations = document.anm2.element_get(ElementType::ANIMATIONS);
+
+    for (auto key : keys)
+    {
+      if (is_window_animation_group_key(key))
+      {
+        if (!animations) continue;
+        auto indices = window_animation_group_indices_get(*animations, window_animation_group_id_from_key_get(key));
+        result.insert(indices.begin(), indices.end());
+      }
+      else
+        result.insert(key);
+    }
+
+    result.erase(reference);
+    return result;
+  }
+
+  void window_animation_groups_remove(Document& document, const std::set<int>& groupIds)
+  {
+    auto animations = document.anm2.element_get(ElementType::ANIMATIONS);
+    if (!animations || groupIds.empty()) return;
+
+    for (auto& item : animations->children)
+      if (item.type == ElementType::ANIMATION && groupIds.contains(item.groupId)) item.groupId = -1;
+    std::erase_if(animations->children, [&](const Element& item)
+    { return item.type == ElementType::GROUP && groupIds.contains(item.id); });
+  }
+
+  std::string window_animation_clipboard_text_get(Document& document, const Window& window)
+  {
+    std::string clipboardText{};
+    auto animations = document.anm2.element_get(ElementType::ANIMATIONS);
+    if (!animations) return clipboardText;
+
+    int animationIndex{};
+    for (const auto& item : animations->children)
+    {
+      if (item.type == ElementType::GROUP)
+      {
+        if (window.selection.contains(item.id)) clipboardText += element_to_string(item);
+      }
+      else if (item.type == ElementType::ANIMATION)
+      {
+        if (document.animation.selection.contains(animationIndex) || window.selection.contains(item.groupId))
+          clipboardText += element_to_string(item);
+        ++animationIndex;
+      }
+    }
+
+    return clipboardText;
+  }
+
+  bool is_window_item_selected(Window& window, Document& document)
+  {
+    return !window.storage_get(document).selection.empty() || is_window_animation_group_selected(window);
+  }
+
+  bool is_window_item_renameable(Window& window, Document& document)
+  {
+    auto& selection = window.storage_get(document).selection;
+    return selection.size() == 1 ||
+           (window.elementType == ElementType::ANIMATION && selection.empty() && window.selection.size() == 1);
+  }
+
+  bool is_window_merge_available(Window& window, Document& document)
+  {
+    auto& selection = window.storage_get(document).selection;
+    if (window.elementType != ElementType::ANIMATION) return !selection.empty();
+    return !window_animation_selected_indices_get(document, window).empty();
+  }
+
+  int window_animations_merge(Document& document, const AnimationMergeOptions& options,
+                              const std::set<int>* quickSelection = nullptr,
+                              const std::set<int>* quickGroupSelection = nullptr)
   {
     auto& anm2 = document.anm2;
     auto& selection = document.animation.selection;
@@ -344,17 +545,21 @@ namespace anm2ed::imgui
     auto& overlayIndex = document.overlayIndex;
     int merged{-1};
 
-    document.snapshot(localize.get(EDIT_MERGE_ANIMATIONS));
+    document.anm2_snapshot(localize.get(EDIT_MERGE_ANIMATIONS));
     if (options.selection.empty())
     {
-      if (selection.contains(overlayIndex)) overlayIndex = -1;
+      auto selected = quickSelection ? *quickSelection : std::set<int>(selection.begin(), selection.end());
+      auto isQuickGroupMerge = quickGroupSelection && !quickGroupSelection->empty();
+      if (selected.contains(overlayIndex)) overlayIndex = -1;
 
-      if (selection.size() > 1)
-        merged = anm2.animations_merge(*selection.begin(), selection);
-      else if (selection.size() == 1 && *selection.begin() != window_animation_count_get(anm2) - 1)
+      if (selected.size() > 1)
+        merged = anm2.animations_merge(*selected.begin(), selected);
+      else if (selected.size() == 1 && isQuickGroupMerge)
+        merged = *selected.begin();
+      else if (selected.size() == 1 && *selected.begin() != window_animation_count_get(anm2) - 1)
       {
-        auto start = *selection.begin();
-        auto next = *selection.begin() + 1;
+        auto start = *selected.begin();
+        auto next = *selected.begin() + 1;
         std::set<int> animationSet{};
         animationSet.insert(start);
         animationSet.insert(next);
@@ -362,11 +567,14 @@ namespace anm2ed::imgui
       }
       else
         return -1;
+
+      if (isQuickGroupMerge) window_animation_groups_remove(document, *quickGroupSelection);
     }
     else
     {
-      if (options.selection.contains(overlayIndex)) overlayIndex = -1;
-      auto mergeSelection = options.selection;
+      auto mergeSelection = window_animation_merge_indices_get(document, options.selection, options.reference);
+      if (mergeSelection.empty()) return -1;
+      if (mergeSelection.contains(overlayIndex)) overlayIndex = -1;
       merged = anm2.animations_merge(options.reference, mergeSelection, options.type, options.isDeleteAnimationsAfter);
     }
 
@@ -402,7 +610,7 @@ namespace anm2ed::imgui
       }
     };
 
-    document.snapshot(localize.get(EDIT_MERGE_SPRITESHEETS));
+    document.anm2_textures_snapshot(localize.get(EDIT_MERGE_SPRITESHEETS));
     behavior();
     document.change(Document::ALL);
   }
@@ -431,7 +639,7 @@ namespace anm2ed::imgui
       }
     };
 
-    document.snapshot(localize.get(EDIT_PACK_SPRITESHEET));
+    document.anm2_textures_snapshot(localize.get(EDIT_PACK_SPRITESHEET));
     behavior();
     document.change(Document::SPRITESHEETS);
   }
@@ -464,6 +672,87 @@ namespace anm2ed::imgui
     }
   }
 
+  void window_overlays_save(Document& document, const std::set<int>& ids)
+  {
+    if (ids.empty()) return;
+
+    for (auto& id : ids)
+    {
+      auto overlay = document.overlay_get(id);
+      auto texture = document.overlay_texture_get(id);
+      if (!overlay || !texture) continue;
+      auto pathString = path::to_utf8(overlay->path);
+      WorkingDirectory workingDirectory(document.directory_get());
+      path::ensure_directory(overlay->path.parent_path());
+      if (texture->write_png(overlay->path))
+      {
+        document.overlay_hash_set_saved(id);
+        toasts.push(std::vformat(localize.get(TOAST_SAVE_OVERLAY), std::make_format_args(id, pathString)));
+        logger.info(
+            std::vformat(localize.get(TOAST_SAVE_OVERLAY, anm2ed::ENGLISH), std::make_format_args(id, pathString)));
+      }
+      else
+      {
+        toasts.push(std::vformat(localize.get(TOAST_SAVE_OVERLAY_FAILED), std::make_format_args(id, pathString)));
+        logger.error(std::vformat(localize.get(TOAST_SAVE_OVERLAY_FAILED, anm2ed::ENGLISH),
+                                  std::make_format_args(id, pathString)));
+      }
+    }
+  }
+
+  int window_overlay_next_id_get(const Document& document)
+  {
+    int nextId{};
+    if (auto spritesheets = document.anm2.element_get(ElementType::SPRITESHEETS))
+      for (auto& spritesheet : spritesheets->children)
+      {
+        if (spritesheet.type != ElementType::SPRITESHEET) continue;
+        for (auto& overlay : spritesheet.children)
+          if (overlay.type == ElementType::OVERLAY) nextId = std::max(nextId, overlay.id + 1);
+      }
+    return nextId;
+  }
+
+  void window_overlays_context_actions_add(Window& window, Manager& manager, Settings& settings, Document& document,
+                                           Clipboard& clipboard, Actions& actions)
+  {
+    auto& selection = document.overlay.selection;
+    actions_undo_redo_add(actions, manager, document);
+    actions.separator();
+    actions.add(ACTION_OPEN_DIRECTORY, [&]() { return selection.size() == 1 && (bool)window.open; },
+                [&]() { window_command_run(window, manager, settings, document, clipboard, window.open); });
+    actions.add(ACTION_SET_FILE_PATH, [&]() { return selection.size() == 1 && (bool)window.path_set; },
+                [&]() { window_command_run(window, manager, settings, document, clipboard, window.path_set); });
+    actions.add(ACTION_ADD, [&]() { return (bool)window.add; },
+                [&]() { window_command_run(window, manager, settings, document, clipboard, window.add); });
+    actions.add(ACTION_REMOVE, [&]() { return !selection.empty() && (bool)window.remove; },
+                [&]() { window_command_run(window, manager, settings, document, clipboard, window.remove); },
+                TOOLTIP_REMOVE_OVERLAYS);
+    actions.add(ACTION_RELOAD, [&]() { return !selection.empty() && (bool)window.reload; },
+                [&]() { window_command_run(window, manager, settings, document, clipboard, window.reload); },
+                TOOLTIP_RELOAD_OVERLAYS);
+    actions.add(ACTION_REPLACE, [&]() { return selection.size() == 1 && (bool)window.replace; },
+                [&]() { window_command_run(window, manager, settings, document, clipboard, window.replace); },
+                TOOLTIP_REPLACE_OVERLAY);
+    actions.add(ACTION_SAVE, [&]() { return !selection.empty(); },
+                [&]()
+                {
+                  if (settings.fileIsWarnOverwrite)
+                  {
+                    window.selection2 = selection;
+                    window.popup.open();
+                  }
+                  else if (window.save)
+                    window_command_run(window, manager, settings, document, clipboard, window.save);
+                },
+                TOOLTIP_SAVE_OVERLAYS);
+    actions.separator();
+    actions.add(ACTION_COPY, [&]() { return !selection.empty() && (bool)window.copy; },
+                [&]() { window_command_run(window, manager, settings, document, clipboard, window.copy); });
+    actions.add(ACTION_PASTE, [&]() { return !clipboard.is_empty() && (bool)window.paste; },
+                [&]() { window_command_run(window, manager, settings, document, clipboard, window.paste); });
+  }
+
   int window_footer_button_count_get(const Window& window)
   {
     int count{};
@@ -487,21 +776,31 @@ namespace anm2ed::imgui
                   [&]() { window_add(window, manager, settings, document, clipboard); }, window.addTooltip);
 
     if (window_flag_has(window.flags, WINDOW_DUPLICATE))
-      actions.add(ACTION_DUPLICATE, [&]() { return !selection.empty(); },
+      actions.add(ACTION_DUPLICATE, [&]() { return is_window_item_selected(window, document); },
                   [&]() { window_command_run(window, manager, settings, document, clipboard, window.duplicate); },
                   window.duplicateTooltip);
 
     if (window_flag_has(window.flags, WINDOW_MERGE))
-      actions.add(ACTION_MERGE, [&]() { return selection.size() == 1; },
+      actions.add(ACTION_MERGE,
                   [&]()
                   {
-                    window_command_run(window, manager, settings, document, clipboard,
-                                       window.merge_open ? window.merge_open : window.merge);
+                    if (window.elementType == ElementType::ANIMATION)
+                    {
+                      if (is_window_animation_group_selected(window)) return is_window_merge_available(window, document);
+                      return selection.size() == 1;
+                    }
+                    return selection.size() == 1;
+                  },
+                  [&]()
+                  {
+                    auto command = window.merge_open && !is_window_animation_group_selected(window) ? window.merge_open
+                                                                                                    : window.merge;
+                    window_command_run(window, manager, settings, document, clipboard, command);
                   },
                   window.mergeTooltip);
 
     if (window_flag_has(window.flags, WINDOW_REMOVE))
-      actions.add(ACTION_REMOVE, [&]() { return !selection.empty(); },
+      actions.add(ACTION_REMOVE, [&]() { return !selection.empty() || is_window_animation_group_selected(window); },
                   [&]() { window_command_run(window, manager, settings, document, clipboard, window.remove); },
                   window.removeTooltip);
 
@@ -531,8 +830,14 @@ namespace anm2ed::imgui
     }
 
     if (window_flag_has(window.flags, WINDOW_RENAME))
-      actions.add(ACTION_RENAME, [&]() { return selection.size() == 1; },
-                  [&]() { window.renameQueued = *selection.begin(); });
+      actions.add(ACTION_RENAME, [&]() { return is_window_item_renameable(window, document); },
+                  [&]()
+                  {
+                    if (selection.size() == 1)
+                      window.renameQueued = *selection.begin();
+                    else if (window.elementType == ElementType::ANIMATION && window.selection.size() == 1)
+                      window.renameQueued = window_animation_group_key_get(*window.selection.begin());
+                  });
     if (window_flag_has(window.flags, WINDOW_PROPERTIES))
       actions.add(ACTION_PROPERTIES, [&]() { return selection.size() == 1; },
                   [&]() { window_properties(window, manager, *selection.begin()); });
@@ -540,13 +845,22 @@ namespace anm2ed::imgui
       actions.add(ACTION_ADD, []() { return true; },
                   [&]() { window_add(window, manager, settings, document, clipboard); });
     if (window_flag_has(window.flags, WINDOW_DUPLICATE))
-      actions.add(ACTION_DUPLICATE, [&]() { return !selection.empty(); },
+      actions.add(ACTION_DUPLICATE, [&]() { return is_window_item_selected(window, document); },
                   [&]() { window_command_run(window, manager, settings, document, clipboard, window.duplicate); });
     if (window_flag_has(window.flags, WINDOW_MERGE))
-      actions.add(ACTION_MERGE, [&]() { return !selection.empty(); },
+      actions.add(ACTION_MERGE, [&]() { return is_window_merge_available(window, document); },
                   [&]() { window_command_run(window, manager, settings, document, clipboard, window.merge); });
+    if (window_flag_has(window.flags, WINDOW_GROUP))
+      actions.add(ACTION_GROUP,
+                  [&]()
+                  {
+                    if (window.elementType == ElementType::ANIMATION)
+                      return !window_animation_groupable_indices_get(document).empty();
+                    return !selection.empty();
+                  },
+                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.group); });
     if (window_flag_has(window.flags, WINDOW_REMOVE))
-      actions.add(ACTION_REMOVE, [&]() { return !selection.empty(); },
+      actions.add(ACTION_REMOVE, [&]() { return !selection.empty() || is_window_animation_group_selected(window); },
                   [&]() { window_command_run(window, manager, settings, document, clipboard, window.remove); });
     if (window_flag_has(window.flags, WINDOW_REMOVE_UNUSED))
       actions.add(ACTION_REMOVE_UNUSED, []() { return true; },
@@ -558,10 +872,10 @@ namespace anm2ed::imgui
     actions.separator();
 
     if (window_flag_has(window.flags, WINDOW_CUT))
-      actions.add(ACTION_CUT, [&]() { return !selection.empty(); },
+      actions.add(ACTION_CUT, [&]() { return is_window_item_selected(window, document); },
                   [&]() { window_command_run(window, manager, settings, document, clipboard, window.cut); });
     if (window_flag_has(window.flags, WINDOW_COPY))
-      actions.add(ACTION_COPY, [&]() { return !selection.empty(); },
+      actions.add(ACTION_COPY, [&]() { return is_window_item_selected(window, document); },
                   [&]() { window_copy(window, manager, settings, document, clipboard); });
     if (window_flag_has(window.flags, WINDOW_PASTE))
       actions.add(ACTION_PASTE, [&]() { return !clipboard.is_empty(); },
@@ -655,10 +969,11 @@ namespace anm2ed::imgui
 
           auto isRenaming = window.renameId == key;
           auto& name = isRenaming ? window.renameText : element.name;
+          bool isActivated{};
           if (selectable_input_text(label, window_rename_format_get(window, manager, key), name, isSelected,
                                     ImGuiSelectableFlags_None, window.renameState))
           {
-            if (window.row_select) window.row_select(window, document, key);
+            isActivated = true;
             if (window.renameState == RENAME_BEGIN)
             {
               window.renameId = key;
@@ -671,11 +986,22 @@ namespace anm2ed::imgui
               window.renameText.clear();
             }
           }
+          auto isClicked = ImGui::IsItemClicked(ImGuiMouseButton_Left) || ImGui::IsItemClicked(ImGuiMouseButton_Right);
+          if (isActivated || isClicked)
+          {
+            storage.reference = key;
+            if (window.row_select) window.row_select(window, document, key);
+          }
         }
         else
         {
-          if (ImGui::Selectable(label.c_str(), isSelected))
+          auto isActivated = ImGui::Selectable(label.c_str(), isSelected);
+          auto isClicked = ImGui::IsItemClicked(ImGuiMouseButton_Left) || ImGui::IsItemClicked(ImGuiMouseButton_Right);
+          if (isActivated || isClicked)
+          {
+            storage.reference = key;
             if (window.row_select) window.row_select(window, document, key);
+          }
         }
 
         if (isFontPushed) ImGui::PopFont();
@@ -801,7 +1127,7 @@ namespace anm2ed::imgui
     window.renameEdit = SNAPSHOT_RENAME_ANIMATION;
     window.pasteEdit = EDIT_PASTE_ANIMATIONS;
     window.deserializeFailedToast = TOAST_DESERIALIZE_ANIMATIONS_FAILED;
-    window.flags = WINDOW_ADD | WINDOW_DUPLICATE | WINDOW_MERGE | WINDOW_REMOVE | WINDOW_DEFAULT | WINDOW_CUT |
+    window.flags = WINDOW_ADD | WINDOW_DUPLICATE | WINDOW_MERGE | WINDOW_GROUP | WINDOW_REMOVE | WINDOW_DEFAULT | WINDOW_CUT |
                    WINDOW_COPY | WINDOW_PASTE | WINDOW_RENAME;
     window.popup = PopupHelper(LABEL_ANIMATIONS_MERGE_POPUP);
     window.storage_get = [](Document& document) -> Storage& { return document.animation; };
@@ -883,15 +1209,39 @@ namespace anm2ed::imgui
           if (payload->IsDelivery())
           {
             auto targetIndex = index + (isDropAfter ? 1 : 0);
-            manager.command_push({manager.selected, [&window, indices, targetIndex](Manager&, Document& document) mutable
+            auto targetGroupId = -1;
+            if (auto targetAnimation = anm2.element_get(ElementType::ANIMATION, index))
+              targetGroupId = targetAnimation->groupId;
+            manager.command_push({manager.selected, [&window, indices, targetIndex, targetGroupId](Manager&, Document& document) mutable
                                   {
                                     auto move = [&]()
                                     {
                                       auto items = window_container_get(window, document.anm2);
-                                      if (items)
-                                        document.animation.selection =
-                                            anm2ed::util::vector::move_indices_to_position(items->children, indices,
-                                                                                           targetIndex);
+                                      if (!items) return;
+
+                                      auto groupIds = window_animation_group_ids_get(*items);
+                                      auto groupId = groupIds.contains(targetGroupId) ? targetGroupId : -1;
+                                      std::vector<int> childIndices{};
+                                      childIndices.reserve(indices.size());
+                                      for (auto animationIndex : indices)
+                                      {
+                                        auto childIndex = window_animation_child_index_get(*items, animationIndex);
+                                        if (childIndex == -1) continue;
+                                        if (auto animation = vector::find(items->children, childIndex))
+                                          animation->groupId = groupId;
+                                        childIndices.push_back(childIndex);
+                                      }
+
+                                      auto targetChildIndex = window_animation_child_insert_index_get(*items, targetIndex);
+                                      auto movedChildIndices =
+                                          anm2ed::util::vector::move_indices_to_position(items->children, childIndices,
+                                                                                         targetChildIndex);
+                                      document.animation.selection.clear();
+                                      for (auto childIndex : movedChildIndices)
+                                      {
+                                        auto animationIndex = window_animation_index_from_child_index_get(*items, childIndex);
+                                        if (animationIndex != -1) document.animation.selection.insert(animationIndex);
+                                      }
                                     };
                                     window_edit(window, document, localize.get(EDIT_MOVE_ANIMATIONS), move);
                                   }});
@@ -903,6 +1253,297 @@ namespace anm2ed::imgui
       }
 
       return false;
+    };
+    window.rows_update = [](Window& window, Manager& manager, Settings&, Resources& resources, Clipboard&,
+                            Document& document, ImVec2)
+    {
+      auto container = window_container_get(window, document.anm2);
+      auto& storage = window.storage_get(document);
+      auto& selection = storage.selection;
+      auto& groupSelection = window.selection;
+      auto count = window_element_count_get(window, container);
+      auto groupIds = container ? window_animation_group_ids_get(*container) : std::set<int>{};
+      std::erase_if(groupSelection, [&](int groupId) { return !groupIds.contains(groupId); });
+      std::vector<int> visibleIds{};
+      int visibleIndex{};
+
+      auto visible_group_children_push = [&](int groupId)
+      {
+        int animationIndex{};
+        for (auto& child : container->children)
+        {
+          if (child.type != ElementType::ANIMATION) continue;
+          if (child.groupId == groupId) visibleIds.push_back(animationIndex);
+          ++animationIndex;
+        }
+      };
+
+      if (container)
+        for (auto& child : container->children)
+        {
+          if (child.type == ElementType::GROUP)
+          {
+            if (child.isExpanded) visible_group_children_push(child.id);
+          }
+          else if (child.type == ElementType::ANIMATION)
+          {
+            if (!is_window_animation_grouped(groupIds, child)) visibleIds.push_back(visibleIndex);
+            ++visibleIndex;
+          }
+        }
+
+      int scrollTargetId = -1;
+      int arrowSelectionId = -1;
+
+      selection.start(count);
+      if (container && ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_A, ImGuiInputFlags_RouteFocused))
+      {
+        selection.clear();
+        for (int i = 0; i < count; ++i)
+          selection.insert(i);
+        groupSelection = groupIds;
+      }
+      if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+          (ImGui::IsKeyPressed(ImGuiKey_UpArrow, true) || ImGui::IsKeyPressed(ImGuiKey_DownArrow, true)))
+      {
+        auto nextId = window_arrow_selection_get(visibleIds, storage.reference, selection);
+        if (nextId != -1)
+        {
+          arrowSelectionId = nextId;
+          scrollTargetId = nextId;
+        }
+      }
+
+      auto animation_row_draw = [&](Element& element, int key)
+      {
+        auto isSelected = selection.contains(key) || arrowSelectionId == key;
+        auto font = window.row_font_get ? window.row_font_get(document, element, key) : resource::font::REGULAR;
+        auto isFontPushed = font != resource::font::REGULAR;
+
+        ImGui::PushID(key);
+        ImGui::SetNextItemSelectionUserData(key);
+        auto label = window.row_label_get ? window.row_label_get(document, element) : element.name;
+        if (isFontPushed) ImGui::PushFont(resources.fonts[font].get(), resource::font::SIZE);
+        if (scrollTargetId == key) ImGui::SetKeyboardFocusHere();
+
+        if (window_flag_has(window.flags, WINDOW_RENAME))
+        {
+          if (window.newElementId == key || window.renameQueued == key)
+          {
+            window.renameState = RENAME_FORCE_EDIT;
+            window.renameQueued = -1;
+          }
+
+          auto isRenaming = window.renameId == key;
+          auto& name = isRenaming ? window.renameText : element.name;
+          bool isActivated{};
+          if (selectable_input_text(label, window_rename_format_get(window, manager, key), name, isSelected,
+                                    ImGuiSelectableFlags_None, window.renameState))
+          {
+            isActivated = true;
+            if (window.renameState == RENAME_BEGIN)
+            {
+              window.renameId = key;
+              window.renameText = element.name;
+            }
+            else if (window.renameState == RENAME_FINISHED)
+            {
+              if (isRenaming) window_rename_finish(window, manager, key, count, window.renameText);
+              window.renameId = -1;
+              window.renameText.clear();
+            }
+          }
+          auto isClicked = ImGui::IsItemClicked(ImGuiMouseButton_Left) || ImGui::IsItemClicked(ImGuiMouseButton_Right);
+          if (isActivated || isClicked)
+          {
+            auto& io = ImGui::GetIO();
+            if (!io.KeyCtrl && !io.KeyShift) groupSelection.clear();
+            storage.reference = key;
+            if (window.row_select) window.row_select(window, document, key);
+          }
+        }
+        else
+        {
+          auto isActivated = ImGui::Selectable(label.c_str(), isSelected);
+          auto isClicked = ImGui::IsItemClicked(ImGuiMouseButton_Left) || ImGui::IsItemClicked(ImGuiMouseButton_Right);
+          if (isActivated || isClicked)
+          {
+            auto& io = ImGui::GetIO();
+            if (!io.KeyCtrl && !io.KeyShift) groupSelection.clear();
+            storage.reference = key;
+            if (window.row_select) window.row_select(window, document, key);
+          }
+        }
+
+        if (isFontPushed) ImGui::PopFont();
+
+        if (window.newElementId == key || window.scrollQueued == key || scrollTargetId == key)
+        {
+          ImGui::SetScrollHereY(0.5f);
+          if (window.newElementId == key) window.newElementId = -1;
+          if (window.scrollQueued == key) window.scrollQueued = -1;
+        }
+
+        bool isBreak{};
+        if (window.row_drag_drop_update && window.row_drag_drop_update(window, manager, document, element, key))
+          isBreak = true;
+
+        if (window.tooltip_draw)
+        {
+          ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, window.tooltipItemSpacing);
+          ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, window.tooltipWindowPadding);
+          if (ImGui::BeginItemTooltip())
+          {
+            window.tooltip_draw(document, resources, element);
+            ImGui::EndTooltip();
+          }
+          ImGui::PopStyleVar(2);
+        }
+
+        ImGui::PopID();
+        return isBreak;
+      };
+
+      auto group_reference_clear = [&]()
+      {
+        storage.reference = -1;
+        document.reference = {};
+        document.frames.clear();
+      };
+
+      auto group_selection_apply = [&](int groupId)
+      {
+        auto& io = ImGui::GetIO();
+        auto isSelected = groupSelection.contains(groupId);
+        if (!io.KeyCtrl)
+        {
+          selection.clear();
+          groupSelection.clear();
+        }
+
+        if (io.KeyCtrl && isSelected)
+        {
+          groupSelection.erase(groupId);
+          if (selection.empty() && groupSelection.empty()) group_reference_clear();
+          return;
+        }
+
+        groupSelection.insert(groupId);
+        if (!io.KeyCtrl || selection.empty()) group_reference_clear();
+      };
+
+      bool isRowsDone{};
+      if (container)
+      {
+        int animationIndex{};
+        for (auto& item : container->children)
+        {
+          if (item.type == ElementType::GROUP)
+          {
+            ImGui::PushID("Animation Group");
+            ImGui::PushID(item.id);
+            auto label = item.name.empty() ? std::string(localize.get(TEXT_NEW_GROUP)) : item.name;
+            auto isGroupSelected = groupSelection.contains(item.id);
+            auto renameKey = window_animation_group_key_get(item.id);
+            auto isRenaming = window.renameId == renameKey;
+            auto& name = isRenaming ? window.renameText : item.name;
+            if (window.renameQueued == renameKey)
+            {
+              window.renameState = RENAME_FORCE_EDIT;
+              window.renameQueued = -1;
+            }
+            ImGui::SetNextItemOpen(item.isExpanded, ImGuiCond_Always);
+            auto treeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
+            auto tree =
+                tree_node_input_text(label, std::format("###Document #{} Animation Group #{}", manager.selected,
+                                                        item.id),
+                                     name, isGroupSelected, treeFlags, window.renameState);
+            auto isGroupOpen = tree.isOpen;
+            auto isGroupClicked = tree.isClicked;
+            if (tree.isRenameStarted)
+            {
+              window.renameId = renameKey;
+              window.renameText = item.name;
+            }
+            else if (tree.isRenameFinished)
+            {
+              if (isRenaming && item.name != window.renameText)
+              {
+                auto targetGroupId = item.id;
+                auto targetName = window.renameText;
+                manager.command_push({manager.selected, [targetGroupId, targetName](Manager&, Document& document)
+                                      {
+                                        auto animations = document.anm2.element_get(ElementType::ANIMATIONS);
+                                        auto group = animations ? element_child_id_get(*animations, ElementType::GROUP,
+                                                                                       targetGroupId)
+                                                                : nullptr;
+                                        if (!group || group->name == targetName) return;
+                                        document.anm2_snapshot(localize.get(EDIT_RENAME_GROUP));
+                                        group->name = targetName;
+                                        document.anm2_change(Document::ANIMATIONS);
+                                      }});
+              }
+              window.renameId = -1;
+              window.renameText.clear();
+            }
+            if (isGroupOpen != item.isExpanded)
+            {
+              auto targetGroupId = item.id;
+              manager.command_push({manager.selected, [targetGroupId, isGroupOpen](Manager&, Document& document)
+                                    {
+                                      auto animations = document.anm2.element_get(ElementType::ANIMATIONS);
+                                      auto group = animations ? element_child_id_get(*animations, ElementType::GROUP,
+                                                                                     targetGroupId)
+                                                              : nullptr;
+                                      if (!group || group->isExpanded == isGroupOpen) return;
+                                      document.anm2_snapshot(localize.get(EDIT_TOGGLE_GROUP_EXPANDED));
+                                      group->isExpanded = isGroupOpen;
+                                      document.anm2_change(Document::ANIMATIONS);
+                                    }});
+            }
+            if (isGroupClicked) group_selection_apply(item.id);
+
+            if (isGroupOpen)
+            {
+              int groupAnimationIndex{};
+              for (auto& animation : container->children)
+              {
+                if (animation.type != ElementType::ANIMATION) continue;
+                if (animation.groupId == item.id)
+                  if (animation_row_draw(animation, groupAnimationIndex))
+                  {
+                    isRowsDone = true;
+                    break;
+                  }
+                ++groupAnimationIndex;
+              }
+              ImGui::TreePop();
+            }
+            ImGui::PopID();
+            ImGui::PopID();
+            if (isRowsDone) break;
+          }
+          else if (item.type == ElementType::ANIMATION)
+          {
+            if (!is_window_animation_grouped(groupIds, item))
+              if (animation_row_draw(item, animationIndex))
+              {
+                isRowsDone = true;
+                break;
+              }
+            ++animationIndex;
+          }
+        }
+      }
+
+      selection.finish();
+      if (arrowSelectionId != -1)
+      {
+        groupSelection.clear();
+        selection = {arrowSelectionId};
+        storage.reference = arrowSelectionId;
+        if (window.row_select) window.row_select(window, document, arrowSelectionId);
+      }
     };
     window.add = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
     {
@@ -917,6 +1558,10 @@ namespace anm2ed::imgui
       {
         auto items = animations();
         if (!items) return;
+        auto groupIds = window_animation_group_ids_get(*items);
+        auto targetGroupId =
+            window.selection.size() == 1 && groupIds.contains(*window.selection.begin()) ? *window.selection.begin()
+                                                                                         : -1;
 
         auto animation = element_make(ElementType::ANIMATION);
         animation.name = localize.get(TEXT_NEW_ANIMATION);
@@ -946,10 +1591,23 @@ namespace anm2ed::imgui
         auto count = animation_count();
         auto index = count;
         if (!selection.empty()) index = std::min(*selection.rbegin() + 1, count);
+        else if (targetGroupId != -1)
+        {
+          auto groupIndices = window_animation_group_indices_get(*items, targetGroupId);
+          if (!groupIndices.empty()) index = std::min(*groupIndices.rbegin() + 1, count);
+        }
+        if (!selection.empty())
+          if (auto selectedAnimation = anm2.element_get(ElementType::ANIMATION, *selection.rbegin()))
+          {
+            if (groupIds.contains(selectedAnimation->groupId)) animation.groupId = selectedAnimation->groupId;
+          }
+        if (selection.empty() && targetGroupId != -1) animation.groupId = targetGroupId;
         if (count == 0) items->defaultAnimation = animation.name;
 
-        items->children.insert(items->children.begin() + index, animation);
+        auto childIndex = window_animation_child_insert_index_get(*items, index);
+        items->children.insert(items->children.begin() + childIndex, animation);
         selection = {index};
+        window.selection.clear();
         reference = {index};
         window.newElementId = index;
         window.scrollQueued = index;
@@ -962,23 +1620,34 @@ namespace anm2ed::imgui
       auto& selection = document.animation.selection;
       auto& reference = document.reference;
       auto& overlayIndex = document.overlayIndex;
+      auto groupSelection = window.selection;
 
       auto behavior = [&]()
       {
         auto items = document.anm2.element_get(ElementType::ANIMATIONS);
-        if (!items || selection.empty()) return;
+        if (!items || (selection.empty() && groupSelection.empty())) return;
+        if (!groupSelection.empty())
+        {
+          for (auto& item : items->children)
+            if (item.type == ElementType::ANIMATION && groupSelection.contains(item.groupId)) item.groupId = -1;
+          std::erase_if(items->children, [&](const Element& item)
+          { return item.type == ElementType::GROUP && groupSelection.contains(item.id); });
+        }
         for (auto it = selection.rbegin(); it != selection.rend(); ++it)
         {
           auto i = *it;
-          if (i < 0 || i >= (int)items->children.size()) continue;
+          auto childIndex = window_animation_child_index_get(*items, i);
+          if (childIndex == -1) continue;
           if (overlayIndex == i) overlayIndex = -1;
           if (reference.animationIndex == i) reference.animationIndex = -1;
-          items->children.erase(items->children.begin() + i);
+          items->children.erase(items->children.begin() + childIndex);
         }
         selection.clear();
+        window.selection.clear();
       };
 
-      window_edit(window, document, localize.get(EDIT_REMOVE_ANIMATIONS), behavior);
+      auto edit = groupSelection.empty() ? EDIT_REMOVE_ANIMATIONS : EDIT_REMOVE_GROUP;
+      window_edit(window, document, localize.get(edit), behavior);
     };
     window.duplicate = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
     {
@@ -987,16 +1656,38 @@ namespace anm2ed::imgui
       auto behavior = [&]()
       {
         auto items = document.anm2.element_get(ElementType::ANIMATIONS);
-        if (!items || selection.empty()) return;
-        auto duplicated = selection;
-        auto end = *duplicated.rbegin();
-        for (auto& id : duplicated)
+        auto clipboardText = window_animation_clipboard_text_get(document, window);
+        if (!items || clipboardText.empty()) return;
+
+        auto selectedIndices = window_animation_selected_indices_get(document, window);
+        auto count = window_element_count_get(window, items);
+        auto start = selectedIndices.empty() ? count : std::min(*selectedIndices.rbegin() + 1, count);
+        std::set<int> indices{};
+        std::set<int> groupIds{};
+        std::string errorString{};
+        if (!document.anm2.animations_deserialize(clipboardText, start, indices, &errorString, &groupIds)) return;
+
+        if (!groupIds.empty())
         {
-          if (id < 0 || id >= (int)items->children.size()) continue;
-          items->children.insert(items->children.begin() + end, items->children[id]);
-          selection.insert(++end);
-          selection.erase(id);
+          selection.clear();
+          window.selection = groupIds;
+          document.reference = {};
+          window.newElementId = -1;
         }
+        else
+        {
+          selection = indices;
+          window.selection.clear();
+        }
+        if (!indices.empty() && groupIds.empty())
+        {
+          auto index = *indices.rbegin();
+          document.reference = {index};
+          window.newElementId = indices.size() == 1 && groupIds.empty() ? index : -1;
+          window.scrollQueued = index;
+        }
+        else if (!indices.empty())
+          window.scrollQueued = *indices.rbegin();
       };
 
       window_edit(window, document, localize.get(EDIT_DUPLICATE_ANIMATIONS), behavior);
@@ -1005,11 +1696,20 @@ namespace anm2ed::imgui
     {
       auto& mergeSelection = document.merge.selection;
       auto& mergeReference = document.merge.reference;
+      auto quickSelection = mergeSelection.empty() ? window_animation_selected_indices_get(document, window)
+                                                   : std::set<int>{};
+      auto quickGroupSelection = mergeSelection.empty() ? window.selection : std::set<int>{};
       auto merged = window_animations_merge(document, {.selection = mergeSelection,
                                                        .reference = mergeReference,
                                                        .type = (merge::Type)settings.mergeType,
-                                                       .isDeleteAnimationsAfter = settings.mergeIsDeleteAnimationsAfter});
-      if (merged != -1) window.scrollQueued = merged;
+                                                       .isDeleteAnimationsAfter = settings.mergeIsDeleteAnimationsAfter},
+                                            mergeSelection.empty() ? &quickSelection : nullptr,
+                                            mergeSelection.empty() ? &quickGroupSelection : nullptr);
+      if (merged != -1)
+      {
+        window.scrollQueued = merged;
+        window.selection.clear();
+      }
       mergeSelection.clear();
     };
     window.merge_open = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
@@ -1019,6 +1719,46 @@ namespace anm2ed::imgui
       window.popup.open();
       document.merge.selection.clear();
       document.merge.reference = *selection.begin();
+    };
+    window.group = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
+    {
+      auto targetIndices = window_animation_groupable_indices_get(document);
+      if (targetIndices.empty()) return;
+
+      auto behavior = [&]()
+      {
+        auto items = document.anm2.element_get(ElementType::ANIMATIONS);
+        if (!items) return;
+
+        std::set<int> targetSet(targetIndices.begin(), targetIndices.end());
+        auto group = element_make(ElementType::GROUP);
+        group.id = element_child_next_id_get(*items, ElementType::GROUP);
+        group.name = localize.get(TEXT_NEW_GROUP);
+        group.isExpanded = true;
+        int insertIndex = (int)items->children.size();
+        int animationIndex{};
+
+        for (int i = 0; i < (int)items->children.size(); ++i)
+        {
+          auto& item = items->children[i];
+          if (item.type != ElementType::ANIMATION) continue;
+          if (targetSet.contains(animationIndex))
+          {
+            insertIndex = std::min(insertIndex, i);
+            item.groupId = group.id;
+          }
+          ++animationIndex;
+        }
+
+        if (insertIndex == (int)items->children.size()) return;
+        items->children.insert(items->children.begin() + insertIndex, group);
+        document.animation.selection = targetSet;
+        window.selection = {group.id};
+        document.reference = {*targetSet.begin()};
+        window.scrollQueued = *targetSet.begin();
+      };
+
+      window_edit(window, document, localize.get(EDIT_GROUP_ITEMS), behavior);
     };
     window.default_set = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
     {
@@ -1034,33 +1774,35 @@ namespace anm2ed::imgui
 
       window_edit(window, document, localize.get(EDIT_DEFAULT_ANIMATION), behavior);
     };
-    window.copy = [](Window&, Manager&, Settings&, Document& document, Clipboard& clipboard)
+    window.copy = [](Window& window, Manager&, Settings&, Document& document, Clipboard& clipboard)
     {
-      auto& selection = document.animation.selection;
-      if (selection.empty()) return;
-
-      std::string clipboardText{};
-      for (auto& i : selection)
-        if (auto animation = document.anm2.element_get(ElementType::ANIMATION, i))
-          clipboardText += element_to_string(*animation);
-      clipboard.set(clipboardText);
+      auto clipboardText = window_animation_clipboard_text_get(document, window);
+      if (!clipboardText.empty()) clipboard.set(clipboardText);
     };
     window.cut = [](Window& window, Manager& manager, Settings& settings, Document& document, Clipboard& clipboard)
     {
       if (window.copy) window.copy(window, manager, settings, document, clipboard);
 
       auto& selection = document.animation.selection;
+      auto groupSelection = window.selection;
+      auto selectedIndices = window_animation_selected_indices_get(document, window);
       auto behavior = [&]()
       {
         auto items = document.anm2.element_get(ElementType::ANIMATIONS);
         if (!items) return;
-        for (auto it = selection.rbegin(); it != selection.rend(); ++it)
+        for (auto it = selectedIndices.rbegin(); it != selectedIndices.rend(); ++it)
         {
           auto i = *it;
-          if (i < 0 || i >= (int)items->children.size()) continue;
-          items->children.erase(items->children.begin() + i);
+          auto childIndex = window_animation_child_index_get(*items, i);
+          if (childIndex == -1) continue;
+          if (document.overlayIndex == i) document.overlayIndex = -1;
+          if (document.reference.animationIndex == i) document.reference.animationIndex = -1;
+          items->children.erase(items->children.begin() + childIndex);
         }
+        std::erase_if(items->children, [&](const Element& item)
+        { return item.type == ElementType::GROUP && groupSelection.contains(item.id); });
         selection.clear();
+        window.selection.clear();
       };
 
       window_edit(window, document, localize.get(EDIT_CUT_ANIMATIONS), behavior);
@@ -1079,18 +1821,43 @@ namespace anm2ed::imgui
       {
         auto clipboardText = clipboard.get();
         auto start = selection.empty() ? animation_count() : *selection.rbegin() + 1;
-        std::set<int> indices{};
-        std::string errorString{};
-        if (anm2.animations_deserialize(clipboardText, start, indices, &errorString))
+        auto items = anm2.element_get(ElementType::ANIMATIONS);
+        auto groupIdsBefore = items ? window_animation_group_ids_get(*items) : std::set<int>{};
+        auto targetGroupId =
+            selection.empty() && window.selection.size() == 1 && groupIdsBefore.contains(*window.selection.begin())
+                ? *window.selection.begin()
+                : -1;
+        if (selection.empty() && targetGroupId != -1)
         {
-          if (!indices.empty())
+          auto groupIndices = window_animation_group_indices_get(*items, targetGroupId);
+          if (!groupIndices.empty()) start = std::min(*groupIndices.rbegin() + 1, animation_count());
+        }
+        std::set<int> indices{};
+        std::set<int> groupIds{};
+        std::string errorString{};
+        if (anm2.animations_deserialize(clipboardText, start, indices, &errorString, &groupIds))
+        {
+          if (targetGroupId != -1 && groupIds.empty())
+            for (auto index : indices)
+              if (auto animation = anm2.element_get(ElementType::ANIMATION, index)) animation->groupId = targetGroupId;
+
+          if (!groupIds.empty())
+          {
+            selection.clear();
+            window.selection = groupIds;
+            reference = {};
+            window.newElementId = -1;
+          }
+          else if (!indices.empty())
           {
             auto index = *indices.rbegin();
             selection = {index};
+            window.selection.clear();
             reference = {index};
             window.newElementId = indices.size() == 1 ? index : -1;
             window.scrollQueued = index;
           }
+          if (!indices.empty()) window.scrollQueued = *indices.rbegin();
         }
         else
         {
@@ -1112,7 +1879,6 @@ namespace anm2ed::imgui
         [](Window& window, Manager& manager, Settings& settings, Resources&, Clipboard&, Document& document)
     {
       auto animations = [&]() { return document.anm2.element_get(ElementType::ANIMATIONS); };
-      auto animation_count = [&]() { return window_element_count_get(window, animations()); };
       auto& mergeSelection = document.merge.selection;
       auto& mergeReference = document.merge.reference;
 
@@ -1128,6 +1894,51 @@ namespace anm2ed::imgui
 
         auto& type = settings.mergeType;
         auto& isDeleteAnimationsAfter = settings.mergeIsDeleteAnimationsAfter;
+        struct AnimationMergeCandidate
+        {
+          int key{};
+          std::string label{};
+        };
+        std::vector<AnimationMergeCandidate> candidates{};
+        auto items = animations();
+        auto groupIds = items ? window_animation_group_ids_get(*items) : std::set<int>{};
+
+        if (items)
+        {
+          auto candidate_animation_push = [&](const Element& animation, int animationIndex, bool isGrouped)
+          {
+            if (animationIndex == mergeReference) return;
+            auto label = isGrouped ? std::format("  {}", animation.name) : animation.name;
+            candidates.push_back({.key = animationIndex, .label = label});
+          };
+
+          int animationIndex{};
+          for (const auto& item : items->children)
+          {
+            if (item.type == ElementType::GROUP)
+            {
+              auto groupIndices = window_animation_group_indices_get(*items, item.id);
+              groupIndices.erase(mergeReference);
+              if (!groupIndices.empty())
+              {
+                auto label = item.name.empty() ? std::string(localize.get(TEXT_NEW_GROUP)) : item.name;
+                candidates.push_back({.key = window_animation_group_key_get(item.id), .label = label});
+                int groupAnimationIndex{};
+                for (const auto& animation : items->children)
+                {
+                  if (animation.type != ElementType::ANIMATION) continue;
+                  if (animation.groupId == item.id) candidate_animation_push(animation, groupAnimationIndex, true);
+                  ++groupAnimationIndex;
+                }
+              }
+            }
+            else if (item.type == ElementType::ANIMATION)
+            {
+              if (!is_window_animation_grouped(groupIds, item)) candidate_animation_push(item, animationIndex, false);
+              ++animationIndex;
+            }
+          }
+        }
 
         auto footerSize = footer_size_get();
         auto optionsSize = child_size_get(2);
@@ -1138,26 +1949,25 @@ namespace anm2ed::imgui
 
         if (ImGui::BeginChild(localize.get(LABEL_ANIMATIONS_CHILD), animationsSize, ImGuiChildFlags_Borders))
         {
-          auto items = animations();
-          mergeSelection.start(animation_count());
+          std::vector<int> candidateKeys{};
+          candidateKeys.reserve(candidates.size());
+          for (const auto& candidate : candidates)
+            candidateKeys.push_back(candidate.key);
 
-          if (items)
+          mergeSelection.set_index_map(&candidateKeys);
+          mergeSelection.start(candidates.size());
+
+          for (int i = 0; i < (int)candidates.size(); ++i)
           {
-            for (int i = 0; i < (int)items->children.size(); i++)
-            {
-              if (i == mergeReference) continue;
-
-              auto& animation = items->children[i];
-              if (animation.type != ElementType::ANIMATION) continue;
-
-              ImGui::PushID(i);
-              ImGui::SetNextItemSelectionUserData(i);
-              ImGui::Selectable(animation.name.c_str(), mergeSelection.contains(i));
-              ImGui::PopID();
-            }
+            const auto& candidate = candidates[i];
+            ImGui::PushID(candidate.key);
+            ImGui::SetNextItemSelectionUserData(i);
+            ImGui::Selectable(candidate.label.c_str(), mergeSelection.contains(candidate.key));
+            ImGui::PopID();
           }
 
           mergeSelection.finish();
+          mergeSelection.set_index_map(nullptr);
         }
         ImGui::EndChild();
 
@@ -1189,7 +1999,7 @@ namespace anm2ed::imgui
 
         auto widgetSize = widget_size_with_row_get(2);
 
-        ImGui::BeginDisabled(mergeSelection.empty());
+        ImGui::BeginDisabled(window_animation_merge_indices_get(document, mergeSelection, mergeReference).empty());
         if (ImGui::Button(localize.get(LABEL_MERGE), widgetSize))
         {
           auto queuedSelection = mergeSelection;
@@ -1327,7 +2137,7 @@ namespace anm2ed::imgui
         }
       };
 
-      document.snapshot(localize.get(EDIT_TRIM_REGIONS));
+      document.anm2_snapshot(localize.get(EDIT_TRIM_REGIONS));
       behavior();
       document.change(Document::SPRITESHEETS);
     };
@@ -1358,7 +2168,7 @@ namespace anm2ed::imgui
       std::string errorString{};
       if (pasted.regions_deserialize(spritesheetReference, clipboard.get(), true, &errorString))
       {
-        document.snapshot(localize.get(EDIT_PASTE_REGIONS));
+        document.anm2_snapshot(localize.get(EDIT_PASTE_REGIONS));
         anm2 = std::move(pasted);
         if (auto pastedSpritesheet = anm2.element_get(ElementType::SPRITESHEET, spritesheetReference))
         {
@@ -1482,7 +2292,9 @@ namespace anm2ed::imgui
           ImGui::SetNextItemSelectionUserData(i);
           ImGui::SetNextItemStorageID(id);
           if (scrollTargetId == id) ImGui::SetKeyboardFocusHere();
-          if (ImGui::Selectable("##Region Selectable", isSelected, 0, regionChildSize))
+          auto isActivated = ImGui::Selectable("##Region Selectable", isSelected, 0, regionChildSize);
+          auto isClicked = ImGui::IsItemClicked(ImGuiMouseButton_Left) || ImGui::IsItemClicked(ImGuiMouseButton_Right);
+          if (isActivated || isClicked)
           {
             document.editTarget = Document::EditTarget::REGION;
             reference = id;
@@ -1910,6 +2722,546 @@ namespace anm2ed::imgui
     return window;
   }
 
+  Window overlays_window_register()
+  {
+    Window window{};
+    window.title = LABEL_OVERLAYS_WINDOW;
+    window.isOpen = &Settings::windowIsOverlays;
+    window.changeType = Document::SPRITESHEETS;
+    window.elementType = ElementType::OVERLAY;
+    window.childLabel = "##Overlays Child";
+    window.footerRows = 2;
+    window.flags = 0;
+    window.isChildPaddingZero = true;
+    window.unavailableText = TEXT_SELECT_SPRITESHEET;
+    window.popup = PopupHelper(LABEL_TASKBAR_OVERWRITE_FILE, POPUP_SMALL_NO_HEIGHT);
+    window.storage_get = [](Document& document) -> Storage& { return document.overlay; };
+    window.is_available = [](Document& document)
+    { return document.anm2.element_get(ElementType::SPRITESHEET, document.spritesheet.reference); };
+    window.add = [](Window& window, Manager&, Settings&, Document&, Clipboard&)
+    {
+      if (window.dialog) window.dialog->file_open(Dialog::OVERLAY_OPEN, true);
+    };
+    window.replace = [](Window& window, Manager&, Settings&, Document&, Clipboard&)
+    {
+      if (window.dialog) window.dialog->file_open(Dialog::OVERLAY_REPLACE);
+    };
+    window.path_set = [](Window& window, Manager&, Settings&, Document&, Clipboard&)
+    {
+      if (window.dialog) window.dialog->file_save(Dialog::OVERLAY_PATH_SET);
+    };
+    window.open = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
+    {
+      auto& selection = document.overlay.selection;
+      if (selection.size() != 1 || !window.dialog) return;
+      if (auto overlay = document.overlay_get(*selection.begin())) window_directory_open(*window.dialog, document, overlay->path);
+    };
+    window.remove = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
+    {
+      auto selected = document.overlay.selection;
+      if (selected.empty()) return;
+      auto spritesheet = document.anm2.element_get(ElementType::SPRITESHEET, document.spritesheet.reference);
+      if (!spritesheet) return;
+
+      auto behavior = [&]()
+      {
+        for (auto id : selected)
+        {
+          auto overlay = element_child_id_get(*spritesheet, ElementType::OVERLAY, id);
+          if (!overlay) continue;
+          auto pathString = path::to_utf8(overlay->path);
+          toasts.push(std::vformat(localize.get(TOAST_REMOVE_OVERLAY), std::make_format_args(id, pathString)));
+          logger.info(std::vformat(localize.get(TOAST_REMOVE_OVERLAY, anm2ed::ENGLISH),
+                                   std::make_format_args(id, pathString)));
+          element_child_id_erase(*spritesheet, ElementType::OVERLAY, id);
+        }
+        document.overlay.reference = -1;
+        document.overlay.selection.clear();
+      };
+
+      window_edit(window, document, localize.get(EDIT_REMOVE_OVERLAYS), behavior);
+    };
+    window.reload = [](Window&, Manager&, Settings&, Document& document, Clipboard&)
+    {
+      auto selected = document.overlay.selection;
+      if (selected.empty()) return;
+      document.textures_snapshot(localize.get(EDIT_RELOAD_OVERLAYS));
+      for (auto id : selected)
+        document.overlay_texture_reload(id);
+      document.change(Document::TEXTURES);
+
+      for (auto id : selected)
+      {
+        auto overlay = document.overlay_get(id);
+        if (!overlay) continue;
+        document.overlay_hash_set_saved(id);
+        auto pathString = path::to_utf8(overlay->path);
+        toasts.push(std::vformat(localize.get(TOAST_RELOAD_OVERLAY), std::make_format_args(id, pathString)));
+        logger.info(std::vformat(localize.get(TOAST_RELOAD_OVERLAY, anm2ed::ENGLISH),
+                                 std::make_format_args(id, pathString)));
+      }
+    };
+    window.save = [](Window&, Manager&, Settings&, Document& document, Clipboard&)
+    {
+      window_overlays_save(document, document.overlay.selection);
+    };
+    window.copy = [](Window&, Manager&, Settings&, Document& document, Clipboard& clipboard)
+    {
+      auto& selection = document.overlay.selection;
+      if (selection.empty()) return;
+
+      std::string clipboardText{};
+      for (auto id : selection)
+        if (auto overlay = document.overlay_get(id)) clipboardText += element_to_string(*overlay);
+      clipboard.set(clipboardText);
+    };
+    window.paste = [](Window& window, Manager&, Settings&, Document& document, Clipboard& clipboard)
+    {
+      if (clipboard.is_empty()) return;
+
+      auto spritesheet = document.anm2.element_get(ElementType::SPRITESHEET, document.spritesheet.reference);
+      if (!spritesheet) return;
+
+      tinyxml2::XMLDocument xmlDocument{};
+      std::string errorString{};
+      if (xmlDocument.Parse(clipboard.get().c_str()) != tinyxml2::XML_SUCCESS)
+      {
+        errorString = xmlDocument.ErrorStr();
+        toasts.push(std::vformat(localize.get(TOAST_DESERIALIZE_OVERLAYS_FAILED), std::make_format_args(errorString)));
+        logger.error(std::vformat(localize.get(TOAST_DESERIALIZE_OVERLAYS_FAILED, anm2ed::ENGLISH),
+                                  std::make_format_args(errorString)));
+        return;
+      }
+
+      std::vector<Element> pasted{};
+      for (auto xmlElement = xmlDocument.FirstChildElement("Overlay"); xmlElement;
+           xmlElement = xmlElement->NextSiblingElement("Overlay"))
+      {
+        auto overlay = element_read(xmlElement);
+        if (overlay.type == ElementType::OVERLAY) pasted.push_back(std::move(overlay));
+      }
+      if (pasted.empty())
+      {
+        errorString = "No valid Overlay(s).";
+        toasts.push(std::vformat(localize.get(TOAST_DESERIALIZE_OVERLAYS_FAILED), std::make_format_args(errorString)));
+        logger.error(std::vformat(localize.get(TOAST_DESERIALIZE_OVERLAYS_FAILED, anm2ed::ENGLISH),
+                                  std::make_format_args(errorString)));
+        return;
+      }
+
+      auto behavior = [&]()
+      {
+        std::set<int> added{};
+        for (auto overlay : pasted)
+        {
+          overlay.id = window_overlay_next_id_get(document);
+          overlay.path = path::backslash_handle(overlay.path);
+          added.insert(overlay.id);
+          spritesheet->children.push_back(std::move(overlay));
+          document.overlay_texture_reload(*added.rbegin());
+        }
+
+        document.overlay.selection = added;
+        document.overlay.reference = added.empty() ? -1 : *added.rbegin();
+        document.editTarget = Document::EditTarget::OVERLAY;
+        window.newElementId = document.overlay.reference;
+      };
+
+      window_edit(window, document, localize.get(EDIT_PASTE_OVERLAYS), behavior);
+    };
+    window.rows_update =
+        [](Window& window, Manager& manager, Settings& settings, Resources& resources, Clipboard& clipboard,
+           Document& document, ImVec2)
+    {
+      auto spritesheet = document.anm2.element_get(ElementType::SPRITESHEET, document.spritesheet.reference);
+      if (!spritesheet) return;
+
+      auto& selection = document.overlay.selection;
+      auto& reference = document.overlay.reference;
+      auto style = ImGui::GetStyle();
+      auto overlayChildSize = ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetTextLineHeightWithSpacing() * 4);
+      bool isContextMenuQueued{};
+      int contextMenuTargetId{-1};
+      StringType visibilityTooltip{STRING_UNDEFINED};
+
+      std::vector<int> ids{};
+      for (auto& overlay : spritesheet->children)
+        if (overlay.type == ElementType::OVERLAY) ids.push_back(overlay.id);
+
+      if (reference != -1 && std::ranges::find(ids, reference) == ids.end())
+      {
+        reference = -1;
+        selection.clear();
+      }
+
+      selection.start((int)ids.size());
+      if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_A, ImGuiInputFlags_RouteFocused))
+      {
+        selection.clear();
+        for (auto id : ids)
+          selection.insert(id);
+      }
+      if (ImGui::Shortcut(ImGuiKey_Escape, ImGuiInputFlags_RouteFocused))
+      {
+        selection.clear();
+        reference = -1;
+      }
+
+      int scrollTargetId = -1;
+      int arrowSelectionId = -1;
+      if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+          (ImGui::IsKeyPressed(ImGuiKey_UpArrow, true) || ImGui::IsKeyPressed(ImGuiKey_DownArrow, true)))
+      {
+        auto nextId = window_arrow_selection_get(ids, reference, selection);
+        if (nextId != -1)
+        {
+          arrowSelectionId = nextId;
+          scrollTargetId = nextId;
+        }
+      }
+
+      ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2());
+      for (auto& overlay : spritesheet->children)
+      {
+        if (overlay.type != ElementType::OVERLAY) continue;
+        auto id = overlay.id;
+        auto isNewOverlay = window.newElementId == id;
+        ImGui::PushID(id);
+
+        window_scroll_to_item(overlayChildSize.y, scrollTargetId == id);
+        if (scrollTargetId == id) ImGui::SetNextWindowFocus();
+
+        if (ImGui::BeginChild("##Overlay Child", overlayChildSize, ImGuiChildFlags_Borders))
+        {
+          auto isSelected = selection.contains(id) || arrowSelectionId == id;
+          auto isReferenced = id == reference || arrowSelectionId == id;
+          auto cursorPos = ImGui::GetCursorPos();
+          auto textureInfo = document.overlay_texture_get(id);
+          bool isValid = textureInfo && textureInfo->is_valid();
+          auto& texture = isValid ? *textureInfo : resources.icons[icon::NONE];
+          auto tintColor = !isValid       ? ImVec4(1.0f, 0.25f, 0.25f, 1.0f)
+                           : overlay.isVisible ? ImVec4(1.0f, 1.0f, 1.0f, 1.0f)
+                                               : ImVec4(1.0f, 1.0f, 1.0f, 0.35f);
+          auto pathString = path::to_utf8(overlay.path);
+          auto pathCStr = pathString.c_str();
+          auto visibleButtonSize = icon_size_get();
+
+          ImGui::SetNextItemSelectionUserData(id);
+          ImGui::SetNextItemStorageID(id);
+          if (scrollTargetId == id) ImGui::SetKeyboardFocusHere();
+          auto isActivated =
+              ImGui::Selectable("##Overlay Selectable", isSelected, ImGuiSelectableFlags_AllowOverlap,
+                                overlayChildSize);
+          auto isRowRightClicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
+          auto isClicked = ImGui::IsItemClicked(ImGuiMouseButton_Left) || isRowRightClicked;
+          if (isActivated || isClicked)
+          {
+            document.editTarget = Document::EditTarget::OVERLAY;
+            reference = id;
+            document.region.reference = -1;
+            document.region.selection.clear();
+          }
+          if (isRowRightClicked)
+          {
+            isContextMenuQueued = true;
+            contextMenuTargetId = id;
+          }
+          if (scrollTargetId == id) ImGui::SetItemDefaultFocus();
+          if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && window.dialog)
+            window_directory_open(*window.dialog, document, overlay.path);
+
+          auto imageSize = to_imvec2(vec2(overlayChildSize.y));
+          auto aspectRatio = texture.size.y != 0 ? (float)texture.size.x / texture.size.y : 1.0f;
+          if (imageSize.x / imageSize.y > aspectRatio)
+            imageSize.x = imageSize.y * aspectRatio;
+          else
+            imageSize.y = imageSize.x / aspectRatio;
+
+          ImGui::SetCursorPos(cursorPos);
+          ImGui::ImageWithBg(texture.id, imageSize, ImVec2(), ImVec2(1, 1), ImVec4(), tintColor);
+
+          ImGui::SetCursorPos(
+              ImVec2(overlayChildSize.y + style.ItemSpacing.x,
+                     overlayChildSize.y - overlayChildSize.y / 2 - ImGui::GetTextLineHeight() / 2));
+
+          if (isReferenced) ImGui::PushFont(resources.fonts[font::ITALICS].get(), font::SIZE);
+          auto overlayLabel = std::vformat(localize.get(FORMAT_OVERLAY), std::make_format_args(id, pathCStr));
+          if (document.overlay_is_dirty(id))
+            overlayLabel =
+                std::vformat(localize.get(FORMAT_SPRITESHEET_NOT_SAVED), std::make_format_args(overlayLabel));
+          ImGui::TextUnformatted(overlayLabel.c_str());
+          if (isReferenced) ImGui::PopFont();
+
+          auto visibleIcon = overlay.isVisible ? icon::VISIBLE : icon::INVISIBLE;
+          auto visibleButtonPos =
+              ImVec2(overlayChildSize.x - visibleButtonSize.x - style.ItemSpacing.x,
+                     overlayChildSize.y * 0.5f - visibleButtonSize.y * 0.5f);
+          ImGui::SetCursorPos(visibleButtonPos);
+          ImGui::PushStyleColor(ImGuiCol_Button, ImVec4());
+          ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4());
+          ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4());
+          ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2());
+          ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
+          if (ImGui::ImageButton("##Overlay Visible Toggle", resources.icons[visibleIcon].id, visibleButtonSize))
+          {
+            auto queuedId = id;
+            manager.command_push({manager.selected,
+                                  [queuedId](Manager&, Document& document)
+                                  {
+                                    auto behavior = [&]()
+                                    {
+                                      auto overlay = document.overlay_get(queuedId);
+                                      if (!overlay) return;
+                                      overlay->isVisible = !overlay->isVisible;
+                                    };
+                                    window_edit(document, Document::SPRITESHEETS,
+                                                localize.get(EDIT_TOGGLE_ITEM_VISIBILITY), behavior);
+                                  }});
+          }
+          auto isVisibleButtonHovered = ImGui::IsItemHovered();
+          auto isVisibleButtonRightClicked = ImGui::IsItemClicked(ImGuiMouseButton_Right);
+          if (isVisibleButtonRightClicked)
+          {
+            document.editTarget = Document::EditTarget::OVERLAY;
+            reference = id;
+            document.region.reference = -1;
+            document.region.selection.clear();
+            isContextMenuQueued = true;
+            contextMenuTargetId = id;
+          }
+          ImGui::PopStyleVar(2);
+          ImGui::PopStyleColor(3);
+          if (isVisibleButtonHovered)
+            visibilityTooltip =
+                overlay.isVisible ? TOOLTIP_ITEM_VISIBILITY_SHOWN : TOOLTIP_ITEM_VISIBILITY_HIDDEN;
+        }
+
+        ImGui::EndChild();
+
+        if (isNewOverlay)
+        {
+          ImGui::SetScrollHereY(0.5f);
+          window.newElementId = -1;
+        }
+
+        ImGui::PopID();
+      }
+      ImGui::PopStyleVar();
+
+      if (visibilityTooltip != STRING_UNDEFINED)
+      {
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, window.tooltipWindowPadding);
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, window.tooltipItemSpacing);
+        ImGui::SetTooltip("%s", localize.get(visibilityTooltip));
+        ImGui::PopStyleVar(2);
+      }
+
+      selection.finish();
+      if (contextMenuTargetId != -1)
+      {
+        document.editTarget = Document::EditTarget::OVERLAY;
+        if (!selection.contains(contextMenuTargetId)) selection = {contextMenuTargetId};
+        reference = contextMenuTargetId;
+        document.region.reference = -1;
+        document.region.selection.clear();
+      }
+      if (arrowSelectionId != -1)
+      {
+        document.editTarget = Document::EditTarget::OVERLAY;
+        selection = {arrowSelectionId};
+        reference = arrowSelectionId;
+        document.region.reference = -1;
+        document.region.selection.clear();
+      }
+      if (shortcut(manager.chords[SHORTCUT_CONFIRM], shortcut::FOCUSED) && reference != -1 && window.dialog)
+        if (auto overlay = document.overlay_get(reference)) window_directory_open(*window.dialog, document, overlay->path);
+      if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) &&
+          ImGui::IsMouseReleased(ImGuiMouseButton_Right) && !ImGui::IsAnyItemHovered())
+        isContextMenuQueued = true;
+      if (isContextMenuQueued) ImGui::OpenPopup("##Overlay Context Menu");
+
+      Actions actions{};
+      window_overlays_context_actions_add(window, manager, settings, document, clipboard, actions);
+      ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, window.tooltipWindowPadding);
+      ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, window.tooltipItemSpacing);
+      actions_popup_draw("##Overlay Context Menu", actions, settings);
+      ImGui::PopStyleVar(2);
+    };
+    window.context_update =
+        [](Window&, Manager&, Settings&, Resources&, Clipboard&, Document&) {};
+    window.footer_update =
+        [](Window& window, Manager& manager, Settings& settings, Resources&, Clipboard& clipboard, Document& document)
+    {
+      auto& selection = document.overlay.selection;
+
+      auto rowOneWidgetSize = widget_size_with_row_get(3);
+      Actions rowOneActions{};
+      rowOneActions.add(ACTION_ADD, [&]() { return (bool)window.add; },
+                        [&]() { window_command_run(window, manager, settings, document, clipboard, window.add); },
+                        TOOLTIP_ADD_OVERLAY);
+      rowOneActions.add(ACTION_RELOAD, [&]() { return !selection.empty() && (bool)window.reload; },
+                        [&]() { window_command_run(window, manager, settings, document, clipboard, window.reload); },
+                        TOOLTIP_RELOAD_OVERLAYS);
+      rowOneActions.add(ACTION_REPLACE, [&]() { return selection.size() == 1 && (bool)window.replace; },
+                        [&]() { window_command_run(window, manager, settings, document, clipboard, window.replace); },
+                        TOOLTIP_REPLACE_OVERLAY);
+
+      bool isSameLine{};
+      for (auto& action : rowOneActions.items)
+        action_button_draw(action, manager, settings, rowOneWidgetSize, isSameLine);
+
+      if (window.dialog && window.dialog->is_selected(Dialog::OVERLAY_OPEN))
+      {
+        auto paths = window.dialog->paths;
+        manager.command_push({manager.selected, [&window, paths](Manager&, Document& document)
+                              {
+                                document.overlays_add(document.spritesheet.reference, paths);
+                                document.region.reference = -1;
+                                document.region.selection.clear();
+                                window.newElementId = document.overlay.reference;
+                              }});
+        window.dialog->reset();
+      }
+
+      if (window.dialog && window.dialog->is_selected(Dialog::OVERLAY_REPLACE))
+      {
+        if (selection.size() == 1 && !window.dialog->path.empty())
+        {
+          auto id = *selection.begin();
+          auto dialogPath = window.dialog->path;
+          manager.command_push({manager.selected, [id, dialogPath](Manager&, Document& document)
+                                {
+                                  auto behavior = [&]()
+                                  {
+                                    auto overlay = document.overlay_get(id);
+                                    if (!overlay) return;
+                                    overlay->path = window_asset_path_get(document, dialogPath);
+                                    document.overlay_texture_reload(id);
+                                  };
+
+                                  window_edit(document, Document::SPRITESHEETS, localize.get(EDIT_REPLACE_OVERLAY),
+                                              behavior);
+                                  if (auto overlay = document.overlay_get(id))
+                                  {
+                                    document.overlay_hash_set_saved(id);
+                                    auto pathString = path::to_utf8(overlay->path);
+                                    toasts.push(std::vformat(localize.get(TOAST_REPLACE_OVERLAY),
+                                                             std::make_format_args(id, pathString)));
+                                    logger.info(std::vformat(localize.get(TOAST_REPLACE_OVERLAY, anm2ed::ENGLISH),
+                                                             std::make_format_args(id, pathString)));
+                                  }
+                                }});
+        }
+        window.dialog->reset();
+      }
+
+      if (window.dialog && window.dialog->is_selected(Dialog::OVERLAY_PATH_SET))
+      {
+        if (selection.size() == 1 && !window.dialog->path.empty())
+        {
+          auto id = *selection.begin();
+          auto dialogPath = window.dialog->path;
+          manager.command_push({manager.selected, [id, dialogPath](Manager&, Document& document)
+                                {
+                                  auto behavior = [&]()
+                                  {
+                                    auto overlay = document.overlay_get(id);
+                                    auto texture = document.overlay_texture_get(id);
+                                    if (!overlay || !texture) return;
+                                    auto newPath = window_asset_path_get(document, dialogPath);
+                                    auto pathString = path::to_utf8(newPath);
+                                    WorkingDirectory workingDirectory(document.directory_get());
+                                    path::ensure_directory(newPath.parent_path());
+                                    if (!texture->write_png(newPath))
+                                    {
+                                      toasts.push(std::vformat(localize.get(TOAST_SAVE_OVERLAY_FAILED),
+                                                               std::make_format_args(id, pathString)));
+                                      logger.error(
+                                          std::vformat(localize.get(TOAST_SAVE_OVERLAY_FAILED, anm2ed::ENGLISH),
+                                                       std::make_format_args(id, pathString)));
+                                      return;
+                                    }
+                                    overlay->path = newPath;
+                                    document.overlayTexturePaths[id] = overlay->path;
+                                    document.overlay_hash_set_saved(id);
+                                    toasts.push(std::vformat(localize.get(TOAST_SAVE_OVERLAY),
+                                                             std::make_format_args(id, pathString)));
+                                    logger.info(std::vformat(localize.get(TOAST_SAVE_OVERLAY, anm2ed::ENGLISH),
+                                                             std::make_format_args(id, pathString)));
+                                  };
+
+                                  window_edit(document, Document::SPRITESHEETS, localize.get(EDIT_SET_OVERLAY_FILE_PATH),
+                                              behavior);
+                                }});
+        }
+        window.dialog->reset();
+      }
+
+      auto rowTwoWidgetSize = widget_size_with_row_get(2);
+      Actions rowTwoActions{};
+      rowTwoActions.add(ACTION_REMOVE, [&]() { return !selection.empty() && (bool)window.remove; },
+                        [&]() { window_command_run(window, manager, settings, document, clipboard, window.remove); },
+                        TOOLTIP_REMOVE_OVERLAYS);
+      rowTwoActions.add(ACTION_SAVE, [&]() { return !selection.empty(); },
+                        [&]()
+                        {
+                          if (settings.fileIsWarnOverwrite)
+                          {
+                            window.selection2 = selection;
+                            window.popup.open();
+                          }
+                          else if (window.save)
+                            window_command_run(window, manager, settings, document, clipboard, window.save);
+                        },
+                        TOOLTIP_SAVE_OVERLAYS);
+
+      isSameLine = false;
+      for (auto& action : rowTwoActions.items)
+        action_button_draw(action, manager, settings, rowTwoWidgetSize, isSameLine);
+
+      if (shortcut(manager.chords[SHORTCUT_ADD], shortcut::FOCUSED) && window.add)
+        window_command_run(window, manager, settings, document, clipboard, window.add);
+      if (shortcut(manager.chords[SHORTCUT_REMOVE], shortcut::FOCUSED) && window.remove)
+        window_command_run(window, manager, settings, document, clipboard, window.remove);
+      if (shortcut(manager.chords[SHORTCUT_COPY], shortcut::FOCUSED) && window.copy)
+        window_command_run(window, manager, settings, document, clipboard, window.copy);
+      if (shortcut(manager.chords[SHORTCUT_PASTE], shortcut::FOCUSED) && window.paste)
+        window_command_run(window, manager, settings, document, clipboard, window.paste);
+    };
+    window.popup_update =
+        [](Window& window, Manager& manager, Settings&, Resources&, Clipboard&, Document&)
+    {
+      window.popup.trigger();
+      if (ImGui::BeginPopupModal(window.popup.label(), &window.popup.isOpen, ImGuiWindowFlags_NoResize))
+      {
+        ImGui::TextUnformatted(localize.get(LABEL_OVERWRITE_CONFIRMATION));
+
+        auto widgetSize = widget_size_with_row_get(2);
+
+        if (ImGui::Button(localize.get(BASIC_YES), widgetSize))
+        {
+          auto queuedSelection = window.selection2;
+          manager.command_push({manager.selected, [queuedSelection](Manager&, Document& document) mutable
+                                { window_overlays_save(document, queuedSelection); }});
+          window.selection2.clear();
+          window.popup.close();
+        }
+
+        ImGui::SameLine();
+
+        if (ImGui::Button(localize.get(BASIC_NO), widgetSize))
+        {
+          window.selection2.clear();
+          window.popup.close();
+        }
+
+        ImGui::EndPopup();
+      }
+      window.popup.end();
+    };
+    return window;
+  }
+
   Window spritesheets_window_register()
   {
     Window window{};
@@ -2044,7 +3396,7 @@ namespace anm2ed::imgui
       std::string errorString{};
       if (pasted.deserialize(ElementType::SPRITESHEET, clipboard.get(), true, &errorString, document.directory_get()))
       {
-        document.snapshot(localize.get(EDIT_PASTE_SPRITESHEETS));
+        document.anm2_snapshot(localize.get(EDIT_PASTE_SPRITESHEETS));
         anm2 = std::move(pasted);
         if (auto pastedItems = anm2.element_get(ElementType::SPRITESHEETS))
         {
@@ -2145,7 +3497,9 @@ namespace anm2ed::imgui
             ImGui::SetNextItemSelectionUserData(id);
             ImGui::SetNextItemStorageID(id);
             if (scrollTargetId == id) ImGui::SetKeyboardFocusHere();
-            if (ImGui::Selectable("##Spritesheet Selectable", isSelected, 0, spritesheetChildSize))
+            auto isActivated = ImGui::Selectable("##Spritesheet Selectable", isSelected, 0, spritesheetChildSize);
+            auto isClicked = ImGui::IsItemClicked(ImGuiMouseButton_Left) || ImGui::IsItemClicked(ImGuiMouseButton_Right);
+            if (isActivated || isClicked)
             {
               document.editTarget = Document::EditTarget::SPRITESHEET;
               reference = id;
@@ -2701,7 +4055,7 @@ namespace anm2ed::imgui
       std::string errorString{};
       if (pasted.deserialize(ElementType::SOUND_ELEMENT, clipboard.get(), true, &errorString, document.directory_get()))
       {
-        document.snapshot(localize.get(TOAST_SOUNDS_PASTE));
+        document.anm2_snapshot(localize.get(TOAST_SOUNDS_PASTE));
         anm2 = std::move(pasted);
         if (auto pastedSounds = anm2.element_get(ElementType::SOUNDS))
         {
@@ -2793,10 +4147,12 @@ namespace anm2ed::imgui
             ImGui::SetNextItemSelectionUserData(id);
             ImGui::SetNextItemStorageID(id);
             if (scrollTargetId == id) ImGui::SetKeyboardFocusHere();
-            if (ImGui::Selectable("##Sound Selectable", isSelected, 0, soundChildSize))
+            auto isActivated = ImGui::Selectable("##Sound Selectable", isSelected, 0, soundChildSize);
+            auto isClicked = ImGui::IsItemClicked(ImGuiMouseButton_Left) || ImGui::IsItemClicked(ImGuiMouseButton_Right);
+            if (isActivated || isClicked)
             {
               reference = id;
-              if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) play(id);
+              if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) play(id);
             }
             if (scrollTargetId == id) ImGui::SetItemDefaultFocus();
             if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && window.dialog)

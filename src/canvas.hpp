@@ -61,7 +61,7 @@ namespace anm2ed
     void grid_render(resource::Shader&, float, glm::vec2, glm::ivec2 = glm::ivec2(32, 32), glm::ivec2 = {},
                      glm::vec4 = glm::vec4(1.0f)) const;
     void texture_render(resource::Shader&, GLuint&, glm::mat4 = {1.0f}, glm::vec4 = glm::vec4(1.0f), glm::vec3 = {},
-                        float* = (float*)TEXTURE_VERTICES) const;
+                        float* = (float*)TEXTURE_VERTICES, glm::vec2 = {}, float = 0.0f) const;
     void rect_fill_render(resource::Shader&, const glm::mat4&, const glm::mat4&,
                           glm::vec4 = glm::vec4(1.0f)) const;
     void rect_render(resource::Shader&, const glm::mat4&, const glm::mat4&, glm::vec4 = glm::vec4(1.0f),

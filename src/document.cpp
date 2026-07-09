@@ -7,6 +7,7 @@
 #include <new>
 #include <optional>
 #include <set>
+#include <sstream>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
@@ -14,6 +15,7 @@
 
 #include <format>
 
+#include "file.hpp"
 #include "log.hpp"
 #include "manager.hpp"
 #include "path.hpp"
@@ -55,6 +57,185 @@ namespace anm2ed::document
     {
       return format;
     }
+  }
+
+  const Element* shader_element_get(const Element& spritesheet)
+  {
+    return element_child_first_get(spritesheet, ElementType::SHADER);
+  }
+
+  Element* shader_element_get(Element& spritesheet)
+  {
+    return element_child_first_get(spritesheet, ElementType::SHADER);
+  }
+
+  std::filesystem::path shader_absolute_path_get(Document& document, const std::filesystem::path& path)
+  {
+    auto loadPath = path::backslash_handle(path);
+    if (loadPath.empty() || loadPath.is_absolute()) return loadPath;
+    return document.directory_get() / loadPath;
+  }
+
+  void shader_status_append(const resource::ShaderCompileResult& result, std::string* status)
+  {
+    if (!status) return;
+
+    *status += localize.get(result.isCompiled ? LABEL_SHADER_COMPILE_SUCCEEDED : LABEL_SHADER_COMPILE_FAILED);
+    *status += "\n";
+    if (result.isCompiled)
+    {
+      *status += localize.get(result.isLinked ? LABEL_SHADER_LINK_SUCCEEDED : LABEL_SHADER_LINK_FAILED);
+      *status += "\n";
+    }
+    if (!result.output.empty()) *status += result.output;
+  }
+
+  std::string shader_source_lines_get(std::string_view label, std::string_view source)
+  {
+    std::string output = std::format("\n{}:\n", label);
+    int lineNumber{1};
+    std::size_t position{};
+    while (position <= source.size())
+    {
+      auto end = source.find('\n', position);
+      auto isEnd = end == std::string_view::npos;
+      auto line = source.substr(position, isEnd ? std::string_view::npos : end - position);
+      output += std::format("{:4}: {}\n", lineNumber++, line);
+      if (isEnd) break;
+      position = end + 1;
+    }
+    return output;
+  }
+
+  bool shader_source_load(Document& document, const std::filesystem::path& shaderPath, std::string& source,
+                          StringType label, std::string* status, const char* fallback = nullptr)
+  {
+    if (shaderPath.empty())
+    {
+      if (fallback)
+      {
+        source = fallback;
+        return true;
+      }
+
+      if (status)
+      {
+        auto labelString = std::string(localize.get(label));
+        *status += std::vformat(localize.get(LABEL_SHADER_PATH_EMPTY), std::make_format_args(labelString)) + "\n";
+      }
+      return false;
+    }
+
+    auto absolute = path::case_insensitive_find(shader_absolute_path_get(document, shaderPath));
+    if (file::read_to_string(absolute, &source)) return true;
+
+    if (status)
+    {
+      auto pathString = path::to_utf8(shaderPath);
+      *status += std::vformat(localize.get(LABEL_SHADER_READ_FAILED), std::make_format_args(pathString)) + "\n";
+    }
+    return false;
+  }
+
+  void shader_uniform_configs_apply(const Element& shaderElement, resource::Shader& shader)
+  {
+    for (auto& uniform : shader.uniforms)
+    {
+      auto config = shader_uniform_get(shaderElement, uniform.name);
+      if (!config) continue;
+
+      if (!config->binding.empty())
+      {
+        auto binding = resource::shader::uniform_binding_get(config->binding);
+        if (resource::shader::is_uniform_binding_valid(binding, uniform.valueType)) uniform.binding = binding;
+      }
+      if (!config->value.empty()) resource::shader::uniform_value_parse(uniform, config->value);
+      for (int index = 0; index < (int)uniform.components.size(); ++index)
+      {
+        auto component = shader_uniform_component_get(*config, index);
+        if (!component) continue;
+
+        if (!component->binding.empty())
+        {
+          auto binding = resource::shader::uniform_binding_get(component->binding);
+          if (binding == resource::shader::UNIFORM_BINDING_MANUAL ||
+              binding == resource::shader::UNIFORM_BINDING_PLAYBACK_TIME)
+            uniform.components[index].binding = binding;
+        }
+        if (!component->value.empty())
+        {
+          std::stringstream stream{component->value};
+          stream >> uniform.components[index].value;
+        }
+      }
+    }
+  }
+
+  bool shader_uniform_configs_trim(Element& shaderElement, const resource::Shader& shader)
+  {
+    auto component_count_get = [](resource::shader::UniformValueType type)
+    {
+      if (type == resource::shader::UNIFORM_VALUE_VEC2) return 2;
+      if (type == resource::shader::UNIFORM_VALUE_VEC3) return 3;
+      if (type == resource::shader::UNIFORM_VALUE_VEC4) return 4;
+      return 0;
+    };
+
+    bool isChanged{};
+    for (auto it = shaderElement.children.begin(); it != shaderElement.children.end();)
+    {
+      if (it->type != ElementType::UNIFORM)
+      {
+        ++it;
+        continue;
+      }
+
+      auto uniform =
+          std::find_if(shader.uniforms.begin(), shader.uniforms.end(),
+                       [&](const resource::shader::Uniform& uniform) { return uniform.name == it->name; });
+      if (uniform == shader.uniforms.end())
+      {
+        it = shaderElement.children.erase(it);
+        isChanged = true;
+        continue;
+      }
+
+      if (!it->binding.empty())
+      {
+        auto binding = resource::shader::uniform_binding_get(it->binding);
+        if (!resource::shader::is_uniform_binding_valid(binding, uniform->valueType))
+        {
+          it->binding.clear();
+          isChanged = true;
+        }
+      }
+
+      auto componentCount = component_count_get(uniform->valueType);
+      auto isComponents = resource::shader::uniform_binding_get(it->binding) == resource::shader::UNIFORM_BINDING_COMPONENTS;
+      auto removed = std::erase_if(it->children,
+                                   [&](const Element& component)
+                                   {
+                                     if (component.type != ElementType::COMPONENT) return false;
+                                     if (!isComponents) return true;
+                                     return component.index < 0 || component.index >= componentCount;
+                                   });
+      if (removed > 0) isChanged = true;
+
+      for (auto& component : it->children)
+      {
+        if (component.type != ElementType::COMPONENT || component.binding.empty()) continue;
+        auto binding = resource::shader::uniform_binding_get(component.binding);
+        if (binding == resource::shader::UNIFORM_BINDING_MANUAL ||
+            binding == resource::shader::UNIFORM_BINDING_PLAYBACK_TIME)
+          continue;
+        component.binding.clear();
+        isChanged = true;
+      }
+
+      ++it;
+    }
+
+    return isChanged;
   }
 
   Element* frame_region_match_get(Element& spritesheet, const Element& frame)
@@ -130,6 +311,41 @@ namespace anm2ed::document
     return ids;
   }
 
+  std::vector<std::string> overlay_labels_get(const Element* spritesheet)
+  {
+    std::vector<std::string> labels{};
+    if (!spritesheet) return labels;
+    for (auto& overlay : spritesheet->children)
+      if (overlay.type == ElementType::OVERLAY)
+      {
+        auto pathString = path::to_utf8(overlay.path);
+        labels.emplace_back(std::vformat(localize.get(FORMAT_OVERLAY), std::make_format_args(overlay.id, pathString)));
+      }
+    return labels;
+  }
+
+  std::vector<int> overlay_ids_get(const Element* spritesheet)
+  {
+    std::vector<int> ids{};
+    if (!spritesheet) return ids;
+    for (auto& overlay : spritesheet->children)
+      if (overlay.type == ElementType::OVERLAY) ids.emplace_back(overlay.id);
+    return ids;
+  }
+
+  int overlay_next_id_get(const Anm2& data)
+  {
+    int nextId{};
+    if (auto spritesheets = data.element_get(ElementType::SPRITESHEETS))
+      for (auto& spritesheet : spritesheets->children)
+      {
+        if (spritesheet.type != ElementType::SPRITESHEET) continue;
+        for (auto& overlay : spritesheet.children)
+          if (overlay.type == ElementType::OVERLAY) nextId = std::max(nextId, overlay.id + 1);
+      }
+    return nextId;
+  }
+
   std::vector<std::string> sound_labels_get(const Anm2& data)
   {
     std::vector<std::string> labels{localize.get(BASIC_NONE)};
@@ -198,13 +414,18 @@ namespace anm2ed::document
     if (reference.animationIndex < 0 || reference.animationIndex >= animationCount)
       reference.animationIndex = std::clamp(reference.animationIndex, 0, animationCount - 1);
 
-    auto item =
-        document.anm2.element_get(reference.animationIndex, item_type_get(reference.itemType), reference.itemID);
+    auto referenceItem = reference;
+    referenceItem.frameIndex = -1;
+    auto item = document.anm2.element_get(referenceItem);
     if (!item)
     {
       reference.itemType = (int)ItemType::ROOT;
       reference.itemID = -1;
-      item = document.anm2.element_get(reference.animationIndex, item_type_get(reference.itemType), reference.itemID);
+      reference.groupType = (int)ItemType::NONE;
+      reference.groupId = -1;
+      referenceItem = reference;
+      referenceItem.frameIndex = -1;
+      item = document.anm2.element_get(referenceItem);
     }
 
     if (!item)
@@ -219,7 +440,9 @@ namespace anm2ed::document
 
     for (auto it = itemReferences.begin(); it != itemReferences.end();)
     {
-      auto item = document.anm2.element_get(it->animationIndex, item_type_get(it->itemType), it->itemID);
+      auto itemReference = *it;
+      itemReference.frameIndex = -1;
+      auto item = document.anm2.element_get(itemReference);
       if (!item)
         it = itemReferences.erase(it);
       else
@@ -243,7 +466,9 @@ namespace anm2ed::document
 
     for (auto it = frameReferences.begin(); it != frameReferences.end();)
     {
-      auto item = document.anm2.element_get(it->animationIndex, item_type_get(it->itemType), it->itemID);
+      auto itemReference = *it;
+      itemReference.frameIndex = -1;
+      auto item = document.anm2.element_get(itemReference);
       auto frameCount = item ? frame_count_get(*item) : 0;
       if (!item || it->frameIndex < 0 || it->frameIndex >= frameCount)
         it = frameReferences.erase(it);
@@ -274,12 +499,17 @@ namespace anm2ed::document
 
     if (frameReferences.empty())
       for (auto frameIndex : selection)
-        frameReferences.insert({reference.animationIndex, reference.itemType, reference.itemID, frameIndex});
+      {
+        auto frameReference = reference;
+        frameReference.frameIndex = frameIndex;
+        frameReferences.insert(frameReference);
+      }
 
     selection.clear();
     for (const auto& frameReference : frameReferences)
       if (frameReference.animationIndex == reference.animationIndex && frameReference.itemType == reference.itemType &&
-          frameReference.itemID == reference.itemID)
+          frameReference.itemID == reference.itemID && frameReference.groupType == reference.groupType &&
+          frameReference.groupId == reference.groupId)
         selection.insert(frameReference.frameIndex);
 
     document.frameTime = frame_time_from_index_get(*item, reference.frameIndex);
@@ -322,18 +552,23 @@ namespace anm2ed
   Document::Document(Document&& other) noexcept
       : path(std::move(other.path)), tabId(other.tabId), snapshots(std::move(other.snapshots)), current(snapshots.current),
         playback(current.playback), animation(current.animation), event(current.event), frames(current.frames),
-        items(current.items), layer(current.layer), merge(current.merge), null(current.null), region(current.region),
-        sound(current.sound), spritesheet(current.spritesheet), textures(current.textures), sounds(current.sounds),
-        anm2(current.anm2), reference(current.reference), groupReferences(current.groupReferences),
+        items(current.items), layer(current.layer), merge(current.merge), null(current.null), overlay(current.overlay),
+        region(current.region), sound(current.sound), spritesheet(current.spritesheet), textures(current.textures),
+        overlayTextures(current.overlayTextures), sounds(current.sounds), anm2(current.anm2),
+        reference(current.reference), groupReferences(current.groupReferences),
         frameTime(current.frameTime), message(current.message), regionBySpritesheet(std::move(other.regionBySpritesheet)),
         changeAllFramePropertiesRegionId(other.changeAllFramePropertiesRegionId), previewZoom(other.previewZoom),
         previewPan(other.previewPan), editorPan(other.editorPan), editorZoom(other.editorZoom),
         overlayIndex(other.overlayIndex), hash(other.hash), saveHash(other.saveHash), autosaveHash(other.autosaveHash),
         lastAutosaveTime(other.lastAutosaveTime), isValid(other.isValid), isOpen(other.isOpen),
         isForceDirty(other.isForceDirty), spritesheetHashes(std::move(other.spritesheetHashes)),
-        spritesheetSaveHashes(std::move(other.spritesheetSaveHashes)), texturePaths(std::move(other.texturePaths)),
-        soundPaths(std::move(other.soundPaths)), isAnimationPreviewSet(other.isAnimationPreviewSet),
-        isSpritesheetEditorSet(other.isSpritesheetEditorSet), editTarget(other.editTarget)
+        spritesheetSaveHashes(std::move(other.spritesheetSaveHashes)), overlayHashes(std::move(other.overlayHashes)),
+        overlaySaveHashes(std::move(other.overlaySaveHashes)), texturePaths(std::move(other.texturePaths)),
+        overlayTexturePaths(std::move(other.overlayTexturePaths)), soundPaths(std::move(other.soundPaths)),
+        shaderVertexPaths(std::move(other.shaderVertexPaths)),
+        shaderFragmentPaths(std::move(other.shaderFragmentPaths)), shaders(std::move(other.shaders)),
+        isAnimationPreviewSet(other.isAnimationPreviewSet), isSpritesheetEditorSet(other.isSpritesheetEditorSet),
+        editTarget(other.editTarget)
   {
   }
 
@@ -420,6 +655,13 @@ namespace anm2ed
     change(SPRITESHEETS);
   }
 
+  void Document::overlay_texture_change(int id)
+  {
+    auto texture = overlay_texture_get(id);
+    if (!texture || !overlay_get(id)) return;
+    change(SPRITESHEETS);
+  }
+
   bool Document::texture_reload(int id)
   {
     auto spritesheet = anm2.element_get(ElementType::SPRITESHEET, id);
@@ -428,6 +670,17 @@ namespace anm2ed
     util::WorkingDirectory workingDirectory(directory_get());
     textures[id] = resource::Texture(path::case_insensitive_find(spritesheet->path));
     texturePaths[id] = spritesheet->path;
+    return true;
+  }
+
+  bool Document::overlay_texture_reload(int id)
+  {
+    auto overlay = overlay_get(id);
+    if (!overlay) return false;
+
+    util::WorkingDirectory workingDirectory(directory_get());
+    overlayTextures[id] = resource::Texture(path::case_insensitive_find(overlay->path));
+    overlayTexturePaths[id] = overlay->path;
     return true;
   }
 
@@ -442,11 +695,71 @@ namespace anm2ed
     return true;
   }
 
+  bool Document::shader_reload(int id, std::string* status)
+  {
+    auto spritesheet = anm2.element_get(ElementType::SPRITESHEET, id);
+    auto shaderElement = spritesheet ? document::shader_element_get(*spritesheet) : nullptr;
+    if (!shaderElement || !shaderElement->isEnabled)
+    {
+      if (status && !shaderElement)
+      {
+        auto labelString = std::string(localize.get(LABEL_FRAGMENT));
+        *status += std::vformat(localize.get(LABEL_SHADER_PATH_EMPTY), std::make_format_args(labelString)) + "\n";
+      }
+      shaders.erase(id);
+      shaderVertexPaths.erase(id);
+      shaderFragmentPaths.erase(id);
+      return false;
+    }
+
+    std::string vertexSource{};
+    std::string fragmentSource{};
+    auto isVertexLoaded = document::shader_source_load(*this, shaderElement->vertex, vertexSource, LABEL_VERTEX, status,
+                                                       resource::shader::TEXTURE_COMPATIBILITY_VERTEX);
+    auto isFragmentLoaded =
+        document::shader_source_load(*this, shaderElement->fragment, fragmentSource, LABEL_FRAGMENT, status);
+    if (!isVertexLoaded || !isFragmentLoaded)
+    {
+      shaders.erase(id);
+      shaderVertexPaths.erase(id);
+      shaderFragmentPaths.erase(id);
+      return false;
+    }
+
+    auto vertex = resource::shader::gles_vertex_convert(vertexSource);
+    auto fragment = resource::shader::gles_fragment_convert(fragmentSource);
+    auto result = resource::shader_compile(vertex.c_str(), fragment.c_str());
+    document::shader_status_append(result, status);
+    if (status && (!result.isCompiled || !result.isLinked))
+    {
+      *status += document::shader_source_lines_get("Converted vertex shader", vertex);
+      *status += document::shader_source_lines_get("Converted fragment shader", fragment);
+    }
+    if (!result.isLinked || !result.id)
+    {
+      shaders.erase(id);
+      shaderVertexPaths.erase(id);
+      shaderFragmentPaths.erase(id);
+      return false;
+    }
+
+    resource::Shader runtime{};
+    runtime.id = result.id;
+    runtime.uniforms = std::move(result.uniforms);
+    if (document::shader_uniform_configs_trim(*shaderElement, runtime)) hash_set();
+    document::shader_uniform_configs_apply(*shaderElement, runtime);
+    shaders[id] = std::move(runtime);
+    shaderVertexPaths[id] = shaderElement->vertex;
+    shaderFragmentPaths[id] = shaderElement->fragment;
+    return true;
+  }
+
   void Document::assets_sync(ChangeType type)
   {
     if (type == ALL || type == SPRITESHEETS || type == TEXTURES)
     {
       std::set<int> validIds{};
+      std::set<int> validOverlayIds{};
       util::WorkingDirectory workingDirectory(directory_get());
       if (auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS))
         for (auto& spritesheet : spritesheets->children)
@@ -460,6 +773,38 @@ namespace anm2ed
             textures[spritesheet.id] = resource::Texture(path::case_insensitive_find(spritesheet.path));
             texturePaths[spritesheet.id] = spritesheet.path;
           }
+
+          for (auto& overlay : spritesheet.children)
+          {
+            if (overlay.type != ElementType::OVERLAY) continue;
+            validOverlayIds.insert(overlay.id);
+            auto isOverlayReload = !overlayTextures.contains(overlay.id) || !overlayTexturePaths.contains(overlay.id) ||
+                                   overlayTexturePaths.at(overlay.id) != overlay.path;
+            if (isOverlayReload)
+            {
+              overlayTextures[overlay.id] = resource::Texture(path::case_insensitive_find(overlay.path));
+              overlayTexturePaths[overlay.id] = overlay.path;
+            }
+          }
+
+          auto shaderElement = document::shader_element_get(spritesheet);
+          if (!shaderElement || !shaderElement->isEnabled || shaderElement->fragment.empty())
+          {
+            shaders.erase(spritesheet.id);
+            shaderVertexPaths.erase(spritesheet.id);
+            shaderFragmentPaths.erase(spritesheet.id);
+            continue;
+          }
+
+          auto isShaderReload =
+              !shaders.contains(spritesheet.id) || !shaderVertexPaths.contains(spritesheet.id) ||
+              !shaderFragmentPaths.contains(spritesheet.id) ||
+              shaderVertexPaths.at(spritesheet.id) != shaderElement->vertex ||
+              shaderFragmentPaths.at(spritesheet.id) != shaderElement->fragment;
+          if (isShaderReload)
+            shader_reload(spritesheet.id);
+          else if (auto shader = shader_get(spritesheet.id))
+            document::shader_uniform_configs_apply(*shaderElement, *shader);
         }
 
       for (auto it = textures.begin(); it != textures.end();)
@@ -468,6 +813,29 @@ namespace anm2ed
         {
           texturePaths.erase(it->first);
           it = textures.erase(it);
+        }
+        else
+          ++it;
+      }
+
+      for (auto it = overlayTextures.begin(); it != overlayTextures.end();)
+      {
+        if (!validOverlayIds.contains(it->first))
+        {
+          overlayTexturePaths.erase(it->first);
+          it = overlayTextures.erase(it);
+        }
+        else
+          ++it;
+      }
+
+      for (auto it = shaders.begin(); it != shaders.end();)
+      {
+        if (!validIds.contains(it->first))
+        {
+          shaderVertexPaths.erase(it->first);
+          shaderFragmentPaths.erase(it->first);
+          it = shaders.erase(it);
         }
         else
           ++it;
@@ -517,6 +885,18 @@ namespace anm2ed
     return it == textures.end() ? nullptr : &it->second;
   }
 
+  resource::Texture* Document::overlay_texture_get(int id)
+  {
+    auto it = overlayTextures.find(id);
+    return it == overlayTextures.end() ? nullptr : &it->second;
+  }
+
+  const resource::Texture* Document::overlay_texture_get(int id) const
+  {
+    auto it = overlayTextures.find(id);
+    return it == overlayTextures.end() ? nullptr : &it->second;
+  }
+
   resource::Audio* Document::sound_get(int id)
   {
     auto it = sounds.find(id);
@@ -527,6 +907,18 @@ namespace anm2ed
   {
     auto it = sounds.find(id);
     return it == sounds.end() ? nullptr : &it->second;
+  }
+
+  resource::Shader* Document::shader_get(int id)
+  {
+    auto it = shaders.find(id);
+    return it == shaders.end() || !it->second.is_valid() ? nullptr : &it->second;
+  }
+
+  const resource::Shader* Document::shader_get(int id) const
+  {
+    auto it = shaders.find(id);
+    return it == shaders.end() || !it->second.is_valid() ? nullptr : &it->second;
   }
 
   bool Document::regions_trim(int spritesheetId, const std::set<int>& ids)
@@ -598,7 +990,7 @@ namespace anm2ed
   {
     if (animationIndices.empty()) return false;
 
-    int regionNumber{};
+    std::unordered_map<int, int> regionNumbers{};
     bool isChanged{};
     for (auto animationIndex : animationIndices)
     {
@@ -631,6 +1023,8 @@ namespace anm2ed
           {
             auto generated = element_make(ElementType::REGION);
             generated.id = element_child_next_id_get(*spritesheet, ElementType::REGION);
+            auto [regionNumberIt, _] = regionNumbers.try_emplace(layer->spritesheetId, 1);
+            auto& regionNumber = regionNumberIt->second;
             generated.name = document::region_name_get(format, regionNumber++);
             generated.crop = frame.crop;
             generated.size = frame.size;
@@ -658,14 +1052,13 @@ namespace anm2ed
   bool Document::regions_generate_from_frames(const std::set<Reference>& frameReferences, const std::string& format,
                                               RegionFrameMapping mapping)
   {
-    int regionNumber{};
+    std::unordered_map<int, int> regionNumbers{};
     bool isChanged{};
     for (auto frameReference : frameReferences)
     {
       if (frameReference.itemType != LAYER || frameReference.frameIndex < 0) continue;
 
-      auto frame = anm2.element_get(frameReference.animationIndex, ItemType::LAYER, frameReference.itemID,
-                                    frameReference.frameIndex);
+      auto frame = anm2.element_get(frameReference);
       if (!frame || frame->type != ElementType::FRAME || frame->regionId != -1) continue;
 
       auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, frameReference.itemID);
@@ -677,6 +1070,7 @@ namespace anm2ed
       {
         auto generated = element_make(ElementType::REGION);
         generated.id = element_child_next_id_get(*spritesheet, ElementType::REGION);
+        auto& regionNumber = regionNumbers[layer->spritesheetId];
         generated.name = document::region_name_get(format, regionNumber++);
         generated.crop = frame->crop;
         generated.size = frame->size;
@@ -1118,10 +1512,13 @@ namespace anm2ed
     }
   }
 
-  bool Document::file_merge(const std::filesystem::path& path)
+  bool Document::file_merge(const std::filesystem::path& path, FileMergePreset preset)
   {
     Anm2 source(path);
     if (!source.isValid) return false;
+
+    bool isAppendAsNew = preset == FILE_MERGE_PRESET_APPEND_AS_NEW;
+    bool isReplaceMatching = preset == FILE_MERGE_PRESET_REPLACE_MATCHING;
 
     auto remap_path = [&](const std::filesystem::path& original) -> std::filesystem::path
     {
@@ -1168,6 +1565,39 @@ namespace anm2ed
       return (Element*)nullptr;
     };
 
+    auto name_unique_get = [&](Element& container, ElementType type, const std::string& name)
+    {
+      if (!find_by_name(container, type, name)) return name;
+      for (int i = 2;; ++i)
+      {
+        auto candidate = std::format("{} {}", name, i);
+        if (!find_by_name(container, type, candidate)) return candidate;
+      }
+    };
+
+    auto named_element_merge = [&](Element& container, Element item, ElementType type)
+    {
+      if (isAppendAsNew)
+      {
+        item.id = element_child_next_id_get(container, type);
+        item.name = name_unique_get(container, type, item.name);
+        container.children.push_back(item);
+        return item.id;
+      }
+
+      if (auto existing = find_by_name(container, type, item.name))
+      {
+        item.id = existing->id;
+        *existing = item;
+      }
+      else
+      {
+        item.id = element_child_next_id_get(container, type);
+        container.children.push_back(item);
+      }
+      return item.id;
+    };
+
     auto child_set = [](Element& container, Element child, ElementType type)
     {
       if (auto existing = element_child_first_get(container, type))
@@ -1206,17 +1636,24 @@ namespace anm2ed
     std::unordered_map<int, int> eventRemap{};
     std::unordered_map<int, int> soundRemap{};
 
-    if (auto sourceSpritesheets = source.element_get(ElementType::SPRITESHEETS))
-      if (auto destinationSpritesheets = anm2.element_get(ElementType::SPRITESHEETS))
-        for (auto spritesheet : sourceSpritesheets->children)
-        {
-          if (spritesheet.type != ElementType::SPRITESHEET) continue;
-          auto sourceId = spritesheet.id;
-          spritesheet.id = element_child_next_id_get(*destinationSpritesheets, ElementType::SPRITESHEET);
-          spritesheet.path = remap_path(spritesheet.path);
-          destinationSpritesheets->children.push_back(spritesheet);
-          spritesheetRemap[sourceId] = spritesheet.id;
-        }
+    auto spritesheet_import = [&](int sourceId)
+    {
+      if (sourceId < 0) return -1;
+      if (spritesheetRemap.contains(sourceId)) return spritesheetRemap[sourceId];
+
+      auto sourceSpritesheets = source.element_get(ElementType::SPRITESHEETS);
+      auto destinationSpritesheets = anm2.element_get(ElementType::SPRITESHEETS);
+      auto spritesheet =
+          sourceSpritesheets ? element_child_id_get(*sourceSpritesheets, ElementType::SPRITESHEET, sourceId) : nullptr;
+      if (!spritesheet || !destinationSpritesheets) return -1;
+
+      auto imported = *spritesheet;
+      imported.id = element_child_next_id_get(*destinationSpritesheets, ElementType::SPRITESHEET);
+      imported.path = remap_path(imported.path);
+      destinationSpritesheets->children.push_back(imported);
+      spritesheetRemap[sourceId] = imported.id;
+      return imported.id;
+    };
 
     if (auto sourceSounds = source.element_get(ElementType::SOUNDS))
       if (auto destinationSounds = anm2.element_get(ElementType::SOUNDS))
@@ -1226,14 +1663,15 @@ namespace anm2ed
           auto sourceId = sound.id;
           sound.path = remap_path(sound.path);
           int destinationId{-1};
-          for (auto& existing : destinationSounds->children)
-            if (existing.type == ElementType::SOUND_ELEMENT && existing.path == sound.path)
-            {
-              destinationId = existing.id;
-              sound.id = destinationId;
-              existing = sound;
-              break;
-            }
+          if (!isAppendAsNew)
+            for (auto& existing : destinationSounds->children)
+              if (existing.type == ElementType::SOUND_ELEMENT && existing.path == sound.path)
+              {
+                destinationId = existing.id;
+                sound.id = destinationId;
+                existing = sound;
+                break;
+              }
           if (destinationId == -1)
           {
             destinationId = element_child_next_id_get(*destinationSounds, ElementType::SOUND_ELEMENT);
@@ -1249,18 +1687,11 @@ namespace anm2ed
         {
           if (layer.type != ElementType::LAYER_ELEMENT) continue;
           auto sourceId = layer.id;
-          layer.spritesheetId = remap_id(spritesheetRemap, layer.spritesheetId);
-          if (auto existing = find_by_name(*destinationLayers, ElementType::LAYER_ELEMENT, layer.name))
-          {
-            layer.id = existing->id;
-            *existing = layer;
-          }
-          else
-          {
-            layer.id = element_child_next_id_get(*destinationLayers, ElementType::LAYER_ELEMENT);
-            destinationLayers->children.push_back(layer);
-          }
-          layerRemap[sourceId] = layer.id;
+          auto sourceSpritesheetId = layer.spritesheetId;
+          auto existing =
+              isAppendAsNew ? nullptr : find_by_name(*destinationLayers, ElementType::LAYER_ELEMENT, layer.name);
+          layer.spritesheetId = existing ? existing->spritesheetId : spritesheet_import(sourceSpritesheetId);
+          layerRemap[sourceId] = named_element_merge(*destinationLayers, layer, ElementType::LAYER_ELEMENT);
         }
 
     if (auto sourceNulls = source.element_get(ElementType::NULLS))
@@ -1269,17 +1700,7 @@ namespace anm2ed
         {
           if (null.type != ElementType::NULL_ELEMENT) continue;
           auto sourceId = null.id;
-          if (auto existing = find_by_name(*destinationNulls, ElementType::NULL_ELEMENT, null.name))
-          {
-            null.id = existing->id;
-            *existing = null;
-          }
-          else
-          {
-            null.id = element_child_next_id_get(*destinationNulls, ElementType::NULL_ELEMENT);
-            destinationNulls->children.push_back(null);
-          }
-          nullRemap[sourceId] = null.id;
+          nullRemap[sourceId] = named_element_merge(*destinationNulls, null, ElementType::NULL_ELEMENT);
         }
 
     if (auto sourceEvents = source.element_get(ElementType::EVENTS))
@@ -1288,17 +1709,7 @@ namespace anm2ed
         {
           if (event.type != ElementType::EVENT_ELEMENT) continue;
           auto sourceId = event.id;
-          if (auto existing = find_by_name(*destinationEvents, ElementType::EVENT_ELEMENT, event.name))
-          {
-            event.id = existing->id;
-            *existing = event;
-          }
-          else
-          {
-            event.id = element_child_next_id_get(*destinationEvents, ElementType::EVENT_ELEMENT);
-            destinationEvents->children.push_back(event);
-          }
-          eventRemap[sourceId] = event.id;
+          eventRemap[sourceId] = named_element_merge(*destinationEvents, event, ElementType::EVENT_ELEMENT);
         }
 
     auto item_remap = [&](Element& item)
@@ -1321,6 +1732,15 @@ namespace anm2ed
         group.id = item.id == -1 ? element_child_next_id_get(container, ElementType::GROUP) : item.id;
         group.name = item.name;
         group.isExpanded = item.isExpanded;
+        group.isVisible = item.isVisible;
+        if (auto root = element_child_first_get(item, ElementType::ROOT_ANIMATION))
+          group.children.push_back(*root);
+        else
+        {
+          auto defaultRoot = element_make(ElementType::ROOT_ANIMATION);
+          defaultRoot.children.push_back(element_make(ElementType::FRAME));
+          group.children.push_back(defaultRoot);
+        }
         container.children.push_back(group);
         for (auto child : item.children)
           self(self, child, itemType, container, group.id);
@@ -1396,7 +1816,14 @@ namespace anm2ed
         if (item.type != ElementType::GROUP) continue;
         auto sourceGroupId = item.id;
         item.id = element_child_next_id_get(destinationContainer, ElementType::GROUP);
-        item.children.clear();
+        std::erase_if(item.children, [](const Element& child)
+                      { return child.type != ElementType::ROOT_ANIMATION; });
+        if (!element_child_first_get(item, ElementType::ROOT_ANIMATION))
+        {
+          auto root = element_make(ElementType::ROOT_ANIMATION);
+          root.children.push_back(element_make(ElementType::FRAME));
+          item.children.push_back(root);
+        }
         destinationContainer.children.push_back(item);
         groupRemap[sourceGroupId] = item.id;
       }
@@ -1413,14 +1840,27 @@ namespace anm2ed
     if (auto sourceAnimations = source.element_get(ElementType::ANIMATIONS))
       if (auto destinationAnimations = anm2.element_get(ElementType::ANIMATIONS))
       {
+        std::string defaultAnimationName{};
         for (const auto& incoming : sourceAnimations->children)
         {
           if (incoming.type != ElementType::ANIMATION) continue;
           auto processed = animation_build(incoming);
           auto destination = find_by_name(*destinationAnimations, ElementType::ANIMATION, processed.name);
-          if (!destination)
+          if (incoming.name == sourceAnimations->defaultAnimation) defaultAnimationName = processed.name;
+          if (!destination || isAppendAsNew)
           {
+            if (isAppendAsNew)
+            {
+              processed.name = name_unique_get(*destinationAnimations, ElementType::ANIMATION, processed.name);
+              if (incoming.name == sourceAnimations->defaultAnimation) defaultAnimationName = processed.name;
+            }
             destinationAnimations->children.push_back(processed);
+            continue;
+          }
+
+          if (isReplaceMatching)
+          {
+            *destination = processed;
             continue;
           }
 
@@ -1449,7 +1889,8 @@ namespace anm2ed
         }
 
         if (destinationAnimations->defaultAnimation.empty() && !sourceAnimations->defaultAnimation.empty())
-          destinationAnimations->defaultAnimation = sourceAnimations->defaultAnimation;
+          destinationAnimations->defaultAnimation =
+              defaultAnimationName.empty() ? sourceAnimations->defaultAnimation : defaultAnimationName;
       }
 
     assets_sync(ALL);
@@ -1471,6 +1912,7 @@ namespace anm2ed
   {
     spritesheetHashes.clear();
     spritesheetSaveHashes.clear();
+    overlay_hashes_reset();
     if (auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS))
       for (auto& spritesheet : spritesheets->children)
         if (spritesheet.type == ElementType::SPRITESHEET)
@@ -1514,6 +1956,65 @@ namespace anm2ed
         }
   }
 
+  void Document::overlay_hashes_reset()
+  {
+    overlayHashes.clear();
+    overlaySaveHashes.clear();
+    if (auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS))
+      for (auto& spritesheet : spritesheets->children)
+      {
+        if (spritesheet.type != ElementType::SPRITESHEET) continue;
+        for (auto& overlay : spritesheet.children)
+          if (overlay.type == ElementType::OVERLAY)
+          {
+            auto currentHash = document::spritesheet_hash_get(overlay, overlay_texture_get(overlay.id));
+            overlayHashes[overlay.id] = currentHash;
+            overlaySaveHashes[overlay.id] = currentHash;
+          }
+      }
+  }
+
+  void Document::overlay_hashes_sync()
+  {
+    std::set<int> validIds{};
+    if (auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS))
+      for (auto& spritesheet : spritesheets->children)
+      {
+        if (spritesheet.type != ElementType::SPRITESHEET) continue;
+        for (auto& overlay : spritesheet.children)
+          if (overlay.type == ElementType::OVERLAY) validIds.insert(overlay.id);
+      }
+
+    for (auto it = overlayHashes.begin(); it != overlayHashes.end();)
+    {
+      if (!validIds.contains(it->first))
+        it = overlayHashes.erase(it);
+      else
+        ++it;
+    }
+
+    for (auto it = overlaySaveHashes.begin(); it != overlaySaveHashes.end();)
+    {
+      if (!validIds.contains(it->first))
+        it = overlaySaveHashes.erase(it);
+      else
+        ++it;
+    }
+
+    if (auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS))
+      for (auto& spritesheet : spritesheets->children)
+      {
+        if (spritesheet.type != ElementType::SPRITESHEET) continue;
+        for (auto& overlay : spritesheet.children)
+          if (overlay.type == ElementType::OVERLAY)
+          {
+            auto currentHash = document::spritesheet_hash_get(overlay, overlay_texture_get(overlay.id));
+            overlayHashes[overlay.id] = currentHash;
+            if (!overlaySaveHashes.contains(overlay.id)) overlaySaveHashes[overlay.id] = currentHash;
+          }
+      }
+  }
+
   void Document::change(ChangeType type)
   {
     hash_set();
@@ -1532,6 +2033,12 @@ namespace anm2ed
     {
       spritesheet.labels_set(document::spritesheet_labels_get(anm2), document::spritesheet_ids_get(anm2));
       spritesheet_hashes_sync();
+      if (auto currentSpritesheet = anm2.element_get(ElementType::SPRITESHEET, spritesheet.reference))
+        overlay.labels_set(document::overlay_labels_get(currentSpritesheet),
+                           document::overlay_ids_get(currentSpritesheet));
+      else
+        overlay.labels_set({}, {});
+      overlay_hashes_sync();
     };
 
     auto sounds_set = [&]() { sound.labels_set(document::sound_labels_get(anm2), document::sound_ids_get(anm2)); };
@@ -1584,6 +2091,8 @@ namespace anm2ed
       default:
         break;
     }
+
+    snapshots.commit(current);
   }
 
   bool Document::is_dirty() const { return hash != saveHash; }
@@ -1622,6 +2131,46 @@ namespace anm2ed
         if (spritesheet.type == ElementType::SPRITESHEET && spritesheet_is_dirty(spritesheet.id)) return true;
     return false;
   }
+
+  void Document::overlay_hash_update(int id)
+  {
+    auto overlay = overlay_get(id);
+    if (!overlay) return;
+    assets_sync(TEXTURES);
+    overlayHashes[id] = document::spritesheet_hash_get(*overlay, overlay_texture_get(id));
+  }
+
+  void Document::overlay_hash_set_saved(int id)
+  {
+    auto overlay = overlay_get(id);
+    if (!overlay) return;
+    assets_sync(TEXTURES);
+    auto currentHash = document::spritesheet_hash_get(*overlay, overlay_texture_get(id));
+    overlayHashes[id] = currentHash;
+    overlaySaveHashes[id] = currentHash;
+  }
+
+  bool Document::overlay_is_dirty(int id)
+  {
+    if (!overlay_get(id)) return false;
+    if (!overlayHashes.contains(id)) overlay_hash_update(id);
+    auto saveIt = overlaySaveHashes.find(id);
+    if (saveIt == overlaySaveHashes.end()) return false;
+    return overlayHashes.at(id) != saveIt->second;
+  }
+
+  bool Document::overlay_any_dirty()
+  {
+    if (auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS))
+      for (auto& spritesheet : spritesheets->children)
+      {
+        if (spritesheet.type != ElementType::SPRITESHEET) continue;
+        for (auto& overlay : spritesheet.children)
+          if (overlay.type == ElementType::OVERLAY && overlay_is_dirty(overlay.id)) return true;
+      }
+    return false;
+  }
+
   std::filesystem::path Document::directory_get() const { return path.parent_path(); }
   std::filesystem::path Document::filename_get() const { return path.filename(); }
   bool Document::is_valid() const { return isValid && !path.empty(); }
@@ -1634,8 +2183,9 @@ namespace anm2ed
   bool Document::is_frame_reference_valid(Reference frameReference) const
   {
     if (frameReference.itemType == NONE || frameReference.frameIndex < 0) return false;
-    auto itemType = static_cast<ItemType>(frameReference.itemType);
-    auto item = anm2.element_get(frameReference.animationIndex, itemType, frameReference.itemID);
+    auto itemReference = frameReference;
+    itemReference.frameIndex = -1;
+    auto item = anm2.element_get(itemReference);
     return item && track_frame_get(*item, frameReference.frameIndex);
   }
 
@@ -1645,16 +2195,17 @@ namespace anm2ed
     itemReference.frameIndex = -1;
     if (itemReference.itemType == NONE) return result;
 
-    auto itemType = static_cast<ItemType>(itemReference.itemType);
-    auto item = anm2.element_get(itemReference.animationIndex, itemType, itemReference.itemID);
+    auto item = anm2.element_get(itemReference);
     if (!item) return result;
 
-    auto frameType = itemType == ItemType::TRIGGER ? ElementType::TRIGGER : ElementType::FRAME;
+    auto frameType = itemReference.itemType == TRIGGER ? ElementType::TRIGGER : ElementType::FRAME;
     int frameIndex{};
     for (auto& child : item->children)
     {
       if (child.type != frameType) continue;
-      result.insert({itemReference.animationIndex, itemReference.itemType, itemReference.itemID, frameIndex});
+      auto frameReference = itemReference;
+      frameReference.frameIndex = frameIndex;
+      result.insert(frameReference);
       ++frameIndex;
     }
     return result;
@@ -1664,7 +2215,11 @@ namespace anm2ed
   {
     auto selectedItems = items.references;
     if (selectedItems.empty() && reference.itemType != NONE)
-      selectedItems.insert({reference.animationIndex, reference.itemType, reference.itemID});
+    {
+      auto itemReference = reference;
+      itemReference.frameIndex = -1;
+      selectedItems.insert(itemReference);
+    }
 
     std::set<Reference> result{};
     for (auto itemReference : selectedItems)
@@ -1679,20 +2234,39 @@ namespace anm2ed
   {
     auto result = frames.references;
     for (auto frameIndex : frames.selection)
-      result.insert({reference.animationIndex, reference.itemType, reference.itemID, frameIndex});
+    {
+      auto frameReference = reference;
+      frameReference.frameIndex = frameIndex;
+      result.insert(frameReference);
+    }
+
+    std::map<Reference, int> frameCounts{};
+    auto is_frame_reference_valid_cached = [&](Reference frameReference)
+    {
+      if (frameReference.itemType == NONE || frameReference.frameIndex < 0) return false;
+      auto itemReference = frameReference;
+      itemReference.frameIndex = -1;
+      if (!frameCounts.contains(itemReference))
+      {
+        auto item = anm2.element_get(itemReference);
+        frameCounts[itemReference] = item ? document::frame_count_get(*item) : 0;
+      }
+      return frameReference.frameIndex < frameCounts[itemReference];
+    };
 
     bool isMultiFrameSelection = frames.references.size() > 1 || frames.selection.size() > 1;
-    std::erase_if(result, [&](const Reference& frameReference) { return !is_frame_reference_valid(frameReference); });
+    std::erase_if(result,
+                  [&](const Reference& frameReference) { return !is_frame_reference_valid_cached(frameReference); });
 
     if (isMultiFrameSelection && result.size() <= 1)
     {
       auto itemFrames = selected_item_frame_references_get();
       std::erase_if(itemFrames,
-                    [&](const Reference& frameReference) { return !is_frame_reference_valid(frameReference); });
+                    [&](const Reference& frameReference) { return !is_frame_reference_valid_cached(frameReference); });
       if (itemFrames.size() > result.size()) result = std::move(itemFrames);
     }
 
-    if (result.empty() && fallback == FrameReferenceFallback::CURRENT && is_frame_reference_valid(reference))
+    if (result.empty() && fallback == FrameReferenceFallback::CURRENT && is_frame_reference_valid_cached(reference))
       result.insert(reference);
 
     return result;
@@ -1700,8 +2274,22 @@ namespace anm2ed
 
   void Document::frame_references_set(std::set<Reference> frameReferences)
   {
+    std::map<Reference, int> frameCounts{};
+    auto is_frame_reference_valid_cached = [&](Reference frameReference)
+    {
+      if (frameReference.itemType == NONE || frameReference.frameIndex < 0) return false;
+      auto itemReference = frameReference;
+      itemReference.frameIndex = -1;
+      if (!frameCounts.contains(itemReference))
+      {
+        auto item = anm2.element_get(itemReference);
+        frameCounts[itemReference] = item ? document::frame_count_get(*item) : 0;
+      }
+      return frameReference.frameIndex < frameCounts[itemReference];
+    };
+
     std::erase_if(frameReferences,
-                  [&](const Reference& frameReference) { return !is_frame_reference_valid(frameReference); });
+                  [&](const Reference& frameReference) { return !is_frame_reference_valid_cached(frameReference); });
 
     frames.references = std::move(frameReferences);
     frames.selection.clear();
@@ -1709,7 +2297,7 @@ namespace anm2ed
 
     if (frames.references.empty()) return;
 
-    if (!frames.references.contains(reference) || !is_frame_reference_valid(reference))
+    if (!frames.references.contains(reference) || !is_frame_reference_valid_cached(reference))
       reference = *frames.references.begin();
 
     for (auto frameReference : frames.references)
@@ -1720,7 +2308,8 @@ namespace anm2ed
 
     for (auto frameReference : frames.references)
       if (frameReference.animationIndex == reference.animationIndex && frameReference.itemType == reference.itemType &&
-          frameReference.itemID == reference.itemID && frameReference.frameIndex >= 0)
+          frameReference.itemID == reference.itemID && frameReference.groupType == reference.groupType &&
+          frameReference.groupId == reference.groupId && frameReference.frameIndex >= 0)
         frames.selection.insert(frameReference.frameIndex);
   }
 
@@ -1740,19 +2329,24 @@ namespace anm2ed
         selectedReferences.insert(frameReference);
       }
     if (selectedReferences.empty() && reference.itemType != NONE)
-      selectedReferences.insert({reference.animationIndex, reference.itemType, reference.itemID});
+    {
+      auto itemReference = reference;
+      itemReference.frameIndex = -1;
+      selectedReferences.insert(itemReference);
+    }
 
     std::vector<Reference> result{};
     for (auto itemReference : selectedReferences)
     {
       itemReference.frameIndex = -1;
       if (itemReference.itemType != LAYER) return {};
-      if (!anm2.element_get(itemReference.animationIndex, ItemType::LAYER, itemReference.itemID))
+      if (!anm2.element_get(itemReference))
       {
-        if (reference.animationIndex == itemReference.animationIndex ||
-            !anm2.element_get(reference.animationIndex, ItemType::LAYER, itemReference.itemID))
+        auto targetReference = itemReference;
+        targetReference.animationIndex = reference.animationIndex;
+        if (reference.animationIndex == itemReference.animationIndex || !anm2.element_get(targetReference))
           return {};
-        itemReference.animationIndex = reference.animationIndex;
+        itemReference = targetReference;
       }
       result.push_back(itemReference);
     }
@@ -1761,16 +2355,52 @@ namespace anm2ed
 
   Element* Document::frame_get()
   {
-    return anm2.element_get(reference.animationIndex, document::item_type_get(reference.itemType), reference.frameIndex,
-                            reference.itemID);
+    return anm2.element_get(reference);
   }
 
   Element* Document::item_get()
   {
-    return anm2.element_get(reference.animationIndex, document::item_type_get(reference.itemType), reference.itemID);
+    auto itemReference = reference;
+    itemReference.frameIndex = -1;
+    return anm2.element_get(itemReference);
   }
   Element* Document::animation_get() { return anm2.element_get(ElementType::ANIMATION, reference.animationIndex); }
   Element* Document::spritesheet_get() { return anm2.element_get(ElementType::SPRITESHEET, spritesheet.reference); }
+
+  Element* Document::overlay_get(int id)
+  {
+    if (id == -1) id = overlay.reference;
+    if (auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS))
+      for (auto& spritesheet : spritesheets->children)
+      {
+        if (spritesheet.type != ElementType::SPRITESHEET) continue;
+        if (auto overlay = element_child_id_get(spritesheet, ElementType::OVERLAY, id)) return overlay;
+      }
+    return nullptr;
+  }
+
+  const Element* Document::overlay_get(int id) const
+  {
+    if (id == -1) id = overlay.reference;
+    if (auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS))
+      for (auto& spritesheet : spritesheets->children)
+      {
+        if (spritesheet.type != ElementType::SPRITESHEET) continue;
+        if (auto overlay = element_child_id_get(spritesheet, ElementType::OVERLAY, id)) return overlay;
+      }
+    return nullptr;
+  }
+
+  int Document::overlay_spritesheet_id_get(int id) const
+  {
+    if (auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS))
+      for (auto& spritesheet : spritesheets->children)
+      {
+        if (spritesheet.type != ElementType::SPRITESHEET) continue;
+        if (element_child_id_get(spritesheet, ElementType::OVERLAY, id)) return spritesheet.id;
+      }
+    return -1;
+  }
 
   void Document::spritesheet_add(const std::filesystem::path& path)
   {
@@ -1812,7 +2442,7 @@ namespace anm2ed
     }
     if (loaded.empty()) return;
 
-    snapshot(localize.get(EDIT_ADD_SPRITESHEET));
+    anm2_snapshot(localize.get(EDIT_ADD_SPRITESHEET));
 
     std::set<int> added{};
     for (auto& loadedSpritesheet : loaded)
@@ -1836,6 +2466,71 @@ namespace anm2ed
     change(Document::SPRITESHEETS);
   }
 
+  void Document::overlay_add(int spritesheetId, const std::filesystem::path& path)
+  {
+    overlays_add(spritesheetId, {path});
+  }
+
+  void Document::overlays_add(int spritesheetId, const std::vector<std::filesystem::path>& paths)
+  {
+    struct LoadedOverlay
+    {
+      std::filesystem::path relativePath{};
+      resource::Texture texture{};
+    };
+
+    auto spritesheet = anm2.element_get(ElementType::SPRITESHEET, spritesheetId);
+    if (!spritesheet) return;
+    auto directory = directory_get();
+
+    std::vector<LoadedOverlay> loaded{};
+    for (auto& path : paths)
+    {
+      auto pathCopy = path;
+      auto storagePath = path::backslash_handle(pathCopy);
+      std::optional<WorkingDirectory> workingDirectory{};
+      if (!storagePath.is_absolute()) workingDirectory.emplace(directory);
+      auto loadPath = path::case_insensitive_find(storagePath);
+      auto texture = resource::Texture(loadPath);
+      if (!texture.is_valid())
+      {
+        auto pathUtf8 = path::to_utf8(pathCopy);
+        toasts.push(std::vformat(localize.get(TOAST_OVERLAY_INIT_FAILED), std::make_format_args(pathUtf8)));
+        logger.error(std::vformat(localize.get(TOAST_OVERLAY_INIT_FAILED, anm2ed::ENGLISH),
+                                  std::make_format_args(pathUtf8)));
+        continue;
+      }
+
+      loaded.push_back({.relativePath = path::backslash_replace(path::make_relative(storagePath, directory)),
+                        .texture = std::move(texture)});
+    }
+    if (loaded.empty()) return;
+
+    anm2_snapshot(localize.get(EDIT_ADD_OVERLAY));
+
+    std::set<int> added{};
+    for (auto& loadedOverlay : loaded)
+    {
+      auto id = document::overlay_next_id_get(anm2);
+      auto overlayElement = element_make(ElementType::OVERLAY);
+      overlayElement.id = id;
+      overlayElement.path = loadedOverlay.relativePath;
+      auto pathString = path::to_utf8(overlayElement.path);
+      spritesheet->children.push_back(overlayElement);
+      overlayTextures[id] = std::move(loadedOverlay.texture);
+      overlayTexturePaths[id] = overlayElement.path;
+      added.insert(id);
+      overlay.reference = id;
+      overlay_hash_set_saved(id);
+      toasts.push(std::vformat(localize.get(TOAST_OVERLAY_INITIALIZED), std::make_format_args(id, pathString)));
+      logger.info(std::vformat(localize.get(TOAST_OVERLAY_INITIALIZED, anm2ed::ENGLISH),
+                               std::make_format_args(id, pathString)));
+    }
+    overlay.selection = added;
+    editTarget = Document::EditTarget::OVERLAY;
+    change(Document::SPRITESHEETS);
+  }
+
   void Document::sound_add(const std::filesystem::path& path)
   {
     sounds_add({path});
@@ -1852,7 +2547,7 @@ namespace anm2ed
       if (!path.empty()) validPaths.push_back(path);
     if (validPaths.empty()) return;
 
-    snapshot(localize.get(EDIT_ADD_SOUND));
+    anm2_snapshot(localize.get(EDIT_ADD_SOUND));
 
     std::set<int> added{};
     for (auto& path : validPaths)
@@ -1880,10 +2575,34 @@ namespace anm2ed
     change(Document::SOUNDS);
   }
 
-  void Document::snapshot(const std::string& message)
+  void Document::anm2_snapshot(const std::string& message)
   {
     this->message = message;
-    snapshots.push(current);
+    snapshots.anm2_push(current, message);
+  }
+
+  void Document::frames_snapshot(const std::string& message, const std::set<Reference>& frameReferences)
+  {
+    this->message = message;
+    snapshots.frames_push(current, message, frameReferences);
+  }
+
+  void Document::regions_snapshot(const std::string& message, int spritesheetId, const std::set<int>& regionIds)
+  {
+    this->message = message;
+    snapshots.regions_push(current, message, spritesheetId, regionIds);
+  }
+
+  void Document::textures_snapshot(const std::string& message)
+  {
+    this->message = message;
+    snapshots.textures_push(current, message);
+  }
+
+  void Document::anm2_textures_snapshot(const std::string& message)
+  {
+    this->message = message;
+    snapshots.anm2_textures_push(current, message);
   }
 
   void Document::undo()

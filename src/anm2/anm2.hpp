@@ -22,6 +22,10 @@
   X(CONTENT, "Content")                                                                                                \
   X(SPRITESHEETS, "Spritesheets")                                                                                      \
   X(SPRITESHEET, "Spritesheet")                                                                                        \
+  X(OVERLAY, "Overlay")                                                                                                \
+  X(SHADER, "Shader")                                                                                                  \
+  X(UNIFORM, "Uniform")                                                                                                \
+  X(COMPONENT, "Component")                                                                                            \
   X(REGION, "Region")                                                                                                  \
   X(LAYERS, "Layers")                                                                                                  \
   X(LAYER_ELEMENT, "Layer")                                                                                            \
@@ -35,8 +39,10 @@
   X(ANIMATION, "Animation")                                                                                            \
   X(ROOT_ANIMATION, "RootAnimation")                                                                                   \
   X(LAYER_ANIMATIONS, "LayerAnimations")                                                                               \
+  X(LAYER_ANIMATION_GROUPS, "LayerAnimationGroups")                                                                    \
   X(LAYER_ANIMATION, "LayerAnimation")                                                                                 \
   X(NULL_ANIMATIONS, "NullAnimations")                                                                                 \
+  X(NULL_ANIMATION_GROUPS, "NullAnimationGroups")                                                                      \
   X(NULL_ANIMATION, "NullAnimation")                                                                                   \
   X(GROUP, "Group")                                                                                                    \
   X(TRIGGERS, "Triggers")                                                                                              \
@@ -181,7 +187,8 @@ namespace anm2ed
     SERIALIZE_REGIONS = 1 << 1,
     SERIALIZE_SOUNDS = 1 << 2,
     SERIALIZE_REDUNDANT_FRAME_REGION_VALUES = 1 << 3,
-    SERIALIZE_BAKE_SPECIAL_INTERPOLATED_FRAMES = 1 << 4
+    SERIALIZE_BAKE_SPECIAL_INTERPOLATED_FRAMES = 1 << 4,
+    SERIALIZE_BAKE_GROUP_FRAMES = 1 << 5
   };
 
   using Flags = int;
@@ -189,7 +196,8 @@ namespace anm2ed
   constexpr bool has_flag(Flags flags, Flag flag) { return (flags & flag) != 0; }
   constexpr Flags SERIALIZE_EDITOR_DEFAULT =
       SERIALIZE_GROUPS | SERIALIZE_REGIONS | SERIALIZE_SOUNDS | SERIALIZE_REDUNDANT_FRAME_REGION_VALUES;
-  constexpr Flags SERIALIZE_DEFAULT = SERIALIZE_EDITOR_DEFAULT | SERIALIZE_BAKE_SPECIAL_INTERPOLATED_FRAMES;
+  constexpr Flags SERIALIZE_DEFAULT =
+      SERIALIZE_EDITOR_DEFAULT | SERIALIZE_BAKE_SPECIAL_INTERPOLATED_FRAMES | SERIALIZE_BAKE_GROUP_FRAMES;
 
   struct Options
   {
@@ -233,6 +241,10 @@ namespace anm2ed
     std::string createdBy{"robot"};
     std::string createdOn{};
     std::filesystem::path path{};
+    std::filesystem::path vertex{};
+    std::filesystem::path fragment{};
+    std::string binding{};
+    std::string value{};
     std::string defaultAnimation{};
     int id{-1};
     int layerId{-1};
@@ -247,10 +259,12 @@ namespace anm2ed
     int regionId{-1};
     int soundId{-1};
     int groupId{-1};
+    int index{-1};
     bool isLoop{true};
     bool isVisible{true};
     bool isShowRect{};
     bool isExpanded{true};
+    bool isEnabled{true};
     Interpolation interpolation{Interpolation::NONE};
     Origin origin{Origin::CUSTOM};
     float rotation{};
@@ -270,6 +284,8 @@ namespace anm2ed
     int itemType{(int)ItemType::NONE};
     int itemID{-1};
     int frameIndex{-1};
+    int groupType{(int)ItemType::NONE};
+    int groupId{-1};
 
     auto operator<=>(const Reference&) const = default;
   };
@@ -283,6 +299,10 @@ namespace anm2ed
                                        Flags = SERIALIZE_EDITOR_DEFAULT);
   Element* element_child_first_get(Element&, ElementType);
   const Element* element_child_first_get(const Element&, ElementType);
+  Element* shader_uniform_get(Element&, std::string_view, bool = false);
+  const Element* shader_uniform_get(const Element&, std::string_view);
+  Element* shader_uniform_component_get(Element&, int, bool = false);
+  const Element* shader_uniform_component_get(const Element&, int);
   Element* element_child_id_get(Element&, ElementType, int);
   const Element* element_child_id_get(const Element&, ElementType, int);
   int element_child_next_id_get(const Element&, ElementType);
@@ -292,6 +312,13 @@ namespace anm2ed
   const Element* element_first_get(const Element&, ElementType);
   Element* animation_item_get(Element&, ItemType, int = -1);
   const Element* animation_item_get(const Element&, ItemType, int = -1);
+  Element* animation_item_get(Element&, ItemType, int, int, int);
+  const Element* animation_item_get(const Element&, ItemType, int, int, int);
+  Element* animation_group_get(Element&, int, int);
+  const Element* animation_group_get(const Element&, int, int);
+  Element* animation_group_root_get(Element&, int, int);
+  const Element* animation_group_root_get(const Element&, int, int);
+  Element* animation_group_root_ensure(Element&, int, int);
   ElementType item_type_to_track_type_get(ItemType);
   Element* track_frame_get(Element&, int);
   const Element* track_frame_get(const Element&, int);
@@ -326,7 +353,7 @@ namespace anm2ed
     void special_interpolated_frames_bake(int, bool, bool);
     void region_frames_sync(bool);
     void region_ids_remap();
-    Anm2 normalized_for_serialize() const;
+    Anm2 normalized_for_serialize(Flags = SERIALIZE_DEFAULT) const;
 
     Element* element_get(ElementType);
     const Element* element_get(ElementType) const;
@@ -334,8 +361,12 @@ namespace anm2ed
     const Element* element_get(ElementType, int) const;
     Element* element_get(int, ItemType, int = -1);
     const Element* element_get(int, ItemType, int = -1) const;
+    Element* element_get(int, ItemType, int, int, int);
+    const Element* element_get(int, ItemType, int, int, int) const;
     Element* element_get(int, ItemType, int, int);
     const Element* element_get(int, ItemType, int, int) const;
+    Element* element_get(Reference);
+    const Element* element_get(Reference) const;
     std::set<int> element_unused(ElementType) const;
     std::set<int> element_unused(ElementType, const Element&) const;
     std::set<int> element_unused(ElementType, int) const;
@@ -347,7 +378,8 @@ namespace anm2ed
                             types::destination::Type = types::destination::ALL);
     int null_animation_add(int, int = -1, std::string = {}, bool = false,
                            types::destination::Type = types::destination::ALL);
-    bool animations_deserialize(const std::string&, int, std::set<int>&, std::string* = nullptr);
+    bool animations_deserialize(const std::string&, int, std::set<int>&, std::string* = nullptr,
+                                std::set<int>* = nullptr);
     int animations_merge(int, std::set<int>&, types::merge::Type = types::merge::APPEND, bool = true);
   };
 }

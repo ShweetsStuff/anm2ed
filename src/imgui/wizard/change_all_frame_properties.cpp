@@ -84,7 +84,11 @@ namespace anm2ed::imgui::wizard
     {
       std::set<Reference> result = itemReferences;
       if (result.empty() && document.reference.itemType != NONE)
-        result.insert({document.reference.animationIndex, document.reference.itemType, document.reference.itemID});
+      {
+        auto itemReference = document.reference;
+        itemReference.frameIndex = -1;
+        result.insert(itemReference);
+      }
       std::erase_if(result, [&](const Reference& reference) { return !is_item_reference_changeable(reference); });
       return result;
     };
@@ -396,12 +400,10 @@ namespace anm2ed::imgui::wizard
                                   groupedFrames[itemReference].insert(frameReference.frameIndex);
                                 }
 
-                                document.snapshot(localize.get(EDIT_CHANGE_FRAME_PROPERTIES));
+                                document.anm2_snapshot(localize.get(EDIT_CHANGE_FRAME_PROPERTIES));
                                 for (auto& [itemReference, selection] : groupedFrames)
                                 {
-                                  auto item = anm2.element_get(itemReference.animationIndex,
-                                                               static_cast<ItemType>(itemReference.itemType),
-                                                               itemReference.itemID);
+                                  auto item = anm2.element_get(itemReference);
                                   if (!item) continue;
                                   frames_change(*item, frameChange, static_cast<ItemType>(itemReference.itemType),
                                                 changeType, selection);
@@ -412,13 +414,12 @@ namespace anm2ed::imgui::wizard
 
                               if (queuedIsItemsDestination)
                               {
-                                document.snapshot(localize.get(EDIT_CHANGE_FRAME_PROPERTIES));
+                                document.anm2_snapshot(localize.get(EDIT_CHANGE_FRAME_PROPERTIES));
                                 for (auto itemReference : queuedItemReferences)
                                 {
                                   if (itemReference.itemType == TRIGGER) continue;
-                                  auto item = anm2.element_get(itemReference.animationIndex,
-                                                               static_cast<ItemType>(itemReference.itemType),
-                                                               itemReference.itemID);
+                                  itemReference.frameIndex = -1;
+                                  auto item = anm2.element_get(itemReference);
                                   if (!item) continue;
                                   auto selection = all_frames_selection(*item);
                                   frames_change(*item, frameChange, static_cast<ItemType>(itemReference.itemType),
@@ -428,7 +429,7 @@ namespace anm2ed::imgui::wizard
                                 return;
                               }
 
-                              document.snapshot(localize.get(EDIT_CHANGE_FRAME_PROPERTIES));
+                              document.anm2_snapshot(localize.get(EDIT_CHANGE_FRAME_PROPERTIES));
                               for (auto animationIndex : queuedAnimations)
                               {
                                 auto animation = anm2.element_get(ElementType::ANIMATION, animationIndex);

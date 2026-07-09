@@ -1,6 +1,12 @@
 #pragma once
 
 #include <glad/glad.h>
+#include <glm/glm.hpp>
+
+#include <array>
+#include <string>
+#include <string_view>
+#include <vector>
 
 namespace anm2ed::resource::shader
 {
@@ -19,6 +25,24 @@ namespace anm2ed::resource::shader
   void main()
   {
       i_uv_out = i_uv;
+      gl_Position = u_transform * vec4(i_position, 0.0, 1.0);
+  }
+  )";
+
+  inline constexpr auto TEXTURE_COMPATIBILITY_VERTEX = R"(
+  #version 330 core
+  layout (location = 0) in vec2 i_position;
+  layout (location = 1) in vec2 i_uv;
+  out vec2 i_uv_out;
+  out vec2 TexCoord0;
+  out vec4 Color0;
+  uniform mat4 u_transform;
+  uniform vec4 u_tint;
+  void main()
+  {
+      i_uv_out = i_uv;
+      TexCoord0 = i_uv;
+      Color0 = u_tint;
       gl_Position = u_transform * vec4(i_position, 0.0, 1.0);
   }
   )";
@@ -203,6 +227,122 @@ namespace anm2ed::resource::shader
   constexpr auto UNIFORM_DASH_GAP = "u_dash_gap";
   constexpr auto UNIFORM_DASH_OFFSET = "u_dash_offset";
 
+#define RESOURCE_SHADER_ATTRIBUTE_ALIASES                                                                              \
+  X(0, "i_position")                                                                                                   \
+  X(0, "a_position")                                                                                                   \
+  X(0, "Position")                                                                                                     \
+  X(0, "Position0")                                                                                                    \
+  X(1, "i_uv")                                                                                                         \
+  X(1, "a_uv")                                                                                                         \
+  X(1, "TexCoord")                                                                                                     \
+  X(1, "TexCoord0")                                                                                                    \
+  X(1, "TextureCoord")                                                                                                 \
+  X(1, "UV")                                                                                                           \
+  X(1, "UV0")                                                                                                          \
+  X(2, "i_color")                                                                                                      \
+  X(2, "a_color")                                                                                                      \
+  X(2, "Color")                                                                                                        \
+  X(2, "Color0")
+
+  struct AttributeAlias
+  {
+    GLuint index{};
+    const char* name{};
+  };
+
+  inline constexpr AttributeAlias ATTRIBUTE_ALIASES[] = {
+#define X(index, name) {index, name},
+      RESOURCE_SHADER_ATTRIBUTE_ALIASES
+#undef X
+  };
+
+#define RESOURCE_SHADER_UNIFORM_BINDINGS                                                                               \
+  X(IGNORE, "Ignore", "Ignore")                                                                                       \
+  X(MAIN_TEXTURE, "MainTexture", "Main Texture")                                                                       \
+  X(TRANSFORM, "Transform", "Transform")                                                                               \
+  X(FRAME_TINT, "FrameTint", "Frame Tint")                                                                             \
+  X(COLOR_OFFSET, "ColorOffset", "Color Offset")                                                                       \
+  X(TEXTURE_SIZE, "TextureSize", "Texture Size")                                                                       \
+  X(PLAYBACK_TIME, "PlaybackTime", "Playback Time")                                                                    \
+  X(COMPONENTS, "Components", "Per Component")                                                                        \
+  X(MANUAL, "Manual", "Manual")
+
+  enum UniformBinding
+  {
+#define X(symbol, value, label) UNIFORM_BINDING_##symbol,
+    RESOURCE_SHADER_UNIFORM_BINDINGS
+#undef X
+        UNIFORM_BINDING_COUNT
+  };
+
+  struct UniformBindingInfo
+  {
+    UniformBinding binding{};
+    const char* value{};
+    const char* label{};
+  };
+
+  inline constexpr UniformBindingInfo UNIFORM_BINDING_INFOS[] = {
+#define X(symbol, value, label) {UNIFORM_BINDING_##symbol, value, label},
+      RESOURCE_SHADER_UNIFORM_BINDINGS
+#undef X
+  };
+
+#define RESOURCE_SHADER_UNIFORM_VALUE_TYPES                                                                            \
+  X(UNKNOWN, "Unknown")                                                                                                \
+  X(FLOAT, "Float")                                                                                                    \
+  X(INT, "Int")                                                                                                        \
+  X(VEC2, "Vec2")                                                                                                      \
+  X(VEC3, "Vec3")                                                                                                      \
+  X(VEC4, "Vec4")                                                                                                      \
+  X(MAT4, "Mat4")                                                                                                      \
+  X(SAMPLER2D, "Sampler2D")
+
+  enum UniformValueType
+  {
+#define X(symbol, label) UNIFORM_VALUE_##symbol,
+    RESOURCE_SHADER_UNIFORM_VALUE_TYPES
+#undef X
+        UNIFORM_VALUE_COUNT
+  };
+
+  struct UniformValueTypeInfo
+  {
+    UniformValueType type{};
+    const char* label{};
+  };
+
+  inline constexpr UniformValueTypeInfo UNIFORM_VALUE_TYPE_INFOS[] = {
+#define X(symbol, label) {UNIFORM_VALUE_##symbol, label},
+      RESOURCE_SHADER_UNIFORM_VALUE_TYPES
+#undef X
+  };
+
+  struct Uniform
+  {
+    struct Component
+    {
+      UniformBinding binding{UNIFORM_BINDING_MANUAL};
+      float value{};
+    };
+
+    std::string name{};
+    GLint location{-1};
+    GLenum glType{};
+    GLint size{};
+    UniformValueType valueType{UNIFORM_VALUE_UNKNOWN};
+    UniformBinding binding{UNIFORM_BINDING_IGNORE};
+    glm::vec4 value{};
+    int intValue{};
+    std::array<Component, 4> components{};
+  };
+
+  enum ShaderStage
+  {
+    SHADER_STAGE_VERTEX,
+    SHADER_STAGE_FRAGMENT
+  };
+
   enum ShaderType
   {
     LINE,
@@ -218,17 +358,45 @@ namespace anm2ed::resource::shader
                                {VERTEX, TEXTURE_FRAGMENT},
                                {AXIS_VERTEX, FRAGMENT},
                                {GRID_VERTEX, GRID_FRAGMENT}};
+
+  UniformBinding uniform_binding_auto_get(std::string_view, UniformValueType);
+  UniformBinding uniform_binding_get(std::string_view);
+  std::string_view uniform_binding_value_get(UniformBinding);
+  std::string_view uniform_binding_label_get(UniformBinding);
+  UniformValueType uniform_value_type_get(GLenum);
+  std::string_view uniform_value_type_label_get(UniformValueType);
+  bool is_uniform_value_editable(UniformValueType);
+  bool is_uniform_value_vector(UniformValueType);
+  bool is_uniform_binding_valid(UniformBinding, UniformValueType);
+  void uniform_value_parse(Uniform&, std::string_view);
+  std::string uniform_value_string_get(const Uniform&);
+  std::string gles_convert(std::string_view, ShaderStage);
+  std::string gles_fragment_convert(std::string_view);
+  std::string gles_vertex_convert(std::string_view);
 }
 
 namespace anm2ed::resource
 {
+  struct ShaderCompileResult
+  {
+    GLuint id{};
+    std::string output{};
+    std::vector<shader::Uniform> uniforms{};
+    bool isCompiled{};
+    bool isLinked{};
+  };
+
+  ShaderCompileResult shader_compile(const char*, const char*);
+
   class Shader
   {
   public:
     GLuint id{};
+    std::vector<shader::Uniform> uniforms{};
 
     Shader();
     Shader(const char*, const char*);
+    Shader(Shader&&) noexcept;
     Shader& operator=(Shader&&) noexcept;
     ~Shader();
     bool is_valid() const;

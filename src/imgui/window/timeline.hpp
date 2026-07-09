@@ -21,6 +21,8 @@ namespace anm2ed::imgui
     int type{NONE};
     int id{-1};
     int index{-1};
+    int groupType{NONE};
+    int groupId{-1};
     bool isGroup{};
 
     auto operator<=>(const TimelineRowReference&) const = default;
@@ -31,6 +33,8 @@ namespace anm2ed::imgui
     int type{NONE};
     int itemID{-1};
     int animationIndex{-1};
+    int groupType{NONE};
+    int groupId{-1};
     int frameIndex{-1};
     int duration{1};
     std::vector<int> indices{};

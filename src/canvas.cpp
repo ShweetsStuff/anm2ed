@@ -165,17 +165,128 @@ namespace anm2ed
     canvas_blend_straight_set();
   }
 
+  void texture_uniform_vec4_set(const shader::Uniform& uniform, vec4 value)
+  {
+    if (uniform.location == -1) return;
+
+    switch (uniform.valueType)
+    {
+      case shader::UNIFORM_VALUE_FLOAT:
+        glUniform1f(uniform.location, value.x);
+        break;
+      case shader::UNIFORM_VALUE_VEC2:
+        glUniform2fv(uniform.location, 1, value_ptr(value));
+        break;
+      case shader::UNIFORM_VALUE_VEC3:
+        glUniform3fv(uniform.location, 1, value_ptr(value));
+        break;
+      case shader::UNIFORM_VALUE_VEC4:
+        glUniform4fv(uniform.location, 1, value_ptr(value));
+        break;
+      default:
+        break;
+    }
+  }
+
+  void texture_uniform_manual_set(const shader::Uniform& uniform)
+  {
+    if (uniform.location == -1) return;
+
+    switch (uniform.valueType)
+    {
+      case shader::UNIFORM_VALUE_FLOAT:
+        glUniform1f(uniform.location, uniform.value.x);
+        break;
+      case shader::UNIFORM_VALUE_INT:
+      case shader::UNIFORM_VALUE_SAMPLER2D:
+        glUniform1i(uniform.location, uniform.intValue);
+        break;
+      case shader::UNIFORM_VALUE_VEC2:
+        glUniform2fv(uniform.location, 1, value_ptr(uniform.value));
+        break;
+      case shader::UNIFORM_VALUE_VEC3:
+        glUniform3fv(uniform.location, 1, value_ptr(uniform.value));
+        break;
+      case shader::UNIFORM_VALUE_VEC4:
+        glUniform4fv(uniform.location, 1, value_ptr(uniform.value));
+        break;
+      default:
+        break;
+    }
+  }
+
+  float texture_uniform_component_value_get(const shader::Uniform::Component& component, float playbackTime)
+  {
+    if (component.binding == shader::UNIFORM_BINDING_PLAYBACK_TIME) return playbackTime;
+    return component.value;
+  }
+
+  vec4 texture_uniform_component_vec4_get(const shader::Uniform& uniform, float playbackTime)
+  {
+    return {texture_uniform_component_value_get(uniform.components[0], playbackTime),
+            texture_uniform_component_value_get(uniform.components[1], playbackTime),
+            texture_uniform_component_value_get(uniform.components[2], playbackTime),
+            texture_uniform_component_value_get(uniform.components[3], playbackTime)};
+  }
+
+  void texture_uniforms_set(Shader& shader, mat4 transform, vec4 tint, vec3 colorOffset, vec2 textureSize,
+                            float playbackTime)
+  {
+    if (shader.uniforms.empty())
+    {
+      glUniform1i(glGetUniformLocation(shader.id, shader::UNIFORM_TEXTURE), 0);
+      glUniform3fv(glGetUniformLocation(shader.id, shader::UNIFORM_COLOR_OFFSET), 1, value_ptr(colorOffset));
+      glUniform4fv(glGetUniformLocation(shader.id, shader::UNIFORM_TINT), 1, value_ptr(tint));
+      glUniformMatrix4fv(glGetUniformLocation(shader.id, shader::UNIFORM_TRANSFORM), 1, GL_FALSE, value_ptr(transform));
+      return;
+    }
+
+    for (const auto& uniform : shader.uniforms)
+    {
+      if (uniform.location == -1) continue;
+
+      switch (uniform.binding)
+      {
+        case shader::UNIFORM_BINDING_MAIN_TEXTURE:
+          glUniform1i(uniform.location, 0);
+          break;
+        case shader::UNIFORM_BINDING_TRANSFORM:
+          if (uniform.valueType == shader::UNIFORM_VALUE_MAT4)
+            glUniformMatrix4fv(uniform.location, 1, GL_FALSE, value_ptr(transform));
+          break;
+        case shader::UNIFORM_BINDING_FRAME_TINT:
+          texture_uniform_vec4_set(uniform, tint);
+          break;
+        case shader::UNIFORM_BINDING_COLOR_OFFSET:
+          texture_uniform_vec4_set(uniform, vec4(colorOffset, 0.0f));
+          break;
+        case shader::UNIFORM_BINDING_TEXTURE_SIZE:
+          texture_uniform_vec4_set(uniform, vec4(textureSize, 0.0f, 0.0f));
+          break;
+        case shader::UNIFORM_BINDING_PLAYBACK_TIME:
+          texture_uniform_vec4_set(uniform, vec4(playbackTime));
+          break;
+        case shader::UNIFORM_BINDING_COMPONENTS:
+          texture_uniform_vec4_set(uniform, texture_uniform_component_vec4_get(uniform, playbackTime));
+          break;
+        case shader::UNIFORM_BINDING_MANUAL:
+          texture_uniform_manual_set(uniform);
+          break;
+        default:
+          break;
+      }
+    }
+  }
+
   void Canvas::texture_render(Shader& shader, GLuint& texture, mat4 transform, vec4 tint, vec3 colorOffset,
-                              float* vertices) const
+                              float* vertices, vec2 textureSize, float playbackTime) const
   {
     canvas_blend_premultiplied_set();
 
     glUseProgram(shader.id);
 
-    glUniform1i(glGetUniformLocation(shader.id, shader::UNIFORM_TEXTURE), 0);
-    glUniform3fv(glGetUniformLocation(shader.id, shader::UNIFORM_COLOR_OFFSET), 1, value_ptr(colorOffset));
-    glUniform4fv(glGetUniformLocation(shader.id, shader::UNIFORM_TINT), 1, value_ptr(tint));
-    glUniformMatrix4fv(glGetUniformLocation(shader.id, shader::UNIFORM_TRANSFORM), 1, GL_FALSE, value_ptr(transform));
+    texture_uniforms_set(shader, transform, tint, colorOffset, textureSize, playbackTime);
+    glVertexAttrib4fv(2, value_ptr(tint));
 
     glBindVertexArray(textureVAO);
 

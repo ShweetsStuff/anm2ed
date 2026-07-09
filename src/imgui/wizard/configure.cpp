@@ -69,15 +69,6 @@ namespace anm2ed::imgui::wizard
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_STACK_SIZE));
 
           ImGui::SeparatorText(localize.get(LABEL_SERIALIZATION));
-          ImGui::Checkbox(localize.get(LABEL_GROUPS), &temporary.fileIsSerializeGroups);
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SERIALIZE_GROUPS));
-          ImGui::SameLine();
-          ImGui::Checkbox(localize.get(LABEL_REGIONS), &temporary.fileIsSerializeRegions);
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SERIALIZE_REGIONS));
-          ImGui::SameLine();
-          ImGui::Checkbox(localize.get(LABEL_SOUNDS), &temporary.fileIsSerializeSounds);
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SERIALIZE_SOUNDS));
-
           ImGui::Checkbox(localize.get(LABEL_KEEP_REDUNDANT_FRAME_REGION_VALUES),
                           &temporary.fileIsKeepRedundantFrameRegionValues);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_KEEP_REDUNDANT_FRAME_REGION_VALUES));
@@ -85,6 +76,9 @@ namespace anm2ed::imgui::wizard
           ImGui::Checkbox(localize.get(LABEL_BAKE_SPECIAL_INTERPOLATED_FRAMES_ON_SAVE),
                           &temporary.fileIsBakeSpecialInterpolatedFrames);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BAKE_SPECIAL_INTERPOLATED_FRAMES_ON_SAVE));
+
+          ImGui::Checkbox(localize.get(LABEL_BAKE_GROUP_FRAMES_ON_SAVE), &temporary.isFileBakeGroupFrames);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BAKE_GROUP_FRAMES_ON_SAVE));
 
           ImGui::SeparatorText(localize.get(LABEL_OPTIONS));
           ImGui::Checkbox(localize.get(LABEL_OVERWRITE_WARNING), &temporary.fileIsWarnOverwrite);

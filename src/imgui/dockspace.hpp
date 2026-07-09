@@ -6,6 +6,7 @@
 #include "window/animation_preview.hpp"
 #include "window/frame_properties.hpp"
 #include "window/onionskin.hpp"
+#include "window/shaders.hpp"
 #include "window/spritesheet_editor.hpp"
 #include "window/timeline.hpp"
 #include "window/tools.hpp"
@@ -25,6 +26,8 @@ namespace anm2ed::imgui
     Window layers{layers_window_register()};
     Window nulls{nulls_window_register()};
     Onionskin onionskin;
+    Window overlays{overlays_window_register()};
+    ShadersWindow shaders;
     SpritesheetEditor spritesheetEditor;
     Window spritesheets{spritesheets_window_register()};
     Window sounds{sounds_window_register()};

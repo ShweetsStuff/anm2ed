@@ -162,8 +162,7 @@ namespace anm2ed::imgui::wizard
                               bool isRegionsChanged{};
                               for (auto queuedReference : queuedLayerReferences)
                               {
-                                auto item = document.anm2.element_get(queuedReference.animationIndex, ItemType::LAYER,
-                                                                      queuedReference.itemID);
+                                auto item = document.anm2.element_get(queuedReference);
                                 auto animation =
                                     document.anm2.element_get(ElementType::ANIMATION, queuedReference.animationIndex);
                                 auto layer = document.anm2.element_get(ElementType::LAYER_ELEMENT,
@@ -175,7 +174,7 @@ namespace anm2ed::imgui::wizard
 
                                 if (!isChanged)
                                 {
-                                  document.snapshot(localize.get(EDIT_GENERATE_ANIMATION_FROM_GRID));
+                                  document.anm2_snapshot(localize.get(EDIT_GENERATE_ANIMATION_FROM_GRID));
                                   isChanged = true;
                                 }
                                 auto frameIndexStart = (int)item->children.size();
