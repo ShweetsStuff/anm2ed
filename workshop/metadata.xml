@@ -8,27 +8,25 @@
 
 [h2]Anm2Ed[/h2]
 
-A reimplementation of [i]The Binding of Isaac: Rebirth[/i]'s proprietary animation editor. Manipulates the XML-based &quot;.anm2&quot; format, used for in-game tweened animations.
+Anm2Ed is a modern editor for [i]The Binding of Isaac: Rebirth[/i]'s XML-based &quot;.anm2&quot; animation format. It is built as an extended, more comfortable replacement for the original proprietary animation editor, with a dockable Dear ImGui interface and tools aimed at both quick edits and larger animation workflows.
 
 [h2]Features[/h2]
 [list]
-[*] Extended version of the original proprietary Nicalis animation editor
-[*] Smooth [url=https://github.com/ocornut/imgui]Dear ImGui[/url] interface; docking, dragging and dropping, etc. You might be familiar with it from [url=https://repentogon.com/]Repentogon[/url].
-[*] Greatly polished in many areas, to assist with all your animating needs
-[*]New features:
-[list]
-[*] Additional hotkeys/shortcuts (rebindable!)
-[*] Additional wizard options
-[*] Broadened sound support
-[*] Can output .webm, .mp4, spritesheet, or *.png sequence (wih FFmpeg)
-[*] Cutting, copying and pasting
-[*] Onionskinning
-[*] Spritesheet &quot;regions&quot;; pre-set regions to reuse in frames
-[*] Robust snapshot (undo/redo) system
-[*] Selecting multiple frames at a time
-[*] Settings that will preserve on exit (stored in %APPDATA% on Windows or ~/.local/share on Linux)
-[*] Texture packing
-[/list]
+[*] Full &quot;.anm2&quot; document editing for spritesheets, layers, nulls, events, sounds, animations, frames, and triggers.
+[*] Dockable [url=https://github.com/ocornut/imgui]Dear ImGui[/url] interface with draggable windows, persistent layout, drag and drop, context menus, and keyboard-focused workflows.
+[*] Timeline editing with multi-selection, cut/copy/paste, duplicate, merge, insert/delete, frame baking, frame dragging, and editable animation length/FPS/loop settings.
+[*] Animation, layer, and null groups for organizing work, including collapsible trees, group roots, visibility toggles, and save-time baking for game compatibility.
+[*] Spritesheet tools for adding, replacing, reloading, packing, saving, editing, and generating reusable regions.
+[*] Overlay spritesheets that can be placed on top of base spritesheets for editing and previewing alternate texture work.
+[*] Custom spritesheet shaders with vertex/fragment file paths, reload/compile feedback, enable/disable behavior, and configurable uniform bindings.
+[*] Animation preview with grid, axes, pivots, root transform display, transparency, borders, zoom controls, onionskinning, and isolated render modes.
+[*] Sound and trigger support, including playback through animation timelines and rendered output.
+[*] Wizards and batch tools for generating animations from grids, generating regions, scanning frames, changing frame properties across selections, baking frames, merging animations, merging spritesheets, and rendering animations.
+[*] Render output to video, GIF-compatible workflows, spritesheets, or PNG sequences through FFmpeg.
+[*] Merge external &quot;.anm2&quot; files into the current document with merge, append, and replace behaviors.
+[*] Robust undo/redo snapshots, autosave support, overwrite warnings, and persistent settings.
+[*] Rebindable shortcuts for common editing, timeline, tool, and navigation actions.
+[*] Localized UI with support for English, Spanish (Latin America), Russian, Chinese, and Korean.
 [/list]
 
 [h3]Supported Languages[/h3] 
@@ -40,10 +38,10 @@ A reimplementation of [i]The Binding of Isaac: Rebirth[/i]'s proprietary animati
 [*] 한국어 (Korean)
 [/list]
 
-[b]If you want to help localize for your language, feel free to get in touch to contribute![/b]
+[b]If you want to help localize for your language, feel free to get in touch to contribute.[/b]
 
-[h3]Note on Rendering Animations[/h3]
-You will need FFmpeg installed! Get it from [url=https://ffmpeg.org/download.html]here[/url] and point to the downloaded ffmpeg executable within the program!
+[h3]Rendering Animations[/h3]
+FFmpeg is required for video/GIF-style export. Download it from [url=https://ffmpeg.org/download.html]ffmpeg.org[/url], then point Anm2Ed to the ffmpeg executable in the render window.
 
 [h2]Download (Windows)[/h2]
 https://github.com/ShweetsStuff/anm2ed/releases
