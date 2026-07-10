@@ -6,6 +6,8 @@
 
 namespace anm2ed::imgui
 {
+  int PopupHelper::nextId = 1;
+
 #define POPUP_LIST                                                                                                     \
   X(POPUP_SMALL, 0.25f, true)                                                                                          \
   X(POPUP_NORMAL, 0.5f, true)                                                                                          \
@@ -32,6 +34,15 @@ namespace anm2ed::imgui
     this->labelId = labelId;
     this->type = type;
     this->position = position;
+    id = nextId++;
+  }
+
+  const char* PopupHelper::label() const
+  {
+    labelText = localize.get(labelId);
+    labelText += "##Popup";
+    labelText += std::to_string(id);
+    return labelText.c_str();
   }
 
   void PopupHelper::open()
@@ -45,7 +56,7 @@ namespace anm2ed::imgui
 
   void PopupHelper::trigger()
   {
-    if (isTriggered) ImGui::OpenPopup(localize.get(labelId));
+    if (isTriggered) ImGui::OpenPopup(label());
     isTriggered = false;
 
     auto viewport = ImGui::GetMainViewport();

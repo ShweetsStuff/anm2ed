@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "strings.hpp"
 
 namespace anm2ed::imgui
@@ -31,12 +33,15 @@ namespace anm2ed::imgui
     StringType labelId{};
     PopupType type{};
     PopupPosition position{};
+    int id{};
     bool isOpen{};
     bool isTriggered{};
     bool isJustOpened{};
+    mutable std::string labelText{};
+    static int nextId;
 
     PopupHelper(StringType, PopupType = POPUP_NORMAL, PopupPosition = POPUP_CENTER);
-    const char* label() const { return localize.get(labelId); }
+    const char* label() const;
     bool is_open();
     void open();
     void trigger();
