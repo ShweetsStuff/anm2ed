@@ -304,6 +304,7 @@ namespace anm2ed
   X(LABEL_FORMAT, "Format", "Formato", "Формат", "格式", "파일 포맷") \
   X(LABEL_FRAGMENT, "Fragment", "Fragment", "Fragment", "Fragment", "Fragment") \
   X(LABEL_FPS, "FPS", "FPS", "FPS", "FPS", "FPS") \
+  X(LABEL_ANIMATION_FPS, "Animation FPS", "Animation FPS", "Animation FPS", "Animation FPS", "Animation FPS") \
   X(LABEL_FRAME_PROPERTIES_WINDOW, "Frame Properties###Frame Properties", "Propiedades de Frame###Frame Properties", "Свойства кадра###Frame Properties", "帧属性###Frame Properties", "프레임 속성###Frame Properties") \
   X(LABEL_GENERATE, "Generate", "Generar", "Сгенерировать", "生成", "생성") \
   X(LABEL_GENERATE_COLUMNS, "Columns", "Columnas", "Колонны", "列", "열") \
@@ -375,9 +376,11 @@ namespace anm2ed
   X(LABEL_PLAY, "Play", "Reproducir", "Возпроизвести", "播放", "재생") \
   X(LABEL_PLAYBACK_ALWAYS_LOOP, "Always Loop", "Siempre Loopear", "Всегда воспроизводить циклично", "持续循环", "항상 반복") \
   X(LABEL_PLAYBACK_MENU, "Playback", "Reproduccion", "Возпроизведение", "回放", "재생") \
+  X(LABEL_PLAYBACK_RATE, "Playback Rate", "Playback Rate", "Playback Rate", "Playback Rate", "Playback Rate") \
   X(LABEL_PREPEND_FRAMES, "Prepend Frames", "Anteponer Frames", "Добавить кадры", "在前面插入帧", "뒷프레임에 추가") \
   X(LABEL_RECT, "Rect", "Rect", "Прямоугольник", "矩形", "사각형") \
   X(LABEL_RENDER, "Render", "Renderizar", "Рендер", "渲染", "렌더링") \
+  X(LABEL_RENDER_FPS, "Render FPS", "Render FPS", "Render FPS", "Render FPS", "Render FPS") \
   X(LABEL_REPEAT_DELAY, "Repeat Delay (seconds)", "Repetir Delay (segundos)", "Задержка повторения (секунды)", "键盘按键重复延迟 (秒)", "반복 입력 지연 시간 (초)") \
   X(LABEL_REPEAT_RATE, "Repeat Rate (seconds)", "Repetir Tasa (segundos)", "Скорость повторения (секунды)", "键盘按键重复速率 (秒)", "반복 입력 속도 (초)") \
   X(LABEL_REPLACE_FRAMES, "Replace Frames", "Reemplazar Frames", "Заменить кадры", "替换帧", "프레임 교체") \
@@ -684,6 +687,7 @@ namespace anm2ed
   X(TOOLTIP_PREVIEW_TRANSPARENT, "Toggle the animation preview background being transparent.", "Alterna la transparencia del fondo de la vista previa de animacion.", "Переключить прозрачность фона предпросмотра анимации.", "切换动画预览背景是否透明.", "애니메이션 미리보기 배경을 투명하게 전환합니다.") \
   X(TOOLTIP_USE_ANIMATION_BOUNDS, "Render using the animation's bounds instead of the preview viewport.", "Render using the animation's bounds instead of the preview viewport.", "Render using the animation's bounds instead of the preview viewport.", "Render using the animation's bounds instead of the preview viewport.", "Render using the animation's bounds instead of the preview viewport.") \
   X(TOOLTIP_USE_ISOLATED_ANIMATION, "Render only animation layers with a transparent background and preview helpers hidden.", "Render only animation layers with a transparent background and preview helpers hidden.", "Render only animation layers with a transparent background and preview helpers hidden.", "Render only animation layers with a transparent background and preview helpers hidden.", "Render only animation layers with a transparent background and preview helpers hidden.") \
+  X(TOOLTIP_RENDER_FPS, "Set the exported animation frame rate.", "Set the exported animation frame rate.", "Set the exported animation frame rate.", "Set the exported animation frame rate.", "Set the exported animation frame rate.") \
   X(TOOLTIP_RELOAD_OVERLAYS, "Reloads the selected overlays.", "Reloads the selected overlays.", "Reloads the selected overlays.", "Reloads the selected overlays.", "Reloads the selected overlays.") \
   X(TOOLTIP_RELOAD_SPRITESHEETS, "Reloads the selected spritesheets.", "Recarga la spritesheet seleccionada.", "Перезагружает выбранные спрайт-листы.", "重新加载所选图集.", "선택한 스프라이트 시트를 다시 불러옵니다.") \
   X(TOOLTIP_RELOAD_SOUNDS, "Reloads the selected sounds.", "Recarga los sonidos seleccionados.", "Перезагружает выбранные звуки.", "重新加载所选声音.", "선택한 사운드를 다시 불러옵니다.") \

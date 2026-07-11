@@ -4,7 +4,6 @@
 #include <cstring>
 #include <filesystem>
 #include <format>
-#include <functional>
 #include <fstream>
 #include <string>
 
@@ -22,25 +21,9 @@ using namespace anm2ed::util;
 
 namespace anm2ed
 {
-  namespace
-  {
-    std::string ffmpeg_concat_escape(const std::string& value)
-    {
-      std::string escaped{};
-      escaped.reserve(value.size());
-      for (auto character : value)
-      {
-        if (character == '\'') escaped += "'\\''";
-        else
-          escaped += character;
-      }
-      return escaped;
-    }
-  }
-
   bool animation_render(const std::filesystem::path& ffmpegPath, const std::filesystem::path& path,
-                        const std::vector<std::filesystem::path>& framePaths,
-                        const std::vector<double>& frameDurations, AudioStream& audioStream, render::Type type, int fps)
+                        const std::vector<std::filesystem::path>& framePaths, AudioStream& audioStream,
+                        render::Type type, int fps)
   {
     if (framePaths.empty() || ffmpegPath.empty() || path.empty()) return false;
     fps = std::max(fps, 1);
@@ -120,39 +103,17 @@ namespace anm2ed
       }
     }
 
-    auto framesListPath = temporaryDirectory / path::from_utf8(std::format(
-                             "anm2ed_frames_{}_{}.txt", std::hash<std::string>{}(pathString), SDL_GetTicks())) ;
-    std::ofstream framesListFile(framesListPath);
-    if (!framesListFile)
-    {
-      audio_remove();
-      return false;
-    }
-
-    auto defaultFrameDuration = 1.0 / (double)fps;
-    for (std::size_t index = 0; index < framePaths.size(); ++index)
-    {
-      auto framePath = framePaths[index];
-      auto framePathString = path::to_utf8(framePath);
-      auto frameDuration = defaultFrameDuration;
-      if (index < frameDurations.size() && frameDurations[index] > 0.0) frameDuration = frameDurations[index];
-      framesListFile << "file '" << ffmpeg_concat_escape(framePathString) << "'\n";
-      framesListFile << "duration " << std::format("{:.9f}", frameDuration) << "\n";
-    }
-    auto lastFramePathString = path::to_utf8(framePaths.back());
-    framesListFile << "file '" << ffmpeg_concat_escape(lastFramePathString) << "'\n";
-    framesListFile.close();
-
-    auto framesListPathString = path::to_utf8(framesListPath);
-    command = std::format("\"{0}\" -y -f concat -safe 0 -i \"{1}\"", ffmpegPathString, framesListPathString);
+    auto framePattern = temporaryDirectory / path::from_utf8("frame_%06d.png");
+    auto framePatternString = path::to_utf8(framePattern);
+    command = std::format("\"{0}\" -y -framerate {1} -start_number 0 -i \"{2}\"", ffmpegPathString, fps,
+                          framePatternString);
 
     if (!audioInputArguments.empty()) command += " " + audioInputArguments;
-    if (type != render::GIF) command += std::format(" -fps_mode cfr -r {}", fps);
+    command += std::format(" -fps_mode cfr -r {}", fps);
 
     switch (type)
     {
       case render::GIF:
-        command += " -fps_mode vfr";
         command +=
             " -lavfi \"split[s0][s1];[s0]palettegen=stats_mode=full:reserve_transparent=1[p];"
             "[s1][p]paletteuse=dither=floyd_steinberg:alpha_threshold=128\""
@@ -172,8 +133,6 @@ namespace anm2ed
         break;
       default:
       {
-        std::error_code ec;
-        std::filesystem::remove(framesListPath, ec);
         return false;
       }
     }
@@ -192,8 +151,6 @@ namespace anm2ed
 
     if (!process.get())
     {
-      std::error_code ec;
-      std::filesystem::remove(framesListPath, ec);
       audio_remove();
       return false;
     }
@@ -202,14 +159,10 @@ namespace anm2ed
     if (ffmpegExitCode != 0)
     {
       logger.error(std::format("FFmpeg exited with code {} while exporting {}", ffmpegExitCode, pathString));
-      std::error_code ec;
-      std::filesystem::remove(framesListPath, ec);
       audio_remove();
       return false;
     }
 
-    std::error_code ec;
-    std::filesystem::remove(framesListPath, ec);
     audio_remove();
     return true;
   }

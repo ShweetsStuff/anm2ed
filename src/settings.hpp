@@ -202,6 +202,7 @@ namespace anm2ed
   X(RENDER_IS_USE_ANIMATION_BOUNDS, renderIsUseAnimationBounds, STRING_UNDEFINED, BOOL, true)                         \
   X(RENDER_IS_USE_ISOLATED_ANIMATION, renderIsUseIsolatedAnimation, STRING_UNDEFINED, BOOL, false)                    \
   X(RENDER_SCALE, renderScale, STRING_UNDEFINED, FLOAT, 1.0f)                                                          \
+  X(RENDER_FPS_MODE, renderFpsMode, STRING_UNDEFINED, INT, render::FPS_ANIMATION)                                      \
   X(RENDER_FFMPEG_PATH, renderFFmpegPath, STRING_UNDEFINED, PATH, FFMPEG_PATH_DEFAULT)
 
 #define SETTINGS_SHORTCUTS                                                                                             \

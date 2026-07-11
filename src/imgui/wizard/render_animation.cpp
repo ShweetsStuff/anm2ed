@@ -8,6 +8,7 @@
 #include "log.hpp"
 #include "path.hpp"
 #include "process.hpp"
+#include "render.hpp"
 #include "toast.hpp"
 #include "util/imgui/input.hpp"
 #include "util/imgui/layout.hpp"
@@ -77,6 +78,7 @@ namespace anm2ed::imgui::wizard
     auto& path = settings.renderPath;
     auto& format = settings.renderFormat;
     auto& scale = settings.renderScale;
+    auto& renderFpsMode = settings.renderFpsMode;
     auto& isUseAnimationBounds = settings.renderIsUseAnimationBounds;
     auto& isUseIsolatedAnimation = settings.renderIsUseIsolatedAnimation;
     auto& type = settings.renderType;
@@ -91,7 +93,17 @@ namespace anm2ed::imgui::wizard
     auto frameMax = animationFrameNum - 1;
     start = std::clamp(start, 0, frameMax);
     end = std::clamp(end, start, frameMax);
-    auto renderFrameNum = isRange ? render::frame_count_get(start, end) : animationFrameNum;
+    auto info = element_first_get(document.anm2.root, ElementType::INFO);
+    auto animationFps = std::max(info ? info->fps : 30, 1);
+    if (renderFpsMode < render::FPS_ANIMATION || renderFpsMode >= render::FPS_COUNT)
+      renderFpsMode = render::FPS_ANIMATION;
+    auto renderFps = render::fps_get(renderFpsMode, animationFps, settings.playbackTickRate);
+    auto render_frame_count_get = [&]()
+    {
+      if (isRange) return render::frame_count_get(start, end, animationFps, renderFps);
+      return render::frame_count_get(0, frameMax, animationFps, renderFps);
+    };
+    auto renderFrameNum = render_frame_count_get();
 
     auto widgetSize = widget_size_with_row_get(2);
 
@@ -196,7 +208,7 @@ namespace anm2ed::imgui::wizard
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_END));
     }
     ImGui::EndDisabled();
-    renderFrameNum = isRange ? render::frame_count_get(start, end) : animationFrameNum;
+    renderFrameNum = render_frame_count_get();
 
     if (type == render::SPRITESHEET)
     {
@@ -221,6 +233,21 @@ namespace anm2ed::imgui::wizard
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SCALE_OUTPUT));
     }
     ImGui::EndDisabled();
+
+    ImGui::Separator();
+
+    const char* renderFpsOptions[] = {localize.get(LABEL_ANIMATION_FPS), localize.get(LABEL_PLAYBACK_RATE)};
+    ImGui::Combo(localize.get(LABEL_RENDER_FPS), &renderFpsMode, renderFpsOptions, IM_ARRAYSIZE(renderFpsOptions));
+    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_RENDER_FPS));
+
+    renderFps = render::fps_get(renderFpsMode, animationFps, settings.playbackTickRate);
+    renderFrameNum = render_frame_count_get();
+    if (type == render::SPRITESHEET)
+    {
+      auto layout = render::spritesheet_layout_get(rows, columns, renderFrameNum);
+      rows = layout.rows;
+      columns = layout.columns;
+    }
 
     ImGui::Separator();
 

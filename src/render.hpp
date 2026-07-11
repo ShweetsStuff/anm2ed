@@ -23,6 +23,13 @@ namespace anm2ed::render
         COUNT
   };
 
+  enum FpsMode
+  {
+    FPS_ANIMATION,
+    FPS_PLAYBACK_RATE,
+    FPS_COUNT
+  };
+
   constexpr const char* STRINGS[] = {
 #define X(symbol, string, extension) string,
       RENDER_LIST
@@ -42,6 +49,33 @@ namespace anm2ed::render
   };
 
   inline int frame_count_get(int start, int end) { return std::max(end - start + 1, 1); }
+
+  inline int frame_count_get(int start, int end, int animationFps, int renderFps)
+  {
+    animationFps = std::max(animationFps, 1);
+    renderFps = std::max(renderFps, 1);
+    auto duration = (double)frame_count_get(start, end) / (double)animationFps;
+    return std::max((int)std::ceil(duration * (double)renderFps), 1);
+  }
+
+  inline float frame_time_get(int start, int frameIndex, int animationFps, int renderFps)
+  {
+    animationFps = std::max(animationFps, 1);
+    renderFps = std::max(renderFps, 1);
+    return (float)start + ((float)frameIndex * ((float)animationFps / (float)renderFps));
+  }
+
+  inline int fps_get(int mode, int animationFps, int playbackRate)
+  {
+    switch (mode)
+    {
+      case FPS_PLAYBACK_RATE:
+        return std::max(playbackRate, 1);
+      case FPS_ANIMATION:
+      default:
+        return std::max(animationFps, 1);
+    }
+  }
 
   inline SpritesheetLayout spritesheet_layout_get(int rows, int columns, int frameCount)
   {
@@ -74,6 +108,5 @@ namespace anm2ed
 {
   std::filesystem::path ffmpeg_log_path();
   bool animation_render(const std::filesystem::path&, const std::filesystem::path&,
-                        const std::vector<std::filesystem::path>&, const std::vector<double>&, AudioStream&,
-                        render::Type, int);
+                        const std::vector<std::filesystem::path>&, AudioStream&, render::Type, int);
 }

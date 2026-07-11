@@ -33,8 +33,11 @@ namespace anm2ed::imgui
     glm::vec2 nullRectScaleAnchor{};
     std::filesystem::path renderTempDirectory{};
     std::vector<std::filesystem::path> renderTempFrames{};
-    std::vector<double> renderTempFrameDurations{};
     std::vector<int> renderFrameSoundIDs{};
+    int renderFrameIndex{};
+    int renderFrameCount{};
+    int renderFrameRate{1};
+    int renderAnimationFps{1};
     int renderFrameSoundTimePrev{-1};
 
   public:

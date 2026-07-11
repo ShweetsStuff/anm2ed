@@ -49,8 +49,10 @@ namespace anm2ed::imgui
       return directory;
     }
 
-    std::filesystem::path render_frame_filename(const std::filesystem::path& format, int index)
+    std::filesystem::path render_frame_filename(const std::filesystem::path& format, int index, int type)
     {
+      if (type != render::PNGS) return path::from_utf8(std::format("frame_{:06}.png", index));
+
       auto formatString = path::to_utf8(format);
       try
       {
@@ -108,6 +110,26 @@ namespace anm2ed::imgui
         pixels[index + 2] = (uint8_t)glm::clamp((float)std::round((float)pixels[index + 2] / alphaUnit), 0.0f, 255.0f);
       }
     }
+
+    int trigger_sound_id_get(Document& document, Element* animation, float time, int deterministicIndex = -1)
+    {
+      if (!animation) return -1;
+      auto triggers = animation_item_get(*animation, ItemType::TRIGGER);
+      if (!triggers || !triggers->isVisible) return -1;
+
+      auto trigger = frame_generate(*triggers, time);
+      if (!trigger.isVisible || trigger.soundIds.empty()) return -1;
+
+      size_t soundIndex{};
+      if (trigger.soundIds.size() > 1)
+        soundIndex = deterministicIndex >= 0 ? (size_t)deterministicIndex % trigger.soundIds.size()
+                                             : (size_t)math::random_in_range(0.0f, (float)trigger.soundIds.size());
+      soundIndex = std::min(soundIndex, trigger.soundIds.size() - 1);
+
+      auto soundID = trigger.soundIds[soundIndex];
+      return document.sound_get(soundID) ? soundID : -1;
+    }
+
     bool render_audio_stream_generate(AudioStream& audioStream, std::map<int, Audio>& sounds,
                                       const std::vector<int>& frameSoundIDs, int fps)
     {
@@ -164,7 +186,6 @@ namespace anm2ed::imgui
     auto& anm2 = document.anm2;
     auto& playback = document.playback;
     auto& frameTime = document.frameTime;
-    auto& end = manager.recordingEnd;
     auto& zoom = document.previewZoom;
     auto& overlayIndex = document.overlayIndex;
     auto& pan = document.previewPan;
@@ -175,29 +196,12 @@ namespace anm2ed::imgui
         sound.stop(mixer);
     };
 
-    auto trigger_sound_id_get = [&](Element* animation, float time)
-    {
-      if (!animation) return -1;
-      auto triggers = animation_item_get(*animation, ItemType::TRIGGER);
-      if (!triggers || !triggers->isVisible) return -1;
-
-      auto trigger = frame_generate(*triggers, time);
-      if (!trigger.isVisible || trigger.soundIds.empty()) return -1;
-
-      auto soundIndex =
-          trigger.soundIds.size() > 1 ? (size_t)math::random_in_range(0.0f, (float)trigger.soundIds.size()) : (size_t)0;
-      soundIndex = std::min(soundIndex, trigger.soundIds.size() - 1);
-      auto soundID = trigger.soundIds[soundIndex];
-      return document.sound_get(soundID) ? soundID : -1;
-    };
-
     if (manager.isRecording)
     {
       auto& ffmpegPath = settings.renderFFmpegPath;
       auto& path = settings.renderPath;
       auto pathString = path::to_utf8(path);
       auto& type = settings.renderType;
-      auto renderFrameRate = std::max(settings.playbackTickRate, 1);
       auto isRenderPreviewOverridden = settings.renderIsUseAnimationBounds || settings.renderIsUseIsolatedAnimation;
       auto render_preview_restore = [&]()
       {
@@ -212,10 +216,8 @@ namespace anm2ed::imgui
         isCheckerPanInitialized = false;
       };
 
-      if (playback.time >= (float)end + 1.0f || playback.isFinished)
+      if (renderFrameIndex >= renderFrameCount)
       {
-        if (settings.timelineIsSound) audioStream.capture_end(mixer);
-
         if (type == render::PNGS)
         {
           if (!renderTempFrames.empty())
@@ -310,8 +312,7 @@ namespace anm2ed::imgui
           else
             audioStream.stream.clear();
 
-          if (animation_render(ffmpegPath, path, renderTempFrames, renderTempFrameDurations, audioStream,
-                               (render::Type)type, renderFrameRate))
+          if (animation_render(ffmpegPath, path, renderTempFrames, audioStream, (render::Type)type, renderFrameRate))
           {
             toasts.push(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION), std::make_format_args(pathString)));
             logger.info(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION, anm2ed::ENGLISH),
@@ -330,13 +331,11 @@ namespace anm2ed::imgui
         {
           renderTempDirectory.clear();
           renderTempFrames.clear();
-          renderTempFrameDurations.clear();
           renderFrameSoundIDs.clear();
         }
         else
         {
           render_temp_cleanup(renderTempDirectory, renderTempFrames);
-          renderTempFrameDurations.clear();
           renderFrameSoundIDs.clear();
         }
 
@@ -345,49 +344,14 @@ namespace anm2ed::imgui
         playback.isPlaying = false;
         playback.isFinished = false;
         manager.isRecording = false;
+        manager.isRecordingStart = false;
+        renderFrameIndex = 0;
+        renderFrameCount = 0;
         manager.progressPopup.close();
       }
-      else
-      {
-        if (settings.timelineIsSound && renderTempFrames.empty()) audioStream.capture_begin(mixer);
-        auto frameSoundID = -1;
-        if (settings.timelineIsSound && !document.sounds.empty())
-        {
-          auto soundTime = (int)std::floor(playback.time);
-          auto animation = anm2.element_get(ElementType::ANIMATION, document.reference.animationIndex);
-          if (soundTime != renderFrameSoundTimePrev && animation)
-            frameSoundID = trigger_sound_id_get(animation, playback.time);
-          renderFrameSoundTimePrev = soundTime;
-        }
-        renderFrameSoundIDs.push_back(frameSoundID);
-
-        bind();
-        auto pixels = pixels_get();
-        if (isRenderPreviewOverridden) pixels_unpremultiply_alpha(pixels);
-        auto frameIndex = (int)renderTempFrames.size();
-        auto framePath = renderTempDirectory / render_frame_filename(settings.renderFormat, frameIndex);
-        if (Texture::write_pixels_png(framePath, size, pixels.data()))
-        {
-          renderTempFrames.push_back(framePath);
-          auto fallbackDuration = 1.0 / (double)renderFrameRate;
-          renderTempFrameDurations.push_back(fallbackDuration);
-        }
-        else
-        {
-          toasts.push(
-              std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED), std::make_format_args(pathString)));
-          logger.error(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED, anm2ed::ENGLISH),
-                                    std::make_format_args(pathString)));
-          if (type != render::PNGS) render_temp_cleanup(renderTempDirectory, renderTempFrames);
-          renderTempFrameDurations.clear();
-          renderFrameSoundIDs.clear();
-          render_preview_restore();
-          playback.isPlaying = false;
-          playback.isFinished = false;
-          manager.isRecording = false;
-          manager.progressPopup.close();
-        }
-      }
+      stop_all_sounds();
+      wasPlaybackPlaying = false;
+      return;
     }
 
     if (playback.isPlaying)
@@ -405,7 +369,7 @@ namespace anm2ed::imgui
       {
         if (!manager.isRecording && !document.sounds.empty() && isSound)
         {
-          if (auto soundID = trigger_sound_id_get(animation, playback.time); soundID != -1)
+          if (auto soundID = trigger_sound_id_get(document, animation, playback.time); soundID != -1)
             if (auto sound = document.sound_get(soundID)) sound->play(false, mixer);
         }
 
@@ -667,8 +631,13 @@ namespace anm2ed::imgui
 
         manager.isRecordingStart = false;
         manager.isRecording = true;
+        renderFrameIndex = 0;
+        auto info = element_first_get(anm2.root, ElementType::INFO);
+        renderAnimationFps = std::max(info ? info->fps : 30, 1);
+        renderFrameRate = render::fps_get(settings.renderFpsMode, renderAnimationFps, settings.playbackTickRate);
+        renderFrameCount =
+            render::frame_count_get(manager.recordingStart, manager.recordingEnd, renderAnimationFps, renderFrameRate);
         renderTempFrames.clear();
-        renderTempFrameDurations.clear();
         renderFrameSoundIDs.clear();
         renderFrameSoundTimePrev = -1;
         if (settings.renderType == render::PNGS)
@@ -703,6 +672,9 @@ namespace anm2ed::imgui
           logger.error(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED, anm2ed::ENGLISH),
                                     std::make_format_args(pathString)));
           manager.isRecording = false;
+          manager.isRecordingStart = false;
+          renderFrameIndex = 0;
+          renderFrameCount = 0;
           manager.progressPopup.close();
           playback.isPlaying = false;
           playback.isFinished = false;
@@ -710,7 +682,18 @@ namespace anm2ed::imgui
         }
         playback.isPlaying = true;
         playback.timing_reset();
-        playback.time = manager.recordingStart;
+        playback.time =
+            render::frame_time_get(manager.recordingStart, renderFrameIndex, renderAnimationFps, renderFrameRate);
+        document.frameTime = playback.time;
+      }
+
+      if (manager.isRecording && renderFrameIndex < renderFrameCount)
+      {
+        playback.isPlaying = true;
+        playback.isFinished = false;
+        playback.time =
+            render::frame_time_get(manager.recordingStart, renderFrameIndex, renderAnimationFps, renderFrameRate);
+        document.frameTime = playback.time;
       }
 
       if (isSizeTrySet)
@@ -1126,6 +1109,61 @@ namespace anm2ed::imgui
                  settings.onionskinMode == (int)OnionskinMode::INDEX);
       }
 
+      if (manager.isRecording && renderFrameIndex < renderFrameCount)
+      {
+        auto renderType = settings.renderType;
+        auto isRenderPreviewOverridden = settings.renderIsUseAnimationBounds || settings.renderIsUseIsolatedAnimation;
+        auto render_capture_fail = [&]()
+        {
+          auto pathString = path::to_utf8(settings.renderPath);
+          toasts.push(
+              std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED), std::make_format_args(pathString)));
+          logger.error(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED, anm2ed::ENGLISH),
+                                    std::make_format_args(pathString)));
+          if (renderType != render::PNGS) render_temp_cleanup(renderTempDirectory, renderTempFrames);
+          renderFrameSoundIDs.clear();
+          if (isRenderPreviewOverridden)
+          {
+            settings = savedSettings;
+            pan = savedPan;
+            zoom = savedZoom;
+            overlayIndex = savedOverlayIndex;
+            isSizeTrySet = true;
+            hasPendingZoomPanAdjust = false;
+            isCheckerPanInitialized = false;
+          }
+          playback.isPlaying = false;
+          playback.isFinished = false;
+          manager.isRecording = false;
+          manager.isRecordingStart = false;
+          renderFrameIndex = 0;
+          renderFrameCount = 0;
+          manager.progressPopup.close();
+        };
+
+        auto frameSoundID = -1;
+        if (settings.timelineIsSound && !document.sounds.empty())
+        {
+          auto soundTime = (int)std::floor(frameTime);
+          if (soundTime != renderFrameSoundTimePrev && animation)
+            frameSoundID = trigger_sound_id_get(document, animation, frameTime, renderFrameIndex);
+          renderFrameSoundTimePrev = soundTime;
+        }
+        renderFrameSoundIDs.push_back(frameSoundID);
+
+        auto pixels = pixels_get();
+        if (isRenderPreviewOverridden) pixels_unpremultiply_alpha(pixels);
+        auto framePath =
+            renderTempDirectory / render_frame_filename(settings.renderFormat, renderFrameIndex, settings.renderType);
+        if (Texture::write_pixels_png(framePath, size, pixels.data()))
+        {
+          renderTempFrames.push_back(framePath);
+          ++renderFrameIndex;
+        }
+        else
+          render_capture_fail();
+      }
+
       unbind();
 
       if (isTransparent)
@@ -1494,9 +1532,7 @@ namespace anm2ed::imgui
 
     if (ImGui::BeginPopupModal(manager.progressPopup.label(), &manager.progressPopup.isOpen, ImGuiWindowFlags_NoResize))
     {
-      auto& start = manager.recordingStart;
-      auto& end = manager.recordingEnd;
-      auto progress = (playback.time - start) / (end - start);
+      auto progress = renderFrameCount > 0 ? (float)renderFrameIndex / (float)renderFrameCount : 0.0f;
 
       ImGui::ProgressBar(progress);
 
@@ -1505,31 +1541,37 @@ namespace anm2ed::imgui
       shortcut(manager.chords[SHORTCUT_CANCEL]);
       if (ImGui::Button(localize.get(BASIC_CANCEL), ImVec2(ImGui::GetContentRegionAvail().x, 0)))
       {
-        if (settings.renderType == render::PNGS)
+        auto renderType = settings.renderType;
+        auto isRenderPreviewOverridden = settings.renderIsUseAnimationBounds || settings.renderIsUseIsolatedAnimation;
+        if (renderType == render::PNGS)
         {
           renderTempDirectory.clear();
           renderTempFrames.clear();
-          renderTempFrameDurations.clear();
+          renderFrameSoundIDs.clear();
         }
         else
         {
           render_temp_cleanup(renderTempDirectory, renderTempFrames);
-          renderTempFrameDurations.clear();
+          renderFrameSoundIDs.clear();
         }
 
-        pan = savedPan;
-        zoom = savedZoom;
-        settings = savedSettings;
-        overlayIndex = savedOverlayIndex;
-        isSizeTrySet = true;
-        hasPendingZoomPanAdjust = false;
-        isCheckerPanInitialized = false;
-
-        if (settings.timelineIsSound) audioStream.capture_end(mixer);
+        if (isRenderPreviewOverridden)
+        {
+          pan = savedPan;
+          zoom = savedZoom;
+          settings = savedSettings;
+          overlayIndex = savedOverlayIndex;
+          isSizeTrySet = true;
+          hasPendingZoomPanAdjust = false;
+          isCheckerPanInitialized = false;
+        }
 
         playback.isPlaying = false;
         playback.isFinished = false;
         manager.isRecording = false;
+        manager.isRecordingStart = false;
+        renderFrameIndex = 0;
+        renderFrameCount = 0;
         manager.progressPopup.close();
       }
 
