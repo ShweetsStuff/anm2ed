@@ -101,6 +101,7 @@ namespace anm2ed
   void group_metadata_extract(Element&, Flags);
   void groups_flatten(Element&);
   void group_frames_restore(Element&);
+  void region_frame_ids_repair(Element&);
   Element* child_first_get(Element&, ElementType);
   const Element* child_first_get(const Element&, ElementType);
   bool is_track(const Element&);
@@ -159,6 +160,7 @@ namespace anm2ed
     group_metadata_embed(anm2.root);
     group_frames_restore(anm2.root);
     groups_flatten(anm2.root);
+    region_frame_ids_repair(anm2.root);
     anm2.region_frames_sync(true);
     anm2.isValid = true;
     return true;
@@ -1583,6 +1585,54 @@ namespace anm2ed
     return nullptr;
   }
 
+  void region_frame_ids_repair(Element& root)
+  {
+    auto content = child_first_get(root, ElementType::CONTENT);
+    auto layers = content ? child_first_get(*content, ElementType::LAYERS) : nullptr;
+    auto spritesheets = content ? child_first_get(*content, ElementType::SPRITESHEETS) : nullptr;
+    auto animations = element_first_get(root, ElementType::ANIMATIONS);
+    if (!layers || !spritesheets || !animations) return;
+
+    for (auto& animation : animations->children)
+    {
+      if (animation.type != ElementType::ANIMATION) continue;
+      auto layerAnimations = child_first_get(animation, ElementType::LAYER_ANIMATIONS);
+      if (!layerAnimations) continue;
+
+      tracks_each(*layerAnimations, ElementType::LAYER_ANIMATION, [&](Element& layerAnimation)
+      {
+        auto layer = child_id_get(*layers, ElementType::LAYER_ELEMENT, layerAnimation.layerId);
+        auto spritesheet =
+            layer ? child_id_get(*spritesheets, ElementType::SPRITESHEET, layer->spritesheetId) : nullptr;
+        if (!spritesheet) return;
+
+        for (auto& frame : layerAnimation.children)
+        {
+          if (frame.type != ElementType::FRAME) continue;
+
+          auto frameCrop = glm::ivec2(frame.crop);
+          auto frameSize = glm::ivec2(frame.size);
+          auto framePivot = glm::ivec2(frame.pivot);
+          auto is_region_match = [&](const Element& region)
+          {
+            return region.type == ElementType::REGION && glm::ivec2(region.crop) == frameCrop &&
+                   glm::ivec2(region.size) == frameSize && glm::ivec2(region.pivot) == framePivot;
+          };
+
+          auto region = frame.regionId == -1 ? nullptr : child_id_get(*spritesheet, ElementType::REGION, frame.regionId);
+          if (region && is_region_match(*region)) continue;
+
+          for (const auto& candidate : spritesheet->children)
+            if (is_region_match(candidate))
+            {
+              frame.regionId = candidate.id;
+              break;
+            }
+        }
+      });
+    }
+  }
+
   bool is_track_group_visible(const Element& container, const Element& track)
   {
     if (track.groupId == -1) return true;
@@ -2214,60 +2264,6 @@ namespace anm2ed
     }
   }
 
-  void Anm2::region_ids_remap()
-  {
-    auto content = child_first_get(root, ElementType::CONTENT);
-    auto spritesheets = content ? child_first_get(*content, ElementType::SPRITESHEETS) : nullptr;
-    if (!spritesheets) return;
-
-    std::map<int, std::map<int, int>> remaps{};
-    for (auto& spritesheet : spritesheets->children)
-    {
-      if (spritesheet.type != ElementType::SPRITESHEET) continue;
-
-      int nextId{};
-      std::map<int, int> remap{};
-      for (auto& region : spritesheet.children)
-      {
-        if (region.type != ElementType::REGION) continue;
-        remap[region.id] = nextId;
-        if (region.id != nextId)
-        {
-          region.id = nextId;
-        }
-        ++nextId;
-      }
-      if (!remap.empty()) remaps[spritesheet.id] = std::move(remap);
-    }
-
-    auto layers = content ? child_first_get(*content, ElementType::LAYERS) : nullptr;
-    auto animations = element_first_get(root, ElementType::ANIMATIONS);
-    if (remaps.empty() || !layers || !animations) return;
-
-    for (auto& animation : animations->children)
-    {
-      if (animation.type != ElementType::ANIMATION) continue;
-      auto layerAnimations = child_first_get(animation, ElementType::LAYER_ANIMATIONS);
-      if (!layerAnimations) continue;
-
-      tracks_each(*layerAnimations, ElementType::LAYER_ANIMATION, [&](Element& layerAnimation)
-      {
-        auto layer = child_id_get(*layers, ElementType::LAYER_ELEMENT, layerAnimation.layerId);
-        auto remapIt = layer ? remaps.find(layer->spritesheetId) : remaps.end();
-        if (remapIt == remaps.end()) return;
-
-        for (auto& frame : layerAnimation.children)
-        {
-          if (frame.type != ElementType::FRAME || frame.regionId == -1) continue;
-          auto regionIt = remapIt->second.find(frame.regionId);
-          if (regionIt == remapIt->second.end()) continue;
-          if (frame.regionId == regionIt->second) continue;
-          frame.regionId = regionIt->second;
-        }
-      });
-    }
-  }
-
   Anm2 Anm2::normalized_for_serialize(Flags flags) const
   {
     auto normalized = *this;
@@ -2291,7 +2287,6 @@ namespace anm2ed
       layer_animation_ids_remap(normalized.root, remap);
     }
 
-    normalized.region_ids_remap();
     return normalized;
   }
 

@@ -381,6 +381,31 @@ namespace anm2ed::imgui
     };
     auto all_frame_references_for_items_get = [&]()
     { return document.selected_item_frame_references_get(); };
+    auto is_frame_copy_item = [](const Reference& itemReference)
+    { return itemReference.itemType == ROOT || itemReference.itemType == LAYER || itemReference.itemType == NULL_; };
+    auto copy_frame_references_get = [&]()
+    {
+      auto selectedFrames = frame_references_for_current_get();
+      if (!selectedFrames.empty()) return selectedFrames;
+
+      auto selectedItems = document.items.references;
+      if (selectedItems.empty() && reference.itemType != NONE && reference.frameIndex < 0)
+      {
+        auto itemReference = reference;
+        itemReference.frameIndex = -1;
+        selectedItems.insert(itemReference);
+      }
+
+      std::set<Reference> result{};
+      for (auto itemReference : selectedItems)
+      {
+        itemReference.frameIndex = -1;
+        if (!is_frame_copy_item(itemReference)) continue;
+        auto itemFrames = document.item_frame_references_get(itemReference);
+        result.insert(itemFrames.begin(), itemFrames.end());
+      }
+      return result;
+    };
     auto frames_selection_reset_for = [this](Document& targetDocument)
     {
       targetDocument.frame_references_clear();
@@ -1769,124 +1794,129 @@ namespace anm2ed::imgui
                         });
     };
 
+    auto frame_references_copy = [&](const std::set<Reference>& selectedFrames)
+    {
+      if (!animation || selectedFrames.empty()) return;
+
+      std::string clipboardString{};
+      for (auto frameReference : selectedFrames)
+      {
+        auto item = item_get(frameReference.itemType, frameReference.itemID, frameReference.groupType,
+                             frameReference.groupId);
+        auto frame = item ? track_frame_get(*item, frameReference.frameIndex) : nullptr;
+        if (!frame) continue;
+        auto parentType = item_type_to_track_type_get(item_type_get(frameReference.itemType));
+        clipboardString += element_to_string(*frame, parentType);
+      }
+      if (!clipboardString.empty()) clipboard.set(clipboardString);
+    };
+
+    auto copy = [&]()
+    {
+      auto selectedFrames = copy_frame_references_get();
+      if (selectedFrames.empty()) return;
+
+      frame_references_copy(selectedFrames);
+    };
+
+    auto cut = [&]()
+    {
+      auto selectedFrames = frame_references_for_current_get();
+      if (selectedFrames.empty()) return;
+      frame_references_copy(selectedFrames);
+      edit_command_push(EDIT_CUT_FRAMES, Document::FRAMES,
+                        [=](Manager&, Document& document) mutable
+                        { frames_delete_for(document, selectedFrames); });
+    };
+
+    auto paste = [&]()
+    {
+      auto targetReference = reference;
+      auto selectedFrames = frame_references_for_current_get();
+      auto clipboardString = clipboard.get();
+      if (clipboardString.empty()) return;
+      auto targetHoveredTime = hoveredTime;
+      auto message = std::string(localize.get(EDIT_PASTE_FRAMES));
+      command_push([=](Manager&, Document& document) mutable
+                   {
+                     document.anm2_snapshot(message);
+                     auto animation = command_animation_get(document, targetReference.animationIndex);
+                     if (!animation) return;
+                     if (auto item = command_item_reference_get(document, targetReference))
+                     {
+                       std::set<int> indices{};
+                       std::string errorString{};
+                       int insertIndex = (int)item->children.size();
+                       std::set<int> selectedIndices{};
+                       for (auto frameReference : selectedFrames)
+                         if (is_same_item(frameReference, targetReference))
+                           selectedIndices.insert(frameReference.frameIndex);
+
+                       if (!selectedIndices.empty())
+                         insertIndex = std::min((int)item->children.size(), *selectedIndices.rbegin() + 1);
+                       else if (targetReference.frameIndex >= 0 && targetReference.frameIndex < (int)item->children.size())
+                         insertIndex = targetReference.frameIndex + 1;
+
+                       auto start = targetReference.itemType == TRIGGER ? targetHoveredTime : insertIndex;
+                       if (frames_deserialize(*item, clipboardString, start, indices, &errorString))
+                       {
+                         if (targetReference.itemType != LAYER)
+                         {
+                           for (auto i : indices)
+                             if (auto frame = track_frame_get(*item, i); frame)
+                             {
+                               frame->regionId = -1;
+                               frame->crop = {};
+                               frame->size = {};
+                               frame->pivot = {};
+                             }
+                         }
+                         else if (targetReference.itemID != -1)
+                         {
+                           auto layer = command_layer_get(document, targetReference.itemID);
+                           auto spritesheet = layer ? command_spritesheet_get(document, layer->spritesheetId) : nullptr;
+
+                           for (auto i : indices)
+                           {
+                             auto frame = track_frame_get(*item, i);
+                             if (!frame || frame->regionId == -1) continue;
+                             auto region =
+                                 spritesheet ? element_child_id_get(*spritesheet, ElementType::REGION, frame->regionId)
+                                             : nullptr;
+                             if (!region) frame->regionId = -1;
+                           }
+                         }
+
+                         std::set<Reference> pastedSelection{};
+                         for (auto i : indices)
+                           pastedSelection.insert(
+                               {targetReference.animationIndex, targetReference.itemType, targetReference.itemID, i});
+                         document.reference = {targetReference.animationIndex, targetReference.itemType,
+                                               targetReference.itemID, *indices.begin()};
+                         document.frame_references_set(std::move(pastedSelection));
+                         document.anm2_change(Document::FRAMES);
+                       }
+                       else
+                       {
+                         toasts.push(
+                             std::format("{} {}", localize.get(TOAST_DESERIALIZE_FRAMES_FAILED), errorString));
+                         logger.error(std::format("{} {}", localize.get(TOAST_DESERIALIZE_FRAMES_FAILED,
+                                                                        anm2ed::ENGLISH),
+                                                  errorString));
+                       }
+                     }
+                     else
+                     {
+                       toasts.push(localize.get(TOAST_DESERIALIZE_FRAMES_NO_SELECTION));
+                       logger.warning(localize.get(TOAST_DESERIALIZE_FRAMES_NO_SELECTION, anm2ed::ENGLISH));
+                     }
+                   });
+    };
+
     auto context_menu = [&]()
     {
       ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
       ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
-
-      auto copy = [&]()
-      {
-        if (!animation) return;
-        auto selectedFrames = frame_references_for_current_get();
-        if (selectedFrames.empty()) return;
-
-        std::string clipboardString{};
-        for (auto frameReference : selectedFrames)
-        {
-          auto item = item_get(frameReference.itemType, frameReference.itemID, frameReference.groupType,
-                               frameReference.groupId);
-          auto frame = item ? track_frame_get(*item, frameReference.frameIndex) : nullptr;
-          if (!frame) continue;
-          auto parentType = item_type_to_track_type_get(item_type_get(frameReference.itemType));
-          clipboardString += element_to_string(*frame, parentType);
-        }
-        if (!clipboardString.empty()) clipboard.set(clipboardString);
-      };
-
-      auto cut = [&]()
-      {
-        copy();
-        auto selectedFrames = frame_references_for_current_get();
-        edit_command_push(EDIT_CUT_FRAMES, Document::FRAMES,
-                          [=](Manager&, Document& document) mutable
-                          { frames_delete_for(document, selectedFrames); });
-      };
-
-      auto paste = [&]()
-      {
-        auto targetReference = reference;
-        auto selectedFrames = frame_references_for_current_get();
-        auto clipboardString = clipboard.get();
-        if (clipboardString.empty()) return;
-        auto targetHoveredTime = hoveredTime;
-        auto message = std::string(localize.get(EDIT_PASTE_FRAMES));
-        command_push([=](Manager&, Document& document) mutable
-                     {
-                       document.anm2_snapshot(message);
-                       auto animation = command_animation_get(document, targetReference.animationIndex);
-                       if (!animation) return;
-                       if (auto item = command_item_reference_get(document, targetReference))
-                       {
-                         std::set<int> indices{};
-                         std::string errorString{};
-                         int insertIndex = (int)item->children.size();
-                         std::set<int> selectedIndices{};
-                         for (auto frameReference : selectedFrames)
-                           if (is_same_item(frameReference, targetReference))
-                             selectedIndices.insert(frameReference.frameIndex);
-
-                         if (!selectedIndices.empty())
-                           insertIndex = std::min((int)item->children.size(), *selectedIndices.rbegin() + 1);
-                         else if (targetReference.frameIndex >= 0 &&
-                                  targetReference.frameIndex < (int)item->children.size())
-                           insertIndex = targetReference.frameIndex + 1;
-
-                         auto start = targetReference.itemType == TRIGGER ? targetHoveredTime : insertIndex;
-                         if (frames_deserialize(*item, clipboardString, start, indices, &errorString))
-                         {
-                           if (targetReference.itemType != LAYER)
-                           {
-                             for (auto i : indices)
-                               if (auto frame = track_frame_get(*item, i); frame)
-                               {
-                                 frame->regionId = -1;
-                                 frame->crop = {};
-                                 frame->size = {};
-                                 frame->pivot = {};
-                               }
-                           }
-                           else if (targetReference.itemID != -1)
-                           {
-                             auto layer = command_layer_get(document, targetReference.itemID);
-                             auto spritesheet =
-                                 layer ? command_spritesheet_get(document, layer->spritesheetId) : nullptr;
-
-                             for (auto i : indices)
-                             {
-                               auto frame = track_frame_get(*item, i);
-                               if (!frame || frame->regionId == -1) continue;
-                               auto region = spritesheet ? element_child_id_get(*spritesheet, ElementType::REGION,
-                                                                                 frame->regionId)
-                                                         : nullptr;
-                               if (!region) frame->regionId = -1;
-                             }
-                           }
-
-                           std::set<Reference> pastedSelection{};
-                           for (auto i : indices)
-                             pastedSelection.insert(
-                                 {targetReference.animationIndex, targetReference.itemType, targetReference.itemID, i});
-                           document.reference = {targetReference.animationIndex, targetReference.itemType,
-                                                 targetReference.itemID, *indices.begin()};
-                           document.frame_references_set(std::move(pastedSelection));
-                           document.anm2_change(Document::FRAMES);
-                         }
-                         else
-                         {
-                           toasts.push(std::format("{} {}", localize.get(TOAST_DESERIALIZE_FRAMES_FAILED),
-                                                   errorString));
-                           logger.error(std::format("{} {}", localize.get(TOAST_DESERIALIZE_FRAMES_FAILED,
-                                                                          anm2ed::ENGLISH),
-                                                    errorString));
-                         }
-                       }
-                       else
-                       {
-                         toasts.push(localize.get(TOAST_DESERIALIZE_FRAMES_NO_SELECTION));
-                         logger.warning(localize.get(TOAST_DESERIALIZE_FRAMES_NO_SELECTION, anm2ed::ENGLISH));
-                       }
-                     });
-      };
 
       if (shortcut(manager.chords[SHORTCUT_CUT], shortcut::FOCUSED)) cut();
       if (shortcut(manager.chords[SHORTCUT_COPY], shortcut::FOCUSED)) copy();
@@ -1954,6 +1984,7 @@ namespace anm2ed::imgui
       auto item = selected_item_get();
       auto frame = frame_get();
       auto selectedFrames = frame_references_for_current_get();
+      auto copyFrames = copy_frame_references_get();
       auto selectedBakeFrames = selectedFrames;
       std::erase_if(selectedBakeFrames,
                     [](const Reference& frameReference) { return frameReference.itemType == TRIGGER; });
@@ -2021,7 +2052,7 @@ namespace anm2ed::imgui
                    .run = [&]() { frames_delete_action(); }});
       actions.separator();
       actions.add(ACTION_CUT, [=]() { return !selectedFrames.empty(); }, cut);
-      actions.add(ACTION_COPY, [=]() { return !selectedFrames.empty(); }, copy);
+      actions.add(ACTION_COPY, [=]() { return !copyFrames.empty(); }, copy);
       actions.add(ACTION_PASTE, [&]() { return !clipboard.is_empty(); }, paste);
       actions_context_window_draw("##Context Menu", actions, settings);
 
@@ -2118,9 +2149,9 @@ namespace anm2ed::imgui
       auto& type = reference.itemType;
       auto& id = reference.itemID;
       auto item = selected_item_get();
-      auto selectedItems = item_references_for_current_get();
       auto selectedRows = selected_row_references_get();
       auto selectedGroupableItems = item_references_groupable_get();
+      auto copyFrames = copy_frame_references_get();
       TimelineItemRow selectedGroupRow{};
       Element* selectedGroup{};
       if (selectedRows.size() == 1 && selectedRows.front().isGroup)
@@ -2131,6 +2162,12 @@ namespace anm2ed::imgui
       }
       auto isRemoveAvailable = std::ranges::any_of(selectedRows, [](const TimelineRowReference& row)
       { return row.type == LAYER || row.type == NULL_; });
+      auto item_cut = [&]()
+      {
+        if (copyFrames.empty() || !isRemoveAvailable) return;
+        frame_references_copy(copyFrames);
+        item_remove();
+      };
 
       if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlappedByWindow) &&
           ImGui::IsMouseClicked(ImGuiMouseButton_Right))
@@ -2150,6 +2187,14 @@ namespace anm2ed::imgui
       actions.add(ACTION_ADD, [&]() { return animation; }, [&]() { itemProperties.open(); });
       actions.add(ACTION_REMOVE, [=]() { return isRemoveAvailable; }, [&]() { item_remove(); });
       actions.add(ACTION_GROUP, [=]() { return !selectedGroupableItems.empty(); }, [&]() { item_group(); });
+      actions.separator();
+      actions.add(ACTION_CUT, [=]() { return !copyFrames.empty() && isRemoveAvailable; }, item_cut);
+      actions.add(ACTION_COPY, [=]() { return !copyFrames.empty(); }, copy);
+      actions.add(ACTION_PASTE, [&]() { return item && !clipboard.is_empty(); }, paste);
+      if (shortcut(manager.chords[SHORTCUT_CUT], shortcut::FOCUSED) && !copyFrames.empty() && isRemoveAvailable)
+        item_cut();
+      if (shortcut(manager.chords[SHORTCUT_COPY], shortcut::FOCUSED) && !copyFrames.empty()) copy();
+      if (shortcut(manager.chords[SHORTCUT_PASTE], shortcut::FOCUSED) && item && !clipboard.is_empty()) paste();
       actions_popup_draw("##Items Context Menu", actions, settings);
 
       ImGui::PopStyleVar(2);
