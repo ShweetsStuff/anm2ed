@@ -104,6 +104,7 @@ namespace anm2ed
   void groups_nest(Element&);
   void group_frames_restore(Element&);
   void source_document_erase(Element&);
+  void region_ids_remap(Element&);
   void region_frame_ids_repair(Element&);
   Element* child_first_get(Element&, ElementType);
   const Element* child_first_get(const Element&, ElementType);
@@ -1734,6 +1735,62 @@ namespace anm2ed
     }
   }
 
+  void region_ids_remap(Element& root)
+  {
+    auto content = child_first_get(root, ElementType::CONTENT);
+    auto layers = content ? child_first_get(*content, ElementType::LAYERS) : nullptr;
+    auto spritesheets = content ? child_first_get(*content, ElementType::SPRITESHEETS) : nullptr;
+    auto animations = element_first_get(root, ElementType::ANIMATIONS);
+    if (!spritesheets) return;
+
+    std::unordered_map<int, std::unordered_map<int, int>> remaps{};
+    for (auto& spritesheet : spritesheets->children)
+    {
+      if (spritesheet.type != ElementType::SPRITESHEET) continue;
+
+      std::unordered_map<int, int> remap{};
+      int nextId{};
+      for (auto& region : spritesheet.children)
+      {
+        if (region.type != ElementType::REGION) continue;
+        remap[region.id] = nextId;
+        region.id = nextId++;
+      }
+      if (!remap.empty()) remaps[spritesheet.id] = std::move(remap);
+    }
+
+    if (!layers || !animations || remaps.empty()) return;
+
+    std::unordered_map<int, int> layerSpritesheets{};
+    for (const auto& layer : layers->children)
+      if (layer.type == ElementType::LAYER_ELEMENT) layerSpritesheets[layer.id] = layer.spritesheetId;
+
+    for (auto& animation : animations->children)
+    {
+      if (animation.type != ElementType::ANIMATION) continue;
+      auto layerAnimations = child_first_get(animation, ElementType::LAYER_ANIMATIONS);
+      if (!layerAnimations) continue;
+
+      tracks_each(*layerAnimations, ElementType::LAYER_ANIMATION,
+                  [&](Element& layerAnimation)
+                  {
+                    auto layer = layerSpritesheets.find(layerAnimation.layerId);
+                    if (layer == layerSpritesheets.end()) return;
+                    auto remap = remaps.find(layer->second);
+                    if (remap == remaps.end()) return;
+
+                    for (auto& frame : layerAnimation.children)
+                    {
+                      if (frame.type != ElementType::FRAME || frame.regionId == -1) continue;
+                      if (auto it = remap->second.find(frame.regionId); it != remap->second.end())
+                        frame.regionId = it->second;
+                      else
+                        frame.regionId = -1;
+                    }
+                  });
+    }
+  }
+
   bool is_track_group_visible(const Element& container, const Element& track)
   {
     if (track.groupId == -1) return true;
@@ -2411,6 +2468,7 @@ namespace anm2ed
     if (has_flag(flags, SERIALIZE_BAKE_GROUP_FRAMES)) group_frames_bake(normalized.root);
     if (has_flag(flags, SERIALIZE_FLATTEN_SPECIAL_INTERPOLATED_FRAMES))
       all_interpolated_frames_bake(normalized.root, FRAME_DURATION_MIN, false, false);
+    region_ids_remap(normalized.root);
     if (has_flag(flags, SERIALIZE_GROUPS) && has_flag(flags, SERIALIZE_NESTED_GROUPS))
       groups_nest(normalized.root);
     else
