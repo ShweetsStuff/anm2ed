@@ -27,44 +27,35 @@ namespace anm2ed::imgui
   constexpr auto GENERATE_REGIONS_TARGET_SELECTION = 0;
   constexpr auto GENERATE_REGIONS_TARGET_ALL = 1;
 
-  Options save_options_get(Settings& settings)
+  bool Taskbar::save_execute(Manager& manager, const PendingSave& request)
   {
-    Flags flags{SERIALIZE_GROUPS | SERIALIZE_REGIONS | SERIALIZE_SOUNDS};
-    if (settings.fileIsKeepRedundantFrameRegionValues) flags |= SERIALIZE_REDUNDANT_FRAME_REGION_VALUES;
-    if (settings.fileIsBakeSpecialInterpolatedFrames) flags |= SERIALIZE_BAKE_SPECIAL_INTERPOLATED_FRAMES;
-    if (settings.isFileBakeGroupFrames) flags |= SERIALIZE_BAKE_GROUP_FRAMES;
-    return {.flags = flags};
+    return manager.save(request.index, request.path);
   }
 
-  bool Taskbar::save_execute(Manager& manager, Settings& settings, const PendingSave& request)
-  {
-    return manager.save(request.index, request.path, save_options_get(settings));
-  }
-
-  void Taskbar::save_enqueue(Manager& manager, Settings& settings, const PendingSave& request)
+  void Taskbar::save_enqueue(Manager& manager, const PendingSave& request)
   {
     auto index = request.index;
     auto path = request.path;
-    auto options = save_options_get(settings);
 
     manager.command_push({.runManager =
                               [=](Manager& manager)
-                              { manager.save(index, path, options); }});
+                              { manager.save(index, path); }});
   }
 
   bool Taskbar::save_request(Manager& manager, Settings& settings, int index, const std::filesystem::path& path,
                              bool isQueued)
   {
+    (void)settings;
     auto* document = manager.get(index);
     if (!document) return false;
 
     PendingSave request{.index = index, .path = path};
     if (isQueued)
     {
-      save_enqueue(manager, settings, request);
+      save_enqueue(manager, request);
       return true;
     }
-    return save_execute(manager, settings, request);
+    return save_execute(manager, request);
   }
 
   bool Taskbar::save_manual(Manager& manager, Settings& settings, int index, const std::filesystem::path& path)

@@ -46,15 +46,6 @@ namespace anm2ed::imgui
 
 #undef ANM2_DRAG_DROP_MERGE_PRESETS
 
-  Options save_options_get(const Settings& settings)
-  {
-    Flags flags{SERIALIZE_GROUPS | SERIALIZE_REGIONS | SERIALIZE_SOUNDS};
-    if (settings.fileIsKeepRedundantFrameRegionValues) flags |= SERIALIZE_REDUNDANT_FRAME_REGION_VALUES;
-    if (settings.fileIsBakeSpecialInterpolatedFrames) flags |= SERIALIZE_BAKE_SPECIAL_INTERPOLATED_FRAMES;
-    if (settings.isFileBakeGroupFrames) flags |= SERIALIZE_BAKE_GROUP_FRAMES;
-    return {.flags = flags};
-  }
-
   void anm2_drag_drop_merge_queue(Manager& manager, const std::vector<std::filesystem::path>& paths,
                                   Document::FileMergePreset preset)
   {
@@ -159,10 +150,7 @@ namespace anm2ed::imgui
         document.lastAutosaveTime += ImGui::GetIO().DeltaTime;
         if (document.lastAutosaveTime > time::SECOND_M)
         {
-          auto options = save_options_get(settings);
-          manager.command_push({i,
-                                [options](Manager& manager, Document& document)
-                                { manager.autosave(document, options); }});
+          manager.command_push({i, [](Manager& manager, Document& document) { manager.autosave(document); }});
         }
       }
     }

@@ -68,18 +68,6 @@ namespace anm2ed::imgui::wizard
           input_int_range(localize.get(LABEL_STACK_SIZE), temporary.fileSnapshotStackSize, 0, 100);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_STACK_SIZE));
 
-          ImGui::SeparatorText(localize.get(LABEL_SERIALIZATION));
-          ImGui::Checkbox(localize.get(LABEL_KEEP_REDUNDANT_FRAME_REGION_VALUES),
-                          &temporary.fileIsKeepRedundantFrameRegionValues);
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_KEEP_REDUNDANT_FRAME_REGION_VALUES));
-
-          ImGui::Checkbox(localize.get(LABEL_BAKE_SPECIAL_INTERPOLATED_FRAMES_ON_SAVE),
-                          &temporary.fileIsBakeSpecialInterpolatedFrames);
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BAKE_SPECIAL_INTERPOLATED_FRAMES_ON_SAVE));
-
-          ImGui::Checkbox(localize.get(LABEL_BAKE_GROUP_FRAMES_ON_SAVE), &temporary.isFileBakeGroupFrames);
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BAKE_GROUP_FRAMES_ON_SAVE));
-
           ImGui::SeparatorText(localize.get(LABEL_OPTIONS));
           ImGui::Checkbox(localize.get(LABEL_OVERWRITE_WARNING), &temporary.fileIsWarnOverwrite);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OVERWRITE_WARNING));

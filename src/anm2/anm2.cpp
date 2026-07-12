@@ -96,11 +96,14 @@ namespace anm2ed
 
   constexpr std::array<std::string_view, (std::size_t)Origin::COUNT> ORIGIN_VALUES = {"", "TopLeft", "Center"};
   constexpr std::string_view ANM2ED_GROUP_FRAME_BACKUP_TAG = "FrameRestore";
+  constexpr std::string_view SOURCE_DOCUMENT_TAG = "SourceDocument";
 
   void group_metadata_embed(Element&);
   void group_metadata_extract(Element&, Flags);
   void groups_flatten(Element&);
+  void groups_nest(Element&);
   void group_frames_restore(Element&);
+  void source_document_erase(Element&);
   void region_frame_ids_repair(Element&);
   Element* child_first_get(Element&, ElementType);
   const Element* child_first_get(const Element&, ElementType);
@@ -146,6 +149,22 @@ namespace anm2ed
     return (int)animations.children.size();
   }
 
+  bool is_source_document_tag(std::string_view tag)
+  {
+    return tag == SOURCE_DOCUMENT_TAG;
+  }
+
+  const XMLElement* source_document_get(const XMLElement* rootElement)
+  {
+    if (!rootElement) return nullptr;
+    if (is_source_document_tag(rootElement->Name() ? rootElement->Name() : "")) return rootElement;
+
+    for (auto child = rootElement->FirstChildElement(); child; child = child->NextSiblingElement())
+      if (is_source_document_tag(child->Name() ? child->Name() : "")) return child;
+
+    return nullptr;
+  }
+
   bool anm2_document_load(Anm2& anm2, XMLDocument& document, std::string* errorString)
   {
     auto rootElement = document.RootElement();
@@ -156,7 +175,13 @@ namespace anm2ed
       return false;
     }
 
-    anm2.root = element_read(rootElement);
+    auto sourceElement = source_document_get(rootElement);
+    anm2.root = element_read(sourceElement ? sourceElement : rootElement);
+    if (sourceElement)
+    {
+      anm2.root.type = ElementType::ANIMATED_ACTOR;
+      anm2.root.tag = "AnimatedActor";
+    }
     group_metadata_embed(anm2.root);
     group_frames_restore(anm2.root);
     groups_flatten(anm2.root);
@@ -262,8 +287,7 @@ namespace anm2ed
     auto cos = std::cos(radians);
     auto sin = std::sin(radians);
 
-    frame.position =
-        rootFrame.position + glm::vec2(offset.x * cos - offset.y * sin, offset.x * sin + offset.y * cos);
+    frame.position = rootFrame.position + glm::vec2(offset.x * cos - offset.y * sin, offset.x * sin + offset.y * cos);
     frame.scale *= rootScale;
     frame.rotation += rootFrame.rotation;
     frame.tint *= rootFrame.tint;
@@ -374,7 +398,7 @@ namespace anm2ed
     if (restoredGroupIds.empty()) return;
 
     std::erase_if(container.children, [&](const Element& item)
-    { return item.type == trackType && restoredGroupIds.contains(item.groupId); });
+                  { return item.type == trackType && restoredGroupIds.contains(item.groupId); });
   }
 
   void group_frames_restore(Element& element)
@@ -580,9 +604,25 @@ namespace anm2ed
     return out;
   }
 
+  bool is_nested_group_parent(ElementType parentType, Flags flags)
+  {
+    return has_flag(flags, SERIALIZE_NESTED_GROUPS) &&
+           (parentType == ElementType::ANIMATIONS || parentType == ElementType::LAYER_ANIMATIONS ||
+            parentType == ElementType::NULL_ANIMATIONS);
+  }
+
+  bool is_group_id_serialized(Flags flags)
+  {
+    return has_flag(flags, SERIALIZE_GROUPS) && !has_flag(flags, SERIALIZE_NESTED_GROUPS);
+  }
+
   bool element_write_skip(const Element& element, ElementType parentType, Flags flags)
   {
     if (!is_track_child_valid(parentType, element.type)) return true;
+    if ((element.type == ElementType::OVERLAY || element.type == ElementType::SHADER ||
+         element.type == ElementType::UNIFORM || element.type == ElementType::COMPONENT) &&
+        !has_flag(flags, SERIALIZE_EXTENSIONS))
+      return true;
     if (element.type == ElementType::SOUNDS && (!has_flag(flags, SERIALIZE_SOUNDS) || element.children.empty()))
       return true;
     if ((element.type == ElementType::LAYER_ANIMATION_GROUPS || element.type == ElementType::NULL_ANIMATION_GROUPS) &&
@@ -691,7 +731,7 @@ namespace anm2ed
     }
     else if (element.type == ElementType::GROUP)
     {
-      out->SetAttribute("Id", element.id);
+      if (!is_nested_group_parent(parentType, flags)) out->SetAttribute("Id", element.id);
       out->SetAttribute("Name", element.name.c_str());
       out->SetAttribute("IsExpanded", element.isExpanded);
       out->SetAttribute("Visible", element.isVisible);
@@ -714,19 +754,19 @@ namespace anm2ed
       out->SetAttribute("Name", element.name.c_str());
       out->SetAttribute("FrameNum", element.frameNum);
       out->SetAttribute("Loop", element.isLoop);
-      if (element.groupId != -1 && has_flag(flags, SERIALIZE_GROUPS)) out->SetAttribute("GroupId", element.groupId);
+      if (element.groupId != -1 && is_group_id_serialized(flags)) out->SetAttribute("GroupId", element.groupId);
     }
     else if (element.type == ElementType::LAYER_ANIMATION)
     {
       out->SetAttribute("LayerId", element.layerId);
       out->SetAttribute("Visible", element.isVisible);
-      if (element.groupId != -1 && has_flag(flags, SERIALIZE_GROUPS)) out->SetAttribute("GroupId", element.groupId);
+      if (element.groupId != -1 && is_group_id_serialized(flags)) out->SetAttribute("GroupId", element.groupId);
     }
     else if (element.type == ElementType::NULL_ANIMATION)
     {
       out->SetAttribute("NullId", element.nullId);
       out->SetAttribute("Visible", element.isVisible);
-      if (element.groupId != -1 && has_flag(flags, SERIALIZE_GROUPS)) out->SetAttribute("GroupId", element.groupId);
+      if (element.groupId != -1 && is_group_id_serialized(flags)) out->SetAttribute("GroupId", element.groupId);
     }
     else if (element.type == ElementType::FRAME)
       frame_attributes_write(out, element, parentType, flags);
@@ -960,7 +1000,8 @@ namespace anm2ed
     {
       hash_attr_append(hash, "Id", element.id);
       hash_path_attr_append(hash, "Path", element.path);
-      if (element.type == ElementType::OVERLAY && !element.isVisible) hash_attr_append(hash, "Visible", element.isVisible);
+      if (element.type == ElementType::OVERLAY && !element.isVisible)
+        hash_attr_append(hash, "Visible", element.isVisible);
     }
     else if (element.type == ElementType::SHADER)
     {
@@ -1004,7 +1045,7 @@ namespace anm2ed
     }
     else if (element.type == ElementType::GROUP)
     {
-      hash_attr_append(hash, "Id", element.id);
+      if (!is_nested_group_parent(parentType, flags)) hash_attr_append(hash, "Id", element.id);
       hash_attr_append(hash, "Name", element.name);
       hash_attr_append(hash, "IsExpanded", element.isExpanded);
       hash_attr_append(hash, "Visible", element.isVisible);
@@ -1027,19 +1068,19 @@ namespace anm2ed
       hash_attr_append(hash, "Name", element.name);
       hash_attr_append(hash, "FrameNum", element.frameNum);
       hash_attr_append(hash, "Loop", element.isLoop);
-      if (element.groupId != -1 && has_flag(flags, SERIALIZE_GROUPS)) hash_attr_append(hash, "GroupId", element.groupId);
+      if (element.groupId != -1 && is_group_id_serialized(flags)) hash_attr_append(hash, "GroupId", element.groupId);
     }
     else if (element.type == ElementType::LAYER_ANIMATION)
     {
       hash_attr_append(hash, "LayerId", element.layerId);
       hash_attr_append(hash, "Visible", element.isVisible);
-      if (element.groupId != -1 && has_flag(flags, SERIALIZE_GROUPS)) hash_attr_append(hash, "GroupId", element.groupId);
+      if (element.groupId != -1 && is_group_id_serialized(flags)) hash_attr_append(hash, "GroupId", element.groupId);
     }
     else if (element.type == ElementType::NULL_ANIMATION)
     {
       hash_attr_append(hash, "NullId", element.nullId);
       hash_attr_append(hash, "Visible", element.isVisible);
-      if (element.groupId != -1 && has_flag(flags, SERIALIZE_GROUPS)) hash_attr_append(hash, "GroupId", element.groupId);
+      if (element.groupId != -1 && is_group_id_serialized(flags)) hash_attr_append(hash, "GroupId", element.groupId);
     }
     else if (element.type == ElementType::FRAME)
       frame_attributes_hash_append(hash, element, parentType, flags);
@@ -1162,7 +1203,7 @@ namespace anm2ed
       for (const auto& group : groups)
         if (group.id >= 0) groupIds.insert(group.id);
       std::erase_if(container.children, [&](const Element& child)
-      { return child.type == ElementType::GROUP && groupIds.contains(child.id); });
+                    { return child.type == ElementType::GROUP && groupIds.contains(child.id); });
 
       std::stable_sort(groups.begin(), groups.end(),
                        [](const Element& left, const Element& right)
@@ -1306,6 +1347,63 @@ namespace anm2ed
 
     for (auto& child : element.children)
       groups_flatten(child);
+  }
+
+  void group_children_nest(Element& container, ElementType childType)
+  {
+    if (childType == ElementType::UNKNOWN) return;
+
+    std::set<int> groupIds{};
+    for (const auto& child : container.children)
+      if (child.type == ElementType::GROUP && child.id >= 0) groupIds.insert(child.id);
+    if (groupIds.empty()) return;
+
+    std::unordered_map<int, std::vector<Element>> groupedChildren{};
+    for (const auto& child : container.children)
+    {
+      if (child.type != childType || !groupIds.contains(child.groupId)) continue;
+      auto groupedChild = child;
+      groupedChild.groupId = -1;
+      groupedChildren[child.groupId].push_back(std::move(groupedChild));
+    }
+
+    std::vector<Element> nested{};
+    nested.reserve(container.children.size());
+    for (auto child : container.children)
+    {
+      if (child.type == childType && groupIds.contains(child.groupId)) continue;
+      if (child.type == ElementType::GROUP)
+      {
+        auto groupId = child.id;
+        child.index = -1;
+        if (auto grouped = groupedChildren.find(groupId); grouped != groupedChildren.end())
+          child.children.insert(child.children.end(), std::make_move_iterator(grouped->second.begin()),
+                                std::make_move_iterator(grouped->second.end()));
+      }
+      nested.push_back(std::move(child));
+    }
+
+    container.children = std::move(nested);
+  }
+
+  void groups_nest(Element& element)
+  {
+    if (element.type == ElementType::ANIMATIONS)
+      group_children_nest(element, ElementType::ANIMATION);
+    else if (element.type == ElementType::LAYER_ANIMATIONS)
+      group_children_nest(element, ElementType::LAYER_ANIMATION);
+    else if (element.type == ElementType::NULL_ANIMATIONS)
+      group_children_nest(element, ElementType::NULL_ANIMATION);
+
+    for (auto& child : element.children)
+      groups_nest(child);
+  }
+
+  void source_document_erase(Element& element)
+  {
+    std::erase_if(element.children, [](const Element& child) { return is_source_document_tag(child.tag); });
+    for (auto& child : element.children)
+      source_document_erase(child);
   }
 
   Element* child_first_get(Element& element, ElementType type)
@@ -1599,37 +1697,40 @@ namespace anm2ed
       auto layerAnimations = child_first_get(animation, ElementType::LAYER_ANIMATIONS);
       if (!layerAnimations) continue;
 
-      tracks_each(*layerAnimations, ElementType::LAYER_ANIMATION, [&](Element& layerAnimation)
-      {
-        auto layer = child_id_get(*layers, ElementType::LAYER_ELEMENT, layerAnimation.layerId);
-        auto spritesheet =
-            layer ? child_id_get(*spritesheets, ElementType::SPRITESHEET, layer->spritesheetId) : nullptr;
-        if (!spritesheet) return;
+      tracks_each(*layerAnimations, ElementType::LAYER_ANIMATION,
+                  [&](Element& layerAnimation)
+                  {
+                    auto layer = child_id_get(*layers, ElementType::LAYER_ELEMENT, layerAnimation.layerId);
+                    auto spritesheet =
+                        layer ? child_id_get(*spritesheets, ElementType::SPRITESHEET, layer->spritesheetId) : nullptr;
+                    if (!spritesheet) return;
 
-        for (auto& frame : layerAnimation.children)
-        {
-          if (frame.type != ElementType::FRAME) continue;
+                    for (auto& frame : layerAnimation.children)
+                    {
+                      if (frame.type != ElementType::FRAME) continue;
 
-          auto frameCrop = glm::ivec2(frame.crop);
-          auto frameSize = glm::ivec2(frame.size);
-          auto framePivot = glm::ivec2(frame.pivot);
-          auto is_region_match = [&](const Element& region)
-          {
-            return region.type == ElementType::REGION && glm::ivec2(region.crop) == frameCrop &&
-                   glm::ivec2(region.size) == frameSize && glm::ivec2(region.pivot) == framePivot;
-          };
+                      auto frameCrop = glm::ivec2(frame.crop);
+                      auto frameSize = glm::ivec2(frame.size);
+                      auto framePivot = glm::ivec2(frame.pivot);
+                      auto is_region_match = [&](const Element& region)
+                      {
+                        return region.type == ElementType::REGION && glm::ivec2(region.crop) == frameCrop &&
+                               glm::ivec2(region.size) == frameSize && glm::ivec2(region.pivot) == framePivot;
+                      };
 
-          auto region = frame.regionId == -1 ? nullptr : child_id_get(*spritesheet, ElementType::REGION, frame.regionId);
-          if (region && is_region_match(*region)) continue;
+                      auto region = frame.regionId == -1
+                                        ? nullptr
+                                        : child_id_get(*spritesheet, ElementType::REGION, frame.regionId);
+                      if (region && is_region_match(*region)) continue;
 
-          for (const auto& candidate : spritesheet->children)
-            if (is_region_match(candidate))
-            {
-              frame.regionId = candidate.id;
-              break;
-            }
-        }
-      });
+                      for (const auto& candidate : spritesheet->children)
+                        if (is_region_match(candidate))
+                        {
+                          frame.regionId = candidate.id;
+                          break;
+                        }
+                    }
+                  });
     }
   }
 
@@ -2055,13 +2156,26 @@ namespace anm2ed
     return false;
   }
 
-  void track_frames_bake(Element& track, int interval, bool isRoundScale, bool isRoundRotation)
+  enum class InterpolationBakeType
+  {
+    SPECIAL,
+    ALL
+  };
+
+  bool is_frame_interpolation_baked(const Element& frame, InterpolationBakeType type)
+  {
+    if (frame.interpolation == Interpolation::NONE) return false;
+    return type == InterpolationBakeType::ALL || frame.interpolation != Interpolation::LINEAR;
+  }
+
+  void track_frames_bake(Element& track, int interval, bool isRoundScale, bool isRoundRotation,
+                         InterpolationBakeType type)
   {
     for (int index = (int)track.children.size() - 1; index >= 0; --index)
     {
       auto original = track.children[index];
       if (original.type != ElementType::FRAME) continue;
-      if (original.interpolation == Interpolation::NONE || original.interpolation == Interpolation::LINEAR) continue;
+      if (!is_frame_interpolation_baked(original, type)) continue;
 
       if (original.duration <= FRAME_DURATION_MIN)
       {
@@ -2100,16 +2214,27 @@ namespace anm2ed
     }
   }
 
-  void special_interpolated_frames_bake(Element& element, int interval, bool isRoundScale, bool isRoundRotation)
+  void interpolated_frames_bake(Element& element, int interval, bool isRoundScale, bool isRoundRotation,
+                                InterpolationBakeType type)
   {
     if (is_track(element))
     {
-      track_frames_bake(element, interval, isRoundScale, isRoundRotation);
+      track_frames_bake(element, interval, isRoundScale, isRoundRotation, type);
       return;
     }
 
     for (auto& child : element.children)
-      special_interpolated_frames_bake(child, interval, isRoundScale, isRoundRotation);
+      interpolated_frames_bake(child, interval, isRoundScale, isRoundRotation, type);
+  }
+
+  void special_interpolated_frames_bake(Element& element, int interval, bool isRoundScale, bool isRoundRotation)
+  {
+    interpolated_frames_bake(element, interval, isRoundScale, isRoundRotation, InterpolationBakeType::SPECIAL);
+  }
+
+  void all_interpolated_frames_bake(Element& element, int interval, bool isRoundScale, bool isRoundRotation)
+  {
+    interpolated_frames_bake(element, interval, isRoundScale, isRoundRotation, InterpolationBakeType::ALL);
   }
 
   void layer_animation_ids_remap(Element& element, const std::unordered_map<int, int>& remap)
@@ -2205,16 +2330,28 @@ namespace anm2ed
 
   XMLElement* Anm2::to_element(XMLDocument& document, Options options) const
   {
-    auto serialized = normalized_for_serialize(options.flags);
-    serialized.region_frames_sync(true);
-    return element_to_xml(document, serialized.root, ElementType::UNKNOWN, options.flags);
+    (void)options;
+
+    auto isaac = normalized_for_serialize(SERIALIZE_ISAAC_DEFAULT);
+    isaac.region_frames_sync(true);
+    auto out = element_to_xml(document, isaac.root, ElementType::UNKNOWN, SERIALIZE_ISAAC_DEFAULT);
+
+    auto editor = normalized_for_serialize(SERIALIZE_ANM2ED_DEFAULT);
+    editor.region_frames_sync(true);
+    auto extension = element_to_xml(document, editor.root, ElementType::UNKNOWN, SERIALIZE_ANM2ED_DEFAULT);
+    extension->SetName(SOURCE_DOCUMENT_TAG.data());
+    out->InsertEndChild(extension);
+
+    return out;
   }
 
   std::uint64_t Anm2::hash(Options options) const
   {
-    auto serialized = normalized_for_serialize(options.flags);
-    serialized.region_frames_sync(true);
-    return element_hash(serialized.root, options.flags);
+    auto serialized = to_string(options);
+    auto hash = ANM2_HASH_OFFSET;
+    for (auto c : serialized)
+      hash_byte_append(hash, (unsigned char)c);
+    return hash;
   }
 
   bool Anm2::is_special_interpolated_frames() const { return ::anm2ed::is_special_interpolated_frames(root); }
@@ -2239,38 +2376,45 @@ namespace anm2ed
       auto layerAnimations = child_first_get(animation, ElementType::LAYER_ANIMATIONS);
       if (!layerAnimations) continue;
 
-      tracks_each(*layerAnimations, ElementType::LAYER_ANIMATION, [&](Element& layerAnimation)
-      {
-        auto layer = child_id_get(*layers, ElementType::LAYER_ELEMENT, layerAnimation.layerId);
-        auto spritesheet =
-            layer ? child_id_get(*spritesheets, ElementType::SPRITESHEET, layer->spritesheetId) : nullptr;
-        if (!spritesheet) return;
+      tracks_each(*layerAnimations, ElementType::LAYER_ANIMATION,
+                  [&](Element& layerAnimation)
+                  {
+                    auto layer = child_id_get(*layers, ElementType::LAYER_ELEMENT, layerAnimation.layerId);
+                    auto spritesheet =
+                        layer ? child_id_get(*spritesheets, ElementType::SPRITESHEET, layer->spritesheetId) : nullptr;
+                    if (!spritesheet) return;
 
-        for (auto& frame : layerAnimation.children)
-        {
-          if (frame.type != ElementType::FRAME || frame.regionId == -1) continue;
-          auto region = child_id_get(*spritesheet, ElementType::REGION, frame.regionId);
-          if (!region)
-          {
-            if (isClearInvalid) frame.regionId = -1;
-            continue;
-          }
+                    for (auto& frame : layerAnimation.children)
+                    {
+                      if (frame.type != ElementType::FRAME || frame.regionId == -1) continue;
+                      auto region = child_id_get(*spritesheet, ElementType::REGION, frame.regionId);
+                      if (!region)
+                      {
+                        if (isClearInvalid) frame.regionId = -1;
+                        continue;
+                      }
 
-          frame.crop = region->crop;
-          frame.size = region->size;
-          frame.pivot = region->pivot;
-        }
-      });
+                      frame.crop = region->crop;
+                      frame.size = region->size;
+                      frame.pivot = region->pivot;
+                    }
+                  });
     }
   }
 
   Anm2 Anm2::normalized_for_serialize(Flags flags) const
   {
     auto normalized = *this;
+    source_document_erase(normalized.root);
     group_frames_restore(normalized.root);
     groups_flatten(normalized.root);
     if (has_flag(flags, SERIALIZE_BAKE_GROUP_FRAMES)) group_frames_bake(normalized.root);
-    group_metadata_extract(normalized.root, flags);
+    if (has_flag(flags, SERIALIZE_FLATTEN_SPECIAL_INTERPOLATED_FRAMES))
+      all_interpolated_frames_bake(normalized.root, FRAME_DURATION_MIN, false, false);
+    if (has_flag(flags, SERIALIZE_GROUPS) && has_flag(flags, SERIALIZE_NESTED_GROUPS))
+      groups_nest(normalized.root);
+    else
+      group_metadata_extract(normalized.root, flags);
 
     auto content = child_first_get(normalized.root, ElementType::CONTENT);
     if (content) std::erase_if(content->children, [](const Element& element) { return element.tag == "Groups"; });
@@ -2407,8 +2551,8 @@ namespace anm2ed
   Element* Anm2::element_get(Reference reference)
   {
     auto itemType = static_cast<ItemType>(reference.itemType);
-    auto item = element_get(reference.animationIndex, itemType, reference.itemID, reference.groupType,
-                            reference.groupId);
+    auto item =
+        element_get(reference.animationIndex, itemType, reference.itemID, reference.groupType, reference.groupId);
     if (reference.frameIndex < 0) return item;
     return item ? track_frame_get(*item, reference.frameIndex) : nullptr;
   }
@@ -2416,8 +2560,8 @@ namespace anm2ed
   const Element* Anm2::element_get(Reference reference) const
   {
     auto itemType = static_cast<ItemType>(reference.itemType);
-    auto item = element_get(reference.animationIndex, itemType, reference.itemID, reference.groupType,
-                            reference.groupId);
+    auto item =
+        element_get(reference.animationIndex, itemType, reference.itemID, reference.groupType, reference.groupId);
     if (reference.frameIndex < 0) return item;
     return item ? track_frame_get(*item, reference.frameIndex) : nullptr;
   }
@@ -2519,11 +2663,12 @@ namespace anm2ed
         if (animation.type != ElementType::ANIMATION) continue;
         auto layerAnimations = child_first_get(animation, ElementType::LAYER_ANIMATIONS);
         if (!layerAnimations) continue;
-        tracks_each(*layerAnimations, ElementType::LAYER_ANIMATION, [&](const Element& layerAnimation)
-        {
-          for (const auto& frame : layerAnimation.children)
-            if (frame.type == ElementType::FRAME && frame.regionId != -1) used.insert(frame.regionId);
-        });
+        tracks_each(*layerAnimations, ElementType::LAYER_ANIMATION,
+                    [&](const Element& layerAnimation)
+                    {
+                      for (const auto& frame : layerAnimation.children)
+                        if (frame.type == ElementType::FRAME && frame.regionId != -1) used.insert(frame.regionId);
+                    });
       }
 
     std::set<int> unused{};
@@ -2660,36 +2805,38 @@ namespace anm2ed
       auto layerAnimations = child_first_get(animation, ElementType::LAYER_ANIMATIONS);
       if (!layerAnimations) continue;
 
-      tracks_each(*layerAnimations, ElementType::LAYER_ANIMATION, [&](const Element& layerAnimation)
-      {
-        if (!layerAnimation.isVisible || !is_track_group_visible(*layerAnimations, layerAnimation)) return;
+      tracks_each(*layerAnimations, ElementType::LAYER_ANIMATION,
+                  [&](const Element& layerAnimation)
+                  {
+                    if (!layerAnimation.isVisible || !is_track_group_visible(*layerAnimations, layerAnimation)) return;
 
-        auto itemTransform = transform;
-        if (isRootTransform && layerAnimation.groupId != -1)
-          if (auto group = child_id_get(*layerAnimations, ElementType::GROUP, layerAnimation.groupId))
-            if (auto groupRoot = child_first_get(*group, ElementType::ROOT_ANIMATION))
-            {
-              auto groupRootFrame = frame_generate(*groupRoot, t);
-              itemTransform *= math::quad_model_parent_get(groupRootFrame.position, {},
-                                                           math::percent_to_unit(groupRootFrame.scale),
-                                                           groupRootFrame.rotation);
-            }
+                    auto itemTransform = transform;
+                    if (isRootTransform && layerAnimation.groupId != -1)
+                      if (auto group = child_id_get(*layerAnimations, ElementType::GROUP, layerAnimation.groupId))
+                        if (auto groupRoot = child_first_get(*group, ElementType::ROOT_ANIMATION))
+                        {
+                          auto groupRootFrame = frame_generate(*groupRoot, t);
+                          itemTransform *= math::quad_model_parent_get(groupRootFrame.position, {},
+                                                                       math::percent_to_unit(groupRootFrame.scale),
+                                                                       groupRootFrame.rotation);
+                        }
 
-        auto frame = frame_effective(layerAnimation.layerId, frame_generate(layerAnimation, t));
-        if (frame.size == glm::vec2() || !frame.isVisible) return;
+                    auto frame = frame_effective(layerAnimation.layerId, frame_generate(layerAnimation, t));
+                    if (frame.size == glm::vec2() || !frame.isVisible) return;
 
-        auto layerTransform = itemTransform * math::quad_model_get(frame.size, frame.position, frame.pivot,
-                                                                   math::percent_to_unit(frame.scale), frame.rotation);
-        for (auto& corner : CORNERS)
-        {
-          auto world = layerTransform * glm::vec4(corner, 0.0f, 1.0f);
-          minX = std::min(minX, world.x);
-          minY = std::min(minY, world.y);
-          maxX = std::max(maxX, world.x);
-          maxY = std::max(maxY, world.y);
-          isAny = true;
-        }
-      });
+                    auto layerTransform =
+                        itemTransform * math::quad_model_get(frame.size, frame.position, frame.pivot,
+                                                             math::percent_to_unit(frame.scale), frame.rotation);
+                    for (auto& corner : CORNERS)
+                    {
+                      auto world = layerTransform * glm::vec4(corner, 0.0f, 1.0f);
+                      minX = std::min(minX, world.x);
+                      minY = std::min(minY, world.y);
+                      maxX = std::max(maxX, world.x);
+                      maxY = std::max(maxY, world.y);
+                      isAny = true;
+                    }
+                  });
     }
 
     if (!isAny) return glm::vec4(-1.0f);

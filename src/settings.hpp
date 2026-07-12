@@ -65,9 +65,6 @@ namespace anm2ed
   X(FILE_IS_AUTOSAVE, fileIsAutosave, STRING_UNDEFINED, BOOL, true)                                                    \
   X(FILE_IS_WARN_OVERWRITE, fileIsWarnOverwrite, STRING_UNDEFINED, BOOL, true)                                         \
   X(FILE_SNAPSHOT_STACK_SIZE, fileSnapshotStackSize, STRING_UNDEFINED, INT, 50)                                        \
-  X(FILE_IS_KEEP_REDUNDANT_FRAME_REGION_VALUES, fileIsKeepRedundantFrameRegionValues, STRING_UNDEFINED, BOOL, true)    \
-  X(FILE_IS_BAKE_SPECIAL_INTERPOLATED_FRAMES, fileIsBakeSpecialInterpolatedFrames, STRING_UNDEFINED, BOOL, true)       \
-  X(IS_FILE_BAKE_GROUP_FRAMES, isFileBakeGroupFrames, STRING_UNDEFINED, BOOL, true)                                    \
                                                                                                                        \
   X(KEYBOARD_REPEAT_DELAY, keyboardRepeatDelay, STRING_UNDEFINED, FLOAT, 0.300f)                                       \
   X(KEYBOARD_REPEAT_RATE, keyboardRepeatRate, STRING_UNDEFINED, FLOAT, 0.050f)                                         \

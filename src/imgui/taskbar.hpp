@@ -47,8 +47,8 @@ namespace anm2ed::imgui
     bool isGenerateRegionsMapFrames{true};
     bool isQuittingMode{};
 
-    bool save_execute(Manager&, Settings&, const PendingSave&);
-    void save_enqueue(Manager&, Settings&, const PendingSave&);
+    bool save_execute(Manager&, const PendingSave&);
+    void save_enqueue(Manager&, const PendingSave&);
     bool save_request(Manager&, Settings&, int = -1, const std::filesystem::path& = {}, bool = false);
 
   public:
