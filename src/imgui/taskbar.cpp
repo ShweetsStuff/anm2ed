@@ -29,27 +29,27 @@ namespace anm2ed::imgui
 
   bool Taskbar::save_execute(Manager& manager, const PendingSave& request)
   {
-    return manager.save(request.index, request.path);
+    return manager.save(request.index, request.path, request.options);
   }
 
   void Taskbar::save_enqueue(Manager& manager, const PendingSave& request)
   {
     auto index = request.index;
     auto path = request.path;
+    auto options = request.options;
 
     manager.command_push({.runManager =
                               [=](Manager& manager)
-                              { manager.save(index, path); }});
+                              { manager.save(index, path, options); }});
   }
 
   bool Taskbar::save_request(Manager& manager, Settings& settings, int index, const std::filesystem::path& path,
                              bool isQueued)
   {
-    (void)settings;
     auto* document = manager.get(index);
     if (!document) return false;
 
-    PendingSave request{.index = index, .path = path};
+    PendingSave request{.index = index, .path = path, .options = settings.anm2_options_get()};
     if (isQueued)
     {
       save_enqueue(manager, request);

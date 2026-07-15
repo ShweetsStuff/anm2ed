@@ -367,6 +367,8 @@ namespace anm2ed
   X(LABEL_OVERLAYS_WINDOW, "Overlays###Overlays", "Overlays###Overlays", "Overlays###Overlays", "Overlays###Overlays", "Overlays###Overlays") \
   X(LABEL_OVERWRITE_CONFIRMATION, "Are you sure? This will overwrite the existing file.", "¿Estas Seguro? Esto sobreescribira el archivo existente.", "Вы уверены? Это перезапишет существующий файл.", "你确定吗? 这样会覆盖原本的文件.", "저장하시겠습니까? 기존 파일을 덮어쓰게 됩니다.") \
   X(LABEL_OVERWRITE_WARNING, "Overwrite Warning", "Alerta de Sobreescribir", "Предупреждение о перезаписи", "覆盖提醒", "덮어쓰기 경고") \
+  X(LABEL_SERIALIZATION, "Serialization", "Serialization", "Serialization", "Serialization", "Serialization") \
+  X(LABEL_EXTENDED_FORMAT, "Extended Format", "Extended Format", "Extended Format", "Extended Format", "Extended Format") \
   X(LABEL_PAUSE, "Pause", "Pausar", "Пауза", "暂停", "일시정지") \
   X(LABEL_PIVOTS, "Pivots", "Pivotes", "Точки вращения", "枢轴", "중심점") \
   X(LABEL_PLAY, "Play", "Reproducir", "Возпроизвести", "播放", "재생") \
@@ -668,6 +670,7 @@ namespace anm2ed
   X(TOOLTIP_OVERLAY, "Set an animation to be drawn over the current animation.", "Ajusta una animacion para ser dibujada sobre la animacion actual.", "Установить анимацию, которая будет выведена над текущей анимацией.", "设置一个当前动画的覆盖动画.", "현재 애니메이션 위에 그려질 애니메이션을 설정합니다.") \
   X(TOOLTIP_OVERLAY_ALPHA, "Set the alpha of the overlayed animation.", "Ajusta el alpha de la animacion en Overlay", "Установить прозрачность наложенной анимации.", "更改覆盖动画的透明度.", "오버레이된 애니메이션의 불투명도를 설정합니다.") \
   X(TOOLTIP_OVERWRITE_WARNING, "A warning will be shown when saving/overwriting a file.", "Una advertencia se mostrara cuando se este guardando/sobreguardando un archivo.", "При сохранении/перезаписи файла будет показано предупреждение.", "保存或覆盖文件时会提示确认。", "저장하거나 덮어쓸 때 경고가 표시됩니다.") \
+  X(TOOLTIP_EXTENDED_FORMAT, "Use extended Anm2Ed .anm2 format.\nThis is NOT compatible with The Binding of Isaac: Rebirth!", "Use extended Anm2Ed .anm2 format.\nThis is NOT compatible with The Binding of Isaac: Rebirth!", "Use extended Anm2Ed .anm2 format.\nThis is NOT compatible with The Binding of Isaac: Rebirth!", "Use extended Anm2Ed .anm2 format.\nThis is NOT compatible with The Binding of Isaac: Rebirth!", "Use extended Anm2Ed .anm2 format.\nThis is NOT compatible with The Binding of Isaac: Rebirth!") \
   X(TOOLTIP_PAUSE_ANIMATION, "Pause the animation.", "Pausa la animacion.", "Поставить анимацию на паузу.", "暂停动画.", "애니메이션을 일시정지합니다.") \
   X(TOOLTIP_PIVOT, "Change the pivot of the frame; i.e., where it is centered.", "Cambia el pivote del Frame; i. e., donde esta centrado.", "Изменить точку поворота кадра, т. е. где он центрирован.", "更改帧枢轴; 比如可以让帧枢轴居中.", "프레임의 중심점을 변경합니다.") \
   X(TOOLTIP_PIVOTS, "Toggle the visibility of the animation's pivots.", "Alterna la visibilidad de los pivotes de la animacion.", "Переключить видимость точек поворота анимации.", "切换动画枢轴是否可见.", "애니메이션의 중심점을 표시하거나 숨깁니다.") \

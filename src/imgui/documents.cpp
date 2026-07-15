@@ -150,7 +150,9 @@ namespace anm2ed::imgui
         document.lastAutosaveTime += ImGui::GetIO().DeltaTime;
         if (document.lastAutosaveTime > time::SECOND_M)
         {
-          manager.command_push({i, [](Manager& manager, Document& document) { manager.autosave(document); }});
+          auto options = settings.anm2_options_get();
+          manager.command_push({i, [options](Manager& manager, Document& document)
+                                { manager.autosave(document, options); }});
         }
       }
     }

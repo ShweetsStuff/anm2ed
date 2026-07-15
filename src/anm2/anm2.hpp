@@ -208,6 +208,7 @@ namespace anm2ed
   struct Options
   {
     Flags flags{SERIALIZE_DEFAULT};
+    bool isExtendedFormat{};
   };
 
   struct FrameChange

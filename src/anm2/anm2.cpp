@@ -629,9 +629,7 @@ namespace anm2ed
     if ((element.type == ElementType::LAYER_ANIMATION_GROUPS || element.type == ElementType::NULL_ANIMATION_GROUPS) &&
         (!has_flag(flags, SERIALIZE_GROUPS) || element.children.empty()))
       return true;
-    if (element.type == ElementType::SOUND_ELEMENT && parentType == ElementType::TRIGGER &&
-        !has_flag(flags, SERIALIZE_SOUNDS))
-      return true;
+    if (element.type == ElementType::SOUND_ELEMENT && parentType == ElementType::TRIGGER) return true;
     if (element.type == ElementType::REGION && !has_flag(flags, SERIALIZE_REGIONS)) return true;
     if (element.type == ElementType::GROUP && !has_flag(flags, SERIALIZE_GROUPS)) return true;
     return false;
@@ -818,11 +816,25 @@ namespace anm2ed
     }
   }
 
+  void trigger_sounds_xml_insert(XMLDocument& document, XMLElement* out, const Element& element, Flags flags)
+  {
+    if (element.type != ElementType::TRIGGER || !has_flag(flags, SERIALIZE_SOUNDS)) return;
+
+    for (auto soundId : element.soundIds)
+    {
+      if (soundId == -1) continue;
+      auto sound = document.NewElement(element_tag_get(ElementType::SOUND_ELEMENT).data());
+      sound->SetAttribute("Id", soundId);
+      out->InsertEndChild(sound);
+    }
+  }
+
   XMLElement* element_to_xml(XMLDocument& document, const Element& element, ElementType parentType, Flags flags)
   {
     auto tag = element.type == ElementType::UNKNOWN ? std::string_view(element.tag) : element_tag_get(element.type);
     auto out = document.NewElement(tag.empty() ? element.tag.c_str() : tag.data());
     element_attributes_write(out, element, parentType, flags);
+    trigger_sounds_xml_insert(document, out, element, flags);
 
     for (int i = 0; i < (int)element.children.size(); ++i)
     {
@@ -1095,6 +1107,19 @@ namespace anm2ed
   void element_hash_append(std::uint64_t& hash, const Element& element, ElementType parentType, Flags flags,
                            std::optional<BakeAttributes> bakeAttributes = std::nullopt);
 
+  void trigger_sounds_hash_append(std::uint64_t& hash, const Element& element, Flags flags)
+  {
+    if (element.type != ElementType::TRIGGER || !has_flag(flags, SERIALIZE_SOUNDS)) return;
+
+    for (auto soundId : element.soundIds)
+    {
+      if (soundId == -1) continue;
+      auto sound = element_make(ElementType::SOUND_ELEMENT);
+      sound.id = soundId;
+      element_hash_append(hash, sound, ElementType::TRIGGER, flags);
+    }
+  }
+
   void baked_frames_hash_append(std::uint64_t& hash, const Element& track, int index, Flags flags)
   {
     const auto& original = track.children[index];
@@ -1131,6 +1156,7 @@ namespace anm2ed
     if (bakeAttributes) bake_attributes_hash_append(hash, bakeAttributes->interpolation, bakeAttributes->delay);
 
     hash_byte_append(hash, '[');
+    trigger_sounds_hash_append(hash, element, flags);
     for (int i = 0; i < (int)element.children.size(); ++i)
     {
       const auto& child = element.children[i];
@@ -1545,6 +1571,7 @@ namespace anm2ed
   bool is_track_child_valid(ElementType parentType, ElementType childType)
   {
     if (parentType == ElementType::TRIGGERS) return childType == ElementType::TRIGGER;
+    if (parentType == ElementType::TRIGGER) return childType == ElementType::SOUND_ELEMENT;
     if (parentType == ElementType::LAYER_ANIMATION_GROUPS || parentType == ElementType::NULL_ANIMATION_GROUPS)
       return childType == ElementType::GROUP;
     if (parentType == ElementType::ROOT_ANIMATION || parentType == ElementType::LAYER_ANIMATION ||
@@ -2387,7 +2414,12 @@ namespace anm2ed
 
   XMLElement* Anm2::to_element(XMLDocument& document, Options options) const
   {
-    (void)options;
+    if (options.isExtendedFormat)
+    {
+      auto editor = normalized_for_serialize(SERIALIZE_ANM2ED_DEFAULT);
+      editor.region_frames_sync(true);
+      return element_to_xml(document, editor.root, ElementType::UNKNOWN, SERIALIZE_ANM2ED_DEFAULT);
+    }
 
     auto isaac = normalized_for_serialize(SERIALIZE_ISAAC_DEFAULT);
     isaac.region_frames_sync(true);

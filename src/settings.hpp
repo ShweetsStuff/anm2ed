@@ -64,6 +64,7 @@ namespace anm2ed
                                                                                                                        \
   X(FILE_IS_AUTOSAVE, fileIsAutosave, STRING_UNDEFINED, BOOL, true)                                                    \
   X(FILE_IS_WARN_OVERWRITE, fileIsWarnOverwrite, STRING_UNDEFINED, BOOL, true)                                         \
+  X(FILE_IS_EXTENDED_FORMAT, isFileExtendedFormat, STRING_UNDEFINED, BOOL, false)                                      \
   X(FILE_SNAPSHOT_STACK_SIZE, fileSnapshotStackSize, STRING_UNDEFINED, INT, 50)                                        \
                                                                                                                        \
   X(KEYBOARD_REPEAT_DELAY, keyboardRepeatDelay, STRING_UNDEFINED, FLOAT, 0.300f)                                       \
@@ -299,6 +300,7 @@ namespace anm2ed
     Settings() = default;
 
     Settings(const std::filesystem::path&);
+    Options anm2_options_get() const;
     void save(const std::filesystem::path&, const std::string&);
     static std::string imgui_data_load(const std::filesystem::path&);
   };

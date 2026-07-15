@@ -24,6 +24,7 @@ namespace anm2ed::imgui
     {
       int index{-1};
       std::filesystem::path path{};
+      Options options{};
       bool isQueued{};
     };
 
