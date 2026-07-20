@@ -57,7 +57,7 @@ namespace anm2ed
     imgui::PopupHelper anm2DragDropPopup{
         imgui::PopupHelper(LABEL_MANAGER_ANM2_DRAG_DROP, imgui::POPUP_NORMAL, imgui::POPUP_BY_CURSOR)};
     imgui::PopupHelper anm2DragDropMergePopup{
-        imgui::PopupHelper(LABEL_DOCUMENTS_MERGE_INTO_CURRENT, imgui::POPUP_NORMAL_NO_HEIGHT)};
+        imgui::PopupHelper(LABEL_DOCUMENTS_MERGE_INTO_CURRENT, imgui::POPUP_SMALL_NO_HEIGHT)};
 
     std::filesystem::path spritesheetDragDropPath{};
     bool isSpritesheetDragDrop{};

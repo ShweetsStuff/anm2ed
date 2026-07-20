@@ -432,9 +432,11 @@ namespace anm2ed::imgui
 
           for (int preset = 0; preset < Document::FILE_MERGE_PRESET_COUNT; ++preset)
           {
+            ImGui::PushID(preset);
             ImGui::RadioButton(localize.get(ANM2_DRAG_DROP_MERGE_PRESET_LABELS[preset]),
                                &manager.anm2DragDropMergePreset, preset);
             ImGui::SetItemTooltip("%s", localize.get(ANM2_DRAG_DROP_MERGE_PRESET_TOOLTIPS[preset]));
+            ImGui::PopID();
           }
 
           auto widgetSize = widget_size_with_row_get(2);

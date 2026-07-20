@@ -202,6 +202,7 @@ namespace anm2ed
     std::filesystem::path path_from_autosave_get(const std::filesystem::path&);
 
     void anm2_snapshot(const std::string& message);
+    void tracks_snapshot(const std::string& message, const std::set<Reference>&);
     void frames_snapshot(const std::string& message, const std::set<Reference>&);
     void regions_snapshot(const std::string& message, int, const std::set<int>&);
     void textures_snapshot(const std::string& message);

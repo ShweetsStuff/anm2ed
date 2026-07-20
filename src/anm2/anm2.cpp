@@ -95,6 +95,8 @@ namespace anm2ed
       "", "", "EaseIn", "EaseOut", "EaseInOut"};
 
   constexpr std::array<std::string_view, (std::size_t)Origin::COUNT> ORIGIN_VALUES = {"", "TopLeft", "Center"};
+  constexpr std::array<std::string_view, (std::size_t)OverlayDrawOrder::COUNT> OVERLAY_DRAW_ORDER_VALUES = {"Below",
+                                                                                                            "Above"};
   constexpr std::string_view ANM2ED_GROUP_FRAME_BACKUP_TAG = "FrameRestore";
   constexpr std::string_view SOURCE_DOCUMENT_TAG = "SourceDocument";
 
@@ -232,6 +234,7 @@ namespace anm2ed
     Element element{};
     element.type = type;
     element.tag = std::string(element_tag_get(type));
+    if (type == ElementType::OVERLAY) element.index = OVERLAY_DRAW_ORDER_ABOVE;
     return element;
   }
 
@@ -451,6 +454,29 @@ namespace anm2ed
 
   int color_write(float value) { return math::float_to_uint8(value); }
 
+  int overlay_draw_order_get(const Element& element)
+  {
+    return element.index == OVERLAY_DRAW_ORDER_BELOW ? OVERLAY_DRAW_ORDER_BELOW : OVERLAY_DRAW_ORDER_ABOVE;
+  }
+
+  void overlay_draw_order_read(Element& out, const XMLElement* element)
+  {
+    if (out.type != ElementType::OVERLAY) return;
+    out.index = OVERLAY_DRAW_ORDER_ABOVE;
+    if (element)
+    {
+      element->QueryFloatAttribute("XOffset", &out.position.x);
+      element->QueryFloatAttribute("YOffset", &out.position.y);
+    }
+    out.tint.a = color_read(element, "Alpha", out.tint.a);
+
+    auto value = element ? element->Attribute("DrawOrder") : nullptr;
+    if (!value) return;
+
+    for (std::size_t i = 0; i < OVERLAY_DRAW_ORDER_VALUES.size(); ++i)
+      if (OVERLAY_DRAW_ORDER_VALUES[i] == value) out.index = (int)i;
+  }
+
   Interpolation interpolation_read(const XMLElement* element, const char* attribute)
   {
     bool isFallback{};
@@ -526,6 +552,7 @@ namespace anm2ed
 
     out.interpolation = interpolation_read(element);
     out.origin = origin_read(element);
+    overlay_draw_order_read(out, element);
     if (out.type == ElementType::REGION && out.origin == Origin::TOP_LEFT) out.pivot = {};
     if (out.type == ElementType::REGION && out.origin == Origin::CENTER) out.pivot = out.size * 0.5f;
   }
@@ -686,7 +713,18 @@ namespace anm2ed
     {
       out->SetAttribute("Id", element.id);
       path_set(out, "Path", element.path);
-      if (element.type == ElementType::OVERLAY && !element.isVisible) out->SetAttribute("Visible", element.isVisible);
+      if (element.type == ElementType::OVERLAY)
+      {
+        if (!element.isVisible) out->SetAttribute("Visible", element.isVisible);
+        if (element.position != glm::vec2())
+        {
+          out->SetAttribute("XOffset", element.position.x);
+          out->SetAttribute("YOffset", element.position.y);
+        }
+        if (color_write(element.tint.a) != 255) out->SetAttribute("Alpha", color_write(element.tint.a));
+        if (overlay_draw_order_get(element) == OVERLAY_DRAW_ORDER_BELOW)
+          out->SetAttribute("DrawOrder", OVERLAY_DRAW_ORDER_VALUES[OVERLAY_DRAW_ORDER_BELOW].data());
+      }
     }
     else if (element.type == ElementType::SHADER)
     {
@@ -1015,6 +1053,17 @@ namespace anm2ed
       hash_path_attr_append(hash, "Path", element.path);
       if (element.type == ElementType::OVERLAY && !element.isVisible)
         hash_attr_append(hash, "Visible", element.isVisible);
+      if (element.type == ElementType::OVERLAY)
+      {
+        if (element.position != glm::vec2())
+        {
+          hash_attr_append(hash, "XOffset", element.position.x);
+          hash_attr_append(hash, "YOffset", element.position.y);
+        }
+        if (color_write(element.tint.a) != 255) hash_attr_append(hash, "Alpha", color_write(element.tint.a));
+        if (overlay_draw_order_get(element) == OVERLAY_DRAW_ORDER_BELOW)
+          hash_attr_append(hash, "DrawOrder", OVERLAY_DRAW_ORDER_VALUES[OVERLAY_DRAW_ORDER_BELOW]);
+      }
     }
     else if (element.type == ElementType::SHADER)
     {
@@ -2436,10 +2485,9 @@ namespace anm2ed
 
   std::uint64_t Anm2::hash(Options options) const
   {
-    auto serialized = to_string(options);
     auto hash = ANM2_HASH_OFFSET;
-    for (auto c : serialized)
-      hash_byte_append(hash, (unsigned char)c);
+    hash_byte_append(hash, options.isExtendedFormat ? 'E' : 'A');
+    element_hash_append(hash, root, ElementType::UNKNOWN, SERIALIZE_ANM2ED_DEFAULT);
     return hash;
   }
 
@@ -2756,6 +2804,8 @@ namespace anm2ed
         tracks_each(*layerAnimations, ElementType::LAYER_ANIMATION,
                     [&](const Element& layerAnimation)
                     {
+                      auto layer = element_get(ElementType::LAYER_ELEMENT, layerAnimation.layerId);
+                      if (!layer || layer->spritesheetId != parentId) return;
                       for (const auto& frame : layerAnimation.children)
                         if (frame.type == ElementType::FRAME && frame.regionId != -1) used.insert(frame.regionId);
                     });

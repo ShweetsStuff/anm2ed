@@ -187,6 +187,7 @@ namespace anm2ed
   X(EDIT_REPLACE_OVERLAY, "Replace Overlay", "Replace Overlay", "Replace Overlay", "Replace Overlay", "Replace Overlay") \
   X(EDIT_REPLACE_SOUND, "Replace Sound", "Reemplazar Sonido", "Заменить звук", "替换声音", "사운드 교체") \
   X(EDIT_SET_OVERLAY_FILE_PATH, "Set Overlay File Path", "Set Overlay File Path", "Set Overlay File Path", "Set Overlay File Path", "Set Overlay File Path") \
+  X(EDIT_SET_OVERLAY_PROPERTIES, "Set Overlay Properties", "Set Overlay Properties", "Set Overlay Properties", "Set Overlay Properties", "Set Overlay Properties") \
   X(EDIT_SET_SPRITESHEET_FILE_PATH, "Set Spritesheet File Path", "Set Spritesheet File Path", "Set Spritesheet File Path", "Set Spritesheet File Path", "Set Spritesheet File Path") \
   X(EDIT_SET_LAYER_PROPERTIES, "Set Layer Properties", "Establecer Propiedades de Capa", "Установить свойства слоя", "更改动画层属性", "레이어 속성 설정") \
   X(EDIT_SET_REGION_PROPERTIES, "Set Region Properties", "Establecer propiedades de región", "Установить свойства региона", "更改区域属性", "영역 속성 설정") \
@@ -195,6 +196,7 @@ namespace anm2ed
   X(EDIT_SCAN_AND_SET_REGIONS, "Scan and Set Regions", "Escanear y establecer regiones", "Сканировать и установить регионы", "扫描并设置区域", "영역 스캔 및 설정") \
   X(EDIT_REGION_CROP, "Region Crop", "Recorte de región", "Обрезка региона", "区域裁剪", "영역 자르기") \
   X(EDIT_REGION_MOVE, "Region Pivot", "Pivote de región", "Пивот региона", "区域枢轴", "영역 피벗") \
+  X(EDIT_OVERLAY_MOVE, "Overlay Offset", "Overlay Offset", "Overlay Offset", "Overlay Offset", "Overlay Offset") \
   X(EDIT_SPLIT_FRAME, "Split Frame", "Dividir Frame", "Разделить кадр", "拆分帧", "프레임 분할") \
   X(EDIT_SHORTEN_FRAME, "Shorten Frame", "Acortar Frame", "Укоротить кадр", "缩短帧时长", "프레임 단축") \
   X(EDIT_TOGGLE_ITEM_VISIBILITY, "Toggle Item Visibility", "Alternar Visibilidad de item", "Переключить видимость предмета", "物品可见", "항목 표시/숨기기") \
@@ -364,6 +366,10 @@ namespace anm2ed
   X(LABEL_OUTPUT_DIRECTORY, "Directory", "Directorio", "Директория", "目录", "디렉터리") \
   X(LABEL_OUTPUT_PATH, "Path", "Ruta", "Путь", "路径", "경로") \
   X(LABEL_OVERLAY, "Overlay", "Overlay", "Наложение", "动画叠加", "오버레이") \
+  X(LABEL_OVERLAY_DRAW_ORDER, "Draw Order", "Draw Order", "Draw Order", "Draw Order", "Draw Order") \
+  X(LABEL_OVERLAY_DRAW_ORDER_ABOVE, "Above", "Above", "Above", "Above", "Above") \
+  X(LABEL_OVERLAY_DRAW_ORDER_BELOW, "Below", "Below", "Below", "Below", "Below") \
+  X(LABEL_OVERLAY_PROPERTIES, "Overlay Properties", "Overlay Properties", "Overlay Properties", "Overlay Properties", "Overlay Properties") \
   X(LABEL_OVERLAYS_WINDOW, "Overlays###Overlays", "Overlays###Overlays", "Overlays###Overlays", "Overlays###Overlays", "Overlays###Overlays") \
   X(LABEL_OVERWRITE_CONFIRMATION, "Are you sure? This will overwrite the existing file.", "¿Estas Seguro? Esto sobreescribira el archivo existente.", "Вы уверены? Это перезапишет существующий файл.", "你确定吗? 这样会覆盖原本的文件.", "저장하시겠습니까? 기존 파일을 덮어쓰게 됩니다.") \
   X(LABEL_OVERWRITE_WARNING, "Overwrite Warning", "Alerta de Sobreescribir", "Предупреждение о перезаписи", "覆盖提醒", "덮어쓰기 경고") \

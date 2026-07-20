@@ -2581,6 +2581,12 @@ namespace anm2ed
     snapshots.anm2_push(current, message);
   }
 
+  void Document::tracks_snapshot(const std::string& message, const std::set<Reference>& trackReferences)
+  {
+    this->message = message;
+    snapshots.tracks_push(current, message, trackReferences);
+  }
+
   void Document::frames_snapshot(const std::string& message, const std::set<Reference>& frameReferences)
   {
     this->message = message;

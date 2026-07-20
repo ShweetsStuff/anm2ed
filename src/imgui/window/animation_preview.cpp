@@ -969,25 +969,33 @@ namespace anm2ed::imgui
               auto customShader = document.shader_get(layer->spritesheetId);
               auto& layerShader = customShader ? *customShader : shaderTexture;
 
+              auto overlay_draw = [&](const Element& overlay)
+              {
+                if (overlay.type != ElementType::OVERLAY) return;
+                if (!overlay.isVisible) return;
+                auto overlayTexture = document.overlay_texture_get(overlay.id);
+                if (!overlayTexture || !overlayTexture->is_valid()) return;
+
+                auto overlayTexSize = vec2(overlayTexture->size);
+                if (overlayTexSize.x <= 0.0f || overlayTexSize.y <= 0.0f) return;
+
+                auto overlayUvMin = (crop - overlay.position) / overlayTexSize;
+                auto overlayUvMax = (crop + size - overlay.position) / overlayTexSize;
+                auto overlayVertices = math::uv_vertices_get(overlayUvMin, overlayUvMax);
+                auto overlayTint = frameTint;
+                overlayTint.a *= overlay.tint.a;
+                texture_render(shaderTexture, overlayTexture->id, layerTransform, overlayTint, frameColorOffset,
+                               overlayVertices.data(), vec2(overlayTexture->size), sampleTime);
+              };
+
+              for (auto& overlay : spritesheet->children)
+                if (overlay.index == OVERLAY_DRAW_ORDER_BELOW) overlay_draw(overlay);
+
               texture_render(layerShader, texture.id, layerTransform, frameTint, frameColorOffset, vertices.data(),
                              vec2(texture.size), sampleTime);
 
               for (auto& overlay : spritesheet->children)
-              {
-                if (overlay.type != ElementType::OVERLAY) continue;
-                if (!overlay.isVisible) continue;
-                auto overlayTexture = document.overlay_texture_get(overlay.id);
-                if (!overlayTexture || !overlayTexture->is_valid()) continue;
-
-                auto overlayTexSize = vec2(overlayTexture->size);
-                if (overlayTexSize.x <= 0.0f || overlayTexSize.y <= 0.0f) continue;
-
-                auto overlayUvMin = crop / overlayTexSize;
-                auto overlayUvMax = (crop + size) / overlayTexSize;
-                auto overlayVertices = math::uv_vertices_get(overlayUvMin, overlayUvMax);
-                texture_render(shaderTexture, overlayTexture->id, layerTransform, frameTint, frameColorOffset,
-                               overlayVertices.data(), vec2(overlayTexture->size), sampleTime);
-              }
+                if (overlay.index != OVERLAY_DRAW_ORDER_BELOW) overlay_draw(overlay);
 
               auto color = isOnion ? vec4(sampleColor, 1.0f - sampleAlpha)
                            : is_layer_animation_selected(id) ? SELECTED_LAYER_BORDER_COLOR

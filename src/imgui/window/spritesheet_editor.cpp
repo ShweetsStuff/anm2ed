@@ -111,8 +111,9 @@ namespace anm2ed::imgui
 
     auto fit_view = [&]()
     {
-      if (texture && texture->is_valid())
-        set_to_rect(zoom, pan, {0, 0, (float)texture->size.x, (float)texture->size.y});
+      auto fitTexture = baseTexture && baseTexture->is_valid() ? baseTexture : texture;
+      if (fitTexture && fitTexture->is_valid())
+        set_to_rect(zoom, pan, {0, 0, (float)fitTexture->size.x, (float)fitTexture->size.y});
     };
 
     auto zoom_adjust = [&](int levelDelta)
@@ -243,17 +244,23 @@ namespace anm2ed::imgui
         auto spritesheetModel = math::quad_model_get(viewTexture->size);
         auto spritesheetTransform = transform * spritesheetModel;
 
+        auto overlay_draw = [&](const Element& overlay)
+        {
+          if (overlay.type != ElementType::OVERLAY) return;
+          if (!overlay.isVisible) return;
+          auto overlayTexture = document.overlay_texture_get(overlay.id);
+          if (!overlayTexture || !overlayTexture->is_valid()) return;
+          auto overlayTransform = transform * math::quad_model_get(overlayTexture->size, overlay.position);
+          texture_render(shaderTexture, overlayTexture->id, overlayTransform, vec4(1.0f, 1.0f, 1.0f, overlay.tint.a));
+        };
+
+        for (auto& overlay : spritesheet->children)
+          if (overlay.index == OVERLAY_DRAW_ORDER_BELOW) overlay_draw(overlay);
+
         if (baseTexture && baseTexture->is_valid()) texture_render(shaderTexture, baseTexture->id, spritesheetTransform);
 
         for (auto& overlay : spritesheet->children)
-        {
-          if (overlay.type != ElementType::OVERLAY) continue;
-          if (!overlay.isVisible) continue;
-          auto overlayTexture = document.overlay_texture_get(overlay.id);
-          if (!overlayTexture || !overlayTexture->is_valid()) continue;
-          auto overlayTransform = transform * math::quad_model_get(overlayTexture->size);
-          texture_render(shaderTexture, overlayTexture->id, overlayTransform);
-        }
+          if (overlay.index != OVERLAY_DRAW_ORDER_BELOW) overlay_draw(overlay);
 
         if (isGrid) grid_render(shaderGrid, zoom, pan, gridSize, gridOffset, gridColor);
 
@@ -318,6 +325,18 @@ namespace anm2ed::imgui
             auto pivotTransform =
                 transform * math::quad_model_get(PIVOT_SIZE, region->crop + region->pivot, PIVOT_SIZE * 0.5f);
             texture_render(shaderTexture, resources.icons[icon::PIVOT].id, pivotTransform, PIVOT_COLOR);
+          }
+        }
+
+        if (activeOverlay)
+        {
+          auto overlayTexture = document.overlay_texture_get(activeOverlayId);
+          if (overlayTexture && overlayTexture->is_valid())
+          {
+            auto overlayModel = math::quad_model_get(overlayTexture->size, activeOverlay->position);
+            auto overlayTransform = transform * overlayModel;
+            rect_render(dashedShader, overlayTransform, overlayModel, color::RED, BORDER_DASH_LENGTH, BORDER_DASH_GAP,
+                        BORDER_DASH_OFFSET);
           }
         }
 
@@ -408,6 +427,13 @@ namespace anm2ed::imgui
         auto stepY = isGridSnap ? step * gridSize.y : step;
         previousMousePos = mousePos;
         mousePos = position_translate(zoom, pan, to_ivec2(ImGui::GetMousePos()) - to_ivec2(cursorScreenPos));
+        auto textureMousePos = mousePos;
+        auto previousTextureMousePos = previousMousePos;
+        if (activeOverlay)
+        {
+          textureMousePos -= activeOverlay->position;
+          previousTextureMousePos -= activeOverlay->position;
+        }
 
         auto snap_rect = [&](glm::vec2 minPoint, glm::vec2 maxPoint)
         {
@@ -440,6 +466,29 @@ namespace anm2ed::imgui
           auto fraction = current - glm::floor(current);
           return glm::floor(value) + fraction;
         };
+        auto overlayIsGridSnap = isGridSnap;
+        auto overlayGridSize = gridSize;
+        auto overlayGridOffset = gridOffset;
+        auto overlay_position_snap =
+            [overlayIsGridSnap, overlayGridSize, overlayGridOffset, clamp_vec2_to_int](vec2 value)
+        {
+          if (overlayIsGridSnap)
+          {
+            if (overlayGridSize.x != 0)
+            {
+              auto offsetX = (float)overlayGridOffset.x;
+              auto sizeX = (float)overlayGridSize.x;
+              value.x = std::round((value.x - offsetX) / sizeX) * sizeX + offsetX;
+            }
+            if (overlayGridSize.y != 0)
+            {
+              auto offsetY = (float)overlayGridOffset.y;
+              auto sizeY = (float)overlayGridSize.y;
+              value.y = std::round((value.y - offsetY) / sizeY) * sizeY + offsetY;
+            }
+          }
+          return clamp_vec2_to_int(value);
+        };
         auto frame_snapshot_push = [&](StringType messageType, const std::set<Reference>& frameReferences)
         {
           auto message = std::string(localize.get(messageType));
@@ -456,6 +505,12 @@ namespace anm2ed::imgui
           manager.command_push({manager.selected,
                                 [message, queuedSpritesheet, queuedRegionIds](Manager&, Document& document)
                                 { document.regions_snapshot(message, queuedSpritesheet, queuedRegionIds); }});
+        };
+        auto overlay_snapshot_push = [&](StringType messageType)
+        {
+          auto message = std::string(localize.get(messageType));
+          manager.command_push(
+              {manager.selected, [message](Manager&, Document& document) { document.anm2_snapshot(message); }});
         };
         auto texture_snapshot_push = [&](StringType messageType)
         {
@@ -638,6 +693,28 @@ namespace anm2ed::imgui
                 region.size = clamp_vec2_to_int(maxPoint - minPoint);
               });
         };
+        auto overlay_update = [&](int id, auto update)
+        {
+          auto queuedSpritesheet = referenceSpritesheet;
+          manager.command_push({manager.selected, [=](Manager&, Document& document)
+                                {
+                                  auto spritesheet =
+                                      document.anm2.element_get(ElementType::SPRITESHEET, queuedSpritesheet);
+                                  if (!spritesheet) return;
+                                  auto overlay = element_child_id_get(*spritesheet, ElementType::OVERLAY, id);
+                                  if (!overlay) return;
+                                  update(*overlay);
+                                }});
+        };
+        auto overlay_position_set = [&](int id, vec2 position)
+        {
+          overlay_update(id, [=](Element& overlay) { overlay.position = overlay_position_snap(position); });
+        };
+        auto overlay_position_offset = [&](int id, vec2 delta)
+        {
+          overlay_update(id,
+                         [=](Element& overlay) { overlay.position = overlay_position_snap(overlay.position + delta); });
+        };
         auto texture_line_apply = [&](ivec2 start, ivec2 end, vec4 color)
         {
           auto queuedSpritesheet = referenceSpritesheet;
@@ -724,7 +801,9 @@ namespace anm2ed::imgui
         auto& toolInfo = tool::INFO[useTool];
         auto& areaType = toolInfo.areaType;
         auto isRegionEditTarget = document.editTarget == Document::EditTarget::REGION;
-        auto selectedFrameToolReferences = isRegionEditTarget ? std::set<Reference>{} : selectedFrameReferences;
+        auto isOverlayEditTarget = document.editTarget == Document::EditTarget::OVERLAY && activeOverlayId != -1;
+        auto selectedFrameToolReferences =
+            isRegionEditTarget || isOverlayEditTarget ? std::set<Reference>{} : selectedFrameReferences;
         bool isAreaAllowed = areaType == tool::ALL || areaType == tool::SPRITESHEET_EDITOR;
         bool isFrameRequired =
             !(useTool == tool::PAN || useTool == tool::DRAW || useTool == tool::ERASE || useTool == tool::COLOR_PICKER);
@@ -733,7 +812,8 @@ namespace anm2ed::imgui
                              (useTool == tool::CROP || useTool == tool::MOVE);
         bool isFrameAvailable = !isFrameRequired || (frame && !isRegionInUse && !selectedFrameToolReferences.empty()) ||
                                 (useTool == tool::CROP && !regionSelection.empty()) ||
-                                (useTool == tool::MOVE && regionReference != -1);
+                                (useTool == tool::MOVE && regionReference != -1) ||
+                                (useTool == tool::MOVE && isOverlayEditTarget);
         bool isSpritesheetRequired = useTool == tool::DRAW || useTool == tool::ERASE || useTool == tool::COLOR_PICKER;
         bool isSpritesheetAvailable = !isSpritesheetRequired || (texture && texture->is_valid());
         auto cursor = (isAreaAllowed && isFrameAvailable && isSpritesheetAvailable) ? toolInfo.cursor
@@ -768,6 +848,34 @@ namespace anm2ed::imgui
             if (isMouseDown || isMouseMiddleDown) pan += mouseDelta;
             break;
           case tool::MOVE:
+            if (isOverlayEditTarget)
+            {
+              if (!activeOverlay) break;
+
+              if (isBegin) overlay_snapshot_push(EDIT_OVERLAY_MOVE);
+              if (isMouseClicked) cropAnchor = mousePos - activeOverlay->position;
+              if (isMouseDown) overlay_position_set(activeOverlayId, mousePos - cropAnchor);
+              if (isLeftPressed) overlay_position_offset(activeOverlayId, vec2(-stepX, 0));
+              if (isRightPressed) overlay_position_offset(activeOverlayId, vec2(stepX, 0));
+              if (isUpPressed) overlay_position_offset(activeOverlayId, vec2(0, -stepY));
+              if (isDownPressed) overlay_position_offset(activeOverlayId, vec2(0, stepY));
+
+              if (isDuring)
+              {
+                if (ImGui::BeginTooltip())
+                {
+                  ImGui::TextUnformatted(
+                      std::vformat(localize.get(FORMAT_POSITION),
+                                   std::make_format_args(activeOverlay->position.x, activeOverlay->position.y))
+                          .c_str());
+                  ImGui::EndTooltip();
+                }
+              }
+
+              if (isEnd) document_change_push(Document::SPRITESHEETS);
+              break;
+            }
+
             if ((isRegionEditTarget || isRegionInUse || selectedFrameToolReferences.empty()) && regionReference != -1)
             {
               if (!spritesheet) break;
@@ -929,7 +1037,7 @@ namespace anm2ed::imgui
             if (!texture) break;
             auto color = useTool == tool::DRAW ? toolColor : vec4();
             if (isMouseClicked) texture_snapshot_push(useTool == tool::DRAW ? EDIT_DRAW : EDIT_ERASE);
-            if (isMouseDown) texture_line_apply(ivec2(previousMousePos), ivec2(mousePos), color);
+            if (isMouseDown) texture_line_apply(ivec2(previousTextureMousePos), ivec2(textureMousePos), color);
             if (isMouseReleased) texture_change_push();
             break;
           }
@@ -937,7 +1045,7 @@ namespace anm2ed::imgui
           {
             if (texture && isDuring)
             {
-              toolColor = texture->pixel_read(mousePos);
+              toolColor = texture->pixel_read(textureMousePos);
               if (ImGui::BeginTooltip())
               {
                 ImGui::ColorButton("##Color Picker Button", to_imvec4(toolColor));
@@ -1043,7 +1151,8 @@ namespace anm2ed::imgui
       actions_undo_redo_add(actions, manager, document);
       actions.separator();
       actions.add(ACTION_CENTER_VIEW, []() { return true; }, center_view);
-      actions.add(ACTION_FIT_VIEW, [&]() { return texture && texture->is_valid(); }, fit_view);
+      actions.add(ACTION_FIT_VIEW, [&]()
+                  { return (baseTexture && baseTexture->is_valid()) || (texture && texture->is_valid()); }, fit_view);
       actions.separator();
       actions.add(ACTION_ZOOM_IN, []() { return true; }, zoom_in);
       actions.add(ACTION_ZOOM_OUT, []() { return true; }, zoom_out);

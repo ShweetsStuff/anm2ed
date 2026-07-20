@@ -473,12 +473,23 @@ namespace anm2ed::imgui
       manager.command_push({manager.selected,
                             [run](Manager& manager, Document& document) mutable { run(manager, document); }});
     };
-    auto snapshot_command_push = [&](StringType messageType)
+    auto track_references_from_frame_references_get = [](std::set<Reference> frameReferences)
+    {
+      std::set<Reference> result{};
+      for (auto frameReference : frameReferences)
+      {
+        frameReference.frameIndex = -1;
+        result.insert(frameReference);
+      }
+      return result;
+    };
+    auto tracks_snapshot_command_push = [&](StringType messageType, const std::set<Reference>& trackReferences)
     {
       auto message = std::string(localize.get(messageType));
+      auto queuedTrackReferences = trackReferences;
       manager.command_push({manager.selected,
-                            [message](Manager&, Document& document)
-                            { document.anm2_snapshot(message); }});
+                            [message, queuedTrackReferences](Manager&, Document& document)
+                            { document.tracks_snapshot(message, queuedTrackReferences); }});
     };
     auto frames_snapshot_command_push = [&](StringType messageType, const std::set<Reference>& frameReferences)
     {
@@ -487,6 +498,34 @@ namespace anm2ed::imgui
       manager.command_push({manager.selected,
                             [message, queuedFrameReferences](Manager&, Document& document)
                             { document.frames_snapshot(message, queuedFrameReferences); }});
+    };
+    auto frames_edit_command_push = [&](StringType messageType, Document::ChangeType changeType,
+                                        const std::set<Reference>& frameReferences, auto run)
+    {
+      auto message = std::string(localize.get(messageType));
+      auto queuedFrameReferences = frameReferences;
+      manager.command_push({manager.selected,
+                            [=](Manager& manager, Document& document) mutable
+                            {
+                              (void)changeType;
+                              document.frames_snapshot(message, queuedFrameReferences);
+                              run(manager, document);
+                              document.anm2_change(changeType);
+                            }});
+    };
+    auto tracks_edit_command_push = [&](StringType messageType, Document::ChangeType changeType,
+                                        const std::set<Reference>& trackReferences, auto run)
+    {
+      auto message = std::string(localize.get(messageType));
+      auto queuedTrackReferences = trackReferences;
+      manager.command_push({manager.selected,
+                            [=](Manager& manager, Document& document) mutable
+                            {
+                              (void)changeType;
+                              document.tracks_snapshot(message, queuedTrackReferences);
+                              run(manager, document);
+                              document.anm2_change(changeType);
+                            }});
     };
     auto edit_command_push = [&](StringType messageType, Document::ChangeType changeType, auto run)
     {
@@ -572,9 +611,9 @@ namespace anm2ed::imgui
       if (!animation || !command_item_reference_get(document, targetReference))
         return;
 
-      edit_command_push(EDIT_INSERT_FRAME, Document::FRAMES,
-                        [=, this](Manager&, Document& document) mutable
-                        {
+      tracks_edit_command_push(EDIT_INSERT_FRAME, Document::FRAMES, {targetReference},
+                               [=, this](Manager&, Document& document) mutable
+                               {
                           auto animation = command_animation_get(document, targetReference.animationIndex);
                           auto item = command_item_reference_get(document, targetReference);
                           if (!animation || !item) return;
@@ -620,7 +659,7 @@ namespace anm2ed::imgui
                           frames_selection_set_reference_for(document);
                           if (newReference.itemType != TRIGGER)
                             document.frameTime = frame_time_from_index_get(*item, newReference.frameIndex);
-                        });
+                               });
     };
 
     auto frames_delete_for = [=](Document& document, std::set<Reference> selectedFrames) mutable
@@ -660,9 +699,10 @@ namespace anm2ed::imgui
     {
       auto selectedFrames = frame_references_for_current_get();
       if (selectedFrames.empty()) return;
-      edit_command_push(EDIT_DELETE_FRAMES, Document::FRAMES,
-                        [=](Manager&, Document& document) mutable
-                        { frames_delete_for(document, selectedFrames); });
+      auto trackReferences = track_references_from_frame_references_get(selectedFrames);
+      tracks_edit_command_push(EDIT_DELETE_FRAMES, Document::FRAMES, trackReferences,
+                               [=](Manager&, Document& document) mutable
+                               { frames_delete_for(document, selectedFrames); });
     };
 
     auto frames_duplicate = [&]()
@@ -672,9 +712,10 @@ namespace anm2ed::imgui
                     [](const Reference& frameReference) { return frameReference.itemType == TRIGGER; });
       if (selectedFrames.empty()) return;
 
-      edit_command_push(EDIT_DUPLICATE_FRAMES, Document::FRAMES,
-                        [=, this](Manager&, Document& document) mutable
-                        {
+      auto trackReferences = track_references_from_frame_references_get(selectedFrames);
+      tracks_edit_command_push(EDIT_DUPLICATE_FRAMES, Document::FRAMES, trackReferences,
+                               [=, this](Manager&, Document& document) mutable
+                               {
                           std::map<Reference, std::set<int>> groupedFrames{};
                           for (auto frameReference : selectedFrames)
                           {
@@ -734,7 +775,7 @@ namespace anm2ed::imgui
                           isFrameSelectionLocked = false;
                           frameFocusIndex = document.reference.frameIndex;
                           frameFocusRequested = true;
-                        });
+                               });
     };
 
     auto is_frames_reverse_available = [&](std::set<Reference> selectedFrames)
@@ -757,9 +798,10 @@ namespace anm2ed::imgui
                     [](const Reference& frameReference) { return frameReference.itemType == TRIGGER; });
       if (!is_frames_reverse_available(selectedFrames)) return;
 
-      edit_command_push(EDIT_REVERSE_FRAMES, Document::FRAMES,
-                        [=, this](Manager&, Document& document) mutable
-                        {
+      auto trackReferences = track_references_from_frame_references_get(selectedFrames);
+      tracks_edit_command_push(EDIT_REVERSE_FRAMES, Document::FRAMES, trackReferences,
+                               [=, this](Manager&, Document& document) mutable
+                               {
                           std::map<Reference, std::set<int>> groupedFrames{};
                           for (auto frameReference : selectedFrames)
                           {
@@ -827,7 +869,7 @@ namespace anm2ed::imgui
                           isFrameSelectionLocked = false;
                           frameFocusIndex = document.reference.frameIndex;
                           frameFocusRequested = true;
-                        });
+                               });
     };
 
     auto frames_bake = [&]()
@@ -840,9 +882,10 @@ namespace anm2ed::imgui
                     [](const Reference& frameReference) { return frameReference.itemType == TRIGGER; });
       if (selectedFrames.empty()) return;
 
-      edit_command_push(EDIT_BAKE_FRAMES, Document::FRAMES,
-                        [=, this](Manager&, Document& document) mutable
-                        {
+      auto trackReferences = track_references_from_frame_references_get(selectedFrames);
+      tracks_edit_command_push(EDIT_BAKE_FRAMES, Document::FRAMES, trackReferences,
+                               [=, this](Manager&, Document& document) mutable
+                               {
                           std::map<Reference, std::set<int>> groupedFrames{};
                           for (auto frameReference : selectedFrames)
                           {
@@ -892,7 +935,7 @@ namespace anm2ed::imgui
                           }
                           else
                             frames_selection_reset_for(document);
-                        });
+                               });
     };
 
     auto selected_root_frame_references_get = [&]()
@@ -983,6 +1026,7 @@ namespace anm2ed::imgui
     {
       auto selectedRootFrames = selected_root_frame_references_get();
       if (selectedRootFrames.empty()) return;
+      if (!animation) return;
       auto target = bakeIntoOtherFramesTarget;
       auto isLayers = isBakeIntoOtherFramesLayers;
       auto isNulls = isBakeIntoOtherFramesNulls;
@@ -990,9 +1034,13 @@ namespace anm2ed::imgui
       auto isRoundRotation = settings.bakeIsRoundRotation;
       auto isMatchRootInterpolation = settings.bakeIsMatchRootInterpolation;
       auto isUseRootPivot = settings.bakeIsUseRootPivot;
-      edit_command_push(EDIT_BAKE_INTO_OTHER_FRAMES, Document::FRAMES,
-                        [=, this](Manager&, Document& document) mutable
-                        {
+      auto targetItems = item_references_for_bake_into_other_frames_get(
+          document, *animation, target, isBakeIntoOtherFramesLayers, isBakeIntoOtherFramesNulls);
+      auto trackReferences = track_references_from_frame_references_get(selectedRootFrames);
+      trackReferences.insert(targetItems.begin(), targetItems.end());
+      tracks_edit_command_push(EDIT_BAKE_INTO_OTHER_FRAMES, Document::FRAMES, trackReferences,
+                               [=, this](Manager&, Document& document) mutable
+                               {
                           auto animation = command_animation_get(document, document.reference.animationIndex);
                           if (!animation) return;
                           auto rootItemReference = item_reference_from_frame_get(*selectedRootFrames.begin());
@@ -1122,7 +1170,7 @@ namespace anm2ed::imgui
                           isFrameSelectionLocked = false;
                           frameFocusIndex = document.reference.frameIndex;
                           frameFocusRequested = true;
-                        });
+                               });
     };
 
     std::optional<int> frameSplitTimeAtCursor;
@@ -1135,9 +1183,9 @@ namespace anm2ed::imgui
       auto splitTime = frameSplitTimeAtCursor.value_or((int)std::floor(playback.time));
       if (targetReference.itemType == TRIGGER) return;
 
-      edit_command_push(EDIT_SPLIT_FRAME, Document::FRAMES,
-                        [=](Manager&, Document& document) mutable
-                        {
+      tracks_edit_command_push(EDIT_SPLIT_FRAME, Document::FRAMES, {targetReference},
+                               [=](Manager&, Document& document) mutable
+                               {
                           if (targetReference.itemType == TRIGGER) return;
 
                           auto item = command_item_reference_get(document, targetReference);
@@ -1193,7 +1241,7 @@ namespace anm2ed::imgui
                           item->children.insert(item->children.begin() + insertIndex, splitFrame);
                           document.reference = targetReference;
                           frames_selection_set_reference_for(document);
-                        });
+                               });
     };
 
     auto reference_clear = [&]()
@@ -1824,9 +1872,10 @@ namespace anm2ed::imgui
       auto selectedFrames = frame_references_for_current_get();
       if (selectedFrames.empty()) return;
       frame_references_copy(selectedFrames);
-      edit_command_push(EDIT_CUT_FRAMES, Document::FRAMES,
-                        [=](Manager&, Document& document) mutable
-                        { frames_delete_for(document, selectedFrames); });
+      auto trackReferences = track_references_from_frame_references_get(selectedFrames);
+      tracks_edit_command_push(EDIT_CUT_FRAMES, Document::FRAMES, trackReferences,
+                               [=](Manager&, Document& document) mutable
+                               { frames_delete_for(document, selectedFrames); });
     };
 
     auto paste = [&]()
@@ -1839,11 +1888,11 @@ namespace anm2ed::imgui
       auto message = std::string(localize.get(EDIT_PASTE_FRAMES));
       command_push([=](Manager&, Document& document) mutable
                    {
-                     document.anm2_snapshot(message);
                      auto animation = command_animation_get(document, targetReference.animationIndex);
                      if (!animation) return;
                      if (auto item = command_item_reference_get(document, targetReference))
                      {
+                       document.tracks_snapshot(message, {targetReference});
                        std::set<int> indices{};
                        std::string errorString{};
                        int insertIndex = (int)item->children.size();
@@ -1898,6 +1947,7 @@ namespace anm2ed::imgui
                        }
                        else
                        {
+                         document.snapshots.pendingStep.reset();
                          toasts.push(
                              std::format("{} {}", localize.get(TOAST_DESERIALIZE_FRAMES_FAILED), errorString));
                          logger.error(std::format("{} {}", localize.get(TOAST_DESERIALIZE_FRAMES_FAILED,
@@ -2861,9 +2911,12 @@ namespace anm2ed::imgui
                     { return frameReference.itemType == TRIGGER || frameReference.frameIndex < 0; });
       if (drag.references.empty()) return;
 
-      edit_command_push(EDIT_MOVE_FRAMES, Document::FRAMES,
-                        [=, this](Manager&, Document& document) mutable
-                        {
+      auto trackReferences = track_references_from_frame_references_get(
+          std::set<Reference>(drag.references.begin(), drag.references.end()));
+      trackReferences.insert({drag.animationIndex, targetType, targetID, -1, targetGroupType, targetGroupId});
+      tracks_edit_command_push(EDIT_MOVE_FRAMES, Document::FRAMES, trackReferences,
+                               [=, this](Manager&, Document& document) mutable
+                               {
                           auto targetItem =
                               command_item_get(document, drag.animationIndex, targetType, targetID, targetGroupType,
                                                targetGroupId);
@@ -2935,7 +2988,7 @@ namespace anm2ed::imgui
                           if (targetType == LAYER)
                             if (auto layer = command_layer_get(document, targetID))
                               document.spritesheet.reference = layer->spritesheetId;
-                        });
+                               });
     };
 
     float playheadLineCenterX{};
@@ -3328,15 +3381,15 @@ namespace anm2ed::imgui
                 if (ImGui::IsKeyDown(ImGuiMod_Alt))
                 {
                   auto targetReference = frameReference;
-                  edit_command_push(EDIT_FRAME_INTERPOLATION, Document::FRAMES,
-                                    [=](Manager&, Document& document)
-                                    {
-                                      auto frame = command_frame_get(document, targetReference);
-                                      if (!frame) return;
-                                      frame->interpolation = frame->interpolation == Interpolation::NONE
-                                                                 ? Interpolation::LINEAR
-                                                                 : Interpolation::NONE;
-                                    });
+                  frames_edit_command_push(EDIT_FRAME_INTERPOLATION, Document::FRAMES, {targetReference},
+                                           [=](Manager&, Document& document)
+                                           {
+                                             auto frame = command_frame_get(document, targetReference);
+                                             if (!frame) return;
+                                             frame->interpolation = frame->interpolation == Interpolation::NONE
+                                                                        ? Interpolation::LINEAR
+                                                                        : Interpolation::NONE;
+                                           });
                 }
 
                 document.frameTime = frameTime;
@@ -3544,7 +3597,7 @@ namespace anm2ed::imgui
         {
           isDraggedFrameSnapshot = true;
           if (draggedFrameType == TRIGGER)
-            snapshot_command_push(EDIT_TRIGGER_AT_FRAME);
+            tracks_snapshot_command_push(EDIT_TRIGGER_AT_FRAME, {item_reference_from_frame_get(draggedFrameReference)});
           else
           {
             std::set<Reference> draggedFrameReferences{};
@@ -4126,7 +4179,6 @@ namespace anm2ed::imgui
       static bool isShortenChordHeld = false;
       auto isShortenFrame = shortcut(manager.chords[SHORTCUT_SHORTEN_FRAME], shortcut::GLOBAL);
 
-      if (isShortenFrame && !isShortenChordHeld) snapshot_command_push(EDIT_SHORTEN_FRAME);
       if (isShortenFrame)
       {
 
@@ -4135,6 +4187,7 @@ namespace anm2ed::imgui
                       [](const Reference& frameReference) { return frameReference.itemType == TRIGGER; });
         if (!selectedFrames.empty())
         {
+          if (!isShortenChordHeld) frames_snapshot_command_push(EDIT_SHORTEN_FRAME, selectedFrames);
           command_push([=](Manager&, Document& document)
                        {
                          for (auto frameReference : selectedFrames)
@@ -4151,7 +4204,6 @@ namespace anm2ed::imgui
 
       static bool isExtendChordHeld = false;
       auto isExtendFrame = shortcut(manager.chords[SHORTCUT_EXTEND_FRAME], shortcut::GLOBAL);
-      if (isExtendFrame && !isExtendChordHeld) snapshot_command_push(EDIT_EXTEND_FRAME);
       if (isExtendFrame)
       {
 
@@ -4160,6 +4212,7 @@ namespace anm2ed::imgui
                       [](const Reference& frameReference) { return frameReference.itemType == TRIGGER; });
         if (!selectedFrames.empty())
         {
+          if (!isExtendChordHeld) frames_snapshot_command_push(EDIT_EXTEND_FRAME, selectedFrames);
           command_push([=](Manager&, Document& document)
                        {
                          for (auto frameReference : selectedFrames)

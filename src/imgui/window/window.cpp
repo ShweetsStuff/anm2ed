@@ -719,6 +719,8 @@ namespace anm2ed::imgui
     auto& selection = document.overlay.selection;
     actions_undo_redo_add(actions, manager, document);
     actions.separator();
+    actions.add(ACTION_PROPERTIES, [&]() { return selection.size() == 1 && (bool)window.properties; },
+                [&]() { window_command_run(window, manager, settings, document, clipboard, window.properties); });
     actions.add(ACTION_OPEN_DIRECTORY, [&]() { return selection.size() == 1 && (bool)window.open; },
                 [&]() { window_command_run(window, manager, settings, document, clipboard, window.open); });
     actions.add(ACTION_SET_FILE_PATH, [&]() { return selection.size() == 1 && (bool)window.path_set; },
@@ -740,7 +742,7 @@ namespace anm2ed::imgui
                   if (settings.fileIsWarnOverwrite)
                   {
                     window.selection2 = selection;
-                    window.popup.open();
+                    window.popup2.open();
                   }
                   else if (window.save)
                     window_command_run(window, manager, settings, document, clipboard, window.save);
@@ -2104,6 +2106,8 @@ namespace anm2ed::imgui
                   return;
                 }
                 if (layerAnimation.type != ElementType::LAYER_ANIMATION) return;
+                auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, layerAnimation.layerId);
+                if (!layer || layer->spritesheetId != spritesheetReference) return;
                 for (auto& frame : layerAnimation.children)
                   if (frame.type == ElementType::FRAME && frame.regionId == id) frame.regionId = -1;
               };
@@ -2734,7 +2738,9 @@ namespace anm2ed::imgui
     window.flags = 0;
     window.isChildPaddingZero = true;
     window.unavailableText = TEXT_SELECT_SPRITESHEET;
-    window.popup = PopupHelper(LABEL_TASKBAR_OVERWRITE_FILE, POPUP_SMALL_NO_HEIGHT);
+    window.editElement = element_make(ElementType::OVERLAY);
+    window.popup = PopupHelper(LABEL_OVERLAY_PROPERTIES, POPUP_SMALL_NO_HEIGHT);
+    window.popup2 = PopupHelper(LABEL_TASKBAR_OVERWRITE_FILE, POPUP_SMALL_NO_HEIGHT);
     window.storage_get = [](Document& document) -> Storage& { return document.overlay; };
     window.is_available = [](Document& document)
     { return document.anm2.element_get(ElementType::SPRITESHEET, document.spritesheet.reference); };
@@ -2755,6 +2761,19 @@ namespace anm2ed::imgui
       auto& selection = document.overlay.selection;
       if (selection.size() != 1 || !window.dialog) return;
       if (auto overlay = document.overlay_get(*selection.begin())) window_directory_open(*window.dialog, document, overlay->path);
+    };
+    window.properties = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
+    {
+      auto spritesheet = document.anm2.element_get(ElementType::SPRITESHEET, document.spritesheet.reference);
+      auto& selection = document.overlay.selection;
+      if (!spritesheet || selection.size() != 1) return;
+      auto id = *selection.begin();
+      if (!element_child_id_get(*spritesheet, ElementType::OVERLAY, id)) return;
+      document.editTarget = Document::EditTarget::OVERLAY;
+      document.overlay.reference = id;
+      document.region.reference = -1;
+      document.region.selection.clear();
+      window.popup.open();
     };
     window.remove = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
     {
@@ -2967,8 +2986,8 @@ namespace anm2ed::imgui
             contextMenuTargetId = id;
           }
           if (scrollTargetId == id) ImGui::SetItemDefaultFocus();
-          if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && window.dialog)
-            window_directory_open(*window.dialog, document, overlay.path);
+          if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && window.properties)
+            window_command_run(window, manager, settings, document, clipboard, window.properties);
 
           auto imageSize = to_imvec2(vec2(overlayChildSize.y));
           auto aspectRatio = texture.size.y != 0 ? (float)texture.size.x / texture.size.y : 1.0f;
@@ -3208,7 +3227,7 @@ namespace anm2ed::imgui
                           if (settings.fileIsWarnOverwrite)
                           {
                             window.selection2 = selection;
-                            window.popup.open();
+                            window.popup2.open();
                           }
                           else if (window.save)
                             window_command_run(window, manager, settings, document, clipboard, window.save);
@@ -3229,10 +3248,93 @@ namespace anm2ed::imgui
         window_command_run(window, manager, settings, document, clipboard, window.paste);
     };
     window.popup_update =
-        [](Window& window, Manager& manager, Settings&, Resources&, Clipboard&, Document&)
+        [](Window& window, Manager& manager, Settings&, Resources&, Clipboard&, Document& document)
     {
       window.popup.trigger();
       if (ImGui::BeginPopupModal(window.popup.label(), &window.popup.isOpen, ImGuiWindowFlags_NoResize))
+      {
+        auto spritesheetReference = document.spritesheet.reference;
+        auto spritesheet = document.anm2.element_get(ElementType::SPRITESHEET, spritesheetReference);
+        auto targetOverlay = document.overlay.reference == -1
+                                 ? nullptr
+                                 : spritesheet ? element_child_id_get(*spritesheet, ElementType::OVERLAY,
+                                                                      document.overlay.reference)
+                                               : nullptr;
+        bool isOverlayInvalid = !spritesheet || !targetOverlay;
+        if (isOverlayInvalid)
+          window.popup.close();
+        else
+        {
+          if (window.popup.isJustOpened) window.editElement = *targetOverlay;
+
+          auto& overlay = window.editElement;
+          auto childSize = child_size_get(4);
+          if (ImGui::BeginChild("##Child", childSize, ImGuiChildFlags_Borders))
+          {
+            ImGui::DragFloat2(localize.get(BASIC_OFFSET), value_ptr(overlay.position), DRAG_SPEED, 0.0f, 0.0f,
+                              math::vec2_format_get(overlay.position));
+
+            int alpha = std::clamp(math::float_to_uint8(overlay.tint.a), 0, 255);
+            if (ImGui::SliderInt(localize.get(BASIC_ALPHA), &alpha, 0, 255))
+              overlay.tint.a = math::uint8_to_float(alpha);
+
+            int drawOrder = overlay.index == OVERLAY_DRAW_ORDER_BELOW ? OVERLAY_DRAW_ORDER_BELOW
+                                                                      : OVERLAY_DRAW_ORDER_ABOVE;
+            ImGui::SeparatorText(localize.get(LABEL_OVERLAY_DRAW_ORDER));
+            ImGui::RadioButton(localize.get(LABEL_OVERLAY_DRAW_ORDER_BELOW), &drawOrder, OVERLAY_DRAW_ORDER_BELOW);
+            ImGui::SameLine();
+            ImGui::RadioButton(localize.get(LABEL_OVERLAY_DRAW_ORDER_ABOVE), &drawOrder, OVERLAY_DRAW_ORDER_ABOVE);
+            overlay.index = drawOrder;
+          }
+          ImGui::EndChild();
+
+          auto widgetSize = widget_size_with_row_get(2);
+
+          shortcut(manager.chords[SHORTCUT_CONFIRM]);
+          if (ImGui::Button(localize.get(BASIC_CONFIRM), widgetSize))
+          {
+            auto editedOverlay = overlay;
+            auto editedReference = document.overlay.reference;
+            auto editedSpritesheetReference = spritesheetReference;
+            manager.command_push({manager.selected, [&window, editedOverlay, editedReference,
+                                                     editedSpritesheetReference](Manager&, Document& document) mutable
+                                  {
+                                    auto spritesheet =
+                                        document.anm2.element_get(ElementType::SPRITESHEET, editedSpritesheetReference);
+                                    if (!spritesheet) return;
+                                    auto target =
+                                        element_child_id_get(*spritesheet, ElementType::OVERLAY, editedReference);
+                                    if (!target) return;
+
+                                    auto set = [&]()
+                                    {
+                                      target->position = editedOverlay.position;
+                                      target->tint.a = editedOverlay.tint.a;
+                                      target->index = editedOverlay.index == OVERLAY_DRAW_ORDER_BELOW
+                                                          ? OVERLAY_DRAW_ORDER_BELOW
+                                                          : OVERLAY_DRAW_ORDER_ABOVE;
+                                      document.overlay.reference = editedReference;
+                                      document.overlay.selection = {editedReference};
+                                      document.editTarget = Document::EditTarget::OVERLAY;
+                                    };
+
+                                    window_edit(window, document, localize.get(EDIT_SET_OVERLAY_PROPERTIES), set);
+                                  }});
+            window.popup.close();
+          }
+
+          ImGui::SameLine();
+
+          shortcut(manager.chords[SHORTCUT_CANCEL]);
+          if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize)) window.popup.close();
+        }
+
+        ImGui::EndPopup();
+      }
+      window.popup.end();
+
+      window.popup2.trigger();
+      if (ImGui::BeginPopupModal(window.popup2.label(), &window.popup2.isOpen, ImGuiWindowFlags_NoResize))
       {
         ImGui::TextUnformatted(localize.get(LABEL_OVERWRITE_CONFIRMATION));
 
@@ -3244,7 +3346,7 @@ namespace anm2ed::imgui
           manager.command_push({manager.selected, [queuedSelection](Manager&, Document& document) mutable
                                 { window_overlays_save(document, queuedSelection); }});
           window.selection2.clear();
-          window.popup.close();
+          window.popup2.close();
         }
 
         ImGui::SameLine();
@@ -3252,12 +3354,12 @@ namespace anm2ed::imgui
         if (ImGui::Button(localize.get(BASIC_NO), widgetSize))
         {
           window.selection2.clear();
-          window.popup.close();
+          window.popup2.close();
         }
 
         ImGui::EndPopup();
       }
-      window.popup.end();
+      window.popup2.end();
     };
     return window;
   }

@@ -142,6 +142,7 @@ namespace anm2ed
 
     Snapshot* get();
     void anm2_push(const Snapshot&, const std::string&);
+    void tracks_push(const Snapshot&, const std::string&, const std::set<Reference>&);
     void frames_push(const Snapshot&, const std::string&, const std::set<Reference>&);
     void regions_push(const Snapshot&, const std::string&, int, const std::set<int>&);
     void textures_push(const Snapshot&, const std::string&);

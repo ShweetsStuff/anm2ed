@@ -110,6 +110,16 @@ namespace anm2ed
   inline constexpr int APPEND_RIGHT = (int)SpritesheetMergeOrigin::APPEND_RIGHT;
   inline constexpr int APPEND_BOTTOM = (int)SpritesheetMergeOrigin::APPEND_BOTTOM;
 
+  enum class OverlayDrawOrder
+  {
+    BELOW,
+    ABOVE,
+    COUNT
+  };
+
+  inline constexpr int OVERLAY_DRAW_ORDER_BELOW = (int)OverlayDrawOrder::BELOW;
+  inline constexpr int OVERLAY_DRAW_ORDER_ABOVE = (int)OverlayDrawOrder::ABOVE;
+
   inline const glm::vec4 ROOT_COLOR = glm::vec4(0.140f, 0.310f, 0.560f, 1.000f);
   inline const glm::vec4 ROOT_COLOR_ACTIVE = glm::vec4(0.240f, 0.520f, 0.880f, 1.000f);
   inline const glm::vec4 ROOT_COLOR_HOVERED = glm::vec4(0.320f, 0.640f, 1.000f, 1.000f);

@@ -173,6 +173,17 @@ namespace anm2ed::snapshots
     return path;
   }
 
+  std::optional<std::vector<int>> track_path_get(const Anm2& anm2, Reference trackReference)
+  {
+    trackReference.frameIndex = -1;
+    auto track = anm2.element_get(trackReference);
+    if (!track) return std::nullopt;
+
+    std::vector<int> path{};
+    if (!element_path_get(anm2.root, track, path)) return std::nullopt;
+    return path;
+  }
+
   std::optional<std::vector<int>> region_path_get(const Anm2& anm2, int spritesheetId, int regionId)
   {
     auto spritesheet = anm2.element_get(ElementType::SPRITESHEET, spritesheetId);
@@ -206,6 +217,20 @@ namespace anm2ed::snapshots
     step.anm2.elements.push_back({{}, snapshot.anm2.root, {}});
     step_state_seed(step, snapshot);
     return step;
+  }
+
+  void tracks_step_add(SnapshotStep& step, const Snapshot& snapshot, Reference trackReference)
+  {
+    trackReference.frameIndex = -1;
+    auto path = track_path_get(snapshot.anm2, trackReference);
+    if (!path) return;
+    for (auto& elementStep : step.anm2.elements)
+      if (elementStep.path == *path) return;
+
+    auto track = snapshot.anm2.element_get(trackReference);
+    if (!track) return;
+
+    step.anm2.elements.push_back({std::move(*path), *track, {}});
   }
 
   void frames_step_add(SnapshotStep& step, const Snapshot& snapshot, Reference frameReference)
@@ -244,6 +269,13 @@ namespace anm2ed::snapshots
     std::vector<int> path{};
     element_steps_build(step.elements, before.root, after.root, path);
     return step;
+  }
+
+  bool is_anm2_step_seeded(const SnapshotStep& step)
+  {
+    return step.anm2.elements.size() == 1 && step.anm2.elements.front().path.empty() &&
+           step.anm2.elements.front().redo.type == ElementType::UNKNOWN &&
+           step.anm2.elements.front().redo.children.empty();
   }
 
 }
@@ -335,6 +367,18 @@ namespace anm2ed
     pendingStep = snapshots::step_anm2_seed(snapshot, message);
   }
 
+  void Snapshots::tracks_push(const Snapshot& snapshot, const std::string& message,
+                              const std::set<Reference>& trackReferences)
+  {
+    SnapshotStep step{};
+    step.message = message;
+    for (auto trackReference : trackReferences)
+      snapshots::tracks_step_add(step, snapshot, trackReference);
+    snapshots::step_state_seed(step, snapshot);
+
+    pendingStep = step.is_empty() ? std::nullopt : std::optional<SnapshotStep>(std::move(step));
+  }
+
   void Snapshots::frames_push(const Snapshot& snapshot, const std::string& message,
                               const std::set<Reference>& frameReferences)
   {
@@ -378,6 +422,14 @@ namespace anm2ed
 
     auto step = std::move(*pendingStep);
     pendingStep.reset();
+
+    if (snapshots::is_anm2_step_seeded(step))
+    {
+      Anm2 before{};
+      before.isValid = step.anm2.isValid ? step.anm2.isValid->undo : snapshot.anm2.isValid;
+      before.root = std::move(step.anm2.elements.front().undo);
+      step.anm2 = snapshots::anm2_step_make(before, snapshot.anm2);
+    }
 
     if (step.anm2.isValid)
     {
