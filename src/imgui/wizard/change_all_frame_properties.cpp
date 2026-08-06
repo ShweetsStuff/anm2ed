@@ -283,7 +283,7 @@ namespace anm2ed::imgui::wizard
                  "##Tint A", localize.get(BASIC_TINT), isTintR, isTintG, isTintB, isTintA, tint);
 
     color3_value("##Is Color Offset R", "##Is Color Offset G", "##Is Color Offset B", "##Color Offset R",
-                 "##Color Offset B", "##Color Offset G", localize.get(BASIC_COLOR_OFFSET), isColorOffsetR,
+                 "##Color Offset G", "##Color Offset B", localize.get(BASIC_COLOR_OFFSET), isColorOffsetR,
                  isColorOffsetG, isColorOffsetB, colorOffset);
 
     ImGui::BeginDisabled(!isLayerPropertyAvailable);
@@ -334,6 +334,12 @@ namespace anm2ed::imgui::wizard
 
     auto frame_change = [&](ChangeType changeType)
     {
+      auto color_value_get = [&](float value)
+      {
+        if (changeType == ChangeType::MULTIPLY || changeType == ChangeType::DIVIDE) return (float)float_to_uint8(value);
+        return value;
+      };
+
       FrameChange frameChange;
       if (isCropX) frameChange.cropX = crop.x;
       if (isCropY) frameChange.cropY = crop.y;
@@ -348,13 +354,13 @@ namespace anm2ed::imgui::wizard
       if (isRotation) frameChange.rotation = std::make_optional(rotation);
       if (isDuration) frameChange.duration = std::make_optional(duration);
       if (isRegion) frameChange.regionId = std::make_optional(regionId);
-      if (isTintR) frameChange.tintR = tint.r;
-      if (isTintG) frameChange.tintG = tint.g;
-      if (isTintB) frameChange.tintB = tint.b;
-      if (isTintA) frameChange.tintA = tint.a;
-      if (isColorOffsetR) frameChange.colorOffsetR = colorOffset.r;
-      if (isColorOffsetG) frameChange.colorOffsetG = colorOffset.g;
-      if (isColorOffsetB) frameChange.colorOffsetB = colorOffset.b;
+      if (isTintR) frameChange.tintR = color_value_get(tint.r);
+      if (isTintG) frameChange.tintG = color_value_get(tint.g);
+      if (isTintB) frameChange.tintB = color_value_get(tint.b);
+      if (isTintA) frameChange.tintA = color_value_get(tint.a);
+      if (isColorOffsetR) frameChange.colorOffsetR = color_value_get(colorOffset.r);
+      if (isColorOffsetG) frameChange.colorOffsetG = color_value_get(colorOffset.g);
+      if (isColorOffsetB) frameChange.colorOffsetB = color_value_get(colorOffset.b);
       if (isVisibleSet) frameChange.isVisible = std::make_optional(isVisible);
       if (isInterpolationSet) frameChange.interpolation = std::make_optional(static_cast<Interpolation>(interpolation));
       if (isFlipXSet) frameChange.isFlipX = std::make_optional(isFlipX);

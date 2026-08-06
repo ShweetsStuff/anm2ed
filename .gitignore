@@ -9,4 +9,5 @@ cmake-build-debug/
 .vs/
 .idea/
 .codex
+compile_commands.json
 AGENTS.md

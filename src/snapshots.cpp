@@ -364,12 +364,14 @@ namespace anm2ed
 
   void Snapshots::anm2_push(const Snapshot& snapshot, const std::string& message)
   {
+    if (pendingStep) commit(snapshot);
     pendingStep = snapshots::step_anm2_seed(snapshot, message);
   }
 
   void Snapshots::tracks_push(const Snapshot& snapshot, const std::string& message,
                               const std::set<Reference>& trackReferences)
   {
+    if (pendingStep) commit(snapshot);
     SnapshotStep step{};
     step.message = message;
     for (auto trackReference : trackReferences)
@@ -382,6 +384,7 @@ namespace anm2ed
   void Snapshots::frames_push(const Snapshot& snapshot, const std::string& message,
                               const std::set<Reference>& frameReferences)
   {
+    if (pendingStep) commit(snapshot);
     SnapshotStep step{};
     step.message = message;
     for (auto frameReference : frameReferences)
@@ -393,6 +396,7 @@ namespace anm2ed
   void Snapshots::regions_push(const Snapshot& snapshot, const std::string& message, int spritesheetId,
                                const std::set<int>& regionIds)
   {
+    if (pendingStep) commit(snapshot);
     SnapshotStep step{};
     step.message = message;
     for (auto regionId : regionIds)
@@ -403,6 +407,7 @@ namespace anm2ed
 
   void Snapshots::textures_push(const Snapshot& snapshot, const std::string& message)
   {
+    if (pendingStep) commit(snapshot);
     SnapshotStep step{};
     step.message = message;
     snapshots::step_textures_seed(step, snapshot);
@@ -411,6 +416,7 @@ namespace anm2ed
 
   void Snapshots::anm2_textures_push(const Snapshot& snapshot, const std::string& message)
   {
+    if (pendingStep) commit(snapshot);
     auto step = snapshots::step_anm2_seed(snapshot, message);
     snapshots::step_textures_seed(step, snapshot);
     pendingStep = std::move(step);
