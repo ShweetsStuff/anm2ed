@@ -1938,10 +1938,13 @@ namespace anm2ed::imgui
 
                          std::set<Reference> pastedSelection{};
                          for (auto i : indices)
-                           pastedSelection.insert(
-                               {targetReference.animationIndex, targetReference.itemType, targetReference.itemID, i});
-                         document.reference = {targetReference.animationIndex, targetReference.itemType,
-                                               targetReference.itemID, *indices.begin()};
+                         {
+                           auto pastedReference = targetReference;
+                           pastedReference.frameIndex = i;
+                           pastedSelection.insert(pastedReference);
+                         }
+                         document.reference = targetReference;
+                         document.reference.frameIndex = *indices.begin();
                          document.frame_references_set(std::move(pastedSelection));
                          document.anm2_change(Document::FRAMES);
                        }
