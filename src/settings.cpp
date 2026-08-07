@@ -111,12 +111,6 @@ Size=563,353
 Collapsed=0
 DockId=0x00000014,1
 
-[Window][###Overlays]
-Pos=1347,369
-Size=563,353
-Collapsed=0
-DockId=0x00000014,2
-
 [Table][0xE5891919,5]
 Column 0  Weight=1.3608
 Column 1  Weight=0.8522

@@ -311,41 +311,6 @@ namespace anm2ed::document
     return ids;
   }
 
-  std::vector<std::string> overlay_labels_get(const Element* spritesheet)
-  {
-    std::vector<std::string> labels{};
-    if (!spritesheet) return labels;
-    for (auto& overlay : spritesheet->children)
-      if (overlay.type == ElementType::OVERLAY)
-      {
-        auto pathString = path::to_utf8(overlay.path);
-        labels.emplace_back(std::vformat(localize.get(FORMAT_OVERLAY), std::make_format_args(overlay.id, pathString)));
-      }
-    return labels;
-  }
-
-  std::vector<int> overlay_ids_get(const Element* spritesheet)
-  {
-    std::vector<int> ids{};
-    if (!spritesheet) return ids;
-    for (auto& overlay : spritesheet->children)
-      if (overlay.type == ElementType::OVERLAY) ids.emplace_back(overlay.id);
-    return ids;
-  }
-
-  int overlay_next_id_get(const Anm2& data)
-  {
-    int nextId{};
-    if (auto spritesheets = data.element_get(ElementType::SPRITESHEETS))
-      for (auto& spritesheet : spritesheets->children)
-      {
-        if (spritesheet.type != ElementType::SPRITESHEET) continue;
-        for (auto& overlay : spritesheet.children)
-          if (overlay.type == ElementType::OVERLAY) nextId = std::max(nextId, overlay.id + 1);
-      }
-    return nextId;
-  }
-
   std::vector<std::string> sound_labels_get(const Anm2& data)
   {
     std::vector<std::string> labels{localize.get(BASIC_NONE)};
@@ -552,20 +517,18 @@ namespace anm2ed
   Document::Document(Document&& other) noexcept
       : path(std::move(other.path)), tabId(other.tabId), snapshots(std::move(other.snapshots)), current(snapshots.current),
         playback(current.playback), animation(current.animation), event(current.event), frames(current.frames),
-        items(current.items), layer(current.layer), merge(current.merge), null(current.null), overlay(current.overlay),
-        region(current.region), sound(current.sound), spritesheet(current.spritesheet), textures(current.textures),
-        overlayTextures(current.overlayTextures), sounds(current.sounds), anm2(current.anm2),
-        reference(current.reference), groupReferences(current.groupReferences),
+        items(current.items), layer(current.layer), merge(current.merge), null(current.null), region(current.region),
+        sound(current.sound), spritesheet(current.spritesheet), textures(current.textures), sounds(current.sounds),
+        anm2(current.anm2), reference(current.reference), groupReferences(current.groupReferences),
         frameTime(current.frameTime), message(current.message), regionBySpritesheet(std::move(other.regionBySpritesheet)),
         changeAllFramePropertiesRegionId(other.changeAllFramePropertiesRegionId), previewZoom(other.previewZoom),
         previewPan(other.previewPan), editorPan(other.editorPan), editorZoom(other.editorZoom),
-        overlayIndex(other.overlayIndex), hash(other.hash), saveHash(other.saveHash), autosaveHash(other.autosaveHash),
+        overlayIndex(other.overlayIndex), overlayDocumentId(other.overlayDocumentId), hash(other.hash),
+        saveHash(other.saveHash), autosaveHash(other.autosaveHash),
         lastAutosaveTime(other.lastAutosaveTime), isValid(other.isValid), isOpen(other.isOpen),
         isForceDirty(other.isForceDirty), spritesheetHashes(std::move(other.spritesheetHashes)),
-        spritesheetSaveHashes(std::move(other.spritesheetSaveHashes)), overlayHashes(std::move(other.overlayHashes)),
-        overlaySaveHashes(std::move(other.overlaySaveHashes)), texturePaths(std::move(other.texturePaths)),
-        overlayTexturePaths(std::move(other.overlayTexturePaths)), soundPaths(std::move(other.soundPaths)),
-        shaderVertexPaths(std::move(other.shaderVertexPaths)),
+        spritesheetSaveHashes(std::move(other.spritesheetSaveHashes)), texturePaths(std::move(other.texturePaths)),
+        soundPaths(std::move(other.soundPaths)), shaderVertexPaths(std::move(other.shaderVertexPaths)),
         shaderFragmentPaths(std::move(other.shaderFragmentPaths)), shaders(std::move(other.shaders)),
         isAnimationPreviewSet(other.isAnimationPreviewSet), isSpritesheetEditorSet(other.isSpritesheetEditorSet),
         editTarget(other.editTarget)
@@ -655,13 +618,6 @@ namespace anm2ed
     change(SPRITESHEETS);
   }
 
-  void Document::overlay_texture_change(int id)
-  {
-    auto texture = overlay_texture_get(id);
-    if (!texture || !overlay_get(id)) return;
-    change(SPRITESHEETS);
-  }
-
   bool Document::texture_reload(int id)
   {
     auto spritesheet = anm2.element_get(ElementType::SPRITESHEET, id);
@@ -670,17 +626,6 @@ namespace anm2ed
     util::WorkingDirectory workingDirectory(directory_get());
     textures[id] = resource::Texture(path::case_insensitive_find(spritesheet->path));
     texturePaths[id] = spritesheet->path;
-    return true;
-  }
-
-  bool Document::overlay_texture_reload(int id)
-  {
-    auto overlay = overlay_get(id);
-    if (!overlay) return false;
-
-    util::WorkingDirectory workingDirectory(directory_get());
-    overlayTextures[id] = resource::Texture(path::case_insensitive_find(overlay->path));
-    overlayTexturePaths[id] = overlay->path;
     return true;
   }
 
@@ -759,7 +704,6 @@ namespace anm2ed
     if (type == ALL || type == SPRITESHEETS || type == TEXTURES)
     {
       std::set<int> validIds{};
-      std::set<int> validOverlayIds{};
       util::WorkingDirectory workingDirectory(directory_get());
       if (auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS))
         for (auto& spritesheet : spritesheets->children)
@@ -772,19 +716,6 @@ namespace anm2ed
           {
             textures[spritesheet.id] = resource::Texture(path::case_insensitive_find(spritesheet.path));
             texturePaths[spritesheet.id] = spritesheet.path;
-          }
-
-          for (auto& overlay : spritesheet.children)
-          {
-            if (overlay.type != ElementType::OVERLAY) continue;
-            validOverlayIds.insert(overlay.id);
-            auto isOverlayReload = !overlayTextures.contains(overlay.id) || !overlayTexturePaths.contains(overlay.id) ||
-                                   overlayTexturePaths.at(overlay.id) != overlay.path;
-            if (isOverlayReload)
-            {
-              overlayTextures[overlay.id] = resource::Texture(path::case_insensitive_find(overlay.path));
-              overlayTexturePaths[overlay.id] = overlay.path;
-            }
           }
 
           auto shaderElement = document::shader_element_get(spritesheet);
@@ -813,17 +744,6 @@ namespace anm2ed
         {
           texturePaths.erase(it->first);
           it = textures.erase(it);
-        }
-        else
-          ++it;
-      }
-
-      for (auto it = overlayTextures.begin(); it != overlayTextures.end();)
-      {
-        if (!validOverlayIds.contains(it->first))
-        {
-          overlayTexturePaths.erase(it->first);
-          it = overlayTextures.erase(it);
         }
         else
           ++it;
@@ -883,18 +803,6 @@ namespace anm2ed
   {
     auto it = textures.find(id);
     return it == textures.end() ? nullptr : &it->second;
-  }
-
-  resource::Texture* Document::overlay_texture_get(int id)
-  {
-    auto it = overlayTextures.find(id);
-    return it == overlayTextures.end() ? nullptr : &it->second;
-  }
-
-  const resource::Texture* Document::overlay_texture_get(int id) const
-  {
-    auto it = overlayTextures.find(id);
-    return it == overlayTextures.end() ? nullptr : &it->second;
   }
 
   resource::Audio* Document::sound_get(int id)
@@ -1912,7 +1820,6 @@ namespace anm2ed
   {
     spritesheetHashes.clear();
     spritesheetSaveHashes.clear();
-    overlay_hashes_reset();
     if (auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS))
       for (auto& spritesheet : spritesheets->children)
         if (spritesheet.type == ElementType::SPRITESHEET)
@@ -1956,65 +1863,6 @@ namespace anm2ed
         }
   }
 
-  void Document::overlay_hashes_reset()
-  {
-    overlayHashes.clear();
-    overlaySaveHashes.clear();
-    if (auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS))
-      for (auto& spritesheet : spritesheets->children)
-      {
-        if (spritesheet.type != ElementType::SPRITESHEET) continue;
-        for (auto& overlay : spritesheet.children)
-          if (overlay.type == ElementType::OVERLAY)
-          {
-            auto currentHash = document::spritesheet_hash_get(overlay, overlay_texture_get(overlay.id));
-            overlayHashes[overlay.id] = currentHash;
-            overlaySaveHashes[overlay.id] = currentHash;
-          }
-      }
-  }
-
-  void Document::overlay_hashes_sync()
-  {
-    std::set<int> validIds{};
-    if (auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS))
-      for (auto& spritesheet : spritesheets->children)
-      {
-        if (spritesheet.type != ElementType::SPRITESHEET) continue;
-        for (auto& overlay : spritesheet.children)
-          if (overlay.type == ElementType::OVERLAY) validIds.insert(overlay.id);
-      }
-
-    for (auto it = overlayHashes.begin(); it != overlayHashes.end();)
-    {
-      if (!validIds.contains(it->first))
-        it = overlayHashes.erase(it);
-      else
-        ++it;
-    }
-
-    for (auto it = overlaySaveHashes.begin(); it != overlaySaveHashes.end();)
-    {
-      if (!validIds.contains(it->first))
-        it = overlaySaveHashes.erase(it);
-      else
-        ++it;
-    }
-
-    if (auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS))
-      for (auto& spritesheet : spritesheets->children)
-      {
-        if (spritesheet.type != ElementType::SPRITESHEET) continue;
-        for (auto& overlay : spritesheet.children)
-          if (overlay.type == ElementType::OVERLAY)
-          {
-            auto currentHash = document::spritesheet_hash_get(overlay, overlay_texture_get(overlay.id));
-            overlayHashes[overlay.id] = currentHash;
-            if (!overlaySaveHashes.contains(overlay.id)) overlaySaveHashes[overlay.id] = currentHash;
-          }
-      }
-  }
-
   void Document::change(ChangeType type)
   {
     hash_set();
@@ -2033,12 +1881,6 @@ namespace anm2ed
     {
       spritesheet.labels_set(document::spritesheet_labels_get(anm2), document::spritesheet_ids_get(anm2));
       spritesheet_hashes_sync();
-      if (auto currentSpritesheet = anm2.element_get(ElementType::SPRITESHEET, spritesheet.reference))
-        overlay.labels_set(document::overlay_labels_get(currentSpritesheet),
-                           document::overlay_ids_get(currentSpritesheet));
-      else
-        overlay.labels_set({}, {});
-      overlay_hashes_sync();
     };
 
     auto sounds_set = [&]() { sound.labels_set(document::sound_labels_get(anm2), document::sound_ids_get(anm2)); };
@@ -2129,45 +1971,6 @@ namespace anm2ed
     if (auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS))
       for (auto& spritesheet : spritesheets->children)
         if (spritesheet.type == ElementType::SPRITESHEET && spritesheet_is_dirty(spritesheet.id)) return true;
-    return false;
-  }
-
-  void Document::overlay_hash_update(int id)
-  {
-    auto overlay = overlay_get(id);
-    if (!overlay) return;
-    assets_sync(TEXTURES);
-    overlayHashes[id] = document::spritesheet_hash_get(*overlay, overlay_texture_get(id));
-  }
-
-  void Document::overlay_hash_set_saved(int id)
-  {
-    auto overlay = overlay_get(id);
-    if (!overlay) return;
-    assets_sync(TEXTURES);
-    auto currentHash = document::spritesheet_hash_get(*overlay, overlay_texture_get(id));
-    overlayHashes[id] = currentHash;
-    overlaySaveHashes[id] = currentHash;
-  }
-
-  bool Document::overlay_is_dirty(int id)
-  {
-    if (!overlay_get(id)) return false;
-    if (!overlayHashes.contains(id)) overlay_hash_update(id);
-    auto saveIt = overlaySaveHashes.find(id);
-    if (saveIt == overlaySaveHashes.end()) return false;
-    return overlayHashes.at(id) != saveIt->second;
-  }
-
-  bool Document::overlay_any_dirty()
-  {
-    if (auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS))
-      for (auto& spritesheet : spritesheets->children)
-      {
-        if (spritesheet.type != ElementType::SPRITESHEET) continue;
-        for (auto& overlay : spritesheet.children)
-          if (overlay.type == ElementType::OVERLAY && overlay_is_dirty(overlay.id)) return true;
-      }
     return false;
   }
 
@@ -2367,41 +2170,6 @@ namespace anm2ed
   Element* Document::animation_get() { return anm2.element_get(ElementType::ANIMATION, reference.animationIndex); }
   Element* Document::spritesheet_get() { return anm2.element_get(ElementType::SPRITESHEET, spritesheet.reference); }
 
-  Element* Document::overlay_get(int id)
-  {
-    if (id == -1) id = overlay.reference;
-    if (auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS))
-      for (auto& spritesheet : spritesheets->children)
-      {
-        if (spritesheet.type != ElementType::SPRITESHEET) continue;
-        if (auto overlay = element_child_id_get(spritesheet, ElementType::OVERLAY, id)) return overlay;
-      }
-    return nullptr;
-  }
-
-  const Element* Document::overlay_get(int id) const
-  {
-    if (id == -1) id = overlay.reference;
-    if (auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS))
-      for (auto& spritesheet : spritesheets->children)
-      {
-        if (spritesheet.type != ElementType::SPRITESHEET) continue;
-        if (auto overlay = element_child_id_get(spritesheet, ElementType::OVERLAY, id)) return overlay;
-      }
-    return nullptr;
-  }
-
-  int Document::overlay_spritesheet_id_get(int id) const
-  {
-    if (auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS))
-      for (auto& spritesheet : spritesheets->children)
-      {
-        if (spritesheet.type != ElementType::SPRITESHEET) continue;
-        if (element_child_id_get(spritesheet, ElementType::OVERLAY, id)) return spritesheet.id;
-      }
-    return -1;
-  }
-
   void Document::spritesheet_add(const std::filesystem::path& path)
   {
     spritesheets_add({path});
@@ -2463,71 +2231,6 @@ namespace anm2ed
                                std::make_format_args(id, pathString)));
     }
     this->spritesheet.selection = added;
-    change(Document::SPRITESHEETS);
-  }
-
-  void Document::overlay_add(int spritesheetId, const std::filesystem::path& path)
-  {
-    overlays_add(spritesheetId, {path});
-  }
-
-  void Document::overlays_add(int spritesheetId, const std::vector<std::filesystem::path>& paths)
-  {
-    struct LoadedOverlay
-    {
-      std::filesystem::path relativePath{};
-      resource::Texture texture{};
-    };
-
-    auto spritesheet = anm2.element_get(ElementType::SPRITESHEET, spritesheetId);
-    if (!spritesheet) return;
-    auto directory = directory_get();
-
-    std::vector<LoadedOverlay> loaded{};
-    for (auto& path : paths)
-    {
-      auto pathCopy = path;
-      auto storagePath = path::backslash_handle(pathCopy);
-      std::optional<WorkingDirectory> workingDirectory{};
-      if (!storagePath.is_absolute()) workingDirectory.emplace(directory);
-      auto loadPath = path::case_insensitive_find(storagePath);
-      auto texture = resource::Texture(loadPath);
-      if (!texture.is_valid())
-      {
-        auto pathUtf8 = path::to_utf8(pathCopy);
-        toasts.push(std::vformat(localize.get(TOAST_OVERLAY_INIT_FAILED), std::make_format_args(pathUtf8)));
-        logger.error(std::vformat(localize.get(TOAST_OVERLAY_INIT_FAILED, anm2ed::ENGLISH),
-                                  std::make_format_args(pathUtf8)));
-        continue;
-      }
-
-      loaded.push_back({.relativePath = path::backslash_replace(path::make_relative(storagePath, directory)),
-                        .texture = std::move(texture)});
-    }
-    if (loaded.empty()) return;
-
-    anm2_snapshot(localize.get(EDIT_ADD_OVERLAY));
-
-    std::set<int> added{};
-    for (auto& loadedOverlay : loaded)
-    {
-      auto id = document::overlay_next_id_get(anm2);
-      auto overlayElement = element_make(ElementType::OVERLAY);
-      overlayElement.id = id;
-      overlayElement.path = loadedOverlay.relativePath;
-      auto pathString = path::to_utf8(overlayElement.path);
-      spritesheet->children.push_back(overlayElement);
-      overlayTextures[id] = std::move(loadedOverlay.texture);
-      overlayTexturePaths[id] = overlayElement.path;
-      added.insert(id);
-      overlay.reference = id;
-      overlay_hash_set_saved(id);
-      toasts.push(std::vformat(localize.get(TOAST_OVERLAY_INITIALIZED), std::make_format_args(id, pathString)));
-      logger.info(std::vformat(localize.get(TOAST_OVERLAY_INITIALIZED, anm2ed::ENGLISH),
-                               std::make_format_args(id, pathString)));
-    }
-    overlay.selection = added;
-    editTarget = Document::EditTarget::OVERLAY;
     change(Document::SPRITESHEETS);
   }
 

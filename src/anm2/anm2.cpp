@@ -95,10 +95,9 @@ namespace anm2ed
       "", "", "EaseIn", "EaseOut", "EaseInOut"};
 
   constexpr std::array<std::string_view, (std::size_t)Origin::COUNT> ORIGIN_VALUES = {"", "TopLeft", "Center"};
-  constexpr std::array<std::string_view, (std::size_t)OverlayDrawOrder::COUNT> OVERLAY_DRAW_ORDER_VALUES = {"Below",
-                                                                                                            "Above"};
   constexpr std::string_view ANM2ED_GROUP_FRAME_BACKUP_TAG = "FrameRestore";
   constexpr std::string_view SOURCE_DOCUMENT_TAG = "SourceDocument";
+  constexpr std::string_view LEGACY_OVERLAY_TAG = "Overlay";
 
   void group_metadata_embed(Element&);
   void group_metadata_extract(Element&, Flags);
@@ -234,7 +233,6 @@ namespace anm2ed
     Element element{};
     element.type = type;
     element.tag = std::string(element_tag_get(type));
-    if (type == ElementType::OVERLAY) element.index = OVERLAY_DRAW_ORDER_ABOVE;
     return element;
   }
 
@@ -454,29 +452,6 @@ namespace anm2ed
 
   int color_write(float value) { return math::float_to_uint8(value); }
 
-  int overlay_draw_order_get(const Element& element)
-  {
-    return element.index == OVERLAY_DRAW_ORDER_BELOW ? OVERLAY_DRAW_ORDER_BELOW : OVERLAY_DRAW_ORDER_ABOVE;
-  }
-
-  void overlay_draw_order_read(Element& out, const XMLElement* element)
-  {
-    if (out.type != ElementType::OVERLAY) return;
-    out.index = OVERLAY_DRAW_ORDER_ABOVE;
-    if (element)
-    {
-      element->QueryFloatAttribute("XOffset", &out.position.x);
-      element->QueryFloatAttribute("YOffset", &out.position.y);
-    }
-    out.tint.a = color_read(element, "Alpha", out.tint.a);
-
-    auto value = element ? element->Attribute("DrawOrder") : nullptr;
-    if (!value) return;
-
-    for (std::size_t i = 0; i < OVERLAY_DRAW_ORDER_VALUES.size(); ++i)
-      if (OVERLAY_DRAW_ORDER_VALUES[i] == value) out.index = (int)i;
-  }
-
   Interpolation interpolation_read(const XMLElement* element, const char* attribute)
   {
     bool isFallback{};
@@ -552,7 +527,6 @@ namespace anm2ed
 
     out.interpolation = interpolation_read(element);
     out.origin = origin_read(element);
-    overlay_draw_order_read(out, element);
     if (out.type == ElementType::REGION && out.origin == Origin::TOP_LEFT) out.pivot = {};
     if (out.type == ElementType::REGION && out.origin == Origin::CENTER) out.pivot = out.size * 0.5f;
   }
@@ -578,7 +552,14 @@ namespace anm2ed
     auto child = element->FirstChildElement();
     while (child)
     {
-      auto childType = element_type_get(child->Name() ? child->Name() : "");
+      auto childName = std::string_view(child->Name() ? child->Name() : "");
+      if (childName == LEGACY_OVERLAY_TAG)
+      {
+        child = child->NextSiblingElement();
+        continue;
+      }
+
+      auto childType = element_type_get(childName);
       if (childType == ElementType::FRAME && is_track(out))
       {
         Interpolation bakeInterpolation{};
@@ -647,8 +628,8 @@ namespace anm2ed
   bool element_write_skip(const Element& element, ElementType parentType, Flags flags)
   {
     if (!is_track_child_valid(parentType, element.type)) return true;
-    if ((element.type == ElementType::OVERLAY || element.type == ElementType::SHADER ||
-         element.type == ElementType::UNIFORM || element.type == ElementType::COMPONENT) &&
+    if ((element.type == ElementType::SHADER || element.type == ElementType::UNIFORM ||
+         element.type == ElementType::COMPONENT) &&
         !has_flag(flags, SERIALIZE_EXTENSIONS))
       return true;
     if (element.type == ElementType::SOUNDS && (!has_flag(flags, SERIALIZE_SOUNDS) || element.children.empty()))
@@ -709,22 +690,10 @@ namespace anm2ed
     }
     else if (element.type == ElementType::ANIMATIONS)
       out->SetAttribute("DefaultAnimation", element.defaultAnimation.c_str());
-    else if (element.type == ElementType::SPRITESHEET || element.type == ElementType::OVERLAY)
+    else if (element.type == ElementType::SPRITESHEET)
     {
       out->SetAttribute("Id", element.id);
       path_set(out, "Path", element.path);
-      if (element.type == ElementType::OVERLAY)
-      {
-        if (!element.isVisible) out->SetAttribute("Visible", element.isVisible);
-        if (element.position != glm::vec2())
-        {
-          out->SetAttribute("XOffset", element.position.x);
-          out->SetAttribute("YOffset", element.position.y);
-        }
-        if (color_write(element.tint.a) != 255) out->SetAttribute("Alpha", color_write(element.tint.a));
-        if (overlay_draw_order_get(element) == OVERLAY_DRAW_ORDER_BELOW)
-          out->SetAttribute("DrawOrder", OVERLAY_DRAW_ORDER_VALUES[OVERLAY_DRAW_ORDER_BELOW].data());
-      }
     }
     else if (element.type == ElementType::SHADER)
     {
@@ -1047,23 +1016,10 @@ namespace anm2ed
     }
     else if (element.type == ElementType::ANIMATIONS)
       hash_attr_append(hash, "DefaultAnimation", element.defaultAnimation);
-    else if (element.type == ElementType::SPRITESHEET || element.type == ElementType::OVERLAY)
+    else if (element.type == ElementType::SPRITESHEET)
     {
       hash_attr_append(hash, "Id", element.id);
       hash_path_attr_append(hash, "Path", element.path);
-      if (element.type == ElementType::OVERLAY && !element.isVisible)
-        hash_attr_append(hash, "Visible", element.isVisible);
-      if (element.type == ElementType::OVERLAY)
-      {
-        if (element.position != glm::vec2())
-        {
-          hash_attr_append(hash, "XOffset", element.position.x);
-          hash_attr_append(hash, "YOffset", element.position.y);
-        }
-        if (color_write(element.tint.a) != 255) hash_attr_append(hash, "Alpha", color_write(element.tint.a));
-        if (overlay_draw_order_get(element) == OVERLAY_DRAW_ORDER_BELOW)
-          hash_attr_append(hash, "DrawOrder", OVERLAY_DRAW_ORDER_VALUES[OVERLAY_DRAW_ORDER_BELOW]);
-      }
     }
     else if (element.type == ElementType::SHADER)
     {

@@ -181,7 +181,7 @@ namespace anm2ed::imgui
         {
           auto& document = manager.documents[i];
           auto isDocumentDirty = document.is_dirty() || document.isForceDirty;
-          auto isSpritesheetDirty = document.spritesheet_any_dirty() || document.overlay_any_dirty();
+          auto isSpritesheetDirty = document.spritesheet_any_dirty();
           auto isDirty = isDocumentDirty || isSpritesheetDirty;
 
           if (!closePopup.is_open())
@@ -278,7 +278,7 @@ namespace anm2ed::imgui
 
           auto filename = path::to_utf8(closeDocument.filename_get());
           auto isDocumentDirty = closeDocument.is_dirty() || closeDocument.isForceDirty;
-          auto isSpritesheetDirty = closeDocument.spritesheet_any_dirty() || closeDocument.overlay_any_dirty();
+          auto isSpritesheetDirty = closeDocument.spritesheet_any_dirty();
           auto promptLabel =
               isDocumentDirty && isSpritesheetDirty
                   ? LABEL_DOCUMENT_AND_SPRITESHEETS_MODIFIED_PROMPT
@@ -335,31 +335,6 @@ namespace anm2ed::imgui
                                                std::make_format_args(id, pathString)));
                       logger.error(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET_FAILED, anm2ed::ENGLISH),
                                                 std::make_format_args(id, pathString)));
-                    }
-                  }
-
-                  for (auto& overlay : spritesheet.children)
-                  {
-                    if (overlay.type != ElementType::OVERLAY) continue;
-                    auto overlayTexture = closeDocument.overlay_texture_get(overlay.id);
-                    if (!overlayTexture || !closeDocument.overlay_is_dirty(overlay.id)) continue;
-                    auto pathString = path::to_utf8(overlay.path);
-                    auto savePath = closeDocument.directory_get() / overlay.path;
-                    path::ensure_directory(savePath.parent_path());
-                    if (overlayTexture->write_png(savePath))
-                    {
-                      closeDocument.overlay_hash_set_saved(overlay.id);
-                      toasts.push(std::vformat(localize.get(TOAST_SAVE_OVERLAY),
-                                               std::make_format_args(overlay.id, pathString)));
-                      logger.info(std::vformat(localize.get(TOAST_SAVE_OVERLAY, anm2ed::ENGLISH),
-                                               std::make_format_args(overlay.id, pathString)));
-                    }
-                    else
-                    {
-                      toasts.push(std::vformat(localize.get(TOAST_SAVE_OVERLAY_FAILED),
-                                               std::make_format_args(overlay.id, pathString)));
-                      logger.error(std::vformat(localize.get(TOAST_SAVE_OVERLAY_FAILED, anm2ed::ENGLISH),
-                                                std::make_format_args(overlay.id, pathString)));
                     }
                   }
                 }

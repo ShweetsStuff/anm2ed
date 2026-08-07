@@ -26,7 +26,6 @@ namespace anm2ed::imgui
     Window layers{layers_window_register()};
     Window nulls{nulls_window_register()};
     Onionskin onionskin;
-    Window overlays{overlays_window_register()};
     ShadersWindow shaders;
     SpritesheetEditor spritesheetEditor;
     Window spritesheets{spritesheets_window_register()};

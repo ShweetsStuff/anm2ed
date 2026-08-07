@@ -108,7 +108,6 @@ namespace anm2ed
   X(EDIT_ADD_ITEM, "Add Item", "Añadir Item", "Добавить предмет", "添加物品", "항목 추가") \
   X(EDIT_ADD_LAYER, "Add Layer", "Añadir Capa", "Добавить слой", "添加动画层", "레이어 추가") \
   X(EDIT_ADD_NULL, "Add Null", "Añadir Null", "Добавить нуль", "添加Null", "Null 추가") \
-  X(EDIT_ADD_OVERLAY, "Add Overlay", "Add Overlay", "Add Overlay", "Add Overlay", "Add Overlay") \
   X(EDIT_ADD_SPRITESHEET, "Add Spritesheet", "Añadir Spritesheet", "Добавить спрайт-лист", "添加图集", "스프라이트 시트 추가") \
   X(EDIT_ADD_SOUND, "Add Sound", "Añadir Sonido", "Добавить звук", "添加声音", "사운드 추가") \
   X(EDIT_ADD_TRIGGER_SOUND, "Add Trigger Sound", "Añadir Sonido del Trigger", "Добавить звук триггера", "添加事件触发器声音", "트리거 사운드 추가") \
@@ -165,10 +164,8 @@ namespace anm2ed
   X(EDIT_PASTE_LAYERS, "Paste Layer(s)", "Pegar Capa(s)", "Вставить слои", "粘贴动画层", "레이어 붙여넣기") \
   X(EDIT_PASTE_REGIONS, "Paste Region(s)", "Pegar Región(es)", "Вставить регионы", "粘贴区域", "영역 붙여넣기") \
   X(EDIT_PASTE_NULLS, "Paste Null(s)", "Pegar Null(s)", "Вставить нули", "粘贴Null", "Null 붙여넣기") \
-  X(EDIT_PASTE_OVERLAYS, "Paste Overlay(s)", "Paste Overlay(s)", "Paste Overlay(s)", "Paste Overlay(s)", "Paste Overlay(s)") \
   X(EDIT_PASTE_SOUNDS, "Paste Sound(s)", "Pegar Sonido(s)", "Вставить звук(и)", "粘贴声音", "사운드 붙여넣기") \
   X(EDIT_PASTE_SPRITESHEETS, "Paste Spritesheet(s)", "Pegar Spritesheet(s)", "Вставить спрайт-листы", "粘贴图集", "스프라이트 시트 붙여넣기") \
-  X(EDIT_RELOAD_OVERLAYS, "Reload Overlay(s)", "Reload Overlay(s)", "Reload Overlay(s)", "Reload Overlay(s)", "Reload Overlay(s)") \
   X(EDIT_RELOAD_SPRITESHEETS, "Reload Spritesheet(s)", "Recargar Spritesheet(s)", "Перезагрузить спрайт-листы", "重新加载图集", "스프라이트 시트 다시 불러오기") \
   X(EDIT_RELOAD_SOUNDS, "Reload Sound(s)", "Recargar Sonido(s)", "Перезагрузить звук(и)", "重新加载声音", "사운드 다시 불러오기") \
   X(EDIT_REMOVE_ANIMATIONS, "Remove Animation(s)", "Remover Animacion(es)", "Удалить анимации", "删除动画层", "애니메이션 제거") \
@@ -180,14 +177,10 @@ namespace anm2ed
   X(EDIT_REMOVE_UNUSED_NULLS, "Remove Unused Nulls", "Remover Nulls No Utilizados", "Удалить неизпользуемые нули", "删除未使用的Null", "미사용 Null 제거") \
   X(EDIT_REMOVE_UNUSED_SOUNDS, "Remove Unused Sounds", "Remover Sonidos No Utilizados", "Удалить неизпользуемые звуки", "删除未使用的声音", "미사용 사운드 제거") \
   X(EDIT_REMOVE_UNUSED_SPRITESHEETS, "Remove Unused Spritesheets", "Remover Spritesheets No Utilizadas", "Удалить неизпользуемые спрайт-листы", "删除未使用的图集", "미사용 스프라이트 시트 제거") \
-  X(EDIT_REMOVE_OVERLAYS, "Remove Overlay(s)", "Remove Overlay(s)", "Remove Overlay(s)", "Remove Overlay(s)", "Remove Overlay(s)") \
   X(EDIT_RENAME_GROUP, "Rename Group", "Renombrar grupo", "Переименовать группу", "重命名组", "그룹 이름 바꾸기") \
   X(EDIT_RENAME_EVENT, "Rename Event", "Renombrar Evento", "Переименовать событие", "重命名事件", "이벤트 이름 바꾸기") \
   X(EDIT_REPLACE_SPRITESHEET, "Replace Spritesheet", "Reemplazar Spritesheet", "Заменить спрайт-лист", "替换图集", "스프라이트 시트 교체") \
-  X(EDIT_REPLACE_OVERLAY, "Replace Overlay", "Replace Overlay", "Replace Overlay", "Replace Overlay", "Replace Overlay") \
   X(EDIT_REPLACE_SOUND, "Replace Sound", "Reemplazar Sonido", "Заменить звук", "替换声音", "사운드 교체") \
-  X(EDIT_SET_OVERLAY_FILE_PATH, "Set Overlay File Path", "Set Overlay File Path", "Set Overlay File Path", "Set Overlay File Path", "Set Overlay File Path") \
-  X(EDIT_SET_OVERLAY_PROPERTIES, "Set Overlay Properties", "Set Overlay Properties", "Set Overlay Properties", "Set Overlay Properties", "Set Overlay Properties") \
   X(EDIT_SET_SPRITESHEET_FILE_PATH, "Set Spritesheet File Path", "Set Spritesheet File Path", "Set Spritesheet File Path", "Set Spritesheet File Path", "Set Spritesheet File Path") \
   X(EDIT_SET_LAYER_PROPERTIES, "Set Layer Properties", "Establecer Propiedades de Capa", "Установить свойства слоя", "更改动画层属性", "레이어 속성 설정") \
   X(EDIT_SET_REGION_PROPERTIES, "Set Region Properties", "Establecer propiedades de región", "Установить свойства региона", "更改区域属性", "영역 속성 설정") \
@@ -196,7 +189,6 @@ namespace anm2ed
   X(EDIT_SCAN_AND_SET_REGIONS, "Scan and Set Regions", "Escanear y establecer regiones", "Сканировать и установить регионы", "扫描并设置区域", "영역 스캔 및 설정") \
   X(EDIT_REGION_CROP, "Region Crop", "Recorte de región", "Обрезка региона", "区域裁剪", "영역 자르기") \
   X(EDIT_REGION_MOVE, "Region Pivot", "Pivote de región", "Пивот региона", "区域枢轴", "영역 피벗") \
-  X(EDIT_OVERLAY_MOVE, "Overlay Offset", "Overlay Offset", "Overlay Offset", "Overlay Offset", "Overlay Offset") \
   X(EDIT_SPLIT_FRAME, "Split Frame", "Dividir Frame", "Разделить кадр", "拆分帧", "프레임 분할") \
   X(EDIT_SHORTEN_FRAME, "Shorten Frame", "Acortar Frame", "Укоротить кадр", "缩短帧时长", "프레임 단축") \
   X(EDIT_TOGGLE_ITEM_VISIBILITY, "Toggle Item Visibility", "Alternar Visibilidad de item", "Переключить видимость предмета", "物品可见", "항목 표시/숨기기") \
@@ -221,7 +213,6 @@ namespace anm2ed
   X(FORMAT_LOOP, "Loop: {0}", "Loop: {0}", "Цикл: {0}", "循环: {0}", "반복: {0}") \
   X(FORMAT_NOT_SAVED, "{0} [Not Saved]", "{0} [Not Saved]", "{0} [Не сохранено]", "{0} [未保存]", "{0} [저장되지 않음]") \
   X(FORMAT_NULL, "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}") \
-  X(FORMAT_OVERLAY, "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}") \
   X(FORMAT_PIVOT, "Pivot: ({0}, {1})", "Pivote", "Точка вращения: ({0}, {1})", "枢轴: ({0}, {1})", "중심점: ({0}, {1})") \
   X(FORMAT_POSITION, "Position: ({0}, {1})", "Posicion: ({0}, {1})", "Позиция: ({0}, {1})", "位置: ({0}, {1})", "위치: ({0}, {1})") \
   X(FORMAT_POSITION_SPACED, "Position: ({0:3}, {1:3})", "Posicion: ({0:3}, {1:3})", "Позиция: ({0:3}, {1:3})", "位置: ({0:3}, {1:3})", "위치: ({0:3}, {1:3})") \
@@ -366,11 +357,6 @@ namespace anm2ed
   X(LABEL_OUTPUT_DIRECTORY, "Directory", "Directorio", "Директория", "目录", "디렉터리") \
   X(LABEL_OUTPUT_PATH, "Path", "Ruta", "Путь", "路径", "경로") \
   X(LABEL_OVERLAY, "Overlay", "Overlay", "Наложение", "动画叠加", "오버레이") \
-  X(LABEL_OVERLAY_DRAW_ORDER, "Draw Order", "Draw Order", "Draw Order", "Draw Order", "Draw Order") \
-  X(LABEL_OVERLAY_DRAW_ORDER_ABOVE, "Above", "Above", "Above", "Above", "Above") \
-  X(LABEL_OVERLAY_DRAW_ORDER_BELOW, "Below", "Below", "Below", "Below", "Below") \
-  X(LABEL_OVERLAY_PROPERTIES, "Overlay Properties", "Overlay Properties", "Overlay Properties", "Overlay Properties", "Overlay Properties") \
-  X(LABEL_OVERLAYS_WINDOW, "Overlays###Overlays", "Overlays###Overlays", "Overlays###Overlays", "Overlays###Overlays", "Overlays###Overlays") \
   X(LABEL_OVERWRITE_CONFIRMATION, "Are you sure? This will overwrite the existing file.", "¿Estas Seguro? Esto sobreescribira el archivo existente.", "Вы уверены? Это перезапишет существующий файл.", "你确定吗? 这样会覆盖原本的文件.", "저장하시겠습니까? 기존 파일을 덮어쓰게 됩니다.") \
   X(LABEL_OVERWRITE_WARNING, "Overwrite Warning", "Alerta de Sobreescribir", "Предупреждение о перезаписи", "覆盖提醒", "덮어쓰기 경고") \
   X(LABEL_SERIALIZATION, "Serialization", "Serialization", "Serialization", "Serialization", "Serialization") \
@@ -523,7 +509,6 @@ namespace anm2ed
   X(TOAST_DESERIALIZE_LAYERS_FAILED, "Failed to deserialize layer(s):", "Falla al deserializar capas(s):", "Не удалось десериализировать слои: {0}", "反序列化动画层失败: {0}", "레이어 역직렬화 실패: {0}") \
   X(TOAST_DESERIALIZE_REGIONS_FAILED, "Failed to deserialize region(s): {0}", "Falla al deserializar región(es): {0}", "Не удалось десериализировать регионы: {0}", "反序列化区域失败: {0}", "영역 역직렬화 실패: {0}") \
   X(TOAST_DESERIALIZE_NULLS_FAILED, "Failed to deserialize null(s): {0}", "Falla al deserializar null(s): {0}", "Не удалось десериализировать нули: {0}", "反序列化Null失败: {0}", "Null 역직렬화 실패: {0}") \
-  X(TOAST_DESERIALIZE_OVERLAYS_FAILED, "Failed to deserialize overlay(s): {0}", "Failed to deserialize overlay(s): {0}", "Failed to deserialize overlay(s): {0}", "Failed to deserialize overlay(s): {0}", "Failed to deserialize overlay(s): {0}") \
   X(TOAST_DESERIALIZE_SPRITESHEETS_FAILED, "Failed to deserialize spritesheet(s): {0}", "Falla al deserializar spritesheet(s): {0}", "Не удалось десериализировать спрайт-листы: {0}", "反序列化图集失败: {0}", "스프라이트 시트 역직렬화 실패: {0}") \
   X(TOAST_EXPORT_RENDERED_ANIMATION, "Exported rendered animation to: {0}", "Se ha exportado la animacion renderizada a: {0}", "Рендерированные анимации экспортированы в: {0}", "渲染动画导出至: {0}", "{0}에 렌더링 된 애니메이션을 내보내기 했습니다.") \
   X(TOAST_EXPORT_RENDERED_ANIMATION_FAILED, "Could not output rendered animation: {0}", "No se pudo emitir la animacion renderizada: {0}", "Не удалось вывести рендерированную анимацию: {0}", "无法输出渲染动画: {0}", "{0}에 렌더링 된 애니메이션을 내보내기 할 수 없습니다.") \
@@ -531,8 +516,6 @@ namespace anm2ed
   X(TOAST_EXPORT_RENDERED_FRAMES_FAILED, "Could not export frames to: {0}", "No se pdo exportar Frames a: {0}", "Не удалось экспортировать кадры в: {0}", "无法导出帧至: {0}", "프레임을 내보내기 할 수 없습니다. {0}") \
   X(TOAST_EXPORT_SPRITESHEET, "Exported spritesheet to: {0}", "Se ha exportado spritesheet a: {0}", "Спрайт-лист экспортирован в: {0}", "导出图集至: {0}", "{0}에 스프라이트 시트를 내보내기 했습니다.") \
   X(TOAST_EXPORT_SPRITESHEET_FAILED, "Could not export spritesheet to: {0}", "No se pudo exportar spritesheet a: {0}", "Не удалось экспортировать спрайт-лист в: {0}", "无法导出图集至: {0}", "{0}에 스프라이트 시트를 내보내기 할 수 없습니다.") \
-  X(TOAST_OVERLAY_INIT_FAILED, "Failed to initialize overlay: {0}", "Failed to initialize overlay: {0}", "Failed to initialize overlay: {0}", "Failed to initialize overlay: {0}", "Failed to initialize overlay: {0}") \
-  X(TOAST_OVERLAY_INITIALIZED, "Initialized overlay #{0}: {1}", "Initialized overlay #{0}: {1}", "Initialized overlay #{0}: {1}", "Initialized overlay #{0}: {1}", "Initialized overlay #{0}: {1}") \
   X(TOAST_ADD_SPRITESHEET_FAILED, "Failed to add spritesheet! Open a document first.", "¡Error a añadir spritesheet! Abre un documento primero.", "Не удалось добавить спрайт-лист! Сначала откройте документ.", "无法添加图集！请先打开文档。", "스프라이트 시트를 추가할 수 없습니다! 먼저 문서를 여세요.") \
   X(TOAST_ADD_SOUND_FAILED, "Failed to add sound! Open a document first.", "¡Error al añadir sonido! Abre un documento primero.", "Не удалось добавить звук! Сначала откройте документ.", "无法添加声音！请先打开文档。", "사운드를 추가할 수 없습니다! 먼저 문서를 여세요.") \
   X(TOAST_INVALID_FFMPEG, "Unable to run FFmpeg. Make sure the executable exists, has the proper permissions, and is a valid FFmpeg executable.", "No se pudo ejecutar FFmpeg. Asegúrate de que el ejecutable exista, tenga los permisos adecuados y sea un FFmpeg válido.", "Не удалось запустить FFmpeg. Убедитесь, что исполняемый файл существует, имеет нужные права и является корректным исполняемым FFmpeg.", "无法运行 FFmpeg。请确保可执行文件存在，具有正确的权限，并且是有效的 FFmpeg 可执行文件。", "FFmpeg을 실행할 수 없습니다. 실행 파일이 존재하고 올바른 권한을 가지며 유효한 FFmpeg 실행 파일인지 확인하세요.") \
@@ -544,7 +527,6 @@ namespace anm2ed
   X(TOAST_REDO, "Redo: {0}", "Rehacer: {0}", "Повтор: {0}", "重做: {0}", "다시 실행: {0}") \
   X(ERROR_FILE_NOT_FOUND, "File not found!", "¡Archivo no encontrado!", "Файл не найден!", "找不到文件！", "파일을 찾을 수 없습니다!") \
   X(ERROR_FILE_PERMISSIONS, "File does not have write permissions!", "¡El archivo no tiene permisos de escritura!", "У файла нет прав на запись!", "文件没有写入权限！", "파일에 쓰기 권한이 없습니다!") \
-  X(TOAST_RELOAD_OVERLAY, "Reloaded overlay #{0}: {1}", "Reloaded overlay #{0}: {1}", "Reloaded overlay #{0}: {1}", "Reloaded overlay #{0}: {1}", "Reloaded overlay #{0}: {1}") \
   X(TOAST_RELOAD_SPRITESHEET, "Reloaded spritesheet #{0}: {1}", "Se ha recargado spritesheet #{0}: {1}", "Спрайт-лист #{0} перезагружен: {1}", "重新加载了图集 #{0}: {1}", "{0}번 스프라이트 시트 다시 불러옴: {1}") \
   X(TOAST_MERGE_SPRITESHEETS, "Merged selected spritesheets.", "Spritesheets seleccionados combinados.", "Выбранные спрайт-листы объединены.", "已合并所选图集。", "선택된 스프라이트 시트를 병합했습니다.") \
   X(TOAST_MERGE_SPRITESHEETS_FAILED, "Failed to merge selected spritesheets.", "No se pudieron combinar los spritesheets seleccionados.", "Не удалось объединить выбранные спрайт-листы.", "合并所选图集失败。", "선택된 스프라이트 시트 병합에 실패했습니다.") \
@@ -552,15 +534,11 @@ namespace anm2ed
   X(TOAST_PACK_SPRITESHEET_FAILED, "Failed to pack spritesheet.", "No se pudo empaquetar el spritesheet.", "Не удалось упаковать спрайт-лист.", "图集打包失败。", "스프라이트 시트 패킹에 실패했습니다.") \
   X(TOAST_RELOAD_SOUND, "Reloaded sound #{0}: {1}", "Se ha recargado sonido #{0}: {1}", "Звук #{0} перезагружен: {1}", "重新加载了声音 #{0}: {1}", "{0}번 사운드 다시 불러옴: {1}") \
   X(TOAST_SCAN_AND_SET_REGIONS, "Matched regionless frames to candidate regions.", "Se emparejaron frames sin region con regiones candidatas.", "Кадры без региона сопоставлены с подходящими регионами.", "已将无区域帧匹配到候选区域。", "영역이 없는 프레임을 후보 영역에 매칭했습니다.") \
-  X(TOAST_REMOVE_OVERLAY, "Removed overlay #{0}: {1}", "Removed overlay #{0}: {1}", "Removed overlay #{0}: {1}", "Removed overlay #{0}: {1}", "Removed overlay #{0}: {1}") \
   X(TOAST_REMOVE_SPRITESHEET, "Removed spritesheet #{0}: {1}", "Se ha removido spritesheet #{0}: {1}", "Спрайт-лист #{0} удален: {1}", "去除了图集 #{0}: {1}", "{0}번 스프라이트 시트 제거됨: {1}") \
-  X(TOAST_REPLACE_OVERLAY, "Replaced overlay #{0}: {1}", "Replaced overlay #{0}: {1}", "Replaced overlay #{0}: {1}", "Replaced overlay #{0}: {1}", "Replaced overlay #{0}: {1}") \
   X(TOAST_REPLACE_SPRITESHEET, "Replaced spritesheet #{0}: {1}", "Se ha reemplazado spritesheet #{0}: {1}", "Спрайт-лист #{0} заменен: {1}", "替换了图集 #{0}: {1}", "{0}번 스프라이트 시트 교체됨: {1}") \
   X(TOAST_REPLACE_SOUND, "Replaced sound #{0}: {1}", "Se ha reemplazado sonido #{0}: {1}", "Звук #{0} заменен: {1}", "已替换声音 #{0}: {1}", "{0}번 사운드 교체됨: {1}") \
   X(TOAST_SAVE_DOCUMENT, "Saved document to: {0}", "Documento Guardado en: {0}", "Документ сохранен в: {0}", "保存文件至: {0}", "{0}에 파일을 저장했습니다.") \
   X(TOAST_SAVE_DOCUMENT_FAILED, "Could not save document to: {0} ({1})", "No se pudo guardar el documento en: {0} ({1})", "Не удалось сохранить документ в: {0} ({1})", "无法保存文件至: {0} ({1})", "{0}에 파일을 저장할 수 없습니다.") \
-  X(TOAST_SAVE_OVERLAY, "Saved overlay #{0}: {1}", "Saved overlay #{0}: {1}", "Saved overlay #{0}: {1}", "Saved overlay #{0}: {1}", "Saved overlay #{0}: {1}") \
-  X(TOAST_SAVE_OVERLAY_FAILED, "Unable to save overlay #{0}: {1}", "Unable to save overlay #{0}: {1}", "Unable to save overlay #{0}: {1}", "Unable to save overlay #{0}: {1}", "Unable to save overlay #{0}: {1}") \
   X(TOAST_SAVE_SPRITESHEET, "Saved spritesheet #{0}: {1}", "Spritesheet Guardada #{0}: {1}", "Спрайт-лист #{0} сохранен: {1}", "已保存图集 #{0}: {1}", "{1}에 {0}번 스프라이트 시트를 저장했습니다.") \
   X(TOAST_SAVE_SPRITESHEET_FAILED, "Unable to save spritesheet #{0}: {1}", "No se pudo guardar spritesheet #{0}: {1}", "Не удалось сохранить спрайт-лист #{0}: {1}", "无法保存图集 #{0}: {1}", "{0}번 스프라이트 시트를 저장할 수 없습니다. {1}") \
   X(TOAST_SOUNDS_DESERIALIZE_ERROR, "Failed to deserialize sound(s): {0}", "Error al deserializar sonido(s): {0}", "Не удалось десериализировать звуки: {0}", "反序列化声音失败: {0}", "사운드 역직렬화 실패: {0}") \
@@ -580,7 +558,6 @@ namespace anm2ed
   X(TOOLTIP_ADD_LAYER, "Add a layer.", "Añadir una capa.", "Добавить слой.", "添加一个动画层.", "레이어를 추가합니다.") \
   X(TOOLTIP_ADD_NULL, "Add a null.", "Añadir Null.", "Добавить нуль.", "添加一个Null.", "Null을 추가합니다.") \
   X(TOOLTIP_ADD_SPRITESHEET, "Add a new spritesheet.", "Añadir nueva spritesheet.", "Добавить новый спрайт-лист.", "添加一个新图集.", "새 스프라이트 시트를 추가합니다.") \
-  X(TOOLTIP_ADD_OVERLAY, "Add a new overlay to the selected spritesheet.", "Add a new overlay to the selected spritesheet.", "Add a new overlay to the selected spritesheet.", "Add a new overlay to the selected spritesheet.", "Add a new overlay to the selected spritesheet.") \
   X(TOOLTIP_ADD_VALUES, "Add the specified values onto each frame.\n(Boolean/mapped values will simply be set.)", "Añadir los valores especifiados a cada Frame.\n(Los valores booleanos/mapeados simplemente se estableceran.)", "Добавить указанные значения к каждому кадру.\n(Булевы/сопоставленные значения будут просто установлены.)", "将指定的数值添加到每一帧上. (布尔/映射值将直接被设置.)", "각 프레임의 속성에 지정한 값을 더합니다.\n(불리언/매핑 값은 그대로 설정됩니다.)") \
   X(TOOLTIP_ADJUST, "Set the value of each specified value onto the frame's equivalent.", "Ajustar el valor de cada valor especificado a el equivalente del Frame.", "Установить значение каждого указанного значения к эквиваленту кадра.", "将每个指定的数值设置到对应帧的相等的属性上.", "지정된 각 값을 프레임의 대응 값으로 설정합니다.") \
   X(TOOLTIP_ALL_ITEMS_VISIBLE, "All items are visible. Press to only show layers.", "Todos los items son visibles. Presiona solo para mostrar capas.", "Все предметы видимы. Нажмите, чтобы только показать слои.", "所有物品均可见. 点击即可仅显示动画层.", "모든 항목이 표시됩니다. 레이어만 표시하려면 누르세요.") \
@@ -673,8 +650,10 @@ namespace anm2ed
   X(TOOLTIP_GENERATE_REGION_NAME_FORMAT, "Set the names of the generated regions.\n{} is the frame number.", "Define los nombres de las regiones generadas.\n{} es el número de frame.", "Задаёт имена создаваемых регионов.\n{} — номер кадра.", "设置生成区域的名称。\n{} 是帧编号。", "생성된 영역의 이름을 설정합니다.\n{}는 프레임 번호입니다.") \
   X(TOOLTIP_PACK_SPRITESHEET, "Pack the spritesheet by its regions and rebuild the texture.", "Empaqueta el spritesheet por sus regiones y reconstruye la textura.", "Упаковать спрайт-лист по его регионам и пересобрать текстуру.", "按区域打包图集并重建纹理。", "영역 기준으로 스프라이트 시트를 패킹하고 텍스처를 다시 만듭니다.") \
   X(TOOLTIP_OUTPUT_PATH, "Set the output path or directory for the animation.", "Ajusta la ruta de salida o el directiorio de la animacion.", "Установить путь или директорию вывода для анимации.", "更改动画的输出路径/目录.", "애니메이션의 출력 경로 또는 디렉터리를 설정합니다.") \
-  X(TOOLTIP_OVERLAY, "Set an animation to be drawn over the current animation.", "Ajusta una animacion para ser dibujada sobre la animacion actual.", "Установить анимацию, которая будет выведена над текущей анимацией.", "设置一个当前动画的覆盖动画.", "현재 애니메이션 위에 그려질 애니메이션을 설정합니다.") \
-  X(TOOLTIP_OVERLAY_ALPHA, "Set the alpha of the overlayed animation.", "Ajusta el alpha de la animacion en Overlay", "Установить прозрачность наложенной анимации.", "更改覆盖动画的透明度.", "오버레이된 애니메이션의 불투명도를 설정합니다.") \
+  X(TOOLTIP_OVERLAY, "Set an animation to draw with the current animation.", "Selecciona una animacion para dibujarla junto a la animacion actual.", "Выбрать анимацию, которая будет рисоваться вместе с текущей анимацией.", "设置一个与当前动画一起绘制的动画.", "현재 애니메이션과 함께 그릴 애니메이션을 설정합니다.") \
+  X(TOOLTIP_OVERLAY_ALPHA, "Change overlay alpha.", "Cambia el alpha del overlay.", "Изменить прозрачность оверлея.", "更改覆盖动画的透明度.", "오버레이 알파를 변경합니다.") \
+  X(TOOLTIP_OVERLAY_OVER, "Draw the overlay animation above the current animation.", "Dibuja la animacion overlay encima de la animacion actual.", "Рисовать оверлей-анимацию поверх текущей анимации.", "在当前动画上方绘制覆盖动画.", "오버레이 애니메이션을 현재 애니메이션 위에 그립니다.") \
+  X(TOOLTIP_OVERLAY_UNDER, "Draw the overlay animation below the current animation.", "Dibuja la animacion overlay debajo de la animacion actual.", "Рисовать оверлей-анимацию под текущей анимацией.", "在当前动画下方绘制覆盖动画.", "오버레이 애니메이션을 현재 애니메이션 아래에 그립니다.") \
   X(TOOLTIP_OVERWRITE_WARNING, "A warning will be shown when saving/overwriting a file.", "Una advertencia se mostrara cuando se este guardando/sobreguardando un archivo.", "При сохранении/перезаписи файла будет показано предупреждение.", "保存或覆盖文件时会提示确认。", "저장하거나 덮어쓸 때 경고가 표시됩니다.") \
   X(TOOLTIP_EXTENDED_FORMAT, "Use extended Anm2Ed .anm2 format.\nThis is NOT compatible with The Binding of Isaac: Rebirth!", "Use extended Anm2Ed .anm2 format.\nThis is NOT compatible with The Binding of Isaac: Rebirth!", "Use extended Anm2Ed .anm2 format.\nThis is NOT compatible with The Binding of Isaac: Rebirth!", "Use extended Anm2Ed .anm2 format.\nThis is NOT compatible with The Binding of Isaac: Rebirth!", "Use extended Anm2Ed .anm2 format.\nThis is NOT compatible with The Binding of Isaac: Rebirth!") \
   X(TOOLTIP_PAUSE_ANIMATION, "Pause the animation.", "Pausa la animacion.", "Поставить анимацию на паузу.", "暂停动画.", "애니메이션을 일시정지합니다.") \
@@ -690,7 +669,6 @@ namespace anm2ed
   X(TOOLTIP_USE_ANIMATION_BOUNDS, "Render using the animation's bounds instead of the preview viewport.", "Render using the animation's bounds instead of the preview viewport.", "Render using the animation's bounds instead of the preview viewport.", "Render using the animation's bounds instead of the preview viewport.", "Render using the animation's bounds instead of the preview viewport.") \
   X(TOOLTIP_USE_ISOLATED_ANIMATION, "Render only animation layers with a transparent background and preview helpers hidden.", "Render only animation layers with a transparent background and preview helpers hidden.", "Render only animation layers with a transparent background and preview helpers hidden.", "Render only animation layers with a transparent background and preview helpers hidden.", "Render only animation layers with a transparent background and preview helpers hidden.") \
   X(TOOLTIP_RENDER_FPS, "Set the exported animation frame rate.", "Set the exported animation frame rate.", "Set the exported animation frame rate.", "Set the exported animation frame rate.", "Set the exported animation frame rate.") \
-  X(TOOLTIP_RELOAD_OVERLAYS, "Reloads the selected overlays.", "Reloads the selected overlays.", "Reloads the selected overlays.", "Reloads the selected overlays.", "Reloads the selected overlays.") \
   X(TOOLTIP_RELOAD_SPRITESHEETS, "Reloads the selected spritesheets.", "Recarga la spritesheet seleccionada.", "Перезагружает выбранные спрайт-листы.", "重新加载所选图集.", "선택한 스프라이트 시트를 다시 불러옵니다.") \
   X(TOOLTIP_RELOAD_SOUNDS, "Reloads the selected sounds.", "Recarga los sonidos seleccionados.", "Перезагружает выбранные звуки.", "重新加载所选声音.", "선택한 사운드를 다시 불러옵니다.") \
   X(TOOLTIP_REMOVE_ANIMATION, "Remove the selected animation(s).", "Remueve la(s) animacion(es) seleccionada(s).", "Удалить выбранные анимации.", "去除所选动画.", "선택한 애니메이션을 제거합니다.") \
@@ -702,12 +680,10 @@ namespace anm2ed
   X(TOOLTIP_REMOVE_UNUSED_NULLS, "Remove unused nulls (i.e., ones not used in any animation.)", "Remueve nulls no utilizados (i. e., aquellos no usados en ninguna animacion.)", "Удалить неиспользуемые нули (т. е. нули, которые не используются ни одной анимацией.)", "去除未使用的Null (未被任何动画使用的那些.)", "사용되지 않는 Null(어떤 애니메이션에서도 사용되지 않는 것)을 제거합니다.") \
   X(TOOLTIP_REMOVE_UNUSED_SOUNDS, "Remove unused sounds (i.e., ones not used in any trigger.)", "Remueve sonidos no utilizados (i. e., aquellos no usados en ningun trigger.)", "Удалить неиспользуемые звуки (т. е. звуки, которые не используются ни одным триггером.)", "去除未使用的声音 (未被任何触发器使用的那些.)", "사용되지 않는 사운드(어떤 트리거에서도 사용되지 않는 것)를 제거합니다.") \
   X(TOOLTIP_REMOVE_UNUSED_SPRITESHEETS, "Remove all unused spritesheets (i.e., not used in any layer.).", "Remueve todos los spritesheets no utilizados (i. e., aquellos no usados en ninguna capa.)", "Удалить неиспользуемые спрайт-листы (т. е. те, которые не используются ни одним слоем.)", "去除未使用的图集 (未被任何动画层使用的那些.)", "사용되지 않는 모든 스프라이트 시트(어떤 레이어에서도 사용되지 않는 것)를 제거합니다.") \
-  X(TOOLTIP_REMOVE_OVERLAYS, "Remove the selected overlays.", "Remove the selected overlays.", "Remove the selected overlays.", "Remove the selected overlays.", "Remove the selected overlays.") \
   X(TOOLTIP_RENDER_BUTTON, "Render the animation using the current settings.", "Renderiza la animacion usando la configuracion actual", "Рендерировать анимацию, используя текущие настройки.", "应用当前设置去渲染动画.", "현재 설정으로 애니메이션을 렌더링합니다.") \
   X(TOOLTIP_RENDER_TYPE, "Set the type of the output.", "Ajusta el tipo de la salida", "Установить тип вывода.", "设置输出的类型.", "출력 유형을 설정합니다.") \
   X(TOOLTIP_REPEAT_DELAY, "Set how often, after repeating begins, key inputs will be fired.", "Ajusta que tanto, despues de que empieza la repeticion, seran disparadas las entradas clave.", "Установить, как часто после начала повторения будут срабатывать нажатия клавиш.", "更改键盘按键开启重复时, 重复的速率.", "반복 입력이 시작된 후 입력이 얼마나 자주 들어갈지 설정합니다.") \
   X(TOOLTIP_REPLACE_SPRITESHEET, "Replace the selected spritesheet with a new one.", "Reemplaza la spritesheet seleccionada con una nueva.", "Заменить выбранный спрайт-лист на новый.", "替换所选旧图集为新图集.", "선택된 스프라이트 시트를 새 시트로 교체합니다.") \
-  X(TOOLTIP_REPLACE_OVERLAY, "Replace the selected overlay with a new one.", "Replace the selected overlay with a new one.", "Replace the selected overlay with a new one.", "Replace the selected overlay with a new one.", "Replace the selected overlay with a new one.") \
   X(TOOLTIP_REPLACE_SOUND, "Replace the selected sound with a new one.", "Reemplaza el sonido seleccionado con uno nuevo.", "Заменяет выбранный звук новым.", "用新的声音替换所选声音.", "선택한 사운드를 새 사운드로 교체합니다.") \
   X(TOOLTIP_ROOT_TRANSFORM, "Root frames will transform the rest of the animation.", "Los Frames root transformaran el resto de la animacion.", "Корневые кадры трансформируют остаток анимации.", "与“根”有关的帧会跟随整个动画而变换.", "Root 프레임이 나머지 애니메이션을 변형합니다.") \
   X(TOOLTIP_ROTATION, "Change the rotation of the frame.", "Cambia la rotacion del Frame.", "Изменить поворот кадра.", "更改此帧的旋转.", "프레임의 회전값을 변경합니다.") \
@@ -715,7 +691,6 @@ namespace anm2ed
   X(TOOLTIP_ROUND_SCALE, "Scale will be rounded to the nearest whole number.", "La escala sera aproximada al numero entero mas cercano.", "Масштаб будет округлен к самому близкому целому числу.", "缩放数值会被取整.", "비율을 가장 가까운 정수로 반올림합니다.") \
   X(TOOLTIP_ROWS, "Set how many rows the spritesheet will have.", "Ajusta cuantas filas tendra el spritsheet.", "Установить сколько рядов будет иметь спрайт-лист.", "设置图集的行数量.", "스프라이트 시트의 행 수를 설정합니다.") \
   X(TOOLTIP_SAVE_SPRITESHEETS, "Save the selected spritesheets.", "Guarda los spritesheets seleccionados.", "Сохранить выбранные спрайт-листы.", "保存所选图集.", "선택한 스프라이트 시트를 저장합니다.") \
-  X(TOOLTIP_SAVE_OVERLAYS, "Save the selected overlays.", "Save the selected overlays.", "Save the selected overlays.", "Save the selected overlays.", "Save the selected overlays.") \
   X(TOOLTIP_SCALE, "Change the scale of the frame, in percent.", "Cambia la escala del Frame, en porcentaje.", "Изменить масштаб кадра.", "修改此帧的缩放.", "프레임의 비율을 변경합니다.") \
   X(TOOLTIP_SCALE_OUTPUT, "Set the output scale of the animation.", "Ajusta la escala de salida de la animacion.", "Установить масштаб анимации при выводе.", "设置输出动画的缩放.", "애니메이션의 출력 비율을 설정합니다.") \
   X(TOOLTIP_SETTINGS_SAVE, "Use the configured settings.", "Usa las opciones configuradas.", "Использовать настроенные настройки.", "应用更改的设置.", "구성된 설정을 사용합니다.") \

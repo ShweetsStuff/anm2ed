@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <filesystem>
 
 #include "audio_stream.hpp"
@@ -22,6 +23,7 @@ namespace anm2ed::imgui
     float savedZoom{};
     glm::vec2 savedPan{};
     int savedOverlayIndex{};
+    uint64_t savedOverlayDocumentId{};
     glm::vec2 mousePos{};
     glm::vec2 checkerPan{};
     glm::vec2 checkerSyncPan{};

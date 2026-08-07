@@ -59,6 +59,15 @@ namespace anm2ed::types::source
   };
 }
 
+namespace anm2ed::types::overlay_draw_order
+{
+  enum Type
+  {
+    OVER,
+    UNDER
+  };
+}
+
 namespace anm2ed::types::merge
 {
   enum Type

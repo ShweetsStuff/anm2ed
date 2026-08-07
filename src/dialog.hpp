@@ -49,9 +49,6 @@ namespace anm2ed
   X(ANM2_SAVE, ANM2)                                                                                                   \
   X(SOUND_OPEN, SOUND)                                                                                                 \
   X(SOUND_REPLACE, SOUND)                                                                                              \
-  X(OVERLAY_OPEN, PNG)                                                                                                 \
-  X(OVERLAY_REPLACE, PNG)                                                                                              \
-  X(OVERLAY_PATH_SET, PNG)                                                                                             \
   X(SPRITESHEET_OPEN, PNG)                                                                                             \
   X(SPRITESHEET_REPLACE, PNG)                                                                                          \
   X(SPRITESHEET_PATH_SET, PNG)                                                                                         \

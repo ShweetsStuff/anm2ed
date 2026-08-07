@@ -129,7 +129,8 @@ namespace anm2ed
   X(PREVIEW_IS_BORDER, previewIsBorder, STRING_UNDEFINED, BOOL, false)                                                 \
   X(PREVIEW_IS_ALT_ICONS, previewIsAltIcons, STRING_UNDEFINED, BOOL, false)                                            \
   X(PREVIEW_IS_TRANSPARENT, animationPreviewTransparent, STRING_UNDEFINED, BOOL, false)                                \
-  X(PREVIEW_OVERLAY_TRANSPARENCY, previewOverlayTransparency, STRING_UNDEFINED, FLOAT, 255)                            \
+  X(PREVIEW_OVERLAY_TRANSPARENCY, previewOverlayTransparency, STRING_UNDEFINED, FLOAT, 100.0f)                         \
+  X(PREVIEW_OVERLAY_DRAW_ORDER, previewOverlayDrawOrder, STRING_UNDEFINED, INT, types::overlay_draw_order::OVER)       \
   X(PREVIEW_START_ZOOM, previewStartZoom, STRING_UNDEFINED, FLOAT, 200.0f)                                             \
   X(PREVIEW_GRID_SIZE, previewGridSize, STRING_UNDEFINED, IVEC2, {32, 32})                                             \
   X(PREVIEW_GRID_OFFSET, previewGridOffset, STRING_UNDEFINED, IVEC2, {})                                               \
@@ -272,7 +273,6 @@ namespace anm2ed
   X(WINDOW_LAYERS, windowIsLayers, LABEL_LAYERS_WINDOW, BOOL, true)                                                    \
   X(WINDOW_NULLS, windowIsNulls, LABEL_NULLS_WINDOW, BOOL, true)                                                       \
   X(WINDOW_ONIONSKIN, windowIsOnionskin, LABEL_ONIONSKIN_WINDOW, BOOL, true)                                           \
-  X(WINDOW_OVERLAYS, windowIsOverlays, LABEL_OVERLAYS_WINDOW, BOOL, true)                                              \
   X(WINDOW_PREVIEW, windowIsSpritesheets, LABEL_SPRITESHEETS_WINDOW, BOOL, true)                                       \
   X(WINDOW_SHADERS, windowIsShaders, LABEL_SHADERS_WINDOW, BOOL, true)                                                  \
   X(WINDOW_SOUNDS, windowIsSounds, LABEL_SOUNDS_WINDOW, BOOL, true)                                                    \

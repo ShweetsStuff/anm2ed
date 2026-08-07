@@ -50,7 +50,6 @@ namespace anm2ed
       NONE,
       FRAME,
       REGION,
-      OVERLAY,
       SPRITESHEET
     };
 
@@ -82,12 +81,10 @@ namespace anm2ed
     Storage& layer = current.layer;
     Storage& merge = current.merge;
     Storage& null = current.null;
-    Storage& overlay = current.overlay;
     Storage& region = current.region;
     Storage& sound = current.sound;
     Storage& spritesheet = current.spritesheet;
     std::map<int, resource::Texture>& textures = current.textures;
-    std::map<int, resource::Texture>& overlayTextures = current.overlayTextures;
     std::map<int, resource::Audio>& sounds = current.sounds;
     Anm2& anm2 = current.anm2;
     Reference& reference = current.reference;
@@ -102,6 +99,7 @@ namespace anm2ed
     glm::vec2 editorPan{};
     float editorZoom{200};
     int overlayIndex{-1};
+    uint64_t overlayDocumentId{};
 
     uint64_t hash{};
     uint64_t saveHash{};
@@ -112,10 +110,7 @@ namespace anm2ed
     bool isForceDirty{false};
     std::unordered_map<int, uint64_t> spritesheetHashes{};
     std::unordered_map<int, uint64_t> spritesheetSaveHashes{};
-    std::unordered_map<int, uint64_t> overlayHashes{};
-    std::unordered_map<int, uint64_t> overlaySaveHashes{};
     std::unordered_map<int, std::filesystem::path> texturePaths{};
-    std::unordered_map<int, std::filesystem::path> overlayTexturePaths{};
     std::unordered_map<int, std::filesystem::path> soundPaths{};
     std::unordered_map<int, std::filesystem::path> shaderVertexPaths{};
     std::unordered_map<int, std::filesystem::path> shaderFragmentPaths{};
@@ -133,15 +128,11 @@ namespace anm2ed
     void anm2_change(ChangeType);
     void assets_sync(ChangeType = ALL);
     void texture_change(int);
-    void overlay_texture_change(int);
     bool texture_reload(int);
-    bool overlay_texture_reload(int);
     bool sound_reload(int);
     bool shader_reload(int, std::string* = nullptr);
     resource::Texture* texture_get(int);
     const resource::Texture* texture_get(int) const;
-    resource::Texture* overlay_texture_get(int);
-    const resource::Texture* overlay_texture_get(int) const;
     resource::Audio* sound_get(int);
     const resource::Audio* sound_get(int) const;
     resource::Shader* shader_get(int);
@@ -168,12 +159,6 @@ namespace anm2ed
     bool spritesheet_any_dirty();
     void spritesheet_hashes_reset();
     void spritesheet_hashes_sync();
-    void overlay_hash_update(int);
-    void overlay_hash_set_saved(int);
-    bool overlay_is_dirty(int);
-    bool overlay_any_dirty();
-    void overlay_hashes_reset();
-    void overlay_hashes_sync();
     bool is_frame_reference_valid(Reference) const;
     std::set<Reference> item_frame_references_get(Reference) const;
     std::set<Reference> selected_item_frame_references_get() const;
@@ -185,15 +170,10 @@ namespace anm2ed
     Element* frame_get();
     Element* item_get();
     Element* spritesheet_get();
-    Element* overlay_get(int = -1);
-    const Element* overlay_get(int = -1) const;
-    int overlay_spritesheet_id_get(int) const;
     Element* animation_get();
 
     void spritesheet_add(const std::filesystem::path&);
     void spritesheets_add(const std::vector<std::filesystem::path>&);
-    void overlay_add(int, const std::filesystem::path&);
-    void overlays_add(int, const std::vector<std::filesystem::path>&);
     void sound_add(const std::filesystem::path&);
     void sounds_add(const std::vector<std::filesystem::path>&);
 

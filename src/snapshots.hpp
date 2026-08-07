@@ -59,12 +59,10 @@ namespace anm2ed
     Storage layer{};
     Storage merge{};
     Storage null{};
-    Storage overlay{};
     Storage region{};
     Storage sound{};
     Storage spritesheet{};
     std::map<int, resource::Texture> textures{};
-    std::map<int, resource::Texture> overlayTextures{};
     std::map<int, resource::Audio> sounds{};
     Anm2 anm2{};
     Reference reference{};
@@ -74,7 +72,6 @@ namespace anm2ed
   };
 
   using SnapshotTextureMap = std::map<int, resource::Texture>;
-  using SnapshotOverlayTextureMap = std::map<int, resource::Texture>;
   using SnapshotSoundMap = std::map<int, resource::Audio>;
 
 #define SNAPSHOT_STEP_STATE_FIELDS                                                                                     \
@@ -86,7 +83,6 @@ namespace anm2ed
   X(Storage, layer)                                                                                                    \
   X(Storage, merge)                                                                                                    \
   X(Storage, null)                                                                                                     \
-  X(Storage, overlay)                                                                                                  \
   X(Storage, region)                                                                                                   \
   X(Storage, sound)                                                                                                    \
   X(Storage, spritesheet)                                                                                              \
@@ -96,7 +92,6 @@ namespace anm2ed
 
 #define SNAPSHOT_STEP_RESOURCE_FIELDS                                                                                  \
   X(SnapshotTextureMap, textures)                                                                                      \
-  X(SnapshotOverlayTextureMap, overlayTextures)                                                                        \
   X(SnapshotSoundMap, sounds)
 
   struct SnapshotStep

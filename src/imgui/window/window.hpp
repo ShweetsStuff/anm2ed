@@ -139,6 +139,5 @@ namespace anm2ed::imgui
   Window layers_window_register();
   Window nulls_window_register();
   Window events_window_register();
-  Window overlays_window_register();
   void window_update(Window&, Manager&, Settings&, Resources&, Dialog&, Clipboard&);
 }

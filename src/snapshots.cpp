@@ -206,7 +206,6 @@ namespace anm2ed::snapshots
   void step_textures_seed(SnapshotStep& step, const Snapshot& snapshot)
   {
     step.textures = SnapshotStepValue<SnapshotTextureMap>{snapshot.textures, {}};
-    step.overlayTextures = SnapshotStepValue<SnapshotOverlayTextureMap>{snapshot.overlayTextures, {}};
   }
 
   SnapshotStep step_anm2_seed(const Snapshot& snapshot, const std::string& message)

@@ -3,11 +3,14 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <filesystem>
 #include <format>
 #include <map>
 #include <optional>
+#include <string>
 #include <system_error>
+#include <vector>
 
 #include <glm/gtc/type_ptr.hpp>
 
@@ -41,6 +44,87 @@ namespace anm2ed::imgui
   constexpr auto TRIGGER_TEXT_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 0.5f);
   namespace
   {
+    struct OverlayAnimationOption
+    {
+      uint64_t documentId{};
+      int animationIndex{-1};
+      std::string label{};
+    };
+
+    std::vector<OverlayAnimationOption> overlay_animation_options_get(Manager& manager)
+    {
+      std::vector<OverlayAnimationOption> options{{.label = std::string(localize.get(BASIC_NONE))}};
+
+      for (auto& document : manager.documents)
+      {
+        auto documentLabel = path::to_utf8(document.filename_get());
+        int animationIndex{};
+        if (auto animations = document.anm2.element_get(ElementType::ANIMATIONS))
+          for (auto& animation : animations->children)
+          {
+            if (animation.type != ElementType::ANIMATION) continue;
+            auto label = std::format("{} ({})", animation.name, documentLabel);
+            options.push_back({.documentId = document.tabId, .animationIndex = animationIndex, .label = label});
+            ++animationIndex;
+          }
+      }
+
+      return options;
+    }
+
+    std::vector<const char*> overlay_animation_option_labels_get(std::vector<OverlayAnimationOption>& options)
+    {
+      std::vector<const char*> labels{};
+      labels.reserve(options.size());
+      for (auto& option : options)
+        labels.push_back(option.label.c_str());
+      return labels;
+    }
+
+    int overlay_animation_option_index_get(const Document& document, const std::vector<OverlayAnimationOption>& options)
+    {
+      if (document.overlayIndex == -1) return 0;
+      auto documentId = document.overlayDocumentId ? document.overlayDocumentId : document.tabId;
+      for (int i = 1; i < (int)options.size(); ++i)
+        if (options[i].documentId == documentId && options[i].animationIndex == document.overlayIndex) return i;
+      return -1;
+    }
+
+    Document* overlay_animation_document_get(Manager& manager, const Document& document)
+    {
+      if (document.overlayIndex == -1) return nullptr;
+      auto documentId = document.overlayDocumentId ? document.overlayDocumentId : document.tabId;
+      for (auto& candidate : manager.documents)
+        if (candidate.tabId == documentId) return &candidate;
+      return nullptr;
+    }
+
+    std::optional<vec4> animation_rects_merge(std::optional<vec4> rect, vec4 next)
+    {
+      if (next == vec4(-1.0f)) return rect;
+      if (!rect) return next;
+
+      auto minPoint = glm::min(vec2(rect->x, rect->y), vec2(next.x, next.y));
+      auto maxPoint = glm::max(vec2(rect->x + rect->z, rect->y + rect->w), vec2(next.x + next.z, next.y + next.w));
+      return vec4(minPoint, maxPoint - minPoint);
+    }
+
+    std::optional<vec4> animation_render_rect_get(Manager& manager, Document& document, Element* animation,
+                                                  bool isRootTransform)
+    {
+      std::optional<vec4> rect{};
+
+      if (animation)
+        rect = animation_rects_merge(rect, document.anm2.animation_rect(*animation, isRootTransform));
+
+      if (auto overlayDocument = overlay_animation_document_get(manager, document))
+        if (auto overlayAnimation = overlayDocument->anm2.element_get(ElementType::ANIMATION, document.overlayIndex))
+          rect = animation_rects_merge(rect,
+                                       overlayDocument->anm2.animation_rect(*overlayAnimation, isRootTransform));
+
+      return rect;
+    }
+
     std::filesystem::path render_destination_directory(const std::filesystem::path& path, int type)
     {
       if (type == render::PNGS) return path;
@@ -188,6 +272,7 @@ namespace anm2ed::imgui
     auto& frameTime = document.frameTime;
     auto& zoom = document.previewZoom;
     auto& overlayIndex = document.overlayIndex;
+    auto& overlayDocumentId = document.overlayDocumentId;
     auto& pan = document.previewPan;
 
     auto stop_all_sounds = [&]()
@@ -211,6 +296,7 @@ namespace anm2ed::imgui
         pan = savedPan;
         zoom = savedZoom;
         overlayIndex = savedOverlayIndex;
+        overlayDocumentId = savedOverlayDocumentId;
         isSizeTrySet = true;
         hasPendingZoomPanAdjust = false;
         isCheckerPanInitialized = false;
@@ -405,7 +491,9 @@ namespace anm2ed::imgui
     auto& gridOffset = settings.previewGridOffset;
     auto& isGrid = settings.previewIsGrid;
     auto& overlayTransparency = settings.previewOverlayTransparency;
+    auto& overlayDrawOrder = settings.previewOverlayDrawOrder;
     auto& overlayIndex = document.overlayIndex;
+    auto& overlayDocumentId = document.overlayDocumentId;
     auto& isRootTransform = settings.previewIsRootTransform;
     auto& isPivots = settings.previewIsPivots;
     auto& isAxes = settings.previewIsAxes;
@@ -550,11 +638,48 @@ namespace anm2ed::imgui
         ImGui::ColorEdit4(localize.get(BASIC_COLOR), value_ptr(axesColor), ImGuiColorEditFlags_NoInputs);
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_AXES_COLOR));
 
-        combo_negative_one_indexed(localize.get(LABEL_OVERLAY), &overlayIndex, document.animation.labels);
+        auto overlayOptions = overlay_animation_options_get(manager);
+        auto overlayLabels = overlay_animation_option_labels_get(overlayOptions);
+        auto overlayOptionIndex = overlay_animation_option_index_get(document, overlayOptions);
+        if (overlayOptionIndex == -1)
+        {
+          overlayIndex = -1;
+          overlayDocumentId = 0;
+          overlayOptionIndex = 0;
+        }
+        if (ImGui::Combo(localize.get(LABEL_OVERLAY), &overlayOptionIndex, overlayLabels.data(),
+                         (int)overlayLabels.size()))
+        {
+          auto& option = overlayOptions[overlayOptionIndex];
+          overlayIndex = option.animationIndex;
+          overlayDocumentId = overlayIndex == -1 ? 0 : option.documentId;
+        }
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OVERLAY));
 
-        ImGui::DragFloat(localize.get(BASIC_ALPHA), &overlayTransparency, DRAG_SPEED, 0, 255, "%.0f");
+        overlayDrawOrder = glm::clamp(overlayDrawOrder, (int)overlay_draw_order::OVER, (int)overlay_draw_order::UNDER);
+        overlayTransparency = glm::clamp(overlayTransparency, 0.0f, 100.0f);
+        auto orderIconSize = icon_size_get();
+        auto orderButtonWidth = orderIconSize.x + ImGui::GetStyle().FramePadding.x * 2.0f;
+        auto alphaWidth =
+            std::max(ImGui::GetContentRegionAvail().x - (orderButtonWidth * 2.0f) -
+                         (ImGui::GetStyle().ItemSpacing.x * 2.0f),
+                     ImGui::GetFrameHeight());
+        auto overlayIconTint = isLightTheme ? ImVec4(0.0f, 0.0f, 0.0f, 1.0f) : ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+        ImGui::PushItemWidth(alphaWidth);
+        ImGui::DragFloat("##Overlay Alpha", &overlayTransparency, DRAG_SPEED, 0, 100, "%.0f%%");
+        ImGui::PopItemWidth();
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OVERLAY_ALPHA));
+        overlayTransparency = glm::clamp(overlayTransparency, 0.0f, 100.0f);
+
+        ImGui::SameLine();
+        radio_button_icon("##Overlay Over", &overlayDrawOrder, overlay_draw_order::OVER, resources.icons[icon::OVER].id,
+                          orderIconSize, overlayIconTint);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OVERLAY_OVER));
+
+        ImGui::SameLine();
+        radio_button_icon("##Overlay Under", &overlayDrawOrder, overlay_draw_order::UNDER,
+                          resources.icons[icon::UNDER].id, orderIconSize, overlayIconTint);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OVERLAY_UNDER));
       }
       ImGui::EndChild();
 
@@ -600,6 +725,7 @@ namespace anm2ed::imgui
         if (isRenderPreviewOverridden)
         {
           savedOverlayIndex = overlayIndex;
+          savedOverlayDocumentId = overlayDocumentId;
           savedZoom = zoom;
           savedPan = pan;
         }
@@ -607,6 +733,7 @@ namespace anm2ed::imgui
         if (settings.renderIsUseIsolatedAnimation)
         {
           overlayIndex = -1;
+          overlayDocumentId = 0;
           settings.animationPreviewTransparent = true;
           settings.timelineIsOnlyShowLayers = true;
           settings.previewIsAxes = false;
@@ -619,12 +746,11 @@ namespace anm2ed::imgui
 
         if (settings.renderIsUseAnimationBounds)
         {
-          if (animation)
-            if (auto rect = anm2.animation_rect(*animation, isRootTransform); rect != vec4(-1.0f))
-            {
-              size_set(vec2(rect.z, rect.w) * settings.renderScale);
-              set_to_rect(zoom, pan, rect);
-            }
+          if (auto rect = animation_render_rect_get(manager, document, animation, isRootTransform))
+          {
+            size_set(vec2(rect->z, rect->w) * settings.renderScale);
+            set_to_rect(zoom, pan, *rect);
+          }
 
           isSizeTrySet = false;
         }
@@ -661,6 +787,7 @@ namespace anm2ed::imgui
             pan = savedPan;
             zoom = savedZoom;
             overlayIndex = savedOverlayIndex;
+            overlayDocumentId = savedOverlayDocumentId;
             isSizeTrySet = true;
             hasPendingZoomPanAdjust = false;
             isCheckerPanInitialized = false;
@@ -753,8 +880,9 @@ namespace anm2ed::imgui
       }
 
       auto referenceItemType = static_cast<ItemType>(reference.itemType);
-      auto is_layer_animation_selected = [&](int id)
+      auto is_layer_animation_selected = [&](Document& sampleDocument, int id)
       {
+        if (&sampleDocument != &document) return false;
         if (reference.animationIndex != -1 && referenceItemType == ItemType::LAYER && reference.itemID == id)
           return true;
         for (auto itemReference : document.items.references)
@@ -768,9 +896,13 @@ namespace anm2ed::imgui
         return false;
       };
 
-      auto render = [&](Element* animation, float time, vec3 colorOffset = {}, float alphaOffset = {},
+      auto render = [&](Document& sampleDocument, Element* animation, float time, vec3 colorOffset = {},
+                        float alphaOffset = {},
                         const std::vector<OnionskinSample>* layeredOnions = nullptr, bool isIndexMode = false)
       {
+        auto& sampleAnm2 = sampleDocument.anm2;
+        bool isActiveDocument = &sampleDocument == &document;
+
         auto sample_time_for_item = [&](Element& item, const OnionskinSample& sample) -> std::optional<float>
         {
           if (!isIndexMode)
@@ -880,7 +1012,7 @@ namespace anm2ed::imgui
                                                       math::percent_to_unit(rootFrame.scale), rootFrame.rotation);
           auto rootTransform = itemTransform * rootModel;
 
-          auto isSelected = referenceItemType == ItemType::ROOT && reference.groupType == groupType &&
+          auto isSelected = isActiveDocument && referenceItemType == ItemType::ROOT && reference.groupType == groupType &&
                             reference.groupId == group.id;
           vec4 color = isOnion ? vec4(sampleColor, sampleAlpha) : isSelected ? color::RED : ROOT_COLOR;
           auto icon = isAltIcons ? icon::TARGET_ALT : icon::TARGET;
@@ -915,12 +1047,11 @@ namespace anm2ed::imgui
               return;
 
             auto id = layerAnimation.layerId;
-            auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, id);
+            auto layer = sampleAnm2.element_get(ElementType::LAYER_ELEMENT, id);
             if (!layer) return;
 
-            auto spritesheet = anm2.element_get(ElementType::SPRITESHEET, layer->spritesheetId);
-            auto textureInfo = document.texture_get(layer->spritesheetId);
-            if (!spritesheet || !textureInfo || !textureInfo->is_valid()) return;
+            auto textureInfo = sampleDocument.texture_get(layer->spritesheetId);
+            if (!textureInfo || !textureInfo->is_valid()) return;
 
             auto draw_layer = [&](float sampleTime, const glm::mat4& sampleTransform, vec3 sampleColor,
                                   float sampleAlpha, bool isOnion)
@@ -933,7 +1064,7 @@ namespace anm2ed::imgui
               auto texSize = vec2(texture.size);
               if (texSize.x <= 0.0f || texSize.y <= 0.0f) return;
 
-              frame = anm2.frame_effective(id, frame);
+              frame = sampleAnm2.frame_effective(id, frame);
               auto crop = frame.crop;
               auto size = frame.size;
               auto pivot = frame.pivot;
@@ -966,40 +1097,15 @@ namespace anm2ed::imgui
               frameTint.a = std::max(0.0f, frameTint.a - (alphaOffset + sampleAlpha));
 
               auto vertices = math::uv_vertices_get(uvMin, uvMax);
-              auto customShader = document.shader_get(layer->spritesheetId);
+              auto customShader = sampleDocument.shader_get(layer->spritesheetId);
               auto& layerShader = customShader ? *customShader : shaderTexture;
-
-              auto overlay_draw = [&](const Element& overlay)
-              {
-                if (overlay.type != ElementType::OVERLAY) return;
-                if (!overlay.isVisible) return;
-                auto overlayTexture = document.overlay_texture_get(overlay.id);
-                if (!overlayTexture || !overlayTexture->is_valid()) return;
-
-                auto overlayTexSize = vec2(overlayTexture->size);
-                if (overlayTexSize.x <= 0.0f || overlayTexSize.y <= 0.0f) return;
-
-                auto overlayUvMin = (crop - overlay.position) / overlayTexSize;
-                auto overlayUvMax = (crop + size - overlay.position) / overlayTexSize;
-                auto overlayVertices = math::uv_vertices_get(overlayUvMin, overlayUvMax);
-                auto overlayTint = frameTint;
-                overlayTint.a *= overlay.tint.a;
-                texture_render(shaderTexture, overlayTexture->id, layerTransform, overlayTint, frameColorOffset,
-                               overlayVertices.data(), vec2(overlayTexture->size), sampleTime);
-              };
-
-              for (auto& overlay : spritesheet->children)
-                if (overlay.index == OVERLAY_DRAW_ORDER_BELOW) overlay_draw(overlay);
 
               texture_render(layerShader, texture.id, layerTransform, frameTint, frameColorOffset, vertices.data(),
                              vec2(texture.size), sampleTime);
 
-              for (auto& overlay : spritesheet->children)
-                if (overlay.index != OVERLAY_DRAW_ORDER_BELOW) overlay_draw(overlay);
-
               auto color = isOnion ? vec4(sampleColor, 1.0f - sampleAlpha)
-                           : is_layer_animation_selected(id) ? SELECTED_LAYER_BORDER_COLOR
-                                                             : color::RED;
+                           : is_layer_animation_selected(sampleDocument, id) ? SELECTED_LAYER_BORDER_COLOR
+                                                                             : color::RED;
 
               if (isBorder) rect_render(shaderLine, layerTransform, layerModel, color);
 
@@ -1055,7 +1161,7 @@ namespace anm2ed::imgui
               return;
 
             auto id = nullAnimation.nullId;
-            auto nulls = anm2.element_get(ElementType::NULLS);
+            auto nulls = sampleAnm2.element_get(ElementType::NULLS);
             auto nullInfo = nulls ? element_child_id_get(*nulls, ElementType::NULL_ELEMENT, id) : nullptr;
             if (!nullInfo) return;
             auto isShowRect = nullInfo->isShowRect;
@@ -1070,8 +1176,9 @@ namespace anm2ed::imgui
 
               auto& size = isShowRect ? POINT_SIZE : TARGET_SIZE;
               auto color = isOnion ? vec4(sampleColor, 1.0f - sampleAlpha)
-                           : id == reference.itemID && referenceItemType == ItemType::NULL_ ? color::RED
-                                                                                            : NULL_COLOR;
+                           : isActiveDocument && id == reference.itemID && referenceItemType == ItemType::NULL_
+                               ? color::RED
+                               : NULL_COLOR;
 
               auto nullModel = math::quad_model_get(size, frame.position, size * 0.5f,
                                                     math::percent_to_unit(frame.scale), frame.rotation);
@@ -1109,12 +1216,19 @@ namespace anm2ed::imgui
       if (animation)
       {
         auto layeredOnions = settings.onionskinIsEnabled ? &onionskinSamples : nullptr;
+        auto overlay_render = [&]()
+        {
+          if (auto overlayDocument = overlay_animation_document_get(manager, document))
+            if (auto overlayAnimation = overlayDocument->anm2.element_get(ElementType::ANIMATION, overlayIndex))
+              render(*overlayDocument, overlayAnimation, frameTime, {},
+                     1.0f - math::percent_to_unit(overlayTransparency), layeredOnions,
+                     settings.onionskinMode == (int)OnionskinMode::INDEX);
+        };
 
-        render(animation, frameTime, {}, 0.0f, layeredOnions, settings.onionskinMode == (int)OnionskinMode::INDEX);
-
-        if (auto overlayAnimation = anm2.element_get(ElementType::ANIMATION, overlayIndex))
-          render(overlayAnimation, frameTime, {}, 1.0f - math::uint8_to_float(overlayTransparency), layeredOnions,
-                 settings.onionskinMode == (int)OnionskinMode::INDEX);
+        if (overlayDrawOrder == overlay_draw_order::UNDER) overlay_render();
+        render(document, animation, frameTime, {}, 0.0f, layeredOnions,
+               settings.onionskinMode == (int)OnionskinMode::INDEX);
+        if (overlayDrawOrder == overlay_draw_order::OVER) overlay_render();
       }
 
       if (manager.isRecording && renderFrameIndex < renderFrameCount)
@@ -1136,6 +1250,7 @@ namespace anm2ed::imgui
             pan = savedPan;
             zoom = savedZoom;
             overlayIndex = savedOverlayIndex;
+            overlayDocumentId = savedOverlayDocumentId;
             isSizeTrySet = true;
             hasPendingZoomPanAdjust = false;
             isCheckerPanInitialized = false;
@@ -1569,6 +1684,7 @@ namespace anm2ed::imgui
           zoom = savedZoom;
           settings = savedSettings;
           overlayIndex = savedOverlayIndex;
+          overlayDocumentId = savedOverlayDocumentId;
           isSizeTrySet = true;
           hasPendingZoomPanAdjust = false;
           isCheckerPanInitialized = false;

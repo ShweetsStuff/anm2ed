@@ -227,6 +227,19 @@ namespace anm2ed::imgui
     return edit::NONE;
   }
 
+  bool radio_button_icon(const char* label, int* value, int buttonValue, ImTextureID texture, ImVec2 size, ImVec4 tint)
+  {
+    bool isSelected = value && *value == buttonValue;
+    if (isSelected) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+
+    bool isActivated =
+        ImGui::ImageButton(label, texture, size, ImVec2(0, 0), ImVec2(1, 1), ImVec4(0, 0, 0, 0), tint);
+
+    if (isSelected) ImGui::PopStyleColor();
+    if (isActivated && value) *value = buttonValue;
+    return isActivated;
+  }
+
   bool input_int_range(const char* label, int& value, int min, int max, int step, int stepFast,
                        ImGuiInputTextFlags flags)
   {
