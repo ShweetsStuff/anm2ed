@@ -1,10 +1,11 @@
 #pragma once
 
+#include <cstdint>
 #include <filesystem>
 #include <functional>
+#include <mutex>
 #include <string>
 #include <string_view>
-#include <mutex>
 #include <thread>
 
 namespace anm2ed
@@ -46,9 +47,11 @@ namespace anm2ed
   class Logger
   {
     std::filesystem::path logPath{};
+    std::uintmax_t logSize{};
     std::mutex mutex{};
     std::thread stderrThread{};
     bool isStderrRedirecting{};
+    bool isLogLimitReached{};
     int stderrPipeReadFd{-1};
     int stderrPipeWriteFd{-1};
     int stderrOriginalFd{-1};

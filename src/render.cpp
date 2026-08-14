@@ -4,11 +4,12 @@
 #include <cstring>
 #include <filesystem>
 #include <format>
-#include <fstream>
 #include <string>
+#include <string_view>
 
 #include <SDL3/SDL_timer.h>
 
+#include "file.hpp"
 #include "log.hpp"
 #include "path.hpp"
 #include "process.hpp"
@@ -61,15 +62,10 @@ namespace anm2ed
       auto tempFilenameUtf8 = std::format("anm2ed_audio_{}_{}.f32", std::hash<std::string>{}(pathString), SDL_GetTicks());
       audioPath = temporaryDirectory / path::from_utf8(tempFilenameUtf8);
 
-      std::ofstream audioFile(audioPath, std::ios::binary);
-
-      if (audioFile)
+      auto data = (const char*)audioStream.stream.data();
+      auto byteCount = audioStream.stream.size() * sizeof(float);
+      if (file::write_string(audioPath, std::string_view(data, byteCount), "wb"))
       {
-        auto data = (const char*)audioStream.stream.data();
-        auto byteCount = audioStream.stream.size() * sizeof(float);
-        audioFile.write(data, byteCount);
-        audioFile.close();
-
         auto sampleRate = std::max(audioStream.spec.freq, 1);
         auto channels = std::max(audioStream.spec.channels, 1);
         auto audioDurationFilter = std::string{};

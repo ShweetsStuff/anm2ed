@@ -56,6 +56,7 @@ namespace anm2ed
   X(BASIC_EASE_OUT, "Ease Out", "Desaceleración de Salida", "Плавный выход", "缓出", "천천히 끝남") \
   X(BASIC_EASE_IN_OUT, "Ease In Out", "Aceleración y Desaceleración", "Плавный вход/выход", "缓入缓出", "천천히 시작/끝") \
   X(BASIC_EVENT, "Event", "Evento", "Событие", "事件", "이벤트") \
+  X(BASIC_EXPORT, "Export", "Export", "Export", "Export", "Export") \
   X(BASIC_FRAME, "Frame", "Frame", "Кадр", "帧", "프레임") \
   X(BASIC_FRAMES, "Frames", "Frames", "Кадры", "帧", "프레임") \
   X(BASIC_GROUP, "Group", "Grupo", "Группа", "组", "그룹") \
@@ -145,6 +146,7 @@ namespace anm2ed
   X(EDIT_FRAME_SIZE, "Frame Size", "Tamaño de Frame", "Размер кадра", "帧大小", "프레임 크기") \
   X(EDIT_FRAME_TINT, "Frame Tint", "Matiz de Frame", "Оттенок кадра", "帧色调", "프레임 색조") \
   X(EDIT_FRAME_VISIBILITY, "Frame Visibility", "Visibilidad de Frame", "Видимость кадра", "帧可见", "프레임 표시") \
+  X(EDIT_EXPORT_REGION, "Export Region", "Export Region", "Export Region", "Export Region", "Export Region") \
   X(EDIT_GENERATE_ANIMATION_FROM_GRID, "Generate Animation from Grid", "Generar Animacion Desde Cuadricula", "Создать анимацию с сетки", "从网格转换为动画", "격자로 애니메이션 생성") \
   X(EDIT_GENERATE_REGIONS_FROM_ANIMATIONS, "Generate Regions from Animations", "Generar regiones desde animaciones", "Создать регионы из анимаций", "从动画生成区域", "애니메이션에서 영역 생성") \
   X(EDIT_INSERT_FRAME, "Insert Frame", "Insertar Frame", "Вставить кадр", "插入帧", "프레임 삽입하기") \
@@ -327,6 +329,9 @@ namespace anm2ed
   X(LABEL_MANAGER_ANM2_DRAG_DROP, "Anm2 Drag Drop", "Arrastrar y Soltar Anm2", "Anm2 Drag Drop", "Anm2 拖放", "Anm2 드래그 앤 드롭") \
   X(LABEL_GROUP_PROPERTIES, "Group Properties", "Propiedades de grupo", "Свойства группы", "组属性", "그룹 속성") \
   X(LABEL_REGION_PROPERTIES, "Region Properties", "Propiedades de región", "Свойства региона", "区域属性", "영역 속성") \
+  X(LABEL_EXPORT_REGION, "Export Region", "Export Region", "Export Region", "Export Region", "Export Region") \
+  X(LABEL_EXPORT_MAKE_SPRITESHEET, "Make Spritesheet", "Make Spritesheet", "Make Spritesheet", "Make Spritesheet", "Make Spritesheet") \
+  X(LABEL_EXPORT_REMOVE_CURRENT_REGION, "Remove Region from Current Spritesheet", "Remove Region from Current Spritesheet", "Remove Region from Current Spritesheet", "Remove Region from Current Spritesheet", "Remove Region from Current Spritesheet") \
   X(LABEL_REGION_PROPERTIES_ORIGIN, "Origin", "Origen", "Точка отсчета", "原点", "원점") \
   X(LABEL_REGION_ORIGIN_TOP_LEFT, "Top Left", "Superior izquierda", "Верхний левый", "左上", "왼쪽 위") \
   X(LABEL_REGION_ORIGIN_CENTER, "Center", "Centro", "Центр", "中心", "중앙") \
@@ -510,6 +515,9 @@ namespace anm2ed
   X(TOAST_DESERIALIZE_REGIONS_FAILED, "Failed to deserialize region(s): {0}", "Falla al deserializar región(es): {0}", "Не удалось десериализировать регионы: {0}", "反序列化区域失败: {0}", "영역 역직렬화 실패: {0}") \
   X(TOAST_DESERIALIZE_NULLS_FAILED, "Failed to deserialize null(s): {0}", "Falla al deserializar null(s): {0}", "Не удалось десериализировать нули: {0}", "反序列化Null失败: {0}", "Null 역직렬화 실패: {0}") \
   X(TOAST_DESERIALIZE_SPRITESHEETS_FAILED, "Failed to deserialize spritesheet(s): {0}", "Falla al deserializar spritesheet(s): {0}", "Не удалось десериализировать спрайт-листы: {0}", "反序列化图集失败: {0}", "스프라이트 시트 역직렬화 실패: {0}") \
+  X(TOAST_EXPORT_REGION, "Saved region {0} to spritesheet: {1}", "Saved region {0} to spritesheet: {1}", "Saved region {0} to spritesheet: {1}", "Saved region {0} to spritesheet: {1}", "Saved region {0} to spritesheet: {1}") \
+  X(TOAST_EXPORT_REGION_FAILED, "Could not export region {0} to: {1}", "Could not export region {0} to: {1}", "Could not export region {0} to: {1}", "Could not export region {0} to: {1}", "Could not export region {0} to: {1}") \
+  X(TOAST_EXPORT_REGION_PATH_EMPTY, "Region export needs a path or an in-memory spritesheet.", "Region export needs a path or an in-memory spritesheet.", "Region export needs a path or an in-memory spritesheet.", "Region export needs a path or an in-memory spritesheet.", "Region export needs a path or an in-memory spritesheet.") \
   X(TOAST_EXPORT_RENDERED_ANIMATION, "Exported rendered animation to: {0}", "Se ha exportado la animacion renderizada a: {0}", "Рендерированные анимации экспортированы в: {0}", "渲染动画导出至: {0}", "{0}에 렌더링 된 애니메이션을 내보내기 했습니다.") \
   X(TOAST_EXPORT_RENDERED_ANIMATION_FAILED, "Could not output rendered animation: {0}", "No se pudo emitir la animacion renderizada: {0}", "Не удалось вывести рендерированную анимацию: {0}", "无法输出渲染动画: {0}", "{0}에 렌더링 된 애니메이션을 내보내기 할 수 없습니다.") \
   X(TOAST_EXPORT_RENDERED_FRAMES, "Exported rendered frames to: {0}", "Se ha exportado los Frames renderizados a: {0}", "Рендерированные кадры экспортированы в: {0}", "渲染帧导出至: {0}", "{0}에 렌더링 된 프레임을 내보내기 했습니다.") \
@@ -674,6 +682,8 @@ namespace anm2ed
   X(TOOLTIP_REMOVE_ANIMATION, "Remove the selected animation(s).", "Remueve la(s) animacion(es) seleccionada(s).", "Удалить выбранные анимации.", "去除所选动画.", "선택한 애니메이션을 제거합니다.") \
   X(TOOLTIP_REMOVE_ITEMS, "Remove the selected item(s).", "Remueve el/los item(s) seleccionado(s).", "Удалить выбранные предметы.", "去除所选物品.", "선택한 항목을 제거합니다.") \
   X(TOOLTIP_REMOVE_UNUSED_REGIONS, "Remove unused regions (i.e., ones not used by any frame in any animation.)", "Remueve regiones no utilizadas (es decir, aquellas no usadas por ningun frame en ninguna animacion.)", "Удалить неиспользуемые регионы (т. е. те, которые не используются ни одним кадром ни в одной анимации.)", "移除未使用的区域（即未被任何动画中的任何帧使用的区域。）", "사용되지 않는 영역(어떤 애니메이션의 어떤 프레임에서도 사용되지 않는 것)를 제거합니다.") \
+  X(TOOLTIP_EXPORT_MAKE_SPRITESHEET, "Make a new spritesheet from this region.", "Make a new spritesheet from this region.", "Make a new spritesheet from this region.", "Make a new spritesheet from this region.", "Make a new spritesheet from this region.") \
+  X(TOOLTIP_EXPORT_REMOVE_CURRENT_REGION, "The region will be removed from the current spritesheet.", "The region will be removed from the current spritesheet.", "The region will be removed from the current spritesheet.", "The region will be removed from the current spritesheet.", "The region will be removed from the current spritesheet.") \
   X(TOOLTIP_TRIM_REGIONS, "Trim region to non-transparent content.", "Recorta la región al contenido no transparente.", "Обрезать регион до непрозрачного содержимого.", "将区域裁剪到非透明内容。", "영역을 불투명 콘텐츠에 맞게 자릅니다.") \
   X(TOOLTIP_REMOVE_UNUSED_EVENTS, "Remove unused events (i.e., ones not used by any trigger in any animation.)", "Remueve eventos no utilizados (i. e., aquellos no usados por algun trigger en ninguna animacion.)", "Удалить неиспользуемые события (т. е. события, которые не использует ни один триггер в ни одной анимации.)", "去除未使用的事件 (未被任何动画触发的事件.)", "사용되지 않는 이벤트(어떤 애니메이션의 트리거에서도 사용되지 않는 것)를 제거합니다.") \
   X(TOOLTIP_REMOVE_UNUSED_LAYERS, "Remove unused layers (i.e., ones not used in any animation.)", "Remueve capas no utilizadas (i. e., aquellos no usados en ninguna animacion.)", "Удалить неиспользуемые слои (т. е. слои, которые не используются ни одной анимацией.)", "去除未使用的动画层 (未被任何动画使用的那些)", "사용되지 않는 레이어(어떤 애니메이션에서도 사용되지 않는 것)를 제거합니다.") \

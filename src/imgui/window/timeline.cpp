@@ -99,6 +99,8 @@ namespace anm2ed::imgui
 
   constexpr auto FRAME_MULTIPLE = 5;
   constexpr auto FRAME_TOOLTIP_HOVER_DELAY = 0.75f;
+  constexpr auto DRAG_DROP_SOURCE_FLAGS =
+      ImGuiDragDropFlags_SourceNoPreviewTooltip | ImGuiDragDropFlags_SourceNoHoldToOpenOthers;
 
 #define ITEM_CHILD_WIDTH ImGui::GetTextLineHeightWithSpacing() * 12.5
 
@@ -1531,40 +1533,6 @@ namespace anm2ed::imgui
       return rows;
     };
 
-    auto row_label_get = [&](const TimelineRowReference& row) -> std::string
-    {
-      if (row.isGroup)
-      {
-        TimelineItemRow groupRow{.type = row.type, .id = row.id, .index = row.index, .isGroup = true};
-        auto group = row_group_get(groupRow);
-        if (!group || group->name.empty()) return localize.get(TEXT_NEW_GROUP);
-        return group->name;
-      }
-      if (row.type == LAYER)
-      {
-        auto layer = layer_get(row.id);
-        if (!layer) return localize.get(TYPE_STRINGS[row.type]);
-        return std::vformat(localize.get(FORMAT_LAYER),
-                            std::make_format_args(layer->id, layer->name, layer->spritesheetId));
-      }
-      if (row.type == NULL_)
-      {
-        auto null = null_get(row.id);
-        if (!null) return localize.get(TYPE_STRINGS[row.type]);
-        return std::vformat(localize.get(FORMAT_NULL), std::make_format_args(null->id, null->name));
-      }
-      return localize.get(TYPE_STRINGS[type_index(row.type)]);
-    };
-
-    auto row_drag_tooltip_draw = [&](const std::vector<TimelineRowReference>& rows)
-    {
-      for (auto row : rows)
-      {
-        auto label = row_label_get(row);
-        ImGui::TextUnformatted(label.c_str());
-      }
-    };
-
     auto item_remove = [&]()
     {
       auto targetRows = selected_row_references_get();
@@ -2334,12 +2302,11 @@ namespace anm2ed::imgui
             imguiStyle.HoverDelayNormal = previousTooltipDelay;
           }
 
-          if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
+          if (ImGui::BeginDragDropSource(DRAG_DROP_SOURCE_FLAGS))
           {
             rowDragReferences = row_drag_references_get(row);
             ImGui::SetDragDropPayload("Timeline Row Drag Drop", rowDragReferences.data(),
                                       (int)rowDragReferences.size() * (int)sizeof(TimelineRowReference));
-            row_drag_tooltip_draw(rowDragReferences);
             ImGui::EndDragDropSource();
           }
 
@@ -2523,12 +2490,11 @@ namespace anm2ed::imgui
 
           if (type == LAYER || type == NULL_)
           {
-            if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
+            if (ImGui::BeginDragDropSource(DRAG_DROP_SOURCE_FLAGS))
             {
               rowDragReferences = row_drag_references_get(row);
               ImGui::SetDragDropPayload("Timeline Row Drag Drop", rowDragReferences.data(),
                                         (int)rowDragReferences.size() * (int)sizeof(TimelineRowReference));
-              row_drag_tooltip_draw(rowDragReferences);
               ImGui::EndDragDropSource();
             }
 

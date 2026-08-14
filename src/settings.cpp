@@ -1,8 +1,8 @@
 #include "settings.hpp"
 
-#include <fstream>
 #include <sstream>
 
+#include "file.hpp"
 #include "log.hpp"
 #include "path.hpp"
 
@@ -170,12 +170,13 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
       isDefault = true;
     }
 
-    std::ifstream file(path);
-    if (!file.is_open())
+    std::string fileData{};
+    if (!file::read_to_string(path, &fileData, "rb"))
     {
       logger.error(std::format("Failed to open settings file: {}", pathUtf8));
       return;
     }
+    std::istringstream file(fileData);
 
     std::string line{};
 
@@ -313,7 +314,6 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
 #undef X
     }
 
-    file.close();
   }
 
   Options Settings::anm2_options_get() const
@@ -324,13 +324,14 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
   std::string Settings::imgui_data_load(const std::filesystem::path& path)
   {
     auto pathUtf8 = path::to_utf8(path);
-    std::ifstream file(path, std::ios::in | std::ios::binary);
-    if (!file.is_open())
+    std::string fileData{};
+    if (!file::read_to_string(path, &fileData, "rb"))
     {
       logger.error(
           std::format("Failed to open settings file for Dear ImGui data: {}; using Dear ImGui defaults", pathUtf8));
       return {};
     }
+    std::istringstream file(fileData);
 
     std::string line{};
     std::ostringstream dataStream;
@@ -370,12 +371,7 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
   {
     auto pathUtf8 = path::to_utf8(path);
     logger.info(std::format("Saving settings to: {}", pathUtf8));
-    std::ofstream file(path, std::ios::out | std::ios::binary);
-    if (!file.is_open())
-    {
-      logger.error(std::format("Failed to save settings file: {}", pathUtf8));
-      return;
-    }
+    std::ostringstream file{};
 
     file << "[Settings]\n";
 
@@ -432,13 +428,16 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
         << "\n# Dear ImGui\n"
         << imguiData;
 
-    file.flush();
     if (file.fail())
     {
       logger.error(std::format("Failed while writing settings file: {}", pathUtf8));
       return;
     }
-    file.close();
+    if (!file::write_string(path, file.str(), "wb"))
+    {
+      logger.error(std::format("Failed to save settings file: {}", pathUtf8));
+      return;
+    }
     logger.info(std::format("Saved settings to: {}", pathUtf8));
   }
 }

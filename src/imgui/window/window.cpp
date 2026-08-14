@@ -32,6 +32,23 @@ namespace anm2ed::imgui
   static constexpr auto PADDING_MAX = 100;
   static constexpr auto MERGE_APPEND_RIGHT = 0;
   static constexpr auto MERGE_APPEND_BOTTOM = 1;
+  static constexpr auto DRAG_DROP_SOURCE_FLAGS =
+      ImGuiDragDropFlags_SourceNoPreviewTooltip | ImGuiDragDropFlags_SourceNoHoldToOpenOthers;
+
+  bool is_drag_drop_active() { return ImGui::GetDragDropPayload() != nullptr; }
+
+  enum class AnimationDropZone
+  {
+    BEFORE,
+    INSIDE,
+    AFTER
+  };
+
+  enum class AnimationDragDropType
+  {
+    ANIMATION,
+    GROUP
+  };
 
   struct SpritesheetMergeOptions
   {
@@ -48,6 +65,31 @@ namespace anm2ed::imgui
     merge::Type type{};
     bool isDeleteAnimationsAfter{};
   };
+
+  struct AnimationDragDropItem
+  {
+    AnimationDragDropType type{AnimationDragDropType::ANIMATION};
+    int id{-1};
+  };
+
+  struct RegionExportOptions
+  {
+    int spritesheetId{-1};
+    int regionId{-1};
+    std::filesystem::path path{};
+    bool isMakeSpritesheet{};
+    bool isRemoveCurrent{};
+  };
+
+  std::filesystem::path region_export_path_default_get(const std::filesystem::path& currentPath,
+                                                       const std::string& regionName)
+  {
+    auto directory = currentPath.parent_path();
+    auto filename = path::from_utf8(regionName).filename();
+    if (filename.empty()) filename = "region";
+    filename += ".png";
+    return directory / filename;
+  }
 
   int window_element_count_get(const Window& window, const Element* container)
   {
@@ -375,6 +417,29 @@ namespace anm2ed::imgui
     return (int)animations.children.size();
   }
 
+  int window_animation_group_child_index_get(const Element& animations, int groupId)
+  {
+    for (int i = 0; i < (int)animations.children.size(); ++i)
+      if (animations.children[i].type == ElementType::GROUP && animations.children[i].id == groupId) return i;
+    return -1;
+  }
+
+  int window_animation_group_child_insert_index_get(const Element& animations, int groupId, AnimationDropZone dropZone)
+  {
+    auto groupChildIndex = window_animation_group_child_index_get(animations, groupId);
+    if (groupChildIndex == -1) return (int)animations.children.size();
+    if (dropZone == AnimationDropZone::BEFORE) return groupChildIndex;
+    if (dropZone == AnimationDropZone::AFTER) return groupChildIndex + 1;
+
+    auto insertIndex = groupChildIndex + 1;
+    for (int i = 0; i < (int)animations.children.size(); ++i)
+    {
+      auto& animation = animations.children[i];
+      if (animation.type == ElementType::ANIMATION && animation.groupId == groupId) insertIndex = i + 1;
+    }
+    return insertIndex;
+  }
+
   int window_animation_index_from_child_index_get(const Element& animations, int childIndex)
   {
     int current{};
@@ -387,12 +452,207 @@ namespace anm2ed::imgui
     return -1;
   }
 
+  AnimationDropZone window_animation_drop_zone_get(ImVec2 min, ImVec2 max)
+  {
+    auto third = (max.y - min.y) / 3.0f;
+    auto mouseY = ImGui::GetIO().MousePos.y;
+    if (mouseY < min.y + third) return AnimationDropZone::BEFORE;
+    if (mouseY >= max.y - third) return AnimationDropZone::AFTER;
+    return AnimationDropZone::INSIDE;
+  }
+
   std::set<int> window_animation_group_ids_get(const Element& animations)
   {
     std::set<int> result{};
     for (const auto& item : animations.children)
       if (item.type == ElementType::GROUP) result.insert(item.id);
     return result;
+  }
+
+  void window_animation_drag_drop_item_push(std::vector<AnimationDragDropItem>& items, AnimationDragDropItem item)
+  {
+    if (item.id < 0) return;
+    auto it = std::find_if(items.begin(), items.end(), [&](const AnimationDragDropItem& current)
+    { return current.type == item.type && current.id == item.id; });
+    if (it == items.end()) items.push_back(item);
+  }
+
+  bool is_window_animation_drag_drop_item_selected(Document& document, const Window& window,
+                                                   AnimationDragDropItem item)
+  {
+    if (item.type == AnimationDragDropType::GROUP) return window.selection.contains(item.id);
+    return document.animation.selection.contains(item.id);
+  }
+
+  std::vector<AnimationDragDropItem> window_animation_drag_drop_items_get(Document& document, const Window& window,
+                                                                          AnimationDragDropItem fallback)
+  {
+    std::vector<AnimationDragDropItem> result{};
+    auto animations = document.anm2.element_get(ElementType::ANIMATIONS);
+    if (animations && is_window_animation_drag_drop_item_selected(document, window, fallback))
+    {
+      auto groupIds = window_animation_group_ids_get(*animations);
+      for (auto groupId : window.selection)
+        if (groupIds.contains(groupId))
+          window_animation_drag_drop_item_push(result, {AnimationDragDropType::GROUP, groupId});
+      for (auto animationIndex : document.animation.selection)
+        if (window_animation_child_index_get(*animations, animationIndex) != -1)
+          window_animation_drag_drop_item_push(result, {AnimationDragDropType::ANIMATION, animationIndex});
+    }
+    if (result.empty()) window_animation_drag_drop_item_push(result, fallback);
+    return result;
+  }
+
+  std::vector<AnimationDragDropItem> window_animation_payload_items_get(const ImGuiPayload& payload)
+  {
+    if (payload.DataSize % (int)sizeof(AnimationDragDropItem) != 0) return {};
+    auto payloadItems = static_cast<const AnimationDragDropItem*>(payload.Data);
+    auto payloadCount = payload.DataSize / sizeof(AnimationDragDropItem);
+    return {payloadItems, payloadItems + payloadCount};
+  }
+
+  bool is_window_animation_drag_drop_grouped(const std::vector<AnimationDragDropItem>& items)
+  {
+    return std::any_of(items.begin(), items.end(),
+                       [](const AnimationDragDropItem& item) { return item.type == AnimationDragDropType::GROUP; });
+  }
+
+  void window_animation_items_move(Window& window, Document& document, std::vector<AnimationDragDropItem> items,
+                                   int targetChildIndex, int targetGroupId)
+  {
+    auto animations = window_container_get(window, document.anm2);
+    if (!animations) return;
+
+    auto groupIds = window_animation_group_ids_get(*animations);
+    auto groupId = groupIds.contains(targetGroupId) ? targetGroupId : -1;
+    std::set<int> draggedAnimationIds{};
+    std::set<int> draggedGroupIds{};
+    for (auto item : items)
+    {
+      if (item.type == AnimationDragDropType::GROUP && groupIds.contains(item.id))
+        draggedGroupIds.insert(item.id);
+      else if (item.type == AnimationDragDropType::ANIMATION &&
+               window_animation_child_index_get(*animations, item.id) != -1)
+        draggedAnimationIds.insert(item.id);
+    }
+    if (draggedAnimationIds.empty() && draggedGroupIds.empty()) return;
+
+    std::vector<int> childIndices{};
+    std::set<int> directAnimationChildIndices{};
+    int animationIndex{};
+    for (int i = 0; i < (int)animations->children.size(); ++i)
+    {
+      auto& item = animations->children[i];
+      if (item.type == ElementType::GROUP)
+      {
+        if (draggedGroupIds.contains(item.id)) childIndices.push_back(i);
+        continue;
+      }
+
+      if (item.type != ElementType::ANIMATION) continue;
+      auto isGroupDragged = draggedGroupIds.contains(item.groupId);
+      auto isAnimationDragged = draggedAnimationIds.contains(animationIndex);
+      if (isGroupDragged || isAnimationDragged)
+      {
+        if (isAnimationDragged && !isGroupDragged)
+        {
+          item.groupId = groupId;
+          directAnimationChildIndices.insert(i);
+        }
+        childIndices.push_back(i);
+      }
+      ++animationIndex;
+    }
+    std::sort(childIndices.begin(), childIndices.end());
+    childIndices.erase(std::unique(childIndices.begin(), childIndices.end()), childIndices.end());
+
+    auto movedChildIndices = anm2ed::util::vector::move_indices_to_position(animations->children, childIndices,
+                                                                            targetChildIndex);
+    if (movedChildIndices.empty()) return;
+
+    document.animation.selection.clear();
+    window.selection = draggedGroupIds;
+    auto sourceIt = childIndices.begin();
+    auto movedIt = movedChildIndices.begin();
+    for (; sourceIt != childIndices.end() && movedIt != movedChildIndices.end(); ++sourceIt, ++movedIt)
+    {
+      if (!directAnimationChildIndices.contains(*sourceIt)) continue;
+      auto movedAnimationIndex = window_animation_index_from_child_index_get(*animations, *movedIt);
+      if (movedAnimationIndex != -1) document.animation.selection.insert(movedAnimationIndex);
+    }
+  }
+
+  void window_animation_move_command_push(Window& window, Manager& manager, std::vector<AnimationDragDropItem> items,
+                                          int targetGroupId,
+                                          auto target_child_index_get)
+  {
+    if (items.empty()) return;
+    manager.command_push({manager.selected, [&window, items, targetGroupId, target_child_index_get](Manager&,
+                                                                                                    Document& document)
+                                          mutable
+                          {
+                            auto move = [&]()
+                            {
+                              auto animations = window_container_get(window, document.anm2);
+                              if (!animations) return;
+                              window_animation_items_move(window, document, items, target_child_index_get(*animations),
+                                                            targetGroupId);
+                            };
+                            window_edit(window, document, localize.get(EDIT_MOVE_ANIMATIONS), move);
+                          }});
+  }
+
+  void window_animation_drag_drop_source_update(Document& document, const Window& window, AnimationDragDropItem fallback)
+  {
+    if (!ImGui::BeginDragDropSource(DRAG_DROP_SOURCE_FLAGS)) return;
+
+    static std::vector<AnimationDragDropItem> dragDropItems{};
+    dragDropItems = window_animation_drag_drop_items_get(document, window, fallback);
+    ImGui::SetDragDropPayload("Animation Drag Drop", dragDropItems.data(),
+                              dragDropItems.size() * sizeof(AnimationDragDropItem));
+    ImGui::EndDragDropSource();
+  }
+
+  bool window_animation_group_drag_drop_update(Window& window, Manager& manager, int groupId, ImVec2 itemMin,
+                                               ImVec2 itemMax)
+  {
+    if (!ImGui::BeginDragDropTarget()) return false;
+
+    bool isDelivered{};
+    if (auto payload = ImGui::AcceptDragDropPayload(
+            "Animation Drag Drop",
+            ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect))
+    {
+      auto items = window_animation_payload_items_get(*payload);
+      if (items.empty())
+      {
+        ImGui::EndDragDropTarget();
+        return false;
+      }
+
+      auto dropZone = window_animation_drop_zone_get(itemMin, itemMax);
+      auto isDropIntoGroup = dropZone == AnimationDropZone::INSIDE && !is_window_animation_drag_drop_grouped(items);
+      if (isDropIntoGroup)
+        drop_box_draw(ImGui::GetWindowDrawList(), itemMin, itemMax);
+      else
+        drop_line_draw(ImGui::GetWindowDrawList(), itemMin, itemMax, dropZone != AnimationDropZone::BEFORE);
+
+      if (payload->IsDelivery())
+      {
+        auto targetGroupId = isDropIntoGroup ? groupId : -1;
+        window_animation_move_command_push(
+            window, manager, items, targetGroupId, [groupId, dropZone, isDropIntoGroup](const Element& items)
+            {
+              auto targetDropZone = !isDropIntoGroup && dropZone == AnimationDropZone::INSIDE ? AnimationDropZone::AFTER
+                                                                                              : dropZone;
+              return window_animation_group_child_insert_index_get(items, groupId, targetDropZone);
+            });
+        isDelivered = true;
+      }
+    }
+
+    ImGui::EndDragDropTarget();
+    return isDelivered;
   }
 
   bool is_window_animation_grouped(const std::set<int>& groupIds, const Element& animation)
@@ -681,6 +941,152 @@ namespace anm2ed::imgui
     }
   }
 
+  bool window_region_pixels_get(const Element& region, const Texture& texture, std::vector<uint8_t>& pixels,
+                                ivec2& exportSize)
+  {
+    auto minPoint = ivec2(glm::min(region.crop, region.crop + region.size));
+    auto maxPoint = ivec2(glm::max(region.crop, region.crop + region.size));
+    exportSize = maxPoint - minPoint;
+    if (exportSize.x <= 0 || exportSize.y <= 0 || texture.size.x <= 0 || texture.size.y <= 0 || texture.pixels.empty())
+      return false;
+
+    auto pixelCount = (size_t)exportSize.x * (size_t)exportSize.y * texture::CHANNELS;
+    pixels.assign(pixelCount, 0);
+
+    for (int y = 0; y < exportSize.y; y++)
+    {
+      auto sourceY = minPoint.y + y;
+      if (sourceY < 0 || sourceY >= texture.size.y) continue;
+
+      for (int x = 0; x < exportSize.x; x++)
+      {
+        auto sourceX = minPoint.x + x;
+        if (sourceX < 0 || sourceX >= texture.size.x) continue;
+
+        auto sourceIndex = ((size_t)sourceY * (size_t)texture.size.x + (size_t)sourceX) * texture::CHANNELS;
+        auto destinationIndex = ((size_t)y * (size_t)exportSize.x + (size_t)x) * texture::CHANNELS;
+        if (sourceIndex + texture::CHANNELS > texture.pixels.size() ||
+            destinationIndex + texture::CHANNELS > pixels.size())
+          continue;
+        std::copy_n(texture.pixels.data() + sourceIndex, texture::CHANNELS, pixels.data() + destinationIndex);
+      }
+    }
+
+    return true;
+  }
+
+  bool window_region_export(Document& document, const RegionExportOptions& options, int& exportedSpritesheetId)
+  {
+    auto pathString = path::to_utf8(options.path);
+    if (options.path.empty()) pathString = "in memory";
+    if (options.path.empty() && !options.isMakeSpritesheet)
+    {
+      toasts.push(localize.get(TOAST_EXPORT_REGION_PATH_EMPTY));
+      logger.error(localize.get(TOAST_EXPORT_REGION_PATH_EMPTY, anm2ed::ENGLISH));
+      return false;
+    }
+
+    auto spritesheet = document.anm2.element_get(ElementType::SPRITESHEET, options.spritesheetId);
+    auto region = spritesheet ? element_child_id_get(*spritesheet, ElementType::REGION, options.regionId) : nullptr;
+    auto texture = document.texture_get(options.spritesheetId);
+    if (!spritesheet || !region || !texture || !texture->is_valid())
+    {
+      toasts.push(std::vformat(localize.get(TOAST_EXPORT_REGION_FAILED), std::make_format_args("", pathString)));
+      logger.error(std::vformat(localize.get(TOAST_EXPORT_REGION_FAILED, anm2ed::ENGLISH),
+                                std::make_format_args("", pathString)));
+      return false;
+    }
+
+    auto sourceRegion = *region;
+    auto regionName = sourceRegion.name;
+    std::vector<uint8_t> pixels{};
+    ivec2 exportSize{};
+    if (!window_region_pixels_get(sourceRegion, *texture, pixels, exportSize))
+    {
+      toasts.push(std::vformat(localize.get(TOAST_EXPORT_REGION_FAILED), std::make_format_args(regionName, pathString)));
+      logger.error(std::vformat(localize.get(TOAST_EXPORT_REGION_FAILED, anm2ed::ENGLISH),
+                                std::make_format_args(regionName, pathString)));
+      return false;
+    }
+
+    auto outputPath = options.path;
+    if (!outputPath.empty())
+    {
+      outputPath.replace_extension(".png");
+      outputPath = window_asset_path_get(document, outputPath);
+      pathString = path::to_utf8(outputPath);
+      WorkingDirectory workingDirectory(document.directory_get());
+      path::ensure_directory(outputPath.parent_path());
+      if (!Texture::write_pixels_png(outputPath, exportSize, pixels.data()))
+      {
+        toasts.push(
+            std::vformat(localize.get(TOAST_EXPORT_REGION_FAILED), std::make_format_args(regionName, pathString)));
+        logger.error(std::vformat(localize.get(TOAST_EXPORT_REGION_FAILED, anm2ed::ENGLISH),
+                                  std::make_format_args(regionName, pathString)));
+        return false;
+      }
+    }
+
+    exportedSpritesheetId = -1;
+    if (options.isMakeSpritesheet || options.isRemoveCurrent)
+    {
+      document.anm2_textures_snapshot(localize.get(EDIT_EXPORT_REGION));
+
+      if (options.isMakeSpritesheet)
+      {
+        auto spritesheets = document.anm2.element_get(ElementType::SPRITESHEETS);
+        if (!spritesheets) return false;
+
+        auto exported = element_make(ElementType::SPRITESHEET);
+        exported.id = element_child_next_id_get(*spritesheets, ElementType::SPRITESHEET);
+        exported.path = outputPath;
+
+        auto exportedRegion = sourceRegion;
+        exportedRegion.id = element_child_next_id_get(exported, ElementType::REGION);
+        exportedRegion.crop = {};
+        exportedRegion.size = vec2(exportSize);
+        if (exportedRegion.origin == Origin::TOP_LEFT)
+          exportedRegion.pivot = {};
+        else if (exportedRegion.origin == Origin::CENTER)
+          exportedRegion.pivot = exportedRegion.size * 0.5f;
+
+        exported.children.push_back(exportedRegion);
+        spritesheets->children.push_back(exported);
+        document.textures[exported.id] = Texture(pixels.data(), exportSize);
+        document.texturePaths[exported.id] = exported.path;
+        document.spritesheet.reference = exported.id;
+        document.spritesheet.selection = {exported.id};
+        document.region.reference = exportedRegion.id;
+        document.region.selection = {exportedRegion.id};
+        exportedSpritesheetId = exported.id;
+
+        if (!outputPath.empty())
+          document.spritesheet_hash_set_saved(exported.id);
+        else
+          document.spritesheetSaveHashes[exported.id] = 0;
+      }
+
+      if (options.isRemoveCurrent)
+      {
+        if (auto sourceSpritesheet = document.anm2.element_get(ElementType::SPRITESHEET, options.spritesheetId))
+          element_child_id_erase(*sourceSpritesheet, ElementType::REGION, options.regionId);
+        document.anm2.region_frames_sync(true);
+        if (!options.isMakeSpritesheet)
+        {
+          document.region.reference = -1;
+          document.region.selection.clear();
+        }
+      }
+
+      document.change(Document::SPRITESHEETS);
+    }
+
+    toasts.push(std::vformat(localize.get(TOAST_EXPORT_REGION), std::make_format_args(regionName, pathString)));
+    logger.info(
+        std::vformat(localize.get(TOAST_EXPORT_REGION, anm2ed::ENGLISH), std::make_format_args(regionName, pathString)));
+    return true;
+  }
+
   int window_footer_button_count_get(const Window& window)
   {
     int count{};
@@ -934,7 +1340,8 @@ namespace anm2ed::imgui
 
         if (isFontPushed) ImGui::PopFont();
 
-        if (window.newElementId == key || window.scrollQueued == key || scrollTargetId == key)
+        if ((window.newElementId == key || window.scrollQueued == key || scrollTargetId == key) &&
+            !is_drag_drop_active())
         {
           ImGui::SetScrollHereY(0.5f);
           if (window.newElementId == key) window.newElementId = -1;
@@ -1105,19 +1512,8 @@ namespace anm2ed::imgui
     window.row_drag_drop_update = [](Window& window, Manager& manager, Document& document, const Element&, int index)
     {
       auto& anm2 = document.anm2;
-      auto& selection = document.animation.selection;
 
-      if (ImGui::BeginDragDropSource())
-      {
-        static std::vector<int> dragDropSelection{};
-        dragDropSelection.assign(selection.begin(), selection.end());
-        ImGui::SetDragDropPayload("Animation Drag Drop", dragDropSelection.data(),
-                                  dragDropSelection.size() * sizeof(int));
-        for (auto& dragIndex : dragDropSelection)
-          if (auto dragAnimation = anm2.element_get(ElementType::ANIMATION, dragIndex))
-            ImGui::Text("%s", dragAnimation->name.c_str());
-        ImGui::EndDragDropSource();
-      }
+      window_animation_drag_drop_source_update(document, window, {AnimationDragDropType::ANIMATION, index});
 
       if (ImGui::BeginDragDropTarget())
       {
@@ -1125,54 +1521,27 @@ namespace anm2ed::imgui
                 "Animation Drag Drop",
                 ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect))
         {
+          auto items = window_animation_payload_items_get(*payload);
+          if (items.empty())
+          {
+            ImGui::EndDragDropTarget();
+            return false;
+          }
+
           auto itemMin = ImGui::GetItemRectMin();
           auto itemMax = ImGui::GetItemRectMax();
           auto isDropAfter = is_drop_after(itemMin, itemMax);
           drop_line_draw(ImGui::GetWindowDrawList(), itemMin, itemMax, isDropAfter);
 
-          auto payloadIndices = (int*)(payload->Data);
-          auto payloadCount = payload->DataSize / sizeof(int);
-          std::vector<int> indices(payloadIndices, payloadIndices + payloadCount);
-          std::sort(indices.begin(), indices.end());
           if (payload->IsDelivery())
           {
             auto targetIndex = index + (isDropAfter ? 1 : 0);
             auto targetGroupId = -1;
             if (auto targetAnimation = anm2.element_get(ElementType::ANIMATION, index))
               targetGroupId = targetAnimation->groupId;
-            manager.command_push({manager.selected, [&window, indices, targetIndex, targetGroupId](Manager&, Document& document) mutable
-                                  {
-                                    auto move = [&]()
-                                    {
-                                      auto items = window_container_get(window, document.anm2);
-                                      if (!items) return;
-
-                                      auto groupIds = window_animation_group_ids_get(*items);
-                                      auto groupId = groupIds.contains(targetGroupId) ? targetGroupId : -1;
-                                      std::vector<int> childIndices{};
-                                      childIndices.reserve(indices.size());
-                                      for (auto animationIndex : indices)
-                                      {
-                                        auto childIndex = window_animation_child_index_get(*items, animationIndex);
-                                        if (childIndex == -1) continue;
-                                        if (auto animation = vector::find(items->children, childIndex))
-                                          animation->groupId = groupId;
-                                        childIndices.push_back(childIndex);
-                                      }
-
-                                      auto targetChildIndex = window_animation_child_insert_index_get(*items, targetIndex);
-                                      auto movedChildIndices =
-                                          anm2ed::util::vector::move_indices_to_position(items->children, childIndices,
-                                                                                         targetChildIndex);
-                                      document.animation.selection.clear();
-                                      for (auto childIndex : movedChildIndices)
-                                      {
-                                        auto animationIndex = window_animation_index_from_child_index_get(*items, childIndex);
-                                        if (animationIndex != -1) document.animation.selection.insert(animationIndex);
-                                      }
-                                    };
-                                    window_edit(window, document, localize.get(EDIT_MOVE_ANIMATIONS), move);
-                                  }});
+            window_animation_move_command_push(window, manager, items, targetGroupId,
+                                               [targetIndex](const Element& items)
+                                               { return window_animation_child_insert_index_get(items, targetIndex); });
             ImGui::EndDragDropTarget();
             return true;
           }
@@ -1305,7 +1674,8 @@ namespace anm2ed::imgui
 
         if (isFontPushed) ImGui::PopFont();
 
-        if (window.newElementId == key || window.scrollQueued == key || scrollTargetId == key)
+        if ((window.newElementId == key || window.scrollQueued == key || scrollTargetId == key) &&
+            !is_drag_drop_active())
         {
           ImGui::SetScrollHereY(0.5f);
           if (window.newElementId == key) window.newElementId = -1;
@@ -1386,6 +1756,8 @@ namespace anm2ed::imgui
                 tree_node_input_text(label, std::format("###Document #{} Animation Group #{}", manager.selected,
                                                         item.id),
                                      name, isGroupSelected, treeFlags, window.renameState);
+            auto groupItemMin = ImGui::GetItemRectMin();
+            auto groupItemMax = ImGui::GetItemRectMax();
             auto isGroupOpen = tree.isOpen;
             auto isGroupClicked = tree.isClicked;
             if (tree.isRenameStarted)
@@ -1414,7 +1786,8 @@ namespace anm2ed::imgui
               window.renameId = -1;
               window.renameText.clear();
             }
-            if (isGroupOpen != item.isExpanded)
+            if (isGroupOpen != item.isExpanded && !is_drag_drop_active() &&
+                !ImGui::IsMouseDragging(ImGuiMouseButton_Left))
             {
               auto targetGroupId = item.id;
               manager.command_push({manager.selected, [targetGroupId, isGroupOpen](Manager&, Document& document)
@@ -1430,20 +1803,26 @@ namespace anm2ed::imgui
                                     }});
             }
             if (isGroupClicked) group_selection_apply(item.id);
+            window_animation_drag_drop_source_update(document, window, {AnimationDragDropType::GROUP, item.id});
+            if (window_animation_group_drag_drop_update(window, manager, item.id, groupItemMin, groupItemMax))
+              isRowsDone = true;
 
             if (isGroupOpen)
             {
-              int groupAnimationIndex{};
-              for (auto& animation : container->children)
+              if (!isRowsDone)
               {
-                if (animation.type != ElementType::ANIMATION) continue;
-                if (animation.groupId == item.id)
-                  if (animation_row_draw(animation, groupAnimationIndex))
-                  {
-                    isRowsDone = true;
-                    break;
-                  }
-                ++groupAnimationIndex;
+                int groupAnimationIndex{};
+                for (auto& animation : container->children)
+                {
+                  if (animation.type != ElementType::ANIMATION) continue;
+                  if (animation.groupId == item.id)
+                    if (animation_row_draw(animation, groupAnimationIndex))
+                    {
+                      isRowsDone = true;
+                      break;
+                    }
+                  ++groupAnimationIndex;
+                }
               }
               ImGui::TreePop();
             }
@@ -1991,6 +2370,7 @@ namespace anm2ed::imgui
     window.unavailableText = TEXT_SELECT_SPRITESHEET;
     window.editElement = element_make(ElementType::REGION);
     window.popup = PopupHelper(LABEL_REGION_PROPERTIES, POPUP_SMALL_NO_HEIGHT);
+    window.popup2 = PopupHelper(LABEL_EXPORT_REGION, POPUP_SMALL_NO_HEIGHT);
     window.storage_get = [](Document& document) -> Storage& { return document.region; };
     window.is_available = [](Document& document)
     { return document.anm2.element_get(ElementType::SPRITESHEET, document.spritesheet.reference); };
@@ -2319,7 +2699,7 @@ namespace anm2ed::imgui
           }
           ImGui::PopStyleVar(2);
 
-          if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceNoPreviewTooltip))
+          if (ImGui::BeginDragDropSource(DRAG_DROP_SOURCE_FLAGS))
           {
             isRegionDragDropSourceSubmitted = true;
             if (selection.contains(id))
@@ -2406,7 +2786,7 @@ namespace anm2ed::imgui
 
         ImGui::EndChild();
 
-        if (isNewRegion)
+        if (isNewRegion && !is_drag_drop_active())
         {
           ImGui::SetScrollHereY(0.5f);
           window.newElementId = -1;
@@ -2419,7 +2799,7 @@ namespace anm2ed::imgui
       auto regionDragPayload = isRegionMoved ? nullptr : ImGui::GetDragDropPayload();
       bool isRegionDragActive = regionDragPayload && regionDragPayload->IsDataType("Region Drag Drop");
       if (isRegionDragActive && !isRegionDragDropSourceSubmitted && !window.dragSelection.empty() &&
-          ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceExtern | ImGuiDragDropFlags_SourceNoPreviewTooltip))
+          ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceExtern | DRAG_DROP_SOURCE_FLAGS))
       {
         ImGui::SetDragDropPayload("Region Drag Drop", window.dragSelection.data(),
                                   window.dragSelection.size() * sizeof(int));
@@ -2494,6 +2874,12 @@ namespace anm2ed::imgui
       actions.add(ACTION_TRIM, [&]() { return !selection.empty() && (bool)window.trim; },
                   [&]() { window_command_run(window, manager, settings, document, clipboard, window.trim); },
                   TOOLTIP_TRIM_REGIONS);
+      actions.add(ACTION_EXPORT, [&]() { return selection.size() == 1; },
+                  [&]()
+                  {
+                    window.editId = *selection.begin();
+                    window.popup2.open();
+                  });
       actions.separator();
       actions.add(ACTION_COPY, [&]() { return !selection.empty() && (bool)window.copy; },
                   [&]() { window_command_run(window, manager, settings, document, clipboard, window.copy); });
@@ -2505,7 +2891,7 @@ namespace anm2ed::imgui
     window.footer_update =
         [](Window& window, Manager& manager, Settings& settings, Resources&, Clipboard& clipboard, Document& document)
     {
-      auto rowOneWidgetSize = widget_size_with_row_get(2);
+      auto rowOneWidgetSize = widget_size_with_row_get(3);
 
       shortcut(manager.chords[SHORTCUT_ADD]);
       if (ImGui::Button(localize.get(BASIC_ADD), rowOneWidgetSize) && window.add)
@@ -2514,12 +2900,23 @@ namespace anm2ed::imgui
 
       ImGui::SameLine();
 
+      ImGui::BeginDisabled(document.region.selection.size() != 1);
+      if (ImGui::Button(localize.get(BASIC_EXPORT), rowOneWidgetSize) && document.region.selection.size() == 1)
+      {
+        window.editId = *document.region.selection.begin();
+        window.popup2.open();
+      }
+      ImGui::EndDisabled();
+
+      ImGui::SameLine();
+
       shortcut(manager.chords[SHORTCUT_REMOVE]);
       if (ImGui::Button(localize.get(BASIC_REMOVE_UNUSED), rowOneWidgetSize) && window.remove)
         window_command_run(window, manager, settings, document, clipboard, window.remove);
       set_item_tooltip_shortcut(localize.get(TOOLTIP_REMOVE_UNUSED_REGIONS), settings.shortcutAdd);
     };
-    window.popup_update = [](Window& window, Manager& manager, Settings&, Resources&, Clipboard&, Document& document)
+    window.popup_update = [](Window& window, Manager& manager, Settings& settings, Resources& resources, Clipboard&,
+                             Document& document)
     {
       auto& anm2 = document.anm2;
       auto& spritesheetReference = document.spritesheet.reference;
@@ -2658,6 +3055,88 @@ namespace anm2ed::imgui
       }
 
       window.popup.end();
+
+      window.popup2.trigger();
+      if (ImGui::BeginPopupModal(window.popup2.label(), &window.popup2.isOpen, ImGuiWindowFlags_NoResize))
+      {
+        auto close = [&]()
+        {
+          window.editId = -1;
+          window.popup2.close();
+        };
+
+        auto exportRegionId = window.editId != -1 ? window.editId : reference;
+        auto targetRegion = exportRegionId == -1 ? nullptr : region_get(exportRegionId);
+        auto texture = document.texture_get(spritesheetReference);
+        auto isTextureValid = texture && texture->is_valid() && !texture->pixels.empty();
+        auto isTargetValid = targetRegion && isTextureValid;
+
+        if (!targetRegion)
+        {
+          close();
+          ImGui::EndPopup();
+          window.popup2.end();
+          return;
+        }
+
+        if (window.popup2.isJustOpened)
+          settings.exportRegionPath = region_export_path_default_get(settings.exportRegionPath, targetRegion->name);
+
+        if (window.dialog && window.dialog->is_selected(Dialog::REGION_EXPORT_PATH_SET))
+        {
+          settings.exportRegionPath = window.dialog->path;
+          window.dialog->reset();
+        }
+
+        auto childSize = child_size_get(5);
+        if (ImGui::BeginChild("##Export Region Child", childSize, ImGuiChildFlags_Borders))
+        {
+          if (ImGui::ImageButton("##Export Region Path Set", resources.icons[icon::FOLDER].id, icon_size_get()) &&
+              window.dialog)
+            window.dialog->file_save(Dialog::REGION_EXPORT_PATH_SET, settings.exportRegionPath);
+          ImGui::SameLine();
+          input_text_path(localize.get(LABEL_OUTPUT_PATH), &settings.exportRegionPath);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OUTPUT_PATH));
+
+          ImGui::Checkbox(localize.get(LABEL_EXPORT_MAKE_SPRITESHEET), &settings.isExportRegionMakeSpritesheet);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_EXPORT_MAKE_SPRITESHEET));
+
+          ImGui::Checkbox(localize.get(LABEL_EXPORT_REMOVE_CURRENT_REGION), &settings.isExportRegionRemoveCurrent);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_EXPORT_REMOVE_CURRENT_REGION));
+        }
+        ImGui::EndChild();
+
+        auto widgetSize = widget_size_with_row_get(2);
+        auto isTargetSelected = settings.isExportRegionMakeSpritesheet || !settings.exportRegionPath.empty();
+        ImGui::BeginDisabled(!isTargetValid || !isTargetSelected);
+        shortcut(manager.chords[SHORTCUT_CONFIRM]);
+        if (ImGui::Button(localize.get(BASIC_CONFIRM), widgetSize))
+        {
+          if (!settings.exportRegionPath.empty()) settings.exportRegionPath.replace_extension(".png");
+          RegionExportOptions options{.spritesheetId = spritesheetReference,
+                                      .regionId = exportRegionId,
+                                      .path = settings.exportRegionPath,
+                                      .isMakeSpritesheet = settings.isExportRegionMakeSpritesheet,
+                                      .isRemoveCurrent = settings.isExportRegionRemoveCurrent};
+          manager.command_push({manager.selected, [&window, options](Manager&, Document& document) mutable
+                                {
+                                  int exportedSpritesheetId{-1};
+                                  if (window_region_export(document, options, exportedSpritesheetId) &&
+                                      exportedSpritesheetId != -1)
+                                    window.newElementId = document.region.reference;
+                                }});
+          close();
+        }
+        ImGui::EndDisabled();
+
+        ImGui::SameLine();
+
+        shortcut(manager.chords[SHORTCUT_CANCEL]);
+        if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize)) close();
+
+        ImGui::EndPopup();
+      }
+      window.popup2.end();
     };
     return window;
   }
@@ -2990,7 +3469,7 @@ namespace anm2ed::imgui
 
           ImGui::EndChild();
 
-          if (isNewSpritesheet)
+          if (isNewSpritesheet && !is_drag_drop_active())
           {
             ImGui::SetScrollHereY(0.5f);
             window.newElementId = -1;
@@ -3597,7 +4076,7 @@ namespace anm2ed::imgui
 
           ImGui::EndChild();
 
-          if (isNewSound)
+          if (isNewSound && !is_drag_drop_active())
           {
             ImGui::SetScrollHereY(0.5f);
             window.newElementId = -1;

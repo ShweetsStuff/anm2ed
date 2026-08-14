@@ -57,6 +57,7 @@ namespace anm2ed
   X(FFMPEG_PATH_SET, EXECUTABLE)                                                                                       \
   X(PNG_DIRECTORY_SET, NO_FILTER)                                                                                      \
   X(PNG_PATH_SET, PNG)                                                                                                 \
+  X(REGION_EXPORT_PATH_SET, PNG)                                                                                       \
   X(GIF_PATH_SET, GIF)                                                                                                 \
   X(WEBM_PATH_SET, WEBM)                                                                                               \
   X(MP4_PATH_SET, MP4)
@@ -85,7 +86,7 @@ namespace anm2ed
     Dialog() = default;
     Dialog(SDL_Window*);
     void file_open(Type type, bool isMany = false);
-    void file_save(Type type);
+    void file_save(Type type, const std::filesystem::path& defaultPath = {});
     void folder_open(Type type);
     bool is_selected(Type type) const;
     void reset();

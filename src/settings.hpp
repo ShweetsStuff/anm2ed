@@ -169,6 +169,9 @@ namespace anm2ed
   X(MERGE_SPRITESHEETS_IS_MAKE_PRIMARY_REGION, mergeSpritesheetsIsMakePrimaryRegion, STRING_UNDEFINED, BOOL, true)     \
   X(MERGE_SPRITESHEETS_REGION_ORIGIN, mergeSpritesheetsRegionOrigin, STRING_UNDEFINED, INT, origin::TOP_LEFT)          \
   X(PACK_PADDING, packPadding, STRING_UNDEFINED, INT, 1)                                                               \
+  X(EXPORT_REGION_PATH, exportRegionPath, STRING_UNDEFINED, PATH, "./region.png")                                      \
+  X(EXPORT_REGION_IS_MAKE_SPRITESHEET, isExportRegionMakeSpritesheet, STRING_UNDEFINED, BOOL, true)                    \
+  X(EXPORT_REGION_IS_REMOVE_CURRENT, isExportRegionRemoveCurrent, STRING_UNDEFINED, BOOL, true)                        \
                                                                                                                        \
   X(BAKE_INTERVAL, bakeInterval, STRING_UNDEFINED, INT, 1)                                                             \
   X(BAKE_IS_ROUND_SCALE, bakeIsRoundScale, STRING_UNDEFINED, BOOL, true)                                               \

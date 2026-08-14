@@ -55,13 +55,15 @@ namespace anm2ed
     this->type = type;
   }
 
-  void Dialog::file_save(Type type)
+  void Dialog::file_save(Type type, const std::filesystem::path& defaultPath)
   {
     if (type == Dialog::NONE) return;
     path.clear();
     paths.clear();
+    auto defaultPathString = path::to_utf8(defaultPath);
+    auto defaultPathCStr = defaultPathString.empty() ? nullptr : defaultPathString.c_str();
     SDL_ShowSaveFileDialog(callback, this, window, FILTERS[TYPE_FILTERS[type]], std::size(FILTERS[TYPE_FILTERS[type]]),
-                           nullptr);
+                           defaultPathCStr);
     this->type = type;
   }
 
