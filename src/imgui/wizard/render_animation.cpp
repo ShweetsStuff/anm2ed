@@ -122,6 +122,9 @@ namespace anm2ed::imgui::wizard
       case render::WEBM:
         dialogType = Dialog::WEBM_PATH_SET;
         break;
+      case render::OGV:
+        dialogType = Dialog::OGV_PATH_SET;
+        break;
       case render::MP4:
         dialogType = Dialog::MP4_PATH_SET;
         break;
@@ -346,6 +349,7 @@ namespace anm2ed::imgui::wizard
             break;
           case render::GIF:
           case render::WEBM:
+          case render::OGV:
           case render::MP4:
             if (!ffmpeg_valid_check()) return false;
             break;

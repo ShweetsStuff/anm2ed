@@ -39,6 +39,8 @@ namespace anm2ed::imgui::wizard
     auto& isPivotY = settings.changeIsPivotY;
     auto& isScaleX = settings.changeIsScaleX;
     auto& isScaleY = settings.changeIsScaleY;
+    auto& isShearX = settings.changeIsShearX;
+    auto& isShearY = settings.changeIsShearY;
     auto& isRotation = settings.changeIsRotation;
     auto& isDuration = settings.changeIsDuration;
     auto& isTintR = settings.changeIsTintR;
@@ -53,16 +55,19 @@ namespace anm2ed::imgui::wizard
     auto& isFlipXSet = settings.changeIsFlipXSet;
     auto& isFlipYSet = settings.changeIsFlipYSet;
     auto& isRegion = settings.changeIsRegion;
+    auto& isShader = settings.changeIsShader;
     auto& crop = settings.changeCrop;
     auto& size = settings.changeSize;
     auto& position = settings.changePosition;
     auto& pivot = settings.changePivot;
     auto& scale = settings.changeScale;
+    auto& shear = settings.changeShear;
     auto& rotation = settings.changeRotation;
     auto& duration = settings.changeDuration;
     auto& tint = settings.changeTint;
     auto& colorOffset = settings.changeColorOffset;
     auto& regionId = document.changeAllFramePropertiesRegionId;
+    auto& shaderId = document.changeAllFramePropertiesShaderId;
     auto& isVisible = settings.changeIsVisible;
     auto& interpolation = settings.changeInterpolation;
     auto& isFlipX = settings.changeIsFlipX;
@@ -114,15 +119,12 @@ namespace anm2ed::imgui::wizard
       isItemsDestination = destination == CHANGE_DESTINATION_ITEMS;
     }
 
-    auto isLayerPropertyAvailable = isFramesDestination
-                                        ? std::ranges::any_of(selectedFrameReferences,
-                                                              [](const Reference& reference)
-                                                              { return reference.itemType == LAYER; })
-                                    : isItemsDestination
-                                        ? std::ranges::any_of(selectedItemReferences,
-                                                              [](const Reference& reference)
-                                                              { return reference.itemType == LAYER; })
-                                        : isLayers;
+    auto isLayerPropertyAvailable =
+        isFramesDestination  ? std::ranges::any_of(selectedFrameReferences, [](const Reference& reference)
+                                                   { return reference.itemType == LAYER; })
+        : isItemsDestination ? std::ranges::any_of(selectedItemReferences, [](const Reference& reference)
+                                                   { return reference.itemType == LAYER; })
+                             : isLayers;
 
 #define PROPERTIES_WIDGET(body, checkboxLabel, isEnabled)                                                              \
   ImGui::Checkbox(checkboxLabel, &isEnabled);                                                                          \
@@ -152,18 +154,15 @@ namespace anm2ed::imgui::wizard
 
       ImGui::PushItemWidth(width);
 
-      PROPERTIES_WIDGET(ImGui::DragInt(valueRLabel, &valueAlt.r, DRAG_SPEED, 0, 0, "R:%d"), checkboxRLabel,
-                        isREnabled);
+      PROPERTIES_WIDGET(ImGui::DragInt(valueRLabel, &valueAlt.r, DRAG_SPEED, 0, 0, "R:%d"), checkboxRLabel, isREnabled);
 
       ImGui::SameLine();
 
-      PROPERTIES_WIDGET(ImGui::DragInt(valueGLabel, &valueAlt.g, DRAG_SPEED, 0, 0, "G:%d"), checkboxGLabel,
-                        isGEnabled);
+      PROPERTIES_WIDGET(ImGui::DragInt(valueGLabel, &valueAlt.g, DRAG_SPEED, 0, 0, "G:%d"), checkboxGLabel, isGEnabled);
 
       ImGui::SameLine();
 
-      PROPERTIES_WIDGET(ImGui::DragInt(valueBLabel, &valueAlt.b, DRAG_SPEED, 0, 0, "B:%d"), checkboxBLabel,
-                        isBEnabled);
+      PROPERTIES_WIDGET(ImGui::DragInt(valueBLabel, &valueAlt.b, DRAG_SPEED, 0, 0, "B:%d"), checkboxBLabel, isBEnabled);
 
       ImGui::PopItemWidth();
 
@@ -196,22 +195,18 @@ namespace anm2ed::imgui::wizard
 
       ImGui::PushItemWidth(width);
 
-      PROPERTIES_WIDGET(ImGui::DragInt(valueRLabel, &valueAlt.r, DRAG_SPEED, 0, 0, "R:%d"), checkboxRLabel,
-                        isREnabled);
+      PROPERTIES_WIDGET(ImGui::DragInt(valueRLabel, &valueAlt.r, DRAG_SPEED, 0, 0, "R:%d"), checkboxRLabel, isREnabled);
       ImGui::SameLine();
 
-      PROPERTIES_WIDGET(ImGui::DragInt(valueGLabel, &valueAlt.g, DRAG_SPEED, 0, 0, "G:%d"), checkboxGLabel,
-                        isGEnabled);
-
-      ImGui::SameLine();
-
-      PROPERTIES_WIDGET(ImGui::DragInt(valueBLabel, &valueAlt.b, DRAG_SPEED, 0, 0, "B:%d"), checkboxBLabel,
-                        isBEnabled);
+      PROPERTIES_WIDGET(ImGui::DragInt(valueGLabel, &valueAlt.g, DRAG_SPEED, 0, 0, "G:%d"), checkboxGLabel, isGEnabled);
 
       ImGui::SameLine();
 
-      PROPERTIES_WIDGET(ImGui::DragInt(valueALabel, &valueAlt.a, DRAG_SPEED, 0, 0, "A:%d"), checkboxALabel,
-                        isAEnabled);
+      PROPERTIES_WIDGET(ImGui::DragInt(valueBLabel, &valueAlt.b, DRAG_SPEED, 0, 0, "B:%d"), checkboxBLabel, isBEnabled);
+
+      ImGui::SameLine();
+
+      PROPERTIES_WIDGET(ImGui::DragInt(valueALabel, &valueAlt.a, DRAG_SPEED, 0, 0, "A:%d"), checkboxALabel, isAEnabled);
 
       ImGui::PopItemWidth();
 
@@ -220,10 +215,9 @@ namespace anm2ed::imgui::wizard
       value = vec4(uint8_to_float(valueAlt.r), uint8_to_float(valueAlt.g), uint8_to_float(valueAlt.b),
                    uint8_to_float(valueAlt.a));
 
-      ImVec4 buttonColor = {isREnabled ? glm::clamp(value.r, 0.0f, 1.0f) : 0,
-                            isGEnabled ? glm::clamp(value.g, 0.0f, 1.0f) : 0,
-                            isBEnabled ? glm::clamp(value.b, 0.0f, 1.0f) : 0,
-                            isAEnabled ? glm::clamp(value.a, 0.0f, 1.0f) : 1};
+      ImVec4 buttonColor = {
+          isREnabled ? glm::clamp(value.r, 0.0f, 1.0f) : 0, isGEnabled ? glm::clamp(value.g, 0.0f, 1.0f) : 0,
+          isBEnabled ? glm::clamp(value.b, 0.0f, 1.0f) : 0, isAEnabled ? glm::clamp(value.a, 0.0f, 1.0f) : 1};
       ImGui::ColorButton(label, buttonColor);
 
       ImGui::SameLine();
@@ -275,6 +269,8 @@ namespace anm2ed::imgui::wizard
 
     float2_value("##Is Scale X", "##Is Scale Y", "##Scale X", localize.get(BASIC_SCALE), isScaleX, isScaleY, scale);
 
+    float2_value("##Is Shear X", "##Is Shear Y", "##Shear X", localize.get(BASIC_SHEAR), isShearX, isShearY, shear);
+
     float_value("##Is Rotation", localize.get(BASIC_ROTATION), isRotation, rotation);
 
     duration_value("##Is Duration", localize.get(BASIC_DURATION), isDuration, duration);
@@ -320,6 +316,15 @@ namespace anm2ed::imgui::wizard
     enum_value("##Is Interpolation", localize.get(BASIC_INTERPOLATED), isInterpolationSet, interpolation,
                interpolationIds, interpolationLabels);
 
+    ImGui::BeginDisabled(!isLayerPropertyAvailable);
+    auto shaderIds = !document.shader.ids.empty() ? document.shader.ids : fallbackIds;
+    auto shaderLabels = !document.shader.labels.empty() ? document.shader.labels : fallbackLabels;
+    if (!isLayerPropertyAvailable || std::find(shaderIds.begin(), shaderIds.end(), shaderId) == shaderIds.end())
+      shaderId = -1;
+    PROPERTIES_WIDGET(combo_id_mapped(localize.get(BASIC_SHADER), &shaderId, shaderIds, shaderLabels), "##Is Shader",
+                      isShader);
+    ImGui::EndDisabled();
+
     bool_value("##Is Visible", localize.get(BASIC_VISIBLE), isVisibleSet, isVisible);
 
     bool_value("##Is Flip X", localize.get(LABEL_FLIP_X), isFlipXSet, isFlipX);
@@ -351,9 +356,12 @@ namespace anm2ed::imgui::wizard
       if (isPivotY) frameChange.pivotY = pivot.y;
       if (isScaleX) frameChange.scaleX = scale.x;
       if (isScaleY) frameChange.scaleY = scale.y;
+      if (isShearX) frameChange.shearX = shear.x;
+      if (isShearY) frameChange.shearY = shear.y;
       if (isRotation) frameChange.rotation = std::make_optional(rotation);
       if (isDuration) frameChange.duration = std::make_optional(duration);
       if (isRegion) frameChange.regionId = std::make_optional(regionId);
+      if (isShader) frameChange.shaderId = std::make_optional(shaderId);
       if (isTintR) frameChange.tintR = color_value_get(tint.r);
       if (isTintG) frameChange.tintG = color_value_get(tint.g);
       if (isTintB) frameChange.tintB = color_value_get(tint.b);
@@ -378,8 +386,7 @@ namespace anm2ed::imgui::wizard
       auto queuedIsLayers = isLayers;
       auto queuedIsNulls = isNulls;
 
-      manager.command_push({manager.selected,
-                            [=](Manager&, Document& document)
+      manager.command_push({manager.selected, [=](Manager&, Document& document)
                             {
                               auto all_frames_selection = [](const Element& item)
                               {
@@ -452,7 +459,8 @@ namespace anm2ed::imgui::wizard
 
                                 if (queuedIsLayers)
                                 {
-                                  auto layerAnimations = element_child_first_get(*animation, ElementType::LAYER_ANIMATIONS);
+                                  auto layerAnimations =
+                                      element_child_first_get(*animation, ElementType::LAYER_ANIMATIONS);
                                   if (layerAnimations)
                                   {
                                     auto item_change = [&](auto&& self, Element& item) -> void
@@ -476,7 +484,8 @@ namespace anm2ed::imgui::wizard
 
                                 if (queuedIsNulls)
                                 {
-                                  auto nullAnimations = element_child_first_get(*animation, ElementType::NULL_ANIMATIONS);
+                                  auto nullAnimations =
+                                      element_child_first_get(*animation, ElementType::NULL_ANIMATIONS);
                                   if (nullAnimations)
                                   {
                                     auto item_change = [&](auto&& self, Element& item) -> void
@@ -543,10 +552,11 @@ namespace anm2ed::imgui::wizard
     }
 
     bool isAnyProperty = isCropX || isCropY || isSizeX || isSizeY || isPositionX || isPositionY || isPivotX ||
-                         isPivotY || isScaleX || isScaleY || isRotation || isDuration || isTintR || isTintG ||
-                         isTintB || isTintA || isColorOffsetR || isColorOffsetG || isColorOffsetB || isRegion ||
-                         isVisibleSet || isInterpolationSet || isFlipXSet || isFlipYSet;
-    bool isDestinationValid = isFramesDestination ? isSelectedFramesAvailable
+                         isPivotY || isScaleX || isScaleY || isShearX || isShearY || isRotation || isDuration ||
+                         isTintR || isTintG || isTintB || isTintA || isColorOffsetR || isColorOffsetG ||
+                         isColorOffsetB || isRegion || isShader || isVisibleSet || isInterpolationSet || isFlipXSet ||
+                         isFlipYSet;
+    bool isDestinationValid = isFramesDestination  ? isSelectedFramesAvailable
                               : isItemsDestination ? isSelectedItemsAvailable
                                                    : isSelectedAnimationsAvailable && (isRoot || isLayers || isNulls);
 

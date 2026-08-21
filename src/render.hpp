@@ -13,6 +13,7 @@ namespace anm2ed::render
   X(SPRITESHEET, "Spritesheet (PNG)", ".png")                                                                          \
   X(GIF, "GIF", ".gif")                                                                                                \
   X(WEBM, "WebM", ".webm")                                                                                             \
+  X(OGV, "OGV", ".ogv")                                                                                                \
   X(MP4, "MP4", ".mp4")
 
   enum Type

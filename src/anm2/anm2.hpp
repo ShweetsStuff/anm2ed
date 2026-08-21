@@ -22,6 +22,7 @@
   X(CONTENT, "Content")                                                                                                \
   X(SPRITESHEETS, "Spritesheets")                                                                                      \
   X(SPRITESHEET, "Spritesheet")                                                                                        \
+  X(SHADERS, "Shaders")                                                                                                \
   X(SHADER, "Shader")                                                                                                  \
   X(UNIFORM, "Uniform")                                                                                                \
   X(COMPONENT, "Component")                                                                                            \
@@ -214,6 +215,7 @@ namespace anm2ed
   {
     std::optional<bool> isVisible{};
     std::optional<Interpolation> interpolation{};
+    std::optional<int> shaderId{};
     std::optional<float> rotation{};
     std::optional<int> duration{};
     std::optional<int> regionId{};
@@ -227,6 +229,8 @@ namespace anm2ed
     std::optional<float> sizeY{};
     std::optional<float> scaleX{};
     std::optional<float> scaleY{};
+    std::optional<float> shearX{};
+    std::optional<float> shearY{};
     std::optional<float> colorOffsetR{};
     std::optional<float> colorOffsetG{};
     std::optional<float> colorOffsetB{};
@@ -263,6 +267,7 @@ namespace anm2ed
     int atFrame{-1};
     int eventId{-1};
     int regionId{-1};
+    int shaderId{-1};
     int soundId{-1};
     int groupId{-1};
     int index{-1};
@@ -280,6 +285,7 @@ namespace anm2ed
     glm::vec2 position{};
     glm::vec2 size{};
     glm::vec2 scale{100.0f, 100.0f};
+    glm::vec2 shear{};
     glm::vec3 colorOffset{};
     glm::vec4 tint{types::color::WHITE};
   };

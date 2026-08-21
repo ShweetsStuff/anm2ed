@@ -20,9 +20,9 @@ namespace anm2ed::snapshots
 
   bool is_storage_equal(const Storage& left, const Storage& right)
   {
-    return left.reference == right.reference && left.hovered == right.hovered && left.labelsString == right.labelsString &&
-           left.ids == right.ids && static_cast<const std::set<int>&>(left.selection) ==
-                                       static_cast<const std::set<int>&>(right.selection) &&
+    return left.reference == right.reference && left.hovered == right.hovered &&
+           left.labelsString == right.labelsString && left.ids == right.ids &&
+           static_cast<const std::set<int>&>(left.selection) == static_cast<const std::set<int>&>(right.selection) &&
            left.references == right.references;
   }
 
@@ -77,16 +77,18 @@ namespace anm2ed::snapshots
            left.createdBy == right.createdBy && left.createdOn == right.createdOn && left.path == right.path &&
            left.vertex == right.vertex && left.fragment == right.fragment && left.binding == right.binding &&
            left.value == right.value && left.defaultAnimation == right.defaultAnimation && left.id == right.id &&
-           left.layerId == right.layerId && left.nullId == right.nullId &&
-           left.spritesheetId == right.spritesheetId && left.fps == right.fps && left.version == right.version &&
-           left.frameNum == right.frameNum && left.duration == right.duration && left.atFrame == right.atFrame &&
-           left.eventId == right.eventId && left.regionId == right.regionId && left.soundId == right.soundId &&
+           left.layerId == right.layerId && left.nullId == right.nullId && left.spritesheetId == right.spritesheetId &&
+           left.fps == right.fps && left.version == right.version && left.frameNum == right.frameNum &&
+           left.duration == right.duration && left.atFrame == right.atFrame && left.eventId == right.eventId &&
+           left.regionId == right.regionId && left.shaderId == right.shaderId && left.soundId == right.soundId &&
            left.groupId == right.groupId && left.index == right.index && left.isLoop == right.isLoop &&
-           left.isVisible == right.isVisible && left.isShowRect == right.isShowRect && left.isExpanded == right.isExpanded &&
-           left.isEnabled == right.isEnabled && left.interpolation == right.interpolation && left.origin == right.origin &&
-           left.rotation == right.rotation && left.soundIds == right.soundIds && is_vec2_equal(left.pivot, right.pivot) &&
-           is_vec2_equal(left.crop, right.crop) && is_vec2_equal(left.position, right.position) &&
-           is_vec2_equal(left.size, right.size) && is_vec2_equal(left.scale, right.scale) &&
+           left.isVisible == right.isVisible && left.isShowRect == right.isShowRect &&
+           left.isExpanded == right.isExpanded && left.isEnabled == right.isEnabled &&
+           left.interpolation == right.interpolation && left.origin == right.origin &&
+           left.rotation == right.rotation && left.soundIds == right.soundIds &&
+           is_vec2_equal(left.pivot, right.pivot) && is_vec2_equal(left.crop, right.crop) &&
+           is_vec2_equal(left.position, right.position) && is_vec2_equal(left.size, right.size) &&
+           is_vec2_equal(left.scale, right.scale) && is_vec2_equal(left.shear, right.shear) &&
            is_vec3_equal(left.colorOffset, right.colorOffset) && is_vec4_equal(left.tint, right.tint);
   }
 
@@ -317,7 +319,6 @@ namespace anm2ed
     SNAPSHOT_STEP_STATE_FIELDS
     SNAPSHOT_STEP_RESOURCE_FIELDS
 #undef X
-
   }
 
   bool SnapshotStack::is_empty() { return stack.empty(); }
@@ -462,11 +463,11 @@ namespace anm2ed
     }
 
 #define X(type, name)                                                                                                  \
-    if (step.name)                                                                                                     \
-    {                                                                                                                  \
-      step.name->redo = snapshot.name;                                                                                 \
-      if (snapshots::is_value_equal(step.name->undo, step.name->redo)) step.name.reset();                             \
-    }
+  if (step.name)                                                                                                       \
+  {                                                                                                                    \
+    step.name->redo = snapshot.name;                                                                                   \
+    if (snapshots::is_value_equal(step.name->undo, step.name->redo)) step.name.reset();                                \
+  }
     SNAPSHOT_STEP_STATE_FIELDS
     SNAPSHOT_STEP_RESOURCE_FIELDS
 #undef X

@@ -12,6 +12,7 @@ namespace anm2ed::tool
     MOVE,
     ROTATE,
     SCALE,
+    SHEAR,
     CROP,
     DRAW,
     ERASE,
@@ -49,6 +50,9 @@ namespace anm2ed::tool
 
       {ImGuiMouseCursor_ResizeNESW, resource::icon::SCALE, SHORTCUT_SCALE, ANIMATION_PREVIEW, "##Scale",
        TOOLTIP_TOOL_SCALE},
+
+      {ImGuiMouseCursor_ResizeNESW, resource::icon::SHEAR, SHORTCUT_SHEAR, ANIMATION_PREVIEW, "##Shear",
+       TOOLTIP_TOOL_SHEAR},
 
       {ImGuiMouseCursor_Arrow, resource::icon::CROP, SHORTCUT_CROP, SPRITESHEET_EDITOR, "##Crop", TOOLTIP_TOOL_CROP},
 

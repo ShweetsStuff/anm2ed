@@ -30,6 +30,7 @@ namespace anm2ed
       NULLS,
       SPRITESHEETS,
       TEXTURES,
+      SHADERS,
       EVENTS,
       ANIMATIONS,
       ITEMS,
@@ -82,6 +83,7 @@ namespace anm2ed
     Storage& merge = current.merge;
     Storage& null = current.null;
     Storage& region = current.region;
+    Storage& shader = current.shader;
     Storage& sound = current.sound;
     Storage& spritesheet = current.spritesheet;
     std::map<int, resource::Texture>& textures = current.textures;
@@ -93,6 +95,7 @@ namespace anm2ed
     std::string& message = current.message;
     std::map<int, Storage> regionBySpritesheet{};
     int changeAllFramePropertiesRegionId{-1};
+    int changeAllFramePropertiesShaderId{-1};
 
     float previewZoom{200};
     glm::vec2 previewPan{};
@@ -112,8 +115,8 @@ namespace anm2ed
     std::unordered_map<int, uint64_t> spritesheetSaveHashes{};
     std::unordered_map<int, std::filesystem::path> texturePaths{};
     std::unordered_map<int, std::filesystem::path> soundPaths{};
-    std::unordered_map<int, std::filesystem::path> shaderVertexPaths{};
-    std::unordered_map<int, std::filesystem::path> shaderFragmentPaths{};
+    std::map<int, std::filesystem::path> shaderVertexPaths{};
+    std::map<int, std::filesystem::path> shaderFragmentPaths{};
     std::map<int, resource::Shader> shaders{};
     bool isAnimationPreviewSet{false};
     bool isSpritesheetEditorSet{false};

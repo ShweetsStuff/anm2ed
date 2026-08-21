@@ -82,6 +82,9 @@ namespace anm2ed
           case render::WEBM:
             audioOutputArguments = "-c:a libopus -b:a 160k -shortest";
             break;
+          case render::OGV:
+            audioOutputArguments = "-c:a libvorbis -q:a 4 -shortest";
+            break;
           case render::MP4:
             audioOutputArguments = "-c:a aac -b:a 192k -shortest";
             break;
@@ -118,6 +121,11 @@ namespace anm2ed
         break;
       case render::WEBM:
         command += " -c:v libvpx-vp9 -crf 30 -b:v 0 -pix_fmt yuva420p -row-mt 1 -threads 0 -speed 2 -auto-alt-ref 0";
+        if (!audioOutputArguments.empty()) command += " " + audioOutputArguments;
+        command += std::format(" \"{}\"", pathString);
+        break;
+      case render::OGV:
+        command += " -vf \"format=yuv420p,scale=trunc(iw/2)*2:trunc(ih/2)*2\" -c:v libtheora -q:v 7";
         if (!audioOutputArguments.empty()) command += " " + audioOutputArguments;
         command += std::format(" \"{}\"", pathString);
         break;

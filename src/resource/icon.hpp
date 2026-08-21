@@ -113,6 +113,10 @@ namespace anm2ed::resource::icon
   <svg viewBox="0 0 24 24" fill="#FFF" xmlns="http://www.w3.org/2000/svg"><path d="M21 3H13.5L16.5429 6.04289L13.2929 9.29289L14.7071 10.7071L17.9571 7.45711L21 10.5V3ZM3 21H10.5L7.45711 17.9571L10.7071 14.7071L9.29289 13.2929L6.04289 16.5429L3 13.5V21Z"/></svg>
   )";
 
+  inline constexpr auto SHEAR_DATA = R"(
+  <svg viewBox="0 0 24 24" fill="none" stroke="#FFF" stroke-width="2" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M8 5H20L16 19H4Z"/></svg>
+  )";
+
   inline constexpr auto CROP_DATA = R"(
   <svg viewBox="0 0 24 24" fill="#FFF" xmlns="http://www.w3.org/2000/svg"><path d="M15 17V19H6C5.44772 19 5 18.5523 5 18V7H2V5H5V2H7V17H15ZM17 22V7H9V5H18C18.5523 5 19 5.44772 19 6V17H22V19H19V22H17Z"/></svg>
   )";
@@ -181,6 +185,10 @@ namespace anm2ed::resource::icon
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FFF"><path d="M6.60282 10.0001L10 7.22056V16.7796L6.60282 14.0001H3V10.0001H6.60282ZM2 16.0001H5.88889L11.1834 20.3319C11.2727 20.405 11.3846 20.4449 11.5 20.4449C11.7761 20.4449 12 20.2211 12 19.9449V4.05519C12 3.93977 11.9601 3.8279 11.887 3.73857C11.7121 3.52485 11.3971 3.49335 11.1834 3.66821L5.88889 8.00007H2C1.44772 8.00007 1 8.44778 1 9.00007V15.0001C1 15.5524 1.44772 16.0001 2 16.0001ZM23 12C23 15.292 21.5539 18.2463 19.2622 20.2622L17.8445 18.8444C19.7758 17.1937 21 14.7398 21 12C21 9.26016 19.7758 6.80629 17.8445 5.15557L19.2622 3.73779C21.5539 5.75368 23 8.70795 23 12ZM18 12C18 10.0883 17.106 8.38548 15.7133 7.28673L14.2842 8.71584C15.3213 9.43855 16 10.64 16 12C16 13.36 15.3213 14.5614 14.2842 15.2841L15.7133 16.7132C17.106 15.6145 18 13.9116 18 12Z"></path></svg>
 )";
 
+  inline constexpr auto SHADER_DATA = R"(
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FFF"><path d="M14 4.4375C15.3462 4.4375 16.4375 3.34619 16.4375 2H17.5625C17.5625 3.34619 18.6538 4.4375 20 4.4375V5.5625C18.6538 5.5625 17.5625 6.65381 17.5625 8H16.4375C16.4375 6.65381 15.3462 5.5625 14 5.5625V4.4375ZM1 11C4.31371 11 7 8.31371 7 5H9C9 8.31371 11.6863 11 15 11V13C11.6863 13 9 15.6863 9 19H7C7 15.6863 4.31371 13 1 13V11ZM4.87601 12C6.18717 12.7276 7.27243 13.8128 8 15.124C8.72757 13.8128 9.81283 12.7276 11.124 12C9.81283 11.2724 8.72757 10.1872 8 8.87601C7.27243 10.1872 6.18717 11.2724 4.87601 12ZM17.25 14C17.25 15.7949 15.7949 17.25 14 17.25V18.75C15.7949 18.75 17.25 20.2051 17.25 22H18.75C18.75 20.2051 20.2051 18.75 22 18.75V17.25C20.2051 17.25 18.75 15.7949 18.75 14H17.25Z"></path></svg>
+)";
+
 #define SVG_LIST                                                                                                       \
   X(NONE, NONE_DATA, SIZE_SMALL)                                                                                       \
   X(FILE, FILE_DATA, SIZE_NORMAL)                                                                                      \
@@ -191,6 +199,7 @@ namespace anm2ed::resource::icon
   X(LAYER, LAYER_DATA, SIZE_NORMAL)                                                                                    \
   X(NULL_, NULL_DATA, SIZE_NORMAL)                                                                                     \
   X(SOUND, SOUND_DATA, SIZE_NORMAL)                                                                                    \
+  X(SHADER, SHADER_DATA, SIZE_NORMAL)                                                                                  \
   X(TRIGGERS, TRIGGERS_DATA, SIZE_NORMAL)                                                                              \
   X(VISIBLE, VISIBLE_DATA, SIZE_NORMAL)                                                                                \
   X(INVISIBLE, INVISIBLE_DATA, SIZE_NORMAL)                                                                            \
@@ -206,6 +215,7 @@ namespace anm2ed::resource::icon
   X(MOVE, MOVE_DATA, SIZE_NORMAL)                                                                                      \
   X(ROTATE, ROTATE_DATA, SIZE_NORMAL)                                                                                  \
   X(SCALE, SCALE_DATA, SIZE_NORMAL)                                                                                    \
+  X(SHEAR, SHEAR_DATA, SIZE_NORMAL)                                                                                    \
   X(CROP, CROP_DATA, SIZE_NORMAL)                                                                                      \
   X(DRAW, DRAW_DATA, SIZE_NORMAL)                                                                                      \
   X(ERASE, ERASE_DATA, SIZE_NORMAL)                                                                                    \

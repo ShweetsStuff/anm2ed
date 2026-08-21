@@ -24,6 +24,7 @@ namespace anm2ed
   X(SOUND, {"WAV file;OGG file", "wav;ogg"})                                                                           \
   X(GIF, {"GIF image", "gif"})                                                                                         \
   X(WEBM, {"WebM video", "webm"})                                                                                      \
+  X(OGV, {"OGV video", "ogv"})                                                                                         \
   X(MP4, {"MP4 video", "MP4"})                                                                                         \
   X(EXECUTABLE, EXECUTABLE_FILTER)
 
@@ -60,6 +61,7 @@ namespace anm2ed
   X(REGION_EXPORT_PATH_SET, PNG)                                                                                       \
   X(GIF_PATH_SET, GIF)                                                                                                 \
   X(WEBM_PATH_SET, WEBM)                                                                                               \
+  X(OGV_PATH_SET, OGV)                                                                                                 \
   X(MP4_PATH_SET, MP4)
 
     enum Type

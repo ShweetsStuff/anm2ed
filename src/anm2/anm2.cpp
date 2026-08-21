@@ -50,6 +50,7 @@ namespace anm2ed
   X("AtFrame", atFrame)                                                                                                \
   X("EventId", eventId)                                                                                                \
   X("RegionId", regionId)                                                                                              \
+  X("ShaderId", shaderId)                                                                                              \
   X("SoundId", soundId)                                                                                                \
   X("GroupId", groupId)                                                                                                \
   X("Index", index)
@@ -72,7 +73,9 @@ namespace anm2ed
   X("Width", size.x)                                                                                                   \
   X("Height", size.y)                                                                                                  \
   X("XScale", scale.x)                                                                                                 \
-  X("YScale", scale.y)
+  X("YScale", scale.y)                                                                                                 \
+  X("ShearX", shear.x)                                                                                                 \
+  X("ShearY", shear.y)
 
 #define ANM2_COLOR_ATTRIBUTES                                                                                          \
   X("RedTint", tint.r)                                                                                                 \
@@ -105,6 +108,9 @@ namespace anm2ed
   void groups_nest(Element&);
   void group_frames_restore(Element&);
   void source_document_erase(Element&);
+  void shader_ids_repair(Element&);
+  void shader_frame_ids_repair(Element&);
+  void shader_ids_remap(Element&);
   void region_ids_remap(Element&);
   void region_frame_ids_repair(Element&);
   Element* child_first_get(Element&, ElementType);
@@ -151,10 +157,7 @@ namespace anm2ed
     return (int)animations.children.size();
   }
 
-  bool is_source_document_tag(std::string_view tag)
-  {
-    return tag == SOURCE_DOCUMENT_TAG;
-  }
+  bool is_source_document_tag(std::string_view tag) { return tag == SOURCE_DOCUMENT_TAG; }
 
   const XMLElement* source_document_get(const XMLElement* rootElement)
   {
@@ -187,6 +190,8 @@ namespace anm2ed
     group_metadata_embed(anm2.root);
     group_frames_restore(anm2.root);
     groups_flatten(anm2.root);
+    shader_ids_repair(anm2.root);
+    shader_frame_ids_repair(anm2.root);
     region_frame_ids_repair(anm2.root);
     anm2.region_frames_sync(true);
     anm2.isValid = true;
@@ -213,6 +218,8 @@ namespace anm2ed
     {
       case ElementType::SPRITESHEET:
         return ElementType::SPRITESHEETS;
+      case ElementType::SHADER:
+        return ElementType::SHADERS;
       case ElementType::LAYER_ELEMENT:
         return ElementType::LAYERS;
       case ElementType::NULL_ELEMENT:
@@ -247,7 +254,7 @@ namespace anm2ed
   {
     auto base = element_make(ElementType::FRAME);
     return frame.position == base.position && frame.scale == base.scale && frame.rotation == base.rotation &&
-           frame.tint == base.tint && frame.colorOffset == base.colorOffset;
+           frame.shear == base.shear && frame.tint == base.tint && frame.colorOffset == base.colorOffset;
   }
 
   bool is_root_animation_transform_default(const Element& root)
@@ -628,10 +635,11 @@ namespace anm2ed
   bool element_write_skip(const Element& element, ElementType parentType, Flags flags)
   {
     if (!is_track_child_valid(parentType, element.type)) return true;
-    if ((element.type == ElementType::SHADER || element.type == ElementType::UNIFORM ||
-         element.type == ElementType::COMPONENT) &&
+    if ((element.type == ElementType::SHADERS || element.type == ElementType::SHADER ||
+         element.type == ElementType::UNIFORM || element.type == ElementType::COMPONENT) &&
         !has_flag(flags, SERIALIZE_EXTENSIONS))
       return true;
+    if (element.type == ElementType::SHADERS && element.children.empty()) return true;
     if (element.type == ElementType::SOUNDS && (!has_flag(flags, SERIALIZE_SOUNDS) || element.children.empty()))
       return true;
     if ((element.type == ElementType::LAYER_ANIMATION_GROUPS || element.type == ElementType::NULL_ANIMATION_GROUPS) &&
@@ -668,6 +676,11 @@ namespace anm2ed
     out->SetAttribute("Visible", element.isVisible);
     out->SetAttribute("XScale", element.scale.x);
     out->SetAttribute("YScale", element.scale.y);
+    if (has_flag(flags, SERIALIZE_EXTENSIONS))
+    {
+      out->SetAttribute("ShearX", element.shear.x);
+      out->SetAttribute("ShearY", element.shear.y);
+    }
     out->SetAttribute("RedTint", color_write(element.tint.r));
     out->SetAttribute("GreenTint", color_write(element.tint.g));
     out->SetAttribute("BlueTint", color_write(element.tint.b));
@@ -677,6 +690,8 @@ namespace anm2ed
     out->SetAttribute("BlueOffset", color_write(element.colorOffset.b));
     out->SetAttribute("Rotation", element.rotation);
     interpolation_write(out, element.interpolation);
+    if (has_flag(flags, SERIALIZE_EXTENSIONS) && element.shaderId != -1)
+      out->SetAttribute("ShaderId", element.shaderId);
   }
 
   void element_attributes_write(XMLElement* out, const Element& element, ElementType parentType, Flags flags)
@@ -697,7 +712,8 @@ namespace anm2ed
     }
     else if (element.type == ElementType::SHADER)
     {
-      if (!element.isEnabled) out->SetAttribute("Enabled", element.isEnabled);
+      out->SetAttribute("Id", element.id);
+      out->SetAttribute("Name", element.name.c_str());
       path_set(out, "Vertex", element.vertex);
       path_set(out, "Fragment", element.fragment);
     }
@@ -815,6 +831,7 @@ namespace anm2ed
       baked.rotation = glm::mix(original.rotation, nextFrame.rotation, amount);
       baked.position = glm::mix(original.position, nextFrame.position, amount);
       baked.scale = glm::mix(original.scale, nextFrame.scale, amount);
+      baked.shear = glm::mix(original.shear, nextFrame.shear, amount);
       baked.colorOffset = glm::mix(original.colorOffset, nextFrame.colorOffset, amount);
       baked.tint = glm::mix(original.tint, nextFrame.tint, amount);
       auto frame = element_to_xml(document, baked, track.type, flags);
@@ -987,6 +1004,11 @@ namespace anm2ed
     hash_attr_append(hash, "Visible", element.isVisible);
     hash_attr_append(hash, "XScale", element.scale.x);
     hash_attr_append(hash, "YScale", element.scale.y);
+    if (has_flag(flags, SERIALIZE_EXTENSIONS))
+    {
+      hash_attr_append(hash, "ShearX", element.shear.x);
+      hash_attr_append(hash, "ShearY", element.shear.y);
+    }
     hash_attr_append(hash, "RedTint", color_write(element.tint.r));
     hash_attr_append(hash, "GreenTint", color_write(element.tint.g));
     hash_attr_append(hash, "BlueTint", color_write(element.tint.b));
@@ -996,6 +1018,8 @@ namespace anm2ed
     hash_attr_append(hash, "BlueOffset", color_write(element.colorOffset.b));
     hash_attr_append(hash, "Rotation", element.rotation);
     hash_interpolation_attr_append(hash, element.interpolation);
+    if (has_flag(flags, SERIALIZE_EXTENSIONS) && element.shaderId != -1)
+      hash_attr_append(hash, "ShaderId", element.shaderId);
   }
 
   void bake_attributes_hash_append(std::uint64_t& hash, Interpolation interpolation, int bakeDelay)
@@ -1023,7 +1047,8 @@ namespace anm2ed
     }
     else if (element.type == ElementType::SHADER)
     {
-      if (!element.isEnabled) hash_attr_append(hash, "Enabled", element.isEnabled);
+      hash_attr_append(hash, "Id", element.id);
+      hash_attr_append(hash, "Name", element.name);
       hash_path_attr_append(hash, "Vertex", element.vertex);
       hash_path_attr_append(hash, "Fragment", element.fragment);
     }
@@ -1142,6 +1167,7 @@ namespace anm2ed
       baked.rotation = glm::mix(original.rotation, nextFrame.rotation, amount);
       baked.position = glm::mix(original.position, nextFrame.position, amount);
       baked.scale = glm::mix(original.scale, nextFrame.scale, amount);
+      baked.shear = glm::mix(original.shear, nextFrame.shear, amount);
       baked.colorOffset = glm::mix(original.colorOffset, nextFrame.colorOffset, amount);
       baked.tint = glm::mix(original.tint, nextFrame.tint, amount);
       element_hash_append(hash, baked, track.type, flags,
@@ -1575,6 +1601,13 @@ namespace anm2ed
 
   bool is_track_child_valid(ElementType parentType, ElementType childType)
   {
+    if (parentType == ElementType::CONTENT && childType == ElementType::SHADERS) return true;
+    if (parentType == ElementType::SHADERS) return childType == ElementType::SHADER;
+    if (parentType == ElementType::SHADER) return childType == ElementType::UNIFORM;
+    if (parentType == ElementType::UNIFORM) return childType == ElementType::COMPONENT;
+    if (childType == ElementType::SHADERS || childType == ElementType::SHADER || childType == ElementType::UNIFORM ||
+        childType == ElementType::COMPONENT)
+      return false;
     if (parentType == ElementType::TRIGGERS) return childType == ElementType::TRIGGER;
     if (parentType == ElementType::TRIGGER) return childType == ElementType::SOUND_ELEMENT;
     if (parentType == ElementType::LAYER_ANIMATION_GROUPS || parentType == ElementType::NULL_ANIMATION_GROUPS)
@@ -1716,6 +1749,48 @@ namespace anm2ed
     return nullptr;
   }
 
+  void shader_ids_repair(Element& root)
+  {
+    auto content = child_first_get(root, ElementType::CONTENT);
+    auto shaders = content ? child_first_get(*content, ElementType::SHADERS) : nullptr;
+    if (!shaders) return;
+
+    std::set<int> usedIds{};
+    int nextId{};
+    for (auto& shader : shaders->children)
+    {
+      if (shader.type != ElementType::SHADER) continue;
+
+      while (usedIds.contains(nextId))
+        ++nextId;
+      if (shader.id < 0 || usedIds.contains(shader.id)) shader.id = nextId++;
+      usedIds.insert(shader.id);
+      if (shader.name.empty()) shader.name = "New Shader";
+    }
+  }
+
+  void shader_frame_ids_repair(Element& root)
+  {
+    auto content = child_first_get(root, ElementType::CONTENT);
+    auto shaders = content ? child_first_get(*content, ElementType::SHADERS) : nullptr;
+    auto animations = element_first_get(root, ElementType::ANIMATIONS);
+    if (!animations) return;
+
+    std::set<int> shaderIds{};
+    if (shaders)
+      for (const auto& shader : shaders->children)
+        if (shader.type == ElementType::SHADER) shaderIds.insert(shader.id);
+
+    auto frame_repair = [&](auto&& self, Element& element) -> void
+    {
+      if (element.type == ElementType::FRAME && element.shaderId != -1 && !shaderIds.contains(element.shaderId))
+        element.shaderId = -1;
+      for (auto& child : element.children)
+        self(self, child);
+    };
+    frame_repair(frame_repair, *animations);
+  }
+
   void region_frame_ids_repair(Element& root)
   {
     auto content = child_first_get(root, ElementType::CONTENT);
@@ -1821,6 +1896,36 @@ namespace anm2ed
                     }
                   });
     }
+  }
+
+  void shader_ids_remap(Element& root)
+  {
+    auto content = child_first_get(root, ElementType::CONTENT);
+    auto shaders = content ? child_first_get(*content, ElementType::SHADERS) : nullptr;
+
+    std::unordered_map<int, int> remap{};
+    int nextId{};
+    if (shaders)
+      for (auto& shader : shaders->children)
+      {
+        if (shader.type != ElementType::SHADER) continue;
+        remap[shader.id] = nextId;
+        shader.id = nextId++;
+      }
+
+    auto frame_remap = [&](auto&& self, Element& element) -> void
+    {
+      if (element.type == ElementType::FRAME && element.shaderId != -1)
+      {
+        if (auto it = remap.find(element.shaderId); it != remap.end())
+          element.shaderId = it->second;
+        else
+          element.shaderId = -1;
+      }
+      for (auto& child : element.children)
+        self(self, child);
+    };
+    frame_remap(frame_remap, root);
   }
 
   bool is_track_group_visible(const Element& container, const Element& track)
@@ -1969,6 +2074,7 @@ namespace anm2ed
       frame.rotation = glm::mix(frame.rotation, frameNext->rotation, amount);
       frame.position = glm::mix(frame.position, frameNext->position, amount);
       frame.scale = glm::mix(frame.scale, frameNext->scale, amount);
+      frame.shear = glm::mix(frame.shear, frameNext->shear, amount);
       frame.colorOffset = glm::mix(frame.colorOffset, frameNext->colorOffset, amount);
       frame.tint = glm::mix(frame.tint, frameNext->tint, amount);
     }
@@ -2058,6 +2164,7 @@ namespace anm2ed
       baked.rotation = glm::mix(original.rotation, next.rotation, amount);
       baked.position = glm::mix(original.position, next.position, amount);
       baked.scale = glm::mix(original.scale, next.scale, amount);
+      baked.shear = glm::mix(original.shear, next.shear, amount);
       baked.colorOffset = glm::mix(original.colorOffset, next.colorOffset, amount);
       baked.tint = glm::mix(original.tint, next.tint, amount);
       if (isRoundScale) baked.scale = glm::round(baked.scale);
@@ -2218,12 +2325,15 @@ namespace anm2ed
         apply_scalar(frame->size.x, change.sizeX);
         apply_scalar(frame->size.y, change.sizeY);
         if (change.regionId) frame->regionId = *change.regionId;
+        if (change.shaderId) frame->shaderId = *change.shaderId;
       }
 
       apply_scalar(frame->position.x, change.positionX);
       apply_scalar(frame->position.y, change.positionY);
       apply_scalar(frame->scale.x, change.scaleX);
       apply_scalar(frame->scale.y, change.scaleY);
+      apply_scalar(frame->shear.x, change.shearX);
+      apply_scalar(frame->shear.y, change.shearY);
       apply_scalar(frame->colorOffset.x, change.colorOffsetR);
       apply_scalar(frame->colorOffset.y, change.colorOffsetG);
       apply_scalar(frame->colorOffset.z, change.colorOffsetB);
@@ -2287,6 +2397,7 @@ namespace anm2ed
         baked.rotation = glm::mix(original.rotation, nextFrame.rotation, amount);
         baked.position = glm::mix(original.position, nextFrame.position, amount);
         baked.scale = glm::mix(original.scale, nextFrame.scale, amount);
+        baked.shear = glm::mix(original.shear, nextFrame.shear, amount);
         baked.colorOffset = glm::mix(original.colorOffset, nextFrame.colorOffset, amount);
         baked.tint = glm::mix(original.tint, nextFrame.tint, amount);
         if (isRoundScale) baked.scale = glm::round(baked.scale);
@@ -2344,6 +2455,7 @@ namespace anm2ed
 
     auto content = element_make(ElementType::CONTENT);
     content.children.push_back(element_make(ElementType::SPRITESHEETS));
+    content.children.push_back(element_make(ElementType::SHADERS));
     content.children.push_back(element_make(ElementType::LAYERS));
     content.children.push_back(element_make(ElementType::NULLS));
     content.children.push_back(element_make(ElementType::EVENTS));
@@ -2505,6 +2617,7 @@ namespace anm2ed
     if (has_flag(flags, SERIALIZE_FLATTEN_SPECIAL_INTERPOLATED_FRAMES))
       all_interpolated_frames_bake(normalized.root, FRAME_DURATION_MIN, false, false);
     region_ids_remap(normalized.root);
+    shader_ids_remap(normalized.root);
     if (has_flag(flags, SERIALIZE_GROUPS) && has_flag(flags, SERIALIZE_NESTED_GROUPS))
       groups_nest(normalized.root);
     else
@@ -2541,6 +2654,7 @@ namespace anm2ed
     switch (type)
     {
       case ElementType::SPRITESHEETS:
+      case ElementType::SHADERS:
       case ElementType::LAYERS:
       case ElementType::NULLS:
       case ElementType::EVENTS:
@@ -2692,6 +2806,17 @@ namespace anm2ed
               used.insert(id);
           }
         }
+        else if (type == ElementType::SHADER)
+        {
+          auto layerAnimations = child_first_get(animation, ElementType::LAYER_ANIMATIONS);
+          if (!layerAnimations) continue;
+          tracks_each(*layerAnimations, ElementType::LAYER_ANIMATION,
+                      [&](const Element& layerAnimation)
+                      {
+                        for (const auto& frame : layerAnimation.children)
+                          if (frame.type == ElementType::FRAME && frame.shaderId != -1) used.insert(frame.shaderId);
+                      });
+        }
         else if (type == ElementType::LAYER_ELEMENT || type == ElementType::NULL_ELEMENT)
         {
           auto containerType =
@@ -2763,14 +2888,17 @@ namespace anm2ed
                       auto layer = element_get(ElementType::LAYER_ELEMENT, layerAnimation.layerId);
                       if (!layer || layer->spritesheetId != parentId) return;
                       for (const auto& frame : layerAnimation.children)
-                        if (frame.type == ElementType::FRAME && frame.regionId != -1) used.insert(frame.regionId);
+                      {
+                        if (frame.type != ElementType::FRAME) continue;
+                        if (frame.regionId != -1) used.insert(frame.regionId);
+                      }
                     });
       }
 
     std::set<int> unused{};
     if (auto spritesheet = element_get(ElementType::SPRITESHEET, parentId))
-      for (const auto& region : spritesheet->children)
-        if (region.type == ElementType::REGION && !used.contains(region.id)) unused.insert(region.id);
+      for (const auto& child : spritesheet->children)
+        if (child.type == type && !used.contains(child.id)) unused.insert(child.id);
     return unused;
   }
 
@@ -2895,7 +3023,7 @@ namespace anm2ed
       {
         auto rootFrame = frame_generate(*root, t);
         transform *= math::quad_model_parent_get(rootFrame.position, {}, math::percent_to_unit(rootFrame.scale),
-                                                 rootFrame.rotation);
+                                                 rootFrame.rotation, math::percent_to_unit(rootFrame.shear));
       }
 
       auto layerAnimations = child_first_get(animation, ElementType::LAYER_ANIMATIONS);
@@ -2912,9 +3040,9 @@ namespace anm2ed
                         if (auto groupRoot = child_first_get(*group, ElementType::ROOT_ANIMATION))
                         {
                           auto groupRootFrame = frame_generate(*groupRoot, t);
-                          itemTransform *= math::quad_model_parent_get(groupRootFrame.position, {},
-                                                                       math::percent_to_unit(groupRootFrame.scale),
-                                                                       groupRootFrame.rotation);
+                          itemTransform *= math::quad_model_parent_get(
+                              groupRootFrame.position, {}, math::percent_to_unit(groupRootFrame.scale),
+                              groupRootFrame.rotation, math::percent_to_unit(groupRootFrame.shear));
                         }
 
                     auto frame = frame_effective(layerAnimation.layerId, frame_generate(layerAnimation, t));
@@ -2922,7 +3050,8 @@ namespace anm2ed
 
                     auto layerTransform =
                         itemTransform * math::quad_model_get(frame.size, frame.position, frame.pivot,
-                                                             math::percent_to_unit(frame.scale), frame.rotation);
+                                                             math::percent_to_unit(frame.scale), frame.rotation,
+                                                             math::percent_to_unit(frame.shear));
                     for (auto& corner : CORNERS)
                     {
                       auto world = layerTransform * glm::vec4(corner, 0.0f, 1.0f);

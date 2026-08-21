@@ -60,6 +60,7 @@ namespace anm2ed
     Storage merge{};
     Storage null{};
     Storage region{};
+    Storage shader{};
     Storage sound{};
     Storage spritesheet{};
     std::map<int, resource::Texture> textures{};
@@ -84,6 +85,7 @@ namespace anm2ed
   X(Storage, merge)                                                                                                    \
   X(Storage, null)                                                                                                     \
   X(Storage, region)                                                                                                   \
+  X(Storage, shader)                                                                                                   \
   X(Storage, sound)                                                                                                    \
   X(Storage, spritesheet)                                                                                              \
   X(Reference, reference)                                                                                              \

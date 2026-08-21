@@ -59,14 +59,16 @@ namespace anm2ed::document
     }
   }
 
-  const Element* shader_element_get(const Element& spritesheet)
+  const Element* shader_element_get(const Anm2& anm2, int id)
   {
-    return element_child_first_get(spritesheet, ElementType::SHADER);
+    auto shaders = anm2.element_get(ElementType::SHADERS);
+    return shaders ? element_child_id_get(*shaders, ElementType::SHADER, id) : nullptr;
   }
 
-  Element* shader_element_get(Element& spritesheet)
+  Element* shader_element_get(Anm2& anm2, int id)
   {
-    return element_child_first_get(spritesheet, ElementType::SHADER);
+    auto shaders = anm2.element_get(ElementType::SHADERS);
+    return shaders ? element_child_id_get(*shaders, ElementType::SHADER, id) : nullptr;
   }
 
   std::filesystem::path shader_absolute_path_get(Document& document, const std::filesystem::path& path)
@@ -190,9 +192,8 @@ namespace anm2ed::document
         continue;
       }
 
-      auto uniform =
-          std::find_if(shader.uniforms.begin(), shader.uniforms.end(),
-                       [&](const resource::shader::Uniform& uniform) { return uniform.name == it->name; });
+      auto uniform = std::find_if(shader.uniforms.begin(), shader.uniforms.end(),
+                                  [&](const resource::shader::Uniform& uniform) { return uniform.name == it->name; });
       if (uniform == shader.uniforms.end())
       {
         it = shaderElement.children.erase(it);
@@ -211,7 +212,8 @@ namespace anm2ed::document
       }
 
       auto componentCount = component_count_get(uniform->valueType);
-      auto isComponents = resource::shader::uniform_binding_get(it->binding) == resource::shader::UNIFORM_BINDING_COMPONENTS;
+      auto isComponents =
+          resource::shader::uniform_binding_get(it->binding) == resource::shader::UNIFORM_BINDING_COMPONENTS;
       auto removed = std::erase_if(it->children,
                                    [&](const Element& component)
                                    {
@@ -515,18 +517,20 @@ namespace anm2ed
   }
 
   Document::Document(Document&& other) noexcept
-      : path(std::move(other.path)), tabId(other.tabId), snapshots(std::move(other.snapshots)), current(snapshots.current),
-        playback(current.playback), animation(current.animation), event(current.event), frames(current.frames),
-        items(current.items), layer(current.layer), merge(current.merge), null(current.null), region(current.region),
-        sound(current.sound), spritesheet(current.spritesheet), textures(current.textures), sounds(current.sounds),
-        anm2(current.anm2), reference(current.reference), groupReferences(current.groupReferences),
-        frameTime(current.frameTime), message(current.message), regionBySpritesheet(std::move(other.regionBySpritesheet)),
-        changeAllFramePropertiesRegionId(other.changeAllFramePropertiesRegionId), previewZoom(other.previewZoom),
+      : path(std::move(other.path)), tabId(other.tabId), snapshots(std::move(other.snapshots)),
+        current(snapshots.current), playback(current.playback), animation(current.animation), event(current.event),
+        frames(current.frames), items(current.items), layer(current.layer), merge(current.merge), null(current.null),
+        region(current.region), shader(current.shader), sound(current.sound), spritesheet(current.spritesheet),
+        textures(current.textures), sounds(current.sounds), anm2(current.anm2), reference(current.reference),
+        groupReferences(current.groupReferences), frameTime(current.frameTime), message(current.message),
+        regionBySpritesheet(std::move(other.regionBySpritesheet)),
+        changeAllFramePropertiesRegionId(other.changeAllFramePropertiesRegionId),
+        changeAllFramePropertiesShaderId(other.changeAllFramePropertiesShaderId), previewZoom(other.previewZoom),
         previewPan(other.previewPan), editorPan(other.editorPan), editorZoom(other.editorZoom),
         overlayIndex(other.overlayIndex), overlayDocumentId(other.overlayDocumentId), hash(other.hash),
-        saveHash(other.saveHash), autosaveHash(other.autosaveHash),
-        lastAutosaveTime(other.lastAutosaveTime), isValid(other.isValid), isOpen(other.isOpen),
-        isForceDirty(other.isForceDirty), spritesheetHashes(std::move(other.spritesheetHashes)),
+        saveHash(other.saveHash), autosaveHash(other.autosaveHash), lastAutosaveTime(other.lastAutosaveTime),
+        isValid(other.isValid), isOpen(other.isOpen), isForceDirty(other.isForceDirty),
+        spritesheetHashes(std::move(other.spritesheetHashes)),
         spritesheetSaveHashes(std::move(other.spritesheetSaveHashes)), texturePaths(std::move(other.texturePaths)),
         soundPaths(std::move(other.soundPaths)), shaderVertexPaths(std::move(other.shaderVertexPaths)),
         shaderFragmentPaths(std::move(other.shaderFragmentPaths)), shaders(std::move(other.shaders)),
@@ -640,20 +644,19 @@ namespace anm2ed
     return true;
   }
 
-  bool Document::shader_reload(int id, std::string* status)
+  bool Document::shader_reload(int shaderId, std::string* status)
   {
-    auto spritesheet = anm2.element_get(ElementType::SPRITESHEET, id);
-    auto shaderElement = spritesheet ? document::shader_element_get(*spritesheet) : nullptr;
-    if (!shaderElement || !shaderElement->isEnabled)
+    auto shaderElement = document::shader_element_get(anm2, shaderId);
+    if (!shaderElement)
     {
-      if (status && !shaderElement)
+      if (status)
       {
         auto labelString = std::string(localize.get(LABEL_FRAGMENT));
         *status += std::vformat(localize.get(LABEL_SHADER_PATH_EMPTY), std::make_format_args(labelString)) + "\n";
       }
-      shaders.erase(id);
-      shaderVertexPaths.erase(id);
-      shaderFragmentPaths.erase(id);
+      shaders.erase(shaderId);
+      shaderVertexPaths.erase(shaderId);
+      shaderFragmentPaths.erase(shaderId);
       return false;
     }
 
@@ -665,9 +668,9 @@ namespace anm2ed
         document::shader_source_load(*this, shaderElement->fragment, fragmentSource, LABEL_FRAGMENT, status);
     if (!isVertexLoaded || !isFragmentLoaded)
     {
-      shaders.erase(id);
-      shaderVertexPaths.erase(id);
-      shaderFragmentPaths.erase(id);
+      shaders.erase(shaderId);
+      shaderVertexPaths.erase(shaderId);
+      shaderFragmentPaths.erase(shaderId);
       return false;
     }
 
@@ -682,9 +685,9 @@ namespace anm2ed
     }
     if (!result.isLinked || !result.id)
     {
-      shaders.erase(id);
-      shaderVertexPaths.erase(id);
-      shaderFragmentPaths.erase(id);
+      shaders.erase(shaderId);
+      shaderVertexPaths.erase(shaderId);
+      shaderFragmentPaths.erase(shaderId);
       return false;
     }
 
@@ -693,9 +696,9 @@ namespace anm2ed
     runtime.uniforms = std::move(result.uniforms);
     if (document::shader_uniform_configs_trim(*shaderElement, runtime)) hash_set();
     document::shader_uniform_configs_apply(*shaderElement, runtime);
-    shaders[id] = std::move(runtime);
-    shaderVertexPaths[id] = shaderElement->vertex;
-    shaderFragmentPaths[id] = shaderElement->fragment;
+    shaders[shaderId] = std::move(runtime);
+    shaderVertexPaths[shaderId] = shaderElement->vertex;
+    shaderFragmentPaths[shaderId] = shaderElement->fragment;
     return true;
   }
 
@@ -717,25 +720,6 @@ namespace anm2ed
             textures[spritesheet.id] = resource::Texture(path::case_insensitive_find(spritesheet.path));
             texturePaths[spritesheet.id] = spritesheet.path;
           }
-
-          auto shaderElement = document::shader_element_get(spritesheet);
-          if (!shaderElement || !shaderElement->isEnabled || shaderElement->fragment.empty())
-          {
-            shaders.erase(spritesheet.id);
-            shaderVertexPaths.erase(spritesheet.id);
-            shaderFragmentPaths.erase(spritesheet.id);
-            continue;
-          }
-
-          auto isShaderReload =
-              !shaders.contains(spritesheet.id) || !shaderVertexPaths.contains(spritesheet.id) ||
-              !shaderFragmentPaths.contains(spritesheet.id) ||
-              shaderVertexPaths.at(spritesheet.id) != shaderElement->vertex ||
-              shaderFragmentPaths.at(spritesheet.id) != shaderElement->fragment;
-          if (isShaderReload)
-            shader_reload(spritesheet.id);
-          else if (auto shader = shader_get(spritesheet.id))
-            document::shader_uniform_configs_apply(*shaderElement, *shader);
         }
 
       for (auto it = textures.begin(); it != textures.end();)
@@ -748,10 +732,39 @@ namespace anm2ed
         else
           ++it;
       }
+    }
+
+    if (type == ALL || type == SHADERS)
+    {
+      std::set<int> validShaderIds{};
+      util::WorkingDirectory workingDirectory(directory_get());
+      if (auto shaderItems = anm2.element_get(ElementType::SHADERS))
+        for (auto& shaderElement : shaderItems->children)
+        {
+          if (shaderElement.type != ElementType::SHADER) continue;
+
+          validShaderIds.insert(shaderElement.id);
+          if (shaderElement.fragment.empty())
+          {
+            shaders.erase(shaderElement.id);
+            shaderVertexPaths.erase(shaderElement.id);
+            shaderFragmentPaths.erase(shaderElement.id);
+            continue;
+          }
+
+          auto isShaderReload = !shaders.contains(shaderElement.id) || !shaderVertexPaths.contains(shaderElement.id) ||
+                                !shaderFragmentPaths.contains(shaderElement.id) ||
+                                shaderVertexPaths.at(shaderElement.id) != shaderElement.vertex ||
+                                shaderFragmentPaths.at(shaderElement.id) != shaderElement.fragment;
+          if (isShaderReload)
+            shader_reload(shaderElement.id);
+          else if (auto shader = shader_get(shaderElement.id))
+            document::shader_uniform_configs_apply(shaderElement, *shader);
+        }
 
       for (auto it = shaders.begin(); it != shaders.end();)
       {
-        if (!validIds.contains(it->first))
+        if (!validShaderIds.contains(it->first))
         {
           shaderVertexPaths.erase(it->first);
           shaderFragmentPaths.erase(it->first);
@@ -817,15 +830,17 @@ namespace anm2ed
     return it == sounds.end() ? nullptr : &it->second;
   }
 
-  resource::Shader* Document::shader_get(int id)
+  resource::Shader* Document::shader_get(int shaderId)
   {
-    auto it = shaders.find(id);
+    if (shaderId == -1) return nullptr;
+    auto it = shaders.find(shaderId);
     return it == shaders.end() || !it->second.is_valid() ? nullptr : &it->second;
   }
 
-  const resource::Shader* Document::shader_get(int id) const
+  const resource::Shader* Document::shader_get(int shaderId) const
   {
-    auto it = shaders.find(id);
+    if (shaderId == -1) return nullptr;
+    auto it = shaders.find(shaderId);
     return it == shaders.end() || !it->second.is_valid() ? nullptr : &it->second;
   }
 
@@ -1352,12 +1367,15 @@ namespace anm2ed
           if (sourceSpritesheetId == baseId) return;
           for (auto& frame : layerAnimation.children)
           {
-            if (frame.type != ElementType::FRAME || frame.regionId == -1) continue;
-            if (isMakeRegions && regionIdMap.contains(sourceSpritesheetId) &&
-                regionIdMap.at(sourceSpritesheetId).contains(frame.regionId))
-              frame.regionId = regionIdMap.at(sourceSpritesheetId).at(frame.regionId);
-            else
-              frame.regionId = -1;
+            if (frame.type != ElementType::FRAME) continue;
+            if (frame.regionId != -1)
+            {
+              if (isMakeRegions && regionIdMap.contains(sourceSpritesheetId) &&
+                  regionIdMap.at(sourceSpritesheetId).contains(frame.regionId))
+                frame.regionId = regionIdMap.at(sourceSpritesheetId).at(frame.regionId);
+              else
+                frame.regionId = -1;
+            }
           }
         };
         for (auto& layerAnimation : layerAnimations->children)
@@ -1631,7 +1649,8 @@ namespace anm2ed
       }
     };
 
-    auto track_tree_remap = [&](auto&& self, Element item, int itemType, Element& container, int parentGroupId = -1) -> void
+    auto track_tree_remap = [&](auto&& self, Element item, int itemType, Element& container,
+                                int parentGroupId = -1) -> void
     {
       auto trackType = itemType == LAYER ? ElementType::LAYER_ANIMATION : ElementType::NULL_ANIMATION;
       if (item.type == ElementType::GROUP)
@@ -1716,7 +1735,8 @@ namespace anm2ed
         destinationContainer.children.push_back(sourceTrack);
     };
 
-    auto track_container_merge = [&](Element& destinationContainer, const Element& sourceContainer, ElementType trackType)
+    auto track_container_merge =
+        [&](Element& destinationContainer, const Element& sourceContainer, ElementType trackType)
     {
       std::unordered_map<int, int> groupRemap{};
       for (auto item : sourceContainer.children)
@@ -1724,8 +1744,7 @@ namespace anm2ed
         if (item.type != ElementType::GROUP) continue;
         auto sourceGroupId = item.id;
         item.id = element_child_next_id_get(destinationContainer, ElementType::GROUP);
-        std::erase_if(item.children, [](const Element& child)
-                      { return child.type != ElementType::ROOT_ANIMATION; });
+        std::erase_if(item.children, [](const Element& child) { return child.type != ElementType::ROOT_ANIMATION; });
         if (!element_child_first_get(item, ElementType::ROOT_ANIMATION))
         {
           auto root = element_make(ElementType::ROOT_ANIMATION);
@@ -1739,8 +1758,7 @@ namespace anm2ed
       for (auto item : sourceContainer.children)
       {
         if (item.type != trackType) continue;
-        if (item.groupId != -1)
-          item.groupId = groupRemap.contains(item.groupId) ? groupRemap.at(item.groupId) : -1;
+        if (item.groupId != -1) item.groupId = groupRemap.contains(item.groupId) ? groupRemap.at(item.groupId) : -1;
         track_merge(destinationContainer, item);
       }
     };
@@ -1899,6 +1917,13 @@ namespace anm2ed
           }
     };
 
+    auto shaders_set = [&]()
+    {
+      auto shaderItems = anm2.element_get(ElementType::SHADERS);
+      shader.labels_set(document::element_name_labels_get(shaderItems, ElementType::SHADER, true),
+                        document::element_ids_get(shaderItems, ElementType::SHADER, true));
+    };
+
     switch (type)
     {
       case LAYERS:
@@ -1911,6 +1936,9 @@ namespace anm2ed
       case SPRITESHEETS:
         spritesheets_set();
         regions_set();
+        break;
+      case SHADERS:
+        shaders_set();
         break;
       case SOUNDS:
         sounds_set();
@@ -1927,6 +1955,7 @@ namespace anm2ed
         events_set();
         spritesheets_set();
         regions_set();
+        shaders_set();
         animations_set();
         sounds_set();
         break;
@@ -2147,8 +2176,7 @@ namespace anm2ed
       {
         auto targetReference = itemReference;
         targetReference.animationIndex = reference.animationIndex;
-        if (reference.animationIndex == itemReference.animationIndex || !anm2.element_get(targetReference))
-          return {};
+        if (reference.animationIndex == itemReference.animationIndex || !anm2.element_get(targetReference)) return {};
         itemReference = targetReference;
       }
       result.push_back(itemReference);
@@ -2156,10 +2184,7 @@ namespace anm2ed
     return result;
   }
 
-  Element* Document::frame_get()
-  {
-    return anm2.element_get(reference);
-  }
+  Element* Document::frame_get() { return anm2.element_get(reference); }
 
   Element* Document::item_get()
   {
@@ -2170,10 +2195,7 @@ namespace anm2ed
   Element* Document::animation_get() { return anm2.element_get(ElementType::ANIMATION, reference.animationIndex); }
   Element* Document::spritesheet_get() { return anm2.element_get(ElementType::SPRITESHEET, spritesheet.reference); }
 
-  void Document::spritesheet_add(const std::filesystem::path& path)
-  {
-    spritesheets_add({path});
-  }
+  void Document::spritesheet_add(const std::filesystem::path& path) { spritesheets_add({path}); }
 
   void Document::spritesheets_add(const std::vector<std::filesystem::path>& paths)
   {
@@ -2234,10 +2256,7 @@ namespace anm2ed
     change(Document::SPRITESHEETS);
   }
 
-  void Document::sound_add(const std::filesystem::path& path)
-  {
-    sounds_add({path});
-  }
+  void Document::sound_add(const std::filesystem::path& path) { sounds_add({path}); }
 
   void Document::sounds_add(const std::vector<std::filesystem::path>& paths)
   {

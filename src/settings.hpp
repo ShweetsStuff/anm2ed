@@ -86,6 +86,8 @@ namespace anm2ed
   X(CHANGE_IS_PIVOT_Y, changeIsPivotY, STRING_UNDEFINED, BOOL, false)                                                  \
   X(CHANGE_IS_SCALE_X, changeIsScaleX, STRING_UNDEFINED, BOOL, false)                                                  \
   X(CHANGE_IS_SCALE_Y, changeIsScaleY, STRING_UNDEFINED, BOOL, false)                                                  \
+  X(CHANGE_IS_SHEAR_X, changeIsShearX, STRING_UNDEFINED, BOOL, false)                                                  \
+  X(CHANGE_IS_SHEAR_Y, changeIsShearY, STRING_UNDEFINED, BOOL, false)                                                  \
   X(CHANGE_IS_ROTATION, changeIsRotation, STRING_UNDEFINED, BOOL, false)                                               \
   X(CHANGE_IS_DURATION, changeIsDuration, STRING_UNDEFINED, BOOL, false)                                               \
   X(CHANGE_IS_TINT_R, changeIsTintR, STRING_UNDEFINED, BOOL, false)                                                    \
@@ -101,11 +103,13 @@ namespace anm2ed
   X(CHANGE_IS_FLIP_X_SET, changeIsFlipXSet, STRING_UNDEFINED, BOOL, false)                                             \
   X(CHANGE_IS_FLIP_Y_SET, changeIsFlipYSet, STRING_UNDEFINED, BOOL, false)                                             \
   X(CHANGE_IS_REGION, changeIsRegion, STRING_UNDEFINED, BOOL, false)                                                   \
+  X(CHANGE_IS_SHADER, changeIsShader, STRING_UNDEFINED, BOOL, false)                                                   \
   X(CHANGE_CROP, changeCrop, STRING_UNDEFINED, VEC2, {})                                                               \
   X(CHANGE_SIZE, changeSize, STRING_UNDEFINED, VEC2, {})                                                               \
   X(CHANGE_POSITION, changePosition, STRING_UNDEFINED, VEC2, {})                                                       \
   X(CHANGE_PIVOT, changePivot, STRING_UNDEFINED, VEC2, {})                                                             \
   X(CHANGE_SCALE, changeScale, STRING_UNDEFINED, VEC2, {})                                                             \
+  X(CHANGE_SHEAR, changeShear, STRING_UNDEFINED, VEC2, {})                                                             \
   X(CHANGE_ROTATION, changeRotation, STRING_UNDEFINED, FLOAT, 0.0f)                                                    \
   X(CHANGE_DURATION, changeDuration, STRING_UNDEFINED, INT, 0)                                                         \
   X(CHANGE_TINT, changeTint, STRING_UNDEFINED, VEC4, {})                                                               \
@@ -201,8 +205,8 @@ namespace anm2ed
   X(RENDER_ROWS, renderRows, STRING_UNDEFINED, INT, 0)                                                                 \
   X(RENDER_COLUMNS, renderColumns, STRING_UNDEFINED, INT, 0)                                                           \
   X(RENDER_FORMAT, renderFormat, STRING_UNDEFINED, PATH, "{}.png")                                                     \
-  X(RENDER_IS_USE_ANIMATION_BOUNDS, renderIsUseAnimationBounds, STRING_UNDEFINED, BOOL, true)                         \
-  X(RENDER_IS_USE_ISOLATED_ANIMATION, renderIsUseIsolatedAnimation, STRING_UNDEFINED, BOOL, false)                    \
+  X(RENDER_IS_USE_ANIMATION_BOUNDS, renderIsUseAnimationBounds, STRING_UNDEFINED, BOOL, true)                          \
+  X(RENDER_IS_USE_ISOLATED_ANIMATION, renderIsUseIsolatedAnimation, STRING_UNDEFINED, BOOL, false)                     \
   X(RENDER_SCALE, renderScale, STRING_UNDEFINED, FLOAT, 1.0f)                                                          \
   X(RENDER_FPS_MODE, renderFpsMode, STRING_UNDEFINED, INT, render::FPS_ANIMATION)                                      \
   X(RENDER_FFMPEG_PATH, renderFFmpegPath, STRING_UNDEFINED, PATH, FFMPEG_PATH_DEFAULT)
@@ -236,6 +240,7 @@ namespace anm2ed
   X(SHORTCUT_MOVE, shortcutMove, SHORTCUT_STRING_MOVE, STRING, "V")                                                    \
   X(SHORTCUT_ROTATE, shortcutRotate, SHORTCUT_STRING_ROTATE, STRING, "R")                                              \
   X(SHORTCUT_SCALE, shortcutScale, SHORTCUT_STRING_SCALE, STRING, "S")                                                 \
+  X(SHORTCUT_SHEAR, shortcutShear, SHORTCUT_STRING_SHEAR, STRING, "H")                                                 \
   X(SHORTCUT_CROP, shortcutCrop, SHORTCUT_STRING_CROP, STRING, "C")                                                    \
   X(SHORTCUT_DRAW, shortcutDraw, SHORTCUT_STRING_DRAW, STRING, "B")                                                    \
   X(SHORTCUT_ERASE, shortcutErase, SHORTCUT_STRING_ERASE, STRING, "E")                                                 \
@@ -277,7 +282,7 @@ namespace anm2ed
   X(WINDOW_NULLS, windowIsNulls, LABEL_NULLS_WINDOW, BOOL, true)                                                       \
   X(WINDOW_ONIONSKIN, windowIsOnionskin, LABEL_ONIONSKIN_WINDOW, BOOL, true)                                           \
   X(WINDOW_PREVIEW, windowIsSpritesheets, LABEL_SPRITESHEETS_WINDOW, BOOL, true)                                       \
-  X(WINDOW_SHADERS, windowIsShaders, LABEL_SHADERS_WINDOW, BOOL, true)                                                  \
+  X(WINDOW_SHADERS, windowIsShaders, LABEL_SHADERS_WINDOW, BOOL, true)                                                 \
   X(WINDOW_SOUNDS, windowIsSounds, LABEL_SOUNDS_WINDOW, BOOL, true)                                                    \
   X(WINDOW_SPRITESHEET_EDITOR, windowIsSpritesheetEditor, LABEL_SPRITESHEET_EDITOR_WINDOW, BOOL, true)                 \
   X(WINDOW_TIMELINE, windowIsTimeline, LABEL_TIMELINE_WINDOW, BOOL, true)                                              \

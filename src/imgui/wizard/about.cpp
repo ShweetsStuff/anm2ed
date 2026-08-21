@@ -210,7 +210,8 @@ namespace anm2ed::imgui::wizard
     if (textureSize.x <= 0.0f || textureSize.y <= 0.0f) return;
 
     auto transform = baseTransform * math::quad_model_get(frame.size, frame.position, frame.pivot,
-                                                          math::percent_to_unit(frame.scale), frame.rotation);
+                                                          math::percent_to_unit(frame.scale), frame.rotation,
+                                                          math::percent_to_unit(frame.shear));
     auto uvVertices = math::uv_vertices_get(frame.crop / textureSize, (frame.crop + frame.size) / textureSize);
     auto tint = frame.tint * rootFrame.tint;
     auto colorOffset = frame.colorOffset + rootFrame.colorOffset;
@@ -252,7 +253,7 @@ namespace anm2ed::imgui::wizard
     {
       rootFrame = frame_generate(*root, state.time);
       transform *= math::quad_model_parent_get(rootFrame.position, {}, math::percent_to_unit(rootFrame.scale),
-                                               rootFrame.rotation);
+                                               rootFrame.rotation, math::percent_to_unit(rootFrame.shear));
     }
 
     if (auto layerAnimations = element_child_first_get(*animation, ElementType::LAYER_ANIMATIONS))

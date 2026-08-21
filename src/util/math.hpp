@@ -27,8 +27,10 @@ namespace anm2ed::util::math
 
   const char* vec2_format_get(glm::vec2&);
 
-  glm::mat4 quad_model_get(glm::vec2 = {}, glm::vec2 = {}, glm::vec2 = {}, glm::vec2 = glm::vec2(1.0f), float = {});
-  glm::mat4 quad_model_parent_get(glm::vec2 = {}, glm::vec2 = {}, glm::vec2 = glm::vec2(1.0f), float = {});
+  glm::mat4 quad_model_get(glm::vec2 = {}, glm::vec2 = {}, glm::vec2 = {}, glm::vec2 = glm::vec2(1.0f), float = {},
+                           glm::vec2 = {});
+  glm::mat4 quad_model_parent_get(glm::vec2 = {}, glm::vec2 = {}, glm::vec2 = glm::vec2(1.0f), float = {},
+                                  glm::vec2 = {});
 
   float random();
   float random_in_range(float min, float max);

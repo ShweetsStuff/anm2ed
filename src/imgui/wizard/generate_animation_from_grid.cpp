@@ -104,7 +104,8 @@ namespace anm2ed::imgui::wizard
             auto uvMax = (frame.crop + frame.size) / textureSize;
             mat4 transform = transform_get(zoom) *
                              math::quad_model_get(frame.size, frame.position, frame.pivot,
-                                                  math::percent_to_unit(frame.scale), frame.rotation);
+                                                  math::percent_to_unit(frame.scale), frame.rotation,
+                                                  math::percent_to_unit(frame.shear));
             auto vertices = math::uv_vertices_get(uvMin, uvMax);
 
             texture_render(shaderTexture, sourceTexture->id, transform, frame.tint, frame.colorOffset, vertices.data());

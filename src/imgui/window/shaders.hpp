@@ -4,6 +4,7 @@
 #include "manager.hpp"
 #include "resources.hpp"
 #include "settings.hpp"
+#include "util/imgui/popup.hpp"
 
 namespace anm2ed::imgui
 {
@@ -11,7 +12,10 @@ namespace anm2ed::imgui
   {
   public:
     std::string status{};
-    int dialogSpritesheetId{-1};
+    int dialogShaderId{-1};
+    int popupShaderId{-1};
+    int newElementId{-1};
+    PopupHelper propertiesPopup{PopupHelper(LABEL_SHADER_PROPERTIES, POPUP_NORMAL)};
     void update(Manager&, Settings&, Resources&, Dialog&);
   };
 }

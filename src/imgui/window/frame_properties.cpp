@@ -24,11 +24,10 @@ namespace anm2ed::imgui
     if (frameSelectionCount == 0 && document.reference.frameIndex >= 0) frameSelectionCount = 1;
     auto isSingleFrameSelection = frameSelectionCount == 1;
     auto isMultiFrameSelection = frameSelectionCount > 1;
-    auto isSingleFrameBatchMode =
-        isSingleFrameSelection && document.reference.itemType != TRIGGER && isBatchMode;
+    auto isSingleFrameBatchMode = isSingleFrameSelection && document.reference.itemType != TRIGGER && isBatchMode;
     auto isBatchFrameProperties = isMultiFrameSelection || isSingleFrameBatchMode;
-    auto windowLabel = std::string(localize.get(isBatchFrameProperties ? LABEL_CHANGE_ALL_FRAME_PROPERTIES
-                                                                       : LABEL_FRAME_PROPERTIES_WINDOW));
+    auto windowLabel = std::string(
+        localize.get(isBatchFrameProperties ? LABEL_CHANGE_ALL_FRAME_PROPERTIES : LABEL_FRAME_PROPERTIES_WINDOW));
     if (isBatchFrameProperties) windowLabel += "###Frame Properties";
 
     if (ImGui::Begin(windowLabel.c_str(), &settings.windowIsFrameProperties))
@@ -38,11 +37,10 @@ namespace anm2ed::imgui
       auto& type = reference.itemType;
       auto frame = reference.frameIndex >= 0 ? anm2.element_get(reference) : nullptr;
 
-        auto frame_edit = [&](auto message, auto behavior)
-        {
-          auto queuedReference = reference;
-          manager.command_push({manager.selected,
-                              [=](Manager&, Document& document) mutable
+      auto frame_edit = [&](auto message, auto behavior)
+      {
+        auto queuedReference = reference;
+        manager.command_push({manager.selected, [=](Manager&, Document& document) mutable
                               {
                                 if (queuedReference.frameIndex < 0) return;
                                 auto frame = document.anm2.element_get(queuedReference);
@@ -55,15 +53,14 @@ namespace anm2ed::imgui
                                 behavior(document, *frame, item, queuedReference);
                                 document.anm2_change(Document::FRAMES);
                               }});
-        };
+      };
 
       auto persistent_edit = [&](auto state, auto message, auto behavior)
       {
         if (state == edit::NONE) return;
 
         auto queuedReference = reference;
-        manager.command_push({manager.selected,
-                              [=](Manager&, Document& document) mutable
+        manager.command_push({manager.selected, [=](Manager&, Document& document) mutable
                               {
                                 if (queuedReference.frameIndex < 0) return;
                                 auto frame = document.anm2.element_get(queuedReference);
@@ -72,11 +69,12 @@ namespace anm2ed::imgui
                                 auto item = document.anm2.element_get(itemReference);
                                 if (!frame) return;
 
-                                if (state == edit::START) document.frames_snapshot(localize.get(message), {queuedReference});
+                                if (state == edit::START)
+                                  document.frames_snapshot(localize.get(message), {queuedReference});
                                 behavior(document, *frame, item, queuedReference);
                                 if (state == edit::END) document.anm2_change(Document::FRAMES);
                               }});
-        };
+      };
 
       auto regionLabelsString = std::vector<std::string>{localize.get(BASIC_NONE)};
       auto regionLabels = std::vector<const char*>{regionLabelsString[0].c_str()};
@@ -165,8 +163,7 @@ namespace anm2ed::imgui
                 frame)
             {
               auto isVisible = useFrame.isVisible;
-              frame_edit(EDIT_TRIGGER_VISIBILITY,
-                         [isVisible](Document&, Element& frame, Element*, const Reference&)
+              frame_edit(EDIT_TRIGGER_VISIBILITY, [isVisible](Document&, Element& frame, Element*, const Reference&)
                          { frame.isVisible = isVisible; });
             }
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TRIGGER_VISIBILITY));
@@ -247,8 +244,7 @@ namespace anm2ed::imgui
             ImGui::EndDisabled();
 
             auto positionEdit =
-                drag_float2_persistent(localize.get(BASIC_POSITION),
-                                       frame ? &useFrame.position : &dummy_value<vec2>(),
+                drag_float2_persistent(localize.get(BASIC_POSITION), frame ? &useFrame.position : &dummy_value<vec2>(),
                                        DRAG_SPEED, 0.0f, 0.0f, frame ? vec2_format_get(frame->position) : "");
             persistent_edit(positionEdit, EDIT_FRAME_POSITION,
                             [position = useFrame.position](Document&, Element& frame, Element*, const Reference&)
@@ -276,6 +272,14 @@ namespace anm2ed::imgui
                             { frame.scale = scale; });
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SCALE));
 
+            auto shearEdit =
+                drag_float2_persistent(localize.get(BASIC_SHEAR), frame ? &useFrame.shear : &dummy_value<vec2>(),
+                                       DRAG_SPEED, 0.0f, 0.0f, frame ? vec2_format_get(frame->shear) : "");
+            persistent_edit(shearEdit, EDIT_FRAME_SHEAR,
+                            [shear = useFrame.shear](Document&, Element& frame, Element*, const Reference&)
+                            { frame.shear = shear; });
+            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SHEAR));
+
             auto rotationEdit =
                 drag_float_persistent(localize.get(BASIC_ROTATION), frame ? &useFrame.rotation : &dummy_value<float>(),
                                       DRAG_SPEED, 0.0f, 0.0f, frame ? float_format_get(frame->rotation) : "");
@@ -290,8 +294,8 @@ namespace anm2ed::imgui
                 frame)
             {
               auto duration = useFrame.duration;
-              frame_edit(EDIT_FRAME_DURATION,
-                         [duration](Document&, Element& frame, Element*, const Reference&) { frame.duration = duration; });
+              frame_edit(EDIT_FRAME_DURATION, [duration](Document&, Element& frame, Element*, const Reference&)
+                         { frame.duration = duration; });
             }
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_DURATION));
 
@@ -311,7 +315,7 @@ namespace anm2ed::imgui
 
             ImGui::BeginDisabled(type != LAYER);
             if (combo_id_mapped(localize.get(BASIC_REGION), frame ? &useFrame.regionId : &dummy_value_negative<int>(),
-                regionIds, regionLabels) &&
+                                regionIds, regionLabels) &&
                 frame)
             {
               auto regionId = useFrame.regionId;
@@ -337,12 +341,23 @@ namespace anm2ed::imgui
                          { frame.interpolation = static_cast<Interpolation>(interpolationValue); });
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FRAME_INTERPOLATION));
 
+            ImGui::BeginDisabled(type != LAYER);
+            if (combo_id_mapped(localize.get(BASIC_SHADER), frame ? &useFrame.shaderId : &dummy_value_negative<int>(),
+                                document.shader.ids, document.shader.labels) &&
+                frame)
+            {
+              auto shaderId = useFrame.shaderId;
+              frame_edit(EDIT_FRAME_SHADER, [shaderId](Document&, Element& frame, Element*, const Reference&)
+                         { frame.shaderId = shaderId; });
+            }
+            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FRAME_SHADER));
+            ImGui::EndDisabled();
+
             if (ImGui::Checkbox(localize.get(BASIC_VISIBLE), frame ? &useFrame.isVisible : &dummy_value<bool>()) &&
                 frame)
             {
               auto isVisible = useFrame.isVisible;
-              frame_edit(EDIT_FRAME_VISIBILITY,
-                         [isVisible](Document&, Element& frame, Element*, const Reference&)
+              frame_edit(EDIT_FRAME_VISIBILITY, [isVisible](Document&, Element& frame, Element*, const Reference&)
                          { frame.isVisible = isVisible; });
             }
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FRAME_VISIBILITY));
@@ -359,8 +374,8 @@ namespace anm2ed::imgui
                              frame.position.x = -frame.position.x;
                            });
               else
-                frame_edit(EDIT_FRAME_FLIP_X,
-                           [](Document&, Element& frame, Element*, const Reference&) { frame.scale.x = -frame.scale.x; });
+                frame_edit(EDIT_FRAME_FLIP_X, [](Document&, Element& frame, Element*, const Reference&)
+                           { frame.scale.x = -frame.scale.x; });
             }
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FLIP_X));
             ImGui::SameLine();
@@ -374,10 +389,13 @@ namespace anm2ed::imgui
                              frame.position.y = -frame.position.y;
                            });
               else
-                frame_edit(EDIT_FRAME_FLIP_Y,
-                           [](Document&, Element& frame, Element*, const Reference&) { frame.scale.y = -frame.scale.y; });
+                frame_edit(EDIT_FRAME_FLIP_Y, [](Document&, Element& frame, Element*, const Reference&)
+                           { frame.scale.y = -frame.scale.y; });
             }
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FLIP_Y));
+
+            ImGui::Separator();
+            ImGui::Dummy(ImVec2(0.0f, ImGui::GetFrameHeight()));
           }
         }
         ImGui::EndDisabled();

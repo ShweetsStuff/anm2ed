@@ -114,13 +114,11 @@ namespace anm2ed::imgui
     {
       std::optional<vec4> rect{};
 
-      if (animation)
-        rect = animation_rects_merge(rect, document.anm2.animation_rect(*animation, isRootTransform));
+      if (animation) rect = animation_rects_merge(rect, document.anm2.animation_rect(*animation, isRootTransform));
 
       if (auto overlayDocument = overlay_animation_document_get(manager, document))
         if (auto overlayAnimation = overlayDocument->anm2.element_get(ElementType::ANIMATION, document.overlayIndex))
-          rect = animation_rects_merge(rect,
-                                       overlayDocument->anm2.animation_rect(*overlayAnimation, isRootTransform));
+          rect = animation_rects_merge(rect, overlayDocument->anm2.animation_rect(*overlayAnimation, isRootTransform));
 
       return rect;
     }
@@ -660,10 +658,9 @@ namespace anm2ed::imgui
         overlayTransparency = glm::clamp(overlayTransparency, 0.0f, 100.0f);
         auto orderIconSize = icon_size_get();
         auto orderButtonWidth = orderIconSize.x + ImGui::GetStyle().FramePadding.x * 2.0f;
-        auto alphaWidth =
-            std::max(ImGui::GetContentRegionAvail().x - (orderButtonWidth * 2.0f) -
-                         (ImGui::GetStyle().ItemSpacing.x * 2.0f),
-                     ImGui::GetFrameHeight());
+        auto alphaWidth = std::max(ImGui::GetContentRegionAvail().x - (orderButtonWidth * 2.0f) -
+                                       (ImGui::GetStyle().ItemSpacing.x * 2.0f),
+                                   ImGui::GetFrameHeight());
         auto overlayIconTint = isLightTheme ? ImVec4(0.0f, 0.0f, 0.0f, 1.0f) : ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
         ImGui::PushItemWidth(alphaWidth);
         ImGui::DragFloat("##Overlay Alpha", &overlayTransparency, DRAG_SPEED, 0, 100, "%.0f%%");
@@ -897,8 +894,8 @@ namespace anm2ed::imgui
       };
 
       auto render = [&](Document& sampleDocument, Element* animation, float time, vec3 colorOffset = {},
-                        float alphaOffset = {},
-                        const std::vector<OnionskinSample>* layeredOnions = nullptr, bool isIndexMode = false)
+                        float alphaOffset = {}, const std::vector<OnionskinSample>* layeredOnions = nullptr,
+                        bool isIndexMode = false)
       {
         auto& sampleAnm2 = sampleDocument.anm2;
         bool isActiveDocument = &sampleDocument == &document;
@@ -926,8 +923,9 @@ namespace anm2ed::imgui
           if (isRootTransform && root)
           {
             auto rootFrame = frame_generate(*root, t);
-            sampleTransform *= math::quad_model_parent_get(rootFrame.position, {},
-                                                           math::percent_to_unit(rootFrame.scale), rootFrame.rotation);
+            sampleTransform *=
+                math::quad_model_parent_get(rootFrame.position, {}, math::percent_to_unit(rootFrame.scale),
+                                            rootFrame.rotation, math::percent_to_unit(rootFrame.shear));
           }
           return sampleTransform;
         };
@@ -942,7 +940,8 @@ namespace anm2ed::imgui
           return true;
         };
 
-        auto group_root_frame_get = [](const Element& container, const Element& track, float t) -> std::optional<Element>
+        auto group_root_frame_get = [](const Element& container, const Element& track,
+                                       float t) -> std::optional<Element>
         {
           if (track.groupId == -1) return std::nullopt;
           auto group = element_child_id_get(container, ElementType::GROUP, track.groupId);
@@ -951,15 +950,15 @@ namespace anm2ed::imgui
           return frame_generate(*root, t);
         };
 
-        auto group_transform_for_time = [&](const Element& container, const Element& track, float t,
-                                            const glm::mat4& sampleTransform)
+        auto group_transform_for_time =
+            [&](const Element& container, const Element& track, float t, const glm::mat4& sampleTransform)
         {
           auto itemTransform = sampleTransform;
           if (isRootTransform)
             if (auto groupRootFrame = group_root_frame_get(container, track, t))
-              itemTransform *= math::quad_model_parent_get(groupRootFrame->position, {},
-                                                           math::percent_to_unit(groupRootFrame->scale),
-                                                           groupRootFrame->rotation);
+              itemTransform *= math::quad_model_parent_get(
+                  groupRootFrame->position, {}, math::percent_to_unit(groupRootFrame->scale), groupRootFrame->rotation,
+                  math::percent_to_unit(groupRootFrame->shear));
           return itemTransform;
         };
 
@@ -973,7 +972,8 @@ namespace anm2ed::imgui
           auto rootModel = isRootTransform
                                ? math::quad_model_get(TARGET_SIZE, {}, TARGET_SIZE * 0.5f)
                                : math::quad_model_get(TARGET_SIZE, rootFrame.position, TARGET_SIZE * 0.5f,
-                                                      math::percent_to_unit(rootFrame.scale), rootFrame.rotation);
+                                                      math::percent_to_unit(rootFrame.scale), rootFrame.rotation,
+                                                      math::percent_to_unit(rootFrame.shear));
           auto rootTransform = sampleTransform * rootModel;
 
           vec4 color = isOnion ? vec4(sampleColor, sampleAlpha) : color::GREEN;
@@ -992,9 +992,8 @@ namespace anm2ed::imgui
 
         draw_root(time, transform, {}, 0.0f, false);
 
-        auto draw_group_root = [&](Element& group, int groupType, float sampleTime,
-                                   const glm::mat4& sampleTransform, vec3 sampleColor, float sampleAlpha,
-                                   bool isOnion)
+        auto draw_group_root = [&](Element& group, int groupType, float sampleTime, const glm::mat4& sampleTransform,
+                                   vec3 sampleColor, float sampleAlpha, bool isOnion)
         {
           auto groupRoot = element_child_first_get(group, ElementType::ROOT_ANIMATION);
           if (!groupRoot) return;
@@ -1004,16 +1003,17 @@ namespace anm2ed::imgui
           auto itemTransform = sampleTransform;
           if (isRootTransform)
             itemTransform *= math::quad_model_parent_get(rootFrame.position, {}, math::percent_to_unit(rootFrame.scale),
-                                                         rootFrame.rotation);
+                                                         rootFrame.rotation, math::percent_to_unit(rootFrame.shear));
 
           auto rootModel = isRootTransform
                                ? math::quad_model_get(TARGET_SIZE, {}, TARGET_SIZE * 0.5f)
                                : math::quad_model_get(TARGET_SIZE, rootFrame.position, TARGET_SIZE * 0.5f,
-                                                      math::percent_to_unit(rootFrame.scale), rootFrame.rotation);
+                                                      math::percent_to_unit(rootFrame.scale), rootFrame.rotation,
+                                                      math::percent_to_unit(rootFrame.shear));
           auto rootTransform = itemTransform * rootModel;
 
-          auto isSelected = isActiveDocument && referenceItemType == ItemType::ROOT && reference.groupType == groupType &&
-                            reference.groupId == group.id;
+          auto isSelected = isActiveDocument && referenceItemType == ItemType::ROOT &&
+                            reference.groupType == groupType && reference.groupId == group.id;
           vec4 color = isOnion ? vec4(sampleColor, sampleAlpha) : isSelected ? color::RED : ROOT_COLOR;
           auto icon = isAltIcons ? icon::TARGET_ALT : icon::TARGET;
           texture_render(shaderTexture, resources.icons[icon].id, rootTransform, color);
@@ -1042,8 +1042,8 @@ namespace anm2ed::imgui
                 self(self, child, isParentVisible && layerAnimation.isVisible);
               return;
             }
-            if (layerAnimation.type != ElementType::LAYER_ANIMATION || !isParentVisible ||
-                !layerAnimation.isVisible || !is_track_group_visible(*layerAnimations, layerAnimation))
+            if (layerAnimation.type != ElementType::LAYER_ANIMATION || !isParentVisible || !layerAnimation.isVisible ||
+                !is_track_group_visible(*layerAnimations, layerAnimation))
               return;
 
             auto id = layerAnimation.layerId;
@@ -1069,10 +1069,10 @@ namespace anm2ed::imgui
               auto size = frame.size;
               auto pivot = frame.pivot;
 
-              auto layerModel =
-                  math::quad_model_get(size, frame.position, pivot, math::percent_to_unit(frame.scale), frame.rotation);
-              auto itemTransform = group_transform_for_time(*layerAnimations, layerAnimation, sampleTime,
-                                                            sampleTransform);
+              auto layerModel = math::quad_model_get(size, frame.position, pivot, math::percent_to_unit(frame.scale),
+                                                     frame.rotation, math::percent_to_unit(frame.shear));
+              auto itemTransform =
+                  group_transform_for_time(*layerAnimations, layerAnimation, sampleTime, sampleTransform);
               auto layerTransform = itemTransform * layerModel;
 
               auto uvMin = crop / texSize;
@@ -1097,13 +1097,13 @@ namespace anm2ed::imgui
               frameTint.a = std::max(0.0f, frameTint.a - (alphaOffset + sampleAlpha));
 
               auto vertices = math::uv_vertices_get(uvMin, uvMax);
-              auto customShader = sampleDocument.shader_get(layer->spritesheetId);
+              auto customShader = sampleDocument.shader_get(frame.shaderId);
               auto& layerShader = customShader ? *customShader : shaderTexture;
 
               texture_render(layerShader, texture.id, layerTransform, frameTint, frameColorOffset, vertices.data(),
                              vec2(texture.size), sampleTime);
 
-              auto color = isOnion ? vec4(sampleColor, 1.0f - sampleAlpha)
+              auto color = isOnion                                           ? vec4(sampleColor, 1.0f - sampleAlpha)
                            : is_layer_animation_selected(sampleDocument, id) ? SELECTED_LAYER_BORDER_COLOR
                                                                              : color::RED;
 
@@ -1112,7 +1112,8 @@ namespace anm2ed::imgui
               if (isPivots)
               {
                 auto pivotModel = math::quad_model_get(PIVOT_SIZE, frame.position, PIVOT_SIZE * 0.5f,
-                                                       math::percent_to_unit(frame.scale), frame.rotation);
+                                                       math::percent_to_unit(frame.scale), frame.rotation,
+                                                       math::percent_to_unit(frame.shear));
                 auto pivotTransform = itemTransform * pivotModel;
 
                 texture_render(shaderTexture, resources.icons[icon::PIVOT].id, pivotTransform, color);
@@ -1180,18 +1181,19 @@ namespace anm2ed::imgui
                                ? color::RED
                                : NULL_COLOR;
 
-              auto nullModel = math::quad_model_get(size, frame.position, size * 0.5f,
-                                                    math::percent_to_unit(frame.scale), frame.rotation);
-              auto itemTransform = group_transform_for_time(*nullAnimations, nullAnimation, sampleTime,
-                                                            sampleTransform);
+              auto nullModel =
+                  math::quad_model_get(size, frame.position, size * 0.5f, math::percent_to_unit(frame.scale),
+                                       frame.rotation, math::percent_to_unit(frame.shear));
+              auto itemTransform =
+                  group_transform_for_time(*nullAnimations, nullAnimation, sampleTime, sampleTransform);
               auto nullTransform = itemTransform * nullModel;
 
               texture_render(shaderTexture, resources.icons[icon].id, nullTransform, color);
 
               if (isShowRect)
               {
-                auto rectModel =
-                    math::quad_model_get(frame.scale, frame.position, frame.scale * 0.5f, vec2(1.0f), frame.rotation);
+                auto rectModel = math::quad_model_get(frame.scale, frame.position, frame.scale * 0.5f, vec2(1.0f),
+                                                      frame.rotation, math::percent_to_unit(frame.shear));
                 auto rectTransform = itemTransform * rectModel;
 
                 rect_render(shaderLine, rectTransform, rectModel, color);
@@ -1404,15 +1406,13 @@ namespace anm2ed::imgui
         auto frame_snapshot = [&](auto message)
         {
           auto queuedFrameReferences = selectedFrameReferences;
-          manager.command_push({manager.selected,
-                                [message, queuedFrameReferences](Manager&, Document& document)
+          manager.command_push({manager.selected, [message, queuedFrameReferences](Manager&, Document& document)
                                 { document.frames_snapshot(localize.get(message), queuedFrameReferences); }});
         };
         auto frame_change_apply = [&](FrameChange frameChange, ChangeType changeType = ChangeType::ADJUST)
         {
           auto queuedFrameReferences = selectedFrameReferences;
-          manager.command_push({manager.selected,
-                                [=](Manager&, Document& document)
+          manager.command_push({manager.selected, [=](Manager&, Document& document)
                                 {
                                   std::map<Reference, std::set<int>> groupedFrames{};
                                   for (auto frameReference : queuedFrameReferences)
@@ -1441,6 +1441,11 @@ namespace anm2ed::imgui
         {
           if (!frame) return;
           frame_change_apply({.scaleX = scale.x - frame->scale.x, .scaleY = scale.y - frame->scale.y}, ChangeType::ADD);
+        };
+        auto frame_shear_apply = [&](vec2 shear)
+        {
+          if (!frame) return;
+          frame_change_apply({.shearX = shear.x - frame->shear.x, .shearY = shear.y - frame->shear.y}, ChangeType::ADD);
         };
         auto frames_changed = [&]()
         {
@@ -1598,6 +1603,39 @@ namespace anm2ed::imgui
               {
                 ImGui::TextUnformatted(
                     std::vformat(localize.get(FORMAT_ROTATION), std::make_format_args(frame->rotation)).c_str());
+                ImGui::EndTooltip();
+              }
+            }
+
+            if (isToolEnd) frames_changed();
+            break;
+          case tool::SHEAR:
+            if (!item || !frame || selectedFrameReferences.empty()) break;
+            if (isToolBegin) frame_snapshot(EDIT_FRAME_SHEAR);
+            if (isToolMouseDown)
+            {
+              auto shear = frame->shear + vec2(mouseDelta.x, mouseDelta.y);
+              if (isMod)
+              {
+                if (std::abs(mouseDelta.x) >= std::abs(mouseDelta.y))
+                  shear.y = frame->shear.y;
+                else
+                  shear.x = frame->shear.x;
+              }
+              frame_shear_apply(shear);
+            }
+            if (isLeftPressed) frame_change_apply({.shearX = step}, ChangeType::SUBTRACT);
+            if (isRightPressed) frame_change_apply({.shearX = step}, ChangeType::ADD);
+            if (isUpPressed) frame_change_apply({.shearY = step}, ChangeType::SUBTRACT);
+            if (isDownPressed) frame_change_apply({.shearY = step}, ChangeType::ADD);
+
+            if (isToolDuring)
+            {
+              if (ImGui::BeginTooltip())
+              {
+                ImGui::TextUnformatted(
+                    std::vformat(localize.get(FORMAT_SHEAR), std::make_format_args(frame->shear.x, frame->shear.y))
+                        .c_str());
                 ImGui::EndTooltip();
               }
             }
