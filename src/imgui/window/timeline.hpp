@@ -101,6 +101,7 @@ namespace anm2ed::imgui
     Reference frameSelectionSnapshotReference{};
     Reference frameSelectionAnchor{};
     bool isFrameSelectionAnchorSet{};
+    int animationLengthEditIndex{-1};
     std::vector<TimelineRowReference> rowDragReferences{};
     glm::vec2 scroll{};
     ImGuiStyle style{};

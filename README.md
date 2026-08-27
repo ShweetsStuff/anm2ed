@@ -12,6 +12,7 @@ This application was developed with the assistance of a large language model.
 - Dockable [Dear ImGui](https://github.com/ocornut/imgui) interface with draggable windows, persistent layout, drag and drop, context menus, and keyboard-focused workflows.
 - Timeline editing with multi-selection, cut/copy/paste, duplicate, merge, insert/delete, frame baking, frame dragging, and editable animation length/FPS/loop settings.
 - Animation, layer, and null groups for organizing work, including collapsible trees, group roots, visibility toggles, and save-time baking for game compatibility.
+- Frame property editing for crop, size, position, pivot, scale, shear, rotation, tint, color offset, regions, shaders, visibility, interpolation, and flips, with single-frame and batch modes.
 - Spritesheet tools for adding, replacing, reloading, packing, saving, editing, and generating reusable regions.
 - Overlay spritesheets that can be placed on top of base spritesheets for editing and previewing alternate texture work.
 - Custom spritesheet shaders with vertex/fragment file paths, reload/compile feedback, enable/disable behavior, and configurable uniform bindings.

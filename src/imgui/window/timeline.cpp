@@ -3893,12 +3893,15 @@ namespace anm2ed::imgui
           ImGui::SameLine();
 
           auto frameNum = animation ? animation->frameNum : dummy_value<int>();
+          auto currentAnimationIndex = reference.animationIndex;
           ImGui::SetNextItemWidth(widgetSize.x);
-          if (input_int_range(localize.get(LABEL_ANIMATION_LENGTH), frameNum, FRAME_NUM_MIN, FRAME_NUM_MAX, STEP,
-                              STEP_FAST, !animation ? ImGuiInputTextFlags_DisplayEmptyRefVal : 0) &&
-              animation)
+          auto isLengthChanged = input_int_range(localize.get(LABEL_ANIMATION_LENGTH), frameNum, FRAME_NUM_MIN,
+                                                 FRAME_NUM_MAX, STEP, STEP_FAST,
+                                                 !animation ? ImGuiInputTextFlags_DisplayEmptyRefVal : 0);
+          if (ImGui::IsItemActivated()) animationLengthEditIndex = currentAnimationIndex;
+          if (isLengthChanged && animation)
           {
-            auto animationIndex = reference.animationIndex;
+            auto animationIndex = animationLengthEditIndex != -1 ? animationLengthEditIndex : currentAnimationIndex;
             edit_command_push(EDIT_ANIMATION_LENGTH, Document::ANIMATIONS,
                               [=](Manager&, Document& document)
                               {
@@ -3907,6 +3910,7 @@ namespace anm2ed::imgui
                                 animation->frameNum = frameNum;
                               });
           }
+          if (ImGui::IsItemDeactivated()) animationLengthEditIndex = -1;
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ANIMATION_LENGTH));
 
           ImGui::SameLine();
