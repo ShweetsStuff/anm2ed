@@ -131,8 +131,9 @@ namespace anm2ed::imgui
                     },
                     .activate = open,
                     .cardLines = SOUND_CARD_LINES};
-      list_panel_draw(panel, actions, {{ACTION_ADD, ACTION_REMOVE_UNUSED, ACTION_RELOAD, ACTION_REPLACE}},
-                      [&]() { content_list_draw(panel, SelectionKind::SOUNDS, item_ids_get(sounds), rows); });
+      list_panel_draw(
+          panel, actions, {{ACTION_ADD, ACTION_REMOVE_UNUSED, ACTION_RELOAD, ACTION_REPLACE}},
+          [&]() { content_list_draw(panel, SelectionKind::SOUNDS, item_ids_get(sounds), rows); }, true);
     }
     ImGui::End();
   }

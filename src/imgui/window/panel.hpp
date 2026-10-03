@@ -47,6 +47,8 @@ namespace anm2ed::imgui
     std::vector<int> keys{};
     std::vector<int> dragIds{};
     MultiSelectStorage selection{};
+    ImVec2 tooltipPadding{};
+    ImVec2 tooltipSpacing{};
   };
 
   // Everything a panel draws with, for one frame. Commands get the document again when they run.
@@ -91,7 +93,9 @@ namespace anm2ed::imgui
   void content_list_draw(Panel&, SelectionKind, const std::vector<int>&, const ListRows&);
   int list_select_begin(Panel&, std::set<int>&, int&, const ListRows&, const std::vector<int>&);
   void list_select_end(Panel&, std::set<int>&, int&, const ListRows&, int);
-  void list_panel_draw(Panel&, Actions&, const Footer&, const std::function<void()>&, Actions* = nullptr);
+  void list_panel_draw(Panel&, Actions&, const Footer&, const std::function<void()>&, bool = false, Actions* = nullptr);
+  bool tooltip_begin(const PanelState&, bool = true);
+  void tooltip_end();
   void tooltip_name_draw(Resources&, const std::string&);
   void tooltip_image_draw(const CardImage&, const std::function<void()>&);
   void directory_open(Dialog&, Document&, const std::filesystem::path&);

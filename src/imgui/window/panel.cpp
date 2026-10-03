@@ -42,14 +42,27 @@ namespace anm2ed::imgui
     if (state.scrollId == key) state.scrollId = -1;
   }
 
-  void row_tooltip_update(const ListRows& rows, int key)
+  // Tooltips keep the window's padding and spacing, which card lists zero out for themselves.
+  bool tooltip_begin(const PanelState& state, bool isItem)
   {
-    if (!rows.tooltip_draw) return;
-    if (ImGui::BeginItemTooltip())
-    {
-      rows.tooltip_draw(key);
-      ImGui::EndTooltip();
-    }
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, state.tooltipPadding);
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, state.tooltipSpacing);
+    if (isItem ? ImGui::BeginItemTooltip() : ImGui::BeginTooltip()) return true;
+    ImGui::PopStyleVar(2);
+    return false;
+  }
+
+  void tooltip_end()
+  {
+    ImGui::EndTooltip();
+    ImGui::PopStyleVar(2);
+  }
+
+  void row_tooltip_update(const PanelState& state, const ListRows& rows, int key)
+  {
+    if (!rows.tooltip_draw || !tooltip_begin(state)) return;
+    rows.tooltip_draw(key);
+    tooltip_end();
   }
 
   // Arrow keys move a single selection through the keys.
@@ -152,7 +165,7 @@ namespace anm2ed::imgui
       rows.activate(key);
 
     auto isBreak = rows.drag_drop_update && rows.drag_drop_update(key, index);
-    row_tooltip_update(rows, key);
+    row_tooltip_update(panel.state, rows, key);
     ImGui::PopID();
     return isBreak;
   }
@@ -194,11 +207,11 @@ namespace anm2ed::imgui
       if (rows.tooltip_draw && ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip) &&
           !ImGui::IsMouseDragging(ImGuiMouseButton_Left))
       {
-        ImGui::SetNextWindowSize(ImVec2(ImGui::CalcTextSize(label.c_str()).x + style.ItemSpacing.x +
-                                            style.WindowPadding.x * TOOLTIP_PADDING_MULTIPLIER,
+        ImGui::SetNextWindowSize(ImVec2(ImGui::CalcTextSize(label.c_str()).x + panel.state.tooltipSpacing.x +
+                                            panel.state.tooltipPadding.x * TOOLTIP_PADDING_MULTIPLIER,
                                         0),
                                  ImGuiCond_Appearing);
-        row_tooltip_update(rows, key);
+        row_tooltip_update(panel.state, rows, key);
       }
 
       isBreak = rows.drag_drop_update && rows.drag_drop_update(key, index);
@@ -258,15 +271,19 @@ namespace anm2ed::imgui
 
   // The list in a bordered child with its context menu and shortcuts, then the footer buttons.
   void list_panel_draw(Panel& panel, Actions& actions, const Footer& footer, const std::function<void()>& list,
-                       Actions* footerActions)
+                       bool isCards, Actions* footerActions)
   {
     auto& [manager, settings, resources, dialog, clipboard, document, state] = panel;
+    state.tooltipPadding = ImGui::GetStyle().WindowPadding;
+    state.tooltipSpacing = ImGui::GetStyle().ItemSpacing;
+    if (isCards) ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2());
     if (ImGui::BeginChild("##List Child", size_without_footer_get((int)footer.size()), ImGuiChildFlags_Borders))
     {
       list();
       actions_shortcuts_update(actions, manager);
     }
     ImGui::EndChild();
+    if (isCards) ImGui::PopStyleVar();
 
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlappedByWindow) &&
         ImGui::IsMouseReleased(ImGuiMouseButton_Right))

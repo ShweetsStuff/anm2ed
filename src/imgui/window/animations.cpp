@@ -783,7 +783,7 @@ namespace anm2ed::imgui
             list_select_end(panel, selection, focus, rows, arrowKey);
             animations_selection_set(document, selection, groupSelection);
           },
-          &footerActions);
+          false, &footerActions);
     }
     ImGui::End();
 

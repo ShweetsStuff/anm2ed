@@ -378,8 +378,9 @@ namespace anm2ed::imgui
                     .image_get = image_get,
                     .activate = properties_open,
                     .cardLines = SHADER_CARD_LINES};
-      list_panel_draw(panel, actions, {{ACTION_ADD, ACTION_REMOVE_UNUSED, ACTION_RELOAD}},
-                      [&]() { content_list_draw(panel, SelectionKind::SHADERS, item_ids_get(items), rows); });
+      list_panel_draw(
+          panel, actions, {{ACTION_ADD, ACTION_REMOVE_UNUSED, ACTION_RELOAD}},
+          [&]() { content_list_draw(panel, SelectionKind::SHADERS, item_ids_get(items), rows); }, true);
 
       propertiesPopup.trigger();
       if (ImGui::BeginPopupModal(propertiesPopup.label(), &propertiesPopup.isOpen, ImGuiWindowFlags_NoResize))

@@ -252,12 +252,10 @@ namespace anm2ed::imgui
 
     auto mousePos = ImGui::GetIO().MousePos;
     ImGui::SetNextWindowPos(ImVec2(mousePos.x + DRAG_TOOLTIP_OFFSET.x, mousePos.y + DRAG_TOOLTIP_OFFSET.y));
-    if (ImGui::BeginTooltip())
-    {
-      for (auto regionId : state.dragIds)
-        if (auto region = model::item_get(spritesheet->regions, regionId)) ImGui::TextUnformatted(region->name.c_str());
-      ImGui::EndTooltip();
-    }
+    if (!tooltip_begin(state, false)) return;
+    for (auto regionId : state.dragIds)
+      if (auto region = model::item_get(spritesheet->regions, regionId)) ImGui::TextUnformatted(region->name.c_str());
+    tooltip_end();
   }
 
   void region_properties_open(RegionsPanel& regions, Document& document, int id)
@@ -536,12 +534,14 @@ namespace anm2ed::imgui
                       .activate = [&](int id) { region_properties_open(regions, document, id); },
                       .drag_drop_update = [&](int id, int index) { return region_drag_drop_update(panel, id, index); },
                       .cardLines = REGION_CARD_LINES};
-        list_panel_draw(panel, actions, {{ACTION_ADD, ACTION_EXPORT, ACTION_REMOVE_UNUSED}},
-                        [&]()
-                        {
-                          content_list_draw(panel, SelectionKind::REGIONS, item_ids_get(spritesheet->regions), rows);
-                          region_drag_tooltip_update(panel);
-                        });
+        list_panel_draw(
+            panel, actions, {{ACTION_ADD, ACTION_EXPORT, ACTION_REMOVE_UNUSED}},
+            [&]()
+            {
+              content_list_draw(panel, SelectionKind::REGIONS, item_ids_get(spritesheet->regions), rows);
+              region_drag_tooltip_update(panel);
+            },
+            true);
       }
     }
     ImGui::End();
