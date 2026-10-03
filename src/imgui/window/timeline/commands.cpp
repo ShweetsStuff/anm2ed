@@ -60,7 +60,7 @@ namespace anm2ed::imgui
     null_get = [&](int id)
     {
       auto nulls = anm2.element_get(ElementType::NULLS);
-      return nulls ? element_child_id_get(*nulls, ElementType::NULL_ELEMENT, id) : nullptr;
+      return nulls ? child_id_get(*nulls, ElementType::NULL_ELEMENT, id) : nullptr;
     };
     spritesheet_get = [&](int id) { return anm2.element_get(ElementType::SPRITESHEET, id); };
     info_get = [&]() { return element_first_get(anm2.root, ElementType::INFO); };
@@ -84,12 +84,12 @@ namespace anm2ed::imgui
     };
     track_container_get = [&](int type)
     {
-      return animation ? element_child_first_get(*animation, container_type_get(type)) : nullptr;
+      return animation ? child_first_get(*animation, container_type_get(type)) : nullptr;
     };
     track_group_get = [&](int type, int groupId)
     {
       auto container = track_container_get(type);
-      return container ? element_child_id_get(*container, ElementType::GROUP, groupId) : nullptr;
+      return container ? child_id_get(*container, ElementType::GROUP, groupId) : nullptr;
     };
     is_track_group_visible = [&](int type, int groupId)
     {
@@ -829,7 +829,7 @@ namespace anm2ed::imgui
 
       auto add_items = [&](const Element& container, int itemType)
       {
-        auto trackType = item_type_to_track_type_get(static_cast<ItemType>(itemType));
+        auto trackType = TYPE_TRACKS[itemType];
         auto add_item = [&](auto&& self, const Element& item) -> void
         {
           if (item.type == ElementType::GROUP)
@@ -848,10 +848,10 @@ namespace anm2ed::imgui
       };
 
       if (isLayers)
-        if (auto layerAnimations = element_child_first_get(targetAnimation, ElementType::LAYER_ANIMATIONS))
+        if (auto layerAnimations = child_first_get(targetAnimation, ElementType::LAYER_ANIMATIONS))
           add_items(*layerAnimations, LAYER);
       if (isNulls)
-        if (auto nullAnimations = element_child_first_get(targetAnimation, ElementType::NULL_ANIMATIONS))
+        if (auto nullAnimations = child_first_get(targetAnimation, ElementType::NULL_ANIMATIONS))
           add_items(*nullAnimations, NULL_);
       return result;
     };
@@ -1070,33 +1070,9 @@ namespace anm2ed::imgui
 
                           auto nextFrame = track_frame_get(*item, targetReference.frameIndex + 1);
                           if (frame->interpolation != Interpolation::NONE && nextFrame)
-                          {
-                            float interpolation = (float)firstDuration / (float)originalDuration;
-                            switch (frame->interpolation)
-                            {
-                              case Interpolation::EASE_IN:
-                                interpolation *= interpolation;
-                                break;
-                              case Interpolation::EASE_OUT:
-                                interpolation = 1.0f - ((1.0f - interpolation) * (1.0f - interpolation));
-                                break;
-                              case Interpolation::EASE_IN_OUT:
-                                interpolation = interpolation < 0.5f
-                                                    ? (2.0f * interpolation * interpolation)
-                                                    : (1.0f - std::pow(-2.0f * interpolation + 2.0f, 2.0f) * 0.5f);
-                                break;
-                              case Interpolation::LINEAR:
-                              case Interpolation::NONE:
-                              default:
-                                break;
-                            }
-
-                            splitFrame.rotation = glm::mix(frame->rotation, nextFrame->rotation, interpolation);
-                            splitFrame.position = glm::mix(frame->position, nextFrame->position, interpolation);
-                            splitFrame.scale = glm::mix(frame->scale, nextFrame->scale, interpolation);
-                            splitFrame.colorOffset = glm::mix(frame->colorOffset, nextFrame->colorOffset, interpolation);
-                            splitFrame.tint = glm::mix(frame->tint, nextFrame->tint, interpolation);
-                          }
+                            frame_mix(splitFrame, *nextFrame,
+                                      interpolation_factor(frame->interpolation,
+                                                           (float)firstDuration / (float)originalDuration));
 
                           frame->duration = firstDuration;
                           auto insertIndex = item_frame_insert_index_get(*item, targetReference.frameIndex + 1);
@@ -1152,7 +1128,7 @@ namespace anm2ed::imgui
 
       rows.push_back({.type = ROOT});
 
-      if (auto layerAnimations = element_child_first_get(*animation, ElementType::LAYER_ANIMATIONS))
+      if (auto layerAnimations = child_first_get(*animation, ElementType::LAYER_ANIMATIONS))
         {
           auto groupIds = group_ids_get(*layerAnimations);
           auto layer_track_push = [&](int groupId, int depth)
@@ -1183,7 +1159,7 @@ namespace anm2ed::imgui
           }
         }
 
-      if (auto nullAnimations = element_child_first_get(*animation, ElementType::NULL_ANIMATIONS))
+      if (auto nullAnimations = child_first_get(*animation, ElementType::NULL_ANIMATIONS))
         {
           auto groupIds = group_ids_get(*nullAnimations);
           auto null_track_push = [&](int groupId, int depth)
@@ -1418,7 +1394,7 @@ namespace anm2ed::imgui
                           {
                             auto containerType = container_type_get(targetType);
                             auto targetTrackType = track_type_get(targetType);
-                            auto container = element_child_first_get(*animation, containerType);
+                            auto container = child_first_get(*animation, containerType);
                             if (!container) continue;
                             auto ids = targetIds.contains(targetType) ? targetIds.at(targetType) : std::set<int>{};
                             auto groupIds =
@@ -1480,7 +1456,7 @@ namespace anm2ed::imgui
 
                           auto containerType = container_type_get(targetType);
                           auto targetTrackType = track_type_get(targetType);
-                          auto container = element_child_first_get(*animation, containerType);
+                          auto container = child_first_get(*animation, containerType);
                           if (!container) return;
 
                           std::set<int> targetIds{};
@@ -1538,7 +1514,7 @@ namespace anm2ed::imgui
                         {
                           auto animation = command_animation_get(document, animationIndex);
                           if (!animation) return;
-                          auto container = element_child_first_get(*animation, container_type_get(targetType));
+                          auto container = child_first_get(*animation, container_type_get(targetType));
                           if (!container) return;
                           auto targetTrackType = track_type_get(targetType);
 
@@ -1681,7 +1657,7 @@ namespace anm2ed::imgui
                              frameReference.groupId);
         auto frame = item ? track_frame_get(*item, frameReference.frameIndex) : nullptr;
         if (!frame) continue;
-        auto parentType = item_type_to_track_type_get(item_type_get(frameReference.itemType));
+        auto parentType = TYPE_TRACKS[frameReference.itemType];
         clipboardString += element_to_string(*frame, parentType);
       }
       if (!clipboardString.empty()) clipboard.set(clipboardString);
@@ -1758,7 +1734,7 @@ namespace anm2ed::imgui
                              auto frame = track_frame_get(*item, i);
                              if (!frame || frame->regionId == -1) continue;
                              auto region =
-                                 spritesheet ? element_child_id_get(*spritesheet, ElementType::REGION, frame->regionId)
+                                 spritesheet ? child_id_get(*spritesheet, ElementType::REGION, frame->regionId)
                                              : nullptr;
                              if (!region) frame->regionId = -1;
                            }
@@ -2001,9 +1977,9 @@ namespace anm2ed::imgui
                             {
                               auto animation = command_animation_get(document, targetAnimationIndex);
                               auto container =
-                                  animation ? element_child_first_get(*animation, container_type_get(targetType))
+                                  animation ? child_first_get(*animation, container_type_get(targetType))
                                             : nullptr;
-                              auto group = container ? element_child_id_get(*container, ElementType::GROUP, targetId)
+                              auto group = container ? child_id_get(*container, ElementType::GROUP, targetId)
                                                      : nullptr;
                               if (!group) return;
                               group->name = targetName;

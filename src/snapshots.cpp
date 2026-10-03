@@ -190,7 +190,7 @@ namespace anm2ed::snapshots
   {
     auto spritesheet = anm2.element_get(ElementType::SPRITESHEET, spritesheetId);
     if (!spritesheet) return std::nullopt;
-    auto region = element_child_id_get(*spritesheet, ElementType::REGION, regionId);
+    auto region = child_id_get(*spritesheet, ElementType::REGION, regionId);
     if (!region) return std::nullopt;
 
     std::vector<int> path{};
@@ -256,7 +256,7 @@ namespace anm2ed::snapshots
 
     auto spritesheet = snapshot.anm2.element_get(ElementType::SPRITESHEET, spritesheetId);
     if (!spritesheet) return;
-    auto region = element_child_id_get(*spritesheet, ElementType::REGION, regionId);
+    auto region = child_id_get(*spritesheet, ElementType::REGION, regionId);
     if (!region) return;
 
     step.anm2.elements.push_back({std::move(*path), *region, {}});

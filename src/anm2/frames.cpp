@@ -12,6 +12,35 @@ namespace anm2ed
   };
 
 
+  void frame_mix(Element& frame, const Element& next, float amount)
+  {
+    frame.rotation = glm::mix(frame.rotation, next.rotation, amount);
+    frame.position = glm::mix(frame.position, next.position, amount);
+    frame.scale = glm::mix(frame.scale, next.scale, amount);
+    frame.shear = glm::mix(frame.shear, next.shear, amount);
+    frame.colorOffset = glm::mix(frame.colorOffset, next.colorOffset, amount);
+    frame.tint = glm::mix(frame.tint, next.tint, amount);
+  }
+
+  std::vector<Element> frame_bake_split(const Element& original, const Element& next, int interval, bool isRoundScale,
+                                        bool isRoundRotation)
+  {
+    auto total = std::max(original.duration, FRAME_DURATION_MIN);
+    interval = std::max(interval, FRAME_DURATION_MIN);
+    std::vector<Element> frames{};
+    frames.reserve((total + interval - 1) / interval);
+    for (int duration = 0; duration < total; duration += interval)
+    {
+      auto& baked = frames.emplace_back(original);
+      frame_mix(baked, next, interpolation_factor(original.interpolation, (float)duration / total));
+      baked.duration = std::min(interval, total - duration);
+      baked.interpolation = Interpolation::NONE;
+      if (isRoundScale) baked.scale = glm::round(baked.scale);
+      if (isRoundRotation) baked.rotation = std::round(baked.rotation);
+    }
+    return frames;
+  }
+
   Element frame_generate(const Element& track, float time)
   {
     auto frame = element_make(track_frame_type_get(track));
@@ -60,14 +89,8 @@ namespace anm2ed
     if (frameType != ElementType::TRIGGER && frame.interpolation != Interpolation::NONE && frameNext &&
         frame.duration > 1)
     {
-      auto amount =
-          interpolation_factor(frame.interpolation, (time - durationCurrent) / (durationNext - durationCurrent));
-      frame.rotation = glm::mix(frame.rotation, frameNext->rotation, amount);
-      frame.position = glm::mix(frame.position, frameNext->position, amount);
-      frame.scale = glm::mix(frame.scale, frameNext->scale, amount);
-      frame.shear = glm::mix(frame.shear, frameNext->shear, amount);
-      frame.colorOffset = glm::mix(frame.colorOffset, frameNext->colorOffset, amount);
-      frame.tint = glm::mix(frame.tint, frameNext->tint, amount);
+      frame_mix(frame, *frameNext,
+                interpolation_factor(frame.interpolation, (time - durationCurrent) / (durationNext - durationCurrent)));
     }
 
     return frame;
@@ -90,9 +113,7 @@ namespace anm2ed
     if (track.type == ElementType::TRIGGERS) return frame_index_from_at_frame_get(track, (int)time);
 
     auto frameType = track_frame_type_get(track);
-    int frameCount{};
-    for (const auto& frame : track.children)
-      if (frame.type == frameType) ++frameCount;
+    auto frameCount = track_frames_count_get(track);
     if (frameCount == 0) return -1;
     if (time <= 0.0f) return 0;
 
@@ -130,45 +151,18 @@ namespace anm2ed
     auto childIndex = track_frame_child_index_get(track, index);
     if (childIndex == -1) return;
 
-    auto frame = &track.children[childIndex];
-
-    auto original = *frame;
+    auto original = track.children[childIndex];
     if (original.duration <= FRAME_DURATION_MIN)
     {
-      frame->interpolation = Interpolation::NONE;
+      track.children[childIndex].interpolation = Interpolation::NONE;
       return;
     }
 
     auto nextFrame = track_frame_get(track, index + 1);
-    auto next = nextFrame ? *nextFrame : original;
-    int duration{};
-    interval = std::max(interval, FRAME_DURATION_MIN);
-    std::vector<Element> bakedFrames{};
-    bakedFrames.reserve((original.duration + interval - 1) / interval);
-
-    while (duration < original.duration)
-    {
-      auto baked = original;
-      auto amount = interpolation_factor(original.interpolation, (float)duration / original.duration);
-      baked.duration = std::min(interval, original.duration - duration);
-      baked.interpolation = Interpolation::NONE;
-      baked.rotation = glm::mix(original.rotation, next.rotation, amount);
-      baked.position = glm::mix(original.position, next.position, amount);
-      baked.scale = glm::mix(original.scale, next.scale, amount);
-      baked.shear = glm::mix(original.shear, next.shear, amount);
-      baked.colorOffset = glm::mix(original.colorOffset, next.colorOffset, amount);
-      baked.tint = glm::mix(original.tint, next.tint, amount);
-      if (isRoundScale) baked.scale = glm::round(baked.scale);
-      if (isRoundRotation) baked.rotation = std::round(baked.rotation);
-
-      bakedFrames.push_back(baked);
-      duration += baked.duration;
-    }
-
-    if (bakedFrames.empty()) return;
-    track.children[childIndex] = std::move(bakedFrames.front());
-    track.children.insert(track.children.begin() + childIndex + 1, std::make_move_iterator(bakedFrames.begin() + 1),
-                          std::make_move_iterator(bakedFrames.end()));
+    auto baked = frame_bake_split(original, nextFrame ? *nextFrame : original, interval, isRoundScale, isRoundRotation);
+    track.children.erase(track.children.begin() + childIndex);
+    track.children.insert(track.children.begin() + childIndex, std::make_move_iterator(baked.begin()),
+                          std::make_move_iterator(baked.end()));
   }
 
   void frames_generate_from_grid(Element& track, glm::ivec2 startPosition, glm::ivec2 size, glm::vec2 pivot,
@@ -202,11 +196,11 @@ namespace anm2ed
     }
 
     auto frameType = track_frame_type_get(track);
-    auto first =
-        frameType == ElementType::TRIGGER ? document.FirstChildElement("Trigger") : document.FirstChildElement("Frame");
+    auto tag = element_tag_get(frameType).data();
+    auto first = document.FirstChildElement(tag);
     if (!first)
     {
-      if (errorString) *errorString = frameType == ElementType::TRIGGER ? "No valid trigger(s)." : "No valid frame(s).";
+      if (errorString) *errorString = std::format("No valid {}(s).", tag);
       return false;
     }
 
@@ -214,7 +208,7 @@ namespace anm2ed
     {
       start = std::clamp(start, 0, track_frames_count_get(track));
       std::vector<Element> frames{};
-      for (auto element = first; element; element = element->NextSiblingElement("Frame"))
+      for (auto element = first; element; element = element->NextSiblingElement(tag))
       {
         auto frame = element_read(element);
         if (frame.type != ElementType::FRAME) continue;
@@ -240,7 +234,7 @@ namespace anm2ed
 
     std::vector<int> atFrames{};
     int count{};
-    for (auto element = first; element; element = element->NextSiblingElement("Trigger"))
+    for (auto element = first; element; element = element->NextSiblingElement(tag))
     {
       auto trigger = element_read(element);
       if (trigger.type != ElementType::TRIGGER) continue;
@@ -358,8 +352,7 @@ namespace anm2ed
     for (int index = (int)track.children.size() - 1; index >= 0; --index)
     {
       auto original = track.children[index];
-      if (original.type != ElementType::FRAME) continue;
-      if (!is_frame_interpolation_baked(original, type)) continue;
+      if (original.type != ElementType::FRAME || !is_frame_interpolation_baked(original, type)) continue;
 
       if (original.duration <= FRAME_DURATION_MIN)
       {
@@ -367,35 +360,12 @@ namespace anm2ed
         continue;
       }
 
-      auto nextFrame = index + 1 < (int)track.children.size() && track.children[index + 1].type == ElementType::FRAME
-                           ? track.children[index + 1]
-                           : original;
-      int duration{};
-      int insertIndex = index;
-
-      while (duration < original.duration)
-      {
-        auto baked = original;
-        float amount = interpolation_factor(original.interpolation, (float)duration / original.duration);
-        baked.duration = std::min(interval, original.duration - duration);
-        baked.interpolation = Interpolation::NONE;
-        baked.rotation = glm::mix(original.rotation, nextFrame.rotation, amount);
-        baked.position = glm::mix(original.position, nextFrame.position, amount);
-        baked.scale = glm::mix(original.scale, nextFrame.scale, amount);
-        baked.shear = glm::mix(original.shear, nextFrame.shear, amount);
-        baked.colorOffset = glm::mix(original.colorOffset, nextFrame.colorOffset, amount);
-        baked.tint = glm::mix(original.tint, nextFrame.tint, amount);
-        if (isRoundScale) baked.scale = glm::round(baked.scale);
-        if (isRoundRotation) baked.rotation = std::round(baked.rotation);
-
-        if (insertIndex == index)
-          track.children[insertIndex] = baked;
-        else
-          track.children.insert(track.children.begin() + insertIndex, baked);
-
-        duration += baked.duration;
-        ++insertIndex;
-      }
+      auto isNextFrame = index + 1 < (int)track.children.size() && track.children[index + 1].type == ElementType::FRAME;
+      auto baked = frame_bake_split(original, isNextFrame ? track.children[index + 1] : original, interval,
+                                    isRoundScale, isRoundRotation);
+      track.children.erase(track.children.begin() + index);
+      track.children.insert(track.children.begin() + index, std::make_move_iterator(baked.begin()),
+                            std::make_move_iterator(baked.end()));
     }
   }
 
@@ -420,15 +390,6 @@ namespace anm2ed
   void all_interpolated_frames_bake(Element& element, int interval, bool isRoundScale, bool isRoundRotation)
   {
     interpolated_frames_bake(element, interval, isRoundScale, isRoundRotation, InterpolationBakeType::ALL);
-  }
-
-  void layer_animation_ids_remap(Element& element, const std::unordered_map<int, int>& remap)
-  {
-    if (element.type == ElementType::LAYER_ANIMATION)
-      if (auto it = remap.find(element.layerId); it != remap.end()) element.layerId = it->second;
-
-    for (auto& child : element.children)
-      layer_animation_ids_remap(child, remap);
   }
 
   int track_length_get(const Element& track)
@@ -459,18 +420,13 @@ namespace anm2ed
 
     if (auto rootAnimation = child_first_get(animation, ElementType::ROOT_ANIMATION))
       length = std::max(length, track_length_get(*rootAnimation));
-    if (auto layerAnimations = child_first_get(animation, ElementType::LAYER_ANIMATIONS))
-    {
-      group_roots_length_apply(*layerAnimations);
-      tracks_each(*layerAnimations, ElementType::LAYER_ANIMATION,
-                  [&](const Element& track) { length = std::max(length, track_length_get(track)); });
-    }
-    if (auto nullAnimations = child_first_get(animation, ElementType::NULL_ANIMATIONS))
-    {
-      group_roots_length_apply(*nullAnimations);
-      tracks_each(*nullAnimations, ElementType::NULL_ANIMATION,
-                  [&](const Element& track) { length = std::max(length, track_length_get(track)); });
-    }
+    for (const auto& row : TRACK_CONTAINERS)
+      if (auto container = child_first_get(animation, row.container))
+      {
+        group_roots_length_apply(*container);
+        tracks_each(*container, row.track,
+                    [&](const Element& track) { length = std::max(length, track_length_get(track)); });
+      }
     if (auto triggers = child_first_get(animation, ElementType::TRIGGERS))
       length = std::max(length, track_length_get(*triggers));
     return std::max(length, FRAME_DURATION_MIN);

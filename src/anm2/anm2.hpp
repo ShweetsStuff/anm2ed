@@ -6,7 +6,9 @@
 #include <set>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <vector>
+#include <algorithm>
 
 #include <glm/glm.hpp>
 #include <tinyxml2/tinyxml2.h>
@@ -16,47 +18,53 @@
 #include "types.hpp"
 
 #define ANM2_ELEMENT_TYPES                                                                                             \
-  X(UNKNOWN, "")                                                                                                       \
-  X(ANIMATED_ACTOR, "AnimatedActor")                                                                                   \
-  X(INFO, "Info")                                                                                                      \
-  X(CONTENT, "Content")                                                                                                \
-  X(SPRITESHEETS, "Spritesheets")                                                                                      \
-  X(SPRITESHEET, "Spritesheet")                                                                                        \
-  X(SHADERS, "Shaders")                                                                                                \
-  X(SHADER, "Shader")                                                                                                  \
-  X(UNIFORM, "Uniform")                                                                                                \
-  X(COMPONENT, "Component")                                                                                            \
-  X(REGION, "Region")                                                                                                  \
-  X(LAYERS, "Layers")                                                                                                  \
-  X(LAYER_ELEMENT, "Layer")                                                                                            \
-  X(NULLS, "Nulls")                                                                                                    \
-  X(NULL_ELEMENT, "Null")                                                                                              \
-  X(EVENTS, "Events")                                                                                                  \
-  X(EVENT_ELEMENT, "Event")                                                                                            \
-  X(SOUNDS, "Sounds")                                                                                                  \
-  X(SOUND_ELEMENT, "Sound")                                                                                            \
-  X(ANIMATIONS, "Animations")                                                                                          \
-  X(ANIMATION, "Animation")                                                                                            \
-  X(ROOT_ANIMATION, "RootAnimation")                                                                                   \
-  X(LAYER_ANIMATIONS, "LayerAnimations")                                                                               \
-  X(LAYER_ANIMATION_GROUPS, "LayerAnimationGroups")                                                                    \
-  X(LAYER_ANIMATION, "LayerAnimation")                                                                                 \
-  X(NULL_ANIMATIONS, "NullAnimations")                                                                                 \
-  X(NULL_ANIMATION_GROUPS, "NullAnimationGroups")                                                                      \
-  X(NULL_ANIMATION, "NullAnimation")                                                                                   \
-  X(GROUP, "Group")                                                                                                    \
-  X(TRIGGERS, "Triggers")                                                                                              \
-  X(FRAME, "Frame")                                                                                                    \
-  X(TRIGGER, "Trigger")
+  X(UNKNOWN, "", UNKNOWN)                                                                                              \
+  X(ANIMATED_ACTOR, "AnimatedActor", UNKNOWN)                                                                          \
+  X(INFO, "Info", UNKNOWN)                                                                                             \
+  X(CONTENT, "Content", UNKNOWN)                                                                                       \
+  X(SPRITESHEETS, "Spritesheets", UNKNOWN)                                                                             \
+  X(SPRITESHEET, "Spritesheet", SPRITESHEETS)                                                                          \
+  X(SHADERS, "Shaders", UNKNOWN)                                                                                       \
+  X(SHADER, "Shader", SHADERS)                                                                                         \
+  X(UNIFORM, "Uniform", UNKNOWN)                                                                                       \
+  X(COMPONENT, "Component", UNKNOWN)                                                                                   \
+  X(REGION, "Region", UNKNOWN)                                                                                         \
+  X(LAYERS, "Layers", UNKNOWN)                                                                                         \
+  X(LAYER_ELEMENT, "Layer", LAYERS)                                                                                    \
+  X(NULLS, "Nulls", UNKNOWN)                                                                                           \
+  X(NULL_ELEMENT, "Null", NULLS)                                                                                       \
+  X(EVENTS, "Events", UNKNOWN)                                                                                         \
+  X(EVENT_ELEMENT, "Event", EVENTS)                                                                                    \
+  X(SOUNDS, "Sounds", UNKNOWN)                                                                                         \
+  X(SOUND_ELEMENT, "Sound", SOUNDS)                                                                                    \
+  X(ANIMATIONS, "Animations", UNKNOWN)                                                                                 \
+  X(ANIMATION, "Animation", ANIMATIONS)                                                                                \
+  X(ROOT_ANIMATION, "RootAnimation", UNKNOWN)                                                                          \
+  X(LAYER_ANIMATIONS, "LayerAnimations", UNKNOWN)                                                                      \
+  X(LAYER_ANIMATION_GROUPS, "LayerAnimationGroups", UNKNOWN)                                                           \
+  X(LAYER_ANIMATION, "LayerAnimation", UNKNOWN)                                                                        \
+  X(NULL_ANIMATIONS, "NullAnimations", UNKNOWN)                                                                        \
+  X(NULL_ANIMATION_GROUPS, "NullAnimationGroups", UNKNOWN)                                                             \
+  X(NULL_ANIMATION, "NullAnimation", UNKNOWN)                                                                          \
+  X(GROUP, "Group", UNKNOWN)                                                                                           \
+  X(TRIGGERS, "Triggers", UNKNOWN)                                                                                     \
+  X(FRAME, "Frame", UNKNOWN)                                                                                           \
+  X(TRIGGER, "Trigger", UNKNOWN)
 
 namespace anm2ed
 {
   enum class ElementType
   {
-#define X(symbol, tag) symbol,
+#define X(symbol, tag, container) symbol,
     ANM2_ELEMENT_TYPES
 #undef X
         COUNT
+  };
+
+  inline constexpr ElementType ELEMENT_CONTAINERS[] = {
+#define X(symbol, tag, container) ElementType::container,
+      ANM2_ELEMENT_TYPES
+#undef X
   };
 
   enum class Interpolation
@@ -127,47 +135,60 @@ namespace anm2ed
   inline const glm::vec4 TRIGGER_COLOR_HOVERED = glm::vec4(0.950f, 0.330f, 0.490f, 1.000f);
 
 #define ANM2_ITEM_TYPES                                                                                                \
-  X(NONE, STRING_UNDEFINED, "", resource::icon::NONE, glm::vec4(), glm::vec4(), glm::vec4())                           \
-  X(ROOT, BASIC_ROOT, "RootAnimation", resource::icon::ROOT, ROOT_COLOR, ROOT_COLOR_ACTIVE, ROOT_COLOR_HOVERED)        \
+  X(NONE, STRING_UNDEFINED, "", resource::icon::NONE, glm::vec4(), glm::vec4(), glm::vec4(), UNKNOWN, UNKNOWN)         \
+  X(ROOT, BASIC_ROOT, "RootAnimation", resource::icon::ROOT, ROOT_COLOR, ROOT_COLOR_ACTIVE, ROOT_COLOR_HOVERED,        \
+    ROOT_ANIMATION, UNKNOWN)                                                                                           \
   X(LAYER, BASIC_LAYER_ANIMATION, "LayerAnimation", resource::icon::LAYER, LAYER_COLOR, LAYER_COLOR_ACTIVE,            \
-    LAYER_COLOR_HOVERED)                                                                                               \
+    LAYER_COLOR_HOVERED, LAYER_ANIMATION, LAYER_ANIMATIONS)                                                            \
   X(NULL_, BASIC_NULL_ANIMATION, "NullAnimation", resource::icon::NULL_, NULL_COLOR, NULL_COLOR_ACTIVE,                \
-    NULL_COLOR_HOVERED)                                                                                                \
+    NULL_COLOR_HOVERED, NULL_ANIMATION, NULL_ANIMATIONS)                                                               \
   X(TRIGGER, BASIC_TRIGGERS, "Triggers", resource::icon::TRIGGERS, TRIGGER_COLOR, TRIGGER_COLOR_ACTIVE,                \
-    TRIGGER_COLOR_HOVERED)
+    TRIGGER_COLOR_HOVERED, TRIGGERS, UNKNOWN)
 
   constexpr StringType TYPE_STRINGS[] = {
-#define X(symbol, string, itemString, icon, color, colorActive, colorHovered) string,
+#define X(symbol, string, itemString, icon, color, colorActive, colorHovered, track, container) string,
       ANM2_ITEM_TYPES
 #undef X
   };
 
   constexpr const char* TYPE_ITEM_STRINGS[] = {
-#define X(symbol, string, itemString, icon, color, colorActive, colorHovered) itemString,
+#define X(symbol, string, itemString, icon, color, colorActive, colorHovered, track, container) itemString,
       ANM2_ITEM_TYPES
 #undef X
   };
 
   constexpr resource::icon::Type TYPE_ICONS[] = {
-#define X(symbol, string, itemString, icon, color, colorActive, colorHovered) icon,
+#define X(symbol, string, itemString, icon, color, colorActive, colorHovered, track, container) icon,
       ANM2_ITEM_TYPES
 #undef X
   };
 
   inline const glm::vec4 TYPE_COLOR[] = {
-#define X(symbol, string, itemString, icon, color, colorActive, colorHovered) color,
+#define X(symbol, string, itemString, icon, color, colorActive, colorHovered, track, container) color,
       ANM2_ITEM_TYPES
 #undef X
   };
 
   inline const glm::vec4 TYPE_COLOR_ACTIVE[] = {
-#define X(symbol, string, itemString, icon, color, colorActive, colorHovered) colorActive,
+#define X(symbol, string, itemString, icon, color, colorActive, colorHovered, track, container) colorActive,
       ANM2_ITEM_TYPES
 #undef X
   };
 
   inline const glm::vec4 TYPE_COLOR_HOVERED[] = {
-#define X(symbol, string, itemString, icon, color, colorActive, colorHovered) colorHovered,
+#define X(symbol, string, itemString, icon, color, colorActive, colorHovered, track, container) colorHovered,
+      ANM2_ITEM_TYPES
+#undef X
+  };
+
+  inline constexpr ElementType TYPE_TRACKS[] = {
+#define X(symbol, string, itemString, icon, color, colorActive, colorHovered, track, container) ElementType::track,
+      ANM2_ITEM_TYPES
+#undef X
+  };
+
+  inline constexpr ElementType TYPE_CONTAINERS[] = {
+#define X(symbol, string, itemString, icon, color, colorActive, colorHovered, track, container) ElementType::container,
       ANM2_ITEM_TYPES
 #undef X
   };
@@ -302,6 +323,166 @@ namespace anm2ed
     auto operator<=>(const Reference&) const = default;
   };
 
+  struct TrackContainer
+  {
+    ItemType itemType;
+    ElementType container;
+    ElementType track;
+    ElementType groups;
+    ElementType elements;
+    ElementType element;
+    int Element::* id;
+  };
+
+  inline constexpr TrackContainer TRACK_CONTAINERS[] = {
+      {ItemType::LAYER, ElementType::LAYER_ANIMATIONS, ElementType::LAYER_ANIMATION,
+       ElementType::LAYER_ANIMATION_GROUPS, ElementType::LAYERS, ElementType::LAYER_ELEMENT, &Element::layerId},
+      {ItemType::NULL_, ElementType::NULL_ANIMATIONS, ElementType::NULL_ANIMATION, ElementType::NULL_ANIMATION_GROUPS,
+       ElementType::NULLS, ElementType::NULL_ELEMENT, &Element::nullId}};
+
+  inline constexpr int GROUP_ANY = -2;
+
+  template <class E> using ElementPointer = std::conditional_t<std::is_const_v<E>, const Element*, Element*>;
+
+  constexpr const TrackContainer* track_container_get(ElementType type)
+  {
+    for (const auto& row : TRACK_CONTAINERS)
+      if (type == row.container || type == row.track || type == row.groups || type == row.elements ||
+          type == row.element)
+        return &row;
+    return nullptr;
+  }
+
+  constexpr const TrackContainer* track_container_get(ItemType type)
+  {
+    for (const auto& row : TRACK_CONTAINERS)
+      if (type == row.itemType) return &row;
+    return nullptr;
+  }
+
+  constexpr bool is_track(const Element& element)
+  {
+    return element.type != ElementType::UNKNOWN && std::ranges::contains(TYPE_TRACKS, element.type);
+  }
+
+  constexpr ElementType track_frame_type_get(const Element& track)
+  {
+    return track.type == ElementType::TRIGGERS ? ElementType::TRIGGER : ElementType::FRAME;
+  }
+
+  constexpr int track_id_get(const Element& track)
+  {
+    auto row = track_container_get(track.type);
+    return row && row->track == track.type ? track.*(row->id) : -1;
+  }
+
+  template <class E, class Predicate> ElementPointer<E> child_find(E& element, Predicate&& isMatch)
+  {
+    for (auto& child : element.children)
+      if (isMatch(child)) return &child;
+    return nullptr;
+  }
+
+  template <class E> ElementPointer<E> child_first_get(E& element, ElementType type)
+  {
+    return child_find(element, [&](const Element& child) { return child.type == type; });
+  }
+
+  template <class E> ElementPointer<E> child_id_get(E& element, ElementType type, int id)
+  {
+    return child_find(element, [&](const Element& child) { return child.type == type && child.id == id; });
+  }
+
+  template <class E> ElementPointer<E> shader_uniform_get(E& shader, std::string_view name)
+  {
+    return child_find(shader,
+                      [&](const Element& child) { return child.type == ElementType::UNIFORM && child.name == name; });
+  }
+
+  template <class E> ElementPointer<E> shader_uniform_component_get(E& uniform, int index)
+  {
+    return child_find(
+        uniform, [&](const Element& child) { return child.type == ElementType::COMPONENT && child.index == index; });
+  }
+
+  template <class E> ElementPointer<E> element_first_get(E& element, ElementType type)
+  {
+    if (element.type == type) return &element;
+    for (auto& child : element.children)
+      if (auto result = element_first_get(child, type)) return result;
+    return nullptr;
+  }
+
+  template <class E> ElementPointer<E> track_find(E& parent, ElementType trackType, int id, int groupId = GROUP_ANY)
+  {
+    for (auto& child : parent.children)
+    {
+      if (child.type == trackType && track_id_get(child) == id && (groupId == GROUP_ANY || child.groupId == groupId))
+        return &child;
+      if (child.type == ElementType::GROUP)
+        if (auto found = track_find(child, trackType, id, groupId)) return found;
+    }
+    return nullptr;
+  }
+
+  template <class E> ElementPointer<E> animation_group_get(E& animation, int groupType, int groupId)
+  {
+    auto container = groupId < 0 ? nullptr : child_first_get(animation, TYPE_CONTAINERS[groupType]);
+    return container ? child_id_get(*container, ElementType::GROUP, groupId) : nullptr;
+  }
+
+  template <class E>
+  ElementPointer<E> animation_item_get(E& animation, ItemType type, int id = -1, int groupType = NONE,
+                                       int groupId = -1)
+  {
+    auto trackType = TYPE_TRACKS[(int)type];
+    auto isGrouped = groupType != NONE && groupId != -1;
+    if (type == ItemType::ROOT && isGrouped)
+    {
+      auto group = animation_group_get(animation, groupType, groupId);
+      return group ? child_first_get(*group, ElementType::ROOT_ANIMATION) : nullptr;
+    }
+    if (type == ItemType::ROOT || type == ItemType::TRIGGER) return child_first_get(animation, trackType);
+
+    auto container = child_first_get(animation, TYPE_CONTAINERS[(int)type]);
+    return container ? track_find(*container, trackType, id, isGrouped ? groupId : GROUP_ANY) : nullptr;
+  }
+
+  int track_frame_child_index_get(const Element&, int);
+  int track_frame_insert_child_index_get(const Element&, int);
+
+  template <class E> ElementPointer<E> track_frame_get(E& track, int index)
+  {
+    auto childIndex = track_frame_child_index_get(track, index);
+    return childIndex == -1 ? nullptr : &track.children[childIndex];
+  }
+
+  template <class E, class Callback> void tracks_each(E& parent, ElementType trackType, Callback&& callback)
+  {
+    for (auto& child : parent.children)
+      if (child.type == trackType)
+        callback(child);
+      else if (child.type == ElementType::GROUP)
+        tracks_each(child, trackType, callback);
+  }
+
+  template <class E, class Callback> void animations_tracks_each(E& root, ElementType trackType, Callback&& callback)
+  {
+    auto animations = element_first_get(root, ElementType::ANIMATIONS);
+    auto row = track_container_get(trackType);
+    if (!animations || !row) return;
+    for (auto& animation : animations->children)
+      if (animation.type == ElementType::ANIMATION)
+        if (auto container = child_first_get(animation, row->container)) tracks_each(*container, trackType, callback);
+  }
+
+  template <class E, class Callback> void element_each(E& element, Callback&& callback)
+  {
+    callback(element);
+    for (auto& child : element.children)
+      element_each(child, callback);
+  }
+
   Element element_make(ElementType);
   Element element_read(const tinyxml2::XMLElement*);
   std::string element_to_string(const Element&, Flags = SERIALIZE_EDITOR_DEFAULT);
@@ -309,31 +490,13 @@ namespace anm2ed
   tinyxml2::XMLElement* element_to_xml(tinyxml2::XMLDocument&, const Element&, Flags = SERIALIZE_EDITOR_DEFAULT);
   tinyxml2::XMLElement* element_to_xml(tinyxml2::XMLDocument&, const Element&, ElementType,
                                        Flags = SERIALIZE_EDITOR_DEFAULT);
-  Element* element_child_first_get(Element&, ElementType);
-  const Element* element_child_first_get(const Element&, ElementType);
-  Element* shader_uniform_get(Element&, std::string_view, bool = false);
-  const Element* shader_uniform_get(const Element&, std::string_view);
-  Element* shader_uniform_component_get(Element&, int, bool = false);
-  const Element* shader_uniform_component_get(const Element&, int);
-  Element* element_child_id_get(Element&, ElementType, int);
-  const Element* element_child_id_get(const Element&, ElementType, int);
+  Element& child_ensure(Element&, ElementType);
   int element_child_next_id_get(const Element&, ElementType);
   int element_child_max_id_get(const Element&, ElementType);
   bool element_child_id_erase(Element&, ElementType, int);
-  Element* element_first_get(Element&, ElementType);
-  const Element* element_first_get(const Element&, ElementType);
-  Element* animation_item_get(Element&, ItemType, int = -1);
-  const Element* animation_item_get(const Element&, ItemType, int = -1);
-  Element* animation_item_get(Element&, ItemType, int, int, int);
-  const Element* animation_item_get(const Element&, ItemType, int, int, int);
-  Element* animation_group_get(Element&, int, int);
-  const Element* animation_group_get(const Element&, int, int);
-  Element* animation_group_root_get(Element&, int, int);
-  const Element* animation_group_root_get(const Element&, int, int);
-  Element* animation_group_root_ensure(Element&, int, int);
-  ElementType item_type_to_track_type_get(ItemType);
-  Element* track_frame_get(Element&, int);
-  const Element* track_frame_get(const Element&, int);
+  int track_frames_count_get(const Element&);
+  float interpolation_factor(Interpolation, float);
+  void frame_mix(Element&, const Element&, float);
   Element frame_generate(const Element&, float);
   int frame_index_from_at_frame_get(const Element&, int);
   int frame_index_from_time_get(const Element&, float);
@@ -366,29 +529,16 @@ namespace anm2ed
     void region_frames_sync(bool);
     Anm2 normalized_for_serialize(Flags = SERIALIZE_DEFAULT) const;
 
-    Element* element_get(ElementType);
-    const Element* element_get(ElementType) const;
-    Element* element_get(ElementType, int);
-    const Element* element_get(ElementType, int) const;
-    Element* element_get(int, ItemType, int = -1);
-    const Element* element_get(int, ItemType, int = -1) const;
-    Element* element_get(int, ItemType, int, int, int);
-    const Element* element_get(int, ItemType, int, int, int) const;
-    Element* element_get(int, ItemType, int, int);
-    const Element* element_get(int, ItemType, int, int) const;
-    Element* element_get(Reference);
-    const Element* element_get(Reference) const;
-    std::set<int> element_unused(ElementType) const;
-    std::set<int> element_unused(ElementType, const Element&) const;
-    std::set<int> element_unused(ElementType, int) const;
-    bool deserialize(ElementType, const std::string&, bool, std::string* = nullptr, const std::filesystem::path& = {});
-    bool regions_deserialize(int, const std::string&, bool, std::string* = nullptr);
+    template <class Self> ElementPointer<Self> element_get(this Self&, ElementType);
+    template <class Self> ElementPointer<Self> element_get(this Self&, ElementType, int);
+    template <class Self> ElementPointer<Self> element_get(this Self&, Reference);
+    std::set<int> element_unused(ElementType, const Element* = nullptr) const;
+    std::set<int> region_unused(int) const;
+    bool deserialize(ElementType, const std::string&, bool, std::string* = nullptr, const std::filesystem::path& = {},
+                     int = -1);
     Element frame_effective(int, const Element&) const;
     glm::vec4 animation_rect(const Element&, bool) const;
-    int layer_animation_add(int, int = -1, int = -1, std::string = {}, int = 0,
-                            types::destination::Type = types::destination::ALL);
-    int null_animation_add(int, int = -1, std::string = {}, bool = false,
-                           types::destination::Type = types::destination::ALL);
+    int item_add(ItemType, int, const Element&, int = -1, types::destination::Type = types::destination::ALL);
     bool animations_deserialize(const std::string&, int, std::set<int>&, std::string* = nullptr,
                                 std::set<int>* = nullptr);
     int animations_merge(int, std::set<int>&, types::merge::Type = types::merge::APPEND, bool = true);

@@ -101,18 +101,21 @@ namespace anm2ed
     }
   }
 
-  void group_frames_bake(Element& element)
+  template <class Callback> void animation_track_containers_each(Element& root, Callback&& callback)
   {
-    if (element.type == ElementType::ANIMATION)
-    {
-      if (auto layerAnimations = child_first_get(element, ElementType::LAYER_ANIMATIONS))
-        group_frames_bake(*layerAnimations, ElementType::LAYER_ANIMATION, element.frameNum);
-      if (auto nullAnimations = child_first_get(element, ElementType::NULL_ANIMATIONS))
-        group_frames_bake(*nullAnimations, ElementType::NULL_ANIMATION, element.frameNum);
-    }
+    element_each(root,
+                 [&](Element& element)
+                 {
+                   if (element.type != ElementType::ANIMATION) return;
+                   for (const auto& row : TRACK_CONTAINERS)
+                     if (auto container = child_first_get(element, row.container)) callback(element, *container, row);
+                 });
+  }
 
-    for (auto& child : element.children)
-      group_frames_bake(child);
+  void group_frames_bake(Element& root)
+  {
+    animation_track_containers_each(root, [](Element& animation, Element& container, const TrackContainer& row)
+                                    { group_frames_bake(container, row.track, animation.frameNum); });
   }
 
   void group_frames_restore(Element& container, ElementType trackType)
@@ -168,39 +171,23 @@ namespace anm2ed
                   { return item.type == trackType && restoredGroupIds.contains(item.groupId); });
   }
 
-  void group_frames_restore(Element& element)
+  void group_frames_restore(Element& root)
   {
-    if (element.type == ElementType::ANIMATION)
-    {
-      if (auto layerAnimations = child_first_get(element, ElementType::LAYER_ANIMATIONS))
-        group_frames_restore(*layerAnimations, ElementType::LAYER_ANIMATION);
-      if (auto nullAnimations = child_first_get(element, ElementType::NULL_ANIMATIONS))
-        group_frames_restore(*nullAnimations, ElementType::NULL_ANIMATION);
-    }
-
-    for (auto& child : element.children)
-      group_frames_restore(child);
+    animation_track_containers_each(root, [](Element&, Element& container, const TrackContainer& row)
+                                    { group_frames_restore(container, row.track); });
   }
 
   int child_index_get(const Element& element, ElementType type)
   {
-    for (int i = 0; i < (int)element.children.size(); ++i)
-      if (element.children[i].type == type) return i;
-    return -1;
+    auto child = child_first_get(element, type);
+    return child ? (int)(child - element.children.data()) : -1;
   }
 
-  ElementType track_container_track_type_get(ElementType containerType)
+  ElementType group_child_type_get(ElementType parentType)
   {
-    if (containerType == ElementType::LAYER_ANIMATIONS) return ElementType::LAYER_ANIMATION;
-    if (containerType == ElementType::NULL_ANIMATIONS) return ElementType::NULL_ANIMATION;
-    return ElementType::UNKNOWN;
-  }
-
-  ElementType track_container_group_container_type_get(ElementType containerType)
-  {
-    if (containerType == ElementType::LAYER_ANIMATIONS) return ElementType::LAYER_ANIMATION_GROUPS;
-    if (containerType == ElementType::NULL_ANIMATIONS) return ElementType::NULL_ANIMATION_GROUPS;
-    return ElementType::UNKNOWN;
+    if (parentType == ElementType::ANIMATIONS) return ElementType::ANIMATION;
+    auto row = track_container_get(parentType);
+    return row && row->container == parentType ? row->track : ElementType::UNKNOWN;
   }
 
   int track_group_insert_index_get(const Element& container, ElementType trackType, int groupId)
@@ -210,27 +197,18 @@ namespace anm2ed
     return (int)container.children.size();
   }
 
-  void group_metadata_embed(Element& animation, ElementType trackContainerType)
+  void group_metadata_embed(Element& animation, const TrackContainer& row)
   {
-    auto groupContainerType = track_container_group_container_type_get(trackContainerType);
-    auto trackType = track_container_track_type_get(trackContainerType);
-    auto groupContainerIndex = child_index_get(animation, groupContainerType);
-    if (groupContainerIndex < 0 || trackType == ElementType::UNKNOWN) return;
+    auto groupContainer = child_first_get(animation, row.groups);
+    if (!groupContainer) return;
 
     std::vector<Element> groups{};
-    for (const auto& child : animation.children[groupContainerIndex].children)
+    for (const auto& child : groupContainer->children)
       if (child.type == ElementType::GROUP) groups.push_back(child);
 
     if (!groups.empty())
     {
-      auto trackContainerIndex = child_index_get(animation, trackContainerType);
-      if (trackContainerIndex < 0)
-      {
-        animation.children.push_back(element_make(trackContainerType));
-        trackContainerIndex = (int)animation.children.size() - 1;
-      }
-
-      auto& container = animation.children[trackContainerIndex];
+      auto& container = child_ensure(animation, row.container);
       std::set<int> groupIds{};
       for (const auto& group : groups)
         if (group.id >= 0) groupIds.insert(group.id);
@@ -247,40 +225,36 @@ namespace anm2ed
       for (auto& group : groups)
       {
         auto insertIndex = group.index >= 0 ? std::min(group.index, (int)container.children.size())
-                                            : track_group_insert_index_get(container, trackType, group.id);
+                                            : track_group_insert_index_get(container, row.track, group.id);
         group.index = -1;
         container.children.insert(container.children.begin() + insertIndex, std::move(group));
       }
     }
 
-    std::erase_if(animation.children, [&](const Element& child) { return child.type == groupContainerType; });
+    std::erase_if(animation.children, [&](const Element& child) { return child.type == row.groups; });
   }
 
-  void group_metadata_embed(Element& element)
+  void group_metadata_embed(Element& root)
   {
-    if (element.type == ElementType::ANIMATION)
-    {
-      group_metadata_embed(element, ElementType::LAYER_ANIMATIONS);
-      group_metadata_embed(element, ElementType::NULL_ANIMATIONS);
-    }
-
-    for (auto& child : element.children)
-      group_metadata_embed(child);
+    element_each(root,
+                 [](Element& element)
+                 {
+                   if (element.type != ElementType::ANIMATION) return;
+                   for (const auto& row : TRACK_CONTAINERS)
+                     group_metadata_embed(element, row);
+                 });
   }
 
-  void group_metadata_extract(Element& animation, ElementType trackContainerType, Flags flags)
+  void group_metadata_extract(Element& animation, const TrackContainer& row, Flags flags)
   {
-    auto groupContainerType = track_container_group_container_type_get(trackContainerType);
-    if (groupContainerType == ElementType::UNKNOWN) return;
-
-    std::erase_if(animation.children, [&](const Element& child) { return child.type == groupContainerType; });
+    std::erase_if(animation.children, [&](const Element& child) { return child.type == row.groups; });
     if (!has_flag(flags, SERIALIZE_GROUPS)) return;
 
-    auto trackContainerIndex = child_index_get(animation, trackContainerType);
+    auto trackContainerIndex = child_index_get(animation, row.container);
     if (trackContainerIndex < 0) return;
 
     auto& container = animation.children[trackContainerIndex];
-    auto groupContainer = element_make(groupContainerType);
+    auto groupContainer = element_make(row.groups);
     std::vector<Element> tracks{};
     tracks.reserve(container.children.size());
 
@@ -301,84 +275,67 @@ namespace anm2ed
     animation.children.insert(animation.children.begin() + trackContainerIndex + 1, std::move(groupContainer));
   }
 
-  void group_metadata_extract(Element& element, Flags flags)
+  void group_metadata_extract(Element& root, Flags flags)
   {
-    if (element.type == ElementType::ANIMATION)
-    {
-      group_metadata_extract(element, ElementType::LAYER_ANIMATIONS, flags);
-      group_metadata_extract(element, ElementType::NULL_ANIMATIONS, flags);
-    }
-
-    for (auto& child : element.children)
-      group_metadata_extract(child, flags);
+    element_each(root,
+                 [&](Element& element)
+                 {
+                   if (element.type != ElementType::ANIMATION) return;
+                   for (const auto& row : TRACK_CONTAINERS)
+                     group_metadata_extract(element, row, flags);
+                 });
   }
 
-  void groups_flatten(Element& element)
+  void group_children_flatten(Element& container, ElementType childType)
   {
-    auto container_flatten = [](Element& container, ElementType childType, bool isRootKept)
+    if (childType == ElementType::UNKNOWN) return;
+
+    int nextGroupId{};
+    for (const auto& item : container.children)
+      if (item.type == ElementType::GROUP) nextGroupId = std::max(nextGroupId, item.id + 1);
+
+    std::vector<Element> flattened{};
+    for (auto item : container.children)
     {
-      int nextGroupId{};
-      for (const auto& item : container.children)
-        if (item.type == ElementType::GROUP) nextGroupId = std::max(nextGroupId, item.id + 1);
-
-      std::vector<Element> flattened{};
-      for (auto item : container.children)
+      if (item.type != ElementType::GROUP)
       {
-        if (item.type != ElementType::GROUP)
-        {
-          flattened.push_back(item);
-          continue;
-        }
-
-        if (item.id < 0) item.id = nextGroupId++;
-        auto groupId = item.id;
-        auto children = std::move(item.children);
-        item.children.clear();
-
-        if (isRootKept)
-        {
-          bool isRootFound{};
-
-          for (auto child : children)
-            if (child.type == ElementType::ROOT_ANIMATION)
-            {
-              if (isRootFound) continue;
-              item.children.push_back(child);
-              isRootFound = true;
-            }
-
-          if (!isRootFound) item.children.push_back(root_animation_make());
-        }
-
         flattened.push_back(item);
-
-        for (auto child : children)
-        {
-          if (child.type != childType) continue;
-          child.groupId = groupId;
-          flattened.push_back(child);
-        }
+        continue;
       }
 
-      std::set<int> groupIds{};
-      for (const auto& item : flattened)
-        if (item.type == ElementType::GROUP) groupIds.insert(item.id);
+      if (item.id < 0) item.id = nextGroupId++;
+      auto children = std::move(item.children);
+      item.children.clear();
 
-      for (auto& item : flattened)
-        if (item.type == childType && !groupIds.contains(item.groupId)) item.groupId = -1;
+      if (childType != ElementType::ANIMATION)
+      {
+        auto root = std::ranges::find(children, ElementType::ROOT_ANIMATION, &Element::type);
+        item.children.push_back(root == children.end() ? root_animation_make() : *root);
+      }
 
-      container.children = std::move(flattened);
-    };
+      flattened.push_back(item);
 
-    if (element.type == ElementType::ANIMATIONS)
-      container_flatten(element, ElementType::ANIMATION, false);
-    else if (element.type == ElementType::LAYER_ANIMATIONS)
-      container_flatten(element, ElementType::LAYER_ANIMATION, true);
-    else if (element.type == ElementType::NULL_ANIMATIONS)
-      container_flatten(element, ElementType::NULL_ANIMATION, true);
+      for (auto child : children)
+      {
+        if (child.type != childType) continue;
+        child.groupId = item.id;
+        flattened.push_back(child);
+      }
+    }
 
-    for (auto& child : element.children)
-      groups_flatten(child);
+    std::set<int> groupIds{};
+    for (const auto& item : flattened)
+      if (item.type == ElementType::GROUP) groupIds.insert(item.id);
+
+    for (auto& item : flattened)
+      if (item.type == childType && !groupIds.contains(item.groupId)) item.groupId = -1;
+
+    container.children = std::move(flattened);
+  }
+
+  void groups_flatten(Element& root)
+  {
+    element_each(root, [](Element& element) { group_children_flatten(element, group_child_type_get(element.type)); });
   }
 
   void group_children_nest(Element& container, ElementType childType)
@@ -418,23 +375,14 @@ namespace anm2ed
     container.children = std::move(nested);
   }
 
-  void groups_nest(Element& element)
+  void groups_nest(Element& root)
   {
-    if (element.type == ElementType::ANIMATIONS)
-      group_children_nest(element, ElementType::ANIMATION);
-    else if (element.type == ElementType::LAYER_ANIMATIONS)
-      group_children_nest(element, ElementType::LAYER_ANIMATION);
-    else if (element.type == ElementType::NULL_ANIMATIONS)
-      group_children_nest(element, ElementType::NULL_ANIMATION);
-
-    for (auto& child : element.children)
-      groups_nest(child);
+    element_each(root, [](Element& element) { group_children_nest(element, group_child_type_get(element.type)); });
   }
 
-  void source_document_erase(Element& element)
+  void source_document_erase(Element& root)
   {
-    std::erase_if(element.children, [](const Element& child) { return is_source_document_tag(child.tag); });
-    for (auto& child : element.children)
-      source_document_erase(child);
+    element_each(root, [](Element& element)
+                 { std::erase_if(element.children, [](const Element& child) { return is_source_document_tag(child.tag); }); });
   }
 }

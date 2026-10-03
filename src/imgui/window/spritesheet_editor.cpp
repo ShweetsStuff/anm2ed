@@ -122,7 +122,7 @@ namespace anm2ed::imgui
     auto zoom_out = [&]() { zoom_adjust(-ZOOM_LEVEL_STEP); };
 
     auto region_get = [&](int id)
-    { return spritesheet ? element_child_id_get(*spritesheet, ElementType::REGION, id) : nullptr; };
+    { return spritesheet ? child_id_get(*spritesheet, ElementType::REGION, id) : nullptr; };
 
     if (ImGui::Begin(localize.get(LABEL_SPRITESHEET_EDITOR_WINDOW), &settings.windowIsSpritesheetEditor))
     {
@@ -553,7 +553,7 @@ namespace anm2ed::imgui
                                   auto spritesheet =
                                       document.anm2.element_get(ElementType::SPRITESHEET, queuedSpritesheet);
                                   if (!spritesheet) return;
-                                  auto region = element_child_id_get(*spritesheet, ElementType::REGION, id);
+                                  auto region = child_id_get(*spritesheet, ElementType::REGION, id);
                                   if (!region) return;
                                   update(*region);
                                 }});
@@ -569,7 +569,7 @@ namespace anm2ed::imgui
                                   if (!spritesheet) return;
                                   for (auto id : queuedSelection)
                                   {
-                                    auto region = element_child_id_get(*spritesheet, ElementType::REGION, id);
+                                    auto region = child_id_get(*spritesheet, ElementType::REGION, id);
                                     if (!region) continue;
                                     update(*region);
                                   }

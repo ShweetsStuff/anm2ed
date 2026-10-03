@@ -106,7 +106,7 @@ namespace anm2ed::imgui
   {
     if (window.element_get) return window.element_get(anm2, key);
     auto container = window_container_get(window, anm2);
-    return container ? element_child_id_get(*container, window.elementType, key) : nullptr;
+    return container ? child_id_get(*container, window.elementType, key) : nullptr;
   }
 
   int region_insert_index_get(const Element& spritesheet, const Storage& storage)
@@ -208,7 +208,7 @@ namespace anm2ed::imgui
                             auto element = elementGet ? elementGet(document.anm2, key) : nullptr;
                             if (!element)
                               if (auto container = document.anm2.element_get(containerType))
-                                element = element_child_id_get(*container, elementType, key);
+                                element = child_id_get(*container, elementType, key);
                             if (!element || element->name == name) return;
 
                             document.anm2_snapshot(localize.get(renameEdit));
@@ -987,7 +987,7 @@ namespace anm2ed::imgui
     }
 
     auto spritesheet = document.anm2.element_get(ElementType::SPRITESHEET, options.spritesheetId);
-    auto region = spritesheet ? element_child_id_get(*spritesheet, ElementType::REGION, options.regionId) : nullptr;
+    auto region = spritesheet ? child_id_get(*spritesheet, ElementType::REGION, options.regionId) : nullptr;
     auto texture = document.texture_get(options.spritesheetId);
     if (!spritesheet || !region || !texture || !texture->is_valid())
     {
@@ -1774,7 +1774,7 @@ namespace anm2ed::imgui
                 manager.command_push({manager.selected, [targetGroupId, targetName](Manager&, Document& document)
                                       {
                                         auto animations = document.anm2.element_get(ElementType::ANIMATIONS);
-                                        auto group = animations ? element_child_id_get(*animations, ElementType::GROUP,
+                                        auto group = animations ? child_id_get(*animations, ElementType::GROUP,
                                                                                        targetGroupId)
                                                                 : nullptr;
                                         if (!group || group->name == targetName) return;
@@ -1793,7 +1793,7 @@ namespace anm2ed::imgui
               manager.command_push({manager.selected, [targetGroupId, isGroupOpen](Manager&, Document& document)
                                     {
                                       auto animations = document.anm2.element_get(ElementType::ANIMATIONS);
-                                      auto group = animations ? element_child_id_get(*animations, ElementType::GROUP,
+                                      auto group = animations ? child_id_get(*animations, ElementType::GROUP,
                                                                                      targetGroupId)
                                                               : nullptr;
                                       if (!group || group->isExpanded == isGroupOpen) return;
@@ -1883,8 +1883,8 @@ namespace anm2ed::imgui
         const Element* referenceNullAnimations{};
         if (auto referenceAnimation = anm2.element_get(ElementType::ANIMATION, reference.animationIndex))
         {
-          referenceLayerAnimations = element_child_first_get(*referenceAnimation, ElementType::LAYER_ANIMATIONS);
-          referenceNullAnimations = element_child_first_get(*referenceAnimation, ElementType::NULL_ANIMATIONS);
+          referenceLayerAnimations = child_first_get(*referenceAnimation, ElementType::LAYER_ANIMATIONS);
+          referenceNullAnimations = child_first_get(*referenceAnimation, ElementType::NULL_ANIMATIONS);
         }
 
         animation.children.push_back(window_track_container_shell_copy(referenceLayerAnimations,
@@ -2387,7 +2387,7 @@ namespace anm2ed::imgui
       auto spritesheet = document.anm2.element_get(ElementType::SPRITESHEET, document.spritesheet.reference);
       if (!spritesheet || selection.size() != 1) return;
       auto id = *selection.begin();
-      if (!element_child_id_get(*spritesheet, ElementType::REGION, id)) return;
+      if (!child_id_get(*spritesheet, ElementType::REGION, id)) return;
       reference = id;
       window.popup.open();
     };
@@ -2398,7 +2398,7 @@ namespace anm2ed::imgui
       auto spritesheet = anm2.element_get(ElementType::SPRITESHEET, spritesheetReference);
       if (!spritesheet) return;
 
-      auto unused = anm2.element_unused(ElementType::REGION, spritesheetReference);
+      auto unused = anm2.region_unused(spritesheetReference);
       if (unused.empty()) return;
 
       auto behavior = [&]()
@@ -2411,7 +2411,7 @@ namespace anm2ed::imgui
             for (auto& animation : animations->children)
             {
               if (animation.type != ElementType::ANIMATION) continue;
-              auto layerAnimations = element_child_first_get(animation, ElementType::LAYER_ANIMATIONS);
+              auto layerAnimations = child_first_get(animation, ElementType::LAYER_ANIMATIONS);
               if (!layerAnimations) continue;
               auto region_clear = [&](auto&& self, Element& layerAnimation) -> void
               {
@@ -2486,7 +2486,7 @@ namespace anm2ed::imgui
       auto insertIndex = region_insert_index_get(*spritesheet, document.region);
       auto pasted = anm2;
       std::string errorString{};
-      if (pasted.regions_deserialize(spritesheetReference, clipboard.get(), true, &errorString))
+      if (pasted.deserialize(ElementType::REGION, clipboard.get(), true, &errorString, {}, spritesheetReference))
       {
         document.anm2_snapshot(localize.get(EDIT_PASTE_REGIONS));
         anm2 = std::move(pasted);
@@ -2590,7 +2590,7 @@ namespace anm2ed::imgui
       for (int i = 0; i < (int)window.order.size(); i++)
       {
         int id = window.order[i];
-        auto region = element_child_id_get(*spritesheet, ElementType::REGION, id);
+        auto region = child_id_get(*spritesheet, ElementType::REGION, id);
         if (!region) continue;
         auto isNewRegion = window.newElementId == id;
         auto nameCStr = region->name.c_str();
@@ -2817,7 +2817,7 @@ namespace anm2ed::imgui
         {
           for (auto regionId : window.dragSelection)
           {
-            auto drag = element_child_id_get(*spritesheet, ElementType::REGION, regionId);
+            auto drag = child_id_get(*spritesheet, ElementType::REGION, regionId);
             if (drag) ImGui::TextUnformatted(drag->name.c_str());
           }
           ImGui::EndTooltip();
@@ -2925,7 +2925,7 @@ namespace anm2ed::imgui
       auto region_get = [&](int id)
       {
         auto spritesheet = spritesheet_get();
-        return spritesheet ? element_child_id_get(*spritesheet, ElementType::REGION, id) : nullptr;
+        return spritesheet ? child_id_get(*spritesheet, ElementType::REGION, id) : nullptr;
       };
 
       window.popup.trigger();
@@ -3026,7 +3026,7 @@ namespace anm2ed::imgui
                                     auto set = [&]()
                                     {
                                       auto target =
-                                          element_child_id_get(*spritesheet, ElementType::REGION, editedReference);
+                                          child_id_get(*spritesheet, ElementType::REGION, editedReference);
                                       if (!target) return;
                                       auto changed = editedRegion;
                                       changed.type = ElementType::REGION;
@@ -3917,7 +3917,7 @@ namespace anm2ed::imgui
       auto sounds = document.anm2.element_get(ElementType::SOUNDS);
       if (!sounds) return;
       for (auto& id : selection)
-        if (auto sound = element_child_id_get(*sounds, ElementType::SOUND_ELEMENT, id))
+        if (auto sound = child_id_get(*sounds, ElementType::SOUND_ELEMENT, id))
           clipboardText += element_to_string(*sound);
       clipboard.set(clipboardText);
     };
@@ -4304,7 +4304,7 @@ namespace anm2ed::imgui
                                     }
 
                                     auto target =
-                                        element_child_id_get(*layers, ElementType::LAYER_ELEMENT, editedReference);
+                                        child_id_get(*layers, ElementType::LAYER_ELEMENT, editedReference);
                                     if (!target) return;
                                     changed.id = editedReference;
                                     *target = changed;
@@ -4410,7 +4410,7 @@ namespace anm2ed::imgui
                                       return;
                                     }
 
-                                    auto target = element_child_id_get(*nulls, ElementType::NULL_ELEMENT, editedReference);
+                                    auto target = child_id_get(*nulls, ElementType::NULL_ELEMENT, editedReference);
                                     if (!target) return;
                                     changed.id = editedReference;
                                     *target = changed;

@@ -51,9 +51,9 @@ namespace anm2ed::imgui
                               {
                                 auto animation = command_animation_get(document, targetAnimationIndex);
                                 auto container =
-                                    animation ? element_child_first_get(*animation, container_type_get(targetRow.type))
+                                    animation ? child_first_get(*animation, container_type_get(targetRow.type))
                                               : nullptr;
-                                auto group = container ? element_child_id_get(*container, ElementType::GROUP,
+                                auto group = container ? child_id_get(*container, ElementType::GROUP,
                                                                               targetRow.id)
                                                        : nullptr;
                                 if (!group) return;
@@ -154,10 +154,10 @@ namespace anm2ed::imgui
                               {
                                 auto animation = command_animation_get(document, targetAnimationIndex);
                                 auto container =
-                                    animation ? element_child_first_get(*animation, container_type_get(targetType))
+                                    animation ? child_first_get(*animation, container_type_get(targetType))
                                               : nullptr;
                                 if (!container) return;
-                                auto group = element_child_id_get(*container, ElementType::GROUP, targetGroupId);
+                                auto group = child_id_get(*container, ElementType::GROUP, targetGroupId);
                                 if (!group) return;
                                 group->isVisible = targetVisible;
                               });
@@ -453,7 +453,7 @@ namespace anm2ed::imgui
                                   [=, this](Manager&, Document& document)
                                   {
                                     auto nulls = document.anm2.element_get(ElementType::NULLS);
-                                    auto null = nulls ? element_child_id_get(*nulls, ElementType::NULL_ELEMENT, nullID)
+                                    auto null = nulls ? child_id_get(*nulls, ElementType::NULL_ELEMENT, nullID)
                                                       : nullptr;
                                     if (!null) return;
                                     null->isShowRect = !null->isShowRect;

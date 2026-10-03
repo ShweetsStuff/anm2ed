@@ -256,7 +256,7 @@ namespace anm2ed::imgui::wizard
                                                rootFrame.rotation, math::percent_to_unit(rootFrame.shear));
     }
 
-    if (auto layerAnimations = element_child_first_get(*animation, ElementType::LAYER_ANIMATIONS))
+    if (auto layerAnimations = child_first_get(*animation, ElementType::LAYER_ANIMATIONS))
       for (auto& layerAnimation : layerAnimations->children)
         friend_layer_draw(state, resources, transform, layerAnimation, rootFrame);
 

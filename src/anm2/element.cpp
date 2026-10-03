@@ -6,47 +6,20 @@ using namespace tinyxml2;
 namespace anm2ed
 {
   constexpr std::array<std::string_view, (std::size_t)ElementType::COUNT> ELEMENT_TAGS = {
-#define X(symbol, tag) std::string_view{tag},
+#define X(symbol, tag, container) std::string_view{tag},
       ANM2_ELEMENT_TYPES
 #undef X
   };
 
-
   ElementType element_type_get(std::string_view tag)
   {
-    for (std::size_t i = 0; i < ELEMENT_TAGS.size(); ++i)
-      if (ELEMENT_TAGS[i] == tag) return (ElementType)i;
-    return ElementType::UNKNOWN;
+    auto it = std::ranges::find(ELEMENT_TAGS, tag);
+    return it == ELEMENT_TAGS.end() ? ElementType::UNKNOWN : (ElementType)(it - ELEMENT_TAGS.begin());
   }
 
   std::string_view element_tag_get(ElementType type)
   {
-    auto index = (std::size_t)type;
-    if (index >= ELEMENT_TAGS.size()) return {};
-    return ELEMENT_TAGS[index];
-  }
-
-  ElementType element_container_type_get(ElementType type)
-  {
-    switch (type)
-    {
-      case ElementType::SPRITESHEET:
-        return ElementType::SPRITESHEETS;
-      case ElementType::SHADER:
-        return ElementType::SHADERS;
-      case ElementType::LAYER_ELEMENT:
-        return ElementType::LAYERS;
-      case ElementType::NULL_ELEMENT:
-        return ElementType::NULLS;
-      case ElementType::EVENT_ELEMENT:
-        return ElementType::EVENTS;
-      case ElementType::SOUND_ELEMENT:
-        return ElementType::SOUNDS;
-      case ElementType::ANIMATION:
-        return ElementType::ANIMATIONS;
-      default:
-        return ElementType::UNKNOWN;
-    }
+    return (std::size_t)type < ELEMENT_TAGS.size() ? ELEMENT_TAGS[(std::size_t)type] : std::string_view{};
   }
 
   Element element_make(ElementType type)
@@ -64,82 +37,29 @@ namespace anm2ed
     return root;
   }
 
-  Element* child_first_get(Element& element, ElementType type)
+  Element& child_ensure(Element& element, ElementType type)
   {
+    if (auto child = child_first_get(element, type)) return *child;
+    return element.children.emplace_back(element_make(type));
+  }
+
+  Element* content_container_get(Element& root, ElementType type)
+  {
+    auto content = child_first_get(root, ElementType::CONTENT);
+    return content ? child_first_get(*content, type) : nullptr;
+  }
+
+  std::unordered_map<int, int> child_ids_compact(Element& element, ElementType type)
+  {
+    std::unordered_map<int, int> remap{};
+    int nextId{};
     for (auto& child : element.children)
-      if (child.type == type) return &child;
-    return nullptr;
-  }
-
-  const Element* child_first_get(const Element& element, ElementType type)
-  {
-    for (const auto& child : element.children)
-      if (child.type == type) return &child;
-    return nullptr;
-  }
-
-  Element* element_child_first_get(Element& element, ElementType type) { return child_first_get(element, type); }
-
-  const Element* element_child_first_get(const Element& element, ElementType type)
-  {
-    return child_first_get(element, type);
-  }
-
-  Element* shader_uniform_get(Element& shader, std::string_view name, bool isCreate)
-  {
-    for (auto& child : shader.children)
-      if (child.type == ElementType::UNIFORM && child.name == name) return &child;
-    if (!isCreate) return nullptr;
-
-    shader.children.push_back(element_make(ElementType::UNIFORM));
-    shader.children.back().name = std::string(name);
-    return &shader.children.back();
-  }
-
-  const Element* shader_uniform_get(const Element& shader, std::string_view name)
-  {
-    for (const auto& child : shader.children)
-      if (child.type == ElementType::UNIFORM && child.name == name) return &child;
-    return nullptr;
-  }
-
-  Element* shader_uniform_component_get(Element& uniform, int index, bool isCreate)
-  {
-    for (auto& child : uniform.children)
-      if (child.type == ElementType::COMPONENT && child.index == index) return &child;
-    if (!isCreate) return nullptr;
-
-    uniform.children.push_back(element_make(ElementType::COMPONENT));
-    uniform.children.back().index = index;
-    return &uniform.children.back();
-  }
-
-  const Element* shader_uniform_component_get(const Element& uniform, int index)
-  {
-    for (const auto& child : uniform.children)
-      if (child.type == ElementType::COMPONENT && child.index == index) return &child;
-    return nullptr;
-  }
-
-  Element* child_id_get(Element& element, ElementType type, int id)
-  {
-    for (auto& child : element.children)
-      if (child.type == type && child.id == id) return &child;
-    return nullptr;
-  }
-
-  const Element* child_id_get(const Element& element, ElementType type, int id)
-  {
-    for (const auto& child : element.children)
-      if (child.type == type && child.id == id) return &child;
-    return nullptr;
-  }
-
-  Element* element_child_id_get(Element& element, ElementType type, int id) { return child_id_get(element, type, id); }
-
-  const Element* element_child_id_get(const Element& element, ElementType type, int id)
-  {
-    return child_id_get(element, type, id);
+      if (child.type == type)
+      {
+        remap[child.id] = nextId;
+        child.id = nextId++;
+      }
+    return remap;
   }
 
   int element_child_max_id_get(const Element& element, ElementType type)
@@ -157,29 +77,7 @@ namespace anm2ed
 
   bool element_child_id_erase(Element& element, ElementType type, int id)
   {
-    for (auto it = element.children.begin(); it != element.children.end(); ++it)
-    {
-      if (it->type != type || it->id != id) continue;
-      element.children.erase(it);
-      return true;
-    }
-    return false;
-  }
-
-  Element* element_first_get(Element& element, ElementType type)
-  {
-    if (element.type == type) return &element;
-    for (auto& child : element.children)
-      if (auto result = element_first_get(child, type); result) return result;
-    return nullptr;
-  }
-
-  const Element* element_first_get(const Element& element, ElementType type)
-  {
-    if (element.type == type) return &element;
-    for (const auto& child : element.children)
-      if (auto result = element_first_get(child, type); result) return result;
-    return nullptr;
+    return std::erase_if(element.children, [&](const Element& child) { return child.type == type && child.id == id; });
   }
 
   float interpolation_factor(Interpolation interpolation, float value)
@@ -191,12 +89,6 @@ namespace anm2ed
     if (interpolation == Interpolation::EASE_IN_OUT)
       return value < 0.5f ? (2.0f * value * value) : (1.0f - std::pow(-2.0f * value + 2.0f, 2.0f) * 0.5f);
     return 0.0f;
-  }
-
-  bool is_track(const Element& element)
-  {
-    return element.type == ElementType::ROOT_ANIMATION || element.type == ElementType::LAYER_ANIMATION ||
-           element.type == ElementType::NULL_ANIMATION || element.type == ElementType::TRIGGERS;
   }
 
   bool is_track_child_valid(ElementType parentType, ElementType childType)
@@ -218,157 +110,10 @@ namespace anm2ed
     return true;
   }
 
-  ElementType track_frame_type_get(const Element& track)
-  {
-    return track.type == ElementType::TRIGGERS ? ElementType::TRIGGER : ElementType::FRAME;
-  }
-
-  ElementType item_type_to_track_type_get(ItemType type)
-  {
-    if (type == ItemType::ROOT) return ElementType::ROOT_ANIMATION;
-    if (type == ItemType::LAYER) return ElementType::LAYER_ANIMATION;
-    if (type == ItemType::NULL_) return ElementType::NULL_ANIMATION;
-    if (type == ItemType::TRIGGER) return ElementType::TRIGGERS;
-    return ElementType::UNKNOWN;
-  }
-
-  ElementType item_type_to_container_type_get(ItemType type)
-  {
-    if (type == ItemType::LAYER) return ElementType::LAYER_ANIMATIONS;
-    if (type == ItemType::NULL_) return ElementType::NULL_ANIMATIONS;
-    return ElementType::UNKNOWN;
-  }
-
-  Element* animation_group_get(Element& animation, int groupType, int groupId)
-  {
-    if (groupId < 0) return nullptr;
-    auto containerType = item_type_to_container_type_get(static_cast<ItemType>(groupType));
-    auto container = child_first_get(animation, containerType);
-    return container ? child_id_get(*container, ElementType::GROUP, groupId) : nullptr;
-  }
-
-  const Element* animation_group_get(const Element& animation, int groupType, int groupId)
-  {
-    if (groupId < 0) return nullptr;
-    auto containerType = item_type_to_container_type_get(static_cast<ItemType>(groupType));
-    auto container = child_first_get(animation, containerType);
-    return container ? child_id_get(*container, ElementType::GROUP, groupId) : nullptr;
-  }
-
-  Element* animation_group_root_get(Element& animation, int groupType, int groupId)
-  {
-    auto group = animation_group_get(animation, groupType, groupId);
-    return group ? child_first_get(*group, ElementType::ROOT_ANIMATION) : nullptr;
-  }
-
-  const Element* animation_group_root_get(const Element& animation, int groupType, int groupId)
-  {
-    auto group = animation_group_get(animation, groupType, groupId);
-    return group ? child_first_get(*group, ElementType::ROOT_ANIMATION) : nullptr;
-  }
-
-  Element* animation_group_root_ensure(Element& animation, int groupType, int groupId)
-  {
-    auto group = animation_group_get(animation, groupType, groupId);
-    if (!group) return nullptr;
-    if (auto root = child_first_get(*group, ElementType::ROOT_ANIMATION)) return root;
-    group->children.push_back(root_animation_make());
-    return &group->children.back();
-  }
-
-  int track_id_get(const Element& track)
-  {
-    if (track.type == ElementType::LAYER_ANIMATION) return track.layerId;
-    if (track.type == ElementType::NULL_ANIMATION) return track.nullId;
-    return -1;
-  }
-
-  Element* track_find(Element& parent, ElementType trackType, int id)
-  {
-    for (auto& child : parent.children)
-    {
-      if (child.type == trackType && track_id_get(child) == id) return &child;
-      if (child.type == ElementType::GROUP)
-        if (auto found = track_find(child, trackType, id)) return found;
-    }
-    return nullptr;
-  }
-
-  const Element* track_find(const Element& parent, ElementType trackType, int id)
-  {
-    for (const auto& child : parent.children)
-    {
-      if (child.type == trackType && track_id_get(child) == id) return &child;
-      if (child.type == ElementType::GROUP)
-        if (auto found = track_find(child, trackType, id)) return found;
-    }
-    return nullptr;
-  }
-
-  Element* track_group_find(Element& parent, ElementType trackType, int id, int groupId)
-  {
-    for (auto& child : parent.children)
-    {
-      if (child.type == trackType && track_id_get(child) == id && child.groupId == groupId) return &child;
-      if (child.type == ElementType::GROUP)
-        if (auto found = track_group_find(child, trackType, id, groupId)) return found;
-    }
-    return nullptr;
-  }
-
-  const Element* track_group_find(const Element& parent, ElementType trackType, int id, int groupId)
-  {
-    for (const auto& child : parent.children)
-    {
-      if (child.type == trackType && track_id_get(child) == id && child.groupId == groupId) return &child;
-      if (child.type == ElementType::GROUP)
-        if (auto found = track_group_find(child, trackType, id, groupId)) return found;
-    }
-    return nullptr;
-  }
-
   bool is_track_group_visible(const Element& container, const Element& track)
   {
-    if (track.groupId == -1) return true;
-    for (const auto& child : container.children)
-      if (child.type == ElementType::GROUP && child.id == track.groupId) return child.isVisible;
-    return true;
-  }
-
-  Element* animation_item_get(Element& animation, ItemType type, int id, int groupType, int groupId)
-  {
-    auto trackType = item_type_to_track_type_get(type);
-    if (type == ItemType::ROOT && groupType != NONE && groupId != -1)
-      return animation_group_root_get(animation, groupType, groupId);
-    if (type == ItemType::ROOT || type == ItemType::TRIGGER) return child_first_get(animation, trackType);
-
-    auto container = child_first_get(animation, item_type_to_container_type_get(type));
-    if (!container) return nullptr;
-    return groupType != NONE && groupId != -1 ? track_group_find(*container, trackType, id, groupId)
-                                              : track_find(*container, trackType, id);
-  }
-
-  Element* animation_item_get(Element& animation, ItemType type, int id)
-  {
-    return animation_item_get(animation, type, id, NONE, -1);
-  }
-
-  const Element* animation_item_get(const Element& animation, ItemType type, int id, int groupType, int groupId)
-  {
-    auto trackType = item_type_to_track_type_get(type);
-    if (type == ItemType::ROOT && groupType != NONE && groupId != -1)
-      return animation_group_root_get(animation, groupType, groupId);
-    if (type == ItemType::ROOT || type == ItemType::TRIGGER) return child_first_get(animation, trackType);
-
-    auto container = child_first_get(animation, item_type_to_container_type_get(type));
-    if (!container) return nullptr;
-    return groupType != NONE && groupId != -1 ? track_group_find(*container, trackType, id, groupId)
-                                              : track_find(*container, trackType, id);
-  }
-
-  const Element* animation_item_get(const Element& animation, ItemType type, int id)
-  {
-    return animation_item_get(animation, type, id, NONE, -1);
+    auto group = track.groupId == -1 ? nullptr : child_id_get(container, ElementType::GROUP, track.groupId);
+    return !group || group->isVisible;
   }
 
   int track_frame_child_index_get(const Element& track, int index)
@@ -377,307 +122,131 @@ namespace anm2ed
     auto frameType = track_frame_type_get(track);
     int frameIndex{};
     for (int i = 0; i < (int)track.children.size(); ++i)
-    {
-      if (track.children[i].type != frameType) continue;
-      if (frameIndex == index) return i;
-      ++frameIndex;
-    }
+      if (track.children[i].type == frameType && frameIndex++ == index) return i;
     return -1;
+  }
+
+  int track_frame_insert_child_index_get(const Element& track, int index)
+  {
+    auto childIndex = track_frame_child_index_get(track, std::max(0, index));
+    return childIndex == -1 ? (int)track.children.size() : childIndex;
   }
 
   int track_frames_count_get(const Element& track)
   {
     auto frameType = track_frame_type_get(track);
-    int count{};
-    for (const auto& child : track.children)
-      if (child.type == frameType) ++count;
-    return count;
+    return (int)std::ranges::count_if(track.children, [&](const Element& child) { return child.type == frameType; });
   }
 
-  int track_frame_insert_child_index_get(const Element& track, int index)
+  template <class Self> ElementPointer<Self> Anm2::element_get(this Self& self, ElementType type)
   {
-    auto targetFrameIndex = std::max(0, index);
-    auto frameType = track_frame_type_get(track);
-    int frameIndex{};
-    for (int i = 0; i < (int)track.children.size(); ++i)
-    {
-      if (track.children[i].type != frameType) continue;
-      if (frameIndex == targetFrameIndex) return i;
-      ++frameIndex;
-    }
-    return (int)track.children.size();
-  }
+    if (type == ElementType::ANIMATED_ACTOR) return &self.root;
+    if (type == ElementType::ANIMATIONS) return element_first_get(self.root, type);
 
-  Element* track_frame_get(Element& track, int index)
-  {
-    auto childIndex = track_frame_child_index_get(track, index);
-    return childIndex == -1 ? nullptr : &track.children[childIndex];
-  }
-
-  const Element* track_frame_get(const Element& track, int index)
-  {
-    auto childIndex = track_frame_child_index_get(track, index);
-    return childIndex == -1 ? nullptr : &track.children[childIndex];
-  }
-
-  Element* Anm2::element_get(ElementType type)
-  {
-    if (type == ElementType::ANIMATED_ACTOR) return &root;
-    if (type == ElementType::ANIMATIONS) return element_first_get(root, type);
-
-    auto content = child_first_get(root, ElementType::CONTENT);
+    auto content = child_first_get(self.root, ElementType::CONTENT);
     if (!content) return nullptr;
     if (type == ElementType::CONTENT) return content;
     if (auto container = child_first_get(*content, type)) return container;
+    if constexpr (!std::is_const_v<Self>)
+      if (type != ElementType::UNKNOWN && std::ranges::contains(ELEMENT_CONTAINERS, type))
+        return &content->children.emplace_back(element_make(type));
+    return element_first_get(self.root, type);
+  }
 
-    switch (type)
+  template <class Self> ElementPointer<Self> Anm2::element_get(this Self& self, ElementType type, int id)
+  {
+    if (type != ElementType::ANIMATION)
     {
-      case ElementType::SPRITESHEETS:
-      case ElementType::SHADERS:
-      case ElementType::LAYERS:
-      case ElementType::NULLS:
-      case ElementType::EVENTS:
-      case ElementType::SOUNDS:
-        content->children.push_back(element_make(type));
-        return &content->children.back();
-      default:
-        break;
+      auto container = self.element_get(ELEMENT_CONTAINERS[(int)type]);
+      return container ? child_id_get(*container, type, id) : nullptr;
     }
 
-    return element_first_get(root, type);
+    auto animations = self.element_get(ElementType::ANIMATIONS);
+    auto childIndex = animations ? animations_child_index_get(*animations, id) : -1;
+    return childIndex == -1 ? nullptr : &animations->children[childIndex];
   }
 
-  const Element* Anm2::element_get(ElementType type) const
+  template <class Self> ElementPointer<Self> Anm2::element_get(this Self& self, Reference reference)
   {
-    if (type == ElementType::ANIMATED_ACTOR) return &root;
-    if (type == ElementType::ANIMATIONS) return element_first_get(root, type);
-
-    auto content = child_first_get(root, ElementType::CONTENT);
-    if (!content) return nullptr;
-    if (type == ElementType::CONTENT) return content;
-    if (auto container = child_first_get(*content, type)) return container;
-    return element_first_get(root, type);
+    auto animation = self.element_get(ElementType::ANIMATION, reference.animationIndex);
+    auto item = animation ? animation_item_get(*animation, (ItemType)reference.itemType, reference.itemID,
+                                               reference.groupType, reference.groupId)
+                          : nullptr;
+    if (reference.frameIndex < 0 || !item) return item;
+    return track_frame_get(*item, reference.frameIndex);
   }
 
-  Element* Anm2::element_get(ElementType type, int id)
+#define X(Self)                                                                                                        \
+  template ElementPointer<Self> Anm2::element_get(this Self&, ElementType);                                            \
+  template ElementPointer<Self> Anm2::element_get(this Self&, ElementType, int);                                       \
+  template ElementPointer<Self> Anm2::element_get(this Self&, Reference);
+  X(Anm2)
+  X(const Anm2)
+#undef X
+
+  std::set<int> children_unused_get(const Element* element, ElementType type, const std::set<int>& used)
   {
-    if (type == ElementType::ANIMATION)
-    {
-      auto animations = element_get(ElementType::ANIMATIONS);
-      if (!animations || id < 0) return nullptr;
-      int current{};
-      for (auto& animation : animations->children)
-      {
-        if (animation.type != ElementType::ANIMATION) continue;
-        if (current == id) return &animation;
-        ++current;
-      }
-      return nullptr;
-    }
-
-    auto container = element_get(element_container_type_get(type));
-    return container ? child_id_get(*container, type, id) : nullptr;
+    std::set<int> unused{};
+    if (element)
+      for (const auto& child : element->children)
+        if (child.type == type && !used.contains(child.id)) unused.insert(child.id);
+    return unused;
   }
 
-  const Element* Anm2::element_get(ElementType type, int id) const
-  {
-    if (type == ElementType::ANIMATION)
-    {
-      auto animations = element_get(ElementType::ANIMATIONS);
-      if (!animations || id < 0) return nullptr;
-      int current{};
-      for (const auto& animation : animations->children)
-      {
-        if (animation.type != ElementType::ANIMATION) continue;
-        if (current == id) return &animation;
-        ++current;
-      }
-      return nullptr;
-    }
-
-    auto container = element_get(element_container_type_get(type));
-    return container ? child_id_get(*container, type, id) : nullptr;
-  }
-
-  Element* Anm2::element_get(int animationIndex, ItemType type, int id)
-  {
-    auto animation = element_get(ElementType::ANIMATION, animationIndex);
-    return animation ? animation_item_get(*animation, type, id) : nullptr;
-  }
-
-  const Element* Anm2::element_get(int animationIndex, ItemType type, int id) const
-  {
-    auto animation = element_get(ElementType::ANIMATION, animationIndex);
-    return animation ? animation_item_get(*animation, type, id) : nullptr;
-  }
-
-  Element* Anm2::element_get(int animationIndex, ItemType type, int id, int groupType, int groupId)
-  {
-    auto animation = element_get(ElementType::ANIMATION, animationIndex);
-    return animation ? animation_item_get(*animation, type, id, groupType, groupId) : nullptr;
-  }
-
-  const Element* Anm2::element_get(int animationIndex, ItemType type, int id, int groupType, int groupId) const
-  {
-    auto animation = element_get(ElementType::ANIMATION, animationIndex);
-    return animation ? animation_item_get(*animation, type, id, groupType, groupId) : nullptr;
-  }
-
-  Element* Anm2::element_get(int animationIndex, ItemType type, int frameIndex, int id)
-  {
-    auto item = element_get(animationIndex, type, id);
-    return item ? track_frame_get(*item, frameIndex) : nullptr;
-  }
-
-  const Element* Anm2::element_get(int animationIndex, ItemType type, int frameIndex, int id) const
-  {
-    auto item = element_get(animationIndex, type, id);
-    return item ? track_frame_get(*item, frameIndex) : nullptr;
-  }
-
-  Element* Anm2::element_get(Reference reference)
-  {
-    auto itemType = static_cast<ItemType>(reference.itemType);
-    auto item =
-        element_get(reference.animationIndex, itemType, reference.itemID, reference.groupType, reference.groupId);
-    if (reference.frameIndex < 0) return item;
-    return item ? track_frame_get(*item, reference.frameIndex) : nullptr;
-  }
-
-  const Element* Anm2::element_get(Reference reference) const
-  {
-    auto itemType = static_cast<ItemType>(reference.itemType);
-    auto item =
-        element_get(reference.animationIndex, itemType, reference.itemID, reference.groupType, reference.groupId);
-    if (reference.frameIndex < 0) return item;
-    return item ? track_frame_get(*item, reference.frameIndex) : nullptr;
-  }
-
-  std::set<int> Anm2::element_unused(ElementType type) const
+  std::set<int> Anm2::element_unused(ElementType type, const Element* animation) const
   {
     std::set<int> used{};
+    auto row = track_container_get(type);
+    auto used_insert = [&](const Element& animation)
+    {
+      if (row)
+        if (auto tracks = child_first_get(animation, row->container))
+          tracks_each(*tracks, row->track, [&](const Element& track) { used.insert(track.*(row->id)); });
+
+      if (auto triggers = child_first_get(animation, ElementType::TRIGGERS))
+        for (const auto& trigger : triggers->children)
+          if (trigger.type == ElementType::TRIGGER)
+          {
+            if (type == ElementType::EVENT_ELEMENT) used.insert(trigger.eventId);
+            if (type == ElementType::SOUND_ELEMENT) used.insert(trigger.soundIds.begin(), trigger.soundIds.end());
+          }
+
+      if (type == ElementType::SHADER)
+        if (auto layerAnimations = child_first_get(animation, ElementType::LAYER_ANIMATIONS))
+          tracks_each(*layerAnimations, ElementType::LAYER_ANIMATION,
+                      [&](const Element& track)
+                      {
+                        for (const auto& frame : track.children)
+                          if (frame.type == ElementType::FRAME) used.insert(frame.shaderId);
+                      });
+    };
 
     if (type == ElementType::SPRITESHEET)
     {
       if (auto layers = element_get(ElementType::LAYERS))
         for (const auto& layer : layers->children)
-          if (layer.type == ElementType::LAYER_ELEMENT && layer.spritesheetId != -1) used.insert(layer.spritesheetId);
+          if (layer.type == ElementType::LAYER_ELEMENT) used.insert(layer.spritesheetId);
     }
+    else if (animation)
+      used_insert(*animation);
     else if (auto animations = element_get(ElementType::ANIMATIONS))
-      for (const auto& animation : animations->children)
-      {
-        if (animation.type != ElementType::ANIMATION) continue;
-        if (type == ElementType::EVENT_ELEMENT)
-        {
-          auto triggers = child_first_get(animation, ElementType::TRIGGERS);
-          if (!triggers) continue;
-          for (const auto& trigger : triggers->children)
-            if (trigger.type == ElementType::TRIGGER && trigger.eventId != -1) used.insert(trigger.eventId);
-        }
-        else if (type == ElementType::SOUND_ELEMENT)
-        {
-          auto triggers = child_first_get(animation, ElementType::TRIGGERS);
-          if (!triggers) continue;
-          for (const auto& trigger : triggers->children)
-          {
-            if (trigger.type != ElementType::TRIGGER) continue;
-            for (auto id : trigger.soundIds)
-              used.insert(id);
-          }
-        }
-        else if (type == ElementType::SHADER)
-        {
-          auto layerAnimations = child_first_get(animation, ElementType::LAYER_ANIMATIONS);
-          if (!layerAnimations) continue;
-          tracks_each(*layerAnimations, ElementType::LAYER_ANIMATION,
-                      [&](const Element& layerAnimation)
-                      {
-                        for (const auto& frame : layerAnimation.children)
-                          if (frame.type == ElementType::FRAME && frame.shaderId != -1) used.insert(frame.shaderId);
-                      });
-        }
-        else if (type == ElementType::LAYER_ELEMENT || type == ElementType::NULL_ELEMENT)
-        {
-          auto containerType =
-              type == ElementType::LAYER_ELEMENT ? ElementType::LAYER_ANIMATIONS : ElementType::NULL_ANIMATIONS;
-          auto tracks = child_first_get(animation, containerType);
-          if (!tracks) continue;
-          auto trackType =
-              type == ElementType::LAYER_ELEMENT ? ElementType::LAYER_ANIMATION : ElementType::NULL_ANIMATION;
-          tracks_each(*tracks, trackType,
-                      [&](const Element& track)
-                      {
-                        if (track.type == ElementType::LAYER_ANIMATION)
-                          used.insert(track.layerId);
-                        else if (track.type == ElementType::NULL_ANIMATION)
-                          used.insert(track.nullId);
-                      });
-        }
-      }
+      for (const auto& child : animations->children)
+        if (child.type == ElementType::ANIMATION) used_insert(child);
 
-    std::set<int> unused{};
-    if (auto container = element_get(element_container_type_get(type)))
-      for (const auto& element : container->children)
-        if (element.type == type && !used.contains(element.id)) unused.insert(element.id);
-    return unused;
+    return children_unused_get(element_get(ELEMENT_CONTAINERS[(int)type]), type, used);
   }
 
-  std::set<int> Anm2::element_unused(ElementType type, const Element& animation) const
+  std::set<int> Anm2::region_unused(int spritesheetId) const
   {
-    if (type != ElementType::LAYER_ELEMENT && type != ElementType::NULL_ELEMENT) return {};
-
     std::set<int> used{};
-    auto containerType =
-        type == ElementType::LAYER_ELEMENT ? ElementType::LAYER_ANIMATIONS : ElementType::NULL_ANIMATIONS;
-    if (auto tracks = child_first_get(animation, containerType))
-    {
-      auto trackType = type == ElementType::LAYER_ELEMENT ? ElementType::LAYER_ANIMATION : ElementType::NULL_ANIMATION;
-      tracks_each(*tracks, trackType,
-                  [&](const Element& track)
-                  {
-                    if (track.type == ElementType::LAYER_ANIMATION)
-                      used.insert(track.layerId);
-                    else if (track.type == ElementType::NULL_ANIMATION)
-                      used.insert(track.nullId);
-                  });
-    }
-
-    std::set<int> unused{};
-    if (auto container = element_get(element_container_type_get(type)))
-      for (const auto& element : container->children)
-        if (element.type == type && !used.contains(element.id)) unused.insert(element.id);
-    return unused;
-  }
-
-  std::set<int> Anm2::element_unused(ElementType type, int parentId) const
-  {
-    if (type != ElementType::REGION) return {};
-
-    std::set<int> used{};
-    auto animations = element_first_get(root, ElementType::ANIMATIONS);
-    if (animations)
-      for (const auto& animation : animations->children)
-      {
-        if (animation.type != ElementType::ANIMATION) continue;
-        auto layerAnimations = child_first_get(animation, ElementType::LAYER_ANIMATIONS);
-        if (!layerAnimations) continue;
-        tracks_each(*layerAnimations, ElementType::LAYER_ANIMATION,
-                    [&](const Element& layerAnimation)
-                    {
-                      auto layer = element_get(ElementType::LAYER_ELEMENT, layerAnimation.layerId);
-                      if (!layer || layer->spritesheetId != parentId) return;
-                      for (const auto& frame : layerAnimation.children)
-                      {
-                        if (frame.type != ElementType::FRAME) continue;
-                        if (frame.regionId != -1) used.insert(frame.regionId);
-                      }
-                    });
-      }
-
-    std::set<int> unused{};
-    if (auto spritesheet = element_get(ElementType::SPRITESHEET, parentId))
-      for (const auto& child : spritesheet->children)
-        if (child.type == type && !used.contains(child.id)) unused.insert(child.id);
-    return unused;
+    animations_tracks_each(root, ElementType::LAYER_ANIMATION,
+                           [&](const Element& track)
+                           {
+                             auto layer = element_get(ElementType::LAYER_ELEMENT, track.layerId);
+                             if (!layer || layer->spritesheetId != spritesheetId) return;
+                             for (const auto& frame : track.children)
+                               if (frame.type == ElementType::FRAME) used.insert(frame.regionId);
+                           });
+    return children_unused_get(element_get(ElementType::SPRITESHEET, spritesheetId), ElementType::REGION, used);
   }
 }

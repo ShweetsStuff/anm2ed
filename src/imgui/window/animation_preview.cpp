@@ -944,8 +944,8 @@ namespace anm2ed::imgui
                                        float t) -> std::optional<Element>
         {
           if (track.groupId == -1) return std::nullopt;
-          auto group = element_child_id_get(container, ElementType::GROUP, track.groupId);
-          auto root = group ? element_child_first_get(*group, ElementType::ROOT_ANIMATION) : nullptr;
+          auto group = child_id_get(container, ElementType::GROUP, track.groupId);
+          auto root = group ? child_first_get(*group, ElementType::ROOT_ANIMATION) : nullptr;
           if (!root) return std::nullopt;
           return frame_generate(*root, t);
         };
@@ -995,7 +995,7 @@ namespace anm2ed::imgui
         auto draw_group_root = [&](Element& group, int groupType, float sampleTime, const glm::mat4& sampleTransform,
                                    vec3 sampleColor, float sampleAlpha, bool isOnion)
         {
-          auto groupRoot = element_child_first_get(group, ElementType::ROOT_ANIMATION);
+          auto groupRoot = child_first_get(group, ElementType::ROOT_ANIMATION);
           if (!groupRoot) return;
           auto rootFrame = frame_generate(*groupRoot, sampleTime);
           if (isOnlyShowLayers || !rootFrame.isVisible || !groupRoot->isVisible) return;
@@ -1019,7 +1019,7 @@ namespace anm2ed::imgui
           texture_render(shaderTexture, resources.icons[icon].id, rootTransform, color);
         };
 
-        if (auto layerAnimations = element_child_first_get(*animation, ElementType::LAYER_ANIMATIONS))
+        if (auto layerAnimations = child_first_get(*animation, ElementType::LAYER_ANIMATIONS))
         {
           auto layer_animation_draw = [&](auto&& self, Element& layerAnimation, bool isParentVisible = true) -> void
           {
@@ -1027,7 +1027,7 @@ namespace anm2ed::imgui
             {
               if (isParentVisible && layerAnimation.isVisible)
               {
-                auto groupRoot = element_child_first_get(layerAnimation, ElementType::ROOT_ANIMATION);
+                auto groupRoot = child_first_get(layerAnimation, ElementType::ROOT_ANIMATION);
                 if (layeredOnions && groupRoot)
                   for (auto& sample : *layeredOnions)
                     if (auto sampleTime = sample_time_for_item(*groupRoot, sample))
@@ -1134,7 +1134,7 @@ namespace anm2ed::imgui
             layer_animation_draw(layer_animation_draw, layerAnimation);
         }
 
-        if (auto nullAnimations = element_child_first_get(*animation, ElementType::NULL_ANIMATIONS))
+        if (auto nullAnimations = child_first_get(*animation, ElementType::NULL_ANIMATIONS))
         {
           auto null_animation_draw = [&](auto&& self, Element& nullAnimation, bool isParentVisible = true) -> void
           {
@@ -1142,7 +1142,7 @@ namespace anm2ed::imgui
             {
               if (isParentVisible && nullAnimation.isVisible)
               {
-                auto groupRoot = element_child_first_get(nullAnimation, ElementType::ROOT_ANIMATION);
+                auto groupRoot = child_first_get(nullAnimation, ElementType::ROOT_ANIMATION);
                 if (layeredOnions && groupRoot)
                   for (auto& sample : *layeredOnions)
                     if (auto sampleTime = sample_time_for_item(*groupRoot, sample))
@@ -1163,7 +1163,7 @@ namespace anm2ed::imgui
 
             auto id = nullAnimation.nullId;
             auto nulls = sampleAnm2.element_get(ElementType::NULLS);
-            auto nullInfo = nulls ? element_child_id_get(*nulls, ElementType::NULL_ELEMENT, id) : nullptr;
+            auto nullInfo = nulls ? child_id_get(*nulls, ElementType::NULL_ELEMENT, id) : nullptr;
             if (!nullInfo) return;
             auto isShowRect = nullInfo->isShowRect;
 
@@ -1314,7 +1314,7 @@ namespace anm2ed::imgui
           ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE_LARGE);
           auto triggerTextColor = isLightTheme ? TRIGGER_TEXT_COLOR_LIGHT : TRIGGER_TEXT_COLOR_DARK;
           auto events = anm2.element_get(ElementType::EVENTS);
-          auto event = events ? element_child_id_get(*events, ElementType::EVENT_ELEMENT, trigger.eventId) : nullptr;
+          auto event = events ? child_id_get(*events, ElementType::EVENT_ELEMENT, trigger.eventId) : nullptr;
           if (event) drawList->AddText(textPos, ImGui::GetColorU32(triggerTextColor), event->name.c_str());
           ImGui::PopFont();
           drawList->PopClipRect();
@@ -1379,7 +1379,7 @@ namespace anm2ed::imgui
         auto item = anm2.element_get(editItemReference);
         auto nulls = anm2.element_get(ElementType::NULLS);
         auto selectedNull = editItemType == ItemType::NULL_ && nulls
-                                ? element_child_id_get(*nulls, ElementType::NULL_ELEMENT, editReference.itemID)
+                                ? child_id_get(*nulls, ElementType::NULL_ELEMENT, editReference.itemID)
                                 : nullptr;
         bool isSelectedNullRect = selectedNull && selectedNull->isShowRect;
         auto null_rect_top_left = [](const Element& frame) { return frame.position - (frame.scale * 0.5f); };

@@ -460,7 +460,7 @@ namespace anm2ed::imgui::wizard
                                 if (queuedIsLayers)
                                 {
                                   auto layerAnimations =
-                                      element_child_first_get(*animation, ElementType::LAYER_ANIMATIONS);
+                                      child_first_get(*animation, ElementType::LAYER_ANIMATIONS);
                                   if (layerAnimations)
                                   {
                                     auto item_change = [&](auto&& self, Element& item) -> void
@@ -485,7 +485,7 @@ namespace anm2ed::imgui::wizard
                                 if (queuedIsNulls)
                                 {
                                   auto nullAnimations =
-                                      element_child_first_get(*animation, ElementType::NULL_ANIMATIONS);
+                                      child_first_get(*animation, ElementType::NULL_ANIMATIONS);
                                   if (nullAnimations)
                                   {
                                     auto item_change = [&](auto&& self, Element& item) -> void

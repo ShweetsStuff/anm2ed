@@ -62,13 +62,13 @@ namespace anm2ed::document
   const Element* shader_element_get(const Anm2& anm2, int id)
   {
     auto shaders = anm2.element_get(ElementType::SHADERS);
-    return shaders ? element_child_id_get(*shaders, ElementType::SHADER, id) : nullptr;
+    return shaders ? child_id_get(*shaders, ElementType::SHADER, id) : nullptr;
   }
 
   Element* shader_element_get(Anm2& anm2, int id)
   {
     auto shaders = anm2.element_get(ElementType::SHADERS);
-    return shaders ? element_child_id_get(*shaders, ElementType::SHADER, id) : nullptr;
+    return shaders ? child_id_get(*shaders, ElementType::SHADER, id) : nullptr;
   }
 
   std::filesystem::path shader_absolute_path_get(Document& document, const std::filesystem::path& path)
@@ -421,10 +421,10 @@ namespace anm2ed::document
       auto animation = document.anm2.element_get(ElementType::ANIMATION, it->animationIndex);
       Element* container{};
       if (animation && it->itemType == LAYER)
-        container = element_child_first_get(*animation, ElementType::LAYER_ANIMATIONS);
+        container = child_first_get(*animation, ElementType::LAYER_ANIMATIONS);
       else if (animation && it->itemType == NULL_)
-        container = element_child_first_get(*animation, ElementType::NULL_ANIMATIONS);
-      auto group = container ? element_child_id_get(*container, ElementType::GROUP, it->itemID) : nullptr;
+        container = child_first_get(*animation, ElementType::NULL_ANIMATIONS);
+      auto group = container ? child_id_get(*container, ElementType::GROUP, it->itemID) : nullptr;
       if (!group)
         it = groupReferences.erase(it);
       else
@@ -853,7 +853,7 @@ namespace anm2ed
     bool isChanged{};
     for (auto id : ids)
     {
-      auto region = element_child_id_get(*spritesheet, ElementType::REGION, id);
+      auto region = child_id_get(*spritesheet, ElementType::REGION, id);
       if (!region) continue;
 
       auto minPoint = glm::ivec2(glm::min(region->crop, region->crop + region->size));
@@ -920,7 +920,7 @@ namespace anm2ed
       auto animation = anm2.element_get(ElementType::ANIMATION, animationIndex);
       if (!animation) continue;
 
-      auto layerAnimations = element_child_first_get(*animation, ElementType::LAYER_ANIMATIONS);
+      auto layerAnimations = child_first_get(*animation, ElementType::LAYER_ANIMATIONS);
       if (!layerAnimations) continue;
 
       auto layer_animation_regions_generate = [&](auto&& self, Element& layerAnimation) -> void
@@ -1350,7 +1350,7 @@ namespace anm2ed
       for (auto& animation : animations->children)
       {
         if (animation.type != ElementType::ANIMATION) continue;
-        auto layerAnimations = element_child_first_get(animation, ElementType::LAYER_ANIMATIONS);
+        auto layerAnimations = child_first_get(animation, ElementType::LAYER_ANIMATIONS);
         if (!layerAnimations) continue;
         auto layer_animation_update = [&](auto&& self, Element& layerAnimation) -> void
         {
@@ -1403,7 +1403,7 @@ namespace anm2ed
       for (auto& animation : animations->children)
       {
         if (animation.type != ElementType::ANIMATION) continue;
-        auto layerAnimations = element_child_first_get(animation, ElementType::LAYER_ANIMATIONS);
+        auto layerAnimations = child_first_get(animation, ElementType::LAYER_ANIMATIONS);
         if (!layerAnimations) continue;
         auto layer_animation_update = [&](auto&& self, Element& layerAnimation) -> void
         {
@@ -1526,7 +1526,7 @@ namespace anm2ed
 
     auto child_set = [](Element& container, Element child, ElementType type)
     {
-      if (auto existing = element_child_first_get(container, type))
+      if (auto existing = child_first_get(container, type))
         *existing = std::move(child);
       else
         container.children.push_back(std::move(child));
@@ -1551,7 +1551,7 @@ namespace anm2ed
 
     auto track_container_get = [](Element& animation, ElementType type)
     {
-      if (auto container = element_child_first_get(animation, type)) return container;
+      if (auto container = child_first_get(animation, type)) return container;
       animation.children.push_back(element_make(type));
       return &animation.children.back();
     };
@@ -1570,7 +1570,7 @@ namespace anm2ed
       auto sourceSpritesheets = source.element_get(ElementType::SPRITESHEETS);
       auto destinationSpritesheets = anm2.element_get(ElementType::SPRITESHEETS);
       auto spritesheet =
-          sourceSpritesheets ? element_child_id_get(*sourceSpritesheets, ElementType::SPRITESHEET, sourceId) : nullptr;
+          sourceSpritesheets ? child_id_get(*sourceSpritesheets, ElementType::SPRITESHEET, sourceId) : nullptr;
       if (!spritesheet || !destinationSpritesheets) return -1;
 
       auto imported = *spritesheet;
@@ -1660,7 +1660,7 @@ namespace anm2ed
         group.name = item.name;
         group.isExpanded = item.isExpanded;
         group.isVisible = item.isVisible;
-        if (auto root = element_child_first_get(item, ElementType::ROOT_ANIMATION))
+        if (auto root = child_first_get(item, ElementType::ROOT_ANIMATION))
           group.children.push_back(*root);
         else
         {
@@ -1692,14 +1692,14 @@ namespace anm2ed
       animation.frameNum = incoming.frameNum;
       animation.isLoop = incoming.isLoop;
 
-      if (auto root = element_child_first_get(incoming, ElementType::ROOT_ANIMATION))
+      if (auto root = child_first_get(incoming, ElementType::ROOT_ANIMATION))
       {
         auto item = *root;
         item_remap(item);
         animation.children.push_back(item);
       }
 
-      if (auto layerAnimations = element_child_first_get(incoming, ElementType::LAYER_ANIMATIONS))
+      if (auto layerAnimations = child_first_get(incoming, ElementType::LAYER_ANIMATIONS))
       {
         auto container = element_make(ElementType::LAYER_ANIMATIONS);
         for (auto item : layerAnimations->children)
@@ -1707,7 +1707,7 @@ namespace anm2ed
         animation.children.push_back(container);
       }
 
-      if (auto nullAnimations = element_child_first_get(incoming, ElementType::NULL_ANIMATIONS))
+      if (auto nullAnimations = child_first_get(incoming, ElementType::NULL_ANIMATIONS))
       {
         auto container = element_make(ElementType::NULL_ANIMATIONS);
         for (auto item : nullAnimations->children)
@@ -1715,7 +1715,7 @@ namespace anm2ed
         animation.children.push_back(container);
       }
 
-      if (auto triggers = element_child_first_get(incoming, ElementType::TRIGGERS))
+      if (auto triggers = child_first_get(incoming, ElementType::TRIGGERS))
       {
         auto item = *triggers;
         item_remap(item);
@@ -1745,7 +1745,7 @@ namespace anm2ed
         auto sourceGroupId = item.id;
         item.id = element_child_next_id_get(destinationContainer, ElementType::GROUP);
         std::erase_if(item.children, [](const Element& child) { return child.type != ElementType::ROOT_ANIMATION; });
-        if (!element_child_first_get(item, ElementType::ROOT_ANIMATION))
+        if (!child_first_get(item, ElementType::ROOT_ANIMATION))
         {
           auto root = element_make(ElementType::ROOT_ANIMATION);
           root.children.push_back(element_make(ElementType::FRAME));
@@ -1792,20 +1792,20 @@ namespace anm2ed
 
           destination->frameNum = std::max(destination->frameNum, processed.frameNum);
           destination->isLoop = processed.isLoop;
-          if (auto root = element_child_first_get(processed, ElementType::ROOT_ANIMATION);
+          if (auto root = child_first_get(processed, ElementType::ROOT_ANIMATION);
               root && !root->children.empty())
             child_set(*destination, *root, ElementType::ROOT_ANIMATION);
-          if (auto triggers = element_child_first_get(processed, ElementType::TRIGGERS);
+          if (auto triggers = child_first_get(processed, ElementType::TRIGGERS);
               triggers && !triggers->children.empty())
             child_set(*destination, *triggers, ElementType::TRIGGERS);
 
-          if (auto layerAnimations = element_child_first_get(processed, ElementType::LAYER_ANIMATIONS))
+          if (auto layerAnimations = child_first_get(processed, ElementType::LAYER_ANIMATIONS))
           {
             auto destinationLayerAnimations = track_container_get(*destination, ElementType::LAYER_ANIMATIONS);
             track_container_merge(*destinationLayerAnimations, *layerAnimations, ElementType::LAYER_ANIMATION);
           }
 
-          if (auto nullAnimations = element_child_first_get(processed, ElementType::NULL_ANIMATIONS))
+          if (auto nullAnimations = child_first_get(processed, ElementType::NULL_ANIMATIONS))
           {
             auto destinationNullAnimations = track_container_get(*destination, ElementType::NULL_ANIMATIONS);
             track_container_merge(*destinationNullAnimations, *nullAnimations, ElementType::NULL_ANIMATION);

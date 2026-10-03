@@ -20,10 +20,8 @@ namespace anm2ed::imgui::popup
 
   std::set<int> ItemProperties::unused_items_get(Anm2& anm2, const Element* animation, int type)
   {
-    if (!animation) return {};
-    if (type == LAYER) return anm2.element_unused(ElementType::LAYER_ELEMENT, *animation);
-    if (type == NULL_) return anm2.element_unused(ElementType::NULL_ELEMENT, *animation);
-    return {};
+    auto row = track_container_get((ItemType)type);
+    return animation && row ? anm2.element_unused(row->element, animation) : std::set<int>{};
   }
 
   void ItemProperties::open()
@@ -162,7 +160,7 @@ namespace anm2ed::imgui::popup
               else if (type == NULL_)
               {
                 auto nulls = anm2.element_get(ElementType::NULLS);
-                auto null = nulls ? element_child_id_get(*nulls, ElementType::NULL_ELEMENT, id) : nullptr;
+                auto null = nulls ? child_id_get(*nulls, ElementType::NULL_ELEMENT, id) : nullptr;
                 if (null)
                 {
                   auto label = std::vformat(localize.get(FORMAT_NULL), std::make_format_args(id, null->name));
@@ -191,7 +189,7 @@ namespace anm2ed::imgui::popup
         auto queuedType = type;
         auto queuedDestination = destination;
         auto queuedAnimationIndex = reference.animationIndex;
-        auto queuedInsertBeforeID = reference.itemType == LAYER ? reference.itemID : -1;
+        auto queuedInsertBeforeID = reference.itemType == LAYER && type == LAYER ? reference.itemID : -1;
         auto queuedAddItemID = addItemID;
         auto queuedAddItemName = addItemName;
         auto queuedAddItemSpritesheetID = addItemSpritesheetID;
@@ -200,17 +198,16 @@ namespace anm2ed::imgui::popup
         manager.command_push({manager.selected,
                               [=](Manager&, Document& document)
                               {
-                                int addId{-1};
+                                Element item{};
+                                item.id = queuedAddItemID;
+                                item.name = queuedAddItemName;
+                                item.spritesheetId = queuedAddItemSpritesheetID;
+                                item.isShowRect = queuedAddItemIsShowRect;
 
                                 document.anm2_snapshot(localize.get(EDIT_ADD_ITEM));
-                                if (queuedType == LAYER)
-                                  addId = document.anm2.layer_animation_add(
-                                      queuedAnimationIndex, queuedAddItemID, queuedInsertBeforeID, queuedAddItemName,
-                                      queuedAddItemSpritesheetID, (destination::Type)queuedDestination);
-                                else if (queuedType == NULL_)
-                                  addId = document.anm2.null_animation_add(queuedAnimationIndex, queuedAddItemID,
-                                                                           queuedAddItemName, queuedAddItemIsShowRect,
-                                                                           (destination::Type)queuedDestination);
+                                auto addId = document.anm2.item_add((ItemType)queuedType, queuedAnimationIndex, item,
+                                                                    queuedInsertBeforeID,
+                                                                    (destination::Type)queuedDestination);
 
                                 document.anm2_change(Document::ITEMS);
 

@@ -35,10 +35,32 @@ namespace anm2ed
   inline constexpr std::array<std::string_view, (std::size_t)Origin::COUNT> ORIGIN_VALUES = {"", "TopLeft", "Center"};
   inline constexpr std::string_view SOURCE_DOCUMENT_TAG = "SourceDocument";
 
+  struct ElementSink
+  {
+    virtual ~ElementSink() = default;
+    virtual void open(std::string_view) = 0;
+    virtual void attribute(const char*, const char*) = 0;
+    virtual void attribute(const char*, int) = 0;
+    virtual void attribute(const char*, bool) = 0;
+    virtual void attribute(const char*, float) = 0;
+    virtual void body() {}
+    virtual void close() = 0;
+  };
+
+  struct BakeAttributes
+  {
+    Interpolation interpolation{Interpolation::NONE};
+    int delay{FRAME_DURATION_MIN};
+  };
+
+  void element_emit(ElementSink&, const Element&, ElementType, Flags, std::optional<BakeAttributes> = std::nullopt);
+
   bool is_source_document_tag(std::string_view);
   ElementType element_type_get(std::string_view);
   std::string_view element_tag_get(ElementType);
-  ElementType element_container_type_get(ElementType);
+  ElementType group_child_type_get(ElementType);
+  Element* content_container_get(Element&, ElementType);
+  std::unordered_map<int, int> child_ids_compact(Element&, ElementType);
   int animations_count_get(const Element&);
   int animations_child_index_get(const Element&, int);
   int animations_child_insert_index_get(const Element&, int);
@@ -55,12 +77,6 @@ namespace anm2ed
   void shader_ids_remap(Element&);
   void region_ids_remap(Element&);
   void region_frame_ids_repair(Element&);
-  void layer_animation_ids_remap(Element&, const std::unordered_map<int, int>&);
-  Element* child_first_get(Element&, ElementType);
-  const Element* child_first_get(const Element&, ElementType);
-  Element* child_id_get(Element&, ElementType, int);
-  const Element* child_id_get(const Element&, ElementType, int);
-  bool is_track(const Element&);
   bool is_track_child_valid(ElementType, ElementType);
   bool is_track_group_visible(const Element&, const Element&);
   bool is_nested_group_parent(ElementType, Flags);
@@ -68,39 +84,10 @@ namespace anm2ed
   bool element_write_skip(const Element&, ElementType, Flags);
   bool is_frame_bake_serialized(const Element&, Flags);
   bool is_special_interpolated_frames(const Element&);
+  std::vector<Element> frame_bake_split(const Element&, const Element&, int, bool, bool);
   void special_interpolated_frames_bake(Element&, int, bool, bool);
   void all_interpolated_frames_bake(Element&, int, bool, bool);
-  float interpolation_factor(Interpolation, float);
   int color_write(float);
   std::uint64_t anm2_hash_get(const Element&, Options);
   std::uint64_t element_hash(const Element&, Flags);
-  ElementType track_frame_type_get(const Element&);
-  ElementType item_type_to_container_type_get(ItemType);
-  int track_id_get(const Element&);
-  int track_frame_child_index_get(const Element&, int);
-  int track_frames_count_get(const Element&);
-  int track_frame_insert_child_index_get(const Element&, int);
-  Element* track_find(Element&, ElementType, int);
-  const Element* track_find(const Element&, ElementType, int);
-  Element* track_group_find(Element&, ElementType, int, int);
-  const Element* track_group_find(const Element&, ElementType, int, int);
-  Element* animation_container_get(Element&, ElementType);
-
-  template <typename Callback> void tracks_each(Element& parent, ElementType trackType, Callback&& callback)
-  {
-    for (auto& child : parent.children)
-      if (child.type == trackType)
-        callback(child);
-      else if (child.type == ElementType::GROUP)
-        tracks_each(child, trackType, callback);
-  }
-
-  template <typename Callback> void tracks_each(const Element& parent, ElementType trackType, Callback&& callback)
-  {
-    for (const auto& child : parent.children)
-      if (child.type == trackType)
-        callback(child);
-      else if (child.type == ElementType::GROUP)
-        tracks_each(child, trackType, callback);
-  }
 }

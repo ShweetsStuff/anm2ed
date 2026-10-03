@@ -1,14 +1,42 @@
 #include "internal.hpp"
 
-using namespace anm2ed::util;
-using namespace tinyxml2;
-
 namespace anm2ed
 {
+  constexpr std::string_view SHADER_NAME_DEFAULT = "New Shader";
+
+  void frame_ids_remap(Element& root, int Element::* member, const std::unordered_map<int, int>& remap)
+  {
+    element_each(root,
+                 [&](Element& element)
+                 {
+                   if (element.type != ElementType::FRAME || element.*member == -1) return;
+                   auto it = remap.find(element.*member);
+                   element.*member = it == remap.end() ? -1 : it->second;
+                 });
+  }
+
+  template <class Callback> void layer_frames_each(Element& root, Callback&& callback)
+  {
+    auto layers = content_container_get(root, ElementType::LAYERS);
+    auto spritesheets = content_container_get(root, ElementType::SPRITESHEETS);
+    if (!layers || !spritesheets) return;
+
+    animations_tracks_each(root, ElementType::LAYER_ANIMATION,
+                           [&](Element& track)
+                           {
+                             auto layer = child_id_get(*layers, ElementType::LAYER_ELEMENT, track.layerId);
+                             auto spritesheet = layer ? child_id_get(*spritesheets, ElementType::SPRITESHEET,
+                                                                     layer->spritesheetId)
+                                                      : nullptr;
+                             if (!spritesheet) return;
+                             for (auto& frame : track.children)
+                               if (frame.type == ElementType::FRAME) callback(frame, *spritesheet);
+                           });
+  }
+
   void shader_ids_repair(Element& root)
   {
-    auto content = child_first_get(root, ElementType::CONTENT);
-    auto shaders = content ? child_first_get(*content, ElementType::SHADERS) : nullptr;
+    auto shaders = content_container_get(root, ElementType::SHADERS);
     if (!shaders) return;
 
     std::set<int> usedIds{};
@@ -21,207 +49,91 @@ namespace anm2ed
         ++nextId;
       if (shader.id < 0 || usedIds.contains(shader.id)) shader.id = nextId++;
       usedIds.insert(shader.id);
-      if (shader.name.empty()) shader.name = "New Shader";
+      if (shader.name.empty()) shader.name = SHADER_NAME_DEFAULT;
     }
   }
 
   void shader_frame_ids_repair(Element& root)
   {
-    auto content = child_first_get(root, ElementType::CONTENT);
-    auto shaders = content ? child_first_get(*content, ElementType::SHADERS) : nullptr;
+    auto shaders = content_container_get(root, ElementType::SHADERS);
     auto animations = element_first_get(root, ElementType::ANIMATIONS);
     if (!animations) return;
 
-    std::set<int> shaderIds{};
+    std::unordered_map<int, int> identity{};
     if (shaders)
       for (const auto& shader : shaders->children)
-        if (shader.type == ElementType::SHADER) shaderIds.insert(shader.id);
-
-    auto frame_repair = [&](auto&& self, Element& element) -> void
-    {
-      if (element.type == ElementType::FRAME && element.shaderId != -1 && !shaderIds.contains(element.shaderId))
-        element.shaderId = -1;
-      for (auto& child : element.children)
-        self(self, child);
-    };
-    frame_repair(frame_repair, *animations);
+        if (shader.type == ElementType::SHADER) identity[shader.id] = shader.id;
+    frame_ids_remap(*animations, &Element::shaderId, identity);
   }
 
   void region_frame_ids_repair(Element& root)
   {
-    auto content = child_first_get(root, ElementType::CONTENT);
-    auto layers = content ? child_first_get(*content, ElementType::LAYERS) : nullptr;
-    auto spritesheets = content ? child_first_get(*content, ElementType::SPRITESHEETS) : nullptr;
-    auto animations = element_first_get(root, ElementType::ANIMATIONS);
-    if (!layers || !spritesheets || !animations) return;
-
-    for (auto& animation : animations->children)
-    {
-      if (animation.type != ElementType::ANIMATION) continue;
-      auto layerAnimations = child_first_get(animation, ElementType::LAYER_ANIMATIONS);
-      if (!layerAnimations) continue;
-
-      tracks_each(*layerAnimations, ElementType::LAYER_ANIMATION,
-                  [&](Element& layerAnimation)
-                  {
-                    auto layer = child_id_get(*layers, ElementType::LAYER_ELEMENT, layerAnimation.layerId);
-                    auto spritesheet =
-                        layer ? child_id_get(*spritesheets, ElementType::SPRITESHEET, layer->spritesheetId) : nullptr;
-                    if (!spritesheet) return;
-
-                    for (auto& frame : layerAnimation.children)
-                    {
-                      if (frame.type != ElementType::FRAME) continue;
-
-                      auto frameCrop = glm::ivec2(frame.crop);
-                      auto frameSize = glm::ivec2(frame.size);
-                      auto framePivot = glm::ivec2(frame.pivot);
-                      auto is_region_match = [&](const Element& region)
+    layer_frames_each(root,
+                      [](Element& frame, const Element& spritesheet)
                       {
-                        return region.type == ElementType::REGION && glm::ivec2(region.crop) == frameCrop &&
-                               glm::ivec2(region.size) == frameSize && glm::ivec2(region.pivot) == framePivot;
-                      };
-
-                      auto region = frame.regionId == -1
-                                        ? nullptr
-                                        : child_id_get(*spritesheet, ElementType::REGION, frame.regionId);
-                      if (region && is_region_match(*region)) continue;
-
-                      for (const auto& candidate : spritesheet->children)
-                        if (is_region_match(candidate))
+                        auto is_region_match = [&](const Element& region)
                         {
-                          frame.regionId = candidate.id;
-                          break;
-                        }
-                    }
-                  });
-    }
+                          return region.type == ElementType::REGION &&
+                                 glm::ivec2(region.crop) == glm::ivec2(frame.crop) &&
+                                 glm::ivec2(region.size) == glm::ivec2(frame.size) &&
+                                 glm::ivec2(region.pivot) == glm::ivec2(frame.pivot);
+                        };
+
+                        auto region = frame.regionId == -1
+                                          ? nullptr
+                                          : child_id_get(spritesheet, ElementType::REGION, frame.regionId);
+                        if (region && is_region_match(*region)) return;
+                        if (auto candidate = child_find(spritesheet, is_region_match)) frame.regionId = candidate->id;
+                      });
   }
 
   void region_ids_remap(Element& root)
   {
-    auto content = child_first_get(root, ElementType::CONTENT);
-    auto layers = content ? child_first_get(*content, ElementType::LAYERS) : nullptr;
-    auto spritesheets = content ? child_first_get(*content, ElementType::SPRITESHEETS) : nullptr;
-    auto animations = element_first_get(root, ElementType::ANIMATIONS);
+    auto spritesheets = content_container_get(root, ElementType::SPRITESHEETS);
     if (!spritesheets) return;
 
     std::unordered_map<int, std::unordered_map<int, int>> remaps{};
     for (auto& spritesheet : spritesheets->children)
-    {
-      if (spritesheet.type != ElementType::SPRITESHEET) continue;
+      if (spritesheet.type == ElementType::SPRITESHEET)
+        if (auto remap = child_ids_compact(spritesheet, ElementType::REGION); !remap.empty())
+          remaps[spritesheet.id] = std::move(remap);
 
-      std::unordered_map<int, int> remap{};
-      int nextId{};
-      for (auto& region : spritesheet.children)
-      {
-        if (region.type != ElementType::REGION) continue;
-        remap[region.id] = nextId;
-        region.id = nextId++;
-      }
-      if (!remap.empty()) remaps[spritesheet.id] = std::move(remap);
-    }
+    if (remaps.empty()) return;
 
-    if (!layers || !animations || remaps.empty()) return;
-
-    std::unordered_map<int, int> layerSpritesheets{};
-    for (const auto& layer : layers->children)
-      if (layer.type == ElementType::LAYER_ELEMENT) layerSpritesheets[layer.id] = layer.spritesheetId;
-
-    for (auto& animation : animations->children)
-    {
-      if (animation.type != ElementType::ANIMATION) continue;
-      auto layerAnimations = child_first_get(animation, ElementType::LAYER_ANIMATIONS);
-      if (!layerAnimations) continue;
-
-      tracks_each(*layerAnimations, ElementType::LAYER_ANIMATION,
-                  [&](Element& layerAnimation)
-                  {
-                    auto layer = layerSpritesheets.find(layerAnimation.layerId);
-                    if (layer == layerSpritesheets.end()) return;
-                    auto remap = remaps.find(layer->second);
-                    if (remap == remaps.end()) return;
-
-                    for (auto& frame : layerAnimation.children)
-                    {
-                      if (frame.type != ElementType::FRAME || frame.regionId == -1) continue;
-                      if (auto it = remap->second.find(frame.regionId); it != remap->second.end())
-                        frame.regionId = it->second;
-                      else
-                        frame.regionId = -1;
-                    }
-                  });
-    }
+    layer_frames_each(root,
+                      [&](Element& frame, const Element& spritesheet)
+                      {
+                        auto remap = remaps.find(spritesheet.id);
+                        if (remap == remaps.end() || frame.regionId == -1) return;
+                        auto it = remap->second.find(frame.regionId);
+                        frame.regionId = it == remap->second.end() ? -1 : it->second;
+                      });
   }
 
   void shader_ids_remap(Element& root)
   {
-    auto content = child_first_get(root, ElementType::CONTENT);
-    auto shaders = content ? child_first_get(*content, ElementType::SHADERS) : nullptr;
-
-    std::unordered_map<int, int> remap{};
-    int nextId{};
-    if (shaders)
-      for (auto& shader : shaders->children)
-      {
-        if (shader.type != ElementType::SHADER) continue;
-        remap[shader.id] = nextId;
-        shader.id = nextId++;
-      }
-
-    auto frame_remap = [&](auto&& self, Element& element) -> void
-    {
-      if (element.type == ElementType::FRAME && element.shaderId != -1)
-      {
-        if (auto it = remap.find(element.shaderId); it != remap.end())
-          element.shaderId = it->second;
-        else
-          element.shaderId = -1;
-      }
-      for (auto& child : element.children)
-        self(self, child);
-    };
-    frame_remap(frame_remap, root);
+    auto shaders = content_container_get(root, ElementType::SHADERS);
+    auto remap = shaders ? child_ids_compact(*shaders, ElementType::SHADER) : std::unordered_map<int, int>{};
+    frame_ids_remap(root, &Element::shaderId, remap);
   }
 
   void Anm2::region_frames_sync(bool isClearInvalid)
   {
-    auto content = child_first_get(root, ElementType::CONTENT);
-    auto layers = content ? child_first_get(*content, ElementType::LAYERS) : nullptr;
-    auto spritesheets = content ? child_first_get(*content, ElementType::SPRITESHEETS) : nullptr;
-    auto animations = element_first_get(root, ElementType::ANIMATIONS);
-    if (!layers || !spritesheets || !animations) return;
-
-    for (auto& animation : animations->children)
-    {
-      if (animation.type != ElementType::ANIMATION) continue;
-      auto layerAnimations = child_first_get(animation, ElementType::LAYER_ANIMATIONS);
-      if (!layerAnimations) continue;
-
-      tracks_each(*layerAnimations, ElementType::LAYER_ANIMATION,
-                  [&](Element& layerAnimation)
-                  {
-                    auto layer = child_id_get(*layers, ElementType::LAYER_ELEMENT, layerAnimation.layerId);
-                    auto spritesheet =
-                        layer ? child_id_get(*spritesheets, ElementType::SPRITESHEET, layer->spritesheetId) : nullptr;
-                    if (!spritesheet) return;
-
-                    for (auto& frame : layerAnimation.children)
-                    {
-                      if (frame.type != ElementType::FRAME || frame.regionId == -1) continue;
-                      auto region = child_id_get(*spritesheet, ElementType::REGION, frame.regionId);
-                      if (!region)
+    layer_frames_each(root,
+                      [&](Element& frame, const Element& spritesheet)
                       {
-                        if (isClearInvalid) frame.regionId = -1;
-                        continue;
-                      }
+                        if (frame.regionId == -1) return;
+                        auto region = child_id_get(spritesheet, ElementType::REGION, frame.regionId);
+                        if (!region)
+                        {
+                          if (isClearInvalid) frame.regionId = -1;
+                          return;
+                        }
 
-                      frame.crop = region->crop;
-                      frame.size = region->size;
-                      frame.pivot = region->pivot;
-                    }
-                  });
-    }
+                        frame.crop = region->crop;
+                        frame.size = region->size;
+                        frame.pivot = region->pivot;
+                      });
   }
 
   Anm2 Anm2::normalized_for_serialize(Flags flags) const
@@ -240,19 +152,17 @@ namespace anm2ed
     else
       group_metadata_extract(normalized.root, flags);
 
-    auto content = child_first_get(normalized.root, ElementType::CONTENT);
-    if (content) std::erase_if(content->children, [](const Element& element) { return element.tag == "Groups"; });
-    if (auto layers = content ? child_first_get(*content, ElementType::LAYERS) : nullptr)
+    if (auto content = child_first_get(normalized.root, ElementType::CONTENT))
+      std::erase_if(content->children, [](const Element& element) { return element.tag == "Groups"; });
+    if (auto layers = content_container_get(normalized.root, ElementType::LAYERS))
     {
-      std::unordered_map<int, int> remap{};
-      int nextId{};
-      for (auto& layer : layers->children)
-      {
-        if (layer.type != ElementType::LAYER_ELEMENT) continue;
-        remap[layer.id] = nextId;
-        layer.id = nextId++;
-      }
-      layer_animation_ids_remap(normalized.root, remap);
+      auto remap = child_ids_compact(*layers, ElementType::LAYER_ELEMENT);
+      element_each(normalized.root,
+                   [&](Element& element)
+                   {
+                     if (element.type != ElementType::LAYER_ANIMATION) return;
+                     if (auto it = remap.find(element.layerId); it != remap.end()) element.layerId = it->second;
+                   });
     }
 
     return normalized;

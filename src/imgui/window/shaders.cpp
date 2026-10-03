@@ -55,7 +55,7 @@ namespace anm2ed::imgui
   Element* shader_element_get(Document& document, int id)
   {
     auto shaders = document.anm2.element_get(ElementType::SHADERS);
-    return shaders ? element_child_id_get(*shaders, ElementType::SHADER, id) : nullptr;
+    return shaders ? child_id_get(*shaders, ElementType::SHADER, id) : nullptr;
   }
 
   std::filesystem::path shader_asset_path_get(Document& document, const std::filesystem::path& path)
@@ -124,8 +124,12 @@ namespace anm2ed::imgui
 
   void shader_uniform_config_save(Document& document, Element& shaderElement, const resource::shader::Uniform& uniform)
   {
-    auto config = shader_uniform_get(shaderElement, uniform.name, true);
-    if (!config) return;
+    auto config = shader_uniform_get(shaderElement, uniform.name);
+    if (!config)
+    {
+      config = &shaderElement.children.emplace_back(element_make(ElementType::UNIFORM));
+      config->name = uniform.name;
+    }
 
     config->binding = std::string(resource::shader::uniform_binding_value_get(uniform.binding));
     config->value = resource::shader::uniform_value_string_get(uniform);
@@ -133,8 +137,12 @@ namespace anm2ed::imgui
     {
       for (int index = 0; index < (int)uniform.components.size(); ++index)
       {
-        auto component = shader_uniform_component_get(*config, index, true);
-        if (!component) continue;
+        auto component = shader_uniform_component_get(*config, index);
+        if (!component)
+        {
+          component = &config->children.emplace_back(element_make(ElementType::COMPONENT));
+          component->index = index;
+        }
         component->binding =
             std::string(resource::shader::uniform_binding_value_get(uniform.components[index].binding));
         component->value = std::format("{:.6g}", uniform.components[index].value);
@@ -382,10 +390,10 @@ namespace anm2ed::imgui
       for (auto& shader : shaders->children)
         if (shader.type == ElementType::SHADER) ids.push_back(shader.id);
 
-      if (reference != -1 && !element_child_id_get(*shaders, ElementType::SHADER, reference)) reference = -1;
+      if (reference != -1 && !child_id_get(*shaders, ElementType::SHADER, reference)) reference = -1;
       for (auto it = selection.begin(); it != selection.end();)
       {
-        if (!element_child_id_get(*shaders, ElementType::SHADER, *it))
+        if (!child_id_get(*shaders, ElementType::SHADER, *it))
           it = selection.erase(it);
         else
           ++it;

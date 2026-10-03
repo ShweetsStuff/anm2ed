@@ -92,12 +92,7 @@ namespace anm2ed
     auto sourceTracks = child_first_get(source, containerType);
     if (!sourceTracks) return;
 
-    auto destinationTracks = child_first_get(destination, containerType);
-    if (!destinationTracks)
-    {
-      destination.children.push_back(element_make(containerType));
-      destinationTracks = &destination.children.back();
-    }
+    auto destinationTracks = &child_ensure(destination, containerType);
 
     std::unordered_map<int, int> groupRemap{};
     std::set<int> matchedGroupIds{};
@@ -120,15 +115,7 @@ namespace anm2ed
         destinationGroup = std::prev(destinationTracks->children.end());
       }
       else if (auto sourceRoot = child_first_get(sourceGroup, ElementType::ROOT_ANIMATION))
-      {
-        auto destinationRoot = child_first_get(*destinationGroup, ElementType::ROOT_ANIMATION);
-        if (!destinationRoot)
-        {
-          destinationGroup->children.push_back(root_animation_make());
-          destinationRoot = &destinationGroup->children.back();
-        }
-        track_merge(*destinationRoot, *sourceRoot, type);
-      }
+        track_merge(child_ensure(*destinationGroup, ElementType::ROOT_ANIMATION), *sourceRoot, type);
 
       groupRemap[sourceGroup.id] = destinationGroup->id;
       matchedGroupIds.insert(destinationGroup->id);
@@ -141,8 +128,7 @@ namespace anm2ed
       auto mappedGroup = groupRemap.find(sourceTrack.groupId);
       auto groupId = mappedGroup != groupRemap.end() ? mappedGroup->second : -1;
 
-      if (auto destinationTrack =
-              track_group_find(*destinationTracks, sourceTrack.type, track_id_get(sourceTrack), groupId))
+      if (auto destinationTrack = track_find(*destinationTracks, sourceTrack.type, track_id_get(sourceTrack), groupId))
         track_merge(*destinationTrack, sourceTrack, type);
       else
       {
@@ -169,30 +155,16 @@ namespace anm2ed
       targetAnimation = element_get(ElementType::ANIMATION, target);
       if (!source || !targetAnimation) continue;
 
-      if (auto sourceRoot = child_first_get(*source, ElementType::ROOT_ANIMATION))
+      auto single_track_merge = [&](ElementType trackType)
       {
-        auto targetRoot = child_first_get(*targetAnimation, ElementType::ROOT_ANIMATION);
-        if (!targetRoot)
-        {
-          targetAnimation->children.push_back(element_make(ElementType::ROOT_ANIMATION));
-          targetRoot = &targetAnimation->children.back();
-        }
-        track_merge(*targetRoot, *sourceRoot, type);
-      }
+        if (auto sourceTrack = child_first_get(*source, trackType))
+          track_merge(child_ensure(*targetAnimation, trackType), *sourceTrack, type);
+      };
 
-      animation_tracks_merge(*targetAnimation, *source, ElementType::LAYER_ANIMATIONS, type);
-      animation_tracks_merge(*targetAnimation, *source, ElementType::NULL_ANIMATIONS, type);
-
-      if (auto sourceTriggers = child_first_get(*source, ElementType::TRIGGERS))
-      {
-        auto targetTriggers = child_first_get(*targetAnimation, ElementType::TRIGGERS);
-        if (!targetTriggers)
-        {
-          targetAnimation->children.push_back(element_make(ElementType::TRIGGERS));
-          targetTriggers = &targetAnimation->children.back();
-        }
-        track_merge(*targetTriggers, *sourceTriggers, type);
-      }
+      single_track_merge(ElementType::ROOT_ANIMATION);
+      for (const auto& row : TRACK_CONTAINERS)
+        animation_tracks_merge(*targetAnimation, *source, row.container, type);
+      single_track_merge(ElementType::TRIGGERS);
     }
 
     int finalIndex = target;

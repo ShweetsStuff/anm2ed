@@ -16,7 +16,7 @@ namespace anm2ed
     auto spritesheet = element_get(ElementType::SPRITESHEET, layer->spritesheetId);
     if (!spritesheet) return resolved;
 
-    auto region = element_child_id_get(*spritesheet, ElementType::REGION, frame.regionId);
+    auto region = child_id_get(*spritesheet, ElementType::REGION, frame.regionId);
     if (!region) return resolved;
 
     resolved.crop = region->crop;
@@ -89,86 +89,34 @@ namespace anm2ed
     return {minX, minY, maxX - minX, maxY - minY};
   }
 
-  Element* animation_container_get(Element& animation, ElementType type)
+  int Anm2::item_add(ItemType type, int animationIndex, const Element& item, int insertBeforeId,
+                      types::destination::Type destination)
   {
-    if (auto container = child_first_get(animation, type)) return container;
-    animation.children.push_back(element_make(type));
-    return &animation.children.back();
-  }
+    auto row = track_container_get(type);
+    auto elements = row ? element_get(row->elements) : nullptr;
+    if (!elements) return -1;
 
-  int Anm2::layer_animation_add(int animationIndex, int id, int insertBeforeId, std::string name, int spritesheetId,
-                                types::destination::Type destination)
-  {
-    auto layers = element_get(ElementType::LAYERS);
-    if (!layers) return -1;
-
-    id = id == -1 ? element_child_next_id_get(*layers, ElementType::LAYER_ELEMENT) : id;
-    auto layer = element_child_id_get(*layers, ElementType::LAYER_ELEMENT, id);
-    if (!layer)
+    auto id = item.id == -1 ? element_child_next_id_get(*elements, row->element) : item.id;
+    auto element = child_id_get(*elements, row->element, id);
+    if (!element)
     {
-      layers->children.push_back(element_make(ElementType::LAYER_ELEMENT));
-      layer = &layers->children.back();
-      layer->id = id;
+      element = &elements->children.emplace_back(element_make(row->element));
+      element->id = id;
     }
 
-    if (!name.empty()) layer->name = name;
-    layer->spritesheetId = element_get(ElementType::SPRITESHEET, spritesheetId) ? spritesheetId : 0;
+    if (!item.name.empty()) element->name = item.name;
+    element->spritesheetId = element_get(ElementType::SPRITESHEET, item.spritesheetId) ? item.spritesheetId : 0;
+    element->isShowRect = item.isShowRect;
 
     auto add = [&](Element& animation)
     {
-      if (animation_item_get(animation, ItemType::LAYER, id)) return;
-      auto layerAnimations = animation_container_get(animation, ElementType::LAYER_ANIMATIONS);
-      auto item = element_make(ElementType::LAYER_ANIMATION);
-      item.layerId = id;
-
-      if (insertBeforeId != -1)
-        for (auto it = layerAnimations->children.begin(); it != layerAnimations->children.end(); ++it)
-          if (it->type == ElementType::LAYER_ANIMATION && it->layerId == insertBeforeId)
-          {
-            layerAnimations->children.insert(it, item);
-            return;
-          }
-
-      layerAnimations->children.push_back(item);
-    };
-
-    if (destination == types::destination::ALL)
-    {
-      if (auto animations = element_get(ElementType::ANIMATIONS))
-        for (auto& animation : animations->children)
-          if (animation.type == ElementType::ANIMATION) add(animation);
-    }
-    else if (auto animation = element_get(ElementType::ANIMATION, animationIndex))
-      add(*animation);
-
-    return id;
-  }
-
-  int Anm2::null_animation_add(int animationIndex, int id, std::string name, bool isShowRect,
-                               types::destination::Type destination)
-  {
-    auto nulls = element_get(ElementType::NULLS);
-    if (!nulls) return -1;
-
-    id = id == -1 ? element_child_next_id_get(*nulls, ElementType::NULL_ELEMENT) : id;
-    auto null = element_child_id_get(*nulls, ElementType::NULL_ELEMENT, id);
-    if (!null)
-    {
-      nulls->children.push_back(element_make(ElementType::NULL_ELEMENT));
-      null = &nulls->children.back();
-      null->id = id;
-    }
-
-    if (!name.empty()) null->name = name;
-    null->isShowRect = isShowRect;
-
-    auto add = [&](Element& animation)
-    {
-      if (animation_item_get(animation, ItemType::NULL_, id)) return;
-      auto nullAnimations = animation_container_get(animation, ElementType::NULL_ANIMATIONS);
-      auto item = element_make(ElementType::NULL_ANIMATION);
-      item.nullId = id;
-      nullAnimations->children.push_back(item);
+      if (animation_item_get(animation, type, id)) return;
+      auto& tracks = child_ensure(animation, row->container);
+      auto track = element_make(row->track);
+      track.*(row->id) = id;
+      auto before = std::ranges::find_if(tracks.children, [&](const Element& child)
+                                         { return child.type == row->track && track_id_get(child) == insertBeforeId; });
+      tracks.children.insert(insertBeforeId == -1 ? tracks.children.end() : before, track);
     };
 
     if (destination == types::destination::ALL)

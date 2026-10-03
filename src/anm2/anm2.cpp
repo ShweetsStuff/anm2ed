@@ -5,6 +5,8 @@ using namespace tinyxml2;
 
 namespace anm2ed
 {
+  constexpr const char* CREATED_ON_FORMAT = "%m/%d/%Y %I:%M:%S %p";
+
   int animations_count_get(const Element& animations)
   {
     int count{};
@@ -17,30 +19,14 @@ namespace anm2ed
   {
     int current{};
     for (int i = 0; i < (int)animations.children.size(); ++i)
-    {
-      if (animations.children[i].type != ElementType::ANIMATION) continue;
-      if (current == animationIndex) return i;
-      ++current;
-    }
+      if (animations.children[i].type == ElementType::ANIMATION && current++ == animationIndex) return i;
     return -1;
   }
 
   int animations_child_insert_index_get(const Element& animations, int animationIndex)
   {
-    if (animationIndex <= 0)
-    {
-      for (int i = 0; i < (int)animations.children.size(); ++i)
-        if (animations.children[i].type == ElementType::ANIMATION) return i;
-      return (int)animations.children.size();
-    }
-    int current{};
-    for (int i = 0; i < (int)animations.children.size(); ++i)
-    {
-      if (animations.children[i].type != ElementType::ANIMATION) continue;
-      if (current == animationIndex) return i;
-      ++current;
-    }
-    return (int)animations.children.size();
+    auto childIndex = animations_child_index_get(animations, std::max(animationIndex, 0));
+    return childIndex == -1 ? (int)animations.children.size() : childIndex;
   }
 
   bool is_source_document_tag(std::string_view tag) { return tag == SOURCE_DOCUMENT_TAG; }
@@ -89,14 +75,12 @@ namespace anm2ed
     root = element_make(ElementType::ANIMATED_ACTOR);
 
     auto info = element_make(ElementType::INFO);
-    info.createdOn = time::get("%m/%d/%Y %I:%M:%S %p");
+    info.createdOn = time::get(CREATED_ON_FORMAT);
 
     auto content = element_make(ElementType::CONTENT);
-    content.children.push_back(element_make(ElementType::SPRITESHEETS));
-    content.children.push_back(element_make(ElementType::SHADERS));
-    content.children.push_back(element_make(ElementType::LAYERS));
-    content.children.push_back(element_make(ElementType::NULLS));
-    content.children.push_back(element_make(ElementType::EVENTS));
+    for (auto type : {ElementType::SPRITESHEETS, ElementType::SHADERS, ElementType::LAYERS, ElementType::NULLS,
+                      ElementType::EVENTS})
+      content.children.push_back(element_make(type));
 
     root.children.push_back(std::move(info));
     root.children.push_back(std::move(content));
@@ -169,23 +153,19 @@ namespace anm2ed
 
   XMLElement* Anm2::to_element(XMLDocument& document, Options options) const
   {
-    if (options.isExtendedFormat)
+    auto serialize = [&](Flags flags)
     {
-      auto editor = normalized_for_serialize(SERIALIZE_ANM2ED_DEFAULT);
-      editor.region_frames_sync(true);
-      return element_to_xml(document, editor.root, ElementType::UNKNOWN, SERIALIZE_ANM2ED_DEFAULT);
-    }
+      auto normalized = normalized_for_serialize(flags);
+      normalized.region_frames_sync(true);
+      return element_to_xml(document, normalized.root, ElementType::UNKNOWN, flags);
+    };
 
-    auto isaac = normalized_for_serialize(SERIALIZE_ISAAC_DEFAULT);
-    isaac.region_frames_sync(true);
-    auto out = element_to_xml(document, isaac.root, ElementType::UNKNOWN, SERIALIZE_ISAAC_DEFAULT);
+    auto editor = serialize(SERIALIZE_ANM2ED_DEFAULT);
+    if (options.isExtendedFormat) return editor;
 
-    auto editor = normalized_for_serialize(SERIALIZE_ANM2ED_DEFAULT);
-    editor.region_frames_sync(true);
-    auto extension = element_to_xml(document, editor.root, ElementType::UNKNOWN, SERIALIZE_ANM2ED_DEFAULT);
-    extension->SetName(SOURCE_DOCUMENT_TAG.data());
-    out->InsertEndChild(extension);
-
+    auto out = serialize(SERIALIZE_ISAAC_DEFAULT);
+    editor->SetName(SOURCE_DOCUMENT_TAG.data());
+    out->InsertEndChild(editor);
     return out;
   }
 

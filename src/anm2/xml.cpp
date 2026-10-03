@@ -88,13 +88,6 @@ namespace anm2ed
     return true;
   }
 
-  void path_set(XMLElement* element, const char* name, const std::filesystem::path& value)
-  {
-    if (!element || value.empty()) return;
-    auto valueUtf8 = path::to_utf8(value);
-    element->SetAttribute(name, valueUtf8.c_str());
-  }
-
   float color_read(const XMLElement* element, const char* name, float fallback)
   {
     int value{};
@@ -120,18 +113,6 @@ namespace anm2ed
 
   Interpolation interpolation_read(const XMLElement* element) { return interpolation_read(element, "Interpolated"); }
 
-  void interpolation_write(XMLElement* element, Interpolation interpolation)
-  {
-    if (interpolation == Interpolation::NONE || interpolation == Interpolation::LINEAR)
-    {
-      element->SetAttribute("Interpolated", interpolation == Interpolation::LINEAR);
-      return;
-    }
-
-    auto value = INTERPOLATION_VALUES[(std::size_t)interpolation];
-    if (!value.empty()) element->SetAttribute("Interpolated", value.data());
-  }
-
   Origin origin_read(const XMLElement* element)
   {
     auto value = element ? element->Attribute("Origin") : nullptr;
@@ -141,19 +122,6 @@ namespace anm2ed
       if (!ORIGIN_VALUES[i].empty() && ORIGIN_VALUES[i] == value) return (Origin)i;
 
     return Origin::CUSTOM;
-  }
-
-  void origin_write(XMLElement* out, const Element& element)
-  {
-    auto origin = ORIGIN_VALUES[(std::size_t)element.origin];
-    if (!origin.empty())
-    {
-      out->SetAttribute("Origin", origin.data());
-      return;
-    }
-
-    out->SetAttribute("XPivot", element.pivot.x);
-    out->SetAttribute("YPivot", element.pivot.y);
   }
 
   void element_attributes_read(Element& out, const XMLElement* element)
@@ -265,11 +233,52 @@ namespace anm2ed
     return out;
   }
 
+  struct WriteRule
+  {
+    ElementType type;
+    Flag flag;
+    bool isEmptySkipped;
+  };
+
+  constexpr WriteRule WRITE_RULES[] = {
+      {ElementType::SHADERS, SERIALIZE_EXTENSIONS, true},
+      {ElementType::SHADER, SERIALIZE_EXTENSIONS, false},
+      {ElementType::UNIFORM, SERIALIZE_EXTENSIONS, false},
+      {ElementType::COMPONENT, SERIALIZE_EXTENSIONS, false},
+      {ElementType::SOUNDS, SERIALIZE_SOUNDS, true},
+      {ElementType::LAYER_ANIMATION_GROUPS, SERIALIZE_GROUPS, true},
+      {ElementType::NULL_ANIMATION_GROUPS, SERIALIZE_GROUPS, true},
+      {ElementType::REGION, SERIALIZE_REGIONS, false},
+      {ElementType::GROUP, SERIALIZE_GROUPS, false}};
+
+  struct XmlSink : ElementSink
+  {
+    XMLDocument& document;
+    std::vector<XMLElement*> stack{};
+    XMLElement* root{};
+
+    explicit XmlSink(XMLDocument& document) : document(document) {}
+
+    void open(std::string_view tag) override
+    {
+      auto element = document.NewElement(std::string(tag).c_str());
+      if (stack.empty())
+        root = element;
+      else
+        stack.back()->InsertEndChild(element);
+      stack.push_back(element);
+    }
+
+    void attribute(const char* name, const char* value) override { stack.back()->SetAttribute(name, value); }
+    void attribute(const char* name, int value) override { stack.back()->SetAttribute(name, value); }
+    void attribute(const char* name, bool value) override { stack.back()->SetAttribute(name, value); }
+    void attribute(const char* name, float value) override { stack.back()->SetAttribute(name, value); }
+    void close() override { stack.pop_back(); }
+  };
+
   bool is_nested_group_parent(ElementType parentType, Flags flags)
   {
-    return has_flag(flags, SERIALIZE_NESTED_GROUPS) &&
-           (parentType == ElementType::ANIMATIONS || parentType == ElementType::LAYER_ANIMATIONS ||
-            parentType == ElementType::NULL_ANIMATIONS);
+    return has_flag(flags, SERIALIZE_NESTED_GROUPS) && group_child_type_get(parentType) != ElementType::UNKNOWN;
   }
 
   bool is_group_id_serialized(Flags flags)
@@ -280,175 +289,10 @@ namespace anm2ed
   bool element_write_skip(const Element& element, ElementType parentType, Flags flags)
   {
     if (!is_track_child_valid(parentType, element.type)) return true;
-    if ((element.type == ElementType::SHADERS || element.type == ElementType::SHADER ||
-         element.type == ElementType::UNIFORM || element.type == ElementType::COMPONENT) &&
-        !has_flag(flags, SERIALIZE_EXTENSIONS))
-      return true;
-    if (element.type == ElementType::SHADERS && element.children.empty()) return true;
-    if (element.type == ElementType::SOUNDS && (!has_flag(flags, SERIALIZE_SOUNDS) || element.children.empty()))
-      return true;
-    if ((element.type == ElementType::LAYER_ANIMATION_GROUPS || element.type == ElementType::NULL_ANIMATION_GROUPS) &&
-        (!has_flag(flags, SERIALIZE_GROUPS) || element.children.empty()))
-      return true;
     if (element.type == ElementType::SOUND_ELEMENT && parentType == ElementType::TRIGGER) return true;
-    if (element.type == ElementType::REGION && !has_flag(flags, SERIALIZE_REGIONS)) return true;
-    if (element.type == ElementType::GROUP && !has_flag(flags, SERIALIZE_GROUPS)) return true;
+    for (const auto& rule : WRITE_RULES)
+      if (rule.type == element.type) return !has_flag(flags, rule.flag) || (rule.isEmptySkipped && element.children.empty());
     return false;
-  }
-
-  void frame_attributes_write(XMLElement* out, const Element& element, ElementType parentType, Flags flags)
-  {
-    if (parentType == ElementType::LAYER_ANIMATION)
-    {
-      bool isHasValidRegion = has_flag(flags, SERIALIZE_REGIONS) && element.regionId != -1;
-      bool isWriteRegionValues = has_flag(flags, SERIALIZE_REDUNDANT_FRAME_REGION_VALUES) || !isHasValidRegion;
-
-      if (isHasValidRegion) out->SetAttribute("RegionId", element.regionId);
-      if (isWriteRegionValues)
-      {
-        out->SetAttribute("XPivot", element.pivot.x);
-        out->SetAttribute("YPivot", element.pivot.y);
-        out->SetAttribute("XCrop", element.crop.x);
-        out->SetAttribute("YCrop", element.crop.y);
-        out->SetAttribute("Width", element.size.x);
-        out->SetAttribute("Height", element.size.y);
-      }
-    }
-
-    out->SetAttribute("XPosition", element.position.x);
-    out->SetAttribute("YPosition", element.position.y);
-    out->SetAttribute("Delay", element.duration);
-    out->SetAttribute("Visible", element.isVisible);
-    out->SetAttribute("XScale", element.scale.x);
-    out->SetAttribute("YScale", element.scale.y);
-    if (has_flag(flags, SERIALIZE_EXTENSIONS))
-    {
-      out->SetAttribute("ShearX", element.shear.x);
-      out->SetAttribute("ShearY", element.shear.y);
-    }
-    out->SetAttribute("RedTint", color_write(element.tint.r));
-    out->SetAttribute("GreenTint", color_write(element.tint.g));
-    out->SetAttribute("BlueTint", color_write(element.tint.b));
-    out->SetAttribute("AlphaTint", color_write(element.tint.a));
-    out->SetAttribute("RedOffset", color_write(element.colorOffset.r));
-    out->SetAttribute("GreenOffset", color_write(element.colorOffset.g));
-    out->SetAttribute("BlueOffset", color_write(element.colorOffset.b));
-    out->SetAttribute("Rotation", element.rotation);
-    interpolation_write(out, element.interpolation);
-    if (has_flag(flags, SERIALIZE_EXTENSIONS) && element.shaderId != -1)
-      out->SetAttribute("ShaderId", element.shaderId);
-  }
-
-  void element_attributes_write(XMLElement* out, const Element& element, ElementType parentType, Flags flags)
-  {
-    if (element.type == ElementType::INFO)
-    {
-      out->SetAttribute("CreatedBy", element.createdBy.c_str());
-      out->SetAttribute("CreatedOn", element.createdOn.c_str());
-      out->SetAttribute("Fps", element.fps);
-      out->SetAttribute("Version", element.version);
-    }
-    else if (element.type == ElementType::ANIMATIONS)
-      out->SetAttribute("DefaultAnimation", element.defaultAnimation.c_str());
-    else if (element.type == ElementType::SPRITESHEET)
-    {
-      out->SetAttribute("Id", element.id);
-      path_set(out, "Path", element.path);
-    }
-    else if (element.type == ElementType::SHADER)
-    {
-      out->SetAttribute("Id", element.id);
-      out->SetAttribute("Name", element.name.c_str());
-      path_set(out, "Vertex", element.vertex);
-      path_set(out, "Fragment", element.fragment);
-    }
-    else if (element.type == ElementType::UNIFORM)
-    {
-      out->SetAttribute("Name", element.name.c_str());
-      if (!element.binding.empty()) out->SetAttribute("Binding", element.binding.c_str());
-      if (!element.value.empty()) out->SetAttribute("Value", element.value.c_str());
-    }
-    else if (element.type == ElementType::COMPONENT)
-    {
-      out->SetAttribute("Index", element.index);
-      if (!element.binding.empty()) out->SetAttribute("Binding", element.binding.c_str());
-      if (!element.value.empty()) out->SetAttribute("Value", element.value.c_str());
-    }
-    else if (element.type == ElementType::REGION)
-    {
-      out->SetAttribute("Id", element.id);
-      out->SetAttribute("Name", element.name.c_str());
-      out->SetAttribute("XCrop", element.crop.x);
-      out->SetAttribute("YCrop", element.crop.y);
-      out->SetAttribute("Width", element.size.x);
-      out->SetAttribute("Height", element.size.y);
-      origin_write(out, element);
-    }
-    else if (element.type == ElementType::LAYER_ELEMENT)
-    {
-      out->SetAttribute("Id", element.id);
-      out->SetAttribute("Name", element.name.c_str());
-      out->SetAttribute("SpritesheetId", element.spritesheetId);
-    }
-    else if (element.type == ElementType::NULL_ELEMENT)
-    {
-      out->SetAttribute("Id", element.id);
-      out->SetAttribute("Name", element.name.c_str());
-      if (element.isShowRect) out->SetAttribute("ShowRect", element.isShowRect);
-    }
-    else if (element.type == ElementType::GROUP)
-    {
-      if (!is_nested_group_parent(parentType, flags)) out->SetAttribute("Id", element.id);
-      out->SetAttribute("Name", element.name.c_str());
-      out->SetAttribute("IsExpanded", element.isExpanded);
-      out->SetAttribute("Visible", element.isVisible);
-      if ((parentType == ElementType::LAYER_ANIMATION_GROUPS || parentType == ElementType::NULL_ANIMATION_GROUPS) &&
-          element.index != -1)
-        out->SetAttribute("Index", element.index);
-    }
-    else if (element.type == ElementType::EVENT_ELEMENT)
-    {
-      out->SetAttribute("Id", element.id);
-      out->SetAttribute("Name", element.name.c_str());
-    }
-    else if (element.type == ElementType::SOUND_ELEMENT)
-    {
-      out->SetAttribute("Id", element.id);
-      if (parentType != ElementType::TRIGGER) path_set(out, "Path", element.path);
-    }
-    else if (element.type == ElementType::ANIMATION)
-    {
-      out->SetAttribute("Name", element.name.c_str());
-      out->SetAttribute("FrameNum", element.frameNum);
-      out->SetAttribute("Loop", element.isLoop);
-      if (element.groupId != -1 && is_group_id_serialized(flags)) out->SetAttribute("GroupId", element.groupId);
-    }
-    else if (element.type == ElementType::LAYER_ANIMATION)
-    {
-      out->SetAttribute("LayerId", element.layerId);
-      out->SetAttribute("Visible", element.isVisible);
-      if (element.groupId != -1 && is_group_id_serialized(flags)) out->SetAttribute("GroupId", element.groupId);
-    }
-    else if (element.type == ElementType::NULL_ANIMATION)
-    {
-      out->SetAttribute("NullId", element.nullId);
-      out->SetAttribute("Visible", element.isVisible);
-      if (element.groupId != -1 && is_group_id_serialized(flags)) out->SetAttribute("GroupId", element.groupId);
-    }
-    else if (element.type == ElementType::FRAME)
-      frame_attributes_write(out, element, parentType, flags);
-    else if (element.type == ElementType::TRIGGER)
-    {
-      if (element.eventId != -1) out->SetAttribute("EventId", element.eventId);
-      out->SetAttribute("AtFrame", element.atFrame);
-    }
-  }
-
-  void bake_attributes_write(XMLElement* out, Interpolation interpolation, int bakeDelay)
-  {
-    auto value = INTERPOLATION_VALUES[(std::size_t)interpolation];
-    if (!value.empty()) out->SetAttribute("BakeInterpolation", value.data());
-    out->SetAttribute("BakeDelay", bakeDelay);
   }
 
   bool is_frame_bake_serialized(const Element& frame, Flags flags)
@@ -457,64 +301,223 @@ namespace anm2ed
            frame.interpolation != Interpolation::NONE && frame.interpolation != Interpolation::LINEAR;
   }
 
-  void baked_frames_insert(XMLDocument& document, XMLElement* out, const Element& track, int index, Flags flags)
+  void path_emit(ElementSink& sink, const char* name, const std::filesystem::path& value)
   {
-    const auto& original = track.children[index];
-    auto nextFrame = index + 1 < (int)track.children.size() && track.children[index + 1].type == ElementType::FRAME
-                         ? track.children[index + 1]
-                         : original;
-    auto bakeDelay = std::max(original.duration, FRAME_DURATION_MIN);
+    if (!value.empty()) sink.attribute(name, path::to_utf8(value).c_str());
+  }
 
-    for (int bakeIndex = 0; bakeIndex < bakeDelay; ++bakeIndex)
+  void interpolation_emit(ElementSink& sink, const char* name, Interpolation interpolation)
+  {
+    auto value = INTERPOLATION_VALUES[(std::size_t)interpolation];
+    if (interpolation == Interpolation::NONE || interpolation == Interpolation::LINEAR)
+      sink.attribute(name, interpolation == Interpolation::LINEAR);
+    else if (!value.empty())
+      sink.attribute(name, value.data());
+  }
+
+  void id_name_emit(ElementSink& sink, const Element& element)
+  {
+    sink.attribute("Id", element.id);
+    sink.attribute("Name", element.name.c_str());
+  }
+
+  void binding_value_emit(ElementSink& sink, const Element& element)
+  {
+    if (!element.binding.empty()) sink.attribute("Binding", element.binding.c_str());
+    if (!element.value.empty()) sink.attribute("Value", element.value.c_str());
+  }
+
+  void group_id_emit(ElementSink& sink, const Element& element, Flags flags)
+  {
+    if (element.groupId != -1 && is_group_id_serialized(flags)) sink.attribute("GroupId", element.groupId);
+  }
+
+  void crop_size_emit(ElementSink& sink, const Element& element)
+  {
+    sink.attribute("XCrop", element.crop.x);
+    sink.attribute("YCrop", element.crop.y);
+    sink.attribute("Width", element.size.x);
+    sink.attribute("Height", element.size.y);
+  }
+
+  void frame_attributes_emit(ElementSink& sink, const Element& element, ElementType parentType, Flags flags)
+  {
+    if (parentType == ElementType::LAYER_ANIMATION)
     {
-      auto baked = original;
-      auto amount = interpolation_factor(original.interpolation, (float)bakeIndex / (float)bakeDelay);
-      baked.duration = FRAME_DURATION_MIN;
-      baked.interpolation = Interpolation::NONE;
-      baked.rotation = glm::mix(original.rotation, nextFrame.rotation, amount);
-      baked.position = glm::mix(original.position, nextFrame.position, amount);
-      baked.scale = glm::mix(original.scale, nextFrame.scale, amount);
-      baked.shear = glm::mix(original.shear, nextFrame.shear, amount);
-      baked.colorOffset = glm::mix(original.colorOffset, nextFrame.colorOffset, amount);
-      baked.tint = glm::mix(original.tint, nextFrame.tint, amount);
-      auto frame = element_to_xml(document, baked, track.type, flags);
-      if (bakeIndex == 0) bake_attributes_write(frame, original.interpolation, bakeDelay);
-      out->InsertEndChild(frame);
+      bool isHasValidRegion = has_flag(flags, SERIALIZE_REGIONS) && element.regionId != -1;
+      if (isHasValidRegion) sink.attribute("RegionId", element.regionId);
+      if (has_flag(flags, SERIALIZE_REDUNDANT_FRAME_REGION_VALUES) || !isHasValidRegion)
+      {
+        sink.attribute("XPivot", element.pivot.x);
+        sink.attribute("YPivot", element.pivot.y);
+        crop_size_emit(sink, element);
+      }
+    }
+
+    sink.attribute("XPosition", element.position.x);
+    sink.attribute("YPosition", element.position.y);
+    sink.attribute("Delay", element.duration);
+    sink.attribute("Visible", element.isVisible);
+    sink.attribute("XScale", element.scale.x);
+    sink.attribute("YScale", element.scale.y);
+    if (has_flag(flags, SERIALIZE_EXTENSIONS))
+    {
+      sink.attribute("ShearX", element.shear.x);
+      sink.attribute("ShearY", element.shear.y);
+    }
+    sink.attribute("RedTint", color_write(element.tint.r));
+    sink.attribute("GreenTint", color_write(element.tint.g));
+    sink.attribute("BlueTint", color_write(element.tint.b));
+    sink.attribute("AlphaTint", color_write(element.tint.a));
+    sink.attribute("RedOffset", color_write(element.colorOffset.r));
+    sink.attribute("GreenOffset", color_write(element.colorOffset.g));
+    sink.attribute("BlueOffset", color_write(element.colorOffset.b));
+    sink.attribute("Rotation", element.rotation);
+    interpolation_emit(sink, "Interpolated", element.interpolation);
+    if (has_flag(flags, SERIALIZE_EXTENSIONS) && element.shaderId != -1) sink.attribute("ShaderId", element.shaderId);
+  }
+
+  void element_attributes_emit(ElementSink& sink, const Element& element, ElementType parentType, Flags flags)
+  {
+    switch (element.type)
+    {
+      case ElementType::INFO:
+        sink.attribute("CreatedBy", element.createdBy.c_str());
+        sink.attribute("CreatedOn", element.createdOn.c_str());
+        sink.attribute("Fps", element.fps);
+        sink.attribute("Version", element.version);
+        break;
+      case ElementType::ANIMATIONS:
+        sink.attribute("DefaultAnimation", element.defaultAnimation.c_str());
+        break;
+      case ElementType::SPRITESHEET:
+        sink.attribute("Id", element.id);
+        path_emit(sink, "Path", element.path);
+        break;
+      case ElementType::SHADER:
+        id_name_emit(sink, element);
+        path_emit(sink, "Vertex", element.vertex);
+        path_emit(sink, "Fragment", element.fragment);
+        break;
+      case ElementType::UNIFORM:
+        sink.attribute("Name", element.name.c_str());
+        binding_value_emit(sink, element);
+        break;
+      case ElementType::COMPONENT:
+        sink.attribute("Index", element.index);
+        binding_value_emit(sink, element);
+        break;
+      case ElementType::REGION:
+      {
+        id_name_emit(sink, element);
+        crop_size_emit(sink, element);
+        auto origin = ORIGIN_VALUES[(std::size_t)element.origin];
+        if (!origin.empty())
+          sink.attribute("Origin", origin.data());
+        else
+        {
+          sink.attribute("XPivot", element.pivot.x);
+          sink.attribute("YPivot", element.pivot.y);
+        }
+        break;
+      }
+      case ElementType::LAYER_ELEMENT:
+        id_name_emit(sink, element);
+        sink.attribute("SpritesheetId", element.spritesheetId);
+        break;
+      case ElementType::NULL_ELEMENT:
+        id_name_emit(sink, element);
+        if (element.isShowRect) sink.attribute("ShowRect", element.isShowRect);
+        break;
+      case ElementType::GROUP:
+        if (!is_nested_group_parent(parentType, flags)) sink.attribute("Id", element.id);
+        sink.attribute("Name", element.name.c_str());
+        sink.attribute("IsExpanded", element.isExpanded);
+        sink.attribute("Visible", element.isVisible);
+        if ((parentType == ElementType::LAYER_ANIMATION_GROUPS || parentType == ElementType::NULL_ANIMATION_GROUPS) &&
+            element.index != -1)
+          sink.attribute("Index", element.index);
+        break;
+      case ElementType::EVENT_ELEMENT:
+        id_name_emit(sink, element);
+        break;
+      case ElementType::SOUND_ELEMENT:
+        sink.attribute("Id", element.id);
+        if (parentType != ElementType::TRIGGER) path_emit(sink, "Path", element.path);
+        break;
+      case ElementType::ANIMATION:
+        sink.attribute("Name", element.name.c_str());
+        sink.attribute("FrameNum", element.frameNum);
+        sink.attribute("Loop", element.isLoop);
+        group_id_emit(sink, element, flags);
+        break;
+      case ElementType::LAYER_ANIMATION:
+      case ElementType::NULL_ANIMATION:
+        sink.attribute(element.type == ElementType::LAYER_ANIMATION ? "LayerId" : "NullId", track_id_get(element));
+        sink.attribute("Visible", element.isVisible);
+        group_id_emit(sink, element, flags);
+        break;
+      case ElementType::FRAME:
+        frame_attributes_emit(sink, element, parentType, flags);
+        break;
+      case ElementType::TRIGGER:
+        if (element.eventId != -1) sink.attribute("EventId", element.eventId);
+        sink.attribute("AtFrame", element.atFrame);
+        break;
+      default:
+        break;
     }
   }
 
-  void trigger_sounds_xml_insert(XMLDocument& document, XMLElement* out, const Element& element, Flags flags)
-  {
-    if (element.type != ElementType::TRIGGER || !has_flag(flags, SERIALIZE_SOUNDS)) return;
-
-    for (auto soundId : element.soundIds)
-    {
-      if (soundId == -1) continue;
-      auto sound = document.NewElement(element_tag_get(ElementType::SOUND_ELEMENT).data());
-      sound->SetAttribute("Id", soundId);
-      out->InsertEndChild(sound);
-    }
-  }
-
-  XMLElement* element_to_xml(XMLDocument& document, const Element& element, ElementType parentType, Flags flags)
+  void element_emit(ElementSink& sink, const Element& element, ElementType parentType, Flags flags,
+                    std::optional<BakeAttributes> bake)
   {
     auto tag = element.type == ElementType::UNKNOWN ? std::string_view(element.tag) : element_tag_get(element.type);
-    auto out = document.NewElement(tag.empty() ? element.tag.c_str() : tag.data());
-    element_attributes_write(out, element, parentType, flags);
-    trigger_sounds_xml_insert(document, out, element, flags);
+    sink.open(tag.empty() ? std::string_view(element.tag) : tag);
+    element_attributes_emit(sink, element, parentType, flags);
+    if (bake)
+    {
+      auto value = INTERPOLATION_VALUES[(std::size_t)bake->interpolation];
+      if (!value.empty()) sink.attribute("BakeInterpolation", value.data());
+      sink.attribute("BakeDelay", bake->delay);
+    }
+    sink.body();
+
+    if (element.type == ElementType::TRIGGER && has_flag(flags, SERIALIZE_SOUNDS))
+      for (auto soundId : element.soundIds)
+      {
+        if (soundId == -1) continue;
+        auto sound = element_make(ElementType::SOUND_ELEMENT);
+        sound.id = soundId;
+        element_emit(sink, sound, ElementType::TRIGGER, flags);
+      }
 
     for (int i = 0; i < (int)element.children.size(); ++i)
     {
       const auto& child = element.children[i];
       if (element_write_skip(child, element.type, flags)) continue;
+      if (!is_track(element) || !is_frame_bake_serialized(child, flags))
+      {
+        element_emit(sink, child, element.type, flags);
+        continue;
+      }
 
-      if (is_track(element) && is_frame_bake_serialized(child, flags))
-        baked_frames_insert(document, out, element, i, flags);
-      else
-        out->InsertEndChild(element_to_xml(document, child, element.type, flags));
+      auto isNextFrame = i + 1 < (int)element.children.size() && element.children[i + 1].type == ElementType::FRAME;
+      auto baked = frame_bake_split(child, isNextFrame ? element.children[i + 1] : child, FRAME_DURATION_MIN, false,
+                                    false);
+      for (int bakeIndex = 0; bakeIndex < (int)baked.size(); ++bakeIndex)
+        element_emit(sink, baked[bakeIndex], element.type, flags,
+                     bakeIndex == 0 ? std::optional<BakeAttributes>({child.interpolation, (int)baked.size()})
+                                    : std::nullopt);
     }
+    sink.close();
+  }
 
-    return out;
+  XMLElement* element_to_xml(XMLDocument& document, const Element& element, ElementType parentType, Flags flags)
+  {
+    XmlSink sink(document);
+    element_emit(sink, element, parentType, flags);
+    return sink.root;
   }
 
   XMLElement* element_to_xml(XMLDocument& document, const Element& element, Flags flags)
@@ -535,7 +538,7 @@ namespace anm2ed
   }
 
   bool Anm2::deserialize(ElementType type, const std::string& string, bool isAppend, std::string* errorString,
-                         const std::filesystem::path& directory)
+                         const std::filesystem::path& directory, int spritesheetId)
   {
     XMLDocument document{};
     if (document.Parse(string.c_str()) != XML_SUCCESS)
@@ -551,17 +554,17 @@ namespace anm2ed
       return false;
     }
 
-    auto containerType = element_container_type_get(type);
-    auto container = element_get(containerType);
+    auto containerType = type == ElementType::REGION ? ElementType::SPRITESHEET : ELEMENT_CONTAINERS[(int)type];
+    auto container = type == ElementType::REGION ? element_get(containerType, spritesheetId) : element_get(containerType);
     if (!container)
     {
       if (errorString) *errorString = std::format("No {} container.", element_tag_get(containerType));
       return false;
     }
 
+    auto isPath = type == ElementType::SOUND_ELEMENT || type == ElementType::SPRITESHEET;
     std::optional<WorkingDirectory> workingDirectory{};
-    if ((type == ElementType::SOUND_ELEMENT || type == ElementType::SPRITESHEET) && !directory.empty())
-      workingDirectory.emplace(directory);
+    if (isPath && !directory.empty()) workingDirectory.emplace(directory);
 
     for (auto xmlElement = document.FirstChildElement(tag.data()); xmlElement;
          xmlElement = xmlElement->NextSiblingElement(tag.data()))
@@ -572,45 +575,8 @@ namespace anm2ed
         element.id = element_child_next_id_get(*container, type);
       else
         element_child_id_erase(*container, type, element.id);
-      if (type == ElementType::SOUND_ELEMENT || type == ElementType::SPRITESHEET)
-        element.path = path::backslash_handle(element.path);
+      if (isPath) element.path = path::backslash_handle(element.path);
       container->children.push_back(element);
-    }
-
-    return true;
-  }
-
-  bool Anm2::regions_deserialize(int spritesheetId, const std::string& string, bool isAppend, std::string* errorString)
-  {
-    XMLDocument document{};
-    if (document.Parse(string.c_str()) != XML_SUCCESS)
-    {
-      if (errorString) *errorString = document.ErrorStr();
-      return false;
-    }
-
-    if (!document.FirstChildElement("Region"))
-    {
-      if (errorString) *errorString = "No valid region(s).";
-      return false;
-    }
-
-    auto spritesheet = element_get(ElementType::SPRITESHEET, spritesheetId);
-    if (!spritesheet)
-    {
-      if (errorString) *errorString = "No spritesheet.";
-      return false;
-    }
-
-    for (auto element = document.FirstChildElement("Region"); element; element = element->NextSiblingElement("Region"))
-    {
-      auto region = element_read(element);
-      if (region.type != ElementType::REGION) continue;
-      if (isAppend)
-        region.id = element_child_next_id_get(*spritesheet, ElementType::REGION);
-      else
-        element_child_id_erase(*spritesheet, ElementType::REGION, region.id);
-      spritesheet->children.push_back(region);
     }
 
     return true;

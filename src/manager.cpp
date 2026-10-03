@@ -267,7 +267,7 @@ namespace anm2ed
       auto nulls = document->anm2.element_get(ElementType::NULLS);
       if (id == -1)
         editNull = element_make(ElementType::NULL_ELEMENT);
-      else if (auto null = nulls ? element_child_id_get(*nulls, ElementType::NULL_ELEMENT, id) : nullptr; null)
+      else if (auto null = nulls ? child_id_get(*nulls, ElementType::NULL_ELEMENT, id) : nullptr; null)
         editNull = *null;
       else
         return;
