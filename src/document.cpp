@@ -895,6 +895,11 @@ namespace anm2ed
     selected_set(SelectionKind::FRAMES, frameReferences);
     selected_set(SelectionKind::TRACKS, tracks);
     if (!frameReferences.empty() && !frameReferences.contains(reference_get())) reference_set(*frameReferences.begin());
+
+    // The spritesheet editor follows the first selected layer frame's spritesheet.
+    for (auto frame : frameReferences)
+      if (auto spritesheet = frame.itemType == LAYER ? model.layer_spritesheet_get(frame.itemID) : nullptr)
+        return focused_id_set(SelectionKind::SPRITESHEETS, spritesheet->id);
   }
 
   void Document::frame_references_clear() { selection.uids[SelectionKind::FRAMES].clear(); }

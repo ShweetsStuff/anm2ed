@@ -44,24 +44,6 @@ namespace anm2ed::imgui
     auto& isGridSnap = settings.editorIsGridSnap;
     auto& isBorder = settings.editorIsBorder;
     auto& isTransparent = settings.editorIsTransparent;
-    auto selected_layer_spritesheet_get = [&]()
-    {
-      for (auto frameReference : document.frame_references_get())
-      {
-        if (frameReference.itemType != LAYER) continue;
-        if (auto layer = model::item_get(model.content.layers, frameReference.itemID)) return layer->spritesheetId;
-      }
-      if (reference.frameIndex >= 0 && reference.itemType == LAYER)
-        if (auto layer = model::item_get(model.content.layers, reference.itemID)) return layer->spritesheetId;
-      return -1;
-    };
-    if (auto selectedLayerSpritesheet = selected_layer_spritesheet_get();
-        selectedLayerSpritesheet != -1 && document.editTarget != Document::EditTarget::REGION &&
-        document.editTarget != Document::EditTarget::SPRITESHEET)
-    {
-      referenceSpritesheet = selectedLayerSpritesheet;
-      document.focused_id_set(SelectionKind::SPRITESHEETS, referenceSpritesheet);
-    }
     auto spritesheet = model::item_get(model.content.spritesheets, referenceSpritesheet);
     auto baseTexture = document.texture_get(referenceSpritesheet);
     auto texture = baseTexture;

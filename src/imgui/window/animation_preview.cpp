@@ -121,76 +121,6 @@ namespace anm2ed::imgui
     return rect;
   }
 
-  std::filesystem::path render_destination_directory(const std::filesystem::path& path, int type)
-  {
-    if (type == render::PNGS) return path;
-    auto directory = path.parent_path();
-    if (directory.empty()) directory = std::filesystem::current_path();
-    return directory;
-  }
-
-  std::filesystem::path render_frame_filename(const std::filesystem::path& format, int index, int type)
-  {
-    if (type != render::PNGS) return path::from_utf8(std::format("frame_{:06}.png", index));
-
-    auto formatString = path::to_utf8(format);
-    try
-    {
-      auto name = std::vformat(formatString, std::make_format_args(index));
-      auto filename = path::from_utf8(name).filename();
-      if (filename.empty()) return path::from_utf8(std::format("frame_{:06}.png", index));
-      if (filename.extension().empty()) filename.replace_extension(render::EXTENSIONS[render::SPRITESHEET]);
-      return filename;
-    }
-    catch (...)
-    {
-      return path::from_utf8(std::format("frame_{:06}.png", index));
-    }
-  }
-
-  std::filesystem::path render_temp_directory_create(const std::filesystem::path& directory)
-  {
-    auto timestamp = (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                         std::chrono::system_clock::now().time_since_epoch())
-                         .count();
-    for (int suffix = 0; suffix < 1000; ++suffix)
-    {
-      auto tempDirectory = directory / path::from_utf8(std::format(".anm2ed_render_tmp_{}_{}", timestamp, suffix));
-      std::error_code ec;
-      if (std::filesystem::create_directories(tempDirectory, ec)) return tempDirectory;
-    }
-    return {};
-  }
-
-  void render_temp_cleanup(std::filesystem::path& directory, std::vector<std::filesystem::path>& frames)
-  {
-    std::error_code ec;
-    if (!directory.empty()) std::filesystem::remove_all(directory, ec);
-    directory.clear();
-    frames.clear();
-  }
-
-  void pixels_unpremultiply_alpha(std::vector<uint8_t>& pixels)
-  {
-    for (size_t index = 0; index + 3 < pixels.size(); index += 4)
-    {
-      auto alpha = pixels[index + 3];
-      if (alpha == 0)
-      {
-        pixels[index + 0] = 0;
-        pixels[index + 1] = 0;
-        pixels[index + 2] = 0;
-        continue;
-      }
-      if (alpha == 255) continue;
-
-      float alphaUnit = (float)alpha / 255.0f;
-      pixels[index + 0] = (uint8_t)glm::clamp((float)std::round((float)pixels[index + 0] / alphaUnit), 0.0f, 255.0f);
-      pixels[index + 1] = (uint8_t)glm::clamp((float)std::round((float)pixels[index + 1] / alphaUnit), 0.0f, 255.0f);
-      pixels[index + 2] = (uint8_t)glm::clamp((float)std::round((float)pixels[index + 2] / alphaUnit), 0.0f, 255.0f);
-    }
-  }
-
   int trigger_sound_id_get(Document& document, const model::Animation* animation, float time,
                            int deterministicIndex = -1)
   {
@@ -209,65 +139,12 @@ namespace anm2ed::imgui
     return document.sound_get(soundID) ? soundID : -1;
   }
 
-  void sounds_detach(const Document& document, MIX_Mixer* mixer)
-  {
-    for (auto& [id, _] : document.sounds)
-      if (auto sound = document.sound_get(id)) audio::track_detach(*sound, mixer);
-  }
-
-  bool render_audio_stream_generate(AudioStream& audioStream, const Document& document,
-                                    const std::vector<int>& frameSoundIDs, int fps)
-  {
-    audioStream.stream.clear();
-    if (frameSoundIDs.empty() || fps <= 0) return true;
-
-    SDL_AudioSpec mixSpec = audioStream.spec;
-    mixSpec.format = SDL_AUDIO_F32;
-    auto* mixer = MIX_CreateMixer(&mixSpec);
-    if (!mixer) return false;
-
-    auto channels = std::max(mixSpec.channels, 1);
-    auto sampleRate = std::max(mixSpec.freq, 1);
-    auto framesPerStep = (double)sampleRate / (double)fps;
-    auto sampleFrameAccumulator = 0.0;
-    auto frameBuffer = std::vector<float>{};
-
-    for (auto soundID : frameSoundIDs)
-    {
-      if (auto sound = document.sound_get(soundID)) audio::play(*sound, false, mixer);
-
-      sampleFrameAccumulator += framesPerStep;
-      auto sampleFramesToGenerate = (int)std::floor(sampleFrameAccumulator);
-      sampleFramesToGenerate = std::max(sampleFramesToGenerate, 1);
-      sampleFrameAccumulator -= (double)sampleFramesToGenerate;
-
-      frameBuffer.resize((std::size_t)sampleFramesToGenerate * (std::size_t)channels);
-      if (!MIX_Generate(mixer, frameBuffer.data(), (int)(frameBuffer.size() * sizeof(float))))
-      {
-        sounds_detach(document, mixer);
-        MIX_DestroyMixer(mixer);
-        audioStream.stream.clear();
-        return false;
-      }
-
-      audioStream.stream.insert(audioStream.stream.end(), frameBuffer.begin(), frameBuffer.end());
-    }
-
-    sounds_detach(document, mixer);
-    MIX_DestroyMixer(mixer);
-    return true;
-  }
-
   void AnimationPreview::tick(Manager& manager, Settings& settings, float deltaSeconds)
   {
     auto& document = *manager.get();
     auto& model = document.model;
     auto& playback = document.playback;
     auto& frameTime = document.frameTime;
-    auto& zoom = document.previewZoom;
-    auto& overlayIndex = document.overlayIndex;
-    auto& overlayDocumentId = document.overlayDocumentId;
-    auto& pan = document.previewPan;
 
     auto stop_all_sounds = [&]()
     {
@@ -277,140 +154,10 @@ namespace anm2ed::imgui
 
     if (manager.isRecording)
     {
-      auto& ffmpegPath = settings.renderFFmpegPath;
-      auto& path = settings.renderPath;
-      auto pathString = path::to_utf8(path);
-      auto& type = settings.renderType;
-      auto isRenderPreviewOverridden = settings.renderIsUseAnimationBounds || settings.renderIsUseIsolatedAnimation;
-      auto render_preview_restore = [&]()
+      if (recorder.is_done())
       {
-        if (!isRenderPreviewOverridden) return;
-
-        settings = savedSettings;
-        pan = savedPan;
-        zoom = savedZoom;
-        overlayIndex = savedOverlayIndex;
-        overlayDocumentId = savedOverlayDocumentId;
-        isSizeTrySet = true;
-        hasPendingZoomPanAdjust = false;
-        isCheckerPanInitialized = false;
-      };
-
-      if (renderFrameIndex >= renderFrameCount)
-      {
-        if (type == render::PNGS)
-        {
-          if (!renderTempFrames.empty())
-          {
-            toast_log(Level::INFO, TOAST_EXPORT_RENDERED_FRAMES, pathString);
-          }
-          else
-          {
-            toast_log(Level::ERROR, TOAST_EXPORT_RENDERED_FRAMES_FAILED, pathString);
-          }
-        }
-        else if (type == render::SPRITESHEET)
-        {
-          auto& rows = settings.renderRows;
-          auto& columns = settings.renderColumns;
-          auto layout = render::spritesheet_layout_get(rows, columns, (int)renderTempFrames.size());
-          rows = layout.rows;
-          columns = layout.columns;
-
-          if (renderTempFrames.empty())
-          {
-            toast_log(Level::WARNING, TOAST_SPRITESHEET_NO_FRAMES);
-          }
-          else
-          {
-            auto firstFrame = Image(renderTempFrames.front());
-            if (firstFrame.size.x <= 0 || firstFrame.size.y <= 0 || firstFrame.pixels.empty())
-            {
-              toast_log(Level::ERROR, TOAST_SPRITESHEET_EMPTY);
-            }
-            else
-            {
-              auto frameWidth = firstFrame.size.x;
-              auto frameHeight = firstFrame.size.y;
-              ivec2 spritesheetSize = ivec2(frameWidth * columns, frameHeight * rows);
-
-              std::vector<uint8_t> spritesheet((size_t)(spritesheetSize.x) * spritesheetSize.y * CHANNELS);
-
-              for (std::size_t index = 0; index < renderTempFrames.size(); ++index)
-              {
-                auto frame = Image(renderTempFrames[index]);
-                auto row = (int)(index / columns);
-                auto column = (int)(index % columns);
-                if (row >= rows || column >= columns) break;
-                if ((int)frame.pixels.size() < frameWidth * frameHeight * CHANNELS) continue;
-
-                for (int y = 0; y < frameHeight; ++y)
-                {
-                  auto destY = (size_t)(row * frameHeight + y);
-                  auto destX = (size_t)(column * frameWidth);
-                  auto destOffset = (destY * spritesheetSize.x + destX) * CHANNELS;
-                  auto srcOffset = (size_t)(y * frameWidth) * CHANNELS;
-                  std::copy_n(frame.pixels.data() + srcOffset, frameWidth * CHANNELS, spritesheet.data() + destOffset);
-                }
-              }
-
-              Image spritesheetTexture(spritesheet.data(), spritesheetSize);
-              if (spritesheetTexture.write_png(path))
-              {
-                toast_log(Level::INFO, TOAST_EXPORT_SPRITESHEET, pathString);
-              }
-              else
-              {
-                toast_log(Level::ERROR, TOAST_EXPORT_SPRITESHEET_FAILED, pathString);
-              }
-            }
-          }
-        }
-        else
-        {
-          if (settings.timelineIsSound && type != render::GIF)
-          {
-            if (!render_audio_stream_generate(audioStream, document, renderFrameSoundIDs, renderFrameRate))
-            {
-              toasts.push(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED));
-              logger.error("Failed to generate deterministic render audio stream; exporting without audio.");
-              audioStream.stream.clear();
-            }
-          }
-          else
-            audioStream.stream.clear();
-
-          if (animation_render(ffmpegPath, path, renderTempFrames, audioStream, (render::Type)type, renderFrameRate))
-          {
-            toast_log(Level::INFO, TOAST_EXPORT_RENDERED_ANIMATION, pathString);
-          }
-          else
-          {
-            toast_log(Level::ERROR, TOAST_EXPORT_RENDERED_ANIMATION_FAILED, pathString);
-          }
-        }
-
-        if (type == render::PNGS)
-        {
-          renderTempDirectory.clear();
-          renderTempFrames.clear();
-          renderFrameSoundIDs.clear();
-        }
-        else
-        {
-          render_temp_cleanup(renderTempDirectory, renderTempFrames);
-          renderFrameSoundIDs.clear();
-        }
-
-        render_preview_restore();
-
-        playback.isPlaying = false;
-        playback.isFinished = false;
-        manager.isRecording = false;
-        manager.isRecordingStart = false;
-        renderFrameIndex = 0;
-        renderFrameCount = 0;
-        manager.progressPopup.close();
+        recorder.finish(document, audioStream);
+        recording_stop(manager, document);
       }
       stop_all_sounds();
       wasPlaybackPlaying = false;
@@ -446,6 +193,61 @@ namespace anm2ed::imgui
 
     if (wasPlaybackPlaying && !playback.isPlaying) stop_all_sounds();
     wasPlaybackPlaying = playback.isPlaying;
+  }
+
+  void AnimationPreview::recording_stop(Manager& manager, Document& document)
+  {
+    document.playback.isPlaying = false;
+    document.playback.isFinished = false;
+    manager.isRecording = false;
+    manager.isRecordingStart = false;
+    manager.progressPopup.close();
+  }
+
+  // Starts a render from the render settings; a bounded render frames the animation (and overlay) at the render scale.
+  void AnimationPreview::recording_start(Manager& manager, Settings& settings, Document& document,
+                                         const model::Animation* animation)
+  {
+    auto animationFps = std::max(document.model.info.fps, 1);
+    RecorderOptions options{.type = (render::Type)settings.renderType,
+                            .path = settings.renderPath,
+                            .format = settings.renderFormat,
+                            .ffmpegPath = settings.renderFFmpegPath,
+                            .start = manager.recordingStart,
+                            .end = manager.recordingEnd,
+                            .animationFps = animationFps,
+                            .fps = render::fps_get(settings.renderFpsMode, animationFps, settings.playbackTickRate),
+                            .rows = settings.renderRows,
+                            .columns = settings.renderColumns,
+                            .isSound = settings.timelineIsSound,
+                            .isIsolated = settings.renderIsUseIsolatedAnimation,
+                            .isBounded = settings.renderIsUseAnimationBounds};
+    if (options.isBounded)
+    {
+      recordSize = size;
+      recordZoom = document.previewZoom;
+      recordPan = document.previewPan;
+      if (auto rect = animation_render_rect_get(manager, document, animation, settings.previewIsRootTransform))
+      {
+        recordSize = glm::vec2(rect->z, rect->w) * settings.renderScale;
+        auto previousSize = size;
+        size = recordSize;
+        set_to_rect(recordZoom, recordPan, *rect);
+        size = previousSize;
+      }
+    }
+
+    manager.isRecordingStart = false;
+    manager.isRecording = true;
+    if (!recorder.start(options))
+    {
+      toast_log(Level::ERROR, TOAST_EXPORT_RENDERED_ANIMATION_FAILED, path::to_utf8(options.path));
+      return recording_stop(manager, document);
+    }
+    document.playback.isPlaying = true;
+    document.playback.timing_reset();
+    document.playback.time = recorder.time_get();
+    document.frameTime = document.playback.time;
   }
 
   void AnimationPreview::update(Manager& manager, Settings& settings, Resources& resources)
@@ -630,109 +432,27 @@ namespace anm2ed::imgui
       auto min = cursorScreenPos;
       auto max = to_imvec2(to_vec2(min) + size);
 
-      if (manager.isRecordingStart)
-      {
-        savedSettings = settings;
-
-        auto isRenderPreviewOverridden = settings.renderIsUseAnimationBounds || settings.renderIsUseIsolatedAnimation;
-        if (isRenderPreviewOverridden)
-        {
-          savedOverlayIndex = overlayIndex;
-          savedOverlayDocumentId = overlayDocumentId;
-          savedZoom = zoom;
-          savedPan = pan;
-        }
-
-        if (settings.renderIsUseIsolatedAnimation)
-        {
-          overlayIndex = -1;
-          overlayDocumentId = 0;
-          settings.animationPreviewTransparent = true;
-          settings.timelineIsOnlyShowLayers = true;
-          settings.previewIsAxes = false;
-          settings.previewIsGrid = false;
-          settings.previewIsPivots = false;
-          settings.previewIsAltIcons = false;
-          settings.previewIsBorder = false;
-          settings.onionskinIsEnabled = false;
-        }
-
-        if (settings.renderIsUseAnimationBounds)
-        {
-          if (auto rect = animation_render_rect_get(manager, document, animation, isRootTransform))
-          {
-            size_set(vec2(rect->z, rect->w) * settings.renderScale);
-            set_to_rect(zoom, pan, *rect);
-          }
-
-          isSizeTrySet = false;
-        }
-
-        manager.isRecordingStart = false;
-        manager.isRecording = true;
-        renderFrameIndex = 0;
-        renderAnimationFps = std::max(model.info.fps, 1);
-        renderFrameRate = render::fps_get(settings.renderFpsMode, renderAnimationFps, settings.playbackTickRate);
-        renderFrameCount =
-            render::frame_count_get(manager.recordingStart, manager.recordingEnd, renderAnimationFps, renderFrameRate);
-        renderTempFrames.clear();
-        renderFrameSoundIDs.clear();
-        renderFrameSoundTimePrev = -1;
-        if (settings.renderType == render::PNGS)
-        {
-          renderTempDirectory = settings.renderPath;
-          std::error_code ec;
-          std::filesystem::create_directories(renderTempDirectory, ec);
-        }
-        else
-        {
-          auto destinationDirectory = render_destination_directory(settings.renderPath, settings.renderType);
-          std::error_code ec;
-          std::filesystem::create_directories(destinationDirectory, ec);
-          renderTempDirectory = render_temp_directory_create(destinationDirectory);
-        }
-        if (renderTempDirectory.empty())
-        {
-          if (isRenderPreviewOverridden)
-          {
-            settings = savedSettings;
-            pan = savedPan;
-            zoom = savedZoom;
-            overlayIndex = savedOverlayIndex;
-            overlayDocumentId = savedOverlayDocumentId;
-            isSizeTrySet = true;
-            hasPendingZoomPanAdjust = false;
-            isCheckerPanInitialized = false;
-          }
-
-          auto pathString = path::to_utf8(settings.renderPath);
-          toast_log(Level::ERROR, TOAST_EXPORT_RENDERED_ANIMATION_FAILED, pathString);
-          manager.isRecording = false;
-          manager.isRecordingStart = false;
-          renderFrameIndex = 0;
-          renderFrameCount = 0;
-          manager.progressPopup.close();
-          playback.isPlaying = false;
-          playback.isFinished = false;
-          return;
-        }
-        playback.isPlaying = true;
-        playback.timing_reset();
-        playback.time =
-            render::frame_time_get(manager.recordingStart, renderFrameIndex, renderAnimationFps, renderFrameRate);
-        document.frameTime = playback.time;
-      }
-
-      if (manager.isRecording && renderFrameIndex < renderFrameCount)
+      if (manager.isRecordingStart) recording_start(manager, settings, document, animation);
+      auto isRecordingFrame = manager.isRecording && !recorder.is_done();
+      if (isRecordingFrame)
       {
         playback.isPlaying = true;
         playback.isFinished = false;
-        playback.time =
-            render::frame_time_get(manager.recordingStart, renderFrameIndex, renderAnimationFps, renderFrameRate);
+        playback.time = recorder.time_get();
         document.frameTime = playback.time;
       }
 
-      if (isSizeTrySet)
+      // A render of an isolated animation hides helpers, overlay and onion skin; a bounded one draws its own view.
+      auto isIsolated = manager.isRecording && recorder.options.isIsolated;
+      auto isBounded = manager.isRecording && recorder.options.isBounded;
+      auto viewZoom = isBounded ? recordZoom : zoom;
+      auto viewPan = isBounded ? recordPan : pan;
+      auto isViewTransparent = isTransparent || isIsolated;
+      auto isViewOnlyLayers = isOnlyShowLayers || isIsolated;
+
+      if (isBounded)
+        size_set(recordSize);
+      else
       {
         auto nextSize = to_vec2(ImGui::GetContentRegionAvail());
         bool isCanvasResized = ivec2(nextSize) != ivec2(size);
@@ -748,12 +468,12 @@ namespace anm2ed::imgui
 
       bind();
       viewport_set();
-      clear(isTransparent ? vec4(0) : vec4(backgroundColor, 1.0f));
+      clear(isViewTransparent ? vec4(0) : vec4(backgroundColor, 1.0f));
 
-      if (isAxes) axes_render(shaderAxes, zoom, pan, axesColor);
-      if (isGrid) grid_render(shaderGrid, zoom, pan, gridSize, gridOffset, gridColor);
+      if (isAxes && !isIsolated) axes_render(shaderAxes, viewZoom, viewPan, axesColor);
+      if (isGrid && !isIsolated) grid_render(shaderGrid, viewZoom, viewPan, gridSize, gridOffset, gridColor);
 
-      auto baseTransform = transform_get(zoom, pan);
+      auto baseTransform = transform_get(viewZoom, viewPan);
       auto frameTime = document.frameTime > -1 && !playback.isPlaying ? document.frameTime : playback.time;
 
       model::DrawOptions drawOptions{.time = frameTime,
@@ -770,7 +490,7 @@ namespace anm2ed::imgui
           sampleAlphas.push_back((1.0f / (count + 1)) * i);
         }
       };
-      if (settings.onionskinIsEnabled)
+      if (settings.onionskinIsEnabled && !isIsolated)
       {
         samples_add(settings.onionskinBeforeCount, -1, settings.onionskinBeforeColor);
         samples_add(settings.onionskinAfterCount, 1, settings.onionskinAfterColor);
@@ -794,7 +514,7 @@ namespace anm2ed::imgui
       {
         auto isActiveDocument = &sampleDocument == &document;
         auto& sampleModel = sampleDocument.model;
-        auto targetIcon = resources.icon_id_get(isAltIcons ? icon::TARGET_ALT : icon::TARGET);
+        auto targetIcon = resources.icon_id_get(isAltIcons && !isIsolated ? icon::TARGET_ALT : icon::TARGET);
         for (const auto& draw : model::animation_draws_get(sampleModel, sampleAnimation, drawOptions))
         {
           auto isOnion = draw.sample != -1;
@@ -812,7 +532,7 @@ namespace anm2ed::imgui
 
           if (draw.type == model::DrawType::ROOT || draw.type == model::DrawType::GROUP_ROOT)
           {
-            if (isOnlyShowLayers) continue;
+            if (isViewOnlyLayers) continue;
             auto isSelected = isActiveDocument && draw.type == model::DrawType::GROUP_ROOT &&
                               referenceItemType == ItemType::ROOT && reference.groupType == draw.groupType &&
                               reference.groupId == draw.id;
@@ -844,12 +564,12 @@ namespace anm2ed::imgui
             auto color = isOnion                                          ? onionColor
                          : isActiveDocument && is_layer_selected(draw.id) ? SELECTED_LAYER_BORDER_COLOR
                                                                           : color::RED;
-            if (isBorder) rect_render(shaderLine, layerTransform, layerModel, color);
-            if (isPivots)
+            if (isBorder && !isIsolated) rect_render(shaderLine, layerTransform, layerModel, color);
+            if (isPivots && !isIsolated)
               texture_render(shaderTexture, resources.icon_id_get(icon::PIVOT),
                              transform * marker_model_get(PIVOT_SIZE), color);
           }
-          else if (!isOnlyShowLayers)
+          else if (!isViewOnlyLayers)
           {
             auto isShowRect = model::item_get(sampleModel.content.nulls, draw.id)->isShowRect;
             auto isSelected = isActiveDocument && draw.id == reference.itemID && referenceItemType == ItemType::NULL_;
@@ -869,7 +589,7 @@ namespace anm2ed::imgui
       {
         auto overlay_render = [&]()
         {
-          if (auto overlayDocument = overlay_animation_document_get(manager, document))
+          if (auto overlayDocument = isIsolated ? nullptr : overlay_animation_document_get(manager, document))
             if (auto overlayAnimation = overlayDocument->model.animation_get(overlayIndex))
               render(*overlayDocument, *overlayAnimation, 1.0f - math::percent_to_unit(overlayTransparency));
         };
@@ -879,62 +599,22 @@ namespace anm2ed::imgui
         if (overlayDrawOrder == overlay_draw_order::OVER) overlay_render();
       }
 
-      if (manager.isRecording && renderFrameIndex < renderFrameCount)
+      if (isRecordingFrame)
       {
-        auto renderType = settings.renderType;
-        auto isRenderPreviewOverridden = settings.renderIsUseAnimationBounds || settings.renderIsUseIsolatedAnimation;
-        auto render_capture_fail = [&]()
+        auto soundId = settings.timelineIsSound && animation && recorder.is_sound_frame()
+                           ? trigger_sound_id_get(document, animation, frameTime, recorder.index)
+                           : -1;
+        if (!recorder.frame_capture(pixels_get(), size, soundId))
         {
-          auto pathString = path::to_utf8(settings.renderPath);
-          toast_log(Level::ERROR, TOAST_EXPORT_RENDERED_ANIMATION_FAILED, pathString);
-          if (renderType != render::PNGS) render_temp_cleanup(renderTempDirectory, renderTempFrames);
-          renderFrameSoundIDs.clear();
-          if (isRenderPreviewOverridden)
-          {
-            settings = savedSettings;
-            pan = savedPan;
-            zoom = savedZoom;
-            overlayIndex = savedOverlayIndex;
-            overlayDocumentId = savedOverlayDocumentId;
-            isSizeTrySet = true;
-            hasPendingZoomPanAdjust = false;
-            isCheckerPanInitialized = false;
-          }
-          playback.isPlaying = false;
-          playback.isFinished = false;
-          manager.isRecording = false;
-          manager.isRecordingStart = false;
-          renderFrameIndex = 0;
-          renderFrameCount = 0;
-          manager.progressPopup.close();
-        };
-
-        auto frameSoundID = -1;
-        if (settings.timelineIsSound && !document.sounds.empty())
-        {
-          auto soundTime = (int)std::floor(frameTime);
-          if (soundTime != renderFrameSoundTimePrev && animation)
-            frameSoundID = trigger_sound_id_get(document, animation, frameTime, renderFrameIndex);
-          renderFrameSoundTimePrev = soundTime;
+          toast_log(Level::ERROR, TOAST_EXPORT_RENDERED_ANIMATION_FAILED, path::to_utf8(recorder.options.path));
+          recorder.cancel();
+          recording_stop(manager, document);
         }
-        renderFrameSoundIDs.push_back(frameSoundID);
-
-        auto pixels = pixels_get();
-        if (isRenderPreviewOverridden) pixels_unpremultiply_alpha(pixels);
-        auto framePath =
-            renderTempDirectory / render_frame_filename(settings.renderFormat, renderFrameIndex, settings.renderType);
-        if (Image::write_pixels_png(framePath, size, pixels.data()))
-        {
-          renderTempFrames.push_back(framePath);
-          ++renderFrameIndex;
-        }
-        else
-          render_capture_fail();
       }
 
       unbind();
 
-      if (isTransparent)
+      if (isViewTransparent)
       {
         checker_pan_sync(zoom, pan);
         render_checker_background(ImGui::GetWindowDrawList(), min, max, -size - checkerPan, CHECKER_SIZE);
@@ -1108,48 +788,14 @@ namespace anm2ed::imgui
 
     if (ImGui::BeginPopupModal(manager.progressPopup.label(), &manager.progressPopup.isOpen, ImGuiWindowFlags_NoResize))
     {
-      auto progress = renderFrameCount > 0 ? (float)renderFrameIndex / (float)renderFrameCount : 0.0f;
-
-      ImGui::ProgressBar(progress);
-
+      ImGui::ProgressBar(recorder.count > 0 ? (float)recorder.index / (float)recorder.count : 0.0f);
       ImGui::TextUnformatted(localize.get(TEXT_RECORDING_PROGRESS));
 
       shortcut(manager.chords[SHORTCUT_CANCEL]);
       if (ImGui::Button(localize.get(BASIC_CANCEL), ImVec2(ImGui::GetContentRegionAvail().x, 0)))
       {
-        auto renderType = settings.renderType;
-        auto isRenderPreviewOverridden = settings.renderIsUseAnimationBounds || settings.renderIsUseIsolatedAnimation;
-        if (renderType == render::PNGS)
-        {
-          renderTempDirectory.clear();
-          renderTempFrames.clear();
-          renderFrameSoundIDs.clear();
-        }
-        else
-        {
-          render_temp_cleanup(renderTempDirectory, renderTempFrames);
-          renderFrameSoundIDs.clear();
-        }
-
-        if (isRenderPreviewOverridden)
-        {
-          pan = savedPan;
-          zoom = savedZoom;
-          settings = savedSettings;
-          overlayIndex = savedOverlayIndex;
-          overlayDocumentId = savedOverlayDocumentId;
-          isSizeTrySet = true;
-          hasPendingZoomPanAdjust = false;
-          isCheckerPanInitialized = false;
-        }
-
-        playback.isPlaying = false;
-        playback.isFinished = false;
-        manager.isRecording = false;
-        manager.isRecordingStart = false;
-        renderFrameIndex = 0;
-        renderFrameCount = 0;
-        manager.progressPopup.close();
+        recorder.cancel();
+        recording_stop(manager, document);
       }
 
       ImGui::EndPopup();

@@ -33,6 +33,8 @@ namespace anm2ed::resource
     bool write_png(const std::filesystem::path&) const;
     static bool write_pixels_png(const std::filesystem::path&, glm::ivec2, const uint8_t*);
     static Image merge_append(const Image&, const Image&, bool);
+    void paste(const Image&, glm::ivec2);
+    Image region_get(glm::ivec2, glm::ivec2) const;
     glm::vec4 pixel_read(glm::vec2) const;
     void pixel_set(glm::ivec2, glm::vec4);
     void pixel_line(glm::ivec2, glm::ivec2, glm::vec4);

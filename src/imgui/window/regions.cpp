@@ -85,25 +85,6 @@ namespace anm2ed::imgui
             .isValid = true};
   }
 
-  bool region_pixels_get(const model::Region& region, const Image& texture, std::vector<uint8_t>& pixels, ivec2& size)
-  {
-    auto minPoint = ivec2(glm::min(region.crop, region.crop + region.size));
-    size = ivec2(glm::max(region.crop, region.crop + region.size)) - minPoint;
-    if (size.x <= 0 || size.y <= 0 || texture.size.x <= 0 || texture.size.y <= 0 || texture.pixels.empty())
-      return false;
-
-    pixels.assign((size_t)size.x * size.y * image::CHANNELS, 0);
-    for (int y = 0; y < size.y; y++)
-      for (int x = 0; x < size.x; x++)
-      {
-        auto source = minPoint + ivec2(x, y);
-        if (source.x < 0 || source.y < 0 || source.x >= texture.size.x || source.y >= texture.size.y) continue;
-        std::copy_n(texture.pixels.data() + ((size_t)source.y * texture.size.x + source.x) * image::CHANNELS,
-                    image::CHANNELS, pixels.data() + ((size_t)y * size.x + x) * image::CHANNELS);
-      }
-    return true;
-  }
-
   bool region_export(Document& document, const RegionExportOptions& options)
   {
     auto pathString = options.path.empty() ? std::string("in memory") : path::to_utf8(options.path);
@@ -116,14 +97,15 @@ namespace anm2ed::imgui
     auto spritesheet = model::item_get(document.model.content.spritesheets, options.spritesheetId);
     auto region = spritesheet ? model::item_get(spritesheet->regions, options.regionId) : nullptr;
     auto texture = document.texture_get(options.spritesheetId);
-    std::vector<uint8_t> pixels{};
-    ivec2 exportSize{};
-    if (!region || !texture || !texture->is_valid() || !region_pixels_get(*region, *texture, pixels, exportSize))
+    auto minPoint = region ? ivec2(glm::min(region->crop, region->crop + region->size)) : ivec2();
+    auto exportSize = region ? ivec2(glm::max(region->crop, region->crop + region->size)) - minPoint : ivec2();
+    if (!region || !texture || !texture->is_valid() || exportSize.x <= 0 || exportSize.y <= 0)
     {
       toast_log(Level::ERROR, TOAST_EXPORT_REGION_FAILED, region ? region->name : std::string(), pathString);
       return false;
     }
 
+    auto exportedImage = texture->region_get(minPoint, exportSize);
     auto sourceRegion = *region;
     auto outputPath = options.path;
     if (!outputPath.empty())
@@ -132,7 +114,7 @@ namespace anm2ed::imgui
       pathString = path::to_utf8(outputPath);
       WorkingDirectory workingDirectory(document.directory_get());
       path::ensure_directory(outputPath.parent_path());
-      if (!Image::write_pixels_png(outputPath, exportSize, pixels.data()))
+      if (!exportedImage.write_png(outputPath))
       {
         toast_log(Level::ERROR, TOAST_EXPORT_REGION_FAILED, sourceRegion.name, pathString);
         return false;
@@ -165,7 +147,7 @@ namespace anm2ed::imgui
         exported.regions.push_back(exportedRegion);
         spritesheets.push_back(exported);
 
-        document.texture_set(exported.id, Image(pixels.data(), exportSize));
+        document.texture_set(exported.id, exportedImage);
         document.texturePaths[exported.id] = exported.path;
         document.selected_ids_set(SelectionKind::SPRITESHEETS, {exported.id});
         document.focused_id_set(SelectionKind::SPRITESHEETS, exported.id);

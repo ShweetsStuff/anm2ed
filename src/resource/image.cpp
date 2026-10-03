@@ -1,5 +1,6 @@
 #include "image.hpp"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
@@ -89,6 +90,35 @@ namespace anm2ed::resource
       return stbi_write_png_to_func(write_func, handle, size.x, size.y, CHANNELS, data, size.x * CHANNELS) != 0;
     }
     return false;
+  }
+
+  // Copies a size-sized block between images; pixels outside either image are skipped.
+  void pixels_copy(const Image& from, glm::ivec2 fromMin, Image& to, glm::ivec2 toMin, glm::ivec2 size)
+  {
+    for (int y = 0; y < size.y; ++y)
+      for (int x = 0; x < size.x; ++x)
+      {
+        auto source = fromMin + glm::ivec2(x, y);
+        auto target = toMin + glm::ivec2(x, y);
+        if (glm::any(glm::lessThan(source, glm::ivec2(0))) || glm::any(glm::greaterThanEqual(source, from.size)) ||
+            glm::any(glm::lessThan(target, glm::ivec2(0))) || glm::any(glm::greaterThanEqual(target, to.size)))
+          continue;
+        std::copy_n(from.pixels.data() + ((std::size_t)source.y * from.size.x + source.x) * image::CHANNELS,
+                    image::CHANNELS,
+                    to.pixels.data() + ((std::size_t)target.y * to.size.x + target.x) * image::CHANNELS);
+      }
+  }
+
+  void Image::paste(const Image& source, glm::ivec2 position) { pixels_copy(source, {}, *this, position, source.size); }
+
+  // A copy of a block of the image (transparent where it falls outside).
+  Image Image::region_get(glm::ivec2 min, glm::ivec2 regionSize) const
+  {
+    Image region{};
+    region.size = regionSize;
+    region.pixels.assign((std::size_t)regionSize.x * regionSize.y * image::CHANNELS, 0);
+    pixels_copy(*this, min, region, {}, regionSize);
+    return region;
   }
 
   Image Image::merge_append(const Image& base, const Image& append, bool isAppendRight)
