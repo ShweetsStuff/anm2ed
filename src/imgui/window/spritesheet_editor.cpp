@@ -170,7 +170,7 @@ namespace anm2ed::imgui
         auto spritesheetTransform = transform * spritesheetModel;
 
         if (baseTexture && baseTexture->is_valid())
-          texture_render(shaderTexture, baseTexture->id, spritesheetTransform);
+          texture_render(shaderTexture, resource::texture::id_get(*baseTexture), spritesheetTransform);
 
         if (isGrid) grid_render(shaderGrid, zoom, pan, gridSize, gridOffset, gridColor);
 
@@ -223,7 +223,7 @@ namespace anm2ed::imgui
 
           auto pivotTransform =
               transform * math::quad_model_get(PIVOT_SIZE, region.crop + region.pivot, PIVOT_SIZE * 0.5f);
-          texture_render(shaderTexture, resources.icons[icon::PIVOT].id, pivotTransform, color::WHITE);
+          texture_render(shaderTexture, resources.icon_id_get(icon::PIVOT), pivotTransform, color::WHITE);
         }
 
         if (highlightedRegionId != -1)
@@ -234,7 +234,7 @@ namespace anm2ed::imgui
 
             auto pivotTransform =
                 transform * math::quad_model_get(PIVOT_SIZE, region->crop + region->pivot, PIVOT_SIZE * 0.5f);
-            texture_render(shaderTexture, resources.icons[icon::PIVOT].id, pivotTransform, PIVOT_COLOR);
+            texture_render(shaderTexture, resources.icon_id_get(icon::PIVOT), pivotTransform, PIVOT_COLOR);
           }
         }
 
@@ -247,7 +247,7 @@ namespace anm2ed::imgui
 
           auto pivotTransform =
               transform * math::quad_model_get(PIVOT_SIZE, frame->crop + frame->pivot, PIVOT_SIZE * 0.5f);
-          texture_render(shaderTexture, resources.icons[icon::PIVOT].id, pivotTransform, PIVOT_COLOR);
+          texture_render(shaderTexture, resources.icon_id_get(icon::PIVOT), pivotTransform, PIVOT_COLOR);
         }
       }
 

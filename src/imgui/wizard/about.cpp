@@ -153,7 +153,7 @@ namespace anm2ed::imgui::wizard
     if (auto spritesheets = state.anm2.element_get(ElementType::SPRITESHEETS))
       for (auto& spritesheet : spritesheets->children)
         if (spritesheet.type == ElementType::SPRITESHEET)
-          state.textures[spritesheet.id] = Texture(info.png, info.pngSize);
+          state.textures[spritesheet.id] = resource::Image(info.png, info.pngSize);
 
     auto animation = friend_animation_get(state);
     if (!animation)
@@ -216,8 +216,8 @@ namespace anm2ed::imgui::wizard
     auto tint = frame.tint * rootFrame.tint;
     auto colorOffset = frame.colorOffset + rootFrame.colorOffset;
 
-    state.canvas->texture_render(resources.shaders[shader::TEXTURE], texture.id, transform, tint, colorOffset,
-                                 uvVertices.data());
+    state.canvas->texture_render(resources.shaders[shader::TEXTURE], resource::texture::id_get(texture), transform,
+                                 tint, colorOffset, uvVertices.data());
   }
 
   void friend_canvas_draw(About::FriendState& state, Resources& resources, ImVec2 displaySize)
@@ -332,7 +332,7 @@ namespace anm2ed::imgui::wizard
 
   void About::reset(Resources& resources)
   {
-    resources.music_track().play(true);
+    resource::audio::play(resources.music_track(), true);
     creditsState = {};
     creditsState.spawnTimer = CREDIT_DELAY;
 

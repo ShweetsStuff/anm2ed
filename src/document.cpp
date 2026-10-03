@@ -157,15 +157,14 @@ namespace anm2ed::document
     std::erase_if(paths, [&](const auto& pair) { return !validIds.contains(pair.first); });
   }
 
-  uint64_t spritesheet_hash_get(const Element& spritesheet, const resource::Texture* texture)
+  uint64_t spritesheet_hash_get(const Element& spritesheet, const resource::Image* texture)
   {
     std::size_t seed{};
     auto hash_combine = [&](std::size_t value) { seed ^= value + HASH_COMBINE_CONSTANT + (seed << 6) + (seed >> 2); };
 
     hash_combine(std::hash<int>{}(texture ? texture->size.x : 0));
     hash_combine(std::hash<int>{}(texture ? texture->size.y : 0));
-    hash_combine(std::hash<int>{}(texture ? texture->channels : 0));
-    hash_combine(std::hash<int>{}(texture ? texture->filter : 0));
+    hash_combine(std::hash<bool>{}(texture && texture->isLinear));
     hash_combine(std::hash<std::string>{}(path::to_utf8(spritesheet.path)));
     auto isPixels = texture && !texture->pixels.empty();
     hash_combine(isPixels ? std::hash<std::string_view>{}(std::string_view(
@@ -459,13 +458,13 @@ namespace anm2ed
     std::erase_if(shaderFragmentPaths, is_invalid);
   }
 
-  resource::Texture* Document::texture_get(int id)
+  resource::Image* Document::texture_get(int id)
   {
     auto it = textures.find(id);
     return it == textures.end() ? nullptr : &it->second;
   }
 
-  resource::Audio* Document::sound_get(int id)
+  resource::AudioData* Document::sound_get(int id)
   {
     auto it = sounds.find(id);
     return it == sounds.end() ? nullptr : &it->second;
@@ -497,10 +496,9 @@ namespace anm2ed
       for (int y = minPoint.y; y < maxPoint.y; ++y)
         for (int x = minPoint.x; x < maxPoint.x; ++x)
         {
-          auto index = ((std::size_t)y * texture->size.x + x) * resource::texture::CHANNELS;
-          if (index + resource::texture::CHANNELS > texture->pixels.size()) continue;
-          if (std::all_of(texture->pixels.begin() + index,
-                          texture->pixels.begin() + index + resource::texture::CHANNELS,
+          auto index = ((std::size_t)y * texture->size.x + x) * resource::image::CHANNELS;
+          if (index + resource::image::CHANNELS > texture->pixels.size()) continue;
+          if (std::all_of(texture->pixels.begin() + index, texture->pixels.begin() + index + resource::image::CHANNELS,
                           [](auto channel) { return channel == 0; }))
             continue;
           contentMin = glm::min(contentMin, glm::ivec2(x, y));
@@ -567,7 +565,7 @@ namespace anm2ed
     std::vector<glm::ivec2> positions{};
     if (!util::pack::rects_pack(sizes, packedSize, positions) || packedSize.x <= 0 || packedSize.y <= 0) return false;
 
-    std::vector<uint8_t> packedPixels((std::size_t)packedSize.x * packedSize.y * resource::texture::CHANNELS, 0);
+    std::vector<uint8_t> packedPixels((std::size_t)packedSize.x * packedSize.y * resource::image::CHANNELS, 0);
     std::unordered_map<int, glm::ivec2> crops{};
     for (int i = 0; i < (int)items.size(); ++i)
     {
@@ -583,15 +581,14 @@ namespace anm2ed
               glm::any(glm::greaterThanEqual(source, texture->size)) ||
               glm::any(glm::greaterThanEqual(target, packedSize)))
             continue;
-          std::copy_n(texture->pixels.data() +
-                          ((std::size_t)source.y * texture->size.x + source.x) * resource::texture::CHANNELS,
-                      resource::texture::CHANNELS,
-                      packedPixels.data() +
-                          ((std::size_t)target.y * packedSize.x + target.x) * resource::texture::CHANNELS);
+          std::copy_n(
+              texture->pixels.data() + ((std::size_t)source.y * texture->size.x + source.x) * resource::image::CHANNELS,
+              resource::image::CHANNELS,
+              packedPixels.data() + ((std::size_t)target.y * packedSize.x + target.x) * resource::image::CHANNELS);
         }
     }
 
-    textures[id] = resource::Texture(packedPixels.data(), packedSize);
+    textures[id] = resource::Image(packedPixels.data(), packedSize);
     for (auto& region : spritesheet->children)
       if (region.type == ElementType::REGION && crops.contains(region.id)) region.crop = crops.at(region.id);
 
@@ -633,7 +630,7 @@ namespace anm2ed
       if (id == baseId) continue;
       auto texture = texture_get(id);
       auto offset = isAppendRight ? glm::ivec2(mergedTexture.size.x, 0) : glm::ivec2(0, mergedTexture.size.y);
-      mergedTexture = resource::Texture::merge_append(mergedTexture, *texture, isAppendRight);
+      mergedTexture = resource::Image::merge_append(mergedTexture, *texture, isAppendRight);
       if (!isMakeRegions) continue;
 
       location_region_add(id, offset, texture->size);
@@ -973,13 +970,13 @@ namespace anm2ed
     if (!items) return;
     auto directory = directory_get();
 
-    std::vector<std::pair<std::filesystem::path, resource::Texture>> loaded{};
+    std::vector<std::pair<std::filesystem::path, resource::Image>> loaded{};
     for (auto& path : paths)
     {
       auto storagePath = path::backslash_handle(path);
       std::optional<WorkingDirectory> workingDirectory{};
       if (!storagePath.is_absolute()) workingDirectory.emplace(directory);
-      auto texture = resource::Texture(path::case_insensitive_find(storagePath));
+      auto texture = resource::Image(path::case_insensitive_find(storagePath));
       if (!texture.is_valid())
       {
         toast_log(Level::ERROR, TOAST_SPRITESHEET_INIT_FAILED, path::to_utf8(path));

@@ -111,7 +111,7 @@ file(GLOB PROJECT_SRC CONFIGURE_DEPENDS
 
 set(CORE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 file(GLOB CORE_SRC CONFIGURE_DEPENDS ${CORE_DIR}/anm2/*.cpp)
-foreach(CORE_FILE log resource/strings util/file util/path util/math util/string util/time util/working_directory
+foreach(CORE_FILE log resource/strings resource/image resource/audio_data util/file util/path util/math util/string util/time util/working_directory
                   util/xml util/pack)
   list(APPEND CORE_SRC ${CORE_DIR}/${CORE_FILE}.cpp)
 endforeach()

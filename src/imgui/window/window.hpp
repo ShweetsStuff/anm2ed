@@ -66,7 +66,7 @@ namespace anm2ed::imgui
 
   struct WindowCardImage
   {
-    resource::Texture* texture{};
+    resource::Image* texture{};
     glm::vec2 size{};
     glm::vec2 uvMin{};
     glm::vec2 uvMax{1.0f};

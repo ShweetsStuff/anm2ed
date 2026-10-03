@@ -7,10 +7,10 @@
 #include <vector>
 
 #include "anm2/anm2.hpp"
-#include "audio.hpp"
+#include "audio_data.hpp"
+#include "image.hpp"
 #include "playback.hpp"
 #include "storage.hpp"
-#include "texture.hpp"
 
 namespace anm2ed::snapshots
 {
@@ -63,8 +63,8 @@ namespace anm2ed
     Storage shader{};
     Storage sound{};
     Storage spritesheet{};
-    std::map<int, resource::Texture> textures{};
-    std::map<int, resource::Audio> sounds{};
+    std::map<int, resource::Image> textures{};
+    std::map<int, resource::AudioData> sounds{};
     Anm2 anm2{};
     Reference reference{};
     std::set<Reference> groupReferences{};
@@ -72,8 +72,8 @@ namespace anm2ed
     std::string message = snapshots::ACTION;
   };
 
-  using SnapshotTextureMap = std::map<int, resource::Texture>;
-  using SnapshotSoundMap = std::map<int, resource::Audio>;
+  using SnapshotTextureMap = std::map<int, resource::Image>;
+  using SnapshotSoundMap = std::map<int, resource::AudioData>;
 
 #define SNAPSHOT_STEP_STATE_FIELDS                                                                                     \
   X(Playback, playback)                                                                                                \

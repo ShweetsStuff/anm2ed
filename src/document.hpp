@@ -108,8 +108,8 @@ namespace anm2ed
     bool texture_reload(int);
     bool sound_reload(int);
     bool shader_reload(int, std::string* = nullptr);
-    resource::Texture* texture_get(int);
-    resource::Audio* sound_get(int);
+    resource::Image* texture_get(int);
+    resource::AudioData* sound_get(int);
     resource::Shader* shader_get(int);
     bool regions_trim(int, const std::set<int>&);
     bool spritesheet_pack(int, int);

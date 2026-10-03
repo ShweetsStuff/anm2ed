@@ -31,7 +31,7 @@
 using namespace anm2ed::types;
 using namespace anm2ed::util;
 using namespace anm2ed::resource;
-using namespace anm2ed::resource::texture;
+using namespace anm2ed::resource::image;
 using namespace glm;
 
 namespace anm2ed::imgui
@@ -210,7 +210,7 @@ namespace anm2ed::imgui
     return document.sound_get(soundID) ? soundID : -1;
   }
 
-  bool render_audio_stream_generate(AudioStream& audioStream, std::map<int, Audio>& sounds,
+  bool render_audio_stream_generate(AudioStream& audioStream, std::map<int, AudioData>& sounds,
                                     const std::vector<int>& frameSoundIDs, int fps)
   {
     audioStream.stream.clear();
@@ -229,7 +229,7 @@ namespace anm2ed::imgui
 
     for (auto soundID : frameSoundIDs)
     {
-      if (soundID != -1 && sounds.contains(soundID)) sounds.at(soundID).play(false, mixer);
+      if (soundID != -1 && sounds.contains(soundID)) audio::play(sounds.at(soundID), false, mixer);
 
       sampleFrameAccumulator += framesPerStep;
       auto sampleFramesToGenerate = (int)std::floor(sampleFrameAccumulator);
@@ -240,7 +240,7 @@ namespace anm2ed::imgui
       if (!MIX_Generate(mixer, frameBuffer.data(), (int)(frameBuffer.size() * sizeof(float))))
       {
         for (auto& [_, sound] : sounds)
-          sound.track_detach(mixer);
+          audio::track_detach(sound, mixer);
         MIX_DestroyMixer(mixer);
         audioStream.stream.clear();
         return false;
@@ -250,7 +250,7 @@ namespace anm2ed::imgui
     }
 
     for (auto& [_, sound] : sounds)
-      sound.track_detach(mixer);
+      audio::track_detach(sound, mixer);
     MIX_DestroyMixer(mixer);
     return true;
   }
@@ -269,7 +269,7 @@ namespace anm2ed::imgui
     auto stop_all_sounds = [&]()
     {
       for (auto& [_, sound] : document.sounds)
-        sound.stop(mixer);
+        audio::stop(sound, mixer);
     };
 
     if (manager.isRecording)
@@ -320,7 +320,7 @@ namespace anm2ed::imgui
           }
           else
           {
-            auto firstFrame = Texture(renderTempFrames.front());
+            auto firstFrame = Image(renderTempFrames.front());
             if (firstFrame.size.x <= 0 || firstFrame.size.y <= 0 || firstFrame.pixels.empty())
             {
               toast_log(Level::ERROR, TOAST_SPRITESHEET_EMPTY);
@@ -335,7 +335,7 @@ namespace anm2ed::imgui
 
               for (std::size_t index = 0; index < renderTempFrames.size(); ++index)
               {
-                auto frame = Texture(renderTempFrames[index]);
+                auto frame = Image(renderTempFrames[index]);
                 auto row = (int)(index / columns);
                 auto column = (int)(index % columns);
                 if (row >= rows || column >= columns) break;
@@ -351,7 +351,7 @@ namespace anm2ed::imgui
                 }
               }
 
-              Texture spritesheetTexture(spritesheet.data(), spritesheetSize);
+              Image spritesheetTexture(spritesheet.data(), spritesheetSize);
               if (spritesheetTexture.write_png(path))
               {
                 toast_log(Level::INFO, TOAST_EXPORT_SPRITESHEET, pathString);
@@ -430,7 +430,7 @@ namespace anm2ed::imgui
         if (!manager.isRecording && !document.sounds.empty() && isSound)
         {
           if (auto soundID = trigger_sound_id_get(document, animation, playback.time); soundID != -1)
-            if (auto sound = document.sound_get(soundID)) sound->play(false, mixer);
+            if (auto sound = document.sound_get(soundID)) audio::play(*sound, false, mixer);
         }
 
         auto info = element_first_get(anm2.root, ElementType::INFO);
@@ -583,13 +583,13 @@ namespace anm2ed::imgui
         overlayTransparency = glm::clamp(overlayTransparency, 0.0f, 100.0f);
 
         ImGui::SameLine();
-        radio_button_icon("##Overlay Over", &overlayDrawOrder, overlay_draw_order::OVER, resources.icons[icon::OVER].id,
-                          orderIconSize, overlayIconTint);
+        radio_button_icon("##Overlay Over", &overlayDrawOrder, overlay_draw_order::OVER,
+                          resources.icon_id_get(icon::OVER), orderIconSize, overlayIconTint);
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OVERLAY_OVER));
 
         ImGui::SameLine();
         radio_button_icon("##Overlay Under", &overlayDrawOrder, overlay_draw_order::UNDER,
-                          resources.icons[icon::UNDER].id, orderIconSize, overlayIconTint);
+                          resources.icon_id_get(icon::UNDER), orderIconSize, overlayIconTint);
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OVERLAY_UNDER));
       }
       ImGui::EndChild();
@@ -886,7 +886,7 @@ namespace anm2ed::imgui
           vec4 color = isOnion ? vec4(sampleColor, sampleAlpha) : color::GREEN;
 
           auto icon = isAltIcons ? icon::TARGET_ALT : icon::TARGET;
-          texture_render(shaderTexture, resources.icons[icon].id, rootTransform, color);
+          texture_render(shaderTexture, resources.icon_id_get(icon), rootTransform, color);
         };
 
         if (layeredOnions && root)
@@ -921,7 +921,7 @@ namespace anm2ed::imgui
                             reference.groupType == groupType && reference.groupId == group.id;
           vec4 color = isOnion ? vec4(sampleColor, sampleAlpha) : isSelected ? color::RED : ROOT_COLOR;
           auto icon = isAltIcons ? icon::TARGET_ALT : icon::TARGET;
-          texture_render(shaderTexture, resources.icons[icon].id, rootTransform, color);
+          texture_render(shaderTexture, resources.icon_id_get(icon), rootTransform, color);
         };
 
         if (auto layerAnimations = child_first_get(*animation, ElementType::LAYER_ANIMATIONS))
@@ -1005,8 +1005,8 @@ namespace anm2ed::imgui
               auto customShader = sampleDocument.shader_get(frame.shaderId);
               auto& layerShader = customShader ? *customShader : shaderTexture;
 
-              texture_render(layerShader, texture.id, layerTransform, frameTint, frameColorOffset, vertices.data(),
-                             vec2(texture.size), sampleTime);
+              texture_render(layerShader, resource::texture::id_get(texture), layerTransform, frameTint,
+                             frameColorOffset, vertices.data(), vec2(texture.size), sampleTime);
 
               auto color = isOnion                                           ? vec4(sampleColor, 1.0f - sampleAlpha)
                            : is_layer_animation_selected(sampleDocument, id) ? SELECTED_LAYER_BORDER_COLOR
@@ -1021,7 +1021,7 @@ namespace anm2ed::imgui
                                                        math::percent_to_unit(frame.shear));
                 auto pivotTransform = itemTransform * pivotModel;
 
-                texture_render(shaderTexture, resources.icons[icon::PIVOT].id, pivotTransform, color);
+                texture_render(shaderTexture, resources.icon_id_get(icon::PIVOT), pivotTransform, color);
               }
             };
 
@@ -1093,7 +1093,7 @@ namespace anm2ed::imgui
                   group_transform_for_time(*nullAnimations, nullAnimation, sampleTime, sampleTransform);
               auto nullTransform = itemTransform * nullModel;
 
-              texture_render(shaderTexture, resources.icons[icon].id, nullTransform, color);
+              texture_render(shaderTexture, resources.icon_id_get(icon), nullTransform, color);
 
               if (isShowRect)
               {
@@ -1182,7 +1182,7 @@ namespace anm2ed::imgui
         if (isRenderPreviewOverridden) pixels_unpremultiply_alpha(pixels);
         auto framePath =
             renderTempDirectory / render_frame_filename(settings.renderFormat, renderFrameIndex, settings.renderType);
-        if (Texture::write_pixels_png(framePath, size, pixels.data()))
+        if (Image::write_pixels_png(framePath, size, pixels.data()))
         {
           renderTempFrames.push_back(framePath);
           ++renderFrameIndex;

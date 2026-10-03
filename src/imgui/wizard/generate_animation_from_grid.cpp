@@ -108,7 +108,8 @@ namespace anm2ed::imgui::wizard
                                                            math::percent_to_unit(frame.shear));
             auto vertices = math::uv_vertices_get(uvMin, uvMax);
 
-            texture_render(shaderTexture, sourceTexture->id, transform, frame.tint, frame.colorOffset, vertices.data());
+            texture_render(shaderTexture, resource::texture::id_get(*sourceTexture), transform, frame.tint,
+                           frame.colorOffset, vertices.data());
           }
         }
       }

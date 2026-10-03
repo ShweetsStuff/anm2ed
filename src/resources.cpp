@@ -43,21 +43,23 @@ namespace anm2ed
     }
 
     for (auto [i, iconInfo] : std::views::enumerate(icon::ICONS))
-      icons[i] = Texture(iconInfo.data, iconInfo.length, iconInfo.size);
+      icons[i] = texture::svg_load(iconInfo.data, iconInfo.length, iconInfo.size);
 
     for (auto [i, shaderInfo] : std::views::enumerate(shader::SHADERS))
       shaders[i] = Shader(shaderInfo.vertex, shaderInfo.fragment);
   };
 
-  resource::Audio& Resources::music_track()
+  GLuint Resources::icon_id_get(int icon) { return texture::id_get(icons[icon]); }
+
+  resource::AudioData& Resources::music_track()
   {
     if (!isMusicLoaded)
     {
-      music = Audio(music::ABOUT, std::size(music::ABOUT));
+      music = AudioData(music::ABOUT, std::size(music::ABOUT));
       isMusicLoaded = true;
     }
     return music;
   }
 
-  resource::Audio* Resources::music_track_if_loaded() { return isMusicLoaded ? &music : nullptr; }
+  resource::AudioData* Resources::music_track_if_loaded() { return isMusicLoaded ? &music : nullptr; }
 }

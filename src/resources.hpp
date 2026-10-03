@@ -14,13 +14,14 @@ namespace anm2ed
   {
   public:
     resource::Font fonts[resource::font::COUNT]{};
-    resource::Texture icons[resource::icon::COUNT]{};
+    resource::Image icons[resource::icon::COUNT]{};
     resource::Shader shaders[resource::shader::COUNT]{};
-    resource::Audio music{};
+    resource::AudioData music{};
 
     Resources();
-    resource::Audio& music_track();
-    resource::Audio* music_track_if_loaded();
+    GLuint icon_id_get(int);
+    resource::AudioData& music_track();
+    resource::AudioData* music_track_if_loaded();
 
   private:
     bool isMusicLoaded{false};

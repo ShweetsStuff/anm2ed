@@ -38,7 +38,7 @@ namespace anm2ed::imgui::wizard
     {
       Anm2 anm2{};
       std::unique_ptr<Canvas> canvas{};
-      std::unordered_map<int, resource::Texture> textures{};
+      std::unordered_map<int, resource::Image> textures{};
       glm::vec4 rect{-1.0f};
       float time{};
       float fps{30.0f};

@@ -134,7 +134,7 @@ namespace anm2ed::imgui::wizard
         break;
     }
 
-    if (ImGui::ImageButton("##FFmpeg Path Set", resources.icons[icon::FOLDER].id, icon_size_get()))
+    if (ImGui::ImageButton("##FFmpeg Path Set", resources.icon_id_get(icon::FOLDER), icon_size_get()))
       dialog.file_open(Dialog::FFMPEG_PATH_SET);
     ImGui::SameLine();
     input_text_path(localize.get(LABEL_FFMPEG_PATH), &ffmpegPath);
@@ -146,7 +146,7 @@ namespace anm2ed::imgui::wizard
       dialog.reset();
     }
 
-    if (ImGui::ImageButton("##Path Set", resources.icons[icon::FOLDER].id, icon_size_get()))
+    if (ImGui::ImageButton("##Path Set", resources.icon_id_get(icon::FOLDER), icon_size_get()))
     {
       if (dialogType == Dialog::PNG_DIRECTORY_SET)
         dialog.folder_open(dialogType);

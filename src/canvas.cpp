@@ -205,7 +205,7 @@ namespace anm2ed
     }
   }
 
-  void Canvas::texture_render(Shader& shader, GLuint& texture, mat4 transform, vec4 tint, vec3 colorOffset,
+  void Canvas::texture_render(Shader& shader, GLuint texture, mat4 transform, vec4 tint, vec3 colorOffset,
                               float* vertices, vec2 textureSize, float playbackTime) const
   {
     canvas_blend_premultiplied_set();

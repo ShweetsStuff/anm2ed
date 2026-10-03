@@ -344,7 +344,7 @@ namespace anm2ed::imgui
     }
 
     if (auto* music = resources.music_track_if_loaded())
-      if (music->is_playing() && !aboutPopup.isOpen) music->stop();
+      if (resource::audio::is_playing(*music) && !aboutPopup.isOpen) resource::audio::stop(*music);
 
     overwritePopup.trigger();
 

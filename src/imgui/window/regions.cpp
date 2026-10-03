@@ -77,21 +77,21 @@ namespace anm2ed::imgui
             .isValid = true};
   }
 
-  bool region_pixels_get(const Element& region, const Texture& texture, std::vector<uint8_t>& pixels, ivec2& size)
+  bool region_pixels_get(const Element& region, const Image& texture, std::vector<uint8_t>& pixels, ivec2& size)
   {
     auto minPoint = ivec2(glm::min(region.crop, region.crop + region.size));
     size = ivec2(glm::max(region.crop, region.crop + region.size)) - minPoint;
     if (size.x <= 0 || size.y <= 0 || texture.size.x <= 0 || texture.size.y <= 0 || texture.pixels.empty())
       return false;
 
-    pixels.assign((size_t)size.x * size.y * texture::CHANNELS, 0);
+    pixels.assign((size_t)size.x * size.y * image::CHANNELS, 0);
     for (int y = 0; y < size.y; y++)
       for (int x = 0; x < size.x; x++)
       {
         auto source = minPoint + ivec2(x, y);
         if (source.x < 0 || source.y < 0 || source.x >= texture.size.x || source.y >= texture.size.y) continue;
-        std::copy_n(texture.pixels.data() + ((size_t)source.y * texture.size.x + source.x) * texture::CHANNELS,
-                    texture::CHANNELS, pixels.data() + ((size_t)y * size.x + x) * texture::CHANNELS);
+        std::copy_n(texture.pixels.data() + ((size_t)source.y * texture.size.x + source.x) * image::CHANNELS,
+                    image::CHANNELS, pixels.data() + ((size_t)y * size.x + x) * image::CHANNELS);
       }
     return true;
   }
@@ -124,7 +124,7 @@ namespace anm2ed::imgui
       pathString = path::to_utf8(outputPath);
       WorkingDirectory workingDirectory(document.directory_get());
       path::ensure_directory(outputPath.parent_path());
-      if (!Texture::write_pixels_png(outputPath, exportSize, pixels.data()))
+      if (!Image::write_pixels_png(outputPath, exportSize, pixels.data()))
       {
         toast_log(Level::ERROR, TOAST_EXPORT_REGION_FAILED, sourceRegion.name, pathString);
         return false;
@@ -150,7 +150,7 @@ namespace anm2ed::imgui
         exported.children.push_back(exportedRegion);
         spritesheets->children.push_back(exported);
 
-        document.textures[exported.id] = Texture(pixels.data(), exportSize);
+        document.textures[exported.id] = Image(pixels.data(), exportSize);
         document.texturePaths[exported.id] = exported.path;
         document.spritesheet.reference = exported.id;
         document.spritesheet.selection = {exported.id};
@@ -338,7 +338,7 @@ namespace anm2ed::imgui
 
       if (ImGui::BeginChild("##Export Region Child", child_size_get(REGION_POPUP_ROWS), ImGuiChildFlags_Borders))
       {
-        if (ImGui::ImageButton("##Export Region Path Set", resources.icons[icon::FOLDER].id, icon_size_get()) &&
+        if (ImGui::ImageButton("##Export Region Path Set", resources.icon_id_get(icon::FOLDER), icon_size_get()) &&
             window.dialog)
           window.dialog->file_save(Dialog::REGION_EXPORT_PATH_SET, settings.exportRegionPath);
         ImGui::SameLine();

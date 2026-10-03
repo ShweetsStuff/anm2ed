@@ -1,188 +1,75 @@
 #include "audio.hpp"
 
-#include <cstdio>
-#include <utility>
+#include <unordered_map>
 
-#include "file.hpp"
-
-using namespace anm2ed::util;
-
-namespace anm2ed::resource
+namespace anm2ed::resource::audio
 {
-  MIX_Mixer* Audio::mixer_get()
+  struct Entry
+  {
+    MIX_Audio* audio{};
+    MIX_Track* track{};
+  };
+
+  std::unordered_map<std::uint64_t, Entry> entries{};
+
+  MIX_Mixer* mixer_get()
   {
     static auto mixer = MIX_CreateMixerDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
     return mixer;
   }
 
-  Audio::Audio(const std::filesystem::path& path)
+  Entry* entry_get(const AudioData& data)
   {
-    if (path.empty()) return;
-
-    File file(path, "rb");
-    if (!file) return;
-
-    if (std::fseek(file.get(), 0, SEEK_END) != 0) return;
-    auto size = std::ftell(file.get());
-    if (size <= 0)
-    {
-      return;
-    }
-    std::rewind(file.get());
-
-    data.resize(static_cast<std::size_t>(size));
-    auto read = std::fread(data.data(), 1, data.size(), file.get());
-    if (read == 0)
-    {
-      data.clear();
-      return;
-    }
-    data.resize(read);
-
-    SDL_IOStream* io = SDL_IOFromConstMem(data.data(), data.size());
-    if (!io)
-      data.clear();
-    else
-    {
-      internal = MIX_LoadAudio_IO(mixer_get(), io, true, true);
-      if (!internal) data.clear();
-    }
+    if (!data.is_valid()) return nullptr;
+    auto [it, isNew] = entries.try_emplace(data.uid);
+    if (isNew)
+      if (auto io = SDL_IOFromConstMem(data.bytes.data(), data.bytes.size()))
+        it->second.audio = MIX_LoadAudio_IO(mixer_get(), io, true, true);
+    return it->second.audio ? &it->second : nullptr;
   }
 
-  Audio::Audio(const unsigned char* memory, size_t size)
+  // The playing track, when it belongs to mixer (or any mixer, when none is given).
+  MIX_Track* track_get(const AudioData& data, MIX_Mixer* mixer)
   {
-    if (!memory || size == 0) return;
-    data.assign(memory, memory + size);
-
-    SDL_IOStream* io = SDL_IOFromConstMem(data.data(), data.size());
-    if (!io)
-      data.clear();
-    else
-    {
-      internal = MIX_LoadAudio_IO(mixer_get(), io, true, true);
-      if (!internal) data.clear();
-    }
+    auto it = entries.find(data.uid);
+    if (it == entries.end() || !it->second.track) return nullptr;
+    return !mixer || MIX_GetTrackMixer(it->second.track) == mixer ? it->second.track : nullptr;
   }
 
-  void Audio::unload()
+  void play(const AudioData& data, bool isLoop, MIX_Mixer* mixer)
   {
-    if (track)
-    {
-      MIX_DestroyTrack(track);
-      track = nullptr;
-    }
-    if (internal)
-    {
-      MIX_DestroyAudio(internal);
-      internal = nullptr;
-    }
-  }
-
-  void Audio::play(bool loop, MIX_Mixer* mixer)
-  {
-    if (!internal) return;
+    auto entry = entry_get(data);
     auto targetMixer = mixer ? mixer : mixer_get();
-    if (!targetMixer) return;
+    if (!entry || !targetMixer) return;
 
-    if (track && MIX_GetTrackMixer(track) != targetMixer)
-    {
-      MIX_DestroyTrack(track);
-      track = nullptr;
-    }
+    if (entry->track && MIX_GetTrackMixer(entry->track) != targetMixer) track_detach(data);
+    if (!entry->track) entry->track = MIX_CreateTrack(targetMixer);
+    if (!entry->track) return;
 
-    if (!track)
-    {
-      track = MIX_CreateTrack(targetMixer);
-      if (!track) return;
-    }
+    MIX_SetTrackAudio(entry->track, entry->audio);
 
-    MIX_SetTrackAudio(track, internal);
-
-    SDL_PropertiesID options = 0;
-    if (loop)
-    {
-      options = SDL_CreateProperties();
-      if (options) SDL_SetNumberProperty(options, MIX_PROP_PLAY_LOOPS_NUMBER, -1);
-    }
-
-    MIX_PlayTrack(track, options);
-
+    SDL_PropertiesID options = isLoop ? SDL_CreateProperties() : 0;
+    if (options) SDL_SetNumberProperty(options, MIX_PROP_PLAY_LOOPS_NUMBER, -1);
+    MIX_PlayTrack(entry->track, options);
     if (options) SDL_DestroyProperties(options);
   }
 
-  void Audio::stop(MIX_Mixer* mixer)
+  void stop(const AudioData& data, MIX_Mixer* mixer)
   {
-    if (!track) return;
-    if (mixer && MIX_GetTrackMixer(track) != mixer) return;
-    MIX_StopTrack(track, 0);
+    if (auto track = track_get(data, mixer)) MIX_StopTrack(track, 0);
   }
 
-  void Audio::track_detach(MIX_Mixer* mixer)
+  void track_detach(const AudioData& data, MIX_Mixer* mixer)
   {
-    if (!track) return;
-    if (mixer && MIX_GetTrackMixer(track) != mixer) return;
+    if (!track_get(data, mixer)) return;
+    auto& track = entries[data.uid].track;
     MIX_DestroyTrack(track);
     track = nullptr;
   }
 
-  bool Audio::is_playing() const { return track && MIX_TrackPlaying(track); }
-
-  Audio::Audio(const Audio& other)
+  bool is_playing(const AudioData& data)
   {
-    if (other.data.empty()) return;
-
-    data = other.data;
-    SDL_IOStream* io = SDL_IOFromConstMem(data.data(), data.size());
-    if (!io)
-      data.clear();
-    else
-    {
-      internal = MIX_LoadAudio_IO(mixer_get(), io, true, true);
-      if (!internal) data.clear();
-    }
+    auto track = track_get(data, nullptr);
+    return track && MIX_TrackPlaying(track);
   }
-
-  Audio::Audio(Audio&& other) noexcept
-  {
-    internal = std::exchange(other.internal, nullptr);
-    track = std::exchange(other.track, nullptr);
-    data = std::move(other.data);
-  }
-
-  Audio& Audio::operator=(Audio&& other) noexcept
-  {
-    if (this != &other)
-    {
-      unload();
-      internal = std::exchange(other.internal, nullptr);
-      track = std::exchange(other.track, nullptr);
-      data = std::move(other.data);
-    }
-    return *this;
-  }
-
-  Audio& Audio::operator=(const Audio& other)
-  {
-    if (this != &other)
-    {
-      unload();
-      data.clear();
-      if (!other.data.empty())
-      {
-        data = other.data;
-        SDL_IOStream* io = SDL_IOFromConstMem(data.data(), data.size());
-        if (!io)
-          data.clear();
-        else
-        {
-          internal = MIX_LoadAudio_IO(mixer_get(), io, true, true);
-          if (!internal) data.clear();
-        }
-      }
-    }
-    return *this;
-  }
-
-  Audio::~Audio() { unload(); }
-  bool Audio::is_valid() { return internal; }
 }

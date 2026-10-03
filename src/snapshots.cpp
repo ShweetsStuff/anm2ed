@@ -26,15 +26,15 @@ namespace anm2ed::snapshots
            left.references == right.references;
   }
 
-  bool is_texture_equal(const resource::Texture& left, const resource::Texture& right)
+  bool is_texture_equal(const resource::Image& left, const resource::Image& right)
   {
-    return left.size == right.size && left.filter == right.filter && left.channels == right.channels &&
-           left.pixels == right.pixels;
+    return left.uid == right.uid ||
+           (left.size == right.size && left.isLinear == right.isLinear && left.pixels == right.pixels);
   }
 
-  bool is_audio_equal(const resource::Audio& left, const resource::Audio& right)
+  bool is_audio_equal(const resource::AudioData& left, const resource::AudioData& right)
   {
-    return const_cast<resource::Audio&>(left).is_valid() == const_cast<resource::Audio&>(right).is_valid();
+    return left.is_valid() == right.is_valid();
   }
 
   template <typename T, typename Compare>
@@ -61,12 +61,12 @@ namespace anm2ed::snapshots
 
   bool is_value_equal(const Storage& left, const Storage& right) { return is_storage_equal(left, right); }
 
-  bool is_value_equal(const std::map<int, resource::Texture>& left, const std::map<int, resource::Texture>& right)
+  bool is_value_equal(const std::map<int, resource::Image>& left, const std::map<int, resource::Image>& right)
   {
     return is_map_equal(left, right, is_texture_equal);
   }
 
-  bool is_value_equal(const std::map<int, resource::Audio>& left, const std::map<int, resource::Audio>& right)
+  bool is_value_equal(const std::map<int, resource::AudioData>& left, const std::map<int, resource::AudioData>& right)
   {
     return is_map_equal(left, right, is_audio_equal);
   }

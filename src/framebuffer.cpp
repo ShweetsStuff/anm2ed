@@ -60,7 +60,7 @@ namespace anm2ed
 
   std::vector<uint8_t> Framebuffer::pixels_get() const
   {
-    auto count = size.x * size.y * texture::CHANNELS;
+    auto count = size.x * size.y * image::CHANNELS;
     std::vector<uint8_t> pixels(count);
 
     glReadBuffer(GL_COLOR_ATTACHMENT0);

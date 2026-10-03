@@ -41,7 +41,8 @@ namespace anm2ed::imgui
     };
     window.row_select = [](Window&, Document& document, int id)
     {
-      if (auto audio = document.sound_get(id); audio && ImGui::IsItemClicked(ImGuiMouseButton_Left)) audio->play();
+      if (auto audio = document.sound_get(id); audio && ImGui::IsItemClicked(ImGuiMouseButton_Left))
+        resource::audio::play(*audio);
     };
     window.card_image_get = [](Document& document, Resources& resources, const Element& sound)
     {
@@ -73,7 +74,7 @@ namespace anm2ed::imgui
     };
     window.play = [](Window&, Manager&, Settings&, Document& document, Clipboard&)
     {
-      if (auto audio = document.sound_get(*document.sound.selection.begin())) audio->play();
+      if (auto audio = document.sound_get(*document.sound.selection.begin())) resource::audio::play(*audio);
     };
     window.open = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
     {

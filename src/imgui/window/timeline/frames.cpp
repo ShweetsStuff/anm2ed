@@ -327,13 +327,13 @@ namespace anm2ed::imgui
         if (length > 0)
         {
           ImGui::SetCursorPos(ImVec2(cursorPos.x + frameSize.x * floorf(playback.time), cursorPos.y));
-          ImGui::Image(resources.icons[icon::PLAYHEAD].id, frameSize);
+          ImGui::Image(resources.icon_id_get(icon::PLAYHEAD), frameSize);
           auto playheadMin = ImGui::GetItemRectMin();
           auto playheadMax = ImGui::GetItemRectMax();
           playheadLineCenterX = (playheadMin.x + playheadMax.x) * 0.5f;
           playheadLineTopY = playheadMax.y;
           isPlayheadLineSet = true;
-          overlay_icon(resources.icons[icon::PLAYHEAD].id, playheadIconTint, true);
+          overlay_icon(resources.icon_id_get(icon::PLAYHEAD), playheadIconTint, true);
         }
       }
       else if (animation)
@@ -596,8 +596,8 @@ namespace anm2ed::imgui
           auto iconPos = ImVec2(cursorPos.x + (frameTime * frameSize.x),
                                 cursorPos.y + (frameSize.y / 2) - (icon_size_get().y / 2));
           ImGui::SetCursorPos(iconPos);
-          ImGui::Image(resources.icons[icon].id, icon_size_get());
-          overlay_icon(resources.icons[icon].id, iconTintDefault, false);
+          ImGui::Image(resources.icon_id_get(icon), icon_size_get());
+          overlay_icon(resources.icon_id_get(icon), iconTintDefault, false);
 
           if (type != TRIGGER) frameTime += frame.duration;
 

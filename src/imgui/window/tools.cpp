@@ -73,8 +73,8 @@ namespace anm2ed::imgui
         {
           if (i == tool::UNDO) ImGui::BeginDisabled(!document.is_able_to_undo());
           if (i == tool::REDO) ImGui::BeginDisabled(!document.is_able_to_redo());
-          if (ImGui::ImageButton(labelText, resources.icons[info.icon].id, to_imvec2(size), ImVec2(0, 0), ImVec2(1, 1),
-                                 ImVec4(0, 0, 0, 0), iconTint))
+          if (ImGui::ImageButton(labelText, resources.icon_id_get(info.icon), to_imvec2(size), ImVec2(0, 0),
+                                 ImVec2(1, 1), ImVec4(0, 0, 0, 0), iconTint))
             tool_use((tool::Type)i);
           if (i == tool::UNDO) ImGui::EndDisabled();
           if (i == tool::REDO) ImGui::EndDisabled();

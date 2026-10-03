@@ -97,8 +97,8 @@ namespace anm2ed::imgui
     auto isDefault = shaderPath.empty();
     auto displayPath = isDefault ? path::from_utf8(localize.get(BASIC_DEFAULT)) : shaderPath;
 
-    if (ImGui::ImageButton(std::format("##{} Path Set", localize.get(label)).c_str(), resources.icons[icon::FOLDER].id,
-                           icon_size_get()))
+    if (ImGui::ImageButton(std::format("##{} Path Set", localize.get(label)).c_str(),
+                           resources.icon_id_get(icon::FOLDER), icon_size_get()))
     {
       if (shader)
       {
@@ -432,7 +432,8 @@ namespace anm2ed::imgui
 
             ImGui::SetCursorPos(cursorPos);
             auto imageSize = ImVec2(shaderChildSize.y, shaderChildSize.y);
-            ImGui::ImageWithBg(shaderIcon.id, imageSize, ImVec2(), ImVec2(1, 1), ImVec4(), tintColor);
+            ImGui::ImageWithBg(resource::texture::id_get(shaderIcon), imageSize, ImVec2(), ImVec2(1, 1), ImVec4(),
+                               tintColor);
 
             ImGui::SetCursorPos(ImVec2(shaderChildSize.y + style.ItemSpacing.x,
                                        shaderChildSize.y - shaderChildSize.y / 2 - ImGui::GetTextLineHeight() / 2));

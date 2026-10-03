@@ -208,7 +208,7 @@ namespace anm2ed
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     SDL_GL_SwapWindow(window);
-    resource::Texture::garbage_collect();
+    resource::texture::garbage_collect();
     SDL_GL_SetSwapInterval(settings.isVsync);
   }
 

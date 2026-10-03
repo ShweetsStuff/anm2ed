@@ -457,8 +457,8 @@ namespace anm2ed::imgui
     auto noScrollFlags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2());
     if (ImGui::BeginChild("##Tooltip Image Child", to_imvec2(previewSize), childFlags, noScrollFlags))
-      ImGui::ImageWithBg(image.texture->id, to_imvec2(previewSize), to_imvec2(image.uvMin), to_imvec2(image.uvMax),
-                         ImVec4(), image.isValid ? CARD_TINT_VALID : CARD_TINT_INVALID);
+      ImGui::ImageWithBg(resource::texture::id_get(*image.texture), to_imvec2(previewSize), to_imvec2(image.uvMin),
+                         to_imvec2(image.uvMax), ImVec4(), image.isValid ? CARD_TINT_VALID : CARD_TINT_INVALID);
     ImGui::EndChild();
     ImGui::PopStyleVar();
 
@@ -540,8 +540,8 @@ namespace anm2ed::imgui
         else
           imageSize.y = imageSize.x / aspectRatio;
         ImGui::SetCursorPos(cursorPos);
-        ImGui::ImageWithBg(image.texture->id, imageSize, to_imvec2(image.uvMin), to_imvec2(image.uvMax), ImVec4(),
-                           tint);
+        ImGui::ImageWithBg(resource::texture::id_get(*image.texture), imageSize, to_imvec2(image.uvMin),
+                           to_imvec2(image.uvMax), ImVec4(), tint);
 
         ImGui::SetCursorPos(
             ImVec2(cardSize.y + style.ItemSpacing.x, cardSize.y - cardSize.y / 2 - ImGui::GetTextLineHeight() / 2));

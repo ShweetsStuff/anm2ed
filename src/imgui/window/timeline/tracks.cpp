@@ -115,10 +115,10 @@ namespace anm2ed::imgui
 
         ImGui::SetCursorPos(cursorPos);
         auto folderIcon = group->isExpanded ? icon::FOLDER_OPEN : icon::FOLDER;
-        ImGui::Image(resources.icons[folderIcon].id, icon_size_get());
+        ImGui::Image(resources.icon_id_get(folderIcon), icon_size_get());
         auto iconMin = ImGui::GetItemRectMin();
         auto iconMax = ImGui::GetItemRectMax();
-        overlay_icon(resources.icons[folderIcon].id, itemIconTint, false);
+        overlay_icon(resources.icon_id_get(folderIcon), itemIconTint, false);
         ImGui::SameLine();
 
         ImGui::PushStyleColor(ImGuiCol_Text, itemTextColor);
@@ -134,7 +134,7 @@ namespace anm2ed::imgui
         ImGui::SetCursorPos(ImVec2(itemSize.x - ImGui::GetTextLineHeightWithSpacing() - ImGui::GetStyle().ItemSpacing.x,
                                    (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
         int visibleIcon = isGroupVisible ? icon::VISIBLE : icon::INVISIBLE;
-        if (ImGui::ImageButton("##Group Visible Toggle", resources.icons[visibleIcon].id, icon_size_get()))
+        if (ImGui::ImageButton("##Group Visible Toggle", resources.icon_id_get(visibleIcon), icon_size_get()))
         {
           auto targetAnimationIndex = reference.animationIndex;
           auto targetType = type;
@@ -154,7 +154,7 @@ namespace anm2ed::imgui
         }
         auto visibleButtonMin = ImGui::GetItemRectMin();
         auto visibleButtonMax = ImGui::GetItemRectMax();
-        overlay_icon(resources.icons[visibleIcon].id, itemIconTint, false);
+        overlay_icon(resources.icon_id_get(visibleIcon), itemIconTint, false);
         ImGui::SetItemTooltip("%s", isGroupVisible ? localize.get(TOOLTIP_ITEM_VISIBILITY_SHOWN)
                                                    : localize.get(TOOLTIP_ITEM_VISIBILITY_HIDDEN));
         ImGui::PopStyleVar(2);
@@ -380,8 +380,8 @@ namespace anm2ed::imgui
         contentCursorPos.x += (float)row.depth * ImGui::GetTextLineHeightWithSpacing();
         ImGui::SetCursorPos(contentCursorPos);
 
-        ImGui::Image(resources.icons[icon].id, icon_size_get());
-        overlay_icon(resources.icons[icon].id, iconTintCurrent, false);
+        ImGui::Image(resources.icon_id_get(icon), icon_size_get());
+        overlay_icon(resources.icon_id_get(icon), iconTintCurrent, false);
         ImGui::SameLine();
         if (isReferenced) ImGui::PushFont(resources.fonts[font::ITALICS].get(), font::SIZE);
         ImGui::PushStyleColor(ImGuiCol_Text, itemTextColor);
@@ -398,7 +398,7 @@ namespace anm2ed::imgui
         ImGui::SetCursorPos(ImVec2(itemSize.x - ImGui::GetTextLineHeightWithSpacing() - ImGui::GetStyle().ItemSpacing.x,
                                    (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
         int visibleIcon = isItemVisible ? icon::VISIBLE : icon::INVISIBLE;
-        if (ImGui::ImageButton("##Visible Toggle", resources.icons[visibleIcon].id, icon_size_get()))
+        if (ImGui::ImageButton("##Visible Toggle", resources.icon_id_get(visibleIcon), icon_size_get()))
         {
           auto animationIndex = reference.animationIndex;
           auto targetType = type;
@@ -414,7 +414,7 @@ namespace anm2ed::imgui
                               item->isVisible = !item->isVisible;
                             });
         }
-        overlay_icon(resources.icons[visibleIcon].id, iconTintCurrent, false);
+        overlay_icon(resources.icon_id_get(visibleIcon), iconTintCurrent, false);
         ImGui::SetItemTooltip("%s", isItemVisible ? localize.get(TOOLTIP_ITEM_VISIBILITY_SHOWN)
                                                   : localize.get(TOOLTIP_ITEM_VISIBILITY_HIDDEN));
 
@@ -427,7 +427,7 @@ namespace anm2ed::imgui
             ImGui::SetCursorPos(
                 ImVec2(itemSize.x - (ImGui::GetTextLineHeightWithSpacing() * 2) - ImGui::GetStyle().ItemSpacing.x,
                        (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
-            if (ImGui::ImageButton("##Rect Toggle", resources.icons[rectIcon].id, icon_size_get()))
+            if (ImGui::ImageButton("##Rect Toggle", resources.icon_id_get(rectIcon), icon_size_get()))
             {
               auto nullID = id;
               edit_command_push(EDIT_TOGGLE_NULL_RECT, Document::FRAMES,
@@ -439,7 +439,7 @@ namespace anm2ed::imgui
                                   null->isShowRect = !null->isShowRect;
                                 });
             }
-            overlay_icon(resources.icons[rectIcon].id, iconTintCurrent, false);
+            overlay_icon(resources.icon_id_get(rectIcon), iconTintCurrent, false);
             ImGui::SetItemTooltip("%s", isShowRect ? localize.get(TOOLTIP_NULL_RECT_SHOWN)
                                                    : localize.get(TOOLTIP_NULL_RECT_HIDDEN));
           }
@@ -461,9 +461,9 @@ namespace anm2ed::imgui
 
         auto& isShowUnused = settings.timelineIsShowUnused;
         auto unusedIcon = isShowUnused ? icon::SHOW_UNUSED : icon::HIDE_UNUSED;
-        if (ImGui::ImageButton("##Unused Toggle", resources.icons[unusedIcon].id, icon_size_get()))
+        if (ImGui::ImageButton("##Unused Toggle", resources.icon_id_get(unusedIcon), icon_size_get()))
           isShowUnused = !isShowUnused;
-        overlay_icon(resources.icons[unusedIcon].id, iconTintCurrent, false);
+        overlay_icon(resources.icon_id_get(unusedIcon), iconTintCurrent, false);
         ImGui::SetItemTooltip("%s", isShowUnused ? localize.get(TOOLTIP_UNUSED_ITEMS_SHOWN)
                                                  : localize.get(TOOLTIP_UNUSED_ITEMS_HIDDEN));
 
@@ -472,9 +472,9 @@ namespace anm2ed::imgui
         ImGui::SetCursorPos(
             ImVec2(itemSize.x - (ImGui::GetTextLineHeightWithSpacing() * 2) - ImGui::GetStyle().ItemSpacing.x,
                    (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
-        if (ImGui::ImageButton("##Layers Toggle", resources.icons[layersIcon].id, icon_size_get()))
+        if (ImGui::ImageButton("##Layers Toggle", resources.icon_id_get(layersIcon), icon_size_get()))
           showLayersOnly = !showLayersOnly;
-        overlay_icon(resources.icons[layersIcon].id, iconTintCurrent, false);
+        overlay_icon(resources.icon_id_get(layersIcon), iconTintCurrent, false);
         ImGui::SetItemTooltip("%s", showLayersOnly ? localize.get(TOOLTIP_ONLY_LAYERS_VISIBLE)
                                                    : localize.get(TOOLTIP_ALL_ITEMS_VISIBLE));
         ImGui::PopStyleVar(2);
