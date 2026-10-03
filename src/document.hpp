@@ -157,6 +157,13 @@ namespace anm2ed
     void focused_id_set(SelectionKind, int);
     void selected_clear(SelectionKind);
     Choices choices_get(SelectionKind, int = -1) const;
+    void frames_select(const edit::Uids&);
+    void frame_select(Reference);
+    void frame_toggle(Reference);
+    bool frames_range_select(Reference, Reference, bool);
+    void frame_focus_select();
+    void focus_clear();
+    void track_select(Reference);
     std::set<int> animations_selected_get() const;
     void animations_selected_set(const std::set<int>&);
     std::set<Reference> item_frame_references_get(Reference) const;

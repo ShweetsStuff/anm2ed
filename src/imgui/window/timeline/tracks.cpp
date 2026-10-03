@@ -2,14 +2,14 @@
 
 namespace anm2ed::imgui
 {
-  void TimelineContext::item_child(const TimelineItemRow& row, int index)
+  void TimelineContext::item_child(const TimelineRow& row, int index)
   {
     ImGui::PushID(index);
 
     auto type = row.type;
     auto id = row.id;
     auto row_reference_make = [&]()
-    { return Reference{reference.animationIndex, type, id, -1, row.rootGroupType, row.rootGroupId}; };
+    { return Reference{reference.animationIndex, type, id, -1, row.groupType, row.groupId}; };
     if (row.isGroup)
     {
       auto group = row_group_get(row);
@@ -23,7 +23,7 @@ namespace anm2ed::imgui
       auto itemSize = ImVec2(ImGui::GetContentRegionAvail().x, rowFrameChildHeight);
       auto isGroupVisible = group->isVisible;
       auto colorVec = color_get(COLOR_ITEM_BASE, type);
-      if (is_group_selected(row)) colorVec = color_get(COLOR_ITEM_SELECTED, type);
+      if (is_row_reference_selected(row)) colorVec = color_get(COLOR_ITEM_SELECTED, type);
       auto color = to_imvec4(isGroupVisible ? colorVec : colorVec * COLOR_HIDDEN_MULTIPLIER);
       ImGui::PushStyleColor(ImGuiCol_ChildBg, color);
       ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
@@ -74,7 +74,7 @@ namespace anm2ed::imgui
         {
           rowDragReferences = row_drag_references_get(row);
           ImGui::SetDragDropPayload("Timeline Row Drag Drop", rowDragReferences.data(),
-                                    (int)rowDragReferences.size() * (int)sizeof(TimelineRowReference));
+                                    (int)rowDragReferences.size() * (int)sizeof(TimelineRow));
           ImGui::EndDragDropSource();
         }
 
@@ -91,9 +91,9 @@ namespace anm2ed::imgui
             else if (mousePos.y >= groupButtonMin.y + groupDropThird)
               dropZone = DropZone::INSIDE;
             auto isDropAfter = dropZone != DropZone::BEFORE;
-            auto payloadRows = (TimelineRowReference*)payload->Data;
-            auto payloadCount = payload->DataSize / sizeof(TimelineRowReference);
-            std::vector<TimelineRowReference> draggedRows(payloadRows, payloadRows + payloadCount);
+            auto payloadRows = (TimelineRow*)payload->Data;
+            auto payloadCount = payload->DataSize / sizeof(TimelineRow);
+            std::vector<TimelineRow> draggedRows(payloadRows, payloadRows + payloadCount);
             auto isDropIntoGroup = dropZone == DropZone::INSIDE && (row.type == LAYER || row.type == NULL_);
             for (auto draggedRow : draggedRows)
               if (draggedRow.isGroup || draggedRow.type != row.type) isDropIntoGroup = false;
@@ -182,7 +182,7 @@ namespace anm2ed::imgui
       return;
     }
 
-    auto item = item_get(type, id, row.rootGroupType, row.rootGroupId);
+    auto item = item_get(type, id, row.groupType, row.groupId);
     if (type != NONE && !item)
     {
       ImGui::PopID();
@@ -190,8 +190,8 @@ namespace anm2ed::imgui
     }
     auto isItemVisible = item ? item->isVisible : false;
     auto isVisible = item ? item->isVisible && is_track_group_visible(type, row.groupId) : false;
-    if (item && type == ROOT && row.rootGroupId != -1)
-      isVisible = item->isVisible && is_track_group_visible(row.rootGroupType, row.rootGroupId);
+    if (item && type == ROOT && row.groupId != -1)
+      isVisible = item->isVisible && is_track_group_visible(row.groupType, row.groupId);
     auto& isOnlyShowLayers = settings.timelineIsOnlyShowLayers;
     if (isOnlyShowLayers && type != LAYER) isVisible = false;
     auto isReferenced = is_same_item(reference, row_reference_make());
@@ -247,7 +247,7 @@ namespace anm2ed::imgui
           {
             rowDragReferences = row_drag_references_get(row);
             ImGui::SetDragDropPayload("Timeline Row Drag Drop", rowDragReferences.data(),
-                                      (int)rowDragReferences.size() * (int)sizeof(TimelineRowReference));
+                                      (int)rowDragReferences.size() * (int)sizeof(TimelineRow));
             ImGui::EndDragDropSource();
           }
 
@@ -260,9 +260,9 @@ namespace anm2ed::imgui
               auto isDropAfter = is_drop_after(itemButtonMin, itemButtonMax);
               drop_line_draw(ImGui::GetWindowDrawList(), itemChildMin, itemChildMax, isDropAfter);
 
-              auto payloadRows = (TimelineRowReference*)payload->Data;
-              auto payloadCount = payload->DataSize / sizeof(TimelineRowReference);
-              std::vector<TimelineRowReference> draggedRows(payloadRows, payloadRows + payloadCount);
+              auto payloadRows = (TimelineRow*)payload->Data;
+              auto payloadCount = payload->DataSize / sizeof(TimelineRow);
+              std::vector<TimelineRow> draggedRows(payloadRows, payloadRows + payloadCount);
               if (payload->IsDelivery()) rows_move_to_row(draggedRows, row, isDropAfter, false);
             }
             ImGui::EndDragDropTarget();
@@ -393,8 +393,8 @@ namespace anm2ed::imgui
           auto animationIndex = reference.animationIndex;
           auto targetType = type;
           auto targetID = id;
-          auto targetGroupType = row.rootGroupType;
-          auto targetGroupId = row.rootGroupId;
+          auto targetGroupType = row.groupType;
+          auto targetGroupId = row.groupId;
           edit_push(EDIT_TOGGLE_ITEM_VISIBILITY,
                     [=](model::Model& model)
                     {
@@ -510,14 +510,13 @@ namespace anm2ed::imgui
       {
         if (animation && ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_A, ImGuiInputFlags_RouteFocused))
         {
-          auto rowReferences = timeline_row_references_get();
+          auto rowReferences = timeline_item_rows_get();
           row_selection_clear();
           for (auto rowReference : rowReferences)
             row_selection_insert(rowReference);
           if (!rowReferences.empty())
           {
             rowSelectionAnchor = rowReferences.front();
-            isRowSelectionAnchorSet = true;
           }
           document.frame_references_clear();
         }
@@ -536,7 +535,7 @@ namespace anm2ed::imgui
           ImGui::TableSetupScrollFreeze(0, 1);
           ImGui::TableSetupColumn("##Items");
 
-          auto item_child_row = [&](const TimelineItemRow& row, int index)
+          auto item_child_row = [&](const TimelineRow& row, int index)
           {
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(0);
@@ -578,7 +577,7 @@ namespace anm2ed::imgui
         ImGui::SameLine();
 
         auto selectedRows = selected_row_references_get();
-        auto isRemoveAvailable = std::ranges::any_of(selectedRows, [](const TimelineRowReference& row)
+        auto isRemoveAvailable = std::ranges::any_of(selectedRows, [](const TimelineRow& row)
                                                      { return row.type == LAYER || row.type == NULL_; });
         ImGui::BeginDisabled(!isRemoveAvailable);
         shortcut(manager.chords[SHORTCUT_REMOVE]);

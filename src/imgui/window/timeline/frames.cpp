@@ -2,43 +2,25 @@
 
 namespace anm2ed::imgui
 {
-  void TimelineContext::frame_move_drag_clear()
-  {
-    frameMoveDrag = {};
-    frameMoveDropType = NONE;
-    frameMoveDropItemID = -1;
-    frameMoveDropGroupType = NONE;
-    frameMoveDropGroupId = -1;
-    frameMoveDropIndex = -1;
-    isFrameMoveDropTarget = false;
-  }
-
-  void TimelineContext::frames_move_to(int targetType, int targetID, int targetGroupType, int targetGroupId,
-                                       int insertIndex)
+  // Moves the dragged frames to `target`'s track, before its frame index.
+  void TimelineContext::frames_move_to(Reference target)
   {
     if (!frameMoveDrag.isActive || !animation || frameMoveDrag.animationIndex != reference.animationIndex) return;
-    if (targetType == TRIGGER) return;
+    if (target.itemType == TRIGGER) return;
 
-    auto drag = frameMoveDrag;
-    std::erase_if(drag.references, [](const Reference& frameReference)
-                  { return frameReference.itemType == TRIGGER || frameReference.frameIndex < 0; });
-    if (drag.references.empty() && drag.frameIndex >= 0)
-      drag.references.push_back(
-          {drag.animationIndex, drag.type, drag.itemID, drag.frameIndex, drag.groupType, drag.groupId});
-    std::erase_if(drag.references, [](const Reference& frameReference)
-                  { return frameReference.itemType == TRIGGER || frameReference.frameIndex < 0; });
-    if (drag.references.empty()) return;
+    auto frames = std::set<Reference>(frameMoveDrag.references.begin(), frameMoveDrag.references.end());
+    std::erase_if(frames, [](const Reference& frame) { return frame.itemType == TRIGGER || frame.frameIndex < 0; });
+    if (frames.empty()) return;
 
-    Reference target{drag.animationIndex, targetType, targetID, -1, targetGroupType, targetGroupId};
+    auto insertIndex = std::exchange(target.frameIndex, -1);
     edit_push(
-        EDIT_MOVE_FRAMES,
-        [frames = std::set<Reference>(drag.references.begin(), drag.references.end()), target,
-         insertIndex](model::Model& model) { return edit::frames_move(model, frames, target, insertIndex); },
+        EDIT_MOVE_FRAMES, [frames, target, insertIndex](model::Model& model)
+        { return edit::frames_move(model, frames, target, insertIndex); },
         [=, this](Document& document, const edit::Uids& uids)
         {
-          frames_select_for(document, uids);
-          if (targetType == LAYER)
-            if (auto layer = model::item_get(document.model.content.layers, targetID))
+          document.frames_select(uids);
+          if (target.itemType == LAYER)
+            if (auto layer = model::item_get(document.model.content.layers, target.itemID))
               document.focused_id_set(SelectionKind::SPRITESHEETS, layer->spritesheetId);
         });
   }
@@ -52,11 +34,6 @@ namespace anm2ed::imgui
   ImVec2 TimelineContext::frame_box_screen_point_get(ImVec2 point)
   {
     return ImVec2(point.x - scroll.x + frameBoxClipMin.x, point.y - scroll.y + frameBoxClipMin.y);
-  }
-
-  bool TimelineContext::is_frame_box_overlapping(ImVec2 leftMin, ImVec2 leftMax, ImVec2 rightMin, ImVec2 rightMax)
-  {
-    return leftMin.x <= rightMax.x && leftMax.x >= rightMin.x && leftMin.y <= rightMax.y && leftMax.y >= rightMin.y;
   }
 
   void TimelineContext::frame_overlay_draw(ImDrawList* drawList, ImVec2 clipMin, ImVec2 clipMax)
@@ -90,12 +67,12 @@ namespace anm2ed::imgui
     }
   }
 
-  void TimelineContext::frame_child(const TimelineItemRow& row, int& index, float width)
+  void TimelineContext::frame_child(const TimelineRow& row, int& index, float width)
   {
     auto type = row.type;
     auto id = row.id;
     auto row_reference_make = [&](int frameIndex = -1)
-    { return Reference{reference.animationIndex, type, id, frameIndex, row.rootGroupType, row.rootGroupId}; };
+    { return Reference{reference.animationIndex, type, id, frameIndex, row.groupType, row.groupId}; };
     auto childSize = ImVec2(width, rowFrameChildHeight);
     if (row.isGroup)
     {
@@ -111,12 +88,12 @@ namespace anm2ed::imgui
       return;
     }
 
-    auto item = item_get(type, id, row.rootGroupType, row.rootGroupId);
+    auto item = item_get(type, id, row.groupType, row.groupId);
     if (type != NONE && !item) return;
 
     auto isVisible = item ? item->isVisible && is_track_group_visible(type, row.groupId) : false;
-    if (item && type == ROOT && row.rootGroupId != -1)
-      isVisible = item->isVisible && is_track_group_visible(row.rootGroupType, row.rootGroupId);
+    if (item && type == ROOT && row.groupId != -1)
+      isVisible = item->isVisible && is_track_group_visible(row.groupType, row.groupId);
     auto& isOnlyShowLayers = settings.timelineIsOnlyShowLayers;
     if (isOnlyShowLayers && type != LAYER) isVisible = false;
 
@@ -174,7 +151,8 @@ namespace anm2ed::imgui
         auto frameEnd = type == TRIGGER ? frameStart + 1.0f : frameStart + frame.duration;
         auto frameContentMin = ImVec2(frameStart * frameSize.x, rowMinY);
         auto frameContentMax = ImVec2(frameEnd * frameSize.x, rowMaxY);
-        if (is_frame_box_overlapping(frameContentMin, frameContentMax, boxMin, boxMax))
+        if (frameContentMin.x <= boxMax.x && frameContentMax.x >= boxMin.x && frameContentMin.y <= boxMax.y &&
+            frameContentMax.y >= boxMin.y)
           frameBoxSelection.insert(frameReference);
         if (type != TRIGGER) selectionFrameTime += frame.duration;
         ++frameIndex;
@@ -193,7 +171,7 @@ namespace anm2ed::imgui
         }
         else if (reference.itemType != NONE || reference.itemID != -1)
           group_selection_reset_for(document);
-        reference_clear_for(document);
+        document.focus_clear();
       }
 
       if (type == NONE)
@@ -350,12 +328,7 @@ namespace anm2ed::imgui
               ++frameIndex;
             }
 
-            frameMoveDropType = type;
-            frameMoveDropItemID = id;
-            frameMoveDropGroupType = row.rootGroupType;
-            frameMoveDropGroupId = row.rootGroupId;
-            frameMoveDropIndex = dropIndex;
-            isFrameMoveDropTarget = true;
+            frameMoveDropTarget = Reference{reference.animationIndex, type, id, dropIndex, row.groupType, row.groupId};
 
             auto dropX = cursorScreenPos.x + dropFrameTime * frameSize.x;
             auto previewWidth = glm::max(frameSize.x, (float)frameMoveDrag.duration * frameSize.x);
@@ -433,25 +406,15 @@ namespace anm2ed::imgui
             auto isShiftDown = ImGui::IsKeyDown(ImGuiMod_Shift);
             if (isShiftDown)
             {
-              auto isHadAnchor = isFrameSelectionAnchorSet;
-              auto anchorReference = isHadAnchor ? frameSelectionAnchor : frameReference;
-              auto isRangeSelected =
-                  frame_selection_range_set_for(document, anchorReference, frameReference, isCtrlDown);
-              if (!isRangeSelected) frame_selection_set_for(document, frameReference);
-              if (!isHadAnchor || !isRangeSelected) frameSelectionAnchor = frameReference;
-              isFrameSelectionAnchorSet = true;
-            }
-            else if (isCtrlDown)
-            {
-              frame_selection_toggle_for(document, frameReference);
-              frameSelectionAnchor = frameReference;
-              isFrameSelectionAnchorSet = true;
+              auto isRangeSelected = document.frames_range_select(frameSelectionAnchor.value_or(frameReference),
+                                                                  frameReference, isCtrlDown);
+              if (!isRangeSelected) document.frame_select(frameReference);
+              if (!frameSelectionAnchor || !isRangeSelected) frameSelectionAnchor = frameReference;
             }
             else
             {
-              frame_selection_set_for(document, frameReference);
+              isCtrlDown ? document.frame_toggle(frameReference) : document.frame_select(frameReference);
               frameSelectionAnchor = frameReference;
-              isFrameSelectionAnchorSet = true;
             }
             reference_set(frameReference);
             isReferenced = true;
@@ -470,13 +433,12 @@ namespace anm2ed::imgui
                 isDraggedFrameActive = true;
                 draggedFrameReference = frameReference;
                 draggedFrameType = type;
-                draggedFrameIndex = frameIndex;
                 draggedFrameStart = hoveredTime;
                 if (type != TRIGGER) draggedFrameStartDuration = frame.duration;
                 draggedFrameStartDurations.clear();
                 if (type != TRIGGER)
                   for (auto selectedReference : drag_frame_references_get(frameReference))
-                    if (auto selectedFrame = command_frame_get(document, selectedReference))
+                    if (auto selectedFrame = document.model.frame_get(selectedReference))
                       draggedFrameStartDurations.push_back({selectedReference, selectedFrame->duration});
                 draggedFrameStartMouseX = ImGui::GetIO().MousePos.x;
                 draggedFrameWidth = frameSize.x;
@@ -492,22 +454,14 @@ namespace anm2ed::imgui
               auto selectedReferences = drag_frame_references_get(frameReference);
               int dragDuration = 0;
               for (auto selectedReference : selectedReferences)
-                if (auto selectedFrame = command_frame_get(document, selectedReference))
+                if (auto selectedFrame = document.model.frame_get(selectedReference))
                   dragDuration += selectedFrame->duration;
               dragDuration = glm::max(1, dragDuration);
 
-              frameMoveDrag = {
-                  .type = type,
-                  .itemID = id,
-                  .animationIndex = reference.animationIndex,
-                  .groupType = row.rootGroupType,
-                  .groupId = row.rootGroupId,
-                  .frameIndex = frameIndex,
-                  .duration = dragDuration,
-                  .indices = {},
-                  .references = {selectedReferences.begin(), selectedReferences.end()},
-                  .isActive = true,
-              };
+              frameMoveDrag = {.animationIndex = reference.animationIndex,
+                               .duration = dragDuration,
+                               .references = {selectedReferences.begin(), selectedReferences.end()},
+                               .isActive = true};
             }
           }
 
@@ -599,7 +553,6 @@ namespace anm2ed::imgui
         isDraggedFrameActive = false;
         draggedFrameReference = {};
         draggedFrameType = NONE;
-        draggedFrameIndex = -1;
         draggedFrameStart = -1;
         draggedFrameStartDuration = -1;
         draggedFrameStartDurations.clear();
@@ -722,7 +675,7 @@ namespace anm2ed::imgui
           ImGui::TableSetupScrollFreeze(0, 1);
           ImGui::TableSetupColumn("##Frames");
 
-          auto frames_child_row = [&](const TimelineItemRow& row)
+          auto frames_child_row = [&](const TimelineRow& row)
           {
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(0);

@@ -747,6 +747,94 @@ namespace anm2ed
     return choices;
   }
 
+  // Selects the frames an edit returned and moves the playhead to the first.
+  void Document::frames_select(const edit::Uids& uids)
+  {
+    auto references = references_get(uids);
+    if (references.empty()) return;
+    auto focus = references.front();
+    editTarget = EditTarget::FRAME;
+    frame_references_set({references.begin(), references.end()});
+    reference_set(focus);
+    if (auto item = model.track_get(focus); item && focus.itemType != TRIGGER)
+      frameTime = model::frame_time_from_index_get(*item, focus.frameIndex);
+  }
+
+  void Document::frame_select(Reference frameReference)
+  {
+    selection.uids[SelectionKind::GROUPS].clear();
+    editTarget = EditTarget::FRAME;
+    frame_references_set({frameReference});
+    reference_set(frameReference);
+  }
+
+  void Document::frame_toggle(Reference frameReference)
+  {
+    selection.uids[SelectionKind::GROUPS].clear();
+    editTarget = EditTarget::FRAME;
+    auto frames = frame_references_get(FrameReferenceFallback::NONE);
+    if (!frames.contains(frameReference))
+      frames.insert(frameReference);
+    else if (frames.size() > 1)
+      frames.erase(frameReference);
+    frame_references_set(frames);
+    reference_set(frameReference);
+  }
+
+  // Selects frames first..last of one track (added to the selection when additive).
+  bool Document::frames_range_select(Reference firstReference, Reference lastReference, bool isAdditive)
+  {
+    selection.uids[SelectionKind::GROUPS].clear();
+    editTarget = EditTarget::FRAME;
+    if (document::item_reference_get(firstReference) != document::item_reference_get(lastReference) ||
+        firstReference.frameIndex < 0 || lastReference.frameIndex < 0)
+      return false;
+
+    auto item = model.track_get(lastReference);
+    if (!item || std::max(firstReference.frameIndex, lastReference.frameIndex) >= model::track_frames_count_get(*item))
+      return false;
+
+    auto [firstIndex, lastIndex] = std::minmax(firstReference.frameIndex, lastReference.frameIndex);
+    auto selectedFrames = isAdditive ? frame_references_get(FrameReferenceFallback::NONE) : std::set<Reference>{};
+    for (int i = firstIndex; i <= lastIndex; ++i)
+    {
+      auto frameReference = lastReference;
+      frameReference.frameIndex = i;
+      selectedFrames.insert(frameReference);
+    }
+
+    frame_references_set(selectedFrames);
+    reference_set(lastReference);
+    return true;
+  }
+
+  void Document::frame_focus_select()
+  {
+    auto targetReference = reference_get();
+    if (targetReference.frameIndex < 0) return frame_references_clear();
+    editTarget = EditTarget::FRAME;
+    frame_references_set({targetReference});
+  }
+
+  void Document::focus_clear()
+  {
+    reference_set({reference_get().animationIndex});
+    frame_references_clear();
+    selection.uids[SelectionKind::TRACKS].clear();
+  }
+
+  // Selects a track (its layer's spritesheet becomes the focused one).
+  void Document::track_select(Reference itemReference)
+  {
+    itemReference.frameIndex = -1;
+    if (itemReference.itemType == LAYER)
+      if (auto layer = model::item_get(model.content.layers, itemReference.itemID))
+        focused_id_set(SelectionKind::SPRITESHEETS, layer->spritesheetId);
+    reference_set(itemReference);
+    frame_references_clear();
+    selected_set(SelectionKind::TRACKS, {itemReference});
+  }
+
   std::set<int> Document::animations_selected_get() const
   {
     std::set<int> indices{};

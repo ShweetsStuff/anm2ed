@@ -136,23 +136,8 @@ namespace anm2ed::imgui
                                                           resource::icon::EASE_IN, resource::icon::EASE_OUT,
                                                           resource::icon::EASE_IN_OUT};
 
-  struct TimelineItemRow
-  {
-    int type{NONE};
-    int id{-1};
-    int index{-1};
-    int groupId{-1};
-    int rootGroupType{NONE};
-    int rootGroupId{-1};
-    int depth{};
-    bool isGroup{};
-  };
-
-  struct RootFrameSpan
-  {
-    int start{};
-    int end{};
-  };
+  Reference row_item_reference_get(const TimelineRow&);
+  Reference row_selection_reference_get(const TimelineRow&);
 
   struct TimelineContext : TimelineState
   {
@@ -183,12 +168,7 @@ namespace anm2ed::imgui
     ImVec4 itemTextColor{};
     std::optional<int> frameSplitTimeAtCursor{};
 
-    int frameMoveDropType{NONE};
-    int frameMoveDropItemID{-1};
-    int frameMoveDropGroupType{NONE};
-    int frameMoveDropGroupId{-1};
-    int frameMoveDropIndex{-1};
-    bool isFrameMoveDropTarget{};
+    std::optional<Reference> frameMoveDropTarget{};
     float playheadLineCenterX{};
     float playheadLineTopY{};
     bool isPlayheadLineSet{};
@@ -201,8 +181,7 @@ namespace anm2ed::imgui
     const model::Track* selected_item_get();
     const model::TrackGroup* track_group_get(int type, int groupId);
     bool is_track_group_visible(int type, int groupId);
-    const model::TrackGroup* row_group_get(const TimelineItemRow& row);
-    const model::Track* command_item_reference_get(Document& document, Reference itemReference);
+    const model::TrackGroup* row_group_get(const TimelineRow& row);
     glm::vec4 color_get(TimelineColor, int);
     std::set<Reference> drag_frame_references_get(const Reference&);
     // Queues an edit on the document; its result is selected (frames by default).
@@ -213,26 +192,17 @@ namespace anm2ed::imgui
           [=, this](Manager&, Document& document) mutable
           {
             auto uids = document.edit_apply(label, operation);
-            select ? select(document, uids) : frames_select_for(document, uids);
+            select ? select(document, uids) : document.frames_select(uids);
           });
     }
     void edit_begin_push(StringType);
     void reference_set(Reference);
-    void frames_select_for(Document&, const edit::Uids&);
-    const model::Frame* command_frame_get(Document& document, const Reference& targetReference);
     Reference item_reference_get(int type, int id, int groupType = NONE, int groupId = -1);
     Reference item_reference_from_frame_get(Reference frameReference);
     bool is_same_item(const Reference& left, const Reference& right);
     void group_selection_reset_for(Document& targetDocument);
     std::set<Reference> item_references_for_current_get();
-    void frame_selection_set_for(Document& targetDocument, Reference frameReference);
-    void frame_selection_toggle_for(Document& targetDocument, Reference frameReference);
-    bool frame_selection_range_set_for(Document& targetDocument, Reference firstReference, Reference lastReference,
-                                       bool isAdditive);
     std::set<Reference> copy_frame_references_get();
-    void frames_selection_set_reference_for(Document& targetDocument);
-    void reference_clear_for(Document& targetDocument);
-    void reference_set_timeline_item_reference_for(Document& targetDocument, Reference itemReference);
     void command_push(std::function<void(Manager&, Document&)> run);
     void overlay_icon(GLuint textureId, ImVec4 tint, bool isForced = false);
     void playback_stop();
@@ -250,27 +220,19 @@ namespace anm2ed::imgui
     bool is_bake_into_other_frames_ready();
     void bake_into_other_frames();
     void frame_split();
-    std::vector<TimelineItemRow> timeline_item_rows_get();
-    std::vector<Reference> timeline_item_references_get();
-    Reference group_reference_get(const TimelineItemRow& row);
-    TimelineRowReference row_reference_get(const TimelineItemRow& row);
-    Reference row_item_reference_get(const TimelineRowReference& row);
-    std::vector<TimelineRowReference> timeline_row_references_get();
-    bool is_group_selected(const TimelineItemRow& row);
-    bool is_row_selected(const TimelineItemRow& row);
+    std::vector<TimelineRow> timeline_item_rows_get();
+    bool is_row_selected(const TimelineRow& row);
     void row_selection_clear();
-    void row_selection_insert(const TimelineRowReference& row);
-    void row_selection_erase(const TimelineRowReference& row);
-    bool is_row_reference_selected(const TimelineRowReference& row);
-    std::size_t row_selection_count_get();
-    void row_selection_set(const TimelineItemRow& row);
+    void row_selection_insert(const TimelineRow& row);
+    bool is_row_reference_selected(const TimelineRow& row);
+    void row_selection_set(const TimelineRow& row);
     void reference_set_adjacent_item(int direction);
-    std::vector<TimelineRowReference> selected_row_references_get();
-    std::vector<TimelineRowReference> row_drag_references_get(const TimelineItemRow& row);
+    std::vector<TimelineRow> selected_row_references_get();
+    std::vector<TimelineRow> row_drag_references_get(const TimelineRow& row);
     void item_remove();
     std::vector<Reference> item_references_groupable_get();
     void item_group();
-    void rows_move_to_row(std::vector<TimelineRowReference> draggedRows, TimelineItemRow targetRow, bool isDropAfter,
+    void rows_move_to_row(std::vector<TimelineRow> draggedRows, TimelineRow targetRow, bool isDropAfter,
                           bool isDropIntoGroup = false);
     void fit_animation_length();
     void frame_references_copy(const std::set<Reference>& selectedFrames);
@@ -279,23 +241,20 @@ namespace anm2ed::imgui
     void paste();
     void context_menu();
     void item_base_properties_open(int type, int id);
-    void group_properties_close();
-    void group_properties_open(const TimelineItemRow& row, const model::TrackGroup& group);
+    void group_properties_open(const TimelineRow& row, const model::TrackGroup& group);
     void group_properties_update();
     void item_context_menu();
 
     TimelineContext(TimelineState&&, Manager&, Settings&, Resources&, Clipboard&);
     void update();
     void frame_begin();
-    void item_child(const TimelineItemRow&, int);
+    void item_child(const TimelineRow&, int);
     void items_child();
-    void frame_move_drag_clear();
-    void frames_move_to(int, int, int, int, int);
+    void frames_move_to(Reference);
     ImVec2 frame_box_content_point_get();
     ImVec2 frame_box_screen_point_get(ImVec2);
-    bool is_frame_box_overlapping(ImVec2, ImVec2, ImVec2, ImVec2);
     void frame_overlay_draw(ImDrawList*, ImVec2, ImVec2);
-    void frame_child(const TimelineItemRow&, int&, float);
+    void frame_child(const TimelineRow&, int&, float);
     void frames_child();
     void draw();
   };

@@ -12,10 +12,8 @@ namespace anm2ed::imgui
       frames_child();
       if (frameMoveDrag.isActive && ImGui::IsMouseReleased(ImGuiMouseButton_Left))
       {
-        if (isFrameMoveDropTarget)
-          frames_move_to(frameMoveDropType, frameMoveDropItemID, frameMoveDropGroupType, frameMoveDropGroupId,
-                         frameMoveDropIndex);
-        frame_move_drag_clear();
+        if (frameMoveDropTarget) frames_move_to(*frameMoveDropTarget);
+        frameMoveDrag = {};
       }
       items_child();
     }
@@ -202,7 +200,7 @@ namespace anm2ed::imgui
           frameReference.frameIndex = glm::clamp(reference.frameIndex + (int)isNextFrame - (int)isPreviousFrame, 0,
                                                  (int)item->frames.size() - 1);
           reference_set(frameReference);
-          frames_selection_set_reference_for(document);
+          document.frame_focus_select();
           document.frameTime = model::frame_time_from_index_get(*item, reference.frameIndex);
         }
 

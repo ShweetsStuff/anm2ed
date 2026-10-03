@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
@@ -17,7 +18,9 @@ namespace anm2ed::imgui
 {
   struct TimelineContext;
 
-  struct TimelineRowReference
+  // A timeline row: a track (in a group or not), a group, or a group's root. groupType/groupId name the group a
+  // track or group root belongs to.
+  struct TimelineRow
   {
     int documentIndex{-1};
     int animationIndex{-1};
@@ -26,21 +29,16 @@ namespace anm2ed::imgui
     int index{-1};
     int groupType{NONE};
     int groupId{-1};
+    int depth{};
     bool isGroup{};
 
-    auto operator<=>(const TimelineRowReference&) const = default;
+    auto operator<=>(const TimelineRow&) const = default;
   };
 
   struct FrameMoveDrag
   {
-    int type{NONE};
-    int itemID{-1};
     int animationIndex{-1};
-    int groupType{NONE};
-    int groupId{-1};
-    int frameIndex{-1};
     int duration{1};
-    std::vector<int> indices{};
     std::vector<Reference> references{};
     bool isActive{};
   };
@@ -78,8 +76,7 @@ namespace anm2ed::imgui
     ImVec2 frameBoxStart{};
     ImVec2 frameBoxEnd{};
     std::set<Reference> frameBoxSelection{};
-    TimelineRowReference rowSelectionAnchor{};
-    bool isRowSelectionAnchorSet{};
+    std::optional<TimelineRow> rowSelectionAnchor{};
     PopupHelper groupPropertiesPopup{PopupHelper(LABEL_GROUP_PROPERTIES, POPUP_SMALL_NO_HEIGHT)};
     std::string groupName{};
     int groupAnimationIndex{-1};
@@ -88,7 +85,6 @@ namespace anm2ed::imgui
     Reference draggedFrameReference{};
     bool isDraggedFrameActive{};
     int draggedFrameType{};
-    int draggedFrameIndex{-1};
     int draggedFrameStart{-1};
     int draggedFrameStartDuration{-1};
     std::vector<FrameDurationDrag> draggedFrameStartDurations{};
@@ -96,10 +92,9 @@ namespace anm2ed::imgui
     float draggedFrameWidth{};
     bool isDraggedFrameSnapshot{};
     FrameMoveDrag frameMoveDrag{};
-    Reference frameSelectionAnchor{};
-    bool isFrameSelectionAnchorSet{};
+    std::optional<Reference> frameSelectionAnchor{};
     int animationLengthEditIndex{-1};
-    std::vector<TimelineRowReference> rowDragReferences{};
+    std::vector<TimelineRow> rowDragReferences{};
     glm::vec2 scroll{};
     ImGuiStyle style{};
   };

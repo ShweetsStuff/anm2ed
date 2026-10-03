@@ -19,24 +19,14 @@ namespace anm2ed::imgui
     return !group || group->isVisible;
   }
 
-  const model::TrackGroup* TimelineContext::row_group_get(const TimelineItemRow& row)
+  const model::TrackGroup* TimelineContext::row_group_get(const TimelineRow& row)
   {
     return row.isGroup ? track_group_get(row.type, row.id) : nullptr;
   }
 
-  const model::Track* TimelineContext::command_item_reference_get(Document& document, Reference itemReference)
-  {
-    return document.model.track_get(itemReference);
-  }
+  const model::Frame* TimelineContext::frame_get() { return document.model.frame_get(reference); }
 
-  const model::Frame* TimelineContext::command_frame_get(Document& document, const Reference& targetReference)
-  {
-    return document.model.frame_get(targetReference);
-  }
-
-  const model::Frame* TimelineContext::frame_get() { return command_frame_get(document, reference); }
-
-  const model::Track* TimelineContext::selected_item_get() { return command_item_reference_get(document, reference); }
+  const model::Track* TimelineContext::selected_item_get() { return document.model.track_get(reference); }
 
   glm::vec4 TimelineContext::color_get(TimelineColor color, int type)
   {
@@ -63,18 +53,6 @@ namespace anm2ed::imgui
     document.reference_set(value);
   }
 
-  void TimelineContext::frames_select_for(Document& targetDocument, const edit::Uids& uids)
-  {
-    auto references = targetDocument.references_get(uids);
-    if (references.empty()) return;
-    auto focus = references.front();
-    targetDocument.editTarget = Document::EditTarget::FRAME;
-    targetDocument.frame_references_set({references.begin(), references.end()});
-    targetDocument.reference_set(focus);
-    if (auto item = command_item_reference_get(targetDocument, focus); item && focus.itemType != TRIGGER)
-      targetDocument.frameTime = model::frame_time_from_index_get(*item, focus.frameIndex);
-  }
-
   Reference TimelineContext::item_reference_get(int type, int id, int groupType, int groupId)
   {
     return Reference{reference.animationIndex, type, id, -1, groupType, groupId};
@@ -95,7 +73,7 @@ namespace anm2ed::imgui
   void TimelineContext::group_selection_reset_for(Document& targetDocument)
   {
     targetDocument.selection.uids[SelectionKind::GROUPS].clear();
-    isRowSelectionAnchorSet = false;
+    rowSelectionAnchor.reset();
   }
 
   std::set<Reference> TimelineContext::item_references_for_current_get()
@@ -103,54 +81,6 @@ namespace anm2ed::imgui
     auto result = document.selected_get(SelectionKind::TRACKS);
     if (result.empty() && reference.itemType != NONE) result.insert(item_reference_from_frame_get(reference));
     return result;
-  }
-
-  void TimelineContext::frame_selection_set_for(Document& targetDocument, Reference frameReference)
-  {
-    group_selection_reset_for(targetDocument);
-    targetDocument.editTarget = Document::EditTarget::FRAME;
-    targetDocument.frame_references_set({frameReference});
-    targetDocument.reference_set(frameReference);
-  }
-
-  void TimelineContext::frame_selection_toggle_for(Document& targetDocument, Reference frameReference)
-  {
-    group_selection_reset_for(targetDocument);
-    targetDocument.editTarget = Document::EditTarget::FRAME;
-    auto selection = targetDocument.frame_references_get(Document::FrameReferenceFallback::NONE);
-    if (!selection.contains(frameReference))
-      selection.insert(frameReference);
-    else if (selection.size() > 1)
-      selection.erase(frameReference);
-    targetDocument.frame_references_set(selection);
-    targetDocument.reference_set(frameReference);
-  }
-
-  bool TimelineContext::frame_selection_range_set_for(Document& targetDocument, Reference firstReference,
-                                                      Reference lastReference, bool isAdditive)
-  {
-    group_selection_reset_for(targetDocument);
-    targetDocument.editTarget = Document::EditTarget::FRAME;
-    if (!is_same_item(firstReference, lastReference) || firstReference.frameIndex < 0 || lastReference.frameIndex < 0)
-      return false;
-
-    auto item = command_item_reference_get(targetDocument, lastReference);
-    if (!item || std::max(firstReference.frameIndex, lastReference.frameIndex) >= model::track_frames_count_get(*item))
-      return false;
-
-    auto [firstIndex, lastIndex] = std::minmax(firstReference.frameIndex, lastReference.frameIndex);
-    auto selectedFrames = isAdditive ? targetDocument.frame_references_get(Document::FrameReferenceFallback::NONE)
-                                     : std::set<Reference>{};
-    for (int i = firstIndex; i <= lastIndex; ++i)
-    {
-      auto frameReference = lastReference;
-      frameReference.frameIndex = i;
-      selectedFrames.insert(frameReference);
-    }
-
-    targetDocument.frame_references_set(selectedFrames);
-    targetDocument.reference_set(lastReference);
-    return true;
   }
 
   std::set<Reference> TimelineContext::copy_frame_references_get()
@@ -173,41 +103,15 @@ namespace anm2ed::imgui
     return result;
   }
 
-  void TimelineContext::frames_selection_set_reference_for(Document& targetDocument)
-  {
-    auto targetReference = targetDocument.reference_get();
-    if (targetReference.frameIndex < 0) return targetDocument.frame_references_clear();
-    targetDocument.editTarget = Document::EditTarget::FRAME;
-    targetDocument.frame_references_set({targetReference});
-  }
-
-  void TimelineContext::reference_clear_for(Document& targetDocument)
-  {
-    targetDocument.reference_set({targetDocument.reference_get().animationIndex});
-    targetDocument.frame_references_clear();
-    targetDocument.selection.uids[SelectionKind::TRACKS].clear();
-  }
-
-  void TimelineContext::reference_set_timeline_item_reference_for(Document& targetDocument, Reference itemReference)
-  {
-    itemReference.frameIndex = -1;
-    if (itemReference.itemType == LAYER)
-      if (auto layer = model::item_get(targetDocument.model.content.layers, itemReference.itemID))
-        targetDocument.focused_id_set(SelectionKind::SPRITESHEETS, layer->spritesheetId);
-    targetDocument.reference_set(itemReference);
-    targetDocument.frame_references_clear();
-    targetDocument.selected_set(SelectionKind::TRACKS, {itemReference});
-  }
-
   void TimelineContext::command_push(std::function<void(Manager&, Document&)> run)
   {
     manager.command_push(
         {manager.selected, [run](Manager& manager, Document& document) mutable { run(manager, document); }});
   }
 
-  std::vector<TimelineItemRow> TimelineContext::timeline_item_rows_get()
+  std::vector<TimelineRow> TimelineContext::timeline_item_rows_get()
   {
-    std::vector<TimelineItemRow> rows{};
+    std::vector<TimelineRow> rows{};
     if (!animation) return rows;
 
     auto is_track_shown = [&](const model::Track& track)
@@ -236,85 +140,50 @@ namespace anm2ed::imgui
         auto& group = std::get<model::TrackGroup>(entries[index]);
         rows.push_back({.type = type, .id = group.id, .index = index, .isGroup = true});
         if (!group.isExpanded) continue;
-        rows.push_back({.type = ROOT, .id = -1, .rootGroupType = type, .rootGroupId = group.id, .depth = 1});
+        rows.push_back({.type = ROOT, .groupType = type, .groupId = group.id, .depth = 1});
         for (auto trackIndex : order_get((int)group.tracks.size(), isReversed))
           if (auto& track = group.tracks[trackIndex]; is_track_shown(track))
             rows.push_back({.type = type,
                             .id = track.id,
                             .index = trackIndex,
+                            .groupType = type,
                             .groupId = group.id,
-                            .rootGroupType = type,
-                            .rootGroupId = group.id,
                             .depth = 1});
       }
     }
 
     rows.push_back({.type = TRIGGER});
+    for (auto& row : rows)
+    {
+      row.documentIndex = manager.selected;
+      row.animationIndex = reference.animationIndex;
+    }
     return rows;
   }
 
-  std::vector<Reference> TimelineContext::timeline_item_references_get()
+  bool TimelineContext::is_row_selected(const TimelineRow& row)
   {
-    std::vector<Reference> itemReferences;
-    for (const auto& row : timeline_item_rows_get())
-    {
-      if (row.isGroup) continue;
-      itemReferences.push_back({reference.animationIndex, row.type, row.id, -1, row.rootGroupType, row.rootGroupId});
-    }
-    return itemReferences;
-  }
-
-  Reference TimelineContext::group_reference_get(const TimelineItemRow& row)
-  {
-    return Reference{reference.animationIndex, row.type, row.id};
-  }
-
-  TimelineRowReference TimelineContext::row_reference_get(const TimelineItemRow& row)
-  {
-    return TimelineRowReference{manager.selected, reference.animationIndex, row.type,        row.id,
-                                row.index,        row.rootGroupType,        row.rootGroupId, row.isGroup};
-  }
-
-  Reference TimelineContext::row_item_reference_get(const TimelineRowReference& row)
-  {
-    return Reference{row.animationIndex, row.type, row.id, -1, row.groupType, row.groupId};
-  }
-
-  std::vector<TimelineRowReference> TimelineContext::timeline_row_references_get()
-  {
-    std::vector<TimelineRowReference> rowReferences;
-    for (const auto& row : timeline_item_rows_get())
-    {
-      if (row.type == NONE) continue;
-      rowReferences.push_back(row_reference_get(row));
-    }
-    return rowReferences;
-  }
-
-  bool TimelineContext::is_group_selected(const TimelineItemRow& row)
-  {
-    return document.selected_get(SelectionKind::GROUPS).contains(group_reference_get(row));
-  }
-
-  bool TimelineContext::is_row_selected(const TimelineItemRow& row)
-  {
-    if (row.isGroup) return is_group_selected(row);
-    auto itemReference = item_reference_get(row.type, row.id, row.rootGroupType, row.rootGroupId);
+    if (row.isGroup) return is_row_reference_selected(row);
+    auto itemReference = item_reference_get(row.type, row.id, row.groupType, row.groupId);
     auto tracks = document.selected_get(SelectionKind::TRACKS);
     return tracks.contains(itemReference) ||
            (tracks.empty() && document.selection.uids[SelectionKind::GROUPS].empty() &&
             is_same_item(reference, itemReference));
   }
 
-  SelectionKind row_kind_get(const TimelineRowReference& row)
+  Reference row_item_reference_get(const TimelineRow& row)
   {
-    return row.isGroup ? SelectionKind::GROUPS : SelectionKind::TRACKS;
+    return Reference{row.animationIndex, row.type, row.id, -1, row.groupType, row.groupId};
   }
 
-  Reference row_selection_reference_get(const TimelineRowReference& row)
+  Reference row_selection_reference_get(const TimelineRow& row)
   {
-    return row.isGroup ? Reference{row.animationIndex, row.type, row.id}
-                       : Reference{row.animationIndex, row.type, row.id, -1, row.groupType, row.groupId};
+    return row.isGroup ? Reference{row.animationIndex, row.type, row.id} : row_item_reference_get(row);
+  }
+
+  SelectionKind row_kind_get(const TimelineRow& row)
+  {
+    return row.isGroup ? SelectionKind::GROUPS : SelectionKind::TRACKS;
   }
 
   void TimelineContext::row_selection_clear()
@@ -323,34 +192,21 @@ namespace anm2ed::imgui
     document.selection.uids[SelectionKind::GROUPS].clear();
   }
 
-  void TimelineContext::row_selection_insert(const TimelineRowReference& row)
+  void TimelineContext::row_selection_insert(const TimelineRow& row)
   {
     auto references = document.selected_get(row_kind_get(row));
     references.insert(row_selection_reference_get(row));
     document.selected_set(row_kind_get(row), references);
   }
 
-  void TimelineContext::row_selection_erase(const TimelineRowReference& row)
-  {
-    auto references = document.selected_get(row_kind_get(row));
-    references.erase(row_selection_reference_get(row));
-    document.selected_set(row_kind_get(row), references);
-  }
-
-  bool TimelineContext::is_row_reference_selected(const TimelineRowReference& row)
+  bool TimelineContext::is_row_reference_selected(const TimelineRow& row)
   {
     return document.selected_get(row_kind_get(row)).contains(row_selection_reference_get(row));
   }
 
-  std::size_t TimelineContext::row_selection_count_get()
+  void TimelineContext::row_selection_set(const TimelineRow& row)
   {
-    return document.selection.uids[SelectionKind::TRACKS].size() +
-           document.selection.uids[SelectionKind::GROUPS].size();
-  }
-
-  void TimelineContext::row_selection_set(const TimelineItemRow& row)
-  {
-    auto rowReference = row_reference_get(row);
+    auto rowReference = row;
     auto isCtrlDown = ImGui::IsKeyDown(ImGuiMod_Ctrl);
     auto isShiftDown = ImGui::IsKeyDown(ImGuiMod_Shift);
 
@@ -367,8 +223,8 @@ namespace anm2ed::imgui
 
     if (isShiftDown)
     {
-      auto rowSelection = timeline_row_references_get();
-      auto anchor = isRowSelectionAnchorSet ? rowSelectionAnchor : rowReference;
+      auto rowSelection = timeline_item_rows_get();
+      auto anchor = rowSelectionAnchor.value_or(rowReference);
       auto first = std::find(rowSelection.begin(), rowSelection.end(), anchor);
       auto last = std::find(rowSelection.begin(), rowSelection.end(), rowReference);
       if (first == rowSelection.end() || last == rowSelection.end())
@@ -385,13 +241,19 @@ namespace anm2ed::imgui
         if (!isCtrlDown) row_selection_clear();
         for (int i = firstIndex; i <= lastIndex; ++i)
           row_selection_insert(rowSelection[i]);
-        if (!isRowSelectionAnchorSet) rowSelectionAnchor = rowReference;
+        if (!rowSelectionAnchor) rowSelectionAnchor = rowReference;
       }
     }
     else if (isCtrlDown)
     {
-      if (is_row_reference_selected(rowReference) && row_selection_count_get() > 1)
-        row_selection_erase(rowReference);
+      if (is_row_reference_selected(rowReference) && document.selection.uids[SelectionKind::TRACKS].size() +
+                                                             document.selection.uids[SelectionKind::GROUPS].size() >
+                                                         1)
+      {
+        auto references = document.selected_get(row_kind_get(rowReference));
+        references.erase(row_selection_reference_get(rowReference));
+        document.selected_set(row_kind_get(rowReference), references);
+      }
       else
         row_selection_insert(rowReference);
       rowSelectionAnchor = rowReference;
@@ -402,13 +264,13 @@ namespace anm2ed::imgui
       row_selection_insert(rowReference);
       rowSelectionAnchor = rowReference;
     }
-
-    isRowSelectionAnchorSet = true;
   }
 
   void TimelineContext::reference_set_adjacent_item(int direction)
   {
-    auto itemReferences = timeline_item_references_get();
+    std::vector<Reference> itemReferences{};
+    for (const auto& row : timeline_item_rows_get())
+      if (!row.isGroup) itemReferences.push_back(row_item_reference_get(row));
     if (itemReferences.empty()) return;
 
     auto it = std::find_if(itemReferences.begin(), itemReferences.end(),
@@ -420,27 +282,27 @@ namespace anm2ed::imgui
 
     auto& itemReference = itemReferences[index];
     group_selection_reset_for(document);
-    reference_set_timeline_item_reference_for(document, itemReference);
+    document.track_select(itemReference);
   }
 
-  std::vector<TimelineRowReference> TimelineContext::selected_row_references_get()
+  std::vector<TimelineRow> TimelineContext::selected_row_references_get()
   {
-    std::vector<TimelineRowReference> result{};
+    std::vector<TimelineRow> result{};
     for (const auto& row : timeline_item_rows_get())
-      if (is_row_selected(row)) result.push_back(row_reference_get(row));
+      if (is_row_selected(row)) result.push_back(row);
     return result;
   }
 
-  std::vector<TimelineRowReference> TimelineContext::row_drag_references_get(const TimelineItemRow& row)
+  std::vector<TimelineRow> TimelineContext::row_drag_references_get(const TimelineRow& row)
   {
-    auto clicked = row_reference_get(row);
-    if (clicked.type != LAYER && clicked.type != NULL_) return std::vector<TimelineRowReference>{clicked};
+    auto clicked = row;
+    if (clicked.type != LAYER && clicked.type != NULL_) return std::vector<TimelineRow>{clicked};
 
     auto rows = selected_row_references_get();
     if (!is_row_reference_selected(clicked)) rows = {clicked};
     if (rows.empty()) rows = {clicked};
 
-    std::erase_if(rows, [&](const TimelineRowReference& rowReference) { return rowReference.type != clicked.type; });
+    std::erase_if(rows, [&](const TimelineRow& rowReference) { return rowReference.type != clicked.type; });
     if (rows.empty()) rows = {clicked};
     return rows;
   }

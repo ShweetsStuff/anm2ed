@@ -6,7 +6,7 @@ namespace anm2ed::imgui
   {
     auto targetReference = reference;
     auto time = (int)document.frameTime;
-    if (!animation || !command_item_reference_get(document, targetReference)) return;
+    if (!animation || !document.model.track_get(targetReference)) return;
     edit_push(EDIT_INSERT_FRAME, [=](model::Model& model) { return edit::frame_insert(model, targetReference, time); });
   }
 
@@ -16,7 +16,7 @@ namespace anm2ed::imgui
     if (selectedFrames.empty()) return;
     edit_push(
         EDIT_DELETE_FRAMES, [=](model::Model& model) { return edit::frames_delete(model, selectedFrames); },
-        [this](Document& document, const edit::Uids&) { frames_selection_set_reference_for(document); });
+        [this](Document& document, const edit::Uids&) { document.frame_focus_select(); });
   }
 
   void TimelineContext::frames_duplicate()
@@ -133,7 +133,7 @@ namespace anm2ed::imgui
         { return edit::items_remove(model, animationIndex, ids, groupIds); },
         [this](Document& document, const edit::Uids&)
         {
-          reference_clear_for(document);
+          document.focus_clear();
           group_selection_reset_for(document);
         });
   }
@@ -182,8 +182,8 @@ namespace anm2ed::imgui
         });
   }
 
-  void TimelineContext::rows_move_to_row(std::vector<TimelineRowReference> draggedRows, TimelineItemRow targetRow,
-                                         bool isDropAfter, bool isDropIntoGroup)
+  void TimelineContext::rows_move_to_row(std::vector<TimelineRow> draggedRows, TimelineRow targetRow, bool isDropAfter,
+                                         bool isDropIntoGroup)
   {
     if (draggedRows.empty()) return;
     auto targetType = draggedRows.front().type;
@@ -198,13 +198,13 @@ namespace anm2ed::imgui
     std::set<int> groupIds{};
     for (const auto& row : draggedRows)
       (row.isGroup ? groupIds : ids).insert(row.id);
-    edit::RowTarget target{targetRow.isGroup, targetRow.type, targetRow.id, targetRow.groupId};
+    edit::RowTarget target{targetRow.isGroup, targetRow.type, targetRow.id,
+                           targetRow.type == ROOT ? -1 : targetRow.groupId};
     auto animationIndex = reference.animationIndex;
     std::set<Reference> tracks{};
     std::set<Reference> groups{};
     for (const auto& row : draggedRows)
-      (row.isGroup ? groups : tracks)
-          .insert(row.isGroup ? Reference{row.animationIndex, row.type, row.id} : row_item_reference_get(row));
+      (row.isGroup ? groups : tracks).insert(row_selection_reference_get(row));
     Selection moved{};
     selection_references_set(moved, model, SelectionKind::TRACKS, tracks);
     selection_references_set(moved, model, SelectionKind::GROUPS, groups);
@@ -265,14 +265,14 @@ namespace anm2ed::imgui
     frame_references_copy(selectedFrames);
     edit_push(
         EDIT_CUT_FRAMES, [=](model::Model& model) { return edit::frames_delete(model, selectedFrames); },
-        [this](Document& document, const edit::Uids&) { frames_selection_set_reference_for(document); });
+        [this](Document& document, const edit::Uids&) { document.frame_focus_select(); });
   }
 
   void TimelineContext::paste()
   {
     auto text = clipboard.get();
     if (text.empty()) return;
-    if (!command_item_reference_get(document, reference))
+    if (!document.model.track_get(reference))
     {
       toast_log(Level::WARNING, TOAST_DESERIALIZE_FRAMES_NO_SELECTION);
       return;
@@ -287,7 +287,7 @@ namespace anm2ed::imgui
         { return edit::frames_paste(model, targetReference, selectedFrames, text, time, errorString.get()); },
         [=, this](Document& document, const edit::Uids& uids)
         {
-          if (errorString->empty()) return frames_select_for(document, uids);
+          if (errorString->empty()) return document.frames_select(uids);
           toasts.push(std::format("{} {}", localize.get(TOAST_DESERIALIZE_FRAMES_FAILED), *errorString));
           logger.error(
               std::format("{} {}", localize.get(TOAST_DESERIALIZE_FRAMES_FAILED, anm2ed::ENGLISH), *errorString));

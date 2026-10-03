@@ -64,7 +64,7 @@ namespace anm2ed::imgui
       command_push(
           [=, this](Manager& manager, Document& document)
           {
-            auto frame = command_frame_get(document, targetReference);
+            auto frame = document.model.frame_get(targetReference);
             if (!frame || frame->regionId != -1) return;
             auto layer = model::item_get(document.model.content.layers, targetReference.itemID);
             if (!layer) return;
@@ -91,7 +91,7 @@ namespace anm2ed::imgui
     auto is_region_makeable = [&](const Reference& frameReference)
     {
       if (frameReference.itemType != LAYER || frameReference.frameIndex < 0) return false;
-      auto frame = command_frame_get(document, frameReference);
+      auto frame = document.model.frame_get(frameReference);
       auto layer = model::item_get(model.content.layers, frameReference.itemID);
       return frame && frame->regionId == -1 && layer &&
              model::item_get(model.content.spritesheets, layer->spritesheetId);
@@ -163,16 +163,7 @@ namespace anm2ed::imgui
     manager.item_properties_open(type == LAYER ? ElementType::LAYER_ELEMENT : ElementType::NULL_ELEMENT, id);
   }
 
-  void TimelineContext::group_properties_close()
-  {
-    groupName.clear();
-    groupAnimationIndex = -1;
-    groupType = NONE;
-    groupId = -1;
-    groupPropertiesPopup.close();
-  }
-
-  void TimelineContext::group_properties_open(const TimelineItemRow& row, const model::TrackGroup& group)
+  void TimelineContext::group_properties_open(const TimelineRow& row, const model::TrackGroup& group)
   {
     groupName = group.name.empty() ? std::string(localize.get(TEXT_NEW_GROUP)) : group.name;
     groupAnimationIndex = reference.animationIndex;
@@ -210,7 +201,7 @@ namespace anm2ed::imgui
                       group->name = targetName;
                   });
       }
-      if (result != PopupButton::NONE) group_properties_close();
+      if (result != PopupButton::NONE) groupPropertiesPopup.close();
 
       ImGui::EndPopup();
     }
@@ -229,15 +220,15 @@ namespace anm2ed::imgui
     auto selectedRows = selected_row_references_get();
     auto selectedGroupableItems = item_references_groupable_get();
     auto copyFrames = copy_frame_references_get();
-    TimelineItemRow selectedGroupRow{};
+    TimelineRow selectedGroupRow{};
     const model::TrackGroup* selectedGroup{};
     if (selectedRows.size() == 1 && selectedRows.front().isGroup)
     {
       auto row = selectedRows.front();
-      selectedGroupRow = {.type = row.type, .id = row.id, .index = row.index, .isGroup = true};
+      selectedGroupRow = row;
       selectedGroup = row_group_get(selectedGroupRow);
     }
-    auto isRemoveAvailable = std::ranges::any_of(selectedRows, [](const TimelineRowReference& row)
+    auto isRemoveAvailable = std::ranges::any_of(selectedRows, [](const TimelineRow& row)
                                                  { return row.type == LAYER || row.type == NULL_; });
     auto item_cut = [&]()
     {
