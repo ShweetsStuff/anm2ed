@@ -1,6 +1,7 @@
 #include "xml.hpp"
 
 #include <algorithm>
+#include <charconv>
 #include <format>
 #include <map>
 #include <optional>
@@ -45,6 +46,14 @@ namespace anm2ed::model
   constexpr const char* CREATED_ON_FORMAT = "%m/%d/%Y %I:%M:%S %p";
   constexpr const char* SHADER_NAME_DEFAULT = "New Shader";
   constexpr std::size_t VALUE_BUFFER_SIZE = 64;
+  constexpr int FLOAT_DIGITS = 8;
+  constexpr int DOUBLE_DIGITS = 17;
+  constexpr double FLOAT_WHOLE_MAX = 1e8;
+  constexpr std::size_t FRAME_ATTRIBUTES_MAX = 27;
+  constexpr std::string_view INDENT = "    ";
+  constexpr std::pair<char, std::string_view> ENTITIES[] = {
+      {'&', "&amp;"}, {'<', "&lt;"}, {'>', "&gt;"}, {'"', "&quot;"}, {'\'', "&apos;"}};
+  constexpr int TEXT_ENTITY_COUNT = 3;
   constexpr std::uint64_t HASH_OFFSET = 14695981039346656037ull;
   constexpr std::uint64_t HASH_PRIME = 1099511628211ull;
   constexpr Flags CLIPBOARD_FLAGS = SERIALIZE_EDITOR_DEFAULT;
@@ -150,11 +159,22 @@ namespace anm2ed::model
       if (is_child_kept(parent, child)) callback(child, type_get(child), position++);
   }
 
+  // A repeated attribute keeps its first position and last value, as tinyxml2 writes it.
+  void attribute_read(std::vector<std::pair<std::string, std::string>>& attributes, const XMLAttribute* attribute)
+  {
+    auto existing = std::ranges::find(attributes, std::string_view(attribute->Name()),
+                                      [](const auto& pair) { return std::string_view(pair.first); });
+    if (existing != attributes.end())
+      existing->second = attribute->Value();
+    else
+      attributes.emplace_back(attribute->Name(), attribute->Value());
+  }
+
   XmlNode node_read(const XMLElement* element)
   {
     XmlNode node{.tag = element->Name()};
     for (auto attribute = element->FirstAttribute(); attribute; attribute = attribute->Next())
-      node.attributes.emplace_back(attribute->Name(), attribute->Value());
+      attribute_read(node.attributes, attribute);
     if (auto text = element->GetText()) node.text = text;
     children_each(element,
                   [&](const XMLElement* child, ElementType, int) { node.children.push_back(node_read(child)); });
@@ -166,7 +186,7 @@ namespace anm2ed::model
     Extras extras{};
     for (auto attribute = element->FirstAttribute(); attribute; attribute = attribute->Next())
       if (!std::ranges::contains(KNOWN_ATTRIBUTES, std::string_view(attribute->Name())))
-        extras.attributes.emplace_back(attribute->Name(), attribute->Value());
+        attribute_read(extras.attributes, attribute);
     if (auto text = element->GetText()) extras.text = text;
     return extras;
   }
@@ -776,15 +796,31 @@ namespace anm2ed::model
     return it == ids.end() ? -1 : it->second;
   }
 
+  bool is_float_whole(double value)
+  {
+    return std::abs(value) < FLOAT_WHOLE_MAX && value == std::trunc(value) && !(value == 0 && std::signbit(value));
+  }
+
   template <class T> void attribute_add(XmlNode& node, const char* name, const T& value)
   {
     if constexpr (std::is_convertible_v<T, std::string_view>)
       node.attributes.emplace_back(name, std::string(std::string_view(value)));
     else
     {
+      // The same text tinyxml2's XMLUtil::ToStr prints ("%d", "%.8g", "true"/"false"), without printf.
       char buffer[VALUE_BUFFER_SIZE]{};
-      XMLUtil::ToStr(value, buffer, sizeof(buffer));
-      node.attributes.emplace_back(name, buffer);
+      auto end = buffer;
+      if constexpr (std::is_same_v<T, bool>)
+        end = std::ranges::copy(std::string_view(value ? "true" : "false"), buffer).out;
+      else if constexpr (std::is_floating_point_v<T>)
+        // Whole numbers (most values) print as integers, which "%.8g" also does below 1e8 (but keeps "-0").
+        end = is_float_whole(value) ? std::to_chars(buffer, buffer + sizeof(buffer), (long long)value).ptr
+                                    : std::to_chars(buffer, buffer + sizeof(buffer), value, std::chars_format::general,
+                                                    std::is_same_v<T, float> ? FLOAT_DIGITS : DOUBLE_DIGITS)
+                                          .ptr;
+      else
+        end = std::to_chars(buffer, buffer + sizeof(buffer), (long long)value).ptr;
+      node.attributes.emplace_back(name, std::string(buffer, end));
     }
   }
 
@@ -858,6 +894,7 @@ namespace anm2ed::model
     }
 
     XmlNode node{.tag = tag_get(ElementType::FRAME)};
+    node.attributes.reserve(FRAME_ATTRIBUTES_MAX + frame.extras.attributes.size());
     if (type == ItemType::LAYER)
     {
       auto isRegion = writer.is(SERIALIZE_REGIONS) && frame.regionId != -1;
@@ -909,6 +946,7 @@ namespace anm2ed::model
     }
 
     auto layerTrack = track.type == ItemType::LAYER && !isBackup ? &track : nullptr;
+    node.children.reserve(track.frames.size());
     for (int i = 0; i < (int)track.frames.size(); ++i)
     {
       auto frame = frame_normalize(writer, track.frames[i], layerTrack);
@@ -1321,24 +1359,90 @@ namespace anm2ed::model
     return game;
   }
 
-  XMLElement* element_write(XMLDocument& document, const XmlNode& node)
+  // Prints a node tree exactly as tinyxml2's XMLPrinter would (4-space indents, entities escaped, text keeping its
+  // element's children inline), without building a tinyxml2 document.
+  struct Printer
   {
-    auto element = document.NewElement(node.tag.c_str());
-    for (const auto& [name, value] : node.attributes)
-      element->SetAttribute(name.c_str(), value.c_str());
-    if (!node.text.empty()) element->SetText(node.text.c_str());
-    for (const auto& child : node.children)
-      element->InsertEndChild(element_write(document, child));
-    return element;
-  }
+    std::string text{};
+    int depth{};
+    int textDepth{-1};
+    bool isFirst{true};
+
+    // Attributes escape all five entities; text only the first three.
+    void escape(std::string_view value, bool isAttribute)
+    {
+      for (auto character : value)
+      {
+        auto entity = std::ranges::find(ENTITIES, character, &std::pair<char, std::string_view>::first);
+        auto isEscaped = entity != std::end(ENTITIES) && (isAttribute || entity - ENTITIES < TEXT_ENTITY_COUNT);
+        if (isEscaped)
+          text += entity->second;
+        else
+          text += character;
+      }
+    }
+
+    void indent()
+    {
+      for (int i = 0; i < depth; ++i)
+        text += INDENT;
+    }
+
+    void print(const XmlNode& node)
+    {
+      if (!isFirst && textDepth < 0) text += '\n';
+      if (isFirst || textDepth < 0) indent();
+      isFirst = false;
+
+      text += '<';
+      text += node.tag;
+      ++depth;
+      for (const auto& [name, value] : node.attributes)
+      {
+        text += ' ';
+        text += name;
+        text += "=\"";
+        escape(value, true);
+        text += '"';
+      }
+      auto isOpen = true;
+      if (!node.text.empty())
+      {
+        textDepth = depth - 1;
+        text += '>';
+        isOpen = false;
+        escape(node.text, false);
+      }
+      for (const auto& child : node.children)
+      {
+        if (std::exchange(isOpen, false)) text += '>';
+        print(child);
+      }
+
+      --depth;
+      if (isOpen)
+        text += "/>";
+      else
+      {
+        if (textDepth < 0)
+        {
+          text += '\n';
+          indent();
+        }
+        text += "</";
+        text += node.tag;
+        text += '>';
+      }
+      if (textDepth == depth) textDepth = -1;
+      if (depth == 0) text += '\n';
+    }
+  };
 
   std::string node_to_string(const XmlNode& node)
   {
-    XMLDocument document{};
-    document.InsertEndChild(element_write(document, node));
-    XMLPrinter printer{};
-    document.Print(&printer);
-    return printer.CStr();
+    Printer printer{};
+    printer.print(node);
+    return std::move(printer.text);
   }
 
   void node_hash(std::uint64_t& hash, const XmlNode& node)
@@ -1403,16 +1507,15 @@ namespace anm2ed::model
 
   bool model_save(const Model& model, const std::filesystem::path& path, std::string* errorString, Options options)
   {
-    XMLDocument document{};
-    document.InsertFirstChild(element_write(document, document_write(model, options)));
+    auto text = model_to_string(model, options);
     File file(path, "wb");
     if (!file)
     {
       if (errorString) *errorString = "File permissions.";
       return false;
     }
-    if (document.SaveFile(file.get()) == XML_SUCCESS) return true;
-    if (errorString) *errorString = document.ErrorStr();
+    if (std::fwrite(text.data(), 1, text.size(), file.get()) == text.size()) return true;
+    if (errorString) *errorString = "Could not write the file.";
     return false;
   }
 

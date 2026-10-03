@@ -36,6 +36,7 @@ namespace anm2ed::imgui::wizard
       {"Design/Programming", font::BOLD},
       {"Shweet"},
       {"OpenAI Codex"},
+      {"Claude Code"},
       {""},
       {"Additional Help", font::BOLD},
       {"im-tem"},
