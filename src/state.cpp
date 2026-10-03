@@ -107,27 +107,25 @@ namespace anm2ed
             if (!spritesheetDropPaths.empty())
             {
               auto paths = spritesheetDropPaths;
-              manager.command_push({manager.selected, [paths](Manager&, Document& document)
-                                    { document.spritesheets_add(paths); }});
+              manager.command_push(
+                  {manager.selected, [paths](Manager&, Document& document) { document.spritesheets_add(paths); }});
             }
             if (!soundDropPaths.empty())
             {
               auto paths = soundDropPaths;
-              manager.command_push({manager.selected, [paths](Manager&, Document& document)
-                                    { document.sounds_add(paths); }});
+              manager.command_push(
+                  {manager.selected, [paths](Manager&, Document& document) { document.sounds_add(paths); }});
             }
           }
           else
           {
             if (!spritesheetDropPaths.empty())
             {
-              toasts.push(localize.get(TOAST_ADD_SPRITESHEET_FAILED));
-              logger.warning(localize.get(TOAST_ADD_SPRITESHEET_FAILED, anm2ed::ENGLISH));
+              toast_log(Level::WARNING, TOAST_ADD_SPRITESHEET_FAILED);
             }
             if (!soundDropPaths.empty())
             {
-              toasts.push(localize.get(TOAST_ADD_SOUND_FAILED));
-              logger.warning(localize.get(TOAST_ADD_SOUND_FAILED, anm2ed::ENGLISH));
+              toast_log(Level::WARNING, TOAST_ADD_SOUND_FAILED);
             }
           }
           spritesheetDropPaths.clear();

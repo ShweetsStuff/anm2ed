@@ -124,57 +124,20 @@ namespace anm2ed::imgui
 
   void shader_uniform_config_save(Document& document, Element& shaderElement, const resource::shader::Uniform& uniform)
   {
-    auto config = shader_uniform_get(shaderElement, uniform.name);
-    if (!config)
-    {
-      config = &shaderElement.children.emplace_back(element_make(ElementType::UNIFORM));
-      config->name = uniform.name;
-    }
-
-    config->binding = std::string(resource::shader::uniform_binding_value_get(uniform.binding));
-    config->value = resource::shader::uniform_value_string_get(uniform);
-    if (uniform.binding == resource::shader::UNIFORM_BINDING_COMPONENTS)
-    {
-      for (int index = 0; index < (int)uniform.components.size(); ++index)
-      {
-        auto component = shader_uniform_component_get(*config, index);
-        if (!component)
-        {
-          component = &config->children.emplace_back(element_make(ElementType::COMPONENT));
-          component->index = index;
-        }
-        component->binding =
-            std::string(resource::shader::uniform_binding_value_get(uniform.components[index].binding));
-        component->value = std::format("{:.6g}", uniform.components[index].value);
-      }
-    }
-    else
-      std::erase_if(config->children, [](const Element& child) { return child.type == ElementType::COMPONENT; });
+    resource::shader::uniform_config_save(shaderElement, uniform);
     document.change(Document::SHADERS);
-  }
-
-  int shader_uniform_component_count_get(resource::shader::UniformValueType type)
-  {
-    if (type == resource::shader::UNIFORM_VALUE_VEC2) return 2;
-    if (type == resource::shader::UNIFORM_VALUE_VEC3) return 3;
-    if (type == resource::shader::UNIFORM_VALUE_VEC4) return 4;
-    return 0;
   }
 
   void shader_uniform_components_from_value_set(resource::shader::Uniform& uniform)
   {
-    uniform.components[0].value = uniform.value.x;
-    uniform.components[1].value = uniform.value.y;
-    uniform.components[2].value = uniform.value.z;
-    uniform.components[3].value = uniform.value.w;
+    for (int i = 0; i < (int)uniform.components.size(); ++i)
+      uniform.components[i].value = uniform.value[i];
   }
 
   void shader_uniform_value_from_components_set(resource::shader::Uniform& uniform)
   {
-    uniform.value.x = uniform.components[0].value;
-    uniform.value.y = uniform.components[1].value;
-    uniform.value.z = uniform.components[2].value;
-    uniform.value.w = uniform.components[3].value;
+    for (int i = 0; i < (int)uniform.components.size(); ++i)
+      uniform.value[i] = uniform.components[i].value;
   }
 
   bool shader_uniform_value_update(resource::shader::Uniform& uniform)
@@ -227,7 +190,7 @@ namespace anm2ed::imgui
   {
     bool isChanged{};
     constexpr const char* labels[] = {"X", "Y", "Z", "W"};
-    auto componentCount = shader_uniform_component_count_get(uniform.valueType);
+    auto componentCount = resource::shader::UNIFORM_VALUE_TYPE_INFOS[uniform.valueType].componentCount;
 
     for (int index = 0; index < componentCount; ++index)
     {
@@ -328,12 +291,7 @@ namespace anm2ed::imgui
     if (ImGui::Begin(localize.get(LABEL_SHADERS_WINDOW), &settings.windowIsShaders))
     {
       auto document = manager.get();
-      if (!document)
-      {
-        ImGui::End();
-        return;
-      }
-      auto shaders = document->anm2.element_get(ElementType::SHADERS);
+      auto shaders = document ? document->anm2.element_get(ElementType::SHADERS) : nullptr;
       if (!shaders)
       {
         ImGui::End();
@@ -354,12 +312,12 @@ namespace anm2ed::imgui
                                 shader.id = element_child_next_id_get(*shaders, ElementType::SHADER);
                                 shader.name = localize.get(TEXT_NEW_SHADER);
 
-                                document.anm2_snapshot(localize.get(EDIT_ADD_SHADER));
+                                document.snapshots.anm2_push(localize.get(EDIT_ADD_SHADER));
                                 shaders->children.push_back(shader);
                                 document.shader.selection = {shader.id};
                                 document.shader.reference = shader.id;
                                 newElementId = shader.id;
-                                document.anm2_change(Document::SHADERS);
+                                document.change(Document::SHADERS);
                               }});
       };
 
@@ -372,7 +330,7 @@ namespace anm2ed::imgui
                                 auto unused = document.anm2.element_unused(ElementType::SHADER);
                                 if (unused.empty()) return;
 
-                                document.anm2_snapshot(localize.get(EDIT_REMOVE_UNUSED_SHADERS));
+                                document.snapshots.anm2_push(localize.get(EDIT_REMOVE_UNUSED_SHADERS));
                                 for (auto id : unused)
                                 {
                                   element_child_id_erase(*shaders, ElementType::SHADER, id);
@@ -380,7 +338,7 @@ namespace anm2ed::imgui
                                   if (document.shader.reference == id) document.shader.reference = -1;
                                   if (popupShaderId == id) propertiesPopup.close();
                                 }
-                                document.anm2_change(Document::SHADERS);
+                                document.change(Document::SHADERS);
                               }});
       };
 

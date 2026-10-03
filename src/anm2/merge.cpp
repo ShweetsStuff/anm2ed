@@ -104,7 +104,8 @@ namespace anm2ed
                                            [&](const Element& child)
                                            {
                                              return child.type == ElementType::GROUP &&
-                                                    child.name == sourceGroup.name && !matchedGroupIds.contains(child.id);
+                                                    child.name == sourceGroup.name &&
+                                                    !matchedGroupIds.contains(child.id);
                                            });
 
       if (destinationGroup == destinationTracks->children.end())
@@ -181,5 +182,229 @@ namespace anm2ed
     if (auto finalAnimation = element_get(ElementType::ANIMATION, finalIndex))
       finalAnimation->frameNum = animation_length_get(*finalAnimation);
     return finalIndex;
+  }
+
+  bool Anm2::file_merge(const std::filesystem::path& path, const std::filesystem::path& directory,
+                        FileMergePreset preset)
+  {
+    Anm2 source(path);
+    if (!source.isValid) return false;
+
+    auto isAppendAsNew = preset == FILE_MERGE_PRESET_APPEND_AS_NEW;
+    std::map<ElementType, std::unordered_map<int, int>> remaps{};
+
+    auto path_remap = [&](const std::filesystem::path& original)
+    {
+      if (directory.empty() || original.empty()) return original;
+      std::error_code ec{};
+      auto absolute =
+          original.is_absolute() ? original : std::filesystem::weakly_canonical(path.parent_path() / original, ec);
+      if (ec) absolute = path.parent_path() / original;
+      auto relative = std::filesystem::relative(absolute, directory, ec);
+      return ec ? original : relative;
+    };
+
+    auto id_remap = [&](ElementType type, int id)
+    {
+      auto it = remaps[type].find(id);
+      return it == remaps[type].end() ? -1 : it->second;
+    };
+
+    auto name_find = [](Element& container, ElementType type, const std::string& name)
+    { return child_find(container, [&](const Element& child) { return child.type == type && child.name == name; }); };
+
+    auto name_unique_get = [&](Element& container, ElementType type, const std::string& name)
+    {
+      auto candidate = name;
+      for (int i = 2; name_find(container, type, candidate); ++i)
+        candidate = std::format("{} {}", name, i);
+      return candidate;
+    };
+
+    auto named_element_merge = [&](Element& container, Element item)
+    {
+      auto existing = isAppendAsNew ? nullptr : name_find(container, item.type, item.name);
+      if (existing)
+      {
+        item.id = existing->id;
+        *existing = item;
+        return item.id;
+      }
+      item.id = element_child_next_id_get(container, item.type);
+      if (isAppendAsNew) item.name = name_unique_get(container, item.type, item.name);
+      container.children.push_back(item);
+      return item.id;
+    };
+
+    auto spritesheet_import = [&](int sourceId)
+    {
+      auto& remap = remaps[ElementType::SPRITESHEET];
+      if (remap.contains(sourceId)) return remap[sourceId];
+      auto spritesheet = source.element_get(ElementType::SPRITESHEET, sourceId);
+      auto destination = element_get(ElementType::SPRITESHEETS);
+      if (sourceId < 0 || !spritesheet || !destination) return -1;
+
+      auto imported = *spritesheet;
+      imported.id = element_child_next_id_get(*destination, ElementType::SPRITESHEET);
+      imported.path = path_remap(imported.path);
+      destination->children.push_back(imported);
+      return remap[sourceId] = imported.id;
+    };
+
+    auto sourceSounds = source.element_get(ElementType::SOUNDS);
+    auto destinationSounds = element_get(ElementType::SOUNDS);
+    if (sourceSounds && destinationSounds)
+      for (auto sound : sourceSounds->children)
+      {
+        if (sound.type != ElementType::SOUND_ELEMENT) continue;
+        auto sourceId = sound.id;
+        sound.path = path_remap(sound.path);
+        auto existing = isAppendAsNew ? nullptr
+                                      : child_find(*destinationSounds, [&](const Element& child)
+                                                   { return child.type == sound.type && child.path == sound.path; });
+        sound.id = existing ? existing->id : element_child_next_id_get(*destinationSounds, sound.type);
+        if (existing)
+          *existing = sound;
+        else
+          destinationSounds->children.push_back(sound);
+        remaps[sound.type][sourceId] = sound.id;
+      }
+
+    for (auto type : {ElementType::LAYER_ELEMENT, ElementType::NULL_ELEMENT, ElementType::EVENT_ELEMENT})
+    {
+      auto sourceContainer = source.element_get(ELEMENT_CONTAINERS[(int)type]);
+      auto destinationContainer = element_get(ELEMENT_CONTAINERS[(int)type]);
+      if (!sourceContainer || !destinationContainer) continue;
+      for (auto item : sourceContainer->children)
+      {
+        if (item.type != type) continue;
+        if (type == ElementType::LAYER_ELEMENT)
+        {
+          auto existing = isAppendAsNew ? nullptr : name_find(*destinationContainer, type, item.name);
+          item.spritesheetId = existing ? existing->spritesheetId : spritesheet_import(item.spritesheetId);
+        }
+        remaps[type][item.id] = named_element_merge(*destinationContainer, item);
+      }
+    }
+
+    auto item_remap = [&](Element& item)
+    {
+      for (auto& frame : item.children)
+      {
+        if (frame.type != ElementType::FRAME && frame.type != ElementType::TRIGGER) continue;
+        for (auto& soundId : frame.soundIds)
+          soundId = id_remap(ElementType::SOUND_ELEMENT, soundId);
+        frame.eventId = id_remap(ElementType::EVENT_ELEMENT, frame.eventId);
+      }
+    };
+
+    auto animation_build = [&](const Element& incoming)
+    {
+      auto animation = element_make(ElementType::ANIMATION);
+      animation.name = incoming.name;
+      animation.frameNum = incoming.frameNum;
+      animation.isLoop = incoming.isLoop;
+
+      auto single_track_build = [&](ElementType type)
+      {
+        if (auto track = child_first_get(incoming, type)) item_remap(animation.children.emplace_back(*track));
+      };
+
+      single_track_build(ElementType::ROOT_ANIMATION);
+      for (const auto& row : TRACK_CONTAINERS)
+      {
+        auto sourceTracks = child_first_get(incoming, row.container);
+        if (!sourceTracks) continue;
+        auto container = element_make(row.container);
+        for (auto item : sourceTracks->children)
+        {
+          if (item.type == ElementType::GROUP)
+          {
+            std::erase_if(item.children,
+                          [](const Element& child) { return child.type != ElementType::ROOT_ANIMATION; });
+            if (item.children.empty()) item.children.push_back(root_animation_make());
+            if (item.id == -1) item.id = element_child_next_id_get(container, ElementType::GROUP);
+            container.children.push_back(item);
+            continue;
+          }
+          if (item.type != row.track) continue;
+          item.*(row.id) = id_remap(row.element, item.*(row.id));
+          if (item.*(row.id) < 0) continue;
+          item_remap(item);
+          container.children.push_back(item);
+        }
+        animation.children.push_back(container);
+      }
+      single_track_build(ElementType::TRIGGERS);
+      return animation;
+    };
+
+    auto sourceAnimations = source.element_get(ElementType::ANIMATIONS);
+    auto destinationAnimations = element_get(ElementType::ANIMATIONS);
+    if (!sourceAnimations || !destinationAnimations) return true;
+
+    std::string defaultAnimationName{};
+    for (const auto& incoming : sourceAnimations->children)
+    {
+      if (incoming.type != ElementType::ANIMATION) continue;
+      auto processed = animation_build(incoming);
+      auto destination = name_find(*destinationAnimations, ElementType::ANIMATION, processed.name);
+      if (isAppendAsNew)
+        processed.name = name_unique_get(*destinationAnimations, ElementType::ANIMATION, processed.name);
+      if (incoming.name == sourceAnimations->defaultAnimation) defaultAnimationName = processed.name;
+
+      if (!destination || isAppendAsNew)
+      {
+        destinationAnimations->children.push_back(processed);
+        continue;
+      }
+
+      if (preset == FILE_MERGE_PRESET_REPLACE_MATCHING)
+      {
+        *destination = processed;
+        continue;
+      }
+
+      destination->isLoop = processed.isLoop;
+      for (auto type : {ElementType::ROOT_ANIMATION, ElementType::TRIGGERS})
+        if (auto track = child_first_get(processed, type); track && !track->children.empty())
+          child_ensure(*destination, type) = *track;
+
+      for (const auto& row : TRACK_CONTAINERS)
+      {
+        auto sourceTracks = child_first_get(processed, row.container);
+        if (!sourceTracks) continue;
+        auto& destinationTracks = child_ensure(*destination, row.container);
+
+        std::unordered_map<int, int> groupRemap{};
+        for (auto item : sourceTracks->children)
+        {
+          if (item.type != ElementType::GROUP) continue;
+          auto sourceGroupId = item.id;
+          item.id = element_child_next_id_get(destinationTracks, ElementType::GROUP);
+          destinationTracks.children.push_back(item);
+          groupRemap[sourceGroupId] = item.id;
+        }
+
+        for (auto item : sourceTracks->children)
+        {
+          if (item.type != row.track) continue;
+          if (item.groupId != -1) item.groupId = groupRemap.contains(item.groupId) ? groupRemap[item.groupId] : -1;
+          if (auto existing = track_find(destinationTracks, row.track, track_id_get(item)))
+          {
+            if (!item.children.empty()) *existing = item;
+          }
+          else
+            destinationTracks.children.push_back(item);
+        }
+      }
+
+      destination->frameNum = std::max({destination->frameNum, processed.frameNum, animation_length_get(*destination)});
+    }
+
+    if (destinationAnimations->defaultAnimation.empty() && !sourceAnimations->defaultAnimation.empty())
+      destinationAnimations->defaultAnimation =
+          defaultAnimationName.empty() ? sourceAnimations->defaultAnimation : defaultAnimationName;
+    return true;
   }
 }

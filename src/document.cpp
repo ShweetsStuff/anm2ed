@@ -1,23 +1,21 @@
 #include "document.hpp"
 
 #include <algorithm>
-#include <cmath>
 #include <cstdint>
+#include <format>
 #include <limits>
 #include <new>
 #include <optional>
 #include <set>
-#include <sstream>
 #include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include <format>
-
 #include "file.hpp"
 #include "log.hpp"
 #include "manager.hpp"
+#include "pack.hpp"
 #include "path.hpp"
 #include "strings.hpp"
 #include "toast.hpp"
@@ -30,45 +28,13 @@ using namespace glm;
 
 namespace anm2ed::document
 {
+  constexpr std::string_view AUTOSAVE_EXTENSION = ".autosave";
+  constexpr std::uint64_t HASH_COMBINE_CONSTANT = 0x9e3779b97f4a7c15ULL;
+
   uint64_t document_tab_id_next()
   {
     static uint64_t next{1};
     return next++;
-  }
-
-  ItemType item_type_get(int type) { return static_cast<ItemType>(type); }
-
-  int animation_count_get(const Anm2& data)
-  {
-    int count{};
-    if (auto animations = data.element_get(ElementType::ANIMATIONS))
-      for (auto& animation : animations->children)
-        if (animation.type == ElementType::ANIMATION) ++count;
-    return count;
-  }
-
-  std::string region_name_get(const std::string& format, int number)
-  {
-    try
-    {
-      return std::vformat(format, std::make_format_args(number));
-    }
-    catch (const std::format_error&)
-    {
-      return format;
-    }
-  }
-
-  const Element* shader_element_get(const Anm2& anm2, int id)
-  {
-    auto shaders = anm2.element_get(ElementType::SHADERS);
-    return shaders ? child_id_get(*shaders, ElementType::SHADER, id) : nullptr;
-  }
-
-  Element* shader_element_get(Anm2& anm2, int id)
-  {
-    auto shaders = anm2.element_get(ElementType::SHADERS);
-    return shaders ? child_id_get(*shaders, ElementType::SHADER, id) : nullptr;
   }
 
   std::filesystem::path shader_absolute_path_get(Document& document, const std::filesystem::path& path)
@@ -101,31 +67,33 @@ namespace anm2ed::document
     {
       auto end = source.find('\n', position);
       auto isEnd = end == std::string_view::npos;
-      auto line = source.substr(position, isEnd ? std::string_view::npos : end - position);
-      output += std::format("{:4}: {}\n", lineNumber++, line);
+      output += std::format("{:4}: {}\n", lineNumber++,
+                            source.substr(position, isEnd ? std::string_view::npos : end - position));
       if (isEnd) break;
       position = end + 1;
     }
     return output;
   }
 
+  void shader_status_format_append(std::string* status, StringType format, StringType argument)
+  {
+    if (!status) return;
+    auto argumentString = std::string(localize.get(argument));
+    *status += std::vformat(localize.get(format), std::make_format_args(argumentString)) + "\n";
+  }
+
   bool shader_source_load(Document& document, const std::filesystem::path& shaderPath, std::string& source,
                           StringType label, std::string* status, const char* fallback = nullptr)
   {
+    if (shaderPath.empty() && !fallback)
+    {
+      shader_status_format_append(status, LABEL_SHADER_PATH_EMPTY, label);
+      return false;
+    }
     if (shaderPath.empty())
     {
-      if (fallback)
-      {
-        source = fallback;
-        return true;
-      }
-
-      if (status)
-      {
-        auto labelString = std::string(localize.get(label));
-        *status += std::vformat(localize.get(LABEL_SHADER_PATH_EMPTY), std::make_format_args(labelString)) + "\n";
-      }
-      return false;
+      source = fallback;
+      return true;
     }
 
     auto absolute = path::case_insensitive_find(shader_absolute_path_get(document, shaderPath));
@@ -139,223 +107,98 @@ namespace anm2ed::document
     return false;
   }
 
-  void shader_uniform_configs_apply(const Element& shaderElement, resource::Shader& shader)
-  {
-    for (auto& uniform : shader.uniforms)
-    {
-      auto config = shader_uniform_get(shaderElement, uniform.name);
-      if (!config) continue;
-
-      if (!config->binding.empty())
-      {
-        auto binding = resource::shader::uniform_binding_get(config->binding);
-        if (resource::shader::is_uniform_binding_valid(binding, uniform.valueType)) uniform.binding = binding;
-      }
-      if (!config->value.empty()) resource::shader::uniform_value_parse(uniform, config->value);
-      for (int index = 0; index < (int)uniform.components.size(); ++index)
-      {
-        auto component = shader_uniform_component_get(*config, index);
-        if (!component) continue;
-
-        if (!component->binding.empty())
-        {
-          auto binding = resource::shader::uniform_binding_get(component->binding);
-          if (binding == resource::shader::UNIFORM_BINDING_MANUAL ||
-              binding == resource::shader::UNIFORM_BINDING_PLAYBACK_TIME)
-            uniform.components[index].binding = binding;
-        }
-        if (!component->value.empty())
-        {
-          std::stringstream stream{component->value};
-          stream >> uniform.components[index].value;
-        }
-      }
-    }
-  }
-
-  bool shader_uniform_configs_trim(Element& shaderElement, const resource::Shader& shader)
-  {
-    auto component_count_get = [](resource::shader::UniformValueType type)
-    {
-      if (type == resource::shader::UNIFORM_VALUE_VEC2) return 2;
-      if (type == resource::shader::UNIFORM_VALUE_VEC3) return 3;
-      if (type == resource::shader::UNIFORM_VALUE_VEC4) return 4;
-      return 0;
-    };
-
-    bool isChanged{};
-    for (auto it = shaderElement.children.begin(); it != shaderElement.children.end();)
-    {
-      if (it->type != ElementType::UNIFORM)
-      {
-        ++it;
-        continue;
-      }
-
-      auto uniform = std::find_if(shader.uniforms.begin(), shader.uniforms.end(),
-                                  [&](const resource::shader::Uniform& uniform) { return uniform.name == it->name; });
-      if (uniform == shader.uniforms.end())
-      {
-        it = shaderElement.children.erase(it);
-        isChanged = true;
-        continue;
-      }
-
-      if (!it->binding.empty())
-      {
-        auto binding = resource::shader::uniform_binding_get(it->binding);
-        if (!resource::shader::is_uniform_binding_valid(binding, uniform->valueType))
-        {
-          it->binding.clear();
-          isChanged = true;
-        }
-      }
-
-      auto componentCount = component_count_get(uniform->valueType);
-      auto isComponents =
-          resource::shader::uniform_binding_get(it->binding) == resource::shader::UNIFORM_BINDING_COMPONENTS;
-      auto removed = std::erase_if(it->children,
-                                   [&](const Element& component)
-                                   {
-                                     if (component.type != ElementType::COMPONENT) return false;
-                                     if (!isComponents) return true;
-                                     return component.index < 0 || component.index >= componentCount;
-                                   });
-      if (removed > 0) isChanged = true;
-
-      for (auto& component : it->children)
-      {
-        if (component.type != ElementType::COMPONENT || component.binding.empty()) continue;
-        auto binding = resource::shader::uniform_binding_get(component.binding);
-        if (binding == resource::shader::UNIFORM_BINDING_MANUAL ||
-            binding == resource::shader::UNIFORM_BINDING_PLAYBACK_TIME)
-          continue;
-        component.binding.clear();
-        isChanged = true;
-      }
-
-      ++it;
-    }
-
-    return isChanged;
-  }
-
-  Element* frame_region_match_get(Element& spritesheet, const Element& frame)
-  {
-    auto frameCrop = glm::ivec2(frame.crop);
-    auto frameSize = glm::ivec2(frame.size);
-    auto framePivot = glm::ivec2(frame.pivot);
-    for (auto& region : spritesheet.children)
-      if (region.type == ElementType::REGION && glm::ivec2(region.crop) == frameCrop &&
-          glm::ivec2(region.size) == frameSize && glm::ivec2(region.pivot) == framePivot)
-        return &region;
-    return nullptr;
-  }
-
-  int frame_count_get(const Element& item)
-  {
-    auto frameType = item.type == ElementType::TRIGGERS ? ElementType::TRIGGER : ElementType::FRAME;
-    int count{};
-    for (auto& frame : item.children)
-      if (frame.type == frameType) ++count;
-    return count;
-  }
-
-  std::vector<std::string> animation_labels_get(const Anm2& data)
-  {
-    std::vector<std::string> labels{"None"};
-    if (auto animations = data.element_get(ElementType::ANIMATIONS))
-      for (auto& animation : animations->children)
-        if (animation.type == ElementType::ANIMATION) labels.emplace_back(animation.name);
-    return labels;
-  }
-
-  std::vector<std::string> element_name_labels_get(const Element* container, ElementType type, bool isNone)
+  template <class Label>
+  void storage_labels_set(Storage& storage, const Element* container, ElementType type, bool isNone, Label&& label_get)
   {
     std::vector<std::string> labels{};
-    if (isNone) labels.emplace_back(localize.get(BASIC_NONE));
-    if (!container) return labels;
-    for (auto& element : container->children)
-      if (element.type == type) labels.emplace_back(element.name);
-    return labels;
-  }
-
-  std::vector<int> element_ids_get(const Element* container, ElementType type, bool isNone)
-  {
     std::vector<int> ids{};
-    if (isNone) ids.emplace_back(-1);
-    if (!container) return ids;
-    for (auto& element : container->children)
-      if (element.type == type) ids.emplace_back(element.id);
-    return ids;
-  }
-
-  std::vector<std::string> spritesheet_labels_get(const Anm2& data)
-  {
-    std::vector<std::string> labels{};
-    if (auto spritesheets = data.element_get(ElementType::SPRITESHEETS))
-      for (auto& spritesheet : spritesheets->children)
-        if (spritesheet.type == ElementType::SPRITESHEET)
+    if (isNone)
+    {
+      labels.emplace_back(localize.get(BASIC_NONE));
+      ids.emplace_back(-1);
+    }
+    if (container)
+      for (auto& element : container->children)
+        if (element.type == type)
         {
-          auto pathString = path::to_utf8(spritesheet.path);
-          labels.emplace_back(
-              std::vformat(localize.get(FORMAT_SPRITESHEET), std::make_format_args(spritesheet.id, pathString)));
+          labels.emplace_back(label_get(element));
+          ids.emplace_back(element.id);
         }
-    return labels;
+    storage.labels_set(std::move(labels), std::move(ids));
   }
 
-  std::vector<int> spritesheet_ids_get(const Anm2& data)
+  std::string element_name_get(const Element& element) { return element.name; }
+
+  template <class Resource>
+  void resource_load(int id, const std::filesystem::path& path, std::map<int, Resource>& resources,
+                     std::unordered_map<int, std::filesystem::path>& paths)
   {
-    std::vector<int> ids{};
-    if (auto spritesheets = data.element_get(ElementType::SPRITESHEETS))
-      for (auto& spritesheet : spritesheets->children)
-        if (spritesheet.type == ElementType::SPRITESHEET) ids.emplace_back(spritesheet.id);
-    return ids;
+    resources[id] = Resource(path::case_insensitive_find(path));
+    paths[id] = path;
   }
 
-  std::vector<std::string> sound_labels_get(const Anm2& data)
+  template <class Resource>
+  void resources_sync(Document& document, ElementType type, std::map<int, Resource>& resources,
+                      std::unordered_map<int, std::filesystem::path>& paths)
   {
-    std::vector<std::string> labels{localize.get(BASIC_NONE)};
-    if (auto sounds = data.element_get(ElementType::SOUNDS))
-      for (auto& sound : sounds->children)
-        if (sound.type == ElementType::SOUND_ELEMENT)
-        {
-          auto pathString = path::to_utf8(sound.path);
-          labels.emplace_back(std::vformat(localize.get(FORMAT_SOUND), std::make_format_args(sound.id, pathString)));
-        }
-    return labels;
-  }
+    std::set<int> validIds{};
+    util::WorkingDirectory workingDirectory(document.directory_get());
+    if (auto container = document.anm2.element_get(ELEMENT_CONTAINERS[(int)type]))
+      for (auto& element : container->children)
+      {
+        if (element.type != type) continue;
+        validIds.insert(element.id);
+        auto path = paths.find(element.id);
+        if (!resources.contains(element.id) || path == paths.end() || path->second != element.path)
+          resource_load(element.id, element.path, resources, paths);
+      }
 
-  std::vector<int> sound_ids_get(const Anm2& data)
-  {
-    std::vector<int> ids{-1};
-    if (auto sounds = data.element_get(ElementType::SOUNDS))
-      for (auto& sound : sounds->children)
-        if (sound.type == ElementType::SOUND_ELEMENT) ids.emplace_back(sound.id);
-    return ids;
+    std::erase_if(resources, [&](const auto& pair) { return !validIds.contains(pair.first); });
+    std::erase_if(paths, [&](const auto& pair) { return !validIds.contains(pair.first); });
   }
 
   uint64_t spritesheet_hash_get(const Element& spritesheet, const resource::Texture* texture)
   {
-    auto hash_combine = [](std::size_t& seed, std::size_t value)
-    { seed ^= value + 0x9e3779b97f4a7c15ULL + (seed << 6) + (seed >> 2); };
-
     std::size_t seed{};
-    hash_combine(seed, std::hash<int>{}(texture ? texture->size.x : 0));
-    hash_combine(seed, std::hash<int>{}(texture ? texture->size.y : 0));
-    hash_combine(seed, std::hash<int>{}(texture ? texture->channels : 0));
-    hash_combine(seed, std::hash<int>{}(texture ? texture->filter : 0));
-    hash_combine(seed, std::hash<std::string>{}(path::to_utf8(spritesheet.path)));
+    auto hash_combine = [&](std::size_t value) { seed ^= value + HASH_COMBINE_CONSTANT + (seed << 6) + (seed >> 2); };
 
-    if (texture && !texture->pixels.empty())
-    {
-      std::string_view bytes(reinterpret_cast<const char*>(texture->pixels.data()), texture->pixels.size());
-      hash_combine(seed, std::hash<std::string_view>{}(bytes));
-    }
-    else
-      hash_combine(seed, 0);
-
+    hash_combine(std::hash<int>{}(texture ? texture->size.x : 0));
+    hash_combine(std::hash<int>{}(texture ? texture->size.y : 0));
+    hash_combine(std::hash<int>{}(texture ? texture->channels : 0));
+    hash_combine(std::hash<int>{}(texture ? texture->filter : 0));
+    hash_combine(std::hash<std::string>{}(path::to_utf8(spritesheet.path)));
+    auto isPixels = texture && !texture->pixels.empty();
+    hash_combine(isPixels ? std::hash<std::string_view>{}(std::string_view(
+                                reinterpret_cast<const char*>(texture->pixels.data()), texture->pixels.size()))
+                          : 0);
     return static_cast<uint64_t>(seed);
+  }
+
+  bool is_reference_item_matched(const Reference& left, const Reference& right)
+  {
+    return left.animationIndex == right.animationIndex && left.itemType == right.itemType &&
+           left.itemID == right.itemID && left.groupType == right.groupType && left.groupId == right.groupId;
+  }
+
+  Reference item_reference_get(Reference reference)
+  {
+    reference.frameIndex = -1;
+    return reference;
+  }
+
+  auto frame_reference_validator_make(const Anm2& anm2)
+  {
+    return [&anm2, frameCounts = std::map<Reference, int>{}](const Reference& frameReference) mutable
+    {
+      if (frameReference.itemType == NONE || frameReference.frameIndex < 0) return false;
+      auto itemReference = item_reference_get(frameReference);
+      if (!frameCounts.contains(itemReference))
+      {
+        auto item = anm2.element_get(itemReference);
+        frameCounts[itemReference] = item ? track_frames_count_get(*item) : 0;
+      }
+      return frameReference.frameIndex < frameCounts[itemReference];
+    };
   }
 
   void restored_snapshot_sanitize(Document& document)
@@ -363,95 +206,51 @@ namespace anm2ed::document
     auto& reference = document.reference;
     auto& selection = document.frames.selection;
     auto& frameReferences = document.frames.references;
-    auto& itemReferences = document.items.references;
     auto& groupReferences = document.groupReferences;
+    auto& anm2 = document.anm2;
 
-    auto animationCount = animation_count_get(document.anm2);
-    if (animationCount <= 0)
-    {
-      reference = {};
-      selection.clear();
-      frameReferences.clear();
-      itemReferences.clear();
-      groupReferences.clear();
-      document.frameTime = 0.0f;
-      return;
-    }
-
-    if (reference.animationIndex < 0 || reference.animationIndex >= animationCount)
-      reference.animationIndex = std::clamp(reference.animationIndex, 0, animationCount - 1);
-
-    auto referenceItem = reference;
-    referenceItem.frameIndex = -1;
-    auto item = document.anm2.element_get(referenceItem);
-    if (!item)
-    {
-      reference.itemType = (int)ItemType::ROOT;
-      reference.itemID = -1;
-      reference.groupType = (int)ItemType::NONE;
-      reference.groupId = -1;
-      referenceItem = reference;
-      referenceItem.frameIndex = -1;
-      item = document.anm2.element_get(referenceItem);
-    }
-
-    if (!item)
+    auto selection_clear = [&]()
     {
       reference.frameIndex = -1;
       selection.clear();
       frameReferences.clear();
       groupReferences.clear();
       document.frameTime = 0.0f;
+    };
+
+    auto animations = anm2.element_get(ElementType::ANIMATIONS);
+    auto animationCount = animations ? animations_count_get(*animations) : 0;
+    if (animationCount <= 0)
+    {
+      reference = {};
+      selection_clear();
+      document.items.references.clear();
       return;
     }
 
-    for (auto it = itemReferences.begin(); it != itemReferences.end();)
+    reference.animationIndex = std::clamp(reference.animationIndex, 0, animationCount - 1);
+    auto item = anm2.element_get(item_reference_get(reference));
+    if (!item)
     {
-      auto itemReference = *it;
-      itemReference.frameIndex = -1;
-      auto item = document.anm2.element_get(itemReference);
-      if (!item)
-        it = itemReferences.erase(it);
-      else
-        ++it;
+      reference = {reference.animationIndex, ROOT, -1, reference.frameIndex};
+      item = anm2.element_get(item_reference_get(reference));
     }
+    if (!item) return selection_clear();
 
-    for (auto it = groupReferences.begin(); it != groupReferences.end();)
-    {
-      auto animation = document.anm2.element_get(ElementType::ANIMATION, it->animationIndex);
-      Element* container{};
-      if (animation && it->itemType == LAYER)
-        container = child_first_get(*animation, ElementType::LAYER_ANIMATIONS);
-      else if (animation && it->itemType == NULL_)
-        container = child_first_get(*animation, ElementType::NULL_ANIMATIONS);
-      auto group = container ? child_id_get(*container, ElementType::GROUP, it->itemID) : nullptr;
-      if (!group)
-        it = groupReferences.erase(it);
-      else
-        ++it;
-    }
+    std::erase_if(document.items.references,
+                  [&](const Reference& itemReference) { return !anm2.element_get(item_reference_get(itemReference)); });
+    std::erase_if(groupReferences,
+                  [&](const Reference& groupReference)
+                  {
+                    auto animation = anm2.element_get(ElementType::ANIMATION, groupReference.animationIndex);
+                    return !animation ||
+                           !animation_group_get(*animation, groupReference.itemType, groupReference.itemID);
+                  });
+    std::erase_if(frameReferences, [isValid = frame_reference_validator_make(anm2)](
+                                       const Reference& frameReference) mutable { return !isValid(frameReference); });
 
-    for (auto it = frameReferences.begin(); it != frameReferences.end();)
-    {
-      auto itemReference = *it;
-      itemReference.frameIndex = -1;
-      auto item = document.anm2.element_get(itemReference);
-      auto frameCount = item ? frame_count_get(*item) : 0;
-      if (!item || it->frameIndex < 0 || it->frameIndex >= frameCount)
-        it = frameReferences.erase(it);
-      else
-        ++it;
-    }
-
-    auto frameCount = frame_count_get(*item);
-    for (auto it = selection.begin(); it != selection.end();)
-    {
-      if (*it < 0 || *it >= frameCount)
-        it = selection.erase(it);
-      else
-        ++it;
-    }
-
+    auto frameCount = track_frames_count_get(*item);
+    std::erase_if(selection, [&](int frameIndex) { return frameIndex < 0 || frameIndex >= frameCount; });
     if (frameCount <= 0)
     {
       reference.frameIndex = -1;
@@ -474,10 +273,7 @@ namespace anm2ed::document
 
     selection.clear();
     for (const auto& frameReference : frameReferences)
-      if (frameReference.animationIndex == reference.animationIndex && frameReference.itemType == reference.itemType &&
-          frameReference.itemID == reference.itemID && frameReference.groupType == reference.groupType &&
-          frameReference.groupId == reference.groupId)
-        selection.insert(frameReference.frameIndex);
+      if (is_reference_item_matched(frameReference, reference)) selection.insert(frameReference.frameIndex);
 
     document.frameTime = frame_time_from_index_get(*item, reference.frameIndex);
   }
@@ -488,26 +284,12 @@ namespace anm2ed
   Document::Document(const std::filesystem::path& path, bool isNew, std::string* errorString)
   {
     tabId = document::document_tab_id_next();
-
-    if (isNew)
+    if (!isNew) anm2 = Anm2(path, errorString);
+    if (isNew ? !save(path, errorString) : !anm2.isValid)
     {
-      anm2 = Anm2();
-      if (!save(path, errorString))
-      {
-        isValid = false;
-        this->path.clear();
-        return;
-      }
-    }
-    else
-    {
-      anm2 = Anm2(path, errorString);
-      if (!anm2.isValid)
-      {
-        isValid = false;
-        this->path.clear();
-        return;
-      }
+      isValid = false;
+      this->path.clear();
+      return;
     }
 
     this->path = path;
@@ -516,28 +298,7 @@ namespace anm2ed
     change(Document::ALL);
   }
 
-  Document::Document(Document&& other) noexcept
-      : path(std::move(other.path)), tabId(other.tabId), snapshots(std::move(other.snapshots)),
-        current(snapshots.current), playback(current.playback), animation(current.animation), event(current.event),
-        frames(current.frames), items(current.items), layer(current.layer), merge(current.merge), null(current.null),
-        region(current.region), shader(current.shader), sound(current.sound), spritesheet(current.spritesheet),
-        textures(current.textures), sounds(current.sounds), anm2(current.anm2), reference(current.reference),
-        groupReferences(current.groupReferences), frameTime(current.frameTime), message(current.message),
-        regionBySpritesheet(std::move(other.regionBySpritesheet)),
-        changeAllFramePropertiesRegionId(other.changeAllFramePropertiesRegionId),
-        changeAllFramePropertiesShaderId(other.changeAllFramePropertiesShaderId), previewZoom(other.previewZoom),
-        previewPan(other.previewPan), editorPan(other.editorPan), editorZoom(other.editorZoom),
-        overlayIndex(other.overlayIndex), overlayDocumentId(other.overlayDocumentId), hash(other.hash),
-        saveHash(other.saveHash), autosaveHash(other.autosaveHash), lastAutosaveTime(other.lastAutosaveTime),
-        isValid(other.isValid), isOpen(other.isOpen), isForceDirty(other.isForceDirty),
-        spritesheetHashes(std::move(other.spritesheetHashes)),
-        spritesheetSaveHashes(std::move(other.spritesheetSaveHashes)), texturePaths(std::move(other.texturePaths)),
-        soundPaths(std::move(other.soundPaths)), shaderVertexPaths(std::move(other.shaderVertexPaths)),
-        shaderFragmentPaths(std::move(other.shaderFragmentPaths)), shaders(std::move(other.shaders)),
-        isAnimationPreviewSet(other.isAnimationPreviewSet), isSpritesheetEditorSet(other.isSpritesheetEditorSet),
-        editTarget(other.editTarget)
-  {
-  }
+  Document::Document(Document&& other) noexcept : DocumentData(std::move(other)), editTarget(other.editTarget) {}
 
   Document& Document::operator=(Document&& other) noexcept
   {
@@ -553,40 +314,27 @@ namespace anm2ed
     if (anm2.save(absolutePath, errorString, options))
     {
       this->path = absolutePath;
-      toasts.push(std::vformat(localize.get(TOAST_SAVE_DOCUMENT), std::make_format_args(absolutePathUtf8)));
-      logger.info(
-          std::vformat(localize.get(TOAST_SAVE_DOCUMENT, anm2ed::ENGLISH), std::make_format_args(absolutePathUtf8)));
+      toast_log(Level::INFO, TOAST_SAVE_DOCUMENT, absolutePathUtf8);
       clean();
       return true;
     }
-    else if (errorString)
-    {
-      toasts.push(std::vformat(localize.get(TOAST_SAVE_DOCUMENT_FAILED),
-                               std::make_format_args(absolutePathUtf8, *errorString)));
-      logger.error(std::vformat(localize.get(TOAST_SAVE_DOCUMENT_FAILED, anm2ed::ENGLISH),
-                                std::make_format_args(absolutePathUtf8, *errorString)));
-    }
-
+    if (errorString) toast_log(Level::ERROR, TOAST_SAVE_DOCUMENT_FAILED, absolutePathUtf8, *errorString);
     return false;
   }
 
   std::filesystem::path Document::autosave_path_get()
   {
-    auto fileNameUtf8 = path::to_utf8(filename_get());
-    auto autosaveNameUtf8 = "." + fileNameUtf8 + ".autosave";
-    return directory_get() / path::from_utf8(autosaveNameUtf8);
+    return directory_get() /
+           path::from_utf8("." + path::to_utf8(filename_get()) + std::string(document::AUTOSAVE_EXTENSION));
   }
 
   std::filesystem::path Document::path_from_autosave_get(const std::filesystem::path& path)
   {
     auto fileName = path::to_utf8(path.filename());
-    if (!fileName.empty() && fileName.front() == '.') fileName.erase(fileName.begin());
-    constexpr std::string_view autosaveExtension = ".autosave";
-    if (fileName.ends_with(autosaveExtension)) fileName.erase(fileName.size() - autosaveExtension.size());
-
-    auto restorePath = path.parent_path() / std::filesystem::path(std::u8string(fileName.begin(), fileName.end()));
-
-    return restorePath;
+    if (fileName.starts_with('.')) fileName.erase(fileName.begin());
+    if (fileName.ends_with(document::AUTOSAVE_EXTENSION))
+      fileName.erase(fileName.size() - document::AUTOSAVE_EXTENSION.size());
+    return path.parent_path() / std::filesystem::path(std::u8string(fileName.begin(), fileName.end()));
   }
 
   bool Document::autosave(std::string* errorString, Options options)
@@ -597,39 +345,25 @@ namespace anm2ed
     {
       autosaveHash = hash;
       lastAutosaveTime = 0.0f;
-      toasts.push(localize.get(TOAST_AUTOSAVING));
-      logger.info(localize.get(TOAST_AUTOSAVING, anm2ed::ENGLISH));
+      toast_log(Level::INFO, TOAST_AUTOSAVING);
       logger.info(std::format("Autosaved document to: {}", autosavePathUtf8));
       return true;
     }
-    else if (errorString)
-    {
-      toasts.push(
-          std::vformat(localize.get(TOAST_AUTOSAVE_FAILED), std::make_format_args(autosavePathUtf8, *errorString)));
-      logger.error(std::vformat(localize.get(TOAST_AUTOSAVE_FAILED, anm2ed::ENGLISH),
-                                std::make_format_args(autosavePathUtf8, *errorString)));
-    }
-
+    if (errorString) toast_log(Level::ERROR, TOAST_AUTOSAVE_FAILED, autosavePathUtf8, *errorString);
     return false;
   }
 
-  void Document::anm2_change(ChangeType type) { change(type); }
-
   void Document::texture_change(int id)
   {
-    auto texture = texture_get(id);
-    if (!texture || !anm2.element_get(ElementType::SPRITESHEET, id)) return;
-    change(SPRITESHEETS);
+    if (texture_get(id) && anm2.element_get(ElementType::SPRITESHEET, id)) change(SPRITESHEETS);
   }
 
   bool Document::texture_reload(int id)
   {
     auto spritesheet = anm2.element_get(ElementType::SPRITESHEET, id);
     if (!spritesheet) return false;
-
     util::WorkingDirectory workingDirectory(directory_get());
-    textures[id] = resource::Texture(path::case_insensitive_find(spritesheet->path));
-    texturePaths[id] = spritesheet->path;
+    document::resource_load(id, spritesheet->path, textures, texturePaths);
     return true;
   }
 
@@ -637,27 +371,26 @@ namespace anm2ed
   {
     auto sound = anm2.element_get(ElementType::SOUND_ELEMENT, id);
     if (!sound) return false;
-
     util::WorkingDirectory workingDirectory(directory_get());
-    sounds[id] = resource::Audio(path::case_insensitive_find(sound->path));
-    soundPaths[id] = sound->path;
+    document::resource_load(id, sound->path, sounds, soundPaths);
     return true;
   }
 
   bool Document::shader_reload(int shaderId, std::string* status)
   {
-    auto shaderElement = document::shader_element_get(anm2, shaderId);
-    if (!shaderElement)
+    auto shader_erase = [&]()
     {
-      if (status)
-      {
-        auto labelString = std::string(localize.get(LABEL_FRAGMENT));
-        *status += std::vformat(localize.get(LABEL_SHADER_PATH_EMPTY), std::make_format_args(labelString)) + "\n";
-      }
       shaders.erase(shaderId);
       shaderVertexPaths.erase(shaderId);
       shaderFragmentPaths.erase(shaderId);
       return false;
+    };
+
+    auto shaderElement = anm2.element_get(ElementType::SHADER, shaderId);
+    if (!shaderElement)
+    {
+      document::shader_status_format_append(status, LABEL_SHADER_PATH_EMPTY, LABEL_FRAGMENT);
+      return shader_erase();
     }
 
     std::string vertexSource{};
@@ -666,13 +399,7 @@ namespace anm2ed
                                                        resource::shader::TEXTURE_COMPATIBILITY_VERTEX);
     auto isFragmentLoaded =
         document::shader_source_load(*this, shaderElement->fragment, fragmentSource, LABEL_FRAGMENT, status);
-    if (!isVertexLoaded || !isFragmentLoaded)
-    {
-      shaders.erase(shaderId);
-      shaderVertexPaths.erase(shaderId);
-      shaderFragmentPaths.erase(shaderId);
-      return false;
-    }
+    if (!isVertexLoaded || !isFragmentLoaded) return shader_erase();
 
     auto vertex = resource::shader::gles_vertex_convert(vertexSource);
     auto fragment = resource::shader::gles_fragment_convert(fragmentSource);
@@ -683,19 +410,13 @@ namespace anm2ed
       *status += document::shader_source_lines_get("Converted vertex shader", vertex);
       *status += document::shader_source_lines_get("Converted fragment shader", fragment);
     }
-    if (!result.isLinked || !result.id)
-    {
-      shaders.erase(shaderId);
-      shaderVertexPaths.erase(shaderId);
-      shaderFragmentPaths.erase(shaderId);
-      return false;
-    }
+    if (!result.isLinked || !result.id) return shader_erase();
 
     resource::Shader runtime{};
     runtime.id = result.id;
     runtime.uniforms = std::move(result.uniforms);
-    if (document::shader_uniform_configs_trim(*shaderElement, runtime)) hash_set();
-    document::shader_uniform_configs_apply(*shaderElement, runtime);
+    if (resource::shader::uniform_configs_trim(*shaderElement, runtime.uniforms)) hash_set();
+    resource::shader::uniform_configs_apply(*shaderElement, runtime.uniforms);
     shaders[shaderId] = std::move(runtime);
     shaderVertexPaths[shaderId] = shaderElement->vertex;
     shaderFragmentPaths[shaderId] = shaderElement->fragment;
@@ -705,114 +426,40 @@ namespace anm2ed
   void Document::assets_sync(ChangeType type)
   {
     if (type == ALL || type == SPRITESHEETS || type == TEXTURES)
-    {
-      std::set<int> validIds{};
-      util::WorkingDirectory workingDirectory(directory_get());
-      if (auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS))
-        for (auto& spritesheet : spritesheets->children)
-        {
-          if (spritesheet.type != ElementType::SPRITESHEET) continue;
-          validIds.insert(spritesheet.id);
-          auto isReload = !textures.contains(spritesheet.id) || !texturePaths.contains(spritesheet.id) ||
-                          texturePaths.at(spritesheet.id) != spritesheet.path;
-          if (isReload)
-          {
-            textures[spritesheet.id] = resource::Texture(path::case_insensitive_find(spritesheet.path));
-            texturePaths[spritesheet.id] = spritesheet.path;
-          }
-        }
+      document::resources_sync(*this, ElementType::SPRITESHEET, textures, texturePaths);
+    if (type == ALL || type == SOUNDS) document::resources_sync(*this, ElementType::SOUND_ELEMENT, sounds, soundPaths);
+    if (type != ALL && type != SHADERS) return;
 
-      for (auto it = textures.begin(); it != textures.end();)
+    std::set<int> validShaderIds{};
+    util::WorkingDirectory workingDirectory(directory_get());
+    if (auto shaderElements = anm2.element_get(ElementType::SHADERS))
+      for (auto& shaderElement : shaderElements->children)
       {
-        if (!validIds.contains(it->first))
+        if (shaderElement.type != ElementType::SHADER) continue;
+        auto id = shaderElement.id;
+        validShaderIds.insert(id);
+        auto isReload = !shaders.contains(id) || !shaderVertexPaths.contains(id) || !shaderFragmentPaths.contains(id) ||
+                        shaderVertexPaths.at(id) != shaderElement.vertex ||
+                        shaderFragmentPaths.at(id) != shaderElement.fragment;
+        if (shaderElement.fragment.empty())
         {
-          texturePaths.erase(it->first);
-          it = textures.erase(it);
+          shaders.erase(id);
+          shaderVertexPaths.erase(id);
+          shaderFragmentPaths.erase(id);
         }
-        else
-          ++it;
+        else if (isReload)
+          shader_reload(id);
+        else if (auto shader = shader_get(id))
+          resource::shader::uniform_configs_apply(shaderElement, shader->uniforms);
       }
-    }
 
-    if (type == ALL || type == SHADERS)
-    {
-      std::set<int> validShaderIds{};
-      util::WorkingDirectory workingDirectory(directory_get());
-      if (auto shaderItems = anm2.element_get(ElementType::SHADERS))
-        for (auto& shaderElement : shaderItems->children)
-        {
-          if (shaderElement.type != ElementType::SHADER) continue;
-
-          validShaderIds.insert(shaderElement.id);
-          if (shaderElement.fragment.empty())
-          {
-            shaders.erase(shaderElement.id);
-            shaderVertexPaths.erase(shaderElement.id);
-            shaderFragmentPaths.erase(shaderElement.id);
-            continue;
-          }
-
-          auto isShaderReload = !shaders.contains(shaderElement.id) || !shaderVertexPaths.contains(shaderElement.id) ||
-                                !shaderFragmentPaths.contains(shaderElement.id) ||
-                                shaderVertexPaths.at(shaderElement.id) != shaderElement.vertex ||
-                                shaderFragmentPaths.at(shaderElement.id) != shaderElement.fragment;
-          if (isShaderReload)
-            shader_reload(shaderElement.id);
-          else if (auto shader = shader_get(shaderElement.id))
-            document::shader_uniform_configs_apply(shaderElement, *shader);
-        }
-
-      for (auto it = shaders.begin(); it != shaders.end();)
-      {
-        if (!validShaderIds.contains(it->first))
-        {
-          shaderVertexPaths.erase(it->first);
-          shaderFragmentPaths.erase(it->first);
-          it = shaders.erase(it);
-        }
-        else
-          ++it;
-      }
-    }
-
-    if (type == ALL || type == SOUNDS)
-    {
-      std::set<int> validIds{};
-      util::WorkingDirectory workingDirectory(directory_get());
-      if (auto soundItems = anm2.element_get(ElementType::SOUNDS))
-        for (auto& sound : soundItems->children)
-        {
-          if (sound.type != ElementType::SOUND_ELEMENT) continue;
-          validIds.insert(sound.id);
-          auto isReload =
-              !sounds.contains(sound.id) || !soundPaths.contains(sound.id) || soundPaths.at(sound.id) != sound.path;
-          if (isReload)
-          {
-            sounds[sound.id] = resource::Audio(path::case_insensitive_find(sound.path));
-            soundPaths[sound.id] = sound.path;
-          }
-        }
-
-      for (auto it = sounds.begin(); it != sounds.end();)
-      {
-        if (!validIds.contains(it->first))
-        {
-          soundPaths.erase(it->first);
-          it = sounds.erase(it);
-        }
-        else
-          ++it;
-      }
-    }
+    auto is_invalid = [&](const auto& pair) { return !validShaderIds.contains(pair.first); };
+    std::erase_if(shaders, is_invalid);
+    std::erase_if(shaderVertexPaths, is_invalid);
+    std::erase_if(shaderFragmentPaths, is_invalid);
   }
 
   resource::Texture* Document::texture_get(int id)
-  {
-    auto it = textures.find(id);
-    return it == textures.end() ? nullptr : &it->second;
-  }
-
-  const resource::Texture* Document::texture_get(int id) const
   {
     auto it = textures.find(id);
     return it == textures.end() ? nullptr : &it->second;
@@ -824,22 +471,8 @@ namespace anm2ed
     return it == sounds.end() ? nullptr : &it->second;
   }
 
-  const resource::Audio* Document::sound_get(int id) const
-  {
-    auto it = sounds.find(id);
-    return it == sounds.end() ? nullptr : &it->second;
-  }
-
   resource::Shader* Document::shader_get(int shaderId)
   {
-    if (shaderId == -1) return nullptr;
-    auto it = shaders.find(shaderId);
-    return it == shaders.end() || !it->second.is_valid() ? nullptr : &it->second;
-  }
-
-  const resource::Shader* Document::shader_get(int shaderId) const
-  {
-    if (shaderId == -1) return nullptr;
     auto it = shaders.find(shaderId);
     return it == shaders.end() || !it->second.is_valid() ? nullptr : &it->second;
   }
@@ -848,7 +481,7 @@ namespace anm2ed
   {
     auto spritesheet = anm2.element_get(ElementType::SPRITESHEET, spritesheetId);
     auto texture = texture_get(spritesheetId);
-    if (!spritesheet || !texture || !texture->is_valid() || texture->pixels.empty() || ids.empty()) return false;
+    if (!spritesheet || !texture || !texture->is_valid() || texture->pixels.empty()) return false;
 
     bool isChanged{};
     for (auto id : ids)
@@ -856,41 +489,28 @@ namespace anm2ed
       auto region = child_id_get(*spritesheet, ElementType::REGION, id);
       if (!region) continue;
 
-      auto minPoint = glm::ivec2(glm::min(region->crop, region->crop + region->size));
-      auto maxPoint = glm::ivec2(glm::max(region->crop, region->crop + region->size));
-      int minX = std::max(0, minPoint.x);
-      int minY = std::max(0, minPoint.y);
-      int maxX = std::min(texture->size.x, maxPoint.x);
-      int maxY = std::min(texture->size.y, maxPoint.y);
-      if (minX >= maxX || minY >= maxY) continue;
+      auto minPoint = glm::max(glm::ivec2(glm::min(region->crop, region->crop + region->size)), glm::ivec2(0));
+      auto maxPoint = glm::min(glm::ivec2(glm::max(region->crop, region->crop + region->size)), texture->size);
+      auto contentMin = glm::ivec2(std::numeric_limits<int>::max());
+      auto contentMax = glm::ivec2(std::numeric_limits<int>::min());
 
-      int contentMinX = std::numeric_limits<int>::max();
-      int contentMinY = std::numeric_limits<int>::max();
-      int contentMaxX = std::numeric_limits<int>::min();
-      int contentMaxY = std::numeric_limits<int>::min();
-
-      for (int y = minY; y < maxY; ++y)
-      {
-        for (int x = minX; x < maxX; ++x)
+      for (int y = minPoint.y; y < maxPoint.y; ++y)
+        for (int x = minPoint.x; x < maxPoint.x; ++x)
         {
           auto index = ((std::size_t)y * texture->size.x + x) * resource::texture::CHANNELS;
           if (index + resource::texture::CHANNELS > texture->pixels.size()) continue;
-          auto r = texture->pixels[index + 0];
-          auto g = texture->pixels[index + 1];
-          auto b = texture->pixels[index + 2];
-          auto a = texture->pixels[index + 3];
-          if (r == 0 && g == 0 && b == 0 && a == 0) continue;
-          contentMinX = std::min(contentMinX, x);
-          contentMinY = std::min(contentMinY, y);
-          contentMaxX = std::max(contentMaxX, x);
-          contentMaxY = std::max(contentMaxY, y);
+          if (std::all_of(texture->pixels.begin() + index,
+                          texture->pixels.begin() + index + resource::texture::CHANNELS,
+                          [](auto channel) { return channel == 0; }))
+            continue;
+          contentMin = glm::min(contentMin, glm::ivec2(x, y));
+          contentMax = glm::max(contentMax, glm::ivec2(x, y));
         }
-      }
 
-      if (contentMinX == std::numeric_limits<int>::max()) continue;
+      if (contentMin.x == std::numeric_limits<int>::max()) continue;
 
-      auto newCrop = glm::vec2(contentMinX, contentMinY);
-      auto newSize = glm::vec2(contentMaxX - contentMinX + 1, contentMaxY - contentMinY + 1);
+      auto newCrop = glm::vec2(contentMin);
+      auto newSize = glm::vec2(contentMax - contentMin + 1);
       if (region->crop == newCrop && region->size == newSize) continue;
 
       auto previousCrop = region->crop;
@@ -908,366 +528,72 @@ namespace anm2ed
     return isChanged;
   }
 
-  bool Document::regions_generate_from_animations(const std::set<int>& animationIndices, const std::string& format,
-                                                  RegionFrameMapping mapping)
-  {
-    if (animationIndices.empty()) return false;
-
-    std::unordered_map<int, int> regionNumbers{};
-    bool isChanged{};
-    for (auto animationIndex : animationIndices)
-    {
-      auto animation = anm2.element_get(ElementType::ANIMATION, animationIndex);
-      if (!animation) continue;
-
-      auto layerAnimations = child_first_get(*animation, ElementType::LAYER_ANIMATIONS);
-      if (!layerAnimations) continue;
-
-      auto layer_animation_regions_generate = [&](auto&& self, Element& layerAnimation) -> void
-      {
-        if (layerAnimation.type == ElementType::GROUP)
-        {
-          for (auto& child : layerAnimation.children)
-            self(self, child);
-          return;
-        }
-        if (layerAnimation.type != ElementType::LAYER_ANIMATION) return;
-
-        auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, layerAnimation.layerId);
-        auto spritesheet = layer ? anm2.element_get(ElementType::SPRITESHEET, layer->spritesheetId) : nullptr;
-        if (!spritesheet) return;
-
-        for (auto& frame : layerAnimation.children)
-        {
-          if (frame.type != ElementType::FRAME) continue;
-
-          auto region = document::frame_region_match_get(*spritesheet, frame);
-          if (!region)
-          {
-            auto generated = element_make(ElementType::REGION);
-            generated.id = element_child_next_id_get(*spritesheet, ElementType::REGION);
-            auto [regionNumberIt, _] = regionNumbers.try_emplace(layer->spritesheetId, 1);
-            auto& regionNumber = regionNumberIt->second;
-            generated.name = document::region_name_get(format, regionNumber++);
-            generated.crop = frame.crop;
-            generated.size = frame.size;
-            generated.pivot = frame.pivot;
-            generated.origin = Origin::CUSTOM;
-            spritesheet->children.push_back(generated);
-            region = &spritesheet->children.back();
-            isChanged = true;
-          }
-          if (mapping == RegionFrameMapping::SET && frame.regionId != region->id)
-          {
-            frame.regionId = region->id;
-            isChanged = true;
-          }
-        }
-      };
-
-      for (auto& layerAnimation : layerAnimations->children)
-        layer_animation_regions_generate(layer_animation_regions_generate, layerAnimation);
-    }
-
-    return isChanged;
-  }
-
-  bool Document::regions_generate_from_frames(const std::set<Reference>& frameReferences, const std::string& format,
-                                              RegionFrameMapping mapping)
-  {
-    std::unordered_map<int, int> regionNumbers{};
-    bool isChanged{};
-    for (auto frameReference : frameReferences)
-    {
-      if (frameReference.itemType != LAYER || frameReference.frameIndex < 0) continue;
-
-      auto frame = anm2.element_get(frameReference);
-      if (!frame || frame->type != ElementType::FRAME || frame->regionId != -1) continue;
-
-      auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, frameReference.itemID);
-      auto spritesheet = layer ? anm2.element_get(ElementType::SPRITESHEET, layer->spritesheetId) : nullptr;
-      if (!spritesheet) continue;
-
-      auto region = document::frame_region_match_get(*spritesheet, *frame);
-      if (!region)
-      {
-        auto generated = element_make(ElementType::REGION);
-        generated.id = element_child_next_id_get(*spritesheet, ElementType::REGION);
-        auto& regionNumber = regionNumbers[layer->spritesheetId];
-        generated.name = document::region_name_get(format, regionNumber++);
-        generated.crop = frame->crop;
-        generated.size = frame->size;
-        generated.pivot = frame->pivot;
-        generated.origin = Origin::CUSTOM;
-        spritesheet->children.push_back(generated);
-        region = &spritesheet->children.back();
-        isChanged = true;
-      }
-      if (mapping == RegionFrameMapping::SET && frame->regionId != region->id)
-      {
-        frame->regionId = region->id;
-        isChanged = true;
-      }
-    }
-
-    return isChanged;
-  }
-
   bool Document::spritesheet_pack(int id, int padding)
   {
-    struct RectI
-    {
-      int x{};
-      int y{};
-      int w{};
-      int h{};
-    };
-
     struct PackItem
     {
       int regionId{-1};
-      int srcX{};
-      int srcY{};
-      int width{};
-      int height{};
-      int packWidth{};
-      int packHeight{};
-    };
-
-    class MaxRectsPacker
-    {
-      int width{};
-      int height{};
-      std::vector<RectI> freeRects{};
-
-      static bool intersects(const RectI& a, const RectI& b)
-      {
-        return !(b.x >= a.x + a.w || b.x + b.w <= a.x || b.y >= a.y + a.h || b.y + b.h <= a.y);
-      }
-
-      static bool contains(const RectI& a, const RectI& b)
-      {
-        return b.x >= a.x && b.y >= a.y && b.x + b.w <= a.x + a.w && b.y + b.h <= a.y + a.h;
-      }
-
-      void split_free_rects(const RectI& used)
-      {
-        std::vector<RectI> next{};
-        next.reserve(freeRects.size() * 2);
-        for (auto& free : freeRects)
-        {
-          if (!intersects(free, used))
-          {
-            next.push_back(free);
-            continue;
-          }
-          if (used.x > free.x) next.push_back({free.x, free.y, used.x - free.x, free.h});
-          if (used.x + used.w < free.x + free.w)
-            next.push_back({used.x + used.w, free.y, free.x + free.w - (used.x + used.w), free.h});
-          if (used.y > free.y) next.push_back({free.x, free.y, free.w, used.y - free.y});
-          if (used.y + used.h < free.y + free.h)
-            next.push_back({free.x, used.y + used.h, free.w, free.y + free.h - (used.y + used.h)});
-        }
-        freeRects = std::move(next);
-      }
-
-      void prune_free_rects()
-      {
-        for (int i = 0; i < (int)freeRects.size(); ++i)
-        {
-          if (freeRects[i].w <= 0 || freeRects[i].h <= 0)
-          {
-            freeRects.erase(freeRects.begin() + i--);
-            continue;
-          }
-          for (int j = i + 1; j < (int)freeRects.size();)
-          {
-            if (contains(freeRects[i], freeRects[j]))
-              freeRects.erase(freeRects.begin() + j);
-            else if (contains(freeRects[j], freeRects[i]))
-            {
-              freeRects.erase(freeRects.begin() + i--);
-              break;
-            }
-            else
-              ++j;
-          }
-        }
-      }
-
-    public:
-      MaxRectsPacker(int width, int height) : width(width), height(height), freeRects({{0, 0, width, height}}) {}
-
-      bool insert(int width, int height, RectI& result)
-      {
-        int bestShort = std::numeric_limits<int>::max();
-        int bestLong = std::numeric_limits<int>::max();
-        RectI best{};
-        bool isFound{};
-        for (auto& free : freeRects)
-        {
-          if (width > free.w || height > free.h) continue;
-          int leftOverW = free.w - width;
-          int leftOverH = free.h - height;
-          int shortSide = std::min(leftOverW, leftOverH);
-          int longSide = std::max(leftOverW, leftOverH);
-          if (shortSide < bestShort || (shortSide == bestShort && longSide < bestLong))
-          {
-            bestShort = shortSide;
-            bestLong = longSide;
-            best = {free.x, free.y, width, height};
-            isFound = true;
-          }
-        }
-        if (!isFound) return false;
-        result = best;
-        split_free_rects(best);
-        prune_free_rects();
-        return true;
-      }
-    };
-
-    auto pack_regions = [&](const std::vector<PackItem>& items, int& packedWidth, int& packedHeight,
-                            std::unordered_map<int, RectI>& packedRects)
-    {
-      if (items.empty()) return false;
-
-      int maxWidth{};
-      int maxHeight{};
-      int sumWidth{};
-      int sumHeight{};
-      std::int64_t totalArea{};
-      for (auto& item : items)
-      {
-        maxWidth = std::max(maxWidth, item.packWidth);
-        maxHeight = std::max(maxHeight, item.packHeight);
-        sumWidth += item.packWidth;
-        sumHeight += item.packHeight;
-        totalArea += (std::int64_t)item.packWidth * item.packHeight;
-      }
-      if (maxWidth <= 0 || maxHeight <= 0) return false;
-
-      int bestSquareDelta = std::numeric_limits<int>::max();
-      int bestArea = std::numeric_limits<int>::max();
-      std::unordered_map<int, RectI> bestRects{};
-      int bestWidth{};
-      int bestHeight{};
-      int startWidth = maxWidth;
-      int endWidth = std::max(startWidth, sumWidth);
-      int step = std::max(1, (endWidth - startWidth) / 512);
-
-      for (int candidateWidth = startWidth; candidateWidth <= endWidth; candidateWidth += step)
-      {
-        int candidateHeightMin = std::max(maxHeight, (int)std::ceil((double)totalArea / candidateWidth));
-        bool isValid{};
-        int usedWidth{};
-        int usedHeight{};
-        std::unordered_map<int, RectI> candidateRects{};
-        for (int candidateHeight = candidateHeightMin; candidateHeight <= sumHeight; ++candidateHeight)
-        {
-          MaxRectsPacker packer(candidateWidth, candidateHeight);
-          candidateRects.clear();
-          isValid = true;
-          usedWidth = 0;
-          usedHeight = 0;
-          for (auto& item : items)
-          {
-            RectI rect{};
-            if (!packer.insert(item.packWidth, item.packHeight, rect))
-            {
-              isValid = false;
-              break;
-            }
-            candidateRects[item.regionId] = rect;
-            usedWidth = std::max(usedWidth, rect.x + rect.w);
-            usedHeight = std::max(usedHeight, rect.y + rect.h);
-          }
-          if (isValid) break;
-        }
-        if (!isValid) continue;
-
-        int area = usedWidth * usedHeight;
-        int squareDelta = std::abs(usedWidth - usedHeight);
-        if (squareDelta < bestSquareDelta || (squareDelta == bestSquareDelta && area < bestArea))
-        {
-          bestSquareDelta = squareDelta;
-          bestArea = area;
-          bestWidth = usedWidth;
-          bestHeight = usedHeight;
-          bestRects = std::move(candidateRects);
-          if (bestArea == totalArea && bestSquareDelta == 0) break;
-        }
-      }
-
-      if (bestArea == std::numeric_limits<int>::max()) return false;
-      packedWidth = bestWidth;
-      packedHeight = bestHeight;
-      packedRects = std::move(bestRects);
-      return true;
+      glm::ivec2 source{};
+      glm::ivec2 size{};
     };
 
     auto spritesheet = anm2.element_get(ElementType::SPRITESHEET, id);
     auto texture = texture_get(id);
     if (!spritesheet || !texture || !texture->is_valid() || texture->pixels.empty()) return false;
 
-    auto packingPadding = std::max(0, padding);
+    padding = std::max(0, padding);
     std::vector<PackItem> items{};
     for (auto& region : spritesheet->children)
     {
       if (region.type != ElementType::REGION) continue;
       auto minPoint = glm::ivec2(glm::min(region.crop, region.crop + region.size));
       auto maxPoint = glm::ivec2(glm::max(region.crop, region.crop + region.size));
-      auto size = glm::max(maxPoint - minPoint, glm::ivec2(1));
-      items.push_back({region.id, minPoint.x, minPoint.y, size.x, size.y, size.x + packingPadding * 2,
-                       size.y + packingPadding * 2});
+      items.push_back({region.id, minPoint, glm::max(maxPoint - minPoint, glm::ivec2(1))});
     }
-    if (items.empty()) return false;
 
     std::sort(items.begin(), items.end(),
               [](const PackItem& a, const PackItem& b)
               {
-                int areaA = a.width * a.height;
-                int areaB = b.width * b.height;
-                if (areaA != areaB) return areaA > areaB;
-                return a.regionId < b.regionId;
+                auto areaA = a.size.x * a.size.y;
+                auto areaB = b.size.x * b.size.y;
+                return areaA != areaB ? areaA > areaB : a.regionId < b.regionId;
               });
 
-    int packedWidth{};
-    int packedHeight{};
-    std::unordered_map<int, RectI> packedRects{};
-    if (!pack_regions(items, packedWidth, packedHeight, packedRects)) return false;
-    if (packedWidth <= 0 || packedHeight <= 0) return false;
-
-    std::vector<uint8_t> packedPixels((std::size_t)packedWidth * packedHeight * resource::texture::CHANNELS, 0);
+    std::vector<glm::ivec2> sizes{};
     for (auto& item : items)
+      sizes.push_back(item.size + padding * 2);
+
+    glm::ivec2 packedSize{};
+    std::vector<glm::ivec2> positions{};
+    if (!util::pack::rects_pack(sizes, packedSize, positions) || packedSize.x <= 0 || packedSize.y <= 0) return false;
+
+    std::vector<uint8_t> packedPixels((std::size_t)packedSize.x * packedSize.y * resource::texture::CHANNELS, 0);
+    std::unordered_map<int, glm::ivec2> crops{};
+    for (int i = 0; i < (int)items.size(); ++i)
     {
-      if (!packedRects.contains(item.regionId)) continue;
-      auto destinationRect = packedRects.at(item.regionId);
-      for (int y = 0; y < item.height; ++y)
-        for (int x = 0; x < item.width; ++x)
+      auto& item = items[i];
+      auto destination = positions[i] + padding;
+      crops[item.regionId] = destination;
+      for (int y = 0; y < item.size.y; ++y)
+        for (int x = 0; x < item.size.x; ++x)
         {
-          int sourceX = item.srcX + x;
-          int sourceY = item.srcY + y;
-          int destinationX = destinationRect.x + packingPadding + x;
-          int destinationY = destinationRect.y + packingPadding + y;
-          if (sourceX < 0 || sourceY < 0 || sourceX >= texture->size.x || sourceY >= texture->size.y) continue;
-          if (destinationX < 0 || destinationY < 0 || destinationX >= packedWidth || destinationY >= packedHeight)
+          auto source = item.source + glm::ivec2(x, y);
+          auto target = destination + glm::ivec2(x, y);
+          if (glm::any(glm::lessThan(source, glm::ivec2(0))) ||
+              glm::any(glm::greaterThanEqual(source, texture->size)) ||
+              glm::any(glm::greaterThanEqual(target, packedSize)))
             continue;
-          auto sourceIndex = ((std::size_t)sourceY * texture->size.x + sourceX) * resource::texture::CHANNELS;
-          auto destinationIndex =
-              ((std::size_t)destinationY * packedWidth + destinationX) * resource::texture::CHANNELS;
-          std::copy_n(texture->pixels.data() + sourceIndex, resource::texture::CHANNELS,
-                      packedPixels.data() + destinationIndex);
+          std::copy_n(texture->pixels.data() +
+                          ((std::size_t)source.y * texture->size.x + source.x) * resource::texture::CHANNELS,
+                      resource::texture::CHANNELS,
+                      packedPixels.data() +
+                          ((std::size_t)target.y * packedSize.x + target.x) * resource::texture::CHANNELS);
         }
     }
 
-    textures[id] = resource::Texture(packedPixels.data(), {packedWidth, packedHeight});
+    textures[id] = resource::Texture(packedPixels.data(), packedSize);
     for (auto& region : spritesheet->children)
-      if (region.type == ElementType::REGION && packedRects.contains(region.id))
-      {
-        auto& rect = packedRects.at(region.id);
-        region.crop = {rect.x + packingPadding, rect.y + packingPadding};
-      }
+      if (region.type == ElementType::REGION && crops.contains(region.id)) region.crop = crops.at(region.id);
 
     assets_sync(SPRITESHEETS);
     return true;
@@ -1277,65 +603,51 @@ namespace anm2ed
                                     bool isMakePrimaryRegion, origin::Type regionOrigin)
   {
     if (ids.size() < 2) return false;
-    auto baseId = *ids.begin();
-    auto base = anm2.element_get(ElementType::SPRITESHEET, baseId);
-    auto baseTexture = texture_get(baseId);
-    if (!base || !baseTexture || !baseTexture->is_valid()) return false;
     for (auto id : ids)
       if (!anm2.element_get(ElementType::SPRITESHEET, id) || !texture_get(id) || !texture_get(id)->is_valid())
         return false;
 
+    auto baseId = *ids.begin();
+    auto base = anm2.element_get(ElementType::SPRITESHEET, baseId);
     auto origin = regionOrigin == origin::ORIGIN_CENTER ? Origin::CENTER : Origin::TOP_LEFT;
-    auto baseTextureSize = baseTexture->size;
-    auto mergedTexture = *baseTexture;
-    std::unordered_map<int, glm::ivec2> offsets{{baseId, {}}};
+    auto mergedTexture = *texture_get(baseId);
+    std::unordered_map<int, std::unordered_map<int, int>> regionIdMap{};
 
+    auto location_region_add = [&](int sourceId, glm::ivec2 crop, glm::ivec2 size)
+    {
+      auto source = anm2.element_get(ElementType::SPRITESHEET, sourceId);
+      auto region = element_make(ElementType::REGION);
+      region.id = element_child_next_id_get(*base, ElementType::REGION);
+      auto stem = path::to_utf8(source->path.stem());
+      region.name = stem.empty() ? std::format("#{}", sourceId) : stem;
+      region.crop = crop;
+      region.size = size;
+      region.pivot = origin == Origin::CENTER ? glm::vec2(size) * 0.5f : glm::vec2();
+      region.origin = origin;
+      base->children.push_back(region);
+    };
+
+    if (isMakeRegions && isMakePrimaryRegion) location_region_add(baseId, {}, mergedTexture.size);
     for (auto id : ids)
     {
       if (id == baseId) continue;
       auto texture = texture_get(id);
-      offsets[id] = isAppendRight ? glm::ivec2(mergedTexture.size.x, 0) : glm::ivec2(0, mergedTexture.size.y);
+      auto offset = isAppendRight ? glm::ivec2(mergedTexture.size.x, 0) : glm::ivec2(0, mergedTexture.size.y);
       mergedTexture = resource::Texture::merge_append(mergedTexture, *texture, isAppendRight);
-    }
-    textures[baseId] = std::move(mergedTexture);
+      if (!isMakeRegions) continue;
 
-    std::unordered_map<int, std::unordered_map<int, int>> regionIdMap{};
-    if (isMakeRegions)
-    {
-      auto add_location_region = [&](int sourceId, glm::ivec2 crop, glm::ivec2 size)
+      location_region_add(id, offset, texture->size);
+      for (auto sourceRegion : anm2.element_get(ElementType::SPRITESHEET, id)->children)
       {
-        auto source = anm2.element_get(ElementType::SPRITESHEET, sourceId);
-        if (!source) return;
-        auto region = element_make(ElementType::REGION);
-        region.id = element_child_next_id_get(*base, ElementType::REGION);
-        auto stem = path::to_utf8(source->path.stem());
-        region.name = stem.empty() ? std::format("#{}", sourceId) : stem;
-        region.crop = crop;
-        region.size = size;
-        region.pivot = origin == Origin::CENTER ? glm::vec2(size) * 0.5f : glm::vec2();
-        region.origin = origin;
-        base->children.push_back(region);
-      };
-
-      if (isMakePrimaryRegion) add_location_region(baseId, {}, baseTextureSize);
-      for (auto id : ids)
-      {
-        if (id == baseId) continue;
-        auto source = anm2.element_get(ElementType::SPRITESHEET, id);
-        auto sourceTexture = texture_get(id);
-        auto sheetOffset = offsets.at(id);
-        add_location_region(id, sheetOffset, sourceTexture->size);
-        for (auto& sourceRegion : source->children)
-        {
-          if (sourceRegion.type != ElementType::REGION) continue;
-          auto destinationRegion = sourceRegion;
-          destinationRegion.id = element_child_next_id_get(*base, ElementType::REGION);
-          destinationRegion.crop += sheetOffset;
-          base->children.push_back(destinationRegion);
-          regionIdMap[id][sourceRegion.id] = destinationRegion.id;
-        }
+        if (sourceRegion.type != ElementType::REGION) continue;
+        auto sourceRegionId = sourceRegion.id;
+        sourceRegion.id = element_child_next_id_get(*base, ElementType::REGION);
+        sourceRegion.crop += offset;
+        base->children.push_back(sourceRegion);
+        regionIdMap[id][sourceRegionId] = sourceRegion.id;
       }
     }
+    textures[baseId] = std::move(mergedTexture);
 
     std::unordered_map<int, int> layerSpritesheetBefore{};
     if (auto layers = anm2.element_get(ElementType::LAYERS))
@@ -1346,477 +658,23 @@ namespace anm2ed
           layer.spritesheetId = baseId;
         }
 
-    if (auto animations = anm2.element_get(ElementType::ANIMATIONS))
-      for (auto& animation : animations->children)
-      {
-        if (animation.type != ElementType::ANIMATION) continue;
-        auto layerAnimations = child_first_get(animation, ElementType::LAYER_ANIMATIONS);
-        if (!layerAnimations) continue;
-        auto layer_animation_update = [&](auto&& self, Element& layerAnimation) -> void
-        {
-          if (layerAnimation.type == ElementType::GROUP)
-          {
-            for (auto& child : layerAnimation.children)
-              self(self, child);
-            return;
-          }
-          if (layerAnimation.type != ElementType::LAYER_ANIMATION ||
-              !layerSpritesheetBefore.contains(layerAnimation.layerId))
-            return;
-          auto sourceSpritesheetId = layerSpritesheetBefore.at(layerAnimation.layerId);
-          if (sourceSpritesheetId == baseId) return;
-          for (auto& frame : layerAnimation.children)
-          {
-            if (frame.type != ElementType::FRAME) continue;
-            if (frame.regionId != -1)
-            {
-              if (isMakeRegions && regionIdMap.contains(sourceSpritesheetId) &&
-                  regionIdMap.at(sourceSpritesheetId).contains(frame.regionId))
-                frame.regionId = regionIdMap.at(sourceSpritesheetId).at(frame.regionId);
-              else
-                frame.regionId = -1;
-            }
-          }
-        };
-        for (auto& layerAnimation : layerAnimations->children)
-          layer_animation_update(layer_animation_update, layerAnimation);
-      }
+    animations_tracks_each(anm2.root, ElementType::LAYER_ANIMATION,
+                           [&](Element& track)
+                           {
+                             auto before = layerSpritesheetBefore.find(track.layerId);
+                             if (before == layerSpritesheetBefore.end() || before->second == baseId) return;
+                             auto& remap = regionIdMap[before->second];
+                             for (auto& frame : track.children)
+                               if (frame.type == ElementType::FRAME && frame.regionId != -1)
+                                 frame.regionId = remap.contains(frame.regionId) ? remap.at(frame.regionId) : -1;
+                           });
 
     auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS);
-    if (!spritesheets) return false;
     for (auto id : ids)
       if (id != baseId)
       {
         element_child_id_erase(*spritesheets, ElementType::SPRITESHEET, id);
         textures.erase(id);
-      }
-
-    assets_sync(ALL);
-    return true;
-  }
-
-  void Document::scan_and_set_regions()
-  {
-    auto animations = anm2.element_get(ElementType::ANIMATIONS);
-    if (animations)
-    {
-      for (auto& animation : animations->children)
-      {
-        if (animation.type != ElementType::ANIMATION) continue;
-        auto layerAnimations = child_first_get(animation, ElementType::LAYER_ANIMATIONS);
-        if (!layerAnimations) continue;
-        auto layer_animation_update = [&](auto&& self, Element& layerAnimation) -> void
-        {
-          if (layerAnimation.type == ElementType::GROUP)
-          {
-            for (auto& child : layerAnimation.children)
-              self(self, child);
-            return;
-          }
-          if (layerAnimation.type != ElementType::LAYER_ANIMATION) return;
-          auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, layerAnimation.layerId);
-          auto spritesheet = layer ? anm2.element_get(ElementType::SPRITESHEET, layer->spritesheetId) : nullptr;
-          if (!spritesheet) return;
-          for (auto& frame : layerAnimation.children)
-          {
-            if (frame.type != ElementType::FRAME || frame.regionId != -1) continue;
-            auto frameCrop = glm::ivec2(frame.crop);
-            auto frameSize = glm::ivec2(frame.size);
-            auto framePivot = glm::ivec2(frame.pivot);
-            for (const auto& region : spritesheet->children)
-              if (region.type == ElementType::REGION && glm::ivec2(region.crop) == frameCrop &&
-                  glm::ivec2(region.size) == frameSize && glm::ivec2(region.pivot) == framePivot)
-              {
-                frame.regionId = region.id;
-                break;
-              }
-          }
-        };
-        for (auto& layerAnimation : layerAnimations->children)
-          layer_animation_update(layer_animation_update, layerAnimation);
-      }
-    }
-  }
-
-  bool Document::file_merge(const std::filesystem::path& path, FileMergePreset preset)
-  {
-    Anm2 source(path);
-    if (!source.isValid) return false;
-
-    bool isAppendAsNew = preset == FILE_MERGE_PRESET_APPEND_AS_NEW;
-    bool isReplaceMatching = preset == FILE_MERGE_PRESET_REPLACE_MATCHING;
-
-    auto remap_path = [&](const std::filesystem::path& original) -> std::filesystem::path
-    {
-      if (directory_get().empty()) return original;
-      std::error_code ec{};
-      std::filesystem::path absolute{};
-      bool isAbsolute{};
-
-      if (!original.empty())
-      {
-        if (original.is_absolute())
-        {
-          absolute = original;
-          isAbsolute = true;
-        }
-        else
-        {
-          absolute = std::filesystem::weakly_canonical(path.parent_path() / original, ec);
-          if (ec)
-          {
-            ec.clear();
-            absolute = path.parent_path() / original;
-          }
-          isAbsolute = true;
-        }
-      }
-
-      if (!isAbsolute) return original;
-      auto relative = std::filesystem::relative(absolute, directory_get(), ec);
-      if (!ec) return relative;
-      return original.empty() ? absolute : original;
-    };
-
-    auto remap_id = [](const std::unordered_map<int, int>& remap, int id)
-    {
-      auto it = remap.find(id);
-      return it == remap.end() ? -1 : it->second;
-    };
-
-    auto find_by_name = [](Element& container, ElementType type, const std::string& name)
-    {
-      for (auto& child : container.children)
-        if (child.type == type && child.name == name) return &child;
-      return (Element*)nullptr;
-    };
-
-    auto name_unique_get = [&](Element& container, ElementType type, const std::string& name)
-    {
-      if (!find_by_name(container, type, name)) return name;
-      for (int i = 2;; ++i)
-      {
-        auto candidate = std::format("{} {}", name, i);
-        if (!find_by_name(container, type, candidate)) return candidate;
-      }
-    };
-
-    auto named_element_merge = [&](Element& container, Element item, ElementType type)
-    {
-      if (isAppendAsNew)
-      {
-        item.id = element_child_next_id_get(container, type);
-        item.name = name_unique_get(container, type, item.name);
-        container.children.push_back(item);
-        return item.id;
-      }
-
-      if (auto existing = find_by_name(container, type, item.name))
-      {
-        item.id = existing->id;
-        *existing = item;
-      }
-      else
-      {
-        item.id = element_child_next_id_get(container, type);
-        container.children.push_back(item);
-      }
-      return item.id;
-    };
-
-    auto child_set = [](Element& container, Element child, ElementType type)
-    {
-      if (auto existing = child_first_get(container, type))
-        *existing = std::move(child);
-      else
-        container.children.push_back(std::move(child));
-    };
-
-    auto track_find = [](Element& container, const Element& source)
-    {
-      auto find = [](auto&& self, Element& parent, const Element& source) -> Element*
-      {
-        for (auto& track : parent.children)
-        {
-          if (track.type == ElementType::GROUP)
-            if (auto result = self(self, track, source)) return result;
-          if (track.type != source.type) continue;
-          if (track.type == ElementType::LAYER_ANIMATION && track.layerId == source.layerId) return &track;
-          if (track.type == ElementType::NULL_ANIMATION && track.nullId == source.nullId) return &track;
-        }
-        return (Element*)nullptr;
-      };
-      return find(find, container, source);
-    };
-
-    auto track_container_get = [](Element& animation, ElementType type)
-    {
-      if (auto container = child_first_get(animation, type)) return container;
-      animation.children.push_back(element_make(type));
-      return &animation.children.back();
-    };
-
-    std::unordered_map<int, int> spritesheetRemap{};
-    std::unordered_map<int, int> layerRemap{};
-    std::unordered_map<int, int> nullRemap{};
-    std::unordered_map<int, int> eventRemap{};
-    std::unordered_map<int, int> soundRemap{};
-
-    auto spritesheet_import = [&](int sourceId)
-    {
-      if (sourceId < 0) return -1;
-      if (spritesheetRemap.contains(sourceId)) return spritesheetRemap[sourceId];
-
-      auto sourceSpritesheets = source.element_get(ElementType::SPRITESHEETS);
-      auto destinationSpritesheets = anm2.element_get(ElementType::SPRITESHEETS);
-      auto spritesheet =
-          sourceSpritesheets ? child_id_get(*sourceSpritesheets, ElementType::SPRITESHEET, sourceId) : nullptr;
-      if (!spritesheet || !destinationSpritesheets) return -1;
-
-      auto imported = *spritesheet;
-      imported.id = element_child_next_id_get(*destinationSpritesheets, ElementType::SPRITESHEET);
-      imported.path = remap_path(imported.path);
-      destinationSpritesheets->children.push_back(imported);
-      spritesheetRemap[sourceId] = imported.id;
-      return imported.id;
-    };
-
-    if (auto sourceSounds = source.element_get(ElementType::SOUNDS))
-      if (auto destinationSounds = anm2.element_get(ElementType::SOUNDS))
-        for (auto sound : sourceSounds->children)
-        {
-          if (sound.type != ElementType::SOUND_ELEMENT) continue;
-          auto sourceId = sound.id;
-          sound.path = remap_path(sound.path);
-          int destinationId{-1};
-          if (!isAppendAsNew)
-            for (auto& existing : destinationSounds->children)
-              if (existing.type == ElementType::SOUND_ELEMENT && existing.path == sound.path)
-              {
-                destinationId = existing.id;
-                sound.id = destinationId;
-                existing = sound;
-                break;
-              }
-          if (destinationId == -1)
-          {
-            destinationId = element_child_next_id_get(*destinationSounds, ElementType::SOUND_ELEMENT);
-            sound.id = destinationId;
-            destinationSounds->children.push_back(sound);
-          }
-          soundRemap[sourceId] = destinationId;
-        }
-
-    if (auto sourceLayers = source.element_get(ElementType::LAYERS))
-      if (auto destinationLayers = anm2.element_get(ElementType::LAYERS))
-        for (auto layer : sourceLayers->children)
-        {
-          if (layer.type != ElementType::LAYER_ELEMENT) continue;
-          auto sourceId = layer.id;
-          auto sourceSpritesheetId = layer.spritesheetId;
-          auto existing =
-              isAppendAsNew ? nullptr : find_by_name(*destinationLayers, ElementType::LAYER_ELEMENT, layer.name);
-          layer.spritesheetId = existing ? existing->spritesheetId : spritesheet_import(sourceSpritesheetId);
-          layerRemap[sourceId] = named_element_merge(*destinationLayers, layer, ElementType::LAYER_ELEMENT);
-        }
-
-    if (auto sourceNulls = source.element_get(ElementType::NULLS))
-      if (auto destinationNulls = anm2.element_get(ElementType::NULLS))
-        for (auto null : sourceNulls->children)
-        {
-          if (null.type != ElementType::NULL_ELEMENT) continue;
-          auto sourceId = null.id;
-          nullRemap[sourceId] = named_element_merge(*destinationNulls, null, ElementType::NULL_ELEMENT);
-        }
-
-    if (auto sourceEvents = source.element_get(ElementType::EVENTS))
-      if (auto destinationEvents = anm2.element_get(ElementType::EVENTS))
-        for (auto event : sourceEvents->children)
-        {
-          if (event.type != ElementType::EVENT_ELEMENT) continue;
-          auto sourceId = event.id;
-          eventRemap[sourceId] = named_element_merge(*destinationEvents, event, ElementType::EVENT_ELEMENT);
-        }
-
-    auto item_remap = [&](Element& item)
-    {
-      for (auto& frame : item.children)
-      {
-        if (frame.type != ElementType::FRAME && frame.type != ElementType::TRIGGER) continue;
-        for (auto& soundId : frame.soundIds)
-          soundId = remap_id(soundRemap, soundId);
-        frame.eventId = remap_id(eventRemap, frame.eventId);
-      }
-    };
-
-    auto track_tree_remap = [&](auto&& self, Element item, int itemType, Element& container,
-                                int parentGroupId = -1) -> void
-    {
-      auto trackType = itemType == LAYER ? ElementType::LAYER_ANIMATION : ElementType::NULL_ANIMATION;
-      if (item.type == ElementType::GROUP)
-      {
-        auto group = element_make(ElementType::GROUP);
-        group.id = item.id == -1 ? element_child_next_id_get(container, ElementType::GROUP) : item.id;
-        group.name = item.name;
-        group.isExpanded = item.isExpanded;
-        group.isVisible = item.isVisible;
-        if (auto root = child_first_get(item, ElementType::ROOT_ANIMATION))
-          group.children.push_back(*root);
-        else
-        {
-          auto defaultRoot = element_make(ElementType::ROOT_ANIMATION);
-          defaultRoot.children.push_back(element_make(ElementType::FRAME));
-          group.children.push_back(defaultRoot);
-        }
-        container.children.push_back(group);
-        for (auto child : item.children)
-          self(self, child, itemType, container, group.id);
-        return;
-      }
-
-      if (item.type != trackType) return;
-      if (itemType == LAYER)
-        item.layerId = remap_id(layerRemap, item.layerId);
-      else
-        item.nullId = remap_id(nullRemap, item.nullId);
-      if ((itemType == LAYER && item.layerId < 0) || (itemType == NULL_ && item.nullId < 0)) return;
-      if (parentGroupId != -1) item.groupId = parentGroupId;
-      item_remap(item);
-      container.children.push_back(item);
-    };
-
-    auto animation_build = [&](const Element& incoming)
-    {
-      auto animation = element_make(ElementType::ANIMATION);
-      animation.name = incoming.name;
-      animation.frameNum = incoming.frameNum;
-      animation.isLoop = incoming.isLoop;
-
-      if (auto root = child_first_get(incoming, ElementType::ROOT_ANIMATION))
-      {
-        auto item = *root;
-        item_remap(item);
-        animation.children.push_back(item);
-      }
-
-      if (auto layerAnimations = child_first_get(incoming, ElementType::LAYER_ANIMATIONS))
-      {
-        auto container = element_make(ElementType::LAYER_ANIMATIONS);
-        for (auto item : layerAnimations->children)
-          track_tree_remap(track_tree_remap, item, LAYER, container);
-        animation.children.push_back(container);
-      }
-
-      if (auto nullAnimations = child_first_get(incoming, ElementType::NULL_ANIMATIONS))
-      {
-        auto container = element_make(ElementType::NULL_ANIMATIONS);
-        for (auto item : nullAnimations->children)
-          track_tree_remap(track_tree_remap, item, NULL_, container);
-        animation.children.push_back(container);
-      }
-
-      if (auto triggers = child_first_get(incoming, ElementType::TRIGGERS))
-      {
-        auto item = *triggers;
-        item_remap(item);
-        animation.children.push_back(item);
-      }
-
-      return animation;
-    };
-
-    auto track_merge = [&](Element& destinationContainer, const Element& sourceTrack)
-    {
-      if (auto destinationTrack = track_find(destinationContainer, sourceTrack))
-      {
-        if (!sourceTrack.children.empty()) *destinationTrack = sourceTrack;
-      }
-      else
-        destinationContainer.children.push_back(sourceTrack);
-    };
-
-    auto track_container_merge =
-        [&](Element& destinationContainer, const Element& sourceContainer, ElementType trackType)
-    {
-      std::unordered_map<int, int> groupRemap{};
-      for (auto item : sourceContainer.children)
-      {
-        if (item.type != ElementType::GROUP) continue;
-        auto sourceGroupId = item.id;
-        item.id = element_child_next_id_get(destinationContainer, ElementType::GROUP);
-        std::erase_if(item.children, [](const Element& child) { return child.type != ElementType::ROOT_ANIMATION; });
-        if (!child_first_get(item, ElementType::ROOT_ANIMATION))
-        {
-          auto root = element_make(ElementType::ROOT_ANIMATION);
-          root.children.push_back(element_make(ElementType::FRAME));
-          item.children.push_back(root);
-        }
-        destinationContainer.children.push_back(item);
-        groupRemap[sourceGroupId] = item.id;
-      }
-
-      for (auto item : sourceContainer.children)
-      {
-        if (item.type != trackType) continue;
-        if (item.groupId != -1) item.groupId = groupRemap.contains(item.groupId) ? groupRemap.at(item.groupId) : -1;
-        track_merge(destinationContainer, item);
-      }
-    };
-
-    if (auto sourceAnimations = source.element_get(ElementType::ANIMATIONS))
-      if (auto destinationAnimations = anm2.element_get(ElementType::ANIMATIONS))
-      {
-        std::string defaultAnimationName{};
-        for (const auto& incoming : sourceAnimations->children)
-        {
-          if (incoming.type != ElementType::ANIMATION) continue;
-          auto processed = animation_build(incoming);
-          auto destination = find_by_name(*destinationAnimations, ElementType::ANIMATION, processed.name);
-          if (incoming.name == sourceAnimations->defaultAnimation) defaultAnimationName = processed.name;
-          if (!destination || isAppendAsNew)
-          {
-            if (isAppendAsNew)
-            {
-              processed.name = name_unique_get(*destinationAnimations, ElementType::ANIMATION, processed.name);
-              if (incoming.name == sourceAnimations->defaultAnimation) defaultAnimationName = processed.name;
-            }
-            destinationAnimations->children.push_back(processed);
-            continue;
-          }
-
-          if (isReplaceMatching)
-          {
-            *destination = processed;
-            continue;
-          }
-
-          destination->frameNum = std::max(destination->frameNum, processed.frameNum);
-          destination->isLoop = processed.isLoop;
-          if (auto root = child_first_get(processed, ElementType::ROOT_ANIMATION);
-              root && !root->children.empty())
-            child_set(*destination, *root, ElementType::ROOT_ANIMATION);
-          if (auto triggers = child_first_get(processed, ElementType::TRIGGERS);
-              triggers && !triggers->children.empty())
-            child_set(*destination, *triggers, ElementType::TRIGGERS);
-
-          if (auto layerAnimations = child_first_get(processed, ElementType::LAYER_ANIMATIONS))
-          {
-            auto destinationLayerAnimations = track_container_get(*destination, ElementType::LAYER_ANIMATIONS);
-            track_container_merge(*destinationLayerAnimations, *layerAnimations, ElementType::LAYER_ANIMATION);
-          }
-
-          if (auto nullAnimations = child_first_get(processed, ElementType::NULL_ANIMATIONS))
-          {
-            auto destinationNullAnimations = track_container_get(*destination, ElementType::NULL_ANIMATIONS);
-            track_container_merge(*destinationNullAnimations, *nullAnimations, ElementType::NULL_ANIMATION);
-          }
-
-          destination->frameNum = std::max(destination->frameNum, animation_length_get(*destination));
-        }
-
-        if (destinationAnimations->defaultAnimation.empty() && !sourceAnimations->defaultAnimation.empty())
-          destinationAnimations->defaultAnimation =
-              defaultAnimationName.empty() ? sourceAnimations->defaultAnimation : defaultAnimationName;
       }
 
     assets_sync(ALL);
@@ -1838,14 +696,7 @@ namespace anm2ed
   {
     spritesheetHashes.clear();
     spritesheetSaveHashes.clear();
-    if (auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS))
-      for (auto& spritesheet : spritesheets->children)
-        if (spritesheet.type == ElementType::SPRITESHEET)
-        {
-          auto currentHash = document::spritesheet_hash_get(spritesheet, texture_get(spritesheet.id));
-          spritesheetHashes[spritesheet.id] = currentHash;
-          spritesheetSaveHashes[spritesheet.id] = currentHash;
-        }
+    spritesheet_hashes_sync();
   }
 
   void Document::spritesheet_hashes_sync()
@@ -1853,32 +704,17 @@ namespace anm2ed
     std::set<int> validIds{};
     if (auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS))
       for (auto& spritesheet : spritesheets->children)
-        if (spritesheet.type == ElementType::SPRITESHEET) validIds.insert(spritesheet.id);
-
-    for (auto it = spritesheetHashes.begin(); it != spritesheetHashes.end();)
-    {
-      if (!validIds.contains(it->first))
-        it = spritesheetHashes.erase(it);
-      else
-        ++it;
-    }
-
-    for (auto it = spritesheetSaveHashes.begin(); it != spritesheetSaveHashes.end();)
-    {
-      if (!validIds.contains(it->first))
-        it = spritesheetSaveHashes.erase(it);
-      else
-        ++it;
-    }
-
-    if (auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS))
-      for (auto& spritesheet : spritesheets->children)
         if (spritesheet.type == ElementType::SPRITESHEET)
         {
+          validIds.insert(spritesheet.id);
           auto currentHash = document::spritesheet_hash_get(spritesheet, texture_get(spritesheet.id));
           spritesheetHashes[spritesheet.id] = currentHash;
-          if (!spritesheetSaveHashes.contains(spritesheet.id)) spritesheetSaveHashes[spritesheet.id] = currentHash;
+          spritesheetSaveHashes.try_emplace(spritesheet.id, currentHash);
         }
+
+    auto is_invalid = [&](const auto& pair) { return !validIds.contains(pair.first); };
+    std::erase_if(spritesheetHashes, is_invalid);
+    std::erase_if(spritesheetSaveHashes, is_invalid);
   }
 
   void Document::change(ChangeType type)
@@ -1888,48 +724,51 @@ namespace anm2ed
 
     auto events_set = [&]()
     {
-      auto events = anm2.element_get(ElementType::EVENTS);
-      event.labels_set(document::element_name_labels_get(events, ElementType::EVENT_ELEMENT, true),
-                       document::element_ids_get(events, ElementType::EVENT_ELEMENT, true));
+      document::storage_labels_set(event, anm2.element_get(ElementType::EVENTS), ElementType::EVENT_ELEMENT, true,
+                                   document::element_name_get);
     };
-
-    auto animations_set = [&]() { animation.labels_set(document::animation_labels_get(anm2)); };
 
     auto spritesheets_set = [&]()
     {
-      spritesheet.labels_set(document::spritesheet_labels_get(anm2), document::spritesheet_ids_get(anm2));
+      document::storage_labels_set(
+          spritesheet, anm2.element_get(ElementType::SPRITESHEETS), ElementType::SPRITESHEET, false,
+          [](const Element& element)
+          {
+            auto pathString = path::to_utf8(element.path);
+            return std::vformat(localize.get(FORMAT_SPRITESHEET), std::make_format_args(element.id, pathString));
+          });
       spritesheet_hashes_sync();
     };
 
-    auto sounds_set = [&]() { sound.labels_set(document::sound_labels_get(anm2), document::sound_ids_get(anm2)); };
+    auto sounds_set = [&]()
+    {
+      document::storage_labels_set(sound, anm2.element_get(ElementType::SOUNDS), ElementType::SOUND_ELEMENT, true,
+                                   [](const Element& element)
+                                   {
+                                     auto pathString = path::to_utf8(element.path);
+                                     return std::vformat(localize.get(FORMAT_SOUND),
+                                                         std::make_format_args(element.id, pathString));
+                                   });
+    };
 
     auto regions_set = [&]()
     {
       regionBySpritesheet.clear();
       if (auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS))
-        for (auto& spritesheet : spritesheets->children)
-          if (spritesheet.type == ElementType::SPRITESHEET)
-          {
-            Storage storage{};
-            storage.labels_set(document::element_name_labels_get(&spritesheet, ElementType::REGION, true),
-                               document::element_ids_get(&spritesheet, ElementType::REGION, true));
-            regionBySpritesheet.emplace(spritesheet.id, std::move(storage));
-          }
+        for (auto& element : spritesheets->children)
+          if (element.type == ElementType::SPRITESHEET)
+            document::storage_labels_set(regionBySpritesheet[element.id], &element, ElementType::REGION, true,
+                                         document::element_name_get);
     };
 
     auto shaders_set = [&]()
     {
-      auto shaderItems = anm2.element_get(ElementType::SHADERS);
-      shader.labels_set(document::element_name_labels_get(shaderItems, ElementType::SHADER, true),
-                        document::element_ids_get(shaderItems, ElementType::SHADER, true));
+      document::storage_labels_set(shader, anm2.element_get(ElementType::SHADERS), ElementType::SHADER, true,
+                                   document::element_name_get);
     };
 
     switch (type)
     {
-      case LAYERS:
-        break;
-      case NULLS:
-        break;
       case EVENTS:
         events_set();
         break;
@@ -1956,18 +795,18 @@ namespace anm2ed
         spritesheets_set();
         regions_set();
         shaders_set();
-        animations_set();
         sounds_set();
         break;
       default:
         break;
     }
 
-    snapshots.commit(current);
+    snapshots.commit();
   }
 
   bool Document::is_dirty() const { return hash != saveHash; }
   bool Document::is_autosave_dirty() const { return hash != autosaveHash; }
+
   void Document::spritesheet_hash_update(int id)
   {
     auto spritesheet = anm2.element_get(ElementType::SPRITESHEET, id);
@@ -1978,12 +817,8 @@ namespace anm2ed
 
   void Document::spritesheet_hash_set_saved(int id)
   {
-    auto spritesheet = anm2.element_get(ElementType::SPRITESHEET, id);
-    if (!spritesheet) return;
-    assets_sync(TEXTURES);
-    auto currentHash = document::spritesheet_hash_get(*spritesheet, texture_get(id));
-    spritesheetHashes[id] = currentHash;
-    spritesheetSaveHashes[id] = currentHash;
+    spritesheet_hash_update(id);
+    if (spritesheetHashes.contains(id)) spritesheetSaveHashes[id] = spritesheetHashes[id];
   }
 
   bool Document::spritesheet_is_dirty(int id)
@@ -1991,16 +826,16 @@ namespace anm2ed
     if (!anm2.element_get(ElementType::SPRITESHEET, id)) return false;
     if (!spritesheetHashes.contains(id)) spritesheet_hash_update(id);
     auto saveIt = spritesheetSaveHashes.find(id);
-    if (saveIt == spritesheetSaveHashes.end()) return false;
-    return spritesheetHashes.at(id) != saveIt->second;
+    return saveIt != spritesheetSaveHashes.end() && spritesheetHashes.at(id) != saveIt->second;
   }
 
   bool Document::spritesheet_any_dirty()
   {
-    if (auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS))
-      for (auto& spritesheet : spritesheets->children)
-        if (spritesheet.type == ElementType::SPRITESHEET && spritesheet_is_dirty(spritesheet.id)) return true;
-    return false;
+    auto spritesheets = anm2.element_get(ElementType::SPRITESHEETS);
+    return spritesheets &&
+           std::ranges::any_of(
+               spritesheets->children, [&](const Element& spritesheet)
+               { return spritesheet.type == ElementType::SPRITESHEET && spritesheet_is_dirty(spritesheet.id); });
   }
 
   std::filesystem::path Document::directory_get() const { return path.parent_path(); }
@@ -2014,31 +849,18 @@ namespace anm2ed
 
   bool Document::is_frame_reference_valid(Reference frameReference) const
   {
-    if (frameReference.itemType == NONE || frameReference.frameIndex < 0) return false;
-    auto itemReference = frameReference;
-    itemReference.frameIndex = -1;
-    auto item = anm2.element_get(itemReference);
-    return item && track_frame_get(*item, frameReference.frameIndex);
+    return document::frame_reference_validator_make(anm2)(frameReference);
   }
 
   std::set<Reference> Document::item_frame_references_get(Reference itemReference) const
   {
     std::set<Reference> result{};
     itemReference.frameIndex = -1;
-    if (itemReference.itemType == NONE) return result;
-
-    auto item = anm2.element_get(itemReference);
-    if (!item) return result;
-
-    auto frameType = itemReference.itemType == TRIGGER ? ElementType::TRIGGER : ElementType::FRAME;
-    int frameIndex{};
-    for (auto& child : item->children)
+    auto item = itemReference.itemType == NONE ? nullptr : anm2.element_get(itemReference);
+    for (int frameIndex = 0; item && frameIndex < track_frames_count_get(*item); ++frameIndex)
     {
-      if (child.type != frameType) continue;
-      auto frameReference = itemReference;
-      frameReference.frameIndex = frameIndex;
-      result.insert(frameReference);
-      ++frameIndex;
+      itemReference.frameIndex = frameIndex;
+      result.insert(itemReference);
     }
     return result;
   }
@@ -2047,18 +869,11 @@ namespace anm2ed
   {
     auto selectedItems = items.references;
     if (selectedItems.empty() && reference.itemType != NONE)
-    {
-      auto itemReference = reference;
-      itemReference.frameIndex = -1;
-      selectedItems.insert(itemReference);
-    }
+      selectedItems.insert(document::item_reference_get(reference));
 
     std::set<Reference> result{};
     for (auto itemReference : selectedItems)
-    {
-      auto itemFrames = item_frame_references_get(itemReference);
-      result.insert(itemFrames.begin(), itemFrames.end());
-    }
+      result.merge(item_frame_references_get(itemReference));
     return result;
   }
 
@@ -2072,77 +887,40 @@ namespace anm2ed
       result.insert(frameReference);
     }
 
-    std::map<Reference, int> frameCounts{};
-    auto is_frame_reference_valid_cached = [&](Reference frameReference)
-    {
-      if (frameReference.itemType == NONE || frameReference.frameIndex < 0) return false;
-      auto itemReference = frameReference;
-      itemReference.frameIndex = -1;
-      if (!frameCounts.contains(itemReference))
-      {
-        auto item = anm2.element_get(itemReference);
-        frameCounts[itemReference] = item ? document::frame_count_get(*item) : 0;
-      }
-      return frameReference.frameIndex < frameCounts[itemReference];
-    };
-
+    auto isValid = document::frame_reference_validator_make(anm2);
+    auto is_invalid = [&](const Reference& frameReference) { return !isValid(frameReference); };
     bool isMultiFrameSelection = frames.references.size() > 1 || frames.selection.size() > 1;
-    std::erase_if(result,
-                  [&](const Reference& frameReference) { return !is_frame_reference_valid_cached(frameReference); });
+    std::erase_if(result, is_invalid);
 
     if (isMultiFrameSelection && result.size() <= 1)
     {
       auto itemFrames = selected_item_frame_references_get();
-      std::erase_if(itemFrames,
-                    [&](const Reference& frameReference) { return !is_frame_reference_valid_cached(frameReference); });
+      std::erase_if(itemFrames, is_invalid);
       if (itemFrames.size() > result.size()) result = std::move(itemFrames);
     }
 
-    if (result.empty() && fallback == FrameReferenceFallback::CURRENT && is_frame_reference_valid_cached(reference))
-      result.insert(reference);
-
+    if (result.empty() && fallback == FrameReferenceFallback::CURRENT && isValid(reference)) result.insert(reference);
     return result;
   }
 
   void Document::frame_references_set(std::set<Reference> frameReferences)
   {
-    std::map<Reference, int> frameCounts{};
-    auto is_frame_reference_valid_cached = [&](Reference frameReference)
-    {
-      if (frameReference.itemType == NONE || frameReference.frameIndex < 0) return false;
-      auto itemReference = frameReference;
-      itemReference.frameIndex = -1;
-      if (!frameCounts.contains(itemReference))
-      {
-        auto item = anm2.element_get(itemReference);
-        frameCounts[itemReference] = item ? document::frame_count_get(*item) : 0;
-      }
-      return frameReference.frameIndex < frameCounts[itemReference];
-    };
-
-    std::erase_if(frameReferences,
-                  [&](const Reference& frameReference) { return !is_frame_reference_valid_cached(frameReference); });
+    auto isValid = document::frame_reference_validator_make(anm2);
+    std::erase_if(frameReferences, [&](const Reference& frameReference) { return !isValid(frameReference); });
 
     frames.references = std::move(frameReferences);
     frames.selection.clear();
     items.references.clear();
-
     if (frames.references.empty()) return;
 
-    if (!frames.references.contains(reference) || !is_frame_reference_valid_cached(reference))
-      reference = *frames.references.begin();
+    if (!frames.references.contains(reference) || !isValid(reference)) reference = *frames.references.begin();
 
     for (auto frameReference : frames.references)
     {
-      frameReference.frameIndex = -1;
-      items.references.insert(frameReference);
-    }
-
-    for (auto frameReference : frames.references)
-      if (frameReference.animationIndex == reference.animationIndex && frameReference.itemType == reference.itemType &&
-          frameReference.itemID == reference.itemID && frameReference.groupType == reference.groupType &&
-          frameReference.groupId == reference.groupId && frameReference.frameIndex >= 0)
+      items.references.insert(document::item_reference_get(frameReference));
+      if (document::is_reference_item_matched(frameReference, reference) && frameReference.frameIndex >= 0)
         frames.selection.insert(frameReference.frameIndex);
+    }
   }
 
   void Document::frame_references_clear()
@@ -2156,16 +934,9 @@ namespace anm2ed
     std::set<Reference> selectedReferences = items.references;
     if (selectedReferences.empty())
       for (auto frameReference : frame_references_get(FrameReferenceFallback::NONE))
-      {
-        frameReference.frameIndex = -1;
-        selectedReferences.insert(frameReference);
-      }
+        selectedReferences.insert(document::item_reference_get(frameReference));
     if (selectedReferences.empty() && reference.itemType != NONE)
-    {
-      auto itemReference = reference;
-      itemReference.frameIndex = -1;
-      selectedReferences.insert(itemReference);
-    }
+      selectedReferences.insert(document::item_reference_get(reference));
 
     std::vector<Reference> result{};
     for (auto itemReference : selectedReferences)
@@ -2185,160 +956,80 @@ namespace anm2ed
   }
 
   Element* Document::frame_get() { return anm2.element_get(reference); }
-
-  Element* Document::item_get()
-  {
-    auto itemReference = reference;
-    itemReference.frameIndex = -1;
-    return anm2.element_get(itemReference);
-  }
+  Element* Document::item_get() { return anm2.element_get(document::item_reference_get(reference)); }
   Element* Document::animation_get() { return anm2.element_get(ElementType::ANIMATION, reference.animationIndex); }
   Element* Document::spritesheet_get() { return anm2.element_get(ElementType::SPRITESHEET, spritesheet.reference); }
 
-  void Document::spritesheet_add(const std::filesystem::path& path) { spritesheets_add({path}); }
-
   void Document::spritesheets_add(const std::vector<std::filesystem::path>& paths)
   {
-    struct LoadedSpritesheet
-    {
-      std::filesystem::path relativePath{};
-      resource::Texture texture{};
-    };
-
     auto items = anm2.element_get(ElementType::SPRITESHEETS);
     if (!items) return;
     auto directory = directory_get();
 
-    std::vector<LoadedSpritesheet> loaded{};
+    std::vector<std::pair<std::filesystem::path, resource::Texture>> loaded{};
     for (auto& path : paths)
     {
-      auto pathCopy = path;
-      auto storagePath = path::backslash_handle(pathCopy);
+      auto storagePath = path::backslash_handle(path);
       std::optional<WorkingDirectory> workingDirectory{};
       if (!storagePath.is_absolute()) workingDirectory.emplace(directory);
-      auto loadPath = path::case_insensitive_find(storagePath);
-      auto texture = resource::Texture(loadPath);
+      auto texture = resource::Texture(path::case_insensitive_find(storagePath));
       if (!texture.is_valid())
       {
-        auto pathUtf8 = path::to_utf8(pathCopy);
-        toasts.push(std::vformat(localize.get(TOAST_SPRITESHEET_INIT_FAILED), std::make_format_args(pathUtf8)));
-        logger.error(std::vformat(localize.get(TOAST_SPRITESHEET_INIT_FAILED, anm2ed::ENGLISH),
-                                  std::make_format_args(pathUtf8)));
+        toast_log(Level::ERROR, TOAST_SPRITESHEET_INIT_FAILED, path::to_utf8(path));
         continue;
       }
-
-      loaded.push_back({.relativePath = path::backslash_replace(path::make_relative(storagePath, directory)),
-                        .texture = std::move(texture)});
+      loaded.emplace_back(path::backslash_replace(path::make_relative(storagePath, directory)), std::move(texture));
     }
     if (loaded.empty()) return;
 
-    anm2_snapshot(localize.get(EDIT_ADD_SPRITESHEET));
+    snapshots.anm2_push(localize.get(EDIT_ADD_SPRITESHEET));
 
     std::set<int> added{};
-    for (auto& loadedSpritesheet : loaded)
+    for (auto& [relativePath, texture] : loaded)
     {
-      auto id = element_child_next_id_get(*items, ElementType::SPRITESHEET);
-      auto spritesheet = element_make(ElementType::SPRITESHEET);
-      spritesheet.id = id;
-      spritesheet.path = loadedSpritesheet.relativePath;
-      auto pathString = path::to_utf8(spritesheet.path);
-      items->children.push_back(spritesheet);
-      textures[id] = std::move(loadedSpritesheet.texture);
-      texturePaths[id] = spritesheet.path;
-      added.insert(id);
-      this->spritesheet.reference = id;
-      spritesheet_hash_set_saved(id);
-      toasts.push(std::vformat(localize.get(TOAST_SPRITESHEET_INITIALIZED), std::make_format_args(id, pathString)));
-      logger.info(std::vformat(localize.get(TOAST_SPRITESHEET_INITIALIZED, anm2ed::ENGLISH),
-                               std::make_format_args(id, pathString)));
+      auto& element = items->children.emplace_back(element_make(ElementType::SPRITESHEET));
+      element.id = element_child_next_id_get(*items, ElementType::SPRITESHEET);
+      element.path = relativePath;
+      textures[element.id] = std::move(texture);
+      texturePaths[element.id] = element.path;
+      added.insert(element.id);
+      spritesheet.reference = element.id;
+      spritesheet_hash_set_saved(element.id);
+      toast_log(Level::INFO, TOAST_SPRITESHEET_INITIALIZED, element.id, path::to_utf8(element.path));
     }
-    this->spritesheet.selection = added;
+    spritesheet.selection = added;
     change(Document::SPRITESHEETS);
   }
-
-  void Document::sound_add(const std::filesystem::path& path) { sounds_add({path}); }
 
   void Document::sounds_add(const std::vector<std::filesystem::path>& paths)
   {
     auto items = anm2.element_get(ElementType::SOUNDS);
-    if (!items) return;
-    auto directory = directory_get();
+    if (!items || std::ranges::all_of(paths, [](const auto& path) { return path.empty(); })) return;
 
-    std::vector<std::filesystem::path> validPaths{};
-    for (auto& path : paths)
-      if (!path.empty()) validPaths.push_back(path);
-    if (validPaths.empty()) return;
-
-    anm2_snapshot(localize.get(EDIT_ADD_SOUND));
+    snapshots.anm2_push(localize.get(EDIT_ADD_SOUND));
 
     std::set<int> added{};
-    for (auto& path : validPaths)
+    for (auto& path : paths)
     {
-      auto id = element_child_next_id_get(*items, ElementType::SOUND_ELEMENT);
-      auto soundElement = element_make(ElementType::SOUND_ELEMENT);
-      soundElement.id = id;
-      auto loadPath = path::backslash_handle(path);
-      auto relativePath = path::backslash_replace(path::make_relative(loadPath, directory));
-      {
-        WorkingDirectory workingDirectory(directory_get());
-        soundElement.path = relativePath;
-        sounds[id] = resource::Audio(path::case_insensitive_find(soundElement.path));
-        soundPaths[id] = soundElement.path;
-      }
-      auto soundPath = path::to_utf8(soundElement.path);
-      items->children.push_back(soundElement);
-      added.insert(id);
-      sound.reference = id;
-      toasts.push(std::vformat(localize.get(TOAST_SOUND_INITIALIZED), std::make_format_args(id, soundPath)));
-      logger.info(
-          std::vformat(localize.get(TOAST_SOUND_INITIALIZED, anm2ed::ENGLISH), std::make_format_args(id, soundPath)));
+      if (path.empty()) continue;
+      auto& element = items->children.emplace_back(element_make(ElementType::SOUND_ELEMENT));
+      element.id = element_child_next_id_get(*items, ElementType::SOUND_ELEMENT);
+      element.path = path::backslash_replace(path::make_relative(path::backslash_handle(path), directory_get()));
+      WorkingDirectory workingDirectory(directory_get());
+      document::resource_load(element.id, element.path, sounds, soundPaths);
+      added.insert(element.id);
+      sound.reference = element.id;
+      toast_log(Level::INFO, TOAST_SOUND_INITIALIZED, element.id, path::to_utf8(element.path));
     }
     sound.selection = added;
     change(Document::SOUNDS);
-  }
-
-  void Document::anm2_snapshot(const std::string& message)
-  {
-    this->message = message;
-    snapshots.anm2_push(current, message);
-  }
-
-  void Document::tracks_snapshot(const std::string& message, const std::set<Reference>& trackReferences)
-  {
-    this->message = message;
-    snapshots.tracks_push(current, message, trackReferences);
-  }
-
-  void Document::frames_snapshot(const std::string& message, const std::set<Reference>& frameReferences)
-  {
-    this->message = message;
-    snapshots.frames_push(current, message, frameReferences);
-  }
-
-  void Document::regions_snapshot(const std::string& message, int spritesheetId, const std::set<int>& regionIds)
-  {
-    this->message = message;
-    snapshots.regions_push(current, message, spritesheetId, regionIds);
-  }
-
-  void Document::textures_snapshot(const std::string& message)
-  {
-    this->message = message;
-    snapshots.textures_push(current, message);
-  }
-
-  void Document::anm2_textures_snapshot(const std::string& message)
-  {
-    this->message = message;
-    snapshots.anm2_textures_push(current, message);
   }
 
   void Document::undo()
   {
     if (!snapshots.undo()) return;
     document::restored_snapshot_sanitize(*this);
-    toasts.push(std::vformat(localize.get(TOAST_UNDO), std::make_format_args(message)));
-    logger.info(std::vformat(localize.get(TOAST_UNDO, anm2ed::ENGLISH), std::make_format_args(message)));
+    toast_log(Level::INFO, TOAST_UNDO, message);
     change(Document::ALL);
   }
 
@@ -2346,8 +1037,7 @@ namespace anm2ed
   {
     if (!snapshots.redo()) return;
     document::restored_snapshot_sanitize(*this);
-    toasts.push(std::vformat(localize.get(TOAST_REDO), std::make_format_args(message)));
-    logger.info(std::vformat(localize.get(TOAST_REDO, anm2ed::ENGLISH), std::make_format_args(message)));
+    toast_log(Level::INFO, TOAST_REDO, message);
     change(Document::ALL);
   }
 

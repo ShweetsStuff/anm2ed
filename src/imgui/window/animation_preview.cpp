@@ -306,16 +306,11 @@ namespace anm2ed::imgui
         {
           if (!renderTempFrames.empty())
           {
-            toasts.push(std::vformat(localize.get(TOAST_EXPORT_RENDERED_FRAMES), std::make_format_args(pathString)));
-            logger.info(std::vformat(localize.get(TOAST_EXPORT_RENDERED_FRAMES, anm2ed::ENGLISH),
-                                     std::make_format_args(pathString)));
+            toast_log(Level::INFO, TOAST_EXPORT_RENDERED_FRAMES, pathString);
           }
           else
           {
-            toasts.push(
-                std::vformat(localize.get(TOAST_EXPORT_RENDERED_FRAMES_FAILED), std::make_format_args(pathString)));
-            logger.error(std::vformat(localize.get(TOAST_EXPORT_RENDERED_FRAMES_FAILED, anm2ed::ENGLISH),
-                                      std::make_format_args(pathString)));
+            toast_log(Level::ERROR, TOAST_EXPORT_RENDERED_FRAMES_FAILED, pathString);
           }
         }
         else if (type == render::SPRITESHEET)
@@ -328,16 +323,14 @@ namespace anm2ed::imgui
 
           if (renderTempFrames.empty())
           {
-            toasts.push(localize.get(TOAST_SPRITESHEET_NO_FRAMES));
-            logger.warning(localize.get(TOAST_SPRITESHEET_NO_FRAMES, anm2ed::ENGLISH));
+            toast_log(Level::WARNING, TOAST_SPRITESHEET_NO_FRAMES);
           }
           else
           {
             auto firstFrame = Texture(renderTempFrames.front());
             if (firstFrame.size.x <= 0 || firstFrame.size.y <= 0 || firstFrame.pixels.empty())
             {
-              toasts.push(localize.get(TOAST_SPRITESHEET_EMPTY));
-              logger.error(localize.get(TOAST_SPRITESHEET_EMPTY, anm2ed::ENGLISH));
+              toast_log(Level::ERROR, TOAST_SPRITESHEET_EMPTY);
             }
             else
             {
@@ -368,16 +361,11 @@ namespace anm2ed::imgui
               Texture spritesheetTexture(spritesheet.data(), spritesheetSize);
               if (spritesheetTexture.write_png(path))
               {
-                toasts.push(std::vformat(localize.get(TOAST_EXPORT_SPRITESHEET), std::make_format_args(pathString)));
-                logger.info(std::vformat(localize.get(TOAST_EXPORT_SPRITESHEET, anm2ed::ENGLISH),
-                                         std::make_format_args(pathString)));
+                toast_log(Level::INFO, TOAST_EXPORT_SPRITESHEET, pathString);
               }
               else
               {
-                toasts.push(
-                    std::vformat(localize.get(TOAST_EXPORT_SPRITESHEET_FAILED), std::make_format_args(pathString)));
-                logger.error(std::vformat(localize.get(TOAST_EXPORT_SPRITESHEET_FAILED, anm2ed::ENGLISH),
-                                          std::make_format_args(pathString)));
+                toast_log(Level::ERROR, TOAST_EXPORT_SPRITESHEET_FAILED, pathString);
               }
             }
           }
@@ -398,16 +386,11 @@ namespace anm2ed::imgui
 
           if (animation_render(ffmpegPath, path, renderTempFrames, audioStream, (render::Type)type, renderFrameRate))
           {
-            toasts.push(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION), std::make_format_args(pathString)));
-            logger.info(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION, anm2ed::ENGLISH),
-                                     std::make_format_args(pathString)));
+            toast_log(Level::INFO, TOAST_EXPORT_RENDERED_ANIMATION, pathString);
           }
           else
           {
-            toasts.push(
-                std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED), std::make_format_args(pathString)));
-            logger.error(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED, anm2ed::ENGLISH),
-                                      std::make_format_args(pathString)));
+            toast_log(Level::ERROR, TOAST_EXPORT_RENDERED_ANIMATION_FAILED, pathString);
           }
         }
 
@@ -791,10 +774,7 @@ namespace anm2ed::imgui
           }
 
           auto pathString = path::to_utf8(settings.renderPath);
-          toasts.push(
-              std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED), std::make_format_args(pathString)));
-          logger.error(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED, anm2ed::ENGLISH),
-                                    std::make_format_args(pathString)));
+          toast_log(Level::ERROR, TOAST_EXPORT_RENDERED_ANIMATION_FAILED, pathString);
           manager.isRecording = false;
           manager.isRecordingStart = false;
           renderFrameIndex = 0;
@@ -1240,10 +1220,7 @@ namespace anm2ed::imgui
         auto render_capture_fail = [&]()
         {
           auto pathString = path::to_utf8(settings.renderPath);
-          toasts.push(
-              std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED), std::make_format_args(pathString)));
-          logger.error(std::vformat(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED, anm2ed::ENGLISH),
-                                    std::make_format_args(pathString)));
+          toast_log(Level::ERROR, TOAST_EXPORT_RENDERED_ANIMATION_FAILED, pathString);
           if (renderType != render::PNGS) render_temp_cleanup(renderTempDirectory, renderTempFrames);
           renderFrameSoundIDs.clear();
           if (isRenderPreviewOverridden)
@@ -1407,7 +1384,7 @@ namespace anm2ed::imgui
         {
           auto queuedFrameReferences = selectedFrameReferences;
           manager.command_push({manager.selected, [message, queuedFrameReferences](Manager&, Document& document)
-                                { document.frames_snapshot(localize.get(message), queuedFrameReferences); }});
+                                { document.snapshots.frames_push(localize.get(message), queuedFrameReferences); }});
         };
         auto frame_change_apply = [&](FrameChange frameChange, ChangeType changeType = ChangeType::ADJUST)
         {
@@ -1450,7 +1427,7 @@ namespace anm2ed::imgui
         auto frames_changed = [&]()
         {
           manager.command_push(
-              {manager.selected, [](Manager&, Document& document) { document.anm2_change(Document::FRAMES); }});
+              {manager.selected, [](Manager&, Document& document) { document.change(Document::FRAMES); }});
         };
         auto null_rect_change = [&](vec2 topLeft, vec2 rectSize)
         {

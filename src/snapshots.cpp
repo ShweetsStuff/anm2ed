@@ -131,20 +131,9 @@ namespace anm2ed::snapshots
     }
   }
 
-  Element* element_get(Element& root, const std::vector<int>& path)
+  template <class E> ElementPointer<E> element_get(E& root, const std::vector<int>& path)
   {
-    auto* element = &root;
-    for (auto index : path)
-    {
-      if (index < 0 || index >= (int)element->children.size()) return nullptr;
-      element = &element->children[index];
-    }
-    return element;
-  }
-
-  const Element* element_get(const Element& root, const std::vector<int>& path)
-  {
-    auto* element = &root;
+    auto element = &root;
     for (auto index : path)
     {
       if (index < 0 || index >= (int)element->children.size()) return nullptr;
@@ -158,44 +147,10 @@ namespace anm2ed::snapshots
     for (size_t i = 0; i < element.children.size(); ++i)
     {
       path.push_back((int)i);
-      if (&element.children[i] == target) return true;
-      if (element_path_get(element.children[i], target, path)) return true;
+      if (&element.children[i] == target || element_path_get(element.children[i], target, path)) return true;
       path.pop_back();
     }
     return false;
-  }
-
-  std::optional<std::vector<int>> frame_path_get(const Anm2& anm2, Reference frameReference)
-  {
-    auto frame = anm2.element_get(frameReference);
-    if (!frame) return std::nullopt;
-
-    std::vector<int> path{};
-    if (!element_path_get(anm2.root, frame, path)) return std::nullopt;
-    return path;
-  }
-
-  std::optional<std::vector<int>> track_path_get(const Anm2& anm2, Reference trackReference)
-  {
-    trackReference.frameIndex = -1;
-    auto track = anm2.element_get(trackReference);
-    if (!track) return std::nullopt;
-
-    std::vector<int> path{};
-    if (!element_path_get(anm2.root, track, path)) return std::nullopt;
-    return path;
-  }
-
-  std::optional<std::vector<int>> region_path_get(const Anm2& anm2, int spritesheetId, int regionId)
-  {
-    auto spritesheet = anm2.element_get(ElementType::SPRITESHEET, spritesheetId);
-    if (!spritesheet) return std::nullopt;
-    auto region = child_id_get(*spritesheet, ElementType::REGION, regionId);
-    if (!region) return std::nullopt;
-
-    std::vector<int> path{};
-    if (!element_path_get(anm2.root, region, path)) return std::nullopt;
-    return path;
   }
 
   void step_state_seed(SnapshotStep& step, const Snapshot& snapshot)
@@ -205,61 +160,27 @@ namespace anm2ed::snapshots
 #undef X
   }
 
-  void step_textures_seed(SnapshotStep& step, const Snapshot& snapshot)
-  {
-    step.textures = SnapshotStepValue<SnapshotTextureMap>{snapshot.textures, {}};
-  }
-
-  SnapshotStep step_anm2_seed(const Snapshot& snapshot, const std::string& message)
+  SnapshotStep step_anm2_make(const Snapshot& snapshot)
   {
     SnapshotStep step{};
-    step.message = message;
     step.anm2.isValid = SnapshotStepValue<bool>{snapshot.anm2.isValid, {}};
     step.anm2.elements.push_back({{}, snapshot.anm2.root, {}});
     step_state_seed(step, snapshot);
     return step;
   }
 
-  void tracks_step_add(SnapshotStep& step, const Snapshot& snapshot, Reference trackReference)
+  SnapshotStep step_elements_make(const Snapshot& snapshot, const std::vector<const Element*>& elements)
   {
-    trackReference.frameIndex = -1;
-    auto path = track_path_get(snapshot.anm2, trackReference);
-    if (!path) return;
-    for (auto& elementStep : step.anm2.elements)
-      if (elementStep.path == *path) return;
-
-    auto track = snapshot.anm2.element_get(trackReference);
-    if (!track) return;
-
-    step.anm2.elements.push_back({std::move(*path), *track, {}});
-  }
-
-  void frames_step_add(SnapshotStep& step, const Snapshot& snapshot, Reference frameReference)
-  {
-    auto path = frame_path_get(snapshot.anm2, frameReference);
-    if (!path) return;
-    for (auto& elementStep : step.anm2.elements)
-      if (elementStep.path == *path) return;
-
-    auto frame = snapshot.anm2.element_get(frameReference);
-    if (!frame) return;
-
-    step.anm2.elements.push_back({std::move(*path), *frame, {}});
-  }
-
-  void regions_step_add(SnapshotStep& step, const Snapshot& snapshot, int spritesheetId, int regionId)
-  {
-    auto path = region_path_get(snapshot.anm2, spritesheetId, regionId);
-    if (!path) return;
-    for (auto& elementStep : step.anm2.elements)
-      if (elementStep.path == *path) return;
-
-    auto spritesheet = snapshot.anm2.element_get(ElementType::SPRITESHEET, spritesheetId);
-    if (!spritesheet) return;
-    auto region = child_id_get(*spritesheet, ElementType::REGION, regionId);
-    if (!region) return;
-
-    step.anm2.elements.push_back({std::move(*path), *region, {}});
+    SnapshotStep step{};
+    for (auto element : elements)
+    {
+      std::vector<int> path{};
+      if (!element || !element_path_get(snapshot.anm2.root, element, path)) continue;
+      if (std::ranges::any_of(step.anm2.elements, [&](const SnapshotElementStep& other) { return other.path == path; }))
+        continue;
+      step.anm2.elements.push_back({std::move(path), *element, {}});
+    }
+    return step;
   }
 
   SnapshotAnm2Step anm2_step_make(const Anm2& before, const Anm2& after)
@@ -360,70 +281,63 @@ namespace anm2ed
 
   int SnapshotStack::max_size_get() { return maxSize; }
 
-  Snapshot* Snapshots::get() { return &current; }
-
-  void Snapshots::anm2_push(const Snapshot& snapshot, const std::string& message)
+  void Snapshots::step_push(const std::string& message, SnapshotStep step)
   {
-    if (pendingStep) commit(snapshot);
-    pendingStep = snapshots::step_anm2_seed(snapshot, message);
+    if (pendingStep) commit();
+    current.message = message;
+    step.message = message;
+    pendingStep = step.is_empty() ? std::nullopt : std::optional<SnapshotStep>(std::move(step));
   }
 
-  void Snapshots::tracks_push(const Snapshot& snapshot, const std::string& message,
-                              const std::set<Reference>& trackReferences)
+  void Snapshots::anm2_push(const std::string& message) { step_push(message, snapshots::step_anm2_make(current)); }
+
+  void Snapshots::tracks_push(const std::string& message, const std::set<Reference>& trackReferences)
   {
-    if (pendingStep) commit(snapshot);
-    SnapshotStep step{};
-    step.message = message;
+    std::vector<const Element*> tracks{};
     for (auto trackReference : trackReferences)
-      snapshots::tracks_step_add(step, snapshot, trackReference);
-    snapshots::step_state_seed(step, snapshot);
-
-    pendingStep = step.is_empty() ? std::nullopt : std::optional<SnapshotStep>(std::move(step));
+    {
+      trackReference.frameIndex = -1;
+      tracks.push_back(current.anm2.element_get(trackReference));
+    }
+    auto step = snapshots::step_elements_make(current, tracks);
+    snapshots::step_state_seed(step, current);
+    step_push(message, std::move(step));
   }
 
-  void Snapshots::frames_push(const Snapshot& snapshot, const std::string& message,
-                              const std::set<Reference>& frameReferences)
+  void Snapshots::frames_push(const std::string& message, const std::set<Reference>& frameReferences)
   {
-    if (pendingStep) commit(snapshot);
-    SnapshotStep step{};
-    step.message = message;
+    std::vector<const Element*> frames{};
     for (auto frameReference : frameReferences)
-      snapshots::frames_step_add(step, snapshot, frameReference);
-
-    pendingStep = step.is_empty() ? std::nullopt : std::optional<SnapshotStep>(std::move(step));
+      frames.push_back(current.anm2.element_get(frameReference));
+    step_push(message, snapshots::step_elements_make(current, frames));
   }
 
-  void Snapshots::regions_push(const Snapshot& snapshot, const std::string& message, int spritesheetId,
-                               const std::set<int>& regionIds)
+  void Snapshots::regions_push(const std::string& message, int spritesheetId, const std::set<int>& regionIds)
   {
-    if (pendingStep) commit(snapshot);
+    std::vector<const Element*> regions{};
+    if (auto spritesheet = current.anm2.element_get(ElementType::SPRITESHEET, spritesheetId))
+      for (auto regionId : regionIds)
+        regions.push_back(child_id_get(*spritesheet, ElementType::REGION, regionId));
+    step_push(message, snapshots::step_elements_make(current, regions));
+  }
+
+  void Snapshots::textures_push(const std::string& message)
+  {
     SnapshotStep step{};
-    step.message = message;
-    for (auto regionId : regionIds)
-      snapshots::regions_step_add(step, snapshot, spritesheetId, regionId);
-
-    pendingStep = step.is_empty() ? std::nullopt : std::optional<SnapshotStep>(std::move(step));
+    step.textures = SnapshotStepValue<SnapshotTextureMap>{current.textures, {}};
+    step_push(message, std::move(step));
   }
 
-  void Snapshots::textures_push(const Snapshot& snapshot, const std::string& message)
+  void Snapshots::anm2_textures_push(const std::string& message)
   {
-    if (pendingStep) commit(snapshot);
-    SnapshotStep step{};
-    step.message = message;
-    snapshots::step_textures_seed(step, snapshot);
-    pendingStep = std::move(step);
+    auto step = snapshots::step_anm2_make(current);
+    step.textures = SnapshotStepValue<SnapshotTextureMap>{current.textures, {}};
+    step_push(message, std::move(step));
   }
 
-  void Snapshots::anm2_textures_push(const Snapshot& snapshot, const std::string& message)
+  void Snapshots::commit()
   {
-    if (pendingStep) commit(snapshot);
-    auto step = snapshots::step_anm2_seed(snapshot, message);
-    snapshots::step_textures_seed(step, snapshot);
-    pendingStep = std::move(step);
-  }
-
-  void Snapshots::commit(const Snapshot& snapshot)
-  {
+    const auto& snapshot = current;
     if (!pendingStep) return;
 
     auto step = std::move(*pendingStep);

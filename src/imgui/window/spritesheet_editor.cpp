@@ -238,7 +238,8 @@ namespace anm2ed::imgui
         auto spritesheetModel = math::quad_model_get(viewTexture->size);
         auto spritesheetTransform = transform * spritesheetModel;
 
-        if (baseTexture && baseTexture->is_valid()) texture_render(shaderTexture, baseTexture->id, spritesheetTransform);
+        if (baseTexture && baseTexture->is_valid())
+          texture_render(shaderTexture, baseTexture->id, spritesheetTransform);
 
         if (isGrid) grid_render(shaderGrid, zoom, pan, gridSize, gridOffset, gridColor);
 
@@ -431,9 +432,8 @@ namespace anm2ed::imgui
         {
           auto message = std::string(localize.get(messageType));
           auto queuedFrameReferences = frameReferences;
-          manager.command_push({manager.selected,
-                                [message, queuedFrameReferences](Manager&, Document& document)
-                                { document.frames_snapshot(message, queuedFrameReferences); }});
+          manager.command_push({manager.selected, [message, queuedFrameReferences](Manager&, Document& document)
+                                { document.snapshots.frames_push(message, queuedFrameReferences); }});
         };
         auto region_snapshot_push = [&](StringType messageType, const std::set<int>& regionIds)
         {
@@ -442,42 +442,41 @@ namespace anm2ed::imgui
           auto queuedRegionIds = regionIds;
           manager.command_push({manager.selected,
                                 [message, queuedSpritesheet, queuedRegionIds](Manager&, Document& document)
-                                { document.regions_snapshot(message, queuedSpritesheet, queuedRegionIds); }});
+                                { document.snapshots.regions_push(message, queuedSpritesheet, queuedRegionIds); }});
         };
         auto texture_snapshot_push = [&](StringType messageType)
         {
           auto message = std::string(localize.get(messageType));
-          manager.command_push(
-              {manager.selected, [message](Manager&, Document& document) { document.textures_snapshot(message); }});
+          manager.command_push({manager.selected, [message](Manager&, Document& document)
+                                { document.snapshots.textures_push(message); }});
         };
         auto document_change_push = [&](Document::ChangeType changeType)
         {
           manager.command_push(
-              {manager.selected, [changeType](Manager&, Document& document) { document.anm2_change(changeType); }});
+              {manager.selected, [changeType](Manager&, Document& document) { document.change(changeType); }});
         };
         auto frame_change_apply_to = [&](const std::set<Reference>& frameReferences, FrameChange frameChange,
                                          ChangeType changeType = ChangeType::ADJUST)
         {
           auto queuedFrameReferences = frameReferences;
-          manager.command_push(
-              {manager.selected, [=](Manager&, Document& document)
-               {
-                 std::map<Reference, std::set<int>> groupedFrames{};
-                 for (auto frameReference : queuedFrameReferences)
-                 {
-                   auto itemReference = frameReference;
-                   itemReference.frameIndex = -1;
-                   groupedFrames[itemReference].insert(frameReference.frameIndex);
-                 }
+          manager.command_push({manager.selected, [=](Manager&, Document& document)
+                                {
+                                  std::map<Reference, std::set<int>> groupedFrames{};
+                                  for (auto frameReference : queuedFrameReferences)
+                                  {
+                                    auto itemReference = frameReference;
+                                    itemReference.frameIndex = -1;
+                                    groupedFrames[itemReference].insert(frameReference.frameIndex);
+                                  }
 
-                 for (auto& [itemReference, itemFrames] : groupedFrames)
-                 {
-                   auto itemType = static_cast<ItemType>(itemReference.itemType);
-                   auto item = document.anm2.element_get(itemReference);
-                   if (!item) continue;
-                   frames_change(*item, frameChange, itemType, changeType, itemFrames);
-                 }
-               }});
+                                  for (auto& [itemReference, itemFrames] : groupedFrames)
+                                  {
+                                    auto itemType = static_cast<ItemType>(itemReference.itemType);
+                                    auto item = document.anm2.element_get(itemReference);
+                                    if (!item) continue;
+                                    frames_change(*item, frameChange, itemType, changeType, itemFrames);
+                                  }
+                                }});
         };
         auto frame_change_apply = [&](FrameChange frameChange, ChangeType changeType = ChangeType::ADJUST)
         { frame_change_apply_to(selectedFrameReferences, frameChange, changeType); };
@@ -486,29 +485,28 @@ namespace anm2ed::imgui
         {
           auto queuedReference = editReference;
           auto queuedFrameReferences = frameReferences;
-          manager.command_push(
-              {manager.selected, [=](Manager&, Document& document)
-               {
-                 if (queuedReference.frameIndex < 0) return;
-                 auto frame = document.anm2.element_get(queuedReference);
-                 if (!frame) return;
+          manager.command_push({manager.selected, [=](Manager&, Document& document)
+                                {
+                                  if (queuedReference.frameIndex < 0) return;
+                                  auto frame = document.anm2.element_get(queuedReference);
+                                  if (!frame) return;
 
-                 std::map<Reference, std::set<int>> groupedFrames{};
-                 for (auto frameReference : queuedFrameReferences)
-                 {
-                   auto itemReference = frameReference;
-                   itemReference.frameIndex = -1;
-                   groupedFrames[itemReference].insert(frameReference.frameIndex);
-                 }
+                                  std::map<Reference, std::set<int>> groupedFrames{};
+                                  for (auto frameReference : queuedFrameReferences)
+                                  {
+                                    auto itemReference = frameReference;
+                                    itemReference.frameIndex = -1;
+                                    groupedFrames[itemReference].insert(frameReference.frameIndex);
+                                  }
 
-                 for (auto& [itemReference, itemFrames] : groupedFrames)
-                 {
-                   auto itemType = static_cast<ItemType>(itemReference.itemType);
-                   auto item = document.anm2.element_get(itemReference);
-                   if (!item) continue;
-                   frames_change(*item, frameChangeGet(*frame), itemType, changeType, itemFrames);
-                 }
-               }});
+                                  for (auto& [itemReference, itemFrames] : groupedFrames)
+                                  {
+                                    auto itemType = static_cast<ItemType>(itemReference.itemType);
+                                    auto item = document.anm2.element_get(itemReference);
+                                    if (!item) continue;
+                                    frames_change(*item, frameChangeGet(*frame), itemType, changeType, itemFrames);
+                                  }
+                                }});
         };
         auto frame_crop_normalize_apply_to =
             [&](const std::set<Reference>& frameReferences, bool isSnap, ivec2 snapGridSize, ivec2 snapGridOffset)
@@ -639,8 +637,7 @@ namespace anm2ed::imgui
         {
           auto queuedSpritesheet = referenceSpritesheet;
           manager.command_push(
-              {manager.selected, [=](Manager&, Document& document)
-               { document.texture_change(queuedSpritesheet); }});
+              {manager.selected, [=](Manager&, Document& document) { document.texture_change(queuedSpritesheet); }});
         };
 
         auto region_selection_set = [&](int id)
@@ -808,7 +805,8 @@ namespace anm2ed::imgui
             if (isEnd) document_change_push(Document::FRAMES);
             break;
           case tool::CROP:
-            if ((isRegionEditTarget || isRegionInUse || selectedFrameToolReferences.empty()) && !regionSelection.empty())
+            if ((isRegionEditTarget || isRegionInUse || selectedFrameToolReferences.empty()) &&
+                !regionSelection.empty())
             {
               if (!spritesheet || regionSelection.empty()) break;
               if (isBegin) region_snapshot_push(EDIT_REGION_CROP, regionSelection);
@@ -1022,8 +1020,9 @@ namespace anm2ed::imgui
       actions_undo_redo_add(actions, manager, document);
       actions.separator();
       actions.add(ACTION_CENTER_VIEW, []() { return true; }, center_view);
-      actions.add(ACTION_FIT_VIEW, [&]()
-                  { return (baseTexture && baseTexture->is_valid()) || (texture && texture->is_valid()); }, fit_view);
+      actions.add(
+          ACTION_FIT_VIEW,
+          [&]() { return (baseTexture && baseTexture->is_valid()) || (texture && texture->is_valid()); }, fit_view);
       actions.separator();
       actions.add(ACTION_ZOOM_IN, []() { return true; }, zoom_in);
       actions.add(ACTION_ZOOM_OUT, []() { return true; }, zoom_out);

@@ -36,11 +36,10 @@ namespace anm2ed::imgui
       {
         auto targetFrames = makeManyRegionReferences;
         auto format = settings.generateRegionNameFormat;
-        auto mapping = isMakeManyRegionsMapFrames ? Document::RegionFrameMapping::SET
-                                                  : Document::RegionFrameMapping::PRESERVE;
+        auto mapping = isMakeManyRegionsMapFrames ? RegionFrameMapping::SET : RegionFrameMapping::PRESERVE;
         edit_command_push(EDIT_GENERATE_REGIONS_FROM_ANIMATIONS, Document::ALL,
                           [=, this](Manager&, Document& document) mutable
-                          { document.regions_generate_from_frames(targetFrames, format, mapping); });
+                          { document.anm2.regions_generate({}, targetFrames, format, mapping); });
         makeManyRegionsPopup.close();
       }
 
@@ -178,16 +177,17 @@ namespace anm2ed::imgui
         if (!selectedFrames.empty())
         {
           if (!isShortenChordHeld) frames_snapshot_command_push(EDIT_SHORTEN_FRAME, selectedFrames);
-          command_push([=, this](Manager&, Document& document)
-                       {
-                         for (auto frameReference : selectedFrames)
-                         {
-                           auto frame = command_frame_get(document, frameReference);
-                           if (!frame) continue;
-                           frame->duration = std::max(FRAME_DURATION_MIN, frame->duration - 1);
-                         }
-                         document.anm2_change(Document::FRAMES);
-                       });
+          command_push(
+              [=, this](Manager&, Document& document)
+              {
+                for (auto frameReference : selectedFrames)
+                {
+                  auto frame = command_frame_get(document, frameReference);
+                  if (!frame) continue;
+                  frame->duration = std::max(FRAME_DURATION_MIN, frame->duration - 1);
+                }
+                document.change(Document::FRAMES);
+              });
         }
       }
       isShortenChordHeld = isShortenFrame;
@@ -203,16 +203,17 @@ namespace anm2ed::imgui
         if (!selectedFrames.empty())
         {
           if (!isExtendChordHeld) frames_snapshot_command_push(EDIT_EXTEND_FRAME, selectedFrames);
-          command_push([=, this](Manager&, Document& document)
-                       {
-                         for (auto frameReference : selectedFrames)
-                         {
-                           auto frame = command_frame_get(document, frameReference);
-                           if (!frame) continue;
-                           frame->duration = std::min(FRAME_DURATION_MAX, frame->duration + 1);
-                         }
-                         document.anm2_change(Document::FRAMES);
-                       });
+          command_push(
+              [=, this](Manager&, Document& document)
+              {
+                for (auto frameReference : selectedFrames)
+                {
+                  auto frame = command_frame_get(document, frameReference);
+                  if (!frame) continue;
+                  frame->duration = std::min(FRAME_DURATION_MAX, frame->duration + 1);
+                }
+                document.change(Document::FRAMES);
+              });
         }
       }
       isExtendChordHeld = isExtendFrame;

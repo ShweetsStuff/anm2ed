@@ -413,7 +413,7 @@ namespace anm2ed::imgui::wizard
                                   groupedFrames[itemReference].insert(frameReference.frameIndex);
                                 }
 
-                                document.anm2_snapshot(localize.get(EDIT_CHANGE_FRAME_PROPERTIES));
+                                document.snapshots.anm2_push(localize.get(EDIT_CHANGE_FRAME_PROPERTIES));
                                 for (auto& [itemReference, selection] : groupedFrames)
                                 {
                                   auto item = anm2.element_get(itemReference);
@@ -421,13 +421,13 @@ namespace anm2ed::imgui::wizard
                                   frames_change(*item, frameChange, static_cast<ItemType>(itemReference.itemType),
                                                 changeType, selection);
                                 }
-                                document.anm2_change(Document::FRAMES);
+                                document.change(Document::FRAMES);
                                 return;
                               }
 
                               if (queuedIsItemsDestination)
                               {
-                                document.anm2_snapshot(localize.get(EDIT_CHANGE_FRAME_PROPERTIES));
+                                document.snapshots.anm2_push(localize.get(EDIT_CHANGE_FRAME_PROPERTIES));
                                 for (auto itemReference : queuedItemReferences)
                                 {
                                   if (itemReference.itemType == TRIGGER) continue;
@@ -438,11 +438,11 @@ namespace anm2ed::imgui::wizard
                                   frames_change(*item, frameChange, static_cast<ItemType>(itemReference.itemType),
                                                 changeType, selection);
                                 }
-                                document.anm2_change(Document::FRAMES);
+                                document.change(Document::FRAMES);
                                 return;
                               }
 
-                              document.anm2_snapshot(localize.get(EDIT_CHANGE_FRAME_PROPERTIES));
+                              document.snapshots.anm2_push(localize.get(EDIT_CHANGE_FRAME_PROPERTIES));
                               for (auto animationIndex : queuedAnimations)
                               {
                                 auto animation = anm2.element_get(ElementType::ANIMATION, animationIndex);
@@ -459,8 +459,7 @@ namespace anm2ed::imgui::wizard
 
                                 if (queuedIsLayers)
                                 {
-                                  auto layerAnimations =
-                                      child_first_get(*animation, ElementType::LAYER_ANIMATIONS);
+                                  auto layerAnimations = child_first_get(*animation, ElementType::LAYER_ANIMATIONS);
                                   if (layerAnimations)
                                   {
                                     auto item_change = [&](auto&& self, Element& item) -> void
@@ -484,8 +483,7 @@ namespace anm2ed::imgui::wizard
 
                                 if (queuedIsNulls)
                                 {
-                                  auto nullAnimations =
-                                      child_first_get(*animation, ElementType::NULL_ANIMATIONS);
+                                  auto nullAnimations = child_first_get(*animation, ElementType::NULL_ANIMATIONS);
                                   if (nullAnimations)
                                   {
                                     auto item_change = [&](auto&& self, Element& item) -> void
@@ -507,7 +505,7 @@ namespace anm2ed::imgui::wizard
                                   }
                                 }
                               }
-                              document.anm2_change(Document::FRAMES);
+                              document.change(Document::FRAMES);
                             }});
       isChanged = true;
     };

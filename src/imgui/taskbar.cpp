@@ -38,9 +38,7 @@ namespace anm2ed::imgui
     auto path = request.path;
     auto options = request.options;
 
-    manager.command_push({.runManager =
-                              [=](Manager& manager)
-                              { manager.save(index, path, options); }});
+    manager.command_push({.runManager = [=](Manager& manager) { manager.save(index, path, options); }});
   }
 
   bool Taskbar::save_request(Manager& manager, Settings& settings, int index, const std::filesystem::path& path,
@@ -145,11 +143,11 @@ namespace anm2ed::imgui
       if (dialog.is_selected(Dialog::ANM2_OPEN))
       {
         auto paths = dialog.paths;
-        manager.command_push({.runManager =
-                                  [paths](Manager& manager)
-                                  {
-                                    for (auto& path : paths) manager.open(path);
-                                  }});
+        manager.command_push({.runManager = [paths](Manager& manager)
+                              {
+                                for (auto& path : paths)
+                                  manager.open(path);
+                              }});
         dialog.reset();
       }
 
@@ -172,15 +170,13 @@ namespace anm2ed::imgui
 
         if (ImGui::MenuItem(localize.get(LABEL_SCAN_AND_SET_REGIONS), nullptr, false, document && hasRegions))
         {
-          manager.command_push({manager.selected,
-                                [](Manager&, Document& document)
+          manager.command_push({manager.selected, [](Manager&, Document& document)
                                 {
-                                  document.anm2_snapshot(localize.get(EDIT_SCAN_AND_SET_REGIONS));
-                                  document.scan_and_set_regions();
+                                  document.snapshots.anm2_push(localize.get(EDIT_SCAN_AND_SET_REGIONS));
+                                  document.anm2.regions_scan();
                                   document.change(Document::FRAMES);
                                 }});
-          toasts.push(localize.get(TOAST_SCAN_AND_SET_REGIONS));
-          logger.info(localize.get(TOAST_SCAN_AND_SET_REGIONS, anm2ed::ENGLISH));
+          toast_log(Level::INFO, TOAST_SCAN_AND_SET_REGIONS);
         }
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_WIZARD_SCAN_AND_SET_REGIONS));
 
@@ -284,19 +280,15 @@ namespace anm2ed::imgui
 
           auto queuedAnimationIndices = animationIndices;
           auto queuedFormat = settings.generateRegionNameFormat;
-          auto queuedMapping = isGenerateRegionsMapFrames ? Document::RegionFrameMapping::SET
-                                                          : Document::RegionFrameMapping::PRESERVE;
-          manager.command_push({manager.selected,
-                                [=](Manager&, Document& document)
-                                {
-                                  if (queuedAnimationIndices.empty()) return;
-                                  document.anm2_snapshot(localize.get(EDIT_GENERATE_REGIONS_FROM_ANIMATIONS));
-                                  if (document.regions_generate_from_animations(queuedAnimationIndices, queuedFormat,
-                                                                                queuedMapping))
-                                    document.anm2_change(queuedMapping == Document::RegionFrameMapping::SET
-                                                             ? Document::ALL
-                                                             : Document::SPRITESHEETS);
-                                }});
+          auto queuedMapping = isGenerateRegionsMapFrames ? RegionFrameMapping::SET : RegionFrameMapping::PRESERVE;
+          manager.command_push(
+              {manager.selected, [=](Manager&, Document& document)
+               {
+                 if (queuedAnimationIndices.empty()) return;
+                 document.snapshots.anm2_push(localize.get(EDIT_GENERATE_REGIONS_FROM_ANIMATIONS));
+                 if (document.anm2.regions_generate(queuedAnimationIndices, {}, queuedFormat, queuedMapping))
+                   document.change(queuedMapping == RegionFrameMapping::SET ? Document::ALL : Document::SPRITESHEETS);
+               }});
           generateRegionsPopup.close();
         }
 

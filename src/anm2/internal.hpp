@@ -61,7 +61,6 @@ namespace anm2ed
   ElementType group_child_type_get(ElementType);
   Element* content_container_get(Element&, ElementType);
   std::unordered_map<int, int> child_ids_compact(Element&, ElementType);
-  int animations_count_get(const Element&);
   int animations_child_index_get(const Element&, int);
   int animations_child_insert_index_get(const Element&, int);
   Element root_animation_make();
@@ -88,6 +87,35 @@ namespace anm2ed
   void special_interpolated_frames_bake(Element&, int, bool, bool);
   void all_interpolated_frames_bake(Element&, int, bool, bool);
   int color_write(float);
+  bool is_region_matched(const Element&, const Element&);
+  Element* region_match_get(Element&, const Element&);
+
+  template <class Callback> void layer_frames_each(Element& root, Element& animation, Callback&& callback)
+  {
+    auto layers = content_container_get(root, ElementType::LAYERS);
+    auto spritesheets = content_container_get(root, ElementType::SPRITESHEETS);
+    auto tracks = child_first_get(animation, ElementType::LAYER_ANIMATIONS);
+    if (!layers || !spritesheets || !tracks) return;
+
+    tracks_each(*tracks, ElementType::LAYER_ANIMATION,
+                [&](Element& track)
+                {
+                  auto layer = child_id_get(*layers, ElementType::LAYER_ELEMENT, track.layerId);
+                  auto spritesheet =
+                      layer ? child_id_get(*spritesheets, ElementType::SPRITESHEET, layer->spritesheetId) : nullptr;
+                  if (!spritesheet) return;
+                  for (auto& frame : track.children)
+                    if (frame.type == ElementType::FRAME) callback(frame, *spritesheet);
+                });
+  }
+
+  template <class Callback> void layer_frames_each(Element& root, Callback&& callback)
+  {
+    if (auto animations = element_first_get(root, ElementType::ANIMATIONS))
+      for (auto& animation : animations->children)
+        if (animation.type == ElementType::ANIMATION) layer_frames_each(root, animation, callback);
+  }
+
   std::uint64_t anm2_hash_get(const Element&, Options);
   std::uint64_t element_hash(const Element&, Flags);
 }

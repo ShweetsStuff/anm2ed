@@ -37,7 +37,8 @@ namespace anm2ed::imgui::wizard
                   {
                     return frameReference.animationIndex != reference.animationIndex ||
                            frameReference.itemType != reference.itemType || frameReference.itemID != reference.itemID ||
-                           frameReference.groupType != reference.groupType || frameReference.groupId != reference.groupId;
+                           frameReference.groupType != reference.groupType ||
+                           frameReference.groupId != reference.groupId;
                   });
     if (!frameReferences.empty())
     {
@@ -283,8 +284,7 @@ namespace anm2ed::imgui::wizard
         {
           if (!ffmpeg_is_valid())
           {
-            toasts.push(localize.get(TOAST_INVALID_FFMPEG));
-            logger.error(localize.get(TOAST_INVALID_FFMPEG, anm2ed::ENGLISH));
+            toast_log(Level::ERROR, TOAST_INVALID_FFMPEG);
             return false;
           }
           return true;
@@ -295,8 +295,7 @@ namespace anm2ed::imgui::wizard
           auto formatString = path::to_utf8(format);
           if (!formatString.contains("{}"))
           {
-            toasts.push(localize.get(TOAST_PNG_FORMAT_INVALID));
-            logger.error(localize.get(TOAST_PNG_FORMAT_INVALID, anm2ed::ENGLISH));
+            toast_log(Level::ERROR, TOAST_PNG_FORMAT_INVALID);
             return false;
           }
           return true;
@@ -306,8 +305,7 @@ namespace anm2ed::imgui::wizard
         {
           if (path.empty())
           {
-            toasts.push(localize.get(TOAST_RENDER_PATH_EMPTY));
-            logger.error(localize.get(TOAST_RENDER_PATH_EMPTY, anm2ed::ENGLISH));
+            toast_log(Level::ERROR, TOAST_RENDER_PATH_EMPTY);
             return false;
           }
           return true;
@@ -317,8 +315,7 @@ namespace anm2ed::imgui::wizard
         {
           if (!path::ensure_directory(path))
           {
-            toasts.push(localize.get(TOAST_PNG_DIRECTORY_INVALID));
-            logger.error(localize.get(TOAST_PNG_DIRECTORY_INVALID, anm2ed::ENGLISH));
+            toast_log(Level::ERROR, TOAST_PNG_DIRECTORY_INVALID);
             return false;
           }
           return true;
@@ -328,8 +325,7 @@ namespace anm2ed::imgui::wizard
         {
           if (rows <= 0 && columns <= 0)
           {
-            toasts.push(localize.get(TOAST_RENDER_PATH_EMPTY));
-            logger.error(localize.get(TOAST_RENDER_PATH_EMPTY, anm2ed::ENGLISH));
+            toast_log(Level::ERROR, TOAST_RENDER_PATH_EMPTY);
             return false;
           }
           return true;

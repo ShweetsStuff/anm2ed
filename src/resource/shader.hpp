@@ -8,6 +8,11 @@
 #include <string_view>
 #include <vector>
 
+namespace anm2ed
+{
+  struct Element;
+}
+
 namespace anm2ed::resource::shader
 {
   struct Info
@@ -257,14 +262,14 @@ namespace anm2ed::resource::shader
   };
 
 #define RESOURCE_SHADER_UNIFORM_BINDINGS                                                                               \
-  X(IGNORE, "Ignore", "Ignore")                                                                                       \
+  X(IGNORE, "Ignore", "Ignore")                                                                                        \
   X(MAIN_TEXTURE, "MainTexture", "Main Texture")                                                                       \
   X(TRANSFORM, "Transform", "Transform")                                                                               \
   X(FRAME_TINT, "FrameTint", "Frame Tint")                                                                             \
   X(COLOR_OFFSET, "ColorOffset", "Color Offset")                                                                       \
   X(TEXTURE_SIZE, "TextureSize", "Texture Size")                                                                       \
   X(PLAYBACK_TIME, "PlaybackTime", "Playback Time")                                                                    \
-  X(COMPONENTS, "Components", "Per Component")                                                                        \
+  X(COMPONENTS, "Components", "Per Component")                                                                         \
   X(MANUAL, "Manual", "Manual")
 
   enum UniformBinding
@@ -289,18 +294,18 @@ namespace anm2ed::resource::shader
   };
 
 #define RESOURCE_SHADER_UNIFORM_VALUE_TYPES                                                                            \
-  X(UNKNOWN, "Unknown")                                                                                                \
-  X(FLOAT, "Float")                                                                                                    \
-  X(INT, "Int")                                                                                                        \
-  X(VEC2, "Vec2")                                                                                                      \
-  X(VEC3, "Vec3")                                                                                                      \
-  X(VEC4, "Vec4")                                                                                                      \
-  X(MAT4, "Mat4")                                                                                                      \
-  X(SAMPLER2D, "Sampler2D")
+  X(UNKNOWN, "Unknown", 0)                                                                                             \
+  X(FLOAT, "Float", 0)                                                                                                 \
+  X(INT, "Int", 0)                                                                                                     \
+  X(VEC2, "Vec2", 2)                                                                                                   \
+  X(VEC3, "Vec3", 3)                                                                                                   \
+  X(VEC4, "Vec4", 4)                                                                                                   \
+  X(MAT4, "Mat4", 0)                                                                                                   \
+  X(SAMPLER2D, "Sampler2D", 0)
 
   enum UniformValueType
   {
-#define X(symbol, label) UNIFORM_VALUE_##symbol,
+#define X(symbol, label, componentCount) UNIFORM_VALUE_##symbol,
     RESOURCE_SHADER_UNIFORM_VALUE_TYPES
 #undef X
         UNIFORM_VALUE_COUNT
@@ -310,10 +315,11 @@ namespace anm2ed::resource::shader
   {
     UniformValueType type{};
     const char* label{};
+    int componentCount{};
   };
 
   inline constexpr UniformValueTypeInfo UNIFORM_VALUE_TYPE_INFOS[] = {
-#define X(symbol, label) {UNIFORM_VALUE_##symbol, label},
+#define X(symbol, label, componentCount) {UNIFORM_VALUE_##symbol, label, componentCount},
       RESOURCE_SHADER_UNIFORM_VALUE_TYPES
 #undef X
   };
@@ -360,6 +366,9 @@ namespace anm2ed::resource::shader
                                {GRID_VERTEX, GRID_FRAGMENT}};
 
   UniformBinding uniform_binding_auto_get(std::string_view, UniformValueType);
+  void uniform_configs_apply(const Element&, std::vector<Uniform>&);
+  bool uniform_configs_trim(Element&, const std::vector<Uniform>&);
+  void uniform_config_save(Element&, const Uniform&);
   UniformBinding uniform_binding_get(std::string_view);
   std::string_view uniform_binding_value_get(UniformBinding);
   std::string_view uniform_binding_label_get(UniformBinding);

@@ -195,8 +195,7 @@ namespace anm2ed::imgui::popup
         auto queuedAddItemSpritesheetID = addItemSpritesheetID;
         auto queuedAddItemIsShowRect = addItemIsShowRect;
 
-        manager.command_push({manager.selected,
-                              [=](Manager&, Document& document)
+        manager.command_push({manager.selected, [=](Manager&, Document& document)
                               {
                                 Element item{};
                                 item.id = queuedAddItemID;
@@ -204,12 +203,12 @@ namespace anm2ed::imgui::popup
                                 item.spritesheetId = queuedAddItemSpritesheetID;
                                 item.isShowRect = queuedAddItemIsShowRect;
 
-                                document.anm2_snapshot(localize.get(EDIT_ADD_ITEM));
-                                auto addId = document.anm2.item_add((ItemType)queuedType, queuedAnimationIndex, item,
-                                                                    queuedInsertBeforeID,
-                                                                    (destination::Type)queuedDestination);
+                                document.snapshots.anm2_push(localize.get(EDIT_ADD_ITEM));
+                                auto addId =
+                                    document.anm2.item_add((ItemType)queuedType, queuedAnimationIndex, item,
+                                                           queuedInsertBeforeID, (destination::Type)queuedDestination);
 
-                                document.anm2_change(Document::ITEMS);
+                                document.change(Document::ITEMS);
 
                                 if (addId != -1)
                                 {

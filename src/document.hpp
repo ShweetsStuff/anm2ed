@@ -20,7 +20,41 @@ namespace anm2ed
   class Manager;
   struct Command;
 
-  class Document
+  struct DocumentData
+  {
+    std::filesystem::path path{};
+    uint64_t tabId{};
+    Snapshots snapshots{};
+    std::map<int, Storage> regionBySpritesheet{};
+    int changeAllFramePropertiesRegionId{-1};
+    int changeAllFramePropertiesShaderId{-1};
+
+    float previewZoom{200};
+    glm::vec2 previewPan{};
+    glm::vec2 editorPan{};
+    float editorZoom{200};
+    int overlayIndex{-1};
+    uint64_t overlayDocumentId{};
+
+    uint64_t hash{};
+    uint64_t saveHash{};
+    uint64_t autosaveHash{};
+    double lastAutosaveTime{};
+    bool isValid{true};
+    bool isOpen{true};
+    bool isForceDirty{false};
+    std::unordered_map<int, uint64_t> spritesheetHashes{};
+    std::unordered_map<int, uint64_t> spritesheetSaveHashes{};
+    std::unordered_map<int, std::filesystem::path> texturePaths{};
+    std::unordered_map<int, std::filesystem::path> soundPaths{};
+    std::map<int, std::filesystem::path> shaderVertexPaths{};
+    std::map<int, std::filesystem::path> shaderFragmentPaths{};
+    std::map<int, resource::Shader> shaders{};
+    bool isAnimationPreviewSet{false};
+    bool isSpritesheetEditorSet{false};
+  };
+
+  class Document : public DocumentData
   {
   public:
     enum ChangeType
@@ -54,72 +88,13 @@ namespace anm2ed
       SPRITESHEET
     };
 
-    enum class RegionFrameMapping
-    {
-      PRESERVE,
-      SET
-    };
-
-    enum FileMergePreset
-    {
-      FILE_MERGE_PRESET_MERGE_BY_NAME,
-      FILE_MERGE_PRESET_APPEND_AS_NEW,
-      FILE_MERGE_PRESET_REPLACE_MATCHING,
-      FILE_MERGE_PRESET_COUNT
-    };
-
-    std::filesystem::path path{};
-    uint64_t tabId{};
-
-    Snapshots snapshots{};
     Snapshot& current = snapshots.current;
-
-    Playback& playback = current.playback;
-    Storage& animation = current.animation;
-    Storage& event = current.event;
-    Storage& frames = current.frames;
-    Storage& items = current.items;
-    Storage& layer = current.layer;
-    Storage& merge = current.merge;
-    Storage& null = current.null;
-    Storage& region = current.region;
-    Storage& shader = current.shader;
-    Storage& sound = current.sound;
-    Storage& spritesheet = current.spritesheet;
-    std::map<int, resource::Texture>& textures = current.textures;
-    std::map<int, resource::Audio>& sounds = current.sounds;
+#define X(type, name) type& name = current.name;
+    SNAPSHOT_STEP_STATE_FIELDS
+    SNAPSHOT_STEP_RESOURCE_FIELDS
+#undef X
     Anm2& anm2 = current.anm2;
-    Reference& reference = current.reference;
-    std::set<Reference>& groupReferences = current.groupReferences;
-    float& frameTime = current.frameTime;
     std::string& message = current.message;
-    std::map<int, Storage> regionBySpritesheet{};
-    int changeAllFramePropertiesRegionId{-1};
-    int changeAllFramePropertiesShaderId{-1};
-
-    float previewZoom{200};
-    glm::vec2 previewPan{};
-    glm::vec2 editorPan{};
-    float editorZoom{200};
-    int overlayIndex{-1};
-    uint64_t overlayDocumentId{};
-
-    uint64_t hash{};
-    uint64_t saveHash{};
-    uint64_t autosaveHash{};
-    double lastAutosaveTime{};
-    bool isValid{true};
-    bool isOpen{true};
-    bool isForceDirty{false};
-    std::unordered_map<int, uint64_t> spritesheetHashes{};
-    std::unordered_map<int, uint64_t> spritesheetSaveHashes{};
-    std::unordered_map<int, std::filesystem::path> texturePaths{};
-    std::unordered_map<int, std::filesystem::path> soundPaths{};
-    std::map<int, std::filesystem::path> shaderVertexPaths{};
-    std::map<int, std::filesystem::path> shaderFragmentPaths{};
-    std::map<int, resource::Shader> shaders{};
-    bool isAnimationPreviewSet{false};
-    bool isSpritesheetEditorSet{false};
     EditTarget editTarget{EditTarget::NONE};
 
     Document(const std::filesystem::path&, bool = false, std::string* = nullptr);
@@ -128,25 +103,17 @@ namespace anm2ed
     Document(Document&&) noexcept;
     Document& operator=(Document&&) noexcept;
     bool save(const std::filesystem::path& = {}, std::string* = nullptr, Options = {});
-    void anm2_change(ChangeType);
     void assets_sync(ChangeType = ALL);
     void texture_change(int);
     bool texture_reload(int);
     bool sound_reload(int);
     bool shader_reload(int, std::string* = nullptr);
     resource::Texture* texture_get(int);
-    const resource::Texture* texture_get(int) const;
     resource::Audio* sound_get(int);
-    const resource::Audio* sound_get(int) const;
     resource::Shader* shader_get(int);
-    const resource::Shader* shader_get(int) const;
     bool regions_trim(int, const std::set<int>&);
-    bool regions_generate_from_animations(const std::set<int>&, const std::string&, RegionFrameMapping);
-    bool regions_generate_from_frames(const std::set<Reference>&, const std::string&, RegionFrameMapping);
     bool spritesheet_pack(int, int);
     bool spritesheets_merge(const std::set<int>&, bool, bool, bool, origin::Type);
-    void scan_and_set_regions();
-    bool file_merge(const std::filesystem::path&, FileMergePreset = FILE_MERGE_PRESET_MERGE_BY_NAME);
     void hash_set();
     void clean();
     void change(ChangeType);
@@ -175,39 +142,16 @@ namespace anm2ed
     Element* spritesheet_get();
     Element* animation_get();
 
-    void spritesheet_add(const std::filesystem::path&);
     void spritesheets_add(const std::vector<std::filesystem::path>&);
-    void sound_add(const std::filesystem::path&);
     void sounds_add(const std::vector<std::filesystem::path>&);
 
     bool autosave(std::string* = nullptr, Options = {});
     std::filesystem::path autosave_path_get();
     std::filesystem::path path_from_autosave_get(const std::filesystem::path&);
 
-    void anm2_snapshot(const std::string& message);
-    void tracks_snapshot(const std::string& message, const std::set<Reference>&);
-    void frames_snapshot(const std::string& message, const std::set<Reference>&);
-    void regions_snapshot(const std::string& message, int, const std::set<int>&);
-    void textures_snapshot(const std::string& message);
-    void anm2_textures_snapshot(const std::string& message);
     void undo();
     void redo();
     bool is_able_to_undo();
     bool is_able_to_redo();
   };
-
-#define DOCUMENT_EDIT(document, message, changeType, body)                                                             \
-  {                                                                                                                    \
-    document.anm2_snapshot(message);                                                                                   \
-    body;                                                                                                              \
-    document.change(changeType);                                                                                       \
-  }
-
-#define DOCUMENT_EDIT_PTR(document, message, changeType, body)                                                         \
-  {                                                                                                                    \
-    document->anm2_snapshot(message);                                                                                  \
-    body;                                                                                                              \
-    document->change(changeType);                                                                                      \
-  }
-
 }

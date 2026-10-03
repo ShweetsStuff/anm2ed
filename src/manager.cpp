@@ -112,10 +112,7 @@ namespace anm2ed
     if (!document.is_valid())
     {
       documents.pop_back();
-      toasts.push(
-          std::vformat(localize.get(TOAST_OPEN_DOCUMENT_FAILED), std::make_format_args(pathString, errorString)));
-      logger.error(std::vformat(localize.get(TOAST_OPEN_DOCUMENT_FAILED, anm2ed::ENGLISH),
-                                std::make_format_args(pathString, errorString)));
+      toast_log(Level::ERROR, TOAST_OPEN_DOCUMENT_FAILED, pathString, errorString);
       return nullptr;
     }
 
@@ -124,8 +121,7 @@ namespace anm2ed
     selected = (int)documents.size() - 1;
     pendingSelected = selected;
     selection_history_push(selected);
-    toasts.push(std::vformat(localize.get(TOAST_OPEN_DOCUMENT), std::make_format_args(pathString)));
-    logger.info(std::vformat(localize.get(TOAST_OPEN_DOCUMENT, anm2ed::ENGLISH), std::make_format_args(pathString)));
+    toast_log(Level::INFO, TOAST_OPEN_DOCUMENT, pathString);
 
     return &document;
   }
@@ -142,8 +138,7 @@ namespace anm2ed
       savePath.replace_extension(".anm2");
       ensure_parent_directory_exists(savePath);
 
-      if (!document->save(savePath, &errorString, options))
-        return false;
+      if (!document->save(savePath, &errorString, options)) return false;
 
       const auto autosavePath = document->autosave_path_get();
       autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), previousAutosavePath),
@@ -160,17 +155,13 @@ namespace anm2ed
     return false;
   }
 
-  bool Manager::save(const std::filesystem::path& path, Options options)
-  {
-    return save(selected, path, options);
-  }
+  bool Manager::save(const std::filesystem::path& path, Options options) { return save(selected, path, options); }
 
   void Manager::autosave(Document& document, Options options)
   {
     std::string errorString{};
     auto autosavePath = document.autosave_path_get();
-    if (!document.autosave(&errorString, options))
-      return;
+    if (!document.autosave(&errorString, options)) return;
 
     autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), autosavePath), autosaveFiles.end());
     autosaveFiles.insert(autosaveFiles.begin(), autosavePath);

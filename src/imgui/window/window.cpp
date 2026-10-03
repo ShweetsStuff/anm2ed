@@ -181,16 +181,16 @@ namespace anm2ed::imgui
 
   void window_edit(Window& window, Document& document, const std::string& message, auto behavior)
   {
-    document.anm2_snapshot(message);
+    document.snapshots.anm2_push(message);
     behavior();
-    document.anm2_change(window.changeType);
+    document.change(window.changeType);
   }
 
   void window_edit(Document& document, Document::ChangeType changeType, const std::string& message, auto behavior)
   {
-    document.anm2_snapshot(message);
+    document.snapshots.anm2_push(message);
     behavior();
-    document.anm2_change(changeType);
+    document.change(changeType);
   }
 
   void window_rename_finish(Window& window, Manager& manager, int key, int count, const std::string& name)
@@ -201,9 +201,8 @@ namespace anm2ed::imgui
     auto elementGet = window.element_get;
     auto renameEdit = window.renameEdit;
     auto renameFinish = window.rename_finish;
-    manager.command_push({manager.selected,
-                          [changeType, containerType, elementType, elementGet, renameEdit, renameFinish, key, count,
-                           name](Manager&, Document& document) mutable
+    manager.command_push({manager.selected, [changeType, containerType, elementType, elementGet, renameEdit,
+                                             renameFinish, key, count, name](Manager&, Document& document) mutable
                           {
                             auto element = elementGet ? elementGet(document.anm2, key) : nullptr;
                             if (!element)
@@ -211,10 +210,10 @@ namespace anm2ed::imgui
                                 element = child_id_get(*container, elementType, key);
                             if (!element || element->name == name) return;
 
-                            document.anm2_snapshot(localize.get(renameEdit));
+                            document.snapshots.anm2_push(localize.get(renameEdit));
                             element->name = name;
                             if (renameFinish) renameFinish(document, *element, key, count);
-                            document.anm2_change(changeType);
+                            document.change(changeType);
                           }});
   }
 
@@ -265,7 +264,7 @@ namespace anm2ed::imgui
 
       if (pasted.deserialize(window.elementType, clipboard.get(), true, &errorString, document.directory_get()))
       {
-        document.anm2_snapshot(localize.get(window.pasteEdit));
+        document.snapshots.anm2_push(localize.get(window.pasteEdit));
         document.anm2 = std::move(pasted);
         container = window_container_get(window, document.anm2);
         auto maxIdAfter = container ? element_child_max_id_get(*container, window.elementType) : -1;
@@ -275,16 +274,11 @@ namespace anm2ed::imgui
           storage->selection = {maxIdAfter};
           storage->reference = maxIdAfter;
         }
-        document.anm2_change(window.changeType);
+        document.change(window.changeType);
         return;
       }
 
-      if (window.deserializeFailedToast)
-      {
-        toasts.push(std::vformat(localize.get(window.deserializeFailedToast), std::make_format_args(errorString)));
-        logger.error(std::vformat(localize.get(window.deserializeFailedToast, anm2ed::ENGLISH),
-                                  std::make_format_args(errorString)));
-      }
+      if (window.deserializeFailedToast) toast_log(Level::ERROR, window.deserializeFailedToast, errorString);
     };
 
     window_command_push(window, manager, settings, clipboard, paste);
@@ -473,12 +467,11 @@ namespace anm2ed::imgui
   {
     if (item.id < 0) return;
     auto it = std::find_if(items.begin(), items.end(), [&](const AnimationDragDropItem& current)
-    { return current.type == item.type && current.id == item.id; });
+                           { return current.type == item.type && current.id == item.id; });
     if (it == items.end()) items.push_back(item);
   }
 
-  bool is_window_animation_drag_drop_item_selected(Document& document, const Window& window,
-                                                   AnimationDragDropItem item)
+  bool is_window_animation_drag_drop_item_selected(Document& document, const Window& window, AnimationDragDropItem item)
   {
     if (item.type == AnimationDragDropType::GROUP) return window.selection.contains(item.id);
     return document.animation.selection.contains(item.id);
@@ -566,8 +559,8 @@ namespace anm2ed::imgui
     std::sort(childIndices.begin(), childIndices.end());
     childIndices.erase(std::unique(childIndices.begin(), childIndices.end()), childIndices.end());
 
-    auto movedChildIndices = anm2ed::util::vector::move_indices_to_position(animations->children, childIndices,
-                                                                            targetChildIndex);
+    auto movedChildIndices =
+        anm2ed::util::vector::move_indices_to_position(animations->children, childIndices, targetChildIndex);
     if (movedChildIndices.empty()) return;
 
     document.animation.selection.clear();
@@ -583,26 +576,24 @@ namespace anm2ed::imgui
   }
 
   void window_animation_move_command_push(Window& window, Manager& manager, std::vector<AnimationDragDropItem> items,
-                                          int targetGroupId,
-                                          auto target_child_index_get)
+                                          int targetGroupId, auto target_child_index_get)
   {
     if (items.empty()) return;
-    manager.command_push({manager.selected, [&window, items, targetGroupId, target_child_index_get](Manager&,
-                                                                                                    Document& document)
-                                          mutable
-                          {
-                            auto move = [&]()
-                            {
-                              auto animations = window_container_get(window, document.anm2);
-                              if (!animations) return;
-                              window_animation_items_move(window, document, items, target_child_index_get(*animations),
-                                                            targetGroupId);
-                            };
-                            window_edit(window, document, localize.get(EDIT_MOVE_ANIMATIONS), move);
-                          }});
+    manager.command_push(
+        {manager.selected, [&window, items, targetGroupId, target_child_index_get](Manager&, Document& document) mutable
+         {
+           auto move = [&]()
+           {
+             auto animations = window_container_get(window, document.anm2);
+             if (!animations) return;
+             window_animation_items_move(window, document, items, target_child_index_get(*animations), targetGroupId);
+           };
+           window_edit(window, document, localize.get(EDIT_MOVE_ANIMATIONS), move);
+         }});
   }
 
-  void window_animation_drag_drop_source_update(Document& document, const Window& window, AnimationDragDropItem fallback)
+  void window_animation_drag_drop_source_update(Document& document, const Window& window,
+                                                AnimationDragDropItem fallback)
   {
     if (!ImGui::BeginDragDropSource(DRAG_DROP_SOURCE_FLAGS)) return;
 
@@ -619,9 +610,9 @@ namespace anm2ed::imgui
     if (!ImGui::BeginDragDropTarget()) return false;
 
     bool isDelivered{};
-    if (auto payload = ImGui::AcceptDragDropPayload(
-            "Animation Drag Drop",
-            ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect))
+    if (auto payload =
+            ImGui::AcceptDragDropPayload("Animation Drag Drop", ImGuiDragDropFlags_AcceptBeforeDelivery |
+                                                                    ImGuiDragDropFlags_AcceptNoDrawDefaultRect))
     {
       auto items = window_animation_payload_items_get(*payload);
       if (items.empty())
@@ -641,10 +632,11 @@ namespace anm2ed::imgui
       {
         auto targetGroupId = isDropIntoGroup ? groupId : -1;
         window_animation_move_command_push(
-            window, manager, items, targetGroupId, [groupId, dropZone, isDropIntoGroup](const Element& items)
+            window, manager, items, targetGroupId,
+            [groupId, dropZone, isDropIntoGroup](const Element& items)
             {
-              auto targetDropZone = !isDropIntoGroup && dropZone == AnimationDropZone::INSIDE ? AnimationDropZone::AFTER
-                                                                                              : dropZone;
+              auto targetDropZone =
+                  !isDropIntoGroup && dropZone == AnimationDropZone::INSIDE ? AnimationDropZone::AFTER : dropZone;
               return window_animation_group_child_insert_index_get(items, groupId, targetDropZone);
             });
         isDelivered = true;
@@ -748,8 +740,8 @@ namespace anm2ed::imgui
 
     for (auto& item : animations->children)
       if (item.type == ElementType::ANIMATION && groupIds.contains(item.groupId)) item.groupId = -1;
-    std::erase_if(animations->children, [&](const Element& item)
-    { return item.type == ElementType::GROUP && groupIds.contains(item.id); });
+    std::erase_if(animations->children,
+                  [&](const Element& item) { return item.type == ElementType::GROUP && groupIds.contains(item.id); });
   }
 
   std::string window_animation_clipboard_text_get(Document& document, const Window& window)
@@ -806,7 +798,7 @@ namespace anm2ed::imgui
     auto& overlayDocumentId = document.overlayDocumentId;
     int merged{-1};
 
-    document.anm2_snapshot(localize.get(EDIT_MERGE_ANIMATIONS));
+    document.snapshots.anm2_push(localize.get(EDIT_MERGE_ANIMATIONS));
     if (options.selection.empty())
     {
       auto selected = quickSelection ? *quickSelection : std::set<int>(selection.begin(), selection.end());
@@ -850,12 +842,11 @@ namespace anm2ed::imgui
     if (merged == -1) return -1;
     selection = {merged};
     reference = {merged};
-    document.anm2_change(Document::ANIMATIONS);
+    document.change(Document::ANIMATIONS);
     return merged;
   }
 
-  void window_spritesheets_merge(Document& document, const std::set<int>& ids,
-                                 const SpritesheetMergeOptions& options)
+  void window_spritesheets_merge(Document& document, const std::set<int>& ids, const SpritesheetMergeOptions& options)
   {
     if (ids.size() <= 1) return;
 
@@ -869,17 +860,15 @@ namespace anm2ed::imgui
         document.spritesheet.reference = baseID;
         document.region.reference = -1;
         document.region.selection.clear();
-        toasts.push(localize.get(TOAST_MERGE_SPRITESHEETS));
-        logger.info(localize.get(TOAST_MERGE_SPRITESHEETS, anm2ed::ENGLISH));
+        toast_log(Level::INFO, TOAST_MERGE_SPRITESHEETS);
       }
       else
       {
-        toasts.push(localize.get(TOAST_MERGE_SPRITESHEETS_FAILED));
-        logger.error(localize.get(TOAST_MERGE_SPRITESHEETS_FAILED, anm2ed::ENGLISH));
+        toast_log(Level::ERROR, TOAST_MERGE_SPRITESHEETS_FAILED);
       }
     };
 
-    document.anm2_textures_snapshot(localize.get(EDIT_MERGE_SPRITESHEETS));
+    document.snapshots.anm2_textures_push(localize.get(EDIT_MERGE_SPRITESHEETS));
     behavior();
     document.change(Document::ALL);
   }
@@ -898,17 +887,15 @@ namespace anm2ed::imgui
     {
       if (document.spritesheet_pack(id, std::max(0, padding)))
       {
-        toasts.push(localize.get(TOAST_PACK_SPRITESHEET));
-        logger.info(localize.get(TOAST_PACK_SPRITESHEET, anm2ed::ENGLISH));
+        toast_log(Level::INFO, TOAST_PACK_SPRITESHEET);
       }
       else
       {
-        toasts.push(localize.get(TOAST_PACK_SPRITESHEET_FAILED));
-        logger.error(localize.get(TOAST_PACK_SPRITESHEET_FAILED, anm2ed::ENGLISH));
+        toast_log(Level::ERROR, TOAST_PACK_SPRITESHEET_FAILED);
       }
     };
 
-    document.anm2_textures_snapshot(localize.get(EDIT_PACK_SPRITESHEET));
+    document.snapshots.anm2_textures_push(localize.get(EDIT_PACK_SPRITESHEET));
     behavior();
     document.change(Document::SPRITESHEETS);
   }
@@ -928,15 +915,11 @@ namespace anm2ed::imgui
       if (texture->write_png(spritesheet->path))
       {
         document.spritesheet_hash_set_saved(id);
-        toasts.push(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET), std::make_format_args(id, pathString)));
-        logger.info(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET, anm2ed::ENGLISH),
-                                 std::make_format_args(id, pathString)));
+        toast_log(Level::INFO, TOAST_SAVE_SPRITESHEET, id, pathString);
       }
       else
       {
-        toasts.push(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET_FAILED), std::make_format_args(id, pathString)));
-        logger.error(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET_FAILED, anm2ed::ENGLISH),
-                                  std::make_format_args(id, pathString)));
+        toast_log(Level::ERROR, TOAST_SAVE_SPRITESHEET_FAILED, id, pathString);
       }
     }
   }
@@ -981,8 +964,7 @@ namespace anm2ed::imgui
     if (options.path.empty()) pathString = "in memory";
     if (options.path.empty() && !options.isMakeSpritesheet)
     {
-      toasts.push(localize.get(TOAST_EXPORT_REGION_PATH_EMPTY));
-      logger.error(localize.get(TOAST_EXPORT_REGION_PATH_EMPTY, anm2ed::ENGLISH));
+      toast_log(Level::ERROR, TOAST_EXPORT_REGION_PATH_EMPTY);
       return false;
     }
 
@@ -991,9 +973,7 @@ namespace anm2ed::imgui
     auto texture = document.texture_get(options.spritesheetId);
     if (!spritesheet || !region || !texture || !texture->is_valid())
     {
-      toasts.push(std::vformat(localize.get(TOAST_EXPORT_REGION_FAILED), std::make_format_args("", pathString)));
-      logger.error(std::vformat(localize.get(TOAST_EXPORT_REGION_FAILED, anm2ed::ENGLISH),
-                                std::make_format_args("", pathString)));
+      toast_log(Level::ERROR, TOAST_EXPORT_REGION_FAILED, "", pathString);
       return false;
     }
 
@@ -1003,9 +983,7 @@ namespace anm2ed::imgui
     ivec2 exportSize{};
     if (!window_region_pixels_get(sourceRegion, *texture, pixels, exportSize))
     {
-      toasts.push(std::vformat(localize.get(TOAST_EXPORT_REGION_FAILED), std::make_format_args(regionName, pathString)));
-      logger.error(std::vformat(localize.get(TOAST_EXPORT_REGION_FAILED, anm2ed::ENGLISH),
-                                std::make_format_args(regionName, pathString)));
+      toast_log(Level::ERROR, TOAST_EXPORT_REGION_FAILED, regionName, pathString);
       return false;
     }
 
@@ -1019,10 +997,7 @@ namespace anm2ed::imgui
       path::ensure_directory(outputPath.parent_path());
       if (!Texture::write_pixels_png(outputPath, exportSize, pixels.data()))
       {
-        toasts.push(
-            std::vformat(localize.get(TOAST_EXPORT_REGION_FAILED), std::make_format_args(regionName, pathString)));
-        logger.error(std::vformat(localize.get(TOAST_EXPORT_REGION_FAILED, anm2ed::ENGLISH),
-                                  std::make_format_args(regionName, pathString)));
+        toast_log(Level::ERROR, TOAST_EXPORT_REGION_FAILED, regionName, pathString);
         return false;
       }
     }
@@ -1030,7 +1005,7 @@ namespace anm2ed::imgui
     exportedSpritesheetId = -1;
     if (options.isMakeSpritesheet || options.isRemoveCurrent)
     {
-      document.anm2_textures_snapshot(localize.get(EDIT_EXPORT_REGION));
+      document.snapshots.anm2_textures_push(localize.get(EDIT_EXPORT_REGION));
 
       if (options.isMakeSpritesheet)
       {
@@ -1081,9 +1056,7 @@ namespace anm2ed::imgui
       document.change(Document::SPRITESHEETS);
     }
 
-    toasts.push(std::vformat(localize.get(TOAST_EXPORT_REGION), std::make_format_args(regionName, pathString)));
-    logger.info(
-        std::vformat(localize.get(TOAST_EXPORT_REGION, anm2ed::ENGLISH), std::make_format_args(regionName, pathString)));
+    toast_log(Level::INFO, TOAST_EXPORT_REGION, regionName, pathString);
     return true;
   }
 
@@ -1106,47 +1079,51 @@ namespace anm2ed::imgui
     auto& selection = window.storage_get(document).selection;
 
     if (window_flag_has(window.flags, WINDOW_ADD))
-      actions.add(ACTION_ADD, []() { return true; },
-                  [&]() { window_add(window, manager, settings, document, clipboard); }, window.addTooltip);
+      actions.add(
+          ACTION_ADD, []() { return true; }, [&]() { window_add(window, manager, settings, document, clipboard); },
+          window.addTooltip);
 
     if (window_flag_has(window.flags, WINDOW_DUPLICATE))
-      actions.add(ACTION_DUPLICATE, [&]() { return is_window_item_selected(window, document); },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.duplicate); },
-                  window.duplicateTooltip);
+      actions.add(
+          ACTION_DUPLICATE, [&]() { return is_window_item_selected(window, document); },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.duplicate); },
+          window.duplicateTooltip);
 
     if (window_flag_has(window.flags, WINDOW_MERGE))
-      actions.add(ACTION_MERGE,
-                  [&]()
-                  {
-                    if (window.elementType == ElementType::ANIMATION)
-                    {
-                      if (is_window_animation_group_selected(window)) return is_window_merge_available(window, document);
-                      return selection.size() == 1;
-                    }
-                    return selection.size() == 1;
-                  },
-                  [&]()
-                  {
-                    auto command = window.merge_open && !is_window_animation_group_selected(window) ? window.merge_open
-                                                                                                    : window.merge;
-                    window_command_run(window, manager, settings, document, clipboard, command);
-                  },
-                  window.mergeTooltip);
+      actions.add(
+          ACTION_MERGE,
+          [&]()
+          {
+            if (window.elementType == ElementType::ANIMATION)
+            {
+              if (is_window_animation_group_selected(window)) return is_window_merge_available(window, document);
+              return selection.size() == 1;
+            }
+            return selection.size() == 1;
+          },
+          [&]()
+          {
+            auto command =
+                window.merge_open && !is_window_animation_group_selected(window) ? window.merge_open : window.merge;
+            window_command_run(window, manager, settings, document, clipboard, command);
+          },
+          window.mergeTooltip);
 
     if (window_flag_has(window.flags, WINDOW_REMOVE))
-      actions.add(ACTION_REMOVE, [&]() { return !selection.empty() || is_window_animation_group_selected(window); },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.remove); },
-                  window.removeTooltip);
+      actions.add(
+          ACTION_REMOVE, [&]() { return !selection.empty() || is_window_animation_group_selected(window); }, [&]()
+          { window_command_run(window, manager, settings, document, clipboard, window.remove); }, window.removeTooltip);
 
     if (window_flag_has(window.flags, WINDOW_REMOVE_UNUSED))
-      actions.add(ACTION_REMOVE_UNUSED, []() { return true; },
-                  [&]() { window_remove_unused(window, manager, settings, document, clipboard); },
-                  window.removeUnusedTooltip);
+      actions.add(
+          ACTION_REMOVE_UNUSED, []() { return true; },
+          [&]() { window_remove_unused(window, manager, settings, document, clipboard); }, window.removeUnusedTooltip);
 
     if (window_flag_has(window.flags, WINDOW_DEFAULT))
-      actions.add(ACTION_DEFAULT, [&]() { return selection.size() == 1; },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.default_set); },
-                  window.defaultTooltip);
+      actions.add(
+          ACTION_DEFAULT, [&]() { return selection.size() == 1; },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.default_set); },
+          window.defaultTooltip);
 
     return actions;
   }
@@ -1164,56 +1141,67 @@ namespace anm2ed::imgui
     }
 
     if (window_flag_has(window.flags, WINDOW_RENAME))
-      actions.add(ACTION_RENAME, [&]() { return is_window_item_renameable(window, document); },
-                  [&]()
-                  {
-                    if (selection.size() == 1)
-                      window.renameQueued = *selection.begin();
-                    else if (window.elementType == ElementType::ANIMATION && window.selection.size() == 1)
-                      window.renameQueued = window_animation_group_key_get(*window.selection.begin());
-                  });
+      actions.add(
+          ACTION_RENAME, [&]() { return is_window_item_renameable(window, document); },
+          [&]()
+          {
+            if (selection.size() == 1)
+              window.renameQueued = *selection.begin();
+            else if (window.elementType == ElementType::ANIMATION && window.selection.size() == 1)
+              window.renameQueued = window_animation_group_key_get(*window.selection.begin());
+          });
     if (window_flag_has(window.flags, WINDOW_PROPERTIES))
-      actions.add(ACTION_PROPERTIES, [&]() { return selection.size() == 1; },
-                  [&]() { window_properties(window, manager, *selection.begin()); });
+      actions.add(
+          ACTION_PROPERTIES, [&]() { return selection.size() == 1; },
+          [&]() { window_properties(window, manager, *selection.begin()); });
     if (window_flag_has(window.flags, WINDOW_ADD))
-      actions.add(ACTION_ADD, []() { return true; },
-                  [&]() { window_add(window, manager, settings, document, clipboard); });
+      actions.add(
+          ACTION_ADD, []() { return true; }, [&]() { window_add(window, manager, settings, document, clipboard); });
     if (window_flag_has(window.flags, WINDOW_DUPLICATE))
-      actions.add(ACTION_DUPLICATE, [&]() { return is_window_item_selected(window, document); },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.duplicate); });
+      actions.add(
+          ACTION_DUPLICATE, [&]() { return is_window_item_selected(window, document); },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.duplicate); });
     if (window_flag_has(window.flags, WINDOW_MERGE))
-      actions.add(ACTION_MERGE, [&]() { return is_window_merge_available(window, document); },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.merge); });
+      actions.add(
+          ACTION_MERGE, [&]() { return is_window_merge_available(window, document); },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.merge); });
     if (window_flag_has(window.flags, WINDOW_GROUP))
-      actions.add(ACTION_GROUP,
-                  [&]()
-                  {
-                    if (window.elementType == ElementType::ANIMATION)
-                      return !window_animation_groupable_indices_get(document).empty();
-                    return !selection.empty();
-                  },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.group); });
+      actions.add(
+          ACTION_GROUP,
+          [&]()
+          {
+            if (window.elementType == ElementType::ANIMATION)
+              return !window_animation_groupable_indices_get(document).empty();
+            return !selection.empty();
+          },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.group); });
     if (window_flag_has(window.flags, WINDOW_REMOVE))
-      actions.add(ACTION_REMOVE, [&]() { return !selection.empty() || is_window_animation_group_selected(window); },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.remove); });
+      actions.add(
+          ACTION_REMOVE, [&]() { return !selection.empty() || is_window_animation_group_selected(window); },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.remove); });
     if (window_flag_has(window.flags, WINDOW_REMOVE_UNUSED))
-      actions.add(ACTION_REMOVE_UNUSED, []() { return true; },
-                  [&]() { window_remove_unused(window, manager, settings, document, clipboard); });
+      actions.add(
+          ACTION_REMOVE_UNUSED, []() { return true; },
+          [&]() { window_remove_unused(window, manager, settings, document, clipboard); });
     if (window_flag_has(window.flags, WINDOW_DEFAULT))
-      actions.add(ACTION_DEFAULT, [&]() { return selection.size() == 1; },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.default_set); });
+      actions.add(
+          ACTION_DEFAULT, [&]() { return selection.size() == 1; },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.default_set); });
 
     actions.separator();
 
     if (window_flag_has(window.flags, WINDOW_CUT))
-      actions.add(ACTION_CUT, [&]() { return is_window_item_selected(window, document); },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.cut); });
+      actions.add(
+          ACTION_CUT, [&]() { return is_window_item_selected(window, document); },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.cut); });
     if (window_flag_has(window.flags, WINDOW_COPY))
-      actions.add(ACTION_COPY, [&]() { return is_window_item_selected(window, document); },
-                  [&]() { window_copy(window, manager, settings, document, clipboard); });
+      actions.add(
+          ACTION_COPY, [&]() { return is_window_item_selected(window, document); },
+          [&]() { window_copy(window, manager, settings, document, clipboard); });
     if (window_flag_has(window.flags, WINDOW_PASTE))
-      actions.add(ACTION_PASTE, [&]() { return !clipboard.is_empty(); },
-                  [&]() { window_paste(window, manager, settings, document, clipboard); });
+      actions.add(
+          ACTION_PASTE, [&]() { return !clipboard.is_empty(); },
+          [&]() { window_paste(window, manager, settings, document, clipboard); });
 
     return actions;
   }
@@ -1462,8 +1450,8 @@ namespace anm2ed::imgui
     window.renameEdit = SNAPSHOT_RENAME_ANIMATION;
     window.pasteEdit = EDIT_PASTE_ANIMATIONS;
     window.deserializeFailedToast = TOAST_DESERIALIZE_ANIMATIONS_FAILED;
-    window.flags = WINDOW_ADD | WINDOW_DUPLICATE | WINDOW_MERGE | WINDOW_GROUP | WINDOW_REMOVE | WINDOW_DEFAULT | WINDOW_CUT |
-                   WINDOW_COPY | WINDOW_PASTE | WINDOW_RENAME;
+    window.flags = WINDOW_ADD | WINDOW_DUPLICATE | WINDOW_MERGE | WINDOW_GROUP | WINDOW_REMOVE | WINDOW_DEFAULT |
+                   WINDOW_CUT | WINDOW_COPY | WINDOW_PASTE | WINDOW_RENAME;
     window.popup = PopupHelper(LABEL_ANIMATIONS_MERGE_POPUP);
     window.storage_get = [](Document& document) -> Storage& { return document.animation; };
     window.element_get = [](Anm2& anm2, int index) { return anm2.element_get(ElementType::ANIMATION, index); };
@@ -1517,9 +1505,9 @@ namespace anm2ed::imgui
 
       if (ImGui::BeginDragDropTarget())
       {
-        if (auto payload = ImGui::AcceptDragDropPayload(
-                "Animation Drag Drop",
-                ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect))
+        if (auto payload =
+                ImGui::AcceptDragDropPayload("Animation Drag Drop", ImGuiDragDropFlags_AcceptBeforeDelivery |
+                                                                        ImGuiDragDropFlags_AcceptNoDrawDefaultRect))
         {
           auto items = window_animation_payload_items_get(*payload);
           if (items.empty())
@@ -1551,8 +1539,8 @@ namespace anm2ed::imgui
 
       return false;
     };
-    window.rows_update = [](Window& window, Manager& manager, Settings&, Resources& resources, Clipboard&,
-                            Document& document, ImVec2)
+    window.rows_update =
+        [](Window& window, Manager& manager, Settings&, Resources& resources, Clipboard&, Document& document, ImVec2)
     {
       auto container = window_container_get(window, document.anm2);
       auto& storage = window.storage_get(document);
@@ -1752,10 +1740,9 @@ namespace anm2ed::imgui
             }
             ImGui::SetNextItemOpen(item.isExpanded, ImGuiCond_Always);
             auto treeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
-            auto tree =
-                tree_node_input_text(label, std::format("###Document #{} Animation Group #{}", manager.selected,
-                                                        item.id),
-                                     name, isGroupSelected, treeFlags, window.renameState);
+            auto tree = tree_node_input_text(
+                label, std::format("###Document #{} Animation Group #{}", manager.selected, item.id), name,
+                isGroupSelected, treeFlags, window.renameState);
             auto groupItemMin = ImGui::GetItemRectMin();
             auto groupItemMax = ImGui::GetItemRectMax();
             auto isGroupOpen = tree.isOpen;
@@ -1774,13 +1761,13 @@ namespace anm2ed::imgui
                 manager.command_push({manager.selected, [targetGroupId, targetName](Manager&, Document& document)
                                       {
                                         auto animations = document.anm2.element_get(ElementType::ANIMATIONS);
-                                        auto group = animations ? child_id_get(*animations, ElementType::GROUP,
-                                                                                       targetGroupId)
-                                                                : nullptr;
+                                        auto group = animations
+                                                         ? child_id_get(*animations, ElementType::GROUP, targetGroupId)
+                                                         : nullptr;
                                         if (!group || group->name == targetName) return;
-                                        document.anm2_snapshot(localize.get(EDIT_RENAME_GROUP));
+                                        document.snapshots.anm2_push(localize.get(EDIT_RENAME_GROUP));
                                         group->name = targetName;
-                                        document.anm2_change(Document::ANIMATIONS);
+                                        document.change(Document::ANIMATIONS);
                                       }});
               }
               window.renameId = -1;
@@ -1793,13 +1780,13 @@ namespace anm2ed::imgui
               manager.command_push({manager.selected, [targetGroupId, isGroupOpen](Manager&, Document& document)
                                     {
                                       auto animations = document.anm2.element_get(ElementType::ANIMATIONS);
-                                      auto group = animations ? child_id_get(*animations, ElementType::GROUP,
-                                                                                     targetGroupId)
-                                                              : nullptr;
+                                      auto group = animations
+                                                       ? child_id_get(*animations, ElementType::GROUP, targetGroupId)
+                                                       : nullptr;
                                       if (!group || group->isExpanded == isGroupOpen) return;
-                                      document.anm2_snapshot(localize.get(EDIT_TOGGLE_GROUP_EXPANDED));
+                                      document.snapshots.anm2_push(localize.get(EDIT_TOGGLE_GROUP_EXPANDED));
                                       group->isExpanded = isGroupOpen;
-                                      document.anm2_change(Document::ANIMATIONS);
+                                      document.change(Document::ANIMATIONS);
                                     }});
             }
             if (isGroupClicked) group_selection_apply(item.id);
@@ -1866,9 +1853,9 @@ namespace anm2ed::imgui
         auto items = animations();
         if (!items) return;
         auto groupIds = window_animation_group_ids_get(*items);
-        auto targetGroupId =
-            window.selection.size() == 1 && groupIds.contains(*window.selection.begin()) ? *window.selection.begin()
-                                                                                         : -1;
+        auto targetGroupId = window.selection.size() == 1 && groupIds.contains(*window.selection.begin())
+                                 ? *window.selection.begin()
+                                 : -1;
 
         auto animation = element_make(ElementType::ANIMATION);
         animation.name = localize.get(TEXT_NEW_ANIMATION);
@@ -1887,17 +1874,16 @@ namespace anm2ed::imgui
           referenceNullAnimations = child_first_get(*referenceAnimation, ElementType::NULL_ANIMATIONS);
         }
 
-        animation.children.push_back(window_track_container_shell_copy(referenceLayerAnimations,
-                                                                       ElementType::LAYER_ANIMATIONS,
-                                                                       ElementType::LAYER_ANIMATION));
-        animation.children.push_back(window_track_container_shell_copy(referenceNullAnimations,
-                                                                       ElementType::NULL_ANIMATIONS,
-                                                                       ElementType::NULL_ANIMATION));
+        animation.children.push_back(window_track_container_shell_copy(
+            referenceLayerAnimations, ElementType::LAYER_ANIMATIONS, ElementType::LAYER_ANIMATION));
+        animation.children.push_back(window_track_container_shell_copy(
+            referenceNullAnimations, ElementType::NULL_ANIMATIONS, ElementType::NULL_ANIMATION));
         animation.children.push_back(element_make(ElementType::TRIGGERS));
 
         auto count = animation_count();
         auto index = count;
-        if (!selection.empty()) index = std::min(*selection.rbegin() + 1, count);
+        if (!selection.empty())
+          index = std::min(*selection.rbegin() + 1, count);
         else if (targetGroupId != -1)
         {
           auto groupIndices = window_animation_group_indices_get(*items, targetGroupId);
@@ -1939,7 +1925,7 @@ namespace anm2ed::imgui
           for (auto& item : items->children)
             if (item.type == ElementType::ANIMATION && groupSelection.contains(item.groupId)) item.groupId = -1;
           std::erase_if(items->children, [&](const Element& item)
-          { return item.type == ElementType::GROUP && groupSelection.contains(item.id); });
+                        { return item.type == ElementType::GROUP && groupSelection.contains(item.id); });
         }
         for (auto it = selection.rbegin(); it != selection.rend(); ++it)
         {
@@ -2008,13 +1994,14 @@ namespace anm2ed::imgui
     {
       auto& mergeSelection = document.merge.selection;
       auto& mergeReference = document.merge.reference;
-      auto quickSelection = mergeSelection.empty() ? window_animation_selected_indices_get(document, window)
-                                                   : std::set<int>{};
+      auto quickSelection =
+          mergeSelection.empty() ? window_animation_selected_indices_get(document, window) : std::set<int>{};
       auto quickGroupSelection = mergeSelection.empty() ? window.selection : std::set<int>{};
-      auto merged = window_animations_merge(document, {.selection = mergeSelection,
-                                                       .reference = mergeReference,
-                                                       .type = (merge::Type)settings.mergeType,
-                                                       .isDeleteAnimationsAfter = settings.mergeIsDeleteAnimationsAfter},
+      auto merged = window_animations_merge(document,
+                                            {.selection = mergeSelection,
+                                             .reference = mergeReference,
+                                             .type = (merge::Type)settings.mergeType,
+                                             .isDeleteAnimationsAfter = settings.mergeIsDeleteAnimationsAfter},
                                             mergeSelection.empty() ? &quickSelection : nullptr,
                                             mergeSelection.empty() ? &quickGroupSelection : nullptr);
       if (merged != -1)
@@ -2117,7 +2104,7 @@ namespace anm2ed::imgui
           items->children.erase(items->children.begin() + childIndex);
         }
         std::erase_if(items->children, [&](const Element& item)
-        { return item.type == ElementType::GROUP && groupSelection.contains(item.id); });
+                      { return item.type == ElementType::GROUP && groupSelection.contains(item.id); });
         selection.clear();
         window.selection.clear();
       };
@@ -2178,10 +2165,7 @@ namespace anm2ed::imgui
         }
         else
         {
-          toasts.push(
-              std::vformat(localize.get(TOAST_DESERIALIZE_ANIMATIONS_FAILED), std::make_format_args(errorString)));
-          logger.error(std::vformat(localize.get(TOAST_DESERIALIZE_ANIMATIONS_FAILED, anm2ed::ENGLISH),
-                                    std::make_format_args(errorString)));
+          toast_log(Level::ERROR, TOAST_DESERIALIZE_ANIMATIONS_FAILED, errorString);
         }
       };
 
@@ -2457,7 +2441,7 @@ namespace anm2ed::imgui
         }
       };
 
-      document.anm2_snapshot(localize.get(EDIT_TRIM_REGIONS));
+      document.snapshots.anm2_push(localize.get(EDIT_TRIM_REGIONS));
       behavior();
       document.change(Document::SPRITESHEETS);
     };
@@ -2488,7 +2472,7 @@ namespace anm2ed::imgui
       std::string errorString{};
       if (pasted.deserialize(ElementType::REGION, clipboard.get(), true, &errorString, {}, spritesheetReference))
       {
-        document.anm2_snapshot(localize.get(EDIT_PASTE_REGIONS));
+        document.snapshots.anm2_push(localize.get(EDIT_PASTE_REGIONS));
         anm2 = std::move(pasted);
         if (auto pastedSpritesheet = anm2.element_get(ElementType::SPRITESHEET, spritesheetReference))
         {
@@ -2506,13 +2490,11 @@ namespace anm2ed::imgui
             reference = maxRegionIdAfter;
           }
         }
-        document.anm2_change(Document::SPRITESHEETS);
+        document.change(Document::SPRITESHEETS);
       }
       else
       {
-        toasts.push(std::vformat(localize.get(TOAST_DESERIALIZE_REGIONS_FAILED), std::make_format_args(errorString)));
-        logger.error(std::vformat(localize.get(TOAST_DESERIALIZE_REGIONS_FAILED, anm2ed::ENGLISH),
-                                  std::make_format_args(errorString)));
+        toast_log(Level::ERROR, TOAST_DESERIALIZE_REGIONS_FAILED, errorString);
       }
     };
     window.begin_update = [](Window& window, Manager& manager, Settings&, Resources&, Clipboard&, Document& document)
@@ -2606,8 +2588,8 @@ namespace anm2ed::imgui
         {
           auto cursorPos = ImGui::GetCursorPos();
           auto regionChildMin = ImGui::GetWindowPos();
-          auto regionChildMax = ImVec2(regionChildMin.x + ImGui::GetWindowSize().x,
-                                       regionChildMin.y + ImGui::GetWindowSize().y);
+          auto regionChildMax =
+              ImVec2(regionChildMin.x + ImGui::GetWindowSize().x, regionChildMin.y + ImGui::GetWindowSize().y);
 
           ImGui::SetNextItemSelectionUserData(i);
           ImGui::SetNextItemStorageID(id);
@@ -2716,9 +2698,9 @@ namespace anm2ed::imgui
           bool isDropLineAfter{};
           if (ImGui::BeginDragDropTarget())
           {
-            if (auto payload = ImGui::AcceptDragDropPayload(
-                    "Region Drag Drop",
-                    ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect))
+            if (auto payload =
+                    ImGui::AcceptDragDropPayload("Region Drag Drop", ImGuiDragDropFlags_AcceptBeforeDelivery |
+                                                                         ImGuiDragDropFlags_AcceptNoDrawDefaultRect))
             {
               isDropLineActive = true;
               isDropLineAfter = is_drop_after(regionRowMin, regionRowMax);
@@ -2865,26 +2847,32 @@ namespace anm2ed::imgui
       Actions actions{};
       actions_undo_redo_add(actions, manager, document);
       actions.separator();
-      actions.add(ACTION_PROPERTIES, [&]() { return selection.size() == 1 && (bool)window.properties; },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.properties); });
-      actions.add(ACTION_ADD, [&]() { return (bool)window.add; },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.add); });
-      actions.add(ACTION_REMOVE_UNUSED, [&]() { return (bool)window.remove; },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.remove); });
-      actions.add(ACTION_TRIM, [&]() { return !selection.empty() && (bool)window.trim; },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.trim); },
-                  TOOLTIP_TRIM_REGIONS);
-      actions.add(ACTION_EXPORT, [&]() { return selection.size() == 1; },
-                  [&]()
-                  {
-                    window.editId = *selection.begin();
-                    window.popup2.open();
-                  });
+      actions.add(
+          ACTION_PROPERTIES, [&]() { return selection.size() == 1 && (bool)window.properties; },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.properties); });
+      actions.add(
+          ACTION_ADD, [&]() { return (bool)window.add; },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.add); });
+      actions.add(
+          ACTION_REMOVE_UNUSED, [&]() { return (bool)window.remove; },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.remove); });
+      actions.add(
+          ACTION_TRIM, [&]() { return !selection.empty() && (bool)window.trim; }, [&]()
+          { window_command_run(window, manager, settings, document, clipboard, window.trim); }, TOOLTIP_TRIM_REGIONS);
+      actions.add(
+          ACTION_EXPORT, [&]() { return selection.size() == 1; },
+          [&]()
+          {
+            window.editId = *selection.begin();
+            window.popup2.open();
+          });
       actions.separator();
-      actions.add(ACTION_COPY, [&]() { return !selection.empty() && (bool)window.copy; },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.copy); });
-      actions.add(ACTION_PASTE, [&]() { return !clipboard.is_empty() && (bool)window.paste; },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.paste); });
+      actions.add(
+          ACTION_COPY, [&]() { return !selection.empty() && (bool)window.copy; },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.copy); });
+      actions.add(
+          ACTION_PASTE, [&]() { return !clipboard.is_empty() && (bool)window.paste; },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.paste); });
       actions_popup_draw("##Region Context Menu", actions, settings);
       ImGui::PopStyleVar(2);
     };
@@ -2915,8 +2903,8 @@ namespace anm2ed::imgui
         window_command_run(window, manager, settings, document, clipboard, window.remove);
       set_item_tooltip_shortcut(localize.get(TOOLTIP_REMOVE_UNUSED_REGIONS), settings.shortcutAdd);
     };
-    window.popup_update = [](Window& window, Manager& manager, Settings& settings, Resources& resources, Clipboard&,
-                             Document& document)
+    window.popup_update =
+        [](Window& window, Manager& manager, Settings& settings, Resources& resources, Clipboard&, Document& document)
     {
       auto& anm2 = document.anm2;
       auto& spritesheetReference = document.spritesheet.reference;
@@ -3025,8 +3013,7 @@ namespace anm2ed::imgui
                                   {
                                     auto set = [&]()
                                     {
-                                      auto target =
-                                          child_id_get(*spritesheet, ElementType::REGION, editedReference);
+                                      auto target = child_id_get(*spritesheet, ElementType::REGION, editedReference);
                                       if (!target) return;
                                       auto changed = editedRegion;
                                       changed.type = ElementType::REGION;
@@ -3191,9 +3178,7 @@ namespace anm2ed::imgui
           auto spritesheet = anm2.element_get(ElementType::SPRITESHEET, id);
           if (!spritesheet) continue;
           auto pathString = path::to_utf8(spritesheet->path);
-          toasts.push(std::vformat(localize.get(TOAST_REMOVE_SPRITESHEET), std::make_format_args(id, pathString)));
-          logger.info(std::vformat(localize.get(TOAST_REMOVE_SPRITESHEET, anm2ed::ENGLISH),
-                                   std::make_format_args(id, pathString)));
+          toast_log(Level::INFO, TOAST_REMOVE_SPRITESHEET, id, pathString);
           element_child_id_erase(*items, ElementType::SPRITESHEET, id);
         }
       };
@@ -3216,15 +3201,11 @@ namespace anm2ed::imgui
         if (!spritesheet) continue;
         document.spritesheet_hash_set_saved(id);
         auto pathString = path::to_utf8(spritesheet->path);
-        toasts.push(std::vformat(localize.get(TOAST_RELOAD_SPRITESHEET), std::make_format_args(id, pathString)));
-        logger.info(std::vformat(localize.get(TOAST_RELOAD_SPRITESHEET, anm2ed::ENGLISH),
-                                 std::make_format_args(id, pathString)));
+        toast_log(Level::INFO, TOAST_RELOAD_SPRITESHEET, id, pathString);
       }
     };
     window.save = [](Window&, Manager&, Settings&, Document& document, Clipboard&)
-    {
-      window_spritesheets_save(document, document.spritesheet.selection);
-    };
+    { window_spritesheets_save(document, document.spritesheet.selection); };
     window.merge_open = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
     {
       auto& selection = document.spritesheet.selection;
@@ -3275,7 +3256,7 @@ namespace anm2ed::imgui
       std::string errorString{};
       if (pasted.deserialize(ElementType::SPRITESHEET, clipboard.get(), true, &errorString, document.directory_get()))
       {
-        document.anm2_snapshot(localize.get(EDIT_PASTE_SPRITESHEETS));
+        document.snapshots.anm2_push(localize.get(EDIT_PASTE_SPRITESHEETS));
         anm2 = std::move(pasted);
         if (auto pastedItems = anm2.element_get(ElementType::SPRITESHEETS))
         {
@@ -3289,14 +3270,11 @@ namespace anm2ed::imgui
             region.selection.clear();
           }
         }
-        document.anm2_change(Document::SPRITESHEETS);
+        document.change(Document::SPRITESHEETS);
       }
       else
       {
-        toasts.push(
-            std::vformat(localize.get(TOAST_DESERIALIZE_SPRITESHEETS_FAILED), std::make_format_args(errorString)));
-        logger.error(std::vformat(localize.get(TOAST_DESERIALIZE_SPRITESHEETS_FAILED, anm2ed::ENGLISH),
-                                  std::make_format_args(errorString)));
+        toast_log(Level::ERROR, TOAST_DESERIALIZE_SPRITESHEETS_FAILED, errorString);
       }
     };
     window.rows_update =
@@ -3377,7 +3355,8 @@ namespace anm2ed::imgui
             ImGui::SetNextItemStorageID(id);
             if (scrollTargetId == id) ImGui::SetKeyboardFocusHere();
             auto isActivated = ImGui::Selectable("##Spritesheet Selectable", isSelected, 0, spritesheetChildSize);
-            auto isClicked = ImGui::IsItemClicked(ImGuiMouseButton_Left) || ImGui::IsItemClicked(ImGuiMouseButton_Right);
+            auto isClicked =
+                ImGui::IsItemClicked(ImGuiMouseButton_Left) || ImGui::IsItemClicked(ImGuiMouseButton_Right);
             if (isActivated || isClicked)
             {
               document.editTarget = Document::EditTarget::SPRITESHEET;
@@ -3520,44 +3499,55 @@ namespace anm2ed::imgui
       Actions actions{};
       actions_undo_redo_add(actions, manager, document);
       actions.separator();
-      actions.add(ACTION_OPEN_DIRECTORY, [&]() { return selection.size() == 1 && (bool)window.open; },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.open); });
-      actions.add(ACTION_SET_FILE_PATH, [&]() { return selection.size() == 1 && (bool)window.path_set; },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.path_set); });
-      actions.add(ACTION_ADD, [&]() { return (bool)window.add; },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.add); });
-      actions.add(ACTION_REMOVE_UNUSED, [&]() { return (bool)window.remove; },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.remove); });
-      actions.add(ACTION_RELOAD, [&]() { return !selection.empty() && (bool)window.reload; },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.reload); });
-      actions.add(ACTION_REPLACE, [&]() { return selection.size() == 1 && (bool)window.replace; },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.replace); });
-      actions.add(ACTION_MERGE, [&]() { return selection.size() > 1 && (bool)window.merge_open; },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.merge_open); });
-      actions.add(ACTION_PACK, [&]() { return isPackable; },
-                  [&]()
-                  {
-                    window.editId = *selection.begin();
-                    window.popup2.open();
-                  },
-                  TOOLTIP_PACK_SPRITESHEET);
-      actions.add(ACTION_SAVE, [&]() { return !selection.empty(); },
-                  [&]()
-                  {
-                    if (settings.fileIsWarnOverwrite)
-                    {
-                      window.selection2 = selection;
-                      window.popup3.open();
-                    }
-                    else if (window.save)
-                      window_command_run(window, manager, settings, document, clipboard, window.save);
-                  },
-                  TOOLTIP_SAVE_SPRITESHEETS);
+      actions.add(
+          ACTION_OPEN_DIRECTORY, [&]() { return selection.size() == 1 && (bool)window.open; },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.open); });
+      actions.add(
+          ACTION_SET_FILE_PATH, [&]() { return selection.size() == 1 && (bool)window.path_set; },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.path_set); });
+      actions.add(
+          ACTION_ADD, [&]() { return (bool)window.add; },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.add); });
+      actions.add(
+          ACTION_REMOVE_UNUSED, [&]() { return (bool)window.remove; },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.remove); });
+      actions.add(
+          ACTION_RELOAD, [&]() { return !selection.empty() && (bool)window.reload; },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.reload); });
+      actions.add(
+          ACTION_REPLACE, [&]() { return selection.size() == 1 && (bool)window.replace; },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.replace); });
+      actions.add(
+          ACTION_MERGE, [&]() { return selection.size() > 1 && (bool)window.merge_open; },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.merge_open); });
+      actions.add(
+          ACTION_PACK, [&]() { return isPackable; },
+          [&]()
+          {
+            window.editId = *selection.begin();
+            window.popup2.open();
+          },
+          TOOLTIP_PACK_SPRITESHEET);
+      actions.add(
+          ACTION_SAVE, [&]() { return !selection.empty(); },
+          [&]()
+          {
+            if (settings.fileIsWarnOverwrite)
+            {
+              window.selection2 = selection;
+              window.popup3.open();
+            }
+            else if (window.save)
+              window_command_run(window, manager, settings, document, clipboard, window.save);
+          },
+          TOOLTIP_SAVE_SPRITESHEETS);
       actions.separator();
-      actions.add(ACTION_COPY, [&]() { return !selection.empty() && (bool)window.copy; },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.copy); });
-      actions.add(ACTION_PASTE, [&]() { return !clipboard.is_empty() && (bool)window.paste; },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.paste); });
+      actions.add(
+          ACTION_COPY, [&]() { return !selection.empty() && (bool)window.copy; },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.copy); });
+      actions.add(
+          ACTION_PASTE, [&]() { return !clipboard.is_empty() && (bool)window.paste; },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.paste); });
       actions_popup_draw("##Spritesheet Context Menu", actions, settings);
       ImGui::PopStyleVar(2);
     };
@@ -3568,15 +3558,17 @@ namespace anm2ed::imgui
 
       auto rowOneWidgetSize = widget_size_with_row_get(3);
       Actions rowOneActions{};
-      rowOneActions.add(ACTION_ADD, [&]() { return (bool)window.add; },
-                        [&]() { window_command_run(window, manager, settings, document, clipboard, window.add); },
-                        TOOLTIP_ADD_SPRITESHEET);
-      rowOneActions.add(ACTION_RELOAD, [&]() { return !selection.empty() && (bool)window.reload; },
-                        [&]() { window_command_run(window, manager, settings, document, clipboard, window.reload); },
-                        TOOLTIP_RELOAD_SPRITESHEETS);
-      rowOneActions.add(ACTION_REPLACE, [&]() { return selection.size() == 1 && (bool)window.replace; },
-                        [&]() { window_command_run(window, manager, settings, document, clipboard, window.replace); },
-                        TOOLTIP_REPLACE_SPRITESHEET);
+      rowOneActions.add(
+          ACTION_ADD, [&]() { return (bool)window.add; }, [&]()
+          { window_command_run(window, manager, settings, document, clipboard, window.add); }, TOOLTIP_ADD_SPRITESHEET);
+      rowOneActions.add(
+          ACTION_RELOAD, [&]() { return !selection.empty() && (bool)window.reload; },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.reload); },
+          TOOLTIP_RELOAD_SPRITESHEETS);
+      rowOneActions.add(
+          ACTION_REPLACE, [&]() { return selection.size() == 1 && (bool)window.replace; },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.replace); },
+          TOOLTIP_REPLACE_SPRITESHEET);
 
       bool isSameLine{};
       for (auto& action : rowOneActions.items)
@@ -3617,10 +3609,7 @@ namespace anm2ed::imgui
                                   {
                                     document.spritesheet_hash_set_saved(id);
                                     auto pathString = path::to_utf8(spritesheet->path);
-                                    toasts.push(std::vformat(localize.get(TOAST_REPLACE_SPRITESHEET),
-                                                             std::make_format_args(id, pathString)));
-                                    logger.info(std::vformat(localize.get(TOAST_REPLACE_SPRITESHEET, anm2ed::ENGLISH),
-                                                             std::make_format_args(id, pathString)));
+                                    toast_log(Level::INFO, TOAST_REPLACE_SPRITESHEET, id, pathString);
                                   }
                                 }});
         }
@@ -3646,20 +3635,13 @@ namespace anm2ed::imgui
                                     path::ensure_directory(newPath.parent_path());
                                     if (!texture->write_png(newPath))
                                     {
-                                      toasts.push(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET_FAILED),
-                                                               std::make_format_args(id, pathString)));
-                                      logger.error(
-                                          std::vformat(localize.get(TOAST_SAVE_SPRITESHEET_FAILED, anm2ed::ENGLISH),
-                                                       std::make_format_args(id, pathString)));
+                                      toast_log(Level::ERROR, TOAST_SAVE_SPRITESHEET_FAILED, id, pathString);
                                       return;
                                     }
                                     spritesheet->path = newPath;
                                     document.texturePaths[id] = spritesheet->path;
                                     document.spritesheet_hash_set_saved(id);
-                                    toasts.push(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET),
-                                                             std::make_format_args(id, pathString)));
-                                    logger.info(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET, anm2ed::ENGLISH),
-                                                             std::make_format_args(id, pathString)));
+                                    toast_log(Level::INFO, TOAST_SAVE_SPRITESHEET, id, pathString);
                                   };
 
                                   window_edit(document, Document::SPRITESHEETS,
@@ -3671,21 +3653,23 @@ namespace anm2ed::imgui
 
       auto rowTwoWidgetSize = widget_size_with_row_get(2);
       Actions rowTwoActions{};
-      rowTwoActions.add(ACTION_REMOVE_UNUSED, [&]() { return (bool)window.remove; },
-                        [&]() { window_command_run(window, manager, settings, document, clipboard, window.remove); },
-                        TOOLTIP_REMOVE_UNUSED_SPRITESHEETS);
-      rowTwoActions.add(ACTION_SAVE, [&]() { return !selection.empty(); },
-                        [&]()
-                        {
-                          if (settings.fileIsWarnOverwrite)
-                          {
-                            window.selection2 = selection;
-                            window.popup3.open();
-                          }
-                          else if (window.save)
-                            window_command_run(window, manager, settings, document, clipboard, window.save);
-                        },
-                        TOOLTIP_SAVE_SPRITESHEETS);
+      rowTwoActions.add(
+          ACTION_REMOVE_UNUSED, [&]() { return (bool)window.remove; },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.remove); },
+          TOOLTIP_REMOVE_UNUSED_SPRITESHEETS);
+      rowTwoActions.add(
+          ACTION_SAVE, [&]() { return !selection.empty(); },
+          [&]()
+          {
+            if (settings.fileIsWarnOverwrite)
+            {
+              window.selection2 = selection;
+              window.popup3.open();
+            }
+            else if (window.save)
+              window_command_run(window, manager, settings, document, clipboard, window.save);
+          },
+          TOOLTIP_SAVE_SPRITESHEETS);
 
       isSameLine = false;
       for (auto& action : rowTwoActions.items)
@@ -3757,9 +3741,7 @@ namespace anm2ed::imgui
                                           .isMakePrimaryRegion = settings.mergeSpritesheetsIsMakePrimaryRegion,
                                           .regionOrigin = (origin::Type)settings.mergeSpritesheetsRegionOrigin};
           manager.command_push({manager.selected, [queuedSelection, options](Manager&, Document& document) mutable
-                                {
-                                  window_spritesheets_merge(document, queuedSelection, options);
-                                }});
+                                { window_spritesheets_merge(document, queuedSelection, options); }});
           close();
         }
         ImGui::EndDisabled();
@@ -3889,9 +3871,7 @@ namespace anm2ed::imgui
           if (!sound) continue;
           document.sound_reload(id);
           auto pathString = path::to_utf8(sound->path);
-          toasts.push(std::vformat(localize.get(TOAST_RELOAD_SOUND), std::make_format_args(id, pathString)));
-          logger.info(
-              std::vformat(localize.get(TOAST_RELOAD_SOUND, anm2ed::ENGLISH), std::make_format_args(id, pathString)));
+          toast_log(Level::INFO, TOAST_RELOAD_SOUND, id, pathString);
         }
       };
 
@@ -3934,7 +3914,7 @@ namespace anm2ed::imgui
       std::string errorString{};
       if (pasted.deserialize(ElementType::SOUND_ELEMENT, clipboard.get(), true, &errorString, document.directory_get()))
       {
-        document.anm2_snapshot(localize.get(TOAST_SOUNDS_PASTE));
+        document.snapshots.anm2_push(localize.get(TOAST_SOUNDS_PASTE));
         anm2 = std::move(pasted);
         if (auto pastedSounds = anm2.element_get(ElementType::SOUNDS))
         {
@@ -3946,13 +3926,11 @@ namespace anm2ed::imgui
             reference = maxSoundIdAfter;
           }
         }
-        document.anm2_change(Document::SOUNDS);
+        document.change(Document::SOUNDS);
       }
       else
       {
-        toasts.push(std::vformat(localize.get(TOAST_SOUNDS_DESERIALIZE_ERROR), std::make_format_args(errorString)));
-        logger.error(std::vformat(localize.get(TOAST_SOUNDS_DESERIALIZE_ERROR, anm2ed::ENGLISH),
-                                  std::make_format_args(errorString)));
+        toast_log(Level::ERROR, TOAST_SOUNDS_DESERIALIZE_ERROR, errorString);
       }
     };
     window.rows_update = [](Window& window, Manager& manager, Settings& settings, Resources& resources,
@@ -4027,7 +4005,8 @@ namespace anm2ed::imgui
             ImGui::SetNextItemStorageID(id);
             if (scrollTargetId == id) ImGui::SetKeyboardFocusHere();
             auto isActivated = ImGui::Selectable("##Sound Selectable", isSelected, 0, soundChildSize);
-            auto isClicked = ImGui::IsItemClicked(ImGuiMouseButton_Left) || ImGui::IsItemClicked(ImGuiMouseButton_Right);
+            auto isClicked =
+                ImGui::IsItemClicked(ImGuiMouseButton_Left) || ImGui::IsItemClicked(ImGuiMouseButton_Right);
             if (isActivated || isClicked)
             {
               reference = id;
@@ -4126,23 +4105,31 @@ namespace anm2ed::imgui
       Actions actions{};
       actions_undo_redo_add(actions, manager, document);
       actions.separator();
-      actions.add(ACTION_PLAY, [&]() { return selection.size() == 1; }, [&]() { play(*selection.begin()); },
-                  STRING_UNDEFINED, -1);
-      actions.add(ACTION_OPEN_DIRECTORY, [&]() { return selection.size() == 1 && (bool)window.open; },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.open); });
-      actions.add(ACTION_ADD, [&]() { return (bool)window.add; },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.add); });
-      actions.add(ACTION_REMOVE_UNUSED, [&]() { return (bool)window.remove; },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.remove); });
-      actions.add(ACTION_RELOAD, [&]() { return !selection.empty() && (bool)window.reload; },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.reload); });
-      actions.add(ACTION_REPLACE, [&]() { return selection.size() == 1 && (bool)window.replace; },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.replace); });
+      actions.add(
+          ACTION_PLAY, [&]() { return selection.size() == 1; }, [&]() { play(*selection.begin()); }, STRING_UNDEFINED,
+          -1);
+      actions.add(
+          ACTION_OPEN_DIRECTORY, [&]() { return selection.size() == 1 && (bool)window.open; },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.open); });
+      actions.add(
+          ACTION_ADD, [&]() { return (bool)window.add; },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.add); });
+      actions.add(
+          ACTION_REMOVE_UNUSED, [&]() { return (bool)window.remove; },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.remove); });
+      actions.add(
+          ACTION_RELOAD, [&]() { return !selection.empty() && (bool)window.reload; },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.reload); });
+      actions.add(
+          ACTION_REPLACE, [&]() { return selection.size() == 1 && (bool)window.replace; },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.replace); });
       actions.separator();
-      actions.add(ACTION_COPY, [&]() { return !selection.empty() && (bool)window.copy; },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.copy); });
-      actions.add(ACTION_PASTE, [&]() { return !clipboard.is_empty() && (bool)window.paste; },
-                  [&]() { window_command_run(window, manager, settings, document, clipboard, window.paste); });
+      actions.add(
+          ACTION_COPY, [&]() { return !selection.empty() && (bool)window.copy; },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.copy); });
+      actions.add(
+          ACTION_PASTE, [&]() { return !clipboard.is_empty() && (bool)window.paste; },
+          [&]() { window_command_run(window, manager, settings, document, clipboard, window.paste); });
       actions_popup_draw("##Sound Context Menu", actions, settings);
       ImGui::PopStyleVar(2);
     };
@@ -4197,23 +4184,20 @@ namespace anm2ed::imgui
         {
           auto id = *selection.begin();
           auto dialogPath = window.dialog->path;
-          manager.command_push(
-              {manager.selected, [id, dialogPath](Manager&, Document& document)
-               {
-                 auto behavior = [&]()
-                 {
-                   auto sound = document.anm2.element_get(ElementType::SOUND_ELEMENT, id);
-                   if (!sound) return;
-                   sound->path = window_asset_path_get(document, dialogPath);
-                   document.sound_reload(id);
-                   auto pathString = path::to_utf8(sound->path);
-                   toasts.push(std::vformat(localize.get(TOAST_REPLACE_SOUND), std::make_format_args(id, pathString)));
-                   logger.info(std::vformat(localize.get(TOAST_REPLACE_SOUND, anm2ed::ENGLISH),
-                                            std::make_format_args(id, pathString)));
-                 };
+          manager.command_push({manager.selected, [id, dialogPath](Manager&, Document& document)
+                                {
+                                  auto behavior = [&]()
+                                  {
+                                    auto sound = document.anm2.element_get(ElementType::SOUND_ELEMENT, id);
+                                    if (!sound) return;
+                                    sound->path = window_asset_path_get(document, dialogPath);
+                                    document.sound_reload(id);
+                                    auto pathString = path::to_utf8(sound->path);
+                                    toast_log(Level::INFO, TOAST_REPLACE_SOUND, id, pathString);
+                                  };
 
-                 window_edit(document, Document::SOUNDS, localize.get(EDIT_REPLACE_SOUND), behavior);
-               }});
+                                  window_edit(document, Document::SOUNDS, localize.get(EDIT_REPLACE_SOUND), behavior);
+                                }});
         }
         window.dialog->reset();
       }
@@ -4303,18 +4287,17 @@ namespace anm2ed::imgui
                                       return;
                                     }
 
-                                    auto target =
-                                        child_id_get(*layers, ElementType::LAYER_ELEMENT, editedReference);
+                                    auto target = child_id_get(*layers, ElementType::LAYER_ELEMENT, editedReference);
                                     if (!target) return;
                                     changed.id = editedReference;
                                     *target = changed;
                                     document.layer.selection = {editedReference};
                                   };
 
-                                  window_edit(document, Document::LAYERS,
-                                              localize.get(editedReference == -1 ? EDIT_ADD_LAYER
-                                                                                 : EDIT_SET_LAYER_PROPERTIES),
-                                              behavior);
+                                  window_edit(
+                                      document, Document::LAYERS,
+                                      localize.get(editedReference == -1 ? EDIT_ADD_LAYER : EDIT_SET_LAYER_PROPERTIES),
+                                      behavior);
                                 }});
 
           manager.layer_properties_close();
@@ -4389,39 +4372,38 @@ namespace anm2ed::imgui
         {
           auto editedNull = null;
           auto editedReference = reference;
-          manager.command_push({manager.selected, [&window, editedNull, editedReference](Manager&, Document& document)
-                                {
-                                  auto behavior = [&]()
-                                  {
-                                    auto nulls = document.anm2.element_get(ElementType::NULLS);
-                                    if (!nulls) return;
-                                    auto changed = editedNull;
-                                    changed.type = ElementType::NULL_ELEMENT;
-                                    changed.tag = "Null";
+          manager.command_push(
+              {manager.selected, [&window, editedNull, editedReference](Manager&, Document& document)
+               {
+                 auto behavior = [&]()
+                 {
+                   auto nulls = document.anm2.element_get(ElementType::NULLS);
+                   if (!nulls) return;
+                   auto changed = editedNull;
+                   changed.type = ElementType::NULL_ELEMENT;
+                   changed.tag = "Null";
 
-                                    if (editedReference == -1)
-                                    {
-                                      auto id = element_child_next_id_get(*nulls, ElementType::NULL_ELEMENT);
-                                      changed.id = id;
-                                      nulls->children.push_back(changed);
-                                      document.null.selection = {id};
-                                      document.null.reference = id;
-                                      window.newElementId = id;
-                                      return;
-                                    }
+                   if (editedReference == -1)
+                   {
+                     auto id = element_child_next_id_get(*nulls, ElementType::NULL_ELEMENT);
+                     changed.id = id;
+                     nulls->children.push_back(changed);
+                     document.null.selection = {id};
+                     document.null.reference = id;
+                     window.newElementId = id;
+                     return;
+                   }
 
-                                    auto target = child_id_get(*nulls, ElementType::NULL_ELEMENT, editedReference);
-                                    if (!target) return;
-                                    changed.id = editedReference;
-                                    *target = changed;
-                                    document.null.selection = {editedReference};
-                                  };
+                   auto target = child_id_get(*nulls, ElementType::NULL_ELEMENT, editedReference);
+                   if (!target) return;
+                   changed.id = editedReference;
+                   *target = changed;
+                   document.null.selection = {editedReference};
+                 };
 
-                                  window_edit(document, Document::NULLS,
-                                              localize.get(editedReference == -1 ? EDIT_ADD_NULL
-                                                                                 : EDIT_SET_NULL_PROPERTIES),
-                                              behavior);
-                                }});
+                 window_edit(document, Document::NULLS,
+                             localize.get(editedReference == -1 ? EDIT_ADD_NULL : EDIT_SET_NULL_PROPERTIES), behavior);
+               }});
 
           manager.null_properties_close();
         }

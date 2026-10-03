@@ -27,18 +27,18 @@ namespace anm2ed::imgui
     uint64_t documentId{};
   };
 
-#define ANM2_DRAG_DROP_MERGE_PRESETS                                                                                    \
+#define ANM2_DRAG_DROP_MERGE_PRESETS                                                                                   \
   X(FILE_MERGE_PRESET_MERGE_BY_NAME, BASIC_MERGE, TOOLTIP_MERGE_PRESET_MERGE_BY_NAME)                                  \
-  X(FILE_MERGE_PRESET_APPEND_AS_NEW, BASIC_APPEND, TOOLTIP_MERGE_PRESET_APPEND_AS_NEW)                                  \
+  X(FILE_MERGE_PRESET_APPEND_AS_NEW, BASIC_APPEND, TOOLTIP_MERGE_PRESET_APPEND_AS_NEW)                                 \
   X(FILE_MERGE_PRESET_REPLACE_MATCHING, BASIC_REPLACE, TOOLTIP_MERGE_PRESET_REPLACE_MATCHING)
 
-  constexpr StringType ANM2_DRAG_DROP_MERGE_PRESET_LABELS[Document::FILE_MERGE_PRESET_COUNT] = {
+  constexpr StringType ANM2_DRAG_DROP_MERGE_PRESET_LABELS[FILE_MERGE_PRESET_COUNT] = {
 #define X(preset, label, tooltip) label,
       ANM2_DRAG_DROP_MERGE_PRESETS
 #undef X
   };
 
-  constexpr StringType ANM2_DRAG_DROP_MERGE_PRESET_TOOLTIPS[Document::FILE_MERGE_PRESET_COUNT] = {
+  constexpr StringType ANM2_DRAG_DROP_MERGE_PRESET_TOOLTIPS[FILE_MERGE_PRESET_COUNT] = {
 #define X(preset, label, tooltip) tooltip,
       ANM2_DRAG_DROP_MERGE_PRESETS
 #undef X
@@ -47,13 +47,13 @@ namespace anm2ed::imgui
 #undef ANM2_DRAG_DROP_MERGE_PRESETS
 
   void anm2_drag_drop_merge_queue(Manager& manager, const std::vector<std::filesystem::path>& paths,
-                                  Document::FileMergePreset preset)
+                                  FileMergePreset preset)
   {
-    manager.command_push({manager.selected,
-                          [paths, preset](Manager&, Document& document)
+    manager.command_push({manager.selected, [paths, preset](Manager&, Document& document)
                           {
-                            document.anm2_snapshot(localize.get(EDIT_MERGE_ANM2));
-                            for (auto& path : paths) document.file_merge(path, preset);
+                            document.snapshots.anm2_push(localize.get(EDIT_MERGE_ANM2));
+                            for (auto& path : paths)
+                              document.anm2.file_merge(path, document.directory_get(), preset);
                             document.change(Document::ALL);
                           }});
   }
@@ -70,8 +70,8 @@ namespace anm2ed::imgui
     order.reserve(manager.documents.size());
     for (auto documentId : pendingDocumentTabIds)
     {
-      auto it = std::ranges::find_if(manager.documents, [documentId](const Document& document)
-                                     { return document.tabId == documentId; });
+      auto it = std::ranges::find_if(manager.documents,
+                                     [documentId](const Document& document) { return document.tabId == documentId; });
       if (it == manager.documents.end())
       {
         pendingDocumentTabIds.clear();
@@ -115,7 +115,8 @@ namespace anm2ed::imgui
     index_remap(manager.selected);
     index_remap(manager.pendingSelected);
     index_remap(closeDocumentIndex);
-    for (auto& index : manager.selectionHistory) index_remap(index);
+    for (auto& index : manager.selectionHistory)
+      index_remap(index);
     for (auto& command : manager.commands)
       if (!command.runManager) index_remap(command.documentIndex);
     std::erase(manager.selectionHistory, -1);
@@ -151,8 +152,8 @@ namespace anm2ed::imgui
         if (document.lastAutosaveTime > time::SECOND_M)
         {
           auto options = settings.anm2_options_get();
-          manager.command_push({i, [options](Manager& manager, Document& document)
-                                { manager.autosave(document, options); }});
+          manager.command_push(
+              {i, [options](Manager& manager, Document& document) { manager.autosave(document, options); }});
         }
       }
     }
@@ -324,17 +325,11 @@ namespace anm2ed::imgui
                     if (texture->write_png(savePath))
                     {
                       closeDocument.spritesheet_hash_set_saved(id);
-                      toasts.push(
-                          std::vformat(localize.get(TOAST_SAVE_SPRITESHEET), std::make_format_args(id, pathString)));
-                      logger.info(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET, anm2ed::ENGLISH),
-                                               std::make_format_args(id, pathString)));
+                      toast_log(Level::INFO, TOAST_SAVE_SPRITESHEET, id, pathString);
                     }
                     else
                     {
-                      toasts.push(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET_FAILED),
-                                               std::make_format_args(id, pathString)));
-                      logger.error(std::vformat(localize.get(TOAST_SAVE_SPRITESHEET_FAILED, anm2ed::ENGLISH),
-                                                std::make_format_args(id, pathString)));
+                      toast_log(Level::ERROR, TOAST_SAVE_SPRITESHEET_FAILED, id, pathString);
                     }
                   }
                 }
@@ -350,12 +345,11 @@ namespace anm2ed::imgui
           if (ImGui::Button(localize.get(BASIC_NO), widgetSize))
           {
             auto index = closeDocumentIndex;
-            manager.command_push({.runManager =
-                                      [index](Manager& manager)
-                                      {
-                                        manager.autosave_file_clear(index);
-                                        manager.close(index);
-                                      }});
+            manager.command_push({.runManager = [index](Manager& manager)
+                                  {
+                                    manager.autosave_file_clear(index);
+                                    manager.close(index);
+                                  }});
             close();
           }
 
@@ -389,7 +383,7 @@ namespace anm2ed::imgui
         manager.anm2DragDropPaths.clear();
         manager.anm2DragDropPopup.close();
         manager.anm2DragDropMergePopup.close();
-        manager.anm2DragDropMergePreset = Document::FILE_MERGE_PRESET_MERGE_BY_NAME;
+        manager.anm2DragDropMergePreset = FILE_MERGE_PRESET_MERGE_BY_NAME;
       };
 
       if (manager.anm2DragDropPaths.empty())
@@ -402,10 +396,9 @@ namespace anm2ed::imgui
                                    ImGuiWindowFlags_NoResize))
         {
           auto document = manager.get();
-          manager.anm2DragDropMergePreset =
-              std::clamp(manager.anm2DragDropMergePreset, 0, Document::FILE_MERGE_PRESET_COUNT - 1);
+          manager.anm2DragDropMergePreset = std::clamp(manager.anm2DragDropMergePreset, 0, FILE_MERGE_PRESET_COUNT - 1);
 
-          for (int preset = 0; preset < Document::FILE_MERGE_PRESET_COUNT; ++preset)
+          for (int preset = 0; preset < FILE_MERGE_PRESET_COUNT; ++preset)
           {
             ImGui::PushID(preset);
             ImGui::RadioButton(localize.get(ANM2_DRAG_DROP_MERGE_PRESET_LABELS[preset]),
@@ -420,7 +413,7 @@ namespace anm2ed::imgui
           if (ImGui::Button(localize.get(BASIC_MERGE), widgetSize))
           {
             auto paths = manager.anm2DragDropPaths;
-            auto preset = (Document::FileMergePreset)manager.anm2DragDropMergePreset;
+            auto preset = (FileMergePreset)manager.anm2DragDropMergePreset;
             anm2_drag_drop_merge_queue(manager, paths, preset);
             drag_drop_reset();
           }
@@ -452,11 +445,11 @@ namespace anm2ed::imgui
                                                                    : localize.get(LABEL_DOCUMENTS_OPEN_NEW)))
           {
             auto paths = manager.anm2DragDropPaths;
-            manager.command_push({.runManager =
-                                      [paths](Manager& manager)
-                                      {
-                                        for (auto& path : paths) manager.open(path);
-                                      }});
+            manager.command_push({.runManager = [paths](Manager& manager)
+                                  {
+                                    for (auto& path : paths)
+                                      manager.open(path);
+                                  }});
             drag_drop_reset();
           }
 

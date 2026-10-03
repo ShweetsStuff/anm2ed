@@ -49,9 +49,9 @@ namespace anm2ed::imgui
                                 auto item = document.anm2.element_get(itemReference);
                                 if (!frame) return;
 
-                                document.frames_snapshot(localize.get(message), {queuedReference});
+                                document.snapshots.frames_push(localize.get(message), {queuedReference});
                                 behavior(document, *frame, item, queuedReference);
-                                document.anm2_change(Document::FRAMES);
+                                document.change(Document::FRAMES);
                               }});
       };
 
@@ -70,9 +70,9 @@ namespace anm2ed::imgui
                                 if (!frame) return;
 
                                 if (state == edit::START)
-                                  document.frames_snapshot(localize.get(message), {queuedReference});
+                                  document.snapshots.frames_push(localize.get(message), {queuedReference});
                                 behavior(document, *frame, item, queuedReference);
-                                if (state == edit::END) document.anm2_change(Document::FRAMES);
+                                if (state == edit::END) document.change(Document::FRAMES);
                               }});
       };
 

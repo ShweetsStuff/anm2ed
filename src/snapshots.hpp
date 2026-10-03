@@ -137,14 +137,14 @@ namespace anm2ed
     Snapshot current{};
     std::optional<SnapshotStep> pendingStep{};
 
-    Snapshot* get();
-    void anm2_push(const Snapshot&, const std::string&);
-    void tracks_push(const Snapshot&, const std::string&, const std::set<Reference>&);
-    void frames_push(const Snapshot&, const std::string&, const std::set<Reference>&);
-    void regions_push(const Snapshot&, const std::string&, int, const std::set<int>&);
-    void textures_push(const Snapshot&, const std::string&);
-    void anm2_textures_push(const Snapshot&, const std::string&);
-    void commit(const Snapshot&);
+    void anm2_push(const std::string&);
+    void tracks_push(const std::string&, const std::set<Reference>&);
+    void frames_push(const std::string&, const std::set<Reference>&);
+    void regions_push(const std::string&, int, const std::set<int>&);
+    void textures_push(const std::string&);
+    void anm2_textures_push(const std::string&);
+    void step_push(const std::string&, SnapshotStep);
+    void commit();
     bool undo();
     bool redo();
     void reset();

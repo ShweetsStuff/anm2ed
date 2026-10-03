@@ -83,9 +83,7 @@ namespace anm2ed::imgui
       return -1;
     };
     track_container_get = [&](int type)
-    {
-      return animation ? child_first_get(*animation, container_type_get(type)) : nullptr;
-    };
+    { return animation ? child_first_get(*animation, container_type_get(type)) : nullptr; };
     track_group_get = [&](int type, int groupId)
     {
       auto container = track_container_get(type);
@@ -98,9 +96,7 @@ namespace anm2ed::imgui
       return !group || group->isVisible;
     };
     row_group_get = [&](const TimelineItemRow& row) -> Element*
-    {
-      return row.isGroup ? track_group_get(row.type, row.id) : nullptr;
-    };
+    { return row.isGroup ? track_group_get(row.type, row.id) : nullptr; };
     group_items_count_get = [&](int type, int groupId)
     {
       auto container = track_container_get(type);
@@ -114,8 +110,8 @@ namespace anm2ed::imgui
 
     command_animation_get = [](Document& document, int animationIndex)
     { return document.anm2.element_get(ElementType::ANIMATION, animationIndex); };
-    command_item_get = [](Document& document, int animationIndex, int type, int id, int groupType = NONE,
-                               int groupId = -1)
+    command_item_get =
+        [](Document& document, int animationIndex, int type, int id, int groupType = NONE, int groupId = -1)
     {
       auto animation = document.anm2.element_get(ElementType::ANIMATION, animationIndex);
       return animation ? animation_item_get(*animation, static_cast<ItemType>(type), id, groupType, groupId) : nullptr;
@@ -134,8 +130,7 @@ namespace anm2ed::imgui
     { return document.anm2.element_get(ElementType::LAYER_ELEMENT, id); };
     command_spritesheet_get = [](Document& document, int id)
     { return document.anm2.element_get(ElementType::SPRITESHEET, id); };
-    command_info_get = [](Document& document)
-    { return element_first_get(document.anm2.root, ElementType::INFO); };
+    command_info_get = [](Document& document) { return element_first_get(document.anm2.root, ElementType::INFO); };
     item_reference_get = [&](int type, int id, int groupType = NONE, int groupId = -1)
     { return Reference{reference.animationIndex, type, id, -1, groupType, groupId}; };
     item_reference_from_frame_get = [](Reference frameReference)
@@ -211,8 +206,8 @@ namespace anm2ed::imgui
       targetDocument.frame_references_set(std::move(selection));
       frames_selection_sync_for(targetDocument);
     };
-    frame_selection_range_set_for = [&](Document& targetDocument, Reference firstReference,
-                                             Reference lastReference, bool isAdditive) -> bool
+    frame_selection_range_set_for = [&](Document& targetDocument, Reference firstReference, Reference lastReference,
+                                        bool isAdditive) -> bool
     {
       group_selection_reset_for(targetDocument);
       targetDocument.editTarget = Document::EditTarget::FRAME;
@@ -243,8 +238,7 @@ namespace anm2ed::imgui
       frames_selection_sync_for(targetDocument);
       return true;
     };
-    all_frame_references_for_items_get = [&]()
-    { return document.selected_item_frame_references_get(); };
+    all_frame_references_for_items_get = [&]() { return document.selected_item_frame_references_get(); };
     is_frame_copy_item = [](const Reference& itemReference)
     { return itemReference.itemType == ROOT || itemReference.itemType == LAYER || itemReference.itemType == NULL_; };
     copy_frame_references_get = [&]()
@@ -334,8 +328,8 @@ namespace anm2ed::imgui
     };
     command_push = [&](auto run)
     {
-      manager.command_push({manager.selected,
-                            [run](Manager& manager, Document& document) mutable { run(manager, document); }});
+      manager.command_push(
+          {manager.selected, [run](Manager& manager, Document& document) mutable { run(manager, document); }});
     };
     track_references_from_frame_references_get = [](std::set<Reference> frameReferences)
     {
@@ -351,56 +345,51 @@ namespace anm2ed::imgui
     {
       auto message = std::string(localize.get(messageType));
       auto queuedTrackReferences = trackReferences;
-      manager.command_push({manager.selected,
-                            [message, queuedTrackReferences](Manager&, Document& document)
-                            { document.tracks_snapshot(message, queuedTrackReferences); }});
+      manager.command_push({manager.selected, [message, queuedTrackReferences](Manager&, Document& document)
+                            { document.snapshots.tracks_push(message, queuedTrackReferences); }});
     };
     frames_snapshot_command_push = [&](StringType messageType, const std::set<Reference>& frameReferences)
     {
       auto message = std::string(localize.get(messageType));
       auto queuedFrameReferences = frameReferences;
-      manager.command_push({manager.selected,
-                            [message, queuedFrameReferences](Manager&, Document& document)
-                            { document.frames_snapshot(message, queuedFrameReferences); }});
+      manager.command_push({manager.selected, [message, queuedFrameReferences](Manager&, Document& document)
+                            { document.snapshots.frames_push(message, queuedFrameReferences); }});
     };
     frames_edit_command_push = [&](StringType messageType, Document::ChangeType changeType,
-                                        const std::set<Reference>& frameReferences, auto run)
+                                   const std::set<Reference>& frameReferences, auto run)
     {
       auto message = std::string(localize.get(messageType));
       auto queuedFrameReferences = frameReferences;
-      manager.command_push({manager.selected,
-                            [=, this](Manager& manager, Document& document) mutable
+      manager.command_push({manager.selected, [=, this](Manager& manager, Document& document) mutable
                             {
                               (void)changeType;
-                              document.frames_snapshot(message, queuedFrameReferences);
+                              document.snapshots.frames_push(message, queuedFrameReferences);
                               run(manager, document);
-                              document.anm2_change(changeType);
+                              document.change(changeType);
                             }});
     };
     tracks_edit_command_push = [&](StringType messageType, Document::ChangeType changeType,
-                                        const std::set<Reference>& trackReferences, auto run)
+                                   const std::set<Reference>& trackReferences, auto run)
     {
       auto message = std::string(localize.get(messageType));
       auto queuedTrackReferences = trackReferences;
-      manager.command_push({manager.selected,
-                            [=, this](Manager& manager, Document& document) mutable
+      manager.command_push({manager.selected, [=, this](Manager& manager, Document& document) mutable
                             {
                               (void)changeType;
-                              document.tracks_snapshot(message, queuedTrackReferences);
+                              document.snapshots.tracks_push(message, queuedTrackReferences);
                               run(manager, document);
-                              document.anm2_change(changeType);
+                              document.change(changeType);
                             }});
     };
     edit_command_push = [&](StringType messageType, Document::ChangeType changeType, auto run)
     {
       auto message = std::string(localize.get(messageType));
-      manager.command_push({manager.selected,
-                            [=, this](Manager& manager, Document& document) mutable
+      manager.command_push({manager.selected, [=, this](Manager& manager, Document& document) mutable
                             {
                               (void)changeType;
-                              document.anm2_snapshot(message);
+                              document.snapshots.anm2_push(message);
                               run(manager, document);
-                              document.anm2_change(changeType);
+                              document.change(changeType);
                             }});
     };
     type_color_base_vec = [&](int type)
@@ -435,15 +424,13 @@ namespace anm2ed::imgui
     frameBorderColor = isLightTheme ? FRAME_BORDER_COLOR_LIGHT : FRAME_BORDER_COLOR_DARK;
     frameBorderColorReferenced =
         isLightTheme ? FRAME_BORDER_COLOR_REFERENCED_LIGHT : FRAME_BORDER_COLOR_REFERENCED_DARK;
-    frameMultipleOverlayColor =
-        isLightTheme ? FRAME_MULTIPLE_OVERLAY_COLOR_LIGHT : FRAME_MULTIPLE_OVERLAY_COLOR_DARK;
+    frameMultipleOverlayColor = isLightTheme ? FRAME_MULTIPLE_OVERLAY_COLOR_LIGHT : FRAME_MULTIPLE_OVERLAY_COLOR_DARK;
     textMultipleColor = isLightTheme ? TEXT_MULTIPLE_COLOR_LIGHT : TEXT_MULTIPLE_COLOR_DARK;
     playheadLineColor = isLightTheme ? PLAYHEAD_LINE_COLOR_LIGHT : PLAYHEAD_LINE_COLOR_DARK;
     playheadIconTint = isLightTheme ? PLAYHEAD_ICON_TINT_LIGHT : iconTintDefault;
     timelineBackgroundColor =
         isLightTheme ? TIMELINE_BACKGROUND_COLOR_LIGHT : ImGui::GetStyleColorVec4(ImGuiCol_Header);
-    timelinePlayheadRectColor =
-        isLightTheme ? TIMELINE_PLAYHEAD_RECT_COLOR_LIGHT : TIMELINE_PLAYHEAD_RECT_COLOR_DARK;
+    timelinePlayheadRectColor = isLightTheme ? TIMELINE_PLAYHEAD_RECT_COLOR_LIGHT : TIMELINE_PLAYHEAD_RECT_COLOR_DARK;
     timelineTickColor = isLightTheme ? TIMELINE_TICK_COLOR_LIGHT : frameBorderColor;
     itemTextColor = isLightTheme ? ITEM_TEXT_COLOR_LIGHT : ITEM_TEXT_COLOR_DARK;
 
@@ -456,10 +443,7 @@ namespace anm2ed::imgui
                                            ImGui::GetColorU32(tint));
     };
 
-    frames_selection_set_reference = [&]()
-    {
-      frames_selection_set_reference_for(document);
-    };
+    frames_selection_set_reference = [&]() { frames_selection_set_reference_for(document); };
 
     playback_stop = [&]()
     {
@@ -472,57 +456,56 @@ namespace anm2ed::imgui
     {
       auto targetReference = reference;
       auto targetFrameTime = document.frameTime;
-      if (!animation || !command_item_reference_get(document, targetReference))
-        return;
+      if (!animation || !command_item_reference_get(document, targetReference)) return;
 
       tracks_edit_command_push(EDIT_INSERT_FRAME, Document::FRAMES, {targetReference},
                                [=, this](Manager&, Document& document) mutable
                                {
-                          auto animation = command_animation_get(document, targetReference.animationIndex);
-                          auto item = command_item_reference_get(document, targetReference);
-                          if (!animation || !item) return;
+                                 auto animation = command_animation_get(document, targetReference.animationIndex);
+                                 auto item = command_item_reference_get(document, targetReference);
+                                 if (!animation || !item) return;
 
-                          auto newReference = targetReference;
+                                 auto newReference = targetReference;
 
-                          if (targetReference.itemType == TRIGGER)
-                          {
-                            for (auto& trigger : item->children)
-                              if (targetFrameTime == trigger.atFrame) return;
+                                 if (targetReference.itemType == TRIGGER)
+                                 {
+                                   for (auto& trigger : item->children)
+                                     if (targetFrameTime == trigger.atFrame) return;
 
-                            auto addFrame = element_make(ElementType::TRIGGER);
-                            addFrame.atFrame = targetFrameTime;
-                            item->children.push_back(addFrame);
-                            frames_sort_by_at_frame(*item);
-                            newReference.frameIndex = frame_index_from_at_frame_get(*item, addFrame.atFrame);
-                          }
-                          else
-                          {
-                            auto frame = command_frame_get(document, targetReference);
-                            auto framesCount = item_frames_count(item);
-                            if (frame)
-                            {
-                              auto addFrame = *frame;
-                              auto insertIndex = std::clamp(targetReference.frameIndex + 1, 0, framesCount);
-                              auto childIndex = item_frame_insert_index_get(*item, insertIndex);
-                              item->children.insert(item->children.begin() + childIndex, addFrame);
-                              newReference.frameIndex = insertIndex;
-                            }
-                            else if (auto lastFrame = track_frame_get(*item, framesCount - 1))
-                            {
-                              item->children.emplace_back(*lastFrame);
-                              newReference.frameIndex = framesCount;
-                            }
-                            else
-                            {
-                              item->children.emplace_back(element_make(ElementType::FRAME));
-                              newReference.frameIndex = 0;
-                            }
-                          }
+                                   auto addFrame = element_make(ElementType::TRIGGER);
+                                   addFrame.atFrame = targetFrameTime;
+                                   item->children.push_back(addFrame);
+                                   frames_sort_by_at_frame(*item);
+                                   newReference.frameIndex = frame_index_from_at_frame_get(*item, addFrame.atFrame);
+                                 }
+                                 else
+                                 {
+                                   auto frame = command_frame_get(document, targetReference);
+                                   auto framesCount = item_frames_count(item);
+                                   if (frame)
+                                   {
+                                     auto addFrame = *frame;
+                                     auto insertIndex = std::clamp(targetReference.frameIndex + 1, 0, framesCount);
+                                     auto childIndex = item_frame_insert_index_get(*item, insertIndex);
+                                     item->children.insert(item->children.begin() + childIndex, addFrame);
+                                     newReference.frameIndex = insertIndex;
+                                   }
+                                   else if (auto lastFrame = track_frame_get(*item, framesCount - 1))
+                                   {
+                                     item->children.emplace_back(*lastFrame);
+                                     newReference.frameIndex = framesCount;
+                                   }
+                                   else
+                                   {
+                                     item->children.emplace_back(element_make(ElementType::FRAME));
+                                     newReference.frameIndex = 0;
+                                   }
+                                 }
 
-                          document.reference = newReference;
-                          frames_selection_set_reference_for(document);
-                          if (newReference.itemType != TRIGGER)
-                            document.frameTime = frame_time_from_index_get(*item, newReference.frameIndex);
+                                 document.reference = newReference;
+                                 frames_selection_set_reference_for(document);
+                                 if (newReference.itemType != TRIGGER)
+                                   document.frameTime = frame_time_from_index_get(*item, newReference.frameIndex);
                                });
     };
 
@@ -572,81 +555,79 @@ namespace anm2ed::imgui
     frames_duplicate = [&]()
     {
       auto selectedFrames = frame_references_for_current_get();
-      std::erase_if(selectedFrames,
-                    [](const Reference& frameReference) { return frameReference.itemType == TRIGGER; });
+      std::erase_if(selectedFrames, [](const Reference& frameReference) { return frameReference.itemType == TRIGGER; });
       if (selectedFrames.empty()) return;
 
       auto trackReferences = track_references_from_frame_references_get(selectedFrames);
       tracks_edit_command_push(EDIT_DUPLICATE_FRAMES, Document::FRAMES, trackReferences,
                                [=, this](Manager&, Document& document) mutable
                                {
-                          std::map<Reference, std::set<int>> groupedFrames{};
-                          for (auto frameReference : selectedFrames)
-                          {
-                            auto itemReference = item_reference_from_frame_get(frameReference);
-                            groupedFrames[itemReference].insert(frameReference.frameIndex);
-                          }
+                                 std::map<Reference, std::set<int>> groupedFrames{};
+                                 for (auto frameReference : selectedFrames)
+                                 {
+                                   auto itemReference = item_reference_from_frame_get(frameReference);
+                                   groupedFrames[itemReference].insert(frameReference.frameIndex);
+                                 }
 
-                          std::set<Reference> duplicatedSelection{};
-                          auto newReference = document.reference;
-                          bool isReferenceSet{};
+                                 std::set<Reference> duplicatedSelection{};
+                                 auto newReference = document.reference;
+                                 bool isReferenceSet{};
 
-                          for (auto& [itemReference, indices] : groupedFrames)
-                          {
-                            auto item = command_item_reference_get(document, itemReference);
-                            if (!item) continue;
+                                 for (auto& [itemReference, indices] : groupedFrames)
+                                 {
+                                   auto item = command_item_reference_get(document, itemReference);
+                                   if (!item) continue;
 
-                            std::vector<int> validIndices{};
-                            std::vector<Element> duplicatedFrames{};
-                            for (auto i : indices)
-                            {
-                              auto frame = track_frame_get(*item, i);
-                              if (!frame) continue;
-                              validIndices.push_back(i);
-                              duplicatedFrames.push_back(*frame);
-                            }
-                            if (validIndices.empty()) continue;
+                                   std::vector<int> validIndices{};
+                                   std::vector<Element> duplicatedFrames{};
+                                   for (auto i : indices)
+                                   {
+                                     auto frame = track_frame_get(*item, i);
+                                     if (!frame) continue;
+                                     validIndices.push_back(i);
+                                     duplicatedFrames.push_back(*frame);
+                                   }
+                                   if (validIndices.empty()) continue;
 
-                            auto insertIndex = validIndices.back() + 1;
-                            auto childIndex = item_frame_insert_index_get(*item, insertIndex);
-                            item->children.insert(item->children.begin() + childIndex,
-                                                  std::make_move_iterator(duplicatedFrames.begin()),
-                                                  std::make_move_iterator(duplicatedFrames.end()));
+                                   auto insertIndex = validIndices.back() + 1;
+                                   auto childIndex = item_frame_insert_index_get(*item, insertIndex);
+                                   item->children.insert(item->children.begin() + childIndex,
+                                                         std::make_move_iterator(duplicatedFrames.begin()),
+                                                         std::make_move_iterator(duplicatedFrames.end()));
 
-                            for (int offset = 0; offset < (int)validIndices.size(); ++offset)
-                            {
-                              auto targetReference = itemReference;
-                              targetReference.frameIndex = insertIndex + offset;
-                              duplicatedSelection.insert(targetReference);
-                              auto sourceReference = itemReference;
-                              sourceReference.frameIndex = validIndices[offset];
-                              if (sourceReference == document.reference)
-                              {
-                                newReference = targetReference;
-                                isReferenceSet = true;
-                              }
-                            }
-                          }
+                                   for (int offset = 0; offset < (int)validIndices.size(); ++offset)
+                                   {
+                                     auto targetReference = itemReference;
+                                     targetReference.frameIndex = insertIndex + offset;
+                                     duplicatedSelection.insert(targetReference);
+                                     auto sourceReference = itemReference;
+                                     sourceReference.frameIndex = validIndices[offset];
+                                     if (sourceReference == document.reference)
+                                     {
+                                       newReference = targetReference;
+                                       isReferenceSet = true;
+                                     }
+                                   }
+                                 }
 
-                          if (duplicatedSelection.empty()) return;
-                          document.reference = isReferenceSet ? newReference : *duplicatedSelection.begin();
-                          document.frame_references_set(std::move(duplicatedSelection));
-                          if (auto item = command_item_reference_get(document, document.reference))
-                            document.frameTime = frame_time_from_index_get(*item, document.reference.frameIndex);
-                          frames_selection_sync_for(document);
-                          frameSelectionSnapshotReference = document.reference;
-                          frameSelectionLocked.clear();
-                          isFrameSelectionLocked = false;
-                          frameFocusIndex = document.reference.frameIndex;
-                          frameFocusRequested = true;
+                                 if (duplicatedSelection.empty()) return;
+                                 document.reference = isReferenceSet ? newReference : *duplicatedSelection.begin();
+                                 document.frame_references_set(std::move(duplicatedSelection));
+                                 if (auto item = command_item_reference_get(document, document.reference))
+                                   document.frameTime = frame_time_from_index_get(*item, document.reference.frameIndex);
+                                 frames_selection_sync_for(document);
+                                 frameSelectionSnapshotReference = document.reference;
+                                 frameSelectionLocked.clear();
+                                 isFrameSelectionLocked = false;
+                                 frameFocusIndex = document.reference.frameIndex;
+                                 frameFocusRequested = true;
                                });
     };
 
     is_frames_reverse_available = [&](std::set<Reference> selectedFrames)
     {
       std::map<Reference, int> counts{};
-      std::erase_if(selectedFrames,
-                    [](const Reference& frameReference) { return frameReference.itemType == TRIGGER; });
+      std::erase_if(selectedFrames, [](const Reference& frameReference) { return frameReference.itemType == TRIGGER; });
       for (auto frameReference : selectedFrames)
       {
         auto itemReference = item_reference_from_frame_get(frameReference);
@@ -658,81 +639,80 @@ namespace anm2ed::imgui
     frames_reverse = [&]()
     {
       auto selectedFrames = frame_references_for_current_get();
-      std::erase_if(selectedFrames,
-                    [](const Reference& frameReference) { return frameReference.itemType == TRIGGER; });
+      std::erase_if(selectedFrames, [](const Reference& frameReference) { return frameReference.itemType == TRIGGER; });
       if (!is_frames_reverse_available(selectedFrames)) return;
 
       auto trackReferences = track_references_from_frame_references_get(selectedFrames);
       tracks_edit_command_push(EDIT_REVERSE_FRAMES, Document::FRAMES, trackReferences,
                                [=, this](Manager&, Document& document) mutable
                                {
-                          std::map<Reference, std::set<int>> groupedFrames{};
-                          for (auto frameReference : selectedFrames)
-                          {
-                            auto itemReference = item_reference_from_frame_get(frameReference);
-                            groupedFrames[itemReference].insert(frameReference.frameIndex);
-                          }
+                                 std::map<Reference, std::set<int>> groupedFrames{};
+                                 for (auto frameReference : selectedFrames)
+                                 {
+                                   auto itemReference = item_reference_from_frame_get(frameReference);
+                                   groupedFrames[itemReference].insert(frameReference.frameIndex);
+                                 }
 
-                          std::set<Reference> reversedSelection{};
-                          auto newReference = document.reference;
-                          bool isReferenceSet{};
+                                 std::set<Reference> reversedSelection{};
+                                 auto newReference = document.reference;
+                                 bool isReferenceSet{};
 
-                          for (auto& [itemReference, indices] : groupedFrames)
-                          {
-                            auto item = command_item_reference_get(document, itemReference);
-                            if (!item || indices.size() < 2) continue;
+                                 for (auto& [itemReference, indices] : groupedFrames)
+                                 {
+                                   auto item = command_item_reference_get(document, itemReference);
+                                   if (!item || indices.size() < 2) continue;
 
-                            std::vector<int> validIndices{};
-                            std::vector<Element> reversedFrames{};
-                            for (auto i : indices)
-                            {
-                              auto frame = track_frame_get(*item, i);
-                              if (!frame) continue;
-                              validIndices.push_back(i);
-                              reversedFrames.push_back(std::move(*frame));
-                            }
-                            if (validIndices.size() < 2) continue;
+                                   std::vector<int> validIndices{};
+                                   std::vector<Element> reversedFrames{};
+                                   for (auto i : indices)
+                                   {
+                                     auto frame = track_frame_get(*item, i);
+                                     if (!frame) continue;
+                                     validIndices.push_back(i);
+                                     reversedFrames.push_back(std::move(*frame));
+                                   }
+                                   if (validIndices.size() < 2) continue;
 
-                            auto insertIndex = validIndices.front();
-                            for (auto it = validIndices.rbegin(); it != validIndices.rend(); ++it)
-                            {
-                              auto childIndex = item_frame_child_index_get(*item, *it);
-                              if (childIndex != -1) item->children.erase(item->children.begin() + childIndex);
-                            }
+                                   auto insertIndex = validIndices.front();
+                                   for (auto it = validIndices.rbegin(); it != validIndices.rend(); ++it)
+                                   {
+                                     auto childIndex = item_frame_child_index_get(*item, *it);
+                                     if (childIndex != -1) item->children.erase(item->children.begin() + childIndex);
+                                   }
 
-                            std::ranges::reverse(reversedFrames);
-                            auto childIndex = item_frame_insert_index_get(*item, insertIndex);
-                            item->children.insert(item->children.begin() + childIndex,
-                                                  std::make_move_iterator(reversedFrames.begin()),
-                                                  std::make_move_iterator(reversedFrames.end()));
+                                   std::ranges::reverse(reversedFrames);
+                                   auto childIndex = item_frame_insert_index_get(*item, insertIndex);
+                                   item->children.insert(item->children.begin() + childIndex,
+                                                         std::make_move_iterator(reversedFrames.begin()),
+                                                         std::make_move_iterator(reversedFrames.end()));
 
-                            for (int offset = 0; offset < (int)validIndices.size(); ++offset)
-                            {
-                              auto targetReference = itemReference;
-                              targetReference.frameIndex = insertIndex + offset;
-                              reversedSelection.insert(targetReference);
-                              auto sourceIndex = validIndices[(int)validIndices.size() - 1 - offset];
-                              auto sourceReference = itemReference;
-                              sourceReference.frameIndex = sourceIndex;
-                              if (sourceReference == document.reference)
-                              {
-                                newReference = targetReference;
-                                isReferenceSet = true;
-                              }
-                            }
-                          }
+                                   for (int offset = 0; offset < (int)validIndices.size(); ++offset)
+                                   {
+                                     auto targetReference = itemReference;
+                                     targetReference.frameIndex = insertIndex + offset;
+                                     reversedSelection.insert(targetReference);
+                                     auto sourceIndex = validIndices[(int)validIndices.size() - 1 - offset];
+                                     auto sourceReference = itemReference;
+                                     sourceReference.frameIndex = sourceIndex;
+                                     if (sourceReference == document.reference)
+                                     {
+                                       newReference = targetReference;
+                                       isReferenceSet = true;
+                                     }
+                                   }
+                                 }
 
-                          if (reversedSelection.empty()) return;
-                          document.reference = isReferenceSet ? newReference : *reversedSelection.begin();
-                          document.frame_references_set(std::move(reversedSelection));
-                          if (auto item = command_item_reference_get(document, document.reference))
-                            document.frameTime = frame_time_from_index_get(*item, document.reference.frameIndex);
-                          frames_selection_sync_for(document);
-                          frameSelectionSnapshotReference = document.reference;
-                          frameSelectionLocked.clear();
-                          isFrameSelectionLocked = false;
-                          frameFocusIndex = document.reference.frameIndex;
-                          frameFocusRequested = true;
+                                 if (reversedSelection.empty()) return;
+                                 document.reference = isReferenceSet ? newReference : *reversedSelection.begin();
+                                 document.frame_references_set(std::move(reversedSelection));
+                                 if (auto item = command_item_reference_get(document, document.reference))
+                                   document.frameTime = frame_time_from_index_get(*item, document.reference.frameIndex);
+                                 frames_selection_sync_for(document);
+                                 frameSelectionSnapshotReference = document.reference;
+                                 frameSelectionLocked.clear();
+                                 isFrameSelectionLocked = false;
+                                 frameFocusIndex = document.reference.frameIndex;
+                                 frameFocusRequested = true;
                                });
     };
 
@@ -742,78 +722,74 @@ namespace anm2ed::imgui
       auto bakeInterval = settings.bakeInterval;
       auto isRoundScale = settings.bakeIsRoundScale;
       auto isRoundRotation = settings.bakeIsRoundRotation;
-      std::erase_if(selectedFrames,
-                    [](const Reference& frameReference) { return frameReference.itemType == TRIGGER; });
+      std::erase_if(selectedFrames, [](const Reference& frameReference) { return frameReference.itemType == TRIGGER; });
       if (selectedFrames.empty()) return;
 
       auto trackReferences = track_references_from_frame_references_get(selectedFrames);
       tracks_edit_command_push(EDIT_BAKE_FRAMES, Document::FRAMES, trackReferences,
                                [=, this](Manager&, Document& document) mutable
                                {
-                          std::map<Reference, std::set<int>> groupedFrames{};
-                          for (auto frameReference : selectedFrames)
-                          {
-                            auto itemReference = item_reference_from_frame_get(frameReference);
-                            groupedFrames[itemReference].insert(frameReference.frameIndex);
-                          }
+                                 std::map<Reference, std::set<int>> groupedFrames{};
+                                 for (auto frameReference : selectedFrames)
+                                 {
+                                   auto itemReference = item_reference_from_frame_get(frameReference);
+                                   groupedFrames[itemReference].insert(frameReference.frameIndex);
+                                 }
 
-                          std::set<Reference> bakedSelection{};
-                          for (auto& [itemReference, indices] : groupedFrames)
-                          {
-                            auto item = command_item_reference_get(document, itemReference);
-                            if (!item) continue;
+                                 std::set<Reference> bakedSelection{};
+                                 for (auto& [itemReference, indices] : groupedFrames)
+                                 {
+                                   auto item = command_item_reference_get(document, itemReference);
+                                   if (!item) continue;
 
-                            int insertedBefore = 0;
-                            for (auto originalIndex : indices)
-                            {
-                              auto i = originalIndex + insertedBefore;
-                              auto frame = track_frame_get(*item, i);
-                              if (!frame) continue;
+                                   int insertedBefore = 0;
+                                   for (auto originalIndex : indices)
+                                   {
+                                     auto i = originalIndex + insertedBefore;
+                                     auto frame = track_frame_get(*item, i);
+                                     if (!frame) continue;
 
-                              auto originalDuration = frame->duration;
-                              frame_bake(*item, i, bakeInterval, isRoundScale, isRoundRotation);
+                                     auto originalDuration = frame->duration;
+                                     frame_bake(*item, i, bakeInterval, isRoundScale, isRoundRotation);
 
-                              auto bakedCount = originalDuration <= FRAME_DURATION_MIN
-                                                    ? 1
-                                                    : (int)std::ceil((float)originalDuration / bakeInterval);
-                              for (int offset = 0; offset < bakedCount; ++offset)
-                              {
-                                auto frameReference = itemReference;
-                                frameReference.frameIndex = i + offset;
-                                bakedSelection.insert(frameReference);
-                              }
+                                     auto bakedCount = originalDuration <= FRAME_DURATION_MIN
+                                                           ? 1
+                                                           : (int)std::ceil((float)originalDuration / bakeInterval);
+                                     for (int offset = 0; offset < bakedCount; ++offset)
+                                     {
+                                       auto frameReference = itemReference;
+                                       frameReference.frameIndex = i + offset;
+                                       bakedSelection.insert(frameReference);
+                                     }
 
-                              insertedBefore += bakedCount - 1;
-                            }
-                          }
+                                     insertedBefore += bakedCount - 1;
+                                   }
+                                 }
 
-                          document.frame_references_set(std::move(bakedSelection));
-                          if (!document.frames.references.empty())
-                          {
-                            frames_selection_sync_for(document);
-                            frameSelectionSnapshotReference = document.reference;
-                            frameSelectionLocked.clear();
-                            isFrameSelectionLocked = false;
-                            frameFocusIndex = document.reference.frameIndex;
-                            frameFocusRequested = true;
-                          }
-                          else
-                            frames_selection_reset_for(document);
+                                 document.frame_references_set(std::move(bakedSelection));
+                                 if (!document.frames.references.empty())
+                                 {
+                                   frames_selection_sync_for(document);
+                                   frameSelectionSnapshotReference = document.reference;
+                                   frameSelectionLocked.clear();
+                                   isFrameSelectionLocked = false;
+                                   frameFocusIndex = document.reference.frameIndex;
+                                   frameFocusRequested = true;
+                                 }
+                                 else
+                                   frames_selection_reset_for(document);
                                });
     };
 
     selected_root_frame_references_get = [&]()
     {
       auto selectedFrames = frame_references_for_current_get();
-      std::erase_if(selectedFrames,
-                    [](const Reference& frameReference) { return frameReference.itemType != ROOT; });
+      std::erase_if(selectedFrames, [](const Reference& frameReference) { return frameReference.itemType != ROOT; });
       return selectedFrames;
     };
 
-    item_references_for_bake_into_other_frames_get = [](const Document& targetDocument,
-                                                             const Element& targetAnimation,
-                                                             BakeIntoOtherFramesTarget target, bool isLayers,
-                                                             bool isNulls)
+    item_references_for_bake_into_other_frames_get = [](const Document& targetDocument, const Element& targetAnimation,
+                                                        BakeIntoOtherFramesTarget target, bool isLayers, bool isNulls)
     {
       std::set<Reference> result{};
       auto animationIndex = targetDocument.reference.animationIndex;
@@ -865,8 +841,8 @@ namespace anm2ed::imgui
       return !targetItems.empty();
     };
 
-    frame_root_transform_apply = [](Element& frame, const Element& rootFrame, bool isRoundScale,
-                                         bool isRoundRotation, bool isUseRootPivot)
+    frame_root_transform_apply =
+        [](Element& frame, const Element& rootFrame, bool isRoundScale, bool isRoundRotation, bool isUseRootPivot)
     {
       auto rootScale = math::percent_to_unit(rootFrame.scale);
       auto pivot = isUseRootPivot ? rootFrame.position : glm::vec2();
@@ -875,8 +851,7 @@ namespace anm2ed::imgui
       auto cos = std::cos(radians);
       auto sin = std::sin(radians);
 
-      frame.position =
-          rootFrame.position + glm::vec2(offset.x * cos - offset.y * sin, offset.x * sin + offset.y * cos);
+      frame.position = rootFrame.position + glm::vec2(offset.x * cos - offset.y * sin, offset.x * sin + offset.y * cos);
       frame.scale *= rootScale;
       frame.rotation += rootFrame.rotation;
       frame.tint *= rootFrame.tint;
@@ -902,139 +877,139 @@ namespace anm2ed::imgui
           document, *animation, target, isBakeIntoOtherFramesLayers, isBakeIntoOtherFramesNulls);
       auto trackReferences = track_references_from_frame_references_get(selectedRootFrames);
       trackReferences.insert(targetItems.begin(), targetItems.end());
-      tracks_edit_command_push(EDIT_BAKE_INTO_OTHER_FRAMES, Document::FRAMES, trackReferences,
-                               [=, this](Manager&, Document& document) mutable
-                               {
-                          auto animation = command_animation_get(document, document.reference.animationIndex);
-                          if (!animation) return;
-                          auto rootItemReference = item_reference_from_frame_get(*selectedRootFrames.begin());
-                          for (auto rootReference : selectedRootFrames)
-                            if (!is_same_item(rootReference, rootItemReference)) return;
-                          auto root = command_item_reference_get(document, rootItemReference);
-                          if (!root) return;
+      tracks_edit_command_push(
+          EDIT_BAKE_INTO_OTHER_FRAMES, Document::FRAMES, trackReferences,
+          [=, this](Manager&, Document& document) mutable
+          {
+            auto animation = command_animation_get(document, document.reference.animationIndex);
+            if (!animation) return;
+            auto rootItemReference = item_reference_from_frame_get(*selectedRootFrames.begin());
+            for (auto rootReference : selectedRootFrames)
+              if (!is_same_item(rootReference, rootItemReference)) return;
+            auto root = command_item_reference_get(document, rootItemReference);
+            if (!root) return;
 
-                          std::vector<RootFrameSpan> spans{};
-                          for (auto rootReference : selectedRootFrames)
-                          {
-                            auto rootFrame = command_frame_get(document, rootReference);
-                            if (!rootFrame) continue;
-                            auto start = (int)frame_time_from_index_get(*root, rootReference.frameIndex);
-                            spans.push_back({start, start + rootFrame->duration});
-                          }
-                          if (spans.empty()) return;
+            std::vector<RootFrameSpan> spans{};
+            for (auto rootReference : selectedRootFrames)
+            {
+              auto rootFrame = command_frame_get(document, rootReference);
+              if (!rootFrame) continue;
+              auto start = (int)frame_time_from_index_get(*root, rootReference.frameIndex);
+              spans.push_back({start, start + rootFrame->duration});
+            }
+            if (spans.empty()) return;
 
-                          auto targetItems = item_references_for_bake_into_other_frames_get(
-                              document, *animation, target, isLayers, isNulls);
-                          if (targetItems.empty()) return;
+            auto targetItems =
+                item_references_for_bake_into_other_frames_get(document, *animation, target, isLayers, isNulls);
+            if (targetItems.empty()) return;
 
-                          for (auto itemReference : targetItems)
-                          {
-                            auto item = command_item_reference_get(document, itemReference);
-                            if (!item) continue;
+            for (auto itemReference : targetItems)
+            {
+              auto item = command_item_reference_get(document, itemReference);
+              if (!item) continue;
 
-                            if (isMatchRootInterpolation)
-                            {
-                              std::vector<int> bakeIndices{};
-                              auto frameType = item_frame_type_get(*item);
-                              int frameIndex{};
-                              for (const auto& frame : item->children)
-                              {
-                                if (frame.type != frameType) continue;
-                                auto frameStart = (int)frame_time_from_index_get(*item, frameIndex);
-                                for (auto span : spans)
-                                  if (frameStart >= span.start && frameStart < span.end)
-                                  {
-                                    bakeIndices.push_back(frameIndex);
-                                    break;
-                                  }
-                                ++frameIndex;
-                              }
-                              for (auto it = bakeIndices.rbegin(); it != bakeIndices.rend(); ++it)
-                                frame_bake(*item, *it, FRAME_DURATION_MIN, isRoundScale, isRoundRotation);
-                            }
+              if (isMatchRootInterpolation)
+              {
+                std::vector<int> bakeIndices{};
+                auto frameType = item_frame_type_get(*item);
+                int frameIndex{};
+                for (const auto& frame : item->children)
+                {
+                  if (frame.type != frameType) continue;
+                  auto frameStart = (int)frame_time_from_index_get(*item, frameIndex);
+                  for (auto span : spans)
+                    if (frameStart >= span.start && frameStart < span.end)
+                    {
+                      bakeIndices.push_back(frameIndex);
+                      break;
+                    }
+                  ++frameIndex;
+                }
+                for (auto it = bakeIndices.rbegin(); it != bakeIndices.rend(); ++it)
+                  frame_bake(*item, *it, FRAME_DURATION_MIN, isRoundScale, isRoundRotation);
+              }
 
-                            auto frameType = item_frame_type_get(*item);
-                            int frameIndex{};
-                            for (auto& frame : item->children)
-                            {
-                              if (frame.type != frameType) continue;
-                              auto frameStart = (int)frame_time_from_index_get(*item, frameIndex);
-                              bool isInsideSpan{};
-                              for (auto span : spans)
-                                if (frameStart >= span.start && frameStart < span.end)
-                                {
-                                  isInsideSpan = true;
-                                  break;
-                                }
-                              if (!isInsideSpan)
-                              {
-                                ++frameIndex;
-                                continue;
-                              }
-                              auto rootFrame = frame_generate(*root, (float)frameStart);
-                              frame_root_transform_apply(frame, rootFrame, isRoundScale, isRoundRotation,
-                                                         isUseRootPivot);
-                              ++frameIndex;
-                            }
-                          }
+              auto frameType = item_frame_type_get(*item);
+              int frameIndex{};
+              for (auto& frame : item->children)
+              {
+                if (frame.type != frameType) continue;
+                auto frameStart = (int)frame_time_from_index_get(*item, frameIndex);
+                bool isInsideSpan{};
+                for (auto span : spans)
+                  if (frameStart >= span.start && frameStart < span.end)
+                  {
+                    isInsideSpan = true;
+                    break;
+                  }
+                if (!isInsideSpan)
+                {
+                  ++frameIndex;
+                  continue;
+                }
+                auto rootFrame = frame_generate(*root, (float)frameStart);
+                frame_root_transform_apply(frame, rootFrame, isRoundScale, isRoundRotation, isUseRootPivot);
+                ++frameIndex;
+              }
+            }
 
-                          std::set<int> selectedRootFrameIndices{};
-                          for (auto rootReference : selectedRootFrames)
-                          {
-                            auto rootFrame = command_frame_get(document, rootReference);
-                            if (!rootFrame) continue;
-                            selectedRootFrameIndices.insert(rootReference.frameIndex);
-                          }
-                          if (selectedRootFrameIndices.empty()) return;
+            std::set<int> selectedRootFrameIndices{};
+            for (auto rootReference : selectedRootFrames)
+            {
+              auto rootFrame = command_frame_get(document, rootReference);
+              if (!rootFrame) continue;
+              selectedRootFrameIndices.insert(rootReference.frameIndex);
+            }
+            if (selectedRootFrameIndices.empty()) return;
 
-                          std::vector<Element> rootFrames{};
-                          std::set<Reference> defaultRootSelection{};
-                          int frameIndex{};
-                          int rewrittenFrameIndex{};
-                          int defaultDuration{};
-                          auto default_root_frame_push = [&]()
-                          {
-                            if (defaultDuration <= 0) return;
-                            auto frame = element_make(ElementType::FRAME);
-                            frame.duration = glm::max(defaultDuration, FRAME_DURATION_MIN);
-                            auto defaultRootReference = rootItemReference;
-                            defaultRootReference.frameIndex = rewrittenFrameIndex;
-                            defaultRootSelection.insert(defaultRootReference);
-                            rootFrames.push_back(frame);
-                            ++rewrittenFrameIndex;
-                            defaultDuration = 0;
-                          };
+            std::vector<Element> rootFrames{};
+            std::set<Reference> defaultRootSelection{};
+            int frameIndex{};
+            int rewrittenFrameIndex{};
+            int defaultDuration{};
+            auto default_root_frame_push = [&]()
+            {
+              if (defaultDuration <= 0) return;
+              auto frame = element_make(ElementType::FRAME);
+              frame.duration = glm::max(defaultDuration, FRAME_DURATION_MIN);
+              auto defaultRootReference = rootItemReference;
+              defaultRootReference.frameIndex = rewrittenFrameIndex;
+              defaultRootSelection.insert(defaultRootReference);
+              rootFrames.push_back(frame);
+              ++rewrittenFrameIndex;
+              defaultDuration = 0;
+            };
 
-                          for (const auto& frame : root->children)
-                          {
-                            if (frame.type != ElementType::FRAME)
-                            {
-                              default_root_frame_push();
-                              rootFrames.push_back(frame);
-                              continue;
-                            }
+            for (const auto& frame : root->children)
+            {
+              if (frame.type != ElementType::FRAME)
+              {
+                default_root_frame_push();
+                rootFrames.push_back(frame);
+                continue;
+              }
 
-                            if (selectedRootFrameIndices.contains(frameIndex))
-                              defaultDuration += frame.duration;
-                            else
-                            {
-                              default_root_frame_push();
-                              rootFrames.push_back(frame);
-                              ++rewrittenFrameIndex;
-                            }
-                            ++frameIndex;
-                          }
-                          default_root_frame_push();
+              if (selectedRootFrameIndices.contains(frameIndex))
+                defaultDuration += frame.duration;
+              else
+              {
+                default_root_frame_push();
+                rootFrames.push_back(frame);
+                ++rewrittenFrameIndex;
+              }
+              ++frameIndex;
+            }
+            default_root_frame_push();
 
-                          root->children = std::move(rootFrames);
-                          document.frame_references_set(std::move(defaultRootSelection));
-                          frames_selection_sync_for(document);
-                          frameSelectionSnapshotReference = document.reference;
-                          frameSelectionLocked.clear();
-                          isFrameSelectionLocked = false;
-                          frameFocusIndex = document.reference.frameIndex;
-                          frameFocusRequested = true;
-                               });
+            root->children = std::move(rootFrames);
+            document.frame_references_set(std::move(defaultRootSelection));
+            frames_selection_sync_for(document);
+            frameSelectionSnapshotReference = document.reference;
+            frameSelectionLocked.clear();
+            isFrameSelectionLocked = false;
+            frameFocusIndex = document.reference.frameIndex;
+            frameFocusRequested = true;
+          });
     };
 
     frame_split = [&]()
@@ -1045,41 +1020,41 @@ namespace anm2ed::imgui
       auto splitTime = frameSplitTimeAtCursor.value_or((int)std::floor(playback.time));
       if (targetReference.itemType == TRIGGER) return;
 
-      tracks_edit_command_push(EDIT_SPLIT_FRAME, Document::FRAMES, {targetReference},
-                               [=, this](Manager&, Document& document) mutable
-                               {
-                          if (targetReference.itemType == TRIGGER) return;
+      tracks_edit_command_push(
+          EDIT_SPLIT_FRAME, Document::FRAMES, {targetReference},
+          [=, this](Manager&, Document& document) mutable
+          {
+            if (targetReference.itemType == TRIGGER) return;
 
-                          auto item = command_item_reference_get(document, targetReference);
-                          auto frame = command_frame_get(document, targetReference);
+            auto item = command_item_reference_get(document, targetReference);
+            auto frame = command_frame_get(document, targetReference);
 
-                          if (!item || !frame) return;
+            if (!item || !frame) return;
 
-                          auto originalDuration = frame->duration;
-                          if (originalDuration <= 1) return;
+            auto originalDuration = frame->duration;
+            if (originalDuration <= 1) return;
 
-                          auto frameStartTime = frame_time_from_index_get(*item, targetReference.frameIndex);
-                          int frameStart = (int)std::round(frameStartTime);
-                          int firstDuration = splitTime - frameStart + 1;
+            auto frameStartTime = frame_time_from_index_get(*item, targetReference.frameIndex);
+            int frameStart = (int)std::round(frameStartTime);
+            int firstDuration = splitTime - frameStart + 1;
 
-                          if (firstDuration <= 0 || firstDuration >= originalDuration) return;
+            if (firstDuration <= 0 || firstDuration >= originalDuration) return;
 
-                          int secondDuration = originalDuration - firstDuration;
-                          auto splitFrame = *frame;
-                          splitFrame.duration = secondDuration;
+            int secondDuration = originalDuration - firstDuration;
+            auto splitFrame = *frame;
+            splitFrame.duration = secondDuration;
 
-                          auto nextFrame = track_frame_get(*item, targetReference.frameIndex + 1);
-                          if (frame->interpolation != Interpolation::NONE && nextFrame)
-                            frame_mix(splitFrame, *nextFrame,
-                                      interpolation_factor(frame->interpolation,
-                                                           (float)firstDuration / (float)originalDuration));
+            auto nextFrame = track_frame_get(*item, targetReference.frameIndex + 1);
+            if (frame->interpolation != Interpolation::NONE && nextFrame)
+              frame_mix(splitFrame, *nextFrame,
+                        interpolation_factor(frame->interpolation, (float)firstDuration / (float)originalDuration));
 
-                          frame->duration = firstDuration;
-                          auto insertIndex = item_frame_insert_index_get(*item, targetReference.frameIndex + 1);
-                          item->children.insert(item->children.begin() + insertIndex, splitFrame);
-                          document.reference = targetReference;
-                          frames_selection_set_reference_for(document);
-                               });
+            frame->duration = firstDuration;
+            auto insertIndex = item_frame_insert_index_get(*item, targetReference.frameIndex + 1);
+            item->children.insert(item->children.begin() + insertIndex, splitFrame);
+            document.reference = targetReference;
+            frames_selection_set_reference_for(document);
+          });
     };
 
     reference_clear = [&]()
@@ -1111,13 +1086,9 @@ namespace anm2ed::imgui
                         .depth = depth});
       };
       auto group_row_push = [&](const Element& group, int type, int index)
-      {
-        rows.push_back({.type = type, .id = group.id, .index = index, .isGroup = true});
-      };
+      { rows.push_back({.type = type, .id = group.id, .index = index, .isGroup = true}); };
       auto group_root_row_push = [&](const Element& group, int type)
-      {
-        rows.push_back({.type = ROOT, .id = -1, .rootGroupType = type, .rootGroupId = group.id, .depth = 1});
-      };
+      { rows.push_back({.type = ROOT, .id = -1, .rootGroupType = type, .rootGroupId = group.id, .depth = 1}); };
       auto group_ids_get = [](const Element& container)
       {
         std::set<int> result{};
@@ -1129,66 +1100,66 @@ namespace anm2ed::imgui
       rows.push_back({.type = ROOT});
 
       if (auto layerAnimations = child_first_get(*animation, ElementType::LAYER_ANIMATIONS))
+      {
+        auto groupIds = group_ids_get(*layerAnimations);
+        auto layer_track_push = [&](int groupId, int depth)
         {
-          auto groupIds = group_ids_get(*layerAnimations);
-          auto layer_track_push = [&](int groupId, int depth)
+          for (int j = (int)layerAnimations->children.size() - 1; j >= 0; --j)
           {
-            for (int j = (int)layerAnimations->children.size() - 1; j >= 0; --j)
-            {
-              auto& item = layerAnimations->children[j];
-              if (item.type != ElementType::LAYER_ANIMATION || item.groupId != groupId) continue;
-              if (settings.timelineIsShowUnused || !item.children.empty()) track_row_push(item, LAYER, j, depth);
-            }
-          };
-
-          for (int i = (int)layerAnimations->children.size() - 1; i >= 0; --i)
-          {
-            auto& item = layerAnimations->children[i];
-            if (item.type == ElementType::GROUP)
-            {
-              group_row_push(item, LAYER, i);
-              if (item.isExpanded)
-              {
-                group_root_row_push(item, LAYER);
-                layer_track_push(item.id, 1);
-              }
-            }
-            else if (item.type == ElementType::LAYER_ANIMATION && !groupIds.contains(item.groupId) &&
-                     (settings.timelineIsShowUnused || !item.children.empty()))
-              track_row_push(item, LAYER, i);
+            auto& item = layerAnimations->children[j];
+            if (item.type != ElementType::LAYER_ANIMATION || item.groupId != groupId) continue;
+            if (settings.timelineIsShowUnused || !item.children.empty()) track_row_push(item, LAYER, j, depth);
           }
+        };
+
+        for (int i = (int)layerAnimations->children.size() - 1; i >= 0; --i)
+        {
+          auto& item = layerAnimations->children[i];
+          if (item.type == ElementType::GROUP)
+          {
+            group_row_push(item, LAYER, i);
+            if (item.isExpanded)
+            {
+              group_root_row_push(item, LAYER);
+              layer_track_push(item.id, 1);
+            }
+          }
+          else if (item.type == ElementType::LAYER_ANIMATION && !groupIds.contains(item.groupId) &&
+                   (settings.timelineIsShowUnused || !item.children.empty()))
+            track_row_push(item, LAYER, i);
         }
+      }
 
       if (auto nullAnimations = child_first_get(*animation, ElementType::NULL_ANIMATIONS))
+      {
+        auto groupIds = group_ids_get(*nullAnimations);
+        auto null_track_push = [&](int groupId, int depth)
         {
-          auto groupIds = group_ids_get(*nullAnimations);
-          auto null_track_push = [&](int groupId, int depth)
+          for (int j = 0; j < (int)nullAnimations->children.size(); ++j)
           {
-            for (int j = 0; j < (int)nullAnimations->children.size(); ++j)
-            {
-              auto& item = nullAnimations->children[j];
-              if (item.type != ElementType::NULL_ANIMATION || item.groupId != groupId) continue;
-              if (settings.timelineIsShowUnused || !item.children.empty()) track_row_push(item, NULL_, j, depth);
-            }
-          };
-
-          for (int i = 0; i < (int)nullAnimations->children.size(); ++i)
-          {
-            auto& item = nullAnimations->children[i];
-            if (item.type == ElementType::GROUP)
-            {
-              group_row_push(item, NULL_, i);
-              if (item.isExpanded)
-              {
-                group_root_row_push(item, NULL_);
-                null_track_push(item.id, 1);
-              }
-            }
-            else if (item.type == ElementType::NULL_ANIMATION && !groupIds.contains(item.groupId) &&
-                     (settings.timelineIsShowUnused || !item.children.empty()))
-              track_row_push(item, NULL_, i);
+            auto& item = nullAnimations->children[j];
+            if (item.type != ElementType::NULL_ANIMATION || item.groupId != groupId) continue;
+            if (settings.timelineIsShowUnused || !item.children.empty()) track_row_push(item, NULL_, j, depth);
           }
+        };
+
+        for (int i = 0; i < (int)nullAnimations->children.size(); ++i)
+        {
+          auto& item = nullAnimations->children[i];
+          if (item.type == ElementType::GROUP)
+          {
+            group_row_push(item, NULL_, i);
+            if (item.isExpanded)
+            {
+              group_root_row_push(item, NULL_);
+              null_track_push(item.id, 1);
+            }
+          }
+          else if (item.type == ElementType::NULL_ANIMATION && !groupIds.contains(item.groupId) &&
+                   (settings.timelineIsShowUnused || !item.children.empty()))
+            track_row_push(item, NULL_, i);
         }
+      }
 
       rows.push_back({.type = TRIGGER});
       return rows;
@@ -1200,8 +1171,7 @@ namespace anm2ed::imgui
       for (const auto& row : timeline_item_rows_get())
       {
         if (row.isGroup) continue;
-        itemReferences.push_back(
-            {reference.animationIndex, row.type, row.id, -1, row.rootGroupType, row.rootGroupId});
+        itemReferences.push_back({reference.animationIndex, row.type, row.id, -1, row.rootGroupType, row.rootGroupId});
       }
       return itemReferences;
     };
@@ -1211,8 +1181,8 @@ namespace anm2ed::imgui
 
     row_reference_get = [&](const TimelineItemRow& row)
     {
-      return TimelineRowReference{manager.selected, reference.animationIndex, row.type, row.id, row.index,
-                                  row.rootGroupType, row.rootGroupId, row.isGroup};
+      return TimelineRowReference{manager.selected, reference.animationIndex, row.type,        row.id,
+                                  row.index,        row.rootGroupType,        row.rootGroupId, row.isGroup};
     };
 
     row_item_reference_get = [](const TimelineRowReference& row)
@@ -1230,9 +1200,7 @@ namespace anm2ed::imgui
     };
 
     is_group_selected = [&](const TimelineItemRow& row)
-    {
-      return document.groupReferences.contains(group_reference_get(row));
-    };
+    { return document.groupReferences.contains(group_reference_get(row)); };
 
     is_row_selected = [&](const TimelineItemRow& row)
     {
@@ -1335,9 +1303,8 @@ namespace anm2ed::imgui
       auto itemReferences = timeline_item_references_get();
       if (itemReferences.empty()) return;
 
-      auto it = std::find_if(
-          itemReferences.begin(), itemReferences.end(), [&](const Reference& itemReference)
-          { return is_same_item(itemReference, reference); });
+      auto it = std::find_if(itemReferences.begin(), itemReferences.end(),
+                             [&](const Reference& itemReference) { return is_same_item(itemReference, reference); });
 
       int index = direction > 0 ? 0 : (int)itemReferences.size() - 1;
       if (it != itemReferences.end()) index = (int)std::distance(itemReferences.begin(), it) + direction;
@@ -1494,8 +1461,8 @@ namespace anm2ed::imgui
                         });
     };
 
-    rows_move_to_row = [&](std::vector<TimelineRowReference> draggedRows, TimelineItemRow targetRow,
-                                bool isDropAfter, bool isDropIntoGroup = false)
+    rows_move_to_row = [&](std::vector<TimelineRowReference> draggedRows, TimelineItemRow targetRow, bool isDropAfter,
+                           bool isDropIntoGroup = false)
     {
       if (draggedRows.empty()) return;
       auto targetType = draggedRows.front().type;
@@ -1509,128 +1476,125 @@ namespace anm2ed::imgui
         return;
 
       auto animationIndex = reference.animationIndex;
-      edit_command_push(EDIT_MOVE_ITEMS, Document::ITEMS,
-                        [=, this](Manager&, Document& document) mutable
-                        {
-                          auto animation = command_animation_get(document, animationIndex);
-                          if (!animation) return;
-                          auto container = child_first_get(*animation, container_type_get(targetType));
-                          if (!container) return;
-                          auto targetTrackType = track_type_get(targetType);
+      edit_command_push(
+          EDIT_MOVE_ITEMS, Document::ITEMS,
+          [=, this](Manager&, Document& document) mutable
+          {
+            auto animation = command_animation_get(document, animationIndex);
+            if (!animation) return;
+            auto container = child_first_get(*animation, container_type_get(targetType));
+            if (!container) return;
+            auto targetTrackType = track_type_get(targetType);
 
-                          std::set<int> draggedIds{};
-                          std::set<int> draggedGroupIds{};
-                          for (const auto& draggedRow : draggedRows)
-                          {
-                            if (draggedRow.isGroup)
-                              draggedGroupIds.insert(draggedRow.id);
-                            else
-                              draggedIds.insert(draggedRow.id);
-                          }
+            std::set<int> draggedIds{};
+            std::set<int> draggedGroupIds{};
+            for (const auto& draggedRow : draggedRows)
+            {
+              if (draggedRow.isGroup)
+                draggedGroupIds.insert(draggedRow.id);
+              else
+                draggedIds.insert(draggedRow.id);
+            }
 
-                          if (targetRow.groupId != -1 && draggedGroupIds.contains(targetRow.groupId)) return;
+            if (targetRow.groupId != -1 && draggedGroupIds.contains(targetRow.groupId)) return;
 
-                          std::vector<Element> movedItems{};
-                          for (const auto& item : container->children)
-                          {
-                            auto isDraggedGroup = item.type == ElementType::GROUP && draggedGroupIds.contains(item.id);
-                            auto isDraggedTrack = item.type == targetTrackType &&
-                                                  (draggedIds.contains(track_id_get(item, targetType)) ||
-                                                   draggedGroupIds.contains(item.groupId));
-                            if (isDraggedGroup || isDraggedTrack) movedItems.push_back(item);
-                          }
-                          if (movedItems.empty()) return;
+            std::vector<Element> movedItems{};
+            for (const auto& item : container->children)
+            {
+              auto isDraggedGroup = item.type == ElementType::GROUP && draggedGroupIds.contains(item.id);
+              auto isDraggedTrack =
+                  item.type == targetTrackType &&
+                  (draggedIds.contains(track_id_get(item, targetType)) || draggedGroupIds.contains(item.groupId));
+              if (isDraggedGroup || isDraggedTrack) movedItems.push_back(item);
+            }
+            if (movedItems.empty()) return;
 
-                          if (targetRow.isGroup && draggedGroupIds.contains(targetRow.id)) return;
+            if (targetRow.isGroup && draggedGroupIds.contains(targetRow.id)) return;
 
-                          auto row_index_get = [&](const TimelineItemRow& row)
-                          {
-                            for (int i = 0; i < (int)container->children.size(); ++i)
-                            {
-                              auto& item = container->children[i];
-                              if (row.isGroup && item.type == ElementType::GROUP && item.id == row.id) return i;
-                              if (!row.isGroup && row.type == targetType && item.type == targetTrackType &&
-                                  track_id_get(item, targetType) == row.id)
-                                return i;
-                            }
-                            return -1;
-                          };
-                          auto group_end_index_get = [&](int groupId)
-                          {
-                            int result = -1;
-                            for (int i = 0; i < (int)container->children.size(); ++i)
-                            {
-                              auto& item = container->children[i];
-                              if (item.type == ElementType::GROUP && item.id == groupId) result = std::max(result, i);
-                              if (item.type == targetTrackType && item.groupId == groupId)
-                                result = std::max(result, i);
-                            }
-                            return result;
-                          };
+            auto row_index_get = [&](const TimelineItemRow& row)
+            {
+              for (int i = 0; i < (int)container->children.size(); ++i)
+              {
+                auto& item = container->children[i];
+                if (row.isGroup && item.type == ElementType::GROUP && item.id == row.id) return i;
+                if (!row.isGroup && row.type == targetType && item.type == targetTrackType &&
+                    track_id_get(item, targetType) == row.id)
+                  return i;
+              }
+              return -1;
+            };
+            auto group_end_index_get = [&](int groupId)
+            {
+              int result = -1;
+              for (int i = 0; i < (int)container->children.size(); ++i)
+              {
+                auto& item = container->children[i];
+                if (item.type == ElementType::GROUP && item.id == groupId) result = std::max(result, i);
+                if (item.type == targetTrackType && item.groupId == groupId) result = std::max(result, i);
+              }
+              return result;
+            };
 
-                          int targetIndex = (int)container->children.size();
-                          if (targetRow.isGroup || targetRow.type == targetType)
-                          {
-                            auto rowIndex = row_index_get(targetRow);
-                            if (rowIndex == -1) return;
-                            if (targetRow.isGroup)
-                            {
-                              auto groupEndIndex = group_end_index_get(targetRow.id);
-                              if (targetType == LAYER)
-                                targetIndex = isDropAfter ? rowIndex : groupEndIndex + 1;
-                              else
-                                targetIndex = rowIndex + isDropAfter;
-                            }
-                            else
-                              targetIndex = rowIndex + (targetType == LAYER ? !isDropAfter : isDropAfter);
-                          }
+            int targetIndex = (int)container->children.size();
+            if (targetRow.isGroup || targetRow.type == targetType)
+            {
+              auto rowIndex = row_index_get(targetRow);
+              if (rowIndex == -1) return;
+              if (targetRow.isGroup)
+              {
+                auto groupEndIndex = group_end_index_get(targetRow.id);
+                if (targetType == LAYER)
+                  targetIndex = isDropAfter ? rowIndex : groupEndIndex + 1;
+                else
+                  targetIndex = rowIndex + isDropAfter;
+              }
+              else
+                targetIndex = rowIndex + (targetType == LAYER ? !isDropAfter : isDropAfter);
+            }
 
-                          int removedBeforeTarget = 0;
-                          for (int i = (int)container->children.size() - 1; i >= 0; --i)
-                          {
-                            auto& item = container->children[i];
-                            auto isDraggedGroup = item.type == ElementType::GROUP && draggedGroupIds.contains(item.id);
-                            auto isDraggedTrack = item.type == targetTrackType &&
-                                                  (draggedIds.contains(track_id_get(item, targetType)) ||
-                                                   draggedGroupIds.contains(item.groupId));
-                            if (isDraggedGroup || isDraggedTrack)
-                            {
-                              if (i < targetIndex) ++removedBeforeTarget;
-                              container->children.erase(container->children.begin() + i);
-                            }
-                          }
+            int removedBeforeTarget = 0;
+            for (int i = (int)container->children.size() - 1; i >= 0; --i)
+            {
+              auto& item = container->children[i];
+              auto isDraggedGroup = item.type == ElementType::GROUP && draggedGroupIds.contains(item.id);
+              auto isDraggedTrack =
+                  item.type == targetTrackType &&
+                  (draggedIds.contains(track_id_get(item, targetType)) || draggedGroupIds.contains(item.groupId));
+              if (isDraggedGroup || isDraggedTrack)
+              {
+                if (i < targetIndex) ++removedBeforeTarget;
+                container->children.erase(container->children.begin() + i);
+              }
+            }
 
-                          auto targetGroupId = -1;
-                          if (targetRow.isGroup && isDropIntoGroup)
-                            targetGroupId = targetRow.id;
-                          else if (targetRow.type == targetType)
-                            targetGroupId = targetRow.groupId;
+            auto targetGroupId = -1;
+            if (targetRow.isGroup && isDropIntoGroup)
+              targetGroupId = targetRow.id;
+            else if (targetRow.type == targetType)
+              targetGroupId = targetRow.groupId;
 
-                          for (auto& item : movedItems)
-                            if (item.type == targetTrackType && !draggedGroupIds.contains(item.groupId))
-                              item.groupId = targetGroupId;
+            for (auto& item : movedItems)
+              if (item.type == targetTrackType && !draggedGroupIds.contains(item.groupId)) item.groupId = targetGroupId;
 
-                          targetIndex -= removedBeforeTarget;
-                          targetIndex = std::clamp(targetIndex, 0, (int)container->children.size());
-                          container->children.insert(container->children.begin() + targetIndex, movedItems.begin(),
-                                                     movedItems.end());
+            targetIndex -= removedBeforeTarget;
+            targetIndex = std::clamp(targetIndex, 0, (int)container->children.size());
+            container->children.insert(container->children.begin() + targetIndex, movedItems.begin(), movedItems.end());
 
-                          document.items.references.clear();
-                          document.groupReferences.clear();
-                          for (const auto& draggedRow : draggedRows)
-                          {
-                            if (draggedRow.isGroup)
-                              document.groupReferences.insert(
-                                  {draggedRow.animationIndex, draggedRow.type, draggedRow.id});
-                            else
-                              document.items.references.insert(row_item_reference_get(draggedRow));
-                          }
-                          if (!document.items.references.empty())
-                            document.reference = *document.items.references.begin();
-                          else
-                            document.reference = {animationIndex};
-                          frames_selection_reset_for(document);
-                        });
+            document.items.references.clear();
+            document.groupReferences.clear();
+            for (const auto& draggedRow : draggedRows)
+            {
+              if (draggedRow.isGroup)
+                document.groupReferences.insert({draggedRow.animationIndex, draggedRow.type, draggedRow.id});
+              else
+                document.items.references.insert(row_item_reference_get(draggedRow));
+            }
+            if (!document.items.references.empty())
+              document.reference = *document.items.references.begin();
+            else
+              document.reference = {animationIndex};
+            frames_selection_reset_for(document);
+          });
     };
 
     fit_animation_length = [&]()
@@ -1653,8 +1617,8 @@ namespace anm2ed::imgui
       std::string clipboardString{};
       for (auto frameReference : selectedFrames)
       {
-        auto item = item_get(frameReference.itemType, frameReference.itemID, frameReference.groupType,
-                             frameReference.groupId);
+        auto item =
+            item_get(frameReference.itemType, frameReference.itemID, frameReference.groupType, frameReference.groupId);
         auto frame = item ? track_frame_get(*item, frameReference.frameIndex) : nullptr;
         if (!frame) continue;
         auto parentType = TYPE_TRACKS[frameReference.itemType];
@@ -1690,84 +1654,80 @@ namespace anm2ed::imgui
       if (clipboardString.empty()) return;
       auto targetHoveredTime = hoveredTime;
       auto message = std::string(localize.get(EDIT_PASTE_FRAMES));
-      command_push([=, this](Manager&, Document& document) mutable
-                   {
-                     auto animation = command_animation_get(document, targetReference.animationIndex);
-                     if (!animation) return;
-                     if (auto item = command_item_reference_get(document, targetReference))
-                     {
-                       document.tracks_snapshot(message, {targetReference});
-                       std::set<int> indices{};
-                       std::string errorString{};
-                       int insertIndex = (int)item->children.size();
-                       std::set<int> selectedIndices{};
-                       for (auto frameReference : selectedFrames)
-                         if (is_same_item(frameReference, targetReference))
-                           selectedIndices.insert(frameReference.frameIndex);
+      command_push(
+          [=, this](Manager&, Document& document) mutable
+          {
+            auto animation = command_animation_get(document, targetReference.animationIndex);
+            if (!animation) return;
+            if (auto item = command_item_reference_get(document, targetReference))
+            {
+              document.snapshots.tracks_push(message, {targetReference});
+              std::set<int> indices{};
+              std::string errorString{};
+              int insertIndex = (int)item->children.size();
+              std::set<int> selectedIndices{};
+              for (auto frameReference : selectedFrames)
+                if (is_same_item(frameReference, targetReference)) selectedIndices.insert(frameReference.frameIndex);
 
-                       if (!selectedIndices.empty())
-                         insertIndex = std::min((int)item->children.size(), *selectedIndices.rbegin() + 1);
-                       else if (targetReference.frameIndex >= 0 && targetReference.frameIndex < (int)item->children.size())
-                         insertIndex = targetReference.frameIndex + 1;
+              if (!selectedIndices.empty())
+                insertIndex = std::min((int)item->children.size(), *selectedIndices.rbegin() + 1);
+              else if (targetReference.frameIndex >= 0 && targetReference.frameIndex < (int)item->children.size())
+                insertIndex = targetReference.frameIndex + 1;
 
-                       auto start = targetReference.itemType == TRIGGER ? targetHoveredTime : insertIndex;
-                       if (frames_deserialize(*item, clipboardString, start, indices, &errorString))
-                       {
-                         if (targetReference.itemType != LAYER)
-                         {
-                           for (auto i : indices)
-                             if (auto frame = track_frame_get(*item, i); frame)
-                             {
-                               frame->regionId = -1;
-                               frame->crop = {};
-                               frame->size = {};
-                               frame->pivot = {};
-                             }
-                         }
-                         else if (targetReference.itemID != -1)
-                         {
-                           auto layer = command_layer_get(document, targetReference.itemID);
-                           auto spritesheet = layer ? command_spritesheet_get(document, layer->spritesheetId) : nullptr;
+              auto start = targetReference.itemType == TRIGGER ? targetHoveredTime : insertIndex;
+              if (frames_deserialize(*item, clipboardString, start, indices, &errorString))
+              {
+                if (targetReference.itemType != LAYER)
+                {
+                  for (auto i : indices)
+                    if (auto frame = track_frame_get(*item, i); frame)
+                    {
+                      frame->regionId = -1;
+                      frame->crop = {};
+                      frame->size = {};
+                      frame->pivot = {};
+                    }
+                }
+                else if (targetReference.itemID != -1)
+                {
+                  auto layer = command_layer_get(document, targetReference.itemID);
+                  auto spritesheet = layer ? command_spritesheet_get(document, layer->spritesheetId) : nullptr;
 
-                           for (auto i : indices)
-                           {
-                             auto frame = track_frame_get(*item, i);
-                             if (!frame || frame->regionId == -1) continue;
-                             auto region =
-                                 spritesheet ? child_id_get(*spritesheet, ElementType::REGION, frame->regionId)
-                                             : nullptr;
-                             if (!region) frame->regionId = -1;
-                           }
-                         }
+                  for (auto i : indices)
+                  {
+                    auto frame = track_frame_get(*item, i);
+                    if (!frame || frame->regionId == -1) continue;
+                    auto region =
+                        spritesheet ? child_id_get(*spritesheet, ElementType::REGION, frame->regionId) : nullptr;
+                    if (!region) frame->regionId = -1;
+                  }
+                }
 
-                         std::set<Reference> pastedSelection{};
-                         for (auto i : indices)
-                         {
-                           auto pastedReference = targetReference;
-                           pastedReference.frameIndex = i;
-                           pastedSelection.insert(pastedReference);
-                         }
-                         document.reference = targetReference;
-                         document.reference.frameIndex = *indices.begin();
-                         document.frame_references_set(std::move(pastedSelection));
-                         document.anm2_change(Document::FRAMES);
-                       }
-                       else
-                       {
-                         document.snapshots.pendingStep.reset();
-                         toasts.push(
-                             std::format("{} {}", localize.get(TOAST_DESERIALIZE_FRAMES_FAILED), errorString));
-                         logger.error(std::format("{} {}", localize.get(TOAST_DESERIALIZE_FRAMES_FAILED,
-                                                                        anm2ed::ENGLISH),
-                                                  errorString));
-                       }
-                     }
-                     else
-                     {
-                       toasts.push(localize.get(TOAST_DESERIALIZE_FRAMES_NO_SELECTION));
-                       logger.warning(localize.get(TOAST_DESERIALIZE_FRAMES_NO_SELECTION, anm2ed::ENGLISH));
-                     }
-                   });
+                std::set<Reference> pastedSelection{};
+                for (auto i : indices)
+                {
+                  auto pastedReference = targetReference;
+                  pastedReference.frameIndex = i;
+                  pastedSelection.insert(pastedReference);
+                }
+                document.reference = targetReference;
+                document.reference.frameIndex = *indices.begin();
+                document.frame_references_set(std::move(pastedSelection));
+                document.change(Document::FRAMES);
+              }
+              else
+              {
+                document.snapshots.pendingStep.reset();
+                toasts.push(std::format("{} {}", localize.get(TOAST_DESERIALIZE_FRAMES_FAILED), errorString));
+                logger.error(
+                    std::format("{} {}", localize.get(TOAST_DESERIALIZE_FRAMES_FAILED, anm2ed::ENGLISH), errorString));
+              }
+            }
+            else
+            {
+              toast_log(Level::WARNING, TOAST_DESERIALIZE_FRAMES_NO_SELECTION);
+            }
+          });
     };
 
     context_menu = [&]()
@@ -1795,28 +1755,29 @@ namespace anm2ed::imgui
         if (!spritesheet_get(spritesheetID)) return;
 
         auto settingsPtr = &settings;
-        command_push([=, this](Manager& manager, Document& document)
-                     {
-                       auto frame = command_frame_get(document, targetReference);
-                       if (!frame || frame->regionId != -1) return;
-                       auto layer = command_layer_get(document, targetReference.itemID);
-                       if (!layer) return;
+        command_push(
+            [=, this](Manager& manager, Document& document)
+            {
+              auto frame = command_frame_get(document, targetReference);
+              if (!frame || frame->regionId != -1) return;
+              auto layer = command_layer_get(document, targetReference.itemID);
+              if (!layer) return;
 
-                       auto spritesheetID = layer->spritesheetId;
-                       if (!command_spritesheet_get(document, spritesheetID)) return;
+              auto spritesheetID = layer->spritesheetId;
+              if (!command_spritesheet_get(document, spritesheetID)) return;
 
-                       auto region = element_make(ElementType::REGION);
-                       region.crop = frame->crop;
-                       region.size = frame->size;
-                       region.pivot = frame->pivot;
-                       region.origin = Origin::CUSTOM;
+              auto region = element_make(ElementType::REGION);
+              region.crop = frame->crop;
+              region.size = frame->size;
+              region.pivot = frame->pivot;
+              region.origin = Origin::CUSTOM;
 
-                       document.spritesheet.reference = spritesheetID;
-                       settingsPtr->windowIsRegions = true;
-                       manager.makeRegionSpritesheetId = spritesheetID;
-                       manager.makeRegion = region;
-                       manager.isMakeRegionRequested = true;
-                     });
+              document.spritesheet.reference = spritesheetID;
+              settingsPtr->windowIsRegions = true;
+              manager.makeRegionSpritesheetId = spritesheetID;
+              manager.makeRegion = region;
+              manager.isMakeRegionRequested = true;
+            });
       };
 
       auto make_many_regions = [&]()
@@ -1895,7 +1856,8 @@ namespace anm2ed::imgui
       actions.add({.label = isMakeManyRegions ? LABEL_MAKE_MANY_REGIONS : LABEL_MAKE_REGION,
                    .shortcut = -1,
                    .isEnabled = [=, this]() { return isMakeManyRegions || isMakeRegion; },
-                   .run = [&]()
+                   .run =
+                       [&]()
                    {
                      if (isMakeManyRegions)
                        make_many_regions();
@@ -1977,10 +1939,8 @@ namespace anm2ed::imgui
                             {
                               auto animation = command_animation_get(document, targetAnimationIndex);
                               auto container =
-                                  animation ? child_first_get(*animation, container_type_get(targetType))
-                                            : nullptr;
-                              auto group = container ? child_id_get(*container, ElementType::GROUP, targetId)
-                                                     : nullptr;
+                                  animation ? child_first_get(*animation, container_type_get(targetType)) : nullptr;
+                              auto group = container ? child_id_get(*container, ElementType::GROUP, targetId) : nullptr;
                               if (!group) return;
                               group->name = targetName;
                             });
@@ -2018,7 +1978,7 @@ namespace anm2ed::imgui
         selectedGroup = row_group_get(selectedGroupRow);
       }
       auto isRemoveAvailable = std::ranges::any_of(selectedRows, [](const TimelineRowReference& row)
-      { return row.type == LAYER || row.type == NULL_; });
+                                                   { return row.type == LAYER || row.type == NULL_; });
       auto item_cut = [&]()
       {
         if (copyFrames.empty() || !isRemoveAvailable) return;
@@ -2033,14 +1993,15 @@ namespace anm2ed::imgui
       Actions actions{};
       actions_undo_redo_add(actions, manager, document);
       actions.separator();
-      actions.add(ACTION_PROPERTIES, [&]() { return selectedGroup || (item && (type == LAYER || type == NULL_)); },
-                  [&]()
-                  {
-                    if (selectedGroup)
-                      group_properties_open(selectedGroupRow, *selectedGroup);
-                    else
-                      item_base_properties_open(type, id);
-                  });
+      actions.add(
+          ACTION_PROPERTIES, [&]() { return selectedGroup || (item && (type == LAYER || type == NULL_)); },
+          [&]()
+          {
+            if (selectedGroup)
+              group_properties_open(selectedGroupRow, *selectedGroup);
+            else
+              item_base_properties_open(type, id);
+          });
       actions.add(ACTION_ADD, [&]() { return animation; }, [&]() { itemProperties.open(); });
       actions.add(ACTION_REMOVE, [=, this]() { return isRemoveAvailable; }, [&]() { item_remove(); });
       actions.add(ACTION_GROUP, [=, this]() { return !selectedGroupableItems.empty(); }, [&]() { item_group(); });
@@ -2056,7 +2017,5 @@ namespace anm2ed::imgui
 
       ImGui::PopStyleVar(2);
     };
-
-
   }
 }

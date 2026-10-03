@@ -1,10 +1,12 @@
 #include "shader.hpp"
 
+#include <algorithm>
 #include <cctype>
 #include <format>
 #include <sstream>
 #include <utility>
 
+#include "anm2/anm2.hpp"
 #include "log.hpp"
 
 namespace anm2ed::resource::shader
@@ -26,15 +28,15 @@ namespace anm2ed::resource::shader
   X(UNIFORM_BINDING_MAIN_TEXTURE, "Texture")                                                                           \
   X(UNIFORM_BINDING_MAIN_TEXTURE, "Sampler0")                                                                          \
   X(UNIFORM_BINDING_MAIN_TEXTURE, "ColorMap")                                                                          \
-  X(UNIFORM_BINDING_TRANSFORM, UNIFORM_TRANSFORM)                                                                       \
+  X(UNIFORM_BINDING_TRANSFORM, UNIFORM_TRANSFORM)                                                                      \
   X(UNIFORM_BINDING_TRANSFORM, "Transform")                                                                            \
   X(UNIFORM_BINDING_TRANSFORM, "MVP")                                                                                  \
   X(UNIFORM_BINDING_TRANSFORM, "Matrix")                                                                               \
-  X(UNIFORM_BINDING_FRAME_TINT, UNIFORM_TINT)                                                                           \
+  X(UNIFORM_BINDING_FRAME_TINT, UNIFORM_TINT)                                                                          \
   X(UNIFORM_BINDING_FRAME_TINT, "Tint")                                                                                \
   X(UNIFORM_BINDING_FRAME_TINT, "Color")                                                                               \
   X(UNIFORM_BINDING_FRAME_TINT, "Color0")                                                                              \
-  X(UNIFORM_BINDING_COLOR_OFFSET, UNIFORM_COLOR_OFFSET)                                                                 \
+  X(UNIFORM_BINDING_COLOR_OFFSET, UNIFORM_COLOR_OFFSET)                                                                \
   X(UNIFORM_BINDING_COLOR_OFFSET, "ColorOffset")                                                                       \
   X(UNIFORM_BINDING_COLOR_OFFSET, "ColorOffset0")                                                                      \
   X(UNIFORM_BINDING_TEXTURE_SIZE, "u_texture_size")                                                                    \
@@ -47,10 +49,7 @@ namespace anm2ed::resource::shader
 #undef X
   };
 
-  bool is_shader_identifier(char character)
-  {
-    return std::isalnum((unsigned char)character) || character == '_';
-  }
+  bool is_shader_identifier(char character) { return std::isalnum((unsigned char)character) || character == '_'; }
 
   std::string shader_text_replace(std::string string, std::string_view from, std::string_view to)
   {
@@ -234,9 +233,7 @@ namespace anm2ed::resource::shader
 
   std::string_view uniform_value_type_label_get(UniformValueType type)
   {
-    for (const auto& info : UNIFORM_VALUE_TYPE_INFOS)
-      if (type == info.type) return info.label;
-    return UNIFORM_VALUE_TYPE_INFOS[0].label;
+    return UNIFORM_VALUE_TYPE_INFOS[type < UNIFORM_VALUE_COUNT ? type : UNIFORM_VALUE_UNKNOWN].label;
   }
 
   bool is_uniform_value_editable(UniformValueType type)
@@ -245,9 +242,100 @@ namespace anm2ed::resource::shader
            type == UNIFORM_VALUE_VEC3 || type == UNIFORM_VALUE_VEC4 || type == UNIFORM_VALUE_SAMPLER2D;
   }
 
-  bool is_uniform_value_vector(UniformValueType type)
+  bool is_uniform_value_vector(UniformValueType type) { return UNIFORM_VALUE_TYPE_INFOS[type].componentCount > 0; }
+
+  bool is_component_binding_valid(UniformBinding binding)
   {
-    return type == UNIFORM_VALUE_VEC2 || type == UNIFORM_VALUE_VEC3 || type == UNIFORM_VALUE_VEC4;
+    return binding == UNIFORM_BINDING_MANUAL || binding == UNIFORM_BINDING_PLAYBACK_TIME;
+  }
+
+  void uniform_configs_apply(const Element& shaderElement, std::vector<Uniform>& uniforms)
+  {
+    for (auto& uniform : uniforms)
+    {
+      auto config = shader_uniform_get(shaderElement, uniform.name);
+      if (!config) continue;
+
+      if (auto binding = uniform_binding_get(config->binding);
+          !config->binding.empty() && is_uniform_binding_valid(binding, uniform.valueType))
+        uniform.binding = binding;
+      if (!config->value.empty()) uniform_value_parse(uniform, config->value);
+      for (int index = 0; index < (int)uniform.components.size(); ++index)
+      {
+        auto component = shader_uniform_component_get(*config, index);
+        if (!component) continue;
+        if (auto binding = uniform_binding_get(component->binding);
+            !component->binding.empty() && is_component_binding_valid(binding))
+          uniform.components[index].binding = binding;
+        if (!component->value.empty()) std::stringstream{component->value} >> uniform.components[index].value;
+      }
+    }
+  }
+
+  bool uniform_configs_trim(Element& shaderElement, const std::vector<Uniform>& uniforms)
+  {
+    bool isChanged = std::erase_if(shaderElement.children,
+                                   [&](const Element& child)
+                                   {
+                                     return child.type == ElementType::UNIFORM &&
+                                            std::ranges::none_of(uniforms, [&](const Uniform& uniform)
+                                                                 { return uniform.name == child.name; });
+                                   }) > 0;
+
+    for (auto& config : shaderElement.children)
+    {
+      if (config.type != ElementType::UNIFORM) continue;
+      auto& uniform = *std::ranges::find(uniforms, config.name, &Uniform::name);
+
+      if (!config.binding.empty() && !is_uniform_binding_valid(uniform_binding_get(config.binding), uniform.valueType))
+      {
+        config.binding.clear();
+        isChanged = true;
+      }
+
+      auto componentCount = UNIFORM_VALUE_TYPE_INFOS[uniform.valueType].componentCount;
+      auto isComponents = uniform_binding_get(config.binding) == UNIFORM_BINDING_COMPONENTS;
+      isChanged |= std::erase_if(config.children,
+                                 [&](const Element& component)
+                                 {
+                                   return component.type == ElementType::COMPONENT &&
+                                          (!isComponents || component.index < 0 || component.index >= componentCount);
+                                 }) > 0;
+
+      for (auto& component : config.children)
+      {
+        if (component.type != ElementType::COMPONENT || component.binding.empty() ||
+            is_component_binding_valid(uniform_binding_get(component.binding)))
+          continue;
+        component.binding.clear();
+        isChanged = true;
+      }
+    }
+
+    return isChanged;
+  }
+
+  void uniform_config_save(Element& shaderElement, const Uniform& uniform)
+  {
+    auto config = shader_uniform_get(shaderElement, uniform.name);
+    if (!config)
+    {
+      config = &shaderElement.children.emplace_back(element_make(ElementType::UNIFORM));
+      config->name = uniform.name;
+    }
+
+    config->binding = std::string(uniform_binding_value_get(uniform.binding));
+    config->value = uniform_value_string_get(uniform);
+    std::erase_if(config->children, [](const Element& child) { return child.type == ElementType::COMPONENT; });
+    if (uniform.binding != UNIFORM_BINDING_COMPONENTS) return;
+
+    for (int index = 0; index < (int)uniform.components.size(); ++index)
+    {
+      auto& component = config->children.emplace_back(element_make(ElementType::COMPONENT));
+      component.index = index;
+      component.binding = std::string(uniform_binding_value_get(uniform.components[index].binding));
+      component.value = std::format("{:.6g}", uniform.components[index].value);
+    }
   }
 
   bool is_uniform_binding_valid(UniformBinding binding, UniformValueType type)
@@ -302,7 +390,8 @@ namespace anm2ed::resource::shader
       case UNIFORM_VALUE_SAMPLER2D:
         return std::format("{}", uniform.intValue);
       case UNIFORM_VALUE_VEC2:
-        return std::format("{} {}", uniform_float_string_get(uniform.value.x), uniform_float_string_get(uniform.value.y));
+        return std::format("{} {}", uniform_float_string_get(uniform.value.x),
+                           uniform_float_string_get(uniform.value.y));
       case UNIFORM_VALUE_VEC3:
         return std::format("{} {} {}", uniform_float_string_get(uniform.value.x),
                            uniform_float_string_get(uniform.value.y), uniform_float_string_get(uniform.value.z));
@@ -374,15 +463,9 @@ namespace anm2ed::resource::shader
     return "#version 330 core\n" + declarations + body;
   }
 
-  std::string gles_fragment_convert(std::string_view source)
-  {
-    return gles_convert(source, SHADER_STAGE_FRAGMENT);
-  }
+  std::string gles_fragment_convert(std::string_view source) { return gles_convert(source, SHADER_STAGE_FRAGMENT); }
 
-  std::string gles_vertex_convert(std::string_view source)
-  {
-    return gles_convert(source, SHADER_STAGE_VERTEX);
-  }
+  std::string gles_vertex_convert(std::string_view source) { return gles_convert(source, SHADER_STAGE_VERTEX); }
 }
 
 namespace anm2ed::resource
@@ -485,8 +568,5 @@ namespace anm2ed::resource
     if (is_valid()) glDeleteProgram(id);
   }
 
-  bool Shader::is_valid() const
-  {
-    return id != 0;
-  }
+  bool Shader::is_valid() const { return id != 0; }
 }

@@ -15,25 +15,6 @@ namespace anm2ed
                  });
   }
 
-  template <class Callback> void layer_frames_each(Element& root, Callback&& callback)
-  {
-    auto layers = content_container_get(root, ElementType::LAYERS);
-    auto spritesheets = content_container_get(root, ElementType::SPRITESHEETS);
-    if (!layers || !spritesheets) return;
-
-    animations_tracks_each(root, ElementType::LAYER_ANIMATION,
-                           [&](Element& track)
-                           {
-                             auto layer = child_id_get(*layers, ElementType::LAYER_ELEMENT, track.layerId);
-                             auto spritesheet = layer ? child_id_get(*spritesheets, ElementType::SPRITESHEET,
-                                                                     layer->spritesheetId)
-                                                      : nullptr;
-                             if (!spritesheet) return;
-                             for (auto& frame : track.children)
-                               if (frame.type == ElementType::FRAME) callback(frame, *spritesheet);
-                           });
-  }
-
   void shader_ids_repair(Element& root)
   {
     auto shaders = content_container_get(root, ElementType::SHADERS);
@@ -69,21 +50,13 @@ namespace anm2ed
   void region_frame_ids_repair(Element& root)
   {
     layer_frames_each(root,
-                      [](Element& frame, const Element& spritesheet)
+                      [](Element& frame, Element& spritesheet)
                       {
-                        auto is_region_match = [&](const Element& region)
-                        {
-                          return region.type == ElementType::REGION &&
-                                 glm::ivec2(region.crop) == glm::ivec2(frame.crop) &&
-                                 glm::ivec2(region.size) == glm::ivec2(frame.size) &&
-                                 glm::ivec2(region.pivot) == glm::ivec2(frame.pivot);
-                        };
-
                         auto region = frame.regionId == -1
                                           ? nullptr
                                           : child_id_get(spritesheet, ElementType::REGION, frame.regionId);
-                        if (region && is_region_match(*region)) return;
-                        if (auto candidate = child_find(spritesheet, is_region_match)) frame.regionId = candidate->id;
+                        if (region && is_region_matched(*region, frame)) return;
+                        if (auto match = region_match_get(spritesheet, frame)) frame.regionId = match->id;
                       });
   }
 

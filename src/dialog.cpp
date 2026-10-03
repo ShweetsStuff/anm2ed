@@ -85,8 +85,7 @@ namespace anm2ed
     auto pathUtf8 = path::to_utf8(path);
     system(std::format("xdg-open \"{}\" &", pathUtf8).c_str());
 #else
-    toasts.push(localize.get(TOAST_NOT_SUPPORTED));
-    logger.warning(localize.get(TOAST_NOT_SUPPORTED, anm2ed::ENGLISH));
+    toast_log(Level::WARNING, TOAST_NOT_SUPPORTED);
 #endif
   }
 

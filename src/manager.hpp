@@ -53,7 +53,7 @@ namespace anm2ed
 
     std::vector<std::filesystem::path> anm2DragDropPaths{};
     bool isAnm2DragDrop{};
-    int anm2DragDropMergePreset{Document::FILE_MERGE_PRESET_MERGE_BY_NAME};
+    int anm2DragDropMergePreset{FILE_MERGE_PRESET_MERGE_BY_NAME};
     imgui::PopupHelper anm2DragDropPopup{
         imgui::PopupHelper(LABEL_MANAGER_ANM2_DRAG_DROP, imgui::POPUP_NORMAL, imgui::POPUP_BY_CURSOR)};
     imgui::PopupHelper anm2DragDropMergePopup{

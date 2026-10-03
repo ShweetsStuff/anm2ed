@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <filesystem>
 #include <optional>
@@ -8,7 +9,6 @@
 #include <string_view>
 #include <type_traits>
 #include <vector>
-#include <algorithm>
 
 #include <glm/glm.hpp>
 #include <tinyxml2/tinyxml2.h>
@@ -191,6 +191,20 @@ namespace anm2ed
 #define X(symbol, string, itemString, icon, color, colorActive, colorHovered, track, container) ElementType::container,
       ANM2_ITEM_TYPES
 #undef X
+  };
+
+  enum class RegionFrameMapping
+  {
+    PRESERVE,
+    SET
+  };
+
+  enum FileMergePreset
+  {
+    FILE_MERGE_PRESET_MERGE_BY_NAME,
+    FILE_MERGE_PRESET_APPEND_AS_NEW,
+    FILE_MERGE_PRESET_REPLACE_MATCHING,
+    FILE_MERGE_PRESET_COUNT
   };
 
   enum class ChangeType
@@ -401,8 +415,8 @@ namespace anm2ed
 
   template <class E> ElementPointer<E> shader_uniform_component_get(E& uniform, int index)
   {
-    return child_find(
-        uniform, [&](const Element& child) { return child.type == ElementType::COMPONENT && child.index == index; });
+    return child_find(uniform, [&](const Element& child)
+                      { return child.type == ElementType::COMPONENT && child.index == index; });
   }
 
   template <class E> ElementPointer<E> element_first_get(E& element, ElementType type)
@@ -432,8 +446,7 @@ namespace anm2ed
   }
 
   template <class E>
-  ElementPointer<E> animation_item_get(E& animation, ItemType type, int id = -1, int groupType = NONE,
-                                       int groupId = -1)
+  ElementPointer<E> animation_item_get(E& animation, ItemType type, int id = -1, int groupType = NONE, int groupId = -1)
   {
     auto trackType = TYPE_TRACKS[(int)type];
     auto isGrouped = groupType != NONE && groupId != -1;
@@ -495,6 +508,7 @@ namespace anm2ed
   int element_child_max_id_get(const Element&, ElementType);
   bool element_child_id_erase(Element&, ElementType, int);
   int track_frames_count_get(const Element&);
+  int animations_count_get(const Element&);
   float interpolation_factor(Interpolation, float);
   void frame_mix(Element&, const Element&, float);
   Element frame_generate(const Element&, float);
@@ -542,5 +556,8 @@ namespace anm2ed
     bool animations_deserialize(const std::string&, int, std::set<int>&, std::string* = nullptr,
                                 std::set<int>* = nullptr);
     int animations_merge(int, std::set<int>&, types::merge::Type = types::merge::APPEND, bool = true);
+    bool file_merge(const std::filesystem::path&, const std::filesystem::path&, FileMergePreset);
+    bool regions_generate(const std::set<int>&, const std::set<Reference>&, const std::string&, RegionFrameMapping);
+    void regions_scan();
   };
 }
