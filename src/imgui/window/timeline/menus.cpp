@@ -74,7 +74,7 @@ namespace anm2ed::imgui
 
             model::Region region{.crop = frame->crop, .size = frame->size, .pivot = frame->pivot};
 
-            document.spritesheet.reference = spritesheetID;
+            document.focused_id_set(SelectionKind::SPRITESHEETS, spritesheetID);
             settingsPtr->windowIsRegions = true;
             manager.makeRegionSpritesheetId = spritesheetID;
             manager.makeRegion = region;
@@ -196,7 +196,7 @@ namespace anm2ed::imgui
       }
       ImGui::EndChild();
 
-      auto result = window_popup_buttons_draw(manager, localize.get(BASIC_CONFIRM));
+      auto result = popup_buttons_draw(manager, localize.get(BASIC_CONFIRM));
       if (result == PopupButton::CONFIRM)
       {
         auto targetName = groupName;

@@ -168,7 +168,7 @@ namespace anm2ed::imgui::wizard
     };
 
     auto combo_draw = [&](const char* id, StringType label, bool& isEnabled, int& value, const std::vector<int>& ids,
-                          std::vector<const char*>& labels)
+                          const std::vector<std::string>& labels)
     {
       ImGui::PushID(id);
       if (std::ranges::find(ids, value) == ids.end()) value = ids.front();
@@ -187,18 +187,16 @@ namespace anm2ed::imgui::wizard
       ImGui::PopID();
     };
 
-    std::vector<int> noneIds{-1};
-    std::string noneLabel = localize.get(BASIC_NONE);
-    std::vector<const char*> noneLabels{noneLabel.c_str()};
     std::vector<int> interpolationIds{};
-    std::vector<const char*> interpolationLabels{};
+    std::vector<std::string> interpolationLabels{};
     for (int i = 0; i < (int)std::size(INTERPOLATION_LABELS); ++i)
     {
       interpolationIds.push_back(i);
       interpolationLabels.push_back(localize.get(INTERPOLATION_LABELS[i]));
     }
-    auto regions =
-        document.layer_regions_get(document.reference_get().itemType == LAYER ? document.reference_get().itemID : -1);
+    auto regions = document.choices_get(
+        SelectionKind::REGIONS, document.reference_get().itemType == LAYER ? document.reference_get().itemID : -1);
+    auto shaders = document.choices_get(SelectionKind::SHADERS);
     if (!isLayerPropertyAvailable) regionId = shaderId = -1;
 
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImGui::GetStyle().ItemInnerSpacing);
@@ -212,15 +210,12 @@ namespace anm2ed::imgui::wizard
     rows_draw(colorRows, true);
 
     ImGui::BeginDisabled(!isLayerPropertyAvailable);
-    combo_draw("Region", BASIC_REGION, settings.changeIsRegion, regionId, regions ? regions->ids : noneIds,
-               regions ? regions->labels : noneLabels);
+    combo_draw("Region", BASIC_REGION, settings.changeIsRegion, regionId, regions.ids, regions.labels);
     ImGui::EndDisabled();
     combo_draw("Interpolation", BASIC_INTERPOLATED, settings.changeIsInterpolationSet, settings.changeInterpolation,
                interpolationIds, interpolationLabels);
     ImGui::BeginDisabled(!isLayerPropertyAvailable);
-    combo_draw("Shader", BASIC_SHADER, settings.changeIsShader, shaderId,
-               document.shader.ids.empty() ? noneIds : document.shader.ids,
-               document.shader.labels.empty() ? noneLabels : document.shader.labels);
+    combo_draw("Shader", BASIC_SHADER, settings.changeIsShader, shaderId, shaders.ids, shaders.labels);
     ImGui::EndDisabled();
     bool_draw("Visible", BASIC_VISIBLE, settings.changeIsVisibleSet, settings.changeIsVisible);
     bool_draw("Flip X", LABEL_FLIP_X, settings.changeIsFlipXSet, settings.changeIsFlipX);

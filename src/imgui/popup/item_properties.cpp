@@ -119,8 +119,9 @@ namespace anm2ed::imgui::popup
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ITEM_NAME));
           if (type == LAYER)
           {
-            combo_id_mapped(localize.get(LABEL_SPRITESHEET), &addItemSpritesheetID, document.spritesheet.ids,
-                            document.spritesheet.labels);
+            auto spritesheets = document.choices_get(SelectionKind::SPRITESHEETS);
+            combo_id_mapped(localize.get(LABEL_SPRITESHEET), &addItemSpritesheetID, spritesheets.ids,
+                            spritesheets.labels);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_SPRITESHEET));
           }
           else if (type == NULL_)
@@ -213,7 +214,7 @@ namespace anm2ed::imgui::popup
                                   document.frame_references_clear();
                                   if (queuedType == LAYER)
                                     if (auto layer = model::item_get(document.model.content.layers, addId))
-                                      document.spritesheet.reference = layer->spritesheetId;
+                                      document.focused_id_set(SelectionKind::SPRITESHEETS, layer->spritesheetId);
                                 }
                               }});
 

@@ -1,8 +1,8 @@
 #include "input.hpp"
 
 #include <algorithm>
-#include <cmath>
 #include <climits>
+#include <cmath>
 
 #include <glm/gtc/type_ptr.hpp>
 
@@ -51,8 +51,12 @@ namespace anm2ed::imgui
     return isActivated;
   }
 
-  bool combo_id_mapped(const std::string& label, int* id, const std::vector<int>& ids, std::vector<const char*>& labels)
+  bool combo_id_mapped(const std::string& label, int* id, const std::vector<int>& ids,
+                       const std::vector<std::string>& labelStrings)
   {
+    std::vector<const char*> labels{};
+    for (const auto& labelString : labelStrings)
+      labels.push_back(labelString.c_str());
     if (!id) return false;
 
     int index = -1;
@@ -75,7 +79,7 @@ namespace anm2ed::imgui
   }
 
   edit_state::Type drag_int_persistent(const char* label, int* value, float speed, int min, int max, const char* format,
-                                 ImGuiSliderFlags flags)
+                                       ImGuiSliderFlags flags)
   {
     static bool isEditing{};
     static int start{INT_MAX};
@@ -106,7 +110,7 @@ namespace anm2ed::imgui
   }
 
   edit_state::Type drag_float_persistent(const char* label, float* value, float speed, float min, float max,
-                                   const char* format, ImGuiSliderFlags flags)
+                                         const char* format, ImGuiSliderFlags flags)
   {
     static bool isEditing{};
     static float start{NAN};
@@ -137,7 +141,7 @@ namespace anm2ed::imgui
   }
 
   edit_state::Type drag_float2_persistent(const char* label, vec2* value, float speed, float min, float max,
-                                    const char* format, ImGuiSliderFlags flags)
+                                          const char* format, ImGuiSliderFlags flags)
   {
     static bool isEditing{};
     static vec2 start{NAN};
@@ -232,8 +236,7 @@ namespace anm2ed::imgui
     bool isSelected = value && *value == buttonValue;
     if (isSelected) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
 
-    bool isActivated =
-        ImGui::ImageButton(label, texture, size, ImVec2(0, 0), ImVec2(1, 1), ImVec4(0, 0, 0, 0), tint);
+    bool isActivated = ImGui::ImageButton(label, texture, size, ImVec2(0, 0), ImVec2(1, 1), ImVec4(0, 0, 0, 0), tint);
 
     if (isSelected) ImGui::PopStyleColor();
     if (isActivated && value) *value = buttonValue;

@@ -9,7 +9,7 @@ namespace anm2ed::imgui
                                    Clipboard& clipboard)
       : TimelineState(std::move(state)), manager(manager), settings(settings), resources(resources),
         clipboard(clipboard), document(*manager.get()), model(document.model), playback(document.playback),
-        reference(document.reference_get()), region(document.region)
+        reference(document.reference_get())
   {
   }
 

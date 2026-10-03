@@ -26,13 +26,18 @@ namespace anm2ed
   class Manager;
   struct Command;
 
+  // Ids and labels for a combo box of content items.
+  struct Choices
+  {
+    std::vector<int> ids{};
+    std::vector<std::string> labels{};
+  };
+
   struct DocumentData
   {
     std::filesystem::path path{};
     uint64_t tabId{};
     Snapshots snapshots{};
-    std::map<int, Storage> regionBySpritesheet{};
-    Storage animation{};
     resource::AssetStore assets{};
     std::map<int, resource::Image> textureDrafts{};
     int changeAllFramePropertiesRegionId{-1};
@@ -146,6 +151,12 @@ namespace anm2ed
     void reference_set(Reference);
     std::set<Reference> selected_get(SelectionKind) const;
     void selected_set(SelectionKind, const std::set<Reference>&);
+    std::set<int> selected_ids_get(SelectionKind) const;
+    void selected_ids_set(SelectionKind, const std::set<int>&);
+    int focused_id_get(SelectionKind) const;
+    void focused_id_set(SelectionKind, int);
+    void selected_clear(SelectionKind);
+    Choices choices_get(SelectionKind, int = -1) const;
     std::set<int> animations_selected_get() const;
     void animations_selected_set(const std::set<int>&);
     std::set<Reference> item_frame_references_get(Reference) const;
@@ -155,7 +166,6 @@ namespace anm2ed
     void frame_references_clear();
     std::vector<Reference> layer_references_get();
 
-    Storage* layer_regions_get(int);
     const model::Frame* frame_get() const;
     const model::Track* item_get() const;
     const model::Spritesheet* spritesheet_get() const;

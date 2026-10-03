@@ -25,7 +25,7 @@
 
 #include "model/frames.hpp"
 #include "vector.hpp"
-#include "window/window.hpp"
+#include "window/panel.hpp"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::types;
@@ -164,7 +164,6 @@ namespace anm2ed::imgui
     model::Model& model;
     Playback& playback;
     Reference reference;
-    Storage& region;
     const model::Animation* animation{};
     float rowFrameChildHeight{};
     bool isLightTheme{};

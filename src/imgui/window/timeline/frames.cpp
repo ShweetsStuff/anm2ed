@@ -39,7 +39,7 @@ namespace anm2ed::imgui
           frames_select_for(document, uids);
           if (targetType == LAYER)
             if (auto layer = model::item_get(document.model.content.layers, targetID))
-              document.spritesheet.reference = layer->spritesheetId;
+              document.focused_id_set(SelectionKind::SPRITESHEETS, layer->spritesheetId);
         });
   }
 
@@ -409,7 +409,7 @@ namespace anm2ed::imgui
           {
             if (type == LAYER)
               if (auto layer = model::item_get(model.content.layers, id))
-                document.spritesheet.reference = layer->spritesheetId;
+                document.focused_id_set(SelectionKind::SPRITESHEETS, layer->spritesheetId);
 
             if (type != TRIGGER)
             {
@@ -454,8 +454,7 @@ namespace anm2ed::imgui
             }
             reference_set(frameReference);
             isReferenced = true;
-            region.reference = -1;
-            region.selection.clear();
+            document.selected_clear(SelectionKind::REGIONS);
           }
           ImGui::PopStyleVar();
 

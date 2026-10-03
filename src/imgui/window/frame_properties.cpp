@@ -79,10 +79,10 @@ namespace anm2ed::imgui
                               }});
       };
 
-      auto regions = document.layer_regions_get(type == LAYER ? reference.itemID : -1);
-      auto noneLabel = std::string(localize.get(BASIC_NONE));
-      auto regionLabels = regions ? regions->labels : std::vector<const char*>{noneLabel.c_str()};
-      auto regionIds = regions ? regions->ids : std::vector<int>{-1};
+      auto regions = document.choices_get(SelectionKind::REGIONS, type == LAYER ? reference.itemID : -1);
+      auto events = document.choices_get(SelectionKind::EVENTS);
+      auto sounds = document.choices_get(SelectionKind::SOUNDS);
+      auto shaders = document.choices_get(SelectionKind::SHADERS);
       std::vector<const char*> interpolationLabels{};
       for (auto label : INTERPOLATION_LABELS)
         interpolationLabels.push_back(localize.get(label));
@@ -115,7 +115,7 @@ namespace anm2ed::imgui
           if (type == TRIGGER)
           {
             if (combo_id_mapped(localize.get(BASIC_EVENT), frame ? &useFrame.eventId : &dummy_value_negative<int>(),
-                                document.event.ids, document.event.labels) &&
+                                events.ids, events.labels) &&
                 frame)
             {
               auto eventId = useFrame.eventId;
@@ -166,8 +166,8 @@ namespace anm2ed::imgui
                 for (auto [i, id] : std::views::enumerate(useFrame.soundIds))
                 {
                   ImGui::PushID(i);
-                  if (combo_id_mapped("##Sound", frame ? &id : &dummy_value_negative<int>(), document.sound.ids,
-                                      document.sound.labels) &&
+                  if (combo_id_mapped("##Sound", frame ? &id : &dummy_value_negative<int>(), sounds.ids,
+                                      sounds.labels) &&
                       frame)
                   {
                     auto soundIndex = (std::size_t)i;
@@ -260,7 +260,7 @@ namespace anm2ed::imgui
 
             ImGui::BeginDisabled(type != LAYER);
             if (combo_id_mapped(localize.get(BASIC_REGION), frame ? &useFrame.regionId : &dummy_value_negative<int>(),
-                                regionIds, regionLabels) &&
+                                regions.ids, regions.labels) &&
                 frame)
             {
               auto regionId = useFrame.regionId;
@@ -288,7 +288,7 @@ namespace anm2ed::imgui
 
             ImGui::BeginDisabled(type != LAYER);
             if (combo_id_mapped(localize.get(BASIC_SHADER), frame ? &useFrame.shaderId : &dummy_value_negative<int>(),
-                                document.shader.ids, document.shader.labels) &&
+                                shaders.ids, shaders.labels) &&
                 frame)
             {
               auto shaderId = useFrame.shaderId;

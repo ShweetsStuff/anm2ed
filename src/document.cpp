@@ -109,26 +109,6 @@ namespace anm2ed::document
     return false;
   }
 
-  template <class Items, class Label>
-  void storage_labels_set(Storage& storage, const Items& items, bool isNone, Label&& label_get)
-  {
-    std::vector<std::string> labels{};
-    std::vector<int> ids{};
-    if (isNone)
-    {
-      labels.emplace_back(localize.get(BASIC_NONE));
-      ids.emplace_back(-1);
-    }
-    for (const auto& item : items)
-    {
-      labels.emplace_back(label_get(item));
-      ids.emplace_back(item.id);
-    }
-    storage.labels_set(std::move(labels), std::move(ids));
-  }
-
-  std::string item_name_get(const auto& item) { return item.name; }
-
   // Loads assets for elements that are new or whose path changed, and forgets those of removed elements.
   template <class Items, class Load>
   void resources_sync(Document& document, const Items& items, std::map<int, std::uint64_t>& keys,
@@ -633,26 +613,7 @@ namespace anm2ed
     hash_set();
     assets_sync();
 
-    auto path_label_get = [](StringType format)
-    {
-      return [format](const auto& item)
-      {
-        auto pathString = path::to_utf8(item.path);
-        return std::vformat(localize.get(format), std::make_format_args(item.id, pathString));
-      };
-    };
-
-    auto& content = model.content;
-    document::storage_labels_set(event, content.events, true, [](const auto& item) { return item.name; });
-    document::storage_labels_set(spritesheet, content.spritesheets, false, path_label_get(FORMAT_SPRITESHEET));
     spritesheet_hashes_sync();
-    regionBySpritesheet.clear();
-    for (auto& element : content.spritesheets)
-      document::storage_labels_set(regionBySpritesheet[element.id], element.regions, true,
-                                   [](const auto& item) { return item.name; });
-    document::storage_labels_set(shader, content.shaders, true, [](const auto& item) { return item.name; });
-    document::storage_labels_set(sound, content.sounds, true, path_label_get(FORMAT_SOUND));
-
     snapshots.commit();
     index = model::UidIndex(model);
   }
@@ -728,6 +689,62 @@ namespace anm2ed
   void Document::selected_set(SelectionKind kind, const std::set<Reference>& references)
   {
     selection_references_set(selection, model, kind, references);
+  }
+
+  std::set<int> Document::selected_ids_get(SelectionKind kind) const
+  {
+    return selection_ids_get(selection, model, kind);
+  }
+
+  void Document::selected_ids_set(SelectionKind kind, const std::set<int>& ids)
+  {
+    selection_ids_set(selection, model, kind, ids);
+  }
+
+  int Document::focused_id_get(SelectionKind kind) const { return selection_focus_id_get(selection, model, kind); }
+
+  void Document::focused_id_set(SelectionKind kind, int id) { selection_focus_id_set(selection, model, kind, id); }
+
+  void Document::selected_clear(SelectionKind kind)
+  {
+    selection.uids.erase(kind);
+    selection.focuses.erase(kind);
+  }
+
+  // Combo entries for a content kind (regions are those of layer `layerId`'s spritesheet); all but spritesheets start with None.
+  Choices Document::choices_get(SelectionKind kind, int layerId) const
+  {
+    Choices choices{};
+    if (kind != SelectionKind::SPRITESHEETS)
+    {
+      choices.ids.push_back(-1);
+      choices.labels.emplace_back(localize.get(BASIC_NONE));
+    }
+    auto add = [&](const auto& items, auto&& label_get)
+    {
+      for (const auto& item : items)
+      {
+        choices.ids.push_back(item.id);
+        choices.labels.push_back(label_get(item));
+      }
+    };
+    auto name_get = [](const auto& item) { return item.name; };
+    auto path_label_get = [](StringType format)
+    {
+      return [format](const auto& item)
+      {
+        auto pathString = path::to_utf8(item.path);
+        return std::vformat(localize.get(format), std::make_format_args(item.id, pathString));
+      };
+    };
+    auto& content = model.content;
+    if (kind == SelectionKind::SPRITESHEETS) add(content.spritesheets, path_label_get(FORMAT_SPRITESHEET));
+    if (kind == SelectionKind::SOUNDS) add(content.sounds, path_label_get(FORMAT_SOUND));
+    if (kind == SelectionKind::EVENTS) add(content.events, name_get);
+    if (kind == SelectionKind::SHADERS) add(content.shaders, name_get);
+    if (kind == SelectionKind::REGIONS)
+      if (auto spritesheet = model.layer_spritesheet_get(layerId)) add(spritesheet->regions, name_get);
+    return choices;
   }
 
   std::set<int> Document::animations_selected_get() const
@@ -810,18 +827,11 @@ namespace anm2ed
     return result;
   }
 
-  Storage* Document::layer_regions_get(int layerId)
-  {
-    auto layer = model::item_get(model.content.layers, layerId);
-    auto regions = layer ? regionBySpritesheet.find(layer->spritesheetId) : regionBySpritesheet.end();
-    return regions == regionBySpritesheet.end() ? nullptr : &regions->second;
-  }
-
   const model::Frame* Document::frame_get() const { return model.frame_get(reference_get()); }
   const model::Track* Document::item_get() const { return model.track_get(reference_get()); }
   const model::Spritesheet* Document::spritesheet_get() const
   {
-    return model::item_get(model.content.spritesheets, spritesheet.reference);
+    return model::item_get(model.content.spritesheets, focused_id_get(SelectionKind::SPRITESHEETS));
   }
 
   void Document::spritesheets_add(const std::vector<std::filesystem::path>& paths)
@@ -855,11 +865,11 @@ namespace anm2ed
       texture_set(element.id, std::move(texture));
       texturePaths[element.id] = element.path;
       added.insert(element.id);
-      spritesheet.reference = element.id;
       spritesheet_hash_set_saved(element.id);
       toast_log(Level::INFO, TOAST_SPRITESHEET_INITIALIZED, element.id, path::to_utf8(element.path));
     }
-    spritesheet.selection = added;
+    selected_ids_set(SelectionKind::SPRITESHEETS, added);
+    focused_id_set(SelectionKind::SPRITESHEETS, *added.rbegin());
     change();
   }
 
@@ -881,10 +891,10 @@ namespace anm2ed
       sound_set(element.id, resource::AudioData(path::case_insensitive_find(element.path)));
       soundPaths[element.id] = element.path;
       added.insert(element.id);
-      sound.reference = element.id;
       toast_log(Level::INFO, TOAST_SOUND_INITIALIZED, element.id, path::to_utf8(element.path));
     }
-    sound.selection = added;
+    selected_ids_set(SelectionKind::SOUNDS, added);
+    focused_id_set(SelectionKind::SOUNDS, *added.rbegin());
     change();
   }
 

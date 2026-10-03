@@ -1,21 +1,17 @@
 #pragma once
 
-#include "dialog.hpp"
-#include "manager.hpp"
-#include "resources.hpp"
-#include "settings.hpp"
-#include "util/imgui/popup.hpp"
+#include "panel.hpp"
 
 namespace anm2ed::imgui
 {
-  class ShadersWindow
+  struct ShadersPanel
   {
-  public:
+    PanelState state{};
     std::string status{};
     int dialogShaderId{-1};
     int popupShaderId{-1};
-    int newElementId{-1};
     PopupHelper propertiesPopup{PopupHelper(LABEL_SHADER_PROPERTIES, POPUP_NORMAL)};
-    void update(Manager&, Settings&, Resources&, Dialog&);
   };
+
+  void shaders_update(Panel&, ShadersPanel&);
 }

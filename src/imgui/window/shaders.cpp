@@ -17,6 +17,8 @@ using namespace anm2ed::util;
 
 namespace anm2ed::imgui
 {
+  constexpr int SHADER_CARD_LINES = 2;
+
 #define SHADER_UNIFORM_BINDING_COMBO_VALUES                                                                            \
   X(resource::shader::UNIFORM_BINDING_IGNORE)                                                                          \
   X(resource::shader::UNIFORM_BINDING_MANUAL)                                                                          \
@@ -74,7 +76,7 @@ namespace anm2ed::imgui
     }
   }
 
-  void shader_dialog_update(ShadersWindow& window, Manager& manager, Dialog& dialog, Dialog::Type type,
+  void shader_dialog_update(ShadersPanel& window, Manager& manager, Dialog& dialog, Dialog::Type type,
                             std::filesystem::path model::Shader::* member)
   {
     if (!dialog.is_selected(type)) return;
@@ -88,7 +90,7 @@ namespace anm2ed::imgui
     dialog.reset();
   }
 
-  void shader_path_row_update(ShadersWindow& window, Document& document, Resources& resources, Dialog& dialog,
+  void shader_path_row_update(ShadersPanel& window, Document& document, Resources& resources, Dialog& dialog,
                               model::Shader* shader, std::filesystem::path model::Shader::* member,
                               Dialog::Type dialogType, StringType label)
   {
@@ -287,210 +289,105 @@ namespace anm2ed::imgui
     ImGui::EndTable();
   }
 
-  void ShadersWindow::update(Manager& manager, Settings& settings, Resources& resources, Dialog& dialog)
+  auto& shaders_get(model::Model& model) { return model.content.shaders; }
+
+  void shaders_update(Panel& panel, ShadersPanel& shaders)
   {
+    auto& [manager, settings, resources, dialog, clipboard, document, state] = panel;
+    auto& items = document.model.content.shaders;
+    auto& status = shaders.status;
+    auto& propertiesPopup = shaders.propertiesPopup;
+    auto& popupShaderId = shaders.popupShaderId;
+    shader_dialog_update(shaders, manager, dialog, Dialog::SHADER_VERTEX_PATH_SET, &model::Shader::vertex);
+    shader_dialog_update(shaders, manager, dialog, Dialog::SHADER_FRAGMENT_PATH_SET, &model::Shader::fragment);
+
     if (ImGui::Begin(localize.get(LABEL_SHADERS_WINDOW), &settings.windowIsShaders))
     {
-      auto document = manager.get();
-      if (!document)
+      auto selection = document.selected_ids_get(SelectionKind::SHADERS);
+      auto properties_open = [&](int id)
       {
-        ImGui::End();
-        return;
-      }
-      auto shaders = &document->model.content.shaders;
-
-      shader_dialog_update(*this, manager, dialog, Dialog::SHADER_VERTEX_PATH_SET, &model::Shader::vertex);
-      shader_dialog_update(*this, manager, dialog, Dialog::SHADER_FRAGMENT_PATH_SET, &model::Shader::fragment);
-
-      auto shader_add = [&]()
-      {
-        manager.command_push({manager.selected, [this](Manager&, Document& document)
-                              {
-                                document.edit_apply(EDIT_ADD_SHADER,
-                                                    [&](model::Model& model)
-                                                    {
-                                                      auto& shaders = model.content.shaders;
-                                                      auto& shader = shaders.emplace_back(
-                                                          model::Shader{.id = model::item_next_id_get(shaders),
-                                                                        .name = localize.get(TEXT_NEW_SHADER)});
-                                                      document.shader.selection = {shader.id};
-                                                      document.shader.reference = shader.id;
-                                                      newElementId = shader.id;
-                                                    });
-                              }});
+        document.selected_ids_set(SelectionKind::SHADERS, {id});
+        popupShaderId = id;
+        propertiesPopup.open();
       };
 
-      auto unused_shaders_remove = [&]()
-      {
-        manager.command_push({manager.selected, [this](Manager&, Document& document)
-                              {
-                                auto unused = document.model.unused_get(ElementType::SHADER);
-                                if (unused.empty()) return;
-
-                                document.edit_apply(EDIT_REMOVE_UNUSED_SHADERS,
-                                                    [&](model::Model& model)
-                                                    {
-                                                      std::erase_if(model.content.shaders,
-                                                                    [&](const model::Shader& shader)
-                                                                    { return unused.contains(shader.id); });
-                                                      for (auto id : unused)
-                                                      {
-                                                        document.shader.selection.erase(id);
-                                                        if (document.shader.reference == id)
-                                                          document.shader.reference = -1;
-                                                        if (popupShaderId == id) propertiesPopup.close();
-                                                      }
-                                                    });
-                              }});
-      };
-
-      auto& selection = document->shader.selection;
-      auto& reference = document->shader.reference;
-      std::vector<int> ids{};
-      for (auto& shader : *shaders)
-        ids.push_back(shader.id);
-
-      if (reference != -1 && !model::item_get(*shaders, reference)) reference = -1;
-      for (auto it = selection.begin(); it != selection.end();)
-      {
-        if (!model::item_get(*shaders, *it))
-          it = selection.erase(it);
-        else
-          ++it;
-      }
-
-      auto contentSize = size_without_footer_get();
-      if (contentSize.y < ImGui::GetFrameHeight()) contentSize.y = ImGui::GetFrameHeight();
-      auto tooltipWindowPadding = ImGui::GetStyle().WindowPadding;
-      auto tooltipItemSpacing = ImGui::GetStyle().ItemSpacing;
-      ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2());
-      if (ImGui::BeginChild("##Shaders Child", contentSize, ImGuiChildFlags_Borders))
-      {
-        auto style = ImGui::GetStyle();
-        auto shaderChildSize = ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetTextLineHeightWithSpacing() * 2);
-
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2());
-        selection.start(ids.size());
-        if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_A, ImGuiInputFlags_RouteFocused))
-        {
-          selection.clear();
-          for (auto id : ids)
-            selection.insert(id);
-        }
-        if (ImGui::Shortcut(ImGuiKey_Escape, ImGuiInputFlags_RouteFocused))
-        {
-          selection.clear();
-          reference = -1;
-        }
-
-        for (auto& shader : *shaders)
-        {
-          auto id = shader.id;
-          auto isNewShader = newElementId == id;
-          ImGui::PushID(id);
-
-          if (ImGui::BeginChild("##Shader Child", shaderChildSize, ImGuiChildFlags_Borders))
+      Actions actions{};
+      actions.add(
+          ACTION_ADD, {},
+          [&]()
           {
-            auto isSelected = selection.contains(id);
-            auto cursorPos = ImGui::GetCursorPos();
-            auto runtime = document->shader_get(id);
-            bool isValid = runtime != nullptr;
-            auto& shaderIcon = isValid ? resources.icons[icon::SHADER] : resources.icons[icon::NONE];
-            auto tintColor = !isValid ? ImVec4(1.0f, 0.25f, 0.25f, 1.0f) : ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-
-            ImGui::SetNextItemSelectionUserData(id);
-            ImGui::SetNextItemStorageID(id);
-            auto isActivated = ImGui::Selectable("##Shader Selectable", isSelected, 0, shaderChildSize);
-            auto isClicked =
-                ImGui::IsItemClicked(ImGuiMouseButton_Left) || ImGui::IsItemClicked(ImGuiMouseButton_Right);
-            if (isActivated || isClicked) reference = id;
-            if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-            {
-              selection = {id};
-              reference = id;
-              popupShaderId = id;
-              propertiesPopup.open();
-            }
-
-            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, tooltipItemSpacing);
-            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, tooltipWindowPadding);
-            if (ImGui::BeginItemTooltip())
-            {
-              ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
-              ImGui::TextUnformatted(shader.name.c_str());
-              ImGui::PopFont();
-              ImGui::Text("%s: %d", localize.get(BASIC_ID), id);
-              ImGui::Text("%s: %s", localize.get(LABEL_VERTEX), path::to_utf8(shader.vertex).c_str());
-              ImGui::Text("%s: %s", localize.get(LABEL_FRAGMENT), path::to_utf8(shader.fragment).c_str());
-              if (!isValid)
+            command_push(panel,
+                         [&state](Document& document)
+                         {
+                           int id{};
+                           document.edit_apply(EDIT_ADD_SHADER,
+                                               [&](model::Model& model)
+                                               {
+                                                 auto& shaders = model.content.shaders;
+                                                 id = model::item_next_id_get(shaders);
+                                                 shaders.push_back({.id = id, .name = localize.get(TEXT_NEW_SHADER)});
+                                               });
+                           document.selected_ids_set(SelectionKind::SHADERS, {id});
+                           document.focused_id_set(SelectionKind::SHADERS, id);
+                           state.newId = id;
+                         });
+          },
+          TOOLTIP_ADD_SHADER);
+      actions.add(
+          ACTION_REMOVE_UNUSED, {},
+          [&]() { items_unused_remove(panel, ElementType::SHADER, EDIT_REMOVE_UNUSED_SHADERS, shaders_get); },
+          TOOLTIP_REMOVE_UNUSED_SHADERS);
+      actions.add(
+          ACTION_RELOAD, [selection]() { return !selection.empty(); },
+          [&]()
+          {
+            status.clear();
+            for (auto id : selection)
+              if (auto shader = shader_element_get(document, id))
               {
-                ImGui::Spacing();
-                ImGui::TextWrapped("%s", localize.get(TOOLTIP_SHADER_INVALID));
+                document.shader_reload(id, &status);
+                toasts.push(std::vformat(localize.get(TOAST_RELOAD_SHADER), std::make_format_args(id, shader->name)));
               }
-              ImGui::EndTooltip();
-            }
-            ImGui::PopStyleVar(2);
+          },
+          TOOLTIP_RELOAD_SHADERS);
 
-            ImGui::SetCursorPos(cursorPos);
-            auto imageSize = ImVec2(shaderChildSize.y, shaderChildSize.y);
-            ImGui::ImageWithBg(resource::texture::id_get(shaderIcon), imageSize, ImVec2(), ImVec2(1, 1), ImVec4(),
-                               tintColor);
-
-            ImGui::SetCursorPos(ImVec2(shaderChildSize.y + style.ItemSpacing.x,
-                                       shaderChildSize.y - shaderChildSize.y / 2 - ImGui::GetTextLineHeight() / 2));
-            auto label = std::vformat(localize.get(FORMAT_SHADER), std::make_format_args(id, shader.name));
-            ImGui::TextUnformatted(label.c_str());
-          }
-          ImGui::EndChild();
-
-          if (isNewShader)
-          {
-            ImGui::SetScrollHereY(0.5f);
-            newElementId = -1;
-          }
-
-          ImGui::PopID();
-        }
-
-        selection.finish();
-        ImGui::PopStyleVar();
-      }
-      ImGui::EndChild();
-      ImGui::PopStyleVar();
-
-      auto widgetSize = widget_size_with_row_get(3);
-      if (ImGui::Button(localize.get(BASIC_ADD), widgetSize)) shader_add();
-      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ADD_SHADER));
-
-      ImGui::SameLine();
-
-      if (ImGui::Button(localize.get(BASIC_REMOVE_UNUSED), widgetSize)) unused_shaders_remove();
-      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_REMOVE_UNUSED_SHADERS));
-
-      ImGui::SameLine();
-
-      ImGui::BeginDisabled(selection.empty());
-      if (ImGui::Button(localize.get(BASIC_RELOAD), widgetSize))
+      auto image_get = [&](int id)
       {
-        status.clear();
-        for (auto id : selection)
-        {
-          auto shader = shader_element_get(*document, id);
-          if (!shader) continue;
-          document->shader_reload(id, &status);
-          toasts.push(std::vformat(localize.get(TOAST_RELOAD_SHADER), std::make_format_args(id, shader->name)));
-        }
-      }
-      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_RELOAD_SHADERS));
-      ImGui::EndDisabled();
+        auto isValid = document.shader_get(id) != nullptr;
+        auto& image = resources.icons[isValid ? icon::SHADER : icon::NONE];
+        return CardImage{.texture = &image, .size = glm::vec2(image.size), .isValid = isValid};
+      };
+      ListRows rows{.label_get =
+                        [&](int id)
+                    {
+                      auto name = shader_element_get(document, id)->name;
+                      return std::vformat(localize.get(FORMAT_SHADER), std::make_format_args(id, name));
+                    },
+                    .tooltip_draw =
+                        [&](int id)
+                    {
+                      auto& shader = *shader_element_get(document, id);
+                      tooltip_name_draw(resources, shader.name);
+                      ImGui::Text("%s: %d", localize.get(BASIC_ID), id);
+                      ImGui::Text("%s: %s", localize.get(LABEL_VERTEX), path::to_utf8(shader.vertex).c_str());
+                      ImGui::Text("%s: %s", localize.get(LABEL_FRAGMENT), path::to_utf8(shader.fragment).c_str());
+                      if (image_get(id).isValid) return;
+                      ImGui::Spacing();
+                      ImGui::TextWrapped("%s", localize.get(TOOLTIP_SHADER_INVALID));
+                    },
+                    .image_get = image_get,
+                    .activate = properties_open,
+                    .cardLines = SHADER_CARD_LINES};
+      list_panel_draw(panel, actions, {{ACTION_ADD, ACTION_REMOVE_UNUSED, ACTION_RELOAD}},
+                      [&]() { content_list_draw(panel, SelectionKind::SHADERS, item_ids_get(items), rows); });
 
       propertiesPopup.trigger();
       if (ImGui::BeginPopupModal(propertiesPopup.label(), &propertiesPopup.isOpen, ImGuiWindowFlags_NoResize))
       {
-        auto shader = shader_element_get(*document, popupShaderId);
+        auto shader = shader_element_get(document, popupShaderId);
+        if (!shader) propertiesPopup.close();
         if (!shader)
         {
-          propertiesPopup.close();
           ImGui::EndPopup();
           propertiesPopup.end();
           ImGui::End();
@@ -502,27 +399,27 @@ namespace anm2ed::imgui
         if (ImGui::BeginChild("##Shader Properties Child", popupSize))
         {
           if (propertiesPopup.isJustOpened) ImGui::SetKeyboardFocusHere();
-          if (input_text_string(localize.get(BASIC_NAME), &shader->name)) document->change();
+          if (input_text_string(localize.get(BASIC_NAME), &shader->name)) document.change();
 
           ImGui::SeparatorText(localize.get(LABEL_FILES));
 
-          shader_path_row_update(*this, *document, resources, dialog, shader, &model::Shader::vertex,
+          shader_path_row_update(shaders, document, resources, dialog, shader, &model::Shader::vertex,
                                  Dialog::SHADER_VERTEX_PATH_SET, LABEL_VERTEX);
-          shader_path_row_update(*this, *document, resources, dialog, shader, &model::Shader::fragment,
+          shader_path_row_update(shaders, document, resources, dialog, shader, &model::Shader::fragment,
                                  Dialog::SHADER_FRAGMENT_PATH_SET, LABEL_FRAGMENT);
 
-          if (is_shader_reload_needed(*document, shader))
+          if (is_shader_reload_needed(document, shader))
             ImGui::TextWrapped("%s", localize.get(LABEL_SHADER_RELOAD_NEEDED));
 
           ImGui::SeparatorText(localize.get(LABEL_UNIFORMS));
 
-          auto runtime = document->shader_get(shader->id);
+          auto runtime = document.shader_get(shader->id);
           auto tableSize = ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetTextLineHeightWithSpacing() * 8.0f);
           auto outputReserve = ImGui::GetTextLineHeightWithSpacing() * 6.0f;
           auto availableHeight = ImGui::GetContentRegionAvail().y;
           if (availableHeight - outputReserve < tableSize.y) tableSize.y = availableHeight - outputReserve;
           if (tableSize.y < ImGui::GetFrameHeight()) tableSize.y = ImGui::GetFrameHeight();
-          shader_uniforms_update(*document, shader, runtime, tableSize);
+          shader_uniforms_update(document, shader, runtime, tableSize);
 
           ImGui::SeparatorText(localize.get(LABEL_OUTPUT));
 
@@ -538,7 +435,7 @@ namespace anm2ed::imgui
         if (ImGui::Button(localize.get(BASIC_CONFIRM), popupWidgetSize))
         {
           status.clear();
-          document->shader_reload(shader->id, &status);
+          document.shader_reload(shader->id, &status);
           propertiesPopup.close();
         }
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_RELOAD_SHADERS));

@@ -32,19 +32,41 @@ namespace anm2ed::imgui
       {
         if (ImGui::DockSpace(ImGui::GetID("##DockSpace"), ImVec2(), ImGuiDockNodeFlags_PassthruCentralNode))
         {
+          auto panel_make = [&](PanelState& state)
+          { return Panel{manager, settings, resources, dialog, clipboard, *document, state}; };
+          auto panel_update = [&](PanelState& state, void (*update)(Panel&))
+          {
+            auto panel = panel_make(state);
+            update(panel);
+          };
           if (settings.windowIsAnimationPreview) animationPreview.update(manager, settings, resources);
-          if (settings.windowIsAnimations) window_update(animations, manager, settings, resources, dialog, clipboard);
-          if (settings.windowIsRegions) window_update(regions, manager, settings, resources, dialog, clipboard);
-          if (settings.windowIsEvents) window_update(events, manager, settings, resources, dialog, clipboard);
+          if (settings.windowIsAnimations)
+          {
+            auto panel = panel_make(animations.state);
+            animations_update(panel, animations);
+          }
+          if (settings.windowIsRegions)
+          {
+            auto panel = panel_make(regions.state);
+            regions_update(panel, regions);
+          }
+          if (settings.windowIsEvents) panel_update(events, events_update);
           if (settings.windowIsFrameProperties) frameProperties.update(manager, settings);
-          if (settings.windowIsLayers) window_update(layers, manager, settings, resources, dialog, clipboard);
-          if (settings.windowIsNulls) window_update(nulls, manager, settings, resources, dialog, clipboard);
+          if (settings.windowIsLayers) panel_update(layers, layers_update);
+          if (settings.windowIsNulls) panel_update(nulls, nulls_update);
           if (settings.windowIsOnionskin) onionskin.update(manager, settings);
-          if (settings.windowIsShaders) shaders.update(manager, settings, resources, dialog);
-          if (settings.windowIsSounds) window_update(sounds, manager, settings, resources, dialog, clipboard);
+          if (settings.windowIsShaders)
+          {
+            auto panel = panel_make(shaders.state);
+            shaders_update(panel, shaders);
+          }
+          if (settings.windowIsSounds) panel_update(sounds, sounds_update);
           if (settings.windowIsSpritesheetEditor) spritesheetEditor.update(manager, settings, resources);
           if (settings.windowIsSpritesheets)
-            window_update(spritesheets, manager, settings, resources, dialog, clipboard);
+          {
+            auto panel = panel_make(spritesheets.state);
+            spritesheets_update(panel, spritesheets);
+          }
           if (settings.windowIsTimeline) timeline.update(manager, settings, resources, clipboard);
           if (settings.windowIsTools) tools.update(manager, settings, resources);
           isCanvasFocused = (settings.windowIsAnimationPreview && animationPreview.is_focused_get()) ||

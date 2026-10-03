@@ -16,14 +16,6 @@ namespace anm2ed::snapshots
     return left.time == right.time && left.isPlaying == right.isPlaying && left.isFinished == right.isFinished;
   }
 
-  bool is_value_equal(const Storage& left, const Storage& right)
-  {
-    return left.reference == right.reference && left.hovered == right.hovered &&
-           left.labelsString == right.labelsString && left.ids == right.ids &&
-           static_cast<const std::set<int>&>(left.selection) == static_cast<const std::set<int>&>(right.selection) &&
-           left.references == right.references;
-  }
-
   bool is_step_empty(const SnapshotStep& step)
   {
 #define X(type, name)                                                                                                  \

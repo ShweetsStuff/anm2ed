@@ -215,7 +215,7 @@ namespace anm2ed::imgui
   {
     if (itemReference.itemType == LAYER)
       if (auto layer = model::item_get(targetDocument.model.content.layers, itemReference.itemID))
-        targetDocument.spritesheet.reference = layer->spritesheetId;
+        targetDocument.focused_id_set(SelectionKind::SPRITESHEETS, layer->spritesheetId);
     reference_set_item_reference_for(targetDocument, itemReference);
   }
 
@@ -392,7 +392,7 @@ namespace anm2ed::imgui
     {
       if (row.type == LAYER)
         if (auto layer = model::item_get(model.content.layers, row.id))
-          document.spritesheet.reference = layer->spritesheetId;
+          document.focused_id_set(SelectionKind::SPRITESHEETS, layer->spritesheetId);
       reference_set(row_item_reference_get(rowReference));
     }
     frames_selection_reset_for(document);

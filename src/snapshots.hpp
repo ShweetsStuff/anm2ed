@@ -8,7 +8,6 @@
 #include "model/model.hpp"
 #include "playback.hpp"
 #include "selection.hpp"
-#include "storage.hpp"
 
 namespace anm2ed::snapshots
 {
@@ -23,14 +22,6 @@ namespace anm2ed
 #define SNAPSHOT_STEP_STATE_FIELDS                                                                                     \
   X(model::Model, model)                                                                                               \
   X(Playback, playback)                                                                                                \
-  X(Storage, event)                                                                                                    \
-  X(Storage, layer)                                                                                                    \
-  X(Storage, merge)                                                                                                    \
-  X(Storage, null)                                                                                                     \
-  X(Storage, region)                                                                                                   \
-  X(Storage, shader)                                                                                                   \
-  X(Storage, sound)                                                                                                    \
-  X(Storage, spritesheet)                                                                                              \
   X(Selection, selection)                                                                                              \
   X(float, frameTime)                                                                                                  \
   X(AssetKeys, textures)                                                                                               \

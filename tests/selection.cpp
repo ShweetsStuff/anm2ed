@@ -90,3 +90,26 @@ TEST_CASE("track and group selection follow regrouping")
   CHECK(selection_references_get(selection, index, SelectionKind::TRACKS) == std::set<Reference>{{0, LAYER, 0}});
   CHECK(selection_references_get(selection, index, SelectionKind::GROUPS) == std::set<Reference>{{0, LAYER, groupId}});
 }
+
+TEST_CASE("content selection follows items, and regions follow the focused spritesheet")
+{
+  auto anm2 = fixture_load_with_uids("05_regions.anm2");
+  Selection selection{};
+  auto& regions = model::item_get(anm2.content.spritesheets, 0)->regions;
+  REQUIRE(regions.size() > 1);
+  auto regionId = regions[1].id;
+
+  selection_ids_set(selection, anm2, SelectionKind::REGIONS, {regionId});
+  CHECK(selection_ids_get(selection, anm2, SelectionKind::REGIONS).empty());
+
+  selection_focus_id_set(selection, anm2, SelectionKind::SPRITESHEETS, 0);
+  selection_ids_set(selection, anm2, SelectionKind::REGIONS, {regionId});
+  selection_focus_id_set(selection, anm2, SelectionKind::REGIONS, regionId);
+  regions.erase(regions.begin());
+  CHECK(selection_ids_get(selection, anm2, SelectionKind::REGIONS) == std::set<int>{regionId});
+  CHECK(selection_focus_id_get(selection, anm2, SelectionKind::REGIONS) == regionId);
+
+  std::erase_if(regions, [&](const model::Region& region) { return region.id == regionId; });
+  CHECK(selection_ids_get(selection, anm2, SelectionKind::REGIONS).empty());
+  CHECK(selection_focus_id_get(selection, anm2, SelectionKind::REGIONS) == -1);
+}

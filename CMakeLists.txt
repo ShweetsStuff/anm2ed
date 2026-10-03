@@ -108,7 +108,7 @@ file(GLOB PROJECT_SRC CONFIGURE_DEPENDS
 set(CORE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 file(GLOB CORE_SRC CONFIGURE_DEPENDS ${CORE_DIR}/edit/*.cpp ${CORE_DIR}/model/*.cpp)
 foreach(CORE_FILE log resource/strings resource/image resource/audio_data resource/asset_store util/file util/path util/math util/string util/time util/working_directory
-                  util/xml util/pack util/imgui/multiselect snapshots storage playback selection)
+                  util/xml util/pack util/imgui/multiselect snapshots playback selection)
   list(APPEND CORE_SRC ${CORE_DIR}/${CORE_FILE}.cpp)
 endforeach()
 list(REMOVE_ITEM PROJECT_SRC ${CORE_SRC})

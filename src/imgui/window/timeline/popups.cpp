@@ -31,7 +31,7 @@ namespace anm2ed::imgui
       input_text_string(localize.get(LABEL_FORMAT), &settings.generateRegionNameFormat);
       ImGui::Checkbox(localize.get(LABEL_MAP_FRAMES_TO_REGIONS), &isMakeManyRegionsMapFrames);
 
-      auto result = window_popup_buttons_draw(manager, localize.get(LABEL_MAKE_MANY_REGIONS));
+      auto result = popup_buttons_draw(manager, localize.get(LABEL_MAKE_MANY_REGIONS));
       if (result == PopupButton::CONFIRM)
         edit_push(EDIT_GENERATE_REGIONS_FROM_ANIMATIONS,
                   [targetFrames = makeManyRegionReferences, format = settings.generateRegionNameFormat,

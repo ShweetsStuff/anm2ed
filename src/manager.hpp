@@ -64,6 +64,7 @@ namespace anm2ed
 
     struct ItemEdit
     {
+      int id{-1};
       std::string name{};
       int spritesheetId{};
       bool isShowRect{};

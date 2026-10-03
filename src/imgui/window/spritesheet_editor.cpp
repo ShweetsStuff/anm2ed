@@ -32,7 +32,7 @@ namespace anm2ed::imgui
     auto& document = *manager.get();
     auto& model = document.model;
     auto reference = document.reference_get();
-    auto& referenceSpritesheet = document.spritesheet.reference;
+    auto referenceSpritesheet = document.focused_id_get(SelectionKind::SPRITESHEETS);
     auto& pan = document.editorPan;
     auto& zoom = document.editorZoom;
     auto& backgroundColor = settings.editorBackgroundColor;
@@ -58,7 +58,10 @@ namespace anm2ed::imgui
     if (auto selectedLayerSpritesheet = selected_layer_spritesheet_get();
         selectedLayerSpritesheet != -1 && document.editTarget != Document::EditTarget::REGION &&
         document.editTarget != Document::EditTarget::SPRITESHEET)
+    {
       referenceSpritesheet = selectedLayerSpritesheet;
+      document.focused_id_set(SelectionKind::SPRITESHEETS, referenceSpritesheet);
+    }
     auto spritesheet = model::item_get(model.content.spritesheets, referenceSpritesheet);
     auto baseTexture = document.texture_get(referenceSpritesheet);
     auto texture = baseTexture;
@@ -67,8 +70,8 @@ namespace anm2ed::imgui
     auto& shaderTexture = resources.shaders[shader::TEXTURE];
     auto& shaderLine = resources.shaders[shader::LINE];
     auto& dashedShader = resources.shaders[shader::DASHED];
-    auto& regionReference = document.region.reference;
-    auto& regionSelection = document.region.selection;
+    auto regionReference = document.focused_id_get(SelectionKind::REGIONS);
+    auto regionSelection = document.selected_ids_get(SelectionKind::REGIONS);
 
     auto center_view = [&]() { pan = -size * 0.5f; };
 
@@ -546,12 +549,8 @@ namespace anm2ed::imgui
           document.editTarget = Document::EditTarget::REGION;
           regionReference = id;
           regionSelection = {id};
-          manager.command_push({manager.selected, [=](Manager&, Document& document)
-                                {
-                                  document.editTarget = Document::EditTarget::REGION;
-                                  document.region.reference = id;
-                                  document.region.selection = {id};
-                                }});
+          document.selected_ids_set(SelectionKind::REGIONS, {id});
+          document.focused_id_set(SelectionKind::REGIONS, id);
         };
         auto region_pivot_set = [&](int id, vec2 pivot)
         {

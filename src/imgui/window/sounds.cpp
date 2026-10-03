@@ -1,9 +1,8 @@
-#include "window.hpp"
+#include "panel.hpp"
 
 #include <format>
 
 #include "path.hpp"
-#include "toast.hpp"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::types;
@@ -13,121 +12,128 @@ namespace anm2ed::imgui
 {
   constexpr int SOUND_CARD_LINES = 2;
 
-  std::vector<model::Sound>* sounds_get(Document&, model::Model& model) { return &model.content.sounds; }
+  auto& sounds_get(model::Model& model) { return model.content.sounds; }
 
-  Window sounds_window_register()
+  void sounds_update(Panel& panel)
   {
-    Window window{};
-    window.title = LABEL_SOUNDS_WINDOW;
-    window.isOpen = &Settings::windowIsSounds;
-    window.elementType = ElementType::SOUND_ELEMENT;
-    window.childLabel = "##Sounds Child";
-    window.cardLines = SOUND_CARD_LINES;
-    window.pasteEdit = TOAST_SOUNDS_PASTE;
-    window.removeUnusedEdit = EDIT_REMOVE_UNUSED_SOUNDS;
-    window.deserializeFailedToast = TOAST_SOUNDS_DESERIALIZE_ERROR;
-    window.flags = WINDOW_PLAY | WINDOW_OPEN_DIRECTORY | WINDOW_ADD | WINDOW_REMOVE_UNUSED | WINDOW_RELOAD |
-                   WINDOW_REPLACE | WINDOW_COPY | WINDOW_PASTE;
-    window.footer = {{WINDOW_ADD, WINDOW_REMOVE_UNUSED, WINDOW_RELOAD, WINDOW_REPLACE}};
-    window.tooltips = {{WINDOW_ADD, TOOLTIP_SOUND_ADD},
-                       {WINDOW_REMOVE_UNUSED, TOOLTIP_REMOVE_UNUSED_SOUNDS},
-                       {WINDOW_RELOAD, TOOLTIP_RELOAD_SOUNDS},
-                       {WINDOW_REPLACE, TOOLTIP_REPLACE_SOUND}};
-    window.storage_get = [](Document& document) -> Storage& { return document.sound; };
-    window_items_bind<model::Sound>(window, sounds_get);
-    window.row_label_get = [](Document& document, int id)
-    {
-      auto pathString = path::to_utf8(model::item_get(document.model.content.sounds, id)->path);
-      return std::vformat(localize.get(FORMAT_SOUND), std::make_format_args(id, pathString));
-    };
-    window.row_select = [](Window&, Document& document, int id)
-    {
-      if (auto audio = document.sound_get(id); audio && ImGui::IsItemClicked(ImGuiMouseButton_Left))
-        resource::audio::play(*audio);
-    };
-    window.card_image_get = [](Document& document, Resources& resources, int id)
-    {
-      auto audio = document.sound_get(id);
-      auto isValid = audio && audio->is_valid();
-      auto& texture = resources.icons[isValid ? icon::SOUND : icon::NONE];
-      return WindowCardImage{.texture = &texture, .size = glm::vec2(texture.size), .isValid = isValid};
-    };
-    window.tooltip_draw = [](Document& document, Resources& resources, int id)
-    {
-      auto audio = document.sound_get(id);
-      window_tooltip_name_draw(resources, path::to_utf8(model::item_get(document.model.content.sounds, id)->path));
-      ImGui::Text("%s: %d", localize.get(BASIC_ID), id);
-      if (audio && audio->is_valid())
-        ImGui::TextUnformatted(localize.get(TEXT_OPEN_DIRECTORY));
-      else
-      {
-        ImGui::Spacing();
-        ImGui::TextWrapped("%s", localize.get(TOOLTIP_SOUND_INVALID));
-      }
-    };
-    window.add = [](Window& window, Manager&, Settings&, Document&, Clipboard&)
-    {
-      if (window.dialog) window.dialog->file_open(Dialog::SOUND_OPEN, true);
-    };
-    window.replace = [](Window& window, Manager&, Settings&, Document&, Clipboard&)
-    {
-      if (window.dialog) window.dialog->file_open(Dialog::SOUND_REPLACE);
-    };
-    window.play = [](Window&, Manager&, Settings&, Document& document, Clipboard&)
-    {
-      if (auto audio = document.sound_get(*document.sound.selection.begin())) resource::audio::play(*audio);
-    };
-    window.open = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
-    {
-      auto sound = model::item_get(document.model.content.sounds, document.sound.reference);
-      if (sound && window.dialog) window_directory_open(*window.dialog, document, sound->path);
-    };
-    window.reload = [](Window&, Manager&, Settings&, Document& document, Clipboard&)
-    {
-      document.edit_apply(EDIT_RELOAD_SOUNDS,
-                          [&](model::Model& model)
-                          {
-                            for (auto id : document.sound.selection)
-                              if (auto sound = model::item_get(model.content.sounds, id))
-                              {
-                                document.sound_reload(id);
-                                toast_log(Level::INFO, TOAST_RELOAD_SOUND, id, path::to_utf8(sound->path));
-                              }
-                          });
-    };
-    window.body_update = [](Window& window, Manager& manager, Settings&, Resources&, Clipboard&, Document& document)
-    {
-      if (!window.dialog) return;
-      if (window.dialog->is_selected(Dialog::SOUND_OPEN))
-      {
-        manager.command_push({manager.selected, [&window, paths = window.dialog->paths](Manager&, Document& document)
-                              {
-                                document.sounds_add(paths);
-                                window.newElementId = document.sound.reference;
-                              }});
-        window.dialog->reset();
-      }
+    auto& [manager, settings, resources, dialog, clipboard, document, state] = panel;
+    auto& sounds = document.model.content.sounds;
+    auto selection = document.selected_ids_get(SelectionKind::SOUNDS);
 
-      if (window.dialog->is_selected(Dialog::SOUND_REPLACE))
+    if (dialog.is_selected(Dialog::SOUND_OPEN))
+    {
+      command_push(panel,
+                   [&state, paths = dialog.paths](Document& document)
+                   {
+                     document.sounds_add(paths);
+                     state.newId = document.focused_id_get(SelectionKind::SOUNDS);
+                   });
+      dialog.reset();
+    }
+
+    if (dialog.is_selected(Dialog::SOUND_REPLACE))
+    {
+      if (selection.size() == 1 && !dialog.path.empty())
+        command_push(panel,
+                     [id = *selection.begin(), dialogPath = dialog.path](Document& document)
+                     {
+                       if (!model::item_get(document.model.content.sounds, id)) return;
+                       document.edit_apply(EDIT_REPLACE_SOUND,
+                                           [&](model::Model& model)
+                                           {
+                                             auto sound = model::item_get(model.content.sounds, id);
+                                             sound->path = asset_path_get(document, dialogPath);
+                                             document.sound_reload(id);
+                                             toast_log(Level::INFO, TOAST_REPLACE_SOUND, id,
+                                                       path::to_utf8(sound->path));
+                                           });
+                     });
+      dialog.reset();
+    }
+
+    if (ImGui::Begin(localize.get(LABEL_SOUNDS_WINDOW), &settings.windowIsSounds))
+    {
+      auto isOne = [selection]() { return selection.size() == 1; };
+      auto play = [&](int id)
       {
-        if (document.sound.selection.size() == 1 && !window.dialog->path.empty())
-          manager.command_push({manager.selected, [&window, id = *document.sound.selection.begin(),
-                                                   dialogPath = window.dialog->path](Manager&, Document& document)
-                                {
-                                  if (!model::item_get(document.model.content.sounds, id)) return;
-                                  document.edit_apply(EDIT_REPLACE_SOUND,
-                                                      [&](model::Model& model)
-                                                      {
-                                                        auto sound = model::item_get(model.content.sounds, id);
-                                                        sound->path = window_asset_path_get(document, dialogPath);
-                                                        document.sound_reload(id);
-                                                        toast_log(Level::INFO, TOAST_REPLACE_SOUND, id,
-                                                                  path::to_utf8(sound->path));
-                                                      });
-                                }});
-        window.dialog->reset();
-      }
-    };
-    return window;
+        if (auto audio = document.sound_get(id)) resource::audio::play(*audio);
+      };
+      auto open = [&](int id)
+      {
+        if (auto sound = model::item_get(sounds, id)) directory_open(dialog, document, sound->path);
+      };
+
+      Actions actions{};
+      actions.add(ACTION_PLAY, isOne, [&]() { play(*selection.begin()); }, STRING_UNDEFINED, -1);
+      actions.add(ACTION_OPEN_DIRECTORY, isOne, [&]() { open(*selection.begin()); });
+      actions.add(ACTION_ADD, {}, [&]() { dialog.file_open(Dialog::SOUND_OPEN, true); }, TOOLTIP_SOUND_ADD);
+      actions.add(
+          ACTION_REMOVE_UNUSED, {},
+          [&]() { items_unused_remove(panel, ElementType::SOUND_ELEMENT, EDIT_REMOVE_UNUSED_SOUNDS, sounds_get); },
+          TOOLTIP_REMOVE_UNUSED_SOUNDS);
+      actions.add(
+          ACTION_RELOAD, [selection]() { return !selection.empty(); },
+          [&]()
+          {
+            command_push(panel,
+                         [selection](Document& document)
+                         {
+                           document.edit_apply(EDIT_RELOAD_SOUNDS,
+                                               [&](model::Model& model)
+                                               {
+                                                 for (auto id : selection)
+                                                   if (auto sound = model::item_get(model.content.sounds, id))
+                                                   {
+                                                     document.sound_reload(id);
+                                                     toast_log(Level::INFO, TOAST_RELOAD_SOUND, id,
+                                                               path::to_utf8(sound->path));
+                                                   }
+                                               });
+                         });
+          },
+          TOOLTIP_RELOAD_SOUNDS);
+      actions.add(ACTION_REPLACE, isOne, [&]() { dialog.file_open(Dialog::SOUND_REPLACE); }, TOOLTIP_REPLACE_SOUND);
+      items_clipboard_actions_add<model::Sound>(actions, panel, SelectionKind::SOUNDS, TOAST_SOUNDS_PASTE,
+                                                TOAST_SOUNDS_DESERIALIZE_ERROR, sounds_get);
+
+      ListRows rows{.label_get =
+                        [&](int id)
+                    {
+                      auto pathString = path::to_utf8(model::item_get(sounds, id)->path);
+                      return std::vformat(localize.get(FORMAT_SOUND), std::make_format_args(id, pathString));
+                    },
+                    .tooltip_draw =
+                        [&](int id)
+                    {
+                      auto audio = document.sound_get(id);
+                      tooltip_name_draw(resources, path::to_utf8(model::item_get(sounds, id)->path));
+                      ImGui::Text("%s: %d", localize.get(BASIC_ID), id);
+                      if (audio && audio->is_valid())
+                        ImGui::TextUnformatted(localize.get(TEXT_OPEN_DIRECTORY));
+                      else
+                      {
+                        ImGui::Spacing();
+                        ImGui::TextWrapped("%s", localize.get(TOOLTIP_SOUND_INVALID));
+                      }
+                    },
+                    .image_get =
+                        [&](int id)
+                    {
+                      auto audio = document.sound_get(id);
+                      auto isValid = audio && audio->is_valid();
+                      auto& texture = resources.icons[isValid ? icon::SOUND : icon::NONE];
+                      return CardImage{.texture = &texture, .size = glm::vec2(texture.size), .isValid = isValid};
+                    },
+                    .select =
+                        [&](int id)
+                    {
+                      if (id != -1 && ImGui::IsItemClicked(ImGuiMouseButton_Left)) play(id);
+                    },
+                    .activate = open,
+                    .cardLines = SOUND_CARD_LINES};
+      list_panel_draw(panel, actions, {{ACTION_ADD, ACTION_REMOVE_UNUSED, ACTION_RELOAD, ACTION_REPLACE}},
+                      [&]() { content_list_draw(panel, SelectionKind::SOUNDS, item_ids_get(sounds), rows); });
+    }
+    ImGui::End();
   }
 }
