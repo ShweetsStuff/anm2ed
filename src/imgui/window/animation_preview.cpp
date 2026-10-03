@@ -429,10 +429,6 @@ namespace anm2ed::imgui
       }
       ImGui::EndChild();
 
-      auto cursorScreenPos = ImGui::GetCursorScreenPos();
-      auto min = cursorScreenPos;
-      auto max = to_imvec2(to_vec2(min) + size);
-
       if (manager.isRecordingStart) recording_start(manager, settings, document, animation);
       auto isRecordingFrame = manager.isRecording && !recorder.is_done();
       if (isRecordingFrame)
@@ -467,184 +463,12 @@ namespace anm2ed::imgui
         }
       }
 
-      bind();
-      viewport_set();
-      clear(isViewTransparent ? vec4(0) : vec4(backgroundColor, 1.0f));
-
-      if (isAxes && !isIsolated) axes_render(shaderAxes, viewZoom, viewPan, axesColor);
-      if (isGrid && !isIsolated) grid_render(shaderGrid, viewZoom, viewPan, gridSize, gridOffset, gridColor);
-
-      auto baseTransform = transform_get(viewZoom, viewPan);
-      auto frameTime = document.frameTime > -1 && !playback.isPlaying ? document.frameTime : playback.time;
-
-      model::DrawOptions drawOptions{.time = frameTime,
-                                     .isRootTransform = isRootTransform,
-                                     .isIndexSampled = settings.onionskinMode == (int)OnionskinMode::INDEX};
-      std::vector<vec3> sampleColors{};
-      std::vector<float> sampleAlphas{};
-      auto samples_add = [&](int count, int direction, vec3 color)
-      {
-        for (int i = 1; i <= count; ++i)
-        {
-          drawOptions.samples.push_back({.timeOffset = (float)(direction * i), .indexOffset = direction * i});
-          sampleColors.push_back(color);
-          sampleAlphas.push_back((1.0f / (count + 1)) * i);
-        }
-      };
-      if (settings.onionskinIsEnabled && !isIsolated)
-      {
-        samples_add(settings.onionskinBeforeCount, -1, settings.onionskinBeforeColor);
-        samples_add(settings.onionskinAfterCount, 1, settings.onionskinAfterColor);
-      }
-
+      auto cursorScreenPos = ImGui::GetCursorScreenPos();
+      auto min = cursorScreenPos;
+      auto max = to_imvec2(to_vec2(min) + size);
       auto referenceItemType = static_cast<ItemType>(reference.itemType);
-      auto is_layer_selected = [&](int id)
-      {
-        auto is_layer = [&](const Reference& itemReference)
-        {
-          return itemReference.animationIndex == reference.animationIndex && itemReference.itemType == LAYER &&
-                 itemReference.itemID == id;
-        };
-        return (reference.animationIndex != -1 && is_layer(reference)) ||
-               std::ranges::any_of(document.selected_get(SelectionKind::TRACKS), is_layer) ||
-               std::ranges::any_of(document.frame_references_get(Document::FrameReferenceFallback::NONE), is_layer);
-      };
 
-      // Draws an animation's draw list; onion-skin samples are tinted and faded, `alphaOffset` fades the overlay.
-      auto render = [&](Document& sampleDocument, const model::Animation& sampleAnimation, float alphaOffset)
-      {
-        auto isActiveDocument = &sampleDocument == &document;
-        auto& sampleModel = sampleDocument.model;
-        auto targetIcon = resources.icon_id_get(isAltIcons && !isIsolated ? icon::TARGET_ALT : icon::TARGET);
-        for (const auto& draw : model::animation_draws_get(sampleModel, sampleAnimation, drawOptions))
-        {
-          auto isOnion = draw.sample != -1;
-          auto sampleColor = isOnion ? sampleColors[draw.sample] : vec3();
-          auto sampleAlpha = isOnion ? sampleAlphas[draw.sample] : 0.0f;
-          auto onionColor = vec4(sampleColor, 1.0f - sampleAlpha);
-          auto& frame = draw.frame;
-          auto transform = baseTransform * draw.parent;
-          auto marker_model_get = [&](vec2 markerSize)
-          {
-            return math::quad_model_get(markerSize, frame.position, markerSize * 0.5f,
-                                        math::percent_to_unit(frame.scale), frame.rotation,
-                                        math::percent_to_unit(frame.shear));
-          };
-
-          if (draw.type == model::DrawType::ROOT || draw.type == model::DrawType::GROUP_ROOT)
-          {
-            if (isViewOnlyLayers) continue;
-            auto isSelected = isActiveDocument && draw.type == model::DrawType::GROUP_ROOT &&
-                              referenceItemType == ItemType::ROOT && reference.groupType == draw.groupType &&
-                              reference.groupId == draw.id;
-            auto color = isOnion                              ? vec4(sampleColor, sampleAlpha)
-                         : draw.type == model::DrawType::ROOT ? color::GREEN
-                         : isSelected                         ? color::RED
-                                                              : ROOT_COLOR;
-            auto markerModel = isRootTransform ? math::quad_model_get(TARGET_SIZE, {}, TARGET_SIZE * 0.5f)
-                                               : marker_model_get(TARGET_SIZE);
-            texture_render(shaderTexture, targetIcon, transform * markerModel, color);
-          }
-          else if (draw.type == model::DrawType::LAYER)
-          {
-            auto layer = model::item_get(sampleModel.content.layers, draw.id);
-            auto layerTexture = sampleDocument.texture_get(layer->spritesheetId);
-            if (!layerTexture || !layerTexture->is_valid() || layerTexture->size.x <= 0 || layerTexture->size.y <= 0)
-              continue;
-            auto textureSize = vec2(layerTexture->size);
-            auto layerModel = model::draw_quad_model_get(draw);
-            auto layerTransform = transform * layerModel;
-            auto vertices = math::uv_vertices_get(frame.crop / textureSize, (frame.crop + frame.size) / textureSize);
-            auto tint = frame.tint;
-            tint.a = std::max(0.0f, tint.a - (alphaOffset + sampleAlpha));
-            auto customShader = sampleDocument.shader_get(frame.shaderId);
-            texture_render(customShader ? *customShader : shaderTexture, resource::texture::id_get(*layerTexture),
-                           layerTransform, tint, frame.colorOffset + sampleColor, vertices.data(), textureSize,
-                           draw.time);
-
-            auto color = isOnion                                          ? onionColor
-                         : isActiveDocument && is_layer_selected(draw.id) ? SELECTED_LAYER_BORDER_COLOR
-                                                                          : color::RED;
-            if (isBorder && !isIsolated) rect_render(shaderLine, layerTransform, layerModel, color);
-            if (isPivots && !isIsolated)
-              texture_render(shaderTexture, resources.icon_id_get(icon::PIVOT),
-                             transform * marker_model_get(PIVOT_SIZE), color);
-          }
-          else if (!isViewOnlyLayers)
-          {
-            auto isShowRect = model::item_get(sampleModel.content.nulls, draw.id)->isShowRect;
-            auto isSelected = isActiveDocument && draw.id == reference.itemID && referenceItemType == ItemType::NULL_;
-            auto color = isOnion ? onionColor : isSelected ? color::RED : NULL_RECT_COLOR;
-            auto markerSize = isShowRect ? POINT_SIZE : TARGET_SIZE;
-            texture_render(shaderTexture, isShowRect ? resources.icon_id_get(icon::POINT) : targetIcon,
-                           transform * marker_model_get(markerSize), color);
-            if (!isShowRect) continue;
-            auto rectModel = math::quad_model_get(frame.scale, frame.position, frame.scale * 0.5f, vec2(1.0f),
-                                                  frame.rotation, math::percent_to_unit(frame.shear));
-            rect_render(shaderLine, transform * rectModel, rectModel, color);
-          }
-        }
-      };
-
-      if (animation)
-      {
-        auto overlay_render = [&]()
-        {
-          if (auto overlayDocument = isIsolated ? nullptr : overlay_animation_document_get(manager, document))
-            if (auto overlayAnimation = overlayDocument->model.animation_get(overlayIndex))
-              render(*overlayDocument, *overlayAnimation, 1.0f - math::percent_to_unit(overlayTransparency));
-        };
-
-        if (overlayDrawOrder == overlay_draw_order::UNDER) overlay_render();
-        render(document, *animation, 0.0f);
-        if (overlayDrawOrder == overlay_draw_order::OVER) overlay_render();
-      }
-
-      if (isRecordingFrame)
-      {
-        auto soundId = settings.timelineIsSound && animation && recorder.is_sound_frame()
-                           ? trigger_sound_id_get(document, animation, frameTime, recorder.index)
-                           : -1;
-        if (!recorder.frame_capture(pixels_get(), size, soundId))
-        {
-          toast_log(Level::ERROR, TOAST_EXPORT_RENDERED_ANIMATION_FAILED, path::to_utf8(recorder.options.path));
-          recorder.cancel();
-          recording_stop(manager, document);
-        }
-      }
-
-      unbind();
-
-      if (isViewTransparent)
-      {
-        checker_pan_sync(zoom, pan);
-        render_checker_background(ImGui::GetWindowDrawList(), min, max, -size - checkerPan, CHECKER_SIZE);
-      }
-      image_premultiplied_draw(texture, to_imvec2(size));
-
-      isPreviewHovered = ImGui::IsItemHovered();
-
-      if (animation && animation->triggers.isVisible && !isOnlyShowLayers && !manager.isRecording)
-      {
-        if (auto trigger = model::frame_generate(animation->triggers, frameTime);
-            trigger.isVisible && trigger.eventId > -1)
-        {
-          auto clipMin = ImGui::GetItemRectMin();
-          auto clipMax = ImGui::GetItemRectMax();
-          auto drawList = ImGui::GetWindowDrawList();
-          auto textPos = to_imvec2(to_vec2(cursorScreenPos) + to_vec2(ImGui::GetStyle().WindowPadding));
-
-          drawList->PushClipRect(clipMin, clipMax);
-          ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE_LARGE);
-          auto triggerTextColor = isLightTheme ? TRIGGER_TEXT_COLOR_LIGHT : TRIGGER_TEXT_COLOR_DARK;
-          if (auto event = model::item_get(model.content.events, trigger.eventId))
-            drawList->AddText(textPos, ImGui::GetColorU32(triggerTextColor), event->name.c_str());
-          ImGui::PopFont();
-          drawList->PopClipRect();
-        }
-      }
-
-      if (isPreviewHovered)
+      if (is_canvas_hovered(min, max))
       {
         auto input = canvas_input_get(manager, isFocused);
         mousePos = position_translate(zoom, pan, to_vec2(ImGui::GetMousePos()) - to_vec2(cursorScreenPos));
@@ -778,6 +602,180 @@ namespace anm2ed::imgui
         if (input.wheel != 0 || input.isZoomIn || input.isZoomOut)
           zoom_step(zoom, pan, vec2(mousePos),
                     (input.wheel > 0 || input.isZoomIn) ? ZOOM_LEVEL_STEP : -ZOOM_LEVEL_STEP);
+      }
+
+      bind();
+      viewport_set();
+      clear(isViewTransparent ? vec4(0) : vec4(backgroundColor, 1.0f));
+
+      if (isAxes && !isIsolated) axes_render(shaderAxes, viewZoom, viewPan, axesColor);
+      if (isGrid && !isIsolated) grid_render(shaderGrid, viewZoom, viewPan, gridSize, gridOffset, gridColor);
+
+      auto baseTransform = transform_get(viewZoom, viewPan);
+      auto frameTime = document.frameTime > -1 && !playback.isPlaying ? document.frameTime : playback.time;
+
+      model::DrawOptions drawOptions{.time = frameTime,
+                                     .isRootTransform = isRootTransform,
+                                     .isIndexSampled = settings.onionskinMode == (int)OnionskinMode::INDEX};
+      std::vector<vec3> sampleColors{};
+      std::vector<float> sampleAlphas{};
+      auto samples_add = [&](int count, int direction, vec3 color)
+      {
+        for (int i = 1; i <= count; ++i)
+        {
+          drawOptions.samples.push_back({.timeOffset = (float)(direction * i), .indexOffset = direction * i});
+          sampleColors.push_back(color);
+          sampleAlphas.push_back((1.0f / (count + 1)) * i);
+        }
+      };
+      if (settings.onionskinIsEnabled && !isIsolated)
+      {
+        samples_add(settings.onionskinBeforeCount, -1, settings.onionskinBeforeColor);
+        samples_add(settings.onionskinAfterCount, 1, settings.onionskinAfterColor);
+      }
+
+      auto is_layer_selected = [&](int id)
+      {
+        auto is_layer = [&](const Reference& itemReference)
+        {
+          return itemReference.animationIndex == reference.animationIndex && itemReference.itemType == LAYER &&
+                 itemReference.itemID == id;
+        };
+        return (reference.animationIndex != -1 && is_layer(reference)) ||
+               std::ranges::any_of(document.selected_get(SelectionKind::TRACKS), is_layer) ||
+               std::ranges::any_of(document.frame_references_get(Document::FrameReferenceFallback::NONE), is_layer);
+      };
+
+      // Draws an animation's draw list; onion-skin samples are tinted and faded, `alphaOffset` fades the overlay.
+      auto render = [&](Document& sampleDocument, const model::Animation& sampleAnimation, float alphaOffset)
+      {
+        auto isActiveDocument = &sampleDocument == &document;
+        auto& sampleModel = sampleDocument.model;
+        auto targetIcon = resources.icon_id_get(isAltIcons && !isIsolated ? icon::TARGET_ALT : icon::TARGET);
+        for (const auto& draw : model::animation_draws_get(sampleModel, sampleAnimation, drawOptions))
+        {
+          auto isOnion = draw.sample != -1;
+          auto sampleColor = isOnion ? sampleColors[draw.sample] : vec3();
+          auto sampleAlpha = isOnion ? sampleAlphas[draw.sample] : 0.0f;
+          auto onionColor = vec4(sampleColor, 1.0f - sampleAlpha);
+          auto& frame = draw.frame;
+          auto transform = baseTransform * draw.parent;
+          auto marker_model_get = [&](vec2 markerSize)
+          {
+            return math::quad_model_get(markerSize, frame.position, markerSize * 0.5f,
+                                        math::percent_to_unit(frame.scale), frame.rotation,
+                                        math::percent_to_unit(frame.shear));
+          };
+
+          if (draw.type == model::DrawType::ROOT || draw.type == model::DrawType::GROUP_ROOT)
+          {
+            if (isViewOnlyLayers) continue;
+            auto isSelected = isActiveDocument && draw.type == model::DrawType::GROUP_ROOT &&
+                              referenceItemType == ItemType::ROOT && reference.groupType == draw.groupType &&
+                              reference.groupId == draw.id;
+            auto color = isOnion                              ? vec4(sampleColor, sampleAlpha)
+                         : draw.type == model::DrawType::ROOT ? color::GREEN
+                         : isSelected                         ? color::RED
+                                                              : ROOT_COLOR;
+            auto markerModel = isRootTransform ? math::quad_model_get(TARGET_SIZE, {}, TARGET_SIZE * 0.5f)
+                                               : marker_model_get(TARGET_SIZE);
+            texture_render(shaderTexture, targetIcon, transform * markerModel, color);
+          }
+          else if (draw.type == model::DrawType::LAYER)
+          {
+            auto layer = model::item_get(sampleModel.content.layers, draw.id);
+            auto layerTexture = sampleDocument.texture_get(layer->spritesheetId);
+            if (!layerTexture || !layerTexture->is_valid() || layerTexture->size.x <= 0 || layerTexture->size.y <= 0)
+              continue;
+            auto textureSize = vec2(layerTexture->size);
+            auto layerModel = model::draw_quad_model_get(draw);
+            auto layerTransform = transform * layerModel;
+            auto vertices = math::uv_vertices_get(frame.crop / textureSize, (frame.crop + frame.size) / textureSize);
+            auto tint = frame.tint;
+            tint.a = std::max(0.0f, tint.a - (alphaOffset + sampleAlpha));
+            auto customShader = sampleDocument.shader_get(frame.shaderId);
+            texture_render(customShader ? *customShader : shaderTexture, resource::texture::id_get(*layerTexture),
+                           layerTransform, tint, frame.colorOffset + sampleColor, vertices.data(), textureSize,
+                           draw.time);
+
+            auto color = isOnion                                          ? onionColor
+                         : isActiveDocument && is_layer_selected(draw.id) ? SELECTED_LAYER_BORDER_COLOR
+                                                                          : color::RED;
+            if (isBorder && !isIsolated) rect_render(shaderLine, layerTransform, layerModel, color);
+            if (isPivots && !isIsolated)
+              texture_render(shaderTexture, resources.icon_id_get(icon::PIVOT),
+                             transform * marker_model_get(PIVOT_SIZE), color);
+          }
+          else if (!isViewOnlyLayers)
+          {
+            auto isShowRect = model::item_get(sampleModel.content.nulls, draw.id)->isShowRect;
+            auto isSelected = isActiveDocument && draw.id == reference.itemID && referenceItemType == ItemType::NULL_;
+            auto color = isOnion ? onionColor : isSelected ? color::RED : NULL_RECT_COLOR;
+            auto markerSize = isShowRect ? POINT_SIZE : TARGET_SIZE;
+            texture_render(shaderTexture, isShowRect ? resources.icon_id_get(icon::POINT) : targetIcon,
+                           transform * marker_model_get(markerSize), color);
+            if (!isShowRect) continue;
+            auto rectModel = math::quad_model_get(frame.scale, frame.position, frame.scale * 0.5f, vec2(1.0f),
+                                                  frame.rotation, math::percent_to_unit(frame.shear));
+            rect_render(shaderLine, transform * rectModel, rectModel, color);
+          }
+        }
+      };
+
+      if (animation)
+      {
+        auto overlay_render = [&]()
+        {
+          if (auto overlayDocument = isIsolated ? nullptr : overlay_animation_document_get(manager, document))
+            if (auto overlayAnimation = overlayDocument->model.animation_get(overlayIndex))
+              render(*overlayDocument, *overlayAnimation, 1.0f - math::percent_to_unit(overlayTransparency));
+        };
+
+        if (overlayDrawOrder == overlay_draw_order::UNDER) overlay_render();
+        render(document, *animation, 0.0f);
+        if (overlayDrawOrder == overlay_draw_order::OVER) overlay_render();
+      }
+
+      if (isRecordingFrame)
+      {
+        auto soundId = settings.timelineIsSound && animation && recorder.is_sound_frame()
+                           ? trigger_sound_id_get(document, animation, frameTime, recorder.index)
+                           : -1;
+        if (!recorder.frame_capture(pixels_get(), size, soundId))
+        {
+          toast_log(Level::ERROR, TOAST_EXPORT_RENDERED_ANIMATION_FAILED, path::to_utf8(recorder.options.path));
+          recorder.cancel();
+          recording_stop(manager, document);
+        }
+      }
+
+      unbind();
+
+      if (isViewTransparent)
+      {
+        checker_pan_sync(zoom, pan);
+        render_checker_background(ImGui::GetWindowDrawList(), min, max, -size - checkerPan, CHECKER_SIZE);
+      }
+      image_premultiplied_draw(texture, to_imvec2(size));
+
+      if (animation && animation->triggers.isVisible && !isOnlyShowLayers && !manager.isRecording)
+      {
+        if (auto trigger = model::frame_generate(animation->triggers, frameTime);
+            trigger.isVisible && trigger.eventId > -1)
+        {
+          auto clipMin = ImGui::GetItemRectMin();
+          auto clipMax = ImGui::GetItemRectMax();
+          auto drawList = ImGui::GetWindowDrawList();
+          auto textPos = to_imvec2(to_vec2(cursorScreenPos) + to_vec2(ImGui::GetStyle().WindowPadding));
+
+          drawList->PushClipRect(clipMin, clipMax);
+          ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE_LARGE);
+          auto triggerTextColor = isLightTheme ? TRIGGER_TEXT_COLOR_LIGHT : TRIGGER_TEXT_COLOR_DARK;
+          if (auto event = model::item_get(model.content.events, trigger.eventId))
+            drawList->AddText(textPos, ImGui::GetColorU32(triggerTextColor), event->name.c_str());
+          ImGui::PopFont();
+          drawList->PopClipRect();
+        }
       }
     }
 

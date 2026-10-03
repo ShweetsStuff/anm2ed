@@ -132,120 +132,8 @@ namespace anm2ed::imgui
       auto min = ImGui::GetCursorScreenPos();
       auto max = to_imvec2(to_vec2(min) + size);
 
-      auto mouseScreenPos = ImGui::GetIO().MousePos;
-      bool isMouseOverCanvas = mouseScreenPos.x >= min.x && mouseScreenPos.x <= max.x && mouseScreenPos.y >= min.y &&
-                               mouseScreenPos.y <= max.y;
-      auto hoverMousePos = vec2();
-      if (isMouseOverCanvas)
-        hoverMousePos = position_translate(zoom, pan, to_ivec2(mouseScreenPos) - to_ivec2(cursorScreenPos));
-
-      bind();
-      viewport_set();
-      clear(isTransparent ? vec4(0) : vec4(backgroundColor, 1.0f));
-
-      auto frame = model.frame_get(reference);
-
-      auto viewTexture = baseTexture && baseTexture->is_valid() ? baseTexture : texture;
-
-      if (spritesheet && viewTexture && viewTexture->is_valid())
-      {
-        auto transform = transform_get(zoom, pan);
-
-        auto spritesheetModel = math::quad_model_get(viewTexture->size);
-        auto spritesheetTransform = transform * spritesheetModel;
-
-        if (baseTexture && baseTexture->is_valid())
-          texture_render(shaderTexture, resource::texture::id_get(*baseTexture), spritesheetTransform);
-
-        if (isGrid) grid_render(shaderGrid, zoom, pan, gridSize, gridOffset, gridColor);
-
-        if (isBorder)
-          rect_render(dashedShader, spritesheetTransform, spritesheetModel, color::WHITE, BORDER_DASH_LENGTH,
-                      BORDER_DASH_GAP, BORDER_DASH_OFFSET);
-
-        if (hoveredRegionId != -1)
-        {
-          if (auto region = region_get(hoveredRegionId))
-          {
-            auto cropModel = math::quad_model_get(region->size, region->crop);
-            auto cropTransform = transform * cropModel;
-            rect_fill_render(shaderLine, cropTransform, cropModel, vec4(1.0f, 1.0f, 1.0f, 0.5f));
-          }
-        }
-
-        auto layer = model::item_get(model.content.layers, reference.itemID);
-        bool isReferenceLayerOnSpritesheet =
-            frame && reference.itemID > -1 && layer && layer->spritesheetId == referenceSpritesheet;
-
-        int highlightedRegionId = -1;
-        if (document.editTarget == Document::EditTarget::REGION && regionReference != -1 && region_get(regionReference))
-        {
-          highlightedRegionId = regionReference;
-        }
-        else if (isReferenceLayerOnSpritesheet && frame->regionId != -1 && region_get(frame->regionId))
-        {
-          highlightedRegionId = frame->regionId;
-        }
-        else if (regionReference != -1 && region_get(regionReference))
-        {
-          highlightedRegionId = regionReference;
-        }
-
-        auto draw_region_rect = [&](const model::Region& region, vec4 regionColor)
-        {
-          auto cropModel = math::quad_model_get(region.size, region.crop);
-          auto cropTransform = transform * cropModel;
-          rect_render(dashedShader, cropTransform, cropModel, regionColor, BORDER_DASH_LENGTH, BORDER_DASH_GAP,
-                      BORDER_DASH_OFFSET);
-        };
-
-        for (auto& region : spritesheet->regions)
-        {
-          auto id = region.id;
-          if (id == highlightedRegionId) continue;
-          draw_region_rect(region, color::WHITE);
-
-          auto pivotTransform =
-              transform * math::quad_model_get(PIVOT_SIZE, region.crop + region.pivot, PIVOT_SIZE * 0.5f);
-          texture_render(shaderTexture, resources.icon_id_get(icon::PIVOT), pivotTransform, color::WHITE);
-        }
-
-        if (highlightedRegionId != -1)
-        {
-          if (auto region = region_get(highlightedRegionId))
-          {
-            draw_region_rect(*region, color::RED);
-
-            auto pivotTransform =
-                transform * math::quad_model_get(PIVOT_SIZE, region->crop + region->pivot, PIVOT_SIZE * 0.5f);
-            texture_render(shaderTexture, resources.icon_id_get(icon::PIVOT), pivotTransform, PIVOT_COLOR);
-          }
-        }
-
-        bool isFrameOnSpritesheet = isReferenceLayerOnSpritesheet;
-        if (isFrameOnSpritesheet && frame->regionId == -1)
-        {
-          auto frameModel = math::quad_model_get(frame->size, frame->crop);
-          auto frameTransform = transform * frameModel;
-          rect_render(shaderLine, frameTransform, frameModel, color::RED);
-
-          auto pivotTransform =
-              transform * math::quad_model_get(PIVOT_SIZE, frame->crop + frame->pivot, PIVOT_SIZE * 0.5f);
-          texture_render(shaderTexture, resources.icon_id_get(icon::PIVOT), pivotTransform, PIVOT_COLOR);
-        }
-      }
-
-      unbind();
-
-      checker_pan_sync(zoom, pan);
-      if (isTransparent)
-        render_checker_background(drawList, min, max, -size * 0.5f - checkerPan, CHECKER_SIZE);
-      else
-        drawList->AddRectFilled(min, max, ImGui::GetColorU32(to_imvec4(vec4(backgroundColor, 1.0f))));
-      image_premultiplied_draw(this->texture, to_imvec2(size));
-
       hoveredRegionId = -1;
-      if (ImGui::IsItemHovered())
+      if (is_canvas_hovered(min, max))
       {
         auto input = canvas_input_get(manager, isFocused);
         auto isMouseClicked = input.isLeftClicked || input.isRightClicked;
@@ -302,13 +190,12 @@ namespace anm2ed::imgui
         if (tool == tool::DRAW && input.isRightDown) useTool = tool::ERASE;
         if (tool == tool::ERASE && input.isRightDown) useTool = tool::DRAW;
 
-        if (useTool == tool::PAN && spritesheet && texture && texture->is_valid() && isMouseOverCanvas)
+        if (useTool == tool::PAN && spritesheet && texture && texture->is_valid())
           for (auto& region : spritesheet->regions)
           {
             auto minPoint = glm::min(region.crop, region.crop + region.size);
             auto maxPoint = glm::max(region.crop, region.crop + region.size);
-            if (glm::all(glm::greaterThanEqual(hoverMousePos, minPoint)) &&
-                glm::all(glm::lessThanEqual(hoverMousePos, maxPoint)))
+            if (glm::all(glm::greaterThanEqual(mousePos, minPoint)) && glm::all(glm::lessThanEqual(mousePos, maxPoint)))
             {
               hoveredRegionId = region.id;
               break;
@@ -516,6 +403,111 @@ namespace anm2ed::imgui
           zoom_step(zoom, pan, focus, (input.wheel > 0 || input.isZoomIn) ? ZOOM_LEVEL_STEP : -ZOOM_LEVEL_STEP);
         }
       }
+
+      bind();
+      viewport_set();
+      clear(isTransparent ? vec4(0) : vec4(backgroundColor, 1.0f));
+
+      auto frame = model.frame_get(reference);
+
+      auto viewTexture = baseTexture && baseTexture->is_valid() ? baseTexture : texture;
+
+      if (spritesheet && viewTexture && viewTexture->is_valid())
+      {
+        auto transform = transform_get(zoom, pan);
+
+        auto spritesheetModel = math::quad_model_get(viewTexture->size);
+        auto spritesheetTransform = transform * spritesheetModel;
+
+        if (baseTexture && baseTexture->is_valid())
+          texture_render(shaderTexture, resource::texture::id_get(*baseTexture), spritesheetTransform);
+
+        if (isGrid) grid_render(shaderGrid, zoom, pan, gridSize, gridOffset, gridColor);
+
+        if (isBorder)
+          rect_render(dashedShader, spritesheetTransform, spritesheetModel, color::WHITE, BORDER_DASH_LENGTH,
+                      BORDER_DASH_GAP, BORDER_DASH_OFFSET);
+
+        if (hoveredRegionId != -1)
+        {
+          if (auto region = region_get(hoveredRegionId))
+          {
+            auto cropModel = math::quad_model_get(region->size, region->crop);
+            auto cropTransform = transform * cropModel;
+            rect_fill_render(shaderLine, cropTransform, cropModel, vec4(1.0f, 1.0f, 1.0f, 0.5f));
+          }
+        }
+
+        auto layer = model::item_get(model.content.layers, reference.itemID);
+        bool isReferenceLayerOnSpritesheet =
+            frame && reference.itemID > -1 && layer && layer->spritesheetId == referenceSpritesheet;
+
+        int highlightedRegionId = -1;
+        if (document.editTarget == Document::EditTarget::REGION && regionReference != -1 && region_get(regionReference))
+        {
+          highlightedRegionId = regionReference;
+        }
+        else if (isReferenceLayerOnSpritesheet && frame->regionId != -1 && region_get(frame->regionId))
+        {
+          highlightedRegionId = frame->regionId;
+        }
+        else if (regionReference != -1 && region_get(regionReference))
+        {
+          highlightedRegionId = regionReference;
+        }
+
+        auto draw_region_rect = [&](const model::Region& region, vec4 regionColor)
+        {
+          auto cropModel = math::quad_model_get(region.size, region.crop);
+          auto cropTransform = transform * cropModel;
+          rect_render(dashedShader, cropTransform, cropModel, regionColor, BORDER_DASH_LENGTH, BORDER_DASH_GAP,
+                      BORDER_DASH_OFFSET);
+        };
+
+        for (auto& region : spritesheet->regions)
+        {
+          auto id = region.id;
+          if (id == highlightedRegionId) continue;
+          draw_region_rect(region, color::WHITE);
+
+          auto pivotTransform =
+              transform * math::quad_model_get(PIVOT_SIZE, region.crop + region.pivot, PIVOT_SIZE * 0.5f);
+          texture_render(shaderTexture, resources.icon_id_get(icon::PIVOT), pivotTransform, color::WHITE);
+        }
+
+        if (highlightedRegionId != -1)
+        {
+          if (auto region = region_get(highlightedRegionId))
+          {
+            draw_region_rect(*region, color::RED);
+
+            auto pivotTransform =
+                transform * math::quad_model_get(PIVOT_SIZE, region->crop + region->pivot, PIVOT_SIZE * 0.5f);
+            texture_render(shaderTexture, resources.icon_id_get(icon::PIVOT), pivotTransform, PIVOT_COLOR);
+          }
+        }
+
+        bool isFrameOnSpritesheet = isReferenceLayerOnSpritesheet;
+        if (isFrameOnSpritesheet && frame->regionId == -1)
+        {
+          auto frameModel = math::quad_model_get(frame->size, frame->crop);
+          auto frameTransform = transform * frameModel;
+          rect_render(shaderLine, frameTransform, frameModel, color::RED);
+
+          auto pivotTransform =
+              transform * math::quad_model_get(PIVOT_SIZE, frame->crop + frame->pivot, PIVOT_SIZE * 0.5f);
+          texture_render(shaderTexture, resources.icon_id_get(icon::PIVOT), pivotTransform, PIVOT_COLOR);
+        }
+      }
+
+      unbind();
+
+      checker_pan_sync(zoom, pan);
+      if (isTransparent)
+        render_checker_background(drawList, min, max, -size * 0.5f - checkerPan, CHECKER_SIZE);
+      else
+        drawList->AddRectFilled(min, max, ImGui::GetColorU32(to_imvec4(vec4(backgroundColor, 1.0f))));
+      image_premultiplied_draw(this->texture, to_imvec2(size));
     }
 
     if (tool == tool::PAN)

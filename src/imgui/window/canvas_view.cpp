@@ -45,6 +45,12 @@ namespace anm2ed::imgui
             .isMod = isMod};
   }
 
+  // Whether the canvas rectangle is hovered, known before the canvas image is drawn so input applies this frame.
+  bool is_canvas_hovered(ImVec2 min, ImVec2 max)
+  {
+    return ImGui::IsWindowHovered() && ImGui::IsMouseHoveringRect(min, max);
+  }
+
   void edit_begin_push(Manager& manager, StringType label)
   {
     manager.command_push({manager.selected, [label](Manager&, Document& document) { document.edit_begin(label); }});

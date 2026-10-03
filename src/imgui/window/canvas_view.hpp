@@ -38,6 +38,7 @@ namespace anm2ed::imgui
   };
 
   CanvasInput canvas_input_get(Manager&, bool);
+  bool is_canvas_hovered(ImVec2, ImVec2);
   void edit_begin_push(Manager&, StringType);
   void document_change_push(Manager&);
   void frames_change_push(Manager&, const std::set<Reference>&, FrameChange, ChangeType = ChangeType::ADJUST);

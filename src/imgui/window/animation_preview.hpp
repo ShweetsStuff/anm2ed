@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "audio_stream.hpp"
 #include "canvas_view.hpp"
 #include "manager.hpp"
@@ -15,7 +14,6 @@ namespace anm2ed::imgui
     MIX_Mixer* mixer = MIX_CreateMixerDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
     AudioStream audioStream = AudioStream(mixer);
     bool wasPlaybackPlaying{};
-    bool isPreviewHovered{};
     bool isMoveDragging{};
     glm::vec2 moveOffset{};
     glm::vec2 nullRectScaleAnchor{};
