@@ -25,86 +25,51 @@ namespace anm2ed
     glEnable(GL_BLEND);
   }
 
+  void vertex_array_make(GLuint& vao, GLuint& vbo, const void* data, GLsizeiptr size, GLenum usage,
+                         std::initializer_list<int> attributeSizes)
+  {
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, size, data, usage);
+
+    auto stride = 0;
+    for (auto attributeSize : attributeSizes)
+      stride += attributeSize;
+    auto offset = 0;
+    auto index = 0;
+    for (auto attributeSize : attributeSizes)
+    {
+      glEnableVertexAttribArray(index);
+      glVertexAttribPointer(index++, attributeSize, GL_FLOAT, GL_FALSE, stride * sizeof(float),
+                            (void*)(offset * sizeof(float)));
+      offset += attributeSize;
+    }
+  }
+
   Canvas::Canvas() = default;
 
   Canvas::Canvas(vec2 size)
   {
     Framebuffer::size_set(size);
-
-    // Axis
-    glGenVertexArrays(1, &axisVAO);
-    glGenBuffers(1, &axisVBO);
-
-    glBindVertexArray(axisVAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, axisVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(AXIS_VERTICES), AXIS_VERTICES, GL_STATIC_DRAW);
-
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
-
-    // Grid
-    glGenVertexArrays(1, &gridVAO);
-    glBindVertexArray(gridVAO);
-
-    glGenBuffers(1, &gridVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, gridVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(GRID_VERTICES), GRID_VERTICES, GL_STATIC_DRAW);
-
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 4, (void*)0);
-
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 4, (void*)(sizeof(float) * 2));
-
-    glBindVertexArray(0);
-
-    // Rect
-    glGenVertexArrays(1, &rectVAO);
-    glGenBuffers(1, &rectVBO);
-
-    glBindVertexArray(rectVAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(RECT_VERTICES), RECT_VERTICES, GL_STATIC_DRAW);
-
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
-
-    // Texture
-    glGenVertexArrays(1, &textureVAO);
-    glGenBuffers(1, &textureVBO);
+    vertex_array_make(axisVAO, axisVBO, AXIS_VERTICES, sizeof(AXIS_VERTICES), GL_STATIC_DRAW, {2});
+    vertex_array_make(gridVAO, gridVBO, GRID_VERTICES, sizeof(GRID_VERTICES), GL_STATIC_DRAW, {2, 2});
+    vertex_array_make(rectVAO, rectVBO, RECT_VERTICES, sizeof(RECT_VERTICES), GL_STATIC_DRAW, {2});
+    vertex_array_make(textureVAO, textureVBO, nullptr, sizeof(TEXTURE_VERTICES), GL_DYNAMIC_DRAW, {2, 2});
     glGenBuffers(1, &textureEBO);
-
-    glBindVertexArray(textureVAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, textureVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * 4, nullptr, GL_DYNAMIC_DRAW);
-
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, textureEBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(TEXTURE_INDICES), TEXTURE_INDICES, GL_DYNAMIC_DRAW);
-
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-
     glBindVertexArray(0);
   }
 
   Canvas::~Canvas()
   {
     if (!Framebuffer::is_valid()) return;
-
-    glDeleteVertexArrays(1, &axisVAO);
-    glDeleteBuffers(1, &axisVBO);
-
-    glDeleteVertexArrays(1, &gridVAO);
-    glDeleteBuffers(1, &gridVBO);
-
-    glDeleteVertexArrays(1, &rectVAO);
-    glDeleteBuffers(1, &rectVBO);
+    for (auto vao : {axisVAO, gridVAO, rectVAO, textureVAO})
+      glDeleteVertexArrays(1, &vao);
+    for (auto buffer : {axisVBO, gridVBO, rectVBO, textureVBO, textureEBO})
+      glDeleteBuffers(1, &buffer);
   }
 
   mat4 Canvas::transform_get(float zoom, vec2 pan) const
@@ -165,68 +130,30 @@ namespace anm2ed
     canvas_blend_straight_set();
   }
 
-  void texture_uniform_vec4_set(const shader::Uniform& uniform, vec4 value)
+  void texture_uniform_set(const shader::Uniform& uniform, vec4 value)
   {
-    if (uniform.location == -1) return;
-
-    switch (uniform.valueType)
+    if (uniform.valueType == shader::UNIFORM_VALUE_INT || uniform.valueType == shader::UNIFORM_VALUE_SAMPLER2D)
+      return glUniform1i(uniform.location, uniform.intValue);
+    switch (shader::UNIFORM_VALUE_TYPE_INFOS[uniform.valueType].componentCount)
     {
-      case shader::UNIFORM_VALUE_FLOAT:
-        glUniform1f(uniform.location, value.x);
-        break;
-      case shader::UNIFORM_VALUE_VEC2:
-        glUniform2fv(uniform.location, 1, value_ptr(value));
-        break;
-      case shader::UNIFORM_VALUE_VEC3:
-        glUniform3fv(uniform.location, 1, value_ptr(value));
-        break;
-      case shader::UNIFORM_VALUE_VEC4:
-        glUniform4fv(uniform.location, 1, value_ptr(value));
-        break;
+      case 2:
+        return glUniform2fv(uniform.location, 1, value_ptr(value));
+      case 3:
+        return glUniform3fv(uniform.location, 1, value_ptr(value));
+      case 4:
+        return glUniform4fv(uniform.location, 1, value_ptr(value));
       default:
-        break;
+        if (uniform.valueType == shader::UNIFORM_VALUE_FLOAT) glUniform1f(uniform.location, value.x);
     }
   }
 
-  void texture_uniform_manual_set(const shader::Uniform& uniform)
+  vec4 texture_uniform_components_get(const shader::Uniform& uniform, float playbackTime)
   {
-    if (uniform.location == -1) return;
-
-    switch (uniform.valueType)
-    {
-      case shader::UNIFORM_VALUE_FLOAT:
-        glUniform1f(uniform.location, uniform.value.x);
-        break;
-      case shader::UNIFORM_VALUE_INT:
-      case shader::UNIFORM_VALUE_SAMPLER2D:
-        glUniform1i(uniform.location, uniform.intValue);
-        break;
-      case shader::UNIFORM_VALUE_VEC2:
-        glUniform2fv(uniform.location, 1, value_ptr(uniform.value));
-        break;
-      case shader::UNIFORM_VALUE_VEC3:
-        glUniform3fv(uniform.location, 1, value_ptr(uniform.value));
-        break;
-      case shader::UNIFORM_VALUE_VEC4:
-        glUniform4fv(uniform.location, 1, value_ptr(uniform.value));
-        break;
-      default:
-        break;
-    }
-  }
-
-  float texture_uniform_component_value_get(const shader::Uniform::Component& component, float playbackTime)
-  {
-    if (component.binding == shader::UNIFORM_BINDING_PLAYBACK_TIME) return playbackTime;
-    return component.value;
-  }
-
-  vec4 texture_uniform_component_vec4_get(const shader::Uniform& uniform, float playbackTime)
-  {
-    return {texture_uniform_component_value_get(uniform.components[0], playbackTime),
-            texture_uniform_component_value_get(uniform.components[1], playbackTime),
-            texture_uniform_component_value_get(uniform.components[2], playbackTime),
-            texture_uniform_component_value_get(uniform.components[3], playbackTime)};
+    vec4 result{};
+    for (int i = 0; i < (int)uniform.components.size(); ++i)
+      result[i] = uniform.components[i].binding == shader::UNIFORM_BINDING_PLAYBACK_TIME ? playbackTime
+                                                                                         : uniform.components[i].value;
+    return result;
   }
 
   void texture_uniforms_set(Shader& shader, mat4 transform, vec4 tint, vec3 colorOffset, vec2 textureSize,
@@ -255,22 +182,22 @@ namespace anm2ed
             glUniformMatrix4fv(uniform.location, 1, GL_FALSE, value_ptr(transform));
           break;
         case shader::UNIFORM_BINDING_FRAME_TINT:
-          texture_uniform_vec4_set(uniform, tint);
+          texture_uniform_set(uniform, tint);
           break;
         case shader::UNIFORM_BINDING_COLOR_OFFSET:
-          texture_uniform_vec4_set(uniform, vec4(colorOffset, 0.0f));
+          texture_uniform_set(uniform, vec4(colorOffset, 0.0f));
           break;
         case shader::UNIFORM_BINDING_TEXTURE_SIZE:
-          texture_uniform_vec4_set(uniform, vec4(textureSize, 0.0f, 0.0f));
+          texture_uniform_set(uniform, vec4(textureSize, 0.0f, 0.0f));
           break;
         case shader::UNIFORM_BINDING_PLAYBACK_TIME:
-          texture_uniform_vec4_set(uniform, vec4(playbackTime));
+          texture_uniform_set(uniform, vec4(playbackTime));
           break;
         case shader::UNIFORM_BINDING_COMPONENTS:
-          texture_uniform_vec4_set(uniform, texture_uniform_component_vec4_get(uniform, playbackTime));
+          texture_uniform_set(uniform, texture_uniform_components_get(uniform, playbackTime));
           break;
         case shader::UNIFORM_BINDING_MANUAL:
-          texture_uniform_manual_set(uniform);
+          texture_uniform_set(uniform, uniform.value);
           break;
         default:
           break;
@@ -306,62 +233,47 @@ namespace anm2ed
     canvas_blend_straight_set();
   }
 
-  void Canvas::rect_render(Shader& shader, const mat4& transform, const mat4& model, vec4 color, float dashLength,
-                           float dashGap, float dashOffset) const
+  void rect_begin(Shader& shader, const mat4& transform, const mat4& model, vec4 color)
   {
     canvas_blend_premultiplied_set();
-
     glUseProgram(shader.id);
-
     glUniformMatrix4fv(glGetUniformLocation(shader.id, shader::UNIFORM_TRANSFORM), 1, GL_FALSE, value_ptr(transform));
     if (auto location = glGetUniformLocation(shader.id, shader::UNIFORM_MODEL); location != -1)
       glUniformMatrix4fv(location, 1, GL_FALSE, value_ptr(model));
     glUniform4fv(glGetUniformLocation(shader.id, shader::UNIFORM_COLOR), 1, value_ptr(color));
+  }
 
-    auto origin = model * vec4(0.0f, 0.0f, 0.0f, 1.0f);
-    auto edgeX = model * vec4(1.0f, 0.0f, 0.0f, 1.0f);
-    auto edgeY = model * vec4(0.0f, 1.0f, 0.0f, 1.0f);
-
-    auto axisX = vec2(edgeX - origin);
-    auto axisY = vec2(edgeY - origin);
-
-    if (auto location = glGetUniformLocation(shader.id, shader::UNIFORM_AXIS_X); location != -1)
-      glUniform2fv(location, 1, value_ptr(axisX));
-    if (auto location = glGetUniformLocation(shader.id, shader::UNIFORM_AXIS_Y); location != -1)
-      glUniform2fv(location, 1, value_ptr(axisY));
-
-    if (auto location = glGetUniformLocation(shader.id, shader::UNIFORM_DASH_LENGTH); location != -1)
-      glUniform1f(location, dashLength);
-    if (auto location = glGetUniformLocation(shader.id, shader::UNIFORM_DASH_GAP); location != -1)
-      glUniform1f(location, dashGap);
-    if (auto location = glGetUniformLocation(shader.id, shader::UNIFORM_DASH_OFFSET); location != -1)
-      glUniform1f(location, dashOffset);
-
-    glBindVertexArray(rectVAO);
-    glDrawArrays(GL_LINE_LOOP, 0, 4);
-
+  void rect_end(GLuint vao, GLenum mode)
+  {
+    glBindVertexArray(vao);
+    glDrawArrays(mode, 0, 4);
     glBindVertexArray(0);
     glUseProgram(0);
     canvas_blend_straight_set();
   }
 
+  void Canvas::rect_render(Shader& shader, const mat4& transform, const mat4& model, vec4 color, float dashLength,
+                           float dashGap, float dashOffset) const
+  {
+    rect_begin(shader, transform, model, color);
+
+    auto origin = model * vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    for (auto [name, axis] : {std::pair{shader::UNIFORM_AXIS_X, vec4(1.0f, 0.0f, 0.0f, 1.0f)},
+                              std::pair{shader::UNIFORM_AXIS_Y, vec4(0.0f, 1.0f, 0.0f, 1.0f)}})
+      if (auto location = glGetUniformLocation(shader.id, name); location != -1)
+        glUniform2fv(location, 1, value_ptr(vec2(model * axis - origin)));
+    for (auto [name, value] :
+         {std::pair{shader::UNIFORM_DASH_LENGTH, dashLength}, std::pair{shader::UNIFORM_DASH_GAP, dashGap},
+          std::pair{shader::UNIFORM_DASH_OFFSET, dashOffset}})
+      if (auto location = glGetUniformLocation(shader.id, name); location != -1) glUniform1f(location, value);
+
+    rect_end(rectVAO, GL_LINE_LOOP);
+  }
+
   void Canvas::rect_fill_render(Shader& shader, const mat4& transform, const mat4& model, vec4 color) const
   {
-    canvas_blend_premultiplied_set();
-
-    glUseProgram(shader.id);
-
-    glUniformMatrix4fv(glGetUniformLocation(shader.id, shader::UNIFORM_TRANSFORM), 1, GL_FALSE, value_ptr(transform));
-    if (auto location = glGetUniformLocation(shader.id, shader::UNIFORM_MODEL); location != -1)
-      glUniformMatrix4fv(location, 1, GL_FALSE, value_ptr(model));
-    glUniform4fv(glGetUniformLocation(shader.id, shader::UNIFORM_COLOR), 1, value_ptr(color));
-
-    glBindVertexArray(rectVAO);
-    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-
-    glBindVertexArray(0);
-    glUseProgram(0);
-    canvas_blend_straight_set();
+    rect_begin(shader, transform, model, color);
+    rect_end(rectVAO, GL_TRIANGLE_FAN);
   }
 
   float Canvas::zoom_level_get(float zoom, int levelDelta) const

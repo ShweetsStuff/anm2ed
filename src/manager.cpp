@@ -21,25 +21,54 @@ namespace anm2ed
 {
   constexpr std::size_t RECENT_LIMIT = 10;
 
-  namespace
+  void ensure_parent_directory_exists(const std::filesystem::path& path)
   {
-    void ensure_parent_directory_exists(const std::filesystem::path& path)
-    {
-      auto parent = path.parent_path();
-      if (parent.empty()) return;
-      std::error_code ec{};
-      std::filesystem::create_directories(parent, ec);
-      if (ec) logger.warning(std::format("Could not create directory for {}: {}", path::to_utf8(path), ec.message()));
-    }
+    auto parent = path.parent_path();
+    if (parent.empty()) return;
+    std::error_code ec{};
+    std::filesystem::create_directories(parent, ec);
+    if (ec) logger.warning(std::format("Could not create directory for {}: {}", path::to_utf8(path), ec.message()));
+  }
 
-    void autosave_file_remove(const std::filesystem::path& path)
-    {
-      if (path.empty()) return;
+  void autosave_file_remove(const std::filesystem::path& path)
+  {
+    if (path.empty()) return;
 
-      std::error_code ec{};
-      std::filesystem::remove(path, ec);
-      if (ec) logger.warning(std::format("Could not remove autosave file {}: {}", path::to_utf8(path), ec.message()));
+    std::error_code ec{};
+    std::filesystem::remove(path, ec);
+    if (ec) logger.warning(std::format("Could not remove autosave file {}: {}", path::to_utf8(path), ec.message()));
+  }
+
+  std::vector<std::filesystem::path> path_list_load(const std::filesystem::path& path, std::string_view name)
+  {
+    std::string fileData{};
+    if (!file::read_to_string(path, &fileData, "rb"))
+    {
+      logger.warning(std::format("Could not load {} from: {}. Skipping...", name, path::to_utf8(path)));
+      return {};
     }
+    logger.info(std::format("Loading {} from: {}", name, path::to_utf8(path)));
+
+    std::vector<std::filesystem::path> result{};
+    std::istringstream file(fileData);
+    for (std::string line{}; std::getline(file, line);)
+    {
+      if (!line.empty() && line.back() == '\r') line.pop_back();
+      auto entry = path::from_utf8(line);
+      if (!line.empty() && std::ranges::find(result, entry) == result.end()) result.push_back(entry);
+    }
+    return result;
+  }
+
+  void path_list_save(const std::filesystem::path& path, const std::vector<std::filesystem::path>& entries,
+                      std::string_view name)
+  {
+    ensure_parent_directory_exists(path);
+    std::ostringstream file{};
+    for (auto& entry : entries)
+      file << path::to_utf8(entry) << '\n';
+    if (!file::write_string(path, file.str(), "wb"))
+      logger.warning(std::format("Could not write {} to: {}. Skipping...", name, path::to_utf8(path)));
   }
 
   void Manager::selection_history_push(int index)
@@ -276,58 +305,23 @@ namespace anm2ed
 
   void Manager::recent_files_load()
   {
-    auto path = recent_files_path_get();
-
-    std::string fileData{};
-    if (!file::read_to_string(path, &fileData, "rb"))
-    {
-      logger.warning(std::format("Could not load recent files from: {}. Skipping...", path::to_utf8(path)));
-      return;
-    }
-    std::istringstream file(fileData);
-
-    logger.info(std::format("Loading recent files from: {}", path::to_utf8(path)));
-
-    std::string line{};
-    std::vector<std::string> loaded{};
-    std::unordered_set<std::string> seen{};
-
-    while (std::getline(file, line))
-    {
-      if (line.empty()) continue;
-      if (!line.empty() && line.back() == '\r') line.pop_back();
-      auto entry = path::from_utf8(line);
-      std::error_code ec{};
-      if (!std::filesystem::exists(entry, ec))
-      {
-        logger.warning(std::format("Skipping missing recent file: {}", line));
-        continue;
-      }
-      auto entryString = path::to_utf8(entry);
-      if (!seen.insert(entryString).second) continue;
-      loaded.emplace_back(std::move(entryString));
-    }
-
     recentFiles.clear();
     recentFilesCounter = 0;
+    auto loaded = path_list_load(recent_files_path_get(), "recent files");
     for (auto it = loaded.rbegin(); it != loaded.rend(); ++it)
     {
-      recentFiles[*it] = ++recentFilesCounter;
+      std::error_code ec{};
+      if (std::filesystem::exists(*it, ec))
+        recentFiles[path::to_utf8(*it)] = ++recentFilesCounter;
+      else
+        logger.warning(std::format("Skipping missing recent file: {}", path::to_utf8(*it)));
     }
     recent_files_trim();
   }
 
   void Manager::recent_files_write()
   {
-    auto path = recent_files_path_get();
-    ensure_parent_directory_exists(path);
-
-    std::ostringstream file;
-    auto ordered = recent_files_ordered();
-    for (auto& entry : ordered)
-      file << path::to_utf8(entry) << '\n';
-    if (!file::write_string(path, file.str(), "wb"))
-      logger.warning(std::format("Could not write recent files to: {}. Skipping...", path::to_utf8(path)));
+    path_list_save(recent_files_path_get(), recent_files_ordered(), "recent files");
   }
 
   void Manager::recent_files_clear()
@@ -352,40 +346,11 @@ namespace anm2ed
 
   void Manager::autosave_files_load()
   {
-    auto path = autosave_path_get();
-
-    std::string fileData{};
-    if (!file::read_to_string(path, &fileData, "rb"))
-    {
-      logger.warning(std::format("Could not load autosave files from: {}. Skipping...", path::to_utf8(path)));
-      return;
-    }
-    std::istringstream file(fileData);
-
-    logger.info(std::format("Loading autosave files from: {}", path::to_utf8(path)));
-
-    std::string line{};
-
-    while (std::getline(file, line))
-    {
-      if (line.empty()) continue;
-      if (!line.empty() && line.back() == '\r') line.pop_back();
-      auto entry = path::from_utf8(line);
-      if (std::find(autosaveFiles.begin(), autosaveFiles.end(), entry) != autosaveFiles.end()) continue;
-      autosaveFiles.emplace_back(std::move(entry));
-    }
+    for (auto& entry : path_list_load(autosave_path_get(), "autosave files"))
+      if (std::ranges::find(autosaveFiles, entry) == autosaveFiles.end()) autosaveFiles.push_back(entry);
   }
 
-  void Manager::autosave_files_write()
-  {
-    ensure_parent_directory_exists(autosave_path_get());
-    std::ostringstream autosaveWriteFile;
-    for (auto& path : autosaveFiles)
-      autosaveWriteFile << path::to_utf8(path) << "\n";
-    if (!file::write_string(autosave_path_get(), autosaveWriteFile.str(), "wb"))
-      logger.warning(
-          std::format("Could not write autosave files to: {}. Skipping...", path::to_utf8(autosave_path_get())));
-  }
+  void Manager::autosave_files_write() { path_list_save(autosave_path_get(), autosaveFiles, "autosave files"); }
 
   void Manager::autosave_files_clear(bool removeFiles)
   {

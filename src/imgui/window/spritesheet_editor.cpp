@@ -24,10 +24,6 @@ using namespace glm;
 
 namespace anm2ed::imgui
 {
-  SpritesheetEditor::SpritesheetEditor() : Canvas(vec2()) {}
-
-  bool SpritesheetEditor::is_focused_get() const { return isFocused; }
-
   void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& resources)
   {
     isFocused = false;
@@ -74,33 +70,6 @@ namespace anm2ed::imgui
     auto& regionReference = document.region.reference;
     auto& regionSelection = document.region.selection;
 
-    auto reset_checker_pan = [&]()
-    {
-      checkerPan = pan;
-      checkerSyncPan = pan;
-      checkerSyncZoom = zoom;
-      isCheckerPanInitialized = true;
-      hasPendingZoomPanAdjust = false;
-    };
-
-    auto sync_checker_pan = [&]()
-    {
-      if (!isCheckerPanInitialized)
-      {
-        reset_checker_pan();
-        return;
-      }
-
-      if (pan != checkerSyncPan || zoom != checkerSyncZoom)
-      {
-        bool ignorePanDelta = hasPendingZoomPanAdjust && zoom != checkerSyncZoom;
-        if (!ignorePanDelta) checkerPan += pan - checkerSyncPan;
-        checkerSyncPan = pan;
-        checkerSyncZoom = zoom;
-        if (ignorePanDelta) hasPendingZoomPanAdjust = false;
-      }
-    };
-
     auto center_view = [&]() { pan = -size * 0.5f; };
 
     auto fit_view = [&]()
@@ -109,17 +78,6 @@ namespace anm2ed::imgui
       if (fitTexture && fitTexture->is_valid())
         set_to_rect(zoom, pan, {0, 0, (float)fitTexture->size.x, (float)fitTexture->size.y});
     };
-
-    auto zoom_adjust = [&](int levelDelta)
-    {
-      auto focus = position_translate(zoom, pan, size * 0.5f);
-      auto previousZoom = zoom;
-      zoom_level_adjust(zoom, pan, focus, levelDelta);
-      if (zoom != previousZoom) hasPendingZoomPanAdjust = true;
-    };
-
-    auto zoom_in = [&]() { zoom_adjust(ZOOM_LEVEL_STEP); };
-    auto zoom_out = [&]() { zoom_adjust(-ZOOM_LEVEL_STEP); };
 
     auto region_get = [&](int id)
     { return spritesheet ? child_id_get(*spritesheet, ElementType::REGION, id) : nullptr; };
@@ -131,24 +89,7 @@ namespace anm2ed::imgui
       auto childSize = ImVec2(imgui::row_widget_width_get(3),
                               (ImGui::GetTextLineHeightWithSpacing() * 4) + (ImGui::GetStyle().WindowPadding.y * 2));
 
-      if (ImGui::BeginChild("##Grid Child", childSize, true, ImGuiWindowFlags_HorizontalScrollbar))
-      {
-        ImGui::Checkbox(localize.get(BASIC_GRID), &isGrid);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_VISIBILITY));
-        ImGui::SameLine();
-        ImGui::Checkbox(localize.get(LABEL_SNAP), &isGridSnap);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_SNAP));
-        ImGui::SameLine();
-        ImGui::ColorEdit4(localize.get(BASIC_COLOR), value_ptr(gridColor), ImGuiColorEditFlags_NoInputs);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_COLOR));
-
-        input_int2_range(localize.get(BASIC_SIZE), gridSize, ivec2(GRID_SIZE_MIN), ivec2(GRID_SIZE_MAX));
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_SIZE));
-
-        input_int2_range(localize.get(BASIC_OFFSET), gridOffset, ivec2(GRID_OFFSET_MIN), ivec2(GRID_OFFSET_MAX));
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_OFFSET));
-      }
-      ImGui::EndChild();
+      grid_child_draw(childSize, isGrid, gridColor, gridSize, gridOffset, &isGridSnap);
 
       ImGui::SameLine();
 
@@ -157,17 +98,7 @@ namespace anm2ed::imgui
         ImGui::InputFloat(localize.get(BASIC_ZOOM), &zoom, 0.0f, 0.0f, "%.0f%%");
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_EDITOR_ZOOM));
 
-        auto widgetSize = ImVec2(imgui::row_widget_width_get(2), 0);
-
-        imgui::shortcut(manager.chords[SHORTCUT_CENTER_VIEW]);
-        if (ImGui::Button(localize.get(LABEL_CENTER_VIEW), widgetSize)) center_view();
-        imgui::set_item_tooltip_shortcut(localize.get(TOOLTIP_CENTER_VIEW), settings.shortcutCenterView);
-
-        ImGui::SameLine();
-
-        imgui::shortcut(manager.chords[SHORTCUT_FIT]);
-        if (ImGui::Button(localize.get(LABEL_FIT), widgetSize)) fit_view();
-        imgui::set_item_tooltip_shortcut(localize.get(TOOLTIP_FIT), settings.shortcutFit);
+        view_buttons_draw(manager, settings, center_view, fit_view);
 
         auto mousePosInt = ivec2(mousePos);
         ImGui::TextUnformatted(
@@ -322,7 +253,7 @@ namespace anm2ed::imgui
 
       unbind();
 
-      sync_checker_pan();
+      checker_pan_sync(zoom, pan);
       if (isTransparent)
         render_checker_background(drawList, min, max, -size * 0.5f - checkerPan, CHECKER_SIZE);
       else
@@ -1007,27 +938,14 @@ namespace anm2ed::imgui
           auto focus = mouseWheel != 0 ? vec2(mousePos) : vec2();
           if (texture && mouseWheel == 0) focus = texture->size / 2;
 
-          auto previousZoom = zoom;
-          zoom_level_adjust(zoom, pan, focus, (mouseWheel > 0 || isZoomIn) ? ZOOM_LEVEL_STEP : -ZOOM_LEVEL_STEP);
-          if (zoom != previousZoom) hasPendingZoomPanAdjust = true;
+          zoom_step(zoom, pan, focus, (mouseWheel > 0 || isZoomIn) ? ZOOM_LEVEL_STEP : -ZOOM_LEVEL_STEP);
         }
       }
     }
 
     if (tool == tool::PAN)
-    {
-      Actions actions{};
-      actions_undo_redo_add(actions, manager, document);
-      actions.separator();
-      actions.add(ACTION_CENTER_VIEW, []() { return true; }, center_view);
-      actions.add(
-          ACTION_FIT_VIEW,
-          [&]() { return (baseTexture && baseTexture->is_valid()) || (texture && texture->is_valid()); }, fit_view);
-      actions.separator();
-      actions.add(ACTION_ZOOM_IN, []() { return true; }, zoom_in);
-      actions.add(ACTION_ZOOM_OUT, []() { return true; }, zoom_out);
-      actions_context_window_draw("##Spritesheet Editor Context Menu", actions, settings);
-    }
+      view_context_menu_draw("##Spritesheet Editor Context Menu", manager, settings, document, zoom, pan, center_view,
+                             fit_view, (baseTexture && baseTexture->is_valid()) || (texture && texture->is_valid()));
 
     if (!document.isSpritesheetEditorSet)
     {
@@ -1035,7 +953,7 @@ namespace anm2ed::imgui
       zoom = settings.editorStartZoom;
       set();
       center_view();
-      reset_checker_pan();
+      checker_pan_reset(zoom, pan);
       document.isSpritesheetEditorSet = true;
     }
 

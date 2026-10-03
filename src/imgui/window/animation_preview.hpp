@@ -4,19 +4,18 @@
 #include <filesystem>
 
 #include "audio_stream.hpp"
-#include "canvas.hpp"
+#include "canvas_view.hpp"
 #include "manager.hpp"
 #include "resources.hpp"
 #include "settings.hpp"
 
 namespace anm2ed::imgui
 {
-  class AnimationPreview : public Canvas
+  class AnimationPreview : public CanvasView
   {
     MIX_Mixer* mixer = MIX_CreateMixerDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
     AudioStream audioStream = AudioStream(mixer);
     bool wasPlaybackPlaying{};
-    bool isFocused{};
     bool isPreviewHovered{};
     bool isSizeTrySet{true};
     Settings savedSettings{};
@@ -24,12 +23,6 @@ namespace anm2ed::imgui
     glm::vec2 savedPan{};
     int savedOverlayIndex{};
     uint64_t savedOverlayDocumentId{};
-    glm::vec2 mousePos{};
-    glm::vec2 checkerPan{};
-    glm::vec2 checkerSyncPan{};
-    float checkerSyncZoom{};
-    bool isCheckerPanInitialized{};
-    bool hasPendingZoomPanAdjust{};
     bool isMoveDragging{};
     glm::vec2 moveOffset{};
     glm::vec2 nullRectScaleAnchor{};
@@ -43,8 +36,6 @@ namespace anm2ed::imgui
     int renderFrameSoundTimePrev{-1};
 
   public:
-    AnimationPreview();
-    bool is_focused_get() const;
     void tick(Manager&, Settings&, float);
     void update(Manager&, Settings&, Resources&);
   };

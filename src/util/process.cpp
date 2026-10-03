@@ -8,17 +8,14 @@
 namespace anm2ed::util
 {
 #ifdef WIN32
-  namespace
+  std::wstring utf8_to_wstring(const char* text)
   {
-    std::wstring utf8_to_wstring(const char* text)
-    {
-      if (!text) return {};
-      auto sizeRequired = MultiByteToWideChar(CP_UTF8, 0, text, -1, nullptr, 0);
-      if (sizeRequired <= 0) return {};
-      std::wstring wide(static_cast<std::size_t>(sizeRequired - 1), L'\0');
-      MultiByteToWideChar(CP_UTF8, 0, text, -1, wide.data(), sizeRequired);
-      return wide;
-    }
+    if (!text) return {};
+    auto sizeRequired = MultiByteToWideChar(CP_UTF8, 0, text, -1, nullptr, 0);
+    if (sizeRequired <= 0) return {};
+    std::wstring wide(static_cast<std::size_t>(sizeRequired - 1), L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, text, -1, wide.data(), sizeRequired);
+    return wide;
   }
 #endif
 

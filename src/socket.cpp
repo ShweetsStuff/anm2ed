@@ -5,30 +5,27 @@
 
 namespace anm2ed
 {
-  namespace
+#ifdef _WIN32
+  struct WSAInitializer
+  {
+    WSAInitializer()
+    {
+      WSADATA data{};
+      WSAStartup(MAKEWORD(2, 2), &data);
+    }
+    ~WSAInitializer() { WSACleanup(); }
+  };
+
+  WSAInitializer initializer{};
+#endif
+
+  int socket_last_error()
   {
 #ifdef _WIN32
-    struct WSAInitializer
-    {
-      WSAInitializer()
-      {
-        WSADATA data{};
-        WSAStartup(MAKEWORD(2, 2), &data);
-      }
-      ~WSAInitializer() { WSACleanup(); }
-    };
-
-    WSAInitializer initializer{};
-#endif
-
-    int socket_last_error()
-    {
-#ifdef _WIN32
-      return WSAGetLastError();
+    return WSAGetLastError();
 #else
-      return errno;
+    return errno;
 #endif
-    }
   }
 
   Socket::Socket() : handle(SOCKET_INVALID), role(CLIENT), lastError(0) {}

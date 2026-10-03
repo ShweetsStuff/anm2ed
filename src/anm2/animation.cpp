@@ -43,8 +43,7 @@ namespace anm2ed
       if (isRootTransform && root)
       {
         auto rootFrame = frame_generate(*root, t);
-        transform *= math::quad_model_parent_get(rootFrame.position, {}, math::percent_to_unit(rootFrame.scale),
-                                                 rootFrame.rotation, math::percent_to_unit(rootFrame.shear));
+        transform *= frame_parent_model_get(rootFrame);
       }
 
       auto layerAnimations = child_first_get(animation, ElementType::LAYER_ANIMATIONS);
@@ -61,9 +60,7 @@ namespace anm2ed
                         if (auto groupRoot = child_first_get(*group, ElementType::ROOT_ANIMATION))
                         {
                           auto groupRootFrame = frame_generate(*groupRoot, t);
-                          itemTransform *= math::quad_model_parent_get(
-                              groupRootFrame.position, {}, math::percent_to_unit(groupRootFrame.scale),
-                              groupRootFrame.rotation, math::percent_to_unit(groupRootFrame.shear));
+                          itemTransform *= frame_parent_model_get(groupRootFrame);
                         }
 
                     auto frame = frame_effective(layerAnimation.layerId, frame_generate(layerAnimation, t));
@@ -90,7 +87,7 @@ namespace anm2ed
   }
 
   int Anm2::item_add(ItemType type, int animationIndex, const Element& item, int insertBeforeId,
-                      types::destination::Type destination)
+                     types::destination::Type destination)
   {
     auto row = track_container_get(type);
     auto elements = row ? element_get(row->elements) : nullptr;

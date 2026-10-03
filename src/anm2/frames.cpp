@@ -40,6 +40,12 @@ namespace anm2ed
     return frames;
   }
 
+  glm::mat4 frame_parent_model_get(const Element& frame)
+  {
+    return math::quad_model_parent_get(frame.position, {}, math::percent_to_unit(frame.scale), frame.rotation,
+                                       math::percent_to_unit(frame.shear));
+  }
+
   Element frame_generate(const Element& track, float time)
   {
     auto frame = element_make(track_frame_type_get(track));

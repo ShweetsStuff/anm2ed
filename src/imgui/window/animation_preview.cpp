@@ -42,225 +42,218 @@ namespace anm2ed::imgui
   constexpr auto POINT_SIZE = vec2(4, 4);
   constexpr auto TRIGGER_TEXT_COLOR_DARK = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
   constexpr auto TRIGGER_TEXT_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 0.5f);
-  namespace
+  struct OverlayAnimationOption
   {
-    struct OverlayAnimationOption
+    uint64_t documentId{};
+    int animationIndex{-1};
+    std::string label{};
+  };
+
+  std::vector<OverlayAnimationOption> overlay_animation_options_get(Manager& manager)
+  {
+    std::vector<OverlayAnimationOption> options{{.label = std::string(localize.get(BASIC_NONE))}};
+
+    for (auto& document : manager.documents)
     {
-      uint64_t documentId{};
-      int animationIndex{-1};
-      std::string label{};
-    };
-
-    std::vector<OverlayAnimationOption> overlay_animation_options_get(Manager& manager)
-    {
-      std::vector<OverlayAnimationOption> options{{.label = std::string(localize.get(BASIC_NONE))}};
-
-      for (auto& document : manager.documents)
-      {
-        auto documentLabel = path::to_utf8(document.filename_get());
-        int animationIndex{};
-        if (auto animations = document.anm2.element_get(ElementType::ANIMATIONS))
-          for (auto& animation : animations->children)
-          {
-            if (animation.type != ElementType::ANIMATION) continue;
-            auto label = std::format("{} ({})", animation.name, documentLabel);
-            options.push_back({.documentId = document.tabId, .animationIndex = animationIndex, .label = label});
-            ++animationIndex;
-          }
-      }
-
-      return options;
-    }
-
-    std::vector<const char*> overlay_animation_option_labels_get(std::vector<OverlayAnimationOption>& options)
-    {
-      std::vector<const char*> labels{};
-      labels.reserve(options.size());
-      for (auto& option : options)
-        labels.push_back(option.label.c_str());
-      return labels;
-    }
-
-    int overlay_animation_option_index_get(const Document& document, const std::vector<OverlayAnimationOption>& options)
-    {
-      if (document.overlayIndex == -1) return 0;
-      auto documentId = document.overlayDocumentId ? document.overlayDocumentId : document.tabId;
-      for (int i = 1; i < (int)options.size(); ++i)
-        if (options[i].documentId == documentId && options[i].animationIndex == document.overlayIndex) return i;
-      return -1;
-    }
-
-    Document* overlay_animation_document_get(Manager& manager, const Document& document)
-    {
-      if (document.overlayIndex == -1) return nullptr;
-      auto documentId = document.overlayDocumentId ? document.overlayDocumentId : document.tabId;
-      for (auto& candidate : manager.documents)
-        if (candidate.tabId == documentId) return &candidate;
-      return nullptr;
-    }
-
-    std::optional<vec4> animation_rects_merge(std::optional<vec4> rect, vec4 next)
-    {
-      if (next == vec4(-1.0f)) return rect;
-      if (!rect) return next;
-
-      auto minPoint = glm::min(vec2(rect->x, rect->y), vec2(next.x, next.y));
-      auto maxPoint = glm::max(vec2(rect->x + rect->z, rect->y + rect->w), vec2(next.x + next.z, next.y + next.w));
-      return vec4(minPoint, maxPoint - minPoint);
-    }
-
-    std::optional<vec4> animation_render_rect_get(Manager& manager, Document& document, Element* animation,
-                                                  bool isRootTransform)
-    {
-      std::optional<vec4> rect{};
-
-      if (animation) rect = animation_rects_merge(rect, document.anm2.animation_rect(*animation, isRootTransform));
-
-      if (auto overlayDocument = overlay_animation_document_get(manager, document))
-        if (auto overlayAnimation = overlayDocument->anm2.element_get(ElementType::ANIMATION, document.overlayIndex))
-          rect = animation_rects_merge(rect, overlayDocument->anm2.animation_rect(*overlayAnimation, isRootTransform));
-
-      return rect;
-    }
-
-    std::filesystem::path render_destination_directory(const std::filesystem::path& path, int type)
-    {
-      if (type == render::PNGS) return path;
-      auto directory = path.parent_path();
-      if (directory.empty()) directory = std::filesystem::current_path();
-      return directory;
-    }
-
-    std::filesystem::path render_frame_filename(const std::filesystem::path& format, int index, int type)
-    {
-      if (type != render::PNGS) return path::from_utf8(std::format("frame_{:06}.png", index));
-
-      auto formatString = path::to_utf8(format);
-      try
-      {
-        auto name = std::vformat(formatString, std::make_format_args(index));
-        auto filename = path::from_utf8(name).filename();
-        if (filename.empty()) return path::from_utf8(std::format("frame_{:06}.png", index));
-        if (filename.extension().empty()) filename.replace_extension(render::EXTENSIONS[render::SPRITESHEET]);
-        return filename;
-      }
-      catch (...)
-      {
-        return path::from_utf8(std::format("frame_{:06}.png", index));
-      }
-    }
-
-    std::filesystem::path render_temp_directory_create(const std::filesystem::path& directory)
-    {
-      auto timestamp = (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
-                           std::chrono::system_clock::now().time_since_epoch())
-                           .count();
-      for (int suffix = 0; suffix < 1000; ++suffix)
-      {
-        auto tempDirectory = directory / path::from_utf8(std::format(".anm2ed_render_tmp_{}_{}", timestamp, suffix));
-        std::error_code ec;
-        if (std::filesystem::create_directories(tempDirectory, ec)) return tempDirectory;
-      }
-      return {};
-    }
-
-    void render_temp_cleanup(std::filesystem::path& directory, std::vector<std::filesystem::path>& frames)
-    {
-      std::error_code ec;
-      if (!directory.empty()) std::filesystem::remove_all(directory, ec);
-      directory.clear();
-      frames.clear();
-    }
-
-    void pixels_unpremultiply_alpha(std::vector<uint8_t>& pixels)
-    {
-      for (size_t index = 0; index + 3 < pixels.size(); index += 4)
-      {
-        auto alpha = pixels[index + 3];
-        if (alpha == 0)
+      auto documentLabel = path::to_utf8(document.filename_get());
+      int animationIndex{};
+      if (auto animations = document.anm2.element_get(ElementType::ANIMATIONS))
+        for (auto& animation : animations->children)
         {
-          pixels[index + 0] = 0;
-          pixels[index + 1] = 0;
-          pixels[index + 2] = 0;
-          continue;
+          if (animation.type != ElementType::ANIMATION) continue;
+          auto label = std::format("{} ({})", animation.name, documentLabel);
+          options.push_back({.documentId = document.tabId, .animationIndex = animationIndex, .label = label});
+          ++animationIndex;
         }
-        if (alpha == 255) continue;
-
-        float alphaUnit = (float)alpha / 255.0f;
-        pixels[index + 0] = (uint8_t)glm::clamp((float)std::round((float)pixels[index + 0] / alphaUnit), 0.0f, 255.0f);
-        pixels[index + 1] = (uint8_t)glm::clamp((float)std::round((float)pixels[index + 1] / alphaUnit), 0.0f, 255.0f);
-        pixels[index + 2] = (uint8_t)glm::clamp((float)std::round((float)pixels[index + 2] / alphaUnit), 0.0f, 255.0f);
-      }
     }
 
-    int trigger_sound_id_get(Document& document, Element* animation, float time, int deterministicIndex = -1)
+    return options;
+  }
+
+  std::vector<const char*> overlay_animation_option_labels_get(std::vector<OverlayAnimationOption>& options)
+  {
+    std::vector<const char*> labels{};
+    labels.reserve(options.size());
+    for (auto& option : options)
+      labels.push_back(option.label.c_str());
+    return labels;
+  }
+
+  int overlay_animation_option_index_get(const Document& document, const std::vector<OverlayAnimationOption>& options)
+  {
+    if (document.overlayIndex == -1) return 0;
+    auto documentId = document.overlayDocumentId ? document.overlayDocumentId : document.tabId;
+    for (int i = 1; i < (int)options.size(); ++i)
+      if (options[i].documentId == documentId && options[i].animationIndex == document.overlayIndex) return i;
+    return -1;
+  }
+
+  Document* overlay_animation_document_get(Manager& manager, const Document& document)
+  {
+    if (document.overlayIndex == -1) return nullptr;
+    auto documentId = document.overlayDocumentId ? document.overlayDocumentId : document.tabId;
+    for (auto& candidate : manager.documents)
+      if (candidate.tabId == documentId) return &candidate;
+    return nullptr;
+  }
+
+  std::optional<vec4> animation_rects_merge(std::optional<vec4> rect, vec4 next)
+  {
+    if (next == vec4(-1.0f)) return rect;
+    if (!rect) return next;
+
+    auto minPoint = glm::min(vec2(rect->x, rect->y), vec2(next.x, next.y));
+    auto maxPoint = glm::max(vec2(rect->x + rect->z, rect->y + rect->w), vec2(next.x + next.z, next.y + next.w));
+    return vec4(minPoint, maxPoint - minPoint);
+  }
+
+  std::optional<vec4> animation_render_rect_get(Manager& manager, Document& document, Element* animation,
+                                                bool isRootTransform)
+  {
+    std::optional<vec4> rect{};
+
+    if (animation) rect = animation_rects_merge(rect, document.anm2.animation_rect(*animation, isRootTransform));
+
+    if (auto overlayDocument = overlay_animation_document_get(manager, document))
+      if (auto overlayAnimation = overlayDocument->anm2.element_get(ElementType::ANIMATION, document.overlayIndex))
+        rect = animation_rects_merge(rect, overlayDocument->anm2.animation_rect(*overlayAnimation, isRootTransform));
+
+    return rect;
+  }
+
+  std::filesystem::path render_destination_directory(const std::filesystem::path& path, int type)
+  {
+    if (type == render::PNGS) return path;
+    auto directory = path.parent_path();
+    if (directory.empty()) directory = std::filesystem::current_path();
+    return directory;
+  }
+
+  std::filesystem::path render_frame_filename(const std::filesystem::path& format, int index, int type)
+  {
+    if (type != render::PNGS) return path::from_utf8(std::format("frame_{:06}.png", index));
+
+    auto formatString = path::to_utf8(format);
+    try
     {
-      if (!animation) return -1;
-      auto triggers = animation_item_get(*animation, ItemType::TRIGGER);
-      if (!triggers || !triggers->isVisible) return -1;
-
-      auto trigger = frame_generate(*triggers, time);
-      if (!trigger.isVisible || trigger.soundIds.empty()) return -1;
-
-      size_t soundIndex{};
-      if (trigger.soundIds.size() > 1)
-        soundIndex = deterministicIndex >= 0 ? (size_t)deterministicIndex % trigger.soundIds.size()
-                                             : (size_t)math::random_in_range(0.0f, (float)trigger.soundIds.size());
-      soundIndex = std::min(soundIndex, trigger.soundIds.size() - 1);
-
-      auto soundID = trigger.soundIds[soundIndex];
-      return document.sound_get(soundID) ? soundID : -1;
+      auto name = std::vformat(formatString, std::make_format_args(index));
+      auto filename = path::from_utf8(name).filename();
+      if (filename.empty()) return path::from_utf8(std::format("frame_{:06}.png", index));
+      if (filename.extension().empty()) filename.replace_extension(render::EXTENSIONS[render::SPRITESHEET]);
+      return filename;
     }
-
-    bool render_audio_stream_generate(AudioStream& audioStream, std::map<int, Audio>& sounds,
-                                      const std::vector<int>& frameSoundIDs, int fps)
+    catch (...)
     {
-      audioStream.stream.clear();
-      if (frameSoundIDs.empty() || fps <= 0) return true;
-
-      SDL_AudioSpec mixSpec = audioStream.spec;
-      mixSpec.format = SDL_AUDIO_F32;
-      auto* mixer = MIX_CreateMixer(&mixSpec);
-      if (!mixer) return false;
-
-      auto channels = std::max(mixSpec.channels, 1);
-      auto sampleRate = std::max(mixSpec.freq, 1);
-      auto framesPerStep = (double)sampleRate / (double)fps;
-      auto sampleFrameAccumulator = 0.0;
-      auto frameBuffer = std::vector<float>{};
-
-      for (auto soundID : frameSoundIDs)
-      {
-        if (soundID != -1 && sounds.contains(soundID)) sounds.at(soundID).play(false, mixer);
-
-        sampleFrameAccumulator += framesPerStep;
-        auto sampleFramesToGenerate = (int)std::floor(sampleFrameAccumulator);
-        sampleFramesToGenerate = std::max(sampleFramesToGenerate, 1);
-        sampleFrameAccumulator -= (double)sampleFramesToGenerate;
-
-        frameBuffer.resize((std::size_t)sampleFramesToGenerate * (std::size_t)channels);
-        if (!MIX_Generate(mixer, frameBuffer.data(), (int)(frameBuffer.size() * sizeof(float))))
-        {
-          for (auto& [_, sound] : sounds)
-            sound.track_detach(mixer);
-          MIX_DestroyMixer(mixer);
-          audioStream.stream.clear();
-          return false;
-        }
-
-        audioStream.stream.insert(audioStream.stream.end(), frameBuffer.begin(), frameBuffer.end());
-      }
-
-      for (auto& [_, sound] : sounds)
-        sound.track_detach(mixer);
-      MIX_DestroyMixer(mixer);
-      return true;
+      return path::from_utf8(std::format("frame_{:06}.png", index));
     }
   }
 
-  AnimationPreview::AnimationPreview() : Canvas(vec2()) {}
+  std::filesystem::path render_temp_directory_create(const std::filesystem::path& directory)
+  {
+    auto timestamp = (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+                         std::chrono::system_clock::now().time_since_epoch())
+                         .count();
+    for (int suffix = 0; suffix < 1000; ++suffix)
+    {
+      auto tempDirectory = directory / path::from_utf8(std::format(".anm2ed_render_tmp_{}_{}", timestamp, suffix));
+      std::error_code ec;
+      if (std::filesystem::create_directories(tempDirectory, ec)) return tempDirectory;
+    }
+    return {};
+  }
 
-  bool AnimationPreview::is_focused_get() const { return isFocused; }
+  void render_temp_cleanup(std::filesystem::path& directory, std::vector<std::filesystem::path>& frames)
+  {
+    std::error_code ec;
+    if (!directory.empty()) std::filesystem::remove_all(directory, ec);
+    directory.clear();
+    frames.clear();
+  }
+
+  void pixels_unpremultiply_alpha(std::vector<uint8_t>& pixels)
+  {
+    for (size_t index = 0; index + 3 < pixels.size(); index += 4)
+    {
+      auto alpha = pixels[index + 3];
+      if (alpha == 0)
+      {
+        pixels[index + 0] = 0;
+        pixels[index + 1] = 0;
+        pixels[index + 2] = 0;
+        continue;
+      }
+      if (alpha == 255) continue;
+
+      float alphaUnit = (float)alpha / 255.0f;
+      pixels[index + 0] = (uint8_t)glm::clamp((float)std::round((float)pixels[index + 0] / alphaUnit), 0.0f, 255.0f);
+      pixels[index + 1] = (uint8_t)glm::clamp((float)std::round((float)pixels[index + 1] / alphaUnit), 0.0f, 255.0f);
+      pixels[index + 2] = (uint8_t)glm::clamp((float)std::round((float)pixels[index + 2] / alphaUnit), 0.0f, 255.0f);
+    }
+  }
+
+  int trigger_sound_id_get(Document& document, Element* animation, float time, int deterministicIndex = -1)
+  {
+    if (!animation) return -1;
+    auto triggers = animation_item_get(*animation, ItemType::TRIGGER);
+    if (!triggers || !triggers->isVisible) return -1;
+
+    auto trigger = frame_generate(*triggers, time);
+    if (!trigger.isVisible || trigger.soundIds.empty()) return -1;
+
+    size_t soundIndex{};
+    if (trigger.soundIds.size() > 1)
+      soundIndex = deterministicIndex >= 0 ? (size_t)deterministicIndex % trigger.soundIds.size()
+                                           : (size_t)math::random_in_range(0.0f, (float)trigger.soundIds.size());
+    soundIndex = std::min(soundIndex, trigger.soundIds.size() - 1);
+
+    auto soundID = trigger.soundIds[soundIndex];
+    return document.sound_get(soundID) ? soundID : -1;
+  }
+
+  bool render_audio_stream_generate(AudioStream& audioStream, std::map<int, Audio>& sounds,
+                                    const std::vector<int>& frameSoundIDs, int fps)
+  {
+    audioStream.stream.clear();
+    if (frameSoundIDs.empty() || fps <= 0) return true;
+
+    SDL_AudioSpec mixSpec = audioStream.spec;
+    mixSpec.format = SDL_AUDIO_F32;
+    auto* mixer = MIX_CreateMixer(&mixSpec);
+    if (!mixer) return false;
+
+    auto channels = std::max(mixSpec.channels, 1);
+    auto sampleRate = std::max(mixSpec.freq, 1);
+    auto framesPerStep = (double)sampleRate / (double)fps;
+    auto sampleFrameAccumulator = 0.0;
+    auto frameBuffer = std::vector<float>{};
+
+    for (auto soundID : frameSoundIDs)
+    {
+      if (soundID != -1 && sounds.contains(soundID)) sounds.at(soundID).play(false, mixer);
+
+      sampleFrameAccumulator += framesPerStep;
+      auto sampleFramesToGenerate = (int)std::floor(sampleFrameAccumulator);
+      sampleFramesToGenerate = std::max(sampleFramesToGenerate, 1);
+      sampleFrameAccumulator -= (double)sampleFramesToGenerate;
+
+      frameBuffer.resize((std::size_t)sampleFramesToGenerate * (std::size_t)channels);
+      if (!MIX_Generate(mixer, frameBuffer.data(), (int)(frameBuffer.size() * sizeof(float))))
+      {
+        for (auto& [_, sound] : sounds)
+          sound.track_detach(mixer);
+        MIX_DestroyMixer(mixer);
+        audioStream.stream.clear();
+        return false;
+      }
+
+      audioStream.stream.insert(audioStream.stream.end(), frameBuffer.begin(), frameBuffer.end());
+    }
+
+    for (auto& [_, sound] : sounds)
+      sound.track_detach(mixer);
+    MIX_DestroyMixer(mixer);
+    return true;
+  }
 
   void AnimationPreview::tick(Manager& manager, Settings& settings, float deltaSeconds)
   {
@@ -487,50 +480,12 @@ namespace anm2ed::imgui
     auto& shaderAxes = resources.shaders[shader::AXIS];
     auto& shaderGrid = resources.shaders[shader::GRID];
     auto& shaderTexture = resources.shaders[shader::TEXTURE];
-    auto reset_checker_pan = [&]()
-    {
-      checkerPan = pan;
-      checkerSyncPan = pan;
-      checkerSyncZoom = zoom;
-      isCheckerPanInitialized = true;
-      hasPendingZoomPanAdjust = false;
-    };
-
-    auto sync_checker_pan = [&]()
-    {
-      if (!isCheckerPanInitialized)
-      {
-        reset_checker_pan();
-        return;
-      }
-
-      if (pan != checkerSyncPan || zoom != checkerSyncZoom)
-      {
-        bool ignorePanDelta = hasPendingZoomPanAdjust && zoom != checkerSyncZoom;
-        if (!ignorePanDelta) checkerPan += pan - checkerSyncPan;
-        checkerSyncPan = pan;
-        checkerSyncZoom = zoom;
-        if (ignorePanDelta) hasPendingZoomPanAdjust = false;
-      }
-    };
-
     auto center_view = [&]() { pan = vec2(); };
 
     auto fit_view = [&]()
     {
       if (animation) set_to_rect(zoom, pan, anm2.animation_rect(*animation, isRootTransform));
     };
-
-    auto zoom_adjust = [&](int levelDelta)
-    {
-      auto focus = position_translate(zoom, pan, size * 0.5f);
-      auto previousZoom = zoom;
-      zoom_level_adjust(zoom, pan, focus, levelDelta);
-      if (zoom != previousZoom) hasPendingZoomPanAdjust = true;
-    };
-
-    auto zoom_in = [&]() { zoom_adjust(ZOOM_LEVEL_STEP); };
-    auto zoom_out = [&]() { zoom_adjust(-ZOOM_LEVEL_STEP); };
 
     manager.isAbleToRecord = false;
 
@@ -542,21 +497,7 @@ namespace anm2ed::imgui
       auto childSize = ImVec2(row_widget_width_get(4),
                               (ImGui::GetTextLineHeightWithSpacing() * 4) + (ImGui::GetStyle().WindowPadding.y * 2));
 
-      if (ImGui::BeginChild("##Grid Child", childSize, true, ImGuiWindowFlags_HorizontalScrollbar))
-      {
-        ImGui::Checkbox(localize.get(BASIC_GRID), &isGrid);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_VISIBILITY));
-        ImGui::SameLine();
-        ImGui::ColorEdit4(localize.get(BASIC_COLOR), value_ptr(gridColor), ImGuiColorEditFlags_NoInputs);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_COLOR));
-
-        input_int2_range(localize.get(BASIC_SIZE), gridSize, ivec2(GRID_SIZE_MIN), ivec2(GRID_SIZE_MAX));
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_SIZE));
-
-        input_int2_range(localize.get(BASIC_OFFSET), gridOffset, ivec2(GRID_OFFSET_MIN), ivec2(GRID_OFFSET_MAX));
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_OFFSET));
-      }
-      ImGui::EndChild();
+      grid_child_draw(childSize, isGrid, gridColor, gridSize, gridOffset);
 
       ImGui::SameLine();
 
@@ -565,17 +506,7 @@ namespace anm2ed::imgui
         ImGui::InputFloat(localize.get(BASIC_ZOOM), &zoom, 0.0f, 0.0f, "%.0f%%");
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_PREVIEW_ZOOM));
 
-        auto widgetSize = widget_size_with_row_get(2);
-
-        shortcut(manager.chords[SHORTCUT_CENTER_VIEW]);
-        if (ImGui::Button(localize.get(LABEL_CENTER_VIEW), widgetSize)) center_view();
-        set_item_tooltip_shortcut(localize.get(TOOLTIP_CENTER_VIEW), settings.shortcutCenterView);
-
-        ImGui::SameLine();
-
-        shortcut(manager.chords[SHORTCUT_FIT]);
-        if (ImGui::Button(localize.get(LABEL_FIT), widgetSize)) fit_view();
-        set_item_tooltip_shortcut(localize.get(TOOLTIP_FIT), settings.shortcutFit);
+        view_buttons_draw(manager, settings, center_view, fit_view);
 
         auto readoutSize = ImVec2(row_widget_width_get(2), ImGui::GetTextLineHeightWithSpacing());
         auto mousePosInt = ivec2(mousePos);
@@ -903,9 +834,7 @@ namespace anm2ed::imgui
           if (isRootTransform && root)
           {
             auto rootFrame = frame_generate(*root, t);
-            sampleTransform *=
-                math::quad_model_parent_get(rootFrame.position, {}, math::percent_to_unit(rootFrame.scale),
-                                            rootFrame.rotation, math::percent_to_unit(rootFrame.shear));
+            sampleTransform *= frame_parent_model_get(rootFrame);
           }
           return sampleTransform;
         };
@@ -936,9 +865,7 @@ namespace anm2ed::imgui
           auto itemTransform = sampleTransform;
           if (isRootTransform)
             if (auto groupRootFrame = group_root_frame_get(container, track, t))
-              itemTransform *= math::quad_model_parent_get(
-                  groupRootFrame->position, {}, math::percent_to_unit(groupRootFrame->scale), groupRootFrame->rotation,
-                  math::percent_to_unit(groupRootFrame->shear));
+              itemTransform *= frame_parent_model_get(*groupRootFrame);
           return itemTransform;
         };
 
@@ -981,9 +908,7 @@ namespace anm2ed::imgui
           if (isOnlyShowLayers || !rootFrame.isVisible || !groupRoot->isVisible) return;
 
           auto itemTransform = sampleTransform;
-          if (isRootTransform)
-            itemTransform *= math::quad_model_parent_get(rootFrame.position, {}, math::percent_to_unit(rootFrame.scale),
-                                                         rootFrame.rotation, math::percent_to_unit(rootFrame.shear));
+          if (isRootTransform) itemTransform *= frame_parent_model_get(rootFrame);
 
           auto rootModel = isRootTransform
                                ? math::quad_model_get(TARGET_SIZE, {}, TARGET_SIZE * 0.5f)
@@ -1270,7 +1195,7 @@ namespace anm2ed::imgui
 
       if (isTransparent)
       {
-        sync_checker_pan();
+        checker_pan_sync(zoom, pan);
         render_checker_background(ImGui::GetWindowDrawList(), min, max, -size - checkerPan, CHECKER_SIZE);
       }
       image_premultiplied_draw(texture, to_imvec2(size));
@@ -1645,26 +1570,14 @@ namespace anm2ed::imgui
 
         if (mouseWheel != 0 || isZoomIn || isZoomOut)
         {
-          auto previousZoom = zoom;
-          zoom_level_adjust(zoom, pan, vec2(mousePos),
-                            (mouseWheel > 0 || isZoomIn) ? ZOOM_LEVEL_STEP : -ZOOM_LEVEL_STEP);
-          if (zoom != previousZoom) hasPendingZoomPanAdjust = true;
+          zoom_step(zoom, pan, vec2(mousePos), (mouseWheel > 0 || isZoomIn) ? ZOOM_LEVEL_STEP : -ZOOM_LEVEL_STEP);
         }
       }
     }
 
     if (tool == tool::PAN)
-    {
-      Actions actions{};
-      actions_undo_redo_add(actions, manager, document);
-      actions.separator();
-      actions.add(ACTION_CENTER_VIEW, []() { return true; }, center_view);
-      actions.add(ACTION_FIT_VIEW, [&]() { return animation; }, fit_view);
-      actions.separator();
-      actions.add(ACTION_ZOOM_IN, []() { return true; }, zoom_in);
-      actions.add(ACTION_ZOOM_OUT, []() { return true; }, zoom_out);
-      actions_context_window_draw("##Animation Preview Context Menu", actions, settings);
-    }
+      view_context_menu_draw("##Animation Preview Context Menu", manager, settings, document, zoom, pan, center_view,
+                             fit_view, animation != nullptr);
 
     manager.progressPopup.trigger();
 
@@ -1721,7 +1634,7 @@ namespace anm2ed::imgui
     {
       center_view();
       zoom = settings.previewStartZoom;
-      reset_checker_pan();
+      checker_pan_reset(zoom, pan);
       document.isAnimationPreviewSet = true;
     }
 

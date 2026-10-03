@@ -8,15 +8,12 @@
 
 namespace anm2ed::util::path
 {
-  namespace
+  template <typename CharT> CharT to_lower_char(CharT character)
   {
-    template <typename CharT> CharT to_lower_char(CharT character)
-    {
-      if constexpr (std::is_same_v<CharT, wchar_t>)
-        return static_cast<CharT>(std::towlower(static_cast<wint_t>(character)));
-      else
-        return static_cast<CharT>(std::tolower(static_cast<unsigned char>(character)));
-    }
+    if constexpr (std::is_same_v<CharT, wchar_t>)
+      return static_cast<CharT>(std::towlower(static_cast<wint_t>(character)));
+    else
+      return static_cast<CharT>(std::tolower(static_cast<unsigned char>(character)));
   }
 
   std::filesystem::path to_lower(const std::filesystem::path& path)

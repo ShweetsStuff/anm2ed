@@ -42,13 +42,6 @@ namespace anm2ed
   X(VEC3, glm::vec3)                                                                                                   \
   X(VEC4, glm::vec4)
 
-  enum Type
-  {
-#define X(name, type) name,
-    SETTINGS_TYPES
-#undef X
-  };
-
 #define X(name, type) using TYPE_##name = type;
   SETTINGS_TYPES
 #undef X

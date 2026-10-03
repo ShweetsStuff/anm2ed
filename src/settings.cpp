@@ -11,6 +11,23 @@ using namespace glm;
 
 namespace anm2ed
 {
+  constexpr const char* COMPONENT_SUFFIXES_XY[] = {"X", "Y"};
+  constexpr const char* COMPONENT_SUFFIXES_WH[] = {"W", "H"};
+  constexpr const char* COMPONENT_SUFFIXES_RGBA[] = {"R", "G", "B", "A"};
+
+  template <class T>
+  concept GlmVector = requires(T value) {
+    T::length();
+    value[0];
+  };
+
+  const char* const* component_suffixes_get(std::string_view type)
+  {
+    if (type.ends_with("_WH")) return COMPONENT_SUFFIXES_WH;
+    if (type.starts_with("VEC3") || type.starts_with("VEC4")) return COMPONENT_SUFFIXES_RGBA;
+    return COMPONENT_SUFFIXES_XY;
+  }
+
   constexpr auto IMGUI_DEFAULT = R"(
 [Window][##DockSpace]
 Pos=0,54
@@ -212,86 +229,20 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
         [&](const std::string& key, std::istringstream& ss, const std::string& name, auto& value, std::string_view type)
     {
       using T = std::decay_t<decltype(value)>;
-
-      auto is_match = [&](const char* suffix) { return key == name + suffix; };
-
-      if constexpr (std::is_same_v<T, ivec2> || std::is_same_v<T, vec2>)
+      if constexpr (GlmVector<T>)
       {
-        if (type.ends_with("_WH"))
-        {
-          if (is_match("W"))
+        auto suffixes = component_suffixes_get(type);
+        for (int i = 0; i < T::length(); ++i)
+          if (key == name + suffixes[i])
           {
-            stream_assign(value.x, ss);
+            stream_assign(value[i], ss);
             return true;
           }
-          if (is_match("H"))
-          {
-            stream_assign(value.y, ss);
-            return true;
-          }
-        }
-        else
-        {
-          if (is_match("X"))
-          {
-            stream_assign(value.x, ss);
-            return true;
-          }
-          if (is_match("Y"))
-          {
-            stream_assign(value.y, ss);
-            return true;
-          }
-        }
       }
-      else if constexpr (std::is_same_v<T, vec3>)
+      else if (key == name)
       {
-        if (is_match("R"))
-        {
-          stream_assign(value.x, ss);
-          return true;
-        }
-        if (is_match("G"))
-        {
-          stream_assign(value.y, ss);
-          return true;
-        }
-        if (is_match("B"))
-        {
-          stream_assign(value.z, ss);
-          return true;
-        }
-      }
-      else if constexpr (std::is_same_v<T, vec4>)
-      {
-        if (is_match("R"))
-        {
-          stream_assign(value.x, ss);
-          return true;
-        }
-        if (is_match("G"))
-        {
-          stream_assign(value.y, ss);
-          return true;
-        }
-        if (is_match("B"))
-        {
-          stream_assign(value.z, ss);
-          return true;
-        }
-        if (is_match("A"))
-        {
-          stream_assign(value.w, ss);
-          return true;
-        }
-      }
-      else
-      {
-        if (key == name)
-        {
-          value_set(value, ss);
-          return true;
-        }
+        value_set(value, ss);
+        return true;
       }
 
       return false;
@@ -313,7 +264,6 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
       SETTINGS_MEMBERS SETTINGS_SHORTCUTS SETTINGS_WINDOWS
 #undef X
     }
-
   }
 
   Options Settings::anm2_options_get() const
@@ -390,31 +340,11 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
     {
       using T = std::decay_t<decltype(value)>;
 
-      if constexpr (std::is_same_v<T, ivec2> || std::is_same_v<T, vec2>)
+      if constexpr (GlmVector<T>)
       {
-        if (type.ends_with("_WH"))
-        {
-          value_save(name + "W", value.x);
-          value_save(name + "H", value.y);
-        }
-        else
-        {
-          value_save(name + "X", value.x);
-          value_save(name + "Y", value.y);
-        }
-      }
-      else if constexpr (std::is_same_v<T, vec3>)
-      {
-        value_save(name + "R", value.x);
-        value_save(name + "G", value.y);
-        value_save(name + "B", value.z);
-      }
-      else if constexpr (std::is_same_v<T, vec4>)
-      {
-        value_save(name + "R", value.x);
-        value_save(name + "G", value.y);
-        value_save(name + "B", value.z);
-        value_save(name + "A", value.w);
+        auto suffixes = component_suffixes_get(type);
+        for (int i = 0; i < T::length(); ++i)
+          value_save(name + suffixes[i], value[i]);
       }
       else
         value_save(name, value);

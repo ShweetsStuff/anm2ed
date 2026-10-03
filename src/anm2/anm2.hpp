@@ -523,6 +523,7 @@ namespace anm2ed
   float interpolation_factor(Interpolation, float);
   void frame_mix(Element&, const Element&, float);
   Element frame_generate(const Element&, float);
+  glm::mat4 frame_parent_model_get(const Element&);
   int frame_index_from_at_frame_get(const Element&, int);
   int frame_index_from_time_get(const Element&, float);
   float frame_time_from_index_get(const Element&, int);
