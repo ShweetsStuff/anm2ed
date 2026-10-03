@@ -73,7 +73,6 @@ namespace anm2ed::edit
   Uids triggers_sort(model::Model&, Reference);
   Uids frames_paste(model::Model&, Reference, const std::set<Reference>&, const std::string&, int, std::string*);
   Uids root_bake_into(model::Model&, const std::set<Reference>&, const std::set<Reference>&, RootBakeOptions);
-  void frame_root_transform_apply(model::Frame&, const model::Frame&, bool, bool, bool);
 
   Uids items_remove(model::Model&, int, const std::map<int, std::set<int>>&, const std::map<int, std::set<int>>&);
   Uids items_group(model::Model&, int, int, const std::set<int>&, const std::string&);

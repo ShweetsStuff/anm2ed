@@ -12,53 +12,47 @@
 #include "types.hpp"
 
 #define ANM2_ELEMENT_TYPES                                                                                             \
-  X(UNKNOWN, "", UNKNOWN)                                                                                              \
-  X(ANIMATED_ACTOR, "AnimatedActor", UNKNOWN)                                                                          \
-  X(INFO, "Info", UNKNOWN)                                                                                             \
-  X(CONTENT, "Content", UNKNOWN)                                                                                       \
-  X(SPRITESHEETS, "Spritesheets", UNKNOWN)                                                                             \
-  X(SPRITESHEET, "Spritesheet", SPRITESHEETS)                                                                          \
-  X(SHADERS, "Shaders", UNKNOWN)                                                                                       \
-  X(SHADER, "Shader", SHADERS)                                                                                         \
-  X(UNIFORM, "Uniform", UNKNOWN)                                                                                       \
-  X(COMPONENT, "Component", UNKNOWN)                                                                                   \
-  X(REGION, "Region", UNKNOWN)                                                                                         \
-  X(LAYERS, "Layers", UNKNOWN)                                                                                         \
-  X(LAYER_ELEMENT, "Layer", LAYERS)                                                                                    \
-  X(NULLS, "Nulls", UNKNOWN)                                                                                           \
-  X(NULL_ELEMENT, "Null", NULLS)                                                                                       \
-  X(EVENTS, "Events", UNKNOWN)                                                                                         \
-  X(EVENT_ELEMENT, "Event", EVENTS)                                                                                    \
-  X(SOUNDS, "Sounds", UNKNOWN)                                                                                         \
-  X(SOUND_ELEMENT, "Sound", SOUNDS)                                                                                    \
-  X(ANIMATIONS, "Animations", UNKNOWN)                                                                                 \
-  X(ANIMATION, "Animation", ANIMATIONS)                                                                                \
-  X(ROOT_ANIMATION, "RootAnimation", UNKNOWN)                                                                          \
-  X(LAYER_ANIMATIONS, "LayerAnimations", UNKNOWN)                                                                      \
-  X(LAYER_ANIMATION_GROUPS, "LayerAnimationGroups", UNKNOWN)                                                           \
-  X(LAYER_ANIMATION, "LayerAnimation", UNKNOWN)                                                                        \
-  X(NULL_ANIMATIONS, "NullAnimations", UNKNOWN)                                                                        \
-  X(NULL_ANIMATION_GROUPS, "NullAnimationGroups", UNKNOWN)                                                             \
-  X(NULL_ANIMATION, "NullAnimation", UNKNOWN)                                                                          \
-  X(GROUP, "Group", UNKNOWN)                                                                                           \
-  X(TRIGGERS, "Triggers", UNKNOWN)                                                                                     \
-  X(FRAME, "Frame", UNKNOWN)                                                                                           \
-  X(TRIGGER, "Trigger", UNKNOWN)
+  X(UNKNOWN, "")                                                                                                       \
+  X(ANIMATED_ACTOR, "AnimatedActor")                                                                                   \
+  X(INFO, "Info")                                                                                                      \
+  X(CONTENT, "Content")                                                                                                \
+  X(SPRITESHEETS, "Spritesheets")                                                                                      \
+  X(SPRITESHEET, "Spritesheet")                                                                                        \
+  X(SHADERS, "Shaders")                                                                                                \
+  X(SHADER, "Shader")                                                                                                  \
+  X(UNIFORM, "Uniform")                                                                                                \
+  X(COMPONENT, "Component")                                                                                            \
+  X(REGION, "Region")                                                                                                  \
+  X(LAYERS, "Layers")                                                                                                  \
+  X(LAYER_ELEMENT, "Layer")                                                                                            \
+  X(NULLS, "Nulls")                                                                                                    \
+  X(NULL_ELEMENT, "Null")                                                                                              \
+  X(EVENTS, "Events")                                                                                                  \
+  X(EVENT_ELEMENT, "Event")                                                                                            \
+  X(SOUNDS, "Sounds")                                                                                                  \
+  X(SOUND_ELEMENT, "Sound")                                                                                            \
+  X(ANIMATIONS, "Animations")                                                                                          \
+  X(ANIMATION, "Animation")                                                                                            \
+  X(ROOT_ANIMATION, "RootAnimation")                                                                                   \
+  X(LAYER_ANIMATIONS, "LayerAnimations")                                                                               \
+  X(LAYER_ANIMATION_GROUPS, "LayerAnimationGroups")                                                                    \
+  X(LAYER_ANIMATION, "LayerAnimation")                                                                                 \
+  X(NULL_ANIMATIONS, "NullAnimations")                                                                                 \
+  X(NULL_ANIMATION_GROUPS, "NullAnimationGroups")                                                                      \
+  X(NULL_ANIMATION, "NullAnimation")                                                                                   \
+  X(GROUP, "Group")                                                                                                    \
+  X(TRIGGERS, "Triggers")                                                                                              \
+  X(FRAME, "Frame")                                                                                                    \
+  X(TRIGGER, "Trigger")
 
 namespace anm2ed
 {
   enum class ElementType
   {
-#define X(symbol, tag, container) symbol,
+#define X(symbol, tag) symbol,
     ANM2_ELEMENT_TYPES
 #undef X
         COUNT
-  };
-
-  inline constexpr ElementType ELEMENT_CONTAINERS[] = {
-#define X(symbol, tag, container) ElementType::container,
-      ANM2_ELEMENT_TYPES
-#undef X
   };
 
   enum class Interpolation
@@ -129,60 +123,38 @@ namespace anm2ed
   inline const glm::vec4 TRIGGER_COLOR_HOVERED = glm::vec4(0.950f, 0.330f, 0.490f, 1.000f);
 
 #define ANM2_ITEM_TYPES                                                                                                \
-  X(NONE, STRING_UNDEFINED, "", resource::icon::NONE, glm::vec4(), glm::vec4(), glm::vec4(), UNKNOWN, UNKNOWN)         \
-  X(ROOT, BASIC_ROOT, "RootAnimation", resource::icon::ROOT, ROOT_COLOR, ROOT_COLOR_ACTIVE, ROOT_COLOR_HOVERED,        \
-    ROOT_ANIMATION, UNKNOWN)                                                                                           \
-  X(LAYER, BASIC_LAYER_ANIMATION, "LayerAnimation", resource::icon::LAYER, LAYER_COLOR, LAYER_COLOR_ACTIVE,            \
-    LAYER_COLOR_HOVERED, LAYER_ANIMATION, LAYER_ANIMATIONS)                                                            \
-  X(NULL_, BASIC_NULL_ANIMATION, "NullAnimation", resource::icon::NULL_, NULL_COLOR, NULL_COLOR_ACTIVE,                \
-    NULL_COLOR_HOVERED, NULL_ANIMATION, NULL_ANIMATIONS)                                                               \
-  X(TRIGGER, BASIC_TRIGGERS, "Triggers", resource::icon::TRIGGERS, TRIGGER_COLOR, TRIGGER_COLOR_ACTIVE,                \
-    TRIGGER_COLOR_HOVERED, TRIGGERS, UNKNOWN)
+  X(NONE, STRING_UNDEFINED, resource::icon::NONE, glm::vec4(), glm::vec4(), glm::vec4())                               \
+  X(ROOT, BASIC_ROOT, resource::icon::ROOT, ROOT_COLOR, ROOT_COLOR_ACTIVE, ROOT_COLOR_HOVERED)                         \
+  X(LAYER, BASIC_LAYER_ANIMATION, resource::icon::LAYER, LAYER_COLOR, LAYER_COLOR_ACTIVE, LAYER_COLOR_HOVERED)         \
+  X(NULL_, BASIC_NULL_ANIMATION, resource::icon::NULL_, NULL_COLOR, NULL_COLOR_ACTIVE, NULL_COLOR_HOVERED)             \
+  X(TRIGGER, BASIC_TRIGGERS, resource::icon::TRIGGERS, TRIGGER_COLOR, TRIGGER_COLOR_ACTIVE, TRIGGER_COLOR_HOVERED)
 
   constexpr StringType TYPE_STRINGS[] = {
-#define X(symbol, string, itemString, icon, color, colorActive, colorHovered, track, container) string,
-      ANM2_ITEM_TYPES
-#undef X
-  };
-
-  constexpr const char* TYPE_ITEM_STRINGS[] = {
-#define X(symbol, string, itemString, icon, color, colorActive, colorHovered, track, container) itemString,
+#define X(symbol, string, icon, color, colorActive, colorHovered) string,
       ANM2_ITEM_TYPES
 #undef X
   };
 
   constexpr resource::icon::Type TYPE_ICONS[] = {
-#define X(symbol, string, itemString, icon, color, colorActive, colorHovered, track, container) icon,
+#define X(symbol, string, icon, color, colorActive, colorHovered) icon,
       ANM2_ITEM_TYPES
 #undef X
   };
 
   inline const glm::vec4 TYPE_COLOR[] = {
-#define X(symbol, string, itemString, icon, color, colorActive, colorHovered, track, container) color,
+#define X(symbol, string, icon, color, colorActive, colorHovered) color,
       ANM2_ITEM_TYPES
 #undef X
   };
 
   inline const glm::vec4 TYPE_COLOR_ACTIVE[] = {
-#define X(symbol, string, itemString, icon, color, colorActive, colorHovered, track, container) colorActive,
+#define X(symbol, string, icon, color, colorActive, colorHovered) colorActive,
       ANM2_ITEM_TYPES
 #undef X
   };
 
   inline const glm::vec4 TYPE_COLOR_HOVERED[] = {
-#define X(symbol, string, itemString, icon, color, colorActive, colorHovered, track, container) colorHovered,
-      ANM2_ITEM_TYPES
-#undef X
-  };
-
-  inline constexpr ElementType TYPE_TRACKS[] = {
-#define X(symbol, string, itemString, icon, color, colorActive, colorHovered, track, container) ElementType::track,
-      ANM2_ITEM_TYPES
-#undef X
-  };
-
-  inline constexpr ElementType TYPE_CONTAINERS[] = {
-#define X(symbol, string, itemString, icon, color, colorActive, colorHovered, track, container) ElementType::container,
+#define X(symbol, string, icon, color, colorActive, colorHovered) colorHovered,
       ANM2_ITEM_TYPES
 #undef X
   };
@@ -236,7 +208,6 @@ namespace anm2ed
 
   struct Options
   {
-    Flags flags{SERIALIZE_DEFAULT};
     bool isExtendedFormat{};
   };
 

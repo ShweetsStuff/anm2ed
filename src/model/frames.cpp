@@ -44,6 +44,26 @@ namespace anm2ed::model
                                        math::percent_to_unit(frame.shear));
   }
 
+  void frame_root_transform_apply(Frame& frame, const Frame& rootFrame, bool isRoundScale, bool isRoundRotation,
+                                  bool isUseRootPivot)
+  {
+    auto rootScale = math::percent_to_unit(rootFrame.scale);
+    auto pivot = isUseRootPivot ? rootFrame.position : glm::vec2();
+    auto offset = (frame.position - pivot) * rootScale;
+    auto radians = glm::radians(rootFrame.rotation);
+    auto cos = std::cos(radians);
+    auto sin = std::sin(radians);
+
+    frame.position = rootFrame.position + glm::vec2(offset.x * cos - offset.y * sin, offset.x * sin + offset.y * cos);
+    frame.scale *= rootScale;
+    frame.rotation += rootFrame.rotation;
+    frame.tint *= rootFrame.tint;
+    frame.colorOffset += rootFrame.colorOffset;
+
+    if (isRoundScale) frame.scale = glm::round(frame.scale);
+    if (isRoundRotation) frame.rotation = std::round(frame.rotation);
+  }
+
   // The track's state at a time: the frame playing then, mixed toward the next one when interpolated. A trigger is
   // returned only on its exact frame; otherwise the result is invisible.
   Frame frame_generate(const Track& track, float time)

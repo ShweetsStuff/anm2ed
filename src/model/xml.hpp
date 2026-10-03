@@ -15,7 +15,7 @@ namespace anm2ed::model
   bool model_save(const Model&, const std::filesystem::path&, std::string* = nullptr, Options = {});
   std::string model_to_string(const Model&, Options = {});
   std::string model_serialize(const Model&, Flags);
-  std::uint64_t model_hash(const Model&, Options = {});
+  std::uint64_t model_hash(const Model&);
   bool is_special_interpolated_frames(const Model&);
 
   std::string frame_to_string(const Frame&, ItemType);

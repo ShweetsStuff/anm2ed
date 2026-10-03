@@ -84,8 +84,6 @@ set(IMGUI_SRC
 set(TINYXML2_SRC external/tinyxml2/tinyxml2.cpp)
 
 file(GLOB PROJECT_SRC CONFIGURE_DEPENDS
-     src/anm2/*.cpp
-     src/anm2/*.hpp
      src/resource/*.cpp
      src/resource/*.hpp
      src/imgui/*.cpp
@@ -108,7 +106,7 @@ file(GLOB PROJECT_SRC CONFIGURE_DEPENDS
      src/*.hpp)
 
 set(CORE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
-file(GLOB CORE_SRC CONFIGURE_DEPENDS ${CORE_DIR}/anm2/*.cpp ${CORE_DIR}/edit/*.cpp ${CORE_DIR}/model/*.cpp)
+file(GLOB CORE_SRC CONFIGURE_DEPENDS ${CORE_DIR}/edit/*.cpp ${CORE_DIR}/model/*.cpp)
 foreach(CORE_FILE log resource/strings resource/image resource/audio_data resource/asset_store util/file util/path util/math util/string util/time util/working_directory
                   util/xml util/pack util/imgui/multiselect snapshots storage playback selection)
   list(APPEND CORE_SRC ${CORE_DIR}/${CORE_FILE}.cpp)

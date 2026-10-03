@@ -64,13 +64,8 @@ namespace anm2ed::test
   inline std::vector<Variant> variants_get(const model::Model& model)
   {
     std::vector<Variant> variants{};
-    std::string hashes{};
     for (auto [name, flags] : PRESETS)
-    {
       variants.emplace_back(name, model::model_serialize(model, flags));
-      for (auto [formatName, isExtended] : FORMATS)
-        hashes += std::format("{}.{} {:016x}\n", name, formatName, model::model_hash(model, {flags, isExtended}));
-    }
     for (auto [name, isExtended] : FORMATS)
       variants.emplace_back(name, model::model_to_string(model, {.isExtendedFormat = isExtended}));
     for (auto [name, type] : MERGES)
@@ -81,7 +76,6 @@ namespace anm2ed::test
                              {});
       variants.emplace_back(name, model::model_to_string(merged, {.isExtendedFormat = true}));
     }
-    variants.emplace_back("hashes", hashes);
     return variants;
   }
 

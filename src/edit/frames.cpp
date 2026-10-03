@@ -273,26 +273,6 @@ namespace anm2ed::edit
     return uids;
   }
 
-  void frame_root_transform_apply(Frame& frame, const Frame& rootFrame, bool isRoundScale, bool isRoundRotation,
-                                  bool isUseRootPivot)
-  {
-    auto rootScale = math::percent_to_unit(rootFrame.scale);
-    auto pivot = isUseRootPivot ? rootFrame.position : glm::vec2();
-    auto offset = (frame.position - pivot) * rootScale;
-    auto radians = glm::radians(rootFrame.rotation);
-    auto cos = std::cos(radians);
-    auto sin = std::sin(radians);
-
-    frame.position = rootFrame.position + glm::vec2(offset.x * cos - offset.y * sin, offset.x * sin + offset.y * cos);
-    frame.scale *= rootScale;
-    frame.rotation += rootFrame.rotation;
-    frame.tint *= rootFrame.tint;
-    frame.colorOffset += rootFrame.colorOffset;
-
-    if (isRoundScale) frame.scale = glm::round(frame.scale);
-    if (isRoundRotation) frame.rotation = std::round(frame.rotation);
-  }
-
   // Applies the selected root frames' transforms to the target tracks' frames under them, then resets those root
   // frames to a default frame spanning the same time.
   Uids root_bake_into(Model& model, const std::set<Reference>& rootFrames, const std::set<Reference>& targets,

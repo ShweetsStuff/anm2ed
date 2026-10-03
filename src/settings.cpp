@@ -266,10 +266,7 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
     }
   }
 
-  Options Settings::anm2_options_get() const
-  {
-    return {.flags = SERIALIZE_DEFAULT, .isExtendedFormat = isFileExtendedFormat};
-  }
+  Options Settings::anm2_options_get() const { return {.isExtendedFormat = isFileExtendedFormat}; }
 
   std::string Settings::imgui_data_load(const std::filesystem::path& path)
   {
