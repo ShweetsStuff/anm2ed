@@ -9,6 +9,7 @@
 
 #include "log.hpp"
 #include "math.hpp"
+#include "model/draw.hpp"
 #include "model/frames.hpp"
 #include "model/xml.hpp"
 #include "strings.hpp"
@@ -176,35 +177,6 @@ namespace anm2ed::imgui::wizard
     return ImVec2(std::max(width, 1.0f), std::max(height, 1.0f));
   }
 
-  void friend_layer_draw(About::FriendState& state, Resources& resources, const mat4& baseTransform,
-                         const model::Track& layerAnimation, const model::Frame& rootFrame)
-  {
-    if (!layerAnimation.isVisible) return;
-
-    auto layer = model::item_get(state.model.content.layers, layerAnimation.id);
-    if (!layer) return;
-
-    auto textureIt = state.textures.find(layer->spritesheetId);
-    if (textureIt == state.textures.end() || !textureIt->second.is_valid()) return;
-
-    auto frame = state.model.frame_effective(layerAnimation.id, model::frame_generate(layerAnimation, state.time));
-    if (!frame.isVisible || frame.size == vec2()) return;
-
-    auto& texture = textureIt->second;
-    auto textureSize = vec2(texture.size);
-    if (textureSize.x <= 0.0f || textureSize.y <= 0.0f) return;
-
-    auto transform = baseTransform * math::quad_model_get(frame.size, frame.position, frame.pivot,
-                                                          math::percent_to_unit(frame.scale), frame.rotation,
-                                                          math::percent_to_unit(frame.shear));
-    auto uvVertices = math::uv_vertices_get(frame.crop / textureSize, (frame.crop + frame.size) / textureSize);
-    auto tint = frame.tint * rootFrame.tint;
-    auto colorOffset = frame.colorOffset + rootFrame.colorOffset;
-
-    state.canvas->texture_render(resources.shaders[shader::TEXTURE], resource::texture::id_get(texture), transform,
-                                 tint, colorOffset, uvVertices.data());
-  }
-
   void friend_canvas_draw(About::FriendState& state, Resources& resources, ImVec2 displaySize)
   {
     if (!state.isLoaded || !state.canvas) return;
@@ -233,12 +205,19 @@ namespace anm2ed::imgui::wizard
     state.canvas->set_to_rect(zoom, pan, rect);
 
     auto transform = state.canvas->transform_get(zoom, pan);
-    auto rootFrame = model::frame_generate(animation->root, state.time);
-    transform *= math::quad_model_parent_get(rootFrame.position, {}, math::percent_to_unit(rootFrame.scale),
-                                             rootFrame.rotation, math::percent_to_unit(rootFrame.shear));
-
-    model::tracks_each(animation->layers, [&](const model::Track& layerAnimation, auto*)
-                       { friend_layer_draw(state, resources, transform, layerAnimation, rootFrame); });
+    for (const auto& draw :
+         model::animation_draws_get(state.model, *animation, {.time = state.time, .isRootTransform = true}))
+    {
+      auto& frame = draw.frame;
+      auto layer = draw.type == model::DrawType::LAYER ? model::item_get(state.model.content.layers, draw.id) : nullptr;
+      auto texture = layer ? state.textures.find(layer->spritesheetId) : state.textures.end();
+      if (texture == state.textures.end() || !texture->second.is_valid() || frame.size == vec2()) continue;
+      auto textureSize = vec2(texture->second.size);
+      auto uvVertices = math::uv_vertices_get(frame.crop / textureSize, (frame.crop + frame.size) / textureSize);
+      state.canvas->texture_render(resources.shaders[shader::TEXTURE], resource::texture::id_get(texture->second),
+                                   transform * draw.parent * model::draw_quad_model_get(draw), frame.tint,
+                                   frame.colorOffset, uvVertices.data());
+    }
 
     state.canvas->unbind();
   }

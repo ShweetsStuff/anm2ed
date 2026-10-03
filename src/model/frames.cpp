@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <limits>
 
+#include "draw.hpp"
 #include "math.hpp"
 
 using namespace anm2ed::util;
@@ -228,35 +229,19 @@ namespace anm2ed::model
     glm::vec2 max{-std::numeric_limits<float>::infinity()};
     bool isAny{};
 
-    for (float t = 0.0f; t < (float)animation.frameNum; t += 1.0f)
-    {
-      glm::mat4 transform(1.0f);
-      if (isRootTransform) transform *= frame_parent_model_get(frame_generate(animation.root, t));
-
-      tracks_each(animation.layers,
-                  [&](const Track& track, const TrackGroup* group)
-                  {
-                    if (!track.isVisible || (group && !group->isVisible)) return;
-                    auto itemTransform = transform;
-                    if (isRootTransform && group)
-                      itemTransform *= frame_parent_model_get(frame_generate(group->root, t));
-
-                    auto frame = model.frame_effective(track.id, frame_generate(track, t));
-                    if (frame.size == glm::vec2() || !frame.isVisible) return;
-
-                    auto layerTransform =
-                        itemTransform * math::quad_model_get(frame.size, frame.position, frame.pivot,
-                                                             math::percent_to_unit(frame.scale), frame.rotation,
-                                                             math::percent_to_unit(frame.shear));
-                    for (auto& corner : CORNERS)
-                    {
-                      auto world = glm::vec2(layerTransform * glm::vec4(corner, 0.0f, 1.0f));
-                      min = glm::min(min, world);
-                      max = glm::max(max, world);
-                      isAny = true;
-                    }
-                  });
-    }
+    for (float time = 0.0f; time < (float)animation.frameNum; time += 1.0f)
+      for (const auto& draw : animation_draws_get(model, animation, {.time = time, .isRootTransform = isRootTransform}))
+      {
+        if (draw.type != DrawType::LAYER || draw.frame.size == glm::vec2()) continue;
+        auto transform = draw.parent * draw_quad_model_get(draw);
+        for (auto& corner : CORNERS)
+        {
+          auto world = glm::vec2(transform * glm::vec4(corner, 0.0f, 1.0f));
+          min = glm::min(min, world);
+          max = glm::max(max, world);
+          isAny = true;
+        }
+      }
 
     if (!isAny) return glm::vec4(-1.0f);
     return {min.x, min.y, max.x - min.x, max.y - min.y};

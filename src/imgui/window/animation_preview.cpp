@@ -17,6 +17,7 @@
 #include "actions.hpp"
 #include "log.hpp"
 #include "math.hpp"
+#include "model/draw.hpp"
 #include "model/frames.hpp"
 #include "path.hpp"
 #include "strings.hpp"
@@ -755,344 +756,126 @@ namespace anm2ed::imgui
       auto baseTransform = transform_get(zoom, pan);
       auto frameTime = document.frameTime > -1 && !playback.isPlaying ? document.frameTime : playback.time;
 
-      struct OnionskinSample
+      model::DrawOptions drawOptions{.time = frameTime,
+                                     .isRootTransform = isRootTransform,
+                                     .isIndexSampled = settings.onionskinMode == (int)OnionskinMode::INDEX};
+      std::vector<vec3> sampleColors{};
+      std::vector<float> sampleAlphas{};
+      auto samples_add = [&](int count, int direction, vec3 color)
       {
-        float time{};
-        int indexOffset{};
-        vec3 colorOffset{};
-        float alphaOffset{};
-      };
-
-      std::vector<OnionskinSample> onionskinSamples;
-
-      if (animation && settings.onionskinIsEnabled)
-      {
-        auto add_samples = [&](int count, int direction, vec3 color)
+        for (int i = 1; i <= count; ++i)
         {
-          for (int i = 1; i <= count; ++i)
-          {
-            float useTime = frameTime + (float)(direction * i);
-
-            float alphaOffset = (1.0f / (count + 1)) * i;
-            OnionskinSample sample{};
-            sample.time = useTime;
-            sample.colorOffset = color;
-            sample.alphaOffset = alphaOffset;
-            sample.indexOffset = direction * i;
-            onionskinSamples.push_back(sample);
-          }
-        };
-
-        add_samples(settings.onionskinBeforeCount, -1, settings.onionskinBeforeColor);
-        add_samples(settings.onionskinAfterCount, 1, settings.onionskinAfterColor);
+          drawOptions.samples.push_back({.timeOffset = (float)(direction * i), .indexOffset = direction * i});
+          sampleColors.push_back(color);
+          sampleAlphas.push_back((1.0f / (count + 1)) * i);
+        }
+      };
+      if (settings.onionskinIsEnabled)
+      {
+        samples_add(settings.onionskinBeforeCount, -1, settings.onionskinBeforeColor);
+        samples_add(settings.onionskinAfterCount, 1, settings.onionskinAfterColor);
       }
 
       auto referenceItemType = static_cast<ItemType>(reference.itemType);
-      auto is_layer_animation_selected = [&](Document& sampleDocument, int id)
+      auto is_layer_selected = [&](int id)
       {
-        if (&sampleDocument != &document) return false;
-        if (reference.animationIndex != -1 && referenceItemType == ItemType::LAYER && reference.itemID == id)
-          return true;
-        for (auto itemReference : document.selected_get(SelectionKind::TRACKS))
-          if (itemReference.animationIndex == reference.animationIndex && itemReference.itemType == LAYER &&
-              itemReference.itemID == id)
-            return true;
-        for (auto frameReference : document.frame_references_get(Document::FrameReferenceFallback::NONE))
-          if (frameReference.animationIndex == reference.animationIndex && frameReference.itemType == LAYER &&
-              frameReference.itemID == id)
-            return true;
-        return false;
+        auto is_layer = [&](const Reference& itemReference)
+        {
+          return itemReference.animationIndex == reference.animationIndex && itemReference.itemType == LAYER &&
+                 itemReference.itemID == id;
+        };
+        return (reference.animationIndex != -1 && is_layer(reference)) ||
+               std::ranges::any_of(document.selected_get(SelectionKind::TRACKS), is_layer) ||
+               std::ranges::any_of(document.frame_references_get(Document::FrameReferenceFallback::NONE), is_layer);
       };
 
-      auto render = [&](Document& sampleDocument, const model::Animation* animation, float time, vec3 colorOffset = {},
-                        float alphaOffset = {}, const std::vector<OnionskinSample>* layeredOnions = nullptr,
-                        bool isIndexMode = false)
+      // Draws an animation's draw list; onion-skin samples are tinted and faded, `alphaOffset` fades the overlay.
+      auto render = [&](Document& sampleDocument, const model::Animation& sampleAnimation, float alphaOffset)
       {
+        auto isActiveDocument = &sampleDocument == &document;
         auto& sampleModel = sampleDocument.model;
-        bool isActiveDocument = &sampleDocument == &document;
-
-        auto sample_time_for_item = [&](const model::Track& item, const OnionskinSample& sample) -> std::optional<float>
+        auto targetIcon = resources.icon_id_get(isAltIcons ? icon::TARGET_ALT : icon::TARGET);
+        for (const auto& draw : model::animation_draws_get(sampleModel, sampleAnimation, drawOptions))
         {
-          if (!isIndexMode)
+          auto isOnion = draw.sample != -1;
+          auto sampleColor = isOnion ? sampleColors[draw.sample] : vec3();
+          auto sampleAlpha = isOnion ? sampleAlphas[draw.sample] : 0.0f;
+          auto onionColor = vec4(sampleColor, 1.0f - sampleAlpha);
+          auto& frame = draw.frame;
+          auto transform = baseTransform * draw.parent;
+          auto marker_model_get = [&](vec2 markerSize)
           {
-            if (sample.time < 0.0f || sample.time > animation->frameNum) return std::nullopt;
-            return sample.time;
+            return math::quad_model_get(markerSize, frame.position, markerSize * 0.5f,
+                                        math::percent_to_unit(frame.scale), frame.rotation,
+                                        math::percent_to_unit(frame.shear));
+          };
+
+          if (draw.type == model::DrawType::ROOT || draw.type == model::DrawType::GROUP_ROOT)
+          {
+            if (isOnlyShowLayers) continue;
+            auto isSelected = isActiveDocument && draw.type == model::DrawType::GROUP_ROOT &&
+                              referenceItemType == ItemType::ROOT && reference.groupType == draw.groupType &&
+                              reference.groupId == draw.id;
+            auto color = isOnion                              ? vec4(sampleColor, sampleAlpha)
+                         : draw.type == model::DrawType::ROOT ? color::GREEN
+                         : isSelected                         ? color::RED
+                                                              : ROOT_COLOR;
+            auto markerModel = isRootTransform ? math::quad_model_get(TARGET_SIZE, {}, TARGET_SIZE * 0.5f)
+                                               : marker_model_get(TARGET_SIZE);
+            texture_render(shaderTexture, targetIcon, transform * markerModel, color);
           }
-          if (item.frames.empty()) return std::nullopt;
-          int baseIndex = model::frame_index_from_time_get(item, frameTime);
-          if (baseIndex < 0) return std::nullopt;
-          int sampleIndex = baseIndex + sample.indexOffset;
-          if (sampleIndex < 0 || sampleIndex >= (int)item.frames.size()) return std::nullopt;
-          return model::frame_time_from_index_get(item, sampleIndex);
-        };
-
-        auto root = &animation->root;
-
-        auto transform_for_time = [&](float t)
-        {
-          auto sampleTransform = baseTransform;
-          if (isRootTransform && root)
+          else if (draw.type == model::DrawType::LAYER)
           {
-            auto rootFrame = model::frame_generate(*root, t);
-            sampleTransform *= model::frame_parent_model_get(rootFrame);
-          }
-          return sampleTransform;
-        };
-
-        auto transform = transform_for_time(time);
-
-        auto group_root_frame_get = [](const model::TrackGroup* group, float t) -> std::optional<model::Frame>
-        {
-          if (!group) return std::nullopt;
-          return model::frame_generate(group->root, t);
-        };
-
-        auto group_transform_for_time = [&](const model::TrackGroup* group, float t, const glm::mat4& sampleTransform)
-        {
-          auto itemTransform = sampleTransform;
-          if (isRootTransform)
-            if (auto groupRootFrame = group_root_frame_get(group, t))
-              itemTransform *= model::frame_parent_model_get(*groupRootFrame);
-          return itemTransform;
-        };
-
-        auto draw_root =
-            [&](float sampleTime, const glm::mat4& sampleTransform, vec3 sampleColor, float sampleAlpha, bool isOnion)
-        {
-          if (!root) return;
-          auto rootFrame = model::frame_generate(*root, sampleTime);
-          if (isOnlyShowLayers || !rootFrame.isVisible || !root->isVisible) return;
-
-          auto rootModel = isRootTransform
-                               ? math::quad_model_get(TARGET_SIZE, {}, TARGET_SIZE * 0.5f)
-                               : math::quad_model_get(TARGET_SIZE, rootFrame.position, TARGET_SIZE * 0.5f,
-                                                      math::percent_to_unit(rootFrame.scale), rootFrame.rotation,
-                                                      math::percent_to_unit(rootFrame.shear));
-          auto rootTransform = sampleTransform * rootModel;
-
-          vec4 color = isOnion ? vec4(sampleColor, sampleAlpha) : color::GREEN;
-
-          auto icon = isAltIcons ? icon::TARGET_ALT : icon::TARGET;
-          texture_render(shaderTexture, resources.icon_id_get(icon), rootTransform, color);
-        };
-
-        if (layeredOnions && root)
-          for (auto& sample : *layeredOnions)
-            if (auto sampleTime = sample_time_for_item(*root, sample))
-            {
-              auto sampleTransform = transform_for_time(*sampleTime);
-              draw_root(*sampleTime, sampleTransform, sample.colorOffset, sample.alphaOffset, true);
-            }
-
-        draw_root(time, transform, {}, 0.0f, false);
-
-        auto draw_group_root = [&](const model::TrackGroup& group, int groupType, float sampleTime,
-                                   const glm::mat4& sampleTransform, vec3 sampleColor, float sampleAlpha, bool isOnion)
-        {
-          auto rootFrame = model::frame_generate(group.root, sampleTime);
-          if (isOnlyShowLayers || !rootFrame.isVisible || !group.root.isVisible) return;
-
-          auto itemTransform = sampleTransform;
-          if (isRootTransform) itemTransform *= model::frame_parent_model_get(rootFrame);
-
-          auto rootModel = isRootTransform
-                               ? math::quad_model_get(TARGET_SIZE, {}, TARGET_SIZE * 0.5f)
-                               : math::quad_model_get(TARGET_SIZE, rootFrame.position, TARGET_SIZE * 0.5f,
-                                                      math::percent_to_unit(rootFrame.scale), rootFrame.rotation,
-                                                      math::percent_to_unit(rootFrame.shear));
-          auto rootTransform = itemTransform * rootModel;
-
-          auto isSelected = isActiveDocument && referenceItemType == ItemType::ROOT &&
-                            reference.groupType == groupType && reference.groupId == group.id;
-          vec4 color = isOnion ? vec4(sampleColor, sampleAlpha) : isSelected ? color::RED : ROOT_COLOR;
-          auto icon = isAltIcons ? icon::TARGET_ALT : icon::TARGET;
-          texture_render(shaderTexture, resources.icon_id_get(icon), rootTransform, color);
-        };
-
-        // Draws loose tracks and visible groups (their root, then their tracks) in file order.
-        auto entries_draw = [&](const std::vector<model::TrackEntry>& entries, int groupType, auto&& track_draw)
-        {
-          for (const auto& entry : entries)
-          {
-            if (auto track = std::get_if<model::Track>(&entry))
-            {
-              track_draw(*track, nullptr);
+            auto layer = model::item_get(sampleModel.content.layers, draw.id);
+            auto layerTexture = sampleDocument.texture_get(layer->spritesheetId);
+            if (!layerTexture || !layerTexture->is_valid() || layerTexture->size.x <= 0 || layerTexture->size.y <= 0)
               continue;
-            }
-            auto& group = std::get<model::TrackGroup>(entry);
-            if (!group.isVisible) continue;
-            if (layeredOnions)
-              for (auto& sample : *layeredOnions)
-                if (auto sampleTime = sample_time_for_item(group.root, sample))
-                  draw_group_root(group, groupType, *sampleTime, transform_for_time(*sampleTime), sample.colorOffset,
-                                  sample.alphaOffset, true);
-            draw_group_root(group, groupType, time, transform, {}, 0.0f, false);
-            for (const auto& groupTrack : group.tracks)
-              track_draw(groupTrack, &group);
+            auto textureSize = vec2(layerTexture->size);
+            auto layerModel = model::draw_quad_model_get(draw);
+            auto layerTransform = transform * layerModel;
+            auto vertices = math::uv_vertices_get(frame.crop / textureSize, (frame.crop + frame.size) / textureSize);
+            auto tint = frame.tint;
+            tint.a = std::max(0.0f, tint.a - (alphaOffset + sampleAlpha));
+            auto customShader = sampleDocument.shader_get(frame.shaderId);
+            texture_render(customShader ? *customShader : shaderTexture, resource::texture::id_get(*layerTexture),
+                           layerTransform, tint, frame.colorOffset + sampleColor, vertices.data(), textureSize,
+                           draw.time);
+
+            auto color = isOnion                                          ? onionColor
+                         : isActiveDocument && is_layer_selected(draw.id) ? SELECTED_LAYER_BORDER_COLOR
+                                                                          : color::RED;
+            if (isBorder) rect_render(shaderLine, layerTransform, layerModel, color);
+            if (isPivots)
+              texture_render(shaderTexture, resources.icon_id_get(icon::PIVOT),
+                             transform * marker_model_get(PIVOT_SIZE), color);
           }
-        };
-
-        entries_draw(animation->layers, LAYER,
-                     [&](const model::Track& layerAnimation, const model::TrackGroup* group)
-                     {
-                       if (!layerAnimation.isVisible) return;
-
-                       auto id = layerAnimation.id;
-                       auto layer = model::item_get(sampleModel.content.layers, id);
-                       if (!layer) return;
-
-                       auto textureInfo = sampleDocument.texture_get(layer->spritesheetId);
-                       if (!textureInfo || !textureInfo->is_valid()) return;
-
-                       auto draw_layer = [&](float sampleTime, const glm::mat4& sampleTransform, vec3 sampleColor,
-                                             float sampleAlpha, bool isOnion)
-                       {
-                         auto frame = model::frame_generate(layerAnimation, sampleTime);
-                         if (!frame.isVisible) return;
-
-                         auto& texture = *textureInfo;
-
-                         auto texSize = vec2(texture.size);
-                         if (texSize.x <= 0.0f || texSize.y <= 0.0f) return;
-
-                         frame = sampleModel.frame_effective(id, frame);
-                         auto crop = frame.crop;
-                         auto size = frame.size;
-                         auto pivot = frame.pivot;
-
-                         auto layerModel =
-                             math::quad_model_get(size, frame.position, pivot, math::percent_to_unit(frame.scale),
+          else if (!isOnlyShowLayers)
+          {
+            auto isShowRect = model::item_get(sampleModel.content.nulls, draw.id)->isShowRect;
+            auto isSelected = isActiveDocument && draw.id == reference.itemID && referenceItemType == ItemType::NULL_;
+            auto color = isOnion ? onionColor : isSelected ? color::RED : NULL_COLOR;
+            auto markerSize = isShowRect ? POINT_SIZE : TARGET_SIZE;
+            texture_render(shaderTexture, isShowRect ? resources.icon_id_get(icon::POINT) : targetIcon,
+                           transform * marker_model_get(markerSize), color);
+            if (!isShowRect) continue;
+            auto rectModel = math::quad_model_get(frame.scale, frame.position, frame.scale * 0.5f, vec2(1.0f),
                                                   frame.rotation, math::percent_to_unit(frame.shear));
-                         auto itemTransform = group_transform_for_time(group, sampleTime, sampleTransform);
-                         auto layerTransform = itemTransform * layerModel;
-
-                         auto uvMin = crop / texSize;
-                         auto uvMax = (crop + size) / texSize;
-
-                         vec3 frameColorOffset = frame.colorOffset + colorOffset + sampleColor;
-                         vec4 frameTint = frame.tint;
-
-                         if (isRootTransform && root)
-                         {
-                           auto rootFrame = model::frame_generate(*root, sampleTime);
-                           frameColorOffset += rootFrame.colorOffset;
-                           frameTint *= rootFrame.tint;
-                         }
-                         if (isRootTransform)
-                           if (auto groupRootFrame = group_root_frame_get(group, sampleTime))
-                           {
-                             frameColorOffset += groupRootFrame->colorOffset;
-                             frameTint *= groupRootFrame->tint;
-                           }
-
-                         frameTint.a = std::max(0.0f, frameTint.a - (alphaOffset + sampleAlpha));
-
-                         auto vertices = math::uv_vertices_get(uvMin, uvMax);
-                         auto customShader = sampleDocument.shader_get(frame.shaderId);
-                         auto& layerShader = customShader ? *customShader : shaderTexture;
-
-                         texture_render(layerShader, resource::texture::id_get(texture), layerTransform, frameTint,
-                                        frameColorOffset, vertices.data(), vec2(texture.size), sampleTime);
-
-                         auto color = isOnion ? vec4(sampleColor, 1.0f - sampleAlpha)
-                                      : is_layer_animation_selected(sampleDocument, id) ? SELECTED_LAYER_BORDER_COLOR
-                                                                                        : color::RED;
-
-                         if (isBorder) rect_render(shaderLine, layerTransform, layerModel, color);
-
-                         if (isPivots)
-                         {
-                           auto pivotModel = math::quad_model_get(PIVOT_SIZE, frame.position, PIVOT_SIZE * 0.5f,
-                                                                  math::percent_to_unit(frame.scale), frame.rotation,
-                                                                  math::percent_to_unit(frame.shear));
-                           auto pivotTransform = itemTransform * pivotModel;
-
-                           texture_render(shaderTexture, resources.icon_id_get(icon::PIVOT), pivotTransform, color);
-                         }
-                       };
-
-                       if (layeredOnions)
-                         for (auto& sample : *layeredOnions)
-                           if (auto sampleTime = sample_time_for_item(layerAnimation, sample))
-                           {
-                             auto sampleTransform = transform_for_time(*sampleTime);
-                             draw_layer(*sampleTime, sampleTransform, sample.colorOffset, sample.alphaOffset, true);
-                           }
-
-                       draw_layer(time, transform, {}, 0.0f, false);
-                     });
-
-        entries_draw(animation->nulls, NULL_,
-                     [&](const model::Track& nullAnimation, const model::TrackGroup* group)
-                     {
-                       if (!nullAnimation.isVisible || isOnlyShowLayers) return;
-
-                       auto id = nullAnimation.id;
-                       auto nullInfo = model::item_get(sampleModel.content.nulls, id);
-                       if (!nullInfo) return;
-                       auto isShowRect = nullInfo->isShowRect;
-
-                       auto draw_null = [&](float sampleTime, const glm::mat4& sampleTransform, vec3 sampleColor,
-                                            float sampleAlpha, bool isOnion)
-                       {
-                         auto frame = model::frame_generate(nullAnimation, sampleTime);
-                         if (!frame.isVisible) return;
-
-                         auto icon = isShowRect ? icon::POINT : isAltIcons ? icon::TARGET_ALT : icon::TARGET;
-
-                         auto& size = isShowRect ? POINT_SIZE : TARGET_SIZE;
-                         auto color =
-                             isOnion ? vec4(sampleColor, 1.0f - sampleAlpha)
-                             : isActiveDocument && id == reference.itemID && referenceItemType == ItemType::NULL_
-                                 ? color::RED
-                                 : NULL_COLOR;
-
-                         auto nullModel =
-                             math::quad_model_get(size, frame.position, size * 0.5f, math::percent_to_unit(frame.scale),
-                                                  frame.rotation, math::percent_to_unit(frame.shear));
-                         auto itemTransform = group_transform_for_time(group, sampleTime, sampleTransform);
-                         auto nullTransform = itemTransform * nullModel;
-
-                         texture_render(shaderTexture, resources.icon_id_get(icon), nullTransform, color);
-
-                         if (isShowRect)
-                         {
-                           auto rectModel =
-                               math::quad_model_get(frame.scale, frame.position, frame.scale * 0.5f, vec2(1.0f),
-                                                    frame.rotation, math::percent_to_unit(frame.shear));
-                           auto rectTransform = itemTransform * rectModel;
-
-                           rect_render(shaderLine, rectTransform, rectModel, color);
-                         }
-                       };
-
-                       if (layeredOnions)
-                         for (auto& sample : *layeredOnions)
-                           if (auto sampleTime = sample_time_for_item(nullAnimation, sample))
-                           {
-                             auto sampleTransform = transform_for_time(*sampleTime);
-                             draw_null(*sampleTime, sampleTransform, sample.colorOffset, sample.alphaOffset, true);
-                           }
-
-                       draw_null(time, transform, {}, 0.0f, false);
-                     });
+            rect_render(shaderLine, transform * rectModel, rectModel, color);
+          }
+        }
       };
 
       if (animation)
       {
-        auto layeredOnions = settings.onionskinIsEnabled ? &onionskinSamples : nullptr;
         auto overlay_render = [&]()
         {
           if (auto overlayDocument = overlay_animation_document_get(manager, document))
             if (auto overlayAnimation = overlayDocument->model.animation_get(overlayIndex))
-              render(*overlayDocument, overlayAnimation, frameTime, {},
-                     1.0f - math::percent_to_unit(overlayTransparency), layeredOnions,
-                     settings.onionskinMode == (int)OnionskinMode::INDEX);
+              render(*overlayDocument, *overlayAnimation, 1.0f - math::percent_to_unit(overlayTransparency));
         };
 
         if (overlayDrawOrder == overlay_draw_order::UNDER) overlay_render();
-        render(document, animation, frameTime, {}, 0.0f, layeredOnions,
-               settings.onionskinMode == (int)OnionskinMode::INDEX);
+        render(document, *animation, 0.0f);
         if (overlayDrawOrder == overlay_draw_order::OVER) overlay_render();
       }
 
