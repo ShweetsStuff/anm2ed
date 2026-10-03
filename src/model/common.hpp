@@ -191,9 +191,6 @@ namespace anm2ed
     std::optional<bool> isFlipY{};
   };
 
-  inline constexpr StringType INTERPOLATION_LABELS[] = {BASIC_NONE, BASIC_LINEAR, BASIC_EASE_IN, BASIC_EASE_OUT,
-                                                        BASIC_EASE_IN_OUT};
-
   struct Reference
   {
     int animationIndex{-1};

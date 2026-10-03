@@ -85,7 +85,7 @@ namespace anm2ed::imgui
       auto sounds = document.choices_get(SelectionKind::SOUNDS);
       auto shaders = document.choices_get(SelectionKind::SHADERS);
       std::vector<const char*> interpolationLabels{};
-      for (auto label : INTERPOLATION_LABELS)
+      for (auto label : wizard::INTERPOLATION_LABELS)
         interpolationLabels.push_back(localize.get(label));
 
       auto mode_selector_draw = [&]()
