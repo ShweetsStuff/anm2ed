@@ -10,7 +10,6 @@
 
 #include "file.hpp"
 #include "path.hpp"
-#include "sdl.hpp"
 #include "strings.hpp"
 #include "time.hpp"
 
@@ -48,12 +47,10 @@ namespace anm2ed
 #endif
     }
 
-    std::filesystem::path directory_path_get() { return sdl::preferences_directory_get() / "logs"; }
-
-    std::filesystem::path session_path_get()
+    std::filesystem::path session_path_get(const std::filesystem::path& directory)
     {
       auto name = std::format("anm2ed_{}_{}.log", time::get("%Y-%m-%d_%H-%M-%S"), process_id_get());
-      return directory_path_get() / path::from_utf8(name);
+      return directory / "logs" / path::from_utf8(name);
     }
 
     std::vector<SessionFile> session_files_get(const std::filesystem::path& directory,
@@ -95,8 +92,8 @@ namespace anm2ed
     void sessions_prune(const std::filesystem::path& directory, const std::filesystem::path& currentPath)
     {
       auto files = session_files_get(directory, currentPath);
-      std::sort(files.begin(), files.end(), [](const SessionFile& left, const SessionFile& right)
-                { return left.time > right.time; });
+      std::sort(files.begin(), files.end(),
+                [](const SessionFile& left, const SessionFile& right) { return left.time > right.time; });
 
       std::uintmax_t totalSize{};
       for (const auto& file : files)
@@ -117,7 +114,7 @@ namespace anm2ed
 
     void legacy_log_remove(const std::filesystem::path& currentPath)
     {
-      auto directory = sdl::preferences_directory_get();
+      auto directory = currentPath.parent_path().parent_path();
       if (directory.empty()) return;
 
       auto legacyPath = directory / "log.txt";
@@ -288,20 +285,19 @@ namespace anm2ed
     stderr_redirect_start();
   }
 
-  std::filesystem::path Logger::path()
-  {
-    static auto path = log::session_path_get();
-    return path;
-  }
+  std::filesystem::path Logger::path() const { return logPath; }
 
-  Logger::Logger()
+  void Logger::session_open(const std::filesystem::path& directory)
   {
-    open(path());
+    open(log::session_path_get(directory));
     info(std::format("Initializing {}", localize.get(LABEL_APPLICATION_NAME, ENGLISH)));
   }
 
+  Logger::Logger() = default;
+
   Logger::~Logger()
   {
+    if (logPath.empty()) return;
     info("Exiting Anm2Ed");
     stderr_redirect_stop();
   }

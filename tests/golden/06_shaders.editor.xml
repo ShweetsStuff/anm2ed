@@ -1,0 +1,39 @@
+<AnimatedActor>
+    <Info CreatedBy="fixture" CreatedOn="01/01/2026 12:00:00 PM" Fps="30" Version="2"/>
+    <Content>
+        <Spritesheets>
+            <Spritesheet Id="0" Path="sheet.png"/>
+        </Spritesheets>
+        <Shaders>
+            <Shader Id="0" Name="glow" Vertex="shaders/glow.vs" Fragment="shaders/glow.fs">
+                <Uniform Name="uColor" Binding="Tint">
+                    <Component Index="0" Binding="Red"/>
+                    <Component Index="1" Value="0.5"/>
+                </Uniform>
+                <Uniform Name="uTime" Value="1.25"/>
+            </Shader>
+            <Shader Id="1" Name="sparse" Fragment="shaders/s.fs"/>
+        </Shaders>
+        <Layers>
+            <Layer Id="0" Name="a" SpritesheetId="0"/>
+        </Layers>
+        <Nulls/>
+        <Events/>
+    </Content>
+    <Animations DefaultAnimation="A">
+        <Animation Name="A" FrameNum="12" Loop="true">
+            <RootAnimation>
+                <Frame XPosition="0" YPosition="0" Delay="4" Visible="true" XScale="100" YScale="100" ShearX="0" ShearY="0" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/>
+            </RootAnimation>
+            <LayerAnimations>
+                <LayerAnimation LayerId="0" Visible="true">
+                    <Frame XPivot="8" YPivot="8" XCrop="0" YCrop="0" Width="16" Height="16" XPosition="0" YPosition="0" Delay="4" Visible="true" XScale="100" YScale="100" ShearX="15" ShearY="-5" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false" ShaderId="0"/>
+                    <Frame XPivot="8" YPivot="8" XCrop="0" YCrop="0" Width="16" Height="16" XPosition="0" YPosition="0" Delay="4" Visible="true" XScale="100" YScale="100" ShearX="0" ShearY="0" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false" ShaderId="1"/>
+                    <Frame XPivot="8" YPivot="8" XCrop="0" YCrop="0" Width="16" Height="16" XPosition="0" YPosition="0" Delay="4" Visible="true" XScale="100" YScale="100" ShearX="0" ShearY="0" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/>
+                </LayerAnimation>
+            </LayerAnimations>
+            <NullAnimations/>
+            <Triggers/>
+        </Animation>
+    </Animations>
+</AnimatedActor>

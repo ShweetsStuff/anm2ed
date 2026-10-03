@@ -31,7 +31,7 @@ namespace anm2ed
 
     auto pathString = path::to_utf8(path);
     auto ffmpegPathString = path::to_utf8(ffmpegPath);
-    auto loggerPath = Logger::path();
+    auto loggerPath = logger.path();
     auto loggerPathString = path::to_utf8(loggerPath);
 #if _WIN32
     auto ffmpegTempPath = loggerPath.parent_path() / "ffmpeg_log.temp.txt";

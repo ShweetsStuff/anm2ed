@@ -61,7 +61,8 @@ namespace anm2ed
     void stderr_pump();
 
   public:
-    static std::filesystem::path path();
+    std::filesystem::path path() const;
+    void session_open(const std::filesystem::path&);
     void write_raw(const std::string&);
     void write(const Level, const std::string&);
     void info(const std::string&);

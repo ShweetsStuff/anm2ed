@@ -1,0 +1,30 @@
+<AnimatedActor>
+  <Info CreatedBy="fixture" CreatedOn="01/01/2026 12:00:00 PM" Fps="30" Version="2"/>
+  <Content>
+    <Spritesheets><Spritesheet Id="0" Path="sheet.png"/></Spritesheets>
+    <Layers><Layer Id="0" Name="a" SpritesheetId="0"/><Layer Id="1" Name="b" SpritesheetId="0"/><Layer Id="2" Name="c" SpritesheetId="0"/></Layers>
+    <Nulls><Null Id="0" Name="n0"/><Null Id="1" Name="n1"/></Nulls>
+    <Events/>
+  </Content>
+  <Animations DefaultAnimation="A">
+    <Animation Name="A" FrameNum="4" Loop="true">
+      <RootAnimation><Frame XPosition="0" YPosition="0" Delay="4" Visible="true" XScale="100" YScale="100" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/></RootAnimation>
+      <LayerAnimations>
+        <LayerAnimation LayerId="0" Visible="true" GroupId="0"><Frame XPivot="8" YPivot="8" XCrop="0" YCrop="0" Width="16" Height="16" XPosition="1" YPosition="2" Delay="4" Visible="true" XScale="100" YScale="100" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/></LayerAnimation>
+        <LayerAnimation LayerId="1" Visible="true" GroupId="0"><Frame XPivot="8" YPivot="8" XCrop="0" YCrop="0" Width="16" Height="16" XPosition="3" YPosition="4" Delay="4" Visible="true" XScale="100" YScale="100" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/></LayerAnimation>
+        <LayerAnimation LayerId="2" Visible="true"><Frame XPivot="8" YPivot="8" XCrop="0" YCrop="0" Width="16" Height="16" XPosition="5" YPosition="6" Delay="4" Visible="true" XScale="100" YScale="100" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/></LayerAnimation>
+      </LayerAnimations>
+      <LayerAnimationGroups>
+        <Group Id="0" Name="Main" IsExpanded="true" Visible="true" Index="0"/>
+      </LayerAnimationGroups>
+      <NullAnimations>
+        <NullAnimation NullId="0" Visible="true" GroupId="3"><Frame XPosition="7" YPosition="8" Delay="4" Visible="true" XScale="100" YScale="100" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/></NullAnimation>
+        <NullAnimation NullId="1" Visible="true" GroupId="99"/>
+      </NullAnimations>
+      <NullAnimationGroups>
+        <Group Id="3" Name="Sparse" IsExpanded="false" Visible="true"/>
+      </NullAnimationGroups>
+      <Triggers/>
+    </Animation>
+  </Animations>
+</AnimatedActor>

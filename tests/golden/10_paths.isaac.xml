@@ -1,0 +1,34 @@
+<AnimatedActor>
+    <Info CreatedBy="fixture" CreatedOn="01/01/2026 12:00:00 PM" Fps="30" Version="2"/>
+    <Content>
+        <Spritesheets>
+            <Spritesheet Id="0" Path="gfx\characters\costumes\body.png"/>
+            <Spritesheet Id="1" Path="ünïcödé/スプライト.png"/>
+            <Spritesheet Id="2" Path="../up one/space name.png"/>
+            <Spritesheet Id="3"/>
+        </Spritesheets>
+        <Layers>
+            <Layer Id="0" Name="Ëmoji 🙂 &amp; &lt;xml&gt; &quot;q&quot;" SpritesheetId="1"/>
+        </Layers>
+        <Nulls/>
+        <Events>
+            <Event Id="0" Name="événement"/>
+        </Events>
+    </Content>
+    <Animations DefaultAnimation="Ånim">
+        <Animation Name="Ånim" FrameNum="4" Loop="true">
+            <RootAnimation>
+                <Frame XPosition="0" YPosition="0" Delay="4" Visible="true" XScale="100" YScale="100" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/>
+            </RootAnimation>
+            <LayerAnimations>
+                <LayerAnimation LayerId="0" Visible="true">
+                    <Frame XPivot="8" YPivot="8" XCrop="0" YCrop="0" Width="16" Height="16" XPosition="0.5" YPosition="-0.25" Delay="4" Visible="true" XScale="33.333" YScale="66.667" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="359.98999" Interpolated="false"/>
+                </LayerAnimation>
+            </LayerAnimations>
+            <NullAnimations/>
+            <Triggers>
+                <Trigger EventId="0" AtFrame="1"/>
+            </Triggers>
+        </Animation>
+    </Animations>
+</AnimatedActor>

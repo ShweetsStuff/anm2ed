@@ -1,5 +1,6 @@
 #include "loader.hpp"
 #include "log.hpp"
+#include "sdl.hpp"
 #include "state.hpp"
 
 #ifdef _WIN32
@@ -62,6 +63,7 @@ namespace anm2ed
 {
   int application_run(int argc, const char** argv)
   {
+    logger.session_open(util::sdl::preferences_directory_get());
     return log_exceptions([&]()
     {
       Loader loader(argc, argv);

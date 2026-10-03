@@ -109,7 +109,33 @@ file(GLOB PROJECT_SRC CONFIGURE_DEPENDS
      src/*.cpp
      src/*.hpp)
 
-add_executable(${PROJECT_NAME} ${GLAD_SRC} ${IMGUI_SRC} ${TINYXML2_SRC} ${PROJECT_SRC})
+set(CORE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+file(GLOB CORE_SRC CONFIGURE_DEPENDS ${CORE_DIR}/anm2/*.cpp)
+foreach(CORE_FILE log resource/strings util/file util/path util/math util/string util/time util/working_directory
+                  util/xml util/pack)
+  list(APPEND CORE_SRC ${CORE_DIR}/${CORE_FILE}.cpp)
+endforeach()
+list(REMOVE_ITEM PROJECT_SRC ${CORE_SRC})
+
+set(CORE_INCLUDE_DIRS
+    include
+    external
+    external/imgui
+    external/glm
+    external/tinyxml2
+    external/SDL/include
+    src
+    src/imgui
+    src/resource
+    src/util)
+
+add_library(anm2ed_core STATIC ${CORE_SRC} ${TINYXML2_SRC})
+target_include_directories(anm2ed_core PUBLIC ${CORE_INCLUDE_DIRS})
+if(NOT MSVC)
+  target_compile_options(anm2ed_core PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+add_executable(${PROJECT_NAME} ${GLAD_SRC} ${IMGUI_SRC} ${PROJECT_SRC})
 set_target_properties(
   ${PROJECT_NAME}
   PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
@@ -207,8 +233,19 @@ else()
   set(SDL_MAIN_TARGET)
 endif()
 
-target_link_libraries(${PROJECT_NAME} PRIVATE ${OPENGL_LIB} SDL3-static ${SDL_MAIN_TARGET}
+target_link_libraries(${PROJECT_NAME} PRIVATE anm2ed_core ${OPENGL_LIB} SDL3-static ${SDL_MAIN_TARGET}
                                             SDL3_mixer::SDL3_mixer lunasvg ${PLATFORM_LIBS})
+
+option(ANM2ED_TESTS "Build the anm2ed test suite" ON)
+if(ANM2ED_TESTS)
+  enable_testing()
+  file(GLOB TEST_SRC CONFIGURE_DEPENDS tests/*.cpp)
+  add_executable(anm2ed_tests ${TEST_SRC})
+  target_link_libraries(anm2ed_tests PRIVATE anm2ed_core)
+  target_include_directories(anm2ed_tests PRIVATE external/doctest)
+  target_compile_definitions(anm2ed_tests PRIVATE ANM2ED_TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests")
+  add_test(NAME anm2ed_tests COMMAND anm2ed_tests WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+endif()
 
 message(STATUS "System: ${CMAKE_SYSTEM_NAME}")
 message(STATUS "Project: ${PROJECT_NAME}")
