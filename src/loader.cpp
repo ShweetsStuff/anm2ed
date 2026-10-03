@@ -189,6 +189,7 @@ namespace anm2ed
     SDL_SetBooleanProperty(windowProperties, SDL_PROP_WINDOW_CREATE_HIGH_PIXEL_DENSITY_BOOLEAN, true);
 
     window = SDL_CreateWindowWithProperties(windowProperties);
+    SDL_DestroyProperties(windowProperties);
 
     if (!window)
     {

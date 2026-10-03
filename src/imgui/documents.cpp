@@ -300,18 +300,11 @@ namespace anm2ed::imgui
           shortcut(manager.chords[SHORTCUT_CONFIRM]);
           if (ImGui::Button(localize.get(BASIC_YES), widgetSize))
           {
-            bool isSaved = true;
-            if (isDocumentDirty) isSaved = taskbar.save_manual(manager, settings, closeDocumentIndex);
-
-            if (!isSaved)
+            // A failed save keeps the document (and its popup) open.
+            auto isSaved = !isDocumentDirty || taskbar.save_manual(manager, settings, closeDocumentIndex);
+            if (isSaved)
             {
-              ImGui::EndPopup();
-              return;
-            }
-
-            if (isSpritesheetDirty)
-            {
-              {
+              if (isSpritesheetDirty)
                 for (auto& spritesheet : closeDocument.model.content.spritesheets)
                 {
                   auto id = spritesheet.id;
@@ -332,11 +325,10 @@ namespace anm2ed::imgui
                     }
                   }
                 }
-              }
+              auto index = closeDocumentIndex;
+              manager.command_push({.runManager = [index](Manager& manager) { manager.close(index); }});
+              close();
             }
-            auto index = closeDocumentIndex;
-            manager.command_push({.runManager = [index](Manager& manager) { manager.close(index); }});
-            close();
           }
 
           ImGui::SameLine();

@@ -146,6 +146,8 @@ namespace anm2ed::imgui
     float draggedFrameWidth{};
     bool isDraggedFrameSnapshot{};
     FrameMoveDrag frameMoveDrag{};
+    // The tab a held shorten/extend chord is editing (0 when released), so a held chord starts one undo entry per document.
+    std::uint64_t resizeChordTabIds[2]{};
     std::optional<Reference> frameSelectionAnchor{};
     int animationLengthEditIndex{-1};
     std::vector<TimelineRow> rowDragReferences{};

@@ -244,6 +244,7 @@ namespace anm2ed::imgui
         drawList->AddRectFilled(min, max, ImGui::GetColorU32(to_imvec4(vec4(backgroundColor, 1.0f))));
       image_premultiplied_draw(this->texture, to_imvec2(size));
 
+      hoveredRegionId = -1;
       if (ImGui::IsItemHovered())
       {
         auto input = canvas_input_get(manager, isFocused);
@@ -301,7 +302,6 @@ namespace anm2ed::imgui
         if (tool == tool::DRAW && input.isRightDown) useTool = tool::ERASE;
         if (tool == tool::ERASE && input.isRightDown) useTool = tool::DRAW;
 
-        hoveredRegionId = -1;
         if (useTool == tool::PAN && spritesheet && texture && texture->is_valid() && isMouseOverCanvas)
           for (auto& region : spritesheet->regions)
           {

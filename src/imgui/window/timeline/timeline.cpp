@@ -201,7 +201,6 @@ namespace anm2ed::imgui
       };
       constexpr FrameResize FRAME_RESIZES[] = {{SHORTCUT_SHORTEN_FRAME, EDIT_SHORTEN_FRAME, -1},
                                                {SHORTCUT_EXTEND_FRAME, EDIT_EXTEND_FRAME, 1}};
-      static bool isResizeChordHeld[std::size(FRAME_RESIZES)]{};
       for (int i = 0; i < (int)std::size(FRAME_RESIZES); ++i)
       {
         auto resize = FRAME_RESIZES[i];
@@ -211,7 +210,7 @@ namespace anm2ed::imgui
         std::erase_if(selectedFrames, is_trigger_reference);
         if (!selectedFrames.empty())
         {
-          if (!isResizeChordHeld[i]) edit_begin_push(resize.edit);
+          if (resizeChordTabIds[i] != document.tabId) edit_begin_push(resize.edit);
           command_push(
               [=, this](Manager&, Document& document)
               {
@@ -222,7 +221,7 @@ namespace anm2ed::imgui
                 document.change();
               });
         }
-        isResizeChordHeld[i] = isPressed;
+        resizeChordTabIds[i] = isPressed ? document.tabId : 0;
       }
 
       auto isPreviousFrame = shortcut(manager.chords[SHORTCUT_PREVIOUS_FRAME], shortcut::GLOBAL);
