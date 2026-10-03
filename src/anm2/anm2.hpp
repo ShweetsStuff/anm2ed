@@ -509,6 +509,9 @@ namespace anm2ed
   bool element_child_id_erase(Element&, ElementType, int);
   int track_frames_count_get(const Element&);
   int animations_count_get(const Element&);
+  int animations_child_index_get(const Element&, int);
+  int animations_child_insert_index_get(const Element&, int);
+  Element root_animation_make();
   float interpolation_factor(Interpolation, float);
   void frame_mix(Element&, const Element&, float);
   Element frame_generate(const Element&, float);

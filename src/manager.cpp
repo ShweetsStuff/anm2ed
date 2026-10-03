@@ -224,59 +224,15 @@ namespace anm2ed
     if (auto document = get()) document->change(Document::ALL);
   }
 
-  void Manager::layer_properties_open(int id)
+  void Manager::item_properties_open(ElementType type, int id)
   {
-    if (auto document = get(); document)
-    {
-      if (id == -1)
-        editLayer = element_make(ElementType::LAYER_ELEMENT);
-      else if (auto layer = document->anm2.element_get(ElementType::LAYER_ELEMENT, id); layer)
-        editLayer = *layer;
-      else
-        return;
-
-      document->layer.reference = id;
-
-      layerPropertiesPopup.open();
-    }
-  }
-
-  void Manager::layer_properties_trigger() { layerPropertiesPopup.trigger(); }
-
-  void Manager::layer_properties_end() { layerPropertiesPopup.end(); }
-
-  void Manager::layer_properties_close()
-  {
-    editLayer = element_make(ElementType::LAYER_ELEMENT);
-    layerPropertiesPopup.close();
-  }
-
-  void Manager::null_properties_open(int id)
-  {
-    if (auto document = get(); document)
-    {
-      auto nulls = document->anm2.element_get(ElementType::NULLS);
-      if (id == -1)
-        editNull = element_make(ElementType::NULL_ELEMENT);
-      else if (auto null = nulls ? child_id_get(*nulls, ElementType::NULL_ELEMENT, id) : nullptr; null)
-        editNull = *null;
-      else
-        return;
-
-      document->null.reference = id;
-
-      nullPropertiesPopup.open();
-    }
-  }
-
-  void Manager::null_properties_trigger() { nullPropertiesPopup.trigger(); }
-
-  void Manager::null_properties_end() { nullPropertiesPopup.end(); }
-
-  void Manager::null_properties_close()
-  {
-    editNull = element_make(ElementType::NULL_ELEMENT);
-    nullPropertiesPopup.close();
+    auto document = get();
+    auto row = track_container_get(type);
+    auto element = id == -1 || !document ? nullptr : document->anm2.element_get(type, id);
+    if (!document || !row || (id != -1 && !element)) return;
+    itemEdit = element ? *element : element_make(type);
+    (type == ElementType::LAYER_ELEMENT ? document->layer : document->null).reference = id;
+    itemPropertiesPopups[row - TRACK_CONTAINERS].open();
   }
 
   void Manager::recent_files_trim()

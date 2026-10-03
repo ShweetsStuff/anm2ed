@@ -62,12 +62,9 @@ namespace anm2ed
     std::filesystem::path spritesheetDragDropPath{};
     bool isSpritesheetDragDrop{};
 
-    Element editLayer{element_make(ElementType::LAYER_ELEMENT)};
-    imgui::PopupHelper layerPropertiesPopup{
-        imgui::PopupHelper(LABEL_MANAGER_LAYER_PROPERTIES, imgui::POPUP_SMALL_NO_HEIGHT)};
-
-    Element editNull{element_make(ElementType::NULL_ELEMENT)};
-    imgui::PopupHelper nullPropertiesPopup{
+    Element itemEdit{};
+    imgui::PopupHelper itemPropertiesPopups[std::size(TRACK_CONTAINERS)]{
+        imgui::PopupHelper(LABEL_MANAGER_LAYER_PROPERTIES, imgui::POPUP_SMALL_NO_HEIGHT),
         imgui::PopupHelper(LABEL_MANAGER_NULL_PROPERTIES, imgui::POPUP_SMALL_NO_HEIGHT)};
 
     Element makeRegion{element_make(ElementType::REGION)};
@@ -93,14 +90,7 @@ namespace anm2ed
     void autosave_file_clear(int);
     void set(int);
     void close(int);
-    void layer_properties_open(int = -1);
-    void layer_properties_trigger();
-    void layer_properties_end();
-    void layer_properties_close();
-    void null_properties_open(int = -1);
-    void null_properties_trigger();
-    void null_properties_end();
-    void null_properties_close();
+    void item_properties_open(ElementType, int = -1);
 
     void recent_files_load();
     void recent_files_write();

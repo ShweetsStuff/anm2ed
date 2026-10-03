@@ -1880,16 +1880,7 @@ namespace anm2ed::imgui
 
     item_base_properties_open = [&](int type, int id)
     {
-      switch (type)
-      {
-        case LAYER:
-          manager.layer_properties_open(id);
-          break;
-        case NULL_:
-          manager.null_properties_open(id);
-        default:
-          break;
-      };
+      if (auto row = anm2ed::track_container_get((ItemType)type)) manager.item_properties_open(row->element, id);
     };
 
     group_properties_close = [&]()

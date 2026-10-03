@@ -61,9 +61,6 @@ namespace anm2ed
   ElementType group_child_type_get(ElementType);
   Element* content_container_get(Element&, ElementType);
   std::unordered_map<int, int> child_ids_compact(Element&, ElementType);
-  int animations_child_index_get(const Element&, int);
-  int animations_child_insert_index_get(const Element&, int);
-  Element root_animation_make();
   void group_frames_bake(Element&);
   void group_frames_restore(Element&);
   void group_metadata_embed(Element&);

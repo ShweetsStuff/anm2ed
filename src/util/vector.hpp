@@ -12,7 +12,7 @@ namespace anm2ed::util::vector
     return index >= 0 && index < (int)v.size() ? &v[index] : nullptr;
   }
 
-  template <typename T> int find_index(std::vector<T>& v, T& value)
+  template <typename T> int find_index(const std::vector<T>& v, const T& value)
   {
     auto it = std::find(v.begin(), v.end(), value);
     if (it == v.end()) return -1;
@@ -86,8 +86,8 @@ namespace anm2ed::util::vector
     return moveIndices;
   }
 
-  template <typename T> std::set<int> move_indices_to_position(std::vector<T>& v, const std::vector<int>& indices,
-                                                               int insertPos)
+  template <typename T>
+  std::set<int> move_indices_to_position(std::vector<T>& v, const std::vector<int>& indices, int insertPos)
   {
     if (indices.empty()) return {};
 
