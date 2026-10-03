@@ -51,10 +51,12 @@ namespace anm2ed::imgui
   {
     manager.command_push({manager.selected, [paths, preset](Manager&, Document& document)
                           {
-                            document.snapshots.anm2_push(localize.get(EDIT_MERGE_ANM2));
-                            for (auto& path : paths)
-                              document.anm2.file_merge(path, document.directory_get(), preset);
-                            document.change(Document::ALL);
+                            document.edit_apply(EDIT_MERGE_ANM2, Document::ALL,
+                                                [&](Anm2& anm2)
+                                                {
+                                                  for (auto& path : paths)
+                                                    anm2.file_merge(path, document.directory_get(), preset);
+                                                });
                           }});
   }
 

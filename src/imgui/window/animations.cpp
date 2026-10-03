@@ -9,11 +9,9 @@
 #include "util/imgui/layout.hpp"
 #include "util/imgui/shortcut.hpp"
 #include "util/imgui/tree.hpp"
-#include "vector.hpp"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::types;
-using namespace anm2ed::util;
 
 namespace anm2ed::imgui
 {
@@ -52,39 +50,6 @@ namespace anm2ed::imgui
     bool isDeleteAnimationsAfter{};
   };
 
-  std::set<int> animation_group_ids_get(const Element& animations)
-  {
-    std::set<int> result{};
-    for (const auto& item : animations.children)
-      if (item.type == ElementType::GROUP) result.insert(item.id);
-    return result;
-  }
-
-  std::set<int> animation_group_indices_get(const Element& animations, int groupId)
-  {
-    std::set<int> result{};
-    int animationIndex{};
-    for (const auto& animation : animations.children)
-      if (animation.type == ElementType::ANIMATION)
-      {
-        if (animation.groupId == groupId) result.insert(animationIndex);
-        ++animationIndex;
-      }
-    return result;
-  }
-
-  int animation_index_from_child_index_get(const Element& animations, int childIndex)
-  {
-    int current{};
-    for (int i = 0; i < (int)animations.children.size(); ++i)
-      if (animations.children[i].type == ElementType::ANIMATION)
-      {
-        if (i == childIndex) return current;
-        ++current;
-      }
-    return -1;
-  }
-
   int animation_group_child_insert_index_get(const Element& animations, int groupId, AnimationDropZone dropZone)
   {
     auto group = std::ranges::find_if(animations.children, [&](const Element& item)
@@ -110,7 +75,7 @@ namespace anm2ed::imgui
     std::set<int> result(document.animation.selection.begin(), document.animation.selection.end());
     if (auto animations = document.anm2.element_get(ElementType::ANIMATIONS))
       for (auto groupId : window.selection)
-        result.merge(animation_group_indices_get(*animations, groupId));
+        result.merge(edit::animation_group_indices_get(*animations, groupId));
     return result;
   }
 
@@ -120,7 +85,7 @@ namespace anm2ed::imgui
     auto& selection = document.animation.selection;
     if (!animations || selection.empty()) return {};
 
-    auto groupIds = animation_group_ids_get(*animations);
+    auto groupIds = edit::animation_group_ids_get(*animations);
     std::vector<int> result{};
     int index{};
     for (const auto& animation : animations->children)
@@ -141,7 +106,7 @@ namespace anm2ed::imgui
       if (!is_window_group_key(key))
         result.insert(key);
       else if (animations)
-        result.merge(animation_group_indices_get(*animations, window_group_id_from_key_get(key)));
+        result.merge(edit::animation_group_indices_get(*animations, window_group_id_from_key_get(key)));
     result.erase(reference);
     return result;
   }
@@ -154,29 +119,27 @@ namespace anm2ed::imgui
     document.overlayDocumentId = 0;
   }
 
-  void animation_groups_remove(Element& animations, const std::set<int>& groupIds)
+  void animations_erase(Window& window, Document& document, const std::set<int>& indices, const std::set<int>& groupIds,
+                        StringType label)
   {
-    for (auto& item : animations.children)
-      if (item.type == ElementType::ANIMATION && groupIds.contains(item.groupId)) item.groupId = -1;
-    std::erase_if(animations.children,
-                  [&](const Element& item) { return item.type == ElementType::GROUP && groupIds.contains(item.id); });
+    document.edit_apply(label, window.changeType,
+                        [&](Anm2& anm2)
+                        {
+                          animation_overlay_reset(document, indices);
+                          if (indices.contains(document.reference.animationIndex))
+                            document.reference.animationIndex = -1;
+                          document.animation.selection.clear();
+                          window.selection.clear();
+                          return edit::animations_remove(anm2, indices, groupIds);
+                        });
   }
 
-  void animations_erase(Window& window, Document& document, const std::set<int>& indices, const std::set<int>& groupIds)
+  std::set<int> animation_indices_get(Document& document, const edit::Uids& uids)
   {
-    auto animations = document.anm2.element_get(ElementType::ANIMATIONS);
-    if (!animations) return;
-    animation_groups_remove(*animations, groupIds);
-    animation_overlay_reset(document, indices);
-    for (auto it = indices.rbegin(); it != indices.rend(); ++it)
-    {
-      auto childIndex = animations_child_index_get(*animations, *it);
-      if (childIndex == -1) continue;
-      if (document.reference.animationIndex == *it) document.reference.animationIndex = -1;
-      animations->children.erase(animations->children.begin() + childIndex);
-    }
-    document.animation.selection.clear();
-    window.selection.clear();
+    std::set<int> indices{};
+    for (auto reference : document.references_get(uids))
+      indices.insert(reference.animationIndex);
+    return indices;
   }
 
   std::string animation_clipboard_text_get(Document& document, const Window& window)
@@ -200,110 +163,67 @@ namespace anm2ed::imgui
   void animations_insert(Window& window, Document& document, const std::string& text, int start, int targetGroupId,
                          StringType edit)
   {
-    std::set<int> indices{};
     std::set<int> groupIds{};
     std::string errorString{};
-    auto pasted = document.anm2;
-    if (!pasted.animations_deserialize(text, start, indices, &errorString, &groupIds))
-    {
-      toast_log(Level::ERROR, TOAST_DESERIALIZE_ANIMATIONS_FAILED, errorString);
-      return;
-    }
-
-    window_edit(document, window.changeType, localize.get(edit),
-                [&]()
-                {
-                  document.anm2 = std::move(pasted);
-                  if (targetGroupId != -1 && groupIds.empty())
-                    for (auto index : indices)
-                      if (auto animation = document.anm2.element_get(ElementType::ANIMATION, index))
-                        animation->groupId = targetGroupId;
-
-                  document.animation.selection = groupIds.empty() ? indices : std::set<int>{};
-                  window.selection = groupIds;
-                  document.reference = {};
-                  window.newElementId = -1;
-                  if (indices.empty()) return;
-                  window.scrollQueued = *indices.rbegin();
-                  if (!groupIds.empty()) return;
-                  document.reference = {*indices.rbegin()};
-                  if (indices.size() == 1) window.newElementId = *indices.rbegin();
-                });
+    auto uids = document.edit_apply(edit, window.changeType,
+                                    [&](Anm2& anm2)
+                                    {
+                                      auto uids = edit::animations_paste(anm2, text, start, targetGroupId, groupIds,
+                                                                         &errorString);
+                                      if (uids.empty()) return uids;
+                                      auto indices = animation_indices_get(document, uids);
+                                      document.animation.selection = groupIds.empty() ? indices : std::set<int>{};
+                                      window.selection = groupIds;
+                                      document.reference = {};
+                                      window.newElementId = -1;
+                                      if (indices.empty()) return uids;
+                                      window.scrollQueued = *indices.rbegin();
+                                      if (!groupIds.empty()) return uids;
+                                      document.reference = {*indices.rbegin()};
+                                      if (indices.size() == 1) window.newElementId = *indices.rbegin();
+                                      return uids;
+                                    });
+    if (!errorString.empty()) toast_log(Level::ERROR, TOAST_DESERIALIZE_ANIMATIONS_FAILED, errorString);
   }
 
   int animations_merge(Document& document, const AnimationMergeOptions& options,
                        const std::set<int>* quickSelection = nullptr,
                        const std::set<int>* quickGroupSelection = nullptr)
   {
-    auto& anm2 = document.anm2;
-    int merged{-1};
-    document.snapshots.anm2_push(localize.get(EDIT_MERGE_ANIMATIONS));
+    auto target = options.reference;
+    auto sources =
+        options.selection.empty() ? *quickSelection : animation_merge_indices_get(document, options.selection, target);
+    auto type = options.selection.empty() ? merge::APPEND : options.type;
+    auto isDeleteAfter = options.selection.empty() || options.isDeleteAnimationsAfter;
+    auto ungroupIds = options.selection.empty() && quickGroupSelection ? *quickGroupSelection : std::set<int>{};
+
     if (options.selection.empty())
     {
-      auto selected = *quickSelection;
-      auto isQuickGroupMerge = quickGroupSelection && !quickGroupSelection->empty();
-      auto animations = anm2.element_get(ElementType::ANIMATIONS);
+      auto animations = document.anm2.element_get(ElementType::ANIMATIONS);
       auto count = animations ? animations_count_get(*animations) : 0;
-      animation_overlay_reset(document, selected);
-
-      if (selected.size() == 1 && !isQuickGroupMerge && *selected.begin() != count - 1)
-        selected.insert(*selected.begin() + 1);
-      if (selected.size() > 1)
-        merged = anm2.animations_merge(*selected.begin(), selected);
-      else if (selected.size() == 1 && isQuickGroupMerge)
-        merged = *selected.begin();
-      if (merged != -1 && isQuickGroupMerge && animations) animation_groups_remove(*animations, *quickGroupSelection);
+      if (sources.empty()) return -1;
+      if (sources.size() == 1 && ungroupIds.empty() && *sources.begin() != count - 1)
+        sources.insert(*sources.begin() + 1);
+      if (sources.size() == 1 && ungroupIds.empty()) return -1;
+      target = *sources.begin();
     }
-    else
-    {
-      auto mergeSelection = animation_merge_indices_get(document, options.selection, options.reference);
-      if (mergeSelection.empty()) return -1;
-      animation_overlay_reset(document, mergeSelection);
-      merged = anm2.animations_merge(options.reference, mergeSelection, options.type, options.isDeleteAnimationsAfter);
-    }
+    else if (sources.empty())
+      return -1;
 
-    if (merged == -1) return -1;
-    document.animation.selection = {merged};
-    document.reference = {merged};
-    document.change(Document::ANIMATIONS);
+    int merged{-1};
+    document.edit_apply(EDIT_MERGE_ANIMATIONS, Document::ANIMATIONS,
+                        [&](Anm2& anm2)
+                        {
+                          animation_overlay_reset(document, sources);
+                          auto uids = edit::animations_merge(anm2, target, sources, type, isDeleteAfter, ungroupIds);
+                          auto indices = animation_indices_get(document, uids);
+                          if (indices.empty()) return uids;
+                          merged = *indices.begin();
+                          document.animation.selection = {merged};
+                          document.reference = {merged};
+                          return uids;
+                        });
     return merged;
-  }
-
-  Element animation_track_container_shell_copy(const Element* source, const TrackContainer& row)
-  {
-    auto destination = element_make(row.container);
-    if (!source) return destination;
-
-    auto nextGroupId = element_child_next_id_get(*source, ElementType::GROUP);
-    std::set<int> copiedTrackIds{};
-    auto track_push = [&](const Element& track, int groupId)
-    {
-      if (track.type != row.track || !copiedTrackIds.insert(track_id_get(track)).second) return;
-      auto item = element_make(row.track);
-      item.*(row.id) = track.*(row.id);
-      item.groupId = track.groupId != -1 ? track.groupId : groupId;
-      item.isVisible = track.isVisible;
-      destination.children.push_back(item);
-    };
-
-    for (const auto& sourceItem : source->children)
-    {
-      if (sourceItem.type != ElementType::GROUP)
-      {
-        track_push(sourceItem, -1);
-        continue;
-      }
-      auto group = element_make(ElementType::GROUP);
-      group.id = sourceItem.id >= 0 ? sourceItem.id : nextGroupId++;
-      group.name = sourceItem.name;
-      group.isExpanded = sourceItem.isExpanded;
-      group.isVisible = sourceItem.isVisible;
-      group.children.push_back(root_animation_make());
-      destination.children.push_back(group);
-      for (const auto& child : sourceItem.children)
-        track_push(child, group.id);
-    }
-    return destination;
   }
 
   AnimationDropZone animation_drop_zone_get(ImVec2 min, ImVec2 max)
@@ -315,52 +235,17 @@ namespace anm2ed::imgui
     return AnimationDropZone::INSIDE;
   }
 
-  void animation_items_move(Window& window, Document& document, const std::vector<AnimationDragDropItem>& items,
-                            int targetChildIndex, int targetGroupId)
+  void animation_items_move(Window& window, Document& document, Anm2& anm2,
+                            const std::vector<AnimationDragDropItem>& items, int targetChildIndex, int targetGroupId)
   {
-    auto animations = window_container_get(window, document);
-    if (!animations) return;
-
-    auto groupIds = animation_group_ids_get(*animations);
-    auto groupId = groupIds.contains(targetGroupId) ? targetGroupId : -1;
-    std::set<int> draggedAnimationIds{};
-    std::set<int> draggedGroupIds{};
+    std::set<int> indices{};
+    std::set<int> groupIds{};
     for (auto item : items)
-      if (item.type == AnimationDragDropType::GROUP && groupIds.contains(item.id))
-        draggedGroupIds.insert(item.id);
-      else if (item.type == AnimationDragDropType::ANIMATION && animations_child_index_get(*animations, item.id) != -1)
-        draggedAnimationIds.insert(item.id);
-    if (draggedAnimationIds.empty() && draggedGroupIds.empty()) return;
-
-    std::vector<int> childIndices{};
-    std::set<int> directAnimationChildIndices{};
-    int animationIndex{};
-    for (int i = 0; i < (int)animations->children.size(); ++i)
-    {
-      auto& item = animations->children[i];
-      if (item.type == ElementType::GROUP && draggedGroupIds.contains(item.id)) childIndices.push_back(i);
-      if (item.type != ElementType::ANIMATION) continue;
-      auto isGroupDragged = draggedGroupIds.contains(item.groupId);
-      if (draggedAnimationIds.contains(animationIndex) && !isGroupDragged)
-      {
-        item.groupId = groupId;
-        directAnimationChildIndices.insert(i);
-      }
-      if (isGroupDragged || draggedAnimationIds.contains(animationIndex)) childIndices.push_back(i);
-      ++animationIndex;
-    }
-
-    auto movedChildIndices = vector::move_indices_to_position(animations->children, childIndices, targetChildIndex);
-    if (movedChildIndices.empty()) return;
-
-    document.animation.selection.clear();
-    window.selection = draggedGroupIds;
-    auto moved = movedChildIndices.begin();
-    for (auto source = childIndices.begin(); source != childIndices.end() && moved != movedChildIndices.end();
-         ++source, ++moved)
-      if (directAnimationChildIndices.contains(*source))
-        if (auto index = animation_index_from_child_index_get(*animations, *moved); index != -1)
-          document.animation.selection.insert(index);
+      (item.type == AnimationDragDropType::GROUP ? groupIds : indices).insert(item.id);
+    auto uids = edit::animations_move(anm2, indices, groupIds, targetChildIndex, targetGroupId);
+    if (uids.empty() && groupIds.empty()) return;
+    document.animation.selection = animation_indices_get(document, uids);
+    window.selection = groupIds;
   }
 
   void animation_move_command_push(Window& window, Manager& manager, std::vector<AnimationDragDropItem> items,
@@ -372,9 +257,12 @@ namespace anm2ed::imgui
          {
            auto animations = window_container_get(window, document);
            if (!animations) return;
-           window_edit(
-               document, window.changeType, localize.get(EDIT_MOVE_ANIMATIONS), [&]()
-               { animation_items_move(window, document, items, target_child_index_get(*animations), targetGroupId); });
+           document.edit_apply(EDIT_MOVE_ANIMATIONS, window.changeType,
+                               [&](Anm2& anm2)
+                               {
+                                 animation_items_move(window, document, anm2, items,
+                                                      target_child_index_get(*animations), targetGroupId);
+                               });
          }});
   }
 
@@ -390,7 +278,7 @@ namespace anm2ed::imgui
                                   : document.animation.selection.contains(fallback.id);
     if (animations && isFallbackSelected)
     {
-      auto groupIds = animation_group_ids_get(*animations);
+      auto groupIds = edit::animation_group_ids_get(*animations);
       for (auto groupId : window.selection)
         if (groupIds.contains(groupId)) items.push_back({AnimationDragDropType::GROUP, groupId});
       for (auto animationIndex : document.animation.selection)
@@ -475,12 +363,12 @@ namespace anm2ed::imgui
                             if (!group || (name.value_or(group->name) == group->name &&
                                            isExpanded.value_or(group->isExpanded) == group->isExpanded))
                               return;
-                            window_edit(document, Document::ANIMATIONS, localize.get(edit),
-                                        [&]()
-                                        {
-                                          group->name = name.value_or(group->name);
-                                          group->isExpanded = isExpanded.value_or(group->isExpanded);
-                                        });
+                            document.edit_apply(edit, Document::ANIMATIONS,
+                                                [&](Anm2&)
+                                                {
+                                                  group->name = name.value_or(group->name);
+                                                  group->isExpanded = isExpanded.value_or(group->isExpanded);
+                                                });
                           }});
   }
 
@@ -632,7 +520,7 @@ namespace anm2ed::imgui
     {
       auto container = window_container_get(window, document);
       if (!container) return;
-      auto groupIds = animation_group_ids_get(*container);
+      auto groupIds = edit::animation_group_ids_get(*container);
       std::erase_if(window.selection, [&](int groupId) { return !groupIds.contains(groupId); });
 
       std::vector<int> visibleIds{};
@@ -641,7 +529,7 @@ namespace anm2ed::imgui
       for (auto& item : container->children)
       {
         if (item.type == ElementType::GROUP && item.isExpanded)
-          visibleIds.insert_range(visibleIds.end(), animation_group_indices_get(*container, item.id));
+          visibleIds.insert_range(visibleIds.end(), edit::animation_group_indices_get(*container, item.id));
         if (item.type != ElementType::ANIMATION) continue;
         if (!is_animation_grouped(groupIds, item)) visibleIds.push_back(animationIndex);
         window.order.push_back(animationIndex++);
@@ -675,62 +563,47 @@ namespace anm2ed::imgui
       auto animations = window_container_get(window, document);
       if (!animations) return;
 
-      window_edit(document, window.changeType, localize.get(EDIT_ADD_ANIMATION),
-                  [&]()
-                  {
-                    auto groupIds = animation_group_ids_get(*animations);
-                    auto targetGroupId = window.selection.size() == 1 && groupIds.contains(*window.selection.begin())
-                                             ? *window.selection.begin()
-                                             : -1;
+      auto groupIds = edit::animation_group_ids_get(*animations);
+      auto targetGroupId =
+          window.selection.size() == 1 && groupIds.contains(*window.selection.begin()) ? *window.selection.begin() : -1;
+      auto count = animations_count_get(*animations);
+      auto groupIndices =
+          targetGroupId != -1 ? edit::animation_group_indices_get(*animations, targetGroupId) : std::set<int>{};
+      auto index = !selection.empty()      ? std::min(*selection.rbegin() + 1, count)
+                   : !groupIndices.empty() ? std::min(*groupIndices.rbegin() + 1, count)
+                                           : count;
+      auto selected =
+          selection.empty() ? nullptr : document.anm2.element_get(ElementType::ANIMATION, *selection.rbegin());
+      auto groupId = selection.empty()                                  ? targetGroupId
+                     : selected && groupIds.contains(selected->groupId) ? selected->groupId
+                                                                        : -1;
 
-                    auto animation = element_make(ElementType::ANIMATION);
-                    animation.name = localize.get(TEXT_NEW_ANIMATION);
-                    animation.children.push_back(root_animation_make());
-                    auto referenceAnimation =
-                        document.anm2.element_get(ElementType::ANIMATION, document.reference.animationIndex);
-                    for (const auto& row : TRACK_CONTAINERS)
-                      animation.children.push_back(animation_track_container_shell_copy(
-                          referenceAnimation ? child_first_get(*referenceAnimation, row.container) : nullptr, row));
-                    animation.children.push_back(element_make(ElementType::TRIGGERS));
-
-                    auto count = animations_count_get(*animations);
-                    auto groupIndices =
-                        targetGroupId != -1 ? animation_group_indices_get(*animations, targetGroupId) : std::set<int>{};
-                    auto index = !selection.empty()      ? std::min(*selection.rbegin() + 1, count)
-                                 : !groupIndices.empty() ? std::min(*groupIndices.rbegin() + 1, count)
-                                                         : count;
-                    auto selected = selection.empty()
-                                        ? nullptr
-                                        : document.anm2.element_get(ElementType::ANIMATION, *selection.rbegin());
-                    if (selected && groupIds.contains(selected->groupId)) animation.groupId = selected->groupId;
-                    if (selection.empty()) animation.groupId = targetGroupId;
-                    if (count == 0) animations->defaultAnimation = animation.name;
-
-                    animations->children.insert(animations->children.begin() +
-                                                    animations_child_insert_index_get(*animations, index),
-                                                animation);
-                    selection = {index};
-                    window.selection.clear();
-                    document.reference = {index};
-                    window.newElementId = index;
-                    window.scrollQueued = index;
-                  });
+      document.edit_apply(EDIT_ADD_ANIMATION, window.changeType,
+                          [&](Anm2& anm2)
+                          {
+                            auto uids = edit::animation_add(anm2, index, groupId, document.reference.animationIndex,
+                                                            localize.get(TEXT_NEW_ANIMATION));
+                            selection = {index};
+                            window.selection.clear();
+                            document.reference = {index};
+                            window.newElementId = index;
+                            window.scrollQueued = index;
+                            return uids;
+                          });
     };
     window.remove = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
     {
       auto selection = std::set<int>(document.animation.selection.begin(), document.animation.selection.end());
       auto groupSelection = window.selection;
-      window_edit(document, window.changeType,
-                  localize.get(groupSelection.empty() ? EDIT_REMOVE_ANIMATIONS : EDIT_REMOVE_GROUP),
-                  [&]() { animations_erase(window, document, selection, groupSelection); });
+      animations_erase(window, document, selection, groupSelection,
+                       groupSelection.empty() ? EDIT_REMOVE_ANIMATIONS : EDIT_REMOVE_GROUP);
     };
     window.cut = [](Window& window, Manager&, Settings&, Document& document, Clipboard& clipboard)
     {
       if (auto text = animation_clipboard_text_get(document, window); !text.empty()) clipboard.set(text);
       auto selectedIndices = animation_selected_indices_get(document, window);
       auto groupSelection = window.selection;
-      window_edit(document, window.changeType, localize.get(EDIT_CUT_ANIMATIONS),
-                  [&]() { animations_erase(window, document, selectedIndices, groupSelection); });
+      animations_erase(window, document, selectedIndices, groupSelection, EDIT_CUT_ANIMATIONS);
     };
     window.copy = [](Window& window, Manager&, Settings&, Document& document, Clipboard& clipboard)
     {
@@ -753,13 +626,13 @@ namespace anm2ed::imgui
       if (clipboard.is_empty() || !animations) return;
       auto& selection = document.animation.selection;
       auto count = animations_count_get(*animations);
-      auto groupIds = animation_group_ids_get(*animations);
+      auto groupIds = edit::animation_group_ids_get(*animations);
       auto targetGroupId =
           selection.empty() && window.selection.size() == 1 && groupIds.contains(*window.selection.begin())
               ? *window.selection.begin()
               : -1;
       auto groupIndices =
-          targetGroupId != -1 ? animation_group_indices_get(*animations, targetGroupId) : std::set<int>{};
+          targetGroupId != -1 ? edit::animation_group_indices_get(*animations, targetGroupId) : std::set<int>{};
       auto start = !selection.empty()      ? *selection.rbegin() + 1
                    : !groupIndices.empty() ? std::min(*groupIndices.rbegin() + 1, count)
                                            : count;
@@ -796,31 +669,26 @@ namespace anm2ed::imgui
       auto animations = window_container_get(window, document);
       if (targetIndices.empty() || !animations) return;
 
-      window_edit(document, window.changeType, localize.get(EDIT_GROUP_ITEMS),
-                  [&]()
-                  {
-                    std::set<int> targetSet(targetIndices.begin(), targetIndices.end());
-                    auto group = element_make(ElementType::GROUP);
-                    group.id = element_child_next_id_get(*animations, ElementType::GROUP);
-                    group.name = localize.get(TEXT_NEW_GROUP);
-                    for (auto index : targetSet)
-                      document.anm2.element_get(ElementType::ANIMATION, index)->groupId = group.id;
-                    animations->children.insert(animations->children.begin() +
-                                                    animations_child_index_get(*animations, *targetSet.begin()),
-                                                group);
-                    document.animation.selection = targetSet;
-                    window.selection = {group.id};
-                    document.reference = {*targetSet.begin()};
-                    window.scrollQueued = *targetSet.begin();
-                  });
+      std::set<int> targetSet(targetIndices.begin(), targetIndices.end());
+      auto groupId = element_child_next_id_get(*animations, ElementType::GROUP);
+      document.edit_apply(EDIT_GROUP_ITEMS, window.changeType,
+                          [&](Anm2& anm2)
+                          {
+                            auto uids = edit::animations_group(anm2, targetSet, localize.get(TEXT_NEW_GROUP));
+                            document.animation.selection = targetSet;
+                            window.selection = {groupId};
+                            document.reference = {*targetSet.begin()};
+                            window.scrollQueued = *targetSet.begin();
+                            return uids;
+                          });
     };
     window.default_set = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
     {
       auto animations = window_container_get(window, document);
       auto animation = document.anm2.element_get(ElementType::ANIMATION, *document.animation.selection.begin());
       if (!animations || !animation) return;
-      window_edit(document, window.changeType, localize.get(EDIT_DEFAULT_ANIMATION),
-                  [&]() { animations->defaultAnimation = animation->name; });
+      document.edit_apply(EDIT_DEFAULT_ANIMATION, window.changeType,
+                          [&](Anm2&) { animations->defaultAnimation = animation->name; });
     };
     window.body_update =
         [](Window& window, Manager& manager, Settings& settings, Resources&, Clipboard&, Document& document)
@@ -838,7 +706,7 @@ namespace anm2ed::imgui
       };
       std::vector<AnimationMergeCandidate> candidates{};
       auto animations = window_container_get(window, document);
-      auto groupIds = animations ? animation_group_ids_get(*animations) : std::set<int>{};
+      auto groupIds = animations ? edit::animation_group_ids_get(*animations) : std::set<int>{};
       static const Element EMPTY{};
       auto candidate_animation_push = [&](const Element& animation, int animationIndex, bool isGrouped)
       {
@@ -851,7 +719,7 @@ namespace anm2ed::imgui
       {
         if (item.type == ElementType::GROUP)
         {
-          auto groupIndices = animation_group_indices_get(*animations, item.id);
+          auto groupIndices = edit::animation_group_indices_get(*animations, item.id);
           groupIndices.erase(mergeReference);
           if (groupIndices.empty()) continue;
           candidates.push_back({window_group_key_get(item.id),

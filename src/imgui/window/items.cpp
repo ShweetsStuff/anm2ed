@@ -143,16 +143,16 @@ namespace anm2ed::imgui
       event.name = localize.get(TEXT_NEW_EVENT);
       auto events = window_container_get(window, document);
       if (!events) return;
-      window_edit(document, window.changeType, localize.get(window.addEdit),
-                  [&]()
-                  {
-                    event.id = element_child_next_id_get(*events, ElementType::EVENT_ELEMENT);
-                    events->children.push_back(event);
-                    auto& storage = window.storage_get(document);
-                    storage.selection = {event.id};
-                    storage.reference = event.id;
-                    window.newElementId = event.id;
-                  });
+      document.edit_apply(window.addEdit, window.changeType,
+                          [&](Anm2&)
+                          {
+                            event.id = element_child_next_id_get(*events, ElementType::EVENT_ELEMENT);
+                            events->children.push_back(event);
+                            auto& storage = window.storage_get(document);
+                            storage.selection = {event.id};
+                            storage.reference = event.id;
+                            window.newElementId = event.id;
+                          });
     };
     return window;
   }

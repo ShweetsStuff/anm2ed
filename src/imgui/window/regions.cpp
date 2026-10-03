@@ -133,7 +133,7 @@ namespace anm2ed::imgui
 
     if (options.isMakeSpritesheet || options.isRemoveCurrent)
     {
-      document.snapshots.anm2_textures_push(localize.get(EDIT_EXPORT_REGION));
+      document.edit_begin(EDIT_EXPORT_REGION, true);
 
       if (options.isMakeSpritesheet)
       {
@@ -218,12 +218,12 @@ namespace anm2ed::imgui
              {
                auto spritesheet = document.anm2.element_get(ElementType::SPRITESHEET, spritesheetId);
                if (!spritesheet) return;
-               window_edit(document, window.changeType, localize.get(EDIT_MOVE_REGIONS),
-                           [&]()
-                           {
-                             vector::move_indices_to_position(spritesheet->children, indices, targetIndex);
-                             document.region.selection = std::set<int>(movedIds.begin(), movedIds.end());
-                           });
+               document.edit_apply(EDIT_MOVE_REGIONS, window.changeType,
+                                   [&](Anm2&)
+                                   {
+                                     vector::move_indices_to_position(spritesheet->children, indices, targetIndex);
+                                     document.region.selection = std::set<int>(movedIds.begin(), movedIds.end());
+                                   });
              }});
         isMoved = true;
       }
@@ -452,73 +452,42 @@ namespace anm2ed::imgui
     };
     window.remove_unused = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
     {
-      auto spritesheetId = document.spritesheet.reference;
-      auto unused = document.anm2.region_unused(spritesheetId);
-      auto spritesheet = region_spritesheet_get(document);
-      if (unused.empty() || !spritesheet) return;
-      window_edit(document, window.changeType, localize.get(EDIT_REMOVE_UNUSED_REGIONS),
-                  [&]()
-                  {
-                    animations_tracks_each(document.anm2.root, ElementType::LAYER_ANIMATION,
-                                           [&](Element& track)
-                                           {
-                                             auto layer =
-                                                 document.anm2.element_get(ElementType::LAYER_ELEMENT, track.layerId);
-                                             if (!layer || layer->spritesheetId != spritesheetId) return;
-                                             for (auto& frame : track.children)
-                                               if (frame.type == ElementType::FRAME && unused.contains(frame.regionId))
-                                                 frame.regionId = -1;
-                                           });
-                    for (auto id : unused)
-                      element_child_id_erase(*spritesheet, ElementType::REGION, id);
-                  });
+      document.edit_apply(EDIT_REMOVE_UNUSED_REGIONS, window.changeType, [&](Anm2& anm2)
+                          { return edit::regions_remove_unused(anm2, document.spritesheet.reference); });
     };
     window.trim = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
     {
       auto& region = document.region;
-      window_edit(document, window.changeType, localize.get(EDIT_TRIM_REGIONS),
-                  [&]()
-                  {
-                    if (!document.regions_trim(document.spritesheet.reference, region.selection)) return;
-                    if (region.reference != -1 && !region.selection.contains(region.reference))
-                      region.reference = *region.selection.begin();
-                    document.reference = {document.reference.animationIndex};
-                    document.frames.reference = -1;
-                    document.frames.selection.clear();
-                  });
+      document.edit_apply(EDIT_TRIM_REGIONS, window.changeType,
+                          [&](Anm2&)
+                          {
+                            if (!document.regions_trim(document.spritesheet.reference, region.selection)) return;
+                            if (region.reference != -1 && !region.selection.contains(region.reference))
+                              region.reference = *region.selection.begin();
+                            document.reference = {document.reference.animationIndex};
+                            document.frames.reference = -1;
+                            document.frames.selection.clear();
+                          });
     };
     window.paste = [](Window& window, Manager&, Settings&, Document& document, Clipboard& clipboard)
     {
-      auto spritesheetId = document.spritesheet.reference;
       auto spritesheet = region_spritesheet_get(document);
       if (!spritesheet || clipboard.is_empty()) return;
-
       auto maxIdBefore = element_child_max_id_get(*spritesheet, ElementType::REGION);
-      auto insertIndex = region_insert_index_get(document);
-      auto pasted = document.anm2;
       std::string errorString{};
-      if (!pasted.deserialize(ElementType::REGION, clipboard.get(), true, &errorString, {}, spritesheetId))
-      {
-        toast_log(Level::ERROR, TOAST_DESERIALIZE_REGIONS_FAILED, errorString);
-        return;
-      }
-
-      window_edit(document, window.changeType, localize.get(EDIT_PASTE_REGIONS),
-                  [&]()
-                  {
-                    document.anm2 = std::move(pasted);
-                    auto target = region_spritesheet_get(document);
-                    auto maxIdAfter = element_child_max_id_get(*target, ElementType::REGION);
-                    if (maxIdAfter <= maxIdBefore) return;
-                    std::vector<int> pastedIndices{};
-                    for (int i = 0; i < (int)target->children.size(); i++)
-                      if (target->children[i].type == ElementType::REGION && target->children[i].id > maxIdBefore)
-                        pastedIndices.push_back(i);
-                    vector::move_indices_to_position(target->children, pastedIndices, insertIndex);
-                    window.newElementId = maxIdAfter;
-                    document.region.selection = {maxIdAfter};
-                    document.region.reference = maxIdAfter;
-                  });
+      document.edit_apply(EDIT_PASTE_REGIONS, window.changeType,
+                          [&](Anm2& anm2)
+                          {
+                            edit::regions_paste(anm2, document.spritesheet.reference, clipboard.get(),
+                                                region_insert_index_get(document), &errorString);
+                            auto target = region_spritesheet_get(document);
+                            auto maxIdAfter = target ? element_child_max_id_get(*target, ElementType::REGION) : -1;
+                            if (maxIdAfter <= maxIdBefore) return;
+                            window.newElementId = maxIdAfter;
+                            document.region.selection = {maxIdAfter};
+                            document.region.reference = maxIdAfter;
+                          });
+      if (!errorString.empty()) toast_log(Level::ERROR, TOAST_DESERIALIZE_REGIONS_FAILED, errorString);
     };
     window.rows_update = [](Window& window, Manager& manager, Settings& settings, Resources& resources,
                             Clipboard& clipboard, Document& document)

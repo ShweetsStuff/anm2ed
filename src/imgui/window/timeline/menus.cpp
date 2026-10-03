@@ -88,7 +88,6 @@ namespace anm2ed::imgui
     };
 
     auto item = selected_item_get();
-    auto frame = frame_get();
     auto selectedFrames = document.frame_references_get(Document::FrameReferenceFallback::NONE);
     auto copyFrames = copy_frame_references_get();
     auto selectedBakeFrames = selectedFrames;
@@ -208,16 +207,15 @@ namespace anm2ed::imgui
         auto targetAnimationIndex = groupAnimationIndex;
         auto targetType = groupType;
         auto targetId = groupId;
-        edit_command_push(EDIT_RENAME_GROUP, Document::ITEMS,
-                          [=, this](Manager&, Document& document)
-                          {
-                            auto animation = document.anm2.element_get(ElementType::ANIMATION, targetAnimationIndex);
-                            auto container =
-                                animation ? child_first_get(*animation, TYPE_CONTAINERS[targetType]) : nullptr;
-                            auto group = container ? child_id_get(*container, ElementType::GROUP, targetId) : nullptr;
-                            if (!group) return;
-                            group->name = targetName;
-                          });
+        edit_push(EDIT_RENAME_GROUP, Document::ITEMS,
+                  [=](Anm2& anm2)
+                  {
+                    auto animation = anm2.element_get(ElementType::ANIMATION, targetAnimationIndex);
+                    auto container = animation ? child_first_get(*animation, TYPE_CONTAINERS[targetType]) : nullptr;
+                    auto group = container ? child_id_get(*container, ElementType::GROUP, targetId) : nullptr;
+                    if (!group) return;
+                    group->name = targetName;
+                  });
       }
       if (result != PopupButton::NONE) group_properties_close();
 

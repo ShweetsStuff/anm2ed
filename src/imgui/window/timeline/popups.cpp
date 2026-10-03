@@ -33,11 +33,10 @@ namespace anm2ed::imgui
 
       auto result = window_popup_buttons_draw(manager, localize.get(LABEL_MAKE_MANY_REGIONS));
       if (result == PopupButton::CONFIRM)
-        edit_command_push(
-            EDIT_GENERATE_REGIONS_FROM_ANIMATIONS, Document::ALL,
-            [targetFrames = makeManyRegionReferences, format = settings.generateRegionNameFormat,
-             mapping = isMakeManyRegionsMapFrames ? RegionFrameMapping::SET : RegionFrameMapping::PRESERVE](
-                Manager&, Document& document) { document.anm2.regions_generate({}, targetFrames, format, mapping); });
+        edit_push(EDIT_GENERATE_REGIONS_FROM_ANIMATIONS, Document::ALL,
+                  [targetFrames = makeManyRegionReferences, format = settings.generateRegionNameFormat,
+                   mapping = isMakeManyRegionsMapFrames ? RegionFrameMapping::SET : RegionFrameMapping::PRESERVE](
+                      Anm2& anm2) { anm2.regions_generate({}, targetFrames, format, mapping); });
       if (result != PopupButton::NONE) makeManyRegionsPopup.close();
 
       ImGui::EndPopup();
@@ -176,7 +175,7 @@ namespace anm2ed::imgui
         std::erase_if(selectedFrames, is_trigger_reference);
         if (!selectedFrames.empty())
         {
-          if (!isResizeChordHeld[i]) snapshot_command_push(resize.edit, SnapshotKind::FRAMES, selectedFrames);
+          if (!isResizeChordHeld[i]) edit_begin_push(resize.edit);
           command_push(
               [=, this](Manager&, Document& document)
               {

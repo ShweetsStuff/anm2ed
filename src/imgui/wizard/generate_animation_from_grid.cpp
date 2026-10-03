@@ -148,56 +148,11 @@ namespace anm2ed::imgui::wizard
       manager.command_push(
           {manager.selected, [=](Manager&, Document& document)
            {
-             auto region_name_get = [](const std::string& format, int frameNumber)
-             {
-               try
-               {
-                 return std::vformat(format, std::make_format_args(frameNumber));
-               }
-               catch (const std::format_error&)
-               {
-                 return format;
-               }
-             };
-
-             bool isChanged{};
-             bool isRegionsChanged{};
-             for (auto queuedReference : queuedLayerReferences)
-             {
-               auto item = document.anm2.element_get(queuedReference);
-               auto animation = document.anm2.element_get(ElementType::ANIMATION, queuedReference.animationIndex);
-               auto layer = document.anm2.element_get(ElementType::LAYER_ELEMENT, queuedReference.itemID);
-               auto spritesheet =
-                   layer ? document.anm2.element_get(ElementType::SPRITESHEET, layer->spritesheetId) : nullptr;
-               if (!item || !animation) continue;
-
-               if (!isChanged)
-               {
-                 document.snapshots.anm2_push(localize.get(EDIT_GENERATE_ANIMATION_FROM_GRID));
-                 isChanged = true;
-               }
-               auto frameIndexStart = (int)item->children.size();
-               frames_generate_from_grid(*item, queuedStartPosition, queuedSize, queuedPivot, queuedColumns,
-                                         queuedCount, queuedDelay);
-               if (queuedIsMakeRegions && spritesheet)
-                 for (int frameIndex = frameIndexStart; frameIndex < (int)item->children.size(); ++frameIndex)
-                 {
-                   auto& frame = item->children[frameIndex];
-                   if (frame.type != ElementType::FRAME) continue;
-
-                   auto region = element_make(ElementType::REGION);
-                   region.id = element_child_next_id_get(*spritesheet, ElementType::REGION);
-                   region.name = region_name_get(queuedRegionNameFormat, frameIndex - frameIndexStart);
-                   region.crop = frame.crop;
-                   region.size = frame.size;
-                   region.pivot = frame.pivot;
-                   frame.regionId = region.id;
-                   spritesheet->children.push_back(region);
-                   isRegionsChanged = true;
-                 }
-               animation->frameNum = animation_length_get(*animation);
-             }
-             if (isChanged) document.change(isRegionsChanged ? Document::ALL : Document::FRAMES);
+             edit::GridOptions options{queuedStartPosition, queuedSize,  queuedPivot,         queuedColumns,
+                                       queuedCount,         queuedDelay, queuedIsMakeRegions, queuedRegionNameFormat};
+             document.edit_apply(EDIT_GENERATE_ANIMATION_FROM_GRID,
+                                 queuedIsMakeRegions ? Document::ALL : Document::FRAMES, [&](Anm2& anm2)
+                                 { return edit::animation_grid_generate(anm2, queuedLayerReferences, options); });
            }});
       isEnd = true;
     }

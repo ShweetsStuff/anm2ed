@@ -52,12 +52,6 @@ namespace anm2ed::imgui
     return targetReference.frameIndex < 0 ? nullptr : document.anm2.element_get(targetReference);
   }
 
-  Element* TimelineContext::command_item_get(Document& document, int animationIndex, int type, int id, int groupType,
-                                             int groupId)
-  {
-    return document.anm2.element_get(Reference{animationIndex, type, id, -1, groupType, groupId});
-  }
-
   Element* TimelineContext::frame_get() { return command_frame_get(document, reference); }
 
   Element* TimelineContext::selected_item_get() { return command_item_reference_get(document, reference); }
@@ -66,14 +60,6 @@ namespace anm2ed::imgui
   {
     auto& colors = TIMELINE_COLORS[color];
     return isLightTheme ? colors.light[std::clamp(type, 0, TRIGGER)] : colors.dark[type];
-  }
-
-  std::set<Reference> TimelineContext::track_references_from_frame_references_get(std::set<Reference> frameReferences)
-  {
-    std::set<Reference> result{};
-    for (auto frameReference : frameReferences)
-      result.insert(item_reference_from_frame_get(frameReference));
-    return result;
   }
 
   void TimelineContext::frames_focus_sync_for(Document& targetDocument)
@@ -93,25 +79,22 @@ namespace anm2ed::imgui
     return selectedReferences.empty() ? std::set<Reference>{frameReference} : selectedReferences;
   }
 
-  void TimelineContext::snapshot_command_push(StringType messageType, SnapshotKind kind,
-                                              const std::set<Reference>& references)
+  void TimelineContext::edit_begin_push(StringType label)
   {
-    command_push([message = std::string(localize.get(messageType)), kind, references](Manager&, Document& document)
-                 { snapshot_take(document, message, kind, references); });
+    command_push([label](Manager&, Document& document) { document.edit_begin(label); });
   }
 
-  void TimelineContext::edit_command_push(StringType messageType, Document::ChangeType changeType,
-                                          std::function<void(Manager&, Document&)> run, SnapshotKind kind,
-                                          const std::set<Reference>& references)
+  void TimelineContext::frames_select_for(Document& targetDocument, const edit::Uids& uids)
   {
-    command_push(
-        [message = std::string(localize.get(messageType)), changeType, run, kind, references](Manager& manager,
-                                                                                              Document& document)
-        {
-          snapshot_take(document, message, kind, references);
-          run(manager, document);
-          document.change(changeType);
-        });
+    auto references = targetDocument.references_get(uids);
+    if (references.empty()) return;
+    targetDocument.reference = references.front();
+    targetDocument.editTarget = Document::EditTarget::FRAME;
+    targetDocument.frame_references_set({references.begin(), references.end()});
+    if (auto item = command_item_reference_get(targetDocument, targetDocument.reference);
+        item && targetDocument.reference.itemType != TRIGGER)
+      targetDocument.frameTime = frame_time_from_index_get(*item, targetDocument.reference.frameIndex);
+    frames_focus_sync_for(targetDocument);
   }
 
   Reference TimelineContext::item_reference_get(int type, int id, int groupType, int groupId)

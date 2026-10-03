@@ -64,9 +64,9 @@ namespace anm2ed::imgui
       auto& type = reference.itemType;
       auto frame = reference.frameIndex >= 0 ? anm2.element_get(reference) : nullptr;
 
-      auto frame_edit = [&](edit::Type state, StringType message, auto behavior)
+      auto frame_edit = [&](edit_state::Type state, StringType message, auto behavior)
       {
-        if (state == edit::NONE) return;
+        if (state == edit_state::NONE) return;
         manager.command_push(
             {manager.selected, [=, queuedReference = reference](Manager&, Document& document) mutable
              {
@@ -75,10 +75,9 @@ namespace anm2ed::imgui
                auto item = document.anm2.element_get(Reference{queuedReference.animationIndex, queuedReference.itemType,
                                                                queuedReference.itemID, -1, queuedReference.groupType,
                                                                queuedReference.groupId});
-               if (state == edit::START || state == edit::COMPLETE)
-                 document.snapshots.frames_push(localize.get(message), {queuedReference});
+               if (state == edit_state::START || state == edit_state::COMPLETE) document.edit_begin(message);
                behavior(document, *frame, item, queuedReference);
-               if (state == edit::END || state == edit::COMPLETE) document.change(Document::FRAMES);
+               if (state == edit_state::END || state == edit_state::COMPLETE) document.change(Document::FRAMES);
              }});
       };
 
@@ -122,7 +121,7 @@ namespace anm2ed::imgui
                 frame)
             {
               auto eventId = useFrame.eventId;
-              frame_edit(edit::COMPLETE, EDIT_TRIGGER_EVENT,
+              frame_edit(edit_state::COMPLETE, EDIT_TRIGGER_EVENT,
                          [eventId](Document&, Element& frame, Element*, const Reference&) { frame.eventId = eventId; });
             }
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TRIGGER_EVENT));
@@ -133,7 +132,7 @@ namespace anm2ed::imgui
                 frame)
             {
               auto atFrame = useFrame.atFrame;
-              frame_edit(edit::COMPLETE, EDIT_TRIGGER_AT_FRAME,
+              frame_edit(edit_state::COMPLETE, EDIT_TRIGGER_AT_FRAME,
                          [atFrame](Document& document, Element& frame, Element* item, const Reference&)
                          {
                            frame.atFrame = atFrame;
@@ -149,7 +148,7 @@ namespace anm2ed::imgui
                 frame)
             {
               auto isVisible = useFrame.isVisible;
-              frame_edit(edit::COMPLETE, EDIT_TRIGGER_VISIBILITY,
+              frame_edit(edit_state::COMPLETE, EDIT_TRIGGER_VISIBILITY,
                          [isVisible](Document&, Element& frame, Element*, const Reference&)
                          { frame.isVisible = isVisible; });
             }
@@ -172,7 +171,7 @@ namespace anm2ed::imgui
                   {
                     auto soundIndex = (std::size_t)i;
                     auto soundId = id;
-                    frame_edit(edit::COMPLETE, EDIT_TRIGGER_SOUND,
+                    frame_edit(edit_state::COMPLETE, EDIT_TRIGGER_SOUND,
                                [soundIndex, soundId](Document&, Element& frame, Element*, const Reference&)
                                {
                                  if (soundIndex < frame.soundIds.size()) frame.soundIds[soundIndex] = soundId;
@@ -188,7 +187,7 @@ namespace anm2ed::imgui
             auto widgetSize = imgui::widget_size_with_row_get(2);
 
             if (ImGui::Button(localize.get(BASIC_ADD), widgetSize) && frame)
-              frame_edit(edit::COMPLETE, EDIT_ADD_TRIGGER_SOUND,
+              frame_edit(edit_state::COMPLETE, EDIT_ADD_TRIGGER_SOUND,
                          [](Document&, Element& frame, Element*, const Reference&) { frame.soundIds.push_back(-1); });
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ADD_TRIGGER_SOUND));
 
@@ -196,7 +195,7 @@ namespace anm2ed::imgui
 
             ImGui::BeginDisabled(useFrame.soundIds.empty());
             if (ImGui::Button(localize.get(BASIC_REMOVE), widgetSize) && frame)
-              frame_edit(edit::COMPLETE, EDIT_REMOVE_TRIGGER_SOUND,
+              frame_edit(edit_state::COMPLETE, EDIT_REMOVE_TRIGGER_SOUND,
                          [](Document&, Element& frame, Element*, const Reference&)
                          {
                            if (!frame.soundIds.empty()) frame.soundIds.pop_back();
@@ -237,7 +236,7 @@ namespace anm2ed::imgui
                 frame)
             {
               auto duration = useFrame.duration;
-              frame_edit(edit::COMPLETE, EDIT_FRAME_DURATION,
+              frame_edit(edit_state::COMPLETE, EDIT_FRAME_DURATION,
                          [duration](Document&, Element& frame, Element*, const Reference&)
                          { frame.duration = duration; });
             }
@@ -263,7 +262,7 @@ namespace anm2ed::imgui
                 frame)
             {
               auto regionId = useFrame.regionId;
-              frame_edit(edit::COMPLETE, EDIT_SET_REGION_PROPERTIES,
+              frame_edit(edit_state::COMPLETE, EDIT_SET_REGION_PROPERTIES,
                          [regionId](Document& document, Element& frame, Element*, const Reference& reference)
                          {
                            frame.regionId = regionId;
@@ -280,7 +279,7 @@ namespace anm2ed::imgui
             if (ImGui::Combo(localize.get(BASIC_INTERPOLATED), &interpolationValue, interpolationLabels.data(),
                              (int)interpolationLabels.size()) &&
                 frame)
-              frame_edit(edit::COMPLETE, EDIT_FRAME_INTERPOLATION,
+              frame_edit(edit_state::COMPLETE, EDIT_FRAME_INTERPOLATION,
                          [interpolationValue](Document&, Element& frame, Element*, const Reference&)
                          { frame.interpolation = static_cast<Interpolation>(interpolationValue); });
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FRAME_INTERPOLATION));
@@ -291,7 +290,7 @@ namespace anm2ed::imgui
                 frame)
             {
               auto shaderId = useFrame.shaderId;
-              frame_edit(edit::COMPLETE, EDIT_FRAME_SHADER,
+              frame_edit(edit_state::COMPLETE, EDIT_FRAME_SHADER,
                          [shaderId](Document&, Element& frame, Element*, const Reference&)
                          { frame.shaderId = shaderId; });
             }
@@ -302,7 +301,7 @@ namespace anm2ed::imgui
                 frame)
             {
               auto isVisible = useFrame.isVisible;
-              frame_edit(edit::COMPLETE, EDIT_FRAME_VISIBILITY,
+              frame_edit(edit_state::COMPLETE, EDIT_FRAME_VISIBILITY,
                          [isVisible](Document&, Element& frame, Element*, const Reference&)
                          { frame.isVisible = isVisible; });
             }
@@ -314,7 +313,7 @@ namespace anm2ed::imgui
             {
               if (axis > 0) ImGui::SameLine();
               if (ImGui::Button(localize.get(FLIP_BUTTONS[axis].label), widgetSize) && frame)
-                frame_edit(edit::COMPLETE, FLIP_BUTTONS[axis].edit,
+                frame_edit(edit_state::COMPLETE, FLIP_BUTTONS[axis].edit,
                            [axis, isPositionFlipped = ImGui::IsKeyDown(ImGuiMod_Ctrl)](Document&, Element& frame,
                                                                                        Element*, const Reference&)
                            {

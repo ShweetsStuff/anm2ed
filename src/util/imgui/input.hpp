@@ -19,14 +19,14 @@ namespace anm2ed::imgui
   bool input_int2_range(const char*, glm::ivec2&, glm::ivec2, glm::ivec2, ImGuiInputTextFlags = 0);
   bool input_float_range(const char*, float&, float, float, float = STEP, float = STEP_FAST, const char* = "%.3f",
                          ImGuiInputTextFlags = 0);
-  types::edit::Type drag_int_persistent(const char*, int*, float = DRAG_SPEED, int = {}, int = {}, const char* = "%d",
+  types::edit_state::Type drag_int_persistent(const char*, int*, float = DRAG_SPEED, int = {}, int = {}, const char* = "%d",
                                         ImGuiSliderFlags = 0);
-  types::edit::Type drag_float_persistent(const char*, float*, float = DRAG_SPEED, float = {}, float = {},
+  types::edit_state::Type drag_float_persistent(const char*, float*, float = DRAG_SPEED, float = {}, float = {},
                                           const char* = "%.3f", ImGuiSliderFlags = 0);
-  types::edit::Type drag_float2_persistent(const char*, glm::vec2*, float = DRAG_SPEED, float = {}, float = {},
+  types::edit_state::Type drag_float2_persistent(const char*, glm::vec2*, float = DRAG_SPEED, float = {}, float = {},
                                            const char* = "%.3f", ImGuiSliderFlags = 0);
-  types::edit::Type color_edit3_persistent(const char*, glm::vec3*, ImGuiColorEditFlags = 0);
-  types::edit::Type color_edit4_persistent(const char*, glm::vec4*, ImGuiColorEditFlags = 0);
+  types::edit_state::Type color_edit3_persistent(const char*, glm::vec3*, ImGuiColorEditFlags = 0);
+  types::edit_state::Type color_edit4_persistent(const char*, glm::vec4*, ImGuiColorEditFlags = 0);
   bool radio_button_icon(const char*, int*, int, ImTextureID, ImVec2, ImVec4 = ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
   bool combo_negative_one_indexed(const std::string&, int*, std::vector<const char*>&);
   bool combo_id_mapped(const std::string&, int*, const std::vector<int>&, std::vector<const char*>&);

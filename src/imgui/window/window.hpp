@@ -180,7 +180,6 @@ namespace anm2ed::imgui
   Element* window_container_get(const Window&, Document&);
   Element* window_element_get(const Window&, Document&, int);
   void window_element_apply_push(Window&, Manager&, const Element&, int);
-  void window_edit(Document&, Document::ChangeType, const std::string&, const std::function<void()>&);
   void window_command_push(Window&, Manager&, Settings&, Clipboard&, const Window::Command&);
   int window_selection_start(Window&, Document&, const std::vector<int>&);
   void window_selection_finish(Window&, Manager&, Settings&, Clipboard&, Document&, int);

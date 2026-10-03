@@ -49,38 +49,38 @@ namespace anm2ed::imgui
                             auto spritesheet = document.anm2.element_get(ElementType::SPRITESHEET, id);
                             auto texture = document.texture_get(id);
                             if (!spritesheet || (isWritten && !texture)) return;
-                            window_edit(document, window.changeType, localize.get(edit),
-                                        [&]()
-                                        {
-                                          auto newPath = window_asset_path_get(document, dialogPath);
-                                          auto pathString = path::to_utf8(newPath);
-                                          if (isWritten)
-                                          {
-                                            WorkingDirectory workingDirectory(document.directory_get());
-                                            path::ensure_directory(newPath.parent_path());
-                                            if (!texture->write_png(newPath))
-                                            {
-                                              toast_log(Level::ERROR, TOAST_SAVE_SPRITESHEET_FAILED, id, pathString);
-                                              return;
-                                            }
-                                          }
-                                          spritesheet->path = newPath;
-                                          if (isWritten)
-                                            document.texturePaths[id] = newPath;
-                                          else
-                                            document.texture_reload(id);
-                                          document.spritesheet_hash_set_saved(id);
-                                          toast_log(Level::INFO,
-                                                    isWritten ? TOAST_SAVE_SPRITESHEET : TOAST_REPLACE_SPRITESHEET, id,
-                                                    pathString);
-                                        });
+                            document.edit_apply(
+                                edit, window.changeType,
+                                [&](Anm2&)
+                                {
+                                  auto newPath = window_asset_path_get(document, dialogPath);
+                                  auto pathString = path::to_utf8(newPath);
+                                  if (isWritten)
+                                  {
+                                    WorkingDirectory workingDirectory(document.directory_get());
+                                    path::ensure_directory(newPath.parent_path());
+                                    if (!texture->write_png(newPath))
+                                    {
+                                      toast_log(Level::ERROR, TOAST_SAVE_SPRITESHEET_FAILED, id, pathString);
+                                      return;
+                                    }
+                                  }
+                                  spritesheet->path = newPath;
+                                  if (isWritten)
+                                    document.texturePaths[id] = newPath;
+                                  else
+                                    document.texture_reload(id);
+                                  document.spritesheet_hash_set_saved(id);
+                                  toast_log(Level::INFO, isWritten ? TOAST_SAVE_SPRITESHEET : TOAST_REPLACE_SPRITESHEET,
+                                            id, pathString);
+                                });
                           }});
   }
 
   void spritesheet_textures_edit(Document& document, StringType edit, Document::ChangeType changeType,
                                  const std::function<bool()>& behavior, StringType successToast, StringType failToast)
   {
-    document.snapshots.anm2_textures_push(localize.get(edit));
+    document.edit_begin(edit, true);
     auto isSuccess = behavior();
     toast_log(isSuccess ? Level::INFO : Level::ERROR, isSuccess ? successToast : failToast);
     document.change(changeType);
@@ -178,26 +178,26 @@ namespace anm2ed::imgui
       auto unused = document.anm2.element_unused(ElementType::SPRITESHEET);
       auto spritesheets = window_container_get(window, document);
       if (unused.empty() || !spritesheets) return;
-      window_edit(document, window.changeType, localize.get(EDIT_REMOVE_UNUSED_SPRITESHEETS),
-                  [&]()
-                  {
-                    for (auto id : unused)
-                      if (auto spritesheet = window_element_get(window, document, id))
-                      {
-                        toast_log(Level::INFO, TOAST_REMOVE_SPRITESHEET, id, path::to_utf8(spritesheet->path));
-                        element_child_id_erase(*spritesheets, ElementType::SPRITESHEET, id);
-                      }
-                  });
+      document.edit_apply(EDIT_REMOVE_UNUSED_SPRITESHEETS, window.changeType,
+                          [&](Anm2&)
+                          {
+                            for (auto id : unused)
+                              if (auto spritesheet = window_element_get(window, document, id))
+                              {
+                                toast_log(Level::INFO, TOAST_REMOVE_SPRITESHEET, id, path::to_utf8(spritesheet->path));
+                                element_child_id_erase(*spritesheets, ElementType::SPRITESHEET, id);
+                              }
+                          });
     };
     window.reload = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
     {
       auto selected = document.spritesheet.selection;
-      window_edit(document, window.changeType, localize.get(EDIT_RELOAD_SPRITESHEETS),
-                  [&]()
-                  {
-                    for (auto id : selected)
-                      document.texture_reload(id);
-                  });
+      document.edit_apply(EDIT_RELOAD_SPRITESHEETS, window.changeType,
+                          [&](Anm2&)
+                          {
+                            for (auto id : selected)
+                              document.texture_reload(id);
+                          });
       for (auto id : selected)
         if (auto spritesheet = window_element_get(window, document, id))
         {

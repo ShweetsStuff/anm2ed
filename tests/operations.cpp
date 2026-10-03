@@ -1,5 +1,6 @@
 #include "common.hpp"
 
+#include "edit/edit.hpp"
 #include "util/pack.hpp"
 
 using namespace anm2ed;
@@ -133,5 +134,112 @@ TEST_CASE("rects_pack fits every rect without overlap")
                         glm::any(glm::lessThanEqual(positions[j] + sizes[j], positions[i]));
       CHECK(isSeparate);
     }
+  }
+}
+
+// Each edit runs on a fixture; its result document is a golden, and every returned uid must resolve.
+TEST_CASE("edit layer operations")
+{
+  struct Case
+  {
+    const char* name;
+    const char* fixture;
+    std::function<edit::Uids(Anm2&)> operation;
+    std::size_t uidCount;
+  };
+
+  const Reference head{0, LAYER, 0};
+  const Case CASES[] = {
+      {"frame_insert", "02_items.anm2", [&](Anm2& anm2) { return edit::frame_insert(anm2, {0, LAYER, 0, 0}, 0); }, 1},
+      {"trigger_insert", "02_items.anm2", [&](Anm2& anm2) { return edit::frame_insert(anm2, {0, TRIGGER, -1, 0}, 2); },
+       1},
+      {"frames_delete", "02_items.anm2",
+       [&](Anm2& anm2) { return edit::frames_delete(anm2, {{0, LAYER, 0, 0}, {0, ROOT, -1, 1}}); }, 0},
+      {"frames_duplicate", "02_items.anm2", [&](Anm2& anm2)
+       { return edit::frames_duplicate(anm2, {{0, LAYER, 0, 0}, {0, LAYER, 0, 1}}, {0, LAYER, 0, 1}); }, 2},
+      {"frames_reverse", "07_special_interpolation.anm2",
+       [&](Anm2& anm2) { return edit::frames_reverse(anm2, {{0, LAYER, 0, 0}, {0, LAYER, 0, 2}}); }, 0},
+      {"frames_bake", "07_special_interpolation.anm2",
+       [&](Anm2& anm2) { return edit::frames_bake(anm2, {{0, LAYER, 0, 0}, {0, LAYER, 0, 1}}, 2, true, false); }, 5},
+      {"frame_split", "02_items.anm2", [&](Anm2& anm2) { return edit::frame_split(anm2, {0, LAYER, 1, 0}, 2); }, 1},
+      {"frames_move", "02_items.anm2",
+       [&](Anm2& anm2) { return edit::frames_move(anm2, {{0, LAYER, 0, 0}, {0, LAYER, 1, 0}}, head, 2); }, 2},
+      {"frames_paste", "02_items.anm2",
+       [&](Anm2& anm2)
+       {
+         auto frame = anm2.element_get(Reference{0, LAYER, 1, 0});
+         auto text = element_to_string(*frame, ElementType::LAYER_ANIMATION) +
+                     element_to_string(*frame, ElementType::LAYER_ANIMATION);
+         return edit::frames_paste(anm2, {0, LAYER, 0, 0}, {}, text, 0, nullptr);
+       },
+       2},
+      {"root_bake_into", "04_group_root_transform.anm2",
+       [&](Anm2& anm2)
+       {
+         return edit::root_bake_into(anm2, {{0, ROOT, -1, 0}}, {{0, LAYER, 2}},
+                                     {.isRoundScale = true, .isMatchRootInterpolation = true});
+       },
+       1},
+      {"items_group", "03b_groups_legacy_flat.anm2",
+       [&](Anm2& anm2) { return edit::items_group(anm2, 0, LAYER, {2}, "New"); }, 1},
+      {"items_move", "03b_groups_legacy_flat.anm2",
+       [&](Anm2& anm2) { return edit::items_move(anm2, 0, LAYER, {2}, {}, {true, LAYER, 0, -1}, false, true); }, 0},
+      {"items_remove", "03b_groups_legacy_flat.anm2",
+       [&](Anm2& anm2) { return edit::items_remove(anm2, 0, {{LAYER, {2}}}, {{NULL_, {3}}}); }, 0},
+      {"animation_add", "03a_groups_nested.anm2",
+       [&](Anm2& anm2) { return edit::animation_add(anm2, 1, 0, 0, "Added"); }, 1},
+      {"animations_remove", "03a_groups_nested.anm2",
+       [&](Anm2& anm2) { return edit::animations_remove(anm2, {1}, {0}); }, 0},
+      {"animations_move", "02_items.anm2", [&](Anm2& anm2) { return edit::animations_move(anm2, {0}, {}, 2, -1); }, 1},
+      {"animations_group", "02_items.anm2", [&](Anm2& anm2) { return edit::animations_group(anm2, {0, 1}, "Group"); },
+       0},
+      {"animations_paste", "02_items.anm2",
+       [&](Anm2& anm2)
+       {
+         std::set<int> groupIds{};
+         auto text = element_to_string(*anm2.element_get(ElementType::ANIMATION, 1));
+         return edit::animations_paste(anm2, text, 0, -1, groupIds, nullptr);
+       },
+       1},
+      {"regions_remove_unused", "05_regions.anm2", [&](Anm2& anm2) { return edit::regions_remove_unused(anm2, 0); }, 0},
+      {"regions_paste", "05_regions.anm2",
+       [&](Anm2& anm2)
+       {
+         auto region = child_id_get(*anm2.element_get(ElementType::SPRITESHEET, 0), ElementType::REGION, 1);
+         return edit::regions_paste(anm2, 0, element_to_string(*region), 1, nullptr);
+       },
+       0},
+      {"animation_grid_generate", "05_regions.anm2",
+       [&](Anm2& anm2)
+       {
+         return edit::animation_grid_generate(anm2, {{0, LAYER, 0}},
+                                              {{0, 0}, {8, 8}, {4, 4}, 2, 3, 2, true, "Grid {}"});
+       },
+       3},
+      {"frames_change_apply", "02_items.anm2",
+       [&](Anm2& anm2)
+       {
+         FrameChange change{.positionX = 3.0f, .rotation = 10.0f};
+         return edit::frames_change_apply(
+             anm2, {.references = {{0, LAYER, 0, 1}, {0, NULL_, 0}}, .animations = {1}, .isRoot = true}, change,
+             ChangeType::ADD);
+       },
+       0},
+      {"animations_merge", "03a_groups_nested.anm2",
+       [&](Anm2& anm2) { return edit::animations_merge(anm2, 0, {1}, types::merge::APPEND, true, {0}); }, 1},
+  };
+
+  for (const auto& entry : CASES)
+  {
+    INFO("operation: ", std::string(entry.name));
+    auto anm2 = fixture_load(entry.fixture);
+    anm2.uids_repair();
+    auto uids = entry.operation(anm2);
+    CHECK(uids.size() == entry.uidCount);
+    anm2.uids_repair();
+    UidIndex index(anm2);
+    for (auto uid : uids)
+      CHECK(index.reference_get(uid));
+    operation_check(entry.name, anm2);
   }
 }

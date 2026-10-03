@@ -40,17 +40,16 @@ namespace anm2ed::imgui
         {
           auto targetRow = row;
           auto targetAnimationIndex = reference.animationIndex;
-          edit_command_push(EDIT_TOGGLE_GROUP_EXPANDED, Document::ITEMS,
-                            [=, this](Manager&, Document& document) mutable
-                            {
-                              auto animation = document.anm2.element_get(ElementType::ANIMATION, targetAnimationIndex);
-                              auto container =
-                                  animation ? child_first_get(*animation, TYPE_CONTAINERS[targetRow.type]) : nullptr;
-                              auto group =
-                                  container ? child_id_get(*container, ElementType::GROUP, targetRow.id) : nullptr;
-                              if (!group) return;
-                              group->isExpanded = !group->isExpanded;
-                            });
+          edit_push(EDIT_TOGGLE_GROUP_EXPANDED, Document::ITEMS,
+                    [=](Anm2& anm2)
+                    {
+                      auto animation = anm2.element_get(ElementType::ANIMATION, targetAnimationIndex);
+                      auto container =
+                          animation ? child_first_get(*animation, TYPE_CONTAINERS[targetRow.type]) : nullptr;
+                      auto group = container ? child_id_get(*container, ElementType::GROUP, targetRow.id) : nullptr;
+                      if (!group) return;
+                      group->isExpanded = !group->isExpanded;
+                    });
         };
 
         ImGui::SetCursorPos(to_imvec2(to_vec2(cursorPos) - to_vec2(style.ItemSpacing)));
@@ -140,17 +139,16 @@ namespace anm2ed::imgui
           auto targetType = type;
           auto targetGroupId = group->id;
           auto targetVisible = !isGroupVisible;
-          edit_command_push(EDIT_TOGGLE_ITEM_VISIBILITY, Document::FRAMES,
-                            [=, this](Manager&, Document& document)
-                            {
-                              auto animation = document.anm2.element_get(ElementType::ANIMATION, targetAnimationIndex);
-                              auto container =
-                                  animation ? child_first_get(*animation, TYPE_CONTAINERS[targetType]) : nullptr;
-                              if (!container) return;
-                              auto group = child_id_get(*container, ElementType::GROUP, targetGroupId);
-                              if (!group) return;
-                              group->isVisible = targetVisible;
-                            });
+          edit_push(EDIT_TOGGLE_ITEM_VISIBILITY, Document::FRAMES,
+                    [=](Anm2& anm2)
+                    {
+                      auto animation = anm2.element_get(ElementType::ANIMATION, targetAnimationIndex);
+                      auto container = animation ? child_first_get(*animation, TYPE_CONTAINERS[targetType]) : nullptr;
+                      if (!container) return;
+                      auto group = child_id_get(*container, ElementType::GROUP, targetGroupId);
+                      if (!group) return;
+                      group->isVisible = targetVisible;
+                    });
         }
         auto visibleButtonMin = ImGui::GetItemRectMin();
         auto visibleButtonMax = ImGui::GetItemRectMax();
@@ -405,14 +403,13 @@ namespace anm2ed::imgui
           auto targetID = id;
           auto targetGroupType = row.rootGroupType;
           auto targetGroupId = row.rootGroupId;
-          edit_command_push(EDIT_TOGGLE_ITEM_VISIBILITY, Document::FRAMES,
-                            [=, this](Manager&, Document& document)
-                            {
-                              auto item = command_item_get(document, animationIndex, targetType, targetID,
-                                                           targetGroupType, targetGroupId);
-                              if (!item) return;
-                              item->isVisible = !item->isVisible;
-                            });
+          edit_push(EDIT_TOGGLE_ITEM_VISIBILITY, Document::FRAMES,
+                    [=](Anm2& anm2)
+                    {
+                      if (auto item = anm2.element_get(
+                              Reference{animationIndex, targetType, targetID, -1, targetGroupType, targetGroupId}))
+                        item->isVisible = !item->isVisible;
+                    });
         }
         overlay_icon(resources.icon_id_get(visibleIcon), iconTintCurrent, false);
         ImGui::SetItemTooltip("%s", isItemVisible ? localize.get(TOOLTIP_ITEM_VISIBILITY_SHOWN)
@@ -430,14 +427,14 @@ namespace anm2ed::imgui
             if (ImGui::ImageButton("##Rect Toggle", resources.icon_id_get(rectIcon), icon_size_get()))
             {
               auto nullID = id;
-              edit_command_push(EDIT_TOGGLE_NULL_RECT, Document::FRAMES,
-                                [=, this](Manager&, Document& document)
-                                {
-                                  auto nulls = document.anm2.element_get(ElementType::NULLS);
-                                  auto null = nulls ? child_id_get(*nulls, ElementType::NULL_ELEMENT, nullID) : nullptr;
-                                  if (!null) return;
-                                  null->isShowRect = !null->isShowRect;
-                                });
+              edit_push(EDIT_TOGGLE_NULL_RECT, Document::FRAMES,
+                        [=](Anm2& anm2)
+                        {
+                          auto nulls = anm2.element_get(ElementType::NULLS);
+                          auto null = nulls ? child_id_get(*nulls, ElementType::NULL_ELEMENT, nullID) : nullptr;
+                          if (!null) return;
+                          null->isShowRect = !null->isShowRect;
+                        });
             }
             overlay_icon(resources.icon_id_get(rectIcon), iconTintCurrent, false);
             ImGui::SetItemTooltip("%s", isShowRect ? localize.get(TOOLTIP_NULL_RECT_SHOWN)

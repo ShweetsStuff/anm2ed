@@ -129,21 +129,6 @@ namespace anm2ed::imgui
                                                      {ITEM_COLOR_LIGHT_ACTIVE, TYPE_COLOR_ACTIVE},
                                                      {ITEM_COLOR_LIGHT_SELECTED, TYPE_COLOR_ACTIVE}};
 
-  enum class SnapshotKind
-  {
-    ANM2,
-    TRACKS,
-    FRAMES
-  };
-
-  inline void snapshot_take(Document& document, const std::string& message, SnapshotKind kind,
-                            const std::set<Reference>& references)
-  {
-    if (kind == SnapshotKind::ANM2) document.snapshots.anm2_push(message);
-    if (kind == SnapshotKind::TRACKS) document.snapshots.tracks_push(message, references);
-    if (kind == SnapshotKind::FRAMES) document.snapshots.frames_push(message, references);
-  }
-
   inline bool is_trigger_reference(const Reference& reference) { return reference.itemType == TRIGGER; }
 
   constexpr resource::icon::Type INTERPOLATION_ICONS[] = {resource::icon::UNINTERPOLATED, resource::icon::INTERPOLATED,
@@ -220,22 +205,24 @@ namespace anm2ed::imgui
     bool is_track_group_visible(int type, int groupId);
     Element* row_group_get(const TimelineItemRow& row);
     int group_items_count_get(int type, int groupId);
-    Element* command_item_get(Document& document, int animationIndex, int type, int id, int groupType = NONE,
-                              int groupId = -1);
     Element* command_item_reference_get(Document& document, Reference itemReference);
     glm::vec4 color_get(TimelineColor, int);
-    template <class Range> std::map<Reference, std::set<int>> frames_by_item_get(const Range& frameReferences)
-    {
-      std::map<Reference, std::set<int>> result{};
-      for (auto frameReference : frameReferences)
-        result[item_reference_from_frame_get(frameReference)].insert(frameReference.frameIndex);
-      return result;
-    }
     void frames_focus_sync_for(Document&);
     std::set<Reference> drag_frame_references_get(const Reference&);
-    void snapshot_command_push(StringType, SnapshotKind, const std::set<Reference>&);
-    void edit_command_push(StringType, Document::ChangeType, std::function<void(Manager&, Document&)>,
-                           SnapshotKind = SnapshotKind::ANM2, const std::set<Reference>& = {});
+    // Queues an edit on the document; its result is selected (frames by default).
+    template <class Operation>
+    void edit_push(StringType label, Document::ChangeType type, Operation operation,
+                   std::function<void(Document&, const edit::Uids&)> select = {})
+    {
+      command_push(
+          [=, this](Manager&, Document& document) mutable
+          {
+            auto uids = document.edit_apply(label, type, operation);
+            select ? select(document, uids) : frames_select_for(document, uids);
+          });
+    }
+    void edit_begin_push(StringType);
+    void frames_select_for(Document&, const edit::Uids&);
     Element* command_frame_get(Document& document, const Reference& targetReference);
     Reference item_reference_get(int type, int id, int groupType = NONE, int groupId = -1);
     Reference item_reference_from_frame_get(Reference frameReference);
@@ -257,11 +244,9 @@ namespace anm2ed::imgui
     void reference_set_item_reference_for(Document& targetDocument, Reference itemReference);
     void reference_set_timeline_item_reference_for(Document& targetDocument, Reference itemReference);
     void command_push(std::function<void(Manager&, Document&)> run);
-    std::set<Reference> track_references_from_frame_references_get(std::set<Reference> frameReferences);
     void overlay_icon(GLuint textureId, ImVec4 tint, bool isForced = false);
     void playback_stop();
     void frame_insert();
-    void frames_delete_for(Document& document, std::set<Reference> selectedFrames);
     void frames_delete_action();
     void frames_duplicate();
     bool is_frames_reverse_available(std::set<Reference> selectedFrames);
@@ -273,8 +258,6 @@ namespace anm2ed::imgui
                                                                        BakeIntoOtherFramesTarget target, bool isLayers,
                                                                        bool isNulls);
     bool is_bake_into_other_frames_ready();
-    void frame_root_transform_apply(Element& frame, const Element& rootFrame, bool isRoundScale, bool isRoundRotation,
-                                    bool isUseRootPivot);
     void bake_into_other_frames();
     void frame_split();
     void reference_clear();

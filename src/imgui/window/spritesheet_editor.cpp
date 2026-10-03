@@ -359,27 +359,10 @@ namespace anm2ed::imgui
           auto fraction = current - glm::floor(current);
           return glm::floor(value) + fraction;
         };
-        auto frame_snapshot_push = [&](StringType messageType, const std::set<Reference>& frameReferences)
+        auto edit_begin_push = [&](StringType label, bool isTextures = false)
         {
-          auto message = std::string(localize.get(messageType));
-          auto queuedFrameReferences = frameReferences;
-          manager.command_push({manager.selected, [message, queuedFrameReferences](Manager&, Document& document)
-                                { document.snapshots.frames_push(message, queuedFrameReferences); }});
-        };
-        auto region_snapshot_push = [&](StringType messageType, const std::set<int>& regionIds)
-        {
-          auto message = std::string(localize.get(messageType));
-          auto queuedSpritesheet = referenceSpritesheet;
-          auto queuedRegionIds = regionIds;
-          manager.command_push({manager.selected,
-                                [message, queuedSpritesheet, queuedRegionIds](Manager&, Document& document)
-                                { document.snapshots.regions_push(message, queuedSpritesheet, queuedRegionIds); }});
-        };
-        auto texture_snapshot_push = [&](StringType messageType)
-        {
-          auto message = std::string(localize.get(messageType));
-          manager.command_push({manager.selected, [message](Manager&, Document& document)
-                                { document.snapshots.textures_push(message); }});
+          manager.command_push({manager.selected, [label, isTextures](Manager&, Document& document)
+                                { document.edit_begin(label, isTextures); }});
         };
         auto document_change_push = [&](Document::ChangeType changeType)
         {
@@ -656,7 +639,7 @@ namespace anm2ed::imgui
               region_selection_set(hoveredRegionId);
               if (isReferenceLayerOnSpritesheet)
               {
-                frame_snapshot_push(EDIT_FRAME_REGION, selectedFrameReferences);
+                edit_begin_push(EDIT_FRAME_REGION);
                 FrameChange change{};
                 change.regionId = hoveredRegionId;
                 if (auto region = region_get(hoveredRegionId))
@@ -681,7 +664,7 @@ namespace anm2ed::imgui
               auto region = region_get(regionReference);
               if (!region) break;
 
-              if (isBegin) region_snapshot_push(EDIT_REGION_MOVE, {regionReference});
+              if (isBegin) edit_begin_push(EDIT_REGION_MOVE);
               if (isMouseDown) region_pivot_set(regionReference, pivot_snap(mousePos - region->crop, region->pivot));
               if (isLeftPressed) region_pivot_offset(regionReference, vec2(-step, 0));
               if (isRightPressed) region_pivot_offset(regionReference, vec2(step, 0));
@@ -704,7 +687,7 @@ namespace anm2ed::imgui
             }
 
             if (!item || !frame || selectedFrameToolReferences.empty() || isRegionInUse) break;
-            if (isBegin) frame_snapshot_push(EDIT_FRAME_PIVOT, selectedFrameToolReferences);
+            if (isBegin) edit_begin_push(EDIT_FRAME_PIVOT);
             if (isMouseDown)
             {
               auto pivot = pivot_snap(mousePos - frame->crop, frame->pivot);
@@ -740,7 +723,7 @@ namespace anm2ed::imgui
                 !regionSelection.empty())
             {
               if (!spritesheet || regionSelection.empty()) break;
-              if (isBegin) region_snapshot_push(EDIT_REGION_CROP, regionSelection);
+              if (isBegin) edit_begin_push(EDIT_REGION_CROP);
 
               if (isMouseClicked)
               {
@@ -781,7 +764,7 @@ namespace anm2ed::imgui
             }
 
             if (!item || !frame || selectedFrameToolReferences.empty() || isRegionInUse) break;
-            if (isBegin) frame_snapshot_push(EDIT_FRAME_CROP, selectedFrameToolReferences);
+            if (isBegin) edit_begin_push(EDIT_FRAME_CROP);
 
             if (isMouseClicked)
             {
@@ -836,7 +819,7 @@ namespace anm2ed::imgui
           {
             if (!texture) break;
             auto color = useTool == tool::DRAW ? toolColor : vec4();
-            if (isMouseClicked) texture_snapshot_push(useTool == tool::DRAW ? EDIT_DRAW : EDIT_ERASE);
+            if (isMouseClicked) edit_begin_push(useTool == tool::DRAW ? EDIT_DRAW : EDIT_ERASE, true);
             if (isMouseDown) texture_line_apply(ivec2(previousTextureMousePos), ivec2(textureMousePos), color);
             if (isMouseReleased) texture_change_push();
             break;

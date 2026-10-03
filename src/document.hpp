@@ -2,12 +2,16 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <map>
 #include <set>
+#include <type_traits>
 #include <unordered_map>
 #include <vector>
 
+#include "edit/edit.hpp"
 #include "snapshots.hpp"
+#include "strings.hpp"
 
 #include <glm/glm.hpp>
 
@@ -117,6 +121,25 @@ namespace anm2ed
     void hash_set();
     void clean();
     void change(ChangeType);
+    void edit_begin(StringType, bool = false);
+    edit::Uids edit_run(StringType, ChangeType, const std::function<edit::Uids(Anm2&)>&);
+
+    // Snapshots for undo, runs the operation on the model, then commits; void operations select nothing.
+    template <class Operation> edit::Uids edit_apply(StringType label, ChangeType type, Operation&& operation)
+    {
+      return edit_run(label, type,
+                      [&](Anm2& anm2) -> edit::Uids
+                      {
+                        if constexpr (std::is_void_v<std::invoke_result_t<Operation&, Anm2&>>)
+                        {
+                          operation(anm2);
+                          return {};
+                        }
+                        else
+                          return operation(anm2);
+                      });
+    }
+    std::vector<Reference> references_get(const edit::Uids&) const;
     bool is_dirty() const;
     bool is_autosave_dirty() const;
     std::filesystem::path directory_get() const;

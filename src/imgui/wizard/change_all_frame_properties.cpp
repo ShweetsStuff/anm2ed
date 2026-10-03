@@ -248,45 +248,15 @@ namespace anm2ed::imgui::wizard
            [=, queuedAnimations = std::set<int>(animations.begin(), animations.end()), isRoot = settings.changeIsRoot,
             isLayers = settings.changeIsLayers, isNulls = settings.changeIsNulls](Manager&, Document& document)
            {
-             auto& anm2 = document.anm2;
-             std::vector<std::tuple<Element*, ItemType, std::set<int>>> targets{};
-             auto all_target_push = [&](Element* item, ItemType type)
-             {
-               if (!item) return;
-               auto indices = std::views::iota(0, track_frames_count_get(*item));
-               targets.emplace_back(item, type, std::set<int>(indices.begin(), indices.end()));
-             };
-
+             edit::ChangeTargets targets{.isRoot = isRoot, .isLayers = isLayers, .isNulls = isNulls};
              if (isFramesDestination)
-             {
-               std::map<Reference, std::set<int>> groupedFrames{};
-               for (auto frameReference : selectedFrameReferences)
-                 groupedFrames[{frameReference.animationIndex, frameReference.itemType, frameReference.itemID, -1,
-                                frameReference.groupType, frameReference.groupId}]
-                     .insert(frameReference.frameIndex);
-               for (auto& [itemReference, selection] : groupedFrames)
-                 if (auto item = anm2.element_get(itemReference))
-                   targets.emplace_back(item, (ItemType)itemReference.itemType, selection);
-             }
+               targets.references = {selectedFrameReferences.begin(), selectedFrameReferences.end()};
              else if (isItemsDestination)
-               for (auto itemReference : selectedItemReferences)
-                 all_target_push(anm2.element_get(itemReference), (ItemType)itemReference.itemType);
+               targets.references = {selectedItemReferences.begin(), selectedItemReferences.end()};
              else
-               for (auto animationIndex : queuedAnimations)
-               {
-                 auto animation = anm2.element_get(ElementType::ANIMATION, animationIndex);
-                 if (!animation) continue;
-                 if (isRoot) all_target_push(animation_item_get(*animation, ItemType::ROOT), ItemType::ROOT);
-                 for (const auto& row : TRACK_CONTAINERS)
-                   if (auto container = child_first_get(*animation, row.container);
-                       container && (row.itemType == ItemType::LAYER ? isLayers : isNulls))
-                     tracks_each(*container, row.track, [&](Element& track) { all_target_push(&track, row.itemType); });
-               }
-
-             document.snapshots.anm2_push(localize.get(EDIT_CHANGE_FRAME_PROPERTIES));
-             for (auto& [item, type, selection] : targets)
-               frames_change(*item, frameChange, type, changeType, selection);
-             document.change(Document::FRAMES);
+               targets.animations = queuedAnimations;
+             document.edit_apply(EDIT_CHANGE_FRAME_PROPERTIES, Document::FRAMES, [&](Anm2& anm2)
+                                 { return edit::frames_change_apply(anm2, targets, frameChange, changeType); });
            }});
       isChanged = true;
     };

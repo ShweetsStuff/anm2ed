@@ -83,16 +83,16 @@ namespace anm2ed::imgui
     };
     window.reload = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
     {
-      window_edit(document, window.changeType, localize.get(EDIT_RELOAD_SOUNDS),
-                  [&]()
-                  {
-                    for (auto id : document.sound.selection)
-                      if (auto sound = window_element_get(window, document, id))
-                      {
-                        document.sound_reload(id);
-                        toast_log(Level::INFO, TOAST_RELOAD_SOUND, id, path::to_utf8(sound->path));
-                      }
-                  });
+      document.edit_apply(EDIT_RELOAD_SOUNDS, window.changeType,
+                          [&](Anm2&)
+                          {
+                            for (auto id : document.sound.selection)
+                              if (auto sound = window_element_get(window, document, id))
+                              {
+                                document.sound_reload(id);
+                                toast_log(Level::INFO, TOAST_RELOAD_SOUND, id, path::to_utf8(sound->path));
+                              }
+                          });
     };
     window.body_update = [](Window& window, Manager& manager, Settings&, Resources&, Clipboard&, Document& document)
     {
@@ -115,14 +115,14 @@ namespace anm2ed::imgui
                                 {
                                   auto sound = window_element_get(window, document, id);
                                   if (!sound) return;
-                                  window_edit(document, window.changeType, localize.get(EDIT_REPLACE_SOUND),
-                                              [&]()
-                                              {
-                                                sound->path = window_asset_path_get(document, dialogPath);
-                                                document.sound_reload(id);
-                                                toast_log(Level::INFO, TOAST_REPLACE_SOUND, id,
-                                                          path::to_utf8(sound->path));
-                                              });
+                                  document.edit_apply(EDIT_REPLACE_SOUND, window.changeType,
+                                                      [&](Anm2&)
+                                                      {
+                                                        sound->path = window_asset_path_get(document, dialogPath);
+                                                        document.sound_reload(id);
+                                                        toast_log(Level::INFO, TOAST_REPLACE_SOUND, id,
+                                                                  path::to_utf8(sound->path));
+                                                      });
                                 }});
         window.dialog->reset();
       }

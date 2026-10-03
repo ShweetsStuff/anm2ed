@@ -79,7 +79,7 @@ namespace anm2ed::types::merge
   };
 }
 
-namespace anm2ed::types::edit
+namespace anm2ed::types::edit_state
 {
   enum Type
   {

@@ -1305,11 +1305,10 @@ namespace anm2ed::imgui
         auto isToolDuring = isToolMouseDown || isKeyDown;
         auto isToolEnd = isToolMouseReleased || isKeyReleased;
 
-        auto frame_snapshot = [&](auto message)
+        auto frame_snapshot = [&](StringType label)
         {
-          auto queuedFrameReferences = selectedFrameReferences;
-          manager.command_push({manager.selected, [message, queuedFrameReferences](Manager&, Document& document)
-                                { document.snapshots.frames_push(localize.get(message), queuedFrameReferences); }});
+          manager.command_push(
+              {manager.selected, [label](Manager&, Document& document) { document.edit_begin(label); }});
         };
         auto frame_change_apply = [&](FrameChange frameChange, ChangeType changeType = ChangeType::ADJUST)
         {

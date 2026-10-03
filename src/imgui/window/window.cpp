@@ -59,37 +59,30 @@ namespace anm2ed::imgui
            auto target =
                reference == -1 || !container ? nullptr : child_id_get(*container, window.elementType, reference);
            if (!container || (reference != -1 && !target)) return;
-           window_edit(
-               document, window.changeType, localize.get(reference == -1 ? window.addEdit : window.propertiesEdit),
-               [&]()
-               {
-                 auto changed = edited;
-                 changed.type = window.elementType;
-                 changed.tag = element_make(window.elementType).tag;
-                 changed.id = reference == -1 ? element_child_next_id_get(*container, window.elementType) : reference;
-                 if (target)
-                   *target = changed;
-                 else
-                 {
-                   auto insertIndex =
-                       window.insert_index_get ? window.insert_index_get(document) : (int)container->children.size();
-                   container->children.insert(container->children.begin() + insertIndex, changed);
-                   window.newElementId = changed.id;
-                 }
-                 auto& storage = window.storage_get(document);
-                 storage.selection = {changed.id};
-                 storage.reference = changed.id;
-                 if (window.row_select) window.row_select(window, document, changed.id);
-               });
+           document.edit_apply(reference == -1 ? window.addEdit : window.propertiesEdit, window.changeType,
+                               [&](Anm2&)
+                               {
+                                 auto changed = edited;
+                                 changed.type = window.elementType;
+                                 changed.tag = element_make(window.elementType).tag;
+                                 changed.id = reference == -1
+                                                  ? element_child_next_id_get(*container, window.elementType)
+                                                  : reference;
+                                 if (target)
+                                   *target = changed;
+                                 else
+                                 {
+                                   auto insertIndex = window.insert_index_get ? window.insert_index_get(document)
+                                                                              : (int)container->children.size();
+                                   container->children.insert(container->children.begin() + insertIndex, changed);
+                                   window.newElementId = changed.id;
+                                 }
+                                 auto& storage = window.storage_get(document);
+                                 storage.selection = {changed.id};
+                                 storage.reference = changed.id;
+                                 if (window.row_select) window.row_select(window, document, changed.id);
+                               });
          }});
-  }
-
-  void window_edit(Document& document, Document::ChangeType changeType, const std::string& message,
-                   const std::function<void()>& behavior)
-  {
-    document.snapshots.anm2_push(message);
-    behavior();
-    document.change(changeType);
   }
 
   void window_command_push(Window& window, Manager& manager, Settings& settings, Clipboard& clipboard,
@@ -107,13 +100,13 @@ namespace anm2ed::imgui
                           {
                             auto element = window_element_get(window, document, key);
                             if (!element || element->name == name) return;
-                            window_edit(document, window.changeType, localize.get(window.renameEdit),
-                                        [&]()
-                                        {
-                                          element->name = name;
-                                          if (window.rename_finish)
-                                            window.rename_finish(document, *element, key, count);
-                                        });
+                            document.edit_apply(window.renameEdit, window.changeType,
+                                                [&](Anm2&)
+                                                {
+                                                  element->name = name;
+                                                  if (window.rename_finish)
+                                                    window.rename_finish(document, *element, key, count);
+                                                });
                           }});
   }
 
@@ -140,18 +133,18 @@ namespace anm2ed::imgui
       return;
     }
 
-    window_edit(document, window.changeType, localize.get(window.pasteEdit),
-                [&]()
-                {
-                  document.anm2 = std::move(pasted);
-                  container = window_container_get(window, document);
-                  auto maxIdAfter = container ? element_child_max_id_get(*container, window.elementType) : -1;
-                  if (maxIdAfter <= maxIdBefore) return;
-                  window.newElementId = maxIdAfter;
-                  storage.selection = {maxIdAfter};
-                  storage.reference = maxIdAfter;
-                  if (window.row_select) window.row_select(window, document, maxIdAfter);
-                });
+    document.edit_apply(window.pasteEdit, window.changeType,
+                        [&](Anm2&)
+                        {
+                          document.anm2 = std::move(pasted);
+                          container = window_container_get(window, document);
+                          auto maxIdAfter = container ? element_child_max_id_get(*container, window.elementType) : -1;
+                          if (maxIdAfter <= maxIdBefore) return;
+                          window.newElementId = maxIdAfter;
+                          storage.selection = {maxIdAfter};
+                          storage.reference = maxIdAfter;
+                          if (window.row_select) window.row_select(window, document, maxIdAfter);
+                        });
   }
 
   void window_remove_unused(Window& window, Manager&, Settings&, Document& document, Clipboard&)
@@ -159,12 +152,12 @@ namespace anm2ed::imgui
     auto unused = document.anm2.element_unused(window.elementType);
     auto container = window_container_get(window, document);
     if (unused.empty() || !container) return;
-    window_edit(document, window.changeType, localize.get(window.removeUnusedEdit),
-                [&]()
-                {
-                  for (auto id : unused)
-                    element_child_id_erase(*container, window.elementType, id);
-                });
+    document.edit_apply(window.removeUnusedEdit, window.changeType,
+                        [&](Anm2&)
+                        {
+                          for (auto id : unused)
+                            element_child_id_erase(*container, window.elementType, id);
+                        });
   }
 
   bool is_window_group_selected(const Window& window)

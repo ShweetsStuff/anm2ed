@@ -75,11 +75,9 @@ add_subdirectory(external/lunasvg)
 
 set(GLAD_SRC ${CMAKE_CURRENT_SOURCE_DIR}/include/glad/glad.cpp)
 
+set(IMGUI_CORE_SRC external/imgui/imgui.cpp external/imgui/imgui_draw.cpp external/imgui/imgui_widgets.cpp
+                   external/imgui/imgui_tables.cpp)
 set(IMGUI_SRC
-    external/imgui/imgui.cpp
-    external/imgui/imgui_draw.cpp
-    external/imgui/imgui_widgets.cpp
-    external/imgui/imgui_tables.cpp
     external/imgui/backends/imgui_impl_sdl3.cpp
     external/imgui/backends/imgui_impl_opengl3.cpp)
 
@@ -110,9 +108,9 @@ file(GLOB PROJECT_SRC CONFIGURE_DEPENDS
      src/*.hpp)
 
 set(CORE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
-file(GLOB CORE_SRC CONFIGURE_DEPENDS ${CORE_DIR}/anm2/*.cpp)
+file(GLOB CORE_SRC CONFIGURE_DEPENDS ${CORE_DIR}/anm2/*.cpp ${CORE_DIR}/edit/*.cpp)
 foreach(CORE_FILE log resource/strings resource/image resource/audio_data util/file util/path util/math util/string util/time util/working_directory
-                  util/xml util/pack)
+                  util/xml util/pack util/imgui/multiselect snapshots storage playback)
   list(APPEND CORE_SRC ${CORE_DIR}/${CORE_FILE}.cpp)
 endforeach()
 list(REMOVE_ITEM PROJECT_SRC ${CORE_SRC})
@@ -129,8 +127,9 @@ set(CORE_INCLUDE_DIRS
     src/resource
     src/util)
 
-add_library(anm2ed_core STATIC ${CORE_SRC} ${TINYXML2_SRC})
+add_library(anm2ed_core STATIC ${CORE_SRC} ${TINYXML2_SRC} ${IMGUI_CORE_SRC})
 target_include_directories(anm2ed_core PUBLIC ${CORE_INCLUDE_DIRS})
+target_compile_definitions(anm2ed_core PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS IMGUI_DEBUG_PARANOID IMGUI_ENABLE_DOCKING)
 if(NOT MSVC)
   target_compile_options(anm2ed_core PRIVATE -Wall -Wextra -Wpedantic)
 endif()
@@ -144,8 +143,6 @@ set_target_properties(
              RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_BINARY_DIR}/bin"
              RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_BINARY_DIR}/bin")
 
-target_compile_definitions(${PROJECT_NAME} PRIVATE IMGUI_DISABLE_OBSOLETE_FUNCTIONS IMGUI_DEBUG_PARANOID
-                                               IMGUI_ENABLE_DOCKING)
 
 target_include_directories(
   ${PROJECT_NAME}

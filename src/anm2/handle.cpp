@@ -92,6 +92,12 @@ namespace anm2ed
     }
   }
 
+  std::optional<Reference> UidIndex::reference_get(std::uint64_t uid) const
+  {
+    auto it = locations.find(uid);
+    return it == locations.end() ? std::nullopt : std::optional<Reference>(it->second);
+  }
+
   std::optional<Reference> UidIndex::reference_get(Handle handle, Reference reference) const
   {
     auto location_get = [&](std::uint64_t uid) -> const Reference*

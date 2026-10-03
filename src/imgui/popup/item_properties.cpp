@@ -203,12 +203,14 @@ namespace anm2ed::imgui::popup
                                 item.spritesheetId = queuedAddItemSpritesheetID;
                                 item.isShowRect = queuedAddItemIsShowRect;
 
-                                document.snapshots.anm2_push(localize.get(EDIT_ADD_ITEM));
-                                auto addId =
-                                    document.anm2.item_add((ItemType)queuedType, queuedAnimationIndex, item,
-                                                           queuedInsertBeforeID, (destination::Type)queuedDestination);
-
-                                document.change(Document::ITEMS);
+                                int addId{-1};
+                                document.edit_apply(EDIT_ADD_ITEM, Document::ITEMS,
+                                                    [&](Anm2& anm2)
+                                                    {
+                                                      addId = anm2.item_add((ItemType)queuedType, queuedAnimationIndex,
+                                                                            item, queuedInsertBeforeID,
+                                                                            (destination::Type)queuedDestination);
+                                                    });
 
                                 if (addId != -1)
                                 {

@@ -731,6 +731,25 @@ namespace anm2ed
     snapshots.commit();
   }
 
+  void Document::edit_begin(StringType label, bool isTextures) { snapshots.push(localize.get(label), isTextures); }
+
+  edit::Uids Document::edit_run(StringType label, ChangeType type, const std::function<edit::Uids(Anm2&)>& operation)
+  {
+    edit_begin(label);
+    auto uids = operation(anm2);
+    change(type);
+    return uids;
+  }
+
+  std::vector<Reference> Document::references_get(const edit::Uids& uids) const
+  {
+    UidIndex index(anm2);
+    std::vector<Reference> references{};
+    for (auto uid : uids)
+      if (auto reference = index.reference_get(uid)) references.push_back(*reference);
+    return references;
+  }
+
   bool Document::is_dirty() const { return hash != saveHash; }
   bool Document::is_autosave_dirty() const { return hash != autosaveHash; }
 
@@ -916,7 +935,7 @@ namespace anm2ed
     }
     if (loaded.empty()) return;
 
-    snapshots.anm2_push(localize.get(EDIT_ADD_SPRITESHEET));
+    edit_begin(EDIT_ADD_SPRITESHEET);
 
     std::set<int> added{};
     for (auto& [relativePath, texture] : loaded)
@@ -940,7 +959,7 @@ namespace anm2ed
     auto items = anm2.element_get(ElementType::SOUNDS);
     if (!items || std::ranges::all_of(paths, [](const auto& path) { return path.empty(); })) return;
 
-    snapshots.anm2_push(localize.get(EDIT_ADD_SOUND));
+    edit_begin(EDIT_ADD_SOUND);
 
     std::set<int> added{};
     for (auto& path : paths)

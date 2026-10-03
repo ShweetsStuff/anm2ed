@@ -30,74 +30,18 @@ namespace anm2ed::imgui
                   { return frameReference.itemType == TRIGGER || frameReference.frameIndex < 0; });
     if (drag.references.empty()) return;
 
-    auto trackReferences =
-        track_references_from_frame_references_get(std::set<Reference>(drag.references.begin(), drag.references.end()));
-    trackReferences.insert({drag.animationIndex, targetType, targetID, -1, targetGroupType, targetGroupId});
-    edit_command_push(
+    Reference target{drag.animationIndex, targetType, targetID, -1, targetGroupType, targetGroupId};
+    edit_push(
         EDIT_MOVE_FRAMES, Document::FRAMES,
-        [=, this](Manager&, Document& document) mutable
+        [frames = std::set<Reference>(drag.references.begin(), drag.references.end()), target, insertIndex](Anm2& anm2)
+        { return edit::frames_move(anm2, frames, target, insertIndex); },
+        [=, this](Document& document, const edit::Uids& uids)
         {
-          auto targetItem =
-              command_item_get(document, drag.animationIndex, targetType, targetID, targetGroupType, targetGroupId);
-          if (!targetItem) return;
-
-          auto groupedFrames = frames_by_item_get(drag.references);
-
-          int removedBeforeTarget = 0;
-          std::vector<Element> movedFrames;
-          for (auto& [itemReference, indices] : groupedFrames)
-          {
-            auto sourceItem = command_item_reference_get(document, itemReference);
-            if (!sourceItem) continue;
-
-            for (auto i : indices)
-            {
-              auto childIndex = track_frame_child_index_get(*sourceItem, i);
-              if (childIndex == -1) continue;
-              movedFrames.push_back(std::move(sourceItem->children[childIndex]));
-              if (itemReference.itemType == targetType && itemReference.itemID == targetID &&
-                  itemReference.groupType == targetGroupType && itemReference.groupId == targetGroupId &&
-                  i < insertIndex)
-                ++removedBeforeTarget;
-            }
-
-            for (auto it = indices.rbegin(); it != indices.rend(); ++it)
-            {
-              auto childIndex = track_frame_child_index_get(*sourceItem, *it);
-              if (childIndex != -1) sourceItem->children.erase(sourceItem->children.begin() + childIndex);
-            }
-          }
-
-          if (movedFrames.empty()) return;
-
-          int desired = std::clamp(insertIndex, 0, track_frames_count_get(*targetItem));
-          desired -= removedBeforeTarget;
-          desired = std::clamp(desired, 0, track_frames_count_get(*targetItem));
-
-          auto insertPosResult = desired;
-          auto insertedCount = (int)movedFrames.size();
-          auto childIndex = track_frame_insert_child_index_get(*targetItem, insertPosResult);
-          targetItem->children.insert(targetItem->children.begin() + childIndex,
-                                      std::make_move_iterator(movedFrames.begin()),
-                                      std::make_move_iterator(movedFrames.end()));
-
-          if (insertedCount <= 0) return;
-
-          std::set<Reference> movedSelection{};
-          for (int offset = 0; offset < insertedCount; ++offset)
-            movedSelection.insert(
-                {drag.animationIndex, targetType, targetID, insertPosResult + offset, targetGroupType, targetGroupId});
-
-          document.reference = {drag.animationIndex, targetType,      targetID,
-                                insertPosResult,     targetGroupType, targetGroupId};
-          document.frame_references_set(std::move(movedSelection));
-          document.frameTime = frame_time_from_index_get(*targetItem, document.reference.frameIndex);
-          frames_focus_sync_for(document);
+          frames_select_for(document, uids);
           if (targetType == LAYER)
             if (auto layer = document.anm2.element_get(ElementType::LAYER_ELEMENT, targetID))
               document.spritesheet.reference = layer->spritesheetId;
-        },
-        SnapshotKind::TRACKS, trackReferences);
+        });
   }
 
   ImVec2 TimelineContext::frame_box_content_point_get()
@@ -487,16 +431,13 @@ namespace anm2ed::imgui
               if (ImGui::IsKeyDown(ImGuiMod_Alt))
               {
                 auto targetReference = frameReference;
-                edit_command_push(EDIT_FRAME_INTERPOLATION, Document::FRAMES,
-                                  [=, this](Manager&, Document& document)
-                                  {
-                                    auto frame = command_frame_get(document, targetReference);
-                                    if (!frame) return;
-                                    frame->interpolation = frame->interpolation == Interpolation::NONE
-                                                               ? Interpolation::LINEAR
-                                                               : Interpolation::NONE;
-                                  },
-                                  SnapshotKind::FRAMES, {targetReference});
+                edit_push(EDIT_FRAME_INTERPOLATION, Document::FRAMES,
+                          [=](Anm2& anm2)
+                          {
+                            if (auto frame = anm2.element_get(targetReference))
+                              frame->interpolation = frame->interpolation == Interpolation::NONE ? Interpolation::LINEAR
+                                                                                                 : Interpolation::NONE;
+                          });
               }
 
               document.frameTime = frameTime;
@@ -653,68 +594,28 @@ namespace anm2ed::imgui
       if (!isDraggedFrameSnapshot && isDraggedFrameChanged)
       {
         isDraggedFrameSnapshot = true;
-        if (draggedFrameType == TRIGGER)
-          snapshot_command_push(EDIT_TRIGGER_AT_FRAME, SnapshotKind::TRACKS,
-                                {item_reference_from_frame_get(draggedFrameReference)});
-        else
-        {
-          std::set<Reference> draggedFrameReferences{};
-          if (draggedFrameStartDurations.empty())
-            draggedFrameReferences.insert(draggedFrameReference);
-          else
-            for (auto& frameDuration : draggedFrameStartDurations)
-              draggedFrameReferences.insert(frameDuration.reference);
-          snapshot_command_push(EDIT_FRAME_DURATION, SnapshotKind::FRAMES, draggedFrameReferences);
-        }
+        edit_begin_push(draggedFrameType == TRIGGER ? EDIT_TRIGGER_AT_FRAME : EDIT_FRAME_DURATION);
       }
 
       if (isDraggedFrameSnapshot)
       {
         auto targetReference = draggedFrameReference;
-        auto targetType = draggedFrameType;
-        auto targetIndex = draggedFrameIndex;
-        auto targetStartDuration = draggedFrameStartDuration;
-        auto targetStartDurations = draggedFrameStartDurations;
-        auto targetHoveredTime = hoveredTime;
-        auto targetDurationDelta = durationDelta;
-        auto isPlaybackClamp = settings.playbackIsClamp;
-        auto animationLength = animation ? animation->frameNum : FRAME_NUM_MAX;
-        command_push(
-            [=, this](Manager&, Document& document)
-            {
-              auto item = command_item_reference_get(document, targetReference);
-              auto frame = command_frame_get(document, targetReference);
-              if (!item || !frame) return;
-
-              if (targetType == TRIGGER)
-              {
-                frame->atFrame =
-                    glm::clamp(targetHoveredTime, 0, isPlaybackClamp ? animationLength - 1 : FRAME_NUM_MAX - 1);
-
-                for (auto [i, trigger] : std::views::enumerate(item->children))
-                {
-                  if ((int)i == targetIndex) continue;
-                  if (trigger.atFrame == frame->atFrame) frame->atFrame--;
-                }
-              }
-              else
-              {
-                if (targetStartDurations.empty())
-                {
-                  frame->duration =
-                      glm::clamp(targetStartDuration + targetDurationDelta, FRAME_DURATION_MIN, FRAME_DURATION_MAX);
-                  return;
-                }
-
-                for (auto frameDuration : targetStartDurations)
-                {
-                  auto targetFrame = command_frame_get(document, frameDuration.reference);
-                  if (!targetFrame) continue;
-                  targetFrame->duration =
-                      glm::clamp(frameDuration.duration + targetDurationDelta, FRAME_DURATION_MIN, FRAME_DURATION_MAX);
-                }
-              }
-            });
+        if (draggedFrameType == TRIGGER)
+        {
+          auto atFrame = glm::clamp(
+              hoveredTime, 0, settings.playbackIsClamp && animation ? animation->frameNum - 1 : FRAME_NUM_MAX - 1);
+          command_push([=](Manager&, Document& document)
+                       { edit::trigger_at_frame_set(document.anm2, targetReference, atFrame); });
+        }
+        else
+        {
+          std::map<Reference, int> durations{};
+          if (draggedFrameStartDurations.empty())
+            durations[targetReference] = draggedFrameStartDuration + durationDelta;
+          for (auto frameDuration : draggedFrameStartDurations)
+            durations[frameDuration.reference] = frameDuration.duration + durationDelta;
+          command_push([=](Manager&, Document& document) { edit::frame_durations_set(document.anm2, durations); });
+        }
       }
 
       if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
@@ -990,13 +891,13 @@ namespace anm2ed::imgui
         if (isLengthChanged && animation)
         {
           auto animationIndex = animationLengthEditIndex != -1 ? animationLengthEditIndex : currentAnimationIndex;
-          edit_command_push(EDIT_ANIMATION_LENGTH, Document::ANIMATIONS,
-                            [=, this](Manager&, Document& document)
-                            {
-                              auto animation = document.anm2.element_get(ElementType::ANIMATION, animationIndex);
-                              if (!animation) return;
-                              animation->frameNum = frameNum;
-                            });
+          edit_push(EDIT_ANIMATION_LENGTH, Document::ANIMATIONS,
+                    [=](Anm2& anm2)
+                    {
+                      auto animation = anm2.element_get(ElementType::ANIMATION, animationIndex);
+                      if (!animation) return;
+                      animation->frameNum = frameNum;
+                    });
         }
         if (ImGui::IsItemDeactivated()) animationLengthEditIndex = -1;
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ANIMATION_LENGTH));
@@ -1008,13 +909,13 @@ namespace anm2ed::imgui
         if (ImGui::Checkbox(localize.get(LABEL_LOOP), &isLoop) && animation)
         {
           auto animationIndex = reference.animationIndex;
-          edit_command_push(EDIT_LOOP, Document::ANIMATIONS,
-                            [=, this](Manager&, Document& document)
-                            {
-                              auto animation = document.anm2.element_get(ElementType::ANIMATION, animationIndex);
-                              if (!animation) return;
-                              animation->isLoop = isLoop;
-                            });
+          edit_push(EDIT_LOOP, Document::ANIMATIONS,
+                    [=](Anm2& anm2)
+                    {
+                      auto animation = anm2.element_get(ElementType::ANIMATION, animationIndex);
+                      if (!animation) return;
+                      animation->isLoop = isLoop;
+                    });
         }
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LOOP_ANIMATION));
       }
@@ -1027,17 +928,17 @@ namespace anm2ed::imgui
       ImGui::SetNextItemWidth(widgetSize.x);
       if (input_int_range(localize.get(LABEL_FPS), fps, FPS_MIN, FPS_MAX))
       {
-        edit_command_push(EDIT_FPS, Document::INFO,
-                          [=, this](Manager&, Document& document)
-                          {
-                            auto info = element_first_get(document.anm2.root, ElementType::INFO);
-                            if (!info)
-                            {
-                              document.anm2.root.children.push_back(element_make(ElementType::INFO));
-                              info = &document.anm2.root.children.back();
-                            }
-                            info->fps = fps;
-                          });
+        edit_push(EDIT_FPS, Document::INFO,
+                  [=](Anm2& anm2)
+                  {
+                    auto info = element_first_get(anm2.root, ElementType::INFO);
+                    if (!info)
+                    {
+                      anm2.root.children.push_back(element_make(ElementType::INFO));
+                      info = &anm2.root.children.back();
+                    }
+                    info->fps = fps;
+                  });
       }
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FPS));
 
@@ -1048,17 +949,17 @@ namespace anm2ed::imgui
       ImGui::SetNextItemWidth(widgetSize.x);
       if (input_text_string(localize.get(LABEL_AUTHOR), &createdBy))
       {
-        edit_command_push(EDIT_AUTHOR, Document::INFO,
-                          [=, this](Manager&, Document& document)
-                          {
-                            auto info = element_first_get(document.anm2.root, ElementType::INFO);
-                            if (!info)
-                            {
-                              document.anm2.root.children.push_back(element_make(ElementType::INFO));
-                              info = &document.anm2.root.children.back();
-                            }
-                            info->createdBy = createdBy;
-                          });
+        edit_push(EDIT_AUTHOR, Document::INFO,
+                  [=](Anm2& anm2)
+                  {
+                    auto info = element_first_get(anm2.root, ElementType::INFO);
+                    if (!info)
+                    {
+                      anm2.root.children.push_back(element_make(ElementType::INFO));
+                      info = &anm2.root.children.back();
+                    }
+                    info->createdBy = createdBy;
+                  });
       }
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_AUTHOR));
 

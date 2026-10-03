@@ -597,5 +597,6 @@ namespace anm2ed
   public:
     explicit UidIndex(const Anm2&);
     std::optional<Reference> reference_get(Handle, Reference) const;
+    std::optional<Reference> reference_get(std::uint64_t) const;
   };
 }

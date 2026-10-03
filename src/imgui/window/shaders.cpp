@@ -312,12 +312,14 @@ namespace anm2ed::imgui
                                 shader.id = element_child_next_id_get(*shaders, ElementType::SHADER);
                                 shader.name = localize.get(TEXT_NEW_SHADER);
 
-                                document.snapshots.anm2_push(localize.get(EDIT_ADD_SHADER));
-                                shaders->children.push_back(shader);
-                                document.shader.selection = {shader.id};
-                                document.shader.reference = shader.id;
-                                newElementId = shader.id;
-                                document.change(Document::SHADERS);
+                                document.edit_apply(EDIT_ADD_SHADER, Document::SHADERS,
+                                                    [&](Anm2&)
+                                                    {
+                                                      shaders->children.push_back(shader);
+                                                      document.shader.selection = {shader.id};
+                                                      document.shader.reference = shader.id;
+                                                      newElementId = shader.id;
+                                                    });
                               }});
       };
 
@@ -330,15 +332,18 @@ namespace anm2ed::imgui
                                 auto unused = document.anm2.element_unused(ElementType::SHADER);
                                 if (unused.empty()) return;
 
-                                document.snapshots.anm2_push(localize.get(EDIT_REMOVE_UNUSED_SHADERS));
-                                for (auto id : unused)
-                                {
-                                  element_child_id_erase(*shaders, ElementType::SHADER, id);
-                                  document.shader.selection.erase(id);
-                                  if (document.shader.reference == id) document.shader.reference = -1;
-                                  if (popupShaderId == id) propertiesPopup.close();
-                                }
-                                document.change(Document::SHADERS);
+                                document.edit_apply(EDIT_REMOVE_UNUSED_SHADERS, Document::SHADERS,
+                                                    [&](Anm2&)
+                                                    {
+                                                      for (auto id : unused)
+                                                      {
+                                                        element_child_id_erase(*shaders, ElementType::SHADER, id);
+                                                        document.shader.selection.erase(id);
+                                                        if (document.shader.reference == id)
+                                                          document.shader.reference = -1;
+                                                        if (popupShaderId == id) propertiesPopup.close();
+                                                      }
+                                                    });
                               }});
       };
 

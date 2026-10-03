@@ -142,15 +142,14 @@ namespace anm2ed::snapshots
     return element;
   }
 
-  bool element_path_get(const Element& element, const Element* target, std::vector<int>& path)
+  SnapshotAnm2Step anm2_step_make(const Anm2& before, const Anm2& after)
   {
-    for (size_t i = 0; i < element.children.size(); ++i)
-    {
-      path.push_back((int)i);
-      if (&element.children[i] == target || element_path_get(element.children[i], target, path)) return true;
-      path.pop_back();
-    }
-    return false;
+    SnapshotAnm2Step step{};
+    if (before.isValid != after.isValid) step.isValid = SnapshotStepValue<bool>{before.isValid, after.isValid};
+
+    std::vector<int> path{};
+    element_steps_build(step.elements, before.root, after.root, path);
+    return step;
   }
 
   void step_state_seed(SnapshotStep& step, const Snapshot& snapshot)
@@ -167,37 +166,6 @@ namespace anm2ed::snapshots
     step.anm2.elements.push_back({{}, snapshot.anm2.root, {}});
     step_state_seed(step, snapshot);
     return step;
-  }
-
-  SnapshotStep step_elements_make(const Snapshot& snapshot, const std::vector<const Element*>& elements)
-  {
-    SnapshotStep step{};
-    for (auto element : elements)
-    {
-      std::vector<int> path{};
-      if (!element || !element_path_get(snapshot.anm2.root, element, path)) continue;
-      if (std::ranges::any_of(step.anm2.elements, [&](const SnapshotElementStep& other) { return other.path == path; }))
-        continue;
-      step.anm2.elements.push_back({std::move(path), *element, {}});
-    }
-    return step;
-  }
-
-  SnapshotAnm2Step anm2_step_make(const Anm2& before, const Anm2& after)
-  {
-    SnapshotAnm2Step step{};
-    if (before.isValid != after.isValid) step.isValid = SnapshotStepValue<bool>{before.isValid, after.isValid};
-
-    std::vector<int> path{};
-    element_steps_build(step.elements, before.root, after.root, path);
-    return step;
-  }
-
-  bool is_anm2_step_seeded(const SnapshotStep& step)
-  {
-    return step.anm2.elements.size() == 1 && step.anm2.elements.front().path.empty() &&
-           step.anm2.elements.front().redo.type == ElementType::UNKNOWN &&
-           step.anm2.elements.front().redo.children.empty();
   }
 
   bool is_same_item(Reference left, Reference right)
@@ -389,49 +357,10 @@ namespace anm2ed
     pendingStep = step.is_empty() ? std::nullopt : std::optional<SnapshotStep>(std::move(step));
   }
 
-  void Snapshots::anm2_push(const std::string& message) { step_push(message, snapshots::step_anm2_make(current)); }
-
-  void Snapshots::tracks_push(const std::string& message, const std::set<Reference>& trackReferences)
-  {
-    std::vector<const Element*> tracks{};
-    for (auto trackReference : trackReferences)
-    {
-      trackReference.frameIndex = -1;
-      tracks.push_back(current.anm2.element_get(trackReference));
-    }
-    auto step = snapshots::step_elements_make(current, tracks);
-    snapshots::step_state_seed(step, current);
-    step_push(message, std::move(step));
-  }
-
-  void Snapshots::frames_push(const std::string& message, const std::set<Reference>& frameReferences)
-  {
-    std::vector<const Element*> frames{};
-    for (auto frameReference : frameReferences)
-      frames.push_back(current.anm2.element_get(frameReference));
-    step_push(message, snapshots::step_elements_make(current, frames));
-  }
-
-  void Snapshots::regions_push(const std::string& message, int spritesheetId, const std::set<int>& regionIds)
-  {
-    std::vector<const Element*> regions{};
-    if (auto spritesheet = current.anm2.element_get(ElementType::SPRITESHEET, spritesheetId))
-      for (auto regionId : regionIds)
-        regions.push_back(child_id_get(*spritesheet, ElementType::REGION, regionId));
-    step_push(message, snapshots::step_elements_make(current, regions));
-  }
-
-  void Snapshots::textures_push(const std::string& message)
-  {
-    SnapshotStep step{};
-    step.textures = SnapshotStepValue<SnapshotTextureMap>{current.textures, {}};
-    step_push(message, std::move(step));
-  }
-
-  void Snapshots::anm2_textures_push(const std::string& message)
+  void Snapshots::push(const std::string& message, bool isTextures)
   {
     auto step = snapshots::step_anm2_make(current);
-    step.textures = SnapshotStepValue<SnapshotTextureMap>{current.textures, {}};
+    if (isTextures) step.textures = SnapshotStepValue<SnapshotTextureMap>{current.textures, {}};
     step_push(message, std::move(step));
   }
 
@@ -444,13 +373,10 @@ namespace anm2ed
     auto step = std::move(*pendingStep);
     pendingStep.reset();
 
-    if (snapshots::is_anm2_step_seeded(step))
-    {
-      Anm2 before{};
-      before.isValid = step.anm2.isValid ? step.anm2.isValid->undo : snapshot.anm2.isValid;
-      before.root = std::move(step.anm2.elements.front().undo);
-      step.anm2 = snapshots::anm2_step_make(before, snapshot.anm2);
-    }
+    Anm2 before{};
+    before.isValid = step.anm2.isValid ? step.anm2.isValid->undo : snapshot.anm2.isValid;
+    before.root = std::move(step.anm2.elements.front().undo);
+    step.anm2 = snapshots::anm2_step_make(before, snapshot.anm2);
 
     if (step.anm2.isValid)
     {
