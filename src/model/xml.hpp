@@ -16,7 +16,6 @@ namespace anm2ed::model
   std::string model_to_string(const Model&, Options = {});
   std::string model_serialize(const Model&, Flags);
   std::uint64_t model_hash(const Model&);
-  bool is_special_interpolated_frames(const Model&);
 
   std::string frame_to_string(const Frame&, ItemType);
   std::string animation_to_string(const Animation&, int = -1);

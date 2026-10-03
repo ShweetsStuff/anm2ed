@@ -70,7 +70,6 @@ namespace anm2ed::edit
   Uids frames_move(model::Model&, const std::set<Reference>&, Reference, int);
   Uids frame_durations_set(model::Model&, const std::map<Reference, int>&);
   Uids trigger_at_frame_set(model::Model&, Reference, int);
-  Uids triggers_sort(model::Model&, Reference);
   Uids frames_paste(model::Model&, Reference, const std::set<Reference>&, const std::string&, int, std::string*);
   Uids root_bake_into(model::Model&, const std::set<Reference>&, const std::set<Reference>&, RootBakeOptions);
 

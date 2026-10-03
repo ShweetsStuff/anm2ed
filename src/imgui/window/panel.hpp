@@ -16,6 +16,7 @@
 #include "util/imgui/multiselect.hpp"
 #include "util/imgui/popup.hpp"
 #include "util/imgui/selectable.hpp"
+#include "wizard/change_all_frame_properties.hpp"
 
 // Panels are plain functions: each draws from the document and its selection, and queues edits as commands.
 namespace anm2ed::imgui
@@ -132,6 +133,15 @@ namespace anm2ed::imgui
     int mergeReference{-1};
   };
 
+  struct FramePropertiesPanel
+  {
+    wizard::ChangeAllFrameProperties changeAllFrameProperties{};
+    bool isBatchMode{};
+  };
+
+  class Taskbar;
+  class Documents;
+
   void animations_update(Panel&, AnimationsPanel&);
   void layers_update(Panel&);
   void nulls_update(Panel&);
@@ -139,6 +149,10 @@ namespace anm2ed::imgui
   void sounds_update(Panel&);
   void spritesheets_update(Panel&, SpritesheetsPanel&);
   void regions_update(Panel&, RegionsPanel&);
+  void frame_properties_update(Manager&, Settings&, FramePropertiesPanel&);
+  void onionskin_update(Manager&, Settings&);
+  void tools_update(Manager&, Settings&, Resources&, PopupHelper&);
+  void welcome_update(Manager&, Resources&, Dialog&, Taskbar&, Documents&);
 
   template <class Items> std::vector<int> item_ids_get(const Items& items)
   {

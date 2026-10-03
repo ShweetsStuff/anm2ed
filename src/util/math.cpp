@@ -12,8 +12,6 @@ namespace anm2ed::util::math
   constexpr auto FLOAT_FORMAT_EPSILON = 1e-7f;
   constexpr float FLOAT_FORMAT_POW10[] = {1.f, 10.f, 100.f, 1000.f, 10000.f, 100000.f, 1000000.f, 10000000.f};
 
-  float round_nearest_multiple(float value, float multiple) { return (roundf((value) / (multiple)) * (multiple)); }
-
   int float_decimals_needed(float value)
   {
     for (int decimalCount = 0; decimalCount <= FLOAT_FORMAT_MAX_DECIMALS; ++decimalCount)

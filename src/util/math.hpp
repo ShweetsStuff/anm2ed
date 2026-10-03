@@ -19,8 +19,6 @@ namespace anm2ed::util::math
             1.0f, 1.0f, uvMax.x, uvMax.y, 0.0f, 1.0f, uvMin.x, uvMax.y};
   }
 
-  float round_nearest_multiple(float, float);
-
   int float_decimals_needed(float);
 
   const char* float_format_get(float);

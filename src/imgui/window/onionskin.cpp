@@ -1,11 +1,11 @@
-#include "onionskin.hpp"
+#include "panel.hpp"
 
 #include <glm/gtc/type_ptr.hpp>
 
 #include "strings.hpp"
 #include "util/imgui/input.hpp"
+#include "util/imgui/layout.hpp"
 #include "util/imgui/shortcut.hpp"
-#include "util/imgui/tooltip.hpp"
 
 using namespace anm2ed::types;
 using namespace glm;
@@ -14,7 +14,7 @@ namespace anm2ed::imgui
 {
   constexpr auto FRAMES_MAX = 100;
 
-  void Onionskin::update(Manager& manager, Settings& settings)
+  void onionskin_update(Manager& manager, Settings& settings)
   {
     auto& isEnabled = settings.onionskinIsEnabled;
     auto& beforeCount = settings.onionskinBeforeCount;

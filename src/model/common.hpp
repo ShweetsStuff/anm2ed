@@ -7,8 +7,6 @@
 
 #include <glm/glm.hpp>
 
-#include "icon.hpp"
-#include "strings.hpp"
 #include "types.hpp"
 
 #define ANM2_ELEMENT_TYPES                                                                                             \
@@ -105,59 +103,6 @@ namespace anm2ed
 
   inline constexpr int APPEND_RIGHT = (int)SpritesheetMergeOrigin::APPEND_RIGHT;
   inline constexpr int APPEND_BOTTOM = (int)SpritesheetMergeOrigin::APPEND_BOTTOM;
-
-  inline const glm::vec4 ROOT_COLOR = glm::vec4(0.140f, 0.310f, 0.560f, 1.000f);
-  inline const glm::vec4 ROOT_COLOR_ACTIVE = glm::vec4(0.240f, 0.520f, 0.880f, 1.000f);
-  inline const glm::vec4 ROOT_COLOR_HOVERED = glm::vec4(0.320f, 0.640f, 1.000f, 1.000f);
-
-  inline const glm::vec4 LAYER_COLOR = glm::vec4(0.640f, 0.320f, 0.110f, 1.000f);
-  inline const glm::vec4 LAYER_COLOR_ACTIVE = glm::vec4(0.840f, 0.450f, 0.170f, 1.000f);
-  inline const glm::vec4 LAYER_COLOR_HOVERED = glm::vec4(0.960f, 0.560f, 0.240f, 1.000f);
-
-  inline const glm::vec4 NULL_COLOR = glm::vec4(0.140f, 0.430f, 0.200f, 1.000f);
-  inline const glm::vec4 NULL_COLOR_ACTIVE = glm::vec4(0.250f, 0.650f, 0.350f, 1.000f);
-  inline const glm::vec4 NULL_COLOR_HOVERED = glm::vec4(0.350f, 0.800f, 0.480f, 1.000f);
-
-  inline const glm::vec4 TRIGGER_COLOR = glm::vec4(0.620f, 0.150f, 0.260f, 1.000f);
-  inline const glm::vec4 TRIGGER_COLOR_ACTIVE = glm::vec4(0.820f, 0.250f, 0.380f, 1.000f);
-  inline const glm::vec4 TRIGGER_COLOR_HOVERED = glm::vec4(0.950f, 0.330f, 0.490f, 1.000f);
-
-#define ANM2_ITEM_TYPES                                                                                                \
-  X(NONE, STRING_UNDEFINED, resource::icon::NONE, glm::vec4(), glm::vec4(), glm::vec4())                               \
-  X(ROOT, BASIC_ROOT, resource::icon::ROOT, ROOT_COLOR, ROOT_COLOR_ACTIVE, ROOT_COLOR_HOVERED)                         \
-  X(LAYER, BASIC_LAYER_ANIMATION, resource::icon::LAYER, LAYER_COLOR, LAYER_COLOR_ACTIVE, LAYER_COLOR_HOVERED)         \
-  X(NULL_, BASIC_NULL_ANIMATION, resource::icon::NULL_, NULL_COLOR, NULL_COLOR_ACTIVE, NULL_COLOR_HOVERED)             \
-  X(TRIGGER, BASIC_TRIGGERS, resource::icon::TRIGGERS, TRIGGER_COLOR, TRIGGER_COLOR_ACTIVE, TRIGGER_COLOR_HOVERED)
-
-  constexpr StringType TYPE_STRINGS[] = {
-#define X(symbol, string, icon, color, colorActive, colorHovered) string,
-      ANM2_ITEM_TYPES
-#undef X
-  };
-
-  constexpr resource::icon::Type TYPE_ICONS[] = {
-#define X(symbol, string, icon, color, colorActive, colorHovered) icon,
-      ANM2_ITEM_TYPES
-#undef X
-  };
-
-  inline const glm::vec4 TYPE_COLOR[] = {
-#define X(symbol, string, icon, color, colorActive, colorHovered) color,
-      ANM2_ITEM_TYPES
-#undef X
-  };
-
-  inline const glm::vec4 TYPE_COLOR_ACTIVE[] = {
-#define X(symbol, string, icon, color, colorActive, colorHovered) colorActive,
-      ANM2_ITEM_TYPES
-#undef X
-  };
-
-  inline const glm::vec4 TYPE_COLOR_HOVERED[] = {
-#define X(symbol, string, icon, color, colorActive, colorHovered) colorHovered,
-      ANM2_ITEM_TYPES
-#undef X
-  };
 
   enum class RegionFrameMapping
   {

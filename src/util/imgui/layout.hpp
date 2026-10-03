@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include <imgui/imgui.h>
 
 namespace anm2ed::imgui
@@ -11,4 +13,5 @@ namespace anm2ed::imgui
   ImVec2 size_without_footer_get(int = 1);
   ImVec2 child_size_get(int = 1);
   ImVec2 icon_size_get();
+  void set_item_tooltip_shortcut(const char*, const std::string& = {});
 }

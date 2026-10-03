@@ -42,15 +42,6 @@ namespace anm2ed::imgui
     return edited;
   }
 
-  bool combo_negative_one_indexed(const std::string& label, int* index, std::vector<const char*>& strings)
-  {
-    *index += 1;
-    bool isActivated = ImGui::Combo(label.c_str(), index, strings.data(), (int)strings.size());
-    *index -= 1;
-
-    return isActivated;
-  }
-
   bool combo_id_mapped(const std::string& label, int* id, const std::vector<int>& ids,
                        const std::vector<std::string>& labelStrings)
   {
@@ -76,37 +67,6 @@ namespace anm2ed::imgui
     }
 
     return isActivated;
-  }
-
-  edit_state::Type drag_int_persistent(const char* label, int* value, float speed, int min, int max, const char* format,
-                                       ImGuiSliderFlags flags)
-  {
-    static bool isEditing{};
-    static int start{INT_MAX};
-    auto persistent = value ? *value : 0;
-
-    ImGui::DragInt(label, &persistent, speed, min, max, format, flags);
-    if (!value) return edit_state::NONE;
-    if (ImGui::IsItemActivated() && persistent != start)
-    {
-      isEditing = true;
-      start = *value;
-      return edit_state::START;
-    }
-    else if (ImGui::IsItemDeactivatedAfterEdit())
-    {
-      isEditing = false;
-      *value = persistent;
-      start = INT_MAX;
-      return edit_state::END;
-    }
-    else if (isEditing)
-    {
-      *value = persistent;
-      return edit_state::DURING;
-    }
-
-    return edit_state::NONE;
   }
 
   edit_state::Type drag_float_persistent(const char* label, float* value, float speed, float min, float max,

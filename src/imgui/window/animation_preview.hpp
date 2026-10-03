@@ -6,7 +6,7 @@
 #include "audio_stream.hpp"
 #include "canvas_view.hpp"
 #include "manager.hpp"
-#include "recorder.hpp"
+#include "render.hpp"
 #include "resources.hpp"
 #include "settings.hpp"
 
@@ -21,7 +21,7 @@ namespace anm2ed::imgui
     bool isMoveDragging{};
     glm::vec2 moveOffset{};
     glm::vec2 nullRectScaleAnchor{};
-    Recorder recorder{};
+    render::Recorder recorder{};
     glm::vec2 recordSize{};
     glm::vec2 recordPan{};
     float recordZoom{};

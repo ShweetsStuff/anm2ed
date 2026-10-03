@@ -16,6 +16,8 @@ namespace anm2ed::imgui
   constexpr int SPRITESHEET_CARD_LINES = 4;
   constexpr int MERGE_OPTIONS_ROWS = 6;
   constexpr int PADDING_MAX = 100;
+  // The merge region origin setting indexes this (top-left or center).
+  constexpr Origin MERGE_REGION_ORIGINS[] = {Origin::TOP_LEFT, Origin::CENTER};
 
   auto& spritesheets_get(model::Model& model) { return model.content.spritesheets; }
 
@@ -122,7 +124,7 @@ namespace anm2ed::imgui
     if (!ImGui::BeginPopupModal(popup.label(), &popup.isOpen, ImGuiWindowFlags_NoResize)) return popup.end();
 
     settings.mergeSpritesheetsRegionOrigin =
-        glm::clamp(settings.mergeSpritesheetsRegionOrigin, (int)origin::TOP_LEFT, (int)origin::ORIGIN_CENTER);
+        glm::clamp(settings.mergeSpritesheetsRegionOrigin, 0, (int)std::size(MERGE_REGION_ORIGINS) - 1);
     if (ImGui::BeginChild("##Merge Spritesheets Options", child_size_get(MERGE_OPTIONS_ROWS), ImGuiChildFlags_Borders))
     {
       ImGui::SeparatorText(localize.get(LABEL_REGION_PROPERTIES_ORIGIN));
@@ -156,7 +158,7 @@ namespace anm2ed::imgui
                    [ids = spritesheets.mergeIds, isAppendRight = settings.mergeSpritesheetsOrigin == APPEND_RIGHT,
                     isMakeRegions = settings.mergeSpritesheetsIsMakeRegions,
                     isMakePrimaryRegion = settings.mergeSpritesheetsIsMakePrimaryRegion,
-                    regionOrigin = (origin::Type)settings.mergeSpritesheetsRegionOrigin](Document& document)
+                    regionOrigin = MERGE_REGION_ORIGINS[settings.mergeSpritesheetsRegionOrigin]](Document& document)
                    {
                      spritesheet_textures_edit(
                          document, EDIT_MERGE_SPRITESHEETS,

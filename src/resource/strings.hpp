@@ -817,7 +817,7 @@ namespace anm2ed
   };
 }
 
-extern anm2ed::Localizer localize;
+inline anm2ed::Localizer localize;
 
 namespace anm2ed
 {

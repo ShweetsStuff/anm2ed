@@ -77,7 +77,6 @@ namespace anm2ed
   }
 
   void SnapshotStack::max_size_set(int value) { maxSize = std::max(value, 0); }
-  int SnapshotStack::max_size_get() { return maxSize; }
 
   // Starts an undoable edit: remembers the state before it (cheap; animations are shared).
   void Snapshots::push(const std::string& message)

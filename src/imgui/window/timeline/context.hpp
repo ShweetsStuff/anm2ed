@@ -21,7 +21,6 @@
 #include "util/imgui/input.hpp"
 #include "util/imgui/layout.hpp"
 #include "util/imgui/shortcut.hpp"
-#include "util/imgui/tooltip.hpp"
 
 #include "model/frames.hpp"
 #include "vector.hpp"

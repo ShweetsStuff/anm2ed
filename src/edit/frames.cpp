@@ -216,12 +216,6 @@ namespace anm2ed::edit
     return {};
   }
 
-  Uids triggers_sort(Model& model, Reference reference)
-  {
-    if (auto track = model.track_edit(reference)) frames_sort_by_at_frame(*track);
-    return {};
-  }
-
   // Pastes clipboard frames after the track's selected frames (or its current frame); triggers go at `time`, stepping
   // past occupied frames. Frames lose regions that do not exist on the target layer.
   Uids frames_paste(Model& model, Reference reference, const std::set<Reference>& selection, const std::string& text,

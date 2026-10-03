@@ -1,13 +1,13 @@
 
-#include "tools.hpp"
+#include "panel.hpp"
 
 #include <glm/gtc/type_ptr.hpp>
 
 #include "strings.hpp"
 #include "tool.hpp"
 #include "types.hpp"
+#include "util/imgui/layout.hpp"
 #include "util/imgui/shortcut.hpp"
-#include "util/imgui/tooltip.hpp"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::types;
@@ -15,7 +15,7 @@ using namespace glm;
 
 namespace anm2ed::imgui
 {
-  void Tools::update(Manager& manager, Settings& settings, Resources& resources)
+  void tools_update(Manager& manager, Settings& settings, Resources& resources, PopupHelper& colorEditPopup)
   {
     auto& document = *manager.get();
 
@@ -66,8 +66,6 @@ namespace anm2ed::imgui
           if (ImGui::ColorButton(labelText, to_imvec4(settings.toolColor), ImGuiColorEditFlags_NoTooltip,
                                  to_imvec2(size)))
             tool_use((tool::Type)i);
-
-          colorEditPosition = ImGui::GetCursorScreenPos();
         }
         else
         {

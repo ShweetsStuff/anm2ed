@@ -1,5 +1,7 @@
 #include "layout.hpp"
 
+#include "strings.hpp"
+
 namespace anm2ed::imgui
 {
   float row_widget_width_get(int count, float width)
@@ -34,5 +36,10 @@ namespace anm2ed::imgui
   ImVec2 icon_size_get()
   {
     return ImVec2(ImGui::GetTextLineHeightWithSpacing(), ImGui::GetTextLineHeightWithSpacing());
+  }
+
+  void set_item_tooltip_shortcut(const char* tooltip, const std::string& shortcut)
+  {
+    ImGui::SetItemTooltip("%s", localize_format(FORMAT_TOOLTIP_SHORTCUT, tooltip, shortcut).c_str());
   }
 }

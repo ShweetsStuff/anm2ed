@@ -18,9 +18,5 @@ namespace anm2ed
     bool isFirstCallbackCaptured{};
 
     AudioStream(MIX_Mixer*);
-    void capture_begin(MIX_Mixer*);
-    void capture_end(MIX_Mixer*);
-    double callback_latency_seconds_get() const;
-    double capture_start_delay_seconds_get() const;
   };
 }

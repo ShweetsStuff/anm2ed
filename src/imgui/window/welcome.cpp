@@ -1,4 +1,6 @@
-#include "welcome.hpp"
+#include "documents.hpp"
+#include "panel.hpp"
+#include "taskbar.hpp"
 
 #include <format>
 #include <ranges>
@@ -13,7 +15,7 @@ using namespace anm2ed::resource;
 
 namespace anm2ed::imgui
 {
-  void Welcome::update(Manager& manager, Resources& resources, Dialog& dialog, Taskbar& taskbar, Documents& documents)
+  void welcome_update(Manager& manager, Resources& resources, Dialog& dialog, Taskbar& taskbar, Documents& documents)
   {
     auto viewport = ImGui::GetMainViewport();
     auto windowHeight = viewport->Size.y - taskbar.height - documents.height;

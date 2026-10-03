@@ -492,7 +492,7 @@ namespace anm2ed
   }
 
   bool Document::spritesheets_merge(const std::set<int>& ids, bool isAppendRight, bool isMakeRegions,
-                                    bool isMakePrimaryRegion, origin::Type regionOrigin)
+                                    bool isMakePrimaryRegion, Origin origin)
   {
     if (ids.size() < 2) return false;
     for (auto id : ids)
@@ -501,7 +501,6 @@ namespace anm2ed
 
     auto baseId = *ids.begin();
     auto base = model::item_get(model.content.spritesheets, baseId);
-    auto origin = regionOrigin == origin::ORIGIN_CENTER ? Origin::CENTER : Origin::TOP_LEFT;
     auto mergedTexture = *texture_get(baseId);
     std::unordered_map<int, std::unordered_map<int, int>> regionIdMap{};
 
@@ -579,13 +578,6 @@ namespace anm2ed
     hash = saveHash;
     lastAutosaveTime = 0.0f;
     isForceDirty = false;
-  }
-
-  void Document::spritesheet_hashes_reset()
-  {
-    spritesheetHashes.clear();
-    spritesheetSaveHashes.clear();
-    spritesheet_hashes_sync();
   }
 
   void Document::spritesheet_hashes_sync()
@@ -918,13 +910,6 @@ namespace anm2ed
       result.push_back(itemReference);
     }
     return result;
-  }
-
-  const model::Frame* Document::frame_get() const { return model.frame_get(reference_get()); }
-  const model::Track* Document::item_get() const { return model.track_get(reference_get()); }
-  const model::Spritesheet* Document::spritesheet_get() const
-  {
-    return model::item_get(model.content.spritesheets, focused_id_get(SelectionKind::SPRITESHEETS));
   }
 
   void Document::spritesheets_add(const std::vector<std::filesystem::path>& paths)

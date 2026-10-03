@@ -6,7 +6,6 @@
 #include <glm/glm.hpp>
 
 #include "model/common.hpp"
-#include "origin.hpp"
 #include "render.hpp"
 #include "strings.hpp"
 #include "types.hpp"
@@ -164,7 +163,7 @@ namespace anm2ed
   X(MERGE_SPRITESHEETS_ORIGIN, mergeSpritesheetsOrigin, STRING_UNDEFINED, INT, APPEND_RIGHT)                           \
   X(MERGE_SPRITESHEETS_IS_MAKE_REGIONS, mergeSpritesheetsIsMakeRegions, STRING_UNDEFINED, BOOL, true)                  \
   X(MERGE_SPRITESHEETS_IS_MAKE_PRIMARY_REGION, mergeSpritesheetsIsMakePrimaryRegion, STRING_UNDEFINED, BOOL, true)     \
-  X(MERGE_SPRITESHEETS_REGION_ORIGIN, mergeSpritesheetsRegionOrigin, STRING_UNDEFINED, INT, origin::TOP_LEFT)          \
+  X(MERGE_SPRITESHEETS_REGION_ORIGIN, mergeSpritesheetsRegionOrigin, STRING_UNDEFINED, INT, 0)                         \
   X(PACK_PADDING, packPadding, STRING_UNDEFINED, INT, 1)                                                               \
   X(EXPORT_REGION_PATH, exportRegionPath, STRING_UNDEFINED, PATH, "./region.png")                                      \
   X(EXPORT_REGION_IS_MAKE_SPRITESHEET, isExportRegionMakeSpritesheet, STRING_UNDEFINED, BOOL, true)                    \

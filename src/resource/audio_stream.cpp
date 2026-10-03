@@ -23,35 +23,4 @@ namespace anm2ed
 
   AudioStream::AudioStream(MIX_Mixer* mixer) { MIX_GetMixerFormat(mixer, &spec); }
 
-  void AudioStream::capture_begin(MIX_Mixer* mixer)
-  {
-    stream.clear();
-    callbackSamples = 0;
-    captureStartCounter = SDL_GetPerformanceCounter();
-    firstCallbackCounter = 0;
-    isFirstCallbackCaptured = false;
-    MIX_SetPostMixCallback(mixer, callback, this);
-  }
-
-  void AudioStream::capture_end(MIX_Mixer* mixer)
-  {
-    MIX_SetPostMixCallback(mixer, nullptr, this);
-    stream.clear();
-  }
-
-  double AudioStream::callback_latency_seconds_get() const
-  {
-    auto freq = std::max(spec.freq, 1);
-    auto channels = std::max(spec.channels, 1);
-    auto framesPerCallback = (double)callbackSamples / (double)channels;
-    return framesPerCallback / (double)freq;
-  }
-
-  double AudioStream::capture_start_delay_seconds_get() const
-  {
-    if (!isFirstCallbackCaptured || captureStartCounter == 0 || firstCallbackCounter < captureStartCounter) return 0.0;
-    auto frequency = SDL_GetPerformanceFrequency();
-    if (frequency == 0) return 0.0;
-    return (double)(firstCallbackCounter - captureStartCounter) / (double)frequency;
-  }
 }

@@ -28,7 +28,7 @@
 #include "util/imgui/input.hpp"
 #include "util/imgui/layout.hpp"
 #include "util/imgui/shortcut.hpp"
-#include "util/imgui/tooltip.hpp"
+#include "window/timeline/timeline.hpp"
 
 using namespace anm2ed::types;
 using namespace anm2ed::util;
@@ -38,7 +38,7 @@ using namespace glm;
 
 namespace anm2ed::imgui
 {
-  constexpr auto NULL_COLOR = vec4(0.0f, 0.0f, 1.0f, 0.90f);
+  constexpr auto NULL_RECT_COLOR = vec4(0.0f, 0.0f, 1.0f, 0.90f);
   constexpr auto SELECTED_LAYER_BORDER_COLOR = vec4(1.0f, 0.1059f, 0.5882f, 1.0f);
   constexpr auto TARGET_SIZE = vec2(32, 32);
   constexpr auto POINT_SIZE = vec2(4, 4);
@@ -209,19 +209,20 @@ namespace anm2ed::imgui
                                          const model::Animation* animation)
   {
     auto animationFps = std::max(document.model.info.fps, 1);
-    RecorderOptions options{.type = (render::Type)settings.renderType,
-                            .path = settings.renderPath,
-                            .format = settings.renderFormat,
-                            .ffmpegPath = settings.renderFFmpegPath,
-                            .start = manager.recordingStart,
-                            .end = manager.recordingEnd,
-                            .animationFps = animationFps,
-                            .fps = render::fps_get(settings.renderFpsMode, animationFps, settings.playbackTickRate),
-                            .rows = settings.renderRows,
-                            .columns = settings.renderColumns,
-                            .isSound = settings.timelineIsSound,
-                            .isIsolated = settings.renderIsUseIsolatedAnimation,
-                            .isBounded = settings.renderIsUseAnimationBounds};
+    render::RecorderOptions options{
+        .type = (render::Type)settings.renderType,
+        .path = settings.renderPath,
+        .format = settings.renderFormat,
+        .ffmpegPath = settings.renderFFmpegPath,
+        .start = manager.recordingStart,
+        .end = manager.recordingEnd,
+        .animationFps = animationFps,
+        .fps = render::fps_get(settings.renderFpsMode, animationFps, settings.playbackTickRate),
+        .rows = settings.renderRows,
+        .columns = settings.renderColumns,
+        .isSound = settings.timelineIsSound,
+        .isIsolated = settings.renderIsUseIsolatedAnimation,
+        .isBounded = settings.renderIsUseAnimationBounds};
     if (options.isBounded)
     {
       recordSize = size;
@@ -573,7 +574,7 @@ namespace anm2ed::imgui
           {
             auto isShowRect = model::item_get(sampleModel.content.nulls, draw.id)->isShowRect;
             auto isSelected = isActiveDocument && draw.id == reference.itemID && referenceItemType == ItemType::NULL_;
-            auto color = isOnion ? onionColor : isSelected ? color::RED : NULL_COLOR;
+            auto color = isOnion ? onionColor : isSelected ? color::RED : NULL_RECT_COLOR;
             auto markerSize = isShowRect ? POINT_SIZE : TARGET_SIZE;
             texture_render(shaderTexture, isShowRect ? resources.icon_id_get(icon::POINT) : targetIcon,
                            transform * marker_model_get(markerSize), color);

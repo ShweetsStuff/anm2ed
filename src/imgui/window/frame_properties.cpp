@@ -1,4 +1,4 @@
-#include "frame_properties.hpp"
+#include "panel.hpp"
 
 #include <limits>
 #include <ranges>
@@ -45,8 +45,9 @@ namespace anm2ed::imgui
   constexpr FlipButton FLIP_BUTTONS[] = {{LABEL_FLIP_X, EDIT_FRAME_FLIP_X, TOOLTIP_FLIP_X},
                                          {LABEL_FLIP_Y, EDIT_FRAME_FLIP_Y, TOOLTIP_FLIP_Y}};
 
-  void FrameProperties::update(Manager& manager, Settings& settings)
+  void frame_properties_update(Manager& manager, Settings& settings, FramePropertiesPanel& panel)
   {
+    auto& [changeAllFrameProperties, isBatchMode] = panel;
     auto& document = *manager.get();
     auto frameSelectionCount = document.frame_references_get(Document::FrameReferenceFallback::NONE).size();
     if (frameSelectionCount == 0 && document.reference_get().frameIndex >= 0) frameSelectionCount = 1;

@@ -17,7 +17,6 @@
 
 #include <glm/glm.hpp>
 
-#include "origin.hpp"
 #include "shader.hpp"
 #include "types.hpp"
 
@@ -112,7 +111,7 @@ namespace anm2ed
     resource::Shader* shader_get(int);
     bool regions_trim(int, const std::set<int>&);
     bool spritesheet_pack(int, int);
-    bool spritesheets_merge(const std::set<int>&, bool, bool, bool, origin::Type);
+    bool spritesheets_merge(const std::set<int>&, bool, bool, bool, Origin);
     void hash_set();
     void clean();
     void change();
@@ -145,7 +144,6 @@ namespace anm2ed
     void spritesheet_hash_set_saved(int);
     bool spritesheet_is_dirty(int);
     bool spritesheet_any_dirty();
-    void spritesheet_hashes_reset();
     void spritesheet_hashes_sync();
     Reference reference_get() const;
     void reference_set(Reference);
@@ -172,10 +170,6 @@ namespace anm2ed
     void frame_references_set(std::set<Reference>);
     void frame_references_clear();
     std::vector<Reference> layer_references_get();
-
-    const model::Frame* frame_get() const;
-    const model::Track* item_get() const;
-    const model::Spritesheet* spritesheet_get() const;
 
     void spritesheets_add(const std::vector<std::filesystem::path>&);
     void sounds_add(const std::vector<std::filesystem::path>&);

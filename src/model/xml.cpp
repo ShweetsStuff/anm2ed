@@ -13,7 +13,6 @@
 #include "math.hpp"
 #include "path.hpp"
 #include "time.hpp"
-#include "util/xml.hpp"
 
 using namespace tinyxml2;
 using namespace anm2ed::util;
@@ -1337,7 +1336,9 @@ namespace anm2ed::model
   {
     XMLDocument document{};
     document.InsertEndChild(element_write(document, node));
-    return xml::document_to_string(document);
+    XMLPrinter printer{};
+    document.Print(&printer);
+    return printer.CStr();
   }
 
   void node_hash(std::uint64_t& hash, const XmlNode& node)
@@ -1428,23 +1429,6 @@ namespace anm2ed::model
     auto hash = HASH_OFFSET;
     node_hash(hash, model_write(model, SERIALIZE_ANM2ED_DEFAULT));
     return hash;
-  }
-
-  bool is_special_interpolated_frames(const Model& model)
-  {
-    for (auto [index, animation] : model.animations_get())
-    {
-      bool isSpecial{};
-      animation_tracks_each(*animation,
-                            [&](const Track& track)
-                            {
-                              for (const auto& frame : track.frames)
-                                isSpecial |=
-                                    track.type != ItemType::TRIGGER && is_special_interpolation(frame.interpolation);
-                            });
-      if (isSpecial) return true;
-    }
-    return false;
   }
 
   std::string frame_to_string(const Frame& frame, ItemType type)

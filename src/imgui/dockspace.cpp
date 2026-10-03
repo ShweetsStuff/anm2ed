@@ -51,10 +51,10 @@ namespace anm2ed::imgui
             regions_update(panel, regions);
           }
           if (settings.windowIsEvents) panel_update(events, events_update);
-          if (settings.windowIsFrameProperties) frameProperties.update(manager, settings);
+          if (settings.windowIsFrameProperties) frame_properties_update(manager, settings, frameProperties);
           if (settings.windowIsLayers) panel_update(layers, layers_update);
           if (settings.windowIsNulls) panel_update(nulls, nulls_update);
-          if (settings.windowIsOnionskin) onionskin.update(manager, settings);
+          if (settings.windowIsOnionskin) onionskin_update(manager, settings);
           if (settings.windowIsShaders)
           {
             auto panel = panel_make(shaders.state);
@@ -68,13 +68,13 @@ namespace anm2ed::imgui
             spritesheets_update(panel, spritesheets);
           }
           if (settings.windowIsTimeline) timeline.update(manager, settings, resources, clipboard);
-          if (settings.windowIsTools) tools.update(manager, settings, resources);
+          if (settings.windowIsTools) tools_update(manager, settings, resources, toolsColorEditPopup);
           isCanvasFocused = (settings.windowIsAnimationPreview && animationPreview.is_focused_get()) ||
                             (settings.windowIsSpritesheetEditor && spritesheetEditor.is_focused_get());
         }
       }
       else
-        welcome.update(manager, resources, dialog, taskbar, documents);
+        welcome_update(manager, resources, dialog, taskbar, documents);
 
       autosaveRestore.update(manager);
     }

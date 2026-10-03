@@ -4,14 +4,10 @@
 #include "popup/autosave_restore.hpp"
 #include "taskbar.hpp"
 #include "window/animation_preview.hpp"
-#include "window/frame_properties.hpp"
-#include "window/onionskin.hpp"
 #include "window/panel.hpp"
 #include "window/shaders.hpp"
 #include "window/spritesheet_editor.hpp"
 #include "window/timeline/timeline.hpp"
-#include "window/tools.hpp"
-#include "window/welcome.hpp"
 
 namespace anm2ed::imgui
 {
@@ -22,17 +18,15 @@ namespace anm2ed::imgui
     AnimationsPanel animations{};
     RegionsPanel regions{};
     PanelState events{};
-    FrameProperties frameProperties;
+    FramePropertiesPanel frameProperties{};
     PanelState layers{};
     PanelState nulls{};
-    Onionskin onionskin;
     ShadersPanel shaders{};
     SpritesheetEditor spritesheetEditor;
     SpritesheetsPanel spritesheets{};
     PanelState sounds{};
     Timeline timeline;
-    Tools tools;
-    Welcome welcome;
+    PopupHelper toolsColorEditPopup{PopupHelper(LABEL_TOOLS_COLOR_EDIT_POPUP, POPUP_TO_CONTENT, POPUP_BY_ITEM)};
     AutosaveRestore autosaveRestore;
 
   public:

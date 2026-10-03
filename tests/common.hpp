@@ -8,9 +8,10 @@
 #include <fstream>
 #include <sstream>
 
+#include <tinyxml2/tinyxml2.h>
+
 #include "edit/edit.hpp"
 #include "model/xml.hpp"
-#include "util/xml.hpp"
 
 namespace anm2ed::test
 {
@@ -86,7 +87,9 @@ namespace anm2ed::test
     document.Parse(text.c_str());
     if (auto source = document.RootElement()->FirstChildElement("SourceDocument"))
       document.RootElement()->DeleteChild(source);
-    return util::xml::document_to_string(document);
+    tinyxml2::XMLPrinter printer{};
+    document.Print(&printer);
+    return printer.CStr();
   }
 
   // Save/reload properties every document must hold.

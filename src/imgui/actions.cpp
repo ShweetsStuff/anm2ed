@@ -2,8 +2,8 @@
 
 #include <utility>
 
+#include "util/imgui/layout.hpp"
 #include "util/imgui/shortcut.hpp"
-#include "util/imgui/tooltip.hpp"
 
 namespace anm2ed::imgui
 {
@@ -47,12 +47,12 @@ namespace anm2ed::imgui
 
   void actions_undo_redo_add(Actions& actions, Manager& manager, Document& document)
   {
-    actions.add(ACTION_UNDO, [&document]() { return document.is_able_to_undo(); },
-                [&manager]()
-                { manager.command_push({manager.selected, [](Manager&, Document& document) { document.undo(); }}); });
-    actions.add(ACTION_REDO, [&document]() { return document.is_able_to_redo(); },
-                [&manager]()
-                { manager.command_push({manager.selected, [](Manager&, Document& document) { document.redo(); }}); });
+    actions.add(
+        ACTION_UNDO, [&document]() { return document.is_able_to_undo(); }, [&manager]()
+        { manager.command_push({manager.selected, [](Manager&, Document& document) { document.undo(); }}); });
+    actions.add(
+        ACTION_REDO, [&document]() { return document.is_able_to_redo(); }, [&manager]()
+        { manager.command_push({manager.selected, [](Manager&, Document& document) { document.redo(); }}); });
   }
 
   void actions_menu_draw(Actions& actions, Settings& settings)

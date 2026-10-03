@@ -54,7 +54,6 @@ namespace anm2ed
     void trim_to_limit();
 
     static void max_size_set(int);
-    static int max_size_get();
 
   private:
     static int maxSize;

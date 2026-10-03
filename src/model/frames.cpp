@@ -203,24 +203,6 @@ namespace anm2ed::model
     }
   }
 
-  // Bakes every ease-in/ease-out frame (not linear ones) in every track into single-step frames.
-  void special_interpolated_frames_bake(Model& model, int interval, bool isRoundScale, bool isRoundRotation)
-  {
-    for (int i = 0; i < model.animations_count_get(); ++i)
-      animation_tracks_each(*model.animation_edit(i),
-                            [&](Track& track)
-                            {
-                              if (track.type == ItemType::TRIGGER) return;
-                              for (int index = (int)track.frames.size() - 1; index >= 0; --index)
-                              {
-                                auto interpolation = track.frames[index].interpolation;
-                                if (interpolation == Interpolation::NONE || interpolation == Interpolation::LINEAR)
-                                  continue;
-                                frame_bake(track, index, interval, isRoundScale, isRoundRotation);
-                              }
-                            });
-  }
-
   // Bounds of all visible layer frames over the animation's length, or -1 when nothing is drawn.
   glm::vec4 animation_rect(const Model& model, const Animation& animation, bool isRootTransform)
   {

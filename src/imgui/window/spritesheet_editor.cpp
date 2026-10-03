@@ -16,7 +16,6 @@
 #include "util/imgui/input.hpp"
 #include "util/imgui/layout.hpp"
 #include "util/imgui/shortcut.hpp"
-#include "util/imgui/tooltip.hpp"
 
 using namespace anm2ed::types;
 using namespace anm2ed::resource;
