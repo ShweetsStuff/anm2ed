@@ -25,7 +25,7 @@ namespace anm2ed::util::math
 
   const char* float_format_get(float);
 
-  const char* vec2_format_get(glm::vec2&);
+  const char* vec2_format_get(const glm::vec2&);
 
   glm::mat4 quad_model_get(glm::vec2 = {}, glm::vec2 = {}, glm::vec2 = {}, glm::vec2 = glm::vec2(1.0f), float = {},
                            glm::vec2 = {});

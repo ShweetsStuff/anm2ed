@@ -11,7 +11,6 @@ namespace anm2ed
     ALL
   };
 
-
   void frame_mix(Element& frame, const Element& next, float amount)
   {
     frame.rotation = glm::mix(frame.rotation, next.rotation, amount);
@@ -254,39 +253,16 @@ namespace anm2ed
   void frames_change(Element& track, FrameChange change, ItemType itemType, ChangeType changeType,
                      const std::set<int>& selection)
   {
-    const auto clamp_identity = [](auto value) { return value; };
-    const auto clamp_duration = [](int value) { return std::max(FRAME_DURATION_MIN, value); };
-
-    if (selection.empty()) return;
-
-    auto apply_scalar_with_clamp = [&](auto& target, const auto& optionalValue, auto clampFunc)
+    auto apply = [&](auto& target, const auto& optionalValue)
     {
       if (!optionalValue) return;
       auto value = *optionalValue;
-
-      switch (changeType)
-      {
-        case ChangeType::ADJUST:
-          target = clampFunc(value);
-          break;
-        case ChangeType::ADD:
-          target = clampFunc(target + value);
-          break;
-        case ChangeType::SUBTRACT:
-          target = clampFunc(target - value);
-          break;
-        case ChangeType::MULTIPLY:
-          target = clampFunc(target * value);
-          break;
-        case ChangeType::DIVIDE:
-          if (value == decltype(value){}) return;
-          target = clampFunc(target / value);
-          break;
-      }
+      if (changeType == ChangeType::ADJUST) target = value;
+      if (changeType == ChangeType::ADD) target += value;
+      if (changeType == ChangeType::SUBTRACT) target -= value;
+      if (changeType == ChangeType::MULTIPLY) target *= value;
+      if (changeType == ChangeType::DIVIDE && value != decltype(value){}) target /= value;
     };
-
-    auto apply_scalar = [&](auto& target, const auto& optionalValue)
-    { apply_scalar_with_clamp(target, optionalValue, clamp_identity); };
 
     for (auto index : selection)
     {
@@ -298,34 +274,14 @@ namespace anm2ed
       if (change.isFlipX) frame->scale.x = -frame->scale.x;
       if (change.isFlipY) frame->scale.y = -frame->scale.y;
 
-      apply_scalar(frame->rotation, change.rotation);
-      apply_scalar_with_clamp(frame->duration, change.duration, clamp_duration);
-
-      if (itemType == ItemType::LAYER)
-      {
-        apply_scalar(frame->crop.x, change.cropX);
-        apply_scalar(frame->crop.y, change.cropY);
-        apply_scalar(frame->pivot.x, change.pivotX);
-        apply_scalar(frame->pivot.y, change.pivotY);
-        apply_scalar(frame->size.x, change.sizeX);
-        apply_scalar(frame->size.y, change.sizeY);
-        if (change.regionId) frame->regionId = *change.regionId;
-        if (change.shaderId) frame->shaderId = *change.shaderId;
-      }
-
-      apply_scalar(frame->position.x, change.positionX);
-      apply_scalar(frame->position.y, change.positionY);
-      apply_scalar(frame->scale.x, change.scaleX);
-      apply_scalar(frame->scale.y, change.scaleY);
-      apply_scalar(frame->shear.x, change.shearX);
-      apply_scalar(frame->shear.y, change.shearY);
-      apply_scalar(frame->colorOffset.x, change.colorOffsetR);
-      apply_scalar(frame->colorOffset.y, change.colorOffsetG);
-      apply_scalar(frame->colorOffset.z, change.colorOffsetB);
-      apply_scalar(frame->tint.x, change.tintR);
-      apply_scalar(frame->tint.y, change.tintG);
-      apply_scalar(frame->tint.z, change.tintB);
-      apply_scalar(frame->tint.w, change.tintA);
+      apply(frame->duration, change.duration);
+      if (change.duration) frame->duration = std::max(FRAME_DURATION_MIN, frame->duration);
+      if (itemType == ItemType::LAYER && change.regionId) frame->regionId = *change.regionId;
+      if (itemType == ItemType::LAYER && change.shaderId) frame->shaderId = *change.shaderId;
+#define X(name, member, isLayerOnly, isColor, isEnabled, value)                                                        \
+  if (!isLayerOnly || itemType == ItemType::LAYER) apply(frame->member, change.name);
+      FRAME_CHANGE_SCALARS
+#undef X
     }
   }
 

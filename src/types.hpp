@@ -86,7 +86,8 @@ namespace anm2ed::types::edit
     NONE,
     START,
     DURING,
-    END
+    END,
+    COMPLETE
   };
 }
 

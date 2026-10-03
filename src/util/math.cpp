@@ -33,7 +33,7 @@ namespace anm2ed::util::math
     return formatString.c_str();
   }
 
-  const char* vec2_format_get(vec2& value)
+  const char* vec2_format_get(const vec2& value)
   {
     static std::string formatString{};
     int decimalCountX = float_decimals_needed(value.x);

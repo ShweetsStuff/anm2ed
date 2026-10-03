@@ -246,36 +246,44 @@ namespace anm2ed
     bool isExtendedFormat{};
   };
 
+#define FRAME_CHANGE_SCALARS                                                                                           \
+  X(cropX, crop.x, true, false, changeIsCropX, changeCrop.x)                                                           \
+  X(cropY, crop.y, true, false, changeIsCropY, changeCrop.y)                                                           \
+  X(sizeX, size.x, true, false, changeIsSizeX, changeSize.x)                                                           \
+  X(sizeY, size.y, true, false, changeIsSizeY, changeSize.y)                                                           \
+  X(pivotX, pivot.x, true, false, changeIsPivotX, changePivot.x)                                                       \
+  X(pivotY, pivot.y, true, false, changeIsPivotY, changePivot.y)                                                       \
+  X(positionX, position.x, false, false, changeIsPositionX, changePosition.x)                                          \
+  X(positionY, position.y, false, false, changeIsPositionY, changePosition.y)                                          \
+  X(scaleX, scale.x, false, false, changeIsScaleX, changeScale.x)                                                      \
+  X(scaleY, scale.y, false, false, changeIsScaleY, changeScale.y)                                                      \
+  X(shearX, shear.x, false, false, changeIsShearX, changeShear.x)                                                      \
+  X(shearY, shear.y, false, false, changeIsShearY, changeShear.y)                                                      \
+  X(rotation, rotation, false, false, changeIsRotation, changeRotation)                                                \
+  X(tintR, tint.r, false, true, changeIsTintR, changeTint.r)                                                           \
+  X(tintG, tint.g, false, true, changeIsTintG, changeTint.g)                                                           \
+  X(tintB, tint.b, false, true, changeIsTintB, changeTint.b)                                                           \
+  X(tintA, tint.a, false, true, changeIsTintA, changeTint.a)                                                           \
+  X(colorOffsetR, colorOffset.r, false, true, changeIsColorOffsetR, changeColorOffset.r)                               \
+  X(colorOffsetG, colorOffset.g, false, true, changeIsColorOffsetG, changeColorOffset.g)                               \
+  X(colorOffsetB, colorOffset.b, false, true, changeIsColorOffsetB, changeColorOffset.b)
+
   struct FrameChange
   {
+    std::optional<int> regionId{};
+#define X(name, member, isLayerOnly, isColor, isEnabled, value) std::optional<float> name{};
+    FRAME_CHANGE_SCALARS
+#undef X
+    std::optional<int> duration{};
+    std::optional<int> shaderId{};
     std::optional<bool> isVisible{};
     std::optional<Interpolation> interpolation{};
-    std::optional<int> shaderId{};
-    std::optional<float> rotation{};
-    std::optional<int> duration{};
-    std::optional<int> regionId{};
-    std::optional<float> pivotX{};
-    std::optional<float> pivotY{};
-    std::optional<float> cropX{};
-    std::optional<float> cropY{};
-    std::optional<float> positionX{};
-    std::optional<float> positionY{};
-    std::optional<float> sizeX{};
-    std::optional<float> sizeY{};
-    std::optional<float> scaleX{};
-    std::optional<float> scaleY{};
-    std::optional<float> shearX{};
-    std::optional<float> shearY{};
-    std::optional<float> colorOffsetR{};
-    std::optional<float> colorOffsetG{};
-    std::optional<float> colorOffsetB{};
-    std::optional<float> tintR{};
-    std::optional<float> tintG{};
-    std::optional<float> tintB{};
-    std::optional<float> tintA{};
     std::optional<bool> isFlipX{};
     std::optional<bool> isFlipY{};
   };
+
+  inline constexpr StringType INTERPOLATION_LABELS[] = {BASIC_NONE, BASIC_LINEAR, BASIC_EASE_IN, BASIC_EASE_OUT,
+                                                        BASIC_EASE_IN_OUT};
 
   struct Element
   {

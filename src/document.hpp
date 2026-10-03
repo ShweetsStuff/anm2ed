@@ -137,6 +137,7 @@ namespace anm2ed
     void frame_references_clear();
     std::vector<Reference> layer_references_get();
 
+    Storage* layer_regions_get(int);
     Element* frame_get();
     Element* item_get();
     Element* spritesheet_get();

@@ -955,6 +955,13 @@ namespace anm2ed
     return result;
   }
 
+  Storage* Document::layer_regions_get(int layerId)
+  {
+    auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, layerId);
+    auto regions = layer ? regionBySpritesheet.find(layer->spritesheetId) : regionBySpritesheet.end();
+    return regions == regionBySpritesheet.end() ? nullptr : &regions->second;
+  }
+
   Element* Document::frame_get() { return anm2.element_get(reference); }
   Element* Document::item_get() { return anm2.element_get(document::item_reference_get(reference)); }
   Element* Document::animation_get() { return anm2.element_get(ElementType::ANIMATION, reference.animationIndex); }
