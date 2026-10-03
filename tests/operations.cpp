@@ -243,3 +243,49 @@ TEST_CASE("edit layer operations")
     operation_check(entry.name, anm2);
   }
 }
+
+TEST_CASE("spritesheet pixel edits")
+{
+  auto image_make = [](glm::ivec2 size, std::vector<glm::ivec2> opaque = {})
+  {
+    std::vector<uint8_t> pixels((std::size_t)size.x * size.y * resource::image::CHANNELS, 0);
+    for (auto point : opaque)
+      std::fill_n(pixels.begin() + ((std::size_t)point.y * size.x + point.x) * resource::image::CHANNELS,
+                  resource::image::CHANNELS, 255);
+    return resource::Image(pixels.data(), size);
+  };
+  auto sheet = image_make({64, 64}, {{4, 6}});
+  auto other = image_make({16, 16});
+
+  SUBCASE("regions_trim shrinks to content and keeps the custom pivot in place")
+  {
+    auto model = fixture_load("05_regions.anm2");
+    CHECK(edit::regions_trim(model, 0, {0, 1}, sheet));
+    auto region = model::item_get(model.content.spritesheets[0].regions, 0);
+    CHECK(region->crop == glm::vec2(4, 6));
+    CHECK(region->size == glm::vec2(1, 1));
+    CHECK(region->pivot == glm::vec2(-1, -1));
+  }
+
+  SUBCASE("spritesheet_pack returns an image holding every region")
+  {
+    auto model = fixture_load("05_regions.anm2");
+    auto packed = edit::spritesheet_pack(model, 0, sheet, 1);
+    REQUIRE(packed);
+    CHECK(packed->is_valid());
+    for (auto& region : model.content.spritesheets[0].regions)
+      CHECK(glm::all(glm::lessThanEqual(glm::ivec2(region.crop + region.size), packed->size)));
+  }
+
+  SUBCASE("spritesheets_merge appends images and moves layers onto the base sheet")
+  {
+    auto model = fixture_load("05_regions.anm2");
+    auto image_get = [&](int id) { return id == 0 ? &sheet : &other; };
+    auto merged = edit::spritesheets_merge(model, {0, 1}, image_get, true, true, false, Origin::TOP_LEFT);
+    REQUIRE(merged);
+    CHECK(merged->size == glm::ivec2(80, 64));
+    CHECK(model.content.spritesheets.size() == 1);
+    CHECK(model::item_get(model.content.layers, 1)->spritesheetId == 0);
+    operation_check("spritesheets_merge", model);
+  }
+}

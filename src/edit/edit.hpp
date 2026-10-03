@@ -1,11 +1,14 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
 
+#include "image.hpp"
 #include "model/model.hpp"
 
 // Document edits as plain functions of the model. Each returns the uids of the elements it created or changed that
@@ -13,6 +16,7 @@
 namespace anm2ed::edit
 {
   using Uids = std::vector<std::uint64_t>;
+  using ImageGet = std::function<const resource::Image*(int)>;
 
   struct RowTarget
   {
@@ -98,5 +102,9 @@ namespace anm2ed::edit
   Uids regions_paste(model::Model&, int, const std::string&, int, std::string*);
   Uids animation_grid_generate(model::Model&, const std::vector<Reference>&, const GridOptions&);
   Uids frames_change_apply(model::Model&, const ChangeTargets&, FrameChange, ChangeType);
+  bool regions_trim(model::Model&, int, const std::set<int>&, const resource::Image&);
+  std::optional<resource::Image> spritesheet_pack(model::Model&, int, const resource::Image&, int);
+  std::optional<resource::Image> spritesheets_merge(model::Model&, const std::set<int>&, const ImageGet&, bool, bool,
+                                                    bool, Origin);
   bool file_merge(model::Model&, const std::filesystem::path&, const std::filesystem::path&, FileMergePreset);
 }
