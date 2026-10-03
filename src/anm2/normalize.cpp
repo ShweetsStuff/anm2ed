@@ -15,23 +15,41 @@ namespace anm2ed
                  });
   }
 
-  void shader_ids_repair(Element& root)
+  // Gives every child of a type a unique, non-negative id; the first holder of a duplicated id keeps it.
+  void child_ids_repair(Element& container, ElementType type)
   {
-    auto shaders = content_container_get(root, ElementType::SHADERS);
-    if (!shaders) return;
-
     std::set<int> usedIds{};
-    int nextId{};
-    for (auto& shader : shaders->children)
-    {
-      if (shader.type != ElementType::SHADER) continue;
+    for (const auto& child : container.children)
+      if (child.type == type && child.id >= 0) usedIds.insert(child.id);
 
+    std::set<int> keptIds{};
+    int nextId{};
+    for (auto& child : container.children)
+    {
+      if (child.type != type) continue;
+      if (child.id >= 0 && keptIds.insert(child.id).second) continue;
       while (usedIds.contains(nextId))
         ++nextId;
-      if (shader.id < 0 || usedIds.contains(shader.id)) shader.id = nextId++;
-      usedIds.insert(shader.id);
-      if (shader.name.empty()) shader.name = SHADER_NAME_DEFAULT;
+      child.id = nextId;
+      usedIds.insert(nextId);
+      keptIds.insert(nextId);
     }
+  }
+
+  void content_ids_repair(Element& root)
+  {
+    for (auto type : {ElementType::SPRITESHEET, ElementType::SHADER, ElementType::LAYER_ELEMENT,
+                      ElementType::NULL_ELEMENT, ElementType::EVENT_ELEMENT, ElementType::SOUND_ELEMENT})
+      if (auto container = content_container_get(root, ELEMENT_CONTAINERS[(int)type]))
+        child_ids_repair(*container, type);
+
+    if (auto spritesheets = content_container_get(root, ElementType::SPRITESHEETS))
+      for (auto& spritesheet : spritesheets->children)
+        child_ids_repair(spritesheet, ElementType::REGION);
+
+    if (auto shaders = content_container_get(root, ElementType::SHADERS))
+      for (auto& shader : shaders->children)
+        if (shader.type == ElementType::SHADER && shader.name.empty()) shader.name = SHADER_NAME_DEFAULT;
   }
 
   void shader_frame_ids_repair(Element& root)

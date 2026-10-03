@@ -68,6 +68,17 @@ namespace anm2ed
 
   constexpr std::string_view LEGACY_OVERLAY_TAG = "Overlay";
 
+  // Attributes read into Element members (or retired by older anm2ed builds) are not passed through.
+#define X(attribute, member) attribute,
+  constexpr std::string_view KNOWN_ATTRIBUTES[] = {ANM2_STRING_ATTRIBUTES ANM2_PATH_ATTRIBUTES ANM2_INT_ATTRIBUTES
+                                                       ANM2_BOOL_ATTRIBUTES ANM2_FLOAT_ATTRIBUTES ANM2_COLOR_ATTRIBUTES
+                                                   "Interpolated",
+                                                   "Origin",
+                                                   "BakeInterpolation",
+                                                   "BakeDelay",
+                                                   "BakeCount",
+                                                   "OriginalDelay"};
+#undef X
 
   bool string_query(const XMLElement* element, const char* name, std::string& out)
   {
@@ -144,6 +155,11 @@ namespace anm2ed
 #define X(attribute, member) out.member = color_read(element, attribute, out.member);
     ANM2_COLOR_ATTRIBUTES
 #undef X
+
+    for (auto attribute = element->FirstAttribute(); attribute; attribute = attribute->Next())
+      if (!std::ranges::contains(KNOWN_ATTRIBUTES, std::string_view(attribute->Name())))
+        out.extraAttributes.emplace_back(attribute->Name(), attribute->Value());
+    if (auto text = element->GetText()) out.text = text;
 
     out.interpolation = interpolation_read(element);
     out.origin = origin_read(element);
@@ -240,16 +256,15 @@ namespace anm2ed
     bool isEmptySkipped;
   };
 
-  constexpr WriteRule WRITE_RULES[] = {
-      {ElementType::SHADERS, SERIALIZE_EXTENSIONS, true},
-      {ElementType::SHADER, SERIALIZE_EXTENSIONS, false},
-      {ElementType::UNIFORM, SERIALIZE_EXTENSIONS, false},
-      {ElementType::COMPONENT, SERIALIZE_EXTENSIONS, false},
-      {ElementType::SOUNDS, SERIALIZE_SOUNDS, true},
-      {ElementType::LAYER_ANIMATION_GROUPS, SERIALIZE_GROUPS, true},
-      {ElementType::NULL_ANIMATION_GROUPS, SERIALIZE_GROUPS, true},
-      {ElementType::REGION, SERIALIZE_REGIONS, false},
-      {ElementType::GROUP, SERIALIZE_GROUPS, false}};
+  constexpr WriteRule WRITE_RULES[] = {{ElementType::SHADERS, SERIALIZE_EXTENSIONS, true},
+                                       {ElementType::SHADER, SERIALIZE_EXTENSIONS, false},
+                                       {ElementType::UNIFORM, SERIALIZE_EXTENSIONS, false},
+                                       {ElementType::COMPONENT, SERIALIZE_EXTENSIONS, false},
+                                       {ElementType::SOUNDS, SERIALIZE_SOUNDS, true},
+                                       {ElementType::LAYER_ANIMATION_GROUPS, SERIALIZE_GROUPS, true},
+                                       {ElementType::NULL_ANIMATION_GROUPS, SERIALIZE_GROUPS, true},
+                                       {ElementType::REGION, SERIALIZE_REGIONS, false},
+                                       {ElementType::GROUP, SERIALIZE_GROUPS, false}};
 
   struct XmlSink : ElementSink
   {
@@ -273,6 +288,7 @@ namespace anm2ed
     void attribute(const char* name, int value) override { stack.back()->SetAttribute(name, value); }
     void attribute(const char* name, bool value) override { stack.back()->SetAttribute(name, value); }
     void attribute(const char* name, float value) override { stack.back()->SetAttribute(name, value); }
+    void text(const char* value) override { stack.back()->SetText(value); }
     void close() override { stack.pop_back(); }
   };
 
@@ -291,7 +307,8 @@ namespace anm2ed
     if (!is_track_child_valid(parentType, element.type)) return true;
     if (element.type == ElementType::SOUND_ELEMENT && parentType == ElementType::TRIGGER) return true;
     for (const auto& rule : WRITE_RULES)
-      if (rule.type == element.type) return !has_flag(flags, rule.flag) || (rule.isEmptySkipped && element.children.empty());
+      if (rule.type == element.type)
+        return !has_flag(flags, rule.flag) || (rule.isEmptySkipped && element.children.empty());
     return false;
   }
 
@@ -475,6 +492,9 @@ namespace anm2ed
     auto tag = element.type == ElementType::UNKNOWN ? std::string_view(element.tag) : element_tag_get(element.type);
     sink.open(tag.empty() ? std::string_view(element.tag) : tag);
     element_attributes_emit(sink, element, parentType, flags);
+    for (const auto& [name, value] : element.extraAttributes)
+      sink.attribute(name.c_str(), value.c_str());
+    if (!element.text.empty()) sink.text(element.text.c_str());
     if (bake)
     {
       auto value = INTERPOLATION_VALUES[(std::size_t)bake->interpolation];
@@ -503,8 +523,8 @@ namespace anm2ed
       }
 
       auto isNextFrame = i + 1 < (int)element.children.size() && element.children[i + 1].type == ElementType::FRAME;
-      auto baked = frame_bake_split(child, isNextFrame ? element.children[i + 1] : child, FRAME_DURATION_MIN, false,
-                                    false);
+      auto baked =
+          frame_bake_split(child, isNextFrame ? element.children[i + 1] : child, FRAME_DURATION_MIN, false, false);
       for (int bakeIndex = 0; bakeIndex < (int)baked.size(); ++bakeIndex)
         element_emit(sink, baked[bakeIndex], element.type, flags,
                      bakeIndex == 0 ? std::optional<BakeAttributes>({child.interpolation, (int)baked.size()})
@@ -555,7 +575,8 @@ namespace anm2ed
     }
 
     auto containerType = type == ElementType::REGION ? ElementType::SPRITESHEET : ELEMENT_CONTAINERS[(int)type];
-    auto container = type == ElementType::REGION ? element_get(containerType, spritesheetId) : element_get(containerType);
+    auto container =
+        type == ElementType::REGION ? element_get(containerType, spritesheetId) : element_get(containerType);
     if (!container)
     {
       if (errorString) *errorString = std::format("No {} container.", element_tag_get(containerType));

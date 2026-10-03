@@ -62,7 +62,7 @@ namespace anm2ed
     group_metadata_embed(anm2.root);
     group_frames_restore(anm2.root);
     groups_flatten(anm2.root);
-    shader_ids_repair(anm2.root);
+    content_ids_repair(anm2.root);
     shader_frame_ids_repair(anm2.root);
     region_frame_ids_repair(anm2.root);
     anm2.region_frames_sync(true);

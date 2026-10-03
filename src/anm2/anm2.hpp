@@ -323,6 +323,8 @@ namespace anm2ed
     Origin origin{Origin::CUSTOM};
     float rotation{};
     std::vector<int> soundIds{};
+    std::vector<std::pair<std::string, std::string>> extraAttributes{};
+    std::string text{};
     glm::vec2 pivot{};
     glm::vec2 crop{};
     glm::vec2 position{};

@@ -54,6 +54,12 @@ namespace anm2ed
     void attribute(const char* name, int value) override { formatted_append(name, value); }
     void attribute(const char* name, bool value) override { formatted_append(name, value); }
     void attribute(const char* name, float value) override { formatted_append(name, value); }
+    void text(const char* value) override
+    {
+      byte_append('T');
+      string_append(value);
+    }
+
     void body() override { byte_append('['); }
     void close() override { byte_append(']'); }
   };

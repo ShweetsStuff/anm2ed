@@ -1,32 +1,32 @@
-<AnimatedActor>
-    <Info CreatedBy="fixture" CreatedOn="01/01/2026 12:00:00 PM" Fps="60" Version="5"/>
-    <Comment/>
+<AnimatedActor Mystery="root">
+    <Info CreatedBy="fixture" CreatedOn="01/01/2026 12:00:00 PM" Fps="60" Version="5" Extra="1"/>
+    <Comment>keep me</Comment>
     <Content>
         <Spritesheets>
-            <Spritesheet Id="0" Path="sheet.png"/>
+            <Spritesheet Id="0" Path="sheet.png" Hint="x"/>
         </Spritesheets>
         <Layers>
-            <Layer Id="0" Name="a" SpritesheetId="0"/>
+            <Layer Id="0" Name="a" SpritesheetId="0" Blend="add"/>
         </Layers>
         <Nulls/>
         <Events/>
-        <CustomBlock>
-            <Child/>
+        <CustomBlock Key="v">
+            <Child Deep="1"/>
         </CustomBlock>
     </Content>
     <Animations DefaultAnimation="A">
-        <Animation Name="A (Merged)" FrameNum="4" Loop="true">
+        <Animation Name="A (Merged)" FrameNum="4" Loop="true" Speed="2">
             <RootAnimation>
                 <Frame XPosition="0" YPosition="0" Delay="4" Visible="true" XScale="100" YScale="100" ShearX="0" ShearY="0" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/>
             </RootAnimation>
             <LayerAnimations>
                 <LayerAnimation LayerId="0" Visible="true">
-                    <Frame XPivot="8" YPivot="8" XCrop="0" YCrop="0" Width="16" Height="16" XPosition="0" YPosition="0" Delay="4" Visible="true" XScale="100" YScale="100" ShearX="0" ShearY="0" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/>
+                    <Frame XPivot="8" YPivot="8" XCrop="0" YCrop="0" Width="16" Height="16" XPosition="0" YPosition="0" Delay="4" Visible="true" XScale="100" YScale="100" ShearX="0" ShearY="0" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false" Unknown="9"/>
                 </LayerAnimation>
             </LayerAnimations>
             <NullAnimations/>
             <Triggers/>
-            <Metadata/>
+            <Metadata Tag="m"/>
         </Animation>
     </Animations>
     <Trailer/>

@@ -43,6 +43,7 @@ namespace anm2ed
     virtual void attribute(const char*, int) = 0;
     virtual void attribute(const char*, bool) = 0;
     virtual void attribute(const char*, float) = 0;
+    virtual void text(const char*) = 0;
     virtual void body() {}
     virtual void close() = 0;
   };
@@ -68,7 +69,7 @@ namespace anm2ed
   void groups_flatten(Element&);
   void groups_nest(Element&);
   void source_document_erase(Element&);
-  void shader_ids_repair(Element&);
+  void content_ids_repair(Element&);
   void shader_frame_ids_repair(Element&);
   void shader_ids_remap(Element&);
   void region_ids_remap(Element&);
