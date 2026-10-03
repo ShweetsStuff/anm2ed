@@ -4,7 +4,6 @@ namespace anm2ed::imgui
 {
   void TimelineContext::frame_begin()
   {
-    frames_reference_normalize_for(document);
     iconTintDefault = isLightTheme ? ICON_TINT_DEFAULT_LIGHT : ICON_TINT_DEFAULT_DARK;
     itemIconTint = isLightTheme ? ICON_TINT_DEFAULT_LIGHT : iconTintDefault;
     frameBorderColor = isLightTheme ? FRAME_BORDER_COLOR_LIGHT : FRAME_BORDER_COLOR_DARK;

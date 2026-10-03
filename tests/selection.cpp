@@ -1,5 +1,8 @@
 #include "common.hpp"
 
+#include "edit/edit.hpp"
+#include "selection.hpp"
+
 using namespace anm2ed;
 using namespace anm2ed::test;
 
@@ -10,20 +13,13 @@ Anm2 fixture_load_with_uids(const char* name)
   return anm2;
 }
 
-Element& track_get(Anm2& anm2, Reference reference)
+// Applies an edit and follows the selection through it, the way a commit does.
+void selection_edit(Anm2& anm2, Selection& selection, auto&& edit)
 {
-  reference.frameIndex = -1;
-  auto track = anm2.element_get(reference);
-  REQUIRE(track);
-  return *track;
-}
-
-std::optional<Reference> reference_follow(Anm2& anm2, Reference reference, auto&& edit)
-{
-  auto handle = anm2.handle_get(reference);
+  auto before = selection_focus_get(selection, UidIndex(anm2));
   edit();
   anm2.uids_repair();
-  return UidIndex(anm2).reference_get(handle, reference);
+  selection_follow(selection, anm2, UidIndex(anm2), before);
 }
 
 TEST_CASE("uids are unique and non-zero after load")
@@ -40,80 +36,57 @@ TEST_CASE("uids are unique and non-zero after load")
   }
 }
 
-TEST_CASE("frame references follow inserts, deletes and copies")
+TEST_CASE("selected frames and focus follow inserts and moves")
 {
   auto anm2 = fixture_load_with_uids("02_items.anm2");
-  Reference frame{0, LAYER, 0, 1};
+  Selection selection{};
+  selection_references_set(selection, anm2, SelectionKind::FRAMES, {{0, LAYER, 0, 1}, {0, LAYER, 1, 0}});
+  selection_focus_set(selection, anm2, {0, LAYER, 0, 1});
 
-  auto inserted = reference_follow(anm2, frame,
-                                   [&]
-                                   {
-                                     auto& track = track_get(anm2, frame);
-                                     track.children.insert(track.children.begin(), element_make(ElementType::FRAME));
-                                   });
-  REQUIRE(inserted);
-  CHECK(inserted->frameIndex == 2);
-  frame = *inserted;
-
-  auto copied = reference_follow(anm2, frame,
-                                 [&]
-                                 {
-                                   auto& track = track_get(anm2, frame);
-                                   track.children.push_back(track.children[frame.frameIndex]);
-                                 });
-  REQUIRE(copied);
-  CHECK(copied->frameIndex == 2);
-
-  CHECK_FALSE(reference_follow(
-      anm2, frame, [&] { track_get(anm2, frame).children.erase(track_get(anm2, frame).children.begin() + 2); }));
-}
-
-TEST_CASE("references follow animation removal and reordering")
-{
-  auto anm2 = fixture_load_with_uids("02_items.anm2");
-  Reference root{1, ROOT, -1, 0};
-  auto animations = anm2.element_get(ElementType::ANIMATIONS);
-  auto followed = reference_follow(anm2, root, [&] { animations->children.erase(animations->children.begin()); });
-  REQUIRE(followed);
-  CHECK(followed->animationIndex == 0);
-  CHECK(followed->frameIndex == 0);
-
-  Reference animationOnly{0};
-  auto reordered = reference_follow(
-      anm2, animationOnly,
-      [&] { animations->children.insert(animations->children.begin(), element_make(ElementType::ANIMATION)); });
-  REQUIRE(reordered);
-  CHECK(reordered->animationIndex == 1);
-}
-
-TEST_CASE("track references follow regrouping")
-{
-  auto anm2 = fixture_load_with_uids("03a_groups_nested.anm2");
-  auto animation = anm2.element_get(ElementType::ANIMATION, 0);
-  auto layers = child_first_get(*animation, ElementType::LAYER_ANIMATIONS);
-  auto group = child_first_get(*layers, ElementType::GROUP);
-  REQUIRE(group);
-  auto grouped = track_find(*layers, ElementType::LAYER_ANIMATION, 0);
-  REQUIRE(grouped);
-  REQUIRE(grouped->groupId == group->id);
-
-  Reference withGroup{0, LAYER, 0, 0, LAYER, group->id};
-  Reference withoutGroup{0, LAYER, 0, 0};
-  auto handleWithGroup = anm2.handle_get(withGroup);
-  auto handleWithoutGroup = anm2.handle_get(withoutGroup);
-  grouped->groupId = -1;
+  selection_edit(anm2, selection, [&] { edit::frame_insert(anm2, {0, LAYER, 0, -1}, 0); });
+  selection_edit(anm2, selection, [&] { edit::frames_reverse(anm2, {{0, LAYER, 0, 0}, {0, LAYER, 0, 1}}); });
 
   UidIndex index(anm2);
-  auto followedWithGroup = index.reference_get(handleWithGroup, withGroup);
-  auto followedWithoutGroup = index.reference_get(handleWithoutGroup, withoutGroup);
-  REQUIRE(followedWithGroup);
-  REQUIRE(followedWithoutGroup);
-  CHECK(*followedWithGroup == Reference{0, LAYER, 0, 0});
-  CHECK(*followedWithoutGroup == withoutGroup);
-  CHECK(anm2.element_get(*followedWithGroup));
+  CHECK(selection_focus_get(selection, index) == Reference{0, LAYER, 0, 0});
+  CHECK(selection_references_get(selection, index, SelectionKind::FRAMES) ==
+        std::set<Reference>{{0, LAYER, 0, 0}, {0, LAYER, 1, 0}});
+}
 
-  Reference groupReference{0, LAYER, group->id};
-  auto groupHandle = anm2.handle_get(groupReference, true);
-  CHECK(groupHandle.item == group->uid);
-  CHECK(index.reference_get(groupHandle, groupReference) == groupReference);
+TEST_CASE("a removed focus falls back to its nearest survivor")
+{
+  auto anm2 = fixture_load_with_uids("02_items.anm2");
+  Selection selection{};
+  selection_focus_set(selection, anm2, {0, LAYER, 0, 1});
+  selection_references_set(selection, anm2, SelectionKind::FRAMES, {{0, LAYER, 0, 1}});
+
+  selection_edit(anm2, selection, [&] { edit::frames_delete(anm2, {{0, LAYER, 0, 1}}); });
+  CHECK(selection_focus_get(selection, UidIndex(anm2)) == Reference{0, LAYER, 0, 0});
+  CHECK(selection.uids[SelectionKind::FRAMES].empty());
+
+  selection_edit(anm2, selection, [&] { edit::items_remove(anm2, 0, {{LAYER, {0}}}, {}); });
+  CHECK(selection_focus_get(selection, UidIndex(anm2)) == Reference{0, ROOT});
+
+  selection_focus_set(selection, anm2, {1, ROOT, -1, 0});
+  selection_edit(anm2, selection, [&] { edit::animations_remove(anm2, {1}, {}); });
+  CHECK(selection_focus_get(selection, UidIndex(anm2)) == Reference{0, ROOT});
+}
+
+TEST_CASE("track and group selection follow regrouping")
+{
+  auto anm2 = fixture_load_with_uids("03a_groups_nested.anm2");
+  auto group =
+      child_first_get(*child_first_get(*anm2.element_get(ElementType::ANIMATION, 0), ElementType::LAYER_ANIMATIONS),
+                      ElementType::GROUP);
+  REQUIRE(group);
+  Selection selection{};
+  selection_references_set(selection, anm2, SelectionKind::TRACKS, {{0, LAYER, 0, -1, LAYER, group->id}});
+  selection_references_set(selection, anm2, SelectionKind::GROUPS, {{0, LAYER, group->id}});
+
+  selection_edit(anm2, selection,
+                 [&] { edit::items_move(anm2, 0, LAYER, {0}, {}, {false, LAYER, 2, -1}, false, false); });
+
+  UidIndex index(anm2);
+  CHECK(selection_references_get(selection, index, SelectionKind::TRACKS) == std::set<Reference>{{0, LAYER, 0}});
+  CHECK(selection_references_get(selection, index, SelectionKind::GROUPS) ==
+        std::set<Reference>{{0, LAYER, group->id}});
 }

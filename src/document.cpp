@@ -173,37 +173,17 @@ namespace anm2ed::document
     return static_cast<uint64_t>(seed);
   }
 
-  bool is_reference_item_matched(const Reference& left, const Reference& right)
-  {
-    return left.animationIndex == right.animationIndex && left.itemType == right.itemType &&
-           left.itemID == right.itemID && left.groupType == right.groupType && left.groupId == right.groupId;
-  }
-
   Reference item_reference_get(Reference reference)
   {
     reference.frameIndex = -1;
     return reference;
   }
 
-  auto frame_reference_validator_make(const Anm2& anm2)
-  {
-    return [&anm2, frameCounts = std::map<Reference, int>{}](const Reference& frameReference) mutable
-    {
-      if (frameReference.itemType == NONE || frameReference.frameIndex < 0) return false;
-      auto itemReference = item_reference_get(frameReference);
-      if (!frameCounts.contains(itemReference))
-      {
-        auto item = anm2.element_get(itemReference);
-        frameCounts[itemReference] = item ? track_frames_count_get(*item) : 0;
-      }
-      return frameReference.frameIndex < frameCounts[itemReference];
-    };
-  }
-
   void frame_time_sync(Document& document)
   {
-    auto item = document.anm2.element_get(item_reference_get(document.reference));
-    auto frameIndex = document.reference.frameIndex;
+    auto reference = document.reference_get();
+    auto item = document.anm2.element_get(item_reference_get(reference));
+    auto frameIndex = reference.frameIndex;
     document.frameTime = item && frameIndex >= 0 ? frame_time_from_index_get(*item, frameIndex) : 0.0f;
   }
 }
@@ -729,6 +709,7 @@ namespace anm2ed
     }
 
     snapshots.commit();
+    index = UidIndex(anm2);
   }
 
   void Document::edit_begin(StringType label, bool isTextures) { snapshots.push(localize.get(label), isTextures); }
@@ -793,9 +774,34 @@ namespace anm2ed
     if (command.run) command.run(manager, *this);
   }
 
-  bool Document::is_frame_reference_valid(Reference frameReference) const
+  Reference Document::reference_get() const { return selection_focus_get(selection, index); }
+
+  void Document::reference_set(Reference reference) { selection_focus_set(selection, anm2, reference); }
+
+  std::set<Reference> Document::selected_get(SelectionKind kind) const
   {
-    return document::frame_reference_validator_make(anm2)(frameReference);
+    return selection_references_get(selection, index, kind);
+  }
+
+  void Document::selected_set(SelectionKind kind, const std::set<Reference>& references)
+  {
+    selection_references_set(selection, anm2, kind, references);
+  }
+
+  std::set<int> Document::animations_selected_get() const
+  {
+    std::set<int> indices{};
+    for (auto reference : selected_get(SelectionKind::ANIMATIONS))
+      indices.insert(reference.animationIndex);
+    return indices;
+  }
+
+  void Document::animations_selected_set(const std::set<int>& indices)
+  {
+    std::set<Reference> references{};
+    for (auto index : indices)
+      references.insert({index});
+    selected_set(SelectionKind::ANIMATIONS, references);
   }
 
   std::set<Reference> Document::item_frame_references_get(Reference itemReference) const
@@ -813,8 +819,8 @@ namespace anm2ed
 
   std::set<Reference> Document::selected_item_frame_references_get() const
   {
-    auto selectedItems = items.references;
-    if (selectedItems.empty() && reference.itemType != NONE)
+    auto selectedItems = selected_get(SelectionKind::TRACKS);
+    if (auto reference = reference_get(); selectedItems.empty() && reference.itemType != NONE)
       selectedItems.insert(document::item_reference_get(reference));
 
     std::set<Reference> result{};
@@ -825,77 +831,39 @@ namespace anm2ed
 
   std::set<Reference> Document::frame_references_get(FrameReferenceFallback fallback) const
   {
-    auto result = frames.references;
-    for (auto frameIndex : frames.selection)
-    {
-      auto frameReference = reference;
-      frameReference.frameIndex = frameIndex;
-      result.insert(frameReference);
-    }
-
-    auto isValid = document::frame_reference_validator_make(anm2);
-    auto is_invalid = [&](const Reference& frameReference) { return !isValid(frameReference); };
-    bool isMultiFrameSelection = frames.references.size() > 1 || frames.selection.size() > 1;
-    std::erase_if(result, is_invalid);
-
-    if (isMultiFrameSelection && result.size() <= 1)
-    {
-      auto itemFrames = selected_item_frame_references_get();
-      std::erase_if(itemFrames, is_invalid);
-      if (itemFrames.size() > result.size()) result = std::move(itemFrames);
-    }
-
-    if (result.empty() && fallback == FrameReferenceFallback::CURRENT && isValid(reference)) result.insert(reference);
+    auto result = selected_get(SelectionKind::FRAMES);
+    auto reference = reference_get();
+    if (result.empty() && fallback == FrameReferenceFallback::CURRENT && reference.frameIndex >= 0)
+      result.insert(reference);
     return result;
   }
 
+  // Selects frames together with their tracks; the focus moves to the first frame unless it is already selected.
   void Document::frame_references_set(std::set<Reference> frameReferences)
   {
-    auto isValid = document::frame_reference_validator_make(anm2);
-    std::erase_if(frameReferences, [&](const Reference& frameReference) { return !isValid(frameReference); });
-
-    frames.references = std::move(frameReferences);
-    frames.selection.clear();
-    items.references.clear();
-    if (frames.references.empty()) return;
-
-    if (!frames.references.contains(reference) || !isValid(reference)) reference = *frames.references.begin();
-
-    for (auto frameReference : frames.references)
-    {
-      items.references.insert(document::item_reference_get(frameReference));
-      if (document::is_reference_item_matched(frameReference, reference) && frameReference.frameIndex >= 0)
-        frames.selection.insert(frameReference.frameIndex);
-    }
+    std::erase_if(frameReferences,
+                  [&](const Reference& frame) { return frame.frameIndex < 0 || !anm2.element_get(frame); });
+    std::set<Reference> tracks{};
+    for (auto frame : frameReferences)
+      tracks.insert(document::item_reference_get(frame));
+    selected_set(SelectionKind::FRAMES, frameReferences);
+    selected_set(SelectionKind::TRACKS, tracks);
+    if (!frameReferences.empty() && !frameReferences.contains(reference_get())) reference_set(*frameReferences.begin());
   }
 
-  void Document::frame_references_clear()
-  {
-    frames.references.clear();
-    frames.selection.clear();
-  }
+  void Document::frame_references_clear() { selection.uids[SelectionKind::FRAMES].clear(); }
 
   std::vector<Reference> Document::layer_references_get()
   {
-    std::set<Reference> selectedReferences = items.references;
-    if (selectedReferences.empty())
-      for (auto frameReference : frame_references_get(FrameReferenceFallback::NONE))
-        selectedReferences.insert(document::item_reference_get(frameReference));
+    auto reference = reference_get();
+    std::set<Reference> selectedReferences = selected_get(SelectionKind::TRACKS);
     if (selectedReferences.empty() && reference.itemType != NONE)
       selectedReferences.insert(document::item_reference_get(reference));
 
     std::vector<Reference> result{};
     for (auto itemReference : selectedReferences)
     {
-      itemReference.frameIndex = -1;
       if (itemReference.itemType != LAYER) return {};
-      if (!anm2.element_get(itemReference))
-      {
-        auto targetReference = itemReference;
-        targetReference.animationIndex = reference.animationIndex;
-        if (reference.animationIndex == itemReference.animationIndex || !anm2.element_get(targetReference)) return {};
-        itemReference = targetReference;
-      }
       result.push_back(itemReference);
     }
     return result;
@@ -908,9 +876,12 @@ namespace anm2ed
     return regions == regionBySpritesheet.end() ? nullptr : &regions->second;
   }
 
-  Element* Document::frame_get() { return anm2.element_get(reference); }
-  Element* Document::item_get() { return anm2.element_get(document::item_reference_get(reference)); }
-  Element* Document::animation_get() { return anm2.element_get(ElementType::ANIMATION, reference.animationIndex); }
+  Element* Document::frame_get()
+  {
+    auto reference = reference_get();
+    return reference.frameIndex < 0 ? nullptr : anm2.element_get(reference);
+  }
+  Element* Document::item_get() { return anm2.element_get(document::item_reference_get(reference_get())); }
   Element* Document::spritesheet_get() { return anm2.element_get(ElementType::SPRITESHEET, spritesheet.reference); }
 
   void Document::spritesheets_add(const std::vector<std::filesystem::path>& paths)

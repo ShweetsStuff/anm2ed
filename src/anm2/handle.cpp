@@ -35,16 +35,17 @@ namespace anm2ed
     return handle;
   }
 
-  void track_locations_add(std::unordered_map<std::uint64_t, Reference>& locations, const Element& track,
-                           Reference reference)
+  using Locations = std::unordered_map<std::uint64_t, UidIndex::Location>;
+
+  void track_locations_add(Locations& locations, const Element& track, Reference reference)
   {
-    locations[track.uid] = reference;
+    locations[track.uid] = {reference, track.type};
     auto frameType = track_frame_type_get(track);
     for (const auto& frame : track.children)
       if (frame.type == frameType)
       {
         ++reference.frameIndex;
-        locations[frame.uid] = reference;
+        locations[frame.uid] = {reference, frame.type};
       }
   }
 
@@ -57,7 +58,7 @@ namespace anm2ed
     for (const auto& animation : animations->children)
     {
       if (animation.type != ElementType::ANIMATION) continue;
-      locations[animation.uid] = {animationIndex};
+      locations[animation.uid] = {{animationIndex}, animation.type};
 
       for (const auto& child : animation.children)
       {
@@ -73,7 +74,7 @@ namespace anm2ed
           for (const auto& track : parent.children)
             if (track.type == ElementType::GROUP)
             {
-              locations[track.uid] = {animationIndex, type, track.id};
+              locations[track.uid] = {{animationIndex, type, track.id}, track.type};
               self(track, track.id);
             }
             else if (track.type == ElementType::ROOT_ANIMATION && groupId != -1)
@@ -92,37 +93,17 @@ namespace anm2ed
     }
   }
 
+  bool UidIndex::contains(std::uint64_t uid) const { return uid && locations.contains(uid); }
+
   std::optional<Reference> UidIndex::reference_get(std::uint64_t uid) const
   {
     auto it = locations.find(uid);
-    return it == locations.end() ? std::nullopt : std::optional<Reference>(it->second);
+    return it == locations.end() ? std::nullopt : std::optional<Reference>(it->second.reference);
   }
 
-  std::optional<Reference> UidIndex::reference_get(Handle handle, Reference reference) const
+  ElementType UidIndex::type_get(std::uint64_t uid) const
   {
-    auto location_get = [&](std::uint64_t uid) -> const Reference*
-    {
-      auto it = locations.find(uid);
-      return it == locations.end() ? nullptr : &it->second;
-    };
-
-    // Resolve the most specific element captured; if it no longer exists, neither does the reference.
-    auto uid = handle.frame ? handle.frame : handle.item ? handle.item : handle.animation;
-    if (!uid) return reference;
-    auto location = location_get(uid);
-    if (!location) return std::nullopt;
-
-    auto isGroupAgnostic = reference.groupId == -1 && reference.itemType != ROOT;
-    if (uid == handle.animation)
-      reference.animationIndex = location->animationIndex;
-    else
-      reference = *location;
-    // References made without group context stay that way, wherever the track now lives.
-    if (isGroupAgnostic && reference.itemType != ROOT)
-    {
-      reference.groupType = NONE;
-      reference.groupId = -1;
-    }
-    return reference;
+    auto it = locations.find(uid);
+    return it == locations.end() ? ElementType::UNKNOWN : it->second.type;
   }
 }

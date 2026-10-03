@@ -64,10 +64,10 @@ namespace anm2ed::imgui
   void Taskbar::update(Manager& manager, Settings& settings, Resources& resources, Dialog& dialog, bool& isQuitting)
   {
     auto document = manager.get();
-    auto itemType = document ? (ItemType)document->reference.itemType : ItemType::NONE;
-    auto animation =
-        document ? document->anm2.element_get(ElementType::ANIMATION, document->reference.animationIndex) : nullptr;
-    auto frames = document ? &document->frames : nullptr;
+    auto itemType = document ? (ItemType)document->reference_get().itemType : ItemType::NONE;
+    auto animation = document
+                         ? document->anm2.element_get(ElementType::ANIMATION, document->reference_get().animationIndex)
+                         : nullptr;
     auto layerReferences = document ? document->layer_references_get() : std::vector<Reference>{};
     bool isGenerateAnimationFromGridAvailable = !layerReferences.empty();
     bool hasRegions = false;
@@ -181,8 +181,9 @@ namespace anm2ed::imgui
 
         ImGui::Separator();
 
-        bool isChangeAllFramesAvailable = frames && !frames->selection.empty() && itemType != ItemType::TRIGGER;
-        bool isChangeAllAnimationsAvailable = document && !document->animation.selection.empty();
+        bool isChangeAllFramesAvailable =
+            document && !document->frame_references_get().empty() && itemType != ItemType::TRIGGER;
+        bool isChangeAllAnimationsAvailable = document && !document->animations_selected_get().empty();
         if (ImGui::MenuItem(localize.get(LABEL_CHANGE_ALL_FRAME_PROPERTIES), nullptr, false,
                             isChangeAllFramesAvailable || isChangeAllAnimationsAvailable))
           changePopup.open();
@@ -272,9 +273,9 @@ namespace anm2ed::imgui
           }
           else
           {
-            animationIndices.insert(document->animation.selection.begin(), document->animation.selection.end());
-            if (animationIndices.empty() && document->reference.animationIndex >= 0)
-              animationIndices.insert(document->reference.animationIndex);
+            animationIndices = document->animations_selected_get();
+            if (animationIndices.empty() && document->reference_get().animationIndex >= 0)
+              animationIndices.insert(document->reference_get().animationIndex);
           }
 
           auto queuedAnimationIndices = animationIndices;

@@ -214,8 +214,8 @@ namespace anm2ed::imgui::popup
 
                                 if (addId != -1)
                                 {
-                                  document.reference = {queuedAnimationIndex, (int)queuedType, addId};
-                                  document.items.references = {document.reference};
+                                  document.reference_set({queuedAnimationIndex, (int)queuedType, addId});
+                                  document.selected_set(SelectionKind::TRACKS, {document.reference_get()});
                                   document.frame_references_clear();
                                   if (queuedType == LAYER)
                                     if (auto layer = document.anm2.element_get(ElementType::LAYER_ELEMENT, addId))

@@ -95,13 +95,7 @@ namespace anm2ed::imgui
     float draggedFrameStartMouseX{};
     float draggedFrameWidth{};
     bool isDraggedFrameSnapshot{};
-    bool frameFocusRequested{};
-    int frameFocusIndex{-1};
     FrameMoveDrag frameMoveDrag{};
-    std::vector<int> frameSelectionSnapshot{};
-    std::vector<int> frameSelectionLocked{};
-    bool isFrameSelectionLocked{};
-    Reference frameSelectionSnapshotReference{};
     Reference frameSelectionAnchor{};
     bool isFrameSelectionAnchorSet{};
     int animationLengthEditIndex{-1};

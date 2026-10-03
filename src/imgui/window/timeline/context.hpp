@@ -162,8 +162,7 @@ namespace anm2ed::imgui
     Document& document;
     Anm2& anm2;
     Playback& playback;
-    Reference& reference;
-    Storage& frames;
+    Reference reference;
     Storage& region;
     Element* animation{};
     float rowFrameChildHeight{};
@@ -207,7 +206,6 @@ namespace anm2ed::imgui
     int group_items_count_get(int type, int groupId);
     Element* command_item_reference_get(Document& document, Reference itemReference);
     glm::vec4 color_get(TimelineColor, int);
-    void frames_focus_sync_for(Document&);
     std::set<Reference> drag_frame_references_get(const Reference&);
     // Queues an edit on the document; its result is selected (frames by default).
     template <class Operation>
@@ -222,6 +220,7 @@ namespace anm2ed::imgui
           });
     }
     void edit_begin_push(StringType);
+    void reference_set(Reference);
     void frames_select_for(Document&, const edit::Uids&);
     Element* command_frame_get(Document& document, const Reference& targetReference);
     Reference item_reference_get(int type, int id, int groupType = NONE, int groupId = -1);
@@ -229,7 +228,6 @@ namespace anm2ed::imgui
     bool is_same_item(const Reference& left, const Reference& right);
     void group_selection_reset_for(Document& targetDocument);
     std::set<Reference> item_references_for_current_get();
-    void frames_selection_sync_for(Document& targetDocument);
     void item_selection_set_for(Document& targetDocument, Reference itemReference);
     void frame_selection_set_for(Document& targetDocument, Reference frameReference);
     void frame_selection_toggle_for(Document& targetDocument, Reference frameReference);
@@ -239,7 +237,6 @@ namespace anm2ed::imgui
     std::set<Reference> copy_frame_references_get();
     void frames_selection_reset_for(Document& targetDocument);
     void frames_selection_set_reference_for(Document& targetDocument);
-    void frames_reference_normalize_for(Document& targetDocument);
     void reference_clear_for(Document& targetDocument);
     void reference_set_item_reference_for(Document& targetDocument, Reference itemReference);
     void reference_set_timeline_item_reference_for(Document& targetDocument, Reference itemReference);

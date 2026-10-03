@@ -109,18 +109,22 @@ TEST_CASE("undo and redo restore every state of a random edit walk")
 TEST_CASE("selection follows its frame through an edit and its undo")
 {
   Snapshots snapshots{};
-  snapshots.current.anm2 = anm2_load(file_load(CORPUS_DIR / "02_items.anm2"));
-  snapshots.current.reference = {0, LAYER, 0, 1};
-  snapshots.current.frames.references = {{0, LAYER, 0, 1}};
+  auto& current = snapshots.current;
+  current.anm2 = anm2_load(file_load(CORPUS_DIR / "02_items.anm2"));
+  current.anm2.uids_repair();
+  selection_focus_set(current.selection, current.anm2, {0, LAYER, 0, 1});
+  selection_references_set(current.selection, current.anm2, SelectionKind::FRAMES, {{0, LAYER, 0, 1}});
 
   snapshots.push("Insert");
-  edit::frame_insert(snapshots.current.anm2, {0, LAYER, 0, -1}, 0);
-  auto& track = *snapshots.current.anm2.element_get(Reference{0, LAYER, 0});
+  edit::frame_insert(current.anm2, {0, LAYER, 0, -1}, 0);
+  auto& track = *current.anm2.element_get(Reference{0, LAYER, 0});
   std::rotate(track.children.begin(), track.children.end() - 1, track.children.end());
   snapshots.commit();
-  CHECK(snapshots.current.reference == Reference{0, LAYER, 0, 2});
-  CHECK(snapshots.current.frames.references == std::set<Reference>{{0, LAYER, 0, 2}});
+  UidIndex index(current.anm2);
+  CHECK(selection_focus_get(current.selection, index) == Reference{0, LAYER, 0, 2});
+  CHECK(selection_references_get(current.selection, index, SelectionKind::FRAMES) ==
+        std::set<Reference>{{0, LAYER, 0, 2}});
 
   REQUIRE(snapshots.undo());
-  CHECK(snapshots.current.reference == Reference{0, LAYER, 0, 1});
+  CHECK(selection_focus_get(current.selection, UidIndex(current.anm2)) == Reference{0, LAYER, 0, 1});
 }

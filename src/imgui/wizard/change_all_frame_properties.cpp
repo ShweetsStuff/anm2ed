@@ -97,18 +97,19 @@ namespace anm2ed::imgui::wizard
   {
     isChanged = false;
 
-    auto& animations = document.animation.selection;
+    auto animations = document.animations_selected_get();
     auto& destination = settings.changeDestination;
     auto& regionId = document.changeAllFramePropertiesRegionId;
     auto& shaderId = document.changeAllFramePropertiesShaderId;
 
     auto selectedFrameReferences = document.frame_references_get(Document::FrameReferenceFallback::NONE);
     std::erase_if(selectedFrameReferences, [](const Reference& reference) { return reference.itemType == TRIGGER; });
-    auto selectedItemReferences = document.items.references;
-    if (selectedItemReferences.empty() && document.reference.itemType != NONE)
-      selectedItemReferences.insert({document.reference.animationIndex, document.reference.itemType,
-                                     document.reference.itemID, -1, document.reference.groupType,
-                                     document.reference.groupId});
+    auto selectedItemReferences = document.selected_get(SelectionKind::TRACKS);
+    if (auto reference = document.reference_get(); selectedItemReferences.empty() && reference.itemType != NONE)
+    {
+      reference.frameIndex = -1;
+      selectedItemReferences.insert(reference);
+    }
     std::erase_if(selectedItemReferences, [](const Reference& reference) { return reference.itemType == TRIGGER; });
 
     bool isSelectedFramesAvailable = !selectedFrameReferences.empty();
@@ -196,7 +197,8 @@ namespace anm2ed::imgui::wizard
       interpolationIds.push_back(i);
       interpolationLabels.push_back(localize.get(INTERPOLATION_LABELS[i]));
     }
-    auto regions = document.layer_regions_get(document.reference.itemType == LAYER ? document.reference.itemID : -1);
+    auto regions =
+        document.layer_regions_get(document.reference_get().itemType == LAYER ? document.reference_get().itemID : -1);
     if (!isLayerPropertyAvailable) regionId = shaderId = -1;
 
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImGui::GetStyle().ItemInnerSpacing);

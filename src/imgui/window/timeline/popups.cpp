@@ -197,8 +197,10 @@ namespace anm2ed::imgui
       if (isPreviousFrame || isNextFrame)
         if (auto item = selected_item_get(); item && !item->children.empty())
         {
-          reference.frameIndex = glm::clamp(reference.frameIndex + (int)isNextFrame - (int)isPreviousFrame, 0,
-                                            (int)item->children.size() - 1);
+          auto frameReference = reference;
+          frameReference.frameIndex = glm::clamp(reference.frameIndex + (int)isNextFrame - (int)isPreviousFrame, 0,
+                                                 (int)item->children.size() - 1);
+          reference_set(frameReference);
           frames_selection_set_reference_for(document);
           document.frameTime = frame_time_from_index_get(*item, reference.frameIndex);
         }

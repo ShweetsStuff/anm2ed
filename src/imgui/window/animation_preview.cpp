@@ -416,7 +416,7 @@ namespace anm2ed::imgui
 
     if (playback.isPlaying)
     {
-      auto animation = anm2.element_get(ElementType::ANIMATION, document.reference.animationIndex);
+      auto animation = anm2.element_get(ElementType::ANIMATION, document.reference_get().animationIndex);
       auto& isSound = settings.timelineIsSound;
 
       if (!animation)
@@ -453,7 +453,7 @@ namespace anm2ed::imgui
     auto& document = *manager.get();
     auto& anm2 = document.anm2;
     auto& playback = document.playback;
-    auto& reference = document.reference;
+    auto reference = document.reference_get();
     auto animation = anm2.element_get(ElementType::ANIMATION, reference.animationIndex);
     auto& pan = document.previewPan;
     auto& zoom = document.previewZoom;
@@ -793,7 +793,7 @@ namespace anm2ed::imgui
         if (&sampleDocument != &document) return false;
         if (reference.animationIndex != -1 && referenceItemType == ItemType::LAYER && reference.itemID == id)
           return true;
-        for (auto itemReference : document.items.references)
+        for (auto itemReference : document.selected_get(SelectionKind::TRACKS))
           if (itemReference.animationIndex == reference.animationIndex && itemReference.itemType == LAYER &&
               itemReference.itemID == id)
             return true;

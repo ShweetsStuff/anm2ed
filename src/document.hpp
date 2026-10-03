@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "edit/edit.hpp"
+#include "selection.hpp"
 #include "snapshots.hpp"
 #include "strings.hpp"
 
@@ -30,6 +31,7 @@ namespace anm2ed
     uint64_t tabId{};
     Snapshots snapshots{};
     std::map<int, Storage> regionBySpritesheet{};
+    Storage animation{};
     int changeAllFramePropertiesRegionId{-1};
     int changeAllFramePropertiesShaderId{-1};
 
@@ -100,6 +102,7 @@ namespace anm2ed
     Anm2& anm2 = current.anm2;
     std::string& message = current.message;
     EditTarget editTarget{EditTarget::NONE};
+    UidIndex index{};
 
     Document(const std::filesystem::path&, bool = false, std::string* = nullptr);
     Document(const Document&) = delete;
@@ -152,7 +155,12 @@ namespace anm2ed
     bool spritesheet_any_dirty();
     void spritesheet_hashes_reset();
     void spritesheet_hashes_sync();
-    bool is_frame_reference_valid(Reference) const;
+    Reference reference_get() const;
+    void reference_set(Reference);
+    std::set<Reference> selected_get(SelectionKind) const;
+    void selected_set(SelectionKind, const std::set<Reference>&);
+    std::set<int> animations_selected_get() const;
+    void animations_selected_set(const std::set<int>&);
     std::set<Reference> item_frame_references_get(Reference) const;
     std::set<Reference> selected_item_frame_references_get() const;
     std::set<Reference> frame_references_get(FrameReferenceFallback = FrameReferenceFallback::CURRENT) const;
@@ -164,7 +172,6 @@ namespace anm2ed
     Element* frame_get();
     Element* item_get();
     Element* spritesheet_get();
-    Element* animation_get();
 
     void spritesheets_add(const std::vector<std::filesystem::path>&);
     void sounds_add(const std::vector<std::filesystem::path>&);

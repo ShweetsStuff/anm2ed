@@ -409,9 +409,8 @@ namespace anm2ed::imgui
     window.row_select = [](Window&, Document& document, int)
     {
       document.editTarget = Document::EditTarget::REGION;
-      document.reference = {document.reference.animationIndex};
-      document.frames.reference = -1;
-      document.frames.selection.clear();
+      document.reference_set({document.reference_get().animationIndex});
+      document.frame_references_clear();
     };
     window.tooltip_draw = [](Document& document, Resources& resources, const Element& region)
     {
@@ -464,9 +463,8 @@ namespace anm2ed::imgui
                             if (!document.regions_trim(document.spritesheet.reference, region.selection)) return;
                             if (region.reference != -1 && !region.selection.contains(region.reference))
                               region.reference = *region.selection.begin();
-                            document.reference = {document.reference.animationIndex};
-                            document.frames.reference = -1;
-                            document.frames.selection.clear();
+                            document.reference_set({document.reference_get().animationIndex});
+                            document.frame_references_clear();
                           });
     };
     window.paste = [](Window& window, Manager&, Settings&, Document& document, Clipboard& clipboard)

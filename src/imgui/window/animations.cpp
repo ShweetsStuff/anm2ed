@@ -65,6 +65,30 @@ namespace anm2ed::imgui
     return insertIndex;
   }
 
+  // The list draws from Storage/Window mirrors of the document Selection: loaded each frame, written back on change.
+  void animations_selection_set(Window& window, Document& document, const std::set<int>& indices,
+                                const std::set<int>& groupIds)
+  {
+    document.animations_selected_set(indices);
+    auto& groupUids = document.selection.uids[SelectionKind::ANIMATION_GROUPS];
+    groupUids.clear();
+    if (auto animations = document.anm2.element_get(ElementType::ANIMATIONS))
+      for (const auto& item : animations->children)
+        if (item.type == ElementType::GROUP && groupIds.contains(item.id)) groupUids.insert(item.uid);
+    document.animation.selection = indices;
+    window.selection = groupIds;
+  }
+
+  void animations_selection_load(Window& window, Document& document)
+  {
+    document.animation.selection = document.animations_selected_get();
+    window.selection.clear();
+    auto& groupUids = document.selection.uids[SelectionKind::ANIMATION_GROUPS];
+    if (auto animations = document.anm2.element_get(ElementType::ANIMATIONS))
+      for (const auto& item : animations->children)
+        if (item.type == ElementType::GROUP && groupUids.contains(item.uid)) window.selection.insert(item.id);
+  }
+
   bool is_animation_grouped(const std::set<int>& groupIds, const Element& animation)
   {
     return animation.groupId != -1 && groupIds.contains(animation.groupId);
@@ -126,10 +150,7 @@ namespace anm2ed::imgui
                         [&](Anm2& anm2)
                         {
                           animation_overlay_reset(document, indices);
-                          if (indices.contains(document.reference.animationIndex))
-                            document.reference.animationIndex = -1;
-                          document.animation.selection.clear();
-                          window.selection.clear();
+                          animations_selection_set(window, document, {}, {});
                           return edit::animations_remove(anm2, indices, groupIds);
                         });
   }
@@ -165,24 +186,23 @@ namespace anm2ed::imgui
   {
     std::set<int> groupIds{};
     std::string errorString{};
-    auto uids = document.edit_apply(edit, window.changeType,
-                                    [&](Anm2& anm2)
-                                    {
-                                      auto uids = edit::animations_paste(anm2, text, start, targetGroupId, groupIds,
-                                                                         &errorString);
-                                      if (uids.empty()) return uids;
-                                      auto indices = animation_indices_get(document, uids);
-                                      document.animation.selection = groupIds.empty() ? indices : std::set<int>{};
-                                      window.selection = groupIds;
-                                      document.reference = {};
-                                      window.newElementId = -1;
-                                      if (indices.empty()) return uids;
-                                      window.scrollQueued = *indices.rbegin();
-                                      if (!groupIds.empty()) return uids;
-                                      document.reference = {*indices.rbegin()};
-                                      if (indices.size() == 1) window.newElementId = *indices.rbegin();
-                                      return uids;
-                                    });
+    auto uids = document.edit_apply(
+        edit, window.changeType,
+        [&](Anm2& anm2)
+        {
+          auto uids = edit::animations_paste(anm2, text, start, targetGroupId, groupIds, &errorString);
+          if (uids.empty()) return uids;
+          auto indices = animation_indices_get(document, uids);
+          animations_selection_set(window, document, groupIds.empty() ? indices : std::set<int>{}, groupIds);
+          document.reference_set({});
+          window.newElementId = -1;
+          if (indices.empty()) return uids;
+          window.scrollQueued = *indices.rbegin();
+          if (!groupIds.empty()) return uids;
+          document.reference_set({*indices.rbegin()});
+          if (indices.size() == 1) window.newElementId = *indices.rbegin();
+          return uids;
+        });
     if (!errorString.empty()) toast_log(Level::ERROR, TOAST_DESERIALIZE_ANIMATIONS_FAILED, errorString);
   }
 
@@ -219,8 +239,8 @@ namespace anm2ed::imgui
                           auto indices = animation_indices_get(document, uids);
                           if (indices.empty()) return uids;
                           merged = *indices.begin();
-                          document.animation.selection = {merged};
-                          document.reference = {merged};
+                          document.animations_selected_set({merged});
+                          document.reference_set({merged});
                           return uids;
                         });
     return merged;
@@ -244,8 +264,7 @@ namespace anm2ed::imgui
       (item.type == AnimationDragDropType::GROUP ? groupIds : indices).insert(item.id);
     auto uids = edit::animations_move(anm2, indices, groupIds, targetChildIndex, targetGroupId);
     if (uids.empty() && groupIds.empty()) return;
-    document.animation.selection = animation_indices_get(document, uids);
-    window.selection = groupIds;
+    animations_selection_set(window, document, animation_indices_get(document, uids), groupIds);
   }
 
   void animation_move_command_push(Window& window, Manager& manager, std::vector<AnimationDragDropItem> items,
@@ -426,8 +445,8 @@ namespace anm2ed::imgui
       if (isDeselected ? selection.empty() && groupSelection.empty() : !isCtrl || selection.empty())
       {
         document.animation.reference = -1;
-        document.reference = {};
-        document.frames.clear();
+        document.reference_set({});
+        document.frame_references_clear();
       }
     }
 
@@ -481,7 +500,7 @@ namespace anm2ed::imgui
     {
       auto animations = document.anm2.element_get(ElementType::ANIMATIONS);
       auto isDefault = animations && animations->defaultAnimation == animation.name;
-      auto isReferenced = document.reference.animationIndex == index;
+      auto isReferenced = document.reference_get().animationIndex == index;
       return isDefault && isReferenced ? font::BOLD_ITALICS
              : isDefault               ? font::BOLD
              : isReferenced            ? font::ITALICS
@@ -491,8 +510,8 @@ namespace anm2ed::imgui
     {
       auto& io = ImGui::GetIO();
       if (!io.KeyCtrl && !io.KeyShift) window.selection.clear();
-      document.reference = {index};
-      document.frames.clear();
+      document.reference_set({index});
+      document.frame_references_clear();
     };
     window.rename_finish = [](Document& document, Element& animation, int, int count)
     {
@@ -521,7 +540,7 @@ namespace anm2ed::imgui
       auto container = window_container_get(window, document);
       if (!container) return;
       auto groupIds = edit::animation_group_ids_get(*container);
-      std::erase_if(window.selection, [&](int groupId) { return !groupIds.contains(groupId); });
+      animations_selection_load(window, document);
 
       std::vector<int> visibleIds{};
       window.order.clear();
@@ -556,6 +575,9 @@ namespace anm2ed::imgui
         ++animationIndex;
       }
       window_selection_finish(window, manager, settings, clipboard, document, arrowSelectionId);
+      animations_selection_set(window, document,
+                               {document.animation.selection.begin(), document.animation.selection.end()},
+                               std::set<int>(window.selection));
     };
     window.add = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
     {
@@ -581,11 +603,11 @@ namespace anm2ed::imgui
       document.edit_apply(EDIT_ADD_ANIMATION, window.changeType,
                           [&](Anm2& anm2)
                           {
-                            auto uids = edit::animation_add(anm2, index, groupId, document.reference.animationIndex,
-                                                            localize.get(TEXT_NEW_ANIMATION));
-                            selection = {index};
-                            window.selection.clear();
-                            document.reference = {index};
+                            auto uids =
+                                edit::animation_add(anm2, index, groupId, document.reference_get().animationIndex,
+                                                    localize.get(TEXT_NEW_ANIMATION));
+                            animations_selection_set(window, document, {index}, {});
+                            document.reference_set({index});
                             window.newElementId = index;
                             window.scrollQueued = index;
                             return uids;
@@ -675,9 +697,8 @@ namespace anm2ed::imgui
                           [&](Anm2& anm2)
                           {
                             auto uids = edit::animations_group(anm2, targetSet, localize.get(TEXT_NEW_GROUP));
-                            document.animation.selection = targetSet;
-                            window.selection = {groupId};
-                            document.reference = {*targetSet.begin()};
+                            animations_selection_set(window, document, targetSet, {groupId});
+                            document.reference_set({*targetSet.begin()});
                             window.scrollQueued = *targetSet.begin();
                             return uids;
                           });
@@ -812,9 +833,10 @@ namespace anm2ed::imgui
       auto count = animations ? animations_count_get(*animations) : 0;
       if ((!isPrevious && !isNext) || count <= 0) return;
 
-      auto& reference = document.reference;
+      auto reference = document.reference_get();
       reference.animationIndex = std::clamp(reference.animationIndex + (isNext ? 1 : -1), 0, count - 1);
-      document.animation.selection = {reference.animationIndex};
+      document.reference_set(reference);
+      animations_selection_set(window, document, {reference.animationIndex}, std::set<int>(window.selection));
       window.scrollQueued = reference.animationIndex;
     };
     return window;

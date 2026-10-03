@@ -74,14 +74,11 @@ namespace anm2ed::imgui
                                                                                       bool isLayers, bool isNulls)
   {
     std::set<Reference> result{};
-    auto animationIndex = targetDocument.reference.animationIndex;
+    auto animationIndex = targetDocument.reference_get().animationIndex;
     if (target == BakeIntoOtherFramesTarget::CURRENT_SELECTION)
     {
-      for (auto itemReference : targetDocument.items.references)
-      {
-        itemReference.frameIndex = -1;
+      for (auto itemReference : targetDocument.selected_get(SelectionKind::TRACKS))
         if (itemReference.itemType == LAYER || itemReference.itemType == NULL_) result.insert(itemReference);
-      }
       return result;
     }
 
@@ -93,8 +90,8 @@ namespace anm2ed::imgui
                   [&](const Element& track)
                   {
                     auto itemType = (int)row.itemType;
-                    result.insert({animationIndex, itemType, anm2ed::track_id_get(track), -1,
-                                   track.groupId == -1 ? NONE : itemType, track.groupId});
+                    result.insert(Reference{animationIndex, itemType, anm2ed::track_id_get(track), -1,
+                                            track.groupId == -1 ? NONE : itemType, track.groupId});
                   });
     }
     return result;
@@ -150,7 +147,7 @@ namespace anm2ed::imgui
 
   std::vector<Reference> TimelineContext::item_references_groupable_get()
   {
-    if (!document.groupReferences.empty()) return std::vector<Reference>{};
+    if (!document.selection.uids[SelectionKind::GROUPS].empty()) return std::vector<Reference>{};
     auto selectedItems = item_references_for_current_get();
     std::erase_if(selectedItems, [](const Reference& itemReference)
                   { return itemReference.itemType != LAYER && itemReference.itemType != NULL_; });
@@ -186,8 +183,8 @@ namespace anm2ed::imgui
         [=, this](Document& document, const edit::Uids& uids)
         {
           if (uids.empty()) return;
-          document.items.references = {targetReferences.begin(), targetReferences.end()};
-          document.reference = targetReferences.front();
+          document.selected_set(SelectionKind::TRACKS, {targetReferences.begin(), targetReferences.end()});
+          document.reference_set(targetReferences.front());
           frames_selection_reset_for(document);
         });
   }
@@ -210,6 +207,15 @@ namespace anm2ed::imgui
       (row.isGroup ? groupIds : ids).insert(row.id);
     edit::RowTarget target{targetRow.isGroup, targetRow.type, targetRow.id, targetRow.groupId};
     auto animationIndex = reference.animationIndex;
+    std::set<Reference> tracks{};
+    std::set<Reference> groups{};
+    for (const auto& row : draggedRows)
+      (row.isGroup ? groups : tracks)
+          .insert(row.isGroup ? Reference{row.animationIndex, row.type, row.id} : row_item_reference_get(row));
+    Selection moved{};
+    selection_references_set(moved, anm2, SelectionKind::TRACKS, tracks);
+    selection_references_set(moved, anm2, SelectionKind::GROUPS, groups);
+    if (!tracks.empty()) selection_focus_set(moved, anm2, *tracks.begin());
 
     edit_push(
         EDIT_MOVE_ITEMS, Document::ITEMS,
@@ -220,15 +226,12 @@ namespace anm2ed::imgui
         },
         [=, this](Document& document, const edit::Uids&)
         {
-          document.items.references.clear();
-          document.groupReferences.clear();
-          for (const auto& row : draggedRows)
-            if (row.isGroup)
-              document.groupReferences.insert({row.animationIndex, row.type, row.id});
-            else
-              document.items.references.insert(row_item_reference_get(row));
-          document.reference =
-              document.items.references.empty() ? Reference{animationIndex} : *document.items.references.begin();
+          document.selection.uids[SelectionKind::TRACKS] = moved.uids.at(SelectionKind::TRACKS);
+          document.selection.uids[SelectionKind::GROUPS] = moved.uids.at(SelectionKind::GROUPS);
+          if (tracks.empty())
+            document.reference_set({document.reference_get().animationIndex});
+          else
+            document.selection.focus = moved.focus;
           frames_selection_reset_for(document);
         });
   }

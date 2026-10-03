@@ -21,7 +21,7 @@ namespace anm2ed::imgui::wizard
 {
   void RenderAnimation::range_to_animation_set(Manager& manager, Document& document)
   {
-    if (auto animation = document.anm2.element_get(ElementType::ANIMATION, document.reference.animationIndex))
+    if (auto animation = document.anm2.element_get(ElementType::ANIMATION, document.reference_get().animationIndex))
     {
       manager.recordingStart = 0;
       manager.recordingEnd = animation->frameNum - 1;
@@ -31,7 +31,7 @@ namespace anm2ed::imgui::wizard
   void RenderAnimation::range_to_frames_set(Manager& manager, Document& document)
   {
     auto frameReferences = document.frame_references_get(Document::FrameReferenceFallback::NONE);
-    auto& reference = document.reference;
+    auto reference = document.reference_get();
     std::erase_if(frameReferences,
                   [&](const Reference& frameReference)
                   {
@@ -72,7 +72,7 @@ namespace anm2ed::imgui::wizard
   {
     isEnd = false;
 
-    auto animation = document.anm2.element_get(ElementType::ANIMATION, document.reference.animationIndex);
+    auto animation = document.anm2.element_get(ElementType::ANIMATION, document.reference_get().animationIndex);
     if (!animation) return;
 
     auto& ffmpegPath = settings.renderFFmpegPath;
@@ -88,7 +88,7 @@ namespace anm2ed::imgui::wizard
     auto& rows = settings.renderRows;
     auto& columns = settings.renderColumns;
     auto& isRange = manager.isRecordingRange;
-    auto& reference = document.reference;
+    auto reference = document.reference_get();
     auto& frameNum = animation->frameNum;
     auto animationFrameNum = std::max(frameNum, 1);
     auto frameMax = animationFrameNum - 1;

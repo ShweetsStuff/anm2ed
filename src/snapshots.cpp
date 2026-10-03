@@ -168,104 +168,15 @@ namespace anm2ed::snapshots
     return step;
   }
 
-  bool is_same_item(Reference left, Reference right)
+  Reference focus_get(const Snapshot& snapshot)
   {
-    left.frameIndex = right.frameIndex = -1;
-    return left == right;
+    return selection_focus_get(snapshot.selection, UidIndex(snapshot.anm2));
   }
 
-  SnapshotSelection selection_capture(const Snapshot& snapshot)
-  {
-    SnapshotSelection selection{snapshot.reference,
-                                snapshot.frames.references,
-                                snapshot.items.references,
-                                snapshot.groupReferences,
-                                {snapshot.frames.selection.begin(), snapshot.frames.selection.end()},
-                                {snapshot.animation.selection.begin(), snapshot.animation.selection.end()}};
-
-    auto handle_add = [&](Reference reference)
-    { selection.handles.try_emplace(reference, snapshot.anm2.handle_get(reference)); };
-    handle_add(selection.reference);
-    for (auto frameIndex : selection.frameIndices)
-      handle_add({selection.reference.animationIndex, selection.reference.itemType, selection.reference.itemID,
-                  frameIndex, selection.reference.groupType, selection.reference.groupId});
-    for (auto animationIndex : selection.animationIndices)
-      handle_add({animationIndex});
-    for (const auto& references : {selection.frameReferences, selection.itemReferences})
-      for (auto reference : references)
-        handle_add(reference);
-    for (auto reference : selection.groupReferences)
-      selection.groupHandles.try_emplace(reference, snapshot.anm2.handle_get(reference, true));
-    return selection;
-  }
-
-  // The main reference never disappears: a removed frame falls back to its track, a removed track to the root.
-  Reference reference_follow(const Anm2& anm2, const UidIndex& index, Handle handle, Reference reference)
-  {
-    if (auto followed = index.reference_get(handle, reference)) return *followed;
-
-    if (auto track = index.reference_get({handle.animation, handle.item}, reference))
-    {
-      auto element = anm2.element_get(*track);
-      auto count = element ? track_frames_count_get(*element) : 0;
-      track->frameIndex = count > 0 ? std::clamp(reference.frameIndex, 0, count - 1) : -1;
-      return *track;
-    }
-
-    if (auto animation = index.reference_get({handle.animation}, {reference.animationIndex, ROOT})) return *animation;
-    auto animations = anm2.element_get(ElementType::ANIMATIONS);
-    auto count = animations ? animations_count_get(*animations) : 0;
-    return count > 0 ? Reference{std::clamp(reference.animationIndex, 0, count - 1), ROOT} : Reference{};
-  }
-
-  std::set<Reference> references_follow(const UidIndex& index, const std::set<Reference>& references,
-                                        const std::map<Reference, Handle>& handles)
-  {
-    std::set<Reference> followed{};
-    for (auto reference : references)
-      if (auto result = index.reference_get(handles.at(reference), reference)) followed.insert(*result);
-    return followed;
-  }
-
-  // Selection fields the change left untouched are re-resolved by uid; fields it set itself are kept.
-  void selection_follow(Snapshot& snapshot, const SnapshotSelection& before)
+  void selection_follow(Snapshot& snapshot, Reference before)
   {
     snapshot.anm2.uids_repair();
-    UidIndex index(snapshot.anm2);
-
-    auto isReferenceKept = snapshot.reference == before.reference;
-    if (isReferenceKept)
-      snapshot.reference =
-          reference_follow(snapshot.anm2, index, before.handles.at(before.reference), before.reference);
-    if (snapshot.frames.references == before.frameReferences)
-      snapshot.frames.references = references_follow(index, before.frameReferences, before.handles);
-    if (snapshot.items.references == before.itemReferences)
-      snapshot.items.references = references_follow(index, before.itemReferences, before.handles);
-    if (snapshot.groupReferences == before.groupReferences)
-      snapshot.groupReferences = references_follow(index, before.groupReferences, before.groupHandles);
-
-    if (std::set<int>(snapshot.animation.selection.begin(), snapshot.animation.selection.end()) ==
-        before.animationIndices)
-    {
-      snapshot.animation.selection.clear();
-      for (auto animationIndex : before.animationIndices)
-        if (auto followed = index.reference_get(before.handles.at({animationIndex}), {animationIndex}))
-          snapshot.animation.selection.insert(followed->animationIndex);
-    }
-
-    if (!isReferenceKept ||
-        std::set<int>(snapshot.frames.selection.begin(), snapshot.frames.selection.end()) != before.frameIndices)
-      return;
-
-    snapshot.frames.selection.clear();
-    for (auto frameIndex : before.frameIndices)
-    {
-      auto frame = before.reference;
-      frame.frameIndex = frameIndex;
-      auto followed = index.reference_get(before.handles.at(frame), frame);
-      if (followed && is_same_item(*followed, snapshot.reference))
-        snapshot.frames.selection.insert(followed->frameIndex);
-    }
+    ::anm2ed::selection_follow(snapshot.selection, snapshot.anm2, UidIndex(snapshot.anm2), before);
   }
 }
 
@@ -350,8 +261,8 @@ namespace anm2ed
 
   void Snapshots::step_push(const std::string& message, SnapshotStep step)
   {
-    if (pendingStep || pendingSelection) commit();
-    pendingSelection = snapshots::selection_capture(current);
+    if (pendingStep || pendingFocus) commit();
+    pendingFocus = snapshots::focus_get(current);
     current.message = message;
     step.message = message;
     pendingStep = step.is_empty() ? std::nullopt : std::optional<SnapshotStep>(std::move(step));
@@ -367,7 +278,7 @@ namespace anm2ed
   void Snapshots::commit()
   {
     const auto& snapshot = current;
-    if (pendingSelection) snapshots::selection_follow(current, *std::exchange(pendingSelection, std::nullopt));
+    if (pendingFocus) snapshots::selection_follow(current, *std::exchange(pendingFocus, std::nullopt));
     if (!pendingStep) return;
 
     auto step = std::move(*pendingStep);
@@ -422,12 +333,12 @@ namespace anm2ed
   bool Snapshots::undo()
   {
     pendingStep.reset();
-    pendingSelection.reset();
+    pendingFocus.reset();
     if (auto step = undoStack.pop())
     {
-      auto selection = snapshots::selection_capture(current);
+      auto focus = snapshots::focus_get(current);
       step->apply(current, SnapshotStepDirection::UNDO);
-      snapshots::selection_follow(current, selection);
+      snapshots::selection_follow(current, focus);
       redoStack.push(std::move(*step));
       return true;
     }
@@ -437,12 +348,12 @@ namespace anm2ed
   bool Snapshots::redo()
   {
     pendingStep.reset();
-    pendingSelection.reset();
+    pendingFocus.reset();
     if (auto step = redoStack.pop())
     {
-      auto selection = snapshots::selection_capture(current);
+      auto focus = snapshots::focus_get(current);
       step->apply(current, SnapshotStepDirection::REDO);
-      snapshots::selection_follow(current, selection);
+      snapshots::selection_follow(current, focus);
       undoStack.push(std::move(*step));
       return true;
     }
@@ -454,7 +365,7 @@ namespace anm2ed
     undoStack.clear();
     redoStack.clear();
     pendingStep.reset();
-    pendingSelection.reset();
+    pendingFocus.reset();
   }
 
   void Snapshots::apply_limit()

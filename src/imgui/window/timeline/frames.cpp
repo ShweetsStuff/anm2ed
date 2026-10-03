@@ -5,7 +5,6 @@ namespace anm2ed::imgui
   void TimelineContext::frame_move_drag_clear()
   {
     frameMoveDrag = {};
-    frameSelectionLocked.clear();
     frameMoveDropType = NONE;
     frameMoveDropItemID = -1;
     frameMoveDropGroupType = NONE;
@@ -189,9 +188,9 @@ namespace anm2ed::imgui
       if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
           ImGui::Shortcut(ImGuiKey_Escape, ImGuiInputFlags_RouteFocused))
       {
-        if (!frames.references.empty() || !frames.selection.empty())
+        if (!document.selection.uids[SelectionKind::FRAMES].empty())
         {
-          reference.frameIndex = -1;
+          reference_set(item_reference_from_frame_get(reference));
           frames_selection_reset_for(document);
         }
         else if (reference.itemType != NONE || reference.itemID != -1)
@@ -370,6 +369,7 @@ namespace anm2ed::imgui
         }
 
         auto frameType = track_frame_type_get(*item);
+        auto& selectedFrames = document.selection.uids[SelectionKind::FRAMES];
         int frameIndex{};
         for (int childIndex = 0; childIndex < (int)item->children.size(); ++childIndex)
         {
@@ -380,10 +380,7 @@ namespace anm2ed::imgui
           auto frameReference = row_reference_make(frameIndex);
           auto isFrameVisible = isVisible && frame.isVisible;
           auto isReferenced = reference == frameReference;
-          auto isSelected = frames.references.contains(frameReference) ||
-                            (frames.references.empty() && frames.selection.contains(frameIndex) &&
-                             reference.itemType == type && reference.itemID == id &&
-                             reference.groupType == row.rootGroupType && reference.groupId == row.rootGroupId);
+          auto isSelected = selectedFrames.contains(frame.uid);
 
           if (type == TRIGGER) frameTime = frame.atFrame;
 
@@ -398,9 +395,6 @@ namespace anm2ed::imgui
             continue;
           }
           auto buttonPos = ImVec2(cursorPos.x + (frameTime * frameSize.x), cursorPos.y);
-
-          if (frameFocusRequested && frameFocusIndex == frameIndex && reference == frameReference)
-            frameFocusRequested = false;
 
           ImGui::SetCursorPos(buttonPos);
 
@@ -419,7 +413,6 @@ namespace anm2ed::imgui
           ImGui::SetNextItemAllowOverlap();
           ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, FRAME_ROUNDING);
           ImGui::SetNextItemSelectionUserData(frameIndex);
-          bool isDifferentItem = !is_same_item(reference, frameReference);
           if (ImGui::Selectable("##Frame Button", isSelected, ImGuiSelectableFlags_None, buttonSize))
           {
             if (type == LAYER)
@@ -467,11 +460,10 @@ namespace anm2ed::imgui
               frameSelectionAnchor = frameReference;
               isFrameSelectionAnchorSet = true;
             }
-            reference = frameReference;
+            reference_set(frameReference);
             isReferenced = true;
             region.reference = -1;
             region.selection.clear();
-            if (isDifferentItem) frames_selection_sync_for(document);
           }
           ImGui::PopStyleVar();
 
@@ -563,22 +555,6 @@ namespace anm2ed::imgui
             (ImGui::IsMouseReleased(ImGuiMouseButton_Left) || ImGui::IsMouseReleased(ImGuiMouseButton_Right)) &&
             !ImGui::IsAnyItemHovered())
           row_selection_set(row);
-
-        if (isFrameSelectionLocked)
-        {
-          std::set<Reference> lockedSelection{};
-          for (int idx : frameSelectionLocked)
-            lockedSelection.insert(row_reference_make(idx));
-          document.frame_references_set(std::move(lockedSelection));
-          isFrameSelectionLocked = false;
-          frameSelectionLocked.clear();
-        }
-        if (reference.itemType == type && reference.itemID == id && reference.groupType == row.rootGroupType &&
-            reference.groupId == row.rootGroupId)
-        {
-          frameSelectionSnapshot.assign(frames.selection.begin(), frames.selection.end());
-          frameSelectionSnapshotReference = reference;
-        }
       }
     }
 
@@ -639,7 +615,6 @@ namespace anm2ed::imgui
         draggedFrameStartMouseX = 0.0f;
         draggedFrameWidth = 0.0f;
         isDraggedFrameSnapshot = false;
-        frameSelectionLocked.clear();
       }
     }
 
@@ -692,7 +667,6 @@ namespace anm2ed::imgui
         {
           group_selection_reset_for(document);
           document.frame_references_set(document.selected_item_frame_references_get());
-          if (!document.frames.references.empty()) frames_selection_sync_for(document);
         }
 
         ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2());
@@ -809,7 +783,6 @@ namespace anm2ed::imgui
               }
               else
                 document.frame_references_set(frameBoxSelection);
-              frames_selection_sync_for(document);
             }
             isFrameBoxPending = false;
             isFrameBoxSelecting = false;

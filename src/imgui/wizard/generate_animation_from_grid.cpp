@@ -21,7 +21,7 @@ namespace anm2ed::imgui::wizard
     isEnd = false;
 
     auto& anm2 = document.anm2;
-    auto& reference = document.reference;
+    auto reference = document.reference_get();
     auto& startPosition = settings.generateStartPosition;
     auto& size = settings.generateSize;
     auto& pivot = settings.generatePivot;

@@ -48,10 +48,10 @@ namespace anm2ed::imgui
   {
     auto& document = *manager.get();
     auto frameSelectionCount = document.frame_references_get(Document::FrameReferenceFallback::NONE).size();
-    if (frameSelectionCount == 0 && document.reference.frameIndex >= 0) frameSelectionCount = 1;
+    if (frameSelectionCount == 0 && document.reference_get().frameIndex >= 0) frameSelectionCount = 1;
     auto isSingleFrameSelection = frameSelectionCount == 1;
     auto isMultiFrameSelection = frameSelectionCount > 1;
-    auto isSingleFrameBatchMode = isSingleFrameSelection && document.reference.itemType != TRIGGER && isBatchMode;
+    auto isSingleFrameBatchMode = isSingleFrameSelection && document.reference_get().itemType != TRIGGER && isBatchMode;
     auto isBatchFrameProperties = isMultiFrameSelection || isSingleFrameBatchMode;
     auto windowLabel = std::string(
         localize.get(isBatchFrameProperties ? LABEL_CHANGE_ALL_FRAME_PROPERTIES : LABEL_FRAME_PROPERTIES_WINDOW));
@@ -60,7 +60,7 @@ namespace anm2ed::imgui
     if (ImGui::Begin(windowLabel.c_str(), &settings.windowIsFrameProperties))
     {
       auto& anm2 = document.anm2;
-      auto& reference = document.reference;
+      auto reference = document.reference_get();
       auto& type = reference.itemType;
       auto frame = reference.frameIndex >= 0 ? anm2.element_get(reference) : nullptr;
 
@@ -138,8 +138,10 @@ namespace anm2ed::imgui
                            frame.atFrame = atFrame;
                            if (!item) return;
                            frames_sort_by_at_frame(*item);
-                           document.reference.frameIndex = frame_index_from_at_frame_get(*item, atFrame);
-                           document.frame_references_set({document.reference});
+                           auto reference = document.reference_get();
+                           reference.frameIndex = frame_index_from_at_frame_get(*item, atFrame);
+                           document.reference_set(reference);
+                           document.frame_references_set({reference});
                          });
             }
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TRIGGER_AT_FRAME));

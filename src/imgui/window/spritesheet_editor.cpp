@@ -30,7 +30,7 @@ namespace anm2ed::imgui
 
     auto& document = *manager.get();
     auto& anm2 = document.anm2;
-    auto& reference = document.reference;
+    auto reference = document.reference_get();
     auto& referenceSpritesheet = document.spritesheet.reference;
     auto& pan = document.editorPan;
     auto& zoom = document.editorZoom;
@@ -51,7 +51,7 @@ namespace anm2ed::imgui
         if (auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, frameReference.itemID))
           return layer->spritesheetId;
       }
-      if (document.is_frame_reference_valid(reference) && reference.itemType == LAYER)
+      if (reference.frameIndex >= 0 && reference.itemType == LAYER)
         if (auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, reference.itemID)) return layer->spritesheetId;
       return -1;
     };

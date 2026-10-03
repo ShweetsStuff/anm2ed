@@ -10,6 +10,7 @@
 #include "audio_data.hpp"
 #include "image.hpp"
 #include "playback.hpp"
+#include "selection.hpp"
 #include "storage.hpp"
 
 namespace anm2ed::snapshots
@@ -52,10 +53,7 @@ namespace anm2ed
   {
   public:
     Playback playback{};
-    Storage animation{};
     Storage event{};
-    Storage frames{};
-    Storage items{};
     Storage layer{};
     Storage merge{};
     Storage null{};
@@ -66,8 +64,7 @@ namespace anm2ed
     std::map<int, resource::Image> textures{};
     std::map<int, resource::AudioData> sounds{};
     Anm2 anm2{};
-    Reference reference{};
-    std::set<Reference> groupReferences{};
+    Selection selection{};
     float frameTime{};
     std::string message = snapshots::ACTION;
   };
@@ -77,10 +74,7 @@ namespace anm2ed
 
 #define SNAPSHOT_STEP_STATE_FIELDS                                                                                     \
   X(Playback, playback)                                                                                                \
-  X(Storage, animation)                                                                                                \
   X(Storage, event)                                                                                                    \
-  X(Storage, frames)                                                                                                   \
-  X(Storage, items)                                                                                                    \
   X(Storage, layer)                                                                                                    \
   X(Storage, merge)                                                                                                    \
   X(Storage, null)                                                                                                     \
@@ -88,8 +82,7 @@ namespace anm2ed
   X(Storage, shader)                                                                                                   \
   X(Storage, sound)                                                                                                    \
   X(Storage, spritesheet)                                                                                              \
-  X(Reference, reference)                                                                                              \
-  X(std::set<Reference>, groupReferences)                                                                              \
+  X(Selection, selection)                                                                                              \
   X(float, frameTime)
 
 #define SNAPSHOT_STEP_RESOURCE_FIELDS                                                                                  \
@@ -108,19 +101,6 @@ namespace anm2ed
 
     bool is_empty() const;
     void apply(Snapshot&, SnapshotStepDirection) const;
-  };
-
-  // The selection as it was before a change, with the uids that let it follow elements through the change.
-  struct SnapshotSelection
-  {
-    Reference reference{};
-    std::set<Reference> frameReferences{};
-    std::set<Reference> itemReferences{};
-    std::set<Reference> groupReferences{};
-    std::set<int> frameIndices{};
-    std::set<int> animationIndices{};
-    std::map<Reference, Handle> handles{};
-    std::map<Reference, Handle> groupHandles{};
   };
 
   class SnapshotStack
@@ -149,7 +129,7 @@ namespace anm2ed
     SnapshotStack redoStack{};
     Snapshot current{};
     std::optional<SnapshotStep> pendingStep{};
-    std::optional<SnapshotSelection> pendingSelection{};
+    std::optional<Reference> pendingFocus{};
 
     void push(const std::string&, bool = false);
     void step_push(const std::string&, SnapshotStep);

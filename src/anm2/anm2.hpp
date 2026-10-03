@@ -589,14 +589,24 @@ namespace anm2ed
     Handle handle_get(Reference, bool = false) const;
   };
 
-  // uid -> current Reference, built in one walk; group uids map to {animation, groupType, groupId}.
+  // uid -> where that element is now (as a Reference) and what it is, built in one walk of the animations.
   class UidIndex
   {
-    std::unordered_map<std::uint64_t, Reference> locations{};
+  public:
+    struct Location
+    {
+      Reference reference{};
+      ElementType type{};
+    };
+
+  private:
+    std::unordered_map<std::uint64_t, Location> locations{};
 
   public:
+    UidIndex() = default;
     explicit UidIndex(const Anm2&);
-    std::optional<Reference> reference_get(Handle, Reference) const;
+    bool contains(std::uint64_t) const;
     std::optional<Reference> reference_get(std::uint64_t) const;
+    ElementType type_get(std::uint64_t) const;
   };
 }
