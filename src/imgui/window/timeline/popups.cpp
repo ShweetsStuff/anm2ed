@@ -31,21 +31,14 @@ namespace anm2ed::imgui
       input_text_string(localize.get(LABEL_FORMAT), &settings.generateRegionNameFormat);
       ImGui::Checkbox(localize.get(LABEL_MAP_FRAMES_TO_REGIONS), &isMakeManyRegionsMapFrames);
 
-      auto widgetSize = widget_size_with_row_get(2);
-      if (ImGui::Button(localize.get(LABEL_MAKE_MANY_REGIONS), widgetSize))
-      {
-        auto targetFrames = makeManyRegionReferences;
-        auto format = settings.generateRegionNameFormat;
-        auto mapping = isMakeManyRegionsMapFrames ? RegionFrameMapping::SET : RegionFrameMapping::PRESERVE;
-        edit_command_push(EDIT_GENERATE_REGIONS_FROM_ANIMATIONS, Document::ALL,
-                          [=, this](Manager&, Document& document) mutable
-                          { document.anm2.regions_generate({}, targetFrames, format, mapping); });
-        makeManyRegionsPopup.close();
-      }
-
-      ImGui::SameLine();
-
-      if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize)) makeManyRegionsPopup.close();
+      auto result = window_popup_buttons_draw(manager, localize.get(LABEL_MAKE_MANY_REGIONS));
+      if (result == PopupButton::CONFIRM)
+        edit_command_push(
+            EDIT_GENERATE_REGIONS_FROM_ANIMATIONS, Document::ALL,
+            [targetFrames = makeManyRegionReferences, format = settings.generateRegionNameFormat,
+             mapping = isMakeManyRegionsMapFrames ? RegionFrameMapping::SET : RegionFrameMapping::PRESERVE](
+                Manager&, Document& document) { document.anm2.regions_generate({}, targetFrames, format, mapping); });
+      if (result != PopupButton::NONE) makeManyRegionsPopup.close();
 
       ImGui::EndPopup();
     }
@@ -165,80 +158,51 @@ namespace anm2ed::imgui
         document.frameTime = playback.time;
       }
 
-      static bool isShortenChordHeld = false;
-      auto isShortenFrame = shortcut(manager.chords[SHORTCUT_SHORTEN_FRAME], shortcut::GLOBAL);
-
-      if (isShortenFrame)
+      struct FrameResize
       {
-
-        auto selectedFrames = frame_references_for_current_get();
-        std::erase_if(selectedFrames,
-                      [](const Reference& frameReference) { return frameReference.itemType == TRIGGER; });
+        int shortcut;
+        StringType edit;
+        int delta;
+      };
+      constexpr FrameResize FRAME_RESIZES[] = {{SHORTCUT_SHORTEN_FRAME, EDIT_SHORTEN_FRAME, -1},
+                                               {SHORTCUT_EXTEND_FRAME, EDIT_EXTEND_FRAME, 1}};
+      static bool isResizeChordHeld[std::size(FRAME_RESIZES)]{};
+      for (int i = 0; i < (int)std::size(FRAME_RESIZES); ++i)
+      {
+        auto resize = FRAME_RESIZES[i];
+        auto isPressed = shortcut(manager.chords[resize.shortcut], shortcut::GLOBAL);
+        auto selectedFrames =
+            isPressed ? document.frame_references_get(Document::FrameReferenceFallback::NONE) : std::set<Reference>{};
+        std::erase_if(selectedFrames, is_trigger_reference);
         if (!selectedFrames.empty())
         {
-          if (!isShortenChordHeld) frames_snapshot_command_push(EDIT_SHORTEN_FRAME, selectedFrames);
+          if (!isResizeChordHeld[i]) snapshot_command_push(resize.edit, SnapshotKind::FRAMES, selectedFrames);
           command_push(
               [=, this](Manager&, Document& document)
               {
                 for (auto frameReference : selectedFrames)
-                {
-                  auto frame = command_frame_get(document, frameReference);
-                  if (!frame) continue;
-                  frame->duration = std::max(FRAME_DURATION_MIN, frame->duration - 1);
-                }
+                  if (auto frame = command_frame_get(document, frameReference))
+                    frame->duration =
+                        std::clamp(frame->duration + resize.delta, FRAME_DURATION_MIN, FRAME_DURATION_MAX);
                 document.change(Document::FRAMES);
               });
         }
+        isResizeChordHeld[i] = isPressed;
       }
-      isShortenChordHeld = isShortenFrame;
-
-      static bool isExtendChordHeld = false;
-      auto isExtendFrame = shortcut(manager.chords[SHORTCUT_EXTEND_FRAME], shortcut::GLOBAL);
-      if (isExtendFrame)
-      {
-
-        auto selectedFrames = frame_references_for_current_get();
-        std::erase_if(selectedFrames,
-                      [](const Reference& frameReference) { return frameReference.itemType == TRIGGER; });
-        if (!selectedFrames.empty())
-        {
-          if (!isExtendChordHeld) frames_snapshot_command_push(EDIT_EXTEND_FRAME, selectedFrames);
-          command_push(
-              [=, this](Manager&, Document& document)
-              {
-                for (auto frameReference : selectedFrames)
-                {
-                  auto frame = command_frame_get(document, frameReference);
-                  if (!frame) continue;
-                  frame->duration = std::min(FRAME_DURATION_MAX, frame->duration + 1);
-                }
-                document.change(Document::FRAMES);
-              });
-        }
-      }
-      isExtendChordHeld = isExtendFrame;
 
       auto isPreviousFrame = shortcut(manager.chords[SHORTCUT_PREVIOUS_FRAME], shortcut::GLOBAL);
       auto isNextFrame = shortcut(manager.chords[SHORTCUT_NEXT_FRAME], shortcut::GLOBAL);
       auto isPreviousItem = shortcut(manager.chords[SHORTCUT_PREVIOUS_ITEM], shortcut::GLOBAL);
       auto isNextItem = shortcut(manager.chords[SHORTCUT_NEXT_ITEM], shortcut::GLOBAL);
 
-      if (isPreviousFrame)
-        if (auto item = selected_item_get(); item && !item->children.empty())
-          reference.frameIndex = glm::clamp(--reference.frameIndex, 0, (int)item->children.size() - 1);
-
-      if (isNextFrame)
-        if (auto item = selected_item_get(); item && !item->children.empty())
-          reference.frameIndex = glm::clamp(++reference.frameIndex, 0, (int)item->children.size() - 1);
-
       if (isPreviousFrame || isNextFrame)
-      {
         if (auto item = selected_item_get(); item && !item->children.empty())
         {
-          frames_selection_set_reference();
+          reference.frameIndex = glm::clamp(reference.frameIndex + (int)isNextFrame - (int)isPreviousFrame, 0,
+                                            (int)item->children.size() - 1);
+          frames_selection_set_reference_for(document);
           document.frameTime = frame_time_from_index_get(*item, reference.frameIndex);
         }
-      }
 
       if (isPreviousItem) reference_set_adjacent_item(-1);
       if (isNextItem) reference_set_adjacent_item(1);

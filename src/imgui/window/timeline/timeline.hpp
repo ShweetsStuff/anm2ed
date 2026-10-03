@@ -57,10 +57,8 @@ namespace anm2ed::imgui
     ALL
   };
 
-  class Timeline
+  struct TimelineState
   {
-    friend struct TimelineContext;
-
     bool isDragging{};
     bool isWindowHovered{};
     bool isHorizontalScroll{};
@@ -110,6 +108,10 @@ namespace anm2ed::imgui
     std::vector<TimelineRowReference> rowDragReferences{};
     glm::vec2 scroll{};
     ImGuiStyle style{};
+  };
+
+  class Timeline
+  {
     std::unique_ptr<TimelineContext> context{};
 
   public:

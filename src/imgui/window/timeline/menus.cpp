@@ -1,0 +1,289 @@
+#include "context.hpp"
+
+namespace anm2ed::imgui
+{
+  void TimelineContext::frame_begin()
+  {
+    frames_reference_normalize_for(document);
+    iconTintDefault = isLightTheme ? ICON_TINT_DEFAULT_LIGHT : ICON_TINT_DEFAULT_DARK;
+    itemIconTint = isLightTheme ? ICON_TINT_DEFAULT_LIGHT : iconTintDefault;
+    frameBorderColor = isLightTheme ? FRAME_BORDER_COLOR_LIGHT : FRAME_BORDER_COLOR_DARK;
+    frameBorderColorReferenced =
+        isLightTheme ? FRAME_BORDER_COLOR_REFERENCED_LIGHT : FRAME_BORDER_COLOR_REFERENCED_DARK;
+    frameMultipleOverlayColor = isLightTheme ? FRAME_MULTIPLE_OVERLAY_COLOR_LIGHT : FRAME_MULTIPLE_OVERLAY_COLOR_DARK;
+    textMultipleColor = isLightTheme ? TEXT_MULTIPLE_COLOR_LIGHT : TEXT_MULTIPLE_COLOR_DARK;
+    playheadLineColor = isLightTheme ? PLAYHEAD_LINE_COLOR_LIGHT : PLAYHEAD_LINE_COLOR_DARK;
+    playheadIconTint = isLightTheme ? PLAYHEAD_ICON_TINT_LIGHT : iconTintDefault;
+    timelineBackgroundColor =
+        isLightTheme ? TIMELINE_BACKGROUND_COLOR_LIGHT : ImGui::GetStyleColorVec4(ImGuiCol_Header);
+    timelinePlayheadRectColor = isLightTheme ? TIMELINE_PLAYHEAD_RECT_COLOR_LIGHT : TIMELINE_PLAYHEAD_RECT_COLOR_DARK;
+    timelineTickColor = isLightTheme ? TIMELINE_TICK_COLOR_LIGHT : frameBorderColor;
+    itemTextColor = isLightTheme ? ITEM_TEXT_COLOR_LIGHT : ITEM_TEXT_COLOR_DARK;
+  }
+
+  void TimelineContext::overlay_icon(GLuint textureId, ImVec4 tint, bool isForced)
+  {
+    if (!isForced && !isLightTheme) return;
+    auto min = ImGui::GetItemRectMin();
+    auto max = ImGui::GetItemRectMax();
+    ImGui::GetWindowDrawList()->AddImage((ImTextureID)(intptr_t)textureId, min, max, ImVec2(0, 0), ImVec2(1, 1),
+                                         ImGui::GetColorU32(tint));
+  }
+
+  void TimelineContext::playback_stop()
+  {
+    playback.isPlaying = false;
+    playback.isFinished = false;
+    playback.timing_reset();
+  }
+
+  void TimelineContext::context_menu()
+  {
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
+
+    if (shortcut(manager.chords[SHORTCUT_CUT], shortcut::FOCUSED)) cut();
+    if (shortcut(manager.chords[SHORTCUT_COPY], shortcut::FOCUSED)) copy();
+    if (shortcut(manager.chords[SHORTCUT_PASTE], shortcut::FOCUSED)) paste();
+    if (shortcut(manager.chords[SHORTCUT_SPLIT], shortcut::FOCUSED)) frame_split();
+    if (shortcut(manager.chords[SHORTCUT_BAKE], shortcut::FOCUSED)) frames_bake();
+    if (shortcut(manager.chords[SHORTCUT_FIT], shortcut::FOCUSED)) fit_animation_length();
+
+    auto make_region = [&]()
+    {
+      auto targetReference = reference;
+      auto frame = frame_get();
+      if (!frame || targetReference.itemType != LAYER || targetReference.itemID == -1) return;
+      if (frame->regionId != -1) return;
+      auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, targetReference.itemID);
+      if (!layer) return;
+
+      auto spritesheetID = layer->spritesheetId;
+      if (!anm2.element_get(ElementType::SPRITESHEET, spritesheetID)) return;
+
+      auto settingsPtr = &settings;
+      command_push(
+          [=, this](Manager& manager, Document& document)
+          {
+            auto frame = command_frame_get(document, targetReference);
+            if (!frame || frame->regionId != -1) return;
+            auto layer = document.anm2.element_get(ElementType::LAYER_ELEMENT, targetReference.itemID);
+            if (!layer) return;
+
+            auto spritesheetID = layer->spritesheetId;
+            if (!document.anm2.element_get(ElementType::SPRITESHEET, spritesheetID)) return;
+
+            auto region = element_make(ElementType::REGION);
+            region.crop = frame->crop;
+            region.size = frame->size;
+            region.pivot = frame->pivot;
+            region.origin = Origin::CUSTOM;
+
+            document.spritesheet.reference = spritesheetID;
+            settingsPtr->windowIsRegions = true;
+            manager.makeRegionSpritesheetId = spritesheetID;
+            manager.makeRegion = region;
+            manager.isMakeRegionRequested = true;
+          });
+    };
+
+    auto item = selected_item_get();
+    auto frame = frame_get();
+    auto selectedFrames = document.frame_references_get(Document::FrameReferenceFallback::NONE);
+    auto copyFrames = copy_frame_references_get();
+    auto selectedBakeFrames = selectedFrames;
+    std::erase_if(selectedBakeFrames, is_trigger_reference);
+    auto isReverseFrames = is_frames_reverse_available(selectedFrames);
+    auto is_region_makeable = [&](const Reference& frameReference)
+    {
+      if (frameReference.itemType != LAYER || frameReference.frameIndex < 0) return false;
+      auto frame = command_frame_get(document, frameReference);
+      auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, frameReference.itemID);
+      return frame && frame->regionId == -1 && layer &&
+             anm2.element_get(ElementType::SPRITESHEET, layer->spritesheetId);
+    };
+    auto selectedRegionFrames = selectedFrames;
+    std::erase_if(selectedRegionFrames,
+                  [&](const Reference& frameReference) { return !is_region_makeable(frameReference); });
+    bool isMakeManyRegions = selectedRegionFrames.size() > 1;
+    auto selectedRootFrames = selected_root_frame_references_get();
+    bool isMakeRegion = is_region_makeable(reference);
+    Actions actions{};
+    actions_undo_redo_add(actions, manager, document);
+    actions.separator();
+    actions.add({.label = playback.isPlaying ? LABEL_PAUSE : LABEL_PLAY,
+                 .shortcut = SHORTCUT_PLAY_PAUSE,
+                 .isEnabled = []() { return true; },
+                 .run = [&]() { playback.toggle(); }});
+    actions.add({.label = LABEL_INSERT,
+                 .shortcut = SHORTCUT_INSERT_FRAME,
+                 .isEnabled = [&]() { return item; },
+                 .run = [&]() { frame_insert(); }});
+    actions.add(ACTION_DUPLICATE, [=, this]() { return !selectedBakeFrames.empty(); }, [&]() { frames_duplicate(); });
+    actions.add({.label = LABEL_SPLIT,
+                 .shortcut = SHORTCUT_SPLIT,
+                 .isEnabled = [=, this]() { return selectedBakeFrames.size() == 1; },
+                 .run = [&]() { frame_split(); }});
+    actions.add(ACTION_REVERSE, [=, this]() { return isReverseFrames; }, [&]() { frames_reverse(); });
+    actions.separator();
+    actions.add({.label = LABEL_BAKE,
+                 .shortcut = SHORTCUT_BAKE,
+                 .isEnabled = [=, this]() { return !selectedBakeFrames.empty(); },
+                 .run = [&]() { frames_bake(); }});
+    actions.add({.label = LABEL_BAKE_INTO_OTHER_FRAMES,
+                 .shortcut = -1,
+                 .isEnabled = [=, this]() { return !selectedRootFrames.empty(); },
+                 .run = [&]() { bakeIntoOtherFramesPopup.open(); }});
+    actions.add({.label = LABEL_FIT_ANIMATION_LENGTH,
+                 .shortcut = SHORTCUT_FIT,
+                 .isEnabled = [&]() { return animation && animation->frameNum != animation_length_get(*animation); },
+                 .run = [&]() { fit_animation_length(); }});
+    actions.separator();
+    actions.add({.label = isMakeManyRegions ? LABEL_MAKE_MANY_REGIONS : LABEL_MAKE_REGION,
+                 .shortcut = -1,
+                 .isEnabled = [=, this]() { return isMakeManyRegions || isMakeRegion; },
+                 .run =
+                     [&]()
+                 {
+                   if (!isMakeManyRegions) return make_region();
+                   makeManyRegionReferences = selectedRegionFrames;
+                   makeManyRegionsPopup.open();
+                 }});
+    actions.separator();
+    actions.add({.label = LABEL_DELETE,
+                 .shortcut = SHORTCUT_REMOVE,
+                 .isEnabled = [=, this]() { return !selectedFrames.empty(); },
+                 .run = [&]() { frames_delete_action(); }});
+    actions.separator();
+    actions.add(ACTION_CUT, [=, this]() { return !selectedFrames.empty(); }, [this]() { cut(); });
+    actions.add(ACTION_COPY, [=, this]() { return !copyFrames.empty(); }, [this]() { copy(); });
+    actions.add(ACTION_PASTE, [&]() { return !clipboard.is_empty(); }, [this]() { paste(); });
+    actions_context_window_draw("##Context Menu", actions, settings);
+
+    ImGui::PopStyleVar(2);
+  }
+
+  void TimelineContext::item_base_properties_open(int type, int id)
+  {
+    if (auto row = anm2ed::track_container_get((ItemType)type)) manager.item_properties_open(row->element, id);
+  }
+
+  void TimelineContext::group_properties_close()
+  {
+    groupName.clear();
+    groupAnimationIndex = -1;
+    groupType = NONE;
+    groupId = -1;
+    groupPropertiesPopup.close();
+  }
+
+  void TimelineContext::group_properties_open(const TimelineItemRow& row, const Element& group)
+  {
+    groupName = group.name.empty() ? std::string(localize.get(TEXT_NEW_GROUP)) : group.name;
+    groupAnimationIndex = reference.animationIndex;
+    groupType = row.type;
+    groupId = row.id;
+    groupPropertiesPopup.open();
+  }
+
+  void TimelineContext::group_properties_update()
+  {
+    groupPropertiesPopup.trigger();
+
+    if (ImGui::BeginPopupModal(groupPropertiesPopup.label(), &groupPropertiesPopup.isOpen, ImGuiWindowFlags_NoResize))
+    {
+      auto childSize = child_size_get(1);
+      if (ImGui::BeginChild("##Group Properties Child", childSize, ImGuiChildFlags_Borders))
+      {
+        if (groupPropertiesPopup.isJustOpened) ImGui::SetKeyboardFocusHere();
+        input_text_string(localize.get(BASIC_NAME), &groupName);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ITEM_NAME));
+      }
+      ImGui::EndChild();
+
+      auto result = window_popup_buttons_draw(manager, localize.get(BASIC_CONFIRM));
+      if (result == PopupButton::CONFIRM)
+      {
+        auto targetName = groupName;
+        auto targetAnimationIndex = groupAnimationIndex;
+        auto targetType = groupType;
+        auto targetId = groupId;
+        edit_command_push(EDIT_RENAME_GROUP, Document::ITEMS,
+                          [=, this](Manager&, Document& document)
+                          {
+                            auto animation = document.anm2.element_get(ElementType::ANIMATION, targetAnimationIndex);
+                            auto container =
+                                animation ? child_first_get(*animation, TYPE_CONTAINERS[targetType]) : nullptr;
+                            auto group = container ? child_id_get(*container, ElementType::GROUP, targetId) : nullptr;
+                            if (!group) return;
+                            group->name = targetName;
+                          });
+      }
+      if (result != PopupButton::NONE) group_properties_close();
+
+      ImGui::EndPopup();
+    }
+
+    groupPropertiesPopup.end();
+  }
+
+  void TimelineContext::item_context_menu()
+  {
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
+
+    auto& type = reference.itemType;
+    auto& id = reference.itemID;
+    auto item = selected_item_get();
+    auto selectedRows = selected_row_references_get();
+    auto selectedGroupableItems = item_references_groupable_get();
+    auto copyFrames = copy_frame_references_get();
+    TimelineItemRow selectedGroupRow{};
+    Element* selectedGroup{};
+    if (selectedRows.size() == 1 && selectedRows.front().isGroup)
+    {
+      auto row = selectedRows.front();
+      selectedGroupRow = {.type = row.type, .id = row.id, .index = row.index, .isGroup = true};
+      selectedGroup = row_group_get(selectedGroupRow);
+    }
+    auto isRemoveAvailable = std::ranges::any_of(selectedRows, [](const TimelineRowReference& row)
+                                                 { return row.type == LAYER || row.type == NULL_; });
+    auto item_cut = [&]()
+    {
+      if (copyFrames.empty() || !isRemoveAvailable) return;
+      frame_references_copy(copyFrames);
+      item_remove();
+    };
+
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlappedByWindow) &&
+        ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+      ImGui::OpenPopup("##Items Context Menu");
+
+    Actions actions{};
+    actions_undo_redo_add(actions, manager, document);
+    actions.separator();
+    actions.add(
+        ACTION_PROPERTIES, [&]() { return selectedGroup || (item && (type == LAYER || type == NULL_)); },
+        [&]()
+        {
+          if (selectedGroup)
+            group_properties_open(selectedGroupRow, *selectedGroup);
+          else
+            item_base_properties_open(type, id);
+        });
+    actions.add(ACTION_ADD, [&]() { return animation; }, [&]() { itemProperties.open(); });
+    actions.add(ACTION_REMOVE, [=, this]() { return isRemoveAvailable; }, [&]() { item_remove(); });
+    actions.add(ACTION_GROUP, [=, this]() { return !selectedGroupableItems.empty(); }, [&]() { item_group(); });
+    actions.separator();
+    actions.add(ACTION_CUT, [=, this]() { return !copyFrames.empty() && isRemoveAvailable; }, item_cut);
+    actions.add(ACTION_COPY, [=, this]() { return !copyFrames.empty(); }, [this]() { copy(); });
+    actions.add(ACTION_PASTE, [&]() { return item && !clipboard.is_empty(); }, [this]() { paste(); });
+    if (shortcut(manager.chords[SHORTCUT_CUT], shortcut::FOCUSED) && !copyFrames.empty() && isRemoveAvailable)
+      item_cut();
+    if (shortcut(manager.chords[SHORTCUT_COPY], shortcut::FOCUSED) && !copyFrames.empty()) copy();
+    if (shortcut(manager.chords[SHORTCUT_PASTE], shortcut::FOCUSED) && item && !clipboard.is_empty()) paste();
+    actions_popup_draw("##Items Context Menu", actions, settings);
+
+    ImGui::PopStyleVar(2);
+  }
+}

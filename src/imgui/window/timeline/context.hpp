@@ -24,6 +24,7 @@
 #include "util/imgui/tooltip.hpp"
 
 #include "vector.hpp"
+#include "window/window.hpp"
 
 using namespace anm2ed::resource;
 using namespace anm2ed::types;
@@ -102,10 +103,52 @@ namespace anm2ed::imgui
 
   constexpr auto FRAME_MULTIPLE = 5;
   constexpr auto FRAME_TOOLTIP_HOVER_DELAY = 0.75f;
-  constexpr auto DRAG_DROP_SOURCE_FLAGS =
-      ImGuiDragDropFlags_SourceNoPreviewTooltip | ImGuiDragDropFlags_SourceNoHoldToOpenOthers;
 
 #define ITEM_CHILD_WIDTH ImGui::GetTextLineHeightWithSpacing() * 12.5
+
+  enum TimelineColor
+  {
+    COLOR_FRAME_BASE,
+    COLOR_FRAME_ACTIVE,
+    COLOR_FRAME_HOVERED,
+    COLOR_ITEM_BASE,
+    COLOR_ITEM_ACTIVE,
+    COLOR_ITEM_SELECTED
+  };
+
+  struct TimelineColorSet
+  {
+    const glm::vec4* light;
+    const glm::vec4* dark;
+  };
+
+  inline const TimelineColorSet TIMELINE_COLORS[] = {{FRAME_COLOR_LIGHT_BASE, TYPE_COLOR},
+                                                     {FRAME_COLOR_LIGHT_ACTIVE, TYPE_COLOR_ACTIVE},
+                                                     {FRAME_COLOR_LIGHT_HOVERED, TYPE_COLOR_HOVERED},
+                                                     {ITEM_COLOR_LIGHT_BASE, TYPE_COLOR},
+                                                     {ITEM_COLOR_LIGHT_ACTIVE, TYPE_COLOR_ACTIVE},
+                                                     {ITEM_COLOR_LIGHT_SELECTED, TYPE_COLOR_ACTIVE}};
+
+  enum class SnapshotKind
+  {
+    ANM2,
+    TRACKS,
+    FRAMES
+  };
+
+  inline void snapshot_take(Document& document, const std::string& message, SnapshotKind kind,
+                            const std::set<Reference>& references)
+  {
+    if (kind == SnapshotKind::ANM2) document.snapshots.anm2_push(message);
+    if (kind == SnapshotKind::TRACKS) document.snapshots.tracks_push(message, references);
+    if (kind == SnapshotKind::FRAMES) document.snapshots.frames_push(message, references);
+  }
+
+  inline bool is_trigger_reference(const Reference& reference) { return reference.itemType == TRIGGER; }
+
+  constexpr resource::icon::Type INTERPOLATION_ICONS[] = {resource::icon::UNINTERPOLATED, resource::icon::INTERPOLATED,
+                                                          resource::icon::EASE_IN, resource::icon::EASE_OUT,
+                                                          resource::icon::EASE_IN_OUT};
 
   struct TimelineItemRow
   {
@@ -125,59 +168,8 @@ namespace anm2ed::imgui
     int end{};
   };
 
-  struct TimelineContext
+  struct TimelineContext : TimelineState
   {
-    Timeline& timeline;
-    bool& isDragging;
-    bool& isWindowHovered;
-    bool& isHorizontalScroll;
-    popup::ItemProperties& itemProperties;
-    PopupHelper& bakePopup;
-    PopupHelper& bakeIntoOtherFramesPopup;
-    PopupHelper& makeManyRegionsPopup;
-    BakeIntoOtherFramesTarget& bakeIntoOtherFramesTarget;
-    bool& isBakeIntoOtherFramesLayers;
-    bool& isBakeIntoOtherFramesNulls;
-    bool& isMakeManyRegionsMapFrames;
-    std::set<Reference>& makeManyRegionReferences;
-    int& hoveredTime;
-    bool& isFrameBoxPending;
-    bool& isFrameBoxSelecting;
-    bool& isFrameBoxAdditive;
-    ImVec2& frameBoxStart;
-    ImVec2& frameBoxEnd;
-    std::set<Reference>& frameBoxSelection;
-    TimelineRowReference& rowSelectionAnchor;
-    bool& isRowSelectionAnchorSet;
-    PopupHelper& groupPropertiesPopup;
-    std::string& groupName;
-    int& groupAnimationIndex;
-    int& groupType;
-    int& groupId;
-    Reference& draggedFrameReference;
-    bool& isDraggedFrameActive;
-    int& draggedFrameType;
-    int& draggedFrameIndex;
-    int& draggedFrameStart;
-    int& draggedFrameStartDuration;
-    std::vector<FrameDurationDrag>& draggedFrameStartDurations;
-    float& draggedFrameStartMouseX;
-    float& draggedFrameWidth;
-    bool& isDraggedFrameSnapshot;
-    bool& frameFocusRequested;
-    int& frameFocusIndex;
-    FrameMoveDrag& frameMoveDrag;
-    std::vector<int>& frameSelectionSnapshot;
-    std::vector<int>& frameSelectionLocked;
-    bool& isFrameSelectionLocked;
-    Reference& frameSelectionSnapshotReference;
-    Reference& frameSelectionAnchor;
-    bool& isFrameSelectionAnchorSet;
-    int& animationLengthEditIndex;
-    std::vector<TimelineRowReference>& rowDragReferences;
-    glm::vec2& scroll;
-    ImGuiStyle& style;
-
     Manager& manager;
     Settings& settings;
     Resources& resources;
@@ -220,126 +212,110 @@ namespace anm2ed::imgui
     ImVec2 frameBoxClipMax{};
     bool isFrameBoxClipSet{};
 
-    std::function<int(int)> type_index{};
-    std::function<ItemType(int)> item_type_get{};
-    std::function<Element*(int, int, int, int)> item_get{};
-    std::function<Element*()> frame_get{};
-    std::function<Element*()> selected_item_get{};
-    std::function<ElementType(const Element&)> item_frame_type_get{};
-    std::function<int(const Element*)> item_frames_count{};
-    std::function<int(const Element&, int)> item_frame_child_index_get{};
-    std::function<int(const Element&, int)> item_frame_insert_index_get{};
-    std::function<Element*(int)> layer_get{};
-    std::function<Element*(int)> null_get{};
-    std::function<Element*(int)> spritesheet_get{};
-    std::function<Element*()> info_get{};
-    std::function<ElementType(int)> container_type_get{};
-    std::function<ElementType(int)> track_type_get{};
-    std::function<int(const Element&, int)> track_id_get{};
-    std::function<Element*(int)> track_container_get{};
-    std::function<Element*(int, int)> track_group_get{};
-    std::function<bool(int, int)> is_track_group_visible{};
-    std::function<Element*(const TimelineItemRow&)> row_group_get{};
-    std::function<int(int, int)> group_items_count_get{};
-    std::function<Element*(Document&, int)> command_animation_get{};
-    std::function<Element*(Document&, int, int, int, int, int)> command_item_get{};
-    std::function<Element*(Document&, Reference)> command_item_reference_get{};
-    std::function<Element*(Document&, const Reference&)> command_frame_get{};
-    std::function<Element*(Document&, int)> command_layer_get{};
-    std::function<Element*(Document&, int)> command_spritesheet_get{};
-    std::function<Element*(Document&)> command_info_get{};
-    std::function<Reference(int, int, int, int)> item_reference_get{};
-    std::function<Reference(Reference)> item_reference_from_frame_get{};
-    std::function<bool(const Reference&, const Reference&)> is_same_item{};
-    std::function<bool(Document&, const Reference&)> is_frame_reference_valid_for{};
-    std::function<void(Document&)> group_selection_reset_for{};
-    std::function<std::set<Reference>()> frame_references_for_current_get{};
-    std::function<std::set<Reference>()> item_references_for_current_get{};
-    std::function<void(Document&)> frames_selection_sync_for{};
-    std::function<void(Document&, Reference)> item_selection_set_for{};
-    std::function<void(Document&, Reference)> frame_selection_set_for{};
-    std::function<void(Document&, Reference)> frame_selection_toggle_for{};
-    std::function<bool(Document&, Reference, Reference, bool)> frame_selection_range_set_for{};
-    std::function<std::set<Reference>()> all_frame_references_for_items_get{};
-    std::function<bool(const Reference&)> is_frame_copy_item{};
-    std::function<std::set<Reference>()> copy_frame_references_get{};
-    std::function<void(Document&)> frames_selection_reset_for{};
-    std::function<void(Document&)> frames_selection_set_reference_for{};
-    std::function<void(Document&)> frames_reference_normalize_for{};
-    std::function<void(Document&)> reference_clear_for{};
-    std::function<void(Document&, Reference)> reference_set_item_reference_for{};
-    std::function<void(Document&, Reference)> reference_set_timeline_item_reference_for{};
-    std::function<void(std::function<void(Manager&, Document&)>)> command_push{};
-    std::function<std::set<Reference>(std::set<Reference>)> track_references_from_frame_references_get{};
-    std::function<void(StringType, const std::set<Reference>&)> tracks_snapshot_command_push{};
-    std::function<void(StringType, const std::set<Reference>&)> frames_snapshot_command_push{};
-    std::function<void(StringType, Document::ChangeType, const std::set<Reference>&,
-                       std::function<void(Manager&, Document&)>)>
-        frames_edit_command_push{};
-    std::function<void(StringType, Document::ChangeType, const std::set<Reference>&,
-                       std::function<void(Manager&, Document&)>)>
-        tracks_edit_command_push{};
-    std::function<void(StringType, Document::ChangeType, std::function<void(Manager&, Document&)>)> edit_command_push{};
-    std::function<glm::vec4(int)> type_color_base_vec{};
-    std::function<glm::vec4(int)> type_color_active_vec{};
-    std::function<glm::vec4(int)> type_color_hovered_vec{};
-    std::function<glm::vec4(int)> item_color_vec{};
-    std::function<glm::vec4(int)> item_color_active_vec{};
-    std::function<void(GLuint, ImVec4, bool)> overlay_icon{};
-    std::function<void()> frames_selection_set_reference{};
-    std::function<void()> playback_stop{};
-    std::function<void()> frame_insert{};
-    std::function<void(Document&, std::set<Reference>)> frames_delete_for{};
-    std::function<void()> frames_delete_action{};
-    std::function<void()> frames_duplicate{};
-    std::function<bool(std::set<Reference>)> is_frames_reverse_available{};
-    std::function<void()> frames_reverse{};
-    std::function<void()> frames_bake{};
-    std::function<std::set<Reference>()> selected_root_frame_references_get{};
-    std::function<std::set<Reference>(const Document&, const Element&, BakeIntoOtherFramesTarget, bool, bool)>
-        item_references_for_bake_into_other_frames_get{};
-    std::function<bool()> is_bake_into_other_frames_ready{};
-    std::function<void(Element&, const Element&, bool, bool, bool)> frame_root_transform_apply{};
-    std::function<void()> bake_into_other_frames{};
-    std::function<void()> frame_split{};
-    std::function<void()> reference_clear{};
-    std::function<void(Reference)> reference_set_timeline_item_reference{};
-    std::function<std::vector<TimelineItemRow>()> timeline_item_rows_get{};
-    std::function<std::vector<Reference>()> timeline_item_references_get{};
-    std::function<Reference(const TimelineItemRow&)> group_reference_get{};
-    std::function<TimelineRowReference(const TimelineItemRow&)> row_reference_get{};
-    std::function<Reference(const TimelineRowReference&)> row_item_reference_get{};
-    std::function<std::vector<TimelineRowReference>()> timeline_row_references_get{};
-    std::function<bool(const TimelineItemRow&)> is_group_selected{};
-    std::function<bool(const TimelineItemRow&)> is_row_selected{};
-    std::function<void()> row_selection_clear{};
-    std::function<void(const TimelineRowReference&)> row_selection_insert{};
-    std::function<void(const TimelineRowReference&)> row_selection_erase{};
-    std::function<bool(const TimelineRowReference&)> is_row_reference_selected{};
-    std::function<std::size_t()> row_selection_count_get{};
-    std::function<void(const TimelineItemRow&)> row_selection_set{};
-    std::function<void(int)> reference_set_adjacent_item{};
-    std::function<std::vector<TimelineRowReference>()> selected_row_references_get{};
-    std::function<std::vector<TimelineRowReference>(const TimelineItemRow&)> row_drag_references_get{};
-    std::function<void()> item_remove{};
-    std::function<std::vector<Reference>()> item_references_groupable_get{};
-    std::function<void()> item_group{};
-    std::function<void(std::vector<TimelineRowReference>, TimelineItemRow, bool, bool)> rows_move_to_row{};
-    std::function<void()> fit_animation_length{};
-    std::function<void(const std::set<Reference>&)> frame_references_copy{};
-    std::function<void()> copy{};
-    std::function<void()> cut{};
-    std::function<void()> paste{};
-    std::function<void()> context_menu{};
-    std::function<void(int, int)> item_base_properties_open{};
-    std::function<void()> group_properties_close{};
-    std::function<void(const TimelineItemRow&, const Element&)> group_properties_open{};
-    std::function<void()> group_properties_update{};
-    std::function<void()> item_context_menu{};
+    Element* item_get(int type, int id = -1, int groupType = NONE, int groupId = -1);
+    Element* frame_get();
+    Element* selected_item_get();
+    Element* track_container_get(int type);
+    Element* track_group_get(int type, int groupId);
+    bool is_track_group_visible(int type, int groupId);
+    Element* row_group_get(const TimelineItemRow& row);
+    int group_items_count_get(int type, int groupId);
+    Element* command_item_get(Document& document, int animationIndex, int type, int id, int groupType = NONE,
+                              int groupId = -1);
+    Element* command_item_reference_get(Document& document, Reference itemReference);
+    glm::vec4 color_get(TimelineColor, int);
+    template <class Range> std::map<Reference, std::set<int>> frames_by_item_get(const Range& frameReferences)
+    {
+      std::map<Reference, std::set<int>> result{};
+      for (auto frameReference : frameReferences)
+        result[item_reference_from_frame_get(frameReference)].insert(frameReference.frameIndex);
+      return result;
+    }
+    void frames_focus_sync_for(Document&);
+    std::set<Reference> drag_frame_references_get(const Reference&);
+    void snapshot_command_push(StringType, SnapshotKind, const std::set<Reference>&);
+    void edit_command_push(StringType, Document::ChangeType, std::function<void(Manager&, Document&)>,
+                           SnapshotKind = SnapshotKind::ANM2, const std::set<Reference>& = {});
+    Element* command_frame_get(Document& document, const Reference& targetReference);
+    Reference item_reference_get(int type, int id, int groupType = NONE, int groupId = -1);
+    Reference item_reference_from_frame_get(Reference frameReference);
+    bool is_same_item(const Reference& left, const Reference& right);
+    void group_selection_reset_for(Document& targetDocument);
+    std::set<Reference> item_references_for_current_get();
+    void frames_selection_sync_for(Document& targetDocument);
+    void item_selection_set_for(Document& targetDocument, Reference itemReference);
+    void frame_selection_set_for(Document& targetDocument, Reference frameReference);
+    void frame_selection_toggle_for(Document& targetDocument, Reference frameReference);
+    bool frame_selection_range_set_for(Document& targetDocument, Reference firstReference, Reference lastReference,
+                                       bool isAdditive);
+    bool is_frame_copy_item(const Reference& itemReference);
+    std::set<Reference> copy_frame_references_get();
+    void frames_selection_reset_for(Document& targetDocument);
+    void frames_selection_set_reference_for(Document& targetDocument);
+    void frames_reference_normalize_for(Document& targetDocument);
+    void reference_clear_for(Document& targetDocument);
+    void reference_set_item_reference_for(Document& targetDocument, Reference itemReference);
+    void reference_set_timeline_item_reference_for(Document& targetDocument, Reference itemReference);
+    void command_push(std::function<void(Manager&, Document&)> run);
+    std::set<Reference> track_references_from_frame_references_get(std::set<Reference> frameReferences);
+    void overlay_icon(GLuint textureId, ImVec4 tint, bool isForced = false);
+    void playback_stop();
+    void frame_insert();
+    void frames_delete_for(Document& document, std::set<Reference> selectedFrames);
+    void frames_delete_action();
+    void frames_duplicate();
+    bool is_frames_reverse_available(std::set<Reference> selectedFrames);
+    void frames_reverse();
+    void frames_bake();
+    std::set<Reference> selected_root_frame_references_get();
+    std::set<Reference> item_references_for_bake_into_other_frames_get(const Document& targetDocument,
+                                                                       const Element& targetAnimation,
+                                                                       BakeIntoOtherFramesTarget target, bool isLayers,
+                                                                       bool isNulls);
+    bool is_bake_into_other_frames_ready();
+    void frame_root_transform_apply(Element& frame, const Element& rootFrame, bool isRoundScale, bool isRoundRotation,
+                                    bool isUseRootPivot);
+    void bake_into_other_frames();
+    void frame_split();
+    void reference_clear();
+    void reference_set_timeline_item_reference(Reference itemReference);
+    std::vector<TimelineItemRow> timeline_item_rows_get();
+    std::vector<Reference> timeline_item_references_get();
+    Reference group_reference_get(const TimelineItemRow& row);
+    TimelineRowReference row_reference_get(const TimelineItemRow& row);
+    Reference row_item_reference_get(const TimelineRowReference& row);
+    std::vector<TimelineRowReference> timeline_row_references_get();
+    bool is_group_selected(const TimelineItemRow& row);
+    bool is_row_selected(const TimelineItemRow& row);
+    void row_selection_clear();
+    void row_selection_insert(const TimelineRowReference& row);
+    void row_selection_erase(const TimelineRowReference& row);
+    bool is_row_reference_selected(const TimelineRowReference& row);
+    std::size_t row_selection_count_get();
+    void row_selection_set(const TimelineItemRow& row);
+    void reference_set_adjacent_item(int direction);
+    std::vector<TimelineRowReference> selected_row_references_get();
+    std::vector<TimelineRowReference> row_drag_references_get(const TimelineItemRow& row);
+    void item_remove();
+    std::vector<Reference> item_references_groupable_get();
+    void item_group();
+    void rows_move_to_row(std::vector<TimelineRowReference> draggedRows, TimelineItemRow targetRow, bool isDropAfter,
+                          bool isDropIntoGroup = false);
+    void fit_animation_length();
+    void frame_references_copy(const std::set<Reference>& selectedFrames);
+    void copy();
+    void cut();
+    void paste();
+    void context_menu();
+    void item_base_properties_open(int type, int id);
+    void group_properties_close();
+    void group_properties_open(const TimelineItemRow& row, const Element& group);
+    void group_properties_update();
+    void item_context_menu();
 
-    TimelineContext(Timeline&, Manager&, Settings&, Resources&, Clipboard&);
+    TimelineContext(TimelineState&&, Manager&, Settings&, Resources&, Clipboard&);
     void update();
-    void commands_bind();
+    void frame_begin();
     void item_child(const TimelineItemRow&, int);
     void items_child();
     void frame_move_drag_clear();
