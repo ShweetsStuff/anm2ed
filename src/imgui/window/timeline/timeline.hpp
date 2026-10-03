@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
@@ -14,6 +15,8 @@
 
 namespace anm2ed::imgui
 {
+  struct TimelineContext;
+
   struct TimelineRowReference
   {
     int documentIndex{-1};
@@ -56,6 +59,8 @@ namespace anm2ed::imgui
 
   class Timeline
   {
+    friend struct TimelineContext;
+
     bool isDragging{};
     bool isWindowHovered{};
     bool isHorizontalScroll{};
@@ -105,8 +110,11 @@ namespace anm2ed::imgui
     std::vector<TimelineRowReference> rowDragReferences{};
     glm::vec2 scroll{};
     ImGuiStyle style{};
+    std::unique_ptr<TimelineContext> context{};
 
   public:
+    Timeline();
+    ~Timeline();
     void update(Manager&, Settings&, Resources&, Clipboard&);
   };
 }

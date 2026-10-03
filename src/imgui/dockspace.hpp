@@ -8,7 +8,7 @@
 #include "window/onionskin.hpp"
 #include "window/shaders.hpp"
 #include "window/spritesheet_editor.hpp"
-#include "window/timeline.hpp"
+#include "window/timeline/timeline.hpp"
 #include "window/tools.hpp"
 #include "window/welcome.hpp"
 #include "window/window.hpp"
