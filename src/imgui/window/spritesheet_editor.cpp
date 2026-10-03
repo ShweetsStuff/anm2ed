@@ -263,47 +263,15 @@ namespace anm2ed::imgui
 
       if (ImGui::IsItemHovered())
       {
-        auto isMouseLeftClicked = ImGui::IsMouseClicked(ImGuiMouseButton_Left);
-        auto isMouseLeftReleased = ImGui::IsMouseReleased(ImGuiMouseButton_Left);
-        auto isMouseLeftDown = ImGui::IsMouseDown(ImGuiMouseButton_Left);
-        auto isMouseMiddleDown = ImGui::IsMouseDown(ImGuiMouseButton_Middle);
-        auto isMouseRightClicked = ImGui::IsMouseClicked(ImGuiMouseButton_Right);
-        auto isMouseRightDown = ImGui::IsMouseDown(ImGuiMouseButton_Right);
-        auto isMouseRightReleased = ImGui::IsMouseReleased(ImGuiMouseButton_Right);
-        auto mouseDelta = to_ivec2(ImGui::GetIO().MouseDelta);
-        auto mouseWheel = ImGui::GetIO().MouseWheel;
-        auto isMouseClicked = isMouseLeftClicked || isMouseRightClicked;
-        auto isMouseDown = isMouseLeftDown || isMouseRightDown;
-        auto isMouseReleased = isMouseLeftReleased || isMouseRightReleased;
-
-        auto isLeftJustPressed = ImGui::IsKeyPressed(ImGuiKey_LeftArrow, false);
-        auto isRightJustPressed = ImGui::IsKeyPressed(ImGuiKey_RightArrow, false);
-        auto isUpJustPressed = ImGui::IsKeyPressed(ImGuiKey_UpArrow, false);
-        auto isDownJustPressed = ImGui::IsKeyPressed(ImGuiKey_DownArrow, false);
-        auto isLeftPressed = ImGui::IsKeyPressed(ImGuiKey_LeftArrow);
-        auto isRightPressed = ImGui::IsKeyPressed(ImGuiKey_RightArrow);
-        auto isUpPressed = ImGui::IsKeyPressed(ImGuiKey_UpArrow);
-        auto isDownPressed = ImGui::IsKeyPressed(ImGuiKey_DownArrow);
-        auto isLeftDown = ImGui::IsKeyDown(ImGuiKey_LeftArrow);
-        auto isRightDown = ImGui::IsKeyDown(ImGuiKey_RightArrow);
-        auto isUpDown = ImGui::IsKeyDown(ImGuiKey_UpArrow);
-        auto isDownDown = ImGui::IsKeyDown(ImGuiKey_DownArrow);
-        auto isLeftReleased = ImGui::IsKeyReleased(ImGuiKey_LeftArrow);
-        auto isRightReleased = ImGui::IsKeyReleased(ImGuiKey_RightArrow);
-        auto isUpReleased = ImGui::IsKeyReleased(ImGuiKey_UpArrow);
-        auto isDownReleased = ImGui::IsKeyReleased(ImGuiKey_DownArrow);
-        auto isKeyJustPressed = isLeftJustPressed || isRightJustPressed || isUpJustPressed || isDownJustPressed;
-        auto isKeyDown = isLeftDown || isRightDown || isUpDown || isDownDown;
-        auto isKeyReleased = isLeftReleased || isRightReleased || isUpReleased || isDownReleased;
-
-        auto isZoomIn = isFocused && shortcut(manager.chords[SHORTCUT_ZOOM_IN], shortcut::GLOBAL);
-        auto isZoomOut = isFocused && shortcut(manager.chords[SHORTCUT_ZOOM_OUT], shortcut::GLOBAL);
-
-        auto isBegin = isMouseClicked || isKeyJustPressed;
-        auto isDuring = isMouseDown || isKeyDown;
-        auto isEnd = isMouseReleased || isKeyReleased;
-
-        auto isMod = ImGui::IsKeyDown(ImGuiMod_Shift);
+        auto input = canvas_input_get(manager, isFocused);
+        auto isMouseClicked = input.isLeftClicked || input.isRightClicked;
+        auto isMouseDown = input.isLeftDown || input.isRightDown;
+        auto isBegin = isMouseClicked || input.isArrowBegin;
+        auto isDuring = isMouseDown || input.isArrowDown;
+        auto isEnd = input.isLeftReleased || input.isRightReleased || input.isArrowEnd;
+        auto arrow = input.arrow * input.step;
+        auto gridArrow = isGridSnap ? arrow * vec2(gridSize) : arrow;
+        auto isArrow = arrow != vec2();
 
         auto selectedFrameReferences = document.frame_references_get();
         std::erase_if(selectedFrameReferences,
@@ -312,601 +280,257 @@ namespace anm2ed::imgui
         if (!selectedFrameReferences.contains(reference) && !selectedFrameReferences.empty())
           editReference = *selectedFrameReferences.begin();
         auto frame = model.frame_get(editReference);
-        auto item = model.track_get(editReference);
         auto layer = model::item_get(model.content.layers, editReference.itemID);
         bool isReferenceLayerOnSpritesheet =
             frame && editReference.itemID > -1 && layer && layer->spritesheetId == referenceSpritesheet;
         if (selectedFrameReferences.empty() && isReferenceLayerOnSpritesheet)
           selectedFrameReferences.insert(editReference);
-        auto useTool = tool;
-        auto step = (float)(isMod ? STEP_FAST : STEP);
-        auto stepX = isGridSnap ? step * gridSize.x : step;
-        auto stepY = isGridSnap ? step * gridSize.y : step;
         previousMousePos = mousePos;
         mousePos = position_translate(zoom, pan, to_ivec2(ImGui::GetMousePos()) - to_ivec2(cursorScreenPos));
-        auto textureMousePos = mousePos;
-        auto previousTextureMousePos = previousMousePos;
 
-        auto snap_rect = [&](glm::vec2 minPoint, glm::vec2 maxPoint)
-        {
-          if (isGridSnap)
-          {
-            if (gridSize.x != 0)
-            {
-              auto offsetX = (float)(gridOffset.x);
-              auto sizeX = (float)(gridSize.x);
-              minPoint.x = std::floor((minPoint.x - offsetX) / sizeX) * sizeX + offsetX;
-              maxPoint.x = std::ceil((maxPoint.x - offsetX) / sizeX) * sizeX + offsetX;
-            }
-            if (gridSize.y != 0)
-            {
-              auto offsetY = (float)(gridOffset.y);
-              auto sizeY = (float)(gridSize.y);
-              minPoint.y = std::floor((minPoint.y - offsetY) / sizeY) * sizeY + offsetY;
-              maxPoint.y = std::ceil((maxPoint.y - offsetY) / sizeY) * sizeY + offsetY;
-            }
-          }
-          minPoint = vec2(ivec2(minPoint));
-          maxPoint = vec2(ivec2(maxPoint));
-          return std::pair{minPoint, maxPoint};
-        };
-
-        auto clamp_vec2_to_int = [](const vec2& value) { return vec2(ivec2(value)); };
         auto pivot_snap = [&](vec2 value, vec2 current)
-        {
-          if (isGridSnap) return clamp_vec2_to_int(value);
-          auto fraction = current - glm::floor(current);
-          return glm::floor(value) + fraction;
-        };
-        auto edit_begin_push = [&](StringType label)
+        { return isGridSnap ? vec2(ivec2(value)) : glm::floor(value) + (current - glm::floor(current)); };
+        // Region edits apply to the given regions of the edited spritesheet when the command runs.
+        auto regions_update = [&](std::set<int> ids, std::function<void(model::Region&)> update)
         {
           manager.command_push(
-              {manager.selected, [label](Manager&, Document& document) { document.edit_begin(label); }});
+              {manager.selected, [=, spritesheetId = referenceSpritesheet](Manager&, Document& document)
+               {
+                 auto spritesheet = model::item_get(document.model.content.spritesheets, spritesheetId);
+                 for (auto id : ids)
+                   if (auto region = spritesheet ? model::item_get(spritesheet->regions, id) : nullptr) update(*region);
+               }});
         };
-        auto document_change_push = [&]()
-        { manager.command_push({manager.selected, [](Manager&, Document& document) { document.change(); }}); };
-        auto frame_change_apply_to = [&](const std::set<Reference>& frameReferences, FrameChange frameChange,
-                                         ChangeType changeType = ChangeType::ADJUST)
+        auto region_pivot_update = [&](std::function<vec2(vec2)> pivot_get)
         {
-          auto queuedFrameReferences = frameReferences;
-          manager.command_push({manager.selected, [=](Manager&, Document& document)
-                                {
-                                  std::map<Reference, std::set<int>> groupedFrames{};
-                                  for (auto frameReference : queuedFrameReferences)
-                                  {
-                                    auto itemReference = frameReference;
-                                    itemReference.frameIndex = -1;
-                                    groupedFrames[itemReference].insert(frameReference.frameIndex);
-                                  }
-
-                                  for (auto& [itemReference, itemFrames] : groupedFrames)
-                                  {
-                                    auto itemType = static_cast<ItemType>(itemReference.itemType);
-                                    if (auto item = document.model.track_edit(itemReference))
-                                      model::frames_change(*item, frameChange, itemType, changeType, itemFrames);
-                                  }
-                                }});
-        };
-        auto frame_change_apply = [&](FrameChange frameChange, ChangeType changeType = ChangeType::ADJUST)
-        { frame_change_apply_to(selectedFrameReferences, frameChange, changeType); };
-        auto frame_change_from_current_apply_to = [&](const std::set<Reference>& frameReferences, auto frameChangeGet,
-                                                      ChangeType changeType = ChangeType::ADJUST)
-        {
-          auto queuedReference = editReference;
-          auto queuedFrameReferences = frameReferences;
-          manager.command_push({manager.selected, [=](Manager&, Document& document)
-                                {
-                                  auto framePointer = document.model.frame_get(queuedReference);
-                                  if (!framePointer) return;
-                                  auto frame = *framePointer;
-
-                                  std::map<Reference, std::set<int>> groupedFrames{};
-                                  for (auto frameReference : queuedFrameReferences)
-                                  {
-                                    auto itemReference = frameReference;
-                                    itemReference.frameIndex = -1;
-                                    groupedFrames[itemReference].insert(frameReference.frameIndex);
-                                  }
-
-                                  for (auto& [itemReference, itemFrames] : groupedFrames)
-                                  {
-                                    auto itemType = static_cast<ItemType>(itemReference.itemType);
-                                    if (auto item = document.model.track_edit(itemReference))
-                                      model::frames_change(*item, frameChangeGet(frame), itemType, changeType,
-                                                           itemFrames);
-                                  }
-                                }});
-        };
-        auto frame_crop_normalize_apply_to =
-            [&](const std::set<Reference>& frameReferences, bool isSnap, ivec2 snapGridSize, ivec2 snapGridOffset)
-        {
-          frame_change_from_current_apply_to(
-              frameReferences,
-              [=](const model::Frame& frame)
-              {
-                auto minPoint = glm::min(frame.crop, frame.crop + frame.size);
-                auto maxPoint = glm::max(frame.crop, frame.crop + frame.size);
-
-                if (isSnap)
-                {
-                  if (snapGridSize.x != 0)
-                  {
-                    auto offsetX = (float)snapGridOffset.x;
-                    auto sizeX = (float)snapGridSize.x;
-                    minPoint.x = std::floor((minPoint.x - offsetX) / sizeX) * sizeX + offsetX;
-                    maxPoint.x = std::ceil((maxPoint.x - offsetX) / sizeX) * sizeX + offsetX;
-                  }
-                  if (snapGridSize.y != 0)
-                  {
-                    auto offsetY = (float)snapGridOffset.y;
-                    auto sizeY = (float)snapGridSize.y;
-                    minPoint.y = std::floor((minPoint.y - offsetY) / sizeY) * sizeY + offsetY;
-                    maxPoint.y = std::ceil((maxPoint.y - offsetY) / sizeY) * sizeY + offsetY;
-                  }
-                }
-
-                return FrameChange{.regionId = -1,
-                                   .cropX = minPoint.x,
-                                   .cropY = minPoint.y,
-                                   .sizeX = maxPoint.x - minPoint.x,
-                                   .sizeY = maxPoint.y - minPoint.y};
-              });
-        };
-        auto region_update = [&](int id, auto update)
-        {
-          auto queuedSpritesheet = referenceSpritesheet;
-          manager.command_push({manager.selected, [=](Manager&, Document& document)
-                                {
-                                  auto spritesheet =
-                                      model::item_get(document.model.content.spritesheets, queuedSpritesheet);
-                                  if (!spritesheet) return;
-                                  if (auto region = model::item_get(spritesheet->regions, id)) update(*region);
-                                }});
-        };
-        auto region_update_all = [&](auto update)
-        {
-          auto queuedSpritesheet = referenceSpritesheet;
-          std::set<int> queuedSelection(regionSelection.begin(), regionSelection.end());
-          manager.command_push({manager.selected, [=](Manager&, Document& document)
-                                {
-                                  auto spritesheet =
-                                      model::item_get(document.model.content.spritesheets, queuedSpritesheet);
-                                  if (!spritesheet) return;
-                                  for (auto id : queuedSelection)
-                                  {
-                                    if (auto region = model::item_get(spritesheet->regions, id)) update(*region);
-                                  }
-                                }});
-        };
-        auto region_set_all = [&](const vec2& crop, const vec2& size)
-        {
-          auto queuedCrop = clamp_vec2_to_int(crop);
-          auto queuedSize = clamp_vec2_to_int(size);
-          region_update_all(
-              [=](model::Region& region)
-              {
-                region.crop = queuedCrop;
-                region.size = queuedSize;
-              });
-        };
-        auto region_offset_all = [&](const vec2& delta)
-        {
-          region_update_all(
-              [=](model::Region& region)
-              {
-                region.crop = clamp_vec2_to_int(region.crop + delta);
-                region.size = clamp_vec2_to_int(region.size);
-              });
-        };
-        auto region_crop_normalize_all = [&](bool isSnap, ivec2 snapGridSize, ivec2 snapGridOffset)
-        {
-          region_update_all(
-              [=](model::Region& region)
-              {
-                auto minPoint = glm::min(region.crop, region.crop + region.size);
-                auto maxPoint = glm::max(region.crop, region.crop + region.size);
-
-                if (isSnap)
-                {
-                  if (snapGridSize.x != 0)
-                  {
-                    auto offsetX = (float)snapGridOffset.x;
-                    auto sizeX = (float)snapGridSize.x;
-                    minPoint.x = std::floor((minPoint.x - offsetX) / sizeX) * sizeX + offsetX;
-                    maxPoint.x = std::ceil((maxPoint.x - offsetX) / sizeX) * sizeX + offsetX;
-                  }
-                  if (snapGridSize.y != 0)
-                  {
-                    auto offsetY = (float)snapGridOffset.y;
-                    auto sizeY = (float)snapGridSize.y;
-                    minPoint.y = std::floor((minPoint.y - offsetY) / sizeY) * sizeY + offsetY;
-                    maxPoint.y = std::ceil((maxPoint.y - offsetY) / sizeY) * sizeY + offsetY;
-                  }
-                }
-
-                region.crop = clamp_vec2_to_int(minPoint);
-                region.size = clamp_vec2_to_int(maxPoint - minPoint);
-              });
-        };
-        auto texture_line_apply = [&](ivec2 start, ivec2 end, vec4 color)
-        {
-          auto queuedSpritesheet = referenceSpritesheet;
-          manager.command_push({manager.selected, [=](Manager&, Document& document)
-                                {
-                                  if (auto texture = document.texture_edit(queuedSpritesheet))
-                                    texture->pixel_line(start, end, color);
-                                }});
-        };
-        auto texture_change_push = [&]()
-        {
-          auto queuedSpritesheet = referenceSpritesheet;
-          manager.command_push(
-              {manager.selected, [=](Manager&, Document& document) { document.texture_change(queuedSpritesheet); }});
+          regions_update({regionReference},
+                         [=](model::Region& region)
+                         {
+                           region.origin = Origin::CUSTOM;
+                           region.pivot = pivot_get(region.pivot);
+                         });
         };
 
-        auto region_selection_set = [&](int id)
-        {
-          document.editTarget = Document::EditTarget::REGION;
-          regionReference = id;
-          regionSelection = {id};
-          document.selected_ids_set(SelectionKind::REGIONS, {id});
-          document.focused_id_set(SelectionKind::REGIONS, id);
-        };
-        auto region_pivot_set = [&](int id, vec2 pivot)
-        {
-          auto queuedPivot = pivot;
-          region_update(id,
-                        [=](model::Region& region)
-                        {
-                          region.origin = Origin::CUSTOM;
-                          region.pivot = queuedPivot;
-                        });
-        };
-        auto region_pivot_offset = [&](int id, vec2 delta)
-        {
-          region_update(id,
-                        [=](model::Region& region)
-                        {
-                          region.origin = Origin::CUSTOM;
-                          region.pivot += delta;
-                          if (isGridSnap) region.pivot = clamp_vec2_to_int(region.pivot);
-                        });
-        };
-
-        if (isMouseMiddleDown) useTool = tool::PAN;
-        if (tool == tool::MOVE && isMouseRightDown) useTool = tool::CROP;
-        if (tool == tool::CROP && isMouseRightDown) useTool = tool::MOVE;
-        if (tool == tool::DRAW && isMouseRightDown) useTool = tool::ERASE;
-        if (tool == tool::ERASE && isMouseRightDown) useTool = tool::DRAW;
+        auto useTool = (tool::Type)tool;
+        if (input.isMiddleDown) useTool = tool::PAN;
+        if (tool == tool::MOVE && input.isRightDown) useTool = tool::CROP;
+        if (tool == tool::CROP && input.isRightDown) useTool = tool::MOVE;
+        if (tool == tool::DRAW && input.isRightDown) useTool = tool::ERASE;
+        if (tool == tool::ERASE && input.isRightDown) useTool = tool::DRAW;
 
         hoveredRegionId = -1;
-
         if (useTool == tool::PAN && spritesheet && texture && texture->is_valid() && isMouseOverCanvas)
-        {
           for (auto& region : spritesheet->regions)
           {
             auto minPoint = glm::min(region.crop, region.crop + region.size);
             auto maxPoint = glm::max(region.crop, region.crop + region.size);
-            if (hoverMousePos.x >= minPoint.x && hoverMousePos.x <= maxPoint.x && hoverMousePos.y >= minPoint.y &&
-                hoverMousePos.y <= maxPoint.y)
+            if (glm::all(glm::greaterThanEqual(hoverMousePos, minPoint)) &&
+                glm::all(glm::lessThanEqual(hoverMousePos, maxPoint)))
             {
               hoveredRegionId = region.id;
               break;
             }
           }
+
+        // Crop and pivot edit regions while a region is the edit target, or a frame's region is in use.
+        auto isRegionEditTarget = document.editTarget == Document::EditTarget::REGION;
+        auto toolFrames = isRegionEditTarget ? std::set<Reference>{} : selectedFrameReferences;
+        bool isRegionInUse = !isRegionEditTarget && toolFrames.size() <= 1 && frame && frame->regionId != -1 &&
+                             (useTool == tool::CROP || useTool == tool::MOVE);
+        auto isRegionTool = isRegionEditTarget || isRegionInUse || toolFrames.empty();
+        auto isFrameTool = frame && !toolFrames.empty() && !isRegionInUse;
+        bool isFrameAvailable = isFrameTool || (useTool == tool::CROP && !regionSelection.empty()) ||
+                                (useTool == tool::MOVE && regionReference != -1);
+        auto frames_change = [&](FrameChange change, ChangeType type = ChangeType::ADJUST)
+        { frames_change_push(manager, toolFrames, change, type); };
+
+        tool_cursor_update(useTool, tool::SPRITESHEET_EDITOR, isFrameAvailable, texture && texture->is_valid(),
+                           isMouseDown || input.isArrowDown,
+                           isRegionInUse           ? TEXT_REGION_IN_USE
+                           : useTool == tool::CROP ? TEXT_SELECT_FRAME_OR_REGION
+                                                   : TEXT_SELECT_FRAME);
+
+        if (useTool == tool::PAN)
+        {
+          if (input.isLeftClicked && hoveredRegionId != -1)
+          {
+            document.editTarget = Document::EditTarget::REGION;
+            regionReference = hoveredRegionId;
+            regionSelection = {hoveredRegionId};
+            document.selected_ids_set(SelectionKind::REGIONS, regionSelection);
+            document.focused_id_set(SelectionKind::REGIONS, hoveredRegionId);
+            if (auto region = region_get(hoveredRegionId); region && isReferenceLayerOnSpritesheet)
+            {
+              edit_begin_push(manager, EDIT_FRAME_REGION);
+              frames_change_push(manager, selectedFrameReferences,
+                                 {.regionId = hoveredRegionId,
+                                  .cropX = region->crop.x,
+                                  .cropY = region->crop.y,
+                                  .sizeX = region->size.x,
+                                  .sizeY = region->size.y,
+                                  .pivotX = region->pivot.x,
+                                  .pivotY = region->pivot.y});
+              document_change_push(manager);
+            }
+          }
+          if (isMouseDown || input.isMiddleDown) pan += input.mouseDelta;
         }
 
-        auto& toolInfo = tool::INFO[useTool];
-        auto& areaType = toolInfo.areaType;
-        auto isRegionEditTarget = document.editTarget == Document::EditTarget::REGION;
-        auto selectedFrameToolReferences = isRegionEditTarget ? std::set<Reference>{} : selectedFrameReferences;
-        bool isAreaAllowed = areaType == tool::ALL || areaType == tool::SPRITESHEET_EDITOR;
-        bool isFrameRequired =
-            !(useTool == tool::PAN || useTool == tool::DRAW || useTool == tool::ERASE || useTool == tool::COLOR_PICKER);
-        bool isMultiFrameToolSelection = selectedFrameToolReferences.size() > 1;
-        bool isRegionInUse = !isRegionEditTarget && !isMultiFrameToolSelection && frame && frame->regionId != -1 &&
-                             (useTool == tool::CROP || useTool == tool::MOVE);
-        bool isFrameAvailable = !isFrameRequired || (frame && !isRegionInUse && !selectedFrameToolReferences.empty()) ||
-                                (useTool == tool::CROP && !regionSelection.empty()) ||
-                                (useTool == tool::MOVE && regionReference != -1);
-        bool isSpritesheetRequired = useTool == tool::DRAW || useTool == tool::ERASE || useTool == tool::COLOR_PICKER;
-        bool isSpritesheetAvailable = !isSpritesheetRequired || (texture && texture->is_valid());
-        auto cursor = (isAreaAllowed && isFrameAvailable && isSpritesheetAvailable) ? toolInfo.cursor
-                                                                                    : ImGuiMouseCursor_NotAllowed;
-        ImGui::SetMouseCursor(cursor);
-        ImGui::SetKeyboardFocusHere();
-
-        switch (useTool)
+        auto region = isRegionTool ? region_get(regionReference) : nullptr;
+        if (useTool == tool::MOVE && region)
         {
-          case tool::PAN:
-            if (isMouseLeftClicked && hoveredRegionId != -1)
-            {
-              region_selection_set(hoveredRegionId);
-              if (isReferenceLayerOnSpritesheet)
-              {
-                edit_begin_push(EDIT_FRAME_REGION);
-                FrameChange change{};
-                change.regionId = hoveredRegionId;
-                if (auto region = region_get(hoveredRegionId))
-                {
-                  change.cropX = region->crop.x;
-                  change.cropY = region->crop.y;
-                  change.sizeX = region->size.x;
-                  change.sizeY = region->size.y;
-                  change.pivotX = region->pivot.x;
-                  change.pivotY = region->pivot.y;
-                }
-                frame_change_apply(change);
-                document_change_push();
-              }
-            }
-            if (isMouseDown || isMouseMiddleDown) pan += mouseDelta;
-            break;
-          case tool::MOVE:
-            if ((isRegionEditTarget || isRegionInUse || selectedFrameToolReferences.empty()) && regionReference != -1)
-            {
-              if (!spritesheet) break;
-              auto region = region_get(regionReference);
-              if (!region) break;
-
-              if (isBegin) edit_begin_push(EDIT_REGION_MOVE);
-              if (isMouseDown) region_pivot_set(regionReference, pivot_snap(mousePos - region->crop, region->pivot));
-              if (isLeftPressed) region_pivot_offset(regionReference, vec2(-step, 0));
-              if (isRightPressed) region_pivot_offset(regionReference, vec2(step, 0));
-              if (isUpPressed) region_pivot_offset(regionReference, vec2(0, -step));
-              if (isDownPressed) region_pivot_offset(regionReference, vec2(0, step));
-
-              if (isDuring)
-              {
-                if (ImGui::BeginTooltip())
-                {
-                  ImGui::TextUnformatted(
-                      std::vformat(localize.get(FORMAT_PIVOT), std::make_format_args(region->pivot.x, region->pivot.y))
-                          .c_str());
-                  ImGui::EndTooltip();
-                }
-              }
-
-              if (isEnd) document_change_push();
-              break;
-            }
-
-            if (!item || !frame || selectedFrameToolReferences.empty() || isRegionInUse) break;
-            if (isBegin) edit_begin_push(EDIT_FRAME_PIVOT);
-            if (isMouseDown)
-            {
-              auto pivot = pivot_snap(mousePos - frame->crop, frame->pivot);
-              frame_change_apply_to(selectedFrameToolReferences,
-                                    {.regionId = -1, .pivotX = pivot.x, .pivotY = pivot.y});
-            }
-            if (isLeftPressed)
-              frame_change_apply_to(selectedFrameToolReferences, {.regionId = -1, .pivotX = step},
-                                    ChangeType::SUBTRACT);
-            if (isRightPressed)
-              frame_change_apply_to(selectedFrameToolReferences, {.regionId = -1, .pivotX = step}, ChangeType::ADD);
-            if (isUpPressed)
-              frame_change_apply_to(selectedFrameToolReferences, {.regionId = -1, .pivotY = step},
-                                    ChangeType::SUBTRACT);
-            if (isDownPressed)
-              frame_change_apply_to(selectedFrameToolReferences, {.regionId = -1, .pivotY = step}, ChangeType::ADD);
-
-            if (isDuring)
-            {
-              if (ImGui::BeginTooltip())
-              {
-                ImGui::TextUnformatted(
-                    std::vformat(localize.get(FORMAT_PIVOT), std::make_format_args(frame->pivot.x, frame->pivot.y))
-                        .c_str());
-                ImGui::EndTooltip();
-              }
-            }
-
-            if (isEnd) document_change_push();
-            break;
-          case tool::CROP:
-            if ((isRegionEditTarget || isRegionInUse || selectedFrameToolReferences.empty()) &&
-                !regionSelection.empty())
-            {
-              if (!spritesheet || regionSelection.empty()) break;
-              if (isBegin) edit_begin_push(EDIT_REGION_CROP);
-
-              if (isMouseClicked)
-              {
-                cropAnchor = mousePos;
-                region_set_all(vec2((int)cropAnchor.x, (int)cropAnchor.y), vec2());
-              }
-              if (isMouseDown)
-              {
-                auto [minPoint, maxPoint] = snap_rect(glm::min(cropAnchor, mousePos), glm::max(cropAnchor, mousePos));
-                region_set_all(vec2(minPoint), vec2(maxPoint - minPoint));
-              }
-              if (isLeftPressed) region_offset_all(vec2(stepX * -1, 0));
-              if (isRightPressed) region_offset_all(vec2(stepX, 0));
-              if (isUpPressed) region_offset_all(vec2(0, stepY * -1));
-              if (isDownPressed) region_offset_all(vec2(0, stepY));
-
-              if (isDuring)
-              {
-                if (!isMouseDown) region_crop_normalize_all(isGridSnap, gridSize, gridOffset);
-
-                if (ImGui::BeginTooltip())
-                {
-                  if (auto region = region_get(*regionSelection.begin()))
-                  {
-                    ImGui::TextUnformatted(
-                        std::vformat(localize.get(FORMAT_CROP), std::make_format_args(region->crop.x, region->crop.y))
-                            .c_str());
-                    ImGui::TextUnformatted(
-                        std::vformat(localize.get(FORMAT_SIZE), std::make_format_args(region->size.x, region->size.y))
-                            .c_str());
-                  }
-                  ImGui::EndTooltip();
-                }
-              }
-
-              if (isEnd) document_change_push();
-              break;
-            }
-
-            if (!item || !frame || selectedFrameToolReferences.empty() || isRegionInUse) break;
-            if (isBegin) edit_begin_push(EDIT_FRAME_CROP);
-
-            if (isMouseClicked)
-            {
-              cropAnchor = mousePos;
-              frame_change_apply_to(selectedFrameToolReferences, {.regionId = -1,
-                                                                  .cropX = (float)(int)cropAnchor.x,
-                                                                  .cropY = (float)(int)cropAnchor.y,
-                                                                  .sizeX = {},
-                                                                  .sizeY = {}});
-            }
-            if (isMouseDown)
-            {
-              auto [minPoint, maxPoint] = snap_rect(glm::min(cropAnchor, mousePos), glm::max(cropAnchor, mousePos));
-              frame_change_apply_to(selectedFrameToolReferences, {.regionId = -1,
-                                                                  .cropX = minPoint.x,
-                                                                  .cropY = minPoint.y,
-                                                                  .sizeX = maxPoint.x - minPoint.x,
-                                                                  .sizeY = maxPoint.y - minPoint.y});
-            }
-            if (isLeftPressed)
-              frame_change_apply_to(selectedFrameToolReferences, {.regionId = -1, .cropX = stepX},
-                                    ChangeType::SUBTRACT);
-            if (isRightPressed)
-              frame_change_apply_to(selectedFrameToolReferences, {.regionId = -1, .cropX = stepX}, ChangeType::ADD);
-            if (isUpPressed)
-              frame_change_apply_to(selectedFrameToolReferences, {.regionId = -1, .cropY = stepY},
-                                    ChangeType::SUBTRACT);
-            if (isDownPressed)
-              frame_change_apply_to(selectedFrameToolReferences, {.regionId = -1, .cropY = stepY}, ChangeType::ADD);
-
-            if (isDuring)
-            {
-              if (!isMouseDown)
-              {
-                frame_crop_normalize_apply_to(selectedFrameToolReferences, isGridSnap, gridSize, gridOffset);
-              }
-              if (ImGui::BeginTooltip())
-              {
-                ImGui::TextUnformatted(
-                    std::vformat(localize.get(FORMAT_CROP), std::make_format_args(frame->crop.x, frame->crop.y))
-                        .c_str());
-                ImGui::TextUnformatted(
-                    std::vformat(localize.get(FORMAT_SIZE), std::make_format_args(frame->size.x, frame->size.y))
-                        .c_str());
-                ImGui::EndTooltip();
-              }
-            }
-            if (isEnd) document_change_push();
-            break;
-          case tool::DRAW:
-          case tool::ERASE:
+          if (isBegin) edit_begin_push(manager, EDIT_REGION_MOVE);
+          if (isMouseDown)
+            region_pivot_update([pivot = pivot_snap(mousePos - region->crop, region->pivot)](vec2) { return pivot; });
+          if (isArrow)
+            region_pivot_update([=, this](vec2 pivot)
+                                { return isGridSnap ? vec2(ivec2(pivot + arrow)) : pivot + arrow; });
+          if (isDuring) tooltip_lines_draw({localize_format(FORMAT_PIVOT, region->pivot.x, region->pivot.y)});
+          if (isEnd) document_change_push(manager);
+        }
+        else if (useTool == tool::MOVE && isFrameTool)
+        {
+          if (isBegin) edit_begin_push(manager, EDIT_FRAME_PIVOT);
+          if (isMouseDown)
           {
-            if (!texture) break;
-            auto color = useTool == tool::DRAW ? toolColor : vec4();
-            if (isMouseClicked) edit_begin_push(useTool == tool::DRAW ? EDIT_DRAW : EDIT_ERASE);
-            if (isMouseDown) texture_line_apply(ivec2(previousTextureMousePos), ivec2(textureMousePos), color);
-            if (isMouseReleased) texture_change_push();
-            break;
+            auto pivot = pivot_snap(mousePos - frame->crop, frame->pivot);
+            frames_change({.regionId = -1, .pivotX = pivot.x, .pivotY = pivot.y});
           }
-          case tool::COLOR_PICKER:
+          if (isArrow) frames_change({.regionId = -1, .pivotX = arrow.x, .pivotY = arrow.y}, ChangeType::ADD);
+          if (isDuring) tooltip_lines_draw({localize_format(FORMAT_PIVOT, frame->pivot.x, frame->pivot.y)});
+          if (isEnd) document_change_push(manager);
+        }
+
+        auto isRegionCrop = isRegionTool && !regionSelection.empty() && spritesheet;
+        if (useTool == tool::CROP && (isRegionCrop || isFrameTool))
+        {
+          if (isBegin) edit_begin_push(manager, isRegionCrop ? EDIT_REGION_CROP : EDIT_FRAME_CROP);
+          auto rect_set = [&](vec2 crop, vec2 cropSize)
           {
-            if (texture && isDuring)
-            {
-              toolColor = texture->pixel_read(textureMousePos);
-              if (ImGui::BeginTooltip())
-              {
-                ImGui::ColorButton("##Color Picker Button", to_imvec4(toolColor));
-                ImGui::SameLine();
-                auto rgba8 = glm::clamp(ivec4(toolColor * 255.0f + 0.5f), ivec4(0), ivec4(255));
-                auto hex = std::format("#{:02X}{:02X}{:02X}{:02X}", rgba8.r, rgba8.g, rgba8.b, rgba8.a);
-                ImGui::TextUnformatted(hex.c_str());
-                ImGui::SameLine();
-                ImGui::Text("(%d, %d, %d, %d)", rgba8.r, rgba8.g, rgba8.b, rgba8.a);
-                ImGui::EndTooltip();
-              }
-            }
-            break;
+            if (isRegionCrop)
+              regions_update(regionSelection,
+                             [=](model::Region& region)
+                             {
+                               region.crop = crop;
+                               region.size = cropSize;
+                             });
+            else
+              frames_change(
+                  {.regionId = -1, .cropX = crop.x, .cropY = crop.y, .sizeX = cropSize.x, .sizeY = cropSize.y});
+          };
+          if (isMouseClicked)
+          {
+            cropAnchor = mousePos;
+            auto crop = vec2(ivec2(cropAnchor));
+            if (isRegionCrop)
+              rect_set(crop, vec2());
+            else
+              frames_change({.regionId = -1, .cropX = crop.x, .cropY = crop.y});
           }
-          default:
-            break;
+          if (isMouseDown)
+          {
+            auto [minPoint, maxPoint] = rect_snap(cropAnchor, mousePos, isGridSnap, gridSize, gridOffset);
+            rect_set(minPoint, maxPoint - minPoint);
+          }
+          if (isArrow && isRegionCrop)
+            regions_update(regionSelection,
+                           [=](model::Region& region)
+                           {
+                             region.crop = vec2(ivec2(region.crop + gridArrow));
+                             region.size = vec2(ivec2(region.size));
+                           });
+          else if (isArrow)
+            frames_change({.regionId = -1, .cropX = gridArrow.x, .cropY = gridArrow.y}, ChangeType::ADD);
+
+          // Arrow nudges are snapped (and the rectangle normalized) when the command runs, after the nudge.
+          if (isDuring && !isMouseDown && isRegionCrop)
+            regions_update(regionSelection,
+                           [=, this](model::Region& region)
+                           {
+                             auto [minPoint, maxPoint] =
+                                 rect_snap(region.crop, region.crop + region.size, isGridSnap, gridSize, gridOffset);
+                             region.crop = minPoint;
+                             region.size = maxPoint - minPoint;
+                           });
+          else if (isDuring && !isMouseDown)
+            manager.command_push({manager.selected, [=, this](Manager&, Document& document)
+                                  {
+                                    auto source = document.model.frame_get(editReference);
+                                    if (!source) return;
+                                    auto [minPoint, maxPoint] = rect_snap(source->crop, source->crop + source->size,
+                                                                          isGridSnap, gridSize, gridOffset);
+                                    edit::frames_change_apply(document.model, {.references = toolFrames},
+                                                              {.regionId = -1,
+                                                               .cropX = minPoint.x,
+                                                               .cropY = minPoint.y,
+                                                               .sizeX = maxPoint.x - minPoint.x,
+                                                               .sizeY = maxPoint.y - minPoint.y},
+                                                              ChangeType::ADJUST);
+                                  }});
+
+          auto shown = isRegionCrop ? region_get(*regionSelection.begin()) : nullptr;
+          auto crop = shown ? shown->crop : frame ? frame->crop : vec2();
+          auto cropSize = shown ? shown->size : frame ? frame->size : vec2();
+          if (isDuring && (shown || !isRegionCrop))
+            tooltip_lines_draw(
+                {localize_format(FORMAT_CROP, crop.x, crop.y), localize_format(FORMAT_SIZE, cropSize.x, cropSize.y)});
+          if (isEnd) document_change_push(manager);
+        }
+
+        if ((useTool == tool::DRAW || useTool == tool::ERASE) && texture)
+        {
+          if (isMouseClicked) edit_begin_push(manager, useTool == tool::DRAW ? EDIT_DRAW : EDIT_ERASE);
+          if (isMouseDown)
+            manager.command_push({manager.selected, [start = ivec2(previousMousePos), end = ivec2(mousePos),
+                                                     color = useTool == tool::DRAW ? toolColor : vec4(),
+                                                     spritesheetId = referenceSpritesheet](Manager&, Document& document)
+                                  {
+                                    if (auto texture = document.texture_edit(spritesheetId))
+                                      texture->pixel_line(start, end, color);
+                                  }});
+          if (input.isLeftReleased || input.isRightReleased)
+            manager.command_push({manager.selected, [spritesheetId = referenceSpritesheet](Manager&, Document& document)
+                                  { document.texture_change(spritesheetId); }});
+        }
+
+        if (useTool == tool::COLOR_PICKER && texture && isDuring)
+        {
+          toolColor = texture->pixel_read(mousePos);
+          if (ImGui::BeginTooltip())
+          {
+            ImGui::ColorButton("##Color Picker Button", to_imvec4(toolColor));
+            ImGui::SameLine();
+            auto rgba8 = glm::clamp(ivec4(toolColor * 255.0f + 0.5f), ivec4(0), ivec4(255));
+            ImGui::TextUnformatted(
+                std::format("#{:02X}{:02X}{:02X}{:02X}", rgba8.r, rgba8.g, rgba8.b, rgba8.a).c_str());
+            ImGui::SameLine();
+            ImGui::Text("(%d, %d, %d, %d)", rgba8.r, rgba8.g, rgba8.b, rgba8.a);
+            ImGui::EndTooltip();
+          }
         }
 
         if (tool == tool::PAN && hoveredRegionId != -1 && spritesheet)
-        {
-          if (auto region = region_get(hoveredRegionId))
+          if (auto region = region_get(hoveredRegionId); region && ImGui::BeginTooltip())
           {
-            if (ImGui::BeginTooltip())
-            {
-              ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
-              ImGui::TextUnformatted(region->name.c_str());
-              ImGui::PopFont();
-              ImGui::TextUnformatted(
-                  std::vformat(localize.get(FORMAT_ID), std::make_format_args(hoveredRegionId)).c_str());
-              ImGui::TextUnformatted(
-                  std::vformat(localize.get(FORMAT_CROP), std::make_format_args(region->crop.x, region->crop.y))
-                      .c_str());
-              ImGui::TextUnformatted(
-                  std::vformat(localize.get(FORMAT_SIZE), std::make_format_args(region->size.x, region->size.y))
-                      .c_str());
-              if (region->origin == Origin::CUSTOM)
-              {
-                ImGui::TextUnformatted(
-                    std::vformat(localize.get(FORMAT_PIVOT), std::make_format_args(region->pivot.x, region->pivot.y))
-                        .c_str());
-              }
-              else
-              {
-                StringType originString = LABEL_REGION_ORIGIN_CENTER;
-                if (region->origin == Origin::TOP_LEFT) originString = LABEL_REGION_ORIGIN_TOP_LEFT;
-                auto originLabel = localize.get(originString);
-                ImGui::TextUnformatted(
-                    std::vformat(localize.get(FORMAT_ORIGIN), std::make_format_args(originLabel)).c_str());
-              }
-              ImGui::EndTooltip();
-            }
+            ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
+            ImGui::TextUnformatted(region->name.c_str());
+            ImGui::PopFont();
+            auto originLabel = localize.get(region->origin == Origin::TOP_LEFT ? LABEL_REGION_ORIGIN_TOP_LEFT
+                                                                               : LABEL_REGION_ORIGIN_CENTER);
+            for (const auto& line :
+                 {localize_format(FORMAT_ID, hoveredRegionId),
+                  localize_format(FORMAT_CROP, region->crop.x, region->crop.y),
+                  localize_format(FORMAT_SIZE, region->size.x, region->size.y),
+                  region->origin == Origin::CUSTOM ? localize_format(FORMAT_PIVOT, region->pivot.x, region->pivot.y)
+                                                   : localize_format(FORMAT_ORIGIN, originLabel)})
+              ImGui::TextUnformatted(line.c_str());
+            ImGui::EndTooltip();
           }
-        }
 
-        if ((isMouseDown || isKeyDown) && useTool != tool::PAN)
+        if (input.wheel != 0 || input.isZoomIn || input.isZoomOut)
         {
-          if (!isAreaAllowed && areaType == tool::ANIMATION_PREVIEW)
-          {
-            if (ImGui::BeginTooltip())
-            {
-              ImGui::TextUnformatted(localize.get(TEXT_TOOL_ANIMATION_PREVIEW));
-              ImGui::EndTooltip();
-            }
-          }
-          else if (isSpritesheetRequired && !isSpritesheetAvailable)
-          {
-            if (ImGui::BeginTooltip())
-            {
-              ImGui::TextUnformatted(localize.get(TEXT_SELECT_SPRITESHEET));
-              ImGui::EndTooltip();
-            }
-          }
-          else if (isFrameRequired && !isFrameAvailable)
-          {
-            if (ImGui::BeginTooltip())
-            {
-              if (isRegionInUse)
-                ImGui::TextUnformatted(localize.get(TEXT_REGION_IN_USE));
-              else if (useTool == tool::CROP)
-                ImGui::TextUnformatted(localize.get(TEXT_SELECT_FRAME_OR_REGION));
-              else
-                ImGui::TextUnformatted(localize.get(TEXT_SELECT_FRAME));
-              ImGui::EndTooltip();
-            }
-          }
-        }
-
-        if (mouseWheel != 0 || isZoomIn || isZoomOut)
-        {
-          auto focus = mouseWheel != 0 ? vec2(mousePos) : vec2();
-          if (texture && mouseWheel == 0) focus = texture->size / 2;
-
-          zoom_step(zoom, pan, focus, (mouseWheel > 0 || isZoomIn) ? ZOOM_LEVEL_STEP : -ZOOM_LEVEL_STEP);
+          auto focus = input.wheel != 0 ? vec2(mousePos) : texture ? vec2(texture->size) / 2.0f : vec2();
+          zoom_step(zoom, pan, focus, (input.wheel > 0 || input.isZoomIn) ? ZOOM_LEVEL_STEP : -ZOOM_LEVEL_STEP);
         }
       }
     }

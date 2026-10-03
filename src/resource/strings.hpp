@@ -1,5 +1,8 @@
 #pragma once
 
+#include <format>
+#include <string>
+
 namespace anm2ed
 {
 #define SELECT_ENGLISH(symbol, english, spanish, russian, chinese, korean) english,
@@ -815,3 +818,12 @@ namespace anm2ed
 }
 
 extern anm2ed::Localizer localize;
+
+namespace anm2ed
+{
+  // A localized format string filled with arguments.
+  template <class... Args> std::string localize_format(StringType format, Args... args)
+  {
+    return std::vformat(localize.get(format), std::make_format_args(args...));
+  }
+}

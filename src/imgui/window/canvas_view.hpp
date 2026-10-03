@@ -1,13 +1,48 @@
 #pragma once
 
 #include <functional>
+#include <initializer_list>
+#include <set>
+#include <string>
+#include <utility>
 
 #include "canvas.hpp"
 #include "manager.hpp"
 #include "settings.hpp"
+#include "tool.hpp"
 
 namespace anm2ed::imgui
 {
+  // One frame of canvas input. `arrow` is the arrow keys pressed this frame (with key repeat), x right and y down.
+  struct CanvasInput
+  {
+    glm::vec2 arrow{};
+    glm::vec2 mouseDelta{};
+    float wheel{};
+    float step{};
+    bool isArrowBegin{};
+    bool isArrowDown{};
+    bool isArrowEnd{};
+    bool isLeftClicked{};
+    bool isLeftDown{};
+    bool isLeftReleased{};
+    bool isRightClicked{};
+    bool isRightDown{};
+    bool isRightReleased{};
+    bool isMiddleDown{};
+    bool isZoomIn{};
+    bool isZoomOut{};
+    bool isMod{};
+  };
+
+  CanvasInput canvas_input_get(Manager&, bool);
+  void edit_begin_push(Manager&, StringType);
+  void document_change_push(Manager&);
+  void frames_change_push(Manager&, const std::set<Reference>&, FrameChange, ChangeType = ChangeType::ADJUST);
+  std::pair<glm::vec2, glm::vec2> rect_snap(glm::vec2, glm::vec2, bool, glm::ivec2, glm::ivec2);
+  void tooltip_lines_draw(std::initializer_list<std::string>);
+  void tool_cursor_update(tool::Type, tool::AreaType, bool, bool, bool, StringType);
+
   class CanvasView : public Canvas
   {
   protected:

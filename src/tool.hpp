@@ -38,32 +38,35 @@ namespace anm2ed::tool
     AreaType areaType;
     const char* label{};
     StringType tooltip{};
+    bool isFrameRequired{};
+    bool isSpritesheetRequired{};
   };
 
   constexpr Info INFO[] = {
       {ImGuiMouseCursor_Hand, resource::icon::PAN, SHORTCUT_PAN, ALL, "##Pan", TOOLTIP_TOOL_PAN},
 
-      {ImGuiMouseCursor_ResizeAll, resource::icon::MOVE, SHORTCUT_MOVE, ALL, "##Move", TOOLTIP_TOOL_MOVE},
+      {ImGuiMouseCursor_ResizeAll, resource::icon::MOVE, SHORTCUT_MOVE, ALL, "##Move", TOOLTIP_TOOL_MOVE, true},
 
       {ImGuiMouseCursor_Arrow, resource::icon::ROTATE, SHORTCUT_ROTATE, ANIMATION_PREVIEW, "##Rotate",
-       TOOLTIP_TOOL_ROTATE},
+       TOOLTIP_TOOL_ROTATE, true},
 
       {ImGuiMouseCursor_ResizeNESW, resource::icon::SCALE, SHORTCUT_SCALE, ANIMATION_PREVIEW, "##Scale",
-       TOOLTIP_TOOL_SCALE},
+       TOOLTIP_TOOL_SCALE, true},
 
       {ImGuiMouseCursor_ResizeNESW, resource::icon::SHEAR, SHORTCUT_SHEAR, ANIMATION_PREVIEW, "##Shear",
-       TOOLTIP_TOOL_SHEAR},
+       TOOLTIP_TOOL_SHEAR, true},
 
-      {ImGuiMouseCursor_Arrow, resource::icon::CROP, SHORTCUT_CROP, SPRITESHEET_EDITOR, "##Crop", TOOLTIP_TOOL_CROP},
+      {ImGuiMouseCursor_Arrow, resource::icon::CROP, SHORTCUT_CROP, SPRITESHEET_EDITOR, "##Crop", TOOLTIP_TOOL_CROP,
+       true},
 
-      {ImGuiMouseCursor_Arrow, resource::icon::DRAW, SHORTCUT_DRAW, SPRITESHEET_EDITOR, "##Draw",
-       TOOLTIP_TOOL_DRAW},
+      {ImGuiMouseCursor_Arrow, resource::icon::DRAW, SHORTCUT_DRAW, SPRITESHEET_EDITOR, "##Draw", TOOLTIP_TOOL_DRAW,
+       false, true},
 
-      {ImGuiMouseCursor_Arrow, resource::icon::ERASE, SHORTCUT_ERASE, SPRITESHEET_EDITOR, "##Erase",
-       TOOLTIP_TOOL_ERASE},
+      {ImGuiMouseCursor_Arrow, resource::icon::ERASE, SHORTCUT_ERASE, SPRITESHEET_EDITOR, "##Erase", TOOLTIP_TOOL_ERASE,
+       false, true},
 
-      {ImGuiMouseCursor_Arrow, resource::icon::COLOR_PICKER, SHORTCUT_COLOR_PICKER, SPRITESHEET_EDITOR, "##Color Picker",
-       TOOLTIP_TOOL_COLOR_PICKER},
+      {ImGuiMouseCursor_Arrow, resource::icon::COLOR_PICKER, SHORTCUT_COLOR_PICKER, SPRITESHEET_EDITOR,
+       "##Color Picker", TOOLTIP_TOOL_COLOR_PICKER, false, true},
 
       {ImGuiMouseCursor_None, resource::icon::UNDO, SHORTCUT_UNDO, ALL, "##Undo", TOOLTIP_TOOL_UNDO},
 

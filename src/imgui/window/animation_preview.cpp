@@ -1182,344 +1182,138 @@ namespace anm2ed::imgui
 
       if (isPreviewHovered)
       {
-        auto isMouseClicked = ImGui::IsMouseClicked(ImGuiMouseButton_Left);
-        auto isMouseReleased = ImGui::IsMouseReleased(ImGuiMouseButton_Left);
-        auto isMouseLeftDown = ImGui::IsMouseDown(ImGuiMouseButton_Left);
-        auto isMouseMiddleDown = ImGui::IsMouseDown(ImGuiMouseButton_Middle);
-        auto isMouseRightDown = ImGui::IsMouseDown(ImGuiMouseButton_Right);
-        auto isMouseRightClicked = ImGui::IsMouseClicked(ImGuiMouseButton_Right);
-        auto isMouseRightReleased = ImGui::IsMouseReleased(ImGuiMouseButton_Right);
-        auto isMouseDown = isMouseLeftDown || isMouseMiddleDown || isMouseRightDown;
-        auto mouseDelta = to_ivec2(ImGui::GetIO().MouseDelta);
-        auto mouseWheel = ImGui::GetIO().MouseWheel;
-
-        auto isLeftJustPressed = ImGui::IsKeyPressed(ImGuiKey_LeftArrow, false);
-        auto isRightJustPressed = ImGui::IsKeyPressed(ImGuiKey_RightArrow, false);
-        auto isUpJustPressed = ImGui::IsKeyPressed(ImGuiKey_UpArrow, false);
-        auto isDownJustPressed = ImGui::IsKeyPressed(ImGuiKey_DownArrow, false);
-        auto isLeftPressed = ImGui::IsKeyPressed(ImGuiKey_LeftArrow);
-        auto isRightPressed = ImGui::IsKeyPressed(ImGuiKey_RightArrow);
-        auto isUpPressed = ImGui::IsKeyPressed(ImGuiKey_UpArrow);
-        auto isDownPressed = ImGui::IsKeyPressed(ImGuiKey_DownArrow);
-        auto isLeftDown = ImGui::IsKeyDown(ImGuiKey_LeftArrow);
-        auto isRightDown = ImGui::IsKeyDown(ImGuiKey_RightArrow);
-        auto isUpDown = ImGui::IsKeyDown(ImGuiKey_UpArrow);
-        auto isDownDown = ImGui::IsKeyDown(ImGuiKey_DownArrow);
-        auto isLeftReleased = ImGui::IsKeyReleased(ImGuiKey_LeftArrow);
-        auto isRightReleased = ImGui::IsKeyReleased(ImGuiKey_RightArrow);
-        auto isUpReleased = ImGui::IsKeyReleased(ImGuiKey_UpArrow);
-        auto isDownReleased = ImGui::IsKeyReleased(ImGuiKey_DownArrow);
-        auto isKeyJustPressed = isLeftJustPressed || isRightJustPressed || isUpJustPressed || isDownJustPressed;
-        auto isKeyDown = isLeftDown || isRightDown || isUpDown || isDownDown;
-        auto isKeyReleased = isLeftReleased || isRightReleased || isUpReleased || isDownReleased;
-
-        auto isZoomIn = isFocused && shortcut(manager.chords[SHORTCUT_ZOOM_IN], shortcut::GLOBAL);
-        auto isZoomOut = isFocused && shortcut(manager.chords[SHORTCUT_ZOOM_OUT], shortcut::GLOBAL);
-
-        auto isMod = ImGui::IsKeyDown(ImGuiMod_Shift);
-        auto useTool = tool;
-        auto step = (float)(isMod ? STEP_FAST : STEP);
+        auto input = canvas_input_get(manager, isFocused);
         mousePos = position_translate(zoom, pan, to_vec2(ImGui::GetMousePos()) - to_vec2(cursorScreenPos));
         auto selectedFrameReferences = document.frame_references_get();
         std::erase_if(selectedFrameReferences, [](const Reference& frameReference)
                       { return frameReference.itemType == NONE || frameReference.itemType == TRIGGER; });
         auto editReference = reference;
-        auto editItemType = referenceItemType;
         if ((referenceItemType == ItemType::TRIGGER || !selectedFrameReferences.contains(reference)) &&
             !selectedFrameReferences.empty())
-        {
           editReference = *selectedFrameReferences.begin();
-          editItemType = static_cast<ItemType>(editReference.itemType);
-        }
 
-        auto frame = model.frame_get(editReference);
-        auto item = model.track_get(editReference);
+        auto frame = selectedFrameReferences.empty() ? nullptr : model.frame_get(editReference);
         auto selectedNull =
-            editItemType == ItemType::NULL_ ? model::item_get(model.content.nulls, editReference.itemID) : nullptr;
+            editReference.itemType == NULL_ ? model::item_get(model.content.nulls, editReference.itemID) : nullptr;
         bool isSelectedNullRect = selectedNull && selectedNull->isShowRect;
         auto null_rect_top_left = [](const model::Frame& frame) { return frame.position - (frame.scale * 0.5f); };
 
-        if (isMouseMiddleDown) useTool = tool::PAN;
-        if (tool == tool::MOVE && isMouseRightDown) useTool = tool::SCALE;
-        if (tool == tool::SCALE && isMouseRightDown) useTool = tool::MOVE;
+        auto useTool = (tool::Type)tool;
+        if (input.isMiddleDown) useTool = tool::PAN;
+        if (tool == tool::MOVE && input.isRightDown) useTool = tool::SCALE;
+        if (tool == tool::SCALE && input.isRightDown) useTool = tool::MOVE;
 
-        bool isToolMouseClicked = isMouseClicked;
-        bool isToolMouseReleased = isMouseReleased;
-        bool isToolMouseDown = isMouseLeftDown;
+        // A tool swapped in by the right button is driven by the right button.
+        auto isSwapped = useTool != tool && useTool != tool::PAN;
+        auto isToolClicked = isSwapped ? input.isRightClicked : input.isLeftClicked;
+        auto isToolDown = isSwapped ? input.isRightDown : input.isLeftDown;
+        auto isToolReleased = isSwapped ? input.isRightReleased : input.isLeftReleased;
+        auto isBegin = isToolClicked || input.isArrowBegin;
+        auto isDuring = isToolDown || input.isArrowDown;
+        auto isEnd = isToolReleased || input.isArrowEnd;
+        auto arrow = input.arrow * input.step;
+        auto isArrow = arrow != vec2();
 
-        if ((tool == tool::MOVE && useTool == tool::SCALE) || (tool == tool::SCALE && useTool == tool::MOVE))
+        // Changes apply to every selected frame; absolute values are applied as the difference from the edited frame.
+        auto frames_change = [&](FrameChange change, ChangeType type = ChangeType::ADD)
+        { frames_change_push(manager, selectedFrameReferences, change, type); };
+        auto null_rect_set = [&](vec2 minPoint, vec2 maxPoint)
         {
-          isToolMouseClicked = isMouseRightClicked;
-          isToolMouseReleased = isMouseRightReleased;
-          isToolMouseDown = isMouseRightDown;
-        }
-
-        auto isToolBegin = isToolMouseClicked || isKeyJustPressed;
-        auto isToolDuring = isToolMouseDown || isKeyDown;
-        auto isToolEnd = isToolMouseReleased || isKeyReleased;
-
-        auto frame_snapshot = [&](StringType label)
-        {
-          manager.command_push(
-              {manager.selected, [label](Manager&, Document& document) { document.edit_begin(label); }});
-        };
-        auto frame_change_apply = [&](FrameChange frameChange, ChangeType changeType = ChangeType::ADJUST)
-        {
-          auto queuedFrameReferences = selectedFrameReferences;
-          manager.command_push({manager.selected, [=](Manager&, Document& document)
-                                {
-                                  std::map<Reference, std::set<int>> groupedFrames{};
-                                  for (auto frameReference : queuedFrameReferences)
-                                  {
-                                    auto itemReference = frameReference;
-                                    itemReference.frameIndex = -1;
-                                    groupedFrames[itemReference].insert(frameReference.frameIndex);
-                                  }
-
-                                  for (auto& [itemReference, itemFrames] : groupedFrames)
-                                  {
-                                    auto itemType = static_cast<ItemType>(itemReference.itemType);
-                                    if (auto item = document.model.track_edit(itemReference))
-                                      model::frames_change(*item, frameChange, itemType, changeType, itemFrames);
-                                  }
-                                }});
-        };
-        auto frame_position_apply = [&](vec2 position)
-        {
-          if (!frame) return;
-          frame_change_apply({.positionX = position.x - frame->position.x, .positionY = position.y - frame->position.y},
-                             ChangeType::ADD);
-        };
-        auto frame_scale_apply = [&](vec2 scale)
-        {
-          if (!frame) return;
-          frame_change_apply({.scaleX = scale.x - frame->scale.x, .scaleY = scale.y - frame->scale.y}, ChangeType::ADD);
-        };
-        auto frame_shear_apply = [&](vec2 shear)
-        {
-          if (!frame) return;
-          frame_change_apply({.shearX = shear.x - frame->shear.x, .shearY = shear.y - frame->shear.y}, ChangeType::ADD);
-        };
-        auto frames_changed = [&]()
-        { manager.command_push({manager.selected, [](Manager&, Document& document) { document.change(); }}); };
-        auto null_rect_change = [&](vec2 topLeft, vec2 rectSize)
-        {
-          topLeft = vec2(ivec2(topLeft));
-          rectSize = vec2(ivec2(rectSize));
-          frame_change_apply({.positionX = topLeft.x + rectSize.x * 0.5f - frame->position.x,
-                              .positionY = topLeft.y + rectSize.y * 0.5f - frame->position.y,
-                              .scaleX = rectSize.x - frame->scale.x,
-                              .scaleY = rectSize.y - frame->scale.y},
-                             ChangeType::ADD);
+          auto rectSize = maxPoint - minPoint;
+          frames_change({.positionX = minPoint.x + rectSize.x * 0.5f - frame->position.x,
+                         .positionY = minPoint.y + rectSize.y * 0.5f - frame->position.y,
+                         .scaleX = rectSize.x - frame->scale.x,
+                         .scaleY = rectSize.y - frame->scale.y});
         };
 
-        auto& toolInfo = tool::INFO[useTool];
-        auto& areaType = toolInfo.areaType;
-        bool isAreaAllowed = areaType == tool::ALL || areaType == tool::ANIMATION_PREVIEW;
-        bool isFrameRequired =
-            !(useTool == tool::PAN || useTool == tool::DRAW || useTool == tool::ERASE || useTool == tool::COLOR_PICKER);
-        bool isFrameAvailable = !isFrameRequired || frame;
-        auto cursor = (isAreaAllowed && isFrameAvailable) ? toolInfo.cursor : ImGuiMouseCursor_NotAllowed;
-        ImGui::SetMouseCursor(cursor);
-        ImGui::SetKeyboardFocusHere();
+        tool_cursor_update(useTool, tool::ANIMATION_PREVIEW, frame != nullptr, true,
+                           input.isLeftDown || input.isRightDown || input.isMiddleDown || input.isArrowDown,
+                           TEXT_SELECT_FRAME);
         if (useTool != tool::MOVE) isMoveDragging = false;
-        switch (useTool)
+        if (useTool == tool::PAN && (input.isLeftDown || input.isRightDown || input.isMiddleDown))
+          pan += input.mouseDelta;
+
+        if (frame && useTool == tool::MOVE)
         {
-          case tool::PAN:
-            if (isMouseDown || isMouseMiddleDown) pan += vec2(mouseDelta.x, mouseDelta.y);
-            break;
-          case tool::MOVE:
-            if (!item || !frame || selectedFrameReferences.empty()) break;
-            if (isToolBegin)
-            {
-              frame_snapshot(EDIT_FRAME_POSITION);
-              if (isToolMouseClicked)
-              {
-                auto origin = isSelectedNullRect ? null_rect_top_left(*frame) : frame->position;
-                moveOffset = settings.inputIsMoveToolSnapToMouse ? vec2() : mousePos - origin;
-                isMoveDragging = true;
-              }
-            }
-            if (isToolMouseDown && isMoveDragging)
-            {
-              auto position = mousePos - moveOffset;
-              if (isSelectedNullRect)
-                frame_position_apply(vec2((float)(int)(position.x + frame->scale.x * 0.5f),
-                                          (float)(int)(position.y + frame->scale.y * 0.5f)));
-              else
-                frame_position_apply(vec2((float)(int)position.x, (float)(int)position.y));
-            }
-
-            if (isLeftPressed) frame_change_apply({.positionX = step}, ChangeType::SUBTRACT);
-            if (isRightPressed) frame_change_apply({.positionX = step}, ChangeType::ADD);
-            if (isUpPressed) frame_change_apply({.positionY = step}, ChangeType::SUBTRACT);
-            if (isDownPressed) frame_change_apply({.positionY = step}, ChangeType::ADD);
-
-            if (isToolMouseReleased) isMoveDragging = false;
-            if (isToolEnd) frames_changed();
-            if (isToolDuring)
-            {
-              if (ImGui::BeginTooltip())
-              {
-                ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_POSITION),
-                                                    std::make_format_args(frame->position.x, frame->position.y))
-                                           .c_str());
-                ImGui::EndTooltip();
-              }
-            }
-            break;
-          case tool::SCALE:
-            if (!item || !frame || selectedFrameReferences.empty()) break;
-            if (isToolBegin)
-            {
-              frame_snapshot(EDIT_FRAME_SCALE);
-              if (isToolMouseClicked && isSelectedNullRect) nullRectScaleAnchor = null_rect_top_left(*frame);
-            }
-            if (isToolMouseDown)
-            {
-              if (isSelectedNullRect)
-              {
-                auto size = mousePos - nullRectScaleAnchor;
-                if (isMod)
-                {
-                  auto squareSize = std::max(std::abs(size.x), std::abs(size.y));
-                  size = {std::copysign(squareSize, size.x), std::copysign(squareSize, size.y)};
-                }
-
-                auto minPoint = glm::min(nullRectScaleAnchor, nullRectScaleAnchor + size);
-                auto maxPoint = glm::max(nullRectScaleAnchor, nullRectScaleAnchor + size);
-                minPoint = vec2(ivec2(minPoint));
-                maxPoint = vec2(ivec2(maxPoint));
-                null_rect_change(minPoint, maxPoint - minPoint);
-              }
-              else
-              {
-                auto scale = frame->scale + vec2(mouseDelta.x, mouseDelta.y);
-                if (isMod) scale = {scale.x, scale.x};
-                frame_scale_apply(scale);
-              }
-            }
-
-            if (isSelectedNullRect)
-            {
-              if (isLeftPressed) frame_change_apply({.positionX = step * 0.5f, .scaleX = step}, ChangeType::SUBTRACT);
-              if (isRightPressed) frame_change_apply({.positionX = step * 0.5f, .scaleX = step}, ChangeType::ADD);
-              if (isUpPressed) frame_change_apply({.positionY = step * 0.5f, .scaleY = step}, ChangeType::SUBTRACT);
-              if (isDownPressed) frame_change_apply({.positionY = step * 0.5f, .scaleY = step}, ChangeType::ADD);
-            }
-            else
-            {
-              if (isLeftPressed) frame_change_apply({.scaleX = step}, ChangeType::SUBTRACT);
-              if (isRightPressed) frame_change_apply({.scaleX = step}, ChangeType::ADD);
-              if (isUpPressed) frame_change_apply({.scaleY = step}, ChangeType::SUBTRACT);
-              if (isDownPressed) frame_change_apply({.scaleY = step}, ChangeType::ADD);
-            }
-
-            if (isToolDuring)
-            {
-              if (ImGui::BeginTooltip())
-              {
-                ImGui::TextUnformatted(
-                    std::vformat(localize.get(FORMAT_SCALE), std::make_format_args(frame->scale.x, frame->scale.y))
-                        .c_str());
-                ImGui::EndTooltip();
-              }
-            }
-
-            if (isToolEnd)
-            {
-              if (isSelectedNullRect)
-              {
-                auto topLeft = null_rect_top_left(*frame);
-                auto minPoint = glm::min(topLeft, topLeft + frame->scale);
-                auto maxPoint = glm::max(topLeft, topLeft + frame->scale);
-                minPoint = vec2(ivec2(minPoint));
-                maxPoint = vec2(ivec2(maxPoint));
-                null_rect_change(minPoint, maxPoint - minPoint);
-              }
-              frames_changed();
-            }
-            break;
-          case tool::ROTATE:
-            if (!item || !frame || selectedFrameReferences.empty()) break;
-            if (isToolBegin) frame_snapshot(EDIT_FRAME_ROTATION);
-            if (isToolMouseDown) frame_change_apply({.rotation = (float)(int)mouseDelta.x}, ChangeType::ADD);
-            if (isLeftPressed || isDownPressed) frame_change_apply({.rotation = step}, ChangeType::SUBTRACT);
-            if (isUpPressed || isRightPressed) frame_change_apply({.rotation = step}, ChangeType::ADD);
-
-            if (isToolDuring)
-            {
-              if (ImGui::BeginTooltip())
-              {
-                ImGui::TextUnformatted(
-                    std::vformat(localize.get(FORMAT_ROTATION), std::make_format_args(frame->rotation)).c_str());
-                ImGui::EndTooltip();
-              }
-            }
-
-            if (isToolEnd) frames_changed();
-            break;
-          case tool::SHEAR:
-            if (!item || !frame || selectedFrameReferences.empty()) break;
-            if (isToolBegin) frame_snapshot(EDIT_FRAME_SHEAR);
-            if (isToolMouseDown)
-            {
-              auto shear = frame->shear + vec2(mouseDelta.x, mouseDelta.y);
-              if (isMod)
-              {
-                if (std::abs(mouseDelta.x) >= std::abs(mouseDelta.y))
-                  shear.y = frame->shear.y;
-                else
-                  shear.x = frame->shear.x;
-              }
-              frame_shear_apply(shear);
-            }
-            if (isLeftPressed) frame_change_apply({.shearX = step}, ChangeType::SUBTRACT);
-            if (isRightPressed) frame_change_apply({.shearX = step}, ChangeType::ADD);
-            if (isUpPressed) frame_change_apply({.shearY = step}, ChangeType::SUBTRACT);
-            if (isDownPressed) frame_change_apply({.shearY = step}, ChangeType::ADD);
-
-            if (isToolDuring)
-            {
-              if (ImGui::BeginTooltip())
-              {
-                ImGui::TextUnformatted(
-                    std::vformat(localize.get(FORMAT_SHEAR), std::make_format_args(frame->shear.x, frame->shear.y))
-                        .c_str());
-                ImGui::EndTooltip();
-              }
-            }
-
-            if (isToolEnd) frames_changed();
-            break;
-          default:
-            break;
-        }
-
-        if ((isMouseDown || isKeyDown) && useTool != tool::PAN)
-        {
-          if (!isAreaAllowed && areaType == tool::SPRITESHEET_EDITOR)
+          if (isBegin) edit_begin_push(manager, EDIT_FRAME_POSITION);
+          if (isToolClicked)
           {
-            if (ImGui::BeginTooltip())
-            {
-              ImGui::TextUnformatted(localize.get(TEXT_TOOL_SPRITESHEET_EDITOR));
-              ImGui::EndTooltip();
-            }
+            auto origin = isSelectedNullRect ? null_rect_top_left(*frame) : frame->position;
+            moveOffset = settings.inputIsMoveToolSnapToMouse ? vec2() : mousePos - origin;
+            isMoveDragging = true;
           }
-          else if (isFrameRequired && !isFrameAvailable)
+          if (isToolDown && isMoveDragging)
           {
-            if (ImGui::BeginTooltip())
-            {
-              ImGui::TextUnformatted(localize.get(TEXT_SELECT_FRAME));
-              ImGui::EndTooltip();
-            }
+            auto position = vec2(ivec2(mousePos - moveOffset + (isSelectedNullRect ? frame->scale * 0.5f : vec2())));
+            frames_change({.positionX = position.x - frame->position.x, .positionY = position.y - frame->position.y});
           }
+          if (isArrow) frames_change({.positionX = arrow.x, .positionY = arrow.y});
+          if (isToolReleased) isMoveDragging = false;
+          if (isDuring) tooltip_lines_draw({localize_format(FORMAT_POSITION, frame->position.x, frame->position.y)});
+          if (isEnd) document_change_push(manager);
         }
 
-        if (mouseWheel != 0 || isZoomIn || isZoomOut)
+        if (frame && useTool == tool::SCALE)
         {
-          zoom_step(zoom, pan, vec2(mousePos), (mouseWheel > 0 || isZoomIn) ? ZOOM_LEVEL_STEP : -ZOOM_LEVEL_STEP);
+          if (isBegin) edit_begin_push(manager, EDIT_FRAME_SCALE);
+          if (isToolClicked && isSelectedNullRect) nullRectScaleAnchor = null_rect_top_left(*frame);
+          if (isToolDown && isSelectedNullRect)
+          {
+            auto rectSize = mousePos - nullRectScaleAnchor;
+            if (input.isMod)
+            {
+              auto squareSize = std::max(std::abs(rectSize.x), std::abs(rectSize.y));
+              rectSize = {std::copysign(squareSize, rectSize.x), std::copysign(squareSize, rectSize.y)};
+            }
+            auto [minPoint, maxPoint] = rect_snap(nullRectScaleAnchor, nullRectScaleAnchor + rectSize, false, {}, {});
+            null_rect_set(minPoint, maxPoint);
+          }
+          else if (isToolDown)
+            frames_change(
+                {.scaleX = input.mouseDelta.x,
+                 .scaleY = input.isMod ? frame->scale.x + input.mouseDelta.x - frame->scale.y : input.mouseDelta.y});
+          if (isArrow)
+            frames_change({.positionX = isSelectedNullRect ? arrow.x * 0.5f : 0.0f,
+                           .positionY = isSelectedNullRect ? arrow.y * 0.5f : 0.0f,
+                           .scaleX = arrow.x,
+                           .scaleY = arrow.y});
+          if (isDuring) tooltip_lines_draw({localize_format(FORMAT_SCALE, frame->scale.x, frame->scale.y)});
+          if (isEnd && isSelectedNullRect)
+          {
+            auto topLeft = null_rect_top_left(*frame);
+            auto [minPoint, maxPoint] = rect_snap(topLeft, topLeft + frame->scale, false, {}, {});
+            null_rect_set(minPoint, maxPoint);
+          }
+          if (isEnd) document_change_push(manager);
         }
+
+        if (frame && useTool == tool::ROTATE)
+        {
+          if (isBegin) edit_begin_push(manager, EDIT_FRAME_ROTATION);
+          if (isToolDown) frames_change({.rotation = input.mouseDelta.x});
+          if (auto turn = glm::sign(input.arrow.x - input.arrow.y); turn != 0.0f)
+            frames_change({.rotation = turn * input.step});
+          if (isDuring) tooltip_lines_draw({localize_format(FORMAT_ROTATION, frame->rotation)});
+          if (isEnd) document_change_push(manager);
+        }
+
+        if (frame && useTool == tool::SHEAR)
+        {
+          if (isBegin) edit_begin_push(manager, EDIT_FRAME_SHEAR);
+          if (isToolDown)
+          {
+            auto delta = input.mouseDelta;
+            if (input.isMod) (std::abs(delta.x) >= std::abs(delta.y) ? delta.y : delta.x) = 0.0f;
+            frames_change({.shearX = delta.x, .shearY = delta.y});
+          }
+          if (isArrow) frames_change({.shearX = arrow.x, .shearY = arrow.y});
+          if (isDuring) tooltip_lines_draw({localize_format(FORMAT_SHEAR, frame->shear.x, frame->shear.y)});
+          if (isEnd) document_change_push(manager);
+        }
+
+        if (input.wheel != 0 || input.isZoomIn || input.isZoomOut)
+          zoom_step(zoom, pan, vec2(mousePos),
+                    (input.wheel > 0 || input.isZoomIn) ? ZOOM_LEVEL_STEP : -ZOOM_LEVEL_STEP);
       }
     }
 
