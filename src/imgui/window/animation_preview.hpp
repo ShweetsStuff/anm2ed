@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cstdint>
-#include <filesystem>
 
 #include "audio_stream.hpp"
 #include "canvas_view.hpp"

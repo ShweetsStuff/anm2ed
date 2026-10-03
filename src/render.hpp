@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "audio_stream.hpp"
-#include "texture.hpp"
+#include <glm/glm.hpp>
 
 namespace anm2ed
 {

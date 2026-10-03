@@ -1,6 +1,5 @@
 #pragma once
 
-#include <set>
 #include <string>
 
 #include "document.hpp"

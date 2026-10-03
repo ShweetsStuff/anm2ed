@@ -18,7 +18,6 @@
 #include <glm/glm.hpp>
 
 #include "shader.hpp"
-#include "types.hpp"
 
 namespace anm2ed
 {
