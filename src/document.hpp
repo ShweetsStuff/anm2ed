@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "asset_store.hpp"
 #include "edit/edit.hpp"
 #include "selection.hpp"
 #include "snapshots.hpp"
@@ -32,6 +33,8 @@ namespace anm2ed
     Snapshots snapshots{};
     std::map<int, Storage> regionBySpritesheet{};
     Storage animation{};
+    resource::AssetStore assets{};
+    std::map<int, resource::Image> textureDrafts{};
     int changeAllFramePropertiesRegionId{-1};
     int changeAllFramePropertiesShaderId{-1};
 
@@ -97,7 +100,6 @@ namespace anm2ed
     Snapshot& current = snapshots.current;
 #define X(type, name) type& name = current.name;
     SNAPSHOT_STEP_STATE_FIELDS
-    SNAPSHOT_STEP_RESOURCE_FIELDS
 #undef X
     Anm2& anm2 = current.anm2;
     std::string& message = current.message;
@@ -115,8 +117,11 @@ namespace anm2ed
     bool texture_reload(int);
     bool sound_reload(int);
     bool shader_reload(int, std::string* = nullptr);
-    resource::Image* texture_get(int);
-    resource::AudioData* sound_get(int);
+    const resource::Image* texture_get(int) const;
+    resource::Image* texture_edit(int);
+    void texture_set(int, resource::Image);
+    const resource::AudioData* sound_get(int) const;
+    void sound_set(int, resource::AudioData);
     resource::Shader* shader_get(int);
     bool regions_trim(int, const std::set<int>&);
     bool spritesheet_pack(int, int);
@@ -124,7 +129,7 @@ namespace anm2ed
     void hash_set();
     void clean();
     void change(ChangeType);
-    void edit_begin(StringType, bool = false);
+    void edit_begin(StringType);
     edit::Uids edit_run(StringType, ChangeType, const std::function<edit::Uids(Anm2&)>&);
 
     // Snapshots for undo, runs the operation on the model, then commits; void operations select nothing.

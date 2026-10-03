@@ -1,5 +1,6 @@
 #include "common.hpp"
 
+#include "asset_store.hpp"
 #include "audio_data.hpp"
 #include "image.hpp"
 
@@ -38,4 +39,22 @@ TEST_CASE("AudioData holds file bytes")
   CHECK(audio.is_valid());
   CHECK(audio.uid != 0);
   CHECK_FALSE(AudioData(std::filesystem::path("missing.wav")).is_valid());
+}
+
+TEST_CASE("AssetStore keys assets by content")
+{
+  AssetStore store{};
+  const std::vector<uint8_t> pixels{1, 2, 3, 4};
+  auto key = store.image_add(Image(pixels.data(), {1, 1}));
+  CHECK(key != 0);
+  CHECK(store.image_add(Image(pixels.data(), {1, 1})) == key);
+  CHECK(store.image_add(Image(pixels.data(), {1, 1}, true)) != key);
+  REQUIRE(store.image_get(key));
+  CHECK(store.image_get(key)->pixels == pixels);
+  CHECK_FALSE(store.image_get(key + 1));
+
+  const unsigned char bytes[] = {'O', 'g', 'g', 'S'};
+  auto audioKey = store.audio_add(AudioData(bytes, sizeof(bytes)));
+  CHECK(store.audio_add(AudioData(bytes, sizeof(bytes))) == audioKey);
+  CHECK(store.audio_get(audioKey)->bytes.size() == sizeof(bytes));
 }

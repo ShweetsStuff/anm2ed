@@ -80,7 +80,7 @@ namespace anm2ed::imgui
   void spritesheet_textures_edit(Document& document, StringType edit, Document::ChangeType changeType,
                                  const std::function<bool()>& behavior, StringType successToast, StringType failToast)
   {
-    document.edit_begin(edit, true);
+    document.edit_begin(edit);
     auto isSuccess = behavior();
     toast_log(isSuccess ? Level::INFO : Level::ERROR, isSuccess ? successToast : failToast);
     document.change(changeType);

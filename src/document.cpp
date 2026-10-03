@@ -129,17 +129,10 @@ namespace anm2ed::document
 
   std::string element_name_get(const Element& element) { return element.name; }
 
-  template <class Resource>
-  void resource_load(int id, const std::filesystem::path& path, std::map<int, Resource>& resources,
-                     std::unordered_map<int, std::filesystem::path>& paths)
-  {
-    resources[id] = Resource(path::case_insensitive_find(path));
-    paths[id] = path;
-  }
-
-  template <class Resource>
-  void resources_sync(Document& document, ElementType type, std::map<int, Resource>& resources,
-                      std::unordered_map<int, std::filesystem::path>& paths)
+  // Loads assets for elements that are new or whose path changed, and forgets those of removed elements.
+  template <class Load>
+  void resources_sync(Document& document, ElementType type, std::map<int, std::uint64_t>& keys,
+                      std::unordered_map<int, std::filesystem::path>& paths, Load&& load)
   {
     std::set<int> validIds{};
     util::WorkingDirectory workingDirectory(document.directory_get());
@@ -149,28 +142,22 @@ namespace anm2ed::document
         if (element.type != type) continue;
         validIds.insert(element.id);
         auto path = paths.find(element.id);
-        if (!resources.contains(element.id) || path == paths.end() || path->second != element.path)
-          resource_load(element.id, element.path, resources, paths);
+        if (!keys.contains(element.id) || path == paths.end() || path->second != element.path)
+        {
+          load(element.id, path::case_insensitive_find(element.path));
+          paths[element.id] = element.path;
+        }
       }
 
-    std::erase_if(resources, [&](const auto& pair) { return !validIds.contains(pair.first); });
+    std::erase_if(keys, [&](const auto& pair) { return !validIds.contains(pair.first); });
     std::erase_if(paths, [&](const auto& pair) { return !validIds.contains(pair.first); });
   }
 
-  uint64_t spritesheet_hash_get(const Element& spritesheet, const resource::Image* texture)
+  // A spritesheet is dirty when its path or image asset differs from what was last saved.
+  uint64_t spritesheet_hash_get(const Element& spritesheet, std::uint64_t imageKey)
   {
-    std::size_t seed{};
-    auto hash_combine = [&](std::size_t value) { seed ^= value + HASH_COMBINE_CONSTANT + (seed << 6) + (seed >> 2); };
-
-    hash_combine(std::hash<int>{}(texture ? texture->size.x : 0));
-    hash_combine(std::hash<int>{}(texture ? texture->size.y : 0));
-    hash_combine(std::hash<bool>{}(texture && texture->isLinear));
-    hash_combine(std::hash<std::string>{}(path::to_utf8(spritesheet.path)));
-    auto isPixels = texture && !texture->pixels.empty();
-    hash_combine(isPixels ? std::hash<std::string_view>{}(std::string_view(
-                                reinterpret_cast<const char*>(texture->pixels.data()), texture->pixels.size()))
-                          : 0);
-    return static_cast<uint64_t>(seed);
+    auto seed = std::hash<std::string>{}(path::to_utf8(spritesheet.path));
+    return seed ^ (imageKey + HASH_COMBINE_CONSTANT + (seed << 6) + (seed >> 2));
   }
 
   Reference item_reference_get(Reference reference)
@@ -272,7 +259,8 @@ namespace anm2ed
     auto spritesheet = anm2.element_get(ElementType::SPRITESHEET, id);
     if (!spritesheet) return false;
     util::WorkingDirectory workingDirectory(directory_get());
-    document::resource_load(id, spritesheet->path, textures, texturePaths);
+    texture_set(id, resource::Image(path::case_insensitive_find(spritesheet->path)));
+    texturePaths[id] = spritesheet->path;
     return true;
   }
 
@@ -281,7 +269,8 @@ namespace anm2ed
     auto sound = anm2.element_get(ElementType::SOUND_ELEMENT, id);
     if (!sound) return false;
     util::WorkingDirectory workingDirectory(directory_get());
-    document::resource_load(id, sound->path, sounds, soundPaths);
+    sound_set(id, resource::AudioData(path::case_insensitive_find(sound->path)));
+    soundPaths[id] = sound->path;
     return true;
   }
 
@@ -335,8 +324,13 @@ namespace anm2ed
   void Document::assets_sync(ChangeType type)
   {
     if (type == ALL || type == SPRITESHEETS || type == TEXTURES)
-      document::resources_sync(*this, ElementType::SPRITESHEET, textures, texturePaths);
-    if (type == ALL || type == SOUNDS) document::resources_sync(*this, ElementType::SOUND_ELEMENT, sounds, soundPaths);
+      document::resources_sync(*this, ElementType::SPRITESHEET, textures, texturePaths,
+                               [&](int id, const std::filesystem::path& path)
+                               { texture_set(id, resource::Image(path)); });
+    if (type == ALL || type == SOUNDS)
+      document::resources_sync(*this, ElementType::SOUND_ELEMENT, sounds, soundPaths,
+                               [&](int id, const std::filesystem::path& path)
+                               { sound_set(id, resource::AudioData(path)); });
     if (type != ALL && type != SHADERS) return;
 
     std::set<int> validShaderIds{};
@@ -368,17 +362,34 @@ namespace anm2ed
     std::erase_if(shaderFragmentPaths, is_invalid);
   }
 
-  resource::Image* Document::texture_get(int id)
+  const resource::Image* Document::texture_get(int id) const
   {
-    auto it = textures.find(id);
-    return it == textures.end() ? nullptr : &it->second;
+    if (auto draft = textureDrafts.find(id); draft != textureDrafts.end()) return &draft->second;
+    auto key = textures.find(id);
+    return key == textures.end() ? nullptr : assets.image_get(key->second);
   }
 
-  resource::AudioData* Document::sound_get(int id)
+  // A private copy of the spritesheet's image to draw on; it becomes a new asset on the next change().
+  resource::Image* Document::texture_edit(int id)
   {
-    auto it = sounds.find(id);
-    return it == sounds.end() ? nullptr : &it->second;
+    auto texture = texture_get(id);
+    if (!texture) return nullptr;
+    return &textureDrafts.try_emplace(id, *texture).first->second;
   }
+
+  void Document::texture_set(int id, resource::Image image)
+  {
+    textureDrafts.erase(id);
+    textures[id] = assets.image_add(std::move(image));
+  }
+
+  const resource::AudioData* Document::sound_get(int id) const
+  {
+    auto key = sounds.find(id);
+    return key == sounds.end() ? nullptr : assets.audio_get(key->second);
+  }
+
+  void Document::sound_set(int id, resource::AudioData data) { sounds[id] = assets.audio_add(std::move(data)); }
 
   resource::Shader* Document::shader_get(int shaderId)
   {
@@ -498,7 +509,7 @@ namespace anm2ed
         }
     }
 
-    textures[id] = resource::Image(packedPixels.data(), packedSize);
+    texture_set(id, resource::Image(packedPixels.data(), packedSize));
     for (auto& region : spritesheet->children)
       if (region.type == ElementType::REGION && crops.contains(region.id)) region.crop = crops.at(region.id);
 
@@ -554,7 +565,7 @@ namespace anm2ed
         regionIdMap[id][sourceRegionId] = sourceRegion.id;
       }
     }
-    textures[baseId] = std::move(mergedTexture);
+    texture_set(baseId, std::move(mergedTexture));
 
     std::unordered_map<int, int> layerSpritesheetBefore{};
     if (auto layers = anm2.element_get(ElementType::LAYERS))
@@ -614,7 +625,8 @@ namespace anm2ed
         if (spritesheet.type == ElementType::SPRITESHEET)
         {
           validIds.insert(spritesheet.id);
-          auto currentHash = document::spritesheet_hash_get(spritesheet, texture_get(spritesheet.id));
+          auto currentHash = document::spritesheet_hash_get(
+              spritesheet, textures.contains(spritesheet.id) ? textures.at(spritesheet.id) : 0);
           spritesheetHashes[spritesheet.id] = currentHash;
           spritesheetSaveHashes.try_emplace(spritesheet.id, currentHash);
         }
@@ -626,6 +638,8 @@ namespace anm2ed
 
   void Document::change(ChangeType type)
   {
+    for (auto& [id, draft] : std::exchange(textureDrafts, {}))
+      textures[id] = assets.image_add(std::move(draft));
     hash_set();
     assets_sync(type);
 
@@ -712,7 +726,7 @@ namespace anm2ed
     index = UidIndex(anm2);
   }
 
-  void Document::edit_begin(StringType label, bool isTextures) { snapshots.push(localize.get(label), isTextures); }
+  void Document::edit_begin(StringType label) { snapshots.push(localize.get(label)); }
 
   edit::Uids Document::edit_run(StringType label, ChangeType type, const std::function<edit::Uids(Anm2&)>& operation)
   {
@@ -739,7 +753,7 @@ namespace anm2ed
     auto spritesheet = anm2.element_get(ElementType::SPRITESHEET, id);
     if (!spritesheet) return;
     assets_sync(TEXTURES);
-    spritesheetHashes[id] = document::spritesheet_hash_get(*spritesheet, texture_get(id));
+    spritesheetHashes[id] = document::spritesheet_hash_get(*spritesheet, textures.contains(id) ? textures.at(id) : 0);
   }
 
   void Document::spritesheet_hash_set_saved(int id)
@@ -914,7 +928,7 @@ namespace anm2ed
       auto& element = items->children.emplace_back(element_make(ElementType::SPRITESHEET));
       element.id = element_child_next_id_get(*items, ElementType::SPRITESHEET);
       element.path = relativePath;
-      textures[element.id] = std::move(texture);
+      texture_set(element.id, std::move(texture));
       texturePaths[element.id] = element.path;
       added.insert(element.id);
       spritesheet.reference = element.id;
@@ -940,7 +954,8 @@ namespace anm2ed
       element.id = element_child_next_id_get(*items, ElementType::SOUND_ELEMENT);
       element.path = path::backslash_replace(path::make_relative(path::backslash_handle(path), directory_get()));
       WorkingDirectory workingDirectory(directory_get());
-      document::resource_load(element.id, element.path, sounds, soundPaths);
+      sound_set(element.id, resource::AudioData(path::case_insensitive_find(element.path)));
+      soundPaths[element.id] = element.path;
       added.insert(element.id);
       sound.reference = element.id;
       toast_log(Level::INFO, TOAST_SOUND_INITIALIZED, element.id, path::to_utf8(element.path));

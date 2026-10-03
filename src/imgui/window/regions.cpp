@@ -133,7 +133,7 @@ namespace anm2ed::imgui
 
     if (options.isMakeSpritesheet || options.isRemoveCurrent)
     {
-      document.edit_begin(EDIT_EXPORT_REGION, true);
+      document.edit_begin(EDIT_EXPORT_REGION);
 
       if (options.isMakeSpritesheet)
       {
@@ -150,7 +150,7 @@ namespace anm2ed::imgui
         exported.children.push_back(exportedRegion);
         spritesheets->children.push_back(exported);
 
-        document.textures[exported.id] = Image(pixels.data(), exportSize);
+        document.texture_set(exported.id, Image(pixels.data(), exportSize));
         document.texturePaths[exported.id] = exported.path;
         document.spritesheet.reference = exported.id;
         document.spritesheet.selection = {exported.id};

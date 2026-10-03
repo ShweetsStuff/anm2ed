@@ -26,50 +26,11 @@ namespace anm2ed::snapshots
            left.references == right.references;
   }
 
-  bool is_texture_equal(const resource::Image& left, const resource::Image& right)
-  {
-    return left.uid == right.uid ||
-           (left.size == right.size && left.isLinear == right.isLinear && left.pixels == right.pixels);
-  }
-
-  bool is_audio_equal(const resource::AudioData& left, const resource::AudioData& right)
-  {
-    return left.is_valid() == right.is_valid();
-  }
-
-  template <typename T, typename Compare>
-  bool is_map_equal(const std::map<int, T>& left, const std::map<int, T>& right, Compare compare)
-  {
-    if (left.size() != right.size()) return false;
-
-    auto leftIt = left.begin();
-    auto rightIt = right.begin();
-    while (leftIt != left.end() && rightIt != right.end())
-    {
-      if (leftIt->first != rightIt->first) return false;
-      if (!compare(leftIt->second, rightIt->second)) return false;
-      ++leftIt;
-      ++rightIt;
-    }
-
-    return leftIt == left.end() && rightIt == right.end();
-  }
-
   template <typename T> bool is_value_equal(const T& left, const T& right) { return left == right; }
 
   bool is_value_equal(const Playback& left, const Playback& right) { return is_playback_equal(left, right); }
 
   bool is_value_equal(const Storage& left, const Storage& right) { return is_storage_equal(left, right); }
-
-  bool is_value_equal(const std::map<int, resource::Image>& left, const std::map<int, resource::Image>& right)
-  {
-    return is_map_equal(left, right, is_texture_equal);
-  }
-
-  bool is_value_equal(const std::map<int, resource::AudioData>& left, const std::map<int, resource::AudioData>& right)
-  {
-    return is_map_equal(left, right, is_audio_equal);
-  }
 
   bool is_element_shallow_equal(const Element& left, const Element& right)
   {
@@ -202,7 +163,6 @@ namespace anm2ed
 #define X(type, name)                                                                                                  \
   if (this->name) return false;
     SNAPSHOT_STEP_STATE_FIELDS
-    SNAPSHOT_STEP_RESOURCE_FIELDS
 #undef X
 
     return true;
@@ -216,7 +176,6 @@ namespace anm2ed
 #define X(type, name)                                                                                                  \
   if (this->name) snapshot.name = direction == SnapshotStepDirection::UNDO ? this->name->undo : this->name->redo;
     SNAPSHOT_STEP_STATE_FIELDS
-    SNAPSHOT_STEP_RESOURCE_FIELDS
 #undef X
   }
 
@@ -268,12 +227,7 @@ namespace anm2ed
     pendingStep = step.is_empty() ? std::nullopt : std::optional<SnapshotStep>(std::move(step));
   }
 
-  void Snapshots::push(const std::string& message, bool isTextures)
-  {
-    auto step = snapshots::step_anm2_make(current);
-    if (isTextures) step.textures = SnapshotStepValue<SnapshotTextureMap>{current.textures, {}};
-    step_push(message, std::move(step));
-  }
+  void Snapshots::push(const std::string& message) { step_push(message, snapshots::step_anm2_make(current)); }
 
   void Snapshots::commit()
   {
@@ -321,7 +275,6 @@ namespace anm2ed
     if (snapshots::is_value_equal(step.name->undo, step.name->redo)) step.name.reset();                                \
   }
     SNAPSHOT_STEP_STATE_FIELDS
-    SNAPSHOT_STEP_RESOURCE_FIELDS
 #undef X
 
     if (step.is_empty()) return;

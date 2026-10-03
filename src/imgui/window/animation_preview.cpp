@@ -210,7 +210,13 @@ namespace anm2ed::imgui
     return document.sound_get(soundID) ? soundID : -1;
   }
 
-  bool render_audio_stream_generate(AudioStream& audioStream, std::map<int, AudioData>& sounds,
+  void sounds_detach(const Document& document, MIX_Mixer* mixer)
+  {
+    for (auto& [id, _] : document.sounds)
+      if (auto sound = document.sound_get(id)) audio::track_detach(*sound, mixer);
+  }
+
+  bool render_audio_stream_generate(AudioStream& audioStream, const Document& document,
                                     const std::vector<int>& frameSoundIDs, int fps)
   {
     audioStream.stream.clear();
@@ -229,7 +235,7 @@ namespace anm2ed::imgui
 
     for (auto soundID : frameSoundIDs)
     {
-      if (soundID != -1 && sounds.contains(soundID)) audio::play(sounds.at(soundID), false, mixer);
+      if (auto sound = document.sound_get(soundID)) audio::play(*sound, false, mixer);
 
       sampleFrameAccumulator += framesPerStep;
       auto sampleFramesToGenerate = (int)std::floor(sampleFrameAccumulator);
@@ -239,8 +245,7 @@ namespace anm2ed::imgui
       frameBuffer.resize((std::size_t)sampleFramesToGenerate * (std::size_t)channels);
       if (!MIX_Generate(mixer, frameBuffer.data(), (int)(frameBuffer.size() * sizeof(float))))
       {
-        for (auto& [_, sound] : sounds)
-          audio::track_detach(sound, mixer);
+        sounds_detach(document, mixer);
         MIX_DestroyMixer(mixer);
         audioStream.stream.clear();
         return false;
@@ -249,8 +254,7 @@ namespace anm2ed::imgui
       audioStream.stream.insert(audioStream.stream.end(), frameBuffer.begin(), frameBuffer.end());
     }
 
-    for (auto& [_, sound] : sounds)
-      audio::track_detach(sound, mixer);
+    sounds_detach(document, mixer);
     MIX_DestroyMixer(mixer);
     return true;
   }
@@ -268,8 +272,8 @@ namespace anm2ed::imgui
 
     auto stop_all_sounds = [&]()
     {
-      for (auto& [_, sound] : document.sounds)
-        audio::stop(sound, mixer);
+      for (auto& [id, _] : document.sounds)
+        if (auto sound = document.sound_get(id)) audio::stop(*sound, mixer);
     };
 
     if (manager.isRecording)
@@ -367,7 +371,7 @@ namespace anm2ed::imgui
         {
           if (settings.timelineIsSound && type != render::GIF)
           {
-            if (!render_audio_stream_generate(audioStream, document.sounds, renderFrameSoundIDs, renderFrameRate))
+            if (!render_audio_stream_generate(audioStream, document, renderFrameSoundIDs, renderFrameRate))
             {
               toasts.push(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED));
               logger.error("Failed to generate deterministic render audio stream; exporting without audio.");

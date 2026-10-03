@@ -7,8 +7,6 @@
 #include <vector>
 
 #include "anm2/anm2.hpp"
-#include "audio_data.hpp"
-#include "image.hpp"
 #include "playback.hpp"
 #include "selection.hpp"
 #include "storage.hpp"
@@ -61,16 +59,15 @@ namespace anm2ed
     Storage shader{};
     Storage sound{};
     Storage spritesheet{};
-    std::map<int, resource::Image> textures{};
-    std::map<int, resource::AudioData> sounds{};
+    std::map<int, std::uint64_t> textures{};
+    std::map<int, std::uint64_t> sounds{};
     Anm2 anm2{};
     Selection selection{};
     float frameTime{};
     std::string message = snapshots::ACTION;
   };
 
-  using SnapshotTextureMap = std::map<int, resource::Image>;
-  using SnapshotSoundMap = std::map<int, resource::AudioData>;
+  using AssetKeys = std::map<int, std::uint64_t>;
 
 #define SNAPSHOT_STEP_STATE_FIELDS                                                                                     \
   X(Playback, playback)                                                                                                \
@@ -83,11 +80,9 @@ namespace anm2ed
   X(Storage, sound)                                                                                                    \
   X(Storage, spritesheet)                                                                                              \
   X(Selection, selection)                                                                                              \
-  X(float, frameTime)
-
-#define SNAPSHOT_STEP_RESOURCE_FIELDS                                                                                  \
-  X(SnapshotTextureMap, textures)                                                                                      \
-  X(SnapshotSoundMap, sounds)
+  X(float, frameTime)                                                                                                  \
+  X(AssetKeys, textures)                                                                                               \
+  X(AssetKeys, sounds)
 
   struct SnapshotStep
   {
@@ -96,7 +91,6 @@ namespace anm2ed
 
 #define X(type, name) std::optional<SnapshotStepValue<type>> name{};
     SNAPSHOT_STEP_STATE_FIELDS
-    SNAPSHOT_STEP_RESOURCE_FIELDS
 #undef X
 
     bool is_empty() const;
@@ -131,7 +125,7 @@ namespace anm2ed
     std::optional<SnapshotStep> pendingStep{};
     std::optional<Reference> pendingFocus{};
 
-    void push(const std::string&, bool = false);
+    void push(const std::string&);
     void step_push(const std::string&, SnapshotStep);
     void commit();
     bool undo();

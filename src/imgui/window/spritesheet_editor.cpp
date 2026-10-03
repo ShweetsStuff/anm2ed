@@ -359,10 +359,10 @@ namespace anm2ed::imgui
           auto fraction = current - glm::floor(current);
           return glm::floor(value) + fraction;
         };
-        auto edit_begin_push = [&](StringType label, bool isTextures = false)
+        auto edit_begin_push = [&](StringType label)
         {
-          manager.command_push({manager.selected, [label, isTextures](Manager&, Document& document)
-                                { document.edit_begin(label, isTextures); }});
+          manager.command_push(
+              {manager.selected, [label](Manager&, Document& document) { document.edit_begin(label); }});
         };
         auto document_change_push = [&](Document::ChangeType changeType)
         {
@@ -542,9 +542,8 @@ namespace anm2ed::imgui
           auto queuedSpritesheet = referenceSpritesheet;
           manager.command_push({manager.selected, [=](Manager&, Document& document)
                                 {
-                                  auto texture = document.texture_get(queuedSpritesheet);
-                                  if (!texture) return;
-                                  texture->pixel_line(start, end, color);
+                                  if (auto texture = document.texture_edit(queuedSpritesheet))
+                                    texture->pixel_line(start, end, color);
                                 }});
         };
         auto texture_change_push = [&]()
@@ -819,7 +818,7 @@ namespace anm2ed::imgui
           {
             if (!texture) break;
             auto color = useTool == tool::DRAW ? toolColor : vec4();
-            if (isMouseClicked) edit_begin_push(useTool == tool::DRAW ? EDIT_DRAW : EDIT_ERASE, true);
+            if (isMouseClicked) edit_begin_push(useTool == tool::DRAW ? EDIT_DRAW : EDIT_ERASE);
             if (isMouseDown) texture_line_apply(ivec2(previousTextureMousePos), ivec2(textureMousePos), color);
             if (isMouseReleased) texture_change_push();
             break;
