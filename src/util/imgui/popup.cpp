@@ -66,9 +66,9 @@ namespace anm2ed::imgui
     switch (position)
     {
       case POPUP_CENTER:
-        ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_None, types::to_imvec2(glm::vec2(0.5f)));
+        ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_None, to_imvec2(glm::vec2(0.5f)));
         if (POPUP_IS_HEIGHT_SET[type])
-          ImGui::SetNextWindowSize(types::to_imvec2(types::to_vec2(viewport->Size) * POPUP_MULTIPLIERS[type]));
+          ImGui::SetNextWindowSize(to_imvec2(to_vec2(viewport->Size) * POPUP_MULTIPLIERS[type]));
         else
           ImGui::SetNextWindowSize(ImVec2(viewport->Size.x * POPUP_MULTIPLIERS[type], 0));
         break;

@@ -2,7 +2,7 @@
 
 #include "strings.hpp"
 
-namespace anm2ed::types::theme
+namespace anm2ed::imgui::theme
 {
 #define THEMES                                                                                                         \
   X(LIGHT, LABEL_THEME_LIGHT)                                                                                          \
@@ -28,5 +28,5 @@ namespace anm2ed::types::theme
 
 namespace anm2ed::imgui
 {
-  void theme_set(types::theme::Type);
+  void theme_set(theme::Type);
 }

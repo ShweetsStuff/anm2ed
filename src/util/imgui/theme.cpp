@@ -19,25 +19,25 @@ namespace anm2ed::imgui
   constexpr ImVec4 COLOR_LIGHT_CHECK_MARK{0.0f, 0.0f, 0.0f, 1.0f};
   constexpr auto FRAME_BORDER_SIZE = 1.0f;
 
-  void theme_set(types::theme::Type theme)
+  void theme_set(theme::Type theme)
   {
     switch (theme)
     {
-      case types::theme::LIGHT:
+      case theme::LIGHT:
         ImGui::StyleColorsLight();
         break;
-      case types::theme::DARK:
+      case theme::DARK:
       default:
         ImGui::StyleColorsDark();
         break;
-      case types::theme::CLASSIC:
+      case theme::CLASSIC:
         ImGui::StyleColorsClassic();
         break;
     }
     auto& style = ImGui::GetStyle();
     style.FrameBorderSize = FRAME_BORDER_SIZE;
 
-    if (theme == types::theme::LIGHT)
+    if (theme == theme::LIGHT)
     {
       auto& colors = style.Colors;
       colors[ImGuiCol_Button] = COLOR_LIGHT_BUTTON;

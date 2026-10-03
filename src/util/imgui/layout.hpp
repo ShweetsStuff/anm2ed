@@ -5,7 +5,7 @@
 #include <glm/glm.hpp>
 #include <imgui/imgui.h>
 
-namespace anm2ed::types
+namespace anm2ed::imgui
 {
   constexpr ImVec2 to_imvec2(const glm::vec2& v) noexcept { return {v.x, v.y}; }
   constexpr glm::vec2 to_vec2(const ImVec2& v) noexcept { return {v.x, v.y}; }
@@ -24,10 +24,7 @@ namespace anm2ed::types
     static T value{-1};
     return value;
   }
-}
 
-namespace anm2ed::imgui
-{
   float row_widget_width_get(int, float = ImGui::GetContentRegionAvail().x);
   ImVec2 widget_size_with_row_get(int, float = ImGui::GetContentRegionAvail().x);
   float footer_height_get(int = 1);

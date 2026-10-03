@@ -237,7 +237,7 @@ namespace anm2ed
 
     logger.info("Initialized Dear ImGui");
 
-    imgui::theme_set((theme::Type)settings.theme);
+    imgui::theme_set((imgui::theme::Type)settings.theme);
 
     ImGui_ImplSDL3_InitForOpenGL(window, glContext);
     ImGui_ImplOpenGL3_Init("#version 330");
