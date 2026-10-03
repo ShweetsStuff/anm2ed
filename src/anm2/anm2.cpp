@@ -66,6 +66,7 @@ namespace anm2ed
     shader_frame_ids_repair(anm2.root);
     region_frame_ids_repair(anm2.root);
     anm2.region_frames_sync(true);
+    anm2.uids_repair();
     anm2.isValid = true;
     return true;
   }

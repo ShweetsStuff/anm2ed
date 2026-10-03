@@ -110,6 +110,19 @@ namespace anm2ed
     void apply(Snapshot&, SnapshotStepDirection) const;
   };
 
+  // The selection as it was before a change, with the uids that let it follow elements through the change.
+  struct SnapshotSelection
+  {
+    Reference reference{};
+    std::set<Reference> frameReferences{};
+    std::set<Reference> itemReferences{};
+    std::set<Reference> groupReferences{};
+    std::set<int> frameIndices{};
+    std::set<int> animationIndices{};
+    std::map<Reference, Handle> handles{};
+    std::map<Reference, Handle> groupHandles{};
+  };
+
   class SnapshotStack
   {
   public:
@@ -136,6 +149,7 @@ namespace anm2ed
     SnapshotStack redoStack{};
     Snapshot current{};
     std::optional<SnapshotStep> pendingStep{};
+    std::optional<SnapshotSelection> pendingSelection{};
 
     void anm2_push(const std::string&);
     void tracks_push(const std::string&, const std::set<Reference>&);

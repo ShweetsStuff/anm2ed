@@ -8,6 +8,7 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <unordered_map>
 #include <vector>
 
 #include <glm/glm.hpp>
@@ -325,6 +326,7 @@ namespace anm2ed
     std::vector<int> soundIds{};
     std::vector<std::pair<std::string, std::string>> extraAttributes{};
     std::string text{};
+    std::uint64_t uid{};
     glm::vec2 pivot{};
     glm::vec2 crop{};
     glm::vec2 position{};
@@ -345,6 +347,16 @@ namespace anm2ed
     int groupId{-1};
 
     auto operator<=>(const Reference&) const = default;
+  };
+
+  // A Reference expressed by runtime uids, so it survives inserts, deletes and moves.
+  struct Handle
+  {
+    std::uint64_t animation{};
+    std::uint64_t item{};
+    std::uint64_t frame{};
+
+    auto operator<=>(const Handle&) const = default;
   };
 
   struct TrackContainer
@@ -573,5 +585,17 @@ namespace anm2ed
     bool file_merge(const std::filesystem::path&, const std::filesystem::path&, FileMergePreset);
     bool regions_generate(const std::set<int>&, const std::set<Reference>&, const std::string&, RegionFrameMapping);
     void regions_scan();
+    void uids_repair();
+    Handle handle_get(Reference, bool = false) const;
+  };
+
+  // uid -> current Reference, built in one walk; group uids map to {animation, groupType, groupId}.
+  class UidIndex
+  {
+    std::unordered_map<std::uint64_t, Reference> locations{};
+
+  public:
+    explicit UidIndex(const Anm2&);
+    std::optional<Reference> reference_get(Handle, Reference) const;
   };
 }

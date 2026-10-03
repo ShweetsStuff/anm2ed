@@ -200,81 +200,11 @@ namespace anm2ed::document
     };
   }
 
-  void restored_snapshot_sanitize(Document& document)
+  void frame_time_sync(Document& document)
   {
-    auto& reference = document.reference;
-    auto& selection = document.frames.selection;
-    auto& frameReferences = document.frames.references;
-    auto& groupReferences = document.groupReferences;
-    auto& anm2 = document.anm2;
-
-    auto selection_clear = [&]()
-    {
-      reference.frameIndex = -1;
-      selection.clear();
-      frameReferences.clear();
-      groupReferences.clear();
-      document.frameTime = 0.0f;
-    };
-
-    auto animations = anm2.element_get(ElementType::ANIMATIONS);
-    auto animationCount = animations ? animations_count_get(*animations) : 0;
-    if (animationCount <= 0)
-    {
-      reference = {};
-      selection_clear();
-      document.items.references.clear();
-      return;
-    }
-
-    reference.animationIndex = std::clamp(reference.animationIndex, 0, animationCount - 1);
-    auto item = anm2.element_get(item_reference_get(reference));
-    if (!item)
-    {
-      reference = {reference.animationIndex, ROOT, -1, reference.frameIndex};
-      item = anm2.element_get(item_reference_get(reference));
-    }
-    if (!item) return selection_clear();
-
-    std::erase_if(document.items.references,
-                  [&](const Reference& itemReference) { return !anm2.element_get(item_reference_get(itemReference)); });
-    std::erase_if(groupReferences,
-                  [&](const Reference& groupReference)
-                  {
-                    auto animation = anm2.element_get(ElementType::ANIMATION, groupReference.animationIndex);
-                    return !animation ||
-                           !animation_group_get(*animation, groupReference.itemType, groupReference.itemID);
-                  });
-    std::erase_if(frameReferences, [isValid = frame_reference_validator_make(anm2)](
-                                       const Reference& frameReference) mutable { return !isValid(frameReference); });
-
-    auto frameCount = track_frames_count_get(*item);
-    std::erase_if(selection, [&](int frameIndex) { return frameIndex < 0 || frameIndex >= frameCount; });
-    if (frameCount <= 0)
-    {
-      reference.frameIndex = -1;
-      frameReferences.clear();
-      document.frameTime = 0.0f;
-      return;
-    }
-
-    if (reference.frameIndex < 0 || reference.frameIndex >= frameCount)
-      reference.frameIndex =
-          selection.empty() ? std::clamp(reference.frameIndex, 0, frameCount - 1) : *selection.begin();
-
-    if (frameReferences.empty())
-      for (auto frameIndex : selection)
-      {
-        auto frameReference = reference;
-        frameReference.frameIndex = frameIndex;
-        frameReferences.insert(frameReference);
-      }
-
-    selection.clear();
-    for (const auto& frameReference : frameReferences)
-      if (is_reference_item_matched(frameReference, reference)) selection.insert(frameReference.frameIndex);
-
-    document.frameTime = frame_time_from_index_get(*item, reference.frameIndex);
+    auto item = document.anm2.element_get(item_reference_get(document.reference));
+    auto frameIndex = document.reference.frameIndex;
+    document.frameTime = item && frameIndex >= 0 ? frame_time_from_index_get(*item, frameIndex) : 0.0f;
   }
 }
 
@@ -1032,7 +962,7 @@ namespace anm2ed
   void Document::undo()
   {
     if (!snapshots.undo()) return;
-    document::restored_snapshot_sanitize(*this);
+    document::frame_time_sync(*this);
     toast_log(Level::INFO, TOAST_UNDO, message);
     change(Document::ALL);
   }
@@ -1040,7 +970,7 @@ namespace anm2ed
   void Document::redo()
   {
     if (!snapshots.redo()) return;
-    document::restored_snapshot_sanitize(*this);
+    document::frame_time_sync(*this);
     toast_log(Level::INFO, TOAST_REDO, message);
     change(Document::ALL);
   }
