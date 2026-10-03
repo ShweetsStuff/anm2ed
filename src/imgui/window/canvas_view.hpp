@@ -6,6 +6,8 @@
 #include <string>
 #include <utility>
 
+#include <imgui/imgui.h>
+
 #include "canvas.hpp"
 #include "manager.hpp"
 #include "settings.hpp"

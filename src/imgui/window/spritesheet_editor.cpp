@@ -5,6 +5,8 @@
 #include <set>
 #include <utility>
 
+#include <glm/gtc/type_ptr.hpp>
+
 #include "actions.hpp"
 #include "imgui_internal.h"
 #include "math.hpp"

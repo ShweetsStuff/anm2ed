@@ -1,5 +1,7 @@
 #include "change_all_frame_properties.hpp"
 
+#include <glm/gtc/type_ptr.hpp>
+
 #include <algorithm>
 #include <ranges>
 #include <set>

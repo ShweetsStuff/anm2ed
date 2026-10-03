@@ -9,6 +9,7 @@
 #include "render.hpp"
 #include "strings.hpp"
 #include "types.hpp"
+#include "util/imgui/theme.hpp"
 
 namespace anm2ed
 {

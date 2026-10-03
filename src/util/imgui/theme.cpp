@@ -1,5 +1,7 @@
 #include "theme.hpp"
 
+#include <imgui/imgui.h>
+
 namespace anm2ed::imgui
 {
   constexpr ImVec4 COLOR_LIGHT_BUTTON{0.98f, 0.98f, 0.98f, 1.0f};

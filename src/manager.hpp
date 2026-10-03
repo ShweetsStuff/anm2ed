@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include <imgui/imgui.h>
+
 #include "document.hpp"
 #include "settings.hpp"
 #include "strings.hpp"

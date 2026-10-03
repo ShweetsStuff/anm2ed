@@ -1,5 +1,7 @@
 #pragma once
 
+#include <imgui/imgui.h>
+
 #include "icon.hpp"
 #include "settings.hpp"
 #include "strings.hpp"

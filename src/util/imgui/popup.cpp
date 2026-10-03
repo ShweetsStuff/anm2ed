@@ -1,5 +1,7 @@
 #include "popup.hpp"
 
+#include "layout.hpp"
+
 #include <imgui/imgui.h>
 
 #include "types.hpp"

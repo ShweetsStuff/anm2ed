@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <format>
 
+#include <glm/gtc/type_ptr.hpp>
+
 #include "math.hpp"
 #include "path.hpp"
 #include "util/imgui/draw.hpp"

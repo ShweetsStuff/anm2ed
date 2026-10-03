@@ -1,5 +1,7 @@
 #include "generate_animation_from_grid.hpp"
 
+#include <glm/gtc/type_ptr.hpp>
+
 #include "math.hpp"
 #include "model/frames.hpp"
 #include "types.hpp"
