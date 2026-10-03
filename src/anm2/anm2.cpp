@@ -7,28 +7,6 @@ namespace anm2ed
 {
   constexpr const char* CREATED_ON_FORMAT = "%m/%d/%Y %I:%M:%S %p";
 
-  int animations_count_get(const Element& animations)
-  {
-    int count{};
-    for (const auto& child : animations.children)
-      if (child.type == ElementType::ANIMATION) ++count;
-    return count;
-  }
-
-  int animations_child_index_get(const Element& animations, int animationIndex)
-  {
-    int current{};
-    for (int i = 0; i < (int)animations.children.size(); ++i)
-      if (animations.children[i].type == ElementType::ANIMATION && current++ == animationIndex) return i;
-    return -1;
-  }
-
-  int animations_child_insert_index_get(const Element& animations, int animationIndex)
-  {
-    auto childIndex = animations_child_index_get(animations, std::max(animationIndex, 0));
-    return childIndex == -1 ? (int)animations.children.size() : childIndex;
-  }
-
   bool is_source_document_tag(std::string_view tag) { return tag == SOURCE_DOCUMENT_TAG; }
 
   const XMLElement* source_document_get(const XMLElement* rootElement)
@@ -66,7 +44,6 @@ namespace anm2ed
     shader_frame_ids_repair(anm2.root);
     region_frame_ids_repair(anm2.root);
     anm2.region_frames_sync(true);
-    anm2.uids_repair();
     anm2.isValid = true;
     return true;
   }
@@ -87,8 +64,6 @@ namespace anm2ed
     root.children.push_back(std::move(content));
     root.children.push_back(element_make(ElementType::ANIMATIONS));
   }
-
-  Anm2::Anm2(const std::filesystem::path& path, std::string* errorString) : Anm2() { load(path, errorString); }
 
   bool Anm2::load(const std::filesystem::path& path, std::string* errorString)
   {
@@ -170,16 +145,4 @@ namespace anm2ed
     return out;
   }
 
-  std::uint64_t Anm2::hash(Options options) const
-  {
-    return anm2_hash_get(root, options);
-  }
-
-  bool Anm2::is_special_interpolated_frames() const { return ::anm2ed::is_special_interpolated_frames(root); }
-
-  void Anm2::special_interpolated_frames_bake(int interval, bool isRoundScale, bool isRoundRotation)
-  {
-    ::anm2ed::special_interpolated_frames_bake(root, std::max(interval, FRAME_DURATION_MIN), isRoundScale,
-                                               isRoundRotation);
-  }
 }

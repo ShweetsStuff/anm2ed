@@ -35,8 +35,9 @@ namespace anm2ed::imgui
       if (result == PopupButton::CONFIRM)
         edit_push(EDIT_GENERATE_REGIONS_FROM_ANIMATIONS,
                   [targetFrames = makeManyRegionReferences, format = settings.generateRegionNameFormat,
-                   mapping = isMakeManyRegionsMapFrames ? RegionFrameMapping::SET : RegionFrameMapping::PRESERVE](
-                      Anm2& anm2) { anm2.regions_generate({}, targetFrames, format, mapping); });
+                   mapping = isMakeManyRegionsMapFrames ? RegionFrameMapping::SET
+                                                        : RegionFrameMapping::PRESERVE](model::Model& model)
+                  { return edit::regions_generate(model, {}, targetFrames, format, mapping); });
       if (result != PopupButton::NONE) makeManyRegionsPopup.close();
 
       ImGui::EndPopup();
@@ -180,7 +181,7 @@ namespace anm2ed::imgui
               [=, this](Manager&, Document& document)
               {
                 for (auto frameReference : selectedFrames)
-                  if (auto frame = command_frame_get(document, frameReference))
+                  if (auto frame = document.model.frame_edit(frameReference))
                     frame->duration =
                         std::clamp(frame->duration + resize.delta, FRAME_DURATION_MIN, FRAME_DURATION_MAX);
                 document.change();
@@ -195,14 +196,14 @@ namespace anm2ed::imgui
       auto isNextItem = shortcut(manager.chords[SHORTCUT_NEXT_ITEM], shortcut::GLOBAL);
 
       if (isPreviousFrame || isNextFrame)
-        if (auto item = selected_item_get(); item && !item->children.empty())
+        if (auto item = selected_item_get(); item && !item->frames.empty())
         {
           auto frameReference = reference;
           frameReference.frameIndex = glm::clamp(reference.frameIndex + (int)isNextFrame - (int)isPreviousFrame, 0,
-                                                 (int)item->children.size() - 1);
+                                                 (int)item->frames.size() - 1);
           reference_set(frameReference);
           frames_selection_set_reference_for(document);
-          document.frameTime = frame_time_from_index_get(*item, reference.frameIndex);
+          document.frameTime = model::frame_time_from_index_get(*item, reference.frameIndex);
         }
 
       if (isPreviousItem) reference_set_adjacent_item(-1);

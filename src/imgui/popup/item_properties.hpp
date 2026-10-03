@@ -19,7 +19,6 @@ namespace anm2ed::imgui::popup
     int addItemSpritesheetID{-1};
 
     void reset();
-    std::set<int> unused_items_get(Anm2&, const Element*, int);
 
   public:
     void open();

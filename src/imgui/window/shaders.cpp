@@ -42,7 +42,7 @@ namespace anm2ed::imgui
     return document.directory_get() / loadPath;
   }
 
-  bool is_shader_reload_needed(Document& document, Element* shader)
+  bool is_shader_reload_needed(Document& document, model::Shader* shader)
   {
     if (!shader || shader->fragment.empty()) return false;
     if (!document.shader_get(shader->id)) return true;
@@ -52,10 +52,9 @@ namespace anm2ed::imgui
            document.shaderFragmentPaths.at(shader->id) != shader->fragment;
   }
 
-  Element* shader_element_get(Document& document, int id)
+  model::Shader* shader_element_get(Document& document, int id)
   {
-    auto shaders = document.anm2.element_get(ElementType::SHADERS);
-    return shaders ? child_id_get(*shaders, ElementType::SHADER, id) : nullptr;
+    return model::item_get(document.model.content.shaders, id);
   }
 
   std::filesystem::path shader_asset_path_get(Document& document, const std::filesystem::path& path)
@@ -64,7 +63,7 @@ namespace anm2ed::imgui
     return path::backslash_replace(path::make_relative(loadPath, document.directory_get()));
   }
 
-  void shader_path_edit(Document& document, int shaderId, std::filesystem::path Element::* member,
+  void shader_path_edit(Document& document, int shaderId, std::filesystem::path model::Shader::* member,
                         const std::filesystem::path& value)
   {
     auto shader = shader_element_get(document, shaderId);
@@ -76,7 +75,7 @@ namespace anm2ed::imgui
   }
 
   void shader_dialog_update(ShadersWindow& window, Manager& manager, Dialog& dialog, Dialog::Type type,
-                            std::filesystem::path Element::* member)
+                            std::filesystem::path model::Shader::* member)
   {
     if (!dialog.is_selected(type)) return;
 
@@ -90,8 +89,8 @@ namespace anm2ed::imgui
   }
 
   void shader_path_row_update(ShadersWindow& window, Document& document, Resources& resources, Dialog& dialog,
-                              Element* shader, std::filesystem::path Element::* member, Dialog::Type dialogType,
-                              StringType label)
+                              model::Shader* shader, std::filesystem::path model::Shader::* member,
+                              Dialog::Type dialogType, StringType label)
   {
     auto shaderPath = shader ? shader->*member : std::filesystem::path{};
     auto isDefault = shaderPath.empty();
@@ -122,7 +121,8 @@ namespace anm2ed::imgui
     ImGui::TextUnformatted(localize.get(label));
   }
 
-  void shader_uniform_config_save(Document& document, Element& shaderElement, const resource::shader::Uniform& uniform)
+  void shader_uniform_config_save(Document& document, model::Shader& shaderElement,
+                                  const resource::shader::Uniform& uniform)
   {
     resource::shader::uniform_config_save(shaderElement, uniform);
     document.change();
@@ -212,7 +212,8 @@ namespace anm2ed::imgui
     return isChanged;
   }
 
-  void shader_uniforms_update(Document& document, Element* shaderElement, resource::Shader* runtime, ImVec2 tableSize)
+  void shader_uniforms_update(Document& document, model::Shader* shaderElement, resource::Shader* runtime,
+                              ImVec2 tableSize)
   {
     if (!shaderElement) return;
 
@@ -291,31 +292,27 @@ namespace anm2ed::imgui
     if (ImGui::Begin(localize.get(LABEL_SHADERS_WINDOW), &settings.windowIsShaders))
     {
       auto document = manager.get();
-      auto shaders = document ? document->anm2.element_get(ElementType::SHADERS) : nullptr;
-      if (!shaders)
+      if (!document)
       {
         ImGui::End();
         return;
       }
+      auto shaders = &document->model.content.shaders;
 
-      shader_dialog_update(*this, manager, dialog, Dialog::SHADER_VERTEX_PATH_SET, &Element::vertex);
-      shader_dialog_update(*this, manager, dialog, Dialog::SHADER_FRAGMENT_PATH_SET, &Element::fragment);
+      shader_dialog_update(*this, manager, dialog, Dialog::SHADER_VERTEX_PATH_SET, &model::Shader::vertex);
+      shader_dialog_update(*this, manager, dialog, Dialog::SHADER_FRAGMENT_PATH_SET, &model::Shader::fragment);
 
       auto shader_add = [&]()
       {
         manager.command_push({manager.selected, [this](Manager&, Document& document)
                               {
-                                auto shaders = document.anm2.element_get(ElementType::SHADERS);
-                                if (!shaders) return;
-
-                                auto shader = element_make(ElementType::SHADER);
-                                shader.id = element_child_next_id_get(*shaders, ElementType::SHADER);
-                                shader.name = localize.get(TEXT_NEW_SHADER);
-
                                 document.edit_apply(EDIT_ADD_SHADER,
-                                                    [&](Anm2&)
+                                                    [&](model::Model& model)
                                                     {
-                                                      shaders->children.push_back(shader);
+                                                      auto& shaders = model.content.shaders;
+                                                      auto& shader = shaders.emplace_back(
+                                                          model::Shader{.id = model::item_next_id_get(shaders),
+                                                                        .name = localize.get(TEXT_NEW_SHADER)});
                                                       document.shader.selection = {shader.id};
                                                       document.shader.reference = shader.id;
                                                       newElementId = shader.id;
@@ -327,17 +324,17 @@ namespace anm2ed::imgui
       {
         manager.command_push({manager.selected, [this](Manager&, Document& document)
                               {
-                                auto shaders = document.anm2.element_get(ElementType::SHADERS);
-                                if (!shaders) return;
-                                auto unused = document.anm2.element_unused(ElementType::SHADER);
+                                auto unused = document.model.unused_get(ElementType::SHADER);
                                 if (unused.empty()) return;
 
                                 document.edit_apply(EDIT_REMOVE_UNUSED_SHADERS,
-                                                    [&](Anm2&)
+                                                    [&](model::Model& model)
                                                     {
+                                                      std::erase_if(model.content.shaders,
+                                                                    [&](const model::Shader& shader)
+                                                                    { return unused.contains(shader.id); });
                                                       for (auto id : unused)
                                                       {
-                                                        element_child_id_erase(*shaders, ElementType::SHADER, id);
                                                         document.shader.selection.erase(id);
                                                         if (document.shader.reference == id)
                                                           document.shader.reference = -1;
@@ -350,13 +347,13 @@ namespace anm2ed::imgui
       auto& selection = document->shader.selection;
       auto& reference = document->shader.reference;
       std::vector<int> ids{};
-      for (auto& shader : shaders->children)
-        if (shader.type == ElementType::SHADER) ids.push_back(shader.id);
+      for (auto& shader : *shaders)
+        ids.push_back(shader.id);
 
-      if (reference != -1 && !child_id_get(*shaders, ElementType::SHADER, reference)) reference = -1;
+      if (reference != -1 && !model::item_get(*shaders, reference)) reference = -1;
       for (auto it = selection.begin(); it != selection.end();)
       {
-        if (!child_id_get(*shaders, ElementType::SHADER, *it))
+        if (!model::item_get(*shaders, *it))
           it = selection.erase(it);
         else
           ++it;
@@ -386,9 +383,8 @@ namespace anm2ed::imgui
           reference = -1;
         }
 
-        for (auto& shader : shaders->children)
+        for (auto& shader : *shaders)
         {
-          if (shader.type != ElementType::SHADER) continue;
           auto id = shader.id;
           auto isNewShader = newElementId == id;
           ImGui::PushID(id);
@@ -510,9 +506,9 @@ namespace anm2ed::imgui
 
           ImGui::SeparatorText(localize.get(LABEL_FILES));
 
-          shader_path_row_update(*this, *document, resources, dialog, shader, &Element::vertex,
+          shader_path_row_update(*this, *document, resources, dialog, shader, &model::Shader::vertex,
                                  Dialog::SHADER_VERTEX_PATH_SET, LABEL_VERTEX);
-          shader_path_row_update(*this, *document, resources, dialog, shader, &Element::fragment,
+          shader_path_row_update(*this, *document, resources, dialog, shader, &model::Shader::fragment,
                                  Dialog::SHADER_FRAGMENT_PATH_SET, LABEL_FRAGMENT);
 
           if (is_shader_reload_needed(*document, shader))

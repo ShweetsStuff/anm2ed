@@ -1,8 +1,10 @@
 #pragma once
 
 #include <set>
+#include <string>
+#include <vector>
 
-#include "anm2/anm2.hpp"
+#include "model/common.hpp"
 #include "util/imgui/multiselect.hpp"
 
 namespace anm2ed

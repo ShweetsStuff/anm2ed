@@ -13,12 +13,13 @@ namespace anm2ed::imgui
 {
   constexpr int SOUND_CARD_LINES = 2;
 
+  std::vector<model::Sound>* sounds_get(Document&, model::Model& model) { return &model.content.sounds; }
+
   Window sounds_window_register()
   {
     Window window{};
     window.title = LABEL_SOUNDS_WINDOW;
     window.isOpen = &Settings::windowIsSounds;
-    window.containerType = ElementType::SOUNDS;
     window.elementType = ElementType::SOUND_ELEMENT;
     window.childLabel = "##Sounds Child";
     window.cardLines = SOUND_CARD_LINES;
@@ -33,28 +34,29 @@ namespace anm2ed::imgui
                        {WINDOW_RELOAD, TOOLTIP_RELOAD_SOUNDS},
                        {WINDOW_REPLACE, TOOLTIP_REPLACE_SOUND}};
     window.storage_get = [](Document& document) -> Storage& { return document.sound; };
-    window.row_label_get = [](Document&, const Element& sound)
+    window_items_bind<model::Sound>(window, sounds_get);
+    window.row_label_get = [](Document& document, int id)
     {
-      auto pathString = path::to_utf8(sound.path);
-      return std::vformat(localize.get(FORMAT_SOUND), std::make_format_args(sound.id, pathString));
+      auto pathString = path::to_utf8(model::item_get(document.model.content.sounds, id)->path);
+      return std::vformat(localize.get(FORMAT_SOUND), std::make_format_args(id, pathString));
     };
     window.row_select = [](Window&, Document& document, int id)
     {
       if (auto audio = document.sound_get(id); audio && ImGui::IsItemClicked(ImGuiMouseButton_Left))
         resource::audio::play(*audio);
     };
-    window.card_image_get = [](Document& document, Resources& resources, const Element& sound)
+    window.card_image_get = [](Document& document, Resources& resources, int id)
     {
-      auto audio = document.sound_get(sound.id);
+      auto audio = document.sound_get(id);
       auto isValid = audio && audio->is_valid();
       auto& texture = resources.icons[isValid ? icon::SOUND : icon::NONE];
       return WindowCardImage{.texture = &texture, .size = glm::vec2(texture.size), .isValid = isValid};
     };
-    window.tooltip_draw = [](Document& document, Resources& resources, const Element& sound)
+    window.tooltip_draw = [](Document& document, Resources& resources, int id)
     {
-      auto audio = document.sound_get(sound.id);
-      window_tooltip_name_draw(resources, path::to_utf8(sound.path));
-      ImGui::Text("%s: %d", localize.get(BASIC_ID), sound.id);
+      auto audio = document.sound_get(id);
+      window_tooltip_name_draw(resources, path::to_utf8(model::item_get(document.model.content.sounds, id)->path));
+      ImGui::Text("%s: %d", localize.get(BASIC_ID), id);
       if (audio && audio->is_valid())
         ImGui::TextUnformatted(localize.get(TEXT_OPEN_DIRECTORY));
       else
@@ -77,16 +79,16 @@ namespace anm2ed::imgui
     };
     window.open = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
     {
-      auto sound = window_element_get(window, document, document.sound.reference);
+      auto sound = model::item_get(document.model.content.sounds, document.sound.reference);
       if (sound && window.dialog) window_directory_open(*window.dialog, document, sound->path);
     };
-    window.reload = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
+    window.reload = [](Window&, Manager&, Settings&, Document& document, Clipboard&)
     {
       document.edit_apply(EDIT_RELOAD_SOUNDS,
-                          [&](Anm2&)
+                          [&](model::Model& model)
                           {
                             for (auto id : document.sound.selection)
-                              if (auto sound = window_element_get(window, document, id))
+                              if (auto sound = model::item_get(model.content.sounds, id))
                               {
                                 document.sound_reload(id);
                                 toast_log(Level::INFO, TOAST_RELOAD_SOUND, id, path::to_utf8(sound->path));
@@ -112,11 +114,11 @@ namespace anm2ed::imgui
           manager.command_push({manager.selected, [&window, id = *document.sound.selection.begin(),
                                                    dialogPath = window.dialog->path](Manager&, Document& document)
                                 {
-                                  auto sound = window_element_get(window, document, id);
-                                  if (!sound) return;
+                                  if (!model::item_get(document.model.content.sounds, id)) return;
                                   document.edit_apply(EDIT_REPLACE_SOUND,
-                                                      [&](Anm2&)
+                                                      [&](model::Model& model)
                                                       {
+                                                        auto sound = model::item_get(model.content.sounds, id);
                                                         sound->path = window_asset_path_get(document, dialogPath);
                                                         document.sound_reload(id);
                                                         toast_log(Level::INFO, TOAST_REPLACE_SOUND, id,

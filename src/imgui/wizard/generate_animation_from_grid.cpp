@@ -1,6 +1,7 @@
 #include "generate_animation_from_grid.hpp"
 
 #include "math.hpp"
+#include "model/frames.hpp"
 #include "types.hpp"
 #include "util/imgui/draw.hpp"
 #include "util/imgui/input.hpp"
@@ -20,7 +21,7 @@ namespace anm2ed::imgui::wizard
   {
     isEnd = false;
 
-    auto& anm2 = document.anm2;
+    auto& model = document.model;
     auto reference = document.reference_get();
     auto& startPosition = settings.generateStartPosition;
     auto& size = settings.generateSize;
@@ -86,16 +87,16 @@ namespace anm2ed::imgui::wizard
 
       if (!layerReferences.empty())
       {
-        auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, previewReference.itemID);
+        auto layer = model::item_get(model.content.layers, previewReference.itemID);
         auto sourceTexture = layer ? document.texture_get(layer->spritesheetId) : nullptr;
         if (sourceTexture && sourceTexture->is_valid())
         {
-          auto previewTrack = element_make(ElementType::LAYER_ANIMATION);
-          frames_generate_from_grid(previewTrack, startPosition, size, pivot, columns, count, delay);
+          model::Track previewTrack{};
+          model::frames_generate_from_grid(previewTrack, startPosition, size, pivot, columns, count, delay);
 
-          auto length = std::max(track_length_get(previewTrack), FRAME_DURATION_MIN);
+          auto length = std::max(model::track_length_get(previewTrack), FRAME_DURATION_MIN);
           auto sampleTime = std::min(time * (float)length, (float)length - 0.001f);
-          auto frame = frame_generate(previewTrack, sampleTime);
+          auto frame = model::frame_generate(previewTrack, sampleTime);
           auto textureSize = vec2(sourceTexture->size);
 
           if (textureSize.x > 0.0f && textureSize.y > 0.0f && frame.size.x > 0.0f && frame.size.y > 0.0f)
@@ -150,8 +151,8 @@ namespace anm2ed::imgui::wizard
            {
              edit::GridOptions options{queuedStartPosition, queuedSize,  queuedPivot,         queuedColumns,
                                        queuedCount,         queuedDelay, queuedIsMakeRegions, queuedRegionNameFormat};
-             document.edit_apply(EDIT_GENERATE_ANIMATION_FROM_GRID, [&](Anm2& anm2)
-                                 { return edit::animation_grid_generate(anm2, queuedLayerReferences, options); });
+             document.edit_apply(EDIT_GENERATE_ANIMATION_FROM_GRID, [&](model::Model& model)
+                                 { return edit::animation_grid_generate(model, queuedLayerReferences, options); });
            }});
       isEnd = true;
     }

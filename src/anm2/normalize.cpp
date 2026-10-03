@@ -65,6 +65,17 @@ namespace anm2ed
     frame_ids_remap(*animations, &Element::shaderId, identity);
   }
 
+  bool is_region_matched(const Element& region, const Element& frame)
+  {
+    return region.type == ElementType::REGION && glm::ivec2(region.crop) == glm::ivec2(frame.crop) &&
+           glm::ivec2(region.size) == glm::ivec2(frame.size) && glm::ivec2(region.pivot) == glm::ivec2(frame.pivot);
+  }
+
+  Element* region_match_get(Element& spritesheet, const Element& frame)
+  {
+    return child_find(spritesheet, [&](const Element& region) { return is_region_matched(region, frame); });
+  }
+
   void region_frame_ids_repair(Element& root)
   {
     layer_frames_each(root,

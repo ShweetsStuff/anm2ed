@@ -84,10 +84,9 @@ namespace anm2ed
 #define X(type, name) type& name = current.name;
     SNAPSHOT_STEP_STATE_FIELDS
 #undef X
-    Anm2& anm2 = current.anm2;
     std::string& message = current.message;
     EditTarget editTarget{EditTarget::NONE};
-    UidIndex index{};
+    model::UidIndex index{};
 
     Document(const std::filesystem::path&, bool = false, std::string* = nullptr);
     Document(const Document&) = delete;
@@ -113,21 +112,21 @@ namespace anm2ed
     void clean();
     void change();
     void edit_begin(StringType);
-    edit::Uids edit_run(StringType, const std::function<edit::Uids(Anm2&)>&);
+    edit::Uids edit_run(StringType, const std::function<edit::Uids(model::Model&)>&);
 
     // Snapshots for undo, runs the operation on the model, then commits; void operations select nothing.
     template <class Operation> edit::Uids edit_apply(StringType label, Operation&& operation)
     {
       return edit_run(label,
-                      [&](Anm2& anm2) -> edit::Uids
+                      [&](model::Model& model) -> edit::Uids
                       {
-                        if constexpr (std::is_void_v<std::invoke_result_t<Operation&, Anm2&>>)
+                        if constexpr (std::is_void_v<std::invoke_result_t<Operation&, model::Model&>>)
                         {
-                          operation(anm2);
+                          operation(model);
                           return {};
                         }
                         else
-                          return operation(anm2);
+                          return operation(model);
                       });
     }
     std::vector<Reference> references_get(const edit::Uids&) const;
@@ -157,9 +156,9 @@ namespace anm2ed
     std::vector<Reference> layer_references_get();
 
     Storage* layer_regions_get(int);
-    Element* frame_get();
-    Element* item_get();
-    Element* spritesheet_get();
+    const model::Frame* frame_get() const;
+    const model::Track* item_get() const;
+    const model::Spritesheet* spritesheet_get() const;
 
     void spritesheets_add(const std::vector<std::filesystem::path>&);
     void sounds_add(const std::vector<std::filesystem::path>&);

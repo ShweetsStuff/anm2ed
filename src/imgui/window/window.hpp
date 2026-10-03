@@ -9,6 +9,7 @@
 #include "clipboard.hpp"
 #include "dialog.hpp"
 #include "manager.hpp"
+#include "model/xml.hpp"
 #include "resources.hpp"
 #include "settings.hpp"
 #include "storage.hpp"
@@ -78,17 +79,16 @@ namespace anm2ed::imgui
   struct Window
   {
     using StorageGet = std::function<Storage&(Document&)>;
-    using ContainerGet = std::function<Element*(Document&)>;
-    using IndexGet = std::function<int(Document&)>;
-    using ElementGet = std::function<Element*(Anm2&, int)>;
-    using ElementKeyGet = std::function<int(const Element&, int)>;
-    using RowLabelGet = std::function<std::string(Document&, const Element&)>;
-    using RowFontGet = std::function<resource::font::Type(Document&, const Element&, int)>;
+    using KeysGet = std::function<std::vector<int>(Document&)>;
+    using NameGet = std::function<std::string(Document&, int)>;
+    using RowFontGet = std::function<resource::font::Type(Document&, int)>;
     using RowSelect = std::function<void(Window&, Document&, int)>;
-    using RenameFinish = std::function<void(Document&, Element&, int, int)>;
-    using TooltipDraw = std::function<void(Document&, Resources&, const Element&)>;
-    using RowDragDropUpdate = std::function<bool(Window&, Manager&, Document&, const Element&, int)>;
-    using CardImageGet = std::function<WindowCardImage(Document&, Resources&, const Element&)>;
+    using RenameApply = std::function<void(Document&, model::Model&, int, const std::string&)>;
+    using PasteApply = std::function<int(Document&, model::Model&, const std::string&, std::string*)>;
+    using UnusedRemove = std::function<void(Document&, model::Model&)>;
+    using TooltipDraw = std::function<void(Document&, Resources&, int)>;
+    using RowDragDropUpdate = std::function<bool(Window&, Manager&, Document&, int, int)>;
+    using CardImageGet = std::function<WindowCardImage(Document&, Resources&, int)>;
     using PropertiesOpen = std::function<void(Manager&, int)>;
     using Command = std::function<void(Window&, Manager&, Settings&, Document&, Clipboard&)>;
     using IsEnabled = std::function<bool(Window&, Document&)>;
@@ -96,7 +96,6 @@ namespace anm2ed::imgui
 
     StringType title{};
     bool Settings::* isOpen{};
-    ElementType containerType{ElementType::UNKNOWN};
     ElementType elementType{ElementType::UNKNOWN};
     const char* childLabel{"##Window Child"};
     std::map<WindowFlag, StringType> tooltips{};
@@ -123,21 +122,22 @@ namespace anm2ed::imgui
     std::set<int> selection2{};
     std::vector<int> dragSelection{};
     std::vector<int> order{};
-    Element editElement{};
+    model::Region editRegion{};
     Dialog* dialog{};
     WindowFlags flags{WINDOW_COPY | WINDOW_PASTE};
     bool isPreserveEditElementOnOpen{};
     ImVec2 tooltipWindowPadding{};
     ImVec2 tooltipItemSpacing{};
     StorageGet storage_get{};
-    ContainerGet container_get{};
-    IndexGet insert_index_get{};
-    ElementGet element_get{};
-    ElementKeyGet element_key_get{};
-    RowLabelGet row_label_get{};
+    KeysGet keys_get{};
+    NameGet name_get{};
+    NameGet row_label_get{};
+    NameGet copy_get{};
     RowFontGet row_font_get{};
     RowSelect row_select{};
-    RenameFinish rename_finish{};
+    RenameApply rename_apply{};
+    PasteApply paste_apply{};
+    UnusedRemove unused_remove{};
     TooltipDraw tooltip_draw{};
     RowDragDropUpdate row_drag_drop_update{};
     CardImageGet card_image_get{};
@@ -176,17 +176,107 @@ namespace anm2ed::imgui
   inline constexpr ImVec4 CARD_TINT_VALID = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
 
   bool is_drag_drop_active();
-  Element* window_container_get(const Window&, Document&);
-  Element* window_element_get(const Window&, Document&, int);
-  void window_element_apply_push(Window&, Manager&, const Element&, int);
   void window_command_push(Window&, Manager&, Settings&, Clipboard&, const Window::Command&);
   int window_selection_start(Window&, Document&, const std::vector<int>&);
   void window_selection_finish(Window&, Manager&, Settings&, Clipboard&, Document&, int);
-  bool window_row_draw(Window&, Manager&, Resources&, Document&, Element&, int, int, int);
-  void window_cards_draw(Window&, Manager&, Settings&, Resources&, Clipboard&, Document&, Element*);
+  bool window_row_draw(Window&, Manager&, Resources&, Document&, int, int, int);
+  void window_cards_draw(Window&, Manager&, Settings&, Resources&, Clipboard&, Document&);
   void window_tooltip_name_draw(Resources&, const std::string&);
   void window_tooltip_image_draw(const WindowCardImage&, const std::function<void()>&);
   void window_directory_open(Dialog&, Document&, const std::filesystem::path&);
   std::filesystem::path window_asset_path_get(Document&, const std::filesystem::path&);
   PopupButton window_popup_buttons_draw(Manager&, const char*, bool = true, StringType = BASIC_CANCEL);
+
+  // Binds a window's generic list behavior (keys, names, copy/paste, remove unused) to a list of content items.
+  template <class Item>
+  void window_items_bind(Window& window, std::function<std::vector<Item>*(Document&, model::Model&)> items_get)
+  {
+    auto items_const_get = [items_get](Document& document) { return items_get(document, document.model); };
+    window.keys_get = [items_const_get](Document& document)
+    {
+      std::vector<int> keys{};
+      if (auto items = items_const_get(document))
+        for (const auto& item : *items)
+          keys.push_back(item.id);
+      return keys;
+    };
+    window.copy_get = [items_const_get](Document& document, int key)
+    {
+      auto items = items_const_get(document);
+      auto item = items ? model::item_get(*items, key) : nullptr;
+      return item ? model::item_to_string(*item) : std::string{};
+    };
+    window.paste_apply =
+        [items_get](Document& document, model::Model& model, const std::string& text, std::string* errorString)
+    {
+      auto items = items_get(document, model);
+      auto pasted = model::items_from_string<Item>(text, errorString);
+      if (!items || pasted.empty()) return -1;
+      for (auto& item : pasted)
+      {
+        item.id = model::item_next_id_get(*items);
+        items->push_back(std::move(item));
+      }
+      return items->back().id;
+    };
+    if constexpr (requires(Item item) { item.name; })
+    {
+      window.name_get = [items_const_get](Document& document, int key)
+      {
+        auto items = items_const_get(document);
+        auto item = items ? model::item_get(*items, key) : nullptr;
+        return item ? item->name : std::string{};
+      };
+      window.rename_apply = [items_get](Document& document, model::Model& model, int key, const std::string& name)
+      {
+        auto items = items_get(document, model);
+        if (auto item = items ? model::item_get(*items, key) : nullptr) item->name = name;
+      };
+    }
+    window.unused_remove = [items_get, type = window.elementType](Document& document, model::Model& model)
+    {
+      auto unused = model.unused_get(type);
+      if (auto items = items_get(document, model))
+        std::erase_if(*items, [&](const Item& item) { return unused.contains(item.id); });
+    };
+  }
+
+  // Adds `edited` as a new item (reference -1) or replaces the item with that id, then selects it.
+  template <class Item>
+  void window_item_apply_push(Window& window, Manager& manager, Item edited, int reference,
+                              std::function<std::vector<Item>*(Document&, model::Model&)> items_get,
+                              int insertIndex = -1)
+  {
+    manager.command_push(
+        {manager.selected, [&window, edited, reference, items_get, insertIndex](Manager&, Document& document)
+         {
+           document.edit_apply(reference == -1 ? window.addEdit : window.propertiesEdit,
+                               [&](model::Model& model)
+                               {
+                                 auto items = items_get(document, model);
+                                 if (!items) return;
+                                 auto target = reference == -1 ? nullptr : model::item_get(*items, reference);
+                                 if (reference != -1 && !target) return;
+                                 auto changed = edited;
+                                 changed.id = reference == -1 ? model::item_next_id_get(*items) : reference;
+                                 if (target)
+                                 {
+                                   changed.uid = target->uid;
+                                   *target = changed;
+                                 }
+                                 else
+                                 {
+                                   changed.uid = util::uid_next();
+                                   auto position =
+                                       insertIndex < 0 ? (int)items->size() : std::min(insertIndex, (int)items->size());
+                                   items->insert(items->begin() + position, changed);
+                                   window.newElementId = changed.id;
+                                 }
+                                 auto& storage = window.storage_get(document);
+                                 storage.selection = {changed.id};
+                                 storage.reference = changed.id;
+                                 if (window.row_select) window.row_select(window, document, changed.id);
+                               });
+         }});
+  }
 }

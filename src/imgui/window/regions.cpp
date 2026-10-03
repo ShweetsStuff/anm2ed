@@ -39,34 +39,45 @@ namespace anm2ed::imgui
     bool isRemoveCurrent{};
   };
 
-  void region_pivot_apply(Element& region)
+  void region_pivot_apply(model::Region& region)
   {
     if (region.origin == Origin::TOP_LEFT) region.pivot = {};
     if (region.origin == Origin::CENTER) region.pivot = region.size * 0.5f;
   }
 
-  Element* region_spritesheet_get(Document& document)
+  std::vector<model::Region>* regions_get(Document& document, model::Model& model)
   {
-    return document.anm2.element_get(ElementType::SPRITESHEET, document.spritesheet.reference);
+    auto spritesheet = model::item_get(model.content.spritesheets, document.spritesheet.reference);
+    return spritesheet ? &spritesheet->regions : nullptr;
+  }
+
+  const model::Spritesheet* region_spritesheet_get(Document& document)
+  {
+    return model::item_get(document.model.content.spritesheets, document.spritesheet.reference);
+  }
+
+  const model::Region* region_get(Document& document, int id)
+  {
+    auto spritesheet = region_spritesheet_get(document);
+    return spritesheet ? model::item_get(spritesheet->regions, id) : nullptr;
   }
 
   int region_insert_index_get(Document& document)
   {
     auto spritesheet = region_spritesheet_get(document);
     auto& storage = document.region;
-    int index = spritesheet ? (int)spritesheet->children.size() : 0;
-    for (int i = 0; spritesheet && i < (int)spritesheet->children.size(); i++)
+    int index = spritesheet ? (int)spritesheet->regions.size() : 0;
+    for (int i = 0; spritesheet && i < (int)spritesheet->regions.size(); i++)
     {
-      const auto& child = spritesheet->children[i];
-      if (child.type == ElementType::REGION &&
-          (storage.selection.contains(child.id) || (storage.selection.empty() && storage.reference == child.id)))
-        index = i + 1;
+      auto id = spritesheet->regions[i].id;
+      if (storage.selection.contains(id) || (storage.selection.empty() && storage.reference == id)) index = i + 1;
     }
     return index;
   }
 
-  WindowCardImage region_image_get(Document& document, Resources& resources, const Element& region)
+  WindowCardImage region_image_get(Document& document, Resources& resources, int id)
   {
+    auto& region = *region_get(document, id);
     auto texture = document.texture_get(document.spritesheet.reference);
     auto isValid = texture && texture->is_valid();
     if (!isValid) return {.texture = &resources.icons[icon::NONE], .size = region.size};
@@ -77,7 +88,7 @@ namespace anm2ed::imgui
             .isValid = true};
   }
 
-  bool region_pixels_get(const Element& region, const Image& texture, std::vector<uint8_t>& pixels, ivec2& size)
+  bool region_pixels_get(const model::Region& region, const Image& texture, std::vector<uint8_t>& pixels, ivec2& size)
   {
     auto minPoint = ivec2(glm::min(region.crop, region.crop + region.size));
     size = ivec2(glm::max(region.crop, region.crop + region.size)) - minPoint;
@@ -105,8 +116,8 @@ namespace anm2ed::imgui
       return false;
     }
 
-    auto spritesheet = document.anm2.element_get(ElementType::SPRITESHEET, options.spritesheetId);
-    auto region = spritesheet ? child_id_get(*spritesheet, ElementType::REGION, options.regionId) : nullptr;
+    auto spritesheet = model::item_get(document.model.content.spritesheets, options.spritesheetId);
+    auto region = spritesheet ? model::item_get(spritesheet->regions, options.regionId) : nullptr;
     auto texture = document.texture_get(options.spritesheetId);
     std::vector<uint8_t> pixels{};
     ivec2 exportSize{};
@@ -137,18 +148,17 @@ namespace anm2ed::imgui
 
       if (options.isMakeSpritesheet)
       {
-        auto spritesheets = document.anm2.element_get(ElementType::SPRITESHEETS);
-        auto exported = element_make(ElementType::SPRITESHEET);
-        exported.id = element_child_next_id_get(*spritesheets, ElementType::SPRITESHEET);
-        exported.path = outputPath;
+        auto& spritesheets = document.model.content.spritesheets;
+        model::Spritesheet exported{.id = model::item_next_id_get(spritesheets), .path = outputPath};
 
         auto exportedRegion = sourceRegion;
+        exportedRegion.uid = util::uid_next();
         exportedRegion.id = 0;
         exportedRegion.crop = {};
         exportedRegion.size = vec2(exportSize);
         region_pivot_apply(exportedRegion);
-        exported.children.push_back(exportedRegion);
-        spritesheets->children.push_back(exported);
+        exported.regions.push_back(exportedRegion);
+        spritesheets.push_back(exported);
 
         document.texture_set(exported.id, Image(pixels.data(), exportSize));
         document.texturePaths[exported.id] = exported.path;
@@ -164,9 +174,9 @@ namespace anm2ed::imgui
 
       if (options.isRemoveCurrent)
       {
-        if (auto source = document.anm2.element_get(ElementType::SPRITESHEET, options.spritesheetId))
-          element_child_id_erase(*source, ElementType::REGION, options.regionId);
-        document.anm2.region_frames_sync(true);
+        if (auto source = model::item_get(document.model.content.spritesheets, options.spritesheetId))
+          std::erase_if(source->regions, [&](const model::Region& region) { return region.id == options.regionId; });
+        edit::region_frames_sync(document.model);
         if (!options.isMakeSpritesheet)
         {
           document.region.reference = -1;
@@ -180,13 +190,13 @@ namespace anm2ed::imgui
     return true;
   }
 
-  bool region_drag_drop_update(Window& window, Manager& manager, Document& document, const Element& region, int index)
+  bool region_drag_drop_update(Window& window, Manager& manager, Document& document, int id, int index)
   {
     auto& selection = document.region.selection;
     if (ImGui::BeginDragDropSource(DRAG_DROP_SOURCE_FLAGS))
     {
-      window.dragSelection = selection.contains(region.id) ? std::vector<int>(selection.begin(), selection.end())
-                                                           : std::vector<int>{region.id};
+      window.dragSelection =
+          selection.contains(id) ? std::vector<int>(selection.begin(), selection.end()) : std::vector<int>{id};
       ImGui::SetDragDropPayload(REGION_DRAG_DROP, window.dragSelection.data(),
                                 window.dragSelection.size() * sizeof(int));
       ImGui::EndDragDropSource();
@@ -216,12 +226,12 @@ namespace anm2ed::imgui
              [&window, indices, movedIds = window.dragSelection, targetIndex = index + (isAfter ? 1 : 0),
               spritesheetId = document.spritesheet.reference](Manager&, Document& document) mutable
              {
-               auto spritesheet = document.anm2.element_get(ElementType::SPRITESHEET, spritesheetId);
-               if (!spritesheet) return;
+               if (!model::item_get(document.model.content.spritesheets, spritesheetId)) return;
                document.edit_apply(EDIT_MOVE_REGIONS,
-                                   [&](Anm2&)
+                                   [&](model::Model& model)
                                    {
-                                     vector::move_indices_to_position(spritesheet->children, indices, targetIndex);
+                                     auto spritesheet = model::item_get(model.content.spritesheets, spritesheetId);
+                                     vector::move_indices_to_position(spritesheet->regions, indices, targetIndex);
                                      document.region.selection = std::set<int>(movedIds.begin(), movedIds.end());
                                    });
              }});
@@ -255,8 +265,7 @@ namespace anm2ed::imgui
     if (ImGui::BeginTooltip())
     {
       for (auto regionId : window.dragSelection)
-        if (auto region = child_id_get(*spritesheet, ElementType::REGION, regionId))
-          ImGui::TextUnformatted(region->name.c_str());
+        if (auto region = model::item_get(spritesheet->regions, regionId)) ImGui::TextUnformatted(region->name.c_str());
       ImGui::EndTooltip();
     }
     ImGui::PopStyleVar(2);
@@ -266,7 +275,7 @@ namespace anm2ed::imgui
   {
     auto& reference = document.region.reference;
     auto spritesheet = region_spritesheet_get(document);
-    auto target = spritesheet && reference != -1 ? child_id_get(*spritesheet, ElementType::REGION, reference) : nullptr;
+    auto target = spritesheet && reference != -1 ? model::item_get(spritesheet->regions, reference) : nullptr;
 
     window.popup.trigger();
     if (ImGui::BeginPopupModal(window.popup.label(), &window.popup.isOpen, ImGuiWindowFlags_NoResize))
@@ -274,9 +283,9 @@ namespace anm2ed::imgui
       if (!spritesheet || (reference != -1 && !target)) window.popup.close();
 
       if (window.popup.isJustOpened && !window.isPreserveEditElementOnOpen)
-        window.editElement = target ? *target : element_make(ElementType::REGION);
+        window.editRegion = target ? *target : model::Region{};
       if (window.popup.isJustOpened) window.isPreserveEditElementOnOpen = false;
-      auto& region = window.editElement;
+      auto& region = window.editRegion;
 
       if (ImGui::BeginChild("##Child", child_size_get(REGION_POPUP_ROWS), ImGuiChildFlags_Borders))
       {
@@ -305,7 +314,9 @@ namespace anm2ed::imgui
       ImGui::EndChild();
 
       auto result = window_popup_buttons_draw(manager, localize.get(reference == -1 ? BASIC_ADD : BASIC_CONFIRM));
-      if (result == PopupButton::CONFIRM) window_element_apply_push(window, manager, region, reference);
+      if (result == PopupButton::CONFIRM)
+        window_item_apply_push<model::Region>(window, manager, region, reference, regions_get,
+                                              region_insert_index_get(document));
       if (result != PopupButton::NONE) window.popup.close();
       ImGui::EndPopup();
     }
@@ -317,7 +328,7 @@ namespace anm2ed::imgui
   {
     auto spritesheet = region_spritesheet_get(document);
     auto regionId = window.editId != -1 ? window.editId : document.region.reference;
-    auto region = spritesheet && regionId != -1 ? child_id_get(*spritesheet, ElementType::REGION, regionId) : nullptr;
+    auto region = spritesheet && regionId != -1 ? model::item_get(spritesheet->regions, regionId) : nullptr;
 
     window.popup2.trigger();
     if (ImGui::BeginPopupModal(window.popup2.label(), &window.popup2.isOpen, ImGuiWindowFlags_NoResize))
@@ -396,12 +407,10 @@ namespace anm2ed::imgui
     window.tooltips = {{WINDOW_ADD, TOOLTIP_ADD_REGION},
                        {WINDOW_REMOVE_UNUSED, TOOLTIP_REMOVE_UNUSED_REGIONS},
                        {WINDOW_TRIM, TOOLTIP_TRIM_REGIONS}};
-    window.editElement = element_make(ElementType::REGION);
     window.popup = PopupHelper(LABEL_REGION_PROPERTIES, POPUP_SMALL_NO_HEIGHT);
     window.popup2 = PopupHelper(LABEL_EXPORT_REGION, POPUP_SMALL_NO_HEIGHT);
     window.storage_get = [](Document& document) -> Storage& { return document.region; };
-    window.container_get = region_spritesheet_get;
-    window.insert_index_get = region_insert_index_get;
+    window_items_bind<model::Region>(window, regions_get);
     window.is_available = [](Window&, Document& document) { return region_spritesheet_get(document) != nullptr; };
     window.card_image_get = region_image_get;
     window.row_drag_drop_update = region_drag_drop_update;
@@ -411,10 +420,11 @@ namespace anm2ed::imgui
       document.reference_set({document.reference_get().animationIndex});
       document.frame_references_clear();
     };
-    window.tooltip_draw = [](Document& document, Resources& resources, const Element& region)
+    window.tooltip_draw = [](Document& document, Resources& resources, int id)
     {
+      auto& region = *region_get(document, id);
       window_tooltip_image_draw(
-          region_image_get(document, resources, region),
+          region_image_get(document, resources, id),
           [&]()
           {
             window_tooltip_name_draw(resources, region.name);
@@ -433,13 +443,13 @@ namespace anm2ed::imgui
     window.add = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
     {
       document.region.reference = -1;
-      window.editElement = element_make(ElementType::REGION);
+      window.editRegion = {};
       window.popup.open();
     };
     window.properties = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
     {
       auto& selection = document.region.selection;
-      if (selection.size() != 1 || !window_element_get(window, document, *selection.begin())) return;
+      if (selection.size() != 1 || !region_get(document, *selection.begin())) return;
       document.region.reference = *selection.begin();
       window.popup.open();
     };
@@ -448,16 +458,16 @@ namespace anm2ed::imgui
       window.editId = *document.region.selection.begin();
       window.popup2.open();
     };
-    window.remove_unused = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
+    window.remove_unused = [](Window&, Manager&, Settings&, Document& document, Clipboard&)
     {
-      document.edit_apply(EDIT_REMOVE_UNUSED_REGIONS, [&](Anm2& anm2)
-                          { return edit::regions_remove_unused(anm2, document.spritesheet.reference); });
+      document.edit_apply(EDIT_REMOVE_UNUSED_REGIONS, [&](model::Model& model)
+                          { return edit::regions_remove_unused(model, document.spritesheet.reference); });
     };
-    window.trim = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
+    window.trim = [](Window&, Manager&, Settings&, Document& document, Clipboard&)
     {
       auto& region = document.region;
       document.edit_apply(EDIT_TRIM_REGIONS,
-                          [&](Anm2&)
+                          [&](model::Model&)
                           {
                             if (!document.regions_trim(document.spritesheet.reference, region.selection)) return;
                             if (region.reference != -1 && !region.selection.contains(region.reference))
@@ -470,15 +480,15 @@ namespace anm2ed::imgui
     {
       auto spritesheet = region_spritesheet_get(document);
       if (!spritesheet || clipboard.is_empty()) return;
-      auto maxIdBefore = element_child_max_id_get(*spritesheet, ElementType::REGION);
+      auto maxIdBefore = model::item_next_id_get(spritesheet->regions) - 1;
       std::string errorString{};
       document.edit_apply(EDIT_PASTE_REGIONS,
-                          [&](Anm2& anm2)
+                          [&](model::Model& model)
                           {
-                            edit::regions_paste(anm2, document.spritesheet.reference, clipboard.get(),
+                            edit::regions_paste(model, document.spritesheet.reference, clipboard.get(),
                                                 region_insert_index_get(document), &errorString);
                             auto target = region_spritesheet_get(document);
-                            auto maxIdAfter = target ? element_child_max_id_get(*target, ElementType::REGION) : -1;
+                            auto maxIdAfter = target ? model::item_next_id_get(target->regions) - 1 : -1;
                             if (maxIdAfter <= maxIdBefore) return;
                             window.newElementId = maxIdAfter;
                             document.region.selection = {maxIdAfter};
@@ -489,7 +499,7 @@ namespace anm2ed::imgui
     window.rows_update = [](Window& window, Manager& manager, Settings& settings, Resources& resources,
                             Clipboard& clipboard, Document& document)
     {
-      window_cards_draw(window, manager, settings, resources, clipboard, document, region_spritesheet_get(document));
+      window_cards_draw(window, manager, settings, resources, clipboard, document);
       region_drag_tooltip_update(window, document);
     };
     window.popup_update =
@@ -499,7 +509,7 @@ namespace anm2ed::imgui
       {
         document.spritesheet.reference = manager.makeRegionSpritesheetId;
         document.region.reference = -1;
-        window.editElement = manager.makeRegion;
+        window.editRegion = manager.makeRegion;
         window.isPreserveEditElementOnOpen = true;
         window.popup.open();
         manager.isMakeRegionRequested = false;

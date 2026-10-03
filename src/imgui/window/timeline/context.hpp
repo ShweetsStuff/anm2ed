@@ -23,6 +23,7 @@
 #include "util/imgui/shortcut.hpp"
 #include "util/imgui/tooltip.hpp"
 
+#include "model/frames.hpp"
 #include "vector.hpp"
 #include "window/window.hpp"
 
@@ -160,11 +161,11 @@ namespace anm2ed::imgui
     Resources& resources;
     Clipboard& clipboard;
     Document& document;
-    Anm2& anm2;
+    model::Model& model;
     Playback& playback;
     Reference reference;
     Storage& region;
-    Element* animation{};
+    const model::Animation* animation{};
     float rowFrameChildHeight{};
     bool isLightTheme{};
     bool isTextPushed{};
@@ -196,15 +197,13 @@ namespace anm2ed::imgui
     ImVec2 frameBoxClipMax{};
     bool isFrameBoxClipSet{};
 
-    Element* item_get(int type, int id = -1, int groupType = NONE, int groupId = -1);
-    Element* frame_get();
-    Element* selected_item_get();
-    Element* track_container_get(int type);
-    Element* track_group_get(int type, int groupId);
+    const model::Track* item_get(int type, int id = -1, int groupType = NONE, int groupId = -1);
+    const model::Frame* frame_get();
+    const model::Track* selected_item_get();
+    const model::TrackGroup* track_group_get(int type, int groupId);
     bool is_track_group_visible(int type, int groupId);
-    Element* row_group_get(const TimelineItemRow& row);
-    int group_items_count_get(int type, int groupId);
-    Element* command_item_reference_get(Document& document, Reference itemReference);
+    const model::TrackGroup* row_group_get(const TimelineItemRow& row);
+    const model::Track* command_item_reference_get(Document& document, Reference itemReference);
     glm::vec4 color_get(TimelineColor, int);
     std::set<Reference> drag_frame_references_get(const Reference&);
     // Queues an edit on the document; its result is selected (frames by default).
@@ -221,7 +220,7 @@ namespace anm2ed::imgui
     void edit_begin_push(StringType);
     void reference_set(Reference);
     void frames_select_for(Document&, const edit::Uids&);
-    Element* command_frame_get(Document& document, const Reference& targetReference);
+    const model::Frame* command_frame_get(Document& document, const Reference& targetReference);
     Reference item_reference_get(int type, int id, int groupType = NONE, int groupId = -1);
     Reference item_reference_from_frame_get(Reference frameReference);
     bool is_same_item(const Reference& left, const Reference& right);
@@ -250,7 +249,7 @@ namespace anm2ed::imgui
     void frames_bake();
     std::set<Reference> selected_root_frame_references_get();
     std::set<Reference> item_references_for_bake_into_other_frames_get(const Document& targetDocument,
-                                                                       const Element& targetAnimation,
+                                                                       const model::Animation& targetAnimation,
                                                                        BakeIntoOtherFramesTarget target, bool isLayers,
                                                                        bool isNulls);
     bool is_bake_into_other_frames_ready();
@@ -288,7 +287,7 @@ namespace anm2ed::imgui
     void context_menu();
     void item_base_properties_open(int type, int id);
     void group_properties_close();
-    void group_properties_open(const TimelineItemRow& row, const Element& group);
+    void group_properties_open(const TimelineItemRow& row, const model::TrackGroup& group);
     void group_properties_update();
     void item_context_menu();
 

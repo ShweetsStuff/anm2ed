@@ -5,8 +5,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "../../anm2/anm2.hpp"
 #include "../../canvas.hpp"
+#include "../../model/model.hpp"
 #include "../../resource/friends.hpp"
 #include "../../resources.hpp"
 
@@ -36,7 +36,7 @@ namespace anm2ed::imgui::wizard
 
     struct FriendState
     {
-      Anm2 anm2{};
+      model::Model model{};
       std::unique_ptr<Canvas> canvas{};
       std::unordered_map<int, resource::Image> textures{};
       glm::vec4 rect{-1.0f};

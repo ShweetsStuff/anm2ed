@@ -8,6 +8,7 @@
 #include "actions.hpp"
 #include "imgui_internal.h"
 #include "math.hpp"
+#include "model/frames.hpp"
 #include "strings.hpp"
 #include "tool.hpp"
 #include "types.hpp"
@@ -29,7 +30,7 @@ namespace anm2ed::imgui
     isFocused = false;
 
     auto& document = *manager.get();
-    auto& anm2 = document.anm2;
+    auto& model = document.model;
     auto reference = document.reference_get();
     auto& referenceSpritesheet = document.spritesheet.reference;
     auto& pan = document.editorPan;
@@ -48,18 +49,17 @@ namespace anm2ed::imgui
       for (auto frameReference : document.frame_references_get())
       {
         if (frameReference.itemType != LAYER) continue;
-        if (auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, frameReference.itemID))
-          return layer->spritesheetId;
+        if (auto layer = model::item_get(model.content.layers, frameReference.itemID)) return layer->spritesheetId;
       }
       if (reference.frameIndex >= 0 && reference.itemType == LAYER)
-        if (auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, reference.itemID)) return layer->spritesheetId;
+        if (auto layer = model::item_get(model.content.layers, reference.itemID)) return layer->spritesheetId;
       return -1;
     };
     if (auto selectedLayerSpritesheet = selected_layer_spritesheet_get();
         selectedLayerSpritesheet != -1 && document.editTarget != Document::EditTarget::REGION &&
         document.editTarget != Document::EditTarget::SPRITESHEET)
       referenceSpritesheet = selectedLayerSpritesheet;
-    auto spritesheet = anm2.element_get(ElementType::SPRITESHEET, referenceSpritesheet);
+    auto spritesheet = model::item_get(model.content.spritesheets, referenceSpritesheet);
     auto baseTexture = document.texture_get(referenceSpritesheet);
     auto texture = baseTexture;
     auto& tool = settings.tool;
@@ -79,8 +79,7 @@ namespace anm2ed::imgui
         set_to_rect(zoom, pan, {0, 0, (float)fitTexture->size.x, (float)fitTexture->size.y});
     };
 
-    auto region_get = [&](int id)
-    { return spritesheet ? child_id_get(*spritesheet, ElementType::REGION, id) : nullptr; };
+    auto region_get = [&](int id) { return spritesheet ? model::item_get(spritesheet->regions, id) : nullptr; };
 
     if (ImGui::Begin(localize.get(LABEL_SPRITESHEET_EDITOR_WINDOW), &settings.windowIsSpritesheetEditor))
     {
@@ -158,7 +157,7 @@ namespace anm2ed::imgui
       viewport_set();
       clear(isTransparent ? vec4(0) : vec4(backgroundColor, 1.0f));
 
-      auto frame = reference.frameIndex >= 0 ? anm2.element_get(reference) : nullptr;
+      auto frame = model.frame_get(reference);
 
       auto viewTexture = baseTexture && baseTexture->is_valid() ? baseTexture : texture;
 
@@ -188,7 +187,7 @@ namespace anm2ed::imgui
           }
         }
 
-        auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, reference.itemID);
+        auto layer = model::item_get(model.content.layers, reference.itemID);
         bool isReferenceLayerOnSpritesheet =
             frame && reference.itemID > -1 && layer && layer->spritesheetId == referenceSpritesheet;
 
@@ -206,7 +205,7 @@ namespace anm2ed::imgui
           highlightedRegionId = regionReference;
         }
 
-        auto draw_region_rect = [&](Element& region, vec4 regionColor)
+        auto draw_region_rect = [&](const model::Region& region, vec4 regionColor)
         {
           auto cropModel = math::quad_model_get(region.size, region.crop);
           auto cropTransform = transform * cropModel;
@@ -214,9 +213,8 @@ namespace anm2ed::imgui
                       BORDER_DASH_OFFSET);
         };
 
-        for (auto& region : spritesheet->children)
+        for (auto& region : spritesheet->regions)
         {
-          if (region.type != ElementType::REGION) continue;
           auto id = region.id;
           if (id == highlightedRegionId) continue;
           draw_region_rect(region, color::WHITE);
@@ -310,11 +308,9 @@ namespace anm2ed::imgui
         auto editReference = reference;
         if (!selectedFrameReferences.contains(reference) && !selectedFrameReferences.empty())
           editReference = *selectedFrameReferences.begin();
-        auto frame = editReference.frameIndex >= 0 ? anm2.element_get(editReference) : nullptr;
-        auto itemReference = editReference;
-        itemReference.frameIndex = -1;
-        auto item = anm2.element_get(itemReference);
-        auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, editReference.itemID);
+        auto frame = model.frame_get(editReference);
+        auto item = model.track_get(editReference);
+        auto layer = model::item_get(model.content.layers, editReference.itemID);
         bool isReferenceLayerOnSpritesheet =
             frame && editReference.itemID > -1 && layer && layer->spritesheetId == referenceSpritesheet;
         if (selectedFrameReferences.empty() && isReferenceLayerOnSpritesheet)
@@ -383,9 +379,8 @@ namespace anm2ed::imgui
                                   for (auto& [itemReference, itemFrames] : groupedFrames)
                                   {
                                     auto itemType = static_cast<ItemType>(itemReference.itemType);
-                                    auto item = document.anm2.element_get(itemReference);
-                                    if (!item) continue;
-                                    frames_change(*item, frameChange, itemType, changeType, itemFrames);
+                                    if (auto item = document.model.track_edit(itemReference))
+                                      model::frames_change(*item, frameChange, itemType, changeType, itemFrames);
                                   }
                                 }});
         };
@@ -398,9 +393,9 @@ namespace anm2ed::imgui
           auto queuedFrameReferences = frameReferences;
           manager.command_push({manager.selected, [=](Manager&, Document& document)
                                 {
-                                  if (queuedReference.frameIndex < 0) return;
-                                  auto frame = document.anm2.element_get(queuedReference);
-                                  if (!frame) return;
+                                  auto framePointer = document.model.frame_get(queuedReference);
+                                  if (!framePointer) return;
+                                  auto frame = *framePointer;
 
                                   std::map<Reference, std::set<int>> groupedFrames{};
                                   for (auto frameReference : queuedFrameReferences)
@@ -413,9 +408,9 @@ namespace anm2ed::imgui
                                   for (auto& [itemReference, itemFrames] : groupedFrames)
                                   {
                                     auto itemType = static_cast<ItemType>(itemReference.itemType);
-                                    auto item = document.anm2.element_get(itemReference);
-                                    if (!item) continue;
-                                    frames_change(*item, frameChangeGet(*frame), itemType, changeType, itemFrames);
+                                    if (auto item = document.model.track_edit(itemReference))
+                                      model::frames_change(*item, frameChangeGet(frame), itemType, changeType,
+                                                           itemFrames);
                                   }
                                 }});
         };
@@ -424,7 +419,7 @@ namespace anm2ed::imgui
         {
           frame_change_from_current_apply_to(
               frameReferences,
-              [=](const Element& frame)
+              [=](const model::Frame& frame)
               {
                 auto minPoint = glm::min(frame.crop, frame.crop + frame.size);
                 auto maxPoint = glm::max(frame.crop, frame.crop + frame.size);
@@ -460,11 +455,9 @@ namespace anm2ed::imgui
           manager.command_push({manager.selected, [=](Manager&, Document& document)
                                 {
                                   auto spritesheet =
-                                      document.anm2.element_get(ElementType::SPRITESHEET, queuedSpritesheet);
+                                      model::item_get(document.model.content.spritesheets, queuedSpritesheet);
                                   if (!spritesheet) return;
-                                  auto region = child_id_get(*spritesheet, ElementType::REGION, id);
-                                  if (!region) return;
-                                  update(*region);
+                                  if (auto region = model::item_get(spritesheet->regions, id)) update(*region);
                                 }});
         };
         auto region_update_all = [&](auto update)
@@ -474,13 +467,11 @@ namespace anm2ed::imgui
           manager.command_push({manager.selected, [=](Manager&, Document& document)
                                 {
                                   auto spritesheet =
-                                      document.anm2.element_get(ElementType::SPRITESHEET, queuedSpritesheet);
+                                      model::item_get(document.model.content.spritesheets, queuedSpritesheet);
                                   if (!spritesheet) return;
                                   for (auto id : queuedSelection)
                                   {
-                                    auto region = child_id_get(*spritesheet, ElementType::REGION, id);
-                                    if (!region) continue;
-                                    update(*region);
+                                    if (auto region = model::item_get(spritesheet->regions, id)) update(*region);
                                   }
                                 }});
         };
@@ -489,7 +480,7 @@ namespace anm2ed::imgui
           auto queuedCrop = clamp_vec2_to_int(crop);
           auto queuedSize = clamp_vec2_to_int(size);
           region_update_all(
-              [=](Element& region)
+              [=](model::Region& region)
               {
                 region.crop = queuedCrop;
                 region.size = queuedSize;
@@ -498,7 +489,7 @@ namespace anm2ed::imgui
         auto region_offset_all = [&](const vec2& delta)
         {
           region_update_all(
-              [=](Element& region)
+              [=](model::Region& region)
               {
                 region.crop = clamp_vec2_to_int(region.crop + delta);
                 region.size = clamp_vec2_to_int(region.size);
@@ -507,7 +498,7 @@ namespace anm2ed::imgui
         auto region_crop_normalize_all = [&](bool isSnap, ivec2 snapGridSize, ivec2 snapGridOffset)
         {
           region_update_all(
-              [=](Element& region)
+              [=](model::Region& region)
               {
                 auto minPoint = glm::min(region.crop, region.crop + region.size);
                 auto maxPoint = glm::max(region.crop, region.crop + region.size);
@@ -566,7 +557,7 @@ namespace anm2ed::imgui
         {
           auto queuedPivot = pivot;
           region_update(id,
-                        [=](Element& region)
+                        [=](model::Region& region)
                         {
                           region.origin = Origin::CUSTOM;
                           region.pivot = queuedPivot;
@@ -575,7 +566,7 @@ namespace anm2ed::imgui
         auto region_pivot_offset = [&](int id, vec2 delta)
         {
           region_update(id,
-                        [=](Element& region)
+                        [=](model::Region& region)
                         {
                           region.origin = Origin::CUSTOM;
                           region.pivot += delta;
@@ -593,9 +584,8 @@ namespace anm2ed::imgui
 
         if (useTool == tool::PAN && spritesheet && texture && texture->is_valid() && isMouseOverCanvas)
         {
-          for (auto& region : spritesheet->children)
+          for (auto& region : spritesheet->regions)
           {
-            if (region.type != ElementType::REGION) continue;
             auto minPoint = glm::min(region.crop, region.crop + region.size);
             auto maxPoint = glm::max(region.crop, region.crop + region.size);
             if (hoverMousePos.x >= minPoint.x && hoverMousePos.x <= maxPoint.x && hoverMousePos.y >= minPoint.y &&

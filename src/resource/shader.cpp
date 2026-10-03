@@ -6,8 +6,8 @@
 #include <sstream>
 #include <utility>
 
-#include "anm2/anm2.hpp"
 #include "log.hpp"
+#include "model/model.hpp"
 
 namespace anm2ed::resource::shader
 {
@@ -249,12 +249,12 @@ namespace anm2ed::resource::shader
     return binding == UNIFORM_BINDING_MANUAL || binding == UNIFORM_BINDING_PLAYBACK_TIME;
   }
 
-  void uniform_configs_apply(const Element& shaderElement, std::vector<Uniform>& uniforms)
+  void uniform_configs_apply(const model::Shader& shader, std::vector<Uniform>& uniforms)
   {
     for (auto& uniform : uniforms)
     {
-      auto config = shader_uniform_get(shaderElement, uniform.name);
-      if (!config) continue;
+      auto config = std::ranges::find(shader.uniforms, uniform.name, &model::Uniform::name);
+      if (config == shader.uniforms.end()) continue;
 
       if (auto binding = uniform_binding_get(config->binding);
           !config->binding.empty() && is_uniform_binding_valid(binding, uniform.valueType))
@@ -262,8 +262,8 @@ namespace anm2ed::resource::shader
       if (!config->value.empty()) uniform_value_parse(uniform, config->value);
       for (int index = 0; index < (int)uniform.components.size(); ++index)
       {
-        auto component = shader_uniform_component_get(*config, index);
-        if (!component) continue;
+        auto component = std::ranges::find(config->components, index, &model::Component::index);
+        if (component == config->components.end()) continue;
         if (auto binding = uniform_binding_get(component->binding);
             !component->binding.empty() && is_component_binding_valid(binding))
           uniform.components[index].binding = binding;
@@ -272,21 +272,19 @@ namespace anm2ed::resource::shader
     }
   }
 
-  bool uniform_configs_trim(Element& shaderElement, const std::vector<Uniform>& uniforms)
+  // Drops saved uniform settings the compiled shader no longer has or cannot use.
+  bool uniform_configs_trim(model::Shader& shader, const std::vector<Uniform>& uniforms)
   {
-    bool isChanged = std::erase_if(shaderElement.children,
-                                   [&](const Element& child)
+    bool isChanged = std::erase_if(shader.uniforms,
+                                   [&](const model::Uniform& config)
                                    {
-                                     return child.type == ElementType::UNIFORM &&
-                                            std::ranges::none_of(uniforms, [&](const Uniform& uniform)
-                                                                 { return uniform.name == child.name; });
+                                     return std::ranges::none_of(uniforms, [&](const Uniform& uniform)
+                                                                 { return uniform.name == config.name; });
                                    }) > 0;
 
-    for (auto& config : shaderElement.children)
+    for (auto& config : shader.uniforms)
     {
-      if (config.type != ElementType::UNIFORM) continue;
       auto& uniform = *std::ranges::find(uniforms, config.name, &Uniform::name);
-
       if (!config.binding.empty() && !is_uniform_binding_valid(uniform_binding_get(config.binding), uniform.valueType))
       {
         config.binding.clear();
@@ -295,18 +293,13 @@ namespace anm2ed::resource::shader
 
       auto componentCount = UNIFORM_VALUE_TYPE_INFOS[uniform.valueType].componentCount;
       auto isComponents = uniform_binding_get(config.binding) == UNIFORM_BINDING_COMPONENTS;
-      isChanged |= std::erase_if(config.children,
-                                 [&](const Element& component)
-                                 {
-                                   return component.type == ElementType::COMPONENT &&
-                                          (!isComponents || component.index < 0 || component.index >= componentCount);
-                                 }) > 0;
+      isChanged |=
+          std::erase_if(config.components, [&](const model::Component& component)
+                        { return !isComponents || component.index < 0 || component.index >= componentCount; }) > 0;
 
-      for (auto& component : config.children)
+      for (auto& component : config.components)
       {
-        if (component.type != ElementType::COMPONENT || component.binding.empty() ||
-            is_component_binding_valid(uniform_binding_get(component.binding)))
-          continue;
+        if (component.binding.empty() || is_component_binding_valid(uniform_binding_get(component.binding))) continue;
         component.binding.clear();
         isChanged = true;
       }
@@ -315,27 +308,21 @@ namespace anm2ed::resource::shader
     return isChanged;
   }
 
-  void uniform_config_save(Element& shaderElement, const Uniform& uniform)
+  void uniform_config_save(model::Shader& shader, const Uniform& uniform)
   {
-    auto config = shader_uniform_get(shaderElement, uniform.name);
-    if (!config)
-    {
-      config = &shaderElement.children.emplace_back(element_make(ElementType::UNIFORM));
-      config->name = uniform.name;
-    }
+    auto config = std::ranges::find(shader.uniforms, uniform.name, &model::Uniform::name);
+    if (config == shader.uniforms.end()) config = shader.uniforms.insert(shader.uniforms.end(), {.name = uniform.name});
 
     config->binding = std::string(uniform_binding_value_get(uniform.binding));
     config->value = uniform_value_string_get(uniform);
-    std::erase_if(config->children, [](const Element& child) { return child.type == ElementType::COMPONENT; });
+    config->components.clear();
     if (uniform.binding != UNIFORM_BINDING_COMPONENTS) return;
 
     for (int index = 0; index < (int)uniform.components.size(); ++index)
-    {
-      auto& component = config->children.emplace_back(element_make(ElementType::COMPONENT));
-      component.index = index;
-      component.binding = std::string(uniform_binding_value_get(uniform.components[index].binding));
-      component.value = std::format("{:.6g}", uniform.components[index].value);
-    }
+      config->components.push_back(
+          {.index = index,
+           .binding = std::string(uniform_binding_value_get(uniform.components[index].binding)),
+           .value = std::format("{:.6g}", uniform.components[index].value)});
   }
 
   bool is_uniform_binding_valid(UniformBinding binding, UniformValueType type)

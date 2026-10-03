@@ -3,7 +3,7 @@
 #include <map>
 #include <set>
 
-#include "anm2/anm2.hpp"
+#include "model/model.hpp"
 
 namespace anm2ed
 {
@@ -26,9 +26,9 @@ namespace anm2ed
     bool operator==(const Selection&) const = default;
   };
 
-  std::set<Reference> selection_references_get(const Selection&, const UidIndex&, SelectionKind);
-  void selection_references_set(Selection&, const Anm2&, SelectionKind, const std::set<Reference>&);
-  Reference selection_focus_get(const Selection&, const UidIndex&);
-  void selection_focus_set(Selection&, const Anm2&, Reference);
-  void selection_follow(Selection&, const Anm2&, const UidIndex&, Reference);
+  std::set<Reference> selection_references_get(const Selection&, const model::UidIndex&, SelectionKind);
+  void selection_references_set(Selection&, const model::Model&, SelectionKind, const std::set<Reference>&);
+  Reference selection_focus_get(const Selection&, const model::UidIndex&);
+  void selection_focus_set(Selection&, const model::Model&, Reference);
+  void selection_follow(Selection&, const model::Model&, const model::UidIndex&, Reference);
 }

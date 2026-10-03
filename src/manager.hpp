@@ -62,12 +62,17 @@ namespace anm2ed
     std::filesystem::path spritesheetDragDropPath{};
     bool isSpritesheetDragDrop{};
 
-    Element itemEdit{};
-    imgui::PopupHelper itemPropertiesPopups[std::size(TRACK_CONTAINERS)]{
+    struct ItemEdit
+    {
+      std::string name{};
+      int spritesheetId{};
+      bool isShowRect{};
+    } itemEdit{};
+    imgui::PopupHelper itemPropertiesPopups[2]{
         imgui::PopupHelper(LABEL_MANAGER_LAYER_PROPERTIES, imgui::POPUP_SMALL_NO_HEIGHT),
         imgui::PopupHelper(LABEL_MANAGER_NULL_PROPERTIES, imgui::POPUP_SMALL_NO_HEIGHT)};
 
-    Element makeRegion{element_make(ElementType::REGION)};
+    model::Region makeRegion{};
     int makeRegionSpritesheetId{-1};
     bool isMakeRegionRequested{};
 

@@ -7,7 +7,7 @@ namespace anm2ed::imgui
     auto targetReference = reference;
     auto time = (int)document.frameTime;
     if (!animation || !command_item_reference_get(document, targetReference)) return;
-    edit_push(EDIT_INSERT_FRAME, [=](Anm2& anm2) { return edit::frame_insert(anm2, targetReference, time); });
+    edit_push(EDIT_INSERT_FRAME, [=](model::Model& model) { return edit::frame_insert(model, targetReference, time); });
   }
 
   void TimelineContext::frames_delete_action()
@@ -15,7 +15,7 @@ namespace anm2ed::imgui
     auto selectedFrames = document.frame_references_get(Document::FrameReferenceFallback::NONE);
     if (selectedFrames.empty()) return;
     edit_push(
-        EDIT_DELETE_FRAMES, [=](Anm2& anm2) { return edit::frames_delete(anm2, selectedFrames); },
+        EDIT_DELETE_FRAMES, [=](model::Model& model) { return edit::frames_delete(model, selectedFrames); },
         [this](Document& document, const edit::Uids&) { frames_selection_set_reference_for(document); });
   }
 
@@ -24,8 +24,8 @@ namespace anm2ed::imgui
     auto selectedFrames = document.frame_references_get(Document::FrameReferenceFallback::NONE);
     std::erase_if(selectedFrames, is_trigger_reference);
     if (selectedFrames.empty()) return;
-    edit_push(EDIT_DUPLICATE_FRAMES,
-              [=, focus = reference](Anm2& anm2) { return edit::frames_duplicate(anm2, selectedFrames, focus); });
+    edit_push(EDIT_DUPLICATE_FRAMES, [=, focus = reference](model::Model& model)
+              { return edit::frames_duplicate(model, selectedFrames, focus); });
   }
 
   bool TimelineContext::is_frames_reverse_available(std::set<Reference> selectedFrames)
@@ -45,7 +45,7 @@ namespace anm2ed::imgui
     auto selectedFrames = document.frame_references_get(Document::FrameReferenceFallback::NONE);
     std::erase_if(selectedFrames, is_trigger_reference);
     if (!is_frames_reverse_available(selectedFrames)) return;
-    edit_push(EDIT_REVERSE_FRAMES, [=](Anm2& anm2) { return edit::frames_reverse(anm2, selectedFrames); });
+    edit_push(EDIT_REVERSE_FRAMES, [=](model::Model& model) { return edit::frames_reverse(model, selectedFrames); });
   }
 
   void TimelineContext::frames_bake()
@@ -54,8 +54,8 @@ namespace anm2ed::imgui
     std::erase_if(selectedFrames, is_trigger_reference);
     if (selectedFrames.empty()) return;
     edit_push(EDIT_BAKE_FRAMES, [=, interval = settings.bakeInterval, isRoundScale = settings.bakeIsRoundScale,
-                                 isRoundRotation = settings.bakeIsRoundRotation](Anm2& anm2)
-              { return edit::frames_bake(anm2, selectedFrames, interval, isRoundScale, isRoundRotation); });
+                                 isRoundRotation = settings.bakeIsRoundRotation](model::Model& model)
+              { return edit::frames_bake(model, selectedFrames, interval, isRoundScale, isRoundRotation); });
   }
 
   std::set<Reference> TimelineContext::selected_root_frame_references_get()
@@ -65,10 +65,9 @@ namespace anm2ed::imgui
     return selectedFrames;
   }
 
-  std::set<Reference> TimelineContext::item_references_for_bake_into_other_frames_get(const Document& targetDocument,
-                                                                                      const Element& targetAnimation,
-                                                                                      BakeIntoOtherFramesTarget target,
-                                                                                      bool isLayers, bool isNulls)
+  std::set<Reference> TimelineContext::item_references_for_bake_into_other_frames_get(
+      const Document& targetDocument, const model::Animation& targetAnimation, BakeIntoOtherFramesTarget target,
+      bool isLayers, bool isNulls)
   {
     std::set<Reference> result{};
     auto animationIndex = targetDocument.reference_get().animationIndex;
@@ -79,17 +78,15 @@ namespace anm2ed::imgui
       return result;
     }
 
-    for (const auto& row : TRACK_CONTAINERS)
+    for (auto itemType : {LAYER, NULL_})
     {
-      auto container = child_first_get(targetAnimation, row.container);
-      if (!container || !(row.itemType == ItemType::LAYER ? isLayers : isNulls)) continue;
-      tracks_each(*container, row.track,
-                  [&](const Element& track)
-                  {
-                    auto itemType = (int)row.itemType;
-                    result.insert(Reference{animationIndex, itemType, anm2ed::track_id_get(track), -1,
-                                            track.groupId == -1 ? NONE : itemType, track.groupId});
-                  });
+      if (!(itemType == LAYER ? isLayers : isNulls)) continue;
+      model::tracks_each(model::animation_entries_get(targetAnimation, itemType),
+                         [&](const model::Track& track, const model::TrackGroup* group)
+                         {
+                           result.insert(Reference{animationIndex, itemType, track.id, -1, group ? itemType : NONE,
+                                                   group ? group->id : -1});
+                         });
     }
     return result;
   }
@@ -111,8 +108,8 @@ namespace anm2ed::imgui
         document, *animation, bakeIntoOtherFramesTarget, isBakeIntoOtherFramesLayers, isBakeIntoOtherFramesNulls);
     edit::RootBakeOptions options{settings.bakeIsRoundScale, settings.bakeIsRoundRotation,
                                   settings.bakeIsMatchRootInterpolation, settings.bakeIsUseRootPivot};
-    edit_push(EDIT_BAKE_INTO_OTHER_FRAMES,
-              [=](Anm2& anm2) { return edit::root_bake_into(anm2, selectedRootFrames, targetItems, options); });
+    edit_push(EDIT_BAKE_INTO_OTHER_FRAMES, [=](model::Model& model)
+              { return edit::root_bake_into(model, selectedRootFrames, targetItems, options); });
   }
 
   void TimelineContext::frame_split()
@@ -121,7 +118,7 @@ namespace anm2ed::imgui
     if (selectedFrames.size() != 1) return;
     auto targetReference = *selectedFrames.begin();
     auto time = frameSplitTimeAtCursor.value_or((int)std::floor(playback.time));
-    edit_push(EDIT_SPLIT_FRAME, [=](Anm2& anm2) { return edit::frame_split(anm2, targetReference, time); });
+    edit_push(EDIT_SPLIT_FRAME, [=](model::Model& model) { return edit::frame_split(model, targetReference, time); });
   }
 
   void TimelineContext::item_remove()
@@ -132,8 +129,8 @@ namespace anm2ed::imgui
       if (row.type == LAYER || row.type == NULL_) (row.isGroup ? groupIds : ids)[row.type].insert(row.id);
     if (!animation || (ids.empty() && groupIds.empty())) return;
     edit_push(
-        EDIT_REMOVE_ITEMS, [=, animationIndex = reference.animationIndex](Anm2& anm2)
-        { return edit::items_remove(anm2, animationIndex, ids, groupIds); },
+        EDIT_REMOVE_ITEMS, [=, animationIndex = reference.animationIndex](model::Model& model)
+        { return edit::items_remove(model, animationIndex, ids, groupIds); },
         [this](Document& document, const edit::Uids&)
         {
           reference_clear_for(document);
@@ -174,8 +171,8 @@ namespace anm2ed::imgui
     edit_push(
         EDIT_GROUP_ITEMS,
         [=, animationIndex = reference.animationIndex, type = targetReferences.front().itemType,
-         name = std::string(localize.get(TEXT_NEW_GROUP))](Anm2& anm2)
-        { return edit::items_group(anm2, animationIndex, type, ids, name); },
+         name = std::string(localize.get(TEXT_NEW_GROUP))](model::Model& model)
+        { return edit::items_group(model, animationIndex, type, ids, name); },
         [=, this](Document& document, const edit::Uids& uids)
         {
           if (uids.empty()) return;
@@ -209,15 +206,15 @@ namespace anm2ed::imgui
       (row.isGroup ? groups : tracks)
           .insert(row.isGroup ? Reference{row.animationIndex, row.type, row.id} : row_item_reference_get(row));
     Selection moved{};
-    selection_references_set(moved, anm2, SelectionKind::TRACKS, tracks);
-    selection_references_set(moved, anm2, SelectionKind::GROUPS, groups);
-    if (!tracks.empty()) selection_focus_set(moved, anm2, *tracks.begin());
+    selection_references_set(moved, model, SelectionKind::TRACKS, tracks);
+    selection_references_set(moved, model, SelectionKind::GROUPS, groups);
+    if (!tracks.empty()) selection_focus_set(moved, model, *tracks.begin());
 
     edit_push(
         EDIT_MOVE_ITEMS,
-        [=](Anm2& anm2)
+        [=](model::Model& model)
         {
-          return edit::items_move(anm2, animationIndex, targetType, ids, groupIds, target, isDropAfter,
+          return edit::items_move(model, animationIndex, targetType, ids, groupIds, target, isDropAfter,
                                   isDropIntoGroup);
         },
         [=, this](Document& document, const edit::Uids&)
@@ -235,8 +232,8 @@ namespace anm2ed::imgui
   void TimelineContext::fit_animation_length()
   {
     if (!animation) return;
-    edit_push(EDIT_FIT_ANIMATION_LENGTH, [animationIndex = reference.animationIndex](Anm2& anm2)
-              { return edit::animation_length_fit(anm2, animationIndex); });
+    edit_push(EDIT_FIT_ANIMATION_LENGTH, [animationIndex = reference.animationIndex](model::Model& model)
+              { return edit::animation_length_fit(model, animationIndex); });
   }
 
   void TimelineContext::frame_references_copy(const std::set<Reference>& selectedFrames)
@@ -246,12 +243,9 @@ namespace anm2ed::imgui
     std::string clipboardString{};
     for (auto frameReference : selectedFrames)
     {
-      auto item =
-          item_get(frameReference.itemType, frameReference.itemID, frameReference.groupType, frameReference.groupId);
-      auto frame = item ? track_frame_get(*item, frameReference.frameIndex) : nullptr;
+      auto frame = model.frame_get(frameReference);
       if (!frame) continue;
-      auto parentType = TYPE_TRACKS[frameReference.itemType];
-      clipboardString += element_to_string(*frame, parentType);
+      clipboardString += model::frame_to_string(*frame, (ItemType)frameReference.itemType);
     }
     if (!clipboardString.empty()) clipboard.set(clipboardString);
   }
@@ -270,7 +264,7 @@ namespace anm2ed::imgui
     if (selectedFrames.empty()) return;
     frame_references_copy(selectedFrames);
     edit_push(
-        EDIT_CUT_FRAMES, [=](Anm2& anm2) { return edit::frames_delete(anm2, selectedFrames); },
+        EDIT_CUT_FRAMES, [=](model::Model& model) { return edit::frames_delete(model, selectedFrames); },
         [this](Document& document, const edit::Uids&) { frames_selection_set_reference_for(document); });
   }
 
@@ -289,8 +283,8 @@ namespace anm2ed::imgui
         EDIT_PASTE_FRAMES,
         [=, targetReference = reference,
          selectedFrames = document.frame_references_get(Document::FrameReferenceFallback::NONE),
-         time = hoveredTime](Anm2& anm2)
-        { return edit::frames_paste(anm2, targetReference, selectedFrames, text, time, errorString.get()); },
+         time = hoveredTime](model::Model& model)
+        { return edit::frames_paste(model, targetReference, selectedFrames, text, time, errorString.get()); },
         [=, this](Document& document, const edit::Uids& uids)
         {
           if (errorString->empty()) return frames_select_for(document, uids);

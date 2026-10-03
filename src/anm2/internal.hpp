@@ -75,14 +75,11 @@ namespace anm2ed
   void region_ids_remap(Element&);
   void region_frame_ids_repair(Element&);
   bool is_track_child_valid(ElementType, ElementType);
-  bool is_track_group_visible(const Element&, const Element&);
   bool is_nested_group_parent(ElementType, Flags);
   bool is_group_id_serialized(Flags);
   bool element_write_skip(const Element&, ElementType, Flags);
   bool is_frame_bake_serialized(const Element&, Flags);
-  bool is_special_interpolated_frames(const Element&);
   std::vector<Element> frame_bake_split(const Element&, const Element&, int, bool, bool);
-  void special_interpolated_frames_bake(Element&, int, bool, bool);
   void all_interpolated_frames_bake(Element&, int, bool, bool);
   int color_write(float);
   bool is_region_matched(const Element&, const Element&);
@@ -115,5 +112,4 @@ namespace anm2ed
   }
 
   std::uint64_t anm2_hash_get(const Element&, Options);
-  std::uint64_t element_hash(const Element&, Flags);
 }

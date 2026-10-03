@@ -1,182 +1,422 @@
 #include "edit.hpp"
 
-#include "vector.hpp"
+#include "model/xml.hpp"
+
+using namespace anm2ed::model;
 
 namespace anm2ed::edit
 {
-  std::set<int> animation_group_ids_get(const Element& animations)
+  constexpr std::string_view ANIMATION_MERGED_SUFFIX = " (Merged)";
+
+  using AnimationPointer = std::shared_ptr<const Animation>;
+
+  std::set<int> animation_group_ids_get(const Model& model)
   {
-    std::set<int> result{};
-    for (const auto& item : animations.children)
-      if (item.type == ElementType::GROUP) result.insert(item.id);
-    return result;
+    std::set<int> ids{};
+    for (const auto& entry : model.animations.entries)
+      if (auto group = std::get_if<AnimationGroup>(&entry)) ids.insert(group->id);
+    return ids;
   }
 
-  std::set<int> animation_group_indices_get(const Element& animations, int groupId)
+  std::set<int> animation_group_indices_get(const Model& model, int groupId)
   {
-    std::set<int> result{};
-    int animationIndex{};
-    for (const auto& animation : animations.children)
-      if (animation.type == ElementType::ANIMATION)
-      {
-        if (animation.groupId == groupId) result.insert(animationIndex);
-        ++animationIndex;
-      }
-    return result;
+    std::set<int> indices{};
+    for (int i = 0; i < model.animations_count_get(); ++i)
+      if (model.animation_group_id_get(i) == groupId) indices.insert(i);
+    return indices;
   }
 
-  // An empty copy of a track container: same tracks and groups, no frames.
-  Element track_container_shell_copy(const Element* source, const TrackContainer& row)
+  // Animations and whole groups taken out of the list, remembering the order they had.
+  struct AnimationsTaken
   {
-    auto destination = element_make(row.container);
-    if (!source) return destination;
+    std::vector<AnimationPointer> animations{};
+    std::vector<AnimationGroup> groups{};
+  };
 
-    auto nextGroupId = element_child_next_id_get(*source, ElementType::GROUP);
-    std::set<int> copiedTrackIds{};
-    auto track_push = [&](const Element& track, int groupId)
-    {
-      if (track.type != row.track || !copiedTrackIds.insert(track_id_get(track)).second) return;
-      auto item = element_make(row.track);
-      item.*(row.id) = track.*(row.id);
-      item.groupId = track.groupId != -1 ? track.groupId : groupId;
-      item.isVisible = track.isVisible;
-      destination.children.push_back(item);
-    };
+  AnimationsTaken animations_take(Model& model, const std::set<int>& indices, const std::set<int>& groupIds)
+  {
+    AnimationsTaken taken{};
+    int index{};
+    std::erase_if(model.animations.entries,
+                  [&](AnimationEntry& entry)
+                  {
+                    if (auto animation = std::get_if<AnimationPointer>(&entry))
+                    {
+                      if (!indices.contains(index++)) return false;
+                      taken.animations.push_back(std::move(*animation));
+                      return true;
+                    }
+                    auto& group = std::get<AnimationGroup>(entry);
+                    if (groupIds.contains(group.id))
+                    {
+                      index += (int)group.animations.size();
+                      taken.groups.push_back(std::move(group));
+                      return true;
+                    }
+                    std::erase_if(group.animations,
+                                  [&](AnimationPointer& animation)
+                                  {
+                                    if (!indices.contains(index++)) return false;
+                                    taken.animations.push_back(std::move(animation));
+                                    return true;
+                                  });
+                    return false;
+                  });
+    return taken;
+  }
 
-    for (const auto& sourceItem : source->children)
+  // Where an animation with this uid sits: its top-level entry, and its group (or nullptr) and position there.
+  struct AnimationPlace
+  {
+    int entry{-1};
+    AnimationGroup* group{};
+    int position{-1};
+  };
+
+  AnimationPlace animation_place_get(Model& model, std::uint64_t uid)
+  {
+    auto& entries = model.animations.entries;
+    for (int i = 0; i < (int)entries.size(); ++i)
     {
-      if (sourceItem.type != ElementType::GROUP)
+      if (auto animation = std::get_if<AnimationPointer>(&entries[i]))
       {
-        track_push(sourceItem, -1);
+        if ((*animation)->uid == uid) return {i, nullptr, -1};
         continue;
       }
-      auto group = element_make(ElementType::GROUP);
-      group.id = sourceItem.id >= 0 ? sourceItem.id : nextGroupId++;
-      group.name = sourceItem.name;
-      group.isExpanded = sourceItem.isExpanded;
-      group.isVisible = sourceItem.isVisible;
-      group.children.push_back(root_animation_make());
-      destination.children.push_back(group);
-      for (const auto& child : sourceItem.children)
-        track_push(child, group.id);
+      auto& group = std::get<AnimationGroup>(entries[i]);
+      for (int j = 0; j < (int)group.animations.size(); ++j)
+        if (group.animations[j]->uid == uid) return {i, &group, j};
     }
-    return destination;
+    return {};
+  }
+
+  int animation_group_entry_get(const Model& model, int groupId)
+  {
+    auto& entries = model.animations.entries;
+    for (int i = 0; i < (int)entries.size(); ++i)
+      if (auto group = std::get_if<AnimationGroup>(&entries[i]); group && group->id == groupId) return i;
+    return -1;
+  }
+
+  AnimationGroup* animation_group_find(Model& model, int groupId)
+  {
+    auto entry = animation_group_entry_get(model, groupId);
+    return entry == -1 ? nullptr : &std::get<AnimationGroup>(model.animations.entries[entry]);
+  }
+
+  // Inserts animations before the animation at a flat index (or at the end), inside `groupId` when given.
+  void animations_insert(Model& model, int index, int groupId, std::vector<AnimationPointer> animations)
+  {
+    auto before = model.animation_get(index);
+    auto place = before ? animation_place_get(model, before->uid) : AnimationPlace{};
+    if (auto group = animation_group_find(model, groupId))
+    {
+      auto position = place.group == group ? place.position : (int)group->animations.size();
+      group->animations.insert(group->animations.begin() + position, animations.begin(), animations.end());
+      return;
+    }
+    auto& entries = model.animations.entries;
+    auto position = place.entry == -1 ? (int)entries.size() : place.entry;
+    entries.insert(entries.begin() + position, animations.begin(), animations.end());
+  }
+
+  void animation_groups_remove(Model& model, const std::set<int>& groupIds)
+  {
+    auto& entries = model.animations.entries;
+    for (int i = 0; i < (int)entries.size(); ++i)
+    {
+      auto group = std::get_if<AnimationGroup>(&entries[i]);
+      if (!group || !groupIds.contains(group->id)) continue;
+      auto animations = std::move(group->animations);
+      entries.erase(entries.begin() + i);
+      entries.insert(entries.begin() + i, animations.begin(), animations.end());
+      i += (int)animations.size() - 1;
+    }
+  }
+
+  // An empty copy of a track list: same tracks and groups, no frames.
+  std::vector<TrackEntry> track_entries_shell_get(const std::vector<TrackEntry>& entries)
+  {
+    std::vector<TrackEntry> shell{};
+    auto track_shell_get = [](const Track& track)
+    { return Track{.type = track.type, .id = track.id, .isVisible = track.isVisible}; };
+    for (const auto& entry : entries)
+      if (auto track = std::get_if<Track>(&entry))
+        shell.emplace_back(track_shell_get(*track));
+      else
+      {
+        const auto& group = std::get<TrackGroup>(entry);
+        TrackGroup copy{
+            .id = group.id, .name = group.name, .isExpanded = group.isExpanded, .isVisible = group.isVisible};
+        for (const auto& groupTrack : group.tracks)
+          copy.tracks.push_back(track_shell_get(groupTrack));
+        shell.emplace_back(std::move(copy));
+      }
+    return shell;
   }
 
   // Adds an animation with the same (empty) tracks as the template animation.
-  Uids animation_add(Anm2& anm2, int index, int groupId, int templateIndex, const std::string& name)
+  Uids animation_add(Model& model, int index, int groupId, int templateIndex, const std::string& name)
   {
-    auto animations = anm2.element_get(ElementType::ANIMATIONS);
-    if (!animations) return {};
-
-    auto animation = element_make(ElementType::ANIMATION);
-    animation.name = name;
-    animation.groupId = groupId;
-    animation.children.push_back(root_animation_make());
-    auto templateAnimation = anm2.element_get(ElementType::ANIMATION, templateIndex);
-    for (const auto& row : TRACK_CONTAINERS)
-      animation.children.push_back(track_container_shell_copy(
-          templateAnimation ? child_first_get(*templateAnimation, row.container) : nullptr, row));
-    animation.children.push_back(element_make(ElementType::TRIGGERS));
-    animation = element_clone(animation);
-
-    if (animations_count_get(*animations) == 0) animations->defaultAnimation = animation.name;
-    animations->children.insert(animations->children.begin() + animations_child_insert_index_get(*animations, index),
-                                animation);
-    return {animation.uid};
+    Animation animation{.name = name};
+    if (auto source = model.animation_get(templateIndex))
+    {
+      animation.layers = track_entries_shell_get(source->layers);
+      animation.nulls = track_entries_shell_get(source->nulls);
+    }
+    if (model.animations_count_get() == 0) model.animations.defaultAnimation = animation.name;
+    auto uid = animation.uid;
+    animations_insert(model, index, groupId, {std::make_shared<const Animation>(std::move(animation))});
+    return {uid};
   }
 
-  Uids animations_remove(Anm2& anm2, const std::set<int>& indices, const std::set<int>& groupIds)
+  Uids animations_remove(Model& model, const std::set<int>& indices, const std::set<int>& groupIds)
   {
-    auto animations = anm2.element_get(ElementType::ANIMATIONS);
-    if (!animations) return {};
-    animation_groups_remove(*animations, groupIds);
-    for (auto it = indices.rbegin(); it != indices.rend(); ++it)
-      if (auto childIndex = animations_child_index_get(*animations, *it); childIndex != -1)
-        animations->children.erase(animations->children.begin() + childIndex);
+    animations_take(model, indices, {});
+    animation_groups_remove(model, groupIds);
     return {};
   }
 
-  void animation_groups_remove(Element& animations, const std::set<int>& groupIds)
+  // Moves animations and whole groups beside a target animation or group; animations dropped on their own join the
+  // target's group (or the group dropped into).
+  Uids animations_move(Model& model, const std::set<int>& indices, const std::set<int>& groupIds,
+                       AnimationTarget target)
   {
-    for (auto& item : animations.children)
-      if (item.type == ElementType::ANIMATION && groupIds.contains(item.groupId)) item.groupId = -1;
-    std::erase_if(animations.children,
-                  [&](const Element& item) { return item.type == ElementType::GROUP && groupIds.contains(item.id); });
-  }
+    auto targetAnimation = model.animation_get(target.animationIndex);
+    auto targetUid = targetAnimation ? targetAnimation->uid : 0;
+    if (targetAnimation && groupIds.contains(model.animation_group_id_get(target.animationIndex))) return {};
+    if (targetAnimation && indices.contains(target.animationIndex)) return {};
+    if (!targetAnimation && groupIds.contains(target.groupId)) return {};
 
-  // Moves animations and whole groups to a child position; animations moved on their own join targetGroupId.
-  Uids animations_move(Anm2& anm2, const std::set<int>& indices, const std::set<int>& groupIds, int targetChildIndex,
-                       int targetGroupId)
-  {
-    auto animations = anm2.element_get(ElementType::ANIMATIONS);
-    if (!animations) return {};
-    auto existingGroupIds = animation_group_ids_get(*animations);
-    auto groupId = existingGroupIds.contains(targetGroupId) ? targetGroupId : -1;
+    auto taken = animations_take(model, indices, groupIds);
+    if (taken.animations.empty() && taken.groups.empty()) return {};
 
     Uids uids{};
-    std::vector<int> childIndices{};
-    int animationIndex{};
-    for (int i = 0; i < (int)animations->children.size(); ++i)
-    {
-      auto& item = animations->children[i];
-      if (item.type == ElementType::GROUP && groupIds.contains(item.id)) childIndices.push_back(i);
-      if (item.type != ElementType::ANIMATION) continue;
-      auto isGroupMoved = groupIds.contains(item.groupId);
-      auto isMoved = indices.contains(animationIndex++);
-      if (isMoved && !isGroupMoved)
-      {
-        item.groupId = groupId;
-        uids.push_back(item.uid);
-      }
-      if (isGroupMoved || isMoved) childIndices.push_back(i);
-    }
+    for (const auto& animation : taken.animations)
+      uids.push_back(animation->uid);
 
-    util::vector::move_indices_to_position(animations->children, childIndices, targetChildIndex);
+    auto& entries = model.animations.entries;
+    auto topIndex = (int)entries.size();
+    if (targetUid)
+    {
+      auto place = animation_place_get(model, targetUid);
+      if (place.group)
+        place.group->animations.insert(place.group->animations.begin() + place.position + target.isAfter,
+                                       taken.animations.begin(), taken.animations.end());
+      else if (place.entry != -1)
+        entries.insert(entries.begin() + place.entry + target.isAfter, taken.animations.begin(),
+                       taken.animations.end());
+      place = animation_place_get(model, targetUid);
+      if (place.entry != -1) topIndex = place.entry + (target.isAfter || place.group);
+    }
+    else if (auto entry = animation_group_entry_get(model, target.groupId); entry != -1)
+    {
+      auto& group = std::get<AnimationGroup>(entries[entry]);
+      if (target.isInto)
+        group.animations.insert(group.animations.end(), taken.animations.begin(), taken.animations.end());
+      else
+        entries.insert(entries.begin() + entry + target.isAfter, taken.animations.begin(), taken.animations.end());
+      if (!target.isInto && !target.isAfter) entry += (int)taken.animations.size();
+      topIndex = entry + (target.isAfter || target.isInto);
+    }
+    else
+      entries.insert(entries.end(), taken.animations.begin(), taken.animations.end());
+
+    entries.insert(entries.begin() + std::clamp(topIndex, 0, (int)entries.size()),
+                   std::make_move_iterator(taken.groups.begin()), std::make_move_iterator(taken.groups.end()));
     return uids;
   }
 
-  Uids animations_group(Anm2& anm2, const std::set<int>& indices, const std::string& name)
+  // Wraps ungrouped animations in a new group placed where the first of them was.
+  Uids animations_group(Model& model, const std::set<int>& indices, const std::string& name)
   {
-    auto animations = anm2.element_get(ElementType::ANIMATIONS);
-    if (!animations || indices.empty()) return {};
-
-    auto group = element_make(ElementType::GROUP);
-    group.id = element_child_next_id_get(*animations, ElementType::GROUP);
-    group.name = name;
-    for (auto index : indices)
-      if (auto animation = anm2.element_get(ElementType::ANIMATION, index)) animation->groupId = group.id;
-    animations->children.insert(
-        animations->children.begin() + animations_child_index_get(*animations, *indices.begin()), group);
+    if (indices.empty()) return {};
+    auto first = model.animation_get(*indices.begin());
+    if (!first) return {};
+    auto firstUid = first->uid;
+    auto entry = animation_place_get(model, firstUid).entry;
+    auto groupIds = animation_group_ids_get(model);
+    auto taken = animations_take(model, indices, {});
+    AnimationGroup group{
+        .id = groupIds.empty() ? 0 : *groupIds.rbegin() + 1, .name = name, .animations = std::move(taken.animations)};
+    auto& entries = model.animations.entries;
+    entries.insert(entries.begin() + std::clamp(entry, 0, (int)entries.size()), std::move(group));
     return {};
   }
 
-  Uids animations_paste(Anm2& anm2, const std::string& text, int start, int targetGroupId, std::set<int>& groupIds,
+  // Pastes clipboard animations (and groups, which get new ids) before the animation at `start`; lone animations join
+  // `targetGroupId` when no group came with them.
+  Uids animations_paste(Model& model, const std::string& text, int start, int targetGroupId, std::set<int>& groupIds,
                         std::string* errorString)
   {
-    std::set<int> indices{};
-    if (!anm2.animations_deserialize(text, start, indices, errorString, &groupIds)) return {};
-    anm2.uids_repair();
+    auto entries = animations_from_string(text, errorString);
+    if (entries.empty()) return {};
 
+    auto existingGroupIds = animation_group_ids_get(model);
+    auto nextGroupId = existingGroupIds.empty() ? 0 : *existingGroupIds.rbegin() + 1;
     Uids uids{};
-    for (auto index : indices)
-      if (auto animation = anm2.element_get(ElementType::ANIMATION, index))
+    std::vector<AnimationPointer> loose{};
+    std::vector<AnimationEntry> placed{};
+    for (auto& entry : entries)
+      if (auto animation = std::get_if<AnimationPointer>(&entry))
       {
-        if (targetGroupId != -1 && groupIds.empty()) animation->groupId = targetGroupId;
-        uids.push_back(animation->uid);
+        uids.push_back((*animation)->uid);
+        loose.push_back(*animation);
+        placed.push_back(entry);
       }
+      else
+      {
+        auto& group = std::get<AnimationGroup>(entry);
+        group.id = nextGroupId++;
+        groupIds.insert(group.id);
+        for (const auto& animation : group.animations)
+          uids.push_back(animation->uid);
+        placed.push_back(std::move(entry));
+      }
+
+    if (groupIds.empty() && targetGroupId != -1 && animation_group_find(model, targetGroupId))
+    {
+      animations_insert(model, start, targetGroupId, std::move(loose));
+      return uids;
+    }
+
+    auto before = model.animation_get(start);
+    auto position = before ? animation_place_get(model, before->uid).entry : (int)model.animations.entries.size();
+    model.animations.entries.insert(model.animations.entries.begin() + position,
+                                    std::make_move_iterator(placed.begin()), std::make_move_iterator(placed.end()));
     return uids;
   }
 
-  Uids animations_merge(Anm2& anm2, int target, std::set<int> sources, types::merge::Type type, bool isDeleteAfter,
+  void track_merge(Track& destination, const Track& source, types::merge::Type type)
+  {
+    std::vector<Frame> frames{};
+    for (const auto& frame : source.frames)
+      frames.push_back(frame_clone(frame));
+    switch (type)
+    {
+      case types::merge::APPEND:
+        destination.frames.insert(destination.frames.end(), frames.begin(), frames.end());
+        break;
+      case types::merge::PREPEND:
+        destination.frames.insert(destination.frames.begin(), frames.begin(), frames.end());
+        break;
+      case types::merge::REPLACE:
+        if (destination.frames.size() < frames.size()) destination.frames.resize(frames.size());
+        std::ranges::copy(frames, destination.frames.begin());
+        break;
+      default:
+        break;
+    }
+  }
+
+  // Merges a source animation's layer or null tracks: groups match by name (else are added), tracks match by id
+  // within their group (else are added).
+  void track_entries_merge(std::vector<TrackEntry>& destination, const std::vector<TrackEntry>& source,
+                           types::merge::Type type)
+  {
+    std::map<int, int> groupRemap{};
+    std::set<int> matchedGroupIds{};
+    int nextGroupId{};
+    groups_each(destination, [&](const TrackGroup& group) { nextGroupId = std::max(nextGroupId, group.id + 1); });
+
+    groups_each(source,
+                [&](const TrackGroup& sourceGroup)
+                {
+                  TrackGroup* matched{};
+                  groups_each(destination,
+                              [&](TrackGroup& group)
+                              {
+                                if (!matched && group.name == sourceGroup.name && !matchedGroupIds.contains(group.id))
+                                  matched = &group;
+                              });
+                  if (matched)
+                    track_merge(matched->root, sourceGroup.root, type);
+                  else
+                  {
+                    TrackGroup group{.id = nextGroupId++,
+                                     .name = sourceGroup.name,
+                                     .isExpanded = sourceGroup.isExpanded,
+                                     .isVisible = sourceGroup.isVisible,
+                                     .root = track_clone(sourceGroup.root),
+                                     .extras = sourceGroup.extras};
+                    destination.emplace_back(std::move(group));
+                    matched = &std::get<TrackGroup>(destination.back());
+                  }
+                  groupRemap[sourceGroup.id] = matched->id;
+                  matchedGroupIds.insert(matched->id);
+                });
+
+    tracks_each(source,
+                [&](const Track& sourceTrack, const TrackGroup* sourceGroup)
+                {
+                  TrackGroup* group{};
+                  if (sourceGroup)
+                    groups_each(destination,
+                                [&](TrackGroup& candidate)
+                                {
+                                  if (candidate.id == groupRemap[sourceGroup->id]) group = &candidate;
+                                });
+                  Track* existing{};
+                  if (group)
+                  {
+                    for (auto& track : group->tracks)
+                      if (track.id == sourceTrack.id) existing = &track;
+                  }
+                  else
+                    for (auto& entry : destination)
+                      if (auto track = std::get_if<Track>(&entry); track && track->id == sourceTrack.id)
+                        existing = track;
+
+                  if (existing)
+                    track_merge(*existing, sourceTrack, type);
+                  else if (group)
+                    group->tracks.push_back(track_clone(sourceTrack));
+                  else
+                    destination.emplace_back(track_clone(sourceTrack));
+                });
+  }
+
+  // Merges source animations into the target (frames appended, prepended, replacing or ignored), optionally deleting
+  // the sources; `ungroupIds` dissolves groups afterwards. Returns the merged animation's uid.
+  Uids animations_merge(Model& model, int target, std::set<int> sources, types::merge::Type type, bool isDeleteAfter,
                         const std::set<int>& ungroupIds)
   {
-    auto merged = sources.size() > 1 || !sources.contains(target)
-                      ? anm2.animations_merge(target, sources, type, isDeleteAfter)
-                      : target;
-    if (merged == -1) return {};
-    if (auto animations = anm2.element_get(ElementType::ANIMATIONS)) animation_groups_remove(*animations, ungroupIds);
-    auto animation = anm2.element_get(ElementType::ANIMATION, merged);
-    return animation ? Uids{animation->uid} : Uids{};
+    if (!model.animation_get(target)) return {};
+    auto isMerge = sources.size() > 1 || !sources.contains(target);
+    if (isMerge)
+    {
+      auto& merged = *model.animation_edit(target);
+      if (!merged.name.ends_with(ANIMATION_MERGED_SUFFIX)) merged.name += std::string(ANIMATION_MERGED_SUFFIX);
+      for (auto index : sources)
+      {
+        if (index == target) continue;
+        auto source = model.animation_get(index);
+        if (!source) continue;
+        auto sourceCopy = *source;
+        auto& destination = *model.animation_edit(target);
+        track_merge(destination.root, sourceCopy.root, type);
+        track_entries_merge(destination.layers, sourceCopy.layers, type);
+        track_entries_merge(destination.nulls, sourceCopy.nulls, type);
+        track_merge(destination.triggers, sourceCopy.triggers, type);
+      }
+
+      auto targetUid = model.animation_get(target)->uid;
+      if (isDeleteAfter)
+      {
+        sources.erase(target);
+        animations_take(model, sources, {});
+      }
+      for (int i = 0; i < model.animations_count_get(); ++i)
+        if (model.animation_get(i)->uid == targetUid)
+        {
+          auto& finalAnimation = *model.animation_edit(i);
+          finalAnimation.frameNum = animation_length_get(finalAnimation);
+          target = i;
+        }
+    }
+
+    auto uid = model.animation_get(target)->uid;
+    animation_groups_remove(model, ungroupIds);
+    return {uid};
   }
 }

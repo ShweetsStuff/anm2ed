@@ -3,10 +3,9 @@
 #include <deque>
 #include <map>
 #include <optional>
-#include <set>
-#include <vector>
+#include <string>
 
-#include "anm2/anm2.hpp"
+#include "model/model.hpp"
 #include "playback.hpp"
 #include "selection.hpp"
 #include "storage.hpp"
@@ -19,57 +18,10 @@ namespace anm2ed::snapshots
 
 namespace anm2ed
 {
-  enum class SnapshotStepDirection
-  {
-    UNDO,
-    REDO
-  };
-
-  template <typename T> struct SnapshotStepValue
-  {
-    T undo{};
-    T redo{};
-  };
-
-  struct SnapshotElementStep
-  {
-    std::vector<int> path{};
-    Element undo{};
-    Element redo{};
-  };
-
-  struct SnapshotAnm2Step
-  {
-    std::optional<SnapshotStepValue<bool>> isValid{};
-    std::vector<SnapshotElementStep> elements{};
-
-    bool is_empty() const;
-    void apply(Anm2&, SnapshotStepDirection) const;
-  };
-
-  class Snapshot
-  {
-  public:
-    Playback playback{};
-    Storage event{};
-    Storage layer{};
-    Storage merge{};
-    Storage null{};
-    Storage region{};
-    Storage shader{};
-    Storage sound{};
-    Storage spritesheet{};
-    std::map<int, std::uint64_t> textures{};
-    std::map<int, std::uint64_t> sounds{};
-    Anm2 anm2{};
-    Selection selection{};
-    float frameTime{};
-    std::string message = snapshots::ACTION;
-  };
-
   using AssetKeys = std::map<int, std::uint64_t>;
 
 #define SNAPSHOT_STEP_STATE_FIELDS                                                                                     \
+  X(model::Model, model)                                                                                               \
   X(Playback, playback)                                                                                                \
   X(Storage, event)                                                                                                    \
   X(Storage, layer)                                                                                                    \
@@ -84,25 +36,27 @@ namespace anm2ed
   X(AssetKeys, textures)                                                                                               \
   X(AssetKeys, sounds)
 
-  struct SnapshotStep
+  // Everything undo restores. The model's animations are shared between snapshots and copied only when edited.
+  struct Snapshot
   {
-    std::string message = snapshots::ACTION;
-    SnapshotAnm2Step anm2{};
-
-#define X(type, name) std::optional<SnapshotStepValue<type>> name{};
+#define X(type, name) type name{};
     SNAPSHOT_STEP_STATE_FIELDS
 #undef X
+    std::string message = snapshots::ACTION;
+  };
 
-    bool is_empty() const;
-    void apply(Snapshot&, SnapshotStepDirection) const;
+  // One undoable edit: the state before and after it; undo/redo restore only the fields the edit changed.
+  struct SnapshotStep
+  {
+    Snapshot before{};
+    Snapshot after{};
   };
 
   class SnapshotStack
   {
   public:
-    SnapshotStack() = default;
-
     bool is_empty();
+    std::size_t size() const;
     void push(SnapshotStep);
     std::optional<SnapshotStep> pop();
     void clear();
@@ -122,11 +76,10 @@ namespace anm2ed
     SnapshotStack undoStack{};
     SnapshotStack redoStack{};
     Snapshot current{};
-    std::optional<SnapshotStep> pendingStep{};
+    std::optional<Snapshot> pending{};
     std::optional<Reference> pendingFocus{};
 
     void push(const std::string&);
-    void step_push(const std::string&, SnapshotStep);
     void commit();
     bool undo();
     bool redo();

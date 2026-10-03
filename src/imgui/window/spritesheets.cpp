@@ -18,17 +18,27 @@ namespace anm2ed::imgui
   constexpr int MERGE_OPTIONS_ROWS = 6;
   constexpr int PADDING_MAX = 100;
 
+  std::vector<model::Spritesheet>* spritesheets_get(Document&, model::Model& model)
+  {
+    return &model.content.spritesheets;
+  }
+
+  const model::Spritesheet* spritesheet_get(Document& document, int id)
+  {
+    return model::item_get(document.model.content.spritesheets, id);
+  }
+
   bool is_spritesheet_regions(Document& document, int id)
   {
-    auto spritesheet = document.anm2.element_get(ElementType::SPRITESHEET, id);
-    return spritesheet && child_first_get(*spritesheet, ElementType::REGION);
+    auto spritesheet = spritesheet_get(document, id);
+    return spritesheet && !spritesheet->regions.empty();
   }
 
   void spritesheets_save(Document& document, const std::set<int>& ids)
   {
     for (auto id : ids)
     {
-      auto spritesheet = document.anm2.element_get(ElementType::SPRITESHEET, id);
+      auto spritesheet = spritesheet_get(document, id);
       auto texture = document.texture_get(id);
       if (!spritesheet || !texture) continue;
       auto pathString = path::to_utf8(spritesheet->path);
@@ -46,13 +56,13 @@ namespace anm2ed::imgui
   {
     manager.command_push({manager.selected, [&window, id, dialogPath, edit, isWritten](Manager&, Document& document)
                           {
-                            auto spritesheet = document.anm2.element_get(ElementType::SPRITESHEET, id);
                             auto texture = document.texture_get(id);
-                            if (!spritesheet || (isWritten && !texture)) return;
+                            if (!spritesheet_get(document, id) || (isWritten && !texture)) return;
                             document.edit_apply(
                                 edit,
-                                [&](Anm2&)
+                                [&](model::Model& model)
                                 {
+                                  auto spritesheet = model::item_get(model.content.spritesheets, id);
                                   auto newPath = window_asset_path_get(document, dialogPath);
                                   auto pathString = path::to_utf8(newPath);
                                   if (isWritten)
@@ -91,7 +101,6 @@ namespace anm2ed::imgui
     Window window{};
     window.title = LABEL_SPRITESHEETS_WINDOW;
     window.isOpen = &Settings::windowIsSpritesheets;
-    window.containerType = ElementType::SPRITESHEETS;
     window.elementType = ElementType::SPRITESHEET;
     window.childLabel = "##Spritesheets Child";
     window.cardLines = SPRITESHEET_CARD_LINES;
@@ -113,11 +122,12 @@ namespace anm2ed::imgui
     window.popup2 = PopupHelper(LABEL_SPRITESHEETS_PACK_POPUP, POPUP_SMALL_NO_HEIGHT);
     window.popup3 = PopupHelper(LABEL_TASKBAR_OVERWRITE_FILE, POPUP_SMALL_NO_HEIGHT);
     window.storage_get = [](Document& document) -> Storage& { return document.spritesheet; };
-    window.row_label_get = [](Document& document, const Element& spritesheet)
+    window_items_bind<model::Spritesheet>(window, spritesheets_get);
+    window.row_label_get = [](Document& document, int id)
     {
-      auto pathString = path::to_utf8(spritesheet.path);
-      auto label = std::vformat(localize.get(FORMAT_SPRITESHEET), std::make_format_args(spritesheet.id, pathString));
-      return document.spritesheet_is_dirty(spritesheet.id)
+      auto pathString = path::to_utf8(spritesheet_get(document, id)->path);
+      auto label = std::vformat(localize.get(FORMAT_SPRITESHEET), std::make_format_args(id, pathString));
+      return document.spritesheet_is_dirty(id)
                  ? std::vformat(localize.get(FORMAT_SPRITESHEET_NOT_SAVED), std::make_format_args(label))
                  : label;
     };
@@ -127,16 +137,17 @@ namespace anm2ed::imgui
       document.region.reference = -1;
       document.region.selection.clear();
     };
-    window.card_image_get = [](Document& document, Resources& resources, const Element& spritesheet)
+    window.card_image_get = [](Document& document, Resources& resources, int id)
     {
-      auto texture = document.texture_get(spritesheet.id);
+      auto texture = document.texture_get(id);
       auto isValid = texture && texture->is_valid();
       auto& image = isValid ? *texture : resources.icons[icon::NONE];
       return WindowCardImage{.texture = &image, .size = glm::vec2(image.size), .isValid = isValid};
     };
-    window.tooltip_draw = [](Document& document, Resources& resources, const Element& spritesheet)
+    window.tooltip_draw = [](Document& document, Resources& resources, int id)
     {
-      auto texture = document.texture_get(spritesheet.id);
+      auto& spritesheet = *spritesheet_get(document, id);
+      auto texture = document.texture_get(id);
       auto isValid = texture && texture->is_valid();
       auto& image = isValid ? *texture : resources.icons[icon::NONE];
       window_tooltip_image_draw(
@@ -169,36 +180,37 @@ namespace anm2ed::imgui
     };
     window.open = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
     {
-      auto spritesheet = window_element_get(window, document, document.spritesheet.reference);
+      auto spritesheet = spritesheet_get(document, document.spritesheet.reference);
       if (spritesheet && window.dialog) window_directory_open(*window.dialog, document, spritesheet->path);
     };
-    window.remove_unused = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
+    window.remove_unused = [](Window&, Manager&, Settings&, Document& document, Clipboard&)
     {
-      auto unused = document.anm2.element_unused(ElementType::SPRITESHEET);
-      auto spritesheets = window_container_get(window, document);
-      if (unused.empty() || !spritesheets) return;
+      auto unused = document.model.unused_get(ElementType::SPRITESHEET);
+      if (unused.empty()) return;
       document.edit_apply(EDIT_REMOVE_UNUSED_SPRITESHEETS,
-                          [&](Anm2&)
+                          [&](model::Model& model)
                           {
-                            for (auto id : unused)
-                              if (auto spritesheet = window_element_get(window, document, id))
-                              {
-                                toast_log(Level::INFO, TOAST_REMOVE_SPRITESHEET, id, path::to_utf8(spritesheet->path));
-                                element_child_id_erase(*spritesheets, ElementType::SPRITESHEET, id);
-                              }
+                            std::erase_if(model.content.spritesheets,
+                                          [&](const model::Spritesheet& spritesheet)
+                                          {
+                                            if (!unused.contains(spritesheet.id)) return false;
+                                            toast_log(Level::INFO, TOAST_REMOVE_SPRITESHEET, spritesheet.id,
+                                                      path::to_utf8(spritesheet.path));
+                                            return true;
+                                          });
                           });
     };
-    window.reload = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
+    window.reload = [](Window&, Manager&, Settings&, Document& document, Clipboard&)
     {
       auto selected = document.spritesheet.selection;
       document.edit_apply(EDIT_RELOAD_SPRITESHEETS,
-                          [&](Anm2&)
+                          [&](model::Model&)
                           {
                             for (auto id : selected)
                               document.texture_reload(id);
                           });
       for (auto id : selected)
-        if (auto spritesheet = window_element_get(window, document, id))
+        if (auto spritesheet = spritesheet_get(document, id))
         {
           document.spritesheet_hash_set_saved(id);
           toast_log(Level::INFO, TOAST_RELOAD_SPRITESHEET, id, path::to_utf8(spritesheet->path));

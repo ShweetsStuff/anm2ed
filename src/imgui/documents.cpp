@@ -52,10 +52,10 @@ namespace anm2ed::imgui
     manager.command_push({manager.selected, [paths, preset](Manager&, Document& document)
                           {
                             document.edit_apply(EDIT_MERGE_ANM2,
-                                                [&](Anm2& anm2)
+                                                [&](model::Model& model)
                                                 {
                                                   for (auto& path : paths)
-                                                    anm2.file_merge(path, document.directory_get(), preset);
+                                                    edit::file_merge(model, path, document.directory_get(), preset);
                                                 });
                           }});
   }
@@ -311,12 +311,9 @@ namespace anm2ed::imgui
 
             if (isSpritesheetDirty)
             {
-              auto spritesheets = closeDocument.anm2.element_get(ElementType::SPRITESHEETS);
-              if (spritesheets)
               {
-                for (auto& spritesheet : spritesheets->children)
+                for (auto& spritesheet : closeDocument.model.content.spritesheets)
                 {
-                  if (spritesheet.type != ElementType::SPRITESHEET) continue;
                   auto id = spritesheet.id;
                   auto texture = closeDocument.texture_get(id);
                   if (texture && closeDocument.spritesheet_is_dirty(id))

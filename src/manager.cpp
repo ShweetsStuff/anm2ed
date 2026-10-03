@@ -256,12 +256,17 @@ namespace anm2ed
   void Manager::item_properties_open(ElementType type, int id)
   {
     auto document = get();
-    auto row = track_container_get(type);
-    auto element = id == -1 || !document ? nullptr : document->anm2.element_get(type, id);
-    if (!document || !row || (id != -1 && !element)) return;
-    itemEdit = element ? *element : element_make(type);
-    (type == ElementType::LAYER_ELEMENT ? document->layer : document->null).reference = id;
-    itemPropertiesPopups[row - TRACK_CONTAINERS].open();
+    if (!document || (type != ElementType::LAYER_ELEMENT && type != ElementType::NULL_ELEMENT)) return;
+    auto isLayer = type == ElementType::LAYER_ELEMENT;
+    auto& content = document->model.content;
+    auto layer = isLayer ? model::item_get(content.layers, id) : nullptr;
+    auto null = isLayer ? nullptr : model::item_get(content.nulls, id);
+    if (id != -1 && !layer && !null) return;
+    itemEdit = layer  ? ItemEdit{layer->name, layer->spritesheetId, false}
+               : null ? ItemEdit{null->name, 0, null->isShowRect}
+                      : ItemEdit{};
+    (isLayer ? document->layer : document->null).reference = id;
+    itemPropertiesPopups[isLayer ? 0 : 1].open();
   }
 
   void Manager::recent_files_trim()

@@ -8,9 +8,9 @@
 #include <string_view>
 #include <vector>
 
-namespace anm2ed
+namespace anm2ed::model
 {
-  struct Element;
+  struct Shader;
 }
 
 namespace anm2ed::resource::shader
@@ -366,9 +366,9 @@ namespace anm2ed::resource::shader
                                {GRID_VERTEX, GRID_FRAGMENT}};
 
   UniformBinding uniform_binding_auto_get(std::string_view, UniformValueType);
-  void uniform_configs_apply(const Element&, std::vector<Uniform>&);
-  bool uniform_configs_trim(Element&, const std::vector<Uniform>&);
-  void uniform_config_save(Element&, const Uniform&);
+  void uniform_configs_apply(const model::Shader&, std::vector<Uniform>&);
+  bool uniform_configs_trim(model::Shader&, const std::vector<Uniform>&);
+  void uniform_config_save(model::Shader&, const Uniform&);
   UniformBinding uniform_binding_get(std::string_view);
   std::string_view uniform_binding_value_get(UniformBinding);
   std::string_view uniform_binding_label_get(UniformBinding);

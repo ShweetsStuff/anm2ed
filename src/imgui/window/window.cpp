@@ -38,53 +38,6 @@ namespace anm2ed::imgui
 
   bool is_drag_drop_active() { return ImGui::GetDragDropPayload() != nullptr; }
 
-  Element* window_container_get(const Window& window, Document& document)
-  {
-    return window.container_get ? window.container_get(document) : document.anm2.element_get(window.containerType);
-  }
-
-  Element* window_element_get(const Window& window, Document& document, int key)
-  {
-    if (window.element_get) return window.element_get(document.anm2, key);
-    auto container = window_container_get(window, document);
-    return container ? child_id_get(*container, window.elementType, key) : nullptr;
-  }
-
-  void window_element_apply_push(Window& window, Manager& manager, const Element& edited, int reference)
-  {
-    manager.command_push(
-        {manager.selected, [&window, edited, reference](Manager&, Document& document)
-         {
-           auto container = window_container_get(window, document);
-           auto target =
-               reference == -1 || !container ? nullptr : child_id_get(*container, window.elementType, reference);
-           if (!container || (reference != -1 && !target)) return;
-           document.edit_apply(reference == -1 ? window.addEdit : window.propertiesEdit,
-                               [&](Anm2&)
-                               {
-                                 auto changed = edited;
-                                 changed.type = window.elementType;
-                                 changed.tag = element_make(window.elementType).tag;
-                                 changed.id = reference == -1
-                                                  ? element_child_next_id_get(*container, window.elementType)
-                                                  : reference;
-                                 if (target)
-                                   *target = changed;
-                                 else
-                                 {
-                                   auto insertIndex = window.insert_index_get ? window.insert_index_get(document)
-                                                                              : (int)container->children.size();
-                                   container->children.insert(container->children.begin() + insertIndex, changed);
-                                   window.newElementId = changed.id;
-                                 }
-                                 auto& storage = window.storage_get(document);
-                                 storage.selection = {changed.id};
-                                 storage.reference = changed.id;
-                                 if (window.row_select) window.row_select(window, document, changed.id);
-                               });
-         }});
-  }
-
   void window_command_push(Window& window, Manager& manager, Settings& settings, Clipboard& clipboard,
                            const Window::Command& command)
   {
@@ -94,19 +47,13 @@ namespace anm2ed::imgui
                           { command(window, manager, settings, document, clipboard); }});
   }
 
-  void window_rename_finish(Window& window, Manager& manager, int key, int count, const std::string& name)
+  void window_rename_finish(Window& window, Manager& manager, int key, const std::string& name)
   {
-    manager.command_push({manager.selected, [&window, key, count, name](Manager&, Document& document)
+    manager.command_push({manager.selected, [&window, key, name](Manager&, Document& document)
                           {
-                            auto element = window_element_get(window, document, key);
-                            if (!element || element->name == name) return;
-                            document.edit_apply(window.renameEdit,
-                                                [&](Anm2&)
-                                                {
-                                                  element->name = name;
-                                                  if (window.rename_finish)
-                                                    window.rename_finish(document, *element, key, count);
-                                                });
+                            if (!window.rename_apply || window.name_get(document, key) == name) return;
+                            document.edit_apply(window.renameEdit, [&](model::Model& model)
+                                                { window.rename_apply(document, model, key, name); });
                           }});
   }
 
@@ -114,50 +61,33 @@ namespace anm2ed::imgui
   {
     std::string clipboardText{};
     for (auto key : window.storage_get(document).selection)
-      if (auto element = window_element_get(window, document, key)) clipboardText += element_to_string(*element);
+      clipboardText += window.copy_get(document, key);
     if (!clipboardText.empty()) clipboard.set(clipboardText);
   }
 
   void window_paste(Window& window, Manager&, Settings&, Document& document, Clipboard& clipboard)
   {
-    if (clipboard.is_empty()) return;
-    auto& storage = window.storage_get(document);
-    auto container = window_container_get(window, document);
-    auto maxIdBefore = container ? element_child_max_id_get(*container, window.elementType) : -1;
-    auto pasted = document.anm2;
+    if (clipboard.is_empty() || !window.paste_apply) return;
     std::string errorString{};
-
-    if (!pasted.deserialize(window.elementType, clipboard.get(), true, &errorString, document.directory_get()))
+    auto key = -1;
+    document.edit_apply(window.pasteEdit, [&](model::Model& model)
+                        { key = window.paste_apply(document, model, clipboard.get(), &errorString); });
+    if (key == -1)
     {
-      toast_log(Level::ERROR, window.deserializeFailedToast, errorString);
+      if (!errorString.empty()) toast_log(Level::ERROR, window.deserializeFailedToast, errorString);
       return;
     }
-
-    document.edit_apply(window.pasteEdit,
-                        [&](Anm2&)
-                        {
-                          document.anm2 = std::move(pasted);
-                          container = window_container_get(window, document);
-                          auto maxIdAfter = container ? element_child_max_id_get(*container, window.elementType) : -1;
-                          if (maxIdAfter <= maxIdBefore) return;
-                          window.newElementId = maxIdAfter;
-                          storage.selection = {maxIdAfter};
-                          storage.reference = maxIdAfter;
-                          if (window.row_select) window.row_select(window, document, maxIdAfter);
-                        });
+    auto& storage = window.storage_get(document);
+    window.newElementId = key;
+    storage.selection = {key};
+    storage.reference = key;
+    if (window.row_select) window.row_select(window, document, key);
   }
 
   void window_remove_unused(Window& window, Manager&, Settings&, Document& document, Clipboard&)
   {
-    auto unused = document.anm2.element_unused(window.elementType);
-    auto container = window_container_get(window, document);
-    if (unused.empty() || !container) return;
-    document.edit_apply(window.removeUnusedEdit,
-                        [&](Anm2&)
-                        {
-                          for (auto id : unused)
-                            element_child_id_erase(*container, window.elementType, id);
-                        });
+    if (!window.unused_remove) return;
+    document.edit_apply(window.removeUnusedEdit, [&](model::Model& model) { window.unused_remove(document, model); });
   }
 
   bool is_window_group_selected(const Window& window)
@@ -358,31 +288,32 @@ namespace anm2ed::imgui
     if (window.scrollQueued == key) window.scrollQueued = -1;
   }
 
-  void window_tooltip_update(Window& window, Resources& resources, Document& document, const Element& element)
+  void window_tooltip_update(Window& window, Resources& resources, Document& document, int key)
   {
     if (!window.tooltip_draw) return;
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, window.tooltipItemSpacing);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, window.tooltipWindowPadding);
     if (ImGui::BeginItemTooltip())
     {
-      window.tooltip_draw(document, resources, element);
+      window.tooltip_draw(document, resources, key);
       ImGui::EndTooltip();
     }
     ImGui::PopStyleVar(2);
   }
 
-  bool window_row_draw(Window& window, Manager& manager, Resources& resources, Document& document, Element& element,
-                       int key, int index, int arrowSelectionId)
+  bool window_row_draw(Window& window, Manager& manager, Resources& resources, Document& document, int key, int index,
+                       int arrowSelectionId)
   {
     auto& storage = window.storage_get(document);
     auto isSelected = storage.selection.contains(key) || arrowSelectionId == key;
     auto isReferenced =
         window_flag_has(window.flags, WINDOW_REFERENCE_ITALIC) && (storage.reference == key || arrowSelectionId == key);
-    auto font = window.row_font_get ? window.row_font_get(document, element, key)
+    auto font = window.row_font_get ? window.row_font_get(document, key)
                 : isReferenced      ? resource::font::ITALICS
                                     : resource::font::REGULAR;
     auto isFontPushed = font != resource::font::REGULAR;
-    auto label = window.row_label_get ? window.row_label_get(document, element) : element.name;
+    auto name = window.name_get ? window.name_get(document, key) : std::string{};
+    auto label = window.row_label_get ? window.row_label_get(document, key) : name;
 
     ImGui::PushID(key);
     ImGui::SetNextItemSelectionUserData(index);
@@ -401,16 +332,16 @@ namespace anm2ed::imgui
       auto isRenaming = window.renameId == key;
       auto renameLabel =
           std::format("###Document #{} Window #{} Element #{}", manager.selected, (int)window.elementType, key);
-      isActivated = selectable_input_text(label, renameLabel, isRenaming ? window.renameText : element.name, isSelected,
+      isActivated = selectable_input_text(label, renameLabel, isRenaming ? window.renameText : name, isSelected,
                                           ImGuiSelectableFlags_None, window.renameState);
       if (isActivated && window.renameState == RENAME_BEGIN)
       {
         window.renameId = key;
-        window.renameText = element.name;
+        window.renameText = name;
       }
       else if (isActivated && window.renameState == RENAME_FINISHED)
       {
-        if (isRenaming) window_rename_finish(window, manager, key, (int)window.order.size(), window.renameText);
+        if (isRenaming) window_rename_finish(window, manager, key, window.renameText);
         window.renameId = -1;
         window.renameText.clear();
       }
@@ -427,8 +358,8 @@ namespace anm2ed::imgui
         ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && window.properties_open)
       window.properties_open(manager, key);
 
-    auto isBreak = window.row_drag_drop_update && window.row_drag_drop_update(window, manager, document, element, key);
-    window_tooltip_update(window, resources, document, element);
+    auto isBreak = window.row_drag_drop_update && window.row_drag_drop_update(window, manager, document, key, index);
+    window_tooltip_update(window, resources, document, key);
     ImGui::PopID();
     return isBreak;
   }
@@ -463,16 +394,13 @@ namespace anm2ed::imgui
   }
 
   void window_cards_draw(Window& window, Manager& manager, Settings& settings, Resources& resources,
-                         Clipboard& clipboard, Document& document, Element* container)
+                         Clipboard& clipboard, Document& document)
   {
     auto& storage = window.storage_get(document);
     auto cardSize = ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetTextLineHeightWithSpacing() * window.cardLines);
     auto style = ImGui::GetStyle();
 
-    window.order.clear();
-    if (container)
-      for (auto& element : container->children)
-        if (element.type == window.elementType) window.order.push_back(element.id);
+    window.order = window.keys_get(document);
 
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2());
     auto arrowSelectionId = window_selection_start(window, document, window.order);
@@ -480,8 +408,6 @@ namespace anm2ed::imgui
     for (int i = 0; i < (int)window.order.size(); i++)
     {
       auto id = window.order[i];
-      auto element = child_id_get(*container, window.elementType, id);
-      if (!element) continue;
 
       ImGui::PushID(id);
       if (arrowSelectionId == id)
@@ -500,9 +426,9 @@ namespace anm2ed::imgui
         auto cursorPos = ImGui::GetCursorPos();
         auto isSelected = storage.selection.contains(id) || arrowSelectionId == id;
         auto isReferenced = id == storage.reference || arrowSelectionId == id;
-        auto image = window.card_image_get(document, resources, *element);
+        auto image = window.card_image_get(document, resources, id);
         auto tint = image.isValid ? CARD_TINT_VALID : CARD_TINT_INVALID;
-        auto label = window.row_label_get ? window.row_label_get(document, *element) : element->name;
+        auto label = window.row_label_get ? window.row_label_get(document, id) : window.name_get(document, id);
 
         ImGui::SetNextItemSelectionUserData(i);
         ImGui::SetNextItemStorageID(id);
@@ -521,10 +447,10 @@ namespace anm2ed::imgui
                                               window.tooltipWindowPadding.x * TOOLTIP_PADDING_MULTIPLIER,
                                           0),
                                    ImGuiCond_Appearing);
-          window_tooltip_update(window, resources, document, *element);
+          window_tooltip_update(window, resources, document, id);
         }
 
-        isBreak = window.row_drag_drop_update && window.row_drag_drop_update(window, manager, document, *element, i);
+        isBreak = window.row_drag_drop_update && window.row_drag_drop_update(window, manager, document, id, i);
 
         auto aspectRatio = image.size.y != 0.0f ? image.size.x / image.size.y : 1.0f;
         auto imageSize = ImVec2(cardSize.y, cardSize.y);
@@ -556,21 +482,10 @@ namespace anm2ed::imgui
   void window_list_draw(Window& window, Manager& manager, Settings& settings, Resources& resources,
                         Clipboard& clipboard, Document& document)
   {
-    std::vector<Element*> elements{};
-    window.order.clear();
-    if (auto container = window_container_get(window, document))
-      for (auto& element : container->children)
-        if (element.type == window.elementType)
-        {
-          window.order.push_back(window.element_key_get ? window.element_key_get(element, (int)elements.size())
-                                                        : element.id);
-          elements.push_back(&element);
-        }
-
+    window.order = window.keys_get(document);
     auto arrowSelectionId = window_selection_start(window, document, window.order);
-    for (int i = 0; i < (int)elements.size(); ++i)
-      if (window_row_draw(window, manager, resources, document, *elements[i], window.order[i], i, arrowSelectionId))
-        break;
+    for (int i = 0; i < (int)window.order.size(); ++i)
+      if (window_row_draw(window, manager, resources, document, window.order[i], i, arrowSelectionId)) break;
     window_selection_finish(window, manager, settings, clipboard, document, arrowSelectionId);
   }
 
@@ -635,8 +550,7 @@ namespace anm2ed::imgui
           if (window.rows_update)
             window.rows_update(window, manager, settings, resources, clipboard, *document);
           else if (isCards)
-            window_cards_draw(window, manager, settings, resources, clipboard, *document,
-                              window_container_get(window, *document));
+            window_cards_draw(window, manager, settings, resources, clipboard, *document);
           else
             window_list_draw(window, manager, settings, resources, clipboard, *document);
 

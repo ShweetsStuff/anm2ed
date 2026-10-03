@@ -540,11 +540,6 @@ namespace anm2ed
     return sink.root;
   }
 
-  XMLElement* element_to_xml(XMLDocument& document, const Element& element, Flags flags)
-  {
-    return element_to_xml(document, element, ElementType::UNKNOWN, flags);
-  }
-
   std::string element_to_string(const Element& element, ElementType parentType, Flags flags)
   {
     XMLDocument document{};
@@ -557,49 +552,4 @@ namespace anm2ed
     return element_to_string(element, ElementType::UNKNOWN, flags);
   }
 
-  bool Anm2::deserialize(ElementType type, const std::string& string, bool isAppend, std::string* errorString,
-                         const std::filesystem::path& directory, int spritesheetId)
-  {
-    XMLDocument document{};
-    if (document.Parse(string.c_str()) != XML_SUCCESS)
-    {
-      if (errorString) *errorString = document.ErrorStr();
-      return false;
-    }
-
-    auto tag = element_tag_get(type);
-    if (tag.empty() || !document.FirstChildElement(tag.data()))
-    {
-      if (errorString) *errorString = std::format("No valid {}(s).", tag);
-      return false;
-    }
-
-    auto containerType = type == ElementType::REGION ? ElementType::SPRITESHEET : ELEMENT_CONTAINERS[(int)type];
-    auto container =
-        type == ElementType::REGION ? element_get(containerType, spritesheetId) : element_get(containerType);
-    if (!container)
-    {
-      if (errorString) *errorString = std::format("No {} container.", element_tag_get(containerType));
-      return false;
-    }
-
-    auto isPath = type == ElementType::SOUND_ELEMENT || type == ElementType::SPRITESHEET;
-    std::optional<WorkingDirectory> workingDirectory{};
-    if (isPath && !directory.empty()) workingDirectory.emplace(directory);
-
-    for (auto xmlElement = document.FirstChildElement(tag.data()); xmlElement;
-         xmlElement = xmlElement->NextSiblingElement(tag.data()))
-    {
-      auto element = element_read(xmlElement);
-      if (element.type != type) continue;
-      if (isAppend)
-        element.id = element_child_next_id_get(*container, type);
-      else
-        element_child_id_erase(*container, type, element.id);
-      if (isPath) element.path = path::backslash_handle(element.path);
-      container->children.push_back(element);
-    }
-
-    return true;
-  }
 }

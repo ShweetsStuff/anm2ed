@@ -17,9 +17,9 @@ TEST_CASE("local corpus matches baselines" * doctest::skip(!is_env_set("ANM2ED_C
     if (line.empty()) continue;
     INFO("file: ", line);
     auto key = std::format("{:016x}", std::hash<std::string>{}(line));
-    Anm2 anm2{};
+    model::Model anm2{};
     std::string error{};
-    if (!anm2.load(line, &error))
+    if (!model::model_load(anm2, line, &error))
     {
       golden_check(baseline / (key + ".error.txt"), error, true);
       continue;

@@ -64,13 +64,6 @@ namespace anm2ed
     void close() override { byte_append(']'); }
   };
 
-  std::uint64_t element_hash(const Element& element, Flags flags)
-  {
-    HashSink sink{};
-    element_emit(sink, element, ElementType::UNKNOWN, flags);
-    return sink.hash;
-  }
-
   std::uint64_t anm2_hash_get(const Element& root, Options options)
   {
     HashSink sink{};

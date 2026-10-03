@@ -32,13 +32,13 @@ namespace anm2ed::imgui
     Reference target{drag.animationIndex, targetType, targetID, -1, targetGroupType, targetGroupId};
     edit_push(
         EDIT_MOVE_FRAMES,
-        [frames = std::set<Reference>(drag.references.begin(), drag.references.end()), target, insertIndex](Anm2& anm2)
-        { return edit::frames_move(anm2, frames, target, insertIndex); },
+        [frames = std::set<Reference>(drag.references.begin(), drag.references.end()), target,
+         insertIndex](model::Model& model) { return edit::frames_move(model, frames, target, insertIndex); },
         [=, this](Document& document, const edit::Uids& uids)
         {
           frames_select_for(document, uids);
           if (targetType == LAYER)
-            if (auto layer = document.anm2.element_get(ElementType::LAYER_ELEMENT, targetID))
+            if (auto layer = model::item_get(document.model.content.layers, targetID))
               document.spritesheet.reference = layer->spritesheetId;
         });
   }
@@ -166,11 +166,9 @@ namespace anm2ed::imgui
       auto rowMinY = cursorScreenPos.y + scroll.y - frameBoxClipMin.y;
       auto rowMaxY = rowMinY + childSize.y;
       float selectionFrameTime{};
-      auto frameType = track_frame_type_get(*item);
       int frameIndex{};
-      for (const auto& frame : item->children)
+      for (const auto& frame : item->frames)
       {
-        if (frame.type != frameType) continue;
         auto frameReference = row_reference_make(frameIndex);
         auto frameStart = type == TRIGGER ? frame.atFrame : selectionFrameTime;
         auto frameEnd = type == TRIGGER ? frameStart + 1.0f : frameStart + frame.duration;
@@ -321,15 +319,13 @@ namespace anm2ed::imgui
           {
             auto mouseX = mousePos.x - cursorScreenPos.x;
             auto targetTime = glm::max(0.0f, mouseX / frameSize.x);
-            int dropIndex = track_frames_count_get(*item);
+            int dropIndex = (int)item->frames.size();
             float dropFrameTime{};
             float frameTime{};
-            auto frameType = track_frame_type_get(*item);
             int frameIndex{};
 
-            for (const auto& frame : item->children)
+            for (const auto& frame : item->frames)
             {
-              if (frame.type != frameType) continue;
               auto frameStart = frameTime;
               auto frameEnd = frameStart + frame.duration;
               if (!isFrameMoveHoveredFrame && targetTime >= frameStart && targetTime < frameEnd)
@@ -368,14 +364,11 @@ namespace anm2ed::imgui
           }
         }
 
-        auto frameType = track_frame_type_get(*item);
         auto& selectedFrames = document.selection.uids[SelectionKind::FRAMES];
-        int frameIndex{};
-        for (int childIndex = 0; childIndex < (int)item->children.size(); ++childIndex)
+        for (int frameIndex = 0; frameIndex < (int)item->frames.size(); ++frameIndex)
         {
-          auto& frame = item->children[childIndex];
-          if (frame.type != frameType) continue;
-          ImGui::PushID(childIndex);
+          auto& frame = item->frames[frameIndex];
+          ImGui::PushID(frameIndex);
 
           auto frameReference = row_reference_make(frameIndex);
           auto isFrameVisible = isVisible && frame.isVisible;
@@ -391,7 +384,6 @@ namespace anm2ed::imgui
           {
             if (type != TRIGGER) frameTime += frame.duration;
             ImGui::PopID();
-            ++frameIndex;
             continue;
           }
           auto buttonPos = ImVec2(cursorPos.x + (frameTime * frameSize.x), cursorPos.y);
@@ -416,7 +408,7 @@ namespace anm2ed::imgui
           if (ImGui::Selectable("##Frame Button", isSelected, ImGuiSelectableFlags_None, buttonSize))
           {
             if (type == LAYER)
-              if (auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, id))
+              if (auto layer = model::item_get(model.content.layers, id))
                 document.spritesheet.reference = layer->spritesheetId;
 
             if (type != TRIGGER)
@@ -425,9 +417,9 @@ namespace anm2ed::imgui
               {
                 auto targetReference = frameReference;
                 edit_push(EDIT_FRAME_INTERPOLATION,
-                          [=](Anm2& anm2)
+                          [=](model::Model& model)
                           {
-                            if (auto frame = anm2.element_get(targetReference))
+                            if (auto frame = model.frame_edit(targetReference))
                               frame->interpolation = frame->interpolation == Interpolation::NONE ? Interpolation::LINEAR
                                                                                                  : Interpolation::NONE;
                           });
@@ -535,7 +527,6 @@ namespace anm2ed::imgui
           if (type != TRIGGER) frameTime += frame.duration;
 
           ImGui::PopID();
-          ++frameIndex;
         }
 
         if (isFrameMovePreview)
@@ -581,7 +572,7 @@ namespace anm2ed::imgui
           auto atFrame = glm::clamp(
               hoveredTime, 0, settings.playbackIsClamp && animation ? animation->frameNum - 1 : FRAME_NUM_MAX - 1);
           command_push([=](Manager&, Document& document)
-                       { edit::trigger_at_frame_set(document.anm2, targetReference, atFrame); });
+                       { edit::trigger_at_frame_set(document.model, targetReference, atFrame); });
         }
         else
         {
@@ -590,7 +581,7 @@ namespace anm2ed::imgui
             durations[targetReference] = draggedFrameStartDuration + durationDelta;
           for (auto frameDuration : draggedFrameStartDurations)
             durations[frameDuration.reference] = frameDuration.duration + durationDelta;
-          command_push([=](Manager&, Document& document) { edit::frame_durations_set(document.anm2, durations); });
+          command_push([=](Manager&, Document& document) { edit::frame_durations_set(document.model, durations); });
         }
       }
 
@@ -601,8 +592,8 @@ namespace anm2ed::imgui
         command_push(
             [=, this](Manager&, Document& document)
             {
-              auto item = command_item_reference_get(document, targetReference);
-              if (targetType == TRIGGER && item) frames_sort_by_at_frame(*item);
+              auto item = document.model.track_edit(targetReference);
+              if (targetType == TRIGGER && item) model::frames_sort_by_at_frame(*item);
               document.change();
             });
         isDraggedFrameActive = false;
@@ -644,9 +635,8 @@ namespace anm2ed::imgui
       auto animationsLength = [&]()
       {
         int length{};
-        if (auto animations = anm2.element_get(ElementType::ANIMATIONS))
-          for (auto& item : animations->children)
-            if (item.type == ElementType::ANIMATION) length = std::max(length, animation_length_get(item));
+        for (auto [index, item] : model.animations_get())
+          length = std::max(length, model::animation_length_get(*item));
         return length;
       }();
       auto childWidth = animationsLength * ImGui::GetTextLineHeight();
@@ -865,11 +855,9 @@ namespace anm2ed::imgui
         {
           auto animationIndex = animationLengthEditIndex != -1 ? animationLengthEditIndex : currentAnimationIndex;
           edit_push(EDIT_ANIMATION_LENGTH,
-                    [=](Anm2& anm2)
+                    [=](model::Model& model)
                     {
-                      auto animation = anm2.element_get(ElementType::ANIMATION, animationIndex);
-                      if (!animation) return;
-                      animation->frameNum = frameNum;
+                      if (auto animation = model.animation_edit(animationIndex)) animation->frameNum = frameNum;
                     });
         }
         if (ImGui::IsItemDeactivated()) animationLengthEditIndex = -1;
@@ -883,11 +871,9 @@ namespace anm2ed::imgui
         {
           auto animationIndex = reference.animationIndex;
           edit_push(EDIT_LOOP,
-                    [=](Anm2& anm2)
+                    [=](model::Model& model)
                     {
-                      auto animation = anm2.element_get(ElementType::ANIMATION, animationIndex);
-                      if (!animation) return;
-                      animation->isLoop = isLoop;
+                      if (auto animation = model.animation_edit(animationIndex)) animation->isLoop = isLoop;
                     });
         }
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LOOP_ANIMATION));
@@ -896,43 +882,21 @@ namespace anm2ed::imgui
 
       ImGui::SameLine();
 
-      auto info = element_first_get(anm2.root, ElementType::INFO);
-      auto fps = info ? info->fps : 30;
+      auto fps = model.info.fps;
       ImGui::SetNextItemWidth(widgetSize.x);
       if (input_int_range(localize.get(LABEL_FPS), fps, FPS_MIN, FPS_MAX))
       {
-        edit_push(EDIT_FPS,
-                  [=](Anm2& anm2)
-                  {
-                    auto info = element_first_get(anm2.root, ElementType::INFO);
-                    if (!info)
-                    {
-                      anm2.root.children.push_back(element_make(ElementType::INFO));
-                      info = &anm2.root.children.back();
-                    }
-                    info->fps = fps;
-                  });
+        edit_push(EDIT_FPS, [=](model::Model& model) { model.info.fps = fps; });
       }
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FPS));
 
       ImGui::SameLine();
 
-      info = element_first_get(anm2.root, ElementType::INFO);
-      auto createdBy = info ? info->createdBy : std::string{};
+      auto createdBy = model.info.createdBy;
       ImGui::SetNextItemWidth(widgetSize.x);
       if (input_text_string(localize.get(LABEL_AUTHOR), &createdBy))
       {
-        edit_push(EDIT_AUTHOR,
-                  [=](Anm2& anm2)
-                  {
-                    auto info = element_first_get(anm2.root, ElementType::INFO);
-                    if (!info)
-                    {
-                      anm2.root.children.push_back(element_make(ElementType::INFO));
-                      info = &anm2.root.children.back();
-                    }
-                    info->createdBy = createdBy;
-                  });
+        edit_push(EDIT_AUTHOR, [=](model::Model& model) { model.info.createdBy = createdBy; });
       }
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_AUTHOR));
 

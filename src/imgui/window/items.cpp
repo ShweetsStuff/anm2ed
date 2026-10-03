@@ -11,16 +11,27 @@ namespace anm2ed::imgui
 {
   constexpr int ITEM_PROPERTIES_ROWS = 2;
 
-  void item_tooltip_draw(Resources& resources, const Element& element)
+  std::vector<model::Layer>* layers_get(Document&, model::Model& model) { return &model.content.layers; }
+  std::vector<model::Null>* nulls_get(Document&, model::Model& model) { return &model.content.nulls; }
+
+  void item_tooltip_draw(Resources& resources, const std::string& name, int id)
   {
-    window_tooltip_name_draw(resources, element.name);
-    ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_ID), std::make_format_args(element.id)).c_str());
+    window_tooltip_name_draw(resources, name);
+    ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_ID), std::make_format_args(id)).c_str());
   }
 
-  void item_properties_popup_update(Window& window, Manager& manager, Document& document, StringType nameTooltip,
-                                    const std::function<void(Element&)>& fields_draw)
+  void item_tooltip_set(Window& window)
   {
-    auto& popup = manager.itemPropertiesPopups[track_container_get(window.elementType) - TRACK_CONTAINERS];
+    window.tooltip_draw = [name_get = window.name_get](Document& document, Resources& resources, int id)
+    { item_tooltip_draw(resources, name_get(document, id), id); };
+  }
+
+  template <class Item>
+  void item_properties_popup_update(Window& window, Manager& manager, Document& document, StringType nameTooltip,
+                                    std::function<std::vector<Item>*(Document&, model::Model&)> items_get,
+                                    const std::function<void(Manager::ItemEdit&)>& fields_draw)
+  {
+    auto& popup = manager.itemPropertiesPopups[window.elementType == ElementType::LAYER_ELEMENT ? 0 : 1];
     auto reference = window.storage_get(document).reference;
 
     popup.trigger();
@@ -36,7 +47,13 @@ namespace anm2ed::imgui
       ImGui::EndChild();
 
       auto result = window_popup_buttons_draw(manager, localize.get(reference == -1 ? BASIC_ADD : BASIC_CONFIRM));
-      if (result == PopupButton::CONFIRM) window_element_apply_push(window, manager, manager.itemEdit, reference);
+      if (result == PopupButton::CONFIRM)
+      {
+        Item item{.name = manager.itemEdit.name};
+        if constexpr (requires { item.spritesheetId; }) item.spritesheetId = manager.itemEdit.spritesheetId;
+        if constexpr (requires { item.isShowRect; }) item.isShowRect = manager.itemEdit.isShowRect;
+        window_item_apply_push(window, manager, item, reference, items_get);
+      }
       if (result != PopupButton::NONE) popup.close();
       ImGui::EndPopup();
     }
@@ -49,14 +66,11 @@ namespace anm2ed::imgui
     Window window{};
     window.title = title;
     window.isOpen = isOpen;
-    window.containerType = ELEMENT_CONTAINERS[(int)elementType];
     window.elementType = elementType;
     window.childLabel = childLabel;
     window.tooltips = {{WINDOW_ADD, addTooltip}, {WINDOW_REMOVE_UNUSED, removeUnusedTooltip}};
     window.footer = {{WINDOW_ADD, WINDOW_REMOVE_UNUSED}};
     window.flags = WINDOW_ADD | WINDOW_REMOVE_UNUSED | WINDOW_COPY | WINDOW_PASTE;
-    window.tooltip_draw = [](Document&, Resources& resources, const Element& element)
-    { item_tooltip_draw(resources, element); };
     window.properties_open = [elementType](Manager& manager, int id) { manager.item_properties_open(elementType, id); };
     return window;
   }
@@ -72,25 +86,30 @@ namespace anm2ed::imgui
     window.deserializeFailedToast = TOAST_DESERIALIZE_LAYERS_FAILED;
     window.flags |= WINDOW_PROPERTIES;
     window.storage_get = [](Document& document) -> Storage& { return document.layer; };
-    window.row_label_get = [](Document&, const Element& layer)
+    window_items_bind<model::Layer>(window, layers_get);
+    window.row_label_get = [](Document& document, int id)
     {
-      return std::vformat(localize.get(FORMAT_LAYER), std::make_format_args(layer.id, layer.name, layer.spritesheetId));
+      auto layer = model::item_get(document.model.content.layers, id);
+      return std::vformat(localize.get(FORMAT_LAYER),
+                          std::make_format_args(layer->id, layer->name, layer->spritesheetId));
     };
-    window.tooltip_draw = [](Document&, Resources& resources, const Element& layer)
+    window.tooltip_draw = [](Document& document, Resources& resources, int id)
     {
-      item_tooltip_draw(resources, layer);
+      auto layer = model::item_get(document.model.content.layers, id);
+      item_tooltip_draw(resources, layer->name, id);
       ImGui::TextUnformatted(
-          std::vformat(localize.get(FORMAT_SPRITESHEET_ID), std::make_format_args(layer.spritesheetId)).c_str());
+          std::vformat(localize.get(FORMAT_SPRITESHEET_ID), std::make_format_args(layer->spritesheetId)).c_str());
     };
     window.popup_update = [](Window& window, Manager& manager, Settings&, Resources&, Clipboard&, Document& document)
     {
-      item_properties_popup_update(window, manager, document, TOOLTIP_ITEM_NAME,
-                                   [&](Element& layer)
-                                   {
-                                     combo_id_mapped(localize.get(LABEL_SPRITESHEET), &layer.spritesheetId,
-                                                     document.spritesheet.ids, document.spritesheet.labels);
-                                     ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_SPRITESHEET));
-                                   });
+      item_properties_popup_update<model::Layer>(window, manager, document, TOOLTIP_ITEM_NAME, layers_get,
+                                                 [&](Manager::ItemEdit& layer)
+                                                 {
+                                                   combo_id_mapped(localize.get(LABEL_SPRITESHEET),
+                                                                   &layer.spritesheetId, document.spritesheet.ids,
+                                                                   document.spritesheet.labels);
+                                                   ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_SPRITESHEET));
+                                                 });
     };
     return window;
   }
@@ -106,16 +125,21 @@ namespace anm2ed::imgui
     window.deserializeFailedToast = TOAST_DESERIALIZE_NULLS_FAILED;
     window.flags |= WINDOW_PROPERTIES | WINDOW_REFERENCE_ITALIC;
     window.storage_get = [](Document& document) -> Storage& { return document.null; };
-    window.row_label_get = [](Document&, const Element& null)
-    { return std::vformat(localize.get(FORMAT_NULL), std::make_format_args(null.id, null.name)); };
+    window_items_bind<model::Null>(window, nulls_get);
+    item_tooltip_set(window);
+    window.row_label_get = [name_get = window.name_get](Document& document, int id)
+    {
+      auto name = name_get(document, id);
+      return std::vformat(localize.get(FORMAT_NULL), std::make_format_args(id, name));
+    };
     window.popup_update = [](Window& window, Manager& manager, Settings&, Resources&, Clipboard&, Document& document)
     {
-      item_properties_popup_update(window, manager, document, TOOLTIP_NULL_NAME,
-                                   [](Element& null)
-                                   {
-                                     ImGui::Checkbox(localize.get(LABEL_RECT), &null.isShowRect);
-                                     ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_NULL_RECT));
-                                   });
+      item_properties_popup_update<model::Null>(window, manager, document, TOOLTIP_NULL_NAME, nulls_get,
+                                                [](Manager::ItemEdit& null)
+                                                {
+                                                  ImGui::Checkbox(localize.get(LABEL_RECT), &null.isShowRect);
+                                                  ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_NULL_RECT));
+                                                });
     };
     return window;
   }
@@ -132,17 +156,16 @@ namespace anm2ed::imgui
     window.flags |= WINDOW_RENAME;
     window.properties_open = {};
     window.storage_get = [](Document& document) -> Storage& { return document.event; };
+    window_items_bind<model::Event>(window, [](Document&, model::Model& model) { return &model.content.events; });
+    item_tooltip_set(window);
     window.add = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
     {
-      auto event = element_make(ElementType::EVENT_ELEMENT);
-      event.name = localize.get(TEXT_NEW_EVENT);
-      auto events = window_container_get(window, document);
-      if (!events) return;
       document.edit_apply(window.addEdit,
-                          [&](Anm2&)
+                          [&](model::Model& model)
                           {
-                            event.id = element_child_next_id_get(*events, ElementType::EVENT_ELEMENT);
-                            events->children.push_back(event);
+                            auto& events = model.content.events;
+                            auto& event = events.emplace_back(model::Event{.id = model::item_next_id_get(events),
+                                                                           .name = localize.get(TEXT_NEW_EVENT)});
                             auto& storage = window.storage_get(document);
                             storage.selection = {event.id};
                             storage.reference = event.id;

@@ -65,25 +65,11 @@ namespace anm2ed::imgui
   {
     auto document = manager.get();
     auto itemType = document ? (ItemType)document->reference_get().itemType : ItemType::NONE;
-    auto animation = document
-                         ? document->anm2.element_get(ElementType::ANIMATION, document->reference_get().animationIndex)
-                         : nullptr;
+    auto animation = document ? document->model.animation_get(document->reference_get().animationIndex) : nullptr;
     auto layerReferences = document ? document->layer_references_get() : std::vector<Reference>{};
     bool isGenerateAnimationFromGridAvailable = !layerReferences.empty();
-    bool hasRegions = false;
-    if (document)
-    {
-      if (auto spritesheets = document->anm2.element_get(ElementType::SPRITESHEETS))
-      {
-        for (auto& spritesheet : spritesheets->children)
-          for (auto& child : spritesheet.children)
-            if (spritesheet.type == ElementType::SPRITESHEET && child.type == ElementType::REGION)
-            {
-              hasRegions = true;
-              break;
-            }
-      }
-    }
+    bool hasRegions = document && std::ranges::any_of(document->model.content.spritesheets, [](const auto& spritesheet)
+                                                      { return !spritesheet.regions.empty(); });
 
     if (ImGui::BeginMainMenuBar())
     {
@@ -170,9 +156,11 @@ namespace anm2ed::imgui
 
         if (ImGui::MenuItem(localize.get(LABEL_SCAN_AND_SET_REGIONS), nullptr, false, document && hasRegions))
         {
-          manager.command_push(
-              {manager.selected, [](Manager&, Document& document)
-               { document.edit_apply(EDIT_SCAN_AND_SET_REGIONS, [](Anm2& anm2) { anm2.regions_scan(); }); }});
+          manager.command_push({manager.selected, [](Manager&, Document& document)
+                                {
+                                  document.edit_apply(EDIT_SCAN_AND_SET_REGIONS,
+                                                      [](model::Model& model) { return edit::regions_scan(model); });
+                                }});
           toast_log(Level::INFO, TOAST_SCAN_AND_SET_REGIONS);
         }
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_WIZARD_SCAN_AND_SET_REGIONS));
@@ -265,9 +253,8 @@ namespace anm2ed::imgui
           std::set<int> animationIndices{};
           if (generateRegionsTarget == GENERATE_REGIONS_TARGET_ALL)
           {
-            if (auto animations = document->anm2.element_get(ElementType::ANIMATIONS))
-              for (auto [i, animation] : std::views::enumerate(animations->children))
-                if (animation.type == ElementType::ANIMATION) animationIndices.insert((int)i);
+            for (int i = 0; i < document->model.animations_count_get(); ++i)
+              animationIndices.insert(i);
           }
           else
           {
@@ -279,14 +266,16 @@ namespace anm2ed::imgui
           auto queuedAnimationIndices = animationIndices;
           auto queuedFormat = settings.generateRegionNameFormat;
           auto queuedMapping = isGenerateRegionsMapFrames ? RegionFrameMapping::SET : RegionFrameMapping::PRESERVE;
-          manager.command_push(
-              {manager.selected, [=](Manager&, Document& document)
-               {
-                 if (queuedAnimationIndices.empty()) return;
-                 document.edit_apply(
-                     EDIT_GENERATE_REGIONS_FROM_ANIMATIONS, [&](Anm2& anm2)
-                     { anm2.regions_generate(queuedAnimationIndices, {}, queuedFormat, queuedMapping); });
-               }});
+          manager.command_push({manager.selected, [=](Manager&, Document& document)
+                                {
+                                  if (queuedAnimationIndices.empty()) return;
+                                  document.edit_apply(EDIT_GENERATE_REGIONS_FROM_ANIMATIONS,
+                                                      [&](model::Model& model)
+                                                      {
+                                                        return edit::regions_generate(model, queuedAnimationIndices, {},
+                                                                                      queuedFormat, queuedMapping);
+                                                      });
+                                }});
           generateRegionsPopup.close();
         }
 

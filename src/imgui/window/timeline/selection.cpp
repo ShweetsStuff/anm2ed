@@ -2,20 +2,14 @@
 
 namespace anm2ed::imgui
 {
-  Element* TimelineContext::item_get(int type, int id, int groupType, int groupId)
+  const model::Track* TimelineContext::item_get(int type, int id, int groupType, int groupId)
   {
-    return animation ? animation_item_get(*animation, (ItemType)(type), id, groupType, groupId) : nullptr;
+    return animation ? model::animation_track_get(*animation, type, id, groupType, groupId) : nullptr;
   }
 
-  Element* TimelineContext::track_container_get(int type)
+  const model::TrackGroup* TimelineContext::track_group_get(int type, int groupId)
   {
-    return animation ? child_first_get(*animation, TYPE_CONTAINERS[type]) : nullptr;
-  }
-
-  Element* TimelineContext::track_group_get(int type, int groupId)
-  {
-    auto container = track_container_get(type);
-    return container ? child_id_get(*container, ElementType::GROUP, groupId) : nullptr;
+    return animation ? model::animation_track_group_get(*animation, type, groupId) : nullptr;
   }
 
   bool TimelineContext::is_track_group_visible(int type, int groupId)
@@ -25,36 +19,24 @@ namespace anm2ed::imgui
     return !group || group->isVisible;
   }
 
-  Element* TimelineContext::row_group_get(const TimelineItemRow& row)
+  const model::TrackGroup* TimelineContext::row_group_get(const TimelineItemRow& row)
   {
     return row.isGroup ? track_group_get(row.type, row.id) : nullptr;
   }
 
-  int TimelineContext::group_items_count_get(int type, int groupId)
+  const model::Track* TimelineContext::command_item_reference_get(Document& document, Reference itemReference)
   {
-    auto container = track_container_get(type);
-    auto trackType = TYPE_TRACKS[type];
-    int count{};
-    if (!container) return count;
-    for (auto& item : container->children)
-      if (item.type == trackType && item.groupId == groupId) ++count;
-    return count;
+    return document.model.track_get(itemReference);
   }
 
-  Element* TimelineContext::command_item_reference_get(Document& document, Reference itemReference)
+  const model::Frame* TimelineContext::command_frame_get(Document& document, const Reference& targetReference)
   {
-    itemReference.frameIndex = -1;
-    return document.anm2.element_get(itemReference);
+    return document.model.frame_get(targetReference);
   }
 
-  Element* TimelineContext::command_frame_get(Document& document, const Reference& targetReference)
-  {
-    return targetReference.frameIndex < 0 ? nullptr : document.anm2.element_get(targetReference);
-  }
+  const model::Frame* TimelineContext::frame_get() { return command_frame_get(document, reference); }
 
-  Element* TimelineContext::frame_get() { return command_frame_get(document, reference); }
-
-  Element* TimelineContext::selected_item_get() { return command_item_reference_get(document, reference); }
+  const model::Track* TimelineContext::selected_item_get() { return command_item_reference_get(document, reference); }
 
   glm::vec4 TimelineContext::color_get(TimelineColor color, int type)
   {
@@ -90,7 +72,7 @@ namespace anm2ed::imgui
     targetDocument.frame_references_set({references.begin(), references.end()});
     targetDocument.reference_set(focus);
     if (auto item = command_item_reference_get(targetDocument, focus); item && focus.itemType != TRIGGER)
-      targetDocument.frameTime = frame_time_from_index_get(*item, focus.frameIndex);
+      targetDocument.frameTime = model::frame_time_from_index_get(*item, focus.frameIndex);
   }
 
   Reference TimelineContext::item_reference_get(int type, int id, int groupType, int groupId)
@@ -158,7 +140,7 @@ namespace anm2ed::imgui
       return false;
 
     auto item = command_item_reference_get(targetDocument, lastReference);
-    if (!item || std::max(firstReference.frameIndex, lastReference.frameIndex) >= track_frames_count_get(*item))
+    if (!item || std::max(firstReference.frameIndex, lastReference.frameIndex) >= model::track_frames_count_get(*item))
       return false;
 
     auto [firstIndex, lastIndex] = std::minmax(firstReference.frameIndex, lastReference.frameIndex);
@@ -232,7 +214,7 @@ namespace anm2ed::imgui
   void TimelineContext::reference_set_timeline_item_reference_for(Document& targetDocument, Reference itemReference)
   {
     if (itemReference.itemType == LAYER)
-      if (auto layer = targetDocument.anm2.element_get(ElementType::LAYER_ELEMENT, itemReference.itemID))
+      if (auto layer = model::item_get(targetDocument.model.content.layers, itemReference.itemID))
         targetDocument.spritesheet.reference = layer->spritesheetId;
     reference_set_item_reference_for(targetDocument, itemReference);
   }
@@ -260,58 +242,42 @@ namespace anm2ed::imgui
     std::vector<TimelineItemRow> rows{};
     if (!animation) return rows;
 
-    auto track_row_push = [&](const Element& item, int type, int index, int depth = 0)
+    auto is_track_shown = [&](const model::Track& track)
+    { return settings.timelineIsShowUnused || !track.frames.empty(); };
+    // Layers are listed top-down in reverse file order; nulls in file order.
+    auto order_get = [](int count, bool isReversed)
     {
-      auto rootGroupType = item.groupId == -1 ? NONE : type;
-      rows.push_back({.type = type,
-                      .id = anm2ed::track_id_get(item),
-                      .index = index,
-                      .groupId = item.groupId,
-                      .rootGroupType = rootGroupType,
-                      .rootGroupId = item.groupId,
-                      .depth = depth});
-    };
-    auto group_row_push = [&](const Element& group, int type, int index)
-    { rows.push_back({.type = type, .id = group.id, .index = index, .isGroup = true}); };
-    auto group_root_row_push = [&](const Element& group, int type)
-    { rows.push_back({.type = ROOT, .id = -1, .rootGroupType = type, .rootGroupId = group.id, .depth = 1}); };
-    auto group_ids_get = [](const Element& container)
-    {
-      std::set<int> result{};
-      for (const auto& item : container.children)
-        if (item.type == ElementType::GROUP) result.insert(item.id);
-      return result;
+      std::vector<int> order(count);
+      for (int i = 0; i < count; ++i)
+        order[i] = isReversed ? count - 1 - i : i;
+      return order;
     };
 
     rows.push_back({.type = ROOT});
-
-    for (const auto& containerRow : TRACK_CONTAINERS)
+    for (auto type : {LAYER, NULL_})
     {
-      auto container = child_first_get(*animation, containerRow.container);
-      if (!container) continue;
-      auto type = (int)containerRow.itemType;
-      auto isReversed = containerRow.itemType == ItemType::LAYER;
-      auto count = (int)container->children.size();
-      auto index_get = [&](int i) { return isReversed ? count - 1 - i : i; };
-      auto groupIds = group_ids_get(*container);
-      auto is_track_shown = [&](const Element& item)
-      { return item.type == containerRow.track && (settings.timelineIsShowUnused || !item.children.empty()); };
-
-      for (int i = 0; i < count; ++i)
+      auto& entries = model::animation_entries_get(*animation, type);
+      auto isReversed = type == LAYER;
+      for (auto index : order_get((int)entries.size(), isReversed))
       {
-        auto index = index_get(i);
-        auto& item = container->children[index];
-        if (item.type == ElementType::GROUP)
+        if (auto track = std::get_if<model::Track>(&entries[index]))
         {
-          group_row_push(item, type, index);
-          if (!item.isExpanded) continue;
-          group_root_row_push(item, type);
-          for (int j = 0; j < count; ++j)
-            if (auto& child = container->children[index_get(j)]; is_track_shown(child) && child.groupId == item.id)
-              track_row_push(child, type, index_get(j), 1);
+          if (is_track_shown(*track)) rows.push_back({.type = type, .id = track->id, .index = index});
+          continue;
         }
-        else if (is_track_shown(item) && !groupIds.contains(item.groupId))
-          track_row_push(item, type, index);
+        auto& group = std::get<model::TrackGroup>(entries[index]);
+        rows.push_back({.type = type, .id = group.id, .index = index, .isGroup = true});
+        if (!group.isExpanded) continue;
+        rows.push_back({.type = ROOT, .id = -1, .rootGroupType = type, .rootGroupId = group.id, .depth = 1});
+        for (auto trackIndex : order_get((int)group.tracks.size(), isReversed))
+          if (auto& track = group.tracks[trackIndex]; is_track_shown(track))
+            rows.push_back({.type = type,
+                            .id = track.id,
+                            .index = trackIndex,
+                            .groupId = group.id,
+                            .rootGroupType = type,
+                            .rootGroupId = group.id,
+                            .depth = 1});
       }
     }
 
@@ -425,7 +391,7 @@ namespace anm2ed::imgui
     else
     {
       if (row.type == LAYER)
-        if (auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, row.id))
+        if (auto layer = model::item_get(model.content.layers, row.id))
           document.spritesheet.reference = layer->spritesheetId;
       reference_set(row_item_reference_get(rowReference));
     }

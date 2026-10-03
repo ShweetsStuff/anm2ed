@@ -54,11 +54,11 @@ namespace anm2ed::imgui
       auto frame = frame_get();
       if (!frame || targetReference.itemType != LAYER || targetReference.itemID == -1) return;
       if (frame->regionId != -1) return;
-      auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, targetReference.itemID);
+      auto layer = model::item_get(model.content.layers, targetReference.itemID);
       if (!layer) return;
 
       auto spritesheetID = layer->spritesheetId;
-      if (!anm2.element_get(ElementType::SPRITESHEET, spritesheetID)) return;
+      if (!model::item_get(model.content.spritesheets, spritesheetID)) return;
 
       auto settingsPtr = &settings;
       command_push(
@@ -66,17 +66,13 @@ namespace anm2ed::imgui
           {
             auto frame = command_frame_get(document, targetReference);
             if (!frame || frame->regionId != -1) return;
-            auto layer = document.anm2.element_get(ElementType::LAYER_ELEMENT, targetReference.itemID);
+            auto layer = model::item_get(document.model.content.layers, targetReference.itemID);
             if (!layer) return;
 
             auto spritesheetID = layer->spritesheetId;
-            if (!document.anm2.element_get(ElementType::SPRITESHEET, spritesheetID)) return;
+            if (!model::item_get(document.model.content.spritesheets, spritesheetID)) return;
 
-            auto region = element_make(ElementType::REGION);
-            region.crop = frame->crop;
-            region.size = frame->size;
-            region.pivot = frame->pivot;
-            region.origin = Origin::CUSTOM;
+            model::Region region{.crop = frame->crop, .size = frame->size, .pivot = frame->pivot};
 
             document.spritesheet.reference = spritesheetID;
             settingsPtr->windowIsRegions = true;
@@ -96,9 +92,9 @@ namespace anm2ed::imgui
     {
       if (frameReference.itemType != LAYER || frameReference.frameIndex < 0) return false;
       auto frame = command_frame_get(document, frameReference);
-      auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, frameReference.itemID);
+      auto layer = model::item_get(model.content.layers, frameReference.itemID);
       return frame && frame->regionId == -1 && layer &&
-             anm2.element_get(ElementType::SPRITESHEET, layer->spritesheetId);
+             model::item_get(model.content.spritesheets, layer->spritesheetId);
     };
     auto selectedRegionFrames = selectedFrames;
     std::erase_if(selectedRegionFrames,
@@ -132,10 +128,11 @@ namespace anm2ed::imgui
                  .shortcut = -1,
                  .isEnabled = [=, this]() { return !selectedRootFrames.empty(); },
                  .run = [&]() { bakeIntoOtherFramesPopup.open(); }});
-    actions.add({.label = LABEL_FIT_ANIMATION_LENGTH,
-                 .shortcut = SHORTCUT_FIT,
-                 .isEnabled = [&]() { return animation && animation->frameNum != animation_length_get(*animation); },
-                 .run = [&]() { fit_animation_length(); }});
+    actions.add(
+        {.label = LABEL_FIT_ANIMATION_LENGTH,
+         .shortcut = SHORTCUT_FIT,
+         .isEnabled = [&]() { return animation && animation->frameNum != model::animation_length_get(*animation); },
+         .run = [&]() { fit_animation_length(); }});
     actions.separator();
     actions.add({.label = isMakeManyRegions ? LABEL_MAKE_MANY_REGIONS : LABEL_MAKE_REGION,
                  .shortcut = -1,
@@ -163,7 +160,7 @@ namespace anm2ed::imgui
 
   void TimelineContext::item_base_properties_open(int type, int id)
   {
-    if (auto row = anm2ed::track_container_get((ItemType)type)) manager.item_properties_open(row->element, id);
+    manager.item_properties_open(type == LAYER ? ElementType::LAYER_ELEMENT : ElementType::NULL_ELEMENT, id);
   }
 
   void TimelineContext::group_properties_close()
@@ -175,7 +172,7 @@ namespace anm2ed::imgui
     groupPropertiesPopup.close();
   }
 
-  void TimelineContext::group_properties_open(const TimelineItemRow& row, const Element& group)
+  void TimelineContext::group_properties_open(const TimelineItemRow& row, const model::TrackGroup& group)
   {
     groupName = group.name.empty() ? std::string(localize.get(TEXT_NEW_GROUP)) : group.name;
     groupAnimationIndex = reference.animationIndex;
@@ -207,13 +204,10 @@ namespace anm2ed::imgui
         auto targetType = groupType;
         auto targetId = groupId;
         edit_push(EDIT_RENAME_GROUP,
-                  [=](Anm2& anm2)
+                  [=](model::Model& model)
                   {
-                    auto animation = anm2.element_get(ElementType::ANIMATION, targetAnimationIndex);
-                    auto container = animation ? child_first_get(*animation, TYPE_CONTAINERS[targetType]) : nullptr;
-                    auto group = container ? child_id_get(*container, ElementType::GROUP, targetId) : nullptr;
-                    if (!group) return;
-                    group->name = targetName;
+                    if (auto group = model.track_group_edit(targetAnimationIndex, targetType, targetId))
+                      group->name = targetName;
                   });
       }
       if (result != PopupButton::NONE) group_properties_close();
@@ -236,7 +230,7 @@ namespace anm2ed::imgui
     auto selectedGroupableItems = item_references_groupable_get();
     auto copyFrames = copy_frame_references_get();
     TimelineItemRow selectedGroupRow{};
-    Element* selectedGroup{};
+    const model::TrackGroup* selectedGroup{};
     if (selectedRows.size() == 1 && selectedRows.front().isGroup)
     {
       auto row = selectedRows.front();

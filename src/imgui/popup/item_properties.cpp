@@ -18,12 +18,6 @@ namespace anm2ed::imgui::popup
     addItemSpritesheetID = {};
   }
 
-  std::set<int> ItemProperties::unused_items_get(Anm2& anm2, const Element* animation, int type)
-  {
-    auto row = track_container_get((ItemType)type);
-    return animation && row ? anm2.element_unused(row->element, animation) : std::set<int>{};
-  }
-
   void ItemProperties::open()
   {
     reset();
@@ -33,8 +27,14 @@ namespace anm2ed::imgui::popup
   bool ItemProperties::update(Manager& manager, Settings& settings, Document& document, Reference& reference)
   {
     bool isAdded{};
-    auto& anm2 = document.anm2;
-    auto animation = anm2.element_get(ElementType::ANIMATION, reference.animationIndex);
+    auto& model = document.model;
+    auto animation = model.animation_get(reference.animationIndex);
+    auto unused_items_get = [&](int type)
+    {
+      return animation
+                 ? model.unused_get(type == LAYER ? ElementType::LAYER_ELEMENT : ElementType::NULL_ELEMENT, animation)
+                 : std::set<int>{};
+    };
 
     popup.trigger();
 
@@ -81,7 +81,7 @@ namespace anm2ed::imgui::popup
 
         ImGui::SeparatorText(localize.get(LABEL_SOURCE));
 
-        auto isUnusedItems = animation && !unused_items_get(anm2, animation, (int)type).empty();
+        auto isUnusedItems = animation && !unused_items_get(type).empty();
         spaced_pair(
             [&]()
             {
@@ -135,7 +135,7 @@ namespace anm2ed::imgui::popup
 
           if (ImGui::BeginChild("##Existing Items", ImVec2(0, 0)))
           {
-            auto unusedItems = unused_items_get(anm2, animation, (int)type);
+            auto unusedItems = unused_items_get(type);
             if (addItemID != -1 && !unusedItems.contains(addItemID)) addItemID = -1;
 
             for (auto id : unusedItems)
@@ -146,7 +146,7 @@ namespace anm2ed::imgui::popup
 
               if (type == LAYER)
               {
-                if (auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, id))
+                if (auto layer = model::item_get(model.content.layers, id))
                 {
                   auto label = std::vformat(localize.get(FORMAT_LAYER),
                                             std::make_format_args(id, layer->name, layer->spritesheetId));
@@ -159,9 +159,7 @@ namespace anm2ed::imgui::popup
               }
               else if (type == NULL_)
               {
-                auto nulls = anm2.element_get(ElementType::NULLS);
-                auto null = nulls ? child_id_get(*nulls, ElementType::NULL_ELEMENT, id) : nullptr;
-                if (null)
+                if (auto null = model::item_get(model.content.nulls, id))
                 {
                   auto label = std::vformat(localize.get(FORMAT_NULL), std::make_format_args(id, null->name));
                   if (ImGui::Selectable(label.c_str(), isSelected))
@@ -197,19 +195,15 @@ namespace anm2ed::imgui::popup
 
         manager.command_push({manager.selected, [=](Manager&, Document& document)
                               {
-                                Element item{};
-                                item.id = queuedAddItemID;
-                                item.name = queuedAddItemName;
-                                item.spritesheetId = queuedAddItemSpritesheetID;
-                                item.isShowRect = queuedAddItemIsShowRect;
-
                                 int addId{-1};
                                 document.edit_apply(EDIT_ADD_ITEM,
-                                                    [&](Anm2& anm2)
+                                                    [&](model::Model& model)
                                                     {
-                                                      addId = anm2.item_add((ItemType)queuedType, queuedAnimationIndex,
-                                                                            item, queuedInsertBeforeID,
-                                                                            (destination::Type)queuedDestination);
+                                                      addId = edit::item_add(
+                                                          model, (ItemType)queuedType, queuedAnimationIndex,
+                                                          queuedAddItemID, queuedAddItemName,
+                                                          queuedAddItemSpritesheetID, queuedAddItemIsShowRect,
+                                                          queuedInsertBeforeID, (destination::Type)queuedDestination);
                                                     });
 
                                 if (addId != -1)
@@ -218,7 +212,7 @@ namespace anm2ed::imgui::popup
                                   document.selected_set(SelectionKind::TRACKS, {document.reference_get()});
                                   document.frame_references_clear();
                                   if (queuedType == LAYER)
-                                    if (auto layer = document.anm2.element_get(ElementType::LAYER_ELEMENT, addId))
+                                    if (auto layer = model::item_get(document.model.content.layers, addId))
                                       document.spritesheet.reference = layer->spritesheetId;
                                 }
                               }});

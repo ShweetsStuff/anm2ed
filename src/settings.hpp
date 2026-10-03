@@ -5,7 +5,7 @@
 
 #include <glm/glm.hpp>
 
-#include "anm2/anm2.hpp"
+#include "model/common.hpp"
 #include "origin.hpp"
 #include "render.hpp"
 #include "strings.hpp"

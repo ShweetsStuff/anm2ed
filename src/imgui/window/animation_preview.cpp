@@ -17,6 +17,7 @@
 #include "actions.hpp"
 #include "log.hpp"
 #include "math.hpp"
+#include "model/frames.hpp"
 #include "path.hpp"
 #include "strings.hpp"
 #include "toast.hpp"
@@ -56,15 +57,11 @@ namespace anm2ed::imgui
     for (auto& document : manager.documents)
     {
       auto documentLabel = path::to_utf8(document.filename_get());
-      int animationIndex{};
-      if (auto animations = document.anm2.element_get(ElementType::ANIMATIONS))
-        for (auto& animation : animations->children)
-        {
-          if (animation.type != ElementType::ANIMATION) continue;
-          auto label = std::format("{} ({})", animation.name, documentLabel);
-          options.push_back({.documentId = document.tabId, .animationIndex = animationIndex, .label = label});
-          ++animationIndex;
-        }
+      for (auto [animationIndex, animation] : document.model.animations_get())
+      {
+        auto label = std::format("{} ({})", animation->name, documentLabel);
+        options.push_back({.documentId = document.tabId, .animationIndex = animationIndex, .label = label});
+      }
     }
 
     return options;
@@ -107,16 +104,18 @@ namespace anm2ed::imgui
     return vec4(minPoint, maxPoint - minPoint);
   }
 
-  std::optional<vec4> animation_render_rect_get(Manager& manager, Document& document, Element* animation,
+  std::optional<vec4> animation_render_rect_get(Manager& manager, Document& document, const model::Animation* animation,
                                                 bool isRootTransform)
   {
     std::optional<vec4> rect{};
 
-    if (animation) rect = animation_rects_merge(rect, document.anm2.animation_rect(*animation, isRootTransform));
+    if (animation)
+      rect = animation_rects_merge(rect, model::animation_rect(document.model, *animation, isRootTransform));
 
     if (auto overlayDocument = overlay_animation_document_get(manager, document))
-      if (auto overlayAnimation = overlayDocument->anm2.element_get(ElementType::ANIMATION, document.overlayIndex))
-        rect = animation_rects_merge(rect, overlayDocument->anm2.animation_rect(*overlayAnimation, isRootTransform));
+      if (auto overlayAnimation = overlayDocument->model.animation_get(document.overlayIndex))
+        rect = animation_rects_merge(rect,
+                                     model::animation_rect(overlayDocument->model, *overlayAnimation, isRootTransform));
 
     return rect;
   }
@@ -191,13 +190,12 @@ namespace anm2ed::imgui
     }
   }
 
-  int trigger_sound_id_get(Document& document, Element* animation, float time, int deterministicIndex = -1)
+  int trigger_sound_id_get(Document& document, const model::Animation* animation, float time,
+                           int deterministicIndex = -1)
   {
-    if (!animation) return -1;
-    auto triggers = animation_item_get(*animation, ItemType::TRIGGER);
-    if (!triggers || !triggers->isVisible) return -1;
+    if (!animation || !animation->triggers.isVisible) return -1;
 
-    auto trigger = frame_generate(*triggers, time);
+    auto trigger = model::frame_generate(animation->triggers, time);
     if (!trigger.isVisible || trigger.soundIds.empty()) return -1;
 
     size_t soundIndex{};
@@ -262,7 +260,7 @@ namespace anm2ed::imgui
   void AnimationPreview::tick(Manager& manager, Settings& settings, float deltaSeconds)
   {
     auto& document = *manager.get();
-    auto& anm2 = document.anm2;
+    auto& model = document.model;
     auto& playback = document.playback;
     auto& frameTime = document.frameTime;
     auto& zoom = document.previewZoom;
@@ -420,7 +418,7 @@ namespace anm2ed::imgui
 
     if (playback.isPlaying)
     {
-      auto animation = anm2.element_get(ElementType::ANIMATION, document.reference_get().animationIndex);
+      auto animation = model.animation_get(document.reference_get().animationIndex);
       auto& isSound = settings.timelineIsSound;
 
       if (!animation)
@@ -437,8 +435,7 @@ namespace anm2ed::imgui
             if (auto sound = document.sound_get(soundID)) audio::play(*sound, false, mixer);
         }
 
-        auto info = element_first_get(anm2.root, ElementType::INFO);
-        auto fps = std::max(info ? info->fps : 30, 1);
+        auto fps = std::max(model.info.fps, 1);
         playback.tick(fps, animation->frameNum, (animation->isLoop || settings.playbackIsLoop) && !manager.isRecording,
                       deltaSeconds);
 
@@ -455,10 +452,10 @@ namespace anm2ed::imgui
     isFocused = false;
 
     auto& document = *manager.get();
-    auto& anm2 = document.anm2;
+    auto& model = document.model;
     auto& playback = document.playback;
     auto reference = document.reference_get();
-    auto animation = anm2.element_get(ElementType::ANIMATION, reference.animationIndex);
+    auto animation = model.animation_get(reference.animationIndex);
     auto& pan = document.previewPan;
     auto& zoom = document.previewZoom;
     auto& backgroundColor = settings.previewBackgroundColor;
@@ -488,7 +485,7 @@ namespace anm2ed::imgui
 
     auto fit_view = [&]()
     {
-      if (animation) set_to_rect(zoom, pan, anm2.animation_rect(*animation, isRootTransform));
+      if (animation) set_to_rect(zoom, pan, model::animation_rect(model, *animation, isRootTransform));
     };
 
     manager.isAbleToRecord = false;
@@ -673,8 +670,7 @@ namespace anm2ed::imgui
         manager.isRecordingStart = false;
         manager.isRecording = true;
         renderFrameIndex = 0;
-        auto info = element_first_get(anm2.root, ElementType::INFO);
-        renderAnimationFps = std::max(info ? info->fps : 30, 1);
+        renderAnimationFps = std::max(model.info.fps, 1);
         renderFrameRate = render::fps_get(settings.renderFpsMode, renderAnimationFps, settings.playbackTickRate);
         renderFrameCount =
             render::frame_count_get(manager.recordingStart, manager.recordingEnd, renderAnimationFps, renderFrameRate);
@@ -808,68 +804,55 @@ namespace anm2ed::imgui
         return false;
       };
 
-      auto render = [&](Document& sampleDocument, Element* animation, float time, vec3 colorOffset = {},
+      auto render = [&](Document& sampleDocument, const model::Animation* animation, float time, vec3 colorOffset = {},
                         float alphaOffset = {}, const std::vector<OnionskinSample>* layeredOnions = nullptr,
                         bool isIndexMode = false)
       {
-        auto& sampleAnm2 = sampleDocument.anm2;
+        auto& sampleModel = sampleDocument.model;
         bool isActiveDocument = &sampleDocument == &document;
 
-        auto sample_time_for_item = [&](Element& item, const OnionskinSample& sample) -> std::optional<float>
+        auto sample_time_for_item = [&](const model::Track& item, const OnionskinSample& sample) -> std::optional<float>
         {
           if (!isIndexMode)
           {
             if (sample.time < 0.0f || sample.time > animation->frameNum) return std::nullopt;
             return sample.time;
           }
-          if (item.children.empty()) return std::nullopt;
-          int baseIndex = frame_index_from_time_get(item, frameTime);
+          if (item.frames.empty()) return std::nullopt;
+          int baseIndex = model::frame_index_from_time_get(item, frameTime);
           if (baseIndex < 0) return std::nullopt;
           int sampleIndex = baseIndex + sample.indexOffset;
-          if (!track_frame_get(item, sampleIndex)) return std::nullopt;
-          return frame_time_from_index_get(item, sampleIndex);
+          if (sampleIndex < 0 || sampleIndex >= (int)item.frames.size()) return std::nullopt;
+          return model::frame_time_from_index_get(item, sampleIndex);
         };
 
-        auto root = animation_item_get(*animation, ItemType::ROOT);
+        auto root = &animation->root;
 
         auto transform_for_time = [&](float t)
         {
           auto sampleTransform = baseTransform;
           if (isRootTransform && root)
           {
-            auto rootFrame = frame_generate(*root, t);
-            sampleTransform *= frame_parent_model_get(rootFrame);
+            auto rootFrame = model::frame_generate(*root, t);
+            sampleTransform *= model::frame_parent_model_get(rootFrame);
           }
           return sampleTransform;
         };
 
         auto transform = transform_for_time(time);
 
-        auto is_track_group_visible = [](const Element& container, const Element& track)
+        auto group_root_frame_get = [](const model::TrackGroup* group, float t) -> std::optional<model::Frame>
         {
-          if (track.groupId == -1) return true;
-          for (const auto& child : container.children)
-            if (child.type == ElementType::GROUP && child.id == track.groupId) return child.isVisible;
-          return true;
+          if (!group) return std::nullopt;
+          return model::frame_generate(group->root, t);
         };
 
-        auto group_root_frame_get = [](const Element& container, const Element& track,
-                                       float t) -> std::optional<Element>
-        {
-          if (track.groupId == -1) return std::nullopt;
-          auto group = child_id_get(container, ElementType::GROUP, track.groupId);
-          auto root = group ? child_first_get(*group, ElementType::ROOT_ANIMATION) : nullptr;
-          if (!root) return std::nullopt;
-          return frame_generate(*root, t);
-        };
-
-        auto group_transform_for_time =
-            [&](const Element& container, const Element& track, float t, const glm::mat4& sampleTransform)
+        auto group_transform_for_time = [&](const model::TrackGroup* group, float t, const glm::mat4& sampleTransform)
         {
           auto itemTransform = sampleTransform;
           if (isRootTransform)
-            if (auto groupRootFrame = group_root_frame_get(container, track, t))
-              itemTransform *= frame_parent_model_get(*groupRootFrame);
+            if (auto groupRootFrame = group_root_frame_get(group, t))
+              itemTransform *= model::frame_parent_model_get(*groupRootFrame);
           return itemTransform;
         };
 
@@ -877,7 +860,7 @@ namespace anm2ed::imgui
             [&](float sampleTime, const glm::mat4& sampleTransform, vec3 sampleColor, float sampleAlpha, bool isOnion)
         {
           if (!root) return;
-          auto rootFrame = frame_generate(*root, sampleTime);
+          auto rootFrame = model::frame_generate(*root, sampleTime);
           if (isOnlyShowLayers || !rootFrame.isVisible || !root->isVisible) return;
 
           auto rootModel = isRootTransform
@@ -903,16 +886,14 @@ namespace anm2ed::imgui
 
         draw_root(time, transform, {}, 0.0f, false);
 
-        auto draw_group_root = [&](Element& group, int groupType, float sampleTime, const glm::mat4& sampleTransform,
-                                   vec3 sampleColor, float sampleAlpha, bool isOnion)
+        auto draw_group_root = [&](const model::TrackGroup& group, int groupType, float sampleTime,
+                                   const glm::mat4& sampleTransform, vec3 sampleColor, float sampleAlpha, bool isOnion)
         {
-          auto groupRoot = child_first_get(group, ElementType::ROOT_ANIMATION);
-          if (!groupRoot) return;
-          auto rootFrame = frame_generate(*groupRoot, sampleTime);
-          if (isOnlyShowLayers || !rootFrame.isVisible || !groupRoot->isVisible) return;
+          auto rootFrame = model::frame_generate(group.root, sampleTime);
+          if (isOnlyShowLayers || !rootFrame.isVisible || !group.root.isVisible) return;
 
           auto itemTransform = sampleTransform;
-          if (isRootTransform) itemTransform *= frame_parent_model_get(rootFrame);
+          if (isRootTransform) itemTransform *= model::frame_parent_model_get(rootFrame);
 
           auto rootModel = isRootTransform
                                ? math::quad_model_get(TARGET_SIZE, {}, TARGET_SIZE * 0.5f)
@@ -928,200 +909,173 @@ namespace anm2ed::imgui
           texture_render(shaderTexture, resources.icon_id_get(icon), rootTransform, color);
         };
 
-        if (auto layerAnimations = child_first_get(*animation, ElementType::LAYER_ANIMATIONS))
+        // Draws loose tracks and visible groups (their root, then their tracks) in file order.
+        auto entries_draw = [&](const std::vector<model::TrackEntry>& entries, int groupType, auto&& track_draw)
         {
-          auto layer_animation_draw = [&](auto&& self, Element& layerAnimation, bool isParentVisible = true) -> void
+          for (const auto& entry : entries)
           {
-            if (layerAnimation.type == ElementType::GROUP)
+            if (auto track = std::get_if<model::Track>(&entry))
             {
-              if (isParentVisible && layerAnimation.isVisible)
-              {
-                auto groupRoot = child_first_get(layerAnimation, ElementType::ROOT_ANIMATION);
-                if (layeredOnions && groupRoot)
-                  for (auto& sample : *layeredOnions)
-                    if (auto sampleTime = sample_time_for_item(*groupRoot, sample))
-                    {
-                      auto sampleTransform = transform_for_time(*sampleTime);
-                      draw_group_root(layerAnimation, LAYER, *sampleTime, sampleTransform, sample.colorOffset,
-                                      sample.alphaOffset, true);
-                    }
-                draw_group_root(layerAnimation, LAYER, time, transform, {}, 0.0f, false);
-              }
-              for (auto& child : layerAnimation.children)
-                self(self, child, isParentVisible && layerAnimation.isVisible);
-              return;
+              track_draw(*track, nullptr);
+              continue;
             }
-            if (layerAnimation.type != ElementType::LAYER_ANIMATION || !isParentVisible || !layerAnimation.isVisible ||
-                !is_track_group_visible(*layerAnimations, layerAnimation))
-              return;
-
-            auto id = layerAnimation.layerId;
-            auto layer = sampleAnm2.element_get(ElementType::LAYER_ELEMENT, id);
-            if (!layer) return;
-
-            auto textureInfo = sampleDocument.texture_get(layer->spritesheetId);
-            if (!textureInfo || !textureInfo->is_valid()) return;
-
-            auto draw_layer = [&](float sampleTime, const glm::mat4& sampleTransform, vec3 sampleColor,
-                                  float sampleAlpha, bool isOnion)
-            {
-              auto frame = frame_generate(layerAnimation, sampleTime);
-              if (!frame.isVisible) return;
-
-              auto& texture = *textureInfo;
-
-              auto texSize = vec2(texture.size);
-              if (texSize.x <= 0.0f || texSize.y <= 0.0f) return;
-
-              frame = sampleAnm2.frame_effective(id, frame);
-              auto crop = frame.crop;
-              auto size = frame.size;
-              auto pivot = frame.pivot;
-
-              auto layerModel = math::quad_model_get(size, frame.position, pivot, math::percent_to_unit(frame.scale),
-                                                     frame.rotation, math::percent_to_unit(frame.shear));
-              auto itemTransform =
-                  group_transform_for_time(*layerAnimations, layerAnimation, sampleTime, sampleTransform);
-              auto layerTransform = itemTransform * layerModel;
-
-              auto uvMin = crop / texSize;
-              auto uvMax = (crop + size) / texSize;
-
-              vec3 frameColorOffset = frame.colorOffset + colorOffset + sampleColor;
-              vec4 frameTint = frame.tint;
-
-              if (isRootTransform && root)
-              {
-                auto rootFrame = frame_generate(*root, sampleTime);
-                frameColorOffset += rootFrame.colorOffset;
-                frameTint *= rootFrame.tint;
-              }
-              if (isRootTransform)
-                if (auto groupRootFrame = group_root_frame_get(*layerAnimations, layerAnimation, sampleTime))
-                {
-                  frameColorOffset += groupRootFrame->colorOffset;
-                  frameTint *= groupRootFrame->tint;
-                }
-
-              frameTint.a = std::max(0.0f, frameTint.a - (alphaOffset + sampleAlpha));
-
-              auto vertices = math::uv_vertices_get(uvMin, uvMax);
-              auto customShader = sampleDocument.shader_get(frame.shaderId);
-              auto& layerShader = customShader ? *customShader : shaderTexture;
-
-              texture_render(layerShader, resource::texture::id_get(texture), layerTransform, frameTint,
-                             frameColorOffset, vertices.data(), vec2(texture.size), sampleTime);
-
-              auto color = isOnion                                           ? vec4(sampleColor, 1.0f - sampleAlpha)
-                           : is_layer_animation_selected(sampleDocument, id) ? SELECTED_LAYER_BORDER_COLOR
-                                                                             : color::RED;
-
-              if (isBorder) rect_render(shaderLine, layerTransform, layerModel, color);
-
-              if (isPivots)
-              {
-                auto pivotModel = math::quad_model_get(PIVOT_SIZE, frame.position, PIVOT_SIZE * 0.5f,
-                                                       math::percent_to_unit(frame.scale), frame.rotation,
-                                                       math::percent_to_unit(frame.shear));
-                auto pivotTransform = itemTransform * pivotModel;
-
-                texture_render(shaderTexture, resources.icon_id_get(icon::PIVOT), pivotTransform, color);
-              }
-            };
-
+            auto& group = std::get<model::TrackGroup>(entry);
+            if (!group.isVisible) continue;
             if (layeredOnions)
               for (auto& sample : *layeredOnions)
-                if (auto sampleTime = sample_time_for_item(layerAnimation, sample))
-                {
-                  auto sampleTransform = transform_for_time(*sampleTime);
-                  draw_layer(*sampleTime, sampleTransform, sample.colorOffset, sample.alphaOffset, true);
-                }
+                if (auto sampleTime = sample_time_for_item(group.root, sample))
+                  draw_group_root(group, groupType, *sampleTime, transform_for_time(*sampleTime), sample.colorOffset,
+                                  sample.alphaOffset, true);
+            draw_group_root(group, groupType, time, transform, {}, 0.0f, false);
+            for (const auto& groupTrack : group.tracks)
+              track_draw(groupTrack, &group);
+          }
+        };
 
-            draw_layer(time, transform, {}, 0.0f, false);
-          };
-          for (auto& layerAnimation : layerAnimations->children)
-            layer_animation_draw(layer_animation_draw, layerAnimation);
-        }
+        entries_draw(animation->layers, LAYER,
+                     [&](const model::Track& layerAnimation, const model::TrackGroup* group)
+                     {
+                       if (!layerAnimation.isVisible) return;
 
-        if (auto nullAnimations = child_first_get(*animation, ElementType::NULL_ANIMATIONS))
-        {
-          auto null_animation_draw = [&](auto&& self, Element& nullAnimation, bool isParentVisible = true) -> void
-          {
-            if (nullAnimation.type == ElementType::GROUP)
-            {
-              if (isParentVisible && nullAnimation.isVisible)
-              {
-                auto groupRoot = child_first_get(nullAnimation, ElementType::ROOT_ANIMATION);
-                if (layeredOnions && groupRoot)
-                  for (auto& sample : *layeredOnions)
-                    if (auto sampleTime = sample_time_for_item(*groupRoot, sample))
-                    {
-                      auto sampleTransform = transform_for_time(*sampleTime);
-                      draw_group_root(nullAnimation, NULL_, *sampleTime, sampleTransform, sample.colorOffset,
-                                      sample.alphaOffset, true);
-                    }
-                draw_group_root(nullAnimation, NULL_, time, transform, {}, 0.0f, false);
-              }
-              for (auto& child : nullAnimation.children)
-                self(self, child, isParentVisible && nullAnimation.isVisible);
-              return;
-            }
-            if (nullAnimation.type != ElementType::NULL_ANIMATION || !isParentVisible || !nullAnimation.isVisible ||
-                !is_track_group_visible(*nullAnimations, nullAnimation) || isOnlyShowLayers)
-              return;
+                       auto id = layerAnimation.id;
+                       auto layer = model::item_get(sampleModel.content.layers, id);
+                       if (!layer) return;
 
-            auto id = nullAnimation.nullId;
-            auto nulls = sampleAnm2.element_get(ElementType::NULLS);
-            auto nullInfo = nulls ? child_id_get(*nulls, ElementType::NULL_ELEMENT, id) : nullptr;
-            if (!nullInfo) return;
-            auto isShowRect = nullInfo->isShowRect;
+                       auto textureInfo = sampleDocument.texture_get(layer->spritesheetId);
+                       if (!textureInfo || !textureInfo->is_valid()) return;
 
-            auto draw_null = [&](float sampleTime, const glm::mat4& sampleTransform, vec3 sampleColor,
-                                 float sampleAlpha, bool isOnion)
-            {
-              auto frame = frame_generate(nullAnimation, sampleTime);
-              if (!frame.isVisible) return;
+                       auto draw_layer = [&](float sampleTime, const glm::mat4& sampleTransform, vec3 sampleColor,
+                                             float sampleAlpha, bool isOnion)
+                       {
+                         auto frame = model::frame_generate(layerAnimation, sampleTime);
+                         if (!frame.isVisible) return;
 
-              auto icon = isShowRect ? icon::POINT : isAltIcons ? icon::TARGET_ALT : icon::TARGET;
+                         auto& texture = *textureInfo;
 
-              auto& size = isShowRect ? POINT_SIZE : TARGET_SIZE;
-              auto color = isOnion ? vec4(sampleColor, 1.0f - sampleAlpha)
-                           : isActiveDocument && id == reference.itemID && referenceItemType == ItemType::NULL_
-                               ? color::RED
-                               : NULL_COLOR;
+                         auto texSize = vec2(texture.size);
+                         if (texSize.x <= 0.0f || texSize.y <= 0.0f) return;
 
-              auto nullModel =
-                  math::quad_model_get(size, frame.position, size * 0.5f, math::percent_to_unit(frame.scale),
-                                       frame.rotation, math::percent_to_unit(frame.shear));
-              auto itemTransform =
-                  group_transform_for_time(*nullAnimations, nullAnimation, sampleTime, sampleTransform);
-              auto nullTransform = itemTransform * nullModel;
+                         frame = sampleModel.frame_effective(id, frame);
+                         auto crop = frame.crop;
+                         auto size = frame.size;
+                         auto pivot = frame.pivot;
 
-              texture_render(shaderTexture, resources.icon_id_get(icon), nullTransform, color);
+                         auto layerModel =
+                             math::quad_model_get(size, frame.position, pivot, math::percent_to_unit(frame.scale),
+                                                  frame.rotation, math::percent_to_unit(frame.shear));
+                         auto itemTransform = group_transform_for_time(group, sampleTime, sampleTransform);
+                         auto layerTransform = itemTransform * layerModel;
 
-              if (isShowRect)
-              {
-                auto rectModel = math::quad_model_get(frame.scale, frame.position, frame.scale * 0.5f, vec2(1.0f),
-                                                      frame.rotation, math::percent_to_unit(frame.shear));
-                auto rectTransform = itemTransform * rectModel;
+                         auto uvMin = crop / texSize;
+                         auto uvMax = (crop + size) / texSize;
 
-                rect_render(shaderLine, rectTransform, rectModel, color);
-              }
-            };
+                         vec3 frameColorOffset = frame.colorOffset + colorOffset + sampleColor;
+                         vec4 frameTint = frame.tint;
 
-            if (layeredOnions)
-              for (auto& sample : *layeredOnions)
-                if (auto sampleTime = sample_time_for_item(nullAnimation, sample))
-                {
-                  auto sampleTransform = transform_for_time(*sampleTime);
-                  draw_null(*sampleTime, sampleTransform, sample.colorOffset, sample.alphaOffset, true);
-                }
+                         if (isRootTransform && root)
+                         {
+                           auto rootFrame = model::frame_generate(*root, sampleTime);
+                           frameColorOffset += rootFrame.colorOffset;
+                           frameTint *= rootFrame.tint;
+                         }
+                         if (isRootTransform)
+                           if (auto groupRootFrame = group_root_frame_get(group, sampleTime))
+                           {
+                             frameColorOffset += groupRootFrame->colorOffset;
+                             frameTint *= groupRootFrame->tint;
+                           }
 
-            draw_null(time, transform, {}, 0.0f, false);
-          };
-          for (auto& nullAnimation : nullAnimations->children)
-            null_animation_draw(null_animation_draw, nullAnimation);
-        }
+                         frameTint.a = std::max(0.0f, frameTint.a - (alphaOffset + sampleAlpha));
+
+                         auto vertices = math::uv_vertices_get(uvMin, uvMax);
+                         auto customShader = sampleDocument.shader_get(frame.shaderId);
+                         auto& layerShader = customShader ? *customShader : shaderTexture;
+
+                         texture_render(layerShader, resource::texture::id_get(texture), layerTransform, frameTint,
+                                        frameColorOffset, vertices.data(), vec2(texture.size), sampleTime);
+
+                         auto color = isOnion ? vec4(sampleColor, 1.0f - sampleAlpha)
+                                      : is_layer_animation_selected(sampleDocument, id) ? SELECTED_LAYER_BORDER_COLOR
+                                                                                        : color::RED;
+
+                         if (isBorder) rect_render(shaderLine, layerTransform, layerModel, color);
+
+                         if (isPivots)
+                         {
+                           auto pivotModel = math::quad_model_get(PIVOT_SIZE, frame.position, PIVOT_SIZE * 0.5f,
+                                                                  math::percent_to_unit(frame.scale), frame.rotation,
+                                                                  math::percent_to_unit(frame.shear));
+                           auto pivotTransform = itemTransform * pivotModel;
+
+                           texture_render(shaderTexture, resources.icon_id_get(icon::PIVOT), pivotTransform, color);
+                         }
+                       };
+
+                       if (layeredOnions)
+                         for (auto& sample : *layeredOnions)
+                           if (auto sampleTime = sample_time_for_item(layerAnimation, sample))
+                           {
+                             auto sampleTransform = transform_for_time(*sampleTime);
+                             draw_layer(*sampleTime, sampleTransform, sample.colorOffset, sample.alphaOffset, true);
+                           }
+
+                       draw_layer(time, transform, {}, 0.0f, false);
+                     });
+
+        entries_draw(animation->nulls, NULL_,
+                     [&](const model::Track& nullAnimation, const model::TrackGroup* group)
+                     {
+                       if (!nullAnimation.isVisible || isOnlyShowLayers) return;
+
+                       auto id = nullAnimation.id;
+                       auto nullInfo = model::item_get(sampleModel.content.nulls, id);
+                       if (!nullInfo) return;
+                       auto isShowRect = nullInfo->isShowRect;
+
+                       auto draw_null = [&](float sampleTime, const glm::mat4& sampleTransform, vec3 sampleColor,
+                                            float sampleAlpha, bool isOnion)
+                       {
+                         auto frame = model::frame_generate(nullAnimation, sampleTime);
+                         if (!frame.isVisible) return;
+
+                         auto icon = isShowRect ? icon::POINT : isAltIcons ? icon::TARGET_ALT : icon::TARGET;
+
+                         auto& size = isShowRect ? POINT_SIZE : TARGET_SIZE;
+                         auto color =
+                             isOnion ? vec4(sampleColor, 1.0f - sampleAlpha)
+                             : isActiveDocument && id == reference.itemID && referenceItemType == ItemType::NULL_
+                                 ? color::RED
+                                 : NULL_COLOR;
+
+                         auto nullModel =
+                             math::quad_model_get(size, frame.position, size * 0.5f, math::percent_to_unit(frame.scale),
+                                                  frame.rotation, math::percent_to_unit(frame.shear));
+                         auto itemTransform = group_transform_for_time(group, sampleTime, sampleTransform);
+                         auto nullTransform = itemTransform * nullModel;
+
+                         texture_render(shaderTexture, resources.icon_id_get(icon), nullTransform, color);
+
+                         if (isShowRect)
+                         {
+                           auto rectModel =
+                               math::quad_model_get(frame.scale, frame.position, frame.scale * 0.5f, vec2(1.0f),
+                                                    frame.rotation, math::percent_to_unit(frame.shear));
+                           auto rectTransform = itemTransform * rectModel;
+
+                           rect_render(shaderLine, rectTransform, rectModel, color);
+                         }
+                       };
+
+                       if (layeredOnions)
+                         for (auto& sample : *layeredOnions)
+                           if (auto sampleTime = sample_time_for_item(nullAnimation, sample))
+                           {
+                             auto sampleTransform = transform_for_time(*sampleTime);
+                             draw_null(*sampleTime, sampleTransform, sample.colorOffset, sample.alphaOffset, true);
+                           }
+
+                       draw_null(time, transform, {}, 0.0f, false);
+                     });
       };
 
       if (animation)
@@ -1130,7 +1084,7 @@ namespace anm2ed::imgui
         auto overlay_render = [&]()
         {
           if (auto overlayDocument = overlay_animation_document_get(manager, document))
-            if (auto overlayAnimation = overlayDocument->anm2.element_get(ElementType::ANIMATION, overlayIndex))
+            if (auto overlayAnimation = overlayDocument->model.animation_get(overlayIndex))
               render(*overlayDocument, overlayAnimation, frameTime, {},
                      1.0f - math::percent_to_unit(overlayTransparency), layeredOnions,
                      settings.onionskinMode == (int)OnionskinMode::INDEX);
@@ -1206,10 +1160,10 @@ namespace anm2ed::imgui
 
       isPreviewHovered = ImGui::IsItemHovered();
 
-      auto triggers = animation ? animation_item_get(*animation, ItemType::TRIGGER) : nullptr;
-      if (animation && triggers && triggers->isVisible && !isOnlyShowLayers && !manager.isRecording)
+      if (animation && animation->triggers.isVisible && !isOnlyShowLayers && !manager.isRecording)
       {
-        if (auto trigger = frame_generate(*triggers, frameTime); trigger.isVisible && trigger.eventId > -1)
+        if (auto trigger = model::frame_generate(animation->triggers, frameTime);
+            trigger.isVisible && trigger.eventId > -1)
         {
           auto clipMin = ImGui::GetItemRectMin();
           auto clipMax = ImGui::GetItemRectMax();
@@ -1219,9 +1173,8 @@ namespace anm2ed::imgui
           drawList->PushClipRect(clipMin, clipMax);
           ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE_LARGE);
           auto triggerTextColor = isLightTheme ? TRIGGER_TEXT_COLOR_LIGHT : TRIGGER_TEXT_COLOR_DARK;
-          auto events = anm2.element_get(ElementType::EVENTS);
-          auto event = events ? child_id_get(*events, ElementType::EVENT_ELEMENT, trigger.eventId) : nullptr;
-          if (event) drawList->AddText(textPos, ImGui::GetColorU32(triggerTextColor), event->name.c_str());
+          if (auto event = model::item_get(model.content.events, trigger.eventId))
+            drawList->AddText(textPos, ImGui::GetColorU32(triggerTextColor), event->name.c_str());
           ImGui::PopFont();
           drawList->PopClipRect();
         }
@@ -1279,16 +1232,12 @@ namespace anm2ed::imgui
           editItemType = static_cast<ItemType>(editReference.itemType);
         }
 
-        auto frame = anm2.element_get(editReference);
-        auto editItemReference = editReference;
-        editItemReference.frameIndex = -1;
-        auto item = anm2.element_get(editItemReference);
-        auto nulls = anm2.element_get(ElementType::NULLS);
-        auto selectedNull = editItemType == ItemType::NULL_ && nulls
-                                ? child_id_get(*nulls, ElementType::NULL_ELEMENT, editReference.itemID)
-                                : nullptr;
+        auto frame = model.frame_get(editReference);
+        auto item = model.track_get(editReference);
+        auto selectedNull =
+            editItemType == ItemType::NULL_ ? model::item_get(model.content.nulls, editReference.itemID) : nullptr;
         bool isSelectedNullRect = selectedNull && selectedNull->isShowRect;
-        auto null_rect_top_left = [](const Element& frame) { return frame.position - (frame.scale * 0.5f); };
+        auto null_rect_top_left = [](const model::Frame& frame) { return frame.position - (frame.scale * 0.5f); };
 
         if (isMouseMiddleDown) useTool = tool::PAN;
         if (tool == tool::MOVE && isMouseRightDown) useTool = tool::SCALE;
@@ -1330,9 +1279,8 @@ namespace anm2ed::imgui
                                   for (auto& [itemReference, itemFrames] : groupedFrames)
                                   {
                                     auto itemType = static_cast<ItemType>(itemReference.itemType);
-                                    auto item = document.anm2.element_get(itemReference);
-                                    if (!item) continue;
-                                    frames_change(*item, frameChange, itemType, changeType, itemFrames);
+                                    if (auto item = document.model.track_edit(itemReference))
+                                      model::frames_change(*item, frameChange, itemType, changeType, itemFrames);
                                   }
                                 }});
         };

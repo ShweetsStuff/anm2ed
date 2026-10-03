@@ -21,7 +21,7 @@ namespace anm2ed::imgui::wizard
 {
   void RenderAnimation::range_to_animation_set(Manager& manager, Document& document)
   {
-    if (auto animation = document.anm2.element_get(ElementType::ANIMATION, document.reference_get().animationIndex))
+    if (auto animation = document.model.animation_get(document.reference_get().animationIndex))
     {
       manager.recordingStart = 0;
       manager.recordingEnd = animation->frameNum - 1;
@@ -42,15 +42,12 @@ namespace anm2ed::imgui::wizard
                   });
     if (!frameReferences.empty())
     {
-      auto itemReference = reference;
-      itemReference.frameIndex = -1;
-      if (auto item = document.anm2.element_get(itemReference))
+      if (auto item = document.model.track_get(reference))
       {
         int duration{};
         int frameIndex{};
-        for (auto& frame : item->children)
+        for (auto& frame : item->frames)
         {
-          if (frame.type != ElementType::FRAME && frame.type != ElementType::TRIGGER) continue;
           if (frameIndex == frameReferences.begin()->frameIndex) manager.recordingStart = duration;
           if (frameIndex == frameReferences.rbegin()->frameIndex) manager.recordingEnd = duration + frame.duration - 1;
 
@@ -72,7 +69,7 @@ namespace anm2ed::imgui::wizard
   {
     isEnd = false;
 
-    auto animation = document.anm2.element_get(ElementType::ANIMATION, document.reference_get().animationIndex);
+    auto animation = document.model.animation_get(document.reference_get().animationIndex);
     if (!animation) return;
 
     auto& ffmpegPath = settings.renderFFmpegPath;
@@ -94,8 +91,7 @@ namespace anm2ed::imgui::wizard
     auto frameMax = animationFrameNum - 1;
     start = std::clamp(start, 0, frameMax);
     end = std::clamp(end, start, frameMax);
-    auto info = element_first_get(document.anm2.root, ElementType::INFO);
-    auto animationFps = std::max(info ? info->fps : 30, 1);
+    auto animationFps = std::max(document.model.info.fps, 1);
     if (renderFpsMode < render::FPS_ANIMATION || renderFpsMode >= render::FPS_COUNT)
       renderFpsMode = render::FPS_ANIMATION;
     auto renderFps = render::fps_get(renderFpsMode, animationFps, settings.playbackTickRate);

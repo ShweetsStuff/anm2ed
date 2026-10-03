@@ -41,14 +41,10 @@ namespace anm2ed::imgui
           auto targetRow = row;
           auto targetAnimationIndex = reference.animationIndex;
           edit_push(EDIT_TOGGLE_GROUP_EXPANDED,
-                    [=](Anm2& anm2)
+                    [=](model::Model& model)
                     {
-                      auto animation = anm2.element_get(ElementType::ANIMATION, targetAnimationIndex);
-                      auto container =
-                          animation ? child_first_get(*animation, TYPE_CONTAINERS[targetRow.type]) : nullptr;
-                      auto group = container ? child_id_get(*container, ElementType::GROUP, targetRow.id) : nullptr;
-                      if (!group) return;
-                      group->isExpanded = !group->isExpanded;
+                      if (auto group = model.track_group_edit(targetAnimationIndex, targetRow.type, targetRow.id))
+                        group->isExpanded = !group->isExpanded;
                     });
         };
 
@@ -140,14 +136,10 @@ namespace anm2ed::imgui
           auto targetGroupId = group->id;
           auto targetVisible = !isGroupVisible;
           edit_push(EDIT_TOGGLE_ITEM_VISIBILITY,
-                    [=](Anm2& anm2)
+                    [=](model::Model& model)
                     {
-                      auto animation = anm2.element_get(ElementType::ANIMATION, targetAnimationIndex);
-                      auto container = animation ? child_first_get(*animation, TYPE_CONTAINERS[targetType]) : nullptr;
-                      if (!container) return;
-                      auto group = child_id_get(*container, ElementType::GROUP, targetGroupId);
-                      if (!group) return;
-                      group->isVisible = targetVisible;
+                      if (auto group = model.track_group_edit(targetAnimationIndex, targetType, targetGroupId))
+                        group->isVisible = targetVisible;
                     });
         }
         auto visibleButtonMin = ImGui::GetItemRectMin();
@@ -167,7 +159,7 @@ namespace anm2ed::imgui
           ImGui::TextUnformatted(label.c_str());
           ImGui::PopFont();
           ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_ID), std::make_format_args(group->id)).c_str());
-          auto groupItemsCount = group_items_count_get(type, group->id);
+          auto groupItemsCount = (int)group->tracks.size();
           ImGui::TextUnformatted(
               std::vformat(localize.get(FORMAT_ITEMS_COUNT), std::make_format_args(groupItemsCount)).c_str());
           ImGui::EndTooltip();
@@ -209,13 +201,13 @@ namespace anm2ed::imgui
     {
       if (type == LAYER)
       {
-        auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, id);
+        auto layer = model::item_get(model.content.layers, id);
         if (!layer) return localize.get(TYPE_STRINGS[type]);
         return std::vformat(localize.get(FORMAT_LAYER), std::make_format_args(id, layer->name, layer->spritesheetId));
       }
       if (type == NULL_)
       {
-        auto null = anm2.element_get(ElementType::NULL_ELEMENT, id);
+        auto null = model::item_get(model.content.nulls, id);
         if (!null) return localize.get(TYPE_STRINGS[type]);
         return std::vformat(localize.get(FORMAT_NULL), std::make_format_args(id, null->name));
       }
@@ -320,7 +312,7 @@ namespace anm2ed::imgui
               }
               case LAYER:
               {
-                auto layer = anm2.element_get(ElementType::LAYER_ELEMENT, id);
+                auto layer = model::item_get(model.content.layers, id);
                 if (!layer) break;
                 ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
                 ImGui::TextUnformatted(layer->name.c_str());
@@ -338,7 +330,7 @@ namespace anm2ed::imgui
               }
               case NULL_:
               {
-                auto nullInfo = anm2.element_get(ElementType::NULL_ELEMENT, id);
+                auto nullInfo = model::item_get(model.content.nulls, id);
                 if (!nullInfo) break;
                 ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
                 ImGui::TextUnformatted(nullInfo->name.c_str());
@@ -404,9 +396,9 @@ namespace anm2ed::imgui
           auto targetGroupType = row.rootGroupType;
           auto targetGroupId = row.rootGroupId;
           edit_push(EDIT_TOGGLE_ITEM_VISIBILITY,
-                    [=](Anm2& anm2)
+                    [=](model::Model& model)
                     {
-                      if (auto item = anm2.element_get(
+                      if (auto item = model.track_edit(
                               Reference{animationIndex, targetType, targetID, -1, targetGroupType, targetGroupId}))
                         item->isVisible = !item->isVisible;
                     });
@@ -417,7 +409,7 @@ namespace anm2ed::imgui
 
         if (type == NULL_)
         {
-          if (auto null = anm2.element_get(ElementType::NULL_ELEMENT, id))
+          if (auto null = model::item_get(model.content.nulls, id))
           {
             auto& isShowRect = null->isShowRect;
             auto rectIcon = isShowRect ? icon::SHOW_RECT : icon::HIDE_RECT;
@@ -428,12 +420,10 @@ namespace anm2ed::imgui
             {
               auto nullID = id;
               edit_push(EDIT_TOGGLE_NULL_RECT,
-                        [=](Anm2& anm2)
+                        [=](model::Model& model)
                         {
-                          auto nulls = anm2.element_get(ElementType::NULLS);
-                          auto null = nulls ? child_id_get(*nulls, ElementType::NULL_ELEMENT, nullID) : nullptr;
-                          if (!null) return;
-                          null->isShowRect = !null->isShowRect;
+                          if (auto null = model::item_get(model.content.nulls, nullID))
+                            null->isShowRect = !null->isShowRect;
                         });
             }
             overlay_icon(resources.icon_id_get(rectIcon), iconTintCurrent, false);

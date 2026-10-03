@@ -9,6 +9,8 @@
 
 #include "log.hpp"
 #include "math.hpp"
+#include "model/frames.hpp"
+#include "model/xml.hpp"
 #include "strings.hpp"
 #include "util/imgui/draw.hpp"
 
@@ -114,26 +116,19 @@ namespace anm2ed::imgui::wizard
   };
   static constexpr auto CREDIT_COUNT = (int)(sizeof(CREDITS) / sizeof(About::Credit));
 
-  const Element* friend_animation_get(const About::FriendState& state)
+  const model::Animation* friend_animation_get(const About::FriendState& state)
   {
-    auto animations = state.anm2.element_get(ElementType::ANIMATIONS);
-    if (!animations) return nullptr;
-
-    if (!animations->defaultAnimation.empty())
-      for (const auto& child : animations->children)
-        if (child.type == ElementType::ANIMATION && child.name == animations->defaultAnimation) return &child;
-
-    for (const auto& child : animations->children)
-      if (child.type == ElementType::ANIMATION) return &child;
-
-    return nullptr;
+    auto animations = state.model.animations_get();
+    for (auto [index, animation] : animations)
+      if (animation->name == state.model.animations.defaultAnimation) return animation;
+    return animations.empty() ? nullptr : animations.front().second;
   }
 
   void friend_state_load(About::FriendState& state, const resource::friends::Info& info)
   {
     if (!state.canvas) state.canvas = std::make_unique<Canvas>(vec2(1.0f, 1.0f));
 
-    state.anm2 = Anm2{};
+    state.model = model::Model{};
     state.textures.clear();
     state.rect = vec4(-1.0f);
     state.time = 0.0f;
@@ -141,19 +136,16 @@ namespace anm2ed::imgui::wizard
     state.isLoaded = false;
 
     std::string errorString{};
-    if (!state.anm2.load_string(info.anm2, &errorString))
+    if (!model::model_load_string(state.model, info.anm2, &errorString))
     {
       logger.error(std::format("Unable to load friend animation {}: {}", info.name, errorString));
       return;
     }
 
-    if (auto anm2Info = state.anm2.element_get(ElementType::INFO))
-      if (anm2Info->fps > 0) state.fps = (float)anm2Info->fps;
+    if (state.model.info.fps > 0) state.fps = (float)state.model.info.fps;
 
-    if (auto spritesheets = state.anm2.element_get(ElementType::SPRITESHEETS))
-      for (auto& spritesheet : spritesheets->children)
-        if (spritesheet.type == ElementType::SPRITESHEET)
-          state.textures[spritesheet.id] = resource::Image(info.png, info.pngSize);
+    for (auto& spritesheet : state.model.content.spritesheets)
+      state.textures[spritesheet.id] = resource::Image(info.png, info.pngSize);
 
     auto animation = friend_animation_get(state);
     if (!animation)
@@ -162,7 +154,7 @@ namespace anm2ed::imgui::wizard
       return;
     }
 
-    state.rect = state.anm2.animation_rect(*animation, true);
+    state.rect = model::animation_rect(state.model, *animation, true);
     state.isLoaded = state.rect != vec4(-1.0f) && !state.textures.empty();
   }
 
@@ -185,24 +177,17 @@ namespace anm2ed::imgui::wizard
   }
 
   void friend_layer_draw(About::FriendState& state, Resources& resources, const mat4& baseTransform,
-                         const Element& layerAnimation, const Element& rootFrame)
+                         const model::Track& layerAnimation, const model::Frame& rootFrame)
   {
-    if (layerAnimation.type == ElementType::GROUP)
-    {
-      for (auto& child : layerAnimation.children)
-        friend_layer_draw(state, resources, baseTransform, child, rootFrame);
-      return;
-    }
+    if (!layerAnimation.isVisible) return;
 
-    if (layerAnimation.type != ElementType::LAYER_ANIMATION || !layerAnimation.isVisible) return;
-
-    auto layer = state.anm2.element_get(ElementType::LAYER_ELEMENT, layerAnimation.layerId);
+    auto layer = model::item_get(state.model.content.layers, layerAnimation.id);
     if (!layer) return;
 
     auto textureIt = state.textures.find(layer->spritesheetId);
     if (textureIt == state.textures.end() || !textureIt->second.is_valid()) return;
 
-    auto frame = state.anm2.frame_effective(layerAnimation.layerId, frame_generate(layerAnimation, state.time));
+    auto frame = state.model.frame_effective(layerAnimation.id, model::frame_generate(layerAnimation, state.time));
     if (!frame.isVisible || frame.size == vec2()) return;
 
     auto& texture = textureIt->second;
@@ -248,17 +233,12 @@ namespace anm2ed::imgui::wizard
     state.canvas->set_to_rect(zoom, pan, rect);
 
     auto transform = state.canvas->transform_get(zoom, pan);
-    Element rootFrame{};
-    if (auto root = animation_item_get(*animation, ItemType::ROOT))
-    {
-      rootFrame = frame_generate(*root, state.time);
-      transform *= math::quad_model_parent_get(rootFrame.position, {}, math::percent_to_unit(rootFrame.scale),
-                                               rootFrame.rotation, math::percent_to_unit(rootFrame.shear));
-    }
+    auto rootFrame = model::frame_generate(animation->root, state.time);
+    transform *= math::quad_model_parent_get(rootFrame.position, {}, math::percent_to_unit(rootFrame.scale),
+                                             rootFrame.rotation, math::percent_to_unit(rootFrame.shear));
 
-    if (auto layerAnimations = child_first_get(*animation, ElementType::LAYER_ANIMATIONS))
-      for (auto& layerAnimation : layerAnimations->children)
-        friend_layer_draw(state, resources, transform, layerAnimation, rootFrame);
+    model::tracks_each(animation->layers, [&](const model::Track& layerAnimation, auto*)
+                       { friend_layer_draw(state, resources, transform, layerAnimation, rootFrame); });
 
     state.canvas->unbind();
   }

@@ -8,7 +8,8 @@
 #include <fstream>
 #include <sstream>
 
-#include "anm2/anm2.hpp"
+#include "edit/edit.hpp"
+#include "model/xml.hpp"
 #include "util/xml.hpp"
 
 namespace anm2ed::test
@@ -52,32 +53,33 @@ namespace anm2ed::test
     return fixtures;
   }
 
-  inline Anm2 anm2_load(const std::string& text)
+  inline model::Model model_load(const std::string& text)
   {
-    Anm2 anm2{};
-    REQUIRE(anm2.load_string(text));
-    return anm2;
+    model::Model model{};
+    REQUIRE(model::model_load_string(model, text));
+    return model;
   }
 
   // Every serialization and merge the editor can produce for a document; goldens lock each one down.
-  inline std::vector<Variant> variants_get(const Anm2& anm2)
+  inline std::vector<Variant> variants_get(const model::Model& model)
   {
     std::vector<Variant> variants{};
     std::string hashes{};
     for (auto [name, flags] : PRESETS)
     {
-      variants.emplace_back(name, element_to_string(anm2.normalized_for_serialize(flags).root, flags));
+      variants.emplace_back(name, model::model_serialize(model, flags));
       for (auto [formatName, isExtended] : FORMATS)
-        hashes += std::format("{}.{} {:016x}\n", name, formatName, anm2.hash({flags, isExtended}));
+        hashes += std::format("{}.{} {:016x}\n", name, formatName, model::model_hash(model, {flags, isExtended}));
     }
     for (auto [name, isExtended] : FORMATS)
-      variants.emplace_back(name, anm2.to_string({.isExtendedFormat = isExtended}));
+      variants.emplace_back(name, model::model_to_string(model, {.isExtendedFormat = isExtended}));
     for (auto [name, type] : MERGES)
     {
-      auto merged = anm2;
+      auto merged = model;
       std::set<int> sources{0, 1, 2};
-      merged.animations_merge(0, sources, type, type == types::merge::PREPEND || type == types::merge::REPLACE);
-      variants.emplace_back(name, merged.to_string({.isExtendedFormat = true}));
+      edit::animations_merge(merged, 0, sources, type, type == types::merge::PREPEND || type == types::merge::REPLACE,
+                             {});
+      variants.emplace_back(name, model::model_to_string(merged, {.isExtendedFormat = true}));
     }
     variants.emplace_back("hashes", hashes);
     return variants;
@@ -94,25 +96,23 @@ namespace anm2ed::test
   }
 
   // Save/reload properties every document must hold.
-  inline void invariants_check(const Anm2& anm2)
+  inline void invariants_check(const model::Model& model)
   {
 
     for (auto [name, isExtended] : FORMATS)
     {
       INFO("format: ", std::string(name));
       // The first save may repair invalid input (dangling ids, duplicates); after that, saves must be fixed points.
-      auto text = anm2.to_string({.isExtendedFormat = isExtended});
-      auto reloaded = anm2_load(text);
-      auto resaved = reloaded.to_string({.isExtendedFormat = isExtended});
+      auto text = model::model_to_string(model, {.isExtendedFormat = isExtended});
+      auto reloaded = model_load(text);
+      auto resaved = model::model_to_string(reloaded, {.isExtendedFormat = isExtended});
       CHECK(resaved == text);
-      CHECK(anm2_load(resaved).hash() == reloaded.hash());
+      CHECK(model::model_hash(model_load(resaved)) == model::model_hash(reloaded));
     }
 
     // Loading only the game's view and re-saving it for the game must not change it.
-    auto game = game_document_get(anm2.to_string());
-    auto gameAnm2 = anm2_load(game);
-    CHECK(element_to_string(gameAnm2.normalized_for_serialize(SERIALIZE_ISAAC_DEFAULT).root, SERIALIZE_ISAAC_DEFAULT) ==
-          game);
+    auto game = game_document_get(model::model_to_string(model));
+    CHECK(model::model_serialize(model_load(game), SERIALIZE_ISAAC_DEFAULT) == game);
   }
 
   // Compares against a stored golden; ANM2ED_UPDATE_GOLDEN (or a missing golden when isBootstrap) rewrites it.
