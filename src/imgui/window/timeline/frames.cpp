@@ -189,10 +189,11 @@ namespace anm2ed::imgui
         if (!document.selection.uids[SelectionKind::FRAMES].empty())
         {
           reference_set(item_reference_from_frame_get(reference));
-          frames_selection_reset_for(document);
+          document.frame_references_clear();
         }
         else if (reference.itemType != NONE || reference.itemID != -1)
-          reference_clear();
+          group_selection_reset_for(document);
+        reference_clear_for(document);
       }
 
       if (type == NONE)

@@ -105,11 +105,6 @@ namespace anm2ed::imgui
     return result;
   }
 
-  void TimelineContext::item_selection_set_for(Document& targetDocument, Reference itemReference)
-  {
-    targetDocument.selected_set(SelectionKind::TRACKS, {item_reference_from_frame_get(itemReference)});
-  }
-
   void TimelineContext::frame_selection_set_for(Document& targetDocument, Reference frameReference)
   {
     group_selection_reset_for(targetDocument);
@@ -158,11 +153,6 @@ namespace anm2ed::imgui
     return true;
   }
 
-  bool TimelineContext::is_frame_copy_item(const Reference& itemReference)
-  {
-    return itemReference.itemType == ROOT || itemReference.itemType == LAYER || itemReference.itemType == NULL_;
-  }
-
   std::set<Reference> TimelineContext::copy_frame_references_get()
   {
     auto selectedFrames = document.frame_references_get(Document::FrameReferenceFallback::NONE);
@@ -176,16 +166,11 @@ namespace anm2ed::imgui
     for (auto itemReference : selectedItems)
     {
       itemReference.frameIndex = -1;
-      if (!is_frame_copy_item(itemReference)) continue;
+      if (itemReference.itemType == TRIGGER) continue;
       auto itemFrames = document.item_frame_references_get(itemReference);
       result.insert(itemFrames.begin(), itemFrames.end());
     }
     return result;
-  }
-
-  void TimelineContext::frames_selection_reset_for(Document& targetDocument)
-  {
-    targetDocument.frame_references_clear();
   }
 
   void TimelineContext::frames_selection_set_reference_for(Document& targetDocument)
@@ -199,42 +184,25 @@ namespace anm2ed::imgui
   void TimelineContext::reference_clear_for(Document& targetDocument)
   {
     targetDocument.reference_set({targetDocument.reference_get().animationIndex});
-    frames_selection_reset_for(targetDocument);
+    targetDocument.frame_references_clear();
     targetDocument.selection.uids[SelectionKind::TRACKS].clear();
-  }
-
-  void TimelineContext::reference_set_item_reference_for(Document& targetDocument, Reference itemReference)
-  {
-    itemReference.frameIndex = -1;
-    targetDocument.reference_set(itemReference);
-    frames_selection_reset_for(targetDocument);
-    item_selection_set_for(targetDocument, itemReference);
   }
 
   void TimelineContext::reference_set_timeline_item_reference_for(Document& targetDocument, Reference itemReference)
   {
+    itemReference.frameIndex = -1;
     if (itemReference.itemType == LAYER)
       if (auto layer = model::item_get(targetDocument.model.content.layers, itemReference.itemID))
         targetDocument.focused_id_set(SelectionKind::SPRITESHEETS, layer->spritesheetId);
-    reference_set_item_reference_for(targetDocument, itemReference);
+    targetDocument.reference_set(itemReference);
+    targetDocument.frame_references_clear();
+    targetDocument.selected_set(SelectionKind::TRACKS, {itemReference});
   }
 
   void TimelineContext::command_push(std::function<void(Manager&, Document&)> run)
   {
     manager.command_push(
         {manager.selected, [run](Manager& manager, Document& document) mutable { run(manager, document); }});
-  }
-
-  void TimelineContext::reference_clear()
-  {
-    group_selection_reset_for(document);
-    reference_clear_for(document);
-  }
-
-  void TimelineContext::reference_set_timeline_item_reference(Reference itemReference)
-  {
-    group_selection_reset_for(document);
-    reference_set_timeline_item_reference_for(document, itemReference);
   }
 
   std::vector<TimelineItemRow> TimelineContext::timeline_item_rows_get()
@@ -395,7 +363,7 @@ namespace anm2ed::imgui
           document.focused_id_set(SelectionKind::SPRITESHEETS, layer->spritesheetId);
       reference_set(row_item_reference_get(rowReference));
     }
-    frames_selection_reset_for(document);
+    document.frame_references_clear();
 
     if (isShiftDown)
     {
@@ -451,7 +419,8 @@ namespace anm2ed::imgui
     index = std::clamp(index, 0, (int)itemReferences.size() - 1);
 
     auto& itemReference = itemReferences[index];
-    reference_set_timeline_item_reference(itemReference);
+    group_selection_reset_for(document);
+    reference_set_timeline_item_reference_for(document, itemReference);
   }
 
   std::vector<TimelineRowReference> TimelineContext::selected_row_references_get()

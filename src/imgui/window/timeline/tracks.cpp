@@ -519,7 +519,7 @@ namespace anm2ed::imgui
             rowSelectionAnchor = rowReferences.front();
             isRowSelectionAnchorSet = true;
           }
-          frames_selection_reset_for(document);
+          document.frame_references_clear();
         }
 
         if (animation && shortcut(manager.chords[SHORTCUT_GROUP], shortcut::FOCUSED) &&

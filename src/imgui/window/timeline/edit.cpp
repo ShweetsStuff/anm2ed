@@ -178,7 +178,7 @@ namespace anm2ed::imgui
           if (uids.empty()) return;
           document.selected_set(SelectionKind::TRACKS, {targetReferences.begin(), targetReferences.end()});
           document.reference_set(targetReferences.front());
-          frames_selection_reset_for(document);
+          document.frame_references_clear();
         });
   }
 
@@ -225,7 +225,7 @@ namespace anm2ed::imgui
             document.reference_set({document.reference_get().animationIndex});
           else
             document.selection.focus = moved.focus;
-          frames_selection_reset_for(document);
+          document.frame_references_clear();
         });
   }
 

@@ -225,17 +225,13 @@ namespace anm2ed::imgui
     bool is_same_item(const Reference& left, const Reference& right);
     void group_selection_reset_for(Document& targetDocument);
     std::set<Reference> item_references_for_current_get();
-    void item_selection_set_for(Document& targetDocument, Reference itemReference);
     void frame_selection_set_for(Document& targetDocument, Reference frameReference);
     void frame_selection_toggle_for(Document& targetDocument, Reference frameReference);
     bool frame_selection_range_set_for(Document& targetDocument, Reference firstReference, Reference lastReference,
                                        bool isAdditive);
-    bool is_frame_copy_item(const Reference& itemReference);
     std::set<Reference> copy_frame_references_get();
-    void frames_selection_reset_for(Document& targetDocument);
     void frames_selection_set_reference_for(Document& targetDocument);
     void reference_clear_for(Document& targetDocument);
-    void reference_set_item_reference_for(Document& targetDocument, Reference itemReference);
     void reference_set_timeline_item_reference_for(Document& targetDocument, Reference itemReference);
     void command_push(std::function<void(Manager&, Document&)> run);
     void overlay_icon(GLuint textureId, ImVec4 tint, bool isForced = false);
@@ -254,8 +250,6 @@ namespace anm2ed::imgui
     bool is_bake_into_other_frames_ready();
     void bake_into_other_frames();
     void frame_split();
-    void reference_clear();
-    void reference_set_timeline_item_reference(Reference itemReference);
     std::vector<TimelineItemRow> timeline_item_rows_get();
     std::vector<Reference> timeline_item_references_get();
     Reference group_reference_get(const TimelineItemRow& row);
