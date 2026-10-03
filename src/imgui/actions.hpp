@@ -86,7 +86,8 @@ namespace anm2ed::imgui
                      int = ACTION_COUNT);
   void actions_undo_redo_add(Actions&, Manager&, Document&);
   void actions_menu_draw(Actions&, Settings&);
-  bool actions_context_window_draw(const char*, Actions&, Settings&, ImGuiPopupFlags = ImGuiPopupFlags_MouseButtonRight);
+  bool actions_context_window_draw(const char*, Actions&, Settings&, ImGuiPopupFlags = ImGuiPopupFlags_MouseButtonRight,
+                                   ImGuiHoveredFlags = ImGuiHoveredFlags_None);
   bool actions_popup_draw(const char*, Actions&, Settings&);
   void actions_shortcuts_update(Actions&, Manager&, types::shortcut::Type = types::shortcut::FOCUSED);
   void action_button_draw(Action&, Manager&, Settings&, ImVec2, bool&);

@@ -107,11 +107,6 @@ namespace anm2ed::imgui
     auto colorActiveHidden = to_imvec4(colorActiveVec * COLOR_HIDDEN_MULTIPLIER);
     auto colorHoveredHidden = to_imvec4(colorHoveredVec * COLOR_HIDDEN_MULTIPLIER);
 
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
-
-    ImGui::PopStyleVar(2);
-
     ImGui::PushID(index);
 
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2());
@@ -161,19 +156,6 @@ namespace anm2ed::imgui
 
     if (isFramesChildVisible)
     {
-      if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
-          ImGui::Shortcut(ImGuiKey_Escape, ImGuiInputFlags_RouteFocused))
-      {
-        if (!document.selection.uids[SelectionKind::FRAMES].empty())
-        {
-          reference_set(item_reference_from_frame_get(reference));
-          document.frame_references_clear();
-        }
-        else if (reference.itemType != NONE || reference.itemID != -1)
-          group_selection_reset_for(document);
-        document.focus_clear();
-      }
-
       if (type == NONE)
       {
         if (length > 0)
@@ -503,73 +485,78 @@ namespace anm2ed::imgui
       }
     }
 
-    if (isDraggedFrameActive)
-    {
-      ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-      auto durationDelta =
-          draggedFrameWidth > 0.0f
-              ? static_cast<int>((ImGui::GetIO().MousePos.x - draggedFrameStartMouseX) / draggedFrameWidth)
-              : hoveredTime - draggedFrameStart;
-      auto isDraggedFrameChanged = draggedFrameType == TRIGGER ? hoveredTime != draggedFrameStart : durationDelta != 0;
-
-      if (!isDraggedFrameSnapshot && isDraggedFrameChanged)
-      {
-        isDraggedFrameSnapshot = true;
-        edit_begin_push(draggedFrameType == TRIGGER ? EDIT_TRIGGER_AT_FRAME : EDIT_FRAME_DURATION);
-      }
-
-      if (isDraggedFrameSnapshot)
-      {
-        auto targetReference = draggedFrameReference;
-        if (draggedFrameType == TRIGGER)
-        {
-          auto atFrame = glm::clamp(
-              hoveredTime, 0, settings.playbackIsClamp && animation ? animation->frameNum - 1 : FRAME_NUM_MAX - 1);
-          command_push([=](Manager&, Document& document)
-                       { edit::trigger_at_frame_set(document.model, targetReference, atFrame); });
-        }
-        else
-        {
-          std::map<Reference, int> durations{};
-          if (draggedFrameStartDurations.empty())
-            durations[targetReference] = draggedFrameStartDuration + durationDelta;
-          for (auto frameDuration : draggedFrameStartDurations)
-            durations[frameDuration.reference] = frameDuration.duration + durationDelta;
-          command_push([=](Manager&, Document& document) { edit::frame_durations_set(document.model, durations); });
-        }
-      }
-
-      if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
-      {
-        auto targetReference = draggedFrameReference;
-        auto targetType = draggedFrameType;
-        command_push(
-            [=, this](Manager&, Document& document)
-            {
-              auto item = document.model.track_edit(targetReference);
-              if (targetType == TRIGGER && item) model::frames_sort_by_at_frame(*item);
-              document.change();
-            });
-        isDraggedFrameActive = false;
-        draggedFrameReference = {};
-        draggedFrameType = NONE;
-        draggedFrameStart = -1;
-        draggedFrameStartDuration = -1;
-        draggedFrameStartDurations.clear();
-        draggedFrameStartMouseX = 0.0f;
-        draggedFrameWidth = 0.0f;
-        isDraggedFrameSnapshot = false;
-      }
-    }
-
-    context_menu();
-
     ImGui::EndChild();
     if (isLightTheme && isDefaultChild) ImGui::PopStyleColor();
     ImGui::PopStyleVar();
 
     index++;
     ImGui::PopID();
+  }
+
+  // Frame drags, once per frame after the rows: dropping moved frames, and resizing frames (or moving a trigger).
+  void TimelineContext::frame_drag_update()
+  {
+    if (frameMoveDrag.isActive && ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+    {
+      if (frameMoveDropTarget) frames_move_to(*frameMoveDropTarget);
+      frameMoveDrag = {};
+    }
+
+    if (!isDraggedFrameActive) return;
+    ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+    auto durationDelta =
+        draggedFrameWidth > 0.0f
+            ? static_cast<int>((ImGui::GetIO().MousePos.x - draggedFrameStartMouseX) / draggedFrameWidth)
+            : hoveredTime - draggedFrameStart;
+    auto isDraggedFrameChanged = draggedFrameType == TRIGGER ? hoveredTime != draggedFrameStart : durationDelta != 0;
+
+    if (!isDraggedFrameSnapshot && isDraggedFrameChanged)
+    {
+      isDraggedFrameSnapshot = true;
+      edit_begin_push(draggedFrameType == TRIGGER ? EDIT_TRIGGER_AT_FRAME : EDIT_FRAME_DURATION);
+    }
+
+    if (isDraggedFrameSnapshot)
+    {
+      auto targetReference = draggedFrameReference;
+      if (draggedFrameType == TRIGGER)
+      {
+        auto atFrame = glm::clamp(hoveredTime, 0,
+                                  settings.playbackIsClamp && animation ? animation->frameNum - 1 : FRAME_NUM_MAX - 1);
+        command_push([=](Manager&, Document& document)
+                     { edit::trigger_at_frame_set(document.model, targetReference, atFrame); });
+      }
+      else
+      {
+        std::map<Reference, int> durations{};
+        if (draggedFrameStartDurations.empty()) durations[targetReference] = draggedFrameStartDuration + durationDelta;
+        for (auto frameDuration : draggedFrameStartDurations)
+          durations[frameDuration.reference] = frameDuration.duration + durationDelta;
+        command_push([=](Manager&, Document& document) { edit::frame_durations_set(document.model, durations); });
+      }
+    }
+
+    if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+    {
+      auto targetReference = draggedFrameReference;
+      auto targetType = draggedFrameType;
+      command_push(
+          [=, this](Manager&, Document& document)
+          {
+            auto item = document.model.track_edit(targetReference);
+            if (targetType == TRIGGER && item) model::frames_sort_by_at_frame(*item);
+            document.change();
+          });
+      isDraggedFrameActive = false;
+      draggedFrameReference = {};
+      draggedFrameType = NONE;
+      draggedFrameStart = -1;
+      draggedFrameStartDuration = -1;
+      draggedFrameStartDurations.clear();
+      draggedFrameStartMouseX = 0.0f;
+      draggedFrameWidth = 0.0f;
+      isDraggedFrameSnapshot = false;
+    }
   }
 
   void TimelineContext::frames_child()
@@ -610,6 +597,19 @@ namespace anm2ed::imgui
         {
           group_selection_reset_for(document);
           document.frame_references_set(document.selected_item_frame_references_get());
+        }
+
+        if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+            ImGui::Shortcut(ImGuiKey_Escape, ImGuiInputFlags_RouteFocused))
+        {
+          if (!document.selection.uids[SelectionKind::FRAMES].empty())
+          {
+            reference_set(item_reference_from_frame_get(reference));
+            document.frame_references_clear();
+          }
+          else if (reference.itemType != NONE || reference.itemID != -1)
+            group_selection_reset_for(document);
+          document.focus_clear();
         }
 
         ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2());
@@ -695,6 +695,9 @@ namespace anm2ed::imgui
           }
           ImGui::EndTable();
         }
+
+        frame_drag_update();
+        context_menu();
 
         if (isFrameBoxClipSet)
         {

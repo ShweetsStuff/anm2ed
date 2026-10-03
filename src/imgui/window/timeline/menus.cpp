@@ -153,7 +153,8 @@ namespace anm2ed::imgui
     actions.add(ACTION_CUT, [=, this]() { return !selectedFrames.empty(); }, [this]() { cut(); });
     actions.add(ACTION_COPY, [=, this]() { return !copyFrames.empty(); }, [this]() { copy(); });
     actions.add(ACTION_PASTE, [&]() { return !clipboard.is_empty(); }, [this]() { paste(); });
-    actions_context_window_draw("##Context Menu", actions, settings);
+    actions_context_window_draw("##Context Menu", actions, settings, ImGuiPopupFlags_MouseButtonRight,
+                                ImGuiHoveredFlags_ChildWindows);
 
     ImGui::PopStyleVar(2);
   }

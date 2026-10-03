@@ -77,10 +77,12 @@ namespace anm2ed::imgui
     }
   }
 
-  bool actions_context_window_draw(const char* label, Actions& actions, Settings& settings, ImGuiPopupFlags flags)
+  bool actions_context_window_draw(const char* label, Actions& actions, Settings& settings, ImGuiPopupFlags flags,
+                                   ImGuiHoveredFlags hoveredFlags)
   {
     auto mouseButton = flags & ImGuiPopupFlags_MouseButtonMask_;
-    if (ImGui::IsMouseReleased(mouseButton) && ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
+    if (ImGui::IsMouseReleased(mouseButton) &&
+        ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup | hoveredFlags))
       if (!(flags & ImGuiPopupFlags_NoOpenOverItems) || !ImGui::IsAnyItemHovered()) ImGui::OpenPopup(label, flags);
 
     if (!ImGui::BeginPopup(label, ImGuiWindowFlags_NoMove)) return false;

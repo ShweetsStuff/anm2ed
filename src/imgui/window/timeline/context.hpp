@@ -254,7 +254,10 @@ namespace anm2ed::imgui
     ImVec2 frame_box_screen_point_get(ImVec2);
     void frame_overlay_draw(ImDrawList*, ImVec2, ImVec2);
     void frame_child(const TimelineRow&, int&, float);
+    void frame_drag_update();
     void frames_child();
+    void popups_update();
+    void shortcuts_update();
     void draw();
   };
 }

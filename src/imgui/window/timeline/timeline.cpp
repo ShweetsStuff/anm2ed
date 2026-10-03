@@ -47,11 +47,6 @@ namespace anm2ed::imgui
       isWindowHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows |
                                                ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
       frames_child();
-      if (frameMoveDrag.isActive && ImGui::IsMouseReleased(ImGuiMouseButton_Left))
-      {
-        if (frameMoveDropTarget) frames_move_to(*frameMoveDropTarget);
-        frameMoveDrag = {};
-      }
       items_child();
     }
     ImGui::PopStyleVar();
@@ -60,6 +55,14 @@ namespace anm2ed::imgui
     if (itemProperties.update(manager, settings, document, reference)) group_selection_reset_for(document);
     group_properties_update();
 
+    popups_update();
+    shortcuts_update();
+
+    if (isTextPushed) ImGui::PopStyleColor();
+  }
+
+  void TimelineContext::popups_update()
+  {
     makeManyRegionsPopup.trigger();
     if (ImGui::BeginPopupModal(makeManyRegionsPopup.label(), &makeManyRegionsPopup.isOpen, ImGuiWindowFlags_NoResize))
     {
@@ -174,76 +177,76 @@ namespace anm2ed::imgui
 
       ImGui::EndPopup();
     }
+  }
 
-    if (animation)
+  // Global timeline shortcuts: playback, playhead, frame resizing and frame/item navigation.
+  void TimelineContext::shortcuts_update()
+  {
+    if (!animation) return;
+
+    if (shortcut(manager.chords[SHORTCUT_PLAY_PAUSE], shortcut::GLOBAL)) playback.toggle();
+
+    if (shortcut(manager.chords[SHORTCUT_MOVE_PLAYHEAD_BACK], shortcut::GLOBAL))
     {
-      if (shortcut(manager.chords[SHORTCUT_PLAY_PAUSE], shortcut::GLOBAL)) playback.toggle();
-
-      if (shortcut(manager.chords[SHORTCUT_MOVE_PLAYHEAD_BACK], shortcut::GLOBAL))
-      {
-        playback_stop();
-        playback.decrement(settings.playbackIsClamp ? animation->frameNum : FRAME_NUM_MAX);
-        document.frameTime = playback.time;
-      }
-
-      if (shortcut(manager.chords[SHORTCUT_MOVE_PLAYHEAD_FORWARD], shortcut::GLOBAL))
-      {
-        playback_stop();
-        playback.increment(settings.playbackIsClamp ? animation->frameNum : FRAME_NUM_MAX);
-        document.frameTime = playback.time;
-      }
-
-      struct FrameResize
-      {
-        int shortcut;
-        StringType edit;
-        int delta;
-      };
-      constexpr FrameResize FRAME_RESIZES[] = {{SHORTCUT_SHORTEN_FRAME, EDIT_SHORTEN_FRAME, -1},
-                                               {SHORTCUT_EXTEND_FRAME, EDIT_EXTEND_FRAME, 1}};
-      for (int i = 0; i < (int)std::size(FRAME_RESIZES); ++i)
-      {
-        auto resize = FRAME_RESIZES[i];
-        auto isPressed = shortcut(manager.chords[resize.shortcut], shortcut::GLOBAL);
-        auto selectedFrames =
-            isPressed ? document.frame_references_get(Document::FrameReferenceFallback::NONE) : std::set<Reference>{};
-        std::erase_if(selectedFrames, is_trigger_reference);
-        if (!selectedFrames.empty())
-        {
-          if (resizeChordTabIds[i] != document.tabId) edit_begin_push(resize.edit);
-          command_push(
-              [=, this](Manager&, Document& document)
-              {
-                for (auto frameReference : selectedFrames)
-                  if (auto frame = document.model.frame_edit(frameReference))
-                    frame->duration =
-                        std::clamp(frame->duration + resize.delta, FRAME_DURATION_MIN, FRAME_DURATION_MAX);
-                document.change();
-              });
-        }
-        resizeChordTabIds[i] = isPressed ? document.tabId : 0;
-      }
-
-      auto isPreviousFrame = shortcut(manager.chords[SHORTCUT_PREVIOUS_FRAME], shortcut::GLOBAL);
-      auto isNextFrame = shortcut(manager.chords[SHORTCUT_NEXT_FRAME], shortcut::GLOBAL);
-      auto isPreviousItem = shortcut(manager.chords[SHORTCUT_PREVIOUS_ITEM], shortcut::GLOBAL);
-      auto isNextItem = shortcut(manager.chords[SHORTCUT_NEXT_ITEM], shortcut::GLOBAL);
-
-      if (isPreviousFrame || isNextFrame)
-        if (auto item = selected_item_get(); item && !item->frames.empty())
-        {
-          auto frameReference = reference;
-          frameReference.frameIndex = glm::clamp(reference.frameIndex + (int)isNextFrame - (int)isPreviousFrame, 0,
-                                                 (int)item->frames.size() - 1);
-          reference_set(frameReference);
-          document.frame_focus_select();
-          document.frameTime = model::frame_time_from_index_get(*item, reference.frameIndex);
-        }
-
-      if (isPreviousItem) reference_set_adjacent_item(-1);
-      if (isNextItem) reference_set_adjacent_item(1);
+      playback_stop();
+      playback.decrement(settings.playbackIsClamp ? animation->frameNum : FRAME_NUM_MAX);
+      document.frameTime = playback.time;
     }
 
-    if (isTextPushed) ImGui::PopStyleColor();
+    if (shortcut(manager.chords[SHORTCUT_MOVE_PLAYHEAD_FORWARD], shortcut::GLOBAL))
+    {
+      playback_stop();
+      playback.increment(settings.playbackIsClamp ? animation->frameNum : FRAME_NUM_MAX);
+      document.frameTime = playback.time;
+    }
+
+    struct FrameResize
+    {
+      int shortcut;
+      StringType edit;
+      int delta;
+    };
+    constexpr FrameResize FRAME_RESIZES[] = {{SHORTCUT_SHORTEN_FRAME, EDIT_SHORTEN_FRAME, -1},
+                                             {SHORTCUT_EXTEND_FRAME, EDIT_EXTEND_FRAME, 1}};
+    for (int i = 0; i < (int)std::size(FRAME_RESIZES); ++i)
+    {
+      auto resize = FRAME_RESIZES[i];
+      auto isPressed = shortcut(manager.chords[resize.shortcut], shortcut::GLOBAL);
+      auto selectedFrames =
+          isPressed ? document.frame_references_get(Document::FrameReferenceFallback::NONE) : std::set<Reference>{};
+      std::erase_if(selectedFrames, is_trigger_reference);
+      if (!selectedFrames.empty())
+      {
+        if (resizeChordTabIds[i] != document.tabId) edit_begin_push(resize.edit);
+        command_push(
+            [=, this](Manager&, Document& document)
+            {
+              for (auto frameReference : selectedFrames)
+                if (auto frame = document.model.frame_edit(frameReference))
+                  frame->duration = std::clamp(frame->duration + resize.delta, FRAME_DURATION_MIN, FRAME_DURATION_MAX);
+              document.change();
+            });
+      }
+      resizeChordTabIds[i] = isPressed ? document.tabId : 0;
+    }
+
+    auto isPreviousFrame = shortcut(manager.chords[SHORTCUT_PREVIOUS_FRAME], shortcut::GLOBAL);
+    auto isNextFrame = shortcut(manager.chords[SHORTCUT_NEXT_FRAME], shortcut::GLOBAL);
+    auto isPreviousItem = shortcut(manager.chords[SHORTCUT_PREVIOUS_ITEM], shortcut::GLOBAL);
+    auto isNextItem = shortcut(manager.chords[SHORTCUT_NEXT_ITEM], shortcut::GLOBAL);
+
+    if (isPreviousFrame || isNextFrame)
+      if (auto item = selected_item_get(); item && !item->frames.empty())
+      {
+        auto frameReference = reference;
+        frameReference.frameIndex =
+            glm::clamp(reference.frameIndex + (int)isNextFrame - (int)isPreviousFrame, 0, (int)item->frames.size() - 1);
+        reference_set(frameReference);
+        document.frame_focus_select();
+        document.frameTime = model::frame_time_from_index_get(*item, reference.frameIndex);
+      }
+
+    if (isPreviousItem) reference_set_adjacent_item(-1);
+    if (isNextItem) reference_set_adjacent_item(1);
   }
 }
