@@ -18,7 +18,6 @@ namespace anm2ed::imgui
     Window window{};
     window.title = LABEL_SOUNDS_WINDOW;
     window.isOpen = &Settings::windowIsSounds;
-    window.changeType = Document::SOUNDS;
     window.containerType = ElementType::SOUNDS;
     window.elementType = ElementType::SOUND_ELEMENT;
     window.childLabel = "##Sounds Child";
@@ -83,7 +82,7 @@ namespace anm2ed::imgui
     };
     window.reload = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
     {
-      document.edit_apply(EDIT_RELOAD_SOUNDS, window.changeType,
+      document.edit_apply(EDIT_RELOAD_SOUNDS,
                           [&](Anm2&)
                           {
                             for (auto id : document.sound.selection)
@@ -115,7 +114,7 @@ namespace anm2ed::imgui
                                 {
                                   auto sound = window_element_get(window, document, id);
                                   if (!sound) return;
-                                  document.edit_apply(EDIT_REPLACE_SOUND, window.changeType,
+                                  document.edit_apply(EDIT_REPLACE_SOUND,
                                                       [&](Anm2&)
                                                       {
                                                         sound->path = window_asset_path_get(document, dialogPath);

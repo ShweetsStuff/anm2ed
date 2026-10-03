@@ -59,7 +59,7 @@ namespace anm2ed::imgui
            auto target =
                reference == -1 || !container ? nullptr : child_id_get(*container, window.elementType, reference);
            if (!container || (reference != -1 && !target)) return;
-           document.edit_apply(reference == -1 ? window.addEdit : window.propertiesEdit, window.changeType,
+           document.edit_apply(reference == -1 ? window.addEdit : window.propertiesEdit,
                                [&](Anm2&)
                                {
                                  auto changed = edited;
@@ -100,7 +100,7 @@ namespace anm2ed::imgui
                           {
                             auto element = window_element_get(window, document, key);
                             if (!element || element->name == name) return;
-                            document.edit_apply(window.renameEdit, window.changeType,
+                            document.edit_apply(window.renameEdit,
                                                 [&](Anm2&)
                                                 {
                                                   element->name = name;
@@ -133,7 +133,7 @@ namespace anm2ed::imgui
       return;
     }
 
-    document.edit_apply(window.pasteEdit, window.changeType,
+    document.edit_apply(window.pasteEdit,
                         [&](Anm2&)
                         {
                           document.anm2 = std::move(pasted);
@@ -152,7 +152,7 @@ namespace anm2ed::imgui
     auto unused = document.anm2.element_unused(window.elementType);
     auto container = window_container_get(window, document);
     if (unused.empty() || !container) return;
-    document.edit_apply(window.removeUnusedEdit, window.changeType,
+    document.edit_apply(window.removeUnusedEdit,
                         [&](Anm2&)
                         {
                           for (auto id : unused)

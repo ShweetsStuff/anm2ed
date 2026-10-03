@@ -150,8 +150,7 @@ namespace anm2ed::imgui::wizard
            {
              edit::GridOptions options{queuedStartPosition, queuedSize,  queuedPivot,         queuedColumns,
                                        queuedCount,         queuedDelay, queuedIsMakeRegions, queuedRegionNameFormat};
-             document.edit_apply(EDIT_GENERATE_ANIMATION_FROM_GRID,
-                                 queuedIsMakeRegions ? Document::ALL : Document::FRAMES, [&](Anm2& anm2)
+             document.edit_apply(EDIT_GENERATE_ANIMATION_FROM_GRID, [&](Anm2& anm2)
                                  { return edit::animation_grid_generate(anm2, queuedLayerReferences, options); });
            }});
       isEnd = true;

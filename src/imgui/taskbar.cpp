@@ -170,11 +170,9 @@ namespace anm2ed::imgui
 
         if (ImGui::MenuItem(localize.get(LABEL_SCAN_AND_SET_REGIONS), nullptr, false, document && hasRegions))
         {
-          manager.command_push({manager.selected, [](Manager&, Document& document)
-                                {
-                                  document.edit_apply(EDIT_SCAN_AND_SET_REGIONS, Document::FRAMES,
-                                                      [](Anm2& anm2) { anm2.regions_scan(); });
-                                }});
+          manager.command_push(
+              {manager.selected, [](Manager&, Document& document)
+               { document.edit_apply(EDIT_SCAN_AND_SET_REGIONS, [](Anm2& anm2) { anm2.regions_scan(); }); }});
           toast_log(Level::INFO, TOAST_SCAN_AND_SET_REGIONS);
         }
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_WIZARD_SCAN_AND_SET_REGIONS));
@@ -286,8 +284,7 @@ namespace anm2ed::imgui
                {
                  if (queuedAnimationIndices.empty()) return;
                  document.edit_apply(
-                     EDIT_GENERATE_REGIONS_FROM_ANIMATIONS,
-                     queuedMapping == RegionFrameMapping::SET ? Document::ALL : Document::SPRITESHEETS, [&](Anm2& anm2)
+                     EDIT_GENERATE_REGIONS_FROM_ANIMATIONS, [&](Anm2& anm2)
                      { anm2.regions_generate(queuedAnimationIndices, {}, queuedFormat, queuedMapping); });
                }});
           generateRegionsPopup.close();

@@ -146,7 +146,7 @@ namespace anm2ed::imgui
   void animations_erase(Window& window, Document& document, const std::set<int>& indices, const std::set<int>& groupIds,
                         StringType label)
   {
-    document.edit_apply(label, window.changeType,
+    document.edit_apply(label,
                         [&](Anm2& anm2)
                         {
                           animation_overlay_reset(document, indices);
@@ -187,7 +187,7 @@ namespace anm2ed::imgui
     std::set<int> groupIds{};
     std::string errorString{};
     auto uids = document.edit_apply(
-        edit, window.changeType,
+        edit,
         [&](Anm2& anm2)
         {
           auto uids = edit::animations_paste(anm2, text, start, targetGroupId, groupIds, &errorString);
@@ -231,7 +231,7 @@ namespace anm2ed::imgui
       return -1;
 
     int merged{-1};
-    document.edit_apply(EDIT_MERGE_ANIMATIONS, Document::ANIMATIONS,
+    document.edit_apply(EDIT_MERGE_ANIMATIONS,
                         [&](Anm2& anm2)
                         {
                           animation_overlay_reset(document, sources);
@@ -276,7 +276,7 @@ namespace anm2ed::imgui
          {
            auto animations = window_container_get(window, document);
            if (!animations) return;
-           document.edit_apply(EDIT_MOVE_ANIMATIONS, window.changeType,
+           document.edit_apply(EDIT_MOVE_ANIMATIONS,
                                [&](Anm2& anm2)
                                {
                                  animation_items_move(window, document, anm2, items,
@@ -382,7 +382,7 @@ namespace anm2ed::imgui
                             if (!group || (name.value_or(group->name) == group->name &&
                                            isExpanded.value_or(group->isExpanded) == group->isExpanded))
                               return;
-                            document.edit_apply(edit, Document::ANIMATIONS,
+                            document.edit_apply(edit,
                                                 [&](Anm2&)
                                                 {
                                                   group->name = name.value_or(group->name);
@@ -475,7 +475,6 @@ namespace anm2ed::imgui
     Window window{};
     window.title = LABEL_ANIMATIONS_WINDOW;
     window.isOpen = &Settings::windowIsAnimations;
-    window.changeType = Document::ANIMATIONS;
     window.containerType = ElementType::ANIMATIONS;
     window.elementType = ElementType::ANIMATION;
     window.childLabel = "##Animations Child";
@@ -600,7 +599,7 @@ namespace anm2ed::imgui
                      : selected && groupIds.contains(selected->groupId) ? selected->groupId
                                                                         : -1;
 
-      document.edit_apply(EDIT_ADD_ANIMATION, window.changeType,
+      document.edit_apply(EDIT_ADD_ANIMATION,
                           [&](Anm2& anm2)
                           {
                             auto uids =
@@ -693,7 +692,7 @@ namespace anm2ed::imgui
 
       std::set<int> targetSet(targetIndices.begin(), targetIndices.end());
       auto groupId = element_child_next_id_get(*animations, ElementType::GROUP);
-      document.edit_apply(EDIT_GROUP_ITEMS, window.changeType,
+      document.edit_apply(EDIT_GROUP_ITEMS,
                           [&](Anm2& anm2)
                           {
                             auto uids = edit::animations_group(anm2, targetSet, localize.get(TEXT_NEW_GROUP));
@@ -708,8 +707,7 @@ namespace anm2ed::imgui
       auto animations = window_container_get(window, document);
       auto animation = document.anm2.element_get(ElementType::ANIMATION, *document.animation.selection.begin());
       if (!animations || !animation) return;
-      document.edit_apply(EDIT_DEFAULT_ANIMATION, window.changeType,
-                          [&](Anm2&) { animations->defaultAnimation = animation->name; });
+      document.edit_apply(EDIT_DEFAULT_ANIMATION, [&](Anm2&) { animations->defaultAnimation = animation->name; });
     };
     window.body_update =
         [](Window& window, Manager& manager, Settings& settings, Resources&, Clipboard&, Document& document)

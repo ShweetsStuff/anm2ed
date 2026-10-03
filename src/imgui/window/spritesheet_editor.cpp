@@ -364,11 +364,8 @@ namespace anm2ed::imgui
           manager.command_push(
               {manager.selected, [label](Manager&, Document& document) { document.edit_begin(label); }});
         };
-        auto document_change_push = [&](Document::ChangeType changeType)
-        {
-          manager.command_push(
-              {manager.selected, [changeType](Manager&, Document& document) { document.change(changeType); }});
-        };
+        auto document_change_push = [&]()
+        { manager.command_push({manager.selected, [](Manager&, Document& document) { document.change(); }}); };
         auto frame_change_apply_to = [&](const std::set<Reference>& frameReferences, FrameChange frameChange,
                                          ChangeType changeType = ChangeType::ADJUST)
         {
@@ -651,7 +648,7 @@ namespace anm2ed::imgui
                   change.pivotY = region->pivot.y;
                 }
                 frame_change_apply(change);
-                document_change_push(Document::FRAMES);
+                document_change_push();
               }
             }
             if (isMouseDown || isMouseMiddleDown) pan += mouseDelta;
@@ -681,7 +678,7 @@ namespace anm2ed::imgui
                 }
               }
 
-              if (isEnd) document_change_push(Document::SPRITESHEETS);
+              if (isEnd) document_change_push();
               break;
             }
 
@@ -715,7 +712,7 @@ namespace anm2ed::imgui
               }
             }
 
-            if (isEnd) document_change_push(Document::FRAMES);
+            if (isEnd) document_change_push();
             break;
           case tool::CROP:
             if ((isRegionEditTarget || isRegionInUse || selectedFrameToolReferences.empty()) &&
@@ -758,7 +755,7 @@ namespace anm2ed::imgui
                 }
               }
 
-              if (isEnd) document_change_push(Document::SPRITESHEETS);
+              if (isEnd) document_change_push();
               break;
             }
 
@@ -811,7 +808,7 @@ namespace anm2ed::imgui
                 ImGui::EndTooltip();
               }
             }
-            if (isEnd) document_change_push(Document::FRAMES);
+            if (isEnd) document_change_push();
             break;
           case tool::DRAW:
           case tool::ERASE:

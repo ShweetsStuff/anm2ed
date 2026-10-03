@@ -96,7 +96,6 @@ namespace anm2ed::imgui
 
     StringType title{};
     bool Settings::* isOpen{};
-    Document::ChangeType changeType{};
     ElementType containerType{ElementType::UNKNOWN};
     ElementType elementType{ElementType::UNKNOWN};
     const char* childLabel{"##Window Child"};

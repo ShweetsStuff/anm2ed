@@ -71,7 +71,7 @@ namespace anm2ed::imgui
     if (shader)
     {
       shader->*member = path::backslash_replace(value);
-      document.change(Document::SHADERS);
+      document.change();
     }
   }
 
@@ -125,7 +125,7 @@ namespace anm2ed::imgui
   void shader_uniform_config_save(Document& document, Element& shaderElement, const resource::shader::Uniform& uniform)
   {
     resource::shader::uniform_config_save(shaderElement, uniform);
-    document.change(Document::SHADERS);
+    document.change();
   }
 
   void shader_uniform_components_from_value_set(resource::shader::Uniform& uniform)
@@ -312,7 +312,7 @@ namespace anm2ed::imgui
                                 shader.id = element_child_next_id_get(*shaders, ElementType::SHADER);
                                 shader.name = localize.get(TEXT_NEW_SHADER);
 
-                                document.edit_apply(EDIT_ADD_SHADER, Document::SHADERS,
+                                document.edit_apply(EDIT_ADD_SHADER,
                                                     [&](Anm2&)
                                                     {
                                                       shaders->children.push_back(shader);
@@ -332,7 +332,7 @@ namespace anm2ed::imgui
                                 auto unused = document.anm2.element_unused(ElementType::SHADER);
                                 if (unused.empty()) return;
 
-                                document.edit_apply(EDIT_REMOVE_UNUSED_SHADERS, Document::SHADERS,
+                                document.edit_apply(EDIT_REMOVE_UNUSED_SHADERS,
                                                     [&](Anm2&)
                                                     {
                                                       for (auto id : unused)
@@ -506,7 +506,7 @@ namespace anm2ed::imgui
         if (ImGui::BeginChild("##Shader Properties Child", popupSize))
         {
           if (propertiesPopup.isJustOpened) ImGui::SetKeyboardFocusHere();
-          if (input_text_string(localize.get(BASIC_NAME), &shader->name)) document->change(Document::SHADERS);
+          if (input_text_string(localize.get(BASIC_NAME), &shader->name)) document->change();
 
           ImGui::SeparatorText(localize.get(LABEL_FILES));
 

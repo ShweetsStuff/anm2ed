@@ -206,7 +206,7 @@ namespace anm2ed::imgui
         auto targetAnimationIndex = groupAnimationIndex;
         auto targetType = groupType;
         auto targetId = groupId;
-        edit_push(EDIT_RENAME_GROUP, Document::ITEMS,
+        edit_push(EDIT_RENAME_GROUP,
                   [=](Anm2& anm2)
                   {
                     auto animation = anm2.element_get(ElementType::ANIMATION, targetAnimationIndex);

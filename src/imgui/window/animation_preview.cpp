@@ -1353,10 +1353,7 @@ namespace anm2ed::imgui
           frame_change_apply({.shearX = shear.x - frame->shear.x, .shearY = shear.y - frame->shear.y}, ChangeType::ADD);
         };
         auto frames_changed = [&]()
-        {
-          manager.command_push(
-              {manager.selected, [](Manager&, Document& document) { document.change(Document::FRAMES); }});
-        };
+        { manager.command_push({manager.selected, [](Manager&, Document& document) { document.change(); }}); };
         auto null_rect_change = [&](vec2 topLeft, vec2 rectSize)
         {
           topLeft = vec2(ivec2(topLeft));

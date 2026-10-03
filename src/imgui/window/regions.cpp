@@ -173,7 +173,7 @@ namespace anm2ed::imgui
           document.region.selection.clear();
         }
       }
-      document.change(Document::SPRITESHEETS);
+      document.change();
     }
 
     toast_log(Level::INFO, TOAST_EXPORT_REGION, sourceRegion.name, pathString);
@@ -218,7 +218,7 @@ namespace anm2ed::imgui
              {
                auto spritesheet = document.anm2.element_get(ElementType::SPRITESHEET, spritesheetId);
                if (!spritesheet) return;
-               document.edit_apply(EDIT_MOVE_REGIONS, window.changeType,
+               document.edit_apply(EDIT_MOVE_REGIONS,
                                    [&](Anm2&)
                                    {
                                      vector::move_indices_to_position(spritesheet->children, indices, targetIndex);
@@ -384,7 +384,6 @@ namespace anm2ed::imgui
     Window window{};
     window.title = LABEL_REGIONS_WINDOW;
     window.isOpen = &Settings::windowIsRegions;
-    window.changeType = Document::SPRITESHEETS;
     window.elementType = ElementType::REGION;
     window.childLabel = "##Regions Child";
     window.cardLines = REGION_CARD_LINES;
@@ -451,13 +450,13 @@ namespace anm2ed::imgui
     };
     window.remove_unused = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
     {
-      document.edit_apply(EDIT_REMOVE_UNUSED_REGIONS, window.changeType, [&](Anm2& anm2)
+      document.edit_apply(EDIT_REMOVE_UNUSED_REGIONS, [&](Anm2& anm2)
                           { return edit::regions_remove_unused(anm2, document.spritesheet.reference); });
     };
     window.trim = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
     {
       auto& region = document.region;
-      document.edit_apply(EDIT_TRIM_REGIONS, window.changeType,
+      document.edit_apply(EDIT_TRIM_REGIONS,
                           [&](Anm2&)
                           {
                             if (!document.regions_trim(document.spritesheet.reference, region.selection)) return;
@@ -473,7 +472,7 @@ namespace anm2ed::imgui
       if (!spritesheet || clipboard.is_empty()) return;
       auto maxIdBefore = element_child_max_id_get(*spritesheet, ElementType::REGION);
       std::string errorString{};
-      document.edit_apply(EDIT_PASTE_REGIONS, window.changeType,
+      document.edit_apply(EDIT_PASTE_REGIONS,
                           [&](Anm2& anm2)
                           {
                             edit::regions_paste(anm2, document.spritesheet.reference, clipboard.get(),

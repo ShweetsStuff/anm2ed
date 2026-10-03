@@ -209,13 +209,12 @@ namespace anm2ed::imgui
     std::set<Reference> drag_frame_references_get(const Reference&);
     // Queues an edit on the document; its result is selected (frames by default).
     template <class Operation>
-    void edit_push(StringType label, Document::ChangeType type, Operation operation,
-                   std::function<void(Document&, const edit::Uids&)> select = {})
+    void edit_push(StringType label, Operation operation, std::function<void(Document&, const edit::Uids&)> select = {})
     {
       command_push(
           [=, this](Manager&, Document& document) mutable
           {
-            auto uids = document.edit_apply(label, type, operation);
+            auto uids = document.edit_apply(label, operation);
             select ? select(document, uids) : frames_select_for(document, uids);
           });
     }

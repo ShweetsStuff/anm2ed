@@ -204,7 +204,7 @@ namespace anm2ed::imgui::popup
                                 item.isShowRect = queuedAddItemIsShowRect;
 
                                 int addId{-1};
-                                document.edit_apply(EDIT_ADD_ITEM, Document::ITEMS,
+                                document.edit_apply(EDIT_ADD_ITEM,
                                                     [&](Anm2& anm2)
                                                     {
                                                       addId = anm2.item_add((ItemType)queuedType, queuedAnimationIndex,

@@ -50,7 +50,7 @@ namespace anm2ed::imgui
                             auto texture = document.texture_get(id);
                             if (!spritesheet || (isWritten && !texture)) return;
                             document.edit_apply(
-                                edit, window.changeType,
+                                edit,
                                 [&](Anm2&)
                                 {
                                   auto newPath = window_asset_path_get(document, dialogPath);
@@ -77,13 +77,13 @@ namespace anm2ed::imgui
                           }});
   }
 
-  void spritesheet_textures_edit(Document& document, StringType edit, Document::ChangeType changeType,
-                                 const std::function<bool()>& behavior, StringType successToast, StringType failToast)
+  void spritesheet_textures_edit(Document& document, StringType edit, const std::function<bool()>& behavior,
+                                 StringType successToast, StringType failToast)
   {
     document.edit_begin(edit);
     auto isSuccess = behavior();
     toast_log(isSuccess ? Level::INFO : Level::ERROR, isSuccess ? successToast : failToast);
-    document.change(changeType);
+    document.change();
   }
 
   Window spritesheets_window_register()
@@ -91,7 +91,6 @@ namespace anm2ed::imgui
     Window window{};
     window.title = LABEL_SPRITESHEETS_WINDOW;
     window.isOpen = &Settings::windowIsSpritesheets;
-    window.changeType = Document::SPRITESHEETS;
     window.containerType = ElementType::SPRITESHEETS;
     window.elementType = ElementType::SPRITESHEET;
     window.childLabel = "##Spritesheets Child";
@@ -178,7 +177,7 @@ namespace anm2ed::imgui
       auto unused = document.anm2.element_unused(ElementType::SPRITESHEET);
       auto spritesheets = window_container_get(window, document);
       if (unused.empty() || !spritesheets) return;
-      document.edit_apply(EDIT_REMOVE_UNUSED_SPRITESHEETS, window.changeType,
+      document.edit_apply(EDIT_REMOVE_UNUSED_SPRITESHEETS,
                           [&](Anm2&)
                           {
                             for (auto id : unused)
@@ -192,7 +191,7 @@ namespace anm2ed::imgui
     window.reload = [](Window& window, Manager&, Settings&, Document& document, Clipboard&)
     {
       auto selected = document.spritesheet.selection;
-      document.edit_apply(EDIT_RELOAD_SPRITESHEETS, window.changeType,
+      document.edit_apply(EDIT_RELOAD_SPRITESHEETS,
                           [&](Anm2&)
                           {
                             for (auto id : selected)
@@ -295,7 +294,7 @@ namespace anm2ed::imgui
                 regionOrigin = (origin::Type)settings.mergeSpritesheetsRegionOrigin](Manager&, Document& document)
                {
                  spritesheet_textures_edit(
-                     document, EDIT_MERGE_SPRITESHEETS, Document::ALL,
+                     document, EDIT_MERGE_SPRITESHEETS,
                      [&]()
                      {
                        if (!document.spritesheets_merge(ids, isAppendRight, isMakeRegions, isMakePrimaryRegion,
@@ -329,14 +328,13 @@ namespace anm2ed::imgui
         auto result = window_popup_buttons_draw(manager, localize.get(BASIC_PACK),
                                                 is_spritesheet_regions(document, window.editId), BASIC_CANCEL);
         if (result == PopupButton::CONFIRM)
-          manager.command_push({manager.selected,
-                                [id = window.editId, padding = settings.packPadding](Manager&, Document& document)
-                                {
-                                  spritesheet_textures_edit(
-                                      document, EDIT_PACK_SPRITESHEET, Document::SPRITESHEETS,
-                                      [&]() { return document.spritesheet_pack(id, padding); }, TOAST_PACK_SPRITESHEET,
-                                      TOAST_PACK_SPRITESHEET_FAILED);
-                                }});
+          manager.command_push(
+              {manager.selected, [id = window.editId, padding = settings.packPadding](Manager&, Document& document)
+               {
+                 spritesheet_textures_edit(
+                     document, EDIT_PACK_SPRITESHEET, [&]() { return document.spritesheet_pack(id, padding); },
+                     TOAST_PACK_SPRITESHEET, TOAST_PACK_SPRITESHEET_FAILED);
+               }});
         if (result != PopupButton::NONE)
         {
           window.editId = -1;

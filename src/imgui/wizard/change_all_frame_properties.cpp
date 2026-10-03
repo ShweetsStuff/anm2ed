@@ -257,7 +257,7 @@ namespace anm2ed::imgui::wizard
                targets.references = {selectedItemReferences.begin(), selectedItemReferences.end()};
              else
                targets.animations = queuedAnimations;
-             document.edit_apply(EDIT_CHANGE_FRAME_PROPERTIES, Document::FRAMES, [&](Anm2& anm2)
+             document.edit_apply(EDIT_CHANGE_FRAME_PROPERTIES, [&](Anm2& anm2)
                                  { return edit::frames_change_apply(anm2, targets, frameChange, changeType); });
            }});
       isChanged = true;

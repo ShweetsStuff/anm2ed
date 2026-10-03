@@ -66,23 +66,6 @@ namespace anm2ed
   class Document : public DocumentData
   {
   public:
-    enum ChangeType
-    {
-      INFO,
-      LAYERS,
-      NULLS,
-      SPRITESHEETS,
-      TEXTURES,
-      SHADERS,
-      EVENTS,
-      ANIMATIONS,
-      ITEMS,
-      FRAMES,
-      SOUNDS,
-      ALL,
-      COUNT
-    };
-
     enum class FrameReferenceFallback
     {
       NONE,
@@ -112,7 +95,7 @@ namespace anm2ed
     Document(Document&&) noexcept;
     Document& operator=(Document&&) noexcept;
     bool save(const std::filesystem::path& = {}, std::string* = nullptr, Options = {});
-    void assets_sync(ChangeType = ALL);
+    void assets_sync();
     void texture_change(int);
     bool texture_reload(int);
     bool sound_reload(int);
@@ -128,14 +111,14 @@ namespace anm2ed
     bool spritesheets_merge(const std::set<int>&, bool, bool, bool, origin::Type);
     void hash_set();
     void clean();
-    void change(ChangeType);
+    void change();
     void edit_begin(StringType);
-    edit::Uids edit_run(StringType, ChangeType, const std::function<edit::Uids(Anm2&)>&);
+    edit::Uids edit_run(StringType, const std::function<edit::Uids(Anm2&)>&);
 
     // Snapshots for undo, runs the operation on the model, then commits; void operations select nothing.
-    template <class Operation> edit::Uids edit_apply(StringType label, ChangeType type, Operation&& operation)
+    template <class Operation> edit::Uids edit_apply(StringType label, Operation&& operation)
     {
-      return edit_run(label, type,
+      return edit_run(label,
                       [&](Anm2& anm2) -> edit::Uids
                       {
                         if constexpr (std::is_void_v<std::invoke_result_t<Operation&, Anm2&>>)

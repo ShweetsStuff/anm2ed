@@ -191,7 +191,7 @@ namespace anm2ed
     this->path = path;
     isValid = anm2.isValid;
     clean();
-    change(Document::ALL);
+    change();
   }
 
   Document::Document(Document&& other) noexcept : DocumentData(std::move(other)), editTarget(other.editTarget) {}
@@ -251,7 +251,7 @@ namespace anm2ed
 
   void Document::texture_change(int id)
   {
-    if (texture_get(id) && anm2.element_get(ElementType::SPRITESHEET, id)) change(SPRITESHEETS);
+    if (texture_get(id) && anm2.element_get(ElementType::SPRITESHEET, id)) change();
   }
 
   bool Document::texture_reload(int id)
@@ -321,17 +321,14 @@ namespace anm2ed
     return true;
   }
 
-  void Document::assets_sync(ChangeType type)
+  void Document::assets_sync()
   {
-    if (type == ALL || type == SPRITESHEETS || type == TEXTURES)
-      document::resources_sync(*this, ElementType::SPRITESHEET, textures, texturePaths,
-                               [&](int id, const std::filesystem::path& path)
-                               { texture_set(id, resource::Image(path)); });
-    if (type == ALL || type == SOUNDS)
-      document::resources_sync(*this, ElementType::SOUND_ELEMENT, sounds, soundPaths,
-                               [&](int id, const std::filesystem::path& path)
-                               { sound_set(id, resource::AudioData(path)); });
-    if (type != ALL && type != SHADERS) return;
+    document::resources_sync(*this, ElementType::SPRITESHEET, textures, texturePaths,
+                             [&](int id, const std::filesystem::path& path)
+                             { texture_set(id, resource::Image(path)); });
+    document::resources_sync(*this, ElementType::SOUND_ELEMENT, sounds, soundPaths,
+                             [&](int id, const std::filesystem::path& path)
+                             { sound_set(id, resource::AudioData(path)); });
 
     std::set<int> validShaderIds{};
     util::WorkingDirectory workingDirectory(directory_get());
@@ -513,7 +510,7 @@ namespace anm2ed
     for (auto& region : spritesheet->children)
       if (region.type == ElementType::REGION && crops.contains(region.id)) region.crop = crops.at(region.id);
 
-    assets_sync(SPRITESHEETS);
+    assets_sync();
     return true;
   }
 
@@ -595,7 +592,7 @@ namespace anm2ed
         textures.erase(id);
       }
 
-    assets_sync(ALL);
+    assets_sync();
     return true;
   }
 
@@ -636,12 +633,13 @@ namespace anm2ed
     std::erase_if(spritesheetSaveHashes, is_invalid);
   }
 
-  void Document::change(ChangeType type)
+  // Commits the pending edit and rebuilds everything derived from the model.
+  void Document::change()
   {
     for (auto& [id, draft] : std::exchange(textureDrafts, {}))
       textures[id] = assets.image_add(std::move(draft));
     hash_set();
-    assets_sync(type);
+    assets_sync();
 
     auto events_set = [&]()
     {
@@ -688,39 +686,11 @@ namespace anm2ed
                                    document::element_name_get);
     };
 
-    switch (type)
-    {
-      case EVENTS:
-        events_set();
-        break;
-      case SPRITESHEETS:
-        spritesheets_set();
-        regions_set();
-        break;
-      case SHADERS:
-        shaders_set();
-        break;
-      case SOUNDS:
-        sounds_set();
-        break;
-      case FRAMES:
-        events_set();
-        sounds_set();
-        break;
-      case ITEMS:
-        spritesheets_set();
-        break;
-      case ANIMATIONS:
-      case ALL:
-        events_set();
-        spritesheets_set();
-        regions_set();
-        shaders_set();
-        sounds_set();
-        break;
-      default:
-        break;
-    }
+    events_set();
+    spritesheets_set();
+    regions_set();
+    shaders_set();
+    sounds_set();
 
     snapshots.commit();
     index = UidIndex(anm2);
@@ -728,11 +698,11 @@ namespace anm2ed
 
   void Document::edit_begin(StringType label) { snapshots.push(localize.get(label)); }
 
-  edit::Uids Document::edit_run(StringType label, ChangeType type, const std::function<edit::Uids(Anm2&)>& operation)
+  edit::Uids Document::edit_run(StringType label, const std::function<edit::Uids(Anm2&)>& operation)
   {
     edit_begin(label);
     auto uids = operation(anm2);
-    change(type);
+    change();
     return uids;
   }
 
@@ -752,7 +722,7 @@ namespace anm2ed
   {
     auto spritesheet = anm2.element_get(ElementType::SPRITESHEET, id);
     if (!spritesheet) return;
-    assets_sync(TEXTURES);
+    assets_sync();
     spritesheetHashes[id] = document::spritesheet_hash_get(*spritesheet, textures.contains(id) ? textures.at(id) : 0);
   }
 
@@ -936,7 +906,7 @@ namespace anm2ed
       toast_log(Level::INFO, TOAST_SPRITESHEET_INITIALIZED, element.id, path::to_utf8(element.path));
     }
     spritesheet.selection = added;
-    change(Document::SPRITESHEETS);
+    change();
   }
 
   void Document::sounds_add(const std::vector<std::filesystem::path>& paths)
@@ -961,7 +931,7 @@ namespace anm2ed
       toast_log(Level::INFO, TOAST_SOUND_INITIALIZED, element.id, path::to_utf8(element.path));
     }
     sound.selection = added;
-    change(Document::SOUNDS);
+    change();
   }
 
   void Document::undo()
@@ -969,7 +939,7 @@ namespace anm2ed
     if (!snapshots.undo()) return;
     document::frame_time_sync(*this);
     toast_log(Level::INFO, TOAST_UNDO, message);
-    change(Document::ALL);
+    change();
   }
 
   void Document::redo()
@@ -977,7 +947,7 @@ namespace anm2ed
     if (!snapshots.redo()) return;
     document::frame_time_sync(*this);
     toast_log(Level::INFO, TOAST_REDO, message);
-    change(Document::ALL);
+    change();
   }
 
   bool Document::is_able_to_undo() { return !snapshots.undoStack.is_empty(); }

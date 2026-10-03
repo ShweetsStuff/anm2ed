@@ -234,7 +234,7 @@ namespace anm2ed
     selected = std::clamp(selected, 0, (int)documents.size() - 1);
     pendingSelected = selected;
 
-    if (selected >= 0 && selected < (int)documents.size()) documents[selected].change(Document::ALL);
+    if (selected >= 0 && selected < (int)documents.size()) documents[selected].change();
   }
 
   void Manager::set(int index)
@@ -250,7 +250,7 @@ namespace anm2ed
     selected = index;
     selection_history_push(selected);
 
-    if (auto document = get()) document->change(Document::ALL);
+    if (auto document = get()) document->change();
   }
 
   void Manager::item_properties_open(ElementType type, int id)
@@ -339,7 +339,7 @@ namespace anm2ed
       {
         document->isForceDirty = true;
         document->path = document->path_from_autosave_get(path);
-        document->change(Document::ALL);
+        document->change();
       }
     }
   }

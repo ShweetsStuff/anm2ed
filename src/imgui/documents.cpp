@@ -51,7 +51,7 @@ namespace anm2ed::imgui
   {
     manager.command_push({manager.selected, [paths, preset](Manager&, Document& document)
                           {
-                            document.edit_apply(EDIT_MERGE_ANM2, Document::ALL,
+                            document.edit_apply(EDIT_MERGE_ANM2,
                                                 [&](Anm2& anm2)
                                                 {
                                                   for (auto& path : paths)

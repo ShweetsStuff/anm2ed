@@ -33,7 +33,7 @@ namespace anm2ed::imgui
 
       auto result = window_popup_buttons_draw(manager, localize.get(LABEL_MAKE_MANY_REGIONS));
       if (result == PopupButton::CONFIRM)
-        edit_push(EDIT_GENERATE_REGIONS_FROM_ANIMATIONS, Document::ALL,
+        edit_push(EDIT_GENERATE_REGIONS_FROM_ANIMATIONS,
                   [targetFrames = makeManyRegionReferences, format = settings.generateRegionNameFormat,
                    mapping = isMakeManyRegionsMapFrames ? RegionFrameMapping::SET : RegionFrameMapping::PRESERVE](
                       Anm2& anm2) { anm2.regions_generate({}, targetFrames, format, mapping); });
@@ -183,7 +183,7 @@ namespace anm2ed::imgui
                   if (auto frame = command_frame_get(document, frameReference))
                     frame->duration =
                         std::clamp(frame->duration + resize.delta, FRAME_DURATION_MIN, FRAME_DURATION_MAX);
-                document.change(Document::FRAMES);
+                document.change();
               });
         }
         isResizeChordHeld[i] = isPressed;

@@ -31,7 +31,7 @@ namespace anm2ed::imgui
 
     Reference target{drag.animationIndex, targetType, targetID, -1, targetGroupType, targetGroupId};
     edit_push(
-        EDIT_MOVE_FRAMES, Document::FRAMES,
+        EDIT_MOVE_FRAMES,
         [frames = std::set<Reference>(drag.references.begin(), drag.references.end()), target, insertIndex](Anm2& anm2)
         { return edit::frames_move(anm2, frames, target, insertIndex); },
         [=, this](Document& document, const edit::Uids& uids)
@@ -424,7 +424,7 @@ namespace anm2ed::imgui
               if (ImGui::IsKeyDown(ImGuiMod_Alt))
               {
                 auto targetReference = frameReference;
-                edit_push(EDIT_FRAME_INTERPOLATION, Document::FRAMES,
+                edit_push(EDIT_FRAME_INTERPOLATION,
                           [=](Anm2& anm2)
                           {
                             if (auto frame = anm2.element_get(targetReference))
@@ -603,7 +603,7 @@ namespace anm2ed::imgui
             {
               auto item = command_item_reference_get(document, targetReference);
               if (targetType == TRIGGER && item) frames_sort_by_at_frame(*item);
-              document.change(Document::FRAMES);
+              document.change();
             });
         isDraggedFrameActive = false;
         draggedFrameReference = {};
@@ -864,7 +864,7 @@ namespace anm2ed::imgui
         if (isLengthChanged && animation)
         {
           auto animationIndex = animationLengthEditIndex != -1 ? animationLengthEditIndex : currentAnimationIndex;
-          edit_push(EDIT_ANIMATION_LENGTH, Document::ANIMATIONS,
+          edit_push(EDIT_ANIMATION_LENGTH,
                     [=](Anm2& anm2)
                     {
                       auto animation = anm2.element_get(ElementType::ANIMATION, animationIndex);
@@ -882,7 +882,7 @@ namespace anm2ed::imgui
         if (ImGui::Checkbox(localize.get(LABEL_LOOP), &isLoop) && animation)
         {
           auto animationIndex = reference.animationIndex;
-          edit_push(EDIT_LOOP, Document::ANIMATIONS,
+          edit_push(EDIT_LOOP,
                     [=](Anm2& anm2)
                     {
                       auto animation = anm2.element_get(ElementType::ANIMATION, animationIndex);
@@ -901,7 +901,7 @@ namespace anm2ed::imgui
       ImGui::SetNextItemWidth(widgetSize.x);
       if (input_int_range(localize.get(LABEL_FPS), fps, FPS_MIN, FPS_MAX))
       {
-        edit_push(EDIT_FPS, Document::INFO,
+        edit_push(EDIT_FPS,
                   [=](Anm2& anm2)
                   {
                     auto info = element_first_get(anm2.root, ElementType::INFO);
@@ -922,7 +922,7 @@ namespace anm2ed::imgui
       ImGui::SetNextItemWidth(widgetSize.x);
       if (input_text_string(localize.get(LABEL_AUTHOR), &createdBy))
       {
-        edit_push(EDIT_AUTHOR, Document::INFO,
+        edit_push(EDIT_AUTHOR,
                   [=](Anm2& anm2)
                   {
                     auto info = element_first_get(anm2.root, ElementType::INFO);

@@ -40,7 +40,7 @@ namespace anm2ed::imgui
         {
           auto targetRow = row;
           auto targetAnimationIndex = reference.animationIndex;
-          edit_push(EDIT_TOGGLE_GROUP_EXPANDED, Document::ITEMS,
+          edit_push(EDIT_TOGGLE_GROUP_EXPANDED,
                     [=](Anm2& anm2)
                     {
                       auto animation = anm2.element_get(ElementType::ANIMATION, targetAnimationIndex);
@@ -139,7 +139,7 @@ namespace anm2ed::imgui
           auto targetType = type;
           auto targetGroupId = group->id;
           auto targetVisible = !isGroupVisible;
-          edit_push(EDIT_TOGGLE_ITEM_VISIBILITY, Document::FRAMES,
+          edit_push(EDIT_TOGGLE_ITEM_VISIBILITY,
                     [=](Anm2& anm2)
                     {
                       auto animation = anm2.element_get(ElementType::ANIMATION, targetAnimationIndex);
@@ -403,7 +403,7 @@ namespace anm2ed::imgui
           auto targetID = id;
           auto targetGroupType = row.rootGroupType;
           auto targetGroupId = row.rootGroupId;
-          edit_push(EDIT_TOGGLE_ITEM_VISIBILITY, Document::FRAMES,
+          edit_push(EDIT_TOGGLE_ITEM_VISIBILITY,
                     [=](Anm2& anm2)
                     {
                       if (auto item = anm2.element_get(
@@ -427,7 +427,7 @@ namespace anm2ed::imgui
             if (ImGui::ImageButton("##Rect Toggle", resources.icon_id_get(rectIcon), icon_size_get()))
             {
               auto nullID = id;
-              edit_push(EDIT_TOGGLE_NULL_RECT, Document::FRAMES,
+              edit_push(EDIT_TOGGLE_NULL_RECT,
                         [=](Anm2& anm2)
                         {
                           auto nulls = anm2.element_get(ElementType::NULLS);

@@ -77,7 +77,7 @@ namespace anm2ed::imgui
                                                                queuedReference.groupId});
                if (state == edit_state::START || state == edit_state::COMPLETE) document.edit_begin(message);
                behavior(document, *frame, item, queuedReference);
-               if (state == edit_state::END || state == edit_state::COMPLETE) document.change(Document::FRAMES);
+               if (state == edit_state::END || state == edit_state::COMPLETE) document.change();
              }});
       };
 

@@ -43,14 +43,12 @@ namespace anm2ed::imgui
     popup.end();
   }
 
-  Window item_window_make(StringType title, bool Settings::* isOpen, Document::ChangeType changeType,
-                          ElementType elementType, const char* childLabel, StringType addTooltip,
-                          StringType removeUnusedTooltip)
+  Window item_window_make(StringType title, bool Settings::* isOpen, ElementType elementType, const char* childLabel,
+                          StringType addTooltip, StringType removeUnusedTooltip)
   {
     Window window{};
     window.title = title;
     window.isOpen = isOpen;
-    window.changeType = changeType;
     window.containerType = ELEMENT_CONTAINERS[(int)elementType];
     window.elementType = elementType;
     window.childLabel = childLabel;
@@ -65,9 +63,8 @@ namespace anm2ed::imgui
 
   Window layers_window_register()
   {
-    auto window =
-        item_window_make(LABEL_LAYERS_WINDOW, &Settings::windowIsLayers, Document::LAYERS, ElementType::LAYER_ELEMENT,
-                         "##Layers Child", TOOLTIP_ADD_LAYER, TOOLTIP_REMOVE_UNUSED_LAYERS);
+    auto window = item_window_make(LABEL_LAYERS_WINDOW, &Settings::windowIsLayers, ElementType::LAYER_ELEMENT,
+                                   "##Layers Child", TOOLTIP_ADD_LAYER, TOOLTIP_REMOVE_UNUSED_LAYERS);
     window.addEdit = EDIT_ADD_LAYER;
     window.propertiesEdit = EDIT_SET_LAYER_PROPERTIES;
     window.pasteEdit = EDIT_PASTE_LAYERS;
@@ -100,9 +97,8 @@ namespace anm2ed::imgui
 
   Window nulls_window_register()
   {
-    auto window =
-        item_window_make(LABEL_NULLS_WINDOW, &Settings::windowIsNulls, Document::NULLS, ElementType::NULL_ELEMENT,
-                         "##Nulls Child", TOOLTIP_ADD_NULL, TOOLTIP_REMOVE_UNUSED_NULLS);
+    auto window = item_window_make(LABEL_NULLS_WINDOW, &Settings::windowIsNulls, ElementType::NULL_ELEMENT,
+                                   "##Nulls Child", TOOLTIP_ADD_NULL, TOOLTIP_REMOVE_UNUSED_NULLS);
     window.addEdit = EDIT_ADD_NULL;
     window.propertiesEdit = EDIT_SET_NULL_PROPERTIES;
     window.pasteEdit = EDIT_PASTE_NULLS;
@@ -126,9 +122,8 @@ namespace anm2ed::imgui
 
   Window events_window_register()
   {
-    auto window =
-        item_window_make(LABEL_EVENTS_WINDOW, &Settings::windowIsEvents, Document::EVENTS, ElementType::EVENT_ELEMENT,
-                         "##Events Child", TOOLTIP_ADD_EVENT, TOOLTIP_REMOVE_UNUSED_EVENTS);
+    auto window = item_window_make(LABEL_EVENTS_WINDOW, &Settings::windowIsEvents, ElementType::EVENT_ELEMENT,
+                                   "##Events Child", TOOLTIP_ADD_EVENT, TOOLTIP_REMOVE_UNUSED_EVENTS);
     window.addEdit = EDIT_ADD_EVENT;
     window.renameEdit = EDIT_RENAME_EVENT;
     window.pasteEdit = EDIT_PASTE_EVENTS;
@@ -143,7 +138,7 @@ namespace anm2ed::imgui
       event.name = localize.get(TEXT_NEW_EVENT);
       auto events = window_container_get(window, document);
       if (!events) return;
-      document.edit_apply(window.addEdit, window.changeType,
+      document.edit_apply(window.addEdit,
                           [&](Anm2&)
                           {
                             event.id = element_child_next_id_get(*events, ElementType::EVENT_ELEMENT);
