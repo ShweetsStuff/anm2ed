@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <charconv>
 #include <format>
+#include <functional>
 #include <map>
 #include <optional>
 #include <tuple>
@@ -51,9 +52,9 @@ namespace anm2ed::model
   constexpr double FLOAT_WHOLE_MAX = 1e8;
   constexpr std::size_t FRAME_ATTRIBUTES_MAX = 27;
   constexpr std::string_view INDENT = "    ";
+  constexpr int TEXT_ENTITY_COUNT = 3;
   constexpr std::pair<char, std::string_view> ENTITIES[] = {
       {'&', "&amp;"}, {'<', "&lt;"}, {'>', "&gt;"}, {'"', "&quot;"}, {'\'', "&apos;"}};
-  constexpr int TEXT_ENTITY_COUNT = 3;
   constexpr std::uint64_t HASH_OFFSET = 14695981039346656037ull;
   constexpr std::uint64_t HASH_PRIME = 1099511628211ull;
   constexpr Flags CLIPBOARD_FLAGS = SERIALIZE_EDITOR_DEFAULT;
@@ -761,7 +762,7 @@ namespace anm2ed::model
     return model;
   }
 
-  // Writing: the model to an XmlNode tree in the shape a set of flags asks for, then to tinyxml2 or a hash.
+  // Writing: the model goes straight to a Sink in the shape a set of flags asks for, as text, a hash or an XmlNode tree.
 
   struct Writer
   {
@@ -801,49 +802,250 @@ namespace anm2ed::model
     return std::abs(value) < FLOAT_WHOLE_MAX && value == std::trunc(value) && !(value == 0 && std::signbit(value));
   }
 
-  template <class T> void attribute_add(XmlNode& node, const char* name, const T& value)
+  // Where written XML goes. TEXT prints exactly as tinyxml2's XMLPrinter would (4-space indents, entities escaped,
+  // text keeping its element's children inline); HASH folds the same elements into an FNV hash; TREE builds an XmlNode.
+  struct Sink
   {
-    if constexpr (std::is_convertible_v<T, std::string_view>)
-      node.attributes.emplace_back(name, std::string(std::string_view(value)));
-    else
+    enum Mode
     {
-      // The same text tinyxml2's XMLUtil::ToStr prints ("%d", "%.8g", "true"/"false"), without printf.
-      char buffer[VALUE_BUFFER_SIZE]{};
-      auto end = buffer;
-      if constexpr (std::is_same_v<T, bool>)
-        end = std::ranges::copy(std::string_view(value ? "true" : "false"), buffer).out;
-      else if constexpr (std::is_floating_point_v<T>)
-        // Whole numbers (most values) print as integers, which "%.8g" also does below 1e8 (but keeps "-0").
-        end = is_float_whole(value) ? std::to_chars(buffer, buffer + sizeof(buffer), (long long)value).ptr
-                                    : std::to_chars(buffer, buffer + sizeof(buffer), value, std::chars_format::general,
-                                                    std::is_same_v<T, float> ? FLOAT_DIGITS : DOUBLE_DIGITS)
-                                          .ptr;
-      else
-        end = std::to_chars(buffer, buffer + sizeof(buffer), (long long)value).ptr;
-      node.attributes.emplace_back(name, std::string(buffer, end));
+      TEXT,
+      HASH,
+      TREE
+    };
+
+    struct Open
+    {
+      std::string_view tag{};
+      bool isEmpty{true};
+      bool isTextDone{};
+    };
+
+    Mode mode{TEXT};
+    std::string text{};
+    std::uint64_t hash{HASH_OFFSET};
+    XmlNode root{};
+    std::vector<Open> stack{};
+    std::vector<XmlNode*> nodes{};
+    int textDepth{-1};
+
+    void hash_add(char marker, std::string_view value)
+    {
+      hash = (hash ^ (unsigned char)marker) * HASH_PRIME;
+      for (unsigned char character : value)
+        hash = (hash ^ character) * HASH_PRIME;
+      hash *= HASH_PRIME;
     }
-  }
 
-  void path_add(XmlNode& node, const char* name, const std::filesystem::path& value)
+    // Attributes escape all five entities; text only the first three.
+    void escape(std::string_view value, bool isAttribute)
+    {
+      for (auto character : value)
+      {
+        auto entity = std::ranges::find(ENTITIES, character, &std::pair<char, std::string_view>::first);
+        if (entity != std::end(ENTITIES) && (isAttribute || entity - ENTITIES < TEXT_ENTITY_COUNT))
+          text += entity->second;
+        else
+          text += character;
+      }
+    }
+
+    void indent(std::size_t depth)
+    {
+      for (std::size_t i = 0; i < depth; ++i)
+        text += INDENT;
+    }
+
+    // The open element gets content: its start tag is finished, and its (empty) text is hashed.
+    void content_begin()
+    {
+      if (stack.empty()) return;
+      auto& parent = stack.back();
+      if (mode == TEXT && parent.isEmpty) text += '>';
+      if (mode == HASH && !parent.isTextDone) hash_add('T', {});
+      parent.isEmpty = false;
+      parent.isTextDone = true;
+    }
+
+    void open(std::string_view tag)
+    {
+      content_begin();
+      if (mode == TEXT)
+      {
+        if (!text.empty() && textDepth < 0) text += '\n';
+        if (text.empty() || textDepth < 0) indent(stack.size());
+        text += '<';
+        text += tag;
+      }
+      if (mode == HASH) hash_add('E', tag);
+      if (mode == TREE)
+      {
+        auto& node = nodes.empty() ? root : nodes.back()->children.emplace_back();
+        node.tag = tag;
+        nodes.push_back(&node);
+      }
+      stack.push_back({tag});
+    }
+
+    // Numbers never need escaping.
+    void attribute_text(std::string_view name, std::string_view value, bool isEscaped = true)
+    {
+      if (mode == TEXT)
+      {
+        text += ' ';
+        text += name;
+        text += "=\"";
+        if (isEscaped)
+          escape(value, true);
+        else
+          text += value;
+        text += '"';
+      }
+      if (mode == HASH)
+      {
+        hash_add('A', name);
+        hash_add('V', value);
+      }
+      if (mode == TREE) nodes.back()->attributes.emplace_back(name, value);
+    }
+
+    // Numbers print as tinyxml2's XMLUtil::ToStr does ("%d", "%.8g", "true"/"false"), without printf; whole numbers
+    // (most values) print as integers, which "%.8g" also does below 1e8 (but keeps "-0").
+    template <class T> void attribute(std::string_view name, const T& value)
+    {
+      if constexpr (std::is_convertible_v<T, std::string_view>)
+        attribute_text(name, value);
+      else
+      {
+        char buffer[VALUE_BUFFER_SIZE]{};
+        auto end = buffer;
+        if constexpr (std::is_same_v<T, bool>)
+          end = std::ranges::copy(std::string_view(value ? "true" : "false"), buffer).out;
+        else if constexpr (std::is_floating_point_v<T>)
+          end = is_float_whole(value)
+                    ? std::to_chars(buffer, buffer + sizeof(buffer), (long long)value).ptr
+                    : std::to_chars(buffer, buffer + sizeof(buffer), value, std::chars_format::general,
+                                    std::is_same_v<T, float> ? FLOAT_DIGITS : DOUBLE_DIGITS)
+                          .ptr;
+        else
+          end = std::to_chars(buffer, buffer + sizeof(buffer), (long long)value).ptr;
+        attribute_text(name, std::string_view(buffer, end), false);
+      }
+    }
+
+    // An element's text, after its attributes and before its children.
+    void text_add(std::string_view value)
+    {
+      auto& open = stack.back();
+      if (mode == HASH) hash_add('T', value);
+      if (mode == TREE) nodes.back()->text = value;
+      if (mode == TEXT && !value.empty())
+      {
+        textDepth = (int)stack.size() - 1;
+        text += '>';
+        open.isEmpty = false;
+        escape(value, false);
+      }
+      open.isTextDone = true;
+    }
+
+    void close()
+    {
+      auto open = stack.back();
+      stack.pop_back();
+      if (mode == HASH)
+      {
+        if (!open.isTextDone) hash_add('T', {});
+        hash_add(']', {});
+      }
+      if (mode == TREE) nodes.pop_back();
+      if (mode != TEXT) return;
+      if (open.isEmpty)
+        text += "/>";
+      else
+      {
+        if (textDepth < 0)
+        {
+          text += '\n';
+          indent(stack.size());
+        }
+        text += "</";
+        text += open.tag;
+        text += '>';
+      }
+      if (textDepth == (int)stack.size()) textDepth = -1;
+      if (stack.empty()) text += '\n';
+    }
+
+    void node(const XmlNode& node)
+    {
+      open(node.tag);
+      for (const auto& [name, value] : node.attributes)
+        attribute_text(name, value);
+      text_add(node.text);
+      for (const auto& child : node.children)
+        this->node(child);
+      close();
+    }
+  };
+
+  // Unknown XML goes back where it was read: attributes after the known ones, then text, and (through Children)
+  // children at their recorded positions among the known ones.
+  void extras_attributes_write(Sink& sink, const Extras& extras)
   {
-    if (!value.empty()) attribute_add(node, name, path::to_utf8(value));
+    for (const auto& [name, value] : extras.attributes)
+      sink.attribute_text(name, value);
   }
 
-  void interpolation_add(XmlNode& node, const char* name, Interpolation interpolation)
+  void extras_write(Sink& sink, const Extras& extras)
+  {
+    extras_attributes_write(sink, extras);
+    sink.text_add(extras.text);
+  }
+
+  // Interleaves an element's unknown children with its known ones: add() comes before each known child.
+  struct Children
+  {
+    Sink& sink;
+    const Extras& extras;
+    std::size_t next{};
+    int position{};
+
+    void add()
+    {
+      while (next < extras.children.size() && extras.children[next].first <= position)
+      {
+        sink.node(extras.children[next++].second);
+        ++position;
+      }
+      ++position;
+    }
+
+    void flush()
+    {
+      while (next < extras.children.size())
+        sink.node(extras.children[next++].second);
+    }
+
+    void close()
+    {
+      flush();
+      sink.close();
+    }
+  };
+
+  void element_close(Sink& sink, const Extras& extras) { Children{sink, extras}.close(); }
+
+  void path_add(Sink& sink, const char* name, const std::filesystem::path& value)
+  {
+    if (!value.empty()) sink.attribute(name, path::to_utf8(value));
+  }
+
+  void interpolation_add(Sink& sink, const char* name, Interpolation interpolation)
   {
     if (interpolation == Interpolation::NONE || interpolation == Interpolation::LINEAR)
-      attribute_add(node, name, interpolation == Interpolation::LINEAR);
+      sink.attribute(name, interpolation == Interpolation::LINEAR);
     else
-      attribute_add(node, name, INTERPOLATION_VALUES[(int)interpolation]);
-  }
-
-  // Unknown XML goes back where it was read: attributes after the known ones, children at their recorded position.
-  void extras_write(XmlNode& node, const Extras& extras)
-  {
-    node.attributes.insert(node.attributes.end(), extras.attributes.begin(), extras.attributes.end());
-    if (!extras.text.empty()) node.text = extras.text;
-    for (const auto& [index, child] : extras.children)
-      node.children.insert(node.children.begin() + std::min(index, (int)node.children.size()), child);
+      sink.attribute(name, INTERPOLATION_VALUES[(int)interpolation]);
   }
 
   bool is_group_id_written(const Writer& writer)
@@ -877,83 +1079,102 @@ namespace anm2ed::model
     return frame;
   }
 
-  XmlNode frame_write(const Writer& writer, const Frame& frame, ItemType type)
+  // A frame baked into single steps for the game records, on its first step, how to read them back as one.
+  struct FrameBake
+  {
+    Interpolation interpolation{};
+    int delay{};
+  };
+
+  void frame_write(Sink& sink, const Writer& writer, const Frame& frame, ItemType type, FrameBake bake = {})
   {
     if (type == ItemType::TRIGGER)
     {
-      XmlNode node{.tag = tag_get(ElementType::TRIGGER)};
-      if (frame.eventId != -1) attribute_add(node, "EventId", frame.eventId);
-      attribute_add(node, "AtFrame", frame.atFrame);
+      sink.open(tag_get(ElementType::TRIGGER));
+      if (frame.eventId != -1) sink.attribute("EventId", frame.eventId);
+      sink.attribute("AtFrame", frame.atFrame);
+      extras_write(sink, frame.extras);
+      Children children{sink, frame.extras};
       if (writer.is(SERIALIZE_SOUNDS))
         for (auto soundId : frame.soundIds)
           if (soundId != -1)
-            attribute_add(node.children.emplace_back(XmlNode{.tag = tag_get(ElementType::SOUND_ELEMENT)}), "Id",
-                          soundId);
-      extras_write(node, frame.extras);
-      return node;
+          {
+            children.add();
+            sink.open(tag_get(ElementType::SOUND_ELEMENT));
+            sink.attribute("Id", soundId);
+            sink.close();
+          }
+      return children.close();
     }
 
-    XmlNode node{.tag = tag_get(ElementType::FRAME)};
-    node.attributes.reserve(FRAME_ATTRIBUTES_MAX + frame.extras.attributes.size());
+    sink.open(tag_get(ElementType::FRAME));
     if (type == ItemType::LAYER)
     {
       auto isRegion = writer.is(SERIALIZE_REGIONS) && frame.regionId != -1;
-      if (isRegion) attribute_add(node, "RegionId", frame.regionId);
+      if (isRegion) sink.attribute("RegionId", frame.regionId);
       if (writer.is(SERIALIZE_REDUNDANT_FRAME_REGION_VALUES) || !isRegion)
       {
-        attribute_add(node, "XPivot", frame.pivot.x);
-        attribute_add(node, "YPivot", frame.pivot.y);
-        attribute_add(node, "XCrop", frame.crop.x);
-        attribute_add(node, "YCrop", frame.crop.y);
-        attribute_add(node, "Width", frame.size.x);
-        attribute_add(node, "Height", frame.size.y);
+        sink.attribute("XPivot", frame.pivot.x);
+        sink.attribute("YPivot", frame.pivot.y);
+        sink.attribute("XCrop", frame.crop.x);
+        sink.attribute("YCrop", frame.crop.y);
+        sink.attribute("Width", frame.size.x);
+        sink.attribute("Height", frame.size.y);
       }
     }
-    attribute_add(node, "XPosition", frame.position.x);
-    attribute_add(node, "YPosition", frame.position.y);
-    attribute_add(node, "Delay", frame.duration);
-    attribute_add(node, "Visible", frame.isVisible);
-    attribute_add(node, "XScale", frame.scale.x);
-    attribute_add(node, "YScale", frame.scale.y);
+    sink.attribute("XPosition", frame.position.x);
+    sink.attribute("YPosition", frame.position.y);
+    sink.attribute("Delay", frame.duration);
+    sink.attribute("Visible", frame.isVisible);
+    sink.attribute("XScale", frame.scale.x);
+    sink.attribute("YScale", frame.scale.y);
     if (writer.is(SERIALIZE_EXTENSIONS))
     {
-      attribute_add(node, "ShearX", frame.shear.x);
-      attribute_add(node, "ShearY", frame.shear.y);
+      sink.attribute("ShearX", frame.shear.x);
+      sink.attribute("ShearY", frame.shear.y);
     }
     for (int i = 0; i < (int)std::size(TINT_ATTRIBUTES); ++i)
-      attribute_add(node, TINT_ATTRIBUTES[i], math::float_to_uint8(frame.tint[i]));
+      sink.attribute(TINT_ATTRIBUTES[i], math::float_to_uint8(frame.tint[i]));
     for (int i = 0; i < (int)std::size(OFFSET_ATTRIBUTES); ++i)
-      attribute_add(node, OFFSET_ATTRIBUTES[i], math::float_to_uint8(frame.colorOffset[i]));
-    attribute_add(node, "Rotation", frame.rotation);
-    interpolation_add(node, "Interpolated", frame.interpolation);
-    if (writer.is(SERIALIZE_EXTENSIONS) && frame.shaderId != -1) attribute_add(node, "ShaderId", frame.shaderId);
-    extras_write(node, frame.extras);
-    return node;
+      sink.attribute(OFFSET_ATTRIBUTES[i], math::float_to_uint8(frame.colorOffset[i]));
+    sink.attribute("Rotation", frame.rotation);
+    interpolation_add(sink, "Interpolated", frame.interpolation);
+    if (writer.is(SERIALIZE_EXTENSIONS) && frame.shaderId != -1) sink.attribute("ShaderId", frame.shaderId);
+    extras_attributes_write(sink, frame.extras);
+    if (bake.delay > 0)
+    {
+      sink.attribute("BakeInterpolation", INTERPOLATION_VALUES[(int)bake.interpolation]);
+      sink.attribute("BakeDelay", bake.delay);
+    }
+    sink.text_add(frame.extras.text);
+    element_close(sink, frame.extras);
   }
 
   // A backup (FrameRestore) track keeps its frames' region ids as they are.
-  XmlNode track_write(const Writer& writer, const Track& track, int groupId = -1, bool isBackup = false)
+  void track_write(Sink& sink, const Writer& writer, const Track& track, int groupId = -1, bool isBackup = false)
   {
-    XmlNode node{.tag = tag_get(track_element_type_get(track.type))};
+    sink.open(tag_get(track_element_type_get(track.type)));
     if (track.type == ItemType::LAYER || track.type == ItemType::NULL_)
     {
       auto id = track.id;
       if (track.type == ItemType::LAYER && writer.model)
         if (auto it = writer.layerIds.find(id); it != writer.layerIds.end()) id = it->second;
-      attribute_add(node, track.type == ItemType::LAYER ? "LayerId" : "NullId", id);
-      attribute_add(node, "Visible", track.isVisible);
-      if (groupId != -1 && is_group_id_written(writer)) attribute_add(node, "GroupId", groupId);
+      sink.attribute(track.type == ItemType::LAYER ? "LayerId" : "NullId", id);
+      sink.attribute("Visible", track.isVisible);
+      if (groupId != -1 && is_group_id_written(writer)) sink.attribute("GroupId", groupId);
     }
+    extras_write(sink, track.extras);
 
+    Children children{sink, track.extras};
     auto layerTrack = track.type == ItemType::LAYER && !isBackup ? &track : nullptr;
-    node.children.reserve(track.frames.size());
     for (int i = 0; i < (int)track.frames.size(); ++i)
     {
       auto frame = frame_normalize(writer, track.frames[i], layerTrack);
       if (!writer.is(SERIALIZE_BAKE_SPECIAL_INTERPOLATED_FRAMES) || track.type == ItemType::TRIGGER ||
           !is_special_interpolation(frame.interpolation))
       {
-        node.children.push_back(frame_write(writer, frame, track.type));
+        children.add();
+        frame_write(sink, writer, frame, track.type);
         continue;
       }
       // Written for the game as single-step frames; the first records how to read them back as one.
@@ -961,101 +1182,129 @@ namespace anm2ed::model
                                     FRAME_DURATION_MIN, false, false);
       for (int bakeIndex = 0; bakeIndex < (int)baked.size(); ++bakeIndex)
       {
-        auto& child = node.children.emplace_back(frame_write(writer, baked[bakeIndex], track.type));
-        if (bakeIndex > 0) continue;
-        attribute_add(child, "BakeInterpolation", INTERPOLATION_VALUES[(int)frame.interpolation]);
-        attribute_add(child, "BakeDelay", (int)baked.size());
+        children.add();
+        frame_write(sink, writer, baked[bakeIndex], track.type,
+                    bakeIndex == 0 ? FrameBake{frame.interpolation, (int)baked.size()} : FrameBake{});
       }
     }
-    extras_write(node, track.extras);
-    return node;
+    children.close();
   }
 
-  template <class Group> XmlNode group_write(const Writer& writer, const Group& group)
+  // A group; `index` records its position when groups are written apart from their container, and `members` writes
+  // the children nested into it.
+  template <class Group>
+  void group_write(Sink& sink, const Writer& writer, const Group& group, std::optional<int> index = {},
+                   const std::function<void()>& members = {})
   {
-    XmlNode node{.tag = tag_get(ElementType::GROUP)};
-    if (!writer.is(SERIALIZE_NESTED_GROUPS)) attribute_add(node, "Id", group.id);
-    attribute_add(node, "Name", group.name);
-    attribute_add(node, "IsExpanded", group.isExpanded);
-    attribute_add(node, "Visible", group.isVisible);
-    if constexpr (requires { group.root; }) node.children.push_back(track_write(writer, group.root));
-    extras_write(node, group.extras);
-    return node;
+    sink.open(tag_get(ElementType::GROUP));
+    if (!writer.is(SERIALIZE_NESTED_GROUPS)) sink.attribute("Id", group.id);
+    sink.attribute("Name", group.name);
+    sink.attribute("IsExpanded", group.isExpanded);
+    sink.attribute("Visible", group.isVisible);
+    if (index) sink.attribute("Index", *index);
+    extras_write(sink, group.extras);
+    Children children{sink, group.extras};
+    if constexpr (requires { group.root; })
+    {
+      children.add();
+      track_write(sink, writer, group.root);
+    }
+    children.flush();
+    if (members) members();
+    sink.close();
   }
 
   struct ContainerChild
   {
-    XmlNode node{};
+    std::function<void(std::optional<int>, const std::function<void()>&)> write{};
     int groupId{-1};
     std::optional<int> ownGroupId{};
-    std::size_t knownCount{};
   };
 
-  template <class Group> ContainerChild group_child_make(const Writer& writer, const Group& group)
+  template <class Group> ContainerChild group_child_make(Sink& sink, const Writer& writer, const Group& group)
   {
-    auto node = group_write(writer, group);
-    auto knownCount = node.attributes.size() - group.extras.attributes.size();
-    return {.node = std::move(node), .ownGroupId = group.id, .knownCount = knownCount};
+    return {.write = [&](std::optional<int> index, const std::function<void()>& members)
+            { group_write(sink, writer, group, index, members); },
+            .ownGroupId = group.id};
   }
 
   // Children are laid out flat (a group, then its children) and reshaped for the flags: nested into their groups, or,
-  // in a track container, moved to a *AnimationGroups sibling that records each group's position as Index.
-  XmlNode container_write(const Writer& writer, XmlNode container, std::vector<ContainerChild> flat,
-                          const Extras& extras, XmlNode* groups = nullptr)
+  // in a track container, moved to a *AnimationGroups sibling (`groupsType`) that records each group's position.
+  void container_write(Sink& sink, const Writer& writer, std::vector<ContainerChild> flat, const Extras& extras,
+                       ElementType groupsType = ElementType::UNKNOWN)
   {
-    container.attributes.insert(container.attributes.end(), extras.attributes.begin(), extras.attributes.end());
-    if (!extras.text.empty()) container.text = extras.text;
+    extras_write(sink, extras);
     for (const auto& [index, node] : extras.children)
-      flat.insert(flat.begin() + std::min(index, (int)flat.size()), ContainerChild{.node = node});
+      flat.insert(flat.begin() + std::min(index, (int)flat.size()),
+                  ContainerChild{.write = [&sink, &node](std::optional<int>, const std::function<void()>&)
+                                 { sink.node(node); }});
 
     auto isGroups = writer.is(SERIALIZE_GROUPS);
+    std::map<int, std::vector<ContainerChild>> grouped{};
     if (isGroups && writer.is(SERIALIZE_NESTED_GROUPS))
     {
       std::set<int> groupIds{};
       for (const auto& child : flat)
         if (child.ownGroupId && *child.ownGroupId >= 0) groupIds.insert(*child.ownGroupId);
-      std::map<int, std::vector<XmlNode>> grouped{};
       for (const auto& child : flat)
-        if (!child.ownGroupId && groupIds.contains(child.groupId)) grouped[child.groupId].push_back(child.node);
+        if (!child.ownGroupId && groupIds.contains(child.groupId)) grouped[child.groupId].push_back(child);
       std::erase_if(flat,
                     [&](const ContainerChild& child) { return !child.ownGroupId && groupIds.contains(child.groupId); });
-      for (auto& child : flat)
-        if (child.ownGroupId) std::ranges::copy(grouped[*child.ownGroupId], std::back_inserter(child.node.children));
     }
 
-    auto isExtracted = groups && isGroups && !writer.is(SERIALIZE_NESTED_GROUPS);
+    auto isExtracted = groupsType != ElementType::UNKNOWN && isGroups && !writer.is(SERIALIZE_NESTED_GROUPS);
+    std::vector<int> extracted{};
     for (int i = 0; i < (int)flat.size(); ++i)
     {
       auto& child = flat[i];
       if (child.ownGroupId && !isGroups) continue;
-      if (!child.ownGroupId || !isExtracted)
+      if (child.ownGroupId && isExtracted)
       {
-        container.children.push_back(std::move(child.node));
+        extracted.push_back(i);
         continue;
       }
-      XmlNode index{};
-      attribute_add(index, "Index", i);
-      child.node.attributes.insert(child.node.attributes.begin() + child.knownCount, index.attributes.front());
-      groups->children.push_back(std::move(child.node));
+      auto members = child.ownGroupId ? grouped.find(*child.ownGroupId) : grouped.end();
+      child.write({},
+                  [&]()
+                  {
+                    if (members != grouped.end())
+                      for (auto& member : members->second)
+                        member.write({}, {});
+                  });
     }
-    return container;
+    sink.close();
+
+    if (extracted.empty()) return;
+    sink.open(tag_get(groupsType));
+    for (auto i : extracted)
+      flat[i].write(i, {});
+    sink.close();
   }
 
-  XmlNode track_entries_write(const Writer& writer, const std::vector<TrackEntry>& entries, ElementType type,
-                              const Extras& extras, XmlNode& groups)
+  void track_entries_write(Sink& sink, const Writer& writer, const std::vector<TrackEntry>& entries, ElementType type,
+                           const Extras& extras)
   {
     std::vector<ContainerChild> flat{};
+    auto track_child_make = [&](const Track& track, int groupId)
+    {
+      return ContainerChild{.write = [&, groupId](std::optional<int>, const std::function<void()>&)
+                            { track_write(sink, writer, track, groupId); },
+                            .groupId = groupId};
+    };
     for (const auto& entry : entries)
       if (auto track = std::get_if<Track>(&entry))
-        flat.push_back({.node = track_write(writer, *track)});
+        flat.push_back(track_child_make(*track, -1));
       else
       {
         auto& group = std::get<TrackGroup>(entry);
-        flat.push_back(group_child_make(writer, group));
+        flat.push_back(group_child_make(sink, writer, group));
         for (const auto& groupTrack : group.tracks)
-          flat.push_back({.node = track_write(writer, groupTrack, group.id), .groupId = group.id});
+          flat.push_back(track_child_make(groupTrack, group.id));
       }
-    return container_write(writer, {.tag = tag_get(type)}, std::move(flat), extras, &groups);
+    sink.open(tag_get(type));
+    container_write(sink, writer, std::move(flat), extras,
+                    type == ElementType::LAYER_ANIMATIONS ? ElementType::LAYER_ANIMATION_GROUPS
+                                                          : ElementType::NULL_ANIMATION_GROUPS);
   }
 
   bool is_frame_transform_default(const Frame& frame)
@@ -1092,15 +1341,20 @@ namespace anm2ed::model
                     [&](TrackGroup& group)
                     {
                       if (std::ranges::all_of(group.root.frames, is_frame_transform_default)) return;
-                      XmlNode backup{.tag = std::string(FRAME_RESTORE_TAG)};
-                      backup.children.push_back(track_write(writer, group.root));
+                      Sink backup{.mode = Sink::TREE};
+                      backup.open(FRAME_RESTORE_TAG);
+                      track_write(backup, writer, group.root);
                       for (auto& track : group.tracks)
                       {
-                        backup.children.push_back(track_write(writer, track, group.id, true));
+                        track_write(backup, writer, track, group.id, true);
                         track_group_root_bake(track, group.root, animation.frameNum);
                       }
+                      backup.close();
                       group.root = TrackGroup{}.root;
-                      group.extras.children.emplace_back(1, std::move(backup));
+                      // Kept in order of position, where it reads back the same as appended at position 1.
+                      auto& children = group.extras.children;
+                      children.insert(std::ranges::lower_bound(children, 1, {}, &std::pair<int, XmlNode>::first),
+                                      {1, std::move(backup.root)});
                     });
 
     if (writer.is(SERIALIZE_FLATTEN_SPECIAL_INTERPOLATED_FRAMES))
@@ -1124,182 +1378,207 @@ namespace anm2ed::model
     return layout;
   }
 
-  XmlNode animation_write(const Writer& writer, const Animation& source, int groupId = -1)
+  void animation_write(Sink& sink, const Writer& writer, const Animation& source, int groupId = -1)
   {
     auto isBaked = writer.model &&
                    (writer.is(SERIALIZE_BAKE_GROUP_FRAMES) || writer.is(SERIALIZE_FLATTEN_SPECIAL_INTERPOLATED_FRAMES));
     auto baked = isBaked ? std::optional(animation_bake(writer, source)) : std::nullopt;
     const auto& animation = baked ? *baked : source;
 
-    XmlNode node{.tag = tag_get(ElementType::ANIMATION)};
-    attribute_add(node, "Name", animation.name);
-    attribute_add(node, "FrameNum", animation.frameNum);
-    attribute_add(node, "Loop", animation.isLoop);
-    if (groupId != -1 && is_group_id_written(writer)) attribute_add(node, "GroupId", groupId);
+    sink.open(tag_get(ElementType::ANIMATION));
+    sink.attribute("Name", animation.name);
+    sink.attribute("FrameNum", animation.frameNum);
+    sink.attribute("Loop", animation.isLoop);
+    if (groupId != -1 && is_group_id_written(writer)) sink.attribute("GroupId", groupId);
+    extras_write(sink, animation.extras);
 
-    std::vector<std::pair<ElementType, XmlNode>> groups{};
+    Children children{sink, animation.extras};
     for (auto type : layout_get(animation.layout, {{ElementType::ROOT_ANIMATION, !animation.root.frames.empty()},
                                                    {ElementType::LAYER_ANIMATIONS, !animation.layers.empty()},
                                                    {ElementType::NULL_ANIMATIONS, !animation.nulls.empty()},
                                                    {ElementType::TRIGGERS, !animation.triggers.frames.empty()}}))
     {
-      if (type == ElementType::ROOT_ANIMATION) node.children.push_back(track_write(writer, animation.root));
-      if (type == ElementType::TRIGGERS) node.children.push_back(track_write(writer, animation.triggers));
-      if (type != ElementType::LAYER_ANIMATIONS && type != ElementType::NULL_ANIMATIONS) continue;
-      auto isLayers = type == ElementType::LAYER_ANIMATIONS;
-      auto& [groupsType, groupsNode] = groups.emplace_back(
-          type,
-          XmlNode{.tag = tag_get(isLayers ? ElementType::LAYER_ANIMATION_GROUPS : ElementType::NULL_ANIMATION_GROUPS)});
-      node.children.push_back(track_entries_write(writer, isLayers ? animation.layers : animation.nulls, type,
-                                                  isLayers ? animation.layersExtras : animation.nullsExtras,
-                                                  groupsNode));
+      children.add();
+      if (type == ElementType::ROOT_ANIMATION) track_write(sink, writer, animation.root);
+      if (type == ElementType::TRIGGERS) track_write(sink, writer, animation.triggers);
+      if (type == ElementType::LAYER_ANIMATIONS)
+        track_entries_write(sink, writer, animation.layers, type, animation.layersExtras);
+      if (type == ElementType::NULL_ANIMATIONS)
+        track_entries_write(sink, writer, animation.nulls, type, animation.nullsExtras);
     }
-    extras_write(node, animation.extras);
-
-    for (auto& [type, groupsNode] : groups)
-    {
-      if (groupsNode.children.empty()) continue;
-      auto container = std::ranges::find(node.children, std::string(tag_get(type)), &XmlNode::tag);
-      node.children.insert(container + 1, std::move(groupsNode));
-    }
-    return node;
+    children.close();
   }
 
-  XmlNode animations_write(const Writer& writer, const Animations& animations)
+  void animations_write(Sink& sink, const Writer& writer, const Animations& animations)
   {
     std::vector<ContainerChild> flat{};
+    auto animation_child_make = [&](const Animation& animation, int groupId)
+    {
+      return ContainerChild{.write = [&, groupId](std::optional<int>, const std::function<void()>&)
+                            { animation_write(sink, writer, animation, groupId); },
+                            .groupId = groupId};
+    };
     for (const auto& entry : animations.entries)
       if (auto animation = std::get_if<std::shared_ptr<const Animation>>(&entry))
-        flat.push_back({.node = animation_write(writer, **animation)});
+        flat.push_back(animation_child_make(**animation, -1));
       else
       {
         auto& group = std::get<AnimationGroup>(entry);
-        flat.push_back(group_child_make(writer, group));
+        flat.push_back(group_child_make(sink, writer, group));
         for (const auto& groupAnimation : group.animations)
-          flat.push_back({.node = animation_write(writer, *groupAnimation, group.id), .groupId = group.id});
+          flat.push_back(animation_child_make(*groupAnimation, group.id));
       }
-    XmlNode node{.tag = tag_get(ElementType::ANIMATIONS)};
-    attribute_add(node, "DefaultAnimation", animations.defaultAnimation);
-    return container_write(writer, std::move(node), std::move(flat), animations.extras);
+    sink.open(tag_get(ElementType::ANIMATIONS));
+    sink.attribute("DefaultAnimation", animations.defaultAnimation);
+    container_write(sink, writer, std::move(flat), animations.extras);
   }
 
-  XmlNode item_write(const Writer&, const Region& region, int id)
+  void item_write(Sink& sink, const Writer&, const Region& region, int id)
   {
-    XmlNode node{.tag = tag_get(ElementType::REGION)};
-    attribute_add(node, "Id", id);
-    attribute_add(node, "Name", region.name);
-    attribute_add(node, "XCrop", region.crop.x);
-    attribute_add(node, "YCrop", region.crop.y);
-    attribute_add(node, "Width", region.size.x);
-    attribute_add(node, "Height", region.size.y);
+    sink.open(tag_get(ElementType::REGION));
+    sink.attribute("Id", id);
+    sink.attribute("Name", region.name);
+    sink.attribute("XCrop", region.crop.x);
+    sink.attribute("YCrop", region.crop.y);
+    sink.attribute("Width", region.size.x);
+    sink.attribute("Height", region.size.y);
     if (region.origin != Origin::CUSTOM)
-      attribute_add(node, "Origin", ORIGIN_VALUES[(int)region.origin]);
+      sink.attribute("Origin", ORIGIN_VALUES[(int)region.origin]);
     else
     {
-      attribute_add(node, "XPivot", region.pivot.x);
-      attribute_add(node, "YPivot", region.pivot.y);
+      sink.attribute("XPivot", region.pivot.x);
+      sink.attribute("YPivot", region.pivot.y);
     }
-    extras_write(node, region.extras);
-    return node;
+    extras_write(sink, region.extras);
+    element_close(sink, region.extras);
   }
 
-  XmlNode item_write(const Writer& writer, const Spritesheet& spritesheet, int id)
+  void item_write(Sink& sink, const Writer& writer, const Spritesheet& spritesheet, int id)
   {
-    XmlNode node{.tag = tag_get(ElementType::SPRITESHEET)};
-    attribute_add(node, "Id", id);
-    path_add(node, "Path", spritesheet.path);
+    sink.open(tag_get(ElementType::SPRITESHEET));
+    sink.attribute("Id", id);
+    path_add(sink, "Path", spritesheet.path);
+    extras_write(sink, spritesheet.extras);
+    Children children{sink, spritesheet.extras};
     if (writer.is(SERIALIZE_REGIONS))
       for (int i = 0; i < (int)spritesheet.regions.size(); ++i)
-        node.children.push_back(
-            item_write(writer, spritesheet.regions[i], writer.model ? i : spritesheet.regions[i].id));
-    extras_write(node, spritesheet.extras);
-    return node;
+      {
+        children.add();
+        item_write(sink, writer, spritesheet.regions[i], writer.model ? i : spritesheet.regions[i].id);
+      }
+    children.close();
   }
 
-  void binding_value_add(XmlNode& node, const std::string& binding, const std::string& value)
+  void binding_value_add(Sink& sink, const std::string& binding, const std::string& value)
   {
-    if (!binding.empty()) attribute_add(node, "Binding", binding);
-    if (!value.empty()) attribute_add(node, "Value", value);
+    if (!binding.empty()) sink.attribute("Binding", binding);
+    if (!value.empty()) sink.attribute("Value", value);
   }
 
-  XmlNode item_write(const Writer&, const Shader& shader, int id)
+  void item_write(Sink& sink, const Writer&, const Shader& shader, int id)
   {
-    XmlNode node{.tag = tag_get(ElementType::SHADER)};
-    attribute_add(node, "Id", id);
-    attribute_add(node, "Name", shader.name);
-    path_add(node, "Vertex", shader.vertex);
-    path_add(node, "Fragment", shader.fragment);
+    sink.open(tag_get(ElementType::SHADER));
+    sink.attribute("Id", id);
+    sink.attribute("Name", shader.name);
+    path_add(sink, "Vertex", shader.vertex);
+    path_add(sink, "Fragment", shader.fragment);
+    extras_write(sink, shader.extras);
+    Children children{sink, shader.extras};
     for (const auto& uniform : shader.uniforms)
     {
-      auto& uniformNode = node.children.emplace_back(XmlNode{.tag = tag_get(ElementType::UNIFORM)});
-      attribute_add(uniformNode, "Name", uniform.name);
-      binding_value_add(uniformNode, uniform.binding, uniform.value);
+      children.add();
+      sink.open(tag_get(ElementType::UNIFORM));
+      sink.attribute("Name", uniform.name);
+      binding_value_add(sink, uniform.binding, uniform.value);
+      extras_write(sink, uniform.extras);
+      Children components{sink, uniform.extras};
       for (const auto& component : uniform.components)
       {
-        auto& componentNode = uniformNode.children.emplace_back(XmlNode{.tag = tag_get(ElementType::COMPONENT)});
-        attribute_add(componentNode, "Index", component.index);
-        binding_value_add(componentNode, component.binding, component.value);
-        extras_write(componentNode, component.extras);
+        components.add();
+        sink.open(tag_get(ElementType::COMPONENT));
+        sink.attribute("Index", component.index);
+        binding_value_add(sink, component.binding, component.value);
+        extras_write(sink, component.extras);
+        element_close(sink, component.extras);
       }
-      extras_write(uniformNode, uniform.extras);
+      components.close();
     }
-    extras_write(node, shader.extras);
-    return node;
+    children.close();
   }
 
-  XmlNode item_write(const Writer&, const Layer& layer, int id)
+  void item_write(Sink& sink, const Writer&, const Layer& layer, int id)
   {
-    XmlNode node{.tag = tag_get(ElementType::LAYER_ELEMENT)};
-    attribute_add(node, "Id", id);
-    attribute_add(node, "Name", layer.name);
-    attribute_add(node, "SpritesheetId", layer.spritesheetId);
-    extras_write(node, layer.extras);
-    return node;
+    sink.open(tag_get(ElementType::LAYER_ELEMENT));
+    sink.attribute("Id", id);
+    sink.attribute("Name", layer.name);
+    sink.attribute("SpritesheetId", layer.spritesheetId);
+    extras_write(sink, layer.extras);
+    element_close(sink, layer.extras);
   }
 
-  XmlNode item_write(const Writer&, const Null& null, int id)
+  void item_write(Sink& sink, const Writer&, const Null& null, int id)
   {
-    XmlNode node{.tag = tag_get(ElementType::NULL_ELEMENT)};
-    attribute_add(node, "Id", id);
-    attribute_add(node, "Name", null.name);
-    if (null.isShowRect) attribute_add(node, "ShowRect", null.isShowRect);
-    extras_write(node, null.extras);
-    return node;
+    sink.open(tag_get(ElementType::NULL_ELEMENT));
+    sink.attribute("Id", id);
+    sink.attribute("Name", null.name);
+    if (null.isShowRect) sink.attribute("ShowRect", null.isShowRect);
+    extras_write(sink, null.extras);
+    element_close(sink, null.extras);
   }
 
-  XmlNode item_write(const Writer&, const Event& event, int id)
+  void item_write(Sink& sink, const Writer&, const Event& event, int id)
   {
-    XmlNode node{.tag = tag_get(ElementType::EVENT_ELEMENT)};
-    attribute_add(node, "Id", id);
-    attribute_add(node, "Name", event.name);
-    extras_write(node, event.extras);
-    return node;
+    sink.open(tag_get(ElementType::EVENT_ELEMENT));
+    sink.attribute("Id", id);
+    sink.attribute("Name", event.name);
+    extras_write(sink, event.extras);
+    element_close(sink, event.extras);
   }
 
-  XmlNode item_write(const Writer&, const Sound& sound, int id)
+  void item_write(Sink& sink, const Writer&, const Sound& sound, int id)
   {
-    XmlNode node{.tag = tag_get(ElementType::SOUND_ELEMENT)};
-    attribute_add(node, "Id", id);
-    path_add(node, "Path", sound.path);
-    extras_write(node, sound.extras);
-    return node;
+    sink.open(tag_get(ElementType::SOUND_ELEMENT));
+    sink.attribute("Id", id);
+    path_add(sink, "Path", sound.path);
+    extras_write(sink, sound.extras);
+    element_close(sink, sound.extras);
+  }
+
+  // A content container's unknown XML (a file may repeat a container; its parts are merged in order).
+  Extras container_extras_get(const Content& content, ElementType type)
+  {
+    Extras merged{};
+    for (const auto& [extrasType, extras] : content.containerExtras)
+    {
+      if (extrasType != type) continue;
+      merged.attributes.insert(merged.attributes.end(), extras.attributes.begin(), extras.attributes.end());
+      if (!extras.text.empty()) merged.text = extras.text;
+      merged.children.insert(merged.children.end(), extras.children.begin(), extras.children.end());
+    }
+    return merged;
   }
 
   template <class Item>
-  XmlNode items_write(const Writer& writer, const std::vector<Item>& items, ElementType type, const Content& content)
+  void items_write(Sink& sink, const Writer& writer, const std::vector<Item>& items, ElementType type,
+                   const Extras& extras)
   {
-    XmlNode node{.tag = tag_get(type)};
+    sink.open(tag_get(type));
+    extras_write(sink, extras);
+    Children children{sink, extras};
     auto isRenumbered = writer.model && (type == ElementType::LAYERS || type == ElementType::SHADERS);
     for (int i = 0; i < (int)items.size(); ++i)
-      node.children.push_back(item_write(writer, items[i], isRenumbered ? i : items[i].id));
-    for (const auto& [extrasType, extras] : content.containerExtras)
-      if (extrasType == type) extras_write(node, extras);
-    return node;
+    {
+      children.add();
+      item_write(sink, writer, items[i], isRenumbered ? i : items[i].id);
+    }
+    children.close();
   }
 
-  XmlNode content_write(const Writer& writer, const Content& content)
+  void content_write(Sink& sink, const Writer& writer, const Content& content)
   {
-    XmlNode node{.tag = tag_get(ElementType::CONTENT)};
+    sink.open(tag_get(ElementType::CONTENT));
+    extras_write(sink, content.extras);
+    Children children{sink, content.extras};
     for (auto type : layout_get(content.layout, {{ElementType::SPRITESHEETS, !content.spritesheets.empty()},
                                                  {ElementType::SHADERS, !content.shaders.empty()},
                                                  {ElementType::LAYERS, !content.layers.empty()},
@@ -1307,163 +1586,68 @@ namespace anm2ed::model
                                                  {ElementType::EVENTS, !content.events.empty()},
                                                  {ElementType::SOUNDS, !content.sounds.empty()}}))
     {
-      auto& container = node.children.emplace_back();
-      if (type == ElementType::SPRITESHEETS) container = items_write(writer, content.spritesheets, type, content);
-      if (type == ElementType::SHADERS) container = items_write(writer, content.shaders, type, content);
-      if (type == ElementType::LAYERS) container = items_write(writer, content.layers, type, content);
-      if (type == ElementType::NULLS) container = items_write(writer, content.nulls, type, content);
-      if (type == ElementType::EVENTS) container = items_write(writer, content.events, type, content);
-      if (type == ElementType::SOUNDS) container = items_write(writer, content.sounds, type, content);
-      // Optional containers are left out when the flags drop them or they are empty; an emptied tag marks them so
-      // extras still land at their recorded positions.
-      auto isOptional = type == ElementType::SHADERS || type == ElementType::SOUNDS;
-      auto isEnabled = writer.is(type == ElementType::SHADERS ? SERIALIZE_EXTENSIONS : SERIALIZE_SOUNDS);
-      if (isOptional && (!isEnabled || container.children.empty())) container.tag.clear();
+      children.add();
+      auto extras = container_extras_get(content, type);
+      // Optional containers are left out when the flags drop them or they are empty (their place still counts for
+      // where unknown children go).
+      if (type == ElementType::SHADERS && writer.is(SERIALIZE_EXTENSIONS) &&
+          (!content.shaders.empty() || !extras.children.empty()))
+        items_write(sink, writer, content.shaders, type, extras);
+      if (type == ElementType::SOUNDS && writer.is(SERIALIZE_SOUNDS) &&
+          (!content.sounds.empty() || !extras.children.empty()))
+        items_write(sink, writer, content.sounds, type, extras);
+      if (type == ElementType::SPRITESHEETS) items_write(sink, writer, content.spritesheets, type, extras);
+      if (type == ElementType::LAYERS) items_write(sink, writer, content.layers, type, extras);
+      if (type == ElementType::NULLS) items_write(sink, writer, content.nulls, type, extras);
+      if (type == ElementType::EVENTS) items_write(sink, writer, content.events, type, extras);
     }
-    extras_write(node, content.extras);
-    std::erase_if(node.children, [](const XmlNode& child) { return child.tag.empty(); });
-    return node;
+    children.close();
   }
 
-  XmlNode model_write(const Model& model, Flags flags)
+  // A whole document; `inner` writes anything after its children (the SourceDocument copy) and `tag` renames it.
+  void model_write(Sink& sink, const Model& model, Flags flags, const std::function<void()>& inner = {},
+                   std::string_view tag = {})
   {
     Writer writer(flags, &model);
-    XmlNode node{.tag = tag_get(ElementType::ANIMATED_ACTOR)};
+    sink.open(tag.empty() ? tag_get(ElementType::ANIMATED_ACTOR) : tag);
+    extras_write(sink, model.extras);
+    Children children{sink, model.extras};
     auto isInfo = model.info.fps != Info{}.fps || model.info.createdBy != Info{}.createdBy;
     for (auto type : layout_get(model.layout, {{ElementType::INFO, isInfo},
                                                {ElementType::CONTENT, true},
                                                {ElementType::ANIMATIONS, !model.animations.entries.empty()}}))
     {
-      if (type == ElementType::CONTENT) node.children.push_back(content_write(writer, model.content));
-      if (type == ElementType::ANIMATIONS) node.children.push_back(animations_write(writer, model.animations));
+      children.add();
+      if (type == ElementType::CONTENT) content_write(sink, writer, model.content);
+      if (type == ElementType::ANIMATIONS) animations_write(sink, writer, model.animations);
       if (type != ElementType::INFO) continue;
-      auto& info = node.children.emplace_back(XmlNode{.tag = tag_get(ElementType::INFO)});
-      attribute_add(info, "CreatedBy", model.info.createdBy);
-      attribute_add(info, "CreatedOn", model.info.createdOn);
-      attribute_add(info, "Fps", model.info.fps);
-      attribute_add(info, "Version", model.info.version);
-      extras_write(info, model.info.extras);
+      sink.open(tag_get(ElementType::INFO));
+      sink.attribute("CreatedBy", model.info.createdBy);
+      sink.attribute("CreatedOn", model.info.createdOn);
+      sink.attribute("Fps", model.info.fps);
+      sink.attribute("Version", model.info.version);
+      extras_write(sink, model.info.extras);
+      element_close(sink, model.info.extras);
     }
-    extras_write(node, model.extras);
-    return node;
+    children.flush();
+    if (inner) inner();
+    sink.close();
   }
 
   // A save is the game's document with the editor's own copy embedded as SourceDocument (or just the editor's copy).
-  XmlNode document_write(const Model& model, Options options)
+  void document_write(Sink& sink, const Model& model, Options options)
   {
-    auto editor = model_write(model, SERIALIZE_ANM2ED_DEFAULT);
-    if (options.isExtendedFormat) return editor;
-    auto game = model_write(model, SERIALIZE_ISAAC_DEFAULT);
-    editor.tag = SOURCE_DOCUMENT_TAG;
-    game.children.push_back(std::move(editor));
-    return game;
+    if (options.isExtendedFormat) return model_write(sink, model, SERIALIZE_ANM2ED_DEFAULT);
+    model_write(sink, model, SERIALIZE_ISAAC_DEFAULT,
+                [&]() { model_write(sink, model, SERIALIZE_ANM2ED_DEFAULT, {}, SOURCE_DOCUMENT_TAG); });
   }
 
-  // Prints a node tree exactly as tinyxml2's XMLPrinter would (4-space indents, entities escaped, text keeping its
-  // element's children inline), without building a tinyxml2 document.
-  struct Printer
+  // The text of whatever `write` sends to a sink.
+  template <class Write> std::string text_get(Write&& write)
   {
-    std::string text{};
-    int depth{};
-    int textDepth{-1};
-    bool isFirst{true};
-
-    // Attributes escape all five entities; text only the first three.
-    void escape(std::string_view value, bool isAttribute)
-    {
-      for (auto character : value)
-      {
-        auto entity = std::ranges::find(ENTITIES, character, &std::pair<char, std::string_view>::first);
-        auto isEscaped = entity != std::end(ENTITIES) && (isAttribute || entity - ENTITIES < TEXT_ENTITY_COUNT);
-        if (isEscaped)
-          text += entity->second;
-        else
-          text += character;
-      }
-    }
-
-    void indent()
-    {
-      for (int i = 0; i < depth; ++i)
-        text += INDENT;
-    }
-
-    void print(const XmlNode& node)
-    {
-      if (!isFirst && textDepth < 0) text += '\n';
-      if (isFirst || textDepth < 0) indent();
-      isFirst = false;
-
-      text += '<';
-      text += node.tag;
-      ++depth;
-      for (const auto& [name, value] : node.attributes)
-      {
-        text += ' ';
-        text += name;
-        text += "=\"";
-        escape(value, true);
-        text += '"';
-      }
-      auto isOpen = true;
-      if (!node.text.empty())
-      {
-        textDepth = depth - 1;
-        text += '>';
-        isOpen = false;
-        escape(node.text, false);
-      }
-      for (const auto& child : node.children)
-      {
-        if (std::exchange(isOpen, false)) text += '>';
-        print(child);
-      }
-
-      --depth;
-      if (isOpen)
-        text += "/>";
-      else
-      {
-        if (textDepth < 0)
-        {
-          text += '\n';
-          indent();
-        }
-        text += "</";
-        text += node.tag;
-        text += '>';
-      }
-      if (textDepth == depth) textDepth = -1;
-      if (depth == 0) text += '\n';
-    }
-  };
-
-  std::string node_to_string(const XmlNode& node)
-  {
-    Printer printer{};
-    printer.print(node);
-    return std::move(printer.text);
-  }
-
-  void node_hash(std::uint64_t& hash, const XmlNode& node)
-  {
-    auto add = [&](char marker, std::string_view value)
-    {
-      hash = (hash ^ (unsigned char)marker) * HASH_PRIME;
-      for (unsigned char character : value)
-        hash = (hash ^ character) * HASH_PRIME;
-      hash *= HASH_PRIME;
-    };
-    add('E', node.tag);
-    for (const auto& [name, value] : node.attributes)
-    {
-      add('A', name);
-      add('V', value);
-    }
-    add('T', node.text);
-    for (const auto& child : node.children)
-      node_hash(hash, child);
-    add(']', {});
+    Sink sink{};
+    write(sink);
+    return std::move(sink.text);
   }
 
   bool document_load(Model& model, XMLDocument& document, XMLError result, std::string* errorString)
@@ -1521,32 +1705,35 @@ namespace anm2ed::model
 
   std::string model_to_string(const Model& model, Options options)
   {
-    return node_to_string(document_write(model, options));
+    return text_get([&](Sink& sink) { document_write(sink, model, options); });
   }
 
-  std::string model_serialize(const Model& model, Flags flags) { return node_to_string(model_write(model, flags)); }
+  std::string model_serialize(const Model& model, Flags flags)
+  {
+    return text_get([&](Sink& sink) { model_write(sink, model, flags); });
+  }
 
   // The hash of what the editor would save, so it changes exactly when a save would.
   std::uint64_t model_hash(const Model& model)
   {
-    auto hash = HASH_OFFSET;
-    node_hash(hash, model_write(model, SERIALIZE_ANM2ED_DEFAULT));
-    return hash;
+    Sink sink{.mode = Sink::HASH};
+    model_write(sink, model, SERIALIZE_ANM2ED_DEFAULT);
+    return sink.hash;
   }
 
   std::string frame_to_string(const Frame& frame, ItemType type)
   {
-    return node_to_string(frame_write(Writer(CLIPBOARD_FLAGS), frame, type));
+    return text_get([&](Sink& sink) { frame_write(sink, Writer(CLIPBOARD_FLAGS), frame, type); });
   }
 
   std::string animation_to_string(const Animation& animation, int groupId)
   {
-    return node_to_string(animation_write(Writer(CLIPBOARD_FLAGS), animation, groupId));
+    return text_get([&](Sink& sink) { animation_write(sink, Writer(CLIPBOARD_FLAGS), animation, groupId); });
   }
 
   std::string animation_group_to_string(const AnimationGroup& group)
   {
-    return node_to_string(group_write(Writer(CLIPBOARD_FLAGS), group));
+    return text_get([&](Sink& sink) { group_write(sink, Writer(CLIPBOARD_FLAGS), group); });
   }
 
   bool document_parse(XMLDocument& document, const std::string& text, std::string* errorString)
@@ -1580,7 +1767,7 @@ namespace anm2ed::model
 
   template <class Item> std::string item_to_string(const Item& item)
   {
-    return node_to_string(item_write(Writer(CLIPBOARD_FLAGS), item, item.id));
+    return text_get([&](Sink& sink) { item_write(sink, Writer(CLIPBOARD_FLAGS), item, item.id); });
   }
 
   template <class Item> std::vector<Item> items_from_string(const std::string& text, std::string* errorString)
