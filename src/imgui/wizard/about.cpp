@@ -61,6 +61,8 @@ namespace anm2ed::imgui::wizard
   static constexpr ImU32 ROLL_HEADER_COLOR = IM_COL32(255, 255, 255, 255);
   static constexpr ImU32 ROLL_NAME_COLOR = IM_COL32(200, 255, 255, 255);
   static constexpr ImU32 BAR_BASE_COLOR = IM_COL32(255, 0, 0, 255);
+  // The original's robots stood 47 px tall in its 183 px box.
+  static constexpr float FRIEND_HEIGHT_RATIO = 47.0f / 183.0f;
   static constexpr float FRIEND_PADDING_RATIO = 0.15f;
   static constexpr float TITLE_SCALE = 2.0f;
   static constexpr int FRIEND_ORDER_LEFT[] = {resource::friends::MEAT_BOY, resource::friends::ISAAC};
@@ -208,19 +210,11 @@ namespace anm2ed::imgui::wizard
     if (state.time < 0.0f) state.time += (float)animation->frameNum;
   }
 
-  // The animation's bounds with some room around them.
-  vec4 friend_rect_get(const About::FriendState& state)
+  ImVec2 friend_size_get(const About::FriendState& state, float height)
   {
-    auto rect = state.rect;
-    auto padding = std::max(2.0f, std::max(rect.z, rect.w) * FRIEND_PADDING_RATIO);
-    return {rect.x - padding, rect.y - padding, rect.z + padding * 2.0f, rect.w + padding * 2.0f};
-  }
-
-  // Characters are drawn 1:1, one screen pixel per animation pixel.
-  ImVec2 friend_size_get(const About::FriendState& state)
-  {
-    auto rect = friend_rect_get(state);
-    return ImVec2(std::max(rect.z, 1.0f), std::max(rect.w, 1.0f));
+    auto width = height;
+    if (state.rect.w > 0.0f && state.rect.z > 0.0f) width = height * (state.rect.z / state.rect.w);
+    return ImVec2(std::max(width, 1.0f), std::max(height, 1.0f));
   }
 
   void friend_canvas_draw(About::FriendState& state, Resources& resources, ImVec2 displaySize)
@@ -242,7 +236,13 @@ namespace anm2ed::imgui::wizard
 
     float zoom = 100.0f;
     vec2 pan{};
-    state.canvas->set_to_rect(zoom, pan, friend_rect_get(state));
+    auto rect = state.rect;
+    auto padding = std::max(2.0f, std::max(rect.z, rect.w) * FRIEND_PADDING_RATIO);
+    rect.x -= padding;
+    rect.y -= padding;
+    rect.z += padding * 2.0f;
+    rect.w += padding * 2.0f;
+    state.canvas->set_to_rect(zoom, pan, rect);
 
     auto transform = state.canvas->transform_get(zoom, pan);
     for (const auto& draw :
@@ -281,12 +281,13 @@ namespace anm2ed::imgui::wizard
   // The dancing characters stand in the credits box's bottom corners, inside the volume bars.
   void friends_draw(About& about, Resources& resources, ImDrawList* drawList, ImVec2 min, ImVec2 max, float inset)
   {
+    auto height = (max.y - min.y) * FRIEND_HEIGHT_RATIO;
     auto row_draw = [&](std::span<const int> indices, float left)
     {
       for (auto index : indices)
       {
         auto& state = about.friendStates[index];
-        auto size = friend_size_get(state);
+        auto size = friend_size_get(state, height);
         friend_canvas_draw(state, resources, size);
         if (state.isLoaded)
           image_premultiplied_draw(drawList, (ImTextureID)(intptr_t)state.canvas->texture, ImVec2(left, max.y - size.y),
@@ -296,7 +297,7 @@ namespace anm2ed::imgui::wizard
     };
     auto rightWidth = 0.0f;
     for (auto index : FRIEND_ORDER_RIGHT)
-      rightWidth += friend_size_get(about.friendStates[index]).x;
+      rightWidth += friend_size_get(about.friendStates[index], height).x;
     row_draw(FRIEND_ORDER_LEFT, min.x + inset);
     row_draw(FRIEND_ORDER_RIGHT, max.x - inset - rightWidth);
   }
