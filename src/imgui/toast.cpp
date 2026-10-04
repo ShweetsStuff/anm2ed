@@ -23,12 +23,13 @@ namespace anm2ed::imgui
 
   void Toasts::update()
   {
-    ImGuiIO& io = ImGui::GetIO();
 
     auto borderColor = ImGui::GetStyleColorVec4(ImGuiCol_Border);
     auto textColor = ImGui::GetStyleColorVec4(ImGuiCol_Text);
 
-    auto position = to_vec2(io.DisplaySize) - to_vec2(ImGui::GetStyle().ItemSpacing);
+    // The main window's bottom right corner (coordinates are the desktop's once windows can be detached).
+    auto viewport = ImGui::GetMainViewport();
+    auto position = to_vec2(viewport->Pos) + to_vec2(viewport->Size) - to_vec2(ImGui::GetStyle().ItemSpacing);
 
     for (int i = (int)toasts.size() - 1; i >= 0; --i)
     {

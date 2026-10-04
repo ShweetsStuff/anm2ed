@@ -36,6 +36,7 @@ namespace anm2ed::imgui
     }
     auto& style = ImGui::GetStyle();
     style.FrameBorderSize = FRAME_BORDER_SIZE;
+    style.Colors[ImGuiCol_WindowBg].w = 1.0f; // windows detached into their own OS windows can't be see-through
 
     if (theme == theme::LIGHT)
     {

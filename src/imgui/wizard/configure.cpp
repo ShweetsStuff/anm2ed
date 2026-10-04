@@ -32,6 +32,9 @@ namespace anm2ed::imgui::wizard
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_UI_SCALE));
           ImGui::Checkbox(localize.get(LABEL_VSYNC), &temporary.isVsync);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_VSYNC));
+          ImGui::SameLine();
+          ImGui::Checkbox(localize.get(LABEL_DETACHABLE_WINDOWS), &temporary.isDetachableWindows);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_DETACHABLE_WINDOWS));
 
           ImGui::SeparatorText(localize.get(LABEL_PLAYBACK_MENU));
           ImGui::RadioButton("30 Hz", &temporary.playbackTickRate, 30);
@@ -194,6 +197,10 @@ namespace anm2ed::imgui::wizard
       ImGui::GetIO().KeyRepeatDelay = settings.keyboardRepeatDelay;
       ImGui::GetIO().KeyRepeatRate = settings.keyboardRepeatRate;
       ImGui::GetStyle().FontScaleMain = math::percent_to_unit(settings.uiScale);
+      if (settings.isDetachableWindows)
+        ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+      else
+        ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
       SnapshotStack::max_size_set(settings.fileSnapshotStackSize);
       imgui::theme_set((theme::Type)settings.theme);
       localize.language = (Language)settings.language;

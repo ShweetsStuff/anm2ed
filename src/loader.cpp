@@ -246,6 +246,7 @@ namespace anm2ed
     ImGuiIO& io = ImGui::GetIO();
     io.IniFilename = nullptr;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    if (settings.isDetachableWindows) io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.KeyRepeatDelay = settings.keyboardRepeatDelay;
     io.KeyRepeatRate = settings.keyboardRepeatRate;

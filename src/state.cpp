@@ -149,6 +149,10 @@ namespace anm2ed
         case SDL_EVENT_QUIT:
           isQuitting = true;
           break;
+        // With detached windows open, closing the main window doesn't end the event loop by itself.
+        case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+          if (event.window.windowID == SDL_GetWindowID(window)) isQuitting = true;
+          break;
         default:
           break;
       }
@@ -208,6 +212,16 @@ namespace anm2ed
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+    // Windows dragged out of the main window are drawn into their own OS windows (and GL contexts).
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+      auto glContext = SDL_GL_GetCurrentContext();
+      ImGui::UpdatePlatformWindows();
+      ImGui::RenderPlatformWindowsDefault();
+      SDL_GL_MakeCurrent(window, glContext);
+    }
+
     SDL_GL_SwapWindow(window);
     resource::texture::garbage_collect();
     SDL_GL_SetSwapInterval(settings.isVsync);
