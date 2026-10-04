@@ -51,6 +51,7 @@ namespace anm2ed::imgui
       ImGui::SeparatorText(localize.get(LABEL_OPTIONS));
       ImGui::Checkbox(localize.get(LABEL_PIVOT_PATH), &settings.onionskinIsPivotPath);
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_PIVOT_PATH));
+      ImGui::SameLine();
       ImGui::Checkbox(localize.get(LABEL_ONLY_SELECTED_ITEM), &settings.onionskinIsOnlySelected);
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ONLY_SELECTED_ITEM));
     }

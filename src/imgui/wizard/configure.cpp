@@ -79,6 +79,7 @@ namespace anm2ed::imgui::wizard
           ImGui::SeparatorText(localize.get(LABEL_OPTIONS));
           ImGui::Checkbox(localize.get(LABEL_OVERWRITE_WARNING), &temporary.fileIsWarnOverwrite);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OVERWRITE_WARNING));
+          ImGui::SameLine();
           ImGui::Checkbox(localize.get(LABEL_ISAAC_COMPATIBILITY_WARNING), &temporary.fileIsWarnIsaac);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ISAAC_COMPATIBILITY_WARNING));
 
