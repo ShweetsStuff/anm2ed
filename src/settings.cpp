@@ -1,9 +1,12 @@
 #include "settings.hpp"
 
+#include <algorithm>
 #include <sstream>
+#include <tuple>
 
 #include "file.hpp"
 #include "log.hpp"
+#include "math.hpp"
 #include "path.hpp"
 
 using namespace anm2ed::util;
@@ -265,9 +268,10 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
 #undef X
     }
 
-    // Scales saved as multipliers (before they were percents) read as tiny percents and clamp to the minimum.
-    uiScale = std::clamp(uiScale, UI_SCALE_MIN, UI_SCALE_MAX);
-    renderScale = std::clamp(renderScale, RENDER_SCALE_MIN, RENDER_SCALE_MAX);
+    // Scales were once saved as multipliers; a value below the minimum percent is one, and is converted.
+    for (auto [scale, min, max] : {std::tuple{&uiScale, UI_SCALE_MIN, UI_SCALE_MAX},
+                                   std::tuple{&renderScale, RENDER_SCALE_MIN, RENDER_SCALE_MAX}})
+      *scale = std::clamp(*scale < min ? math::unit_to_percent(*scale) : *scale, min, max);
   }
 
   Options Settings::anm2_options_get() const { return {.isExtendedFormat = isFileExtendedFormat}; }
