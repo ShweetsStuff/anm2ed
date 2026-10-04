@@ -229,7 +229,7 @@ namespace anm2ed::imgui::wizard
 
     ImGui::BeginDisabled(!isUseAnimationBounds);
     {
-      input_float_range(localize.get(BASIC_SCALE), scale, 0.1f, 100.0f, 1.0f, STEP_FAST, "%.1fx");
+      input_percent_range(localize.get(BASIC_SCALE), scale, RENDER_SCALE_MIN, RENDER_SCALE_MAX);
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SCALE_OUTPUT));
     }
     ImGui::EndDisabled();

@@ -23,6 +23,7 @@ namespace anm2ed::imgui
   bool input_int2_range(const char*, glm::ivec2&, glm::ivec2, glm::ivec2, ImGuiInputTextFlags = 0);
   bool input_float_range(const char*, float&, float, float, float = STEP, float = STEP_FAST, const char* = "%.3f",
                          ImGuiInputTextFlags = 0);
+  bool input_percent_range(const char*, float&, float, float, float = STEP, float = STEP_FAST);
   types::edit_state::Type drag_float_persistent(const char*, float*, float = DRAG_SPEED, float = {}, float = {},
                                                 const char* = "%.3f", ImGuiSliderFlags = 0);
   types::edit_state::Type drag_float2_persistent(const char*, glm::vec2*, float = DRAG_SPEED, float = {}, float = {},

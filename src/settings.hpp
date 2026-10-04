@@ -28,6 +28,8 @@ namespace anm2ed
   constexpr auto UI_SCALE_MIN = 0.5f;
   constexpr auto UI_SCALE_MAX = 2.0f;
   constexpr auto UI_SCALE_STEP = 0.25f;
+  constexpr auto RENDER_SCALE_MIN = 0.1f;
+  constexpr auto RENDER_SCALE_MAX = 10.0f;
 
 #define SETTINGS_TYPES                                                                                                 \
   X(INT, int)                                                                                                          \

@@ -1,5 +1,6 @@
 #include "configure.hpp"
 
+#include "math.hpp"
 #include "sdl.hpp"
 #include "util/imgui/input.hpp"
 #include "util/imgui/layout.hpp"
@@ -7,6 +8,7 @@
 #include "util/imgui/theme.hpp"
 
 using namespace anm2ed::types;
+using namespace anm2ed::util;
 
 namespace anm2ed::imgui::wizard
 {
@@ -25,8 +27,8 @@ namespace anm2ed::imgui::wizard
         if (ImGui::BeginChild("##Tab Child", childSize, true))
         {
           ImGui::SeparatorText(localize.get(LABEL_WINDOW_MENU));
-          input_float_range(localize.get(LABEL_UI_SCALE), temporary.uiScale, UI_SCALE_MIN, UI_SCALE_MAX,
-                            UI_SCALE_STEP, UI_SCALE_STEP, "%.2fx");
+          input_percent_range(localize.get(LABEL_UI_SCALE), temporary.uiScale, UI_SCALE_MIN, UI_SCALE_MAX,
+                              math::unit_to_percent(UI_SCALE_STEP), math::unit_to_percent(UI_SCALE_STEP));
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_UI_SCALE));
           ImGui::Checkbox(localize.get(LABEL_VSYNC), &temporary.isVsync);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_VSYNC));
