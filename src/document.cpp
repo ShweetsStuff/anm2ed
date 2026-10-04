@@ -219,6 +219,13 @@ namespace anm2ed
     auto autosavePathUtf8 = path::to_utf8(autosavePath);
     if (model::model_save(model, autosavePath, errorString, options))
     {
+      for (auto id : spritesheets_autosave_dirty_get())
+      {
+        auto spritesheet = model::item_get(model.content.spritesheets, id);
+        auto texture = texture_get(id);
+        if (texture && texture->write_png(spritesheet_autosave_path_get(*spritesheet)))
+          spritesheetAutosaveHashes[id] = spritesheetHashes.at(id);
+      }
       autosaveHash = hash;
       lastAutosaveTime = 0.0f;
       toast_log(Level::INFO, TOAST_AUTOSAVING);
@@ -463,7 +470,49 @@ namespace anm2ed
   }
 
   bool Document::is_dirty() const { return hash != saveHash; }
-  bool Document::is_autosave_dirty() const { return hash != autosaveHash; }
+  bool Document::is_autosave_dirty() { return hash != autosaveHash || !spritesheets_autosave_dirty_get().empty(); }
+
+  // Edited spritesheets are autosaved as a hidden copy beside their file: .<name>.png.autosave.
+  std::filesystem::path Document::spritesheet_autosave_path_get(const model::Spritesheet& spritesheet)
+  {
+    auto path = directory_get() / spritesheet.path;
+    return path.parent_path() /
+           path::from_utf8("." + path::to_utf8(path.filename()) + std::string(document::AUTOSAVE_EXTENSION));
+  }
+
+  // Spritesheets with unsaved pixel edits that their autosave copy doesn't have yet.
+  std::set<int> Document::spritesheets_autosave_dirty_get()
+  {
+    std::set<int> ids{};
+    for (const auto& spritesheet : model.content.spritesheets)
+    {
+      auto id = spritesheet.id;
+      auto autosaveHash = spritesheetAutosaveHashes.find(id);
+      if (spritesheet_is_dirty(id) &&
+          (autosaveHash == spritesheetAutosaveHashes.end() || autosaveHash->second != spritesheetHashes.at(id)))
+        ids.insert(id);
+    }
+    return ids;
+  }
+
+  // After a crash, autosaved spritesheets come back as unsaved edits; their files are left as they are.
+  void Document::spritesheets_autosave_restore()
+  {
+    for (const auto& spritesheet : model.content.spritesheets)
+    {
+      auto path = spritesheet_autosave_path_get(spritesheet);
+      if (!path::is_exist(path)) continue;
+      if (auto image = resource::Image(path); image.is_valid()) texture_set(spritesheet.id, std::move(image));
+    }
+  }
+
+  void Document::spritesheets_autosave_clear()
+  {
+    std::error_code ec{};
+    for (const auto& spritesheet : model.content.spritesheets)
+      std::filesystem::remove(spritesheet_autosave_path_get(spritesheet), ec);
+    spritesheetAutosaveHashes.clear();
+  }
 
   void Document::spritesheet_hash_update(int id)
   {
@@ -480,6 +529,12 @@ namespace anm2ed
     if (spritesheetHashes.contains(id)) spritesheetSaveHashes[id] = spritesheetHashes[id];
     textureWriteTimes.erase(id);
     spritesheets_changed_get();
+    if (auto spritesheet = model::item_get(model.content.spritesheets, id))
+    {
+      std::error_code ec{};
+      std::filesystem::remove(spritesheet_autosave_path_get(*spritesheet), ec);
+    }
+    spritesheetAutosaveHashes.erase(id);
   }
 
   // Spritesheets whose file changed on disk since it was last loaded or saved; ones with unsaved edits are left alone.

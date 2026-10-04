@@ -57,6 +57,7 @@ namespace anm2ed
     bool isForceDirty{false};
     std::unordered_map<int, uint64_t> spritesheetHashes{};
     std::unordered_map<int, uint64_t> spritesheetSaveHashes{};
+    std::unordered_map<int, uint64_t> spritesheetAutosaveHashes{};
     std::unordered_map<int, std::filesystem::path> texturePaths{};
     std::unordered_map<int, std::filesystem::file_time_type> textureWriteTimes{};
     std::unordered_map<int, std::filesystem::path> soundPaths{};
@@ -135,7 +136,7 @@ namespace anm2ed
     }
     std::vector<Reference> references_get(const edit::Uids&) const;
     bool is_dirty() const;
-    bool is_autosave_dirty() const;
+    bool is_autosave_dirty();
     std::filesystem::path directory_get() const;
     std::filesystem::path filename_get() const;
     bool is_valid() const;
@@ -147,6 +148,10 @@ namespace anm2ed
     void spritesheet_hashes_sync();
     std::set<int> spritesheets_changed_get();
     void spritesheets_reload(const std::set<int>&);
+    std::filesystem::path spritesheet_autosave_path_get(const model::Spritesheet&);
+    std::set<int> spritesheets_autosave_dirty_get();
+    void spritesheets_autosave_restore();
+    void spritesheets_autosave_clear();
     Reference reference_get() const;
     void reference_set(Reference);
     std::set<Reference> selected_get(SelectionKind) const;

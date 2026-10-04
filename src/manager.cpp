@@ -206,6 +206,7 @@ namespace anm2ed
     auto autosavePath = document->autosave_path_get();
     autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), autosavePath), autosaveFiles.end());
     autosave_file_remove(autosavePath);
+    document->spritesheets_autosave_clear();
     autosave_files_write();
   }
 
@@ -343,6 +344,7 @@ namespace anm2ed
       {
         document->isForceDirty = true;
         document->path = document->path_from_autosave_get(path);
+        document->spritesheets_autosave_restore();
         document->change();
       }
     }
