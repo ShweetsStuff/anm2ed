@@ -9,7 +9,7 @@ This application was developed with the assistance of a large language model.
 
 ## Features
 - Full `.anm2` editing: spritesheets, regions, layers, nulls, events, sounds, shaders, animations, frames and triggers.
-- Dockable [Dear ImGui](https://github.com/ocornut/imgui) interface with persistent layout, drag and drop, context menus and rebindable shortcuts.
+- Dockable [Dear ImGui](https://github.com/ocornut/imgui) interface (windows can be detached into their own) with persistent layout, drag and drop, context menus and rebindable shortcuts.
 - Timeline: multi-select, cut/copy/paste (whole frames or single properties), duplicate, split, bake, drag to move/resize, and start/end markers to loop a range.
 - Groups for animations, layers and nulls, with group transforms baked for the game on save.
 - Frame properties for crop, size, position, pivot, scale, shear, rotation, tint, color offset, region, shader, visibility, interpolation (including easing) and flips; batch changes across selections.
