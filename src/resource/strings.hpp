@@ -118,7 +118,9 @@ namespace anm2ed
   X(EDIT_ADD_SOUND, "Add Sound", "Añadir Sonido", "Добавить звук", "添加声音", "사운드 추가") \
   X(EDIT_ADD_SHADER, "Add Shader", "Add Shader", "Add Shader", "Add Shader", "Add Shader") \
   X(EDIT_ADD_TRIGGER_SOUND, "Add Trigger Sound", "Añadir Sonido del Trigger", "Добавить звук триггера", "添加事件触发器声音", "트리거 사운드 추가") \
+  X(EDIT_CUT_FRAME_PROPERTY, "Cut Frame Property", "Cortar Propiedad del Frame", "Вырезание свойства кадра", "剪切帧属性", "프레임 속성 잘라내기") \
   X(EDIT_END_MARKER, "Set End Marker", "Poner Marcador de Fin", "Конечный маркер", "设置结束标记", "끝 마커 설정") \
+  X(EDIT_PASTE_FRAME_PROPERTY, "Paste Frame Property", "Pegar Propiedad del Frame", "Вставка свойства кадра", "粘贴帧属性", "프레임 속성 붙여넣기") \
   X(EDIT_REMOVE_MARKERS, "Remove Markers", "Quitar Marcadores", "Удаление маркеров", "移除标记", "마커 제거") \
   X(EDIT_REMOVE_TRIGGER_SOUND, "Remove Trigger Sound", "Remover Sonido del Trigger", "Удалить звук триггера", "移除事件触发器声音", "트리거 사운드 제거") \
   X(EDIT_ANIMATION_LENGTH, "Animation Length", "Duracion De Animacion", "Длина анимации", "动画时长", "애니메이션 길이") \
@@ -266,6 +268,7 @@ namespace anm2ed
   X(LABEL_ISAAC_COMPATIBILITY_WARNING, "Isaac Compatibility Warning", "Advertencia de Compatibilidad con Isaac", "Предупреждение о совместимости с Isaac", "Isaac 兼容性警告", "Isaac 호환성 경고") \
   X(LABEL_ONLY_SELECTED_ITEM, "Only Selected Item", "Solo el Elemento Seleccionado", "Только выбранный элемент", "仅选中项目", "선택한 항목만") \
   X(LABEL_PIVOT_PATH, "Pivot Path", "Trayectoria del Pivote", "Путь опорной точки", "枢轴路径", "피벗 경로") \
+  X(LABEL_PROPERTY, "Property", "Propiedad", "Свойство", "属性", "속성") \
   X(LABEL_REMOVE_MARKERS, "Remove Markers", "Quitar Marcadores", "Удалить маркеры", "移除标记", "마커 제거") \
   X(LABEL_SAVE_ANYWAY, "Save Anyway", "Guardar de Todos Modos", "Всё равно сохранить", "仍然保存", "그래도 저장") \
   X(LABEL_SPRITESHEETS_PACK_POPUP, "Pack Spritesheet", "Empaquetar spritesheet", "Упаковать спрайт-лист", "打包图集", "스프라이트 시트 패킹") \

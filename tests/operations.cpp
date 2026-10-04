@@ -325,3 +325,26 @@ TEST_CASE("isaac_issues_get counts what the game's copy changes")
   CHECK(shaders.shearFrames > 0);
   CHECK(model::isaac_issues_get(fixture_load("02_items.anm2")).triggerSounds > 0);
 }
+
+TEST_CASE("frames_property_set copies one property to the frames that have it")
+{
+  auto model = fixture_load("02_items.anm2");
+  model::Frame source{.crop = {7, 8}, .position = {3, 4}};
+  Reference layer{0, LAYER, 0, 0};
+  Reference null{0, NULL_, 0, 0};
+  REQUIRE(model.frame_get(layer));
+  REQUIRE(model.frame_get(null));
+  auto nullCrop = model.frame_get(null)->crop;
+
+  edit::frames_property_set(model, {layer, null}, edit::FrameProperty::POSITION, source);
+  CHECK(model.frame_get(layer)->position == glm::vec2(3, 4));
+  CHECK(model.frame_get(null)->position == glm::vec2(3, 4));
+
+  edit::frames_property_set(model, {layer, null}, edit::FrameProperty::CROP, source);
+  CHECK(model.frame_get(layer)->crop == glm::vec2(7, 8));
+  CHECK(model.frame_get(null)->crop == nullCrop);
+
+  CHECK_FALSE(edit::is_frame_property_valid(edit::FrameProperty::EVENT, ItemType::LAYER));
+  CHECK(edit::is_frame_property_valid(edit::FrameProperty::SOUNDS, ItemType::TRIGGER));
+  CHECK_FALSE(edit::is_frame_property_valid(edit::FrameProperty::POSITION, ItemType::TRIGGER));
+}

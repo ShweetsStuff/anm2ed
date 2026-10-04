@@ -2,6 +2,12 @@
 
 namespace anm2ed::imgui
 {
+  constexpr StringType FRAME_PROPERTY_LABELS[] = {
+      BASIC_POSITION, BASIC_SCALE,  BASIC_ROTATION, BASIC_SHEAR,        BASIC_PIVOT,   BASIC_CROP,
+      BASIC_SIZE,     BASIC_REGION, BASIC_TINT,     BASIC_COLOR_OFFSET, BASIC_VISIBLE, BASIC_INTERPOLATED,
+      BASIC_DURATION, BASIC_SHADER, BASIC_EVENT,    LABEL_SOUNDS};
+  static_assert(std::size(FRAME_PROPERTY_LABELS) == (std::size_t)edit::FrameProperty::COUNT);
+
   void TimelineContext::frame_begin()
   {
     iconTintDefault = isLightTheme ? ICON_TINT_DEFAULT_LIGHT : ICON_TINT_DEFAULT_DARK;
@@ -150,9 +156,46 @@ namespace anm2ed::imgui
                  .isEnabled = [=, this]() { return !selectedFrames.empty(); },
                  .run = [&]() { frames_delete_action(); }});
     actions.separator();
-    actions.add(ACTION_CUT, [=, this]() { return !selectedFrames.empty(); }, [this]() { cut(); });
-    actions.add(ACTION_COPY, [=, this]() { return !copyFrames.empty(); }, [this]() { copy(); });
-    actions.add(ACTION_PASTE, [&]() { return !clipboard.is_empty(); }, [this]() { paste(); });
+    // Cut, copy and paste each open onto the whole frame, or one property of it.
+    auto source = property_source_get();
+    auto sourceFrame = source ? model.frame_get(*source) : nullptr;
+    auto clipboardFrame = property_clipboard_frame_get();
+    auto clipboard_menu_add = [&](ActionType type, std::function<bool()> isFrameEnabled, std::function<void()> frameRun,
+                                  int propertyType, std::function<bool(edit::FrameProperty)> is_property_enabled,
+                                  std::function<void(edit::FrameProperty)> property_run)
+    {
+      Action properties{.label = LABEL_PROPERTY};
+      for (int i = 0; i < (int)edit::FrameProperty::COUNT; ++i)
+      {
+        auto property = (edit::FrameProperty)i;
+        if (!edit::is_frame_property_valid(property, (ItemType)propertyType)) continue;
+        properties.children.push_back({.label = FRAME_PROPERTY_LABELS[i],
+                                       .isEnabled = [=]() { return is_property_enabled(property); },
+                                       .run = [=]() { property_run(property); }});
+      }
+      properties.isEnabled = [children = properties.children]()
+      { return std::ranges::any_of(children, is_action_enabled); };
+      actions.add({.label = ACTION_INFOS[type].label,
+                   .children = {{.label = BASIC_FRAME,
+                                 .shortcut = ACTION_INFOS[type].shortcut,
+                                 .isEnabled = isFrameEnabled,
+                                 .run = frameRun},
+                                properties}});
+    };
+    auto sourceType = source ? source->itemType : NONE;
+    clipboard_menu_add(
+        ACTION_CUT, [=, this]() { return !selectedFrames.empty(); }, [this]() { cut(); }, sourceType,
+        [=](edit::FrameProperty) { return sourceFrame != nullptr; },
+        [this](edit::FrameProperty property) { property_cut(property); });
+    clipboard_menu_add(
+        ACTION_COPY, [=, this]() { return !copyFrames.empty(); }, [this]() { copy(); }, sourceType,
+        [=](edit::FrameProperty) { return sourceFrame != nullptr; },
+        [this](edit::FrameProperty property) { property_copy(property); });
+    clipboard_menu_add(
+        ACTION_PASTE, [&]() { return !clipboard.is_empty(); }, [this]() { paste(); },
+        clipboardFrame ? frameClipboard.itemType : NONE,
+        [this](edit::FrameProperty property) { return is_property_pasteable(property); },
+        [this](edit::FrameProperty property) { property_paste(property); });
     // The numbered row has its own (marker) menu.
     if (isRulerHovered)
       actions_popup_draw("##Context Menu", actions, settings);

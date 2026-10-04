@@ -69,6 +69,7 @@ namespace anm2ed::imgui
     bool isSeparator{};
     std::function<bool()> isEnabled{};
     std::function<void()> run{};
+    std::vector<Action> children{}; // a submenu, in menus
   };
 
   struct Actions

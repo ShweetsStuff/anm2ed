@@ -97,6 +97,14 @@ namespace anm2ed::imgui
     bool isActive{};
   };
 
+  // What the timeline last put on the clipboard: frames of a type, or one property of a frame.
+  struct FrameClipboard
+  {
+    std::string text{};
+    int itemType{NONE};
+    int property{-1};
+  };
+
   struct FrameDurationDrag
   {
     Reference reference{};
@@ -113,6 +121,7 @@ namespace anm2ed::imgui
   {
     bool isDragging{};
     bool isRulerHovered{};
+    FrameClipboard frameClipboard{};
     int markerTime{};
     bool isWindowHovered{};
     bool isHorizontalScroll{};

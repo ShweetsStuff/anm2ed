@@ -34,8 +34,9 @@ namespace anm2ed::imgui
   void Timeline::update(Manager& manager, Settings& settings, Resources& resources, Clipboard& clipboard)
   {
     if (!manager.get()) return;
-    auto state = context ? std::move(static_cast<TimelineState&>(*context)) : TimelineState{};
-    context = std::make_unique<TimelineContext>(std::move(state), manager, settings, resources, clipboard);
+    context =
+        std::make_unique<TimelineContext>(context ? std::move(static_cast<TimelineState&>(*context)) : TimelineState{},
+                                          manager, settings, resources, clipboard);
     context->update();
   }
 

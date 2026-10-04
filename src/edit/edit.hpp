@@ -63,6 +63,32 @@ namespace anm2ed::edit
     bool isInto{};
   };
 
+  // Frame properties that can be copied on their own.
+  enum class FrameProperty
+  {
+    POSITION,
+    SCALE,
+    ROTATION,
+    SHEAR,
+    PIVOT,
+    CROP,
+    SIZE,
+    REGION,
+    TINT,
+    COLOR_OFFSET,
+    VISIBLE,
+    INTERPOLATION,
+    DURATION,
+    SHADER,
+    EVENT,
+    SOUNDS,
+    COUNT
+  };
+
+  bool is_frame_property_valid(FrameProperty, ItemType);
+  void frame_property_copy(model::Frame&, const model::Frame&, FrameProperty);
+  Uids frames_property_set(model::Model&, const std::set<Reference>&, FrameProperty, const model::Frame&);
+
   std::map<Reference, std::set<int>> frames_by_track_get(const std::set<Reference>&);
 
   Uids frame_insert(model::Model&, Reference, int);

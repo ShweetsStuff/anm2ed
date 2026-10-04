@@ -242,6 +242,13 @@ namespace anm2ed::imgui
     void copy();
     void cut();
     void paste();
+    std::optional<Reference> property_source_get();
+    std::set<Reference> property_targets_get();
+    std::optional<model::Frame> property_clipboard_frame_get();
+    bool is_property_pasteable(edit::FrameProperty);
+    void property_copy(edit::FrameProperty);
+    void property_cut(edit::FrameProperty);
+    void property_paste(edit::FrameProperty);
     void context_menu();
     void item_base_properties_open(int type, int id);
     void group_properties_open(const TimelineRow& row, const model::TrackGroup& group);

@@ -197,6 +197,92 @@ namespace anm2ed::edit
     return frames_uids_get(destination, insertIndex, (int)moved.size());
   }
 
+  // Triggers have an event and sounds; layer frames add a pivot, crop, size, region and shader to the others' transform.
+  bool is_frame_property_valid(FrameProperty property, ItemType type)
+  {
+    if (type == ItemType::TRIGGER) return property == FrameProperty::EVENT || property == FrameProperty::SOUNDS;
+    if (property == FrameProperty::EVENT || property == FrameProperty::SOUNDS) return false;
+    auto isLayerOnly = property == FrameProperty::PIVOT || property == FrameProperty::CROP ||
+                       property == FrameProperty::SIZE || property == FrameProperty::REGION ||
+                       property == FrameProperty::SHADER;
+    return type == ItemType::LAYER || !isLayerOnly;
+  }
+
+  void frame_property_copy(Frame& target, const Frame& source, FrameProperty property)
+  {
+    switch (property)
+    {
+      case FrameProperty::POSITION:
+        target.position = source.position;
+        break;
+      case FrameProperty::SCALE:
+        target.scale = source.scale;
+        break;
+      case FrameProperty::ROTATION:
+        target.rotation = source.rotation;
+        break;
+      case FrameProperty::SHEAR:
+        target.shear = source.shear;
+        break;
+      case FrameProperty::PIVOT:
+        target.pivot = source.pivot;
+        break;
+      case FrameProperty::CROP:
+        target.crop = source.crop;
+        break;
+      case FrameProperty::SIZE:
+        target.size = source.size;
+        break;
+      case FrameProperty::REGION:
+        target.regionId = source.regionId;
+        target.crop = source.crop;
+        target.size = source.size;
+        target.pivot = source.pivot;
+        break;
+      case FrameProperty::TINT:
+        target.tint = source.tint;
+        break;
+      case FrameProperty::COLOR_OFFSET:
+        target.colorOffset = source.colorOffset;
+        break;
+      case FrameProperty::VISIBLE:
+        target.isVisible = source.isVisible;
+        break;
+      case FrameProperty::INTERPOLATION:
+        target.interpolation = source.interpolation;
+        break;
+      case FrameProperty::DURATION:
+        target.duration = source.duration;
+        break;
+      case FrameProperty::SHADER:
+        target.shaderId = source.shaderId;
+        break;
+      case FrameProperty::EVENT:
+        target.eventId = source.eventId;
+        break;
+      case FrameProperty::SOUNDS:
+        target.soundIds = source.soundIds;
+        break;
+      default:
+        break;
+    }
+  }
+
+  // Sets one property of the frames that have it from a source frame (a default frame clears it).
+  Uids frames_property_set(Model& model, const std::set<Reference>& references, FrameProperty property,
+                           const Frame& source)
+  {
+    Uids uids{};
+    for (auto reference : references)
+      if (is_frame_property_valid(property, (ItemType)reference.itemType))
+        if (auto frame = model.frame_edit(reference))
+        {
+          frame_property_copy(*frame, source, property);
+          uids.push_back(frame->uid);
+        }
+    return uids;
+  }
+
   Uids frame_durations_set(Model& model, const std::map<Reference, int>& durations)
   {
     for (auto [reference, duration] : durations)

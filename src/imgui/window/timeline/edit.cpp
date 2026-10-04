@@ -247,7 +247,9 @@ namespace anm2ed::imgui
       if (!frame) continue;
       clipboardString += model::frame_to_string(*frame, (ItemType)frameReference.itemType);
     }
-    if (!clipboardString.empty()) clipboard.set(clipboardString);
+    if (clipboardString.empty()) return;
+    clipboard.set(clipboardString);
+    frameClipboard = {.text = clipboardString, .itemType = selectedFrames.begin()->itemType};
   }
 
   void TimelineContext::copy()
@@ -318,5 +320,89 @@ namespace anm2ed::imgui
                 if (auto animation = model.animation_edit(animationIndex))
                   animation->startMarker = animation->endMarker = -1;
               });
+  }
+
+  // The frame a property is copied from: the focused frame, or else the first selected one.
+  std::optional<Reference> TimelineContext::property_source_get()
+  {
+    if (reference.frameIndex >= 0 && model.frame_get(reference)) return reference;
+    auto selectedFrames = document.frame_references_get(Document::FrameReferenceFallback::NONE);
+    if (selectedFrames.empty()) return {};
+    return *selectedFrames.begin();
+  }
+
+  // The frames a property is cut from or pasted into: the selected ones, or else the focused one.
+  std::set<Reference> TimelineContext::property_targets_get()
+  {
+    auto selectedFrames = document.frame_references_get(Document::FrameReferenceFallback::NONE);
+    if (selectedFrames.empty())
+      if (auto source = property_source_get()) selectedFrames.insert(*source);
+    return selectedFrames;
+  }
+
+  // The frame this timeline put on the clipboard, while it is still there.
+  std::optional<model::Frame> TimelineContext::property_clipboard_frame_get()
+  {
+    if (frameClipboard.text.empty() || clipboard.get() != frameClipboard.text) return {};
+    auto frames = model::frames_from_string(frameClipboard.text, (ItemType)frameClipboard.itemType);
+    if (frames.empty()) return {};
+    return frames.front();
+  }
+
+  // Every target frame has the property, and what it refers to (a region, shader, event, sound) exists for it.
+  bool TimelineContext::is_property_pasteable(edit::FrameProperty property)
+  {
+    if (frameClipboard.property != -1 && frameClipboard.property != (int)property) return false;
+    if (!edit::is_frame_property_valid(property, (ItemType)frameClipboard.itemType)) return false;
+    auto source = property_clipboard_frame_get();
+    auto targets = property_targets_get();
+    if (!source || targets.empty()) return false;
+
+    auto& content = model.content;
+    for (auto target : targets)
+    {
+      if (!edit::is_frame_property_valid(property, (ItemType)target.itemType)) return false;
+      if (property == edit::FrameProperty::REGION && source->regionId != -1)
+      {
+        auto layer = model::item_get(content.layers, target.itemID);
+        auto spritesheet = layer ? model::item_get(content.spritesheets, layer->spritesheetId) : nullptr;
+        if (!spritesheet || !model::item_get(spritesheet->regions, source->regionId)) return false;
+      }
+    }
+    if (property == edit::FrameProperty::SHADER && source->shaderId != -1 &&
+        !model::item_get(content.shaders, source->shaderId))
+      return false;
+    if (property == edit::FrameProperty::EVENT && source->eventId != -1 &&
+        !model::item_get(content.events, source->eventId))
+      return false;
+    if (property == edit::FrameProperty::SOUNDS)
+      for (auto soundId : source->soundIds)
+        if (soundId != -1 && !model::item_get(content.sounds, soundId)) return false;
+    return true;
+  }
+
+  void TimelineContext::property_copy(edit::FrameProperty property)
+  {
+    auto source = property_source_get();
+    if (!source) return;
+    frame_references_copy({*source});
+    frameClipboard.property = (int)property;
+  }
+
+  // Copies the property, then sets it back to its default on the targets.
+  void TimelineContext::property_cut(edit::FrameProperty property)
+  {
+    auto targets = property_targets_get();
+    property_copy(property);
+    edit_push(EDIT_CUT_FRAME_PROPERTY,
+              [=](model::Model& model) { return edit::frames_property_set(model, targets, property, model::Frame{}); });
+  }
+
+  void TimelineContext::property_paste(edit::FrameProperty property)
+  {
+    auto source = property_clipboard_frame_get();
+    if (!source || !is_property_pasteable(property)) return;
+    edit_push(EDIT_PASTE_FRAME_PROPERTY, [=, targets = property_targets_get(), source = *source](model::Model& model)
+              { return edit::frames_property_set(model, targets, property, source); });
   }
 }

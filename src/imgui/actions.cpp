@@ -55,15 +55,26 @@ namespace anm2ed::imgui
         { manager.command_push({manager.selected, [](Manager&, Document& document) { document.redo(); }}); });
   }
 
-  void actions_menu_draw(Actions& actions, Settings& settings)
+  void action_items_menu_draw(std::vector<Action>& items, Settings& settings)
   {
     bool isPreviousSeparator{};
-    for (auto& action : actions.items)
+    for (auto& action : items)
     {
       if (action.isSeparator)
       {
         if (!isPreviousSeparator) ImGui::Separator();
         isPreviousSeparator = true;
+        continue;
+      }
+      isPreviousSeparator = false;
+
+      if (!action.children.empty())
+      {
+        if (ImGui::BeginMenu(localize.get(action.label), is_action_enabled(action)))
+        {
+          action_items_menu_draw(action.children, settings);
+          ImGui::EndMenu();
+        }
         continue;
       }
 
@@ -73,9 +84,10 @@ namespace anm2ed::imgui
         action.run();
       if (action.tooltip != STRING_UNDEFINED && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
         ImGui::SetItemTooltip("%s", localize.get(action.tooltip));
-      isPreviousSeparator = false;
     }
   }
+
+  void actions_menu_draw(Actions& actions, Settings& settings) { action_items_menu_draw(actions.items, settings); }
 
   bool actions_context_window_draw(const char* label, Actions& actions, Settings& settings, ImGuiPopupFlags flags,
                                    ImGuiHoveredFlags hoveredFlags)
