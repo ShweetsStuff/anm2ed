@@ -64,6 +64,7 @@ namespace anm2ed
                                                                                                                        \
   X(FILE_IS_AUTOSAVE, fileIsAutosave, STRING_UNDEFINED, BOOL, true)                                                    \
   X(FILE_IS_WARN_OVERWRITE, fileIsWarnOverwrite, STRING_UNDEFINED, BOOL, true)                                         \
+  X(FILE_IS_WARN_ISAAC, fileIsWarnIsaac, STRING_UNDEFINED, BOOL, true)                                                 \
   X(FILE_IS_AUTO_RELOAD_SPRITESHEETS, fileIsAutoReloadSpritesheets, STRING_UNDEFINED, BOOL, true)                      \
   X(FILE_AUTO_RELOAD_INTERVAL, fileAutoReloadInterval, STRING_UNDEFINED, FLOAT, 2.0f)                                  \
   X(FILE_IS_EXTENDED_FORMAT, isFileExtendedFormat, STRING_UNDEFINED, BOOL, false)                                      \

@@ -8,7 +8,20 @@
 // The only place the model meets XML: reading and writing documents (with the SourceDocument copy) and clipboard text.
 namespace anm2ed::model
 {
+  // What the game's copy of a save can't keep as it is: how many of each.
+  struct IsaacIssues
+  {
+    int easedFrames{};
+    int groupTransforms{};
+    int shearFrames{};
+    int shaderFrames{};
+    int triggerSounds{};
+
+    bool operator==(const IsaacIssues&) const = default;
+  };
+
   Model model_make();
+  IsaacIssues isaac_issues_get(const Model&);
   bool model_load(Model&, const std::filesystem::path&, std::string* = nullptr);
   bool model_load_string(Model&, std::string_view, std::string* = nullptr);
   bool model_save(const Model&, const std::filesystem::path&, std::string* = nullptr, Options = {});

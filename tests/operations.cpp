@@ -314,3 +314,14 @@ TEST_CASE("markers stay in the editor's copy and bound playback")
   playback.tick(10, 2, 6, true, 0.5f);
   CHECK(playback.time == doctest::Approx(4.0f));
 }
+
+TEST_CASE("isaac_issues_get counts what the game's copy changes")
+{
+  CHECK(model::isaac_issues_get(fixture_load("01_minimal.anm2")) == model::IsaacIssues{});
+  CHECK(model::isaac_issues_get(fixture_load("07_special_interpolation.anm2")).easedFrames == 5);
+  CHECK(model::isaac_issues_get(fixture_load("04_group_root_transform.anm2")).groupTransforms > 0);
+  auto shaders = model::isaac_issues_get(fixture_load("06_shaders.anm2"));
+  CHECK(shaders.shaderFrames > 0);
+  CHECK(shaders.shearFrames > 0);
+  CHECK(model::isaac_issues_get(fixture_load("02_items.anm2")).triggerSounds > 0);
+}

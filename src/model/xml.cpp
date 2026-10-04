@@ -1316,6 +1316,32 @@ namespace anm2ed::model
            frame.shear == base.shear && frame.tint == base.tint && frame.colorOffset == base.colorOffset;
   }
 
+  IsaacIssues isaac_issues_get(const Model& model)
+  {
+    IsaacIssues issues{};
+    for (auto [index, animation] : model.animations_get())
+    {
+      for (const auto* entries : {&animation->layers, &animation->nulls})
+        groups_each(*entries, [&](const TrackGroup& group)
+                    { issues.groupTransforms += !std::ranges::all_of(group.root.frames, is_frame_transform_default); });
+      animation_tracks_each(*animation,
+                            [&](const Track& track)
+                            {
+                              for (const auto& frame : track.frames)
+                              {
+                                issues.easedFrames +=
+                                    track.type != ItemType::TRIGGER && is_special_interpolation(frame.interpolation);
+                                issues.shearFrames += frame.shear != glm::vec2();
+                                issues.shaderFrames += frame.shaderId != -1;
+                                issues.triggerSounds +=
+                                    track.type == ItemType::TRIGGER &&
+                                    std::ranges::any_of(frame.soundIds, [](int id) { return id != -1; });
+                              }
+                            });
+    }
+    return issues;
+  }
+
   // For the game, a group root's transform is baked into its tracks one frame at a time.
   void track_group_root_bake(Track& track, const Track& root, int frameNum)
   {

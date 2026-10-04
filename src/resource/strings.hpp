@@ -219,6 +219,11 @@ namespace anm2ed
   X(FORMAT_DURATION, "Duration: {0}", "Duracion: {0}", "Продолжительность: {0}", "时长: {0}", "유지 시간: {0}") \
   X(FORMAT_EVENT_LABEL, "Event: {0}", "Evento: {0}", "Событие: {0}", "事件: {0}", "이벤트: {0}") \
   X(FORMAT_ID, "ID: {0}", "ID: {0}", "ID: {0}", "ID: {0}", "ID: {0}") \
+  X(FORMAT_ISAAC_EASED_FRAMES, "{} eased frame(s) will be baked into one-frame steps.", "{} Frame(s) con suavizado se convertirán en pasos de un Frame.", "{} кадр(ов) со сглаживанием будут запечены в покадровые шаги.", "{} 个缓动帧将被烘焙为逐帧步进。", "이징 프레임 {}개가 1프레임 단위로 베이크됩니다.") \
+  X(FORMAT_ISAAC_GROUP_TRANSFORMS, "{} group transform(s) will be baked into their items' frames.", "{} transformación(es) de grupo se aplicarán a los Frames de sus elementos.", "{} трансформаци(й) групп будут запечены в кадры их элементов.", "{} 个组变换将被烘焙到其项目的帧中。", "그룹 변형 {}개가 항목의 프레임에 베이크됩니다.") \
+  X(FORMAT_ISAAC_SHADER_FRAMES, "{} frame(s) use shaders, which the game doesn't support; they will be dropped.", "{} Frame(s) usan shaders, que el juego no soporta; se descartarán.", "{} кадр(ов) используют шейдеры, которые игра не поддерживает; они будут отброшены.", "{} 个帧使用了着色器，游戏不支持，将被舍弃。", "프레임 {}개가 게임이 지원하지 않는 셰이더를 사용합니다. 셰이더는 제거됩니다.") \
+  X(FORMAT_ISAAC_SHEAR_FRAMES, "{} frame(s) use shear, which the game doesn't support; it will be dropped.", "{} Frame(s) usan inclinación, que el juego no soporta; se descartará.", "{} кадр(ов) используют наклон, который игра не поддерживает; он будет отброшен.", "{} 个帧使用了斜切，游戏不支持，将被舍弃。", "프레임 {}개가 게임이 지원하지 않는 기울이기를 사용합니다. 기울이기는 제거됩니다.") \
+  X(FORMAT_ISAAC_TRIGGER_SOUNDS, "{} trigger(s) have sounds, which the game doesn't read from animations; they will be dropped.", "{} disparador(es) tienen sonidos, que el juego no lee de las animaciones; se descartarán.", "{} триггер(ов) имеют звуки, которые игра не читает из анимаций; они будут отброшены.", "{} 个触发器带有声音，游戏不会从动画中读取，将被舍弃。", "트리거 {}개에 게임이 애니메이션에서 읽지 않는 사운드가 있습니다. 사운드는 제거됩니다.") \
   X(FORMAT_ORIGIN, "Origin: {0}", "Origen: {0}", "Точка отсчета: {0}", "原点: {0}", "원점: {0}") \
   X(FORMAT_SPRITESHEET_ID, "Spritesheet ID: {0}", "ID de Spritesheet: {0}", "", "图集 ID: {0}", "스프라이트 시트 ID: {0}") \
   X(FORMAT_INDEX, "Index: {0}", "Indice: {0}", "Индекс: {0}", "下标: {0}", "인덱스: {0}") \
@@ -258,9 +263,11 @@ namespace anm2ed
   X(LABEL_ANIMATIONS_CHILD, "Animations", "Animaciones", "", "动画", "애니메이션") \
   X(LABEL_ANIMATIONS_MERGE_POPUP, "Merge Animations", "Combinar Animaciones", "Соединить анимации", "合并多个动画", "애니메이션 병합") \
   X(LABEL_AUTO_SPRITESHEET_RELOAD, "Auto Spritesheet Reload", "Recarga Automática de Spritesheets", "Автоперезагрузка спрайт-листов", "自动重新加载图集", "스프라이트 시트 자동 새로고침") \
+  X(LABEL_ISAAC_COMPATIBILITY_WARNING, "Isaac Compatibility Warning", "Advertencia de Compatibilidad con Isaac", "Предупреждение о совместимости с Isaac", "Isaac 兼容性警告", "Isaac 호환성 경고") \
   X(LABEL_ONLY_SELECTED_ITEM, "Only Selected Item", "Solo el Elemento Seleccionado", "Только выбранный элемент", "仅选中项目", "선택한 항목만") \
   X(LABEL_PIVOT_PATH, "Pivot Path", "Trayectoria del Pivote", "Путь опорной точки", "枢轴路径", "피벗 경로") \
   X(LABEL_REMOVE_MARKERS, "Remove Markers", "Quitar Marcadores", "Удалить маркеры", "移除标记", "마커 제거") \
+  X(LABEL_SAVE_ANYWAY, "Save Anyway", "Guardar de Todos Modos", "Всё равно сохранить", "仍然保存", "그래도 저장") \
   X(LABEL_SPRITESHEETS_PACK_POPUP, "Pack Spritesheet", "Empaquetar spritesheet", "Упаковать спрайт-лист", "打包图集", "스프라이트 시트 패킹") \
   X(LABEL_SPRITESHEETS_MERGE_POPUP, "Merge Spritesheets", "Combinar Spritesheets", "Объединить спрайт-листы", "合并图集", "스프라이트 시트 병합") \
   X(LABEL_PACK_PADDING, "Padding", "Relleno", "Отступ", "填充", "패딩") \
@@ -519,10 +526,13 @@ namespace anm2ed
   X(SHORTCUT_STRING_ZOOM_IN, "Zoom In", "Zoom In", "Увеличить", "视图放大", "확대") \
   X(SHORTCUT_STRING_ZOOM_OUT, "Zoom Out", "Zoom Out", "Уменьшить", "视图缩小", "축소") \
   X(SNAPSHOT_RENAME_ANIMATION, "Rename Animation", "Renombrar Animacion", "Переименовать анимацию", "重命名动画", "애니메이션 이름 바꾸기") \
+  X(TEXT_ISAAC_EDITOR_COPY, "The editor's own copy inside the file keeps everything.", "La copia del editor dentro del archivo lo conserva todo.", "Копия редактора внутри файла сохраняет всё.", "文件内的编辑器副本会保留所有内容。", "파일 안의 편집기 사본에는 모든 것이 그대로 남습니다.") \
+  X(TEXT_ISAAC_ISSUES, "Some of this file won't work in the game as it is:", "Parte de este archivo no funcionará tal cual en el juego:", "Часть этого файла не будет работать в игре как есть:", "此文件的部分内容在游戏中无法按原样工作：", "이 파일의 일부는 게임에서 그대로 작동하지 않습니다:") \
   X(TEXT_SELECT_FRAME, "Select a frame first!", "¡Selecciona primero un frame!", "Сначала выберите кадр!", "请先选择帧！", "먼저 프레임을 선택하세요!") \
   X(TEXT_SELECT_FRAME_OR_REGION, "Select a frame or region first!", "¡Selecciona primero un frame o región!", "Сначала выберите кадр или регион!", "请先选择帧或区域！", "먼저 프레임 또는 영역을 선택하세요!") \
   X(TOOLTIP_AUTO_SPRITESHEET_RELOAD, "Reload spritesheets automatically when their files change on disk.\n(Spritesheets with unsaved edits are left alone.)", "Recarga los spritesheets automáticamente cuando sus archivos cambian en el disco.\n(Los spritesheets con cambios sin guardar no se tocan.)", "Автоматически перезагружать спрайт-листы при изменении их файлов на диске.\n(Спрайт-листы с несохранёнными изменениями не затрагиваются.)", "当图集文件在磁盘上更改时自动重新加载。\n(有未保存修改的图集不受影响。)", "디스크의 파일이 바뀌면 스프라이트 시트를 자동으로 새로고침합니다.\n(저장하지 않은 수정이 있는 스프라이트 시트는 건드리지 않습니다.)") \
   X(TOOLTIP_AUTO_SPRITESHEET_RELOAD_INTERVAL, "How often (in seconds) spritesheet files are checked for changes.", "Cada cuánto (en segundos) se revisan los archivos de spritesheets en busca de cambios.", "Как часто (в секундах) проверять файлы спрайт-листов на изменения.", "检查图集文件更改的间隔(秒)。", "스프라이트 시트 파일의 변경을 확인하는 간격(초).") \
+  X(TOOLTIP_ISAAC_COMPATIBILITY_WARNING, "Before saving, list anything the game doesn't support and what will happen to it.", "Antes de guardar, muestra lo que el juego no soporta y lo que pasará con ello.", "Перед сохранением показывать всё, что игра не поддерживает, и что с этим произойдёт.", "保存前列出游戏不支持的内容及其处理方式。", "저장하기 전에 게임이 지원하지 않는 항목과 그 처리 방식을 알려줍니다.") \
   X(TOOLTIP_MERGE_SPRITESHEETS, "Merge selected spritesheets into the first selected spritesheet.", "Combina los spritesheets seleccionados en el primer spritesheet seleccionado.", "Объединить выбранные спрайт-листы в первый выбранный спрайт-лист.", "将所选图集合并到第一个选中的图集中。", "선택된 스프라이트 시트를 첫 번째 선택된 스프라이트 시트로 병합합니다.") \
   X(TEXT_SELECT_SPRITESHEET, "Select a spritesheet first!", "¡Selecciona primero un spritesheet!", "Сначала выберите спрайт-лист!", "请先选择图集！", "먼저 스프라이트 시트를 선택하세요!") \
   X(TEXT_TOOL_ANIMATION_PREVIEW, "This tool can only be used in Animation Preview!", "¡Esta herramienta solo se puede usar en Vista previa de animación!", "Этот инструмент можно использовать только в \"Предпросмотре анимации\"!", "该工具只能在“动画预放”中使用！", "이 도구는 애니메이션 프리뷰에서만 사용할 수 있습니다!") \

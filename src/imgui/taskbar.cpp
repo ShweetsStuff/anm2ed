@@ -9,6 +9,7 @@
 
 #include "document.hpp"
 #include "log.hpp"
+#include "model/xml.hpp"
 #include "path.hpp"
 #include "strings.hpp"
 #include "toast.hpp"
@@ -50,6 +51,14 @@ namespace anm2ed::imgui
     PendingSave request{.index = index, .path = path, .options = settings.anm2_options_get()};
     if (isQueued)
     {
+      // The game's copy would differ from the document: ask first.
+      if (settings.fileIsWarnIsaac && !request.options.isExtendedFormat &&
+          model::isaac_issues_get(document->model) != model::IsaacIssues{})
+      {
+        isaacSave = request;
+        isaacPopup.open();
+        return false;
+      }
       save_enqueue(manager, request);
       return true;
     }
@@ -355,6 +364,36 @@ namespace anm2ed::imgui
     }
 
     aboutPopup.end();
+
+    isaacPopup.trigger();
+    if (ImGui::BeginPopupModal(isaacPopup.label(), &isaacPopup.isOpen, ImGuiWindowFlags_NoResize))
+    {
+      ImGui::TextWrapped("%s", localize.get(TEXT_ISAAC_ISSUES));
+      if (auto document = manager.get(isaacSave.index))
+      {
+        auto issues = model::isaac_issues_get(document->model);
+        for (auto [count, format] : {std::pair{issues.easedFrames, FORMAT_ISAAC_EASED_FRAMES},
+                                     {issues.groupTransforms, FORMAT_ISAAC_GROUP_TRANSFORMS},
+                                     {issues.shearFrames, FORMAT_ISAAC_SHEAR_FRAMES},
+                                     {issues.shaderFrames, FORMAT_ISAAC_SHADER_FRAMES},
+                                     {issues.triggerSounds, FORMAT_ISAAC_TRIGGER_SOUNDS}})
+          if (count > 0) ImGui::BulletText("%s", localize_format(format, count).c_str());
+      }
+      ImGui::TextWrapped("%s", localize.get(TEXT_ISAAC_EDITOR_COPY));
+
+      auto widgetSize = widget_size_with_row_get(2);
+      shortcut(manager.chords[SHORTCUT_CONFIRM]);
+      if (ImGui::Button(localize.get(LABEL_SAVE_ANYWAY), widgetSize))
+      {
+        save_enqueue(manager, isaacSave);
+        isaacPopup.close();
+      }
+      ImGui::SameLine();
+      shortcut(manager.chords[SHORTCUT_CANCEL]);
+      if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize)) isaacPopup.close();
+      ImGui::EndPopup();
+    }
+    isaacPopup.end();
 
     if (shortcut(manager.chords[SHORTCUT_NEW], shortcut::GLOBAL)) dialog.file_save(Dialog::ANM2_CREATE);
     if (shortcut(manager.chords[SHORTCUT_OPEN], shortcut::GLOBAL)) dialog.file_open(Dialog::ANM2_OPEN, true);
