@@ -20,6 +20,7 @@ namespace anm2ed
     GLuint texture{};
     glm::vec2 size{};
     glm::vec2 previousSize{};
+    GLint filter{GL_LINEAR}; // how the texture is sampled when drawn scaled; takes effect on the next resize
 
     Framebuffer();
     ~Framebuffer();

@@ -167,7 +167,11 @@ namespace anm2ed::imgui::wizard
 
   void friend_state_load(About::FriendState& state, const resource::friends::Info& info)
   {
-    if (!state.canvas) state.canvas = std::make_unique<Canvas>(vec2(1.0f, 1.0f));
+    if (!state.canvas)
+    {
+      state.canvas = std::make_unique<Canvas>(vec2(1.0f, 1.0f));
+      state.canvas->filter = GL_NEAREST;
+    }
 
     state.model = model::Model{};
     state.textures.clear();
@@ -217,12 +221,21 @@ namespace anm2ed::imgui::wizard
     return ImVec2(std::max(width, 1.0f), std::max(height, 1.0f));
   }
 
-  void friend_canvas_draw(About::FriendState& state, Resources& resources, ImVec2 displaySize)
+  // The animation's bounds with some room around them.
+  vec4 friend_rect_get(const About::FriendState& state)
+  {
+    auto rect = state.rect;
+    auto padding = std::max(2.0f, std::max(rect.z, rect.w) * FRIEND_PADDING_RATIO);
+    return {rect.x - padding, rect.y - padding, rect.z + padding * 2.0f, rect.w + padding * 2.0f};
+  }
+
+  // Rendered 1:1 into its canvas, which is drawn scaled up with nearest filtering so the pixels stay sharp.
+  void friend_canvas_draw(About::FriendState& state, Resources& resources)
   {
     if (!state.isLoaded || !state.canvas) return;
 
-    auto canvasSize = vec2(std::max(displaySize.x, 1.0f), std::max(displaySize.y, 1.0f));
-    state.canvas->size_set(canvasSize);
+    auto rect = friend_rect_get(state);
+    state.canvas->size_set(glm::max(vec2(rect.z, rect.w), vec2(1.0f)));
     state.canvas->bind();
     state.canvas->viewport_set();
     state.canvas->clear(vec4(0.0f));
@@ -236,12 +249,6 @@ namespace anm2ed::imgui::wizard
 
     float zoom = 100.0f;
     vec2 pan{};
-    auto rect = state.rect;
-    auto padding = std::max(2.0f, std::max(rect.z, rect.w) * FRIEND_PADDING_RATIO);
-    rect.x -= padding;
-    rect.y -= padding;
-    rect.z += padding * 2.0f;
-    rect.w += padding * 2.0f;
     state.canvas->set_to_rect(zoom, pan, rect);
 
     auto transform = state.canvas->transform_get(zoom, pan);
@@ -288,7 +295,7 @@ namespace anm2ed::imgui::wizard
       {
         auto& state = about.friendStates[index];
         auto size = friend_size_get(state, height);
-        friend_canvas_draw(state, resources, size);
+        friend_canvas_draw(state, resources);
         if (state.isLoaded)
           image_premultiplied_draw(drawList, (ImTextureID)(intptr_t)state.canvas->texture, ImVec2(left, max.y - size.y),
                                    ImVec2(left + size.x, max.y));
