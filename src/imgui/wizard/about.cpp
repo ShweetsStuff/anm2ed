@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <format>
+#include <span>
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -48,8 +49,10 @@ namespace anm2ed::imgui::wizard
   static constexpr int ROLL_TRAIL_ALPHA_SWAY = 25;
   static constexpr int ROLL_TRAIL_ALPHA_STRETCH = 50;
   static constexpr float ROLL_WEIGHT_MIN = 1.0f / 255.0f;
-  static constexpr float BAR_WIDTH = 10.0f;
-  static constexpr float BAR_LEVEL_HEIGHT = 2.0f;
+  static constexpr float BAR_WIDTH = 30.0f;
+  // Bars are scaled to the loudest recent level (which decays slowly), so loud parts reach the top.
+  static constexpr float BAR_LEVEL_DECAY = 0.995f;
+  static constexpr float BAR_LEVEL_FLOOR = 0.05f;
   static constexpr float BAR_GRADIENT_MIN = 50.0f;
   static constexpr int BAR_TRAIL_ALPHA = 20;
   static constexpr int BAR_RED_STEP = 100;
@@ -58,9 +61,10 @@ namespace anm2ed::imgui::wizard
   static constexpr ImU32 ROLL_HEADER_COLOR = IM_COL32(255, 255, 255, 255);
   static constexpr ImU32 ROLL_NAME_COLOR = IM_COL32(200, 255, 255, 255);
   static constexpr ImU32 BAR_BASE_COLOR = IM_COL32(255, 0, 0, 255);
-  static constexpr float FRIEND_HEIGHT_MULTIPLIER = 2.0f;
+  // The original's robots stood 47 px tall in its 183 px box.
+  static constexpr float FRIEND_HEIGHT_RATIO = 47.0f / 183.0f;
   static constexpr float FRIEND_PADDING_RATIO = 0.15f;
-  static constexpr int FRIEND_ROW_SLOT_COUNT = 5;
+  static constexpr float TITLE_SCALE = 2.0f;
   static constexpr int FRIEND_ORDER_LEFT[] = {resource::friends::MEAT_BOY, resource::friends::ISAAC};
   static constexpr int FRIEND_ORDER_RIGHT[] = {resource::friends::STACY, resource::friends::ASH};
 
@@ -258,77 +262,52 @@ namespace anm2ed::imgui::wizard
     state.canvas->unbind();
   }
 
-  void friend_row_draw(About& about, Resources& resources, const char* titleLabel, ImVec2 size)
+  // The application name, as large as fits its row.
+  void title_draw(About& about, Resources& resources, const char* title, float width)
   {
-    ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE_LARGE);
-    auto titleSize = ImGui::CalcTextSize(titleLabel);
-    ImGui::PopFont();
+    auto font = resources.fonts[font::BOLD].get();
+    auto fontSize = (float)font::SIZE_LARGE * TITLE_SCALE;
+    fontSize *= std::min(1.0f, width / font->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, title).x);
+    auto textSize = font->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, title);
+    auto rowHeight = (float)font::SIZE_LARGE * TITLE_SCALE;
+    auto min = ImGui::GetCursorScreenPos();
+    auto color = about.roll.titleColor ? about.roll.titleColor : ImGui::GetColorU32(ImGuiCol_Text);
+    ImGui::GetWindowDrawList()->AddText(
+        font, fontSize, ImVec2(min.x + (width - textSize.x) * 0.5f, min.y + (rowHeight - textSize.y) * 0.5f), color,
+        title);
+    ImGui::Dummy(ImVec2(width, rowHeight));
+  }
 
-    auto slotWidth = std::max(size.x / (float)FRIEND_ROW_SLOT_COUNT, 1.0f);
-    float friendHeight = titleSize.y * FRIEND_HEIGHT_MULTIPLIER;
-    float maxAspect{};
-    for (auto index : FRIEND_ORDER_LEFT)
-      maxAspect = std::max(maxAspect, about.friendStates[index].rect.w > 0.0f
-                                          ? about.friendStates[index].rect.z / about.friendStates[index].rect.w
-                                          : 1.0f);
-    for (auto index : FRIEND_ORDER_RIGHT)
-      maxAspect = std::max(maxAspect, about.friendStates[index].rect.w > 0.0f
-                                          ? about.friendStates[index].rect.z / about.friendStates[index].rect.w
-                                          : 1.0f);
-    if (maxAspect > 0.0f) friendHeight = std::min(friendHeight, slotWidth / maxAspect);
-    friendHeight = std::max(friendHeight, 1.0f);
-
-    std::array<ImVec2, resource::friends::COUNT> friendSizes{};
-    for (auto index : FRIEND_ORDER_LEFT)
-      friendSizes[index] = friend_size_get(about.friendStates[index], friendHeight);
-    for (auto index : FRIEND_ORDER_RIGHT)
-      friendSizes[index] = friend_size_get(about.friendStates[index], friendHeight);
-
-    for (auto index : FRIEND_ORDER_LEFT)
-      friend_canvas_draw(about.friendStates[index], resources, friendSizes[index]);
-    for (auto index : FRIEND_ORDER_RIGHT)
-      friend_canvas_draw(about.friendStates[index], resources, friendSizes[index]);
-
-    auto rowHeight = std::max(titleSize.y, friendHeight);
-    auto rowMin = ImGui::GetCursorScreenPos();
-    auto rowMax = ImVec2(rowMin.x + size.x, rowMin.y + rowHeight);
-    auto drawList = ImGui::GetWindowDrawList();
-    auto textColor = about.roll.titleColor ? about.roll.titleColor : ImGui::GetColorU32(ImGuiCol_Text);
-
-    auto slot_center_x_get = [&](int slot)
+  // The dancing characters stand in the credits box's bottom corners, inside the volume bars.
+  void friends_draw(About& about, Resources& resources, ImDrawList* drawList, ImVec2 min, ImVec2 max, float inset)
+  {
+    auto height = (max.y - min.y) * FRIEND_HEIGHT_RATIO;
+    auto row_draw = [&](std::span<const int> indices, float left)
     {
-      auto offset = slotWidth * ((float)slot + 0.5f);
-      return std::min(rowMin.x + offset, rowMax.x - slotWidth * 0.5f);
+      for (auto index : indices)
+      {
+        auto& state = about.friendStates[index];
+        auto size = friend_size_get(state, height);
+        friend_canvas_draw(state, resources, size);
+        if (state.isLoaded)
+          image_premultiplied_draw(drawList, (ImTextureID)(intptr_t)state.canvas->texture, ImVec2(left, max.y - size.y),
+                                   ImVec2(left + size.x, max.y));
+        left += size.x;
+      }
     };
-
-    auto image_draw = [&](int slot, int index)
-    {
-      auto centerX = slot_center_x_get(slot);
-      auto size = friendSizes[index];
-      auto min = ImVec2(centerX - size.x * 0.5f, rowMin.y + (rowHeight - size.y) * 0.5f);
-      auto max = ImVec2(min.x + size.x, min.y + size.y);
-      image_premultiplied_draw(drawList, (ImTextureID)(intptr_t)about.friendStates[index].canvas->texture, min, max);
-    };
-
-    drawList->PushClipRect(rowMin, rowMax, true);
-    image_draw(0, resource::friends::MEAT_BOY);
-    image_draw(1, resource::friends::ISAAC);
-
-    auto titleCenterX = slot_center_x_get(2);
-    auto titlePos = ImVec2(titleCenterX - titleSize.x * 0.5f, rowMin.y + (rowHeight - titleSize.y) * 0.5f);
-    drawList->AddText(resources.fonts[font::BOLD].get(), (float)font::SIZE_LARGE, titlePos, textColor, titleLabel);
-
-    image_draw(3, resource::friends::STACY);
-    image_draw(4, resource::friends::ASH);
-    drawList->PopClipRect();
-
-    ImGui::Dummy(ImVec2(size.x, rowHeight));
+    auto rightWidth = 0.0f;
+    for (auto index : FRIEND_ORDER_RIGHT)
+      rightWidth += friend_size_get(about.friendStates[index], height).x;
+    row_draw(FRIEND_ORDER_LEFT, min.x + inset);
+    row_draw(FRIEND_ORDER_RIGHT, max.x - inset - rightWidth);
   }
 
   // One tick: the credits scroll up (a new pass, and effect, once they are gone) and the bars follow the music.
   void roll_tick(About::RollState& roll, Resources& resources, float boxHeight, float textHeight)
   {
-    auto levels = glm::min(audio::levels_get(resources.music_track()) * BAR_LEVEL_HEIGHT, 1.0f) * boxHeight;
+    auto levels = audio::levels_get(resources.music_track());
+    roll.levelPeak = std::max({roll.levelPeak * BAR_LEVEL_DECAY, levels.x, levels.y, BAR_LEVEL_FLOOR});
+    levels *= boxHeight / roll.levelPeak;
     roll.scroll -= ROLL_SCROLL_STEP;
     if (roll.scroll < -(textHeight + ROLL_SCROLL_GAP))
     {
@@ -429,8 +408,9 @@ namespace anm2ed::imgui::wizard
     }
   }
 
-  void roll_draw(About::RollState& roll, Resources& resources, ImVec2 min, ImVec2 size)
+  void roll_draw(About& about, Resources& resources, ImVec2 min, ImVec2 size)
   {
+    auto& roll = about.roll;
     auto max = ImVec2(min.x + size.x, min.y + size.y);
     auto lineHeight = ImGui::GetFontSize();
     auto scale = lineHeight / ROLL_FONT_SIZE;
@@ -467,6 +447,7 @@ namespace anm2ed::imgui::wizard
                                       ImVec2(max.x - barWidth, min.y + ROLL_FADE_HEIGHT * scale), ROLL_BACKGROUND,
                                       ROLL_BACKGROUND, ROLL_CLEAR, ROLL_CLEAR);
     roll_bars_draw(drawList, roll.history, min, max, scale);
+    friends_draw(about, resources, drawList, min, max, barWidth);
     drawList->PopClipRect();
     ImGui::Dummy(size);
   }
@@ -489,9 +470,9 @@ namespace anm2ed::imgui::wizard
     for (auto& friendState : friendStates)
       friend_state_tick(friendState, delta);
 
-    friend_row_draw(*this, resources, titleLabel, size);
+    title_draw(*this, resources, titleLabel, size.x);
 
     auto rollSize = ImGui::GetContentRegionAvail();
-    if (rollSize.x > 0.0f && rollSize.y > 0.0f) roll_draw(roll, resources, ImGui::GetCursorScreenPos(), rollSize);
+    if (rollSize.x > 0.0f && rollSize.y > 0.0f) roll_draw(*this, resources, ImGui::GetCursorScreenPos(), rollSize);
   }
 }

@@ -47,6 +47,7 @@ namespace anm2ed::imgui::wizard
       float tickTime{};
       int tick{};
       int pass{};
+      float levelPeak{};
       ImU32 titleColor{};
     };
 
