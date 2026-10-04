@@ -252,6 +252,7 @@ namespace anm2ed
   X(LABEL_ALT_ICONS, "Alt Icons", "Iconos Alternos", "Альт-иконки", "替代图标", "대체 아이콘") \
   X(LABEL_ANIMATIONS_CHILD, "Animations", "Animaciones", "", "动画", "애니메이션") \
   X(LABEL_ANIMATIONS_MERGE_POPUP, "Merge Animations", "Combinar Animaciones", "Соединить анимации", "合并多个动画", "애니메이션 병합") \
+  X(LABEL_AUTO_SPRITESHEET_RELOAD, "Auto Spritesheet Reload", "Recarga Automática de Spritesheets", "Автоперезагрузка спрайт-листов", "自动重新加载图集", "스프라이트 시트 자동 새로고침") \
   X(LABEL_SPRITESHEETS_PACK_POPUP, "Pack Spritesheet", "Empaquetar spritesheet", "Упаковать спрайт-лист", "打包图集", "스프라이트 시트 패킹") \
   X(LABEL_SPRITESHEETS_MERGE_POPUP, "Merge Spritesheets", "Combinar Spritesheets", "Объединить спрайт-листы", "合并图集", "스프라이트 시트 병합") \
   X(LABEL_PACK_PADDING, "Padding", "Relleno", "Отступ", "填充", "패딩") \
@@ -510,6 +511,8 @@ namespace anm2ed
   X(SNAPSHOT_RENAME_ANIMATION, "Rename Animation", "Renombrar Animacion", "Переименовать анимацию", "重命名动画", "애니메이션 이름 바꾸기") \
   X(TEXT_SELECT_FRAME, "Select a frame first!", "¡Selecciona primero un frame!", "Сначала выберите кадр!", "请先选择帧！", "먼저 프레임을 선택하세요!") \
   X(TEXT_SELECT_FRAME_OR_REGION, "Select a frame or region first!", "¡Selecciona primero un frame o región!", "Сначала выберите кадр или регион!", "请先选择帧或区域！", "먼저 프레임 또는 영역을 선택하세요!") \
+  X(TOOLTIP_AUTO_SPRITESHEET_RELOAD, "Reload spritesheets automatically when their files change on disk.\n(Spritesheets with unsaved edits are left alone.)", "Recarga los spritesheets automáticamente cuando sus archivos cambian en el disco.\n(Los spritesheets con cambios sin guardar no se tocan.)", "Автоматически перезагружать спрайт-листы при изменении их файлов на диске.\n(Спрайт-листы с несохранёнными изменениями не затрагиваются.)", "当图集文件在磁盘上更改时自动重新加载。\n(有未保存修改的图集不受影响。)", "디스크의 파일이 바뀌면 스프라이트 시트를 자동으로 새로고침합니다.\n(저장하지 않은 수정이 있는 스프라이트 시트는 건드리지 않습니다.)") \
+  X(TOOLTIP_AUTO_SPRITESHEET_RELOAD_INTERVAL, "How often (in seconds) spritesheet files are checked for changes.", "Cada cuánto (en segundos) se revisan los archivos de spritesheets en busca de cambios.", "Как часто (в секундах) проверять файлы спрайт-листов на изменения.", "检查图集文件更改的间隔(秒)。", "스프라이트 시트 파일의 변경을 확인하는 간격(초).") \
   X(TOOLTIP_MERGE_SPRITESHEETS, "Merge selected spritesheets into the first selected spritesheet.", "Combina los spritesheets seleccionados en el primer spritesheet seleccionado.", "Объединить выбранные спрайт-листы в первый выбранный спрайт-лист.", "将所选图集合并到第一个选中的图集中。", "선택된 스프라이트 시트를 첫 번째 선택된 스프라이트 시트로 병합합니다.") \
   X(TEXT_SELECT_SPRITESHEET, "Select a spritesheet first!", "¡Selecciona primero un spritesheet!", "Сначала выберите спрайт-лист!", "请先选择图集！", "먼저 스프라이트 시트를 선택하세요!") \
   X(TEXT_TOOL_ANIMATION_PREVIEW, "This tool can only be used in Animation Preview!", "¡Esta herramienta solo se puede usar en Vista previa de animación!", "Этот инструмент можно использовать только в \"Предпросмотре анимации\"!", "该工具只能在“动画预放”中使用！", "이 도구는 애니메이션 프리뷰에서만 사용할 수 있습니다!") \

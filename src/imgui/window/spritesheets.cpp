@@ -268,25 +268,7 @@ namespace anm2ed::imgui
           TOOLTIP_REMOVE_UNUSED_SPRITESHEETS);
       actions.add(
           ACTION_RELOAD, isAny,
-          [&]()
-          {
-            command_push(panel,
-                         [selection](Document& document)
-                         {
-                           document.edit_apply(EDIT_RELOAD_SPRITESHEETS,
-                                               [&](model::Model&)
-                                               {
-                                                 for (auto id : selection)
-                                                   document.texture_reload(id);
-                                               });
-                           for (auto id : selection)
-                             if (auto spritesheet = spritesheet_get(document, id))
-                             {
-                               document.spritesheet_hash_set_saved(id);
-                               toast_log(Level::INFO, TOAST_RELOAD_SPRITESHEET, id, path::to_utf8(spritesheet->path));
-                             }
-                         });
-          },
+          [&]() { command_push(panel, [selection](Document& document) { document.spritesheets_reload(selection); }); },
           TOOLTIP_RELOAD_SPRITESHEETS);
       actions.add(
           ACTION_REPLACE, isOne, [&]() { dialog.file_open(Dialog::SPRITESHEET_REPLACE); }, TOOLTIP_REPLACE_SPRITESHEET);

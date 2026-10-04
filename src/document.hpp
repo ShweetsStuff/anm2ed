@@ -58,6 +58,7 @@ namespace anm2ed
     std::unordered_map<int, uint64_t> spritesheetHashes{};
     std::unordered_map<int, uint64_t> spritesheetSaveHashes{};
     std::unordered_map<int, std::filesystem::path> texturePaths{};
+    std::unordered_map<int, std::filesystem::file_time_type> textureWriteTimes{};
     std::unordered_map<int, std::filesystem::path> soundPaths{};
     std::map<int, std::filesystem::path> shaderVertexPaths{};
     std::map<int, std::filesystem::path> shaderFragmentPaths{};
@@ -144,6 +145,8 @@ namespace anm2ed
     bool spritesheet_is_dirty(int);
     bool spritesheet_any_dirty();
     void spritesheet_hashes_sync();
+    std::set<int> spritesheets_changed_get();
+    void spritesheets_reload(const std::set<int>&);
     Reference reference_get() const;
     void reference_set(Reference);
     std::set<Reference> selected_get(SelectionKind) const;

@@ -66,6 +66,15 @@ namespace anm2ed::imgui::wizard
           ImGui::Checkbox(localize.get(BASIC_ENABLED), &temporary.fileIsAutosave);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_AUTOSAVE_ENABLED));
 
+          ImGui::SeparatorText(localize.get(LABEL_AUTO_SPRITESHEET_RELOAD));
+          ImGui::Checkbox(localize.get(BASIC_ENABLED), &temporary.fileIsAutoReloadSpritesheets);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_AUTO_SPRITESHEET_RELOAD));
+          ImGui::BeginDisabled(!temporary.fileIsAutoReloadSpritesheets);
+          input_float_range(localize.get(LABEL_INTERVAL), temporary.fileAutoReloadInterval, AUTO_RELOAD_INTERVAL_MIN,
+                            AUTO_RELOAD_INTERVAL_MAX, AUTO_RELOAD_INTERVAL_STEP, AUTO_RELOAD_INTERVAL_STEP, "%.1f s");
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_AUTO_SPRITESHEET_RELOAD_INTERVAL));
+          ImGui::EndDisabled();
+
           ImGui::SeparatorText(localize.get(LABEL_SNAPSHOTS));
           input_int_range(localize.get(LABEL_STACK_SIZE), temporary.fileSnapshotStackSize, 0, 100);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_STACK_SIZE));

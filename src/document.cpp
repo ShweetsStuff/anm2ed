@@ -473,10 +473,46 @@ namespace anm2ed
     spritesheetHashes[id] = document::spritesheet_hash_get(*spritesheet, textures.contains(id) ? textures.at(id) : 0);
   }
 
+  // The spritesheet matches its file (just saved or reloaded); its file's time is remembered to notice later changes.
   void Document::spritesheet_hash_set_saved(int id)
   {
     spritesheet_hash_update(id);
     if (spritesheetHashes.contains(id)) spritesheetSaveHashes[id] = spritesheetHashes[id];
+    textureWriteTimes.erase(id);
+    spritesheets_changed_get();
+  }
+
+  // Spritesheets whose file changed on disk since it was last loaded or saved; ones with unsaved edits are left alone.
+  std::set<int> Document::spritesheets_changed_get()
+  {
+    std::set<int> ids{};
+    util::WorkingDirectory workingDirectory(directory_get());
+    for (const auto& spritesheet : model.content.spritesheets)
+    {
+      std::error_code ec{};
+      auto time = std::filesystem::last_write_time(path::case_insensitive_find(spritesheet.path), ec);
+      if (ec) continue;
+      auto [it, isNew] = textureWriteTimes.try_emplace(spritesheet.id, time);
+      if (!isNew && it->second != time && !spritesheet_is_dirty(spritesheet.id)) ids.insert(spritesheet.id);
+    }
+    return ids;
+  }
+
+  // Reloads spritesheets from their files as one undoable edit.
+  void Document::spritesheets_reload(const std::set<int>& ids)
+  {
+    edit_apply(EDIT_RELOAD_SPRITESHEETS,
+               [&](model::Model&)
+               {
+                 for (auto id : ids)
+                   texture_reload(id);
+               });
+    for (auto id : ids)
+      if (auto spritesheet = model::item_get(model.content.spritesheets, id))
+      {
+        spritesheet_hash_set_saved(id);
+        toast_log(Level::INFO, TOAST_RELOAD_SPRITESHEET, id, path::to_utf8(spritesheet->path));
+      }
   }
 
   bool Document::spritesheet_is_dirty(int id)

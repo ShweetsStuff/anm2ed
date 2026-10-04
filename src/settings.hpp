@@ -25,6 +25,9 @@ namespace anm2ed
   constexpr auto OUTPUT_PATH_DEFAULT = "./output.gif";
 #endif
 
+  constexpr auto AUTO_RELOAD_INTERVAL_MIN = 0.5f;
+  constexpr auto AUTO_RELOAD_INTERVAL_MAX = 60.0f;
+  constexpr auto AUTO_RELOAD_INTERVAL_STEP = 0.5f;
   // Scales are percents.
   constexpr auto UI_SCALE_MIN = 50.0f;
   constexpr auto UI_SCALE_MAX = 200.0f;
@@ -61,6 +64,8 @@ namespace anm2ed
                                                                                                                        \
   X(FILE_IS_AUTOSAVE, fileIsAutosave, STRING_UNDEFINED, BOOL, true)                                                    \
   X(FILE_IS_WARN_OVERWRITE, fileIsWarnOverwrite, STRING_UNDEFINED, BOOL, true)                                         \
+  X(FILE_IS_AUTO_RELOAD_SPRITESHEETS, fileIsAutoReloadSpritesheets, STRING_UNDEFINED, BOOL, true)                      \
+  X(FILE_AUTO_RELOAD_INTERVAL, fileAutoReloadInterval, STRING_UNDEFINED, FLOAT, 2.0f)                                  \
   X(FILE_IS_EXTENDED_FORMAT, isFileExtendedFormat, STRING_UNDEFINED, BOOL, false)                                      \
   X(FILE_SNAPSHOT_STACK_SIZE, fileSnapshotStackSize, STRING_UNDEFINED, INT, 50)                                        \
                                                                                                                        \

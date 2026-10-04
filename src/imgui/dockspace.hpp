@@ -15,6 +15,7 @@ namespace anm2ed::imgui
   {
     AnimationPreview animationPreview;
     bool isCanvasFocused{};
+    float spritesheetReloadTime{};
     AnimationsPanel animations{};
     RegionsPanel regions{};
     PanelState events{};

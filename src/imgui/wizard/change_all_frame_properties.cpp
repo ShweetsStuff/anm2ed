@@ -1,5 +1,7 @@
 #include "change_all_frame_properties.hpp"
 
+#include <format>
+
 #include <glm/gtc/type_ptr.hpp>
 
 #include <algorithm>
@@ -29,17 +31,18 @@ namespace anm2ed::imgui::wizard
 
   struct ChangeButton
   {
+    const char* symbol;
     StringType label;
     StringType tooltip;
     ChangeType type;
   };
 
   constexpr ChangeButton CHANGE_BUTTONS[CHANGE_TYPE_COUNT] = {
-      {LABEL_ADJUST, TOOLTIP_ADJUST, ChangeType::ADJUST},
-      {BASIC_ADD, TOOLTIP_ADD_VALUES, ChangeType::ADD},
-      {LABEL_SUBTRACT, TOOLTIP_SUBTRACT_VALUES, ChangeType::SUBTRACT},
-      {LABEL_MULTIPLY, TOOLTIP_MULTIPLY_VALUES, ChangeType::MULTIPLY},
-      {LABEL_DIVIDE, TOOLTIP_DIVIDE_VALUES, ChangeType::DIVIDE}};
+      {"=", LABEL_ADJUST, TOOLTIP_ADJUST, ChangeType::ADJUST},
+      {"+", BASIC_ADD, TOOLTIP_ADD_VALUES, ChangeType::ADD},
+      {"-", LABEL_SUBTRACT, TOOLTIP_SUBTRACT_VALUES, ChangeType::SUBTRACT},
+      {"\u00D7", LABEL_MULTIPLY, TOOLTIP_MULTIPLY_VALUES, ChangeType::MULTIPLY},
+      {"\u00F7", LABEL_DIVIDE, TOOLTIP_DIVIDE_VALUES, ChangeType::DIVIDE}};
 
   struct ComponentRow
   {
@@ -325,7 +328,8 @@ namespace anm2ed::imgui::wizard
     for (auto& button : CHANGE_BUTTONS)
     {
       if (&button != CHANGE_BUTTONS) ImGui::SameLine();
-      if (ImGui::Button(localize.get(button.label), rowWidgetSize)) frame_change(button.type);
+      if (ImGui::Button(std::format("{} {}", button.symbol, localize.get(button.label)).c_str(), rowWidgetSize))
+        frame_change(button.type);
       ImGui::SetItemTooltip("%s", localize.get(button.tooltip));
     }
     ImGui::EndDisabled();
