@@ -1,5 +1,8 @@
 #include "audio.hpp"
 
+#include <algorithm>
+#include <atomic>
+#include <cmath>
 #include <unordered_map>
 
 namespace anm2ed::resource::audio
@@ -8,7 +11,23 @@ namespace anm2ed::resource::audio
   {
     MIX_Audio* audio{};
     MIX_Track* track{};
+    std::atomic<float> squares[2]{};
+    std::atomic<int> sampleCount{};
   };
+
+  // Sums the squares of the left/right samples the track plays, for its levels.
+  void SDLCALL levels_update(void* userdata, MIX_Track*, const SDL_AudioSpec* spec, float* pcm, int samples)
+  {
+    auto entry = (Entry*)userdata;
+    auto channels = std::max(spec->channels, 1);
+    float squares[2]{};
+    for (int i = 0; i < samples; ++i)
+      squares[std::min(i % channels, 1)] += pcm[i] * pcm[i];
+    if (channels == 1) squares[1] = squares[0];
+    for (int channel = 0; channel < 2; ++channel)
+      entry->squares[channel] += squares[channel];
+    entry->sampleCount += samples / channels;
+  }
 
   std::unordered_map<std::uint64_t, Entry> entries{};
 
@@ -45,6 +64,7 @@ namespace anm2ed::resource::audio
     if (entry->track && MIX_GetTrackMixer(entry->track) != targetMixer) track_detach(data);
     if (!entry->track) entry->track = MIX_CreateTrack(targetMixer);
     if (!entry->track) return;
+    MIX_SetTrackCookedCallback(entry->track, levels_update, entry);
 
     MIX_SetTrackAudio(entry->track, entry->audio);
 
@@ -71,5 +91,15 @@ namespace anm2ed::resource::audio
   {
     auto track = track_get(data, nullptr);
     return track && MIX_TrackPlaying(track);
+  }
+
+  // The left/right loudness (RMS, 0-1) of what the track played since the last call.
+  glm::vec2 levels_get(const AudioData& data)
+  {
+    auto it = entries.find(data.uid);
+    if (it == entries.end()) return {};
+    auto& entry = it->second;
+    auto count = (float)std::max(entry.sampleCount.exchange(0), 1);
+    return {std::sqrt(entry.squares[0].exchange(0.0f) / count), std::sqrt(entry.squares[1].exchange(0.0f) / count)};
   }
 }

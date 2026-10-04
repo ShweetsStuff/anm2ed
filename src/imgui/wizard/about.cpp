@@ -3,10 +3,13 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
+#include <cstdlib>
 #include <format>
 
 #include <imgui.h>
+#include <imgui_internal.h>
 
+#include "audio.hpp"
 #include "log.hpp"
 #include "math.hpp"
 #include "model/draw.hpp"
@@ -21,8 +24,40 @@ using namespace glm;
 
 namespace anm2ed::imgui::wizard
 {
-  static constexpr float CREDIT_DELAY = 0.66f;
-  static constexpr float CREDIT_SCROLL_SPEED = 33.0f;
+  // The credits roll, after the original editor's About box: lengths are its pixels (for 14 px text), at its 30 Hz.
+  enum RollEffect
+  {
+    EFFECT_NONE,
+    EFFECT_SWAY,
+    EFFECT_STRETCH,
+    EFFECT_WAVE,
+    EFFECT_COUNT
+  };
+
+  static constexpr float ROLL_FONT_SIZE = 14.0f;
+  static constexpr float ROLL_TICK = 1.0f / 30.0f;
+  static constexpr int ROLL_TICKS_MAX = 4;
+  static constexpr std::size_t ROLL_HISTORY_MAX = 72;
+  static constexpr float ROLL_SCROLL_STEP = 1.0f;
+  static constexpr float ROLL_SCROLL_GAP = 20.0f;
+  static constexpr float ROLL_FADE_HEIGHT = 30.0f;
+  static constexpr float ROLL_WAVE_FREQUENCY = 0.1f;
+  static constexpr float ROLL_SWAY_AMPLITUDE = 10.0f;
+  static constexpr float ROLL_WAVE_AMPLITUDE = 15.0f;
+  static constexpr float ROLL_STRETCH = 0.2f;
+  static constexpr int ROLL_TRAIL_ALPHA_SWAY = 25;
+  static constexpr int ROLL_TRAIL_ALPHA_STRETCH = 50;
+  static constexpr float ROLL_WEIGHT_MIN = 1.0f / 255.0f;
+  static constexpr float BAR_WIDTH = 10.0f;
+  static constexpr float BAR_LEVEL_HEIGHT = 2.0f;
+  static constexpr float BAR_GRADIENT_MIN = 50.0f;
+  static constexpr int BAR_TRAIL_ALPHA = 20;
+  static constexpr int BAR_RED_STEP = 100;
+  static constexpr ImU32 ROLL_BACKGROUND = IM_COL32(0, 0, 0, 255);
+  static constexpr ImU32 ROLL_CLEAR = IM_COL32(0, 0, 0, 0);
+  static constexpr ImU32 ROLL_HEADER_COLOR = IM_COL32(255, 255, 255, 255);
+  static constexpr ImU32 ROLL_NAME_COLOR = IM_COL32(200, 255, 255, 255);
+  static constexpr ImU32 BAR_BASE_COLOR = IM_COL32(255, 0, 0, 255);
   static constexpr float FRIEND_HEIGHT_MULTIPLIER = 2.0f;
   static constexpr float FRIEND_PADDING_RATIO = 0.15f;
   static constexpr int FRIEND_ROW_SLOT_COUNT = 5;
@@ -258,7 +293,7 @@ namespace anm2ed::imgui::wizard
     auto rowMin = ImGui::GetCursorScreenPos();
     auto rowMax = ImVec2(rowMin.x + size.x, rowMin.y + rowHeight);
     auto drawList = ImGui::GetWindowDrawList();
-    auto textColor = ImGui::GetColorU32(ImGuiCol_Text);
+    auto textColor = about.roll.titleColor ? about.roll.titleColor : ImGui::GetColorU32(ImGuiCol_Text);
 
     auto slot_center_x_get = [&](int slot)
     {
@@ -290,11 +325,156 @@ namespace anm2ed::imgui::wizard
     ImGui::Dummy(ImVec2(size.x, rowHeight));
   }
 
+  // One tick: the credits scroll up (a new pass, and effect, once they are gone) and the bars follow the music.
+  void roll_tick(About::RollState& roll, Resources& resources, float boxHeight, float textHeight)
+  {
+    auto levels = glm::min(audio::levels_get(resources.music_track()) * BAR_LEVEL_HEIGHT, 1.0f) * boxHeight;
+    roll.scroll -= ROLL_SCROLL_STEP;
+    if (roll.scroll < -(textHeight + ROLL_SCROLL_GAP))
+    {
+      roll.scroll = boxHeight;
+      ++roll.pass;
+    }
+    ++roll.tick;
+
+    About::RollFrame frame{.scroll = roll.scroll,
+                           .effect = roll.pass % EFFECT_COUNT,
+                           .levels = levels,
+                           .gradientHeight = std::max({BAR_GRADIENT_MIN, levels.x, levels.y}),
+                           .gradientColor =
+                               IM_COL32((roll.pass * BAR_RED_STEP) % 256, 255 - roll.tick % 256, roll.tick % 256, 255)};
+    if (frame.effect == EFFECT_SWAY)
+    {
+      frame.trailAlpha = ROLL_TRAIL_ALPHA_SWAY;
+      frame.offsetX = std::sin(roll.scroll * ROLL_WAVE_FREQUENCY) * ROLL_SWAY_AMPLITUDE;
+    }
+    if (frame.effect == EFFECT_STRETCH)
+    {
+      frame.trailAlpha = ROLL_TRAIL_ALPHA_STRETCH;
+      frame.stretch = 1.0f + (levels.x + levels.y) / boxHeight * ROLL_STRETCH;
+    }
+    // While the credits stretch, the title flashes random colors.
+    roll.titleColor =
+        frame.effect == EFFECT_STRETCH ? IM_COL32(std::rand() % 256, std::rand() % 256, std::rand() % 256, 255) : 0;
+
+    roll.history.push_front(frame);
+    if (roll.history.size() > ROLL_HISTORY_MAX) roll.history.pop_back();
+  }
+
+  ImU32 color_weighted_get(ImU32 color, float weight)
+  {
+    auto value = ImGui::ColorConvertU32ToFloat4(color);
+    value.w *= weight;
+    return ImGui::ColorConvertFloat4ToU32(value);
+  }
+
+  // The credits as one tick drew them; `weight` fades the copies that linger as trails.
+  void roll_text_draw(ImDrawList* drawList, Resources& resources, const About::RollFrame& frame, ImVec2 min, ImVec2 max,
+                      float scale, float lineHeight, float weight)
+  {
+    auto centerX = (min.x + max.x) * 0.5f;
+    for (int i = 0; i < CREDIT_COUNT; ++i)
+    {
+      auto& credit = CREDITS[i];
+      auto y = min.y + frame.scroll * scale + (float)i * lineHeight;
+      if (!*credit.string || y + lineHeight < min.y || y > max.y) continue;
+
+      auto font = resources.fonts[credit.font].get();
+      auto x = centerX - font->CalcTextSizeA(lineHeight, FLT_MAX, 0.0f, credit.string).x * 0.5f + frame.offsetX * scale;
+      if (frame.effect == EFFECT_WAVE)
+        x += std::round(std::sin((y - min.y) / scale * ROLL_WAVE_FREQUENCY) * ROLL_WAVE_AMPLITUDE) * scale;
+      auto color = credit.font == font::BOLD ? ROLL_HEADER_COLOR : ROLL_NAME_COLOR;
+
+      auto vertexStart = drawList->VtxBuffer.Size;
+      drawList->AddText(font, lineHeight, ImVec2(x, y), color_weighted_get(color, weight), credit.string);
+      if (frame.stretch != 1.0f)
+        for (int vertex = vertexStart; vertex < drawList->VtxBuffer.Size; ++vertex)
+          drawList->VtxBuffer[vertex].pos.x = centerX + (drawList->VtxBuffer[vertex].pos.x - centerX) * frame.stretch;
+    }
+  }
+
+  // A volume bar's color at a height: red at the bottom into the tick's color at its gradient height.
+  ImU32 bar_color_get(const About::RollFrame& frame, float height, float weight)
+  {
+    auto color = ImLerp(ImGui::ColorConvertU32ToFloat4(BAR_BASE_COLOR),
+                        ImGui::ColorConvertU32ToFloat4(frame.gradientColor), height / frame.gradientHeight);
+    color.w = weight;
+    return ImGui::ColorConvertFloat4ToU32(color);
+  }
+
+  // The left and right volume bars; older, taller bars show above newer ones, fading as they age.
+  void roll_bars_draw(ImDrawList* drawList, const std::deque<About::RollFrame>& history, ImVec2 min, ImVec2 max,
+                      float scale)
+  {
+    auto width = BAR_WIDTH * scale;
+    for (int side = 0; side < 2; ++side)
+    {
+      auto left = side == 0 ? min.x : max.x - width;
+      auto covered = 0.0f;
+      auto weight = 1.0f;
+      for (const auto& frame : history)
+      {
+        if (weight < ROLL_WEIGHT_MIN) break;
+        auto height = frame.levels[side];
+        if (height > covered)
+        {
+          auto top = bar_color_get(frame, height, weight);
+          auto bottom = bar_color_get(frame, covered, weight);
+          drawList->AddRectFilledMultiColor(ImVec2(left, max.y - height * scale),
+                                            ImVec2(left + width, max.y - covered * scale), top, top, bottom, bottom);
+          covered = height;
+        }
+        weight *= 1.0f - (float)BAR_TRAIL_ALPHA / 255.0f;
+      }
+    }
+  }
+
+  void roll_draw(About::RollState& roll, Resources& resources, ImVec2 min, ImVec2 size)
+  {
+    auto max = ImVec2(min.x + size.x, min.y + size.y);
+    auto lineHeight = ImGui::GetFontSize();
+    auto scale = lineHeight / ROLL_FONT_SIZE;
+    auto boxHeight = size.y / scale;
+    auto textHeight = (float)CREDIT_COUNT * lineHeight / scale;
+
+    if (roll.history.empty())
+    {
+      roll.scroll = boxHeight;
+      roll_tick(roll, resources, boxHeight, textHeight);
+    }
+    roll.tickTime += ImGui::GetIO().DeltaTime;
+    for (int i = 0; roll.tickTime >= ROLL_TICK; ++i, roll.tickTime -= ROLL_TICK)
+      if (i < ROLL_TICKS_MAX) roll_tick(roll, resources, boxHeight, textHeight);
+
+    auto drawList = ImGui::GetWindowDrawList();
+    drawList->PushClipRect(min, max, true);
+    drawList->AddRectFilled(min, max, ROLL_BACKGROUND);
+
+    // Each tick faded what came before it by its trail alpha; the copies still visible are drawn oldest first.
+    std::vector<std::pair<const About::RollFrame*, float>> copies{};
+    auto weight = 1.0f;
+    for (const auto& frame : roll.history)
+    {
+      if (weight < ROLL_WEIGHT_MIN) break;
+      copies.emplace_back(&frame, weight);
+      weight *= 1.0f - (float)frame.trailAlpha / 255.0f;
+    }
+    for (auto it = copies.rbegin(); it != copies.rend(); ++it)
+      roll_text_draw(drawList, resources, *it->first, min, max, scale, lineHeight, it->second);
+
+    auto barWidth = BAR_WIDTH * scale;
+    drawList->AddRectFilledMultiColor(ImVec2(min.x + barWidth, min.y),
+                                      ImVec2(max.x - barWidth, min.y + ROLL_FADE_HEIGHT * scale), ROLL_BACKGROUND,
+                                      ROLL_BACKGROUND, ROLL_CLEAR, ROLL_CLEAR);
+    roll_bars_draw(drawList, roll.history, min, max, scale);
+    drawList->PopClipRect();
+    ImGui::Dummy(size);
+  }
+
   void About::reset(Resources& resources)
   {
     resource::audio::play(resources.music_track(), true);
-    creditsState = {};
-    creditsState.spawnTimer = CREDIT_DELAY;
+    roll = {};
 
     for (int i = 0; i < resource::friends::COUNT; ++i)
       friend_state_load(friendStates[i], resource::friends::FRIENDS[i]);
@@ -311,64 +491,7 @@ namespace anm2ed::imgui::wizard
 
     friend_row_draw(*this, resources, titleLabel, size);
 
-    auto creditRegionPos = ImGui::GetCursorScreenPos();
-    auto creditRegionSize = ImGui::GetContentRegionAvail();
-
-    if (creditRegionSize.y > 0.0f && creditRegionSize.x > 0.0f)
-    {
-      auto fontSize = ImGui::GetFontSize();
-      auto drawList = ImGui::GetWindowDrawList();
-      auto clipMax = ImVec2(creditRegionPos.x + creditRegionSize.x, creditRegionPos.y + creditRegionSize.y);
-      drawList->PushClipRect(creditRegionPos, clipMax, true);
-
-      creditsState.spawnTimer -= delta;
-      auto maxVisible = std::max(1, (int)std::floor(creditRegionSize.y / (float)fontSize));
-
-      while (creditsState.active.size() < (size_t)maxVisible && creditsState.spawnTimer <= 0.0f)
-      {
-        creditsState.active.push_back({creditsState.nextIndex, 0.0f});
-        creditsState.nextIndex = (creditsState.nextIndex + 1) % CREDIT_COUNT;
-        creditsState.spawnTimer += CREDIT_DELAY;
-      }
-
-      auto baseY = clipMax.y - (float)fontSize;
-      auto& baseColor = ImGui::GetStyleColorVec4(ImGuiCol_Text);
-      auto fadeSpan = (float)fontSize * 2.0f;
-
-      for (auto it = creditsState.active.begin(); it != creditsState.active.end();)
-      {
-        it->offset += CREDIT_SCROLL_SPEED * delta;
-        auto yPos = baseY - it->offset;
-        if (yPos + fontSize < creditRegionPos.y)
-        {
-          it = creditsState.active.erase(it);
-          continue;
-        }
-
-        auto& credit = CREDITS[it->index];
-        auto fontPtr = resources.fonts[credit.font].get();
-        auto textSize = fontPtr->CalcTextSizeA((float)fontSize, FLT_MAX, 0.0f, credit.string);
-        auto xPos = creditRegionPos.x + (creditRegionSize.x - textSize.x) * 0.5f;
-
-        auto alpha = 1.0f;
-        auto topDist = yPos - creditRegionPos.y;
-        if (topDist < fadeSpan) alpha *= std::clamp(topDist / fadeSpan, 0.0f, 1.0f);
-        auto bottomDist = (creditRegionPos.y + creditRegionSize.y) - (yPos + fontSize);
-        if (bottomDist < fadeSpan) alpha *= std::clamp(bottomDist / fadeSpan, 0.0f, 1.0f);
-        if (alpha <= 0.0f)
-        {
-          ++it;
-          continue;
-        }
-
-        auto color = baseColor;
-        color.w *= alpha;
-
-        drawList->AddText(fontPtr, fontSize, ImVec2(xPos, yPos), ImGui::GetColorU32(color), credit.string);
-        ++it;
-      }
-
-      drawList->PopClipRect();
-    }
+    auto rollSize = ImGui::GetContentRegionAvail();
+    if (rollSize.x > 0.0f && rollSize.y > 0.0f) roll_draw(roll, resources, ImGui::GetCursorScreenPos(), rollSize);
   }
 }

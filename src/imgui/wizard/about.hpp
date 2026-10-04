@@ -1,9 +1,12 @@
 #pragma once
 
 #include <array>
+#include <deque>
 #include <memory>
 #include <unordered_map>
 #include <vector>
+
+#include <imgui/imgui.h>
 
 #include "../../canvas.hpp"
 #include "../../model/model.hpp"
@@ -21,17 +24,30 @@ namespace anm2ed::imgui::wizard
       resource::font::Type font{resource::font::REGULAR};
     };
 
-    struct ScrollingCredit
+    // One 30 Hz tick of the credits roll, after the original editor's About box. Lengths are in its pixels (for
+    // 14 px text); `trailAlpha` is how much of what was drawn before this tick it faded out (255 clears it).
+    struct RollFrame
     {
-      int index{};
-      float offset{};
+      float scroll{};
+      float offsetX{};
+      float stretch{1.0f};
+      int effect{};
+      int trailAlpha{255};
+      glm::vec2 levels{};
+      float gradientHeight{};
+      ImU32 gradientColor{};
     };
 
-    struct CreditsState
+    // The credits scroll up through a box, one of four effects per pass (none, sway, stretch to the music, wave),
+    // between volume bars; recent ticks are kept to draw the trails they leave.
+    struct RollState
     {
-      std::vector<ScrollingCredit> active{};
-      float spawnTimer{1.0f};
-      int nextIndex{};
+      std::deque<RollFrame> history{};
+      float scroll{};
+      float tickTime{};
+      int tick{};
+      int pass{};
+      ImU32 titleColor{};
     };
 
     struct FriendState
@@ -45,8 +61,7 @@ namespace anm2ed::imgui::wizard
       bool isLoaded{};
     };
 
-    int creditsIndex{};
-    CreditsState creditsState{};
+    RollState roll{};
     std::array<FriendState, resource::friends::COUNT> friendStates{};
 
     void reset(Resources& resources);
