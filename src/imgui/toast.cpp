@@ -23,7 +23,6 @@ namespace anm2ed::imgui
 
   void Toasts::update()
   {
-
     auto borderColor = ImGui::GetStyleColorVec4(ImGuiCol_Border);
     auto textColor = ImGui::GetStyleColorVec4(ImGuiCol_Text);
 
