@@ -8,22 +8,17 @@ Anm2Ed is a modern editor for *The Binding of Isaac: Rebirth*'s XML-based `.anm2
 This application was developed with the assistance of a large language model.
 
 ## Features
-- Full `.anm2` document editing for spritesheets, layers, nulls, events, sounds, animations, frames, and triggers.
-- Dockable [Dear ImGui](https://github.com/ocornut/imgui) interface with draggable windows, persistent layout, drag and drop, context menus, and keyboard-focused workflows.
-- Timeline editing with multi-selection, cut/copy/paste, duplicate, merge, insert/delete, frame baking, frame dragging, and editable animation length/FPS/loop settings.
-- Animation, layer, and null groups for organizing work, including collapsible trees, group roots, visibility toggles, and save-time baking for game compatibility.
-- Frame property editing for crop, size, position, pivot, scale, shear, rotation, tint, color offset, regions, shaders, visibility, interpolation, and flips, with single-frame and batch modes.
-- Spritesheet tools for adding, replacing, reloading, packing, saving, editing, and generating reusable regions.
-- Overlay spritesheets that can be placed on top of base spritesheets for editing and previewing alternate texture work.
-- Custom spritesheet shaders with vertex/fragment file paths, reload/compile feedback, enable/disable behavior, and configurable uniform bindings.
-- Animation preview with grid, axes, pivots, root transform display, transparency, borders, zoom controls, onionskinning, and isolated render modes.
-- Sound and trigger support, including playback through animation timelines and rendered output.
-- Wizards and batch tools for generating animations from grids, generating regions, scanning frames, changing frame properties across selections, baking frames, merging animations, merging spritesheets, and rendering animations.
-- Render output to video, GIF-compatible workflows, spritesheets, or PNG sequences through FFmpeg.
-- Merge external `.anm2` files into the current document with merge, append, and replace behaviors.
-- Robust undo/redo snapshots, autosave support, overwrite warnings, and persistent settings.
-- Rebindable shortcuts for common editing, timeline, tool, and navigation actions.
-- Localized UI with support for English, Spanish (Latin America), Russian, Chinese, and Korean.
+- Full `.anm2` editing: spritesheets, regions, layers, nulls, events, sounds, shaders, animations, frames and triggers.
+- Dockable [Dear ImGui](https://github.com/ocornut/imgui) interface with persistent layout, drag and drop, context menus and rebindable shortcuts.
+- Timeline: multi-select, cut/copy/paste (whole frames or single properties), duplicate, split, bake, drag to move/resize, and start/end markers to loop a range.
+- Groups for animations, layers and nulls, with group transforms baked for the game on save.
+- Frame properties for crop, size, position, pivot, scale, shear, rotation, tint, color offset, region, shader, visibility, interpolation (including easing) and flips; batch changes across selections.
+- Spritesheet editor with pan, move, crop, draw, erase and color picker tools; regions; packing, merging, trimming; automatic reload when files change on disk.
+- Animation preview with grid, axes, pivots, borders, onionskin (with pivot paths), and another document's animation as an overlay.
+- Wizards: generate animations from a grid, generate regions, change all frame properties, merge animations and files.
+- Render to video, GIF, spritesheet or PNG sequence (FFmpeg), with trigger sounds.
+- Saves the game's format with the editor's own copy embedded (`SourceDocument`), so nothing is lost; warns before saving anything the game doesn't support.
+- Undo/redo, autosave (spritesheet edits included) with crash restore, and overwrite warnings.
 
 ### Supported Languages
 - English
@@ -51,8 +46,11 @@ Visual Studio is recommended.
 ### Linux
 
 ```sh
-mkdir build
-cd build
-cmake ..
-make
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+```
+
+### Tests
+```sh
+ctest --test-dir build
 ```
