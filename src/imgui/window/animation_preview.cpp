@@ -285,6 +285,7 @@ namespace anm2ed::imgui
     auto& shaderAxes = resources.shaders[shader::AXIS];
     auto& shaderGrid = resources.shaders[shader::GRID];
     auto& shaderTexture = resources.shaders[shader::TEXTURE];
+    auto& shaderDashed = resources.shaders[shader::DASHED];
     auto center_view = [&]() { pan = vec2(); };
 
     auto fit_view = [&]()
@@ -646,6 +647,24 @@ namespace anm2ed::imgui
                std::ranges::any_of(document.frame_references_get(Document::FrameReferenceFallback::NONE), is_layer);
       };
 
+      // The item the reference points at: the root (or a group's root), a layer or a null.
+      auto is_draw_selected = [&](const model::Draw& draw)
+      {
+        switch (draw.type)
+        {
+          case model::DrawType::ROOT:
+            return referenceItemType == ItemType::ROOT && reference.groupId == -1;
+          case model::DrawType::GROUP_ROOT:
+            return referenceItemType == ItemType::ROOT && reference.groupType == draw.groupType &&
+                   reference.groupId == draw.id;
+          case model::DrawType::LAYER:
+            return referenceItemType == ItemType::LAYER && reference.itemID == draw.id;
+          default:
+            return referenceItemType == ItemType::NULL_ && reference.itemID == draw.id;
+        }
+      };
+      auto isOnlySelected = settings.onionskinIsOnlySelected;
+
       // Draws an animation's draw list; onion-skin samples are tinted and faded, `alphaOffset` fades the overlay.
       auto render = [&](Document& sampleDocument, const model::Animation& sampleAnimation, float alphaOffset)
       {
@@ -655,6 +674,7 @@ namespace anm2ed::imgui
         for (const auto& draw : model::animation_draws_get(sampleModel, sampleAnimation, drawOptions))
         {
           auto isOnion = draw.sample != -1;
+          if (isOnion && isOnlySelected && !(isActiveDocument && is_draw_selected(draw))) continue;
           auto sampleColor = isOnion ? sampleColors[draw.sample] : vec3();
           auto sampleAlpha = isOnion ? sampleAlphas[draw.sample] : 0.0f;
           auto onionColor = vec4(sampleColor, 1.0f - sampleAlpha);
@@ -734,6 +754,42 @@ namespace anm2ed::imgui
         if (overlayDrawOrder == overlay_draw_order::UNDER) overlay_render();
         render(document, *animation, 0.0f);
         if (overlayDrawOrder == overlay_draw_order::OVER) overlay_render();
+
+        if (settings.onionskinIsEnabled && settings.onionskinIsPivotPath && !isIsolated)
+        {
+          auto key = std::tuple{document.hash, reference.animationIndex, isRootTransform};
+          if (key != pivotPathsKey || pivotPaths.empty())
+          {
+            pivotPathsKey = key;
+            pivotPaths.clear();
+            for (int time = 0; time < animation->frameNum; ++time)
+              for (const auto& draw : model::animation_draws_get(
+                       model, *animation, {.time = (float)time, .isRootTransform = isRootTransform}))
+              {
+                auto path = std::ranges::find_if(pivotPaths,
+                                                 [&](const PivotPath& path)
+                                                 {
+                                                   return path.item.type == draw.type && path.item.id == draw.id &&
+                                                          path.item.groupType == draw.groupType;
+                                                 });
+                if (path == pivotPaths.end()) path = pivotPaths.insert(pivotPaths.end(), {.item = draw});
+                path->points.push_back(vec2(draw.parent * vec4(draw.frame.position, 0.0f, 1.0f)));
+              }
+          }
+
+          auto pointIcon = resources.icon_id_get(icon::POINT);
+          for (const auto& path : pivotPaths)
+          {
+            if (isOnlySelected && !is_draw_selected(path.item)) continue;
+            for (std::size_t i = 0; i < path.points.size(); ++i)
+            {
+              if (i > 0) line_render(shaderDashed, baseTransform, path.points[i - 1], path.points[i], color::RED);
+              texture_render(shaderTexture, pointIcon,
+                             baseTransform * math::quad_model_get(POINT_SIZE, path.points[i], POINT_SIZE * 0.5f),
+                             color::RED);
+            }
+          }
+        }
       }
 
       if (isRecordingFrame)

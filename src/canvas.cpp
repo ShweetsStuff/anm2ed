@@ -243,17 +243,17 @@ namespace anm2ed
     glUniform4fv(glGetUniformLocation(shader.id, shader::UNIFORM_COLOR), 1, value_ptr(color));
   }
 
-  void rect_end(GLuint vao, GLenum mode)
+  void rect_end(GLuint vao, GLenum mode, int count = 4)
   {
     glBindVertexArray(vao);
-    glDrawArrays(mode, 0, 4);
+    glDrawArrays(mode, 0, count);
     glBindVertexArray(0);
     glUseProgram(0);
     canvas_blend_straight_set();
   }
 
-  void Canvas::rect_render(Shader& shader, const mat4& transform, const mat4& model, vec4 color, float dashLength,
-                           float dashGap, float dashOffset) const
+  void Canvas::dashed_render(Shader& shader, const mat4& transform, const mat4& model, vec4 color, float dashLength,
+                             float dashGap, float dashOffset, GLenum mode, int count) const
   {
     rect_begin(shader, transform, model, color);
 
@@ -267,7 +267,24 @@ namespace anm2ed
           std::pair{shader::UNIFORM_DASH_OFFSET, dashOffset}})
       if (auto location = glGetUniformLocation(shader.id, name); location != -1) glUniform1f(location, value);
 
-    rect_end(rectVAO, GL_LINE_LOOP);
+    rect_end(rectVAO, mode, count);
+  }
+
+  void Canvas::rect_render(Shader& shader, const mat4& transform, const mat4& model, vec4 color, float dashLength,
+                           float dashGap, float dashOffset) const
+  {
+    dashed_render(shader, transform, model, color, dashLength, dashGap, dashOffset, GL_LINE_LOOP, RECT_VERTEX_COUNT);
+  }
+
+  // A line from start to end: the bottom edge of a rectangle laid along it.
+  void Canvas::line_render(Shader& shader, const mat4& transform, vec2 start, vec2 end, vec4 color, float dashLength,
+                           float dashGap, float dashOffset) const
+  {
+    auto direction = end - start;
+    auto normal = glm::length(direction) > 0.0f ? glm::normalize(vec2(-direction.y, direction.x)) : vec2(0.0f, 1.0f);
+    auto model = mat4(vec4(direction, 0.0f, 0.0f), vec4(normal, 0.0f, 0.0f), vec4(0.0f, 0.0f, 1.0f, 0.0f),
+                      vec4(start, 0.0f, 1.0f));
+    dashed_render(shader, transform, model, color, dashLength, dashGap, dashOffset, GL_LINES, LINE_VERTEX_COUNT);
   }
 
   void Canvas::rect_fill_render(Shader& shader, const mat4& transform, const mat4& model, vec4 color) const

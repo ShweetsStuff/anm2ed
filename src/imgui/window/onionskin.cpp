@@ -47,6 +47,12 @@ namespace anm2ed::imgui
       ImGui::SameLine();
       ImGui::RadioButton(localize.get(BASIC_INDEX), &mode, (int)OnionskinMode::INDEX);
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ONIONSKIN_INDEX));
+
+      ImGui::SeparatorText(localize.get(LABEL_OPTIONS));
+      ImGui::Checkbox(localize.get(LABEL_PIVOT_PATH), &settings.onionskinIsPivotPath);
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_PIVOT_PATH));
+      ImGui::Checkbox(localize.get(LABEL_ONLY_SELECTED_ITEM), &settings.onionskinIsOnlySelected);
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ONLY_SELECTED_ITEM));
     }
     ImGui::End();
 

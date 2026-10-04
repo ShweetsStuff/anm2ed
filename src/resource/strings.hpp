@@ -253,6 +253,8 @@ namespace anm2ed
   X(LABEL_ANIMATIONS_CHILD, "Animations", "Animaciones", "", "动画", "애니메이션") \
   X(LABEL_ANIMATIONS_MERGE_POPUP, "Merge Animations", "Combinar Animaciones", "Соединить анимации", "合并多个动画", "애니메이션 병합") \
   X(LABEL_AUTO_SPRITESHEET_RELOAD, "Auto Spritesheet Reload", "Recarga Automática de Spritesheets", "Автоперезагрузка спрайт-листов", "自动重新加载图集", "스프라이트 시트 자동 새로고침") \
+  X(LABEL_ONLY_SELECTED_ITEM, "Only Selected Item", "Solo el Elemento Seleccionado", "Только выбранный элемент", "仅选中项目", "선택한 항목만") \
+  X(LABEL_PIVOT_PATH, "Pivot Path", "Trayectoria del Pivote", "Путь опорной точки", "枢轴路径", "피벗 경로") \
   X(LABEL_SPRITESHEETS_PACK_POPUP, "Pack Spritesheet", "Empaquetar spritesheet", "Упаковать спрайт-лист", "打包图集", "스프라이트 시트 패킹") \
   X(LABEL_SPRITESHEETS_MERGE_POPUP, "Merge Spritesheets", "Combinar Spritesheets", "Объединить спрайт-листы", "合并图集", "스프라이트 시트 병합") \
   X(LABEL_PACK_PADDING, "Padding", "Relleno", "Отступ", "填充", "패딩") \
@@ -616,6 +618,8 @@ namespace anm2ed
   X(TOOLTIP_CENTER_VIEW, "Centers the view.", "Centra la vista.", "Центрирует вид.", "居中视角.", "미리보기 화면을 가운데에 맞춥니다.") \
   X(TOOLTIP_CLOSE_SETTINGS, "Close without updating settings.", "Cerrar sin actualizar las configuraciones.", "Закрыть без обновления настройки.", "关闭但不保存设置.", "설정을 갱신하지 않고 닫습니다.") \
   X(TOOLTIP_COLOR_OFFSET, "Change the color added onto the frame.", "Cambia el color añadido al Frame.", "Изменить цвет, который добавлен на кадр.", "更改覆盖在帧上的颜色.", "프레임에 더해지는 색을 변경합니다.") \
+  X(TOOLTIP_ONLY_SELECTED_ITEM, "Only the selected item (root, layer or null) is onionskinned and shows its pivot path.", "Solo el elemento seleccionado (raíz, capa o null) usa papel cebolla y muestra la trayectoria de su pivote.", "Оньонскин и путь опорной точки показываются только для выбранного элемента (корень, слой или null).", "仅对选中的项目(根、图层或空节点)显示洋葱皮和枢轴路径。", "선택한 항목(루트, 레이어 또는 널)에만 전후 비교와 피벗 경로를 표시합니다.") \
+  X(TOOLTIP_PIVOT_PATH, "Show the path each item's pivot travels through the animation, with a dot on every frame.", "Muestra la trayectoria que recorre el pivote de cada elemento durante la animación, con un punto en cada Frame.", "Показать путь опорной точки каждого элемента в анимации, с точкой на каждом кадре.", "显示每个项目的枢轴在动画中移动的路径，每帧一个点。", "애니메이션 동안 각 항목의 피벗이 지나는 경로를 프레임마다 점으로 표시합니다.") \
   X(TOOLTIP_REGION, "Set the spritesheet region the frame will use.", "Establece la región del spritesheet que usará el frame.", "Установить регион спрайт-листа, который будет использовать кадр.", "设置帧将使用的图集区域.", "프레임이 사용할 스프라이트 시트 영역을 설정합니다.") \
   X(TOOLTIP_FRAME_SHADER, "Set the shader this frame uses. None uses the default shader.", "Set the shader this frame uses. None uses the default shader.", "Set the shader this frame uses. None uses the default shader.", "Set the shader this frame uses. None uses the default shader.", "Set the shader this frame uses. None uses the default shader.") \
   X(TOOLTIP_REGION_PROPERTIES_ORIGIN, "Use a preset origin for the region.", "Usa un origen predefinido para la región.", "Использовать предустановленную точку отсчета для региона.", "为区域使用预设原点。", "영역에 사전 설정된 원점을 사용합니다.") \

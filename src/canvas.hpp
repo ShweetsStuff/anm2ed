@@ -37,6 +37,8 @@ namespace anm2ed
     static constexpr float AXIS_VERTICES[] = {-1.0f, 0.0f, 1.0f, 0.0f};
     static constexpr float GRID_VERTICES[] = {-1.f, -1.f, 0.f, 0.f, 3.f, -1.f, 2.f, 0.f, -1.f, 3.f, 0.f, 2.f};
     static constexpr float RECT_VERTICES[] = {0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f};
+    static constexpr int RECT_VERTEX_COUNT = 4;
+    static constexpr int LINE_VERTEX_COUNT = 2;
     static constexpr GLuint TEXTURE_INDICES[] = {0, 1, 2, 2, 3, 0};
     static constexpr auto BORDER_DASH_LENGTH = 1.0f;
     static constexpr auto BORDER_DASH_GAP = 0.5f;
@@ -63,7 +65,11 @@ namespace anm2ed
     void texture_render(resource::Shader&, GLuint, glm::mat4 = {1.0f}, glm::vec4 = glm::vec4(1.0f), glm::vec3 = {},
                         float* = (float*)TEXTURE_VERTICES, glm::vec2 = {}, float = 0.0f) const;
     void rect_fill_render(resource::Shader&, const glm::mat4&, const glm::mat4&, glm::vec4 = glm::vec4(1.0f)) const;
+    void dashed_render(resource::Shader&, const glm::mat4&, const glm::mat4&, glm::vec4, float, float, float, GLenum,
+                       int) const;
     void rect_render(resource::Shader&, const glm::mat4&, const glm::mat4&, glm::vec4 = glm::vec4(1.0f),
+                     float dashLength = DASH_LENGTH, float dashGap = DASH_GAP, float dashOffset = DASH_OFFSET) const;
+    void line_render(resource::Shader&, const glm::mat4&, glm::vec2, glm::vec2, glm::vec4 = glm::vec4(1.0f),
                      float dashLength = DASH_LENGTH, float dashGap = DASH_GAP, float dashOffset = DASH_OFFSET) const;
     float zoom_level_get(float, int) const;
     void zoom_level_adjust(float&, glm::vec2&, glm::vec2, int) const;

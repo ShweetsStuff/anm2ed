@@ -198,6 +198,8 @@ namespace anm2ed
   X(ONIONSKIN_BEFORE_COLOR, onionskinBeforeColor, STRING_UNDEFINED, VEC3, types::color::RED)                           \
   X(ONIONSKIN_AFTER_COLOR, onionskinAfterColor, STRING_UNDEFINED, VEC3, types::color::BLUE)                            \
   X(ONIONSKIN_MODE, onionskinMode, STRING_UNDEFINED, INT, (int)types::OnionskinMode::TIME)                             \
+  X(ONIONSKIN_IS_PIVOT_PATH, onionskinIsPivotPath, STRING_UNDEFINED, BOOL, false)                                      \
+  X(ONIONSKIN_IS_ONLY_SELECTED, onionskinIsOnlySelected, STRING_UNDEFINED, BOOL, false)                                \
                                                                                                                        \
   X(TOOL, tool, STRING_UNDEFINED, INT, 0)                                                                              \
   X(TOOL_COLOR, toolColor, STRING_UNDEFINED, VEC4, {1.0, 1.0, 1.0, 1.0})                                               \
