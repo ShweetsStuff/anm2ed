@@ -11,7 +11,7 @@ namespace anm2ed::imgui
 
     if (!settings.fileIsAutoReloadSpritesheets) return;
     spritesheetReloadTime += deltaSeconds;
-    if (spritesheetReloadTime < settings.fileAutoReloadInterval) return;
+    if (spritesheetReloadTime < AUTO_RELOAD_INTERVAL) return;
     spritesheetReloadTime = 0.0f;
     for (auto& document : manager.documents)
       if (auto ids = document.spritesheets_changed_get(); !ids.empty()) document.spritesheets_reload(ids);

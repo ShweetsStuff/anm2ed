@@ -423,7 +423,7 @@ namespace anm2ed
   X(LABEL_SHORTCUTS_TAB, "Shortcuts", "Atajos", "Сочетания клавиш", "快捷键", "단축키") \
   X(LABEL_SHORTCUT_COLUMN, "Shortcut", "Atajo", "Сочетание клавиш", "快捷方式", "단축") \
   X(LABEL_SNAP, "Snap", "Ajustar", "Привязка", "吸附", "맞추기") \
-  X(LABEL_SNAPSHOTS, "Snapshots", "Snapshots", "Снапшоты", "快照", "스냅숏") \
+  X(LABEL_SNAPSHOTS, "Undo/Redo", "Deshacer/Rehacer", "Отмена/Повтор", "撤销/重做", "실행 취소/다시 실행") \
   X(LABEL_SOUND, "Sound", "Sonido", "Звук", "声音", "사운드") \
   X(LABEL_SOUNDS, "Sounds", "Sonidos", "Звук", "声音", "사운드") \
   X(LABEL_SOUNDS_WINDOW, "Sounds###Sounds", "Sonidos###Sounds", "Звук###Sounds", "声音###Sounds", "사운드###Sounds") \
@@ -534,7 +534,6 @@ namespace anm2ed
   X(TEXT_SELECT_FRAME, "Select a frame first!", "¡Selecciona primero un frame!", "Сначала выберите кадр!", "请先选择帧！", "먼저 프레임을 선택하세요!") \
   X(TEXT_SELECT_FRAME_OR_REGION, "Select a frame or region first!", "¡Selecciona primero un frame o región!", "Сначала выберите кадр или регион!", "请先选择帧或区域！", "먼저 프레임 또는 영역을 선택하세요!") \
   X(TOOLTIP_AUTO_SPRITESHEET_RELOAD, "Reload spritesheets automatically when their files change on disk.\n(Spritesheets with unsaved edits are left alone.)", "Recarga los spritesheets automáticamente cuando sus archivos cambian en el disco.\n(Los spritesheets con cambios sin guardar no se tocan.)", "Автоматически перезагружать спрайт-листы при изменении их файлов на диске.\n(Спрайт-листы с несохранёнными изменениями не затрагиваются.)", "当图集文件在磁盘上更改时自动重新加载。\n(有未保存修改的图集不受影响。)", "디스크의 파일이 바뀌면 스프라이트 시트를 자동으로 새로고침합니다.\n(저장하지 않은 수정이 있는 스프라이트 시트는 건드리지 않습니다.)") \
-  X(TOOLTIP_AUTO_SPRITESHEET_RELOAD_INTERVAL, "How often (in seconds) spritesheet files are checked for changes.", "Cada cuánto (en segundos) se revisan los archivos de spritesheets en busca de cambios.", "Как часто (в секундах) проверять файлы спрайт-листов на изменения.", "检查图集文件更改的间隔(秒)。", "스프라이트 시트 파일의 변경을 확인하는 간격(초).") \
   X(TOOLTIP_ISAAC_COMPATIBILITY_WARNING, "Before saving, list anything the game doesn't support and what will happen to it.", "Antes de guardar, muestra lo que el juego no soporta y lo que pasará con ello.", "Перед сохранением показывать всё, что игра не поддерживает, и что с этим произойдёт.", "保存前列出游戏不支持的内容及其处理方式。", "저장하기 전에 게임이 지원하지 않는 항목과 그 처리 방식을 알려줍니다.") \
   X(TOOLTIP_MERGE_SPRITESHEETS, "Merge selected spritesheets into the first selected spritesheet.", "Combina los spritesheets seleccionados en el primer spritesheet seleccionado.", "Объединить выбранные спрайт-листы в первый выбранный спрайт-лист.", "将所选图集合并到第一个选中的图集中。", "선택된 스프라이트 시트를 첫 번째 선택된 스프라이트 시트로 병합합니다.") \
   X(TEXT_SELECT_SPRITESHEET, "Select a spritesheet first!", "¡Selecciona primero un spritesheet!", "Сначала выберите спрайт-лист!", "请先选择图集！", "먼저 스프라이트 시트를 선택하세요!") \

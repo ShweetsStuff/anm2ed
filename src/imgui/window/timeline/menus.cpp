@@ -160,42 +160,49 @@ namespace anm2ed::imgui
     auto source = property_source_get();
     auto sourceFrame = source ? model.frame_get(*source) : nullptr;
     auto clipboardFrame = property_clipboard_frame_get();
-    auto clipboard_menu_add = [&](ActionType type, std::function<bool()> isFrameEnabled, std::function<void()> frameRun,
-                                  int propertyType, std::function<bool(edit::FrameProperty)> is_property_enabled,
-                                  std::function<void(edit::FrameProperty)> property_run)
+    // A submenu of the properties a frame type has.
+    auto properties_get = [&](int itemType, std::function<bool(edit::FrameProperty)> is_property_enabled,
+                              std::function<void(edit::FrameProperty)> property_run)
     {
       Action properties{.label = LABEL_PROPERTY};
       for (int i = 0; i < (int)edit::FrameProperty::COUNT; ++i)
       {
         auto property = (edit::FrameProperty)i;
-        if (!edit::is_frame_property_valid(property, (ItemType)propertyType)) continue;
+        if (!edit::is_frame_property_valid(property, (ItemType)itemType)) continue;
         properties.children.push_back({.label = FRAME_PROPERTY_LABELS[i],
                                        .isEnabled = [=]() { return is_property_enabled(property); },
                                        .run = [=]() { property_run(property); }});
       }
       properties.isEnabled = [children = properties.children]()
       { return std::ranges::any_of(children, is_action_enabled); };
+      return properties;
+    };
+    auto clipboard_menu_add =
+        [&](ActionType type, std::function<bool()> isFrameEnabled, std::function<void()> frameRun, Action property)
+    {
       actions.add({.label = ACTION_INFOS[type].label,
                    .children = {{.label = BASIC_FRAME,
                                  .shortcut = ACTION_INFOS[type].shortcut,
                                  .isEnabled = isFrameEnabled,
                                  .run = frameRun},
-                                properties}});
+                                property}});
     };
     auto sourceType = source ? source->itemType : NONE;
+    auto is_source = [=](edit::FrameProperty) { return sourceFrame != nullptr; };
     clipboard_menu_add(
-        ACTION_CUT, [=, this]() { return !selectedFrames.empty(); }, [this]() { cut(); }, sourceType,
-        [=](edit::FrameProperty) { return sourceFrame != nullptr; },
-        [this](edit::FrameProperty property) { property_cut(property); });
+        ACTION_CUT, [=, this]() { return !selectedFrames.empty(); }, [this]() { cut(); },
+        properties_get(sourceType, is_source, [this](edit::FrameProperty property) { property_cut(property); }));
     clipboard_menu_add(
-        ACTION_COPY, [=, this]() { return !copyFrames.empty(); }, [this]() { copy(); }, sourceType,
-        [=](edit::FrameProperty) { return sourceFrame != nullptr; },
-        [this](edit::FrameProperty property) { property_copy(property); });
+        ACTION_COPY, [=, this]() { return !copyFrames.empty(); }, [this]() { copy(); },
+        properties_get(sourceType, is_source, [this](edit::FrameProperty property) { property_copy(property); }));
+    // Only one property is ever on the clipboard, so pasting one is a single item.
+    auto clipboardProperty = (edit::FrameProperty)frameClipboard.property;
     clipboard_menu_add(
         ACTION_PASTE, [&]() { return !clipboard.is_empty(); }, [this]() { paste(); },
-        clipboardFrame ? frameClipboard.itemType : NONE,
-        [this](edit::FrameProperty property) { return is_property_pasteable(property); },
-        [this](edit::FrameProperty property) { property_paste(property); });
+        {.label = LABEL_PROPERTY,
+         .isEnabled = [=, this]()
+         { return clipboardFrame && frameClipboard.property != -1 && is_property_pasteable(clipboardProperty); },
+         .run = [=, this]() { property_paste(clipboardProperty); }});
     // The numbered row has its own (marker) menu.
     if (isRulerHovered)
       actions_popup_draw("##Context Menu", actions, settings);

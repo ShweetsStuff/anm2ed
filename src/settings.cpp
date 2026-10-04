@@ -272,7 +272,6 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
     for (auto [scale, min, max] : {std::tuple{&uiScale, UI_SCALE_MIN, UI_SCALE_MAX},
                                    std::tuple{&renderScale, RENDER_SCALE_MIN, RENDER_SCALE_MAX}})
       *scale = std::clamp(*scale < min ? math::unit_to_percent(*scale) : *scale, min, max);
-    fileAutoReloadInterval = std::clamp(fileAutoReloadInterval, AUTO_RELOAD_INTERVAL_MIN, AUTO_RELOAD_INTERVAL_MAX);
   }
 
   Options Settings::anm2_options_get() const { return {.isExtendedFormat = isFileExtendedFormat}; }
