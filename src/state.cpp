@@ -8,6 +8,7 @@
 #include <imgui/backends/imgui_impl_sdl3.h>
 
 #include "log.hpp"
+#include "math.hpp"
 #include "path.hpp"
 #include "strings.hpp"
 #include "texture.hpp"
@@ -187,7 +188,7 @@ namespace anm2ed
       if (uiScaleDelta != 0.0f)
       {
         settings.uiScale = std::clamp(settings.uiScale + uiScaleDelta, UI_SCALE_MIN, UI_SCALE_MAX);
-        ImGui::GetStyle().FontScaleMain = settings.uiScale;
+        ImGui::GetStyle().FontScaleMain = math::percent_to_unit(settings.uiScale);
       }
     }
 

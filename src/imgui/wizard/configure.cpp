@@ -27,8 +27,8 @@ namespace anm2ed::imgui::wizard
         if (ImGui::BeginChild("##Tab Child", childSize, true))
         {
           ImGui::SeparatorText(localize.get(LABEL_WINDOW_MENU));
-          input_percent_range(localize.get(LABEL_UI_SCALE), temporary.uiScale, UI_SCALE_MIN, UI_SCALE_MAX,
-                              math::unit_to_percent(UI_SCALE_STEP), math::unit_to_percent(UI_SCALE_STEP));
+          input_float_range(localize.get(LABEL_UI_SCALE), temporary.uiScale, UI_SCALE_MIN, UI_SCALE_MAX, UI_SCALE_STEP,
+                            UI_SCALE_STEP, "%.0f%%");
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_UI_SCALE));
           ImGui::Checkbox(localize.get(LABEL_VSYNC), &temporary.isVsync);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_VSYNC));
@@ -184,7 +184,7 @@ namespace anm2ed::imgui::wizard
 
       ImGui::GetIO().KeyRepeatDelay = settings.keyboardRepeatDelay;
       ImGui::GetIO().KeyRepeatRate = settings.keyboardRepeatRate;
-      ImGui::GetStyle().FontScaleMain = settings.uiScale;
+      ImGui::GetStyle().FontScaleMain = math::percent_to_unit(settings.uiScale);
       SnapshotStack::max_size_set(settings.fileSnapshotStackSize);
       imgui::theme_set((theme::Type)settings.theme);
       localize.language = (Language)settings.language;

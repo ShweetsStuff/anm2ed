@@ -25,11 +25,13 @@ namespace anm2ed
   constexpr auto OUTPUT_PATH_DEFAULT = "./output.gif";
 #endif
 
-  constexpr auto UI_SCALE_MIN = 0.5f;
-  constexpr auto UI_SCALE_MAX = 2.0f;
-  constexpr auto UI_SCALE_STEP = 0.25f;
-  constexpr auto RENDER_SCALE_MIN = 0.1f;
-  constexpr auto RENDER_SCALE_MAX = 10.0f;
+  // Scales are percents.
+  constexpr auto UI_SCALE_MIN = 50.0f;
+  constexpr auto UI_SCALE_MAX = 200.0f;
+  constexpr auto UI_SCALE_STEP = 25.0f;
+  constexpr auto RENDER_SCALE_MIN = 25.0f;
+  constexpr auto RENDER_SCALE_MAX = 1000.0f;
+  constexpr auto RENDER_SCALE_STEP = 25.0f;
 
 #define SETTINGS_TYPES                                                                                                 \
   X(INT, int)                                                                                                          \
@@ -53,7 +55,7 @@ namespace anm2ed
   X(WINDOW_SIZE, windowSize, STRING_UNDEFINED, IVEC2_WH, {1200, 720})                                                  \
   X(WINDOW_POSITION, windowPosition, STRING_UNDEFINED, IVEC2, glm::ivec2())                                            \
   X(IS_VSYNC, isVsync, STRING_UNDEFINED, BOOL, true)                                                                   \
-  X(UI_SCALE, uiScale, STRING_UNDEFINED, FLOAT, 1.0f)                                                                  \
+  X(UI_SCALE, uiScale, STRING_UNDEFINED, FLOAT, 100.0f)                                                                \
   X(THEME, theme, STRING_UNDEFINED, INT, imgui::theme::DARK)                                                           \
   X(LANGUAGE, language, STRING_UNDEFINED, INT, ENGLISH)                                                                \
                                                                                                                        \
@@ -202,7 +204,7 @@ namespace anm2ed
   X(RENDER_FORMAT, renderFormat, STRING_UNDEFINED, PATH, "{}.png")                                                     \
   X(RENDER_IS_USE_ANIMATION_BOUNDS, renderIsUseAnimationBounds, STRING_UNDEFINED, BOOL, true)                          \
   X(RENDER_IS_USE_ISOLATED_ANIMATION, renderIsUseIsolatedAnimation, STRING_UNDEFINED, BOOL, false)                     \
-  X(RENDER_SCALE, renderScale, STRING_UNDEFINED, FLOAT, 1.0f)                                                          \
+  X(RENDER_SCALE, renderScale, STRING_UNDEFINED, FLOAT, 100.0f)                                                        \
   X(RENDER_FPS_MODE, renderFpsMode, STRING_UNDEFINED, INT, render::FPS_ANIMATION)                                      \
   X(RENDER_FFMPEG_PATH, renderFFmpegPath, STRING_UNDEFINED, PATH, FFMPEG_PATH_DEFAULT)
 

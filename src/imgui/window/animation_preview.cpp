@@ -230,7 +230,7 @@ namespace anm2ed::imgui
       recordPan = document.previewPan;
       if (auto rect = animation_render_rect_get(manager, document, animation, settings.previewIsRootTransform))
       {
-        recordSize = glm::vec2(rect->z, rect->w) * settings.renderScale;
+        recordSize = glm::vec2(rect->z, rect->w) * math::percent_to_unit(settings.renderScale);
         auto previousSize = size;
         size = recordSize;
         set_to_rect(recordZoom, recordPan, *rect);

@@ -30,7 +30,7 @@ using namespace anm2ed::util;
 namespace anm2ed
 {
   constexpr auto WINDOW_4K_SIZE = glm::ivec2(3840, 2160);
-  constexpr auto UI_SCALE_4K_DEFAULT = 1.5f;
+  constexpr auto UI_SCALE_4K_DEFAULT = 150.0f;
   constexpr auto WINDOW_DEFAULT_SIZE_MULTIPLIER = 0.90f;
 
   constexpr auto SOCKET_ADDRESS = "127.0.0.1";
@@ -249,7 +249,7 @@ namespace anm2ed
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.KeyRepeatDelay = settings.keyboardRepeatDelay;
     io.KeyRepeatRate = settings.keyboardRepeatRate;
-    ImGui::GetStyle().FontScaleMain = settings.uiScale;
+    ImGui::GetStyle().FontScaleMain = math::percent_to_unit(settings.uiScale);
     io.ConfigWindowsMoveFromTitleBarOnly = true;
 
     if (auto imguiData = Settings::imgui_data_load(settings_path()); !imguiData.empty())

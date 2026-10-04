@@ -264,6 +264,10 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
       SETTINGS_MEMBERS SETTINGS_SHORTCUTS SETTINGS_WINDOWS
 #undef X
     }
+
+    // Scales saved as multipliers (before they were percents) read as tiny percents and clamp to the minimum.
+    uiScale = std::clamp(uiScale, UI_SCALE_MIN, UI_SCALE_MAX);
+    renderScale = std::clamp(renderScale, RENDER_SCALE_MIN, RENDER_SCALE_MAX);
   }
 
   Options Settings::anm2_options_get() const { return {.isExtendedFormat = isFileExtendedFormat}; }

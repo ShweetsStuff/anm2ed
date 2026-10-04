@@ -6,7 +6,6 @@
 
 #include <glm/gtc/type_ptr.hpp>
 
-#include "math.hpp"
 #include "path.hpp"
 
 using namespace anm2ed::types;
@@ -224,16 +223,6 @@ namespace anm2ed::imgui
   {
     auto isActivated = ImGui::InputFloat(label, &value, step, stepFast, format, flags);
     value = glm::clamp(value, min, max);
-    return isActivated;
-  }
-
-  // Edits a multiplier (1 = 100%) as a percent; the range is in multipliers, the steps in percent.
-  bool input_percent_range(const char* label, float& value, float min, float max, float step, float stepFast)
-  {
-    auto percent = math::unit_to_percent(value);
-    auto isActivated = input_float_range(label, percent, math::unit_to_percent(min), math::unit_to_percent(max), step,
-                                         stepFast, "%.0f%%");
-    if (percent != math::unit_to_percent(value)) value = math::percent_to_unit(percent);
     return isActivated;
   }
 }
