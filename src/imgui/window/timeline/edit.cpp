@@ -293,4 +293,30 @@ namespace anm2ed::imgui
               std::format("{} {}", localize.get(TOAST_DESERIALIZE_FRAMES_FAILED, anm2ed::ENGLISH), *errorString));
         });
   }
+
+  // Sets the animation's start or end marker at a time, moving the other one if it would end up on the wrong side.
+  void TimelineContext::marker_set(bool isStart, int time)
+  {
+    if (!animation) return;
+    edit_push(isStart ? EDIT_START_MARKER : EDIT_END_MARKER,
+              [=, animationIndex = reference.animationIndex](model::Model& model)
+              {
+                auto animation = model.animation_edit(animationIndex);
+                if (!animation) return;
+                auto marker = std::clamp(time, 0, std::max(animation->frameNum - 1, 0));
+                (isStart ? animation->startMarker : animation->endMarker) = marker;
+                auto& other = isStart ? animation->endMarker : animation->startMarker;
+                if (other != -1 && (isStart ? other < marker : other > marker)) other = marker;
+              });
+  }
+
+  void TimelineContext::markers_remove()
+  {
+    edit_push(EDIT_REMOVE_MARKERS,
+              [animationIndex = reference.animationIndex](model::Model& model)
+              {
+                if (auto animation = model.animation_edit(animationIndex))
+                  animation->startMarker = animation->endMarker = -1;
+              });
+  }
 }

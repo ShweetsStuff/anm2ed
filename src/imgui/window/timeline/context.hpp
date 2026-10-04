@@ -101,6 +101,8 @@ namespace anm2ed::imgui
                                                      {0.3765f, 0.6784f, 0.2980f, 1.0f},
                                                      {0.6353f, 0.2235f, 0.3647f, 1.0f}};
 
+  constexpr auto MARKER_ALPHA = 0.5f;
+  constexpr auto MARKER_OUTSIDE_COLOR = IM_COL32(0, 0, 0, 96);
   constexpr auto FRAME_MULTIPLE = 5;
   constexpr auto FRAME_TOOLTIP_HOVER_DELAY = 0.75f;
 
@@ -234,6 +236,8 @@ namespace anm2ed::imgui
     void rows_move_to_row(std::vector<TimelineRow> draggedRows, TimelineRow targetRow, bool isDropAfter,
                           bool isDropIntoGroup = false);
     void fit_animation_length();
+    void marker_set(bool, int);
+    void markers_remove();
     void frame_references_copy(const std::set<Reference>& selectedFrames);
     void copy();
     void cut();

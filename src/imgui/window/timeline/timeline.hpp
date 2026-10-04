@@ -112,6 +112,8 @@ namespace anm2ed::imgui
   struct TimelineState
   {
     bool isDragging{};
+    bool isRulerHovered{};
+    int markerTime{};
     bool isWindowHovered{};
     bool isHorizontalScroll{};
     popup::ItemProperties itemProperties{};

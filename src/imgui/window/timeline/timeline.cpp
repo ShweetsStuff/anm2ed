@@ -185,6 +185,8 @@ namespace anm2ed::imgui
     if (!animation) return;
 
     if (shortcut(manager.chords[SHORTCUT_PLAY_PAUSE], shortcut::GLOBAL)) playback.toggle();
+    if (shortcut(manager.chords[SHORTCUT_START_MARKER], shortcut::GLOBAL)) marker_set(true, (int)playback.time);
+    if (shortcut(manager.chords[SHORTCUT_END_MARKER], shortcut::GLOBAL)) marker_set(false, (int)playback.time);
 
     if (shortcut(manager.chords[SHORTCUT_MOVE_PLAYHEAD_BACK], shortcut::GLOBAL))
     {

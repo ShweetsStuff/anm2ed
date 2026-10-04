@@ -12,7 +12,7 @@ namespace anm2ed
     void toggle();
     void timing_reset();
     void clamp(int);
-    void tick(int, int, bool, float);
+    void tick(int, int, int, bool, float);
     void decrement(int);
     void increment(int);
 

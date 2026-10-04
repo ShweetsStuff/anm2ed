@@ -226,6 +226,49 @@ namespace anm2ed::imgui
 
         if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) isDragging = false;
 
+        // Markers show as faded playheads, with the numbers outside the range they set darkened.
+        if (length > 0 && animation)
+        {
+          auto x_get = [&](int time) { return cursorScreenPos.x + frameSize.x * (float)time; };
+          auto range = model::animation_play_range_get(*animation);
+          auto bottom = cursorScreenPos.y + frameSize.y;
+          if (animation->startMarker != -1)
+            drawList->AddRectFilled(cursorScreenPos, ImVec2(x_get(range.x), bottom), MARKER_OUTSIDE_COLOR);
+          if (animation->endMarker != -1)
+            drawList->AddRectFilled(ImVec2(x_get(range.y), cursorScreenPos.y),
+                                    ImVec2(cursorScreenPos.x + framesSize.x, bottom), MARKER_OUTSIDE_COLOR);
+          auto markerTint = playheadIconTint;
+          markerTint.w *= MARKER_ALPHA;
+          for (auto marker : {animation->startMarker, animation->endMarker})
+            if (marker != -1)
+              drawList->AddImage((ImTextureID)(intptr_t)resources.icon_id_get(icon::PLAYHEAD),
+                                 ImVec2(x_get(marker), cursorScreenPos.y), ImVec2(x_get(marker) + frameSize.x, bottom),
+                                 ImVec2(0, 0), ImVec2(1, 1), ImGui::GetColorU32(markerTint));
+        }
+
+        isRulerHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
+        if (isRulerHovered && ImGui::IsMouseReleased(ImGuiMouseButton_Right)) markerTime = hoveredTime;
+        Actions markerActions{};
+        auto isAnimation = [&]() { return animation != nullptr; };
+        markerActions.add({.label = LABEL_ADD_START_MARKER,
+                           .shortcut = SHORTCUT_START_MARKER,
+                           .isEnabled = isAnimation,
+                           .run = [&]() { marker_set(true, markerTime); }});
+        markerActions.add({.label = LABEL_ADD_END_MARKER,
+                           .shortcut = SHORTCUT_END_MARKER,
+                           .isEnabled = isAnimation,
+                           .run = [&]() { marker_set(false, markerTime); }});
+        markerActions.separator();
+        markerActions.add(
+            {.label = LABEL_REMOVE_MARKERS,
+             .shortcut = -1,
+             .isEnabled = [&]() { return animation && (animation->startMarker != -1 || animation->endMarker != -1); },
+             .run = [&]() { markers_remove(); }});
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
+        actions_context_window_draw("##Marker Menu", markerActions, settings);
+        ImGui::PopStyleVar(2);
+
         if (length > 0)
         {
           ImGui::SetCursorPos(ImVec2(cursorPos.x + frameSize.x * floorf(playback.time), cursorPos.y));

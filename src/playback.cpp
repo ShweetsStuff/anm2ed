@@ -18,26 +18,25 @@ namespace anm2ed
 
   void Playback::clamp(int length) { time = glm::clamp(time, 0.0f, (float)length - 1.0f); }
 
-  void Playback::tick(int fps, int length, bool isLoop, float deltaSeconds)
+  // Plays the frames [start, end); a playhead outside them starts at start.
+  void Playback::tick(int fps, int start, int end, bool isLoop, float deltaSeconds)
   {
     if (isLoop) isFinished = false;
-    if (isFinished || !isPlaying || fps <= 0 || length <= 0) return;
+    if (isFinished || !isPlaying || fps <= 0 || end <= start) return;
     if (deltaSeconds <= 0.0f) return;
 
+    if (!std::isfinite(time) || time < (float)start || time >= (float)end) time = (float)start;
     time += deltaSeconds * (float)fps;
-
-    if (!std::isfinite(time)) time = 0.0f;
 
     if (isLoop)
     {
-      time = std::fmod(time, (float)length);
-      if (time < 0.0f) time += (float)length;
+      time = (float)start + std::fmod(time - (float)start, (float)(end - start));
       return;
     }
 
-    if (time >= (float)length)
+    if (time >= (float)end)
     {
-      time = (float)length - 1.0f;
+      time = (float)end - 1.0f;
       isPlaying = false;
       isFinished = true;
       timing_reset();

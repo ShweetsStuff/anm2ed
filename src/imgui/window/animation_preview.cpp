@@ -184,7 +184,8 @@ namespace anm2ed::imgui
         }
 
         auto fps = std::max(model.info.fps, 1);
-        playback.tick(fps, animation->frameNum, (animation->isLoop || settings.playbackIsLoop) && !manager.isRecording,
+        auto range = model::animation_play_range_get(*animation);
+        playback.tick(fps, range.x, range.y, (animation->isLoop || settings.playbackIsLoop) && !manager.isRecording,
                       deltaSeconds);
 
         frameTime = playback.time;

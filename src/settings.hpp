@@ -267,6 +267,8 @@ namespace anm2ed
   X(SHORTCUT_PREVIOUS_FRAME, shortcutPreviousFrame, SHORTCUT_STRING_PREVIOUS_FRAME, STRING, "F7")                      \
   X(SHORTCUT_NEXT_FRAME, shortcutNextFrame, SHORTCUT_STRING_NEXT_FRAME, STRING, "F8")                                  \
   /* Item */                                                                                                           \
+  X(SHORTCUT_START_MARKER, shortcutStartMarker, SHORTCUT_STRING_START_MARKER, STRING, "Shift+Comma")                   \
+  X(SHORTCUT_END_MARKER, shortcutEndMarker, SHORTCUT_STRING_END_MARKER, STRING, "Shift+Period")                        \
   X(SHORTCUT_PREVIOUS_ITEM, shortcutPreviousItem, SHORTCUT_STRING_PREVIOUS_ITEM, STRING, "Shift+F7")                   \
   X(SHORTCUT_NEXT_ITEM, shortcutNextItem, SHORTCUT_STRING_NEXT_ITEM, STRING, "Shift+F8")                               \
   /* Animation */                                                                                                      \

@@ -118,6 +118,8 @@ namespace anm2ed
   X(EDIT_ADD_SOUND, "Add Sound", "Añadir Sonido", "Добавить звук", "添加声音", "사운드 추가") \
   X(EDIT_ADD_SHADER, "Add Shader", "Add Shader", "Add Shader", "Add Shader", "Add Shader") \
   X(EDIT_ADD_TRIGGER_SOUND, "Add Trigger Sound", "Añadir Sonido del Trigger", "Добавить звук триггера", "添加事件触发器声音", "트리거 사운드 추가") \
+  X(EDIT_END_MARKER, "Set End Marker", "Poner Marcador de Fin", "Конечный маркер", "设置结束标记", "끝 마커 설정") \
+  X(EDIT_REMOVE_MARKERS, "Remove Markers", "Quitar Marcadores", "Удаление маркеров", "移除标记", "마커 제거") \
   X(EDIT_REMOVE_TRIGGER_SOUND, "Remove Trigger Sound", "Remover Sonido del Trigger", "Удалить звук триггера", "移除事件触发器声音", "트리거 사운드 제거") \
   X(EDIT_ANIMATION_LENGTH, "Animation Length", "Duracion De Animacion", "Длина анимации", "动画时长", "애니메이션 길이") \
   X(EDIT_AUTHOR, "Author", "Autor", "Автор", "制作者", "작성자") \
@@ -137,6 +139,7 @@ namespace anm2ed
   X(EDIT_FPS, "FPS", "FPS", "FPS", "每秒帧数(FPS)", "FPS") \
   X(EDIT_GROUP_ITEMS, "Group Item(s)", "Agrupar item(s)", "Сгруппировать элементы", "将项目分组", "항목 그룹화") \
   X(EDIT_REMOVE_GROUP, "Remove Group", "Eliminar grupo", "Удалить группу", "删除组", "그룹 삭제") \
+  X(EDIT_START_MARKER, "Set Start Marker", "Poner Marcador de Inicio", "Начальный маркер", "设置起始标记", "시작 마커 설정") \
   X(EDIT_TOGGLE_GROUP_EXPANDED, "Toggle Group Expanded", "Alternar grupo expandido", "Развернуть/свернуть группу", "展开/折叠组", "그룹 펼침 전환") \
   X(EDIT_FRAME_COLOR_OFFSET, "Frame Color Offset", "Offset de color de Frame", "Смещение цвета кадра", "帧颜色偏移", "프레임 색상 오프셋") \
   X(EDIT_FRAME_CROP, "Frame Crop", "Recorte de Frame", "Обрезка кадра", "帧裁剪", "프레임 자르기") \
@@ -248,6 +251,8 @@ namespace anm2ed
   X(FORMAT_TINT, "Tint: {0}, {1}, {2}, {3}", "Tint: {0}, {1}, {2}, {3}", "Оттенок: {0}, {1}, {2}, {3}", "色调: {0}, {1}, {2}, {3}", "색조: {0}, {1}, {2}, {3}") \
   X(FORMAT_TOOLTIP_SHORTCUT, "{0}\n(Shortcut: {1})", "{0}\n(Shortcut: {1})", "{0}\n(Сочетание клавиш: {1})", "{0}\n(快捷键: {1})", "{0}\n(단축키: {1})") \
   X(FORMAT_VISIBLE, "Visible: {0}", "Visible: {0}", "Видимо: {0}", "可见: {0}", "표시: {0}") \
+  X(LABEL_ADD_END_MARKER, "Add End Marker Here", "Añadir Marcador de Fin Aquí", "Поставить конечный маркер здесь", "在此添加结束标记", "여기에 끝 마커 추가") \
+  X(LABEL_ADD_START_MARKER, "Add Start Marker Here", "Añadir Marcador de Inicio Aquí", "Поставить начальный маркер здесь", "在此添加起始标记", "여기에 시작 마커 추가") \
   X(LABEL_ADJUST, "Adjust", "Ajustar", "Отрегулировать", "调节", "조정") \
   X(LABEL_ALT_ICONS, "Alt Icons", "Iconos Alternos", "Альт-иконки", "替代图标", "대체 아이콘") \
   X(LABEL_ANIMATIONS_CHILD, "Animations", "Animaciones", "", "动画", "애니메이션") \
@@ -255,6 +260,7 @@ namespace anm2ed
   X(LABEL_AUTO_SPRITESHEET_RELOAD, "Auto Spritesheet Reload", "Recarga Automática de Spritesheets", "Автоперезагрузка спрайт-листов", "自动重新加载图集", "스프라이트 시트 자동 새로고침") \
   X(LABEL_ONLY_SELECTED_ITEM, "Only Selected Item", "Solo el Elemento Seleccionado", "Только выбранный элемент", "仅选中项目", "선택한 항목만") \
   X(LABEL_PIVOT_PATH, "Pivot Path", "Trayectoria del Pivote", "Путь опорной точки", "枢轴路径", "피벗 경로") \
+  X(LABEL_REMOVE_MARKERS, "Remove Markers", "Quitar Marcadores", "Удалить маркеры", "移除标记", "마커 제거") \
   X(LABEL_SPRITESHEETS_PACK_POPUP, "Pack Spritesheet", "Empaquetar spritesheet", "Упаковать спрайт-лист", "打包图集", "스프라이트 시트 패킹") \
   X(LABEL_SPRITESHEETS_MERGE_POPUP, "Merge Spritesheets", "Combinar Spritesheets", "Объединить спрайт-листы", "合并图集", "스프라이트 시트 병합") \
   X(LABEL_PACK_PADDING, "Padding", "Relleno", "Отступ", "填充", "패딩") \
@@ -474,6 +480,7 @@ namespace anm2ed
   X(SHORTCUT_STRING_DEFAULT, "Default", "Predeterminado", "По умолчанию", "默认", "기본값") \
   X(SHORTCUT_STRING_DRAW, "Draw", "Dibujar", "Рисовать", "绘画", "그리기") \
   X(SHORTCUT_STRING_DUPLICATE, "Duplicate", "Duplicar", "Дублировать", "拷贝", "복제") \
+  X(SHORTCUT_STRING_END_MARKER, "End Marker", "Marcador de Fin", "Конечный маркер", "结束标记", "끝 마커") \
   X(SHORTCUT_STRING_ERASE, "Erase", "Borrar", "Стереть", "擦除", "지우기") \
   X(SHORTCUT_STRING_EXIT, "Exit", "Salir", "Выйти", "退出", "종료") \
   X(SHORTCUT_STRING_EXTEND_FRAME, "Extend Frame", "Extender Frame", "Удлиннить кадр", "延长帧", "프레임 확장") \
@@ -507,6 +514,7 @@ namespace anm2ed
   X(SHORTCUT_STRING_SPLIT, "Split", "Dividir", "", "", "") \
   X(SHORTCUT_STRING_BAKE, "Bake", "Bake", "Запечь", "提前渲染", "베이크") \
   X(SHORTCUT_STRING_SHORTEN_FRAME, "Shorten Frame", "Acortar Frame", "Укоротить кадр", "缩短帧时长", "프레임 단축") \
+  X(SHORTCUT_STRING_START_MARKER, "Start Marker", "Marcador de Inicio", "Начальный маркер", "起始标记", "시작 마커") \
   X(SHORTCUT_STRING_UNDO, "Undo", "Deshacer", "Отменить", "撤销", "실행 취소") \
   X(SHORTCUT_STRING_ZOOM_IN, "Zoom In", "Zoom In", "Увеличить", "视图放大", "확대") \
   X(SHORTCUT_STRING_ZOOM_OUT, "Zoom Out", "Zoom Out", "Уменьшить", "视图缩小", "축소") \

@@ -1,6 +1,7 @@
 #include "common.hpp"
 
 #include "model/frames.hpp"
+#include "playback.hpp"
 #include "util/pack.hpp"
 
 using namespace anm2ed;
@@ -288,4 +289,28 @@ TEST_CASE("spritesheet pixel edits")
     CHECK(model::item_get(model.content.layers, 1)->spritesheetId == 0);
     operation_check("spritesheets_merge", model);
   }
+}
+
+TEST_CASE("markers stay in the editor's copy and bound playback")
+{
+  auto model = fixture_load("01_minimal.anm2");
+  auto animation = model.animation_edit(0);
+  REQUIRE(animation);
+  animation->frameNum = 10;
+  animation->startMarker = 2;
+  animation->endMarker = 5;
+  CHECK(model::animation_play_range_get(*animation) == glm::ivec2(2, 6));
+
+  auto text = model::model_to_string(model);
+  CHECK(game_document_get(text).find("Marker") == std::string::npos);
+  auto reloaded = model_load(text);
+  CHECK(reloaded.animation_get(0)->startMarker == 2);
+  CHECK(reloaded.animation_get(0)->endMarker == 5);
+
+  Playback playback{};
+  playback.isPlaying = true;
+  playback.tick(10, 2, 6, true, 0.1f);
+  CHECK(playback.time == doctest::Approx(3.0f));
+  playback.tick(10, 2, 6, true, 0.5f);
+  CHECK(playback.time == doctest::Approx(4.0f));
 }

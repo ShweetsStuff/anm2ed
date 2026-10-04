@@ -35,7 +35,7 @@ namespace anm2ed::model
   constexpr std::string_view KNOWN_ATTRIBUTES[] = {
       "Name", "CreatedBy", "CreatedOn", "Binding", "Value", "DefaultAnimation", "Path", "Vertex", "Fragment", "Id",
       "LayerId", "NullId", "SpritesheetId", "Fps", "Version", "FrameNum", "Delay", "AtFrame", "EventId", "RegionId",
-      "ShaderId", "SoundId", "GroupId", "Index", "Loop", "Visible", "ShowRect", "IsExpanded", "Enabled", "Rotation",
+      "ShaderId", "SoundId", "GroupId", "Index", "Loop", "StartMarker", "EndMarker", "Visible", "ShowRect", "IsExpanded", "Enabled", "Rotation",
       "XPivot", "YPivot", "XCrop", "YCrop", "XPosition", "YPosition", "Width", "Height", "XScale", "YScale", "ShearX",
       "ShearY", "RedTint", "GreenTint", "BlueTint", "AlphaTint", "RedOffset", "GreenOffset", "BlueOffset",
       "Interpolated", "Origin", "BakeInterpolation", "BakeDelay", "BakeCount", "OriginalDelay"};
@@ -423,6 +423,8 @@ namespace anm2ed::model
     Animation animation{.name = string_get(element, "Name"),
                         .frameNum = int_get(element, "FrameNum", 1),
                         .isLoop = bool_get(element, "Loop", true),
+                        .startMarker = int_get(element, "StartMarker"),
+                        .endMarker = int_get(element, "EndMarker"),
                         .root = {.type = ItemType::ROOT},
                         .layout = {},
                         .extras = extras_read(element)};
@@ -1389,6 +1391,9 @@ namespace anm2ed::model
     sink.attribute("Name", animation.name);
     sink.attribute("FrameNum", animation.frameNum);
     sink.attribute("Loop", animation.isLoop);
+    if (writer.is(SERIALIZE_EXTENSIONS))
+      for (auto [name, marker] : {std::pair{"StartMarker", animation.startMarker}, {"EndMarker", animation.endMarker}})
+        if (marker != -1) sink.attribute(name, marker);
     if (groupId != -1 && is_group_id_written(writer)) sink.attribute("GroupId", groupId);
     extras_write(sink, animation.extras);
 

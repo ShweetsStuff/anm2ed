@@ -96,6 +96,9 @@ namespace anm2ed::model
     std::string name{};
     int frameNum{1};
     bool isLoop{true};
+    // Playback stays between these frames (inclusive) when set; -1 for none. Saved only in the editor's copy.
+    int startMarker{-1};
+    int endMarker{-1};
     Track root{.type = ItemType::ROOT, .frames = {Frame{}}};
     std::vector<TrackEntry> layers{};
     std::vector<TrackEntry> nulls{};
@@ -379,6 +382,7 @@ namespace anm2ed::model
   int track_frames_count_get(const Track&);
   int track_length_get(const Track&);
   int animation_length_get(const Animation&);
+  glm::ivec2 animation_play_range_get(const Animation&);
   const Track* animation_track_get(const Animation&, int, int, int = NONE, int = -1);
   Track* animation_track_get(Animation&, int, int, int = NONE, int = -1);
   TrackGroup* animation_track_group_get(Animation&, int, int);

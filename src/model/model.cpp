@@ -368,6 +368,15 @@ namespace anm2ed::model
     return length;
   }
 
+  // The frames playback stays within: [start, end), from the markers (or the whole animation).
+  glm::ivec2 animation_play_range_get(const Animation& animation)
+  {
+    auto length = std::max(animation.frameNum, 1);
+    auto start = animation.startMarker != -1 ? std::clamp(animation.startMarker, 0, length - 1) : 0;
+    auto end = animation.endMarker != -1 ? std::clamp(animation.endMarker + 1, start + 1, length) : length;
+    return {start, end};
+  }
+
   int animation_length_get(const Animation& animation)
   {
     int length{};
