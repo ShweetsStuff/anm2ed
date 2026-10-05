@@ -1,0 +1,134 @@
+// Animations drawn by the editor's OpenGL renderer, compared with golden PNGs (ANM2ED_UPDATE_GOLDEN=1 rewrites them).
+// Every render is also written to ANM2ED_RENDER_DIR (build/renders) so it can be looked at. Skipped without OpenGL.
+
+#include <doctest.h>
+
+#include <cstdlib>
+#include <format>
+
+#include "canvas.hpp"
+#include "document.hpp"
+#include "image.hpp"
+#include "render.hpp"
+
+using namespace anm2ed;
+
+namespace anm2ed::test
+{
+  const std::filesystem::path RENDER_TEST_DIR = std::filesystem::path(ANM2ED_TEST_DIR) / "render";
+  const std::filesystem::path GOLDEN_DIR = RENDER_TEST_DIR / "golden";
+  const std::filesystem::path OUTPUT_DIR = ANM2ED_RENDER_DIR;
+  constexpr int CHANNEL_TOLERANCE = 8;
+  constexpr double MISMATCH_RATIO_MAX = 0.01;
+  constexpr float SCALE = 3.0f;
+  constexpr glm::vec4 BACKGROUND = {0.2f, 0.2f, 0.2f, 1.0f};
+}
+
+using namespace anm2ed::test;
+
+// Different OpenGL implementations round a little differently: a few pixels may differ, each only slightly.
+void golden_image_check(const std::string& name)
+{
+  auto actualPath = OUTPUT_DIR / name;
+  auto goldenPath = GOLDEN_DIR / name;
+  INFO("render: ", actualPath.string());
+  if (std::getenv("ANM2ED_UPDATE_GOLDEN"))
+  {
+    std::filesystem::copy_file(actualPath, goldenPath, std::filesystem::copy_options::overwrite_existing);
+    return;
+  }
+  resource::Image actual(actualPath);
+  resource::Image golden(goldenPath);
+  REQUIRE(golden.is_valid());
+  REQUIRE(actual.size == golden.size);
+  int mismatches{};
+  for (std::size_t i = 0; i < actual.pixels.size(); ++i)
+    mismatches += std::abs((int)actual.pixels[i] - (int)golden.pixels[i]) > CHANNEL_TOLERANCE;
+  CHECK((double)mismatches / (double)actual.pixels.size() <= MISMATCH_RATIO_MAX);
+}
+
+struct RenderFixture
+{
+  render::HeadlessGL gl{};
+  std::optional<Document> document{};
+  std::optional<resource::Shader> shader{};
+  std::optional<Canvas> canvas{};
+  const model::Animation* animation{};
+  glm::vec4 bounds{};
+
+  explicit RenderFixture(const char* file)
+  {
+    if (!gl.is_valid()) return;
+    std::filesystem::create_directories(OUTPUT_DIR);
+    document.emplace(RENDER_TEST_DIR / file, false);
+    auto& info = resource::shader::SHADERS[resource::shader::TEXTURE];
+    shader.emplace(info.vertex, info.fragment);
+    canvas.emplace(glm::vec2(1.0f));
+    animation = document->model.animation_get(0);
+    bounds = render::animation_bounds_get(*document, *animation, true);
+  }
+
+  std::vector<uint8_t> frame_get(float time)
+  {
+    auto pixels =
+        render::animation_frame_render(*canvas, *shader, *document, *animation, time, bounds, SCALE, BACKGROUND, true);
+    render::pixels_unpremultiply(pixels);
+    return pixels;
+  }
+
+  glm::u8vec4 pixel_get(const std::vector<uint8_t>& pixels, glm::vec2 point)
+  {
+    auto position = glm::ivec2((point - glm::vec2(bounds.x, bounds.y)) * SCALE);
+    auto index = ((std::size_t)position.y * (std::size_t)canvas->size.x + (std::size_t)position.x) * 4;
+    return {pixels[index], pixels[index + 1], pixels[index + 2], pixels[index + 3]};
+  }
+};
+
+TEST_CASE("frames draw where the animation puts them")
+{
+  RenderFixture fixture("spin.anm2");
+  if (!fixture.gl.is_valid())
+  {
+    MESSAGE("skipped: no OpenGL context");
+    return;
+  }
+  REQUIRE(fixture.document->is_valid());
+
+  // At time 0 the red square is centered at (-16, 0) with its white dot up and left; the half-transparent blue
+  // square (32 x 32, at the origin) covers the middle.
+  auto pixels = fixture.frame_get(0.0f);
+  auto red = fixture.pixel_get(pixels, {-20.0f, 4.0f});
+  CHECK(red.r > 200);
+  CHECK(red.g < 80);
+  auto dot = fixture.pixel_get(pixels, {-18.5f, -2.5f});
+  CHECK(dot.g > 200);
+  auto blue = fixture.pixel_get(pixels, {12.0f, 12.0f});
+  CHECK(blue.b > blue.r + 40);
+
+  auto framePath = OUTPUT_DIR / "spin_frame_0.png";
+  REQUIRE(resource::Image::write_pixels_png(framePath, glm::ivec2(fixture.canvas->size), pixels.data()));
+  golden_image_check("spin_frame_0.png");
+}
+
+TEST_CASE("a recorded spritesheet holds every frame")
+{
+  RenderFixture fixture("spin.anm2");
+  if (!fixture.gl.is_valid())
+  {
+    MESSAGE("skipped: no OpenGL context");
+    return;
+  }
+
+  render::RecorderOptions options{.type = render::SPRITESHEET,
+                                  .path = OUTPUT_DIR / "spin_sheet.png",
+                                  .start = 0,
+                                  .end = fixture.animation->frameNum - 1,
+                                  .animationFps = fixture.document->model.info.fps,
+                                  .fps = fixture.document->model.info.fps};
+  REQUIRE(render::animation_record(options, *fixture.canvas, *fixture.shader, *fixture.document, *fixture.animation,
+                                   fixture.bounds, SCALE, BACKGROUND, true));
+  resource::Image sheet(options.path);
+  auto layout = render::spritesheet_layout_get(0, 0, fixture.animation->frameNum);
+  CHECK(sheet.size == glm::ivec2(fixture.canvas->size) * glm::ivec2(layout.columns, layout.rows));
+  golden_image_check("spin_sheet.png");
+}

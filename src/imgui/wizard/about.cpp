@@ -251,20 +251,13 @@ namespace anm2ed::imgui::wizard
     vec2 pan{};
     state.canvas->set_to_rect(zoom, pan, rect);
 
-    auto transform = state.canvas->transform_get(zoom, pan);
-    for (const auto& draw :
-         model::animation_draws_get(state.model, *animation, {.time = state.time, .isRootTransform = true}))
-    {
-      auto& frame = draw.frame;
-      auto layer = draw.type == model::DrawType::LAYER ? model::item_get(state.model.content.layers, draw.id) : nullptr;
-      auto texture = layer ? state.textures.find(layer->spritesheetId) : state.textures.end();
-      if (texture == state.textures.end() || !texture->second.is_valid() || frame.size == vec2()) continue;
-      auto textureSize = vec2(texture->second.size);
-      auto uvVertices = math::uv_vertices_get(frame.crop / textureSize, (frame.crop + frame.size) / textureSize);
-      state.canvas->texture_render(resources.shaders[shader::TEXTURE], resource::texture::id_get(texture->second),
-                                   transform * draw.parent * model::draw_quad_model_get(draw), frame.tint,
-                                   frame.colorOffset, uvVertices.data());
-    }
+    state.canvas->layers_render(resources.shaders[shader::TEXTURE], state.model, *animation,
+                                {.time = state.time, .isRootTransform = true}, state.canvas->transform_get(zoom, pan),
+                                [&](int id)
+                                {
+                                  auto texture = state.textures.find(id);
+                                  return texture == state.textures.end() ? nullptr : &texture->second;
+                                });
 
     state.canvas->unbind();
   }

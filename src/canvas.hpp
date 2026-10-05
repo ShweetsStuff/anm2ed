@@ -1,11 +1,14 @@
 #pragma once
 
 #include <array>
+#include <functional>
 
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 
 #include "framebuffer.hpp"
+#include "image.hpp"
+#include "model/draw.hpp"
 #include "shader.hpp"
 
 #include "types.hpp"
@@ -65,6 +68,9 @@ namespace anm2ed
     void texture_render(resource::Shader&, GLuint, glm::mat4 = {1.0f}, glm::vec4 = glm::vec4(1.0f), glm::vec3 = {},
                         float* = (float*)TEXTURE_VERTICES, glm::vec2 = {}, float = 0.0f) const;
     void rect_fill_render(resource::Shader&, const glm::mat4&, const glm::mat4&, glm::vec4 = glm::vec4(1.0f)) const;
+    void layers_render(resource::Shader&, const model::Model&, const model::Animation&, const model::DrawOptions&,
+                       const glm::mat4&, const std::function<const resource::Image*(int)>&,
+                       const std::function<resource::Shader*(int)>& = {}) const;
     void dashed_render(resource::Shader&, const glm::mat4&, const glm::mat4&, glm::vec4, float, float, float, GLenum,
                        int) const;
     void rect_render(resource::Shader&, const glm::mat4&, const glm::mat4&, glm::vec4 = glm::vec4(1.0f),

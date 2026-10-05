@@ -10,11 +10,15 @@
 #include <string_view>
 
 #include <SDL3/SDL_timer.h>
+#include <SDL3/SDL_video.h>
+#include <glad/glad.h>
 
 #include "audio.hpp"
+#include "canvas.hpp"
 #include "document.hpp"
 #include "file.hpp"
 #include "log.hpp"
+#include "model/frames.hpp"
 #include "path.hpp"
 #include "process.hpp"
 #include "toast.hpp"
@@ -178,6 +182,7 @@ namespace anm2ed
 namespace anm2ed::render
 {
   constexpr int TEMP_DIRECTORY_ATTEMPTS = 1000;
+  constexpr glm::vec4 BOUNDS_DEFAULT = {-32.0f, -32.0f, 64.0f, 64.0f};
   constexpr int ALPHA_OPAQUE = 255;
   constexpr float CHANNEL_MAX = 255.0f;
 
@@ -275,6 +280,59 @@ namespace anm2ed::render
     return isGenerated;
   }
 
+  HeadlessGL::HeadlessGL()
+  {
+    if (!SDL_Init(SDL_INIT_VIDEO)) return;
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    window = SDL_CreateWindow("anm2ed", 1, 1, SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN);
+    if (window) context = SDL_GL_CreateContext(window);
+    if (!context || !gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress))
+    {
+      if (context) SDL_GL_DestroyContext(context);
+      context = nullptr;
+      return;
+    }
+    glEnable(GL_BLEND);
+    glDisable(GL_DEPTH_TEST);
+  }
+
+  HeadlessGL::~HeadlessGL()
+  {
+    if (context) SDL_GL_DestroyContext(context);
+    if (window) SDL_DestroyWindow(window);
+    SDL_Quit();
+  }
+
+  bool HeadlessGL::is_valid() const { return context != nullptr; }
+
+  glm::vec4 animation_bounds_get(const Document& document, const model::Animation& animation, bool isRootTransform)
+  {
+    auto bounds = model::animation_rect(document.model, animation, isRootTransform);
+    return bounds != glm::vec4(-1.0f) ? bounds : BOUNDS_DEFAULT;
+  }
+
+  std::vector<uint8_t> animation_frame_render(Canvas& canvas, Shader& shader, Document& document,
+                                              const model::Animation& animation, float time, glm::vec4 bounds,
+                                              float scale, glm::vec4 background, bool isRootTransform)
+  {
+    canvas.size_set(glm::vec2(glm::max(glm::ivec2(glm::ceil(glm::vec2(bounds.z, bounds.w) * scale)), glm::ivec2(1))));
+    float zoom{};
+    glm::vec2 pan{};
+    canvas.set_to_rect(zoom, pan, bounds);
+    canvas.bind();
+    canvas.viewport_set();
+    canvas.clear(glm::vec4(glm::vec3(background) * background.a, background.a));
+    canvas.layers_render(
+        shader, document.model, animation, {.time = time, .isRootTransform = isRootTransform},
+        canvas.transform_get(zoom, pan), [&](int id) { return document.texture_get(id); },
+        [&](int id) { return document.shader_get(id); });
+    auto pixels = canvas.pixels_get();
+    canvas.unbind();
+    return pixels;
+  }
+
   bool Recorder::start(const RecorderOptions& recorderOptions)
   {
     options = recorderOptions;
@@ -359,5 +417,26 @@ namespace anm2ed::render
     frames.clear();
     soundIds.clear();
     index = count = 0;
+  }
+
+  bool animation_record(const RecorderOptions& recorderOptions, Canvas& canvas, Shader& shader, Document& document,
+                        const model::Animation& animation, glm::vec4 bounds, float scale, glm::vec4 background,
+                        bool isRootTransform)
+  {
+    auto options = recorderOptions;
+    options.isIsolated = options.isBounded = true;
+    Recorder recorder{};
+    if (!recorder.start(options)) return false;
+    while (!recorder.is_done())
+    {
+      auto pixels = animation_frame_render(canvas, shader, document, animation, recorder.time_get(), bounds, scale,
+                                           background, isRootTransform);
+      if (recorder.frame_capture(std::move(pixels), glm::ivec2(canvas.size), -1)) continue;
+      recorder.cancel();
+      return false;
+    }
+    AudioStream audioStream(nullptr);
+    recorder.finish(document, audioStream);
+    return path::is_exist(options.path);
   }
 }

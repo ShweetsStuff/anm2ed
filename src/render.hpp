@@ -8,9 +8,23 @@
 #include "audio_stream.hpp"
 #include <glm/glm.hpp>
 
+struct SDL_Window;
+struct SDL_GLContextState;
+
 namespace anm2ed
 {
+  class Canvas;
   class Document;
+}
+
+namespace anm2ed::model
+{
+  struct Animation;
+}
+
+namespace anm2ed::resource
+{
+  class Shader;
 }
 
 namespace anm2ed::render
@@ -111,6 +125,25 @@ namespace anm2ed::render
     return {rows, columns};
   }
 
+  // An OpenGL context with no visible window, for drawing animations outside the editor (the CLI, render tests).
+  class HeadlessGL
+  {
+    SDL_Window* window{};
+    SDL_GLContextState* context{};
+
+  public:
+    HeadlessGL();
+    ~HeadlessGL();
+    bool is_valid() const;
+  };
+
+  // The area an animation covers over all its frames (or a default one when it draws nothing).
+  glm::vec4 animation_bounds_get(const Document&, const model::Animation&, bool);
+  // One frame drawn over `bounds` at `scale`, as premultiplied RGBA rows from the top.
+  std::vector<uint8_t> animation_frame_render(Canvas&, resource::Shader&, Document&, const model::Animation&, float,
+                                              glm::vec4, float, glm::vec4, bool);
+  void pixels_unpremultiply(std::vector<uint8_t>&);
+
   struct RecorderOptions
   {
     Type type{};
@@ -151,6 +184,11 @@ namespace anm2ed::render
     std::vector<int> soundIds{};
     int soundTime{-1};
   };
+
+  // Records a whole animation with these options (bounded and isolated), each frame drawn as animation_frame_render
+  // draws it; false when a frame or the output can't be written.
+  bool animation_record(const RecorderOptions&, Canvas&, resource::Shader&, Document&, const model::Animation&,
+                        glm::vec4, float, glm::vec4, bool);
 }
 
 namespace anm2ed

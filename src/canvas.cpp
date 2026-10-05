@@ -6,6 +6,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "math.hpp"
+#include "texture.hpp"
 
 using namespace glm;
 using namespace anm2ed::resource;
@@ -268,6 +269,28 @@ namespace anm2ed
       if (auto location = glGetUniformLocation(shader.id, name); location != -1) glUniform1f(location, value);
 
     rect_end(rectVAO, mode, count);
+  }
+
+  // An animation's layers alone (no markers or helpers); spritesheet images and custom shaders are looked up by id.
+  void Canvas::layers_render(Shader& shader, const model::Model& model, const model::Animation& animation,
+                             const model::DrawOptions& options, const mat4& transform,
+                             const std::function<const Image*(int)>& image_get,
+                             const std::function<Shader*(int)>& shader_get) const
+  {
+    for (const auto& draw : model::animation_draws_get(model, animation, options))
+    {
+      if (draw.type != model::DrawType::LAYER) continue;
+      auto& frame = draw.frame;
+      auto layer = model::item_get(model.content.layers, draw.id);
+      auto image = layer ? image_get(layer->spritesheetId) : nullptr;
+      if (!image || !image->is_valid() || frame.size == vec2()) continue;
+      auto imageSize = vec2(image->size);
+      auto uvVertices = math::uv_vertices_get(frame.crop / imageSize, (frame.crop + frame.size) / imageSize);
+      auto customShader = shader_get ? shader_get(frame.shaderId) : nullptr;
+      texture_render(customShader ? *customShader : shader, texture::id_get(*image),
+                     transform * draw.parent * model::draw_quad_model_get(draw), frame.tint, frame.colorOffset,
+                     uvVertices.data(), imageSize, draw.time);
+    }
   }
 
   void Canvas::rect_render(Shader& shader, const mat4& transform, const mat4& model, vec4 color, float dashLength,
