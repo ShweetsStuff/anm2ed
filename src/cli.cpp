@@ -1,6 +1,6 @@
-// anm2ed-cli: look at .anm2 files without the editor - a text summary, or animations drawn (with the editor's own
-// OpenGL renderer, in a hidden window) to a PNG frame, a contact sheet, a PNG sequence, a GIF or a video.
+#include "cli.hpp"
 
+#include <algorithm>
 #include <charconv>
 #include <cstdio>
 #include <format>
@@ -17,12 +17,11 @@
 #include "render.hpp"
 #include "working_directory.hpp"
 
-using namespace anm2ed;
 using namespace anm2ed::util;
 
 namespace anm2ed::cli
 {
-  constexpr const char* USAGE = R"(usage: anm2ed-cli <command> <file.anm2> [options]
+  constexpr const char* USAGE = R"(usage: anm2ed <command> <file.anm2> [options]
 
 commands:
   info                  animations, items, spritesheets and Isaac compatibility, as text
@@ -75,7 +74,7 @@ options:
     return arguments.command == "render" && arguments.get("type").value_or("") == "pngs";
   }
 
-  std::optional<Arguments> arguments_get(int argc, char** argv)
+  std::optional<Arguments> arguments_get(int argc, const char** argv)
   {
     if (argc < 3) return {};
     Arguments arguments{.command = argv[1], .file = path::from_utf8(argv[2])};
@@ -267,18 +266,23 @@ options:
     std::println("");
     return 0;
   }
-}
 
-int main(int argc, char** argv)
-{
-  auto arguments = cli::arguments_get(argc, argv);
-  if (!arguments)
+  constexpr std::string_view COMMANDS[] = {"info", "frame", "render"};
+
+  bool is_cli(int argc, const char** argv)
   {
-    std::print(stderr, "{}", cli::USAGE);
-    return 2;
+    return argc >= 2 && std::ranges::contains(COMMANDS, std::string_view(argv[1])) && !path::is_exist(argv[1]);
   }
-  if (arguments->command == "info") return cli::info_print(*arguments);
-  if (arguments->command == "frame" || arguments->command == "render") return cli::draw_run(*arguments);
-  std::print(stderr, "{}", cli::USAGE);
-  return 2;
+
+  int run(int argc, const char** argv)
+  {
+    auto arguments = arguments_get(argc, argv);
+    if (!arguments)
+    {
+      std::print(stderr, "{}", USAGE);
+      return 2;
+    }
+    if (arguments->command == "info") return info_print(*arguments);
+    return draw_run(*arguments);
+  }
 }

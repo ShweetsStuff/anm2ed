@@ -111,7 +111,7 @@ foreach(CORE_FILE log resource/image resource/audio_data resource/asset_store ut
                   util/pack util/imgui/multiselect snapshots playback selection)
   list(APPEND CORE_SRC ${CORE_DIR}/${CORE_FILE}.cpp)
 endforeach()
-list(REMOVE_ITEM PROJECT_SRC ${CORE_SRC} ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/cli.cpp)
+list(REMOVE_ITEM PROJECT_SRC ${CORE_SRC} ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
 
 set(CORE_INCLUDE_DIRS
     include
@@ -136,10 +136,9 @@ if(NOT MSVC)
   target_compile_options(anm2ed_core PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
-# The editor's code as a library, shared by the editor, the CLI and the render tests.
+# The editor's code as a library, shared by the editor and the render tests.
 add_library(anm2ed_app STATIC ${GLAD_SRC} ${IMGUI_SRC} ${PROJECT_SRC})
 add_executable(${PROJECT_NAME} src/main.cpp)
-add_executable(anm2ed-cli src/cli.cpp)
 set_target_properties(
   ${PROJECT_NAME}
   PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
@@ -148,8 +147,6 @@ set_target_properties(
              RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_BINARY_DIR}/bin"
              RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_BINARY_DIR}/bin")
 
-
-set_target_properties(anm2ed-cli PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 target_include_directories(
   anm2ed_app
@@ -240,7 +237,6 @@ endif()
 target_link_libraries(anm2ed_app PUBLIC anm2ed_core ${OPENGL_LIB} SDL3-static SDL3_mixer::SDL3_mixer lunasvg
                                         ${PLATFORM_LIBS})
 target_link_libraries(${PROJECT_NAME} PRIVATE anm2ed_app ${SDL_MAIN_TARGET})
-target_link_libraries(anm2ed-cli PRIVATE anm2ed_app)
 
 option(ANM2ED_TESTS "Build the anm2ed test suite" ON)
 if(ANM2ED_TESTS)
@@ -260,7 +256,7 @@ if(ANM2ED_TESTS)
   target_compile_definitions(anm2ed_render_tests PRIVATE ANM2ED_TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests"
                                                          ANM2ED_RENDER_DIR="${CMAKE_BINARY_DIR}/renders")
   add_test(NAME anm2ed_render_tests COMMAND anm2ed_render_tests WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
-  add_test(NAME anm2ed_cli_info COMMAND anm2ed-cli info ${CMAKE_CURRENT_SOURCE_DIR}/tests/render/spin.anm2)
+  add_test(NAME anm2ed_cli_info COMMAND ${PROJECT_NAME} info ${CMAKE_CURRENT_SOURCE_DIR}/tests/render/spin.anm2)
 endif()
 
 message(STATUS "System: ${CMAKE_SYSTEM_NAME}")

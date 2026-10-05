@@ -57,10 +57,10 @@ ctest --test-dir build
 Render tests draw with OpenGL (skipped without a display) and leave their images in `build/renders`.
 
 ## Command Line
-`anm2ed-cli` looks at a file without the editor, drawing with the editor's renderer:
+`anm2ed <command>` looks at a file without opening the editor, drawing with the editor's renderer:
 ```sh
-anm2ed-cli info  file.anm2                                  # animations, items, spritesheets, Isaac issues
-anm2ed-cli frame file.anm2 --out frame.png --time 4         # one frame
-anm2ed-cli render file.anm2 --out sheet.png --scale 3       # every frame in a grid (--type pngs|gif|webm|mp4|ogv)
+anm2ed info   file.anm2                               # animations, items, spritesheets, Isaac issues
+anm2ed frame  file.anm2 --out frame.png --time 4      # one frame
+anm2ed render file.anm2 --out sheet.png --scale 3     # every frame in a grid (--type pngs|gif|webm|mp4|ogv)
 ```
-Common options: `--animation NAME|INDEX`, `--scale`, `--fps`, `--start`/`--end`, `--background RRGGBB`. Run it without arguments for the full list.
+Common options: `--animation NAME|INDEX`, `--scale`, `--fps`, `--start`/`--end`, `--background RRGGBB`. `anm2ed render` alone lists them all.

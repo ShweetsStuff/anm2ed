@@ -1,3 +1,4 @@
+#include "cli.hpp"
 #include "loader.hpp"
 #include "log.hpp"
 #include "sdl.hpp"
@@ -6,11 +7,11 @@
 #ifdef _WIN32
   #define SDL_MAIN_HANDLED
   #include <SDL3/SDL_main.h>
+  #include <shellapi.h>
   #include <string>
   #include <string_view>
   #include <vector>
   #include <windows.h>
-  #include <shellapi.h>
 #endif
 
 #ifdef _WIN32
@@ -63,20 +64,34 @@ namespace anm2ed
 {
   int application_run(int argc, const char** argv)
   {
-    logger.session_open(util::sdl::preferences_directory_get());
-    return log_exceptions([&]()
+    if (cli::is_cli(argc, argv))
     {
-      Loader loader(argc, argv);
+#ifdef _WIN32
+      // A GUI-subsystem build has no console of its own; print to the one it was started from.
+      if (AttachConsole(ATTACH_PARENT_PROCESS))
+      {
+        freopen("CONOUT$", "w", stdout);
+        freopen("CONOUT$", "w", stderr);
+      }
+#endif
+      return cli::run(argc, argv);
+    }
 
-      if (loader.isError) return EXIT_FAILURE;
+    logger.session_open(util::sdl::preferences_directory_get());
+    return log_exceptions(
+        [&]()
+        {
+          Loader loader(argc, argv);
 
-      State state(loader.window, loader.settings, loader.arguments);
+          if (loader.isError) return EXIT_FAILURE;
 
-      while (!state.isQuit)
-        state.loop(loader.window, loader.settings);
+          State state(loader.window, loader.settings, loader.arguments);
 
-      return EXIT_SUCCESS;
-    });
+          while (!state.isQuit)
+            state.loop(loader.window, loader.settings);
+
+          return EXIT_SUCCESS;
+        });
   }
 }
 
