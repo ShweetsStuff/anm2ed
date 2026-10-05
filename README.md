@@ -63,4 +63,4 @@ anm2ed info   file.anm2                               # animations, items, sprit
 anm2ed frame  file.anm2 --out frame.png --time 4      # one frame
 anm2ed render file.anm2 --out sheet.png --scale 3     # every frame in a grid (--type pngs|gif|webm|mp4|ogv)
 ```
-Common options: `--animation NAME|INDEX`, `--scale`, `--fps`, `--start`/`--end`, `--background RRGGBB`. `anm2ed render` alone lists them all.
+Common options: `--animation NAME|INDEX`, `--scale`, `--fps`, `--start`/`--end`, `--background RRGGBB`, `--ffmpeg PATH` (defaults to the editor's FFmpeg setting). `anm2ed render` alone lists them all.

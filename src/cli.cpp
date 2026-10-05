@@ -15,6 +15,8 @@
 #include "model/xml.hpp"
 #include "path.hpp"
 #include "render.hpp"
+#include "sdl.hpp"
+#include "settings.hpp"
 #include "working_directory.hpp"
 
 using namespace anm2ed::util;
@@ -29,7 +31,7 @@ commands:
   render                the animation as --type:
                           sheet  all frames in a grid PNG (default; --rows, --columns)
                           pngs   one PNG per frame in the --out folder (--format, default "{}.png")
-                          gif, webm, mp4, ogv  through FFmpeg (--ffmpeg, default "ffmpeg")
+                          gif, webm, mp4, ogv  through FFmpeg (--ffmpeg, default: the editor's setting)
 
 options:
   --animation NAME|INDEX  which animation (default: the default animation)
@@ -100,6 +102,16 @@ options:
       return {};
     return {(float)((value >> 16) & 0xFF) / CHANNEL_MAX, (float)((value >> 8) & 0xFF) / CHANNEL_MAX,
             (float)(value & 0xFF) / CHANNEL_MAX, 1.0f};
+  }
+
+  // --ffmpeg, or else the FFmpeg the editor's Render Animation uses (or "ffmpeg" on the PATH).
+  std::filesystem::path ffmpeg_path_get(const Arguments& arguments)
+  {
+    if (auto ffmpeg = arguments.get("ffmpeg")) return path::from_utf8(*ffmpeg);
+    auto settingsPath = sdl::preferences_directory_get() / "settings.ini";
+    auto settingsFfmpeg =
+        path::is_exist(settingsPath) ? Settings(settingsPath).renderFFmpegPath : std::filesystem::path{};
+    return settingsFfmpeg.empty() ? std::filesystem::path("ffmpeg") : settingsFfmpeg;
   }
 
   // By index or name; the default animation otherwise.
@@ -241,7 +253,7 @@ options:
     render::RecorderOptions options{.type = type,
                                     .path = outPath,
                                     .format = path::from_utf8(arguments.get("format").value_or("{}.png")),
-                                    .ffmpegPath = path::from_utf8(arguments.get("ffmpeg").value_or("ffmpeg")),
+                                    .ffmpegPath = ffmpeg_path_get(arguments),
                                     .start = arguments.number_get("start", 0),
                                     .end = arguments.number_get("end", animation->frameNum - 1),
                                     .animationFps = fps,
