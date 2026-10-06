@@ -45,14 +45,14 @@
                 <NullAnimation NullId="1" Visible="true"/>
             </NullAnimations>
             <Triggers>
-                <Trigger EventId="0" AtFrame="0">
+                <Trigger EventId="0" AtFrame="1">
                     <Sound Id="0"/>
                 </Trigger>
-                <Trigger EventId="1" AtFrame="4">
+                <Trigger EventId="1" AtFrame="5">
                     <Sound Id="0"/>
                     <Sound Id="1"/>
                 </Trigger>
-                <Trigger AtFrame="6">
+                <Trigger AtFrame="7">
                     <Sound Id="1"/>
                 </Trigger>
             </Triggers>

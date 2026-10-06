@@ -387,6 +387,8 @@ namespace anm2ed::edit
     {
       auto& merged = *model.animation_edit(target);
       if (!merged.name.ends_with(ANIMATION_MERGED_SUFFIX)) merged.name += std::string(ANIMATION_MERGED_SUFFIX);
+      // Triggers are placed by time, so whichever animation ends up second has its triggers moved past the first.
+      auto length = merged.frameNum;
       for (auto index : sources)
       {
         if (index == target) continue;
@@ -394,6 +396,13 @@ namespace anm2ed::edit
         if (!source) continue;
         auto sourceCopy = *source;
         auto& destination = *model.animation_edit(target);
+        if (type == types::merge::APPEND)
+          for (auto& trigger : sourceCopy.triggers.frames)
+            trigger.atFrame += length;
+        if (type == types::merge::PREPEND)
+          for (auto& trigger : destination.triggers.frames)
+            trigger.atFrame += sourceCopy.frameNum;
+        if (type == types::merge::APPEND || type == types::merge::PREPEND) length += sourceCopy.frameNum;
         track_merge(destination.root, sourceCopy.root, type);
         track_entries_merge(destination.layers, sourceCopy.layers, type);
         track_entries_merge(destination.nulls, sourceCopy.nulls, type);

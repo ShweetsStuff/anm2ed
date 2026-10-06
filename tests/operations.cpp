@@ -378,3 +378,27 @@ TEST_CASE("change all frame properties changes layer depth only")
   CHECK(model.frame_get(layer)->depth == 1);
   CHECK(model.frame_get(null)->depth == 0);
 }
+
+TEST_CASE("animations_merge moves triggers past the animation placed before them")
+{
+  auto model_make = []()
+  {
+    auto model = fixture_load("01_minimal.anm2");
+    auto first = *model.animation_get(0);
+    first.frameNum = 10;
+    auto second = first;
+    second.uid = util::uid_next();
+    second.triggers.frames = {model::Frame{.atFrame = 5}};
+    model.animations.entries = {std::make_shared<const model::Animation>(first),
+                                std::make_shared<const model::Animation>(second)};
+    return model;
+  };
+
+  auto appended = model_make();
+  edit::animations_merge(appended, 0, {0, 1}, types::merge::APPEND, false, {});
+  CHECK(appended.animation_get(0)->triggers.frames.at(0).atFrame == 15);
+
+  auto prepended = model_make();
+  edit::animations_merge(prepended, 1, {0, 1}, types::merge::PREPEND, false, {});
+  CHECK(prepended.animation_get(1)->triggers.frames.at(0).atFrame == 15);
+}
