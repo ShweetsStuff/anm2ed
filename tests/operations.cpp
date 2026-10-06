@@ -367,3 +367,14 @@ TEST_CASE("frames_split splits every selected frame that spans the time")
   CHECK(model.track_get({0, NULL_, 0})->frames.size() == nullCount + 1);
   CHECK(model.track_get({0, LAYER, 0})->frames[0].duration == 1);
 }
+
+TEST_CASE("change all frame properties changes layer depth only")
+{
+  auto model = fixture_load("02_items.anm2");
+  Reference layer{0, LAYER, 0, 0};
+  Reference null{0, NULL_, 0, 0};
+  edit::frames_change_apply(model, {.references = {layer, null}}, {.depth = 2}, ChangeType::ADD);
+  edit::frames_change_apply(model, {.references = {layer, null}}, {.depth = 1}, ChangeType::SUBTRACT);
+  CHECK(model.frame_get(layer)->depth == 1);
+  CHECK(model.frame_get(null)->depth == 0);
+}

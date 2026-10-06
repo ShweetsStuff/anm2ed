@@ -185,6 +185,7 @@ namespace anm2ed
     FRAME_CHANGE_SCALARS
 #undef X
     std::optional<int> duration{};
+    std::optional<int> depth{};
     std::optional<int> shaderId{};
     std::optional<bool> isVisible{};
     std::optional<Interpolation> interpolation{};

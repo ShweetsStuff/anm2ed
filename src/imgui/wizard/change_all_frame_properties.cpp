@@ -212,6 +212,15 @@ namespace anm2ed::imgui::wizard
                     STEP_FAST);
     ImGui::EndDisabled();
     ImGui::PopID();
+    ImGui::BeginDisabled(!isLayerPropertyAvailable);
+    ImGui::PushID("Depth");
+    property_toggle_begin(settings.changeIsDepth);
+    input_int_range(localize.get(BASIC_DEPTH), settings.changeDepth, -FRAME_DEPTH_MAX, FRAME_DEPTH_MAX, STEP,
+                    STEP_FAST);
+    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_DEPTH));
+    ImGui::EndDisabled();
+    ImGui::PopID();
+    ImGui::EndDisabled();
     rows_draw(colorRows, true);
 
     ImGui::BeginDisabled(!isLayerPropertyAvailable);
@@ -238,6 +247,7 @@ namespace anm2ed::imgui::wizard
       FRAME_CHANGE_SCALARS
 #undef X
       if (settings.changeIsDuration) frameChange.duration = settings.changeDuration;
+      if (settings.changeIsDepth) frameChange.depth = settings.changeDepth;
       if (settings.changeIsRegion) frameChange.regionId = regionId;
       if (settings.changeIsShader) frameChange.shaderId = shaderId;
       if (settings.changeIsVisibleSet) frameChange.isVisible = settings.changeIsVisible;
@@ -309,8 +319,8 @@ namespace anm2ed::imgui::wizard
       ImGui::Separator();
     }
 
-    bool isAnyProperty = settings.changeIsDuration || settings.changeIsRegion || settings.changeIsShader ||
-                         settings.changeIsVisibleSet || settings.changeIsInterpolationSet ||
+    bool isAnyProperty = settings.changeIsDuration || settings.changeIsDepth || settings.changeIsRegion ||
+                         settings.changeIsShader || settings.changeIsVisibleSet || settings.changeIsInterpolationSet ||
                          settings.changeIsFlipXSet ||
                          settings.changeIsFlipYSet
 #define X(name, member, isLayerOnly, isColor, isEnabled, value) || settings.isEnabled

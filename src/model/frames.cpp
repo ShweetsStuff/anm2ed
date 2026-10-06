@@ -196,6 +196,11 @@ namespace anm2ed::model
       if (change.duration) frame.duration = std::max(FRAME_DURATION_MIN, frame.duration);
       if (itemType == ItemType::LAYER && change.regionId) frame.regionId = *change.regionId;
       if (itemType == ItemType::LAYER && change.shaderId) frame.shaderId = *change.shaderId;
+      if (itemType == ItemType::LAYER && change.depth)
+      {
+        apply(frame.depth, change.depth);
+        frame.depth = std::clamp(frame.depth, -FRAME_DEPTH_MAX, FRAME_DEPTH_MAX);
+      }
 #define X(name, member, isLayerOnly, isColor, isEnabled, value)                                                        \
   if (!isLayerOnly || itemType == ItemType::LAYER) apply(frame.member, change.name);
       FRAME_CHANGE_SCALARS

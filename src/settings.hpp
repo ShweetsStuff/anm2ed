@@ -91,6 +91,7 @@ namespace anm2ed
   X(CHANGE_IS_SHEAR_Y, changeIsShearY, STRING_UNDEFINED, BOOL, false)                                                  \
   X(CHANGE_IS_ROTATION, changeIsRotation, STRING_UNDEFINED, BOOL, false)                                               \
   X(CHANGE_IS_DURATION, changeIsDuration, STRING_UNDEFINED, BOOL, false)                                               \
+  X(CHANGE_IS_DEPTH, changeIsDepth, STRING_UNDEFINED, BOOL, false)                                                     \
   X(CHANGE_IS_TINT_R, changeIsTintR, STRING_UNDEFINED, BOOL, false)                                                    \
   X(CHANGE_IS_TINT_G, changeIsTintG, STRING_UNDEFINED, BOOL, false)                                                    \
   X(CHANGE_IS_TINT_B, changeIsTintB, STRING_UNDEFINED, BOOL, false)                                                    \
@@ -113,6 +114,7 @@ namespace anm2ed
   X(CHANGE_SHEAR, changeShear, STRING_UNDEFINED, VEC2, {})                                                             \
   X(CHANGE_ROTATION, changeRotation, STRING_UNDEFINED, FLOAT, 0.0f)                                                    \
   X(CHANGE_DURATION, changeDuration, STRING_UNDEFINED, INT, 0)                                                         \
+  X(CHANGE_DEPTH, changeDepth, STRING_UNDEFINED, INT, 0)                                                               \
   X(CHANGE_TINT, changeTint, STRING_UNDEFINED, VEC4, {})                                                               \
   X(CHANGE_COLOR_OFFSET, changeColorOffset, STRING_UNDEFINED, VEC3, {})                                                \
   X(CHANGE_REGION_ID, changeRegionId, STRING_UNDEFINED, INT, -1)                                                       \
