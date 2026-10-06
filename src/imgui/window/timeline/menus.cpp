@@ -122,7 +122,7 @@ namespace anm2ed::imgui
     actions.add(ACTION_DUPLICATE, [=, this]() { return !selectedBakeFrames.empty(); }, [&]() { frames_duplicate(); });
     actions.add({.label = LABEL_SPLIT,
                  .shortcut = SHORTCUT_SPLIT,
-                 .isEnabled = [=, this]() { return selectedBakeFrames.size() == 1; },
+                 .isEnabled = [=, this]() { return !selectedBakeFrames.empty(); },
                  .run = [&]() { frame_split(); }});
     actions.add(ACTION_REVERSE, [=, this]() { return isReverseFrames; }, [&]() { frames_reverse(); });
     actions.separator();

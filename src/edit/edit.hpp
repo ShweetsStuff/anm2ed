@@ -97,6 +97,7 @@ namespace anm2ed::edit
   Uids frames_reverse(model::Model&, const std::set<Reference>&);
   Uids frames_bake(model::Model&, const std::set<Reference>&, int, bool, bool);
   Uids frame_split(model::Model&, Reference, int);
+  Uids frames_split(model::Model&, const std::set<Reference>&, int);
   Uids frames_move(model::Model&, const std::set<Reference>&, Reference, int);
   Uids frame_durations_set(model::Model&, const std::map<Reference, int>&);
   Uids trigger_at_frame_set(model::Model&, Reference, int);

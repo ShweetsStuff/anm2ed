@@ -348,3 +348,22 @@ TEST_CASE("frames_property_set copies one property to the frames that have it")
   CHECK(edit::is_frame_property_valid(edit::FrameProperty::SOUNDS, ItemType::TRIGGER));
   CHECK_FALSE(edit::is_frame_property_valid(edit::FrameProperty::POSITION, ItemType::TRIGGER));
 }
+
+TEST_CASE("frames_split splits every selected frame that spans the time")
+{
+  auto model = fixture_load("02_items.anm2");
+  auto layerTrack = model.track_get({0, LAYER, 0});
+  auto nullTrack = model.track_get({0, NULL_, 0});
+  REQUIRE(layerTrack);
+  REQUIRE(nullTrack);
+  auto layerCount = layerTrack->frames.size();
+  auto nullCount = nullTrack->frames.size();
+  REQUIRE(layerTrack->frames[0].duration > 1);
+  REQUIRE(nullTrack->frames[0].duration > 1);
+
+  auto uids = edit::frames_split(model, {{0, LAYER, 0, 0}, {0, NULL_, 0, 0}}, 0);
+  CHECK(uids.size() == 2);
+  CHECK(model.track_get({0, LAYER, 0})->frames.size() == layerCount + 1);
+  CHECK(model.track_get({0, NULL_, 0})->frames.size() == nullCount + 1);
+  CHECK(model.track_get({0, LAYER, 0})->frames[0].duration == 1);
+}

@@ -165,6 +165,15 @@ namespace anm2ed::edit
     return {uid};
   }
 
+  // Splits each of the frames that spans the time (last first, so earlier references stay valid).
+  Uids frames_split(Model& model, const std::set<Reference>& references, int time)
+  {
+    Uids uids{};
+    for (auto it = references.rbegin(); it != references.rend(); ++it)
+      std::ranges::copy(frame_split(model, *it, time), std::back_inserter(uids));
+    return uids;
+  }
+
   // Moves frames (from any tracks) into one track before the frame at the given index.
   Uids frames_move(Model& model, const std::set<Reference>& frames, Reference target, int insertIndex)
   {

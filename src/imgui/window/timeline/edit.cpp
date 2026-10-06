@@ -115,10 +115,10 @@ namespace anm2ed::imgui
   void TimelineContext::frame_split()
   {
     auto selectedFrames = document.frame_references_get(Document::FrameReferenceFallback::NONE);
-    if (selectedFrames.size() != 1) return;
-    auto targetReference = *selectedFrames.begin();
+    std::erase_if(selectedFrames, is_trigger_reference);
+    if (selectedFrames.empty()) return;
     auto time = frameSplitTimeAtCursor.value_or((int)std::floor(playback.time));
-    edit_push(EDIT_SPLIT_FRAME, [=](model::Model& model) { return edit::frame_split(model, targetReference, time); });
+    edit_push(EDIT_SPLIT_FRAME, [=](model::Model& model) { return edit::frames_split(model, selectedFrames, time); });
   }
 
   void TimelineContext::item_remove()
