@@ -245,6 +245,20 @@ namespace anm2ed::imgui
             }
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_DURATION));
 
+            ImGui::BeginDisabled(type != LAYER);
+            if (input_int_range(localize.get(BASIC_DEPTH), frame && type == LAYER ? useFrame.depth : dummy_value<int>(),
+                                -FRAME_DEPTH_MAX, FRAME_DEPTH_MAX, STEP, STEP_FAST,
+                                !frame ? ImGuiInputTextFlags_DisplayEmptyRefVal : 0) &&
+                frame)
+            {
+              auto depth = useFrame.depth;
+              frame_edit(edit_state::COMPLETE, EDIT_FRAME_DEPTH,
+                         [depth](Document&, model::Frame& frame, model::Track*, const Reference&)
+                         { frame.depth = depth; });
+            }
+            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_DEPTH));
+            ImGui::EndDisabled();
+
             auto tintEdit =
                 color_edit4_persistent(localize.get(BASIC_TINT), frame ? &useFrame.tint : &dummy_value<vec4>());
             frame_edit(tintEdit, EDIT_FRAME_TINT,

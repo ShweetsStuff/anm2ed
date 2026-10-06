@@ -1,5 +1,7 @@
 #include "draw.hpp"
 
+#include <algorithm>
+
 #include "frames.hpp"
 #include "math.hpp"
 
@@ -40,6 +42,10 @@ namespace anm2ed::model
   std::vector<Draw> animation_draws_get(const Model& model, const Animation& animation, const DrawOptions& options)
   {
     std::vector<Draw> draws{};
+    // Each layer draw's place in the drawing order: its track's position among the layers plus its frame's depth; a
+    // moved layer lands past the one already at that place (below it when moved down, above it when moved up).
+    std::vector<std::pair<int, int>> layerOrders{};
+    int layerOrder{};
     auto parent_get = [&](float time, const TrackGroup* group)
     {
       glm::mat4 parent(1.0f);
@@ -67,6 +73,7 @@ namespace anm2ed::model
                 frame.colorOffset += rootFrame.colorOffset;
               }
         }
+        layerOrders.emplace_back(layerOrder + frame.depth, frame.depth);
         draws.push_back({type, id, groupType, sample, time, frame, parent});
       }
     };
@@ -80,6 +87,7 @@ namespace anm2ed::model
         auto isFound = type == LAYER ? item_get(model.content.layers, track.id) != nullptr
                                      : item_get(model.content.nulls, track.id) != nullptr;
         if (track.isVisible && isFound) track_draws_add(track, drawType, track.id, NONE, group);
+        if (type == LAYER) ++layerOrder;
       };
       for (const auto& entry : *entries)
       {
@@ -95,6 +103,18 @@ namespace anm2ed::model
           track_add(groupTrack, &group);
       }
     }
+
+    // Layers draw one after another, so reordering them by depth only moves them among each other.
+    std::vector<std::size_t> layerIndices{};
+    for (std::size_t i = 0; i < draws.size(); ++i)
+      if (draws[i].type == DrawType::LAYER) layerIndices.push_back(i);
+    auto sorted = layerIndices;
+    std::ranges::stable_sort(sorted, {}, [&](std::size_t i) { return layerOrders[i]; });
+    std::vector<Draw> layerDraws{};
+    for (auto i : sorted)
+      layerDraws.push_back(draws[i]);
+    for (std::size_t i = 0; i < layerIndices.size(); ++i)
+      draws[layerIndices[i]] = std::move(layerDraws[i]);
     return draws;
   }
 }

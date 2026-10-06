@@ -35,3 +35,25 @@ TEST_CASE("root transforms fold into layer draws")
     isAnyMoved |= plain[i].type == model::DrawType::LAYER && plain[i].parent != rooted[i].parent;
   CHECK(isAnyMoved);
 }
+
+TEST_CASE("a layer frame's depth moves it among the layers for that frame only")
+{
+  auto anm2 = model_load(file_load(TEST_DIR / "render" / "spin.anm2"));
+  auto layer_ids_get = [&](float time)
+  {
+    std::vector<int> ids{};
+    for (const auto& draw : model::animation_draws_get(anm2, *anm2.animation_get(0), {.time = time}))
+      if (draw.type == model::DrawType::LAYER) ids.push_back(draw.id);
+    return ids;
+  };
+  CHECK(layer_ids_get(0.0f) == std::vector{1, 0});
+
+  anm2.frame_edit({0, LAYER, 0, 0})->depth = -1;
+  CHECK(layer_ids_get(0.0f) == std::vector{0, 1});
+  CHECK(layer_ids_get(5.0f) == std::vector{1, 0});
+
+  auto text = model::model_to_string(anm2);
+  CHECK(game_document_get(text).find("Depth") == std::string::npos);
+  CHECK(model_load(text).frame_get({0, LAYER, 0, 0})->depth == -1);
+  CHECK(model::isaac_issues_get(anm2).depthFrames == 1);
+}

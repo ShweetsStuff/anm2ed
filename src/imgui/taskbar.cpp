@@ -376,6 +376,7 @@ namespace anm2ed::imgui
                                      {issues.groupTransforms, FORMAT_ISAAC_GROUP_TRANSFORMS},
                                      {issues.shearFrames, FORMAT_ISAAC_SHEAR_FRAMES},
                                      {issues.shaderFrames, FORMAT_ISAAC_SHADER_FRAMES},
+                                     {issues.depthFrames, FORMAT_ISAAC_DEPTH_FRAMES},
                                      {issues.triggerSounds, FORMAT_ISAAC_TRIGGER_SOUNDS}})
           if (count > 0) ImGui::BulletText("%s", localize_format(format, count).c_str());
       }

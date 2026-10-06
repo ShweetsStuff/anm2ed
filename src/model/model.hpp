@@ -54,6 +54,7 @@ namespace anm2ed::model
     Interpolation interpolation{Interpolation::NONE};
     int regionId{-1};
     int shaderId{-1};
+    int depth{}; // a layer frame draws this many layers above (or below) its place in the timeline; editor-only
     int atFrame{-1};
     int eventId{-1};
     std::vector<int> soundIds{};

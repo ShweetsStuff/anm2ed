@@ -15,6 +15,7 @@ namespace anm2ed::model
     int groupTransforms{};
     int shearFrames{};
     int shaderFrames{};
+    int depthFrames{};
     int triggerSounds{};
 
     bool operator==(const IsaacIssues&) const = default;

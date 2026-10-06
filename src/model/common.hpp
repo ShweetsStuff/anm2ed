@@ -92,6 +92,7 @@ namespace anm2ed
   inline constexpr int FRAME_NUM_MAX = FRAME_DURATION_MAX;
   inline constexpr int FPS_MIN = 1;
   inline constexpr int FPS_MAX = 120;
+  inline constexpr int FRAME_DEPTH_MAX = 100;
 
   enum class SpritesheetMergeOrigin
   {

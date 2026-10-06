@@ -80,6 +80,7 @@ namespace anm2ed::edit
     INTERPOLATION,
     DURATION,
     SHADER,
+    DEPTH,
     EVENT,
     SOUNDS,
     COUNT

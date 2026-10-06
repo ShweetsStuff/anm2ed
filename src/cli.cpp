@@ -172,10 +172,10 @@ options:
       std::println("sound #{} {}", sound.id, path::to_utf8(sound.path));
 
     auto issues = model::isaac_issues_get(model);
-    std::println("isaac issues: {} eased frames, {} group transforms, {} sheared frames, {} shader frames, {} trigger "
-                 "sounds",
+    std::println("isaac issues: {} eased frames, {} group transforms, {} sheared frames, {} shader frames, {} depth "
+                 "frames, {} trigger sounds",
                  issues.easedFrames, issues.groupTransforms, issues.shearFrames, issues.shaderFrames,
-                 issues.triggerSounds);
+                 issues.depthFrames, issues.triggerSounds);
     return 0;
   }
 

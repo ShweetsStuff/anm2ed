@@ -51,6 +51,7 @@ namespace anm2ed
   X(BASIC_CROP, "Crop", "Recortar", "Обрезать", "裁剪", "자르기") \
   X(BASIC_CUT, "Cut", "Cortar", "Вырезать", "剪切", "잘라내기") \
   X(BASIC_DEFAULT, "Default", "Predeterminado", "По умолчанию", "默认", "기본값") \
+  X(BASIC_DEPTH, "Depth", "Profundidad", "Глубина", "深度", "깊이") \
   X(BASIC_DISABLED, "Disabled", "Desactivado", "Отключено", "禁用", "비활성화") \
   X(BASIC_DUPLICATE, "Duplicate", "Duplicar", "Дублировать", "拷贝", "복제") \
   X(BASIC_DURATION, "Duration", "Duracion", "Продолжительность", "时长", "유지 시간") \
@@ -120,6 +121,7 @@ namespace anm2ed
   X(EDIT_ADD_TRIGGER_SOUND, "Add Trigger Sound", "Añadir Sonido del Trigger", "Добавить звук триггера", "添加事件触发器声音", "트리거 사운드 추가") \
   X(EDIT_CUT_FRAME_PROPERTY, "Cut Frame Property", "Cortar Propiedad del Frame", "Вырезание свойства кадра", "剪切帧属性", "프레임 속성 잘라내기") \
   X(EDIT_END_MARKER, "Set End Marker", "Poner Marcador de Fin", "Конечный маркер", "设置结束标记", "끝 마커 설정") \
+  X(EDIT_FRAME_DEPTH, "Frame Depth", "Profundidad del Frame", "Глубина кадра", "帧深度", "프레임 깊이") \
   X(EDIT_PASTE_FRAME_PROPERTY, "Paste Frame Property", "Pegar Propiedad del Frame", "Вставка свойства кадра", "粘贴帧属性", "프레임 속성 붙여넣기") \
   X(EDIT_REMOVE_MARKERS, "Remove Markers", "Quitar Marcadores", "Удаление маркеров", "移除标记", "마커 제거") \
   X(EDIT_REMOVE_TRIGGER_SOUND, "Remove Trigger Sound", "Remover Sonido del Trigger", "Удалить звук триггера", "移除事件触发器声音", "트리거 사운드 제거") \
@@ -221,6 +223,7 @@ namespace anm2ed
   X(FORMAT_DURATION, "Duration: {0}", "Duracion: {0}", "Продолжительность: {0}", "时长: {0}", "유지 시간: {0}") \
   X(FORMAT_EVENT_LABEL, "Event: {0}", "Evento: {0}", "Событие: {0}", "事件: {0}", "이벤트: {0}") \
   X(FORMAT_ID, "ID: {0}", "ID: {0}", "ID: {0}", "ID: {0}", "ID: {0}") \
+  X(FORMAT_ISAAC_DEPTH_FRAMES, "{} frame(s) change their layer's depth, which the game doesn't support; they will draw in timeline order.", "{} Frame(s) cambian la profundidad de su capa, que el juego no soporta; se dibujarán en el orden de la línea de tiempo.", "{} кадр(ов) меняют глубину слоя, что игра не поддерживает; они будут рисоваться в порядке таймлайна.", "{} 个帧改变了图层深度，游戏不支持，将按时间轴顺序绘制。", "프레임 {}개가 게임이 지원하지 않는 레이어 깊이를 바꿉니다. 타임라인 순서로 그려집니다.") \
   X(FORMAT_ISAAC_EASED_FRAMES, "{} eased frame(s) will be baked into one-frame steps.", "{} Frame(s) con suavizado se convertirán en pasos de un Frame.", "{} кадр(ов) со сглаживанием будут запечены в покадровые шаги.", "{} 个缓动帧将被烘焙为逐帧步进。", "이징 프레임 {}개가 1프레임 단위로 베이크됩니다.") \
   X(FORMAT_ISAAC_GROUP_TRANSFORMS, "{} group transform(s) will be baked into their items' frames.", "{} transformación(es) de grupo se aplicarán a los Frames de sus elementos.", "{} трансформаци(й) групп будут запечены в кадры их элементов.", "{} 个组变换将被烘焙到其项目的帧中。", "그룹 변형 {}개가 항목의 프레임에 베이크됩니다.") \
   X(FORMAT_ISAAC_SHADER_FRAMES, "{} frame(s) use shaders, which the game doesn't support; they will be dropped.", "{} Frame(s) usan shaders, que el juego no soporta; se descartarán.", "{} кадр(ов) используют шейдеры, которые игра не поддерживает; они будут отброшены.", "{} 个帧使用了着色器，游戏不支持，将被舍弃。", "프레임 {}개가 게임이 지원하지 않는 셰이더를 사용합니다. 셰이더는 제거됩니다.") \
@@ -535,6 +538,7 @@ namespace anm2ed
   X(TEXT_SELECT_FRAME, "Select a frame first!", "¡Selecciona primero un frame!", "Сначала выберите кадр!", "请先选择帧！", "먼저 프레임을 선택하세요!") \
   X(TEXT_SELECT_FRAME_OR_REGION, "Select a frame or region first!", "¡Selecciona primero un frame o región!", "Сначала выберите кадр или регион!", "请先选择帧或区域！", "먼저 프레임 또는 영역을 선택하세요!") \
   X(TOOLTIP_AUTO_SPRITESHEET_RELOAD, "Reload spritesheets automatically when their files change on disk.\n(Spritesheets with unsaved edits are left alone.)", "Recarga los spritesheets automáticamente cuando sus archivos cambian en el disco.\n(Los spritesheets con cambios sin guardar no se tocan.)", "Автоматически перезагружать спрайт-листы при изменении их файлов на диске.\n(Спрайт-листы с несохранёнными изменениями не затрагиваются.)", "当图集文件在磁盘上更改时自动重新加载。\n(有未保存修改的图集不受影响。)", "디스크의 파일이 바뀌면 스프라이트 시트를 자동으로 새로고침합니다.\n(저장하지 않은 수정이 있는 스프라이트 시트는 건드리지 않습니다.)") \
+  X(TOOLTIP_DEPTH, "Draw this layer this many layers above (or, negative, below) its place in the timeline, for this frame.\n(Editor only; the game always uses the timeline's order.)", "Dibuja esta capa tantas capas por encima (o, en negativo, por debajo) de su lugar en la línea de tiempo, durante este Frame.\n(Solo en el editor; el juego siempre usa el orden de la línea de tiempo.)", "Рисовать этот слой на столько слоёв выше (или, если отрицательно, ниже) его места на таймлайне в этом кадре.\n(Только в редакторе; игра всегда использует порядок таймлайна.)", "在此帧中，将此图层绘制在其时间轴位置之上(负数则之下)若干层。\n(仅限编辑器；游戏始终使用时间轴顺序。)", "이 프레임 동안 이 레이어를 타임라인 위치보다 지정한 수만큼 위(음수면 아래)에 그립니다.\n(편집기 전용이며, 게임은 항상 타임라인 순서를 사용합니다.)") \
   X(TOOLTIP_DETACHABLE_WINDOWS, "Windows can be dragged outside the main window into their own windows.\n(Not available on Wayland.)", "Las ventanas pueden arrastrarse fuera de la ventana principal a sus propias ventanas.\n(No disponible en Wayland.)", "Окна можно вытаскивать за пределы главного окна в отдельные окна.\n(Недоступно в Wayland.)", "可以将窗口拖出主窗口，成为独立的窗口。\n(Wayland 下不可用。)", "창을 메인 창 밖으로 끌어내 별도의 창으로 만들 수 있습니다.\n(Wayland에서는 사용할 수 없습니다.)") \
   X(TOOLTIP_ISAAC_COMPATIBILITY_WARNING, "Before saving, list anything the game doesn't support and what will happen to it.", "Antes de guardar, muestra lo que el juego no soporta y lo que pasará con ello.", "Перед сохранением показывать всё, что игра не поддерживает, и что с этим произойдёт.", "保存前列出游戏不支持的内容及其处理方式。", "저장하기 전에 게임이 지원하지 않는 항목과 그 처리 방식을 알려줍니다.") \
   X(TOOLTIP_MERGE_SPRITESHEETS, "Merge selected spritesheets into the first selected spritesheet.", "Combina los spritesheets seleccionados en el primer spritesheet seleccionado.", "Объединить выбранные спрайт-листы в первый выбранный спрайт-лист.", "将所选图集合并到第一个选中的图集中。", "선택된 스프라이트 시트를 첫 번째 선택된 스프라이트 시트로 병합합니다.") \

@@ -35,7 +35,7 @@ namespace anm2ed::model
   constexpr std::string_view KNOWN_ATTRIBUTES[] = {
       "Name", "CreatedBy", "CreatedOn", "Binding", "Value", "DefaultAnimation", "Path", "Vertex", "Fragment", "Id",
       "LayerId", "NullId", "SpritesheetId", "Fps", "Version", "FrameNum", "Delay", "AtFrame", "EventId", "RegionId",
-      "ShaderId", "SoundId", "GroupId", "Index", "Loop", "StartMarker", "EndMarker", "Visible", "ShowRect", "IsExpanded", "Enabled", "Rotation",
+      "ShaderId", "Depth", "SoundId", "GroupId", "Index", "Loop", "StartMarker", "EndMarker", "Visible", "ShowRect", "IsExpanded", "Enabled", "Rotation",
       "XPivot", "YPivot", "XCrop", "YCrop", "XPosition", "YPosition", "Width", "Height", "XScale", "YScale", "ShearX",
       "ShearY", "RedTint", "GreenTint", "BlueTint", "AlphaTint", "RedOffset", "GreenOffset", "BlueOffset",
       "Interpolated", "Origin", "BakeInterpolation", "BakeDelay", "BakeCount", "OriginalDelay"};
@@ -216,6 +216,7 @@ namespace anm2ed::model
     frame.interpolation = interpolation_read(element, "Interpolated");
     frame.regionId = int_get(element, "RegionId");
     frame.shaderId = int_get(element, "ShaderId");
+    frame.depth = int_get(element, "Depth", 0);
     frame.atFrame = int_get(element, "AtFrame");
     frame.eventId = int_get(element, "EventId");
     frame.extras = extras_read(element);
@@ -1142,6 +1143,8 @@ namespace anm2ed::model
     sink.attribute("Rotation", frame.rotation);
     interpolation_add(sink, "Interpolated", frame.interpolation);
     if (writer.is(SERIALIZE_EXTENSIONS) && frame.shaderId != -1) sink.attribute("ShaderId", frame.shaderId);
+    if (writer.is(SERIALIZE_EXTENSIONS) && type == ItemType::LAYER && frame.depth != 0)
+      sink.attribute("Depth", frame.depth);
     extras_attributes_write(sink, frame.extras);
     if (bake.delay > 0)
     {
@@ -1333,6 +1336,7 @@ namespace anm2ed::model
                                     track.type != ItemType::TRIGGER && is_special_interpolation(frame.interpolation);
                                 issues.shearFrames += frame.shear != glm::vec2();
                                 issues.shaderFrames += frame.shaderId != -1;
+                                issues.depthFrames += track.type == ItemType::LAYER && frame.depth != 0;
                                 issues.triggerSounds +=
                                     track.type == ItemType::TRIGGER &&
                                     std::ranges::any_of(frame.soundIds, [](int id) { return id != -1; });

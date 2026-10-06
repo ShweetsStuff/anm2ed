@@ -213,7 +213,7 @@ namespace anm2ed::edit
     if (property == FrameProperty::EVENT || property == FrameProperty::SOUNDS) return false;
     auto isLayerOnly = property == FrameProperty::PIVOT || property == FrameProperty::CROP ||
                        property == FrameProperty::SIZE || property == FrameProperty::REGION ||
-                       property == FrameProperty::SHADER;
+                       property == FrameProperty::SHADER || property == FrameProperty::DEPTH;
     return type == ItemType::LAYER || !isLayerOnly;
   }
 
@@ -265,6 +265,9 @@ namespace anm2ed::edit
         break;
       case FrameProperty::SHADER:
         target.shaderId = source.shaderId;
+        break;
+      case FrameProperty::DEPTH:
+        target.depth = source.depth;
         break;
       case FrameProperty::EVENT:
         target.eventId = source.eventId;
