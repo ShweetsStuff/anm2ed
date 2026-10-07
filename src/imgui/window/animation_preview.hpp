@@ -18,6 +18,7 @@ namespace anm2ed::imgui
     MIX_Mixer* mixer = MIX_CreateMixerDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
     AudioStream audioStream = AudioStream(mixer);
     bool wasPlaybackPlaying{};
+    int soundFrame{-1};
     bool isMoveDragging{};
     glm::vec2 moveOffset{};
     glm::vec2 nullRectScaleAnchor{};

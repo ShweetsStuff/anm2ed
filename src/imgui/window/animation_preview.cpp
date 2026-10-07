@@ -177,16 +177,21 @@ namespace anm2ed::imgui
       }
       else
       {
-        if (!manager.isRecording && !document.sounds.empty() && isSound)
-        {
-          if (auto soundID = trigger_sound_id_get(document, animation, playback.time); soundID != -1)
-            if (auto sound = document.sound_get(soundID)) audio::play(*sound, false, mixer);
-        }
-
         auto fps = std::max(model.info.fps, 1);
         auto range = model::animation_play_range_get(*animation);
+        if (!wasPlaybackPlaying) soundFrame = (int)std::floor(playback.time) - 1;
         playback.tick(fps, range.x, range.y, (animation->isLoop || settings.playbackIsLoop) && !manager.isRecording,
                       deltaSeconds);
+
+        // Each frame playback reaches plays its trigger's sound once, however many ticks it lasts or skips.
+        auto frame = (int)std::floor(playback.time);
+        for (int step = 0; soundFrame != frame && step < range.y - range.x; ++step)
+        {
+          soundFrame = soundFrame + 1 >= range.y || soundFrame + 1 < range.x ? range.x : soundFrame + 1;
+          if (manager.isRecording || document.sounds.empty() || !isSound) continue;
+          if (auto soundID = trigger_sound_id_get(document, animation, (float)soundFrame); soundID != -1)
+            if (auto sound = document.sound_get(soundID)) audio::play(*sound, false, mixer);
+        }
 
         frameTime = playback.time;
       }
