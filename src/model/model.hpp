@@ -416,6 +416,7 @@ namespace anm2ed::model
   };
 
   bool is_model_equal(const Model&, const Model&);
+  std::set<int> spritesheets_vector_used_get(const Model&);
   int track_frames_count_get(const Track&);
   int track_length_get(const Track&);
   int animation_length_get(const Animation&);

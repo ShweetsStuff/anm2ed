@@ -347,7 +347,13 @@ namespace anm2ed::imgui
           if (isEnd) document_change_push(manager);
         }
 
-        if ((useTool == tool::DRAW || useTool == tool::ERASE) && texture)
+        auto isDrawTool = useTool == tool::DRAW || useTool == tool::ERASE;
+        if (isDrawTool && texture && texture->is_vector())
+        {
+          ImGui::SetMouseCursor(ImGuiMouseCursor_NotAllowed);
+          if (isMouseDown) tooltip_lines_draw({localize.get(TEXT_SVG_NOT_EDITABLE)});
+        }
+        else if (isDrawTool && texture)
         {
           if (isMouseClicked) edit_begin_push(manager, useTool == tool::DRAW ? EDIT_DRAW : EDIT_ERASE);
           if (isMouseDown)

@@ -450,5 +450,11 @@ TEST_CASE("a trigger fires several events; built-in events join a file when firs
   auto text = model::model_to_string(model);
   CHECK(model_load(text).frame_get({0, TRIGGER, -1, 0})->eventIds == std::vector{0, stopId, 1});
   CHECK(model_load(game_document_get(text)).frame_get({0, TRIGGER, -1, 0})->eventIds == std::vector{0});
-  CHECK(model::isaac_issues_get(model).extraEvents == 2);
+  CHECK(model::isaac_issues_get(model).extraEvents == 1);
+
+  // The game's copy skips built-in events for the first custom one.
+  model.frame_edit({0, TRIGGER, -1, 0})->eventIds = {stopId, 1};
+  CHECK(model_load(game_document_get(model::model_to_string(model))).frame_get({0, TRIGGER, -1, 0})->eventIds ==
+        std::vector{1});
+  CHECK(model::isaac_issues_get(model).extraEvents == 0);
 }

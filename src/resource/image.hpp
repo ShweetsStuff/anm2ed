@@ -13,6 +13,7 @@ namespace anm2ed::resource::image
 {
   constexpr auto CHANNELS = 4;
   constexpr auto SVG_EXTENSION = "svg";
+  constexpr auto PNG_EXTENSION = "png";
 }
 
 namespace anm2ed::resource

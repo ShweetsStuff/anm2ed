@@ -125,3 +125,11 @@ TEST_CASE("an alpha offset is kept by the editor's copy only")
   CHECK(model_load(text).frame_get({0, LAYER, 0, 0})->colorOffset.a == doctest::Approx(-127.0f / 255.0f));
   CHECK(model::isaac_issues_get(anm2).alphaOffsetFrames == 1);
 }
+
+TEST_CASE("only SVG spritesheets that layers show count against Rebirth")
+{
+  auto anm2 = model_load(file_load(TEST_DIR / "render" / "vector.anm2"));
+  CHECK(model::spritesheets_vector_used_get(anm2) == std::set{0});
+  anm2.content.layers.clear();
+  CHECK(model::spritesheets_vector_used_get(anm2).empty());
+}

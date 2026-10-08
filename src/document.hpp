@@ -64,6 +64,7 @@ namespace anm2ed
     bool isValid{true};
     bool isOpen{true};
     bool isForceDirty{false};
+    bool isVectorKept{}; // asked this session to keep SVG spritesheets in a Rebirth document
     std::unordered_map<int, uint64_t> spritesheetHashes{};
     std::unordered_map<int, uint64_t> spritesheetSaveHashes{};
     std::unordered_map<int, uint64_t> spritesheetAutosaveHashes{};
@@ -171,6 +172,7 @@ namespace anm2ed
     void spritesheet_hashes_sync();
     std::set<int> spritesheets_changed_get();
     void spritesheets_reload(const std::set<int>&);
+    void spritesheets_vector_convert();
     std::filesystem::path spritesheet_autosave_path_get(const model::Spritesheet&);
     std::set<int> spritesheets_autosave_dirty_get();
     void spritesheets_autosave_restore();

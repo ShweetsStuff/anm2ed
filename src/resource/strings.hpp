@@ -122,6 +122,7 @@ namespace anm2ed
   X(EDIT_ADD_SHADER, "Add Shader", "Add Shader", "Add Shader", "Add Shader", "Add Shader") \
   X(EDIT_ADD_TRIGGER_EVENT, "Add Trigger Event", "Añadir Evento del Trigger", "Добавить событие триггера", "添加触发事件", "트리거 이벤트 추가") \
   X(EDIT_ADD_TRIGGER_SOUND, "Add Trigger Sound", "Añadir Sonido del Trigger", "Добавить звук триггера", "添加事件触发器声音", "트리거 사운드 추가") \
+  X(EDIT_CONVERT_SVG_SPRITESHEETS, "Convert SVG Spritesheets", "Convertir Spritesheets SVG", "Преобразовать SVG спрайт-листы", "转换 SVG 图集", "SVG 스프라이트 시트 변환") \
   X(EDIT_CUT_FRAME_PROPERTY, "Cut Frame Property", "Cortar Propiedad del Frame", "Вырезание свойства кадра", "剪切帧属性", "프레임 속성 잘라내기") \
   X(EDIT_DOCUMENT_FORMAT, "Document Format", "Formato del Documento", "Формат документа", "文档格式", "문서 형식") \
   X(EDIT_END_MARKER, "Set End Marker", "Poner Marcador de Fin", "Конечный маркер", "设置结束标记", "끝 마커 설정") \
@@ -286,12 +287,15 @@ namespace anm2ed
   X(LABEL_ANIMATIONS_MERGE_POPUP, "Merge Animations", "Combinar Animaciones", "Соединить анимации", "合并多个动画", "애니메이션 병합") \
   X(LABEL_AUTO_SPRITESHEET_RELOAD, "Auto Spritesheet Reload", "Recarga Automática de Spritesheets", "Автоперезагрузка спрайт-листов", "自动重新加载图集", "스프라이트 시트 자동 새로고침") \
   X(LABEL_CHILD, "Child", "Hijo", "Дочерняя", "子动画", "자식") \
+  X(LABEL_CONVERT, "Convert", "Convertir", "Преобразовать", "转换", "변환") \
+  X(LABEL_CONVERT_SVG_POPUP, "Convert SVG Spritesheets", "Convertir Spritesheets SVG", "Преобразовать SVG спрайт-листы", "转换 SVG 图集", "SVG 스프라이트 시트 변환") \
   X(LABEL_DETACHABLE_WINDOWS, "Detachable Windows", "Ventanas Desacoplables", "Отделяемые окна", "可分离窗口", "분리 가능한 창") \
   X(LABEL_DOCUMENTS_ADD_AS_LIBRARY, "Add as Library", "Añadir como Biblioteca", "Добавить как библиотеку", "添加为库", "라이브러리로 추가") \
   X(LABEL_DOCUMENT_EXTENDED_FORMAT, "Extended Format", "Formato Extendido", "Расширенный формат", "扩展格式", "확장 형식") \
   X(LABEL_EVENTS, "Events", "Eventos", "События", "事件", "이벤트") \
   X(LABEL_HOLD, "Hold", "Mantener", "Удерживать", "保持", "유지") \
   X(LABEL_ISAAC_COMPATIBILITY_WARNING, "Isaac Compatibility Warning", "Advertencia de Compatibilidad con Isaac", "Предупреждение о совместимости с Isaac", "Isaac 兼容性警告", "Isaac 호환성 경고") \
+  X(LABEL_KEEP_SVG, "Keep SVG", "Mantener SVG", "Оставить SVG", "保留 SVG", "SVG 유지") \
   X(LABEL_LAYER_SOURCE, "Source", "Fuente", "Источник", "来源", "소스") \
   X(LABEL_LIBRARIES_WINDOW, "Libraries###Libraries", "Bibliotecas###Libraries", "Библиотеки###Libraries", "库###Libraries", "라이브러리###Libraries") \
   X(LABEL_LIBRARY, "Library", "Biblioteca", "Библиотека", "库", "라이브러리") \
@@ -562,6 +566,7 @@ namespace anm2ed
   X(SHORTCUT_STRING_ZOOM_IN, "Zoom In", "Zoom In", "Увеличить", "视图放大", "확대") \
   X(SHORTCUT_STRING_ZOOM_OUT, "Zoom Out", "Zoom Out", "Уменьшить", "视图缩小", "축소") \
   X(SNAPSHOT_RENAME_ANIMATION, "Rename Animation", "Renombrar Animacion", "Переименовать анимацию", "重命名动画", "애니메이션 이름 바꾸기") \
+  X(TEXT_CONVERT_SVG, "Rebirth can't load SVG spritesheets. Convert the ones layers use into PNGs beside them, and use those instead?", "Rebirth no puede cargar spritesheets SVG. ¿Convertir los que usan las capas en PNG junto a ellos y usar esos?", "Rebirth не может загружать SVG спрайт-листы. Преобразовать используемые слоями в PNG рядом с ними и использовать их?", "Rebirth 无法加载 SVG 图集。要将图层使用的图集转换为旁边的 PNG 并改用它们吗？", "Rebirth는 SVG 스프라이트 시트를 불러올 수 없습니다. 레이어가 사용하는 시트를 옆에 PNG로 변환해 대신 사용할까요?") \
   X(TEXT_ISAAC_EDITOR_COPY, "The editor's own copy inside the file keeps everything.", "La copia del editor dentro del archivo lo conserva todo.", "Копия редактора внутри файла сохраняет всё.", "文件内的编辑器副本会保留所有内容。", "파일 안의 편집기 사본에는 모든 것이 그대로 남습니다.") \
   X(TEXT_ISAAC_ISSUES, "Some of this file won't work in the game as it is:", "Parte de este archivo no funcionará tal cual en el juego:", "Часть этого файла не будет работать в игре как есть:", "此文件的部分内容在游戏中无法按原样工作：", "이 파일의 일부는 게임에서 그대로 작동하지 않습니다:") \
   X(TEXT_LAYER_ANIMATION, "Layer's", "De la Capa", "Как у слоя", "图层的", "레이어 기본값") \
@@ -588,6 +593,7 @@ namespace anm2ed
   X(TOOLTIP_MERGE_SPRITESHEETS, "Merge selected spritesheets into the first selected spritesheet.", "Combina los spritesheets seleccionados en el primer spritesheet seleccionado.", "Объединить выбранные спрайт-листы в первый выбранный спрайт-лист.", "将所选图集合并到第一个选中的图集中。", "선택된 스프라이트 시트를 첫 번째 선택된 스프라이트 시트로 병합합니다.") \
   X(TEXT_SELECT_SPRITESHEET, "Select a spritesheet first!", "¡Selecciona primero un spritesheet!", "Сначала выберите спрайт-лист!", "请先选择图集！", "먼저 스프라이트 시트를 선택하세요!") \
   X(TEXT_SELF, "Self", "Propio", "Сам", "自身", "자신") \
+  X(TEXT_SVG_NOT_EDITABLE, "SVG spritesheets can't be drawn on; edit the SVG file instead.", "Los spritesheets SVG no se pueden dibujar; edita el archivo SVG.", "На SVG спрайт-листах нельзя рисовать; редактируйте файл SVG.", "无法在 SVG 图集上绘制；请编辑 SVG 文件。", "SVG 스프라이트 시트에는 그릴 수 없습니다. SVG 파일을 편집하세요.") \
   X(TEXT_TOOL_ANIMATION_PREVIEW, "This tool can only be used in Animation Preview!", "¡Esta herramienta solo se puede usar en Vista previa de animación!", "Этот инструмент можно использовать только в \"Предпросмотре анимации\"!", "该工具只能在“动画预放”中使用！", "이 도구는 애니메이션 프리뷰에서만 사용할 수 있습니다!") \
   X(TEXT_TOOL_SPRITESHEET_EDITOR, "This tool can only be used in Spritesheet Editor!", "¡Esta herramienta solo se puede usar en el Editor de spritesheets!", "Этот инструмент можно использовать только в \"Редакторе спрайт-листов\"!", "该工具只能在“图集编辑器”中使用！", "이 도구는 스프라이트 시트 편집기에서만 사용할 수 있습니다!") \
   X(TEXT_NEW_ANIMATION, "New Animation", "Nueva Animacion", "Новая анимация", "新动画", "새 애니메이션") \
@@ -600,6 +606,7 @@ namespace anm2ed
   X(TEXT_OPEN_DIRECTORY, "Double-click to open directory in file explorer.", "Haz doble click para abrir el directiorio en el buscador de archivos.", "Дважды нажмите, чтобы открыть директорию в проводнике.", "双击以在文件管理器中打开目录。", "더블 클릭하여 파일 탐색기로 디렉터리를 엽니다.") \
   X(TOAST_AUTOSAVE_FAILED, "Could not autosave document to: {0} ({1})", "No se pudo autoguardar el documento en: {0} ({1})", "Не получилось автосохранить документ в: {0} ({1})", "自动保存到 {0} ({1}) 失败", "{0}에 파일을 자동저장할 수 없습니다. ({1})") \
   X(TOAST_AUTOSAVING, "Autosaving...", "Autoguardando...", "Автосохранение...", "自动保存中...", "자동저장 중...") \
+  X(TOAST_CONVERT_SVG_SPRITESHEET, "Converted spritesheet #{0} to {1}", "Spritesheet #{0} convertido a {1}", "Спрайт-лист #{0} преобразован в {1}", "已将图集 #{0} 转换为 {1}", "{0}번 스프라이트 시트를 {1}(으)로 변환함") \
   X(TOAST_DESERIALIZE_ANIMATIONS_FAILED, "Failed to deserialize animation(s): {0}", "Falla al deserializar animacion(es): {0}", "Не удалось десериализировать анимации: {0}", "反序列化动画失败: {0}", "애니메이션 역직렬화 실패: {0}") \
   X(TOAST_DESERIALIZE_EVENTS_FAILED, "Failed to deserialize event(s): {0}", "Falla al deserializar evento(s): {0}", "Не удалось десериализировать события: {0}", "反序列化事件失败: {0}", "이벤트 역직렬화 실패: {0}") \
   X(TOAST_DESERIALIZE_FRAMES_FAILED, "Failed to deserialize frames:", "Falla al deserializar Frames:", "Не удалось десериализировать кадры: {0}", "反序列化帧失败: {0}", "프레임 역직렬화 실패: {0}") \

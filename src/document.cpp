@@ -710,6 +710,36 @@ namespace anm2ed
       }
   }
 
+  // Writes each SVG spritesheet a layer shows as a PNG beside it, and points the spritesheet at the PNG.
+  void Document::spritesheets_vector_convert()
+  {
+    auto ids = model::spritesheets_vector_used_get(model);
+    std::set<int> converted{};
+    edit_apply(EDIT_CONVERT_SVG_SPRITESHEETS,
+               [&](model::Model& model)
+               {
+                 for (auto id : ids)
+                 {
+                   auto spritesheet = model::item_get(model.content.spritesheets, id);
+                   auto texture = texture_get(id);
+                   auto pngPath =
+                       std::filesystem::path(spritesheet->path).replace_extension(resource::image::PNG_EXTENSION);
+                   auto pathString = path::to_utf8(pngPath);
+                   if (!texture || !texture->write_png(std::filesystem::absolute(directory_get()) / pngPath))
+                   {
+                     toast_log(Level::ERROR, TOAST_SAVE_SPRITESHEET_FAILED, id, pathString);
+                     continue;
+                   }
+                   spritesheet->path = pngPath;
+                   texture_reload(id);
+                   converted.insert(id);
+                   toast_log(Level::INFO, TOAST_CONVERT_SVG_SPRITESHEET, id, pathString);
+                 }
+               });
+    for (auto id : converted)
+      spritesheet_hash_set_saved(id);
+  }
+
   bool Document::spritesheet_is_dirty(int id)
   {
     if (!model::item_get(model.content.spritesheets, id)) return false;

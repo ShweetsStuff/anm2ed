@@ -50,6 +50,14 @@ namespace anm2ed::imgui
     PendingSave request{.index = index, .path = path};
     if (isQueued)
     {
+      // Rebirth can't load SVG spritesheets: offer to convert them (the request waits in isaacSave either way).
+      if (!document->model.isExtendedFormat && !document->isVectorKept &&
+          !model::spritesheets_vector_used_get(document->model).empty())
+      {
+        isaacSave = request;
+        vectorPopup.open();
+        return false;
+      }
       // The game's copy would differ from the document: ask first.
       if (settings.fileIsWarnIsaac && !document->model.isExtendedFormat &&
           model::isaac_issues_get(document->model) != model::IsaacIssues{})
@@ -374,6 +382,28 @@ namespace anm2ed::imgui
     }
 
     aboutPopup.end();
+
+    vectorPopup.trigger();
+    if (ImGui::BeginPopupModal(vectorPopup.label(), &vectorPopup.isOpen, ImGuiWindowFlags_NoResize))
+    {
+      ImGui::TextWrapped("%s", localize.get(TEXT_CONVERT_SVG));
+      auto widgetSize = widget_size_with_row_get(2);
+      auto document = manager.get(isaacSave.index);
+      for (auto [label, isConverted] : {std::pair{LABEL_CONVERT, true}, std::pair{LABEL_KEEP_SVG, false}})
+      {
+        if (!isConverted) ImGui::SameLine();
+        shortcut(manager.chords[isConverted ? SHORTCUT_CONFIRM : SHORTCUT_CANCEL]);
+        if (!ImGui::Button(localize.get(label), widgetSize) || !document) continue;
+        if (isConverted)
+          document->spritesheets_vector_convert();
+        else
+          document->isVectorKept = true;
+        vectorPopup.close();
+        save_request(manager, settings, isaacSave.index, isaacSave.path, true);
+      }
+      ImGui::EndPopup();
+    }
+    vectorPopup.end();
 
     isaacPopup.trigger();
     if (ImGui::BeginPopupModal(isaacPopup.label(), &isaacPopup.isOpen, ImGuiWindowFlags_NoResize))

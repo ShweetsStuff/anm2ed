@@ -204,3 +204,26 @@ TEST_CASE("SVG spritesheets draw sharp at any scale")
                                             pixels.data()));
   golden_image_check("vector_frame_0.png");
 }
+
+TEST_CASE("converting SVG spritesheets writes PNGs beside them")
+{
+  auto directory = std::filesystem::temp_directory_path() / "anm2ed_vector_convert";
+  std::filesystem::remove_all(directory);
+  std::filesystem::create_directories(directory);
+  for (auto name : {"vector.anm2", "vector.svg"})
+    std::filesystem::copy_file(RENDER_TEST_DIR / name, directory / name);
+
+  Document document(directory / "vector.anm2", false);
+  REQUIRE(document.is_valid());
+  document.spritesheets_vector_convert();
+  CHECK(document.model.content.spritesheets.front().path == "vector.png");
+  CHECK(std::filesystem::exists(directory / "vector.png"));
+  REQUIRE(document.texture_get(0));
+  CHECK_FALSE(document.texture_get(0)->is_vector());
+  CHECK(model::spritesheets_vector_used_get(document.model).empty());
+
+  document.undo();
+  CHECK(document.model.content.spritesheets.front().path == "vector.svg");
+  CHECK(document.texture_get(0)->is_vector());
+  std::filesystem::remove_all(directory);
+}

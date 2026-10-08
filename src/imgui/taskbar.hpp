@@ -41,6 +41,7 @@ namespace anm2ed::imgui
     PopupHelper overwritePopup{PopupHelper(LABEL_TASKBAR_OVERWRITE_FILE, imgui::POPUP_SMALL_NO_HEIGHT)};
     PopupHelper isaacPopup{PopupHelper(LABEL_ISAAC_COMPATIBILITY_WARNING, imgui::POPUP_SMALL_NO_HEIGHT)};
     PendingSave isaacSave{};
+    PopupHelper vectorPopup{PopupHelper(LABEL_CONVERT_SVG_POPUP, imgui::POPUP_SMALL_NO_HEIGHT)};
     PopupHelper renderPopup{PopupHelper(LABEL_TASKBAR_RENDER_ANIMATION, imgui::POPUP_SMALL_NO_HEIGHT)};
     PopupHelper configurePopup{PopupHelper(LABEL_TASKBAR_CONFIGURE)};
     PopupHelper aboutPopup{PopupHelper(LABEL_TASKBAR_ABOUT)};

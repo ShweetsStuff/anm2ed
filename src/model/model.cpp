@@ -3,6 +3,11 @@
 #include <algorithm>
 #include <unordered_set>
 
+#include "image.hpp"
+#include "path.hpp"
+
+using namespace anm2ed::util;
+
 namespace anm2ed::model
 {
   // The slot holding the animation at a flat index (animations inside groups count in order), or nullptr.
@@ -367,6 +372,17 @@ namespace anm2ed::model
       repair(sound.uid);
     for (auto& library : content.libraries)
       repair(library.uid);
+  }
+
+  // SVG spritesheets that layers show.
+  std::set<int> spritesheets_vector_used_get(const Model& model)
+  {
+    std::set<int> ids{};
+    for (const auto& layer : model.content.layers)
+      if (auto spritesheet = item_get(model.content.spritesheets, layer.spritesheetId);
+          spritesheet && !layer.is_animation() && path::is_extension(spritesheet->path, resource::image::SVG_EXTENSION))
+        ids.insert(spritesheet->id);
+    return ids;
   }
 
   int track_frames_count_get(const Track& track) { return (int)track.frames.size(); }
