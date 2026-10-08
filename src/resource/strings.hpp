@@ -279,6 +279,7 @@ namespace anm2ed
   X(LABEL_AUTO_SPRITESHEET_RELOAD, "Auto Spritesheet Reload", "Recarga Automática de Spritesheets", "Автоперезагрузка спрайт-листов", "自动重新加载图集", "스프라이트 시트 자동 새로고침") \
   X(LABEL_CHILD, "Child", "Hijo", "Дочерняя", "子动画", "자식") \
   X(LABEL_DETACHABLE_WINDOWS, "Detachable Windows", "Ventanas Desacoplables", "Отделяемые окна", "可分离窗口", "분리 가능한 창") \
+  X(LABEL_DOCUMENTS_ADD_AS_LIBRARY, "Add as Library", "Añadir como Biblioteca", "Добавить как библиотеку", "添加为库", "라이브러리로 추가") \
   X(LABEL_DOCUMENT_EXTENDED_FORMAT, "Extended Format", "Formato Extendido", "Расширенный формат", "扩展格式", "확장 형식") \
   X(LABEL_HOLD, "Hold", "Mantener", "Удерживать", "保持", "유지") \
   X(LABEL_ISAAC_COMPATIBILITY_WARNING, "Isaac Compatibility Warning", "Advertencia de Compatibilidad con Isaac", "Предупреждение о совместимости с Isaac", "Isaac 兼容性警告", "Isaac 호환성 경고") \
@@ -575,7 +576,7 @@ namespace anm2ed
   X(TOOLTIP_LIBRARY_OPEN, "Open the library in its own tab to edit it; saving it updates every file that uses it.", "Abre la biblioteca en su propia pestaña para editarla; al guardarla se actualiza cada archivo que la usa.", "Открыть библиотеку в отдельной вкладке для редактирования; сохранение обновит все файлы, которые её используют.", "在单独的标签页中打开库进行编辑；保存后所有使用它的文件都会更新。", "라이브러리를 자체 탭에서 열어 편집합니다. 저장하면 이를 사용하는 모든 파일이 업데이트됩니다.") \
   X(TOOLTIP_MERGE_SPRITESHEETS, "Merge selected spritesheets into the first selected spritesheet.", "Combina los spritesheets seleccionados en el primer spritesheet seleccionado.", "Объединить выбранные спрайт-листы в первый выбранный спрайт-лист.", "将所选图集合并到第一个选中的图集中。", "선택된 스프라이트 시트를 첫 번째 선택된 스프라이트 시트로 병합합니다.") \
   X(TEXT_SELECT_SPRITESHEET, "Select a spritesheet first!", "¡Selecciona primero un spritesheet!", "Сначала выберите спрайт-лист!", "请先选择图集！", "먼저 스프라이트 시트를 선택하세요!") \
-  X(TEXT_THIS_FILE, "This File", "Este Archivo", "Этот файл", "此文件", "이 파일") \
+  X(TEXT_SELF, "Self", "Propio", "Сам", "自身", "자신") \
   X(TEXT_TOOL_ANIMATION_PREVIEW, "This tool can only be used in Animation Preview!", "¡Esta herramienta solo se puede usar en Vista previa de animación!", "Этот инструмент можно использовать только в \"Предпросмотре анимации\"!", "该工具只能在“动画预放”中使用！", "이 도구는 애니메이션 프리뷰에서만 사용할 수 있습니다!") \
   X(TEXT_TOOL_SPRITESHEET_EDITOR, "This tool can only be used in Spritesheet Editor!", "¡Esta herramienta solo se puede usar en el Editor de spritesheets!", "Этот инструмент можно использовать только в \"Редакторе спрайт-листов\"!", "该工具只能在“图集编辑器”中使用！", "이 도구는 스프라이트 시트 편집기에서만 사용할 수 있습니다!") \
   X(TEXT_NEW_ANIMATION, "New Animation", "Nueva Animacion", "Новая анимация", "新动画", "새 애니메이션") \

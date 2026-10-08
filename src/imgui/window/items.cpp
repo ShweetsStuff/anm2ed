@@ -10,7 +10,7 @@ using namespace anm2ed::types;
 namespace anm2ed::imgui
 {
   constexpr int NULL_PROPERTIES_ROWS = 2;
-  constexpr int LAYER_PROPERTIES_ROWS = 4;
+  constexpr int LAYER_PROPERTIES_ROWS = 6;
 
   auto& layers_get(model::Model& model) { return model.content.layers; }
   auto& nulls_get(model::Model& model) { return model.content.nulls; }
@@ -147,15 +147,17 @@ namespace anm2ed::imgui
         EDIT_SET_LAYER_PROPERTIES, layers_get,
         [&](Manager::ItemEdit& layer)
         {
-          ImGui::TextUnformatted(localize.get(LABEL_LAYER_SOURCE));
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_SOURCE));
+          ImGui::SeparatorText(localize.get(LABEL_LAYER_SOURCE));
+          ImGui::PushID("##Source");
           for (auto [label, isAnimation] : {std::pair{LABEL_SPRITESHEET, false}, std::pair{LABEL_ANIMATION, true}})
           {
-            ImGui::SameLine();
+            if (isAnimation) ImGui::SameLine();
             if (ImGui::RadioButton(localize.get(label), layer.isAnimation == isAnimation))
               layer.isAnimation = isAnimation;
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_SOURCE));
           }
+          ImGui::PopID();
+          ImGui::Separator();
 
           if (!layer.isAnimation)
           {
@@ -167,7 +169,7 @@ namespace anm2ed::imgui
           }
 
           auto libraries = document.choices_get(SelectionKind::LIBRARIES);
-          libraries.labels.front() = localize.get(TEXT_THIS_FILE);
+          libraries.labels.front() = localize.get(TEXT_SELF);
           combo_id_mapped(localize.get(LABEL_LIBRARY), &layer.libraryId, libraries.ids, libraries.labels);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_LIBRARY));
           auto names = document.animation_names_get(layer.libraryId);

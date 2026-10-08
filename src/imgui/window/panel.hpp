@@ -77,7 +77,6 @@ namespace anm2ed::imgui
     std::function<void(int)> select{};
     std::function<void(int)> activate{};
     std::function<bool(int, int)> drag_drop_update{};
-    std::function<void(int)> children_draw{};
     int cardLines{};
     bool isFocusItalic{};
   };

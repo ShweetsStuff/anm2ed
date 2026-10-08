@@ -79,53 +79,46 @@ namespace anm2ed::imgui
       items_clipboard_actions_add<model::Library>(actions, panel, SelectionKind::LIBRARIES, EDIT_PASTE_LIBRARIES,
                                                   TOAST_DESERIALIZE_LIBRARIES_FAILED, libraries_get);
 
-      ListRows rows{.label_get =
-                        [&](int id)
-                    {
-                      auto pathString = path::to_utf8(model::item_get(libraries, id)->path);
-                      return std::vformat(localize.get(FORMAT_SOUND), std::make_format_args(id, pathString));
-                    },
-                    .tooltip_draw =
-                        [&](int id)
-                    {
-                      auto loaded = loaded_get(id);
-                      tooltip_name_draw(resources, path::to_utf8(model::item_get(libraries, id)->path));
-                      ImGui::Text("%s: %d", localize.get(BASIC_ID), id);
-                      if (loaded && loaded->model.isValid)
-                        ImGui::TextUnformatted(localize.get(TOOLTIP_LIBRARY_OPEN));
-                      else
-                      {
-                        ImGui::Spacing();
-                        ImGui::TextWrapped("%s", localize.get(TOOLTIP_LIBRARY_INVALID));
-                      }
-                    },
-                    .image_get =
-                        [&](int id)
-                    {
-                      auto loaded = loaded_get(id);
-                      auto isValid = loaded && loaded->model.isValid;
-                      auto& texture = resources.icons[isValid ? icon::ANIMATION : icon::NONE];
-                      return CardImage{.texture = &texture, .size = glm::vec2(texture.size), .isValid = isValid};
-                    },
-                    .activate = open,
-                    .children_draw =
-                        [&](int id)
-                    {
-                      auto loaded = loaded_get(id);
-                      if (!loaded || !loaded->model.isValid) return;
-                      auto animations = loaded->model.animations_get();
-                      auto count = animations.size();
-                      auto label = std::vformat(localize.get(FORMAT_LIBRARY_ANIMATIONS), std::make_format_args(count));
-                      ImGui::PushID(id);
-                      if (ImGui::TreeNodeEx(label.c_str(), ImGuiTreeNodeFlags_SpanAvailWidth))
-                      {
-                        for (auto [index, animation] : animations)
-                          ImGui::BulletText("%s", animation->name.c_str());
-                        ImGui::TreePop();
-                      }
-                      ImGui::PopID();
-                    },
-                    .cardLines = LIBRARY_CARD_LINES};
+      ListRows rows{
+          .label_get =
+              [&](int id)
+          {
+            auto pathString = path::to_utf8(model::item_get(libraries, id)->path);
+            return std::vformat(localize.get(FORMAT_SOUND), std::make_format_args(id, pathString));
+          },
+          .tooltip_draw =
+              [&](int id)
+          {
+            auto loaded = loaded_get(id);
+            tooltip_name_draw(resources, path::to_utf8(model::item_get(libraries, id)->path));
+            ImGui::Text("%s: %d", localize.get(BASIC_ID), id);
+            if (loaded && loaded->model.isValid)
+            {
+              auto animations = loaded->model.animations_get();
+              auto count = animations.size();
+              ImGui::SeparatorText(
+                  std::vformat(localize.get(FORMAT_LIBRARY_ANIMATIONS), std::make_format_args(count)).c_str());
+              for (auto [index, animation] : animations)
+                ImGui::BulletText("%s", animation->name.c_str());
+              ImGui::Separator();
+              ImGui::TextUnformatted(localize.get(TOOLTIP_LIBRARY_OPEN));
+            }
+            else
+            {
+              ImGui::Spacing();
+              ImGui::TextWrapped("%s", localize.get(TOOLTIP_LIBRARY_INVALID));
+            }
+          },
+          .image_get =
+              [&](int id)
+          {
+            auto loaded = loaded_get(id);
+            auto isValid = loaded && loaded->model.isValid;
+            auto& texture = resources.icons[isValid ? icon::ANIMATION : icon::NONE];
+            return CardImage{.texture = &texture, .size = glm::vec2(texture.size), .isValid = isValid};
+          },
+          .activate = open,
+          .cardLines = LIBRARY_CARD_LINES};
       list_panel_draw(
           panel, actions, {{ACTION_ADD, ACTION_REMOVE_UNUSED, ACTION_RELOAD, ACTION_OPEN}},
           [&]() { content_list_draw(panel, SelectionKind::LIBRARIES, item_ids_get(libraries), rows); }, true);

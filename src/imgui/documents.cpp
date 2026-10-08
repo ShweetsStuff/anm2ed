@@ -454,6 +454,14 @@ namespace anm2ed::imgui
             }
           }
 
+          if (ImGui::MenuItem(localize.get(LABEL_DOCUMENTS_ADD_AS_LIBRARY), nullptr, false, document))
+          {
+            manager.command_push({manager.selected, [paths = manager.anm2DragDropPaths](Manager&, Document& document)
+                                  { document.libraries_add(paths); }});
+            drag_drop_reset();
+          }
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LIBRARY_ADD));
+
           ImGui::Separator();
 
           if (ImGui::MenuItem(localize.get(BASIC_CANCEL))) drag_drop_reset();
