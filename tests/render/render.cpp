@@ -5,6 +5,7 @@
 
 #include <cstdlib>
 #include <format>
+#include <fstream>
 
 #include "canvas.hpp"
 #include "document.hpp"
@@ -225,5 +226,35 @@ TEST_CASE("converting SVG spritesheets writes PNGs beside them")
   document.undo();
   CHECK(document.model.content.spritesheets.front().path == "vector.svg");
   CHECK(document.texture_get(0)->is_vector());
+  std::filesystem::remove_all(directory);
+}
+
+TEST_CASE("a Rebirth save flattens animation layers for the game")
+{
+  auto directory = std::filesystem::temp_directory_path() / "anm2ed_flatten";
+  std::filesystem::remove_all(directory);
+  std::filesystem::create_directories(directory / "library");
+  std::filesystem::copy_file(RENDER_TEST_DIR / "nested.anm2", directory / "nested.anm2");
+  for (auto name : {"spin.anm2", "sheet.png"})
+    std::filesystem::copy_file(RENDER_TEST_DIR / name, directory / "library" / name);
+  auto text = std::string{};
+  {
+    std::ifstream file(directory / "nested.anm2");
+    text.assign(std::istreambuf_iterator<char>(file), {});
+  }
+  text.replace(text.find("Path=\"spin.anm2\""), std::string("Path=\"spin.anm2\"").size(), "Path=\"library/spin.anm2\"");
+  std::ofstream(directory / "nested.anm2") << text;
+
+  Document document(directory / "nested.anm2", false);
+  REQUIRE(document.is_valid());
+  document.model.isExtendedFormat = false;
+  REQUIRE(document.save(directory / "rebirth.anm2"));
+  std::ifstream file(directory / "rebirth.anm2");
+  std::string saved(std::istreambuf_iterator<char>(file), {});
+  auto game = saved.substr(0, saved.find("<SourceDocument"));
+  CHECK(game.find("Name=\"spin/red\"") != std::string::npos);
+  CHECK(game.find("Path=\"library/sheet.png\"") != std::string::npos);
+  CHECK(game.find(" Animation=\"") == std::string::npos);
+  CHECK(saved.find(" Animation=\"Spin\"") != std::string::npos);
   std::filesystem::remove_all(directory);
 }

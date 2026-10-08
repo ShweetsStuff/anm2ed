@@ -157,3 +157,35 @@ TEST_CASE("child animations fire their triggers as they reach them")
   CHECK(sources_get(1) == std::vector<const model::Model*>{&spin});
   CHECK(sources_get(2).empty());
 }
+
+TEST_CASE("flattening animation layers bakes their children into plain layers that draw the same")
+{
+  auto anm2 = model_load(file_load(TEST_DIR / "render" / "nested.anm2"));
+  auto spin = model_load(file_load(TEST_DIR / "render" / "spin.anm2"));
+  auto library_get = [&](const model::Model&, int id) { return id == 0 ? &spin : nullptr; };
+  auto flat =
+      edit::animation_layers_flatten(anm2, library_get, [](const model::Model&, const std::filesystem::path& path)
+                                     { return std::filesystem::path("library") / path; });
+  CHECK(std::ranges::none_of(flat.content.layers, &model::Layer::is_animation));
+  CHECK(flat.content.spritesheets.back().path == std::filesystem::path("library") / "sheet.png");
+
+  // Every frame, the plain layers draw where the animation layers' children did.
+  auto points_get = [&](const model::Model& model, const model::LibraryGet& get, float time)
+  {
+    std::vector<glm::vec2> points{};
+    for (const auto& draw :
+         model::animation_draws_get(model, *model.animation_get(0), {.time = time, .library_get = get}))
+      if (draw.type == model::DrawType::LAYER)
+        points.push_back(glm::round(glm::vec2(draw.parent * model::draw_quad_model_get(draw) * glm::vec4(1, 1, 0, 1))));
+    std::ranges::sort(points, [](glm::vec2 a, glm::vec2 b) { return std::tie(a.x, a.y) < std::tie(b.x, b.y); });
+    return points;
+  };
+  for (float time = 0.0f; time < 8.0f; time += 1.0f)
+    CHECK(points_get(flat, {}, time) == points_get(anm2, library_get, time));
+
+  auto text = model::model_to_string(anm2, {.gameModel = &flat});
+  auto game = game_document_get(text);
+  CHECK(game.find(" Animation=\"") == std::string::npos);
+  CHECK(game.find("spin/red") != std::string::npos);
+  CHECK(std::ranges::count_if(model_load(text).content.layers, &model::Layer::is_animation) == 3);
+}

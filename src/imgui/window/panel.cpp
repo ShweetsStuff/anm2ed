@@ -122,9 +122,11 @@ namespace anm2ed::imgui
     auto font = rows.font_get ? rows.font_get(key) : isFocused ? font::ITALICS : font::REGULAR;
     auto label = rows.label_get(key);
 
+    auto isInvalid = rows.is_invalid && rows.is_invalid(key);
     ImGui::PushID(key);
     ImGui::SetNextItemSelectionUserData(index);
     if (font != font::REGULAR) ImGui::PushFont(panel.resources.fonts[font].get(), font::SIZE);
+    if (isInvalid) ImGui::PushStyleColor(ImGuiCol_Text, CARD_TINT_INVALID);
     if (arrowKey == key) ImGui::SetKeyboardFocusHere();
 
     bool isActivated{};
@@ -157,6 +159,7 @@ namespace anm2ed::imgui
 
     if (isActivated || ImGui::IsItemClicked(ImGuiMouseButton_Left) || ImGui::IsItemClicked(ImGuiMouseButton_Right))
       row_select(selection, focus, rows, key);
+    if (isInvalid) ImGui::PopStyleColor();
     if (font != font::REGULAR) ImGui::PopFont();
     row_scroll_update(state, key, arrowKey);
     if (state.newId == key) state.newId = -1;

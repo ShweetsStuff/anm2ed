@@ -749,7 +749,7 @@ namespace anm2ed::imgui
 
         if (settings.onionskinIsEnabled && settings.onionskinIsPivotPath && !isIsolated)
         {
-          auto key = std::tuple{document.hash, reference.animationIndex, isRootTransform};
+          auto key = std::tuple{document.hash, document.librariesRevision, reference.animationIndex, isRootTransform};
           if (key != pivotPathsKey || pivotPaths.empty())
           {
             pivotPathsKey = key;

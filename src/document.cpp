@@ -214,7 +214,7 @@ namespace anm2ed
   {
     auto absolutePath = !path.empty() ? path : this->path;
     auto absolutePathUtf8 = path::to_utf8(absolutePath);
-    if (model::model_save(model, absolutePath, errorString, {.isExtendedFormat = model.isExtendedFormat}))
+    if (file_write(absolutePath, errorString))
     {
       this->path = absolutePath;
       toast_log(Level::INFO, TOAST_SAVE_DOCUMENT, absolutePathUtf8);
@@ -223,6 +223,26 @@ namespace anm2ed
     }
     if (errorString) toast_log(Level::ERROR, TOAST_SAVE_DOCUMENT_FAILED, absolutePathUtf8, *errorString);
     return false;
+  }
+
+  // Writes the document; a Rebirth document's game copy has its animation layers flattened into plain layers.
+  bool Document::file_write(const std::filesystem::path& path, std::string* errorString)
+  {
+    std::optional<model::Model> game{};
+    if (!model.isExtendedFormat && std::ranges::any_of(model.content.layers, &model::Layer::is_animation))
+      game = edit::animation_layers_flatten(
+          model, library_resolver_get(),
+          [&](const model::Model& source, const std::filesystem::path& spritesheetPath)
+          {
+            for (const auto& [libraryPath, library] : libraries)
+              if (&library.model == &source)
+                return path::backslash_replace(
+                    path::make_relative(document::absolute_path_get(libraryPath.parent_path(), spritesheetPath),
+                                        std::filesystem::absolute(directory_get())));
+            return spritesheetPath;
+          });
+    return model::model_save(model, path, errorString,
+                             {.isExtendedFormat = model.isExtendedFormat, .gameModel = game ? &*game : nullptr});
   }
 
   std::filesystem::path Document::autosave_path_get()
@@ -244,7 +264,7 @@ namespace anm2ed
   {
     auto autosavePath = autosave_path_get();
     auto autosavePathUtf8 = path::to_utf8(autosavePath);
-    if (model::model_save(model, autosavePath, errorString, {.isExtendedFormat = model.isExtendedFormat}))
+    if (file_write(autosavePath, errorString))
     {
       for (auto id : spritesheets_autosave_dirty_get())
       {
@@ -388,9 +408,11 @@ namespace anm2ed
                    : std::filesystem::path{};
   }
 
+  // A library of this document (or of a copy of it) or of one of its libraries.
   const LibraryData* Document::library_get(const model::Model& from, int id) const
   {
-    auto link = libraryLinks.find({&from == &model ? nullptr : &from, id});
+    auto isLibrary = std::ranges::any_of(libraries, [&](const auto& pair) { return &pair.second.model == &from; });
+    auto link = libraryLinks.find({isLibrary ? &from : nullptr, id});
     return link == libraryLinks.end() ? nullptr : link->second;
   }
 
@@ -401,6 +423,15 @@ namespace anm2ed
       auto library = library_get(from, id);
       return library ? &library->model : nullptr;
     };
+  }
+
+  // An animation layer whose animation isn't there; a library that didn't load leaves the question open (false).
+  bool Document::is_layer_animation_missing(const model::Layer& layer) const
+  {
+    if (!layer.is_animation()) return false;
+    auto library = layer.libraryId == -1 ? nullptr : library_get(model, layer.libraryId);
+    auto source = layer.libraryId == -1 ? &model : library && library->model.isValid ? &library->model : nullptr;
+    return source && !source->animation_named_get(layer.animation);
   }
 
   // The animation names of library `libraryId`, or of this document at -1.
@@ -455,7 +486,11 @@ namespace anm2ed
       {
         auto path = document::absolute_path_get(directory, library.path);
         auto [it, isNew] = libraries.try_emplace(path);
-        if (isNew) document::library_load(path, it->second);
+        if (isNew)
+        {
+          document::library_load(path, it->second);
+          ++librariesRevision;
+        }
         libraryLinks[{from == &model ? nullptr : from, library.id}] = &it->second;
         if (reached.insert(path).second) pending.emplace_back(&it->second.model, path.parent_path());
       }
@@ -473,6 +508,7 @@ namespace anm2ed
       auto time = std::filesystem::last_write_time(path, ec);
       if (ec || time == library.writeTime) continue;
       document::library_load(path, library);
+      ++librariesRevision;
       isReloaded = true;
     }
     if (isReloaded) assets_sync();

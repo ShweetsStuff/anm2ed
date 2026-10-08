@@ -50,6 +50,7 @@ namespace anm2ed::model
     glm::mat4 parent{1.0f};
     const Model* source{};
     int spritesheetId{-1};
+    int sourceId{-1}; // the layer of `source` drawn (a child's, for an animation layer's draws)
   };
 
   // A trigger that fires, from the animation played or a child animation (whose ids belong to `source`).

@@ -165,9 +165,17 @@ namespace anm2ed
   constexpr Flags SERIALIZE_ANM2ED_DEFAULT =
       SERIALIZE_GROUPS | SERIALIZE_REGIONS | SERIALIZE_SOUNDS | SERIALIZE_NESTED_GROUPS | SERIALIZE_EXTENSIONS;
 
+  namespace model
+  {
+    class Model;
+  }
+
+  // How a document saves: the editor's document alone (extended), or the game's copy with the editor's embedded;
+  // `gameModel` is the game's copy when it differs from the document (animation layers flattened).
   struct Options
   {
     bool isExtendedFormat{};
+    const model::Model* gameModel{};
   };
 
 #define FRAME_CHANGE_SCALARS                                                                                           \

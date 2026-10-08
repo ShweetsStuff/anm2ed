@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "image.hpp"
+#include "model/draw.hpp"
 #include "model/model.hpp"
 
 // Document edits as plain functions of the model. Each returns the uids of the elements it created or changed that
@@ -137,5 +138,9 @@ namespace anm2ed::edit
   std::optional<resource::Image> spritesheets_merge(model::Model&, const std::set<int>&, const ImageGet&, bool, bool,
                                                     bool, Origin);
   int event_id_resolve(model::Model&, int);
+
+  // Where a spritesheet path of a document (this one, or a library) points, from this document.
+  using SpritesheetPathGet = std::function<std::filesystem::path(const model::Model&, const std::filesystem::path&)>;
+  model::Model animation_layers_flatten(model::Model, const model::LibraryGet&, const SpritesheetPathGet&);
   bool file_merge(model::Model&, const std::filesystem::path&, const std::filesystem::path&, FileMergePreset);
 }

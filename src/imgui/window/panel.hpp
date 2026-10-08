@@ -72,6 +72,7 @@ namespace anm2ed::imgui
     std::function<std::string(int)> name_get{};
     std::function<void(int, const std::string&)> rename{};
     std::function<bool(int)> is_locked{};
+    std::function<bool(int)> is_invalid{};
     std::function<resource::font::Type(int)> font_get{};
     std::function<void(int)> tooltip_draw{};
     std::function<CardImage(int)> image_get{};

@@ -167,17 +167,22 @@ namespace anm2ed::imgui
       track_items_actions_add<model::Layer>(actions, panel, SelectionKind::LAYERS, ElementType::LAYER_ELEMENT,
                                             TOOLTIP_ADD_LAYER, TOOLTIP_REMOVE_UNUSED_LAYERS, EDIT_REMOVE_UNUSED_LAYERS,
                                             EDIT_PASTE_LAYERS, TOAST_DESERIALIZE_LAYERS_FAILED, layers_get);
-      ListRows rows{
-          .label_get = [&](int id) { return layer_label_get(*model::item_get(layers, id)); },
-          .tooltip_draw =
-              [&](int id)
-          {
-            auto layer = model::item_get(layers, id);
-            item_tooltip_draw(resources, layer->name, id);
-            ImGui::TextUnformatted(
-                std::vformat(localize.get(FORMAT_SPRITESHEET_ID), std::make_format_args(layer->spritesheetId)).c_str());
-          },
-          .activate = [&](int id) { manager.item_properties_open(ElementType::LAYER_ELEMENT, id); }};
+      ListRows rows{.label_get = [&](int id) { return layer_label_get(*model::item_get(layers, id)); },
+                    .is_invalid = [&](int id)
+                    { return document.is_layer_animation_missing(*model::item_get(layers, id)); },
+                    .tooltip_draw =
+                        [&](int id)
+                    {
+                      auto layer = model::item_get(layers, id);
+                      item_tooltip_draw(resources, layer->name, id);
+                      if (document.is_layer_animation_missing(*layer))
+                        ImGui::TextUnformatted(localize.get(TOOLTIP_LAYER_ANIMATION_MISSING));
+                      else if (!layer->is_animation())
+                        ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_SPRITESHEET_ID),
+                                                            std::make_format_args(layer->spritesheetId))
+                                                   .c_str());
+                    },
+                    .activate = [&](int id) { manager.item_properties_open(ElementType::LAYER_ELEMENT, id); }};
       list_panel_draw(panel, actions, {{ACTION_ADD, ACTION_REMOVE_UNUSED}},
                       [&]() { content_list_draw(panel, SelectionKind::LAYERS, item_ids_get(layers), rows); });
     }

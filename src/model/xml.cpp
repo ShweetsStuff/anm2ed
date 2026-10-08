@@ -1766,7 +1766,7 @@ namespace anm2ed::model
   {
     if (options.isExtendedFormat)
       return model_write(sink, model, SERIALIZE_ANM2ED_DEFAULT | SERIALIZE_EXTENDED_DOCUMENT);
-    model_write(sink, model, SERIALIZE_ISAAC_DEFAULT,
+    model_write(sink, options.gameModel ? *options.gameModel : model, SERIALIZE_ISAAC_DEFAULT,
                 [&]() { model_write(sink, model, SERIALIZE_ANM2ED_DEFAULT, {}, SOURCE_DOCUMENT_TAG); });
   }
 

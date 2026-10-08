@@ -212,7 +212,8 @@ namespace anm2ed::model
           }
         }
         layerOrders.emplace_back(layerOrder + frame.depth, frame.depth);
-        draws.push_back({type, id, groupType, sample, time, frame, parent, &model, layer ? layer->spritesheetId : -1});
+        draws.push_back(
+            {type, id, groupType, sample, time, frame, parent, &model, layer ? layer->spritesheetId : -1, id});
       }
     };
     if (animation.root.isVisible) track_draws_add(animation.root, DrawType::ROOT, -1, NONE, nullptr);

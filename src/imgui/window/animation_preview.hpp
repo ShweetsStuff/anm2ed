@@ -34,7 +34,7 @@ namespace anm2ed::imgui
       std::vector<glm::vec2> points{};
     };
     std::vector<PivotPath> pivotPaths{};
-    std::tuple<std::uint64_t, int, bool> pivotPathsKey{};
+    std::tuple<std::uint64_t, std::uint64_t, int, bool> pivotPathsKey{};
 
     void recording_start(Manager&, Settings&, Document&, const model::Animation*);
     void recording_stop(Manager&, Document&);

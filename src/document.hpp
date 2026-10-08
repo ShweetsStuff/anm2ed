@@ -78,6 +78,7 @@ namespace anm2ed
     // Libraries by absolute path, and what each (document, library id) points at (nullptr is this document).
     std::map<std::filesystem::path, LibraryData> libraries{};
     std::map<std::pair<const model::Model*, int>, const LibraryData*> libraryLinks{};
+    std::uint64_t librariesRevision{}; // counts library loads, for anything drawn from them
     // Vector spritesheets drawn again for zooms past 100%, by (image uid, power-of-two level).
     mutable std::map<std::pair<std::uint64_t, int>, resource::Image> vectorImages{};
     bool isAnimationPreviewSet{false};
@@ -115,6 +116,7 @@ namespace anm2ed
     Document(Document&&) noexcept;
     Document& operator=(Document&&) noexcept;
     bool save(const std::filesystem::path& = {}, std::string* = nullptr);
+    bool file_write(const std::filesystem::path&, std::string* = nullptr);
     void assets_sync();
     void texture_change(int);
     bool texture_reload(int);
@@ -163,6 +165,7 @@ namespace anm2ed
     }
     std::vector<Reference> references_get(const edit::Uids&) const;
     bool is_dirty() const;
+    bool is_layer_animation_missing(const model::Layer&) const;
     bool is_autosave_dirty();
     std::filesystem::path directory_get() const;
     std::filesystem::path filename_get() const;
