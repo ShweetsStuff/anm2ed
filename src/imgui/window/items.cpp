@@ -2,6 +2,7 @@
 
 #include <format>
 
+#include "path.hpp"
 #include "util/imgui/input.hpp"
 #include "util/imgui/layout.hpp"
 
@@ -30,6 +31,23 @@ namespace anm2ed::imgui
       return std::vformat(localize.get(FORMAT_LAYER_ANIMATION),
                           std::make_format_args(layer.id, layer.name, layer.animation));
     return std::vformat(localize.get(FORMAT_LAYER), std::make_format_args(layer.id, layer.name, layer.spritesheetId));
+  }
+
+  // Tooltip lines for what a layer shows: its spritesheet, or its animation and the library it's from.
+  void layer_source_tooltip_draw(const Document& document, const model::Layer& layer)
+  {
+    if (!layer.is_animation())
+    {
+      ImGui::TextUnformatted(localize_format(FORMAT_SPRITESHEET_ID, layer.spritesheetId).c_str());
+      return;
+    }
+    auto library = model::item_get(document.model.content.libraries, layer.libraryId);
+    auto libraryLabel = library ? std::format("#{} {}", library->id, util::path::to_utf8(library->path))
+                                : std::string(localize.get(TEXT_SELF));
+    ImGui::TextUnformatted(localize_format(FORMAT_LAYER_ANIMATION_NAME, layer.animation).c_str());
+    ImGui::TextUnformatted(localize_format(FORMAT_LAYER_LIBRARY, libraryLabel).c_str());
+    if (document.is_layer_animation_missing(layer))
+      ImGui::TextUnformatted(localize.get(TOOLTIP_LAYER_ANIMATION_MISSING));
   }
 
   model::Layer item_edit_layer_get(const Manager::ItemEdit& edit)
@@ -175,12 +193,7 @@ namespace anm2ed::imgui
                     {
                       auto layer = model::item_get(layers, id);
                       item_tooltip_draw(resources, layer->name, id);
-                      if (document.is_layer_animation_missing(*layer))
-                        ImGui::TextUnformatted(localize.get(TOOLTIP_LAYER_ANIMATION_MISSING));
-                      else if (!layer->is_animation())
-                        ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_SPRITESHEET_ID),
-                                                            std::make_format_args(layer->spritesheetId))
-                                                   .c_str());
+                      layer_source_tooltip_draw(document, *layer);
                     },
                     .activate = [&](int id) { manager.item_properties_open(ElementType::LAYER_ELEMENT, id); }};
       list_panel_draw(panel, actions, {{ACTION_ADD, ACTION_REMOVE_UNUSED}},

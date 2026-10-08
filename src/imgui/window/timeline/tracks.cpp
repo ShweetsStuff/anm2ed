@@ -321,9 +321,7 @@ namespace anm2ed::imgui
                 ImGui::PopFont();
 
                 ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_ID), std::make_format_args(id)).c_str());
-                ImGui::TextUnformatted(
-                    std::vformat(localize.get(FORMAT_SPRITESHEET_ID), std::make_format_args(layer->spritesheetId))
-                        .c_str());
+                layer_source_tooltip_draw(document, *layer);
                 ImGui::TextUnformatted(
                     std::vformat(localize.get(FORMAT_VISIBLE), std::make_format_args(visibleLabel)).c_str());
                 ImGui::TextUnformatted(

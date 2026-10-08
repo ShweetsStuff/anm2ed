@@ -151,6 +151,8 @@ namespace anm2ed::imgui
   void events_update(Panel&);
   void sounds_update(Panel&);
   std::string layer_label_get(const model::Layer&);
+  void layer_source_tooltip_draw(const Document&, const model::Layer&);
+  void layer_source_tooltip_draw(const Document&, const model::Layer&);
   model::Layer item_edit_layer_get(const Manager::ItemEdit&);
   model::Null item_edit_null_get(const Manager::ItemEdit&);
   void layer_source_draw(Document&, Manager::ItemEdit&);

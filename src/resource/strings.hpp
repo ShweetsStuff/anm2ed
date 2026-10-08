@@ -245,6 +245,8 @@ namespace anm2ed
   X(FORMAT_ISAAC_TRIGGER_SOUNDS, "{} trigger(s) have sounds, which the game doesn't read from animations; they will be dropped.", "{} disparador(es) tienen sonidos, que el juego no lee de las animaciones; se descartarán.", "{} триггер(ов) имеют звуки, которые игра не читает из анимаций; они будут отброшены.", "{} 个触发器带有声音，游戏不会从动画中读取，将被舍弃。", "트리거 {}개에 게임이 애니메이션에서 읽지 않는 사운드가 있습니다. 사운드는 제거됩니다.") \
   X(FORMAT_ISAAC_VECTOR_SPRITESHEETS, "{} spritesheet(s) are SVGs, which the game can't load; export them as PNGs for it.", "{} spritesheet(s) son SVG, que el juego no puede cargar; expórtalos como PNG para él.", "{} спрайт-лист(ов) в формате SVG, который игра не может загрузить; экспортируйте их в PNG.", "{} 个图集是 SVG，游戏无法加载；请将其导出为 PNG。", "{}개의 스프라이트 시트가 SVG라서 게임에서 불러올 수 없습니다. PNG로 내보내세요.") \
   X(FORMAT_LAYER_ANIMATION, "#{0} {1} (Animation: {2})", "#{0} {1} (Animación: {2})", "#{0} {1} (Анимация: {2})", "#{0} {1} (动画: {2})", "#{0} {1} (애니메이션: {2})") \
+  X(FORMAT_LAYER_ANIMATION_NAME, "Animation: {}", "Animación: {}", "Анимация: {}", "动画: {}", "애니메이션: {}") \
+  X(FORMAT_LAYER_LIBRARY, "Library: {}", "Biblioteca: {}", "Библиотека: {}", "库: {}", "라이브러리: {}") \
   X(FORMAT_LIBRARY_ANIMATIONS, "Animations ({0})", "Animaciones ({0})", "Анимации ({0})", "动画 ({0})", "애니메이션 ({0})") \
   X(FORMAT_ORIGIN, "Origin: {0}", "Origen: {0}", "Точка отсчета: {0}", "原点: {0}", "원점: {0}") \
   X(FORMAT_SPRITESHEET_ID, "Spritesheet ID: {0}", "ID de Spritesheet: {0}", "", "图集 ID: {0}", "스프라이트 시트 ID: {0}") \
