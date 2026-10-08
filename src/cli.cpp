@@ -180,10 +180,10 @@ options:
     auto issues = model::isaac_issues_get(model);
     std::println("isaac issues: {} eased frames, {} group transforms, {} skewed frames, {} shader frames, {} depth "
                  "frames, {} alpha offset frames, {} blurred frames, {} extra trigger events, {} trigger sounds, "
-                 "{} animation layers",
+                 "{} animation layers, {} vector spritesheets",
                  issues.easedFrames, issues.groupTransforms, issues.skewFrames, issues.shaderFrames, issues.depthFrames,
                  issues.alphaOffsetFrames, issues.blurFrames, issues.extraEvents, issues.triggerSounds,
-                 issues.animationLayers);
+                 issues.animationLayers, issues.vectorSpritesheets);
     return 0;
   }
 

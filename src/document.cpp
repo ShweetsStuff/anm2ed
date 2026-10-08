@@ -1,6 +1,7 @@
 #include "document.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <format>
 #include <limits>
@@ -31,6 +32,8 @@ using namespace glm;
 namespace anm2ed::document
 {
   constexpr std::string_view AUTOSAVE_EXTENSION = ".autosave";
+  constexpr int VECTOR_LEVEL_MAX = 3;
+  constexpr int VECTOR_SIZE_MAX = 8192;
   constexpr std::uint64_t HASH_COMBINE_CONSTANT = 0x9e3779b97f4a7c15ULL;
 
   // A path written in a document in `directory`, as an absolute path.
@@ -364,6 +367,15 @@ namespace anm2ed
     std::erase_if(shaders, is_invalid);
     std::erase_if(shaderVertexPaths, is_invalid);
     std::erase_if(shaderFragmentPaths, is_invalid);
+
+    // Vector images drawn from spritesheet images no longer in use are dropped.
+    std::set<std::uint64_t> imageUids{};
+    for (const auto& spritesheet : model.content.spritesheets)
+      if (auto image = texture_get(spritesheet.id)) imageUids.insert(image->uid);
+    for (const auto& [path, library] : libraries)
+      for (const auto& [id, image] : library.images)
+        imageUids.insert(image.uid);
+    std::erase_if(vectorImages, [&](const auto& pair) { return !imageUids.contains(pair.first.first); });
   }
 
   std::filesystem::path Document::library_path_get(int id) const
@@ -400,16 +412,23 @@ namespace anm2ed
     return names;
   }
 
-  const resource::Image* Document::draw_image_get(const model::Draw& draw) const
+  // A layer draw's spritesheet image; a vector one is drawn again (cached) when `scale` canvas pixels show each pixel.
+  const resource::Image* Document::draw_image_get(const model::Draw& draw, float scale) const
   {
-    if (!draw.source || draw.source == &model) return texture_get(draw.spritesheetId);
+    const resource::Image* image{};
+    if (!draw.source || draw.source == &model) image = texture_get(draw.spritesheetId);
     for (const auto& [path, library] : libraries)
       if (&library.model == draw.source)
-      {
-        auto image = library.images.find(draw.spritesheetId);
-        return image == library.images.end() ? nullptr : &image->second;
-      }
-    return nullptr;
+        if (auto found = library.images.find(draw.spritesheetId); found != library.images.end()) image = &found->second;
+    if (!image || !image->is_vector() || scale <= 1.0f) return image;
+
+    auto level = std::min((int)std::ceil(std::log2(scale)), document::VECTOR_LEVEL_MAX);
+    while (level > 0 && std::max(image->size.x, image->size.y) << level > document::VECTOR_SIZE_MAX)
+      --level;
+    if (level == 0) return image;
+    auto [it, isNew] = vectorImages.try_emplace({image->uid, level});
+    if (isNew) it->second = image->vector_render(image->scale * (float)(1 << level));
+    return &it->second;
   }
 
   // Loads every library this document reaches (libraries' own libraries too) and forgets the ones it no longer does.
@@ -447,7 +466,7 @@ namespace anm2ed
       document::library_load(path, library);
       isReloaded = true;
     }
-    if (isReloaded) libraries_sync();
+    if (isReloaded) assets_sync();
     return isReloaded;
   }
 
@@ -468,7 +487,7 @@ namespace anm2ed
   resource::Image* Document::texture_edit(int id)
   {
     auto texture = texture_get(id);
-    if (!texture) return nullptr;
+    if (!texture || texture->is_vector()) return nullptr;
     return &textureDrafts.try_emplace(id, *texture).first->second;
   }
 
@@ -501,7 +520,8 @@ namespace anm2ed
   bool Document::spritesheet_pack(int id, int padding)
   {
     auto texture = texture_get(id);
-    auto packed = texture ? edit::spritesheet_pack(model, id, *texture, padding) : std::nullopt;
+    auto packed =
+        texture && !texture->is_vector() ? edit::spritesheet_pack(model, id, *texture, padding) : std::nullopt;
     if (!packed) return false;
     texture_set(id, std::move(*packed));
     assets_sync();
@@ -511,6 +531,7 @@ namespace anm2ed
   bool Document::spritesheets_merge(const std::set<int>& ids, bool isAppendRight, bool isMakeRegions,
                                     bool isMakePrimaryRegion, Origin origin)
   {
+    if (std::ranges::any_of(ids, [&](int id) { return texture_get(id) && texture_get(id)->is_vector(); })) return false;
     auto merged = edit::spritesheets_merge(
         model, ids, [this](int id) { return texture_get(id); }, isAppendRight, isMakeRegions, isMakePrimaryRegion,
         origin);

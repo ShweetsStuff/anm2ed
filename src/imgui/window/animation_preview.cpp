@@ -715,10 +715,11 @@ namespace anm2ed::imgui
           }
           else if (draw.type == model::DrawType::LAYER)
           {
-            auto layerTexture = sampleDocument.draw_image_get(draw);
+            auto layerTexture =
+                sampleDocument.draw_image_get(draw, math::percent_to_unit(viewZoom) * model::draw_scale_get(draw));
             if (!layerTexture || !layerTexture->is_valid() || layerTexture->size.x <= 0 || layerTexture->size.y <= 0)
               continue;
-            auto textureSize = vec2(layerTexture->size);
+            auto textureSize = layerTexture->unit_size_get();
             auto layerModel = model::draw_quad_model_get(draw);
             auto layerTransform = transform * layerModel;
             auto tint = frame.tint;

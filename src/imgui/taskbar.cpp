@@ -391,7 +391,8 @@ namespace anm2ed::imgui
                                      {issues.blurFrames, FORMAT_ISAAC_BLUR_FRAMES},
                                      {issues.extraEvents, FORMAT_ISAAC_EXTRA_EVENTS},
                                      {issues.triggerSounds, FORMAT_ISAAC_TRIGGER_SOUNDS},
-                                     {issues.animationLayers, FORMAT_ISAAC_ANIMATION_LAYERS}})
+                                     {issues.animationLayers, FORMAT_ISAAC_ANIMATION_LAYERS},
+                                     {issues.vectorSpritesheets, FORMAT_ISAAC_VECTOR_SPRITESHEETS}})
           if (count > 0) ImGui::BulletText("%s", localize_format(format, count).c_str());
       }
       ImGui::TextWrapped("%s", localize.get(TEXT_ISAAC_EDITOR_COPY));

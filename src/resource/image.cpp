@@ -23,8 +23,11 @@
   #pragma GCC diagnostic pop
 #endif
 
+#include <lunasvg.h>
+
 #include "file.hpp"
 #include "math.hpp"
+#include "path.hpp"
 #include "uid.hpp"
 
 using namespace anm2ed::resource::image;
@@ -34,7 +37,29 @@ using namespace glm;
 
 namespace anm2ed::resource
 {
+
   bool Image::is_valid() const { return !pixels.empty(); }
+
+  bool Image::is_vector() const { return svg != nullptr; }
+
+  glm::vec2 Image::unit_size_get() const { return glm::vec2(size) / scale; }
+
+  // An SVG drawn at about `scale` pixels per unit (exactly, after rounding to whole pixels); nothing if it won't parse.
+  Image svg_render(std::shared_ptr<const std::string> svg, float scale)
+  {
+    auto document = svg ? lunasvg::Document::loadFromData(*svg) : nullptr;
+    if (!document || document->width() <= 0.0f) return {};
+    auto size = glm::max(ivec2(glm::ceil(vec2(document->width(), document->height()) * scale)), ivec2(1));
+    auto bitmap = document->renderToBitmap(size.x, size.y);
+    if (bitmap.isNull()) return {};
+    bitmap.convertToRGBA();
+    Image image(bitmap.data(), size, true);
+    image.svg = std::move(svg);
+    image.scale = (float)size.x / document->width();
+    return image;
+  }
+
+  Image Image::vector_render(float scale) const { return svg_render(svg, scale); }
 
   size_t Image::pixel_size_get() const { return size.x * size.y * CHANNELS; }
 
@@ -62,6 +87,12 @@ namespace anm2ed::resource
 
   Image::Image(const std::filesystem::path& pngPath)
   {
+    if (path::is_extension(pngPath, SVG_EXTENSION))
+    {
+      auto text = std::make_shared<std::string>();
+      if (file::read_to_string(pngPath, text.get())) *this = svg_render(std::move(text), 1.0f);
+      return;
+    }
     File file(pngPath, "rb");
     if (auto handle = file.get())
     {

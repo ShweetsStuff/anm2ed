@@ -21,6 +21,7 @@ namespace anm2ed::model
     int triggerSounds{};
     int extraEvents{};
     int animationLayers{};
+    int vectorSpritesheets{};
 
     bool operator==(const IsaacIssues&) const = default;
   };

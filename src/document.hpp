@@ -76,6 +76,8 @@ namespace anm2ed
     // Libraries by absolute path, and what each (document, library id) points at (nullptr is this document).
     std::map<std::filesystem::path, LibraryData> libraries{};
     std::map<std::pair<const model::Model*, int>, const LibraryData*> libraryLinks{};
+    // Vector spritesheets drawn again for zooms past 100%, by (image uid, power-of-two level).
+    mutable std::map<std::pair<std::uint64_t, int>, resource::Image> vectorImages{};
     bool isAnimationPreviewSet{false};
     bool isSpritesheetEditorSet{false};
   };
@@ -126,7 +128,7 @@ namespace anm2ed
     const LibraryData* library_get(const model::Model&, int) const;
     model::LibraryGet library_resolver_get() const;
     std::vector<std::string> animation_names_get(int) const;
-    const resource::Image* draw_image_get(const model::Draw&) const;
+    const resource::Image* draw_image_get(const model::Draw&, float = 1.0f) const;
     void libraries_sync();
     bool libraries_reload();
     void library_reload(int);

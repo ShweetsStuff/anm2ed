@@ -38,7 +38,7 @@ namespace anm2ed::imgui
     {
       auto spritesheet = spritesheet_get(document, id);
       auto texture = document.texture_get(id);
-      if (!spritesheet || !texture) continue;
+      if (!spritesheet || !texture || texture->is_vector()) continue;
       auto pathString = path::to_utf8(spritesheet->path);
       WorkingDirectory workingDirectory(document.directory_get());
       path::ensure_directory(spritesheet->path.parent_path());

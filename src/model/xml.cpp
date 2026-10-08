@@ -13,6 +13,7 @@
 
 #include "file.hpp"
 #include "frames.hpp"
+#include "image.hpp"
 #include "math.hpp"
 #include "path.hpp"
 #include "time.hpp"
@@ -1373,6 +1374,9 @@ namespace anm2ed::model
   {
     IsaacIssues issues{};
     issues.animationLayers = (int)std::ranges::count_if(model.content.layers, &Layer::is_animation);
+    issues.vectorSpritesheets =
+        (int)std::ranges::count_if(model.content.spritesheets, [](const Spritesheet& spritesheet)
+                                   { return path::is_extension(spritesheet.path, resource::image::SVG_EXTENSION); });
     for (auto [index, animation] : model.animations_get())
     {
       for (const auto* entries : {&animation->layers, &animation->nulls})

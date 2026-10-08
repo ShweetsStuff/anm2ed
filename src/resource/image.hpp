@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <memory>
+#include <string>
 #include <vector>
 
 #include <glm/glm.hpp>
@@ -10,11 +12,13 @@
 namespace anm2ed::resource::image
 {
   constexpr auto CHANNELS = 4;
+  constexpr auto SVG_EXTENSION = "svg";
 }
 
 namespace anm2ed::resource
 {
-  // CPU-side RGBA pixels. uid changes whenever the pixels do, so GPU copies can be cached by it.
+  // CPU-side RGBA pixels. uid changes whenever the pixels do, so GPU copies can be cached by it. A vector image keeps
+  // its SVG and is drawn at `scale` pixels per SVG unit; it can be drawn again at any scale, and isn't edited.
   class Image
   {
   public:
@@ -22,6 +26,8 @@ namespace anm2ed::resource
     std::vector<uint8_t> pixels{};
     bool isLinear{};
     std::uint64_t uid{};
+    std::shared_ptr<const std::string> svg{};
+    float scale{1.0f};
 
     Image() = default;
     Image(const uint8_t*, glm::ivec2, bool = false);
@@ -29,6 +35,9 @@ namespace anm2ed::resource
     Image(const std::filesystem::path&);
 
     bool is_valid() const;
+    bool is_vector() const;
+    glm::vec2 unit_size_get() const;
+    Image vector_render(float) const;
     size_t pixel_size_get() const;
     bool write_png(const std::filesystem::path&) const;
     static bool write_pixels_png(const std::filesystem::path&, glm::ivec2, const uint8_t*);

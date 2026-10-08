@@ -119,6 +119,7 @@ set(CORE_INCLUDE_DIRS
     external/imgui
     external/glm
     external/tinyxml2
+    external/lunasvg/include
     external/SDL/include
     src
     src/imgui
@@ -127,6 +128,7 @@ set(CORE_INCLUDE_DIRS
 
 add_library(anm2ed_core STATIC ${CORE_SRC} ${TINYXML2_SRC} ${IMGUI_CORE_SRC})
 target_include_directories(anm2ed_core PUBLIC ${CORE_INCLUDE_DIRS})
+target_link_libraries(anm2ed_core PUBLIC lunasvg)
 target_compile_definitions(anm2ed_core PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS IMGUI_DEBUG_PARANOID IMGUI_ENABLE_DOCKING)
 # windows.h otherwise defines min/max macros that break std::min/std::max.
 if(WIN32)

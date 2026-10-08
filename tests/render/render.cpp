@@ -181,3 +181,26 @@ TEST_CASE("a blurred layer spreads past its crop like Flash's blur filter")
   REQUIRE(resource::Image::write_pixels_png(OUTPUT_DIR / "spin_blur_frame_0.png", glm::ivec2(fixture.canvas->size),
                                             blurred.data()));
 }
+
+TEST_CASE("SVG spritesheets draw sharp at any scale")
+{
+  RenderFixture fixture("vector.anm2");
+  if (!fixture.gl.is_valid())
+  {
+    MESSAGE("skipped: no OpenGL context");
+    return;
+  }
+  REQUIRE(fixture.document->is_valid());
+
+  // Drawn at 600% (200% frames at a 3x render), the circle's edge stays within a pixel or two: just inside it is
+  // solid red, just outside it clear.
+  auto pixels = fixture.frame_get(0.0f);
+  auto inside = fixture.pixel_get(pixels, {-20.0f + 13.0f, 0.0f});
+  auto outside = fixture.pixel_get(pixels, {-20.0f + 14.6f, 0.0f});
+  CHECK(inside.r > 200);
+  CHECK(outside.r < 80);
+
+  REQUIRE(resource::Image::write_pixels_png(OUTPUT_DIR / "vector_frame_0.png", glm::ivec2(fixture.canvas->size),
+                                            pixels.data()));
+  golden_image_check("vector_frame_0.png");
+}

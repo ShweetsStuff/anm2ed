@@ -53,5 +53,6 @@ namespace anm2ed::model
   };
 
   glm::mat4 draw_quad_model_get(const Draw&);
+  float draw_scale_get(const Draw&);
   std::vector<Draw> animation_draws_get(const Model&, const Animation&, const DrawOptions&);
 }

@@ -311,8 +311,8 @@ namespace anm2ed
       auto image = image_get(draw);
       if (!image || !image->is_valid() || frame.size == vec2()) continue;
       auto customShader = shader_get ? shader_get(frame.shaderId) : nullptr;
-      layer_render(customShader ? *customShader : shader, texture::id_get(*image), vec2(image->size), transform, draw,
-                   frame.tint, frame.colorOffset);
+      layer_render(customShader ? *customShader : shader, texture::id_get(*image), image->unit_size_get(), transform,
+                   draw, frame.tint, frame.colorOffset);
     }
   }
 

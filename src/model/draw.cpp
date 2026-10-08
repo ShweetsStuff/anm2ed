@@ -20,6 +20,14 @@ namespace anm2ed::model
                                 frame.rotation, math::percent_to_unit(frame.skew));
   }
 
+  // How many canvas pixels one spritesheet pixel of a layer draw covers (along its longer axis).
+  float draw_scale_get(const Draw& draw)
+  {
+    auto model = draw.parent * draw_quad_model_get(draw);
+    auto size = glm::max(draw.frame.size, glm::vec2(1.0f));
+    return std::max(glm::length(glm::vec2(model[0])) / size.x, glm::length(glm::vec2(model[1])) / size.y);
+  }
+
   // When an item is drawn: now, and for each sample its time if the track has a frame there.
   std::vector<std::pair<int, float>> draw_times_get(const Animation& animation, const Track& track,
                                                     const DrawOptions& options)

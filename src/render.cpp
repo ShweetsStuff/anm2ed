@@ -327,7 +327,8 @@ namespace anm2ed::render
     canvas.layers_render(
         shader, document.model, animation,
         {.time = time, .isRootTransform = isRootTransform, .library_get = document.library_resolver_get()},
-        canvas.transform_get(zoom, pan), [&](const model::Draw& draw) { return document.draw_image_get(draw); },
+        canvas.transform_get(zoom, pan),
+        [&](const model::Draw& draw) { return document.draw_image_get(draw, scale * model::draw_scale_get(draw)); },
         [&](int id) { return document.shader_get(id); });
     auto pixels = canvas.pixels_get();
     canvas.unbind();

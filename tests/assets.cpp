@@ -58,3 +58,19 @@ TEST_CASE("AssetStore keys assets by content")
   CHECK(store.audio_add(AudioData(bytes, sizeof(bytes))) == audioKey);
   CHECK(store.audio_get(audioKey)->bytes.size() == sizeof(bytes));
 }
+
+TEST_CASE("an SVG spritesheet loads in SVG units and draws again at any scale")
+{
+  Image image(test::TEST_DIR / "render" / "vector.svg");
+  REQUIRE(image.is_valid());
+  CHECK(image.is_vector());
+  CHECK(image.size == glm::ivec2(32, 16));
+  auto red = image.pixel_read({8.0f, 8.0f});
+  CHECK(red.r > 0.8f);
+  CHECK(red.b < 0.2f);
+
+  auto large = image.vector_render(4.0f);
+  CHECK(large.size == glm::ivec2(128, 64));
+  CHECK(large.unit_size_get() == image.unit_size_get());
+  CHECK(large.uid != image.uid);
+}
