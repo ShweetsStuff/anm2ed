@@ -155,10 +155,11 @@ namespace anm2ed::document
 
 namespace anm2ed
 {
-  Document::Document(const std::filesystem::path& path, bool isNew, std::string* errorString)
+  Document::Document(const std::filesystem::path& path, bool isNew, std::string* errorString, bool isExtendedFormat)
   {
     tabId = document::document_tab_id_next();
     model = model::model_make();
+    model.isExtendedFormat = isExtendedFormat;
     if (!isNew) model::model_load(model, path, errorString);
     if (isNew ? !save(path, errorString) : !model.isValid)
     {
@@ -183,11 +184,11 @@ namespace anm2ed
     return *this;
   }
 
-  bool Document::save(const std::filesystem::path& path, std::string* errorString, Options options)
+  bool Document::save(const std::filesystem::path& path, std::string* errorString)
   {
     auto absolutePath = !path.empty() ? path : this->path;
     auto absolutePathUtf8 = path::to_utf8(absolutePath);
-    if (model::model_save(model, absolutePath, errorString, options))
+    if (model::model_save(model, absolutePath, errorString, {.isExtendedFormat = model.isExtendedFormat}))
     {
       this->path = absolutePath;
       toast_log(Level::INFO, TOAST_SAVE_DOCUMENT, absolutePathUtf8);
@@ -213,11 +214,11 @@ namespace anm2ed
     return path.parent_path() / std::filesystem::path(std::u8string(fileName.begin(), fileName.end()));
   }
 
-  bool Document::autosave(std::string* errorString, Options options)
+  bool Document::autosave(std::string* errorString)
   {
     auto autosavePath = autosave_path_get();
     auto autosavePathUtf8 = path::to_utf8(autosavePath);
-    if (model::model_save(model, autosavePath, errorString, options))
+    if (model::model_save(model, autosavePath, errorString, {.isExtendedFormat = model.isExtendedFormat}))
     {
       for (auto id : spritesheets_autosave_dirty_get())
       {

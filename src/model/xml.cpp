@@ -33,7 +33,7 @@ namespace anm2ed::model
   // Attributes the editor reads (or older builds wrote); any other attribute is kept verbatim as Extras.
   // clang-format off
   constexpr std::string_view KNOWN_ATTRIBUTES[] = {
-      "Name", "CreatedBy", "CreatedOn", "Binding", "Value", "DefaultAnimation", "Path", "Vertex", "Fragment", "Id",
+      "Name", "CreatedBy", "CreatedOn", "ExtendedVersion", "Binding", "Value", "DefaultAnimation", "Path", "Vertex", "Fragment", "Id",
       "LayerId", "NullId", "SpritesheetId", "Fps", "Version", "FrameNum", "Delay", "AtFrame", "EventId", "RegionId",
       "ShaderId", "Depth", "SoundId", "GroupId", "Index", "Loop", "StartMarker", "EndMarker", "Visible", "ShowRect", "IsExpanded", "Enabled", "Rotation",
       "XPivot", "YPivot", "XCrop", "YCrop", "XPosition", "YPosition", "Width", "Height", "XScale", "YScale", "SkewX",
@@ -47,6 +47,7 @@ namespace anm2ed::model
   constexpr const char* CREATED_ON_FORMAT = "%m/%d/%Y %I:%M:%S %p";
   constexpr const char* SHADER_NAME_DEFAULT = "New Shader";
   constexpr std::size_t VALUE_BUFFER_SIZE = 64;
+  constexpr int EXTENDED_VERSION = 1;
   constexpr int FLOAT_DIGITS = 8;
   constexpr int DOUBLE_DIGITS = 17;
   constexpr double FLOAT_WHOLE_MAX = 1e8;
@@ -1649,7 +1650,8 @@ namespace anm2ed::model
     sink.open(tag.empty() ? tag_get(ElementType::ANIMATED_ACTOR) : tag);
     extras_write(sink, model.extras);
     Children children{sink, model.extras};
-    auto isInfo = model.info.fps != Info{}.fps || model.info.createdBy != Info{}.createdBy;
+    auto isInfo = model.info.fps != Info{}.fps || model.info.createdBy != Info{}.createdBy ||
+                  writer.is(SERIALIZE_EXTENDED_DOCUMENT);
     for (auto type : layout_get(model.layout, {{ElementType::INFO, isInfo},
                                                {ElementType::CONTENT, true},
                                                {ElementType::ANIMATIONS, !model.animations.entries.empty()}}))
@@ -1663,6 +1665,7 @@ namespace anm2ed::model
       sink.attribute("CreatedOn", model.info.createdOn);
       sink.attribute("Fps", model.info.fps);
       sink.attribute("Version", model.info.version);
+      if (writer.is(SERIALIZE_EXTENDED_DOCUMENT)) sink.attribute("ExtendedVersion", EXTENDED_VERSION);
       extras_write(sink, model.info.extras);
       element_close(sink, model.info.extras);
     }
@@ -1674,7 +1677,8 @@ namespace anm2ed::model
   // A save is the game's document with the editor's own copy embedded as SourceDocument (or just the editor's copy).
   void document_write(Sink& sink, const Model& model, Options options)
   {
-    if (options.isExtendedFormat) return model_write(sink, model, SERIALIZE_ANM2ED_DEFAULT);
+    if (options.isExtendedFormat)
+      return model_write(sink, model, SERIALIZE_ANM2ED_DEFAULT | SERIALIZE_EXTENDED_DOCUMENT);
     model_write(sink, model, SERIALIZE_ISAAC_DEFAULT,
                 [&]() { model_write(sink, model, SERIALIZE_ANM2ED_DEFAULT, {}, SOURCE_DOCUMENT_TAG); });
   }
@@ -1699,6 +1703,9 @@ namespace anm2ed::model
     }
     auto source = root->Name() == SOURCE_DOCUMENT_TAG ? root : root->FirstChildElement(SOURCE_DOCUMENT_TAG.data());
     model = model_read(source ? source : root);
+    // An extended document is the editor's own, marked in its Info; anything else is a Rebirth document.
+    auto info = root->FirstChildElement(tag_get(ElementType::INFO));
+    model.isExtendedFormat = !source && info && info->Attribute("ExtendedVersion");
     return true;
   }
 
@@ -1754,7 +1761,7 @@ namespace anm2ed::model
   std::uint64_t model_hash(const Model& model)
   {
     Sink sink{.mode = Sink::HASH};
-    model_write(sink, model, SERIALIZE_ANM2ED_DEFAULT);
+    model_write(sink, model, SERIALIZE_ANM2ED_DEFAULT | (model.isExtendedFormat ? SERIALIZE_EXTENDED_DOCUMENT : 0));
     return sink.hash;
   }
 

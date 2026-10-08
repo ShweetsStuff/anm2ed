@@ -90,11 +90,11 @@ namespace anm2ed
     Document* get(int = -1);
     void command_push(Command);
     void commands_run();
-    Document* open(const std::filesystem::path&, bool = false, bool = true);
-    void new_(const std::filesystem::path&);
-    bool save(int, const std::filesystem::path& = {}, Options = {});
-    bool save(const std::filesystem::path& = {}, Options = {});
-    void autosave(Document&, Options = {});
+    Document* open(const std::filesystem::path&, bool = false, bool = true, bool = false);
+    void new_(const std::filesystem::path&, bool);
+    bool save(int, const std::filesystem::path& = {});
+    bool save(const std::filesystem::path& = {});
+    void autosave(Document&);
     void autosave_file_clear(int);
     void set(int);
     void close(int);

@@ -131,10 +131,10 @@ namespace anm2ed
       if (command.runManager) command.runManager(*this);
   }
 
-  Document* Manager::open(const std::filesystem::path& path, bool isNew, bool isRecent)
+  Document* Manager::open(const std::filesystem::path& path, bool isNew, bool isRecent, bool isExtendedFormat)
   {
     std::string errorString{};
-    documents.emplace_back(path, isNew, &errorString);
+    documents.emplace_back(path, isNew, &errorString, isExtendedFormat);
     auto pathString = path::to_utf8(path);
 
     auto& document = documents.back();
@@ -155,9 +155,13 @@ namespace anm2ed
     return &document;
   }
 
-  void Manager::new_(const std::filesystem::path& path) { open(path, true); }
+  // A new document targets the extended format or Rebirth's, as the settings default.
+  void Manager::new_(const std::filesystem::path& path, bool isExtendedFormat)
+  {
+    open(path, true, true, isExtendedFormat);
+  }
 
-  bool Manager::save(int index, const std::filesystem::path& path, Options options)
+  bool Manager::save(int index, const std::filesystem::path& path)
   {
     if (auto document = get(index); document)
     {
@@ -167,7 +171,7 @@ namespace anm2ed
       savePath.replace_extension(".anm2");
       ensure_parent_directory_exists(savePath);
 
-      if (!document->save(savePath, &errorString, options)) return false;
+      if (!document->save(savePath, &errorString)) return false;
 
       const auto autosavePath = document->autosave_path_get();
       autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), previousAutosavePath),
@@ -184,13 +188,13 @@ namespace anm2ed
     return false;
   }
 
-  bool Manager::save(const std::filesystem::path& path, Options options) { return save(selected, path, options); }
+  bool Manager::save(const std::filesystem::path& path) { return save(selected, path); }
 
-  void Manager::autosave(Document& document, Options options)
+  void Manager::autosave(Document& document)
   {
     std::string errorString{};
     auto autosavePath = document.autosave_path_get();
-    if (!document.autosave(&errorString, options)) return;
+    if (!document.autosave(&errorString)) return;
 
     autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), autosavePath), autosaveFiles.end());
     autosaveFiles.insert(autosaveFiles.begin(), autosavePath);

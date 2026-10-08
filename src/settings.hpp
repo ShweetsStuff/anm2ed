@@ -315,7 +315,6 @@ namespace anm2ed
     Settings() = default;
 
     Settings(const std::filesystem::path&);
-    Options anm2_options_get() const;
     void save(const std::filesystem::path&, const std::string&);
     static std::string imgui_data_load(const std::filesystem::path&);
   };

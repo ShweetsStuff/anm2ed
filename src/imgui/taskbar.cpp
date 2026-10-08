@@ -30,16 +30,15 @@ namespace anm2ed::imgui
 
   bool Taskbar::save_execute(Manager& manager, const PendingSave& request)
   {
-    return manager.save(request.index, request.path, request.options);
+    return manager.save(request.index, request.path);
   }
 
   void Taskbar::save_enqueue(Manager& manager, const PendingSave& request)
   {
     auto index = request.index;
     auto path = request.path;
-    auto options = request.options;
 
-    manager.command_push({.runManager = [=](Manager& manager) { manager.save(index, path, options); }});
+    manager.command_push({.runManager = [=](Manager& manager) { manager.save(index, path); }});
   }
 
   bool Taskbar::save_request(Manager& manager, Settings& settings, int index, const std::filesystem::path& path,
@@ -48,11 +47,11 @@ namespace anm2ed::imgui
     auto* document = manager.get(index);
     if (!document) return false;
 
-    PendingSave request{.index = index, .path = path, .options = settings.anm2_options_get()};
+    PendingSave request{.index = index, .path = path};
     if (isQueued)
     {
       // The game's copy would differ from the document: ask first.
-      if (settings.fileIsWarnIsaac && !request.options.isExtendedFormat &&
+      if (settings.fileIsWarnIsaac && !document->model.isExtendedFormat &&
           model::isaac_issues_get(document->model) != model::IsaacIssues{})
       {
         isaacSave = request;
@@ -124,6 +123,16 @@ namespace anm2ed::imgui
         if (ImGui::MenuItem(localize.get(LABEL_EXPLORE_XML_LOCATION), nullptr, false, document))
           dialog.file_explorer_open(document->directory_get());
 
+        // Which game this document is saved for: the editor's format alone, or Rebirth's (with the editor's copy).
+        auto isExtendedFormat = document && document->model.isExtendedFormat;
+        if (ImGui::MenuItem(localize.get(LABEL_DOCUMENT_EXTENDED_FORMAT), nullptr, isExtendedFormat, document))
+          manager.command_push({manager.selected, [isExtendedFormat](Manager&, Document& document)
+                                {
+                                  document.edit_apply(EDIT_DOCUMENT_FORMAT, [&](model::Model& model)
+                                                      { model.isExtendedFormat = !isExtendedFormat; });
+                                }});
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_DOCUMENT_EXTENDED_FORMAT));
+
         ImGui::Separator();
         if (ImGui::MenuItem(localize.get(LABEL_EXIT), settings.shortcutExit.c_str())) isQuitting = true;
         ImGui::EndMenu();
@@ -131,7 +140,8 @@ namespace anm2ed::imgui
       if (dialog.is_selected(Dialog::ANM2_CREATE))
       {
         auto path = dialog.path;
-        manager.command_push({.runManager = [path](Manager& manager) { manager.new_(path); }});
+        manager.command_push({.runManager = [path, isExtendedFormat = settings.isFileExtendedFormat](Manager& manager)
+                              { manager.new_(path, isExtendedFormat); }});
         dialog.reset();
       }
 

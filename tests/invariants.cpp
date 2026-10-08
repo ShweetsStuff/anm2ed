@@ -27,3 +27,19 @@ TEST_CASE("saved text is what tinyxml2 prints for the same document")
   document.Print(&printer);
   CHECK(text == printer.CStr());
 }
+
+TEST_CASE("a document's format is kept by what it saves")
+{
+  auto model = model_load(file_load(CORPUS_DIR / "01_minimal.anm2"));
+  CHECK_FALSE(model.isExtendedFormat);
+  CHECK_FALSE(model_load(model::model_to_string(model)).isExtendedFormat);
+
+  auto rebirthHash = model::model_hash(model);
+  model.isExtendedFormat = true;
+  CHECK(model::model_hash(model) != rebirthHash);
+  auto text = model::model_to_string(model, {.isExtendedFormat = true});
+  CHECK(text.find("SourceDocument") == std::string::npos);
+  auto reloaded = model_load(text);
+  CHECK(reloaded.isExtendedFormat);
+  CHECK(model::model_hash(reloaded) == model::model_hash(model));
+}
