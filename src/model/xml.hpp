@@ -19,6 +19,7 @@ namespace anm2ed::model
     int alphaOffsetFrames{};
     int blurFrames{};
     int triggerSounds{};
+    int extraEvents{};
     int animationLayers{};
 
     bool operator==(const IsaacIssues&) const = default;

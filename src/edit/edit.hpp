@@ -136,5 +136,6 @@ namespace anm2ed::edit
   std::optional<resource::Image> spritesheet_pack(model::Model&, int, const resource::Image&, int);
   std::optional<resource::Image> spritesheets_merge(model::Model&, const std::set<int>&, const ImageGet&, bool, bool,
                                                     bool, Origin);
+  int event_id_resolve(model::Model&, int);
   bool file_merge(model::Model&, const std::filesystem::path&, const std::filesystem::path&, FileMergePreset);
 }

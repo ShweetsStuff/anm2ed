@@ -389,6 +389,7 @@ namespace anm2ed::imgui
                                      {issues.depthFrames, FORMAT_ISAAC_DEPTH_FRAMES},
                                      {issues.alphaOffsetFrames, FORMAT_ISAAC_ALPHA_OFFSET_FRAMES},
                                      {issues.blurFrames, FORMAT_ISAAC_BLUR_FRAMES},
+                                     {issues.extraEvents, FORMAT_ISAAC_EXTRA_EVENTS},
                                      {issues.triggerSounds, FORMAT_ISAAC_TRIGGER_SOUNDS},
                                      {issues.animationLayers, FORMAT_ISAAC_ANIMATION_LAYERS}})
           if (count > 0) ImGui::BulletText("%s", localize_format(format, count).c_str());

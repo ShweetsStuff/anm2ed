@@ -372,9 +372,9 @@ namespace anm2ed::imgui
     if (property == edit::FrameProperty::SHADER && source->shaderId != -1 &&
         !model::item_get(content.shaders, source->shaderId))
       return false;
-    if (property == edit::FrameProperty::EVENT && source->eventId != -1 &&
-        !model::item_get(content.events, source->eventId))
-      return false;
+    if (property == edit::FrameProperty::EVENT)
+      for (auto eventId : source->eventIds)
+        if (eventId != -1 && !model::item_get(content.events, eventId)) return false;
     if (property == edit::FrameProperty::SOUNDS)
       for (auto soundId : source->soundIds)
         if (soundId != -1 && !model::item_get(content.sounds, soundId)) return false;

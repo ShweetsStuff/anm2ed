@@ -770,7 +770,17 @@ namespace anm2ed
     if (kind == SelectionKind::SPRITESHEETS) add(content.spritesheets, path_label_get(FORMAT_SPRITESHEET));
     if (kind == SelectionKind::SOUNDS) add(content.sounds, path_label_get(FORMAT_SOUND));
     if (kind == SelectionKind::LIBRARIES) add(content.libraries, path_label_get(FORMAT_SOUND));
-    if (kind == SelectionKind::EVENTS) add(content.events, name_get);
+    if (kind == SelectionKind::EVENTS)
+    {
+      add(content.events, name_get);
+      // An extended document offers the built-in events it doesn't have yet.
+      for (int i = 0; model.isExtendedFormat && i < (int)std::size(model::EVENT_BUILT_INS); ++i)
+        if (std::ranges::find(content.events, model::EVENT_BUILT_INS[i], &model::Event::name) == content.events.end())
+        {
+          choices.ids.push_back(model::EVENT_BUILT_IN_ID_FIRST - i);
+          choices.labels.emplace_back(model::EVENT_BUILT_INS[i]);
+        }
+    }
     if (kind == SelectionKind::SHADERS) add(content.shaders, name_get);
     if (kind == SelectionKind::REGIONS)
       if (auto spritesheet = model.layer_spritesheet_get(layerId)) add(spritesheet->regions, name_get);

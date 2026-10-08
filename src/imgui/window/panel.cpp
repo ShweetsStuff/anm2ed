@@ -128,7 +128,7 @@ namespace anm2ed::imgui
     if (arrowKey == key) ImGui::SetKeyboardFocusHere();
 
     bool isActivated{};
-    if (rows.rename)
+    if (rows.rename && !(rows.is_locked && rows.is_locked(key)))
     {
       if (state.newId == key)
       {

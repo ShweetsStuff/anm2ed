@@ -828,7 +828,7 @@ namespace anm2ed::imgui
       if (animation && animation->triggers.isVisible && !isOnlyShowLayers && !manager.isRecording)
       {
         if (auto trigger = model::frame_generate(animation->triggers, frameTime);
-            trigger.isVisible && trigger.eventId > -1)
+            trigger.isVisible && !trigger.eventIds.empty())
         {
           auto clipMin = ImGui::GetItemRectMin();
           auto clipMax = ImGui::GetItemRectMax();
@@ -838,8 +838,11 @@ namespace anm2ed::imgui
           drawList->PushClipRect(clipMin, clipMax);
           ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE_LARGE);
           auto triggerTextColor = isLightTheme ? TRIGGER_TEXT_COLOR_LIGHT : TRIGGER_TEXT_COLOR_DARK;
-          if (auto event = model::item_get(model.content.events, trigger.eventId))
-            drawList->AddText(textPos, ImGui::GetColorU32(triggerTextColor), event->name.c_str());
+          std::string names{};
+          for (auto eventId : trigger.eventIds)
+            if (auto event = model::item_get(model.content.events, eventId))
+              names += (names.empty() ? "" : ", ") + event->name;
+          drawList->AddText(textPos, ImGui::GetColorU32(triggerTextColor), names.c_str());
           ImGui::PopFont();
           drawList->PopClipRect();
         }

@@ -6,6 +6,7 @@
 #include <functional>
 #include <map>
 #include <optional>
+#include <ranges>
 #include <tuple>
 
 #include <tinyxml2/tinyxml2.h>
@@ -233,20 +234,24 @@ namespace anm2ed::model
     frame.childStart = int_get(element, "ChildStart", 0);
     frame.isChildRestart = bool_get(element, "Restart", false);
     frame.atFrame = int_get(element, "AtFrame");
-    frame.eventId = int_get(element, "EventId");
     frame.extras = extras_read(element);
     if (type_get(element) != ElementType::TRIGGER) return frame;
 
-    // A trigger's sounds are <Sound Id> children; older files name one with a SoundId attribute instead.
-    auto soundId = int_get(element, "SoundId");
-    std::vector<int> soundIds{};
-    children_each(element,
-                  [&](const XMLElement* child, ElementType type, int)
-                  {
-                    if (type == ElementType::SOUND_ELEMENT) soundIds.push_back(int_get(child, "Id"));
-                  });
-    if (soundId != -1 && !std::ranges::contains(soundIds, soundId)) soundIds.insert(soundIds.begin(), soundId);
-    std::ranges::copy_if(soundIds, std::back_inserter(frame.soundIds), [](int id) { return id != -1; });
+    // A trigger's first event is its EventId and any others are <Event Id> children; its sounds are <Sound Id> children
+    // (older files name one with a SoundId attribute instead).
+    auto ids_read = [&](std::vector<int>& ids, const char* attribute, ElementType type)
+    {
+      children_each(element,
+                    [&](const XMLElement* child, ElementType childType, int)
+                    {
+                      if (childType == type) ids.push_back(int_get(child, "Id"));
+                    });
+      if (auto id = int_get(element, attribute); id != -1 && !std::ranges::contains(ids, id))
+        ids.insert(ids.begin(), id);
+      std::erase(ids, -1);
+    };
+    ids_read(frame.eventIds, "EventId", ElementType::EVENT_ELEMENT);
+    ids_read(frame.soundIds, "SoundId", ElementType::SOUND_ELEMENT);
     return frame;
   }
 
@@ -1119,10 +1124,18 @@ namespace anm2ed::model
     if (type == ItemType::TRIGGER)
     {
       sink.open(tag_get(ElementType::TRIGGER));
-      if (frame.eventId != -1) sink.attribute("EventId", frame.eventId);
+      if (!frame.eventIds.empty()) sink.attribute("EventId", frame.eventIds.front());
       sink.attribute("AtFrame", frame.atFrame);
       extras_write(sink, frame.extras);
       Children children{sink, frame.extras};
+      if (writer.is(SERIALIZE_EXTENSIONS))
+        for (auto eventId : frame.eventIds | std::views::drop(1))
+        {
+          children.add();
+          sink.open(tag_get(ElementType::EVENT_ELEMENT));
+          sink.attribute("Id", eventId);
+          sink.close();
+        }
       if (writer.is(SERIALIZE_SOUNDS))
         for (auto soundId : frame.soundIds)
           if (soundId != -1)
@@ -1365,23 +1378,23 @@ namespace anm2ed::model
       for (const auto* entries : {&animation->layers, &animation->nulls})
         groups_each(*entries, [&](const TrackGroup& group)
                     { issues.groupTransforms += !std::ranges::all_of(group.root.frames, is_frame_transform_default); });
-      animation_tracks_each(*animation,
-                            [&](const Track& track)
-                            {
-                              for (const auto& frame : track.frames)
-                              {
-                                issues.easedFrames +=
-                                    track.type != ItemType::TRIGGER && is_special_interpolation(frame.interpolation);
-                                issues.skewFrames += frame.skew != glm::vec2();
-                                issues.shaderFrames += frame.shaderId != -1;
-                                issues.depthFrames += track.type == ItemType::LAYER && frame.depth != 0;
-                                issues.alphaOffsetFrames += math::float_to_uint8(frame.colorOffset.a) != 0;
-                                issues.blurFrames += track.type == ItemType::LAYER && frame.blur != 0.0f;
-                                issues.triggerSounds +=
-                                    track.type == ItemType::TRIGGER &&
-                                    std::ranges::any_of(frame.soundIds, [](int id) { return id != -1; });
-                              }
-                            });
+      animation_tracks_each(
+          *animation,
+          [&](const Track& track)
+          {
+            for (const auto& frame : track.frames)
+            {
+              issues.easedFrames += track.type != ItemType::TRIGGER && is_special_interpolation(frame.interpolation);
+              issues.skewFrames += frame.skew != glm::vec2();
+              issues.shaderFrames += frame.shaderId != -1;
+              issues.depthFrames += track.type == ItemType::LAYER && frame.depth != 0;
+              issues.alphaOffsetFrames += math::float_to_uint8(frame.colorOffset.a) != 0;
+              issues.blurFrames += track.type == ItemType::LAYER && frame.blur != 0.0f;
+              issues.extraEvents += track.type == ItemType::TRIGGER ? std::max((int)frame.eventIds.size() - 1, 0) : 0;
+              issues.triggerSounds += track.type == ItemType::TRIGGER &&
+                                      std::ranges::any_of(frame.soundIds, [](int id) { return id != -1; });
+            }
+          });
     }
     return issues;
   }

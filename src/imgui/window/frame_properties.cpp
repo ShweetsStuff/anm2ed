@@ -18,6 +18,8 @@ using namespace glm;
 
 namespace anm2ed::imgui
 {
+  constexpr int TRIGGER_EVENTS_ROWS = 3;
+
   struct Vec2Field
   {
     StringType label;
@@ -115,17 +117,6 @@ namespace anm2ed::imgui
         {
           if (type == TRIGGER)
           {
-            if (combo_id_mapped(localize.get(BASIC_EVENT), frame ? &useFrame.eventId : &dummy_value_negative<int>(),
-                                events.ids, events.labels) &&
-                frame)
-            {
-              auto eventId = useFrame.eventId;
-              frame_edit(edit_state::COMPLETE, EDIT_TRIGGER_EVENT,
-                         [eventId](Document&, model::Frame& frame, model::Track*, const Reference&)
-                         { frame.eventId = eventId; });
-            }
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TRIGGER_EVENT));
-
             if (input_int_range(localize.get(BASIC_AT_FRAME), frame ? useFrame.atFrame : dummy_value<int>(), 0,
                                 std::numeric_limits<int>::max(), STEP, STEP_FAST,
                                 !frame ? ImGuiInputTextFlags_DisplayEmptyRefVal : 0) &&
@@ -156,55 +147,59 @@ namespace anm2ed::imgui
             }
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TRIGGER_VISIBILITY));
 
-            ImGui::SeparatorText(localize.get(LABEL_SOUNDS));
-
-            auto childSize = imgui::size_without_footer_get();
-
-            if (ImGui::BeginChild("##Sounds Child", childSize, ImGuiChildFlags_Borders))
+            // A trigger's events or sounds: a combo for each, then Add and Remove (the last).
+            auto trigger_ids_draw = [&](StringType label, std::vector<int> model::Frame::* member,
+                                        const Choices& choices, ImVec2 size, StringType tooltip, StringType setEdit,
+                                        StringType addEdit, StringType addTooltip, StringType removeEdit,
+                                        StringType removeTooltip)
             {
-              if (!useFrame.soundIds.empty())
-              {
-                for (auto [i, id] : std::views::enumerate(useFrame.soundIds))
+              ImGui::PushID(label);
+              ImGui::SeparatorText(localize.get(label));
+              if (ImGui::BeginChild("##Child", size, ImGuiChildFlags_Borders))
+                for (auto [i, id] : std::views::enumerate(useFrame.*member))
                 {
                   ImGui::PushID(i);
-                  if (combo_id_mapped("##Sound", frame ? &id : &dummy_value_negative<int>(), sounds.ids,
-                                      sounds.labels) &&
-                      frame)
-                  {
-                    auto soundIndex = (std::size_t)i;
-                    auto soundId = id;
-                    frame_edit(edit_state::COMPLETE, EDIT_TRIGGER_SOUND,
-                               [soundIndex, soundId](Document&, model::Frame& frame, model::Track*, const Reference&)
+                  if (combo_id_mapped("##Choice", &id, choices.ids, choices.labels) && frame)
+                    frame_edit(edit_state::COMPLETE, setEdit,
+                               [index = (std::size_t)i, id, member](Document& document, model::Frame& frame,
+                                                                    model::Track*, const Reference&)
                                {
-                                 if (soundIndex < frame.soundIds.size()) frame.soundIds[soundIndex] = soundId;
+                                 auto& ids = frame.*member;
+                                 if (index >= ids.size()) return;
+                                 ids[index] = member == &model::Frame::eventIds
+                                                  ? edit::event_id_resolve(document.model, id)
+                                                  : id;
                                });
-                  }
-                  ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TRIGGER_SOUND));
+                  ImGui::SetItemTooltip("%s", localize.get(tooltip));
                   ImGui::PopID();
                 }
-              }
-            }
-            ImGui::EndChild();
+              ImGui::EndChild();
 
-            auto widgetSize = imgui::widget_size_with_row_get(2);
+              auto widgetSize = imgui::widget_size_with_row_get(2);
+              if (ImGui::Button(localize.get(BASIC_ADD), widgetSize) && frame)
+                frame_edit(edit_state::COMPLETE, addEdit,
+                           [member](Document&, model::Frame& frame, model::Track*, const Reference&)
+                           { (frame.*member).push_back(-1); });
+              ImGui::SetItemTooltip("%s", localize.get(addTooltip));
+              ImGui::SameLine();
+              ImGui::BeginDisabled((useFrame.*member).empty());
+              if (ImGui::Button(localize.get(BASIC_REMOVE), widgetSize) && frame)
+                frame_edit(edit_state::COMPLETE, removeEdit,
+                           [member](Document&, model::Frame& frame, model::Track*, const Reference&)
+                           {
+                             if (!(frame.*member).empty()) (frame.*member).pop_back();
+                           });
+              ImGui::SetItemTooltip("%s", localize.get(removeTooltip));
+              ImGui::EndDisabled();
+              ImGui::PopID();
+            };
 
-            if (ImGui::Button(localize.get(BASIC_ADD), widgetSize) && frame)
-              frame_edit(edit_state::COMPLETE, EDIT_ADD_TRIGGER_SOUND,
-                         [](Document&, model::Frame& frame, model::Track*, const Reference&)
-                         { frame.soundIds.push_back(-1); });
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ADD_TRIGGER_SOUND));
-
-            ImGui::SameLine();
-
-            ImGui::BeginDisabled(useFrame.soundIds.empty());
-            if (ImGui::Button(localize.get(BASIC_REMOVE), widgetSize) && frame)
-              frame_edit(edit_state::COMPLETE, EDIT_REMOVE_TRIGGER_SOUND,
-                         [](Document&, model::Frame& frame, model::Track*, const Reference&)
-                         {
-                           if (!frame.soundIds.empty()) frame.soundIds.pop_back();
-                         });
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_REMOVE_TRIGGER_SOUND));
-            ImGui::EndDisabled();
+            trigger_ids_draw(LABEL_EVENTS, &model::Frame::eventIds, events, child_size_get(TRIGGER_EVENTS_ROWS),
+                             TOOLTIP_TRIGGER_EVENT, EDIT_TRIGGER_EVENT, EDIT_ADD_TRIGGER_EVENT,
+                             TOOLTIP_ADD_TRIGGER_EVENT, EDIT_REMOVE_TRIGGER_EVENT, TOOLTIP_REMOVE_TRIGGER_EVENT);
+            trigger_ids_draw(LABEL_SOUNDS, &model::Frame::soundIds, sounds, imgui::size_without_footer_get(),
+                             TOOLTIP_TRIGGER_SOUND, EDIT_TRIGGER_SOUND, EDIT_ADD_TRIGGER_SOUND,
+                             TOOLTIP_ADD_TRIGGER_SOUND, EDIT_REMOVE_TRIGGER_SOUND, TOOLTIP_REMOVE_TRIGGER_SOUND);
           }
           else
           {

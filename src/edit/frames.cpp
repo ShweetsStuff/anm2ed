@@ -281,7 +281,7 @@ namespace anm2ed::edit
         target.isChildRestart = source.isChildRestart;
         break;
       case FrameProperty::EVENT:
-        target.eventId = source.eventId;
+        target.eventIds = source.eventIds;
         break;
       case FrameProperty::SOUNDS:
         target.soundIds = source.soundIds;

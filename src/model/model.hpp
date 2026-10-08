@@ -1,9 +1,11 @@
 #pragma once
 
+#include <algorithm>
 #include <filesystem>
 #include <memory>
 #include <set>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <variant>
@@ -36,7 +38,7 @@ namespace anm2ed::model
     bool operator==(const Extras&) const = default;
   };
 
-  // A keyframe; on a triggers track the same struct is a trigger (atFrame, eventId, soundIds).
+  // A keyframe; on a triggers track the same struct is a trigger (atFrame, eventIds, soundIds).
   struct Frame
   {
     std::uint64_t uid{util::uid_next()};
@@ -54,7 +56,7 @@ namespace anm2ed::model
     Interpolation interpolation{Interpolation::NONE};
     int regionId{-1};
     int shaderId{-1};
-    int depth{}; // a layer frame draws this many layers above (or below) its place in the timeline; editor-only
+    int depth{};  // a layer frame draws this many layers above (or below) its place in the timeline; editor-only
     float blur{}; // Flash's BlurFilter at quality 1: one box blur this many canvas pixels wide; editor-only
     // On an animation layer: the child animation (empty for the layer's own) and how it plays; editor-only.
     std::string childAnimation{};
@@ -63,7 +65,7 @@ namespace anm2ed::model
     bool isChildStartRandom{};
     bool isChildRestart{};
     int atFrame{-1};
-    int eventId{-1};
+    std::vector<int> eventIds{};
     std::vector<int> soundIds{};
     Extras extras{};
 
@@ -288,6 +290,13 @@ namespace anm2ed::model
 
     bool operator==(const Animations&) const = default;
   };
+
+  // Events the editor knows by name: shown locked in Events, and added to a file when a trigger first uses one. A
+  // choice of one not yet in the file has id EVENT_BUILT_IN_ID_FIRST - its index.
+  inline constexpr std::string_view EVENT_BUILT_INS[] = {"stop", "done"};
+  inline constexpr int EVENT_BUILT_IN_ID_FIRST = -2;
+
+  inline bool is_event_built_in(std::string_view name) { return std::ranges::contains(EVENT_BUILT_INS, name); }
 
   // Content item lookup by file id (layers, nulls, events, sounds, spritesheets, shaders, regions).
   template <class Items> auto item_get(Items& items, int id) -> decltype(&items.front())

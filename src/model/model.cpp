@@ -227,7 +227,7 @@ namespace anm2ed::model
                     [&](const Track& track, auto*) { used.insert(track.id); });
       for (const auto& trigger : animation.triggers.frames)
       {
-        if (type == ElementType::EVENT_ELEMENT) used.insert(trigger.eventId);
+        if (type == ElementType::EVENT_ELEMENT) used.insert(trigger.eventIds.begin(), trigger.eventIds.end());
         if (type == ElementType::SOUND_ELEMENT) used.insert(trigger.soundIds.begin(), trigger.soundIds.end());
       }
       if (type == ElementType::SHADER)

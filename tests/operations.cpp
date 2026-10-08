@@ -437,3 +437,18 @@ TEST_CASE("skew reads from the old Shear attributes too")
   CHECK(frames[1].skew.x == 7);
   CHECK(frames[0].extras.attributes.empty());
 }
+
+TEST_CASE("a trigger fires several events; built-in events join a file when first used")
+{
+  auto model = fixture_load("02_items.anm2");
+  auto stopId = edit::event_id_resolve(model, model::EVENT_BUILT_IN_ID_FIRST);
+  CHECK(model::item_get(model.content.events, stopId)->name == "stop");
+  CHECK(edit::event_id_resolve(model, model::EVENT_BUILT_IN_ID_FIRST) == stopId);
+  CHECK(edit::event_id_resolve(model, 1) == 1);
+
+  model.frame_edit({0, TRIGGER, -1, 0})->eventIds = {0, stopId, 1};
+  auto text = model::model_to_string(model);
+  CHECK(model_load(text).frame_get({0, TRIGGER, -1, 0})->eventIds == std::vector{0, stopId, 1});
+  CHECK(model_load(game_document_get(text)).frame_get({0, TRIGGER, -1, 0})->eventIds == std::vector{0});
+  CHECK(model::isaac_issues_get(model).extraEvents == 2);
+}
