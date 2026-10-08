@@ -16,6 +16,7 @@ namespace anm2ed::model
     int skewFrames{};
     int shaderFrames{};
     int depthFrames{};
+    int blurFrames{};
     int triggerSounds{};
     int animationLayers{};
 

@@ -41,7 +41,7 @@ namespace anm2ed::model
       "XPivot", "YPivot", "XCrop", "YCrop", "XPosition", "YPosition", "Width", "Height", "XScale", "YScale", "SkewX",
       "SkewY", "ShearX", "ShearY", "RedTint", "GreenTint", "BlueTint", "AlphaTint", "RedOffset", "GreenOffset", "BlueOffset",
       "Interpolated", "Origin", "BakeInterpolation", "BakeDelay", "BakeCount", "OriginalDelay", "Library", "Animation",
-      "ChildAnimation", "ChildMode", "ChildStart", "Restart"};
+      "ChildAnimation", "ChildMode", "ChildStart", "Restart", "Blur"};
   // clang-format on
   constexpr std::string_view SOURCE_DOCUMENT_TAG = "SourceDocument";
   constexpr std::string_view FRAME_RESTORE_TAG = "FrameRestore";
@@ -223,6 +223,7 @@ namespace anm2ed::model
     frame.regionId = int_get(element, "RegionId");
     frame.shaderId = int_get(element, "ShaderId");
     frame.depth = int_get(element, "Depth", 0);
+    frame.blur = float_get(element, "Blur");
     frame.childAnimation = string_get(element, "ChildAnimation");
     auto childMode = std::ranges::find(CHILD_MODE_VALUES, string_get(element, "ChildMode"));
     if (childMode != std::end(CHILD_MODE_VALUES))
@@ -1169,6 +1170,7 @@ namespace anm2ed::model
     if (writer.is(SERIALIZE_EXTENSIONS) && type == ItemType::LAYER)
     {
       if (frame.depth != 0) sink.attribute("Depth", frame.depth);
+      if (frame.blur != 0.0f) sink.attribute("Blur", frame.blur);
       if (!frame.childAnimation.empty()) sink.attribute("ChildAnimation", frame.childAnimation);
       if (frame.childMode != ChildMode::LOOP) sink.attribute("ChildMode", CHILD_MODE_VALUES[(int)frame.childMode]);
       if (frame.isChildStartRandom)
@@ -1370,6 +1372,7 @@ namespace anm2ed::model
                                 issues.skewFrames += frame.skew != glm::vec2();
                                 issues.shaderFrames += frame.shaderId != -1;
                                 issues.depthFrames += track.type == ItemType::LAYER && frame.depth != 0;
+                                issues.blurFrames += track.type == ItemType::LAYER && frame.blur != 0.0f;
                                 issues.triggerSounds +=
                                     track.type == ItemType::TRIGGER &&
                                     std::ranges::any_of(frame.soundIds, [](int id) { return id != -1; });

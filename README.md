@@ -12,7 +12,7 @@ This application was developed with the assistance of a large language model.
 - Dockable [Dear ImGui](https://github.com/ocornut/imgui) interface (windows can be detached into their own) with persistent layout, drag and drop, context menus and rebindable shortcuts.
 - Timeline: multi-select, cut/copy/paste (whole frames or single properties), duplicate, split, bake, drag to move/resize, and start/end markers to loop a range.
 - Groups for animations, layers and nulls, with group transforms baked for the game on save.
-- Frame properties for crop, size, position, pivot, scale, skew, rotation, tint, color offset, region, shader, visibility, interpolation (including easing) and flips; batch changes across selections.
+- Frame properties for crop, size, position, pivot, scale, skew, rotation, tint, color offset, blur (Flash's blur filter), region, shader, visibility, interpolation (including easing) and flips; batch changes across selections.
 - Spritesheet editor with pan, move, crop, draw, erase and color picker tools; regions; packing, merging, trimming; automatic reload when files change on disk.
 - Animation preview with grid, axes, pivots, borders, onionskin (with pivot paths), and another document's animation as an overlay.
 - Wizards: generate animations from a grid, generate regions, change all frame properties, merge animations and files.

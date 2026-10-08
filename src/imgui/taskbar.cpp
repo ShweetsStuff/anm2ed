@@ -387,6 +387,7 @@ namespace anm2ed::imgui
                                      {issues.skewFrames, FORMAT_ISAAC_SKEW_FRAMES},
                                      {issues.shaderFrames, FORMAT_ISAAC_SHADER_FRAMES},
                                      {issues.depthFrames, FORMAT_ISAAC_DEPTH_FRAMES},
+                                     {issues.blurFrames, FORMAT_ISAAC_BLUR_FRAMES},
                                      {issues.triggerSounds, FORMAT_ISAAC_TRIGGER_SOUNDS},
                                      {issues.animationLayers, FORMAT_ISAAC_ANIMATION_LAYERS}})
           if (count > 0) ImGui::BulletText("%s", localize_format(format, count).c_str());

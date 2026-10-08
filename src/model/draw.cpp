@@ -123,6 +123,7 @@ namespace anm2ed::model
         child.parent = transform * child.parent;
         child.frame.tint *= frame.tint;
         child.frame.colorOffset += frame.colorOffset;
+        child.frame.blur = std::max(child.frame.blur, frame.blur); // Each part blurs on its own, as the game draws it.
         if (child.source != &model) child.frame.shaderId = -1;
         layerOrders.emplace_back(layerOrder + frame.depth, frame.depth);
         draws.push_back(std::move(child));

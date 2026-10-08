@@ -277,6 +277,16 @@ namespace anm2ed::imgui
                                                             const Reference&) { frame.colorOffset = colorOffset; });
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_COLOR_OFFSET));
 
+            ImGui::BeginDisabled(type != LAYER);
+            auto blurEdit =
+                drag_float_persistent(localize.get(BASIC_BLUR), frame ? &useFrame.blur : &dummy_value<float>(),
+                                      DRAG_SPEED, 0.0f, FRAME_BLUR_MAX, frame ? float_format_get(frame->blur) : "");
+            frame_edit(blurEdit, EDIT_FRAME_BLUR,
+                       [blur = useFrame.blur](Document&, model::Frame& frame, model::Track*, const Reference&)
+                       { frame.blur = std::clamp(blur, 0.0f, FRAME_BLUR_MAX); });
+            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BLUR));
+            ImGui::EndDisabled();
+
             ImGui::BeginDisabled(type != LAYER || isAnimationLayer);
             if (combo_id_mapped(localize.get(BASIC_REGION), frame ? &useFrame.regionId : &dummy_value_negative<int>(),
                                 regions.ids, regions.labels) &&
@@ -328,6 +338,22 @@ namespace anm2ed::imgui
             }
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FRAME_VISIBILITY));
 
+            auto widgetSize = widget_size_with_row_get(2);
+
+            for (int axis = 0; axis < (int)std::size(FLIP_BUTTONS); ++axis)
+            {
+              if (axis > 0) ImGui::SameLine();
+              if (ImGui::Button(localize.get(FLIP_BUTTONS[axis].label), widgetSize) && frame)
+                frame_edit(edit_state::COMPLETE, FLIP_BUTTONS[axis].edit,
+                           [axis, isPositionFlipped = ImGui::IsKeyDown(ImGuiMod_Ctrl)](Document&, model::Frame& frame,
+                                                                                       model::Track*, const Reference&)
+                           {
+                             frame.scale[axis] = -frame.scale[axis];
+                             if (isPositionFlipped) frame.position[axis] = -frame.position[axis];
+                           });
+              ImGui::SetItemTooltip("%s", localize.get(FLIP_BUTTONS[axis].tooltip));
+            }
+
             if (isAnimationLayer && frame)
             {
               ImGui::SeparatorText(localize.get(LABEL_CHILD));
@@ -339,9 +365,11 @@ namespace anm2ed::imgui
                   combo_string_mapped(localize.get(LABEL_ANIMATION), &useFrame.childAnimation, values, labels);
               ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHILD_ANIMATION));
 
-              const char* modeLabels[] = {localize.get(LABEL_LOOP), localize.get(LABEL_ONCE), localize.get(LABEL_HOLD)};
+              std::vector<const char*> modeLabels{};
+              for (auto label : wizard::CHILD_MODE_LABELS)
+                modeLabels.push_back(localize.get(label));
               auto mode = (int)useFrame.childMode;
-              if (ImGui::Combo(localize.get(BASIC_MODE), &mode, modeLabels, (int)std::size(modeLabels)))
+              if (ImGui::Combo(localize.get(BASIC_MODE), &mode, modeLabels.data(), (int)modeLabels.size()))
               {
                 useFrame.childMode = (ChildMode)mode;
                 isChildChanged = true;
@@ -364,22 +392,6 @@ namespace anm2ed::imgui
                 frame_edit(edit_state::COMPLETE, EDIT_FRAME_CHILD,
                            [child = useFrame](Document&, model::Frame& frame, model::Track*, const Reference&)
                            { edit::frame_property_copy(frame, child, edit::FrameProperty::CHILD); });
-            }
-
-            auto widgetSize = widget_size_with_row_get(2);
-
-            for (int axis = 0; axis < (int)std::size(FLIP_BUTTONS); ++axis)
-            {
-              if (axis > 0) ImGui::SameLine();
-              if (ImGui::Button(localize.get(FLIP_BUTTONS[axis].label), widgetSize) && frame)
-                frame_edit(edit_state::COMPLETE, FLIP_BUTTONS[axis].edit,
-                           [axis, isPositionFlipped = ImGui::IsKeyDown(ImGuiMod_Ctrl)](Document&, model::Frame& frame,
-                                                                                       model::Track*, const Reference&)
-                           {
-                             frame.scale[axis] = -frame.scale[axis];
-                             if (isPositionFlipped) frame.position[axis] = -frame.position[axis];
-                           });
-              ImGui::SetItemTooltip("%s", localize.get(FLIP_BUTTONS[axis].tooltip));
             }
 
             ImGui::Separator();

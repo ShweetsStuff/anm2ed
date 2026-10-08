@@ -207,13 +207,18 @@ namespace anm2ed
   }
 
   void Canvas::texture_render(Shader& shader, GLuint texture, mat4 transform, vec4 tint, vec3 colorOffset,
-                              float* vertices, vec2 textureSize, float playbackTime) const
+                              float* vertices, vec2 textureSize, float playbackTime, TextureBlur blur) const
   {
     canvas_blend_premultiplied_set();
 
     glUseProgram(shader.id);
 
     texture_uniforms_set(shader, transform, tint, colorOffset, textureSize, playbackTime);
+    // The editor's own texture shader blurs; a custom shader without these uniforms ignores them.
+    glUniform1f(glGetUniformLocation(shader.id, shader::UNIFORM_BLUR), blur.radius);
+    glUniform4fv(glGetUniformLocation(shader.id, shader::UNIFORM_REGION), 1, value_ptr(blur.region));
+    glUniform2fv(glGetUniformLocation(shader.id, shader::UNIFORM_TEXEL), 1,
+                 value_ptr(textureSize.x > 0 && textureSize.y > 0 ? 1.0f / textureSize : vec2()));
     glVertexAttrib4fv(2, value_ptr(tint));
 
     glBindVertexArray(textureVAO);
@@ -271,6 +276,28 @@ namespace anm2ed
     rect_end(rectVAO, mode, count);
   }
 
+  // A layer draw's crop of its spritesheet. A blurred one (Flash's BlurFilter: a box `blur` canvas pixels wide) grows by
+  // the box's reach, in texels at the draw's scale, and averages its crop over it.
+  void Canvas::layer_render(Shader& shader, GLuint texture, vec2 textureSize, const mat4& transform,
+                            const model::Draw& draw, vec4 tint, vec3 colorOffset) const
+  {
+    auto blurred = draw;
+    auto& frame = blurred.frame;
+    TextureBlur blur{.region = vec4(frame.crop, frame.crop + frame.size) / vec4(textureSize, textureSize)};
+    if (frame.blur > 0.0f && frame.size.x > 0.0f && frame.size.y > 0.0f)
+    {
+      auto canvasArea = std::abs(glm::determinant(glm::mat2(draw.parent * model::draw_quad_model_get(draw))));
+      auto canvasPerTexel = std::sqrt(canvasArea / (frame.size.x * frame.size.y));
+      blur.radius = canvasPerTexel > 0.0f ? std::round(frame.blur * 0.5f / canvasPerTexel) : 0.0f;
+      frame.crop -= blur.radius;
+      frame.size += blur.radius * 2.0f;
+      frame.pivot += blur.radius;
+    }
+    auto vertices = math::uv_vertices_get(frame.crop / textureSize, (frame.crop + frame.size) / textureSize);
+    texture_render(shader, texture, transform * blurred.parent * model::draw_quad_model_get(blurred), tint, colorOffset,
+                   vertices.data(), textureSize, draw.time, blur);
+  }
+
   // An animation's layers alone (no markers or helpers); spritesheet images are looked up by draw, custom shaders by id.
   void Canvas::layers_render(Shader& shader, const model::Model& model, const model::Animation& animation,
                              const model::DrawOptions& options, const mat4& transform,
@@ -283,12 +310,9 @@ namespace anm2ed
       auto& frame = draw.frame;
       auto image = image_get(draw);
       if (!image || !image->is_valid() || frame.size == vec2()) continue;
-      auto imageSize = vec2(image->size);
-      auto uvVertices = math::uv_vertices_get(frame.crop / imageSize, (frame.crop + frame.size) / imageSize);
       auto customShader = shader_get ? shader_get(frame.shaderId) : nullptr;
-      texture_render(customShader ? *customShader : shader, texture::id_get(*image),
-                     transform * draw.parent * model::draw_quad_model_get(draw), frame.tint, frame.colorOffset,
-                     uvVertices.data(), imageSize, draw.time);
+      layer_render(customShader ? *customShader : shader, texture::id_get(*image), vec2(image->size), transform, draw,
+                   frame.tint, frame.colorOffset);
     }
   }
 

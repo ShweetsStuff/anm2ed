@@ -721,13 +721,11 @@ namespace anm2ed::imgui
             auto textureSize = vec2(layerTexture->size);
             auto layerModel = model::draw_quad_model_get(draw);
             auto layerTransform = transform * layerModel;
-            auto vertices = math::uv_vertices_get(frame.crop / textureSize, (frame.crop + frame.size) / textureSize);
             auto tint = frame.tint;
             tint.a = std::max(0.0f, tint.a - (alphaOffset + sampleAlpha));
             auto customShader = sampleDocument.shader_get(frame.shaderId);
-            texture_render(customShader ? *customShader : shaderTexture, resource::texture::id_get(*layerTexture),
-                           layerTransform, tint, frame.colorOffset + sampleColor, vertices.data(), textureSize,
-                           draw.time);
+            layer_render(customShader ? *customShader : shaderTexture, resource::texture::id_get(*layerTexture),
+                         textureSize, baseTransform, draw, tint, frame.colorOffset + sampleColor);
 
             auto color = isOnion                                          ? onionColor
                          : isActiveDocument && is_layer_selected(draw.id) ? SELECTED_LAYER_BORDER_COLOR

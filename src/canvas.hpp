@@ -15,6 +15,13 @@
 
 namespace anm2ed
 {
+  // A box blur `radius` texels wide each way over the texture's `region` (UV min, max); outside it is clear.
+  struct TextureBlur
+  {
+    float radius{};
+    glm::vec4 region{};
+  };
+
   class Canvas : public Framebuffer
   {
   public:
@@ -66,7 +73,9 @@ namespace anm2ed
     void grid_render(resource::Shader&, float, glm::vec2, glm::ivec2 = glm::ivec2(32, 32), glm::ivec2 = {},
                      glm::vec4 = glm::vec4(1.0f)) const;
     void texture_render(resource::Shader&, GLuint, glm::mat4 = {1.0f}, glm::vec4 = glm::vec4(1.0f), glm::vec3 = {},
-                        float* = (float*)TEXTURE_VERTICES, glm::vec2 = {}, float = 0.0f) const;
+                        float* = (float*)TEXTURE_VERTICES, glm::vec2 = {}, float = 0.0f, TextureBlur = {}) const;
+    void layer_render(resource::Shader&, GLuint, glm::vec2, const glm::mat4&, const model::Draw&, glm::vec4,
+                      glm::vec3) const;
     void rect_fill_render(resource::Shader&, const glm::mat4&, const glm::mat4&, glm::vec4 = glm::vec4(1.0f)) const;
     void layers_render(resource::Shader&, const model::Model&, const model::Animation&, const model::DrawOptions&,
                        const glm::mat4&, const std::function<const resource::Image*(const model::Draw&)>&,

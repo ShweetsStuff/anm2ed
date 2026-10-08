@@ -18,6 +18,7 @@ namespace anm2ed::model
     frame.skew = glm::mix(frame.skew, next.skew, amount);
     frame.colorOffset = glm::mix(frame.colorOffset, next.colorOffset, amount);
     frame.tint = glm::mix(frame.tint, next.tint, amount);
+    frame.blur = glm::mix(frame.blur, next.blur, amount);
   }
 
   // Splits an interpolated frame into uninterpolated frames of at most `interval`; the first keeps the frame's uid.
@@ -170,7 +171,7 @@ namespace anm2ed::model
   }
 
   void frames_change(Track& track, FrameChange change, ItemType itemType, ChangeType changeType,
-                     const std::set<int>& selection)
+                     const std::set<int>& selection, bool isAnimationLayer)
   {
     auto apply = [&](auto& target, const auto& optionalValue)
     {
@@ -205,6 +206,14 @@ namespace anm2ed::model
   if (!isLayerOnly || itemType == ItemType::LAYER) apply(frame.member, change.name);
       FRAME_CHANGE_SCALARS
 #undef X
+      frame.blur = std::clamp(frame.blur, 0.0f, FRAME_BLUR_MAX);
+      if (!isAnimationLayer) continue;
+      if (change.childAnimation) frame.childAnimation = *change.childAnimation;
+      if (change.childMode) frame.childMode = *change.childMode;
+      if (change.isChildStartRandom) frame.isChildStartRandom = *change.isChildStartRandom;
+      if (change.isChildRestart) frame.isChildRestart = *change.isChildRestart;
+      apply(frame.childStart, change.childStart);
+      frame.childStart = std::clamp(frame.childStart, 0, FRAME_NUM_MAX);
     }
   }
 

@@ -214,7 +214,7 @@ namespace anm2ed::edit
     auto isLayerOnly = property == FrameProperty::PIVOT || property == FrameProperty::CROP ||
                        property == FrameProperty::SIZE || property == FrameProperty::REGION ||
                        property == FrameProperty::SHADER || property == FrameProperty::DEPTH ||
-                       property == FrameProperty::CHILD;
+                       property == FrameProperty::BLUR || property == FrameProperty::CHILD;
     return type == ItemType::LAYER || !isLayerOnly;
   }
 
@@ -269,6 +269,9 @@ namespace anm2ed::edit
         break;
       case FrameProperty::DEPTH:
         target.depth = source.depth;
+        break;
+      case FrameProperty::BLUR:
+        target.blur = source.blur;
         break;
       case FrameProperty::CHILD:
         target.childAnimation = source.childAnimation;

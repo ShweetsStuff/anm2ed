@@ -105,6 +105,7 @@ namespace anm2ed
   inline constexpr int FPS_MIN = 1;
   inline constexpr int FPS_MAX = 120;
   inline constexpr int FRAME_DEPTH_MAX = 100;
+  inline constexpr float FRAME_BLUR_MAX = 255.0f; // Flash's BlurFilter limit
 
   enum class SpritesheetMergeOrigin
   {
@@ -189,7 +190,8 @@ namespace anm2ed
   X(tintA, tint.a, false, true, changeIsTintA, changeTint.a)                                                           \
   X(colorOffsetR, colorOffset.r, false, true, changeIsColorOffsetR, changeColorOffset.r)                               \
   X(colorOffsetG, colorOffset.g, false, true, changeIsColorOffsetG, changeColorOffset.g)                               \
-  X(colorOffsetB, colorOffset.b, false, true, changeIsColorOffsetB, changeColorOffset.b)
+  X(colorOffsetB, colorOffset.b, false, true, changeIsColorOffsetB, changeColorOffset.b)                               \
+  X(blur, blur, true, false, changeIsBlur, changeBlur)
 
   struct FrameChange
   {
@@ -204,6 +206,12 @@ namespace anm2ed
     std::optional<Interpolation> interpolation{};
     std::optional<bool> isFlipX{};
     std::optional<bool> isFlipY{};
+    // An animation layer's child; a spritesheet layer's frames keep theirs.
+    std::optional<std::string> childAnimation{};
+    std::optional<ChildMode> childMode{};
+    std::optional<int> childStart{};
+    std::optional<bool> isChildStartRandom{};
+    std::optional<bool> isChildRestart{};
   };
 
   struct Reference

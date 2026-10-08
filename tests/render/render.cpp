@@ -157,3 +157,27 @@ TEST_CASE("animation layers draw their child animations")
                                             pixels.data()));
   golden_image_check("nested_frame_0.png");
 }
+
+TEST_CASE("a blurred layer spreads past its crop like Flash's blur filter")
+{
+  RenderFixture fixture("spin.anm2");
+  if (!fixture.gl.is_valid())
+  {
+    MESSAGE("skipped: no OpenGL context");
+    return;
+  }
+  REQUIRE(fixture.document->is_valid());
+
+  // The red square (16 x 16 at (-16, 0)) sharp leaves the canvas clear 2 above its top edge and solid 1 inside it; an
+  // 8 pixel box spreads a third of it out and takes as much from inside.
+  constexpr glm::vec2 OUTSIDE{-20.0f, -10.0f}, INSIDE{-20.0f, -7.0f};
+  auto sharp = fixture.frame_get(0.0f);
+  fixture.document->model.frame_edit({0, LAYER, 0, 0})->blur = 8.0f;
+  fixture.animation = fixture.document->model.animation_get(0);
+  auto blurred = fixture.frame_get(0.0f);
+  CHECK(fixture.pixel_get(blurred, OUTSIDE).r > fixture.pixel_get(sharp, OUTSIDE).r + 40);
+  CHECK(fixture.pixel_get(blurred, INSIDE).r + 40 < fixture.pixel_get(sharp, INSIDE).r);
+
+  REQUIRE(resource::Image::write_pixels_png(OUTPUT_DIR / "spin_blur_frame_0.png", glm::ivec2(fixture.canvas->size),
+                                            blurred.data()));
+}

@@ -42,6 +42,7 @@ namespace anm2ed
   X(BASIC_AT_FRAME, "At Frame", "En Frame", "На кадре", "触发帧", "트리거될 프레임") \
   X(BASIC_BATCH, "Batch", "Lote", "Пакетный", "批量", "일괄") \
   X(BASIC_BEFORE, "Before", "Antes", "До", "前一帧", "전") \
+  X(BASIC_BLUR, "Blur", "Desenfoque", "Размытие", "模糊", "흐림") \
   X(BASIC_BORDER, "Border", "Borde", "Границы", "边框", "경계선") \
   X(BASIC_CANCEL, "Cancel", "Cancelar", "Отмена", "取消", "취소") \
   X(BASIC_COLOR, "Color", "Color", "Цвет", "颜色", "색상") \
@@ -125,6 +126,7 @@ namespace anm2ed
   X(EDIT_END_MARKER, "Set End Marker", "Poner Marcador de Fin", "Конечный маркер", "设置结束标记", "끝 마커 설정") \
   X(EDIT_FRAME_CHILD, "Frame Child", "Hijo del Frame", "Дочерняя анимация кадра", "帧子动画", "프레임 자식") \
   X(EDIT_FRAME_DEPTH, "Frame Depth", "Profundidad del Frame", "Глубина кадра", "帧深度", "프레임 깊이") \
+  X(EDIT_FRAME_BLUR, "Frame Blur", "Desenfoque del Frame", "Размытие кадра", "帧模糊", "프레임 흐림") \
   X(EDIT_PASTE_FRAME_PROPERTY, "Paste Frame Property", "Pegar Propiedad del Frame", "Вставка свойства кадра", "粘贴帧属性", "프레임 속성 붙여넣기") \
   X(EDIT_PASTE_LIBRARIES, "Paste Libraries", "Pegar Bibliotecas", "Вставить библиотеки", "粘贴库", "라이브러리 붙여넣기") \
   X(EDIT_REMOVE_MARKERS, "Remove Markers", "Quitar Marcadores", "Удаление маркеров", "移除标记", "마커 제거") \
@@ -229,6 +231,7 @@ namespace anm2ed
   X(FORMAT_EVENT_LABEL, "Event: {0}", "Evento: {0}", "Событие: {0}", "事件: {0}", "이벤트: {0}") \
   X(FORMAT_ID, "ID: {0}", "ID: {0}", "ID: {0}", "ID: {0}", "ID: {0}") \
   X(FORMAT_ISAAC_ANIMATION_LAYERS, "{} layer(s) play animations, which the game doesn't support; they will draw nothing.", "{} capa(s) reproducen animaciones, que el juego no soporta; no dibujarán nada.", "{} слой(ёв) проигрывают анимации, которые игра не поддерживает; они ничего не отобразят.", "{} 个图层播放动画，游戏不支持；它们将不显示任何内容。", "{}개의 레이어가 애니메이션을 재생합니다. 게임에서 지원하지 않으므로 아무것도 그리지 않습니다.") \
+  X(FORMAT_ISAAC_BLUR_FRAMES, "{} frame(s) blur their layer, which the game doesn't support; they will draw sharp.", "{} Frame(s) desenfocan su capa, que el juego no soporta; se dibujarán nítidos.", "{} кадр(ов) размывают слой, что игра не поддерживает; они будут нарисованы чётко.", "{} 个帧模糊了图层，游戏不支持，将清晰绘制。", "프레임 {}개가 게임이 지원하지 않는 레이어 흐림을 사용합니다. 선명하게 그려집니다.") \
   X(FORMAT_ISAAC_DEPTH_FRAMES, "{} frame(s) change their layer's depth, which the game doesn't support; they will draw in timeline order.", "{} Frame(s) cambian la profundidad de su capa, que el juego no soporta; se dibujarán en el orden de la línea de tiempo.", "{} кадр(ов) меняют глубину слоя, что игра не поддерживает; они будут рисоваться в порядке таймлайна.", "{} 个帧改变了图层深度，游戏不支持，将按时间轴顺序绘制。", "프레임 {}개가 게임이 지원하지 않는 레이어 깊이를 바꿉니다. 타임라인 순서로 그려집니다.") \
   X(FORMAT_ISAAC_EASED_FRAMES, "{} eased frame(s) will be baked into one-frame steps.", "{} Frame(s) con suavizado se convertirán en pasos de un Frame.", "{} кадр(ов) со сглаживанием будут запечены в покадровые шаги.", "{} 个缓动帧将被烘焙为逐帧步进。", "이징 프레임 {}개가 1프레임 단위로 베이크됩니다.") \
   X(FORMAT_ISAAC_GROUP_TRANSFORMS, "{} group transform(s) will be baked into their items' frames.", "{} transformación(es) de grupo se aplicarán a los Frames de sus elementos.", "{} трансформаци(й) групп будут запечены в кадры их элементов.", "{} 个组变换将被烘焙到其项目的帧中。", "그룹 변형 {}개가 항목의 프레임에 베이크됩니다.") \
@@ -669,6 +672,7 @@ namespace anm2ed
   X(TOOLTIP_BAKE_INTO_OTHER_FRAMES_ALL, "All layer/null frames will have the selected root frames' transformations applied to them.", "Todos los frames de capas/nulls tendrán aplicadas las transformaciones de los root frames seleccionados.", "Все кадры слоев/нулей получат трансформации выбранных корневых кадров.", "所有图层/Null帧会应用所选根帧的变换.", "모든 레이어/Null 프레임에 선택된 Root 프레임의 변환을 적용합니다.") \
   X(TOOLTIP_BAKE_MATCH_ROOT_INTERPOLATION, "Bake affected layer/null frames to duration 1 before applying root transforms, so they match the selected root frames' interpolation.", "Hornea los frames de capas/nulls afectados a duración 1 antes de aplicar transformaciones root, para coincidir con la interpolación root seleccionada.", "Запечь затронутые кадры слоев/нулей до длительности 1 перед применением корневых трансформаций, чтобы соответствовать интерполяции выбранных корневых кадров.", "应用根变换前，将受影响的图层/Null帧烘焙为时长1，以匹配所选根帧的插值.", "선택된 Root 프레임의 보간에 맞도록 Root 변환 적용 전에 영향받는 레이어/Null 프레임을 지속시간 1로 베이크합니다.") \
   X(TOOLTIP_BAKE_USE_ROOT_PIVOT, "Scale and rotate other frames around the root frame position instead of the animation origin.", "Escala y rota otros frames alrededor de la posición del root frame en vez del origen de la animación.", "Масштабировать и вращать другие кадры вокруг позиции корневого кадра, а не начала координат анимации.", "围绕根帧位置而不是动画原点缩放和旋转其他帧.", "애니메이션 원점 대신 Root 프레임 위치를 중심으로 다른 프레임을 확대/회전합니다.") \
+  X(TOOLTIP_BLUR, "Blur this layer like a Flash blur filter (low quality): one box blur this many canvas pixels wide, across and down. An animation layer blurs its child at least this much.\n(Editor only; the game draws it sharp.)", "Desenfoca esta capa como un filtro de desenfoque de Flash (calidad baja): un desenfoque de caja de este ancho en píxeles del lienzo, horizontal y vertical. Una capa de animación desenfoca a su hijo al menos esto.\n(Solo en el editor; el juego la dibuja nítida.)", "Размыть слой как фильтр размытия Flash (низкое качество): одно прямоугольное размытие такой ширины в пикселях холста, по горизонтали и вертикали. Слой анимации размывает дочернюю анимацию не меньше этого.\n(Только в редакторе; игра рисует его чётко.)", "像 Flash 模糊滤镜(低品质)一样模糊此图层：沿水平和垂直方向进行一次此宽度(画布像素)的方框模糊。动画图层至少以此程度模糊其子动画。\n(仅限编辑器；游戏会清晰绘制。)", "Flash 흐림 필터(낮은 품질)처럼 이 레이어를 흐리게 합니다. 캔버스 픽셀 기준 이 너비의 박스 흐림을 가로와 세로로 한 번 적용합니다. 애니메이션 레이어는 자식을 최소 이만큼 흐리게 합니다.\n(편집기 전용이며, 게임은 선명하게 그립니다.)") \
   X(TOOLTIP_BORDER, "Toggle the visibility of borders around layers.", "Alterna la visibilidad de los bordes alrededor de las capas.", "Переключить видимость границ около слоев.", "切换动画层边框是否可见.", "레이어 주변 경계선을 표시하거나 숨깁니다.") \
   X(TOOLTIP_CANCEL_ADD_ITEM, "Cancel adding an item.", "Cancelar añadir un item.", "Отменить добавление предмета.", "取消添加物品.", "항목 추가를 취소합니다.") \
   X(TOOLTIP_CANCEL_BAKE_FRAMES, "Cancel baking frames.", "Cancelar hacer bake de Frames.", "Отменить запечку кадров.", "取消提前渲染.", "프레임 베이킹을 취소합니다.") \

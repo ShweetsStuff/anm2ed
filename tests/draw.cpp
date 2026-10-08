@@ -58,6 +58,25 @@ TEST_CASE("a layer frame's depth moves it among the layers for that frame only")
   CHECK(model::isaac_issues_get(anm2).depthFrames == 1);
 }
 
+TEST_CASE("a layer frame's blur reaches its child's draws and stays out of the game's copy")
+{
+  auto anm2 = model_load(file_load(TEST_DIR / "render" / "nested.anm2"));
+  anm2.frame_edit({0, LAYER, 1, 0})->blur = 6.0f;
+  bool isAnyChild{};
+  for (const auto& draw : model::animation_draws_get(anm2, *anm2.animation_get(0), {}))
+    if (draw.type == model::DrawType::LAYER && draw.id == 1)
+    {
+      isAnyChild = true;
+      CHECK(draw.frame.blur >= 6.0f);
+    }
+  CHECK(isAnyChild);
+
+  auto text = model::model_to_string(anm2);
+  CHECK(game_document_get(text).find("Blur") == std::string::npos);
+  CHECK(model_load(text).frame_get({0, LAYER, 1, 0})->blur == 6.0f);
+  CHECK(model::isaac_issues_get(anm2).blurFrames == 1);
+}
+
 TEST_CASE("an animation layer draws its child animation, from this file or a library")
 {
   auto anm2 = model_load(file_load(TEST_DIR / "render" / "nested.anm2"));

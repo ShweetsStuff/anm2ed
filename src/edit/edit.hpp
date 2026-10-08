@@ -81,6 +81,7 @@ namespace anm2ed::edit
     DURATION,
     SHADER,
     DEPTH,
+    BLUR,
     CHILD,
     EVENT,
     SOUNDS,

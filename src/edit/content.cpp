@@ -191,16 +191,22 @@ namespace anm2ed::edit
       index < 0 ? (void)wholeTracks.insert(reference) : (void)frames[reference].insert(index);
     }
 
+    auto is_animation_layer = [&](const Track& track)
+    {
+      auto layer = track.type == ItemType::LAYER ? item_get(model.content.layers, track.id) : nullptr;
+      return layer && layer->is_animation();
+    };
     auto whole_apply = [&](Track& track)
     {
       std::set<int> indices{};
       for (int i = 0; i < (int)track.frames.size(); ++i)
         indices.insert(i);
-      frames_change(track, change, track.type, type, indices);
+      frames_change(track, change, track.type, type, indices, is_animation_layer(track));
     };
 
     for (auto& [reference, indices] : frames)
-      if (auto track = model.track_edit(reference)) frames_change(*track, change, track->type, type, indices);
+      if (auto track = model.track_edit(reference))
+        frames_change(*track, change, track->type, type, indices, is_animation_layer(*track));
     for (auto reference : wholeTracks)
       if (auto track = model.track_edit(reference)) whole_apply(*track);
     for (auto index : targets.animations)

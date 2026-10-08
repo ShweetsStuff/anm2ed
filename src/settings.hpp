@@ -92,6 +92,12 @@ namespace anm2ed
   X(CHANGE_IS_ROTATION, changeIsRotation, STRING_UNDEFINED, BOOL, false)                                               \
   X(CHANGE_IS_DURATION, changeIsDuration, STRING_UNDEFINED, BOOL, false)                                               \
   X(CHANGE_IS_DEPTH, changeIsDepth, STRING_UNDEFINED, BOOL, false)                                                     \
+  X(CHANGE_IS_BLUR, changeIsBlur, STRING_UNDEFINED, BOOL, false)                                                       \
+  X(CHANGE_IS_CHILD_ANIMATION, changeIsChildAnimation, STRING_UNDEFINED, BOOL, false)                                  \
+  X(CHANGE_IS_CHILD_MODE, changeIsChildMode, STRING_UNDEFINED, BOOL, false)                                            \
+  X(CHANGE_IS_CHILD_START, changeIsChildStart, STRING_UNDEFINED, BOOL, false)                                          \
+  X(CHANGE_IS_CHILD_START_RANDOM_SET, changeIsChildStartRandomSet, STRING_UNDEFINED, BOOL, false)                      \
+  X(CHANGE_IS_CHILD_RESTART_SET, changeIsChildRestartSet, STRING_UNDEFINED, BOOL, false)                               \
   X(CHANGE_IS_TINT_R, changeIsTintR, STRING_UNDEFINED, BOOL, false)                                                    \
   X(CHANGE_IS_TINT_G, changeIsTintG, STRING_UNDEFINED, BOOL, false)                                                    \
   X(CHANGE_IS_TINT_B, changeIsTintB, STRING_UNDEFINED, BOOL, false)                                                    \
@@ -115,6 +121,12 @@ namespace anm2ed
   X(CHANGE_ROTATION, changeRotation, STRING_UNDEFINED, FLOAT, 0.0f)                                                    \
   X(CHANGE_DURATION, changeDuration, STRING_UNDEFINED, INT, 0)                                                         \
   X(CHANGE_DEPTH, changeDepth, STRING_UNDEFINED, INT, 0)                                                               \
+  X(CHANGE_BLUR, changeBlur, STRING_UNDEFINED, FLOAT, 0.0f)                                                            \
+  X(CHANGE_CHILD_ANIMATION, changeChildAnimation, STRING_UNDEFINED, STRING, "")                                        \
+  X(CHANGE_CHILD_MODE, changeChildMode, STRING_UNDEFINED, INT, 0)                                                      \
+  X(CHANGE_CHILD_START, changeChildStart, STRING_UNDEFINED, INT, 0)                                                    \
+  X(CHANGE_IS_CHILD_START_RANDOM, changeIsChildStartRandom, STRING_UNDEFINED, BOOL, false)                             \
+  X(CHANGE_IS_CHILD_RESTART, changeIsChildRestart, STRING_UNDEFINED, BOOL, false)                                      \
   X(CHANGE_TINT, changeTint, STRING_UNDEFINED, VEC4, {})                                                               \
   X(CHANGE_COLOR_OFFSET, changeColorOffset, STRING_UNDEFINED, VEC3, {})                                                \
   X(CHANGE_REGION_ID, changeRegionId, STRING_UNDEFINED, INT, -1)                                                       \

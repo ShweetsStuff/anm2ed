@@ -380,6 +380,30 @@ TEST_CASE("change all frame properties changes layer depth only")
   CHECK(model.frame_get(null)->depth == 0);
 }
 
+TEST_CASE("change all frame properties blurs layers and changes only animation layers' children")
+{
+  auto model = model_load(file_load(TEST_DIR / "render" / "nested.anm2"));
+  Reference animationLayer{0, LAYER, 1, 0};
+  Reference spritesheetLayer{1, LAYER, 2, 0};
+  REQUIRE(model.frame_get(spritesheetLayer));
+  edit::frames_change_apply(model, {.references = {animationLayer, spritesheetLayer}},
+                            {.blur = 8.0f, .childAnimation = "Spin", .childMode = ChildMode::ONCE, .childStart = 3},
+                            ChangeType::ADJUST);
+  auto child = *model.frame_get(animationLayer);
+  CHECK(child.blur == 8.0f);
+  CHECK(child.childAnimation == "Spin");
+  CHECK(child.childMode == ChildMode::ONCE);
+  CHECK(child.childStart == 3);
+  auto sprite = *model.frame_get(spritesheetLayer);
+  CHECK(sprite.blur == 8.0f);
+  CHECK(sprite.childAnimation.empty());
+  CHECK(sprite.childMode == ChildMode::LOOP);
+  CHECK(sprite.childStart == 0);
+
+  edit::frames_change_apply(model, {.references = {animationLayer}}, {.blur = 1000.0f}, ChangeType::ADD);
+  CHECK(model.frame_get(animationLayer)->blur == FRAME_BLUR_MAX);
+}
+
 TEST_CASE("animations_merge moves triggers past the animation placed before them")
 {
   auto model_make = []()

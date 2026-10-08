@@ -78,16 +78,43 @@ namespace anm2ed::resource::shader
   }
   )";
 
+  // u_blur > 0: Flash's low-quality BlurFilter, a box of 2 * u_blur + 1 texels averaged (premultiplied) over the
+  // u_region crop, clear outside it; a wide box steps over texels so a fragment reads at most BLUR_SAMPLES per axis.
   inline constexpr auto TEXTURE_FRAGMENT = R"(
   #version 330 core
   in vec2 i_uv_out;
   uniform sampler2D u_texture;
   uniform vec4 u_tint;
   uniform vec3 u_color_offset;
+  uniform float u_blur;
+  uniform vec4 u_region;
+  uniform vec2 u_texel;
   out vec4 o_fragColor;
+  const int BLUR_SAMPLES = 33;
+  vec4 texel_premultiplied_get(vec2 uv)
+  {
+      if (any(lessThan(uv, u_region.xy)) || any(greaterThanEqual(uv, u_region.zw))) return vec4(0.0);
+      vec4 color = texture(u_texture, uv);
+      return vec4(color.rgb * color.a, color.a);
+  }
   void main()
   {
       vec4 texColor = texture(u_texture, i_uv_out);
+      if (u_blur > 0.0)
+      {
+          int radius = int(u_blur);
+          int stride = max(1, (radius * 2 + BLUR_SAMPLES) / BLUR_SAMPLES);
+          vec4 sum = vec4(0.0);
+          float count = 0.0;
+          for (int y = -radius; y <= radius; y += stride)
+              for (int x = -radius; x <= radius; x += stride)
+              {
+                  sum += texel_premultiplied_get(i_uv_out + vec2(x, y) * u_texel);
+                  count += 1.0;
+              }
+          sum /= count;
+          texColor = sum.a > 0.0 ? vec4(sum.rgb / sum.a, sum.a) : vec4(0.0);
+      }
       texColor *= u_tint;
       texColor.rgb += u_color_offset;
       texColor.rgb *= texColor.a;
@@ -231,6 +258,9 @@ namespace anm2ed::resource::shader
   constexpr auto UNIFORM_DASH_LENGTH = "u_dash_length";
   constexpr auto UNIFORM_DASH_GAP = "u_dash_gap";
   constexpr auto UNIFORM_DASH_OFFSET = "u_dash_offset";
+  constexpr auto UNIFORM_BLUR = "u_blur";
+  constexpr auto UNIFORM_REGION = "u_region";
+  constexpr auto UNIFORM_TEXEL = "u_texel";
 
 #define RESOURCE_SHADER_ATTRIBUTE_ALIASES                                                                              \
   X(0, "i_position")                                                                                                   \

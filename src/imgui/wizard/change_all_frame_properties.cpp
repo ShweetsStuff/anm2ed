@@ -138,6 +138,27 @@ namespace anm2ed::imgui::wizard
     auto isLayerPropertyAvailable = isFramesDestination  ? std::ranges::any_of(selectedFrameReferences, is_layer)
                                     : isItemsDestination ? std::ranges::any_of(selectedItemReferences, is_layer)
                                                          : settings.changeIsLayers;
+    // Child properties reach animation layers only; their choices are every such layer's animations.
+    auto animation_layer_get = [&](const Reference& reference) -> const model::Layer*
+    {
+      auto layer = is_layer(reference) ? model::item_get(document.model.content.layers, reference.itemID) : nullptr;
+      return layer && layer->is_animation() ? layer : nullptr;
+    };
+    std::set<std::string> childAnimations{};
+    bool isChildPropertyAvailable{};
+    auto child_layer_add = [&](const model::Layer* layer)
+    {
+      if (!layer || !layer->is_animation()) return;
+      isChildPropertyAvailable = true;
+      for (auto& name : document.animation_names_get(layer->libraryId))
+        childAnimations.insert(name);
+    };
+    if (isFramesDestination || isItemsDestination)
+      for (const auto& reference : isFramesDestination ? selectedFrameReferences : selectedItemReferences)
+        child_layer_add(animation_layer_get(reference));
+    else if (settings.changeIsLayers)
+      for (const auto& layer : document.model.content.layers)
+        child_layer_add(&layer);
 
     ComponentRow componentRows[] = {
         {BASIC_CROP, {&settings.changeIsCropX, &settings.changeIsCropY}, value_ptr(settings.changeCrop), true},
@@ -149,7 +170,8 @@ namespace anm2ed::imgui::wizard
         {BASIC_PIVOT, {&settings.changeIsPivotX, &settings.changeIsPivotY}, value_ptr(settings.changePivot), true},
         {BASIC_SCALE, {&settings.changeIsScaleX, &settings.changeIsScaleY}, value_ptr(settings.changeScale), false},
         {BASIC_SKEW, {&settings.changeIsSkewX, &settings.changeIsSkewY}, value_ptr(settings.changeSkew), false},
-        {BASIC_ROTATION, {&settings.changeIsRotation}, &settings.changeRotation, false}};
+        {BASIC_ROTATION, {&settings.changeIsRotation}, &settings.changeRotation, false},
+        {BASIC_BLUR, {&settings.changeIsBlur}, &settings.changeBlur, true}};
     ComponentRow colorRows[] = {
         {BASIC_TINT,
          {&settings.changeIsTintR, &settings.changeIsTintG, &settings.changeIsTintB, &settings.changeIsTintA},
@@ -235,6 +257,42 @@ namespace anm2ed::imgui::wizard
     bool_draw("Flip X", LABEL_FLIP_X, settings.changeIsFlipXSet, settings.changeIsFlipX);
     ImGui::SameLine();
     bool_draw("Flip Y", LABEL_FLIP_Y, settings.changeIsFlipYSet, settings.changeIsFlipY);
+
+    ImGui::SeparatorText(localize.get(LABEL_CHILD));
+    ImGui::BeginDisabled(!isChildPropertyAvailable);
+    {
+      std::vector<std::string> values{std::string{}};
+      std::vector<std::string> labels{localize.get(TEXT_LAYER_ANIMATION)};
+      values.insert(values.end(), childAnimations.begin(), childAnimations.end());
+      labels.insert(labels.end(), childAnimations.begin(), childAnimations.end());
+      ImGui::PushID("Child Animation");
+      property_toggle_begin(settings.changeIsChildAnimation);
+      combo_string_mapped(localize.get(LABEL_ANIMATION), &settings.changeChildAnimation, values, labels);
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHILD_ANIMATION));
+      ImGui::EndDisabled();
+      ImGui::PopID();
+
+      std::vector<int> modeIds{};
+      std::vector<std::string> modeLabels{};
+      for (int i = 0; i < (int)std::size(CHILD_MODE_LABELS); ++i)
+      {
+        modeIds.push_back(i);
+        modeLabels.push_back(localize.get(CHILD_MODE_LABELS[i]));
+      }
+      combo_draw("Child Mode", BASIC_MODE, settings.changeIsChildMode, settings.changeChildMode, modeIds, modeLabels);
+
+      ImGui::PushID("Child Start");
+      property_toggle_begin(settings.changeIsChildStart);
+      input_int_range(localize.get(LABEL_START_FRAME), settings.changeChildStart, 0, FRAME_NUM_MAX, STEP, STEP_FAST);
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHILD_START));
+      ImGui::EndDisabled();
+      ImGui::PopID();
+
+      bool_draw("Child Random", LABEL_RANDOM, settings.changeIsChildStartRandomSet, settings.changeIsChildStartRandom);
+      ImGui::SameLine();
+      bool_draw("Child Restart", LABEL_RESTART, settings.changeIsChildRestartSet, settings.changeIsChildRestart);
+    }
+    ImGui::EndDisabled();
     ImGui::PopStyleVar();
 
     auto frame_change = [&](ChangeType changeType)
@@ -254,6 +312,14 @@ namespace anm2ed::imgui::wizard
       if (settings.changeIsInterpolationSet) frameChange.interpolation = (Interpolation)settings.changeInterpolation;
       if (settings.changeIsFlipXSet) frameChange.isFlipX = settings.changeIsFlipX;
       if (settings.changeIsFlipYSet) frameChange.isFlipY = settings.changeIsFlipY;
+      if (isChildPropertyAvailable)
+      {
+        if (settings.changeIsChildAnimation) frameChange.childAnimation = settings.changeChildAnimation;
+        if (settings.changeIsChildMode) frameChange.childMode = (ChildMode)settings.changeChildMode;
+        if (settings.changeIsChildStart) frameChange.childStart = settings.changeChildStart;
+        if (settings.changeIsChildStartRandomSet) frameChange.isChildStartRandom = settings.changeIsChildStartRandom;
+        if (settings.changeIsChildRestartSet) frameChange.isChildRestart = settings.changeIsChildRestart;
+      }
 
       manager.command_push(
           {manager.selected,
@@ -319,12 +385,15 @@ namespace anm2ed::imgui::wizard
       ImGui::Separator();
     }
 
-    bool isAnyProperty = settings.changeIsDuration || settings.changeIsDepth || settings.changeIsRegion ||
-                         settings.changeIsShader || settings.changeIsVisibleSet || settings.changeIsInterpolationSet ||
-                         settings.changeIsFlipXSet ||
-                         settings.changeIsFlipYSet
+    bool isAnyProperty =
+        settings.changeIsDuration || settings.changeIsDepth || settings.changeIsRegion || settings.changeIsShader ||
+        settings.changeIsVisibleSet || settings.changeIsInterpolationSet || settings.changeIsFlipXSet ||
+        settings.changeIsFlipYSet ||
+        (isChildPropertyAvailable &&
+         (settings.changeIsChildAnimation || settings.changeIsChildMode || settings.changeIsChildStart ||
+          settings.changeIsChildStartRandomSet || settings.changeIsChildRestartSet))
 #define X(name, member, isLayerOnly, isColor, isEnabled, value) || settings.isEnabled
-                             FRAME_CHANGE_SCALARS
+            FRAME_CHANGE_SCALARS
 #undef X
         ;
     bool isDestinationValid = isFramesDestination ? isSelectedFramesAvailable

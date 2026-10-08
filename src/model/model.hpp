@@ -55,6 +55,7 @@ namespace anm2ed::model
     int regionId{-1};
     int shaderId{-1};
     int depth{}; // a layer frame draws this many layers above (or below) its place in the timeline; editor-only
+    float blur{}; // Flash's BlurFilter at quality 1: one box blur this many canvas pixels wide; editor-only
     // On an animation layer: the child animation (empty for the layer's own) and how it plays; editor-only.
     std::string childAnimation{};
     ChildMode childMode{ChildMode::LOOP};

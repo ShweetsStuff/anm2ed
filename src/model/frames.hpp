@@ -18,6 +18,6 @@ namespace anm2ed::model
   void frame_bake(Track&, int, int, bool, bool);
   void frames_generate_from_grid(Track&, glm::ivec2, glm::ivec2, glm::vec2, int, int, int);
   void frames_sort_by_at_frame(Track&);
-  void frames_change(Track&, FrameChange, ItemType, ChangeType, const std::set<int>&);
+  void frames_change(Track&, FrameChange, ItemType, ChangeType, const std::set<int>&, bool isAnimationLayer = false);
   glm::vec4 animation_rect(const Model&, const Animation&, bool, const LibraryGet& = {});
 }
