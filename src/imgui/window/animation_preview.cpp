@@ -123,24 +123,6 @@ namespace anm2ed::imgui
     return rect;
   }
 
-  int trigger_sound_id_get(Document& document, const model::Animation* animation, float time,
-                           int deterministicIndex = -1)
-  {
-    if (!animation || !animation->triggers.isVisible) return -1;
-
-    auto trigger = model::frame_generate(animation->triggers, time);
-    if (!trigger.isVisible || trigger.soundIds.empty()) return -1;
-
-    size_t soundIndex{};
-    if (trigger.soundIds.size() > 1)
-      soundIndex = deterministicIndex >= 0 ? (size_t)deterministicIndex % trigger.soundIds.size()
-                                           : (size_t)math::random_in_range(0.0f, (float)trigger.soundIds.size());
-    soundIndex = std::min(soundIndex, trigger.soundIds.size() - 1);
-
-    auto soundID = trigger.soundIds[soundIndex];
-    return document.sound_get(soundID) ? soundID : -1;
-  }
-
   void AnimationPreview::tick(Manager& manager, Settings& settings, float deltaSeconds)
   {
     auto& document = *manager.get();
@@ -150,8 +132,8 @@ namespace anm2ed::imgui
 
     auto stop_all_sounds = [&]()
     {
-      for (auto& [id, _] : document.sounds)
-        if (auto sound = document.sound_get(id)) audio::stop(*sound, mixer);
+      for (auto sound : document.sounds_get())
+        audio::stop(*sound, mixer);
     };
 
     if (manager.isRecording)
@@ -190,9 +172,9 @@ namespace anm2ed::imgui
         for (int step = 0; soundFrame != frame && step < range.y - range.x; ++step)
         {
           soundFrame = soundFrame + 1 >= range.y || soundFrame + 1 < range.x ? range.x : soundFrame + 1;
-          if (manager.isRecording || document.sounds.empty() || !isSound) continue;
-          if (auto soundID = trigger_sound_id_get(document, animation, (float)soundFrame); soundID != -1)
-            if (auto sound = document.sound_get(soundID)) audio::play(*sound, false, mixer);
+          if (manager.isRecording || !isSound) continue;
+          for (auto sound : document.trigger_sounds_get(*animation, soundFrame))
+            audio::play(*sound, false, mixer);
         }
 
         frameTime = playback.time;
@@ -806,10 +788,10 @@ namespace anm2ed::imgui
 
       if (isRecordingFrame)
       {
-        auto soundId = settings.timelineIsSound && animation && recorder.is_sound_frame()
-                           ? trigger_sound_id_get(document, animation, frameTime, recorder.index)
-                           : -1;
-        if (!recorder.frame_capture(pixels_get(), size, soundId))
+        auto sounds = settings.timelineIsSound && animation && recorder.is_sound_frame()
+                          ? document.trigger_sounds_get(*animation, (int)frameTime, recorder.index)
+                          : std::vector<const resource::AudioData*>{};
+        if (!recorder.frame_capture(pixels_get(), size, sounds))
         {
           toast_log(Level::ERROR, TOAST_EXPORT_RENDERED_ANIMATION_FAILED, path::to_utf8(recorder.options.path));
           recorder.cancel();
@@ -826,27 +808,27 @@ namespace anm2ed::imgui
       }
       image_premultiplied_draw(texture, to_imvec2(size));
 
-      if (animation && animation->triggers.isVisible && !isOnlyShowLayers && !manager.isRecording)
-      {
-        if (auto trigger = model::frame_generate(animation->triggers, frameTime);
-            trigger.isVisible && !trigger.eventIds.empty())
-        {
-          auto clipMin = ImGui::GetItemRectMin();
-          auto clipMax = ImGui::GetItemRectMax();
-          auto drawList = ImGui::GetWindowDrawList();
-          auto textPos = to_imvec2(to_vec2(cursorScreenPos) + to_vec2(ImGui::GetStyle().WindowPadding));
-
-          drawList->PushClipRect(clipMin, clipMax);
-          ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE_LARGE);
-          auto triggerTextColor = isLightTheme ? TRIGGER_TEXT_COLOR_LIGHT : TRIGGER_TEXT_COLOR_DARK;
-          std::string names{};
+      // The events triggers (the animation's and its children's) fire on this frame.
+      std::string names{};
+      if (animation && !isOnlyShowLayers && !manager.isRecording)
+        for (const auto& [source, trigger] :
+             model::animation_triggers_get(model, *animation, (int)frameTime, document.library_resolver_get()))
           for (auto eventId : trigger.eventIds)
-            if (auto event = model::item_get(model.content.events, eventId))
+            if (auto event = model::item_get(source->content.events, eventId))
               names += (names.empty() ? "" : ", ") + event->name;
-          drawList->AddText(textPos, ImGui::GetColorU32(triggerTextColor), names.c_str());
-          ImGui::PopFont();
-          drawList->PopClipRect();
-        }
+      if (!names.empty())
+      {
+        auto clipMin = ImGui::GetItemRectMin();
+        auto clipMax = ImGui::GetItemRectMax();
+        auto drawList = ImGui::GetWindowDrawList();
+        auto textPos = to_imvec2(to_vec2(cursorScreenPos) + to_vec2(ImGui::GetStyle().WindowPadding));
+
+        drawList->PushClipRect(clipMin, clipMax);
+        ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE_LARGE);
+        auto triggerTextColor = isLightTheme ? TRIGGER_TEXT_COLOR_LIGHT : TRIGGER_TEXT_COLOR_DARK;
+        drawList->AddText(textPos, ImGui::GetColorU32(triggerTextColor), names.c_str());
+        ImGui::PopFont();
+        drawList->PopClipRect();
       }
     }
 

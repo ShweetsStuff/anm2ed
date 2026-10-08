@@ -9,14 +9,14 @@ namespace anm2ed::imgui
     if (auto document = manager.get(); document)
       if (settings.windowIsAnimationPreview) animationPreview.tick(manager, settings, deltaSeconds);
 
-    // Files changed on disk are picked up every few seconds: libraries always, spritesheets when set to.
+    // Spritesheets and libraries changed on disk are picked up every few seconds.
+    if (!settings.fileIsAutoReloadResources) return;
     reloadTime += deltaSeconds;
     if (reloadTime < AUTO_RELOAD_INTERVAL) return;
     reloadTime = 0.0f;
     for (auto& document : manager.documents)
     {
       document.libraries_reload();
-      if (!settings.fileIsAutoReloadSpritesheets) continue;
       if (auto ids = document.spritesheets_changed_get(); !ids.empty()) document.spritesheets_reload(ids);
     }
   }

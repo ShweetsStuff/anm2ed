@@ -23,6 +23,15 @@ namespace anm2ed::imgui
     ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_ID), std::make_format_args(id)).c_str());
   }
 
+  // "#id name", then what the layer shows: its spritesheet or its animation.
+  std::string layer_label_get(const model::Layer& layer)
+  {
+    if (layer.is_animation())
+      return std::vformat(localize.get(FORMAT_LAYER_ANIMATION),
+                          std::make_format_args(layer.id, layer.name, layer.animation));
+    return std::vformat(localize.get(FORMAT_LAYER), std::make_format_args(layer.id, layer.name, layer.spritesheetId));
+  }
+
   model::Layer item_edit_layer_get(const Manager::ItemEdit& edit)
   {
     return {.name = edit.name,
@@ -159,16 +168,7 @@ namespace anm2ed::imgui
                                             TOOLTIP_ADD_LAYER, TOOLTIP_REMOVE_UNUSED_LAYERS, EDIT_REMOVE_UNUSED_LAYERS,
                                             EDIT_PASTE_LAYERS, TOAST_DESERIALIZE_LAYERS_FAILED, layers_get);
       ListRows rows{
-          .label_get =
-              [&](int id)
-          {
-            auto layer = model::item_get(layers, id);
-            if (layer->is_animation())
-              return std::vformat(localize.get(FORMAT_LAYER_ANIMATION),
-                                  std::make_format_args(layer->id, layer->name, layer->animation));
-            return std::vformat(localize.get(FORMAT_LAYER),
-                                std::make_format_args(layer->id, layer->name, layer->spritesheetId));
-          },
+          .label_get = [&](int id) { return layer_label_get(*model::item_get(layers, id)); },
           .tooltip_draw =
               [&](int id)
           {

@@ -243,16 +243,16 @@ namespace anm2ed::render
 
   void sounds_detach(const Document& document, MIX_Mixer* mixer)
   {
-    for (auto& [id, _] : document.sounds)
-      if (auto sound = document.sound_get(id)) audio::track_detach(*sound, mixer);
+    for (auto sound : document.sounds_get())
+      audio::track_detach(*sound, mixer);
   }
 
-  // Mixes each frame's trigger sound into one stream at the render frame rate.
-  bool audio_stream_generate(AudioStream& audioStream, const Document& document, const std::vector<int>& soundIds,
-                             int fps)
+  // Mixes each frame's trigger sounds into one stream at the render frame rate.
+  bool audio_stream_generate(AudioStream& audioStream, const Document& document,
+                             const std::vector<std::vector<const resource::AudioData*>>& frameSounds, int fps)
   {
     audioStream.stream.clear();
-    if (soundIds.empty() || fps <= 0) return true;
+    if (frameSounds.empty() || fps <= 0) return true;
 
     SDL_AudioSpec mixSpec = audioStream.spec;
     mixSpec.format = SDL_AUDIO_F32;
@@ -264,9 +264,10 @@ namespace anm2ed::render
     auto accumulator = 0.0;
     std::vector<float> buffer{};
     auto isGenerated = true;
-    for (auto soundId : soundIds)
+    for (const auto& sounds : frameSounds)
     {
-      if (auto sound = document.sound_get(soundId)) audio::play(*sound, false, mixer);
+      for (auto sound : sounds)
+        audio::play(*sound, false, mixer);
       accumulator += framesPerStep;
       auto sampleFrames = std::max((int)std::floor(accumulator), 1);
       accumulator -= (double)sampleFrames;
@@ -341,7 +342,7 @@ namespace anm2ed::render
     index = 0;
     count = frame_count_get(options.start, options.end, options.animationFps, options.fps);
     frames.clear();
-    soundIds.clear();
+    sounds.clear();
     soundTime = -1;
     directory = frames_directory_create(options);
     return !directory.empty();
@@ -354,10 +355,11 @@ namespace anm2ed::render
   // A trigger sound is taken once per animation frame, however many render frames it spans.
   bool Recorder::is_sound_frame() const { return (int)std::floor(time_get()) != soundTime; }
 
-  bool Recorder::frame_capture(std::vector<uint8_t> pixels, glm::ivec2 size, int soundId)
+  bool Recorder::frame_capture(std::vector<uint8_t> pixels, glm::ivec2 size,
+                               std::vector<const resource::AudioData*> frameSounds)
   {
     soundTime = (int)std::floor(time_get());
-    soundIds.push_back(soundId);
+    sounds.push_back(std::move(frameSounds));
     if (options.isIsolated || options.isBounded) pixels_unpremultiply(pixels);
     auto framePath = directory / frame_filename_get(options.format, index, options.type);
     if (!Image::write_pixels_png(framePath, size, pixels.data())) return false;
@@ -396,8 +398,7 @@ namespace anm2ed::render
     else
     {
       audioStream.stream.clear();
-      if (options.isSound && options.type != GIF &&
-          !audio_stream_generate(audioStream, document, soundIds, options.fps))
+      if (options.isSound && options.type != GIF && !audio_stream_generate(audioStream, document, sounds, options.fps))
       {
         toasts.push(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED));
         logger.error("Failed to generate deterministic render audio stream; exporting without audio.");
@@ -417,7 +418,7 @@ namespace anm2ed::render
     if (options.type != PNGS && !directory.empty()) std::filesystem::remove_all(directory, ec);
     directory.clear();
     frames.clear();
-    soundIds.clear();
+    sounds.clear();
     index = count = 0;
   }
 
@@ -433,7 +434,7 @@ namespace anm2ed::render
     {
       auto pixels = animation_frame_render(canvas, shader, document, animation, recorder.time_get(), bounds, scale,
                                            background, isRootTransform);
-      if (recorder.frame_capture(std::move(pixels), glm::ivec2(canvas.size), -1)) continue;
+      if (recorder.frame_capture(std::move(pixels), glm::ivec2(canvas.size))) continue;
       recorder.cancel();
       return false;
     }

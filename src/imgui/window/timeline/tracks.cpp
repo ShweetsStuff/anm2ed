@@ -203,7 +203,7 @@ namespace anm2ed::imgui
       {
         auto layer = model::item_get(model.content.layers, id);
         if (!layer) return localize.get(TYPE_STRINGS[type]);
-        return std::vformat(localize.get(FORMAT_LAYER), std::make_format_args(id, layer->name, layer->spritesheetId));
+        return layer_label_get(*layer);
       }
       if (type == NULL_)
       {

@@ -16,6 +16,7 @@
 #include "file.hpp"
 #include "log.hpp"
 #include "manager.hpp"
+#include "math.hpp"
 #include "model/frames.hpp"
 #include "model/xml.hpp"
 #include "pack.hpp"
@@ -54,6 +55,8 @@ namespace anm2ed::document
     util::WorkingDirectory workingDirectory(path.parent_path());
     for (const auto& spritesheet : library.model.content.spritesheets)
       library.images.emplace(spritesheet.id, resource::Image(path::case_insensitive_find(spritesheet.path)));
+    for (const auto& sound : library.model.content.sounds)
+      library.sounds.emplace(sound.id, resource::AudioData(path::case_insensitive_find(sound.path)));
   }
 
   uint64_t document_tab_id_next()
@@ -507,6 +510,41 @@ namespace anm2ed
   {
     auto key = sounds.find(id);
     return key == sounds.end() ? nullptr : assets.audio_get(key->second);
+  }
+
+  // Every sound that may be playing: this document's and its libraries'.
+  std::vector<const resource::AudioData*> Document::sounds_get() const
+  {
+    std::vector<const resource::AudioData*> result{};
+    for (const auto& [id, key] : sounds)
+      if (auto sound = sound_get(id)) result.push_back(sound);
+    for (const auto& [path, library] : libraries)
+      for (const auto& [id, sound] : library.sounds)
+        result.push_back(&sound);
+    return result;
+  }
+
+  // The sounds triggers play on an animation's frame, its children's included: one of each trigger's sounds, at random
+  // (or picked by `index` for repeatable renders).
+  std::vector<const resource::AudioData*> Document::trigger_sounds_get(const model::Animation& animation, int time,
+                                                                       int index) const
+  {
+    std::vector<const resource::AudioData*> result{};
+    for (const auto& [source, trigger] : model::animation_triggers_get(model, animation, time, library_resolver_get()))
+    {
+      if (trigger.soundIds.empty()) continue;
+      auto count = trigger.soundIds.size();
+      auto soundIndex = std::min(
+          index >= 0 ? (std::size_t)index % count : (std::size_t)math::random_in_range(0.0f, (float)count), count - 1);
+      auto soundId = trigger.soundIds[soundIndex];
+      const resource::AudioData* sound{};
+      if (source == &model) sound = sound_get(soundId);
+      for (const auto& [path, library] : libraries)
+        if (&library.model == source)
+          if (auto found = library.sounds.find(soundId); found != library.sounds.end()) sound = &found->second;
+      if (sound) result.push_back(sound);
+    }
+    return result;
   }
 
   void Document::sound_set(int id, resource::AudioData data) { sounds[id] = assets.audio_add(std::move(data)); }

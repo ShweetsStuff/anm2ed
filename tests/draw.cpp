@@ -133,3 +133,27 @@ TEST_CASE("only SVG spritesheets that layers show count against Rebirth")
   anm2.content.layers.clear();
   CHECK(model::spritesheets_vector_used_get(anm2).empty());
 }
+
+TEST_CASE("child animations fire their triggers as they reach them")
+{
+  auto anm2 = model_load(file_load(TEST_DIR / "render" / "nested.anm2"));
+  auto spin = model_load(file_load(TEST_DIR / "render" / "spin.anm2"));
+  spin.content.events.push_back({.id = 0, .name = "spun"});
+  spin.animation_edit(0)->triggers.frames.push_back({.atFrame = 5, .eventIds = {0}});
+  anm2.content.events.push_back({.id = 0, .name = "inner"});
+  anm2.animation_edit(1)->triggers.frames.push_back({.atFrame = 0, .eventIds = {0}});
+  auto library_get = [&](const model::Model&, int id) { return id == 0 ? &spin : nullptr; };
+  auto sources_get = [&](int time)
+  {
+    std::vector<const model::Model*> sources{};
+    for (const auto& fire : model::animation_triggers_get(anm2, *anm2.animation_get(0), time, library_get))
+      sources.push_back(fire.source);
+    return sources;
+  };
+
+  // Inner (held on its first frame) fires once, when the parent starts; the library's Spin, started on its fifth
+  // frame, reaches its sixth (and its trigger) one frame later.
+  CHECK(sources_get(0) == std::vector<const model::Model*>{&anm2});
+  CHECK(sources_get(1) == std::vector<const model::Model*>{&spin});
+  CHECK(sources_get(2).empty());
+}

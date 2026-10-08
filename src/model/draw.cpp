@@ -85,6 +85,61 @@ namespace anm2ed::model
     return 0.0f;
   }
 
+  // The child animation an animation layer's frame plays: its own, or the layer's, from this file or a library.
+  std::pair<const Model*, const Animation*> child_get(const Model& model, const Layer& layer, const Frame& frame,
+                                                      const LibraryGet& library_get)
+  {
+    auto childModel = layer.libraryId == -1 ? &model : library_get ? library_get(model, layer.libraryId) : nullptr;
+    auto childAnimation =
+        childModel
+            ? childModel->animation_named_get(frame.childAnimation.empty() ? layer.animation : frame.childAnimation)
+            : nullptr;
+    if (childAnimation && childAnimation->frameNum < FRAME_NUM_MIN) childAnimation = nullptr;
+    return {childModel, childAnimation};
+  }
+
+  void animation_triggers_add(std::vector<TriggerFire>& fires, const Model& model, const Animation& animation, int time,
+                              const LibraryGet& library_get, std::vector<const Animation*>& playing)
+  {
+    if (animation.triggers.isVisible)
+      if (auto trigger = frame_generate(animation.triggers, (float)time); trigger.isVisible)
+        fires.push_back({&model, std::move(trigger)});
+
+    // A child fires the trigger of each frame it reaches: when its frame (or animation) changes from the parent's last.
+    tracks_each(
+        animation.layers,
+        [&](const Track& track, const TrackGroup* group)
+        {
+          auto layer = item_get(model.content.layers, track.id);
+          if (!layer || !layer->is_animation() || !track.isVisible || (group && !group->isVisible)) return;
+          auto frame = frame_generate(track, (float)time);
+          auto [childModel, childAnimation] = child_get(model, *layer, frame, library_get);
+          if (!frame.isVisible || !childAnimation || std::ranges::contains(playing, childAnimation)) return;
+          auto childTime = (int)child_time_get(track, (float)time, childAnimation->frameNum, layer->id);
+          if (time > 0)
+          {
+            auto previous = frame_generate(track, (float)(time - 1));
+            auto previousTime = (int)child_time_get(track, (float)(time - 1), childAnimation->frameNum, layer->id);
+            if (previous.isVisible && child_get(model, *layer, previous, library_get).second == childAnimation &&
+                previousTime == childTime)
+              return;
+          }
+          playing.push_back(childAnimation);
+          animation_triggers_add(fires, *childModel, *childAnimation, childTime, library_get, playing);
+          playing.pop_back();
+        });
+  }
+
+  // The triggers that fire on an animation's frame: its own, and those its animation layers' children reach then.
+  std::vector<TriggerFire> animation_triggers_get(const Model& model, const Animation& animation, int time,
+                                                  const LibraryGet& library_get)
+  {
+    std::vector<TriggerFire> fires{};
+    std::vector<const Animation*> playing{&animation};
+    animation_triggers_add(fires, model, animation, time, library_get, playing);
+    return fires;
+  }
+
   // `playing` holds the animations being drawn into one another, so an animation never draws itself.
   std::vector<Draw> animation_draws_get(const Model& model, const Animation& animation, const DrawOptions& options,
                                         std::vector<const Animation*>& playing)
@@ -106,15 +161,8 @@ namespace anm2ed::model
     auto child_draws_add =
         [&](const Track& track, const Layer& layer, int sample, float time, const Frame& frame, const glm::mat4& parent)
     {
-      auto childModel = layer.libraryId == -1 ? &model
-                        : options.library_get ? options.library_get(model, layer.libraryId)
-                                              : nullptr;
-      auto childAnimation =
-          childModel
-              ? childModel->animation_named_get(frame.childAnimation.empty() ? layer.animation : frame.childAnimation)
-              : nullptr;
-      if (!childAnimation || childAnimation->frameNum < FRAME_NUM_MIN || std::ranges::contains(playing, childAnimation))
-        return;
+      auto [childModel, childAnimation] = child_get(model, layer, frame, options.library_get);
+      if (!childAnimation || std::ranges::contains(playing, childAnimation)) return;
       playing.push_back(childAnimation);
       auto transform = parent * math::quad_model_get(glm::vec2(1.0f), frame.position, frame.pivot,
                                                      math::percent_to_unit(frame.scale), frame.rotation,

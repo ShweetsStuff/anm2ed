@@ -32,11 +32,12 @@ namespace anm2ed
     std::vector<std::string> labels{};
   };
 
-  // A linked .anm2, loaded read-only: its document and its spritesheets' images.
+  // A linked .anm2, loaded read-only: its document, its spritesheets' images and its sounds.
   struct LibraryData
   {
     model::Model model{};
     std::map<int, resource::Image> images{};
+    std::map<int, resource::AudioData> sounds{};
     std::filesystem::file_time_type writeTime{};
   };
 
@@ -123,6 +124,8 @@ namespace anm2ed
     resource::Image* texture_edit(int);
     void texture_set(int, resource::Image);
     const resource::AudioData* sound_get(int) const;
+    std::vector<const resource::AudioData*> sounds_get() const;
+    std::vector<const resource::AudioData*> trigger_sounds_get(const model::Animation&, int, int = -1) const;
     void sound_set(int, resource::AudioData);
     resource::Shader* shader_get(int);
     std::filesystem::path library_path_get(int) const;

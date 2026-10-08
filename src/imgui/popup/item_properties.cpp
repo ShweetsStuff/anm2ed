@@ -140,9 +140,7 @@ namespace anm2ed::imgui::popup
               {
                 if (auto layer = model::item_get(model.content.layers, id))
                 {
-                  auto label = std::vformat(localize.get(FORMAT_LAYER),
-                                            std::make_format_args(id, layer->name, layer->spritesheetId));
-                  if (ImGui::Selectable(label.c_str(), isSelected))
+                  if (ImGui::Selectable(layer_label_get(*layer).c_str(), isSelected))
                   {
                     edit.id = id;
                   }

@@ -69,10 +69,10 @@ namespace anm2ed::imgui::wizard
           ImGui::Checkbox(localize.get(BASIC_ENABLED), &temporary.fileIsAutosave);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_AUTOSAVE_ENABLED));
 
-          ImGui::SeparatorText(localize.get(LABEL_AUTO_SPRITESHEET_RELOAD));
-          ImGui::PushID(LABEL_AUTO_SPRITESHEET_RELOAD);
-          ImGui::Checkbox(localize.get(BASIC_ENABLED), &temporary.fileIsAutoReloadSpritesheets);
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_AUTO_SPRITESHEET_RELOAD));
+          ImGui::SeparatorText(localize.get(LABEL_AUTO_RESOURCE_RELOAD));
+          ImGui::PushID(LABEL_AUTO_RESOURCE_RELOAD);
+          ImGui::Checkbox(localize.get(BASIC_ENABLED), &temporary.fileIsAutoReloadResources);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_AUTO_RESOURCE_RELOAD));
           ImGui::PopID();
 
           ImGui::SeparatorText(localize.get(LABEL_SNAPSHOTS));

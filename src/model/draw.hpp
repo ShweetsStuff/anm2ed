@@ -52,7 +52,15 @@ namespace anm2ed::model
     int spritesheetId{-1};
   };
 
+  // A trigger that fires, from the animation played or a child animation (whose ids belong to `source`).
+  struct TriggerFire
+  {
+    const Model* source{};
+    Frame trigger{};
+  };
+
   glm::mat4 draw_quad_model_get(const Draw&);
   float draw_scale_get(const Draw&);
   std::vector<Draw> animation_draws_get(const Model&, const Animation&, const DrawOptions&);
+  std::vector<TriggerFire> animation_triggers_get(const Model&, const Animation&, int, const LibraryGet& = {});
 }
