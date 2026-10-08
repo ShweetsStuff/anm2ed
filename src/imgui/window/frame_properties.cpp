@@ -33,7 +33,7 @@ namespace anm2ed::imgui
       {BASIC_POSITION, TOOLTIP_POSITION, EDIT_FRAME_POSITION, &model::Frame::position, false},
       {BASIC_PIVOT, TOOLTIP_PIVOT, EDIT_FRAME_PIVOT, &model::Frame::pivot, true},
       {BASIC_SCALE, TOOLTIP_SCALE, EDIT_FRAME_SCALE, &model::Frame::scale, false},
-      {BASIC_SHEAR, TOOLTIP_SHEAR, EDIT_FRAME_SHEAR, &model::Frame::shear, false}};
+      {BASIC_SKEW, TOOLTIP_SKEW, EDIT_FRAME_SKEW, &model::Frame::skew, false}};
 
   struct FlipButton
   {

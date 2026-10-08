@@ -592,17 +592,17 @@ namespace anm2ed::imgui
           if (isEnd) document_change_push(manager);
         }
 
-        if (frame && useTool == tool::SHEAR)
+        if (frame && useTool == tool::SKEW)
         {
-          if (isBegin) edit_begin_push(manager, EDIT_FRAME_SHEAR);
+          if (isBegin) edit_begin_push(manager, EDIT_FRAME_SKEW);
           if (isToolDown)
           {
             auto delta = input.mouseDelta;
             if (input.isMod) (std::abs(delta.x) >= std::abs(delta.y) ? delta.y : delta.x) = 0.0f;
-            frames_change({.shearX = delta.x, .shearY = delta.y});
+            frames_change({.skewX = delta.x, .skewY = delta.y});
           }
-          if (isArrow) frames_change({.shearX = arrow.x, .shearY = arrow.y});
-          if (isDuring) tooltip_lines_draw({localize_format(FORMAT_SHEAR, frame->shear.x, frame->shear.y)});
+          if (isArrow) frames_change({.skewX = arrow.x, .skewY = arrow.y});
+          if (isDuring) tooltip_lines_draw({localize_format(FORMAT_SKEW, frame->skew.x, frame->skew.y)});
           if (isEnd) document_change_push(manager);
         }
 
@@ -690,7 +690,7 @@ namespace anm2ed::imgui
           {
             return math::quad_model_get(markerSize, frame.position, markerSize * 0.5f,
                                         math::percent_to_unit(frame.scale), frame.rotation,
-                                        math::percent_to_unit(frame.shear));
+                                        math::percent_to_unit(frame.skew));
           };
 
           if (draw.type == model::DrawType::ROOT || draw.type == model::DrawType::GROUP_ROOT)
@@ -742,7 +742,7 @@ namespace anm2ed::imgui
                            transform * marker_model_get(markerSize), color);
             if (!isShowRect) continue;
             auto rectModel = math::quad_model_get(frame.scale, frame.position, frame.scale * 0.5f, vec2(1.0f),
-                                                  frame.rotation, math::percent_to_unit(frame.shear));
+                                                  frame.rotation, math::percent_to_unit(frame.skew));
             rect_render(shaderLine, transform * rectModel, rectModel, color);
           }
         }

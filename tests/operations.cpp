@@ -106,12 +106,12 @@ TEST_CASE("frame_bake and frame_mix")
   model::Frame from{};
   model::Frame to{};
   to.position = {10.0f, -20.0f};
-  to.shear = {30.0f, 0.0f};
+  to.skew = {30.0f, 0.0f};
   to.rotation = 90.0f;
   to.tint = {0.0f, 1.0f, 1.0f, 0.5f};
   model::frame_mix(from, to, 0.5f);
   CHECK(from.position == glm::vec2(5.0f, -10.0f));
-  CHECK(from.shear == glm::vec2(15.0f, 0.0f));
+  CHECK(from.skew == glm::vec2(15.0f, 0.0f));
   CHECK(from.rotation == doctest::Approx(45.0f));
   CHECK(from.tint.a == doctest::Approx(0.75f));
 }
@@ -322,7 +322,7 @@ TEST_CASE("isaac_issues_get counts what the game's copy changes")
   CHECK(model::isaac_issues_get(fixture_load("04_group_root_transform.anm2")).groupTransforms > 0);
   auto shaders = model::isaac_issues_get(fixture_load("06_shaders.anm2"));
   CHECK(shaders.shaderFrames > 0);
-  CHECK(shaders.shearFrames > 0);
+  CHECK(shaders.skewFrames > 0);
   CHECK(model::isaac_issues_get(fixture_load("02_items.anm2")).triggerSounds > 0);
 }
 
@@ -401,4 +401,14 @@ TEST_CASE("animations_merge moves triggers past the animation placed before them
   auto prepended = model_make();
   edit::animations_merge(prepended, 1, {0, 1}, types::merge::PREPEND, false, {});
   CHECK(prepended.animation_get(1)->triggers.frames.at(0).atFrame == 15);
+}
+
+TEST_CASE("skew reads from the old Shear attributes too")
+{
+  auto frames =
+      model::frames_from_string(R"(<Frame ShearX="5" ShearY="6"/><Frame SkewX="7" ShearX="9"/>)", ItemType::NULL_);
+  REQUIRE(frames.size() == 2);
+  CHECK(frames[0].skew == glm::vec2(5, 6));
+  CHECK(frames[1].skew.x == 7);
+  CHECK(frames[0].extras.attributes.empty());
 }

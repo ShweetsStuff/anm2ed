@@ -374,7 +374,7 @@ namespace anm2ed::imgui
         auto issues = model::isaac_issues_get(document->model);
         for (auto [count, format] : {std::pair{issues.easedFrames, FORMAT_ISAAC_EASED_FRAMES},
                                      {issues.groupTransforms, FORMAT_ISAAC_GROUP_TRANSFORMS},
-                                     {issues.shearFrames, FORMAT_ISAAC_SHEAR_FRAMES},
+                                     {issues.skewFrames, FORMAT_ISAAC_SKEW_FRAMES},
                                      {issues.shaderFrames, FORMAT_ISAAC_SHADER_FRAMES},
                                      {issues.depthFrames, FORMAT_ISAAC_DEPTH_FRAMES},
                                      {issues.triggerSounds, FORMAT_ISAAC_TRIGGER_SOUNDS}})

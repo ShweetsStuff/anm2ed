@@ -96,7 +96,7 @@ namespace anm2ed
   X(BASIC_ROTATION, "Rotation", "Rotacion", "Поворот", "旋转", "회전") \
   X(BASIC_SAVE, "Save", "Guardar", "Сохранить", "保存", "저장") \
   X(BASIC_SCALE, "Scale", "Escalar", "Масштаб", "缩放", "크기") \
-  X(BASIC_SHEAR, "Shear", "Shear", "Shear", "Shear", "Shear") \
+  X(BASIC_SKEW, "Skew", "Skew", "Skew", "Skew", "Skew") \
   X(BASIC_SHADER, "Shader", "Shader", "Shader", "Shader", "Shader") \
   X(BASIC_SET_FILE_PATH, "Set File Path", "Set File Path", "Set File Path", "Set File Path", "Set File Path") \
   X(BASIC_SINGLE, "Single", "Individual", "Один", "单个", "단일") \
@@ -157,7 +157,7 @@ namespace anm2ed
   X(EDIT_FRAME_ROTATION, "Frame Rotation", "Rotacion de Frame", "Поворот кадра", "帧旋转", "프레임 회전") \
   X(EDIT_FRAME_SCALE, "Frame Scale", "Escala de Frame", "Масштаб кадра", "帧缩放", "프레임 비율") \
   X(EDIT_FRAME_SHADER, "Frame Shader", "Frame Shader", "Frame Shader", "Frame Shader", "Frame Shader") \
-  X(EDIT_FRAME_SHEAR, "Frame Shear", "Frame Shear", "Frame Shear", "Frame Shear", "Frame Shear") \
+  X(EDIT_FRAME_SKEW, "Frame Skew", "Frame Skew", "Frame Skew", "Frame Skew", "Frame Skew") \
   X(EDIT_FRAME_SIZE, "Frame Size", "Tamaño de Frame", "Размер кадра", "帧大小", "프레임 크기") \
   X(EDIT_FRAME_TINT, "Frame Tint", "Matiz de Frame", "Оттенок кадра", "帧色调", "프레임 색조") \
   X(EDIT_FRAME_VISIBILITY, "Frame Visibility", "Visibilidad de Frame", "Видимость кадра", "帧可见", "프레임 표시") \
@@ -227,7 +227,7 @@ namespace anm2ed
   X(FORMAT_ISAAC_EASED_FRAMES, "{} eased frame(s) will be baked into one-frame steps.", "{} Frame(s) con suavizado se convertirán en pasos de un Frame.", "{} кадр(ов) со сглаживанием будут запечены в покадровые шаги.", "{} 个缓动帧将被烘焙为逐帧步进。", "이징 프레임 {}개가 1프레임 단위로 베이크됩니다.") \
   X(FORMAT_ISAAC_GROUP_TRANSFORMS, "{} group transform(s) will be baked into their items' frames.", "{} transformación(es) de grupo se aplicarán a los Frames de sus elementos.", "{} трансформаци(й) групп будут запечены в кадры их элементов.", "{} 个组变换将被烘焙到其项目的帧中。", "그룹 변형 {}개가 항목의 프레임에 베이크됩니다.") \
   X(FORMAT_ISAAC_SHADER_FRAMES, "{} frame(s) use shaders, which the game doesn't support; they will be dropped.", "{} Frame(s) usan shaders, que el juego no soporta; se descartarán.", "{} кадр(ов) используют шейдеры, которые игра не поддерживает; они будут отброшены.", "{} 个帧使用了着色器，游戏不支持，将被舍弃。", "프레임 {}개가 게임이 지원하지 않는 셰이더를 사용합니다. 셰이더는 제거됩니다.") \
-  X(FORMAT_ISAAC_SHEAR_FRAMES, "{} frame(s) use shear, which the game doesn't support; it will be dropped.", "{} Frame(s) usan inclinación, que el juego no soporta; se descartará.", "{} кадр(ов) используют наклон, который игра не поддерживает; он будет отброшен.", "{} 个帧使用了斜切，游戏不支持，将被舍弃。", "프레임 {}개가 게임이 지원하지 않는 기울이기를 사용합니다. 기울이기는 제거됩니다.") \
+  X(FORMAT_ISAAC_SKEW_FRAMES, "{} frame(s) use skew, which the game doesn't support; it will be dropped.", "{} Frame(s) usan inclinación, que el juego no soporta; se descartará.", "{} кадр(ов) используют наклон, который игра не поддерживает; он будет отброшен.", "{} 个帧使用了斜切，游戏不支持，将被舍弃。", "프레임 {}개가 게임이 지원하지 않는 기울이기를 사용합니다. 기울이기는 제거됩니다.") \
   X(FORMAT_ISAAC_TRIGGER_SOUNDS, "{} trigger(s) have sounds, which the game doesn't read from animations; they will be dropped.", "{} disparador(es) tienen sonidos, que el juego no lee de las animaciones; se descartarán.", "{} триггер(ов) имеют звуки, которые игра не читает из анимаций; они будут отброшены.", "{} 个触发器带有声音，游戏不会从动画中读取，将被舍弃。", "트리거 {}개에 게임이 애니메이션에서 읽지 않는 사운드가 있습니다. 사운드는 제거됩니다.") \
   X(FORMAT_ORIGIN, "Origin: {0}", "Origen: {0}", "Точка отсчета: {0}", "原点: {0}", "원점: {0}") \
   X(FORMAT_SPRITESHEET_ID, "Spritesheet ID: {0}", "ID de Spritesheet: {0}", "", "图集 ID: {0}", "스프라이트 시트 ID: {0}") \
@@ -245,7 +245,7 @@ namespace anm2ed
   X(FORMAT_SIZE_SPACED, "Size: ({0:3}, {1:3})", "Tamaño: ({0:3}, {1:3})", "Размер: ({0:3}, {1:3})", "大小: ({0:3}, {1:3})", "크기: ({0:3}, {1:3})") \
   X(FORMAT_ROTATION, "Rotation: {0}", "Rotacion: {0}", "Поворот: {0}", "旋转: {0}", "회전: {0}") \
   X(FORMAT_SCALE, "Scale: ({0}, {1})", "Escalar: ({0}, {1})", "Масштаб: ({0}, {1})", "缩放: ({0}, {1})", "비율: ({0}, {1})") \
-  X(FORMAT_SHEAR, "Shear: ({0}, {1})", "Shear: ({0}, {1})", "Shear: ({0}, {1})", "Shear: ({0}, {1})", "Shear: ({0}, {1})") \
+  X(FORMAT_SKEW, "Skew: ({0}, {1})", "Skew: ({0}, {1})", "Skew: ({0}, {1})", "Skew: ({0}, {1})", "Skew: ({0}, {1})") \
   X(FORMAT_SIZE, "Size: ({0}, {1})", "Tamaño: ({0}, {1})", "Размер: ({0}, {1})", "大小: ({0}, {1})", "크기: ({0}, {1})") \
   X(FORMAT_SOUND_LABEL, "Sound: {0}", "Sonido: {0}", "Звук: {0}", "声音: {0}", "사운드: {0}") \
   X(FORMAT_SPRITESHEET, "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}") \
@@ -524,7 +524,7 @@ namespace anm2ed
   X(SHORTCUT_STRING_SAVE, "Save", "Guardar", "Сохранить", "保存", "저장") \
   X(SHORTCUT_STRING_SAVE_AS, "Save As", "Guardar Como", "Сохранить как", "保存为", "다른 이름으로 저장") \
   X(SHORTCUT_STRING_SCALE, "Scale", "Escalar", "Изменить масштаб", "缩放", "비율") \
-  X(SHORTCUT_STRING_SHEAR, "Shear", "Shear", "Shear", "Shear", "Shear") \
+  X(SHORTCUT_STRING_SKEW, "Skew", "Skew", "Skew", "Skew", "Skew") \
   X(SHORTCUT_STRING_SPLIT, "Split", "Dividir", "", "", "") \
   X(SHORTCUT_STRING_BAKE, "Bake", "Bake", "Запечь", "提前渲染", "베이크") \
   X(SHORTCUT_STRING_SHORTEN_FRAME, "Shorten Frame", "Acortar Frame", "Укоротить кадр", "缩短帧时长", "프레임 단축") \
@@ -757,7 +757,7 @@ namespace anm2ed
   X(TOOLTIP_ROWS, "Set how many rows the spritesheet will have.", "Ajusta cuantas filas tendra el spritsheet.", "Установить сколько рядов будет иметь спрайт-лист.", "设置图集的行数量.", "스프라이트 시트의 행 수를 설정합니다.") \
   X(TOOLTIP_SAVE_SPRITESHEETS, "Save the selected spritesheets.", "Guarda los spritesheets seleccionados.", "Сохранить выбранные спрайт-листы.", "保存所选图集.", "선택한 스프라이트 시트를 저장합니다.") \
   X(TOOLTIP_SCALE, "Change the scale of the frame, in percent.", "Cambia la escala del Frame, en porcentaje.", "Изменить масштаб кадра.", "修改此帧的缩放.", "프레임의 비율을 변경합니다.") \
-  X(TOOLTIP_SHEAR, "Change the shear of the frame, in percent.\nShearing is not supported in The Binding of Isaac: Rebirth.", "Change the shear of the frame, in percent.\nShearing is not supported in The Binding of Isaac: Rebirth.", "Change the shear of the frame, in percent.\nShearing is not supported in The Binding of Isaac: Rebirth.", "Change the shear of the frame, in percent.\nShearing is not supported in The Binding of Isaac: Rebirth.", "Change the shear of the frame, in percent.\nShearing is not supported in The Binding of Isaac: Rebirth.") \
+  X(TOOLTIP_SKEW, "Change the skew of the frame, in percent.\nSkewing is not supported in The Binding of Isaac: Rebirth.", "Change the skew of the frame, in percent.\nSkewing is not supported in The Binding of Isaac: Rebirth.", "Change the skew of the frame, in percent.\nSkewing is not supported in The Binding of Isaac: Rebirth.", "Change the skew of the frame, in percent.\nSkewing is not supported in The Binding of Isaac: Rebirth.", "Change the skew of the frame, in percent.\nSkewing is not supported in The Binding of Isaac: Rebirth.") \
   X(TOOLTIP_SCALE_OUTPUT, "Set the output scale of the animation.", "Ajusta la escala de salida de la animacion.", "Установить масштаб анимации при выводе.", "设置输出动画的缩放.", "애니메이션의 출력 비율을 설정합니다.") \
   X(TOOLTIP_SETTINGS_SAVE, "Use the configured settings.", "Usa las opciones configuradas.", "Использовать настроенные настройки.", "应用更改的设置.", "구성된 설정을 사용합니다.") \
   X(TOOLTIP_SET_DEFAULT_ANIMATION, "Set the selected animation as the default.", "Ajusta la animacion seleccionada como predeterminada.", "Установить выбранную анимацию как анимацию по умолчанию.", "把当前所选动画设置为默认动画.", "선택한 애니메이션을 기본 애니메이션으로 설정합니다.") \
@@ -786,7 +786,7 @@ namespace anm2ed
   X(TOOLTIP_TOOL_REDO, "Redoes the last action.", "Rehace la accion anterior.", "Повторяет последнее действие.", "重做上一个操作.", "마지막 작업을 다시 실행합니다.") \
   X(TOOLTIP_TOOL_ROTATE, "Use the rotate tool.\nWill rotate the selected item as the cursor is dragged, or directional keys are pressed.\n(Animation Preview only.)", "Usa la herramienta rotar.\nRotara el item seleccionado mientras el puntero es arrastrado, o las teclas direccionales son presionadas\n(Solo en la vista previa de animacion)", "Использовать инструмент поворота.\nПовернет выбранный предмет при перемещении курсора или при нажатии клавишей со стрелками.\n(Только в предпросмотре анимации.)", "使用旋转工具.\n将随着光标拖动或方向键按下来旋转选中的物品.\n(仅应用于动画预览.)", "회전 도구를 사용합니다.\n커서를 드래그하거나 방향키를 눌러 선택한 항목을 회전합니다.\n(애니메이션 미리보기 전용)") \
   X(TOOLTIP_TOOL_SCALE, "Use the scale tool.\nWill scale the selected item as the cursor is dragged, or directional keys are pressed.\nHold SHIFT to lock scaling to one dimension.\n(Animation Preview only.)", "Usa la herramienta escalar.\nEscalara el item seleccionado mientras el puntero es arrastrado, o las teclas direccionales son presionadas\nManten SHIFT para fijar el escalado a solo una dimension.\n(Solo en la Vista previa de Animacion.)", "Использовать инструмент масштабирования.\nВыбранный элемент будет масштабироваться при перетаскивании курсора или нажатии клавиш со стрелками.\nУдерживайте клавишу SHIFT, чтобы заблокировать масштабирование в одном измерении.\n(Только в предпросмотре анимации.)", "使用缩放工具.\n将随着光标拖动或方向键按下来缩放选中的物品.\n按住 SHIFT 可将缩放锁定为单一维度(单一坐标轴).\n(仅应用与动画预览.)", "비율 도구를 사용합니다.\n커서를 드래그하거나 방향키를 눌러 선택한 항목의 비율을 조정합니다.\nSHIFT 키를 누르면 한 축으로 고정됩니다.\n(애니메이션 미리보기 전용)") \
-  X(TOOLTIP_TOOL_SHEAR, "Use the shear tool.\nWill shear the selected item as the cursor is dragged, or directional keys are pressed.\nHold SHIFT to lock shearing to one dimension.\nShearing is not supported in The Binding of Isaac: Rebirth.\n(Animation Preview only.)", "Use the shear tool.\nWill shear the selected item as the cursor is dragged, or directional keys are pressed.\nHold SHIFT to lock shearing to one dimension.\nShearing is not supported in The Binding of Isaac: Rebirth.\n(Animation Preview only.)", "Use the shear tool.\nWill shear the selected item as the cursor is dragged, or directional keys are pressed.\nHold SHIFT to lock shearing to one dimension.\nShearing is not supported in The Binding of Isaac: Rebirth.\n(Animation Preview only.)", "Use the shear tool.\nWill shear the selected item as the cursor is dragged, or directional keys are pressed.\nHold SHIFT to lock shearing to one dimension.\nShearing is not supported in The Binding of Isaac: Rebirth.\n(Animation Preview only.)", "Use the shear tool.\nWill shear the selected item as the cursor is dragged, or directional keys are pressed.\nHold SHIFT to lock shearing to one dimension.\nShearing is not supported in The Binding of Isaac: Rebirth.\n(Animation Preview only.)") \
+  X(TOOLTIP_TOOL_SKEW, "Use the skew tool.\nWill skew the selected item as the cursor is dragged, or directional keys are pressed.\nHold SHIFT to lock skewing to one dimension.\nSkewing is not supported in The Binding of Isaac: Rebirth.\n(Animation Preview only.)", "Use the skew tool.\nWill skew the selected item as the cursor is dragged, or directional keys are pressed.\nHold SHIFT to lock skewing to one dimension.\nSkewing is not supported in The Binding of Isaac: Rebirth.\n(Animation Preview only.)", "Use the skew tool.\nWill skew the selected item as the cursor is dragged, or directional keys are pressed.\nHold SHIFT to lock skewing to one dimension.\nSkewing is not supported in The Binding of Isaac: Rebirth.\n(Animation Preview only.)", "Use the skew tool.\nWill skew the selected item as the cursor is dragged, or directional keys are pressed.\nHold SHIFT to lock skewing to one dimension.\nSkewing is not supported in The Binding of Isaac: Rebirth.\n(Animation Preview only.)", "Use the skew tool.\nWill skew the selected item as the cursor is dragged, or directional keys are pressed.\nHold SHIFT to lock skewing to one dimension.\nSkewing is not supported in The Binding of Isaac: Rebirth.\n(Animation Preview only.)") \
   X(TOOLTIP_TOOL_UNDO, "Undoes the last action.", "Deshace la accion anterior.", "Отменяет последнее действие.", "重做上一个操作.", "마지막 작업을 취소합니다.") \
   X(TOOLTIP_TO_ANIMATION_RANGE, "Set the range to the normal range of the animation.", "Ajusta el rango a el rango normal de la animacion.", "Установить диапазон равным обычному диапазону анимации.", "将范围设置为动画的正常范围.", "렌더링 범위를 애니메이션의 범위로 설정합니다.") \
   X(TOOLTIP_TO_SELECTED_FRAMES, "If frames are selected, use that range for the rendered animation.", "Si los Frames son seleccionados, usa ese rango para la animacion renderizada.", "Если кадры выбраны, использовать этот диапазон для рендерированной анимации.", "只渲染选择范围内的帧.", "프레임이 선택된 경우 그 영역만 렌더링 범위로 사용합니다.") \

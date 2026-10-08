@@ -167,8 +167,8 @@ namespace anm2ed
   X(positionY, position.y, false, false, changeIsPositionY, changePosition.y)                                          \
   X(scaleX, scale.x, false, false, changeIsScaleX, changeScale.x)                                                      \
   X(scaleY, scale.y, false, false, changeIsScaleY, changeScale.y)                                                      \
-  X(shearX, shear.x, false, false, changeIsShearX, changeShear.x)                                                      \
-  X(shearY, shear.y, false, false, changeIsShearY, changeShear.y)                                                      \
+  X(skewX, skew.x, false, false, changeIsSkewX, changeSkew.x)                                                          \
+  X(skewY, skew.y, false, false, changeIsSkewY, changeSkew.y)                                                          \
   X(rotation, rotation, false, false, changeIsRotation, changeRotation)                                                \
   X(tintR, tint.r, false, true, changeIsTintR, changeTint.r)                                                           \
   X(tintG, tint.g, false, true, changeIsTintG, changeTint.g)                                                           \

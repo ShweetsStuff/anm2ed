@@ -230,8 +230,8 @@ namespace anm2ed::edit
       case FrameProperty::ROTATION:
         target.rotation = source.rotation;
         break;
-      case FrameProperty::SHEAR:
-        target.shear = source.shear;
+      case FrameProperty::SKEW:
+        target.skew = source.skew;
         break;
       case FrameProperty::PIVOT:
         target.pivot = source.pivot;

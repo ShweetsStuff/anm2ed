@@ -148,7 +148,7 @@ namespace anm2ed::imgui::wizard
          false},
         {BASIC_PIVOT, {&settings.changeIsPivotX, &settings.changeIsPivotY}, value_ptr(settings.changePivot), true},
         {BASIC_SCALE, {&settings.changeIsScaleX, &settings.changeIsScaleY}, value_ptr(settings.changeScale), false},
-        {BASIC_SHEAR, {&settings.changeIsShearX, &settings.changeIsShearY}, value_ptr(settings.changeShear), false},
+        {BASIC_SKEW, {&settings.changeIsSkewX, &settings.changeIsSkewY}, value_ptr(settings.changeSkew), false},
         {BASIC_ROTATION, {&settings.changeIsRotation}, &settings.changeRotation, false}};
     ComponentRow colorRows[] = {
         {BASIC_TINT,

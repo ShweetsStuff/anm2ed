@@ -14,6 +14,8 @@ using namespace glm;
 
 namespace anm2ed
 {
+  constexpr std::string_view SETTINGS_SHEAR = "Shear";
+
   constexpr const char* COMPONENT_SUFFIXES_XY[] = {"X", "Y"};
   constexpr const char* COMPONENT_SUFFIXES_WH[] = {"W", "H"};
   constexpr const char* COMPONENT_SUFFIXES_RGBA[] = {"R", "G", "B", "A"};
@@ -260,6 +262,9 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
       if (eq == std::string::npos) continue;
 
       auto key = line.substr(0, eq);
+      // Skew settings were once named for shear.
+      if (auto legacy = key.find(SETTINGS_SHEAR); legacy != std::string::npos)
+        key.replace(legacy, SETTINGS_SHEAR.size(), "Skew");
       std::istringstream ss(line.substr(eq + 1));
 
 #define X(symbol, name, string, type, ...)                                                                             \

@@ -87,8 +87,8 @@ namespace anm2ed
   X(CHANGE_IS_PIVOT_Y, changeIsPivotY, STRING_UNDEFINED, BOOL, false)                                                  \
   X(CHANGE_IS_SCALE_X, changeIsScaleX, STRING_UNDEFINED, BOOL, false)                                                  \
   X(CHANGE_IS_SCALE_Y, changeIsScaleY, STRING_UNDEFINED, BOOL, false)                                                  \
-  X(CHANGE_IS_SHEAR_X, changeIsShearX, STRING_UNDEFINED, BOOL, false)                                                  \
-  X(CHANGE_IS_SHEAR_Y, changeIsShearY, STRING_UNDEFINED, BOOL, false)                                                  \
+  X(CHANGE_IS_SKEW_X, changeIsSkewX, STRING_UNDEFINED, BOOL, false)                                                    \
+  X(CHANGE_IS_SKEW_Y, changeIsSkewY, STRING_UNDEFINED, BOOL, false)                                                    \
   X(CHANGE_IS_ROTATION, changeIsRotation, STRING_UNDEFINED, BOOL, false)                                               \
   X(CHANGE_IS_DURATION, changeIsDuration, STRING_UNDEFINED, BOOL, false)                                               \
   X(CHANGE_IS_DEPTH, changeIsDepth, STRING_UNDEFINED, BOOL, false)                                                     \
@@ -111,7 +111,7 @@ namespace anm2ed
   X(CHANGE_POSITION, changePosition, STRING_UNDEFINED, VEC2, {})                                                       \
   X(CHANGE_PIVOT, changePivot, STRING_UNDEFINED, VEC2, {})                                                             \
   X(CHANGE_SCALE, changeScale, STRING_UNDEFINED, VEC2, {})                                                             \
-  X(CHANGE_SHEAR, changeShear, STRING_UNDEFINED, VEC2, {})                                                             \
+  X(CHANGE_SKEW, changeSkew, STRING_UNDEFINED, VEC2, {})                                                               \
   X(CHANGE_ROTATION, changeRotation, STRING_UNDEFINED, FLOAT, 0.0f)                                                    \
   X(CHANGE_DURATION, changeDuration, STRING_UNDEFINED, INT, 0)                                                         \
   X(CHANGE_DEPTH, changeDepth, STRING_UNDEFINED, INT, 0)                                                               \
@@ -245,7 +245,7 @@ namespace anm2ed
   X(SHORTCUT_MOVE, shortcutMove, SHORTCUT_STRING_MOVE, STRING, "V")                                                    \
   X(SHORTCUT_ROTATE, shortcutRotate, SHORTCUT_STRING_ROTATE, STRING, "R")                                              \
   X(SHORTCUT_SCALE, shortcutScale, SHORTCUT_STRING_SCALE, STRING, "S")                                                 \
-  X(SHORTCUT_SHEAR, shortcutShear, SHORTCUT_STRING_SHEAR, STRING, "H")                                                 \
+  X(SHORTCUT_SKEW, shortcutSkew, SHORTCUT_STRING_SKEW, STRING, "H")                                                    \
   X(SHORTCUT_CROP, shortcutCrop, SHORTCUT_STRING_CROP, STRING, "C")                                                    \
   X(SHORTCUT_DRAW, shortcutDraw, SHORTCUT_STRING_DRAW, STRING, "B")                                                    \
   X(SHORTCUT_ERASE, shortcutErase, SHORTCUT_STRING_ERASE, STRING, "E")                                                 \

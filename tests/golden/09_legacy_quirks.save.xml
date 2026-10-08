@@ -59,14 +59,14 @@
         <Animations DefaultAnimation="Missing">
             <Animation Name="A" FrameNum="4" Loop="true">
                 <RootAnimation>
-                    <Frame XPosition="0" YPosition="0" Delay="4" Visible="true" XScale="100" YScale="100" ShearX="0" ShearY="0" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/>
+                    <Frame XPosition="0" YPosition="0" Delay="4" Visible="true" XScale="100" YScale="100" SkewX="0" SkewY="0" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/>
                 </RootAnimation>
                 <LayerAnimations>
                     <LayerAnimation LayerId="0" Visible="true">
-                        <Frame XPivot="8" YPivot="8" XCrop="0" YCrop="0" Width="16" Height="16" XPosition="0" YPosition="0" Delay="4" Visible="true" XScale="100" YScale="100" ShearX="0" ShearY="0" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/>
+                        <Frame XPivot="8" YPivot="8" XCrop="0" YCrop="0" Width="16" Height="16" XPosition="0" YPosition="0" Delay="4" Visible="true" XScale="100" YScale="100" SkewX="0" SkewY="0" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/>
                     </LayerAnimation>
                     <LayerAnimation LayerId="1" Visible="true">
-                        <Frame XPivot="8" YPivot="8" XCrop="0" YCrop="0" Width="16" Height="16" XPosition="0" YPosition="0" Delay="4" Visible="true" XScale="100" YScale="100" ShearX="0" ShearY="0" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/>
+                        <Frame XPivot="8" YPivot="8" XCrop="0" YCrop="0" Width="16" Height="16" XPosition="0" YPosition="0" Delay="4" Visible="true" XScale="100" YScale="100" SkewX="0" SkewY="0" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/>
                     </LayerAnimation>
                     <LayerAnimation LayerId="99" Visible="true"/>
                 </LayerAnimations>

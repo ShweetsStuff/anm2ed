@@ -108,7 +108,7 @@ namespace anm2ed::imgui::wizard
             mat4 transform =
                 transform_get(zoom) * math::quad_model_get(frame.size, frame.position, frame.pivot,
                                                            math::percent_to_unit(frame.scale), frame.rotation,
-                                                           math::percent_to_unit(frame.shear));
+                                                           math::percent_to_unit(frame.skew));
             auto vertices = math::uv_vertices_get(uvMin, uvMax);
 
             texture_render(shaderTexture, resource::texture::id_get(*sourceTexture), transform, frame.tint,

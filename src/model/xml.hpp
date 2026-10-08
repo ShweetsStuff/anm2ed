@@ -13,7 +13,7 @@ namespace anm2ed::model
   {
     int easedFrames{};
     int groupTransforms{};
-    int shearFrames{};
+    int skewFrames{};
     int shaderFrames{};
     int depthFrames{};
     int triggerSounds{};

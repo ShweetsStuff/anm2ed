@@ -69,7 +69,7 @@ namespace anm2ed::edit
     POSITION,
     SCALE,
     ROTATION,
-    SHEAR,
+    SKEW,
     PIVOT,
     CROP,
     SIZE,

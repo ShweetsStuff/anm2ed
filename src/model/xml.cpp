@@ -36,8 +36,8 @@ namespace anm2ed::model
       "Name", "CreatedBy", "CreatedOn", "Binding", "Value", "DefaultAnimation", "Path", "Vertex", "Fragment", "Id",
       "LayerId", "NullId", "SpritesheetId", "Fps", "Version", "FrameNum", "Delay", "AtFrame", "EventId", "RegionId",
       "ShaderId", "Depth", "SoundId", "GroupId", "Index", "Loop", "StartMarker", "EndMarker", "Visible", "ShowRect", "IsExpanded", "Enabled", "Rotation",
-      "XPivot", "YPivot", "XCrop", "YCrop", "XPosition", "YPosition", "Width", "Height", "XScale", "YScale", "ShearX",
-      "ShearY", "RedTint", "GreenTint", "BlueTint", "AlphaTint", "RedOffset", "GreenOffset", "BlueOffset",
+      "XPivot", "YPivot", "XCrop", "YCrop", "XPosition", "YPosition", "Width", "Height", "XScale", "YScale", "SkewX",
+      "SkewY", "ShearX", "ShearY", "RedTint", "GreenTint", "BlueTint", "AlphaTint", "RedOffset", "GreenOffset", "BlueOffset",
       "Interpolated", "Origin", "BakeInterpolation", "BakeDelay", "BakeCount", "OriginalDelay"};
   // clang-format on
   constexpr std::string_view SOURCE_DOCUMENT_TAG = "SourceDocument";
@@ -205,7 +205,9 @@ namespace anm2ed::model
     frame.pivot = {float_get(element, "XPivot"), float_get(element, "YPivot")};
     frame.position = {float_get(element, "XPosition"), float_get(element, "YPosition")};
     frame.scale = {float_get(element, "XScale", frame.scale.x), float_get(element, "YScale", frame.scale.y)};
-    frame.shear = {float_get(element, "ShearX"), float_get(element, "ShearY")};
+    // Skew was once called shear.
+    frame.skew = {float_get(element, "SkewX", float_get(element, "ShearX")),
+                  float_get(element, "SkewY", float_get(element, "ShearY"))};
     frame.rotation = float_get(element, "Rotation");
     for (int i = 0; i < (int)std::size(TINT_ATTRIBUTES); ++i)
       frame.tint[i] = color_get(element, TINT_ATTRIBUTES[i], frame.tint[i]);
@@ -1133,8 +1135,8 @@ namespace anm2ed::model
     sink.attribute("YScale", frame.scale.y);
     if (writer.is(SERIALIZE_EXTENSIONS))
     {
-      sink.attribute("ShearX", frame.shear.x);
-      sink.attribute("ShearY", frame.shear.y);
+      sink.attribute("SkewX", frame.skew.x);
+      sink.attribute("SkewY", frame.skew.y);
     }
     for (int i = 0; i < (int)std::size(TINT_ATTRIBUTES); ++i)
       sink.attribute(TINT_ATTRIBUTES[i], math::float_to_uint8(frame.tint[i]));
@@ -1316,7 +1318,7 @@ namespace anm2ed::model
   {
     Frame base{};
     return frame.position == base.position && frame.scale == base.scale && frame.rotation == base.rotation &&
-           frame.shear == base.shear && frame.tint == base.tint && frame.colorOffset == base.colorOffset;
+           frame.skew == base.skew && frame.tint == base.tint && frame.colorOffset == base.colorOffset;
   }
 
   IsaacIssues isaac_issues_get(const Model& model)
@@ -1334,7 +1336,7 @@ namespace anm2ed::model
                               {
                                 issues.easedFrames +=
                                     track.type != ItemType::TRIGGER && is_special_interpolation(frame.interpolation);
-                                issues.shearFrames += frame.shear != glm::vec2();
+                                issues.skewFrames += frame.skew != glm::vec2();
                                 issues.shaderFrames += frame.shaderId != -1;
                                 issues.depthFrames += track.type == ItemType::LAYER && frame.depth != 0;
                                 issues.triggerSounds +=

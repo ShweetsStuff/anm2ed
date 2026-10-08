@@ -113,7 +113,7 @@ namespace anm2ed::resource::icon
   <svg viewBox="0 0 24 24" fill="#FFF" xmlns="http://www.w3.org/2000/svg"><path d="M21 3H13.5L16.5429 6.04289L13.2929 9.29289L14.7071 10.7071L17.9571 7.45711L21 10.5V3ZM3 21H10.5L7.45711 17.9571L10.7071 14.7071L9.29289 13.2929L6.04289 16.5429L3 13.5V21Z"/></svg>
   )";
 
-  inline constexpr auto SHEAR_DATA = R"(
+  inline constexpr auto SKEW_DATA = R"(
   <svg viewBox="0 0 24 24" fill="none" stroke="#FFF" stroke-width="2" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M8 5H20L16 19H4Z"/></svg>
   )";
 
@@ -215,7 +215,7 @@ namespace anm2ed::resource::icon
   X(MOVE, MOVE_DATA, SIZE_NORMAL)                                                                                      \
   X(ROTATE, ROTATE_DATA, SIZE_NORMAL)                                                                                  \
   X(SCALE, SCALE_DATA, SIZE_NORMAL)                                                                                    \
-  X(SHEAR, SHEAR_DATA, SIZE_NORMAL)                                                                                    \
+  X(SKEW, SKEW_DATA, SIZE_NORMAL)                                                                                    \
   X(CROP, CROP_DATA, SIZE_NORMAL)                                                                                      \
   X(DRAW, DRAW_DATA, SIZE_NORMAL)                                                                                      \
   X(ERASE, ERASE_DATA, SIZE_NORMAL)                                                                                    \

@@ -15,7 +15,7 @@ namespace anm2ed::model
     frame.rotation = glm::mix(frame.rotation, next.rotation, amount);
     frame.position = glm::mix(frame.position, next.position, amount);
     frame.scale = glm::mix(frame.scale, next.scale, amount);
-    frame.shear = glm::mix(frame.shear, next.shear, amount);
+    frame.skew = glm::mix(frame.skew, next.skew, amount);
     frame.colorOffset = glm::mix(frame.colorOffset, next.colorOffset, amount);
     frame.tint = glm::mix(frame.tint, next.tint, amount);
   }
@@ -42,7 +42,7 @@ namespace anm2ed::model
   glm::mat4 frame_parent_model_get(const Frame& frame)
   {
     return math::quad_model_parent_get(frame.position, {}, math::percent_to_unit(frame.scale), frame.rotation,
-                                       math::percent_to_unit(frame.shear));
+                                       math::percent_to_unit(frame.skew));
   }
 
   void frame_root_transform_apply(Frame& frame, const Frame& rootFrame, bool isRoundScale, bool isRoundRotation,

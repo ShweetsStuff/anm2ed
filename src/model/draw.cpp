@@ -13,7 +13,7 @@ namespace anm2ed::model
   {
     auto& frame = draw.frame;
     return math::quad_model_get(frame.size, frame.position, frame.pivot, math::percent_to_unit(frame.scale),
-                                frame.rotation, math::percent_to_unit(frame.shear));
+                                frame.rotation, math::percent_to_unit(frame.skew));
   }
 
   // When an item is drawn: now, and for each sample its time if the track has a frame there.

@@ -41,15 +41,15 @@ namespace anm2ed::util::math
     return formatString.c_str();
   }
 
-  mat4 shear_get(vec2 shear)
+  mat4 skew_get(vec2 skew)
   {
     mat4 result(1.0f);
-    result[1][0] = shear.x;
-    result[0][1] = shear.y;
+    result[1][0] = skew.x;
+    result[0][1] = skew.y;
     return result;
   }
 
-  mat4 quad_model_get(vec2 size, vec2 position, vec2 pivot, vec2 scale, float rotation, vec2 shear)
+  mat4 quad_model_get(vec2 size, vec2 position, vec2 pivot, vec2 scale, float rotation, vec2 skew)
   {
     vec2 scaleAbsolute = glm::abs(scale);
     vec2 scaleSign = glm::sign(scale);
@@ -62,13 +62,13 @@ namespace anm2ed::util::math
     model = glm::translate(model, vec3(pivotScaled, 0.0f));
     model = glm::scale(model, vec3(scaleSign, 1.0f));
     model = glm::rotate(model, glm::radians(rotation) * handedness, vec3(0, 0, 1));
-    model *= shear_get(shear);
+    model *= skew_get(skew);
     model = glm::translate(model, vec3(-pivotScaled, 0.0f));
     model = glm::scale(model, vec3(sizeScaled, 1.0f));
     return model;
   }
 
-  mat4 quad_model_parent_get(vec2 position, vec2 pivot, vec2 scale, float rotation, vec2 shear)
+  mat4 quad_model_parent_get(vec2 position, vec2 pivot, vec2 scale, float rotation, vec2 skew)
   {
     vec2 scaleSign = glm::sign(scale);
     vec2 scaleAbsolute = glm::abs(scale);
@@ -78,7 +78,7 @@ namespace anm2ed::util::math
     local = glm::translate(local, vec3(pivot, 0.0f));
     local = glm::scale(local, vec3(scaleSign, 1.0f));
     local = glm::rotate(local, glm::radians(rotation) * handedness, vec3(0, 0, 1));
-    local *= shear_get(shear);
+    local *= skew_get(skew);
     local = glm::translate(local, vec3(-pivot, 0.0f));
     local = glm::scale(local, vec3(scaleAbsolute, 1.0f));
 

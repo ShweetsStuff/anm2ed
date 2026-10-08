@@ -45,7 +45,7 @@ namespace anm2ed::model
     glm::vec2 pivot{};
     glm::vec2 position{};
     glm::vec2 scale{100.0f, 100.0f};
-    glm::vec2 shear{};
+    glm::vec2 skew{};
     float rotation{};
     glm::vec4 tint{types::color::WHITE};
     glm::vec3 colorOffset{};
