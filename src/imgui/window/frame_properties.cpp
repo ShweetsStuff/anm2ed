@@ -208,13 +208,17 @@ namespace anm2ed::imgui
           }
           else
           {
+            auto layer = type == LAYER ? model::item_get(model.content.layers, reference.itemID) : nullptr;
+            auto isAnimationLayer = layer && layer->is_animation();
             bool isRegionSet = frame && displayFrame.regionId != -1 && displayFrame.crop == frame->crop &&
                                displayFrame.size == frame->size && displayFrame.pivot == frame->pivot;
             for (auto& field : VEC2_FIELDS)
             {
               const auto& source = field.isRegionField ? displayFrame : useFrame;
               auto value = frame ? source.*field.member : vec2();
-              ImGui::BeginDisabled(field.isRegionField && (type == ROOT || type == NULL_ || isRegionSet));
+              // An animation layer's pivot is where its child's origin goes; it has no crop or size.
+              ImGui::BeginDisabled(field.isRegionField && (type == ROOT || type == NULL_ || isRegionSet ||
+                                                           (isAnimationLayer && field.member != &model::Frame::pivot)));
               auto state =
                   drag_float2_persistent(localize.get(field.label), frame ? &value : &dummy_value<vec2>(), DRAG_SPEED,
                                          0.0f, 0.0f, frame ? vec2_format_get(source.*field.member) : "");
@@ -273,7 +277,7 @@ namespace anm2ed::imgui
                                                             const Reference&) { frame.colorOffset = colorOffset; });
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_COLOR_OFFSET));
 
-            ImGui::BeginDisabled(type != LAYER);
+            ImGui::BeginDisabled(type != LAYER || isAnimationLayer);
             if (combo_id_mapped(localize.get(BASIC_REGION), frame ? &useFrame.regionId : &dummy_value_negative<int>(),
                                 regions.ids, regions.labels) &&
                 frame)
@@ -301,7 +305,7 @@ namespace anm2ed::imgui
                          { frame.interpolation = static_cast<Interpolation>(interpolationValue); });
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FRAME_INTERPOLATION));
 
-            ImGui::BeginDisabled(type != LAYER);
+            ImGui::BeginDisabled(type != LAYER || isAnimationLayer);
             if (combo_id_mapped(localize.get(BASIC_SHADER), frame ? &useFrame.shaderId : &dummy_value_negative<int>(),
                                 shaders.ids, shaders.labels) &&
                 frame)
@@ -323,6 +327,44 @@ namespace anm2ed::imgui
                          { frame.isVisible = isVisible; });
             }
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FRAME_VISIBILITY));
+
+            if (isAnimationLayer && frame)
+            {
+              ImGui::SeparatorText(localize.get(LABEL_CHILD));
+              auto values = document.animation_names_get(layer->libraryId);
+              auto labels = values;
+              values.insert(values.begin(), std::string{});
+              labels.insert(labels.begin(), localize.get(TEXT_LAYER_ANIMATION));
+              bool isChildChanged =
+                  combo_string_mapped(localize.get(LABEL_ANIMATION), &useFrame.childAnimation, values, labels);
+              ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHILD_ANIMATION));
+
+              const char* modeLabels[] = {localize.get(LABEL_LOOP), localize.get(LABEL_ONCE), localize.get(LABEL_HOLD)};
+              auto mode = (int)useFrame.childMode;
+              if (ImGui::Combo(localize.get(BASIC_MODE), &mode, modeLabels, (int)std::size(modeLabels)))
+              {
+                useFrame.childMode = (ChildMode)mode;
+                isChildChanged = true;
+              }
+              ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHILD_MODE));
+
+              ImGui::BeginDisabled(useFrame.isChildStartRandom);
+              isChildChanged |= input_int_range(localize.get(LABEL_START_FRAME), useFrame.childStart, 0, FRAME_NUM_MAX,
+                                                STEP, STEP_FAST);
+              ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHILD_START));
+              ImGui::EndDisabled();
+
+              isChildChanged |= ImGui::Checkbox(localize.get(LABEL_RANDOM), &useFrame.isChildStartRandom);
+              ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHILD_START_RANDOM));
+              ImGui::SameLine();
+              isChildChanged |= ImGui::Checkbox(localize.get(LABEL_RESTART), &useFrame.isChildRestart);
+              ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHILD_RESTART));
+
+              if (isChildChanged)
+                frame_edit(edit_state::COMPLETE, EDIT_FRAME_CHILD,
+                           [child = useFrame](Document&, model::Frame& frame, model::Track*, const Reference&)
+                           { edit::frame_property_copy(frame, child, edit::FrameProperty::CHILD); });
+            }
 
             auto widgetSize = widget_size_with_row_get(2);
 

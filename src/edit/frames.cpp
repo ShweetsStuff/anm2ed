@@ -213,7 +213,8 @@ namespace anm2ed::edit
     if (property == FrameProperty::EVENT || property == FrameProperty::SOUNDS) return false;
     auto isLayerOnly = property == FrameProperty::PIVOT || property == FrameProperty::CROP ||
                        property == FrameProperty::SIZE || property == FrameProperty::REGION ||
-                       property == FrameProperty::SHADER || property == FrameProperty::DEPTH;
+                       property == FrameProperty::SHADER || property == FrameProperty::DEPTH ||
+                       property == FrameProperty::CHILD;
     return type == ItemType::LAYER || !isLayerOnly;
   }
 
@@ -268,6 +269,13 @@ namespace anm2ed::edit
         break;
       case FrameProperty::DEPTH:
         target.depth = source.depth;
+        break;
+      case FrameProperty::CHILD:
+        target.childAnimation = source.childAnimation;
+        target.childMode = source.childMode;
+        target.childStart = source.childStart;
+        target.isChildStartRandom = source.isChildStartRandom;
+        target.isChildRestart = source.isChildRestart;
         break;
       case FrameProperty::EVENT:
         target.eventId = source.eventId;

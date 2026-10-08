@@ -47,6 +47,13 @@ namespace anm2ed::model
     return const_cast<Animation*>(slot->get());
   }
 
+  const Animation* Model::animation_named_get(std::string_view name) const
+  {
+    for (auto [index, animation] : animations_get())
+      if (animation->name == name) return animation;
+    return nullptr;
+  }
+
   std::vector<std::pair<int, const Animation*>> Model::animations_get() const
   {
     std::vector<std::pair<int, const Animation*>> result{};
@@ -232,9 +239,9 @@ namespace anm2ed::model
                     });
     };
 
-    if (type == ElementType::SPRITESHEET)
+    if (type == ElementType::SPRITESHEET || type == ElementType::LIBRARY)
       for (const auto& layer : content.layers)
-        used.insert(layer.spritesheetId);
+        used.insert(type == ElementType::LIBRARY ? layer.libraryId : layer.spritesheetId);
     else if (only)
       used_insert(*only);
     else
@@ -255,6 +262,8 @@ namespace anm2ed::model
         return unused_ids_get(content.events, used);
       case ElementType::SOUND_ELEMENT:
         return unused_ids_get(content.sounds, used);
+      case ElementType::LIBRARY:
+        return unused_ids_get(content.libraries, used);
       default:
         return {};
     }
@@ -356,6 +365,8 @@ namespace anm2ed::model
       repair(event.uid);
     for (auto& sound : content.sounds)
       repair(sound.uid);
+    for (auto& library : content.libraries)
+      repair(library.uid);
   }
 
   int track_frames_count_get(const Track& track) { return (int)track.frames.size(); }

@@ -55,6 +55,12 @@ namespace anm2ed::model
     int regionId{-1};
     int shaderId{-1};
     int depth{}; // a layer frame draws this many layers above (or below) its place in the timeline; editor-only
+    // On an animation layer: the child animation (empty for the layer's own) and how it plays; editor-only.
+    std::string childAnimation{};
+    ChildMode childMode{ChildMode::LOOP};
+    int childStart{};
+    bool isChildStartRandom{};
+    bool isChildRestart{};
     int atFrame{-1};
     int eventId{-1};
     std::vector<int> soundIds{};
@@ -193,9 +199,25 @@ namespace anm2ed::model
     int id{-1};
     std::string name{};
     int spritesheetId{};
+    // An animation layer plays `animation` (from library `libraryId`, or this file at -1) instead of showing its
+    // spritesheet.
+    int libraryId{-1};
+    std::string animation{};
     Extras extras{};
 
+    bool is_animation() const { return !animation.empty(); }
     bool operator==(const Layer&) const = default;
+  };
+
+  // Another .anm2 whose animations this one's layers can play.
+  struct Library
+  {
+    std::uint64_t uid{util::uid_next()};
+    int id{-1};
+    std::filesystem::path path{};
+    Extras extras{};
+
+    bool operator==(const Library&) const = default;
   };
 
   struct Null
@@ -248,6 +270,7 @@ namespace anm2ed::model
     std::vector<Null> nulls{};
     std::vector<Event> events{};
     std::vector<Sound> sounds{};
+    std::vector<Library> libraries{};
     std::vector<ElementType> layout{ElementType::SPRITESHEETS, ElementType::SHADERS, ElementType::LAYERS,
                                     ElementType::NULLS, ElementType::EVENTS};
     Extras extras{};
@@ -338,6 +361,7 @@ namespace anm2ed::model
 
     int animations_count_get() const;
     const Animation* animation_get(int) const;
+    const Animation* animation_named_get(std::string_view) const;
     Animation* animation_edit(int);
     int animation_group_id_get(int) const;
     const AnimationGroup* animation_group_get(int) const;

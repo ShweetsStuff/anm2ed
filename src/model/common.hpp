@@ -28,6 +28,8 @@
   X(EVENT_ELEMENT, "Event")                                                                                            \
   X(SOUNDS, "Sounds")                                                                                                  \
   X(SOUND_ELEMENT, "Sound")                                                                                            \
+  X(LIBRARIES, "Libraries")                                                                                            \
+  X(LIBRARY, "Library")                                                                                                \
   X(ANIMATIONS, "Animations")                                                                                          \
   X(ANIMATION, "Animation")                                                                                            \
   X(ROOT_ANIMATION, "RootAnimation")                                                                                   \
@@ -67,6 +69,16 @@ namespace anm2ed
     CUSTOM,
     TOP_LEFT,
     CENTER,
+    COUNT
+  };
+
+  // How an animation layer's child animation plays through a keyframe: looping, once (then holding its last frame),
+  // or held at the keyframe's start frame.
+  enum class ChildMode
+  {
+    LOOP,
+    ONCE,
+    HOLD,
     COUNT
   };
 

@@ -30,6 +30,7 @@ namespace anm2ed::imgui
   X(ACTION_REPLACE, BASIC_REPLACE, -1)                                                                                 \
   X(ACTION_SAVE, BASIC_SAVE, -1)                                                                                       \
   X(ACTION_EXPORT, BASIC_EXPORT, -1)                                                                                   \
+  X(ACTION_OPEN, BASIC_OPEN, -1)                                                                                       \
   X(ACTION_OPEN_DIRECTORY, BASIC_OPEN_DIRECTORY, -1)                                                                   \
   X(ACTION_SET_FILE_PATH, BASIC_SET_FILE_PATH, -1)                                                                     \
   X(ACTION_PACK, BASIC_PACK, -1)                                                                                       \

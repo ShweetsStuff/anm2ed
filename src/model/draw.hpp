@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <vector>
 
 #include "model.hpp"
@@ -22,16 +23,22 @@ namespace anm2ed::model
     int indexOffset{};
   };
 
+  // The document a library id of a document (the one drawn, or a library) points at; nullptr when not loaded.
+  using LibraryGet = std::function<const Model*(const Model&, int)>;
+
   struct DrawOptions
   {
     float time{};
     bool isRootTransform{};
     bool isIndexSampled{};
     std::vector<DrawSample> samples{};
+    LibraryGet library_get{};
   };
 
   // An item's frame at a time; `parent` is the transform of its root and group root when root transforms are shown
   // (whose tint and color offset are then folded into a layer's frame). `sample` indexes the samples, -1 for now.
+  // A layer draw shows spritesheet `spritesheetId` of `source`; an animation layer's child animation draws as its
+  // layers' draws, with the animation layer's id and transform.
   struct Draw
   {
     DrawType type{};
@@ -41,6 +48,8 @@ namespace anm2ed::model
     float time{};
     Frame frame{};
     glm::mat4 parent{1.0f};
+    const Model* source{};
+    int spritesheetId{-1};
   };
 
   glm::mat4 draw_quad_model_get(const Draw&);

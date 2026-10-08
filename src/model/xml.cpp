@@ -28,6 +28,8 @@ namespace anm2ed::model
   };
   constexpr std::string_view INTERPOLATION_VALUES[] = {"", "", "EaseIn", "EaseOut", "EaseInOut"};
   constexpr std::string_view ORIGIN_VALUES[] = {"", "TopLeft", "Center"};
+  constexpr std::string_view CHILD_MODE_VALUES[] = {"Loop", "Once", "Hold"};
+  constexpr std::string_view CHILD_START_RANDOM = "Random";
   constexpr const char* TINT_ATTRIBUTES[] = {"RedTint", "GreenTint", "BlueTint", "AlphaTint"};
   constexpr const char* OFFSET_ATTRIBUTES[] = {"RedOffset", "GreenOffset", "BlueOffset"};
   // Attributes the editor reads (or older builds wrote); any other attribute is kept verbatim as Extras.
@@ -38,7 +40,8 @@ namespace anm2ed::model
       "ShaderId", "Depth", "SoundId", "GroupId", "Index", "Loop", "StartMarker", "EndMarker", "Visible", "ShowRect", "IsExpanded", "Enabled", "Rotation",
       "XPivot", "YPivot", "XCrop", "YCrop", "XPosition", "YPosition", "Width", "Height", "XScale", "YScale", "SkewX",
       "SkewY", "ShearX", "ShearY", "RedTint", "GreenTint", "BlueTint", "AlphaTint", "RedOffset", "GreenOffset", "BlueOffset",
-      "Interpolated", "Origin", "BakeInterpolation", "BakeDelay", "BakeCount", "OriginalDelay"};
+      "Interpolated", "Origin", "BakeInterpolation", "BakeDelay", "BakeCount", "OriginalDelay", "Library", "Animation",
+      "ChildAnimation", "ChildMode", "ChildStart", "Restart"};
   // clang-format on
   constexpr std::string_view SOURCE_DOCUMENT_TAG = "SourceDocument";
   constexpr std::string_view FRAME_RESTORE_TAG = "FrameRestore";
@@ -220,6 +223,13 @@ namespace anm2ed::model
     frame.regionId = int_get(element, "RegionId");
     frame.shaderId = int_get(element, "ShaderId");
     frame.depth = int_get(element, "Depth", 0);
+    frame.childAnimation = string_get(element, "ChildAnimation");
+    auto childMode = std::ranges::find(CHILD_MODE_VALUES, string_get(element, "ChildMode"));
+    if (childMode != std::end(CHILD_MODE_VALUES))
+      frame.childMode = (ChildMode)(childMode - std::begin(CHILD_MODE_VALUES));
+    frame.isChildStartRandom = string_get(element, "ChildStart") == CHILD_START_RANDOM;
+    frame.childStart = int_get(element, "ChildStart", 0);
+    frame.isChildRestart = bool_get(element, "Restart", false);
     frame.atFrame = int_get(element, "AtFrame");
     frame.eventId = int_get(element, "EventId");
     frame.extras = extras_read(element);
@@ -588,6 +598,8 @@ namespace anm2ed::model
     return {.id = int_get(element, "Id"),
             .name = string_get(element, "Name"),
             .spritesheetId = int_get(element, "SpritesheetId", 0),
+            .libraryId = int_get(element, "Library"),
+            .animation = string_get(element, "Animation"),
             .extras = extras_read(element)};
   }
   template <> Null item_read(const XMLElement* element)
@@ -605,6 +617,10 @@ namespace anm2ed::model
   {
     return {.id = int_get(element, "Id"), .path = path_get(element, "Path"), .extras = extras_read(element)};
   }
+  template <> Library item_read(const XMLElement* element)
+  {
+    return {.id = int_get(element, "Id"), .path = path_get(element, "Path"), .extras = extras_read(element)};
+  }
 
   template <class Item> constexpr ElementType ITEM_TYPE{};
   template <> constexpr ElementType ITEM_TYPE<Spritesheet>{ElementType::SPRITESHEET};
@@ -614,6 +630,7 @@ namespace anm2ed::model
   template <> constexpr ElementType ITEM_TYPE<Null>{ElementType::NULL_ELEMENT};
   template <> constexpr ElementType ITEM_TYPE<Event>{ElementType::EVENT_ELEMENT};
   template <> constexpr ElementType ITEM_TYPE<Sound>{ElementType::SOUND_ELEMENT};
+  template <> constexpr ElementType ITEM_TYPE<Library>{ElementType::LIBRARY};
 
   template <class Item> std::vector<Item> items_read(const XMLElement* container, Content& content, ElementType type)
   {
@@ -640,7 +657,8 @@ namespace anm2ed::model
                     if (child->Name() == LEGACY_GROUPS_TAG) return;
                     auto isKnown = type == ElementType::SPRITESHEETS || type == ElementType::SHADERS ||
                                    type == ElementType::LAYERS || type == ElementType::NULLS ||
-                                   type == ElementType::EVENTS || type == ElementType::SOUNDS;
+                                   type == ElementType::EVENTS || type == ElementType::SOUNDS ||
+                                   type == ElementType::LIBRARIES;
                     if (!isKnown || std::ranges::contains(content.layout, type))
                       return extras_child_add(content.extras, child, position);
                     content.layout.push_back(type);
@@ -651,6 +669,7 @@ namespace anm2ed::model
                     if (type == ElementType::NULLS) content.nulls = items_read<Null>(child, content, type);
                     if (type == ElementType::EVENTS) content.events = items_read<Event>(child, content, type);
                     if (type == ElementType::SOUNDS) content.sounds = items_read<Sound>(child, content, type);
+                    if (type == ElementType::LIBRARIES) content.libraries = items_read<Library>(child, content, type);
                   });
     return content;
   }
@@ -691,6 +710,7 @@ namespace anm2ed::model
     ids_repair(content.nulls);
     ids_repair(content.events);
     ids_repair(content.sounds);
+    ids_repair(content.libraries);
     for (auto& spritesheet : content.spritesheets)
       ids_repair(spritesheet.regions);
     for (auto& shader : content.shaders)
@@ -1146,8 +1166,17 @@ namespace anm2ed::model
     sink.attribute("Rotation", frame.rotation);
     interpolation_add(sink, "Interpolated", frame.interpolation);
     if (writer.is(SERIALIZE_EXTENSIONS) && frame.shaderId != -1) sink.attribute("ShaderId", frame.shaderId);
-    if (writer.is(SERIALIZE_EXTENSIONS) && type == ItemType::LAYER && frame.depth != 0)
-      sink.attribute("Depth", frame.depth);
+    if (writer.is(SERIALIZE_EXTENSIONS) && type == ItemType::LAYER)
+    {
+      if (frame.depth != 0) sink.attribute("Depth", frame.depth);
+      if (!frame.childAnimation.empty()) sink.attribute("ChildAnimation", frame.childAnimation);
+      if (frame.childMode != ChildMode::LOOP) sink.attribute("ChildMode", CHILD_MODE_VALUES[(int)frame.childMode]);
+      if (frame.isChildStartRandom)
+        sink.attribute("ChildStart", CHILD_START_RANDOM);
+      else if (frame.childStart != 0)
+        sink.attribute("ChildStart", frame.childStart);
+      if (frame.isChildRestart) sink.attribute("Restart", frame.isChildRestart);
+    }
     extras_attributes_write(sink, frame.extras);
     if (bake.delay > 0)
     {
@@ -1325,6 +1354,7 @@ namespace anm2ed::model
   IsaacIssues isaac_issues_get(const Model& model)
   {
     IsaacIssues issues{};
+    issues.animationLayers = (int)std::ranges::count_if(model.content.layers, &Layer::is_animation);
     for (auto [index, animation] : model.animations_get())
     {
       for (const auto* entries : {&animation->layers, &animation->nulls})
@@ -1544,12 +1574,17 @@ namespace anm2ed::model
     children.close();
   }
 
-  void item_write(Sink& sink, const Writer&, const Layer& layer, int id)
+  void item_write(Sink& sink, const Writer& writer, const Layer& layer, int id)
   {
     sink.open(tag_get(ElementType::LAYER_ELEMENT));
     sink.attribute("Id", id);
     sink.attribute("Name", layer.name);
     sink.attribute("SpritesheetId", layer.spritesheetId);
+    if (writer.is(SERIALIZE_EXTENSIONS) && layer.is_animation())
+    {
+      if (layer.libraryId != -1) sink.attribute("Library", layer.libraryId);
+      sink.attribute("Animation", layer.animation);
+    }
     extras_write(sink, layer.extras);
     element_close(sink, layer.extras);
   }
@@ -1573,13 +1608,24 @@ namespace anm2ed::model
     element_close(sink, event.extras);
   }
 
+  // Sounds and libraries are a path.
+  template <class Item> void item_path_write(Sink& sink, const Item& item, ElementType type, int id)
+  {
+    sink.open(tag_get(type));
+    sink.attribute("Id", id);
+    path_add(sink, "Path", item.path);
+    extras_write(sink, item.extras);
+    element_close(sink, item.extras);
+  }
+
   void item_write(Sink& sink, const Writer&, const Sound& sound, int id)
   {
-    sink.open(tag_get(ElementType::SOUND_ELEMENT));
-    sink.attribute("Id", id);
-    path_add(sink, "Path", sound.path);
-    extras_write(sink, sound.extras);
-    element_close(sink, sound.extras);
+    item_path_write(sink, sound, ElementType::SOUND_ELEMENT, id);
+  }
+
+  void item_write(Sink& sink, const Writer&, const Library& library, int id)
+  {
+    item_path_write(sink, library, ElementType::LIBRARY, id);
   }
 
   // A content container's unknown XML (a file may repeat a container; its parts are merged in order).
@@ -1622,7 +1668,8 @@ namespace anm2ed::model
                                                  {ElementType::LAYERS, !content.layers.empty()},
                                                  {ElementType::NULLS, !content.nulls.empty()},
                                                  {ElementType::EVENTS, !content.events.empty()},
-                                                 {ElementType::SOUNDS, !content.sounds.empty()}}))
+                                                 {ElementType::SOUNDS, !content.sounds.empty()},
+                                                 {ElementType::LIBRARIES, !content.libraries.empty()}}))
     {
       children.add();
       auto extras = container_extras_get(content, type);
@@ -1634,6 +1681,9 @@ namespace anm2ed::model
       if (type == ElementType::SOUNDS && writer.is(SERIALIZE_SOUNDS) &&
           (!content.sounds.empty() || !extras.children.empty()))
         items_write(sink, writer, content.sounds, type, extras);
+      if (type == ElementType::LIBRARIES && writer.is(SERIALIZE_EXTENSIONS) &&
+          (!content.libraries.empty() || !extras.children.empty()))
+        items_write(sink, writer, content.libraries, type, extras);
       if (type == ElementType::SPRITESHEETS) items_write(sink, writer, content.spritesheets, type, extras);
       if (type == ElementType::LAYERS) items_write(sink, writer, content.layers, type, extras);
       if (type == ElementType::NULLS) items_write(sink, writer, content.nulls, type, extras);
@@ -1840,5 +1890,6 @@ namespace anm2ed::model
   X(Null)
   X(Event)
   X(Sound)
+  X(Library)
 #undef X
 }

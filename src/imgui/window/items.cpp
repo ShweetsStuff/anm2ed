@@ -9,7 +9,8 @@ using namespace anm2ed::types;
 
 namespace anm2ed::imgui
 {
-  constexpr int ITEM_PROPERTIES_ROWS = 2;
+  constexpr int NULL_PROPERTIES_ROWS = 2;
+  constexpr int LAYER_PROPERTIES_ROWS = 4;
 
   auto& layers_get(model::Model& model) { return model.content.layers; }
   auto& nulls_get(model::Model& model) { return model.content.nulls; }
@@ -23,7 +24,7 @@ namespace anm2ed::imgui
 
   // The layer/null properties popup: adds a new item (id -1) or replaces the edited one, then selects it.
   template <class Item, class ItemsGet, class FieldsDraw>
-  void item_properties_update(Panel& panel, int popupIndex, SelectionKind kind, StringType nameTooltip,
+  void item_properties_update(Panel& panel, int popupIndex, int rows, SelectionKind kind, StringType nameTooltip,
                               StringType addEdit, StringType propertiesEdit, ItemsGet items_get,
                               FieldsDraw&& fields_draw)
   {
@@ -34,7 +35,7 @@ namespace anm2ed::imgui
     popup.trigger();
     if (ImGui::BeginPopupModal(popup.label(), &popup.isOpen, ImGuiWindowFlags_NoResize))
     {
-      if (ImGui::BeginChild("##Child", child_size_get(ITEM_PROPERTIES_ROWS), ImGuiChildFlags_Borders))
+      if (ImGui::BeginChild("##Child", child_size_get(rows), ImGuiChildFlags_Borders))
       {
         if (popup.isJustOpened) ImGui::SetKeyboardFocusHere();
         input_text_string(localize.get(BASIC_NAME), &edit.name);
@@ -49,6 +50,12 @@ namespace anm2ed::imgui
         Item item{.name = edit.name};
         if constexpr (requires { item.spritesheetId; }) item.spritesheetId = edit.spritesheetId;
         if constexpr (requires { item.isShowRect; }) item.isShowRect = edit.isShowRect;
+        if constexpr (requires { item.animation; })
+          if (edit.isAnimation)
+          {
+            item.libraryId = edit.libraryId;
+            item.animation = edit.animation;
+          }
         auto& state = panel.state;
         command_push(panel,
                      [&state, item, id = edit.id, kind, addEdit, propertiesEdit, items_get](Document& document)
@@ -115,6 +122,9 @@ namespace anm2ed::imgui
               [&](int id)
           {
             auto layer = model::item_get(layers, id);
+            if (layer->is_animation())
+              return std::vformat(localize.get(FORMAT_LAYER_ANIMATION),
+                                  std::make_format_args(layer->id, layer->name, layer->animation));
             return std::vformat(localize.get(FORMAT_LAYER),
                                 std::make_format_args(layer->id, layer->name, layer->spritesheetId));
           },
@@ -133,12 +143,37 @@ namespace anm2ed::imgui
     ImGui::End();
 
     item_properties_update<model::Layer>(
-        panel, 0, SelectionKind::LAYERS, TOOLTIP_ITEM_NAME, EDIT_ADD_LAYER, EDIT_SET_LAYER_PROPERTIES, layers_get,
+        panel, 0, LAYER_PROPERTIES_ROWS, SelectionKind::LAYERS, TOOLTIP_ITEM_NAME, EDIT_ADD_LAYER,
+        EDIT_SET_LAYER_PROPERTIES, layers_get,
         [&](Manager::ItemEdit& layer)
         {
-          auto spritesheets = document.choices_get(SelectionKind::SPRITESHEETS);
-          combo_id_mapped(localize.get(LABEL_SPRITESHEET), &layer.spritesheetId, spritesheets.ids, spritesheets.labels);
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_SPRITESHEET));
+          ImGui::TextUnformatted(localize.get(LABEL_LAYER_SOURCE));
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_SOURCE));
+          for (auto [label, isAnimation] : {std::pair{LABEL_SPRITESHEET, false}, std::pair{LABEL_ANIMATION, true}})
+          {
+            ImGui::SameLine();
+            if (ImGui::RadioButton(localize.get(label), layer.isAnimation == isAnimation))
+              layer.isAnimation = isAnimation;
+            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_SOURCE));
+          }
+
+          if (!layer.isAnimation)
+          {
+            auto spritesheets = document.choices_get(SelectionKind::SPRITESHEETS);
+            combo_id_mapped(localize.get(LABEL_SPRITESHEET), &layer.spritesheetId, spritesheets.ids,
+                            spritesheets.labels);
+            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_SPRITESHEET));
+            return;
+          }
+
+          auto libraries = document.choices_get(SelectionKind::LIBRARIES);
+          libraries.labels.front() = localize.get(TEXT_THIS_FILE);
+          combo_id_mapped(localize.get(LABEL_LIBRARY), &layer.libraryId, libraries.ids, libraries.labels);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_LIBRARY));
+          auto names = document.animation_names_get(layer.libraryId);
+          if (layer.animation.empty() && !names.empty()) layer.animation = names.front();
+          combo_string_mapped(localize.get(LABEL_ANIMATION), &layer.animation, names, names);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_ANIMATION));
         });
   }
 
@@ -166,8 +201,8 @@ namespace anm2ed::imgui
     }
     ImGui::End();
 
-    item_properties_update<model::Null>(panel, 1, SelectionKind::NULLS, TOOLTIP_NULL_NAME, EDIT_ADD_NULL,
-                                        EDIT_SET_NULL_PROPERTIES, nulls_get,
+    item_properties_update<model::Null>(panel, 1, NULL_PROPERTIES_ROWS, SelectionKind::NULLS, TOOLTIP_NULL_NAME,
+                                        EDIT_ADD_NULL, EDIT_SET_NULL_PROPERTIES, nulls_get,
                                         [](Manager::ItemEdit& null)
                                         {
                                           ImGui::Checkbox(localize.get(LABEL_RECT), &null.isShowRect);

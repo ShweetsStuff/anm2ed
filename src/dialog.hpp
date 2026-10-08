@@ -49,6 +49,7 @@ namespace anm2ed
   X(ANM2_OPEN, ANM2)                                                                                                   \
   X(ANM2_SAVE, ANM2)                                                                                                   \
   X(SOUND_OPEN, SOUND)                                                                                                 \
+  X(LIBRARY_OPEN, ANM2)                                                                                                \
   X(SOUND_REPLACE, SOUND)                                                                                              \
   X(SPRITESHEET_OPEN, PNG)                                                                                             \
   X(SPRITESHEET_REPLACE, PNG)                                                                                          \

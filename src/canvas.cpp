@@ -271,18 +271,17 @@ namespace anm2ed
     rect_end(rectVAO, mode, count);
   }
 
-  // An animation's layers alone (no markers or helpers); spritesheet images and custom shaders are looked up by id.
+  // An animation's layers alone (no markers or helpers); spritesheet images are looked up by draw, custom shaders by id.
   void Canvas::layers_render(Shader& shader, const model::Model& model, const model::Animation& animation,
                              const model::DrawOptions& options, const mat4& transform,
-                             const std::function<const Image*(int)>& image_get,
+                             const std::function<const Image*(const model::Draw&)>& image_get,
                              const std::function<Shader*(int)>& shader_get) const
   {
     for (const auto& draw : model::animation_draws_get(model, animation, options))
     {
       if (draw.type != model::DrawType::LAYER) continue;
       auto& frame = draw.frame;
-      auto layer = model::item_get(model.content.layers, draw.id);
-      auto image = layer ? image_get(layer->spritesheetId) : nullptr;
+      auto image = image_get(draw);
       if (!image || !image->is_valid() || frame.size == vec2()) continue;
       auto imageSize = vec2(image->size);
       auto uvVertices = math::uv_vertices_get(frame.crop / imageSize, (frame.crop + frame.size) / imageSize);

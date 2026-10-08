@@ -15,7 +15,7 @@ namespace anm2ed::imgui
   {
     AnimationPreview animationPreview;
     bool isCanvasFocused{};
-    float spritesheetReloadTime{};
+    float reloadTime{};
     AnimationsPanel animations{};
     RegionsPanel regions{};
     PanelState events{};
@@ -26,6 +26,7 @@ namespace anm2ed::imgui
     SpritesheetEditor spritesheetEditor;
     SpritesheetsPanel spritesheets{};
     PanelState sounds{};
+    PanelState libraries{};
     Timeline timeline;
     PopupHelper toolsColorEditPopup{PopupHelper(LABEL_TOOLS_COLOR_EDIT_POPUP, POPUP_TO_CONTENT, POPUP_BY_ITEM)};
     AutosaveRestore autosaveRestore;

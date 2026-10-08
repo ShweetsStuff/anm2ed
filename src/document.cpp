@@ -33,6 +33,26 @@ namespace anm2ed::document
   constexpr std::string_view AUTOSAVE_EXTENSION = ".autosave";
   constexpr std::uint64_t HASH_COMBINE_CONSTANT = 0x9e3779b97f4a7c15ULL;
 
+  // A path written in a document in `directory`, as an absolute path.
+  std::filesystem::path absolute_path_get(const std::filesystem::path& directory, const std::filesystem::path& path)
+  {
+    util::WorkingDirectory workingDirectory(directory);
+    std::error_code ec{};
+    auto absolutePath = std::filesystem::weakly_canonical(directory / path::case_insensitive_find(path), ec);
+    return ec ? directory / path : absolutePath;
+  }
+
+  void library_load(const std::filesystem::path& path, LibraryData& library)
+  {
+    library = {};
+    model::model_load(library.model, path);
+    std::error_code ec{};
+    library.writeTime = std::filesystem::last_write_time(path, ec);
+    util::WorkingDirectory workingDirectory(path.parent_path());
+    for (const auto& spritesheet : library.model.content.spritesheets)
+      library.images.emplace(spritesheet.id, resource::Image(path::case_insensitive_find(spritesheet.path)));
+  }
+
   uint64_t document_tab_id_next()
   {
     static uint64_t next{1};
@@ -311,6 +331,7 @@ namespace anm2ed
 
   void Document::assets_sync()
   {
+    libraries_sync();
     document::resources_sync(*this, model.content.spritesheets, textures, texturePaths,
                              [&](int id, const std::filesystem::path& path)
                              { texture_set(id, resource::Image(path)); });
@@ -343,6 +364,97 @@ namespace anm2ed
     std::erase_if(shaders, is_invalid);
     std::erase_if(shaderVertexPaths, is_invalid);
     std::erase_if(shaderFragmentPaths, is_invalid);
+  }
+
+  std::filesystem::path Document::library_path_get(int id) const
+  {
+    auto library = model::item_get(model.content.libraries, id);
+    return library ? document::absolute_path_get(std::filesystem::absolute(directory_get()), library->path)
+                   : std::filesystem::path{};
+  }
+
+  const LibraryData* Document::library_get(const model::Model& from, int id) const
+  {
+    auto link = libraryLinks.find({&from == &model ? nullptr : &from, id});
+    return link == libraryLinks.end() ? nullptr : link->second;
+  }
+
+  model::LibraryGet Document::library_resolver_get() const
+  {
+    return [this](const model::Model& from, int id)
+    {
+      auto library = library_get(from, id);
+      return library ? &library->model : nullptr;
+    };
+  }
+
+  // The animation names of library `libraryId`, or of this document at -1.
+  std::vector<std::string> Document::animation_names_get(int libraryId) const
+  {
+    auto library = libraryId == -1 ? nullptr : library_get(model, libraryId);
+    auto source = libraryId == -1 ? &model : library ? &library->model : nullptr;
+    std::vector<std::string> names{};
+    if (source)
+      for (auto [index, animation] : source->animations_get())
+        names.push_back(animation->name);
+    return names;
+  }
+
+  const resource::Image* Document::draw_image_get(const model::Draw& draw) const
+  {
+    if (!draw.source || draw.source == &model) return texture_get(draw.spritesheetId);
+    for (const auto& [path, library] : libraries)
+      if (&library.model == draw.source)
+      {
+        auto image = library.images.find(draw.spritesheetId);
+        return image == library.images.end() ? nullptr : &image->second;
+      }
+    return nullptr;
+  }
+
+  // Loads every library this document reaches (libraries' own libraries too) and forgets the ones it no longer does.
+  void Document::libraries_sync()
+  {
+    libraryLinks.clear();
+    std::set<std::filesystem::path> reached{};
+    std::vector<std::pair<const model::Model*, std::filesystem::path>> pending{
+        {&model, std::filesystem::absolute(directory_get())}};
+    while (!pending.empty())
+    {
+      auto [from, directory] = pending.back();
+      pending.pop_back();
+      for (const auto& library : from->content.libraries)
+      {
+        auto path = document::absolute_path_get(directory, library.path);
+        auto [it, isNew] = libraries.try_emplace(path);
+        if (isNew) document::library_load(path, it->second);
+        libraryLinks[{from == &model ? nullptr : from, library.id}] = &it->second;
+        if (reached.insert(path).second) pending.emplace_back(&it->second.model, path.parent_path());
+      }
+    }
+    std::erase_if(libraries, [&](const auto& pair) { return !reached.contains(pair.first); });
+  }
+
+  // Reloads the libraries whose file changed on disk; true when any did.
+  bool Document::libraries_reload()
+  {
+    bool isReloaded{};
+    for (auto& [path, library] : libraries)
+    {
+      std::error_code ec{};
+      auto time = std::filesystem::last_write_time(path, ec);
+      if (ec || time == library.writeTime) continue;
+      document::library_load(path, library);
+      isReloaded = true;
+    }
+    if (isReloaded) libraries_sync();
+    return isReloaded;
+  }
+
+  void Document::library_reload(int id)
+  {
+    libraries.erase(library_path_get(id));
+    libraries_sync();
   }
 
   const resource::Image* Document::texture_get(int id) const
@@ -657,6 +769,7 @@ namespace anm2ed
     auto& content = model.content;
     if (kind == SelectionKind::SPRITESHEETS) add(content.spritesheets, path_label_get(FORMAT_SPRITESHEET));
     if (kind == SelectionKind::SOUNDS) add(content.sounds, path_label_get(FORMAT_SOUND));
+    if (kind == SelectionKind::LIBRARIES) add(content.libraries, path_label_get(FORMAT_SOUND));
     if (kind == SelectionKind::EVENTS) add(content.events, name_get);
     if (kind == SelectionKind::SHADERS) add(content.shaders, name_get);
     if (kind == SelectionKind::REGIONS)
@@ -899,6 +1012,31 @@ namespace anm2ed
     selected_ids_set(SelectionKind::SOUNDS, added);
     focused_id_set(SelectionKind::SOUNDS, *added.rbegin());
     change();
+  }
+
+  void Document::libraries_add(const std::vector<std::filesystem::path>& paths)
+  {
+    std::set<int> added{};
+    edit_apply(
+        EDIT_ADD_LIBRARY,
+        [&](model::Model& model)
+        {
+          auto& libraries = model.content.libraries;
+          for (auto& path : paths)
+            if (!path.empty())
+            {
+              auto& library = libraries.emplace_back(model::Library{
+                  .id = model::item_next_id_get(libraries),
+                  .path = path::backslash_replace(path::make_relative(path::backslash_handle(path), directory_get()))});
+              added.insert(library.id);
+            }
+        });
+    if (added.empty()) return;
+    for (auto id : added)
+      toast_log(Level::INFO, TOAST_LIBRARY_INITIALIZED, id,
+                path::to_utf8(model::item_get(model.content.libraries, id)->path));
+    selected_ids_set(SelectionKind::LIBRARIES, added);
+    focused_id_set(SelectionKind::LIBRARIES, *added.rbegin());
   }
 
   void Document::undo()

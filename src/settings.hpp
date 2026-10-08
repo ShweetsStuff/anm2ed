@@ -25,7 +25,7 @@ namespace anm2ed
   constexpr auto OUTPUT_PATH_DEFAULT = "./output.gif";
 #endif
 
-  constexpr auto AUTO_RELOAD_INTERVAL = 3.0f; // seconds between checks of spritesheet files
+  constexpr auto AUTO_RELOAD_INTERVAL = 3.0f; // seconds between checks of spritesheet and library files
   // Scales are percents.
   constexpr auto UI_SCALE_MIN = 50.0f;
   constexpr auto UI_SCALE_MAX = 200.0f;
@@ -286,6 +286,7 @@ namespace anm2ed
   X(WINDOW_EVENTS, windowIsEvents, LABEL_EVENTS_WINDOW, BOOL, true)                                                    \
   X(WINDOW_FRAME_PROPERTIES, windowIsFrameProperties, LABEL_FRAME_PROPERTIES_WINDOW, BOOL, true)                       \
   X(WINDOW_LAYERS, windowIsLayers, LABEL_LAYERS_WINDOW, BOOL, true)                                                    \
+  X(WINDOW_LIBRARIES, windowIsLibraries, LABEL_LIBRARIES_WINDOW, BOOL, true)                                           \
   X(WINDOW_NULLS, windowIsNulls, LABEL_NULLS_WINDOW, BOOL, true)                                                       \
   X(WINDOW_ONIONSKIN, windowIsOnionskin, LABEL_ONIONSKIN_WINDOW, BOOL, true)                                           \
   X(WINDOW_PREVIEW, windowIsSpritesheets, LABEL_SPRITESHEETS_WINDOW, BOOL, true)                                       \

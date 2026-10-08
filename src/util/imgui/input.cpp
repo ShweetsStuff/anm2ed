@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <climits>
 #include <cmath>
+#include <numeric>
 
 #include <glm/gtc/type_ptr.hpp>
 
@@ -40,6 +41,18 @@ namespace anm2ed::imgui
     if (edited) *path = path::from_utf8(pathUtf8);
 
     return edited;
+  }
+
+  // A combo over `values` shown as `labels`.
+  bool combo_string_mapped(const std::string& label, std::string* value, const std::vector<std::string>& values,
+                           const std::vector<std::string>& labels)
+  {
+    std::vector<int> ids(values.size());
+    std::iota(ids.begin(), ids.end(), 0);
+    auto index = (int)std::distance(values.begin(), std::ranges::find(values, *value));
+    if (!combo_id_mapped(label, &index, ids, labels) || index < 0) return false;
+    *value = values[index];
+    return true;
   }
 
   bool combo_id_mapped(const std::string& label, int* id, const std::vector<int>& ids,

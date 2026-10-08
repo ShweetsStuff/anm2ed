@@ -253,9 +253,9 @@ namespace anm2ed::imgui::wizard
 
     state.canvas->layers_render(resources.shaders[shader::TEXTURE], state.model, *animation,
                                 {.time = state.time, .isRootTransform = true}, state.canvas->transform_get(zoom, pan),
-                                [&](int id)
+                                [&](const model::Draw& draw)
                                 {
-                                  auto texture = state.textures.find(id);
+                                  auto texture = state.textures.find(draw.spritesheetId);
                                   return texture == state.textures.end() ? nullptr : &texture->second;
                                 });
 

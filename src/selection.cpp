@@ -56,6 +56,7 @@ namespace anm2ed
     if (kind == SelectionKind::NULLS) add(content.nulls);
     if (kind == SelectionKind::EVENTS) add(content.events);
     if (kind == SelectionKind::SOUNDS) add(content.sounds);
+    if (kind == SelectionKind::LIBRARIES) add(content.libraries);
     if (kind == SelectionKind::REGIONS)
       if (auto spritesheet = model::item_get(content.spritesheets,
                                              selection_focus_id_get(selection, model, SelectionKind::SPRITESHEETS)))

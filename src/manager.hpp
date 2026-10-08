@@ -70,6 +70,9 @@ namespace anm2ed
       std::string name{};
       int spritesheetId{};
       bool isShowRect{};
+      bool isAnimation{};
+      int libraryId{-1};
+      std::string animation{};
     } itemEdit{};
     imgui::PopupHelper itemPropertiesPopups[2]{
         imgui::PopupHelper(LABEL_MANAGER_LAYER_PROPERTIES, imgui::POPUP_SMALL_NO_HEIGHT),

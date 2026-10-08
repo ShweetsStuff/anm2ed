@@ -9,12 +9,16 @@ namespace anm2ed::imgui
     if (auto document = manager.get(); document)
       if (settings.windowIsAnimationPreview) animationPreview.tick(manager, settings, deltaSeconds);
 
-    if (!settings.fileIsAutoReloadSpritesheets) return;
-    spritesheetReloadTime += deltaSeconds;
-    if (spritesheetReloadTime < AUTO_RELOAD_INTERVAL) return;
-    spritesheetReloadTime = 0.0f;
+    // Files changed on disk are picked up every few seconds: libraries always, spritesheets when set to.
+    reloadTime += deltaSeconds;
+    if (reloadTime < AUTO_RELOAD_INTERVAL) return;
+    reloadTime = 0.0f;
     for (auto& document : manager.documents)
+    {
+      document.libraries_reload();
+      if (!settings.fileIsAutoReloadSpritesheets) continue;
       if (auto ids = document.spritesheets_changed_get(); !ids.empty()) document.spritesheets_reload(ids);
+    }
   }
 
   void Dockspace::update(Taskbar& taskbar, Documents& documents, Manager& manager, Settings& settings,
@@ -68,6 +72,7 @@ namespace anm2ed::imgui
             shaders_update(panel, shaders);
           }
           if (settings.windowIsSounds) panel_update(sounds, sounds_update);
+          if (settings.windowIsLibraries) panel_update(libraries, libraries_update);
           if (settings.windowIsSpritesheetEditor) spritesheetEditor.update(manager, settings, resources);
           if (settings.windowIsSpritesheets)
           {

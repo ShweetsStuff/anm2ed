@@ -267,8 +267,13 @@ namespace anm2ed
     auto layer = isLayer ? model::item_get(content.layers, id) : nullptr;
     auto null = isLayer ? nullptr : model::item_get(content.nulls, id);
     if (id != -1 && !layer && !null) return;
-    itemEdit = layer  ? ItemEdit{id, layer->name, layer->spritesheetId, false}
-               : null ? ItemEdit{id, null->name, 0, null->isShowRect}
+    itemEdit = layer  ? ItemEdit{.id = id,
+                                 .name = layer->name,
+                                 .spritesheetId = layer->spritesheetId,
+                                 .isAnimation = layer->is_animation(),
+                                 .libraryId = layer->libraryId,
+                                 .animation = layer->animation}
+               : null ? ItemEdit{.id = id, .name = null->name, .isShowRect = null->isShowRect}
                       : ItemEdit{};
     itemPropertiesPopups[isLayer ? 0 : 1].open();
   }

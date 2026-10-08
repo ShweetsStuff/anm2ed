@@ -57,3 +57,42 @@ TEST_CASE("a layer frame's depth moves it among the layers for that frame only")
   CHECK(model_load(text).frame_get({0, LAYER, 0, 0})->depth == -1);
   CHECK(model::isaac_issues_get(anm2).depthFrames == 1);
 }
+
+TEST_CASE("an animation layer draws its child animation, from this file or a library")
+{
+  auto anm2 = model_load(file_load(TEST_DIR / "render" / "nested.anm2"));
+  auto spin = model_load(file_load(TEST_DIR / "render" / "spin.anm2"));
+  model::DrawOptions options{.library_get = [&](const model::Model&, int id) { return id == 0 ? &spin : nullptr; }};
+  auto red_position_get = [&](int layerId)
+  {
+    std::optional<glm::vec2> position{};
+    for (const auto& draw : model::animation_draws_get(anm2, *anm2.animation_get(0), options))
+      if (draw.type == model::DrawType::LAYER && draw.id == layerId && draw.frame.crop == glm::vec2())
+        position = glm::vec2(draw.parent * glm::vec4(draw.frame.position, 0.0f, 1.0f));
+    return position;
+  };
+
+  // The library's red square, half size at (40, 0), starts on its fifth frame (at x 16).
+  CHECK(red_position_get(0) == glm::vec2(48.0f, 0.0f));
+  // This file's Inner holds its first frame however far the parent plays.
+  options.time = 1.0f;
+  CHECK(red_position_get(1) == glm::vec2(-40.0f, 0.0f));
+  // An animation never draws inside itself.
+  CHECK_FALSE(red_position_get(3));
+
+  // Once stops on the child's last frame; Loop wraps around it.
+  options.time = 6.0f;
+  anm2.frame_edit({0, LAYER, 1, 0})->childMode = ChildMode::ONCE;
+  CHECK(red_position_get(1) == glm::vec2(-40.0f, 10.0f));
+  anm2.frame_edit({0, LAYER, 1, 0})->childMode = ChildMode::LOOP;
+  CHECK(red_position_get(1) == glm::vec2(-40.0f, 0.0f));
+
+  // Without the library loaded, its layer draws nothing.
+  options.library_get = {};
+  CHECK_FALSE(red_position_get(0));
+
+  auto text = model::model_to_string(anm2, {.isExtendedFormat = true});
+  CHECK(model::model_hash(model_load(text)) == model::model_hash(anm2));
+  CHECK(model::isaac_issues_get(anm2).animationLayers == 3);
+  CHECK(game_document_get(model::model_to_string(anm2)).find(" Animation=\"") == std::string::npos);
+}

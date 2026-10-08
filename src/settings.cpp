@@ -104,6 +104,12 @@ Size=744,305
 Collapsed=0
 DockId=0x0000000F,0
 
+[Window][###Libraries]
+Pos=1166,62
+Size=744,305
+Collapsed=0
+DockId=0x0000000F,2
+
 [Window][###Tools]
 Pos=8,62
 Size=50,660

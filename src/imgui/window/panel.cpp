@@ -254,6 +254,7 @@ namespace anm2ed::imgui
       else
         isBreak = row_draw(panel, selection, focus, rows, keys[i], i, arrowKey);
       if (isBreak) break;
+      if (rows.children_draw) rows.children_draw(keys[i]);
     }
     if (isCards) ImGui::PopStyleVar();
     list_select_end(panel, selection, focus, rows, arrowKey);

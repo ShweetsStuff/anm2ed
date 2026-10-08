@@ -3,7 +3,7 @@
 #include <set>
 #include <vector>
 
-#include "model.hpp"
+#include "draw.hpp"
 
 namespace anm2ed::model
 {
@@ -19,5 +19,5 @@ namespace anm2ed::model
   void frames_generate_from_grid(Track&, glm::ivec2, glm::ivec2, glm::vec2, int, int, int);
   void frames_sort_by_at_frame(Track&);
   void frames_change(Track&, FrameChange, ItemType, ChangeType, const std::set<int>&);
-  glm::vec4 animation_rect(const Model&, const Animation&, bool);
+  glm::vec4 animation_rect(const Model&, const Animation&, bool, const LibraryGet& = {});
 }

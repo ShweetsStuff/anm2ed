@@ -110,6 +110,7 @@ namespace anm2ed
   X(BASIC_YES, "Yes", "Si", "Да", "是", "예") \
   X(BASIC_ZOOM, "Zoom", "Zoom", "Масштаб", "缩放", "확대") \
   X(EDIT_ADD_ANIMATION, "Add Animation", "Añadir Animacion", "Добавить анимацию", "添加动画", "애니메이션 추가") \
+  X(EDIT_ADD_LIBRARY, "Add Library", "Añadir Biblioteca", "Добавить библиотеку", "添加库", "라이브러리 추가") \
   X(EDIT_ADD_REGION, "Add Region", "Añadir Región", "Добавить регион", "添加区域", "영역 추가") \
   X(EDIT_ADD_EVENT, "Add Event", "Añadir Evento", "Добавить событие", "添加事件", "이벤트 추가") \
   X(EDIT_ADD_ITEM, "Add Item", "Añadir Item", "Добавить предмет", "添加物品", "항목 추가") \
@@ -122,8 +123,10 @@ namespace anm2ed
   X(EDIT_CUT_FRAME_PROPERTY, "Cut Frame Property", "Cortar Propiedad del Frame", "Вырезание свойства кадра", "剪切帧属性", "프레임 속성 잘라내기") \
   X(EDIT_DOCUMENT_FORMAT, "Document Format", "Formato del Documento", "Формат документа", "文档格式", "문서 형식") \
   X(EDIT_END_MARKER, "Set End Marker", "Poner Marcador de Fin", "Конечный маркер", "设置结束标记", "끝 마커 설정") \
+  X(EDIT_FRAME_CHILD, "Frame Child", "Hijo del Frame", "Дочерняя анимация кадра", "帧子动画", "프레임 자식") \
   X(EDIT_FRAME_DEPTH, "Frame Depth", "Profundidad del Frame", "Глубина кадра", "帧深度", "프레임 깊이") \
   X(EDIT_PASTE_FRAME_PROPERTY, "Paste Frame Property", "Pegar Propiedad del Frame", "Вставка свойства кадра", "粘贴帧属性", "프레임 속성 붙여넣기") \
+  X(EDIT_PASTE_LIBRARIES, "Paste Libraries", "Pegar Bibliotecas", "Вставить библиотеки", "粘贴库", "라이브러리 붙여넣기") \
   X(EDIT_REMOVE_MARKERS, "Remove Markers", "Quitar Marcadores", "Удаление маркеров", "移除标记", "마커 제거") \
   X(EDIT_REMOVE_TRIGGER_SOUND, "Remove Trigger Sound", "Remover Sonido del Trigger", "Удалить звук триггера", "移除事件触发器声音", "트리거 사운드 제거") \
   X(EDIT_ANIMATION_LENGTH, "Animation Length", "Duracion De Animacion", "Длина анимации", "动画时长", "애니메이션 길이") \
@@ -144,6 +147,7 @@ namespace anm2ed
   X(EDIT_FPS, "FPS", "FPS", "FPS", "每秒帧数(FPS)", "FPS") \
   X(EDIT_GROUP_ITEMS, "Group Item(s)", "Agrupar item(s)", "Сгруппировать элементы", "将项目分组", "항목 그룹화") \
   X(EDIT_REMOVE_GROUP, "Remove Group", "Eliminar grupo", "Удалить группу", "删除组", "그룹 삭제") \
+  X(EDIT_REMOVE_UNUSED_LIBRARIES, "Remove Unused Libraries", "Eliminar Bibliotecas No Usadas", "Удалить неиспользуемые библиотеки", "删除未使用的库", "사용하지 않는 라이브러리 제거") \
   X(EDIT_START_MARKER, "Set Start Marker", "Poner Marcador de Inicio", "Начальный маркер", "设置起始标记", "시작 마커 설정") \
   X(EDIT_TOGGLE_GROUP_EXPANDED, "Toggle Group Expanded", "Alternar grupo expandido", "Развернуть/свернуть группу", "展开/折叠组", "그룹 펼침 전환") \
   X(EDIT_FRAME_COLOR_OFFSET, "Frame Color Offset", "Offset de color de Frame", "Смещение цвета кадра", "帧颜色偏移", "프레임 색상 오프셋") \
@@ -224,12 +228,15 @@ namespace anm2ed
   X(FORMAT_DURATION, "Duration: {0}", "Duracion: {0}", "Продолжительность: {0}", "时长: {0}", "유지 시간: {0}") \
   X(FORMAT_EVENT_LABEL, "Event: {0}", "Evento: {0}", "Событие: {0}", "事件: {0}", "이벤트: {0}") \
   X(FORMAT_ID, "ID: {0}", "ID: {0}", "ID: {0}", "ID: {0}", "ID: {0}") \
+  X(FORMAT_ISAAC_ANIMATION_LAYERS, "{} layer(s) play animations, which the game doesn't support; they will draw nothing.", "{} capa(s) reproducen animaciones, que el juego no soporta; no dibujarán nada.", "{} слой(ёв) проигрывают анимации, которые игра не поддерживает; они ничего не отобразят.", "{} 个图层播放动画，游戏不支持；它们将不显示任何内容。", "{}개의 레이어가 애니메이션을 재생합니다. 게임에서 지원하지 않으므로 아무것도 그리지 않습니다.") \
   X(FORMAT_ISAAC_DEPTH_FRAMES, "{} frame(s) change their layer's depth, which the game doesn't support; they will draw in timeline order.", "{} Frame(s) cambian la profundidad de su capa, que el juego no soporta; se dibujarán en el orden de la línea de tiempo.", "{} кадр(ов) меняют глубину слоя, что игра не поддерживает; они будут рисоваться в порядке таймлайна.", "{} 个帧改变了图层深度，游戏不支持，将按时间轴顺序绘制。", "프레임 {}개가 게임이 지원하지 않는 레이어 깊이를 바꿉니다. 타임라인 순서로 그려집니다.") \
   X(FORMAT_ISAAC_EASED_FRAMES, "{} eased frame(s) will be baked into one-frame steps.", "{} Frame(s) con suavizado se convertirán en pasos de un Frame.", "{} кадр(ов) со сглаживанием будут запечены в покадровые шаги.", "{} 个缓动帧将被烘焙为逐帧步进。", "이징 프레임 {}개가 1프레임 단위로 베이크됩니다.") \
   X(FORMAT_ISAAC_GROUP_TRANSFORMS, "{} group transform(s) will be baked into their items' frames.", "{} transformación(es) de grupo se aplicarán a los Frames de sus elementos.", "{} трансформаци(й) групп будут запечены в кадры их элементов.", "{} 个组变换将被烘焙到其项目的帧中。", "그룹 변형 {}개가 항목의 프레임에 베이크됩니다.") \
   X(FORMAT_ISAAC_SHADER_FRAMES, "{} frame(s) use shaders, which the game doesn't support; they will be dropped.", "{} Frame(s) usan shaders, que el juego no soporta; se descartarán.", "{} кадр(ов) используют шейдеры, которые игра не поддерживает; они будут отброшены.", "{} 个帧使用了着色器，游戏不支持，将被舍弃。", "프레임 {}개가 게임이 지원하지 않는 셰이더를 사용합니다. 셰이더는 제거됩니다.") \
   X(FORMAT_ISAAC_SKEW_FRAMES, "{} frame(s) use skew, which the game doesn't support; it will be dropped.", "{} Frame(s) usan inclinación, que el juego no soporta; se descartará.", "{} кадр(ов) используют наклон, который игра не поддерживает; он будет отброшен.", "{} 个帧使用了斜切，游戏不支持，将被舍弃。", "프레임 {}개가 게임이 지원하지 않는 기울이기를 사용합니다. 기울이기는 제거됩니다.") \
   X(FORMAT_ISAAC_TRIGGER_SOUNDS, "{} trigger(s) have sounds, which the game doesn't read from animations; they will be dropped.", "{} disparador(es) tienen sonidos, que el juego no lee de las animaciones; se descartarán.", "{} триггер(ов) имеют звуки, которые игра не читает из анимаций; они будут отброшены.", "{} 个触发器带有声音，游戏不会从动画中读取，将被舍弃。", "트리거 {}개에 게임이 애니메이션에서 읽지 않는 사운드가 있습니다. 사운드는 제거됩니다.") \
+  X(FORMAT_LAYER_ANIMATION, "#{0} {1} (Animation: {2})", "#{0} {1} (Animación: {2})", "#{0} {1} (Анимация: {2})", "#{0} {1} (动画: {2})", "#{0} {1} (애니메이션: {2})") \
+  X(FORMAT_LIBRARY_ANIMATIONS, "Animations ({0})", "Animaciones ({0})", "Анимации ({0})", "动画 ({0})", "애니메이션 ({0})") \
   X(FORMAT_ORIGIN, "Origin: {0}", "Origen: {0}", "Точка отсчета: {0}", "原点: {0}", "원점: {0}") \
   X(FORMAT_SPRITESHEET_ID, "Spritesheet ID: {0}", "ID de Spritesheet: {0}", "", "图集 ID: {0}", "스프라이트 시트 ID: {0}") \
   X(FORMAT_INDEX, "Index: {0}", "Indice: {0}", "Индекс: {0}", "下标: {0}", "인덱스: {0}") \
@@ -266,16 +273,25 @@ namespace anm2ed
   X(LABEL_ADD_START_MARKER, "Add Start Marker Here", "Añadir Marcador de Inicio Aquí", "Поставить начальный маркер здесь", "在此添加起始标记", "여기에 시작 마커 추가") \
   X(LABEL_ADJUST, "Adjust", "Ajustar", "Отрегулировать", "调节", "조정") \
   X(LABEL_ALT_ICONS, "Alt Icons", "Iconos Alternos", "Альт-иконки", "替代图标", "대체 아이콘") \
+  X(LABEL_ANIMATION, "Animation", "Animación", "Анимация", "动画", "애니메이션") \
   X(LABEL_ANIMATIONS_CHILD, "Animations", "Animaciones", "", "动画", "애니메이션") \
   X(LABEL_ANIMATIONS_MERGE_POPUP, "Merge Animations", "Combinar Animaciones", "Соединить анимации", "合并多个动画", "애니메이션 병합") \
   X(LABEL_AUTO_SPRITESHEET_RELOAD, "Auto Spritesheet Reload", "Recarga Automática de Spritesheets", "Автоперезагрузка спрайт-листов", "自动重新加载图集", "스프라이트 시트 자동 새로고침") \
+  X(LABEL_CHILD, "Child", "Hijo", "Дочерняя", "子动画", "자식") \
   X(LABEL_DETACHABLE_WINDOWS, "Detachable Windows", "Ventanas Desacoplables", "Отделяемые окна", "可分离窗口", "분리 가능한 창") \
   X(LABEL_DOCUMENT_EXTENDED_FORMAT, "Extended Format", "Formato Extendido", "Расширенный формат", "扩展格式", "확장 형식") \
+  X(LABEL_HOLD, "Hold", "Mantener", "Удерживать", "保持", "유지") \
   X(LABEL_ISAAC_COMPATIBILITY_WARNING, "Isaac Compatibility Warning", "Advertencia de Compatibilidad con Isaac", "Предупреждение о совместимости с Isaac", "Isaac 兼容性警告", "Isaac 호환성 경고") \
+  X(LABEL_LAYER_SOURCE, "Source", "Fuente", "Источник", "来源", "소스") \
+  X(LABEL_LIBRARIES_WINDOW, "Libraries###Libraries", "Bibliotecas###Libraries", "Библиотеки###Libraries", "库###Libraries", "라이브러리###Libraries") \
+  X(LABEL_LIBRARY, "Library", "Biblioteca", "Библиотека", "库", "라이브러리") \
+  X(LABEL_ONCE, "Once", "Una vez", "Один раз", "一次", "한 번") \
   X(LABEL_ONLY_SELECTED_ITEM, "Only Selected Item", "Solo el Elemento Seleccionado", "Только выбранный элемент", "仅选中项目", "선택한 항목만") \
   X(LABEL_PIVOT_PATH, "Pivot Path", "Trayectoria del Pivote", "Путь опорной точки", "枢轴路径", "피벗 경로") \
   X(LABEL_PROPERTY, "Property", "Propiedad", "Свойство", "属性", "속성") \
+  X(LABEL_RANDOM, "Random", "Aleatorio", "Случайно", "随机", "무작위") \
   X(LABEL_REMOVE_MARKERS, "Remove Markers", "Quitar Marcadores", "Удалить маркеры", "移除标记", "마커 제거") \
+  X(LABEL_RESTART, "Restart", "Reiniciar", "Перезапуск", "重新开始", "다시 시작") \
   X(LABEL_SAVE_ANYWAY, "Save Anyway", "Guardar de Todos Modos", "Всё равно сохранить", "仍然保存", "그래도 저장") \
   X(LABEL_SPRITESHEETS_PACK_POPUP, "Pack Spritesheet", "Empaquetar spritesheet", "Упаковать спрайт-лист", "打包图集", "스프라이트 시트 패킹") \
   X(LABEL_SPRITESHEETS_MERGE_POPUP, "Merge Spritesheets", "Combinar Spritesheets", "Объединить спрайт-листы", "合并图集", "스프라이트 시트 병합") \
@@ -356,6 +372,7 @@ namespace anm2ed
   X(LABEL_LAYER, "Layer", "Capa", "Слой", "动画层", "레이어") \
   X(LABEL_LAYERS_CHILD, "Layers List", "Lista de Capas", "", "动画层列表", "레이어 목록") \
   X(LABEL_LAYERS_WINDOW, "Layers###Layers", "Capas###Layers", "Слои###Layers", "动画层###Layers", "레이어###Layers") \
+  X(LABEL_START_FRAME, "Start Frame", "Frame Inicial", "Начальный кадр", "起始帧", "시작 프레임") \
   X(LABEL_THIS_ANIMATION, "This Animation", "Esta Animacion", "Эта анимация", "此动画", "이 애니메이션") \
   X(LABEL_DESTINATION, "Destination", "Destino", "Назначение", "目标", "대상") \
   X(LABEL_ITEMS, "Items", "Items", "Предметы", "物品", "항목") \
@@ -537,15 +554,28 @@ namespace anm2ed
   X(SNAPSHOT_RENAME_ANIMATION, "Rename Animation", "Renombrar Animacion", "Переименовать анимацию", "重命名动画", "애니메이션 이름 바꾸기") \
   X(TEXT_ISAAC_EDITOR_COPY, "The editor's own copy inside the file keeps everything.", "La copia del editor dentro del archivo lo conserva todo.", "Копия редактора внутри файла сохраняет всё.", "文件内的编辑器副本会保留所有内容。", "파일 안의 편집기 사본에는 모든 것이 그대로 남습니다.") \
   X(TEXT_ISAAC_ISSUES, "Some of this file won't work in the game as it is:", "Parte de este archivo no funcionará tal cual en el juego:", "Часть этого файла не будет работать в игре как есть:", "此文件的部分内容在游戏中无法按原样工作：", "이 파일의 일부는 게임에서 그대로 작동하지 않습니다:") \
+  X(TEXT_LAYER_ANIMATION, "Layer's", "De la Capa", "Как у слоя", "图层的", "레이어 기본값") \
   X(TEXT_SELECT_FRAME, "Select a frame first!", "¡Selecciona primero un frame!", "Сначала выберите кадр!", "请先选择帧！", "먼저 프레임을 선택하세요!") \
   X(TEXT_SELECT_FRAME_OR_REGION, "Select a frame or region first!", "¡Selecciona primero un frame o región!", "Сначала выберите кадр или регион!", "请先选择帧或区域！", "먼저 프레임 또는 영역을 선택하세요!") \
   X(TOOLTIP_AUTO_SPRITESHEET_RELOAD, "Reload spritesheets automatically when their files change on disk.\n(Spritesheets with unsaved edits are left alone.)", "Recarga los spritesheets automáticamente cuando sus archivos cambian en el disco.\n(Los spritesheets con cambios sin guardar no se tocan.)", "Автоматически перезагружать спрайт-листы при изменении их файлов на диске.\n(Спрайт-листы с несохранёнными изменениями не затрагиваются.)", "当图集文件在磁盘上更改时自动重新加载。\n(有未保存修改的图集不受影响。)", "디스크의 파일이 바뀌면 스프라이트 시트를 자동으로 새로고침합니다.\n(저장하지 않은 수정이 있는 스프라이트 시트는 건드리지 않습니다.)") \
+  X(TOOLTIP_CHILD_ANIMATION, "The animation this keyframe plays; the layer's unless set. Changing it restarts the child.", "La animación que reproduce este keyframe; la de la capa si no se ajusta. Cambiarla reinicia el hijo.", "Анимация этого ключевого кадра; если не задана, то анимация слоя. Смена перезапускает её.", "此关键帧播放的动画；未设置时使用图层的。更改会重新开始子动画。", "이 키프레임이 재생하는 애니메이션입니다. 설정하지 않으면 레이어의 것을 사용합니다. 바꾸면 자식이 다시 시작됩니다.") \
+  X(TOOLTIP_CHILD_MODE, "Loop the child, play it once and stop on its last frame, or hold it on the start frame.", "Repite el hijo, reprodúcelo una vez y detente en su último frame, o mantenlo en el frame inicial.", "Зациклить дочернюю анимацию, проиграть один раз и остановиться на последнем кадре, или удерживать начальный кадр.", "循环子动画、播放一次并停在最后一帧，或保持在起始帧。", "자식을 반복하거나, 한 번 재생하고 마지막 프레임에서 멈추거나, 시작 프레임에 고정합니다.") \
+  X(TOOLTIP_CHILD_RESTART, "Restart the child at this keyframe; otherwise it keeps playing from the keyframe before.", "Reinicia el hijo en este keyframe; si no, sigue desde el keyframe anterior.", "Перезапустить дочернюю анимацию на этом ключевом кадре; иначе она продолжается с предыдущего.", "在此关键帧重新开始子动画；否则从上一个关键帧继续播放。", "이 키프레임에서 자식을 다시 시작합니다. 그렇지 않으면 이전 키프레임부터 계속 재생됩니다.") \
+  X(TOOLTIP_CHILD_START, "The child's frame when it starts (or the frame held).", "El frame del hijo al empezar (o el frame mantenido).", "Кадр дочерней анимации при старте (или удерживаемый кадр).", "子动画开始时的帧（或保持的帧）。", "자식이 시작할 때의 프레임(또는 고정된 프레임).") \
+  X(TOOLTIP_CHILD_START_RANDOM, "Start the child on a random frame.", "Empieza el hijo en un frame aleatorio.", "Начинать дочернюю анимацию со случайного кадра.", "从随机帧开始子动画。", "자식을 무작위 프레임에서 시작합니다.") \
   X(TOOLTIP_DEPTH, "Draw this layer this many layers above (or, negative, below) its place in the timeline, for this frame.\n(Editor only; the game always uses the timeline's order.)", "Dibuja esta capa tantas capas por encima (o, en negativo, por debajo) de su lugar en la línea de tiempo, durante este Frame.\n(Solo en el editor; el juego siempre usa el orden de la línea de tiempo.)", "Рисовать этот слой на столько слоёв выше (или, если отрицательно, ниже) его места на таймлайне в этом кадре.\n(Только в редакторе; игра всегда использует порядок таймлайна.)", "在此帧中，将此图层绘制在其时间轴位置之上(负数则之下)若干层。\n(仅限编辑器；游戏始终使用时间轴顺序。)", "이 프레임 동안 이 레이어를 타임라인 위치보다 지정한 수만큼 위(음수면 아래)에 그립니다.\n(편집기 전용이며, 게임은 항상 타임라인 순서를 사용합니다.)") \
   X(TOOLTIP_DETACHABLE_WINDOWS, "Windows can be dragged outside the main window into their own windows.\n(Not available on Wayland.)", "Las ventanas pueden arrastrarse fuera de la ventana principal a sus propias ventanas.\n(No disponible en Wayland.)", "Окна можно вытаскивать за пределы главного окна в отдельные окна.\n(Недоступно в Wayland.)", "可以将窗口拖出主窗口，成为独立的窗口。\n(Wayland 下不可用。)", "창을 메인 창 밖으로 끌어내 별도의 창으로 만들 수 있습니다.\n(Wayland에서는 사용할 수 없습니다.)") \
   X(TOOLTIP_DOCUMENT_EXTENDED_FORMAT, "Save this document in the extended Anm2Ed format alone, instead of as a Rebirth document with the editor's copy inside.\nThe extended format is NOT compatible with The Binding of Isaac: Rebirth!", "Guarda este documento solo en el formato extendido de Anm2Ed, en vez de como documento de Rebirth con la copia del editor dentro.\n¡El formato extendido NO es compatible con The Binding of Isaac: Rebirth!", "Сохранять этот документ только в расширенном формате Anm2Ed, а не как документ Rebirth с копией редактора внутри.\nРасширенный формат НЕ совместим с The Binding of Isaac: Rebirth!", "仅以 Anm2Ed 扩展格式保存此文档，而不是保存为内含编辑器副本的 Rebirth 文档。\n扩展格式与 The Binding of Isaac: Rebirth 不兼容！", "이 문서를 편집기 사본이 들어 있는 Rebirth 문서 대신 Anm2Ed 확장 형식으로만 저장합니다.\n확장 형식은 The Binding of Isaac: Rebirth와 호환되지 않습니다!") \
   X(TOOLTIP_ISAAC_COMPATIBILITY_WARNING, "Before saving, list anything the game doesn't support and what will happen to it.", "Antes de guardar, muestra lo que el juego no soporta y lo que pasará con ello.", "Перед сохранением показывать всё, что игра не поддерживает, и что с этим произойдёт.", "保存前列出游戏不支持的内容及其处理方式。", "저장하기 전에 게임이 지원하지 않는 항목과 그 처리 방식을 알려줍니다.") \
+  X(TOOLTIP_LAYER_ANIMATION, "The animation this layer plays.", "La animación que reproduce esta capa.", "Анимация, которую проигрывает этот слой.", "此图层播放的动画。", "이 레이어가 재생하는 애니메이션.") \
+  X(TOOLTIP_LAYER_LIBRARY, "Where the animation comes from: this file, or a library.", "De dónde viene la animación: este archivo o una biblioteca.", "Откуда берётся анимация: этот файл или библиотека.", "动画来自哪里：此文件或库。", "애니메이션의 출처: 이 파일 또는 라이브러리.") \
+  X(TOOLTIP_LAYER_SOURCE, "Show a spritesheet, or play an animation (from this file or a library).\n(Animations are editor only; the game draws nothing for them.)", "Muestra un spritesheet o reproduce una animación (de este archivo o de una biblioteca).\n(Las animaciones son solo del editor; el juego no dibuja nada para ellas.)", "Показывать спрайт-лист или проигрывать анимацию (из этого файла или библиотеки).\n(Анимации только для редактора; игра для них ничего не рисует.)", "显示图集，或播放动画（来自此文件或库）。\n（动画仅限编辑器；游戏不会绘制它们。）", "스프라이트 시트를 표시하거나 애니메이션을 재생합니다(이 파일 또는 라이브러리에서).\n(애니메이션은 에디터 전용이며 게임에서는 아무것도 그리지 않습니다.)") \
+  X(TOOLTIP_LIBRARY_ADD, "Add an .anm2 whose animations layers can play.", "Añade un .anm2 cuyas animaciones pueden reproducir las capas.", "Добавить .anm2, анимации которого могут проигрывать слои.", "添加一个 .anm2，图层可以播放其中的动画。", "레이어가 애니메이션을 재생할 수 있는 .anm2를 추가합니다.") \
+  X(TOOLTIP_LIBRARY_INVALID, "This library could not be loaded. Check the file.", "Esta biblioteca no se pudo cargar. Revisa el archivo.", "Эту библиотеку не удалось загрузить. Проверьте файл.", "无法加载此库。请检查文件。", "이 라이브러리를 불러올 수 없습니다. 파일을 확인하세요.") \
+  X(TOOLTIP_LIBRARY_OPEN, "Open the library in its own tab to edit it; saving it updates every file that uses it.", "Abre la biblioteca en su propia pestaña para editarla; al guardarla se actualiza cada archivo que la usa.", "Открыть библиотеку в отдельной вкладке для редактирования; сохранение обновит все файлы, которые её используют.", "在单独的标签页中打开库进行编辑；保存后所有使用它的文件都会更新。", "라이브러리를 자체 탭에서 열어 편집합니다. 저장하면 이를 사용하는 모든 파일이 업데이트됩니다.") \
   X(TOOLTIP_MERGE_SPRITESHEETS, "Merge selected spritesheets into the first selected spritesheet.", "Combina los spritesheets seleccionados en el primer spritesheet seleccionado.", "Объединить выбранные спрайт-листы в первый выбранный спрайт-лист.", "将所选图集合并到第一个选中的图集中。", "선택된 스프라이트 시트를 첫 번째 선택된 스프라이트 시트로 병합합니다.") \
   X(TEXT_SELECT_SPRITESHEET, "Select a spritesheet first!", "¡Selecciona primero un spritesheet!", "Сначала выберите спрайт-лист!", "请先选择图集！", "먼저 스프라이트 시트를 선택하세요!") \
+  X(TEXT_THIS_FILE, "This File", "Este Archivo", "Этот файл", "此文件", "이 파일") \
   X(TEXT_TOOL_ANIMATION_PREVIEW, "This tool can only be used in Animation Preview!", "¡Esta herramienta solo se puede usar en Vista previa de animación!", "Этот инструмент можно использовать только в \"Предпросмотре анимации\"!", "该工具只能在“动画预放”中使用！", "이 도구는 애니메이션 프리뷰에서만 사용할 수 있습니다!") \
   X(TEXT_TOOL_SPRITESHEET_EDITOR, "This tool can only be used in Spritesheet Editor!", "¡Esta herramienta solo se puede usar en el Editor de spritesheets!", "Этот инструмент можно использовать только в \"Редакторе спрайт-листов\"!", "该工具只能在“图集编辑器”中使用！", "이 도구는 스프라이트 시트 편집기에서만 사용할 수 있습니다!") \
   X(TEXT_NEW_ANIMATION, "New Animation", "Nueva Animacion", "Новая анимация", "新动画", "새 애니메이션") \
@@ -563,6 +593,7 @@ namespace anm2ed
   X(TOAST_DESERIALIZE_FRAMES_FAILED, "Failed to deserialize frames:", "Falla al deserializar Frames:", "Не удалось десериализировать кадры: {0}", "反序列化帧失败: {0}", "프레임 역직렬화 실패: {0}") \
   X(TOAST_DESERIALIZE_FRAMES_NO_SELECTION, "Failed to deserialize frames: no selection.", "Falla al deserializar Frames: sin seleccion.", "Не удалось десериализировать кадры: ничего не выбрано.", "到所选帧", "프레임 역직렬화 실패. 선택한 것이 없습니다.") \
   X(TOAST_DESERIALIZE_LAYERS_FAILED, "Failed to deserialize layer(s):", "Falla al deserializar capas(s):", "Не удалось десериализировать слои: {0}", "反序列化动画层失败: {0}", "레이어 역직렬화 실패: {0}") \
+  X(TOAST_DESERIALIZE_LIBRARIES_FAILED, "Failed to deserialize libraries: {0}", "Falla al deserializar bibliotecas: {0}", "Не удалось десериализировать библиотеки: {0}", "反序列化库失败: {0}", "라이브러리 역직렬화 실패: {0}") \
   X(TOAST_DESERIALIZE_REGIONS_FAILED, "Failed to deserialize region(s): {0}", "Falla al deserializar región(es): {0}", "Не удалось десериализировать регионы: {0}", "反序列化区域失败: {0}", "영역 역직렬화 실패: {0}") \
   X(TOAST_DESERIALIZE_NULLS_FAILED, "Failed to deserialize null(s): {0}", "Falla al deserializar null(s): {0}", "Не удалось десериализировать нули: {0}", "反序列化Null失败: {0}", "Null 역직렬화 실패: {0}") \
   X(TOAST_DESERIALIZE_SPRITESHEETS_FAILED, "Failed to deserialize spritesheet(s): {0}", "Falla al deserializar spritesheet(s): {0}", "Не удалось десериализировать спрайт-листы: {0}", "反序列化图集失败: {0}", "스프라이트 시트 역직렬화 실패: {0}") \
@@ -578,6 +609,7 @@ namespace anm2ed
   X(TOAST_ADD_SPRITESHEET_FAILED, "Failed to add spritesheet! Open a document first.", "¡Error a añadir spritesheet! Abre un documento primero.", "Не удалось добавить спрайт-лист! Сначала откройте документ.", "无法添加图集！请先打开文档。", "스프라이트 시트를 추가할 수 없습니다! 먼저 문서를 여세요.") \
   X(TOAST_ADD_SOUND_FAILED, "Failed to add sound! Open a document first.", "¡Error al añadir sonido! Abre un documento primero.", "Не удалось добавить звук! Сначала откройте документ.", "无法添加声音！请先打开文档。", "사운드를 추가할 수 없습니다! 먼저 문서를 여세요.") \
   X(TOAST_INVALID_FFMPEG, "Unable to run FFmpeg. Make sure the executable exists, has the proper permissions, and is a valid FFmpeg executable.", "No se pudo ejecutar FFmpeg. Asegúrate de que el ejecutable exista, tenga los permisos adecuados y sea un FFmpeg válido.", "Не удалось запустить FFmpeg. Убедитесь, что исполняемый файл существует, имеет нужные права и является корректным исполняемым FFmpeg.", "无法运行 FFmpeg。请确保可执行文件存在，具有正确的权限，并且是有效的 FFmpeg 可执行文件。", "FFmpeg을 실행할 수 없습니다. 실행 파일이 존재하고 올바른 권한을 가지며 유효한 FFmpeg 실행 파일인지 확인하세요.") \
+  X(TOAST_LIBRARY_INITIALIZED, "Initialized library #{0}: {1}", "Biblioteca inicializada #{0}: {1}", "Библиотека #{0} инициализирована: {1}", "已初始化库 #{0}: {1}", "{0}번 라이브러리 초기화됨: {1}") \
   X(TOAST_NOT_SUPPORTED, "Operation not supported.", "Operacion no soportada.", "Операция не поддерживается.", "不支持此操作.", "해당 작업은 지원되지 않습니다.") \
   X(TOAST_OPEN_DOCUMENT, "Opened document: {0}", "Documento Abierto: {0}", "Открыт документ: {0}", "已打开文件: {0}", "{0} 파일 열기") \
   X(TOAST_OPEN_DOCUMENT_FAILED, "Failed to open document: {0} ({1})", "Error al abrir el documento: {0} ({1})", "Не удалось открыть документ: {0} ({1})", "打开文件失败: {0} ({1})", "{0} 파일을 여는데 실패했습니다. {1}") \
@@ -586,6 +618,7 @@ namespace anm2ed
   X(TOAST_REDO, "Redo: {0}", "Rehacer: {0}", "Повтор: {0}", "重做: {0}", "다시 실행: {0}") \
   X(ERROR_FILE_NOT_FOUND, "File not found!", "¡Archivo no encontrado!", "Файл не найден!", "找不到文件！", "파일을 찾을 수 없습니다!") \
   X(ERROR_FILE_PERMISSIONS, "File does not have write permissions!", "¡El archivo no tiene permisos de escritura!", "У файла нет прав на запись!", "文件没有写入权限！", "파일에 쓰기 권한이 없습니다!") \
+  X(TOAST_RELOAD_LIBRARY, "Reloaded library #{0}: {1}", "Se ha recargado biblioteca #{0}: {1}", "Библиотека #{0} перезагружена: {1}", "重新加载了库 #{0}: {1}", "{0}번 라이브러리 다시 불러옴: {1}") \
   X(TOAST_RELOAD_SPRITESHEET, "Reloaded spritesheet #{0}: {1}", "Se ha recargado spritesheet #{0}: {1}", "Спрайт-лист #{0} перезагружен: {1}", "重新加载了图集 #{0}: {1}", "{0}번 스프라이트 시트 다시 불러옴: {1}") \
   X(TOAST_RELOAD_SHADER, "Reloaded shader #{0}: {1}", "Reloaded shader #{0}: {1}", "Reloaded shader #{0}: {1}", "Reloaded shader #{0}: {1}", "Reloaded shader #{0}: {1}") \
   X(TOAST_MERGE_SPRITESHEETS, "Merged selected spritesheets.", "Spritesheets seleccionados combinados.", "Выбранные спрайт-листы объединены.", "已合并所选图集。", "선택된 스프라이트 시트를 병합했습니다.") \
@@ -730,6 +763,8 @@ namespace anm2ed
   X(TOOLTIP_POSITION, "Change the position of the frame.", "Cambia la posicion del Frame.", "Изменить позицию кадра.", "更改此帧的位置.", "프레임의 위치를 변경합니다.") \
   X(TOOLTIP_PREVIEW_ZOOM, "Change the zoom of the preview.", "Cambia el zoom de la vista previa.", "Изменить масштаб предпросмотра.", "更改预览视图的缩放.", "미리보기의 줌을 변경합니다.") \
   X(TOOLTIP_PREVIEW_TRANSPARENT, "Toggle the animation preview background being transparent.", "Alterna la transparencia del fondo de la vista previa de animacion.", "Переключить прозрачность фона предпросмотра анимации.", "切换动画预览背景是否透明.", "애니메이션 미리보기 배경을 투명하게 전환합니다.") \
+  X(TOOLTIP_RELOAD_LIBRARIES, "Reloads the selected libraries.", "Recarga las bibliotecas seleccionadas.", "Перезагружает выбранные библиотеки.", "重新加载所选库.", "선택한 라이브러리를 다시 불러옵니다.") \
+  X(TOOLTIP_REMOVE_UNUSED_LIBRARIES, "Remove libraries no layer plays from.", "Elimina las bibliotecas que ninguna capa usa.", "Удалить библиотеки, которые не использует ни один слой.", "删除没有图层使用的库。", "어떤 레이어도 사용하지 않는 라이브러리를 제거합니다.") \
   X(TOOLTIP_USE_ANIMATION_BOUNDS, "Render using the animation's bounds instead of the preview viewport.", "Render using the animation's bounds instead of the preview viewport.", "Render using the animation's bounds instead of the preview viewport.", "Render using the animation's bounds instead of the preview viewport.", "Render using the animation's bounds instead of the preview viewport.") \
   X(TOOLTIP_USE_ISOLATED_ANIMATION, "Render only animation layers with a transparent background and preview helpers hidden.", "Render only animation layers with a transparent background and preview helpers hidden.", "Render only animation layers with a transparent background and preview helpers hidden.", "Render only animation layers with a transparent background and preview helpers hidden.", "Render only animation layers with a transparent background and preview helpers hidden.") \
   X(TOOLTIP_RENDER_FPS, "Set the exported animation frame rate.", "Set the exported animation frame rate.", "Set the exported animation frame rate.", "Set the exported animation frame rate.", "Set the exported animation frame rate.") \

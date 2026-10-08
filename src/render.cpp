@@ -309,7 +309,7 @@ namespace anm2ed::render
 
   glm::vec4 animation_bounds_get(const Document& document, const model::Animation& animation, bool isRootTransform)
   {
-    auto bounds = model::animation_rect(document.model, animation, isRootTransform);
+    auto bounds = model::animation_rect(document.model, animation, isRootTransform, document.library_resolver_get());
     return bounds != glm::vec4(-1.0f) ? bounds : BOUNDS_DEFAULT;
   }
 
@@ -325,8 +325,9 @@ namespace anm2ed::render
     canvas.viewport_set();
     canvas.clear(glm::vec4(glm::vec3(background) * background.a, background.a));
     canvas.layers_render(
-        shader, document.model, animation, {.time = time, .isRootTransform = isRootTransform},
-        canvas.transform_get(zoom, pan), [&](int id) { return document.texture_get(id); },
+        shader, document.model, animation,
+        {.time = time, .isRootTransform = isRootTransform, .library_get = document.library_resolver_get()},
+        canvas.transform_get(zoom, pan), [&](const model::Draw& draw) { return document.draw_image_get(draw); },
         [&](int id) { return document.shader_get(id); });
     auto pixels = canvas.pixels_get();
     canvas.unbind();

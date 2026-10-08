@@ -209,7 +209,8 @@ namespace anm2ed::model
   }
 
   // Bounds of all visible layer frames over the animation's length, or -1 when nothing is drawn.
-  glm::vec4 animation_rect(const Model& model, const Animation& animation, bool isRootTransform)
+  glm::vec4 animation_rect(const Model& model, const Animation& animation, bool isRootTransform,
+                           const LibraryGet& library_get)
   {
     constexpr glm::ivec2 CORNERS[4] = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
     glm::vec2 min{std::numeric_limits<float>::infinity()};
@@ -217,7 +218,8 @@ namespace anm2ed::model
     bool isAny{};
 
     for (float time = 0.0f; time < (float)animation.frameNum; time += 1.0f)
-      for (const auto& draw : animation_draws_get(model, animation, {.time = time, .isRootTransform = isRootTransform}))
+      for (const auto& draw : animation_draws_get(
+               model, animation, {.time = time, .isRootTransform = isRootTransform, .library_get = library_get}))
       {
         if (draw.type != DrawType::LAYER || draw.frame.size == glm::vec2()) continue;
         auto transform = draw.parent * draw_quad_model_get(draw);

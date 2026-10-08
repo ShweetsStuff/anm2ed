@@ -286,26 +286,33 @@ namespace anm2ed::edit
       return remap[sourceId] = imported.id;
     };
 
-    for (auto sound : source.content.sounds)
+    // Sounds and libraries are matched by path.
+    auto paths_merge = [&](auto& items, const auto& sourceItems, ElementType type)
     {
-      auto sourceId = sound.id;
-      sound.path = path_remap(sound.path);
-      auto existing = isAppendAsNew ? content.sounds.end()
-                                    : std::ranges::find_if(content.sounds, [&](const Sound& other)
-                                                           { return other.path == sound.path; });
-      sound.id = existing != content.sounds.end() ? existing->id : item_next_id_get(content.sounds);
-      if (existing != content.sounds.end())
-        *existing = sound;
-      else
-        content.sounds.push_back(sound);
-      remaps[ElementType::SOUND_ELEMENT][sourceId] = sound.id;
-    }
+      for (auto item : sourceItems)
+      {
+        auto sourceId = item.id;
+        item.path = path_remap(item.path);
+        auto existing = isAppendAsNew
+                            ? items.end()
+                            : std::ranges::find_if(items, [&](const auto& other) { return other.path == item.path; });
+        item.id = existing != items.end() ? existing->id : item_next_id_get(items);
+        if (existing != items.end())
+          *existing = item;
+        else
+          items.push_back(item);
+        remaps[type][sourceId] = item.id;
+      }
+    };
+    paths_merge(content.sounds, source.content.sounds, ElementType::SOUND_ELEMENT);
+    paths_merge(content.libraries, source.content.libraries, ElementType::LIBRARY);
 
     for (auto layer : source.content.layers)
     {
       auto existing = isAppendAsNew ? nullptr : name_find(content.layers, layer.name);
       auto sourceId = layer.id;
       layer.spritesheetId = existing ? existing->spritesheetId : spritesheet_import(layer.spritesheetId);
+      layer.libraryId = id_remap(ElementType::LIBRARY, layer.libraryId);
       remaps[ElementType::LAYER_ELEMENT][sourceId] = named_merge(content.layers, layer);
     }
     for (auto null : source.content.nulls)

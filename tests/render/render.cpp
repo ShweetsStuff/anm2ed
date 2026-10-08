@@ -132,3 +132,28 @@ TEST_CASE("a recorded spritesheet holds every frame")
   CHECK(sheet.size == glm::ivec2(fixture.canvas->size) * glm::ivec2(layout.columns, layout.rows));
   golden_image_check("spin_sheet.png");
 }
+
+TEST_CASE("animation layers draw their child animations")
+{
+  RenderFixture fixture("nested.anm2");
+  if (!fixture.gl.is_valid())
+  {
+    MESSAGE("skipped: no OpenGL context");
+    return;
+  }
+  REQUIRE(fixture.document->is_valid());
+
+  // The library's red square at half size starts on its fifth frame, centered at (48, 0); this file's Inner holds its
+  // red square at (-40, 0).
+  auto pixels = fixture.frame_get(0.0f);
+  for (auto point : {glm::vec2(48.0f, 0.0f), glm::vec2(-40.0f, 0.0f)})
+  {
+    auto red = fixture.pixel_get(pixels, point);
+    CHECK(red.r > 200);
+    CHECK(red.g < 80);
+  }
+
+  REQUIRE(resource::Image::write_pixels_png(OUTPUT_DIR / "nested_frame_0.png", glm::ivec2(fixture.canvas->size),
+                                            pixels.data()));
+  golden_image_check("nested_frame_0.png");
+}

@@ -69,7 +69,7 @@ namespace anm2ed
                         float* = (float*)TEXTURE_VERTICES, glm::vec2 = {}, float = 0.0f) const;
     void rect_fill_render(resource::Shader&, const glm::mat4&, const glm::mat4&, glm::vec4 = glm::vec4(1.0f)) const;
     void layers_render(resource::Shader&, const model::Model&, const model::Animation&, const model::DrawOptions&,
-                       const glm::mat4&, const std::function<const resource::Image*(int)>&,
+                       const glm::mat4&, const std::function<const resource::Image*(const model::Draw&)>&,
                        const std::function<resource::Shader*(int)>& = {}) const;
     void dashed_render(resource::Shader&, const glm::mat4&, const glm::mat4&, glm::vec4, float, float, float, GLenum,
                        int) const;

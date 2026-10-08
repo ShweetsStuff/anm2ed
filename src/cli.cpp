@@ -162,8 +162,14 @@ options:
       std::println("  #{} {} ({}), {} regions", spritesheet.id, path::to_utf8(spritesheet.path), status,
                    spritesheet.regions.size());
     }
+    for (const auto& library : content.libraries)
+      std::println("library #{} {}", library.id, path::to_utf8(library.path));
     for (const auto& layer : content.layers)
-      std::println("layer #{} {} (spritesheet #{})", layer.id, layer.name, layer.spritesheetId);
+      if (layer.is_animation())
+        std::println("layer #{} {} (animation {}, library #{})", layer.id, layer.name, layer.animation,
+                     layer.libraryId);
+      else
+        std::println("layer #{} {} (spritesheet #{})", layer.id, layer.name, layer.spritesheetId);
     for (const auto& null : content.nulls)
       std::println("null #{} {}", null.id, null.name);
     for (const auto& event : content.events)
@@ -173,9 +179,9 @@ options:
 
     auto issues = model::isaac_issues_get(model);
     std::println("isaac issues: {} eased frames, {} group transforms, {} skewed frames, {} shader frames, {} depth "
-                 "frames, {} trigger sounds",
+                 "frames, {} trigger sounds, {} animation layers",
                  issues.easedFrames, issues.groupTransforms, issues.skewFrames, issues.shaderFrames, issues.depthFrames,
-                 issues.triggerSounds);
+                 issues.triggerSounds, issues.animationLayers);
     return 0;
   }
 

@@ -1,0 +1,52 @@
+<AnimatedActor>
+    <Info CreatedBy="fixture" CreatedOn="01/01/2026 12:00:00 PM" Fps="30" Version="2" ExtendedVersion="1"/>
+    <Content>
+        <Spritesheets>
+            <Spritesheet Id="0" Path="sheet.png"/>
+        </Spritesheets>
+        <Layers>
+            <Layer Id="0" Name="spin" SpritesheetId="0" Library="0" Animation="Spin"/>
+            <Layer Id="1" Name="inner" SpritesheetId="0" Animation="Inner"/>
+            <Layer Id="2" Name="red" SpritesheetId="0"/>
+            <Layer Id="3" Name="cycle" SpritesheetId="0" Animation="Nested"/>
+        </Layers>
+        <Nulls/>
+        <Events/>
+        <Libraries>
+            <Library Id="0" Path="spin.anm2"/>
+        </Libraries>
+    </Content>
+    <Animations DefaultAnimation="Nested">
+        <Animation Name="Nested" FrameNum="8" Loop="true">
+            <RootAnimation>
+                <Frame XPosition="0" YPosition="0" Delay="8" Visible="true" XScale="100" YScale="100" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/>
+            </RootAnimation>
+            <LayerAnimations>
+                <LayerAnimation LayerId="1" Visible="true">
+                    <Frame XPivot="0" YPivot="0" XCrop="0" YCrop="0" Width="0" Height="0" XPosition="-40" YPosition="0" Delay="8" Visible="true" XScale="100" YScale="100" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false" ChildMode="Hold"/>
+                </LayerAnimation>
+                <LayerAnimation LayerId="0" Visible="true">
+                    <Frame XPivot="0" YPivot="0" XCrop="0" YCrop="0" Width="0" Height="0" XPosition="40" YPosition="0" Delay="8" Visible="true" XScale="50" YScale="50" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false" ChildStart="4"/>
+                </LayerAnimation>
+                <LayerAnimation LayerId="3" Visible="true">
+                    <Frame XPivot="0" YPivot="0" XCrop="0" YCrop="0" Width="0" Height="0" XPosition="0" YPosition="0" Delay="8" Visible="true" XScale="100" YScale="100" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/>
+                </LayerAnimation>
+            </LayerAnimations>
+            <NullAnimations/>
+            <Triggers/>
+        </Animation>
+        <Animation Name="Inner" FrameNum="2" Loop="true">
+            <RootAnimation>
+                <Frame XPosition="0" YPosition="0" Delay="2" Visible="true" XScale="100" YScale="100" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/>
+            </RootAnimation>
+            <LayerAnimations>
+                <LayerAnimation LayerId="2" Visible="true">
+                    <Frame XPivot="8" YPivot="8" XCrop="0" YCrop="0" Width="16" Height="16" XPosition="0" YPosition="0" Delay="1" Visible="true" XScale="100" YScale="100" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/>
+                    <Frame XPivot="8" YPivot="8" XCrop="0" YCrop="0" Width="16" Height="16" XPosition="0" YPosition="10" Delay="1" Visible="true" XScale="100" YScale="100" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/>
+                </LayerAnimation>
+            </LayerAnimations>
+            <NullAnimations/>
+            <Triggers/>
+        </Animation>
+    </Animations>
+</AnimatedActor>

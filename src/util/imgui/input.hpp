@@ -31,4 +31,6 @@ namespace anm2ed::imgui
   types::edit_state::Type color_edit4_persistent(const char*, glm::vec4*, ImGuiColorEditFlags = 0);
   bool radio_button_icon(const char*, int*, int, ImTextureID, ImVec2, ImVec4 = ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
   bool combo_id_mapped(const std::string&, int*, const std::vector<int>&, const std::vector<std::string>&);
+  bool combo_string_mapped(const std::string&, std::string*, const std::vector<std::string>&,
+                           const std::vector<std::string>&);
 }

@@ -111,12 +111,14 @@ namespace anm2ed::imgui
     std::optional<vec4> rect{};
 
     if (animation)
-      rect = animation_rects_merge(rect, model::animation_rect(document.model, *animation, isRootTransform));
+      rect = animation_rects_merge(
+          rect, model::animation_rect(document.model, *animation, isRootTransform, document.library_resolver_get()));
 
     if (auto overlayDocument = overlay_animation_document_get(manager, document))
       if (auto overlayAnimation = overlayDocument->model.animation_get(document.overlayIndex))
         rect = animation_rects_merge(rect,
-                                     model::animation_rect(overlayDocument->model, *overlayAnimation, isRootTransform));
+                                     model::animation_rect(overlayDocument->model, *overlayAnimation, isRootTransform,
+                                                           overlayDocument->library_resolver_get()));
 
     return rect;
   }
@@ -296,7 +298,9 @@ namespace anm2ed::imgui
 
     auto fit_view = [&]()
     {
-      if (animation) set_to_rect(zoom, pan, model::animation_rect(model, *animation, isRootTransform));
+      if (animation)
+        set_to_rect(zoom, pan,
+                    model::animation_rect(model, *animation, isRootTransform, document.library_resolver_get()));
     };
 
     manager.isAbleToRecord = false;
@@ -677,7 +681,9 @@ namespace anm2ed::imgui
         auto isActiveDocument = &sampleDocument == &document;
         auto& sampleModel = sampleDocument.model;
         auto targetIcon = resources.icon_id_get(isAltIcons && !isIsolated ? icon::TARGET_ALT : icon::TARGET);
-        for (const auto& draw : model::animation_draws_get(sampleModel, sampleAnimation, drawOptions))
+        auto sampleOptions = drawOptions;
+        sampleOptions.library_get = sampleDocument.library_resolver_get();
+        for (const auto& draw : model::animation_draws_get(sampleModel, sampleAnimation, sampleOptions))
         {
           auto isOnion = draw.sample != -1;
           if (isOnion && isOnlySelected && !(isActiveDocument && is_draw_selected(draw))) continue;
@@ -709,8 +715,7 @@ namespace anm2ed::imgui
           }
           else if (draw.type == model::DrawType::LAYER)
           {
-            auto layer = model::item_get(sampleModel.content.layers, draw.id);
-            auto layerTexture = sampleDocument.texture_get(layer->spritesheetId);
+            auto layerTexture = sampleDocument.draw_image_get(draw);
             if (!layerTexture || !layerTexture->is_valid() || layerTexture->size.x <= 0 || layerTexture->size.y <= 0)
               continue;
             auto textureSize = vec2(layerTexture->size);
@@ -769,8 +774,10 @@ namespace anm2ed::imgui
             pivotPathsKey = key;
             pivotPaths.clear();
             for (int time = 0; time < animation->frameNum; ++time)
-              for (const auto& draw : model::animation_draws_get(
-                       model, *animation, {.time = (float)time, .isRootTransform = isRootTransform}))
+              for (const auto& draw : model::animation_draws_get(model, *animation,
+                                                                 {.time = (float)time,
+                                                                  .isRootTransform = isRootTransform,
+                                                                  .library_get = document.library_resolver_get()}))
               {
                 auto path = std::ranges::find_if(pivotPaths,
                                                  [&](const PivotPath& path)

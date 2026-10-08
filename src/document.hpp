@@ -11,6 +11,7 @@
 
 #include "asset_store.hpp"
 #include "edit/edit.hpp"
+#include "model/draw.hpp"
 #include "selection.hpp"
 #include "snapshots.hpp"
 #include "strings.hpp"
@@ -29,6 +30,14 @@ namespace anm2ed
   {
     std::vector<int> ids{};
     std::vector<std::string> labels{};
+  };
+
+  // A linked .anm2, loaded read-only: its document and its spritesheets' images.
+  struct LibraryData
+  {
+    model::Model model{};
+    std::map<int, resource::Image> images{};
+    std::filesystem::file_time_type writeTime{};
   };
 
   struct DocumentData
@@ -64,6 +73,9 @@ namespace anm2ed
     std::map<int, std::filesystem::path> shaderVertexPaths{};
     std::map<int, std::filesystem::path> shaderFragmentPaths{};
     std::map<int, resource::Shader> shaders{};
+    // Libraries by absolute path, and what each (document, library id) points at (nullptr is this document).
+    std::map<std::filesystem::path, LibraryData> libraries{};
+    std::map<std::pair<const model::Model*, int>, const LibraryData*> libraryLinks{};
     bool isAnimationPreviewSet{false};
     bool isSpritesheetEditorSet{false};
   };
@@ -110,6 +122,14 @@ namespace anm2ed
     const resource::AudioData* sound_get(int) const;
     void sound_set(int, resource::AudioData);
     resource::Shader* shader_get(int);
+    std::filesystem::path library_path_get(int) const;
+    const LibraryData* library_get(const model::Model&, int) const;
+    model::LibraryGet library_resolver_get() const;
+    std::vector<std::string> animation_names_get(int) const;
+    const resource::Image* draw_image_get(const model::Draw&) const;
+    void libraries_sync();
+    bool libraries_reload();
+    void library_reload(int);
     bool regions_trim(int, const std::set<int>&);
     bool spritesheet_pack(int, int);
     bool spritesheets_merge(const std::set<int>&, bool, bool, bool, Origin);
@@ -180,6 +200,7 @@ namespace anm2ed
 
     void spritesheets_add(const std::vector<std::filesystem::path>&);
     void sounds_add(const std::vector<std::filesystem::path>&);
+    void libraries_add(const std::vector<std::filesystem::path>&);
 
     bool autosave(std::string* = nullptr);
     std::filesystem::path autosave_path_get();

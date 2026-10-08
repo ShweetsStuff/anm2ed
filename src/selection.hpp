@@ -20,7 +20,8 @@ namespace anm2ed
     LAYERS,
     NULLS,
     EVENTS,
-    SOUNDS
+    SOUNDS,
+    LIBRARIES
   };
 
   // What is selected, by element uid, plus the focused animation/track/frame. uids follow elements through edits,

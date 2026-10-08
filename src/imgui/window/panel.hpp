@@ -64,7 +64,8 @@ namespace anm2ed::imgui
     PanelState& state;
   };
 
-  // How a list shows its keys; only `label_get` is required. With `image_get` the rows are cards.
+  // How a list shows its keys; only `label_get` is required. With `image_get` the rows are cards; `children_draw` draws
+  // under a key.
   struct ListRows
   {
     std::function<std::string(int)> label_get{};
@@ -76,6 +77,7 @@ namespace anm2ed::imgui
     std::function<void(int)> select{};
     std::function<void(int)> activate{};
     std::function<bool(int, int)> drag_drop_update{};
+    std::function<void(int)> children_draw{};
     int cardLines{};
     bool isFocusItalic{};
   };
@@ -147,6 +149,7 @@ namespace anm2ed::imgui
   void nulls_update(Panel&);
   void events_update(Panel&);
   void sounds_update(Panel&);
+  void libraries_update(Panel&);
   void spritesheets_update(Panel&, SpritesheetsPanel&);
   void regions_update(Panel&, RegionsPanel&);
   void frame_properties_update(Manager&, Settings&, FramePropertiesPanel&);
