@@ -41,6 +41,7 @@ namespace anm2ed::imgui
   constexpr auto NULL_RECT_COLOR = vec4(0.0f, 0.0f, 1.0f, 0.90f);
   constexpr auto SELECTED_LAYER_BORDER_COLOR = vec4(1.0f, 0.1059f, 0.5882f, 1.0f);
   constexpr auto TARGET_SIZE = vec2(32, 32);
+  constexpr auto PARENT_DIM_ALPHA = 0.65f; // how much a stepped-into child's parent fades
   constexpr auto POINT_SIZE = vec2(4, 4);
   constexpr auto TRIGGER_TEXT_COLOR_DARK = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
   constexpr auto TRIGGER_TEXT_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 0.5f);
@@ -657,23 +658,28 @@ namespace anm2ed::imgui
       };
       auto isOnlySelected = settings.onionskinIsOnlySelected;
 
-      // Draws an animation's draw list; onion-skin samples are tinted and faded, `alphaOffset` fades the overlay.
-      auto render = [&](Document& sampleDocument, const model::Animation& sampleAnimation, float alphaOffset)
+      // Draws an animation's draw list; onion-skin samples are tinted and faded, `alphaOffset` fades the overlay. A
+      // parent around a stepped-into child is drawn in the child's space (`scene`), its layers only, without the
+      // animation layer playing the child (`skipLayerId`).
+      auto render = [&](Document& sampleDocument, const model::Animation& sampleAnimation, float alphaOffset,
+                        const model::DrawOptions& options, const mat4& scene = mat4(1.0f), int skipLayerId = -1)
       {
-        auto isActiveDocument = &sampleDocument == &document;
+        auto isActiveDocument = &sampleDocument == &document && skipLayerId == -1;
+        auto isParent = skipLayerId != -1;
         auto& sampleModel = sampleDocument.model;
         auto targetIcon = resources.icon_id_get(isAltIcons && !isIsolated ? icon::TARGET_ALT : icon::TARGET);
-        auto sampleOptions = drawOptions;
+        auto sampleOptions = options;
         sampleOptions.library_get = sampleDocument.library_resolver_get();
         for (const auto& draw : model::animation_draws_get(sampleModel, sampleAnimation, sampleOptions))
         {
+          if (isParent && (draw.type != model::DrawType::LAYER || draw.id == skipLayerId)) continue;
           auto isOnion = draw.sample != -1;
           if (isOnion && isOnlySelected && !(isActiveDocument && is_draw_selected(draw))) continue;
           auto sampleColor = isOnion ? sampleColors[draw.sample] : vec3();
           auto sampleAlpha = isOnion ? sampleAlphas[draw.sample] : 0.0f;
           auto onionColor = vec4(sampleColor, 1.0f - sampleAlpha);
           auto& frame = draw.frame;
-          auto transform = baseTransform * draw.parent;
+          auto transform = baseTransform * scene * draw.parent;
           auto marker_model_get = [&](vec2 markerSize)
           {
             return math::quad_model_get(markerSize, frame.position, markerSize * 0.5f,
@@ -708,7 +714,8 @@ namespace anm2ed::imgui
             tint.a = std::max(0.0f, tint.a - (alphaOffset + sampleAlpha));
             auto customShader = sampleDocument.shader_get(frame.shaderId);
             layer_render(customShader ? *customShader : shaderTexture, resource::texture::id_get(*layerTexture),
-                         textureSize, baseTransform, draw, tint, frame.colorOffset + vec4(sampleColor, 0.0f));
+                         textureSize, baseTransform * scene, draw, tint, frame.colorOffset + vec4(sampleColor, 0.0f));
+            if (isParent) continue;
 
             auto color = isOnion                                          ? onionColor
                          : isActiveDocument && is_layer_selected(draw.id) ? SELECTED_LAYER_BORDER_COLOR
@@ -740,11 +747,30 @@ namespace anm2ed::imgui
         {
           if (auto overlayDocument = isIsolated ? nullptr : overlay_animation_document_get(manager, document))
             if (auto overlayAnimation = overlayDocument->model.animation_get(overlayIndex))
-              render(*overlayDocument, *overlayAnimation, 1.0f - math::percent_to_unit(overlayTransparency));
+              render(*overlayDocument, *overlayAnimation, 1.0f - math::percent_to_unit(overlayTransparency),
+                     drawOptions);
         };
 
+        // Editing a stepped-into child: its parent, dimmed and frozen where it was stepped in, around it.
+        if (auto& steps = document.childSteps;
+            !isIsolated && !steps.empty() && steps.back().childAnimationIndex == reference.animationIndex)
+        {
+          auto& step = steps.back();
+          auto parentIndex = manager.tab_index_get(step.tabId);
+          auto parentDocument = parentIndex == -1 ? nullptr : manager.get(parentIndex);
+          auto parentAnimation = parentDocument ? parentDocument->model.animation_get(step.animationIndex) : nullptr;
+          auto placement = parentAnimation
+                               ? model::layer_child_transform_get(parentDocument->model, *parentAnimation,
+                                                                  step.layer.itemID, step.frameTime, isRootTransform)
+                               : std::nullopt;
+          if (placement && glm::determinant(*placement) != 0.0f)
+            render(*parentDocument, *parentAnimation, PARENT_DIM_ALPHA,
+                   {.time = step.frameTime, .isRootTransform = isRootTransform}, glm::inverse(*placement),
+                   step.layer.itemID);
+        }
+
         if (overlayDrawOrder == overlay_draw_order::UNDER) overlay_render();
-        render(document, *animation, 0.0f);
+        render(document, *animation, 0.0f, drawOptions);
         if (overlayDrawOrder == overlay_draw_order::OVER) overlay_render();
 
         if (settings.onionskinIsEnabled && settings.onionskinIsPivotPath && !isIsolated)

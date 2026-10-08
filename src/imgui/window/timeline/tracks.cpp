@@ -269,10 +269,12 @@ namespace anm2ed::imgui
           }
         }
 
+        auto animationLayer = type == LAYER ? model::item_get(model.content.layers, id) : nullptr;
+        if (animationLayer && !animationLayer->is_animation()) animationLayer = nullptr;
         if (isItemButtonHovered)
         {
           if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-            item_base_properties_open(type, id);
+            animationLayer ? child_step_in(row) : item_base_properties_open(type, id);
           else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) &&
                    !ImGui::IsMouseDragPastThreshold(ImGuiMouseButton_Left))
             row_selection_set(row);
@@ -370,7 +372,23 @@ namespace anm2ed::imgui
         contentCursorPos.x += (float)row.depth * ImGui::GetTextLineHeightWithSpacing();
         ImGui::SetCursorPos(contentCursorPos);
 
+        // An animation layer's icon is a folder that shows (or hides) its child's tracks.
+        auto isExpanded = item && expandedLayerTracks.contains(item->uid);
+        if (animationLayer) icon = isExpanded ? icon::FOLDER_OPEN : icon::FOLDER;
         ImGui::Image(resources.icon_id_get(icon), icon_size_get());
+        auto mousePos = ImGui::GetIO().MousePos;
+        auto iconMin = ImGui::GetItemRectMin();
+        auto iconMax = ImGui::GetItemRectMax();
+        auto isIconHovered =
+            mousePos.x >= iconMin.x && mousePos.x < iconMax.x && mousePos.y >= iconMin.y && mousePos.y < iconMax.y;
+        if (animationLayer && isItemButtonHovered && isIconHovered && ImGui::IsMouseReleased(ImGuiMouseButton_Left) &&
+            !ImGui::IsMouseDragPastThreshold(ImGuiMouseButton_Left))
+        {
+          if (isExpanded)
+            expandedLayerTracks.erase(item->uid);
+          else
+            expandedLayerTracks.insert(item->uid);
+        }
         overlay_icon(resources.icon_id_get(icon), iconTintCurrent, false);
         ImGui::SameLine();
         if (isReferenced) ImGui::PushFont(resources.fonts[font::ITALICS].get(), font::SIZE);
@@ -546,7 +564,15 @@ namespace anm2ed::imgui
           item_child_row({.type = NONE}, index++);
           if (animation)
             for (const auto& row : timeline_item_rows_get())
+            {
               item_child_row(row, index++);
+              for (const auto& peek : peek_rows_get(row))
+              {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                peek_item_child(row, peek, index++);
+              }
+            }
 
           if (isHorizontalScroll && ImGui::GetCurrentWindow()->ScrollbarY)
           {

@@ -732,7 +732,15 @@ namespace anm2ed::imgui
             ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 2.0f);
 
             for (const auto& row : timeline_item_rows_get())
+            {
               frames_child_row(row);
+              for (const auto& peek : peek_rows_get(row))
+              {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                peek_frame_child(row, peek, index, childWidth);
+              }
+            }
 
             ImGui::PopStyleVar();
           }

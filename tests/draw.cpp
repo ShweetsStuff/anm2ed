@@ -189,3 +189,12 @@ TEST_CASE("flattening animation layers bakes their children into plain layers th
   CHECK(game.find("spin/red") != std::string::npos);
   CHECK(std::ranges::count_if(model_load(text).content.layers, &model::Layer::is_animation) == 3);
 }
+
+TEST_CASE("an animation layer's child sits where the layer's frame puts it")
+{
+  auto anm2 = model_load(file_load(TEST_DIR / "render" / "nested.anm2"));
+  auto placement = model::layer_child_transform_get(anm2, *anm2.animation_get(0), 0, 0.0f, true);
+  REQUIRE(placement);
+  CHECK(glm::vec2(*placement * glm::vec4(16.0f, 0.0f, 0.0f, 1.0f)) == glm::vec2(48.0f, 0.0f));
+  CHECK_FALSE(model::layer_child_transform_get(anm2, *anm2.animation_get(0), 99, 0.0f, true));
+}

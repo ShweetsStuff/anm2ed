@@ -20,6 +20,13 @@ namespace anm2ed::model
                                 frame.rotation, math::percent_to_unit(frame.skew));
   }
 
+  // Where an animation layer's frame puts its child: the frame's transform, with its pivot as the child's origin.
+  glm::mat4 frame_child_model_get(const Frame& frame)
+  {
+    return math::quad_model_get(glm::vec2(1.0f), frame.position, frame.pivot, math::percent_to_unit(frame.scale),
+                                frame.rotation, math::percent_to_unit(frame.skew));
+  }
+
   // How many canvas pixels one spritesheet pixel of a layer draw covers (along its longer axis).
   float draw_scale_get(const Draw& draw)
   {
@@ -140,6 +147,26 @@ namespace anm2ed::model
     return fires;
   }
 
+  // Where an animation layer track (`layerId`) puts its child at a time, in the animation's space.
+  std::optional<glm::mat4> layer_child_transform_get(const Model& model, const Animation& animation, int layerId,
+                                                     float time, bool isRootTransform)
+  {
+    std::optional<glm::mat4> transform{};
+    tracks_each(animation.layers,
+                [&](const Track& track, const TrackGroup* group)
+                {
+                  if (track.id != layerId || transform) return;
+                  glm::mat4 parent(1.0f);
+                  if (isRootTransform)
+                  {
+                    parent *= frame_parent_model_get(frame_generate(animation.root, time));
+                    if (group) parent *= frame_parent_model_get(frame_generate(group->root, time));
+                  }
+                  transform = parent * frame_child_model_get(frame_generate(track, time));
+                });
+    return transform;
+  }
+
   // `playing` holds the animations being drawn into one another, so an animation never draws itself.
   std::vector<Draw> animation_draws_get(const Model& model, const Animation& animation, const DrawOptions& options,
                                         std::vector<const Animation*>& playing)
@@ -164,9 +191,7 @@ namespace anm2ed::model
       auto [childModel, childAnimation] = child_get(model, layer, frame, options.library_get);
       if (!childAnimation || std::ranges::contains(playing, childAnimation)) return;
       playing.push_back(childAnimation);
-      auto transform = parent * math::quad_model_get(glm::vec2(1.0f), frame.position, frame.pivot,
-                                                     math::percent_to_unit(frame.scale), frame.rotation,
-                                                     math::percent_to_unit(frame.skew));
+      auto transform = parent * frame_child_model_get(frame);
       DrawOptions childOptions{.time = child_time_get(track, time, childAnimation->frameNum, layer.id),
                                .isRootTransform = true,
                                .library_get = options.library_get};

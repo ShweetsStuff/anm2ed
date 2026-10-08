@@ -7,6 +7,8 @@
 
 #include "file.hpp"
 #include "log.hpp"
+#include "model/draw.hpp"
+#include "model/frames.hpp"
 #include "path.hpp"
 #include "sdl.hpp"
 #include "strings.hpp"
@@ -256,6 +258,96 @@ namespace anm2ed
     selection_history_push(selected);
 
     if (auto document = get()) document->change();
+  }
+
+  int Manager::tab_index_get(std::uint64_t tabId) const
+  {
+    for (int i = 0; i < (int)documents.size(); ++i)
+      if (documents[i].tabId == tabId) return i;
+    return -1;
+  }
+
+  // The open document saved at `path`, or -1.
+  int Manager::path_index_get(const std::filesystem::path& path) const
+  {
+    for (int i = 0; i < (int)documents.size(); ++i)
+    {
+      std::error_code ec{};
+      if (std::filesystem::equivalent(documents[i].path, path, ec)) return i;
+    }
+    return -1;
+  }
+
+  // Switches to a document's tab.
+  void Manager::tab_select(int index)
+  {
+    pendingSelected = index;
+    set(index);
+  }
+
+  // Edits the child of an animation layer track: its animation in this tab, or in its library's tab (opened if need
+  // be), at the time the parent plays it now. The step is remembered, so the breadcrumb can lead back.
+  void Manager::child_step_in(int index, Reference layerTrack)
+  {
+    auto parent = get(index);
+    auto animation = parent ? parent->model.animation_get(layerTrack.animationIndex) : nullptr;
+    auto track = parent ? parent->model.track_get(layerTrack) : nullptr;
+    auto layer = parent ? model::item_get(parent->model.content.layers, layerTrack.itemID) : nullptr;
+    if (!animation || !track || !layer || !layer->is_animation()) return;
+    auto time = parent->frameTime > -1 && !parent->playback.isPlaying ? parent->frameTime : parent->playback.time;
+    auto [childModel, childAnimation] =
+        model::child_get(parent->model, *layer, model::frame_generate(*track, time), parent->library_resolver_get());
+    if (!childAnimation) return;
+
+    auto steps = parent->childSteps;
+    steps.push_back({.tabId = parent->tabId,
+                     .animationIndex = layerTrack.animationIndex,
+                     .frameTime = time,
+                     .layer = layerTrack,
+                     .animationName = animation->name,
+                     .layerName = layer->name});
+    auto childTime = model::child_time_get(*track, time, childAnimation->frameNum, layer->id);
+    auto childName = childAnimation->name;
+    parent->playback.isPlaying = false;
+    auto targetIndex = index;
+    if (childModel != &parent->model)
+    {
+      auto path = parent->library_path_get(layer->libraryId);
+      targetIndex = path_index_get(path);
+      if (targetIndex == -1)
+      {
+        if (!open(path)) return;
+        targetIndex = (int)documents.size() - 1;
+      }
+    }
+
+    auto& target = documents[targetIndex];
+    for (auto [childIndex, candidate] : target.model.animations_get())
+      if (candidate->name == childName) steps.back().childAnimationIndex = childIndex;
+    target.childSteps = steps;
+    target.reference_set({steps.back().childAnimationIndex});
+    target.frame_references_clear();
+    target.frameTime = target.playback.time = childTime;
+    tab_select(targetIndex);
+  }
+
+  // Goes back to where step `stepIndex` of a document's breadcrumb was taken, keeping the steps before it.
+  void Manager::child_step_out(int index, int stepIndex)
+  {
+    auto document = get(index);
+    if (!document || stepIndex < 0 || stepIndex >= (int)document->childSteps.size()) return;
+    auto steps = document->childSteps;
+    auto step = steps[stepIndex];
+    auto targetIndex = tab_index_get(step.tabId);
+    if (targetIndex == -1) return;
+    if (targetIndex != index) document->childSteps.clear();
+
+    auto& target = documents[targetIndex];
+    target.childSteps.assign(steps.begin(), steps.begin() + stepIndex);
+    target.reference_set(step.layer);
+    target.frame_references_clear();
+    target.frameTime = target.playback.time = step.frameTime;
+    tab_select(targetIndex);
   }
 
   void Manager::item_properties_open(ElementType type, int id)

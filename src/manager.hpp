@@ -102,6 +102,11 @@ namespace anm2ed
     void set(int);
     void close(int);
     void item_properties_open(ElementType, int = -1);
+    int tab_index_get(std::uint64_t) const;
+    int path_index_get(const std::filesystem::path&) const;
+    void tab_select(int);
+    void child_step_in(int, Reference);
+    void child_step_out(int, int);
 
     void recent_files_load();
     void recent_files_write();

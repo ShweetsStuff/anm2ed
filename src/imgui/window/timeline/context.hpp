@@ -137,6 +137,14 @@ namespace anm2ed::imgui
                                                           resource::icon::EASE_IN, resource::icon::EASE_OUT,
                                                           resource::icon::EASE_IN_OUT};
 
+  // A read-only row under an expanded animation layer: one track of the child animation it plays.
+  struct PeekRow
+  {
+    const model::Model* source{};
+    const model::Animation* child{};
+    const model::Track* track{};
+  };
+
   Reference row_item_reference_get(const TimelineRow&);
   Reference row_selection_reference_get(const TimelineRow&);
 
@@ -254,6 +262,11 @@ namespace anm2ed::imgui
     void group_properties_open(const TimelineRow& row, const model::TrackGroup& group);
     void group_properties_update();
     void item_context_menu();
+    std::vector<PeekRow> peek_rows_get(const TimelineRow&);
+    void peek_item_child(const TimelineRow&, const PeekRow&, int);
+    void peek_frame_child(const TimelineRow&, const PeekRow&, int&, float);
+    void child_step_in(const TimelineRow&);
+    void breadcrumb_draw();
 
     TimelineContext(TimelineState&&, Manager&, Settings&, Resources&, Clipboard&);
     void update();

@@ -47,6 +47,7 @@ namespace anm2ed::imgui
     {
       isWindowHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows |
                                                ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
+      breadcrumb_draw();
       frames_child();
       items_child();
     }

@@ -40,13 +40,8 @@ namespace anm2ed::imgui
       {
         manager.command_push({.runManager = [path = document.library_path_get(id)](Manager& manager)
                               {
-                                for (int i = 0; i < (int)manager.documents.size(); ++i)
-                                {
-                                  std::error_code ec{};
-                                  if (!std::filesystem::equivalent(manager.documents[i].path, path, ec)) continue;
-                                  manager.pendingSelected = i;
-                                  return manager.set(i);
-                                }
+                                if (auto index = manager.path_index_get(path); index != -1)
+                                  return manager.tab_select(index);
                                 manager.open(path);
                               }});
       };

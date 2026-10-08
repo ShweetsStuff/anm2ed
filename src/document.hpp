@@ -41,6 +41,19 @@ namespace anm2ed
     std::filesystem::file_time_type writeTime{};
   };
 
+  // A step into an animation layer's child: the parent's tab, animation, time and layer track it was taken from,
+  // and the animation it led to (in this tab, or a library's).
+  struct ChildStep
+  {
+    std::uint64_t tabId{};
+    int animationIndex{-1};
+    float frameTime{};
+    Reference layer{};
+    std::string animationName{};
+    std::string layerName{};
+    int childAnimationIndex{-1};
+  };
+
   struct DocumentData
   {
     std::filesystem::path path{};
@@ -65,7 +78,9 @@ namespace anm2ed
     bool isValid{true};
     bool isOpen{true};
     bool isForceDirty{false};
-    bool isVectorKept{}; // asked this session to keep SVG spritesheets in a Rebirth document
+    bool isVectorKept{};
+    std::vector<ChildStep>
+        childSteps{}; // the steps that led to the animation being edited (the breadcrumb) // asked this session to keep SVG spritesheets in a Rebirth document
     std::unordered_map<int, uint64_t> spritesheetHashes{};
     std::unordered_map<int, uint64_t> spritesheetSaveHashes{};
     std::unordered_map<int, uint64_t> spritesheetAutosaveHashes{};

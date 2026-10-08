@@ -162,6 +162,7 @@ namespace anm2ed::imgui
     std::optional<Reference> frameSelectionAnchor{};
     int animationLengthEditIndex{-1};
     std::vector<TimelineRow> rowDragReferences{};
+    std::set<std::uint64_t> expandedLayerTracks{}; // animation layer tracks (by uid) showing their child's tracks
     glm::vec2 scroll{};
     ImGuiStyle style{};
   };
