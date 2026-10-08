@@ -148,6 +148,9 @@ namespace anm2ed::imgui
   void nulls_update(Panel&);
   void events_update(Panel&);
   void sounds_update(Panel&);
+  model::Layer item_edit_layer_get(const Manager::ItemEdit&);
+  model::Null item_edit_null_get(const Manager::ItemEdit&);
+  void layer_source_draw(Document&, Manager::ItemEdit&);
   void libraries_update(Panel&);
   void spritesheets_update(Panel&, SpritesheetsPanel&);
   void regions_update(Panel&, RegionsPanel&);

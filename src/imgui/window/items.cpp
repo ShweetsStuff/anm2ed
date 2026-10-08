@@ -22,6 +22,50 @@ namespace anm2ed::imgui
     ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_ID), std::make_format_args(id)).c_str());
   }
 
+  model::Layer item_edit_layer_get(const Manager::ItemEdit& edit)
+  {
+    return {.name = edit.name,
+            .spritesheetId = edit.spritesheetId,
+            .libraryId = edit.isAnimation ? edit.libraryId : -1,
+            .animation = edit.isAnimation ? edit.animation : std::string{}};
+  }
+
+  model::Null item_edit_null_get(const Manager::ItemEdit& edit)
+  {
+    return {.name = edit.name, .isShowRect = edit.isShowRect};
+  }
+
+  // A layer's source: a spritesheet, or an animation of this file ("Self") or a library.
+  void layer_source_draw(Document& document, Manager::ItemEdit& layer)
+  {
+    ImGui::PushID("##Source");
+    for (auto [label, isAnimation] : {std::pair{LABEL_SPRITESHEET, false}, std::pair{LABEL_ANIMATION, true}})
+    {
+      if (isAnimation) ImGui::SameLine();
+      if (ImGui::RadioButton(localize.get(label), layer.isAnimation == isAnimation)) layer.isAnimation = isAnimation;
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_SOURCE));
+    }
+    ImGui::PopID();
+    ImGui::Separator();
+
+    if (!layer.isAnimation)
+    {
+      auto spritesheets = document.choices_get(SelectionKind::SPRITESHEETS);
+      combo_id_mapped(localize.get(LABEL_SPRITESHEET), &layer.spritesheetId, spritesheets.ids, spritesheets.labels);
+      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_SPRITESHEET));
+      return;
+    }
+
+    auto libraries = document.choices_get(SelectionKind::LIBRARIES);
+    libraries.labels.front() = localize.get(TEXT_SELF);
+    combo_id_mapped(localize.get(LABEL_LIBRARY), &layer.libraryId, libraries.ids, libraries.labels);
+    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_LIBRARY));
+    auto names = document.animation_names_get(layer.libraryId);
+    if (layer.animation.empty() && !names.empty()) layer.animation = names.front();
+    combo_string_mapped(localize.get(LABEL_ANIMATION), &layer.animation, names, names);
+    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_ANIMATION));
+  }
+
   // The layer/null properties popup: adds a new item (id -1) or replaces the edited one, then selects it.
   template <class Item, class ItemsGet, class FieldsDraw>
   void item_properties_update(Panel& panel, int popupIndex, int rows, SelectionKind kind, StringType nameTooltip,
@@ -47,15 +91,11 @@ namespace anm2ed::imgui
       auto result = popup_buttons_draw(manager, localize.get(edit.id == -1 ? BASIC_ADD : BASIC_CONFIRM));
       if (result == PopupButton::CONFIRM)
       {
-        Item item{.name = edit.name};
-        if constexpr (requires { item.spritesheetId; }) item.spritesheetId = edit.spritesheetId;
-        if constexpr (requires { item.isShowRect; }) item.isShowRect = edit.isShowRect;
-        if constexpr (requires { item.animation; })
-          if (edit.isAnimation)
-          {
-            item.libraryId = edit.libraryId;
-            item.animation = edit.animation;
-          }
+        Item item{};
+        if constexpr (std::is_same_v<Item, model::Layer>)
+          item = item_edit_layer_get(edit);
+        else
+          item = item_edit_null_get(edit);
         auto& state = panel.state;
         command_push(panel,
                      [&state, item, id = edit.id, kind, addEdit, propertiesEdit, items_get](Document& document)
@@ -142,41 +182,13 @@ namespace anm2ed::imgui
     }
     ImGui::End();
 
-    item_properties_update<model::Layer>(
-        panel, 0, LAYER_PROPERTIES_ROWS, SelectionKind::LAYERS, TOOLTIP_ITEM_NAME, EDIT_ADD_LAYER,
-        EDIT_SET_LAYER_PROPERTIES, layers_get,
-        [&](Manager::ItemEdit& layer)
-        {
-          ImGui::SeparatorText(localize.get(LABEL_LAYER_SOURCE));
-          ImGui::PushID("##Source");
-          for (auto [label, isAnimation] : {std::pair{LABEL_SPRITESHEET, false}, std::pair{LABEL_ANIMATION, true}})
-          {
-            if (isAnimation) ImGui::SameLine();
-            if (ImGui::RadioButton(localize.get(label), layer.isAnimation == isAnimation))
-              layer.isAnimation = isAnimation;
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_SOURCE));
-          }
-          ImGui::PopID();
-          ImGui::Separator();
-
-          if (!layer.isAnimation)
-          {
-            auto spritesheets = document.choices_get(SelectionKind::SPRITESHEETS);
-            combo_id_mapped(localize.get(LABEL_SPRITESHEET), &layer.spritesheetId, spritesheets.ids,
-                            spritesheets.labels);
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_SPRITESHEET));
-            return;
-          }
-
-          auto libraries = document.choices_get(SelectionKind::LIBRARIES);
-          libraries.labels.front() = localize.get(TEXT_SELF);
-          combo_id_mapped(localize.get(LABEL_LIBRARY), &layer.libraryId, libraries.ids, libraries.labels);
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_LIBRARY));
-          auto names = document.animation_names_get(layer.libraryId);
-          if (layer.animation.empty() && !names.empty()) layer.animation = names.front();
-          combo_string_mapped(localize.get(LABEL_ANIMATION), &layer.animation, names, names);
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_ANIMATION));
-        });
+    item_properties_update<model::Layer>(panel, 0, LAYER_PROPERTIES_ROWS, SelectionKind::LAYERS, TOOLTIP_ITEM_NAME,
+                                         EDIT_ADD_LAYER, EDIT_SET_LAYER_PROPERTIES, layers_get,
+                                         [&](Manager::ItemEdit& layer)
+                                         {
+                                           ImGui::SeparatorText(localize.get(LABEL_LAYER_SOURCE));
+                                           layer_source_draw(document, layer);
+                                         });
   }
 
   void nulls_update(Panel& panel)

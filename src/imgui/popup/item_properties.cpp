@@ -2,6 +2,7 @@
 
 #include <format>
 
+#include "../window/panel.hpp"
 #include "util/imgui/input.hpp"
 #include "util/imgui/layout.hpp"
 #include "util/imgui/shortcut.hpp"
@@ -13,12 +14,7 @@ namespace anm2ed::imgui::popup
 {
   constexpr int EXISTING_ITEMS_ROWS = 6;
 
-  void ItemProperties::reset()
-  {
-    addItemName.clear();
-    addItemID = -1;
-    addItemSpritesheetID = {};
-  }
+  void ItemProperties::reset() { edit = {}; }
 
   void ItemProperties::open()
   {
@@ -114,18 +110,13 @@ namespace anm2ed::imgui::popup
         {
           ImGui::SeparatorText(localize.get(LABEL_OPTIONS));
 
-          input_text_string(localize.get(BASIC_NAME), &addItemName);
+          input_text_string(localize.get(BASIC_NAME), &edit.name);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ITEM_NAME));
           if (type == LAYER)
-          {
-            auto spritesheets = document.choices_get(SelectionKind::SPRITESHEETS);
-            combo_id_mapped(localize.get(LABEL_SPRITESHEET), &addItemSpritesheetID, spritesheets.ids,
-                            spritesheets.labels);
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_SPRITESHEET));
-          }
+            layer_source_draw(document, edit);
           else if (type == NULL_)
           {
-            ImGui::Checkbox(localize.get(LABEL_RECT), &addItemIsShowRect);
+            ImGui::Checkbox(localize.get(LABEL_RECT), &edit.isShowRect);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_NULL_RECT));
           }
         }
@@ -137,11 +128,11 @@ namespace anm2ed::imgui::popup
                                 ImVec2(0, ImGui::GetFrameHeightWithSpacing() * EXISTING_ITEMS_ROWS)))
           {
             auto unusedItems = unused_items_get(type);
-            if (addItemID != -1 && !unusedItems.contains(addItemID)) addItemID = -1;
+            if (edit.id != -1 && !unusedItems.contains(edit.id)) edit.id = -1;
 
             for (auto id : unusedItems)
             {
-              auto isSelected = addItemID == id;
+              auto isSelected = edit.id == id;
 
               ImGui::PushID(id);
 
@@ -153,8 +144,7 @@ namespace anm2ed::imgui::popup
                                             std::make_format_args(id, layer->name, layer->spritesheetId));
                   if (ImGui::Selectable(label.c_str(), isSelected))
                   {
-                    addItemID = id;
-                    addItemSpritesheetID = layer->spritesheetId;
+                    edit.id = id;
                   }
                 }
               }
@@ -165,8 +155,7 @@ namespace anm2ed::imgui::popup
                   auto label = std::vformat(localize.get(FORMAT_NULL), std::make_format_args(id, null->name));
                   if (ImGui::Selectable(label.c_str(), isSelected))
                   {
-                    addItemID = id;
-                    addItemIsShowRect = null->isShowRect;
+                    edit.id = id;
                   }
                 }
               }
@@ -181,7 +170,7 @@ namespace anm2ed::imgui::popup
 
       auto widgetSize = widget_size_with_row_get(2);
 
-      ImGui::BeginDisabled(source == source::EXISTING && addItemID == -1);
+      ImGui::BeginDisabled(source == source::EXISTING && edit.id == -1);
       shortcut(manager.chords[SHORTCUT_CONFIRM]);
       if (ImGui::Button(localize.get(BASIC_ADD), widgetSize))
       {
@@ -189,10 +178,9 @@ namespace anm2ed::imgui::popup
         auto queuedDestination = destination;
         auto queuedAnimationIndex = reference.animationIndex;
         auto queuedInsertBeforeID = reference.itemType == LAYER && type == LAYER ? reference.itemID : -1;
-        auto queuedAddItemID = addItemID;
-        auto queuedAddItemName = addItemName;
-        auto queuedAddItemSpritesheetID = addItemSpritesheetID;
-        auto queuedAddItemIsShowRect = addItemIsShowRect;
+        auto queuedAddItemID = source == source::NEW ? -1 : edit.id;
+        auto queuedLayer = item_edit_layer_get(edit);
+        auto queuedNull = item_edit_null_get(edit);
 
         manager.command_push({manager.selected, [=](Manager&, Document& document)
                               {
@@ -202,8 +190,7 @@ namespace anm2ed::imgui::popup
                                                     {
                                                       addId = edit::item_add(
                                                           model, (ItemType)queuedType, queuedAnimationIndex,
-                                                          queuedAddItemID, queuedAddItemName,
-                                                          queuedAddItemSpritesheetID, queuedAddItemIsShowRect,
+                                                          queuedAddItemID, queuedLayer, queuedNull,
                                                           queuedInsertBeforeID, (destination::Type)queuedDestination);
                                                     });
 

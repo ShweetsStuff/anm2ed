@@ -159,26 +159,23 @@ namespace anm2ed::edit
   }
 
   // Adds a layer or null (or updates the one with the item's id) and gives it a track in one or every animation.
-  int item_add(Model& model, ItemType type, int animationIndex, int id, const std::string& name, int spritesheetId,
-               bool isShowRect, int insertBeforeId, types::destination::Type destination)
+  // Adds track `id` (a new item, from `layer` or `null`, at -1) to an animation or all of them.
+  int item_add(Model& model, ItemType type, int animationIndex, int id, Layer layer, Null null, int insertBeforeId,
+               types::destination::Type destination)
   {
     auto& content = model.content;
+    auto item_insert = [&](auto& items, auto item)
+    {
+      if (id == -1) id = item_next_id_get(items);
+      if (item_get(items, id)) return;
+      item.id = id;
+      items.push_back(item);
+    };
+    if (!item_get(content.spritesheets, layer.spritesheetId)) layer.spritesheetId = 0;
     if (type == ItemType::LAYER)
-    {
-      if (id == -1) id = item_next_id_get(content.layers);
-      auto layer = item_get(content.layers, id);
-      if (!layer) layer = &content.layers.emplace_back(Layer{.id = id});
-      if (!name.empty()) layer->name = name;
-      layer->spritesheetId = item_get(content.spritesheets, spritesheetId) ? spritesheetId : 0;
-    }
+      item_insert(content.layers, layer);
     else if (type == ItemType::NULL_)
-    {
-      if (id == -1) id = item_next_id_get(content.nulls);
-      auto null = item_get(content.nulls, id);
-      if (!null) null = &content.nulls.emplace_back(Null{.id = id});
-      if (!name.empty()) null->name = name;
-      null->isShowRect = isShowRect;
-    }
+      item_insert(content.nulls, null);
     else
       return -1;
 

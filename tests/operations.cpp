@@ -58,8 +58,9 @@ TEST_CASE("file_merge presets")
 TEST_CASE("item_add")
 {
   auto model = fixture_load("02_items.anm2");
-  CHECK(edit::item_add(model, ItemType::LAYER, 0, -1, "added", 1, false, 1, types::destination::ALL) == 2);
-  CHECK(edit::item_add(model, ItemType::NULL_, 1, -1, "thisOnly", 0, false, -1, types::destination::THIS) == 2);
+  CHECK(edit::item_add(model, ItemType::LAYER, 0, -1, {.name = "added", .spritesheetId = 1}, {}, 1,
+                       types::destination::ALL) == 2);
+  CHECK(edit::item_add(model, ItemType::NULL_, 1, -1, {}, {.name = "thisOnly"}, -1, types::destination::THIS) == 2);
   operation_check("item_add", model);
 }
 

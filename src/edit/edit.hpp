@@ -110,7 +110,7 @@ namespace anm2ed::edit
   Uids items_group(model::Model&, int, int, const std::set<int>&, const std::string&);
   Uids items_move(model::Model&, int, int, const std::set<int>&, const std::set<int>&, RowTarget, bool, bool);
   Uids animation_length_fit(model::Model&, int);
-  int item_add(model::Model&, ItemType, int, int, const std::string&, int, bool, int, types::destination::Type);
+  int item_add(model::Model&, ItemType, int, int, model::Layer, model::Null, int, types::destination::Type);
 
   std::set<int> animation_group_ids_get(const model::Model&);
   std::set<int> animation_group_indices_get(const model::Model&, int);
