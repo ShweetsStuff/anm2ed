@@ -129,6 +129,7 @@ namespace anm2ed
     model::LibraryGet library_resolver_get() const;
     std::vector<std::string> animation_names_get(int) const;
     const resource::Image* draw_image_get(const model::Draw&, float = 1.0f) const;
+    const resource::Image* vector_image_get(const resource::Image*, float) const;
     void libraries_sync();
     bool libraries_reload();
     void library_reload(int);

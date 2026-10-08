@@ -420,7 +420,10 @@ namespace anm2ed::imgui
         auto spritesheetTransform = transform * spritesheetModel;
 
         if (baseTexture && baseTexture->is_valid())
-          texture_render(shaderTexture, resource::texture::id_get(*baseTexture), spritesheetTransform);
+          texture_render(
+              shaderTexture,
+              resource::texture::id_get(*document.vector_image_get(baseTexture, math::percent_to_unit(zoom))),
+              spritesheetTransform);
 
         if (isGrid) grid_render(shaderGrid, zoom, pan, gridSize, gridOffset, gridColor);
 

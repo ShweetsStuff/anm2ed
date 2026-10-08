@@ -412,7 +412,7 @@ namespace anm2ed
     return names;
   }
 
-  // A layer draw's spritesheet image; a vector one is drawn again (cached) when `scale` canvas pixels show each pixel.
+  // A layer draw's spritesheet image, at `scale` (see vector_image_get).
   const resource::Image* Document::draw_image_get(const model::Draw& draw, float scale) const
   {
     const resource::Image* image{};
@@ -420,6 +420,12 @@ namespace anm2ed
     for (const auto& [path, library] : libraries)
       if (&library.model == draw.source)
         if (auto found = library.images.find(draw.spritesheetId); found != library.images.end()) image = &found->second;
+    return vector_image_get(image, scale);
+  }
+
+  // A vector image drawn again (cached) for when `scale` screen pixels show each of its pixels; others as they are.
+  const resource::Image* Document::vector_image_get(const resource::Image* image, float scale) const
+  {
     if (!image || !image->is_vector() || scale <= 1.0f) return image;
 
     auto level = std::min((int)std::ceil(std::log2(scale)), document::VECTOR_LEVEL_MAX);
