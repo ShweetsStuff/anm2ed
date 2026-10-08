@@ -8,16 +8,17 @@ Anm2Ed is a modern editor for *The Binding of Isaac: Rebirth*'s XML-based `.anm2
 This application was developed with the assistance of a large language model.
 
 ## Features
-- Full `.anm2` editing: spritesheets, regions, layers, nulls, events, sounds, shaders, animations, frames and triggers.
+- Full `.anm2` editing: spritesheets (PNG or SVG), regions, layers, nulls, events, sounds, shaders, animations, frames and triggers (several events each).
+- Animation layers: a layer can play another animation, from the same file or a linked library (`.anm2`), with per-keyframe loop/once/hold, start frame and restart. The timeline shows the child's tracks under the layer; double-click to edit the child in place, with a breadcrumb back out.
 - Dockable [Dear ImGui](https://github.com/ocornut/imgui) interface (windows can be detached into their own) with persistent layout, drag and drop, context menus and rebindable shortcuts.
 - Timeline: multi-select, cut/copy/paste (whole frames or single properties), duplicate, split, bake, drag to move/resize, and start/end markers to loop a range.
 - Groups for animations, layers and nulls, with group transforms baked for the game on save.
-- Frame properties for crop, size, position, pivot, scale, skew, rotation, tint, color offset, blur (Flash's blur filter), region, shader, visibility, interpolation (including easing) and flips; batch changes across selections.
-- Spritesheet editor with pan, move, crop, draw, erase and color picker tools; regions; packing, merging, trimming; automatic reload when files change on disk.
+- Frame properties for crop, size, position, pivot, scale, skew, rotation, depth, tint, color offset (with alpha), blur (Flash's blur filter), region, shader, visibility, interpolation (including easing) and flips; batch changes across selections.
+- Spritesheet editor with pan, move, crop, draw, erase and color picker tools; regions; packing, merging, trimming; spritesheets and libraries reload when their files change on disk.
 - Animation preview with grid, axes, pivots, borders, onionskin (with pivot paths), and another document's animation as an overlay.
 - Wizards: generate animations from a grid, generate regions, change all frame properties, merge animations and files.
 - Render to video, GIF, spritesheet or PNG sequence (FFmpeg), with trigger sounds.
-- Saves the game's format with the editor's own copy embedded (`SourceDocument`), so nothing is lost; warns before saving anything the game doesn't support.
+- Each document targets Rebirth or the extended format. Rebirth saves write the game's format with the editor's own copy embedded (`SourceDocument`), so nothing is lost; animation layers are flattened for the game, and anything else the game doesn't support is warned about first. Extended saves write the editor's document alone ([format](docs/extended_format.md)).
 - Undo/redo, autosave (spritesheet edits included) with crash restore, and overwrite warnings.
 
 ### Supported Languages
