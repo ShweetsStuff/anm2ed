@@ -5,6 +5,7 @@
 #include <tuple>
 
 #include "math.hpp"
+#include "model/frames.hpp"
 
 using namespace anm2ed::model;
 using namespace anm2ed::util;
@@ -122,7 +123,35 @@ namespace anm2ed::edit
               group.tracks.push_back(std::move(flat));
           entries.emplace_back(std::move(group));
         }
-      model.animation_edit(index)->layers = std::move(entries);
+      // The children's triggers join the animation's own, on the frames they fire (their events found by name).
+      auto triggers = source.triggers;
+      for (int time = 0; time < source.frameNum; ++time)
+      {
+        auto fires = animation_triggers_get(model, source, time, library_get);
+        auto isOwn = source.triggers.isVisible && frame_generate(source.triggers, (float)time).isVisible;
+        std::vector<int> eventIds{};
+        for (int i = isOwn ? 1 : 0; i < (int)fires.size(); ++i)
+          for (auto eventId : fires[i].trigger.eventIds)
+            if (auto event = item_get(fires[i].source->content.events, eventId))
+            {
+              auto existing = std::ranges::find(content.events, event->name, &Event::name);
+              eventIds.push_back(existing != content.events.end()
+                                     ? existing->id
+                                     : content.events.emplace_back(Event{.id = item_next_id_get(content.events),
+                                                                         .name = event->name})
+                                           .id);
+            }
+        if (eventIds.empty()) continue;
+        auto trigger = std::ranges::find(triggers.frames, time, &Frame::atFrame);
+        if (trigger == triggers.frames.end())
+          trigger = triggers.frames.insert(triggers.frames.end(), Frame{.atFrame = time});
+        trigger->eventIds.insert(trigger->eventIds.end(), eventIds.begin(), eventIds.end());
+      }
+      frames_sort_by_at_frame(triggers);
+
+      auto flattened = model.animation_edit(index);
+      flattened->layers = std::move(entries);
+      flattened->triggers = std::move(triggers);
     }
     std::erase_if(content.layers, [](const Layer& layer) { return layer.is_animation(); });
     return model;

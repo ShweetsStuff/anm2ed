@@ -188,6 +188,16 @@ TEST_CASE("flattening animation layers bakes their children into plain layers th
   CHECK(game.find(" Animation=\"") == std::string::npos);
   CHECK(game.find("spin/red") != std::string::npos);
   CHECK(std::ranges::count_if(model_load(text).content.layers, &model::Layer::is_animation) == 3);
+
+  // Children's triggers join the flattened animation's, their events found (or added) by name.
+  spin.content.events.push_back({.id = 0, .name = "spun"});
+  spin.animation_edit(0)->triggers.frames.push_back({.atFrame = 5, .eventIds = {0}});
+  flat = edit::animation_layers_flatten(anm2, library_get,
+                                        [](const model::Model&, const std::filesystem::path& path) { return path; });
+  auto& triggers = flat.animation_get(0)->triggers.frames;
+  REQUIRE(triggers.size() == 1);
+  CHECK(triggers.front().atFrame == 1);
+  CHECK(model::item_get(flat.content.events, triggers.front().eventIds.front())->name == "spun");
 }
 
 TEST_CASE("an animation layer's child sits where the layer's frame puts it")

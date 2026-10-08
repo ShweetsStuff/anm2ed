@@ -51,7 +51,7 @@ namespace anm2ed::model
   constexpr const char* CREATED_ON_FORMAT = "%m/%d/%Y %I:%M:%S %p";
   constexpr const char* SHADER_NAME_DEFAULT = "New Shader";
   constexpr std::size_t VALUE_BUFFER_SIZE = 64;
-  constexpr int EXTENDED_VERSION = 1;
+  constexpr int EXTENDED_VERSION = 2;
   constexpr int FLOAT_DIGITS = 8;
   constexpr int DOUBLE_DIGITS = 17;
   constexpr double FLOAT_WHOLE_MAX = 1e8;
