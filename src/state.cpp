@@ -91,7 +91,8 @@ namespace anm2ed
             }
             SDL_FlashWindow(window, SDL_FLASH_UNTIL_FOCUSED);
           }
-          else if (path::is_extension(droppedPath, "png"))
+          else if (path::is_extension(droppedPath, "png") ||
+                   path::is_extension(droppedPath, resource::image::SVG_EXTENSION))
           {
             spritesheetDropPaths.push_back(droppedPath);
           }

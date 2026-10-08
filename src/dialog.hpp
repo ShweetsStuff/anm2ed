@@ -20,6 +20,7 @@ namespace anm2ed
   X(NO_FILTER, {})                                                                                                     \
   X(ANM2, {"Anm2 file", "anm2;xml"})                                                                                   \
   X(PNG, {"PNG image", "png;PNG"})                                                                                     \
+  X(SPRITESHEET, {"PNG or SVG image", "png;PNG;svg;SVG"})                                                              \
   X(SHADER, {"Shader file", "fs;vs;FS;VS"})                                                                            \
   X(SOUND, {"WAV file;OGG file", "wav;ogg"})                                                                           \
   X(GIF, {"GIF image", "gif"})                                                                                         \
@@ -51,8 +52,8 @@ namespace anm2ed
   X(SOUND_OPEN, SOUND)                                                                                                 \
   X(LIBRARY_OPEN, ANM2)                                                                                                \
   X(SOUND_REPLACE, SOUND)                                                                                              \
-  X(SPRITESHEET_OPEN, PNG)                                                                                             \
-  X(SPRITESHEET_REPLACE, PNG)                                                                                          \
+  X(SPRITESHEET_OPEN, SPRITESHEET)                                                                                     \
+  X(SPRITESHEET_REPLACE, SPRITESHEET)                                                                                  \
   X(SPRITESHEET_PATH_SET, PNG)                                                                                         \
   X(SHADER_FRAGMENT_PATH_SET, SHADER)                                                                                   \
   X(SHADER_VERTEX_PATH_SET, SHADER)                                                                                     \
