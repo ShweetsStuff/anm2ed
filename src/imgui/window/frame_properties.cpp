@@ -270,8 +270,8 @@ namespace anm2ed::imgui
                        { frame.tint = tint; });
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TINT));
 
-            auto colorOffsetEdit = color_edit3_persistent(localize.get(BASIC_COLOR_OFFSET),
-                                                          frame ? &useFrame.colorOffset : &dummy_value<vec3>());
+            auto colorOffsetEdit = color_edit4_persistent(localize.get(BASIC_COLOR_OFFSET),
+                                                          frame ? &useFrame.colorOffset : &dummy_value<vec4>());
             frame_edit(colorOffsetEdit, EDIT_FRAME_COLOR_OFFSET,
                        [colorOffset = useFrame.colorOffset](Document&, model::Frame& frame, model::Track*,
                                                             const Reference&) { frame.colorOffset = colorOffset; });
@@ -412,7 +412,6 @@ namespace anm2ed::imgui
     dummy_value<int>() = 0;
     dummy_value<bool>() = 0;
     dummy_value<vec2>() = vec2();
-    dummy_value<vec3>() = vec3();
     dummy_value<vec4>() = vec4();
   }
 }

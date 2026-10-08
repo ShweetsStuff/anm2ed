@@ -39,7 +39,7 @@ namespace anm2ed::model
       "LayerId", "NullId", "SpritesheetId", "Fps", "Version", "FrameNum", "Delay", "AtFrame", "EventId", "RegionId",
       "ShaderId", "Depth", "SoundId", "GroupId", "Index", "Loop", "StartMarker", "EndMarker", "Visible", "ShowRect", "IsExpanded", "Enabled", "Rotation",
       "XPivot", "YPivot", "XCrop", "YCrop", "XPosition", "YPosition", "Width", "Height", "XScale", "YScale", "SkewX",
-      "SkewY", "ShearX", "ShearY", "RedTint", "GreenTint", "BlueTint", "AlphaTint", "RedOffset", "GreenOffset", "BlueOffset",
+      "SkewY", "ShearX", "ShearY", "RedTint", "GreenTint", "BlueTint", "AlphaTint", "RedOffset", "GreenOffset", "BlueOffset", "AlphaOffset",
       "Interpolated", "Origin", "BakeInterpolation", "BakeDelay", "BakeCount", "OriginalDelay", "Library", "Animation",
       "ChildAnimation", "ChildMode", "ChildStart", "Restart", "Blur"};
   // clang-format on
@@ -217,6 +217,7 @@ namespace anm2ed::model
       frame.tint[i] = color_get(element, TINT_ATTRIBUTES[i], frame.tint[i]);
     for (int i = 0; i < (int)std::size(OFFSET_ATTRIBUTES); ++i)
       frame.colorOffset[i] = color_get(element, OFFSET_ATTRIBUTES[i], frame.colorOffset[i]);
+    frame.colorOffset.a = color_get(element, "AlphaOffset", frame.colorOffset.a);
     frame.duration = int_get(element, "Delay", frame.duration);
     frame.isVisible = bool_get(element, "Visible", frame.isVisible);
     frame.interpolation = interpolation_read(element, "Interpolated");
@@ -1164,6 +1165,8 @@ namespace anm2ed::model
       sink.attribute(TINT_ATTRIBUTES[i], math::float_to_uint8(frame.tint[i]));
     for (int i = 0; i < (int)std::size(OFFSET_ATTRIBUTES); ++i)
       sink.attribute(OFFSET_ATTRIBUTES[i], math::float_to_uint8(frame.colorOffset[i]));
+    if (writer.is(SERIALIZE_EXTENSIONS) && math::float_to_uint8(frame.colorOffset.a) != 0)
+      sink.attribute("AlphaOffset", math::float_to_uint8(frame.colorOffset.a));
     sink.attribute("Rotation", frame.rotation);
     interpolation_add(sink, "Interpolated", frame.interpolation);
     if (writer.is(SERIALIZE_EXTENSIONS) && frame.shaderId != -1) sink.attribute("ShaderId", frame.shaderId);
@@ -1372,6 +1375,7 @@ namespace anm2ed::model
                                 issues.skewFrames += frame.skew != glm::vec2();
                                 issues.shaderFrames += frame.shaderId != -1;
                                 issues.depthFrames += track.type == ItemType::LAYER && frame.depth != 0;
+                                issues.alphaOffsetFrames += math::float_to_uint8(frame.colorOffset.a) != 0;
                                 issues.blurFrames += track.type == ItemType::LAYER && frame.blur != 0.0f;
                                 issues.triggerSounds +=
                                     track.type == ItemType::TRIGGER &&

@@ -191,6 +191,7 @@ namespace anm2ed
   X(colorOffsetR, colorOffset.r, false, true, changeIsColorOffsetR, changeColorOffset.r)                               \
   X(colorOffsetG, colorOffset.g, false, true, changeIsColorOffsetG, changeColorOffset.g)                               \
   X(colorOffsetB, colorOffset.b, false, true, changeIsColorOffsetB, changeColorOffset.b)                               \
+  X(colorOffsetA, colorOffset.a, false, true, changeIsColorOffsetA, changeColorOffset.a)                               \
   X(blur, blur, true, false, changeIsBlur, changeBlur)
 
   struct FrameChange

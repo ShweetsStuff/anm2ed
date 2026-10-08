@@ -725,7 +725,7 @@ namespace anm2ed::imgui
             tint.a = std::max(0.0f, tint.a - (alphaOffset + sampleAlpha));
             auto customShader = sampleDocument.shader_get(frame.shaderId);
             layer_render(customShader ? *customShader : shaderTexture, resource::texture::id_get(*layerTexture),
-                         textureSize, baseTransform, draw, tint, frame.colorOffset + sampleColor);
+                         textureSize, baseTransform, draw, tint, frame.colorOffset + vec4(sampleColor, 0.0f));
 
             auto color = isOnion                                          ? onionColor
                          : isActiveDocument && is_layer_selected(draw.id) ? SELECTED_LAYER_BORDER_COLOR

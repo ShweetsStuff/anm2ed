@@ -157,13 +157,13 @@ namespace anm2ed
     return result;
   }
 
-  void texture_uniforms_set(Shader& shader, mat4 transform, vec4 tint, vec3 colorOffset, vec2 textureSize,
+  void texture_uniforms_set(Shader& shader, mat4 transform, vec4 tint, vec4 colorOffset, vec2 textureSize,
                             float playbackTime)
   {
     if (shader.uniforms.empty())
     {
       glUniform1i(glGetUniformLocation(shader.id, shader::UNIFORM_TEXTURE), 0);
-      glUniform3fv(glGetUniformLocation(shader.id, shader::UNIFORM_COLOR_OFFSET), 1, value_ptr(colorOffset));
+      glUniform4fv(glGetUniformLocation(shader.id, shader::UNIFORM_COLOR_OFFSET), 1, value_ptr(colorOffset));
       glUniform4fv(glGetUniformLocation(shader.id, shader::UNIFORM_TINT), 1, value_ptr(tint));
       glUniformMatrix4fv(glGetUniformLocation(shader.id, shader::UNIFORM_TRANSFORM), 1, GL_FALSE, value_ptr(transform));
       return;
@@ -186,7 +186,7 @@ namespace anm2ed
           texture_uniform_set(uniform, tint);
           break;
         case shader::UNIFORM_BINDING_COLOR_OFFSET:
-          texture_uniform_set(uniform, vec4(colorOffset, 0.0f));
+          texture_uniform_set(uniform, colorOffset);
           break;
         case shader::UNIFORM_BINDING_TEXTURE_SIZE:
           texture_uniform_set(uniform, vec4(textureSize, 0.0f, 0.0f));
@@ -206,7 +206,7 @@ namespace anm2ed
     }
   }
 
-  void Canvas::texture_render(Shader& shader, GLuint texture, mat4 transform, vec4 tint, vec3 colorOffset,
+  void Canvas::texture_render(Shader& shader, GLuint texture, mat4 transform, vec4 tint, vec4 colorOffset,
                               float* vertices, vec2 textureSize, float playbackTime, TextureBlur blur) const
   {
     canvas_blend_premultiplied_set();
@@ -279,7 +279,7 @@ namespace anm2ed
   // A layer draw's crop of its spritesheet. A blurred one (Flash's BlurFilter: a box `blur` canvas pixels wide) grows by
   // the box's reach, in texels at the draw's scale, and averages its crop over it.
   void Canvas::layer_render(Shader& shader, GLuint texture, vec2 textureSize, const mat4& transform,
-                            const model::Draw& draw, vec4 tint, vec3 colorOffset) const
+                            const model::Draw& draw, vec4 tint, vec4 colorOffset) const
   {
     auto blurred = draw;
     auto& frame = blurred.frame;

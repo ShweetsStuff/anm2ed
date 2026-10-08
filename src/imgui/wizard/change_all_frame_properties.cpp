@@ -178,7 +178,8 @@ namespace anm2ed::imgui::wizard
          value_ptr(settings.changeTint),
          false},
         {BASIC_COLOR_OFFSET,
-         {&settings.changeIsColorOffsetR, &settings.changeIsColorOffsetG, &settings.changeIsColorOffsetB},
+         {&settings.changeIsColorOffsetR, &settings.changeIsColorOffsetG, &settings.changeIsColorOffsetB,
+          &settings.changeIsColorOffsetA},
          value_ptr(settings.changeColorOffset),
          false}};
 

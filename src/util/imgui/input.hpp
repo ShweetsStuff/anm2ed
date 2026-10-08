@@ -27,7 +27,6 @@ namespace anm2ed::imgui
                                                 const char* = "%.3f", ImGuiSliderFlags = 0);
   types::edit_state::Type drag_float2_persistent(const char*, glm::vec2*, float = DRAG_SPEED, float = {}, float = {},
                                                  const char* = "%.3f", ImGuiSliderFlags = 0);
-  types::edit_state::Type color_edit3_persistent(const char*, glm::vec3*, ImGuiColorEditFlags = 0);
   types::edit_state::Type color_edit4_persistent(const char*, glm::vec4*, ImGuiColorEditFlags = 0);
   bool radio_button_icon(const char*, int*, int, ImTextureID, ImVec2, ImVec4 = ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
   bool combo_id_mapped(const std::string&, int*, const std::vector<int>&, const std::vector<std::string>&);

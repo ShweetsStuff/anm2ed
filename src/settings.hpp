@@ -128,7 +128,7 @@ namespace anm2ed
   X(CHANGE_IS_CHILD_START_RANDOM, changeIsChildStartRandom, STRING_UNDEFINED, BOOL, false)                             \
   X(CHANGE_IS_CHILD_RESTART, changeIsChildRestart, STRING_UNDEFINED, BOOL, false)                                      \
   X(CHANGE_TINT, changeTint, STRING_UNDEFINED, VEC4, {})                                                               \
-  X(CHANGE_COLOR_OFFSET, changeColorOffset, STRING_UNDEFINED, VEC3, {})                                                \
+  X(CHANGE_COLOR_OFFSET, changeColorOffset, STRING_UNDEFINED, VEC4, {})                                                \
   X(CHANGE_REGION_ID, changeRegionId, STRING_UNDEFINED, INT, -1)                                                       \
   X(CHANGE_IS_VISIBLE, changeIsVisible, STRING_UNDEFINED, BOOL, false)                                                 \
   X(CHANGE_INTERPOLATION, changeInterpolation, STRING_UNDEFINED, INT, 0)                                               \

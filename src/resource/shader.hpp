@@ -85,7 +85,7 @@ namespace anm2ed::resource::shader
   in vec2 i_uv_out;
   uniform sampler2D u_texture;
   uniform vec4 u_tint;
-  uniform vec3 u_color_offset;
+  uniform vec4 u_color_offset;
   uniform float u_blur;
   uniform vec4 u_region;
   uniform vec2 u_texel;
@@ -116,7 +116,8 @@ namespace anm2ed::resource::shader
           texColor = sum.a > 0.0 ? vec4(sum.rgb / sum.a, sum.a) : vec4(0.0);
       }
       texColor *= u_tint;
-      texColor.rgb += u_color_offset;
+      texColor.rgb += u_color_offset.rgb;
+      texColor.a = clamp(texColor.a + u_color_offset.a, 0.0, 1.0);
       texColor.rgb *= texColor.a;
       o_fragColor = texColor;
   }

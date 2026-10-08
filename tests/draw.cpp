@@ -115,3 +115,13 @@ TEST_CASE("an animation layer draws its child animation, from this file or a lib
   CHECK(model::isaac_issues_get(anm2).animationLayers == 3);
   CHECK(game_document_get(model::model_to_string(anm2)).find(" Animation=\"") == std::string::npos);
 }
+
+TEST_CASE("an alpha offset is kept by the editor's copy only")
+{
+  auto anm2 = model_load(file_load(TEST_DIR / "render" / "spin.anm2"));
+  anm2.frame_edit({0, LAYER, 0, 0})->colorOffset.a = -0.5f;
+  auto text = model::model_to_string(anm2);
+  CHECK(game_document_get(text).find("AlphaOffset") == std::string::npos);
+  CHECK(model_load(text).frame_get({0, LAYER, 0, 0})->colorOffset.a == doctest::Approx(-127.0f / 255.0f));
+  CHECK(model::isaac_issues_get(anm2).alphaOffsetFrames == 1);
+}

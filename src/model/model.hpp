@@ -48,7 +48,7 @@ namespace anm2ed::model
     glm::vec2 skew{};
     float rotation{};
     glm::vec4 tint{types::color::WHITE};
-    glm::vec3 colorOffset{};
+    glm::vec4 colorOffset{};
     int duration{1};
     bool isVisible{true};
     Interpolation interpolation{Interpolation::NONE};

@@ -144,36 +144,6 @@ namespace anm2ed::imgui
     return edit_state::NONE;
   }
 
-  edit_state::Type color_edit3_persistent(const char* label, vec3* value, ImGuiColorEditFlags flags)
-  {
-    static bool isEditing{};
-    static vec3 start{NAN};
-    auto persistent = value ? *value : vec4();
-
-    ImGui::ColorEdit3(label, value_ptr(persistent), flags);
-    if (!value) return edit_state::NONE;
-    if (ImGui::IsItemActivated() && persistent != start)
-    {
-      isEditing = true;
-      start = *value;
-      return edit_state::START;
-    }
-    else if (ImGui::IsItemDeactivatedAfterEdit())
-    {
-      isEditing = false;
-      *value = persistent;
-      start = vec4{NAN};
-      return edit_state::END;
-    }
-    else if (isEditing)
-    {
-      *value = persistent;
-      return edit_state::DURING;
-    }
-
-    return edit_state::NONE;
-  }
-
   edit_state::Type color_edit4_persistent(const char* label, vec4* value, ImGuiColorEditFlags flags)
   {
     static bool isEditing{};
