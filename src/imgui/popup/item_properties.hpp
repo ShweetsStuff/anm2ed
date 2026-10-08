@@ -11,7 +11,7 @@ namespace anm2ed::imgui::popup
 {
   class ItemProperties
   {
-    PopupHelper popup{PopupHelper(LABEL_TIMELINE_PROPERTIES_POPUP, POPUP_NORMAL)};
+    PopupHelper popup{PopupHelper(LABEL_TIMELINE_PROPERTIES_POPUP, POPUP_SMALL_NO_HEIGHT)};
     std::string addItemName{"New Item"};
     bool addItemIsShowRect{};
     int addItemID{-1};

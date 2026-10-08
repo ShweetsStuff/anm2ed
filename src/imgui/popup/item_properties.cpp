@@ -11,6 +11,8 @@ using namespace anm2ed::types;
 
 namespace anm2ed::imgui::popup
 {
+  constexpr int EXISTING_ITEMS_ROWS = 6;
+
   void ItemProperties::reset()
   {
     addItemName.clear();
@@ -50,10 +52,7 @@ namespace anm2ed::imgui::popup
       auto& destination = settings.timelineAddItemDestination;
       auto& source = settings.timelineAddItemSource;
 
-      auto contentHeight = ImGui::GetContentRegionAvail().y - ImGui::GetFrameHeightWithSpacing();
-      if (contentHeight < 1.0f) contentHeight = 1.0f;
-
-      if (ImGui::BeginChild("##Content", ImVec2(0, contentHeight), ImGuiChildFlags_Borders))
+      if (ImGui::BeginChild("##Content", ImVec2(), ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY))
       {
         auto spaced_pair = [](auto left, auto right)
         {
@@ -134,7 +133,8 @@ namespace anm2ed::imgui::popup
         {
           ImGui::SeparatorText(localize.get(type == LAYER ? LABEL_LAYER : LABEL_NULL));
 
-          if (ImGui::BeginChild("##Existing Items", ImVec2(0, 0)))
+          if (ImGui::BeginChild("##Existing Items",
+                                ImVec2(0, ImGui::GetFrameHeightWithSpacing() * EXISTING_ITEMS_ROWS)))
           {
             auto unusedItems = unused_items_get(type);
             if (addItemID != -1 && !unusedItems.contains(addItemID)) addItemID = -1;
