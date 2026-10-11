@@ -151,7 +151,8 @@ namespace anm2ed
     SERIALIZE_NESTED_GROUPS = 1 << 6,
     SERIALIZE_EXTENSIONS = 1 << 7,
     SERIALIZE_FLATTEN_SPECIAL_INTERPOLATED_FRAMES = 1 << 8,
-    SERIALIZE_EXTENDED_DOCUMENT = 1 << 9
+    SERIALIZE_EXTENDED_DOCUMENT = 1 << 9,
+    SERIALIZE_PURGE_DEFAULT_COLORS = 1 << 10
   };
 
   using Flags = int;
@@ -175,6 +176,7 @@ namespace anm2ed
   struct Options
   {
     bool isExtendedFormat{};
+    bool isPurgeDefaultColors{}; // leave out tints of 255 and color offsets of 0, which readers assume
     const model::Model* gameModel{};
   };
 

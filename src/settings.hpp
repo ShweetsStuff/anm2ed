@@ -66,6 +66,7 @@ namespace anm2ed
   X(FILE_IS_WARN_ISAAC, fileIsWarnIsaac, STRING_UNDEFINED, BOOL, true)                                                 \
   X(FILE_IS_AUTO_RELOAD_RESOURCES, fileIsAutoReloadResources, STRING_UNDEFINED, BOOL, true)                            \
   X(FILE_IS_EXTENDED_FORMAT, isFileExtendedFormat, STRING_UNDEFINED, BOOL, false)                                      \
+  X(FILE_IS_PURGE_DEFAULT_COLORS, fileIsPurgeDefaultColors, STRING_UNDEFINED, BOOL, true)                              \
   X(FILE_SNAPSHOT_STACK_SIZE, fileSnapshotStackSize, STRING_UNDEFINED, INT, 50)                                        \
                                                                                                                        \
   X(KEYBOARD_REPEAT_DELAY, keyboardRepeatDelay, STRING_UNDEFINED, FLOAT, 0.300f)                                       \

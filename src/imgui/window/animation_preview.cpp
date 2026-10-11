@@ -759,10 +759,9 @@ namespace anm2ed::imgui
           auto parentIndex = manager.tab_index_get(step.tabId);
           auto parentDocument = parentIndex == -1 ? nullptr : manager.get(parentIndex);
           auto parentAnimation = parentDocument ? parentDocument->model.animation_get(step.animationIndex) : nullptr;
-          auto placement = parentAnimation
-                               ? model::layer_child_transform_get(parentDocument->model, *parentAnimation,
-                                                                  step.layer.itemID, step.frameTime, isRootTransform)
-                               : std::nullopt;
+          auto placement = parentAnimation ? model::layer_child_transform_get(*parentAnimation, step.layer.itemID,
+                                                                              step.frameTime, isRootTransform)
+                                           : std::nullopt;
           if (placement && glm::determinant(*placement) != 0.0f)
             render(*parentDocument, *parentAnimation, PARENT_DIM_ALPHA,
                    {.time = step.frameTime, .isRootTransform = isRootTransform}, glm::inverse(*placement),

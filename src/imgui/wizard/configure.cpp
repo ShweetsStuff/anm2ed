@@ -89,6 +89,9 @@ namespace anm2ed::imgui::wizard
           ImGui::SeparatorText(localize.get(LABEL_SERIALIZATION));
           ImGui::Checkbox(localize.get(LABEL_EXTENDED_FORMAT), &temporary.isFileExtendedFormat);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_EXTENDED_FORMAT));
+          ImGui::SameLine();
+          ImGui::Checkbox(localize.get(LABEL_PURGE_DEFAULT_COLORS), &temporary.fileIsPurgeDefaultColors);
+          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_PURGE_DEFAULT_COLORS));
         }
         ImGui::EndChild();
 
@@ -204,7 +207,7 @@ namespace anm2ed::imgui::wizard
       SnapshotStack::max_size_set(settings.fileSnapshotStackSize);
       imgui::theme_set((theme::Type)settings.theme);
       localize.language = (Language)settings.language;
-      manager.chords_set(settings);
+      manager.settings_apply(settings);
 
       for (auto& document : manager.documents)
         document.snapshots.apply_limit();

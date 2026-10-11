@@ -210,11 +210,11 @@ namespace anm2ed
     return *this;
   }
 
-  bool Document::save(const std::filesystem::path& path, std::string* errorString)
+  bool Document::save(const std::filesystem::path& path, std::string* errorString, bool isPurgeDefaultColors)
   {
     auto absolutePath = !path.empty() ? path : this->path;
     auto absolutePathUtf8 = path::to_utf8(absolutePath);
-    if (file_write(absolutePath, errorString))
+    if (file_write(absolutePath, errorString, isPurgeDefaultColors))
     {
       this->path = absolutePath;
       toast_log(Level::INFO, TOAST_SAVE_DOCUMENT, absolutePathUtf8);
@@ -226,7 +226,7 @@ namespace anm2ed
   }
 
   // Writes the document; a Rebirth document's game copy has its animation layers flattened into plain layers.
-  bool Document::file_write(const std::filesystem::path& path, std::string* errorString)
+  bool Document::file_write(const std::filesystem::path& path, std::string* errorString, bool isPurgeDefaultColors)
   {
     std::optional<model::Model> game{};
     if (!model.isExtendedFormat && std::ranges::any_of(model.content.layers, &model::Layer::is_animation))
@@ -242,7 +242,9 @@ namespace anm2ed
             return spritesheetPath;
           });
     return model::model_save(model, path, errorString,
-                             {.isExtendedFormat = model.isExtendedFormat, .gameModel = game ? &*game : nullptr});
+                             {.isExtendedFormat = model.isExtendedFormat,
+                              .isPurgeDefaultColors = isPurgeDefaultColors,
+                              .gameModel = game ? &*game : nullptr});
   }
 
   std::filesystem::path Document::autosave_path_get()
@@ -260,11 +262,11 @@ namespace anm2ed
     return path.parent_path() / std::filesystem::path(std::u8string(fileName.begin(), fileName.end()));
   }
 
-  bool Document::autosave(std::string* errorString)
+  bool Document::autosave(std::string* errorString, bool isPurgeDefaultColors)
   {
     auto autosavePath = autosave_path_get();
     auto autosavePathUtf8 = path::to_utf8(autosavePath);
-    if (file_write(autosavePath, errorString))
+    if (file_write(autosavePath, errorString, isPurgeDefaultColors))
     {
       for (auto id : spritesheets_autosave_dirty_get())
       {

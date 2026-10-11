@@ -148,8 +148,8 @@ namespace anm2ed::model
   }
 
   // Where an animation layer track (`layerId`) puts its child at a time, in the animation's space.
-  std::optional<glm::mat4> layer_child_transform_get(const Model& model, const Animation& animation, int layerId,
-                                                     float time, bool isRootTransform)
+  std::optional<glm::mat4> layer_child_transform_get(const Animation& animation, int layerId, float time,
+                                                     bool isRootTransform)
   {
     std::optional<glm::mat4> transform{};
     tracks_each(animation.layers,

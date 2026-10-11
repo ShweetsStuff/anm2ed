@@ -52,6 +52,7 @@ namespace anm2ed
     bool isAbleToRecord{};
 
     ImGuiKeyChord chords[SHORTCUT_COUNT]{};
+    bool isPurgeDefaultColors{true};
 
     std::vector<std::filesystem::path> anm2DragDropPaths{};
     bool isAnm2DragDrop{};
@@ -119,6 +120,6 @@ namespace anm2ed
     void autosave_files_write();
     void autosave_files_clear(bool removeFiles = false);
 
-    void chords_set(Settings&);
+    void settings_apply(Settings&);
   };
 }

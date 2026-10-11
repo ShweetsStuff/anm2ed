@@ -43,3 +43,22 @@ TEST_CASE("a document's format is kept by what it saves")
   CHECK(reloaded.isExtendedFormat);
   CHECK(model::model_hash(reloaded) == model::model_hash(model));
 }
+
+TEST_CASE("purged default colors read back the same")
+{
+  for (const auto& fixture : fixtures_get())
+  {
+    INFO("fixture: ", fixture.string());
+    auto model = model_load(file_load(fixture));
+    for (auto isExtended : {false, true})
+    {
+      auto text = model::model_to_string(model, {.isExtendedFormat = isExtended, .isPurgeDefaultColors = true});
+      CHECK(text.find("Tint=\"255\"") == std::string::npos);
+      CHECK(text.find("Offset=\"0\"") == std::string::npos);
+      CHECK(text.size() <= model::model_to_string(model, {.isExtendedFormat = isExtended}).size());
+      auto reloaded = model_load(text);
+      reloaded.isExtendedFormat = model.isExtendedFormat;
+      CHECK(model::model_hash(reloaded) == model::model_hash(model));
+    }
+  }
+}

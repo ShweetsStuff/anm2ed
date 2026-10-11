@@ -173,7 +173,7 @@ namespace anm2ed
       savePath.replace_extension(".anm2");
       ensure_parent_directory_exists(savePath);
 
-      if (!document->save(savePath, &errorString)) return false;
+      if (!document->save(savePath, &errorString, isPurgeDefaultColors)) return false;
 
       const auto autosavePath = document->autosave_path_get();
       autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), previousAutosavePath),
@@ -196,7 +196,7 @@ namespace anm2ed
   {
     std::string errorString{};
     auto autosavePath = document.autosave_path_get();
-    if (!document.autosave(&errorString)) return;
+    if (!document.autosave(&errorString, isPurgeDefaultColors)) return;
 
     autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), autosavePath), autosaveFiles.end());
     autosaveFiles.insert(autosaveFiles.begin(), autosavePath);
@@ -469,8 +469,10 @@ namespace anm2ed
     autosave_files_write();
   }
 
-  void Manager::chords_set(Settings& settings)
+  // What the manager keeps from the settings: shortcuts, and how documents save.
+  void Manager::settings_apply(Settings& settings)
   {
+    isPurgeDefaultColors = settings.fileIsPurgeDefaultColors;
     for (int i = 0; i < SHORTCUT_COUNT; i++)
       chords[i] = imgui::string_to_chord(settings.*SHORTCUT_MEMBERS[i]);
   }

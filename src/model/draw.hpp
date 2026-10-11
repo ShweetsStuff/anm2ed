@@ -65,7 +65,7 @@ namespace anm2ed::model
   glm::mat4 frame_child_model_get(const Frame&);
   std::pair<const Model*, const Animation*> child_get(const Model&, const Layer&, const Frame&, const LibraryGet&);
   float child_time_get(const Track&, float, int, int);
-  std::optional<glm::mat4> layer_child_transform_get(const Model&, const Animation&, int, float, bool);
+  std::optional<glm::mat4> layer_child_transform_get(const Animation&, int, float, bool);
   float draw_scale_get(const Draw&);
   std::vector<Draw> animation_draws_get(const Model&, const Animation&, const DrawOptions&);
   std::vector<TriggerFire> animation_triggers_get(const Model&, const Animation&, int, const LibraryGet& = {});

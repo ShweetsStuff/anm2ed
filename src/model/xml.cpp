@@ -1183,10 +1183,13 @@ namespace anm2ed::model
       sink.attribute("SkewX", frame.skew.x);
       sink.attribute("SkewY", frame.skew.y);
     }
+    auto isPurged = writer.is(SERIALIZE_PURGE_DEFAULT_COLORS);
     for (int i = 0; i < (int)std::size(TINT_ATTRIBUTES); ++i)
-      sink.attribute(TINT_ATTRIBUTES[i], math::float_to_uint8(frame.tint[i]));
+      if (auto tint = math::float_to_uint8(frame.tint[i]); !isPurged || tint != math::float_to_uint8(1.0f))
+        sink.attribute(TINT_ATTRIBUTES[i], tint);
     for (int i = 0; i < (int)std::size(OFFSET_ATTRIBUTES); ++i)
-      sink.attribute(OFFSET_ATTRIBUTES[i], math::float_to_uint8(frame.colorOffset[i]));
+      if (auto offset = math::float_to_uint8(frame.colorOffset[i]); !isPurged || offset != 0)
+        sink.attribute(OFFSET_ATTRIBUTES[i], offset);
     if (writer.is(SERIALIZE_EXTENSIONS) && math::float_to_uint8(frame.colorOffset.a) != 0)
       sink.attribute("AlphaOffset", math::float_to_uint8(frame.colorOffset.a));
     sink.attribute("Rotation", frame.rotation);
@@ -1764,10 +1767,11 @@ namespace anm2ed::model
   // A save is the game's document with the editor's own copy embedded as SourceDocument (or just the editor's copy).
   void document_write(Sink& sink, const Model& model, Options options)
   {
+    Flags purge = options.isPurgeDefaultColors ? SERIALIZE_PURGE_DEFAULT_COLORS : 0;
     if (options.isExtendedFormat)
-      return model_write(sink, model, SERIALIZE_ANM2ED_DEFAULT | SERIALIZE_EXTENDED_DOCUMENT);
-    model_write(sink, options.gameModel ? *options.gameModel : model, SERIALIZE_ISAAC_DEFAULT,
-                [&]() { model_write(sink, model, SERIALIZE_ANM2ED_DEFAULT, {}, SOURCE_DOCUMENT_TAG); });
+      return model_write(sink, model, SERIALIZE_ANM2ED_DEFAULT | SERIALIZE_EXTENDED_DOCUMENT | purge);
+    model_write(sink, options.gameModel ? *options.gameModel : model, SERIALIZE_ISAAC_DEFAULT | purge,
+                [&]() { model_write(sink, model, SERIALIZE_ANM2ED_DEFAULT | purge, {}, SOURCE_DOCUMENT_TAG); });
   }
 
   // The text of whatever `write` sends to a sink.

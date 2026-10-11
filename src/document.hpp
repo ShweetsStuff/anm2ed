@@ -130,8 +130,8 @@ namespace anm2ed
     Document& operator=(const Document&) = delete;
     Document(Document&&) noexcept;
     Document& operator=(Document&&) noexcept;
-    bool save(const std::filesystem::path& = {}, std::string* = nullptr);
-    bool file_write(const std::filesystem::path&, std::string* = nullptr);
+    bool save(const std::filesystem::path& = {}, std::string* = nullptr, bool = true);
+    bool file_write(const std::filesystem::path&, std::string* = nullptr, bool = true);
     void assets_sync();
     void texture_change(int);
     bool texture_reload(int);
@@ -228,7 +228,7 @@ namespace anm2ed
     void sounds_add(const std::vector<std::filesystem::path>&);
     void libraries_add(const std::vector<std::filesystem::path>&);
 
-    bool autosave(std::string* = nullptr);
+    bool autosave(std::string* = nullptr, bool = true);
     std::filesystem::path autosave_path_get();
     std::filesystem::path path_from_autosave_get(const std::filesystem::path&);
 

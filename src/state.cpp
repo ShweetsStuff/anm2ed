@@ -31,7 +31,7 @@ namespace anm2ed
     for (const auto& argument : arguments)
       manager.open(path::from_utf8(argument));
 
-    manager.chords_set(settings);
+    manager.settings_apply(settings);
   }
 
   void State::tick(Settings& settings, float deltaSeconds) { dockspace.tick(manager, settings, deltaSeconds); }
