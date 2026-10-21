@@ -6,7 +6,6 @@
 #include "util/imgui/input.hpp"
 #include "util/imgui/layout.hpp"
 
-using namespace anm2ed::resource;
 using namespace anm2ed::types;
 
 namespace anm2ed::imgui
@@ -250,10 +249,9 @@ namespace anm2ed::imgui
     if (ImGui::Begin(localize.get(LABEL_EVENTS_WINDOW), &settings.windowIsEvents))
     {
       auto selection = document.selected_ids_get(SelectionKind::EVENTS);
-      auto is_built_in = [&](int id) { return model::is_event_built_in(model::item_get(events, id)->name); };
       Actions actions{};
       actions.add(
-          ACTION_RENAME, [=]() { return selection.size() == 1 && !is_built_in(*selection.begin()); },
+          ACTION_RENAME, [selection]() { return selection.size() == 1; },
           [&state, selection]() { state.newId = *selection.begin(); });
       actions.add(
           ACTION_ADD, {},
@@ -299,31 +297,10 @@ namespace anm2ed::imgui
                                                          });
                                    });
                     },
-                    .is_locked = is_built_in,
-                    .font_get = [&](int id) { return is_built_in(id) ? font::ITALICS : font::REGULAR; },
-                    .tooltip_draw =
-                        [&](int id)
-                    {
-                      item_tooltip_draw(resources, model::item_get(events, id)->name, id);
-                      if (is_built_in(id)) ImGui::TextUnformatted(localize.get(TOOLTIP_EVENT_BUILT_IN));
-                    }};
-      // Built-in events come first; an extended document lists the ones it doesn't have yet above them.
-      auto ids = item_ids_get(events);
-      std::ranges::stable_partition(ids, is_built_in);
+                    .tooltip_draw = [&](int id)
+                    { item_tooltip_draw(resources, model::item_get(events, id)->name, id); }};
       list_panel_draw(panel, actions, {{ACTION_ADD, ACTION_REMOVE_UNUSED}},
-                      [&]()
-                      {
-                        ImGui::PushFont(resources.fonts[font::ITALICS].get(), font::SIZE);
-                        for (auto name : model::EVENT_BUILT_INS)
-                          if (document.model.isExtendedFormat &&
-                              std::ranges::find(events, name, &model::Event::name) == events.end())
-                          {
-                            ImGui::TextDisabled("%s", std::string(name).c_str());
-                            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_EVENT_BUILT_IN));
-                          }
-                        ImGui::PopFont();
-                        content_list_draw(panel, SelectionKind::EVENTS, ids, rows);
-                      });
+                      [&]() { content_list_draw(panel, SelectionKind::EVENTS, item_ids_get(events), rows); });
     }
     ImGui::End();
   }

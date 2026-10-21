@@ -1124,21 +1124,12 @@ namespace anm2ed::model
     if (type == ItemType::TRIGGER)
     {
       sink.open(tag_get(ElementType::TRIGGER));
-      // The game's copy (one event per trigger) keeps the first event that isn't built in.
-      auto eventIds = frame.eventIds;
-      if (!writer.is(SERIALIZE_EXTENSIONS) && writer.model)
-        std::erase_if(eventIds,
-                      [&](int id)
-                      {
-                        auto event = item_get(writer.model->content.events, id);
-                        return event && is_event_built_in(event->name);
-                      });
-      if (!eventIds.empty()) sink.attribute("EventId", eventIds.front());
+      if (!frame.eventIds.empty()) sink.attribute("EventId", frame.eventIds.front());
       sink.attribute("AtFrame", frame.atFrame);
       extras_write(sink, frame.extras);
       Children children{sink, frame.extras};
       if (writer.is(SERIALIZE_EXTENSIONS))
-        for (auto eventId : eventIds | std::views::drop(1))
+        for (auto eventId : frame.eventIds | std::views::drop(1))
         {
           children.add();
           sink.open(tag_get(ElementType::EVENT_ELEMENT));
@@ -1403,14 +1394,7 @@ namespace anm2ed::model
               issues.depthFrames += track.type == ItemType::LAYER && frame.depth != 0;
               issues.alphaOffsetFrames += math::float_to_uint8(frame.colorOffset.a) != 0;
               issues.blurFrames += track.type == ItemType::LAYER && frame.blur != 0.0f;
-              // Built-in events are left out of the game's copy on purpose; only further custom ones are lost.
-              auto customEvents = std::ranges::count_if(frame.eventIds,
-                                                        [&](int id)
-                                                        {
-                                                          auto event = item_get(model.content.events, id);
-                                                          return !event || !is_event_built_in(event->name);
-                                                        });
-              issues.extraEvents += track.type == ItemType::TRIGGER ? std::max((int)customEvents - 1, 0) : 0;
+              issues.extraEvents += track.type == ItemType::TRIGGER ? std::max((int)frame.eventIds.size() - 1, 0) : 0;
               issues.triggerSounds += track.type == ItemType::TRIGGER &&
                                       std::ranges::any_of(frame.soundIds, [](int id) { return id != -1; });
             }

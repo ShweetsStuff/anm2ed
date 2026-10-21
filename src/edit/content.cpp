@@ -22,18 +22,6 @@ namespace anm2ed::edit
     }
   }
 
-  // An event id from a choice: a built-in event not yet in the file is added (or found by name) first.
-  int event_id_resolve(Model& model, int id)
-  {
-    auto index = EVENT_BUILT_IN_ID_FIRST - id;
-    if (index < 0 || index >= (int)std::size(EVENT_BUILT_INS)) return id;
-    auto& events = model.content.events;
-    std::string name(EVENT_BUILT_INS[index]);
-    auto event = std::ranges::find(events, name, &Event::name);
-    if (event != events.end()) return event->id;
-    return events.emplace_back(Event{.id = item_next_id_get(events), .name = name}).id;
-  }
-
   bool is_region_matched(const Region& region, const Frame& frame)
   {
     return glm::ivec2(region.crop) == glm::ivec2(frame.crop) && glm::ivec2(region.size) == glm::ivec2(frame.size) &&

@@ -137,7 +137,6 @@ namespace anm2ed::edit
   std::optional<resource::Image> spritesheet_pack(model::Model&, int, const resource::Image&, int);
   std::optional<resource::Image> spritesheets_merge(model::Model&, const std::set<int>&, const ImageGet&, bool, bool,
                                                     bool, Origin);
-  int event_id_resolve(model::Model&, int);
 
   // Where a spritesheet path of a document (this one, or a library) points, from this document.
   using SpritesheetPathGet = std::function<std::filesystem::path(const model::Model&, const std::filesystem::path&)>;

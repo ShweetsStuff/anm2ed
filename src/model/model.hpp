@@ -291,13 +291,6 @@ namespace anm2ed::model
     bool operator==(const Animations&) const = default;
   };
 
-  // Events the editor knows by name: shown locked in Events, and added to a file when a trigger first uses one. A
-  // choice of one not yet in the file has id EVENT_BUILT_IN_ID_FIRST - its index.
-  inline constexpr std::string_view EVENT_BUILT_INS[] = {"stop", "done"};
-  inline constexpr int EVENT_BUILT_IN_ID_FIRST = -2;
-
-  inline bool is_event_built_in(std::string_view name) { return std::ranges::contains(EVENT_BUILT_INS, name); }
-
   // Content item lookup by file id (layers, nulls, events, sounds, spritesheets, shaders, regions).
   template <class Items> auto item_get(Items& items, int id) -> decltype(&items.front())
   {

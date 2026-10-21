@@ -30,8 +30,8 @@ A Rebirth document is different: it saves the game's copy, followed by the exten
   </Layers>
   <Nulls>…</Nulls>
   <Events>
-    <Event Id="0" Name="stop"/>
-    <Event Id="1" Name="shoot"/>
+    <Event Id="0" Name="shoot"/>
+    <Event Id="1" Name="done"/>
   </Events>
   <Sounds>…</Sounds>
   <Libraries>
@@ -60,11 +60,6 @@ A Rebirth document is different: it saves the game's copy, followed by the exten
 - **Instance name:** the layer's `Name` is the name code should use for the instance.
 - **No self-nesting:** an animation never plays inside itself, even through other animations. That draw is skipped.
 
-**Events**
-- Event names are free, but `stop` and `done` are built in.
-- The editor offers them and locks them from renaming. It gives them no behaviour of its own; what they do is up to the runtime.
-- The game's copy of a Rebirth document leaves them out of triggers.
-
 ## Animations
 ```xml
 <Animations DefaultAnimation="Walk">
@@ -79,8 +74,8 @@ A Rebirth document is different: it saves the game's copy, followed by the exten
     </LayerAnimations>
     <NullAnimations>…</NullAnimations>
     <Triggers>
-      <Trigger EventId="1" AtFrame="12"><Sound Id="0"/></Trigger>
-      <Trigger EventId="0" AtFrame="23"><Event Id="2"/></Trigger>
+      <Trigger EventId="0" AtFrame="12"><Sound Id="0"/></Trigger>
+      <Trigger EventId="0" AtFrame="23"><Event Id="1"/></Trigger>
     </Triggers>
   </Animation>
 </Animations>
@@ -162,6 +157,6 @@ world = Root · GroupRoot · ( position + Flip · Rotate · Skew · |scale| · (
 A Rebirth document's game copy keeps only what the game reads:
 - **Animation layers** are flattened into plain layers, one per layer the child draws, named `layer/childLayer`. Their frames are baked one per frame and skew is dropped. A library's spritesheets are added with paths relative to the document.
 - **Children's trigger events** join the animation's triggers, matched by name.
-- **Triggers** keep one event each: the first that isn't built in.
+- **Triggers** keep one event each: the first.
 - **Dropped attributes:** markers, depth, skew, alpha offset, blur, shaders, extra events, trigger sounds and libraries.
 - **SVG spritesheets** are offered for conversion to PNGs before saving.

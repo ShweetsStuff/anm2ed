@@ -161,14 +161,10 @@ namespace anm2ed::imgui
                   ImGui::PushID(i);
                   if (combo_id_mapped("##Choice", &id, choices.ids, choices.labels) && frame)
                     frame_edit(edit_state::COMPLETE, setEdit,
-                               [index = (std::size_t)i, id, member](Document& document, model::Frame& frame,
-                                                                    model::Track*, const Reference&)
+                               [index = (std::size_t)i, id, member](Document&, model::Frame& frame, model::Track*,
+                                                                    const Reference&)
                                {
-                                 auto& ids = frame.*member;
-                                 if (index >= ids.size()) return;
-                                 ids[index] = member == &model::Frame::eventIds
-                                                  ? edit::event_id_resolve(document.model, id)
-                                                  : id;
+                                 if (index < (frame.*member).size()) (frame.*member)[index] = id;
                                });
                   ImGui::SetItemTooltip("%s", localize.get(tooltip));
                   ImGui::PopID();
