@@ -129,7 +129,7 @@ namespace anm2ed::imgui
         if (ImGui::MenuItem(localize.get(LABEL_SAVE_AS), settings.shortcutSaveAs.c_str(), false, document))
           dialog.file_save(Dialog::ANM2_SAVE);
         if (ImGui::MenuItem(localize.get(LABEL_EXPLORE_XML_LOCATION), nullptr, false, document))
-          dialog.file_explorer_open(document->directory_get());
+          dialog.file_explorer_open(document->path);
 
         // Which game this document is saved for: the editor's format alone, or Rebirth's (with the editor's copy).
         auto isExtendedFormat = document && document->model.isExtendedFormat;

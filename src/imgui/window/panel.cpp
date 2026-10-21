@@ -342,13 +342,15 @@ namespace anm2ed::imgui
     return path::backslash_replace(path::make_relative(path::backslash_handle(path), document.directory_get()));
   }
 
+  // Shows a resource's file selected in the file manager (or the nearest folder there is, when it's missing).
   void directory_open(Dialog& dialog, Document& document, const std::filesystem::path& path)
   {
     if (path.empty()) return;
     std::error_code ec{};
     auto absolutePath = std::filesystem::weakly_canonical(document.directory_get() / path, ec);
     if (ec) absolutePath = document.directory_get() / path;
-    auto target = std::filesystem::is_directory(absolutePath)                 ? absolutePath
+    auto target = std::filesystem::is_regular_file(absolutePath, ec) || std::filesystem::is_directory(absolutePath, ec)
+                      ? absolutePath
                   : std::filesystem::is_directory(absolutePath.parent_path()) ? absolutePath.parent_path()
                                                                               : document.directory_get();
     dialog.file_explorer_open(target);

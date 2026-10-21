@@ -9,6 +9,7 @@
   #include "toast.hpp"
 #endif
 
+#include <cctype>
 #include <cstdlib>
 #include <cstring>
 #include <format>
@@ -76,14 +77,54 @@ namespace anm2ed
     this->type = type;
   }
 
+#ifdef __unix__
+  // A string as one single-quoted shell word.
+  std::string shell_quote(std::string_view text)
+  {
+    std::string quoted = "'";
+    for (auto character : text)
+      quoted += character == '\'' ? std::string("'\\''") : std::string(1, character);
+    return quoted + "'";
+  }
+
+  // A file:// URI; everything but unreserved characters and slashes is percent-encoded (commas too, which dbus-send
+  // would otherwise take as array separators).
+  std::string file_uri_get(const std::filesystem::path& path)
+  {
+    std::string uri = "file://";
+    for (unsigned char character : path::to_utf8(path))
+      if (std::isalnum(character) || std::string_view("-._~/").contains((char)character))
+        uri += (char)character;
+      else
+        uri += std::format("%{:02X}", character);
+    return uri;
+  }
+#endif
+
+  // Shows a folder in the system's file manager; a file is shown selected in its folder.
   void Dialog::file_explorer_open(const std::filesystem::path& path)
   {
     if (path.empty()) return;
+    std::error_code ec{};
+    auto absolutePath = std::filesystem::absolute(path, ec);
+    auto isFile = std::filesystem::is_regular_file(absolutePath, ec);
 #ifdef _WIN32
-    ShellExecuteW(nullptr, L"open", path.native().c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+    if (isFile)
+      ShellExecuteW(nullptr, L"open", L"explorer.exe", (L"/select,\"" + absolutePath.native() + L"\"").c_str(), nullptr,
+                    SW_SHOWNORMAL);
+    else
+      ShellExecuteW(nullptr, L"open", absolutePath.native().c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 #elif __unix__
-    auto pathUtf8 = path::to_utf8(path);
-    system(std::format("xdg-open \"{}\" &", pathUtf8).c_str());
+    // File managers that implement org.freedesktop.FileManager1 (Nautilus, Dolphin, Nemo, Caja, Thunar...) select the
+    // file; anything else opens its folder.
+    auto folder = shell_quote(path::to_utf8(isFile ? absolutePath.parent_path() : absolutePath));
+    auto command = isFile ? std::format("(dbus-send --session --print-reply --dest=org.freedesktop.FileManager1 "
+                                        "--type=method_call /org/freedesktop/FileManager1 "
+                                        "org.freedesktop.FileManager1.ShowItems array:string:{} string:'' "
+                                        ">/dev/null 2>&1 || xdg-open {}) &",
+                                        shell_quote(file_uri_get(absolutePath)), folder)
+                          : std::format("xdg-open {} &", folder);
+    system(command.c_str());
 #else
     toast_log(Level::WARNING, TOAST_NOT_SUPPORTED);
 #endif
