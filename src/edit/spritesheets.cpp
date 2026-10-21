@@ -102,32 +102,17 @@ namespace anm2ed::edit
     std::vector<glm::ivec2> positions{};
     if (!util::pack::rects_pack(sizes, packedSize, positions) || packedSize.x <= 0 || packedSize.y <= 0) return {};
 
-    std::vector<uint8_t> packedPixels((std::size_t)packedSize.x * packedSize.y * image::CHANNELS, 0);
-    std::unordered_map<int, glm::ivec2> crops{};
+    std::vector<ImagePart> parts{};
     for (int i = 0; i < (int)items.size(); ++i)
-    {
-      auto& item = items[i];
-      auto destination = positions[i] + padding;
-      crops[item.regionId] = destination;
-      for (int y = 0; y < item.size.y; ++y)
-        for (int x = 0; x < item.size.x; ++x)
-        {
-          auto source = item.source + glm::ivec2(x, y);
-          auto target = destination + glm::ivec2(x, y);
-          if (glm::any(glm::lessThan(source, glm::ivec2(0))) || glm::any(glm::greaterThanEqual(source, sheet.size)) ||
-              glm::any(glm::greaterThanEqual(target, packedSize)))
-            continue;
-          std::copy_n(sheet.pixels.data() + ((std::size_t)source.y * sheet.size.x + source.x) * image::CHANNELS,
-                      image::CHANNELS,
-                      packedPixels.data() + ((std::size_t)target.y * packedSize.x + target.x) * image::CHANNELS);
-        }
-    }
-
+      parts.push_back({&sheet, items[i].source, items[i].size, positions[i] + padding});
     for (auto& region : spritesheet->regions)
-      if (crops.contains(region.id)) region.crop = crops.at(region.id);
-    return Image(packedPixels.data(), packedSize);
+      for (int i = 0; i < (int)items.size(); ++i)
+        if (items[i].regionId == region.id) region.crop = parts[i].destination;
+    return Image::compose(parts, packedSize, sheet.is_vector());
   }
 
+  // Appends sheets to the first, right or below. The result is an SVG (holding any PNG sheets as images) when any of
+  // them is one; the first sheet's path takes the result's extension.
   std::optional<Image> spritesheets_merge(Model& model, const std::set<int>& ids, const ImageGet& image_get,
                                           bool isAppendRight, bool isMakeRegions, bool isMakePrimaryRegion,
                                           Origin origin)
@@ -138,7 +123,8 @@ namespace anm2ed::edit
 
     auto baseId = *ids.begin();
     auto base = item_get(model.content.spritesheets, baseId);
-    auto mergedTexture = *image_get(baseId);
+    auto mergedSize = image_get(baseId)->size;
+    std::vector<ImagePart> parts{{image_get(baseId), {}, mergedSize, {}}};
     std::unordered_map<int, std::unordered_map<int, int>> regionIdMap{};
 
     auto location_region_add = [&](int sourceId, glm::ivec2 crop, glm::ivec2 size)
@@ -155,13 +141,15 @@ namespace anm2ed::edit
       base->regions.push_back(region);
     };
 
-    if (isMakeRegions && isMakePrimaryRegion) location_region_add(baseId, {}, mergedTexture.size);
+    if (isMakeRegions && isMakePrimaryRegion) location_region_add(baseId, {}, mergedSize);
     for (auto id : ids)
     {
       if (id == baseId) continue;
       auto texture = image_get(id);
-      auto offset = isAppendRight ? glm::ivec2(mergedTexture.size.x, 0) : glm::ivec2(0, mergedTexture.size.y);
-      mergedTexture = Image::merge_append(mergedTexture, *texture, isAppendRight);
+      auto offset = isAppendRight ? glm::ivec2(mergedSize.x, 0) : glm::ivec2(0, mergedSize.y);
+      mergedSize = isAppendRight ? glm::ivec2(mergedSize.x + texture->size.x, std::max(mergedSize.y, texture->size.y))
+                                 : glm::ivec2(std::max(mergedSize.x, texture->size.x), mergedSize.y + texture->size.y);
+      parts.push_back({texture, {}, texture->size, offset});
       if (!isMakeRegions) continue;
 
       location_region_add(id, offset, texture->size);
@@ -196,8 +184,11 @@ namespace anm2ed::edit
                         frame.regionId = remap.contains(frame.regionId) ? remap.at(frame.regionId) : -1;
                   });
 
+    auto isVector = std::ranges::any_of(parts, [](const ImagePart& part) { return part.image->is_vector(); });
+    if (isVector != path::is_extension(base->path, image::SVG_EXTENSION))
+      base->path.replace_extension(isVector ? image::SVG_EXTENSION : image::PNG_EXTENSION);
     std::erase_if(model.content.spritesheets, [&](const Spritesheet& spritesheet)
                   { return spritesheet.id != baseId && ids.contains(spritesheet.id); });
-    return mergedTexture;
+    return Image::compose(parts, mergedSize, isVector);
   }
 }

@@ -34,6 +34,7 @@ namespace anm2ed::imgui
   X(ACTION_OPEN_DIRECTORY, BASIC_OPEN_DIRECTORY, -1)                                                                   \
   X(ACTION_SET_FILE_PATH, BASIC_SET_FILE_PATH, -1)                                                                     \
   X(ACTION_PACK, BASIC_PACK, -1)                                                                                       \
+  X(ACTION_RASTERIZE, LABEL_RASTERIZE, -1)                                                                             \
   X(ACTION_TRIM, BASIC_TRIM, -1)                                                                                       \
   X(ACTION_PLAY, LABEL_PLAY, SHORTCUT_PLAY_PAUSE)                                                                      \
   X(ACTION_CENTER_VIEW, LABEL_CENTER_VIEW, SHORTCUT_CENTER_VIEW)                                                       \

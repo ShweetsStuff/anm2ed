@@ -18,6 +18,17 @@ namespace anm2ed::resource::image
 
 namespace anm2ed::resource
 {
+  class Image;
+
+  // A block of an image placed at `destination`, for composing images.
+  struct ImagePart
+  {
+    const Image* image{};
+    glm::ivec2 source{};
+    glm::ivec2 size{};
+    glm::ivec2 destination{};
+  };
+
   // CPU-side RGBA pixels. uid changes whenever the pixels do, so GPU copies can be cached by it. A vector image keeps
   // its SVG and is drawn at `scale` pixels per SVG unit; it can be drawn again at any scale, and isn't edited.
   class Image
@@ -42,7 +53,8 @@ namespace anm2ed::resource
     size_t pixel_size_get() const;
     bool write_png(const std::filesystem::path&) const;
     static bool write_pixels_png(const std::filesystem::path&, glm::ivec2, const uint8_t*);
-    static Image merge_append(const Image&, const Image&, bool);
+    bool write(const std::filesystem::path&) const;
+    static Image compose(const std::vector<ImagePart>&, glm::ivec2, bool);
     void paste(const Image&, glm::ivec2);
     Image region_get(glm::ivec2, glm::ivec2) const;
     glm::vec4 pixel_read(glm::vec2) const;

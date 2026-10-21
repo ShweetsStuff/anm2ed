@@ -313,7 +313,7 @@ namespace anm2ed::imgui
                     auto pathString = path::to_utf8(spritesheet.path);
                     auto savePath = closeDocument.directory_get() / spritesheet.path;
                     path::ensure_directory(savePath.parent_path());
-                    if (texture->write_png(savePath))
+                    if (texture->write(savePath))
                     {
                       closeDocument.spritesheet_hash_set_saved(id);
                       toast_log(Level::INFO, TOAST_SAVE_SPRITESHEET, id, pathString);

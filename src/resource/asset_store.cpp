@@ -26,7 +26,9 @@ namespace anm2ed::resource
   {
     auto hash = bytes_hash(value_bytes_get(image.size));
     hash = bytes_hash(value_bytes_get(image.isLinear), hash);
-    hash = hash_finish(bytes_hash(image.pixels, hash));
+    hash = bytes_hash(image.pixels, hash);
+    if (image.svg) hash = bytes_hash({(const std::uint8_t*)image.svg->data(), image.svg->size()}, hash);
+    hash = hash_finish(hash);
     images.try_emplace(hash, std::move(image));
     return hash;
   }

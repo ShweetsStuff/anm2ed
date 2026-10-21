@@ -216,7 +216,7 @@ TEST_CASE("converting SVG spritesheets writes PNGs beside them")
 
   Document document(directory / "vector.anm2", false);
   REQUIRE(document.is_valid());
-  document.spritesheets_vector_convert();
+  document.spritesheets_vector_convert({0});
   CHECK(document.model.content.spritesheets.front().path == "vector.png");
   CHECK(std::filesystem::exists(directory / "vector.png"));
   REQUIRE(document.texture_get(0));

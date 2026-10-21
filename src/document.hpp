@@ -193,7 +193,7 @@ namespace anm2ed
     void spritesheet_hashes_sync();
     std::set<int> spritesheets_changed_get();
     void spritesheets_reload(const std::set<int>&);
-    void spritesheets_vector_convert();
+    void spritesheets_vector_convert(const std::set<int>&);
     std::filesystem::path spritesheet_autosave_path_get(const model::Spritesheet&);
     std::set<int> spritesheets_autosave_dirty_get();
     void spritesheets_autosave_restore();

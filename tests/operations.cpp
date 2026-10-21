@@ -458,3 +458,41 @@ TEST_CASE("a trigger fires several events; built-in events join a file when firs
         std::vector{1});
   CHECK(model::isaac_issues_get(model).extraEvents == 0);
 }
+
+TEST_CASE("SVG spritesheets pack and merge into SVGs")
+{
+  auto model = model_load(file_load(TEST_DIR / "render" / "vector.anm2"));
+  resource::Image vector(TEST_DIR / "render" / "vector.svg");
+  auto& regions = model.content.spritesheets.front().regions;
+  regions.push_back({.id = 0, .name = "circle", .crop = {0, 0}, .size = {16, 16}});
+  regions.push_back({.id = 1, .name = "square", .crop = {16, 0}, .size = {16, 16}});
+
+  // Packing keeps the drawing: each region shows the same pixels where it now sits.
+  auto packed = edit::spritesheet_pack(model, 0, vector, 1);
+  REQUIRE(packed);
+  CHECK(packed->is_vector());
+  for (auto [id, original] : {std::pair{0, glm::vec2(8, 8)}, std::pair{1, glm::vec2(24, 8)}})
+  {
+    auto region = model::item_get(model.content.spritesheets.front().regions, id);
+    CHECK(packed->pixel_read(region->crop + glm::vec2(8, 8)) == vector.pixel_read(original));
+  }
+
+  // A PNG sheet merged after an SVG one: the result is an SVG holding the PNG; a PNG first takes the .svg name.
+  const std::vector<uint8_t> pixels(4 * 4 * resource::image::CHANNELS, 255);
+  resource::Image raster(pixels.data(), {4, 4});
+  model.content.spritesheets.push_back({.id = 1, .path = "white.png"});
+  auto images = std::map<int, const resource::Image*>{{0, &vector}, {1, &raster}};
+  auto image_get = [&](int id) { return images.at(id); };
+  auto mixed = model;
+  auto merged = edit::spritesheets_merge(mixed, {0, 1}, image_get, true, false, false, Origin::TOP_LEFT);
+  REQUIRE(merged);
+  CHECK(merged->is_vector());
+  CHECK(merged->size == glm::ivec2(36, 16));
+  CHECK(merged->pixel_read({33, 1}) == raster.pixel_read({1, 1}));
+  CHECK(mixed.content.spritesheets.front().path == "vector.svg");
+
+  std::swap(model.content.spritesheets.front().id, model.content.spritesheets.back().id);
+  images = {{1, &vector}, {0, &raster}};
+  REQUIRE(edit::spritesheets_merge(model, {0, 1}, image_get, true, false, false, Origin::TOP_LEFT));
+  CHECK(model::item_get(model.content.spritesheets, 0)->path == "white.svg");
+}

@@ -4,7 +4,9 @@
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
+#include <format>
 #include <memory>
+#include <set>
 #include <utility>
 
 #if defined(__clang__) || defined(__GNUC__)
@@ -24,6 +26,7 @@
 #endif
 
 #include <lunasvg.h>
+#include <tinyxml2/tinyxml2.h>
 
 #include "file.hpp"
 #include "math.hpp"
@@ -37,6 +40,19 @@ using namespace glm;
 
 namespace anm2ed::resource
 {
+  constexpr std::size_t BASE64_GROUP_BYTES = 3;
+  constexpr int BASE64_DIGIT_BITS = 6;
+  constexpr std::uint32_t BASE64_DIGIT_MASK = 0x3F;
+  constexpr int BYTE_BITS = 8;
+  constexpr std::string_view BASE64_DIGITS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  constexpr char BASE64_PADDING = '=';
+  constexpr auto SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+  constexpr auto XLINK_NAMESPACE = "http://www.w3.org/1999/xlink";
+  constexpr auto SVG_ID_PREFIX = "anm2ed-source-";
+  constexpr std::string_view SVG_URL_START = "url(#";
+  // A drawing's root attributes that place it, rather than style it.
+  constexpr std::string_view SVG_ROOT_ONLY_ATTRIBUTES[] = {"width", "height", "viewBox", "preserveAspectRatio",
+                                                           "x",     "y",      "version", "id"};
 
   bool Image::is_valid() const { return !pixels.empty(); }
 
@@ -85,23 +101,13 @@ namespace anm2ed::resource
     }
   }
 
-  Image::Image(const std::filesystem::path& pngPath)
+  // A PNG, or else an SVG (whatever the file is named, so autosaved copies load too).
+  Image::Image(const std::filesystem::path& path)
   {
-    if (path::is_extension(pngPath, SVG_EXTENSION))
-    {
-      auto text = std::make_shared<std::string>();
-      if (file::read_to_string(pngPath, text.get())) *this = svg_render(std::move(text), 1.0f);
-      return;
-    }
-    File file(pngPath, "rb");
-    if (auto handle = file.get())
-    {
-      if (auto data = stbi_load_from_file(handle, &size.x, &size.y, nullptr, CHANNELS); data)
-      {
-        *this = Image(data, size);
-        stbi_image_free((void*)data);
-      }
-    }
+    auto text = std::make_shared<std::string>();
+    if (!file::read_to_string(path, text.get())) return;
+    *this = Image((const unsigned char*)text->data(), text->size());
+    if (!is_valid()) *this = svg_render(std::move(text), 1.0f);
   }
 
   bool Image::write_png(const std::filesystem::path& path) const
@@ -152,32 +158,173 @@ namespace anm2ed::resource
     return region;
   }
 
-  Image Image::merge_append(const Image& base, const Image& append, bool isAppendRight)
+  // Base64 of bytes, for an image embedded in an SVG.
+  std::string base64_get(const std::vector<uint8_t>& bytes)
   {
-    if (base.size.x <= 0 || base.size.y <= 0) return append;
-    if (append.size.x <= 0 || append.size.y <= 0) return base;
-    if (base.pixels.empty()) return append;
-    if (append.pixels.empty()) return base;
-
-    auto resultSize = isAppendRight ? ivec2(base.size.x + append.size.x, std::max(base.size.y, append.size.y))
-                                    : ivec2(std::max(base.size.x, append.size.x), base.size.y + append.size.y);
-    auto resultPixelsSize = (size_t)resultSize.x * (size_t)resultSize.y * CHANNELS;
-    std::vector<uint8_t> resultPixels(resultPixelsSize, 0);
-
-    auto blit = [&](const Image& texture, ivec2 offset)
+    std::string text{};
+    for (std::size_t i = 0; i < bytes.size(); i += BASE64_GROUP_BYTES)
     {
-      for (int y = 0; y < texture.size.y; y++)
-      {
-        auto src = (size_t)y * (size_t)texture.size.x * CHANNELS;
-        auto dst = ((size_t)(offset.y + y) * (size_t)resultSize.x + (size_t)offset.x) * CHANNELS;
-        std::memcpy(resultPixels.data() + dst, texture.pixels.data() + src, (size_t)texture.size.x * CHANNELS);
-      }
+      auto count = std::min(BASE64_GROUP_BYTES, bytes.size() - i);
+      std::uint32_t value{};
+      for (std::size_t j = 0; j < BASE64_GROUP_BYTES; ++j)
+        value = value << BYTE_BITS | (j < count ? bytes[i + j] : 0u);
+      for (std::size_t j = 0; j <= BASE64_GROUP_BYTES; ++j)
+        text += j <= count
+                    ? BASE64_DIGITS[(value >> ((BASE64_GROUP_BYTES - j) * BASE64_DIGIT_BITS)) & BASE64_DIGIT_MASK]
+                    : BASE64_PADDING;
+    }
+    return text;
+  }
+
+  // An image as one SVG definition: a vector one as a symbol of its drawing (its ids prefixed with `id`, so
+  // several drawings can share a document), a raster one as an embedded PNG. Either draws at the image's size in
+  // SVG units.
+  void svg_definition_add(tinyxml2::XMLDocument& document, tinyxml2::XMLElement* root, tinyxml2::XMLElement* defs,
+                          const Image& image, const std::string& id)
+  {
+    if (!image.is_vector())
+    {
+      std::vector<uint8_t> png{};
+      stbi_write_png_to_func(
+          [](void* context, void* data, int count)
+          {
+            static_cast<std::vector<uint8_t>*>(context)->insert(static_cast<std::vector<uint8_t>*>(context)->end(),
+                                                                (uint8_t*)data, (uint8_t*)data + count);
+          },
+          &png, image.size.x, image.size.y, CHANNELS, image.pixels.data(), image.size.x * CHANNELS);
+      auto element = defs->InsertNewChildElement("image");
+      element->SetAttribute("id", id.c_str());
+      element->SetAttribute("width", image.size.x);
+      element->SetAttribute("height", image.size.y);
+      element->SetAttribute("xlink:href", ("data:image/png;base64," + base64_get(png)).c_str());
+      return;
+    }
+
+    tinyxml2::XMLDocument source{};
+    source.Parse(image.svg->c_str());
+    auto sourceRoot = source.RootElement();
+    if (!sourceRoot) return;
+
+    // Every id in the drawing gets the prefix, and so does every reference to one (href="#id", url(#id)).
+    std::set<std::string> ids{};
+    auto elements_each = [](tinyxml2::XMLElement* element, auto&& callback, auto&& self) -> void
+    {
+      callback(element);
+      for (auto child = element->FirstChildElement(); child; child = child->NextSiblingElement())
+        self(child, callback, self);
     };
+    elements_each(
+        sourceRoot,
+        [&](tinyxml2::XMLElement* element)
+        {
+          if (auto elementId = element->Attribute("id")) ids.insert(elementId);
+        },
+        elements_each);
+    auto renamed_get = [&](std::string_view sourceId) { return id + "-" + std::string(sourceId); };
+    elements_each(
+        sourceRoot,
+        [&](tinyxml2::XMLElement* element)
+        {
+          std::vector<std::pair<std::string, std::string>> attributes{};
+          for (auto attribute = element->FirstAttribute(); attribute; attribute = attribute->Next())
+            attributes.emplace_back(attribute->Name(), attribute->Value());
+          for (auto& [name, value] : attributes)
+          {
+            if (name == "id")
+              value = renamed_get(value);
+            else if ((name == "href" || name == "xlink:href") && value.starts_with('#') &&
+                     ids.contains(value.substr(1)))
+              value = "#" + renamed_get(value.substr(1));
+            else
+              for (auto at = value.find(SVG_URL_START); at != std::string::npos; at = value.find(SVG_URL_START, at + 1))
+              {
+                auto start = at + SVG_URL_START.size();
+                auto end = value.find(')', start);
+                if (end == std::string::npos) break;
+                if (auto reference = value.substr(start, end - start); ids.contains(reference))
+                  value.replace(start, end - start, renamed_get(reference));
+              }
+            element->SetAttribute(name.c_str(), value.c_str());
+          }
+        },
+        elements_each);
 
-    blit(base, {0, 0});
-    blit(append, isAppendRight ? ivec2(base.size.x, 0) : ivec2(0, base.size.y));
+    auto unitSize = image.unit_size_get();
+    auto symbol = defs->InsertNewChildElement("symbol");
+    symbol->SetAttribute("id", id.c_str());
+    auto viewBox = sourceRoot->Attribute("viewBox");
+    symbol->SetAttribute("viewBox", viewBox ? viewBox : std::format("0 0 {} {}", unitSize.x, unitSize.y).c_str());
+    if (auto aspect = sourceRoot->Attribute("preserveAspectRatio")) symbol->SetAttribute("preserveAspectRatio", aspect);
+    // The drawing's root styles carry over through a group; its namespaces go on the new root.
+    auto group = symbol->InsertNewChildElement("g");
+    for (auto attribute = sourceRoot->FirstAttribute(); attribute; attribute = attribute->Next())
+    {
+      std::string_view name = attribute->Name();
+      if (name.starts_with("xmlns"))
+        root->SetAttribute(attribute->Name(), attribute->Value());
+      else if (!std::ranges::contains(SVG_ROOT_ONLY_ATTRIBUTES, name))
+        group->SetAttribute(attribute->Name(), attribute->Value());
+    }
+    for (auto child = sourceRoot->FirstChild(); child; child = child->NextSibling())
+      group->InsertEndChild(child->DeepClone(&document));
+  }
 
-    return Image(resultPixels.data(), resultSize);
+  // Parts of images placed into one image of `size`: an SVG when `isVector` (each part a clipped view of its image's
+  // drawing, or of an embedded PNG), otherwise pixels.
+  Image Image::compose(const std::vector<ImagePart>& parts, glm::ivec2 size, bool isVector)
+  {
+    if (!isVector)
+    {
+      std::vector<uint8_t> pixels((std::size_t)size.x * size.y * CHANNELS, 0);
+      Image composed(pixels.data(), size);
+      for (const auto& part : parts)
+        composed.paste(part.image->region_get(part.source, part.size), part.destination);
+      return composed;
+    }
+
+    tinyxml2::XMLDocument document{};
+    auto root = document.NewElement("svg");
+    document.InsertEndChild(root);
+    root->SetAttribute("xmlns", SVG_NAMESPACE);
+    root->SetAttribute("xmlns:xlink", XLINK_NAMESPACE);
+    root->SetAttribute("width", size.x);
+    root->SetAttribute("height", size.y);
+    root->SetAttribute("viewBox", std::format("0 0 {} {}", size.x, size.y).c_str());
+    auto defs = root->InsertNewChildElement("defs");
+
+    std::vector<const Image*> sources{};
+    for (const auto& part : parts)
+    {
+      auto source = std::ranges::find(sources, part.image);
+      if (source == sources.end())
+      {
+        source = sources.insert(sources.end(), part.image);
+        svg_definition_add(document, root, defs, *part.image, std::format("{}{}", SVG_ID_PREFIX, sources.size() - 1));
+      }
+      auto view = root->InsertNewChildElement("svg");
+      view->SetAttribute("x", part.destination.x);
+      view->SetAttribute("y", part.destination.y);
+      view->SetAttribute("width", part.size.x);
+      view->SetAttribute("height", part.size.y);
+      view->SetAttribute("viewBox",
+                         std::format("{} {} {} {}", part.source.x, part.source.y, part.size.x, part.size.y).c_str());
+      auto use = view->InsertNewChildElement("use");
+      auto unitSize = part.image->unit_size_get();
+      use->SetAttribute("xlink:href", std::format("#{}{}", SVG_ID_PREFIX, source - sources.begin()).c_str());
+      use->SetAttribute("width", unitSize.x);
+      use->SetAttribute("height", unitSize.y);
+    }
+
+    tinyxml2::XMLPrinter printer{};
+    document.Print(&printer);
+    return svg_render(std::make_shared<std::string>(printer.CStr()), 1.0f);
+  }
+
+  // Writes a vector image as its SVG (unless the path asks for a PNG), and any other as a PNG.
+  bool Image::write(const std::filesystem::path& path) const
+  {
+    if (is_vector() && !path::is_extension(path, PNG_EXTENSION)) return file::write_string(path, *svg);
+    return write_png(path);
   }
 
   vec4 Image::pixel_read(vec2 position) const

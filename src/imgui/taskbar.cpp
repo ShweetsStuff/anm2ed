@@ -395,7 +395,7 @@ namespace anm2ed::imgui
         shortcut(manager.chords[isConverted ? SHORTCUT_CONFIRM : SHORTCUT_CANCEL]);
         if (!ImGui::Button(localize.get(label), widgetSize) || !document) continue;
         if (isConverted)
-          document->spritesheets_vector_convert();
+          document->spritesheets_vector_convert(model::spritesheets_vector_used_get(document->model));
         else
           document->isVectorKept = true;
         vectorPopup.close();

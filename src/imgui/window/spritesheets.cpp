@@ -38,11 +38,11 @@ namespace anm2ed::imgui
     {
       auto spritesheet = spritesheet_get(document, id);
       auto texture = document.texture_get(id);
-      if (!spritesheet || !texture || texture->is_vector()) continue;
+      if (!spritesheet || !texture) continue;
       auto pathString = path::to_utf8(spritesheet->path);
       WorkingDirectory workingDirectory(document.directory_get());
       path::ensure_directory(spritesheet->path.parent_path());
-      auto isSaved = texture->write_png(spritesheet->path);
+      auto isSaved = texture->write(spritesheet->path);
       if (isSaved) document.spritesheet_hash_set_saved(id);
       toast_log(isSaved ? Level::INFO : Level::ERROR, isSaved ? TOAST_SAVE_SPRITESHEET : TOAST_SAVE_SPRITESHEET_FAILED,
                 id, pathString);
@@ -65,7 +65,7 @@ namespace anm2ed::imgui
                           {
                             WorkingDirectory workingDirectory(document.directory_get());
                             path::ensure_directory(newPath.parent_path());
-                            if (!texture->write_png(newPath))
+                            if (!texture->write(newPath))
                               return toast_log(Level::ERROR, TOAST_SAVE_SPRITESHEET_FAILED, id, pathString);
                           }
                           spritesheet->path = newPath;
@@ -287,6 +287,23 @@ namespace anm2ed::imgui
             spritesheets.packPopup.open();
           },
           TOOLTIP_PACK_SPRITESHEET);
+      // SVG sheets become PNGs beside them; greyed when none of the selection is an SVG.
+      actions.add(
+          ACTION_RASTERIZE,
+          [&]()
+          {
+            return std::ranges::any_of(selection,
+                                       [&](int id)
+                                       {
+                                         auto texture = document.texture_get(id);
+                                         return texture && texture->is_vector();
+                                       });
+          },
+          [&]()
+          {
+            command_push(panel, [selection](Document& document) { document.spritesheets_vector_convert(selection); });
+          },
+          TOOLTIP_RASTERIZE_SPRITESHEETS);
       actions.add(
           ACTION_SAVE, isAny,
           [&]()

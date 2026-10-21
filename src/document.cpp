@@ -272,7 +272,7 @@ namespace anm2ed
       {
         auto spritesheet = model::item_get(model.content.spritesheets, id);
         auto texture = texture_get(id);
-        if (texture && texture->write_png(spritesheet_autosave_path_get(*spritesheet)))
+        if (texture && texture->write(spritesheet_autosave_path_get(*spritesheet)))
           spritesheetAutosaveHashes[id] = spritesheetHashes.at(id);
       }
       autosaveHash = hash;
@@ -602,8 +602,7 @@ namespace anm2ed
   bool Document::spritesheet_pack(int id, int padding)
   {
     auto texture = texture_get(id);
-    auto packed =
-        texture && !texture->is_vector() ? edit::spritesheet_pack(model, id, *texture, padding) : std::nullopt;
+    auto packed = texture ? edit::spritesheet_pack(model, id, *texture, padding) : std::nullopt;
     if (!packed) return false;
     texture_set(id, std::move(*packed));
     assets_sync();
@@ -613,12 +612,13 @@ namespace anm2ed
   bool Document::spritesheets_merge(const std::set<int>& ids, bool isAppendRight, bool isMakeRegions,
                                     bool isMakePrimaryRegion, Origin origin)
   {
-    if (std::ranges::any_of(ids, [&](int id) { return texture_get(id) && texture_get(id)->is_vector(); })) return false;
     auto merged = edit::spritesheets_merge(
         model, ids, [this](int id) { return texture_get(id); }, isAppendRight, isMakeRegions, isMakePrimaryRegion,
         origin);
     if (!merged) return false;
     texture_set(*ids.begin(), std::move(*merged));
+    // The merged sheet may now be an SVG (or a PNG) under a new name; it is written when saved.
+    texturePaths[*ids.begin()] = model::item_get(model.content.spritesheets, *ids.begin())->path;
     for (auto id : ids)
       if (id != *ids.begin()) textures.erase(id);
     assets_sync();
@@ -786,10 +786,9 @@ namespace anm2ed
       }
   }
 
-  // Writes each SVG spritesheet a layer shows as a PNG beside it, and points the spritesheet at the PNG.
-  void Document::spritesheets_vector_convert()
+  // Rasterizes SVG spritesheets: each is written as a PNG beside it (as drawn now), and points at the PNG.
+  void Document::spritesheets_vector_convert(const std::set<int>& ids)
   {
-    auto ids = model::spritesheets_vector_used_get(model);
     std::set<int> converted{};
     edit_apply(EDIT_CONVERT_SVG_SPRITESHEETS,
                [&](model::Model& model)
@@ -798,10 +797,11 @@ namespace anm2ed
                  {
                    auto spritesheet = model::item_get(model.content.spritesheets, id);
                    auto texture = texture_get(id);
+                   if (!spritesheet || !texture || !texture->is_vector()) continue;
                    auto pngPath =
                        std::filesystem::path(spritesheet->path).replace_extension(resource::image::PNG_EXTENSION);
                    auto pathString = path::to_utf8(pngPath);
-                   if (!texture || !texture->write_png(std::filesystem::absolute(directory_get()) / pngPath))
+                   if (!texture->write_png(std::filesystem::absolute(directory_get()) / pngPath))
                    {
                      toast_log(Level::ERROR, TOAST_SAVE_SPRITESHEET_FAILED, id, pathString);
                      continue;
