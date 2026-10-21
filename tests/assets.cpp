@@ -98,3 +98,21 @@ TEST_CASE("SVG spritesheets compose into SVGs that draw the same")
   CHECK(Image::compose({{&mixed, {}, mixed.size, {}}}, mixed.size, true).pixel_read({24.0f, 8.0f}) ==
         vector.pixel_read({8.0f, 8.0f}));
 }
+
+TEST_CASE("an SVG's shapes meet without a seam")
+{
+  // Two rectangles of one color meeting at x 10.5: the pixel they share is solid, while the outer edge at 20.5 keeps
+  // its anti-aliasing.
+  auto text = std::make_shared<std::string>(R"(<svg xmlns="http://www.w3.org/2000/svg" width="24" height="4">
+    <rect x="0" y="0" width="10.5" height="4" fill="#804020"/>
+    <rect x="10.5" y="0" width="10" height="4" fill="#804020"/></svg>)");
+  auto path = std::filesystem::temp_directory_path() / "anm2ed_seam.svg";
+  test::file_save(path, *text);
+  Image image(path);
+  std::filesystem::remove(path);
+  REQUIRE(image.is_vector());
+  auto seam = image.pixel_read({10.0f, 2.0f});
+  CHECK(seam.a == 1.0f);
+  CHECK(glm::distance(glm::vec3(seam), glm::vec3(image.pixel_read({5.0f, 2.0f}))) < 2.0f / 255.0f);
+  CHECK(image.pixel_read({20.0f, 2.0f}).a < 1.0f);
+}

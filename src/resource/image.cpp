@@ -1,6 +1,8 @@
 #include "image.hpp"
 
 #include <algorithm>
+#include <climits>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
@@ -50,6 +52,9 @@ namespace anm2ed::resource
   constexpr auto XLINK_NAMESPACE = "http://www.w3.org/1999/xlink";
   constexpr auto SVG_ID_PREFIX = "anm2ed-source-";
   constexpr std::string_view SVG_URL_START = "url(#";
+  constexpr int ALPHA = 3; // a pixel's alpha channel
+  constexpr int SEAM_REACH = 2;
+  constexpr uint8_t SEAM_OPAQUE_ALPHA = 250;
   // A drawing's root attributes that place it, rather than style it.
   constexpr std::string_view SVG_ROOT_ONLY_ATTRIBUTES[] = {"width", "height", "viewBox", "preserveAspectRatio",
                                                            "x",     "y",      "version", "id"};
@@ -59,6 +64,51 @@ namespace anm2ed::resource
   bool Image::is_vector() const { return svg != nullptr; }
 
   glm::vec2 Image::unit_size_get() const { return glm::vec2(size) / scale; }
+
+  // Closes the hairline seams an SVG's anti-aliasing leaves where two shapes meet: a partly covered pixel with opaque
+  // pixels on both sides of it (along any axis, within SEAM_REACH) takes their color over its own and becomes opaque.
+  // Outer edges, with transparency on one side, keep their anti-aliasing.
+  void seams_fill(Image& image)
+  {
+    constexpr glm::ivec2 AXES[] = {{1, 0}, {0, 1}, {1, 1}, {1, -1}};
+    // Coverage as drawn (filling only ever raises it, and only on partly covered pixels, whose colors no check reads).
+    std::vector<uint8_t> alphas((std::size_t)image.size.x * image.size.y);
+    for (std::size_t i = 0; i < alphas.size(); ++i)
+      alphas[i] = image.pixels[i * CHANNELS + ALPHA];
+    auto index_get = [&](glm::ivec2 point) { return (std::size_t)point.y * image.size.x + point.x; };
+    auto opaque_get = [&](glm::ivec2 point, glm::ivec2 step) -> const uint8_t*
+    {
+      for (int reach = 1; reach <= SEAM_REACH; ++reach)
+      {
+        auto neighbor = point + step * reach;
+        if (glm::any(glm::lessThan(neighbor, glm::ivec2(0))) || glm::any(glm::greaterThanEqual(neighbor, image.size)))
+          return nullptr;
+        if (alphas[index_get(neighbor)] >= SEAM_OPAQUE_ALPHA)
+          return image.pixels.data() + index_get(neighbor) * CHANNELS;
+      }
+      return nullptr;
+    };
+
+    for (int y = 0; y < image.size.y; ++y)
+      for (int x = 0; x < image.size.x; ++x)
+      {
+        auto alpha = alphas[index_get({x, y})];
+        if (alpha == 0 || alpha == UINT8_MAX) continue;
+        for (auto axis : AXES)
+        {
+          auto before = opaque_get({x, y}, -axis);
+          auto after = before ? opaque_get({x, y}, axis) : nullptr;
+          if (!after) continue;
+          auto pixel = image.pixels.data() + index_get({x, y}) * CHANNELS;
+          auto coverage = alpha / (float)UINT8_MAX;
+          for (int channel = 0; channel < ALPHA; ++channel)
+            pixel[channel] = (uint8_t)std::round(pixel[channel] * coverage +
+                                                 (before[channel] + after[channel]) * 0.5f * (1.0f - coverage));
+          pixel[ALPHA] = UINT8_MAX;
+          break;
+        }
+      }
+  }
 
   // An SVG drawn at about `scale` pixels per unit (exactly, after rounding to whole pixels); nothing if it won't parse.
   Image svg_render(std::shared_ptr<const std::string> svg, float scale)
@@ -70,6 +120,7 @@ namespace anm2ed::resource
     if (bitmap.isNull()) return {};
     bitmap.convertToRGBA();
     Image image(bitmap.data(), size, true);
+    seams_fill(image);
     image.svg = std::move(svg);
     image.scale = (float)size.x / document->width();
     return image;
