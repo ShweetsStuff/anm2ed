@@ -51,16 +51,16 @@ namespace anm2ed::imgui
     if (isQueued)
     {
       // Rebirth can't load SVG spritesheets: offer to convert them (the request waits in isaacSave either way).
-      if (!document->model.isExtendedFormat && !document->isVectorKept &&
+      if (!settings.fileIsJson && !document->isVectorKept &&
           !model::spritesheets_vector_used_get(document->model).empty())
       {
         isaacSave = request;
         vectorPopup.open();
         return false;
       }
-      // The game's copy would differ from the document: ask first.
-      if (settings.fileIsWarnIsaac && !document->model.isExtendedFormat &&
-          model::isaac_issues_get(document->model) != model::IsaacIssues{})
+      // The game can't read JSON, or its copy would differ from the document: ask first.
+      if (settings.fileIsWarnIsaac &&
+          (settings.fileIsJson || model::isaac_issues_get(document->model) != model::IsaacIssues{}))
       {
         isaacSave = request;
         isaacPopup.open();
@@ -131,16 +131,6 @@ namespace anm2ed::imgui
         if (ImGui::MenuItem(localize.get(LABEL_EXPLORE_XML_LOCATION), nullptr, false, document))
           dialog.file_explorer_open(document->path);
 
-        // Which game this document is saved for: the editor's format alone, or Rebirth's (with the editor's copy).
-        auto isExtendedFormat = document && document->model.isExtendedFormat;
-        if (ImGui::MenuItem(localize.get(LABEL_DOCUMENT_EXTENDED_FORMAT), nullptr, isExtendedFormat, document))
-          manager.command_push({manager.selected, [isExtendedFormat](Manager&, Document& document)
-                                {
-                                  document.edit_apply(EDIT_DOCUMENT_FORMAT, [&](model::Model& model)
-                                                      { model.isExtendedFormat = !isExtendedFormat; });
-                                }});
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_DOCUMENT_EXTENDED_FORMAT));
-
         ImGui::Separator();
         if (ImGui::MenuItem(localize.get(LABEL_EXIT), settings.shortcutExit.c_str())) isQuitting = true;
         ImGui::EndMenu();
@@ -148,8 +138,7 @@ namespace anm2ed::imgui
       if (dialog.is_selected(Dialog::ANM2_CREATE))
       {
         auto path = dialog.path;
-        manager.command_push({.runManager = [path, isExtendedFormat = settings.isFileExtendedFormat](Manager& manager)
-                              { manager.new_(path, isExtendedFormat); }});
+        manager.command_push({.runManager = [path](Manager& manager) { manager.new_(path); }});
         dialog.reset();
       }
 
@@ -408,9 +397,11 @@ namespace anm2ed::imgui
     isaacPopup.trigger();
     if (ImGui::BeginPopupModal(isaacPopup.label(), &isaacPopup.isOpen, ImGuiWindowFlags_NoResize))
     {
-      ImGui::TextWrapped("%s", localize.get(TEXT_ISAAC_ISSUES));
-      if (auto document = manager.get(isaacSave.index))
+      if (settings.fileIsJson)
+        ImGui::TextWrapped("%s", localize.get(TEXT_ISAAC_JSON));
+      else if (auto document = manager.get(isaacSave.index))
       {
+        ImGui::TextWrapped("%s", localize.get(TEXT_ISAAC_ISSUES));
         auto issues = model::isaac_issues_get(document->model);
         for (auto [count, format] : {std::pair{issues.easedFrames, FORMAT_ISAAC_EASED_FRAMES},
                                      {issues.groupTransforms, FORMAT_ISAAC_GROUP_TRANSFORMS},
@@ -424,8 +415,8 @@ namespace anm2ed::imgui
                                      {issues.animationLayers, FORMAT_ISAAC_ANIMATION_LAYERS},
                                      {issues.vectorSpritesheets, FORMAT_ISAAC_VECTOR_SPRITESHEETS}})
           if (count > 0) ImGui::BulletText("%s", localize_format(format, count).c_str());
+        ImGui::TextWrapped("%s", localize.get(TEXT_ISAAC_EDITOR_COPY));
       }
-      ImGui::TextWrapped("%s", localize.get(TEXT_ISAAC_EDITOR_COPY));
 
       auto widgetSize = widget_size_with_row_get(2);
       shortcut(manager.chords[SHORTCUT_CONFIRM]);

@@ -133,10 +133,10 @@ namespace anm2ed
       if (command.runManager) command.runManager(*this);
   }
 
-  Document* Manager::open(const std::filesystem::path& path, bool isNew, bool isRecent, bool isExtendedFormat)
+  Document* Manager::open(const std::filesystem::path& path, bool isNew, bool isRecent)
   {
     std::string errorString{};
-    documents.emplace_back(path, isNew, &errorString, isExtendedFormat);
+    documents.emplace_back(path, isNew, &errorString);
     auto pathString = path::to_utf8(path);
 
     auto& document = documents.back();
@@ -153,15 +153,13 @@ namespace anm2ed
     pendingSelected = selected;
     selection_history_push(selected);
     toast_log(Level::INFO, TOAST_OPEN_DOCUMENT, pathString);
+    // A JSON document that opened lists what it couldn't read.
+    if (!errorString.empty()) toast_log(Level::WARNING, TOAST_OPEN_DOCUMENT_ISSUES, pathString, errorString);
 
     return &document;
   }
 
-  // A new document targets the extended format or Rebirth's, as the settings default.
-  void Manager::new_(const std::filesystem::path& path, bool isExtendedFormat)
-  {
-    open(path, true, true, isExtendedFormat);
-  }
+  void Manager::new_(const std::filesystem::path& path) { open(path, true, true); }
 
   bool Manager::save(int index, const std::filesystem::path& path)
   {
@@ -173,7 +171,7 @@ namespace anm2ed
       savePath.replace_extension(".anm2");
       ensure_parent_directory_exists(savePath);
 
-      if (!document->save(savePath, &errorString, isPurgeDefaultColors)) return false;
+      if (!document->save(savePath, &errorString, saveOptions)) return false;
 
       const auto autosavePath = document->autosave_path_get();
       autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), previousAutosavePath),
@@ -196,7 +194,7 @@ namespace anm2ed
   {
     std::string errorString{};
     auto autosavePath = document.autosave_path_get();
-    if (!document.autosave(&errorString, isPurgeDefaultColors)) return;
+    if (!document.autosave(&errorString, saveOptions)) return;
 
     autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), autosavePath), autosaveFiles.end());
     autosaveFiles.insert(autosaveFiles.begin(), autosavePath);
@@ -472,7 +470,7 @@ namespace anm2ed
   // What the manager keeps from the settings: shortcuts, and how documents save.
   void Manager::settings_apply(Settings& settings)
   {
-    isPurgeDefaultColors = settings.fileIsPurgeDefaultColors;
+    saveOptions = {.isPurgeDefaultColors = settings.fileIsPurgeDefaultColors, .isJson = settings.fileIsJson};
     for (int i = 0; i < SHORTCUT_COUNT; i++)
       chords[i] = imgui::string_to_chord(settings.*SHORTCUT_MEMBERS[i]);
   }

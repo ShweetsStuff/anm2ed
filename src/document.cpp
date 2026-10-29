@@ -49,7 +49,10 @@ namespace anm2ed::document
   void library_load(const std::filesystem::path& path, LibraryData& library)
   {
     library = {};
-    model::model_load(library.model, path);
+    std::string errorString{};
+    model::model_load(library.model, path, &errorString);
+    // Why it couldn't load, or what a JSON library couldn't read.
+    if (!errorString.empty()) toast_log(Level::WARNING, TOAST_LIBRARY_ISSUES, path::to_utf8(path), errorString);
     std::error_code ec{};
     library.writeTime = std::filesystem::last_write_time(path, ec);
     util::WorkingDirectory workingDirectory(path.parent_path());
@@ -181,11 +184,10 @@ namespace anm2ed::document
 
 namespace anm2ed
 {
-  Document::Document(const std::filesystem::path& path, bool isNew, std::string* errorString, bool isExtendedFormat)
+  Document::Document(const std::filesystem::path& path, bool isNew, std::string* errorString)
   {
     tabId = document::document_tab_id_next();
     model = model::model_make();
-    model.isExtendedFormat = isExtendedFormat;
     if (!isNew) model::model_load(model, path, errorString);
     if (isNew ? !save(path, errorString) : !model.isValid)
     {
@@ -210,11 +212,11 @@ namespace anm2ed
     return *this;
   }
 
-  bool Document::save(const std::filesystem::path& path, std::string* errorString, bool isPurgeDefaultColors)
+  bool Document::save(const std::filesystem::path& path, std::string* errorString, Options options)
   {
     auto absolutePath = !path.empty() ? path : this->path;
     auto absolutePathUtf8 = path::to_utf8(absolutePath);
-    if (file_write(absolutePath, errorString, isPurgeDefaultColors))
+    if (file_write(absolutePath, errorString, options))
     {
       this->path = absolutePath;
       toast_log(Level::INFO, TOAST_SAVE_DOCUMENT, absolutePathUtf8);
@@ -226,10 +228,10 @@ namespace anm2ed
   }
 
   // Writes the document; a Rebirth document's game copy has its animation layers flattened into plain layers.
-  bool Document::file_write(const std::filesystem::path& path, std::string* errorString, bool isPurgeDefaultColors)
+  bool Document::file_write(const std::filesystem::path& path, std::string* errorString, Options options)
   {
     std::optional<model::Model> game{};
-    if (!model.isExtendedFormat && std::ranges::any_of(model.content.layers, &model::Layer::is_animation))
+    if (!options.isJson && std::ranges::any_of(model.content.layers, &model::Layer::is_animation))
       game = edit::animation_layers_flatten(
           model, library_resolver_get(),
           [&](const model::Model& source, const std::filesystem::path& spritesheetPath)
@@ -241,10 +243,8 @@ namespace anm2ed
                                         std::filesystem::absolute(directory_get())));
             return spritesheetPath;
           });
-    return model::model_save(model, path, errorString,
-                             {.isExtendedFormat = model.isExtendedFormat,
-                              .isPurgeDefaultColors = isPurgeDefaultColors,
-                              .gameModel = game ? &*game : nullptr});
+    options.gameModel = game ? &*game : nullptr;
+    return model::model_save(model, path, errorString, options);
   }
 
   std::filesystem::path Document::autosave_path_get()
@@ -262,11 +262,11 @@ namespace anm2ed
     return path.parent_path() / std::filesystem::path(std::u8string(fileName.begin(), fileName.end()));
   }
 
-  bool Document::autosave(std::string* errorString, bool isPurgeDefaultColors)
+  bool Document::autosave(std::string* errorString, Options options)
   {
     auto autosavePath = autosave_path_get();
     auto autosavePathUtf8 = path::to_utf8(autosavePath);
-    if (file_write(autosavePath, errorString, isPurgeDefaultColors))
+    if (file_write(autosavePath, errorString, options))
     {
       for (auto id : spritesheets_autosave_dirty_get())
       {

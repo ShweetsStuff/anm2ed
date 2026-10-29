@@ -247,7 +247,6 @@ TEST_CASE("a Rebirth save flattens animation layers for the game")
 
   Document document(directory / "nested.anm2", false);
   REQUIRE(document.is_valid());
-  document.model.isExtendedFormat = false;
   REQUIRE(document.save(directory / "rebirth.anm2"));
   std::ifstream file(directory / "rebirth.anm2");
   std::string saved(std::istreambuf_iterator<char>(file), {});

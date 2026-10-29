@@ -52,7 +52,7 @@ namespace anm2ed
     bool isAbleToRecord{};
 
     ImGuiKeyChord chords[SHORTCUT_COUNT]{};
-    bool isPurgeDefaultColors{true};
+    Options saveOptions{SAVE_OPTIONS_DEFAULT};
 
     std::vector<std::filesystem::path> anm2DragDropPaths{};
     bool isAnm2DragDrop{};
@@ -94,8 +94,8 @@ namespace anm2ed
     Document* get(int = -1);
     void command_push(Command);
     void commands_run();
-    Document* open(const std::filesystem::path&, bool = false, bool = true, bool = false);
-    void new_(const std::filesystem::path&, bool);
+    Document* open(const std::filesystem::path&, bool = false, bool = true);
+    void new_(const std::filesystem::path&);
     bool save(int, const std::filesystem::path& = {});
     bool save(const std::filesystem::path& = {});
     void autosave(Document&);

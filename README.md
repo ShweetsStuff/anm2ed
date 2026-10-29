@@ -18,7 +18,7 @@ This application was developed with the assistance of a large language model.
 - Animation preview with grid, axes, pivots, borders, onionskin (with pivot paths), and another document's animation as an overlay.
 - Wizards: generate animations from a grid, generate regions, change all frame properties, merge animations and files.
 - Render to video, GIF, spritesheet or PNG sequence (FFmpeg), with trigger sounds.
-- Each document targets Rebirth or the extended format. Rebirth saves write the game's format with the editor's own copy embedded (`SourceDocument`), so nothing is lost; animation layers are flattened for the game, and anything else the game doesn't support is warned about first. Extended saves write the editor's document alone ([format](docs/extended_format.md)).
+- Saves write the game's format with the editor's own copy embedded (`SourceDocument`), so nothing is lost; animation layers are flattened for the game, and anything else the game doesn't support is warned about first. Documents can instead be saved as the editor's own, human-readable JSON ([format](docs/json_format.md)), which opens like any `.anm2`.
 - Undo/redo, autosave (spritesheet edits included) with crash restore, and overwrite warnings.
 
 ### Supported Languages

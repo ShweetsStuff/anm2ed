@@ -151,8 +151,7 @@ namespace anm2ed
     SERIALIZE_NESTED_GROUPS = 1 << 6,
     SERIALIZE_EXTENSIONS = 1 << 7,
     SERIALIZE_FLATTEN_SPECIAL_INTERPOLATED_FRAMES = 1 << 8,
-    SERIALIZE_EXTENDED_DOCUMENT = 1 << 9,
-    SERIALIZE_PURGE_DEFAULT_COLORS = 1 << 10
+    SERIALIZE_PURGE_DEFAULT_COLORS = 1 << 9
   };
 
   using Flags = int;
@@ -171,14 +170,15 @@ namespace anm2ed
     class Model;
   }
 
-  // How a document saves: the editor's document alone (extended), or the game's copy with the editor's embedded;
-  // `gameModel` is the game's copy when it differs from the document (animation layers flattened).
+  // How a document saves: the game's copy with the editor's embedded, or the editor's own JSON; `gameModel` is the
+  // game's copy when it differs from the document (animation layers flattened).
   struct Options
   {
-    bool isExtendedFormat{};
     bool isPurgeDefaultColors{}; // leave out tints of 255 and color offsets of 0, which readers assume
+    bool isJson{};               // the editor's own JSON document instead
     const model::Model* gameModel{};
   };
+  constexpr Options SAVE_OPTIONS_DEFAULT{.isPurgeDefaultColors = true};
 
 #define FRAME_CHANGE_SCALARS                                                                                           \
   X(cropX, crop.x, true, false, changeIsCropX, changeCrop.x)                                                           \

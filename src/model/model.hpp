@@ -359,8 +359,6 @@ namespace anm2ed::model
     std::vector<ElementType> layout{ElementType::INFO, ElementType::CONTENT, ElementType::ANIMATIONS};
     Extras extras{};
     bool isValid{true};
-    // Saved as the editor's document alone (true), or as Rebirth's document with the editor's copy embedded.
-    bool isExtendedFormat{};
 
     int animations_count_get() const;
     const Animation* animation_get(int) const;

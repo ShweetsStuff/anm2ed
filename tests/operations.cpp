@@ -12,7 +12,7 @@ model::Model fixture_load(const char* name) { return model_load(file_load(CORPUS
 void operation_check(const char* name, const model::Model& model)
 {
   golden_check(GOLDEN_DIR / std::format("operation.{}.xml", name),
-               model::model_to_string(model, {.isExtendedFormat = true}));
+               model::model_serialize(model, SERIALIZE_ANM2ED_DEFAULT));
 }
 
 model::Track& layer_track_get(model::Model& model, int animationIndex, int layerId)

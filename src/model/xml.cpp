@@ -13,6 +13,7 @@
 
 #include "file.hpp"
 #include "frames.hpp"
+#include "json.hpp"
 #include "math.hpp"
 #include "path.hpp"
 #include "time.hpp"
@@ -33,7 +34,8 @@ namespace anm2ed::model
   constexpr std::string_view CHILD_START_RANDOM = "Random";
   constexpr const char* TINT_ATTRIBUTES[] = {"RedTint", "GreenTint", "BlueTint", "AlphaTint"};
   constexpr const char* OFFSET_ATTRIBUTES[] = {"RedOffset", "GreenOffset", "BlueOffset"};
-  // Attributes the editor reads (or older builds wrote); any other attribute is kept verbatim as Extras.
+  // Attributes the editor reads (or older builds wrote, like ExtendedVersion); any other attribute is kept verbatim as
+  // Extras.
   // clang-format off
   constexpr std::string_view KNOWN_ATTRIBUTES[] = {
       "Name", "CreatedBy", "CreatedOn", "ExtendedVersion", "Binding", "Value", "DefaultAnimation", "Path", "Vertex", "Fragment", "Id",
@@ -51,7 +53,6 @@ namespace anm2ed::model
   constexpr const char* CREATED_ON_FORMAT = "%m/%d/%Y %I:%M:%S %p";
   constexpr const char* SHADER_NAME_DEFAULT = "New Shader";
   constexpr std::size_t VALUE_BUFFER_SIZE = 64;
-  constexpr int EXTENDED_VERSION = 2;
   constexpr int FLOAT_DIGITS = 8;
   constexpr int DOUBLE_DIGITS = 17;
   constexpr double FLOAT_WHOLE_MAX = 1e8;
@@ -1724,8 +1725,7 @@ namespace anm2ed::model
     sink.open(tag.empty() ? tag_get(ElementType::ANIMATED_ACTOR) : tag);
     extras_write(sink, model.extras);
     Children children{sink, model.extras};
-    auto isInfo = model.info.fps != Info{}.fps || model.info.createdBy != Info{}.createdBy ||
-                  writer.is(SERIALIZE_EXTENDED_DOCUMENT);
+    auto isInfo = model.info.fps != Info{}.fps || model.info.createdBy != Info{}.createdBy;
     for (auto type : layout_get(model.layout, {{ElementType::INFO, isInfo},
                                                {ElementType::CONTENT, true},
                                                {ElementType::ANIMATIONS, !model.animations.entries.empty()}}))
@@ -1739,7 +1739,6 @@ namespace anm2ed::model
       sink.attribute("CreatedOn", model.info.createdOn);
       sink.attribute("Fps", model.info.fps);
       sink.attribute("Version", model.info.version);
-      if (writer.is(SERIALIZE_EXTENDED_DOCUMENT)) sink.attribute("ExtendedVersion", EXTENDED_VERSION);
       extras_write(sink, model.info.extras);
       element_close(sink, model.info.extras);
     }
@@ -1748,12 +1747,10 @@ namespace anm2ed::model
     sink.close();
   }
 
-  // A save is the game's document with the editor's own copy embedded as SourceDocument (or just the editor's copy).
+  // A save is the game's document with the editor's own copy embedded as SourceDocument.
   void document_write(Sink& sink, const Model& model, Options options)
   {
     Flags purge = options.isPurgeDefaultColors ? SERIALIZE_PURGE_DEFAULT_COLORS : 0;
-    if (options.isExtendedFormat)
-      return model_write(sink, model, SERIALIZE_ANM2ED_DEFAULT | SERIALIZE_EXTENDED_DOCUMENT | purge);
     model_write(sink, options.gameModel ? *options.gameModel : model, SERIALIZE_ISAAC_DEFAULT | purge,
                 [&]() { model_write(sink, model, SERIALIZE_ANM2ED_DEFAULT | purge, {}, SOURCE_DOCUMENT_TAG); });
   }
@@ -1766,21 +1763,24 @@ namespace anm2ed::model
     return std::move(sink.text);
   }
 
+  bool model_invalid_set(Model& model)
+  {
+    model = model_make();
+    model.isValid = false;
+    return false;
+  }
+
   bool document_load(Model& model, XMLDocument& document, XMLError result, std::string* errorString)
   {
     auto root = result == XML_SUCCESS ? document.RootElement() : nullptr;
     if (!root)
     {
       if (errorString) *errorString = result == XML_SUCCESS ? "No root element." : document.ErrorStr();
-      model = model_make();
-      model.isValid = false;
-      return false;
+      return model_invalid_set(model);
     }
     auto source = root->Name() == SOURCE_DOCUMENT_TAG ? root : root->FirstChildElement(SOURCE_DOCUMENT_TAG.data());
+    // A document without one (as the old extended format saved) is read as the editor's own.
     model = model_read(source ? source : root);
-    // An extended document is the editor's own, marked in its Info; anything else is a Rebirth document.
-    auto info = root->FirstChildElement(tag_get(ElementType::INFO));
-    model.isExtendedFormat = !source && info && info->Attribute("ExtendedVersion");
     return true;
   }
 
@@ -1793,17 +1793,15 @@ namespace anm2ed::model
 
   bool model_load(Model& model, const std::filesystem::path& path, std::string* errorString)
   {
-    XMLDocument document{};
-    File file(path, "rb");
-    if (file) return document_load(model, document, document.LoadFile(file.get()), errorString);
+    std::string text{};
+    if (file::read_to_string(path, &text)) return model_load_string(model, text, errorString);
     if (errorString) *errorString = "File not found.";
-    model = model_make();
-    model.isValid = false;
-    return false;
+    return model_invalid_set(model);
   }
 
   bool model_load_string(Model& model, std::string_view text, std::string* errorString)
   {
+    if (is_json(text)) return model_from_json(model, text, errorString) || model_invalid_set(model);
     XMLDocument document{};
     return document_load(model, document, document.Parse(text.data(), text.size()), errorString);
   }
@@ -1824,6 +1822,7 @@ namespace anm2ed::model
 
   std::string model_to_string(const Model& model, Options options)
   {
+    if (options.isJson) return model_to_json(model);
     return text_get([&](Sink& sink) { document_write(sink, model, options); });
   }
 
@@ -1836,7 +1835,7 @@ namespace anm2ed::model
   std::uint64_t model_hash(const Model& model)
   {
     Sink sink{.mode = Sink::HASH};
-    model_write(sink, model, SERIALIZE_ANM2ED_DEFAULT | (model.isExtendedFormat ? SERIALIZE_EXTENDED_DOCUMENT : 0));
+    model_write(sink, model, SERIALIZE_ANM2ED_DEFAULT);
     return sink.hash;
   }
 

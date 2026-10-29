@@ -1,5 +1,5 @@
 <AnimatedActor Mystery="root">
-    <Info CreatedBy="fixture" CreatedOn="01/01/2026 12:00:00 PM" Fps="60" Version="5" ExtendedVersion="2" Extra="1"/>
+    <Info CreatedBy="fixture" CreatedOn="01/01/2026 12:00:00 PM" Fps="60" Version="5" Extra="1"/>
     <Comment>keep me</Comment>
     <Content>
         <Spritesheets>

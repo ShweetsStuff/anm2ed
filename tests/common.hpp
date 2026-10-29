@@ -11,6 +11,7 @@
 #include <tinyxml2/tinyxml2.h>
 
 #include "edit/edit.hpp"
+#include "model/json.hpp"
 #include "model/xml.hpp"
 
 namespace anm2ed::test
@@ -23,7 +24,6 @@ namespace anm2ed::test
                                                               {"editor", SERIALIZE_EDITOR_DEFAULT},
                                                               {"isaac", SERIALIZE_ISAAC_DEFAULT},
                                                               {"anm2ed", SERIALIZE_ANM2ED_DEFAULT}};
-  inline constexpr std::pair<const char*, bool> FORMATS[] = {{"save", false}, {"extended", true}};
   inline constexpr std::pair<const char*, types::merge::Type> MERGES[] = {{"merge_prepend", types::merge::PREPEND},
                                                                           {"merge_append", types::merge::APPEND},
                                                                           {"merge_replace", types::merge::REPLACE},
@@ -67,15 +67,14 @@ namespace anm2ed::test
     std::vector<Variant> variants{};
     for (auto [name, flags] : PRESETS)
       variants.emplace_back(name, model::model_serialize(model, flags));
-    for (auto [name, isExtended] : FORMATS)
-      variants.emplace_back(name, model::model_to_string(model, {.isExtendedFormat = isExtended}));
+    variants.emplace_back("save", model::model_to_string(model));
     for (auto [name, type] : MERGES)
     {
       auto merged = model;
       std::set<int> sources{0, 1, 2};
       edit::animations_merge(merged, 0, sources, type, type == types::merge::PREPEND || type == types::merge::REPLACE,
                              {});
-      variants.emplace_back(name, model::model_to_string(merged, {.isExtendedFormat = true}));
+      variants.emplace_back(name, model::model_serialize(merged, SERIALIZE_ANM2ED_DEFAULT));
     }
     return variants;
   }
@@ -96,16 +95,12 @@ namespace anm2ed::test
   inline void invariants_check(const model::Model& model)
   {
 
-    for (auto [name, isExtended] : FORMATS)
-    {
-      INFO("format: ", std::string(name));
-      // The first save may repair invalid input (dangling ids, duplicates); after that, saves must be fixed points.
-      auto text = model::model_to_string(model, {.isExtendedFormat = isExtended});
-      auto reloaded = model_load(text);
-      auto resaved = model::model_to_string(reloaded, {.isExtendedFormat = isExtended});
-      CHECK(resaved == text);
-      CHECK(model::model_hash(model_load(resaved)) == model::model_hash(reloaded));
-    }
+    // The first save may repair invalid input (dangling ids, duplicates); after that, saves must be fixed points.
+    auto text = model::model_to_string(model);
+    auto reloaded = model_load(text);
+    auto resaved = model::model_to_string(reloaded);
+    CHECK(resaved == text);
+    CHECK(model::model_hash(model_load(resaved)) == model::model_hash(reloaded));
 
     // Loading only the game's view and re-saving it for the game must not change it.
     auto game = game_document_get(model::model_to_string(model));

@@ -28,6 +28,7 @@ namespace anm2ed::model
 
   Model model_make();
   IsaacIssues isaac_issues_get(const Model&);
+  void model_repair(Model&);
   bool model_load(Model&, const std::filesystem::path&, std::string* = nullptr);
   bool model_load_string(Model&, std::string_view, std::string* = nullptr);
   bool model_save(const Model&, const std::filesystem::path&, std::string* = nullptr, Options = {});

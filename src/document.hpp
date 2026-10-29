@@ -125,13 +125,13 @@ namespace anm2ed
     EditTarget editTarget{EditTarget::NONE};
     model::UidIndex index{};
 
-    Document(const std::filesystem::path&, bool = false, std::string* = nullptr, bool = false);
+    Document(const std::filesystem::path&, bool = false, std::string* = nullptr);
     Document(const Document&) = delete;
     Document& operator=(const Document&) = delete;
     Document(Document&&) noexcept;
     Document& operator=(Document&&) noexcept;
-    bool save(const std::filesystem::path& = {}, std::string* = nullptr, bool = true);
-    bool file_write(const std::filesystem::path&, std::string* = nullptr, bool = true);
+    bool save(const std::filesystem::path& = {}, std::string* = nullptr, Options = SAVE_OPTIONS_DEFAULT);
+    bool file_write(const std::filesystem::path&, std::string* = nullptr, Options = SAVE_OPTIONS_DEFAULT);
     void assets_sync();
     void texture_change(int);
     bool texture_reload(int);
@@ -228,7 +228,7 @@ namespace anm2ed
     void sounds_add(const std::vector<std::filesystem::path>&);
     void libraries_add(const std::vector<std::filesystem::path>&);
 
-    bool autosave(std::string* = nullptr, bool = true);
+    bool autosave(std::string* = nullptr, Options = SAVE_OPTIONS_DEFAULT);
     std::filesystem::path autosave_path_get();
     std::filesystem::path path_from_autosave_get(const std::filesystem::path&);
 

@@ -1,5 +1,5 @@
 <AnimatedActor>
-    <Info CreatedBy="fixture" CreatedOn="01/01/2026 12:00:00 PM" Fps="30" Version="2" ExtendedVersion="2"/>
+    <Info CreatedBy="fixture" CreatedOn="01/01/2026 12:00:00 PM" Fps="30" Version="2"/>
     <Content>
         <Spritesheets>
             <Spritesheet Id="0" Path="tear.png">
