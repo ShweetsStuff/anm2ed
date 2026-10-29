@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <charconv>
+#include <cstdio>
 #include <format>
 #include <functional>
 #include <map>
@@ -9,7 +10,7 @@
 #include <ranges>
 #include <tuple>
 
-#include <tinyxml2/tinyxml2.h>
+#include <pugixml/src/pugixml.hpp>
 
 #include "file.hpp"
 #include "frames.hpp"
@@ -18,7 +19,6 @@
 #include "path.hpp"
 #include "time.hpp"
 
-using namespace tinyxml2;
 using namespace anm2ed::util;
 
 namespace anm2ed::model
@@ -46,6 +46,8 @@ namespace anm2ed::model
       "Interpolated", "Origin", "BakeInterpolation", "BakeDelay", "BakeCount", "OriginalDelay", "Library", "Animation",
       "ChildAnimation", "ChildMode", "ChildStart", "Restart", "Blur"};
   // clang-format on
+  constexpr std::pair<std::string_view, bool> BOOL_WORDS[] = {{"true", true},   {"True", true},   {"TRUE", true},
+                                                              {"false", false}, {"False", false}, {"FALSE", false}};
   constexpr std::string_view SOURCE_DOCUMENT_TAG = "SourceDocument";
   constexpr std::string_view FRAME_RESTORE_TAG = "FrameRestore";
   constexpr std::string_view LEGACY_OVERLAY_TAG = "Overlay";
@@ -67,9 +69,9 @@ namespace anm2ed::model
 
   const char* tag_get(ElementType type) { return ELEMENT_TAGS[(int)type].data(); }
 
-  ElementType type_get(const XMLElement* element)
+  ElementType type_get(pugi::xml_node element)
   {
-    auto it = std::ranges::find(ELEMENT_TAGS, std::string_view(element->Name()));
+    auto it = std::ranges::find(ELEMENT_TAGS, std::string_view(element.name()));
     return it == std::end(ELEMENT_TAGS) ? ElementType::UNKNOWN : (ElementType)(it - std::begin(ELEMENT_TAGS));
   }
 
@@ -88,61 +90,94 @@ namespace anm2ed::model
     }
   }
 
-  // Reading: tinyxml2 straight into the model.
+  // Reading: pugixml straight into the model.
 
-  int int_get(const XMLElement* element, const char* name, int value = -1)
+  // Numbers and booleans read as tinyxml2 (which older builds used) reads them: "%d" and "%f" on the leading text,
+  // and booleans as a number or true/false.
+  const char* attribute_get(pugi::xml_node element, const char* name)
   {
-    element->QueryIntAttribute(name, &value);
+    auto attribute = element.attribute(name);
+    return attribute ? attribute.value() : nullptr;
+  }
+
+  bool is_int_read(const char* text, int& value) { return text && std::sscanf(text, "%d", &value) == 1; }
+
+  int int_get(pugi::xml_node element, const char* name, int value = -1)
+  {
+    is_int_read(attribute_get(element, name), value);
     return value;
   }
 
-  float float_get(const XMLElement* element, const char* name, float value = 0.0f)
+  float float_get(pugi::xml_node element, const char* name, float value = 0.0f)
   {
-    element->QueryFloatAttribute(name, &value);
+    if (auto text = attribute_get(element, name)) std::sscanf(text, "%f", &value);
     return value;
   }
 
-  bool bool_get(const XMLElement* element, const char* name, bool value)
+  bool bool_get(pugi::xml_node element, const char* name, bool value)
   {
-    element->QueryBoolAttribute(name, &value);
+    auto text = attribute_get(element, name);
+    if (int number{}; is_int_read(text, number)) return number != 0;
+    if (!text) return value;
+    for (auto [word, isTrue] : BOOL_WORDS)
+      if (word == text) return isTrue;
     return value;
   }
 
-  std::string string_get(const XMLElement* element, const char* name, std::string value = {})
+  std::string string_get(pugi::xml_node element, const char* name, std::string value = {})
   {
-    if (auto attribute = element->Attribute(name)) value = attribute;
+    if (auto attribute = attribute_get(element, name)) value = attribute;
     return value;
   }
 
-  std::filesystem::path path_get(const XMLElement* element, const char* name)
+  std::filesystem::path path_get(pugi::xml_node element, const char* name)
   {
-    auto attribute = element->Attribute(name);
+    auto attribute = attribute_get(element, name);
     return attribute ? path::from_utf8(attribute) : std::filesystem::path{};
   }
 
-  float color_get(const XMLElement* element, const char* name, float value)
+  float color_get(pugi::xml_node element, const char* name, float value)
   {
-    int color{};
-    if (element->QueryIntAttribute(name, &color) == XML_SUCCESS) value = math::uint8_to_float(color);
+    if (int color{}; is_int_read(attribute_get(element, name), color)) value = math::uint8_to_float(color);
     return value;
   }
 
-  Interpolation interpolation_read(const XMLElement* element, const char* name)
+  // An element's text: its first child, when that is text.
+  const char* text_get(pugi::xml_node element)
   {
-    auto value = element->Attribute(name);
+    auto first = element.first_child();
+    return first.type() == pugi::node_pcdata || first.type() == pugi::node_cdata ? first.value() : nullptr;
+  }
+
+  Interpolation interpolation_read(pugi::xml_node element, const char* name)
+  {
+    auto value = attribute_get(element, name);
     if (!value) return Interpolation::NONE;
     for (std::size_t i = 0; i < std::size(INTERPOLATION_VALUES); ++i)
       if (!INTERPOLATION_VALUES[i].empty() && INTERPOLATION_VALUES[i] == value) return (Interpolation)i;
     return bool_get(element, name, false) ? Interpolation::LINEAR : Interpolation::NONE;
   }
 
-  // Shader elements are only read where they belong; one anywhere else is dropped.
-  bool is_child_kept(const XMLNode* parent, const XMLElement* child)
+  pugi::xml_node element_next(pugi::xml_node node)
   {
-    std::string_view tag = child->Name();
+    do
+      node = node.next_sibling();
+    while (node && node.type() != pugi::node_element);
+    return node;
+  }
+
+  pugi::xml_node element_first(pugi::xml_node parent)
+  {
+    auto child = parent.first_child();
+    return !child || child.type() == pugi::node_element ? child : element_next(child);
+  }
+
+  // Shader elements are only read where they belong; one anywhere else is dropped.
+  bool is_child_kept(pugi::xml_node parent, pugi::xml_node child)
+  {
+    std::string_view tag = child.name();
     if (tag == LEGACY_OVERLAY_TAG || tag == SOURCE_DOCUMENT_TAG) return false;
-    auto parentElement = parent->ToElement();
-    auto parentType = parentElement ? type_get(parentElement) : ElementType::UNKNOWN;
+    auto parentType = parent.type() == pugi::node_element ? type_get(parent) : ElementType::UNKNOWN;
     switch (type_get(child))
     {
       case ElementType::SHADERS:
@@ -159,51 +194,51 @@ namespace anm2ed::model
   }
 
   // Child elements with their position, skipping legacy Overlay, nested SourceDocument copies and misplaced shaders.
-  template <class Callback> void children_each(const XMLNode* parent, Callback&& callback)
+  template <class Callback> void children_each(pugi::xml_node parent, Callback&& callback)
   {
     int position{};
-    for (auto child = parent->FirstChildElement(); child; child = child->NextSiblingElement())
-      if (is_child_kept(parent, child)) callback(child, type_get(child), position++);
+    for (auto child : parent.children())
+      if (child.type() == pugi::node_element && is_child_kept(parent, child))
+        callback(child, type_get(child), position++);
   }
 
-  // A repeated attribute keeps its first position and last value, as tinyxml2 writes it.
-  void attribute_read(std::vector<std::pair<std::string, std::string>>& attributes, const XMLAttribute* attribute)
+  // A repeated attribute keeps its first position and last value.
+  void attribute_read(std::vector<std::pair<std::string, std::string>>& attributes, pugi::xml_attribute attribute)
   {
-    auto existing = std::ranges::find(attributes, std::string_view(attribute->Name()),
+    auto existing = std::ranges::find(attributes, std::string_view(attribute.name()),
                                       [](const auto& pair) { return std::string_view(pair.first); });
     if (existing != attributes.end())
-      existing->second = attribute->Value();
+      existing->second = attribute.value();
     else
-      attributes.emplace_back(attribute->Name(), attribute->Value());
+      attributes.emplace_back(attribute.name(), attribute.value());
   }
 
-  XmlNode node_read(const XMLElement* element)
+  XmlNode node_read(pugi::xml_node element)
   {
-    XmlNode node{.tag = element->Name()};
-    for (auto attribute = element->FirstAttribute(); attribute; attribute = attribute->Next())
+    XmlNode node{.tag = element.name()};
+    for (auto attribute : element.attributes())
       attribute_read(node.attributes, attribute);
-    if (auto text = element->GetText()) node.text = text;
-    children_each(element,
-                  [&](const XMLElement* child, ElementType, int) { node.children.push_back(node_read(child)); });
+    if (auto text = text_get(element)) node.text = text;
+    children_each(element, [&](pugi::xml_node child, ElementType, int) { node.children.push_back(node_read(child)); });
     return node;
   }
 
-  Extras extras_read(const XMLElement* element)
+  Extras extras_read(pugi::xml_node element)
   {
     Extras extras{};
-    for (auto attribute = element->FirstAttribute(); attribute; attribute = attribute->Next())
-      if (!std::ranges::contains(KNOWN_ATTRIBUTES, std::string_view(attribute->Name())))
+    for (auto attribute : element.attributes())
+      if (!std::ranges::contains(KNOWN_ATTRIBUTES, std::string_view(attribute.name())))
         attribute_read(extras.attributes, attribute);
-    if (auto text = element->GetText()) extras.text = text;
+    if (auto text = text_get(element)) extras.text = text;
     return extras;
   }
 
-  void extras_child_add(Extras& extras, const XMLElement* child, int position)
+  void extras_child_add(Extras& extras, pugi::xml_node child, int position)
   {
     extras.children.emplace_back(position, node_read(child));
   }
 
-  Frame frame_read(const XMLElement* element)
+  Frame frame_read(pugi::xml_node element)
   {
     Frame frame{};
     frame.crop = {float_get(element, "XCrop"), float_get(element, "YCrop")};
@@ -243,7 +278,7 @@ namespace anm2ed::model
     auto ids_read = [&](std::vector<int>& ids, const char* attribute, ElementType type)
     {
       children_each(element,
-                    [&](const XMLElement* child, ElementType childType, int)
+                    [&](pugi::xml_node child, ElementType childType, int)
                     {
                       if (childType == type) ids.push_back(int_get(child, "Id"));
                     });
@@ -256,29 +291,29 @@ namespace anm2ed::model
     return frame;
   }
 
-  Track track_read(const XMLElement* element, ItemType type)
+  Track track_read(pugi::xml_node element, ItemType type)
   {
     Track track{.type = type, .isVisible = bool_get(element, "Visible", true), .extras = extras_read(element)};
     if (type == ItemType::LAYER) track.id = int_get(element, "LayerId");
     if (type == ItemType::NULL_) track.id = int_get(element, "NullId");
     auto frameType = type == ItemType::TRIGGER ? ElementType::TRIGGER : ElementType::FRAME;
-    for (auto child = element->FirstChildElement(); child;)
+    for (auto child = element_first(element); child;)
     {
       auto childType = type_get(child);
       // A frame written baked (BakeInterpolation/BakeDelay) is read back as the one interpolated frame it came from.
       if (auto delay = int_get(child, "BakeDelay", 0);
-          childType == ElementType::FRAME && child->Attribute("BakeInterpolation") && delay >= FRAME_DURATION_MIN)
+          childType == ElementType::FRAME && attribute_get(child, "BakeInterpolation") && delay >= FRAME_DURATION_MIN)
       {
         auto frame = frame_read(child);
         frame.interpolation = interpolation_read(child, "BakeInterpolation");
         frame.duration = delay;
         if (frameType == ElementType::FRAME) track.frames.push_back(std::move(frame));
         for (int i = 0; child && i < delay; ++i)
-          child = child->NextSiblingElement();
+          child = element_next(child);
         continue;
       }
       if (childType == frameType) track.frames.push_back(frame_read(child));
-      child = child->NextSiblingElement();
+      child = element_next(child);
     }
     return track;
   }
@@ -351,7 +386,7 @@ namespace anm2ed::model
     return entries;
   }
 
-  TrackItem track_group_item_read(const XMLElement* element, ItemType type)
+  TrackItem track_group_item_read(pugi::xml_node element, ItemType type)
   {
     TrackItem item{.group = TrackGroup{.id = int_get(element, "Id"),
                                        .name = string_get(element, "Name"),
@@ -361,17 +396,17 @@ namespace anm2ed::model
                    .index = int_get(element, "Index")};
     auto trackType = track_element_type_get(type);
     children_each(element,
-                  [&](const XMLElement* child, ElementType childType, int)
+                  [&](pugi::xml_node child, ElementType childType, int)
                   {
                     if (childType == ElementType::ROOT_ANIMATION && !item.root)
                       item.root = track_read(child, ItemType::ROOT);
                     else if (childType == trackType)
                       item.children.push_back(track_read(child, type));
-                    else if (child->Name() == FRAME_RESTORE_TAG && !item.isBackup)
+                    else if (child.name() == FRAME_RESTORE_TAG && !item.isBackup)
                     {
                       item.isBackup = true;
                       children_each(child,
-                                    [&](const XMLElement* backup, ElementType backupType, int)
+                                    [&](pugi::xml_node backup, ElementType backupType, int)
                                     {
                                       if (backupType == ElementType::ROOT_ANIMATION && !item.backupRoot)
                                         item.backupRoot = track_read(backup, ItemType::ROOT);
@@ -383,11 +418,11 @@ namespace anm2ed::model
     return item;
   }
 
-  std::vector<TrackItem> track_items_read(const XMLElement* container, ItemType type)
+  std::vector<TrackItem> track_items_read(pugi::xml_node container, ItemType type)
   {
     std::vector<TrackItem> items{};
     children_each(container,
-                  [&](const XMLElement* child, ElementType childType, int)
+                  [&](pugi::xml_node child, ElementType childType, int)
                   {
                     if (childType == ElementType::GROUP)
                       items.push_back(track_group_item_read(child, type));
@@ -440,7 +475,7 @@ namespace anm2ed::model
     return entries_build<TrackEntry>(std::move(items), extras);
   }
 
-  Animation animation_read(const XMLElement* element)
+  Animation animation_read(pugi::xml_node element)
   {
     Animation animation{.name = string_get(element, "Name"),
                         .frameNum = int_get(element, "FrameNum", 1),
@@ -455,7 +490,7 @@ namespace anm2ed::model
     std::set<ElementType> legacyRead{};
     int skipped{};
     children_each(element,
-                  [&](const XMLElement* child, ElementType type, int position)
+                  [&](pugi::xml_node child, ElementType type, int position)
                   {
                     if (type == ElementType::LAYER_ANIMATION_GROUPS || type == ElementType::NULL_ANIMATION_GROUPS)
                     {
@@ -463,7 +498,7 @@ namespace anm2ed::model
                       auto container = isLayers ? ElementType::LAYER_ANIMATIONS : ElementType::NULL_ANIMATIONS;
                       if (legacyRead.insert(type).second)
                         children_each(child,
-                                      [&](const XMLElement* group, ElementType groupType, int)
+                                      [&](pugi::xml_node group, ElementType groupType, int)
                                       {
                                         if (groupType == ElementType::GROUP)
                                           legacyGroups[container].push_back(track_group_item_read(
@@ -505,11 +540,11 @@ namespace anm2ed::model
     return animation;
   }
 
-  std::vector<AnimationEntry> animation_entries_read(const XMLNode* parent, Extras& extras)
+  std::vector<AnimationEntry> animation_entries_read(pugi::xml_node parent, Extras& extras)
   {
     std::vector<AnimationItem> items{};
     children_each(parent,
-                  [&](const XMLElement* child, ElementType type, int)
+                  [&](pugi::xml_node child, ElementType type, int)
                   {
                     if (type == ElementType::GROUP)
                     {
@@ -519,7 +554,7 @@ namespace anm2ed::model
                                                                  .isVisible = bool_get(child, "Visible", true),
                                                                  .extras = extras_read(child)}};
                       children_each(child,
-                                    [&](const XMLElement* animation, ElementType animationType, int)
+                                    [&](pugi::xml_node animation, ElementType animationType, int)
                                     {
                                       if (animationType == ElementType::ANIMATION)
                                         item.children.push_back(
@@ -536,7 +571,7 @@ namespace anm2ed::model
     return entries_build<AnimationEntry>(std::move(items), extras);
   }
 
-  Region region_read(const XMLElement* element)
+  Region region_read(pugi::xml_node element)
   {
     Region region{.id = int_get(element, "Id"),
                   .name = string_get(element, "Name"),
@@ -544,7 +579,7 @@ namespace anm2ed::model
                   .size = {float_get(element, "Width"), float_get(element, "Height")},
                   .pivot = {float_get(element, "XPivot"), float_get(element, "YPivot")},
                   .extras = extras_read(element)};
-    if (auto origin = element->Attribute("Origin"))
+    if (auto origin = attribute_get(element, "Origin"))
       for (std::size_t i = 0; i < std::size(ORIGIN_VALUES); ++i)
         if (!ORIGIN_VALUES[i].empty() && ORIGIN_VALUES[i] == origin) region.origin = (Origin)i;
     if (region.origin == Origin::TOP_LEFT) region.pivot = {};
@@ -552,12 +587,12 @@ namespace anm2ed::model
     return region;
   }
 
-  Spritesheet spritesheet_read(const XMLElement* element)
+  Spritesheet spritesheet_read(pugi::xml_node element)
   {
     Spritesheet spritesheet{
         .id = int_get(element, "Id"), .path = path_get(element, "Path"), .extras = extras_read(element)};
     children_each(element,
-                  [&](const XMLElement* child, ElementType type, int position)
+                  [&](pugi::xml_node child, ElementType type, int position)
                   {
                     if (type == ElementType::REGION)
                       spritesheet.regions.push_back(region_read(child));
@@ -567,7 +602,7 @@ namespace anm2ed::model
     return spritesheet;
   }
 
-  Shader shader_read(const XMLElement* element)
+  Shader shader_read(pugi::xml_node element)
   {
     Shader shader{.id = int_get(element, "Id"),
                   .name = string_get(element, "Name"),
@@ -575,7 +610,7 @@ namespace anm2ed::model
                   .fragment = path_get(element, "Fragment"),
                   .extras = extras_read(element)};
     children_each(element,
-                  [&](const XMLElement* child, ElementType type, int position)
+                  [&](pugi::xml_node child, ElementType type, int position)
                   {
                     if (type != ElementType::UNIFORM) return extras_child_add(shader.extras, child, position);
                     Uniform uniform{.name = string_get(child, "Name"),
@@ -583,7 +618,7 @@ namespace anm2ed::model
                                     .value = string_get(child, "Value"),
                                     .extras = extras_read(child)};
                     children_each(child,
-                                  [&](const XMLElement* component, ElementType componentType, int componentPosition)
+                                  [&](pugi::xml_node component, ElementType componentType, int componentPosition)
                                   {
                                     if (componentType != ElementType::COMPONENT)
                                       return extras_child_add(uniform.extras, component, componentPosition);
@@ -597,11 +632,11 @@ namespace anm2ed::model
     return shader;
   }
 
-  template <class Item> Item item_read(const XMLElement*);
-  template <> Spritesheet item_read(const XMLElement* element) { return spritesheet_read(element); }
-  template <> Region item_read(const XMLElement* element) { return region_read(element); }
-  template <> Shader item_read(const XMLElement* element) { return shader_read(element); }
-  template <> Layer item_read(const XMLElement* element)
+  template <class Item> Item item_read(pugi::xml_node);
+  template <> Spritesheet item_read(pugi::xml_node element) { return spritesheet_read(element); }
+  template <> Region item_read(pugi::xml_node element) { return region_read(element); }
+  template <> Shader item_read(pugi::xml_node element) { return shader_read(element); }
+  template <> Layer item_read(pugi::xml_node element)
   {
     return {.id = int_get(element, "Id"),
             .name = string_get(element, "Name"),
@@ -610,22 +645,22 @@ namespace anm2ed::model
             .animation = string_get(element, "Animation"),
             .extras = extras_read(element)};
   }
-  template <> Null item_read(const XMLElement* element)
+  template <> Null item_read(pugi::xml_node element)
   {
     return {.id = int_get(element, "Id"),
             .name = string_get(element, "Name"),
             .isShowRect = bool_get(element, "ShowRect", false),
             .extras = extras_read(element)};
   }
-  template <> Event item_read(const XMLElement* element)
+  template <> Event item_read(pugi::xml_node element)
   {
     return {.id = int_get(element, "Id"), .name = string_get(element, "Name"), .extras = extras_read(element)};
   }
-  template <> Sound item_read(const XMLElement* element)
+  template <> Sound item_read(pugi::xml_node element)
   {
     return {.id = int_get(element, "Id"), .path = path_get(element, "Path"), .extras = extras_read(element)};
   }
-  template <> Library item_read(const XMLElement* element)
+  template <> Library item_read(pugi::xml_node element)
   {
     return {.id = int_get(element, "Id"), .path = path_get(element, "Path"), .extras = extras_read(element)};
   }
@@ -640,12 +675,12 @@ namespace anm2ed::model
   template <> constexpr ElementType ITEM_TYPE<Sound>{ElementType::SOUND_ELEMENT};
   template <> constexpr ElementType ITEM_TYPE<Library>{ElementType::LIBRARY};
 
-  template <class Item> std::vector<Item> items_read(const XMLElement* container, Content& content, ElementType type)
+  template <class Item> std::vector<Item> items_read(pugi::xml_node container, Content& content, ElementType type)
   {
     std::vector<Item> items{};
     auto extras = extras_read(container);
     children_each(container,
-                  [&](const XMLElement* child, ElementType childType, int position)
+                  [&](pugi::xml_node child, ElementType childType, int position)
                   {
                     if (childType == ITEM_TYPE<Item>)
                       items.push_back(item_read<Item>(child));
@@ -656,13 +691,13 @@ namespace anm2ed::model
     return items;
   }
 
-  Content content_read(const XMLElement* element)
+  Content content_read(pugi::xml_node element)
   {
     Content content{.layout = {}, .extras = extras_read(element)};
     children_each(element,
-                  [&](const XMLElement* child, ElementType type, int position)
+                  [&](pugi::xml_node child, ElementType type, int position)
                   {
-                    if (child->Name() == LEGACY_GROUPS_TAG) return;
+                    if (child.name() == LEGACY_GROUPS_TAG) return;
                     auto isKnown = type == ElementType::SPRITESHEETS || type == ElementType::SHADERS ||
                                    type == ElementType::LAYERS || type == ElementType::NULLS ||
                                    type == ElementType::EVENTS || type == ElementType::SOUNDS ||
@@ -763,11 +798,11 @@ namespace anm2ed::model
     }
   }
 
-  Model model_read(const XMLElement* element)
+  Model model_read(pugi::xml_node element)
   {
     Model model{.layout = {}, .extras = extras_read(element)};
     children_each(element,
-                  [&](const XMLElement* child, ElementType type, int position)
+                  [&](pugi::xml_node child, ElementType type, int position)
                   {
                     auto isKnown =
                         type == ElementType::INFO || type == ElementType::CONTENT || type == ElementType::ANIMATIONS;
@@ -781,7 +816,7 @@ namespace anm2ed::model
                                     .fps = int_get(child, "Fps", Info{}.fps),
                                     .version = int_get(child, "Version", 0),
                                     .extras = extras_read(child)};
-                      children_each(child, [&](const XMLElement* infoChild, ElementType, int infoPosition)
+                      children_each(child, [&](pugi::xml_node infoChild, ElementType, int infoPosition)
                                     { extras_child_add(model.info.extras, infoChild, infoPosition); });
                     }
                     if (type == ElementType::CONTENT) model.content = content_read(child);
@@ -836,7 +871,7 @@ namespace anm2ed::model
     return std::abs(value) < FLOAT_WHOLE_MAX && value == std::trunc(value) && !(value == 0 && std::signbit(value));
   }
 
-  // Where written XML goes. TEXT prints exactly as tinyxml2's XMLPrinter would (4-space indents, entities escaped,
+  // Where written XML goes. TEXT prints as tinyxml2's XMLPrinter did (4-space indents, entities escaped,
   // text keeping its element's children inline); HASH folds the same elements into an FNV hash; TREE builds an XmlNode.
   struct Sink
   {
@@ -942,7 +977,7 @@ namespace anm2ed::model
       if (mode == TREE) nodes.back()->attributes.emplace_back(name, value);
     }
 
-    // Numbers print as tinyxml2's XMLUtil::ToStr does ("%d", "%.8g", "true"/"false"), without printf; whole numbers
+    // Numbers print as tinyxml2's XMLUtil::ToStr did ("%d", "%.8g", "true"/"false"), without printf; whole numbers
     // (most values) print as integers, which "%.8g" also does below 1e8 (but keeps "-0").
     template <class T> void attribute(std::string_view name, const T& value)
     {
@@ -1770,15 +1805,28 @@ namespace anm2ed::model
     return false;
   }
 
-  bool document_load(Model& model, XMLDocument& document, XMLError result, std::string* errorString)
+  // A parse error says where it is: "Error parsing element name (line 12)".
+  bool document_parse(pugi::xml_document& document, std::string_view text, std::string* errorString)
   {
-    auto root = result == XML_SUCCESS ? document.RootElement() : nullptr;
+    auto result = document.load_buffer(text.data(), text.size());
+    if (result) return true;
+    if (errorString)
+      *errorString = std::format("{} (line {})", result.description(),
+                                 std::ranges::count(text.substr(0, result.offset), '\n') + 1);
+    return false;
+  }
+
+  bool document_load(Model& model, std::string_view text, std::string* errorString)
+  {
+    pugi::xml_document document{};
+    if (!document_parse(document, text, errorString)) return model_invalid_set(model);
+    auto root = document.document_element();
     if (!root)
     {
-      if (errorString) *errorString = result == XML_SUCCESS ? "No root element." : document.ErrorStr();
+      if (errorString) *errorString = "No root element.";
       return model_invalid_set(model);
     }
-    auto source = root->Name() == SOURCE_DOCUMENT_TAG ? root : root->FirstChildElement(SOURCE_DOCUMENT_TAG.data());
+    auto source = root.name() == SOURCE_DOCUMENT_TAG ? root : root.child(SOURCE_DOCUMENT_TAG.data());
     // A document without one (as the old extended format saved) is read as the editor's own.
     model = model_read(source ? source : root);
     return true;
@@ -1802,8 +1850,7 @@ namespace anm2ed::model
   bool model_load_string(Model& model, std::string_view text, std::string* errorString)
   {
     if (is_json(text)) return model_from_json(model, text, errorString) || model_invalid_set(model);
-    XMLDocument document{};
-    return document_load(model, document, document.Parse(text.data(), text.size()), errorString);
+    return document_load(model, text, errorString);
   }
 
   bool model_save(const Model& model, const std::filesystem::path& path, std::string* errorString, Options options)
@@ -1854,20 +1901,13 @@ namespace anm2ed::model
     return text_get([&](Sink& sink) { group_write(sink, Writer(CLIPBOARD_FLAGS), group); });
   }
 
-  bool document_parse(XMLDocument& document, const std::string& text, std::string* errorString)
-  {
-    if (document.Parse(text.c_str()) == XML_SUCCESS) return true;
-    if (errorString) *errorString = document.ErrorStr();
-    return false;
-  }
-
   std::vector<Frame> frames_from_string(const std::string& text, ItemType type, std::string* errorString)
   {
-    XMLDocument document{};
+    pugi::xml_document document{};
     if (!document_parse(document, text, errorString)) return {};
     auto tag = tag_get(type == ItemType::TRIGGER ? ElementType::TRIGGER : ElementType::FRAME);
     std::vector<Frame> frames{};
-    for (auto element = document.FirstChildElement(tag); element; element = element->NextSiblingElement(tag))
+    for (auto element : document.children(tag))
       frames.push_back(frame_read(element));
     if (frames.empty() && errorString) *errorString = std::format("No valid {}(s).", tag);
     return frames;
@@ -1875,10 +1915,10 @@ namespace anm2ed::model
 
   std::vector<AnimationEntry> animations_from_string(const std::string& text, std::string* errorString)
   {
-    XMLDocument document{};
+    pugi::xml_document document{};
     if (!document_parse(document, text, errorString)) return {};
     Extras extras{};
-    auto entries = animation_entries_read(&document, extras);
+    auto entries = animation_entries_read(document, extras);
     if (entries.empty() && errorString) *errorString = "No valid animation(s).";
     return entries;
   }
@@ -1890,11 +1930,11 @@ namespace anm2ed::model
 
   template <class Item> std::vector<Item> items_from_string(const std::string& text, std::string* errorString)
   {
-    XMLDocument document{};
+    pugi::xml_document document{};
     if (!document_parse(document, text, errorString)) return {};
     auto tag = tag_get(ITEM_TYPE<Item>);
     std::vector<Item> items{};
-    for (auto element = document.FirstChildElement(tag); element; element = element->NextSiblingElement(tag))
+    for (auto element : document.children(tag))
     {
       auto item = item_read<Item>(element);
       if constexpr (requires { item.path; }) item.path = path::backslash_handle(item.path);

@@ -81,7 +81,7 @@ set(IMGUI_SRC
     external/imgui/backends/imgui_impl_sdl3.cpp
     external/imgui/backends/imgui_impl_opengl3.cpp)
 
-set(TINYXML2_SRC external/tinyxml2/tinyxml2.cpp)
+set(PUGIXML_SRC external/pugixml/src/pugixml.cpp)
 set(SIMDJSON_SRC external/simdjson/singleheader/simdjson.cpp)
 
 file(GLOB PROJECT_SRC CONFIGURE_DEPENDS
@@ -119,7 +119,6 @@ set(CORE_INCLUDE_DIRS
     external
     external/imgui
     external/glm
-    external/tinyxml2
     external/lunasvg/include
     external/SDL/include
     src
@@ -127,7 +126,7 @@ set(CORE_INCLUDE_DIRS
     src/resource
     src/util)
 
-add_library(anm2ed_core STATIC ${CORE_SRC} ${TINYXML2_SRC} ${SIMDJSON_SRC} ${IMGUI_CORE_SRC})
+add_library(anm2ed_core STATIC ${CORE_SRC} ${PUGIXML_SRC} ${SIMDJSON_SRC} ${IMGUI_CORE_SRC})
 target_include_directories(anm2ed_core PUBLIC ${CORE_INCLUDE_DIRS})
 target_link_libraries(anm2ed_core PUBLIC lunasvg)
 target_compile_definitions(anm2ed_core PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS IMGUI_DEBUG_PARANOID IMGUI_ENABLE_DOCKING)
@@ -158,8 +157,7 @@ target_include_directories(
           external
           external/imgui
           external/glm
-          external/tinyxml2
-          external/lunasvg
+                external/lunasvg
           external/SDL
           external/SDL_mixer
           external/SDL_mixer/include

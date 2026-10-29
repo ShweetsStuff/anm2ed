@@ -5,9 +5,6 @@
 	path = external/imgui
 	url = https://github.com/ocornut/imgui
 	branch = docking
-[submodule "external/tinyxml2"]
-	path = external/tinyxml2
-	url = https://github.com/leethomason/tinyxml2
 [submodule "external/SDL"]
 	path = external/SDL
 	url = https://github.com/libsdl-org/SDL.git
@@ -20,3 +17,6 @@
 [submodule "external/simdjson"]
 	path = external/simdjson
 	url = https://github.com/simdjson/simdjson
+[submodule "external/pugixml"]
+	path = external/pugixml
+	url = https://github.com/zeux/pugixml

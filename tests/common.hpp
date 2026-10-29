@@ -8,8 +8,6 @@
 #include <fstream>
 #include <sstream>
 
-#include <tinyxml2/tinyxml2.h>
-
 #include "edit/edit.hpp"
 #include "model/json.hpp"
 #include "model/xml.hpp"
@@ -79,16 +77,14 @@ namespace anm2ed::test
     return variants;
   }
 
-  // The outer document of a save with its SourceDocument removed: what the game reads.
-  inline std::string game_document_get(const std::string& text)
+  // The outer document of a save with its SourceDocument (the root's last child, on lines of its own) removed: what
+  // the game reads.
+  inline std::string game_document_get(std::string text)
   {
-    tinyxml2::XMLDocument document{};
-    document.Parse(text.c_str());
-    if (auto source = document.RootElement()->FirstChildElement("SourceDocument"))
-      document.RootElement()->DeleteChild(source);
-    tinyxml2::XMLPrinter printer{};
-    document.Print(&printer);
-    return printer.CStr();
+    constexpr std::string_view END = "</SourceDocument>";
+    auto start = text.find("\n    <SourceDocument");
+    if (start != std::string::npos) text.erase(start, text.find(END, start) + END.size() - start);
+    return text;
   }
 
   // Save/reload properties every document must hold.

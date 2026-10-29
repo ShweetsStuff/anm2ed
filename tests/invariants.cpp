@@ -12,7 +12,7 @@ TEST_CASE("per-fixture invariants")
   }
 }
 
-TEST_CASE("saved text is what tinyxml2 prints for the same document")
+TEST_CASE("saved text escapes what it holds, and reads back the same")
 {
   auto model = model_load(file_load(CORPUS_DIR / "11_unknown.anm2"));
   model.extras.children.emplace_back(
@@ -21,11 +21,12 @@ TEST_CASE("saved text is what tinyxml2 prints for the same document")
                         .text = "a & b > c 'd' \"e\"",
                         .children = {{.tag = "Inner", .children = {{.tag = "Leaf", .attributes = {{"A", "1"}}}}}}});
   auto text = model::model_to_string(model);
-  tinyxml2::XMLDocument document{};
-  REQUIRE(document.Parse(text.c_str()) == tinyxml2::XML_SUCCESS);
-  tinyxml2::XMLPrinter printer{};
-  document.Print(&printer);
-  CHECK(text == printer.CStr());
+  CHECK(text.find("Quote=\"it&apos;s &quot;x&quot; &amp; &lt;y&gt;\"") != std::string::npos);
+  CHECK(text.find(">a &amp; b &gt; c 'd' \"e\"<") != std::string::npos);
+  auto reloaded = model_load(text).extras.children;
+  auto note = std::ranges::find(reloaded, std::string("Note"), [](const auto& child) { return child.second.tag; });
+  REQUIRE(note != reloaded.end());
+  CHECK(note->second == model.extras.children.back().second);
 }
 
 TEST_CASE("purged default colors read back the same")

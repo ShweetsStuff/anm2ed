@@ -9,6 +9,7 @@
 #include <format>
 #include <memory>
 #include <set>
+#include <sstream>
 #include <utility>
 
 #if defined(__clang__) || defined(__GNUC__)
@@ -28,7 +29,7 @@
 #endif
 
 #include <lunasvg.h>
-#include <tinyxml2/tinyxml2.h>
+#include <pugixml/src/pugixml.hpp>
 
 #include "file.hpp"
 #include "math.hpp"
@@ -52,6 +53,7 @@ namespace anm2ed::resource
   constexpr auto XLINK_NAMESPACE = "http://www.w3.org/1999/xlink";
   constexpr auto SVG_ID_PREFIX = "anm2ed-source-";
   constexpr std::string_view SVG_URL_START = "url(#";
+  constexpr auto SVG_INDENT = "    ";
   constexpr int ALPHA = 3; // a pixel's alpha channel
   constexpr int SEAM_REACH = 2;
   constexpr uint8_t SEAM_OPAQUE_ALPHA = 250;
@@ -227,11 +229,17 @@ namespace anm2ed::resource
     return text;
   }
 
+  // Sets an attribute, adding it when the element doesn't have it yet.
+  template <class T> void attribute_set(pugi::xml_node element, const char* name, const T& value)
+  {
+    auto attribute = element.attribute(name);
+    (attribute ? attribute : element.append_attribute(name)).set_value(value);
+  }
+
   // An image as one SVG definition: a vector one as a symbol of its drawing (its ids prefixed with `id`, so
   // several drawings can share a document), a raster one as an embedded PNG. Either draws at the image's size in
   // SVG units.
-  void svg_definition_add(tinyxml2::XMLDocument& document, tinyxml2::XMLElement* root, tinyxml2::XMLElement* defs,
-                          const Image& image, const std::string& id)
+  void svg_definition_add(pugi::xml_node root, pugi::xml_node defs, const Image& image, const std::string& id)
   {
     if (!image.is_vector())
     {
@@ -243,44 +251,43 @@ namespace anm2ed::resource
                                                                 (uint8_t*)data, (uint8_t*)data + count);
           },
           &png, image.size.x, image.size.y, CHANNELS, image.pixels.data(), image.size.x * CHANNELS);
-      auto element = defs->InsertNewChildElement("image");
-      element->SetAttribute("id", id.c_str());
-      element->SetAttribute("width", image.size.x);
-      element->SetAttribute("height", image.size.y);
-      element->SetAttribute("xlink:href", ("data:image/png;base64," + base64_get(png)).c_str());
+      auto element = defs.append_child("image");
+      element.append_attribute("id") = id.c_str();
+      element.append_attribute("width") = image.size.x;
+      element.append_attribute("height") = image.size.y;
+      element.append_attribute("xlink:href") = ("data:image/png;base64," + base64_get(png)).c_str();
       return;
     }
 
-    tinyxml2::XMLDocument source{};
-    source.Parse(image.svg->c_str());
-    auto sourceRoot = source.RootElement();
+    pugi::xml_document source{};
+    source.load_string(image.svg->c_str());
+    auto sourceRoot = source.document_element();
     if (!sourceRoot) return;
 
     // Every id in the drawing gets the prefix, and so does every reference to one (href="#id", url(#id)).
     std::set<std::string> ids{};
-    auto elements_each = [](tinyxml2::XMLElement* element, auto&& callback, auto&& self) -> void
+    auto elements_each = [](pugi::xml_node element, auto&& callback, auto&& self) -> void
     {
       callback(element);
-      for (auto child = element->FirstChildElement(); child; child = child->NextSiblingElement())
-        self(child, callback, self);
+      for (auto child : element.children())
+        if (child.type() == pugi::node_element) self(child, callback, self);
     };
     elements_each(
         sourceRoot,
-        [&](tinyxml2::XMLElement* element)
+        [&](pugi::xml_node element)
         {
-          if (auto elementId = element->Attribute("id")) ids.insert(elementId);
+          if (auto elementId = element.attribute("id")) ids.insert(elementId.value());
         },
         elements_each);
     auto renamed_get = [&](std::string_view sourceId) { return id + "-" + std::string(sourceId); };
     elements_each(
         sourceRoot,
-        [&](tinyxml2::XMLElement* element)
+        [&](pugi::xml_node element)
         {
-          std::vector<std::pair<std::string, std::string>> attributes{};
-          for (auto attribute = element->FirstAttribute(); attribute; attribute = attribute->Next())
-            attributes.emplace_back(attribute->Name(), attribute->Value());
-          for (auto& [name, value] : attributes)
+          for (auto attribute : element.attributes())
           {
+            std::string_view name = attribute.name();
+            std::string value = attribute.value();
             if (name == "id")
               value = renamed_get(value);
             else if ((name == "href" || name == "xlink:href") && value.starts_with('#') &&
@@ -295,29 +302,31 @@ namespace anm2ed::resource
                 if (auto reference = value.substr(start, end - start); ids.contains(reference))
                   value.replace(start, end - start, renamed_get(reference));
               }
-            element->SetAttribute(name.c_str(), value.c_str());
+            attribute.set_value(value.c_str());
           }
         },
         elements_each);
 
     auto unitSize = image.unit_size_get();
-    auto symbol = defs->InsertNewChildElement("symbol");
-    symbol->SetAttribute("id", id.c_str());
-    auto viewBox = sourceRoot->Attribute("viewBox");
-    symbol->SetAttribute("viewBox", viewBox ? viewBox : std::format("0 0 {} {}", unitSize.x, unitSize.y).c_str());
-    if (auto aspect = sourceRoot->Attribute("preserveAspectRatio")) symbol->SetAttribute("preserveAspectRatio", aspect);
+    auto symbol = defs.append_child("symbol");
+    symbol.append_attribute("id") = id.c_str();
+    auto viewBox = sourceRoot.attribute("viewBox");
+    symbol.append_attribute("viewBox") =
+        viewBox ? viewBox.value() : std::format("0 0 {} {}", unitSize.x, unitSize.y).c_str();
+    if (auto aspect = sourceRoot.attribute("preserveAspectRatio"))
+      symbol.append_attribute("preserveAspectRatio") = aspect.value();
     // The drawing's root styles carry over through a group; its namespaces go on the new root.
-    auto group = symbol->InsertNewChildElement("g");
-    for (auto attribute = sourceRoot->FirstAttribute(); attribute; attribute = attribute->Next())
+    auto group = symbol.append_child("g");
+    for (auto attribute : sourceRoot.attributes())
     {
-      std::string_view name = attribute->Name();
+      std::string_view name = attribute.name();
       if (name.starts_with("xmlns"))
-        root->SetAttribute(attribute->Name(), attribute->Value());
+        attribute_set(root, attribute.name(), attribute.value());
       else if (!std::ranges::contains(SVG_ROOT_ONLY_ATTRIBUTES, name))
-        group->SetAttribute(attribute->Name(), attribute->Value());
+        group.append_attribute(attribute.name()) = attribute.value();
     }
-    for (auto child = sourceRoot->FirstChild(); child; child = child->NextSibling())
-      group->InsertEndChild(child->DeepClone(&document));
+    for (auto child : sourceRoot.children())
+      group.append_copy(child);
   }
 
   // Parts of images placed into one image of `size`: an SVG when `isVector` (each part a clipped view of its image's
@@ -333,15 +342,14 @@ namespace anm2ed::resource
       return composed;
     }
 
-    tinyxml2::XMLDocument document{};
-    auto root = document.NewElement("svg");
-    document.InsertEndChild(root);
-    root->SetAttribute("xmlns", SVG_NAMESPACE);
-    root->SetAttribute("xmlns:xlink", XLINK_NAMESPACE);
-    root->SetAttribute("width", size.x);
-    root->SetAttribute("height", size.y);
-    root->SetAttribute("viewBox", std::format("0 0 {} {}", size.x, size.y).c_str());
-    auto defs = root->InsertNewChildElement("defs");
+    pugi::xml_document document{};
+    auto root = document.append_child("svg");
+    root.append_attribute("xmlns") = SVG_NAMESPACE;
+    root.append_attribute("xmlns:xlink") = XLINK_NAMESPACE;
+    root.append_attribute("width") = size.x;
+    root.append_attribute("height") = size.y;
+    root.append_attribute("viewBox") = std::format("0 0 {} {}", size.x, size.y).c_str();
+    auto defs = root.append_child("defs");
 
     std::vector<const Image*> sources{};
     for (const auto& part : parts)
@@ -350,25 +358,25 @@ namespace anm2ed::resource
       if (source == sources.end())
       {
         source = sources.insert(sources.end(), part.image);
-        svg_definition_add(document, root, defs, *part.image, std::format("{}{}", SVG_ID_PREFIX, sources.size() - 1));
+        svg_definition_add(root, defs, *part.image, std::format("{}{}", SVG_ID_PREFIX, sources.size() - 1));
       }
-      auto view = root->InsertNewChildElement("svg");
-      view->SetAttribute("x", part.destination.x);
-      view->SetAttribute("y", part.destination.y);
-      view->SetAttribute("width", part.size.x);
-      view->SetAttribute("height", part.size.y);
-      view->SetAttribute("viewBox",
-                         std::format("{} {} {} {}", part.source.x, part.source.y, part.size.x, part.size.y).c_str());
-      auto use = view->InsertNewChildElement("use");
+      auto view = root.append_child("svg");
+      view.append_attribute("x") = part.destination.x;
+      view.append_attribute("y") = part.destination.y;
+      view.append_attribute("width") = part.size.x;
+      view.append_attribute("height") = part.size.y;
+      view.append_attribute("viewBox") =
+          std::format("{} {} {} {}", part.source.x, part.source.y, part.size.x, part.size.y).c_str();
+      auto use = view.append_child("use");
       auto unitSize = part.image->unit_size_get();
-      use->SetAttribute("xlink:href", std::format("#{}{}", SVG_ID_PREFIX, source - sources.begin()).c_str());
-      use->SetAttribute("width", unitSize.x);
-      use->SetAttribute("height", unitSize.y);
+      use.append_attribute("xlink:href") = std::format("#{}{}", SVG_ID_PREFIX, source - sources.begin()).c_str();
+      use.append_attribute("width") = unitSize.x;
+      use.append_attribute("height") = unitSize.y;
     }
 
-    tinyxml2::XMLPrinter printer{};
-    document.Print(&printer);
-    return svg_render(std::make_shared<std::string>(printer.CStr()), 1.0f);
+    std::ostringstream text{};
+    document.save(text, SVG_INDENT, pugi::format_indent | pugi::format_no_declaration);
+    return svg_render(std::make_shared<std::string>(text.str()), 1.0f);
   }
 
   // Writes a vector image as its SVG (unless the path asks for a PNG), and any other as a PNG.
