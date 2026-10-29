@@ -32,6 +32,9 @@ A regular save is different: it writes the game's `.anm2` XML, with the editor's
 "shaders": [
   {"name": "glow", "vertex": "glow.vs", "fragment": "glow.fs", "uniforms": [{"name": "strength", "value": "0.5"}]}
 ],
+"libraries": [
+  "shared/shadows.anm2"
+],
 "layers": [
   {"name": "torso", "sheet": 1},
   {"name": "hx", "animation": "Head"},
@@ -46,9 +49,6 @@ A regular save is different: it writes the game's `.anm2` XML, with the editor's
 ],
 "sounds": [
   "sounds/step.ogg"
-],
-"libraries": [
-  "shared/shadows.anm2"
 ]
 ```
 

@@ -13,6 +13,8 @@
 #include <utility>
 #include <vector>
 
+#include <SDL3/SDL_video.h>
+
 #include "file.hpp"
 #include "log.hpp"
 #include "manager.hpp"
@@ -320,7 +322,8 @@ namespace anm2ed
       return false;
     };
 
-    auto shaderElement = model::item_get(model.content.shaders, shaderId);
+    // Without an OpenGL context (as the command line converts), there is nothing to compile it with.
+    auto shaderElement = SDL_GL_GetCurrentContext() ? model::item_get(model.content.shaders, shaderId) : nullptr;
     if (!shaderElement)
     {
       document::shader_status_format_append(status, LABEL_SHADER_PATH_EMPTY, LABEL_FRAGMENT);

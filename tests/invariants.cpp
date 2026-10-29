@@ -101,3 +101,14 @@ TEST_CASE("JSON that can't be read is reported by where it is, and the rest stil
   CHECK_FALSE(model::model_load_string(model, "{ \"fps\": 30 }", &issues));
   CHECK_FALSE(model::model_load_string(model, "{ \"anm2ed\": 1, ", &issues));
 }
+
+TEST_CASE("JSON layers can name a library listed after them in the file")
+{
+  auto text = R"({ "anm2ed": 1, "layers": [ { "name": "shadow", "library": 0, "animation": "Small" } ],
+    "libraries": [ "shared/shadows.anm2" ] })";
+  model::Model model{};
+  std::string issues{};
+  REQUIRE(model::model_load_string(model, text, &issues));
+  CHECK(issues.empty());
+  CHECK(model.content.layers[0].libraryId == 0);
+}

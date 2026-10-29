@@ -28,12 +28,14 @@ namespace anm2ed::cli
 commands:
   info                  animations, items, spritesheets and Isaac compatibility, as text
   frame                 one frame as a PNG                       (--out, --time)
+  convert               the document as --format, to --out (default: the file itself)
   render                the animation as --type:
                           sheet  all frames in a grid PNG (default; --rows, --columns)
                           pngs   one PNG per frame in the --out folder (--format, default "{}.png")
                           gif, webm, mp4, ogv  through FFmpeg (--ffmpeg, default: the editor's setting)
 
 options:
+  --format json|xml       the document format for "convert" (default xml: the game's, with the editor's copy)
   --animation NAME|INDEX  which animation (default: the default animation)
   --out PATH              where to write
   --time T                frame time for "frame" (default 0)
@@ -79,7 +81,8 @@ options:
   std::optional<Arguments> arguments_get(int argc, const char** argv)
   {
     if (argc < 3) return {};
-    Arguments arguments{.command = argv[1], .file = path::from_utf8(argv[2])};
+    // Absolute, so a bare file name still has a folder for the paths in it.
+    Arguments arguments{.command = argv[1], .file = std::filesystem::absolute(path::from_utf8(argv[2]))};
     for (int i = 3; i < argc; ++i)
     {
       std::string name = argv[i];
@@ -287,7 +290,33 @@ options:
     return 0;
   }
 
-  constexpr std::string_view COMMANDS[] = {"info", "frame", "render"};
+  // Saved as the editor saves it: XML (the game's copy, with the editor's embedded) or the editor's JSON.
+  int convert_run(const Arguments& arguments)
+  {
+    auto format = arguments.get("format").value_or("xml");
+    if (format != "xml" && format != "json")
+    {
+      std::println(stderr, "--format must be json or xml");
+      return 2;
+    }
+    std::string error{};
+    Document document(arguments.file, false, &error);
+    auto fileUtf8 = path::to_utf8(arguments.file);
+    if (!document.is_valid())
+    {
+      std::println(stderr, "could not load {}: {}", fileUtf8, error);
+      return 1;
+    }
+    if (!error.empty()) std::println(stderr, "{}:\n{}", fileUtf8, error);
+    auto out = std::filesystem::absolute(arguments.get("out").transform(path::from_utf8).value_or(arguments.file));
+    auto options = SAVE_OPTIONS_DEFAULT;
+    options.isJson = format == "json";
+    if (document.save(out, &error, options)) return 0;
+    std::println(stderr, "could not write {}: {}", path::to_utf8(out), error);
+    return 1;
+  }
+
+  constexpr std::string_view COMMANDS[] = {"info", "frame", "render", "convert"};
 
   bool is_cli(int argc, const char** argv)
   {
@@ -303,6 +332,7 @@ options:
       return 2;
     }
     if (arguments->command == "info") return info_print(*arguments);
+    if (arguments->command == "convert") return convert_run(*arguments);
     return draw_run(*arguments);
   }
 }

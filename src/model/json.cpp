@@ -675,7 +675,7 @@ namespace anm2ed::model
         false);
   }
 
-  // Content comes before animations, which read it.
+  // Content comes before animations, which read it (and anything named comes before what names it).
   template <class Io, class M> void model_io(Io& io, M& model)
   {
     auto& content = model.content;
@@ -734,6 +734,8 @@ namespace anm2ed::model
               true);
         },
         false, false);
+    // Libraries come before the layers that name them.
+    io.values("libraries", content.libraries, [](auto& library) -> auto& { return library.path; });
     io.list(
         "layers", content.layers,
         [&](auto& layerIo, auto& layer)
@@ -754,7 +756,6 @@ namespace anm2ed::model
         true, false);
     io.values("events", content.events, [](auto& event) -> auto& { return event.name; });
     io.values("sounds", content.sounds, [](auto& sound) -> auto& { return sound.path; });
-    io.values("libraries", content.libraries, [](auto& library) -> auto& { return library.path; });
     io.field("defaultAnimation", model.animations.defaultAnimation, {});
     if constexpr (Io::IS_READING)
       animations_read(io, model);
