@@ -379,7 +379,7 @@ namespace anm2ed::model
     const Spritesheet* layer_spritesheet_get(int) const;
     Frame frame_effective(int, const Frame&) const;
     std::set<int> unused_get(ElementType, const Animation* = nullptr) const;
-    std::set<int> region_unused_get(int) const;
+    int uses_count(ElementType, const std::set<int>&, int = -1, const Animation* = nullptr) const;
     std::uint64_t uid_get(Reference, bool = false) const;
     Handle handle_get(Reference, bool = false) const;
     void uids_repair();

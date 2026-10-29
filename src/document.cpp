@@ -229,22 +229,26 @@ namespace anm2ed
     return false;
   }
 
+  // A library's spritesheet path, made relative to this document (for flattening its animation layers).
+  edit::SpritesheetPathGet Document::spritesheet_path_resolver_get() const
+  {
+    return [this](const model::Model& source, const std::filesystem::path& spritesheetPath)
+    {
+      for (const auto& [libraryPath, library] : libraries)
+        if (&library.model == &source)
+          return path::backslash_replace(
+              path::make_relative(document::absolute_path_get(libraryPath.parent_path(), spritesheetPath),
+                                  std::filesystem::absolute(directory_get())));
+      return spritesheetPath;
+    };
+  }
+
   // Writes the document; a Rebirth document's game copy has its animation layers flattened into plain layers.
   bool Document::file_write(const std::filesystem::path& path, std::string* errorString, Options options)
   {
     std::optional<model::Model> game{};
     if (!options.isJson && std::ranges::any_of(model.content.layers, &model::Layer::is_animation))
-      game = edit::animation_layers_flatten(
-          model, library_resolver_get(),
-          [&](const model::Model& source, const std::filesystem::path& spritesheetPath)
-          {
-            for (const auto& [libraryPath, library] : libraries)
-              if (&library.model == &source)
-                return path::backslash_replace(
-                    path::make_relative(document::absolute_path_get(libraryPath.parent_path(), spritesheetPath),
-                                        std::filesystem::absolute(directory_get())));
-            return spritesheetPath;
-          });
+      game = edit::animation_layers_flatten(model, library_resolver_get(), spritesheet_path_resolver_get());
     options.gameModel = game ? &*game : nullptr;
     return model::model_save(model, path, errorString, options);
   }
@@ -571,7 +575,8 @@ namespace anm2ed
                                                                        int index) const
   {
     std::vector<const resource::AudioData*> result{};
-    for (const auto& [source, trigger] : model::animation_triggers_get(model, animation, time, library_resolver_get()))
+    for (const auto& [source, trigger, layerId] :
+         model::animation_triggers_get(model, animation, time, library_resolver_get()))
     {
       if (trigger.soundIds.empty()) continue;
       auto count = trigger.soundIds.size();

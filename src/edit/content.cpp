@@ -123,12 +123,106 @@ namespace anm2ed::edit
   }
 
   // Clears frame references to the spritesheet's unused regions, then removes them.
-  Uids regions_remove_unused(Model& model, int spritesheetId)
+  // Removes content items (regions of spritesheet `spritesheetId`) with what refers to them: a layer's or null's tracks
+  // in every animation, an event or sound from its triggers (dropping those left with neither), a shader from its
+  // frames (which go back to the default), a region from its frames (which keep its crop, size and pivot), a
+  // spritesheet's plain layers, and a library's layers, flattened into plain ones.
+  Uids content_remove(Model& model, ElementType type, const std::set<int>& ids, int spritesheetId,
+                      const LibraryGet& library_get, const SpritesheetPathGet& path_get)
   {
-    auto unused = model.region_unused_get(spritesheetId);
-    auto spritesheet = item_get(model.content.spritesheets, spritesheetId);
-    if (unused.empty() || !spritesheet) return {};
-    std::erase_if(spritesheet->regions, [&](const Region& region) { return unused.contains(region.id); });
+    auto& content = model.content;
+    auto items_erase = [&](auto& items)
+    { std::erase_if(items, [&](const auto& item) { return ids.contains(item.id); }); };
+    auto layer_ids_get = [&](auto&& is_removed)
+    {
+      std::set<int> layerIds{};
+      for (const auto& layer : content.layers)
+        if (is_removed(layer)) layerIds.insert(layer.id);
+      return layerIds;
+    };
+    // Only the animations that refer to them are edited.
+    auto animations_edit = [&](auto&& edit)
+    {
+      for (int i = 0; i < model.animations_count_get(); ++i)
+        if (model.uses_count(type, ids, spritesheetId, model.animation_get(i)) > 0) edit(*model.animation_edit(i), i);
+    };
+
+    switch (type)
+    {
+      case ElementType::LIBRARY:
+        model =
+            animation_layers_flatten(std::move(model), library_get, path_get,
+                                     layer_ids_get([&](const Layer& layer) { return ids.contains(layer.libraryId); }));
+        items_erase(content.libraries);
+        break;
+      case ElementType::SPRITESHEET:
+        content_remove(model, ElementType::LAYER_ELEMENT,
+                       layer_ids_get([&](const Layer& layer)
+                                     { return !layer.is_animation() && ids.contains(layer.spritesheetId); }),
+                       -1, library_get, path_get);
+        items_erase(content.spritesheets);
+        break;
+      case ElementType::LAYER_ELEMENT:
+      case ElementType::NULL_ELEMENT:
+      {
+        auto itemType = type == ElementType::LAYER_ELEMENT ? LAYER : NULL_;
+        animations_edit([&](Animation&, int index) { items_remove(model, index, {{itemType, ids}}, {}); });
+        if (type == ElementType::LAYER_ELEMENT)
+          items_erase(content.layers);
+        else
+          items_erase(content.nulls);
+        break;
+      }
+      case ElementType::EVENT_ELEMENT:
+      case ElementType::SOUND_ELEMENT:
+        animations_edit(
+            [&](Animation& animation, int)
+            {
+              std::erase_if(animation.triggers.frames,
+                            [&](Frame& trigger)
+                            {
+                              auto& triggerIds =
+                                  type == ElementType::EVENT_ELEMENT ? trigger.eventIds : trigger.soundIds;
+                              if (!std::erase_if(triggerIds, [&](int id) { return ids.contains(id); })) return false;
+                              return trigger.eventIds.empty() && trigger.soundIds.empty();
+                            });
+            });
+        if (type == ElementType::EVENT_ELEMENT)
+          items_erase(content.events);
+        else
+          items_erase(content.sounds);
+        break;
+      case ElementType::SHADER:
+        animations_edit(
+            [&](Animation& animation, int)
+            {
+              animation_tracks_each(animation,
+                                    [&](Track& track)
+                                    {
+                                      for (auto& frame : track.frames)
+                                        if (ids.contains(frame.shaderId)) frame.shaderId = -1;
+                                    });
+            });
+        items_erase(content.shaders);
+        break;
+      case ElementType::REGION:
+        animations_edit(
+            [&](Animation& animation, int)
+            {
+              tracks_each(animation.layers,
+                          [&](Track& track, auto*)
+                          {
+                            auto layer = item_get(content.layers, track.id);
+                            if (!layer || layer->spritesheetId != spritesheetId) return;
+                            for (auto& frame : track.frames)
+                              if (ids.contains(frame.regionId)) frame.regionId = -1;
+                          });
+            });
+        if (auto spritesheet = item_get(content.spritesheets, spritesheetId)) items_erase(spritesheet->regions);
+        break;
+      default:
+        break;
+    }
     return {};
   }
 

@@ -17,6 +17,7 @@ using namespace glm;
 namespace anm2ed::imgui
 {
   constexpr float SCROLL_CENTER = 0.5f;
+  constexpr std::size_t REMOVE_LINES_MAX = 10;
   constexpr float TOOLTIP_PADDING_MULTIPLIER = 4.0f;
   constexpr float PREVIEW_VIEWPORT_FRACTION = 0.5f;
   constexpr const char* CONTEXT_MENU_LABEL = "##Context Menu";
@@ -273,6 +274,151 @@ namespace anm2ed::imgui
   }
 
   // The list in a bordered child with its context menu and shortcuts, then the footer buttons.
+  // The confirmation's lines: the items by name, then what goes with them.
+  std::vector<std::string> remove_lines_get(const model::Model& model, ElementType type, const std::set<int>& ids,
+                                            int spritesheetId)
+  {
+    auto& content = model.content;
+    std::vector<std::string> lines{};
+    auto names_add = [&](const auto& items, auto&& name_get)
+    {
+      for (auto id : ids)
+        if (auto item = model::item_get(items, id)) lines.push_back(std::format("\"{}\"", name_get(*item)));
+    };
+    auto name_get = [](const auto& item) { return item.name; };
+    auto path_get = [](const auto& item) { return path::to_utf8(item.path); };
+    auto count_add = [&](StringType format, int count)
+    {
+      if (count > 0) lines.push_back(localize_format(format, count));
+    };
+    auto layers_add = [&](StringType format, auto&& is_removed)
+    {
+      std::set<int> layerIds{};
+      for (const auto& layer : content.layers)
+        if (is_removed(layer))
+        {
+          layerIds.insert(layer.id);
+          lines.push_back(localize_format(format, layer.name));
+        }
+      return layerIds;
+    };
+    auto uses = model.uses_count(type, ids, spritesheetId);
+
+    switch (type)
+    {
+      case ElementType::LAYER_ELEMENT:
+        names_add(content.layers, name_get);
+        count_add(FORMAT_REMOVE_TRACKS, uses);
+        break;
+      case ElementType::NULL_ELEMENT:
+        names_add(content.nulls, name_get);
+        count_add(FORMAT_REMOVE_TRACKS, uses);
+        break;
+      case ElementType::EVENT_ELEMENT:
+      case ElementType::SOUND_ELEMENT:
+      {
+        auto isEvent = type == ElementType::EVENT_ELEMENT;
+        if (isEvent)
+          names_add(content.events, name_get);
+        else
+          names_add(content.sounds, path_get);
+        count_add(FORMAT_REMOVE_TRIGGER_USES, uses);
+        // Triggers whose every event and sound goes.
+        int emptied{};
+        for (auto [index, animation] : model.animations_get())
+          for (const auto& trigger : animation->triggers.frames)
+          {
+            auto& own = isEvent ? trigger.eventIds : trigger.soundIds;
+            auto& other = isEvent ? trigger.soundIds : trigger.eventIds;
+            emptied +=
+                other.empty() && !own.empty() && std::ranges::all_of(own, [&](int id) { return ids.contains(id); });
+          }
+        count_add(FORMAT_REMOVE_TRIGGERS_EMPTY, emptied);
+        break;
+      }
+      case ElementType::SHADER:
+        names_add(content.shaders, name_get);
+        count_add(FORMAT_REMOVE_SHADER_USES, uses);
+        break;
+      case ElementType::REGION:
+        if (auto spritesheet = model::item_get(content.spritesheets, spritesheetId))
+          names_add(spritesheet->regions, name_get);
+        count_add(FORMAT_REMOVE_REGION_USES, uses);
+        break;
+      case ElementType::SPRITESHEET:
+      {
+        names_add(content.spritesheets, path_get);
+        auto layerIds = layers_add(FORMAT_REMOVE_LAYER, [&](const model::Layer& layer)
+                                   { return !layer.is_animation() && ids.contains(layer.spritesheetId); });
+        count_add(FORMAT_REMOVE_TRACKS, model.uses_count(ElementType::LAYER_ELEMENT, layerIds));
+        break;
+      }
+      default:
+        names_add(content.libraries, path_get);
+        layers_add(FORMAT_REMOVE_FLATTENED_LAYER,
+                   [&](const model::Layer& layer) { return ids.contains(layer.libraryId); });
+        break;
+    }
+    return lines;
+  }
+
+  void content_remove_apply(Panel& panel)
+  {
+    command_push(panel,
+                 [removal = panel.state.removal](Document& document)
+                 {
+                   document.edit_apply(EDIT_REMOVE_ITEMS,
+                                       [&](model::Model& model)
+                                       {
+                                         return edit::content_remove(
+                                             model, removal.type, removal.ids, removal.spritesheetId,
+                                             document.library_resolver_get(), document.spritesheet_path_resolver_get());
+                                       });
+                   document.selected_clear(removal.kind);
+                 });
+  }
+
+  // Removes the selected content items; when anything uses them, it asks first, saying what goes with them.
+  void content_remove_action_add(Actions& actions, Panel& panel, ElementType type, SelectionKind kind,
+                                 int spritesheetId)
+  {
+    auto selection = panel.document.selected_ids_get(kind);
+    actions.add(
+        ACTION_REMOVE, [selection]() { return !selection.empty(); },
+        [&panel, type, kind, selection, spritesheetId]()
+        {
+          auto& model = panel.document.model;
+          panel.state.removal = {type, kind, selection, spritesheetId,
+                                 remove_lines_get(model, type, selection, spritesheetId)};
+          if (model.uses_count(type, selection, spritesheetId) > 0)
+            panel.state.removePopup.open();
+          else
+            content_remove_apply(panel);
+        },
+        TOOLTIP_REMOVE_CONTENT);
+  }
+
+  void content_remove_popup_draw(Panel& panel)
+  {
+    auto& popup = panel.state.removePopup;
+    popup.trigger();
+    if (!ImGui::BeginPopupModal(popup.label(), &popup.isOpen, ImGuiWindowFlags_NoResize)) return popup.end();
+    auto& removal = panel.state.removal;
+    ImGui::TextUnformatted(localize.get(TEXT_REMOVE_LIST));
+    auto& lines = removal.lines;
+    for (std::size_t i = 0; i < std::min(lines.size(), REMOVE_LINES_MAX); ++i)
+      ImGui::BulletText("%s", lines[i].c_str());
+    if (lines.size() > REMOVE_LINES_MAX)
+      ImGui::BulletText("%s", localize_format(FORMAT_REMOVE_MORE, (int)(lines.size() - REMOVE_LINES_MAX)).c_str());
+    ImGui::Spacing();
+    ImGui::TextUnformatted(localize.get(TEXT_REMOVE_CONFIRM));
+    auto result = popup_buttons_draw(panel.manager, localize.get(BASIC_REMOVE));
+    if (result == PopupButton::CONFIRM) content_remove_apply(panel);
+    if (result != PopupButton::NONE) popup.close();
+    ImGui::EndPopup();
+    popup.end();
+  }
+
   void list_panel_draw(Panel& panel, Actions& actions, const Footer& footer, const std::function<void()>& list,
                        bool isCards, Actions* footerActions)
   {
@@ -306,6 +452,7 @@ namespace anm2ed::imgui
         if (auto action = std::ranges::find(buttons.items, type, &Action::type); action != buttons.items.end())
           action_button_draw(*action, manager, settings, widgetSize, isSameLine);
     }
+    content_remove_popup_draw(panel);
   }
 
   void tooltip_name_draw(Resources& resources, const std::string& name)

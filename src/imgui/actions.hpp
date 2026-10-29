@@ -15,7 +15,6 @@ namespace anm2ed::imgui
   X(ACTION_REDO, SHORTCUT_STRING_REDO, SHORTCUT_REDO)                                                                  \
   X(ACTION_ADD, BASIC_ADD, SHORTCUT_ADD)                                                                               \
   X(ACTION_REMOVE, BASIC_REMOVE, SHORTCUT_REMOVE)                                                                      \
-  X(ACTION_REMOVE_UNUSED, BASIC_REMOVE_UNUSED, SHORTCUT_REMOVE)                                                        \
   X(ACTION_DUPLICATE, BASIC_DUPLICATE, SHORTCUT_DUPLICATE)                                                             \
   X(ACTION_MERGE, BASIC_MERGE, SHORTCUT_MERGE)                                                                         \
   X(ACTION_GROUP, BASIC_GROUP, SHORTCUT_GROUP)                                                                         \
@@ -47,7 +46,7 @@ namespace anm2ed::imgui
 #define X(name, label, shortcut) name,
     ACTIONS(X)
 #undef X
-        ACTION_COUNT
+    ACTION_COUNT
   };
 
   struct ActionInfo

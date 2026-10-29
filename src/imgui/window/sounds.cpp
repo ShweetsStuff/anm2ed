@@ -67,10 +67,7 @@ namespace anm2ed::imgui
       actions.add(ACTION_PLAY, isOne, [&]() { play(*selection.begin()); }, STRING_UNDEFINED, -1);
       actions.add(ACTION_OPEN_DIRECTORY, isOne, [&]() { open(*selection.begin()); });
       actions.add(ACTION_ADD, {}, [&]() { dialog.file_open(Dialog::SOUND_OPEN, true); }, TOOLTIP_SOUND_ADD);
-      actions.add(
-          ACTION_REMOVE_UNUSED, {},
-          [&]() { items_unused_remove(panel, ElementType::SOUND_ELEMENT, EDIT_REMOVE_UNUSED_SOUNDS, sounds_get); },
-          TOOLTIP_REMOVE_UNUSED_SOUNDS);
+      content_remove_action_add(actions, panel, ElementType::SOUND_ELEMENT, SelectionKind::SOUNDS);
       actions.add(
           ACTION_RELOAD, [selection]() { return !selection.empty(); },
           [&]()
@@ -132,7 +129,7 @@ namespace anm2ed::imgui
                     .activate = open,
                     .cardLines = SOUND_CARD_LINES};
       list_panel_draw(
-          panel, actions, {{ACTION_ADD, ACTION_REMOVE_UNUSED, ACTION_RELOAD, ACTION_REPLACE}},
+          panel, actions, {{ACTION_ADD, ACTION_REMOVE, ACTION_RELOAD, ACTION_REPLACE}},
           [&]() { content_list_draw(panel, SelectionKind::SOUNDS, item_ids_get(sounds), rows); }, true);
     }
     ImGui::End();

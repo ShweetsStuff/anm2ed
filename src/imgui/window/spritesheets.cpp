@@ -241,31 +241,7 @@ namespace anm2ed::imgui
       actions.add(ACTION_OPEN_DIRECTORY, isOne, [&]() { open(*selection.begin()); });
       actions.add(ACTION_SET_FILE_PATH, isOne, [&]() { dialog.file_save(Dialog::SPRITESHEET_PATH_SET); });
       actions.add(ACTION_ADD, {}, [&]() { dialog.file_open(Dialog::SPRITESHEET_OPEN, true); }, TOOLTIP_ADD_SPRITESHEET);
-      actions.add(
-          ACTION_REMOVE_UNUSED, {},
-          [&]()
-          {
-            command_push(panel,
-                         [](Document& document)
-                         {
-                           auto unused = document.model.unused_get(ElementType::SPRITESHEET);
-                           if (unused.empty()) return;
-                           document.edit_apply(EDIT_REMOVE_UNUSED_SPRITESHEETS,
-                                               [&](model::Model& model)
-                                               {
-                                                 std::erase_if(model.content.spritesheets,
-                                                               [&](const model::Spritesheet& spritesheet)
-                                                               {
-                                                                 if (!unused.contains(spritesheet.id)) return false;
-                                                                 toast_log(Level::INFO, TOAST_REMOVE_SPRITESHEET,
-                                                                           spritesheet.id,
-                                                                           path::to_utf8(spritesheet.path));
-                                                                 return true;
-                                                               });
-                                               });
-                         });
-          },
-          TOOLTIP_REMOVE_UNUSED_SPRITESHEETS);
+      content_remove_action_add(actions, panel, ElementType::SPRITESHEET, SelectionKind::SPRITESHEETS);
       actions.add(
           ACTION_RELOAD, isAny,
           [&]() { command_push(panel, [selection](Document& document) { document.spritesheets_reload(selection); }); },
@@ -365,7 +341,7 @@ namespace anm2ed::imgui
           .activate = open,
           .cardLines = SPRITESHEET_CARD_LINES};
       list_panel_draw(
-          panel, actions, {{ACTION_ADD, ACTION_RELOAD, ACTION_REPLACE}, {ACTION_REMOVE_UNUSED, ACTION_SAVE}},
+          panel, actions, {{ACTION_ADD, ACTION_RELOAD, ACTION_REPLACE}, {ACTION_REMOVE, ACTION_SAVE}},
           [&]() { content_list_draw(panel, SelectionKind::SPRITESHEETS, item_ids_get(items), rows); }, true);
     }
     ImGui::End();

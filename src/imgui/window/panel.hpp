@@ -50,6 +50,16 @@ namespace anm2ed::imgui
     MultiSelectStorage selection{};
     ImVec2 tooltipPadding{};
     ImVec2 tooltipSpacing{};
+    PopupHelper removePopup{PopupHelper(LABEL_REMOVE_IN_USE, POPUP_SMALL_NO_HEIGHT)};
+    // A removal waiting on its confirmation, since what it removes is in use.
+    struct Removal
+    {
+      ElementType type{};
+      SelectionKind kind{};
+      std::set<int> ids{};
+      int spritesheetId{-1};
+      std::vector<std::string> lines{};
+    } removal{};
   };
 
   // Everything a panel draws with, for one frame. Commands get the document again when they run.
@@ -104,6 +114,7 @@ namespace anm2ed::imgui
   void directory_open(Dialog&, Document&, const std::filesystem::path&);
   std::filesystem::path asset_path_get(Document&, const std::filesystem::path&);
   PopupButton popup_buttons_draw(Manager&, const char*, bool = true, StringType = BASIC_CANCEL);
+  void content_remove_action_add(Actions&, Panel&, ElementType, SelectionKind, int = -1);
 
   struct SpritesheetsPanel
   {
@@ -222,21 +233,5 @@ namespace anm2ed::imgui
         ACTION_PASTE, [&panel]() { return !panel.clipboard.is_empty(); },
         [&panel, kind, pasteEdit, failToast, items_get]()
         { items_paste<Item>(panel, kind, pasteEdit, failToast, items_get); });
-  }
-
-  // Removes content items no animation (or layer, for spritesheets) uses.
-  template <class ItemsGet>
-  void items_unused_remove(const Panel& panel, ElementType type, StringType edit, ItemsGet items_get)
-  {
-    command_push(
-        panel,
-        [type, edit, items_get](Document& document)
-        {
-          auto unused = document.model.unused_get(type);
-          if (unused.empty()) return;
-          document.edit_apply(
-              edit, [&](model::Model& model)
-              { std::erase_if(items_get(model), [&](const auto& item) { return unused.contains(item.id); }); });
-        });
   }
 }

@@ -159,8 +159,8 @@ namespace anm2ed::imgui
   // Layers and nulls: properties popup, add, remove unused, copy and paste.
   template <class Item, class ItemsGet>
   void track_items_actions_add(Actions& actions, Panel& panel, SelectionKind kind, ElementType type,
-                               StringType addTooltip, StringType removeUnusedTooltip, StringType removeUnusedEdit,
-                               StringType pasteEdit, StringType pasteFailToast, ItemsGet items_get)
+                               StringType addTooltip, StringType pasteEdit, StringType pasteFailToast,
+                               ItemsGet items_get)
   {
     auto selection = panel.document.selected_ids_get(kind);
     auto& manager = panel.manager;
@@ -168,9 +168,7 @@ namespace anm2ed::imgui
         ACTION_PROPERTIES, [selection]() { return selection.size() == 1; },
         [&manager, type, selection]() { manager.item_properties_open(type, *selection.begin()); });
     actions.add(ACTION_ADD, {}, [&manager, type]() { manager.item_properties_open(type, -1); }, addTooltip);
-    actions.add(
-        ACTION_REMOVE_UNUSED, {}, [&panel, type, removeUnusedEdit, items_get]()
-        { items_unused_remove(panel, type, removeUnusedEdit, items_get); }, removeUnusedTooltip);
+    content_remove_action_add(actions, panel, type, kind);
     items_clipboard_actions_add<Item>(actions, panel, kind, pasteEdit, pasteFailToast, items_get);
   }
 
@@ -182,8 +180,8 @@ namespace anm2ed::imgui
     {
       Actions actions{};
       track_items_actions_add<model::Layer>(actions, panel, SelectionKind::LAYERS, ElementType::LAYER_ELEMENT,
-                                            TOOLTIP_ADD_LAYER, TOOLTIP_REMOVE_UNUSED_LAYERS, EDIT_REMOVE_UNUSED_LAYERS,
-                                            EDIT_PASTE_LAYERS, TOAST_DESERIALIZE_LAYERS_FAILED, layers_get);
+                                            TOOLTIP_ADD_LAYER, EDIT_PASTE_LAYERS, TOAST_DESERIALIZE_LAYERS_FAILED,
+                                            layers_get);
       ListRows rows{.label_get = [&](int id) { return layer_label_get(*model::item_get(layers, id)); },
                     .is_invalid = [&](int id)
                     { return document.is_layer_animation_missing(*model::item_get(layers, id)); },
@@ -195,7 +193,7 @@ namespace anm2ed::imgui
                       layer_source_tooltip_draw(document, *layer);
                     },
                     .activate = [&](int id) { manager.item_properties_open(ElementType::LAYER_ELEMENT, id); }};
-      list_panel_draw(panel, actions, {{ACTION_ADD, ACTION_REMOVE_UNUSED}},
+      list_panel_draw(panel, actions, {{ACTION_ADD, ACTION_REMOVE}},
                       [&]() { content_list_draw(panel, SelectionKind::LAYERS, item_ids_get(layers), rows); });
     }
     ImGui::End();
@@ -217,8 +215,8 @@ namespace anm2ed::imgui
     {
       Actions actions{};
       track_items_actions_add<model::Null>(actions, panel, SelectionKind::NULLS, ElementType::NULL_ELEMENT,
-                                           TOOLTIP_ADD_NULL, TOOLTIP_REMOVE_UNUSED_NULLS, EDIT_REMOVE_UNUSED_NULLS,
-                                           EDIT_PASTE_NULLS, TOAST_DESERIALIZE_NULLS_FAILED, nulls_get);
+                                           TOOLTIP_ADD_NULL, EDIT_PASTE_NULLS, TOAST_DESERIALIZE_NULLS_FAILED,
+                                           nulls_get);
       ListRows rows{.label_get =
                         [&](int id)
                     {
@@ -228,7 +226,7 @@ namespace anm2ed::imgui
                     .tooltip_draw = [&](int id) { item_tooltip_draw(resources, model::item_get(nulls, id)->name, id); },
                     .activate = [&](int id) { manager.item_properties_open(ElementType::NULL_ELEMENT, id); },
                     .isFocusItalic = true};
-      list_panel_draw(panel, actions, {{ACTION_ADD, ACTION_REMOVE_UNUSED}},
+      list_panel_draw(panel, actions, {{ACTION_ADD, ACTION_REMOVE}},
                       [&]() { content_list_draw(panel, SelectionKind::NULLS, item_ids_get(nulls), rows); });
     }
     ImGui::End();
@@ -275,10 +273,7 @@ namespace anm2ed::imgui
                          });
           },
           TOOLTIP_ADD_EVENT);
-      actions.add(
-          ACTION_REMOVE_UNUSED, {},
-          [&panel]() { items_unused_remove(panel, ElementType::EVENT_ELEMENT, EDIT_REMOVE_UNUSED_EVENTS, events_get); },
-          TOOLTIP_REMOVE_UNUSED_EVENTS);
+      content_remove_action_add(actions, panel, ElementType::EVENT_ELEMENT, SelectionKind::EVENTS);
       items_clipboard_actions_add<model::Event>(actions, panel, SelectionKind::EVENTS, EDIT_PASTE_EVENTS,
                                                 TOAST_DESERIALIZE_EVENTS_FAILED, events_get);
       ListRows rows{.label_get = [&](int id) { return model::item_get(events, id)->name; },
@@ -299,7 +294,7 @@ namespace anm2ed::imgui
                     },
                     .tooltip_draw = [&](int id)
                     { item_tooltip_draw(resources, model::item_get(events, id)->name, id); }};
-      list_panel_draw(panel, actions, {{ACTION_ADD, ACTION_REMOVE_UNUSED}},
+      list_panel_draw(panel, actions, {{ACTION_ADD, ACTION_REMOVE}},
                       [&]() { content_list_draw(panel, SelectionKind::EVENTS, item_ids_get(events), rows); });
     }
     ImGui::End();

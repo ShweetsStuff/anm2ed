@@ -51,10 +51,7 @@ namespace anm2ed::imgui
       actions.add(ACTION_OPEN_DIRECTORY, isOne,
                   [&]() { directory_open(dialog, document, model::item_get(libraries, *selection.begin())->path); });
       actions.add(ACTION_ADD, {}, [&]() { dialog.file_open(Dialog::LIBRARY_OPEN, true); }, TOOLTIP_LIBRARY_ADD);
-      actions.add(
-          ACTION_REMOVE_UNUSED, {},
-          [&]() { items_unused_remove(panel, ElementType::LIBRARY, EDIT_REMOVE_UNUSED_LIBRARIES, libraries_get); },
-          TOOLTIP_REMOVE_UNUSED_LIBRARIES);
+      content_remove_action_add(actions, panel, ElementType::LIBRARY, SelectionKind::LIBRARIES);
       actions.add(
           ACTION_RELOAD, [selection]() { return !selection.empty(); },
           [&]()
@@ -115,7 +112,7 @@ namespace anm2ed::imgui
           .activate = open,
           .cardLines = LIBRARY_CARD_LINES};
       list_panel_draw(
-          panel, actions, {{ACTION_ADD, ACTION_REMOVE_UNUSED, ACTION_RELOAD, ACTION_OPEN}},
+          panel, actions, {{ACTION_ADD, ACTION_REMOVE, ACTION_RELOAD, ACTION_OPEN}},
           [&]() { content_list_draw(panel, SelectionKind::LIBRARIES, item_ids_get(libraries), rows); }, true);
     }
     ImGui::End();

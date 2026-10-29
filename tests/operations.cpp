@@ -203,8 +203,6 @@ TEST_CASE("edit layer operations")
          return edit::animations_paste(anm2, text, 0, -1, groupIds, nullptr);
        },
        1},
-      {"regions_remove_unused", "05_regions.anm2",
-       [&](model::Model& anm2) { return edit::regions_remove_unused(anm2, 0); }, 0},
       {"regions_paste", "05_regions.anm2",
        [&](model::Model& anm2)
        {
@@ -484,4 +482,86 @@ TEST_CASE("SVG spritesheets pack and merge into SVGs")
   images = {{1, &vector}, {0, &raster}};
   REQUIRE(edit::spritesheets_merge(model, {0, 1}, image_get, true, false, false, Origin::TOP_LEFT));
   CHECK(model::item_get(model.content.spritesheets, 0)->path == "white.svg");
+}
+
+TEST_CASE("content_remove takes what refers to an item with it")
+{
+  auto path_keep = [](const model::Model&, const std::filesystem::path& path) { return path; };
+  auto remove = [&](model::Model& model, ElementType type, std::set<int> ids, int spritesheetId = -1,
+                    const model::LibraryGet& library_get = {})
+  { edit::content_remove(model, type, ids, spritesheetId, library_get, path_keep); };
+  auto tracks_count = [](const model::Model& model, int layerId)
+  {
+    int count{};
+    for (auto [index, animation] : model.animations_get())
+      model::tracks_each(animation->layers, [&](const model::Track& track, auto*) { count += track.id == layerId; });
+    return count;
+  };
+
+  SUBCASE("a layer's tracks, and a spritesheet's plain layers")
+  {
+    auto model = fixture_load("02_items.anm2");
+    CHECK(model.uses_count(ElementType::LAYER_ELEMENT, {0}) == tracks_count(model, 0));
+    remove(model, ElementType::LAYER_ELEMENT, {0});
+    CHECK_FALSE(model::item_get(model.content.layers, 0));
+    CHECK(tracks_count(model, 0) == 0);
+    CHECK(tracks_count(model, 1) > 0);
+
+    CHECK(model.uses_count(ElementType::SPRITESHEET, {1}) == 1);
+    remove(model, ElementType::SPRITESHEET, {1});
+    CHECK(model.content.layers.empty());
+    CHECK(tracks_count(model, 1) == 0);
+    CHECK(model.content.spritesheets.size() == 1);
+  }
+
+  SUBCASE("an event or sound from its triggers, and triggers left with neither")
+  {
+    auto model = fixture_load("02_items.anm2");
+    auto& triggers = model.animation_get(0)->triggers.frames;
+    REQUIRE(triggers.size() == 3);
+    CHECK(model.uses_count(ElementType::SOUND_ELEMENT, {1}) == 2);
+    remove(model, ElementType::SOUND_ELEMENT, {1});
+    REQUIRE(triggers.size() == 2);
+    CHECK(triggers[1].soundIds == std::vector{0});
+    remove(model, ElementType::EVENT_ELEMENT, {0});
+    REQUIRE(triggers.size() == 2);
+    CHECK(triggers[0].eventIds.empty());
+    CHECK(triggers[0].soundIds == std::vector{0});
+  }
+
+  SUBCASE("a shader, and a region, from their frames")
+  {
+    auto shaders = fixture_load("06_shaders.anm2");
+    remove(shaders, ElementType::SHADER, {0});
+    CHECK(shaders.frame_get({0, LAYER, 0, 0})->shaderId == -1);
+    CHECK(shaders.frame_get({0, LAYER, 0, 1})->shaderId == 4);
+
+    auto regions = fixture_load("05_regions.anm2");
+    auto before = *regions.frame_get({0, LAYER, 0, 0});
+    REQUIRE(before.regionId == 0);
+    CHECK(regions.uses_count(ElementType::REGION, {0}, 0) == 1);
+    remove(regions, ElementType::REGION, {0}, 0);
+    auto after = *regions.frame_get({0, LAYER, 0, 0});
+    CHECK(after.regionId == -1);
+    CHECK(after.crop == before.crop);
+    CHECK(after.size == before.size);
+    CHECK(after.pivot == before.pivot);
+    CHECK_FALSE(model::item_get(regions.content.spritesheets.front().regions, 0));
+  }
+
+  SUBCASE("a library's layers, flattened")
+  {
+    auto model = model_load(file_load(TEST_DIR / "render" / "nested.anm2"));
+    auto spin = model_load(file_load(TEST_DIR / "render" / "spin.anm2"));
+    CHECK(model.uses_count(ElementType::LIBRARY, {0}) == 1);
+    remove(model, ElementType::LIBRARY, {0}, -1,
+           [&](const model::Model&, int id) { return id == 0 ? &spin : nullptr; });
+    CHECK(model.content.libraries.empty());
+    CHECK_FALSE(model::item_get(model.content.layers, 0));
+    CHECK(
+        std::ranges::any_of(model.content.layers, [](const model::Layer& layer) { return layer.name == "spin/red"; }));
+    // Layers playing this file's animations stay as they are.
+    CHECK(model::item_get(model.content.layers, 1)->is_animation());
+    CHECK(model::item_get(model.content.layers, 3)->is_animation());
+  }
 }

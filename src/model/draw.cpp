@@ -106,11 +106,11 @@ namespace anm2ed::model
   }
 
   void animation_triggers_add(std::vector<TriggerFire>& fires, const Model& model, const Animation& animation, int time,
-                              const LibraryGet& library_get, std::vector<const Animation*>& playing)
+                              const LibraryGet& library_get, std::vector<const Animation*>& playing, int layerId = -1)
   {
     if (animation.triggers.isVisible)
       if (auto trigger = frame_generate(animation.triggers, (float)time); trigger.isVisible)
-        fires.push_back({&model, std::move(trigger)});
+        fires.push_back({&model, std::move(trigger), layerId});
 
     // A child fires the trigger of each frame it reaches: when its frame (or animation) changes from the parent's last.
     tracks_each(
@@ -132,7 +132,8 @@ namespace anm2ed::model
               return;
           }
           playing.push_back(childAnimation);
-          animation_triggers_add(fires, *childModel, *childAnimation, childTime, library_get, playing);
+          animation_triggers_add(fires, *childModel, *childAnimation, childTime, library_get, playing,
+                                 layerId == -1 ? layer->id : layerId);
           playing.pop_back();
         });
   }

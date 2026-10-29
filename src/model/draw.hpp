@@ -59,6 +59,7 @@ namespace anm2ed::model
   {
     const Model* source{};
     Frame trigger{};
+    int layerId{-1}; // the animation's layer whose child fired it; -1 for the animation's own
   };
 
   glm::mat4 draw_quad_model_get(const Draw&);

@@ -129,7 +129,6 @@ namespace anm2ed::edit
                         RegionFrameMapping);
   Uids regions_scan(model::Model&);
   Uids region_frames_sync(model::Model&);
-  Uids regions_remove_unused(model::Model&, int);
   Uids regions_paste(model::Model&, int, const std::string&, int, std::string*);
   Uids animation_grid_generate(model::Model&, const std::vector<Reference>&, const GridOptions&);
   Uids frames_change_apply(model::Model&, const ChangeTargets&, FrameChange, ChangeType);
@@ -140,6 +139,9 @@ namespace anm2ed::edit
 
   // Where a spritesheet path of a document (this one, or a library) points, from this document.
   using SpritesheetPathGet = std::function<std::filesystem::path(const model::Model&, const std::filesystem::path&)>;
-  model::Model animation_layers_flatten(model::Model, const model::LibraryGet&, const SpritesheetPathGet&);
+  model::Model animation_layers_flatten(model::Model, const model::LibraryGet&, const SpritesheetPathGet&,
+                                       const std::set<int>& = {});
+  Uids content_remove(model::Model&, ElementType, const std::set<int>&, int, const model::LibraryGet&,
+                      const SpritesheetPathGet&);
   bool file_merge(model::Model&, const std::filesystem::path&, const std::filesystem::path&, FileMergePreset);
 }

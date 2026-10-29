@@ -836,7 +836,7 @@ namespace anm2ed::imgui
       // The events triggers (the animation's and its children's) fire on this frame.
       std::string names{};
       if (animation && !isOnlyShowLayers && !manager.isRecording)
-        for (const auto& [source, trigger] :
+        for (const auto& [source, trigger, layerId] :
              model::animation_triggers_get(model, *animation, (int)frameTime, document.library_resolver_get()))
           for (auto eventId : trigger.eventIds)
             if (auto event = model::item_get(source->content.events, eventId))

@@ -333,10 +333,7 @@ namespace anm2ed::imgui
                          });
           },
           TOOLTIP_ADD_SHADER);
-      actions.add(
-          ACTION_REMOVE_UNUSED, {},
-          [&]() { items_unused_remove(panel, ElementType::SHADER, EDIT_REMOVE_UNUSED_SHADERS, shaders_get); },
-          TOOLTIP_REMOVE_UNUSED_SHADERS);
+      content_remove_action_add(actions, panel, ElementType::SHADER, SelectionKind::SHADERS);
       actions.add(
           ACTION_RELOAD, [selection]() { return !selection.empty(); },
           [&]()
@@ -379,7 +376,7 @@ namespace anm2ed::imgui
                     .activate = properties_open,
                     .cardLines = SHADER_CARD_LINES};
       list_panel_draw(
-          panel, actions, {{ACTION_ADD, ACTION_REMOVE_UNUSED, ACTION_RELOAD}},
+          panel, actions, {{ACTION_ADD, ACTION_REMOVE, ACTION_RELOAD}},
           [&]() { content_list_draw(panel, SelectionKind::SHADERS, item_ids_get(items), rows); }, true);
 
       propertiesPopup.trigger();

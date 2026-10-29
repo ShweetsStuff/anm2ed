@@ -414,18 +414,7 @@ namespace anm2ed::imgui
         Actions actions{};
         actions.add(ACTION_PROPERTIES, isOne, [&]() { region_properties_open(regions, document, *selection.begin()); });
         actions.add(ACTION_ADD, {}, [&]() { region_properties_open(regions, document, -1); }, TOOLTIP_ADD_REGION);
-        actions.add(
-            ACTION_REMOVE_UNUSED, {},
-            [&]()
-            {
-              command_push(panel,
-                           [spritesheetId](Document& document)
-                           {
-                             document.edit_apply(EDIT_REMOVE_UNUSED_REGIONS, [&](model::Model& model)
-                                                 { return edit::regions_remove_unused(model, spritesheetId); });
-                           });
-            },
-            TOOLTIP_REMOVE_UNUSED_REGIONS);
+        content_remove_action_add(actions, panel, ElementType::REGION, SelectionKind::REGIONS, spritesheetId);
         actions.add(
             ACTION_TRIM, [selection]() { return !selection.empty(); },
             [&]()
@@ -519,7 +508,7 @@ namespace anm2ed::imgui
                       .drag_drop_update = [&](int id, int index) { return region_drag_drop_update(panel, id, index); },
                       .cardLines = REGION_CARD_LINES};
         list_panel_draw(
-            panel, actions, {{ACTION_ADD, ACTION_EXPORT, ACTION_REMOVE_UNUSED}},
+            panel, actions, {{ACTION_ADD, ACTION_EXPORT, ACTION_REMOVE}},
             [&]()
             {
               content_list_draw(panel, SelectionKind::REGIONS, item_ids_get(spritesheet->regions), rows);

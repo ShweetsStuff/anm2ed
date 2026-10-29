@@ -148,6 +148,7 @@ namespace anm2ed
     std::filesystem::path library_path_get(int) const;
     const LibraryData* library_get(const model::Model&, int) const;
     model::LibraryGet library_resolver_get() const;
+    edit::SpritesheetPathGet spritesheet_path_resolver_get() const;
     std::vector<std::string> animation_names_get(int) const;
     const resource::Image* draw_image_get(const model::Draw&, float = 1.0f) const;
     const resource::Image* vector_image_get(const resource::Image*, float) const;

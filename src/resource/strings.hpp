@@ -90,7 +90,6 @@ namespace anm2ed
   X(BASIC_RENAME, "Rename", "Renombrar", "Переименовать", "重命名", "이름 변경") \
   X(BASIC_RELOAD, "Reload", "Recargar", "Перезагрузить", "重新加载", "다시 불러오기") \
   X(BASIC_REMOVE, "Remove", "Remover", "Удалить", "删除", "제거") \
-  X(BASIC_REMOVE_UNUSED, "Remove Unused", "Remover no utilizados", "Удалить неизпользуемые", "删除未使用", "미사용 시트 제거") \
   X(BASIC_REPLACE, "Replace", "Reemplazar", "Заменить", "替换", "교체") \
   X(BASIC_REVERSE, "Reverse", "Invertir", "Развернуть", "反转", "역순") \
   X(BASIC_ROOT, "Root", "Root", "Корень", "根", "Root") \
@@ -151,7 +150,6 @@ namespace anm2ed
   X(EDIT_FPS, "FPS", "FPS", "FPS", "每秒帧数(FPS)", "FPS") \
   X(EDIT_GROUP_ITEMS, "Group Item(s)", "Agrupar item(s)", "Сгруппировать элементы", "将项目分组", "항목 그룹화") \
   X(EDIT_REMOVE_GROUP, "Remove Group", "Eliminar grupo", "Удалить группу", "删除组", "그룹 삭제") \
-  X(EDIT_REMOVE_UNUSED_LIBRARIES, "Remove Unused Libraries", "Eliminar Bibliotecas No Usadas", "Удалить неиспользуемые библиотеки", "删除未使用的库", "사용하지 않는 라이브러리 제거") \
   X(EDIT_START_MARKER, "Set Start Marker", "Poner Marcador de Inicio", "Начальный маркер", "设置起始标记", "시작 마커 설정") \
   X(EDIT_TOGGLE_GROUP_EXPANDED, "Toggle Group Expanded", "Alternar grupo expandido", "Развернуть/свернуть группу", "展开/折叠组", "그룹 펼침 전환") \
   X(EDIT_FRAME_COLOR_OFFSET, "Frame Color Offset", "Offset de color de Frame", "Смещение цвета кадра", "帧颜色偏移", "프레임 색상 오프셋") \
@@ -198,13 +196,6 @@ namespace anm2ed
   X(EDIT_REMOVE_ANIMATIONS, "Remove Animation(s)", "Remover Animacion(es)", "Удалить анимации", "删除动画层", "애니메이션 제거") \
   X(EDIT_REVERSE_FRAMES, "Reverse Frame(s)", "Invertir Frame(s)", "Развернуть кадры", "反转帧", "프레임 역순") \
   X(EDIT_REMOVE_ITEMS, "Remove Item(s)", "Remover Item(s)", "Удалить предметы", "删除物品", "항목 제거") \
-  X(EDIT_REMOVE_UNUSED_EVENTS, "Remove Unused Events", "Remover Eventos No Utilizados", "Удалить неизпользуемые события", "删除未使用的事件", "미사용 이벤트 제거") \
-  X(EDIT_REMOVE_UNUSED_REGIONS, "Remove Unused Regions", "Remover Regiones No Utilizadas", "Удалить неиспользуемые регионы", "删除未使用的区域", "미사용 영역 제거") \
-  X(EDIT_REMOVE_UNUSED_LAYERS, "Remove Unused Layers", "Remover Capas No Utilizadas", "Удалить неизпользуемые слои", "删除未使用的动画层", "미사용 레이어 제거") \
-  X(EDIT_REMOVE_UNUSED_NULLS, "Remove Unused Nulls", "Remover Nulls No Utilizados", "Удалить неизпользуемые нули", "删除未使用的Null", "미사용 Null 제거") \
-  X(EDIT_REMOVE_UNUSED_SOUNDS, "Remove Unused Sounds", "Remover Sonidos No Utilizados", "Удалить неизпользуемые звуки", "删除未使用的声音", "미사용 사운드 제거") \
-  X(EDIT_REMOVE_UNUSED_SHADERS, "Remove Unused Shaders", "Remove Unused Shaders", "Remove Unused Shaders", "Remove Unused Shaders", "Remove Unused Shaders") \
-  X(EDIT_REMOVE_UNUSED_SPRITESHEETS, "Remove Unused Spritesheets", "Remover Spritesheets No Utilizadas", "Удалить неизпользуемые спрайт-листы", "删除未使用的图集", "미사용 스프라이트 시트 제거") \
   X(EDIT_RENAME_GROUP, "Rename Group", "Renombrar grupo", "Переименовать группу", "重命名组", "그룹 이름 바꾸기") \
   X(EDIT_RENAME_EVENT, "Rename Event", "Renombrar Evento", "Переименовать событие", "重命名事件", "이벤트 이름 바꾸기") \
   X(EDIT_REPLACE_SPRITESHEET, "Replace Spritesheet", "Reemplazar Spritesheet", "Заменить спрайт-лист", "替换图集", "스프라이트 시트 교체") \
@@ -248,6 +239,14 @@ namespace anm2ed
   X(FORMAT_LAYER_LIBRARY, "Library: {}", "Biblioteca: {}", "Библиотека: {}", "库: {}", "라이브러리: {}") \
   X(FORMAT_LIBRARY_ANIMATIONS, "Animations ({0})", "Animaciones ({0})", "Анимации ({0})", "动画 ({0})", "애니메이션 ({0})") \
   X(FORMAT_ORIGIN, "Origin: {0}", "Origen: {0}", "Точка отсчета: {0}", "原点: {0}", "원점: {0}") \
+  X(FORMAT_REMOVE_FLATTENED_LAYER, "Layer \"{0}\" (flattened into plain layers)", "Capa \"{0}\" (aplanada en capas simples)", "Слой \"{0}\" (сводится в обычные слои)", "图层\"{0}\"（展平为普通图层）", "레이어 \"{0}\" (일반 레이어로 평탄화)") \
+  X(FORMAT_REMOVE_LAYER, "Layer \"{0}\"", "Capa \"{0}\"", "Слой \"{0}\"", "图层\"{0}\"", "레이어 \"{0}\"") \
+  X(FORMAT_REMOVE_MORE, "...and {0} more", "...y {0} más", "...и ещё {0}", "...以及另外 {0} 项", "...외 {0}개") \
+  X(FORMAT_REMOVE_REGION_USES, "{0} use(s) on frames (the frames keep its crop, size and pivot)", "{0} uso(s) en Frames (los Frames conservan su recorte, tamaño y pivote)", "{0} использ. в кадрах (кадры сохранят обрезку, размер и опорную точку)", "{0} 处帧上的使用（帧保留其裁剪、尺寸和枢轴）", "프레임에서 {0}회 사용 (프레임은 자르기, 크기, 피벗을 유지)") \
+  X(FORMAT_REMOVE_SHADER_USES, "{0} use(s) on frames (the frames go back to the default shader)", "{0} uso(s) en Frames (los Frames vuelven al shader por defecto)", "{0} использ. в кадрах (кадры вернутся к шейдеру по умолчанию)", "{0} 处帧上的使用（帧改用默认着色器）", "프레임에서 {0}회 사용 (프레임은 기본 셰이더로 돌아감)") \
+  X(FORMAT_REMOVE_TRACKS, "{0} track(s), with their frames", "{0} pista(s), con sus Frames", "{0} дорож(ек), вместе с их кадрами", "{0} 条轨道及其帧", "{0}개 트랙과 해당 프레임") \
+  X(FORMAT_REMOVE_TRIGGERS_EMPTY, "{0} trigger(s) left with no events or sounds", "{0} disparador(es) que quedan sin eventos ni sonidos", "{0} триггер(ов), оставшихся без событий и звуков", "{0} 个没有事件或声音的触发器", "이벤트나 사운드가 남지 않는 트리거 {0}개") \
+  X(FORMAT_REMOVE_TRIGGER_USES, "{0} use(s) in triggers", "{0} uso(s) en disparadores", "{0} использ. в триггерах", "{0} 处触发器中的使用", "트리거에서 {0}회 사용") \
   X(FORMAT_SPRITESHEET_ID, "Spritesheet ID: {0}", "ID de Spritesheet: {0}", "", "图集 ID: {0}", "스프라이트 시트 ID: {0}") \
   X(FORMAT_INDEX, "Index: {0}", "Indice: {0}", "Индекс: {0}", "下标: {0}", "인덱스: {0}") \
   X(FORMAT_INTERPOLATED, "Interpolation: {0}", "Interpolación: {0}", "Интерполяция: {0}", "插值: {0}", "보간: {0}") \
@@ -306,6 +305,7 @@ namespace anm2ed
   X(LABEL_PURGE_DEFAULT_COLORS, "Purge Default Color Values", "Omitir Valores de Color por Defecto", "Убирать цвета по умолчанию", "清除默认颜色值", "기본 색상 값 제거") \
   X(LABEL_RANDOM, "Random", "Aleatorio", "Случайно", "随机", "무작위") \
   X(LABEL_RASTERIZE, "Rasterize", "Rasterizar", "Растеризовать", "栅格化", "래스터화") \
+  X(LABEL_REMOVE_IN_USE, "Remove Items in Use", "Remover Elementos en Uso", "Удалить используемые элементы", "删除正在使用的项目", "사용 중인 항목 제거") \
   X(LABEL_REMOVE_MARKERS, "Remove Markers", "Quitar Marcadores", "Удалить маркеры", "移除标记", "마커 제거") \
   X(LABEL_RESTART, "Restart", "Reiniciar", "Перезапуск", "重新开始", "다시 시작") \
   X(LABEL_SAVE_ANYWAY, "Save Anyway", "Guardar de Todos Modos", "Всё равно сохранить", "仍然保存", "그래도 저장") \
@@ -573,6 +573,8 @@ namespace anm2ed
   X(TEXT_ISAAC_ISSUES, "Some of this file won't work in the game as it is:", "Parte de este archivo no funcionará tal cual en el juego:", "Часть этого файла не будет работать в игре как есть:", "此文件的部分内容在游戏中无法按原样工作：", "이 파일의 일부는 게임에서 그대로 작동하지 않습니다:") \
   X(TEXT_ISAAC_JSON, "Save as JSON is on: the game only reads XML, so it won't be able to load this file. Turn it off in Configure to save a copy the game can read.", "Guardar como JSON está activado: el juego solo lee XML, así que no podrá cargar este archivo. Desactívalo en Configurar para guardar una copia que el juego pueda leer.", "Включено сохранение в JSON: игра читает только XML, поэтому не сможет загрузить этот файл. Отключите это в настройках, чтобы сохранить копию, которую игра сможет прочитать.", "已启用保存为 JSON：游戏只读取 XML，因此无法加载此文件。在配置中关闭此选项以保存游戏可读取的副本。", "JSON으로 저장이 켜져 있습니다: 게임은 XML만 읽으므로 이 파일을 불러올 수 없습니다. 게임이 읽을 수 있는 사본을 저장하려면 설정에서 끄세요.") \
   X(TEXT_LAYER_ANIMATION, "Layer's", "De la Capa", "Как у слоя", "图层的", "레이어 기본값") \
+  X(TEXT_REMOVE_CONFIRM, "Are you sure?", "¿Estás seguro?", "Вы уверены?", "确定吗？", "계속하시겠습니까?") \
+  X(TEXT_REMOVE_LIST, "This will remove:", "Esto eliminará:", "Будет удалено:", "这将删除：", "다음 항목이 제거됩니다:") \
   X(TEXT_SELECT_FRAME, "Select a frame first!", "¡Selecciona primero un frame!", "Сначала выберите кадр!", "请先选择帧！", "먼저 프레임을 선택하세요!") \
   X(TEXT_SELECT_FRAME_OR_REGION, "Select a frame or region first!", "¡Selecciona primero un frame o región!", "Сначала выберите кадр или регион!", "请先选择帧或区域！", "먼저 프레임 또는 영역을 선택하세요!") \
   X(TOOLTIP_ADD_TRIGGER_EVENT, "Add another event to the trigger; all of them fire on its frame.\n(Only the first reaches the game.)", "Añade otro evento al trigger; todos se disparan en su Frame.\n(Solo el primero llega al juego.)", "Добавить ещё одно событие в триггер; все срабатывают на его кадре.\n(В игру попадает только первое.)", "向触发器添加另一个事件；它们都会在该帧触发。\n（只有第一个会进入游戏。）", "트리거에 이벤트를 하나 더 추가합니다. 모두 해당 프레임에서 발생합니다.\n(게임에는 첫 번째만 전달됩니다.)") \
@@ -651,7 +653,6 @@ namespace anm2ed
   X(TOAST_PACK_SPRITESHEET_FAILED, "Failed to pack spritesheet.", "No se pudo empaquetar el spritesheet.", "Не удалось упаковать спрайт-лист.", "图集打包失败。", "스프라이트 시트 패킹에 실패했습니다.") \
   X(TOAST_RELOAD_SOUND, "Reloaded sound #{0}: {1}", "Se ha recargado sonido #{0}: {1}", "Звук #{0} перезагружен: {1}", "重新加载了声音 #{0}: {1}", "{0}번 사운드 다시 불러옴: {1}") \
   X(TOAST_SCAN_AND_SET_REGIONS, "Matched regionless frames to candidate regions.", "Se emparejaron frames sin region con regiones candidatas.", "Кадры без региона сопоставлены с подходящими регионами.", "已将无区域帧匹配到候选区域。", "영역이 없는 프레임을 후보 영역에 매칭했습니다.") \
-  X(TOAST_REMOVE_SPRITESHEET, "Removed spritesheet #{0}: {1}", "Se ha removido spritesheet #{0}: {1}", "Спрайт-лист #{0} удален: {1}", "去除了图集 #{0}: {1}", "{0}번 스프라이트 시트 제거됨: {1}") \
   X(TOAST_REPLACE_SPRITESHEET, "Replaced spritesheet #{0}: {1}", "Se ha reemplazado spritesheet #{0}: {1}", "Спрайт-лист #{0} заменен: {1}", "替换了图集 #{0}: {1}", "{0}번 스프라이트 시트 교체됨: {1}") \
   X(TOAST_REPLACE_SOUND, "Replaced sound #{0}: {1}", "Se ha reemplazado sonido #{0}: {1}", "Звук #{0} заменен: {1}", "已替换声音 #{0}: {1}", "{0}번 사운드 교체됨: {1}") \
   X(TOAST_SAVE_DOCUMENT, "Saved document to: {0}", "Documento Guardado en: {0}", "Документ сохранен в: {0}", "保存文件至: {0}", "{0}에 파일을 저장했습니다.") \
@@ -790,8 +791,8 @@ namespace anm2ed
   X(TOOLTIP_PREVIEW_ZOOM, "Change the zoom of the preview.", "Cambia el zoom de la vista previa.", "Изменить масштаб предпросмотра.", "更改预览视图的缩放.", "미리보기의 줌을 변경합니다.") \
   X(TOOLTIP_PREVIEW_TRANSPARENT, "Toggle the animation preview background being transparent.", "Alterna la transparencia del fondo de la vista previa de animacion.", "Переключить прозрачность фона предпросмотра анимации.", "切换动画预览背景是否透明.", "애니메이션 미리보기 배경을 투명하게 전환합니다.") \
   X(TOOLTIP_RELOAD_LIBRARIES, "Reloads the selected libraries.", "Recarga las bibliotecas seleccionadas.", "Перезагружает выбранные библиотеки.", "重新加载所选库.", "선택한 라이브러리를 다시 불러옵니다.") \
+  X(TOOLTIP_REMOVE_CONTENT, "Remove the selected items. If anything uses them, you are asked first.", "Elimina los elementos seleccionados. Si algo los usa, se te pregunta primero.", "Удалить выбранные элементы. Если что-то их использует, сначала будет запрошено подтверждение.", "删除所选项目。如果有内容正在使用它们，会先询问你。", "선택한 항목을 제거합니다. 사용 중인 경우 먼저 확인합니다.") \
   X(TOOLTIP_REMOVE_TRIGGER_EVENT, "Remove the last trigger event.", "Remover el último evento del trigger.", "Удалить последнее событие триггера.", "移除最后一个触发事件。", "마지막 트리거 이벤트를 제거합니다.") \
-  X(TOOLTIP_REMOVE_UNUSED_LIBRARIES, "Remove libraries no layer plays from.", "Elimina las bibliotecas que ninguna capa usa.", "Удалить библиотеки, которые не использует ни один слой.", "删除没有图层使用的库。", "어떤 레이어도 사용하지 않는 라이브러리를 제거합니다.") \
   X(TOOLTIP_SAVE_AS_JSON, "Save documents as JSON (the editor's copy only; the game reads XML). JSON documents are recognized when opened either way.", "Guarda los documentos como JSON (solo la copia del editor; el juego lee XML). Los documentos JSON se reconocen al abrirlos de todas formas.", "Сохранять документы в JSON (только копия редактора; игра читает XML). JSON-документы распознаются при открытии в любом случае.", "将文档保存为 JSON（仅编辑器副本；游戏读取 XML）。无论如何，打开时都会识别 JSON 文档。", "문서를 JSON으로 저장합니다(에디터 사본만, 게임은 XML을 읽습니다). JSON 문서는 어느 경우든 열 때 인식됩니다.") \
   X(TOOLTIP_STEP_OUT, "Go back to editing this animation.", "Volver a editar esta animación.", "Вернуться к редактированию этой анимации.", "返回编辑此动画。", "이 애니메이션 편집으로 돌아갑니다.") \
   X(TOOLTIP_USE_ANIMATION_BOUNDS, "Render using the animation's bounds instead of the preview viewport.", "Render using the animation's bounds instead of the preview viewport.", "Render using the animation's bounds instead of the preview viewport.", "Render using the animation's bounds instead of the preview viewport.", "Render using the animation's bounds instead of the preview viewport.") \
@@ -802,16 +803,9 @@ namespace anm2ed
   X(TOOLTIP_RELOAD_SHADERS, "Reloads the selected shaders.", "Reloads the selected shaders.", "Reloads the selected shaders.", "Reloads the selected shaders.", "Reloads the selected shaders.") \
   X(TOOLTIP_REMOVE_ANIMATION, "Remove the selected animation(s).", "Remueve la(s) animacion(es) seleccionada(s).", "Удалить выбранные анимации.", "去除所选动画.", "선택한 애니메이션을 제거합니다.") \
   X(TOOLTIP_REMOVE_ITEMS, "Remove the selected item(s).", "Remueve el/los item(s) seleccionado(s).", "Удалить выбранные предметы.", "去除所选物品.", "선택한 항목을 제거합니다.") \
-  X(TOOLTIP_REMOVE_UNUSED_REGIONS, "Remove unused regions (i.e., ones not used by any frame in any animation.)", "Remueve regiones no utilizadas (es decir, aquellas no usadas por ningun frame en ninguna animacion.)", "Удалить неиспользуемые регионы (т. е. те, которые не используются ни одним кадром ни в одной анимации.)", "移除未使用的区域（即未被任何动画中的任何帧使用的区域。）", "사용되지 않는 영역(어떤 애니메이션의 어떤 프레임에서도 사용되지 않는 것)를 제거합니다.") \
-  X(TOOLTIP_REMOVE_UNUSED_SHADERS, "Remove unused shaders (i.e., ones not used by any frame in any animation.)", "Remove unused shaders (i.e., ones not used by any frame in any animation.)", "Remove unused shaders (i.e., ones not used by any frame in any animation.)", "Remove unused shaders (i.e., ones not used by any frame in any animation.)", "Remove unused shaders (i.e., ones not used by any frame in any animation.)") \
   X(TOOLTIP_EXPORT_MAKE_SPRITESHEET, "Make a new spritesheet from this region.", "Make a new spritesheet from this region.", "Make a new spritesheet from this region.", "Make a new spritesheet from this region.", "Make a new spritesheet from this region.") \
   X(TOOLTIP_EXPORT_REMOVE_CURRENT_REGION, "The region will be removed from the current spritesheet.", "The region will be removed from the current spritesheet.", "The region will be removed from the current spritesheet.", "The region will be removed from the current spritesheet.", "The region will be removed from the current spritesheet.") \
   X(TOOLTIP_TRIM_REGIONS, "Trim region to non-transparent content.", "Recorta la región al contenido no transparente.", "Обрезать регион до непрозрачного содержимого.", "将区域裁剪到非透明内容。", "영역을 불투명 콘텐츠에 맞게 자릅니다.") \
-  X(TOOLTIP_REMOVE_UNUSED_EVENTS, "Remove unused events (i.e., ones not used by any trigger in any animation.)", "Remueve eventos no utilizados (i. e., aquellos no usados por algun trigger en ninguna animacion.)", "Удалить неиспользуемые события (т. е. события, которые не использует ни один триггер в ни одной анимации.)", "去除未使用的事件 (未被任何动画触发的事件.)", "사용되지 않는 이벤트(어떤 애니메이션의 트리거에서도 사용되지 않는 것)를 제거합니다.") \
-  X(TOOLTIP_REMOVE_UNUSED_LAYERS, "Remove unused layers (i.e., ones not used in any animation.)", "Remueve capas no utilizadas (i. e., aquellos no usados en ninguna animacion.)", "Удалить неиспользуемые слои (т. е. слои, которые не используются ни одной анимацией.)", "去除未使用的动画层 (未被任何动画使用的那些)", "사용되지 않는 레이어(어떤 애니메이션에서도 사용되지 않는 것)를 제거합니다.") \
-  X(TOOLTIP_REMOVE_UNUSED_NULLS, "Remove unused nulls (i.e., ones not used in any animation.)", "Remueve nulls no utilizados (i. e., aquellos no usados en ninguna animacion.)", "Удалить неиспользуемые нули (т. е. нули, которые не используются ни одной анимацией.)", "去除未使用的Null (未被任何动画使用的那些.)", "사용되지 않는 Null(어떤 애니메이션에서도 사용되지 않는 것)을 제거합니다.") \
-  X(TOOLTIP_REMOVE_UNUSED_SOUNDS, "Remove unused sounds (i.e., ones not used in any trigger.)", "Remueve sonidos no utilizados (i. e., aquellos no usados en ningun trigger.)", "Удалить неиспользуемые звуки (т. е. звуки, которые не используются ни одным триггером.)", "去除未使用的声音 (未被任何触发器使用的那些.)", "사용되지 않는 사운드(어떤 트리거에서도 사용되지 않는 것)를 제거합니다.") \
-  X(TOOLTIP_REMOVE_UNUSED_SPRITESHEETS, "Remove all unused spritesheets (i.e., not used in any layer.).", "Remueve todos los spritesheets no utilizados (i. e., aquellos no usados en ninguna capa.)", "Удалить неиспользуемые спрайт-листы (т. е. те, которые не используются ни одним слоем.)", "去除未使用的图集 (未被任何动画层使用的那些.)", "사용되지 않는 모든 스프라이트 시트(어떤 레이어에서도 사용되지 않는 것)를 제거합니다.") \
   X(TOOLTIP_RENDER_BUTTON, "Render the animation using the current settings.", "Renderiza la animacion usando la configuracion actual", "Рендерировать анимацию, используя текущие настройки.", "应用当前设置去渲染动画.", "현재 설정으로 애니메이션을 렌더링합니다.") \
   X(TOOLTIP_RENDER_TYPE, "Set the type of the output.", "Ajusta el tipo de la salida", "Установить тип вывода.", "设置输出的类型.", "출력 유형을 설정합니다.") \
   X(TOOLTIP_REPEAT_DELAY, "Set how often, after repeating begins, key inputs will be fired.", "Ajusta que tanto, despues de que empieza la repeticion, seran disparadas las entradas clave.", "Установить, как часто после начала повторения будут срабатывать нажатия клавиш.", "更改键盘按键开启重复时, 重复的速率.", "반복 입력이 시작된 후 입력이 얼마나 자주 들어갈지 설정합니다.") \

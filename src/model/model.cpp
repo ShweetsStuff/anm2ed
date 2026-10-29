@@ -222,37 +222,60 @@ namespace anm2ed::model
     return unused;
   }
 
-  std::set<int> Model::unused_get(ElementType type, const Animation* only) const
+  // Each reference to a content item of `type`, as the id it holds: a plain layer's spritesheet or a layer's library, a
+  // track's layer or null, a trigger's events or sounds, a frame's shader, or (from layers on spritesheet
+  // `spritesheetId`) a frame's region. With `only`, those in that animation (layers name spritesheets and libraries
+  // either way).
+  template <class Callback>
+  void references_each(const Model& model, ElementType type, int spritesheetId, const Animation* only,
+                       Callback&& callback)
   {
-    std::set<int> used{};
-    auto used_insert = [&](const Animation& animation)
+    auto& content = model.content;
+    if (type == ElementType::SPRITESHEET || type == ElementType::LIBRARY)
+    {
+      // An animation layer's spritesheet isn't drawn.
+      for (const auto& layer : content.layers)
+        if (type == ElementType::LIBRARY)
+          callback(layer.libraryId);
+        else if (!layer.is_animation())
+          callback(layer.spritesheetId);
+      return;
+    }
+    auto animation_references_each = [&](const Animation& animation)
     {
       if (type == ElementType::LAYER_ELEMENT || type == ElementType::NULL_ELEMENT)
         tracks_each(type == ElementType::LAYER_ELEMENT ? animation.layers : animation.nulls,
-                    [&](const Track& track, auto*) { used.insert(track.id); });
-      for (const auto& trigger : animation.triggers.frames)
-      {
-        if (type == ElementType::EVENT_ELEMENT) used.insert(trigger.eventIds.begin(), trigger.eventIds.end());
-        if (type == ElementType::SOUND_ELEMENT) used.insert(trigger.soundIds.begin(), trigger.soundIds.end());
-      }
+                    [&](const Track& track, auto*) { callback(track.id); });
+      if (type == ElementType::EVENT_ELEMENT || type == ElementType::SOUND_ELEMENT)
+        for (const auto& trigger : animation.triggers.frames)
+          for (auto id : type == ElementType::EVENT_ELEMENT ? trigger.eventIds : trigger.soundIds)
+            callback(id);
       if (type == ElementType::SHADER)
+        animation_tracks_each(animation,
+                              [&](const Track& track)
+                              {
+                                for (const auto& frame : track.frames)
+                                  callback(frame.shaderId);
+                              });
+      if (type == ElementType::REGION)
         tracks_each(animation.layers,
                     [&](const Track& track, auto*)
                     {
+                      auto layer = item_get(content.layers, track.id);
+                      if (!layer || layer->spritesheetId != spritesheetId) return;
                       for (const auto& frame : track.frames)
-                        used.insert(frame.shaderId);
+                        callback(frame.regionId);
                     });
     };
+    if (only) return animation_references_each(*only);
+    for (auto [index, animation] : model.animations_get())
+      animation_references_each(*animation);
+  }
 
-    if (type == ElementType::SPRITESHEET || type == ElementType::LIBRARY)
-      for (const auto& layer : content.layers)
-        used.insert(type == ElementType::LIBRARY ? layer.libraryId : layer.spritesheetId);
-    else if (only)
-      used_insert(*only);
-    else
-      for (auto [index, animation] : animations_get())
-        used_insert(*animation);
-
+  std::set<int> Model::unused_get(ElementType type, const Animation* only) const
+  {
+    std::set<int> used{};
+    references_each(*this, type, -1, only, [&](int id) { used.insert(id); });
     switch (type)
     {
       case ElementType::SPRITESHEET:
@@ -274,20 +297,12 @@ namespace anm2ed::model
     }
   }
 
-  std::set<int> Model::region_unused_get(int spritesheetId) const
+  // How many references there are to the items `ids` (see references_each).
+  int Model::uses_count(ElementType type, const std::set<int>& ids, int spritesheetId, const Animation* only) const
   {
-    std::set<int> used{};
-    for (auto [index, animation] : animations_get())
-      tracks_each(animation->layers,
-                  [&](const Track& track, auto*)
-                  {
-                    auto layer = item_get(content.layers, track.id);
-                    if (!layer || layer->spritesheetId != spritesheetId) return;
-                    for (const auto& frame : track.frames)
-                      used.insert(frame.regionId);
-                  });
-    auto spritesheet = item_get(content.spritesheets, spritesheetId);
-    return spritesheet ? unused_ids_get(spritesheet->regions, used) : std::set<int>{};
+    int count{};
+    references_each(*this, type, spritesheetId, only, [&](int id) { count += ids.contains(id); });
+    return count;
   }
 
   Handle Model::handle_get(Reference reference, bool isGroup) const

@@ -42,12 +42,16 @@ namespace anm2ed::edit
     return a == b;
   }
 
-  // The game's copy of a document: each animation layer's track becomes plain layer tracks (one per layer its child
-  // animation draws), baked a frame at a time. A library's spritesheets join the copy, at paths from `path_get`.
-  Model animation_layers_flatten(Model model, const LibraryGet& library_get, const SpritesheetPathGet& path_get)
+  // The game's copy of a document: each animation layer's track (or only those of `layerIds`) becomes plain layer
+  // tracks (one per layer its child animation draws), baked a frame at a time. A library's spritesheets join the copy,
+  // at paths from `path_get`.
+  Model animation_layers_flatten(Model model, const LibraryGet& library_get, const SpritesheetPathGet& path_get,
+                                 const std::set<int>& layerIds)
   {
     auto& content = model.content;
-    if (std::ranges::none_of(content.layers, &Layer::is_animation)) return model;
+    auto is_flattened = [&](const Layer& layer)
+    { return layer.is_animation() && (layerIds.empty() || layerIds.contains(layer.id)); };
+    if (std::ranges::none_of(content.layers, is_flattened)) return model;
 
     std::map<std::pair<const Model*, int>, int> spritesheetIds{};
     auto spritesheet_id_get = [&](const Model* source, int id)
@@ -63,10 +67,10 @@ namespace anm2ed::edit
     };
 
     // (animation layer, source, source layer) -> the plain layer standing in for it.
-    std::map<std::tuple<int, const Model*, int>, int> layerIds{};
+    std::map<std::tuple<int, const Model*, int>, int> plainIds{};
     auto layer_id_get = [&](const Draw& draw)
     {
-      auto [it, isNew] = layerIds.try_emplace({draw.id, draw.source, draw.sourceId});
+      auto [it, isNew] = plainIds.try_emplace({draw.id, draw.source, draw.sourceId});
       if (!isNew) return it->second;
       auto parent = item_get(content.layers, draw.id);
       auto sourceLayer = item_get(draw.source->content.layers, draw.sourceId);
@@ -84,7 +88,7 @@ namespace anm2ed::edit
       auto tracks_flatten = [&](const Track& track)
       {
         auto layer = item_get(content.layers, track.id);
-        if (!layer || !layer->is_animation()) return std::vector{track};
+        if (!layer || !is_flattened(*layer)) return std::vector{track};
         std::map<int, std::vector<Frame>> frames{};
         std::vector<int> order{};
         for (int time = 0; time < source.frameNum; ++time)
@@ -123,24 +127,27 @@ namespace anm2ed::edit
               group.tracks.push_back(std::move(flat));
           entries.emplace_back(std::move(group));
         }
-      // The children's triggers join the animation's own, on the frames they fire (their events found by name).
+      // The flattened children's triggers join the animation's own, on the frames they fire (their events found by
+      // name).
       auto triggers = source.triggers;
       for (int time = 0; time < source.frameNum; ++time)
       {
-        auto fires = animation_triggers_get(model, source, time, library_get);
-        auto isOwn = source.triggers.isVisible && frame_generate(source.triggers, (float)time).isVisible;
         std::vector<int> eventIds{};
-        for (int i = isOwn ? 1 : 0; i < (int)fires.size(); ++i)
-          for (auto eventId : fires[i].trigger.eventIds)
-            if (auto event = item_get(fires[i].source->content.events, eventId))
+        for (const auto& fire : animation_triggers_get(model, source, time, library_get))
+        {
+          auto layer = item_get(content.layers, fire.layerId);
+          if (!layer || !is_flattened(*layer)) continue;
+          for (auto eventId : fire.trigger.eventIds)
+            if (auto event = item_get(fire.source->content.events, eventId))
             {
               auto existing = std::ranges::find(content.events, event->name, &Event::name);
-              eventIds.push_back(existing != content.events.end()
-                                     ? existing->id
-                                     : content.events.emplace_back(Event{.id = item_next_id_get(content.events),
-                                                                         .name = event->name})
-                                           .id);
+              eventIds.push_back(
+                  existing != content.events.end()
+                      ? existing->id
+                      : content.events.emplace_back(Event{.id = item_next_id_get(content.events), .name = event->name})
+                            .id);
             }
+        }
         if (eventIds.empty()) continue;
         auto trigger = std::ranges::find(triggers.frames, time, &Frame::atFrame);
         if (trigger == triggers.frames.end())
@@ -153,7 +160,7 @@ namespace anm2ed::edit
       flattened->layers = std::move(entries);
       flattened->triggers = std::move(triggers);
     }
-    std::erase_if(content.layers, [](const Layer& layer) { return layer.is_animation(); });
+    std::erase_if(content.layers, is_flattened);
     return model;
   }
 }
