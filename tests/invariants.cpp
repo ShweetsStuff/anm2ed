@@ -29,16 +29,15 @@ TEST_CASE("saved text escapes what it holds, and reads back the same")
   CHECK(note->second == model.extras.children.back().second);
 }
 
-TEST_CASE("purged default colors read back the same")
+TEST_CASE("saves leave out default colors, which read back the same")
 {
   for (const auto& fixture : fixtures_get())
   {
     INFO("fixture: ", fixture.string());
     auto model = model_load(file_load(fixture));
-    auto text = model::model_to_string(model, {.isPurgeDefaultColors = true});
+    auto text = model::model_to_string(model);
     CHECK(text.find("Tint=\"255\"") == std::string::npos);
     CHECK(text.find("Offset=\"0\"") == std::string::npos);
-    CHECK(text.size() <= model::model_to_string(model).size());
     CHECK(model::model_hash(model_load(text)) == model::model_hash(model));
   }
 }

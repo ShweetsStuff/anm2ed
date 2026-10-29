@@ -100,7 +100,7 @@ namespace anm2ed::test
 
     // Loading only the game's view and re-saving it for the game must not change it.
     auto game = game_document_get(model::model_to_string(model));
-    CHECK(model::model_serialize(model_load(game), SERIALIZE_ISAAC_DEFAULT) == game);
+    CHECK(model::model_serialize(model_load(game), SERIALIZE_ISAAC_DEFAULT | SERIALIZE_PURGE_DEFAULT_COLORS) == game);
   }
 
   // Compares against a stored golden; ANM2ED_UPDATE_GOLDEN (or a missing golden when isBootstrap) rewrites it.

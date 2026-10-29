@@ -66,6 +66,23 @@ namespace anm2ed::model
     if (isRoundRotation) frame.rotation = std::round(frame.rotation);
   }
 
+  // For the game, a group root's transform is baked into its tracks one frame at a time.
+  void track_group_root_bake(Track& track, const Track& root, int frameNum)
+  {
+    auto trackLength = track_length_get(track);
+    if (trackLength <= 0) return;
+    auto length = std::max({trackLength, track_length_get(root), frameNum, FRAME_DURATION_MIN});
+    std::vector<Frame> frames{};
+    for (int time = 0; time < length; ++time)
+    {
+      auto& frame = frames.emplace_back(frame_generate(track, (float)time));
+      frame_root_transform_apply(frame, frame_generate(root, (float)time), false, false, false);
+      frame.duration = FRAME_DURATION_MIN;
+      frame.interpolation = Interpolation::NONE;
+    }
+    track.frames = std::move(frames);
+  }
+
   // The track's state at a time: the frame playing then, mixed toward the next one when interpolated. A trigger is
   // returned only on its exact frame; otherwise the result is invisible.
   Frame frame_generate(const Track& track, float time)

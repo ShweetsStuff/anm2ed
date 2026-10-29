@@ -405,25 +405,42 @@ namespace anm2ed::imgui
         auto issues = model::isaac_issues_get(document->model);
         for (auto [count, format] : {std::pair{issues.easedFrames, FORMAT_ISAAC_EASED_FRAMES},
                                      {issues.groupTransforms, FORMAT_ISAAC_GROUP_TRANSFORMS},
-                                     {issues.skewFrames, FORMAT_ISAAC_SKEW_FRAMES},
-                                     {issues.shaderFrames, FORMAT_ISAAC_SHADER_FRAMES},
+                                     {issues.animationLayers, FORMAT_ISAAC_ANIMATION_LAYERS},
                                      {issues.depthFrames, FORMAT_ISAAC_DEPTH_FRAMES},
                                      {issues.alphaOffsetFrames, FORMAT_ISAAC_ALPHA_OFFSET_FRAMES},
+                                     {issues.skewFrames, FORMAT_ISAAC_SKEW_FRAMES},
                                      {issues.blurFrames, FORMAT_ISAAC_BLUR_FRAMES},
+                                     {issues.shaderFrames, FORMAT_ISAAC_SHADER_FRAMES},
                                      {issues.extraEvents, FORMAT_ISAAC_EXTRA_EVENTS},
                                      {issues.triggerSounds, FORMAT_ISAAC_TRIGGER_SOUNDS},
-                                     {issues.animationLayers, FORMAT_ISAAC_ANIMATION_LAYERS},
                                      {issues.vectorSpritesheets, FORMAT_ISAAC_VECTOR_SPRITESHEETS}})
           if (count > 0) ImGui::BulletText("%s", localize_format(format, count).c_str());
+        ImGui::TextWrapped("%s", localize.get(TEXT_ISAAC_CONVERT));
         ImGui::TextWrapped("%s", localize.get(TEXT_ISAAC_EDITOR_COPY));
       }
 
-      auto widgetSize = widget_size_with_row_get(2);
-      shortcut(manager.chords[SHORTCUT_CONFIRM]);
-      if (ImGui::Button(localize.get(LABEL_SAVE_ANYWAY), widgetSize))
+      // Converting works around what the game can't show; the document remembers which, for saves that don't ask.
+      auto isConvertible = !settings.fileIsJson;
+      auto widgetSize = widget_size_with_row_get(isConvertible ? 3 : 2);
+      auto save = [&](std::optional<bool> isIgnored)
       {
+        if (isIgnored)
+          manager.command_push({isaacSave.index, [isIgnored = *isIgnored](Manager&, Document& document)
+                                {
+                                  if (document.model.info.isIsaacIgnored == isIgnored) return;
+                                  document.edit_apply(EDIT_ISAAC_COMPATIBILITY, [&](model::Model& model)
+                                                      { model.info.isIsaacIgnored = isIgnored; });
+                                }});
         save_enqueue(manager, isaacSave);
         isaacPopup.close();
+      };
+      shortcut(manager.chords[SHORTCUT_CONFIRM]);
+      if (ImGui::Button(localize.get(isConvertible ? LABEL_CONVERT_AND_SAVE : LABEL_SAVE_ANYWAY), widgetSize))
+        save(isConvertible ? std::optional(false) : std::nullopt);
+      if (isConvertible)
+      {
+        ImGui::SameLine();
+        if (ImGui::Button(localize.get(LABEL_IGNORE_AND_SAVE), widgetSize)) save(true);
       }
       ImGui::SameLine();
       shortcut(manager.chords[SHORTCUT_CANCEL]);

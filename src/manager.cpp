@@ -470,7 +470,7 @@ namespace anm2ed
   // What the manager keeps from the settings: shortcuts, and how documents save.
   void Manager::settings_apply(Settings& settings)
   {
-    saveOptions = {.isPurgeDefaultColors = settings.fileIsPurgeDefaultColors, .isJson = settings.fileIsJson};
+    saveOptions = {.isJson = settings.fileIsJson};
     for (int i = 0; i < SHORTCUT_COUNT; i++)
       chords[i] = imgui::string_to_chord(settings.*SHORTCUT_MEMBERS[i]);
   }

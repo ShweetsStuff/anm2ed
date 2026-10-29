@@ -13,11 +13,11 @@
     <Animations DefaultAnimation="Idle">
         <Animation Name="Idle" FrameNum="2" Loop="true">
             <RootAnimation>
-                <Frame XPosition="0" YPosition="0" Delay="1" Visible="true" XScale="100" YScale="100" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/>
+                <Frame XPosition="0" YPosition="0" Delay="1" Visible="true" XScale="100" YScale="100" Rotation="0" Interpolated="false"/>
             </RootAnimation>
             <LayerAnimations>
                 <LayerAnimation LayerId="0" Visible="true">
-                    <Frame XPivot="8" YPivot="8" XCrop="0" YCrop="0" Width="16" Height="16" XPosition="0" YPosition="0" Delay="2" Visible="true" XScale="100" YScale="100" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/>
+                    <Frame XPivot="8" YPivot="8" XCrop="0" YCrop="0" Width="16" Height="16" XPosition="0" YPosition="0" Delay="2" Visible="true" XScale="100" YScale="100" Rotation="0" Interpolated="false"/>
                 </LayerAnimation>
             </LayerAnimations>
             <NullAnimations/>
@@ -39,11 +39,11 @@
         <Animations DefaultAnimation="Idle">
             <Animation Name="Idle" FrameNum="2" Loop="true">
                 <RootAnimation>
-                    <Frame XPosition="0" YPosition="0" Delay="1" Visible="true" XScale="100" YScale="100" SkewX="0" SkewY="0" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/>
+                    <Frame XPosition="0" YPosition="0" Delay="1" Visible="true" XScale="100" YScale="100" SkewX="0" SkewY="0" Rotation="0" Interpolated="false"/>
                 </RootAnimation>
                 <LayerAnimations>
                     <LayerAnimation LayerId="0" Visible="true">
-                        <Frame XPivot="8" YPivot="8" XCrop="0" YCrop="0" Width="16" Height="16" XPosition="0" YPosition="0" Delay="2" Visible="true" XScale="100" YScale="100" SkewX="0" SkewY="0" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/>
+                        <Frame XPivot="8" YPivot="8" XCrop="0" YCrop="0" Width="16" Height="16" XPosition="0" YPosition="0" Delay="2" Visible="true" XScale="100" YScale="100" SkewX="0" SkewY="0" Rotation="0" Interpolated="false"/>
                     </LayerAnimation>
                 </LayerAnimations>
                 <NullAnimations/>

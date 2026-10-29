@@ -87,9 +87,6 @@ namespace anm2ed::imgui::wizard
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ISAAC_COMPATIBILITY_WARNING));
 
           ImGui::SeparatorText(localize.get(LABEL_SERIALIZATION));
-          ImGui::Checkbox(localize.get(LABEL_PURGE_DEFAULT_COLORS), &temporary.fileIsPurgeDefaultColors);
-          ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_PURGE_DEFAULT_COLORS));
-          ImGui::SameLine();
           ImGui::Checkbox(localize.get(LABEL_SAVE_AS_JSON), &temporary.fileIsJson);
           ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SAVE_AS_JSON));
         }

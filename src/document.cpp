@@ -23,6 +23,7 @@
 #include "model/xml.hpp"
 #include "pack.hpp"
 #include "path.hpp"
+#include "render.hpp"
 #include "strings.hpp"
 #include "toast.hpp"
 #include "working_directory.hpp"
@@ -34,6 +35,7 @@ using namespace glm;
 
 namespace anm2ed::document
 {
+  constexpr std::string_view BAKED_EXTENSION = ".baked.png";
   constexpr std::string_view AUTOSAVE_EXTENSION = ".autosave";
   constexpr int VECTOR_LEVEL_MAX = 3;
   constexpr int VECTOR_SIZE_MAX = 8192;
@@ -243,12 +245,22 @@ namespace anm2ed
     };
   }
 
-  // Writes the document; a Rebirth document's game copy has its animation layers flattened into plain layers.
+  // Writes the document; the game's copy has its animation layers flattened into plain layers, and what else the game
+  // can't show worked around.
   bool Document::file_write(const std::filesystem::path& path, std::string* errorString, Options options)
   {
     std::optional<model::Model> game{};
-    if (!options.isJson && std::ranges::any_of(model.content.layers, &model::Layer::is_animation))
+    if (!options.isJson)
+    {
       game = edit::animation_layers_flatten(model, library_resolver_get(), spritesheet_path_resolver_get());
+      if (!model.info.isIsaacIgnored)
+      {
+        auto bakedPath = path;
+        if (options.isPixelBaked)
+          render::frames_bake(*this, *game, bakedPath.replace_extension(document::BAKED_EXTENSION));
+        game = edit::isaac_bridge(std::move(*game));
+      }
+    }
     options.gameModel = game ? &*game : nullptr;
     return model::model_save(model, path, errorString, options);
   }
@@ -272,6 +284,8 @@ namespace anm2ed
   {
     auto autosavePath = autosave_path_get();
     auto autosavePathUtf8 = path::to_utf8(autosavePath);
+    // An autosave is read back from the editor's copy, so the game's needs no baked spritesheet.
+    options.isPixelBaked = false;
     if (file_write(autosavePath, errorString, options))
     {
       for (auto id : spritesheets_autosave_dirty_get())

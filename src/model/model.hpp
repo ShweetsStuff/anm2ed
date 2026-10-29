@@ -260,6 +260,7 @@ namespace anm2ed::model
     std::string createdOn{};
     int fps{30};
     int version{};
+    bool isIsaacIgnored{}; // last saved with Ignore and Save: nothing the game can't show worked around; editor-only
     Extras extras{};
 
     bool operator==(const Info&) const = default;

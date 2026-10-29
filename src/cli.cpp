@@ -299,6 +299,9 @@ options:
       std::println(stderr, "--format must be json or xml");
       return 2;
     }
+    // The game's copy bakes what it can't draw with OpenGL (and the document's shaders compile only with it).
+    std::optional<render::HeadlessGL> gl{};
+    if (format == "xml") gl.emplace();
     std::string error{};
     Document document(arguments.file, false, &error);
     auto fileUtf8 = path::to_utf8(arguments.file);
@@ -309,7 +312,7 @@ options:
     }
     if (!error.empty()) std::println(stderr, "{}:\n{}", fileUtf8, error);
     auto out = std::filesystem::absolute(arguments.get("out").transform(path::from_utf8).value_or(arguments.file));
-    auto options = SAVE_OPTIONS_DEFAULT;
+    Options options{};
     options.isJson = format == "json";
     if (document.save(out, &error, options)) return 0;
     std::println(stderr, "could not write {}: {}", path::to_utf8(out), error);

@@ -44,6 +44,7 @@ namespace anm2ed::model
       "XPivot", "YPivot", "XCrop", "YCrop", "XPosition", "YPosition", "Width", "Height", "XScale", "YScale", "SkewX",
       "SkewY", "ShearX", "ShearY", "RedTint", "GreenTint", "BlueTint", "AlphaTint", "RedOffset", "GreenOffset", "BlueOffset", "AlphaOffset",
       "Interpolated", "Origin", "BakeInterpolation", "BakeDelay", "BakeCount", "OriginalDelay", "Library", "Animation",
+      "IsaacIgnored",
       "ChildAnimation", "ChildMode", "ChildStart", "Restart", "Blur"};
   // clang-format on
   constexpr std::pair<std::string_view, bool> BOOL_WORDS[] = {{"true", true},   {"True", true},   {"TRUE", true},
@@ -815,6 +816,7 @@ namespace anm2ed::model
                                     .createdOn = string_get(child, "CreatedOn"),
                                     .fps = int_get(child, "Fps", Info{}.fps),
                                     .version = int_get(child, "Version", 0),
+                                    .isIsaacIgnored = bool_get(child, "IsaacIgnored", false),
                                     .extras = extras_read(child)};
                       children_each(child, [&](pugi::xml_node infoChild, ElementType, int infoPosition)
                                     { extras_child_add(model.info.extras, infoChild, infoPosition); });
@@ -1439,23 +1441,6 @@ namespace anm2ed::model
     return issues;
   }
 
-  // For the game, a group root's transform is baked into its tracks one frame at a time.
-  void track_group_root_bake(Track& track, const Track& root, int frameNum)
-  {
-    auto trackLength = track_length_get(track);
-    if (trackLength <= 0) return;
-    auto length = std::max({trackLength, track_length_get(root), frameNum, FRAME_DURATION_MIN});
-    std::vector<Frame> frames{};
-    for (int time = 0; time < length; ++time)
-    {
-      auto& frame = frames.emplace_back(frame_generate(track, (float)time));
-      frame_root_transform_apply(frame, frame_generate(root, (float)time), false, false, false);
-      frame.duration = FRAME_DURATION_MIN;
-      frame.interpolation = Interpolation::NONE;
-    }
-    track.frames = std::move(frames);
-  }
-
   // The game's copy: group roots baked into their tracks (originals kept in a FrameRestore node the editor reads
   // back), and interpolation flattened into single-step frames.
   Animation animation_bake(const Writer& writer, Animation animation)
@@ -1760,7 +1745,8 @@ namespace anm2ed::model
     sink.open(tag.empty() ? tag_get(ElementType::ANIMATED_ACTOR) : tag);
     extras_write(sink, model.extras);
     Children children{sink, model.extras};
-    auto isInfo = model.info.fps != Info{}.fps || model.info.createdBy != Info{}.createdBy;
+    auto isIgnored = writer.is(SERIALIZE_EXTENSIONS) && model.info.isIsaacIgnored;
+    auto isInfo = model.info.fps != Info{}.fps || model.info.createdBy != Info{}.createdBy || isIgnored;
     for (auto type : layout_get(model.layout, {{ElementType::INFO, isInfo},
                                                {ElementType::CONTENT, true},
                                                {ElementType::ANIMATIONS, !model.animations.entries.empty()}}))
@@ -1774,6 +1760,7 @@ namespace anm2ed::model
       sink.attribute("CreatedOn", model.info.createdOn);
       sink.attribute("Fps", model.info.fps);
       sink.attribute("Version", model.info.version);
+      if (isIgnored) sink.attribute("IsaacIgnored", true);
       extras_write(sink, model.info.extras);
       element_close(sink, model.info.extras);
     }
@@ -1782,12 +1769,16 @@ namespace anm2ed::model
     sink.close();
   }
 
-  // A save is the game's document with the editor's own copy embedded as SourceDocument.
+  // A save is the game's document with the editor's own copy embedded as SourceDocument; neither writes tints of 255
+  // or color offsets of 0, which readers assume.
   void document_write(Sink& sink, const Model& model, Options options)
   {
-    Flags purge = options.isPurgeDefaultColors ? SERIALIZE_PURGE_DEFAULT_COLORS : 0;
-    model_write(sink, options.gameModel ? *options.gameModel : model, SERIALIZE_ISAAC_DEFAULT | purge,
-                [&]() { model_write(sink, model, SERIALIZE_ANM2ED_DEFAULT | purge, {}, SOURCE_DOCUMENT_TAG); });
+    model_write(
+        sink, options.gameModel ? *options.gameModel : model, SERIALIZE_ISAAC_DEFAULT | SERIALIZE_PURGE_DEFAULT_COLORS,
+        [&]()
+        {
+          model_write(sink, model, SERIALIZE_ANM2ED_DEFAULT | SERIALIZE_PURGE_DEFAULT_COLORS, {}, SOURCE_DOCUMENT_TAG);
+        });
   }
 
   // The text of whatever `write` sends to a sink.

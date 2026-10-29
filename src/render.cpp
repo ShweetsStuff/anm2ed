@@ -6,6 +6,9 @@
 #include <cstring>
 #include <filesystem>
 #include <format>
+#include <limits>
+#include <map>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -19,8 +22,10 @@
 #include "file.hpp"
 #include "log.hpp"
 #include "model/frames.hpp"
+#include "pack.hpp"
 #include "path.hpp"
 #include "process.hpp"
+#include "texture.hpp"
 #include "toast.hpp"
 
 using namespace anm2ed::imgui;
@@ -441,5 +446,265 @@ namespace anm2ed::render
     AudioStream audioStream(nullptr);
     recorder.finish(document, audioStream);
     return path::is_exist(options.path);
+  }
+
+  constexpr float BAKE_MARGIN = 1.0f;
+  constexpr int BAKED_SIZE_MAX = 4096;
+
+  // A layer draw alone at canvas pixels, cut to what it can cover (its blur's reach too): its image (straight alpha) and
+  // the canvas position of the image's top-left. Its tint and color offset go into the pixels only when `isColored`.
+  std::optional<std::pair<Image, glm::vec2>> draw_bake(Canvas& canvas, Shader& shader, Document& document,
+                                                       const model::Draw& draw, bool isColored)
+  {
+    auto image = document.draw_image_get(draw, model::draw_scale_get(draw));
+    if (!image || !image->is_valid() || draw.frame.size == glm::vec2()) return {};
+    auto quad = draw.parent * model::draw_quad_model_get(draw);
+    glm::vec2 low{std::numeric_limits<float>::max()};
+    glm::vec2 high{std::numeric_limits<float>::lowest()};
+    for (auto corner : {glm::vec2(0.0f), glm::vec2(1.0f, 0.0f), glm::vec2(0.0f, 1.0f), glm::vec2(1.0f)})
+    {
+      auto point = glm::vec2(quad * glm::vec4(corner, 0.0f, 1.0f));
+      low = glm::min(low, point);
+      high = glm::max(high, point);
+    }
+    auto reach = draw.frame.blur + BAKE_MARGIN;
+    low = glm::floor(low - reach);
+    high = glm::ceil(high + reach);
+    auto size = glm::ivec2(high - low);
+
+    canvas.size_set(glm::vec2(size));
+    float zoom{};
+    glm::vec2 pan{};
+    canvas.set_to_rect(zoom, pan, glm::vec4(low, glm::vec2(size)));
+    canvas.bind();
+    canvas.viewport_set();
+    canvas.clear(glm::vec4(0.0f));
+    auto custom = document.shader_get(draw.frame.shaderId);
+    canvas.layer_render(custom ? *custom : shader, texture::id_get(*image), image->unit_size_get(),
+                        canvas.transform_get(zoom, pan), draw, isColored ? draw.frame.tint : glm::vec4(1.0f),
+                        isColored ? draw.frame.colorOffset : glm::vec4(0.0f));
+    auto pixels = canvas.pixels_get();
+    canvas.unbind();
+    pixels_unpremultiply(pixels);
+    return std::pair{Image(pixels.data(), size), low};
+  }
+
+  // The game's copy with the layer frames it can't draw baked into images: skewed, blurred or shaded ones, and every
+  // layer frame under a skewed root or group root, which then goes into the images (the root becomes plain). A layer has one spritesheet in the game, so baked frames stand on a copy of their layer
+  // ("name (baked)") right after it, one frame per step, while the layer hides them. The images (each once) are packed
+  // into one spritesheet written to `path`, beside the document; when it can't be, `result` keeps its frames.
+  void frames_bake(Document& document, model::Model& result, const std::filesystem::path& path)
+  {
+    auto game = result;
+    auto is_baked = [](const model::Frame& frame)
+    { return frame.skew != glm::vec2() || frame.blur > 0.0f || frame.shaderId != -1; };
+    auto is_skewed = [](const model::Track& root)
+    { return std::ranges::any_of(root.frames, [](const model::Frame& frame) { return frame.skew != glm::vec2(); }); };
+
+    std::vector<int> indices{};
+    for (int i = 0; i < game.animations_count_get(); ++i)
+    {
+      auto& animation = *game.animation_get(i);
+      auto isNeeded = is_skewed(animation.root);
+      model::tracks_each(
+          animation.layers, [&](const model::Track& track, const model::TrackGroup* group)
+          { isNeeded |= (group && is_skewed(group->root)) || std::ranges::any_of(track.frames, is_baked); });
+      if (isNeeded) indices.push_back(i);
+    }
+    auto pathUtf8 = path::to_utf8(path);
+    if (indices.empty()) return;
+    if (!SDL_GL_GetCurrentContext()) return toast_log(Level::WARNING, TOAST_BAKE_NO_OPENGL, pathUtf8);
+
+    auto& textureInfo = shader::SHADERS[shader::TEXTURE];
+    Shader shader(textureInfo.vertex, textureInfo.fragment);
+    Canvas canvas(glm::vec2(1.0f));
+    auto& content = game.content;
+    auto spritesheetId = model::item_next_id_get(content.spritesheets);
+
+    std::vector<Image> images{};
+    std::map<std::size_t, std::vector<int>> imageHashes{};
+    auto image_index_get = [&](Image image)
+    {
+      auto hash =
+          std::hash<std::string_view>{}(std::string_view((const char*)image.pixels.data(), image.pixels.size()));
+      for (auto index : imageHashes[hash])
+        if (images[index].size == image.size && images[index].pixels == image.pixels) return index;
+      imageHashes[hash].push_back((int)images.size());
+      images.push_back(std::move(image));
+      return (int)images.size() - 1;
+    };
+    std::map<int, int> bakedLayerIds{};
+    auto baked_layer_id_get = [&](int layerId)
+    {
+      auto [it, isNew] = bakedLayerIds.try_emplace(layerId);
+      if (!isNew) return it->second;
+      auto layer = model::item_get(content.layers, layerId);
+      it->second = model::item_next_id_get(content.layers);
+      content.layers.push_back({.id = it->second,
+                                .name = (layer ? layer->name : std::string{}) + " (baked)",
+                                .spritesheetId = spritesheetId});
+      return it->second;
+    };
+    // Steps alike join into one frame.
+    auto step_add = [](model::Track& track, model::Frame frame)
+    {
+      frame.duration = FRAME_DURATION_MIN;
+      frame.interpolation = Interpolation::NONE;
+      if (!track.frames.empty())
+      {
+        auto last = track.frames.back();
+        last.uid = frame.uid;
+        last.duration = frame.duration;
+        if (last == frame) return (void)++track.frames.back().duration;
+      }
+      track.frames.push_back(frame);
+    };
+
+    for (auto index : indices)
+    {
+      auto& animation = *game.animation_edit(index);
+      auto isRootFolded = is_skewed(animation.root);
+      // A layer track's baked copy, the track left with the rest; nothing when no frame of it bakes.
+      auto track_bake = [&](model::Track& track, const model::Track* groupRoot) -> std::optional<model::Track>
+      {
+        auto isForced = isRootFolded || groupRoot;
+        auto layer = model::item_get(content.layers, track.id);
+        if (!layer || (!isForced && std::ranges::none_of(track.frames, is_baked))) return {};
+        model::Track plain{track};
+        plain.frames.clear();
+        model::Track baked{.type = ItemType::LAYER, .id = -1, .isVisible = track.isVisible};
+        auto isBaked = false;
+        auto length = std::max(model::track_length_get(track), animation.frameNum);
+        for (int time = 0; time < length; ++time)
+        {
+          auto frame = model::frame_generate(track, (float)time);
+          std::optional<std::pair<Image, glm::vec2>> bakedImage{};
+          model::Draw draw{.type = model::DrawType::LAYER,
+                           .id = track.id,
+                           .time = (float)time,
+                           .frame = frame,
+                           .source = &document.model,
+                           .spritesheetId = layer->spritesheetId};
+          if (frame.isVisible && (isForced || is_baked(frame)))
+          {
+            for (auto* root :
+                 std::initializer_list<const model::Track*>{isRootFolded ? &animation.root : nullptr, groupRoot})
+              if (root)
+              {
+                auto rootFrame = model::frame_generate(*root, (float)time);
+                draw.parent *= model::frame_parent_model_get(rootFrame);
+                draw.frame.tint *= rootFrame.tint;
+                draw.frame.colorOffset += rootFrame.colorOffset;
+              }
+            bakedImage = draw_bake(canvas, shader, document, draw, draw.frame.shaderId != -1);
+          }
+          if (!bakedImage)
+          {
+            step_add(plain, frame);
+            step_add(baked, model::Frame{.isVisible = false});
+            continue;
+          }
+          // The image stands where it was drawn, its region found once the images are packed (kept in regionId).
+          auto step = draw.frame;
+          if (step.shaderId != -1)
+          {
+            step.tint = glm::vec4(1.0f);
+            step.colorOffset = {};
+          }
+          step.crop = {};
+          step.size = glm::vec2(bakedImage->first.size);
+          step.pivot = {};
+          step.position = bakedImage->second;
+          step.scale = model::Frame{}.scale;
+          step.skew = {};
+          step.rotation = 0.0f;
+          step.blur = 0.0f;
+          step.shaderId = -1;
+          step.regionId = image_index_get(std::move(bakedImage->first));
+          step_add(baked, step);
+          step_add(plain, model::Frame{.isVisible = false});
+          isBaked = true;
+        }
+        if (!isBaked) return {};
+        baked.id = baked_layer_id_get(track.id);
+        track = std::move(plain);
+        return baked;
+      };
+
+      std::vector<model::TrackEntry> entries{};
+      for (auto& entry : animation.layers)
+        if (auto track = std::get_if<model::Track>(&entry))
+        {
+          auto baked = track_bake(*track, nullptr);
+          entries.emplace_back(std::move(*track));
+          if (baked) entries.emplace_back(std::move(*baked));
+        }
+        else
+        {
+          auto group = std::get<model::TrackGroup>(entry);
+          auto isGroupFolded = is_skewed(group.root);
+          std::vector<model::Track> tracks{};
+          for (auto& groupTrack : group.tracks)
+          {
+            auto baked = track_bake(groupTrack, isGroupFolded ? &group.root : nullptr);
+            tracks.push_back(std::move(groupTrack));
+            if (baked) tracks.push_back(std::move(*baked));
+          }
+          group.tracks = std::move(tracks);
+          if (isGroupFolded) group.root = model::TrackGroup{}.root;
+          entries.emplace_back(std::move(group));
+        }
+      animation.layers = std::move(entries);
+
+      // A folded root's transform goes into the nulls too (their group roots first), and the root becomes plain.
+      if (!isRootFolded) continue;
+      for (auto& entry : animation.nulls)
+        if (auto track = std::get_if<model::Track>(&entry))
+          model::track_group_root_bake(*track, animation.root, animation.frameNum);
+        else
+        {
+          auto& group = std::get<model::TrackGroup>(entry);
+          for (auto& groupTrack : group.tracks)
+          {
+            model::track_group_root_bake(groupTrack, group.root, animation.frameNum);
+            model::track_group_root_bake(groupTrack, animation.root, animation.frameNum);
+          }
+          group.root = model::TrackGroup{}.root;
+        }
+      animation.root = model::Animation{}.root;
+    }
+    if (images.empty()) return;
+
+    std::vector<glm::ivec2> sizes{};
+    for (const auto& image : images)
+      sizes.push_back(image.size);
+    glm::ivec2 packedSize{};
+    std::vector<glm::ivec2> positions{};
+    pack::rects_pack(sizes, packedSize, positions);
+    std::vector<ImagePart> parts{};
+    for (int i = 0; i < (int)images.size(); ++i)
+      parts.push_back({.image = &images[i], .size = images[i].size, .destination = positions[i]});
+    if (!Image::compose(parts, packedSize, false).write_png(path))
+      return toast_log(Level::ERROR, TOAST_BAKE_WRITE_FAILED, pathUtf8);
+    if (packedSize.x > BAKED_SIZE_MAX || packedSize.y > BAKED_SIZE_MAX)
+      toast_log(Level::WARNING, TOAST_BAKE_LARGE, pathUtf8, packedSize.x, packedSize.y, BAKED_SIZE_MAX);
+    content.spritesheets.push_back({.id = spritesheetId, .path = path.filename()});
+
+    std::set<int> bakedIds{};
+    for (auto [layerId, bakedId] : bakedLayerIds)
+      bakedIds.insert(bakedId);
+    for (auto index : indices)
+      model::tracks_each(game.animation_edit(index)->layers,
+                         [&](model::Track& track, auto*)
+                         {
+                           if (!bakedIds.contains(track.id)) return;
+                           for (auto& frame : track.frames)
+                             if (frame.regionId != -1)
+                             {
+                               frame.crop = glm::vec2(positions[frame.regionId]);
+                               frame.regionId = -1;
+                             }
+                         });
+    result = std::move(game);
   }
 }

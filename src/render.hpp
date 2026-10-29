@@ -21,6 +21,7 @@ namespace anm2ed
 namespace anm2ed::model
 {
   struct Animation;
+  class Model;
 }
 
 namespace anm2ed::resource
@@ -144,6 +145,7 @@ namespace anm2ed::render
   std::vector<uint8_t> animation_frame_render(Canvas&, resource::Shader&, Document&, const model::Animation&, float,
                                               glm::vec4, float, glm::vec4, bool);
   void pixels_unpremultiply(std::vector<uint8_t>&);
+  void frames_bake(Document&, model::Model&, const std::filesystem::path&);
 
   struct RecorderOptions
   {

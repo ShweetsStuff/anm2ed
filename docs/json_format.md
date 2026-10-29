@@ -17,6 +17,7 @@ A regular save is different: it writes the game's `.anm2` XML, with the editor's
 - **Ids are indices.** An item is referred to by its position in its array, starting at 0.
 - **Unknown keys, wrong types, unknown values and out-of-range indices** are reported by where they are (e.g. `animations.Idle.layers[0].frames[2].pos: expected an array of 2 numbers`); the document still opens, with the default in their place.
 - **`createdOn`** is ISO 8601 local time.
+- **`info.isaacIgnored`** is `true` when the document was last saved with Ignore and Save; see [XML saves](#xml-saves).
 
 ## Content
 ```json
@@ -183,10 +184,15 @@ world = Root · GroupRoot · ( pos + Flip · Rotate · Skew · |scale| · (q −
 
 ## XML saves
 A regular save writes the game's `.anm2` XML, keeping only what the game reads, followed by the editor's full copy as `<SourceDocument>` (the same data as the JSON, in XML):
+- **Default colors** (tints of 255, color offsets of 0) are left out of both copies, since readers assume them.
 - **Animation layers** are flattened into plain layers, one per layer the child draws, named `layer/childLayer`. Their frames are baked one per frame and skew is dropped. A library's spritesheets are added with paths relative to the document.
 - **Children's trigger events** join the animation's triggers, matched by name.
 - **Triggers** keep one event each: the first.
-- **Dropped attributes:** markers, depth, skew, alpha offset, blur, shaders, extra events, trigger sounds and libraries.
+- **Depth** is stood in for by copies of the layer, named for the depth (`body (depth +1)`), placed where the editor draws it, and each showing only the frames at its depth. Groups in such an animation have their roots baked into their tracks.
+- **Alpha offsets** join the alpha tint (clamped), which matches on opaque pixels.
+- **Skew, blur and shaders** are baked: each layer frame using one is drawn alone at 1x into `<name>.baked.png` beside the save (identical images once), and stands on a copy of its layer (`body (baked)`, on that spritesheet) right after it, one frame per step, while the layer hides those frames. A shaded frame's tint and color offset go into its image; others keep theirs. A skewed root (or group root) goes into its layers' images, and becomes plain; nulls take its transform without the skew. Children of animation layers are flattened first, without their skew. Baking needs OpenGL (`convert` makes a context); without it, these are dropped. Autosaves don't bake.
+- These are what **Convert and Save** does; **Ignore and Save**, in the save's Isaac compatibility warning, leaves them out. The document remembers which (`info.isaacIgnored`) for saves that don't ask (the warning turned off, or `convert`).
+- **Dropped attributes:** markers, extra events, trigger sounds and libraries.
 - **SVG spritesheets** are offered for conversion to PNGs before saving.
 
 Older editor files saved without a game copy (the former extended format) still open, and are written as above when saved again.

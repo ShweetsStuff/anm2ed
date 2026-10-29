@@ -52,7 +52,7 @@ namespace anm2ed
     bool isAbleToRecord{};
 
     ImGuiKeyChord chords[SHORTCUT_COUNT]{};
-    Options saveOptions{SAVE_OPTIONS_DEFAULT};
+    Options saveOptions{};
 
     std::vector<std::filesystem::path> anm2DragDropPaths{};
     bool isAnm2DragDrop{};

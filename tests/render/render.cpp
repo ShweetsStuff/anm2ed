@@ -3,6 +3,7 @@
 
 #include <doctest.h>
 
+#include <algorithm>
 #include <cstdlib>
 #include <format>
 #include <fstream>
@@ -256,4 +257,78 @@ TEST_CASE("a Rebirth save flattens animation layers for the game")
   CHECK(game.find(" Animation=\"") == std::string::npos);
   CHECK(saved.find(" Animation=\"Spin\"") != std::string::npos);
   std::filesystem::remove_all(directory);
+}
+
+// The game's copy draws what the editor does: skew, blur and a skewed root baked into a spritesheet beside the save.
+TEST_CASE("the game's copy bakes skew and blur into a spritesheet that draws the same")
+{
+  render::HeadlessGL gl{};
+  if (!gl.is_valid()) return;
+  auto directory = std::filesystem::temp_directory_path() / "anm2ed_bake";
+  std::filesystem::remove_all(directory);
+  std::filesystem::create_directories(directory);
+  std::filesystem::copy_file(RENDER_TEST_DIR / "sheet.png", directory / "sheet.png");
+  std::ofstream(directory / "bake.anm2") << R"({ "anm2ed": 1, "spritesheets": [ { "path": "sheet.png" } ],
+    "layers": [ { "name": "skewed" }, { "name": "blurred" } ],
+    "animations": {
+      "Layers": { "length": 6, "layers": [
+        { "layer": 0, "frames": [
+          { "size": [16, 16], "pivot": [8, 8], "pos": [-12, 0], "skew": [40, 0], "delay": 3, "interpolation": "linear" },
+          { "size": [16, 16], "pivot": [8, 8], "pos": [-12, 4], "skew": [0, 30], "rotation": 45, "delay": 3 } ] },
+        { "layer": 1, "frames": [
+          { "crop": [16, 0], "size": [16, 16], "pivot": [8, 8], "pos": [12, 0], "blur": 4, "delay": 6 } ] } ] },
+      "Root": { "length": 2,
+        "root": [ { "pos": [2, 3], "skew": [25, 10], "scale": [150, 100], "delay": 2 } ],
+        "layers": [ { "layer": 1, "frames": [ { "crop": [16, 0], "size": [16, 16], "pivot": [8, 8], "delay": 2 } ] } ] } } })";
+
+  Document document(directory / "bake.anm2", false);
+  REQUIRE(document.is_valid());
+  REQUIRE(document.save(directory / "saved.anm2"));
+  CHECK(std::filesystem::exists(directory / "saved.baked.png"));
+  std::string saved{};
+  {
+    std::ifstream file(directory / "saved.anm2");
+    saved.assign(std::istreambuf_iterator<char>(file), {});
+  }
+  auto game = saved.substr(0, saved.find("    <SourceDocument")) + "</AnimatedActor>\n";
+  CHECK(game.find("SkewX") == std::string::npos);
+  CHECK(game.find("Blur") == std::string::npos);
+  std::ofstream(directory / "game.anm2") << game;
+  Document gameDocument(directory / "game.anm2", false);
+  REQUIRE(gameDocument.is_valid());
+
+  auto& info = resource::shader::SHADERS[resource::shader::TEXTURE];
+  resource::Shader shader(info.vertex, info.fragment);
+  Canvas canvas(glm::vec2(1.0f));
+  for (int index = 0; index < document.model.animations_count_get(); ++index)
+  {
+    auto& animation = *document.model.animation_get(index);
+    auto& gameAnimation = *gameDocument.model.animation_get(index);
+    INFO("animation: ", animation.name);
+    // On whole pixels, so the baked images land on the pixels they were drawn on.
+    auto bounds = render::animation_bounds_get(document, animation, true);
+    bounds = glm::vec4(glm::floor(glm::vec2(bounds)) - 8.0f, glm::ceil(glm::vec2(bounds.z, bounds.w)) + 16.0f);
+    for (int time = 0; time < animation.frameNum; ++time)
+    {
+      INFO("time: ", time);
+      auto expected = render::animation_frame_render(canvas, shader, document, animation, (float)time, bounds, 1.0f,
+                                                     glm::vec4(0.0f), true);
+      auto actual = render::animation_frame_render(canvas, shader, gameDocument, gameAnimation, (float)time, bounds,
+                                                   1.0f, glm::vec4(0.0f), true);
+      REQUIRE(actual.size() == expected.size());
+      CHECK(std::ranges::any_of(expected, [](uint8_t channel) { return channel != 0; }));
+      int mismatches{};
+      for (std::size_t i = 0; i < actual.size(); ++i)
+        mismatches += std::abs((int)actual[i] - (int)expected[i]) > CHANNEL_TOLERANCE;
+      CHECK((double)mismatches / (double)actual.size() <= MISMATCH_RATIO_MAX);
+    }
+  }
+
+  // Ignore and Save leaves them out: no baked layers or spritesheet.
+  document.model.info.isIsaacIgnored = true;
+  REQUIRE(document.save(directory / "ignored.anm2"));
+  CHECK_FALSE(std::filesystem::exists(directory / "ignored.baked.png"));
+  std::ifstream ignored(directory / "ignored.anm2");
+  CHECK(std::string(std::istreambuf_iterator<char>(ignored), {}).find("(baked)") == std::string::npos);
+  if (!std::getenv("ANM2ED_KEEP")) std::filesystem::remove_all(directory);
 }

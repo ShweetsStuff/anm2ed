@@ -143,5 +143,6 @@ namespace anm2ed::edit
                                        const std::set<int>& = {});
   Uids content_remove(model::Model&, ElementType, const std::set<int>&, int, const model::LibraryGet&,
                       const SpritesheetPathGet&);
+  model::Model isaac_bridge(model::Model);
   bool file_merge(model::Model&, const std::filesystem::path&, const std::filesystem::path&, FileMergePreset);
 }

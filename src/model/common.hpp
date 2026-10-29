@@ -174,11 +174,10 @@ namespace anm2ed
   // game's copy when it differs from the document (animation layers flattened).
   struct Options
   {
-    bool isPurgeDefaultColors{}; // leave out tints of 255 and color offsets of 0, which readers assume
-    bool isJson{};               // the editor's own JSON document instead
+    bool isJson{};           // the editor's own JSON document instead
+    bool isPixelBaked{true}; // what the game can't draw is baked into a spritesheet beside the file
     const model::Model* gameModel{};
   };
-  constexpr Options SAVE_OPTIONS_DEFAULT{.isPurgeDefaultColors = true};
 
 #define FRAME_CHANGE_SCALARS                                                                                           \
   X(cropX, crop.x, true, false, changeIsCropX, changeCrop.x)                                                           \

@@ -1,5 +1,6 @@
 #include "common.hpp"
 
+#include "math.hpp"
 #include "model/draw.hpp"
 #include "model/frames.hpp"
 
@@ -207,4 +208,42 @@ TEST_CASE("an animation layer's child sits where the layer's frame puts it")
   REQUIRE(placement);
   CHECK(glm::vec2(*placement * glm::vec4(16.0f, 0.0f, 0.0f, 1.0f)) == glm::vec2(48.0f, 0.0f));
   CHECK_FALSE(model::layer_child_transform_get(*anm2.animation_get(0), 99, 0.0f, true));
+}
+
+TEST_CASE("the game's copy stands in for depth and alpha offsets")
+{
+  auto anm2 = model_load(R"({ "anm2ed": 1, "spritesheets": [ { "path": "a.png" } ],
+    "layers": [ { "name": "a" }, { "name": "b" }, { "name": "c" } ],
+    "animations": { "A": { "length": 6, "layers": [
+      { "layer": 0, "frames": [ { "crop": [0, 0], "size": [1, 1], "delay": 2 },
+                                { "crop": [1, 0], "size": [1, 1], "delay": 2, "depth": 2, "interpolation": "linear" },
+                                { "crop": [1, 0], "size": [1, 1], "pos": [8, 0], "delay": 2, "depth": -1 } ] },
+      { "layer": 1, "frames": [ { "crop": [2, 0], "size": [1, 1], "delay": 6, "depth": -1 } ] },
+      { "layer": 2, "frames": [ { "crop": [3, 0], "size": [1, 1], "delay": 6, "offset": [0, 0, 0, -64] } ] } ] } } })");
+  auto game = edit::isaac_bridge(anm2);
+
+  // Every frame, the same crops draw in the same order and places, with no depth left.
+  auto draws_get = [](const model::Model& model, float time)
+  {
+    std::vector<std::pair<glm::vec2, glm::vec2>> draws{};
+    for (const auto& draw : model::animation_draws_get(model, *model.animation_get(0), {.time = time}))
+      if (draw.type == model::DrawType::LAYER && draw.frame.isVisible)
+        draws.emplace_back(draw.frame.crop, draw.frame.position);
+    return draws;
+  };
+  for (float time = 0.0f; time < 6.0f; time += 0.5f)
+    CHECK(draws_get(game, time) == draws_get(anm2, time));
+  CHECK(model::isaac_issues_get(game).depthFrames == 0);
+  CHECK(
+      std::ranges::any_of(game.content.layers, [](const model::Layer& layer) { return layer.name == "a (depth +2)"; }));
+
+  // The alpha offset joins the alpha tint.
+  auto& offsetFrame = *game.frame_get({0, LAYER, 2, 0});
+  CHECK(offsetFrame.colorOffset.a == 0.0f);
+  CHECK(util::math::float_to_uint8(offsetFrame.tint.a) == 255 - 64);
+
+  // A document saved with Ignore and Save remembers it, in either format.
+  anm2.info.isIsaacIgnored = true;
+  CHECK(model_load(model::model_to_string(anm2)).info.isIsaacIgnored);
+  CHECK(model_load(model::model_to_json(anm2)).info.isIsaacIgnored);
 }

@@ -193,7 +193,7 @@ namespace anm2ed::model
     }
 
     template <int L, class T, glm::qualifier Q> void value(const glm::vec<L, T, Q>& value) { array(value, L); }
-    void value(const std::vector<int>& value) { array(value, (int)value.size()); }
+    template <class T> void value(const std::vector<T>& value) { array(value, (int)value.size()); }
 
     template <class T> void field(std::string_view name, const T& value)
     {
@@ -321,13 +321,13 @@ namespace anm2ed::model
     return {};
   }
 
-  std::string_view value_read(dom::element element, std::vector<int>& value)
+  template <class T> std::string_view value_read(dom::element element, std::vector<T>& value)
   {
     dom::array array{};
-    if (element.get(array)) return "an array of numbers";
-    std::vector<int> read{};
+    if (element.get(array)) return "an array";
+    std::vector<T> read{};
     for (auto item : array)
-      if (!value_read(item, read.emplace_back()).empty()) return "an array of numbers";
+      if (auto expected = value_read(item, read.emplace_back()); !expected.empty()) return expected;
     value = std::move(read);
     return {};
   }
@@ -687,6 +687,7 @@ namespace anm2ed::model
           infoIo.field("createdOn", model.info.createdOn, {}, date_to_iso, date_from_iso);
           infoIo.field("fps", model.info.fps, Info{}.fps);
           infoIo.field("version", model.info.version, Info{}.version);
+          infoIo.field("isaacIgnored", model.info.isIsaacIgnored, false);
         },
         true);
     io.list(
