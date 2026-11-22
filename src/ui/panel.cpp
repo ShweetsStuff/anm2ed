@@ -424,7 +424,7 @@ static void content_remove_popup_draw(Panel& panel)
         ImGui::BulletText("%s", localize_format(FORMAT_REMOVE_MORE, (int)(lines.size() - REMOVE_LINES_MAX)).c_str());
     ImGui::Spacing();
     ImGui::TextUnformatted(localize.get(TEXT_REMOVE_CONFIRM));
-    auto result = popup_buttons_draw(panel.manager, localize.get(BASIC_REMOVE));
+    auto result = popup_buttons_draw(panel.manager, {.confirm = BASIC_REMOVE});
     if (result == PopupButton::CONFIRM)
         content_remove_apply(panel);
     if (result != PopupButton::NONE)
@@ -521,21 +521,24 @@ void directory_open(Dialog& dialog, Document& document, const std::filesystem::p
     dialog.file_explorer_open(target);
 }
 
-PopupButton popup_buttons_draw(Manager& manager, const char* confirmLabel, bool isConfirmEnabled,
-                               StringType cancelLabel)
+PopupButton popup_buttons_draw(Manager& manager, const PopupButtons& buttons)
 {
     auto widgetSize = widget_size_with_row_get(2);
     auto result = PopupButton::NONE;
 
-    ImGui::BeginDisabled(!isConfirmEnabled);
+    ImGui::BeginDisabled(!buttons.isConfirmEnabled);
     shortcut(manager.chords[SHORTCUT_CONFIRM]);
-    if (ImGui::Button(confirmLabel, widgetSize))
+    if (ImGui::Button(localize.get(buttons.confirm), widgetSize))
         result = PopupButton::CONFIRM;
     ImGui::EndDisabled();
+    if (buttons.confirmTooltip != STRING_UNDEFINED)
+        tooltip_set(buttons.confirmTooltip);
 
     ImGui::SameLine();
     shortcut(manager.chords[SHORTCUT_CANCEL]);
-    if (ImGui::Button(localize.get(cancelLabel), widgetSize))
+    if (ImGui::Button(localize.get(buttons.cancel), widgetSize))
         result = PopupButton::CANCEL;
+    if (buttons.cancelTooltip != STRING_UNDEFINED)
+        tooltip_set(buttons.cancelTooltip);
     return result;
 }

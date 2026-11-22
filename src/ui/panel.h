@@ -111,7 +111,17 @@ void tooltip_name_draw(Resources&, const std::string&);
 void tooltip_image_draw(const CardImage&, const std::function<void()>&);
 void directory_open(Dialog&, Document&, const std::filesystem::path&);
 std::filesystem::path asset_path_get(Document&, const std::filesystem::path&);
-PopupButton popup_buttons_draw(Manager&, const char*, bool = true, StringType = BASIC_CANCEL);
+// The confirm and cancel buttons that end a popup, side by side, on the confirm and cancel shortcuts.
+struct PopupButtons
+{
+    StringType confirm = BASIC_CONFIRM;
+    StringType cancel = BASIC_CANCEL;
+    StringType confirmTooltip = STRING_UNDEFINED;
+    StringType cancelTooltip = STRING_UNDEFINED;
+    bool isConfirmEnabled = true;
+};
+
+PopupButton popup_buttons_draw(Manager&, const PopupButtons&);
 void content_remove_action_add(Actions&, Panel&, ElementType, SelectionKind, int = -1);
 
 struct SpritesheetsPanel

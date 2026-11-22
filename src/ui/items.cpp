@@ -124,7 +124,7 @@ void item_properties_update(Panel& panel, int popupIndex, int rows, SelectionKin
         }
         ImGui::EndChild();
 
-        auto result = popup_buttons_draw(manager, localize.get(edit.id == -1 ? BASIC_ADD : BASIC_CONFIRM));
+        auto result = popup_buttons_draw(manager, {.confirm = edit.id == -1 ? BASIC_ADD : BASIC_CONFIRM});
         if (result == PopupButton::CONFIRM)
         {
             Item item = {};

@@ -286,7 +286,7 @@ static void region_properties_popup_update(Panel& panel, RegionsPanel& regions)
     }
     ImGui::EndChild();
 
-    auto result = popup_buttons_draw(panel.manager, localize.get(regions.editId == -1 ? BASIC_ADD : BASIC_CONFIRM));
+    auto result = popup_buttons_draw(panel.manager, {.confirm = regions.editId == -1 ? BASIC_ADD : BASIC_CONFIRM});
     if (result == PopupButton::CONFIRM)
     {
         auto& state = panel.state;
@@ -368,7 +368,7 @@ static void region_export_popup_update(Panel& panel, RegionsPanel& regions)
     auto texture = document.texture_get(spritesheetId);
     auto isValid = region && texture && texture->is_valid() && !texture->pixels.empty() &&
                    (settings.isExportRegionMakeSpritesheet || !settings.exportRegionPath.empty());
-    auto result = popup_buttons_draw(manager, localize.get(BASIC_CONFIRM), isValid);
+    auto result = popup_buttons_draw(manager, {.confirm = BASIC_CONFIRM, .isConfirmEnabled = isValid});
     if (result == PopupButton::CONFIRM)
     {
         if (!settings.exportRegionPath.empty())

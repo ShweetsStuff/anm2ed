@@ -70,7 +70,7 @@ void TimelineContext::popups_update()
         input_text_string(localize.get(LABEL_FORMAT), &settings.generateRegionNameFormat);
         ImGui::Checkbox(localize.get(LABEL_MAP_FRAMES_TO_REGIONS), &isMakeManyRegionsMapFrames);
 
-        auto result = popup_buttons_draw(manager, localize.get(LABEL_MAKE_MANY_REGIONS));
+        auto result = popup_buttons_draw(manager, {.confirm = LABEL_MAKE_MANY_REGIONS});
         if (result == PopupButton::CONFIRM)
             edit_push(EDIT_GENERATE_REGIONS_FROM_ANIMATIONS,
                       [targetFrames = makeManyRegionReferences, format = settings.generateRegionNameFormat,
@@ -101,22 +101,13 @@ void TimelineContext::popups_update()
         ImGui::Checkbox(localize.get(LABEL_ROUND_SCALE), &isRoundScale);
         tooltip_set(TOOLTIP_ROUND_SCALE);
 
-        auto widgetSize = widget_size_with_row_get(2);
-
-        shortcut(manager.chords[SHORTCUT_CONFIRM]);
-        if (ImGui::Button(localize.get(LABEL_BAKE), widgetSize))
-        {
+        auto result = popup_buttons_draw(manager, {.confirm = LABEL_BAKE,
+                                                   .confirmTooltip = TOOLTIP_BAKE_FRAMES_OPTIONS,
+                                                   .cancelTooltip = TOOLTIP_CANCEL_BAKE_FRAMES});
+        if (result == PopupButton::CONFIRM)
             frames_bake();
+        if (result != PopupButton::NONE)
             bakePopup.close();
-        }
-        tooltip_set(TOOLTIP_BAKE_FRAMES_OPTIONS);
-
-        ImGui::SameLine();
-
-        shortcut(manager.chords[SHORTCUT_CANCEL]);
-        if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize))
-            bakePopup.close();
-        tooltip_set(TOOLTIP_CANCEL_BAKE_FRAMES);
 
         ImGui::EndPopup();
     }
@@ -155,23 +146,13 @@ void TimelineContext::popups_update()
         ImGui::Checkbox(localize.get(LABEL_BAKE_USE_ROOT_PIVOT), &isUseRootPivot);
         tooltip_set(TOOLTIP_BAKE_USE_ROOT_PIVOT);
 
-        auto widgetSize = widget_size_with_row_get(2);
-
-        shortcut(manager.chords[SHORTCUT_CONFIRM]);
-        ImGui::BeginDisabled(!is_bake_into_other_frames_ready());
-        if (ImGui::Button(localize.get(LABEL_BAKE), widgetSize))
-        {
+        auto result = popup_buttons_draw(manager, {.confirm = LABEL_BAKE,
+                                                   .cancelTooltip = TOOLTIP_CANCEL_BAKE_FRAMES,
+                                                   .isConfirmEnabled = is_bake_into_other_frames_ready()});
+        if (result == PopupButton::CONFIRM)
             bake_into_other_frames();
+        if (result != PopupButton::NONE)
             bakeIntoOtherFramesPopup.close();
-        }
-        ImGui::EndDisabled();
-
-        ImGui::SameLine();
-
-        shortcut(manager.chords[SHORTCUT_CANCEL]);
-        if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize))
-            bakeIntoOtherFramesPopup.close();
-        tooltip_set(TOOLTIP_CANCEL_BAKE_FRAMES);
 
         ImGui::EndPopup();
     }

@@ -252,7 +252,7 @@ void TimelineContext::group_properties_update()
         }
         ImGui::EndChild();
 
-        auto result = popup_buttons_draw(manager, localize.get(BASIC_CONFIRM));
+        auto result = popup_buttons_draw(manager, {.confirm = BASIC_CONFIRM});
         if (result == PopupButton::CONFIRM)
         {
             auto targetName = groupName;

@@ -529,9 +529,10 @@ static void animations_merge_popup_update(Panel& panel, AnimationsPanel& animati
         ImGui::Checkbox(localize.get(LABEL_DELETE_ANIMATIONS_AFTER), &settings.mergeIsDeleteAnimationsAfter);
     ImGui::EndChild();
 
-    auto result =
-        popup_buttons_draw(manager, localize.get(LABEL_MERGE),
-                           !animation_merge_indices_get(document, mergeSelection, mergeReference).empty(), LABEL_CLOSE);
+    auto result = popup_buttons_draw(
+        manager, {.confirm = LABEL_MERGE,
+                  .cancel = LABEL_CLOSE,
+                  .isConfirmEnabled = !animation_merge_indices_get(document, mergeSelection, mergeReference).empty()});
     if (result == PopupButton::CONFIRM)
         command_push(
             panel, [options = AnimationMergeOptions{.selection = mergeSelection,

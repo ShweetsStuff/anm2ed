@@ -149,7 +149,8 @@ static void spritesheets_merge_popup_update(Panel& panel, SpritesheetsPanel& spr
     }
     ImGui::EndChild();
 
-    auto result = popup_buttons_draw(manager, localize.get(BASIC_MERGE), spritesheets.mergeIds.size() > 1);
+    auto result =
+        popup_buttons_draw(manager, {.confirm = BASIC_MERGE, .isConfirmEnabled = spritesheets.mergeIds.size() > 1});
     if (result == PopupButton::CONFIRM)
         command_push(panel,
                      [ids = spritesheets.mergeIds, isAppendRight = settings.mergeSpritesheetsOrigin == APPEND_RIGHT,
@@ -187,8 +188,8 @@ static void spritesheets_pack_popup_update(Panel& panel, SpritesheetsPanel& spri
         ImGui::DragInt(localize.get(LABEL_PACK_PADDING), &settings.packPadding, DRAG_SPEED, 0, PADDING_MAX);
     ImGui::EndChild();
 
-    auto result =
-        popup_buttons_draw(manager, localize.get(BASIC_PACK), is_spritesheet_regions(document, spritesheets.packId));
+    auto result = popup_buttons_draw(
+        manager, {.confirm = BASIC_PACK, .isConfirmEnabled = is_spritesheet_regions(document, spritesheets.packId)});
     if (result == PopupButton::CONFIRM)
         command_push(panel, [id = spritesheets.packId, padding = settings.packPadding](Document& document) {
             spritesheet_textures_edit(
@@ -208,7 +209,7 @@ static void spritesheets_overwrite_popup_update(Panel& panel, SpritesheetsPanel&
         return popup.end();
 
     ImGui::TextUnformatted(localize.get(LABEL_OVERWRITE_CONFIRMATION));
-    auto result = popup_buttons_draw(panel.manager, localize.get(BASIC_YES), true, BASIC_NO);
+    auto result = popup_buttons_draw(panel.manager, {.confirm = BASIC_YES, .cancel = BASIC_NO});
     if (result == PopupButton::CONFIRM)
         command_push(panel, [ids = spritesheets.saveIds](Document& document) { spritesheets_save(document, ids); });
     if (result != PopupButton::NONE)

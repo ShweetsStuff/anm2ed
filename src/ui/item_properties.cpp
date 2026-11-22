@@ -150,11 +150,11 @@ bool ItemProperties::update(Manager& manager, Settings& settings, Document& docu
         }
         ImGui::EndChild();
 
-        auto widgetSize = widget_size_with_row_get(2);
-
-        ImGui::BeginDisabled(source == SOURCE_EXISTING && edit.id == -1);
-        shortcut(manager.chords[SHORTCUT_CONFIRM]);
-        if (ImGui::Button(localize.get(BASIC_ADD), widgetSize))
+        auto result = popup_buttons_draw(manager, {.confirm = BASIC_ADD,
+                                                   .confirmTooltip = TOOLTIP_ADD_ITEM,
+                                                   .cancelTooltip = TOOLTIP_CANCEL_ADD_ITEM,
+                                                   .isConfirmEnabled = source != SOURCE_EXISTING || edit.id != -1});
+        if (result == PopupButton::CONFIRM)
         {
             auto queuedType = type;
             auto queuedDestination = destination;
@@ -185,17 +185,9 @@ bool ItemProperties::update(Manager& manager, Settings& settings, Document& docu
                                   }});
 
             isAdded = true;
-            close();
         }
-        ImGui::EndDisabled();
-        tooltip_set(TOOLTIP_ADD_ITEM);
-
-        ImGui::SameLine();
-
-        shortcut(manager.chords[SHORTCUT_CANCEL]);
-        if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize))
+        if (result != PopupButton::NONE)
             close();
-        tooltip_set(TOOLTIP_CANCEL_ADD_ITEM);
 
         ImGui::EndPopup();
     }
