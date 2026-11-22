@@ -60,7 +60,7 @@ struct RenderFixture
         if (!gl.is_valid())
             return;
         std::filesystem::create_directories(OUTPUT_DIR);
-        document.emplace(RENDER_TEST_DIR / file, false);
+        document.emplace(RENDER_TEST_DIR / file);
         auto& info = SHADERS[SHADER_TEXTURE];
         shader.emplace(info.vertex, info.fragment);
         canvas.emplace(Vec2(1.0f));
@@ -210,7 +210,7 @@ TEST_CASE("converting SVG spritesheets writes PNGs beside them")
     for (auto name : {"vector.anm2", "vector.svg"})
         std::filesystem::copy_file(RENDER_TEST_DIR / name, directory / name);
 
-    Document document(directory / "vector.anm2", false);
+    Document document(directory / "vector.anm2");
     REQUIRE(document.is_valid());
     document.spritesheets_vector_convert({0});
     CHECK(document.model.content.spritesheets.front().path == "vector.png");
@@ -242,7 +242,7 @@ TEST_CASE("a Rebirth save flattens animation layers for the game")
                  "Path=\"library/spin.anm2\"");
     std::ofstream(directory / "nested.anm2") << text;
 
-    Document document(directory / "nested.anm2", false);
+    Document document(directory / "nested.anm2");
     REQUIRE(document.is_valid());
     REQUIRE(document.save(directory / "rebirth.anm2"));
     std::ifstream file(directory / "rebirth.anm2");
@@ -278,7 +278,7 @@ TEST_CASE("the game's copy bakes skew and blur into a spritesheet that draws the
         "root": [ { "pos": [2, 3], "skew": [25, 10], "scale": [150, 100], "delay": 2 } ],
         "layers": [ { "layer": 1, "frames": [ { "crop": [16, 0], "size": [16, 16], "pivot": [8, 8], "delay": 2 } ] } ] } } })";
 
-    Document document(directory / "bake.anm2", false);
+    Document document(directory / "bake.anm2");
     REQUIRE(document.is_valid());
     REQUIRE(document.save(directory / "saved.anm2"));
     CHECK(std::filesystem::exists(directory / "saved.baked.png"));
@@ -291,7 +291,7 @@ TEST_CASE("the game's copy bakes skew and blur into a spritesheet that draws the
     CHECK(game.find("SkewX") == std::string::npos);
     CHECK(game.find("Blur") == std::string::npos);
     std::ofstream(directory / "game.anm2") << game;
-    Document gameDocument(directory / "game.anm2", false);
+    Document gameDocument(directory / "game.anm2");
     REQUIRE(gameDocument.is_valid());
 
     auto& info = SHADERS[SHADER_TEXTURE];

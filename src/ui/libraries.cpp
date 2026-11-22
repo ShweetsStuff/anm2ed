@@ -47,7 +47,7 @@ void libraries_update(Panel& panel)
         actions.add(ACTION_OPEN, isOne, [&]() { open(*selection.begin()); }, TOOLTIP_LIBRARY_OPEN);
         actions.add(ACTION_OPEN_DIRECTORY, isOne,
                     [&]() { directory_open(dialog, document, item_get(libraries, *selection.begin())->path); });
-        actions.add(ACTION_ADD, {}, [&]() { dialog.file_open(Dialog::LIBRARY_OPEN, true); }, TOOLTIP_LIBRARY_ADD);
+        actions.add(ACTION_ADD, {}, [&]() { dialog.file_open(Dialog::LIBRARY_OPEN); }, TOOLTIP_LIBRARY_ADD);
         content_remove_action_add(actions, panel, ElementType::LIBRARY, SelectionKind::LIBRARIES);
         actions.add(
             ACTION_RELOAD, [selection]() { return !selection.empty(); },

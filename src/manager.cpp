@@ -148,10 +148,10 @@ void Manager::commands_run()
             command.runManager(*this);
 }
 
-Document* Manager::open(const std::filesystem::path& path, bool isNew, bool isRecent)
+Document* Manager::open(const std::filesystem::path& path, DocumentOpen mode)
 {
     std::string errorString;
-    documents.emplace_back(path, isNew, &errorString);
+    documents.emplace_back(path, mode, &errorString);
     auto pathString = path_to_utf8(path);
 
     auto& document = documents.back();
@@ -162,7 +162,7 @@ Document* Manager::open(const std::filesystem::path& path, bool isNew, bool isRe
         return nullptr;
     }
 
-    if (isRecent)
+    if (mode != DOCUMENT_RESTORE)
         recent_file_add(path);
 
     selected = (int)documents.size() - 1;
@@ -174,11 +174,6 @@ Document* Manager::open(const std::filesystem::path& path, bool isNew, bool isRe
         toast_log(Level::WARNING, TOAST_OPEN_DOCUMENT_ISSUES, pathString, errorString);
 
     return &document;
-}
-
-void Manager::new_(const std::filesystem::path& path)
-{
-    open(path, true, true);
 }
 
 bool Manager::save(int index, const std::filesystem::path& path)
@@ -482,7 +477,7 @@ void Manager::autosave_files_open()
 {
     for (auto& path : autosaveFiles)
     {
-        if (auto document = open(path, false, false))
+        if (auto document = open(path, DOCUMENT_RESTORE))
         {
             document->isForceDirty = true;
             document->path = document->path_from_autosave_get(path);

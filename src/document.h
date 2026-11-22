@@ -21,6 +21,15 @@
 #include "shader.h"
 
 class Manager;
+
+// How a document comes to be open: read from its file, made new there, or restored from an autosave (kept out of the
+// recent files).
+enum DocumentOpen
+{
+    DOCUMENT_OPEN,
+    DOCUMENT_NEW,
+    DOCUMENT_RESTORE
+};
 struct Command;
 
 // Ids and labels for a combo box of content items.
@@ -116,7 +125,7 @@ public:
     EditTarget editTarget = EditTarget::NONE;
     UidIndex index = {};
 
-    Document(const std::filesystem::path&, bool = false, std::string* = nullptr);
+    Document(const std::filesystem::path&, DocumentOpen = DOCUMENT_OPEN, std::string* = nullptr);
     Document(const Document&) = delete;
     Document& operator=(const Document&) = delete;
     Document(Document&&) = default;

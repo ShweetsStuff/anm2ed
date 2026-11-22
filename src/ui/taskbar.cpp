@@ -90,7 +90,7 @@ void Taskbar::update(Manager& manager, Settings& settings, Resources& resources,
             if (ImGui::MenuItem(localize.get(BASIC_NEW), settings.shortcutNew.c_str()))
                 dialog.file_save(Dialog::ANM2_CREATE);
             if (ImGui::MenuItem(localize.get(BASIC_OPEN), settings.shortcutOpen.c_str()))
-                dialog.file_open(Dialog::ANM2_OPEN, true);
+                dialog.file_open(Dialog::ANM2_OPEN);
 
             auto recentFiles = manager.recent_files_ordered();
             if (ImGui::BeginMenu(localize.get(LABEL_OPEN_RECENT), !recentFiles.empty()))
@@ -134,7 +134,7 @@ void Taskbar::update(Manager& manager, Settings& settings, Resources& resources,
         if (dialog.is_selected(Dialog::ANM2_CREATE))
         {
             auto path = dialog.path;
-            manager.command_push({.runManager = [path](Manager& manager) { manager.new_(path); }});
+            manager.command_push({.runManager = [path](Manager& manager) { manager.open(path, DOCUMENT_NEW); }});
             dialog.reset();
         }
 
@@ -446,7 +446,7 @@ void Taskbar::update(Manager& manager, Settings& settings, Resources& resources,
     if (shortcut(manager.chords[SHORTCUT_NEW], SCOPE_GLOBAL))
         dialog.file_save(Dialog::ANM2_CREATE);
     if (shortcut(manager.chords[SHORTCUT_OPEN], SCOPE_GLOBAL))
-        dialog.file_open(Dialog::ANM2_OPEN, true);
+        dialog.file_open(Dialog::ANM2_OPEN);
     if (shortcut(manager.chords[SHORTCUT_SAVE], SCOPE_GLOBAL))
     {
         if (settings.fileIsWarnOverwrite)

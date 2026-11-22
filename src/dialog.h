@@ -87,7 +87,7 @@ public:
 
     Dialog() = default;
     Dialog(SDL_Window*);
-    void file_open(Type type, bool isMany = false);
+    void file_open(Type type);
     void file_save(Type type, const std::filesystem::path& defaultPath = {});
     void folder_open(Type type);
     bool is_selected(Type type) const;

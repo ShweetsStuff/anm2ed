@@ -241,8 +241,7 @@ void spritesheets_update(Panel& panel, SpritesheetsPanel& spritesheets)
         Actions actions = {};
         actions.add(ACTION_OPEN_DIRECTORY, isOne, [&]() { open(*selection.begin()); });
         actions.add(ACTION_SET_FILE_PATH, isOne, [&]() { dialog.file_save(Dialog::SPRITESHEET_PATH_SET); });
-        actions.add(
-            ACTION_ADD, {}, [&]() { dialog.file_open(Dialog::SPRITESHEET_OPEN, true); }, TOOLTIP_ADD_SPRITESHEET);
+        actions.add(ACTION_ADD, {}, [&]() { dialog.file_open(Dialog::SPRITESHEET_OPEN); }, TOOLTIP_ADD_SPRITESHEET);
         content_remove_action_add(actions, panel, ElementType::SPRITESHEET, SelectionKind::SPRITESHEETS);
         actions.add(
             ACTION_RELOAD, isAny,

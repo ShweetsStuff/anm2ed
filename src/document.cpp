@@ -186,8 +186,9 @@ static void frame_time_sync(Document& document)
     document.frameTime = item && frameIndex >= 0 ? frame_time_from_index_get(*item, frameIndex) : 0.0f;
 }
 
-Document::Document(const std::filesystem::path& path, bool isNew, std::string* errorString)
+Document::Document(const std::filesystem::path& path, DocumentOpen mode, std::string* errorString)
 {
+    auto isNew = mode == DOCUMENT_NEW;
     tabId = document_tab_id_next();
     model = model_make();
     if (!isNew)

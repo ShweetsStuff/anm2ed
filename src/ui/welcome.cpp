@@ -38,7 +38,7 @@ void welcome_update(Manager& manager, Resources& resources, Dialog& dialog, Task
             dialog.file_save(Dialog::ANM2_CREATE); // handled in taskbar.cpp
         ImGui::SameLine();
         if (ImGui::Button(localize.get(BASIC_OPEN), widgetSize))
-            dialog.file_open(Dialog::ANM2_OPEN, true); // handled in taskbar.cpp
+            dialog.file_open(Dialog::ANM2_OPEN); // handled in taskbar.cpp
 
         if (ImGui::BeginChild("##Recent Files Child", {}, ImGuiChildFlags_Borders))
         {

@@ -42,14 +42,16 @@ Dialog::Dialog(SDL_Window* window)
     this->window = window;
 }
 
-void Dialog::file_open(Type type, bool isMany)
+// The *_OPEN dialogs pick any number of files. The others pick one.
+void Dialog::file_open(Type type)
 {
     if (type == Dialog::NONE)
         return;
     path.clear();
     paths.clear();
     SDL_ShowOpenFileDialog(callback, this, window, FILTERS[TYPE_FILTERS[type]], std::size(FILTERS[TYPE_FILTERS[type]]),
-                           nullptr, isMany);
+                           nullptr,
+                           type == ANM2_OPEN || type == SOUND_OPEN || type == LIBRARY_OPEN || type == SPRITESHEET_OPEN);
     this->type = type;
 }
 

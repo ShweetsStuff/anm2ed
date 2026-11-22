@@ -59,7 +59,7 @@ void sounds_update(Panel& panel)
         Actions actions = {};
         actions.add(ACTION_PLAY, isOne, [&]() { play(*selection.begin()); }, STRING_UNDEFINED, -1);
         actions.add(ACTION_OPEN_DIRECTORY, isOne, [&]() { open(*selection.begin()); });
-        actions.add(ACTION_ADD, {}, [&]() { dialog.file_open(Dialog::SOUND_OPEN, true); }, TOOLTIP_SOUND_ADD);
+        actions.add(ACTION_ADD, {}, [&]() { dialog.file_open(Dialog::SOUND_OPEN); }, TOOLTIP_SOUND_ADD);
         content_remove_action_add(actions, panel, ElementType::SOUND_ELEMENT, SelectionKind::SOUNDS);
         actions.add(
             ACTION_RELOAD, [selection]() { return !selection.empty(); },

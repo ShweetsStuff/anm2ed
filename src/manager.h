@@ -88,8 +88,7 @@ public:
     Document* get(int = -1);
     void command_push(Command);
     void commands_run();
-    Document* open(const std::filesystem::path&, bool = false, bool = true);
-    void new_(const std::filesystem::path&);
+    Document* open(const std::filesystem::path&, DocumentOpen = DOCUMENT_OPEN);
     bool save(int, const std::filesystem::path& = {});
     bool save(const std::filesystem::path& = {});
     void autosave(Document&);

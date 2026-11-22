@@ -213,7 +213,7 @@ static int draw_run(const Arguments& arguments)
     }
 
     std::string error;
-    Document document(arguments.file, false, &error);
+    Document document(arguments.file, DOCUMENT_OPEN, &error);
     if (!document.is_valid())
     {
         std::println(stderr, "could not load {}: {}", path_to_utf8(arguments.file), error);
@@ -309,7 +309,7 @@ static int convert_run(const Arguments& arguments)
     if (format == "xml")
         gl.emplace();
     std::string error;
-    Document document(arguments.file, false, &error);
+    Document document(arguments.file, DOCUMENT_OPEN, &error);
     auto fileUtf8 = path_to_utf8(arguments.file);
     if (!document.is_valid())
     {
