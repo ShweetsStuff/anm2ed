@@ -600,10 +600,7 @@ static Region region_read(pugi::xml_node element)
         for (std::size_t i = 0; i < std::size(ORIGIN_VALUES); ++i)
             if (!ORIGIN_VALUES[i].empty() && ORIGIN_VALUES[i] == origin)
                 region.origin = (Origin)i;
-    if (region.origin == Origin::TOP_LEFT)
-        region.pivot = {};
-    if (region.origin == Origin::CENTER)
-        region.pivot = region.size * 0.5f;
+    region.pivot = region_pivot_get(region);
     return region;
 }
 
@@ -772,12 +769,6 @@ template <class Items> static void ids_repair(Items& items)
     }
 }
 
-static bool is_region_matched(const Region& region, const Frame& frame)
-{
-    return IVec2(region.crop) == IVec2(frame.crop) && IVec2(region.size) == IVec2(frame.size) &&
-           IVec2(region.pivot) == IVec2(frame.pivot);
-}
-
 // Loaded documents get unique content ids, frames lose dangling shader ids, and layer frames point at the region
 // matching their rectangle and take that region's rectangle.
 void model_repair(Model& model)
@@ -813,22 +804,11 @@ void model_repair(Model& model)
                 return;
             for (auto& frame : track.frames)
             {
-                auto region = frame.regionId == -1 ? nullptr : item_get(spritesheet->regions, frame.regionId);
-                auto match = std::ranges::find_if(
-                    spritesheet->regions, [&](const Region& candidate) { return is_region_matched(candidate, frame); });
-                if ((!region || !is_region_matched(*region, frame)) && match != spritesheet->regions.end())
+                auto region = item_get(spritesheet->regions, frame.regionId);
+                if (auto match = region_matched_get(spritesheet->regions, frame);
+                    match && (!region || !is_region_matched(*region, frame)))
                     frame.regionId = match->id;
-                if (frame.regionId == -1)
-                    continue;
-                region = item_get(spritesheet->regions, frame.regionId);
-                if (!region)
-                {
-                    frame.regionId = -1;
-                    continue;
-                }
-                frame.crop = region->crop;
-                frame.size = region->size;
-                frame.pivot = region->pivot;
+                frame_region_apply(frame, spritesheet->regions);
             }
         });
     }
@@ -1205,10 +1185,7 @@ static Frame frame_normalize(const Writer& writer, Frame frame, const Track* lay
     frame.regionId = regionIds == writer.regionIds.end() ? -1 : id_map_get(regionIds->second, frame.regionId);
     if (frame.regionId == -1)
         return frame;
-    auto& region = spritesheet->regions[frame.regionId];
-    frame.crop = region.crop;
-    frame.size = region.size;
-    frame.pivot = region.pivot;
+    frame_region_rect_set(frame, spritesheet->regions[frame.regionId]);
     return frame;
 }
 

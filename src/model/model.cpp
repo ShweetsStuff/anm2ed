@@ -173,13 +173,50 @@ Frame Model::frame_effective(int layerId, const Frame& frame) const
 {
     auto resolved = frame;
     auto spritesheet = frame.regionId == -1 ? nullptr : layer_spritesheet_get(layerId);
-    auto region = spritesheet ? item_get(spritesheet->regions, frame.regionId) : nullptr;
-    if (!region)
-        return resolved;
-    resolved.crop = region->crop;
-    resolved.size = region->size;
-    resolved.pivot = region->pivot;
+    if (auto region = spritesheet ? item_get(spritesheet->regions, frame.regionId) : nullptr)
+        frame_region_rect_set(resolved, *region);
     return resolved;
+}
+
+// Whether a frame shows exactly a region's rectangle, by whole pixels.
+bool is_region_matched(const Region& region, const Frame& frame)
+{
+    return IVec2(region.crop) == IVec2(frame.crop) && IVec2(region.size) == IVec2(frame.size) &&
+           IVec2(region.pivot) == IVec2(frame.pivot);
+}
+
+const Region* region_matched_get(const std::vector<Region>& regions, const Frame& frame)
+{
+    auto region = std::ranges::find_if(regions, [&](const Region& region) { return is_region_matched(region, frame); });
+    return region == regions.end() ? nullptr : &*region;
+}
+
+// Where a region's origin puts its pivot: its top left, its center, or wherever it was set.
+Vec2 region_pivot_get(const Region& region)
+{
+    if (region.origin == Origin::TOP_LEFT)
+        return {};
+    if (region.origin == Origin::CENTER)
+        return region.size * 0.5f;
+    return region.pivot;
+}
+
+void frame_region_rect_set(Frame& frame, const Region& region)
+{
+    frame.crop = region.crop;
+    frame.size = region.size;
+    frame.pivot = region.pivot;
+}
+
+// A layer frame on a region takes its rectangle. One on a region that isn't there loses it.
+void frame_region_apply(Frame& frame, const std::vector<Region>& regions)
+{
+    if (frame.regionId == -1)
+        return;
+    if (auto region = item_get(regions, frame.regionId))
+        frame_region_rect_set(frame, *region);
+    else
+        frame.regionId = -1;
 }
 
 template <class Items> static std::set<int> unused_ids_get(const Items& items, const std::set<int>& used)

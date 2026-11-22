@@ -18,12 +18,6 @@ std::string region_name_get(const std::string& format, int number)
     }
 }
 
-static bool is_region_matched(const Region& region, const Frame& frame)
-{
-    return IVec2(region.crop) == IVec2(frame.crop) && IVec2(region.size) == IVec2(frame.size) &&
-           IVec2(region.pivot) == IVec2(frame.pivot);
-}
-
 // Every frame of every layer track whose layer has a spritesheet, with that spritesheet's id.
 template <class Callback> static void layer_frames_each(Model& model, int animationIndex, Callback&& callback)
 {
@@ -51,17 +45,13 @@ Uids regions_generate(Model& model, const std::set<int>& animationIndices, const
     std::unordered_map<int, int> regionNumbers;
     auto frame_apply = [&](Frame& frame, int spritesheetId) {
         auto& regions = item_get(model.content.spritesheets, spritesheetId)->regions;
-        auto region =
-            std::ranges::find_if(regions, [&](const Region& region) { return is_region_matched(region, frame); });
-        if (region == regions.end())
-        {
-            regions.push_back({.id = item_next_id_get(regions),
-                               .name = region_name_get(format, ++regionNumbers[spritesheetId]),
-                               .crop = frame.crop,
-                               .size = frame.size,
-                               .pivot = frame.pivot});
-            region = regions.end() - 1;
-        }
+        auto region = region_matched_get(regions, frame);
+        if (!region)
+            region = &regions.emplace_back(Region{.id = item_next_id_get(regions),
+                                                  .name = region_name_get(format, ++regionNumbers[spritesheetId]),
+                                                  .crop = frame.crop,
+                                                  .size = frame.size,
+                                                  .pivot = frame.pivot});
         if (mapping == RegionFrameMapping::SET)
             frame.regionId = region->id;
     };
@@ -86,12 +76,8 @@ Uids regions_scan(Model& model)
         layer_frames_each(model, i, [&](Frame& frame, int spritesheetId) {
             if (frame.regionId != -1)
                 return;
-            for (auto& region : item_get(model.content.spritesheets, spritesheetId)->regions)
-                if (is_region_matched(region, frame))
-                {
-                    frame.regionId = region.id;
-                    break;
-                }
+            if (auto match = region_matched_get(item_get(model.content.spritesheets, spritesheetId)->regions, frame))
+                frame.regionId = match->id;
         });
     return {};
 }
@@ -101,17 +87,7 @@ Uids region_frames_sync(Model& model)
 {
     for (int i = 0; i < model.animations_count_get(); ++i)
         layer_frames_each(model, i, [&](Frame& frame, int spritesheetId) {
-            if (frame.regionId == -1)
-                return;
-            auto region = item_get(item_get(model.content.spritesheets, spritesheetId)->regions, frame.regionId);
-            if (!region)
-            {
-                frame.regionId = -1;
-                return;
-            }
-            frame.crop = region->crop;
-            frame.size = region->size;
-            frame.pivot = region->pivot;
+            frame_region_apply(frame, item_get(model.content.spritesheets, spritesheetId)->regions);
         });
     return {};
 }
@@ -341,13 +317,6 @@ bool file_merge(Model& model, const std::filesystem::path& path, const std::file
         return it == items.end() ? nullptr : &*it;
     };
 
-    auto name_unique_get = [&](auto& items, const std::string& name) {
-        auto candidate = name;
-        for (int i = 2; name_find(items, candidate); ++i)
-            candidate = std::format("{} {}", name, i);
-        return candidate;
-    };
-
     auto named_merge = [&](auto& items, auto item) {
         auto existing = isAppendAsNew ? nullptr : name_find(items, item.name);
         if (existing)
@@ -359,7 +328,7 @@ bool file_merge(Model& model, const std::filesystem::path& path, const std::file
         }
         item.id = item_next_id_get(items);
         if (isAppendAsNew)
-            item.name = name_unique_get(items, item.name);
+            item.name = name_unique_get(item.name, [&](auto& name) { return name_find(items, name) != nullptr; });
         items.push_back(item);
         return item.id;
     };
@@ -455,12 +424,7 @@ bool file_merge(Model& model, const std::filesystem::path& path, const std::file
         auto processed = animation_build(*incoming);
         auto destination = animation_find(processed.name);
         if (isAppendAsNew)
-        {
-            auto candidate = processed.name;
-            for (int i = 2; animation_find(candidate) != -1; ++i)
-                candidate = std::format("{} {}", processed.name, i);
-            processed.name = candidate;
-        }
+            processed.name = name_unique_get(processed.name, [&](auto& name) { return animation_find(name) != -1; });
         if (incoming->name == source.animations.defaultAnimation)
             defaultAnimationName = processed.name;
 

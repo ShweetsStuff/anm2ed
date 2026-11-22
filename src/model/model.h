@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <format>
 #include <memory>
 #include <set>
 #include <string>
@@ -304,6 +305,15 @@ template <class Items> auto item_get(Items& items, int id) -> decltype(&items.fr
     return nullptr;
 }
 
+// `name`, or else the first of "name 2", "name 3" and so on that isTaken says is free.
+template <class IsTaken> std::string name_unique_get(const std::string& name, IsTaken&& isTaken)
+{
+    auto candidate = name;
+    for (int i = 2; isTaken(candidate); ++i)
+        candidate = std::format("{} {}", name, i);
+    return candidate;
+}
+
 template <class Items> int item_next_id_get(const Items& items)
 {
     int id = -1;
@@ -392,6 +402,11 @@ public:
 };
 
 bool is_model_equal(const Model&, const Model&);
+bool is_region_matched(const Region&, const Frame&);
+const Region* region_matched_get(const std::vector<Region>&, const Frame&);
+Vec2 region_pivot_get(const Region&);
+void frame_region_rect_set(Frame&, const Region&);
+void frame_region_apply(Frame&, const std::vector<Region>&);
 std::set<int> spritesheets_vector_used_get(const Model&);
 int track_frames_count_get(const Track&);
 int track_length_get(const Track&);

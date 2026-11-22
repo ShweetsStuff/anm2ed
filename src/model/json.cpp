@@ -653,17 +653,17 @@ static void animations_write(JsonWriter& io, const Model& model)
 {
     std::set<std::string> animationNames;
     std::set<std::string> keys;
-    auto name_unique_get = [](const std::string& name, std::initializer_list<std::set<std::string>*> sets) {
-        auto candidate = name;
-        for (int i = 2; std::ranges::any_of(sets, [&](auto* names) { return names->contains(candidate); }); ++i)
-            candidate = std::format("{} {}", name, i);
+    auto name_claim = [](const std::string& name, std::initializer_list<std::set<std::string>*> sets) {
+        auto candidate = name_unique_get(name, [&](auto& name) {
+            return std::ranges::any_of(sets, [&](auto* names) { return names->contains(name); });
+        });
         for (auto* names : sets)
             names->insert(candidate);
         return candidate;
     };
     auto animation_write = [&](const Animation& animation, bool isTopLevel) {
-        auto name = isTopLevel ? name_unique_get(animation.name, {&animationNames, &keys})
-                               : name_unique_get(animation.name, {&animationNames});
+        auto name = isTopLevel ? name_claim(animation.name, {&animationNames, &keys})
+                               : name_claim(animation.name, {&animationNames});
         io.object(name, [&](JsonWriter&) { animation_io(io, animation); }, false);
     };
 
@@ -679,7 +679,7 @@ static void animations_write(JsonWriter& io, const Model& model)
                 }
                 auto& group = std::get<AnimationGroup>(entry);
                 io.object(
-                    name_unique_get(group.name, {&keys}),
+                    name_claim(group.name, {&keys}),
                     [&](JsonWriter&) {
                         io.field("expanded", group.isExpanded, true);
                         io.field("visible", group.isVisible, true);

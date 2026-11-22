@@ -52,12 +52,8 @@ bool regions_trim(Model& model, int spritesheetId, const std::set<int>& ids, con
         auto previousCrop = region->crop;
         region->crop = newCrop;
         region->size = newSize;
-        if (region->origin == Origin::TOP_LEFT)
-            region->pivot = {};
-        else if (region->origin == Origin::CENTER)
-            region->pivot = region->size * 0.5f;
-        else
-            region->pivot -= region->crop - previousCrop;
+        region->pivot = region->origin == Origin::CUSTOM ? region->pivot - (region->crop - previousCrop)
+                                                         : region_pivot_get(*region);
         isChanged = true;
     }
 
