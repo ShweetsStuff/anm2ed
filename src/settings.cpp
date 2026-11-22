@@ -9,11 +9,8 @@
 #include "math_util.h"
 #include "path.h"
 
-using namespace anm2ed::util;
 using namespace glm;
 
-namespace anm2ed
-{
   constexpr std::string_view SETTINGS_SHEAR = "Shear";
 
   constexpr const char* COMPONENT_SUFFIXES_XY[] = {"X", "Y"};
@@ -26,7 +23,7 @@ namespace anm2ed
     value[0];
   };
 
-  const char* const* component_suffixes_get(std::string_view type)
+  static const char* const* component_suffixes_get(std::string_view type)
   {
     if (type.ends_with("_WH")) return COMPONENT_SUFFIXES_WH;
     if (type.starts_with("VEC3") || type.starts_with("VEC4")) return COMPONENT_SUFFIXES_RGBA;
@@ -181,15 +178,13 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
             DockNode      ID=0x0000000C Parent=0x0000000A SizeRef=459,250 Selected=0xC1986EE2
   DockNode                ID=0x00000016 Parent=0x123F8F08 SizeRef=1902,329 Selected=0x597925B7
 
-
-
   
 )";
 
   Settings::Settings(const std::filesystem::path& path)
   {
-    auto pathUtf8 = path::to_utf8(path);
-    if (path::is_exist(path))
+    auto pathUtf8 = path_to_utf8(path);
+    if (is_path_exist(path))
       logger.info(std::format("Using settings from: {}", pathUtf8));
     else
     {
@@ -199,7 +194,7 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
     }
 
     std::string fileData{};
-    if (!file::read_to_string(path, &fileData, "rb"))
+    if (!file_text_load(path, &fileData, "rb"))
     {
       logger.error(std::format("Failed to open settings file: {}", pathUtf8));
       return;
@@ -228,7 +223,7 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
       {
         std::string value;
         std::getline(ss, value);
-        dest = path::from_utf8(value);
+        dest = path_from_utf8(value);
       }
       else
       {
@@ -282,14 +277,14 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
     // Scales were once saved as multipliers; a value below the minimum percent is one, and is converted.
     for (auto [scale, min, max] : {std::tuple{&uiScale, UI_SCALE_MIN, UI_SCALE_MAX},
                                    std::tuple{&renderScale, RENDER_SCALE_MIN, RENDER_SCALE_MAX}})
-      *scale = std::clamp(*scale < min ? math::unit_to_percent(*scale) : *scale, min, max);
+      *scale = std::clamp(*scale < min ? unit_to_percent(*scale) : *scale, min, max);
   }
 
   std::string Settings::imgui_data_load(const std::filesystem::path& path)
   {
-    auto pathUtf8 = path::to_utf8(path);
+    auto pathUtf8 = path_to_utf8(path);
     std::string fileData{};
-    if (!file::read_to_string(path, &fileData, "rb"))
+    if (!file_text_load(path, &fileData, "rb"))
     {
       logger.error(
           std::format("Failed to open settings file for Dear ImGui data: {}; using Dear ImGui defaults", pathUtf8));
@@ -333,7 +328,7 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
 
   void Settings::save(const std::filesystem::path& path, const std::string& imguiData)
   {
-    auto pathUtf8 = path::to_utf8(path);
+    auto pathUtf8 = path_to_utf8(path);
     logger.info(std::format("Saving settings to: {}", pathUtf8));
     std::ostringstream file{};
 
@@ -346,7 +341,7 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
       if constexpr (std::is_same_v<T, bool>)
         file << key << "=" << (value ? "true" : "false") << "\n";
       else if constexpr (std::is_same_v<T, std::filesystem::path>)
-        file << key << "=" << path::to_utf8(value) << "\n";
+        file << key << "=" << path_to_utf8(value) << "\n";
       else
         file << key << "=" << value << "\n";
     };
@@ -377,11 +372,10 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
       logger.error(std::format("Failed while writing settings file: {}", pathUtf8));
       return;
     }
-    if (!file::write_string(path, file.str(), "wb"))
+    if (!file_text_save(path, file.str(), "wb"))
     {
       logger.error(std::format("Failed to save settings file: {}", pathUtf8));
       return;
     }
     logger.info(std::format("Saved settings to: {}", pathUtf8));
   }
-}

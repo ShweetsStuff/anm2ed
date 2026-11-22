@@ -26,13 +26,7 @@
 #include "vector.h"
 #include "ui/panel.h"
 
-using namespace anm2ed::resource;
-using namespace anm2ed::types;
-using namespace anm2ed::util;
 using namespace glm;
-
-namespace anm2ed::imgui
-{
 
   constexpr auto WIDTH_MULTIPLIER = 1.25f;
 
@@ -48,13 +42,13 @@ namespace anm2ed::imgui
   constexpr auto FRAME_ROUNDING = 3.0f;
   constexpr auto ICON_TINT_DEFAULT_DARK = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
   constexpr auto ICON_TINT_DEFAULT_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
-  constexpr auto ITEM_TEXT_COLOR_DARK = to_imvec4(color::WHITE);
+  constexpr auto ITEM_TEXT_COLOR_DARK = to_imvec4(COLOR_WHITE);
   constexpr auto ITEM_TEXT_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
   constexpr auto PLAYHEAD_ICON_TINT_LIGHT = ImVec4(0.3922f, 0.7843f, 0.5882f, 1.0f);
-  constexpr auto PLAYHEAD_LINE_COLOR_DARK = to_imvec4(color::WHITE);
+  constexpr auto PLAYHEAD_LINE_COLOR_DARK = to_imvec4(COLOR_WHITE);
   constexpr auto PLAYHEAD_LINE_COLOR_LIGHT = ImVec4(0.1961f, 0.5882f, 0.3922f, 1.0f);
   constexpr auto PLAYHEAD_LINE_THICKNESS = 4.0f;
-  constexpr auto TEXT_MULTIPLE_COLOR_DARK = to_imvec4(color::WHITE);
+  constexpr auto TEXT_MULTIPLE_COLOR_DARK = to_imvec4(COLOR_WHITE);
   constexpr auto TEXT_MULTIPLE_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
   constexpr auto TIMELINE_BACKGROUND_COLOR_LIGHT = ImVec4(0.5490f, 0.5490f, 0.5882f, 1.0f);
   constexpr auto TIMELINE_PLAYHEAD_RECT_COLOR_DARK = ImVec4(0.60f, 0.45f, 0.30f, 1.0f);
@@ -133,16 +127,16 @@ namespace anm2ed::imgui
 
   inline bool is_trigger_reference(const Reference& reference) { return reference.itemType == TRIGGER; }
 
-  constexpr resource::icon::Type INTERPOLATION_ICONS[] = {resource::icon::UNINTERPOLATED, resource::icon::INTERPOLATED,
-                                                          resource::icon::EASE_IN, resource::icon::EASE_OUT,
-                                                          resource::icon::EASE_IN_OUT};
+  constexpr Icon INTERPOLATION_ICONS[] = {ICON_UNINTERPOLATED, ICON_INTERPOLATED,
+                                                          ICON_EASE_IN, ICON_EASE_OUT,
+                                                          ICON_EASE_IN_OUT};
 
   // A read-only row under an expanded animation layer: one track of the child animation it plays.
   struct PeekRow
   {
-    const model::Model* source{};
-    const model::Animation* child{};
-    const model::Track* track{};
+    const Model* source{};
+    const Animation* child{};
+    const Track* track{};
   };
 
   Reference row_item_reference_get(const TimelineRow&);
@@ -155,10 +149,10 @@ namespace anm2ed::imgui
     Resources& resources;
     Clipboard& clipboard;
     Document& document;
-    model::Model& model;
+    Model& model;
     Playback& playback;
     Reference reference;
-    const model::Animation* animation{};
+    const Animation* animation{};
     float rowFrameChildHeight{};
     bool isLightTheme{};
     bool isTextPushed{};
@@ -185,17 +179,17 @@ namespace anm2ed::imgui
     ImVec2 frameBoxClipMax{};
     bool isFrameBoxClipSet{};
 
-    const model::Track* item_get(int type, int id = -1, int groupType = NONE, int groupId = -1);
-    const model::Frame* frame_get();
-    const model::Track* selected_item_get();
-    const model::TrackGroup* track_group_get(int type, int groupId);
+    const Track* item_get(int type, int id = -1, int groupType = NONE, int groupId = -1);
+    const Frame* frame_get();
+    const Track* selected_item_get();
+    const TrackGroup* track_group_get(int type, int groupId);
     bool is_track_group_visible(int type, int groupId);
-    const model::TrackGroup* row_group_get(const TimelineRow& row);
+    const TrackGroup* row_group_get(const TimelineRow& row);
     glm::vec4 color_get(TimelineColor, int);
     std::set<Reference> drag_frame_references_get(const Reference&);
     // Queues an edit on the document; its result is selected (frames by default).
     template <class Operation>
-    void edit_push(StringType label, Operation operation, std::function<void(Document&, const edit::Uids&)> select = {})
+    void edit_push(StringType label, Operation operation, std::function<void(Document&, const Uids&)> select = {})
     {
       command_push(
           [=, this](Manager&, Document& document) mutable
@@ -223,7 +217,7 @@ namespace anm2ed::imgui
     void frames_bake();
     std::set<Reference> selected_root_frame_references_get();
     std::set<Reference> item_references_for_bake_into_other_frames_get(const Document& targetDocument,
-                                                                       const model::Animation& targetAnimation,
+                                                                       const Animation& targetAnimation,
                                                                        BakeIntoOtherFramesTarget target, bool isLayers,
                                                                        bool isNulls);
     bool is_bake_into_other_frames_ready();
@@ -252,14 +246,14 @@ namespace anm2ed::imgui
     void paste();
     std::optional<Reference> property_source_get();
     std::set<Reference> property_targets_get();
-    std::optional<model::Frame> property_clipboard_frame_get();
-    bool is_property_pasteable(edit::FrameProperty);
-    void property_copy(edit::FrameProperty);
-    void property_cut(edit::FrameProperty);
-    void property_paste(edit::FrameProperty);
+    std::optional<Frame> property_clipboard_frame_get();
+    bool is_property_pasteable(FrameProperty);
+    void property_copy(FrameProperty);
+    void property_cut(FrameProperty);
+    void property_paste(FrameProperty);
     void context_menu();
     void item_base_properties_open(int type, int id);
-    void group_properties_open(const TimelineRow& row, const model::TrackGroup& group);
+    void group_properties_open(const TimelineRow& row, const TrackGroup& group);
     void group_properties_update();
     void item_context_menu();
     std::vector<PeekRow> peek_rows_get(const TimelineRow&);
@@ -284,4 +278,3 @@ namespace anm2ed::imgui
     void shortcuts_update();
     void draw();
   };
-}

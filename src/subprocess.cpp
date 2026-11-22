@@ -5,8 +5,6 @@
   #include <windows.h>
 #endif
 
-namespace anm2ed::util
-{
 #ifdef WIN32
   std::wstring utf8_to_wstring(const char* text)
   {
@@ -71,4 +69,3 @@ namespace anm2ed::util
   FILE* Process::get() const { return pipe; }
 
   Process::operator bool() const { return pipe != nullptr; }
-}

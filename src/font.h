@@ -3,25 +3,20 @@
 #include <imgui/imgui.h>
 #include "embed.h"
 
-namespace anm2ed::resource::font
-{
-  constexpr auto SIZE = 16;
-  constexpr auto SIZE_LARGE = 32;
+  constexpr auto FONT_SIZE = 16;
+  constexpr auto FONT_SIZE_LARGE = 32;
 
-  enum Type
+  enum FontStyle
   {
-    REGULAR,
-    ITALICS,
-    BOLD,
-    BOLD_ITALICS,
-    COUNT
+    FONT_REGULAR,
+    FONT_ITALICS,
+    FONT_BOLD,
+    FONT_BOLD_ITALICS,
+    FONT_COUNT
   };
 
-  constexpr const Embed* FONTS[COUNT] = {&FONT_REGULAR_TTF, &FONT_ITALICS_TTF, &FONT_BOLD_TTF, &FONT_BOLD_ITALICS_TTF};
-}
+  constexpr const Embed* FONTS[FONT_COUNT] = {&FONT_REGULAR_TTF, &FONT_ITALICS_TTF, &FONT_BOLD_TTF, &FONT_BOLD_ITALICS_TTF};
 
-namespace anm2ed::resource
-{
   class Font
   {
     ImFont* pointer{};
@@ -36,4 +31,3 @@ namespace anm2ed::resource
     ImFont* get();
     Font& operator=(Font&&) noexcept;
   };
-}

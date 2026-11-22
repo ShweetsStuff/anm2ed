@@ -4,8 +4,6 @@
 
 #include "localization.h"
 
-namespace anm2ed::imgui
-{
 #define POPUP_LIST                                                                                                     \
   X(POPUP_SMALL, 0.25f, true)                                                                                          \
   X(POPUP_NORMAL, 0.5f, true)                                                                                          \
@@ -50,4 +48,3 @@ namespace anm2ed::imgui
   };
 
 #undef POPUP_LIST
-}

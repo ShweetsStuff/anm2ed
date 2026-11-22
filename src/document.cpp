@@ -28,13 +28,8 @@
 #include "ui/toast.h"
 #include "working_directory.h"
 
-using namespace anm2ed::imgui;
-using namespace anm2ed::types;
-using namespace anm2ed::util;
 using namespace glm;
 
-namespace anm2ed::document
-{
   constexpr std::string_view BAKED_EXTENSION = ".baked.png";
   constexpr std::string_view AUTOSAVE_EXTENSION = ".autosave";
   constexpr int VECTOR_LEVEL_MAX = 3;
@@ -42,44 +37,44 @@ namespace anm2ed::document
   constexpr std::uint64_t HASH_COMBINE_CONSTANT = 0x9e3779b97f4a7c15ULL;
 
   // A path written in a document in `directory`, as an absolute path.
-  std::filesystem::path absolute_path_get(const std::filesystem::path& directory, const std::filesystem::path& path)
+  static std::filesystem::path absolute_path_get(const std::filesystem::path& directory, const std::filesystem::path& path)
   {
-    util::WorkingDirectory workingDirectory(directory);
+    WorkingDirectory workingDirectory(directory);
     std::error_code ec{};
-    auto absolutePath = std::filesystem::weakly_canonical(directory / path::case_insensitive_find(path), ec);
+    auto absolutePath = std::filesystem::weakly_canonical(directory / path_case_insensitive_find(path), ec);
     return ec ? directory / path : absolutePath;
   }
 
-  void library_load(const std::filesystem::path& path, LibraryData& library)
+  static void library_load(const std::filesystem::path& path, LibraryData& library)
   {
     library = {};
     std::string errorString{};
-    model::model_load(library.model, path, &errorString);
+    model_load(library.model, path, &errorString);
     // Why it couldn't load, or what a JSON library couldn't read.
-    if (!errorString.empty()) toast_log(Level::WARNING, TOAST_LIBRARY_ISSUES, path::to_utf8(path), errorString);
+    if (!errorString.empty()) toast_log(Level::WARNING, TOAST_LIBRARY_ISSUES, path_to_utf8(path), errorString);
     std::error_code ec{};
     library.writeTime = std::filesystem::last_write_time(path, ec);
-    util::WorkingDirectory workingDirectory(path.parent_path());
+    WorkingDirectory workingDirectory(path.parent_path());
     for (const auto& spritesheet : library.model.content.spritesheets)
-      library.images.emplace(spritesheet.id, resource::Image(path::case_insensitive_find(spritesheet.path)));
+      library.images.emplace(spritesheet.id, Image(path_case_insensitive_find(spritesheet.path)));
     for (const auto& sound : library.model.content.sounds)
-      library.sounds.emplace(sound.id, resource::AudioData(path::case_insensitive_find(sound.path)));
+      library.sounds.emplace(sound.id, AudioData(path_case_insensitive_find(sound.path)));
   }
 
-  uint64_t document_tab_id_next()
+  static uint64_t document_tab_id_next()
   {
     static uint64_t next{1};
     return next++;
   }
 
-  std::filesystem::path shader_absolute_path_get(Document& document, const std::filesystem::path& path)
+  static std::filesystem::path shader_absolute_path_get(Document& document, const std::filesystem::path& path)
   {
-    auto loadPath = path::backslash_handle(path);
+    auto loadPath = path_backslash_handle(path);
     if (loadPath.empty() || loadPath.is_absolute()) return loadPath;
     return document.directory_get() / loadPath;
   }
 
-  void shader_status_append(const resource::ShaderCompileResult& result, std::string* status)
+  static void shader_status_append(const ShaderCompileResult& result, std::string* status)
   {
     if (!status) return;
 
@@ -93,7 +88,7 @@ namespace anm2ed::document
     if (!result.output.empty()) *status += result.output;
   }
 
-  std::string shader_source_lines_get(std::string_view label, std::string_view source)
+  static std::string shader_source_lines_get(std::string_view label, std::string_view source)
   {
     std::string output = std::format("\n{}:\n", label);
     int lineNumber{1};
@@ -110,14 +105,14 @@ namespace anm2ed::document
     return output;
   }
 
-  void shader_status_format_append(std::string* status, StringType format, StringType argument)
+  static void shader_status_format_append(std::string* status, StringType format, StringType argument)
   {
     if (!status) return;
     auto argumentString = std::string(localize.get(argument));
     *status += std::vformat(localize.get(format), std::make_format_args(argumentString)) + "\n";
   }
 
-  bool shader_source_load(Document& document, const std::filesystem::path& shaderPath, std::string& source,
+  static bool shader_source_load(Document& document, const std::filesystem::path& shaderPath, std::string& source,
                           StringType label, std::string* status, const char* fallback = nullptr)
   {
     if (shaderPath.empty() && !fallback)
@@ -131,12 +126,12 @@ namespace anm2ed::document
       return true;
     }
 
-    auto absolute = path::case_insensitive_find(shader_absolute_path_get(document, shaderPath));
-    if (file::read_to_string(absolute, &source)) return true;
+    auto absolute = path_case_insensitive_find(shader_absolute_path_get(document, shaderPath));
+    if (file_text_load(absolute, &source)) return true;
 
     if (status)
     {
-      auto pathString = path::to_utf8(shaderPath);
+      auto pathString = path_to_utf8(shaderPath);
       *status += std::vformat(localize.get(LABEL_SHADER_READ_FAILED), std::make_format_args(pathString)) + "\n";
     }
     return false;
@@ -148,14 +143,14 @@ namespace anm2ed::document
                       std::unordered_map<int, std::filesystem::path>& paths, Load&& load)
   {
     std::set<int> validIds{};
-    util::WorkingDirectory workingDirectory(document.directory_get());
+    WorkingDirectory workingDirectory(document.directory_get());
     for (auto& element : items)
     {
       validIds.insert(element.id);
       auto path = paths.find(element.id);
       if (!keys.contains(element.id) || path == paths.end() || path->second != element.path)
       {
-        load(element.id, path::case_insensitive_find(element.path));
+        load(element.id, path_case_insensitive_find(element.path));
         paths[element.id] = element.path;
       }
     }
@@ -165,34 +160,31 @@ namespace anm2ed::document
   }
 
   // A spritesheet is dirty when its path or image asset differs from what was last saved.
-  uint64_t spritesheet_hash_get(const model::Spritesheet& spritesheet, std::uint64_t imageKey)
+  static uint64_t spritesheet_hash_get(const Spritesheet& spritesheet, std::uint64_t imageKey)
   {
-    auto seed = std::hash<std::string>{}(path::to_utf8(spritesheet.path));
+    auto seed = std::hash<std::string>{}(path_to_utf8(spritesheet.path));
     return seed ^ (imageKey + HASH_COMBINE_CONSTANT + (seed << 6) + (seed >> 2));
   }
 
-  Reference item_reference_get(Reference reference)
+  static Reference item_reference_get(Reference reference)
   {
     reference.frameIndex = -1;
     return reference;
   }
 
-  void frame_time_sync(Document& document)
+  static void frame_time_sync(Document& document)
   {
     auto reference = document.reference_get();
     auto item = document.model.track_get(reference);
     auto frameIndex = reference.frameIndex;
     document.frameTime = item && frameIndex >= 0 ? frame_time_from_index_get(*item, frameIndex) : 0.0f;
   }
-}
 
-namespace anm2ed
-{
   Document::Document(const std::filesystem::path& path, bool isNew, std::string* errorString)
   {
-    tabId = document::document_tab_id_next();
-    model = model::model_make();
-    if (!isNew) model::model_load(model, path, errorString);
+    tabId = document_tab_id_next();
+    model = model_make();
+    if (!isNew) model_load(model, path, errorString);
     if (isNew ? !save(path, errorString) : !model.isValid)
     {
       isValid = false;
@@ -219,7 +211,7 @@ namespace anm2ed
   bool Document::save(const std::filesystem::path& path, std::string* errorString, Options options)
   {
     auto absolutePath = !path.empty() ? path : this->path;
-    auto absolutePathUtf8 = path::to_utf8(absolutePath);
+    auto absolutePathUtf8 = path_to_utf8(absolutePath);
     if (file_write(absolutePath, errorString, options))
     {
       this->path = absolutePath;
@@ -232,14 +224,14 @@ namespace anm2ed
   }
 
   // A library's spritesheet path, made relative to this document (for flattening its animation layers).
-  edit::SpritesheetPathGet Document::spritesheet_path_resolver_get() const
+  SpritesheetPathGet Document::spritesheet_path_resolver_get() const
   {
-    return [this](const model::Model& source, const std::filesystem::path& spritesheetPath)
+    return [this](const Model& source, const std::filesystem::path& spritesheetPath)
     {
       for (const auto& [libraryPath, library] : libraries)
         if (&library.model == &source)
-          return path::backslash_replace(
-              path::make_relative(document::absolute_path_get(libraryPath.parent_path(), spritesheetPath),
+          return path_backslash_replace(
+              path_make_relative(absolute_path_get(libraryPath.parent_path(), spritesheetPath),
                                   std::filesystem::absolute(directory_get())));
       return spritesheetPath;
     };
@@ -249,48 +241,48 @@ namespace anm2ed
   // can't show worked around.
   bool Document::file_write(const std::filesystem::path& path, std::string* errorString, Options options)
   {
-    std::optional<model::Model> game{};
+    std::optional<Model> game{};
     if (!options.isJson)
     {
-      game = edit::animation_layers_flatten(model, library_resolver_get(), spritesheet_path_resolver_get());
+      game = animation_layers_flatten(model, library_resolver_get(), spritesheet_path_resolver_get());
       if (!model.info.isIsaacIgnored)
       {
         auto bakedPath = path;
         if (options.isPixelBaked)
-          render::frames_bake(*this, *game, bakedPath.replace_extension(document::BAKED_EXTENSION));
-        game = edit::isaac_bridge(std::move(*game));
+          frames_bake(*this, *game, bakedPath.replace_extension(BAKED_EXTENSION));
+        game = isaac_bridge(std::move(*game));
       }
     }
     options.gameModel = game ? &*game : nullptr;
-    return model::model_save(model, path, errorString, options);
+    return model_save(model, path, errorString, options);
   }
 
   std::filesystem::path Document::autosave_path_get()
   {
     return directory_get() /
-           path::from_utf8("." + path::to_utf8(filename_get()) + std::string(document::AUTOSAVE_EXTENSION));
+           path_from_utf8("." + path_to_utf8(filename_get()) + std::string(AUTOSAVE_EXTENSION));
   }
 
   std::filesystem::path Document::path_from_autosave_get(const std::filesystem::path& path)
   {
-    auto fileName = path::to_utf8(path.filename());
+    auto fileName = path_to_utf8(path.filename());
     if (fileName.starts_with('.')) fileName.erase(fileName.begin());
-    if (fileName.ends_with(document::AUTOSAVE_EXTENSION))
-      fileName.erase(fileName.size() - document::AUTOSAVE_EXTENSION.size());
+    if (fileName.ends_with(AUTOSAVE_EXTENSION))
+      fileName.erase(fileName.size() - AUTOSAVE_EXTENSION.size());
     return path.parent_path() / std::filesystem::path(std::u8string(fileName.begin(), fileName.end()));
   }
 
   bool Document::autosave(std::string* errorString, Options options)
   {
     auto autosavePath = autosave_path_get();
-    auto autosavePathUtf8 = path::to_utf8(autosavePath);
+    auto autosavePathUtf8 = path_to_utf8(autosavePath);
     // An autosave is read back from the editor's copy, so the game's needs no baked spritesheet.
     options.isPixelBaked = false;
     if (file_write(autosavePath, errorString, options))
     {
       for (auto id : spritesheets_autosave_dirty_get())
       {
-        auto spritesheet = model::item_get(model.content.spritesheets, id);
+        auto spritesheet = item_get(model.content.spritesheets, id);
         auto texture = texture_get(id);
         if (texture && texture->write(spritesheet_autosave_path_get(*spritesheet)))
           spritesheetAutosaveHashes[id] = spritesheetHashes.at(id);
@@ -307,25 +299,25 @@ namespace anm2ed
 
   void Document::texture_change(int id)
   {
-    if (texture_get(id) && model::item_get(model.content.spritesheets, id)) change();
+    if (texture_get(id) && item_get(model.content.spritesheets, id)) change();
   }
 
   bool Document::texture_reload(int id)
   {
-    auto spritesheet = model::item_get(model.content.spritesheets, id);
+    auto spritesheet = item_get(model.content.spritesheets, id);
     if (!spritesheet) return false;
-    util::WorkingDirectory workingDirectory(directory_get());
-    texture_set(id, resource::Image(path::case_insensitive_find(spritesheet->path)));
+    WorkingDirectory workingDirectory(directory_get());
+    texture_set(id, Image(path_case_insensitive_find(spritesheet->path)));
     texturePaths[id] = spritesheet->path;
     return true;
   }
 
   bool Document::sound_reload(int id)
   {
-    auto sound = model::item_get(model.content.sounds, id);
+    auto sound = item_get(model.content.sounds, id);
     if (!sound) return false;
-    util::WorkingDirectory workingDirectory(directory_get());
-    sound_set(id, resource::AudioData(path::case_insensitive_find(sound->path)));
+    WorkingDirectory workingDirectory(directory_get());
+    sound_set(id, AudioData(path_case_insensitive_find(sound->path)));
     soundPaths[id] = sound->path;
     return true;
   }
@@ -341,37 +333,37 @@ namespace anm2ed
     };
 
     // Without an OpenGL context (as the command line converts), there is nothing to compile it with.
-    auto shaderElement = SDL_GL_GetCurrentContext() ? model::item_get(model.content.shaders, shaderId) : nullptr;
+    auto shaderElement = SDL_GL_GetCurrentContext() ? item_get(model.content.shaders, shaderId) : nullptr;
     if (!shaderElement)
     {
-      document::shader_status_format_append(status, LABEL_SHADER_PATH_EMPTY, LABEL_FRAGMENT);
+      shader_status_format_append(status, LABEL_SHADER_PATH_EMPTY, LABEL_FRAGMENT);
       return shader_erase();
     }
 
     std::string vertexSource{};
     std::string fragmentSource{};
-    auto isVertexLoaded = document::shader_source_load(*this, shaderElement->vertex, vertexSource, LABEL_VERTEX, status,
-                                                       resource::shader::TEXTURE_COMPATIBILITY_VERTEX);
+    auto isVertexLoaded = shader_source_load(*this, shaderElement->vertex, vertexSource, LABEL_VERTEX, status,
+                                                       TEXTURE_COMPATIBILITY_VERTEX);
     auto isFragmentLoaded =
-        document::shader_source_load(*this, shaderElement->fragment, fragmentSource, LABEL_FRAGMENT, status);
+        shader_source_load(*this, shaderElement->fragment, fragmentSource, LABEL_FRAGMENT, status);
     if (!isVertexLoaded || !isFragmentLoaded) return shader_erase();
 
-    auto vertex = resource::shader::gles_vertex_convert(vertexSource);
-    auto fragment = resource::shader::gles_fragment_convert(fragmentSource);
-    auto result = resource::shader_compile(vertex.c_str(), fragment.c_str());
-    document::shader_status_append(result, status);
+    auto vertex = gles_vertex_convert(vertexSource);
+    auto fragment = gles_fragment_convert(fragmentSource);
+    auto result = shader_compile(vertex.c_str(), fragment.c_str());
+    shader_status_append(result, status);
     if (status && (!result.isCompiled || !result.isLinked))
     {
-      *status += document::shader_source_lines_get("Converted vertex shader", vertex);
-      *status += document::shader_source_lines_get("Converted fragment shader", fragment);
+      *status += shader_source_lines_get("Converted vertex shader", vertex);
+      *status += shader_source_lines_get("Converted fragment shader", fragment);
     }
     if (!result.isLinked || !result.id) return shader_erase();
 
-    resource::Shader runtime{};
+    ShaderProgram runtime{};
     runtime.id = result.id;
     runtime.uniforms = std::move(result.uniforms);
-    if (resource::shader::uniform_configs_trim(*shaderElement, runtime.uniforms)) hash_set();
-    resource::shader::uniform_configs_apply(*shaderElement, runtime.uniforms);
+    if (uniform_configs_trim(*shaderElement, runtime.uniforms)) hash_set();
+    uniform_configs_apply(*shaderElement, runtime.uniforms);
     shaders[shaderId] = std::move(runtime);
     shaderVertexPaths[shaderId] = shaderElement->vertex;
     shaderFragmentPaths[shaderId] = shaderElement->fragment;
@@ -381,15 +373,15 @@ namespace anm2ed
   void Document::assets_sync()
   {
     libraries_sync();
-    document::resources_sync(*this, model.content.spritesheets, textures, texturePaths,
+    resources_sync(*this, model.content.spritesheets, textures, texturePaths,
                              [&](int id, const std::filesystem::path& path)
-                             { texture_set(id, resource::Image(path)); });
-    document::resources_sync(*this, model.content.sounds, sounds, soundPaths,
+                             { texture_set(id, Image(path)); });
+    resources_sync(*this, model.content.sounds, sounds, soundPaths,
                              [&](int id, const std::filesystem::path& path)
-                             { sound_set(id, resource::AudioData(path)); });
+                             { sound_set(id, AudioData(path)); });
 
     std::set<int> validShaderIds{};
-    util::WorkingDirectory workingDirectory(directory_get());
+    WorkingDirectory workingDirectory(directory_get());
     for (auto& shaderElement : model.content.shaders)
     {
       auto id = shaderElement.id;
@@ -406,7 +398,7 @@ namespace anm2ed
       else if (isReload)
         shader_reload(id);
       else if (auto shader = shader_get(id))
-        resource::shader::uniform_configs_apply(shaderElement, shader->uniforms);
+        uniform_configs_apply(shaderElement, shader->uniforms);
     }
 
     auto is_invalid = [&](const auto& pair) { return !validShaderIds.contains(pair.first); };
@@ -426,22 +418,22 @@ namespace anm2ed
 
   std::filesystem::path Document::library_path_get(int id) const
   {
-    auto library = model::item_get(model.content.libraries, id);
-    return library ? document::absolute_path_get(std::filesystem::absolute(directory_get()), library->path)
+    auto library = item_get(model.content.libraries, id);
+    return library ? absolute_path_get(std::filesystem::absolute(directory_get()), library->path)
                    : std::filesystem::path{};
   }
 
   // A library of this document (or of a copy of it) or of one of its libraries.
-  const LibraryData* Document::library_get(const model::Model& from, int id) const
+  const LibraryData* Document::library_get(const Model& from, int id) const
   {
     auto isLibrary = std::ranges::any_of(libraries, [&](const auto& pair) { return &pair.second.model == &from; });
     auto link = libraryLinks.find({isLibrary ? &from : nullptr, id});
     return link == libraryLinks.end() ? nullptr : link->second;
   }
 
-  model::LibraryGet Document::library_resolver_get() const
+  LibraryGet Document::library_resolver_get() const
   {
-    return [this](const model::Model& from, int id)
+    return [this](const Model& from, int id)
     {
       auto library = library_get(from, id);
       return library ? &library->model : nullptr;
@@ -449,7 +441,7 @@ namespace anm2ed
   }
 
   // An animation layer whose animation isn't there; a library that didn't load leaves the question open (false).
-  bool Document::is_layer_animation_missing(const model::Layer& layer) const
+  bool Document::is_layer_animation_missing(const Layer& layer) const
   {
     if (!layer.is_animation()) return false;
     auto library = layer.libraryId == -1 ? nullptr : library_get(model, layer.libraryId);
@@ -470,9 +462,9 @@ namespace anm2ed
   }
 
   // A layer draw's spritesheet image, at `scale` (see vector_image_get).
-  const resource::Image* Document::draw_image_get(const model::Draw& draw, float scale) const
+  const Image* Document::draw_image_get(const Draw& draw, float scale) const
   {
-    const resource::Image* image{};
+    const Image* image{};
     if (!draw.source || draw.source == &model) image = texture_get(draw.spritesheetId);
     for (const auto& [path, library] : libraries)
       if (&library.model == draw.source)
@@ -481,12 +473,12 @@ namespace anm2ed
   }
 
   // A vector image drawn again (cached) for when `scale` screen pixels show each of its pixels; others as they are.
-  const resource::Image* Document::vector_image_get(const resource::Image* image, float scale) const
+  const Image* Document::vector_image_get(const Image* image, float scale) const
   {
     if (!image || !image->is_vector() || scale <= 1.0f) return image;
 
-    auto level = std::min((int)std::ceil(std::log2(scale)), document::VECTOR_LEVEL_MAX);
-    while (level > 0 && std::max(image->size.x, image->size.y) << level > document::VECTOR_SIZE_MAX)
+    auto level = std::min((int)std::ceil(std::log2(scale)), VECTOR_LEVEL_MAX);
+    while (level > 0 && std::max(image->size.x, image->size.y) << level > VECTOR_SIZE_MAX)
       --level;
     if (level == 0) return image;
     auto [it, isNew] = vectorImages.try_emplace({image->uid, level});
@@ -499,7 +491,7 @@ namespace anm2ed
   {
     libraryLinks.clear();
     std::set<std::filesystem::path> reached{};
-    std::vector<std::pair<const model::Model*, std::filesystem::path>> pending{
+    std::vector<std::pair<const Model*, std::filesystem::path>> pending{
         {&model, std::filesystem::absolute(directory_get())}};
     while (!pending.empty())
     {
@@ -507,11 +499,11 @@ namespace anm2ed
       pending.pop_back();
       for (const auto& library : from->content.libraries)
       {
-        auto path = document::absolute_path_get(directory, library.path);
+        auto path = absolute_path_get(directory, library.path);
         auto [it, isNew] = libraries.try_emplace(path);
         if (isNew)
         {
-          document::library_load(path, it->second);
+          library_load(path, it->second);
           ++librariesRevision;
         }
         libraryLinks[{from == &model ? nullptr : from, library.id}] = &it->second;
@@ -530,7 +522,7 @@ namespace anm2ed
       std::error_code ec{};
       auto time = std::filesystem::last_write_time(path, ec);
       if (ec || time == library.writeTime) continue;
-      document::library_load(path, library);
+      library_load(path, library);
       ++librariesRevision;
       isReloaded = true;
     }
@@ -544,7 +536,7 @@ namespace anm2ed
     libraries_sync();
   }
 
-  const resource::Image* Document::texture_get(int id) const
+  const Image* Document::texture_get(int id) const
   {
     if (auto draft = textureDrafts.find(id); draft != textureDrafts.end()) return &draft->second;
     auto key = textures.find(id);
@@ -552,29 +544,29 @@ namespace anm2ed
   }
 
   // A private copy of the spritesheet's image to draw on; it becomes a new asset on the next change().
-  resource::Image* Document::texture_edit(int id)
+  Image* Document::texture_edit(int id)
   {
     auto texture = texture_get(id);
     if (!texture || texture->is_vector()) return nullptr;
     return &textureDrafts.try_emplace(id, *texture).first->second;
   }
 
-  void Document::texture_set(int id, resource::Image image)
+  void Document::texture_set(int id, Image image)
   {
     textureDrafts.erase(id);
     textures[id] = assets.image_add(std::move(image));
   }
 
-  const resource::AudioData* Document::sound_get(int id) const
+  const AudioData* Document::sound_get(int id) const
   {
     auto key = sounds.find(id);
     return key == sounds.end() ? nullptr : assets.audio_get(key->second);
   }
 
   // Every sound that may be playing: this document's and its libraries'.
-  std::vector<const resource::AudioData*> Document::sounds_get() const
+  std::vector<const AudioData*> Document::sounds_get() const
   {
-    std::vector<const resource::AudioData*> result{};
+    std::vector<const AudioData*> result{};
     for (const auto& [id, key] : sounds)
       if (auto sound = sound_get(id)) result.push_back(sound);
     for (const auto& [path, library] : libraries)
@@ -585,19 +577,19 @@ namespace anm2ed
 
   // The sounds triggers play on an animation's frame, its children's included: one of each trigger's sounds, at random
   // (or picked by `index` for repeatable renders).
-  std::vector<const resource::AudioData*> Document::trigger_sounds_get(const model::Animation& animation, int time,
+  std::vector<const AudioData*> Document::trigger_sounds_get(const Animation& animation, int time,
                                                                        int index) const
   {
-    std::vector<const resource::AudioData*> result{};
+    std::vector<const AudioData*> result{};
     for (const auto& [source, trigger, layerId] :
-         model::animation_triggers_get(model, animation, time, library_resolver_get()))
+         animation_triggers_get(model, animation, time, library_resolver_get()))
     {
       if (trigger.soundIds.empty()) continue;
       auto count = trigger.soundIds.size();
       auto soundIndex = std::min(
-          index >= 0 ? (std::size_t)index % count : (std::size_t)math::random_in_range(0.0f, (float)count), count - 1);
+          index >= 0 ? (std::size_t)index % count : (std::size_t)random_in_range(0.0f, (float)count), count - 1);
       auto soundId = trigger.soundIds[soundIndex];
-      const resource::AudioData* sound{};
+      const AudioData* sound{};
       if (source == &model) sound = sound_get(soundId);
       for (const auto& [path, library] : libraries)
         if (&library.model == source)
@@ -607,9 +599,9 @@ namespace anm2ed
     return result;
   }
 
-  void Document::sound_set(int id, resource::AudioData data) { sounds[id] = assets.audio_add(std::move(data)); }
+  void Document::sound_set(int id, AudioData data) { sounds[id] = assets.audio_add(std::move(data)); }
 
-  resource::Shader* Document::shader_get(int shaderId)
+  ShaderProgram* Document::shader_get(int shaderId)
   {
     auto it = shaders.find(shaderId);
     return it == shaders.end() || !it->second.is_valid() ? nullptr : &it->second;
@@ -618,13 +610,13 @@ namespace anm2ed
   bool Document::regions_trim(int spritesheetId, const std::set<int>& ids)
   {
     auto texture = texture_get(spritesheetId);
-    return texture && edit::regions_trim(model, spritesheetId, ids, *texture);
+    return texture && ::regions_trim(model, spritesheetId, ids, *texture);
   }
 
   bool Document::spritesheet_pack(int id, int padding)
   {
     auto texture = texture_get(id);
-    auto packed = texture ? edit::spritesheet_pack(model, id, *texture, padding) : std::nullopt;
+    auto packed = texture ? ::spritesheet_pack(model, id, *texture, padding) : std::nullopt;
     if (!packed) return false;
     texture_set(id, std::move(*packed));
     assets_sync();
@@ -634,25 +626,25 @@ namespace anm2ed
   bool Document::spritesheets_merge(const std::set<int>& ids, bool isAppendRight, bool isMakeRegions,
                                     bool isMakePrimaryRegion, Origin origin)
   {
-    auto merged = edit::spritesheets_merge(
+    auto merged = ::spritesheets_merge(
         model, ids, [this](int id) { return texture_get(id); }, isAppendRight, isMakeRegions, isMakePrimaryRegion,
         origin);
     if (!merged) return false;
     texture_set(*ids.begin(), std::move(*merged));
     // The merged sheet may now be an SVG (or a PNG) under a new name; it is written when saved.
-    texturePaths[*ids.begin()] = model::item_get(model.content.spritesheets, *ids.begin())->path;
+    texturePaths[*ids.begin()] = item_get(model.content.spritesheets, *ids.begin())->path;
     for (auto id : ids)
       if (id != *ids.begin()) textures.erase(id);
     assets_sync();
     return true;
   }
 
-  void Document::hash_set() { hash = model::model_hash(model); }
+  void Document::hash_set() { hash = model_hash(model); }
 
   void Document::clean()
   {
     assets_sync();
-    saveHash = model::model_hash(model);
+    saveHash = model_hash(model);
     hash = saveHash;
     lastAutosaveTime = 0.0f;
     isForceDirty = false;
@@ -664,7 +656,7 @@ namespace anm2ed
     for (auto& spritesheet : model.content.spritesheets)
     {
       validIds.insert(spritesheet.id);
-      auto currentHash = document::spritesheet_hash_get(
+      auto currentHash = spritesheet_hash_get(
           spritesheet, textures.contains(spritesheet.id) ? textures.at(spritesheet.id) : 0);
       spritesheetHashes[spritesheet.id] = currentHash;
       spritesheetSaveHashes.try_emplace(spritesheet.id, currentHash);
@@ -685,12 +677,12 @@ namespace anm2ed
 
     spritesheet_hashes_sync();
     snapshots.commit();
-    index = model::UidIndex(model);
+    index = UidIndex(model);
   }
 
   void Document::edit_begin(StringType label) { snapshots.push(localize.get(label)); }
 
-  edit::Uids Document::edit_run(StringType label, const std::function<edit::Uids(model::Model&)>& operation)
+  Uids Document::edit_run(StringType label, const std::function<Uids(Model&)>& operation)
   {
     edit_begin(label);
     auto uids = operation(model);
@@ -698,9 +690,9 @@ namespace anm2ed
     return uids;
   }
 
-  std::vector<Reference> Document::references_get(const edit::Uids& uids) const
+  std::vector<Reference> Document::references_get(const Uids& uids) const
   {
-    model::UidIndex index(model);
+    UidIndex index(model);
     std::vector<Reference> references{};
     for (auto uid : uids)
       if (auto reference = index.reference_get(uid)) references.push_back(*reference);
@@ -711,11 +703,11 @@ namespace anm2ed
   bool Document::is_autosave_dirty() { return hash != autosaveHash || !spritesheets_autosave_dirty_get().empty(); }
 
   // Edited spritesheets are autosaved as a hidden copy beside their file: .<name>.png.autosave.
-  std::filesystem::path Document::spritesheet_autosave_path_get(const model::Spritesheet& spritesheet)
+  std::filesystem::path Document::spritesheet_autosave_path_get(const Spritesheet& spritesheet)
   {
     auto path = directory_get() / spritesheet.path;
     return path.parent_path() /
-           path::from_utf8("." + path::to_utf8(path.filename()) + std::string(document::AUTOSAVE_EXTENSION));
+           path_from_utf8("." + path_to_utf8(path.filename()) + std::string(AUTOSAVE_EXTENSION));
   }
 
   // Spritesheets with unsaved pixel edits that their autosave copy doesn't have yet.
@@ -739,8 +731,8 @@ namespace anm2ed
     for (const auto& spritesheet : model.content.spritesheets)
     {
       auto path = spritesheet_autosave_path_get(spritesheet);
-      if (!path::is_exist(path)) continue;
-      if (auto image = resource::Image(path); image.is_valid()) texture_set(spritesheet.id, std::move(image));
+      if (!is_path_exist(path)) continue;
+      if (auto image = Image(path); image.is_valid()) texture_set(spritesheet.id, std::move(image));
     }
   }
 
@@ -754,10 +746,10 @@ namespace anm2ed
 
   void Document::spritesheet_hash_update(int id)
   {
-    auto spritesheet = model::item_get(model.content.spritesheets, id);
+    auto spritesheet = item_get(model.content.spritesheets, id);
     if (!spritesheet) return;
     assets_sync();
-    spritesheetHashes[id] = document::spritesheet_hash_get(*spritesheet, textures.contains(id) ? textures.at(id) : 0);
+    spritesheetHashes[id] = spritesheet_hash_get(*spritesheet, textures.contains(id) ? textures.at(id) : 0);
   }
 
   // The spritesheet matches its file (just saved or reloaded); its file's time is remembered to notice later changes.
@@ -767,7 +759,7 @@ namespace anm2ed
     if (spritesheetHashes.contains(id)) spritesheetSaveHashes[id] = spritesheetHashes[id];
     textureWriteTimes.erase(id);
     spritesheets_changed_get();
-    if (auto spritesheet = model::item_get(model.content.spritesheets, id))
+    if (auto spritesheet = item_get(model.content.spritesheets, id))
     {
       std::error_code ec{};
       std::filesystem::remove(spritesheet_autosave_path_get(*spritesheet), ec);
@@ -779,11 +771,11 @@ namespace anm2ed
   std::set<int> Document::spritesheets_changed_get()
   {
     std::set<int> ids{};
-    util::WorkingDirectory workingDirectory(directory_get());
+    WorkingDirectory workingDirectory(directory_get());
     for (const auto& spritesheet : model.content.spritesheets)
     {
       std::error_code ec{};
-      auto time = std::filesystem::last_write_time(path::case_insensitive_find(spritesheet.path), ec);
+      auto time = std::filesystem::last_write_time(path_case_insensitive_find(spritesheet.path), ec);
       if (ec) continue;
       auto [it, isNew] = textureWriteTimes.try_emplace(spritesheet.id, time);
       if (!isNew && it->second != time && !spritesheet_is_dirty(spritesheet.id)) ids.insert(spritesheet.id);
@@ -795,16 +787,16 @@ namespace anm2ed
   void Document::spritesheets_reload(const std::set<int>& ids)
   {
     edit_apply(EDIT_RELOAD_SPRITESHEETS,
-               [&](model::Model&)
+               [&](Model&)
                {
                  for (auto id : ids)
                    texture_reload(id);
                });
     for (auto id : ids)
-      if (auto spritesheet = model::item_get(model.content.spritesheets, id))
+      if (auto spritesheet = item_get(model.content.spritesheets, id))
       {
         spritesheet_hash_set_saved(id);
-        toast_log(Level::INFO, TOAST_RELOAD_SPRITESHEET, id, path::to_utf8(spritesheet->path));
+        toast_log(Level::INFO, TOAST_RELOAD_SPRITESHEET, id, path_to_utf8(spritesheet->path));
       }
   }
 
@@ -813,16 +805,16 @@ namespace anm2ed
   {
     std::set<int> converted{};
     edit_apply(EDIT_CONVERT_SVG_SPRITESHEETS,
-               [&](model::Model& model)
+               [&](Model& model)
                {
                  for (auto id : ids)
                  {
-                   auto spritesheet = model::item_get(model.content.spritesheets, id);
+                   auto spritesheet = item_get(model.content.spritesheets, id);
                    auto texture = texture_get(id);
                    if (!spritesheet || !texture || !texture->is_vector()) continue;
                    auto pngPath =
-                       std::filesystem::path(spritesheet->path).replace_extension(resource::image::PNG_EXTENSION);
-                   auto pathString = path::to_utf8(pngPath);
+                       std::filesystem::path(spritesheet->path).replace_extension(PNG_EXTENSION);
+                   auto pathString = path_to_utf8(pngPath);
                    if (!texture->write_png(std::filesystem::absolute(directory_get()) / pngPath))
                    {
                      toast_log(Level::ERROR, TOAST_SAVE_SPRITESHEET_FAILED, id, pathString);
@@ -840,7 +832,7 @@ namespace anm2ed
 
   bool Document::spritesheet_is_dirty(int id)
   {
-    if (!model::item_get(model.content.spritesheets, id)) return false;
+    if (!item_get(model.content.spritesheets, id)) return false;
     if (!spritesheetHashes.contains(id)) spritesheet_hash_update(id);
     auto saveIt = spritesheetSaveHashes.find(id);
     return saveIt != spritesheetSaveHashes.end() && spritesheetHashes.at(id) != saveIt->second;
@@ -848,7 +840,7 @@ namespace anm2ed
 
   bool Document::spritesheet_any_dirty()
   {
-    return std::ranges::any_of(model.content.spritesheets, [&](const model::Spritesheet& spritesheet)
+    return std::ranges::any_of(model.content.spritesheets, [&](const Spritesheet& spritesheet)
                                { return spritesheet_is_dirty(spritesheet.id); });
   }
 
@@ -917,7 +909,7 @@ namespace anm2ed
     {
       return [format](const auto& item)
       {
-        auto pathString = path::to_utf8(item.path);
+        auto pathString = path_to_utf8(item.path);
         return std::vformat(localize.get(format), std::make_format_args(item.id, pathString));
       };
     };
@@ -933,7 +925,7 @@ namespace anm2ed
   }
 
   // Selects the frames an edit returned and moves the playhead to the first.
-  void Document::frames_select(const edit::Uids& uids)
+  void Document::frames_select(const Uids& uids)
   {
     auto references = references_get(uids);
     if (references.empty()) return;
@@ -942,7 +934,7 @@ namespace anm2ed
     frame_references_set({references.begin(), references.end()});
     reference_set(focus);
     if (auto item = model.track_get(focus); item && focus.itemType != TRIGGER)
-      frameTime = model::frame_time_from_index_get(*item, focus.frameIndex);
+      frameTime = frame_time_from_index_get(*item, focus.frameIndex);
   }
 
   void Document::frame_select(Reference frameReference)
@@ -971,12 +963,12 @@ namespace anm2ed
   {
     selection.uids[SelectionKind::GROUPS].clear();
     editTarget = EditTarget::FRAME;
-    if (document::item_reference_get(firstReference) != document::item_reference_get(lastReference) ||
+    if (item_reference_get(firstReference) != item_reference_get(lastReference) ||
         firstReference.frameIndex < 0 || lastReference.frameIndex < 0)
       return false;
 
     auto item = model.track_get(lastReference);
-    if (!item || std::max(firstReference.frameIndex, lastReference.frameIndex) >= model::track_frames_count_get(*item))
+    if (!item || std::max(firstReference.frameIndex, lastReference.frameIndex) >= track_frames_count_get(*item))
       return false;
 
     auto [firstIndex, lastIndex] = std::minmax(firstReference.frameIndex, lastReference.frameIndex);
@@ -1013,7 +1005,7 @@ namespace anm2ed
   {
     itemReference.frameIndex = -1;
     if (itemReference.itemType == LAYER)
-      if (auto layer = model::item_get(model.content.layers, itemReference.itemID))
+      if (auto layer = item_get(model.content.layers, itemReference.itemID))
         focused_id_set(SelectionKind::SPRITESHEETS, layer->spritesheetId);
     reference_set(itemReference);
     frame_references_clear();
@@ -1053,7 +1045,7 @@ namespace anm2ed
   {
     auto selectedItems = selected_get(SelectionKind::TRACKS);
     if (auto reference = reference_get(); selectedItems.empty() && reference.itemType != NONE)
-      selectedItems.insert(document::item_reference_get(reference));
+      selectedItems.insert(item_reference_get(reference));
 
     std::set<Reference> result{};
     for (auto itemReference : selectedItems)
@@ -1076,7 +1068,7 @@ namespace anm2ed
     std::erase_if(frameReferences, [&](const Reference& frame) { return !model.frame_get(frame); });
     std::set<Reference> tracks{};
     for (auto frame : frameReferences)
-      tracks.insert(document::item_reference_get(frame));
+      tracks.insert(item_reference_get(frame));
     selected_set(SelectionKind::FRAMES, frameReferences);
     selected_set(SelectionKind::TRACKS, tracks);
     if (!frameReferences.empty() && !frameReferences.contains(reference_get())) reference_set(*frameReferences.begin());
@@ -1094,7 +1086,7 @@ namespace anm2ed
     auto reference = reference_get();
     std::set<Reference> selectedReferences = selected_get(SelectionKind::TRACKS);
     if (selectedReferences.empty() && reference.itemType != NONE)
-      selectedReferences.insert(document::item_reference_get(reference));
+      selectedReferences.insert(item_reference_get(reference));
 
     std::vector<Reference> result{};
     for (auto itemReference : selectedReferences)
@@ -1110,19 +1102,19 @@ namespace anm2ed
     auto& items = model.content.spritesheets;
     auto directory = directory_get();
 
-    std::vector<std::pair<std::filesystem::path, resource::Image>> loaded{};
+    std::vector<std::pair<std::filesystem::path, Image>> loaded{};
     for (auto& path : paths)
     {
-      auto storagePath = path::backslash_handle(path);
+      auto storagePath = path_backslash_handle(path);
       std::optional<WorkingDirectory> workingDirectory{};
       if (!storagePath.is_absolute()) workingDirectory.emplace(directory);
-      auto texture = resource::Image(path::case_insensitive_find(storagePath));
+      auto texture = Image(path_case_insensitive_find(storagePath));
       if (!texture.is_valid())
       {
-        toast_log(Level::ERROR, TOAST_SPRITESHEET_INIT_FAILED, path::to_utf8(path));
+        toast_log(Level::ERROR, TOAST_SPRITESHEET_INIT_FAILED, path_to_utf8(path));
         continue;
       }
-      loaded.emplace_back(path::backslash_replace(path::make_relative(storagePath, directory)), std::move(texture));
+      loaded.emplace_back(path_backslash_replace(path_make_relative(storagePath, directory)), std::move(texture));
     }
     if (loaded.empty()) return;
 
@@ -1132,12 +1124,12 @@ namespace anm2ed
     for (auto& [relativePath, texture] : loaded)
     {
       auto& element =
-          items.emplace_back(model::Spritesheet{.id = model::item_next_id_get(items), .path = relativePath});
+          items.emplace_back(Spritesheet{.id = item_next_id_get(items), .path = relativePath});
       texture_set(element.id, std::move(texture));
       texturePaths[element.id] = element.path;
       added.insert(element.id);
       spritesheet_hash_set_saved(element.id);
-      toast_log(Level::INFO, TOAST_SPRITESHEET_INITIALIZED, element.id, path::to_utf8(element.path));
+      toast_log(Level::INFO, TOAST_SPRITESHEET_INITIALIZED, element.id, path_to_utf8(element.path));
     }
     selected_ids_set(SelectionKind::SPRITESHEETS, added);
     focused_id_set(SelectionKind::SPRITESHEETS, *added.rbegin());
@@ -1155,14 +1147,14 @@ namespace anm2ed
     for (auto& path : paths)
     {
       if (path.empty()) continue;
-      auto& element = items.emplace_back(model::Sound{
-          .id = model::item_next_id_get(items),
-          .path = path::backslash_replace(path::make_relative(path::backslash_handle(path), directory_get()))});
+      auto& element = items.emplace_back(Sound{
+          .id = item_next_id_get(items),
+          .path = path_backslash_replace(path_make_relative(path_backslash_handle(path), directory_get()))});
       WorkingDirectory workingDirectory(directory_get());
-      sound_set(element.id, resource::AudioData(path::case_insensitive_find(element.path)));
+      sound_set(element.id, AudioData(path_case_insensitive_find(element.path)));
       soundPaths[element.id] = element.path;
       added.insert(element.id);
-      toast_log(Level::INFO, TOAST_SOUND_INITIALIZED, element.id, path::to_utf8(element.path));
+      toast_log(Level::INFO, TOAST_SOUND_INITIALIZED, element.id, path_to_utf8(element.path));
     }
     selected_ids_set(SelectionKind::SOUNDS, added);
     focused_id_set(SelectionKind::SOUNDS, *added.rbegin());
@@ -1174,22 +1166,22 @@ namespace anm2ed
     std::set<int> added{};
     edit_apply(
         EDIT_ADD_LIBRARY,
-        [&](model::Model& model)
+        [&](Model& model)
         {
           auto& libraries = model.content.libraries;
           for (auto& path : paths)
             if (!path.empty())
             {
-              auto& library = libraries.emplace_back(model::Library{
-                  .id = model::item_next_id_get(libraries),
-                  .path = path::backslash_replace(path::make_relative(path::backslash_handle(path), directory_get()))});
+              auto& library = libraries.emplace_back(Library{
+                  .id = item_next_id_get(libraries),
+                  .path = path_backslash_replace(path_make_relative(path_backslash_handle(path), directory_get()))});
               added.insert(library.id);
             }
         });
     if (added.empty()) return;
     for (auto id : added)
       toast_log(Level::INFO, TOAST_LIBRARY_INITIALIZED, id,
-                path::to_utf8(model::item_get(model.content.libraries, id)->path));
+                path_to_utf8(item_get(model.content.libraries, id)->path));
     selected_ids_set(SelectionKind::LIBRARIES, added);
     focused_id_set(SelectionKind::LIBRARIES, *added.rbegin());
   }
@@ -1197,7 +1189,7 @@ namespace anm2ed
   void Document::undo()
   {
     if (!snapshots.undo()) return;
-    document::frame_time_sync(*this);
+    frame_time_sync(*this);
     toast_log(Level::INFO, TOAST_UNDO, message);
     change();
   }
@@ -1205,11 +1197,10 @@ namespace anm2ed
   void Document::redo()
   {
     if (!snapshots.redo()) return;
-    document::frame_time_sync(*this);
+    frame_time_sync(*this);
     toast_log(Level::INFO, TOAST_REDO, message);
     change();
   }
 
   bool Document::is_able_to_undo() { return !snapshots.undoStack.is_empty(); }
   bool Document::is_able_to_redo() { return !snapshots.redoStack.is_empty(); }
-}

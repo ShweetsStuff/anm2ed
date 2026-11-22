@@ -6,25 +6,21 @@
 #include "ui/input.h"
 #include "ui/layout.h"
 
-using namespace anm2ed::types;
-
-namespace anm2ed::imgui
-{
   constexpr int NULL_PROPERTIES_ROWS = 2;
   constexpr int LAYER_PROPERTIES_ROWS = 6;
 
-  auto& layers_get(model::Model& model) { return model.content.layers; }
-  auto& nulls_get(model::Model& model) { return model.content.nulls; }
-  auto& events_get(model::Model& model) { return model.content.events; }
+  static auto& layers_get(Model& model) { return model.content.layers; }
+  static auto& nulls_get(Model& model) { return model.content.nulls; }
+  static auto& events_get(Model& model) { return model.content.events; }
 
-  void item_tooltip_draw(Resources& resources, const std::string& name, int id)
+  static void item_tooltip_draw(Resources& resources, const std::string& name, int id)
   {
     tooltip_name_draw(resources, name);
     ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_ID), std::make_format_args(id)).c_str());
   }
 
   // "#id name", then what the layer shows: its spritesheet or its animation.
-  std::string layer_label_get(const model::Layer& layer)
+  std::string layer_label_get(const Layer& layer)
   {
     if (layer.is_animation())
       return std::vformat(localize.get(FORMAT_LAYER_ANIMATION),
@@ -33,15 +29,15 @@ namespace anm2ed::imgui
   }
 
   // Tooltip lines for what a layer shows: its spritesheet, or its animation and the library it's from.
-  void layer_source_tooltip_draw(const Document& document, const model::Layer& layer)
+  void layer_source_tooltip_draw(const Document& document, const Layer& layer)
   {
     if (!layer.is_animation())
     {
       ImGui::TextUnformatted(localize_format(FORMAT_SPRITESHEET_ID, layer.spritesheetId).c_str());
       return;
     }
-    auto library = model::item_get(document.model.content.libraries, layer.libraryId);
-    auto libraryLabel = library ? std::format("#{} {}", library->id, util::path::to_utf8(library->path))
+    auto library = item_get(document.model.content.libraries, layer.libraryId);
+    auto libraryLabel = library ? std::format("#{} {}", library->id, path_to_utf8(library->path))
                                 : std::string(localize.get(TEXT_SELF));
     ImGui::TextUnformatted(localize_format(FORMAT_LAYER_ANIMATION_NAME, layer.animation).c_str());
     ImGui::TextUnformatted(localize_format(FORMAT_LAYER_LIBRARY, libraryLabel).c_str());
@@ -49,7 +45,7 @@ namespace anm2ed::imgui
       ImGui::TextUnformatted(localize.get(TOOLTIP_LAYER_ANIMATION_MISSING));
   }
 
-  model::Layer item_edit_layer_get(const Manager::ItemEdit& edit)
+  Layer item_edit_layer_get(const Manager::ItemEdit& edit)
   {
     return {.name = edit.name,
             .spritesheetId = edit.spritesheetId,
@@ -57,7 +53,7 @@ namespace anm2ed::imgui
             .animation = edit.isAnimation ? edit.animation : std::string{}};
   }
 
-  model::Null item_edit_null_get(const Manager::ItemEdit& edit)
+  Null item_edit_null_get(const Manager::ItemEdit& edit)
   {
     return {.name = edit.name, .isShowRect = edit.isShowRect};
   }
@@ -119,7 +115,7 @@ namespace anm2ed::imgui
       if (result == PopupButton::CONFIRM)
       {
         Item item{};
-        if constexpr (std::is_same_v<Item, model::Layer>)
+        if constexpr (std::is_same_v<Item, Layer>)
           item = item_edit_layer_get(edit);
         else
           item = item_edit_null_get(edit);
@@ -129,10 +125,10 @@ namespace anm2ed::imgui
                      {
                        auto changedId = id;
                        document.edit_apply(id == -1 ? addEdit : propertiesEdit,
-                                           [&](model::Model& model)
+                                           [&](Model& model)
                                            {
                                              auto& items = items_get(model);
-                                             if (auto target = model::item_get(items, id))
+                                             if (auto target = item_get(items, id))
                                              {
                                                auto uid = target->uid;
                                                *target = item;
@@ -141,7 +137,7 @@ namespace anm2ed::imgui
                                                return;
                                              }
                                              if (id != -1) return;
-                                             changedId = model::item_next_id_get(items);
+                                             changedId = item_next_id_get(items);
                                              items.push_back(item);
                                              items.back().id = changedId;
                                              state.newId = changedId;
@@ -179,16 +175,16 @@ namespace anm2ed::imgui
     if (ImGui::Begin(localize.get(LABEL_LAYERS_WINDOW), &settings.windowIsLayers))
     {
       Actions actions{};
-      track_items_actions_add<model::Layer>(actions, panel, SelectionKind::LAYERS, ElementType::LAYER_ELEMENT,
+      track_items_actions_add<Layer>(actions, panel, SelectionKind::LAYERS, ElementType::LAYER_ELEMENT,
                                             TOOLTIP_ADD_LAYER, EDIT_PASTE_LAYERS, TOAST_DESERIALIZE_LAYERS_FAILED,
                                             layers_get);
-      ListRows rows{.label_get = [&](int id) { return layer_label_get(*model::item_get(layers, id)); },
+      ListRows rows{.label_get = [&](int id) { return layer_label_get(*item_get(layers, id)); },
                     .is_invalid = [&](int id)
-                    { return document.is_layer_animation_missing(*model::item_get(layers, id)); },
+                    { return document.is_layer_animation_missing(*item_get(layers, id)); },
                     .tooltip_draw =
                         [&](int id)
                     {
-                      auto layer = model::item_get(layers, id);
+                      auto layer = item_get(layers, id);
                       item_tooltip_draw(resources, layer->name, id);
                       layer_source_tooltip_draw(document, *layer);
                     },
@@ -198,7 +194,7 @@ namespace anm2ed::imgui
     }
     ImGui::End();
 
-    item_properties_update<model::Layer>(panel, 0, LAYER_PROPERTIES_ROWS, SelectionKind::LAYERS, TOOLTIP_ITEM_NAME,
+    item_properties_update<Layer>(panel, 0, LAYER_PROPERTIES_ROWS, SelectionKind::LAYERS, TOOLTIP_ITEM_NAME,
                                          EDIT_ADD_LAYER, EDIT_SET_LAYER_PROPERTIES, layers_get,
                                          [&](Manager::ItemEdit& layer)
                                          {
@@ -214,16 +210,16 @@ namespace anm2ed::imgui
     if (ImGui::Begin(localize.get(LABEL_NULLS_WINDOW), &settings.windowIsNulls))
     {
       Actions actions{};
-      track_items_actions_add<model::Null>(actions, panel, SelectionKind::NULLS, ElementType::NULL_ELEMENT,
+      track_items_actions_add<Null>(actions, panel, SelectionKind::NULLS, ElementType::NULL_ELEMENT,
                                            TOOLTIP_ADD_NULL, EDIT_PASTE_NULLS, TOAST_DESERIALIZE_NULLS_FAILED,
                                            nulls_get);
       ListRows rows{.label_get =
                         [&](int id)
                     {
-                      auto name = model::item_get(nulls, id)->name;
+                      auto name = item_get(nulls, id)->name;
                       return std::vformat(localize.get(FORMAT_NULL), std::make_format_args(id, name));
                     },
-                    .tooltip_draw = [&](int id) { item_tooltip_draw(resources, model::item_get(nulls, id)->name, id); },
+                    .tooltip_draw = [&](int id) { item_tooltip_draw(resources, item_get(nulls, id)->name, id); },
                     .activate = [&](int id) { manager.item_properties_open(ElementType::NULL_ELEMENT, id); },
                     .isFocusItalic = true};
       list_panel_draw(panel, actions, {{ACTION_ADD, ACTION_REMOVE}},
@@ -231,7 +227,7 @@ namespace anm2ed::imgui
     }
     ImGui::End();
 
-    item_properties_update<model::Null>(panel, 1, NULL_PROPERTIES_ROWS, SelectionKind::NULLS, TOOLTIP_NULL_NAME,
+    item_properties_update<Null>(panel, 1, NULL_PROPERTIES_ROWS, SelectionKind::NULLS, TOOLTIP_NULL_NAME,
                                         EDIT_ADD_NULL, EDIT_SET_NULL_PROPERTIES, nulls_get,
                                         [](Manager::ItemEdit& null)
                                         {
@@ -261,10 +257,10 @@ namespace anm2ed::imgui
                          {
                            int id{};
                            document.edit_apply(EDIT_ADD_EVENT,
-                                               [&](model::Model& model)
+                                               [&](Model& model)
                                                {
                                                  auto& events = model.content.events;
-                                                 id = model::item_next_id_get(events);
+                                                 id = item_next_id_get(events);
                                                  events.push_back({.id = id, .name = localize.get(TEXT_NEW_EVENT)});
                                                });
                            document.selected_ids_set(SelectionKind::EVENTS, {id});
@@ -274,10 +270,10 @@ namespace anm2ed::imgui
           },
           TOOLTIP_ADD_EVENT);
       content_remove_action_add(actions, panel, ElementType::EVENT_ELEMENT, SelectionKind::EVENTS);
-      items_clipboard_actions_add<model::Event>(actions, panel, SelectionKind::EVENTS, EDIT_PASTE_EVENTS,
+      items_clipboard_actions_add<Event>(actions, panel, SelectionKind::EVENTS, EDIT_PASTE_EVENTS,
                                                 TOAST_DESERIALIZE_EVENTS_FAILED, events_get);
-      ListRows rows{.label_get = [&](int id) { return model::item_get(events, id)->name; },
-                    .name_get = [&](int id) { return model::item_get(events, id)->name; },
+      ListRows rows{.label_get = [&](int id) { return item_get(events, id)->name; },
+                    .name_get = [&](int id) { return item_get(events, id)->name; },
                     .rename =
                         [&](int id, const std::string& name)
                     {
@@ -285,18 +281,17 @@ namespace anm2ed::imgui
                                    [id, name](Document& document)
                                    {
                                      document.edit_apply(EDIT_RENAME_EVENT,
-                                                         [&](model::Model& model)
+                                                         [&](Model& model)
                                                          {
-                                                           if (auto event = model::item_get(model.content.events, id))
+                                                           if (auto event = item_get(model.content.events, id))
                                                              event->name = name;
                                                          });
                                    });
                     },
                     .tooltip_draw = [&](int id)
-                    { item_tooltip_draw(resources, model::item_get(events, id)->name, id); }};
+                    { item_tooltip_draw(resources, item_get(events, id)->name, id); }};
       list_panel_draw(panel, actions, {{ACTION_ADD, ACTION_REMOVE}},
                       [&]() { content_list_draw(panel, SelectionKind::EVENTS, item_ids_get(events), rows); });
     }
     ImGui::End();
   }
-}

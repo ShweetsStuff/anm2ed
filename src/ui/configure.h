@@ -2,8 +2,6 @@
 
 #include "manager.h"
 
-namespace anm2ed::imgui::wizard
-{
   class Configure
   {
     Settings temporary{};
@@ -15,4 +13,3 @@ namespace anm2ed::imgui::wizard
     void reset(Settings&);
     void update(Manager&, Settings&);
   };
-}

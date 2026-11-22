@@ -5,8 +5,6 @@
 
 #include <SDL3/SDL.h>
 
-namespace anm2ed
-{
   class Dialog
   {
   public:
@@ -96,4 +94,3 @@ namespace anm2ed
     void reset();
     void file_explorer_open(const std::filesystem::path&);
   };
-}

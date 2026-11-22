@@ -8,9 +8,6 @@
 #include "image.h"
 #include "model/xml.h"
 
-using namespace anm2ed;
-using namespace anm2ed::resource;
-
 TEST_CASE("Image png round trip and uid tracking")
 {
   const std::vector<uint8_t> pixels{255, 0, 0, 255, 0, 255, 0, 128, 0, 0, 255, 0, 10, 20, 30, 40};
@@ -66,7 +63,7 @@ TEST_CASE("AssetStore keys assets by content")
 
 TEST_CASE("an SVG spritesheet loads in SVG units and draws again at any scale")
 {
-  Image image(test::TEST_DIR / "render" / "vector.svg");
+  Image image(TEST_DIR / "render" / "vector.svg");
   REQUIRE(image.is_valid());
   CHECK(image.is_vector());
   CHECK(image.size == glm::ivec2(32, 16));
@@ -82,7 +79,7 @@ TEST_CASE("an SVG spritesheet loads in SVG units and draws again at any scale")
 
 TEST_CASE("SVG spritesheets compose into SVGs that draw the same")
 {
-  Image vector(test::TEST_DIR / "render" / "vector.svg");
+  Image vector(TEST_DIR / "render" / "vector.svg");
   REQUIRE(vector.is_vector());
 
   // The circle (left half) and the square (right half) swapped: each part is a clipped view of the drawing.
@@ -111,7 +108,7 @@ TEST_CASE("an SVG's shapes meet without a seam")
     <rect x="0" y="0" width="10.5" height="4" fill="#804020"/>
     <rect x="10.5" y="0" width="10" height="4" fill="#804020"/></svg>)");
   auto path = std::filesystem::temp_directory_path() / "anm2ed_seam.svg";
-  test::file_save(path, *text);
+  file_save(path, *text);
   Image image(path);
   std::filesystem::remove(path);
   REQUIRE(image.is_vector());
@@ -123,17 +120,17 @@ TEST_CASE("an SVG's shapes meet without a seam")
 
 TEST_CASE("Embedded resources load")
 {
-  for (auto& info : friends::FRIENDS)
+  for (auto& info : FRIENDS)
   {
     INFO("friend: ", info.name);
-    model::Model model{};
+    Model model{};
     std::string errorString{};
-    CHECK(model::model_load_string(model, std::string_view((const char*)info.anm2->data, info.anm2->size), &errorString));
+    CHECK(model_load_string(model, std::string_view((const char*)info.anm2->data, info.anm2->size), &errorString));
     CHECK(model.animations_count_get() > 0);
     CHECK(Image(info.png->data, info.png->size).is_valid());
   }
-  for (auto& icon : icon::ICONS)
+  for (auto& icon : ICONS)
     CHECK(std::string_view((const char*)icon.svg->data, icon.svg->size).starts_with("<svg"));
-  for (auto& font : font::FONTS)
+  for (auto& font : FONTS)
     CHECK(font->size > 0);
 }

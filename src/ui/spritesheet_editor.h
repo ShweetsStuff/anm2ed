@@ -5,8 +5,6 @@
 #include "resources.h"
 #include "settings.h"
 
-namespace anm2ed::imgui
-{
   class SpritesheetEditor : public CanvasView
   {
     glm::vec2 previousMousePos{};
@@ -16,4 +14,3 @@ namespace anm2ed::imgui
   public:
     void update(Manager&, Settings&, Resources&);
   };
-}

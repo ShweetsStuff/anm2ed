@@ -15,12 +15,6 @@
 #include "ui/layout.h"
 #include "ui/shortcut.h"
 
-using namespace anm2ed::resource;
-using namespace anm2ed::types;
-using namespace anm2ed::util;
-
-namespace anm2ed::imgui
-{
   struct DocumentTab
   {
     ImGuiID imguiId{};
@@ -46,16 +40,16 @@ namespace anm2ed::imgui
 
 #undef ANM2_DRAG_DROP_MERGE_PRESETS
 
-  void anm2_drag_drop_merge_queue(Manager& manager, const std::vector<std::filesystem::path>& paths,
+  static void anm2_drag_drop_merge_queue(Manager& manager, const std::vector<std::filesystem::path>& paths,
                                   FileMergePreset preset)
   {
     manager.command_push({manager.selected, [paths, preset](Manager&, Document& document)
                           {
                             document.edit_apply(EDIT_MERGE_ANM2,
-                                                [&](model::Model& model)
+                                                [&](Model& model)
                                                 {
                                                   for (auto& path : paths)
-                                                    edit::file_merge(model, path, document.directory_get(), preset);
+                                                    file_merge(model, path, document.directory_get(), preset);
                                                 });
                           }});
   }
@@ -132,7 +126,7 @@ namespace anm2ed::imgui
 
     auto viewport = ImGui::GetMainViewport();
     auto windowHeight = ImGui::GetFrameHeightWithSpacing();
-    bool isLightTheme = settings.theme == theme::LIGHT;
+    bool isLightTheme = settings.theme == THEME_LIGHT;
     bool pushedStyle = false;
 
     ImGui::SetNextWindowViewport(viewport->ID);
@@ -152,7 +146,7 @@ namespace anm2ed::imgui
       if (isDirty)
       {
         document.lastAutosaveTime += ImGui::GetIO().DeltaTime;
-        if (document.lastAutosaveTime > time::SECOND_M)
+        if (document.lastAutosaveTime > SECOND_MINUTES)
         {
           manager.command_push({i, [](Manager& manager, Document& document) { manager.autosave(document); }});
         }
@@ -170,7 +164,7 @@ namespace anm2ed::imgui
       if (ImGui::BeginTabBar("##Documents Bar", ImGuiTabBarFlags_Reorderable))
       {
         auto documentsCount = (int)manager.documents.size();
-        bool isCloseShortcut = shortcut(manager.chords[SHORTCUT_CLOSE], shortcut::GLOBAL) && !closePopup.is_open();
+        bool isCloseShortcut = shortcut(manager.chords[SHORTCUT_CLOSE], SCOPE_GLOBAL) && !closePopup.is_open();
         int closeShortcutIndex =
             isCloseShortcut && manager.selected >= 0 && manager.selected < documentsCount ? manager.selected : -1;
 
@@ -210,8 +204,8 @@ namespace anm2ed::imgui
           }
 
           auto isRequested = i == manager.pendingSelected;
-          auto font = isDocumentDirty ? font::ITALICS : font::REGULAR;
-          auto filename = path::to_utf8(document.filename_get());
+          auto font = isDocumentDirty ? FONT_ITALICS : FONT_REGULAR;
+          auto filename = path_to_utf8(document.filename_get());
           auto string = isDocumentDirty ? std::vformat(localize.get(FORMAT_NOT_SAVED), std::make_format_args(filename))
                                         : filename;
           auto label = std::format("{}###Document{}", string, document.tabId);
@@ -221,7 +215,7 @@ namespace anm2ed::imgui
           auto flags = isDocumentDirty ? ImGuiTabItemFlags_UnsavedDocument : 0;
           if (isRequested) flags |= ImGuiTabItemFlags_SetSelected;
 
-          ImGui::PushFont(resources.fonts[font].get(), font::SIZE);
+          ImGui::PushFont(resources.fonts[font].get(), FONT_SIZE);
           if (ImGui::BeginTabItem(label.c_str(), &document.isOpen, flags))
           {
             if (manager.selected != i) manager.set(i);
@@ -230,7 +224,7 @@ namespace anm2ed::imgui
 
             ImGui::EndTabItem();
           }
-          auto pathUtf8 = path::to_utf8(document.path);
+          auto pathUtf8 = path_to_utf8(document.path);
           ImGui::SetItemTooltip("%s", pathUtf8.c_str());
 
           ImGui::PopFont();
@@ -278,7 +272,7 @@ namespace anm2ed::imgui
         {
           auto& closeDocument = manager.documents[closeDocumentIndex];
 
-          auto filename = path::to_utf8(closeDocument.filename_get());
+          auto filename = path_to_utf8(closeDocument.filename_get());
           auto isDocumentDirty = closeDocument.is_dirty() || closeDocument.isForceDirty;
           auto isSpritesheetDirty = closeDocument.spritesheet_any_dirty();
           auto promptLabel =
@@ -288,7 +282,7 @@ namespace anm2ed::imgui
           auto prompt = std::vformat(localize.get(promptLabel), std::make_format_args(filename));
           ImGui::TextUnformatted(prompt.c_str());
 
-          auto widgetSize = imgui::widget_size_with_row_get(3);
+          auto widgetSize = widget_size_with_row_get(3);
 
           auto close = [&]()
           {
@@ -310,9 +304,9 @@ namespace anm2ed::imgui
                   auto texture = closeDocument.texture_get(id);
                   if (texture && closeDocument.spritesheet_is_dirty(id))
                   {
-                    auto pathString = path::to_utf8(spritesheet.path);
+                    auto pathString = path_to_utf8(spritesheet.path);
                     auto savePath = closeDocument.directory_get() / spritesheet.path;
-                    path::ensure_directory(savePath.parent_path());
+                    path_ensure_directory(savePath.parent_path());
                     if (texture->write(savePath))
                     {
                       closeDocument.spritesheet_hash_set_saved(id);
@@ -475,4 +469,3 @@ namespace anm2ed::imgui
     }
   }
 
-}

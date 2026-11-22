@@ -6,10 +6,6 @@
 #include "model/draw.h"
 #include "math_util.h"
 
-using namespace anm2ed::util;
-
-namespace anm2ed::model
-{
   void frame_mix(Frame& frame, const Frame& next, float amount)
   {
     frame.rotation = glm::mix(frame.rotation, next.rotation, amount);
@@ -42,14 +38,14 @@ namespace anm2ed::model
 
   glm::mat4 frame_parent_model_get(const Frame& frame)
   {
-    return math::quad_model_parent_get(frame.position, {}, math::percent_to_unit(frame.scale), frame.rotation,
-                                       math::percent_to_unit(frame.skew));
+    return quad_model_parent_get(frame.position, {}, percent_to_unit(frame.scale), frame.rotation,
+                                       percent_to_unit(frame.skew));
   }
 
   void frame_root_transform_apply(Frame& frame, const Frame& rootFrame, bool isRoundScale, bool isRoundRotation,
                                   bool isUseRootPivot)
   {
-    auto rootScale = math::percent_to_unit(rootFrame.scale);
+    auto rootScale = percent_to_unit(rootFrame.scale);
     auto pivot = isUseRootPivot ? rootFrame.position : glm::vec2();
     auto offset = (frame.position - pivot) * rootScale;
     auto radians = glm::radians(rootFrame.rotation);
@@ -261,4 +257,3 @@ namespace anm2ed::model
     if (!isAny) return glm::vec4(-1.0f);
     return {min.x, min.y, max.x - min.x, max.y - min.y};
   }
-}

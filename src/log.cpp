@@ -21,12 +21,6 @@
   #include <unistd.h>
 #endif
 
-using namespace anm2ed::util;
-
-namespace anm2ed
-{
-  namespace log
-  {
     constexpr auto SESSION_LIMIT = 10;
     constexpr std::uintmax_t DIRECTORY_SIZE_LIMIT = 100ull * 1024ull * 1024ull;
     constexpr std::uintmax_t SESSION_SIZE_LIMIT = 25ull * 1024ull * 1024ull;
@@ -38,7 +32,7 @@ namespace anm2ed
       std::uintmax_t size{};
     };
 
-    std::uint32_t process_id_get()
+    static std::uint32_t process_id_get()
     {
 #if _WIN32
       return (std::uint32_t)_getpid();
@@ -47,13 +41,13 @@ namespace anm2ed
 #endif
     }
 
-    std::filesystem::path session_path_get(const std::filesystem::path& directory)
+    static std::filesystem::path session_path_get(const std::filesystem::path& directory)
     {
-      auto name = std::format("anm2ed_{}_{}.log", time::get("%Y-%m-%d_%H-%M-%S"), process_id_get());
-      return directory / "logs" / path::from_utf8(name);
+      auto name = std::format("anm2ed_{}_{}.log", timestamp_get("%Y-%m-%d_%H-%M-%S"), process_id_get());
+      return directory / "logs" / path_from_utf8(name);
     }
 
-    std::vector<SessionFile> session_files_get(const std::filesystem::path& directory,
+    static std::vector<SessionFile> session_files_get(const std::filesystem::path& directory,
                                                const std::filesystem::path& currentPath)
     {
       std::vector<SessionFile> files{};
@@ -82,14 +76,14 @@ namespace anm2ed
       return files;
     }
 
-    void session_file_remove(const SessionFile& file, std::uintmax_t& totalSize)
+    static void session_file_remove(const SessionFile& file, std::uintmax_t& totalSize)
     {
       std::error_code ec{};
       std::filesystem::remove(file.path, ec);
       if (!ec && totalSize >= file.size) totalSize -= file.size;
     }
 
-    void sessions_prune(const std::filesystem::path& directory, const std::filesystem::path& currentPath)
+    static void sessions_prune(const std::filesystem::path& directory, const std::filesystem::path& currentPath)
     {
       auto files = session_files_get(directory, currentPath);
       std::sort(files.begin(), files.end(),
@@ -112,7 +106,7 @@ namespace anm2ed
       }
     }
 
-    void legacy_log_remove(const std::filesystem::path& currentPath)
+    static void legacy_log_remove(const std::filesystem::path& currentPath)
     {
       auto directory = currentPath.parent_path().parent_path();
       if (directory.empty()) return;
@@ -123,7 +117,6 @@ namespace anm2ed
       std::error_code ec{};
       std::filesystem::remove(legacyPath, ec);
     }
-  }
 
   void Logger::write_raw(const std::string& message)
   {
@@ -140,18 +133,18 @@ namespace anm2ed
       try
       {
         auto lineSize = (std::uintmax_t)message.size() + 1;
-        auto isLineWithinLimit = logSize <= log::SESSION_SIZE_LIMIT && lineSize <= log::SESSION_SIZE_LIMIT - logSize;
+        auto isLineWithinLimit = logSize <= SESSION_SIZE_LIMIT && lineSize <= SESSION_SIZE_LIMIT - logSize;
         if (isLineWithinLimit)
         {
           auto line = message + '\n';
-          if (file::write_string(logPath, line, "ab")) logSize += line.size();
+          if (file_text_save(logPath, line, "ab")) logSize += line.size();
         }
         else if (!isLogLimitReached)
         {
           std::string line =
               "[WARNING] Session log size limit reached; suppressing further file logs for this session.\n";
-          if (logSize + line.size() <= log::SESSION_SIZE_LIMIT)
-            if (file::write_string(logPath, line, "ab")) logSize += line.size();
+          if (logSize + line.size() <= SESSION_SIZE_LIMIT)
+            if (file_text_save(logPath, line, "ab")) logSize += line.size();
           isLogLimitReached = true;
         }
       }
@@ -163,7 +156,7 @@ namespace anm2ed
 
   void Logger::write(const Level level, const std::string& message)
   {
-    std::string formatted = std::format("{} {} {}", LEVEL_STRINGS[level], time::get("(%d-%B-%Y %I:%M:%S)"), message);
+    std::string formatted = std::format("{} {} {}", LEVEL_STRINGS[level], timestamp_get("(%d-%B-%Y %I:%M:%S)"), message);
     write_raw(formatted);
   }
 
@@ -276,11 +269,11 @@ namespace anm2ed
       std::error_code ec{};
       auto directory = logPath.parent_path();
       if (!directory.empty()) std::filesystem::create_directories(directory, ec);
-      log::legacy_log_remove(logPath);
-      log::sessions_prune(directory, logPath);
+      legacy_log_remove(logPath);
+      sessions_prune(directory, logPath);
       logSize = std::filesystem::file_size(logPath, ec);
       if (ec) logSize = 0;
-      isLogLimitReached = logSize >= log::SESSION_SIZE_LIMIT;
+      isLogLimitReached = logSize >= SESSION_SIZE_LIMIT;
     }
     stderr_redirect_start();
   }
@@ -289,7 +282,7 @@ namespace anm2ed
 
   void Logger::session_open(const std::filesystem::path& directory)
   {
-    open(log::session_path_get(directory));
+    open(session_path_get(directory));
     info(std::format("Initializing {}", localize.get(LABEL_APPLICATION_NAME, ENGLISH)));
   }
 
@@ -319,6 +312,5 @@ namespace anm2ed
 
     return EXIT_FAILURE;
   }
-}
 
-anm2ed::Logger logger;
+Logger logger;

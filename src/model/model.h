@@ -15,8 +15,6 @@
 #include "uid.h"
 
 // The typed document model. XML exists only in model/xml.cpp; everything else edits and reads these structs.
-namespace anm2ed::model
-{
   // An XML element the editor does not understand, kept verbatim so it survives a save.
   struct XmlNode
   {
@@ -41,7 +39,7 @@ namespace anm2ed::model
   // A keyframe; on a triggers track the same struct is a trigger (atFrame, eventIds, soundIds).
   struct Frame
   {
-    std::uint64_t uid{util::uid_next()};
+    std::uint64_t uid{uid_next()};
     glm::vec2 crop{};
     glm::vec2 size{};
     glm::vec2 pivot{};
@@ -49,7 +47,7 @@ namespace anm2ed::model
     glm::vec2 scale{100.0f, 100.0f};
     glm::vec2 skew{};
     float rotation{};
-    glm::vec4 tint{types::color::WHITE};
+    glm::vec4 tint{COLOR_WHITE};
     glm::vec4 colorOffset{};
     int duration{1};
     bool isVisible{true};
@@ -74,7 +72,7 @@ namespace anm2ed::model
 
   struct Track
   {
-    std::uint64_t uid{util::uid_next()};
+    std::uint64_t uid{uid_next()};
     ItemType type{ItemType::LAYER};
     int id{-1};
     bool isVisible{true};
@@ -86,7 +84,7 @@ namespace anm2ed::model
 
   struct TrackGroup
   {
-    std::uint64_t uid{util::uid_next()};
+    std::uint64_t uid{uid_next()};
     int id{-1};
     std::string name{};
     bool isExpanded{true};
@@ -102,7 +100,7 @@ namespace anm2ed::model
 
   struct Animation
   {
-    std::uint64_t uid{util::uid_next()};
+    std::uint64_t uid{uid_next()};
     std::string name{};
     int frameNum{1};
     bool isLoop{true};
@@ -124,7 +122,7 @@ namespace anm2ed::model
 
   struct AnimationGroup
   {
-    std::uint64_t uid{util::uid_next()};
+    std::uint64_t uid{uid_next()};
     int id{-1};
     std::string name{};
     bool isExpanded{true};
@@ -139,7 +137,7 @@ namespace anm2ed::model
 
   struct Region
   {
-    std::uint64_t uid{util::uid_next()};
+    std::uint64_t uid{uid_next()};
     int id{-1};
     std::string name{};
     glm::vec2 crop{};
@@ -153,7 +151,7 @@ namespace anm2ed::model
 
   struct Spritesheet
   {
-    std::uint64_t uid{util::uid_next()};
+    std::uint64_t uid{uid_next()};
     int id{-1};
     std::filesystem::path path{};
     std::vector<Region> regions{};
@@ -185,7 +183,7 @@ namespace anm2ed::model
 
   struct Shader
   {
-    std::uint64_t uid{util::uid_next()};
+    std::uint64_t uid{uid_next()};
     int id{-1};
     std::string name{};
     std::filesystem::path vertex{};
@@ -198,7 +196,7 @@ namespace anm2ed::model
 
   struct Layer
   {
-    std::uint64_t uid{util::uid_next()};
+    std::uint64_t uid{uid_next()};
     int id{-1};
     std::string name{};
     int spritesheetId{};
@@ -215,7 +213,7 @@ namespace anm2ed::model
   // Another .anm2 whose animations this one's layers can play.
   struct Library
   {
-    std::uint64_t uid{util::uid_next()};
+    std::uint64_t uid{uid_next()};
     int id{-1};
     std::filesystem::path path{};
     Extras extras{};
@@ -225,7 +223,7 @@ namespace anm2ed::model
 
   struct Null
   {
-    std::uint64_t uid{util::uid_next()};
+    std::uint64_t uid{uid_next()};
     int id{-1};
     std::string name{};
     bool isShowRect{};
@@ -236,7 +234,7 @@ namespace anm2ed::model
 
   struct Event
   {
-    std::uint64_t uid{util::uid_next()};
+    std::uint64_t uid{uid_next()};
     int id{-1};
     std::string name{};
     Extras extras{};
@@ -246,7 +244,7 @@ namespace anm2ed::model
 
   struct Sound
   {
-    std::uint64_t uid{util::uid_next()};
+    std::uint64_t uid{uid_next()};
     int id{-1};
     std::filesystem::path path{};
     Extras extras{};
@@ -420,4 +418,3 @@ namespace anm2ed::model
   Animation animation_clone(Animation);
   Frame frame_clone(Frame);
   Track track_clone(Track);
-}

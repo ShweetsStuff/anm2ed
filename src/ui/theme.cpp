@@ -2,8 +2,6 @@
 
 #include <imgui/imgui.h>
 
-namespace anm2ed::imgui
-{
   constexpr ImVec4 COLOR_LIGHT_BUTTON{0.98f, 0.98f, 0.98f, 1.0f};
   constexpr ImVec4 COLOR_LIGHT_TITLE_BG{0.78f, 0.78f, 0.78f, 1.0f};
   constexpr ImVec4 COLOR_LIGHT_TITLE_BG_ACTIVE{0.64f, 0.64f, 0.64f, 1.0f};
@@ -19,18 +17,18 @@ namespace anm2ed::imgui
   constexpr ImVec4 COLOR_LIGHT_CHECK_MARK{0.0f, 0.0f, 0.0f, 1.0f};
   constexpr auto FRAME_BORDER_SIZE = 1.0f;
 
-  void theme_set(theme::Type theme)
+  void theme_set(Theme theme)
   {
     switch (theme)
     {
-      case theme::LIGHT:
+      case THEME_LIGHT:
         ImGui::StyleColorsLight();
         break;
-      case theme::DARK:
+      case THEME_DARK:
       default:
         ImGui::StyleColorsDark();
         break;
-      case theme::CLASSIC:
+      case THEME_CLASSIC:
         ImGui::StyleColorsClassic();
         break;
     }
@@ -38,7 +36,7 @@ namespace anm2ed::imgui
     style.FrameBorderSize = FRAME_BORDER_SIZE;
     style.Colors[ImGuiCol_WindowBg].w = 1.0f; // windows detached into their own OS windows can't be see-through
 
-    if (theme == theme::LIGHT)
+    if (theme == THEME_LIGHT)
     {
       auto& colors = style.Colors;
       colors[ImGuiCol_Button] = COLOR_LIGHT_BUTTON;
@@ -56,4 +54,3 @@ namespace anm2ed::imgui
       colors[ImGuiCol_CheckMark] = COLOR_LIGHT_CHECK_MARK;
     }
   }
-}

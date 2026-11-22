@@ -3,8 +3,6 @@
 #include <SDL3_mixer/SDL_mixer.h>
 #include <vector>
 
-namespace anm2ed
-{
   class AudioStream
   {
     static void callback(void*, MIX_Mixer*, const SDL_AudioSpec*, float*, int);
@@ -19,4 +17,3 @@ namespace anm2ed
 
     AudioStream(MIX_Mixer*);
   };
-}

@@ -5,8 +5,6 @@
 #include <glm/glm.hpp>
 #include <imgui/imgui.h>
 
-namespace anm2ed::imgui
-{
   constexpr ImVec2 to_imvec2(const glm::vec2& v) noexcept { return {v.x, v.y}; }
   constexpr glm::vec2 to_vec2(const ImVec2& v) noexcept { return {v.x, v.y}; }
   constexpr glm::ivec2 to_ivec2(const ImVec2& v) noexcept { return {v.x, v.y}; }
@@ -33,4 +31,3 @@ namespace anm2ed::imgui
   ImVec2 child_size_get(int = 1);
   ImVec2 icon_size_get();
   void set_item_tooltip_shortcut(const char*, const std::string& = {});
-}

@@ -1,8 +1,5 @@
 #include "common.h"
 
-using namespace anm2ed;
-using namespace anm2ed::test;
-
 TEST_CASE("fixtures match goldens")
 {
   auto fixtures = fixtures_get();

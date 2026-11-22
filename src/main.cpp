@@ -15,8 +15,6 @@
 #endif
 
 #ifdef _WIN32
-namespace anm2ed::main
-{
   struct CommandLineArguments
   {
     std::vector<std::string> strings{};
@@ -57,14 +55,11 @@ namespace anm2ed::main
 
     return arguments;
   }
-}
 #endif
 
-namespace anm2ed
-{
-  int application_run(int argc, const char** argv)
+  static int application_run(int argc, const char** argv)
   {
-    if (cli::is_cli(argc, argv))
+    if (is_cli(argc, argv))
     {
 #ifdef _WIN32
       // A GUI-subsystem build has no console of its own; print to the one it was started from.
@@ -74,10 +69,10 @@ namespace anm2ed
         freopen("CONOUT$", "w", stderr);
       }
 #endif
-      return cli::run(argc, argv);
+      return cli_run(argc, argv);
     }
 
-    logger.session_open(util::sdl::preferences_directory_get());
+    logger.session_open(preferences_directory_get());
     return log_exceptions(
         [&]()
         {
@@ -93,22 +88,21 @@ namespace anm2ed
           return EXIT_SUCCESS;
         });
   }
-}
 
 int main(int argc, const char** argv)
 {
 #ifdef _WIN32
-  auto arguments = anm2ed::main::command_line_arguments_get();
+  auto arguments = command_line_arguments_get();
   if (!arguments.pointers.empty())
-    return anm2ed::application_run((int)arguments.pointers.size(), arguments.pointers.data());
+    return application_run((int)arguments.pointers.size(), arguments.pointers.data());
 #endif
-  return anm2ed::application_run(argc, argv);
+  return application_run(argc, argv);
 }
 
 #ifdef _WIN32
 int APIENTRY WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
-  auto arguments = anm2ed::main::command_line_arguments_get();
-  return anm2ed::application_run((int)arguments.pointers.size(), arguments.pointers.data());
+  auto arguments = command_line_arguments_get();
+  return application_run((int)arguments.pointers.size(), arguments.pointers.data());
 }
 #endif

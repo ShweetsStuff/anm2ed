@@ -2,25 +2,23 @@
 
 #include <span>
 
-namespace anm2ed::resource
-{
   constexpr std::uint64_t FNV_OFFSET = 14695981039346656037ull;
   constexpr std::uint64_t FNV_PRIME = 1099511628211ull;
 
-  std::uint64_t bytes_hash(std::span<const std::uint8_t> bytes, std::uint64_t hash = FNV_OFFSET)
+  static std::uint64_t bytes_hash(std::span<const std::uint8_t> bytes, std::uint64_t hash = FNV_OFFSET)
   {
     for (auto byte : bytes)
       hash = (hash ^ byte) * FNV_PRIME;
     return hash;
   }
 
-  template <class Value> std::span<const std::uint8_t> value_bytes_get(const Value& value)
+  template <class Value> static std::span<const std::uint8_t> value_bytes_get(const Value& value)
   {
     return {reinterpret_cast<const std::uint8_t*>(&value), sizeof(value)};
   }
 
   // Content hash; 0 stays free to mean "no asset".
-  std::uint64_t hash_finish(std::uint64_t hash) { return hash ? hash : 1; }
+  static std::uint64_t hash_finish(std::uint64_t hash) { return hash ? hash : 1; }
 
   std::uint64_t AssetStore::image_add(Image image)
   {
@@ -51,4 +49,3 @@ namespace anm2ed::resource
     auto it = audio.find(hash);
     return it == audio.end() ? nullptr : &it->second;
   }
-}

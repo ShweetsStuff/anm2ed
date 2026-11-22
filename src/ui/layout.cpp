@@ -2,8 +2,6 @@
 
 #include "localization.h"
 
-namespace anm2ed::imgui
-{
   float row_widget_width_get(int count, float width)
   {
     return (width - (ImGui::GetStyle().ItemSpacing.x * (float)(count - 1))) / (float)count;
@@ -42,4 +40,3 @@ namespace anm2ed::imgui
   {
     ImGui::SetItemTooltip("%s", localize_format(FORMAT_TOOLTIP_SHORTCUT, tooltip, shortcut).c_str());
   }
-}

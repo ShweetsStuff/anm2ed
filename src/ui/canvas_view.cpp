@@ -8,12 +8,8 @@
 #include "ui/layout.h"
 #include "ui/shortcut.h"
 
-using namespace anm2ed::types;
-using namespace anm2ed::util;
 using namespace glm;
 
-namespace anm2ed::imgui
-{
   CanvasInput canvas_input_get(Manager& manager, bool isFocused)
   {
     auto key_axis_get = [](ImGuiKey negative, ImGuiKey positive)
@@ -40,8 +36,8 @@ namespace anm2ed::imgui
             .isRightDown = ImGui::IsMouseDown(ImGuiMouseButton_Right),
             .isRightReleased = ImGui::IsMouseReleased(ImGuiMouseButton_Right),
             .isMiddleDown = ImGui::IsMouseDown(ImGuiMouseButton_Middle),
-            .isZoomIn = isFocused && shortcut(manager.chords[SHORTCUT_ZOOM_IN], shortcut::GLOBAL),
-            .isZoomOut = isFocused && shortcut(manager.chords[SHORTCUT_ZOOM_OUT], shortcut::GLOBAL),
+            .isZoomIn = isFocused && shortcut(manager.chords[SHORTCUT_ZOOM_IN], SCOPE_GLOBAL),
+            .isZoomOut = isFocused && shortcut(manager.chords[SHORTCUT_ZOOM_OUT], SCOPE_GLOBAL),
             .isMod = isMod};
   }
 
@@ -64,7 +60,7 @@ namespace anm2ed::imgui
   void frames_change_push(Manager& manager, const std::set<Reference>& frames, FrameChange change, ChangeType type)
   {
     manager.command_push({manager.selected, [=](Manager&, Document& document)
-                          { edit::frames_change_apply(document.model, {.references = frames}, change, type); }});
+                          { frames_change_apply(document.model, {.references = frames}, change, type); }});
   }
 
   // The rectangle spanned by two corners, grown outward to the grid when snapping, in whole pixels.
@@ -93,19 +89,19 @@ namespace anm2ed::imgui
 
   // The tool's cursor, or a not-allowed cursor and (while in use) why: the tool belongs to the other canvas, or needs
   // a spritesheet or a frame first.
-  void tool_cursor_update(tool::Type type, tool::AreaType area, bool isFrameAvailable, bool isSpritesheetAvailable,
+  void tool_cursor_update(Tool type, ToolArea area, bool isFrameAvailable, bool isSpritesheetAvailable,
                           bool isUsing, StringType frameHint)
   {
-    auto& info = tool::INFO[type];
-    auto isAreaAllowed = info.areaType == tool::ALL || info.areaType == area;
+    auto& info = TOOLS[type];
+    auto isAreaAllowed = info.areaType == TOOL_AREA_ALL || info.areaType == area;
     auto isFrameMissing = info.isFrameRequired && !isFrameAvailable;
     auto isSpritesheetMissing = info.isSpritesheetRequired && !isSpritesheetAvailable;
     auto isAvailable = isAreaAllowed && !isFrameMissing && !isSpritesheetMissing;
     ImGui::SetMouseCursor(isAvailable ? info.cursor : ImGuiMouseCursor_NotAllowed);
     ImGui::SetKeyboardFocusHere();
-    if (!isUsing || type == tool::PAN || isAvailable) return;
+    if (!isUsing || type == TOOL_PAN || isAvailable) return;
     auto hint = !isAreaAllowed
-                    ? (area == tool::ANIMATION_PREVIEW ? TEXT_TOOL_SPRITESHEET_EDITOR : TEXT_TOOL_ANIMATION_PREVIEW)
+                    ? (area == TOOL_AREA_ANIMATION_PREVIEW ? TEXT_TOOL_SPRITESHEET_EDITOR : TEXT_TOOL_ANIMATION_PREVIEW)
                 : isSpritesheetMissing ? TEXT_SELECT_SPRITESHEET
                                        : frameHint;
     tooltip_lines_draw({localize.get(hint)});
@@ -198,4 +194,3 @@ namespace anm2ed::imgui
     actions.add(ACTION_ZOOM_OUT, []() { return true; }, [&]() { zoom_center_step(-ZOOM_LEVEL_STEP); });
     actions_context_window_draw(label, actions, settings);
   }
-}

@@ -7,15 +7,10 @@
 #include "math_util.h"
 #include "model/frames.h"
 
-using namespace anm2ed::model;
-using namespace anm2ed::util;
-
-namespace anm2ed::edit
-{
   // An alpha offset joins the alpha tint: exact on opaque pixels, which the offset can only fade.
-  void alpha_offsets_bridge(Model& model)
+  static void alpha_offsets_bridge(Model& model)
   {
-    auto is_offset = [](const Frame& frame) { return math::float_to_uint8(frame.colorOffset.a) != 0; };
+    auto is_offset = [](const Frame& frame) { return float_to_uint8(frame.colorOffset.a) != 0; };
     for (int i = 0; i < model.animations_count_get(); ++i)
     {
       auto isUsed = false;
@@ -38,7 +33,7 @@ namespace anm2ed::edit
   // A layer frame's depth becomes a copy of its layer, named for the depth, standing where the editor draws it (the
   // layer at the copy's place + depth, past the layer already there), and showing only the frames at that depth; the
   // layer itself shows the rest. Groups can't stand apart in the game, so their roots go into their tracks first.
-  void depths_bridge(Model& model)
+  static void depths_bridge(Model& model)
   {
     auto& content = model.content;
     std::map<std::pair<int, int>, int> copyIds{};
@@ -117,4 +112,3 @@ namespace anm2ed::edit
     depths_bridge(model);
     return model;
   }
-}

@@ -6,8 +6,6 @@
 
 #include "types.h"
 
-namespace anm2ed::imgui
-{
   int PopupHelper::nextId = 1;
 
 #define POPUP_LIST                                                                                                     \
@@ -83,4 +81,3 @@ namespace anm2ed::imgui
   void PopupHelper::end() { isJustOpened = false; }
 
   void PopupHelper::close() { isOpen = false; }
-}

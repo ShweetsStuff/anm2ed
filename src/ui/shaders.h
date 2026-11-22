@@ -2,8 +2,6 @@
 
 #include "ui/panel.h"
 
-namespace anm2ed::imgui
-{
   struct ShadersPanel
   {
     PanelState state{};
@@ -14,4 +12,3 @@ namespace anm2ed::imgui
   };
 
   void shaders_update(Panel&, ShadersPanel&);
-}

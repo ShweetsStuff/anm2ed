@@ -13,10 +13,6 @@
 #include "image.h"
 #include "render.h"
 
-using namespace anm2ed;
-
-namespace anm2ed::test
-{
   const std::filesystem::path RENDER_TEST_DIR = std::filesystem::path(ANM2ED_TEST_DIR) / "render";
   const std::filesystem::path GOLDEN_DIR = RENDER_TEST_DIR / "golden";
   const std::filesystem::path OUTPUT_DIR = ANM2ED_RENDER_DIR;
@@ -24,12 +20,9 @@ namespace anm2ed::test
   constexpr double MISMATCH_RATIO_MAX = 0.01;
   constexpr float SCALE = 3.0f;
   constexpr glm::vec4 BACKGROUND = {0.2f, 0.2f, 0.2f, 1.0f};
-}
-
-using namespace anm2ed::test;
 
 // Different OpenGL implementations round a little differently: a few pixels may differ, each only slightly.
-void golden_image_check(const std::string& name)
+static void golden_image_check(const std::string& name)
 {
   auto actualPath = OUTPUT_DIR / name;
   auto goldenPath = GOLDEN_DIR / name;
@@ -39,8 +32,8 @@ void golden_image_check(const std::string& name)
     std::filesystem::copy_file(actualPath, goldenPath, std::filesystem::copy_options::overwrite_existing);
     return;
   }
-  resource::Image actual(actualPath);
-  resource::Image golden(goldenPath);
+  Image actual(actualPath);
+  Image golden(goldenPath);
   REQUIRE(golden.is_valid());
   REQUIRE(actual.size == golden.size);
   int mismatches{};
@@ -51,11 +44,11 @@ void golden_image_check(const std::string& name)
 
 struct RenderFixture
 {
-  render::HeadlessGL gl{};
+  HeadlessGL gl{};
   std::optional<Document> document{};
-  std::optional<resource::Shader> shader{};
+  std::optional<ShaderProgram> shader{};
   std::optional<Canvas> canvas{};
-  const model::Animation* animation{};
+  const Animation* animation{};
   glm::vec4 bounds{};
 
   explicit RenderFixture(const char* file)
@@ -63,18 +56,18 @@ struct RenderFixture
     if (!gl.is_valid()) return;
     std::filesystem::create_directories(OUTPUT_DIR);
     document.emplace(RENDER_TEST_DIR / file, false);
-    auto& info = resource::shader::SHADERS[resource::shader::TEXTURE];
+    auto& info = SHADERS[SHADER_TEXTURE];
     shader.emplace(info.vertex, info.fragment);
     canvas.emplace(glm::vec2(1.0f));
     animation = document->model.animation_get(0);
-    bounds = render::animation_bounds_get(*document, *animation, true);
+    bounds = animation_bounds_get(*document, *animation, true);
   }
 
   std::vector<uint8_t> frame_get(float time)
   {
     auto pixels =
-        render::animation_frame_render(*canvas, *shader, *document, *animation, time, bounds, SCALE, BACKGROUND, true);
-    render::pixels_unpremultiply(pixels);
+        animation_frame_render(*canvas, *shader, *document, *animation, time, bounds, SCALE, BACKGROUND, true);
+    pixels_unpremultiply(pixels);
     return pixels;
   }
 
@@ -108,7 +101,7 @@ TEST_CASE("frames draw where the animation puts them")
   CHECK(blue.b > blue.r + 40);
 
   auto framePath = OUTPUT_DIR / "spin_frame_0.png";
-  REQUIRE(resource::Image::write_pixels_png(framePath, glm::ivec2(fixture.canvas->size), pixels.data()));
+  REQUIRE(Image::write_pixels_png(framePath, glm::ivec2(fixture.canvas->size), pixels.data()));
   golden_image_check("spin_frame_0.png");
 }
 
@@ -121,16 +114,16 @@ TEST_CASE("a recorded spritesheet holds every frame")
     return;
   }
 
-  render::RecorderOptions options{.type = render::SPRITESHEET,
+  RecorderOptions options{.type = RENDER_SPRITESHEET,
                                   .path = OUTPUT_DIR / "spin_sheet.png",
                                   .start = 0,
                                   .end = fixture.animation->frameNum - 1,
                                   .animationFps = fixture.document->model.info.fps,
                                   .fps = fixture.document->model.info.fps};
-  REQUIRE(render::animation_record(options, *fixture.canvas, *fixture.shader, *fixture.document, *fixture.animation,
+  REQUIRE(animation_record(options, *fixture.canvas, *fixture.shader, *fixture.document, *fixture.animation,
                                    fixture.bounds, SCALE, BACKGROUND, true));
-  resource::Image sheet(options.path);
-  auto layout = render::spritesheet_layout_get(0, 0, fixture.animation->frameNum);
+  Image sheet(options.path);
+  auto layout = spritesheet_layout_get(0, 0, fixture.animation->frameNum);
   CHECK(sheet.size == glm::ivec2(fixture.canvas->size) * glm::ivec2(layout.columns, layout.rows));
   golden_image_check("spin_sheet.png");
 }
@@ -155,7 +148,7 @@ TEST_CASE("animation layers draw their child animations")
     CHECK(red.g < 80);
   }
 
-  REQUIRE(resource::Image::write_pixels_png(OUTPUT_DIR / "nested_frame_0.png", glm::ivec2(fixture.canvas->size),
+  REQUIRE(Image::write_pixels_png(OUTPUT_DIR / "nested_frame_0.png", glm::ivec2(fixture.canvas->size),
                                             pixels.data()));
   golden_image_check("nested_frame_0.png");
 }
@@ -180,7 +173,7 @@ TEST_CASE("a blurred layer spreads past its crop like Flash's blur filter")
   CHECK(fixture.pixel_get(blurred, OUTSIDE).r > fixture.pixel_get(sharp, OUTSIDE).r + 40);
   CHECK(fixture.pixel_get(blurred, INSIDE).r + 40 < fixture.pixel_get(sharp, INSIDE).r);
 
-  REQUIRE(resource::Image::write_pixels_png(OUTPUT_DIR / "spin_blur_frame_0.png", glm::ivec2(fixture.canvas->size),
+  REQUIRE(Image::write_pixels_png(OUTPUT_DIR / "spin_blur_frame_0.png", glm::ivec2(fixture.canvas->size),
                                             blurred.data()));
 }
 
@@ -202,7 +195,7 @@ TEST_CASE("SVG spritesheets draw sharp at any scale")
   CHECK(inside.r > 200);
   CHECK(outside.r < 80);
 
-  REQUIRE(resource::Image::write_pixels_png(OUTPUT_DIR / "vector_frame_0.png", glm::ivec2(fixture.canvas->size),
+  REQUIRE(Image::write_pixels_png(OUTPUT_DIR / "vector_frame_0.png", glm::ivec2(fixture.canvas->size),
                                             pixels.data()));
   golden_image_check("vector_frame_0.png");
 }
@@ -222,7 +215,7 @@ TEST_CASE("converting SVG spritesheets writes PNGs beside them")
   CHECK(std::filesystem::exists(directory / "vector.png"));
   REQUIRE(document.texture_get(0));
   CHECK_FALSE(document.texture_get(0)->is_vector());
-  CHECK(model::spritesheets_vector_used_get(document.model).empty());
+  CHECK(spritesheets_vector_used_get(document.model).empty());
 
   document.undo();
   CHECK(document.model.content.spritesheets.front().path == "vector.svg");
@@ -262,7 +255,7 @@ TEST_CASE("a Rebirth save flattens animation layers for the game")
 // The game's copy draws what the editor does: skew, blur and a skewed root baked into a spritesheet beside the save.
 TEST_CASE("the game's copy bakes skew and blur into a spritesheet that draws the same")
 {
-  render::HeadlessGL gl{};
+  HeadlessGL gl{};
   if (!gl.is_valid()) return;
   auto directory = std::filesystem::temp_directory_path() / "anm2ed_bake";
   std::filesystem::remove_all(directory);
@@ -297,8 +290,8 @@ TEST_CASE("the game's copy bakes skew and blur into a spritesheet that draws the
   Document gameDocument(directory / "game.anm2", false);
   REQUIRE(gameDocument.is_valid());
 
-  auto& info = resource::shader::SHADERS[resource::shader::TEXTURE];
-  resource::Shader shader(info.vertex, info.fragment);
+  auto& info = SHADERS[SHADER_TEXTURE];
+  ShaderProgram shader(info.vertex, info.fragment);
   Canvas canvas(glm::vec2(1.0f));
   for (int index = 0; index < document.model.animations_count_get(); ++index)
   {
@@ -306,14 +299,14 @@ TEST_CASE("the game's copy bakes skew and blur into a spritesheet that draws the
     auto& gameAnimation = *gameDocument.model.animation_get(index);
     INFO("animation: ", animation.name);
     // On whole pixels, so the baked images land on the pixels they were drawn on.
-    auto bounds = render::animation_bounds_get(document, animation, true);
+    auto bounds = animation_bounds_get(document, animation, true);
     bounds = glm::vec4(glm::floor(glm::vec2(bounds)) - 8.0f, glm::ceil(glm::vec2(bounds.z, bounds.w)) + 16.0f);
     for (int time = 0; time < animation.frameNum; ++time)
     {
       INFO("time: ", time);
-      auto expected = render::animation_frame_render(canvas, shader, document, animation, (float)time, bounds, 1.0f,
+      auto expected = animation_frame_render(canvas, shader, document, animation, (float)time, bounds, 1.0f,
                                                      glm::vec4(0.0f), true);
-      auto actual = render::animation_frame_render(canvas, shader, gameDocument, gameAnimation, (float)time, bounds,
+      auto actual = animation_frame_render(canvas, shader, gameDocument, gameAnimation, (float)time, bounds,
                                                    1.0f, glm::vec4(0.0f), true);
       REQUIRE(actual.size() == expected.size());
       CHECK(std::ranges::any_of(expected, [](uint8_t channel) { return channel != 0; }));

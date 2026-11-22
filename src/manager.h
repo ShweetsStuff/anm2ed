@@ -13,8 +13,6 @@
 #include "localization.h"
 #include "ui/popup.h"
 
-namespace anm2ed
-{
   constexpr auto FILE_LABEL_FORMAT = "{} [{}]";
 
   class Manager;
@@ -57,10 +55,10 @@ namespace anm2ed
     std::vector<std::filesystem::path> anm2DragDropPaths{};
     bool isAnm2DragDrop{};
     int anm2DragDropMergePreset{FILE_MERGE_PRESET_MERGE_BY_NAME};
-    imgui::PopupHelper anm2DragDropPopup{
-        imgui::PopupHelper(LABEL_MANAGER_ANM2_DRAG_DROP, imgui::POPUP_NORMAL, imgui::POPUP_BY_CURSOR)};
-    imgui::PopupHelper anm2DragDropMergePopup{
-        imgui::PopupHelper(LABEL_DOCUMENTS_MERGE_INTO_CURRENT, imgui::POPUP_SMALL_NO_HEIGHT)};
+    PopupHelper anm2DragDropPopup{
+        PopupHelper(LABEL_MANAGER_ANM2_DRAG_DROP, POPUP_NORMAL, POPUP_BY_CURSOR)};
+    PopupHelper anm2DragDropMergePopup{
+        PopupHelper(LABEL_DOCUMENTS_MERGE_INTO_CURRENT, POPUP_SMALL_NO_HEIGHT)};
 
     std::filesystem::path spritesheetDragDropPath{};
     bool isSpritesheetDragDrop{};
@@ -75,16 +73,16 @@ namespace anm2ed
       int libraryId{-1};
       std::string animation{};
     } itemEdit{};
-    imgui::PopupHelper itemPropertiesPopups[2]{
-        imgui::PopupHelper(LABEL_MANAGER_LAYER_PROPERTIES, imgui::POPUP_SMALL_NO_HEIGHT),
-        imgui::PopupHelper(LABEL_MANAGER_NULL_PROPERTIES, imgui::POPUP_SMALL_NO_HEIGHT)};
+    PopupHelper itemPropertiesPopups[2]{
+        PopupHelper(LABEL_MANAGER_LAYER_PROPERTIES, POPUP_SMALL_NO_HEIGHT),
+        PopupHelper(LABEL_MANAGER_NULL_PROPERTIES, POPUP_SMALL_NO_HEIGHT)};
 
-    model::Region makeRegion{};
+    Region makeRegion{};
     int makeRegionSpritesheetId{-1};
     bool isMakeRegionRequested{};
 
-    imgui::PopupHelper progressPopup{
-        imgui::PopupHelper(LABEL_MANAGER_RENDERING_PROGRESS, imgui::POPUP_SMALL_NO_HEIGHT)};
+    PopupHelper progressPopup{
+        PopupHelper(LABEL_MANAGER_RENDERING_PROGRESS, POPUP_SMALL_NO_HEIGHT)};
 
     std::vector<int> selectionHistory{};
 
@@ -122,4 +120,3 @@ namespace anm2ed
 
     void settings_apply(Settings&);
   };
-}

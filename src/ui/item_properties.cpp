@@ -7,11 +7,6 @@
 #include "ui/layout.h"
 #include "ui/shortcut.h"
 
-using namespace anm2ed::resource;
-using namespace anm2ed::types;
-
-namespace anm2ed::imgui::popup
-{
   constexpr int EXISTING_ITEMS_ROWS = 6;
 
   void ItemProperties::reset() { edit = {}; }
@@ -80,13 +75,13 @@ namespace anm2ed::imgui::popup
         spaced_pair(
             [&]()
             {
-              ImGui::RadioButton(localize.get(LABEL_NEW), &source, source::NEW);
+              ImGui::RadioButton(localize.get(LABEL_NEW), &source, SOURCE_NEW);
               ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_NEW_ITEM));
             },
             [&]()
             {
               ImGui::BeginDisabled(!isUnusedItems);
-              ImGui::RadioButton(localize.get(LABEL_EXISTING), &source, source::EXISTING);
+              ImGui::RadioButton(localize.get(LABEL_EXISTING), &source, SOURCE_EXISTING);
               ImGui::EndDisabled();
               ImGui::SetItemTooltip("%s", isUnusedItems ? localize.get(TOOLTIP_USE_EXISTING_ITEM)
                                                         : localize.get(TOOLTIP_NO_UNUSED_ITEMS));
@@ -97,16 +92,16 @@ namespace anm2ed::imgui::popup
         spaced_pair(
             [&]()
             {
-              ImGui::RadioButton(localize.get(LABEL_ALL_ANIMATIONS), &destination, destination::ALL);
+              ImGui::RadioButton(localize.get(LABEL_ALL_ANIMATIONS), &destination, DESTINATION_ALL);
               ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ITEM_ALL_ANIMATIONS));
             },
             [&]()
             {
-              ImGui::RadioButton(localize.get(LABEL_THIS_ANIMATION), &destination, destination::THIS);
+              ImGui::RadioButton(localize.get(LABEL_THIS_ANIMATION), &destination, DESTINATION_THIS);
               ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ITEM_THIS_ANIMATION));
             });
 
-        if (source == source::NEW)
+        if (source == SOURCE_NEW)
         {
           ImGui::SeparatorText(localize.get(LABEL_OPTIONS));
 
@@ -138,7 +133,7 @@ namespace anm2ed::imgui::popup
 
               if (type == LAYER)
               {
-                if (auto layer = model::item_get(model.content.layers, id))
+                if (auto layer = item_get(model.content.layers, id))
                 {
                   if (ImGui::Selectable(layer_label_get(*layer).c_str(), isSelected))
                   {
@@ -148,7 +143,7 @@ namespace anm2ed::imgui::popup
               }
               else if (type == NULL_)
               {
-                if (auto null = model::item_get(model.content.nulls, id))
+                if (auto null = item_get(model.content.nulls, id))
                 {
                   auto label = std::vformat(localize.get(FORMAT_NULL), std::make_format_args(id, null->name));
                   if (ImGui::Selectable(label.c_str(), isSelected))
@@ -168,7 +163,7 @@ namespace anm2ed::imgui::popup
 
       auto widgetSize = widget_size_with_row_get(2);
 
-      ImGui::BeginDisabled(source == source::EXISTING && edit.id == -1);
+      ImGui::BeginDisabled(source == SOURCE_EXISTING && edit.id == -1);
       shortcut(manager.chords[SHORTCUT_CONFIRM]);
       if (ImGui::Button(localize.get(BASIC_ADD), widgetSize))
       {
@@ -176,7 +171,7 @@ namespace anm2ed::imgui::popup
         auto queuedDestination = destination;
         auto queuedAnimationIndex = reference.animationIndex;
         auto queuedInsertBeforeID = reference.itemType == LAYER && type == LAYER ? reference.itemID : -1;
-        auto queuedAddItemID = source == source::NEW ? -1 : edit.id;
+        auto queuedAddItemID = source == SOURCE_NEW ? -1 : edit.id;
         auto queuedLayer = item_edit_layer_get(edit);
         auto queuedNull = item_edit_null_get(edit);
 
@@ -184,12 +179,12 @@ namespace anm2ed::imgui::popup
                               {
                                 int addId{-1};
                                 document.edit_apply(EDIT_ADD_ITEM,
-                                                    [&](model::Model& model)
+                                                    [&](Model& model)
                                                     {
-                                                      addId = edit::item_add(
+                                                      addId = item_add(
                                                           model, (ItemType)queuedType, queuedAnimationIndex,
                                                           queuedAddItemID, queuedLayer, queuedNull,
-                                                          queuedInsertBeforeID, (destination::Type)queuedDestination);
+                                                          queuedInsertBeforeID, (Destination)queuedDestination);
                                                     });
 
                                 if (addId != -1)
@@ -198,7 +193,7 @@ namespace anm2ed::imgui::popup
                                   document.selected_set(SelectionKind::TRACKS, {document.reference_get()});
                                   document.frame_references_clear();
                                   if (queuedType == LAYER)
-                                    if (auto layer = model::item_get(document.model.content.layers, addId))
+                                    if (auto layer = item_get(document.model.content.layers, addId))
                                       document.focused_id_set(SelectionKind::SPRITESHEETS, layer->spritesheetId);
                                 }
                               }});
@@ -220,4 +215,3 @@ namespace anm2ed::imgui::popup
 
     return isAdded;
   }
-}

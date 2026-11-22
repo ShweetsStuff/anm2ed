@@ -14,11 +14,6 @@
 #include "ui/layout.h"
 #include "ui/shortcut.h"
 
-using namespace anm2ed::resource;
-using namespace anm2ed::util;
-
-namespace anm2ed::imgui::wizard
-{
   void RenderAnimation::range_to_animation_set(Manager& manager, Document& document)
   {
     if (auto animation = document.model.animation_get(document.reference_get().animationIndex))
@@ -61,7 +56,7 @@ namespace anm2ed::imgui::wizard
   void RenderAnimation::reset(Manager& manager, Document& document, Settings& settings)
   {
     if (!manager.isRecordingRange) range_to_animation_set(manager, document);
-    settings.renderPath.replace_extension(render::EXTENSIONS[settings.renderType]);
+    settings.renderPath.replace_extension(RENDER_EXTENSIONS[settings.renderType]);
   }
 
   void RenderAnimation::update(Manager& manager, Document& document, Resources& resources, Settings& settings,
@@ -92,13 +87,13 @@ namespace anm2ed::imgui::wizard
     start = std::clamp(start, 0, frameMax);
     end = std::clamp(end, start, frameMax);
     auto animationFps = std::max(document.model.info.fps, 1);
-    if (renderFpsMode < render::FPS_ANIMATION || renderFpsMode >= render::FPS_COUNT)
-      renderFpsMode = render::FPS_ANIMATION;
-    auto renderFps = render::fps_get(renderFpsMode, animationFps, settings.playbackTickRate);
+    if (renderFpsMode < FPS_ANIMATION || renderFpsMode >= FPS_COUNT)
+      renderFpsMode = FPS_ANIMATION;
+    auto renderFps = fps_get(renderFpsMode, animationFps, settings.playbackTickRate);
     auto render_frame_count_get = [&]()
     {
-      if (isRange) return render::frame_count_get(start, end, animationFps, renderFps);
-      return render::frame_count_get(0, frameMax, animationFps, renderFps);
+      if (isRange) return frame_count_get(start, end, animationFps, renderFps);
+      return frame_count_get(0, frameMax, animationFps, renderFps);
     };
     auto renderFrameNum = render_frame_count_get();
 
@@ -107,22 +102,22 @@ namespace anm2ed::imgui::wizard
     Dialog::Type dialogType{Dialog::NONE};
     switch (type)
     {
-      case render::PNGS:
+      case RENDER_PNGS:
         dialogType = Dialog::PNG_DIRECTORY_SET;
         break;
-      case render::SPRITESHEET:
+      case RENDER_SPRITESHEET:
         dialogType = Dialog::PNG_PATH_SET;
         break;
-      case render::GIF:
+      case RENDER_GIF:
         dialogType = Dialog::GIF_PATH_SET;
         break;
-      case render::WEBM:
+      case RENDER_WEBM:
         dialogType = Dialog::WEBM_PATH_SET;
         break;
-      case render::OGV:
+      case RENDER_OGV:
         dialogType = Dialog::OGV_PATH_SET;
         break;
-      case render::MP4:
+      case RENDER_MP4:
         dialogType = Dialog::MP4_PATH_SET;
         break;
       default:
@@ -130,7 +125,7 @@ namespace anm2ed::imgui::wizard
         break;
     }
 
-    if (ImGui::ImageButton("##FFmpeg Path Set", resources.icon_id_get(icon::FOLDER), icon_size_get()))
+    if (ImGui::ImageButton("##FFmpeg Path Set", resources.icon_id_get(ICON_FOLDER), icon_size_get()))
       dialog.file_open(Dialog::FFMPEG_PATH_SET);
     ImGui::SameLine();
     input_text_path(localize.get(LABEL_FFMPEG_PATH), &ffmpegPath);
@@ -142,7 +137,7 @@ namespace anm2ed::imgui::wizard
       dialog.reset();
     }
 
-    if (ImGui::ImageButton("##Path Set", resources.icon_id_get(icon::FOLDER), icon_size_get()))
+    if (ImGui::ImageButton("##Path Set", resources.icon_id_get(ICON_FOLDER), icon_size_get()))
     {
       if (dialogType == Dialog::PNG_DIRECTORY_SET)
         dialog.folder_open(dialogType);
@@ -151,7 +146,7 @@ namespace anm2ed::imgui::wizard
     }
 
     ImGui::SameLine();
-    auto pathLabel = type == render::PNGS ? LABEL_OUTPUT_DIRECTORY : LABEL_OUTPUT_PATH;
+    auto pathLabel = type == RENDER_PNGS ? LABEL_OUTPUT_DIRECTORY : LABEL_OUTPUT_PATH;
     input_text_path(localize.get(pathLabel), &path);
     ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OUTPUT_PATH));
 
@@ -161,19 +156,19 @@ namespace anm2ed::imgui::wizard
       dialog.reset();
     }
 
-    if (ImGui::Combo(localize.get(LABEL_TYPE), &type, render::STRINGS, render::COUNT))
-      path.replace_extension(render::EXTENSIONS[type]);
+    if (ImGui::Combo(localize.get(LABEL_TYPE), &type, RENDER_STRINGS, RENDER_COUNT))
+      path.replace_extension(RENDER_EXTENSIONS[type]);
 
     ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_RENDER_TYPE));
 
-    if (type == render::PNGS || type == render::SPRITESHEET) ImGui::Separator();
+    if (type == RENDER_PNGS || type == RENDER_SPRITESHEET) ImGui::Separator();
 
-    if (type == render::PNGS)
+    if (type == RENDER_PNGS)
     {
       input_text_path(localize.get(LABEL_FORMAT), &format);
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FORMAT));
     }
-    else if (type == render::SPRITESHEET)
+    else if (type == RENDER_SPRITESHEET)
     {
       input_int_range(localize.get(LABEL_GENERATE_ROWS), rows, 1, renderFrameNum);
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ROWS));
@@ -210,9 +205,9 @@ namespace anm2ed::imgui::wizard
     ImGui::EndDisabled();
     renderFrameNum = render_frame_count_get();
 
-    if (type == render::SPRITESHEET)
+    if (type == RENDER_SPRITESHEET)
     {
-      auto layout = render::spritesheet_layout_get(rows, columns, renderFrameNum);
+      auto layout = spritesheet_layout_get(rows, columns, renderFrameNum);
       rows = layout.rows;
       columns = layout.columns;
     }
@@ -241,11 +236,11 @@ namespace anm2ed::imgui::wizard
     ImGui::Combo(localize.get(LABEL_RENDER_FPS), &renderFpsMode, renderFpsOptions, IM_ARRAYSIZE(renderFpsOptions));
     ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_RENDER_FPS));
 
-    renderFps = render::fps_get(renderFpsMode, animationFps, settings.playbackTickRate);
+    renderFps = fps_get(renderFpsMode, animationFps, settings.playbackTickRate);
     renderFrameNum = render_frame_count_get();
-    if (type == render::SPRITESHEET)
+    if (type == RENDER_SPRITESHEET)
     {
-      auto layout = render::spritesheet_layout_get(rows, columns, renderFrameNum);
+      auto layout = spritesheet_layout_get(rows, columns, renderFrameNum);
       rows = layout.rows;
       columns = layout.columns;
     }
@@ -257,18 +252,18 @@ namespace anm2ed::imgui::wizard
 
     ImGui::Separator();
 
-    imgui::shortcut(manager.chords[SHORTCUT_CONFIRM]);
+    shortcut(manager.chords[SHORTCUT_CONFIRM]);
     if (ImGui::Button(localize.get(LABEL_RENDER), widgetSize))
     {
-      path.replace_extension(render::EXTENSIONS[type]);
+      path.replace_extension(RENDER_EXTENSIONS[type]);
 
       auto render_is_valid = [&]()
       {
         auto ffmpeg_is_valid = [&]()
         {
-          if (!path::is_executable(ffmpegPath)) return false;
+          if (!is_path_executable(ffmpegPath)) return false;
 
-          auto testCommand = std::string("\"") + path::to_utf8(ffmpegPath) + "\" -version";
+          auto testCommand = std::string("\"") + path_to_utf8(ffmpegPath) + "\" -version";
           Process process(testCommand.c_str(), "r");
           auto result = process.output_get_and_close();
 
@@ -289,7 +284,7 @@ namespace anm2ed::imgui::wizard
 
         auto png_format_valid_check = [&]()
         {
-          auto formatString = path::to_utf8(format);
+          auto formatString = path_to_utf8(format);
           if (!formatString.contains("{}"))
           {
             toast_log(Level::ERROR, TOAST_PNG_FORMAT_INVALID);
@@ -310,7 +305,7 @@ namespace anm2ed::imgui::wizard
 
         auto png_directory_valid_check = [&]()
         {
-          if (!path::ensure_directory(path))
+          if (!path_ensure_directory(path))
           {
             toast_log(Level::ERROR, TOAST_PNG_DIRECTORY_INVALID);
             return false;
@@ -332,18 +327,18 @@ namespace anm2ed::imgui::wizard
 
         switch (type)
         {
-          case render::PNGS:
+          case RENDER_PNGS:
             if (!png_format_valid_check()) return false;
             if (!png_directory_valid_check()) return false;
-            format.replace_extension(render::EXTENSIONS[render::SPRITESHEET]);
+            format.replace_extension(RENDER_EXTENSIONS[RENDER_SPRITESHEET]);
             break;
-          case render::SPRITESHEET:
+          case RENDER_SPRITESHEET:
             if (!spritesheet_valid_check()) return false;
             break;
-          case render::GIF:
-          case render::WEBM:
-          case render::OGV:
-          case render::MP4:
+          case RENDER_GIF:
+          case RENDER_WEBM:
+          case RENDER_OGV:
+          case RENDER_MP4:
             if (!ffmpeg_valid_check()) return false;
             break;
           default:
@@ -367,7 +362,6 @@ namespace anm2ed::imgui::wizard
 
     ImGui::SameLine();
 
-    imgui::shortcut(manager.chords[SHORTCUT_CANCEL]);
+    shortcut(manager.chords[SHORTCUT_CANCEL]);
     if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize)) isEnd = true;
   }
-}

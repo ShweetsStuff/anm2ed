@@ -7,11 +7,8 @@
 #include "ui/layout.h"
 #include "ui/shortcut.h"
 
-using namespace anm2ed::types;
 using namespace glm;
 
-namespace anm2ed::imgui
-{
   constexpr auto FRAMES_MAX = 100;
 
   void onionskin_update(Manager& manager, Settings& settings)
@@ -57,7 +54,6 @@ namespace anm2ed::imgui
     }
     ImGui::End();
 
-    if (shortcut(manager.chords[SHORTCUT_ONIONSKIN], shortcut::GLOBAL)) isEnabled = !isEnabled;
+    if (shortcut(manager.chords[SHORTCUT_ONIONSKIN], SCOPE_GLOBAL)) isEnabled = !isEnabled;
   }
 
-}

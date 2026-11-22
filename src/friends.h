@@ -2,9 +2,7 @@
 
 #include "embed.h"
 
-namespace anm2ed::resource::friends
-{
-  struct Info
+  struct FriendInfo
   {
     const char* name{};
     const Embed* png{};
@@ -12,22 +10,21 @@ namespace anm2ed::resource::friends
   };
 
 #define FRIENDS_LIST                                                                                                   \
-  X(MEAT_BOY, "Meat Boy", FRIENDS_MEAT_BOY)                                                                            \
-  X(ISAAC, "Isaac", FRIENDS_ISAAC)                                                                                     \
-  X(STACY, "Stacy", FRIENDS_STACY)                                                                                     \
-  X(ASH, "Ash", FRIENDS_ASH)
+  X(FRIEND_MEAT_BOY, "Meat Boy", FRIENDS_MEAT_BOY)                                                                            \
+  X(FRIEND_ISAAC, "Isaac", FRIENDS_ISAAC)                                                                                     \
+  X(FRIEND_STACY, "Stacy", FRIENDS_STACY)                                                                                     \
+  X(FRIEND_ASH, "Ash", FRIENDS_ASH)
 
-  enum Type
+  enum Friend
   {
 #define X(symbol, name, embed) symbol,
     FRIENDS_LIST
 #undef X
-        COUNT
+        FRIEND_COUNT
   };
 
-  constexpr Info FRIENDS[COUNT] = {
+  constexpr FriendInfo FRIENDS[FRIEND_COUNT] = {
 #define X(symbol, name, embed) {name, &embed##_PNG, &embed##_ANM2},
       FRIENDS_LIST
 #undef X
   };
-}

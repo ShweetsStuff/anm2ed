@@ -9,8 +9,6 @@
 #include "ui/spritesheet_editor.h"
 #include "ui/timeline.h"
 
-namespace anm2ed::imgui
-{
   class Dockspace
   {
     AnimationPreview animationPreview;
@@ -36,4 +34,3 @@ namespace anm2ed::imgui
     void tick(Manager&, Settings&, float);
     void update(Taskbar&, Documents&, Manager&, Settings&, Resources&, Dialog&, Clipboard&);
   };
-}

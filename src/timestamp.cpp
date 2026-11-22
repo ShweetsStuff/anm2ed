@@ -5,9 +5,7 @@
 #include <iomanip>
 #include <sstream>
 
-namespace anm2ed::util::time
-{
-  std::string get(const char* format)
+  std::string timestamp_get(const char* format)
   {
     auto now = std::chrono::system_clock::now();
     auto time = std::chrono::system_clock::to_time_t(now);
@@ -16,4 +14,3 @@ namespace anm2ed::util::time
     timeString << std::put_time(&localTime, format);
     return timeString.str();
   }
-}

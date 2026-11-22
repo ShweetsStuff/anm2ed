@@ -5,13 +5,11 @@
 
 #include "uid.h"
 
-namespace anm2ed::resource
-{
   AudioData::AudioData(const unsigned char* memory, size_t size)
   {
     if (!memory || size == 0) return;
     bytes.assign(memory, memory + size);
-    uid = util::uid_next();
+    uid = uid_next();
   }
 
   AudioData::AudioData(const std::filesystem::path& path)
@@ -22,4 +20,3 @@ namespace anm2ed::resource
   }
 
   bool AudioData::is_valid() const { return !bytes.empty(); }
-}

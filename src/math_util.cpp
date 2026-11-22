@@ -6,8 +6,6 @@
 
 using namespace glm;
 
-namespace anm2ed::util::math
-{
   constexpr auto FLOAT_FORMAT_MAX_DECIMALS = 7;
   constexpr auto FLOAT_FORMAT_EPSILON = 1e-7f;
   constexpr float FLOAT_FORMAT_POW10[] = {1.f, 10.f, 100.f, 1000.f, 10000.f, 100000.f, 1000000.f, 10000000.f};
@@ -41,7 +39,7 @@ namespace anm2ed::util::math
     return formatString.c_str();
   }
 
-  mat4 skew_get(vec2 skew)
+  static mat4 skew_get(vec2 skew)
   {
     mat4 result(1.0f);
     result[1][0] = skew.x;
@@ -85,7 +83,6 @@ namespace anm2ed::util::math
     return glm::translate(mat4(1.0f), vec3(position, 0.0f)) * local;
   }
 
-  float random() { return (float)rand() / RAND_MAX; }
-  float random_in_range(float min, float max) { return min + random() * (max - min); }
+  float random_unit_get() { return (float)rand() / RAND_MAX; }
+  float random_in_range(float min, float max) { return min + random_unit_get() * (max - min); }
   void random_seed_set() { srand(std::time(nullptr)); }
-}

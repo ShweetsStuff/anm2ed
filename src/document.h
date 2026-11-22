@@ -20,8 +20,6 @@
 
 #include "shader.h"
 
-namespace anm2ed
-{
   class Manager;
   struct Command;
 
@@ -35,9 +33,9 @@ namespace anm2ed
   // A linked .anm2, loaded read-only: its document, its spritesheets' images and its sounds.
   struct LibraryData
   {
-    model::Model model{};
-    std::map<int, resource::Image> images{};
-    std::map<int, resource::AudioData> sounds{};
+    Model model{};
+    std::map<int, Image> images{};
+    std::map<int, AudioData> sounds{};
     std::filesystem::file_time_type writeTime{};
   };
 
@@ -59,8 +57,8 @@ namespace anm2ed
     std::filesystem::path path{};
     uint64_t tabId{};
     Snapshots snapshots{};
-    resource::AssetStore assets{};
-    std::map<int, resource::Image> textureDrafts{};
+    AssetStore assets{};
+    std::map<int, Image> textureDrafts{};
     int changeAllFramePropertiesRegionId{-1};
     int changeAllFramePropertiesShaderId{-1};
 
@@ -89,13 +87,13 @@ namespace anm2ed
     std::unordered_map<int, std::filesystem::path> soundPaths{};
     std::map<int, std::filesystem::path> shaderVertexPaths{};
     std::map<int, std::filesystem::path> shaderFragmentPaths{};
-    std::map<int, resource::Shader> shaders{};
+    std::map<int, ShaderProgram> shaders{};
     // Libraries by absolute path, and what each (document, library id) points at (nullptr is this document).
     std::map<std::filesystem::path, LibraryData> libraries{};
-    std::map<std::pair<const model::Model*, int>, const LibraryData*> libraryLinks{};
+    std::map<std::pair<const Model*, int>, const LibraryData*> libraryLinks{};
     std::uint64_t librariesRevision{}; // counts library loads, for anything drawn from them
     // Vector spritesheets drawn again for zooms past 100%, by (image uid, power-of-two level).
-    mutable std::map<std::pair<std::uint64_t, int>, resource::Image> vectorImages{};
+    mutable std::map<std::pair<std::uint64_t, int>, Image> vectorImages{};
     bool isAnimationPreviewSet{false};
     bool isSpritesheetEditorSet{false};
   };
@@ -123,7 +121,7 @@ namespace anm2ed
 #undef X
     std::string& message = current.message;
     EditTarget editTarget{EditTarget::NONE};
-    model::UidIndex index{};
+    UidIndex index{};
 
     Document(const std::filesystem::path&, bool = false, std::string* = nullptr);
     Document(const Document&) = delete;
@@ -137,21 +135,21 @@ namespace anm2ed
     bool texture_reload(int);
     bool sound_reload(int);
     bool shader_reload(int, std::string* = nullptr);
-    const resource::Image* texture_get(int) const;
-    resource::Image* texture_edit(int);
-    void texture_set(int, resource::Image);
-    const resource::AudioData* sound_get(int) const;
-    std::vector<const resource::AudioData*> sounds_get() const;
-    std::vector<const resource::AudioData*> trigger_sounds_get(const model::Animation&, int, int = -1) const;
-    void sound_set(int, resource::AudioData);
-    resource::Shader* shader_get(int);
+    const Image* texture_get(int) const;
+    Image* texture_edit(int);
+    void texture_set(int, Image);
+    const AudioData* sound_get(int) const;
+    std::vector<const AudioData*> sounds_get() const;
+    std::vector<const AudioData*> trigger_sounds_get(const Animation&, int, int = -1) const;
+    void sound_set(int, AudioData);
+    ShaderProgram* shader_get(int);
     std::filesystem::path library_path_get(int) const;
-    const LibraryData* library_get(const model::Model&, int) const;
-    model::LibraryGet library_resolver_get() const;
-    edit::SpritesheetPathGet spritesheet_path_resolver_get() const;
+    const LibraryData* library_get(const Model&, int) const;
+    LibraryGet library_resolver_get() const;
+    SpritesheetPathGet spritesheet_path_resolver_get() const;
     std::vector<std::string> animation_names_get(int) const;
-    const resource::Image* draw_image_get(const model::Draw&, float = 1.0f) const;
-    const resource::Image* vector_image_get(const resource::Image*, float) const;
+    const Image* draw_image_get(const Draw&, float = 1.0f) const;
+    const Image* vector_image_get(const Image*, float) const;
     void libraries_sync();
     bool libraries_reload();
     void library_reload(int);
@@ -162,15 +160,15 @@ namespace anm2ed
     void clean();
     void change();
     void edit_begin(StringType);
-    edit::Uids edit_run(StringType, const std::function<edit::Uids(model::Model&)>&);
+    Uids edit_run(StringType, const std::function<Uids(Model&)>&);
 
     // Snapshots for undo, runs the operation on the model, then commits; void operations select nothing.
-    template <class Operation> edit::Uids edit_apply(StringType label, Operation&& operation)
+    template <class Operation> Uids edit_apply(StringType label, Operation&& operation)
     {
       return edit_run(label,
-                      [&](model::Model& model) -> edit::Uids
+                      [&](Model& model) -> Uids
                       {
-                        if constexpr (std::is_void_v<std::invoke_result_t<Operation&, model::Model&>>)
+                        if constexpr (std::is_void_v<std::invoke_result_t<Operation&, Model&>>)
                         {
                           operation(model);
                           return {};
@@ -179,9 +177,9 @@ namespace anm2ed
                           return operation(model);
                       });
     }
-    std::vector<Reference> references_get(const edit::Uids&) const;
+    std::vector<Reference> references_get(const Uids&) const;
     bool is_dirty() const;
-    bool is_layer_animation_missing(const model::Layer&) const;
+    bool is_layer_animation_missing(const Layer&) const;
     bool is_autosave_dirty();
     std::filesystem::path directory_get() const;
     std::filesystem::path filename_get() const;
@@ -195,7 +193,7 @@ namespace anm2ed
     std::set<int> spritesheets_changed_get();
     void spritesheets_reload(const std::set<int>&);
     void spritesheets_vector_convert(const std::set<int>&);
-    std::filesystem::path spritesheet_autosave_path_get(const model::Spritesheet&);
+    std::filesystem::path spritesheet_autosave_path_get(const Spritesheet&);
     std::set<int> spritesheets_autosave_dirty_get();
     void spritesheets_autosave_restore();
     void spritesheets_autosave_clear();
@@ -209,7 +207,7 @@ namespace anm2ed
     void focused_id_set(SelectionKind, int);
     void selected_clear(SelectionKind);
     Choices choices_get(SelectionKind, int = -1) const;
-    void frames_select(const edit::Uids&);
+    void frames_select(const Uids&);
     void frame_select(Reference);
     void frame_toggle(Reference);
     bool frames_range_select(Reference, Reference, bool);
@@ -238,4 +236,3 @@ namespace anm2ed
     bool is_able_to_undo();
     bool is_able_to_redo();
   };
-}

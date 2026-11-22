@@ -7,8 +7,6 @@
   #pragma GCC diagnostic ignored "-Wunused-parameter"
 #endif
 
-namespace anm2ed
-{
   void AudioStream::callback(void* userData, MIX_Mixer* mixer, const SDL_AudioSpec* spec, float* pcm, int samples)
   {
     auto self = (AudioStream*)userData;
@@ -23,4 +21,3 @@ namespace anm2ed
 
   AudioStream::AudioStream(MIX_Mixer* mixer) { MIX_GetMixerFormat(mixer, &spec); }
 
-}

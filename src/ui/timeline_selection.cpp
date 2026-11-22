@@ -1,15 +1,13 @@
 #include "ui/timeline_context.h"
 
-namespace anm2ed::imgui
-{
-  const model::Track* TimelineContext::item_get(int type, int id, int groupType, int groupId)
+  const Track* TimelineContext::item_get(int type, int id, int groupType, int groupId)
   {
-    return animation ? model::animation_track_get(*animation, type, id, groupType, groupId) : nullptr;
+    return animation ? animation_track_get(*animation, type, id, groupType, groupId) : nullptr;
   }
 
-  const model::TrackGroup* TimelineContext::track_group_get(int type, int groupId)
+  const TrackGroup* TimelineContext::track_group_get(int type, int groupId)
   {
-    return animation ? model::animation_track_group_get(*animation, type, groupId) : nullptr;
+    return animation ? animation_track_group_get(*animation, type, groupId) : nullptr;
   }
 
   bool TimelineContext::is_track_group_visible(int type, int groupId)
@@ -19,14 +17,14 @@ namespace anm2ed::imgui
     return !group || group->isVisible;
   }
 
-  const model::TrackGroup* TimelineContext::row_group_get(const TimelineRow& row)
+  const TrackGroup* TimelineContext::row_group_get(const TimelineRow& row)
   {
     return row.isGroup ? track_group_get(row.type, row.id) : nullptr;
   }
 
-  const model::Frame* TimelineContext::frame_get() { return document.model.frame_get(reference); }
+  const Frame* TimelineContext::frame_get() { return document.model.frame_get(reference); }
 
-  const model::Track* TimelineContext::selected_item_get() { return document.model.track_get(reference); }
+  const Track* TimelineContext::selected_item_get() { return document.model.track_get(reference); }
 
   glm::vec4 TimelineContext::color_get(TimelineColor color, int type)
   {
@@ -114,7 +112,7 @@ namespace anm2ed::imgui
     std::vector<TimelineRow> rows{};
     if (!animation) return rows;
 
-    auto is_track_shown = [&](const model::Track& track)
+    auto is_track_shown = [&](const Track& track)
     { return settings.timelineIsShowUnused || !track.frames.empty(); };
     // Layers are listed top-down in reverse file order; nulls in file order.
     auto order_get = [](int count, bool isReversed)
@@ -128,16 +126,16 @@ namespace anm2ed::imgui
     rows.push_back({.type = ROOT});
     for (auto type : {LAYER, NULL_})
     {
-      auto& entries = model::animation_entries_get(*animation, type);
+      auto& entries = animation_entries_get(*animation, type);
       auto isReversed = type == LAYER;
       for (auto index : order_get((int)entries.size(), isReversed))
       {
-        if (auto track = std::get_if<model::Track>(&entries[index]))
+        if (auto track = std::get_if<Track>(&entries[index]))
         {
           if (is_track_shown(*track)) rows.push_back({.type = type, .id = track->id, .index = index});
           continue;
         }
-        auto& group = std::get<model::TrackGroup>(entries[index]);
+        auto& group = std::get<TrackGroup>(entries[index]);
         rows.push_back({.type = type, .id = group.id, .index = index, .isGroup = true});
         if (!group.isExpanded) continue;
         rows.push_back({.type = ROOT, .groupType = type, .groupId = group.id, .depth = 1});
@@ -181,7 +179,7 @@ namespace anm2ed::imgui
     return row.isGroup ? Reference{row.animationIndex, row.type, row.id} : row_item_reference_get(row);
   }
 
-  SelectionKind row_kind_get(const TimelineRow& row)
+  static SelectionKind row_kind_get(const TimelineRow& row)
   {
     return row.isGroup ? SelectionKind::GROUPS : SelectionKind::TRACKS;
   }
@@ -215,7 +213,7 @@ namespace anm2ed::imgui
     else
     {
       if (row.type == LAYER)
-        if (auto layer = model::item_get(model.content.layers, row.id))
+        if (auto layer = ::item_get(model.content.layers, row.id))
           document.focused_id_set(SelectionKind::SPRITESHEETS, layer->spritesheetId);
       reference_set(row_item_reference_get(rowReference));
     }
@@ -306,4 +304,3 @@ namespace anm2ed::imgui
     if (rows.empty()) rows = {clicked};
     return rows;
   }
-}

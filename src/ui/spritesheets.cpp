@@ -7,41 +7,35 @@
 #include "ui/layout.h"
 #include "working_directory.h"
 
-using namespace anm2ed::resource;
-using namespace anm2ed::types;
-using namespace anm2ed::util;
-
-namespace anm2ed::imgui
-{
   constexpr int SPRITESHEET_CARD_LINES = 4;
   constexpr int MERGE_OPTIONS_ROWS = 6;
   constexpr int PADDING_MAX = 100;
   // The merge region origin setting indexes this (top-left or center).
   constexpr Origin MERGE_REGION_ORIGINS[] = {Origin::TOP_LEFT, Origin::CENTER};
 
-  auto& spritesheets_get(model::Model& model) { return model.content.spritesheets; }
+  static auto& spritesheets_get(Model& model) { return model.content.spritesheets; }
 
-  const model::Spritesheet* spritesheet_get(Document& document, int id)
+  static const Spritesheet* spritesheet_get(Document& document, int id)
   {
-    return model::item_get(document.model.content.spritesheets, id);
+    return item_get(document.model.content.spritesheets, id);
   }
 
-  bool is_spritesheet_regions(Document& document, int id)
+  static bool is_spritesheet_regions(Document& document, int id)
   {
     auto spritesheet = spritesheet_get(document, id);
     return spritesheet && !spritesheet->regions.empty();
   }
 
-  void spritesheets_save(Document& document, const std::set<int>& ids)
+  static void spritesheets_save(Document& document, const std::set<int>& ids)
   {
     for (auto id : ids)
     {
       auto spritesheet = spritesheet_get(document, id);
       auto texture = document.texture_get(id);
       if (!spritesheet || !texture) continue;
-      auto pathString = path::to_utf8(spritesheet->path);
+      auto pathString = path_to_utf8(spritesheet->path);
       WorkingDirectory workingDirectory(document.directory_get());
-      path::ensure_directory(spritesheet->path.parent_path());
+      path_ensure_directory(spritesheet->path.parent_path());
       auto isSaved = texture->write(spritesheet->path);
       if (isSaved) document.spritesheet_hash_set_saved(id);
       toast_log(isSaved ? Level::INFO : Level::ERROR, isSaved ? TOAST_SAVE_SPRITESHEET : TOAST_SAVE_SPRITESHEET_FAILED,
@@ -50,21 +44,21 @@ namespace anm2ed::imgui
   }
 
   // Points a spritesheet at a new file: replacing loads it, setting the path writes the current texture there.
-  void spritesheet_path_change(Document& document, int id, const std::filesystem::path& dialogPath, StringType edit,
+  static void spritesheet_path_change(Document& document, int id, const std::filesystem::path& dialogPath, StringType edit,
                                bool isWritten)
   {
     auto texture = document.texture_get(id);
     if (!spritesheet_get(document, id) || (isWritten && !texture)) return;
     document.edit_apply(edit,
-                        [&](model::Model& model)
+                        [&](Model& model)
                         {
-                          auto spritesheet = model::item_get(model.content.spritesheets, id);
+                          auto spritesheet = item_get(model.content.spritesheets, id);
                           auto newPath = asset_path_get(document, dialogPath);
-                          auto pathString = path::to_utf8(newPath);
+                          auto pathString = path_to_utf8(newPath);
                           if (isWritten)
                           {
                             WorkingDirectory workingDirectory(document.directory_get());
-                            path::ensure_directory(newPath.parent_path());
+                            path_ensure_directory(newPath.parent_path());
                             if (!texture->write(newPath))
                               return toast_log(Level::ERROR, TOAST_SAVE_SPRITESHEET_FAILED, id, pathString);
                           }
@@ -79,7 +73,7 @@ namespace anm2ed::imgui
                         });
   }
 
-  void spritesheet_textures_edit(Document& document, StringType edit, const std::function<bool()>& behavior,
+  static void spritesheet_textures_edit(Document& document, StringType edit, const std::function<bool()>& behavior,
                                  StringType successToast, StringType failToast)
   {
     document.edit_begin(edit);
@@ -88,7 +82,7 @@ namespace anm2ed::imgui
     document.change();
   }
 
-  void spritesheets_dialog_update(Panel& panel)
+  static void spritesheets_dialog_update(Panel& panel)
   {
     auto& [manager, settings, resources, dialog, clipboard, document, state] = panel;
     if (dialog.is_selected(Dialog::SPRITESHEET_OPEN))
@@ -116,7 +110,7 @@ namespace anm2ed::imgui
     }
   }
 
-  void spritesheets_merge_popup_update(Panel& panel, SpritesheetsPanel& spritesheets)
+  static void spritesheets_merge_popup_update(Panel& panel, SpritesheetsPanel& spritesheets)
   {
     auto& [manager, settings, resources, dialog, clipboard, document, state] = panel;
     auto& popup = spritesheets.mergePopup;
@@ -179,7 +173,7 @@ namespace anm2ed::imgui
     popup.end();
   }
 
-  void spritesheets_pack_popup_update(Panel& panel, SpritesheetsPanel& spritesheets)
+  static void spritesheets_pack_popup_update(Panel& panel, SpritesheetsPanel& spritesheets)
   {
     auto& [manager, settings, resources, dialog, clipboard, document, state] = panel;
     auto& popup = spritesheets.packPopup;
@@ -206,7 +200,7 @@ namespace anm2ed::imgui
     popup.end();
   }
 
-  void spritesheets_overwrite_popup_update(Panel& panel, SpritesheetsPanel& spritesheets)
+  static void spritesheets_overwrite_popup_update(Panel& panel, SpritesheetsPanel& spritesheets)
   {
     auto& popup = spritesheets.overwritePopup;
     popup.trigger();
@@ -290,7 +284,7 @@ namespace anm2ed::imgui
             spritesheets.overwritePopup.open();
           },
           TOOLTIP_SAVE_SPRITESHEETS);
-      items_clipboard_actions_add<model::Spritesheet>(actions, panel, SelectionKind::SPRITESHEETS,
+      items_clipboard_actions_add<Spritesheet>(actions, panel, SelectionKind::SPRITESHEETS,
                                                       EDIT_PASTE_SPRITESHEETS, TOAST_DESERIALIZE_SPRITESHEETS_FAILED,
                                                       spritesheets_get);
 
@@ -298,14 +292,14 @@ namespace anm2ed::imgui
       {
         auto texture = document.texture_get(id);
         auto isValid = texture && texture->is_valid();
-        auto& image = isValid ? *texture : resources.icons[icon::NONE];
+        auto& image = isValid ? *texture : resources.icons[ICON_NONE];
         return CardImage{.texture = &image, .size = glm::vec2(image.size), .isValid = isValid};
       };
       ListRows rows{
           .label_get =
               [&](int id)
           {
-            auto pathString = path::to_utf8(spritesheet_get(document, id)->path);
+            auto pathString = path_to_utf8(spritesheet_get(document, id)->path);
             auto label = std::vformat(localize.get(FORMAT_SPRITESHEET), std::make_format_args(id, pathString));
             return document.spritesheet_is_dirty(id)
                        ? std::vformat(localize.get(FORMAT_SPRITESHEET_NOT_SAVED), std::make_format_args(label))
@@ -318,7 +312,7 @@ namespace anm2ed::imgui
             tooltip_image_draw(image,
                                [&]()
                                {
-                                 tooltip_name_draw(resources, path::to_utf8(spritesheet_get(document, id)->path));
+                                 tooltip_name_draw(resources, path_to_utf8(spritesheet_get(document, id)->path));
                                  ImGui::TextUnformatted(
                                      std::vformat(localize.get(FORMAT_ID), std::make_format_args(id)).c_str());
                                  if (image.isValid)
@@ -350,4 +344,3 @@ namespace anm2ed::imgui
     spritesheets_pack_popup_update(panel, spritesheets);
     spritesheets_overwrite_popup_update(panel, spritesheets);
   }
-}

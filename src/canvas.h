@@ -13,8 +13,6 @@
 
 #include "types.h"
 
-namespace anm2ed
-{
   // A box blur `radius` texels wide each way over the texture's `region` (UV min, max); outside it is clear.
   struct TextureBlur
   {
@@ -53,7 +51,7 @@ namespace anm2ed
     static constexpr auto BORDER_DASH_LENGTH = 1.0f;
     static constexpr auto BORDER_DASH_GAP = 0.5f;
     static constexpr auto BORDER_DASH_OFFSET = 0.0f;
-    static constexpr auto PIVOT_COLOR = types::color::PINK;
+    static constexpr auto PIVOT_COLOR = COLOR_PINK;
 
     GLuint axisVAO{};
     GLuint axisVBO{};
@@ -69,26 +67,25 @@ namespace anm2ed
     Canvas(glm::vec2);
     ~Canvas();
     glm::mat4 transform_get(float = 100.0f, glm::vec2 = {}) const;
-    void axes_render(resource::Shader&, float, glm::vec2, glm::vec4 = glm::vec4(1.0f)) const;
-    void grid_render(resource::Shader&, float, glm::vec2, glm::ivec2 = glm::ivec2(32, 32), glm::ivec2 = {},
+    void axes_render(ShaderProgram&, float, glm::vec2, glm::vec4 = glm::vec4(1.0f)) const;
+    void grid_render(ShaderProgram&, float, glm::vec2, glm::ivec2 = glm::ivec2(32, 32), glm::ivec2 = {},
                      glm::vec4 = glm::vec4(1.0f)) const;
-    void texture_render(resource::Shader&, GLuint, glm::mat4 = {1.0f}, glm::vec4 = glm::vec4(1.0f), glm::vec4 = {},
+    void texture_render(ShaderProgram&, GLuint, glm::mat4 = {1.0f}, glm::vec4 = glm::vec4(1.0f), glm::vec4 = {},
                         float* = (float*)TEXTURE_VERTICES, glm::vec2 = {}, float = 0.0f, TextureBlur = {}) const;
-    void layer_render(resource::Shader&, GLuint, glm::vec2, const glm::mat4&, const model::Draw&, glm::vec4,
+    void layer_render(ShaderProgram&, GLuint, glm::vec2, const glm::mat4&, const Draw&, glm::vec4,
                       glm::vec4) const;
-    void rect_fill_render(resource::Shader&, const glm::mat4&, const glm::mat4&, glm::vec4 = glm::vec4(1.0f)) const;
-    void layers_render(resource::Shader&, const model::Model&, const model::Animation&, const model::DrawOptions&,
-                       const glm::mat4&, const std::function<const resource::Image*(const model::Draw&)>&,
-                       const std::function<resource::Shader*(int)>& = {}) const;
-    void dashed_render(resource::Shader&, const glm::mat4&, const glm::mat4&, glm::vec4, float, float, float, GLenum,
+    void rect_fill_render(ShaderProgram&, const glm::mat4&, const glm::mat4&, glm::vec4 = glm::vec4(1.0f)) const;
+    void layers_render(ShaderProgram&, const Model&, const Animation&, const DrawOptions&,
+                       const glm::mat4&, const std::function<const Image*(const Draw&)>&,
+                       const std::function<ShaderProgram*(int)>& = {}) const;
+    void dashed_render(ShaderProgram&, const glm::mat4&, const glm::mat4&, glm::vec4, float, float, float, GLenum,
                        int) const;
-    void rect_render(resource::Shader&, const glm::mat4&, const glm::mat4&, glm::vec4 = glm::vec4(1.0f),
+    void rect_render(ShaderProgram&, const glm::mat4&, const glm::mat4&, glm::vec4 = glm::vec4(1.0f),
                      float dashLength = DASH_LENGTH, float dashGap = DASH_GAP, float dashOffset = DASH_OFFSET) const;
-    void line_render(resource::Shader&, const glm::mat4&, glm::vec2, glm::vec2, glm::vec4 = glm::vec4(1.0f),
+    void line_render(ShaderProgram&, const glm::mat4&, glm::vec2, glm::vec2, glm::vec4 = glm::vec4(1.0f),
                      float dashLength = DASH_LENGTH, float dashGap = DASH_GAP, float dashOffset = DASH_OFFSET) const;
     float zoom_level_get(float, int) const;
     void zoom_level_adjust(float&, glm::vec2&, glm::vec2, int) const;
     glm::vec2 position_translate(float&, glm::vec2&, glm::vec2) const;
     void set_to_rect(float& zoom, glm::vec2& pan, glm::vec4 rect) const;
   };
-}

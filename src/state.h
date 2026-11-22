@@ -7,8 +7,6 @@
 
 #include "ui/dockspace.h"
 
-namespace anm2ed
-{
   class State
   {
     void tick(Settings&, float);
@@ -23,9 +21,9 @@ namespace anm2ed
     Dialog dialog;
     Clipboard clipboard;
 
-    imgui::Taskbar taskbar;
-    imgui::Documents documents;
-    imgui::Dockspace dockspace;
+    Taskbar taskbar;
+    Documents documents;
+    Dockspace dockspace;
 
     uint64_t previousTick{};
     uint64_t previousUpdate{};
@@ -38,4 +36,3 @@ namespace anm2ed
 
     void loop(SDL_Window*&, Settings&);
   };
-};

@@ -13,18 +13,13 @@
 #include "vector.h"
 #include "working_directory.h"
 
-using namespace anm2ed::resource;
-using namespace anm2ed::types;
-using namespace anm2ed::util;
 using namespace glm;
 
-namespace anm2ed::imgui
-{
   constexpr int REGION_CARD_LINES = 2;
   constexpr int REGION_POPUP_ROWS = 5;
   constexpr const char* REGION_DRAG_DROP = "Region Drag Drop";
   constexpr const char* REGION_EXPORT_NAME_DEFAULT = "region";
-  constexpr const char* PNG_EXTENSION = ".png";
+  constexpr const char* REGION_EXPORT_EXTENSION = ".png";
   constexpr ImVec2 DRAG_TOOLTIP_OFFSET = ImVec2(16.0f, 16.0f);
 
   constexpr StringType ORIGIN_LABELS[] = {LABEL_REGION_ORIGIN_CUSTOM, LABEL_REGION_ORIGIN_TOP_LEFT,
@@ -40,19 +35,19 @@ namespace anm2ed::imgui
     bool isRemoveCurrent{};
   };
 
-  void region_pivot_apply(model::Region& region)
+  static void region_pivot_apply(Region& region)
   {
     if (region.origin == Origin::TOP_LEFT) region.pivot = {};
     if (region.origin == Origin::CENTER) region.pivot = region.size * 0.5f;
   }
 
-  const model::Spritesheet* region_spritesheet_get(Document& document)
+  static const Spritesheet* region_spritesheet_get(Document& document)
   {
-    return model::item_get(document.model.content.spritesheets, document.focused_id_get(SelectionKind::SPRITESHEETS));
+    return item_get(document.model.content.spritesheets, document.focused_id_get(SelectionKind::SPRITESHEETS));
   }
 
   // New regions go after the last selected (or focused) one.
-  int region_insert_index_get(Document& document)
+  static int region_insert_index_get(Document& document)
   {
     auto spritesheet = region_spritesheet_get(document);
     if (!spritesheet) return 0;
@@ -67,7 +62,7 @@ namespace anm2ed::imgui
     return index;
   }
 
-  void region_select(Document& document, int id)
+  static void region_select(Document& document, int id)
   {
     document.editTarget = Document::EditTarget::REGION;
     document.selected_ids_set(SelectionKind::REGIONS, {id});
@@ -76,10 +71,10 @@ namespace anm2ed::imgui
     document.frame_references_clear();
   }
 
-  CardImage region_image_get(Document& document, Resources& resources, const model::Region& region)
+  static CardImage region_image_get(Document& document, Resources& resources, const Region& region)
   {
     auto texture = document.texture_get(document.focused_id_get(SelectionKind::SPRITESHEETS));
-    if (!texture || !texture->is_valid()) return {.texture = &resources.icons[icon::NONE], .size = region.size};
+    if (!texture || !texture->is_valid()) return {.texture = &resources.icons[ICON_NONE], .size = region.size};
     return {.texture = texture,
             .size = region.size,
             .uvMin = region.crop / vec2(texture->size),
@@ -87,17 +82,17 @@ namespace anm2ed::imgui
             .isValid = true};
   }
 
-  bool region_export(Document& document, const RegionExportOptions& options)
+  static bool region_export(Document& document, const RegionExportOptions& options)
   {
-    auto pathString = options.path.empty() ? std::string("in memory") : path::to_utf8(options.path);
+    auto pathString = options.path.empty() ? std::string("in memory") : path_to_utf8(options.path);
     if (options.path.empty() && !options.isMakeSpritesheet)
     {
       toast_log(Level::ERROR, TOAST_EXPORT_REGION_PATH_EMPTY);
       return false;
     }
 
-    auto spritesheet = model::item_get(document.model.content.spritesheets, options.spritesheetId);
-    auto region = spritesheet ? model::item_get(spritesheet->regions, options.regionId) : nullptr;
+    auto spritesheet = item_get(document.model.content.spritesheets, options.spritesheetId);
+    auto region = spritesheet ? item_get(spritesheet->regions, options.regionId) : nullptr;
     auto texture = document.texture_get(options.spritesheetId);
     auto minPoint = region ? ivec2(glm::min(region->crop, region->crop + region->size)) : ivec2();
     auto exportSize = region ? ivec2(glm::max(region->crop, region->crop + region->size)) - minPoint : ivec2();
@@ -112,10 +107,10 @@ namespace anm2ed::imgui
     auto outputPath = options.path;
     if (!outputPath.empty())
     {
-      outputPath = asset_path_get(document, outputPath.replace_extension(PNG_EXTENSION));
-      pathString = path::to_utf8(outputPath);
+      outputPath = asset_path_get(document, outputPath.replace_extension(REGION_EXPORT_EXTENSION));
+      pathString = path_to_utf8(outputPath);
       WorkingDirectory workingDirectory(document.directory_get());
-      path::ensure_directory(outputPath.parent_path());
+      path_ensure_directory(outputPath.parent_path());
       if (!exportedImage.write_png(outputPath))
       {
         toast_log(Level::ERROR, TOAST_EXPORT_REGION_FAILED, sourceRegion.name, pathString);
@@ -129,19 +124,19 @@ namespace anm2ed::imgui
 
       if (options.isRemoveCurrent)
       {
-        if (auto source = model::item_get(document.model.content.spritesheets, options.spritesheetId))
-          std::erase_if(source->regions, [&](const model::Region& region) { return region.id == options.regionId; });
-        edit::region_frames_sync(document.model);
+        if (auto source = item_get(document.model.content.spritesheets, options.spritesheetId))
+          std::erase_if(source->regions, [&](const Region& region) { return region.id == options.regionId; });
+        region_frames_sync(document.model);
         document.selected_clear(SelectionKind::REGIONS);
       }
 
       if (options.isMakeSpritesheet)
       {
         auto& spritesheets = document.model.content.spritesheets;
-        model::Spritesheet exported{.id = model::item_next_id_get(spritesheets), .path = outputPath};
+        Spritesheet exported{.id = item_next_id_get(spritesheets), .path = outputPath};
 
         auto exportedRegion = sourceRegion;
-        exportedRegion.uid = util::uid_next();
+        exportedRegion.uid = uid_next();
         exportedRegion.id = 0;
         exportedRegion.crop = {};
         exportedRegion.size = vec2(exportSize);
@@ -167,7 +162,7 @@ namespace anm2ed::imgui
     return true;
   }
 
-  bool region_drag_drop_update(Panel& panel, int id, int index)
+  static bool region_drag_drop_update(Panel& panel, int id, int index)
   {
     auto& state = panel.state;
     auto selection = panel.document.selected_ids_get(SelectionKind::REGIONS);
@@ -192,7 +187,7 @@ namespace anm2ed::imgui
       std::vector<int> indices{};
       auto payloadIds = (const int*)payload->Data;
       for (int i = 0; i < payload->DataSize / (int)sizeof(int); i++)
-        if (auto keyIndex = vector::find_index(state.keys, payloadIds[i]); keyIndex != -1) indices.push_back(keyIndex);
+        if (auto keyIndex = vector_index_find(state.keys, payloadIds[i]); keyIndex != -1) indices.push_back(keyIndex);
 
       if (!indices.empty() && payload->IsDelivery())
       {
@@ -201,13 +196,13 @@ namespace anm2ed::imgui
                      [indices, movedIds = state.dragIds, targetIndex = index + (isAfter ? 1 : 0),
                       spritesheetId = panel.document.focused_id_get(SelectionKind::SPRITESHEETS)](Document& document)
                      {
-                       if (!model::item_get(document.model.content.spritesheets, spritesheetId)) return;
+                       if (!item_get(document.model.content.spritesheets, spritesheetId)) return;
                        document.edit_apply(
                            EDIT_MOVE_REGIONS,
-                           [&](model::Model& model)
+                           [&](Model& model)
                            {
-                             auto spritesheet = model::item_get(model.content.spritesheets, spritesheetId);
-                             vector::move_indices_to_position(spritesheet->regions, indices, targetIndex);
+                             auto spritesheet = item_get(model.content.spritesheets, spritesheetId);
+                             vector_indices_move(spritesheet->regions, indices, targetIndex);
                            });
                        document.selected_ids_set(SelectionKind::REGIONS, {movedIds.begin(), movedIds.end()});
                      });
@@ -218,7 +213,7 @@ namespace anm2ed::imgui
     return isMoved;
   }
 
-  void region_drag_tooltip_update(Panel& panel)
+  static void region_drag_tooltip_update(Panel& panel)
   {
     auto& state = panel.state;
     auto payload = ImGui::GetDragDropPayload();
@@ -238,21 +233,21 @@ namespace anm2ed::imgui
     ImGui::SetNextWindowPos(ImVec2(mousePos.x + DRAG_TOOLTIP_OFFSET.x, mousePos.y + DRAG_TOOLTIP_OFFSET.y));
     if (!tooltip_begin(state, false)) return;
     for (auto regionId : state.dragIds)
-      if (auto region = model::item_get(spritesheet->regions, regionId)) ImGui::TextUnformatted(region->name.c_str());
+      if (auto region = item_get(spritesheet->regions, regionId)) ImGui::TextUnformatted(region->name.c_str());
     tooltip_end();
   }
 
-  void region_properties_open(RegionsPanel& regions, Document& document, int id)
+  static void region_properties_open(RegionsPanel& regions, Document& document, int id)
   {
     auto spritesheet = region_spritesheet_get(document);
-    auto region = spritesheet ? model::item_get(spritesheet->regions, id) : nullptr;
+    auto region = spritesheet ? item_get(spritesheet->regions, id) : nullptr;
     if (id != -1 && !region) return;
     regions.editId = id;
-    regions.editRegion = region ? *region : model::Region{};
+    regions.editRegion = region ? *region : Region{};
     regions.propertiesPopup.open();
   }
 
-  void region_properties_popup_update(Panel& panel, RegionsPanel& regions)
+  static void region_properties_popup_update(Panel& panel, RegionsPanel& regions)
   {
     auto& popup = regions.propertiesPopup;
     popup.trigger();
@@ -265,12 +260,12 @@ namespace anm2ed::imgui
       input_text_string(localize.get(BASIC_NAME), &region.name);
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ITEM_NAME));
       ImGui::DragFloat2(localize.get(BASIC_CROP), value_ptr(region.crop), DRAG_SPEED, 0.0f, 0.0f,
-                        math::vec2_format_get(region.crop));
+                        vec2_format_get(region.crop));
       ImGui::DragFloat2(localize.get(BASIC_SIZE), value_ptr(region.size), DRAG_SPEED, 0.0f, 0.0f,
-                        math::vec2_format_get(region.size));
+                        vec2_format_get(region.size));
       ImGui::BeginDisabled(region.origin != Origin::CUSTOM);
       ImGui::DragFloat2(localize.get(BASIC_PIVOT), value_ptr(region.pivot), DRAG_SPEED, 0.0f, 0.0f,
-                        math::vec2_format_get(region.pivot));
+                        vec2_format_get(region.pivot));
       ImGui::EndDisabled();
 
       const char* originOptions[std::size(ORIGIN_COMBO_ORDER)]{};
@@ -295,13 +290,13 @@ namespace anm2ed::imgui
                    {
                      auto changedId = id;
                      document.edit_apply(id == -1 ? EDIT_ADD_REGION : EDIT_SET_REGION_PROPERTIES,
-                                         [&](model::Model& model)
+                                         [&](Model& model)
                                          {
                                            auto spritesheet =
-                                               model::item_get(model.content.spritesheets, spritesheetId);
+                                               item_get(model.content.spritesheets, spritesheetId);
                                            if (!spritesheet) return;
                                            auto& items = spritesheet->regions;
-                                           if (auto target = model::item_get(items, id))
+                                           if (auto target = item_get(items, id))
                                            {
                                              auto uid = target->uid;
                                              *target = edited;
@@ -310,10 +305,10 @@ namespace anm2ed::imgui
                                              return;
                                            }
                                            if (id != -1) return;
-                                           changedId = model::item_next_id_get(items);
+                                           changedId = item_next_id_get(items);
                                            auto& added = *items.insert(
                                                items.begin() + std::min(insertIndex, (int)items.size()), edited);
-                                           added.uid = util::uid_next();
+                                           added.uid = uid_next();
                                            added.id = changedId;
                                            state.newId = changedId;
                                          });
@@ -325,11 +320,11 @@ namespace anm2ed::imgui
     popup.end();
   }
 
-  void region_export_popup_update(Panel& panel, RegionsPanel& regions)
+  static void region_export_popup_update(Panel& panel, RegionsPanel& regions)
   {
     auto& [manager, settings, resources, dialog, clipboard, document, state] = panel;
     auto spritesheet = region_spritesheet_get(document);
-    auto region = spritesheet ? model::item_get(spritesheet->regions, regions.exportId) : nullptr;
+    auto region = spritesheet ? item_get(spritesheet->regions, regions.exportId) : nullptr;
     auto& popup = regions.exportPopup;
 
     popup.trigger();
@@ -338,10 +333,10 @@ namespace anm2ed::imgui
     if (!region) popup.close();
     if (region && popup.isJustOpened)
     {
-      auto filename = path::from_utf8(region->name).filename();
+      auto filename = path_from_utf8(region->name).filename();
       settings.exportRegionPath =
           settings.exportRegionPath.parent_path() /
-          (filename.empty() ? std::filesystem::path(REGION_EXPORT_NAME_DEFAULT) : filename).concat(PNG_EXTENSION);
+          (filename.empty() ? std::filesystem::path(REGION_EXPORT_NAME_DEFAULT) : filename).concat(REGION_EXPORT_EXTENSION);
     }
     if (dialog.is_selected(Dialog::REGION_EXPORT_PATH_SET))
     {
@@ -351,7 +346,7 @@ namespace anm2ed::imgui
 
     if (ImGui::BeginChild("##Export Region Child", child_size_get(REGION_POPUP_ROWS), ImGuiChildFlags_Borders))
     {
-      if (ImGui::ImageButton("##Export Region Path Set", resources.icon_id_get(icon::FOLDER), icon_size_get()))
+      if (ImGui::ImageButton("##Export Region Path Set", resources.icon_id_get(ICON_FOLDER), icon_size_get()))
         dialog.file_save(Dialog::REGION_EXPORT_PATH_SET, settings.exportRegionPath);
       ImGui::SameLine();
       input_text_path(localize.get(LABEL_OUTPUT_PATH), &settings.exportRegionPath);
@@ -370,7 +365,7 @@ namespace anm2ed::imgui
     auto result = popup_buttons_draw(manager, localize.get(BASIC_CONFIRM), isValid);
     if (result == PopupButton::CONFIRM)
     {
-      if (!settings.exportRegionPath.empty()) settings.exportRegionPath.replace_extension(PNG_EXTENSION);
+      if (!settings.exportRegionPath.empty()) settings.exportRegionPath.replace_extension(REGION_EXPORT_EXTENSION);
       RegionExportOptions options{.spritesheetId = spritesheetId,
                                   .regionId = regions.exportId,
                                   .path = settings.exportRegionPath,
@@ -423,7 +418,7 @@ namespace anm2ed::imgui
                            [spritesheetId, selection](Document& document)
                            {
                              document.edit_apply(EDIT_TRIM_REGIONS,
-                                                 [&](model::Model&)
+                                                 [&](Model&)
                                                  {
                                                    if (!document.regions_trim(spritesheetId, selection)) return;
                                                    document.reference_set({document.reference_get().animationIndex});
@@ -451,30 +446,30 @@ namespace anm2ed::imgui
                   [&state, spritesheetId, text = clipboard.get(),
                    insertIndex = region_insert_index_get(document)](Document& document)
                   {
-                    auto spritesheet_regions_get = [&]() -> const std::vector<model::Region>*
+                    auto spritesheet_regions_get = [&]() -> const std::vector<Region>*
                     {
-                      auto spritesheet = model::item_get(document.model.content.spritesheets, spritesheetId);
+                      auto spritesheet = item_get(document.model.content.spritesheets, spritesheetId);
                       return spritesheet ? &spritesheet->regions : nullptr;
                     };
                     if (!spritesheet_regions_get()) return;
-                    auto nextId = model::item_next_id_get(*spritesheet_regions_get());
+                    auto nextId = item_next_id_get(*spritesheet_regions_get());
                     std::string errorString{};
                     document.edit_apply(
-                        EDIT_PASTE_REGIONS, [&](model::Model& model)
-                        { return edit::regions_paste(model, spritesheetId, text, insertIndex, &errorString); });
+                        EDIT_PASTE_REGIONS, [&](Model& model)
+                        { return regions_paste(model, spritesheetId, text, insertIndex, &errorString); });
                     if (!errorString.empty()) toast_log(Level::ERROR, TOAST_DESERIALIZE_REGIONS_FAILED, errorString);
-                    auto lastId = model::item_next_id_get(*spritesheet_regions_get()) - 1;
+                    auto lastId = item_next_id_get(*spritesheet_regions_get()) - 1;
                     if (lastId < nextId) return;
                     state.newId = lastId;
                     region_select(document, lastId);
                   });
             });
 
-        ListRows rows{.label_get = [&](int id) { return model::item_get(spritesheet->regions, id)->name; },
+        ListRows rows{.label_get = [&](int id) { return item_get(spritesheet->regions, id)->name; },
                       .tooltip_draw =
                           [&](int id)
                       {
-                        auto& region = *model::item_get(spritesheet->regions, id);
+                        auto& region = *item_get(spritesheet->regions, id);
                         tooltip_image_draw(
                             region_image_get(document, resources, region),
                             [&]()
@@ -496,7 +491,7 @@ namespace anm2ed::imgui
                             });
                       },
                       .image_get = [&](int id)
-                      { return region_image_get(document, resources, *model::item_get(spritesheet->regions, id)); },
+                      { return region_image_get(document, resources, *item_get(spritesheet->regions, id)); },
                       .select =
                           [&](int)
                       {
@@ -522,4 +517,3 @@ namespace anm2ed::imgui
     region_properties_popup_update(panel, regions);
     region_export_popup_update(panel, regions);
   }
-}

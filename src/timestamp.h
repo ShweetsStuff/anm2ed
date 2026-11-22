@@ -2,9 +2,6 @@
 
 #include <string>
 
-namespace anm2ed::util::time
-{
-  constexpr auto SECOND_M = 60;
+  constexpr auto SECOND_MINUTES = 60;
 
-  std::string get(const char*);
-}
+  std::string timestamp_get(const char*);

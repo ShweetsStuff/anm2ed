@@ -1,10 +1,6 @@
 #include "edit/edit.h"
 
-using namespace anm2ed::model;
-
-namespace anm2ed::edit
-{
-  std::vector<TrackEntry>* track_entries_edit(Model& model, int animationIndex, int type)
+  static std::vector<TrackEntry>* track_entries_edit(Model& model, int animationIndex, int type)
   {
     if (type != LAYER && type != NULL_) return nullptr;
     auto animation = model.animation_edit(animationIndex);
@@ -161,7 +157,7 @@ namespace anm2ed::edit
   // Adds a layer or null (or updates the one with the item's id) and gives it a track in one or every animation.
   // Adds track `id` (a new item, from `layer` or `null`, at -1) to an animation or all of them.
   int item_add(Model& model, ItemType type, int animationIndex, int id, Layer layer, Null null, int insertBeforeId,
-               types::destination::Type destination)
+               Destination destination)
   {
     auto& content = model.content;
     auto item_insert = [&](auto& items, auto item)
@@ -192,11 +188,10 @@ namespace anm2ed::edit
       entries.insert(insertBeforeId == -1 ? entries.end() : before, Track{.type = type, .id = id});
     };
 
-    if (destination == types::destination::ALL)
+    if (destination == DESTINATION_ALL)
       for (int i = 0; i < model.animations_count_get(); ++i)
         add(i);
     else if (model.animation_get(animationIndex))
       add(animationIndex);
     return id;
   }
-}

@@ -9,12 +9,8 @@
 #include "ui/layout.h"
 #include "ui/shortcut.h"
 
-using namespace anm2ed::resource;
-using namespace anm2ed::types;
 using namespace glm;
 
-namespace anm2ed::imgui
-{
   void tools_update(Manager& manager, Settings& settings, Resources& resources, PopupHelper& colorEditPopup)
   {
     auto& document = *manager.get();
@@ -27,19 +23,19 @@ namespace anm2ed::imgui
       auto size = vec2(ImGui::GetTextLineHeightWithSpacing() * 1.5f);
       auto usedWidth = ImGui::GetStyle().WindowPadding.x;
 
-      auto tool_use = [&](tool::Type type)
+      auto tool_use = [&](Tool type)
       {
         switch (type)
         {
-          case tool::UNDO:
+          case TOOL_UNDO:
             if (document.is_able_to_undo())
               manager.command_push({manager.selected, [](Manager&, Document& document) { document.undo(); }});
             break;
-          case tool::REDO:
+          case TOOL_REDO:
             if (document.is_able_to_redo())
               manager.command_push({manager.selected, [](Manager&, Document& document) { document.redo(); }});
             break;
-          case tool::COLOR:
+          case TOOL_COLOR:
             colorEditPopup.open();
             break;
           default:
@@ -48,34 +44,34 @@ namespace anm2ed::imgui
         }
       };
 
-      auto iconTint = settings.theme == theme::LIGHT ? ImVec4(0.0f, 0.0f, 0.0f, 1.0f) : ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+      auto iconTint = settings.theme == THEME_LIGHT ? ImVec4(0.0f, 0.0f, 0.0f, 1.0f) : ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
 
-      for (int i = 0; i < tool::COUNT; i++)
+      for (int i = 0; i < TOOL_COUNT; i++)
       {
-        auto& info = tool::INFO[i];
+        auto& info = TOOLS[i];
         auto isSelected = settings.tool == i;
 
         if (isSelected) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
 
-        if (shortcut(manager.chords[info.shortcut], shortcut::GLOBAL)) tool_use((tool::Type)i);
+        if (shortcut(manager.chords[info.shortcut], SCOPE_GLOBAL)) tool_use((Tool)i);
 
         auto labelText = info.label;
-        if (i == tool::COLOR)
+        if (i == TOOL_COLOR)
         {
           size += to_vec2(ImGui::GetStyle().FramePadding) * 2.0f;
           if (ImGui::ColorButton(labelText, to_imvec4(settings.toolColor), ImGuiColorEditFlags_NoTooltip,
                                  to_imvec2(size)))
-            tool_use((tool::Type)i);
+            tool_use((Tool)i);
         }
         else
         {
-          if (i == tool::UNDO) ImGui::BeginDisabled(!document.is_able_to_undo());
-          if (i == tool::REDO) ImGui::BeginDisabled(!document.is_able_to_redo());
+          if (i == TOOL_UNDO) ImGui::BeginDisabled(!document.is_able_to_undo());
+          if (i == TOOL_REDO) ImGui::BeginDisabled(!document.is_able_to_redo());
           if (ImGui::ImageButton(labelText, resources.icon_id_get(info.icon), to_imvec2(size), ImVec2(0, 0),
                                  ImVec2(1, 1), ImVec4(0, 0, 0, 0), iconTint))
-            tool_use((tool::Type)i);
-          if (i == tool::UNDO) ImGui::EndDisabled();
-          if (i == tool::REDO) ImGui::EndDisabled();
+            tool_use((Tool)i);
+          if (i == TOOL_UNDO) ImGui::EndDisabled();
+          if (i == TOOL_REDO) ImGui::EndDisabled();
         }
 
         auto widthIncrement = ImGui::GetItemRectSize().x + ImGui::GetStyle().ItemSpacing.x;
@@ -102,4 +98,3 @@ namespace anm2ed::imgui
     }
     ImGui::End();
   }
-}

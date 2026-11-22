@@ -36,13 +36,8 @@
 #include "path.h"
 #include "uid.h"
 
-using namespace anm2ed::resource::image;
-using namespace anm2ed::util::math;
-using namespace anm2ed::util;
 using namespace glm;
 
-namespace anm2ed::resource
-{
   constexpr std::size_t BASE64_GROUP_BYTES = 3;
   constexpr int BASE64_DIGIT_BITS = 6;
   constexpr std::uint32_t BASE64_DIGIT_MASK = 0x3F;
@@ -70,13 +65,13 @@ namespace anm2ed::resource
   // Closes the hairline seams an SVG's anti-aliasing leaves where two shapes meet: a partly covered pixel with opaque
   // pixels on both sides of it (along any axis, within SEAM_REACH) takes their color over its own and becomes opaque.
   // Outer edges, with transparency on one side, keep their anti-aliasing.
-  void seams_fill(Image& image)
+  static void seams_fill(Image& image)
   {
     constexpr glm::ivec2 AXES[] = {{1, 0}, {0, 1}, {1, 1}, {1, -1}};
     // Coverage as drawn (filling only ever raises it, and only on partly covered pixels, whose colors no check reads).
     std::vector<uint8_t> alphas((std::size_t)image.size.x * image.size.y);
     for (std::size_t i = 0; i < alphas.size(); ++i)
-      alphas[i] = image.pixels[i * CHANNELS + ALPHA];
+      alphas[i] = image.pixels[i * IMAGE_CHANNELS + ALPHA];
     auto index_get = [&](glm::ivec2 point) { return (std::size_t)point.y * image.size.x + point.x; };
     auto opaque_get = [&](glm::ivec2 point, glm::ivec2 step) -> const uint8_t*
     {
@@ -86,7 +81,7 @@ namespace anm2ed::resource
         if (glm::any(glm::lessThan(neighbor, glm::ivec2(0))) || glm::any(glm::greaterThanEqual(neighbor, image.size)))
           return nullptr;
         if (alphas[index_get(neighbor)] >= SEAM_OPAQUE_ALPHA)
-          return image.pixels.data() + index_get(neighbor) * CHANNELS;
+          return image.pixels.data() + index_get(neighbor) * IMAGE_CHANNELS;
       }
       return nullptr;
     };
@@ -101,7 +96,7 @@ namespace anm2ed::resource
           auto before = opaque_get({x, y}, -axis);
           auto after = before ? opaque_get({x, y}, axis) : nullptr;
           if (!after) continue;
-          auto pixel = image.pixels.data() + index_get({x, y}) * CHANNELS;
+          auto pixel = image.pixels.data() + index_get({x, y}) * IMAGE_CHANNELS;
           auto coverage = alpha / (float)UINT8_MAX;
           for (int channel = 0; channel < ALPHA; ++channel)
             pixel[channel] = (uint8_t)std::round(pixel[channel] * coverage +
@@ -113,7 +108,7 @@ namespace anm2ed::resource
   }
 
   // An SVG drawn at about `scale` pixels per unit (exactly, after rounding to whole pixels); nothing if it won't parse.
-  Image svg_render(std::shared_ptr<const std::string> svg, float scale)
+  static Image svg_render(std::shared_ptr<const std::string> svg, float scale)
   {
     auto document = svg ? lunasvg::Document::loadFromData(*svg) : nullptr;
     if (!document || document->width() <= 0.0f) return {};
@@ -130,7 +125,7 @@ namespace anm2ed::resource
 
   Image Image::vector_render(float scale) const { return svg_render(svg, scale); }
 
-  size_t Image::pixel_size_get() const { return size.x * size.y * CHANNELS; }
+  size_t Image::pixel_size_get() const { return size.x * size.y * IMAGE_CHANNELS; }
 
   Image::Image(const uint8_t* data, ivec2 size, bool isLinear) : isLinear(isLinear)
   {
@@ -147,7 +142,7 @@ namespace anm2ed::resource
     auto sizeInt = static_cast<int>(pngSize);
     if (sizeInt <= 0) return;
 
-    if (auto data = stbi_load_from_memory(pngData, sizeInt, &size.x, &size.y, nullptr, CHANNELS); data)
+    if (auto data = stbi_load_from_memory(pngData, sizeInt, &size.x, &size.y, nullptr, IMAGE_CHANNELS); data)
     {
       *this = Image(data, size);
       stbi_image_free((void*)data);
@@ -158,7 +153,7 @@ namespace anm2ed::resource
   Image::Image(const std::filesystem::path& path)
   {
     auto text = std::make_shared<std::string>();
-    if (!file::read_to_string(path, text.get())) return;
+    if (!file_text_load(path, text.get())) return;
     *this = Image((const unsigned char*)text->data(), text->size());
     if (!is_valid()) *this = svg_render(std::move(text), 1.0f);
   }
@@ -177,13 +172,13 @@ namespace anm2ed::resource
     {
       auto write_func = [](void* context, void* bytes, int count)
       { fwrite(bytes, 1, count, static_cast<FILE*>(context)); };
-      return stbi_write_png_to_func(write_func, handle, size.x, size.y, CHANNELS, data, size.x * CHANNELS) != 0;
+      return stbi_write_png_to_func(write_func, handle, size.x, size.y, IMAGE_CHANNELS, data, size.x * IMAGE_CHANNELS) != 0;
     }
     return false;
   }
 
   // Copies a size-sized block between images; pixels outside either image are skipped.
-  void pixels_copy(const Image& from, glm::ivec2 fromMin, Image& to, glm::ivec2 toMin, glm::ivec2 size)
+  static void pixels_copy(const Image& from, glm::ivec2 fromMin, Image& to, glm::ivec2 toMin, glm::ivec2 size)
   {
     for (int y = 0; y < size.y; ++y)
       for (int x = 0; x < size.x; ++x)
@@ -193,9 +188,9 @@ namespace anm2ed::resource
         if (glm::any(glm::lessThan(source, glm::ivec2(0))) || glm::any(glm::greaterThanEqual(source, from.size)) ||
             glm::any(glm::lessThan(target, glm::ivec2(0))) || glm::any(glm::greaterThanEqual(target, to.size)))
           continue;
-        std::copy_n(from.pixels.data() + ((std::size_t)source.y * from.size.x + source.x) * image::CHANNELS,
-                    image::CHANNELS,
-                    to.pixels.data() + ((std::size_t)target.y * to.size.x + target.x) * image::CHANNELS);
+        std::copy_n(from.pixels.data() + ((std::size_t)source.y * from.size.x + source.x) * IMAGE_CHANNELS,
+                    IMAGE_CHANNELS,
+                    to.pixels.data() + ((std::size_t)target.y * to.size.x + target.x) * IMAGE_CHANNELS);
       }
   }
 
@@ -206,13 +201,13 @@ namespace anm2ed::resource
   {
     Image region{};
     region.size = regionSize;
-    region.pixels.assign((std::size_t)regionSize.x * regionSize.y * image::CHANNELS, 0);
+    region.pixels.assign((std::size_t)regionSize.x * regionSize.y * IMAGE_CHANNELS, 0);
     pixels_copy(*this, min, region, {}, regionSize);
     return region;
   }
 
   // Base64 of bytes, for an image embedded in an SVG.
-  std::string base64_get(const std::vector<uint8_t>& bytes)
+  static std::string base64_get(const std::vector<uint8_t>& bytes)
   {
     std::string text{};
     for (std::size_t i = 0; i < bytes.size(); i += BASE64_GROUP_BYTES)
@@ -230,7 +225,7 @@ namespace anm2ed::resource
   }
 
   // Sets an attribute, adding it when the element doesn't have it yet.
-  template <class T> void attribute_set(pugi::xml_node element, const char* name, const T& value)
+  template <class T> static void attribute_set(pugi::xml_node element, const char* name, const T& value)
   {
     auto attribute = element.attribute(name);
     (attribute ? attribute : element.append_attribute(name)).set_value(value);
@@ -239,7 +234,7 @@ namespace anm2ed::resource
   // An image as one SVG definition: a vector one as a symbol of its drawing (its ids prefixed with `id`, so
   // several drawings can share a document), a raster one as an embedded PNG. Either draws at the image's size in
   // SVG units.
-  void svg_definition_add(pugi::xml_node root, pugi::xml_node defs, const Image& image, const std::string& id)
+  static void svg_definition_add(pugi::xml_node root, pugi::xml_node defs, const Image& image, const std::string& id)
   {
     if (!image.is_vector())
     {
@@ -250,7 +245,7 @@ namespace anm2ed::resource
             static_cast<std::vector<uint8_t>*>(context)->insert(static_cast<std::vector<uint8_t>*>(context)->end(),
                                                                 (uint8_t*)data, (uint8_t*)data + count);
           },
-          &png, image.size.x, image.size.y, CHANNELS, image.pixels.data(), image.size.x * CHANNELS);
+          &png, image.size.x, image.size.y, IMAGE_CHANNELS, image.pixels.data(), image.size.x * IMAGE_CHANNELS);
       auto element = defs.append_child("image");
       element.append_attribute("id") = id.c_str();
       element.append_attribute("width") = image.size.x;
@@ -335,7 +330,7 @@ namespace anm2ed::resource
   {
     if (!isVector)
     {
-      std::vector<uint8_t> pixels((std::size_t)size.x * size.y * CHANNELS, 0);
+      std::vector<uint8_t> pixels((std::size_t)size.x * size.y * IMAGE_CHANNELS, 0);
       Image composed(pixels.data(), size);
       for (const auto& part : parts)
         composed.paste(part.image->region_get(part.source, part.size), part.destination);
@@ -382,19 +377,19 @@ namespace anm2ed::resource
   // Writes a vector image as its SVG (unless the path asks for a PNG), and any other as a PNG.
   bool Image::write(const std::filesystem::path& path) const
   {
-    if (is_vector() && !path::is_extension(path, PNG_EXTENSION)) return file::write_string(path, *svg);
+    if (is_vector() && !is_path_extension(path, PNG_EXTENSION)) return file_text_save(path, *svg);
     return write_png(path);
   }
 
   vec4 Image::pixel_read(vec2 position) const
   {
-    if (pixels.size() < CHANNELS || size.x <= 0 || size.y <= 0) return vec4(0.0f);
+    if (pixels.size() < IMAGE_CHANNELS || size.x <= 0 || size.y <= 0) return vec4(0.0f);
 
     int x = glm::clamp((int)(position.x), 0, size.x - 1);
     int y = glm::clamp((int)(position.y), 0, size.y - 1);
 
-    auto index = ((size_t)(y) * (size_t)(size.x) + (size_t)(x)) * CHANNELS;
-    if (index + CHANNELS > pixels.size()) return vec4(0.0f);
+    auto index = ((size_t)(y) * (size_t)(size.x) + (size_t)(x)) * IMAGE_CHANNELS;
+    if (index + IMAGE_CHANNELS > pixels.size()) return vec4(0.0f);
 
     vec4 color{uint8_to_float(pixels[index + 0]), uint8_to_float(pixels[index + 1]), uint8_to_float(pixels[index + 2]),
                uint8_to_float(pixels[index + 3])};
@@ -411,7 +406,7 @@ namespace anm2ed::resource
                       (uint8)float_to_uint8(color.a)};
 
     if (pixels.size() != pixel_size_get()) return;
-    size_t idx = (position.y * size.x + position.x) * CHANNELS;
+    size_t idx = (position.y * size.x + position.x) * IMAGE_CHANNELS;
     memcpy(&pixels[idx], rgba8, 4);
     uid = uid_next();
   }
@@ -448,4 +443,3 @@ namespace anm2ed::resource
       }
     }
   }
-}

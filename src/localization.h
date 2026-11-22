@@ -3,8 +3,6 @@
 #include <format>
 #include <string>
 
-namespace anm2ed
-{
 #define SELECT_ENGLISH(symbol, english, spanish, russian, chinese, korean) english,
 #define SELECT_SPANISH(symbol, english, spanish, russian, chinese, korean) spanish,
 #define SELECT_RUSSIAN(symbol, english, spanish, russian, chinese, korean) russian,
@@ -914,15 +912,11 @@ namespace anm2ed
       return LANGUAGE_STRING_COLLECTIONS[useLanguage][type];
     }
   };
-}
 
-inline anm2ed::Localizer localize;
+inline Localizer localize;
 
-namespace anm2ed
-{
   // A localized format string filled with arguments.
   template <class... Args> std::string localize_format(StringType format, Args... args)
   {
     return std::vformat(localize.get(format), std::make_format_args(args...));
   }
-}

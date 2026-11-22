@@ -2,8 +2,6 @@
 
 #include <filesystem>
 
-namespace anm2ed::util
-{
   class WorkingDirectory
   {
   public:
@@ -18,4 +16,3 @@ namespace anm2ed::util
     WorkingDirectory(const std::filesystem::path&, Type type = DIRECTORY);
     ~WorkingDirectory();
   };
-}

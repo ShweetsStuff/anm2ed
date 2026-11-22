@@ -10,11 +10,6 @@
 #include "ui/layout.h"
 #include "ui/selectable.h"
 
-using namespace anm2ed::util;
-using namespace anm2ed::resource;
-
-namespace anm2ed::imgui
-{
   void welcome_update(Manager& manager, Resources& resources, Dialog& dialog, Taskbar& taskbar, Documents& documents)
   {
     auto viewport = ImGui::GetMainViewport();
@@ -30,7 +25,7 @@ namespace anm2ed::imgui
                          ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoScrollbar |
                          ImGuiWindowFlags_NoScrollWithMouse))
     {
-      ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE_LARGE);
+      ImGui::PushFont(resources.fonts[FONT_BOLD].get(), FONT_SIZE_LARGE);
       ImGui::TextUnformatted(localize.get(LABEL_APPLICATION_NAME));
       ImGui::PopFont();
 
@@ -51,7 +46,7 @@ namespace anm2ed::imgui
         {
           ImGui::PushID(i);
 
-          auto label = std::format(FILE_LABEL_FORMAT, path::to_utf8(file.filename()), path::to_utf8(file));
+          auto label = std::format(FILE_LABEL_FORMAT, path_to_utf8(file.filename()), path_to_utf8(file));
 
           if (ImGui::Selectable(label.c_str()))
           {
@@ -70,4 +65,3 @@ namespace anm2ed::imgui
     selectable_input_text_id() = {};
   }
 
-}

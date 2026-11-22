@@ -30,14 +30,8 @@
 #include "ui/shortcut.h"
 #include "ui/timeline.h"
 
-using namespace anm2ed::types;
-using namespace anm2ed::util;
-using namespace anm2ed::resource;
-using namespace anm2ed::resource::image;
 using namespace glm;
 
-namespace anm2ed::imgui
-{
   constexpr auto NULL_RECT_COLOR = vec4(0.0f, 0.0f, 1.0f, 0.90f);
   constexpr auto SELECTED_LAYER_BORDER_COLOR = vec4(1.0f, 0.1059f, 0.5882f, 1.0f);
   constexpr auto TARGET_SIZE = vec2(32, 32);
@@ -52,13 +46,13 @@ namespace anm2ed::imgui
     std::string label{};
   };
 
-  std::vector<OverlayAnimationOption> overlay_animation_options_get(Manager& manager)
+  static std::vector<OverlayAnimationOption> overlay_animation_options_get(Manager& manager)
   {
     std::vector<OverlayAnimationOption> options{{.label = std::string(localize.get(BASIC_NONE))}};
 
     for (auto& document : manager.documents)
     {
-      auto documentLabel = path::to_utf8(document.filename_get());
+      auto documentLabel = path_to_utf8(document.filename_get());
       for (auto [animationIndex, animation] : document.model.animations_get())
       {
         auto label = std::format("{} ({})", animation->name, documentLabel);
@@ -69,7 +63,7 @@ namespace anm2ed::imgui
     return options;
   }
 
-  std::vector<const char*> overlay_animation_option_labels_get(std::vector<OverlayAnimationOption>& options)
+  static std::vector<const char*> overlay_animation_option_labels_get(std::vector<OverlayAnimationOption>& options)
   {
     std::vector<const char*> labels{};
     labels.reserve(options.size());
@@ -78,7 +72,7 @@ namespace anm2ed::imgui
     return labels;
   }
 
-  int overlay_animation_option_index_get(const Document& document, const std::vector<OverlayAnimationOption>& options)
+  static int overlay_animation_option_index_get(const Document& document, const std::vector<OverlayAnimationOption>& options)
   {
     if (document.overlayIndex == -1) return 0;
     auto documentId = document.overlayDocumentId ? document.overlayDocumentId : document.tabId;
@@ -87,7 +81,7 @@ namespace anm2ed::imgui
     return -1;
   }
 
-  Document* overlay_animation_document_get(Manager& manager, const Document& document)
+  static Document* overlay_animation_document_get(Manager& manager, const Document& document)
   {
     if (document.overlayIndex == -1) return nullptr;
     auto documentId = document.overlayDocumentId ? document.overlayDocumentId : document.tabId;
@@ -96,7 +90,7 @@ namespace anm2ed::imgui
     return nullptr;
   }
 
-  std::optional<vec4> animation_rects_merge(std::optional<vec4> rect, vec4 next)
+  static std::optional<vec4> animation_rects_merge(std::optional<vec4> rect, vec4 next)
   {
     if (next == vec4(-1.0f)) return rect;
     if (!rect) return next;
@@ -106,19 +100,19 @@ namespace anm2ed::imgui
     return vec4(minPoint, maxPoint - minPoint);
   }
 
-  std::optional<vec4> animation_render_rect_get(Manager& manager, Document& document, const model::Animation* animation,
+  static std::optional<vec4> animation_render_rect_get(Manager& manager, Document& document, const Animation* animation,
                                                 bool isRootTransform)
   {
     std::optional<vec4> rect{};
 
     if (animation)
       rect = animation_rects_merge(
-          rect, model::animation_rect(document.model, *animation, isRootTransform, document.library_resolver_get()));
+          rect, animation_rect(document.model, *animation, isRootTransform, document.library_resolver_get()));
 
     if (auto overlayDocument = overlay_animation_document_get(manager, document))
       if (auto overlayAnimation = overlayDocument->model.animation_get(document.overlayIndex))
         rect = animation_rects_merge(rect,
-                                     model::animation_rect(overlayDocument->model, *overlayAnimation, isRootTransform,
+                                     animation_rect(overlayDocument->model, *overlayAnimation, isRootTransform,
                                                            overlayDocument->library_resolver_get()));
 
     return rect;
@@ -134,7 +128,7 @@ namespace anm2ed::imgui
     auto stop_all_sounds = [&]()
     {
       for (auto sound : document.sounds_get())
-        audio::stop(*sound, mixer);
+        audio_stop(*sound, mixer);
     };
 
     if (manager.isRecording)
@@ -163,7 +157,7 @@ namespace anm2ed::imgui
       else
       {
         auto fps = std::max(model.info.fps, 1);
-        auto range = model::animation_play_range_get(*animation);
+        auto range = animation_play_range_get(*animation);
         if (!wasPlaybackPlaying) soundFrame = (int)std::floor(playback.time) - 1;
         playback.tick(fps, range.x, range.y, (animation->isLoop || settings.playbackIsLoop) && !manager.isRecording,
                       deltaSeconds);
@@ -175,7 +169,7 @@ namespace anm2ed::imgui
           soundFrame = soundFrame + 1 >= range.y || soundFrame + 1 < range.x ? range.x : soundFrame + 1;
           if (manager.isRecording || !isSound) continue;
           for (auto sound : document.trigger_sounds_get(*animation, soundFrame))
-            audio::play(*sound, false, mixer);
+            audio_play(*sound, false, mixer);
         }
 
         frameTime = playback.time;
@@ -197,18 +191,18 @@ namespace anm2ed::imgui
 
   // Starts a render from the render settings; a bounded render frames the animation (and overlay) at the render scale.
   void AnimationPreview::recording_start(Manager& manager, Settings& settings, Document& document,
-                                         const model::Animation* animation)
+                                         const Animation* animation)
   {
     auto animationFps = std::max(document.model.info.fps, 1);
-    render::RecorderOptions options{
-        .type = (render::Type)settings.renderType,
+    RecorderOptions options{
+        .type = (RenderType)settings.renderType,
         .path = settings.renderPath,
         .format = settings.renderFormat,
         .ffmpegPath = settings.renderFFmpegPath,
         .start = manager.recordingStart,
         .end = manager.recordingEnd,
         .animationFps = animationFps,
-        .fps = render::fps_get(settings.renderFpsMode, animationFps, settings.playbackTickRate),
+        .fps = fps_get(settings.renderFpsMode, animationFps, settings.playbackTickRate),
         .rows = settings.renderRows,
         .columns = settings.renderColumns,
         .isSound = settings.timelineIsSound,
@@ -221,7 +215,7 @@ namespace anm2ed::imgui
       recordPan = document.previewPan;
       if (auto rect = animation_render_rect_get(manager, document, animation, settings.previewIsRootTransform))
       {
-        recordSize = glm::vec2(rect->z, rect->w) * math::percent_to_unit(settings.renderScale);
+        recordSize = glm::vec2(rect->z, rect->w) * percent_to_unit(settings.renderScale);
         auto previousSize = size;
         size = recordSize;
         set_to_rect(recordZoom, recordPan, *rect);
@@ -233,7 +227,7 @@ namespace anm2ed::imgui
     manager.isRecording = true;
     if (!recorder.start(options))
     {
-      toast_log(Level::ERROR, TOAST_EXPORT_RENDERED_ANIMATION_FAILED, path::to_utf8(options.path));
+      toast_log(Level::ERROR, TOAST_EXPORT_RENDERED_ANIMATION_FAILED, path_to_utf8(options.path));
       return recording_stop(manager, document);
     }
     document.playback.isPlaying = true;
@@ -271,19 +265,19 @@ namespace anm2ed::imgui
     auto& isBorder = settings.previewIsBorder;
     auto& tool = settings.tool;
     auto& isOnlyShowLayers = settings.timelineIsOnlyShowLayers;
-    auto& shaderLine = resources.shaders[shader::LINE];
-    bool isLightTheme = settings.theme == theme::LIGHT;
-    auto& shaderAxes = resources.shaders[shader::AXIS];
-    auto& shaderGrid = resources.shaders[shader::GRID];
-    auto& shaderTexture = resources.shaders[shader::TEXTURE];
-    auto& shaderDashed = resources.shaders[shader::DASHED];
+    auto& shaderLine = resources.shaders[SHADER_LINE];
+    bool isLightTheme = settings.theme == THEME_LIGHT;
+    auto& shaderAxes = resources.shaders[SHADER_AXIS];
+    auto& shaderGrid = resources.shaders[SHADER_GRID];
+    auto& shaderTexture = resources.shaders[SHADER_TEXTURE];
+    auto& shaderDashed = resources.shaders[SHADER_DASHED];
     auto center_view = [&]() { pan = vec2(); };
 
     auto fit_view = [&]()
     {
       if (animation)
         set_to_rect(zoom, pan,
-                    model::animation_rect(model, *animation, isRootTransform, document.library_resolver_get()));
+                    animation_rect(model, *animation, isRootTransform, document.library_resolver_get()));
     };
 
     manager.isAbleToRecord = false;
@@ -367,7 +361,7 @@ namespace anm2ed::imgui
         }
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OVERLAY));
 
-        overlayDrawOrder = glm::clamp(overlayDrawOrder, (int)overlay_draw_order::OVER, (int)overlay_draw_order::UNDER);
+        overlayDrawOrder = glm::clamp(overlayDrawOrder, (int)OVERLAY_OVER, (int)OVERLAY_UNDER);
         overlayTransparency = glm::clamp(overlayTransparency, 0.0f, 100.0f);
         auto orderIconSize = icon_size_get();
         auto orderButtonWidth = orderIconSize.x + ImGui::GetStyle().FramePadding.x * 2.0f;
@@ -382,13 +376,13 @@ namespace anm2ed::imgui
         overlayTransparency = glm::clamp(overlayTransparency, 0.0f, 100.0f);
 
         ImGui::SameLine();
-        radio_button_icon("##Overlay Over", &overlayDrawOrder, overlay_draw_order::OVER,
-                          resources.icon_id_get(icon::OVER), orderIconSize, overlayIconTint);
+        radio_button_icon("##Overlay Over", &overlayDrawOrder, OVERLAY_OVER,
+                          resources.icon_id_get(ICON_OVER), orderIconSize, overlayIconTint);
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OVERLAY_OVER));
 
         ImGui::SameLine();
-        radio_button_icon("##Overlay Under", &overlayDrawOrder, overlay_draw_order::UNDER,
-                          resources.icon_id_get(icon::UNDER), orderIconSize, overlayIconTint);
+        radio_button_icon("##Overlay Under", &overlayDrawOrder, OVERLAY_UNDER,
+                          resources.icon_id_get(ICON_UNDER), orderIconSize, overlayIconTint);
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OVERLAY_UNDER));
       }
       ImGui::EndChild();
@@ -476,17 +470,17 @@ namespace anm2ed::imgui
 
         auto frame = selectedFrameReferences.empty() ? nullptr : model.frame_get(editReference);
         auto selectedNull =
-            editReference.itemType == NULL_ ? model::item_get(model.content.nulls, editReference.itemID) : nullptr;
+            editReference.itemType == NULL_ ? item_get(model.content.nulls, editReference.itemID) : nullptr;
         bool isSelectedNullRect = selectedNull && selectedNull->isShowRect;
-        auto null_rect_top_left = [](const model::Frame& frame) { return frame.position - (frame.scale * 0.5f); };
+        auto null_rect_top_left = [](const Frame& frame) { return frame.position - (frame.scale * 0.5f); };
 
-        auto useTool = (tool::Type)tool;
-        if (input.isMiddleDown) useTool = tool::PAN;
-        if (tool == tool::MOVE && input.isRightDown) useTool = tool::SCALE;
-        if (tool == tool::SCALE && input.isRightDown) useTool = tool::MOVE;
+        auto useTool = (Tool)tool;
+        if (input.isMiddleDown) useTool = TOOL_PAN;
+        if (tool == TOOL_MOVE && input.isRightDown) useTool = TOOL_SCALE;
+        if (tool == TOOL_SCALE && input.isRightDown) useTool = TOOL_MOVE;
 
         // A tool swapped in by the right button is driven by the right button.
-        auto isSwapped = useTool != tool && useTool != tool::PAN;
+        auto isSwapped = useTool != tool && useTool != TOOL_PAN;
         auto isToolClicked = isSwapped ? input.isRightClicked : input.isLeftClicked;
         auto isToolDown = isSwapped ? input.isRightDown : input.isLeftDown;
         auto isToolReleased = isSwapped ? input.isRightReleased : input.isLeftReleased;
@@ -508,14 +502,14 @@ namespace anm2ed::imgui
                          .scaleY = rectSize.y - frame->scale.y});
         };
 
-        tool_cursor_update(useTool, tool::ANIMATION_PREVIEW, frame != nullptr, true,
+        tool_cursor_update(useTool, TOOL_AREA_ANIMATION_PREVIEW, frame != nullptr, true,
                            input.isLeftDown || input.isRightDown || input.isMiddleDown || input.isArrowDown,
                            TEXT_SELECT_FRAME);
-        if (useTool != tool::MOVE) isMoveDragging = false;
-        if (useTool == tool::PAN && (input.isLeftDown || input.isRightDown || input.isMiddleDown))
+        if (useTool != TOOL_MOVE) isMoveDragging = false;
+        if (useTool == TOOL_PAN && (input.isLeftDown || input.isRightDown || input.isMiddleDown))
           pan += input.mouseDelta;
 
-        if (frame && useTool == tool::MOVE)
+        if (frame && useTool == TOOL_MOVE)
         {
           if (isBegin) edit_begin_push(manager, EDIT_FRAME_POSITION);
           if (isToolClicked)
@@ -535,7 +529,7 @@ namespace anm2ed::imgui
           if (isEnd) document_change_push(manager);
         }
 
-        if (frame && useTool == tool::SCALE)
+        if (frame && useTool == TOOL_SCALE)
         {
           if (isBegin) edit_begin_push(manager, EDIT_FRAME_SCALE);
           if (isToolClicked && isSelectedNullRect) nullRectScaleAnchor = null_rect_top_left(*frame);
@@ -569,7 +563,7 @@ namespace anm2ed::imgui
           if (isEnd) document_change_push(manager);
         }
 
-        if (frame && useTool == tool::ROTATE)
+        if (frame && useTool == TOOL_ROTATE)
         {
           if (isBegin) edit_begin_push(manager, EDIT_FRAME_ROTATION);
           if (isToolDown) frames_change({.rotation = input.mouseDelta.x});
@@ -579,7 +573,7 @@ namespace anm2ed::imgui
           if (isEnd) document_change_push(manager);
         }
 
-        if (frame && useTool == tool::SKEW)
+        if (frame && useTool == TOOL_SKEW)
         {
           if (isBegin) edit_begin_push(manager, EDIT_FRAME_SKEW);
           if (isToolDown)
@@ -608,7 +602,7 @@ namespace anm2ed::imgui
       auto baseTransform = transform_get(viewZoom, viewPan);
       auto frameTime = document.frameTime > -1 && !playback.isPlaying ? document.frameTime : playback.time;
 
-      model::DrawOptions drawOptions{.time = frameTime,
+      DrawOptions drawOptions{.time = frameTime,
                                      .isRootTransform = isRootTransform,
                                      .isIndexSampled = settings.onionskinMode == (int)OnionskinMode::INDEX};
       std::vector<vec3> sampleColors{};
@@ -641,16 +635,16 @@ namespace anm2ed::imgui
       };
 
       // The item the reference points at: the root (or a group's root), a layer or a null.
-      auto is_draw_selected = [&](const model::Draw& draw)
+      auto is_draw_selected = [&](const Draw& draw)
       {
         switch (draw.type)
         {
-          case model::DrawType::ROOT:
+          case DrawType::ROOT:
             return referenceItemType == ItemType::ROOT && reference.groupId == -1;
-          case model::DrawType::GROUP_ROOT:
+          case DrawType::GROUP_ROOT:
             return referenceItemType == ItemType::ROOT && reference.groupType == draw.groupType &&
                    reference.groupId == draw.id;
-          case model::DrawType::LAYER:
+          case DrawType::LAYER:
             return referenceItemType == ItemType::LAYER && reference.itemID == draw.id;
           default:
             return referenceItemType == ItemType::NULL_ && reference.itemID == draw.id;
@@ -661,18 +655,18 @@ namespace anm2ed::imgui
       // Draws an animation's draw list; onion-skin samples are tinted and faded, `alphaOffset` fades the overlay. A
       // parent around a stepped-into child is drawn in the child's space (`scene`), its layers only, without the
       // animation layer playing the child (`skipLayerId`).
-      auto render = [&](Document& sampleDocument, const model::Animation& sampleAnimation, float alphaOffset,
-                        const model::DrawOptions& options, const mat4& scene = mat4(1.0f), int skipLayerId = -1)
+      auto render = [&](Document& sampleDocument, const Animation& sampleAnimation, float alphaOffset,
+                        const DrawOptions& options, const mat4& scene = mat4(1.0f), int skipLayerId = -1)
       {
         auto isActiveDocument = &sampleDocument == &document && skipLayerId == -1;
         auto isParent = skipLayerId != -1;
         auto& sampleModel = sampleDocument.model;
-        auto targetIcon = resources.icon_id_get(isAltIcons && !isIsolated ? icon::TARGET_ALT : icon::TARGET);
+        auto targetIcon = resources.icon_id_get(isAltIcons && !isIsolated ? ICON_TARGET_ALT : ICON_TARGET);
         auto sampleOptions = options;
         sampleOptions.library_get = sampleDocument.library_resolver_get();
-        for (const auto& draw : model::animation_draws_get(sampleModel, sampleAnimation, sampleOptions))
+        for (const auto& draw : animation_draws_get(sampleModel, sampleAnimation, sampleOptions))
         {
-          if (isParent && (draw.type != model::DrawType::LAYER || draw.id == skipLayerId)) continue;
+          if (isParent && (draw.type != DrawType::LAYER || draw.id == skipLayerId)) continue;
           auto isOnion = draw.sample != -1;
           if (isOnion && isOnlySelected && !(isActiveDocument && is_draw_selected(draw))) continue;
           auto sampleColor = isOnion ? sampleColors[draw.sample] : vec3();
@@ -682,60 +676,60 @@ namespace anm2ed::imgui
           auto transform = baseTransform * scene * draw.parent;
           auto marker_model_get = [&](vec2 markerSize)
           {
-            return math::quad_model_get(markerSize, frame.position, markerSize * 0.5f,
-                                        math::percent_to_unit(frame.scale), frame.rotation,
-                                        math::percent_to_unit(frame.skew));
+            return quad_model_get(markerSize, frame.position, markerSize * 0.5f,
+                                        percent_to_unit(frame.scale), frame.rotation,
+                                        percent_to_unit(frame.skew));
           };
 
-          if (draw.type == model::DrawType::ROOT || draw.type == model::DrawType::GROUP_ROOT)
+          if (draw.type == DrawType::ROOT || draw.type == DrawType::GROUP_ROOT)
           {
             if (isViewOnlyLayers) continue;
-            auto isSelected = isActiveDocument && draw.type == model::DrawType::GROUP_ROOT &&
+            auto isSelected = isActiveDocument && draw.type == DrawType::GROUP_ROOT &&
                               referenceItemType == ItemType::ROOT && reference.groupType == draw.groupType &&
                               reference.groupId == draw.id;
             auto color = isOnion                              ? vec4(sampleColor, sampleAlpha)
-                         : draw.type == model::DrawType::ROOT ? color::GREEN
-                         : isSelected                         ? color::RED
+                         : draw.type == DrawType::ROOT ? COLOR_GREEN
+                         : isSelected                         ? COLOR_RED
                                                               : ROOT_COLOR;
-            auto markerModel = isRootTransform ? math::quad_model_get(TARGET_SIZE, {}, TARGET_SIZE * 0.5f)
+            auto markerModel = isRootTransform ? quad_model_get(TARGET_SIZE, {}, TARGET_SIZE * 0.5f)
                                                : marker_model_get(TARGET_SIZE);
             texture_render(shaderTexture, targetIcon, transform * markerModel, color);
           }
-          else if (draw.type == model::DrawType::LAYER)
+          else if (draw.type == DrawType::LAYER)
           {
             auto layerTexture =
-                sampleDocument.draw_image_get(draw, math::percent_to_unit(viewZoom) * model::draw_scale_get(draw));
+                sampleDocument.draw_image_get(draw, percent_to_unit(viewZoom) * draw_scale_get(draw));
             if (!layerTexture || !layerTexture->is_valid() || layerTexture->size.x <= 0 || layerTexture->size.y <= 0)
               continue;
             auto textureSize = layerTexture->unit_size_get();
-            auto layerModel = model::draw_quad_model_get(draw);
+            auto layerModel = draw_quad_model_get(draw);
             auto layerTransform = transform * layerModel;
             auto tint = frame.tint;
             tint.a = std::max(0.0f, tint.a - (alphaOffset + sampleAlpha));
             auto customShader = sampleDocument.shader_get(frame.shaderId);
-            layer_render(customShader ? *customShader : shaderTexture, resource::texture::id_get(*layerTexture),
+            layer_render(customShader ? *customShader : shaderTexture, texture_id_get(*layerTexture),
                          textureSize, baseTransform * scene, draw, tint, frame.colorOffset + vec4(sampleColor, 0.0f));
             if (isParent) continue;
 
             auto color = isOnion                                          ? onionColor
                          : isActiveDocument && is_layer_selected(draw.id) ? SELECTED_LAYER_BORDER_COLOR
-                                                                          : color::RED;
+                                                                          : COLOR_RED;
             if (isBorder && !isIsolated) rect_render(shaderLine, layerTransform, layerModel, color);
             if (isPivots && !isIsolated)
-              texture_render(shaderTexture, resources.icon_id_get(icon::PIVOT),
+              texture_render(shaderTexture, resources.icon_id_get(ICON_PIVOT),
                              transform * marker_model_get(PIVOT_SIZE), color);
           }
           else if (!isViewOnlyLayers)
           {
-            auto isShowRect = model::item_get(sampleModel.content.nulls, draw.id)->isShowRect;
+            auto isShowRect = item_get(sampleModel.content.nulls, draw.id)->isShowRect;
             auto isSelected = isActiveDocument && draw.id == reference.itemID && referenceItemType == ItemType::NULL_;
-            auto color = isOnion ? onionColor : isSelected ? color::RED : NULL_RECT_COLOR;
+            auto color = isOnion ? onionColor : isSelected ? COLOR_RED : NULL_RECT_COLOR;
             auto markerSize = isShowRect ? POINT_SIZE : TARGET_SIZE;
-            texture_render(shaderTexture, isShowRect ? resources.icon_id_get(icon::POINT) : targetIcon,
+            texture_render(shaderTexture, isShowRect ? resources.icon_id_get(ICON_POINT) : targetIcon,
                            transform * marker_model_get(markerSize), color);
             if (!isShowRect) continue;
-            auto rectModel = math::quad_model_get(frame.scale, frame.position, frame.scale * 0.5f, vec2(1.0f),
-                                                  frame.rotation, math::percent_to_unit(frame.skew));
+            auto rectModel = quad_model_get(frame.scale, frame.position, frame.scale * 0.5f, vec2(1.0f),
+                                                  frame.rotation, percent_to_unit(frame.skew));
             rect_render(shaderLine, transform * rectModel, rectModel, color);
           }
         }
@@ -747,7 +741,7 @@ namespace anm2ed::imgui
         {
           if (auto overlayDocument = isIsolated ? nullptr : overlay_animation_document_get(manager, document))
             if (auto overlayAnimation = overlayDocument->model.animation_get(overlayIndex))
-              render(*overlayDocument, *overlayAnimation, 1.0f - math::percent_to_unit(overlayTransparency),
+              render(*overlayDocument, *overlayAnimation, 1.0f - percent_to_unit(overlayTransparency),
                      drawOptions);
         };
 
@@ -759,7 +753,7 @@ namespace anm2ed::imgui
           auto parentIndex = manager.tab_index_get(step.tabId);
           auto parentDocument = parentIndex == -1 ? nullptr : manager.get(parentIndex);
           auto parentAnimation = parentDocument ? parentDocument->model.animation_get(step.animationIndex) : nullptr;
-          auto placement = parentAnimation ? model::layer_child_transform_get(*parentAnimation, step.layer.itemID,
+          auto placement = parentAnimation ? layer_child_transform_get(*parentAnimation, step.layer.itemID,
                                                                               step.frameTime, isRootTransform)
                                            : std::nullopt;
           if (placement && glm::determinant(*placement) != 0.0f)
@@ -768,9 +762,9 @@ namespace anm2ed::imgui
                    step.layer.itemID);
         }
 
-        if (overlayDrawOrder == overlay_draw_order::UNDER) overlay_render();
+        if (overlayDrawOrder == OVERLAY_UNDER) overlay_render();
         render(document, *animation, 0.0f, drawOptions);
-        if (overlayDrawOrder == overlay_draw_order::OVER) overlay_render();
+        if (overlayDrawOrder == OVERLAY_OVER) overlay_render();
 
         if (settings.onionskinIsEnabled && settings.onionskinIsPivotPath && !isIsolated)
         {
@@ -780,7 +774,7 @@ namespace anm2ed::imgui
             pivotPathsKey = key;
             pivotPaths.clear();
             for (int time = 0; time < animation->frameNum; ++time)
-              for (const auto& draw : model::animation_draws_get(model, *animation,
+              for (const auto& draw : animation_draws_get(model, *animation,
                                                                  {.time = (float)time,
                                                                   .isRootTransform = isRootTransform,
                                                                   .library_get = document.library_resolver_get()}))
@@ -796,16 +790,16 @@ namespace anm2ed::imgui
               }
           }
 
-          auto pointIcon = resources.icon_id_get(icon::POINT);
+          auto pointIcon = resources.icon_id_get(ICON_POINT);
           for (const auto& path : pivotPaths)
           {
             if (isOnlySelected && !is_draw_selected(path.item)) continue;
             for (std::size_t i = 0; i < path.points.size(); ++i)
             {
-              if (i > 0) line_render(shaderDashed, baseTransform, path.points[i - 1], path.points[i], color::RED);
+              if (i > 0) line_render(shaderDashed, baseTransform, path.points[i - 1], path.points[i], COLOR_RED);
               texture_render(shaderTexture, pointIcon,
-                             baseTransform * math::quad_model_get(POINT_SIZE, path.points[i], POINT_SIZE * 0.5f),
-                             color::RED);
+                             baseTransform * quad_model_get(POINT_SIZE, path.points[i], POINT_SIZE * 0.5f),
+                             COLOR_RED);
             }
           }
         }
@@ -815,10 +809,10 @@ namespace anm2ed::imgui
       {
         auto sounds = settings.timelineIsSound && animation && recorder.is_sound_frame()
                           ? document.trigger_sounds_get(*animation, (int)frameTime, recorder.index)
-                          : std::vector<const resource::AudioData*>{};
+                          : std::vector<const AudioData*>{};
         if (!recorder.frame_capture(pixels_get(), size, sounds))
         {
-          toast_log(Level::ERROR, TOAST_EXPORT_RENDERED_ANIMATION_FAILED, path::to_utf8(recorder.options.path));
+          toast_log(Level::ERROR, TOAST_EXPORT_RENDERED_ANIMATION_FAILED, path_to_utf8(recorder.options.path));
           recorder.cancel();
           recording_stop(manager, document);
         }
@@ -837,9 +831,9 @@ namespace anm2ed::imgui
       std::string names{};
       if (animation && !isOnlyShowLayers && !manager.isRecording)
         for (const auto& [source, trigger, layerId] :
-             model::animation_triggers_get(model, *animation, (int)frameTime, document.library_resolver_get()))
+             animation_triggers_get(model, *animation, (int)frameTime, document.library_resolver_get()))
           for (auto eventId : trigger.eventIds)
-            if (auto event = model::item_get(source->content.events, eventId))
+            if (auto event = item_get(source->content.events, eventId))
               names += (names.empty() ? "" : ", ") + event->name;
       if (!names.empty())
       {
@@ -849,7 +843,7 @@ namespace anm2ed::imgui
         auto textPos = to_imvec2(to_vec2(cursorScreenPos) + to_vec2(ImGui::GetStyle().WindowPadding));
 
         drawList->PushClipRect(clipMin, clipMax);
-        ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE_LARGE);
+        ImGui::PushFont(resources.fonts[FONT_BOLD].get(), FONT_SIZE_LARGE);
         auto triggerTextColor = isLightTheme ? TRIGGER_TEXT_COLOR_LIGHT : TRIGGER_TEXT_COLOR_DARK;
         drawList->AddText(textPos, ImGui::GetColorU32(triggerTextColor), names.c_str());
         ImGui::PopFont();
@@ -857,7 +851,7 @@ namespace anm2ed::imgui
       }
     }
 
-    if (tool == tool::PAN)
+    if (tool == TOOL_PAN)
       view_context_menu_draw("##Animation Preview Context Menu", manager, settings, document, zoom, pan, center_view,
                              fit_view, animation != nullptr);
 
@@ -889,4 +883,3 @@ namespace anm2ed::imgui
     settings.previewStartZoom = zoom;
     ImGui::End();
   }
-}

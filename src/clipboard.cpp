@@ -3,8 +3,6 @@
 #include <SDL3/SDL_clipboard.h>
 #include <SDL3/SDL_stdinc.h>
 
-namespace anm2ed
-{
   Clipboard::Clipboard() { set(""); }
 
   std::string Clipboard::get()
@@ -19,4 +17,3 @@ namespace anm2ed
   bool Clipboard::is_empty() { return !SDL_HasClipboardText(); }
 
   void Clipboard::set(const std::string& string) { SDL_SetClipboardText(string.c_str()); }
-}

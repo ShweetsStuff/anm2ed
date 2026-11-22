@@ -1,7 +1,5 @@
 #include "ui/dockspace.h"
 
-namespace anm2ed::imgui
-{
   bool Dockspace::is_canvas_focused_get() const { return isCanvasFocused; }
 
   void Dockspace::tick(Manager& manager, Settings& settings, float deltaSeconds)
@@ -92,4 +90,3 @@ namespace anm2ed::imgui
     }
     ImGui::End();
   }
-}

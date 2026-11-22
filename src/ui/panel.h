@@ -19,8 +19,6 @@
 #include "ui/change_all_frame_properties.h"
 
 // Panels are plain functions: each draws from the document and its selection, and queues edits as commands.
-namespace anm2ed::imgui
-{
   inline constexpr auto DRAG_DROP_SOURCE_FLAGS =
       ImGuiDragDropFlags_SourceNoPreviewTooltip | ImGuiDragDropFlags_SourceNoHoldToOpenOthers;
   inline constexpr ImVec4 CARD_TINT_INVALID = ImVec4(1.0f, 0.25f, 0.25f, 1.0f);
@@ -30,7 +28,7 @@ namespace anm2ed::imgui
 
   struct CardImage
   {
-    const resource::Image* texture{};
+    const Image* texture{};
     glm::vec2 size{};
     glm::vec2 uvMin{};
     glm::vec2 uvMax{1.0f};
@@ -82,7 +80,7 @@ namespace anm2ed::imgui
     std::function<std::string(int)> name_get{};
     std::function<void(int, const std::string&)> rename{};
     std::function<bool(int)> is_invalid{};
-    std::function<resource::font::Type(int)> font_get{};
+    std::function<FontStyle(int)> font_get{};
     std::function<void(int)> tooltip_draw{};
     std::function<CardImage(int)> image_get{};
     std::function<void(int)> select{};
@@ -132,7 +130,7 @@ namespace anm2ed::imgui
     PanelState state{};
     PopupHelper propertiesPopup{PopupHelper(LABEL_REGION_PROPERTIES, POPUP_SMALL_NO_HEIGHT)};
     PopupHelper exportPopup{PopupHelper(LABEL_EXPORT_REGION, POPUP_SMALL_NO_HEIGHT)};
-    model::Region editRegion{};
+    Region editRegion{};
     int editId{-1};
     int exportId{-1};
   };
@@ -148,7 +146,7 @@ namespace anm2ed::imgui
 
   struct FramePropertiesPanel
   {
-    wizard::ChangeAllFrameProperties changeAllFrameProperties{};
+    ChangeAllFrameProperties changeAllFrameProperties{};
     bool isBatchMode{};
   };
 
@@ -160,11 +158,11 @@ namespace anm2ed::imgui
   void nulls_update(Panel&);
   void events_update(Panel&);
   void sounds_update(Panel&);
-  std::string layer_label_get(const model::Layer&);
-  void layer_source_tooltip_draw(const Document&, const model::Layer&);
-  void layer_source_tooltip_draw(const Document&, const model::Layer&);
-  model::Layer item_edit_layer_get(const Manager::ItemEdit&);
-  model::Null item_edit_null_get(const Manager::ItemEdit&);
+  std::string layer_label_get(const Layer&);
+  void layer_source_tooltip_draw(const Document&, const Layer&);
+  void layer_source_tooltip_draw(const Document&, const Layer&);
+  Layer item_edit_layer_get(const Manager::ItemEdit&);
+  Null item_edit_null_get(const Manager::ItemEdit&);
   void layer_source_draw(Document&, Manager::ItemEdit&);
   void libraries_update(Panel&);
   void spritesheets_update(Panel&, SpritesheetsPanel&);
@@ -186,7 +184,7 @@ namespace anm2ed::imgui
   {
     std::string text{};
     for (auto id : ids)
-      if (auto item = model::item_get(items, id)) text += model::item_to_string(*item);
+      if (auto item = item_get(items, id)) text += item_to_string(*item);
     if (!text.empty()) clipboard.set(text);
   }
 
@@ -200,15 +198,15 @@ namespace anm2ed::imgui
                  [&state, kind, edit, failToast, text, items_get](Document& document)
                  {
                    std::string errorString{};
-                   auto pasted = model::items_from_string<Item>(text, &errorString);
+                   auto pasted = items_from_string<Item>(text, &errorString);
                    if (pasted.empty()) return toast_log(Level::ERROR, failToast, errorString);
                    document.edit_apply(edit,
-                                       [&](model::Model& model)
+                                       [&](Model& model)
                                        {
                                          auto& items = items_get(model);
                                          for (auto& item : pasted)
                                          {
-                                           item.id = model::item_next_id_get(items);
+                                           item.id = item_next_id_get(items);
                                            items.push_back(std::move(item));
                                          }
                                        });
@@ -234,4 +232,3 @@ namespace anm2ed::imgui
         [&panel, kind, pasteEdit, failToast, items_get]()
         { items_paste<Item>(panel, kind, pasteEdit, failToast, items_get); });
   }
-}

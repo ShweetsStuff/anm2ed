@@ -14,11 +14,8 @@
 #include "ui/input.h"
 #include "ui/layout.h"
 
-using namespace anm2ed::util::math;
 using namespace glm;
 
-namespace anm2ed::imgui::wizard
-{
   constexpr int CHANGE_TYPE_COUNT = 5;
   constexpr const char* COLOR_COMPONENT_FORMATS[] = {"R:%d", "G:%d", "B:%d", "A:%d"};
 
@@ -52,14 +49,14 @@ namespace anm2ed::imgui::wizard
     bool isLayerOnly;
   };
 
-  void property_toggle_begin(bool& isEnabled)
+  static void property_toggle_begin(bool& isEnabled)
   {
     ImGui::Checkbox("##Is Enabled", &isEnabled);
     ImGui::SameLine();
     ImGui::BeginDisabled(!isEnabled);
   }
 
-  void components_draw(const ComponentRow& row, bool isColor)
+  static void components_draw(const ComponentRow& row, bool isColor)
   {
     auto count = (int)row.isEnabled.size();
     auto label = localize.get(row.label);
@@ -139,14 +136,14 @@ namespace anm2ed::imgui::wizard
                                     : isItemsDestination ? std::ranges::any_of(selectedItemReferences, is_layer)
                                                          : settings.changeIsLayers;
     // Child properties reach animation layers only; their choices are every such layer's animations.
-    auto animation_layer_get = [&](const Reference& reference) -> const model::Layer*
+    auto animation_layer_get = [&](const Reference& reference) -> const Layer*
     {
-      auto layer = is_layer(reference) ? model::item_get(document.model.content.layers, reference.itemID) : nullptr;
+      auto layer = is_layer(reference) ? item_get(document.model.content.layers, reference.itemID) : nullptr;
       return layer && layer->is_animation() ? layer : nullptr;
     };
     std::set<std::string> childAnimations{};
     bool isChildPropertyAvailable{};
-    auto child_layer_add = [&](const model::Layer* layer)
+    auto child_layer_add = [&](const Layer* layer)
     {
       if (!layer || !layer->is_animation()) return;
       isChildPropertyAvailable = true;
@@ -327,15 +324,15 @@ namespace anm2ed::imgui::wizard
            [=, queuedAnimations = std::set<int>(animations.begin(), animations.end()), isRoot = settings.changeIsRoot,
             isLayers = settings.changeIsLayers, isNulls = settings.changeIsNulls](Manager&, Document& document)
            {
-             edit::ChangeTargets targets{.isRoot = isRoot, .isLayers = isLayers, .isNulls = isNulls};
+             ChangeTargets targets{.isRoot = isRoot, .isLayers = isLayers, .isNulls = isNulls};
              if (isFramesDestination)
                targets.references = {selectedFrameReferences.begin(), selectedFrameReferences.end()};
              else if (isItemsDestination)
                targets.references = {selectedItemReferences.begin(), selectedItemReferences.end()};
              else
                targets.animations = queuedAnimations;
-             document.edit_apply(EDIT_CHANGE_FRAME_PROPERTIES, [&](model::Model& model)
-                                 { return edit::frames_change_apply(model, targets, frameChange, changeType); });
+             document.edit_apply(EDIT_CHANGE_FRAME_PROPERTIES, [&](Model& model)
+                                 { return frames_change_apply(model, targets, frameChange, changeType); });
            }});
       isChanged = true;
     };
@@ -414,4 +411,3 @@ namespace anm2ed::imgui::wizard
     }
     ImGui::EndDisabled();
   }
-}

@@ -2,11 +2,8 @@
 
 #include "texture.h"
 
-using namespace anm2ed::resource;
 using namespace glm;
 
-namespace anm2ed
-{
   Framebuffer::Framebuffer()
   {
     glGenFramebuffers(1, &fbo);
@@ -60,7 +57,7 @@ namespace anm2ed
 
   std::vector<uint8_t> Framebuffer::pixels_get() const
   {
-    auto count = size.x * size.y * image::CHANNELS;
+    auto count = size.x * size.y * IMAGE_CHANNELS;
     std::vector<uint8_t> pixels(count);
 
     glReadBuffer(GL_COLOR_ATTACHMENT0);
@@ -85,4 +82,3 @@ namespace anm2ed
   void Framebuffer::viewport_set() const { glViewport(0, 0, size.x, size.y); }
   void Framebuffer::bind() const { glBindFramebuffer(GL_FRAMEBUFFER, fbo); }
   void Framebuffer::unbind() const { glBindFramebuffer(GL_FRAMEBUFFER, 0); }
-}

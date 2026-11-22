@@ -1,7 +1,5 @@
 #include "ui/timeline_context.h"
 
-namespace anm2ed::imgui
-{
   void TimelineContext::item_child(const TimelineRow& row, int index)
   {
     ImGui::PushID(index);
@@ -41,7 +39,7 @@ namespace anm2ed::imgui
           auto targetRow = row;
           auto targetAnimationIndex = reference.animationIndex;
           edit_push(EDIT_TOGGLE_GROUP_EXPANDED,
-                    [=](model::Model& model)
+                    [=](Model& model)
                     {
                       if (auto group = model.track_group_edit(targetAnimationIndex, targetRow.type, targetRow.id))
                         group->isExpanded = !group->isExpanded;
@@ -109,7 +107,7 @@ namespace anm2ed::imgui
         }
 
         ImGui::SetCursorPos(cursorPos);
-        auto folderIcon = group->isExpanded ? icon::FOLDER_OPEN : icon::FOLDER;
+        auto folderIcon = group->isExpanded ? ICON_FOLDER_OPEN : ICON_FOLDER;
         ImGui::Image(resources.icon_id_get(folderIcon), icon_size_get());
         auto iconMin = ImGui::GetItemRectMin();
         auto iconMax = ImGui::GetItemRectMax();
@@ -128,7 +126,7 @@ namespace anm2ed::imgui
 
         ImGui::SetCursorPos(ImVec2(itemSize.x - ImGui::GetTextLineHeightWithSpacing() - ImGui::GetStyle().ItemSpacing.x,
                                    (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
-        int visibleIcon = isGroupVisible ? icon::VISIBLE : icon::INVISIBLE;
+        int visibleIcon = isGroupVisible ? ICON_VISIBLE : ICON_INVISIBLE;
         if (ImGui::ImageButton("##Group Visible Toggle", resources.icon_id_get(visibleIcon), icon_size_get()))
         {
           auto targetAnimationIndex = reference.animationIndex;
@@ -136,7 +134,7 @@ namespace anm2ed::imgui
           auto targetGroupId = group->id;
           auto targetVisible = !isGroupVisible;
           edit_push(EDIT_TOGGLE_ITEM_VISIBILITY,
-                    [=](model::Model& model)
+                    [=](Model& model)
                     {
                       if (auto group = model.track_group_edit(targetAnimationIndex, targetType, targetGroupId))
                         group->isVisible = targetVisible;
@@ -155,7 +153,7 @@ namespace anm2ed::imgui
         if (isGroupTooltipDelayed && !isVisibleButtonHovered)
         {
           ImGui::BeginTooltip();
-          ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
+          ImGui::PushFont(resources.fonts[FONT_BOLD].get(), FONT_SIZE);
           ImGui::TextUnformatted(label.c_str());
           ImGui::PopFont();
           ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_ID), std::make_format_args(group->id)).c_str());
@@ -201,13 +199,13 @@ namespace anm2ed::imgui
     {
       if (type == LAYER)
       {
-        auto layer = model::item_get(model.content.layers, id);
+        auto layer = ::item_get(model.content.layers, id);
         if (!layer) return localize.get(TYPE_STRINGS[type]);
         return layer_label_get(*layer);
       }
       if (type == NULL_)
       {
-        auto null = model::item_get(model.content.nulls, id);
+        auto null = ::item_get(model.content.nulls, id);
         if (!null) return localize.get(TYPE_STRINGS[type]);
         return std::vformat(localize.get(FORMAT_NULL), std::make_format_args(id, null->name));
       }
@@ -269,7 +267,7 @@ namespace anm2ed::imgui
           }
         }
 
-        auto animationLayer = type == LAYER ? model::item_get(model.content.layers, id) : nullptr;
+        auto animationLayer = type == LAYER ? ::item_get(model.content.layers, id) : nullptr;
         if (animationLayer && !animationLayer->is_animation()) animationLayer = nullptr;
         if (isItemButtonHovered)
         {
@@ -299,7 +297,7 @@ namespace anm2ed::imgui
             {
               case ROOT:
               {
-                ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
+                ImGui::PushFont(resources.fonts[FONT_BOLD].get(), FONT_SIZE);
                 ImGui::TextUnformatted(localize.get(BASIC_ROOT));
                 ImGui::PopFont();
 
@@ -314,9 +312,9 @@ namespace anm2ed::imgui
               }
               case LAYER:
               {
-                auto layer = model::item_get(model.content.layers, id);
+                auto layer = ::item_get(model.content.layers, id);
                 if (!layer) break;
-                ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
+                ImGui::PushFont(resources.fonts[FONT_BOLD].get(), FONT_SIZE);
                 ImGui::TextUnformatted(layer->name.c_str());
                 ImGui::PopFont();
 
@@ -330,9 +328,9 @@ namespace anm2ed::imgui
               }
               case NULL_:
               {
-                auto nullInfo = model::item_get(model.content.nulls, id);
+                auto nullInfo = ::item_get(model.content.nulls, id);
                 if (!nullInfo) break;
-                ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
+                ImGui::PushFont(resources.fonts[FONT_BOLD].get(), FONT_SIZE);
                 ImGui::TextUnformatted(nullInfo->name.c_str());
                 ImGui::PopFont();
 
@@ -348,7 +346,7 @@ namespace anm2ed::imgui
               }
               case TRIGGER:
               {
-                ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
+                ImGui::PushFont(resources.fonts[FONT_BOLD].get(), FONT_SIZE);
                 ImGui::TextUnformatted(localize.get(BASIC_TRIGGERS));
                 ImGui::PopFont();
 
@@ -372,7 +370,7 @@ namespace anm2ed::imgui
 
         // An animation layer's icon is a folder that shows (or hides) its child's tracks.
         auto isExpanded = item && expandedLayerTracks.contains(item->uid);
-        if (animationLayer) icon = isExpanded ? icon::FOLDER_OPEN : icon::FOLDER;
+        if (animationLayer) icon = isExpanded ? ICON_FOLDER_OPEN : ICON_FOLDER;
         ImGui::Image(resources.icon_id_get(icon), icon_size_get());
         auto mousePos = ImGui::GetIO().MousePos;
         auto iconMin = ImGui::GetItemRectMin();
@@ -389,7 +387,7 @@ namespace anm2ed::imgui
         }
         overlay_icon(resources.icon_id_get(icon), iconTintCurrent, false);
         ImGui::SameLine();
-        if (isReferenced) ImGui::PushFont(resources.fonts[font::ITALICS].get(), font::SIZE);
+        if (isReferenced) ImGui::PushFont(resources.fonts[FONT_ITALICS].get(), FONT_SIZE);
         ImGui::PushStyleColor(ImGuiCol_Text, itemTextColor);
         ImGui::TextUnformatted(label.c_str());
         ImGui::PopStyleColor();
@@ -403,7 +401,7 @@ namespace anm2ed::imgui
 
         ImGui::SetCursorPos(ImVec2(itemSize.x - ImGui::GetTextLineHeightWithSpacing() - ImGui::GetStyle().ItemSpacing.x,
                                    (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
-        int visibleIcon = isItemVisible ? icon::VISIBLE : icon::INVISIBLE;
+        int visibleIcon = isItemVisible ? ICON_VISIBLE : ICON_INVISIBLE;
         if (ImGui::ImageButton("##Visible Toggle", resources.icon_id_get(visibleIcon), icon_size_get()))
         {
           auto animationIndex = reference.animationIndex;
@@ -412,7 +410,7 @@ namespace anm2ed::imgui
           auto targetGroupType = row.groupType;
           auto targetGroupId = row.groupId;
           edit_push(EDIT_TOGGLE_ITEM_VISIBILITY,
-                    [=](model::Model& model)
+                    [=](Model& model)
                     {
                       if (auto item = model.track_edit(
                               Reference{animationIndex, targetType, targetID, -1, targetGroupType, targetGroupId}))
@@ -425,10 +423,10 @@ namespace anm2ed::imgui
 
         if (type == NULL_)
         {
-          if (auto null = model::item_get(model.content.nulls, id))
+          if (auto null = ::item_get(model.content.nulls, id))
           {
             auto& isShowRect = null->isShowRect;
-            auto rectIcon = isShowRect ? icon::SHOW_RECT : icon::HIDE_RECT;
+            auto rectIcon = isShowRect ? ICON_SHOW_RECT : ICON_HIDE_RECT;
             ImGui::SetCursorPos(
                 ImVec2(itemSize.x - (ImGui::GetTextLineHeightWithSpacing() * 2) - ImGui::GetStyle().ItemSpacing.x,
                        (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
@@ -436,9 +434,9 @@ namespace anm2ed::imgui
             {
               auto nullID = id;
               edit_push(EDIT_TOGGLE_NULL_RECT,
-                        [=](model::Model& model)
+                        [=](Model& model)
                         {
-                          if (auto null = model::item_get(model.content.nulls, nullID))
+                          if (auto null = ::item_get(model.content.nulls, nullID))
                             null->isShowRect = !null->isShowRect;
                         });
             }
@@ -463,7 +461,7 @@ namespace anm2ed::imgui
                                    (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
 
         auto& isShowUnused = settings.timelineIsShowUnused;
-        auto unusedIcon = isShowUnused ? icon::SHOW_UNUSED : icon::HIDE_UNUSED;
+        auto unusedIcon = isShowUnused ? ICON_SHOW_UNUSED : ICON_HIDE_UNUSED;
         if (ImGui::ImageButton("##Unused Toggle", resources.icon_id_get(unusedIcon), icon_size_get()))
           isShowUnused = !isShowUnused;
         overlay_icon(resources.icon_id_get(unusedIcon), iconTintCurrent, false);
@@ -471,7 +469,7 @@ namespace anm2ed::imgui
                                                  : localize.get(TOOLTIP_UNUSED_ITEMS_HIDDEN));
 
         auto& showLayersOnly = settings.timelineIsOnlyShowLayers;
-        auto layersIcon = showLayersOnly ? icon::SHOW_LAYERS : icon::HIDE_LAYERS;
+        auto layersIcon = showLayersOnly ? ICON_SHOW_LAYERS : ICON_HIDE_LAYERS;
         ImGui::SetCursorPos(
             ImVec2(itemSize.x - (ImGui::GetTextLineHeightWithSpacing() * 2) - ImGui::GetStyle().ItemSpacing.x,
                    (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
@@ -537,7 +535,7 @@ namespace anm2ed::imgui
           document.frame_references_clear();
         }
 
-        if (animation && shortcut(manager.chords[SHORTCUT_GROUP], shortcut::FOCUSED) &&
+        if (animation && shortcut(manager.chords[SHORTCUT_GROUP], SCOPE_FOCUSED) &&
             !item_references_groupable_get().empty())
           item_group();
 
@@ -615,4 +613,3 @@ namespace anm2ed::imgui
     }
     ImGui::EndChild();
   }
-}

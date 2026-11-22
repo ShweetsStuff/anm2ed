@@ -18,13 +18,8 @@
 #include "ui/layout.h"
 #include "ui/shortcut.h"
 
-using namespace anm2ed::resource;
-using namespace anm2ed::types;
-using namespace anm2ed::util;
 using namespace glm;
 
-namespace anm2ed::imgui
-{
   constexpr auto GENERATE_REGIONS_TARGET_SELECTION = 0;
   constexpr auto GENERATE_REGIONS_TARGET_ALL = 1;
 
@@ -52,7 +47,7 @@ namespace anm2ed::imgui
     {
       // Rebirth can't load SVG spritesheets: offer to convert them (the request waits in isaacSave either way).
       if (!settings.fileIsJson && !document->isVectorKept &&
-          !model::spritesheets_vector_used_get(document->model).empty())
+          !spritesheets_vector_used_get(document->model).empty())
       {
         isaacSave = request;
         vectorPopup.open();
@@ -60,7 +55,7 @@ namespace anm2ed::imgui
       }
       // The game can't read JSON, or its copy would differ from the document: ask first.
       if (settings.fileIsWarnIsaac &&
-          (settings.fileIsJson || model::isaac_issues_get(document->model) != model::IsaacIssues{}))
+          (settings.fileIsJson || isaac_issues_get(document->model) != IsaacIssues{}))
       {
         isaacSave = request;
         isaacPopup.open();
@@ -104,8 +99,8 @@ namespace anm2ed::imgui
           for (auto [i, file] : std::views::enumerate(recentFiles))
           {
             ImGui::PushID((int)i);
-            auto fileNameUtf8 = path::to_utf8(file.filename());
-            auto filePathUtf8 = path::to_utf8(file);
+            auto fileNameUtf8 = path_to_utf8(file.filename());
+            auto filePathUtf8 = path_to_utf8(file);
             auto label = std::format(FILE_LABEL_FORMAT, fileNameUtf8, filePathUtf8);
             if (ImGui::MenuItem(label.c_str()))
               manager.command_push({.runManager = [file](Manager& manager) { manager.open(file); }});
@@ -175,7 +170,7 @@ namespace anm2ed::imgui
           manager.command_push({manager.selected, [](Manager&, Document& document)
                                 {
                                   document.edit_apply(EDIT_SCAN_AND_SET_REGIONS,
-                                                      [](model::Model& model) { return edit::regions_scan(model); });
+                                                      [](Model& model) { return regions_scan(model); });
                                 }});
           toast_log(Level::INFO, TOAST_SCAN_AND_SET_REGIONS);
         }
@@ -217,7 +212,7 @@ namespace anm2ed::imgui
         for (int i = 0; i < WINDOW_COUNT; i++)
         {
           auto member = WINDOW_MEMBERS[i];
-          ImGui::MenuItem(localize.get(::anm2ed::WINDOW_STRING_TYPES[i]), nullptr, &(settings.*member));
+          ImGui::MenuItem(localize.get(WINDOW_STRING_TYPES[i]), nullptr, &(settings.*member));
         }
 
         ImGui::EndMenu();
@@ -286,9 +281,9 @@ namespace anm2ed::imgui
                                 {
                                   if (queuedAnimationIndices.empty()) return;
                                   document.edit_apply(EDIT_GENERATE_REGIONS_FROM_ANIMATIONS,
-                                                      [&](model::Model& model)
+                                                      [&](Model& model)
                                                       {
-                                                        return edit::regions_generate(model, queuedAnimationIndices, {},
+                                                        return regions_generate(model, queuedAnimationIndices, {},
                                                                                       queuedFormat, queuedMapping);
                                                       });
                                 }});
@@ -347,7 +342,7 @@ namespace anm2ed::imgui
     }
 
     if (auto* music = resources.music_track_if_loaded())
-      if (resource::audio::is_playing(*music) && !aboutPopup.isOpen) resource::audio::stop(*music);
+      if (is_audio_playing(*music) && !aboutPopup.isOpen) audio_stop(*music);
 
     overwritePopup.trigger();
 
@@ -384,7 +379,7 @@ namespace anm2ed::imgui
         shortcut(manager.chords[isConverted ? SHORTCUT_CONFIRM : SHORTCUT_CANCEL]);
         if (!ImGui::Button(localize.get(label), widgetSize) || !document) continue;
         if (isConverted)
-          document->spritesheets_vector_convert(model::spritesheets_vector_used_get(document->model));
+          document->spritesheets_vector_convert(spritesheets_vector_used_get(document->model));
         else
           document->isVectorKept = true;
         vectorPopup.close();
@@ -402,7 +397,7 @@ namespace anm2ed::imgui
       else if (auto document = manager.get(isaacSave.index))
       {
         ImGui::TextWrapped("%s", localize.get(TEXT_ISAAC_ISSUES));
-        auto issues = model::isaac_issues_get(document->model);
+        auto issues = isaac_issues_get(document->model);
         for (auto [count, format] : {std::pair{issues.easedFrames, FORMAT_ISAAC_EASED_FRAMES},
                                      {issues.groupTransforms, FORMAT_ISAAC_GROUP_TRANSFORMS},
                                      {issues.animationLayers, FORMAT_ISAAC_ANIMATION_LAYERS},
@@ -428,7 +423,7 @@ namespace anm2ed::imgui
           manager.command_push({isaacSave.index, [isIgnored = *isIgnored](Manager&, Document& document)
                                 {
                                   if (document.model.info.isIsaacIgnored == isIgnored) return;
-                                  document.edit_apply(EDIT_ISAAC_COMPATIBILITY, [&](model::Model& model)
+                                  document.edit_apply(EDIT_ISAAC_COMPATIBILITY, [&](Model& model)
                                                       { model.info.isIsaacIgnored = isIgnored; });
                                 }});
         save_enqueue(manager, isaacSave);
@@ -449,16 +444,15 @@ namespace anm2ed::imgui
     }
     isaacPopup.end();
 
-    if (shortcut(manager.chords[SHORTCUT_NEW], shortcut::GLOBAL)) dialog.file_save(Dialog::ANM2_CREATE);
-    if (shortcut(manager.chords[SHORTCUT_OPEN], shortcut::GLOBAL)) dialog.file_open(Dialog::ANM2_OPEN, true);
-    if (shortcut(manager.chords[SHORTCUT_SAVE], shortcut::GLOBAL))
+    if (shortcut(manager.chords[SHORTCUT_NEW], SCOPE_GLOBAL)) dialog.file_save(Dialog::ANM2_CREATE);
+    if (shortcut(manager.chords[SHORTCUT_OPEN], SCOPE_GLOBAL)) dialog.file_open(Dialog::ANM2_OPEN, true);
+    if (shortcut(manager.chords[SHORTCUT_SAVE], SCOPE_GLOBAL))
     {
       if (settings.fileIsWarnOverwrite)
         overwritePopup.open();
       else
         save_request(manager, settings, manager.selected, {}, true);
     }
-    if (shortcut(manager.chords[SHORTCUT_SAVE_AS], shortcut::GLOBAL)) dialog.file_save(Dialog::ANM2_SAVE);
-    if (shortcut(manager.chords[SHORTCUT_EXIT], shortcut::GLOBAL)) isQuitting = true;
+    if (shortcut(manager.chords[SHORTCUT_SAVE_AS], SCOPE_GLOBAL)) dialog.file_save(Dialog::ANM2_SAVE);
+    if (shortcut(manager.chords[SHORTCUT_EXIT], SCOPE_GLOBAL)) isQuitting = true;
   }
-}

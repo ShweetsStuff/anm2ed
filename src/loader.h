@@ -10,8 +10,6 @@
 #include "settings.h"
 #include "socket.h"
 
-namespace anm2ed
-{
   class Loader
   {
     std::filesystem::path settings_path();
@@ -30,4 +28,3 @@ namespace anm2ed
     Loader(int, const char**);
     ~Loader();
   };
-}

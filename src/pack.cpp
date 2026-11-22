@@ -5,8 +5,6 @@
 #include <cstdint>
 #include <limits>
 
-namespace anm2ed::util::pack
-{
   constexpr int WIDTH_CANDIDATES_MAX = 512;
 
   struct Rect
@@ -17,17 +15,17 @@ namespace anm2ed::util::pack
     int h{};
   };
 
-  bool is_rect_intersecting(const Rect& a, const Rect& b)
+  static bool is_rect_intersecting(const Rect& a, const Rect& b)
   {
     return !(b.x >= a.x + a.w || b.x + b.w <= a.x || b.y >= a.y + a.h || b.y + b.h <= a.y);
   }
 
-  bool is_rect_contained(const Rect& a, const Rect& b)
+  static bool is_rect_contained(const Rect& a, const Rect& b)
   {
     return b.x >= a.x && b.y >= a.y && b.x + b.w <= a.x + a.w && b.y + b.h <= a.y + a.h;
   }
 
-  void free_rects_split(std::vector<Rect>& freeRects, const Rect& used)
+  static void free_rects_split(std::vector<Rect>& freeRects, const Rect& used)
   {
     std::vector<Rect> next{};
     next.reserve(freeRects.size() * 2);
@@ -48,7 +46,7 @@ namespace anm2ed::util::pack
     freeRects = std::move(next);
   }
 
-  void free_rects_prune(std::vector<Rect>& freeRects)
+  static void free_rects_prune(std::vector<Rect>& freeRects)
   {
     for (int i = 0; i < (int)freeRects.size(); ++i)
     {
@@ -72,7 +70,7 @@ namespace anm2ed::util::pack
     }
   }
 
-  bool rect_insert(std::vector<Rect>& freeRects, glm::ivec2 size, Rect& result)
+  static bool rect_insert(std::vector<Rect>& freeRects, glm::ivec2 size, Rect& result)
   {
     int bestShort = std::numeric_limits<int>::max();
     int bestLong = std::numeric_limits<int>::max();
@@ -147,4 +145,3 @@ namespace anm2ed::util::pack
 
     return bestArea != std::numeric_limits<int>::max();
   }
-}

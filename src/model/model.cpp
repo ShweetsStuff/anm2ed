@@ -6,12 +6,8 @@
 #include "image.h"
 #include "path.h"
 
-using namespace anm2ed::util;
-
-namespace anm2ed::model
-{
   // The slot holding the animation at a flat index (animations inside groups count in order), or nullptr.
-  template <class Entries> auto animation_slot_get(Entries& entries, int index) -> decltype(&std::get<0>(entries[0]))
+  template <class Entries> static auto animation_slot_get(Entries& entries, int index) -> decltype(&std::get<0>(entries[0]))
   {
     if (index < 0) return nullptr;
     for (auto& entry : entries)
@@ -67,7 +63,7 @@ namespace anm2ed::model
     return result;
   }
 
-  template <class Self> auto animation_group_find(Self& self, int index)
+  template <class Self> static auto animation_group_find(Self& self, int index)
   {
     using Group = std::conditional_t<std::is_const_v<Self>, const AnimationGroup, AnimationGroup>;
     Group* result{};
@@ -95,7 +91,7 @@ namespace anm2ed::model
     return group ? group->id : -1;
   }
 
-  template <class A> auto animation_track_group_find(A& animation, int groupType, int groupId)
+  template <class A> static auto animation_track_group_find(A& animation, int groupType, int groupId)
   {
     using Group = std::conditional_t<std::is_const_v<A>, const TrackGroup, TrackGroup>;
     Group* result{};
@@ -120,7 +116,7 @@ namespace anm2ed::model
 
   // A track by item type and id; a group root when the item is ROOT with a group, and grouped tracks only match their
   // own group when one is given.
-  template <class A> auto animation_track_find(A& animation, int itemType, int id, int groupType, int groupId)
+  template <class A> static auto animation_track_find(A& animation, int itemType, int id, int groupType, int groupId)
   {
     using T = std::conditional_t<std::is_const_v<A>, const Track, Track>;
     T* result{};
@@ -214,7 +210,7 @@ namespace anm2ed::model
     return resolved;
   }
 
-  template <class Items> std::set<int> unused_ids_get(const Items& items, const std::set<int>& used)
+  template <class Items> static std::set<int> unused_ids_get(const Items& items, const std::set<int>& used)
   {
     std::set<int> unused{};
     for (const auto& item : items)
@@ -334,7 +330,7 @@ namespace anm2ed::model
     return handle.frame ? handle.frame : handle.item ? handle.item : handle.animation;
   }
 
-  template <class Callback> void animation_uids_each(Animation& animation, Callback&& callback)
+  template <class Callback> static void animation_uids_each(Animation& animation, Callback&& callback)
   {
     callback(animation.uid);
     for (auto* entries : {&animation.layers, &animation.nulls})
@@ -354,7 +350,7 @@ namespace anm2ed::model
     std::unordered_set<std::uint64_t> seen{};
     auto repair = [&](std::uint64_t& uid)
     {
-      if (!uid || !seen.insert(uid).second) uid = util::uid_next();
+      if (!uid || !seen.insert(uid).second) uid = uid_next();
     };
 
     for (int i = 0; i < animations_count_get(); ++i)
@@ -395,7 +391,7 @@ namespace anm2ed::model
     std::set<int> ids{};
     for (const auto& layer : model.content.layers)
       if (auto spritesheet = item_get(model.content.spritesheets, layer.spritesheetId);
-          spritesheet && !layer.is_animation() && path::is_extension(spritesheet->path, resource::image::SVG_EXTENSION))
+          spritesheet && !layer.is_animation() && is_path_extension(spritesheet->path, SVG_EXTENSION))
         ids.insert(spritesheet->id);
     return ids;
   }
@@ -428,25 +424,25 @@ namespace anm2ed::model
 
   Frame frame_clone(Frame frame)
   {
-    frame.uid = util::uid_next();
+    frame.uid = uid_next();
     return frame;
   }
 
   Track track_clone(Track track)
   {
-    track.uid = util::uid_next();
+    track.uid = uid_next();
     for (auto& frame : track.frames)
-      frame.uid = util::uid_next();
+      frame.uid = uid_next();
     return track;
   }
 
   Animation animation_clone(Animation animation)
   {
-    animation_uids_each(animation, [](std::uint64_t& uid) { uid = util::uid_next(); });
+    animation_uids_each(animation, [](std::uint64_t& uid) { uid = uid_next(); });
     return animation;
   }
 
-  void track_locations_add(std::unordered_map<std::uint64_t, UidIndex::Location>& locations, const Track& track,
+  static void track_locations_add(std::unordered_map<std::uint64_t, UidIndex::Location>& locations, const Track& track,
                            Reference reference)
   {
     constexpr ElementType TRACK_TYPES[] = {ElementType::UNKNOWN, ElementType::ROOT_ANIMATION,
@@ -529,4 +525,3 @@ namespace anm2ed::model
     }
     return true;
   }
-}

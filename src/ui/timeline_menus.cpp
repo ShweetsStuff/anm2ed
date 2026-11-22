@@ -1,12 +1,10 @@
 #include "ui/timeline_context.h"
 
-namespace anm2ed::imgui
-{
   constexpr StringType FRAME_PROPERTY_LABELS[] = {
       BASIC_POSITION, BASIC_SCALE, BASIC_ROTATION,     BASIC_SKEW,    BASIC_PIVOT,        BASIC_CROP,     BASIC_SIZE,
       BASIC_REGION,   BASIC_TINT,  BASIC_COLOR_OFFSET, BASIC_VISIBLE, BASIC_INTERPOLATED, BASIC_DURATION, BASIC_SHADER,
       BASIC_DEPTH,    BASIC_BLUR,  LABEL_CHILD,        LABEL_EVENTS,  LABEL_SOUNDS};
-  static_assert(std::size(FRAME_PROPERTY_LABELS) == (std::size_t)edit::FrameProperty::COUNT);
+  static_assert(std::size(FRAME_PROPERTY_LABELS) == (std::size_t)FrameProperty::COUNT);
 
   void TimelineContext::frame_begin()
   {
@@ -47,12 +45,12 @@ namespace anm2ed::imgui
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
 
-    if (shortcut(manager.chords[SHORTCUT_CUT], shortcut::FOCUSED)) cut();
-    if (shortcut(manager.chords[SHORTCUT_COPY], shortcut::FOCUSED)) copy();
-    if (shortcut(manager.chords[SHORTCUT_PASTE], shortcut::FOCUSED)) paste();
-    if (shortcut(manager.chords[SHORTCUT_SPLIT], shortcut::FOCUSED)) frame_split();
-    if (shortcut(manager.chords[SHORTCUT_BAKE], shortcut::FOCUSED)) frames_bake();
-    if (shortcut(manager.chords[SHORTCUT_FIT], shortcut::FOCUSED)) fit_animation_length();
+    if (shortcut(manager.chords[SHORTCUT_CUT], SCOPE_FOCUSED)) cut();
+    if (shortcut(manager.chords[SHORTCUT_COPY], SCOPE_FOCUSED)) copy();
+    if (shortcut(manager.chords[SHORTCUT_PASTE], SCOPE_FOCUSED)) paste();
+    if (shortcut(manager.chords[SHORTCUT_SPLIT], SCOPE_FOCUSED)) frame_split();
+    if (shortcut(manager.chords[SHORTCUT_BAKE], SCOPE_FOCUSED)) frames_bake();
+    if (shortcut(manager.chords[SHORTCUT_FIT], SCOPE_FOCUSED)) fit_animation_length();
 
     auto make_region = [&]()
     {
@@ -60,11 +58,11 @@ namespace anm2ed::imgui
       auto frame = frame_get();
       if (!frame || targetReference.itemType != LAYER || targetReference.itemID == -1) return;
       if (frame->regionId != -1) return;
-      auto layer = model::item_get(model.content.layers, targetReference.itemID);
+      auto layer = ::item_get(model.content.layers, targetReference.itemID);
       if (!layer) return;
 
       auto spritesheetID = layer->spritesheetId;
-      if (!model::item_get(model.content.spritesheets, spritesheetID)) return;
+      if (!::item_get(model.content.spritesheets, spritesheetID)) return;
 
       auto settingsPtr = &settings;
       command_push(
@@ -72,13 +70,13 @@ namespace anm2ed::imgui
           {
             auto frame = document.model.frame_get(targetReference);
             if (!frame || frame->regionId != -1) return;
-            auto layer = model::item_get(document.model.content.layers, targetReference.itemID);
+            auto layer = ::item_get(document.model.content.layers, targetReference.itemID);
             if (!layer) return;
 
             auto spritesheetID = layer->spritesheetId;
-            if (!model::item_get(document.model.content.spritesheets, spritesheetID)) return;
+            if (!::item_get(document.model.content.spritesheets, spritesheetID)) return;
 
-            model::Region region{.crop = frame->crop, .size = frame->size, .pivot = frame->pivot};
+            Region region{.crop = frame->crop, .size = frame->size, .pivot = frame->pivot};
 
             document.focused_id_set(SelectionKind::SPRITESHEETS, spritesheetID);
             settingsPtr->windowIsRegions = true;
@@ -98,9 +96,9 @@ namespace anm2ed::imgui
     {
       if (frameReference.itemType != LAYER || frameReference.frameIndex < 0) return false;
       auto frame = document.model.frame_get(frameReference);
-      auto layer = model::item_get(model.content.layers, frameReference.itemID);
+      auto layer = ::item_get(model.content.layers, frameReference.itemID);
       return frame && frame->regionId == -1 && layer &&
-             model::item_get(model.content.spritesheets, layer->spritesheetId);
+             ::item_get(model.content.spritesheets, layer->spritesheetId);
     };
     auto selectedRegionFrames = selectedFrames;
     std::erase_if(selectedRegionFrames,
@@ -137,7 +135,7 @@ namespace anm2ed::imgui
     actions.add(
         {.label = LABEL_FIT_ANIMATION_LENGTH,
          .shortcut = SHORTCUT_FIT,
-         .isEnabled = [&]() { return animation && animation->frameNum != model::animation_length_get(*animation); },
+         .isEnabled = [&]() { return animation && animation->frameNum != animation_length_get(*animation); },
          .run = [&]() { fit_animation_length(); }});
     actions.separator();
     actions.add({.label = isMakeManyRegions ? LABEL_MAKE_MANY_REGIONS : LABEL_MAKE_REGION,
@@ -161,14 +159,14 @@ namespace anm2ed::imgui
     auto sourceFrame = source ? model.frame_get(*source) : nullptr;
     auto clipboardFrame = property_clipboard_frame_get();
     // A submenu of the properties a frame type has.
-    auto properties_get = [&](int itemType, std::function<bool(edit::FrameProperty)> is_property_enabled,
-                              std::function<void(edit::FrameProperty)> property_run)
+    auto properties_get = [&](int itemType, std::function<bool(FrameProperty)> is_property_enabled,
+                              std::function<void(FrameProperty)> property_run)
     {
       Action properties{.label = LABEL_PROPERTY};
-      for (int i = 0; i < (int)edit::FrameProperty::COUNT; ++i)
+      for (int i = 0; i < (int)FrameProperty::COUNT; ++i)
       {
-        auto property = (edit::FrameProperty)i;
-        if (!edit::is_frame_property_valid(property, (ItemType)itemType)) continue;
+        auto property = (FrameProperty)i;
+        if (!is_frame_property_valid(property, (ItemType)itemType)) continue;
         properties.children.push_back({.label = FRAME_PROPERTY_LABELS[i],
                                        .isEnabled = [=]() { return is_property_enabled(property); },
                                        .run = [=]() { property_run(property); }});
@@ -188,15 +186,15 @@ namespace anm2ed::imgui
                                 property}});
     };
     auto sourceType = source ? source->itemType : NONE;
-    auto is_source = [=](edit::FrameProperty) { return sourceFrame != nullptr; };
+    auto is_source = [=](FrameProperty) { return sourceFrame != nullptr; };
     clipboard_menu_add(
         ACTION_CUT, [=, this]() { return !selectedFrames.empty(); }, [this]() { cut(); },
-        properties_get(sourceType, is_source, [this](edit::FrameProperty property) { property_cut(property); }));
+        properties_get(sourceType, is_source, [this](FrameProperty property) { property_cut(property); }));
     clipboard_menu_add(
         ACTION_COPY, [=, this]() { return !copyFrames.empty(); }, [this]() { copy(); },
-        properties_get(sourceType, is_source, [this](edit::FrameProperty property) { property_copy(property); }));
+        properties_get(sourceType, is_source, [this](FrameProperty property) { property_copy(property); }));
     // Only one property is ever on the clipboard, so pasting one is a single item.
-    auto clipboardProperty = (edit::FrameProperty)frameClipboard.property;
+    auto clipboardProperty = (FrameProperty)frameClipboard.property;
     clipboard_menu_add(
         ACTION_PASTE, [&]() { return !clipboard.is_empty(); }, [this]() { paste(); },
         {.label = LABEL_PROPERTY,
@@ -218,7 +216,7 @@ namespace anm2ed::imgui
     manager.item_properties_open(type == LAYER ? ElementType::LAYER_ELEMENT : ElementType::NULL_ELEMENT, id);
   }
 
-  void TimelineContext::group_properties_open(const TimelineRow& row, const model::TrackGroup& group)
+  void TimelineContext::group_properties_open(const TimelineRow& row, const TrackGroup& group)
   {
     groupName = group.name.empty() ? std::string(localize.get(TEXT_NEW_GROUP)) : group.name;
     groupAnimationIndex = reference.animationIndex;
@@ -250,7 +248,7 @@ namespace anm2ed::imgui
         auto targetType = groupType;
         auto targetId = groupId;
         edit_push(EDIT_RENAME_GROUP,
-                  [=](model::Model& model)
+                  [=](Model& model)
                   {
                     if (auto group = model.track_group_edit(targetAnimationIndex, targetType, targetId))
                       group->name = targetName;
@@ -276,7 +274,7 @@ namespace anm2ed::imgui
     auto selectedGroupableItems = item_references_groupable_get();
     auto copyFrames = copy_frame_references_get();
     TimelineRow selectedGroupRow{};
-    const model::TrackGroup* selectedGroup{};
+    const TrackGroup* selectedGroup{};
     if (selectedRows.size() == 1 && selectedRows.front().isGroup)
     {
       auto row = selectedRows.front();
@@ -315,12 +313,11 @@ namespace anm2ed::imgui
     actions.add(ACTION_CUT, [=, this]() { return !copyFrames.empty() && isRemoveAvailable; }, item_cut);
     actions.add(ACTION_COPY, [=, this]() { return !copyFrames.empty(); }, [this]() { copy(); });
     actions.add(ACTION_PASTE, [&]() { return item && !clipboard.is_empty(); }, [this]() { paste(); });
-    if (shortcut(manager.chords[SHORTCUT_CUT], shortcut::FOCUSED) && !copyFrames.empty() && isRemoveAvailable)
+    if (shortcut(manager.chords[SHORTCUT_CUT], SCOPE_FOCUSED) && !copyFrames.empty() && isRemoveAvailable)
       item_cut();
-    if (shortcut(manager.chords[SHORTCUT_COPY], shortcut::FOCUSED) && !copyFrames.empty()) copy();
-    if (shortcut(manager.chords[SHORTCUT_PASTE], shortcut::FOCUSED) && item && !clipboard.is_empty()) paste();
+    if (shortcut(manager.chords[SHORTCUT_COPY], SCOPE_FOCUSED) && !copyFrames.empty()) copy();
+    if (shortcut(manager.chords[SHORTCUT_PASTE], SCOPE_FOCUSED) && item && !clipboard.is_empty()) paste();
     actions_popup_draw("##Items Context Menu", actions, settings);
 
     ImGui::PopStyleVar(2);
   }
-}

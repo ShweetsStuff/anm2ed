@@ -4,8 +4,6 @@
 
 #include <glm/common.hpp>
 
-namespace anm2ed
-{
   void Playback::toggle()
   {
     if (isFinished) time = 0.0f;
@@ -56,4 +54,3 @@ namespace anm2ed
     clamp(length);
     timing_reset();
   }
-}

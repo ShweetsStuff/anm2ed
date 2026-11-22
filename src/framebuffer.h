@@ -3,8 +3,6 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 
-namespace anm2ed
-{
   class Framebuffer
   {
   public:
@@ -35,4 +33,3 @@ namespace anm2ed
     void bind() const;
     void unbind() const;
   };
-};

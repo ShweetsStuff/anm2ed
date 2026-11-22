@@ -9,11 +9,6 @@
 #include "ui/shortcut.h"
 #include "ui/tree.h"
 
-using namespace anm2ed::resource;
-using namespace anm2ed::types;
-
-namespace anm2ed::imgui
-{
   constexpr const char* ANIMATION_DRAG_DROP = "Animation Drag Drop";
   constexpr float DROP_ZONE_FRACTION = 1.0f / 3.0f;
   constexpr int MERGE_OPTIONS_ROWS = 2;
@@ -45,68 +40,68 @@ namespace anm2ed::imgui
   {
     std::set<int> selection{};
     int reference{-1};
-    merge::Type type{};
+    Merge type{};
     bool isDeleteAnimationsAfter{};
   };
 
   // Calls back for each top-level entry: (animation index, animation) for loose animations, (index, group) for groups.
-  template <class Callback> void animation_entries_each(const model::Model& model, Callback&& callback)
+  template <class Callback> static void animation_entries_each(const Model& model, Callback&& callback)
   {
     int index{};
     for (const auto& entry : model.animations.entries)
-      if (auto animation = std::get_if<std::shared_ptr<const model::Animation>>(&entry))
-        callback(index++, animation->get(), (const model::AnimationGroup*)nullptr);
+      if (auto animation = std::get_if<std::shared_ptr<const Animation>>(&entry))
+        callback(index++, animation->get(), (const AnimationGroup*)nullptr);
       else
       {
-        auto& group = std::get<model::AnimationGroup>(entry);
-        callback(index, (const model::Animation*)nullptr, &group);
+        auto& group = std::get<AnimationGroup>(entry);
+        callback(index, (const Animation*)nullptr, &group);
         index += (int)group.animations.size();
       }
   }
 
   // The flat index of a group's first animation.
-  int animation_group_first_index_get(const model::Model& model, int groupId)
+  static int animation_group_first_index_get(const Model& model, int groupId)
   {
     int first{-1};
     animation_entries_each(model,
-                           [&](int index, auto*, const model::AnimationGroup* group)
+                           [&](int index, auto*, const AnimationGroup* group)
                            {
                              if (group && group->id == groupId) first = index;
                            });
     return first;
   }
 
-  std::set<int> animation_groups_selected_get(const Document& document)
+  static std::set<int> animation_groups_selected_get(const Document& document)
   {
     std::set<int> groupIds{};
     auto uids = document.selection.uids.find(SelectionKind::ANIMATION_GROUPS);
     if (uids == document.selection.uids.end()) return groupIds;
     for (const auto& entry : document.model.animations.entries)
-      if (auto group = std::get_if<model::AnimationGroup>(&entry); group && uids->second.contains(group->uid))
+      if (auto group = std::get_if<AnimationGroup>(&entry); group && uids->second.contains(group->uid))
         groupIds.insert(group->id);
     return groupIds;
   }
 
-  void animations_selection_set(Document& document, const std::set<int>& indices, const std::set<int>& groupIds)
+  static void animations_selection_set(Document& document, const std::set<int>& indices, const std::set<int>& groupIds)
   {
     document.animations_selected_set(indices);
     auto& groupUids = document.selection.uids[SelectionKind::ANIMATION_GROUPS];
     groupUids.clear();
     for (const auto& entry : document.model.animations.entries)
-      if (auto group = std::get_if<model::AnimationGroup>(&entry); group && groupIds.contains(group->id))
+      if (auto group = std::get_if<AnimationGroup>(&entry); group && groupIds.contains(group->id))
         groupUids.insert(group->uid);
   }
 
   // Selected animations plus every animation of a selected group.
-  std::set<int> animation_selected_indices_get(const Document& document)
+  static std::set<int> animation_selected_indices_get(const Document& document)
   {
     auto result = document.animations_selected_get();
     for (auto groupId : animation_groups_selected_get(document))
-      result.merge(edit::animation_group_indices_get(document.model, groupId));
+      result.merge(animation_group_indices_get(document.model, groupId));
     return result;
   }
 
-  std::vector<int> animation_groupable_indices_get(const Document& document)
+  static std::vector<int> animation_groupable_indices_get(const Document& document)
   {
     std::vector<int> result{};
     for (auto index : document.animations_selected_get())
@@ -117,19 +112,19 @@ namespace anm2ed::imgui
     return result;
   }
 
-  std::set<int> animation_merge_indices_get(const Document& document, const std::set<int>& keys, int reference)
+  static std::set<int> animation_merge_indices_get(const Document& document, const std::set<int>& keys, int reference)
   {
     std::set<int> result{};
     for (auto key : keys)
       if (!is_group_key(key))
         result.insert(key);
       else
-        result.merge(edit::animation_group_indices_get(document.model, group_id_from_key_get(key)));
+        result.merge(animation_group_indices_get(document.model, group_id_from_key_get(key)));
     result.erase(reference);
     return result;
   }
 
-  void animation_overlay_reset(Document& document, const std::set<int>& indices)
+  static void animation_overlay_reset(Document& document, const std::set<int>& indices)
   {
     auto isOverlayDocument = document.overlayDocumentId == 0 || document.overlayDocumentId == document.tabId;
     if (!isOverlayDocument || !indices.contains(document.overlayIndex)) return;
@@ -137,19 +132,19 @@ namespace anm2ed::imgui
     document.overlayDocumentId = 0;
   }
 
-  void animations_erase(Document& document, const std::set<int>& indices, const std::set<int>& groupIds,
+  static void animations_erase(Document& document, const std::set<int>& indices, const std::set<int>& groupIds,
                         StringType label)
   {
     document.edit_apply(label,
-                        [&](model::Model& model)
+                        [&](Model& model)
                         {
                           animation_overlay_reset(document, indices);
                           animations_selection_set(document, {}, {});
-                          return edit::animations_remove(model, indices, groupIds);
+                          return animations_remove(model, indices, groupIds);
                         });
   }
 
-  std::set<int> animation_indices_get(Document& document, const edit::Uids& uids)
+  static std::set<int> animation_indices_get(Document& document, const Uids& uids)
   {
     std::set<int> indices{};
     for (auto reference : document.references_get(uids))
@@ -157,33 +152,33 @@ namespace anm2ed::imgui
     return indices;
   }
 
-  std::string animation_clipboard_text_get(const Document& document)
+  static std::string animation_clipboard_text_get(const Document& document)
   {
     std::string clipboardText{};
     auto& model = document.model;
     auto groupIds = animation_groups_selected_get(document);
     auto selection = document.animations_selected_get();
     for (const auto& entry : model.animations.entries)
-      if (auto group = std::get_if<model::AnimationGroup>(&entry); group && groupIds.contains(group->id))
-        clipboardText += model::animation_group_to_string(*group);
+      if (auto group = std::get_if<AnimationGroup>(&entry); group && groupIds.contains(group->id))
+        clipboardText += animation_group_to_string(*group);
     for (int i = 0; i < model.animations_count_get(); ++i)
     {
       auto groupId = model.animation_group_id_get(i);
       if (selection.contains(i) || groupIds.contains(groupId))
-        clipboardText += model::animation_to_string(*model.animation_get(i), groupId);
+        clipboardText += animation_to_string(*model.animation_get(i), groupId);
     }
     return clipboardText;
   }
 
-  void animations_insert(PanelState& state, Document& document, const std::string& text, int start, int targetGroupId,
+  static void animations_insert(PanelState& state, Document& document, const std::string& text, int start, int targetGroupId,
                          StringType edit)
   {
     std::set<int> groupIds{};
     std::string errorString{};
     document.edit_apply(edit,
-                        [&](model::Model& model)
+                        [&](Model& model)
                         {
-                          auto uids = edit::animations_paste(model, text, start, targetGroupId, groupIds, &errorString);
+                          auto uids = animations_paste(model, text, start, targetGroupId, groupIds, &errorString);
                           if (uids.empty()) return uids;
                           auto indices = animation_indices_get(document, uids);
                           animations_selection_set(document, groupIds.empty() ? indices : std::set<int>{}, groupIds);
@@ -199,13 +194,13 @@ namespace anm2ed::imgui
   }
 
   // Merges into options.reference; without a merge-popup selection, the selected animations merge into the first.
-  int animations_merge(Document& document, const AnimationMergeOptions& options)
+  static int animations_merge(Document& document, const AnimationMergeOptions& options)
   {
     auto isQuick = options.selection.empty();
     auto target = options.reference;
     auto sources = isQuick ? animation_selected_indices_get(document)
                            : animation_merge_indices_get(document, options.selection, target);
-    auto type = isQuick ? merge::APPEND : options.type;
+    auto type = isQuick ? MERGE_APPEND : options.type;
     auto isDeleteAfter = isQuick || options.isDeleteAnimationsAfter;
     auto ungroupIds = isQuick ? animation_groups_selected_get(document) : std::set<int>{};
 
@@ -223,10 +218,10 @@ namespace anm2ed::imgui
 
     int merged{-1};
     document.edit_apply(EDIT_MERGE_ANIMATIONS,
-                        [&](model::Model& model)
+                        [&](Model& model)
                         {
                           animation_overlay_reset(document, sources);
-                          auto uids = edit::animations_merge(model, target, sources, type, isDeleteAfter, ungroupIds);
+                          auto uids = animations_merge(model, target, sources, type, isDeleteAfter, ungroupIds);
                           auto indices = animation_indices_get(document, uids);
                           if (indices.empty()) return uids;
                           merged = *indices.begin();
@@ -237,7 +232,7 @@ namespace anm2ed::imgui
     return merged;
   }
 
-  AnimationDropZone animation_drop_zone_get(ImVec2 min, ImVec2 max)
+  static AnimationDropZone animation_drop_zone_get(ImVec2 min, ImVec2 max)
   {
     auto zoneHeight = (max.y - min.y) * DROP_ZONE_FRACTION;
     auto mouseY = ImGui::GetIO().MousePos.y;
@@ -246,8 +241,8 @@ namespace anm2ed::imgui
     return AnimationDropZone::INSIDE;
   }
 
-  void animation_move_command_push(const Panel& panel, std::vector<AnimationDragDropItem> items,
-                                   edit::AnimationTarget target)
+  static void animation_move_command_push(const Panel& panel, std::vector<AnimationDragDropItem> items,
+                                   AnimationTarget target)
   {
     if (items.empty()) return;
     command_push(panel,
@@ -258,9 +253,9 @@ namespace anm2ed::imgui
                    for (auto item : items)
                      (item.isGroup ? groupIds : indices).insert(item.id);
                    document.edit_apply(EDIT_MOVE_ANIMATIONS,
-                                       [&](model::Model& model)
+                                       [&](Model& model)
                                        {
-                                         auto uids = edit::animations_move(model, indices, groupIds, target);
+                                         auto uids = animations_move(model, indices, groupIds, target);
                                          if (uids.empty() && groupIds.empty()) return;
                                          animations_selection_set(document, animation_indices_get(document, uids),
                                                                   groupIds);
@@ -268,7 +263,7 @@ namespace anm2ed::imgui
                  });
   }
 
-  void animation_drag_drop_source_update(const Document& document, AnimationDragDropItem fallback)
+  static void animation_drag_drop_source_update(const Document& document, AnimationDragDropItem fallback)
   {
     if (!ImGui::BeginDragDropSource(DRAG_DROP_SOURCE_FLAGS)) return;
 
@@ -288,7 +283,7 @@ namespace anm2ed::imgui
     ImGui::EndDragDropSource();
   }
 
-  std::vector<AnimationDragDropItem> animation_drag_drop_target_items_get()
+  static std::vector<AnimationDragDropItem> animation_drag_drop_target_items_get()
   {
     auto payload = ImGui::AcceptDragDropPayload(ANIMATION_DRAG_DROP, ImGuiDragDropFlags_AcceptBeforeDelivery |
                                                                          ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
@@ -297,7 +292,7 @@ namespace anm2ed::imgui
     return {items, items + payload->DataSize / sizeof(AnimationDragDropItem)};
   }
 
-  bool animation_group_drag_drop_update(const Panel& panel, int groupId, ImVec2 itemMin, ImVec2 itemMax)
+  static bool animation_group_drag_drop_update(const Panel& panel, int groupId, ImVec2 itemMin, ImVec2 itemMax)
   {
     if (!ImGui::BeginDragDropTarget()) return false;
     auto items = animation_drag_drop_target_items_get();
@@ -322,7 +317,7 @@ namespace anm2ed::imgui
     return isDelivered;
   }
 
-  bool animation_row_drag_drop_update(const Panel& panel, int index)
+  static bool animation_row_drag_drop_update(const Panel& panel, int index)
   {
     animation_drag_drop_source_update(panel.document, {false, index});
     if (!ImGui::BeginDragDropTarget()) return false;
@@ -342,7 +337,7 @@ namespace anm2ed::imgui
     return isDelivered;
   }
 
-  void animation_group_set_push(const Panel& panel, int groupId, StringType edit, std::optional<std::string> name,
+  static void animation_group_set_push(const Panel& panel, int groupId, StringType edit, std::optional<std::string> name,
                                 std::optional<bool> isExpanded)
   {
     command_push(panel,
@@ -354,7 +349,7 @@ namespace anm2ed::imgui
                                   isExpanded.value_or(group->isExpanded) == group->isExpanded))
                      return;
                    document.edit_apply(edit,
-                                       [&](model::Model& model)
+                                       [&](Model& model)
                                        {
                                          auto group = model.animation_group_edit(first);
                                          group->name = name.value_or(group->name);
@@ -364,8 +359,8 @@ namespace anm2ed::imgui
   }
 
   // A group's tree node (renamable, a drop target) and, when expanded, its animations' rows.
-  bool animation_group_draw(Panel& panel, std::set<int>& selection, std::set<int>& groupSelection, int& focus,
-                            const ListRows& rows, const model::AnimationGroup& group, int firstIndex, int arrowKey)
+  static bool animation_group_draw(Panel& panel, std::set<int>& selection, std::set<int>& groupSelection, int& focus,
+                            const ListRows& rows, const AnimationGroup& group, int firstIndex, int arrowKey)
   {
     auto& state = panel.state;
     auto key = group_key_get(group.id);
@@ -435,7 +430,7 @@ namespace anm2ed::imgui
     return isRowsDone;
   }
 
-  void animations_merge_popup_update(Panel& panel, AnimationsPanel& animations)
+  static void animations_merge_popup_update(Panel& panel, AnimationsPanel& animations)
   {
     auto& [manager, settings, resources, dialog, clipboard, document, state] = panel;
     auto& popup = animations.mergePopup;
@@ -451,13 +446,13 @@ namespace anm2ed::imgui
       std::string label{};
     };
     std::vector<AnimationMergeCandidate> candidates{};
-    auto candidate_animation_push = [&](const model::Animation& animation, int animationIndex, bool isGrouped)
+    auto candidate_animation_push = [&](const Animation& animation, int animationIndex, bool isGrouped)
     {
       if (animationIndex != mergeReference)
         candidates.push_back({animationIndex, isGrouped ? std::format("  {}", animation.name) : animation.name});
     };
     animation_entries_each(document.model,
-                           [&](int index, const model::Animation* animation, const model::AnimationGroup* group)
+                           [&](int index, const Animation* animation, const AnimationGroup* group)
                            {
                              if (animation) return candidate_animation_push(*animation, index, false);
                              auto isReferenceOnly = group->animations.size() == 1 && index == mergeReference;
@@ -500,15 +495,15 @@ namespace anm2ed::imgui
       auto size = ImVec2(optionsSize.x * MERGE_OPTIONS_HALF, optionsSize.y - ImGui::GetStyle().WindowPadding.y * 2);
       if (ImGui::BeginChild("##Merge Options 1", size))
       {
-        ImGui::RadioButton(localize.get(LABEL_APPEND_FRAMES), &settings.mergeType, merge::APPEND);
-        ImGui::RadioButton(localize.get(LABEL_PREPEND_FRAMES), &settings.mergeType, merge::PREPEND);
+        ImGui::RadioButton(localize.get(LABEL_APPEND_FRAMES), &settings.mergeType, MERGE_APPEND);
+        ImGui::RadioButton(localize.get(LABEL_PREPEND_FRAMES), &settings.mergeType, MERGE_PREPEND);
       }
       ImGui::EndChild();
       ImGui::SameLine();
       if (ImGui::BeginChild("##Merge Options 2", size))
       {
-        ImGui::RadioButton(localize.get(LABEL_REPLACE_FRAMES), &settings.mergeType, merge::REPLACE);
-        ImGui::RadioButton(localize.get(LABEL_IGNORE_FRAMES), &settings.mergeType, merge::IGNORE);
+        ImGui::RadioButton(localize.get(LABEL_REPLACE_FRAMES), &settings.mergeType, MERGE_REPLACE);
+        ImGui::RadioButton(localize.get(LABEL_IGNORE_FRAMES), &settings.mergeType, MERGE_IGNORE);
       }
       ImGui::EndChild();
     }
@@ -525,7 +520,7 @@ namespace anm2ed::imgui
       command_push(panel,
                    [options = AnimationMergeOptions{.selection = mergeSelection,
                                                     .reference = mergeReference,
-                                                    .type = (merge::Type)settings.mergeType,
+                                                    .type = (Merge)settings.mergeType,
                                                     .isDeleteAnimationsAfter = settings.mergeIsDeleteAnimationsAfter}](
                        Document& document) { animations_merge(document, options); });
     if (result != PopupButton::NONE)
@@ -546,7 +541,7 @@ namespace anm2ed::imgui
     {
       auto selection = document.animations_selected_get();
       auto groupSelection = animation_groups_selected_get(document);
-      auto groupIds = edit::animation_group_ids_get(model);
+      auto groupIds = animation_group_ids_get(model);
       auto count = model.animations_count_get();
       auto isItemSelected = [&]() { return !selection.empty() || !groupSelection.empty(); };
       // A single selected group is where adds and pastes go.
@@ -556,7 +551,7 @@ namespace anm2ed::imgui
       };
       auto group_end_get = [&](int groupId)
       {
-        auto indices = groupId != -1 ? edit::animation_group_indices_get(model, groupId) : std::set<int>{};
+        auto indices = groupId != -1 ? animation_group_indices_get(model, groupId) : std::set<int>{};
         return indices.empty() ? count : std::min(*indices.rbegin() + 1, count);
       };
 
@@ -574,9 +569,9 @@ namespace anm2ed::imgui
                          [&state, index, groupId](Document& document)
                          {
                            document.edit_apply(EDIT_ADD_ANIMATION,
-                                               [&](model::Model& model)
+                                               [&](Model& model)
                                                {
-                                                 auto uids = edit::animation_add(
+                                                 auto uids = animation_add(
                                                      model, index, groupId, document.reference_get().animationIndex,
                                                      localize.get(TEXT_NEW_ANIMATION));
                                                  animations_selection_set(document, {index}, {});
@@ -622,12 +617,12 @@ namespace anm2ed::imgui
             command_push(panel,
                          [&state, targets = std::set<int>(targets.begin(), targets.end())](Document& document)
                          {
-                           auto groupIds = edit::animation_group_ids_get(document.model);
+                           auto groupIds = animation_group_ids_get(document.model);
                            auto groupId = groupIds.empty() ? 0 : *groupIds.rbegin() + 1;
                            document.edit_apply(EDIT_GROUP_ITEMS,
-                                               [&](model::Model& model)
+                                               [&](Model& model)
                                                {
-                                                 auto uids = edit::animations_group(model, targets,
+                                                 auto uids = animations_group(model, targets,
                                                                                     localize.get(TEXT_NEW_GROUP));
                                                  animations_selection_set(document, targets, {groupId});
                                                  document.reference_set({*targets.begin()});
@@ -657,7 +652,7 @@ namespace anm2ed::imgui
                          {
                            auto animation = document.model.animation_get(index);
                            if (!animation) return;
-                           document.edit_apply(EDIT_DEFAULT_ANIMATION, [name = animation->name](model::Model& model)
+                           document.edit_apply(EDIT_DEFAULT_ANIMATION, [name = animation->name](Model& model)
                                                { model.animations.defaultAnimation = name; });
                          });
           },
@@ -702,7 +697,7 @@ namespace anm2ed::imgui
                                    [index, name](Document& document)
                                    {
                                      document.edit_apply(SNAPSHOT_RENAME_ANIMATION,
-                                                         [&](model::Model& model)
+                                                         [&](Model& model)
                                                          {
                                                            auto animation = model.animation_edit(index);
                                                            if (!animation) return;
@@ -718,10 +713,10 @@ namespace anm2ed::imgui
                       auto animation = model.animation_get(index);
                       auto isDefault = animation && model.animations.defaultAnimation == animation->name;
                       auto isFocused = document.reference_get().animationIndex == index;
-                      return isDefault && isFocused ? font::BOLD_ITALICS
-                             : isDefault            ? font::BOLD
-                             : isFocused            ? font::ITALICS
-                                                    : font::REGULAR;
+                      return isDefault && isFocused ? FONT_BOLD_ITALICS
+                             : isDefault            ? FONT_BOLD
+                             : isFocused            ? FONT_ITALICS
+                                                    : FONT_REGULAR;
                     },
                     .tooltip_draw =
                         [&](int index)
@@ -730,7 +725,7 @@ namespace anm2ed::imgui
                       tooltip_name_draw(resources, animation.name);
                       if (model.animations.defaultAnimation == animation.name)
                       {
-                        ImGui::PushFont(resources.fonts[font::ITALICS].get(), font::SIZE);
+                        ImGui::PushFont(resources.fonts[FONT_ITALICS].get(), FONT_SIZE);
                         ImGui::TextUnformatted(localize.get(BASIC_DEFAULT));
                         ImGui::PopFont();
                       }
@@ -759,7 +754,7 @@ namespace anm2ed::imgui
             for (int i = 0; i < count; ++i)
               state.keys.push_back(i);
             animation_entries_each(model,
-                                   [&](int index, const model::Animation* animation, const model::AnimationGroup* group)
+                                   [&](int index, const Animation* animation, const AnimationGroup* group)
                                    {
                                      if (animation) visibleKeys.push_back(index);
                                      if (group && group->isExpanded)
@@ -771,7 +766,7 @@ namespace anm2ed::imgui
             auto arrowKey = list_select_begin(panel, selection, focus, rows, visibleKeys);
             auto isRowsDone = false;
             animation_entries_each(model,
-                                   [&](int index, const model::Animation* animation, const model::AnimationGroup* group)
+                                   [&](int index, const Animation* animation, const AnimationGroup* group)
                                    {
                                      if (isRowsDone) return;
                                      if (group)
@@ -789,8 +784,8 @@ namespace anm2ed::imgui
 
     animations_merge_popup_update(panel, animations);
 
-    auto isNext = shortcut(manager.chords[SHORTCUT_NEXT_ANIMATION], shortcut::GLOBAL);
-    auto isPrevious = shortcut(manager.chords[SHORTCUT_PREVIOUS_ANIMATION], shortcut::GLOBAL);
+    auto isNext = shortcut(manager.chords[SHORTCUT_NEXT_ANIMATION], SCOPE_GLOBAL);
+    auto isPrevious = shortcut(manager.chords[SHORTCUT_PREVIOUS_ANIMATION], SCOPE_GLOBAL);
     auto count = model.animations_count_get();
     if ((!isPrevious && !isNext) || count <= 0) return;
     auto reference = document.reference_get();
@@ -799,4 +794,3 @@ namespace anm2ed::imgui
     animations_selection_set(document, {reference.animationIndex}, animation_groups_selected_get(document));
     state.scrollId = reference.animationIndex;
   }
-}

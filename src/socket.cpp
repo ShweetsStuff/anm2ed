@@ -3,8 +3,6 @@
 #include <cerrno>
 #include <climits>
 
-namespace anm2ed
-{
 #ifdef _WIN32
   struct WSAInitializer
   {
@@ -19,7 +17,7 @@ namespace anm2ed
   WSAInitializer initializer{};
 #endif
 
-  int socket_last_error()
+  static int socket_last_error()
   {
 #ifdef _WIN32
     return WSAGetLastError();
@@ -262,4 +260,3 @@ namespace anm2ed
   bool Socket::is_valid() const { return handle != SOCKET_INVALID; }
 
   int Socket::last_error() const { return lastError; }
-}

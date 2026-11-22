@@ -5,17 +5,15 @@
 #include <unordered_map>
 #include <utility>
 
-namespace anm2ed::resource::texture
-{
-  struct Entry
+  struct TextureEntry
   {
     GLuint id{};
     bool isUsed{};
   };
 
-  std::unordered_map<std::uint64_t, Entry> entries{};
+  static std::unordered_map<std::uint64_t, TextureEntry> entries{};
 
-  GLuint id_get(const Image& image)
+  GLuint texture_id_get(const Image& image)
   {
     if (!image.is_valid()) return 0;
 
@@ -38,7 +36,7 @@ namespace anm2ed::resource::texture
     return entry.id;
   }
 
-  void garbage_collect()
+  void texture_garbage_collect()
   {
     std::erase_if(entries,
                   [](auto& pair)
@@ -49,7 +47,7 @@ namespace anm2ed::resource::texture
                   });
   }
 
-  Image svg_load(const char* data, size_t length, glm::ivec2 size)
+  Image texture_svg_load(const char* data, size_t length, glm::ivec2 size)
   {
     auto document = data ? lunasvg::Document::loadFromData(data, length) : nullptr;
     if (!document) return {};
@@ -57,4 +55,3 @@ namespace anm2ed::resource::texture
     if (bitmap.width() == 0 || bitmap.height() == 0) return {};
     return Image(bitmap.data(), size, true);
   }
-}

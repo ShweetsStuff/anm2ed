@@ -2,8 +2,6 @@
 
 // Animation layers in the timeline: their child's tracks under them (read only, timed as the parent plays them),
 // stepping into the child, and the breadcrumb back out.
-namespace anm2ed::imgui
-{
   constexpr auto BREADCRUMB_SEPARATOR = ">";
 
   // The child animation's tracks (root, layers top-down, nulls, triggers) when an animation layer row is expanded.
@@ -12,21 +10,21 @@ namespace anm2ed::imgui
     std::vector<PeekRow> rows{};
     if (row.isGroup || row.type != LAYER) return rows;
     auto track = item_get(LAYER, row.id, row.groupType, row.groupId);
-    auto layer = model::item_get(model.content.layers, row.id);
+    auto layer = ::item_get(model.content.layers, row.id);
     if (!track || !layer || !layer->is_animation() || !expandedLayerTracks.contains(track->uid)) return rows;
-    auto [source, child] = model::child_get(model, *layer, {}, document.library_resolver_get());
+    auto [source, child] = child_get(model, *layer, {}, document.library_resolver_get());
     if (!child) return rows;
 
-    auto row_add = [&](const model::Track& childTrack)
+    auto row_add = [&](const Track& childTrack)
     {
       if (settings.timelineIsShowUnused || !childTrack.frames.empty()) rows.push_back({source, child, &childTrack});
     };
     row_add(child->root);
-    std::vector<const model::Track*> layers{};
-    model::tracks_each(child->layers, [&](const model::Track& childTrack, auto*) { layers.push_back(&childTrack); });
+    std::vector<const Track*> layers{};
+    tracks_each(child->layers, [&](const Track& childTrack, auto*) { layers.push_back(&childTrack); });
     for (auto it = layers.rbegin(); it != layers.rend(); ++it)
       row_add(**it);
-    model::tracks_each(child->nulls, [&](const model::Track& childTrack, auto*) { row_add(childTrack); });
+    tracks_each(child->nulls, [&](const Track& childTrack, auto*) { row_add(childTrack); });
     row_add(child->triggers);
     return rows;
   }
@@ -42,9 +40,9 @@ namespace anm2ed::imgui
     auto type = (int)peek.track->type;
     auto label = std::string(localize.get(TYPE_STRINGS[type]));
     if (type == LAYER)
-      if (auto layer = model::item_get(peek.source->content.layers, peek.track->id)) label = layer_label_get(*layer);
+      if (auto layer = ::item_get(peek.source->content.layers, peek.track->id)) label = layer_label_get(*layer);
     if (type == NULL_)
-      if (auto null = model::item_get(peek.source->content.nulls, peek.track->id)) label = null->name;
+      if (auto null = ::item_get(peek.source->content.nulls, peek.track->id)) label = null->name;
 
     ImGui::PushID(index);
     ImGui::PushStyleColor(ImGuiCol_ChildBg, to_imvec4(color_get(COLOR_ITEM_BASE, type) * COLOR_HIDDEN_MULTIPLIER));
@@ -81,7 +79,7 @@ namespace anm2ed::imgui
       auto origin = ImGui::GetCursorScreenPos();
       auto frameSize = ImVec2(ImGui::GetTextLineHeight(), ImGui::GetContentRegionAvail().y);
       auto track = item_get(LAYER, row.id, row.groupType, row.groupId);
-      auto layer = model::item_get(model.content.layers, row.id);
+      auto layer = ::item_get(model.content.layers, row.id);
       auto type = (int)peek.track->type;
       auto isTrigger = type == TRIGGER;
       auto color = ImGui::GetColorU32(to_imvec4(color_get(COLOR_FRAME_BASE, type) * COLOR_HIDDEN_MULTIPLIER));
@@ -89,11 +87,11 @@ namespace anm2ed::imgui
 
       auto key_get = [&](int time)
       {
-        auto frame = model::frame_generate(*track, (float)time);
-        if (!frame.isVisible || model::child_get(model, *layer, frame, libraryGet).second != peek.child) return -1;
-        auto childTime = model::child_time_get(*track, (float)time, peek.child->frameNum, layer->id);
-        return isTrigger ? model::frame_index_from_at_frame_get(*peek.track, (int)childTime)
-                         : model::frame_index_from_time_get(*peek.track, childTime);
+        auto frame = frame_generate(*track, (float)time);
+        if (!frame.isVisible || child_get(model, *layer, frame, libraryGet).second != peek.child) return -1;
+        auto childTime = child_time_get(*track, (float)time, peek.child->frameNum, layer->id);
+        return isTrigger ? frame_index_from_at_frame_get(*peek.track, (int)childTime)
+                         : frame_index_from_time_get(*peek.track, childTime);
       };
       auto cell_draw = [&](int start, int end, int key)
       {
@@ -101,7 +99,7 @@ namespace anm2ed::imgui
         auto max = ImVec2(origin.x + frameSize.x * (float)end, origin.y + frameSize.y);
         drawList->AddRectFilled(min, max, color, FRAME_ROUNDING);
         drawList->AddRect(min, max, ImGui::GetColorU32(frameBorderColor), FRAME_ROUNDING);
-        auto icon = isTrigger ? icon::TRIGGER : INTERPOLATION_ICONS[(int)peek.track->frames[key].interpolation];
+        auto icon = isTrigger ? ICON_TRIGGER : INTERPOLATION_ICONS[(int)peek.track->frames[key].interpolation];
         auto iconSize = icon_size_get();
         auto iconMin = ImVec2(min.x, origin.y + (frameSize.y - iconSize.y) / 2);
         drawList->AddImage((ImTextureID)(intptr_t)resources.icon_id_get(icon), iconMin,
@@ -156,4 +154,3 @@ namespace anm2ed::imgui
     ImGui::TextUnformatted(steps.back().layerName.c_str());
     ImGui::PopStyleVar(2);
   }
-}

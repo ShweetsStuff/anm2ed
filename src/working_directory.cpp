@@ -5,8 +5,6 @@
 #include "log.h"
 #include "path.h"
 
-namespace anm2ed::util
-{
   WorkingDirectory::WorkingDirectory(const std::filesystem::path& path, Type type)
   {
     std::error_code ec{};
@@ -25,13 +23,13 @@ namespace anm2ed::util
       std::filesystem::current_path(parentPath, ec);
       if (ec)
         logger.warning(
-            std::format("Could not set current directory to {}: {}", path::to_utf8(parentPath), ec.message()));
+            std::format("Could not set current directory to {}: {}", path_to_utf8(parentPath), ec.message()));
     }
     else
     {
       std::filesystem::current_path(path, ec);
       if (ec)
-        logger.warning(std::format("Could not set current directory to {}: {}", path::to_utf8(path), ec.message()));
+        logger.warning(std::format("Could not set current directory to {}: {}", path_to_utf8(path), ec.message()));
     }
   }
 
@@ -43,6 +41,5 @@ namespace anm2ed::util
     std::filesystem::current_path(previous, ec);
     if (ec)
       logger.warning(
-          std::format("Could not restore current directory to {}: {}", path::to_utf8(previous), ec.message()));
+          std::format("Could not restore current directory to {}: {}", path_to_utf8(previous), ec.message()));
   }
-}

@@ -4,8 +4,6 @@
 #include <string>
 #include <string_view>
 
-namespace anm2ed::util
-{
   class File
   {
   public:
@@ -22,9 +20,5 @@ namespace anm2ed::util
     FILE* handle{};
   };
 
-  namespace file
-  {
-    bool read_to_string(const std::filesystem::path&, std::string*, const char* mode = "rb");
-    bool write_string(const std::filesystem::path&, std::string_view, const char* mode = "wb");
-  }
-}
+    bool file_text_load(const std::filesystem::path&, std::string*, const char* mode = "rb");
+    bool file_text_save(const std::filesystem::path&, std::string_view, const char* mode = "wb");

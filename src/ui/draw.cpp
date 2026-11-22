@@ -4,8 +4,6 @@
 
 #include <glad/glad.h>
 
-namespace anm2ed::imgui
-{
   constexpr ImU32 DROP_LINE_COLOR = IM_COL32(255, 255, 0, 255);
   constexpr float DROP_LINE_THICKNESS = 2.0f;
 
@@ -15,7 +13,7 @@ namespace anm2ed::imgui
     long long index{};
   };
 
-  CheckerStart checker_start(float minCoord, float offset, float step)
+  static CheckerStart checker_start(float minCoord, float offset, float step)
   {
     float world = minCoord + offset;
     long long index = static_cast<long long>(std::floor(world / step));
@@ -44,7 +42,7 @@ namespace anm2ed::imgui
     drawList->AddLine(ImVec2(min.x, y), ImVec2(max.x, y), DROP_LINE_COLOR, DROP_LINE_THICKNESS);
   }
 
-  void image_premultiplied_blend_set(const ImDrawList*, const ImDrawCmd*)
+  static void image_premultiplied_blend_set(const ImDrawList*, const ImDrawCmd*)
   {
     glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
   }
@@ -91,4 +89,3 @@ namespace anm2ed::imgui
       }
     }
   }
-}

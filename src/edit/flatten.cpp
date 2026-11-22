@@ -7,14 +7,9 @@
 #include "math_util.h"
 #include "model/frames.h"
 
-using namespace anm2ed::model;
-using namespace anm2ed::util;
-
-namespace anm2ed::edit
-{
   // A draw as a plain layer frame of one frame: its transform (parents included) taken apart into position, scale and
   // rotation. Skew has no place in a plain frame, and is dropped.
-  Frame draw_frame_bake(const Draw& draw)
+  static Frame draw_frame_bake(const Draw& draw)
   {
     auto frame = draw.frame;
     auto size = glm::max(frame.size, glm::vec2(1.0f));
@@ -24,7 +19,7 @@ namespace anm2ed::edit
     auto scaleX = glm::length(column0);
     auto determinant = column0.x * column1.y - column0.y * column1.x;
     frame.position = glm::vec2(model * glm::vec4(frame.pivot / size, 0.0f, 1.0f));
-    frame.scale = math::unit_to_percent(glm::vec2(scaleX, scaleX > 0.0f ? determinant / scaleX : 0.0f));
+    frame.scale = unit_to_percent(glm::vec2(scaleX, scaleX > 0.0f ? determinant / scaleX : 0.0f));
     frame.rotation = glm::degrees(std::atan2(column0.y, column0.x));
     frame.skew = {};
     frame.depth = 0;
@@ -35,7 +30,7 @@ namespace anm2ed::edit
     return frame;
   }
 
-  bool is_frame_baked_equal(Frame a, const Frame& b)
+  static bool is_frame_baked_equal(Frame a, const Frame& b)
   {
     a.uid = b.uid;
     a.duration = b.duration;
@@ -163,4 +158,3 @@ namespace anm2ed::edit
     std::erase_if(content.layers, is_flattened);
     return model;
   }
-}

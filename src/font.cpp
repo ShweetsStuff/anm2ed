@@ -1,7 +1,5 @@
 #include "font.h"
 
-namespace anm2ed::resource
-{
   Font::Font() = default;
 
   Font::Font(void* data, size_t length, int size)
@@ -52,4 +50,3 @@ namespace anm2ed::resource
     }
     return *this;
   }
-}

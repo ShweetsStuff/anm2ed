@@ -6,74 +6,71 @@
 #include "settings.h"
 #include "localization.h"
 
-namespace anm2ed::tool
-{
-  enum Type
+  enum Tool
   {
-    PAN,
-    MOVE,
-    ROTATE,
-    SCALE,
-    SKEW,
-    CROP,
-    DRAW,
-    ERASE,
-    COLOR_PICKER,
-    UNDO,
-    REDO,
-    COLOR,
-    COUNT
+    TOOL_PAN,
+    TOOL_MOVE,
+    TOOL_ROTATE,
+    TOOL_SCALE,
+    TOOL_SKEW,
+    TOOL_CROP,
+    TOOL_DRAW,
+    TOOL_ERASE,
+    TOOL_COLOR_PICKER,
+    TOOL_UNDO,
+    TOOL_REDO,
+    TOOL_COLOR,
+    TOOL_COUNT
   };
 
-  enum AreaType
+  enum ToolArea
   {
-    ANIMATION_PREVIEW,
-    SPRITESHEET_EDITOR,
-    ALL
+    TOOL_AREA_ANIMATION_PREVIEW,
+    TOOL_AREA_SPRITESHEET_EDITOR,
+    TOOL_AREA_ALL
   };
 
-  struct Info
+  struct ToolInfo
   {
     ImGuiMouseCursor cursor{ImGuiMouseCursor_None};
-    resource::icon::Type icon{};
+    Icon icon{};
     ShortcutType shortcut{};
-    AreaType areaType;
+    ToolArea areaType;
     const char* label{};
     StringType tooltip{};
     bool isFrameRequired{};
     bool isSpritesheetRequired{};
   };
 
-  constexpr Info INFO[] = {
-      {ImGuiMouseCursor_Hand, resource::icon::PAN, SHORTCUT_PAN, ALL, "##Pan", TOOLTIP_TOOL_PAN},
+  constexpr ToolInfo TOOLS[] = {
+      {ImGuiMouseCursor_Hand, ICON_PAN, SHORTCUT_PAN, TOOL_AREA_ALL, "##Pan", TOOLTIP_TOOL_PAN},
 
-      {ImGuiMouseCursor_ResizeAll, resource::icon::MOVE, SHORTCUT_MOVE, ALL, "##Move", TOOLTIP_TOOL_MOVE, true},
+      {ImGuiMouseCursor_ResizeAll, ICON_MOVE, SHORTCUT_MOVE, TOOL_AREA_ALL, "##Move", TOOLTIP_TOOL_MOVE, true},
 
-      {ImGuiMouseCursor_Arrow, resource::icon::ROTATE, SHORTCUT_ROTATE, ANIMATION_PREVIEW, "##Rotate",
+      {ImGuiMouseCursor_Arrow, ICON_ROTATE, SHORTCUT_ROTATE, TOOL_AREA_ANIMATION_PREVIEW, "##Rotate",
        TOOLTIP_TOOL_ROTATE, true},
 
-      {ImGuiMouseCursor_ResizeNESW, resource::icon::SCALE, SHORTCUT_SCALE, ANIMATION_PREVIEW, "##Scale",
+      {ImGuiMouseCursor_ResizeNESW, ICON_SCALE, SHORTCUT_SCALE, TOOL_AREA_ANIMATION_PREVIEW, "##Scale",
        TOOLTIP_TOOL_SCALE, true},
 
-      {ImGuiMouseCursor_ResizeNESW, resource::icon::SKEW, SHORTCUT_SKEW, ANIMATION_PREVIEW, "##Skew", TOOLTIP_TOOL_SKEW,
+      {ImGuiMouseCursor_ResizeNESW, ICON_SKEW, SHORTCUT_SKEW, TOOL_AREA_ANIMATION_PREVIEW, "##Skew", TOOLTIP_TOOL_SKEW,
        true},
 
-      {ImGuiMouseCursor_Arrow, resource::icon::CROP, SHORTCUT_CROP, SPRITESHEET_EDITOR, "##Crop", TOOLTIP_TOOL_CROP,
+      {ImGuiMouseCursor_Arrow, ICON_CROP, SHORTCUT_CROP, TOOL_AREA_SPRITESHEET_EDITOR, "##Crop", TOOLTIP_TOOL_CROP,
        true},
 
-      {ImGuiMouseCursor_Arrow, resource::icon::DRAW, SHORTCUT_DRAW, SPRITESHEET_EDITOR, "##Draw", TOOLTIP_TOOL_DRAW,
+      {ImGuiMouseCursor_Arrow, ICON_DRAW, SHORTCUT_DRAW, TOOL_AREA_SPRITESHEET_EDITOR, "##Draw", TOOLTIP_TOOL_DRAW,
        false, true},
 
-      {ImGuiMouseCursor_Arrow, resource::icon::ERASE, SHORTCUT_ERASE, SPRITESHEET_EDITOR, "##Erase", TOOLTIP_TOOL_ERASE,
+      {ImGuiMouseCursor_Arrow, ICON_ERASE, SHORTCUT_ERASE, TOOL_AREA_SPRITESHEET_EDITOR, "##Erase", TOOLTIP_TOOL_ERASE,
        false, true},
 
-      {ImGuiMouseCursor_Arrow, resource::icon::COLOR_PICKER, SHORTCUT_COLOR_PICKER, SPRITESHEET_EDITOR,
+      {ImGuiMouseCursor_Arrow, ICON_COLOR_PICKER, SHORTCUT_COLOR_PICKER, TOOL_AREA_SPRITESHEET_EDITOR,
        "##Color Picker", TOOLTIP_TOOL_COLOR_PICKER, false, true},
 
-      {ImGuiMouseCursor_None, resource::icon::UNDO, SHORTCUT_UNDO, ALL, "##Undo", TOOLTIP_TOOL_UNDO},
+      {ImGuiMouseCursor_None, ICON_UNDO, SHORTCUT_UNDO, TOOL_AREA_ALL, "##Undo", TOOLTIP_TOOL_UNDO},
 
-      {ImGuiMouseCursor_None, resource::icon::REDO, SHORTCUT_REDO, ALL, "##Redo", TOOLTIP_TOOL_REDO},
+      {ImGuiMouseCursor_None, ICON_REDO, SHORTCUT_REDO, TOOL_AREA_ALL, "##Redo", TOOLTIP_TOOL_REDO},
 
-      {ImGuiMouseCursor_None, resource::icon::NONE, SHORTCUT_COLOR, ALL, "##Color", TOOLTIP_TOOL_COLOR},
+      {ImGuiMouseCursor_None, ICON_NONE, SHORTCUT_COLOR, TOOL_AREA_ALL, "##Color", TOOLTIP_TOOL_COLOR},
   };
-}

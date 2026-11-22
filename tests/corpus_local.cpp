@@ -1,8 +1,5 @@
 #include "common.h"
 
-using namespace anm2ed;
-using namespace anm2ed::test;
-
 // Private corpus run: ANM2ED_CORPUS=<file listing .anm2 paths>. Baselines are written on first sight to
 // ANM2ED_CORPUS_BASELINE (default ~/.cache/anm2ed/corpus) and compared on every later run. Nothing here is committed.
 TEST_CASE("local corpus matches baselines" * doctest::skip(!is_env_set("ANM2ED_CORPUS")))
@@ -17,9 +14,9 @@ TEST_CASE("local corpus matches baselines" * doctest::skip(!is_env_set("ANM2ED_C
     if (line.empty()) continue;
     INFO("file: ", line);
     auto key = std::format("{:016x}", std::hash<std::string>{}(line));
-    model::Model anm2{};
+    Model anm2{};
     std::string error{};
-    if (!model::model_load(anm2, line, &error))
+    if (!model_load(anm2, line, &error))
     {
       golden_check(baseline / (key + ".error.txt"), error, true);
       continue;

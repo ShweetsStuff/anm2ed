@@ -7,11 +7,6 @@
 #include "ui/shortcut.h"
 #include "ui/theme.h"
 
-using namespace anm2ed::types;
-using namespace anm2ed::util;
-
-namespace anm2ed::imgui::wizard
-{
   void Configure::reset(Settings& settings) { temporary = settings; }
 
   void Configure::update(Manager& manager, Settings& settings)
@@ -49,9 +44,9 @@ namespace anm2ed::imgui::wizard
 
           ImGui::SeparatorText(localize.get(LABEL_THEME));
 
-          for (int i = 0; i < theme::COUNT; i++)
+          for (int i = 0; i < THEME_COUNT; i++)
           {
-            ImGui::RadioButton(localize.get(theme::STRINGS[i]), &temporary.theme, i);
+            ImGui::RadioButton(localize.get(THEME_STRINGS[i]), &temporary.theme, i);
             ImGui::SameLine();
           }
         }
@@ -144,7 +139,7 @@ namespace anm2ed::imgui::wizard
               ImGui::PushID(i);
               ImGui::TableNextRow();
               ImGui::TableSetColumnIndex(0);
-              ImGui::TextUnformatted(localize.get(::anm2ed::SHORTCUT_STRING_TYPES[i]));
+              ImGui::TextUnformatted(localize.get(SHORTCUT_STRING_TYPES[i]));
               ImGui::TableSetColumnIndex(1);
 
               if (ImGui::Selectable(chordString.c_str(), isSelected)) selectedShortcut = i;
@@ -191,18 +186,18 @@ namespace anm2ed::imgui::wizard
     shortcut(manager.chords[SHORTCUT_CONFIRM]);
     if (ImGui::Button(localize.get(BASIC_SAVE), widgetSize))
     {
-      auto settingsPath = util::sdl::preferences_directory_get() / "settings.ini";
+      auto settingsPath = preferences_directory_get() / "settings.ini";
       settings = temporary;
 
       ImGui::GetIO().KeyRepeatDelay = settings.keyboardRepeatDelay;
       ImGui::GetIO().KeyRepeatRate = settings.keyboardRepeatRate;
-      ImGui::GetStyle().FontScaleMain = math::percent_to_unit(settings.uiScale);
+      ImGui::GetStyle().FontScaleMain = percent_to_unit(settings.uiScale);
       if (settings.isDetachableWindows)
         ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
       else
         ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
       SnapshotStack::max_size_set(settings.fileSnapshotStackSize);
-      imgui::theme_set((theme::Type)settings.theme);
+      theme_set((Theme)settings.theme);
       localize.language = (Language)settings.language;
       manager.settings_apply(settings);
 
@@ -226,4 +221,3 @@ namespace anm2ed::imgui::wizard
     if (ImGui::Button(localize.get(LABEL_CLOSE), widgetSize)) isSet = true;
     ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CLOSE_SETTINGS));
   }
-}

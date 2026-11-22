@@ -9,12 +9,8 @@
 
 #include "path.h"
 
-using namespace anm2ed::types;
-using namespace anm2ed::util;
 using namespace glm;
 
-namespace anm2ed::imgui
-{
   int input_text_callback(ImGuiInputTextCallbackData* data)
   {
     if (data->EventFlag == ImGuiInputTextFlags_CallbackResize)
@@ -36,9 +32,9 @@ namespace anm2ed::imgui
   {
     if (!path) return false;
 
-    auto pathUtf8 = path::to_utf8(*path);
+    auto pathUtf8 = path_to_utf8(*path);
     auto edited = input_text_string(label, &pathUtf8, flags);
-    if (edited) *path = path::from_utf8(pathUtf8);
+    if (edited) *path = path_from_utf8(pathUtf8);
 
     return edited;
   }
@@ -82,7 +78,7 @@ namespace anm2ed::imgui
     return isActivated;
   }
 
-  edit_state::Type drag_float_persistent(const char* label, float* value, float speed, float min, float max,
+  EditState drag_float_persistent(const char* label, float* value, float speed, float min, float max,
                                          const char* format, ImGuiSliderFlags flags)
   {
     static bool isEditing{};
@@ -90,30 +86,30 @@ namespace anm2ed::imgui
     auto persistent = value ? *value : 0;
 
     ImGui::DragFloat(label, &persistent, speed, min, max, format, flags);
-    if (!value) return edit_state::NONE;
+    if (!value) return EDIT_STATE_NONE;
     if (ImGui::IsItemActivated() && persistent != start)
     {
       isEditing = true;
       start = *value;
-      return edit_state::START;
+      return EDIT_STATE_START;
     }
     else if (ImGui::IsItemDeactivatedAfterEdit())
     {
       isEditing = false;
       *value = persistent;
       start = NAN;
-      return edit_state::END;
+      return EDIT_STATE_END;
     }
     else if (isEditing)
     {
       *value = persistent;
-      return edit_state::DURING;
+      return EDIT_STATE_DURING;
     }
 
-    return edit_state::NONE;
+    return EDIT_STATE_NONE;
   }
 
-  edit_state::Type drag_float2_persistent(const char* label, vec2* value, float speed, float min, float max,
+  EditState drag_float2_persistent(const char* label, vec2* value, float speed, float min, float max,
                                           const char* format, ImGuiSliderFlags flags)
   {
     static bool isEditing{};
@@ -121,57 +117,57 @@ namespace anm2ed::imgui
     auto persistent = value ? *value : vec2();
 
     ImGui::DragFloat2(label, value_ptr(persistent), speed, min, max, format, flags);
-    if (!value) return edit_state::NONE;
+    if (!value) return EDIT_STATE_NONE;
     if (ImGui::IsItemActivated() && persistent != start)
     {
       isEditing = true;
       start = *value;
-      return edit_state::START;
+      return EDIT_STATE_START;
     }
     else if (ImGui::IsItemDeactivatedAfterEdit())
     {
       isEditing = false;
       *value = persistent;
       start = vec2{NAN};
-      return edit_state::END;
+      return EDIT_STATE_END;
     }
     else if (isEditing)
     {
       *value = persistent;
-      return edit_state::DURING;
+      return EDIT_STATE_DURING;
     }
 
-    return edit_state::NONE;
+    return EDIT_STATE_NONE;
   }
 
-  edit_state::Type color_edit4_persistent(const char* label, vec4* value, ImGuiColorEditFlags flags)
+  EditState color_edit4_persistent(const char* label, vec4* value, ImGuiColorEditFlags flags)
   {
     static bool isEditing{};
     static vec4 start{NAN};
     auto persistent = value ? *value : vec4();
 
     ImGui::ColorEdit4(label, value_ptr(persistent), flags);
-    if (!value) return edit_state::NONE;
+    if (!value) return EDIT_STATE_NONE;
     if (ImGui::IsItemActivated() && persistent != start)
     {
       isEditing = true;
       start = *value;
-      return edit_state::START;
+      return EDIT_STATE_START;
     }
     else if (ImGui::IsItemDeactivatedAfterEdit())
     {
       isEditing = false;
       *value = persistent;
       start = vec4{NAN};
-      return edit_state::END;
+      return EDIT_STATE_END;
     }
     else if (isEditing)
     {
       *value = persistent;
-      return edit_state::DURING;
+      return EDIT_STATE_DURING;
     }
 
-    return edit_state::NONE;
+    return EDIT_STATE_NONE;
   }
 
   bool radio_button_icon(const char* label, int* value, int buttonValue, ImTextureID texture, ImVec2 size, ImVec4 tint)
@@ -208,4 +204,3 @@ namespace anm2ed::imgui
     value = glm::clamp(value, min, max);
     return isActivated;
   }
-}

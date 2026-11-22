@@ -2,21 +2,19 @@
 
 #include <utility>
 
-namespace anm2ed::snapshots
-{
-  template <typename T> bool is_value_equal(const T& left, const T& right) { return left == right; }
+  template <typename T> static bool is_value_equal(const T& left, const T& right) { return left == right; }
 
-  bool is_value_equal(const model::Model& left, const model::Model& right)
+  static bool is_value_equal(const Model& left, const Model& right)
   {
-    return model::is_model_equal(left, right);
+    return is_model_equal(left, right);
   }
 
-  bool is_value_equal(const Playback& left, const Playback& right)
+  static bool is_value_equal(const Playback& left, const Playback& right)
   {
     return left.time == right.time && left.isPlaying == right.isPlaying && left.isFinished == right.isFinished;
   }
 
-  bool is_step_empty(const SnapshotStep& step)
+  static bool is_step_empty(const SnapshotStep& step)
   {
 #define X(type, name)                                                                                                  \
   if (!is_value_equal(step.before.name, step.after.name)) return false;
@@ -25,7 +23,7 @@ namespace anm2ed::snapshots
     return true;
   }
 
-  void step_apply(Snapshot& current, const SnapshotStep& step, bool isUndo)
+  static void step_apply(Snapshot& current, const SnapshotStep& step, bool isUndo)
   {
     const auto& target = isUndo ? step.before : step.after;
 #define X(type, name)                                                                                                  \
@@ -35,21 +33,18 @@ namespace anm2ed::snapshots
     current.message = step.after.message;
   }
 
-  Reference focus_get(const Snapshot& snapshot)
+  static Reference focus_get(const Snapshot& snapshot)
   {
-    return selection_focus_get(snapshot.selection, model::UidIndex(snapshot.model));
+    return selection_focus_get(snapshot.selection, UidIndex(snapshot.model));
   }
 
-  void selection_follow(Snapshot& snapshot, Reference before)
+  static void selection_follow(Snapshot& snapshot, Reference before)
   {
     snapshot.model.uids_repair();
-    ::anm2ed::selection_follow(snapshot.selection, snapshot.model, model::UidIndex(snapshot.model), before);
+    selection_follow(snapshot.selection, snapshot.model, UidIndex(snapshot.model), before);
   }
-}
 
-namespace anm2ed
-{
-  int SnapshotStack::maxSize = snapshots::MAX;
+  int SnapshotStack::maxSize = SNAPSHOT_MAX;
 
   bool SnapshotStack::is_empty() { return stack.empty(); }
   std::size_t SnapshotStack::size() const { return stack.size(); }
@@ -82,17 +77,17 @@ namespace anm2ed
   void Snapshots::push(const std::string& message)
   {
     if (pending || pendingFocus) commit();
-    pendingFocus = snapshots::focus_get(current);
+    pendingFocus = focus_get(current);
     current.message = message;
     pending = current;
   }
 
   void Snapshots::commit()
   {
-    if (pendingFocus) snapshots::selection_follow(current, *std::exchange(pendingFocus, std::nullopt));
+    if (pendingFocus) selection_follow(current, *std::exchange(pendingFocus, std::nullopt));
     if (!pending) return;
     SnapshotStep step{std::move(*std::exchange(pending, std::nullopt)), current};
-    if (snapshots::is_step_empty(step)) return;
+    if (is_step_empty(step)) return;
     undoStack.push(std::move(step));
     redoStack.clear();
   }
@@ -103,9 +98,9 @@ namespace anm2ed
     pendingFocus.reset();
     auto step = undoStack.pop();
     if (!step) return false;
-    auto focus = snapshots::focus_get(current);
-    snapshots::step_apply(current, *step, true);
-    snapshots::selection_follow(current, focus);
+    auto focus = focus_get(current);
+    step_apply(current, *step, true);
+    selection_follow(current, focus);
     redoStack.push(std::move(*step));
     return true;
   }
@@ -116,9 +111,9 @@ namespace anm2ed
     pendingFocus.reset();
     auto step = redoStack.pop();
     if (!step) return false;
-    auto focus = snapshots::focus_get(current);
-    snapshots::step_apply(current, *step, false);
-    snapshots::selection_follow(current, focus);
+    auto focus = focus_get(current);
+    step_apply(current, *step, false);
+    selection_follow(current, focus);
     undoStack.push(std::move(*step));
     return true;
   }
@@ -136,4 +131,3 @@ namespace anm2ed
     undoStack.trim_to_limit();
     redoStack.trim_to_limit();
   }
-}

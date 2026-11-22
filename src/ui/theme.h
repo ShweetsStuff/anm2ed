@@ -2,31 +2,25 @@
 
 #include "localization.h"
 
-namespace anm2ed::imgui::theme
-{
 #define THEMES                                                                                                         \
-  X(LIGHT, LABEL_THEME_LIGHT)                                                                                          \
-  X(DARK, LABEL_THEME_DARK)                                                                                            \
-  X(CLASSIC, LABEL_THEME_CLASSIC)
+  X(THEME_LIGHT, LABEL_THEME_LIGHT)                                                                                          \
+  X(THEME_DARK, LABEL_THEME_DARK)                                                                                            \
+  X(THEME_CLASSIC, LABEL_THEME_CLASSIC)
 
-  enum Type
+  enum Theme
   {
 #define X(symbol, string) symbol,
     THEMES
 #undef X
-        COUNT
+        THEME_COUNT
   };
 
-  constexpr StringType STRINGS[] = {
+  constexpr StringType THEME_STRINGS[] = {
 #define X(symbol, string) string,
       THEMES
 #undef X
   };
 
 #undef THEMES
-}
 
-namespace anm2ed::imgui
-{
-  void theme_set(theme::Type);
-}
+  void theme_set(Theme);

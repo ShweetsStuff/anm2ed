@@ -1,7 +1,5 @@
 #include "ui/multiselect.h"
 
-namespace anm2ed::imgui
-{
   void external_storage_set(ImGuiSelectionExternalStorage* self, int id, bool isSelected)
   {
     auto* storage = static_cast<MultiSelectStorage*>(self->UserData);
@@ -38,4 +36,3 @@ namespace anm2ed::imgui
     if (index < 0 || index >= (int)indexMap->size()) return index;
     return (*indexMap)[index];
   }
-}

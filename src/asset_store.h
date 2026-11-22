@@ -6,8 +6,6 @@
 #include "audio_data.h"
 #include "image.h"
 
-namespace anm2ed::resource
-{
   // Immutable images and sounds keyed by content hash. Undo history records keys, never pixels or bytes, and
   // entries live until the document closes so any step can be restored.
   class AssetStore
@@ -21,4 +19,3 @@ namespace anm2ed::resource
     const Image* image_get(std::uint64_t) const;
     const AudioData* audio_get(std::uint64_t) const;
   };
-}

@@ -13,10 +13,7 @@
 #include "model/xml.h"
 
 using namespace simdjson;
-using namespace anm2ed::util;
 
-namespace anm2ed::model
-{
   constexpr std::string_view INDENT = "  ";
   constexpr std::size_t LINE_WIDTH_MAX = 100;
   constexpr std::string_view WHITESPACE = " \t\r\n";
@@ -38,26 +35,26 @@ namespace anm2ed::model
     return start != std::string_view::npos && text[start] == '{';
   }
 
-  template <class Items> int index_get(const Items& items, int id)
+  template <class Items> static int index_get(const Items& items, int id)
   {
     auto it = std::ranges::find(items, id, &std::ranges::range_value_t<Items>::id);
     return it == items.end() ? -1 : (int)(it - items.begin());
   }
 
-  glm::ivec4 color_to_bytes(const glm::vec4& color)
+  static glm::ivec4 color_to_bytes(const glm::vec4& color)
   {
-    return {math::float_to_uint8(color.r), math::float_to_uint8(color.g), math::float_to_uint8(color.b),
-            math::float_to_uint8(color.a)};
+    return {float_to_uint8(color.r), float_to_uint8(color.g), float_to_uint8(color.b),
+            float_to_uint8(color.a)};
   }
 
-  glm::vec4 color_from_bytes(const glm::ivec4& bytes)
+  static glm::vec4 color_from_bytes(const glm::ivec4& bytes)
   {
-    return {math::uint8_to_float(bytes.r), math::uint8_to_float(bytes.g), math::uint8_to_float(bytes.b),
-            math::uint8_to_float(bytes.a)};
+    return {uint8_to_float(bytes.r), uint8_to_float(bytes.g), uint8_to_float(bytes.b),
+            uint8_to_float(bytes.a)};
   }
 
   // The editor keeps dates as "MM/DD/YYYY hh:mm:ss AM"; JSON has them as ISO 8601. Anything else is kept as it is.
-  std::string date_to_iso(const std::string& date)
+  static std::string date_to_iso(const std::string& date)
   {
     int month{}, day{}, year{}, hour{}, minute{}, second{};
     char meridiem[DATE_MERIDIEM_SIZE]{};
@@ -68,7 +65,7 @@ namespace anm2ed::model
     return std::format("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}", year, month, day, hour, minute, second);
   }
 
-  std::string date_from_iso(const std::string& date)
+  static std::string date_from_iso(const std::string& date)
   {
     int year{}, month{}, day{}, hour{}, minute{}, second{};
     if (std::sscanf(date.c_str(), "%d-%d-%dT%d:%d:%d", &year, &month, &day, &hour, &minute, &second) != DATE_FIELDS)
@@ -78,7 +75,7 @@ namespace anm2ed::model
                        hour < HOURS_HALF_DAY ? "AM" : "PM");
   }
 
-  void line_break(std::string& text, int depth)
+  static void line_break(std::string& text, int depth)
   {
     text += '\n';
     for (int i = 0; i < depth; ++i)
@@ -161,7 +158,7 @@ namespace anm2ed::model
     void value(int value) { number(value); }
     void value(float value) { number(value); }
     void value(const std::string& value) { this->value(std::string_view(value)); }
-    void value(const std::filesystem::path& value) { this->value(path::to_utf8(value)); }
+    void value(const std::filesystem::path& value) { this->value(path_to_utf8(value)); }
 
     void value(std::string_view value)
     {
@@ -277,7 +274,7 @@ namespace anm2ed::model
   };
 
   // Each returns what it expected when the value is the wrong kind (and leaves the value as it was).
-  std::string_view value_read(dom::element element, bool& value)
+  static std::string_view value_read(dom::element element, bool& value)
   {
     bool read{};
     if (element.get(read)) return "true or false";
@@ -295,7 +292,7 @@ namespace anm2ed::model
     return {};
   }
 
-  std::string_view value_read(dom::element element, std::string& value)
+  static std::string_view value_read(dom::element element, std::string& value)
   {
     std::string_view read{};
     if (element.get(read)) return "a string";
@@ -303,11 +300,11 @@ namespace anm2ed::model
     return {};
   }
 
-  std::string_view value_read(dom::element element, std::filesystem::path& value)
+  static std::string_view value_read(dom::element element, std::filesystem::path& value)
   {
     std::string read{};
     auto expected = value_read(element, read);
-    if (expected.empty()) value = path::from_utf8(read);
+    if (expected.empty()) value = path_from_utf8(read);
     return expected;
   }
 
@@ -325,7 +322,7 @@ namespace anm2ed::model
     return {};
   }
 
-  template <class T> std::string_view value_read(dom::element element, std::vector<T>& value)
+  template <class T> static std::string_view value_read(dom::element element, std::vector<T>& value)
   {
     dom::array array{};
     if (element.get(array)) return "an array";
@@ -478,7 +475,7 @@ namespace anm2ed::model
 
   // Each part of the document is described once; with a JsonWriter it is written, with a JsonReader read.
 
-  template <class Io, class F> void frame_io(Io& io, F& frame, ItemType type, const std::vector<Region>& regions)
+  template <class Io, class F> static void frame_io(Io& io, F& frame, ItemType type, const std::vector<Region>& regions)
   {
     static const Frame FRAME_DEFAULT{};
     auto& content = io.model.content;
@@ -530,7 +527,7 @@ namespace anm2ed::model
     io.list(name, frames, [&](auto& frameIo, auto& frame) { frame_io(frameIo, frame, type, regions); }, true, false);
   }
 
-  template <class Io, class T> void track_io(Io& io, T& track, ItemType type)
+  template <class Io, class T> static void track_io(Io& io, T& track, ItemType type)
   {
     auto isLayer = type == ItemType::LAYER;
     if constexpr (Io::IS_READING) track.type = type;
@@ -548,7 +545,7 @@ namespace anm2ed::model
   }
 
   // A group is an entry with a "group" name, its root and its own tracks.
-  template <class Io, class Entries> void entries_io(Io& io, std::string_view name, Entries& entries, ItemType type)
+  template <class Io, class Entries> static void entries_io(Io& io, std::string_view name, Entries& entries, ItemType type)
   {
     io.list(
         name, entries,
@@ -581,7 +578,7 @@ namespace anm2ed::model
     }
   }
 
-  template <class Io, class A> void animation_io(Io& io, A& animation)
+  template <class Io, class A> static void animation_io(Io& io, A& animation)
   {
     io.field("length", animation.frameNum, 1);
     io.field("loop", animation.isLoop, true);
@@ -596,7 +593,7 @@ namespace anm2ed::model
 
   // Animations (and groups, which hold an "animations" object) are keyed by name; a repeated name is renumbered.
   // Animation names are unique document-wide (default names one); a group's only among the top-level keys.
-  void animations_write(JsonWriter& io, const Model& model)
+  static void animations_write(JsonWriter& io, const Model& model)
   {
     std::set<std::string> animationNames{};
     std::set<std::string> keys{};
@@ -649,7 +646,7 @@ namespace anm2ed::model
         false);
   }
 
-  void animations_read(JsonReader& io, Model& model)
+  static void animations_read(JsonReader& io, Model& model)
   {
     auto animation_read = [&](std::string_view name, JsonReader& animationIo)
     {
@@ -694,7 +691,7 @@ namespace anm2ed::model
   }
 
   // Content comes before animations, which read it (and anything named comes before what names it).
-  template <class Io, class M> void model_io(Io& io, M& model)
+  template <class Io, class M> static void model_io(Io& io, M& model)
   {
     auto& content = model.content;
     io.object(
@@ -818,4 +815,3 @@ namespace anm2ed::model
     if (issues.size() > ISSUES_SHOWN_MAX) *errorString += std::format("\n({} more)", issues.size() - ISSUES_SHOWN_MAX);
     return true;
   }
-}

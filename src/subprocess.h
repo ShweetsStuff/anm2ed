@@ -2,8 +2,6 @@
 
 #include <string>
 
-namespace anm2ed::util
-{
   class Process
   {
   public:
@@ -21,4 +19,3 @@ namespace anm2ed::util
   private:
     FILE* pipe{};
   };
-}

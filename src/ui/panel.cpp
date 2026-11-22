@@ -9,13 +9,8 @@
 #include "ui/layout.h"
 #include "ui/shortcut.h"
 
-using namespace anm2ed::resource;
-using namespace anm2ed::types;
-using namespace anm2ed::util;
 using namespace glm;
 
-namespace anm2ed::imgui
-{
   constexpr float SCROLL_CENTER = 0.5f;
   constexpr std::size_t REMOVE_LINES_MAX = 10;
   constexpr float TOOLTIP_PADDING_MULTIPLIER = 4.0f;
@@ -30,13 +25,13 @@ namespace anm2ed::imgui
         {panel.manager.selected, [run = std::move(run)](Manager&, Document& document) { run(document); }});
   }
 
-  void row_select(std::set<int>&, int& focus, const ListRows& rows, int key)
+  static void row_select(std::set<int>&, int& focus, const ListRows& rows, int key)
   {
     focus = key;
     if (rows.select) rows.select(key);
   }
 
-  void row_scroll_update(PanelState& state, int key, int arrowKey)
+  static void row_scroll_update(PanelState& state, int key, int arrowKey)
   {
     if ((state.newId != key && state.scrollId != key && arrowKey != key) || is_drag_drop_active()) return;
     ImGui::SetScrollHereY(SCROLL_CENTER);
@@ -59,7 +54,7 @@ namespace anm2ed::imgui
     ImGui::PopStyleVar(2);
   }
 
-  void row_tooltip_update(const PanelState& state, const ListRows& rows, int key)
+  static void row_tooltip_update(const PanelState& state, const ListRows& rows, int key)
   {
     if (!rows.tooltip_draw || !tooltip_begin(state)) return;
     rows.tooltip_draw(key);
@@ -67,7 +62,7 @@ namespace anm2ed::imgui
   }
 
   // Arrow keys move a single selection through the keys.
-  int arrow_key_get(const std::vector<int>& keys, const std::set<int>& selection, int focus)
+  static int arrow_key_get(const std::vector<int>& keys, const std::set<int>& selection, int focus)
   {
     if (keys.empty() || !ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) ||
         !(ImGui::IsKeyPressed(ImGuiKey_UpArrow, true) || ImGui::IsKeyPressed(ImGuiKey_DownArrow, true)))
@@ -110,7 +105,7 @@ namespace anm2ed::imgui
       selection = {arrowKey};
       row_select(selection, focus, rows, arrowKey);
     }
-    if (shortcut(panel.manager.chords[SHORTCUT_CONFIRM], shortcut::FOCUSED) && selection.size() == 1 && rows.activate)
+    if (shortcut(panel.manager.chords[SHORTCUT_CONFIRM], SCOPE_FOCUSED) && selection.size() == 1 && rows.activate)
       rows.activate(*selection.begin());
   }
 
@@ -120,13 +115,13 @@ namespace anm2ed::imgui
     auto& state = panel.state;
     auto isSelected = selection.contains(key) || arrowKey == key;
     auto isFocused = rows.isFocusItalic && (focus == key || arrowKey == key);
-    auto font = rows.font_get ? rows.font_get(key) : isFocused ? font::ITALICS : font::REGULAR;
+    auto font = rows.font_get ? rows.font_get(key) : isFocused ? FONT_ITALICS : FONT_REGULAR;
     auto label = rows.label_get(key);
 
     auto isInvalid = rows.is_invalid && rows.is_invalid(key);
     ImGui::PushID(key);
     ImGui::SetNextItemSelectionUserData(index);
-    if (font != font::REGULAR) ImGui::PushFont(panel.resources.fonts[font].get(), font::SIZE);
+    if (font != FONT_REGULAR) ImGui::PushFont(panel.resources.fonts[font].get(), FONT_SIZE);
     if (isInvalid) ImGui::PushStyleColor(ImGuiCol_Text, CARD_TINT_INVALID);
     if (arrowKey == key) ImGui::SetKeyboardFocusHere();
 
@@ -161,7 +156,7 @@ namespace anm2ed::imgui
     if (isActivated || ImGui::IsItemClicked(ImGuiMouseButton_Left) || ImGui::IsItemClicked(ImGuiMouseButton_Right))
       row_select(selection, focus, rows, key);
     if (isInvalid) ImGui::PopStyleColor();
-    if (font != font::REGULAR) ImGui::PopFont();
+    if (font != FONT_REGULAR) ImGui::PopFont();
     row_scroll_update(state, key, arrowKey);
     if (state.newId == key) state.newId = -1;
 
@@ -174,7 +169,7 @@ namespace anm2ed::imgui
     return isBreak;
   }
 
-  void card_draw(Panel& panel, std::set<int>& selection, int& focus, const ListRows& rows, int key, int index,
+  static void card_draw(Panel& panel, std::set<int>& selection, int& focus, const ListRows& rows, int key, int index,
                  int arrowKey, bool& isBreak)
   {
     auto cardSize = ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetTextLineHeightWithSpacing() * rows.cardLines);
@@ -227,12 +222,12 @@ namespace anm2ed::imgui
       else
         imageSize.y = imageSize.x / aspectRatio;
       ImGui::SetCursorPos(cursorPos);
-      ImGui::ImageWithBg(resource::texture::id_get(*image.texture), imageSize, to_imvec2(image.uvMin),
+      ImGui::ImageWithBg(texture_id_get(*image.texture), imageSize, to_imvec2(image.uvMin),
                          to_imvec2(image.uvMax), ImVec4(), image.isValid ? CARD_TINT_VALID : CARD_TINT_INVALID);
 
       ImGui::SetCursorPos(
           ImVec2(cardSize.y + style.ItemSpacing.x, cardSize.y - cardSize.y / 2 - ImGui::GetTextLineHeight() / 2));
-      if (isFocused) ImGui::PushFont(panel.resources.fonts[font::ITALICS].get(), font::SIZE);
+      if (isFocused) ImGui::PushFont(panel.resources.fonts[FONT_ITALICS].get(), FONT_SIZE);
       ImGui::TextUnformatted(label.c_str());
       if (isFocused) ImGui::PopFont();
     }
@@ -275,7 +270,7 @@ namespace anm2ed::imgui
 
   // The list in a bordered child with its context menu and shortcuts, then the footer buttons.
   // The confirmation's lines: the items by name, then what goes with them.
-  std::vector<std::string> remove_lines_get(const model::Model& model, ElementType type, const std::set<int>& ids,
+  static std::vector<std::string> remove_lines_get(const Model& model, ElementType type, const std::set<int>& ids,
                                             int spritesheetId)
   {
     auto& content = model.content;
@@ -283,10 +278,10 @@ namespace anm2ed::imgui
     auto names_add = [&](const auto& items, auto&& name_get)
     {
       for (auto id : ids)
-        if (auto item = model::item_get(items, id)) lines.push_back(std::format("\"{}\"", name_get(*item)));
+        if (auto item = item_get(items, id)) lines.push_back(std::format("\"{}\"", name_get(*item)));
     };
     auto name_get = [](const auto& item) { return item.name; };
-    auto path_get = [](const auto& item) { return path::to_utf8(item.path); };
+    auto path_get = [](const auto& item) { return path_to_utf8(item.path); };
     auto count_add = [&](StringType format, int count)
     {
       if (count > 0) lines.push_back(localize_format(format, count));
@@ -341,14 +336,14 @@ namespace anm2ed::imgui
         count_add(FORMAT_REMOVE_SHADER_USES, uses);
         break;
       case ElementType::REGION:
-        if (auto spritesheet = model::item_get(content.spritesheets, spritesheetId))
+        if (auto spritesheet = item_get(content.spritesheets, spritesheetId))
           names_add(spritesheet->regions, name_get);
         count_add(FORMAT_REMOVE_REGION_USES, uses);
         break;
       case ElementType::SPRITESHEET:
       {
         names_add(content.spritesheets, path_get);
-        auto layerIds = layers_add(FORMAT_REMOVE_LAYER, [&](const model::Layer& layer)
+        auto layerIds = layers_add(FORMAT_REMOVE_LAYER, [&](const Layer& layer)
                                    { return !layer.is_animation() && ids.contains(layer.spritesheetId); });
         count_add(FORMAT_REMOVE_TRACKS, model.uses_count(ElementType::LAYER_ELEMENT, layerIds));
         break;
@@ -356,21 +351,21 @@ namespace anm2ed::imgui
       default:
         names_add(content.libraries, path_get);
         layers_add(FORMAT_REMOVE_FLATTENED_LAYER,
-                   [&](const model::Layer& layer) { return ids.contains(layer.libraryId); });
+                   [&](const Layer& layer) { return ids.contains(layer.libraryId); });
         break;
     }
     return lines;
   }
 
-  void content_remove_apply(Panel& panel)
+  static void content_remove_apply(Panel& panel)
   {
     command_push(panel,
                  [removal = panel.state.removal](Document& document)
                  {
                    document.edit_apply(EDIT_REMOVE_ITEMS,
-                                       [&](model::Model& model)
+                                       [&](Model& model)
                                        {
-                                         return edit::content_remove(
+                                         return content_remove(
                                              model, removal.type, removal.ids, removal.spritesheetId,
                                              document.library_resolver_get(), document.spritesheet_path_resolver_get());
                                        });
@@ -398,7 +393,7 @@ namespace anm2ed::imgui
         TOOLTIP_REMOVE_CONTENT);
   }
 
-  void content_remove_popup_draw(Panel& panel)
+  static void content_remove_popup_draw(Panel& panel)
   {
     auto& popup = panel.state.removePopup;
     popup.trigger();
@@ -457,7 +452,7 @@ namespace anm2ed::imgui
 
   void tooltip_name_draw(Resources& resources, const std::string& name)
   {
-    ImGui::PushFont(resources.fonts[font::BOLD].get(), font::SIZE);
+    ImGui::PushFont(resources.fonts[FONT_BOLD].get(), FONT_SIZE);
     ImGui::TextUnformatted(name.c_str());
     ImGui::PopFont();
   }
@@ -472,7 +467,7 @@ namespace anm2ed::imgui
     auto noScrollFlags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2());
     if (ImGui::BeginChild("##Tooltip Image Child", to_imvec2(previewSize), childFlags, noScrollFlags))
-      ImGui::ImageWithBg(resource::texture::id_get(*image.texture), to_imvec2(previewSize), to_imvec2(image.uvMin),
+      ImGui::ImageWithBg(texture_id_get(*image.texture), to_imvec2(previewSize), to_imvec2(image.uvMin),
                          to_imvec2(image.uvMax), ImVec4(), image.isValid ? CARD_TINT_VALID : CARD_TINT_INVALID);
     ImGui::EndChild();
     ImGui::PopStyleVar();
@@ -486,7 +481,7 @@ namespace anm2ed::imgui
 
   std::filesystem::path asset_path_get(Document& document, const std::filesystem::path& path)
   {
-    return path::backslash_replace(path::make_relative(path::backslash_handle(path), document.directory_get()));
+    return path_backslash_replace(path_make_relative(path_backslash_handle(path), document.directory_get()));
   }
 
   // Shows a resource's file selected in the file manager (or the nearest folder there is, when it's missing).
@@ -519,4 +514,3 @@ namespace anm2ed::imgui
     if (ImGui::Button(localize.get(cancelLabel), widgetSize)) result = PopupButton::CANCEL;
     return result;
   }
-}

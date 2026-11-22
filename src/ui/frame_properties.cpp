@@ -12,12 +12,8 @@
 #include "ui/input.h"
 #include "ui/layout.h"
 
-using namespace anm2ed::util::math;
-using namespace anm2ed::types;
 using namespace glm;
 
-namespace anm2ed::imgui
-{
   constexpr int TRIGGER_EVENTS_ROWS = 3;
 
   struct Vec2Field
@@ -25,17 +21,17 @@ namespace anm2ed::imgui
     StringType label;
     StringType tooltip;
     StringType edit;
-    vec2 model::Frame::* member;
+    vec2 Frame::* member;
     bool isRegionField;
   };
 
   constexpr Vec2Field VEC2_FIELDS[] = {
-      {BASIC_CROP, TOOLTIP_CROP, EDIT_FRAME_CROP, &model::Frame::crop, true},
-      {BASIC_SIZE, TOOLTIP_SIZE, EDIT_FRAME_SIZE, &model::Frame::size, true},
-      {BASIC_POSITION, TOOLTIP_POSITION, EDIT_FRAME_POSITION, &model::Frame::position, false},
-      {BASIC_PIVOT, TOOLTIP_PIVOT, EDIT_FRAME_PIVOT, &model::Frame::pivot, true},
-      {BASIC_SCALE, TOOLTIP_SCALE, EDIT_FRAME_SCALE, &model::Frame::scale, false},
-      {BASIC_SKEW, TOOLTIP_SKEW, EDIT_FRAME_SKEW, &model::Frame::skew, false}};
+      {BASIC_CROP, TOOLTIP_CROP, EDIT_FRAME_CROP, &Frame::crop, true},
+      {BASIC_SIZE, TOOLTIP_SIZE, EDIT_FRAME_SIZE, &Frame::size, true},
+      {BASIC_POSITION, TOOLTIP_POSITION, EDIT_FRAME_POSITION, &Frame::position, false},
+      {BASIC_PIVOT, TOOLTIP_PIVOT, EDIT_FRAME_PIVOT, &Frame::pivot, true},
+      {BASIC_SCALE, TOOLTIP_SCALE, EDIT_FRAME_SCALE, &Frame::scale, false},
+      {BASIC_SKEW, TOOLTIP_SKEW, EDIT_FRAME_SKEW, &Frame::skew, false}};
 
   struct FlipButton
   {
@@ -68,17 +64,17 @@ namespace anm2ed::imgui
       auto& type = reference.itemType;
       auto frame = model.frame_get(reference);
 
-      auto frame_edit = [&](edit_state::Type state, StringType message, auto behavior)
+      auto frame_edit = [&](EditState state, StringType message, auto behavior)
       {
-        if (state == edit_state::NONE) return;
+        if (state == EDIT_STATE_NONE) return;
         manager.command_push({manager.selected, [=, queuedReference = reference](Manager&, Document& document) mutable
                               {
                                 if (!document.model.frame_get(queuedReference)) return;
-                                if (state == edit_state::START || state == edit_state::COMPLETE)
+                                if (state == EDIT_STATE_START || state == EDIT_STATE_COMPLETE)
                                   document.edit_begin(message);
                                 auto item = document.model.track_edit(queuedReference);
                                 behavior(document, item->frames[queuedReference.frameIndex], item, queuedReference);
-                                if (state == edit_state::END || state == edit_state::COMPLETE) document.change();
+                                if (state == EDIT_STATE_END || state == EDIT_STATE_COMPLETE) document.change();
                               }});
       };
 
@@ -87,7 +83,7 @@ namespace anm2ed::imgui
       auto sounds = document.choices_get(SelectionKind::SOUNDS);
       auto shaders = document.choices_get(SelectionKind::SHADERS);
       std::vector<const char*> interpolationLabels{};
-      for (auto label : wizard::INTERPOLATION_LABELS)
+      for (auto label : INTERPOLATION_LABELS)
         interpolationLabels.push_back(localize.get(label));
 
       auto mode_selector_draw = [&]()
@@ -108,7 +104,7 @@ namespace anm2ed::imgui
       }
       else if (!isMultiFrameSelection)
       {
-        auto useFrame = frame ? *frame : model::Frame();
+        auto useFrame = frame ? *frame : Frame();
         auto displayFrame = frame && type == LAYER && reference.itemID != -1
                                 ? model.frame_effective(reference.itemID, *frame)
                                 : useFrame;
@@ -123,14 +119,14 @@ namespace anm2ed::imgui
                 frame)
             {
               auto atFrame = useFrame.atFrame;
-              frame_edit(edit_state::COMPLETE, EDIT_TRIGGER_AT_FRAME,
-                         [atFrame](Document& document, model::Frame& frame, model::Track* item, const Reference&)
+              frame_edit(EDIT_STATE_COMPLETE, EDIT_TRIGGER_AT_FRAME,
+                         [atFrame](Document& document, Frame& frame, Track* item, const Reference&)
                          {
                            frame.atFrame = atFrame;
                            if (!item) return;
-                           model::frames_sort_by_at_frame(*item);
+                           frames_sort_by_at_frame(*item);
                            auto reference = document.reference_get();
-                           reference.frameIndex = model::frame_index_from_at_frame_get(*item, atFrame);
+                           reference.frameIndex = frame_index_from_at_frame_get(*item, atFrame);
                            document.reference_set(reference);
                            document.frame_references_set({reference});
                          });
@@ -141,14 +137,14 @@ namespace anm2ed::imgui
                 frame)
             {
               auto isVisible = useFrame.isVisible;
-              frame_edit(edit_state::COMPLETE, EDIT_TRIGGER_VISIBILITY,
-                         [isVisible](Document&, model::Frame& frame, model::Track*, const Reference&)
+              frame_edit(EDIT_STATE_COMPLETE, EDIT_TRIGGER_VISIBILITY,
+                         [isVisible](Document&, Frame& frame, Track*, const Reference&)
                          { frame.isVisible = isVisible; });
             }
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TRIGGER_VISIBILITY));
 
             // A trigger's events or sounds: a combo for each, then Add and Remove (the last).
-            auto trigger_ids_draw = [&](StringType label, std::vector<int> model::Frame::* member,
+            auto trigger_ids_draw = [&](StringType label, std::vector<int> Frame::* member,
                                         const Choices& choices, ImVec2 size, StringType tooltip, StringType setEdit,
                                         StringType addEdit, StringType addTooltip, StringType removeEdit,
                                         StringType removeTooltip)
@@ -160,8 +156,8 @@ namespace anm2ed::imgui
                 {
                   ImGui::PushID(i);
                   if (combo_id_mapped("##Choice", &id, choices.ids, choices.labels) && frame)
-                    frame_edit(edit_state::COMPLETE, setEdit,
-                               [index = (std::size_t)i, id, member](Document&, model::Frame& frame, model::Track*,
+                    frame_edit(EDIT_STATE_COMPLETE, setEdit,
+                               [index = (std::size_t)i, id, member](Document&, Frame& frame, Track*,
                                                                     const Reference&)
                                {
                                  if (index < (frame.*member).size()) (frame.*member)[index] = id;
@@ -171,17 +167,17 @@ namespace anm2ed::imgui
                 }
               ImGui::EndChild();
 
-              auto widgetSize = imgui::widget_size_with_row_get(2);
+              auto widgetSize = widget_size_with_row_get(2);
               if (ImGui::Button(localize.get(BASIC_ADD), widgetSize) && frame)
-                frame_edit(edit_state::COMPLETE, addEdit,
-                           [member](Document&, model::Frame& frame, model::Track*, const Reference&)
+                frame_edit(EDIT_STATE_COMPLETE, addEdit,
+                           [member](Document&, Frame& frame, Track*, const Reference&)
                            { (frame.*member).push_back(-1); });
               ImGui::SetItemTooltip("%s", localize.get(addTooltip));
               ImGui::SameLine();
               ImGui::BeginDisabled((useFrame.*member).empty());
               if (ImGui::Button(localize.get(BASIC_REMOVE), widgetSize) && frame)
-                frame_edit(edit_state::COMPLETE, removeEdit,
-                           [member](Document&, model::Frame& frame, model::Track*, const Reference&)
+                frame_edit(EDIT_STATE_COMPLETE, removeEdit,
+                           [member](Document&, Frame& frame, Track*, const Reference&)
                            {
                              if (!(frame.*member).empty()) (frame.*member).pop_back();
                            });
@@ -190,16 +186,16 @@ namespace anm2ed::imgui
               ImGui::PopID();
             };
 
-            trigger_ids_draw(LABEL_EVENTS, &model::Frame::eventIds, events, child_size_get(TRIGGER_EVENTS_ROWS),
+            trigger_ids_draw(LABEL_EVENTS, &Frame::eventIds, events, child_size_get(TRIGGER_EVENTS_ROWS),
                              TOOLTIP_TRIGGER_EVENT, EDIT_TRIGGER_EVENT, EDIT_ADD_TRIGGER_EVENT,
                              TOOLTIP_ADD_TRIGGER_EVENT, EDIT_REMOVE_TRIGGER_EVENT, TOOLTIP_REMOVE_TRIGGER_EVENT);
-            trigger_ids_draw(LABEL_SOUNDS, &model::Frame::soundIds, sounds, imgui::size_without_footer_get(),
+            trigger_ids_draw(LABEL_SOUNDS, &Frame::soundIds, sounds, size_without_footer_get(),
                              TOOLTIP_TRIGGER_SOUND, EDIT_TRIGGER_SOUND, EDIT_ADD_TRIGGER_SOUND,
                              TOOLTIP_ADD_TRIGGER_SOUND, EDIT_REMOVE_TRIGGER_SOUND, TOOLTIP_REMOVE_TRIGGER_SOUND);
           }
           else
           {
-            auto layer = type == LAYER ? model::item_get(model.content.layers, reference.itemID) : nullptr;
+            auto layer = type == LAYER ? item_get(model.content.layers, reference.itemID) : nullptr;
             auto isAnimationLayer = layer && layer->is_animation();
             bool isRegionSet = frame && displayFrame.regionId != -1 && displayFrame.crop == frame->crop &&
                                displayFrame.size == frame->size && displayFrame.pivot == frame->pivot;
@@ -209,12 +205,12 @@ namespace anm2ed::imgui
               auto value = frame ? source.*field.member : vec2();
               // An animation layer's pivot is where its child's origin goes; it has no crop or size.
               ImGui::BeginDisabled(field.isRegionField && (type == ROOT || type == NULL_ || isRegionSet ||
-                                                           (isAnimationLayer && field.member != &model::Frame::pivot)));
+                                                           (isAnimationLayer && field.member != &Frame::pivot)));
               auto state =
                   drag_float2_persistent(localize.get(field.label), frame ? &value : &dummy_value<vec2>(), DRAG_SPEED,
                                          0.0f, 0.0f, frame ? vec2_format_get(source.*field.member) : "");
               frame_edit(state, field.edit,
-                         [value, member = field.member](Document&, model::Frame& frame, model::Track*, const Reference&)
+                         [value, member = field.member](Document&, Frame& frame, Track*, const Reference&)
                          { frame.*member = value; });
               ImGui::SetItemTooltip("%s", localize.get(field.tooltip));
               ImGui::EndDisabled();
@@ -224,7 +220,7 @@ namespace anm2ed::imgui
                 drag_float_persistent(localize.get(BASIC_ROTATION), frame ? &useFrame.rotation : &dummy_value<float>(),
                                       DRAG_SPEED, 0.0f, 0.0f, frame ? float_format_get(frame->rotation) : "");
             frame_edit(rotationEdit, EDIT_FRAME_ROTATION,
-                       [rotation = useFrame.rotation](Document&, model::Frame& frame, model::Track*, const Reference&)
+                       [rotation = useFrame.rotation](Document&, Frame& frame, Track*, const Reference&)
                        { frame.rotation = rotation; });
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ROTATION));
 
@@ -234,8 +230,8 @@ namespace anm2ed::imgui
                 frame)
             {
               auto duration = useFrame.duration;
-              frame_edit(edit_state::COMPLETE, EDIT_FRAME_DURATION,
-                         [duration](Document&, model::Frame& frame, model::Track*, const Reference&)
+              frame_edit(EDIT_STATE_COMPLETE, EDIT_FRAME_DURATION,
+                         [duration](Document&, Frame& frame, Track*, const Reference&)
                          { frame.duration = duration; });
             }
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_DURATION));
@@ -247,8 +243,8 @@ namespace anm2ed::imgui
                 frame)
             {
               auto depth = useFrame.depth;
-              frame_edit(edit_state::COMPLETE, EDIT_FRAME_DEPTH,
-                         [depth](Document&, model::Frame& frame, model::Track*, const Reference&)
+              frame_edit(EDIT_STATE_COMPLETE, EDIT_FRAME_DEPTH,
+                         [depth](Document&, Frame& frame, Track*, const Reference&)
                          { frame.depth = depth; });
             }
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_DEPTH));
@@ -257,14 +253,14 @@ namespace anm2ed::imgui
             auto tintEdit =
                 color_edit4_persistent(localize.get(BASIC_TINT), frame ? &useFrame.tint : &dummy_value<vec4>());
             frame_edit(tintEdit, EDIT_FRAME_TINT,
-                       [tint = useFrame.tint](Document&, model::Frame& frame, model::Track*, const Reference&)
+                       [tint = useFrame.tint](Document&, Frame& frame, Track*, const Reference&)
                        { frame.tint = tint; });
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TINT));
 
             auto colorOffsetEdit = color_edit4_persistent(localize.get(BASIC_COLOR_OFFSET),
                                                           frame ? &useFrame.colorOffset : &dummy_value<vec4>());
             frame_edit(colorOffsetEdit, EDIT_FRAME_COLOR_OFFSET,
-                       [colorOffset = useFrame.colorOffset](Document&, model::Frame& frame, model::Track*,
+                       [colorOffset = useFrame.colorOffset](Document&, Frame& frame, Track*,
                                                             const Reference&) { frame.colorOffset = colorOffset; });
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_COLOR_OFFSET));
 
@@ -273,7 +269,7 @@ namespace anm2ed::imgui
                 drag_float_persistent(localize.get(BASIC_BLUR), frame ? &useFrame.blur : &dummy_value<float>(),
                                       DRAG_SPEED, 0.0f, FRAME_BLUR_MAX, frame ? float_format_get(frame->blur) : "");
             frame_edit(blurEdit, EDIT_FRAME_BLUR,
-                       [blur = useFrame.blur](Document&, model::Frame& frame, model::Track*, const Reference&)
+                       [blur = useFrame.blur](Document&, Frame& frame, Track*, const Reference&)
                        { frame.blur = std::clamp(blur, 0.0f, FRAME_BLUR_MAX); });
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BLUR));
             ImGui::EndDisabled();
@@ -284,8 +280,8 @@ namespace anm2ed::imgui
                 frame)
             {
               auto regionId = useFrame.regionId;
-              frame_edit(edit_state::COMPLETE, EDIT_SET_REGION_PROPERTIES,
-                         [regionId](Document& document, model::Frame& frame, model::Track*, const Reference& reference)
+              frame_edit(EDIT_STATE_COMPLETE, EDIT_SET_REGION_PROPERTIES,
+                         [regionId](Document& document, Frame& frame, Track*, const Reference& reference)
                          {
                            frame.regionId = regionId;
                            auto effectiveFrame = document.model.frame_effective(reference.itemID, frame);
@@ -301,8 +297,8 @@ namespace anm2ed::imgui
             if (ImGui::Combo(localize.get(BASIC_INTERPOLATED), &interpolationValue, interpolationLabels.data(),
                              (int)interpolationLabels.size()) &&
                 frame)
-              frame_edit(edit_state::COMPLETE, EDIT_FRAME_INTERPOLATION,
-                         [interpolationValue](Document&, model::Frame& frame, model::Track*, const Reference&)
+              frame_edit(EDIT_STATE_COMPLETE, EDIT_FRAME_INTERPOLATION,
+                         [interpolationValue](Document&, Frame& frame, Track*, const Reference&)
                          { frame.interpolation = static_cast<Interpolation>(interpolationValue); });
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FRAME_INTERPOLATION));
 
@@ -312,8 +308,8 @@ namespace anm2ed::imgui
                 frame)
             {
               auto shaderId = useFrame.shaderId;
-              frame_edit(edit_state::COMPLETE, EDIT_FRAME_SHADER,
-                         [shaderId](Document&, model::Frame& frame, model::Track*, const Reference&)
+              frame_edit(EDIT_STATE_COMPLETE, EDIT_FRAME_SHADER,
+                         [shaderId](Document&, Frame& frame, Track*, const Reference&)
                          { frame.shaderId = shaderId; });
             }
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FRAME_SHADER));
@@ -323,8 +319,8 @@ namespace anm2ed::imgui
                 frame)
             {
               auto isVisible = useFrame.isVisible;
-              frame_edit(edit_state::COMPLETE, EDIT_FRAME_VISIBILITY,
-                         [isVisible](Document&, model::Frame& frame, model::Track*, const Reference&)
+              frame_edit(EDIT_STATE_COMPLETE, EDIT_FRAME_VISIBILITY,
+                         [isVisible](Document&, Frame& frame, Track*, const Reference&)
                          { frame.isVisible = isVisible; });
             }
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FRAME_VISIBILITY));
@@ -335,9 +331,9 @@ namespace anm2ed::imgui
             {
               if (axis > 0) ImGui::SameLine();
               if (ImGui::Button(localize.get(FLIP_BUTTONS[axis].label), widgetSize) && frame)
-                frame_edit(edit_state::COMPLETE, FLIP_BUTTONS[axis].edit,
-                           [axis, isPositionFlipped = ImGui::IsKeyDown(ImGuiMod_Ctrl)](Document&, model::Frame& frame,
-                                                                                       model::Track*, const Reference&)
+                frame_edit(EDIT_STATE_COMPLETE, FLIP_BUTTONS[axis].edit,
+                           [axis, isPositionFlipped = ImGui::IsKeyDown(ImGuiMod_Ctrl)](Document&, Frame& frame,
+                                                                                       Track*, const Reference&)
                            {
                              frame.scale[axis] = -frame.scale[axis];
                              if (isPositionFlipped) frame.position[axis] = -frame.position[axis];
@@ -357,7 +353,7 @@ namespace anm2ed::imgui
               ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHILD_ANIMATION));
 
               std::vector<const char*> modeLabels{};
-              for (auto label : wizard::CHILD_MODE_LABELS)
+              for (auto label : CHILD_MODE_LABELS)
                 modeLabels.push_back(localize.get(label));
               auto mode = (int)useFrame.childMode;
               if (ImGui::Combo(localize.get(BASIC_MODE), &mode, modeLabels.data(), (int)modeLabels.size()))
@@ -380,9 +376,9 @@ namespace anm2ed::imgui
               ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHILD_RESTART));
 
               if (isChildChanged)
-                frame_edit(edit_state::COMPLETE, EDIT_FRAME_CHILD,
-                           [child = useFrame](Document&, model::Frame& frame, model::Track*, const Reference&)
-                           { edit::frame_property_copy(frame, child, edit::FrameProperty::CHILD); });
+                frame_edit(EDIT_STATE_COMPLETE, EDIT_FRAME_CHILD,
+                           [child = useFrame](Document&, Frame& frame, Track*, const Reference&)
+                           { frame_property_copy(frame, child, FrameProperty::CHILD); });
             }
 
             ImGui::Separator();
@@ -405,4 +401,3 @@ namespace anm2ed::imgui
     dummy_value<vec2>() = vec2();
     dummy_value<vec4>() = vec4();
   }
-}

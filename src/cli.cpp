@@ -19,10 +19,6 @@
 #include "settings.h"
 #include "working_directory.h"
 
-using namespace anm2ed::util;
-
-namespace anm2ed::cli
-{
   constexpr const char* USAGE = R"(usage: anm2ed <command> <file.anm2> [options]
 
 commands:
@@ -73,16 +69,16 @@ options:
   };
 
   // PNG sequences go into a folder; everything else is a file.
-  bool type_is_folder(const Arguments& arguments)
+  static bool type_is_folder(const Arguments& arguments)
   {
     return arguments.command == "render" && arguments.get("type").value_or("") == "pngs";
   }
 
-  std::optional<Arguments> arguments_get(int argc, const char** argv)
+  static std::optional<Arguments> arguments_get(int argc, const char** argv)
   {
     if (argc < 3) return {};
     // Absolute, so a bare file name still has a folder for the paths in it.
-    Arguments arguments{.command = argv[1], .file = std::filesystem::absolute(path::from_utf8(argv[2]))};
+    Arguments arguments{.command = argv[1], .file = std::filesystem::absolute(path_from_utf8(argv[2]))};
     for (int i = 3; i < argc; ++i)
     {
       std::string name = argv[i];
@@ -95,7 +91,7 @@ options:
   }
 
   // RRGGBB (opaque) or "transparent".
-  glm::vec4 background_get(const Arguments& arguments)
+  static glm::vec4 background_get(const Arguments& arguments)
   {
     auto text = arguments.get("background").value_or("transparent");
     if (text.starts_with('#')) text.erase(0, 1);
@@ -108,17 +104,17 @@ options:
   }
 
   // --ffmpeg, or else the FFmpeg the editor's Render Animation uses (or "ffmpeg" on the PATH).
-  std::filesystem::path ffmpeg_path_get(const Arguments& arguments)
+  static std::filesystem::path ffmpeg_path_get(const Arguments& arguments)
   {
-    if (auto ffmpeg = arguments.get("ffmpeg")) return path::from_utf8(*ffmpeg);
-    auto settingsPath = sdl::preferences_directory_get() / "settings.ini";
+    if (auto ffmpeg = arguments.get("ffmpeg")) return path_from_utf8(*ffmpeg);
+    auto settingsPath = preferences_directory_get() / "settings.ini";
     auto settingsFfmpeg =
-        path::is_exist(settingsPath) ? Settings(settingsPath).renderFFmpegPath : std::filesystem::path{};
+        is_path_exist(settingsPath) ? Settings(settingsPath).renderFFmpegPath : std::filesystem::path{};
     return settingsFfmpeg.empty() ? std::filesystem::path("ffmpeg") : settingsFfmpeg;
   }
 
   // By index or name; the default animation otherwise.
-  std::pair<int, const model::Animation*> animation_get(const model::Model& model, const Arguments& arguments)
+  static std::pair<int, const Animation*> animation_get(const Model& model, const Arguments& arguments)
   {
     auto animations = model.animations_get();
     auto name = arguments.get("animation").value_or(model.animations.defaultAnimation);
@@ -132,25 +128,25 @@ options:
     return {-1, nullptr};
   }
 
-  int info_print(const Arguments& arguments)
+  static int info_print(const Arguments& arguments)
   {
-    model::Model model{};
+    Model model{};
     std::string error{};
-    if (!model::model_load(model, arguments.file, &error))
+    if (!model_load(model, arguments.file, &error))
     {
-      std::println(stderr, "could not load {}: {}", path::to_utf8(arguments.file), error);
+      std::println(stderr, "could not load {}: {}", path_to_utf8(arguments.file), error);
       return 1;
     }
     auto& content = model.content;
-    std::println("file: {}", path::to_utf8(arguments.file));
+    std::println("file: {}", path_to_utf8(arguments.file));
     std::println("fps: {}, created by: {}", model.info.fps, model.info.createdBy);
 
     std::println("animations (default: {}):", model.animations.defaultAnimation);
     for (auto [index, animation] : model.animations_get())
     {
       int layers{}, nulls{};
-      model::tracks_each(animation->layers, [&](const model::Track&, auto*) { ++layers; });
-      model::tracks_each(animation->nulls, [&](const model::Track&, auto*) { ++nulls; });
+      tracks_each(animation->layers, [&](const Track&, auto*) { ++layers; });
+      tracks_each(animation->nulls, [&](const Track&, auto*) { ++nulls; });
       std::println("  [{}] {}: {} frames{}, {} layer tracks, {} null tracks, {} triggers", index, animation->name,
                    animation->frameNum, animation->isLoop ? ", loops" : "", layers, nulls,
                    animation->triggers.frames.size());
@@ -160,13 +156,13 @@ options:
     std::println("spritesheets:");
     for (const auto& spritesheet : content.spritesheets)
     {
-      auto image = resource::Image(path::case_insensitive_find(spritesheet.path));
+      auto image = Image(path_case_insensitive_find(spritesheet.path));
       auto status = image.is_valid() ? std::format("{}x{}", image.size.x, image.size.y) : std::string("missing");
-      std::println("  #{} {} ({}), {} regions", spritesheet.id, path::to_utf8(spritesheet.path), status,
+      std::println("  #{} {} ({}), {} regions", spritesheet.id, path_to_utf8(spritesheet.path), status,
                    spritesheet.regions.size());
     }
     for (const auto& library : content.libraries)
-      std::println("library #{} {}", library.id, path::to_utf8(library.path));
+      std::println("library #{} {}", library.id, path_to_utf8(library.path));
     for (const auto& layer : content.layers)
       if (layer.is_animation())
         std::println("layer #{} {} (animation {}, library #{})", layer.id, layer.name, layer.animation,
@@ -178,9 +174,9 @@ options:
     for (const auto& event : content.events)
       std::println("event #{} {}", event.id, event.name);
     for (const auto& sound : content.sounds)
-      std::println("sound #{} {}", sound.id, path::to_utf8(sound.path));
+      std::println("sound #{} {}", sound.id, path_to_utf8(sound.path));
 
-    auto issues = model::isaac_issues_get(model);
+    auto issues = isaac_issues_get(model);
     std::println("isaac issues: {} eased frames, {} group transforms, {} skewed frames, {} shader frames, {} depth "
                  "frames, {} alpha offset frames, {} blurred frames, {} extra trigger events, {} trigger sounds, "
                  "{} animation layers, {} vector spritesheets",
@@ -190,7 +186,7 @@ options:
     return 0;
   }
 
-  int draw_run(const Arguments& arguments)
+  static int draw_run(const Arguments& arguments)
   {
     auto out = arguments.get("out");
     if (!out)
@@ -199,7 +195,7 @@ options:
       return 2;
     }
 
-    render::HeadlessGL gl{};
+    HeadlessGL gl{};
     if (!gl.is_valid())
     {
       std::println(stderr, "could not create an OpenGL 3.3 context");
@@ -210,7 +206,7 @@ options:
     Document document(arguments.file, false, &error);
     if (!document.is_valid())
     {
-      std::println(stderr, "could not load {}: {}", path::to_utf8(arguments.file), error);
+      std::println(stderr, "could not load {}: {}", path_to_utf8(arguments.file), error);
       return 1;
     }
     auto [index, animation] = animation_get(document.model, arguments);
@@ -220,27 +216,27 @@ options:
       return 1;
     }
 
-    auto& textureInfo = resource::shader::SHADERS[resource::shader::TEXTURE];
-    resource::Shader shader(textureInfo.vertex, textureInfo.fragment);
+    auto& textureInfo = SHADERS[SHADER_TEXTURE];
+    ShaderProgram shader(textureInfo.vertex, textureInfo.fragment);
     Canvas canvas(glm::vec2(1.0f));
     auto isRootTransform = !arguments.is("no-root-transform");
-    auto bounds = render::animation_bounds_get(document, *animation, isRootTransform);
+    auto bounds = animation_bounds_get(document, *animation, isRootTransform);
     auto scale = arguments.number_get("scale", SCALE_DEFAULT);
     auto background = background_get(arguments);
     auto frame_render = [&](float time)
     {
-      return render::animation_frame_render(canvas, shader, document, *animation, time, bounds, scale, background,
+      return animation_frame_render(canvas, shader, document, *animation, time, bounds, scale, background,
                                             isRootTransform);
     };
-    auto outPath = path::from_utf8(*out);
+    auto outPath = path_from_utf8(*out);
     std::error_code ec{};
     std::filesystem::create_directories(type_is_folder(arguments) ? outPath : outPath.parent_path(), ec);
 
     if (arguments.command == "frame")
     {
       auto pixels = frame_render(arguments.number_get("time", 0.0f));
-      render::pixels_unpremultiply(pixels);
-      if (!resource::Image::write_pixels_png(outPath, glm::ivec2(canvas.size), pixels.data()))
+      pixels_unpremultiply(pixels);
+      if (!Image::write_pixels_png(outPath, glm::ivec2(canvas.size), pixels.data()))
       {
         std::println(stderr, "could not write {}", *out);
         return 1;
@@ -251,19 +247,19 @@ options:
     }
 
     auto typeName = arguments.get("type").value_or("sheet");
-    auto type = typeName == "sheet" ? render::SPRITESHEET : render::PNGS;
-    for (int i = 0; i < render::COUNT; ++i)
-      if (render::EXTENSIONS[i] == "." + typeName) type = (render::Type)i;
-    if (typeName != "sheet" && typeName != "pngs" && type == render::PNGS)
+    auto type = typeName == "sheet" ? RENDER_SPRITESHEET : RENDER_PNGS;
+    for (int i = 0; i < RENDER_COUNT; ++i)
+      if (RENDER_EXTENSIONS[i] == "." + typeName) type = (RenderType)i;
+    if (typeName != "sheet" && typeName != "pngs" && type == RENDER_PNGS)
     {
       std::println(stderr, "unknown --type: {}", typeName);
       return 2;
     }
 
     auto fps = std::max(document.model.info.fps, 1);
-    render::RecorderOptions options{.type = type,
+    RecorderOptions options{.type = type,
                                     .path = outPath,
-                                    .format = path::from_utf8(arguments.get("format").value_or("{}.png")),
+                                    .format = path_from_utf8(arguments.get("format").value_or("{}.png")),
                                     .ffmpegPath = ffmpeg_path_get(arguments),
                                     .start = arguments.number_get("start", 0),
                                     .end = arguments.number_get("end", animation->frameNum - 1),
@@ -271,19 +267,19 @@ options:
                                     .fps = arguments.number_get("fps", fps),
                                     .rows = arguments.number_get("rows", 0),
                                     .columns = arguments.number_get("columns", 0)};
-    auto count = render::frame_count_get(options.start, options.end, options.animationFps, options.fps);
-    if (!render::animation_record(options, canvas, shader, document, *animation, bounds, scale, background,
+    auto count = frame_count_get(options.start, options.end, options.animationFps, options.fps);
+    if (!animation_record(options, canvas, shader, document, *animation, bounds, scale, background,
                                   isRootTransform))
     {
-      std::println(stderr, "could not write {} (FFmpeg: {})", *out, path::to_utf8(options.ffmpegPath));
+      std::println(stderr, "could not write {} (FFmpeg: {})", *out, path_to_utf8(options.ffmpegPath));
       return 1;
     }
 
     std::print("{}: \"{}\", {} frames ({} to {} at {} fps), each {}x{}", *out, animation->name, count, options.start,
                options.end, options.fps, (int)canvas.size.x, (int)canvas.size.y);
-    if (type == render::SPRITESHEET)
+    if (type == RENDER_SPRITESHEET)
     {
-      auto layout = render::spritesheet_layout_get(options.rows, options.columns, count);
+      auto layout = spritesheet_layout_get(options.rows, options.columns, count);
       std::print(", {} rows x {} columns, left to right", layout.rows, layout.columns);
     }
     std::println("");
@@ -291,7 +287,7 @@ options:
   }
 
   // Saved as the editor saves it: XML (the game's copy, with the editor's embedded) or the editor's JSON.
-  int convert_run(const Arguments& arguments)
+  static int convert_run(const Arguments& arguments)
   {
     auto format = arguments.get("format").value_or("xml");
     if (format != "xml" && format != "json")
@@ -300,22 +296,22 @@ options:
       return 2;
     }
     // The game's copy bakes what it can't draw with OpenGL (and the document's shaders compile only with it).
-    std::optional<render::HeadlessGL> gl{};
+    std::optional<HeadlessGL> gl{};
     if (format == "xml") gl.emplace();
     std::string error{};
     Document document(arguments.file, false, &error);
-    auto fileUtf8 = path::to_utf8(arguments.file);
+    auto fileUtf8 = path_to_utf8(arguments.file);
     if (!document.is_valid())
     {
       std::println(stderr, "could not load {}: {}", fileUtf8, error);
       return 1;
     }
     if (!error.empty()) std::println(stderr, "{}:\n{}", fileUtf8, error);
-    auto out = std::filesystem::absolute(arguments.get("out").transform(path::from_utf8).value_or(arguments.file));
+    auto out = std::filesystem::absolute(arguments.get("out").transform(path_from_utf8).value_or(arguments.file));
     Options options{};
     options.isJson = format == "json";
     if (document.save(out, &error, options)) return 0;
-    std::println(stderr, "could not write {}: {}", path::to_utf8(out), error);
+    std::println(stderr, "could not write {}: {}", path_to_utf8(out), error);
     return 1;
   }
 
@@ -323,10 +319,10 @@ options:
 
   bool is_cli(int argc, const char** argv)
   {
-    return argc >= 2 && std::ranges::contains(COMMANDS, std::string_view(argv[1])) && !path::is_exist(argv[1]);
+    return argc >= 2 && std::ranges::contains(COMMANDS, std::string_view(argv[1])) && !is_path_exist(argv[1]);
   }
 
-  int run(int argc, const char** argv)
+  int cli_run(int argc, const char** argv)
   {
     auto arguments = arguments_get(argc, argv);
     if (!arguments)
@@ -338,4 +334,3 @@ options:
     if (arguments->command == "convert") return convert_run(*arguments);
     return draw_run(*arguments);
   }
-}

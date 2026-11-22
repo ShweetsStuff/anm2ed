@@ -1,7 +1,5 @@
 #include "ui/timeline_context.h"
 
-namespace anm2ed::imgui
-{
   // Moves the dragged frames to `target`'s track, before its frame index.
   void TimelineContext::frames_move_to(Reference target)
   {
@@ -14,13 +12,13 @@ namespace anm2ed::imgui
 
     auto insertIndex = std::exchange(target.frameIndex, -1);
     edit_push(
-        EDIT_MOVE_FRAMES, [frames, target, insertIndex](model::Model& model)
-        { return edit::frames_move(model, frames, target, insertIndex); },
-        [=, this](Document& document, const edit::Uids& uids)
+        EDIT_MOVE_FRAMES, [frames, target, insertIndex](Model& model)
+        { return frames_move(model, frames, target, insertIndex); },
+        [=, this](Document& document, const Uids& uids)
         {
           document.frames_select(uids);
           if (target.itemType == LAYER)
-            if (auto layer = model::item_get(document.model.content.layers, target.itemID))
+            if (auto layer = ::item_get(document.model.content.layers, target.itemID))
               document.focused_id_set(SelectionKind::SPRITESHEETS, layer->spritesheetId);
         });
   }
@@ -230,7 +228,7 @@ namespace anm2ed::imgui
         if (length > 0 && animation)
         {
           auto x_get = [&](int time) { return cursorScreenPos.x + frameSize.x * (float)time; };
-          auto range = model::animation_play_range_get(*animation);
+          auto range = animation_play_range_get(*animation);
           auto bottom = cursorScreenPos.y + frameSize.y;
           if (animation->startMarker != -1)
             drawList->AddRectFilled(cursorScreenPos, ImVec2(x_get(range.x), bottom), MARKER_OUTSIDE_COLOR);
@@ -241,7 +239,7 @@ namespace anm2ed::imgui
           markerTint.w *= MARKER_ALPHA;
           for (auto marker : {animation->startMarker, animation->endMarker})
             if (marker != -1)
-              drawList->AddImage((ImTextureID)(intptr_t)resources.icon_id_get(icon::PLAYHEAD),
+              drawList->AddImage((ImTextureID)(intptr_t)resources.icon_id_get(ICON_PLAYHEAD),
                                  ImVec2(x_get(marker), cursorScreenPos.y), ImVec2(x_get(marker) + frameSize.x, bottom),
                                  ImVec2(0, 0), ImVec2(1, 1), ImGui::GetColorU32(markerTint));
         }
@@ -272,13 +270,13 @@ namespace anm2ed::imgui
         if (length > 0)
         {
           ImGui::SetCursorPos(ImVec2(cursorPos.x + frameSize.x * floorf(playback.time), cursorPos.y));
-          ImGui::Image(resources.icon_id_get(icon::PLAYHEAD), frameSize);
+          ImGui::Image(resources.icon_id_get(ICON_PLAYHEAD), frameSize);
           auto playheadMin = ImGui::GetItemRectMin();
           auto playheadMax = ImGui::GetItemRectMax();
           playheadLineCenterX = (playheadMin.x + playheadMax.x) * 0.5f;
           playheadLineTopY = playheadMax.y;
           isPlayheadLineSet = true;
-          overlay_icon(resources.icon_id_get(icon::PLAYHEAD), playheadIconTint, true);
+          overlay_icon(resources.icon_id_get(ICON_PLAYHEAD), playheadIconTint, true);
         }
       }
       else if (animation)
@@ -407,7 +405,7 @@ namespace anm2ed::imgui
           if (ImGui::Selectable("##Frame Button", isSelected, ImGuiSelectableFlags_None, buttonSize))
           {
             if (type == LAYER)
-              if (auto layer = model::item_get(model.content.layers, id))
+              if (auto layer = ::item_get(model.content.layers, id))
                 document.focused_id_set(SelectionKind::SPRITESHEETS, layer->spritesheetId);
 
             if (type != TRIGGER)
@@ -416,7 +414,7 @@ namespace anm2ed::imgui
               {
                 auto targetReference = frameReference;
                 edit_push(EDIT_FRAME_INTERPOLATION,
-                          [=](model::Model& model)
+                          [=](Model& model)
                           {
                             if (auto frame = model.frame_edit(targetReference))
                               frame->interpolation = frame->interpolation == Interpolation::NONE ? Interpolation::LINEAR
@@ -496,7 +494,7 @@ namespace anm2ed::imgui
           auto borderThickness = isReferenced ? FRAME_BORDER_THICKNESS_REFERENCED : FRAME_BORDER_THICKNESS;
           drawList->AddRect(rectMin, rectMax, ImGui::GetColorU32(borderColor), FRAME_ROUNDING, 0, borderThickness);
 
-          auto icon = type == TRIGGER ? icon::TRIGGER : INTERPOLATION_ICONS[(int)frame.interpolation];
+          auto icon = type == TRIGGER ? ICON_TRIGGER : INTERPOLATION_ICONS[(int)frame.interpolation];
           auto iconPos = ImVec2(cursorPos.x + (frameTime * frameSize.x),
                                 cursorPos.y + (frameSize.y / 2) - (icon_size_get().y / 2));
           ImGui::SetCursorPos(iconPos);
@@ -567,7 +565,7 @@ namespace anm2ed::imgui
         auto atFrame = glm::clamp(hoveredTime, 0,
                                   settings.playbackIsClamp && animation ? animation->frameNum - 1 : FRAME_NUM_MAX - 1);
         command_push([=](Manager&, Document& document)
-                     { edit::trigger_at_frame_set(document.model, targetReference, atFrame); });
+                     { trigger_at_frame_set(document.model, targetReference, atFrame); });
       }
       else
       {
@@ -575,7 +573,7 @@ namespace anm2ed::imgui
         if (draggedFrameStartDurations.empty()) durations[targetReference] = draggedFrameStartDuration + durationDelta;
         for (auto frameDuration : draggedFrameStartDurations)
           durations[frameDuration.reference] = frameDuration.duration + durationDelta;
-        command_push([=](Manager&, Document& document) { edit::frame_durations_set(document.model, durations); });
+        command_push([=](Manager&, Document& document) { frame_durations_set(document.model, durations); });
       }
     }
 
@@ -587,7 +585,7 @@ namespace anm2ed::imgui
           [=, this](Manager&, Document& document)
           {
             auto item = document.model.track_edit(targetReference);
-            if (targetType == TRIGGER && item) model::frames_sort_by_at_frame(*item);
+            if (targetType == TRIGGER && item) frames_sort_by_at_frame(*item);
             document.change();
           });
       isDraggedFrameActive = false;
@@ -619,7 +617,7 @@ namespace anm2ed::imgui
       {
         int length{};
         for (auto [index, item] : model.animations_get())
-          length = std::max(length, model::animation_length_get(*item));
+          length = std::max(length, animation_length_get(*item));
         return length;
       }();
       auto childWidth = animationsLength * ImGui::GetTextLineHeight();
@@ -862,7 +860,7 @@ namespace anm2ed::imgui
         {
           auto animationIndex = animationLengthEditIndex != -1 ? animationLengthEditIndex : currentAnimationIndex;
           edit_push(EDIT_ANIMATION_LENGTH,
-                    [=](model::Model& model)
+                    [=](Model& model)
                     {
                       if (auto animation = model.animation_edit(animationIndex)) animation->frameNum = frameNum;
                     });
@@ -878,7 +876,7 @@ namespace anm2ed::imgui
         {
           auto animationIndex = reference.animationIndex;
           edit_push(EDIT_LOOP,
-                    [=](model::Model& model)
+                    [=](Model& model)
                     {
                       if (auto animation = model.animation_edit(animationIndex)) animation->isLoop = isLoop;
                     });
@@ -893,7 +891,7 @@ namespace anm2ed::imgui
       ImGui::SetNextItemWidth(widgetSize.x);
       if (input_int_range(localize.get(LABEL_FPS), fps, FPS_MIN, FPS_MAX))
       {
-        edit_push(EDIT_FPS, [=](model::Model& model) { model.info.fps = fps; });
+        edit_push(EDIT_FPS, [=](Model& model) { model.info.fps = fps; });
       }
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FPS));
 
@@ -903,7 +901,7 @@ namespace anm2ed::imgui
       ImGui::SetNextItemWidth(widgetSize.x);
       if (input_text_string(localize.get(LABEL_AUTHOR), &createdBy))
       {
-        edit_push(EDIT_AUTHOR, [=](model::Model& model) { model.info.createdBy = createdBy; });
+        edit_push(EDIT_AUTHOR, [=](Model& model) { model.info.createdBy = createdBy; });
       }
       ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_AUTHOR));
 
@@ -919,4 +917,3 @@ namespace anm2ed::imgui
 
     ImGui::SetCursorPos(cursorPos);
   }
-}

@@ -6,9 +6,7 @@
 #include <filesystem>
 #include <type_traits>
 
-namespace anm2ed::util::path
-{
-  template <typename CharT> CharT to_lower_char(CharT character)
+  template <typename CharT> static CharT to_lower_char(CharT character)
   {
     if constexpr (std::is_same_v<CharT, wchar_t>)
       return static_cast<CharT>(std::towlower(static_cast<wint_t>(character)));
@@ -16,7 +14,7 @@ namespace anm2ed::util::path
       return static_cast<CharT>(std::tolower(static_cast<unsigned char>(character)));
   }
 
-  std::filesystem::path to_lower(const std::filesystem::path& path)
+  std::filesystem::path path_to_lower(const std::filesystem::path& path)
   {
     auto native = path.native();
     for (auto& character : native)
@@ -24,7 +22,7 @@ namespace anm2ed::util::path
     return std::filesystem::path(native);
   }
 
-  std::filesystem::path backslash_replace(const std::filesystem::path& path)
+  std::filesystem::path path_backslash_replace(const std::filesystem::path& path)
   {
     auto native = path.native();
     constexpr auto backslash = static_cast<std::filesystem::path::value_type>('\\');
@@ -34,33 +32,33 @@ namespace anm2ed::util::path
     return std::filesystem::path(native);
   }
 
-  std::string to_utf8(const std::filesystem::path& path)
+  std::string path_to_utf8(const std::filesystem::path& path)
   {
     auto u8 = path.u8string();
     return std::string(u8.begin(), u8.end());
   }
 
-  std::filesystem::path from_utf8(const std::string& utf8)
+  std::filesystem::path path_from_utf8(const std::string& utf8)
   {
     return std::filesystem::path(std::u8string(utf8.begin(), utf8.end()));
   }
 
-  bool is_exist(const std::filesystem::path& path)
+  bool is_path_exist(const std::filesystem::path& path)
   {
     if (path.empty()) return false;
     std::error_code errorCode;
     return std::filesystem::exists(path, errorCode) && ((void)std::filesystem::status(path, errorCode), !errorCode);
   }
 
-  bool is_extension(const std::filesystem::path& path, const std::string& extension)
+  bool is_path_extension(const std::filesystem::path& path, const std::string& extension)
   {
     if (path.empty()) return false;
-    auto extensionUtf8 = to_utf8(std::filesystem::path(path).extension());
+    auto extensionUtf8 = path_to_utf8(std::filesystem::path(path).extension());
     std::transform(extensionUtf8.begin(), extensionUtf8.end(), extensionUtf8.begin(), ::tolower);
     return extensionUtf8 == ("." + extension);
   }
 
-  bool is_executable(const std::filesystem::path& path)
+  bool is_path_executable(const std::filesystem::path& path)
   {
     if (path.empty()) return false;
 
@@ -71,7 +69,7 @@ namespace anm2ed::util::path
     if (!std::filesystem::is_regular_file(status)) return false;
 
 #ifdef WIN32
-    auto extension = to_lower(path.extension());
+    auto extension = path_to_lower(path.extension());
     if (extension != ".exe" && extension != ".bat" && extension != ".cmd") return false;
 #else
     auto permissions = status.permissions();
@@ -83,17 +81,17 @@ namespace anm2ed::util::path
     return true;
   }
 
-  bool ensure_directory(const std::filesystem::path& path)
+  bool path_ensure_directory(const std::filesystem::path& path)
   {
     if (path.empty()) return false;
 
     std::error_code ec;
     if (std::filesystem::create_directories(path, ec)) return true;
 
-    return is_exist(path.parent_path());
+    return is_path_exist(path.parent_path());
   }
 
-  std::filesystem::path make_relative(const std::filesystem::path& path)
+  std::filesystem::path path_make_relative(const std::filesystem::path& path)
   {
     if (path.empty()) return path;
     if (!path.is_absolute()) return path;
@@ -104,7 +102,7 @@ namespace anm2ed::util::path
     return path;
   }
 
-  std::filesystem::path make_relative(const std::filesystem::path& path, const std::filesystem::path& base)
+  std::filesystem::path path_make_relative(const std::filesystem::path& path, const std::filesystem::path& base)
   {
     if (path.empty()) return path;
     if (base.empty() || !path.is_absolute()) return path;
@@ -115,25 +113,25 @@ namespace anm2ed::util::path
     return path;
   }
 
-  std::filesystem::path backslash_handle(const std::filesystem::path& path)
+  std::filesystem::path path_backslash_handle(const std::filesystem::path& path)
   {
     auto newPath = path;
-    if (is_exist(newPath)) return newPath;
+    if (is_path_exist(newPath)) return newPath;
 
-    newPath = backslash_replace(newPath);
+    newPath = path_backslash_replace(newPath);
     return newPath;
   }
 
-  std::filesystem::path case_insensitive_find(const std::filesystem::path& path)
+  std::filesystem::path path_case_insensitive_find(const std::filesystem::path& path)
   {
-    auto handledPath = backslash_handle(path);
-    if (is_exist(handledPath)) return handledPath;
+    auto handledPath = path_backslash_handle(path);
+    if (is_path_exist(handledPath)) return handledPath;
 
     auto resolvedPath = handledPath.root_path();
     for (const auto& part : handledPath.relative_path())
     {
       auto candidate = resolvedPath / part;
-      if (is_exist(candidate))
+      if (is_path_exist(candidate))
       {
         resolvedPath = candidate;
         continue;
@@ -144,11 +142,11 @@ namespace anm2ed::util::path
       bool isFound{};
       if (std::filesystem::is_directory(parent, ec))
       {
-        auto partLower = to_lower(part);
+        auto partLower = path_to_lower(part);
         std::filesystem::directory_iterator it(parent, ec);
         std::filesystem::directory_iterator end{};
         for (; !ec && it != end; it.increment(ec))
-          if (to_lower(it->path().filename()) == partLower)
+          if (path_to_lower(it->path().filename()) == partLower)
           {
             resolvedPath /= it->path().filename();
             isFound = true;
@@ -159,11 +157,10 @@ namespace anm2ed::util::path
       if (!isFound) resolvedPath = candidate;
     }
 
-    if (is_exist(resolvedPath)) return resolvedPath;
+    if (is_path_exist(resolvedPath)) return resolvedPath;
 
-    auto lowerPath = to_lower(handledPath);
-    if (is_exist(lowerPath)) return lowerPath;
+    auto lowerPath = path_to_lower(handledPath);
+    if (is_path_exist(lowerPath)) return lowerPath;
 
     return handledPath;
   }
-}

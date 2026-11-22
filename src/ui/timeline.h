@@ -15,8 +15,6 @@
 #include "localization.h"
 #include "ui/popup.h"
 
-namespace anm2ed::imgui
-{
   inline const glm::vec4 ROOT_COLOR = glm::vec4(0.140f, 0.310f, 0.560f, 1.000f);
   inline const glm::vec4 ROOT_COLOR_ACTIVE = glm::vec4(0.240f, 0.520f, 0.880f, 1.000f);
   inline const glm::vec4 ROOT_COLOR_HOVERED = glm::vec4(0.320f, 0.640f, 1.000f, 1.000f);
@@ -34,11 +32,11 @@ namespace anm2ed::imgui
   inline const glm::vec4 TRIGGER_COLOR_HOVERED = glm::vec4(0.950f, 0.330f, 0.490f, 1.000f);
 
 #define ANM2_ITEM_TYPES                                                                                                \
-  X(NONE, STRING_UNDEFINED, resource::icon::NONE, glm::vec4(), glm::vec4(), glm::vec4())                               \
-  X(ROOT, BASIC_ROOT, resource::icon::ROOT, ROOT_COLOR, ROOT_COLOR_ACTIVE, ROOT_COLOR_HOVERED)                         \
-  X(LAYER, BASIC_LAYER_ANIMATION, resource::icon::LAYER, LAYER_COLOR, LAYER_COLOR_ACTIVE, LAYER_COLOR_HOVERED)         \
-  X(NULL_, BASIC_NULL_ANIMATION, resource::icon::NULL_, NULL_COLOR, NULL_COLOR_ACTIVE, NULL_COLOR_HOVERED)             \
-  X(TRIGGER, BASIC_TRIGGERS, resource::icon::TRIGGERS, TRIGGER_COLOR, TRIGGER_COLOR_ACTIVE, TRIGGER_COLOR_HOVERED)
+  X(NONE, STRING_UNDEFINED, ICON_NONE, glm::vec4(), glm::vec4(), glm::vec4())                               \
+  X(ROOT, BASIC_ROOT, ICON_ROOT, ROOT_COLOR, ROOT_COLOR_ACTIVE, ROOT_COLOR_HOVERED)                         \
+  X(LAYER, BASIC_LAYER_ANIMATION, ICON_LAYER, LAYER_COLOR, LAYER_COLOR_ACTIVE, LAYER_COLOR_HOVERED)         \
+  X(NULL_, BASIC_NULL_ANIMATION, ICON_NULL, NULL_COLOR, NULL_COLOR_ACTIVE, NULL_COLOR_HOVERED)             \
+  X(TRIGGER, BASIC_TRIGGERS, ICON_TRIGGERS, TRIGGER_COLOR, TRIGGER_COLOR_ACTIVE, TRIGGER_COLOR_HOVERED)
 
   constexpr StringType TYPE_STRINGS[] = {
 #define X(symbol, string, icon, color, colorActive, colorHovered) string,
@@ -46,7 +44,7 @@ namespace anm2ed::imgui
 #undef X
   };
 
-  constexpr resource::icon::Type TYPE_ICONS[] = {
+  constexpr Icon TYPE_ICONS[] = {
 #define X(symbol, string, icon, color, colorActive, colorHovered) icon,
       ANM2_ITEM_TYPES
 #undef X
@@ -125,7 +123,7 @@ namespace anm2ed::imgui
     int markerTime{};
     bool isWindowHovered{};
     bool isHorizontalScroll{};
-    popup::ItemProperties itemProperties{};
+    ItemProperties itemProperties{};
     PopupHelper bakePopup{PopupHelper(LABEL_TIMELINE_BAKE_POPUP, POPUP_SMALL_NO_HEIGHT)};
     PopupHelper bakeIntoOtherFramesPopup{PopupHelper(LABEL_BAKE_INTO_OTHER_FRAMES, POPUP_SMALL_NO_HEIGHT)};
     PopupHelper makeManyRegionsPopup{PopupHelper(LABEL_MAKE_MANY_REGIONS, POPUP_SMALL_NO_HEIGHT)};
@@ -176,4 +174,3 @@ namespace anm2ed::imgui
     ~Timeline();
     void update(Manager&, Settings&, Resources&, Clipboard&);
   };
-}

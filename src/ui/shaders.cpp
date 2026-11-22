@@ -12,39 +12,27 @@
 #include "ui/input.h"
 #include "ui/layout.h"
 
-using namespace anm2ed::resource;
-using namespace anm2ed::util;
-
-namespace anm2ed::imgui
-{
   constexpr int SHADER_CARD_LINES = 2;
 
 #define SHADER_UNIFORM_BINDING_COMBO_VALUES                                                                            \
-  X(resource::shader::UNIFORM_BINDING_IGNORE)                                                                          \
-  X(resource::shader::UNIFORM_BINDING_MANUAL)                                                                          \
-  X(resource::shader::UNIFORM_BINDING_COLOR_OFFSET)                                                                    \
-  X(resource::shader::UNIFORM_BINDING_FRAME_TINT)                                                                      \
-  X(resource::shader::UNIFORM_BINDING_MAIN_TEXTURE)                                                                    \
-  X(resource::shader::UNIFORM_BINDING_COMPONENTS)                                                                      \
-  X(resource::shader::UNIFORM_BINDING_PLAYBACK_TIME)                                                                   \
-  X(resource::shader::UNIFORM_BINDING_TEXTURE_SIZE)                                                                    \
-  X(resource::shader::UNIFORM_BINDING_TRANSFORM)
+  X(UNIFORM_BINDING_IGNORE)                                                                          \
+  X(UNIFORM_BINDING_MANUAL)                                                                          \
+  X(UNIFORM_BINDING_COLOR_OFFSET)                                                                    \
+  X(UNIFORM_BINDING_FRAME_TINT)                                                                      \
+  X(UNIFORM_BINDING_MAIN_TEXTURE)                                                                    \
+  X(UNIFORM_BINDING_COMPONENTS)                                                                      \
+  X(UNIFORM_BINDING_PLAYBACK_TIME)                                                                   \
+  X(UNIFORM_BINDING_TEXTURE_SIZE)                                                                    \
+  X(UNIFORM_BINDING_TRANSFORM)
 
-  inline constexpr resource::shader::UniformBinding SHADER_UNIFORM_BINDING_COMBO_ORDER[] = {
+  inline constexpr UniformBinding SHADER_UNIFORM_BINDING_COMBO_ORDER[] = {
 #define X(binding) binding,
       SHADER_UNIFORM_BINDING_COMBO_VALUES
 #undef X
   };
 #undef SHADER_UNIFORM_BINDING_COMBO_VALUES
 
-  std::filesystem::path shader_absolute_path_get(Document& document, const std::filesystem::path& shaderPath)
-  {
-    auto loadPath = path::backslash_handle(shaderPath);
-    if (loadPath.empty() || loadPath.is_absolute()) return loadPath;
-    return document.directory_get() / loadPath;
-  }
-
-  bool is_shader_reload_needed(Document& document, model::Shader* shader)
+  static bool is_shader_reload_needed(Document& document, Shader* shader)
   {
     if (!shader || shader->fragment.empty()) return false;
     if (!document.shader_get(shader->id)) return true;
@@ -54,30 +42,30 @@ namespace anm2ed::imgui
            document.shaderFragmentPaths.at(shader->id) != shader->fragment;
   }
 
-  model::Shader* shader_element_get(Document& document, int id)
+  static Shader* shader_element_get(Document& document, int id)
   {
-    return model::item_get(document.model.content.shaders, id);
+    return item_get(document.model.content.shaders, id);
   }
 
-  std::filesystem::path shader_asset_path_get(Document& document, const std::filesystem::path& path)
+  static std::filesystem::path shader_asset_path_get(Document& document, const std::filesystem::path& path)
   {
-    auto loadPath = path::backslash_handle(path);
-    return path::backslash_replace(path::make_relative(loadPath, document.directory_get()));
+    auto loadPath = path_backslash_handle(path);
+    return path_backslash_replace(path_make_relative(loadPath, document.directory_get()));
   }
 
-  void shader_path_edit(Document& document, int shaderId, std::filesystem::path model::Shader::* member,
+  static void shader_path_edit(Document& document, int shaderId, std::filesystem::path Shader::* member,
                         const std::filesystem::path& value)
   {
     auto shader = shader_element_get(document, shaderId);
     if (shader)
     {
-      shader->*member = path::backslash_replace(value);
+      shader->*member = path_backslash_replace(value);
       document.change();
     }
   }
 
-  void shader_dialog_update(ShadersPanel& window, Manager& manager, Dialog& dialog, Dialog::Type type,
-                            std::filesystem::path model::Shader::* member)
+  static void shader_dialog_update(ShadersPanel& window, Manager& manager, Dialog& dialog, Dialog::Type type,
+                            std::filesystem::path Shader::* member)
   {
     if (!dialog.is_selected(type)) return;
 
@@ -90,16 +78,16 @@ namespace anm2ed::imgui
     dialog.reset();
   }
 
-  void shader_path_row_update(ShadersPanel& window, Document& document, Resources& resources, Dialog& dialog,
-                              model::Shader* shader, std::filesystem::path model::Shader::* member,
+  static void shader_path_row_update(ShadersPanel& window, Document& document, Resources& resources, Dialog& dialog,
+                              Shader* shader, std::filesystem::path Shader::* member,
                               Dialog::Type dialogType, StringType label)
   {
     auto shaderPath = shader ? shader->*member : std::filesystem::path{};
     auto isDefault = shaderPath.empty();
-    auto displayPath = isDefault ? path::from_utf8(localize.get(BASIC_DEFAULT)) : shaderPath;
+    auto displayPath = isDefault ? path_from_utf8(localize.get(BASIC_DEFAULT)) : shaderPath;
 
     if (ImGui::ImageButton(std::format("##{} Path Set", localize.get(label)).c_str(),
-                           resources.icon_id_get(icon::FOLDER), icon_size_get()))
+                           resources.icon_id_get(ICON_FOLDER), icon_size_get()))
     {
       if (shader)
       {
@@ -123,40 +111,40 @@ namespace anm2ed::imgui
     ImGui::TextUnformatted(localize.get(label));
   }
 
-  void shader_uniform_config_save(Document& document, model::Shader& shaderElement,
-                                  const resource::shader::Uniform& uniform)
+  static void shader_uniform_config_save(Document& document, Shader& shaderElement,
+                                  const ShaderUniform& uniform)
   {
-    resource::shader::uniform_config_save(shaderElement, uniform);
+    uniform_config_save(shaderElement, uniform);
     document.change();
   }
 
-  void shader_uniform_components_from_value_set(resource::shader::Uniform& uniform)
+  static void shader_uniform_components_from_value_set(ShaderUniform& uniform)
   {
     for (int i = 0; i < (int)uniform.components.size(); ++i)
       uniform.components[i].value = uniform.value[i];
   }
 
-  void shader_uniform_value_from_components_set(resource::shader::Uniform& uniform)
+  static void shader_uniform_value_from_components_set(ShaderUniform& uniform)
   {
     for (int i = 0; i < (int)uniform.components.size(); ++i)
       uniform.value[i] = uniform.components[i].value;
   }
 
-  bool shader_uniform_value_update(resource::shader::Uniform& uniform)
+  static bool shader_uniform_value_update(ShaderUniform& uniform)
   {
     ImGui::SetNextItemWidth(-1.0f);
     switch (uniform.valueType)
     {
-      case resource::shader::UNIFORM_VALUE_FLOAT:
+      case UNIFORM_VALUE_FLOAT:
         return ImGui::DragFloat("##Value", &uniform.value.x, 0.01f);
-      case resource::shader::UNIFORM_VALUE_INT:
-      case resource::shader::UNIFORM_VALUE_SAMPLER2D:
+      case UNIFORM_VALUE_INT:
+      case UNIFORM_VALUE_SAMPLER2D:
         return ImGui::InputInt("##Value", &uniform.intValue);
-      case resource::shader::UNIFORM_VALUE_VEC2:
+      case UNIFORM_VALUE_VEC2:
         return ImGui::DragFloat2("##Value", &uniform.value.x, 0.01f);
-      case resource::shader::UNIFORM_VALUE_VEC3:
+      case UNIFORM_VALUE_VEC3:
         return ImGui::DragFloat3("##Value", &uniform.value.x, 0.01f);
-      case resource::shader::UNIFORM_VALUE_VEC4:
+      case UNIFORM_VALUE_VEC4:
         return ImGui::DragFloat4("##Value", &uniform.value.x, 0.01f);
       default:
         ImGui::TextUnformatted(localize.get(BASIC_NONE));
@@ -164,19 +152,19 @@ namespace anm2ed::imgui
     }
   }
 
-  bool shader_uniform_component_binding_update(resource::shader::Uniform::Component& component)
+  static bool shader_uniform_component_binding_update(ShaderUniform::Component& component)
   {
-    auto bindingLabel = resource::shader::uniform_binding_label_get(component.binding);
+    auto bindingLabel = uniform_binding_label_get(component.binding);
     ImGui::SetNextItemWidth(ImGui::GetFrameHeight() * 5.0f);
     if (!ImGui::BeginCombo("##Component Binding", bindingLabel.data())) return false;
 
     bool isChanged{};
-    constexpr resource::shader::UniformBinding bindings[] = {resource::shader::UNIFORM_BINDING_MANUAL,
-                                                             resource::shader::UNIFORM_BINDING_PLAYBACK_TIME};
+    constexpr UniformBinding bindings[] = {UNIFORM_BINDING_MANUAL,
+                                                             UNIFORM_BINDING_PLAYBACK_TIME};
     for (auto binding : bindings)
     {
       auto isSelected = component.binding == binding;
-      auto label = resource::shader::uniform_binding_label_get(binding);
+      auto label = uniform_binding_label_get(binding);
       if (ImGui::Selectable(label.data(), isSelected))
       {
         component.binding = binding;
@@ -188,11 +176,11 @@ namespace anm2ed::imgui
     return isChanged;
   }
 
-  bool shader_uniform_components_update(resource::shader::Uniform& uniform)
+  static bool shader_uniform_components_update(ShaderUniform& uniform)
   {
     bool isChanged{};
     constexpr const char* labels[] = {"X", "Y", "Z", "W"};
-    auto componentCount = resource::shader::UNIFORM_VALUE_TYPE_INFOS[uniform.valueType].componentCount;
+    auto componentCount = UNIFORM_VALUE_TYPE_INFOS[uniform.valueType].componentCount;
 
     for (int index = 0; index < componentCount; ++index)
     {
@@ -203,7 +191,7 @@ namespace anm2ed::imgui
       ImGui::SameLine();
       if (shader_uniform_component_binding_update(component)) isChanged = true;
       ImGui::SameLine();
-      ImGui::BeginDisabled(component.binding != resource::shader::UNIFORM_BINDING_MANUAL);
+      ImGui::BeginDisabled(component.binding != UNIFORM_BINDING_MANUAL);
       ImGui::SetNextItemWidth(-1.0f);
       if (ImGui::DragFloat("##Component Value", &component.value, 0.01f)) isChanged = true;
       ImGui::EndDisabled();
@@ -214,7 +202,7 @@ namespace anm2ed::imgui
     return isChanged;
   }
 
-  void shader_uniforms_update(Document& document, model::Shader* shaderElement, resource::Shader* runtime,
+  static void shader_uniforms_update(Document& document, Shader* shaderElement, ShaderProgram* runtime,
                               ImVec2 tableSize)
   {
     if (!shaderElement) return;
@@ -243,22 +231,22 @@ namespace anm2ed::imgui
         ImGui::TextUnformatted(uniform.name.c_str());
 
         ImGui::TableNextColumn();
-        ImGui::TextUnformatted(resource::shader::uniform_value_type_label_get(uniform.valueType).data());
+        ImGui::TextUnformatted(uniform_value_type_label_get(uniform.valueType).data());
 
         ImGui::TableNextColumn();
-        auto bindingLabel = resource::shader::uniform_binding_label_get(uniform.binding);
+        auto bindingLabel = uniform_binding_label_get(uniform.binding);
         ImGui::SetNextItemWidth(-1.0f);
         if (ImGui::BeginCombo("##Binding", bindingLabel.data()))
         {
           for (auto binding : SHADER_UNIFORM_BINDING_COMBO_ORDER)
           {
-            if (!resource::shader::is_uniform_binding_valid(binding, uniform.valueType)) continue;
+            if (!is_uniform_binding_valid(binding, uniform.valueType)) continue;
             auto isSelected = uniform.binding == binding;
-            auto label = resource::shader::uniform_binding_label_get(binding);
+            auto label = uniform_binding_label_get(binding);
             if (ImGui::Selectable(label.data(), isSelected))
             {
               uniform.binding = binding;
-              if (uniform.binding == resource::shader::UNIFORM_BINDING_COMPONENTS)
+              if (uniform.binding == UNIFORM_BINDING_COMPONENTS)
                 shader_uniform_components_from_value_set(uniform);
               shader_uniform_config_save(document, *shaderElement, uniform);
             }
@@ -268,13 +256,13 @@ namespace anm2ed::imgui
         }
 
         ImGui::TableNextColumn();
-        if (uniform.binding == resource::shader::UNIFORM_BINDING_COMPONENTS)
+        if (uniform.binding == UNIFORM_BINDING_COMPONENTS)
         {
           if (shader_uniform_components_update(uniform)) shader_uniform_config_save(document, *shaderElement, uniform);
         }
         else
         {
-          ImGui::BeginDisabled(uniform.binding != resource::shader::UNIFORM_BINDING_MANUAL);
+          ImGui::BeginDisabled(uniform.binding != UNIFORM_BINDING_MANUAL);
           if (shader_uniform_value_update(uniform))
           {
             shader_uniform_components_from_value_set(uniform);
@@ -289,8 +277,6 @@ namespace anm2ed::imgui
     ImGui::EndTable();
   }
 
-  auto& shaders_get(model::Model& model) { return model.content.shaders; }
-
   void shaders_update(Panel& panel, ShadersPanel& shaders)
   {
     auto& [manager, settings, resources, dialog, clipboard, document, state] = panel;
@@ -298,8 +284,8 @@ namespace anm2ed::imgui
     auto& status = shaders.status;
     auto& propertiesPopup = shaders.propertiesPopup;
     auto& popupShaderId = shaders.popupShaderId;
-    shader_dialog_update(shaders, manager, dialog, Dialog::SHADER_VERTEX_PATH_SET, &model::Shader::vertex);
-    shader_dialog_update(shaders, manager, dialog, Dialog::SHADER_FRAGMENT_PATH_SET, &model::Shader::fragment);
+    shader_dialog_update(shaders, manager, dialog, Dialog::SHADER_VERTEX_PATH_SET, &Shader::vertex);
+    shader_dialog_update(shaders, manager, dialog, Dialog::SHADER_FRAGMENT_PATH_SET, &Shader::fragment);
 
     if (ImGui::Begin(localize.get(LABEL_SHADERS_WINDOW), &settings.windowIsShaders))
     {
@@ -321,10 +307,10 @@ namespace anm2ed::imgui
                          {
                            int id{};
                            document.edit_apply(EDIT_ADD_SHADER,
-                                               [&](model::Model& model)
+                                               [&](Model& model)
                                                {
                                                  auto& shaders = model.content.shaders;
-                                                 id = model::item_next_id_get(shaders);
+                                                 id = item_next_id_get(shaders);
                                                  shaders.push_back({.id = id, .name = localize.get(TEXT_NEW_SHADER)});
                                                });
                            document.selected_ids_set(SelectionKind::SHADERS, {id});
@@ -351,7 +337,7 @@ namespace anm2ed::imgui
       auto image_get = [&](int id)
       {
         auto isValid = document.shader_get(id) != nullptr;
-        auto& image = resources.icons[isValid ? icon::SHADER : icon::NONE];
+        auto& image = resources.icons[isValid ? ICON_SHADER : ICON_NONE];
         return CardImage{.texture = &image, .size = glm::vec2(image.size), .isValid = isValid};
       };
       ListRows rows{.label_get =
@@ -366,8 +352,8 @@ namespace anm2ed::imgui
                       auto& shader = *shader_element_get(document, id);
                       tooltip_name_draw(resources, shader.name);
                       ImGui::Text("%s: %d", localize.get(BASIC_ID), id);
-                      ImGui::Text("%s: %s", localize.get(LABEL_VERTEX), path::to_utf8(shader.vertex).c_str());
-                      ImGui::Text("%s: %s", localize.get(LABEL_FRAGMENT), path::to_utf8(shader.fragment).c_str());
+                      ImGui::Text("%s: %s", localize.get(LABEL_VERTEX), path_to_utf8(shader.vertex).c_str());
+                      ImGui::Text("%s: %s", localize.get(LABEL_FRAGMENT), path_to_utf8(shader.fragment).c_str());
                       if (image_get(id).isValid) return;
                       ImGui::Spacing();
                       ImGui::TextWrapped("%s", localize.get(TOOLTIP_SHADER_INVALID));
@@ -401,9 +387,9 @@ namespace anm2ed::imgui
 
           ImGui::SeparatorText(localize.get(LABEL_FILES));
 
-          shader_path_row_update(shaders, document, resources, dialog, shader, &model::Shader::vertex,
+          shader_path_row_update(shaders, document, resources, dialog, shader, &Shader::vertex,
                                  Dialog::SHADER_VERTEX_PATH_SET, LABEL_VERTEX);
-          shader_path_row_update(shaders, document, resources, dialog, shader, &model::Shader::fragment,
+          shader_path_row_update(shaders, document, resources, dialog, shader, &Shader::fragment,
                                  Dialog::SHADER_FRAGMENT_PATH_SET, LABEL_FRAGMENT);
 
           if (is_shader_reload_needed(document, shader))
@@ -446,4 +432,3 @@ namespace anm2ed::imgui
     }
     ImGui::End();
   }
-}

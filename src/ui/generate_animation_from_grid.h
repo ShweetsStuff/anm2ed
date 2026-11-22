@@ -6,8 +6,6 @@
 #include "resources.h"
 #include "settings.h"
 
-namespace anm2ed::imgui::wizard
-{
   class GenerateAnimationFromGrid : public Canvas
   {
     float time{};
@@ -18,4 +16,3 @@ namespace anm2ed::imgui::wizard
     GenerateAnimationFromGrid();
     void update(Manager&, Document&, Resources&, Settings&);
   };
-}

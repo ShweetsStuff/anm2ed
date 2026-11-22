@@ -7,11 +7,6 @@
 #include "model/frames.h"
 #include "model/xml.h"
 
-using namespace anm2ed::util;
-using namespace anm2ed::model;
-
-namespace anm2ed::edit
-{
   std::map<Reference, std::set<int>> frames_by_track_get(const std::set<Reference>& frames)
   {
     std::map<Reference, std::set<int>> result{};
@@ -23,7 +18,7 @@ namespace anm2ed::edit
     return result;
   }
 
-  Uids frames_uids_get(const Track& track, int start, int count)
+  static Uids frames_uids_get(const Track& track, int start, int count)
   {
     Uids uids{};
     for (int i = std::max(start, 0); i < std::min(start + count, (int)track.frames.size()); ++i)
@@ -446,4 +441,3 @@ namespace anm2ed::edit
     model.track_edit(rootReference)->frames = std::move(rewritten);
     return uids;
   }
-}

@@ -24,11 +24,6 @@
   #include <windows.h>
 #endif
 
-using namespace anm2ed::types;
-using namespace anm2ed::util;
-
-namespace anm2ed
-{
   constexpr auto WINDOW_4K_SIZE = glm::ivec2(3840, 2160);
   constexpr auto UI_SCALE_4K_DEFAULT = 150.0f;
   constexpr auto WINDOW_DEFAULT_SIZE_MULTIPLIER = 0.90f;
@@ -44,7 +39,7 @@ namespace anm2ed
   constexpr int SOCKET_ERROR_ADDRESS_IN_USE = EADDRINUSE;
 #endif
 
-  bool socket_paths_send(Socket& socket, const std::vector<std::string>& paths)
+  static bool socket_paths_send(Socket& socket, const std::vector<std::string>& paths)
   {
     uint32_t count = htonl(static_cast<uint32_t>(paths.size()));
     if (!socket.send(&count, sizeof(count))) return false;
@@ -59,7 +54,7 @@ namespace anm2ed
     return true;
   }
 
-  std::vector<std::string> socket_paths_receive(Socket& socket)
+  static std::vector<std::string> socket_paths_receive(Socket& socket)
   {
     uint32_t count{};
     if (!socket.receive(&count, sizeof(count))) return {};
@@ -84,7 +79,7 @@ namespace anm2ed
     return paths;
   }
 
-  std::filesystem::path Loader::settings_path() { return sdl::preferences_directory_get() / "settings.ini"; }
+  std::filesystem::path Loader::settings_path() { return preferences_directory_get() / "settings.ini"; }
 
   Loader::Loader(int argc, const char** argv)
   {
@@ -226,7 +221,7 @@ namespace anm2ed
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_LINE_SMOOTH);
 
-    math::random_seed_set();
+    random_seed_set();
 
     IMGUI_CHECKVERSION();
     if (!ImGui::CreateContext())
@@ -238,7 +233,7 @@ namespace anm2ed
 
     logger.info("Initialized Dear ImGui");
 
-    imgui::theme_set((imgui::theme::Type)settings.theme);
+    theme_set((Theme)settings.theme);
 
     ImGui_ImplSDL3_InitForOpenGL(window, glContext);
     ImGui_ImplOpenGL3_Init("#version 330");
@@ -250,7 +245,7 @@ namespace anm2ed
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.KeyRepeatDelay = settings.keyboardRepeatDelay;
     io.KeyRepeatRate = settings.keyboardRepeatRate;
-    ImGui::GetStyle().FontScaleMain = math::percent_to_unit(settings.uiScale);
+    ImGui::GetStyle().FontScaleMain = percent_to_unit(settings.uiScale);
     io.ConfigWindowsMoveFromTitleBarOnly = true;
 
     if (auto imguiData = Settings::imgui_data_load(settings_path()); !imguiData.empty())
@@ -319,7 +314,7 @@ namespace anm2ed
     if (ImGui::GetCurrentContext())
     {
       settings.save(settings_path(), ImGui::SaveIniSettingsToMemory(nullptr));
-      resource::texture::garbage_collect();
+      texture_garbage_collect();
 
       ImGui_ImplSDL3_Shutdown();
       ImGui_ImplOpenGL3_Shutdown();
@@ -335,4 +330,3 @@ namespace anm2ed
       SDL_Quit();
     }
   }
-}

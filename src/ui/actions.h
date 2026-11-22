@@ -8,8 +8,6 @@
 #include "manager.h"
 #include "settings.h"
 
-namespace anm2ed::imgui
-{
 #define ACTIONS(X)                                                                                                     \
   X(ACTION_UNDO, SHORTCUT_STRING_UNDO, SHORTCUT_UNDO)                                                                  \
   X(ACTION_REDO, SHORTCUT_STRING_REDO, SHORTCUT_REDO)                                                                  \
@@ -91,6 +89,5 @@ namespace anm2ed::imgui
   bool actions_context_window_draw(const char*, Actions&, Settings&, ImGuiPopupFlags = ImGuiPopupFlags_MouseButtonRight,
                                    ImGuiHoveredFlags = ImGuiHoveredFlags_None);
   bool actions_popup_draw(const char*, Actions&, Settings&);
-  void actions_shortcuts_update(Actions&, Manager&, types::shortcut::Type = types::shortcut::FOCUSED);
+  void actions_shortcuts_update(Actions&, Manager&, ShortcutScope = SCOPE_FOCUSED);
   void action_button_draw(Action&, Manager&, Settings&, ImVec2, bool&);
-}

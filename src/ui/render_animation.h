@@ -4,8 +4,6 @@
 #include "manager.h"
 #include "resources.h"
 
-namespace anm2ed::imgui::wizard
-{
   class RenderAnimation
   {
 
@@ -17,4 +15,3 @@ namespace anm2ed::imgui::wizard
     void reset(Manager&, Document&, Settings&);
     void update(Manager&, Document&, Resources&, Settings&, Dialog&);
   };
-}

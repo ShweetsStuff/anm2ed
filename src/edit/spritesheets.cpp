@@ -9,13 +9,7 @@
 #include "pack.h"
 #include "path.h"
 
-using namespace anm2ed::model;
-using namespace anm2ed::resource;
-using namespace anm2ed::util;
-
 // Spritesheet pixel edits: the model changes in place, and a new image is returned for the document to store.
-namespace anm2ed::edit
-{
   bool regions_trim(Model& model, int spritesheetId, const std::set<int>& ids, const Image& source)
   {
     auto spritesheet = item_get(model.content.spritesheets, spritesheetId);
@@ -35,9 +29,9 @@ namespace anm2ed::edit
       for (int y = minPoint.y; y < maxPoint.y; ++y)
         for (int x = minPoint.x; x < maxPoint.x; ++x)
         {
-          auto index = ((std::size_t)y * source.size.x + x) * image::CHANNELS;
-          if (index + image::CHANNELS > source.pixels.size()) continue;
-          if (std::all_of(source.pixels.begin() + index, source.pixels.begin() + index + image::CHANNELS,
+          auto index = ((std::size_t)y * source.size.x + x) * IMAGE_CHANNELS;
+          if (index + IMAGE_CHANNELS > source.pixels.size()) continue;
+          if (std::all_of(source.pixels.begin() + index, source.pixels.begin() + index + IMAGE_CHANNELS,
                           [](auto channel) { return channel == 0; }))
             continue;
           contentMin = glm::min(contentMin, glm::ivec2(x, y));
@@ -100,7 +94,7 @@ namespace anm2ed::edit
 
     glm::ivec2 packedSize{};
     std::vector<glm::ivec2> positions{};
-    if (!util::pack::rects_pack(sizes, packedSize, positions) || packedSize.x <= 0 || packedSize.y <= 0) return {};
+    if (!rects_pack(sizes, packedSize, positions) || packedSize.x <= 0 || packedSize.y <= 0) return {};
 
     std::vector<ImagePart> parts{};
     for (int i = 0; i < (int)items.size(); ++i)
@@ -132,7 +126,7 @@ namespace anm2ed::edit
       auto source = item_get(model.content.spritesheets, sourceId);
       Region region{};
       region.id = item_next_id_get(base->regions);
-      auto stem = path::to_utf8(source->path.stem());
+      auto stem = path_to_utf8(source->path.stem());
       region.name = stem.empty() ? std::format("#{}", sourceId) : stem;
       region.crop = crop;
       region.size = size;
@@ -157,7 +151,7 @@ namespace anm2ed::edit
       {
         auto sourceRegionId = sourceRegion.id;
         sourceRegion.id = item_next_id_get(base->regions);
-        sourceRegion.uid = util::uid_next();
+        sourceRegion.uid = uid_next();
         sourceRegion.crop += offset;
         base->regions.push_back(sourceRegion);
         regionIdMap[id][sourceRegionId] = sourceRegion.id;
@@ -185,10 +179,9 @@ namespace anm2ed::edit
                   });
 
     auto isVector = std::ranges::any_of(parts, [](const ImagePart& part) { return part.image->is_vector(); });
-    if (isVector != path::is_extension(base->path, image::SVG_EXTENSION))
-      base->path.replace_extension(isVector ? image::SVG_EXTENSION : image::PNG_EXTENSION);
+    if (isVector != is_path_extension(base->path, SVG_EXTENSION))
+      base->path.replace_extension(isVector ? SVG_EXTENSION : PNG_EXTENSION);
     std::erase_if(model.content.spritesheets, [&](const Spritesheet& spritesheet)
                   { return spritesheet.id != baseId && ids.contains(spritesheet.id); });
     return Image::compose(parts, mergedSize, isVector);
   }
-}

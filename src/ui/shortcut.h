@@ -7,8 +7,6 @@
 
 #include "types.h"
 
-namespace anm2ed::imgui
-{
   inline const std::unordered_map<std::string, ImGuiKey> KEY_MAP = {
       {"A", ImGuiKey_A},
       {"B", ImGuiKey_B},
@@ -133,5 +131,4 @@ namespace anm2ed::imgui
 
   std::string chord_to_string(ImGuiKeyChord);
   ImGuiKeyChord string_to_chord(const std::string&);
-  bool shortcut(ImGuiKeyChord, types::shortcut::Type = types::shortcut::FOCUSED_SET);
-}
+  bool shortcut(ImGuiKeyChord, ShortcutScope = SCOPE_FOCUSED_SET);

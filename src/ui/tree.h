@@ -6,8 +6,6 @@
 
 #include "ui/selectable.h"
 
-namespace anm2ed::imgui
-{
   struct TreeNodeInputTextResult
   {
     bool isOpen{};
@@ -19,4 +17,3 @@ namespace anm2ed::imgui
 
   TreeNodeInputTextResult tree_node_input_text(const std::string&, const std::string&, std::string&, bool,
                                                ImGuiTreeNodeFlags, RenameState&);
-}

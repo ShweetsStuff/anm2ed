@@ -3,8 +3,6 @@
 #include <array>
 #include <glm/glm/mat4x4.hpp>
 
-namespace anm2ed::util::math
-{
   template <typename T> constexpr T percent_to_unit(T value) { return value / 100.0f; }
 
   template <typename T> constexpr T unit_to_percent(T value) { return value * 100.0f; }
@@ -30,7 +28,6 @@ namespace anm2ed::util::math
   glm::mat4 quad_model_parent_get(glm::vec2 = {}, glm::vec2 = {}, glm::vec2 = glm::vec2(1.0f), float = {},
                                   glm::vec2 = {});
 
-  float random();
+  float random_unit_get();
   float random_in_range(float min, float max);
   void random_seed_set();
-}

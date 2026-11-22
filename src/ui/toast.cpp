@@ -8,10 +8,6 @@
 
 #include "types.h"
 
-using namespace anm2ed::types;
-
-namespace anm2ed::imgui
-{
   constexpr auto LIFETIME = 4.0f;
   constexpr auto FADE_THRESHOLD = 1.0f;
 
@@ -70,6 +66,5 @@ namespace anm2ed::imgui
   }
 
   void Toasts::push(const std::string& message) { toasts.emplace_back(Toast(message)); }
-}
 
-anm2ed::imgui::Toasts toasts;
+Toasts toasts;

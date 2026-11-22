@@ -12,8 +12,6 @@
 #include "model/json.h"
 #include "model/xml.h"
 
-namespace anm2ed::test
-{
   inline const std::filesystem::path TEST_DIR = ANM2ED_TEST_DIR;
   inline const std::filesystem::path CORPUS_DIR = TEST_DIR / "corpus";
   inline const std::filesystem::path GOLDEN_DIR = TEST_DIR / "golden";
@@ -22,10 +20,10 @@ namespace anm2ed::test
                                                               {"editor", SERIALIZE_EDITOR_DEFAULT},
                                                               {"isaac", SERIALIZE_ISAAC_DEFAULT},
                                                               {"anm2ed", SERIALIZE_ANM2ED_DEFAULT}};
-  inline constexpr std::pair<const char*, types::merge::Type> MERGES[] = {{"merge_prepend", types::merge::PREPEND},
-                                                                          {"merge_append", types::merge::APPEND},
-                                                                          {"merge_replace", types::merge::REPLACE},
-                                                                          {"merge_ignore", types::merge::IGNORE}};
+  inline constexpr std::pair<const char*, Merge> MERGES[] = {{"merge_prepend", MERGE_PREPEND},
+                                                                          {"merge_append", MERGE_APPEND},
+                                                                          {"merge_replace", MERGE_REPLACE},
+                                                                          {"merge_ignore", MERGE_IGNORE}};
 
   using Variant = std::pair<std::string, std::string>;
 
@@ -52,27 +50,27 @@ namespace anm2ed::test
     return fixtures;
   }
 
-  inline model::Model model_load(const std::string& text)
+  inline Model model_load(const std::string& text)
   {
-    model::Model model{};
-    REQUIRE(model::model_load_string(model, text));
+    Model model{};
+    REQUIRE(model_load_string(model, text));
     return model;
   }
 
   // Every serialization and merge the editor can produce for a document; goldens lock each one down.
-  inline std::vector<Variant> variants_get(const model::Model& model)
+  inline std::vector<Variant> variants_get(const Model& model)
   {
     std::vector<Variant> variants{};
     for (auto [name, flags] : PRESETS)
-      variants.emplace_back(name, model::model_serialize(model, flags));
-    variants.emplace_back("save", model::model_to_string(model));
+      variants.emplace_back(name, model_serialize(model, flags));
+    variants.emplace_back("save", model_to_string(model));
     for (auto [name, type] : MERGES)
     {
       auto merged = model;
       std::set<int> sources{0, 1, 2};
-      edit::animations_merge(merged, 0, sources, type, type == types::merge::PREPEND || type == types::merge::REPLACE,
+      animations_merge(merged, 0, sources, type, type == MERGE_PREPEND || type == MERGE_REPLACE,
                              {});
-      variants.emplace_back(name, model::model_serialize(merged, SERIALIZE_ANM2ED_DEFAULT));
+      variants.emplace_back(name, model_serialize(merged, SERIALIZE_ANM2ED_DEFAULT));
     }
     return variants;
   }
@@ -88,19 +86,19 @@ namespace anm2ed::test
   }
 
   // Save/reload properties every document must hold.
-  inline void invariants_check(const model::Model& model)
+  inline void invariants_check(const Model& model)
   {
 
     // The first save may repair invalid input (dangling ids, duplicates); after that, saves must be fixed points.
-    auto text = model::model_to_string(model);
+    auto text = model_to_string(model);
     auto reloaded = model_load(text);
-    auto resaved = model::model_to_string(reloaded);
+    auto resaved = model_to_string(reloaded);
     CHECK(resaved == text);
-    CHECK(model::model_hash(model_load(resaved)) == model::model_hash(reloaded));
+    CHECK(model_hash(model_load(resaved)) == model_hash(reloaded));
 
     // Loading only the game's view and re-saving it for the game must not change it.
-    auto game = game_document_get(model::model_to_string(model));
-    CHECK(model::model_serialize(model_load(game), SERIALIZE_ISAAC_DEFAULT | SERIALIZE_PURGE_DEFAULT_COLORS) == game);
+    auto game = game_document_get(model_to_string(model));
+    CHECK(model_serialize(model_load(game), SERIALIZE_ISAAC_DEFAULT | SERIALIZE_PURGE_DEFAULT_COLORS) == game);
   }
 
   // Compares against a stored golden; ANM2ED_UPDATE_GOLDEN (or a missing golden when isBootstrap) rewrites it.
@@ -115,4 +113,3 @@ namespace anm2ed::test
     REQUIRE(std::filesystem::exists(path));
     CHECK(file_load(path) == text);
   }
-}

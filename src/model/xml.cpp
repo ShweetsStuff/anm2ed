@@ -19,10 +19,6 @@
 #include "path.h"
 #include "timestamp.h"
 
-using namespace anm2ed::util;
-
-namespace anm2ed::model
-{
   constexpr std::string_view ELEMENT_TAGS[] = {
 #define X(symbol, tag) tag,
       ANM2_ELEMENT_TYPES
@@ -68,15 +64,15 @@ namespace anm2ed::model
   constexpr std::uint64_t HASH_PRIME = 1099511628211ull;
   constexpr Flags CLIPBOARD_FLAGS = SERIALIZE_EDITOR_DEFAULT;
 
-  const char* tag_get(ElementType type) { return ELEMENT_TAGS[(int)type].data(); }
+  static const char* tag_get(ElementType type) { return ELEMENT_TAGS[(int)type].data(); }
 
-  ElementType type_get(pugi::xml_node element)
+  static ElementType type_get(pugi::xml_node element)
   {
     auto it = std::ranges::find(ELEMENT_TAGS, std::string_view(element.name()));
     return it == std::end(ELEMENT_TAGS) ? ElementType::UNKNOWN : (ElementType)(it - std::begin(ELEMENT_TAGS));
   }
 
-  ElementType track_element_type_get(ItemType type)
+  static ElementType track_element_type_get(ItemType type)
   {
     switch (type)
     {
@@ -95,27 +91,27 @@ namespace anm2ed::model
 
   // Numbers and booleans read as tinyxml2 (which older builds used) reads them: "%d" and "%f" on the leading text,
   // and booleans as a number or true/false.
-  const char* attribute_get(pugi::xml_node element, const char* name)
+  static const char* attribute_get(pugi::xml_node element, const char* name)
   {
     auto attribute = element.attribute(name);
     return attribute ? attribute.value() : nullptr;
   }
 
-  bool is_int_read(const char* text, int& value) { return text && std::sscanf(text, "%d", &value) == 1; }
+  static bool is_int_read(const char* text, int& value) { return text && std::sscanf(text, "%d", &value) == 1; }
 
-  int int_get(pugi::xml_node element, const char* name, int value = -1)
+  static int int_get(pugi::xml_node element, const char* name, int value = -1)
   {
     is_int_read(attribute_get(element, name), value);
     return value;
   }
 
-  float float_get(pugi::xml_node element, const char* name, float value = 0.0f)
+  static float float_get(pugi::xml_node element, const char* name, float value = 0.0f)
   {
     if (auto text = attribute_get(element, name)) std::sscanf(text, "%f", &value);
     return value;
   }
 
-  bool bool_get(pugi::xml_node element, const char* name, bool value)
+  static bool bool_get(pugi::xml_node element, const char* name, bool value)
   {
     auto text = attribute_get(element, name);
     if (int number{}; is_int_read(text, number)) return number != 0;
@@ -125,32 +121,32 @@ namespace anm2ed::model
     return value;
   }
 
-  std::string string_get(pugi::xml_node element, const char* name, std::string value = {})
+  static std::string string_get(pugi::xml_node element, const char* name, std::string value = {})
   {
     if (auto attribute = attribute_get(element, name)) value = attribute;
     return value;
   }
 
-  std::filesystem::path path_get(pugi::xml_node element, const char* name)
+  static std::filesystem::path path_get(pugi::xml_node element, const char* name)
   {
     auto attribute = attribute_get(element, name);
-    return attribute ? path::from_utf8(attribute) : std::filesystem::path{};
+    return attribute ? path_from_utf8(attribute) : std::filesystem::path{};
   }
 
-  float color_get(pugi::xml_node element, const char* name, float value)
+  static float color_get(pugi::xml_node element, const char* name, float value)
   {
-    if (int color{}; is_int_read(attribute_get(element, name), color)) value = math::uint8_to_float(color);
+    if (int color{}; is_int_read(attribute_get(element, name), color)) value = uint8_to_float(color);
     return value;
   }
 
   // An element's text: its first child, when that is text.
-  const char* text_get(pugi::xml_node element)
+  static const char* text_get(pugi::xml_node element)
   {
     auto first = element.first_child();
     return first.type() == pugi::node_pcdata || first.type() == pugi::node_cdata ? first.value() : nullptr;
   }
 
-  Interpolation interpolation_read(pugi::xml_node element, const char* name)
+  static Interpolation interpolation_read(pugi::xml_node element, const char* name)
   {
     auto value = attribute_get(element, name);
     if (!value) return Interpolation::NONE;
@@ -159,7 +155,7 @@ namespace anm2ed::model
     return bool_get(element, name, false) ? Interpolation::LINEAR : Interpolation::NONE;
   }
 
-  pugi::xml_node element_next(pugi::xml_node node)
+  static pugi::xml_node element_next(pugi::xml_node node)
   {
     do
       node = node.next_sibling();
@@ -167,14 +163,14 @@ namespace anm2ed::model
     return node;
   }
 
-  pugi::xml_node element_first(pugi::xml_node parent)
+  static pugi::xml_node element_first(pugi::xml_node parent)
   {
     auto child = parent.first_child();
     return !child || child.type() == pugi::node_element ? child : element_next(child);
   }
 
   // Shader elements are only read where they belong; one anywhere else is dropped.
-  bool is_child_kept(pugi::xml_node parent, pugi::xml_node child)
+  static bool is_child_kept(pugi::xml_node parent, pugi::xml_node child)
   {
     std::string_view tag = child.name();
     if (tag == LEGACY_OVERLAY_TAG || tag == SOURCE_DOCUMENT_TAG) return false;
@@ -195,7 +191,7 @@ namespace anm2ed::model
   }
 
   // Child elements with their position, skipping legacy Overlay, nested SourceDocument copies and misplaced shaders.
-  template <class Callback> void children_each(pugi::xml_node parent, Callback&& callback)
+  template <class Callback> static void children_each(pugi::xml_node parent, Callback&& callback)
   {
     int position{};
     for (auto child : parent.children())
@@ -204,7 +200,7 @@ namespace anm2ed::model
   }
 
   // A repeated attribute keeps its first position and last value.
-  void attribute_read(std::vector<std::pair<std::string, std::string>>& attributes, pugi::xml_attribute attribute)
+  static void attribute_read(std::vector<std::pair<std::string, std::string>>& attributes, pugi::xml_attribute attribute)
   {
     auto existing = std::ranges::find(attributes, std::string_view(attribute.name()),
                                       [](const auto& pair) { return std::string_view(pair.first); });
@@ -214,7 +210,7 @@ namespace anm2ed::model
       attributes.emplace_back(attribute.name(), attribute.value());
   }
 
-  XmlNode node_read(pugi::xml_node element)
+  static XmlNode node_read(pugi::xml_node element)
   {
     XmlNode node{.tag = element.name()};
     for (auto attribute : element.attributes())
@@ -224,7 +220,7 @@ namespace anm2ed::model
     return node;
   }
 
-  Extras extras_read(pugi::xml_node element)
+  static Extras extras_read(pugi::xml_node element)
   {
     Extras extras{};
     for (auto attribute : element.attributes())
@@ -234,12 +230,12 @@ namespace anm2ed::model
     return extras;
   }
 
-  void extras_child_add(Extras& extras, pugi::xml_node child, int position)
+  static void extras_child_add(Extras& extras, pugi::xml_node child, int position)
   {
     extras.children.emplace_back(position, node_read(child));
   }
 
-  Frame frame_read(pugi::xml_node element)
+  static Frame frame_read(pugi::xml_node element)
   {
     Frame frame{};
     frame.crop = {float_get(element, "XCrop"), float_get(element, "YCrop")};
@@ -292,7 +288,7 @@ namespace anm2ed::model
     return frame;
   }
 
-  Track track_read(pugi::xml_node element, ItemType type)
+  static Track track_read(pugi::xml_node element, ItemType type)
   {
     Track track{.type = type, .isVisible = bool_get(element, "Visible", true), .extras = extras_read(element)};
     if (type == ItemType::LAYER) track.id = int_get(element, "LayerId");
@@ -340,12 +336,12 @@ namespace anm2ed::model
   using TrackItem = ContainerItem<Track, TrackGroup>;
   using AnimationItem = ContainerItem<std::shared_ptr<const Animation>, AnimationGroup>;
 
-  auto& group_children_get(TrackGroup& group) { return group.tracks; }
-  auto& group_children_get(AnimationGroup& group) { return group.animations; }
+  static auto& group_children_get(TrackGroup& group) { return group.tracks; }
+  static auto& group_children_get(AnimationGroup& group) { return group.animations; }
 
   // Groups become entries followed by their children: nested children move out after their group, and a child joins a
   // group seen before it. Unknown XML becomes extras at its position.
-  template <class Entry, class Item> std::vector<Entry> entries_build(std::vector<Item> items, Extras& extras)
+  template <class Entry, class Item> static std::vector<Entry> entries_build(std::vector<Item> items, Extras& extras)
   {
     int nextGroupId{};
     for (const auto& item : items)
@@ -387,7 +383,7 @@ namespace anm2ed::model
     return entries;
   }
 
-  TrackItem track_group_item_read(pugi::xml_node element, ItemType type)
+  static TrackItem track_group_item_read(pugi::xml_node element, ItemType type)
   {
     TrackItem item{.group = TrackGroup{.id = int_get(element, "Id"),
                                        .name = string_get(element, "Name"),
@@ -419,7 +415,7 @@ namespace anm2ed::model
     return item;
   }
 
-  std::vector<TrackItem> track_items_read(pugi::xml_node container, ItemType type)
+  static std::vector<TrackItem> track_items_read(pugi::xml_node container, ItemType type)
   {
     std::vector<TrackItem> items{};
     children_each(container,
@@ -437,7 +433,7 @@ namespace anm2ed::model
 
   // Track groups as any version wrote them: legacy *AnimationGroups metadata is placed back at its Index, and a group
   // whose tracks were written baked (FrameRestore) gets its original root and tracks back.
-  std::vector<TrackEntry> track_entries_build(std::vector<TrackItem> items, std::vector<TrackItem> legacyGroups,
+  static std::vector<TrackEntry> track_entries_build(std::vector<TrackItem> items, std::vector<TrackItem> legacyGroups,
                                               Extras& extras)
   {
     if (!legacyGroups.empty())
@@ -476,7 +472,7 @@ namespace anm2ed::model
     return entries_build<TrackEntry>(std::move(items), extras);
   }
 
-  Animation animation_read(pugi::xml_node element)
+  static Animation animation_read(pugi::xml_node element)
   {
     Animation animation{.name = string_get(element, "Name"),
                         .frameNum = int_get(element, "FrameNum", 1),
@@ -541,7 +537,7 @@ namespace anm2ed::model
     return animation;
   }
 
-  std::vector<AnimationEntry> animation_entries_read(pugi::xml_node parent, Extras& extras)
+  static std::vector<AnimationEntry> animation_entries_read(pugi::xml_node parent, Extras& extras)
   {
     std::vector<AnimationItem> items{};
     children_each(parent,
@@ -572,7 +568,7 @@ namespace anm2ed::model
     return entries_build<AnimationEntry>(std::move(items), extras);
   }
 
-  Region region_read(pugi::xml_node element)
+  static Region region_read(pugi::xml_node element)
   {
     Region region{.id = int_get(element, "Id"),
                   .name = string_get(element, "Name"),
@@ -588,7 +584,7 @@ namespace anm2ed::model
     return region;
   }
 
-  Spritesheet spritesheet_read(pugi::xml_node element)
+  static Spritesheet spritesheet_read(pugi::xml_node element)
   {
     Spritesheet spritesheet{
         .id = int_get(element, "Id"), .path = path_get(element, "Path"), .extras = extras_read(element)};
@@ -603,7 +599,7 @@ namespace anm2ed::model
     return spritesheet;
   }
 
-  Shader shader_read(pugi::xml_node element)
+  static Shader shader_read(pugi::xml_node element)
   {
     Shader shader{.id = int_get(element, "Id"),
                   .name = string_get(element, "Name"),
@@ -633,7 +629,7 @@ namespace anm2ed::model
     return shader;
   }
 
-  template <class Item> Item item_read(pugi::xml_node);
+  template <class Item> static Item item_read(pugi::xml_node);
   template <> Spritesheet item_read(pugi::xml_node element) { return spritesheet_read(element); }
   template <> Region item_read(pugi::xml_node element) { return region_read(element); }
   template <> Shader item_read(pugi::xml_node element) { return shader_read(element); }
@@ -676,7 +672,7 @@ namespace anm2ed::model
   template <> constexpr ElementType ITEM_TYPE<Sound>{ElementType::SOUND_ELEMENT};
   template <> constexpr ElementType ITEM_TYPE<Library>{ElementType::LIBRARY};
 
-  template <class Item> std::vector<Item> items_read(pugi::xml_node container, Content& content, ElementType type)
+  template <class Item> static std::vector<Item> items_read(pugi::xml_node container, Content& content, ElementType type)
   {
     std::vector<Item> items{};
     auto extras = extras_read(container);
@@ -692,7 +688,7 @@ namespace anm2ed::model
     return items;
   }
 
-  Content content_read(pugi::xml_node element)
+  static Content content_read(pugi::xml_node element)
   {
     Content content{.layout = {}, .extras = extras_read(element)};
     children_each(element,
@@ -719,7 +715,7 @@ namespace anm2ed::model
   }
 
   // Gives every item a unique, non-negative id; the first holder of a duplicated id keeps it.
-  template <class Items> void ids_repair(Items& items)
+  template <class Items> static void ids_repair(Items& items)
   {
     std::set<int> usedIds{};
     for (const auto& item : items)
@@ -737,7 +733,7 @@ namespace anm2ed::model
     }
   }
 
-  bool is_region_matched(const Region& region, const Frame& frame)
+  static bool is_region_matched(const Region& region, const Frame& frame)
   {
     return glm::ivec2(region.crop) == glm::ivec2(frame.crop) && glm::ivec2(region.size) == glm::ivec2(frame.size) &&
            glm::ivec2(region.pivot) == glm::ivec2(frame.pivot);
@@ -799,7 +795,7 @@ namespace anm2ed::model
     }
   }
 
-  Model model_read(pugi::xml_node element)
+  static Model model_read(pugi::xml_node element)
   {
     Model model{.layout = {}, .extras = extras_read(element)};
     children_each(element,
@@ -862,13 +858,13 @@ namespace anm2ed::model
     bool is(Flag flag) const { return has_flag(flags, flag); }
   };
 
-  int id_map_get(const std::map<int, int>& ids, int id)
+  static int id_map_get(const std::map<int, int>& ids, int id)
   {
     auto it = ids.find(id);
     return it == ids.end() ? -1 : it->second;
   }
 
-  bool is_float_whole(double value)
+  static bool is_float_whole(double value)
   {
     return std::abs(value) < FLOAT_WHOLE_MAX && value == std::trunc(value) && !(value == 0 && std::signbit(value));
   }
@@ -1061,13 +1057,13 @@ namespace anm2ed::model
 
   // Unknown XML goes back where it was read: attributes after the known ones, then text, and (through Children)
   // children at their recorded positions among the known ones.
-  void extras_attributes_write(Sink& sink, const Extras& extras)
+  static void extras_attributes_write(Sink& sink, const Extras& extras)
   {
     for (const auto& [name, value] : extras.attributes)
       sink.attribute_text(name, value);
   }
 
-  void extras_write(Sink& sink, const Extras& extras)
+  static void extras_write(Sink& sink, const Extras& extras)
   {
     extras_attributes_write(sink, extras);
     sink.text_add(extras.text);
@@ -1104,14 +1100,14 @@ namespace anm2ed::model
     }
   };
 
-  void element_close(Sink& sink, const Extras& extras) { Children{sink, extras}.close(); }
+  static void element_close(Sink& sink, const Extras& extras) { Children{sink, extras}.close(); }
 
-  void path_add(Sink& sink, const char* name, const std::filesystem::path& value)
+  static void path_add(Sink& sink, const char* name, const std::filesystem::path& value)
   {
-    if (!value.empty()) sink.attribute(name, path::to_utf8(value));
+    if (!value.empty()) sink.attribute(name, path_to_utf8(value));
   }
 
-  void interpolation_add(Sink& sink, const char* name, Interpolation interpolation)
+  static void interpolation_add(Sink& sink, const char* name, Interpolation interpolation)
   {
     if (interpolation == Interpolation::NONE || interpolation == Interpolation::LINEAR)
       sink.attribute(name, interpolation == Interpolation::LINEAR);
@@ -1119,18 +1115,18 @@ namespace anm2ed::model
       sink.attribute(name, INTERPOLATION_VALUES[(int)interpolation]);
   }
 
-  bool is_group_id_written(const Writer& writer)
+  static bool is_group_id_written(const Writer& writer)
   {
     return writer.is(SERIALIZE_GROUPS) && !writer.is(SERIALIZE_NESTED_GROUPS);
   }
 
-  bool is_special_interpolation(Interpolation interpolation)
+  static bool is_special_interpolation(Interpolation interpolation)
   {
     return interpolation != Interpolation::NONE && interpolation != Interpolation::LINEAR;
   }
 
   // A whole document's frames use renumbered shader and region ids; a layer frame on a region takes its rectangle.
-  Frame frame_normalize(const Writer& writer, Frame frame, const Track* layerTrack)
+  static Frame frame_normalize(const Writer& writer, Frame frame, const Track* layerTrack)
   {
     if (!writer.model) return frame;
     if (frame.shaderId != -1) frame.shaderId = id_map_get(writer.shaderIds, frame.shaderId);
@@ -1157,7 +1153,7 @@ namespace anm2ed::model
     int delay{};
   };
 
-  void frame_write(Sink& sink, const Writer& writer, const Frame& frame, ItemType type, FrameBake bake = {})
+  static void frame_write(Sink& sink, const Writer& writer, const Frame& frame, ItemType type, FrameBake bake = {})
   {
     if (type == ItemType::TRIGGER)
     {
@@ -1214,13 +1210,13 @@ namespace anm2ed::model
     }
     auto isPurged = writer.is(SERIALIZE_PURGE_DEFAULT_COLORS);
     for (int i = 0; i < (int)std::size(TINT_ATTRIBUTES); ++i)
-      if (auto tint = math::float_to_uint8(frame.tint[i]); !isPurged || tint != math::float_to_uint8(1.0f))
+      if (auto tint = float_to_uint8(frame.tint[i]); !isPurged || tint != float_to_uint8(1.0f))
         sink.attribute(TINT_ATTRIBUTES[i], tint);
     for (int i = 0; i < (int)std::size(OFFSET_ATTRIBUTES); ++i)
-      if (auto offset = math::float_to_uint8(frame.colorOffset[i]); !isPurged || offset != 0)
+      if (auto offset = float_to_uint8(frame.colorOffset[i]); !isPurged || offset != 0)
         sink.attribute(OFFSET_ATTRIBUTES[i], offset);
-    if (writer.is(SERIALIZE_EXTENSIONS) && math::float_to_uint8(frame.colorOffset.a) != 0)
-      sink.attribute("AlphaOffset", math::float_to_uint8(frame.colorOffset.a));
+    if (writer.is(SERIALIZE_EXTENSIONS) && float_to_uint8(frame.colorOffset.a) != 0)
+      sink.attribute("AlphaOffset", float_to_uint8(frame.colorOffset.a));
     sink.attribute("Rotation", frame.rotation);
     interpolation_add(sink, "Interpolated", frame.interpolation);
     if (writer.is(SERIALIZE_EXTENSIONS) && frame.shaderId != -1) sink.attribute("ShaderId", frame.shaderId);
@@ -1247,7 +1243,7 @@ namespace anm2ed::model
   }
 
   // A backup (FrameRestore) track keeps its frames' region ids as they are.
-  void track_write(Sink& sink, const Writer& writer, const Track& track, int groupId = -1, bool isBackup = false)
+  static void track_write(Sink& sink, const Writer& writer, const Track& track, int groupId = -1, bool isBackup = false)
   {
     sink.open(tag_get(track_element_type_get(track.type)));
     if (track.type == ItemType::LAYER || track.type == ItemType::NULL_)
@@ -1317,7 +1313,7 @@ namespace anm2ed::model
     std::optional<int> ownGroupId{};
   };
 
-  template <class Group> ContainerChild group_child_make(Sink& sink, const Writer& writer, const Group& group)
+  template <class Group> static ContainerChild group_child_make(Sink& sink, const Writer& writer, const Group& group)
   {
     return {.write = [&](std::optional<int> index, const std::function<void()>& members)
             { group_write(sink, writer, group, index, members); },
@@ -1326,7 +1322,7 @@ namespace anm2ed::model
 
   // Children are laid out flat (a group, then its children) and reshaped for the flags: nested into their groups, or,
   // in a track container, moved to a *AnimationGroups sibling (`groupsType`) that records each group's position.
-  void container_write(Sink& sink, const Writer& writer, std::vector<ContainerChild> flat, const Extras& extras,
+  static void container_write(Sink& sink, const Writer& writer, std::vector<ContainerChild> flat, const Extras& extras,
                        ElementType groupsType = ElementType::UNKNOWN)
   {
     extras_write(sink, extras);
@@ -1377,7 +1373,7 @@ namespace anm2ed::model
     sink.close();
   }
 
-  void track_entries_write(Sink& sink, const Writer& writer, const std::vector<TrackEntry>& entries, ElementType type,
+  static void track_entries_write(Sink& sink, const Writer& writer, const std::vector<TrackEntry>& entries, ElementType type,
                            const Extras& extras)
   {
     std::vector<ContainerChild> flat{};
@@ -1403,7 +1399,7 @@ namespace anm2ed::model
                                                           : ElementType::NULL_ANIMATION_GROUPS);
   }
 
-  bool is_frame_transform_default(const Frame& frame)
+  static bool is_frame_transform_default(const Frame& frame)
   {
     Frame base{};
     return frame.position == base.position && frame.scale == base.scale && frame.rotation == base.rotation &&
@@ -1430,7 +1426,7 @@ namespace anm2ed::model
               issues.skewFrames += frame.skew != glm::vec2();
               issues.shaderFrames += frame.shaderId != -1;
               issues.depthFrames += track.type == ItemType::LAYER && frame.depth != 0;
-              issues.alphaOffsetFrames += math::float_to_uint8(frame.colorOffset.a) != 0;
+              issues.alphaOffsetFrames += float_to_uint8(frame.colorOffset.a) != 0;
               issues.blurFrames += track.type == ItemType::LAYER && frame.blur != 0.0f;
               issues.extraEvents += track.type == ItemType::TRIGGER ? std::max((int)frame.eventIds.size() - 1, 0) : 0;
               issues.triggerSounds += track.type == ItemType::TRIGGER &&
@@ -1443,7 +1439,7 @@ namespace anm2ed::model
 
   // The game's copy: group roots baked into their tracks (originals kept in a FrameRestore node the editor reads
   // back), and interpolation flattened into single-step frames.
-  Animation animation_bake(const Writer& writer, Animation animation)
+  static Animation animation_bake(const Writer& writer, Animation animation)
   {
     if (writer.is(SERIALIZE_BAKE_GROUP_FRAMES))
       for (auto* entries : {&animation.layers, &animation.nulls})
@@ -1480,7 +1476,7 @@ namespace anm2ed::model
   }
 
   // Known children in their recorded order; a part with content that was never in the file is appended.
-  std::vector<ElementType> layout_get(std::vector<ElementType> layout,
+  static std::vector<ElementType> layout_get(std::vector<ElementType> layout,
                                       std::initializer_list<std::pair<ElementType, bool>> parts)
   {
     for (auto [type, isContent] : parts)
@@ -1488,7 +1484,7 @@ namespace anm2ed::model
     return layout;
   }
 
-  void animation_write(Sink& sink, const Writer& writer, const Animation& source, int groupId = -1)
+  static void animation_write(Sink& sink, const Writer& writer, const Animation& source, int groupId = -1)
   {
     auto isBaked = writer.model &&
                    (writer.is(SERIALIZE_BAKE_GROUP_FRAMES) || writer.is(SERIALIZE_FLATTEN_SPECIAL_INTERPOLATED_FRAMES));
@@ -1522,7 +1518,7 @@ namespace anm2ed::model
     children.close();
   }
 
-  void animations_write(Sink& sink, const Writer& writer, const Animations& animations)
+  static void animations_write(Sink& sink, const Writer& writer, const Animations& animations)
   {
     std::vector<ContainerChild> flat{};
     auto animation_child_make = [&](const Animation& animation, int groupId)
@@ -1546,7 +1542,7 @@ namespace anm2ed::model
     container_write(sink, writer, std::move(flat), animations.extras);
   }
 
-  void item_write(Sink& sink, const Writer&, const Region& region, int id)
+  static void item_write(Sink& sink, const Writer&, const Region& region, int id)
   {
     sink.open(tag_get(ElementType::REGION));
     sink.attribute("Id", id);
@@ -1566,7 +1562,7 @@ namespace anm2ed::model
     element_close(sink, region.extras);
   }
 
-  void item_write(Sink& sink, const Writer& writer, const Spritesheet& spritesheet, int id)
+  static void item_write(Sink& sink, const Writer& writer, const Spritesheet& spritesheet, int id)
   {
     sink.open(tag_get(ElementType::SPRITESHEET));
     sink.attribute("Id", id);
@@ -1582,13 +1578,13 @@ namespace anm2ed::model
     children.close();
   }
 
-  void binding_value_add(Sink& sink, const std::string& binding, const std::string& value)
+  static void binding_value_add(Sink& sink, const std::string& binding, const std::string& value)
   {
     if (!binding.empty()) sink.attribute("Binding", binding);
     if (!value.empty()) sink.attribute("Value", value);
   }
 
-  void item_write(Sink& sink, const Writer&, const Shader& shader, int id)
+  static void item_write(Sink& sink, const Writer&, const Shader& shader, int id)
   {
     sink.open(tag_get(ElementType::SHADER));
     sink.attribute("Id", id);
@@ -1619,7 +1615,7 @@ namespace anm2ed::model
     children.close();
   }
 
-  void item_write(Sink& sink, const Writer& writer, const Layer& layer, int id)
+  static void item_write(Sink& sink, const Writer& writer, const Layer& layer, int id)
   {
     sink.open(tag_get(ElementType::LAYER_ELEMENT));
     sink.attribute("Id", id);
@@ -1634,7 +1630,7 @@ namespace anm2ed::model
     element_close(sink, layer.extras);
   }
 
-  void item_write(Sink& sink, const Writer&, const Null& null, int id)
+  static void item_write(Sink& sink, const Writer&, const Null& null, int id)
   {
     sink.open(tag_get(ElementType::NULL_ELEMENT));
     sink.attribute("Id", id);
@@ -1644,7 +1640,7 @@ namespace anm2ed::model
     element_close(sink, null.extras);
   }
 
-  void item_write(Sink& sink, const Writer&, const Event& event, int id)
+  static void item_write(Sink& sink, const Writer&, const Event& event, int id)
   {
     sink.open(tag_get(ElementType::EVENT_ELEMENT));
     sink.attribute("Id", id);
@@ -1654,7 +1650,7 @@ namespace anm2ed::model
   }
 
   // Sounds and libraries are a path.
-  template <class Item> void item_path_write(Sink& sink, const Item& item, ElementType type, int id)
+  template <class Item> static void item_path_write(Sink& sink, const Item& item, ElementType type, int id)
   {
     sink.open(tag_get(type));
     sink.attribute("Id", id);
@@ -1663,18 +1659,18 @@ namespace anm2ed::model
     element_close(sink, item.extras);
   }
 
-  void item_write(Sink& sink, const Writer&, const Sound& sound, int id)
+  static void item_write(Sink& sink, const Writer&, const Sound& sound, int id)
   {
     item_path_write(sink, sound, ElementType::SOUND_ELEMENT, id);
   }
 
-  void item_write(Sink& sink, const Writer&, const Library& library, int id)
+  static void item_write(Sink& sink, const Writer&, const Library& library, int id)
   {
     item_path_write(sink, library, ElementType::LIBRARY, id);
   }
 
   // A content container's unknown XML (a file may repeat a container; its parts are merged in order).
-  Extras container_extras_get(const Content& content, ElementType type)
+  static Extras container_extras_get(const Content& content, ElementType type)
   {
     Extras merged{};
     for (const auto& [extrasType, extras] : content.containerExtras)
@@ -1703,7 +1699,7 @@ namespace anm2ed::model
     children.close();
   }
 
-  void content_write(Sink& sink, const Writer& writer, const Content& content)
+  static void content_write(Sink& sink, const Writer& writer, const Content& content)
   {
     sink.open(tag_get(ElementType::CONTENT));
     extras_write(sink, content.extras);
@@ -1738,7 +1734,7 @@ namespace anm2ed::model
   }
 
   // A whole document; `inner` writes anything after its children (the SourceDocument copy) and `tag` renames it.
-  void model_write(Sink& sink, const Model& model, Flags flags, const std::function<void()>& inner = {},
+  static void model_write(Sink& sink, const Model& model, Flags flags, const std::function<void()>& inner = {},
                    std::string_view tag = {})
   {
     Writer writer(flags, &model);
@@ -1771,7 +1767,7 @@ namespace anm2ed::model
 
   // A save is the game's document with the editor's own copy embedded as SourceDocument; neither writes tints of 255
   // or color offsets of 0, which readers assume.
-  void document_write(Sink& sink, const Model& model, Options options)
+  static void document_write(Sink& sink, const Model& model, Options options)
   {
     model_write(
         sink, options.gameModel ? *options.gameModel : model, SERIALIZE_ISAAC_DEFAULT | SERIALIZE_PURGE_DEFAULT_COLORS,
@@ -1782,14 +1778,14 @@ namespace anm2ed::model
   }
 
   // The text of whatever `write` sends to a sink.
-  template <class Write> std::string text_get(Write&& write)
+  template <class Write> static std::string text_get(Write&& write)
   {
     Sink sink{};
     write(sink);
     return std::move(sink.text);
   }
 
-  bool model_invalid_set(Model& model)
+  static bool model_invalid_set(Model& model)
   {
     model = model_make();
     model.isValid = false;
@@ -1797,7 +1793,7 @@ namespace anm2ed::model
   }
 
   // A parse error says where it is: "Error parsing element name (line 12)".
-  bool document_parse(pugi::xml_document& document, std::string_view text, std::string* errorString)
+  static bool document_parse(pugi::xml_document& document, std::string_view text, std::string* errorString)
   {
     auto result = document.load_buffer(text.data(), text.size());
     if (result) return true;
@@ -1807,7 +1803,7 @@ namespace anm2ed::model
     return false;
   }
 
-  bool document_load(Model& model, std::string_view text, std::string* errorString)
+  static bool document_load(Model& model, std::string_view text, std::string* errorString)
   {
     pugi::xml_document document{};
     if (!document_parse(document, text, errorString)) return model_invalid_set(model);
@@ -1826,14 +1822,14 @@ namespace anm2ed::model
   Model model_make()
   {
     Model model{};
-    model.info.createdOn = time::get(CREATED_ON_FORMAT);
+    model.info.createdOn = timestamp_get(CREATED_ON_FORMAT);
     return model;
   }
 
   bool model_load(Model& model, const std::filesystem::path& path, std::string* errorString)
   {
     std::string text{};
-    if (file::read_to_string(path, &text)) return model_load_string(model, text, errorString);
+    if (file_text_load(path, &text)) return model_load_string(model, text, errorString);
     if (errorString) *errorString = "File not found.";
     return model_invalid_set(model);
   }
@@ -1914,12 +1910,12 @@ namespace anm2ed::model
     return entries;
   }
 
-  template <class Item> std::string item_to_string(const Item& item)
+  template <class Item> static std::string item_to_string(const Item& item)
   {
     return text_get([&](Sink& sink) { item_write(sink, Writer(CLIPBOARD_FLAGS), item, item.id); });
   }
 
-  template <class Item> std::vector<Item> items_from_string(const std::string& text, std::string* errorString)
+  template <class Item> static std::vector<Item> items_from_string(const std::string& text, std::string* errorString)
   {
     pugi::xml_document document{};
     if (!document_parse(document, text, errorString)) return {};
@@ -1928,7 +1924,7 @@ namespace anm2ed::model
     for (auto element : document.children(tag))
     {
       auto item = item_read<Item>(element);
-      if constexpr (requires { item.path; }) item.path = path::backslash_handle(item.path);
+      if constexpr (requires { item.path; }) item.path = path_backslash_handle(item.path);
       items.push_back(std::move(item));
     }
     if (items.empty() && errorString) *errorString = std::format("No valid {}(s).", tag);
@@ -1947,4 +1943,3 @@ namespace anm2ed::model
   X(Sound)
   X(Library)
 #undef X
-}

@@ -5,8 +5,6 @@
 #include <filesystem>
 #include <vector>
 
-namespace anm2ed::resource
-{
   // Encoded audio file bytes. uid identifies the bytes so playback state can be cached by it.
   struct AudioData
   {
@@ -19,4 +17,3 @@ namespace anm2ed::resource
 
     bool is_valid() const;
   };
-}

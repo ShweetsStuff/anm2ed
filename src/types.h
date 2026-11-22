@@ -2,81 +2,58 @@
 
 #include <glm/glm.hpp>
 
-namespace anm2ed::types::shortcut
-{
-  enum Type
+  enum ShortcutScope
   {
-    FOCUSED,
-    GLOBAL,
-    FOCUSED_SET,
-    GLOBAL_SET
+    SCOPE_FOCUSED,
+    SCOPE_GLOBAL,
+    SCOPE_FOCUSED_SET,
+    SCOPE_GLOBAL_SET
   };
-}
 
-namespace anm2ed::types::destination
-{
-  enum Type
+  enum Destination
   {
-    ALL,
-    THIS
+    DESTINATION_ALL,
+    DESTINATION_THIS
   };
-}
 
-namespace anm2ed::types::source
-{
-  enum Type
+  enum Source
   {
-    NEW,
-    EXISTING
+    SOURCE_NEW,
+    SOURCE_EXISTING
   };
-}
 
-namespace anm2ed::types::overlay_draw_order
-{
-  enum Type
+  enum OverlayDrawOrder
   {
-    OVER,
-    UNDER
+    OVERLAY_OVER,
+    OVERLAY_UNDER
   };
-}
 
-namespace anm2ed::types::merge
-{
-  enum Type
+  enum Merge
   {
-    PREPEND,
-    APPEND,
-    REPLACE,
-    IGNORE
+    MERGE_PREPEND,
+    MERGE_APPEND,
+    MERGE_REPLACE,
+    MERGE_IGNORE
   };
-}
 
-namespace anm2ed::types::edit_state
-{
-  enum Type
+  enum EditState
   {
-    NONE,
-    START,
-    DURING,
-    END,
-    COMPLETE
+    EDIT_STATE_NONE,
+    EDIT_STATE_START,
+    EDIT_STATE_DURING,
+    EDIT_STATE_END,
+    EDIT_STATE_COMPLETE
   };
-}
 
-namespace anm2ed::types::color
-{
   using namespace glm;
 
-  constexpr auto WHITE = vec4(1.0);
-  constexpr auto BLACK = vec4(0.0, 0.0, 0.0, 1.0);
-  constexpr auto RED = vec4(1.0, 0.0, 0.0, 1.0);
-  constexpr auto GREEN = vec4(0.0, 1.0, 0.0, 1.0);
-  constexpr auto BLUE = vec4(0.0, 0.0, 1.0, 1.0);
-  constexpr auto PINK = vec4(1.0, 0.0, 1.0, 1.0);
-}
+  constexpr auto COLOR_WHITE = vec4(1.0);
+  constexpr auto COLOR_BLACK = vec4(0.0, 0.0, 0.0, 1.0);
+  constexpr auto COLOR_RED = vec4(1.0, 0.0, 0.0, 1.0);
+  constexpr auto COLOR_GREEN = vec4(0.0, 1.0, 0.0, 1.0);
+  constexpr auto COLOR_BLUE = vec4(0.0, 0.0, 1.0, 1.0);
+  constexpr auto COLOR_PINK = vec4(1.0, 0.0, 1.0, 1.0);
 
-namespace anm2ed::types
-{
   enum class OnionskinMode
   {
     TIME,
@@ -84,4 +61,3 @@ namespace anm2ed::types
   };
 
   constexpr auto ID_NONE = -1;
-}

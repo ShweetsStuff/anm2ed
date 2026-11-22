@@ -6,8 +6,6 @@
 
 #include <imgui/imgui_internal.h>
 
-namespace anm2ed::imgui
-{
   const std::vector<std::pair<ImGuiKey, const char*>> CANONICAL_KEY_NAMES = {
       {ImGuiKey_A, "A"},
       {ImGuiKey_B, "B"},
@@ -102,7 +100,7 @@ namespace anm2ed::imgui
       {ImGuiKey_GraveAccent, "GraveAccent"},
   };
 
-  const char* shortcut_canonical_key_name(ImGuiKey key)
+  static const char* shortcut_canonical_key_name(ImGuiKey key)
   {
     for (const auto& [mappedKey, name] : CANONICAL_KEY_NAMES)
       if (mappedKey == key) return name;
@@ -156,19 +154,19 @@ namespace anm2ed::imgui
     return chord;
   }
 
-  bool shortcut(ImGuiKeyChord chord, types::shortcut::Type type)
+  bool shortcut(ImGuiKeyChord chord, ShortcutScope type)
   {
     if (chord == ImGuiKey_None) return false;
 
     if (ImGui::GetTopMostPopupModal() != nullptr &&
-        (type == types::shortcut::GLOBAL || type == types::shortcut::GLOBAL_SET))
+        (type == SCOPE_GLOBAL || type == SCOPE_GLOBAL_SET))
       return false;
 
-    int flags = type == types::shortcut::GLOBAL || type == types::shortcut::GLOBAL_SET ? ImGuiInputFlags_RouteGlobal
+    int flags = type == SCOPE_GLOBAL || type == SCOPE_GLOBAL_SET ? ImGuiInputFlags_RouteGlobal
                                                                                        : ImGuiInputFlags_RouteFocused;
     flags |= ImGuiInputFlags_Repeat;
 
-    if (type == types::shortcut::GLOBAL_SET || type == types::shortcut::FOCUSED_SET)
+    if (type == SCOPE_GLOBAL_SET || type == SCOPE_FOCUSED_SET)
     {
       ImGui::SetNextItemShortcut(chord, flags);
       return false;
@@ -176,4 +174,3 @@ namespace anm2ed::imgui
 
     return ImGui::Shortcut(chord, flags);
   }
-}

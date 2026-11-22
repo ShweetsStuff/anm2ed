@@ -13,15 +13,13 @@
 #include "friends.h"
 #include "resources.h"
 
-namespace anm2ed::imgui::wizard
-{
   class About
   {
   public:
     struct Credit
     {
       const char* string{};
-      resource::font::Type font{resource::font::REGULAR};
+      FontStyle font{FONT_REGULAR};
     };
 
     // One 30 Hz tick of the credits roll, after the original editor's About box. Lengths are in its pixels (for
@@ -53,9 +51,9 @@ namespace anm2ed::imgui::wizard
 
     struct FriendState
     {
-      model::Model model{};
+      Model model{};
       std::unique_ptr<Canvas> canvas{};
-      std::unordered_map<int, resource::Image> textures{};
+      std::unordered_map<int, Image> textures{};
       glm::vec4 rect{-1.0f};
       float time{};
       float fps{30.0f};
@@ -63,10 +61,9 @@ namespace anm2ed::imgui::wizard
     };
 
     RollState roll{};
-    std::array<FriendState, resource::friends::COUNT> friendStates{};
+    std::array<FriendState, FRIEND_COUNT> friendStates{};
 
     void reset(Resources& resources);
     void update(Resources& resources);
   };
 
-}

@@ -16,10 +16,6 @@
 
 #include "path.h"
 
-using namespace anm2ed::util;
-
-namespace anm2ed
-{
   static void callback(void* userData, const char* const* filelist, int filter)
   {
     auto self = (Dialog*)(userData);
@@ -28,7 +24,7 @@ namespace anm2ed
     {
       self->paths.clear();
       for (int i = 0; filelist[i] && strlen(filelist[i]) > 0; ++i)
-        self->paths.push_back(path::from_utf8(filelist[i]));
+        self->paths.push_back(path_from_utf8(filelist[i]));
       self->path = self->paths.empty() ? std::filesystem::path{} : self->paths.front();
       self->selectedFilter = filter;
     }
@@ -61,7 +57,7 @@ namespace anm2ed
     if (type == Dialog::NONE) return;
     path.clear();
     paths.clear();
-    auto defaultPathString = path::to_utf8(defaultPath);
+    auto defaultPathString = path_to_utf8(defaultPath);
     auto defaultPathCStr = defaultPathString.empty() ? nullptr : defaultPathString.c_str();
     SDL_ShowSaveFileDialog(callback, this, window, FILTERS[TYPE_FILTERS[type]], std::size(FILTERS[TYPE_FILTERS[type]]),
                            defaultPathCStr);
@@ -79,7 +75,7 @@ namespace anm2ed
 
 #ifdef __unix__
   // A string as one single-quoted shell word.
-  std::string shell_quote(std::string_view text)
+  static std::string shell_quote(std::string_view text)
   {
     std::string quoted = "'";
     for (auto character : text)
@@ -89,10 +85,10 @@ namespace anm2ed
 
   // A file:// URI; everything but unreserved characters and slashes is percent-encoded (commas too, which dbus-send
   // would otherwise take as array separators).
-  std::string file_uri_get(const std::filesystem::path& path)
+  static std::string file_uri_get(const std::filesystem::path& path)
   {
     std::string uri = "file://";
-    for (unsigned char character : path::to_utf8(path))
+    for (unsigned char character : path_to_utf8(path))
       if (std::isalnum(character) || std::string_view("-._~/").contains((char)character))
         uri += (char)character;
       else
@@ -117,7 +113,7 @@ namespace anm2ed
 #elif __unix__
     // File managers that implement org.freedesktop.FileManager1 (Nautilus, Dolphin, Nemo, Caja, Thunar...) select the
     // file; anything else opens its folder.
-    auto folder = shell_quote(path::to_utf8(isFile ? absolutePath.parent_path() : absolutePath));
+    auto folder = shell_quote(path_to_utf8(isFile ? absolutePath.parent_path() : absolutePath));
     auto command = isFile ? std::format("(dbus-send --session --print-reply --dest=org.freedesktop.FileManager1 "
                                         "--type=method_call /org/freedesktop/FileManager1 "
                                         "org.freedesktop.FileManager1.ShowItems array:string:{} string:'' "
@@ -134,4 +130,3 @@ namespace anm2ed
 
   bool Dialog::is_selected(Type type) const { return this->type == type && !paths.empty(); }
 
-};

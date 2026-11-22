@@ -8,14 +8,9 @@
 #include <string_view>
 #include <vector>
 
-namespace anm2ed::model
-{
   struct Shader;
-}
 
-namespace anm2ed::resource::shader
-{
-  struct Info
+  struct ShaderInfo
   {
     const char* vertex;
     const char* fragment;
@@ -355,7 +350,7 @@ namespace anm2ed::resource::shader
 #undef X
   };
 
-  struct Uniform
+  struct ShaderUniform
   {
     struct Component
     {
@@ -382,24 +377,24 @@ namespace anm2ed::resource::shader
 
   enum ShaderType
   {
-    LINE,
-    DASHED,
-    TEXTURE,
-    AXIS,
-    GRID,
-    COUNT
+    SHADER_LINE,
+    SHADER_DASHED,
+    SHADER_TEXTURE,
+    SHADER_AXIS,
+    SHADER_GRID,
+    SHADER_COUNT
   };
 
-  const Info SHADERS[COUNT] = {{VERTEX, FRAGMENT},
+  const ShaderInfo SHADERS[SHADER_COUNT] = {{VERTEX, FRAGMENT},
                                {DASHED_VERTEX, DASHED_FRAGMENT},
                                {VERTEX, TEXTURE_FRAGMENT},
                                {AXIS_VERTEX, FRAGMENT},
                                {GRID_VERTEX, GRID_FRAGMENT}};
 
   UniformBinding uniform_binding_auto_get(std::string_view, UniformValueType);
-  void uniform_configs_apply(const model::Shader&, std::vector<Uniform>&);
-  bool uniform_configs_trim(model::Shader&, const std::vector<Uniform>&);
-  void uniform_config_save(model::Shader&, const Uniform&);
+  void uniform_configs_apply(const Shader&, std::vector<ShaderUniform>&);
+  bool uniform_configs_trim(Shader&, const std::vector<ShaderUniform>&);
+  void uniform_config_save(Shader&, const ShaderUniform&);
   UniformBinding uniform_binding_get(std::string_view);
   std::string_view uniform_binding_value_get(UniformBinding);
   std::string_view uniform_binding_label_get(UniformBinding);
@@ -408,37 +403,33 @@ namespace anm2ed::resource::shader
   bool is_uniform_value_editable(UniformValueType);
   bool is_uniform_value_vector(UniformValueType);
   bool is_uniform_binding_valid(UniformBinding, UniformValueType);
-  void uniform_value_parse(Uniform&, std::string_view);
-  std::string uniform_value_string_get(const Uniform&);
+  void uniform_value_parse(ShaderUniform&, std::string_view);
+  std::string uniform_value_string_get(const ShaderUniform&);
   std::string gles_convert(std::string_view, ShaderStage);
   std::string gles_fragment_convert(std::string_view);
   std::string gles_vertex_convert(std::string_view);
-}
 
-namespace anm2ed::resource
-{
   struct ShaderCompileResult
   {
     GLuint id{};
     std::string output{};
-    std::vector<shader::Uniform> uniforms{};
+    std::vector<ShaderUniform> uniforms{};
     bool isCompiled{};
     bool isLinked{};
   };
 
   ShaderCompileResult shader_compile(const char*, const char*);
 
-  class Shader
+  class ShaderProgram
   {
   public:
     GLuint id{};
-    std::vector<shader::Uniform> uniforms{};
+    std::vector<ShaderUniform> uniforms{};
 
-    Shader();
-    Shader(const char*, const char*);
-    Shader(Shader&&) noexcept;
-    Shader& operator=(Shader&&) noexcept;
-    ~Shader();
+    ShaderProgram();
+    ShaderProgram(const char*, const char*);
+    ShaderProgram(ShaderProgram&&) noexcept;
+    ShaderProgram& operator=(ShaderProgram&&) noexcept;
+    ~ShaderProgram();
     bool is_valid() const;
   };
-}

@@ -1,7 +1,5 @@
 #pragma once
 
-namespace anm2ed
-{
   class Playback
   {
   public:
@@ -19,4 +17,3 @@ namespace anm2ed
   private:
     float tickAccumulator{};
   };
-}

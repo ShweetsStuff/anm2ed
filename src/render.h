@@ -12,39 +12,28 @@
 struct SDL_Window;
 struct SDL_GLContextState;
 
-namespace anm2ed
-{
   class Canvas;
   class Document;
-}
 
-namespace anm2ed::model
-{
   struct Animation;
   class Model;
-}
 
-namespace anm2ed::resource
-{
-  class Shader;
-}
+  class ShaderProgram;
 
-namespace anm2ed::render
-{
 #define RENDER_LIST                                                                                                    \
-  X(PNGS, "PNGs", "")                                                                                                  \
-  X(SPRITESHEET, "Spritesheet (PNG)", ".png")                                                                          \
-  X(GIF, "GIF", ".gif")                                                                                                \
-  X(WEBM, "WebM", ".webm")                                                                                             \
-  X(OGV, "OGV", ".ogv")                                                                                                \
-  X(MP4, "MP4", ".mp4")
+  X(RENDER_PNGS, "PNGs", "")                                                                                                  \
+  X(RENDER_SPRITESHEET, "Spritesheet (PNG)", ".png")                                                                          \
+  X(RENDER_GIF, "GIF", ".gif")                                                                                                \
+  X(RENDER_WEBM, "WebM", ".webm")                                                                                             \
+  X(RENDER_OGV, "OGV", ".ogv")                                                                                                \
+  X(RENDER_MP4, "MP4", ".mp4")
 
-  enum Type
+  enum RenderType
   {
 #define X(symbol, string, extension) symbol,
     RENDER_LIST
 #undef X
-        COUNT
+        RENDER_COUNT
   };
 
   enum FpsMode
@@ -54,13 +43,13 @@ namespace anm2ed::render
     FPS_COUNT
   };
 
-  constexpr const char* STRINGS[] = {
+  constexpr const char* RENDER_STRINGS[] = {
 #define X(symbol, string, extension) string,
       RENDER_LIST
 #undef X
   };
 
-  constexpr const char* EXTENSIONS[] = {
+  constexpr const char* RENDER_EXTENSIONS[] = {
 #define X(symbol, string, extension) extension,
       RENDER_LIST
 #undef X
@@ -140,16 +129,16 @@ namespace anm2ed::render
   };
 
   // The area an animation covers over all its frames (or a default one when it draws nothing).
-  glm::vec4 animation_bounds_get(const Document&, const model::Animation&, bool);
+  glm::vec4 animation_bounds_get(const Document&, const Animation&, bool);
   // One frame drawn over `bounds` at `scale`, as premultiplied RGBA rows from the top.
-  std::vector<uint8_t> animation_frame_render(Canvas&, resource::Shader&, Document&, const model::Animation&, float,
+  std::vector<uint8_t> animation_frame_render(Canvas&, ShaderProgram&, Document&, const Animation&, float,
                                               glm::vec4, float, glm::vec4, bool);
   void pixels_unpremultiply(std::vector<uint8_t>&);
-  void frames_bake(Document&, model::Model&, const std::filesystem::path&);
+  void frames_bake(Document&, Model&, const std::filesystem::path&);
 
   struct RecorderOptions
   {
-    Type type{};
+    RenderType type{};
     std::filesystem::path path{};
     std::filesystem::path format{};
     std::filesystem::path ffmpegPath{};
@@ -177,26 +166,22 @@ namespace anm2ed::render
     bool is_done() const;
     float time_get() const;
     bool is_sound_frame() const;
-    bool frame_capture(std::vector<uint8_t>, glm::ivec2, std::vector<const resource::AudioData*> = {});
+    bool frame_capture(std::vector<uint8_t>, glm::ivec2, std::vector<const AudioData*> = {});
     void finish(const Document&, AudioStream&);
     void cancel();
 
   private:
     std::filesystem::path directory{};
     std::vector<std::filesystem::path> frames{};
-    std::vector<std::vector<const resource::AudioData*>> sounds{};
+    std::vector<std::vector<const AudioData*>> sounds{};
     int soundTime{-1};
   };
 
   // Records a whole animation with these options (bounded and isolated), each frame drawn as animation_frame_render
   // draws it; false when a frame or the output can't be written.
-  bool animation_record(const RecorderOptions&, Canvas&, resource::Shader&, Document&, const model::Animation&,
+  bool animation_record(const RecorderOptions&, Canvas&, ShaderProgram&, Document&, const Animation&,
                         glm::vec4, float, glm::vec4, bool);
-}
 
-namespace anm2ed
-{
   std::filesystem::path ffmpeg_log_path();
   bool animation_render(const std::filesystem::path&, const std::filesystem::path&,
-                        const std::vector<std::filesystem::path>&, AudioStream&, render::Type, int);
-}
+                        const std::vector<std::filesystem::path>&, AudioStream&, RenderType, int);

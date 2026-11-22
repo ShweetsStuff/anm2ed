@@ -9,18 +9,13 @@
 #include "playback.h"
 #include "selection.h"
 
-namespace anm2ed::snapshots
-{
-  constexpr auto ACTION = "Action";
-  constexpr auto MAX = 20;
-};
+  constexpr auto SNAPSHOT_ACTION = "Action";
+  constexpr auto SNAPSHOT_MAX = 20;
 
-namespace anm2ed
-{
   using AssetKeys = std::map<int, std::uint64_t>;
 
 #define SNAPSHOT_STEP_STATE_FIELDS                                                                                     \
-  X(model::Model, model)                                                                                               \
+  X(Model, model)                                                                                               \
   X(Playback, playback)                                                                                                \
   X(Selection, selection)                                                                                              \
   X(float, frameTime)                                                                                                  \
@@ -33,7 +28,7 @@ namespace anm2ed
 #define X(type, name) type name{};
     SNAPSHOT_STEP_STATE_FIELDS
 #undef X
-    std::string message = snapshots::ACTION;
+    std::string message = SNAPSHOT_ACTION;
   };
 
   // One undoable edit: the state before and after it; undo/redo restore only the fields the edit changed.
@@ -76,4 +71,3 @@ namespace anm2ed
     void reset();
     void apply_limit();
   };
-}

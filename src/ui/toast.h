@@ -7,8 +7,6 @@
 #include "log.h"
 #include "localization.h"
 
-namespace anm2ed::imgui
-{
   class Toast
   {
   public:
@@ -27,12 +25,8 @@ namespace anm2ed::imgui
     void push(const std::string&);
   };
 
-}
+extern Toasts toasts;
 
-extern anm2ed::imgui::Toasts toasts;
-
-namespace anm2ed
-{
   template <class... Args> void toast_log(Level level, StringType type, Args&&... args)
   {
     auto format = [&](Language language) -> std::string
@@ -45,4 +39,3 @@ namespace anm2ed
     toasts.push(format(localize.language));
     logger.write(level, format(ENGLISH));
   }
-}

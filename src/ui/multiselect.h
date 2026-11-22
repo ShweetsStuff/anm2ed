@@ -5,8 +5,6 @@
 
 #include <imgui/imgui.h>
 
-namespace anm2ed::imgui
-{
   class MultiSelectStorage : public std::set<int>
   {
   public:
@@ -33,4 +31,3 @@ namespace anm2ed::imgui
   };
 
   void external_storage_set(ImGuiSelectionExternalStorage*, int, bool);
-}

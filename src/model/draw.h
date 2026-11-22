@@ -7,8 +7,6 @@
 #include "model/model.h"
 
 // What an animation draws at a time, as plain data: every canvas (preview, render, about) draws from this list.
-namespace anm2ed::model
-{
   enum class DrawType
   {
     ROOT,
@@ -70,4 +68,3 @@ namespace anm2ed::model
   float draw_scale_get(const Draw&);
   std::vector<Draw> animation_draws_get(const Model&, const Animation&, const DrawOptions&);
   std::vector<TriggerFire> animation_triggers_get(const Model&, const Animation&, int, const LibraryGet& = {});
-}

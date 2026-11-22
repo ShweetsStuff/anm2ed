@@ -9,15 +9,10 @@
 
 #include <glm/glm.hpp>
 
-namespace anm2ed::resource::image
-{
-  constexpr auto CHANNELS = 4;
+  constexpr auto IMAGE_CHANNELS = 4;
   constexpr auto SVG_EXTENSION = "svg";
   constexpr auto PNG_EXTENSION = "png";
-}
 
-namespace anm2ed::resource
-{
   class Image;
 
   // A block of an image placed at `destination`, for composing images.
@@ -61,4 +56,3 @@ namespace anm2ed::resource
     void pixel_set(glm::ivec2, glm::vec4);
     void pixel_line(glm::ivec2, glm::ivec2, glm::vec4);
   };
-}

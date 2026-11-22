@@ -16,61 +16,56 @@
 #include "ui/shortcut.h"
 #include "vector.h"
 
-using namespace anm2ed::types;
-using namespace anm2ed::util;
-
-namespace anm2ed
-{
   constexpr std::size_t RECENT_LIMIT = 10;
 
-  void ensure_parent_directory_exists(const std::filesystem::path& path)
+  static void ensure_parent_directory_exists(const std::filesystem::path& path)
   {
     auto parent = path.parent_path();
     if (parent.empty()) return;
     std::error_code ec{};
     std::filesystem::create_directories(parent, ec);
-    if (ec) logger.warning(std::format("Could not create directory for {}: {}", path::to_utf8(path), ec.message()));
+    if (ec) logger.warning(std::format("Could not create directory for {}: {}", path_to_utf8(path), ec.message()));
   }
 
-  void autosave_file_remove(const std::filesystem::path& path)
+  static void autosave_file_remove(const std::filesystem::path& path)
   {
     if (path.empty()) return;
 
     std::error_code ec{};
     std::filesystem::remove(path, ec);
-    if (ec) logger.warning(std::format("Could not remove autosave file {}: {}", path::to_utf8(path), ec.message()));
+    if (ec) logger.warning(std::format("Could not remove autosave file {}: {}", path_to_utf8(path), ec.message()));
   }
 
-  std::vector<std::filesystem::path> path_list_load(const std::filesystem::path& path, std::string_view name)
+  static std::vector<std::filesystem::path> path_list_load(const std::filesystem::path& path, std::string_view name)
   {
     std::string fileData{};
-    if (!file::read_to_string(path, &fileData, "rb"))
+    if (!file_text_load(path, &fileData, "rb"))
     {
-      logger.warning(std::format("Could not load {} from: {}. Skipping...", name, path::to_utf8(path)));
+      logger.warning(std::format("Could not load {} from: {}. Skipping...", name, path_to_utf8(path)));
       return {};
     }
-    logger.info(std::format("Loading {} from: {}", name, path::to_utf8(path)));
+    logger.info(std::format("Loading {} from: {}", name, path_to_utf8(path)));
 
     std::vector<std::filesystem::path> result{};
     std::istringstream file(fileData);
     for (std::string line{}; std::getline(file, line);)
     {
       if (!line.empty() && line.back() == '\r') line.pop_back();
-      auto entry = path::from_utf8(line);
+      auto entry = path_from_utf8(line);
       if (!line.empty() && std::ranges::find(result, entry) == result.end()) result.push_back(entry);
     }
     return result;
   }
 
-  void path_list_save(const std::filesystem::path& path, const std::vector<std::filesystem::path>& entries,
+  static void path_list_save(const std::filesystem::path& path, const std::vector<std::filesystem::path>& entries,
                       std::string_view name)
   {
     ensure_parent_directory_exists(path);
     std::ostringstream file{};
     for (auto& entry : entries)
-      file << path::to_utf8(entry) << '\n';
-    if (!file::write_string(path, file.str(), "wb"))
-      logger.warning(std::format("Could not write {} to: {}. Skipping...", name, path::to_utf8(path)));
+      file << path_to_utf8(entry) << '\n';
+    if (!file_text_save(path, file.str(), "wb"))
+      logger.warning(std::format("Could not write {} to: {}. Skipping...", name, path_to_utf8(path)));
   }
 
   void Manager::selection_history_push(int index)
@@ -100,8 +95,8 @@ namespace anm2ed
     if (documents.empty()) selectionHistory.clear();
   }
 
-  std::filesystem::path Manager::recent_files_path_get() { return sdl::preferences_directory_get() / "recent.txt"; }
-  std::filesystem::path Manager::autosave_path_get() { return sdl::preferences_directory_get() / "autosave.txt"; }
+  std::filesystem::path Manager::recent_files_path_get() { return preferences_directory_get() / "recent.txt"; }
+  std::filesystem::path Manager::autosave_path_get() { return preferences_directory_get() / "autosave.txt"; }
 
   Manager::Manager()
   {
@@ -109,7 +104,7 @@ namespace anm2ed
     autosave_files_load();
   }
 
-  Document* Manager::get(int index) { return vector::find(documents, index > -1 ? index : selected); }
+  Document* Manager::get(int index) { return vector_find(documents, index > -1 ? index : selected); }
 
   void Manager::command_push(Command command)
   {
@@ -137,7 +132,7 @@ namespace anm2ed
   {
     std::string errorString{};
     documents.emplace_back(path, isNew, &errorString);
-    auto pathString = path::to_utf8(path);
+    auto pathString = path_to_utf8(path);
 
     auto& document = documents.back();
     if (!document.is_valid())
@@ -216,7 +211,7 @@ namespace anm2ed
 
   void Manager::close(int index)
   {
-    if (!vector::in_bounds(documents, index)) return;
+    if (!is_vector_in_bounds(documents, index)) return;
 
     documents.erase(documents.begin() + index);
     selection_history_cleanup(index);
@@ -290,11 +285,11 @@ namespace anm2ed
     auto parent = get(index);
     auto animation = parent ? parent->model.animation_get(layerTrack.animationIndex) : nullptr;
     auto track = parent ? parent->model.track_get(layerTrack) : nullptr;
-    auto layer = parent ? model::item_get(parent->model.content.layers, layerTrack.itemID) : nullptr;
+    auto layer = parent ? item_get(parent->model.content.layers, layerTrack.itemID) : nullptr;
     if (!animation || !track || !layer || !layer->is_animation()) return;
     auto time = parent->frameTime > -1 && !parent->playback.isPlaying ? parent->frameTime : parent->playback.time;
     auto [childModel, childAnimation] =
-        model::child_get(parent->model, *layer, model::frame_generate(*track, time), parent->library_resolver_get());
+        child_get(parent->model, *layer, frame_generate(*track, time), parent->library_resolver_get());
     if (!childAnimation) return;
 
     auto steps = parent->childSteps;
@@ -304,7 +299,7 @@ namespace anm2ed
                      .layer = layerTrack,
                      .animationName = animation->name,
                      .layerName = layer->name});
-    auto childTime = model::child_time_get(*track, time, childAnimation->frameNum, layer->id);
+    auto childTime = child_time_get(*track, time, childAnimation->frameNum, layer->id);
     auto childName = childAnimation->name;
     parent->playback.isPlaying = false;
     auto targetIndex = index;
@@ -354,8 +349,8 @@ namespace anm2ed
     if (!document || (type != ElementType::LAYER_ELEMENT && type != ElementType::NULL_ELEMENT)) return;
     auto isLayer = type == ElementType::LAYER_ELEMENT;
     auto& content = document->model.content;
-    auto layer = isLayer ? model::item_get(content.layers, id) : nullptr;
-    auto null = isLayer ? nullptr : model::item_get(content.nulls, id);
+    auto layer = isLayer ? item_get(content.layers, id) : nullptr;
+    auto null = isLayer ? nullptr : item_get(content.nulls, id);
     if (id != -1 && !layer && !null) return;
     itemEdit = layer  ? ItemEdit{.id = id,
                                  .name = layer->name,
@@ -388,7 +383,7 @@ namespace anm2ed
     std::vector<std::filesystem::path> ordered;
     ordered.reserve(orderedEntries.size());
     for (const auto& [pathString, _] : orderedEntries)
-      ordered.emplace_back(path::from_utf8(pathString));
+      ordered.emplace_back(path_from_utf8(pathString));
     return ordered;
   }
 
@@ -398,11 +393,11 @@ namespace anm2ed
     std::error_code ec{};
     if (!std::filesystem::exists(path, ec))
     {
-      logger.warning(std::format("Skipping missing recent file: {}", path::to_utf8(path)));
+      logger.warning(std::format("Skipping missing recent file: {}", path_to_utf8(path)));
       return;
     }
 
-    recentFiles[path::to_utf8(path)] = ++recentFilesCounter;
+    recentFiles[path_to_utf8(path)] = ++recentFilesCounter;
     recent_files_trim();
     recent_files_write();
   }
@@ -416,9 +411,9 @@ namespace anm2ed
     {
       std::error_code ec{};
       if (std::filesystem::exists(*it, ec))
-        recentFiles[path::to_utf8(*it)] = ++recentFilesCounter;
+        recentFiles[path_to_utf8(*it)] = ++recentFilesCounter;
       else
-        logger.warning(std::format("Skipping missing recent file: {}", path::to_utf8(*it)));
+        logger.warning(std::format("Skipping missing recent file: {}", path_to_utf8(*it)));
     }
     recent_files_trim();
   }
@@ -472,8 +467,7 @@ namespace anm2ed
   {
     saveOptions = {.isJson = settings.fileIsJson};
     for (int i = 0; i < SHORTCUT_COUNT; i++)
-      chords[i] = imgui::string_to_chord(settings.*SHORTCUT_MEMBERS[i]);
+      chords[i] = string_to_chord(settings.*SHORTCUT_MEMBERS[i]);
   }
 
   Manager::~Manager() = default;
-}

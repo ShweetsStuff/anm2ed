@@ -1,7 +1,5 @@
 #include "ui/tree.h"
 
-namespace anm2ed::imgui
-{
   TreeNodeInputTextResult tree_node_input_text(const std::string& label, const std::string& id, std::string& text,
                                                bool isSelected, ImGuiTreeNodeFlags flags, RenameState& state)
   {
@@ -38,4 +36,3 @@ namespace anm2ed::imgui
     result.isRenameFinished = state == RENAME_FINISHED;
     return result;
   }
-}

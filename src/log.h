@@ -8,8 +8,6 @@
 #include <string_view>
 #include <thread>
 
-namespace anm2ed
-{
 #if defined(INFO)
   #undef INFO
 #endif
@@ -77,6 +75,4 @@ namespace anm2ed
 
   int log_exceptions(const std::function<int()>&);
 
-}
-
-extern anm2ed::Logger logger;
+extern Logger logger;

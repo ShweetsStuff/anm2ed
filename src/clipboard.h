@@ -2,8 +2,6 @@
 
 #include <string>
 
-namespace anm2ed
-{
   class Clipboard
   {
   public:
@@ -12,4 +10,3 @@ namespace anm2ed
     std::string get();
     void set(const std::string&);
   };
-}

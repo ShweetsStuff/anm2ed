@@ -2,8 +2,6 @@
 
 #include <array>
 
-namespace anm2ed::util
-{
   File::File(const std::filesystem::path& path, const char* mode) { open(path, mode); }
 
   File::~File() { close(); }
@@ -42,9 +40,7 @@ namespace anm2ed::util
 
   File::operator bool() const { return handle != nullptr; }
 
-  namespace file
-  {
-    bool read_to_string(const std::filesystem::path& path, std::string* output, const char* mode)
+    bool file_text_load(const std::filesystem::path& path, std::string* output, const char* mode)
     {
       if (!output) return false;
 
@@ -61,12 +57,10 @@ namespace anm2ed::util
       }
     }
 
-    bool write_string(const std::filesystem::path& path, std::string_view data, const char* mode)
+    bool file_text_save(const std::filesystem::path& path, std::string_view data, const char* mode)
     {
       File file(path, mode);
       if (!file) return false;
 
       return std::fwrite(data.data(), 1, data.size(), file.get()) == data.size();
     }
-  }
-}

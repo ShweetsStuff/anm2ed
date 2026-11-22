@@ -19,12 +19,8 @@
 #include "localization.h"
 #include "ui/draw.h"
 
-using namespace anm2ed::resource;
-using namespace anm2ed::util;
 using namespace glm;
 
-namespace anm2ed::imgui::wizard
-{
   // The credits roll, after the original editor's About box: lengths are its pixels (for 14 px text), at its 30 Hz.
   enum RollEffect
   {
@@ -65,42 +61,42 @@ namespace anm2ed::imgui::wizard
   static constexpr float FRIEND_HEIGHT_RATIO = 47.0f / 183.0f;
   static constexpr float FRIEND_PADDING_RATIO = 0.15f;
   static constexpr float TITLE_SCALE = 2.0f;
-  static constexpr int FRIEND_ORDER_LEFT[] = {resource::friends::MEAT_BOY, resource::friends::ISAAC};
-  static constexpr int FRIEND_ORDER_RIGHT[] = {resource::friends::STACY, resource::friends::ASH};
+  static constexpr int FRIEND_ORDER_LEFT[] = {FRIEND_MEAT_BOY, FRIEND_ISAAC};
+  static constexpr int FRIEND_ORDER_RIGHT[] = {FRIEND_STACY, FRIEND_ASH};
 
   static constexpr About::Credit CREDITS[] = {
-      {"Anm2Ed", font::BOLD},
+      {"Anm2Ed", FONT_BOLD},
       {"License: GPLv3"},
       {""},
-      {"Design/Programming", font::BOLD},
+      {"Design/Programming", FONT_BOLD},
       {"Shweet"},
       {"OpenAI Codex"},
       {"Claude Code"},
       {""},
-      {"Additional Help", font::BOLD},
+      {"Additional Help", FONT_BOLD},
       {"im-tem"},
       {""},
-      {"Localization", font::BOLD},
+      {"Localization", FONT_BOLD},
       {"Gabriel Asencio (Spanish (Latin America))"},
       {"ExtremeThreat (Russian)"},
       {"CxRedix (Chinese)"},
       {"sawalk/사왈이 (Korean)"},
       {""},
-      {"Based on the work of", font::BOLD},
+      {"Based on the work of", FONT_BOLD},
       {"Adrian Gavrilita"},
       {"Simon Parzer"},
       {"Matt Kapuszczak"},
       {""},
-      {"Music", font::BOLD},
+      {"Music", FONT_BOLD},
       {"Soundbin"},
       {"\"Digital Antidepressant\""},
       {"https://www.newgrounds.com/audio/listen/1565433"},
       {"License: CC0"},
       {""},
-      {"Dancing Characters", font::BOLD},
+      {"Dancing Characters", FONT_BOLD},
       {"Shweet"},
       {""},
-      {"Libraries", font::BOLD},
+      {"Libraries", FONT_BOLD},
       {"Dear ImGui"},
       {"https://github.com/ocornut/imgui"},
       {"License: MIT"},
@@ -129,17 +125,17 @@ namespace anm2ed::imgui::wizard
       {"https://github.com/sammycage/lunasvg"},
       {"License: MIT"},
       {""},
-      {"Icons", font::BOLD},
+      {"Icons", FONT_BOLD},
       {"Remix Icons"},
       {"remixicon.com"},
       {"License: Apache"},
       {""},
-      {"Font", font::BOLD},
+      {"Font", FONT_BOLD},
       {"Noto Sans"},
       {"https://fonts.google.com/noto/specimen/Noto+Sans"},
       {"License: OFL"},
       {""},
-      {"Special Thanks", font::BOLD},
+      {"Special Thanks", FONT_BOLD},
       {"Edmund McMillen"},
       {"Florian Himsl"},
       {"Tyrone Rodriguez"},
@@ -161,7 +157,7 @@ namespace anm2ed::imgui::wizard
   };
   static constexpr auto CREDIT_COUNT = (int)(sizeof(CREDITS) / sizeof(About::Credit));
 
-  const model::Animation* friend_animation_get(const About::FriendState& state)
+  static const Animation* friend_animation_get(const About::FriendState& state)
   {
     auto animations = state.model.animations_get();
     for (auto [index, animation] : animations)
@@ -169,7 +165,7 @@ namespace anm2ed::imgui::wizard
     return animations.empty() ? nullptr : animations.front().second;
   }
 
-  void friend_state_load(About::FriendState& state, const resource::friends::Info& info)
+  static void friend_state_load(About::FriendState& state, const FriendInfo& info)
   {
     if (!state.canvas)
     {
@@ -177,7 +173,7 @@ namespace anm2ed::imgui::wizard
       state.canvas->filter = GL_NEAREST;
     }
 
-    state.model = model::Model{};
+    state.model = Model{};
     state.textures.clear();
     state.rect = vec4(-1.0f);
     state.time = 0.0f;
@@ -185,7 +181,7 @@ namespace anm2ed::imgui::wizard
     state.isLoaded = false;
 
     std::string errorString{};
-    if (!model::model_load_string(state.model, std::string_view((const char*)info.anm2->data, info.anm2->size), &errorString))
+    if (!model_load_string(state.model, std::string_view((const char*)info.anm2->data, info.anm2->size), &errorString))
     {
       logger.error(std::format("Unable to load friend animation {}: {}", info.name, errorString));
       return;
@@ -194,7 +190,7 @@ namespace anm2ed::imgui::wizard
     if (state.model.info.fps > 0) state.fps = (float)state.model.info.fps;
 
     for (auto& spritesheet : state.model.content.spritesheets)
-      state.textures[spritesheet.id] = resource::Image(info.png->data, info.png->size);
+      state.textures[spritesheet.id] = Image(info.png->data, info.png->size);
 
     auto animation = friend_animation_get(state);
     if (!animation)
@@ -203,11 +199,11 @@ namespace anm2ed::imgui::wizard
       return;
     }
 
-    state.rect = model::animation_rect(state.model, *animation, true);
+    state.rect = animation_rect(state.model, *animation, true);
     state.isLoaded = state.rect != vec4(-1.0f) && !state.textures.empty();
   }
 
-  void friend_state_tick(About::FriendState& state, float delta)
+  static void friend_state_tick(About::FriendState& state, float delta)
   {
     if (!state.isLoaded) return;
 
@@ -218,7 +214,7 @@ namespace anm2ed::imgui::wizard
     if (state.time < 0.0f) state.time += (float)animation->frameNum;
   }
 
-  ImVec2 friend_size_get(const About::FriendState& state, float height)
+  static ImVec2 friend_size_get(const About::FriendState& state, float height)
   {
     auto width = height;
     if (state.rect.w > 0.0f && state.rect.z > 0.0f) width = height * (state.rect.z / state.rect.w);
@@ -226,7 +222,7 @@ namespace anm2ed::imgui::wizard
   }
 
   // The animation's bounds with some room around them.
-  vec4 friend_rect_get(const About::FriendState& state)
+  static vec4 friend_rect_get(const About::FriendState& state)
   {
     auto rect = state.rect;
     auto padding = std::max(2.0f, std::max(rect.z, rect.w) * FRIEND_PADDING_RATIO);
@@ -234,7 +230,7 @@ namespace anm2ed::imgui::wizard
   }
 
   // Rendered 1:1 into its canvas, which is drawn scaled up with nearest filtering so the pixels stay sharp.
-  void friend_canvas_draw(About::FriendState& state, Resources& resources)
+  static void friend_canvas_draw(About::FriendState& state, Resources& resources)
   {
     if (!state.isLoaded || !state.canvas) return;
 
@@ -255,9 +251,9 @@ namespace anm2ed::imgui::wizard
     vec2 pan{};
     state.canvas->set_to_rect(zoom, pan, rect);
 
-    state.canvas->layers_render(resources.shaders[shader::TEXTURE], state.model, *animation,
+    state.canvas->layers_render(resources.shaders[SHADER_TEXTURE], state.model, *animation,
                                 {.time = state.time, .isRootTransform = true}, state.canvas->transform_get(zoom, pan),
-                                [&](const model::Draw& draw)
+                                [&](const Draw& draw)
                                 {
                                   auto texture = state.textures.find(draw.spritesheetId);
                                   return texture == state.textures.end() ? nullptr : &texture->second;
@@ -267,13 +263,13 @@ namespace anm2ed::imgui::wizard
   }
 
   // The application name, as large as fits its row.
-  void title_draw(About& about, Resources& resources, const char* title, float width)
+  static void title_draw(About& about, Resources& resources, const char* title, float width)
   {
-    auto font = resources.fonts[font::BOLD].get();
-    auto fontSize = (float)font::SIZE_LARGE * TITLE_SCALE;
+    auto font = resources.fonts[FONT_BOLD].get();
+    auto fontSize = (float)FONT_SIZE_LARGE * TITLE_SCALE;
     fontSize *= std::min(1.0f, width / font->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, title).x);
     auto textSize = font->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, title);
-    auto rowHeight = (float)font::SIZE_LARGE * TITLE_SCALE;
+    auto rowHeight = (float)FONT_SIZE_LARGE * TITLE_SCALE;
     auto min = ImGui::GetCursorScreenPos();
     auto color = about.roll.titleColor ? about.roll.titleColor : ImGui::GetColorU32(ImGuiCol_Text);
     ImGui::GetWindowDrawList()->AddText(
@@ -283,7 +279,7 @@ namespace anm2ed::imgui::wizard
   }
 
   // The dancing characters stand in the credits box's bottom corners, inside the volume bars.
-  void friends_draw(About& about, Resources& resources, ImDrawList* drawList, ImVec2 min, ImVec2 max, float inset)
+  static void friends_draw(About& about, Resources& resources, ImDrawList* drawList, ImVec2 min, ImVec2 max, float inset)
   {
     auto height = (max.y - min.y) * FRIEND_HEIGHT_RATIO;
     auto row_draw = [&](std::span<const int> indices, float left)
@@ -307,9 +303,9 @@ namespace anm2ed::imgui::wizard
   }
 
   // One tick: the credits scroll up (a new pass, and effect, once they are gone) and the bars follow the music.
-  void roll_tick(About::RollState& roll, Resources& resources, float boxHeight, float textHeight)
+  static void roll_tick(About::RollState& roll, Resources& resources, float boxHeight, float textHeight)
   {
-    auto levels = audio::levels_get(resources.music_track());
+    auto levels = audio_levels_get(resources.music_track());
     roll.levelPeak = std::max({roll.levelPeak * BAR_LEVEL_DECAY, levels.x, levels.y, BAR_LEVEL_FLOOR});
     levels *= boxHeight / roll.levelPeak;
     roll.scroll -= ROLL_SCROLL_STEP;
@@ -344,7 +340,7 @@ namespace anm2ed::imgui::wizard
     if (roll.history.size() > ROLL_HISTORY_MAX) roll.history.pop_back();
   }
 
-  ImU32 color_weighted_get(ImU32 color, float weight)
+  static ImU32 color_weighted_get(ImU32 color, float weight)
   {
     auto value = ImGui::ColorConvertU32ToFloat4(color);
     value.w *= weight;
@@ -352,7 +348,7 @@ namespace anm2ed::imgui::wizard
   }
 
   // The credits as one tick drew them; `weight` fades the copies that linger as trails.
-  void roll_text_draw(ImDrawList* drawList, Resources& resources, const About::RollFrame& frame, ImVec2 min, ImVec2 max,
+  static void roll_text_draw(ImDrawList* drawList, Resources& resources, const About::RollFrame& frame, ImVec2 min, ImVec2 max,
                       float scale, float lineHeight, float weight)
   {
     auto centerX = (min.x + max.x) * 0.5f;
@@ -366,7 +362,7 @@ namespace anm2ed::imgui::wizard
       auto x = centerX - font->CalcTextSizeA(lineHeight, FLT_MAX, 0.0f, credit.string).x * 0.5f + frame.offsetX * scale;
       if (frame.effect == EFFECT_WAVE)
         x += std::round(std::sin((y - min.y) / scale * ROLL_WAVE_FREQUENCY) * ROLL_WAVE_AMPLITUDE) * scale;
-      auto color = credit.font == font::BOLD ? ROLL_HEADER_COLOR : ROLL_NAME_COLOR;
+      auto color = credit.font == FONT_BOLD ? ROLL_HEADER_COLOR : ROLL_NAME_COLOR;
 
       auto vertexStart = drawList->VtxBuffer.Size;
       drawList->AddText(font, lineHeight, ImVec2(x, y), color_weighted_get(color, weight), credit.string);
@@ -377,7 +373,7 @@ namespace anm2ed::imgui::wizard
   }
 
   // A volume bar's color at a height: red at the bottom into the tick's color at its gradient height.
-  ImU32 bar_color_get(const About::RollFrame& frame, float height, float weight)
+  static ImU32 bar_color_get(const About::RollFrame& frame, float height, float weight)
   {
     auto color = ImLerp(ImGui::ColorConvertU32ToFloat4(BAR_BASE_COLOR),
                         ImGui::ColorConvertU32ToFloat4(frame.gradientColor), height / frame.gradientHeight);
@@ -386,7 +382,7 @@ namespace anm2ed::imgui::wizard
   }
 
   // The left and right volume bars; older, taller bars show above newer ones, fading as they age.
-  void roll_bars_draw(ImDrawList* drawList, const std::deque<About::RollFrame>& history, ImVec2 min, ImVec2 max,
+  static void roll_bars_draw(ImDrawList* drawList, const std::deque<About::RollFrame>& history, ImVec2 min, ImVec2 max,
                       float scale)
   {
     auto width = BAR_WIDTH * scale;
@@ -412,7 +408,7 @@ namespace anm2ed::imgui::wizard
     }
   }
 
-  void roll_draw(About& about, Resources& resources, ImVec2 min, ImVec2 size)
+  static void roll_draw(About& about, Resources& resources, ImVec2 min, ImVec2 size)
   {
     auto& roll = about.roll;
     auto max = ImVec2(min.x + size.x, min.y + size.y);
@@ -458,11 +454,11 @@ namespace anm2ed::imgui::wizard
 
   void About::reset(Resources& resources)
   {
-    resource::audio::play(resources.music_track(), true);
+    audio_play(resources.music_track(), true);
     roll = {};
 
-    for (int i = 0; i < resource::friends::COUNT; ++i)
-      friend_state_load(friendStates[i], resource::friends::FRIENDS[i]);
+    for (int i = 0; i < FRIEND_COUNT; ++i)
+      friend_state_load(friendStates[i], FRIENDS[i]);
   }
 
   void About::update(Resources& resources)
@@ -479,4 +475,3 @@ namespace anm2ed::imgui::wizard
     auto rollSize = ImGui::GetContentRegionAvail();
     if (rollSize.x > 0.0f && rollSize.y > 0.0f) roll_draw(*this, resources, ImGui::GetCursorScreenPos(), rollSize);
   }
-}

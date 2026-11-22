@@ -11,8 +11,6 @@
 #include "types.h"
 #include "ui/theme.h"
 
-namespace anm2ed
-{
 #ifdef _WIN32
   constexpr auto FFMPEG_PATH_DEFAULT = "C:\\ffmpeg\\bin\\ffmpeg.exe";
 #else
@@ -58,7 +56,7 @@ namespace anm2ed
   X(IS_VSYNC, isVsync, STRING_UNDEFINED, BOOL, true)                                                                   \
   X(IS_DETACHABLE_WINDOWS, isDetachableWindows, STRING_UNDEFINED, BOOL, true)                                          \
   X(UI_SCALE, uiScale, STRING_UNDEFINED, FLOAT, 100.0f)                                                                \
-  X(THEME, theme, STRING_UNDEFINED, INT, imgui::theme::DARK)                                                           \
+  X(THEME, theme, STRING_UNDEFINED, INT, THEME_DARK)                                                           \
   X(LANGUAGE, language, STRING_UNDEFINED, INT, ENGLISH)                                                                \
                                                                                                                        \
   X(FILE_IS_AUTOSAVE, fileIsAutosave, STRING_UNDEFINED, BOOL, true)                                                    \
@@ -149,7 +147,7 @@ namespace anm2ed
   X(PREVIEW_IS_ALT_ICONS, previewIsAltIcons, STRING_UNDEFINED, BOOL, false)                                            \
   X(PREVIEW_IS_TRANSPARENT, animationPreviewTransparent, STRING_UNDEFINED, BOOL, false)                                \
   X(PREVIEW_OVERLAY_TRANSPARENCY, previewOverlayTransparency, STRING_UNDEFINED, FLOAT, 100.0f)                         \
-  X(PREVIEW_OVERLAY_DRAW_ORDER, previewOverlayDrawOrder, STRING_UNDEFINED, INT, types::overlay_draw_order::OVER)       \
+  X(PREVIEW_OVERLAY_DRAW_ORDER, previewOverlayDrawOrder, STRING_UNDEFINED, INT, OVERLAY_OVER)       \
   X(PREVIEW_START_ZOOM, previewStartZoom, STRING_UNDEFINED, FLOAT, 200.0f)                                             \
   X(PREVIEW_GRID_SIZE, previewGridSize, STRING_UNDEFINED, IVEC2, {32, 32})                                             \
   X(PREVIEW_GRID_OFFSET, previewGridOffset, STRING_UNDEFINED, IVEC2, {})                                               \
@@ -199,8 +197,8 @@ namespace anm2ed
   X(BAKE_IS_USE_ROOT_PIVOT, bakeIsUseRootPivot, STRING_UNDEFINED, BOOL, true)                                          \
                                                                                                                        \
   X(TIMELINE_ADD_ITEM_TYPE, timelineAddItemType, STRING_UNDEFINED, INT, LAYER)                                         \
-  X(TIMELINE_ADD_ITEM_DESTINATION, timelineAddItemDestination, STRING_UNDEFINED, INT, types::destination::ALL)         \
-  X(TIMELINE_ADD_ITEM_SOURCE, timelineAddItemSource, STRING_UNDEFINED, INT, types::source::NEW)                        \
+  X(TIMELINE_ADD_ITEM_DESTINATION, timelineAddItemDestination, STRING_UNDEFINED, INT, DESTINATION_ALL)         \
+  X(TIMELINE_ADD_ITEM_SOURCE, timelineAddItemSource, STRING_UNDEFINED, INT, SOURCE_NEW)                        \
   X(TIMELINE_IS_SHOW_UNUSED, timelineIsShowUnused, STRING_UNDEFINED, BOOL, true)                                       \
   X(TIMELINE_IS_ONLY_SHOW_LAYERS, timelineIsOnlyShowLayers, STRING_UNDEFINED, BOOL, false)                             \
   X(TIMELINE_IS_SOUND, timelineIsSound, STRING_UNDEFINED, BOOL, true)                                                  \
@@ -208,16 +206,16 @@ namespace anm2ed
   X(ONIONSKIN_IS_ENABLED, onionskinIsEnabled, STRING_UNDEFINED, BOOL, false)                                           \
   X(ONIONSKIN_BEFORE_COUNT, onionskinBeforeCount, STRING_UNDEFINED, INT, 0)                                            \
   X(ONIONSKIN_AFTER_COUNT, onionskinAfterCount, STRING_UNDEFINED, INT, 0)                                              \
-  X(ONIONSKIN_BEFORE_COLOR, onionskinBeforeColor, STRING_UNDEFINED, VEC3, types::color::RED)                           \
-  X(ONIONSKIN_AFTER_COLOR, onionskinAfterColor, STRING_UNDEFINED, VEC3, types::color::BLUE)                            \
-  X(ONIONSKIN_MODE, onionskinMode, STRING_UNDEFINED, INT, (int)types::OnionskinMode::TIME)                             \
+  X(ONIONSKIN_BEFORE_COLOR, onionskinBeforeColor, STRING_UNDEFINED, VEC3, COLOR_RED)                           \
+  X(ONIONSKIN_AFTER_COLOR, onionskinAfterColor, STRING_UNDEFINED, VEC3, COLOR_BLUE)                            \
+  X(ONIONSKIN_MODE, onionskinMode, STRING_UNDEFINED, INT, (int)OnionskinMode::TIME)                             \
   X(ONIONSKIN_IS_PIVOT_PATH, onionskinIsPivotPath, STRING_UNDEFINED, BOOL, false)                                      \
   X(ONIONSKIN_IS_ONLY_SELECTED, onionskinIsOnlySelected, STRING_UNDEFINED, BOOL, false)                                \
                                                                                                                        \
   X(TOOL, tool, STRING_UNDEFINED, INT, 0)                                                                              \
   X(TOOL_COLOR, toolColor, STRING_UNDEFINED, VEC4, {1.0, 1.0, 1.0, 1.0})                                               \
                                                                                                                        \
-  X(RENDER_TYPE, renderType, STRING_UNDEFINED, INT, render::GIF)                                                       \
+  X(RENDER_TYPE, renderType, STRING_UNDEFINED, INT, RENDER_GIF)                                                       \
   X(RENDER_PATH, renderPath, STRING_UNDEFINED, PATH, OUTPUT_PATH_DEFAULT)                                              \
   X(RENDER_ROWS, renderRows, STRING_UNDEFINED, INT, 0)                                                                 \
   X(RENDER_COLUMNS, renderColumns, STRING_UNDEFINED, INT, 0)                                                           \
@@ -225,7 +223,7 @@ namespace anm2ed
   X(RENDER_IS_USE_ANIMATION_BOUNDS, renderIsUseAnimationBounds, STRING_UNDEFINED, BOOL, true)                          \
   X(RENDER_IS_USE_ISOLATED_ANIMATION, renderIsUseIsolatedAnimation, STRING_UNDEFINED, BOOL, false)                     \
   X(RENDER_SCALE, renderScale, STRING_UNDEFINED, FLOAT, 100.0f)                                                        \
-  X(RENDER_FPS_MODE, renderFpsMode, STRING_UNDEFINED, INT, render::FPS_ANIMATION)                                      \
+  X(RENDER_FPS_MODE, renderFpsMode, STRING_UNDEFINED, INT, FPS_ANIMATION)                                      \
   X(RENDER_FFMPEG_PATH, renderFFmpegPath, STRING_UNDEFINED, PATH, FFMPEG_PATH_DEFAULT)
 
 #define SETTINGS_SHORTCUTS                                                                                             \
@@ -365,4 +363,3 @@ namespace anm2ed
       SETTINGS_WINDOWS
 #undef X
   };
-}

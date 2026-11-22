@@ -6,25 +6,21 @@
 #include "model/frames.h"
 #include "math_util.h"
 
-using namespace anm2ed::util;
-
-namespace anm2ed::model
-{
   constexpr unsigned RANDOM_MULTIPLIER_A = 73856093u;
   constexpr unsigned RANDOM_MULTIPLIER_B = 19349663u;
 
   glm::mat4 draw_quad_model_get(const Draw& draw)
   {
     auto& frame = draw.frame;
-    return math::quad_model_get(frame.size, frame.position, frame.pivot, math::percent_to_unit(frame.scale),
-                                frame.rotation, math::percent_to_unit(frame.skew));
+    return quad_model_get(frame.size, frame.position, frame.pivot, percent_to_unit(frame.scale),
+                                frame.rotation, percent_to_unit(frame.skew));
   }
 
   // Where an animation layer's frame puts its child: the frame's transform, with its pivot as the child's origin.
   glm::mat4 frame_child_model_get(const Frame& frame)
   {
-    return math::quad_model_get(glm::vec2(1.0f), frame.position, frame.pivot, math::percent_to_unit(frame.scale),
-                                frame.rotation, math::percent_to_unit(frame.skew));
+    return quad_model_get(glm::vec2(1.0f), frame.position, frame.pivot, percent_to_unit(frame.scale),
+                                frame.rotation, percent_to_unit(frame.skew));
   }
 
   // How many canvas pixels one spritesheet pixel of a layer draw covers (along its longer axis).
@@ -36,7 +32,7 @@ namespace anm2ed::model
   }
 
   // When an item is drawn: now, and for each sample its time if the track has a frame there.
-  std::vector<std::pair<int, float>> draw_times_get(const Animation& animation, const Track& track,
+  static std::vector<std::pair<int, float>> draw_times_get(const Animation& animation, const Track& track,
                                                     const DrawOptions& options)
   {
     std::vector<std::pair<int, float>> times{};
@@ -59,7 +55,7 @@ namespace anm2ed::model
   }
 
   // A keyframe's start frame in its child animation; a random start is fixed per layer and keyframe.
-  float child_start_get(const Frame& frame, int length, int seed, int index)
+  static float child_start_get(const Frame& frame, int length, int seed, int index)
   {
     if (!frame.isChildStartRandom) return (float)frame.childStart;
     return (float)((((unsigned)seed * RANDOM_MULTIPLIER_A) ^ ((unsigned)index * RANDOM_MULTIPLIER_B)) %
@@ -105,7 +101,7 @@ namespace anm2ed::model
     return {childModel, childAnimation};
   }
 
-  void animation_triggers_add(std::vector<TriggerFire>& fires, const Model& model, const Animation& animation, int time,
+  static void animation_triggers_add(std::vector<TriggerFire>& fires, const Model& model, const Animation& animation, int time,
                               const LibraryGet& library_get, std::vector<const Animation*>& playing, int layerId = -1)
   {
     if (animation.triggers.isVisible)
@@ -169,7 +165,7 @@ namespace anm2ed::model
   }
 
   // `playing` holds the animations being drawn into one another, so an animation never draws itself.
-  std::vector<Draw> animation_draws_get(const Model& model, const Animation& animation, const DrawOptions& options,
+  static std::vector<Draw> animation_draws_get(const Model& model, const Animation& animation, const DrawOptions& options,
                                         std::vector<const Animation*>& playing)
   {
     std::vector<Draw> draws{};
@@ -287,4 +283,3 @@ namespace anm2ed::model
     std::vector<const Animation*> playing{&animation};
     return animation_draws_get(model, animation, options, playing);
   }
-}

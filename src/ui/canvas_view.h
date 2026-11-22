@@ -13,8 +13,6 @@
 #include "settings.h"
 #include "tool.h"
 
-namespace anm2ed::imgui
-{
   // One frame of canvas input. `arrow` is the arrow keys pressed this frame (with key repeat), x right and y down.
   struct CanvasInput
   {
@@ -44,7 +42,7 @@ namespace anm2ed::imgui
   void frames_change_push(Manager&, const std::set<Reference>&, FrameChange, ChangeType = ChangeType::ADJUST);
   std::pair<glm::vec2, glm::vec2> rect_snap(glm::vec2, glm::vec2, bool, glm::ivec2, glm::ivec2);
   void tooltip_lines_draw(std::initializer_list<std::string>);
-  void tool_cursor_update(tool::Type, tool::AreaType, bool, bool, bool, StringType);
+  void tool_cursor_update(Tool, ToolArea, bool, bool, bool, StringType);
 
   class CanvasView : public Canvas
   {
@@ -69,4 +67,3 @@ namespace anm2ed::imgui
     CanvasView();
     bool is_focused_get() const;
   };
-}

@@ -11,12 +11,8 @@
 #include <algorithm>
 #include <format>
 
-using namespace anm2ed::types;
-using namespace anm2ed::util;
 using namespace glm;
 
-namespace anm2ed::imgui::wizard
-{
   GenerateAnimationFromGrid::GenerateAnimationFromGrid() : Canvas(vec2()) {}
 
   void GenerateAnimationFromGrid::update(Manager& manager, Document& document, Resources& resources, Settings& settings)
@@ -48,7 +44,7 @@ namespace anm2ed::imgui::wizard
     {
       ImGui::InputInt2(localize.get(LABEL_GENERATE_START_POSITION), value_ptr(startPosition));
       ImGui::InputInt2(localize.get(LABEL_GENERATE_FRAME_SIZE), value_ptr(size));
-      ImGui::InputFloat2(localize.get(BASIC_PIVOT), value_ptr(pivot), math::vec2_format_get(pivot));
+      ImGui::InputFloat2(localize.get(BASIC_PIVOT), value_ptr(pivot), vec2_format_get(pivot));
       ImGui::InputInt(localize.get(LABEL_GENERATE_ROWS), &rows, STEP, STEP_FAST);
       ImGui::InputInt(localize.get(LABEL_GENERATE_COLUMNS), &columns, STEP, STEP_FAST);
 
@@ -76,7 +72,7 @@ namespace anm2ed::imgui::wizard
     {
       auto& backgroundColor = settings.previewBackgroundColor;
       auto& isTransparent = settings.animationPreviewTransparent;
-      auto& shaderTexture = resources.shaders[resource::shader::TEXTURE];
+      auto& shaderTexture = resources.shaders[SHADER_TEXTURE];
 
       auto previewSize = ImVec2(ImGui::GetContentRegionAvail().x, size_without_footer_get(2).y);
       auto previewMin = ImGui::GetCursorScreenPos();
@@ -89,16 +85,16 @@ namespace anm2ed::imgui::wizard
 
       if (!layerReferences.empty())
       {
-        auto layer = model::item_get(model.content.layers, previewReference.itemID);
+        auto layer = item_get(model.content.layers, previewReference.itemID);
         auto sourceTexture = layer ? document.texture_get(layer->spritesheetId) : nullptr;
         if (sourceTexture && sourceTexture->is_valid())
         {
-          model::Track previewTrack{};
-          model::frames_generate_from_grid(previewTrack, startPosition, size, pivot, columns, count, delay);
+          Track previewTrack{};
+          frames_generate_from_grid(previewTrack, startPosition, size, pivot, columns, count, delay);
 
-          auto length = std::max(model::track_length_get(previewTrack), FRAME_DURATION_MIN);
+          auto length = std::max(track_length_get(previewTrack), FRAME_DURATION_MIN);
           auto sampleTime = std::min(time * (float)length, (float)length - 0.001f);
-          auto frame = model::frame_generate(previewTrack, sampleTime);
+          auto frame = frame_generate(previewTrack, sampleTime);
           auto textureSize = vec2(sourceTexture->size);
 
           if (textureSize.x > 0.0f && textureSize.y > 0.0f && frame.size.x > 0.0f && frame.size.y > 0.0f)
@@ -106,12 +102,12 @@ namespace anm2ed::imgui::wizard
             auto uvMin = frame.crop / textureSize;
             auto uvMax = (frame.crop + frame.size) / textureSize;
             mat4 transform =
-                transform_get(zoom) * math::quad_model_get(frame.size, frame.position, frame.pivot,
-                                                           math::percent_to_unit(frame.scale), frame.rotation,
-                                                           math::percent_to_unit(frame.skew));
-            auto vertices = math::uv_vertices_get(uvMin, uvMax);
+                transform_get(zoom) * quad_model_get(frame.size, frame.position, frame.pivot,
+                                                           percent_to_unit(frame.scale), frame.rotation,
+                                                           percent_to_unit(frame.skew));
+            auto vertices = uv_vertices_get(uvMin, uvMax);
 
-            texture_render(shaderTexture, resource::texture::id_get(*sourceTexture), transform, frame.tint,
+            texture_render(shaderTexture, texture_id_get(*sourceTexture), transform, frame.tint,
                            frame.colorOffset, vertices.data());
           }
         }
@@ -151,10 +147,10 @@ namespace anm2ed::imgui::wizard
       manager.command_push(
           {manager.selected, [=](Manager&, Document& document)
            {
-             edit::GridOptions options{queuedStartPosition, queuedSize,  queuedPivot,         queuedColumns,
+             GridOptions options{queuedStartPosition, queuedSize,  queuedPivot,         queuedColumns,
                                        queuedCount,         queuedDelay, queuedIsMakeRegions, queuedRegionNameFormat};
-             document.edit_apply(EDIT_GENERATE_ANIMATION_FROM_GRID, [&](model::Model& model)
-                                 { return edit::animation_grid_generate(model, queuedLayerReferences, options); });
+             document.edit_apply(EDIT_GENERATE_ANIMATION_FROM_GRID, [&](Model& model)
+                                 { return animation_grid_generate(model, queuedLayerReferences, options); });
            }});
       isEnd = true;
     }
@@ -164,4 +160,3 @@ namespace anm2ed::imgui::wizard
 
     if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize)) isEnd = true;
   }
-}

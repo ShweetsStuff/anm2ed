@@ -14,10 +14,8 @@
 
 // Document edits as plain functions of the model. Each returns the uids of the elements it created or changed that
 // the caller may want to select (the first one is the focus); selection itself stays with the UI.
-namespace anm2ed::edit
-{
   using Uids = std::vector<std::uint64_t>;
-  using ImageGet = std::function<const resource::Image*(int)>;
+  using ImageGet = std::function<const Image*(int)>;
 
   struct RowTarget
   {
@@ -90,59 +88,58 @@ namespace anm2ed::edit
   };
 
   bool is_frame_property_valid(FrameProperty, ItemType);
-  void frame_property_copy(model::Frame&, const model::Frame&, FrameProperty);
-  Uids frames_property_set(model::Model&, const std::set<Reference>&, FrameProperty, const model::Frame&);
+  void frame_property_copy(Frame&, const Frame&, FrameProperty);
+  Uids frames_property_set(Model&, const std::set<Reference>&, FrameProperty, const Frame&);
 
   std::map<Reference, std::set<int>> frames_by_track_get(const std::set<Reference>&);
 
-  Uids frame_insert(model::Model&, Reference, int);
-  Uids frames_delete(model::Model&, const std::set<Reference>&);
-  Uids frames_duplicate(model::Model&, const std::set<Reference>&, Reference);
-  Uids frames_reverse(model::Model&, const std::set<Reference>&);
-  Uids frames_bake(model::Model&, const std::set<Reference>&, int, bool, bool);
-  Uids frame_split(model::Model&, Reference, int);
-  Uids frames_split(model::Model&, const std::set<Reference>&, int);
-  Uids frames_move(model::Model&, const std::set<Reference>&, Reference, int);
-  Uids frame_durations_set(model::Model&, const std::map<Reference, int>&);
-  Uids trigger_at_frame_set(model::Model&, Reference, int);
-  Uids frames_paste(model::Model&, Reference, const std::set<Reference>&, const std::string&, int, std::string*);
-  Uids root_bake_into(model::Model&, const std::set<Reference>&, const std::set<Reference>&, RootBakeOptions);
+  Uids frame_insert(Model&, Reference, int);
+  Uids frames_delete(Model&, const std::set<Reference>&);
+  Uids frames_duplicate(Model&, const std::set<Reference>&, Reference);
+  Uids frames_reverse(Model&, const std::set<Reference>&);
+  Uids frames_bake(Model&, const std::set<Reference>&, int, bool, bool);
+  Uids frame_split(Model&, Reference, int);
+  Uids frames_split(Model&, const std::set<Reference>&, int);
+  Uids frames_move(Model&, const std::set<Reference>&, Reference, int);
+  Uids frame_durations_set(Model&, const std::map<Reference, int>&);
+  Uids trigger_at_frame_set(Model&, Reference, int);
+  Uids frames_paste(Model&, Reference, const std::set<Reference>&, const std::string&, int, std::string*);
+  Uids root_bake_into(Model&, const std::set<Reference>&, const std::set<Reference>&, RootBakeOptions);
 
-  Uids items_remove(model::Model&, int, const std::map<int, std::set<int>>&, const std::map<int, std::set<int>>&);
-  Uids items_group(model::Model&, int, int, const std::set<int>&, const std::string&);
-  Uids items_move(model::Model&, int, int, const std::set<int>&, const std::set<int>&, RowTarget, bool, bool);
-  Uids animation_length_fit(model::Model&, int);
-  int item_add(model::Model&, ItemType, int, int, model::Layer, model::Null, int, types::destination::Type);
+  Uids items_remove(Model&, int, const std::map<int, std::set<int>>&, const std::map<int, std::set<int>>&);
+  Uids items_group(Model&, int, int, const std::set<int>&, const std::string&);
+  Uids items_move(Model&, int, int, const std::set<int>&, const std::set<int>&, RowTarget, bool, bool);
+  Uids animation_length_fit(Model&, int);
+  int item_add(Model&, ItemType, int, int, Layer, Null, int, Destination);
 
-  std::set<int> animation_group_ids_get(const model::Model&);
-  std::set<int> animation_group_indices_get(const model::Model&, int);
-  void animation_groups_remove(model::Model&, const std::set<int>&);
-  Uids animation_add(model::Model&, int, int, int, const std::string&);
-  Uids animations_remove(model::Model&, const std::set<int>&, const std::set<int>&);
-  Uids animations_move(model::Model&, const std::set<int>&, const std::set<int>&, AnimationTarget);
-  Uids animations_group(model::Model&, const std::set<int>&, const std::string&);
-  Uids animations_paste(model::Model&, const std::string&, int, int, std::set<int>&, std::string*);
-  Uids animations_merge(model::Model&, int, std::set<int>, types::merge::Type, bool, const std::set<int>&);
+  std::set<int> animation_group_ids_get(const Model&);
+  std::set<int> animation_group_indices_get(const Model&, int);
+  void animation_groups_remove(Model&, const std::set<int>&);
+  Uids animation_add(Model&, int, int, int, const std::string&);
+  Uids animations_remove(Model&, const std::set<int>&, const std::set<int>&);
+  Uids animations_move(Model&, const std::set<int>&, const std::set<int>&, AnimationTarget);
+  Uids animations_group(Model&, const std::set<int>&, const std::string&);
+  Uids animations_paste(Model&, const std::string&, int, int, std::set<int>&, std::string*);
+  Uids animations_merge(Model&, int, std::set<int>, Merge, bool, const std::set<int>&);
 
   std::string region_name_get(const std::string&, int);
-  Uids regions_generate(model::Model&, const std::set<int>&, const std::set<Reference>&, const std::string&,
+  Uids regions_generate(Model&, const std::set<int>&, const std::set<Reference>&, const std::string&,
                         RegionFrameMapping);
-  Uids regions_scan(model::Model&);
-  Uids region_frames_sync(model::Model&);
-  Uids regions_paste(model::Model&, int, const std::string&, int, std::string*);
-  Uids animation_grid_generate(model::Model&, const std::vector<Reference>&, const GridOptions&);
-  Uids frames_change_apply(model::Model&, const ChangeTargets&, FrameChange, ChangeType);
-  bool regions_trim(model::Model&, int, const std::set<int>&, const resource::Image&);
-  std::optional<resource::Image> spritesheet_pack(model::Model&, int, const resource::Image&, int);
-  std::optional<resource::Image> spritesheets_merge(model::Model&, const std::set<int>&, const ImageGet&, bool, bool,
+  Uids regions_scan(Model&);
+  Uids region_frames_sync(Model&);
+  Uids regions_paste(Model&, int, const std::string&, int, std::string*);
+  Uids animation_grid_generate(Model&, const std::vector<Reference>&, const GridOptions&);
+  Uids frames_change_apply(Model&, const ChangeTargets&, FrameChange, ChangeType);
+  bool regions_trim(Model&, int, const std::set<int>&, const Image&);
+  std::optional<Image> spritesheet_pack(Model&, int, const Image&, int);
+  std::optional<Image> spritesheets_merge(Model&, const std::set<int>&, const ImageGet&, bool, bool,
                                                     bool, Origin);
 
   // Where a spritesheet path of a document (this one, or a library) points, from this document.
-  using SpritesheetPathGet = std::function<std::filesystem::path(const model::Model&, const std::filesystem::path&)>;
-  model::Model animation_layers_flatten(model::Model, const model::LibraryGet&, const SpritesheetPathGet&,
+  using SpritesheetPathGet = std::function<std::filesystem::path(const Model&, const std::filesystem::path&)>;
+  Model animation_layers_flatten(Model, const LibraryGet&, const SpritesheetPathGet&,
                                        const std::set<int>& = {});
-  Uids content_remove(model::Model&, ElementType, const std::set<int>&, int, const model::LibraryGet&,
+  Uids content_remove(Model&, ElementType, const std::set<int>&, int, const LibraryGet&,
                       const SpritesheetPathGet&);
-  model::Model isaac_bridge(model::Model);
-  bool file_merge(model::Model&, const std::filesystem::path&, const std::filesystem::path&, FileMergePreset);
-}
+  Model isaac_bridge(Model);
+  bool file_merge(Model&, const std::filesystem::path&, const std::filesystem::path&, FileMergePreset);

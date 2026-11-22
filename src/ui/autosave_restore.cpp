@@ -5,11 +5,6 @@
 #include "path.h"
 #include "ui/layout.h"
 
-using namespace anm2ed::resource;
-using namespace anm2ed::util;
-
-namespace anm2ed::imgui
-{
   void AutosaveRestore::update(Manager& manager)
   {
     if (!isInitialized)
@@ -32,7 +27,7 @@ namespace anm2ed::imgui
       {
         for (auto& file : manager.autosaveFiles)
         {
-          auto label = std::format(FILE_LABEL_FORMAT, path::to_utf8(file.filename()), path::to_utf8(file));
+          auto label = std::format(FILE_LABEL_FORMAT, path_to_utf8(file.filename()), path_to_utf8(file));
           ImGui::TextUnformatted(label.c_str());
         }
       }
@@ -59,4 +54,3 @@ namespace anm2ed::imgui
       ImGui::EndPopup();
     }
   }
-}

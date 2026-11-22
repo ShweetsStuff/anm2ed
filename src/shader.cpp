@@ -9,8 +9,6 @@
 #include "log.h"
 #include "model/model.h"
 
-namespace anm2ed::resource::shader
-{
 #define SHADER_GLES_WORD_REPLACEMENTS                                                                                  \
   X("texture2D", "texture")                                                                                            \
   X("gl_FragColor", "fragColor")
@@ -49,9 +47,9 @@ namespace anm2ed::resource::shader
 #undef X
   };
 
-  bool is_shader_identifier(char character) { return std::isalnum((unsigned char)character) || character == '_'; }
+  static bool is_shader_identifier(char character) { return std::isalnum((unsigned char)character) || character == '_'; }
 
-  std::string shader_text_replace(std::string string, std::string_view from, std::string_view to)
+  static std::string shader_text_replace(std::string string, std::string_view from, std::string_view to)
   {
     if (from.empty()) return string;
     std::size_t position{};
@@ -63,7 +61,7 @@ namespace anm2ed::resource::shader
     return string;
   }
 
-  std::string shader_word_replace(std::string string, std::string_view from, std::string_view to)
+  static std::string shader_word_replace(std::string string, std::string_view from, std::string_view to)
   {
     if (from.empty()) return string;
 
@@ -84,7 +82,7 @@ namespace anm2ed::resource::shader
     return string;
   }
 
-  std::string shader_space_collapse(std::string_view string)
+  static std::string shader_space_collapse(std::string_view string)
   {
     std::string out{};
     bool isSpace{};
@@ -103,7 +101,7 @@ namespace anm2ed::resource::shader
     return out;
   }
 
-  std::string shader_trim_get(std::string_view line)
+  static std::string shader_trim_get(std::string_view line)
   {
     std::size_t begin{};
     while (begin < line.size() && std::isspace((unsigned char)line[begin]))
@@ -116,7 +114,7 @@ namespace anm2ed::resource::shader
     return std::string(line.substr(begin, end - begin));
   }
 
-  bool is_shader_word_present(std::string_view string, std::string_view word)
+  static bool is_shader_word_present(std::string_view string, std::string_view word)
   {
     std::size_t position{};
     while ((position = string.find(word, position)) != std::string_view::npos)
@@ -130,7 +128,7 @@ namespace anm2ed::resource::shader
     return false;
   }
 
-  bool is_shader_line_skipped(std::string_view line)
+  static bool is_shader_line_skipped(std::string_view line)
   {
     auto normalized = shader_space_collapse(shader_trim_get(line));
     if (normalized.starts_with("#version")) return true;
@@ -143,7 +141,7 @@ namespace anm2ed::resource::shader
     return false;
   }
 
-  std::string shader_precision_erase(std::string line)
+  static std::string shader_precision_erase(std::string line)
   {
     line = shader_word_replace(std::move(line), "lowp", "");
     line = shader_word_replace(std::move(line), "mediump", "");
@@ -151,7 +149,7 @@ namespace anm2ed::resource::shader
     return line;
   }
 
-  std::string shader_line_convert(std::string line, ShaderStage stage)
+  static std::string shader_line_convert(std::string line, ShaderStage stage)
   {
     line = shader_precision_erase(std::move(line));
     line = shader_word_replace(std::move(line), "attribute", "in");
@@ -162,20 +160,20 @@ namespace anm2ed::resource::shader
     return line;
   }
 
-  std::string shader_fragment_declarations_get(std::string_view body)
+  static std::string shader_fragment_declarations_get(std::string_view body)
   {
     if (!is_shader_word_present(body, "fragColor")) return {};
     if (body.find("out vec4 fragColor") != std::string_view::npos) return {};
     return "out vec4 fragColor;\n";
   }
 
-  std::string uniform_name_clean_get(std::string name)
+  static std::string uniform_name_clean_get(std::string name)
   {
     if (name.ends_with("[0]")) name.erase(name.size() - 3);
     return name;
   }
 
-  std::string uniform_float_string_get(float value) { return std::format("{:.6g}", value); }
+  static std::string uniform_float_string_get(float value) { return std::format("{:.6g}", value); }
 
   UniformBinding uniform_binding_auto_get(std::string_view name, UniformValueType type)
   {
@@ -244,16 +242,16 @@ namespace anm2ed::resource::shader
 
   bool is_uniform_value_vector(UniformValueType type) { return UNIFORM_VALUE_TYPE_INFOS[type].componentCount > 0; }
 
-  bool is_component_binding_valid(UniformBinding binding)
+  static bool is_component_binding_valid(UniformBinding binding)
   {
     return binding == UNIFORM_BINDING_MANUAL || binding == UNIFORM_BINDING_PLAYBACK_TIME;
   }
 
-  void uniform_configs_apply(const model::Shader& shader, std::vector<Uniform>& uniforms)
+  void uniform_configs_apply(const Shader& shader, std::vector<ShaderUniform>& uniforms)
   {
     for (auto& uniform : uniforms)
     {
-      auto config = std::ranges::find(shader.uniforms, uniform.name, &model::Uniform::name);
+      auto config = std::ranges::find(shader.uniforms, uniform.name, &Uniform::name);
       if (config == shader.uniforms.end()) continue;
 
       if (auto binding = uniform_binding_get(config->binding);
@@ -262,7 +260,7 @@ namespace anm2ed::resource::shader
       if (!config->value.empty()) uniform_value_parse(uniform, config->value);
       for (int index = 0; index < (int)uniform.components.size(); ++index)
       {
-        auto component = std::ranges::find(config->components, index, &model::Component::index);
+        auto component = std::ranges::find(config->components, index, &Component::index);
         if (component == config->components.end()) continue;
         if (auto binding = uniform_binding_get(component->binding);
             !component->binding.empty() && is_component_binding_valid(binding))
@@ -273,18 +271,18 @@ namespace anm2ed::resource::shader
   }
 
   // Drops saved uniform settings the compiled shader no longer has or cannot use.
-  bool uniform_configs_trim(model::Shader& shader, const std::vector<Uniform>& uniforms)
+  bool uniform_configs_trim(Shader& shader, const std::vector<ShaderUniform>& uniforms)
   {
     bool isChanged = std::erase_if(shader.uniforms,
-                                   [&](const model::Uniform& config)
+                                   [&](const Uniform& config)
                                    {
-                                     return std::ranges::none_of(uniforms, [&](const Uniform& uniform)
+                                     return std::ranges::none_of(uniforms, [&](const ShaderUniform& uniform)
                                                                  { return uniform.name == config.name; });
                                    }) > 0;
 
     for (auto& config : shader.uniforms)
     {
-      auto& uniform = *std::ranges::find(uniforms, config.name, &Uniform::name);
+      auto& uniform = *std::ranges::find(uniforms, config.name, &ShaderUniform::name);
       if (!config.binding.empty() && !is_uniform_binding_valid(uniform_binding_get(config.binding), uniform.valueType))
       {
         config.binding.clear();
@@ -294,7 +292,7 @@ namespace anm2ed::resource::shader
       auto componentCount = UNIFORM_VALUE_TYPE_INFOS[uniform.valueType].componentCount;
       auto isComponents = uniform_binding_get(config.binding) == UNIFORM_BINDING_COMPONENTS;
       isChanged |=
-          std::erase_if(config.components, [&](const model::Component& component)
+          std::erase_if(config.components, [&](const Component& component)
                         { return !isComponents || component.index < 0 || component.index >= componentCount; }) > 0;
 
       for (auto& component : config.components)
@@ -308,9 +306,9 @@ namespace anm2ed::resource::shader
     return isChanged;
   }
 
-  void uniform_config_save(model::Shader& shader, const Uniform& uniform)
+  void uniform_config_save(Shader& shader, const ShaderUniform& uniform)
   {
-    auto config = std::ranges::find(shader.uniforms, uniform.name, &model::Uniform::name);
+    auto config = std::ranges::find(shader.uniforms, uniform.name, &Uniform::name);
     if (config == shader.uniforms.end()) config = shader.uniforms.insert(shader.uniforms.end(), {.name = uniform.name});
 
     config->binding = std::string(uniform_binding_value_get(uniform.binding));
@@ -349,7 +347,7 @@ namespace anm2ed::resource::shader
     }
   }
 
-  void uniform_value_parse(Uniform& uniform, std::string_view value)
+  void uniform_value_parse(ShaderUniform& uniform, std::string_view value)
   {
     if (value.empty()) return;
 
@@ -367,7 +365,7 @@ namespace anm2ed::resource::shader
     uniform.components[3].value = uniform.value.w;
   }
 
-  std::string uniform_value_string_get(const Uniform& uniform)
+  std::string uniform_value_string_get(const ShaderUniform& uniform)
   {
     switch (uniform.valueType)
     {
@@ -391,14 +389,14 @@ namespace anm2ed::resource::shader
     }
   }
 
-  std::vector<Uniform> uniforms_get(GLuint id)
+  static std::vector<ShaderUniform> uniforms_get(GLuint id)
   {
     GLint count{};
     GLint maxLength{};
     glGetProgramiv(id, GL_ACTIVE_UNIFORMS, &count);
     glGetProgramiv(id, GL_ACTIVE_UNIFORM_MAX_LENGTH, &maxLength);
 
-    std::vector<Uniform> uniforms{};
+    std::vector<ShaderUniform> uniforms{};
     if (count <= 0 || maxLength <= 0) return uniforms;
 
     std::string name((std::size_t)maxLength, '\0');
@@ -412,7 +410,7 @@ namespace anm2ed::resource::shader
       auto uniformName = uniform_name_clean_get(std::string(name.data(), (std::size_t)length));
       auto valueType = uniform_value_type_get(type);
 
-      Uniform uniform{};
+      ShaderUniform uniform{};
       uniform.name = uniformName;
       uniform.location = glGetUniformLocation(id, uniformName.c_str());
       uniform.glType = type;
@@ -453,10 +451,7 @@ namespace anm2ed::resource::shader
   std::string gles_fragment_convert(std::string_view source) { return gles_convert(source, SHADER_STAGE_FRAGMENT); }
 
   std::string gles_vertex_convert(std::string_view source) { return gles_convert(source, SHADER_STAGE_VERTEX); }
-}
 
-namespace anm2ed::resource
-{
   ShaderCompileResult shader_compile(const char* vertex, const char* fragment)
   {
     ShaderCompileResult result{};
@@ -493,7 +488,7 @@ namespace anm2ed::resource
       glAttachShader(result.id, vertexHandle);
       glAttachShader(result.id, fragmentHandle);
 
-      for (const auto& alias : shader::ATTRIBUTE_ALIASES)
+      for (const auto& alias : ATTRIBUTE_ALIASES)
         glBindAttribLocation(result.id, alias.index, alias.name);
 
       glLinkProgram(result.id);
@@ -511,7 +506,7 @@ namespace anm2ed::resource
         result.output += std::format("Shader link log:\n{}\n", linkLog.c_str());
       }
       else
-        result.uniforms = shader::uniforms_get(result.id);
+        result.uniforms = uniforms_get(result.id);
     }
 
     glDeleteShader(vertexHandle);
@@ -526,9 +521,9 @@ namespace anm2ed::resource
     return result;
   }
 
-  Shader::Shader() = default;
+  ShaderProgram::ShaderProgram() = default;
 
-  Shader::Shader(const char* vertex, const char* fragment)
+  ShaderProgram::ShaderProgram(const char* vertex, const char* fragment)
   {
     auto result = shader_compile(vertex, fragment);
     id = result.id;
@@ -536,9 +531,9 @@ namespace anm2ed::resource
     if (!result.output.empty()) logger.error(result.output);
   }
 
-  Shader::Shader(Shader&& other) noexcept { *this = std::move(other); }
+  ShaderProgram::ShaderProgram(ShaderProgram&& other) noexcept { *this = std::move(other); }
 
-  Shader& Shader::operator=(Shader&& other) noexcept
+  ShaderProgram& ShaderProgram::operator=(ShaderProgram&& other) noexcept
   {
     if (this != &other)
     {
@@ -550,10 +545,9 @@ namespace anm2ed::resource
     return *this;
   }
 
-  Shader::~Shader()
+  ShaderProgram::~ShaderProgram()
   {
     if (is_valid()) glDeleteProgram(id);
   }
 
-  bool Shader::is_valid() const { return id != 0; }
-}
+  bool ShaderProgram::is_valid() const { return id != 0; }

@@ -5,17 +5,15 @@
 #include "ui/layout.h"
 #include "ui/shortcut.h"
 
-namespace anm2ed::imgui
-{
-  bool is_action_shortcut_valid(int shortcutType) { return shortcutType >= 0 && shortcutType < SHORTCUT_COUNT; }
+  static bool is_action_shortcut_valid(int shortcutType) { return shortcutType >= 0 && shortcutType < SHORTCUT_COUNT; }
 
-  std::string action_shortcut_text_get(const Action& action, Settings& settings)
+  static std::string action_shortcut_text_get(const Action& action, Settings& settings)
   {
     if (!is_action_shortcut_valid(action.shortcut)) return {};
     return settings.*SHORTCUT_MEMBERS[action.shortcut];
   }
 
-  ImGuiKeyChord action_chord_get(const Action& action, Manager& manager)
+  static ImGuiKeyChord action_chord_get(const Action& action, Manager& manager)
   {
     if (!is_action_shortcut_valid(action.shortcut)) return ImGuiKey_None;
     return manager.chords[action.shortcut];
@@ -55,7 +53,7 @@ namespace anm2ed::imgui
         { manager.command_push({manager.selected, [](Manager&, Document& document) { document.redo(); }}); });
   }
 
-  void action_items_menu_draw(std::vector<Action>& items, Settings& settings)
+  static void action_items_menu_draw(std::vector<Action>& items, Settings& settings)
   {
     bool isPreviousSeparator{};
     for (auto& action : items)
@@ -111,7 +109,7 @@ namespace anm2ed::imgui
     return true;
   }
 
-  void actions_shortcuts_update(Actions& actions, Manager& manager, types::shortcut::Type shortcutType)
+  void actions_shortcuts_update(Actions& actions, Manager& manager, ShortcutScope shortcutType)
   {
     for (auto& action : actions.items)
     {
@@ -140,4 +138,3 @@ namespace anm2ed::imgui
     }
     isSameLine = true;
   }
-}

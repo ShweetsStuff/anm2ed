@@ -7,8 +7,6 @@
 #include "settings.h"
 #include "localization.h"
 
-namespace anm2ed::imgui::popup
-{
   class ItemProperties
   {
     PopupHelper popup{PopupHelper(LABEL_TIMELINE_PROPERTIES_POPUP, POPUP_SMALL_NO_HEIGHT)};
@@ -20,4 +18,3 @@ namespace anm2ed::imgui::popup
     void open();
     bool update(Manager&, Settings&, Document&, Reference&);
   };
-}

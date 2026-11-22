@@ -17,8 +17,6 @@ using socket_handle = int;
 constexpr socket_handle SOCKET_INVALID = -1;
 #endif
 
-namespace anm2ed
-{
   enum SocketRole
   {
     SERVER,
@@ -60,4 +58,3 @@ namespace anm2ed
     bool is_valid() const;
     int last_error() const;
   };
-}

@@ -6,8 +6,6 @@
 #include "model/model.h"
 
 // The only place the model meets XML: reading and writing documents (with the SourceDocument copy) and clipboard text.
-namespace anm2ed::model
-{
   // What the game's copy of a save can't keep as it is: how many of each.
   struct IsaacIssues
   {
@@ -44,4 +42,3 @@ namespace anm2ed::model
 
   template <class Item> std::string item_to_string(const Item&);
   template <class Item> std::vector<Item> items_from_string(const std::string&, std::string* = nullptr);
-}

@@ -28,26 +28,20 @@
 #include "texture.h"
 #include "ui/toast.h"
 
-using namespace anm2ed::imgui;
-using namespace anm2ed::resource;
-using namespace anm2ed::util;
-
-namespace anm2ed
-{
   bool animation_render(const std::filesystem::path& ffmpegPath, const std::filesystem::path& path,
                         const std::vector<std::filesystem::path>& framePaths, AudioStream& audioStream,
-                        render::Type type, int fps)
+                        RenderType type, int fps)
   {
     if (framePaths.empty() || ffmpegPath.empty() || path.empty()) return false;
     fps = std::max(fps, 1);
 
-    auto pathString = path::to_utf8(path);
-    auto ffmpegPathString = path::to_utf8(ffmpegPath);
+    auto pathString = path_to_utf8(path);
+    auto ffmpegPathString = path_to_utf8(ffmpegPath);
     auto loggerPath = logger.path();
-    auto loggerPathString = path::to_utf8(loggerPath);
+    auto loggerPathString = path_to_utf8(loggerPath);
 #if _WIN32
     auto ffmpegTempPath = loggerPath.parent_path() / "ffmpeg_log.temp.txt";
-    auto ffmpegTempPathString = path::to_utf8(ffmpegTempPath);
+    auto ffmpegTempPathString = path_to_utf8(ffmpegTempPath);
     std::error_code ffmpegTempError;
     std::filesystem::remove(ffmpegTempPath, ffmpegTempError);
 #endif
@@ -68,16 +62,16 @@ namespace anm2ed
       }
     };
 
-    if (type != render::GIF && !audioStream.stream.empty() && audioStream.spec.freq > 0 &&
+    if (type != RENDER_GIF && !audioStream.stream.empty() && audioStream.spec.freq > 0 &&
         audioStream.spec.channels > 0)
     {
       auto tempFilenameUtf8 =
           std::format("anm2ed_audio_{}_{}.f32", std::hash<std::string>{}(pathString), SDL_GetTicks());
-      audioPath = temporaryDirectory / path::from_utf8(tempFilenameUtf8);
+      audioPath = temporaryDirectory / path_from_utf8(tempFilenameUtf8);
 
       auto data = (const char*)audioStream.stream.data();
       auto byteCount = audioStream.stream.size() * sizeof(float);
-      if (file::write_string(audioPath, std::string_view(data, byteCount), "wb"))
+      if (file_text_save(audioPath, std::string_view(data, byteCount), "wb"))
       {
         auto sampleRate = std::max(audioStream.spec.freq, 1);
         auto channels = std::max(audioStream.spec.channels, 1);
@@ -88,17 +82,17 @@ namespace anm2ed
           audioDurationFilter += std::format("apad,atrim=duration={:.9f}", expectedDurationSeconds);
 
         audioInputArguments =
-            std::format("-f f32le -ar {0} -ac {1} -i \"{2}\"", sampleRate, channels, path::to_utf8(audioPath));
+            std::format("-f f32le -ar {0} -ac {1} -i \"{2}\"", sampleRate, channels, path_to_utf8(audioPath));
 
         switch (type)
         {
-          case render::WEBM:
+          case RENDER_WEBM:
             audioOutputArguments = "-c:a libopus -b:a 160k -shortest";
             break;
-          case render::OGV:
+          case RENDER_OGV:
             audioOutputArguments = "-c:a libvorbis -q:a 4 -shortest";
             break;
-          case render::MP4:
+          case RENDER_MP4:
             audioOutputArguments = "-c:a aac -b:a 192k -shortest";
             break;
           default:
@@ -115,8 +109,8 @@ namespace anm2ed
       }
     }
 
-    auto framePattern = temporaryDirectory / path::from_utf8("frame_%06d.png");
-    auto framePatternString = path::to_utf8(framePattern);
+    auto framePattern = temporaryDirectory / path_from_utf8("frame_%06d.png");
+    auto framePatternString = path_to_utf8(framePattern);
     command =
         std::format("\"{0}\" -y -framerate {1} -start_number 0 -i \"{2}\"", ffmpegPathString, fps, framePatternString);
 
@@ -125,23 +119,23 @@ namespace anm2ed
 
     switch (type)
     {
-      case render::GIF:
+      case RENDER_GIF:
         command += " -lavfi \"split[s0][s1];[s0]palettegen=stats_mode=full:reserve_transparent=1[p];"
                    "[s1][p]paletteuse=dither=floyd_steinberg:alpha_threshold=128\""
                    " -loop 0";
         command += std::format(" \"{}\"", pathString);
         break;
-      case render::WEBM:
+      case RENDER_WEBM:
         command += " -c:v libvpx-vp9 -crf 30 -b:v 0 -pix_fmt yuva420p -row-mt 1 -threads 0 -speed 2 -auto-alt-ref 0";
         if (!audioOutputArguments.empty()) command += " " + audioOutputArguments;
         command += std::format(" \"{}\"", pathString);
         break;
-      case render::OGV:
+      case RENDER_OGV:
         command += " -vf \"format=yuv420p,scale=trunc(iw/2)*2:trunc(ih/2)*2\" -c:v libtheora -q:v 7";
         if (!audioOutputArguments.empty()) command += " " + audioOutputArguments;
         command += std::format(" \"{}\"", pathString);
         break;
-      case render::MP4:
+      case RENDER_MP4:
         command += " -vf \"format=yuv420p,scale=trunc(iw/2)*2:trunc(ih/2)*2\" -c:v libx265 -crf 20 -preset slow"
                    " -tag:v hvc1 -movflags +faststart";
         if (!audioOutputArguments.empty()) command += " " + audioOutputArguments;
@@ -182,24 +176,21 @@ namespace anm2ed
     audio_remove();
     return true;
   }
-}
 
-namespace anm2ed::render
-{
   constexpr int TEMP_DIRECTORY_ATTEMPTS = 1000;
   constexpr glm::vec4 BOUNDS_DEFAULT = {-32.0f, -32.0f, 64.0f, 64.0f};
   constexpr int ALPHA_OPAQUE = 255;
   constexpr float CHANNEL_MAX = 255.0f;
 
-  std::filesystem::path frame_filename_get(const std::filesystem::path& format, int index, Type type)
+  static std::filesystem::path frame_filename_get(const std::filesystem::path& format, int index, RenderType type)
   {
-    auto fallback = path::from_utf8(std::format("frame_{:06}.png", index));
-    if (type != PNGS) return fallback;
+    auto fallback = path_from_utf8(std::format("frame_{:06}.png", index));
+    if (type != RENDER_PNGS) return fallback;
     try
     {
-      auto filename = path::from_utf8(std::vformat(path::to_utf8(format), std::make_format_args(index))).filename();
+      auto filename = path_from_utf8(std::vformat(path_to_utf8(format), std::make_format_args(index))).filename();
       if (filename.empty()) return fallback;
-      if (filename.extension().empty()) filename.replace_extension(EXTENSIONS[SPRITESHEET]);
+      if (filename.extension().empty()) filename.replace_extension(RENDER_EXTENSIONS[RENDER_SPRITESHEET]);
       return filename;
     }
     catch (...)
@@ -209,10 +200,10 @@ namespace anm2ed::render
   }
 
   // PNG sequences go straight to their folder; other outputs collect frames in a temporary folder beside the output.
-  std::filesystem::path frames_directory_create(const RecorderOptions& options)
+  static std::filesystem::path frames_directory_create(const RecorderOptions& options)
   {
     std::error_code ec{};
-    if (options.type == PNGS)
+    if (options.type == RENDER_PNGS)
     {
       std::filesystem::create_directories(options.path, ec);
       return options.path;
@@ -225,7 +216,7 @@ namespace anm2ed::render
             .count();
     for (int suffix = 0; suffix < TEMP_DIRECTORY_ATTEMPTS; ++suffix)
     {
-      auto temporary = directory / path::from_utf8(std::format(".anm2ed_render_tmp_{}_{}", timestamp, suffix));
+      auto temporary = directory / path_from_utf8(std::format(".anm2ed_render_tmp_{}_{}", timestamp, suffix));
       if (std::filesystem::create_directories(temporary, ec)) return temporary;
     }
     return {};
@@ -234,7 +225,7 @@ namespace anm2ed::render
   // Rendered pixels are premultiplied; outputs on a transparent background want straight alpha.
   void pixels_unpremultiply(std::vector<uint8_t>& pixels)
   {
-    for (std::size_t index = 0; index + 3 < pixels.size(); index += image::CHANNELS)
+    for (std::size_t index = 0; index + 3 < pixels.size(); index += IMAGE_CHANNELS)
     {
       auto alpha = pixels[index + 3];
       if (alpha == ALPHA_OPAQUE) continue;
@@ -246,15 +237,15 @@ namespace anm2ed::render
     }
   }
 
-  void sounds_detach(const Document& document, MIX_Mixer* mixer)
+  static void sounds_detach(const Document& document, MIX_Mixer* mixer)
   {
     for (auto sound : document.sounds_get())
-      audio::track_detach(*sound, mixer);
+      audio_track_detach(*sound, mixer);
   }
 
   // Mixes each frame's trigger sounds into one stream at the render frame rate.
-  bool audio_stream_generate(AudioStream& audioStream, const Document& document,
-                             const std::vector<std::vector<const resource::AudioData*>>& frameSounds, int fps)
+  static bool audio_stream_generate(AudioStream& audioStream, const Document& document,
+                             const std::vector<std::vector<const AudioData*>>& frameSounds, int fps)
   {
     audioStream.stream.clear();
     if (frameSounds.empty() || fps <= 0) return true;
@@ -272,7 +263,7 @@ namespace anm2ed::render
     for (const auto& sounds : frameSounds)
     {
       for (auto sound : sounds)
-        audio::play(*sound, false, mixer);
+        audio_play(*sound, false, mixer);
       accumulator += framesPerStep;
       auto sampleFrames = std::max((int)std::floor(accumulator), 1);
       accumulator -= (double)sampleFrames;
@@ -313,14 +304,14 @@ namespace anm2ed::render
 
   bool HeadlessGL::is_valid() const { return context != nullptr; }
 
-  glm::vec4 animation_bounds_get(const Document& document, const model::Animation& animation, bool isRootTransform)
+  glm::vec4 animation_bounds_get(const Document& document, const Animation& animation, bool isRootTransform)
   {
-    auto bounds = model::animation_rect(document.model, animation, isRootTransform, document.library_resolver_get());
+    auto bounds = animation_rect(document.model, animation, isRootTransform, document.library_resolver_get());
     return bounds != glm::vec4(-1.0f) ? bounds : BOUNDS_DEFAULT;
   }
 
-  std::vector<uint8_t> animation_frame_render(Canvas& canvas, Shader& shader, Document& document,
-                                              const model::Animation& animation, float time, glm::vec4 bounds,
+  std::vector<uint8_t> animation_frame_render(Canvas& canvas, ShaderProgram& shader, Document& document,
+                                              const Animation& animation, float time, glm::vec4 bounds,
                                               float scale, glm::vec4 background, bool isRootTransform)
   {
     canvas.size_set(glm::vec2(glm::max(glm::ivec2(glm::ceil(glm::vec2(bounds.z, bounds.w) * scale)), glm::ivec2(1))));
@@ -334,7 +325,7 @@ namespace anm2ed::render
         shader, document.model, animation,
         {.time = time, .isRootTransform = isRootTransform, .library_get = document.library_resolver_get()},
         canvas.transform_get(zoom, pan),
-        [&](const model::Draw& draw) { return document.draw_image_get(draw, scale * model::draw_scale_get(draw)); },
+        [&](const Draw& draw) { return document.draw_image_get(draw, scale * draw_scale_get(draw)); },
         [&](int id) { return document.shader_get(id); });
     auto pixels = canvas.pixels_get();
     canvas.unbind();
@@ -361,7 +352,7 @@ namespace anm2ed::render
   bool Recorder::is_sound_frame() const { return (int)std::floor(time_get()) != soundTime; }
 
   bool Recorder::frame_capture(std::vector<uint8_t> pixels, glm::ivec2 size,
-                               std::vector<const resource::AudioData*> frameSounds)
+                               std::vector<const AudioData*> frameSounds)
   {
     soundTime = (int)std::floor(time_get());
     sounds.push_back(std::move(frameSounds));
@@ -375,11 +366,11 @@ namespace anm2ed::render
 
   void Recorder::finish(const Document& document, AudioStream& audioStream)
   {
-    auto pathString = path::to_utf8(options.path);
-    if (options.type == PNGS)
+    auto pathString = path_to_utf8(options.path);
+    if (options.type == RENDER_PNGS)
       toast_log(frames.empty() ? Level::ERROR : Level::INFO,
                 frames.empty() ? TOAST_EXPORT_RENDERED_FRAMES_FAILED : TOAST_EXPORT_RENDERED_FRAMES, pathString);
-    else if (options.type == SPRITESHEET)
+    else if (options.type == RENDER_SPRITESHEET)
     {
       auto layout = spritesheet_layout_get(options.rows, options.columns, (int)frames.size());
       auto first = frames.empty() ? Image{} : Image(frames.front());
@@ -391,7 +382,7 @@ namespace anm2ed::render
       {
         Image sheet{};
         sheet.size = first.size * glm::ivec2(layout.columns, layout.rows);
-        sheet.pixels.resize((std::size_t)sheet.size.x * sheet.size.y * image::CHANNELS);
+        sheet.pixels.resize((std::size_t)sheet.size.x * sheet.size.y * IMAGE_CHANNELS);
         for (int i = 0; i < (int)frames.size() && i < layout.rows * layout.columns; ++i)
           if (auto frame = Image(frames[i]); frame.size == first.size)
             sheet.paste(frame, first.size * glm::ivec2(i % layout.columns, i / layout.columns));
@@ -403,7 +394,7 @@ namespace anm2ed::render
     else
     {
       audioStream.stream.clear();
-      if (options.isSound && options.type != GIF && !audio_stream_generate(audioStream, document, sounds, options.fps))
+      if (options.isSound && options.type != RENDER_GIF && !audio_stream_generate(audioStream, document, sounds, options.fps))
       {
         toasts.push(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED));
         logger.error("Failed to generate deterministic render audio stream; exporting without audio.");
@@ -420,15 +411,15 @@ namespace anm2ed::render
   void Recorder::cancel()
   {
     std::error_code ec{};
-    if (options.type != PNGS && !directory.empty()) std::filesystem::remove_all(directory, ec);
+    if (options.type != RENDER_PNGS && !directory.empty()) std::filesystem::remove_all(directory, ec);
     directory.clear();
     frames.clear();
     sounds.clear();
     index = count = 0;
   }
 
-  bool animation_record(const RecorderOptions& recorderOptions, Canvas& canvas, Shader& shader, Document& document,
-                        const model::Animation& animation, glm::vec4 bounds, float scale, glm::vec4 background,
+  bool animation_record(const RecorderOptions& recorderOptions, Canvas& canvas, ShaderProgram& shader, Document& document,
+                        const Animation& animation, glm::vec4 bounds, float scale, glm::vec4 background,
                         bool isRootTransform)
   {
     auto options = recorderOptions;
@@ -445,7 +436,7 @@ namespace anm2ed::render
     }
     AudioStream audioStream(nullptr);
     recorder.finish(document, audioStream);
-    return path::is_exist(options.path);
+    return is_path_exist(options.path);
   }
 
   constexpr float BAKE_MARGIN = 1.0f;
@@ -453,12 +444,12 @@ namespace anm2ed::render
 
   // A layer draw alone at canvas pixels, cut to what it can cover (its blur's reach too): its image (straight alpha) and
   // the canvas position of the image's top-left. Its tint and color offset go into the pixels only when `isColored`.
-  std::optional<std::pair<Image, glm::vec2>> draw_bake(Canvas& canvas, Shader& shader, Document& document,
-                                                       const model::Draw& draw, bool isColored)
+  static std::optional<std::pair<Image, glm::vec2>> draw_bake(Canvas& canvas, ShaderProgram& shader, Document& document,
+                                                       const Draw& draw, bool isColored)
   {
-    auto image = document.draw_image_get(draw, model::draw_scale_get(draw));
+    auto image = document.draw_image_get(draw, draw_scale_get(draw));
     if (!image || !image->is_valid() || draw.frame.size == glm::vec2()) return {};
-    auto quad = draw.parent * model::draw_quad_model_get(draw);
+    auto quad = draw.parent * draw_quad_model_get(draw);
     glm::vec2 low{std::numeric_limits<float>::max()};
     glm::vec2 high{std::numeric_limits<float>::lowest()};
     for (auto corner : {glm::vec2(0.0f), glm::vec2(1.0f, 0.0f), glm::vec2(0.0f, 1.0f), glm::vec2(1.0f)})
@@ -480,7 +471,7 @@ namespace anm2ed::render
     canvas.viewport_set();
     canvas.clear(glm::vec4(0.0f));
     auto custom = document.shader_get(draw.frame.shaderId);
-    canvas.layer_render(custom ? *custom : shader, texture::id_get(*image), image->unit_size_get(),
+    canvas.layer_render(custom ? *custom : shader, texture_id_get(*image), image->unit_size_get(),
                         canvas.transform_get(zoom, pan), draw, isColored ? draw.frame.tint : glm::vec4(1.0f),
                         isColored ? draw.frame.colorOffset : glm::vec4(0.0f));
     auto pixels = canvas.pixels_get();
@@ -493,33 +484,33 @@ namespace anm2ed::render
   // layer frame under a skewed root or group root, which then goes into the images (the root becomes plain). A layer has one spritesheet in the game, so baked frames stand on a copy of their layer
   // ("name (baked)") right after it, one frame per step, while the layer hides them. The images (each once) are packed
   // into one spritesheet written to `path`, beside the document; when it can't be, `result` keeps its frames.
-  void frames_bake(Document& document, model::Model& result, const std::filesystem::path& path)
+  void frames_bake(Document& document, Model& result, const std::filesystem::path& path)
   {
     auto game = result;
-    auto is_baked = [](const model::Frame& frame)
+    auto is_baked = [](const Frame& frame)
     { return frame.skew != glm::vec2() || frame.blur > 0.0f || frame.shaderId != -1; };
-    auto is_skewed = [](const model::Track& root)
-    { return std::ranges::any_of(root.frames, [](const model::Frame& frame) { return frame.skew != glm::vec2(); }); };
+    auto is_skewed = [](const Track& root)
+    { return std::ranges::any_of(root.frames, [](const Frame& frame) { return frame.skew != glm::vec2(); }); };
 
     std::vector<int> indices{};
     for (int i = 0; i < game.animations_count_get(); ++i)
     {
       auto& animation = *game.animation_get(i);
       auto isNeeded = is_skewed(animation.root);
-      model::tracks_each(
-          animation.layers, [&](const model::Track& track, const model::TrackGroup* group)
+      tracks_each(
+          animation.layers, [&](const Track& track, const TrackGroup* group)
           { isNeeded |= (group && is_skewed(group->root)) || std::ranges::any_of(track.frames, is_baked); });
       if (isNeeded) indices.push_back(i);
     }
-    auto pathUtf8 = path::to_utf8(path);
+    auto pathUtf8 = path_to_utf8(path);
     if (indices.empty()) return;
     if (!SDL_GL_GetCurrentContext()) return toast_log(Level::WARNING, TOAST_BAKE_NO_OPENGL, pathUtf8);
 
-    auto& textureInfo = shader::SHADERS[shader::TEXTURE];
-    Shader shader(textureInfo.vertex, textureInfo.fragment);
+    auto& textureInfo = SHADERS[SHADER_TEXTURE];
+    ShaderProgram shader(textureInfo.vertex, textureInfo.fragment);
     Canvas canvas(glm::vec2(1.0f));
     auto& content = game.content;
-    auto spritesheetId = model::item_next_id_get(content.spritesheets);
+    auto spritesheetId = item_next_id_get(content.spritesheets);
 
     std::vector<Image> images{};
     std::map<std::size_t, std::vector<int>> imageHashes{};
@@ -538,15 +529,15 @@ namespace anm2ed::render
     {
       auto [it, isNew] = bakedLayerIds.try_emplace(layerId);
       if (!isNew) return it->second;
-      auto layer = model::item_get(content.layers, layerId);
-      it->second = model::item_next_id_get(content.layers);
+      auto layer = item_get(content.layers, layerId);
+      it->second = item_next_id_get(content.layers);
       content.layers.push_back({.id = it->second,
                                 .name = (layer ? layer->name : std::string{}) + " (baked)",
                                 .spritesheetId = spritesheetId});
       return it->second;
     };
     // Steps alike join into one frame.
-    auto step_add = [](model::Track& track, model::Frame frame)
+    auto step_add = [](Track& track, Frame frame)
     {
       frame.duration = FRAME_DURATION_MIN;
       frame.interpolation = Interpolation::NONE;
@@ -565,21 +556,21 @@ namespace anm2ed::render
       auto& animation = *game.animation_edit(index);
       auto isRootFolded = is_skewed(animation.root);
       // A layer track's baked copy, the track left with the rest; nothing when no frame of it bakes.
-      auto track_bake = [&](model::Track& track, const model::Track* groupRoot) -> std::optional<model::Track>
+      auto track_bake = [&](Track& track, const Track* groupRoot) -> std::optional<Track>
       {
         auto isForced = isRootFolded || groupRoot;
-        auto layer = model::item_get(content.layers, track.id);
+        auto layer = item_get(content.layers, track.id);
         if (!layer || (!isForced && std::ranges::none_of(track.frames, is_baked))) return {};
-        model::Track plain{track};
+        Track plain{track};
         plain.frames.clear();
-        model::Track baked{.type = ItemType::LAYER, .id = -1, .isVisible = track.isVisible};
+        Track baked{.type = ItemType::LAYER, .id = -1, .isVisible = track.isVisible};
         auto isBaked = false;
-        auto length = std::max(model::track_length_get(track), animation.frameNum);
+        auto length = std::max(track_length_get(track), animation.frameNum);
         for (int time = 0; time < length; ++time)
         {
-          auto frame = model::frame_generate(track, (float)time);
+          auto frame = frame_generate(track, (float)time);
           std::optional<std::pair<Image, glm::vec2>> bakedImage{};
-          model::Draw draw{.type = model::DrawType::LAYER,
+          Draw draw{.type = DrawType::LAYER,
                            .id = track.id,
                            .time = (float)time,
                            .frame = frame,
@@ -588,11 +579,11 @@ namespace anm2ed::render
           if (frame.isVisible && (isForced || is_baked(frame)))
           {
             for (auto* root :
-                 std::initializer_list<const model::Track*>{isRootFolded ? &animation.root : nullptr, groupRoot})
+                 std::initializer_list<const Track*>{isRootFolded ? &animation.root : nullptr, groupRoot})
               if (root)
               {
-                auto rootFrame = model::frame_generate(*root, (float)time);
-                draw.parent *= model::frame_parent_model_get(rootFrame);
+                auto rootFrame = frame_generate(*root, (float)time);
+                draw.parent *= frame_parent_model_get(rootFrame);
                 draw.frame.tint *= rootFrame.tint;
                 draw.frame.colorOffset += rootFrame.colorOffset;
               }
@@ -601,7 +592,7 @@ namespace anm2ed::render
           if (!bakedImage)
           {
             step_add(plain, frame);
-            step_add(baked, model::Frame{.isVisible = false});
+            step_add(baked, Frame{.isVisible = false});
             continue;
           }
           // The image stands where it was drawn, its region found once the images are packed (kept in regionId).
@@ -615,14 +606,14 @@ namespace anm2ed::render
           step.size = glm::vec2(bakedImage->first.size);
           step.pivot = {};
           step.position = bakedImage->second;
-          step.scale = model::Frame{}.scale;
+          step.scale = Frame{}.scale;
           step.skew = {};
           step.rotation = 0.0f;
           step.blur = 0.0f;
           step.shaderId = -1;
           step.regionId = image_index_get(std::move(bakedImage->first));
           step_add(baked, step);
-          step_add(plain, model::Frame{.isVisible = false});
+          step_add(plain, Frame{.isVisible = false});
           isBaked = true;
         }
         if (!isBaked) return {};
@@ -631,9 +622,9 @@ namespace anm2ed::render
         return baked;
       };
 
-      std::vector<model::TrackEntry> entries{};
+      std::vector<TrackEntry> entries{};
       for (auto& entry : animation.layers)
-        if (auto track = std::get_if<model::Track>(&entry))
+        if (auto track = std::get_if<Track>(&entry))
         {
           auto baked = track_bake(*track, nullptr);
           entries.emplace_back(std::move(*track));
@@ -641,9 +632,9 @@ namespace anm2ed::render
         }
         else
         {
-          auto group = std::get<model::TrackGroup>(entry);
+          auto group = std::get<TrackGroup>(entry);
           auto isGroupFolded = is_skewed(group.root);
-          std::vector<model::Track> tracks{};
+          std::vector<Track> tracks{};
           for (auto& groupTrack : group.tracks)
           {
             auto baked = track_bake(groupTrack, isGroupFolded ? &group.root : nullptr);
@@ -651,7 +642,7 @@ namespace anm2ed::render
             if (baked) tracks.push_back(std::move(*baked));
           }
           group.tracks = std::move(tracks);
-          if (isGroupFolded) group.root = model::TrackGroup{}.root;
+          if (isGroupFolded) group.root = TrackGroup{}.root;
           entries.emplace_back(std::move(group));
         }
       animation.layers = std::move(entries);
@@ -659,19 +650,19 @@ namespace anm2ed::render
       // A folded root's transform goes into the nulls too (their group roots first), and the root becomes plain.
       if (!isRootFolded) continue;
       for (auto& entry : animation.nulls)
-        if (auto track = std::get_if<model::Track>(&entry))
-          model::track_group_root_bake(*track, animation.root, animation.frameNum);
+        if (auto track = std::get_if<Track>(&entry))
+          track_group_root_bake(*track, animation.root, animation.frameNum);
         else
         {
-          auto& group = std::get<model::TrackGroup>(entry);
+          auto& group = std::get<TrackGroup>(entry);
           for (auto& groupTrack : group.tracks)
           {
-            model::track_group_root_bake(groupTrack, group.root, animation.frameNum);
-            model::track_group_root_bake(groupTrack, animation.root, animation.frameNum);
+            track_group_root_bake(groupTrack, group.root, animation.frameNum);
+            track_group_root_bake(groupTrack, animation.root, animation.frameNum);
           }
-          group.root = model::TrackGroup{}.root;
+          group.root = TrackGroup{}.root;
         }
-      animation.root = model::Animation{}.root;
+      animation.root = Animation{}.root;
     }
     if (images.empty()) return;
 
@@ -680,7 +671,7 @@ namespace anm2ed::render
       sizes.push_back(image.size);
     glm::ivec2 packedSize{};
     std::vector<glm::ivec2> positions{};
-    pack::rects_pack(sizes, packedSize, positions);
+    rects_pack(sizes, packedSize, positions);
     std::vector<ImagePart> parts{};
     for (int i = 0; i < (int)images.size(); ++i)
       parts.push_back({.image = &images[i], .size = images[i].size, .destination = positions[i]});
@@ -694,8 +685,8 @@ namespace anm2ed::render
     for (auto [layerId, bakedId] : bakedLayerIds)
       bakedIds.insert(bakedId);
     for (auto index : indices)
-      model::tracks_each(game.animation_edit(index)->layers,
-                         [&](model::Track& track, auto*)
+      tracks_each(game.animation_edit(index)->layers,
+                         [&](Track& track, auto*)
                          {
                            if (!bakedIds.contains(track.id)) return;
                            for (auto& frame : track.frames)
@@ -707,4 +698,3 @@ namespace anm2ed::render
                          });
     result = std::move(game);
   }
-}

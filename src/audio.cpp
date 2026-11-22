@@ -6,9 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace anm2ed::resource::audio
-{
-  struct Entry
+  struct AudioEntry
   {
     MIX_Audio* audio{};
     std::vector<MIX_Track*> tracks{}; // one per overlapping play, reused once finished
@@ -17,9 +15,9 @@ namespace anm2ed::resource::audio
   };
 
   // Sums the squares of the left/right samples the track plays, for its levels.
-  void SDLCALL levels_update(void* userdata, MIX_Track*, const SDL_AudioSpec* spec, float* pcm, int samples)
+  static void SDLCALL levels_update(void* userdata, MIX_Track*, const SDL_AudioSpec* spec, float* pcm, int samples)
   {
-    auto entry = (Entry*)userdata;
+    auto entry = (AudioEntry*)userdata;
     auto channels = std::max(spec->channels, 1);
     float squares[2]{};
     for (int i = 0; i < samples; ++i)
@@ -30,31 +28,31 @@ namespace anm2ed::resource::audio
     entry->sampleCount += samples / channels;
   }
 
-  std::unordered_map<std::uint64_t, Entry> entries{};
+  static std::unordered_map<std::uint64_t, AudioEntry> entries{};
 
-  MIX_Mixer* mixer_get()
+  static MIX_Mixer* audio_mixer_get()
   {
     static auto mixer = MIX_CreateMixerDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
     return mixer;
   }
 
-  Entry* entry_get(const AudioData& data)
+  static AudioEntry* entry_get(const AudioData& data)
   {
     if (!data.is_valid()) return nullptr;
     auto [it, isNew] = entries.try_emplace(data.uid);
     if (isNew)
       if (auto io = SDL_IOFromConstMem(data.bytes.data(), data.bytes.size()))
-        it->second.audio = MIX_LoadAudio_IO(mixer_get(), io, true, true);
+        it->second.audio = MIX_LoadAudio_IO(audio_mixer_get(), io, true, true);
     return it->second.audio ? &it->second : nullptr;
   }
 
-  bool is_on_mixer(MIX_Track* track, MIX_Mixer* mixer) { return !mixer || MIX_GetTrackMixer(track) == mixer; }
+  static bool is_on_mixer(MIX_Track* track, MIX_Mixer* mixer) { return !mixer || MIX_GetTrackMixer(track) == mixer; }
 
   // A sound can play over itself: while a track is still playing it, another track takes the new play.
-  void play(const AudioData& data, bool isLoop, MIX_Mixer* mixer)
+  void audio_play(const AudioData& data, bool isLoop, MIX_Mixer* mixer)
   {
     auto entry = entry_get(data);
-    auto targetMixer = mixer ? mixer : mixer_get();
+    auto targetMixer = mixer ? mixer : audio_mixer_get();
     if (!entry || !targetMixer) return;
 
     auto free = std::ranges::find_if(entry->tracks, [&](MIX_Track* track)
@@ -74,14 +72,14 @@ namespace anm2ed::resource::audio
     if (options) SDL_DestroyProperties(options);
   }
 
-  void stop(const AudioData& data, MIX_Mixer* mixer)
+  void audio_stop(const AudioData& data, MIX_Mixer* mixer)
   {
     if (auto it = entries.find(data.uid); it != entries.end())
       for (auto track : it->second.tracks)
         if (is_on_mixer(track, mixer)) MIX_StopTrack(track, 0);
   }
 
-  void track_detach(const AudioData& data, MIX_Mixer* mixer)
+  void audio_track_detach(const AudioData& data, MIX_Mixer* mixer)
   {
     auto it = entries.find(data.uid);
     if (it == entries.end()) return;
@@ -94,14 +92,14 @@ namespace anm2ed::resource::audio
                   });
   }
 
-  bool is_playing(const AudioData& data)
+  bool is_audio_playing(const AudioData& data)
   {
     auto it = entries.find(data.uid);
     return it != entries.end() && std::ranges::any_of(it->second.tracks, MIX_TrackPlaying);
   }
 
   // The left/right loudness (RMS, 0-1) of what the track played since the last call.
-  glm::vec2 levels_get(const AudioData& data)
+  glm::vec2 audio_levels_get(const AudioData& data)
   {
     auto it = entries.find(data.uid);
     if (it == entries.end()) return {};
@@ -109,4 +107,3 @@ namespace anm2ed::resource::audio
     auto count = (float)std::max(entry.sampleCount.exchange(0), 1);
     return {std::sqrt(entry.squares[0].exchange(0.0f) / count), std::sqrt(entry.squares[1].exchange(0.0f) / count)};
   }
-}

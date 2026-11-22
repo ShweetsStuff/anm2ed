@@ -4,15 +4,9 @@
 
 #include "path.h"
 
-using namespace anm2ed::resource;
-using namespace anm2ed::types;
-using namespace anm2ed::util;
-
-namespace anm2ed::imgui
-{
   constexpr int LIBRARY_CARD_LINES = 2;
 
-  auto& libraries_get(model::Model& model) { return model.content.libraries; }
+  static auto& libraries_get(Model& model) { return model.content.libraries; }
 
   void libraries_update(Panel& panel)
   {
@@ -49,7 +43,7 @@ namespace anm2ed::imgui
       Actions actions{};
       actions.add(ACTION_OPEN, isOne, [&]() { open(*selection.begin()); }, TOOLTIP_LIBRARY_OPEN);
       actions.add(ACTION_OPEN_DIRECTORY, isOne,
-                  [&]() { directory_open(dialog, document, model::item_get(libraries, *selection.begin())->path); });
+                  [&]() { directory_open(dialog, document, item_get(libraries, *selection.begin())->path); });
       actions.add(ACTION_ADD, {}, [&]() { dialog.file_open(Dialog::LIBRARY_OPEN, true); }, TOOLTIP_LIBRARY_ADD);
       content_remove_action_add(actions, panel, ElementType::LIBRARY, SelectionKind::LIBRARIES);
       actions.add(
@@ -60,29 +54,29 @@ namespace anm2ed::imgui
                          [selection](Document& document)
                          {
                            for (auto id : selection)
-                             if (auto library = model::item_get(document.model.content.libraries, id))
+                             if (auto library = item_get(document.model.content.libraries, id))
                              {
                                document.library_reload(id);
-                               toast_log(Level::INFO, TOAST_RELOAD_LIBRARY, id, path::to_utf8(library->path));
+                               toast_log(Level::INFO, TOAST_RELOAD_LIBRARY, id, path_to_utf8(library->path));
                              }
                          });
           },
           TOOLTIP_RELOAD_LIBRARIES);
-      items_clipboard_actions_add<model::Library>(actions, panel, SelectionKind::LIBRARIES, EDIT_PASTE_LIBRARIES,
+      items_clipboard_actions_add<Library>(actions, panel, SelectionKind::LIBRARIES, EDIT_PASTE_LIBRARIES,
                                                   TOAST_DESERIALIZE_LIBRARIES_FAILED, libraries_get);
 
       ListRows rows{
           .label_get =
               [&](int id)
           {
-            auto pathString = path::to_utf8(model::item_get(libraries, id)->path);
+            auto pathString = path_to_utf8(item_get(libraries, id)->path);
             return std::vformat(localize.get(FORMAT_SOUND), std::make_format_args(id, pathString));
           },
           .tooltip_draw =
               [&](int id)
           {
             auto loaded = loaded_get(id);
-            tooltip_name_draw(resources, path::to_utf8(model::item_get(libraries, id)->path));
+            tooltip_name_draw(resources, path_to_utf8(item_get(libraries, id)->path));
             ImGui::Text("%s: %d", localize.get(BASIC_ID), id);
             if (loaded && loaded->model.isValid)
             {
@@ -106,7 +100,7 @@ namespace anm2ed::imgui
           {
             auto loaded = loaded_get(id);
             auto isValid = loaded && loaded->model.isValid;
-            auto& texture = resources.icons[isValid ? icon::ANIMATION : icon::NONE];
+            auto& texture = resources.icons[isValid ? ICON_ANIMATION : ICON_NONE];
             return CardImage{.texture = &texture, .size = glm::vec2(texture.size), .isValid = isValid};
           },
           .activate = open,
@@ -117,4 +111,3 @@ namespace anm2ed::imgui
     }
     ImGui::End();
   }
-}

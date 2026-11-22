@@ -44,8 +44,6 @@
   X(FRAME, "Frame")                                                                                                    \
   X(TRIGGER, "Trigger")
 
-namespace anm2ed
-{
   enum class ElementType
   {
 #define X(symbol, tag) symbol,
@@ -165,10 +163,7 @@ namespace anm2ed
   constexpr Flags SERIALIZE_ANM2ED_DEFAULT =
       SERIALIZE_GROUPS | SERIALIZE_REGIONS | SERIALIZE_SOUNDS | SERIALIZE_NESTED_GROUPS | SERIALIZE_EXTENSIONS;
 
-  namespace model
-  {
     class Model;
-  }
 
   // How a document saves: the game's copy with the editor's embedded, or the editor's own JSON; `gameModel` is the
   // game's copy when it differs from the document (animation layers flattened).
@@ -176,7 +171,7 @@ namespace anm2ed
   {
     bool isJson{};           // the editor's own JSON document instead
     bool isPixelBaked{true}; // what the game can't draw is baked into a spritesheet beside the file
-    const model::Model* gameModel{};
+    const Model* gameModel{};
   };
 
 #define FRAME_CHANGE_SCALARS                                                                                           \
@@ -256,4 +251,3 @@ namespace anm2ed
       return value < 0.5f ? (2.0f * value * value) : (1.0f - std::pow(-2.0f * value + 2.0f, 2.0f) * 0.5f);
     return 0.0f;
   }
-}

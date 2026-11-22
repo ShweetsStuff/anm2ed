@@ -2,10 +2,6 @@
 
 #include "model/xml.h"
 
-using namespace anm2ed::model;
-
-namespace anm2ed::edit
-{
   constexpr std::string_view ANIMATION_MERGED_SUFFIX = " (Merged)";
 
   using AnimationPointer = std::shared_ptr<const Animation>;
@@ -33,7 +29,7 @@ namespace anm2ed::edit
     std::vector<AnimationGroup> groups{};
   };
 
-  AnimationsTaken animations_take(Model& model, const std::set<int>& indices, const std::set<int>& groupIds)
+  static AnimationsTaken animations_take(Model& model, const std::set<int>& indices, const std::set<int>& groupIds)
   {
     AnimationsTaken taken{};
     int index{};
@@ -73,7 +69,7 @@ namespace anm2ed::edit
     int position{-1};
   };
 
-  AnimationPlace animation_place_get(Model& model, std::uint64_t uid)
+  static AnimationPlace animation_place_get(Model& model, std::uint64_t uid)
   {
     auto& entries = model.animations.entries;
     for (int i = 0; i < (int)entries.size(); ++i)
@@ -90,7 +86,7 @@ namespace anm2ed::edit
     return {};
   }
 
-  int animation_group_entry_get(const Model& model, int groupId)
+  static int animation_group_entry_get(const Model& model, int groupId)
   {
     auto& entries = model.animations.entries;
     for (int i = 0; i < (int)entries.size(); ++i)
@@ -98,14 +94,14 @@ namespace anm2ed::edit
     return -1;
   }
 
-  AnimationGroup* animation_group_find(Model& model, int groupId)
+  static AnimationGroup* animation_group_find(Model& model, int groupId)
   {
     auto entry = animation_group_entry_get(model, groupId);
     return entry == -1 ? nullptr : &std::get<AnimationGroup>(model.animations.entries[entry]);
   }
 
   // Inserts animations before the animation at a flat index (or at the end), inside `groupId` when given.
-  void animations_insert(Model& model, int index, int groupId, std::vector<AnimationPointer> animations)
+  static void animations_insert(Model& model, int index, int groupId, std::vector<AnimationPointer> animations)
   {
     auto before = model.animation_get(index);
     auto place = before ? animation_place_get(model, before->uid) : AnimationPlace{};
@@ -135,7 +131,7 @@ namespace anm2ed::edit
   }
 
   // An empty copy of a track list: same tracks and groups, no frames.
-  std::vector<TrackEntry> track_entries_shell_get(const std::vector<TrackEntry>& entries)
+  static std::vector<TrackEntry> track_entries_shell_get(const std::vector<TrackEntry>& entries)
   {
     std::vector<TrackEntry> shell{};
     auto track_shell_get = [](const Track& track)
@@ -287,20 +283,20 @@ namespace anm2ed::edit
     return uids;
   }
 
-  void track_merge(Track& destination, const Track& source, types::merge::Type type)
+  static void track_merge(Track& destination, const Track& source, Merge type)
   {
     std::vector<Frame> frames{};
     for (const auto& frame : source.frames)
       frames.push_back(frame_clone(frame));
     switch (type)
     {
-      case types::merge::APPEND:
+      case MERGE_APPEND:
         destination.frames.insert(destination.frames.end(), frames.begin(), frames.end());
         break;
-      case types::merge::PREPEND:
+      case MERGE_PREPEND:
         destination.frames.insert(destination.frames.begin(), frames.begin(), frames.end());
         break;
-      case types::merge::REPLACE:
+      case MERGE_REPLACE:
         if (destination.frames.size() < frames.size()) destination.frames.resize(frames.size());
         std::ranges::copy(frames, destination.frames.begin());
         break;
@@ -311,8 +307,8 @@ namespace anm2ed::edit
 
   // Merges a source animation's layer or null tracks: groups match by name (else are added), tracks match by id
   // within their group (else are added).
-  void track_entries_merge(std::vector<TrackEntry>& destination, const std::vector<TrackEntry>& source,
-                           types::merge::Type type)
+  static void track_entries_merge(std::vector<TrackEntry>& destination, const std::vector<TrackEntry>& source,
+                           Merge type)
   {
     std::map<int, int> groupRemap{};
     std::set<int> matchedGroupIds{};
@@ -378,7 +374,7 @@ namespace anm2ed::edit
 
   // Merges source animations into the target (frames appended, prepended, replacing or ignored), optionally deleting
   // the sources; `ungroupIds` dissolves groups afterwards. Returns the merged animation's uid.
-  Uids animations_merge(Model& model, int target, std::set<int> sources, types::merge::Type type, bool isDeleteAfter,
+  Uids animations_merge(Model& model, int target, std::set<int> sources, Merge type, bool isDeleteAfter,
                         const std::set<int>& ungroupIds)
   {
     if (!model.animation_get(target)) return {};
@@ -396,13 +392,13 @@ namespace anm2ed::edit
         if (!source) continue;
         auto sourceCopy = *source;
         auto& destination = *model.animation_edit(target);
-        if (type == types::merge::APPEND)
+        if (type == MERGE_APPEND)
           for (auto& trigger : sourceCopy.triggers.frames)
             trigger.atFrame += length;
-        if (type == types::merge::PREPEND)
+        if (type == MERGE_PREPEND)
           for (auto& trigger : destination.triggers.frames)
             trigger.atFrame += sourceCopy.frameNum;
-        if (type == types::merge::APPEND || type == types::merge::PREPEND) length += sourceCopy.frameNum;
+        if (type == MERGE_APPEND || type == MERGE_PREPEND) length += sourceCopy.frameNum;
         track_merge(destination.root, sourceCopy.root, type);
         track_entries_merge(destination.layers, sourceCopy.layers, type);
         track_entries_merge(destination.nulls, sourceCopy.nulls, type);
@@ -428,4 +424,3 @@ namespace anm2ed::edit
     animation_groups_remove(model, ungroupIds);
     return {uid};
   }
-}

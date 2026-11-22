@@ -4,8 +4,6 @@
 
 #include "ui/input.h"
 
-namespace anm2ed::imgui
-{
   bool isSelectableInputTextRenaming = false;
 
   std::string& selectable_input_text_id()
@@ -64,4 +62,3 @@ namespace anm2ed::imgui
 
     return isActivated;
   }
-}

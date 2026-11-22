@@ -5,8 +5,6 @@
 
 #include "model/draw.h"
 
-namespace anm2ed::model
-{
   void frame_mix(Frame&, const Frame&, float);
   std::vector<Frame> frame_bake_split(const Frame&, const Frame&, int, bool, bool);
   glm::mat4 frame_parent_model_get(const Frame&);
@@ -21,4 +19,3 @@ namespace anm2ed::model
   void frames_sort_by_at_frame(Track&);
   void frames_change(Track&, FrameChange, ItemType, ChangeType, const std::set<int>&, bool isAnimationLayer = false);
   glm::vec4 animation_rect(const Model&, const Animation&, bool, const LibraryGet& = {});
-}

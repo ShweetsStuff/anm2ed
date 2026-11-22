@@ -1,7 +1,5 @@
 #include "ui/timeline_context.h"
 
-namespace anm2ed::imgui
-{
   Timeline::Timeline() = default;
   Timeline::~Timeline() = default;
 
@@ -19,7 +17,7 @@ namespace anm2ed::imgui
     rowFrameChildHeight = ImGui::GetTextLineHeightWithSpacing() + ImGui::GetStyle().WindowPadding.y * 1.5f;
 
     style = ImGui::GetStyle();
-    isLightTheme = settings.theme == theme::LIGHT;
+    isLightTheme = settings.theme == THEME_LIGHT;
     isTextPushed = false;
     if (isLightTheme)
     {
@@ -76,8 +74,8 @@ namespace anm2ed::imgui
         edit_push(EDIT_GENERATE_REGIONS_FROM_ANIMATIONS,
                   [targetFrames = makeManyRegionReferences, format = settings.generateRegionNameFormat,
                    mapping = isMakeManyRegionsMapFrames ? RegionFrameMapping::SET
-                                                        : RegionFrameMapping::PRESERVE](model::Model& model)
-                  { return edit::regions_generate(model, {}, targetFrames, format, mapping); });
+                                                        : RegionFrameMapping::PRESERVE](Model& model)
+                  { return regions_generate(model, {}, targetFrames, format, mapping); });
       if (result != PopupButton::NONE) makeManyRegionsPopup.close();
 
       ImGui::EndPopup();
@@ -186,18 +184,18 @@ namespace anm2ed::imgui
   {
     if (!animation) return;
 
-    if (shortcut(manager.chords[SHORTCUT_PLAY_PAUSE], shortcut::GLOBAL)) playback.toggle();
-    if (shortcut(manager.chords[SHORTCUT_START_MARKER], shortcut::GLOBAL)) marker_set(true, (int)playback.time);
-    if (shortcut(manager.chords[SHORTCUT_END_MARKER], shortcut::GLOBAL)) marker_set(false, (int)playback.time);
+    if (shortcut(manager.chords[SHORTCUT_PLAY_PAUSE], SCOPE_GLOBAL)) playback.toggle();
+    if (shortcut(manager.chords[SHORTCUT_START_MARKER], SCOPE_GLOBAL)) marker_set(true, (int)playback.time);
+    if (shortcut(manager.chords[SHORTCUT_END_MARKER], SCOPE_GLOBAL)) marker_set(false, (int)playback.time);
 
-    if (shortcut(manager.chords[SHORTCUT_MOVE_PLAYHEAD_BACK], shortcut::GLOBAL))
+    if (shortcut(manager.chords[SHORTCUT_MOVE_PLAYHEAD_BACK], SCOPE_GLOBAL))
     {
       playback_stop();
       playback.decrement(settings.playbackIsClamp ? animation->frameNum : FRAME_NUM_MAX);
       document.frameTime = playback.time;
     }
 
-    if (shortcut(manager.chords[SHORTCUT_MOVE_PLAYHEAD_FORWARD], shortcut::GLOBAL))
+    if (shortcut(manager.chords[SHORTCUT_MOVE_PLAYHEAD_FORWARD], SCOPE_GLOBAL))
     {
       playback_stop();
       playback.increment(settings.playbackIsClamp ? animation->frameNum : FRAME_NUM_MAX);
@@ -215,7 +213,7 @@ namespace anm2ed::imgui
     for (int i = 0; i < (int)std::size(FRAME_RESIZES); ++i)
     {
       auto resize = FRAME_RESIZES[i];
-      auto isPressed = shortcut(manager.chords[resize.shortcut], shortcut::GLOBAL);
+      auto isPressed = shortcut(manager.chords[resize.shortcut], SCOPE_GLOBAL);
       auto selectedFrames =
           isPressed ? document.frame_references_get(Document::FrameReferenceFallback::NONE) : std::set<Reference>{};
       std::erase_if(selectedFrames, is_trigger_reference);
@@ -234,10 +232,10 @@ namespace anm2ed::imgui
       resizeChordTabIds[i] = isPressed ? document.tabId : 0;
     }
 
-    auto isPreviousFrame = shortcut(manager.chords[SHORTCUT_PREVIOUS_FRAME], shortcut::GLOBAL);
-    auto isNextFrame = shortcut(manager.chords[SHORTCUT_NEXT_FRAME], shortcut::GLOBAL);
-    auto isPreviousItem = shortcut(manager.chords[SHORTCUT_PREVIOUS_ITEM], shortcut::GLOBAL);
-    auto isNextItem = shortcut(manager.chords[SHORTCUT_NEXT_ITEM], shortcut::GLOBAL);
+    auto isPreviousFrame = shortcut(manager.chords[SHORTCUT_PREVIOUS_FRAME], SCOPE_GLOBAL);
+    auto isNextFrame = shortcut(manager.chords[SHORTCUT_NEXT_FRAME], SCOPE_GLOBAL);
+    auto isPreviousItem = shortcut(manager.chords[SHORTCUT_PREVIOUS_ITEM], SCOPE_GLOBAL);
+    auto isNextItem = shortcut(manager.chords[SHORTCUT_NEXT_ITEM], SCOPE_GLOBAL);
 
     if (isPreviousFrame || isNextFrame)
       if (auto item = selected_item_get(); item && !item->frames.empty())
@@ -247,10 +245,9 @@ namespace anm2ed::imgui
             glm::clamp(reference.frameIndex + (int)isNextFrame - (int)isPreviousFrame, 0, (int)item->frames.size() - 1);
         reference_set(frameReference);
         document.frame_focus_select();
-        document.frameTime = model::frame_time_from_index_get(*item, reference.frameIndex);
+        document.frameTime = frame_time_from_index_get(*item, reference.frameIndex);
       }
 
     if (isPreviousItem) reference_set_adjacent_item(-1);
     if (isNextItem) reference_set_adjacent_item(1);
   }
-}

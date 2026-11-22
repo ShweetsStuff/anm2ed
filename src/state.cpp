@@ -15,12 +15,6 @@
 #include "ui/toast.h"
 #include "ui/shortcut.h"
 
-using namespace anm2ed::imgui;
-using namespace anm2ed::util;
-using namespace anm2ed::types;
-
-namespace anm2ed
-{
   constexpr auto UPDATE_RATE = 120;
   constexpr auto UPDATE_INTERVAL = (1000 / UPDATE_RATE);
 
@@ -29,7 +23,7 @@ namespace anm2ed
     dialog = Dialog(window);
 
     for (const auto& argument : arguments)
-      manager.open(path::from_utf8(argument));
+      manager.open(path_from_utf8(argument));
 
     manager.settings_apply(settings);
   }
@@ -77,8 +71,8 @@ namespace anm2ed
         {
           std::string droppedFile = event.drop.data ? event.drop.data : "";
           if (droppedFile.empty()) break;
-          auto droppedPath = path::from_utf8(droppedFile);
-          if (path::is_extension(droppedPath, "anm2"))
+          auto droppedPath = path_from_utf8(droppedFile);
+          if (is_path_extension(droppedPath, "anm2"))
           {
             if (manager.documents.empty())
               manager.open(droppedPath);
@@ -91,12 +85,12 @@ namespace anm2ed
             }
             SDL_FlashWindow(window, SDL_FLASH_UNTIL_FOCUSED);
           }
-          else if (path::is_extension(droppedPath, resource::image::PNG_EXTENSION) ||
-                   path::is_extension(droppedPath, resource::image::SVG_EXTENSION))
+          else if (is_path_extension(droppedPath, PNG_EXTENSION) ||
+                   is_path_extension(droppedPath, SVG_EXTENSION))
           {
             spritesheetDropPaths.push_back(droppedPath);
           }
-          else if (path::is_extension(droppedPath, "wav") || path::is_extension(droppedPath, "ogg"))
+          else if (is_path_extension(droppedPath, "wav") || is_path_extension(droppedPath, "ogg"))
           {
             soundDropPaths.push_back(droppedPath);
           }
@@ -139,8 +133,8 @@ namespace anm2ed
           std::string droppedFile = event.user.data1 ? static_cast<const char*>(event.user.data1) : "";
           if (event.user.data1) SDL_free(event.user.data1);
           if (droppedFile.empty()) break;
-          auto droppedPath = path::from_utf8(droppedFile);
-          if (path::is_extension(droppedPath, "anm2"))
+          auto droppedPath = path_from_utf8(droppedFile);
+          if (is_path_extension(droppedPath, "anm2"))
           {
             manager.open(droppedPath);
             SDL_FlashWindow(window, SDL_FLASH_UNTIL_FOCUSED);
@@ -188,12 +182,12 @@ namespace anm2ed
     if (!dockspace.is_canvas_focused_get())
     {
       float uiScaleDelta{};
-      if (imgui::shortcut(manager.chords[SHORTCUT_ZOOM_IN], shortcut::GLOBAL)) uiScaleDelta += UI_SCALE_STEP;
-      if (imgui::shortcut(manager.chords[SHORTCUT_ZOOM_OUT], shortcut::GLOBAL)) uiScaleDelta -= UI_SCALE_STEP;
+      if (shortcut(manager.chords[SHORTCUT_ZOOM_IN], SCOPE_GLOBAL)) uiScaleDelta += UI_SCALE_STEP;
+      if (shortcut(manager.chords[SHORTCUT_ZOOM_OUT], SCOPE_GLOBAL)) uiScaleDelta -= UI_SCALE_STEP;
       if (uiScaleDelta != 0.0f)
       {
         settings.uiScale = std::clamp(settings.uiScale + uiScaleDelta, UI_SCALE_MIN, UI_SCALE_MAX);
-        ImGui::GetStyle().FontScaleMain = math::percent_to_unit(settings.uiScale);
+        ImGui::GetStyle().FontScaleMain = percent_to_unit(settings.uiScale);
       }
     }
 
@@ -224,7 +218,7 @@ namespace anm2ed
     }
 
     SDL_GL_SwapWindow(window);
-    resource::texture::garbage_collect();
+    texture_garbage_collect();
     SDL_GL_SetSwapInterval(settings.isVsync);
   }
 
@@ -265,4 +259,3 @@ namespace anm2ed
 
     SDL_Delay(1);
   }
-}

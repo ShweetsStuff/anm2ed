@@ -4,15 +4,9 @@
 
 #include "path.h"
 
-using namespace anm2ed::resource;
-using namespace anm2ed::types;
-using namespace anm2ed::util;
-
-namespace anm2ed::imgui
-{
   constexpr int SOUND_CARD_LINES = 2;
 
-  auto& sounds_get(model::Model& model) { return model.content.sounds; }
+  static auto& sounds_get(Model& model) { return model.content.sounds; }
 
   void sounds_update(Panel& panel)
   {
@@ -37,15 +31,15 @@ namespace anm2ed::imgui
         command_push(panel,
                      [id = *selection.begin(), dialogPath = dialog.path](Document& document)
                      {
-                       if (!model::item_get(document.model.content.sounds, id)) return;
+                       if (!item_get(document.model.content.sounds, id)) return;
                        document.edit_apply(EDIT_REPLACE_SOUND,
-                                           [&](model::Model& model)
+                                           [&](Model& model)
                                            {
-                                             auto sound = model::item_get(model.content.sounds, id);
+                                             auto sound = item_get(model.content.sounds, id);
                                              sound->path = asset_path_get(document, dialogPath);
                                              document.sound_reload(id);
                                              toast_log(Level::INFO, TOAST_REPLACE_SOUND, id,
-                                                       path::to_utf8(sound->path));
+                                                       path_to_utf8(sound->path));
                                            });
                      });
       dialog.reset();
@@ -56,11 +50,11 @@ namespace anm2ed::imgui
       auto isOne = [selection]() { return selection.size() == 1; };
       auto play = [&](int id)
       {
-        if (auto audio = document.sound_get(id)) resource::audio::play(*audio);
+        if (auto audio = document.sound_get(id)) audio_play(*audio);
       };
       auto open = [&](int id)
       {
-        if (auto sound = model::item_get(sounds, id)) directory_open(dialog, document, sound->path);
+        if (auto sound = item_get(sounds, id)) directory_open(dialog, document, sound->path);
       };
 
       Actions actions{};
@@ -76,34 +70,34 @@ namespace anm2ed::imgui
                          [selection](Document& document)
                          {
                            document.edit_apply(EDIT_RELOAD_SOUNDS,
-                                               [&](model::Model& model)
+                                               [&](Model& model)
                                                {
                                                  for (auto id : selection)
-                                                   if (auto sound = model::item_get(model.content.sounds, id))
+                                                   if (auto sound = item_get(model.content.sounds, id))
                                                    {
                                                      document.sound_reload(id);
                                                      toast_log(Level::INFO, TOAST_RELOAD_SOUND, id,
-                                                               path::to_utf8(sound->path));
+                                                               path_to_utf8(sound->path));
                                                    }
                                                });
                          });
           },
           TOOLTIP_RELOAD_SOUNDS);
       actions.add(ACTION_REPLACE, isOne, [&]() { dialog.file_open(Dialog::SOUND_REPLACE); }, TOOLTIP_REPLACE_SOUND);
-      items_clipboard_actions_add<model::Sound>(actions, panel, SelectionKind::SOUNDS, TOAST_SOUNDS_PASTE,
+      items_clipboard_actions_add<Sound>(actions, panel, SelectionKind::SOUNDS, TOAST_SOUNDS_PASTE,
                                                 TOAST_SOUNDS_DESERIALIZE_ERROR, sounds_get);
 
       ListRows rows{.label_get =
                         [&](int id)
                     {
-                      auto pathString = path::to_utf8(model::item_get(sounds, id)->path);
+                      auto pathString = path_to_utf8(item_get(sounds, id)->path);
                       return std::vformat(localize.get(FORMAT_SOUND), std::make_format_args(id, pathString));
                     },
                     .tooltip_draw =
                         [&](int id)
                     {
                       auto audio = document.sound_get(id);
-                      tooltip_name_draw(resources, path::to_utf8(model::item_get(sounds, id)->path));
+                      tooltip_name_draw(resources, path_to_utf8(item_get(sounds, id)->path));
                       ImGui::Text("%s: %d", localize.get(BASIC_ID), id);
                       if (audio && audio->is_valid())
                         ImGui::TextUnformatted(localize.get(TEXT_OPEN_DIRECTORY));
@@ -118,7 +112,7 @@ namespace anm2ed::imgui
                     {
                       auto audio = document.sound_get(id);
                       auto isValid = audio && audio->is_valid();
-                      auto& texture = resources.icons[isValid ? icon::SOUND : icon::NONE];
+                      auto& texture = resources.icons[isValid ? ICON_SOUND : ICON_NONE];
                       return CardImage{.texture = &texture, .size = glm::vec2(texture.size), .isValid = isValid};
                     },
                     .select =
@@ -134,4 +128,3 @@ namespace anm2ed::imgui
     }
     ImGui::End();
   }
-}
