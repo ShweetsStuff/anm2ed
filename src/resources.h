@@ -11,7 +11,7 @@
 class Resources
 {
 public:
-    Font fonts[FONT_COUNT]{};
+    ImFont* fonts[FONT_COUNT] = {};
     Image icons[ICON_COUNT]{};
     ShaderProgram shaders[SHADER_COUNT]{};
     AudioData music = {};

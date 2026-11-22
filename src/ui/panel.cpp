@@ -130,7 +130,7 @@ bool row_draw(Panel& panel, std::set<int>& selection, int& focus, const ListRows
     ImGui::PushID(key);
     ImGui::SetNextItemSelectionUserData(index);
     if (font != FONT_REGULAR)
-        ImGui::PushFont(panel.resources.fonts[font].get(), FONT_SIZE);
+        ImGui::PushFont(panel.resources.fonts[font], FONT_SIZE);
     if (isInvalid)
         ImGui::PushStyleColor(ImGuiCol_Text, CARD_TINT_INVALID);
     if (arrowKey == key)
@@ -244,7 +244,7 @@ static void card_draw(Panel& panel, std::set<int>& selection, int& focus, const 
         ImGui::SetCursorPos(
             ImVec2(cardSize.y + style.ItemSpacing.x, cardSize.y - cardSize.y / 2 - ImGui::GetTextLineHeight() / 2));
         if (isFocused)
-            ImGui::PushFont(panel.resources.fonts[FONT_ITALICS].get(), FONT_SIZE);
+            ImGui::PushFont(panel.resources.fonts[FONT_ITALICS], FONT_SIZE);
         ImGui::TextUnformatted(label.c_str());
         if (isFocused)
             ImGui::PopFont();
@@ -476,7 +476,7 @@ void list_panel_draw(Panel& panel, Actions& actions, const Footer& footer, const
 
 void tooltip_name_draw(Resources& resources, const std::string& name)
 {
-    ImGui::PushFont(resources.fonts[FONT_BOLD].get(), FONT_SIZE);
+    ImGui::PushFont(resources.fonts[FONT_BOLD], FONT_SIZE);
     ImGui::TextUnformatted(name.c_str());
     ImGui::PopFont();
 }

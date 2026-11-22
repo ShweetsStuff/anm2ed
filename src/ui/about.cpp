@@ -272,7 +272,7 @@ static void friend_canvas_draw(About::FriendState& state, Resources& resources)
 // The application name, as large as fits its row.
 static void title_draw(About& about, Resources& resources, const char* title, float width)
 {
-    auto font = resources.fonts[FONT_BOLD].get();
+    auto font = resources.fonts[FONT_BOLD];
     auto fontSize = (float)FONT_SIZE_LARGE * TITLE_SCALE;
     fontSize *= std::min(1.0f, width / font->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, title).x);
     auto textSize = font->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, title);
@@ -366,7 +366,7 @@ static void roll_text_draw(ImDrawList* drawList, Resources& resources, const Abo
         if (!*credit.string || y + lineHeight < min.y || y > max.y)
             continue;
 
-        auto font = resources.fonts[credit.font].get();
+        auto font = resources.fonts[credit.font];
         auto x =
             centerX - font->CalcTextSizeA(lineHeight, FLT_MAX, 0.0f, credit.string).x * 0.5f + frame.offsetX * scale;
         if (frame.effect == EFFECT_WAVE)

@@ -891,7 +891,7 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
             auto textPos = to_imvec2(to_vec2(cursorScreenPos) + to_vec2(ImGui::GetStyle().WindowPadding));
 
             drawList->PushClipRect(clipMin, clipMax);
-            ImGui::PushFont(resources.fonts[FONT_BOLD].get(), FONT_SIZE_LARGE);
+            ImGui::PushFont(resources.fonts[FONT_BOLD], FONT_SIZE_LARGE);
             auto triggerTextColor = isLightTheme ? TRIGGER_TEXT_COLOR_LIGHT : TRIGGER_TEXT_COLOR_DARK;
             drawList->AddText(textPos, ImGui::GetColorU32(triggerTextColor), names.c_str());
             ImGui::PopFont();

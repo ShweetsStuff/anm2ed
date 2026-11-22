@@ -26,7 +26,7 @@ void welcome_update(Manager& manager, Resources& resources, Dialog& dialog, Task
                          ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoScrollbar |
                          ImGuiWindowFlags_NoScrollWithMouse))
     {
-        ImGui::PushFont(resources.fonts[FONT_BOLD].get(), FONT_SIZE_LARGE);
+        ImGui::PushFont(resources.fonts[FONT_BOLD], FONT_SIZE_LARGE);
         ImGui::TextUnformatted(localize.get(LABEL_APPLICATION_NAME));
         ImGui::PopFont();
 

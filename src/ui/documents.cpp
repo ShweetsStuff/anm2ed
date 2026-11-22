@@ -212,7 +212,7 @@ void Documents::update(Taskbar& taskbar, Manager& manager, Settings& settings, R
                 if (isRequested)
                     flags |= ImGuiTabItemFlags_SetSelected;
 
-                ImGui::PushFont(resources.fonts[font].get(), FONT_SIZE);
+                ImGui::PushFont(resources.fonts[font], FONT_SIZE);
                 if (ImGui::BeginTabItem(label.c_str(), &document.isOpen, flags))
                 {
                     if (manager.selected != i)

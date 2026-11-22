@@ -720,7 +720,7 @@ void animations_update(Panel& panel, AnimationsPanel& animations)
                     tooltip_name_draw(resources, animation.name);
                     if (model.animations.defaultAnimation == animation.name)
                     {
-                        ImGui::PushFont(resources.fonts[FONT_ITALICS].get(), FONT_SIZE);
+                        ImGui::PushFont(resources.fonts[FONT_ITALICS], FONT_SIZE);
                         ImGui::TextUnformatted(localize.get(BASIC_DEFAULT));
                         ImGui::PopFont();
                     }

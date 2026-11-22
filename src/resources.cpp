@@ -2,7 +2,10 @@
 
 #include <ranges>
 
+#include "file.h"
 #include "log.h"
+
+#include <map>
 
 #ifdef _WIN32
 static constexpr const char* CHINESE_FALLBACK = "C:\\Windows\\Fonts\\msyh.ttc";
@@ -16,27 +19,47 @@ static constexpr int CHINESE_FALLBACK_NUMBER = 2;
 static constexpr int KOREAN_FALLBACK_NUMBER = 1;
 #endif
 
+// A font the atlas reads from memory it doesn't own, number `number` in its file.
+struct FontSource
+{
+    const void* data = nullptr;
+    std::size_t size = 0;
+    int number = 0;
+};
+
+// A system font with the CJK glyphs the embedded subsets lack, read once and kept, as the atlas reads from it.
+// The embedded subset when the system one isn't there.
+static FontSource fallback_get(const char* path, int number, const Embed& embedded)
+{
+    static std::map<std::string, std::string> files;
+    auto [it, isNew] = files.try_emplace(path);
+    if (isNew && !file_text_load(path, &it->second))
+        logger.error(std::format("Failed to load CJK fallback font: {}", path));
+    if (it->second.empty())
+        return {embedded.data, embedded.size, 0};
+    return {it->second.data(), it->second.size(), number};
+}
+
+// A new font, or more glyphs for `target`.
+static ImFont* font_add(FontSource source, ImFont* target)
+{
+    ImFontConfig config;
+    config.FontDataOwnedByAtlas = false;
+    config.FontNo = source.number;
+    config.MergeMode = target != nullptr;
+    config.DstFont = target;
+    return ImGui::GetIO().Fonts->AddFontFromMemoryTTF((void*)source.data, (int)source.size, FONT_SIZE, &config);
+}
+
 Resources::Resources()
 {
-    auto isKoreanFallback = std::filesystem::exists(KOREAN_FALLBACK);
-    auto isChineseFallback = std::filesystem::exists(CHINESE_FALLBACK);
-
-    if (!isKoreanFallback)
-        logger.error(std::format("Failed to load Korean fallback font: {}", KOREAN_FALLBACK));
-    if (!isChineseFallback)
-        logger.error(std::format("Failed to load Chinese fallback font: {}", CHINESE_FALLBACK));
-
-    for (auto [i, fontInfo] : std::views::enumerate(FONTS))
+    auto korean = fallback_get(KOREAN_FALLBACK, KOREAN_FALLBACK_NUMBER, FONT_KOREAN_TTF);
+    auto chinese = fallback_get(CHINESE_FALLBACK, CHINESE_FALLBACK_NUMBER, FONT_CHINESE_TTF);
+    for (int i = 0; i < FONT_COUNT; ++i)
     {
-        fonts[i] = Font((void*)fontInfo->data, fontInfo->size, FONT_SIZE);
-        if (isKoreanFallback)
-            fonts[i].append(KOREAN_FALLBACK, FONT_SIZE, KOREAN_FALLBACK_NUMBER);
-        else
-            fonts[i].append((void*)FONT_KOREAN_TTF.data, FONT_KOREAN_TTF.size, FONT_SIZE);
-        if (isChineseFallback)
-            fonts[i].append(CHINESE_FALLBACK, FONT_SIZE, CHINESE_FALLBACK_NUMBER);
-        else
-            fonts[i].append((void*)FONT_CHINESE_TTF.data, FONT_CHINESE_TTF.size, FONT_SIZE);
+        fonts[i] = font_add({FONTS[i]->data, FONTS[i]->size}, nullptr);
+        font_add(korean, fonts[i]);
+        font_add(chinese, fonts[i]);
     }
 
     for (auto [i, iconInfo] : std::views::enumerate(ICONS))

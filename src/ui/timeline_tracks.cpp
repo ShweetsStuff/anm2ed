@@ -155,7 +155,7 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
             if (isGroupTooltipDelayed && !isVisibleButtonHovered)
             {
                 ImGui::BeginTooltip();
-                ImGui::PushFont(resources.fonts[FONT_BOLD].get(), FONT_SIZE);
+                ImGui::PushFont(resources.fonts[FONT_BOLD], FONT_SIZE);
                 ImGui::TextUnformatted(label.c_str());
                 ImGui::PopFont();
                 ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_ID), std::make_format_args(group->id)).c_str());
@@ -307,7 +307,7 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
                     {
                         case ROOT:
                         {
-                            ImGui::PushFont(resources.fonts[FONT_BOLD].get(), FONT_SIZE);
+                            ImGui::PushFont(resources.fonts[FONT_BOLD], FONT_SIZE);
                             ImGui::TextUnformatted(localize.get(BASIC_ROOT));
                             ImGui::PopFont();
 
@@ -328,7 +328,7 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
                             auto layer = ::item_get(model.content.layers, id);
                             if (!layer)
                                 break;
-                            ImGui::PushFont(resources.fonts[FONT_BOLD].get(), FONT_SIZE);
+                            ImGui::PushFont(resources.fonts[FONT_BOLD], FONT_SIZE);
                             ImGui::TextUnformatted(layer->name.c_str());
                             ImGui::PopFont();
 
@@ -348,7 +348,7 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
                             auto nullInfo = ::item_get(model.content.nulls, id);
                             if (!nullInfo)
                                 break;
-                            ImGui::PushFont(resources.fonts[FONT_BOLD].get(), FONT_SIZE);
+                            ImGui::PushFont(resources.fonts[FONT_BOLD], FONT_SIZE);
                             ImGui::TextUnformatted(nullInfo->name.c_str());
                             ImGui::PopFont();
 
@@ -367,7 +367,7 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
                         }
                         case TRIGGER:
                         {
-                            ImGui::PushFont(resources.fonts[FONT_BOLD].get(), FONT_SIZE);
+                            ImGui::PushFont(resources.fonts[FONT_BOLD], FONT_SIZE);
                             ImGui::TextUnformatted(localize.get(BASIC_TRIGGERS));
                             ImGui::PopFont();
 
@@ -413,7 +413,7 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
             overlay_icon(resources.icon_id_get(icon), iconTintCurrent, false);
             ImGui::SameLine();
             if (isReferenced)
-                ImGui::PushFont(resources.fonts[FONT_ITALICS].get(), FONT_SIZE);
+                ImGui::PushFont(resources.fonts[FONT_ITALICS], FONT_SIZE);
             ImGui::PushStyleColor(ImGuiCol_Text, itemTextColor);
             ImGui::TextUnformatted(label.c_str());
             ImGui::PopStyleColor();
