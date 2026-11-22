@@ -36,8 +36,10 @@ Uids items_group(Model& model, int animationIndex, int type, const std::set<int>
 // Moves tracks and whole groups next to (or into) a target row. Layers are listed bottom-up, so for them "after" on
 // screen is "before" in the file.
 void items_move(Model& model, int animationIndex, int type, const std::set<int>& ids, const std::set<int>& groupIds,
-                RowTarget target, bool isDropAfter, bool isDropIntoGroup)
+                RowTarget target, DropZone zone)
 {
+    auto isDropAfter = zone != DROP_BEFORE;
+    auto isDropIntoGroup = zone == DROP_INSIDE;
     if ((target.groupId != -1 && groupIds.contains(target.groupId)) || (target.isGroup && groupIds.contains(target.id)))
         return;
     auto entries = track_entries_edit(model, animationIndex, type);

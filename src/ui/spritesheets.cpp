@@ -153,15 +153,16 @@ static void spritesheets_merge_popup_update(Panel& panel, SpritesheetsPanel& spr
         popup_buttons_draw(manager, {.confirm = BASIC_MERGE, .isConfirmEnabled = spritesheets.mergeIds.size() > 1});
     if (result == PopupButton::CONFIRM)
         command_push(panel,
-                     [ids = spritesheets.mergeIds, isAppendRight = settings.mergeSpritesheetsOrigin == APPEND_RIGHT,
-                      isMakeRegions = settings.mergeSpritesheetsIsMakeRegions,
-                      isMakePrimaryRegion = settings.mergeSpritesheetsIsMakePrimaryRegion,
-                      regionOrigin = MERGE_REGION_ORIGINS[settings.mergeSpritesheetsRegionOrigin]](Document& document) {
+                     [ids = spritesheets.mergeIds,
+                      options = SpritesheetMergeOptions{
+                          .isAppendRight = settings.mergeSpritesheetsOrigin == APPEND_RIGHT,
+                          .isMakeRegions = settings.mergeSpritesheetsIsMakeRegions,
+                          .isMakePrimaryRegion = settings.mergeSpritesheetsIsMakePrimaryRegion,
+                          .origin = MERGE_REGION_ORIGINS[settings.mergeSpritesheetsRegionOrigin]}](Document& document) {
                          spritesheet_textures_edit(
                              document, EDIT_MERGE_SPRITESHEETS,
                              [&]() {
-                                 if (!document.spritesheets_merge(ids, isAppendRight, isMakeRegions,
-                                                                  isMakePrimaryRegion, regionOrigin))
+                                 if (!document.spritesheets_merge(ids, options))
                                      return false;
                                  document.selected_ids_set(SelectionKind::SPRITESHEETS, {*ids.begin()});
                                  document.focused_id_set(SelectionKind::SPRITESHEETS, *ids.begin());

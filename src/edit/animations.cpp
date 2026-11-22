@@ -309,7 +309,7 @@ static void track_entries_merge(std::vector<TrackEntry>& destination, const std:
 
 // Merges source animations into the target (frames appended, prepended, replacing or ignored), optionally deleting
 // the sources. `ungroupIds` dissolves groups afterwards. Returns the merged animation's uid.
-Uids animations_merge(Model& model, int target, std::set<int> sources, Merge type, bool isDeleteAfter,
+Uids animations_merge(Model& model, int target, std::set<int> sources, Merge type, MergeSources sourcesAfter,
                       const std::set<int>& ungroupIds)
 {
     if (!model.animation_get(target))
@@ -346,7 +346,7 @@ Uids animations_merge(Model& model, int target, std::set<int> sources, Merge typ
         }
 
         auto targetUid = model.animation_get(target)->uid;
-        if (isDeleteAfter)
+        if (sourcesAfter == SOURCES_DELETED)
         {
             sources.erase(target);
             animations_take(model, sources, {});

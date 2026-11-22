@@ -1,14 +1,9 @@
 #pragma once
 
+#include "model/common.h"
+
 #include "vec.h"
 #include <imgui/imgui.h>
-
-enum DropZone
-{
-    DROP_BEFORE,
-    DROP_INSIDE,
-    DROP_AFTER
-};
 
 bool is_drop_after(ImVec2, ImVec2);
 DropZone drop_zone_get(ImVec2, ImVec2);

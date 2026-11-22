@@ -163,8 +163,8 @@ void AnimationPreview::tick(Manager& manager, Settings& settings, float deltaSec
             auto range = animation_play_range_get(*animation);
             if (!wasPlaybackPlaying)
                 soundFrame = (int)std::floor(playback.time) - 1;
-            playback.tick(fps, range.x, range.y, (animation->isLoop || settings.playbackIsLoop) && !manager.isRecording,
-                          deltaSeconds);
+            auto isLoop = (animation->isLoop || settings.playbackIsLoop) && !manager.isRecording;
+            playback.tick(fps, range.x, range.y, isLoop ? PLAYBACK_LOOP : PLAYBACK_ONCE, deltaSeconds);
 
             // Each frame playback reaches plays its trigger's sound once, however many ticks it lasts or skips.
             auto frame = (int)std::floor(playback.time);

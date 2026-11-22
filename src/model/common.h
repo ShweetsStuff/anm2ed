@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdint>
 #include <optional>
+#include <string>
 
 #include "vec.h"
 
@@ -136,6 +137,21 @@ enum class ChangeType
     SUBTRACT,
     MULTIPLY,
     DIVIDE
+};
+
+// Where something dragged lands on a row: before it, into it (a group), or after it.
+enum DropZone
+{
+    DROP_BEFORE,
+    DROP_INSIDE,
+    DROP_AFTER
+};
+
+// What an animation merge does with the animations merged in.
+enum MergeSources
+{
+    SOURCES_KEPT,
+    SOURCES_DELETED
 };
 
 // What a document is written as: the game's copy, the editor's own (embedded in a save), or clipboard text.

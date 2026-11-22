@@ -18,9 +18,9 @@ void Playback::clamp(int length)
 }
 
 // Plays the frames [start, end). A playhead outside them starts at start.
-void Playback::tick(int fps, int start, int end, bool isLoop, float deltaSeconds)
+void Playback::tick(int fps, int start, int end, PlaybackLoop loop, float deltaSeconds)
 {
-    if (isLoop)
+    if (loop == PLAYBACK_LOOP)
         isFinished = false;
     if (isFinished || !isPlaying || fps <= 0 || end <= start)
         return;
@@ -31,7 +31,7 @@ void Playback::tick(int fps, int start, int end, bool isLoop, float deltaSeconds
         time = (float)start;
     time += deltaSeconds * (float)fps;
 
-    if (isLoop)
+    if (loop == PLAYBACK_LOOP)
     {
         time = (float)start + std::fmod(time - (float)start, (float)(end - start));
         return;

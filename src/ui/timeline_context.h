@@ -227,8 +227,7 @@ struct TimelineContext : TimelineState
     void item_remove();
     std::vector<Reference> item_references_groupable_get();
     void item_group();
-    void rows_move_to_row(std::vector<TimelineRow> draggedRows, TimelineRow targetRow, bool isDropAfter,
-                          bool isDropIntoGroup = false);
+    void rows_move_to_row(std::vector<TimelineRow> draggedRows, TimelineRow targetRow, DropZone zone);
     void fit_animation_length();
     void marker_set(bool, int);
     void markers_remove();

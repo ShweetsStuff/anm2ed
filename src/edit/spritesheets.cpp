@@ -110,8 +110,9 @@ std::optional<Image> spritesheet_pack(Model& model, int id, const Image& sheet, 
 // Appends sheets to the first, right or below. The result is an SVG (holding any PNG sheets as images) when any of
 // them is one. The first sheet's path takes the result's extension.
 std::optional<Image> spritesheets_merge(Model& model, const std::set<int>& ids, const ImageGet& image_get,
-                                        bool isAppendRight, bool isMakeRegions, bool isMakePrimaryRegion, Origin origin)
+                                        SpritesheetMergeOptions options)
 {
+    auto [isAppendRight, isMakeRegions, isMakePrimaryRegion, origin] = options;
     if (ids.size() < 2)
         return {};
     for (auto id : ids)

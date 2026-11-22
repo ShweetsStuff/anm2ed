@@ -203,8 +203,7 @@ void TimelineContext::item_group()
         });
 }
 
-void TimelineContext::rows_move_to_row(std::vector<TimelineRow> draggedRows, TimelineRow targetRow, bool isDropAfter,
-                                       bool isDropIntoGroup)
+void TimelineContext::rows_move_to_row(std::vector<TimelineRow> draggedRows, TimelineRow targetRow, DropZone zone)
 {
     if (draggedRows.empty())
         return;
@@ -237,9 +236,7 @@ void TimelineContext::rows_move_to_row(std::vector<TimelineRow> draggedRows, Tim
 
     edit_push(
         EDIT_MOVE_ITEMS,
-        [=](Model& model) {
-            return items_move(model, animationIndex, targetType, ids, groupIds, target, isDropAfter, isDropIntoGroup);
-        },
+        [=](Model& model) { return items_move(model, animationIndex, targetType, ids, groupIds, target, zone); },
         [=, this](Document& document, const Uids&) {
             document.selection.uids[SelectionKind::TRACKS] = moved.uids.at(SelectionKind::TRACKS);
             document.selection.uids[SelectionKind::GROUPS] = moved.uids.at(SelectionKind::GROUPS);

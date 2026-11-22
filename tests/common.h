@@ -70,7 +70,8 @@ inline std::vector<Variant> variants_get(const Model& model)
     {
         auto merged = model;
         std::set<int> sources = {0, 1, 2};
-        animations_merge(merged, 0, sources, type, type == MERGE_PREPEND || type == MERGE_REPLACE, {});
+        animations_merge(merged, 0, sources, type,
+                         type == MERGE_PREPEND || type == MERGE_REPLACE ? SOURCES_DELETED : SOURCES_KEPT, {});
         variants.emplace_back(name, model_serialize(merged, SAVE_EDITOR));
     }
     return variants;

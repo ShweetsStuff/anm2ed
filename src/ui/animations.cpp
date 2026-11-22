@@ -227,7 +227,8 @@ static int animations_merge(Document& document, const AnimationMergeOptions& opt
     int merged = -1;
     document.edit_apply(EDIT_MERGE_ANIMATIONS, [&](Model& model) {
         animation_overlay_reset(document, sources);
-        auto uids = animations_merge(model, target, sources, type, isDeleteAfter, ungroupIds);
+        auto uids =
+            animations_merge(model, target, sources, type, isDeleteAfter ? SOURCES_DELETED : SOURCES_KEPT, ungroupIds);
         auto indices = animation_indices_get(document, uids);
         if (indices.empty())
             return uids;

@@ -35,7 +35,7 @@ TEST_CASE("animations_merge keeps one group per name")
     {
         INFO("merge: ", std::string(name));
         auto model = fixture_load("03a_groups_nested.anm2");
-        animations_merge(model, 0, {0, 1}, type, false, {});
+        animations_merge(model, 0, {0, 1}, type, SOURCES_KEPT, {});
         CHECK(groups_named_count(*model.animation_get(0), "Main") == 1);
     }
 }
@@ -190,7 +190,7 @@ TEST_CASE("edit layer operations")
          [&](Model& anm2) { return items_group(anm2, 0, LAYER, {2}, "New"); }, 1},
         {"items_move", "03b_groups_legacy_flat.anm2",
          [&](Model& anm2) {
-             items_move(anm2, 0, LAYER, {2}, {}, {true, LAYER, 0, -1}, false, true);
+             items_move(anm2, 0, LAYER, {2}, {}, {true, LAYER, 0, -1}, DROP_INSIDE);
              return Uids{};
          },
          0},
@@ -244,7 +244,7 @@ TEST_CASE("edit layer operations")
          },
          0},
         {"animations_merge", "03a_groups_nested.anm2",
-         [&](Model& anm2) { return animations_merge(anm2, 0, {1}, MERGE_APPEND, true, {0}); }, 1},
+         [&](Model& anm2) { return animations_merge(anm2, 0, {1}, MERGE_APPEND, SOURCES_DELETED, {0}); }, 1},
     };
 
     for (auto& entry : CASES)
@@ -299,7 +299,7 @@ TEST_CASE("spritesheet pixel edits")
         auto image_get = [&](int id) {
             return id == 0 ? &sheet : &other;
         };
-        auto merged = spritesheets_merge(model, {0, 1}, image_get, true, true, false, Origin::TOP_LEFT);
+        auto merged = spritesheets_merge(model, {0, 1}, image_get, {true, true, false, Origin::TOP_LEFT});
         REQUIRE(merged);
         CHECK(merged->size == IVec2(80, 64));
         CHECK(model.content.spritesheets.size() == 1);
@@ -326,9 +326,9 @@ TEST_CASE("markers stay in the editor's copy and bound playback")
 
     Playback playback = {};
     playback.isPlaying = true;
-    playback.tick(10, 2, 6, true, 0.1f);
+    playback.tick(10, 2, 6, PLAYBACK_LOOP, 0.1f);
     CHECK(playback.time == doctest::Approx(3.0f));
-    playback.tick(10, 2, 6, true, 0.5f);
+    playback.tick(10, 2, 6, PLAYBACK_LOOP, 0.5f);
     CHECK(playback.time == doctest::Approx(4.0f));
 }
 
@@ -435,11 +435,11 @@ TEST_CASE("animations_merge moves triggers past the animation placed before them
     };
 
     auto appended = model_make();
-    animations_merge(appended, 0, {0, 1}, MERGE_APPEND, false, {});
+    animations_merge(appended, 0, {0, 1}, MERGE_APPEND, SOURCES_KEPT, {});
     CHECK(appended.animation_get(0)->triggers.frames.at(0).atFrame == 15);
 
     auto prepended = model_make();
-    animations_merge(prepended, 1, {0, 1}, MERGE_PREPEND, false, {});
+    animations_merge(prepended, 1, {0, 1}, MERGE_PREPEND, SOURCES_KEPT, {});
     CHECK(prepended.animation_get(1)->triggers.frames.at(0).atFrame == 15);
 }
 
@@ -489,7 +489,7 @@ TEST_CASE("SVG spritesheets pack and merge into SVGs")
         return images.at(id);
     };
     auto mixed = model;
-    auto merged = spritesheets_merge(mixed, {0, 1}, image_get, true, false, false, Origin::TOP_LEFT);
+    auto merged = spritesheets_merge(mixed, {0, 1}, image_get, {true, false, false, Origin::TOP_LEFT});
     REQUIRE(merged);
     CHECK(merged->is_vector());
     CHECK(merged->size == IVec2(36, 16));
@@ -498,7 +498,7 @@ TEST_CASE("SVG spritesheets pack and merge into SVGs")
 
     std::swap(model.content.spritesheets.front().id, model.content.spritesheets.back().id);
     images = {{1, &vector}, {0, &raster}};
-    REQUIRE(spritesheets_merge(model, {0, 1}, image_get, true, false, false, Origin::TOP_LEFT));
+    REQUIRE(spritesheets_merge(model, {0, 1}, image_get, {true, false, false, Origin::TOP_LEFT}));
     CHECK(item_get(model.content.spritesheets, 0)->path == "white.svg");
 }
 

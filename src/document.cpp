@@ -645,12 +645,9 @@ bool Document::spritesheet_pack(int id, int padding)
     return true;
 }
 
-bool Document::spritesheets_merge(const std::set<int>& ids, bool isAppendRight, bool isMakeRegions,
-                                  bool isMakePrimaryRegion, Origin origin)
+bool Document::spritesheets_merge(const std::set<int>& ids, SpritesheetMergeOptions options)
 {
-    auto merged = ::spritesheets_merge(
-        model, ids, [this](int id) { return texture_get(id); }, isAppendRight, isMakeRegions, isMakePrimaryRegion,
-        origin);
+    auto merged = ::spritesheets_merge(model, ids, [this](int id) { return texture_get(id); }, options);
     if (!merged)
         return false;
     texture_set(*ids.begin(), std::move(*merged));

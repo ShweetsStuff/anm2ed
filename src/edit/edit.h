@@ -111,7 +111,7 @@ Uids root_bake_into(Model&, const std::set<Reference>&, const std::set<Reference
 
 void items_remove(Model&, int, const std::map<int, std::set<int>>&, const std::map<int, std::set<int>>&);
 Uids items_group(Model&, int, int, const std::set<int>&, const std::string&);
-void items_move(Model&, int, int, const std::set<int>&, const std::set<int>&, RowTarget, bool, bool);
+void items_move(Model&, int, int, const std::set<int>&, const std::set<int>&, RowTarget, DropZone);
 void animation_length_fit(Model&, int);
 int item_add(Model&, ItemType, int, int, Layer, Null, int, Destination);
 
@@ -123,7 +123,7 @@ void animations_remove(Model&, const std::set<int>&, const std::set<int>&);
 Uids animations_move(Model&, const std::set<int>&, const std::set<int>&, AnimationTarget);
 void animations_group(Model&, const std::set<int>&, const std::string&);
 Uids animations_paste(Model&, const std::string&, int, int, std::set<int>&, std::string*);
-Uids animations_merge(Model&, int, std::set<int>, Merge, bool, const std::set<int>&);
+Uids animations_merge(Model&, int, std::set<int>, Merge, MergeSources, const std::set<int>&);
 
 std::string region_name_get(const std::string&, int);
 void regions_generate(Model&, const std::set<int>&, const std::set<Reference>&, const std::string&, RegionFrameMapping);
@@ -134,7 +134,16 @@ Uids animation_grid_generate(Model&, const std::vector<Reference>&, const GridOp
 Uids frames_change_apply(Model&, const ChangeTargets&, FrameChange, ChangeType);
 bool regions_trim(Model&, int, const std::set<int>&, const Image&);
 std::optional<Image> spritesheet_pack(Model&, int, const Image&, int);
-std::optional<Image> spritesheets_merge(Model&, const std::set<int>&, const ImageGet&, bool, bool, bool, Origin);
+// How spritesheets merge: side by side or stacked, and the regions made for each sheet.
+struct SpritesheetMergeOptions
+{
+    bool isAppendRight = false;
+    bool isMakeRegions = false;
+    bool isMakePrimaryRegion = false;
+    Origin origin = Origin::CUSTOM;
+};
+
+std::optional<Image> spritesheets_merge(Model&, const std::set<int>&, const ImageGet&, SpritesheetMergeOptions);
 
 // Where a spritesheet path of a document (this one, or a library) points, from this document.
 using SpritesheetPathGet = std::function<std::filesystem::path(const Model&, const std::filesystem::path&)>;

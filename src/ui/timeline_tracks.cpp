@@ -582,7 +582,7 @@ void TimelineContext::row_drag_drop(const TimelineRow& row, ImVec2 buttonMin, Im
         else
             drop_line_draw(ImGui::GetWindowDrawList(), childMin, childMax, isDropAfter);
         if (payload->IsDelivery())
-            rows_move_to_row(draggedRows, row, isDropAfter, isDropIntoGroup);
+            rows_move_to_row(draggedRows, row, isDropIntoGroup ? DROP_INSIDE : isDropAfter ? DROP_AFTER : DROP_BEFORE);
     }
     ImGui::EndDragDropTarget();
 }

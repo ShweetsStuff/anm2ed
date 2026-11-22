@@ -1,5 +1,11 @@
 #pragma once
 
+enum PlaybackLoop
+{
+    PLAYBACK_ONCE,
+    PLAYBACK_LOOP
+};
+
 class Playback
 {
 public:
@@ -9,7 +15,7 @@ public:
 
     void toggle();
     void clamp(int);
-    void tick(int, int, int, bool, float);
+    void tick(int, int, int, PlaybackLoop, float);
     void decrement(int);
     void increment(int);
 };

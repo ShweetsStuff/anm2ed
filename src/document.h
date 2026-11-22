@@ -157,7 +157,7 @@ public:
     void library_reload(int);
     bool regions_trim(int, const std::set<int>&);
     bool spritesheet_pack(int, int);
-    bool spritesheets_merge(const std::set<int>&, bool, bool, bool, Origin);
+    bool spritesheets_merge(const std::set<int>&, SpritesheetMergeOptions);
     void hash_set();
     void clean();
     void change();
