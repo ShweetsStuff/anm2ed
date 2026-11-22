@@ -1,0 +1,36 @@
+
+<AnimatedActor>
+    <Info CreatedBy="robot" CreatedOn="05/21/2026 11:54:09 PM" Fps="30" Version="0"/>
+    <Content>
+        <Spritesheets>
+            <Spritesheet Id="0" Path="isaac.png">
+                <Region Id="0" Name="1" XCrop="1" YCrop="36" Width="28" Height="34" XPivot="14" YPivot="34"/>
+                <Region Id="1" Name="2" XCrop="1" YCrop="1" Width="30" Height="33" XPivot="15" YPivot="33"/>
+                <Region Id="2" Name="3" XCrop="31" YCrop="36" Width="28" Height="34" XPivot="15" YPivot="34"/>
+            </Spritesheet>
+        </Spritesheets>
+        <Layers>
+            <Layer Id="0" Name="Main" SpritesheetId="0"/>
+        </Layers>
+        <Nulls/>
+        <Events/>
+    </Content>
+    <Animations DefaultAnimation="Main">
+        <Animation Name="Main" FrameNum="14" Loop="true">
+            <RootAnimation>
+                <Frame XPosition="0" YPosition="0" Delay="14" Visible="true" XScale="100" YScale="100" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/>
+            </RootAnimation>
+            <LayerAnimations>
+                <LayerAnimation LayerId="0" Visible="true">
+                    <Frame RegionId="0" XPivot="14" YPivot="34" XCrop="1" YCrop="36" Width="28" Height="34" XPosition="2" YPosition="0" Delay="5" Visible="true" XScale="100" YScale="100" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="EaseInOut"/>
+                    <Frame RegionId="1" XPivot="15" YPivot="33" XCrop="1" YCrop="1" Width="30" Height="33" XPosition="2" YPosition="0" Delay="2" Visible="true" XScale="110" YScale="90" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="EaseInOut"/>
+                    <Frame RegionId="2" XPivot="15" YPivot="34" XCrop="31" YCrop="36" Width="28" Height="34" XPosition="2" YPosition="0" Delay="5" Visible="true" XScale="100" YScale="100" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="EaseInOut"/>
+                    <Frame RegionId="1" XPivot="15" YPivot="33" XCrop="1" YCrop="1" Width="30" Height="33" XPosition="2" YPosition="0" Delay="2" Visible="true" XScale="110" YScale="90" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="EaseInOut"/>
+                </LayerAnimation>
+            </LayerAnimations>
+            <NullAnimations/>
+            <Triggers/>
+        </Animation>
+    </Animations>
+</AnimatedActor>
+

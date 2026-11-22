@@ -185,7 +185,7 @@ namespace anm2ed::imgui::wizard
     state.isLoaded = false;
 
     std::string errorString{};
-    if (!model::model_load_string(state.model, info.anm2, &errorString))
+    if (!model::model_load_string(state.model, std::string_view((const char*)info.anm2->data, info.anm2->size), &errorString))
     {
       logger.error(std::format("Unable to load friend animation {}: {}", info.name, errorString));
       return;
@@ -194,7 +194,7 @@ namespace anm2ed::imgui::wizard
     if (state.model.info.fps > 0) state.fps = (float)state.model.info.fps;
 
     for (auto& spritesheet : state.model.content.spritesheets)
-      state.textures[spritesheet.id] = resource::Image(info.png, info.pngSize);
+      state.textures[spritesheet.id] = resource::Image(info.png->data, info.png->size);
 
     auto animation = friend_animation_get(state);
     if (!animation)

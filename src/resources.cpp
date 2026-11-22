@@ -3,7 +3,6 @@
 #include <ranges>
 
 #include "log.hpp"
-#include "music.hpp"
 
 using namespace anm2ed::resource;
 
@@ -31,19 +30,19 @@ namespace anm2ed
 
     for (auto [i, fontInfo] : std::views::enumerate(font::FONTS))
     {
-      fonts[i] = Font((void*)fontInfo.data, fontInfo.length, font::SIZE);
+      fonts[i] = Font((void*)fontInfo->data, fontInfo->size, font::SIZE);
       if (isKoreanFallback)
         fonts[i].append(KOREAN_FALLBACK, font::SIZE, KOREAN_FALLBACK_NUMBER);
       else
-        fonts[i].append((void*)font::KOREAN_INFO.data, font::KOREAN_INFO.length, font::SIZE);
+        fonts[i].append((void*)FONT_KOREAN_TTF.data, FONT_KOREAN_TTF.size, font::SIZE);
       if (isChineseFallback)
         fonts[i].append(CHINESE_FALLBACK, font::SIZE, CHINESE_FALLBACK_NUMBER);
       else
-        fonts[i].append((void*)font::CHINESE_INFO.data, font::CHINESE_INFO.length, font::SIZE);
+        fonts[i].append((void*)FONT_CHINESE_TTF.data, FONT_CHINESE_TTF.size, font::SIZE);
     }
 
     for (auto [i, iconInfo] : std::views::enumerate(icon::ICONS))
-      icons[i] = texture::svg_load(iconInfo.data, iconInfo.length, iconInfo.size);
+      icons[i] = texture::svg_load((const char*)iconInfo.svg->data, iconInfo.svg->size, iconInfo.size);
 
     for (auto [i, shaderInfo] : std::views::enumerate(shader::SHADERS))
       shaders[i] = Shader(shaderInfo.vertex, shaderInfo.fragment);
@@ -55,7 +54,7 @@ namespace anm2ed
   {
     if (!isMusicLoaded)
     {
-      music = AudioData(music::ABOUT, std::size(music::ABOUT));
+      music = AudioData(MUSIC_ABOUT_OPUS.data, MUSIC_ABOUT_OPUS.size);
       isMusicLoaded = true;
     }
     return music;

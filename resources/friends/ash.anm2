@@ -1,0 +1,34 @@
+
+<AnimatedActor>
+    <Info CreatedBy="robot" CreatedOn="05/21/2026 09:25:40 PM" Fps="30" Version="0"/>
+    <Content>
+        <Spritesheets>
+            <Spritesheet Id="0" Path="ash.png">
+                <Region Id="0" Name="1" XCrop="1" YCrop="51" Width="52" Height="28" XPivot="25" YPivot="28"/>
+                <Region Id="1" Name="2" XCrop="1" YCrop="1" Width="48" Height="48" XPivot="24" YPivot="48"/>
+            </Spritesheet>
+        </Spritesheets>
+        <Layers>
+            <Layer Id="0" Name="Main" SpritesheetId="0"/>
+        </Layers>
+        <Nulls/>
+        <Events/>
+    </Content>
+    <Animations DefaultAnimation="Main">
+        <Animation Name="Main" FrameNum="9" Loop="true">
+            <RootAnimation>
+                <Frame XPosition="0" YPosition="0" Delay="9" Visible="true" XScale="100" YScale="100" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="false"/>
+            </RootAnimation>
+            <LayerAnimations>
+                <LayerAnimation LayerId="0" Visible="true">
+                    <Frame RegionId="1" XPivot="24" YPivot="48" XCrop="1" YCrop="1" Width="48" Height="48" XPosition="1" YPosition="-4" Delay="3" Visible="true" XScale="95" YScale="105" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="EaseInOut"/>
+                    <Frame RegionId="0" XPivot="25" YPivot="28" XCrop="1" YCrop="51" Width="52" Height="28" XPosition="1" YPosition="-4" Delay="5" Visible="true" XScale="105" YScale="95" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="EaseInOut"/>
+                    <Frame RegionId="1" XPivot="24" YPivot="48" XCrop="1" YCrop="1" Width="48" Height="48" XPosition="1" YPosition="-4" Delay="1" Visible="true" XScale="90" YScale="110" RedTint="255" GreenTint="255" BlueTint="255" AlphaTint="255" RedOffset="0" GreenOffset="0" BlueOffset="0" Rotation="0" Interpolated="EaseInOut"/>
+                </LayerAnimation>
+            </LayerAnimations>
+            <NullAnimations/>
+            <Triggers/>
+        </Animation>
+    </Animations>
+</AnimatedActor>
+

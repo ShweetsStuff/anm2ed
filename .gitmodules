@@ -20,3 +20,9 @@
 [submodule "external/pugixml"]
 	path = external/pugixml
 	url = https://github.com/zeux/pugixml
+[submodule "external/doctest"]
+	path = external/doctest
+	url = https://github.com/doctest/doctest
+[submodule "external/stb"]
+	path = external/stb
+	url = https://github.com/nothings/stb

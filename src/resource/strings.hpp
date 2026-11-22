@@ -26,7 +26,7 @@ namespace anm2ed
         LANGUAGE_COUNT
   };
 
-  static constexpr const char* LANGUAGE_STRINGS[LANGUAGE_COUNT] = {
+  inline constexpr const char* LANGUAGE_STRINGS[LANGUAGE_COUNT] = {
 #define X(symbol, label, selector) label,
       LANGUAGES(X)
 #undef X
@@ -885,11 +885,11 @@ namespace anm2ed
   };
 
 #define DEFINE_LANGUAGE_ARRAY(symbol, label, selector)                                                                 \
-  static constexpr const char* STRINGS_##symbol[] = {STRINGS(selector)};
+  inline constexpr const char* STRINGS_##symbol[] = {STRINGS(selector)};
   LANGUAGES(DEFINE_LANGUAGE_ARRAY)
 #undef DEFINE_LANGUAGE_ARRAY
 
-  static constexpr const char* const* LANGUAGE_STRING_COLLECTIONS[LANGUAGE_COUNT] = {
+  inline constexpr const char* const* LANGUAGE_STRING_COLLECTIONS[LANGUAGE_COUNT] = {
 #define X(symbol, label, selector) STRINGS_##symbol,
       LANGUAGES(X)
 #undef X

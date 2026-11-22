@@ -1,287 +1,126 @@
 cmake_minimum_required(VERSION 3.27)
 project(anm2ed LANGUAGES C CXX)
 
-if(WIN32 AND DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
-  set(CMAKE_TOOLCHAIN_FILE
-      "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
-      CACHE STRING "Vcpkg toolchain file")
-endif()
-
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-if(CMAKE_EXPORT_COMPILE_COMMANDS AND NOT WIN32)
-  execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_BINARY_DIR}/compile_commands.json
-                          ${CMAKE_SOURCE_DIR}/compile_commands.json)
-endif()
-
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-
-if(MSVC)
-  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
-  set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<$<CONFIG:Debug>:ProgramDatabase>")
-endif()
-
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
-macro(anm2ed_set_cache_bool name value)
-  set(${name} ${value} CACHE BOOL "" FORCE)
-endmacro()
-
-anm2ed_set_cache_bool(SDL_STATIC ON)
-anm2ed_set_cache_bool(SDL_SHARED OFF)
-if(NOT WIN32)
-  anm2ed_set_cache_bool(SDL_ALSA ON)
-  anm2ed_set_cache_bool(SDL_ALSA_SHARED ON)
-  anm2ed_set_cache_bool(SDL_JACK ON)
-  anm2ed_set_cache_bool(SDL_JACK_SHARED ON)
-  anm2ed_set_cache_bool(SDL_PIPEWIRE ON)
-  anm2ed_set_cache_bool(SDL_PIPEWIRE_SHARED ON)
-  anm2ed_set_cache_bool(SDL_SNDIO ON)
-  anm2ed_set_cache_bool(SDL_SNDIO_SHARED ON)
-endif()
-anm2ed_set_cache_bool(SDL_HAPTIC OFF)
-anm2ed_set_cache_bool(SDL_JOYSTICK OFF)
-anm2ed_set_cache_bool(SDL_SENSOR OFF)
-anm2ed_set_cache_bool(SDL_HIDAPI OFF)
-anm2ed_set_cache_bool(SDL_CAMERA OFF)
-anm2ed_set_cache_bool(SDL_TRAY OFF)
-anm2ed_set_cache_bool(SDL_VULKAN OFF)
-add_subdirectory(external/SDL EXCLUDE_FROM_ALL)
-
-anm2ed_set_cache_bool(SDLMIXER_DEPS_SHARED OFF)
-anm2ed_set_cache_bool(SDLMIXER_AIFF OFF)
-anm2ed_set_cache_bool(SDLMIXER_AU OFF)
-anm2ed_set_cache_bool(SDLMIXER_FLAC_LIBFLAC OFF)
-anm2ed_set_cache_bool(SDLMIXER_FLAC_DRFLAC OFF)
-anm2ed_set_cache_bool(SDLMIXER_GME OFF)
-anm2ed_set_cache_bool(SDLMIXER_MOD_XMP OFF)
-anm2ed_set_cache_bool(SDLMIXER_MP3_DRMP3 OFF)
-anm2ed_set_cache_bool(SDLMIXER_MP3_MPG123 OFF)
-anm2ed_set_cache_bool(SDLMIXER_MIDI_FLUIDSYNTH OFF)
-anm2ed_set_cache_bool(SDLMIXER_MIDI_TIMIDITY OFF)
-anm2ed_set_cache_bool(SDLMIXER_OPUS ON)
-anm2ed_set_cache_bool(SDLMIXER_VOC OFF)
-anm2ed_set_cache_bool(SDLMIXER_VORBIS_STB ON)
-anm2ed_set_cache_bool(SDLMIXER_VORBIS_VORBISFILE OFF)
-anm2ed_set_cache_bool(SDLMIXER_VORBIS_TREMOR OFF)
-anm2ed_set_cache_bool(SDLMIXER_WAVE ON)
-anm2ed_set_cache_bool(SDLMIXER_WAVPACK OFF)
-anm2ed_set_cache_bool(SDLMIXER_TEST OFF)
-anm2ed_set_cache_bool(SDLMIXER_INSTALL OFF)
-add_subdirectory(external/SDL_mixer EXCLUDE_FROM_ALL)
-
-add_subdirectory(external/lunasvg)
-
-set(GLAD_SRC ${CMAKE_CURRENT_SOURCE_DIR}/include/glad/glad.cpp)
-
-set(IMGUI_CORE_SRC external/imgui/imgui.cpp external/imgui/imgui_draw.cpp external/imgui/imgui_widgets.cpp
-                   external/imgui/imgui_tables.cpp)
-set(IMGUI_SRC
-    external/imgui/backends/imgui_impl_sdl3.cpp
-    external/imgui/backends/imgui_impl_opengl3.cpp)
-
-set(PUGIXML_SRC external/pugixml/src/pugixml.cpp)
-set(SIMDJSON_SRC external/simdjson/singleheader/simdjson.cpp)
-
-file(GLOB PROJECT_SRC CONFIGURE_DEPENDS
-     src/resource/*.cpp
-     src/resource/*.hpp
-     src/imgui/*.cpp
-     src/imgui/*.hpp
-     src/imgui/window/*.cpp
-     src/imgui/window/*.hpp
-     src/imgui/window/timeline/*.cpp
-     src/imgui/window/timeline/*.hpp
-     src/imgui/popup/*.cpp
-     src/imgui/popup/*.hpp
-     src/imgui/wizard/*.cpp
-     src/imgui/wizard/*.hpp
-     src/util/imgui/*.cpp
-     src/util/imgui/*.hpp
-     src/util/*.cpp
-     src/util/*.hpp
-     src/window/*.cpp
-     src/window/*.hpp
-     src/*.cpp
-     src/*.hpp)
-
-set(CORE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
-file(GLOB CORE_SRC CONFIGURE_DEPENDS ${CORE_DIR}/edit/*.cpp ${CORE_DIR}/model/*.cpp)
-foreach(CORE_FILE log resource/image resource/audio_data resource/asset_store util/file util/path util/math util/time util/working_directory
-                  util/pack util/imgui/multiselect snapshots playback selection)
-  list(APPEND CORE_SRC ${CORE_DIR}/${CORE_FILE}.cpp)
-endforeach()
-list(REMOVE_ITEM PROJECT_SRC ${CORE_SRC} ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
-
-set(CORE_INCLUDE_DIRS
-    include
-    external
-    external/imgui
-    external/glm
-    external/lunasvg/include
-    external/SDL/include
-    src
-    src/imgui
-    src/resource
-    src/util)
-
-add_library(anm2ed_core STATIC ${CORE_SRC} ${PUGIXML_SRC} ${SIMDJSON_SRC} ${IMGUI_CORE_SRC})
-target_include_directories(anm2ed_core PUBLIC ${CORE_INCLUDE_DIRS})
-target_link_libraries(anm2ed_core PUBLIC lunasvg)
-target_compile_definitions(anm2ed_core PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS IMGUI_DEBUG_PARANOID IMGUI_ENABLE_DOCKING)
-# windows.h otherwise defines min/max macros that break std::min/std::max.
-if(WIN32)
-  target_compile_definitions(anm2ed_core PUBLIC NOMINMAX)
-endif()
-if(NOT MSVC)
-  target_compile_options(anm2ed_core PRIVATE -Wall -Wextra -Wpedantic)
+# Two builds: Release (the default) and Debug. Set before the libraries are added, so they're optimized too.
+if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(CMAKE_BUILD_TYPE Release)
 endif()
 
-# The editor's code as a library, shared by the editor and the render tests.
-add_library(anm2ed_app STATIC ${GLAD_SRC} ${IMGUI_SRC} ${PROJECT_SRC})
-add_executable(${PROJECT_NAME} src/main.cpp)
-set_target_properties(
-  ${PROJECT_NAME}
-  PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
-             RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/bin"
-             RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/bin"
-             RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_BINARY_DIR}/bin"
-             RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_BINARY_DIR}/bin")
-
-
-target_include_directories(
-  anm2ed_app
-  PUBLIC include
-          include/glad
-          external
-          external/imgui
-          external/glm
-                external/lunasvg
-          external/SDL
-          external/SDL_mixer
-          external/SDL_mixer/include
-          src
-          src/imgui
-          src/resource
-          src/util)
-
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "Release")
-endif()
-
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  target_compile_definitions(anm2ed_app PUBLIC DEBUG)
-endif()
-
-if(WIN32)
-  # Keep Release as a GUI app (no console window).
-  if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    if(MSVC)
-      target_link_options(${PROJECT_NAME} PRIVATE /SUBSYSTEM:WINDOWS)
-    else()
-      target_link_options(${PROJECT_NAME} PRIVATE -mwindows)
-    endif()
-  endif()
-else()
-  if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_options(anm2ed_app PUBLIC -Wall -Wextra -Wpedantic -O0 -pg)
-  else()
-    set(CMAKE_BUILD_TYPE "Release")
-    target_compile_options(anm2ed_app PUBLIC -Wall -Wextra -Wpedantic -O3)
-  endif()
-  target_link_libraries(anm2ed_app PUBLIC m)
-endif()
-
-if(WIN32)
-  enable_language(RC)
-  target_sources(${PROJECT_NAME} PRIVATE anm2ed.rc)
+# Linux release builds: -O2, unused code and data dropped, and the symbols stripped.
+# Link-time optimization is left off: it made the binary bigger and every relink take seconds longer.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_compile_options("$<$<CONFIG:Release>:-O2;-ffunction-sections;-fdata-sections>")
+    add_link_options("$<$<CONFIG:Release>:-Wl,--gc-sections;-s>")
 endif()
 
 if(MSVC)
-  target_compile_options(anm2ed_app PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:/std:c++latest>")
-  target_compile_options(anm2ed_app PUBLIC /EHsc)
-  target_link_options(${PROJECT_NAME} PRIVATE /STACK:0xffffff)
-
-  if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_options(anm2ed_app PUBLIC /Zi)
-    target_link_options(${PROJECT_NAME} PRIVATE /DEBUG)
-  endif()
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+    add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:/std:c++latest>" /EHsc)
 endif()
 
+# SDL: static, with only video (OpenGL), audio, events, clipboard and file dialogs.
+set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+set(SDL_STATIC ON CACHE BOOL "" FORCE)
+foreach(OPTION TEST_LIBRARY EXAMPLES RENDER GPU VULKAN OPENGLES CAMERA HAPTIC JOYSTICK HIDAPI SENSOR POWER TRAY
+        OFFSCREEN KMSDRM DUMMYVIDEO DISKAUDIO DUMMYAUDIO OSS JACK SNDIO LIBURING)
+    set(SDL_${OPTION} OFF CACHE BOOL "" FORCE)
+endforeach()
+add_subdirectory(external/SDL EXCLUDE_FROM_ALL)
+
+# SDL_mixer: WAV, Vorbis and Opus only.
+foreach(OPTION DEPS_SHARED AIFF AU FLAC_LIBFLAC FLAC_DRFLAC GME MOD_XMP MP3_DRMP3 MP3_MPG123 MIDI_FLUIDSYNTH
+        MIDI_TIMIDITY VOC VORBIS_VORBISFILE VORBIS_TREMOR WAVPACK TEST INSTALL)
+    set(SDLMIXER_${OPTION} OFF CACHE BOOL "" FORCE)
+endforeach()
+foreach(OPTION OPUS VORBIS_STB WAVE)
+    set(SDLMIXER_${OPTION} ON CACHE BOOL "" FORCE)
+endforeach()
+add_subdirectory(external/SDL_mixer EXCLUDE_FROM_ALL)
+
+set(LUNASVG_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+add_subdirectory(external/lunasvg EXCLUDE_FROM_ALL)
+
+# simdjson: its single-file build, without exceptions, with only the AVX2 parser and the portable one.
+add_library(simdjson STATIC external/simdjson/singleheader/simdjson.cpp)
+target_compile_definitions(simdjson PUBLIC SIMDJSON_EXCEPTIONS=0 SIMDJSON_IMPLEMENTATION_ICELAKE=0
+                           SIMDJSON_IMPLEMENTATION_WESTMERE=0)
+
+# Everything under resources/ is compiled in, through one generated C file (see embed.cmake).
+file(GLOB_RECURSE RESOURCES CONFIGURE_DEPENDS resources/*)
+add_custom_command(
+    OUTPUT ${CMAKE_BINARY_DIR}/embed/embed.c ${CMAKE_BINARY_DIR}/embed/embed.h
+    COMMAND ${CMAKE_COMMAND} -DRESOURCES=${CMAKE_SOURCE_DIR}/resources -DOUTPUT=${CMAKE_BINARY_DIR}/embed
+            -P ${CMAKE_SOURCE_DIR}/embed.cmake
+    DEPENDS ${RESOURCES} ${CMAKE_SOURCE_DIR}/embed.cmake)
+
+# The core: the model, edits, undo and file formats, with no window or OpenGL. The tests link it alone.
+file(GLOB CORE_SOURCES CONFIGURE_DEPENDS src/edit/*.cpp src/model/*.cpp)
+foreach(FILE log resource/image resource/audio_data resource/asset_store util/file util/path util/math util/time
+        util/working_directory util/pack util/imgui/multiselect snapshots playback selection)
+    list(APPEND CORE_SOURCES src/${FILE}.cpp)
+endforeach()
+add_library(anm2ed_core STATIC ${CORE_SOURCES} external/pugixml/src/pugixml.cpp external/imgui/imgui.cpp
+            external/imgui/imgui_draw.cpp external/imgui/imgui_widgets.cpp external/imgui/imgui_tables.cpp
+            ${CMAKE_BINARY_DIR}/embed/embed.c)
+target_include_directories(anm2ed_core PUBLIC include external external/imgui external/glm external/stb src
+                           src/imgui src/resource src/util ${CMAKE_BINARY_DIR}/embed)
+target_link_libraries(anm2ed_core PUBLIC lunasvg simdjson SDL3::Headers)
+target_compile_definitions(anm2ed_core PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+                           $<$<CONFIG:Debug>:IMGUI_DEBUG_PARANOID> $<$<BOOL:${WIN32}>:NOMINMAX>)
+
+# The editor: the core with its window, OpenGL and interface. The render tests link it too.
+file(GLOB_RECURSE APP_SOURCES CONFIGURE_DEPENDS src/*.cpp)
+list(REMOVE_ITEM APP_SOURCES ${CORE_SOURCES} ${CMAKE_SOURCE_DIR}/src/main.cpp)
+add_library(anm2ed_app STATIC ${APP_SOURCES} include/glad/glad.cpp external/imgui/backends/imgui_impl_sdl3.cpp
+            external/imgui/backends/imgui_impl_opengl3.cpp)
 if(WIN32)
-  set(OPENGL_LIB opengl32)
-  set(PLATFORM_LIBS
-      ws2_32
-      bcrypt
-      imm32
-      version
-      winmm
-      shell32
-      ole32
-      advapi32
-      gdi32
-      user32
-      setupapi
-      legacy_stdio_definitions)
-  if(TARGET SDL3::SDL3main)
-    set(SDL_MAIN_TARGET SDL3::SDL3main)
-  else()
-    set(SDL_MAIN_TARGET)
-  endif()
+    set(PLATFORM_LIBRARIES opengl32 ws2_32 bcrypt imm32 version winmm shell32 ole32 advapi32 gdi32 user32 setupapi
+        $<$<BOOL:${MSVC}>:legacy_stdio_definitions>)
 else()
-  set(OPENGL_LIB GL)
-  set(PLATFORM_LIBS)
-  set(SDL_MAIN_TARGET)
+    set(PLATFORM_LIBRARIES GL)
+endif()
+target_link_libraries(anm2ed_app PUBLIC anm2ed_core SDL3::SDL3-static SDL3_mixer::SDL3_mixer ${PLATFORM_LIBRARIES})
+
+add_executable(anm2ed src/main.cpp $<$<BOOL:${WIN32}>:anm2ed.rc>)
+target_link_libraries(anm2ed PRIVATE anm2ed_app)
+set_target_properties(anm2ed PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+if(MSVC)
+    target_link_options(anm2ed PRIVATE /STACK:0xffffff $<$<CONFIG:Release>:/SUBSYSTEM:WINDOWS>)
+elseif(WIN32)
+    target_link_options(anm2ed PRIVATE $<$<CONFIG:Release>:-mwindows>)
 endif()
 
-target_link_libraries(anm2ed_app PUBLIC anm2ed_core ${OPENGL_LIB} SDL3-static SDL3_mixer::SDL3_mixer lunasvg
-                                        ${PLATFORM_LIBS})
-target_link_libraries(${PROJECT_NAME} PRIVATE anm2ed_app ${SDL_MAIN_TARGET})
+if(NOT MSVC)
+    foreach(TARGET anm2ed_core anm2ed_app anm2ed)
+        target_compile_options(${TARGET} PRIVATE -Wall -Wextra -Wpedantic)
+    endforeach()
+endif()
 
-option(ANM2ED_TESTS "Build the anm2ed test suite" ON)
+option(ANM2ED_TESTS "Build the tests" ON)
 if(ANM2ED_TESTS)
-  enable_testing()
-  file(GLOB TEST_SRC CONFIGURE_DEPENDS tests/*.cpp)
-  add_executable(anm2ed_tests ${TEST_SRC})
-  target_link_libraries(anm2ed_tests PRIVATE anm2ed_core)
-  target_include_directories(anm2ed_tests PRIVATE external/doctest)
-  target_compile_definitions(anm2ed_tests PRIVATE ANM2ED_TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests")
-  add_test(NAME anm2ed_tests COMMAND anm2ed_tests WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+    enable_testing()
+    set(TEST_DIRECTORY ${CMAKE_SOURCE_DIR}/tests)
 
-  # Drawing animations needs OpenGL (skipped without a display); renders land in build/renders for a look.
-  file(GLOB RENDER_TEST_SRC CONFIGURE_DEPENDS tests/render/*.cpp)
-  add_executable(anm2ed_render_tests tests/main.cpp ${RENDER_TEST_SRC})
-  target_link_libraries(anm2ed_render_tests PRIVATE anm2ed_app)
-  target_include_directories(anm2ed_render_tests PRIVATE external/doctest tests)
-  target_compile_definitions(anm2ed_render_tests PRIVATE ANM2ED_TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests"
-                                                         ANM2ED_RENDER_DIR="${CMAKE_BINARY_DIR}/renders")
-  add_test(NAME anm2ed_render_tests COMMAND anm2ed_render_tests WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
-  add_test(NAME anm2ed_cli_info COMMAND ${PROJECT_NAME} info ${CMAKE_CURRENT_SOURCE_DIR}/tests/render/spin.anm2)
+    file(GLOB TEST_SOURCES CONFIGURE_DEPENDS tests/*.cpp)
+    add_executable(anm2ed_tests ${TEST_SOURCES})
+    target_link_libraries(anm2ed_tests PRIVATE anm2ed_core)
+    target_include_directories(anm2ed_tests PRIVATE external/doctest/doctest)
+    target_compile_definitions(anm2ed_tests PRIVATE ANM2ED_TEST_DIR="${TEST_DIRECTORY}")
+    add_test(NAME anm2ed_tests COMMAND anm2ed_tests WORKING_DIRECTORY ${TEST_DIRECTORY})
+
+    # Drawing needs OpenGL (skipped without a display). Renders land in build/renders for a look.
+    file(GLOB RENDER_TEST_SOURCES CONFIGURE_DEPENDS tests/render/*.cpp)
+    add_executable(anm2ed_render_tests tests/main.cpp ${RENDER_TEST_SOURCES})
+    target_link_libraries(anm2ed_render_tests PRIVATE anm2ed_app)
+    target_include_directories(anm2ed_render_tests PRIVATE external/doctest/doctest tests)
+    target_compile_definitions(anm2ed_render_tests PRIVATE ANM2ED_TEST_DIR="${TEST_DIRECTORY}"
+                               ANM2ED_RENDER_DIR="${CMAKE_BINARY_DIR}/renders")
+    add_test(NAME anm2ed_render_tests COMMAND anm2ed_render_tests WORKING_DIRECTORY ${TEST_DIRECTORY})
+    add_test(NAME anm2ed_cli_info COMMAND anm2ed info ${TEST_DIRECTORY}/render/spin.anm2)
 endif()
-
-message(STATUS "System: ${CMAKE_SYSTEM_NAME}")
-message(STATUS "Project: ${PROJECT_NAME}")
-message(STATUS "Compiler: ${CMAKE_CXX_COMPILER}")
-
-get_target_property(PROJECT_COMPILE_OPTIONS ${PROJECT_NAME} COMPILE_OPTIONS)
-if(NOT PROJECT_COMPILE_OPTIONS)
-  set(PROJECT_COMPILE_OPTIONS "<none>")
-endif()
-
-string(TOUPPER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_UPPER)
-set(EFFECTIVE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-if(BUILD_TYPE_UPPER)
-  set(CONFIG_FLAGS_VAR "CMAKE_CXX_FLAGS_${BUILD_TYPE_UPPER}")
-  if(DEFINED ${CONFIG_FLAGS_VAR})
-    string(APPEND EFFECTIVE_CXX_FLAGS " ${${CONFIG_FLAGS_VAR}}")
-  endif()
-endif()
-string(STRIP "${EFFECTIVE_CXX_FLAGS}" EFFECTIVE_CXX_FLAGS)
-if(EFFECTIVE_CXX_FLAGS STREQUAL "")
-  set(EFFECTIVE_CXX_FLAGS "<none>")
-endif()
-
-message(STATUS "Compiler Flags: ${EFFECTIVE_CXX_FLAGS}")
-message(STATUS "Target Compile Options: ${PROJECT_COMPILE_OPTIONS}")
-message(STATUS "Build: ${CMAKE_BUILD_TYPE}")

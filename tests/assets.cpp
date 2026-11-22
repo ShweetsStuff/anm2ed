@@ -2,7 +2,11 @@
 
 #include "asset_store.hpp"
 #include "audio_data.hpp"
+#include "font.hpp"
+#include "friends.hpp"
+#include "icon.hpp"
 #include "image.hpp"
+#include "model/xml.hpp"
 
 using namespace anm2ed;
 using namespace anm2ed::resource;
@@ -115,4 +119,21 @@ TEST_CASE("an SVG's shapes meet without a seam")
   CHECK(seam.a == 1.0f);
   CHECK(glm::distance(glm::vec3(seam), glm::vec3(image.pixel_read({5.0f, 2.0f}))) < 2.0f / 255.0f);
   CHECK(image.pixel_read({20.0f, 2.0f}).a < 1.0f);
+}
+
+TEST_CASE("Embedded resources load")
+{
+  for (auto& info : friends::FRIENDS)
+  {
+    INFO("friend: ", info.name);
+    model::Model model{};
+    std::string errorString{};
+    CHECK(model::model_load_string(model, std::string_view((const char*)info.anm2->data, info.anm2->size), &errorString));
+    CHECK(model.animations_count_get() > 0);
+    CHECK(Image(info.png->data, info.png->size).is_valid());
+  }
+  for (auto& icon : icon::ICONS)
+    CHECK(std::string_view((const char*)icon.svg->data, icon.svg->size).starts_with("<svg"));
+  for (auto& font : font::FONTS)
+    CHECK(font->size > 0);
 }
