@@ -212,11 +212,11 @@ TEST_CASE("an animation layer's child sits where the layer's frame puts it")
 
 TEST_CASE("the game's copy stands in for depth and alpha offsets")
 {
-  auto anm2 = model_load(R"({ "anm2ed": 1, "spritesheets": [ { "path": "a.png" } ],
+  auto anm2 = model_load(R"({ "sheets": [ { "path": "a.png" } ],
     "layers": [ { "name": "a" }, { "name": "b" }, { "name": "c" } ],
     "animations": { "A": { "length": 6, "layers": [
       { "layer": 0, "frames": [ { "crop": [0, 0], "size": [1, 1], "delay": 2 },
-                                { "crop": [1, 0], "size": [1, 1], "delay": 2, "depth": 2, "interpolation": "linear" },
+                                { "crop": [1, 0], "size": [1, 1], "delay": 2, "depth": 2, "ease": "lerp" },
                                 { "crop": [1, 0], "size": [1, 1], "pos": [8, 0], "delay": 2, "depth": -1 } ] },
       { "layer": 1, "frames": [ { "crop": [2, 0], "size": [1, 1], "delay": 6, "depth": -1 } ] },
       { "layer": 2, "frames": [ { "crop": [3, 0], "size": [1, 1], "delay": 6, "offset": [0, 0, 0, -64] } ] } ] } } })");

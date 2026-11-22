@@ -1,4 +1,4 @@
-# Anm2Ed JSON format (version 1)
+# Anm2Ed JSON format
 
 The JSON format is the editor's own document, saved alone when **Save as JSON** is on (Configure → Serialization). It holds everything the editor knows about a document; the game can't read it. This page lists its shape and how the editor plays it, so that a converter or a game's loader can match the editor exactly.
 
@@ -7,12 +7,11 @@ A regular save is different: it writes the game's `.anm2` XML, with the editor's
 ## Recognizing one
 ```json
 {
-  "anm2ed": 1,
   "info": {"createdBy": "…", "createdOn": "2026-01-01T12:00:00", "fps": 30, "version": 2},
   …
 }
 ```
-- **`anm2ed`** is the format version. A JSON file without it is not opened.
+- **A file is JSON** when its first character, after whitespace, is `{`. There is no format version.
 - **Defaults are left out.** Any key missing from an object has its default (listed below).
 - **Ids are indices.** An item is referred to by its position in its array, starting at 0.
 - **Unknown keys, wrong types, unknown values and out-of-range indices** are reported by where they are (e.g. `animations.Idle.layers[0].frames[2].pos: expected an array of 2 numbers`); the document still opens, with the default in their place.
@@ -21,7 +20,7 @@ A regular save is different: it writes the game's `.anm2` XML, with the editor's
 
 ## Content
 ```json
-"spritesheets": [
+"sheets": [
   {"path": "parts.png"},
   {
     "path": "body.svg",
@@ -55,7 +54,7 @@ A regular save is different: it writes the game's `.anm2` XML, with the editor's
 
 | Item | Key | Default | Meaning |
 |---|---|---|---|
-| Spritesheet | `path` | | The image, relative to the document. |
+| Sheet | `path` | | The image, relative to the document. |
 | Region | `name` | `""` | |
 | | `crop`, `size`, `pivot` | `[0, 0]` | The rectangle in the spritesheet, and its pivot. |
 | | `origin` | custom | `topLeft` or `center` sets the pivot from the size. |
@@ -83,12 +82,12 @@ A regular save is different: it writes the game's `.anm2` XML, with the editor's
 - **No self-nesting:** an animation never plays inside itself, even through other animations. That draw is skipped.
 
 ## Animations
-Animations are an object keyed by their name; names are unique (a repeated one is saved as `"Name 2"`, `"Name 3"`…). A key whose object has an `animations` object is a group of animations.
+Animations are an object keyed by their name; names are unique (a repeated one is saved as `"Name 2"`, `"Name 3"`…). A key whose object has an `animations` object is a group of animations; a group may share a name with an animation inside it.
 ```json
-"defaultAnimation": "Walk",
+"default": "Walk",
 "animations": {
   "Walk": {
-    "length": 24, "startMarker": 4, "endMarker": 19,
+    "length": 24, "markers": [4, 19],
     "root": […frames…],
     "layers": [
       {"layer": 0, "frames": […frames…]},
@@ -108,7 +107,7 @@ Animations are an object keyed by their name; names are unique (a repeated one i
 |---|---|---|
 | `length` | `1` | Frames in the animation. |
 | `loop` | `true` | |
-| `startMarker`, `endMarker` | none | Editor playback stays between these frames, inclusive. Editor-only. |
+| `markers` | `[-1, -1]` | Start and end frames editor playback stays between, inclusive; `-1` for none. Editor-only. |
 | `root`, `triggers` | none | Frame arrays. |
 | `layers`, `nulls` | none | Tracks and groups, in order. |
 | Track `layer` / `null` | | The item the track animates. |
@@ -143,7 +142,7 @@ Keys on a frame of a layer, null or root track:
 | `shader` | none | A custom shader from `shaders`. |
 | `delay` | `1` | Duration in frames. |
 | `visible` | `true` | Hidden frames draw nothing. |
-| `interpolation` | none | `linear`, `easeIn` (t²), `easeOut` (1−(1−t)²) or `easeInOut`. It blends position, scale, skew, rotation, tint, color offset and blur toward the next frame. |
+| `ease` | none | `lerp`, `in` (t²), `out` (1−(1−t)²) or `inOut`. It blends position, scale, skew, rotation, tint, color offset and blur toward the next frame. |
 
 **A layer frame's transform.** A point `p` of the spritesheet crop, in pixels, lands at:
 ```
@@ -153,14 +152,17 @@ world = Root · GroupRoot · ( pos + Flip · Rotate · Skew · |scale| · (p −
 - A root's transform is `pos + Flip · Rotate · Skew · |scale| · p`. A root has no pivot.
 
 ### Animation layer frames
-On a layer that plays an animation, a frame places and plays the child:
+On a layer that plays an animation, a frame places the child, and its `child` object plays it. The object is left out when all its keys are defaults:
+```json
+{"pos": [8, 0], "child": {"name": "Spin", "mode": "once", "start": 3}}
+```
 
 | Key | Default | Meaning |
 |---|---|---|
-| `child` | the layer's | The animation this keyframe plays, from the same file or library. |
-| `childMode` | `loop` | `loop`, `once` (stops on its last frame) or `hold` (stays on the start frame). |
-| `childStart` | `0` | The child's frame when its clock starts. |
-| `childStartRandom` | `false` | Start on a random frame instead. |
+| `name` | the layer's | The animation this keyframe plays, from the same file or library. |
+| `mode` | `loop` | `loop`, `once` (stops on its last frame) or `hold` (stays on the start frame). |
+| `start` | `0` | The child's frame when its clock starts. |
+| `random` | `false` | Start on a random frame instead. |
 | `restart` | `false` | Restarts the child's clock at this keyframe. |
 
 **Placement.** The child's whole drawing goes through the frame's transform, with the frame's pivot as the child's origin:
@@ -172,12 +174,12 @@ world = Root · GroupRoot · ( pos + Flip · Rotate · Skew · |scale| · (q −
 - **Unused keys:** crop, size, region and shader are not used.
 
 **Timing.** The child's time when the parent is at time `t`:
-1. **Clock start.** The child's clock starts at the first keyframe. It restarts at any keyframe with `restart`, or whose `child` differs from the previous keyframe's. Each start begins at that keyframe's `childStart`.
-2. **Child time.** Take the start keyframe that most recently began (call its start frame `S` and its `childStart` `C`). The child time is `C + (t − S)`.
+1. **Clock start.** The child's clock starts at the first keyframe. It restarts at any keyframe with `restart`, or whose `name` differs from the previous keyframe's. Each start begins at that keyframe's `start`.
+2. **Child time.** Take the start keyframe that most recently began (call its frame `S` and its `start` `C`). The child time is `C + (t − S)`.
 3. **Mode.** The keyframe playing at `t` decides the mode:
    - `loop` wraps the time over the child's `length`.
    - `once` stops at `length − 1`.
-   - `hold` uses that keyframe's own `childStart`.
+   - `hold` uses that keyframe's own `start`.
 4. **Random start.** A random start is `(layerIndex·73856093 xor keyframeIndex·19349663) mod length`, using unsigned 32-bit arithmetic.
 
 **Child triggers.** A child fires its trigger on each frame it reaches. That is the frames where its whole-number time, or its animation, differs from the previous parent frame's, and always on parent frame 0. A held child fires once.

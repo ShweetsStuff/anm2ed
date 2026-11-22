@@ -17,15 +17,13 @@ using namespace anm2ed::util;
 
 namespace anm2ed::model
 {
-  constexpr std::string_view VERSION_KEY = "anm2ed";
-  constexpr int VERSION = 1;
   constexpr std::string_view INDENT = "  ";
   constexpr std::size_t LINE_WIDTH_MAX = 100;
   constexpr std::string_view WHITESPACE = " \t\r\n";
   constexpr std::size_t NUMBER_BUFFER_SIZE = 64;
   constexpr std::pair<char, std::string_view> ESCAPES[] = {
       {'"', "\\\""}, {'\\', "\\\\"}, {'\n', "\\n"}, {'\r', "\\r"}, {'\t', "\\t"}};
-  constexpr std::string_view INTERPOLATION_NAMES[] = {"", "linear", "easeIn", "easeOut", "easeInOut"};
+  constexpr std::string_view INTERPOLATION_NAMES[] = {"", "lerp", "in", "out", "inOut"};
   constexpr std::string_view CHILD_MODE_NAMES[] = {"loop", "once", "hold"};
   constexpr std::string_view ORIGIN_NAMES[] = {"", "topLeft", "center"};
   constexpr std::size_t ISSUES_SHOWN_MAX = 5;
@@ -234,12 +232,18 @@ namespace anm2ed::model
       if (value != defaultValue) field(name, names[(int)value]);
     }
 
-    template <class Fn> void object(std::string_view name, Fn&& fn, bool isInline)
+    // An object with nothing in it is left out when `isOmittedEmpty`.
+    template <class Fn> void object(std::string_view name, Fn&& fn, bool isInline, bool isOmittedEmpty = false)
     {
+      auto size = text.size();
+      auto isParentEmpty = scopes.back().isEmpty;
       key(name);
       open('{', isInline);
       fn(*this);
-      close('}');
+      if (!isOmittedEmpty || !scopes.back().isEmpty) return close('}');
+      scopes.pop_back();
+      text.resize(size);
+      scopes.back().isEmpty = isParentEmpty;
     }
 
     template <class T, class Fn>
@@ -427,7 +431,7 @@ namespace anm2ed::model
       reader.unknown_keys_check();
     }
 
-    template <class Fn> void object(std::string_view name, Fn&& fn, bool)
+    template <class Fn> void object(std::string_view name, Fn&& fn, bool, bool = false)
     {
       dom::element element{};
       if (element_get(name, element)) object_each(element, std::format("{}{}.", path, name), fn);
@@ -500,16 +504,22 @@ namespace anm2ed::model
     io.field("offset", frame.colorOffset, FRAME_DEFAULT.colorOffset, color_to_bytes, color_from_bytes);
     io.field("delay", frame.duration, FRAME_DEFAULT.duration);
     io.field("visible", frame.isVisible, FRAME_DEFAULT.isVisible);
-    io.choice("interpolation", frame.interpolation, INTERPOLATION_NAMES, FRAME_DEFAULT.interpolation);
+    io.choice("ease", frame.interpolation, INTERPOLATION_NAMES, FRAME_DEFAULT.interpolation);
     io.reference("shader", frame.shaderId, content.shaders);
     if (type != ItemType::LAYER) return;
     io.field("depth", frame.depth, FRAME_DEFAULT.depth);
     io.field("blur", frame.blur, FRAME_DEFAULT.blur);
-    io.field("child", frame.childAnimation, FRAME_DEFAULT.childAnimation);
-    io.choice("childMode", frame.childMode, CHILD_MODE_NAMES, FRAME_DEFAULT.childMode);
-    io.field("childStart", frame.childStart, FRAME_DEFAULT.childStart);
-    io.field("childStartRandom", frame.isChildStartRandom, FRAME_DEFAULT.isChildStartRandom);
-    io.field("restart", frame.isChildRestart, FRAME_DEFAULT.isChildRestart);
+    io.object(
+        "child",
+        [&](auto& childIo)
+        {
+          childIo.field("name", frame.childAnimation, FRAME_DEFAULT.childAnimation);
+          childIo.choice("mode", frame.childMode, CHILD_MODE_NAMES, FRAME_DEFAULT.childMode);
+          childIo.field("start", frame.childStart, FRAME_DEFAULT.childStart);
+          childIo.field("random", frame.isChildStartRandom, FRAME_DEFAULT.isChildStartRandom);
+          childIo.field("restart", frame.isChildRestart, FRAME_DEFAULT.isChildRestart);
+        },
+        true, true);
   }
 
   template <class Io, class Frames>
@@ -575,8 +585,9 @@ namespace anm2ed::model
   {
     io.field("length", animation.frameNum, 1);
     io.field("loop", animation.isLoop, true);
-    io.field("startMarker", animation.startMarker, -1);
-    io.field("endMarker", animation.endMarker, -1);
+    glm::ivec2 markers{animation.startMarker, animation.endMarker};
+    io.field("markers", markers, glm::ivec2{-1});
+    if constexpr (Io::IS_READING) std::tie(animation.startMarker, animation.endMarker) = std::tie(markers.x, markers.y);
     frames_io(io, "root", animation.root.frames, ItemType::ROOT);
     entries_io(io, "layers", animation.layers, ItemType::LAYER);
     entries_io(io, "nulls", animation.nulls, ItemType::NULL_);
@@ -584,19 +595,26 @@ namespace anm2ed::model
   }
 
   // Animations (and groups, which hold an "animations" object) are keyed by name; a repeated name is renumbered.
+  // Animation names are unique document-wide (default names one); a group's only among the top-level keys.
   void animations_write(JsonWriter& io, const Model& model)
   {
-    std::set<std::string> names{};
-    auto name_unique_get = [&](const std::string& name)
+    std::set<std::string> animationNames{};
+    std::set<std::string> keys{};
+    auto name_unique_get = [](const std::string& name, std::initializer_list<std::set<std::string>*> sets)
     {
       auto candidate = name;
-      for (int i = 2; names.contains(candidate); ++i)
+      for (int i = 2; std::ranges::any_of(sets, [&](auto* names) { return names->contains(candidate); }); ++i)
         candidate = std::format("{} {}", name, i);
-      names.insert(candidate);
+      for (auto* names : sets)
+        names->insert(candidate);
       return candidate;
     };
-    auto animation_write = [&](const Animation& animation)
-    { io.object(name_unique_get(animation.name), [&](JsonWriter&) { animation_io(io, animation); }, false); };
+    auto animation_write = [&](const Animation& animation, bool isTopLevel)
+    {
+      auto name = isTopLevel ? name_unique_get(animation.name, {&animationNames, &keys})
+                             : name_unique_get(animation.name, {&animationNames});
+      io.object(name, [&](JsonWriter&) { animation_io(io, animation); }, false);
+    };
 
     io.object(
         "animations",
@@ -606,12 +624,12 @@ namespace anm2ed::model
           {
             if (auto animation = std::get_if<std::shared_ptr<const Animation>>(&entry))
             {
-              animation_write(**animation);
+              animation_write(**animation, true);
               continue;
             }
             auto& group = std::get<AnimationGroup>(entry);
             io.object(
-                name_unique_get(group.name),
+                name_unique_get(group.name, {&keys}),
                 [&](JsonWriter&)
                 {
                   io.field("expanded", group.isExpanded, true);
@@ -621,7 +639,7 @@ namespace anm2ed::model
                       [&](JsonWriter&)
                       {
                         for (const auto& animation : group.animations)
-                          animation_write(*animation);
+                          animation_write(*animation, false);
                       },
                       false);
                 },
@@ -691,7 +709,7 @@ namespace anm2ed::model
         },
         true);
     io.list(
-        "spritesheets", content.spritesheets,
+        "sheets", content.spritesheets,
         [](auto& spritesheetIo, auto& spritesheet)
         {
           spritesheetIo.field("path", spritesheet.path, {});
@@ -757,7 +775,7 @@ namespace anm2ed::model
         true, false);
     io.values("events", content.events, [](auto& event) -> auto& { return event.name; });
     io.values("sounds", content.sounds, [](auto& sound) -> auto& { return sound.path; });
-    io.field("defaultAnimation", model.animations.defaultAnimation, {});
+    io.field("default", model.animations.defaultAnimation, {});
     if constexpr (Io::IS_READING)
       animations_read(io, model);
     else
@@ -768,14 +786,13 @@ namespace anm2ed::model
   {
     JsonWriter io{model};
     io.open('{', false);
-    io.field(VERSION_KEY, VERSION);
     model_io(io, model);
     io.close('}');
     io.text += '\n';
     return std::move(io.text);
   }
 
-  // Fails only when the text isn't an anm2ed JSON document; anything it couldn't read is listed in `errorString`.
+  // Fails only when the text isn't a JSON object; anything it couldn't read is listed in `errorString`.
   bool model_from_json(Model& model, std::string_view text, std::string* errorString)
   {
     dom::parser parser{};
@@ -785,9 +802,9 @@ namespace anm2ed::model
     JsonReader io{model, &issues};
     auto error = parser.parse(json).get(root);
     if (!error) error = root.get(io.fields);
-    if (error || !io.has(VERSION_KEY))
+    if (error)
     {
-      if (errorString) *errorString = error ? error_message(error) : "Not an anm2ed JSON document.";
+      if (errorString) *errorString = error_message(error);
       return false;
     }
     model = Model{};

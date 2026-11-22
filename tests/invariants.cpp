@@ -68,6 +68,35 @@ TEST_CASE("JSON animations get unique names")
   CHECK(reloaded.animation_get(1)->name == reloaded.animation_get(0)->name + " 2");
 }
 
+TEST_CASE("JSON groups don't renumber an animation sharing their name")
+{
+  auto model = model_load(file_load(CORPUS_DIR / "01_minimal.anm2"));
+  auto animation = std::get<std::shared_ptr<const model::Animation>>(model.animations.entries.front());
+  model.animations.entries = {model::AnimationGroup{.name = animation->name, .animations = {animation}}};
+  auto reloaded = model_load(model::model_to_json(model));
+  REQUIRE(reloaded.animations_count_get() == 1);
+  CHECK(reloaded.animation_get(0)->name == animation->name);
+}
+
+TEST_CASE("JSON markers are a pair, and a frame's child an object only when it has one")
+{
+  auto model = model_load(file_load(CORPUS_DIR / "01_minimal.anm2"));
+  auto text = model::model_to_json(model);
+  CHECK(text.find("\"child\"") == std::string::npos);
+  model.animation_edit(0)->startMarker = 2;
+  model.animation_edit(0)->endMarker = 5;
+  auto frame = model.frame_edit({0, (int)ItemType::LAYER, 0, 0});
+  REQUIRE(frame);
+  frame->childMode = ChildMode::HOLD;
+  frame->childStart = 3;
+  text = model::model_to_json(model);
+  CHECK(text.find("\"markers\": [2, 5]") != std::string::npos);
+  CHECK(text.find("\"child\": {\"mode\": \"hold\", \"start\": 3}") != std::string::npos);
+  auto reloaded = model_load(text);
+  CHECK(reloaded.animation_get(0)->endMarker == 5);
+  CHECK(model::model_to_json(reloaded) == text);
+}
+
 TEST_CASE("JSON dates are ISO 8601")
 {
   auto model = model_load(file_load(CORPUS_DIR / "01_minimal.anm2"));
@@ -84,9 +113,9 @@ TEST_CASE("JSON dates are ISO 8601")
 
 TEST_CASE("JSON that can't be read is reported by where it is, and the rest still opens")
 {
-  auto text = R"({ "anm2ed": 1, "colour": 1, "info": { "fps": "fast" },
+  auto text = R"({ "colour": 1, "info": { "fps": "fast" },
     "layers": [ { "name": "a", "sheet": 4 } ],
-    "animations": { "Idle": { "length": 3, "root": [ { "pos": [1], "interpolation": "bouncy", "delay": 3 } ] } } })";
+    "animations": { "Idle": { "length": 3, "root": [ { "pos": [1], "ease": "bouncy", "delay": 3 } ] } } })";
   model::Model model{};
   std::string issues{};
   REQUIRE(model::model_load_string(model, text, &issues));
@@ -94,16 +123,15 @@ TEST_CASE("JSON that can't be read is reported by where it is, and the rest stil
   CHECK(model.animation_get(0)->root.frames[0].duration == 3);
   for (auto issue : {"colour: unknown key", "info.fps: expected a number", "layers[0].sheet: no item at index 4",
                      "animations.Idle.root[0].pos: expected an array of 2 numbers",
-                     "animations.Idle.root[0].interpolation: unknown value \"bouncy\""})
+                     "animations.Idle.root[0].ease: unknown value \"bouncy\""})
     CHECK_MESSAGE(issues.find(issue) != std::string::npos, issue);
 
-  CHECK_FALSE(model::model_load_string(model, "{ \"fps\": 30 }", &issues));
-  CHECK_FALSE(model::model_load_string(model, "{ \"anm2ed\": 1, ", &issues));
+  CHECK_FALSE(model::model_load_string(model, "{ \"fps\": 30, ", &issues));
 }
 
 TEST_CASE("JSON layers can name a library listed after them in the file")
 {
-  auto text = R"({ "anm2ed": 1, "layers": [ { "name": "shadow", "library": 0, "animation": "Small" } ],
+  auto text = R"({ "layers": [ { "name": "shadow", "library": 0, "animation": "Small" } ],
     "libraries": [ "shared/shadows.anm2" ] })";
   model::Model model{};
   std::string issues{};

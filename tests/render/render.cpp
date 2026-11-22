@@ -268,12 +268,12 @@ TEST_CASE("the game's copy bakes skew and blur into a spritesheet that draws the
   std::filesystem::remove_all(directory);
   std::filesystem::create_directories(directory);
   std::filesystem::copy_file(RENDER_TEST_DIR / "sheet.png", directory / "sheet.png");
-  std::ofstream(directory / "bake.anm2") << R"({ "anm2ed": 1, "spritesheets": [ { "path": "sheet.png" } ],
+  std::ofstream(directory / "bake.anm2") << R"({ "sheets": [ { "path": "sheet.png" } ],
     "layers": [ { "name": "skewed" }, { "name": "blurred" } ],
     "animations": {
       "Layers": { "length": 6, "layers": [
         { "layer": 0, "frames": [
-          { "size": [16, 16], "pivot": [8, 8], "pos": [-12, 0], "skew": [40, 0], "delay": 3, "interpolation": "linear" },
+          { "size": [16, 16], "pivot": [8, 8], "pos": [-12, 0], "skew": [40, 0], "delay": 3, "ease": "lerp" },
           { "size": [16, 16], "pivot": [8, 8], "pos": [-12, 4], "skew": [0, 30], "rotation": 45, "delay": 3 } ] },
         { "layer": 1, "frames": [
           { "crop": [16, 0], "size": [16, 16], "pivot": [8, 8], "pos": [12, 0], "blur": 4, "delay": 6 } ] } ] },
