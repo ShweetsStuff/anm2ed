@@ -60,14 +60,13 @@ class Snapshots
 public:
     SnapshotStack undoStack = {};
     SnapshotStack redoStack = {};
-    Snapshot current = {};
     std::optional<Snapshot> pending;
     std::optional<Reference> pendingFocus;
 
-    void push(const std::string&);
-    void commit();
-    bool undo();
-    bool redo();
+    void push(Snapshot&, const std::string&);
+    void commit(Snapshot&);
+    bool undo(Snapshot&);
+    bool redo(Snapshot&);
     void reset();
     void apply_limit();
 };

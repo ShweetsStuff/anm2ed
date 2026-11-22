@@ -93,16 +93,16 @@ void SnapshotStack::max_size_set(int value)
 }
 
 // Starts an undoable edit: remembers the state before it (cheap. Animations are shared).
-void Snapshots::push(const std::string& message)
+void Snapshots::push(Snapshot& current, const std::string& message)
 {
     if (pending || pendingFocus)
-        commit();
+        commit(current);
     pendingFocus = focus_get(current);
     current.message = message;
     pending = current;
 }
 
-void Snapshots::commit()
+void Snapshots::commit(Snapshot& current)
 {
     if (pendingFocus)
         selection_follow(current, *std::exchange(pendingFocus, std::nullopt));
@@ -115,7 +115,7 @@ void Snapshots::commit()
     redoStack.clear();
 }
 
-bool Snapshots::undo()
+bool Snapshots::undo(Snapshot& current)
 {
     pending.reset();
     pendingFocus.reset();
@@ -129,7 +129,7 @@ bool Snapshots::undo()
     return true;
 }
 
-bool Snapshots::redo()
+bool Snapshots::redo(Snapshot& current)
 {
     pending.reset();
     pendingFocus.reset();

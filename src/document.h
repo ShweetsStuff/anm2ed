@@ -52,8 +52,10 @@ struct ChildStep
     int childAnimationIndex = -1;
 };
 
-struct DocumentData
+// An open document: the state undo restores (as a Snapshot), its history, assets, libraries and view.
+class Document : public Snapshot
 {
+public:
     std::filesystem::path path;
     uint64_t tabId = 0;
     Snapshots snapshots = {};
@@ -76,9 +78,10 @@ struct DocumentData
     bool isValid = true;
     bool isOpen = true;
     bool isForceDirty = false;
+    // Asked this session to keep SVG spritesheets in a Rebirth document.
     bool isVectorKept = false;
-    std::vector<ChildStep> childSteps{}; // the steps that led to the animation being edited (the breadcrumb) // asked
-                                         // this session to keep SVG spritesheets in a Rebirth document
+    // The steps that led to the animation being edited (the breadcrumb).
+    std::vector<ChildStep> childSteps;
     std::unordered_map<int, uint64_t> spritesheetHashes;
     std::unordered_map<int, uint64_t> spritesheetSaveHashes;
     std::unordered_map<int, uint64_t> spritesheetAutosaveHashes;
@@ -96,11 +99,6 @@ struct DocumentData
     mutable std::map<std::pair<std::uint64_t, int>, Image> vectorImages;
     bool isAnimationPreviewSet = false;
     bool isSpritesheetEditorSet = false;
-};
-
-class Document : public DocumentData
-{
-public:
     enum class FrameReferenceFallback
     {
         NONE,
@@ -115,19 +113,14 @@ public:
         SPRITESHEET
     };
 
-    Snapshot& current = snapshots.current;
-#define X(type, name) type& name = current.name;
-    SNAPSHOT_STEP_STATE_FIELDS
-#undef X
-    std::string& message = current.message;
     EditTarget editTarget = EditTarget::NONE;
     UidIndex index = {};
 
     Document(const std::filesystem::path&, bool = false, std::string* = nullptr);
     Document(const Document&) = delete;
     Document& operator=(const Document&) = delete;
-    Document(Document&&) noexcept;
-    Document& operator=(Document&&) noexcept;
+    Document(Document&&) = default;
+    Document& operator=(Document&&) = default;
     bool save(const std::filesystem::path& = {}, std::string* = nullptr, Options = {});
     bool file_write(const std::filesystem::path&, std::string* = nullptr, Options = {});
     void assets_sync();

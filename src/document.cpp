@@ -206,17 +206,6 @@ Document::Document(const std::filesystem::path& path, bool isNew, std::string* e
     change();
 }
 
-Document::Document(Document&& other) noexcept : DocumentData(std::move(other)), editTarget(other.editTarget)
-{}
-
-Document& Document::operator=(Document&& other) noexcept
-{
-    if (this != &other)
-        this->~Document();
-    new (this) Document(std::move(other));
-    return *this;
-}
-
 bool Document::save(const std::filesystem::path& path, std::string* errorString, Options options)
 {
     auto absolutePath = !path.empty() ? path : this->path;
@@ -715,13 +704,13 @@ void Document::change()
     assets_sync();
 
     spritesheet_hashes_sync();
-    snapshots.commit();
+    snapshots.commit(*this);
     index = UidIndex(model);
 }
 
 void Document::edit_begin(StringType label)
 {
-    snapshots.push(localize.get(label));
+    snapshots.push(*this, localize.get(label));
 }
 
 Uids Document::edit_run(StringType label, const std::function<Uids(Model&)>& operation)
@@ -1279,7 +1268,7 @@ void Document::libraries_add(const std::vector<std::filesystem::path>& paths)
 
 void Document::undo()
 {
-    if (!snapshots.undo())
+    if (!snapshots.undo(*this))
         return;
     frame_time_sync(*this);
     toast_log(Level::INFO, TOAST_UNDO, message);
@@ -1288,7 +1277,7 @@ void Document::undo()
 
 void Document::redo()
 {
-    if (!snapshots.redo())
+    if (!snapshots.redo(*this))
         return;
     frame_time_sync(*this);
     toast_log(Level::INFO, TOAST_REDO, message);

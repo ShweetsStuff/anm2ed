@@ -85,33 +85,34 @@ TEST_CASE("undo and redo restore every state of a random edit walk")
     {
         INFO("fixture: ", name);
         Snapshots snapshots = {};
-        snapshots.current.model = model_load(file_load(CORPUS_DIR / name));
+        Snapshot current = {};
+        current.model = model_load(file_load(CORPUS_DIR / name));
         std::mt19937 random(WALK_SEED);
 
-        std::vector<std::uint64_t> hashes{model_hash(snapshots.current.model)};
+        std::vector<std::uint64_t> hashes{model_hash(current.model)};
         for (int step = 0; step < WALK_STEPS; ++step)
         {
-            snapshots.push("Edit");
-            if (!edit_random_apply(snapshots.current.model, random))
+            snapshots.push(current, "Edit");
+            if (!edit_random_apply(current.model, random))
                 break;
             auto count = snapshots.undoStack.size();
-            snapshots.commit();
+            snapshots.commit(current);
             if (snapshots.undoStack.size() != count)
-                hashes.push_back(model_hash(snapshots.current.model));
+                hashes.push_back(model_hash(current.model));
         }
         REQUIRE(hashes.size() > 1);
 
         for (auto it = hashes.rbegin() + 1; it != hashes.rend(); ++it)
         {
-            REQUIRE(snapshots.undo());
-            CHECK(model_hash(snapshots.current.model) == *it);
+            REQUIRE(snapshots.undo(current));
+            CHECK(model_hash(current.model) == *it);
         }
-        CHECK_FALSE(snapshots.undo());
+        CHECK_FALSE(snapshots.undo(current));
 
         for (auto it = hashes.begin() + 1; it != hashes.end(); ++it)
         {
-            REQUIRE(snapshots.redo());
-            CHECK(model_hash(snapshots.current.model) == *it);
+            REQUIRE(snapshots.redo(current));
+            CHECK(model_hash(current.model) == *it);
         }
     }
 }
@@ -119,21 +120,21 @@ TEST_CASE("undo and redo restore every state of a random edit walk")
 TEST_CASE("selection follows its frame through an edit and its undo")
 {
     Snapshots snapshots = {};
-    auto& current = snapshots.current;
+    Snapshot current = {};
     current.model = model_load(file_load(CORPUS_DIR / "02_items.anm2"));
     selection_focus_set(current.selection, current.model, {0, LAYER, 0, 1});
     selection_references_set(current.selection, current.model, SelectionKind::FRAMES, {{0, LAYER, 0, 1}});
 
-    snapshots.push("Insert");
+    snapshots.push(current, "Insert");
     frame_insert(current.model, {0, LAYER, 0, -1}, 0);
     auto& track = *current.model.track_edit(Reference{0, LAYER, 0});
     std::rotate(track.frames.begin(), track.frames.end() - 1, track.frames.end());
-    snapshots.commit();
+    snapshots.commit(current);
     UidIndex index(current.model);
     CHECK(selection_focus_get(current.selection, index) == Reference{0, LAYER, 0, 2});
     CHECK(selection_references_get(current.selection, index, SelectionKind::FRAMES) ==
           std::set<Reference>{{0, LAYER, 0, 2}});
 
-    REQUIRE(snapshots.undo());
+    REQUIRE(snapshots.undo(current));
     CHECK(selection_focus_get(current.selection, UidIndex(current.model)) == Reference{0, LAYER, 0, 1});
 }
