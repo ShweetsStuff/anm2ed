@@ -51,8 +51,7 @@ TEST_CASE("JSON documents read back as the editor's copy")
         // Unknown XML, element order, dangling references and repeated animation names are not kept.
         auto isQuirky = fixture.filename() == "09_legacy_quirks.anm2" || fixture.filename() == "11_unknown.anm2";
         if (!isQuirky)
-            CHECK(model_serialize(reloaded, SAVE_EDITOR) ==
-                  model_serialize(model, SAVE_EDITOR));
+            CHECK(model_serialize(reloaded, SAVE_EDITOR) == model_serialize(model, SAVE_EDITOR));
     }
 }
 

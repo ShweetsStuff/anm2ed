@@ -58,7 +58,7 @@ static bool edit_random_apply(Model& anm2, std::mt19937& random)
             frames_reverse(anm2, {frame, other});
             break;
         case 4:
-            frames_bake(anm2, {frame}, 1, false, false);
+            frames_bake(anm2, {frame}, 1, {});
             break;
         case 5:
             frame_split(anm2, frame, 1);

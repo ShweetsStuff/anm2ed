@@ -1495,7 +1495,7 @@ static Animation animation_bake(const Writer& writer, Animation animation)
                 return;
             for (int index = (int)track.frames.size() - 1; index >= 0; --index)
                 if (track.frames[index].interpolation != Interpolation::NONE)
-                    frame_bake(track, index, FRAME_DURATION_MIN, false, false);
+                    frame_bake(track, index, FRAME_DURATION_MIN);
         });
     return animation;
 }

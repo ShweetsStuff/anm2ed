@@ -119,7 +119,7 @@ void frames_reverse(Model& model, const std::set<Reference>& frames)
     }
 }
 
-Uids frames_bake(Model& model, const std::set<Reference>& frames, int interval, bool isRoundScale, bool isRoundRotation)
+Uids frames_bake(Model& model, const std::set<Reference>& frames, int interval, BakeOptions options)
 {
     Uids uids = {};
     for (auto& [trackReference, indices] : frames_by_track_get(frames))
@@ -136,7 +136,7 @@ Uids frames_bake(Model& model, const std::set<Reference>& frames, int interval, 
                 continue;
             auto duration = track->frames[index].duration;
             auto count = duration <= FRAME_DURATION_MIN ? 1 : (int)std::ceil((float)duration / interval);
-            frame_bake(*track, index, interval, isRoundScale, isRoundRotation);
+            frame_bake(*track, index, interval, options);
             uids.append_range(frames_uids_get(*track, index, count));
             inserted += count - 1;
         }
@@ -340,7 +340,7 @@ Uids frames_paste(Model& model, Reference reference, const std::set<Reference>& 
 // Applies the selected root frames' transforms to the target tracks' frames under them, then resets those root
 // frames to a default frame spanning the same time.
 Uids root_bake_into(Model& model, const std::set<Reference>& rootFrames, const std::set<Reference>& targets,
-                    RootBakeOptions options)
+                    BakeOptions options)
 {
     auto byTrack = frames_by_track_get(rootFrames);
     if (byTrack.size() != 1 || targets.empty())
@@ -373,14 +373,13 @@ Uids root_bake_into(Model& model, const std::set<Reference>& rootFrames, const s
         if (options.isMatchRootInterpolation)
             for (int index = (int)track->frames.size() - 1; index >= 0; --index)
                 if (is_spanned((int)frame_time_from_index_get(*track, index)))
-                    frame_bake(*track, index, FRAME_DURATION_MIN, options.isRoundScale, options.isRoundRotation);
+                    frame_bake(*track, index, FRAME_DURATION_MIN, options);
 
         for (int index = 0; index < (int)track->frames.size(); ++index)
         {
             auto start = (int)frame_time_from_index_get(*track, index);
             if (is_spanned(start))
-                frame_root_transform_apply(track->frames[index], frame_generate(root, (float)start),
-                                           options.isRoundScale, options.isRoundRotation, options.isUseRootPivot);
+                frame_root_transform_apply(track->frames[index], frame_generate(root, (float)start), options);
         }
     }
 

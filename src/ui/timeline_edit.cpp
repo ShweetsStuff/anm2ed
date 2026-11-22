@@ -58,7 +58,8 @@ void TimelineContext::frames_bake()
         return;
     edit_push(EDIT_BAKE_FRAMES, [=, interval = settings.bakeInterval, isRoundScale = settings.bakeIsRoundScale,
                                  isRoundRotation = settings.bakeIsRoundRotation](Model& model) {
-        return ::frames_bake(model, selectedFrames, interval, isRoundScale, isRoundRotation);
+        return ::frames_bake(model, selectedFrames, interval,
+                             {.isRoundScale = isRoundScale, .isRoundRotation = isRoundRotation});
     });
 }
 
@@ -113,8 +114,8 @@ void TimelineContext::bake_into_other_frames()
         return;
     auto targetItems = item_references_for_bake_into_other_frames_get(
         document, *animation, bakeIntoOtherFramesTarget, isBakeIntoOtherFramesLayers, isBakeIntoOtherFramesNulls);
-    RootBakeOptions options{settings.bakeIsRoundScale, settings.bakeIsRoundRotation,
-                            settings.bakeIsMatchRootInterpolation, settings.bakeIsUseRootPivot};
+    BakeOptions options{settings.bakeIsRoundScale, settings.bakeIsRoundRotation, settings.bakeIsMatchRootInterpolation,
+                        settings.bakeIsUseRootPivot};
     edit_push(EDIT_BAKE_INTO_OTHER_FRAMES,
               [=](Model& model) { return root_bake_into(model, selectedRootFrames, targetItems, options); });
 }

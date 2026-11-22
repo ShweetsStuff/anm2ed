@@ -98,8 +98,8 @@ TEST_CASE("frames_change")
 TEST_CASE("frame_bake and frame_mix")
 {
     auto model = fixture_load("07_special_interpolation.anm2");
-    frame_bake(layer_track_get(model, 0, 0), 0, 2, true, false);
-    frame_bake(layer_track_get(model, 0, 0), 3, 1, false, true);
+    frame_bake(layer_track_get(model, 0, 0), 0, 2, {.isRoundScale = true});
+    frame_bake(layer_track_get(model, 0, 0), 3, 1, {.isRoundRotation = true});
     operation_check("frame_bake", model);
 
     Frame from = {};
@@ -166,7 +166,10 @@ TEST_CASE("edit layer operations")
          },
          0},
         {"frames_bake", "07_special_interpolation.anm2",
-         [&](Model& anm2) { return frames_bake(anm2, {{0, LAYER, 0, 0}, {0, LAYER, 0, 1}}, 2, true, false); }, 5},
+         [&](Model& anm2) {
+             return frames_bake(anm2, {{0, LAYER, 0, 0}, {0, LAYER, 0, 1}}, 2, {.isRoundScale = true});
+         },
+         5},
         {"frame_split", "02_items.anm2", [&](Model& anm2) { return frame_split(anm2, {0, LAYER, 1, 0}, 2); }, 1},
         {"frames_move", "02_items.anm2",
          [&](Model& anm2) { return frames_move(anm2, {{0, LAYER, 0, 0}, {0, LAYER, 1, 0}}, head, 2); }, 2},

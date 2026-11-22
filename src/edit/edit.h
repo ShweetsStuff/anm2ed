@@ -10,6 +10,7 @@
 
 #include "image.h"
 #include "model/draw.h"
+#include "model/frames.h"
 #include "model/model.h"
 
 // Document edits as plain functions of the model. Each returns the uids of the elements it created or changed that
@@ -23,14 +24,6 @@ struct RowTarget
     int type = NONE;
     int id = -1;
     int groupId = -1;
-};
-
-struct RootBakeOptions
-{
-    bool isRoundScale = false;
-    bool isRoundRotation = false;
-    bool isMatchRootInterpolation = false;
-    bool isUseRootPivot = false;
 };
 
 struct GridOptions
@@ -94,9 +87,8 @@ enum class FrameProperty
 #define X(property, tracks, ...) property,
     FRAME_PROPERTIES(X)
 #undef X
-        COUNT
+    COUNT
 };
-
 
 bool is_frame_property_valid(FrameProperty, ItemType);
 void frame_property_copy(Frame&, const Frame&, FrameProperty);
@@ -108,14 +100,14 @@ Uids frame_insert(Model&, Reference, int);
 void frames_delete(Model&, const std::set<Reference>&);
 Uids frames_duplicate(Model&, const std::set<Reference>&, Reference);
 void frames_reverse(Model&, const std::set<Reference>&);
-Uids frames_bake(Model&, const std::set<Reference>&, int, bool, bool);
+Uids frames_bake(Model&, const std::set<Reference>&, int, BakeOptions);
 Uids frame_split(Model&, Reference, int);
 Uids frames_split(Model&, const std::set<Reference>&, int);
 Uids frames_move(Model&, const std::set<Reference>&, Reference, int);
 void frame_durations_set(Model&, const std::map<Reference, int>&);
 void trigger_at_frame_set(Model&, Reference, int);
 Uids frames_paste(Model&, Reference, const std::set<Reference>&, const std::string&, int, std::string*);
-Uids root_bake_into(Model&, const std::set<Reference>&, const std::set<Reference>&, RootBakeOptions);
+Uids root_bake_into(Model&, const std::set<Reference>&, const std::set<Reference>&, BakeOptions);
 
 void items_remove(Model&, int, const std::map<int, std::set<int>>&, const std::map<int, std::set<int>>&);
 Uids items_group(Model&, int, int, const std::set<int>&, const std::string&);

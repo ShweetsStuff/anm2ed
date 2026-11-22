@@ -18,8 +18,7 @@ void frame_mix(Frame& frame, const Frame& next, float amount)
 }
 
 // Splits an interpolated frame into uninterpolated frames of at most `interval`. The first keeps the frame's uid.
-std::vector<Frame> frame_bake_split(const Frame& original, const Frame& next, int interval, bool isRoundScale,
-                                    bool isRoundRotation)
+std::vector<Frame> frame_bake_split(const Frame& original, const Frame& next, int interval, BakeOptions options)
 {
     auto total = std::max(original.duration, FRAME_DURATION_MIN);
     interval = std::max(interval, FRAME_DURATION_MIN);
@@ -30,9 +29,9 @@ std::vector<Frame> frame_bake_split(const Frame& original, const Frame& next, in
         frame_mix(baked, next, interpolation_factor(original.interpolation, (float)duration / total));
         baked.duration = std::min(interval, total - duration);
         baked.interpolation = Interpolation::NONE;
-        if (isRoundScale)
+        if (options.isRoundScale)
             baked.scale = vec_round(baked.scale);
-        if (isRoundRotation)
+        if (options.isRoundRotation)
             baked.rotation = std::round(baked.rotation);
     }
     return frames;
@@ -44,11 +43,10 @@ Mat4 frame_parent_model_get(const Frame& frame)
                                  percent_to_unit(frame.skew));
 }
 
-void frame_root_transform_apply(Frame& frame, const Frame& rootFrame, bool isRoundScale, bool isRoundRotation,
-                                bool isUseRootPivot)
+void frame_root_transform_apply(Frame& frame, const Frame& rootFrame, BakeOptions options)
 {
     auto rootScale = percent_to_unit(rootFrame.scale);
-    auto pivot = isUseRootPivot ? rootFrame.position : Vec2();
+    auto pivot = options.isUseRootPivot ? rootFrame.position : Vec2();
     auto offset = (frame.position - pivot) * rootScale;
     auto angle = radians(rootFrame.rotation);
     auto cos = std::cos(angle);
@@ -60,9 +58,9 @@ void frame_root_transform_apply(Frame& frame, const Frame& rootFrame, bool isRou
     frame.tint *= rootFrame.tint;
     frame.colorOffset += rootFrame.colorOffset;
 
-    if (isRoundScale)
+    if (options.isRoundScale)
         frame.scale = vec_round(frame.scale);
-    if (isRoundRotation)
+    if (options.isRoundRotation)
         frame.rotation = std::round(frame.rotation);
 }
 
@@ -77,7 +75,7 @@ void track_group_root_bake(Track& track, const Track& root, int frameNum)
     for (int time = 0; time < length; ++time)
     {
         auto& frame = frames.emplace_back(frame_generate(track, (float)time));
-        frame_root_transform_apply(frame, frame_generate(root, (float)time), false, false, false);
+        frame_root_transform_apply(frame, frame_generate(root, (float)time));
         frame.duration = FRAME_DURATION_MIN;
         frame.interpolation = Interpolation::NONE;
     }
@@ -164,7 +162,7 @@ float frame_time_from_index_get(const Track& track, int index)
     return time;
 }
 
-void frame_bake(Track& track, int index, int interval, bool isRoundScale, bool isRoundRotation)
+void frame_bake(Track& track, int index, int interval, BakeOptions options)
 {
     if (index < 0 || index >= (int)track.frames.size())
         return;
@@ -176,7 +174,7 @@ void frame_bake(Track& track, int index, int interval, bool isRoundScale, bool i
     }
 
     auto next = index + 1 < (int)track.frames.size() ? track.frames[index + 1] : original;
-    auto baked = frame_bake_split(original, next, interval, isRoundScale, isRoundRotation);
+    auto baked = frame_bake_split(original, next, interval, options);
     track.frames.erase(track.frames.begin() + index);
     track.frames.insert(track.frames.begin() + index, baked.begin(), baked.end());
 }
