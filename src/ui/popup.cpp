@@ -8,13 +8,6 @@
 
 int PopupHelper::nextId = 1;
 
-#define POPUP_LIST                                                                                                     \
-    X(POPUP_SMALL, 0.25f, true)                                                                                        \
-    X(POPUP_NORMAL, 0.5f, true)                                                                                        \
-    X(POPUP_TO_CONTENT, 0.0f, true)                                                                                    \
-    X(POPUP_SMALL_NO_HEIGHT, 0.25f, false)                                                                             \
-    X(POPUP_NORMAL_NO_HEIGHT, 0.5f, false)
-
 constexpr float POPUP_MULTIPLIERS[] = {
 #define X(name, multiplier, isHeightSet) multiplier,
     POPUP_LIST
@@ -26,8 +19,6 @@ constexpr bool POPUP_IS_HEIGHT_SET[] = {
     POPUP_LIST
 #undef X
 };
-
-#undef POPUP_LIST
 
 PopupHelper::PopupHelper(StringType labelId, PopupType type, PopupPosition position)
 {

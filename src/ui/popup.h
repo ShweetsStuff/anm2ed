@@ -5,7 +5,6 @@
 #include "localization.h"
 
 #define POPUP_LIST                                                                                                     \
-    X(POPUP_SMALL, 0.25f, true)                                                                                        \
     X(POPUP_NORMAL, 0.5f, true)                                                                                        \
     X(POPUP_TO_CONTENT, 0.0f, true)                                                                                    \
     X(POPUP_SMALL_NO_HEIGHT, 0.25f, false)                                                                             \
@@ -46,5 +45,3 @@ public:
     void end();
     void close();
 };
-
-#undef POPUP_LIST

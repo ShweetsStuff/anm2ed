@@ -14,12 +14,6 @@ public:
 
     using std::set<int>::set;
     using std::set<int>::operator=;
-    using std::set<int>::begin;
-    using std::set<int>::rbegin;
-    using std::set<int>::end;
-    using std::set<int>::size;
-    using std::set<int>::insert;
-    using std::set<int>::erase;
 
     MultiSelectStorage();
     void start(size_t,

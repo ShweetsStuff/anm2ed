@@ -49,12 +49,6 @@ static Shader* shader_element_get(Document& document, int id)
     return item_get(document.model.content.shaders, id);
 }
 
-static std::filesystem::path shader_asset_path_get(Document& document, const std::filesystem::path& path)
-{
-    auto loadPath = path_backslash_handle(path);
-    return path_backslash_replace(path_make_relative(loadPath, document.directory_get()));
-}
-
 static void shader_path_edit(Document& document, int shaderId, std::filesystem::path Shader::* member,
                              const std::filesystem::path& value)
 {
@@ -75,7 +69,7 @@ static void shader_dialog_update(ShadersPanel& window, Manager& manager, Dialog&
     auto dialogPath = dialog.path;
     auto shaderId = window.dialogShaderId;
     manager.command_push({manager.selected, [dialogPath, shaderId, member](Manager&, Document& document) {
-                              shader_path_edit(document, shaderId, member, shader_asset_path_get(document, dialogPath));
+                              shader_path_edit(document, shaderId, member, asset_path_get(document, dialogPath));
                           }});
     window.dialogShaderId = -1;
     dialog.reset();

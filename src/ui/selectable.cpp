@@ -4,8 +4,6 @@
 
 #include "ui/input.h"
 
-bool isSelectableInputTextRenaming = false;
-
 std::string& selectable_input_text_id()
 {
     static std::string editID;
@@ -20,7 +18,6 @@ bool input_text_rename_update(std::string& text, RenameState& state, float width
         selectable_input_text_id().clear();
         isActivated = true;
         state = RENAME_FINISHED;
-        isSelectableInputTextRenaming = false;
     };
 
     if (state == RENAME_BEGIN)
@@ -58,7 +55,6 @@ bool selectable_input_text(const std::string& label, const std::string& id, std:
             state = RENAME_BEGIN;
             editID = id;
             isActivated = true;
-            isSelectableInputTextRenaming = true;
         }
     }
 

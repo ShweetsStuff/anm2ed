@@ -77,7 +77,7 @@ void sounds_update(Panel& panel)
             },
             TOOLTIP_RELOAD_SOUNDS);
         actions.add(ACTION_REPLACE, isOne, [&]() { dialog.file_open(Dialog::SOUND_REPLACE); }, TOOLTIP_REPLACE_SOUND);
-        items_clipboard_actions_add<Sound>(actions, panel, SelectionKind::SOUNDS, TOAST_SOUNDS_PASTE,
+        items_clipboard_actions_add<Sound>(actions, panel, SelectionKind::SOUNDS, EDIT_PASTE_SOUNDS,
                                            TOAST_SOUNDS_DESERIALIZE_ERROR, sounds_get);
 
         ListRows rows{.label_get =

@@ -25,11 +25,6 @@ constexpr ImVec4 to_imvec4(const Vec4& v) noexcept
     return {v.x, v.y, v.z, v.w};
 }
 
-constexpr Vec4 to_vec4(const ImVec4& v) noexcept
-{
-    return {v.x, v.y, v.z, v.w};
-}
-
 template <typename T> constexpr T& dummy_value()
 {
     static T value = {};

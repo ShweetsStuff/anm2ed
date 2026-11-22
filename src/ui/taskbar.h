@@ -31,7 +31,6 @@ class Taskbar
     GenerateAnimationFromGrid generateAnimationFromGrid = {};
     RenderAnimation renderAnimation = {};
 
-    Canvas generate;
     PopupHelper generatePopup = PopupHelper(LABEL_TASKBAR_GENERATE_ANIMATION_FROM_GRID);
     PopupHelper generateRegionsPopup{
         PopupHelper(LABEL_TASKBAR_GENERATE_REGIONS_FROM_ANIMATIONS, POPUP_SMALL_NO_HEIGHT)};
@@ -42,10 +41,8 @@ class Taskbar
     PopupHelper vectorPopup = PopupHelper(LABEL_CONVERT_SVG_POPUP, POPUP_SMALL_NO_HEIGHT);
     PopupHelper renderPopup = PopupHelper(LABEL_TASKBAR_RENDER_ANIMATION, POPUP_SMALL_NO_HEIGHT);
     PopupHelper configurePopup = PopupHelper(LABEL_TASKBAR_CONFIGURE);
-    Settings editSettings = {};
     int generateRegionsTarget = 0;
     bool isGenerateRegionsMapFrames = true;
-    bool isQuittingMode = false;
 
     bool save_execute(Manager&, const PendingSave&);
     void save_enqueue(Manager&, const PendingSave&);

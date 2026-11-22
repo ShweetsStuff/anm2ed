@@ -35,13 +35,11 @@ inline constexpr const char* LANGUAGE_STRINGS[LANGUAGE_COUNT] = {
   X(STRING_UNDEFINED, "undefined", "undefined", "undefined", "undefined", "undefined") \
   X(BASIC_ADD, "Add", "Añadir", "Добавить", "添加", "추가") \
   X(BASIC_AFTER, "After", "Despues", "После", "后一帧", "후") \
-  X(BASIC_ALPHA, "Alpha", "Alpha", "Прозрачность", "透明度", "불투명도") \
   X(BASIC_APPEND, "Append", "Anteponer", "Добавить к концу", "添加", "추가") \
   X(BASIC_AT_FRAME, "At Frame", "En Frame", "На кадре", "触发帧", "트리거될 프레임") \
   X(BASIC_BATCH, "Batch", "Lote", "Пакетный", "批量", "일괄") \
   X(BASIC_BEFORE, "Before", "Antes", "До", "前一帧", "전") \
   X(BASIC_BLUR, "Blur", "Desenfoque", "Размытие", "模糊", "흐림") \
-  X(BASIC_BORDER, "Border", "Borde", "Границы", "边框", "경계선") \
   X(BASIC_CANCEL, "Cancel", "Cancelar", "Отмена", "取消", "취소") \
   X(BASIC_COLOR, "Color", "Color", "Цвет", "颜色", "색상") \
   X(BASIC_COLOR_OFFSET, "Color Offset", "Offset de Color", "Смещение цвета", "颜色偏移", "색상 오프셋") \
@@ -51,14 +49,12 @@ inline constexpr const char* LANGUAGE_STRINGS[LANGUAGE_COUNT] = {
   X(BASIC_CUT, "Cut", "Cortar", "Вырезать", "剪切", "잘라내기") \
   X(BASIC_DEFAULT, "Default", "Predeterminado", "По умолчанию", "默认", "기본값") \
   X(BASIC_DEPTH, "Depth", "Profundidad", "Глубина", "深度", "깊이") \
-  X(BASIC_DISABLED, "Disabled", "Desactivado", "Отключено", "禁用", "비활성화") \
   X(BASIC_DUPLICATE, "Duplicate", "Duplicar", "Дублировать", "拷贝", "복제") \
   X(BASIC_DURATION, "Duration", "Duracion", "Продолжительность", "时长", "유지 시간") \
   X(BASIC_ENABLED, "Enabled", "Activado", "Включено", "开启", "활성화") \
   X(BASIC_EASE_IN, "Ease In", "Aceleración de Entrada", "Плавный вход", "缓入", "천천히 시작") \
   X(BASIC_EASE_OUT, "Ease Out", "Desaceleración de Salida", "Плавный выход", "缓出", "천천히 끝남") \
   X(BASIC_EASE_IN_OUT, "Ease In Out", "Aceleración y Desaceleración", "Плавный вход/выход", "缓入缓出", "천천히 시작/끝") \
-  X(BASIC_EVENT, "Event", "Evento", "Событие", "事件", "이벤트") \
   X(BASIC_EXPORT, "Export", "Export", "Export", "Export", "Export") \
   X(BASIC_FRAME, "Frame", "Frame", "Кадр", "帧", "프레임") \
   X(BASIC_FRAMES, "Frames", "Frames", "Кадры", "帧", "프레임") \
@@ -99,7 +95,6 @@ inline constexpr const char* LANGUAGE_STRINGS[LANGUAGE_COUNT] = {
   X(BASIC_SET_FILE_PATH, "Set File Path", "Set File Path", "Set File Path", "Set File Path", "Set File Path") \
   X(BASIC_SINGLE, "Single", "Individual", "Один", "单个", "단일") \
   X(BASIC_SIZE, "Size", "Tamaño", "Размер", "大小", "비율") \
-  X(BASIC_SOUND, "Sound", "Sonido", "Звук", "声音", "사운드") \
   X(BASIC_TRIM, "Trim", "Recortar contenido", "Обрезать по содержимому", "修剪", "내용으로 자르기") \
   X(BASIC_TIME, "Time", "Tiempo", "Время", "时间", "시간") \
   X(BASIC_TINT, "Tint", "Matiz", "Оттенок", "色调", "색조") \
@@ -180,7 +175,6 @@ inline constexpr const char* LANGUAGE_STRINGS[LANGUAGE_COUNT] = {
   X(EDIT_MOVE_FRAMES, "Move Frame(s)", "Mover Frame(s)", "Перемесить кадры", "移动多个/单个帧", "프레임 이동") \
   X(EDIT_MOVE_ITEMS, "Move Item(s)", "Mover item(s)", "Переместить элементы", "移动项目", "항목 이동") \
   X(EDIT_MOVE_REGIONS, "Move Regions", "Mover regiones", "Переместить регионы", "移动区域", "영역 이동") \
-  X(EDIT_MOVE_LAYER_ANIMATION, "Move Layer Animation", "Mover Animacion de Capa", "Переместить анимацию слоя", "移动动画层", "레이어 애니메이션 이동") \
   X(EDIT_PASTE_ANIMATIONS, "Paste Animation(s)", "Pegar Animacion(es)", "Вставить анимации", "粘贴动画", "애니메이션 붙여넣기") \
   X(EDIT_PASTE_EVENTS, "Paste Event(s)", "Pegar Eventos", "Вставить события", "粘贴事件", "이벤트 붙여넣기") \
   X(EDIT_PASTE_FRAMES, "Paste Frame(s)", "Pegar Frames", "Вставить кадры", "粘贴帧", "프레임 붙여넣기") \
@@ -191,7 +185,6 @@ inline constexpr const char* LANGUAGE_STRINGS[LANGUAGE_COUNT] = {
   X(EDIT_PASTE_SPRITESHEETS, "Paste Spritesheet(s)", "Pegar Spritesheet(s)", "Вставить спрайт-листы", "粘贴图集", "스프라이트 시트 붙여넣기") \
   X(EDIT_RELOAD_SPRITESHEETS, "Reload Spritesheet(s)", "Recargar Spritesheet(s)", "Перезагрузить спрайт-листы", "重新加载图集", "스프라이트 시트 다시 불러오기") \
   X(EDIT_RELOAD_SOUNDS, "Reload Sound(s)", "Recargar Sonido(s)", "Перезагрузить звук(и)", "重新加载声音", "사운드 다시 불러오기") \
-  X(EDIT_RELOAD_SHADERS, "Reload Shader(s)", "Reload Shader(s)", "Reload Shader(s)", "Reload Shader(s)", "Reload Shader(s)") \
   X(EDIT_REMOVE_ANIMATIONS, "Remove Animation(s)", "Remover Animacion(es)", "Удалить анимации", "删除动画层", "애니메이션 제거") \
   X(EDIT_REVERSE_FRAMES, "Reverse Frame(s)", "Invertir Frame(s)", "Развернуть кадры", "反转帧", "프레임 역순") \
   X(EDIT_REMOVE_ITEMS, "Remove Item(s)", "Remover Item(s)", "Удалить предметы", "删除物品", "항목 제거") \
@@ -202,7 +195,6 @@ inline constexpr const char* LANGUAGE_STRINGS[LANGUAGE_COUNT] = {
   X(EDIT_SET_SPRITESHEET_FILE_PATH, "Set Spritesheet File Path", "Set Spritesheet File Path", "Set Spritesheet File Path", "Set Spritesheet File Path", "Set Spritesheet File Path") \
   X(EDIT_SET_LAYER_PROPERTIES, "Set Layer Properties", "Establecer Propiedades de Capa", "Установить свойства слоя", "更改动画层属性", "레이어 속성 설정") \
   X(EDIT_SET_REGION_PROPERTIES, "Set Region Properties", "Establecer propiedades de región", "Установить свойства региона", "更改区域属性", "영역 속성 설정") \
-  X(EDIT_SET_SHADER_PROPERTIES, "Set Shader Properties", "Set Shader Properties", "Set Shader Properties", "Set Shader Properties", "Set Shader Properties") \
   X(EDIT_TRIM_REGIONS, "Trim Regions", "Recortar regiones", "Обрезать регионы", "修剪区域", "영역 트리밍") \
   X(EDIT_SET_NULL_PROPERTIES, "Set Null Properties", "Establecer Propiedades Null", "Установить свойства нуля", "更改Null属性", "Null 속성 설정") \
   X(EDIT_SCAN_AND_SET_REGIONS, "Scan and Set Regions", "Escanear y establecer regiones", "Сканировать и установить регионы", "扫描并设置区域", "영역 스캔 및 설정") \
@@ -216,11 +208,7 @@ inline constexpr const char* LANGUAGE_STRINGS[LANGUAGE_COUNT] = {
   X(EDIT_TRIGGER_EVENT, "Trigger Event", "Trigger Evento", "Событие триггера", "触发事件", "트리거 이벤트") \
   X(EDIT_TRIGGER_SOUND, "Trigger Sound", "Trigger Sonido", "Звук триггера", "触发声音", "트리거 사운드") \
   X(EDIT_TRIGGER_VISIBILITY, "Trigger Visibility", "Trigger Visibilidad", "Видимость триггера", "触发可见", "트리거 표시") \
-  X(FORMAT_AT_FRAME, "At Frame: {0}", "At Frame: {0}", "На кадре: {0}", "第{0}帧", "트리거될 프레임: {0}") \
-  X(FORMAT_COLOR_OFFSET, "Color Offset: {0}, {1}, {2}", "Color Offset: {0}, {1}, {2}", "Смещение цвета: {0} {1} {2}", "颜色偏移: {0} {1} {2}", "색상 오프셋: {0} {1} {2}") \
   X(FORMAT_CROP, "Crop: ({0}, {1})", "Recortar: ({0}, {1})", "Обрезка: ({0}, {1})", "裁剪: ({0}, {1})", "자르기: ({0}, {1})") \
-  X(FORMAT_DURATION, "Duration: {0}", "Duracion: {0}", "Продолжительность: {0}", "时长: {0}", "유지 시간: {0}") \
-  X(FORMAT_EVENT_LABEL, "Event: {0}", "Evento: {0}", "Событие: {0}", "事件: {0}", "이벤트: {0}") \
   X(FORMAT_ID, "ID: {0}", "ID: {0}", "ID: {0}", "ID: {0}", "ID: {0}") \
   X(FORMAT_ISAAC_ALPHA_OFFSET_FRAMES, "{} frame(s) use an alpha offset, which the game doesn't support.", "{} Frame(s) usan un desplazamiento de alfa, que el juego no soporta.", "{} кадр(ов) используют смещение альфы, которое игра не поддерживает.", "{} 帧使用了游戏不支持的透明度偏移。", "{}개 프레임이 게임에서 지원하지 않는 알파 오프셋을 사용합니다.") \
   X(FORMAT_ISAAC_ANIMATION_LAYERS, "{} layer(s) play animations, which the game doesn't support; they will be flattened into plain layers (one per layer of the animation, a frame at a time, without skew).", "{} capa(s) reproducen animaciones, que el juego no soporta; se aplanarán en capas normales (una por capa de la animación, Frame a Frame, sin inclinación).", "{} слой(ёв) проигрывают анимации, которые игра не поддерживает; они будут развёрнуты в обычные слои (по одному на слой анимации, покадрово, без наклона).", "{} 个图层播放动画，游戏不支持；它们将被展开为普通图层（动画的每个图层一个，逐帧，无倾斜）。", "{}개의 레이어가 애니메이션을 재생합니다. 게임에서 지원하지 않으므로 일반 레이어로 펼쳐집니다(애니메이션의 레이어마다 하나씩, 프레임 단위, 기울이기 제외).") \
@@ -247,8 +235,6 @@ inline constexpr const char* LANGUAGE_STRINGS[LANGUAGE_COUNT] = {
   X(FORMAT_REMOVE_TRIGGERS_EMPTY, "{0} trigger(s) left with no events or sounds", "{0} disparador(es) que quedan sin eventos ni sonidos", "{0} триггер(ов), оставшихся без событий и звуков", "{0} 个没有事件或声音的触发器", "이벤트나 사운드가 남지 않는 트리거 {0}개") \
   X(FORMAT_REMOVE_TRIGGER_USES, "{0} use(s) in triggers", "{0} uso(s) en disparadores", "{0} использ. в триггерах", "{0} 处触发器中的使用", "트리거에서 {0}회 사용") \
   X(FORMAT_SPRITESHEET_ID, "Spritesheet ID: {0}", "ID de Spritesheet: {0}", "", "图集 ID: {0}", "스프라이트 시트 ID: {0}") \
-  X(FORMAT_INDEX, "Index: {0}", "Indice: {0}", "Индекс: {0}", "下标: {0}", "인덱스: {0}") \
-  X(FORMAT_INTERPOLATED, "Interpolation: {0}", "Interpolación: {0}", "Интерполяция: {0}", "插值: {0}", "보간: {0}") \
   X(FORMAT_ITEMS_COUNT, "Items: {0}", "Items: {0}", "Предметы: {0}", "物品: {0}", "항목: {0}") \
   X(FORMAT_LAYER, "#{0} {1} (Spritesheet: #{2})", "#{0} {1} (Spritesheet: #{2})", "#{0} {1} (Спрайт-лист: #{2})", "#{0} {1} (图集: #{2})", "#{0} {1} (스프라이트 시트: #{2})") \
   X(FORMAT_LENGTH, "Length: {0}", "Largo: {0}", "Длина: {0}", "长度: {0}", "길이: {0}") \
@@ -263,18 +249,15 @@ inline constexpr const char* LANGUAGE_STRINGS[LANGUAGE_COUNT] = {
   X(FORMAT_SCALE, "Scale: ({0}, {1})", "Escalar: ({0}, {1})", "Масштаб: ({0}, {1})", "缩放: ({0}, {1})", "비율: ({0}, {1})") \
   X(FORMAT_SKEW, "Skew: ({0}, {1})", "Skew: ({0}, {1})", "Skew: ({0}, {1})", "Skew: ({0}, {1})", "Skew: ({0}, {1})") \
   X(FORMAT_SIZE, "Size: ({0}, {1})", "Tamaño: ({0}, {1})", "Размер: ({0}, {1})", "大小: ({0}, {1})", "크기: ({0}, {1})") \
-  X(FORMAT_SOUND_LABEL, "Sound: {0}", "Sonido: {0}", "Звук: {0}", "声音: {0}", "사운드: {0}") \
   X(FORMAT_SPRITESHEET, "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}") \
   X(FORMAT_SPRITESHEET_NOT_SAVED, "{0} (Not Saved)", "{0} (No guardado)", "{0} (Не сохранено)", "{0} (未保存)", "{0} (저장되지 않음)") \
   X(FORMAT_SOUND, "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}") \
   X(FORMAT_SHADER, "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}") \
-  X(FORMAT_REGION, "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}", "#{0} {1}") \
   X(FORMAT_TRANSFORM, "Transform: {0}", "Transformar: {0}", "Трансформация: {0}", "变换: {0}", "변환: {0}") \
   X(FORMAT_RECT, "Rect: {0}", "Rect: {0}", "Прямоугольник: {0}", "矩形: {0}", "사각형: {0}") \
   X(FORMAT_FRAMES_COUNT, "Frames: {0}", "Frames: {0}", "Кадры: {0}", "帧: {0}", "프레임: {0}") \
   X(FORMAT_TRIGGERS_COUNT, "Triggers: {0}", "Triggers: {0}", "Триггеры: {0}", "触发器: {0}", "트리거: {0}") \
   X(FORMAT_TEXTURE_SIZE, "Size: {0}x{1}", "Tamaño: {0}x{1}", "Размер: {0}x{1}", "大小: {0}x{1}", "크기: {0}x{1}") \
-  X(FORMAT_TINT, "Tint: {0}, {1}, {2}, {3}", "Tint: {0}, {1}, {2}, {3}", "Оттенок: {0}, {1}, {2}, {3}", "色调: {0}, {1}, {2}, {3}", "색조: {0}, {1}, {2}, {3}") \
   X(FORMAT_TOOLTIP_SHORTCUT, "{0}\n(Shortcut: {1})", "{0}\n(Shortcut: {1})", "{0}\n(Сочетание клавиш: {1})", "{0}\n(快捷键: {1})", "{0}\n(단축키: {1})") \
   X(FORMAT_VISIBLE, "Visible: {0}", "Visible: {0}", "Видимо: {0}", "可见: {0}", "표시: {0}") \
   X(LABEL_ADD_END_MARKER, "Add End Marker Here", "Añadir Marcador de Fin Aquí", "Поставить конечный маркер здесь", "在此添加结束标记", "여기에 끝 마커 추가") \
@@ -336,8 +319,6 @@ inline constexpr const char* LANGUAGE_STRINGS[LANGUAGE_COUNT] = {
   X(LABEL_CLEAR_LIST, "Clear List", "Limpiar Lista", "Стереть список", "清除列表", "기록 삭제") \
   X(LABEL_CLOSE, "Close", "Cerrar", "Закрыть", "关闭", "닫기") \
   X(LABEL_CURRENT_SELECTION, "Current Selection", "Selección actual", "Текущее выделение", "当前选择", "현재 선택") \
-  X(LABEL_GROUPS, "Groups", "Grupos", "Группы", "组", "그룹") \
-  X(LABEL_REGIONS, "Regions", "Regiones", "Регионы", "区域", "영역") \
   X(LABEL_CUSTOM_RANGE, "Custom Range", "Rango Personalizado", "Пользовательский диапазон", "自定义范围", "길이 맞춤설정") \
   X(LABEL_DELETE, "Delete", "Borrar", "Удалить", "删除", "삭제") \
   X(LABEL_DELETE_ANIMATIONS_AFTER, "Delete Animations After", "Borrar Animaciones Despues", "Удалить анимации после", "删除之后的动画", "기존 애니메이션 삭제") \
@@ -351,7 +332,6 @@ inline constexpr const char* LANGUAGE_STRINGS[LANGUAGE_COUNT] = {
   X(LABEL_DOCUMENT_AND_SPRITESHEETS_MODIFIED_PROMPT, "The document \"{0}\" and its spritesheets have been modified.\nDo you want to save them?", "El Documento \"{0}\" y sus spritesheets han sido modificados.\n¿Quieres guardarlos?", "Документ \"{0}\" и его спрайт-листы были изменены.\nХотите сохранить их?", "此文件\"{0}\"及其图集已被更改。\n要保存吗？", "\"{0}\" 파일과 스프라이트 시트가 수정되었습니다.\n저장하시겠습니까?") \
   X(LABEL_SPRITESHEETS_MODIFIED_PROMPT, "Spritesheets in \"{0}\" have been modified.\nDo you want to save them?", "Los spritesheets en \"{0}\" han sido modificados.\n¿Quieres guardarlos?", "Спрайт-листы в \"{0}\" были изменены.\nХотите сохранить их?", "\"{0}\" 中的图集已被修改。\n要保存吗？", "\"{0}\"의 스프라이트 시트가 수정되었습니다.\n저장하시겠습니까?") \
   X(LABEL_END, "End", "Fin", "Конец", "结尾", "끝") \
-  X(LABEL_EVENT, "Event", "Evento", "Событие", "事件", "이벤트") \
   X(LABEL_EVENTS_WINDOW, "Events###Events", "Eventos###Events", "События###Events", "事件###Events", "이벤트###Events") \
   X(LABEL_EXISTING, "Existing", "Existente", "Существующий", "已存在的", "기존") \
   X(LABEL_EXIT, "Exit", "Salir", "Выход", "退出", "종료") \
@@ -373,10 +353,8 @@ inline constexpr const char* LANGUAGE_STRINGS[LANGUAGE_COUNT] = {
   X(LABEL_GENERATE_COUNT, "Count", "Conteo", "Кол-во", "数量", "프레임 수") \
   X(LABEL_GENERATE_FRAME_SIZE, "Frame Size", "Tamaño de Frame", "Размер кадра", "单帧大小", "프레임 크기") \
   X(LABEL_GENERATE_MAKE_REGIONS, "Make Regions", "Crear Regiones", "Создать регионы", "创建区域", "영역 만들기") \
-  X(LABEL_GENERATE_REGIONS_FROM_ANIMATIONS, "Generate Regions from Animations", "Generar regiones desde animaciones", "Создать регионы из анимаций", "从动画生成区域", "애니메이션에서 영역 생성") \
   X(LABEL_GENERATE_ROWS, "Rows", "Filas", "Ряды", "行", "행") \
   X(LABEL_GENERATE_START_POSITION, "Start Position", "Poscicion de Inicio", "Начальная позиция", "起始位置", "시작 위치") \
-  X(LABEL_GENERAL, "General", "General", "General", "General", "General") \
   X(LABEL_ALL, "All", "Todo", "Все", "全部", "전체") \
   X(LABEL_ALL_ANIMATIONS, "All Animations", "Todas las Animaciones", "Все анимации", "所有动画", "모든 애니메이션") \
   X(LABEL_HELP_MENU, "Help", "Ayuda", "Помощь", "帮助", "도움말") \
@@ -387,7 +365,6 @@ inline constexpr const char* LANGUAGE_STRINGS[LANGUAGE_COUNT] = {
   X(LABEL_KEYBOARD, "Keyboard", "Teclado", "Клавиатура", "键盘", "키보드") \
   X(LABEL_LANGUAGE, "Language", "Lenguaje", "Язык", "语言", "언어") \
   X(LABEL_LAYER, "Layer", "Capa", "Слой", "动画层", "레이어") \
-  X(LABEL_LAYERS_CHILD, "Layers List", "Lista de Capas", "", "动画层列表", "레이어 목록") \
   X(LABEL_LAYERS_WINDOW, "Layers###Layers", "Capas###Layers", "Слои###Layers", "动画层###Layers", "레이어###Layers") \
   X(LABEL_START_FRAME, "Start Frame", "Frame Inicial", "Начальный кадр", "起始帧", "시작 프레임") \
   X(LABEL_THIS_ANIMATION, "This Animation", "Esta Animacion", "Эта анимация", "此动画", "이 애니메이션") \
@@ -416,10 +393,6 @@ inline constexpr const char* LANGUAGE_STRINGS[LANGUAGE_COUNT] = {
   X(LABEL_MANAGER_NULL_PROPERTIES, "Null Properties", "Propiedades Null", "Свойства нуля", "Null属性", "Null 속성") \
   X(LABEL_MANAGER_RENDERING_PROGRESS, "Rendering...", "Renderizando...", "Рендеринг...", "渲染中...", "렌더링 중...") \
   X(LABEL_MERGE, "Merge", "Combinar", "Соединить", "合并", "병합") \
-  X(LABEL_MERGE_PRESET, "Preset", "Preset", "Preset", "Preset", "Preset") \
-  X(LABEL_MERGE_PRESET_APPEND_AS_NEW, "Append as New", "Append as New", "Append as New", "Append as New", "Append as New") \
-  X(LABEL_MERGE_PRESET_MERGE_BY_NAME, "Merge by Name", "Merge by Name", "Merge by Name", "Merge by Name", "Merge by Name") \
-  X(LABEL_MERGE_PRESET_REPLACE_MATCHING, "Replace Matching", "Replace Matching", "Replace Matching", "Replace Matching", "Replace Matching") \
   X(LABEL_MERGE_SPRITESHEETS_APPEND_RIGHT, "Top Right", "Arriba a la derecha", "Сверху справа", "右上", "우측 상단") \
   X(LABEL_MERGE_SPRITESHEETS_APPEND_BOTTOM, "Bottom Left", "Abajo a la izquierda", "Снизу слева", "左下", "좌측 하단") \
   X(LABEL_MERGE_MAKE_SPRITESHEET_REGIONS, "Make Spritesheet Regions", "Crear regiones de spritesheet", "Создать регионы спрайт-листа", "生成图集区域", "스프라이트 시트 영역 만들기") \
@@ -458,7 +431,6 @@ inline constexpr const char* LANGUAGE_STRINGS[LANGUAGE_COUNT] = {
   X(LABEL_ROUND_SCALE, "Round Scale", "Escala Aprox.", "Округленный масштаб", "缩放取整", "비율 반올림") \
   X(LABEL_SAVE_AS, "Save As", "Guardar Como", "Сохранить как", "保存为", "다른 이름으로 저장") \
   X(LABEL_SETTINGS_MENU, "Settings", "Opciones", "Настройки", "设置", "설정") \
-  X(LABEL_SET_TO_RECOMMENDED, "Set to Recommended", "Ajustar a Recomendado", "Установить на рекомендованные", "设置为推荐值", "권장값으로 설정") \
   X(LABEL_SHORTCUTS_TAB, "Shortcuts", "Atajos", "Сочетания клавиш", "快捷键", "단축키") \
   X(LABEL_SHORTCUT_COLUMN, "Shortcut", "Atajo", "Сочетание клавиш", "快捷方式", "단축") \
   X(LABEL_SNAP, "Snap", "Ajustar", "Привязка", "吸附", "맞추기") \
@@ -495,7 +467,6 @@ inline constexpr const char* LANGUAGE_STRINGS[LANGUAGE_COUNT] = {
   X(LABEL_TIMELINE_BAKE_POPUP, "Bake", "Bake", "Запечь", "提前渲染", "베이크") \
   X(LABEL_TIMELINE_PROPERTIES_POPUP, "Item Properties", "Propiedades de Item", "Свойства предмета", "物品属性", "항목 속성") \
   X(LABEL_TIMELINE_WINDOW, "Timeline###Timeline", "Linea de tiempo###Timeline", "Таймлайн###Timeline", "时间轴###Timeline", "타임라인###Timeline") \
-  X(LABEL_TIME_MINUTES, "Time (minutes)", "Tiempo (minutos)", "Время (минуты)", "时间 (分钟)", "시간 (분)") \
   X(LABEL_TOOL, "Tool", "Herramienta", "Инструмент", "工具", "도구") \
   X(LABEL_TOOLS_COLOR_EDIT_POPUP, "##Color Edit", "##Color Edit", "##Color Edit", "##Color Edit", "##Color Edit") \
   X(LABEL_TOOLS_WINDOW, "Tools###Tools", "Herramientas###Tools", "Инструменты###Tools", "工具###Tools", "도구###Tools") \
@@ -596,7 +567,6 @@ inline constexpr const char* LANGUAGE_STRINGS[LANGUAGE_COUNT] = {
   X(TOOLTIP_LIBRARY_ADD, "Add an .anm2 whose animations layers can play.", "Añade un .anm2 cuyas animaciones pueden reproducir las capas.", "Добавить .anm2, анимации которого могут проигрывать слои.", "添加一个 .anm2，图层可以播放其中的动画。", "레이어가 애니메이션을 재생할 수 있는 .anm2를 추가합니다.") \
   X(TOOLTIP_LIBRARY_INVALID, "This library could not be loaded. Check the file.", "Esta biblioteca no se pudo cargar. Revisa el archivo.", "Эту библиотеку не удалось загрузить. Проверьте файл.", "无法加载此库。请检查文件。", "이 라이브러리를 불러올 수 없습니다. 파일을 확인하세요.") \
   X(TOOLTIP_LIBRARY_OPEN, "Open the library in its own tab to edit it; saving it updates every file that uses it.", "Abre la biblioteca en su propia pestaña para editarla; al guardarla se actualiza cada archivo que la usa.", "Открыть библиотеку в отдельной вкладке для редактирования; сохранение обновит все файлы, которые её используют.", "在单独的标签页中打开库进行编辑；保存后所有使用它的文件都会更新。", "라이브러리를 자체 탭에서 열어 편집합니다. 저장하면 이를 사용하는 모든 파일이 업데이트됩니다.") \
-  X(TOOLTIP_MERGE_SPRITESHEETS, "Merge selected spritesheets into the first selected spritesheet.", "Combina los spritesheets seleccionados en el primer spritesheet seleccionado.", "Объединить выбранные спрайт-листы в первый выбранный спрайт-лист.", "将所选图集合并到第一个选中的图集中。", "선택된 스프라이트 시트를 첫 번째 선택된 스프라이트 시트로 병합합니다.") \
   X(TEXT_SELECT_SPRITESHEET, "Select a spritesheet first!", "¡Selecciona primero un spritesheet!", "Сначала выберите спрайт-лист!", "请先选择图集！", "먼저 스프라이트 시트를 선택하세요!") \
   X(TEXT_SELF, "Self", "Propio", "Сам", "自身", "자신") \
   X(TEXT_SVG_NOT_EDITABLE, "SVG spritesheets can't be drawn on; edit the SVG file instead.", "Los spritesheets SVG no se pueden dibujar; edita el archivo SVG.", "На SVG спрайт-листах нельзя рисовать; редактируйте файл SVG.", "无法在 SVG 图集上绘制；请编辑 SVG 文件。", "SVG 스프라이트 시트에는 그릴 수 없습니다. SVG 파일을 편집하세요.") \
@@ -605,7 +575,6 @@ inline constexpr const char* LANGUAGE_STRINGS[LANGUAGE_COUNT] = {
   X(TEXT_NEW_ANIMATION, "New Animation", "Nueva Animacion", "Новая анимация", "新动画", "새 애니메이션") \
   X(TEXT_NEW_EVENT, "New Event", "Nuevo Evento", "Новое событие", "新事件", "새 이벤트") \
   X(TEXT_NEW_GROUP, "New Group", "Nuevo grupo", "Новая группа", "新组", "새 그룹") \
-  X(TEXT_NEW_REGION, "New Region", "Nueva Región", "Новый регион", "新区域", "새 영역") \
   X(TEXT_NEW_SHADER, "New Shader", "New Shader", "New Shader", "New Shader", "New Shader") \
   X(TEXT_REGION_IN_USE, "A spritesheet region is in use; remove region to edit.", "Se está usando una región del spritesheet; elimina la región para editar.", "Регион спрайт-листа используется; удалите регион для редактирования.", "图集中有区域正在使用；移除区域后才能编辑。", "스프라이트 시트 영역이 사용 중입니다. 편집하려면 영역을 제거하세요.") \
   X(TEXT_RECORDING_PROGRESS, "Once recording is complete, rendering may take some time.\nPlease be patient...", "Una vez que el grabado este completo, renderizar puede tomar algo de tiempo. \nPor favor se paciente...", "Когда запись завершена, рендеринг может занять некоторое время.\nПожалуйста потерпите...", "录制完成时，渲染可能会花一些时间.\n请耐心等待...", "녹화가 완료되면 렌더링에 시간이 걸릴 수 있습니다.\n잠시만 기다려 주세요...") \
@@ -646,8 +615,6 @@ inline constexpr const char* LANGUAGE_STRINGS[LANGUAGE_COUNT] = {
   X(TOAST_PNG_DIRECTORY_INVALID, "Unable to create PNG directory. Make sure to check permissions.", "No se puede crear el directorio PNG. Verifica los permisos.", "Не удалось создать каталог PNG. Проверьте права доступа.", "无法创建 PNG 目录。请检查权限。", "PNG 디렉터리를 만들 수 없습니다. 권한을 확인하세요.") \
   X(TOAST_PNG_FORMAT_INVALID, "PNG format invalid. Make sure it contains \"{}\".", "Formato PNG inválido. Asegúrate de que contenga \"{}\".", "Недопустимый формат PNG. Убедитесь, что он содержит \"{}\".", "PNG 格式无效。请确保其中包含 \"{}\"。", "PNG 형식이 잘못되었습니다. \"{}\"을 포함하는지 확인하세요.") \
   X(TOAST_REDO, "Redo: {0}", "Rehacer: {0}", "Повтор: {0}", "重做: {0}", "다시 실행: {0}") \
-  X(ERROR_FILE_NOT_FOUND, "File not found!", "¡Archivo no encontrado!", "Файл не найден!", "找不到文件！", "파일을 찾을 수 없습니다!") \
-  X(ERROR_FILE_PERMISSIONS, "File does not have write permissions!", "¡El archivo no tiene permisos de escritura!", "У файла нет прав на запись!", "文件没有写入权限！", "파일에 쓰기 권한이 없습니다!") \
   X(TOAST_RELOAD_LIBRARY, "Reloaded library #{0}: {1}", "Se ha recargado biblioteca #{0}: {1}", "Библиотека #{0} перезагружена: {1}", "重新加载了库 #{0}: {1}", "{0}번 라이브러리 다시 불러옴: {1}") \
   X(TOAST_RELOAD_SPRITESHEET, "Reloaded spritesheet #{0}: {1}", "Se ha recargado spritesheet #{0}: {1}", "Спрайт-лист #{0} перезагружен: {1}", "重新加载了图集 #{0}: {1}", "{0}번 스프라이트 시트 다시 불러옴: {1}") \
   X(TOAST_RELOAD_SHADER, "Reloaded shader #{0}: {1}", "Reloaded shader #{0}: {1}", "Reloaded shader #{0}: {1}", "Reloaded shader #{0}: {1}", "Reloaded shader #{0}: {1}") \
@@ -664,9 +631,7 @@ inline constexpr const char* LANGUAGE_STRINGS[LANGUAGE_COUNT] = {
   X(TOAST_SAVE_SPRITESHEET, "Saved spritesheet #{0}: {1}", "Spritesheet Guardada #{0}: {1}", "Спрайт-лист #{0} сохранен: {1}", "已保存图集 #{0}: {1}", "{1}에 {0}번 스프라이트 시트를 저장했습니다.") \
   X(TOAST_SAVE_SPRITESHEET_FAILED, "Unable to save spritesheet #{0}: {1}", "No se pudo guardar spritesheet #{0}: {1}", "Не удалось сохранить спрайт-лист #{0}: {1}", "无法保存图集 #{0}: {1}", "{0}번 스프라이트 시트를 저장할 수 없습니다. {1}") \
   X(TOAST_SOUNDS_DESERIALIZE_ERROR, "Failed to deserialize sound(s): {0}", "Error al deserializar sonido(s): {0}", "Не удалось десериализировать звуки: {0}", "反序列化声音失败: {0}", "사운드 역직렬화 실패: {0}") \
-  X(TOAST_SOUNDS_PASTE, "Paste Sound(s)", "Pegar Sonido(s)", "Вставить звуки", "粘贴声音", "사운드 붙여넣기") \
   X(TOAST_SOUND_INITIALIZED, "Initialized sound #{0}: {1}", "Sonido Inizializado #{0}: {1}", "Звук #{0} инициализирован: {1}", "已初始化声音 #{0}: {1}", "{0}번 사운드 초기화됨: {1}") \
-  X(TOAST_SOUND_INITIALIZE_FAILED, "Failed to initialize sound: {0}", "Error al Inizializar sonido: {0}", "Не удалось инициализировать звуки: {0}", "初始化声音失败: {0}", "사운드 초기화 실패: {0}") \
   X(TOAST_RENDER_PATH_EMPTY, "Render path is empty!", "¡La ruta de render está vacía!", "Путь вывода пуст!", "渲染路径为空！", "렌더 경로가 비어 있습니다!") \
   X(TOAST_SPRITESHEET_EMPTY, "Spritesheet export failed: captured frames are empty.", "Error al exportar spritesheet: Frames capturados estan vacios.", "Не удалось экспортировать спрайт-лист: захваченные кадры пусты.", "导出图集失败: 未捕获任何帧.", "스프라이트 내보내기 실패: 캡처된 프레임이 비어있습니다.") \
   X(TOAST_SPRITESHEET_INITIALIZED, "Initialized spritesheet #{0}: {1}", "Spritesheet Inizializada #{0}: {1}", "Спрайт-лист #{0} инициализирован: {1}", "已初始化图集 #{0}: {1}", "{0}번 스프라이트 시트 초기화됨: {1}") \
@@ -722,7 +687,6 @@ inline constexpr const char* LANGUAGE_STRINGS[LANGUAGE_COUNT] = {
   X(TOOLTIP_COLUMNS, "Set how many columns the spritesheet will have.", "Ajusta cuantas columnas va a tener el spritesheet.", "Установить сколько колонн будет иметь спрайт-лист.", "设置图集有多少列.", "스프라이트 시트의 열 수를 설정합니다.") \
   X(TOOLTIP_CROP, "Change the crop position the frame uses.", "Cambiar la poscicion de recortado que usa el Frame.", "Изменить позицию обрезки, которую использует кадр.", "更改当前帧的裁剪位置.", "프레임에 대응되는 스프라이트 시트를 어느 지점부터 사용할지 변경합니다.") \
   X(TOOLTIP_CUSTOM_RANGE, "Toggle using a custom range for the animation.", "Alterna usando un rango personalizado para la animacion.", "Переключить использование пользовательского диапазона для анимации.", "切换是否让动画使用自定义区间.", "애니메이션에 사용자 지정 길이를 사용할지 정합니다.") \
-  X(TOOLTIP_DELETE_ANIMATIONS_AFTER, "Delete animations after merging them.", "Borrar animaciones despues de combinarlas.", "Удалить анимации после их соединения.", "合并动画后，删除其他动画。", "병합 후 기존 애니메이션을 삭제합니다.") \
   X(TOOLTIP_DELETE_FRAMES, "Delete the selected frames.", "Borrar los Frames seleccionados.", "Удалить выбранные кадры.", "删除所选帧.", "선택된 프레임을 삭제합니다.") \
   X(TOOLTIP_DIVIDE_VALUES, "Divide the specified values for each frame.\n(Boolean/mapped values will simply be set.)", "Dividir los valores especificos para cada Frame.\n(Los valores booleanos/mapeados simplemente se estableceran.)", "Разделить указанные значения для каждого кадра.\n(Булевы/сопоставленные значения будут просто установлены.)", "将每一帧的指定值进行除法操作. (布尔/映射值将直接被设置.)", "각 프레임의 속성을 지정된 값으로 나눕니다.\n(불리언/매핑 값은 그대로 설정됩니다.)") \
   X(TOOLTIP_DUPLICATE_ANIMATION, "Duplicate the selected animation(s).", "Duplica la(s) animacion(es) seleccionada.", "Дублировать выбранные анимации.", "拷贝所选动画.", "선택된 애니메이션을 복제합니다.") \
@@ -825,11 +789,8 @@ inline constexpr const char* LANGUAGE_STRINGS[LANGUAGE_COUNT] = {
   X(TOOLTIP_SCALE_OUTPUT, "Set the output scale of the animation.", "Ajusta la escala de salida de la animacion.", "Установить масштаб анимации при выводе.", "设置输出动画的缩放.", "애니메이션의 출력 비율을 설정합니다.") \
   X(TOOLTIP_SETTINGS_SAVE, "Use the configured settings.", "Usa las opciones configuradas.", "Использовать настроенные настройки.", "应用更改的设置.", "구성된 설정을 사용합니다.") \
   X(TOOLTIP_SET_DEFAULT_ANIMATION, "Set the selected animation as the default.", "Ajusta la animacion seleccionada como predeterminada.", "Установить выбранную анимацию как анимацию по умолчанию.", "把当前所选动画设置为默认动画.", "선택한 애니메이션을 기본 애니메이션으로 설정합니다.") \
-  X(TOOLTIP_SET_TO_RECOMMENDED, "Use a recommended value for rows/columns.", "Usa un valor recomendado para las filas/columnas.", "Использовать рекомендованное значение для рядов/колонн.", "应用列/行的推荐值.", "행/열에 권장값을 사용합니다.") \
-  X(TOOLTIP_SPLIT, "Based on the cursor position, split the selected frame into two.", "Basado en la posicion del cursor, divide el Frame seleccionado en dos.", "С учётом позиции курсора разделяет выбранный кадр на два.", "根据光标位置，将所选帧拆分成两个。", "커서 위치에 따라 선택한 프레임을 두 개로 분할합니다.") \
   X(TOOLTIP_SIZE, "Change the crop size the frame uses.", "Cambia el tamaño de recorte que usa el Frame.", "Изменить размер обрезки, который использует этот кадр.", "更改此帧的裁剪大小.", "프레임에 대응되는 스프라이트 시트의 사용 영역의 크기를 변경합니다.") \
   X(TOOLTIP_SOUND, "Toggle sounds playing with triggers.\nSet a trigger's sounds in Frame Properties.", "Alterna los sonidos reproducidos con triggers.\nConfigura los sonidos de un trigger en Propiedades de Frame.", "Переключить воспроизведение звуков у триггеров.\nНастраивайте звуки триггера в свойствах кадра.", "切换是否在触发器触发时播放声音.\n可在帧属性中设置触发器的声音.", "트리거와 함께 사운드를 재생할지 정합니다.\n트리거 사운드는 프레임 속성에서 설정하세요.") \
-  X(TEXT_SOUND_PLAY, "Click to play.", "Click para reproducir.", "Нажмите, чтобы возпроизвести.", "点击播放.", "클릭하여 재생합니다.") \
   X(TOOLTIP_SOUND_INVALID, "This sound could not be loaded. Replace the file.", "Este sonido no se pudo cargar. Reemplaza el archivo.", "Этот звук не удалось загрузить. Замените файл.", "无法加载此声音。请替换文件。", "이 사운드를 불러올 수 없습니다. 파일을 교체하세요.") \
   X(TOOLTIP_SHADER_INVALID, "The shader has errors. Reload it to see details.", "The shader has errors. Reload it to see details.", "The shader has errors. Reload it to see details.", "The shader has errors. Reload it to see details.", "The shader has errors. Reload it to see details.") \
   X(TOOLTIP_SOUND_ADD, "Add a sound.", "Añadir un sonido.", "Добавить звук.", "添加一个声音.", "사운드를 추가합니다.") \
