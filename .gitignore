@@ -11,3 +11,4 @@ cmake-build-debug/
 .codex
 compile_commands.json
 AGENTS.md
+CLAUDE.md
