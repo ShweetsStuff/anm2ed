@@ -30,25 +30,25 @@
 
   struct AnimationDragDropItem
   {
-    bool isGroup{};
-    int id{-1};
+    bool isGroup = false;
+    int id = -1;
 
     bool operator==(const AnimationDragDropItem&) const = default;
   };
 
   struct AnimationMergeOptions
   {
-    std::set<int> selection{};
-    int reference{-1};
-    Merge type{};
-    bool isDeleteAnimationsAfter{};
+    std::set<int> selection;
+    int reference = -1;
+    Merge type = {};
+    bool isDeleteAnimationsAfter = false;
   };
 
   // Calls back for each top-level entry: (animation index, animation) for loose animations, (index, group) for groups.
   template <class Callback> static void animation_entries_each(const Model& model, Callback&& callback)
   {
-    int index{};
-    for (const auto& entry : model.animations.entries)
+    int index = 0;
+    for (auto& entry : model.animations.entries)
       if (auto animation = std::get_if<std::shared_ptr<const Animation>>(&entry))
         callback(index++, animation->get(), (const AnimationGroup*)nullptr);
       else
@@ -62,7 +62,7 @@
   // The flat index of a group's first animation.
   static int animation_group_first_index_get(const Model& model, int groupId)
   {
-    int first{-1};
+    int first = -1;
     animation_entries_each(model,
                            [&](int index, auto*, const AnimationGroup* group)
                            {
@@ -73,10 +73,10 @@
 
   static std::set<int> animation_groups_selected_get(const Document& document)
   {
-    std::set<int> groupIds{};
+    std::set<int> groupIds;
     auto uids = document.selection.uids.find(SelectionKind::ANIMATION_GROUPS);
     if (uids == document.selection.uids.end()) return groupIds;
-    for (const auto& entry : document.model.animations.entries)
+    for (auto& entry : document.model.animations.entries)
       if (auto group = std::get_if<AnimationGroup>(&entry); group && uids->second.contains(group->uid))
         groupIds.insert(group->id);
     return groupIds;
@@ -87,7 +87,7 @@
     document.animations_selected_set(indices);
     auto& groupUids = document.selection.uids[SelectionKind::ANIMATION_GROUPS];
     groupUids.clear();
-    for (const auto& entry : document.model.animations.entries)
+    for (auto& entry : document.model.animations.entries)
       if (auto group = std::get_if<AnimationGroup>(&entry); group && groupIds.contains(group->id))
         groupUids.insert(group->uid);
   }
@@ -103,7 +103,7 @@
 
   static std::vector<int> animation_groupable_indices_get(const Document& document)
   {
-    std::vector<int> result{};
+    std::vector<int> result;
     for (auto index : document.animations_selected_get())
     {
       if (!document.model.animation_get(index) || document.model.animation_group_id_get(index) != -1) return {};
@@ -114,7 +114,7 @@
 
   static std::set<int> animation_merge_indices_get(const Document& document, const std::set<int>& keys, int reference)
   {
-    std::set<int> result{};
+    std::set<int> result;
     for (auto key : keys)
       if (!is_group_key(key))
         result.insert(key);
@@ -146,7 +146,7 @@
 
   static std::set<int> animation_indices_get(Document& document, const Uids& uids)
   {
-    std::set<int> indices{};
+    std::set<int> indices;
     for (auto reference : document.references_get(uids))
       indices.insert(reference.animationIndex);
     return indices;
@@ -154,11 +154,11 @@
 
   static std::string animation_clipboard_text_get(const Document& document)
   {
-    std::string clipboardText{};
+    std::string clipboardText;
     auto& model = document.model;
     auto groupIds = animation_groups_selected_get(document);
     auto selection = document.animations_selected_get();
-    for (const auto& entry : model.animations.entries)
+    for (auto& entry : model.animations.entries)
       if (auto group = std::get_if<AnimationGroup>(&entry); group && groupIds.contains(group->id))
         clipboardText += animation_group_to_string(*group);
     for (int i = 0; i < model.animations_count_get(); ++i)
@@ -173,8 +173,8 @@
   static void animations_insert(PanelState& state, Document& document, const std::string& text, int start, int targetGroupId,
                          StringType edit)
   {
-    std::set<int> groupIds{};
-    std::string errorString{};
+    std::set<int> groupIds;
+    std::string errorString;
     document.edit_apply(edit,
                         [&](Model& model)
                         {
@@ -216,7 +216,7 @@
     else if (sources.empty())
       return -1;
 
-    int merged{-1};
+    int merged = -1;
     document.edit_apply(EDIT_MERGE_ANIMATIONS,
                         [&](Model& model)
                         {
@@ -248,8 +248,8 @@
     command_push(panel,
                  [items, target](Document& document)
                  {
-                   std::set<int> indices{};
-                   std::set<int> groupIds{};
+                   std::set<int> indices;
+                   std::set<int> groupIds;
                    for (auto item : items)
                      (item.isGroup ? groupIds : indices).insert(item.id);
                    document.edit_apply(EDIT_MOVE_ANIMATIONS,
@@ -267,7 +267,7 @@
   {
     if (!ImGui::BeginDragDropSource(DRAG_DROP_SOURCE_FLAGS)) return;
 
-    static std::vector<AnimationDragDropItem> items{};
+    static std::vector<AnimationDragDropItem> items;
     items.clear();
     auto groupIds = animation_groups_selected_get(document);
     auto selection = document.animations_selected_get();
@@ -442,10 +442,10 @@
 
     struct AnimationMergeCandidate
     {
-      int key{};
-      std::string label{};
+      int key = 0;
+      std::string label;
     };
-    std::vector<AnimationMergeCandidate> candidates{};
+    std::vector<AnimationMergeCandidate> candidates;
     auto candidate_animation_push = [&](const Animation& animation, int animationIndex, bool isGrouped)
     {
       if (animationIndex != mergeReference)
@@ -474,7 +474,7 @@
     if (ImGui::BeginChild(localize.get(LABEL_ANIMATIONS_CHILD), animationsSize, ImGuiChildFlags_Borders))
     {
       animations.mergeKeys.clear();
-      for (const auto& candidate : candidates)
+      for (auto& candidate : candidates)
         animations.mergeKeys.push_back(candidate.key);
       mergeSelection.set_index_map(&animations.mergeKeys);
       mergeSelection.start(candidates.size());
@@ -555,7 +555,7 @@
         return indices.empty() ? count : std::min(*indices.rbegin() + 1, count);
       };
 
-      Actions actions{};
+      Actions actions = {};
       actions.add(
           ACTION_RENAME, [&]() { return selection.size() == 1 || (selection.empty() && groupSelection.size() == 1); },
           [&]() { state.newId = selection.size() == 1 ? *selection.begin() : group_key_get(*groupSelection.begin()); });
@@ -749,7 +749,7 @@
           panel, actions, {{ACTION_ADD, ACTION_DUPLICATE, ACTION_MERGE, ACTION_REMOVE, ACTION_DEFAULT}},
           [&]()
           {
-            std::vector<int> visibleKeys{};
+            std::vector<int> visibleKeys;
             state.keys.clear();
             for (int i = 0; i < count; ++i)
               state.keys.push_back(i);

@@ -65,7 +65,7 @@
 
   struct IconInfo
   {
-    const Embed* svg{};
+    const Embed* svg = nullptr;
     glm::ivec2 size{};
   };
 

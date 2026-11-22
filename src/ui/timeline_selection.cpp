@@ -90,7 +90,7 @@
     if (selectedItems.empty() && reference.itemType != NONE && reference.frameIndex < 0)
       selectedItems.insert(item_reference_from_frame_get(reference));
 
-    std::set<Reference> result{};
+    std::set<Reference> result;
     for (auto itemReference : selectedItems)
     {
       itemReference.frameIndex = -1;
@@ -109,7 +109,7 @@
 
   std::vector<TimelineRow> TimelineContext::timeline_item_rows_get()
   {
-    std::vector<TimelineRow> rows{};
+    std::vector<TimelineRow> rows;
     if (!animation) return rows;
 
     auto is_track_shown = [&](const Track& track)
@@ -266,8 +266,8 @@
 
   void TimelineContext::reference_set_adjacent_item(int direction)
   {
-    std::vector<Reference> itemReferences{};
-    for (const auto& row : timeline_item_rows_get())
+    std::vector<Reference> itemReferences;
+    for (auto& row : timeline_item_rows_get())
       if (!row.isGroup) itemReferences.push_back(row_item_reference_get(row));
     if (itemReferences.empty()) return;
 
@@ -285,8 +285,8 @@
 
   std::vector<TimelineRow> TimelineContext::selected_row_references_get()
   {
-    std::vector<TimelineRow> result{};
-    for (const auto& row : timeline_item_rows_get())
+    std::vector<TimelineRow> result;
+    for (auto& row : timeline_item_rows_get())
       if (is_row_selected(row)) result.push_back(row);
     return result;
   }

@@ -15,7 +15,7 @@
     auto spritesheet = item_get(model.content.spritesheets, spritesheetId);
     if (!spritesheet || !source.is_valid() || source.pixels.empty()) return false;
 
-    bool isChanged{};
+    bool isChanged = false;
     for (auto id : ids)
     {
       auto region = item_get(spritesheet->regions, id);
@@ -63,7 +63,7 @@
   {
     struct PackItem
     {
-      int regionId{-1};
+      int regionId = -1;
       glm::ivec2 source{};
       glm::ivec2 size{};
     };
@@ -72,7 +72,7 @@
     if (!spritesheet || !sheet.is_valid() || sheet.pixels.empty()) return {};
 
     padding = std::max(0, padding);
-    std::vector<PackItem> items{};
+    std::vector<PackItem> items;
     for (auto& region : spritesheet->regions)
     {
       auto minPoint = glm::ivec2(glm::min(region.crop, region.crop + region.size));
@@ -96,7 +96,7 @@
     std::vector<glm::ivec2> positions{};
     if (!rects_pack(sizes, packedSize, positions) || packedSize.x <= 0 || packedSize.y <= 0) return {};
 
-    std::vector<ImagePart> parts{};
+    std::vector<ImagePart> parts;
     for (int i = 0; i < (int)items.size(); ++i)
       parts.push_back({&sheet, items[i].source, items[i].size, positions[i] + padding});
     for (auto& region : spritesheet->regions)
@@ -119,12 +119,12 @@
     auto base = item_get(model.content.spritesheets, baseId);
     auto mergedSize = image_get(baseId)->size;
     std::vector<ImagePart> parts{{image_get(baseId), {}, mergedSize, {}}};
-    std::unordered_map<int, std::unordered_map<int, int>> regionIdMap{};
+    std::unordered_map<int, std::unordered_map<int, int>> regionIdMap;
 
     auto location_region_add = [&](int sourceId, glm::ivec2 crop, glm::ivec2 size)
     {
       auto source = item_get(model.content.spritesheets, sourceId);
-      Region region{};
+      Region region = {};
       region.id = item_next_id_get(base->regions);
       auto stem = path_to_utf8(source->path.stem());
       region.name = stem.empty() ? std::format("#{}", sourceId) : stem;
@@ -158,7 +158,7 @@
       }
     }
 
-    std::unordered_map<int, int> layerSpritesheetBefore{};
+    std::unordered_map<int, int> layerSpritesheetBefore;
     for (auto& layer : model.content.layers)
       if (ids.contains(layer.spritesheetId))
       {

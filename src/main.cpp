@@ -17,8 +17,8 @@
 #ifdef _WIN32
   struct CommandLineArguments
   {
-    std::vector<std::string> strings{};
-    std::vector<const char*> pointers{};
+    std::vector<std::string> strings;
+    std::vector<const char*> pointers;
   };
 
   std::string wstring_utf8_get(std::wstring_view value)
@@ -34,7 +34,7 @@
 
   CommandLineArguments command_line_arguments_get()
   {
-    int count{};
+    int count = 0;
     auto wideArguments = CommandLineToArgvW(GetCommandLineW(), &count);
     if (!wideArguments) return {};
     if (count <= 0)
@@ -43,7 +43,7 @@
       return {};
     }
 
-    CommandLineArguments arguments{};
+    CommandLineArguments arguments = {};
     arguments.strings.reserve((std::size_t)count);
     for (int i = 0; i < count; ++i)
       arguments.strings.push_back(wstring_utf8_get(wideArguments[i]));

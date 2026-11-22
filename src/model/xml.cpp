@@ -193,7 +193,7 @@
   // Child elements with their position, skipping legacy Overlay, nested SourceDocument copies and misplaced shaders.
   template <class Callback> static void children_each(pugi::xml_node parent, Callback&& callback)
   {
-    int position{};
+    int position = 0;
     for (auto child : parent.children())
       if (child.type() == pugi::node_element && is_child_kept(parent, child))
         callback(child, type_get(child), position++);
@@ -212,7 +212,7 @@
 
   static XmlNode node_read(pugi::xml_node element)
   {
-    XmlNode node{.tag = element.name()};
+    XmlNode node = {.tag = element.name()};
     for (auto attribute : element.attributes())
       attribute_read(node.attributes, attribute);
     if (auto text = text_get(element)) node.text = text;
@@ -222,7 +222,7 @@
 
   static Extras extras_read(pugi::xml_node element)
   {
-    Extras extras{};
+    Extras extras = {};
     for (auto attribute : element.attributes())
       if (!std::ranges::contains(KNOWN_ATTRIBUTES, std::string_view(attribute.name())))
         attribute_read(extras.attributes, attribute);
@@ -237,7 +237,7 @@
 
   static Frame frame_read(pugi::xml_node element)
   {
-    Frame frame{};
+    Frame frame = {};
     frame.crop = {float_get(element, "XCrop"), float_get(element, "YCrop")};
     frame.size = {float_get(element, "Width"), float_get(element, "Height")};
     frame.pivot = {float_get(element, "XPivot"), float_get(element, "YPivot")};
@@ -290,7 +290,7 @@
 
   static Track track_read(pugi::xml_node element, ItemType type)
   {
-    Track track{.type = type, .isVisible = bool_get(element, "Visible", true), .extras = extras_read(element)};
+    Track track = {.type = type, .isVisible = bool_get(element, "Visible", true), .extras = extras_read(element)};
     if (type == ItemType::LAYER) track.id = int_get(element, "LayerId");
     if (type == ItemType::NULL_) track.id = int_get(element, "NullId");
     auto frameType = type == ItemType::TRIGGER ? ElementType::TRIGGER : ElementType::FRAME;
@@ -321,16 +321,16 @@
   {
     using Group = GroupType;
 
-    std::optional<Child> child{};
-    std::optional<Group> group{};
-    std::optional<XmlNode> node{};
-    int groupId{-1};
-    int index{-1};
-    std::vector<Child> children{};
-    std::optional<Track> root{};
-    std::optional<Track> backupRoot{};
-    std::vector<Track> backupTracks{};
-    bool isBackup{};
+    std::optional<Child> child;
+    std::optional<Group> group;
+    std::optional<XmlNode> node;
+    int groupId = -1;
+    int index = -1;
+    std::vector<Child> children;
+    std::optional<Track> root;
+    std::optional<Track> backupRoot;
+    std::vector<Track> backupTracks;
+    bool isBackup = false;
   };
 
   using TrackItem = ContainerItem<Track, TrackGroup>;
@@ -343,11 +343,11 @@
   // group seen before it. Unknown XML becomes extras at its position.
   template <class Entry, class Item> static std::vector<Entry> entries_build(std::vector<Item> items, Extras& extras)
   {
-    int nextGroupId{};
-    for (const auto& item : items)
+    int nextGroupId = 0;
+    for (auto& item : items)
       if (item.group) nextGroupId = std::max(nextGroupId, item.group->id + 1);
 
-    std::vector<Item> flat{};
+    std::vector<Item> flat;
     for (auto& item : items)
     {
       if (!item.group)
@@ -363,8 +363,8 @@
         flat.push_back({.child = std::move(child), .groupId = groupId});
     }
 
-    std::vector<Entry> entries{};
-    std::map<int, std::size_t> groupEntries{};
+    std::vector<Entry> entries;
+    std::map<int, std::size_t> groupEntries;
     for (int i = 0; i < (int)flat.size(); ++i)
     {
       auto& item = flat[i];
@@ -417,7 +417,7 @@
 
   static std::vector<TrackItem> track_items_read(pugi::xml_node container, ItemType type)
   {
-    std::vector<TrackItem> items{};
+    std::vector<TrackItem> items;
     children_each(container,
                   [&](pugi::xml_node child, ElementType childType, int)
                   {
@@ -438,8 +438,8 @@
   {
     if (!legacyGroups.empty())
     {
-      std::set<int> legacyIds{};
-      for (const auto& item : legacyGroups)
+      std::set<int> legacyIds;
+      for (auto& item : legacyGroups)
         if (item.group->id >= 0) legacyIds.insert(item.group->id);
       std::erase_if(items, [&](const TrackItem& item) { return item.group && legacyIds.contains(item.group->id); });
       std::ranges::stable_sort(legacyGroups,
@@ -457,7 +457,7 @@
       }
     }
 
-    std::set<int> restoredIds{};
+    std::set<int> restoredIds;
     for (auto& item : items)
       if (item.group && item.group->id >= 0 && item.isBackup && (item.backupRoot || !item.backupTracks.empty()))
       {
@@ -482,10 +482,10 @@
                         .root = {.type = ItemType::ROOT},
                         .layout = {},
                         .extras = extras_read(element)};
-    std::map<ElementType, std::vector<TrackItem>> items{};
-    std::map<ElementType, std::vector<TrackItem>> legacyGroups{};
-    std::set<ElementType> legacyRead{};
-    int skipped{};
+    std::map<ElementType, std::vector<TrackItem>> items;
+    std::map<ElementType, std::vector<TrackItem>> legacyGroups;
+    std::set<ElementType> legacyRead;
+    int skipped = 0;
     children_each(element,
                   [&](pugi::xml_node child, ElementType type, int position)
                   {
@@ -539,7 +539,7 @@
 
   static std::vector<AnimationEntry> animation_entries_read(pugi::xml_node parent, Extras& extras)
   {
-    std::vector<AnimationItem> items{};
+    std::vector<AnimationItem> items;
     children_each(parent,
                   [&](pugi::xml_node child, ElementType type, int)
                   {
@@ -674,7 +674,7 @@
 
   template <class Item> static std::vector<Item> items_read(pugi::xml_node container, Content& content, ElementType type)
   {
-    std::vector<Item> items{};
+    std::vector<Item> items;
     auto extras = extras_read(container);
     children_each(container,
                   [&](pugi::xml_node child, ElementType childType, int position)
@@ -690,7 +690,7 @@
 
   static Content content_read(pugi::xml_node element)
   {
-    Content content{.layout = {}, .extras = extras_read(element)};
+    Content content = {.layout = {}, .extras = extras_read(element)};
     children_each(element,
                   [&](pugi::xml_node child, ElementType type, int position)
                   {
@@ -717,11 +717,11 @@
   // Gives every item a unique, non-negative id; the first holder of a duplicated id keeps it.
   template <class Items> static void ids_repair(Items& items)
   {
-    std::set<int> usedIds{};
-    for (const auto& item : items)
+    std::set<int> usedIds;
+    for (auto& item : items)
       if (item.id >= 0) usedIds.insert(item.id);
-    std::set<int> keptIds{};
-    int nextId{};
+    std::set<int> keptIds;
+    int nextId = 0;
     for (auto& item : items)
     {
       if (item.id >= 0 && keptIds.insert(item.id).second) continue;
@@ -797,7 +797,7 @@
 
   static Model model_read(pugi::xml_node element)
   {
-    Model model{.layout = {}, .extras = extras_read(element)};
+    Model model = {.layout = {}, .extras = extras_read(element)};
     children_each(element,
                   [&](pugi::xml_node child, ElementType type, int position)
                   {
@@ -833,11 +833,11 @@
 
   struct Writer
   {
-    Flags flags{};
-    const Model* model{};
-    std::map<int, int> shaderIds{};
-    std::map<int, int> layerIds{};
-    std::map<int, std::map<int, int>> regionIds{};
+    Flags flags = {};
+    const Model* model = nullptr;
+    std::map<int, int> shaderIds;
+    std::map<int, int> layerIds;
+    std::map<int, std::map<int, int>> regionIds;
 
     // With a model, a whole document is written: shader, layer and region ids are renumbered by position.
     Writer(Flags flags, const Model* model = nullptr) : flags(flags), model(model)
@@ -848,8 +848,8 @@
         shaderIds[content.shaders[i].id] = i;
       for (int i = 0; i < (int)content.layers.size(); ++i)
         layerIds[content.layers[i].id] = i;
-      std::set<int> spritesheetIds{};
-      for (const auto& spritesheet : content.spritesheets)
+      std::set<int> spritesheetIds;
+      for (auto& spritesheet : content.spritesheets)
         if (spritesheetIds.insert(spritesheet.id).second && !spritesheet.regions.empty())
           for (int i = 0; i < (int)spritesheet.regions.size(); ++i)
             regionIds[spritesheet.id][spritesheet.regions[i].id] = i;
@@ -882,18 +882,18 @@
 
     struct Open
     {
-      std::string_view tag{};
-      bool isEmpty{true};
-      bool isTextDone{};
+      std::string_view tag;
+      bool isEmpty = true;
+      bool isTextDone = false;
     };
 
-    Mode mode{TEXT};
-    std::string text{};
-    std::uint64_t hash{HASH_OFFSET};
-    XmlNode root{};
-    std::vector<Open> stack{};
-    std::vector<XmlNode*> nodes{};
-    int textDepth{-1};
+    Mode mode = TEXT;
+    std::string text;
+    std::uint64_t hash = HASH_OFFSET;
+    XmlNode root = {};
+    std::vector<Open> stack;
+    std::vector<XmlNode*> nodes;
+    int textDepth = -1;
 
     void hash_add(char marker, std::string_view value)
     {
@@ -1046,10 +1046,10 @@
     void node(const XmlNode& node)
     {
       open(node.tag);
-      for (const auto& [name, value] : node.attributes)
+      for (auto& [name, value] : node.attributes)
         attribute_text(name, value);
       text_add(node.text);
-      for (const auto& child : node.children)
+      for (auto& child : node.children)
         this->node(child);
       close();
     }
@@ -1059,7 +1059,7 @@
   // children at their recorded positions among the known ones.
   static void extras_attributes_write(Sink& sink, const Extras& extras)
   {
-    for (const auto& [name, value] : extras.attributes)
+    for (auto& [name, value] : extras.attributes)
       sink.attribute_text(name, value);
   }
 
@@ -1074,8 +1074,8 @@
   {
     Sink& sink;
     const Extras& extras;
-    std::size_t next{};
-    int position{};
+    std::size_t next = 0;
+    int position = 0;
 
     void add()
     {
@@ -1149,8 +1149,8 @@
   // A frame baked into single steps for the game records, on its first step, how to read them back as one.
   struct FrameBake
   {
-    Interpolation interpolation{};
-    int delay{};
+    Interpolation interpolation = {};
+    int delay = 0;
   };
 
   static void frame_write(Sink& sink, const Writer& writer, const Frame& frame, ItemType type, FrameBake bake = {})
@@ -1161,7 +1161,7 @@
       if (!frame.eventIds.empty()) sink.attribute("EventId", frame.eventIds.front());
       sink.attribute("AtFrame", frame.atFrame);
       extras_write(sink, frame.extras);
-      Children children{sink, frame.extras};
+      Children children = {sink, frame.extras};
       if (writer.is(SERIALIZE_EXTENSIONS))
         for (auto eventId : frame.eventIds | std::views::drop(1))
         {
@@ -1257,7 +1257,7 @@
     }
     extras_write(sink, track.extras);
 
-    Children children{sink, track.extras};
+    Children children = {sink, track.extras};
     auto layerTrack = track.type == ItemType::LAYER && !isBackup ? &track : nullptr;
     for (int i = 0; i < (int)track.frames.size(); ++i)
     {
@@ -1295,7 +1295,7 @@
     sink.attribute("Visible", group.isVisible);
     if (index) sink.attribute("Index", *index);
     extras_write(sink, group.extras);
-    Children children{sink, group.extras};
+    Children children = {sink, group.extras};
     if constexpr (requires { group.root; })
     {
       children.add();
@@ -1309,8 +1309,8 @@
   struct ContainerChild
   {
     std::function<void(std::optional<int>, const std::function<void()>&)> write{};
-    int groupId{-1};
-    std::optional<int> ownGroupId{};
+    int groupId = -1;
+    std::optional<int> ownGroupId;
   };
 
   template <class Group> static ContainerChild group_child_make(Sink& sink, const Writer& writer, const Group& group)
@@ -1326,26 +1326,26 @@
                        ElementType groupsType = ElementType::UNKNOWN)
   {
     extras_write(sink, extras);
-    for (const auto& [index, node] : extras.children)
+    for (auto& [index, node] : extras.children)
       flat.insert(flat.begin() + std::min(index, (int)flat.size()),
                   ContainerChild{.write = [&sink, &node](std::optional<int>, const std::function<void()>&)
                                  { sink.node(node); }});
 
     auto isGroups = writer.is(SERIALIZE_GROUPS);
-    std::map<int, std::vector<ContainerChild>> grouped{};
+    std::map<int, std::vector<ContainerChild>> grouped;
     if (isGroups && writer.is(SERIALIZE_NESTED_GROUPS))
     {
-      std::set<int> groupIds{};
-      for (const auto& child : flat)
+      std::set<int> groupIds;
+      for (auto& child : flat)
         if (child.ownGroupId && *child.ownGroupId >= 0) groupIds.insert(*child.ownGroupId);
-      for (const auto& child : flat)
+      for (auto& child : flat)
         if (!child.ownGroupId && groupIds.contains(child.groupId)) grouped[child.groupId].push_back(child);
       std::erase_if(flat,
                     [&](const ContainerChild& child) { return !child.ownGroupId && groupIds.contains(child.groupId); });
     }
 
     auto isExtracted = groupsType != ElementType::UNKNOWN && isGroups && !writer.is(SERIALIZE_NESTED_GROUPS);
-    std::vector<int> extracted{};
+    std::vector<int> extracted;
     for (int i = 0; i < (int)flat.size(); ++i)
     {
       auto& child = flat[i];
@@ -1376,21 +1376,21 @@
   static void track_entries_write(Sink& sink, const Writer& writer, const std::vector<TrackEntry>& entries, ElementType type,
                            const Extras& extras)
   {
-    std::vector<ContainerChild> flat{};
+    std::vector<ContainerChild> flat;
     auto track_child_make = [&](const Track& track, int groupId)
     {
       return ContainerChild{.write = [&, groupId](std::optional<int>, const std::function<void()>&)
                             { track_write(sink, writer, track, groupId); },
                             .groupId = groupId};
     };
-    for (const auto& entry : entries)
+    for (auto& entry : entries)
       if (auto track = std::get_if<Track>(&entry))
         flat.push_back(track_child_make(*track, -1));
       else
       {
         auto& group = std::get<TrackGroup>(entry);
         flat.push_back(group_child_make(sink, writer, group));
-        for (const auto& groupTrack : group.tracks)
+        for (auto& groupTrack : group.tracks)
           flat.push_back(track_child_make(groupTrack, group.id));
       }
     sink.open(tag_get(type));
@@ -1401,14 +1401,14 @@
 
   static bool is_frame_transform_default(const Frame& frame)
   {
-    Frame base{};
+    Frame base = {};
     return frame.position == base.position && frame.scale == base.scale && frame.rotation == base.rotation &&
            frame.skew == base.skew && frame.tint == base.tint && frame.colorOffset == base.colorOffset;
   }
 
   IsaacIssues isaac_issues_get(const Model& model)
   {
-    IsaacIssues issues{};
+    IsaacIssues issues = {};
     issues.animationLayers = (int)std::ranges::count_if(model.content.layers, &Layer::is_animation);
     issues.vectorSpritesheets = (int)spritesheets_vector_used_get(model).size();
     for (auto [index, animation] : model.animations_get())
@@ -1420,7 +1420,7 @@
           *animation,
           [&](const Track& track)
           {
-            for (const auto& frame : track.frames)
+            for (auto& frame : track.frames)
             {
               issues.easedFrames += track.type != ItemType::TRIGGER && is_special_interpolation(frame.interpolation);
               issues.skewFrames += frame.skew != glm::vec2();
@@ -1447,7 +1447,7 @@
                     [&](TrackGroup& group)
                     {
                       if (std::ranges::all_of(group.root.frames, is_frame_transform_default)) return;
-                      Sink backup{.mode = Sink::TREE};
+                      Sink backup = {.mode = Sink::TREE};
                       backup.open(FRAME_RESTORE_TAG);
                       track_write(backup, writer, group.root);
                       for (auto& track : group.tracks)
@@ -1489,7 +1489,7 @@
     auto isBaked = writer.model &&
                    (writer.is(SERIALIZE_BAKE_GROUP_FRAMES) || writer.is(SERIALIZE_FLATTEN_SPECIAL_INTERPOLATED_FRAMES));
     auto baked = isBaked ? std::optional(animation_bake(writer, source)) : std::nullopt;
-    const auto& animation = baked ? *baked : source;
+    auto& animation = baked ? *baked : source;
 
     sink.open(tag_get(ElementType::ANIMATION));
     sink.attribute("Name", animation.name);
@@ -1501,7 +1501,7 @@
     if (groupId != -1 && is_group_id_written(writer)) sink.attribute("GroupId", groupId);
     extras_write(sink, animation.extras);
 
-    Children children{sink, animation.extras};
+    Children children = {sink, animation.extras};
     for (auto type : layout_get(animation.layout, {{ElementType::ROOT_ANIMATION, !animation.root.frames.empty()},
                                                    {ElementType::LAYER_ANIMATIONS, !animation.layers.empty()},
                                                    {ElementType::NULL_ANIMATIONS, !animation.nulls.empty()},
@@ -1520,21 +1520,21 @@
 
   static void animations_write(Sink& sink, const Writer& writer, const Animations& animations)
   {
-    std::vector<ContainerChild> flat{};
+    std::vector<ContainerChild> flat;
     auto animation_child_make = [&](const Animation& animation, int groupId)
     {
       return ContainerChild{.write = [&, groupId](std::optional<int>, const std::function<void()>&)
                             { animation_write(sink, writer, animation, groupId); },
                             .groupId = groupId};
     };
-    for (const auto& entry : animations.entries)
+    for (auto& entry : animations.entries)
       if (auto animation = std::get_if<std::shared_ptr<const Animation>>(&entry))
         flat.push_back(animation_child_make(**animation, -1));
       else
       {
         auto& group = std::get<AnimationGroup>(entry);
         flat.push_back(group_child_make(sink, writer, group));
-        for (const auto& groupAnimation : group.animations)
+        for (auto& groupAnimation : group.animations)
           flat.push_back(animation_child_make(*groupAnimation, group.id));
       }
     sink.open(tag_get(ElementType::ANIMATIONS));
@@ -1568,7 +1568,7 @@
     sink.attribute("Id", id);
     path_add(sink, "Path", spritesheet.path);
     extras_write(sink, spritesheet.extras);
-    Children children{sink, spritesheet.extras};
+    Children children = {sink, spritesheet.extras};
     if (writer.is(SERIALIZE_REGIONS))
       for (int i = 0; i < (int)spritesheet.regions.size(); ++i)
       {
@@ -1592,16 +1592,16 @@
     path_add(sink, "Vertex", shader.vertex);
     path_add(sink, "Fragment", shader.fragment);
     extras_write(sink, shader.extras);
-    Children children{sink, shader.extras};
-    for (const auto& uniform : shader.uniforms)
+    Children children = {sink, shader.extras};
+    for (auto& uniform : shader.uniforms)
     {
       children.add();
       sink.open(tag_get(ElementType::UNIFORM));
       sink.attribute("Name", uniform.name);
       binding_value_add(sink, uniform.binding, uniform.value);
       extras_write(sink, uniform.extras);
-      Children components{sink, uniform.extras};
-      for (const auto& component : uniform.components)
+      Children components = {sink, uniform.extras};
+      for (auto& component : uniform.components)
       {
         components.add();
         sink.open(tag_get(ElementType::COMPONENT));
@@ -1672,8 +1672,8 @@
   // A content container's unknown XML (a file may repeat a container; its parts are merged in order).
   static Extras container_extras_get(const Content& content, ElementType type)
   {
-    Extras merged{};
-    for (const auto& [extrasType, extras] : content.containerExtras)
+    Extras merged = {};
+    for (auto& [extrasType, extras] : content.containerExtras)
     {
       if (extrasType != type) continue;
       merged.attributes.insert(merged.attributes.end(), extras.attributes.begin(), extras.attributes.end());
@@ -1689,7 +1689,7 @@
   {
     sink.open(tag_get(type));
     extras_write(sink, extras);
-    Children children{sink, extras};
+    Children children = {sink, extras};
     auto isRenumbered = writer.model && (type == ElementType::LAYERS || type == ElementType::SHADERS);
     for (int i = 0; i < (int)items.size(); ++i)
     {
@@ -1703,7 +1703,7 @@
   {
     sink.open(tag_get(ElementType::CONTENT));
     extras_write(sink, content.extras);
-    Children children{sink, content.extras};
+    Children children = {sink, content.extras};
     for (auto type : layout_get(content.layout, {{ElementType::SPRITESHEETS, !content.spritesheets.empty()},
                                                  {ElementType::SHADERS, !content.shaders.empty()},
                                                  {ElementType::LAYERS, !content.layers.empty()},
@@ -1740,7 +1740,7 @@
     Writer writer(flags, &model);
     sink.open(tag.empty() ? tag_get(ElementType::ANIMATED_ACTOR) : tag);
     extras_write(sink, model.extras);
-    Children children{sink, model.extras};
+    Children children = {sink, model.extras};
     auto isIgnored = writer.is(SERIALIZE_EXTENSIONS) && model.info.isIsaacIgnored;
     auto isInfo = model.info.fps != Info{}.fps || model.info.createdBy != Info{}.createdBy || isIgnored;
     for (auto type : layout_get(model.layout, {{ElementType::INFO, isInfo},
@@ -1780,7 +1780,7 @@
   // The text of whatever `write` sends to a sink.
   template <class Write> static std::string text_get(Write&& write)
   {
-    Sink sink{};
+    Sink sink = {};
     write(sink);
     return std::move(sink.text);
   }
@@ -1805,7 +1805,7 @@
 
   static bool document_load(Model& model, std::string_view text, std::string* errorString)
   {
-    pugi::xml_document document{};
+    pugi::xml_document document;
     if (!document_parse(document, text, errorString)) return model_invalid_set(model);
     auto root = document.document_element();
     if (!root)
@@ -1821,14 +1821,14 @@
 
   Model model_make()
   {
-    Model model{};
+    Model model = {};
     model.info.createdOn = timestamp_get(CREATED_ON_FORMAT);
     return model;
   }
 
   bool model_load(Model& model, const std::filesystem::path& path, std::string* errorString)
   {
-    std::string text{};
+    std::string text;
     if (file_text_load(path, &text)) return model_load_string(model, text, errorString);
     if (errorString) *errorString = "File not found.";
     return model_invalid_set(model);
@@ -1868,7 +1868,7 @@
   // The hash of what the editor would save, so it changes exactly when a save would.
   std::uint64_t model_hash(const Model& model)
   {
-    Sink sink{.mode = Sink::HASH};
+    Sink sink = {.mode = Sink::HASH};
     model_write(sink, model, SERIALIZE_ANM2ED_DEFAULT);
     return sink.hash;
   }
@@ -1890,10 +1890,10 @@
 
   std::vector<Frame> frames_from_string(const std::string& text, ItemType type, std::string* errorString)
   {
-    pugi::xml_document document{};
+    pugi::xml_document document;
     if (!document_parse(document, text, errorString)) return {};
     auto tag = tag_get(type == ItemType::TRIGGER ? ElementType::TRIGGER : ElementType::FRAME);
-    std::vector<Frame> frames{};
+    std::vector<Frame> frames;
     for (auto element : document.children(tag))
       frames.push_back(frame_read(element));
     if (frames.empty() && errorString) *errorString = std::format("No valid {}(s).", tag);
@@ -1902,9 +1902,9 @@
 
   std::vector<AnimationEntry> animations_from_string(const std::string& text, std::string* errorString)
   {
-    pugi::xml_document document{};
+    pugi::xml_document document;
     if (!document_parse(document, text, errorString)) return {};
-    Extras extras{};
+    Extras extras = {};
     auto entries = animation_entries_read(document, extras);
     if (entries.empty() && errorString) *errorString = "No valid animation(s).";
     return entries;
@@ -1917,10 +1917,10 @@
 
   template <class Item> static std::vector<Item> items_from_string(const std::string& text, std::string* errorString)
   {
-    pugi::xml_document document{};
+    pugi::xml_document document;
     if (!document_parse(document, text, errorString)) return {};
     auto tag = tag_get(ITEM_TYPE<Item>);
-    std::vector<Item> items{};
+    std::vector<Item> items;
     for (auto element : document.children(tag))
     {
       auto item = item_read<Item>(element);

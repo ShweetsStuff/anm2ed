@@ -41,9 +41,9 @@ using namespace glm;
   constexpr auto TRIGGER_TEXT_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 0.5f);
   struct OverlayAnimationOption
   {
-    uint64_t documentId{};
-    int animationIndex{-1};
-    std::string label{};
+    uint64_t documentId = 0;
+    int animationIndex = -1;
+    std::string label;
   };
 
   static std::vector<OverlayAnimationOption> overlay_animation_options_get(Manager& manager)
@@ -65,7 +65,7 @@ using namespace glm;
 
   static std::vector<const char*> overlay_animation_option_labels_get(std::vector<OverlayAnimationOption>& options)
   {
-    std::vector<const char*> labels{};
+    std::vector<const char*> labels;
     labels.reserve(options.size());
     for (auto& option : options)
       labels.push_back(option.label.c_str());
@@ -606,7 +606,7 @@ using namespace glm;
                                      .isRootTransform = isRootTransform,
                                      .isIndexSampled = settings.onionskinMode == (int)OnionskinMode::INDEX};
       std::vector<vec3> sampleColors{};
-      std::vector<float> sampleAlphas{};
+      std::vector<float> sampleAlphas;
       auto samples_add = [&](int count, int direction, vec3 color)
       {
         for (int i = 1; i <= count; ++i)
@@ -664,7 +664,7 @@ using namespace glm;
         auto targetIcon = resources.icon_id_get(isAltIcons && !isIsolated ? ICON_TARGET_ALT : ICON_TARGET);
         auto sampleOptions = options;
         sampleOptions.library_get = sampleDocument.library_resolver_get();
-        for (const auto& draw : animation_draws_get(sampleModel, sampleAnimation, sampleOptions))
+        for (auto& draw : animation_draws_get(sampleModel, sampleAnimation, sampleOptions))
         {
           if (isParent && (draw.type != DrawType::LAYER || draw.id == skipLayerId)) continue;
           auto isOnion = draw.sample != -1;
@@ -774,7 +774,7 @@ using namespace glm;
             pivotPathsKey = key;
             pivotPaths.clear();
             for (int time = 0; time < animation->frameNum; ++time)
-              for (const auto& draw : animation_draws_get(model, *animation,
+              for (auto& draw : animation_draws_get(model, *animation,
                                                                  {.time = (float)time,
                                                                   .isRootTransform = isRootTransform,
                                                                   .library_get = document.library_resolver_get()}))
@@ -791,7 +791,7 @@ using namespace glm;
           }
 
           auto pointIcon = resources.icon_id_get(ICON_POINT);
-          for (const auto& path : pivotPaths)
+          for (auto& path : pivotPaths)
           {
             if (isOnlySelected && !is_draw_selected(path.item)) continue;
             for (std::size_t i = 0; i < path.points.size(); ++i)
@@ -828,9 +828,9 @@ using namespace glm;
       image_premultiplied_draw(texture, to_imvec2(size));
 
       // The events triggers (the animation's and its children's) fire on this frame.
-      std::string names{};
+      std::string names;
       if (animation && !isOnlyShowLayers && !manager.isRecording)
-        for (const auto& [source, trigger, layerId] :
+        for (auto& [source, trigger, layerId] :
              animation_triggers_get(model, *animation, (int)frameTime, document.library_resolver_get()))
           for (auto eventId : trigger.eventIds)
             if (auto event = item_get(source->content.events, eventId))

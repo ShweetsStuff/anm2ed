@@ -11,7 +11,7 @@
     close();
 
 #ifdef _WIN32
-    std::wstring wideMode{};
+    std::wstring wideMode = {};
     if (mode)
       for (auto character = mode; *character; ++character)
         wideMode.push_back((wchar_t)*character);
@@ -48,7 +48,7 @@
       if (!file) return false;
 
       output->clear();
-      std::array<char, 4096> buffer{};
+      std::array<char, 4096> buffer = {};
       while (true)
       {
         auto read = std::fread(buffer.data(), 1, buffer.size(), file.get());

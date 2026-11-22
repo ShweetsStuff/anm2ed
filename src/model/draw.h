@@ -18,8 +18,8 @@
   // An onion-skin sample: a time offset, or (when sampling by index) an offset in each track's frames.
   struct DrawSample
   {
-    float timeOffset{};
-    int indexOffset{};
+    float timeOffset = 0;
+    int indexOffset = 0;
   };
 
   // The document a library id of a document (the one drawn, or a library) points at; nullptr when not loaded.
@@ -27,11 +27,11 @@
 
   struct DrawOptions
   {
-    float time{};
-    bool isRootTransform{};
-    bool isIndexSampled{};
-    std::vector<DrawSample> samples{};
-    LibraryGet library_get{};
+    float time = 0;
+    bool isRootTransform = false;
+    bool isIndexSampled = false;
+    std::vector<DrawSample> samples;
+    LibraryGet library_get = {};
   };
 
   // An item's frame at a time; `parent` is the transform of its root and group root when root transforms are shown
@@ -40,24 +40,24 @@
   // layers' draws, with the animation layer's id and transform.
   struct Draw
   {
-    DrawType type{};
-    int id{-1};
-    int groupType{NONE};
-    int sample{-1};
-    float time{};
-    Frame frame{};
+    DrawType type = {};
+    int id = -1;
+    int groupType = NONE;
+    int sample = -1;
+    float time = 0;
+    Frame frame = {};
     glm::mat4 parent{1.0f};
-    const Model* source{};
-    int spritesheetId{-1};
-    int sourceId{-1}; // the layer of `source` drawn (a child's, for an animation layer's draws)
+    const Model* source = nullptr;
+    int spritesheetId = -1;
+    int sourceId = -1; // the layer of `source` drawn (a child's, for an animation layer's draws)
   };
 
   // A trigger that fires, from the animation played or a child animation (whose ids belong to `source`).
   struct TriggerFire
   {
-    const Model* source{};
-    Frame trigger{};
-    int layerId{-1}; // the animation's layer whose child fired it; -1 for the animation's own
+    const Model* source = nullptr;
+    Frame trigger = {};
+    int layerId = -1; // the animation's layer whose child fired it; -1 for the animation's own
   };
 
   glm::mat4 draw_quad_model_get(const Draw&);

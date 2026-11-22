@@ -8,13 +8,13 @@
   {
     WSAInitializer()
     {
-      WSADATA data{};
+      WSADATA data = {};
       WSAStartup(MAKEWORD(2, 2), &data);
     }
     ~WSAInitializer() { WSACleanup(); }
   };
 
-  WSAInitializer initializer{};
+  WSAInitializer initializer = {};
 #endif
 
   static int socket_last_error()
@@ -97,7 +97,7 @@
       return false;
     }
 
-    sockaddr_in addr{};
+    sockaddr_in addr = {};
     addr.sin_family = AF_INET;
     addr.sin_port = htons(address.port);
 
@@ -141,7 +141,7 @@
 
   Socket Socket::accept()
   {
-    Socket client{};
+    Socket client = {};
     if (!is_valid()) return client;
 
     auto accepted = ::accept(handle, nullptr, nullptr);
@@ -166,7 +166,7 @@
       return false;
     }
 
-    sockaddr_in addr{};
+    sockaddr_in addr = {};
     addr.sin_family = AF_INET;
     addr.sin_port = htons(address.port);
 

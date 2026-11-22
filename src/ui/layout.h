@@ -13,13 +13,13 @@
 
   template <typename T> constexpr T& dummy_value()
   {
-    static T value{};
+    static T value = {};
     return value;
   }
 
   template <typename T> constexpr T& dummy_value_negative()
   {
-    static T value{-1};
+    static T value = -1;
     return value;
   }
 

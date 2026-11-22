@@ -135,9 +135,9 @@
       auto boxMax = ImVec2(std::max(frameBoxStart.x, frameBoxEnd.x), std::max(frameBoxStart.y, frameBoxEnd.y));
       auto rowMinY = cursorScreenPos.y + scroll.y - frameBoxClipMin.y;
       auto rowMaxY = rowMinY + childSize.y;
-      float selectionFrameTime{};
-      int frameIndex{};
-      for (const auto& frame : item->frames)
+      float selectionFrameTime = 0;
+      int frameIndex = 0;
+      for (auto& frame : item->frames)
       {
         auto frameReference = row_reference_make(frameIndex);
         auto frameStart = type == TRIGGER ? frame.atFrame : selectionFrameTime;
@@ -246,7 +246,7 @@
 
         isRulerHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
         if (isRulerHovered && ImGui::IsMouseReleased(ImGuiMouseButton_Right)) markerTime = hoveredTime;
-        Actions markerActions{};
+        Actions markerActions = {};
         auto isAnimation = [&]() { return animation != nullptr; };
         markerActions.add({.label = LABEL_ADD_START_MARKER,
                            .shortcut = SHORTCUT_START_MARKER,
@@ -281,7 +281,7 @@
       }
       else if (animation)
       {
-        float frameTime{};
+        float frameTime = 0;
 
         for (int i = frameMin; i < frameMax; i++)
         {
@@ -306,11 +306,11 @@
         }
 
         bool isFrameMovePreview = false;
-        ImVec2 frameMovePreviewMin{};
-        ImVec2 frameMovePreviewMax{};
+        ImVec2 frameMovePreviewMin;
+        ImVec2 frameMovePreviewMax;
         bool isFrameMoveHoveredFrame = false;
-        ImVec2 frameMoveHoveredFrameMin{};
-        ImVec2 frameMoveHoveredFrameMax{};
+        ImVec2 frameMoveHoveredFrameMin;
+        ImVec2 frameMoveHoveredFrameMax;
 
         if (frameMoveDrag.isActive && type != TRIGGER)
         {
@@ -322,11 +322,11 @@
             auto mouseX = mousePos.x - cursorScreenPos.x;
             auto targetTime = glm::max(0.0f, mouseX / frameSize.x);
             int dropIndex = (int)item->frames.size();
-            float dropFrameTime{};
-            float frameTime{};
-            int frameIndex{};
+            float dropFrameTime = 0;
+            float frameTime = 0;
+            int frameIndex = 0;
 
-            for (const auto& frame : item->frames)
+            for (auto& frame : item->frames)
             {
               auto frameStart = frameTime;
               auto frameEnd = frameStart + frame.duration;
@@ -569,7 +569,7 @@
       }
       else
       {
-        std::map<Reference, int> durations{};
+        std::map<Reference, int> durations;
         if (draggedFrameStartDurations.empty()) durations[targetReference] = draggedFrameStartDuration + durationDelta;
         for (auto frameDuration : draggedFrameStartDurations)
           durations[frameDuration.reference] = frameDuration.duration + durationDelta;
@@ -615,7 +615,7 @@
 
       auto animationsLength = [&]()
       {
-        int length{};
+        int length = 0;
         for (auto [index, item] : model.animations_get())
           length = std::max(length, animation_length_get(*item));
         return length;
@@ -711,7 +711,7 @@
             }
           }
 
-          int index{};
+          int index = 0;
 
           ImGui::TableSetupScrollFreeze(0, 1);
           ImGui::TableSetupColumn("##Frames");
@@ -729,10 +729,10 @@
           {
             ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 2.0f);
 
-            for (const auto& row : timeline_item_rows_get())
+            for (auto& row : timeline_item_rows_get())
             {
               frames_child_row(row);
-              for (const auto& peek : peek_rows_get(row))
+              for (auto& peek : peek_rows_get(row))
               {
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);

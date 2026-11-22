@@ -180,7 +180,7 @@ using namespace glm;
     state.fps = 30.0f;
     state.isLoaded = false;
 
-    std::string errorString{};
+    std::string errorString;
     if (!model_load_string(state.model, std::string_view((const char*)info.anm2->data, info.anm2->size), &errorString))
     {
       logger.error(std::format("Unable to load friend animation {}: {}", info.name, errorString));
@@ -391,7 +391,7 @@ using namespace glm;
       auto left = side == 0 ? min.x : max.x - width;
       auto covered = 0.0f;
       auto weight = 1.0f;
-      for (const auto& frame : history)
+      for (auto& frame : history)
       {
         if (weight < ROLL_WEIGHT_MIN) break;
         auto height = frame.levels[side];
@@ -431,9 +431,9 @@ using namespace glm;
     drawList->AddRectFilled(min, max, ROLL_BACKGROUND);
 
     // Each tick faded what came before it by its trail alpha; the copies still visible are drawn oldest first.
-    std::vector<std::pair<const About::RollFrame*, float>> copies{};
+    std::vector<std::pair<const About::RollFrame*, float>> copies;
     auto weight = 1.0f;
-    for (const auto& frame : roll.history)
+    for (auto& frame : roll.history)
     {
       if (weight < ROLL_WEIGHT_MIN) break;
       copies.emplace_back(&frame, weight);

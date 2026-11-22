@@ -17,5 +17,5 @@
     std::string output_get_and_close();
 
   private:
-    FILE* pipe{};
+    FILE* pipe = nullptr;
   };

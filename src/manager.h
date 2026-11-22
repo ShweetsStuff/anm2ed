@@ -19,7 +19,7 @@
 
   struct Command
   {
-    int documentIndex{-1};
+    int documentIndex = -1;
     std::function<void(Manager&, Document&)> run{};
     std::function<void(Manager&)> runManager{};
   };
@@ -33,58 +33,58 @@
     void recent_files_trim();
 
   public:
-    std::vector<Document> documents{};
-    std::vector<Command> commands{};
-    std::map<std::string, std::size_t, std::less<>> recentFiles{};
-    std::size_t recentFilesCounter{};
-    std::vector<std::filesystem::path> autosaveFiles{};
+    std::vector<Document> documents;
+    std::vector<Command> commands;
+    std::map<std::string, std::size_t, std::less<>> recentFiles;
+    std::size_t recentFilesCounter = 0;
+    std::vector<std::filesystem::path> autosaveFiles;
 
-    int selected{-1};
-    int pendingSelected{-1};
+    int selected = -1;
+    int pendingSelected = -1;
 
-    bool isRecording{};
-    bool isRecordingStart{};
-    int recordingStart{};
-    int recordingEnd{};
-    bool isRecordingRange{};
-    bool isAbleToRecord{};
+    bool isRecording = false;
+    bool isRecordingStart = false;
+    int recordingStart = 0;
+    int recordingEnd = 0;
+    bool isRecordingRange = false;
+    bool isAbleToRecord = false;
 
     ImGuiKeyChord chords[SHORTCUT_COUNT]{};
-    Options saveOptions{};
+    Options saveOptions = {};
 
-    std::vector<std::filesystem::path> anm2DragDropPaths{};
-    bool isAnm2DragDrop{};
-    int anm2DragDropMergePreset{FILE_MERGE_PRESET_MERGE_BY_NAME};
+    std::vector<std::filesystem::path> anm2DragDropPaths;
+    bool isAnm2DragDrop = false;
+    int anm2DragDropMergePreset = FILE_MERGE_PRESET_MERGE_BY_NAME;
     PopupHelper anm2DragDropPopup{
         PopupHelper(LABEL_MANAGER_ANM2_DRAG_DROP, POPUP_NORMAL, POPUP_BY_CURSOR)};
     PopupHelper anm2DragDropMergePopup{
         PopupHelper(LABEL_DOCUMENTS_MERGE_INTO_CURRENT, POPUP_SMALL_NO_HEIGHT)};
 
-    std::filesystem::path spritesheetDragDropPath{};
-    bool isSpritesheetDragDrop{};
+    std::filesystem::path spritesheetDragDropPath;
+    bool isSpritesheetDragDrop = false;
 
     struct ItemEdit
     {
-      int id{-1};
-      std::string name{};
-      int spritesheetId{};
-      bool isShowRect{};
-      bool isAnimation{};
-      int libraryId{-1};
-      std::string animation{};
+      int id = -1;
+      std::string name;
+      int spritesheetId = 0;
+      bool isShowRect = false;
+      bool isAnimation = false;
+      int libraryId = -1;
+      std::string animation;
     } itemEdit{};
     PopupHelper itemPropertiesPopups[2]{
         PopupHelper(LABEL_MANAGER_LAYER_PROPERTIES, POPUP_SMALL_NO_HEIGHT),
         PopupHelper(LABEL_MANAGER_NULL_PROPERTIES, POPUP_SMALL_NO_HEIGHT)};
 
-    Region makeRegion{};
-    int makeRegionSpritesheetId{-1};
-    bool isMakeRegionRequested{};
+    Region makeRegion = {};
+    int makeRegionSpritesheetId = -1;
+    bool isMakeRegionRequested = false;
 
     PopupHelper progressPopup{
         PopupHelper(LABEL_MANAGER_RENDERING_PROGRESS, POPUP_SMALL_NO_HEIGHT)};
 
-    std::vector<int> selectionHistory{};
+    std::vector<int> selectionHistory;
 
     Manager();
     ~Manager();

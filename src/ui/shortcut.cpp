@@ -102,7 +102,7 @@
 
   static const char* shortcut_canonical_key_name(ImGuiKey key)
   {
-    for (const auto& [mappedKey, name] : CANONICAL_KEY_NAMES)
+    for (auto& [mappedKey, name] : CANONICAL_KEY_NAMES)
       if (mappedKey == key) return name;
     return nullptr;
   }

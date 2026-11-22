@@ -17,8 +17,8 @@
 
   struct DocumentTab
   {
-    ImGuiID imguiId{};
-    uint64_t documentId{};
+    ImGuiID imguiId = 0;
+    uint64_t documentId = 0;
   };
 
 #define ANM2_DRAG_DROP_MERGE_PRESETS                                                                                   \
@@ -62,7 +62,7 @@
       return;
     }
 
-    std::vector<int> order{};
+    std::vector<int> order;
     order.reserve(manager.documents.size());
     for (auto documentId : pendingDocumentTabIds)
     {
@@ -91,7 +91,7 @@
     }
 
     std::vector<int> remap(manager.documents.size(), -1);
-    std::vector<Document> documents{};
+    std::vector<Document> documents;
     documents.reserve(manager.documents.size());
     for (auto [i, index] : std::views::enumerate(order))
     {
@@ -168,9 +168,9 @@
         int closeShortcutIndex =
             isCloseShortcut && manager.selected >= 0 && manager.selected < documentsCount ? manager.selected : -1;
 
-        std::vector<int> closeIndices{};
+        std::vector<int> closeIndices;
         closeIndices.reserve(documentsCount);
-        std::vector<DocumentTab> documentTabs{};
+        std::vector<DocumentTab> documentTabs;
         documentTabs.reserve(documentsCount);
 
         for (int i = 0; i < documentsCount; ++i)
@@ -232,7 +232,7 @@
 
         if (auto tabBar = ImGui::GetCurrentTabBar(); tabBar && documentTabs.size() == manager.documents.size())
         {
-          std::vector<uint64_t> documentTabIds{};
+          std::vector<uint64_t> documentTabIds;
           documentTabIds.reserve(manager.documents.size());
           for (auto& tab : tabBar->Tabs)
           {

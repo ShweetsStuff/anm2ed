@@ -15,15 +15,15 @@
     std::filesystem::path settings_path();
 
   public:
-    Socket socket{};
-    std::thread socketThread{};
-    std::atomic_bool isSocketRunning{};
-    SDL_Window* window{};
-    SDL_GLContext glContext{};
+    Socket socket = {};
+    std::thread socketThread;
+    std::atomic_bool isSocketRunning = {};
+    SDL_Window* window = nullptr;
+    SDL_GLContext glContext = {};
     Settings settings;
     std::vector<std::string> arguments;
-    bool isError{};
-    bool isSocketThread{};
+    bool isError = false;
+    bool isSocketThread = false;
 
     Loader(int, const char**);
     ~Loader();

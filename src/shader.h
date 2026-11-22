@@ -277,8 +277,8 @@
 
   struct AttributeAlias
   {
-    GLuint index{};
-    const char* name{};
+    GLuint index = 0;
+    const char* name = nullptr;
   };
 
   inline constexpr AttributeAlias ATTRIBUTE_ALIASES[] = {
@@ -308,9 +308,9 @@
 
   struct UniformBindingInfo
   {
-    UniformBinding binding{};
-    const char* value{};
-    const char* label{};
+    UniformBinding binding = {};
+    const char* value = nullptr;
+    const char* label = nullptr;
   };
 
   inline constexpr UniformBindingInfo UNIFORM_BINDING_INFOS[] = {
@@ -339,9 +339,9 @@
 
   struct UniformValueTypeInfo
   {
-    UniformValueType type{};
-    const char* label{};
-    int componentCount{};
+    UniformValueType type = {};
+    const char* label = nullptr;
+    int componentCount = 0;
   };
 
   inline constexpr UniformValueTypeInfo UNIFORM_VALUE_TYPE_INFOS[] = {
@@ -354,19 +354,19 @@
   {
     struct Component
     {
-      UniformBinding binding{UNIFORM_BINDING_MANUAL};
-      float value{};
+      UniformBinding binding = UNIFORM_BINDING_MANUAL;
+      float value = 0;
     };
 
-    std::string name{};
-    GLint location{-1};
-    GLenum glType{};
-    GLint size{};
-    UniformValueType valueType{UNIFORM_VALUE_UNKNOWN};
-    UniformBinding binding{UNIFORM_BINDING_IGNORE};
+    std::string name;
+    GLint location = -1;
+    GLenum glType = 0;
+    GLint size = 0;
+    UniformValueType valueType = UNIFORM_VALUE_UNKNOWN;
+    UniformBinding binding = UNIFORM_BINDING_IGNORE;
     glm::vec4 value{};
-    int intValue{};
-    std::array<Component, 4> components{};
+    int intValue = 0;
+    std::array<Component, 4> components = {};
   };
 
   enum ShaderStage
@@ -411,11 +411,11 @@
 
   struct ShaderCompileResult
   {
-    GLuint id{};
-    std::string output{};
-    std::vector<ShaderUniform> uniforms{};
-    bool isCompiled{};
-    bool isLinked{};
+    GLuint id = 0;
+    std::string output;
+    std::vector<ShaderUniform> uniforms;
+    bool isCompiled = false;
+    bool isLinked = false;
   };
 
   ShaderCompileResult shader_compile(const char*, const char*);
@@ -423,8 +423,8 @@
   class ShaderProgram
   {
   public:
-    GLuint id{};
-    std::vector<ShaderUniform> uniforms{};
+    GLuint id = 0;
+    std::vector<ShaderUniform> uniforms;
 
     ShaderProgram();
     ShaderProgram(const char*, const char*);

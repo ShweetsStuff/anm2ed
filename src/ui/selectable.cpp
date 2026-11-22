@@ -8,13 +8,13 @@
 
   std::string& selectable_input_text_id()
   {
-    static std::string editID{};
+    static std::string editID;
     return editID;
   }
 
   bool input_text_rename_update(std::string& text, RenameState& state, float width)
   {
-    bool isActivated{};
+    bool isActivated = false;
 
     auto finish = [&]()
     {
@@ -43,7 +43,7 @@
   {
     auto& editID = selectable_input_text_id();
     auto isRename = editID == id;
-    bool isActivated{};
+    bool isActivated = false;
 
     if (isRename)
       isActivated = input_text_rename_update(text, state);

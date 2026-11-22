@@ -44,15 +44,15 @@
 
   class Logger
   {
-    std::filesystem::path logPath{};
-    std::uintmax_t logSize{};
-    std::mutex mutex{};
-    std::thread stderrThread{};
-    bool isStderrRedirecting{};
-    bool isLogLimitReached{};
-    int stderrPipeReadFd{-1};
-    int stderrPipeWriteFd{-1};
-    int stderrOriginalFd{-1};
+    std::filesystem::path logPath;
+    std::uintmax_t logSize = 0;
+    std::mutex mutex;
+    std::thread stderrThread;
+    bool isStderrRedirecting = false;
+    bool isLogLimitReached = false;
+    int stderrPipeReadFd = -1;
+    int stderrPipeWriteFd = -1;
+    int stderrOriginalFd = -1;
 
     void stderr_redirect_start();
     void stderr_redirect_stop();

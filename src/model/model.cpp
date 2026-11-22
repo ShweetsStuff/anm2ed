@@ -26,8 +26,8 @@
 
   int Model::animations_count_get() const
   {
-    int count{};
-    for (const auto& entry : animations.entries)
+    int count = 0;
+    for (auto& entry : animations.entries)
       count +=
           std::holds_alternative<AnimationGroup>(entry) ? (int)std::get<AnimationGroup>(entry).animations.size() : 1;
     return count;
@@ -57,7 +57,7 @@
 
   std::vector<std::pair<int, const Animation*>> Model::animations_get() const
   {
-    std::vector<std::pair<int, const Animation*>> result{};
+    std::vector<std::pair<int, const Animation*>> result;
     for (int i = 0; i < animations_count_get(); ++i)
       result.emplace_back(i, animation_get(i));
     return result;
@@ -66,7 +66,7 @@
   template <class Self> static auto animation_group_find(Self& self, int index)
   {
     using Group = std::conditional_t<std::is_const_v<Self>, const AnimationGroup, AnimationGroup>;
-    Group* result{};
+    Group* result = nullptr;
     if (index < 0) return result;
     for (auto& entry : self.animations.entries)
     {
@@ -94,7 +94,7 @@
   template <class A> static auto animation_track_group_find(A& animation, int groupType, int groupId)
   {
     using Group = std::conditional_t<std::is_const_v<A>, const TrackGroup, TrackGroup>;
-    Group* result{};
+    Group* result = nullptr;
     if (groupId < 0 || (groupType != LAYER && groupType != NULL_)) return result;
     groups_each(animation_entries_get(animation, groupType),
                 [&](auto& group)
@@ -119,7 +119,7 @@
   template <class A> static auto animation_track_find(A& animation, int itemType, int id, int groupType, int groupId)
   {
     using T = std::conditional_t<std::is_const_v<A>, const Track, Track>;
-    T* result{};
+    T* result = nullptr;
     auto isGrouped = groupType != NONE && groupId != -1;
     if (itemType == ROOT)
     {
@@ -212,8 +212,8 @@
 
   template <class Items> static std::set<int> unused_ids_get(const Items& items, const std::set<int>& used)
   {
-    std::set<int> unused{};
-    for (const auto& item : items)
+    std::set<int> unused;
+    for (auto& item : items)
       if (!used.contains(item.id)) unused.insert(item.id);
     return unused;
   }
@@ -230,7 +230,7 @@
     if (type == ElementType::SPRITESHEET || type == ElementType::LIBRARY)
     {
       // An animation layer's spritesheet isn't drawn.
-      for (const auto& layer : content.layers)
+      for (auto& layer : content.layers)
         if (type == ElementType::LIBRARY)
           callback(layer.libraryId);
         else if (!layer.is_animation())
@@ -243,14 +243,14 @@
         tracks_each(type == ElementType::LAYER_ELEMENT ? animation.layers : animation.nulls,
                     [&](const Track& track, auto*) { callback(track.id); });
       if (type == ElementType::EVENT_ELEMENT || type == ElementType::SOUND_ELEMENT)
-        for (const auto& trigger : animation.triggers.frames)
+        for (auto& trigger : animation.triggers.frames)
           for (auto id : type == ElementType::EVENT_ELEMENT ? trigger.eventIds : trigger.soundIds)
             callback(id);
       if (type == ElementType::SHADER)
         animation_tracks_each(animation,
                               [&](const Track& track)
                               {
-                                for (const auto& frame : track.frames)
+                                for (auto& frame : track.frames)
                                   callback(frame.shaderId);
                               });
       if (type == ElementType::REGION)
@@ -259,7 +259,7 @@
                     {
                       auto layer = item_get(content.layers, track.id);
                       if (!layer || layer->spritesheetId != spritesheetId) return;
-                      for (const auto& frame : track.frames)
+                      for (auto& frame : track.frames)
                         callback(frame.regionId);
                     });
     };
@@ -270,7 +270,7 @@
 
   std::set<int> Model::unused_get(ElementType type, const Animation* only) const
   {
-    std::set<int> used{};
+    std::set<int> used;
     references_each(*this, type, -1, only, [&](int id) { used.insert(id); });
     switch (type)
     {
@@ -296,14 +296,14 @@
   // How many references there are to the items `ids` (see references_each).
   int Model::uses_count(ElementType type, const std::set<int>& ids, int spritesheetId, const Animation* only) const
   {
-    int count{};
+    int count = 0;
     references_each(*this, type, spritesheetId, only, [&](int id) { count += ids.contains(id); });
     return count;
   }
 
   Handle Model::handle_get(Reference reference, bool isGroup) const
   {
-    Handle handle{};
+    Handle handle = {};
     auto animation = animation_get(reference.animationIndex);
     if (!animation) return handle;
     handle.animation = animation->uid;
@@ -347,7 +347,7 @@
   // Gives any element that shares a uid with an earlier one a fresh uid (copies made without cloning).
   void Model::uids_repair()
   {
-    std::unordered_set<std::uint64_t> seen{};
+    std::unordered_set<std::uint64_t> seen;
     auto repair = [&](std::uint64_t& uid)
     {
       if (!uid || !seen.insert(uid).second) uid = uid_next();
@@ -356,7 +356,7 @@
     for (int i = 0; i < animations_count_get(); ++i)
     {
       auto seenBefore = seen;
-      bool isDuplicate{};
+      bool isDuplicate = false;
       animation_uids_each(const_cast<Animation&>(*animation_get(i)),
                           [&](std::uint64_t& uid) { isDuplicate |= !uid || !seen.insert(uid).second; });
       if (!isDuplicate) continue;
@@ -388,8 +388,8 @@
   // SVG spritesheets that layers show.
   std::set<int> spritesheets_vector_used_get(const Model& model)
   {
-    std::set<int> ids{};
-    for (const auto& layer : model.content.layers)
+    std::set<int> ids;
+    for (auto& layer : model.content.layers)
       if (auto spritesheet = item_get(model.content.spritesheets, layer.spritesheetId);
           spritesheet && !layer.is_animation() && is_path_extension(spritesheet->path, SVG_EXTENSION))
         ids.insert(spritesheet->id);
@@ -400,8 +400,8 @@
 
   int track_length_get(const Track& track)
   {
-    int length{};
-    for (const auto& frame : track.frames)
+    int length = 0;
+    for (auto& frame : track.frames)
       length = track.type == ItemType::TRIGGER ? std::max(length, frame.atFrame) : length + frame.duration;
     return length;
   }
@@ -417,7 +417,7 @@
 
   int animation_length_get(const Animation& animation)
   {
-    int length{};
+    int length = 0;
     animation_tracks_each(animation, [&](const Track& track) { length = std::max(length, track_length_get(track)); });
     return std::max(length, FRAME_DURATION_MIN);
   }
@@ -449,7 +449,7 @@
                                            ElementType::LAYER_ANIMATION, ElementType::NULL_ANIMATION,
                                            ElementType::TRIGGERS};
     locations[track.uid] = {reference, TRACK_TYPES[(int)track.type]};
-    for (const auto& frame : track.frames)
+    for (auto& frame : track.frames)
     {
       ++reference.frameIndex;
       locations[frame.uid] = {reference, track.type == ItemType::TRIGGER ? ElementType::TRIGGER : ElementType::FRAME};
@@ -464,15 +464,15 @@
       track_locations_add(locations, animation->root, {index, ROOT});
       track_locations_add(locations, animation->triggers, {index, TRIGGER});
       for (auto type : {LAYER, NULL_})
-        for (const auto& entry : animation_entries_get(*animation, type))
+        for (auto& entry : animation_entries_get(*animation, type))
           if (auto track = std::get_if<Track>(&entry))
             track_locations_add(locations, *track, {index, type, track->id});
           else
           {
-            const auto& group = std::get<TrackGroup>(entry);
+            auto& group = std::get<TrackGroup>(entry);
             locations[group.uid] = {{index, type, group.id}, ElementType::GROUP};
             track_locations_add(locations, group.root, {index, ROOT, -1, -1, type, group.id});
-            for (const auto& groupTrack : group.tracks)
+            for (auto& groupTrack : group.tracks)
               track_locations_add(locations, groupTrack, {index, type, groupTrack.id, -1, type, group.id});
           }
     }
@@ -506,16 +506,16 @@
     { return a == b || (a && b && *a == *b); };
     for (std::size_t i = 0; i < left.animations.entries.size(); ++i)
     {
-      const auto& a = left.animations.entries[i];
-      const auto& b = right.animations.entries[i];
+      auto& a = left.animations.entries[i];
+      auto& b = right.animations.entries[i];
       if (a.index() != b.index()) return false;
       if (auto animation = std::get_if<std::shared_ptr<const Animation>>(&a))
       {
         if (!is_animation_equal(*animation, std::get<std::shared_ptr<const Animation>>(b))) return false;
         continue;
       }
-      const auto& groupA = std::get<AnimationGroup>(a);
-      const auto& groupB = std::get<AnimationGroup>(b);
+      auto& groupA = std::get<AnimationGroup>(a);
+      auto& groupB = std::get<AnimationGroup>(b);
       if (groupA.uid != groupB.uid || groupA.id != groupB.id || groupA.name != groupB.name ||
           groupA.isExpanded != groupB.isExpanded || groupA.isVisible != groupB.isVisible ||
           groupA.extras != groupB.extras || groupA.animations.size() != groupB.animations.size())

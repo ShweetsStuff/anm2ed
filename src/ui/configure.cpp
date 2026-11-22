@@ -148,14 +148,14 @@
 
               if (isSelected)
               {
-                ImGuiKeyChord chord{ImGuiKey_None};
+                ImGuiKeyChord chord = ImGuiKey_None;
 
                 if (ImGui::IsKeyDown(ImGuiMod_Ctrl)) chord |= ImGuiMod_Ctrl;
                 if (ImGui::IsKeyDown(ImGuiMod_Shift)) chord |= ImGuiMod_Shift;
                 if (ImGui::IsKeyDown(ImGuiMod_Alt)) chord |= ImGuiMod_Alt;
                 if (ImGui::IsKeyDown(ImGuiMod_Super)) chord |= ImGuiMod_Super;
 
-                for (const auto& entry : KEY_MAP)
+                for (auto& entry : KEY_MAP)
                 {
                   auto key = entry.second;
                   if (ImGui::IsKeyPressed(key))

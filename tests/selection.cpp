@@ -16,17 +16,17 @@ void selection_edit(Model& anm2, Selection& selection, auto&& edit)
 
 TEST_CASE("uids are unique and non-zero after load")
 {
-  for (const auto& fixture : fixtures_get())
+  for (auto& fixture : fixtures_get())
   {
     auto anm2 = model_load(file_load(fixture));
-    std::set<std::uint64_t> uids{};
-    bool isUnique{true};
+    std::set<std::uint64_t> uids;
+    bool isUnique = true;
     for (auto [index, animation] : anm2.animations_get())
       animation_tracks_each(*animation,
                                    [&](const Track& track)
                                    {
                                      isUnique &= uids.insert(track.uid).second;
-                                     for (const auto& frame : track.frames)
+                                     for (auto& frame : track.frames)
                                        isUnique &= uids.insert(frame.uid).second;
                                    });
     INFO("fixture: ", fixture.filename().string());
@@ -37,7 +37,7 @@ TEST_CASE("uids are unique and non-zero after load")
 TEST_CASE("selected frames and focus follow inserts and moves")
 {
   auto anm2 = fixture_load_with_uids("02_items.anm2");
-  Selection selection{};
+  Selection selection = {};
   selection_references_set(selection, anm2, SelectionKind::FRAMES, {{0, LAYER, 0, 1}, {0, LAYER, 1, 0}});
   selection_focus_set(selection, anm2, {0, LAYER, 0, 1});
 
@@ -53,7 +53,7 @@ TEST_CASE("selected frames and focus follow inserts and moves")
 TEST_CASE("a removed focus falls back to its nearest survivor")
 {
   auto anm2 = fixture_load_with_uids("02_items.anm2");
-  Selection selection{};
+  Selection selection = {};
   selection_focus_set(selection, anm2, {0, LAYER, 0, 1});
   selection_references_set(selection, anm2, SelectionKind::FRAMES, {{0, LAYER, 0, 1}});
 
@@ -72,11 +72,11 @@ TEST_CASE("a removed focus falls back to its nearest survivor")
 TEST_CASE("track and group selection follow regrouping")
 {
   auto anm2 = fixture_load_with_uids("03a_groups_nested.anm2");
-  const TrackGroup* group{};
+  const TrackGroup* group = nullptr;
   groups_each(anm2.animation_get(0)->layers, [&](const TrackGroup& candidate) { group = &candidate; });
   REQUIRE(group);
   auto groupId = group->id;
-  Selection selection{};
+  Selection selection = {};
   selection_references_set(selection, anm2, SelectionKind::TRACKS, {{0, LAYER, 0, -1, LAYER, groupId}});
   selection_references_set(selection, anm2, SelectionKind::GROUPS, {{0, LAYER, groupId}});
 
@@ -91,7 +91,7 @@ TEST_CASE("track and group selection follow regrouping")
 TEST_CASE("content selection follows items, and regions follow the focused spritesheet")
 {
   auto anm2 = fixture_load_with_uids("05_regions.anm2");
-  Selection selection{};
+  Selection selection = {};
   auto& regions = item_get(anm2.content.spritesheets, 0)->regions;
   REQUIRE(regions.size() > 1);
   auto regionId = regions[1].id;

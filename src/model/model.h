@@ -18,10 +18,10 @@
   // An XML element the editor does not understand, kept verbatim so it survives a save.
   struct XmlNode
   {
-    std::string tag{};
-    std::vector<std::pair<std::string, std::string>> attributes{};
-    std::string text{};
-    std::vector<XmlNode> children{};
+    std::string tag;
+    std::vector<std::pair<std::string, std::string>> attributes;
+    std::string text;
+    std::vector<XmlNode> children;
 
     bool operator==(const XmlNode&) const = default;
   };
@@ -29,9 +29,9 @@
   // Unknown XML attached to a known node: attributes, text, and unknown children with the child index they had.
   struct Extras
   {
-    std::vector<std::pair<std::string, std::string>> attributes{};
-    std::string text{};
-    std::vector<std::pair<int, XmlNode>> children{};
+    std::vector<std::pair<std::string, std::string>> attributes;
+    std::string text;
+    std::vector<std::pair<int, XmlNode>> children;
 
     bool operator==(const Extras&) const = default;
   };
@@ -39,59 +39,59 @@
   // A keyframe; on a triggers track the same struct is a trigger (atFrame, eventIds, soundIds).
   struct Frame
   {
-    std::uint64_t uid{uid_next()};
+    std::uint64_t uid = uid_next();
     glm::vec2 crop{};
     glm::vec2 size{};
     glm::vec2 pivot{};
     glm::vec2 position{};
     glm::vec2 scale{100.0f, 100.0f};
     glm::vec2 skew{};
-    float rotation{};
+    float rotation = 0;
     glm::vec4 tint{COLOR_WHITE};
     glm::vec4 colorOffset{};
-    int duration{1};
-    bool isVisible{true};
-    Interpolation interpolation{Interpolation::NONE};
-    int regionId{-1};
-    int shaderId{-1};
-    int depth{};  // a layer frame draws this many layers above (or below) its place in the timeline; editor-only
-    float blur{}; // Flash's BlurFilter at quality 1: one box blur this many canvas pixels wide; editor-only
+    int duration = 1;
+    bool isVisible = true;
+    Interpolation interpolation = Interpolation::NONE;
+    int regionId = -1;
+    int shaderId = -1;
+    int depth = 0;  // a layer frame draws this many layers above (or below) its place in the timeline; editor-only
+    float blur = 0; // Flash's BlurFilter at quality 1: one box blur this many canvas pixels wide; editor-only
     // On an animation layer: the child animation (empty for the layer's own) and how it plays; editor-only.
-    std::string childAnimation{};
-    ChildMode childMode{ChildMode::LOOP};
-    int childStart{};
-    bool isChildStartRandom{};
-    bool isChildRestart{};
-    int atFrame{-1};
-    std::vector<int> eventIds{};
-    std::vector<int> soundIds{};
-    Extras extras{};
+    std::string childAnimation;
+    ChildMode childMode = ChildMode::LOOP;
+    int childStart = 0;
+    bool isChildStartRandom = false;
+    bool isChildRestart = false;
+    int atFrame = -1;
+    std::vector<int> eventIds;
+    std::vector<int> soundIds;
+    Extras extras = {};
 
     bool operator==(const Frame&) const = default;
   };
 
   struct Track
   {
-    std::uint64_t uid{uid_next()};
-    ItemType type{ItemType::LAYER};
-    int id{-1};
-    bool isVisible{true};
-    std::vector<Frame> frames{};
-    Extras extras{};
+    std::uint64_t uid = uid_next();
+    ItemType type = ItemType::LAYER;
+    int id = -1;
+    bool isVisible = true;
+    std::vector<Frame> frames;
+    Extras extras = {};
 
     bool operator==(const Track&) const = default;
   };
 
   struct TrackGroup
   {
-    std::uint64_t uid{uid_next()};
-    int id{-1};
-    std::string name{};
-    bool isExpanded{true};
-    bool isVisible{true};
-    Track root{.type = ItemType::ROOT, .frames = {Frame{}}};
-    std::vector<Track> tracks{};
-    Extras extras{};
+    std::uint64_t uid = uid_next();
+    int id = -1;
+    std::string name;
+    bool isExpanded = true;
+    bool isVisible = true;
+    Track root = {.type = ItemType::ROOT, .frames = {Frame{}}};
+    std::vector<Track> tracks;
+    Extras extras = {};
 
     bool operator==(const TrackGroup&) const = default;
   };
@@ -100,35 +100,35 @@
 
   struct Animation
   {
-    std::uint64_t uid{uid_next()};
-    std::string name{};
-    int frameNum{1};
-    bool isLoop{true};
+    std::uint64_t uid = uid_next();
+    std::string name;
+    int frameNum = 1;
+    bool isLoop = true;
     // Playback stays between these frames (inclusive) when set; -1 for none. Saved only in the editor's copy.
-    int startMarker{-1};
-    int endMarker{-1};
-    Track root{.type = ItemType::ROOT, .frames = {Frame{}}};
-    std::vector<TrackEntry> layers{};
-    std::vector<TrackEntry> nulls{};
-    Track triggers{.type = ItemType::TRIGGER};
+    int startMarker = -1;
+    int endMarker = -1;
+    Track root = {.type = ItemType::ROOT, .frames = {Frame{}}};
+    std::vector<TrackEntry> layers;
+    std::vector<TrackEntry> nulls;
+    Track triggers = {.type = ItemType::TRIGGER};
     std::vector<ElementType> layout{ElementType::ROOT_ANIMATION, ElementType::LAYER_ANIMATIONS,
                                     ElementType::NULL_ANIMATIONS, ElementType::TRIGGERS};
-    Extras extras{};
-    Extras layersExtras{};
-    Extras nullsExtras{};
+    Extras extras = {};
+    Extras layersExtras = {};
+    Extras nullsExtras = {};
 
     bool operator==(const Animation&) const = default;
   };
 
   struct AnimationGroup
   {
-    std::uint64_t uid{uid_next()};
-    int id{-1};
-    std::string name{};
-    bool isExpanded{true};
-    bool isVisible{true};
-    std::vector<std::shared_ptr<const Animation>> animations{};
-    Extras extras{};
+    std::uint64_t uid = uid_next();
+    int id = -1;
+    std::string name;
+    bool isExpanded = true;
+    bool isVisible = true;
+    std::vector<std::shared_ptr<const Animation>> animations;
+    Extras extras = {};
 
     bool operator==(const AnimationGroup&) const = default;
   };
@@ -137,74 +137,74 @@
 
   struct Region
   {
-    std::uint64_t uid{uid_next()};
-    int id{-1};
-    std::string name{};
+    std::uint64_t uid = uid_next();
+    int id = -1;
+    std::string name;
     glm::vec2 crop{};
     glm::vec2 size{};
     glm::vec2 pivot{};
-    Origin origin{Origin::CUSTOM};
-    Extras extras{};
+    Origin origin = Origin::CUSTOM;
+    Extras extras = {};
 
     bool operator==(const Region&) const = default;
   };
 
   struct Spritesheet
   {
-    std::uint64_t uid{uid_next()};
-    int id{-1};
-    std::filesystem::path path{};
-    std::vector<Region> regions{};
-    Extras extras{};
+    std::uint64_t uid = uid_next();
+    int id = -1;
+    std::filesystem::path path;
+    std::vector<Region> regions;
+    Extras extras = {};
 
     bool operator==(const Spritesheet&) const = default;
   };
 
   struct Component
   {
-    int index{-1};
-    std::string binding{};
-    std::string value{};
-    Extras extras{};
+    int index = -1;
+    std::string binding;
+    std::string value;
+    Extras extras = {};
 
     bool operator==(const Component&) const = default;
   };
 
   struct Uniform
   {
-    std::string name{};
-    std::string binding{};
-    std::string value{};
-    std::vector<Component> components{};
-    Extras extras{};
+    std::string name;
+    std::string binding;
+    std::string value;
+    std::vector<Component> components;
+    Extras extras = {};
 
     bool operator==(const Uniform&) const = default;
   };
 
   struct Shader
   {
-    std::uint64_t uid{uid_next()};
-    int id{-1};
-    std::string name{};
-    std::filesystem::path vertex{};
-    std::filesystem::path fragment{};
-    std::vector<Uniform> uniforms{};
-    Extras extras{};
+    std::uint64_t uid = uid_next();
+    int id = -1;
+    std::string name;
+    std::filesystem::path vertex;
+    std::filesystem::path fragment;
+    std::vector<Uniform> uniforms;
+    Extras extras = {};
 
     bool operator==(const Shader&) const = default;
   };
 
   struct Layer
   {
-    std::uint64_t uid{uid_next()};
-    int id{-1};
-    std::string name{};
-    int spritesheetId{};
+    std::uint64_t uid = uid_next();
+    int id = -1;
+    std::string name;
+    int spritesheetId = 0;
     // An animation layer plays `animation` (from library `libraryId`, or this file at -1) instead of showing its
     // spritesheet.
-    int libraryId{-1};
-    std::string animation{};
-    Extras extras{};
+    int libraryId = -1;
+    std::string animation;
+    Extras extras = {};
 
     bool is_animation() const { return !animation.empty(); }
     bool operator==(const Layer&) const = default;
@@ -213,79 +213,79 @@
   // Another .anm2 whose animations this one's layers can play.
   struct Library
   {
-    std::uint64_t uid{uid_next()};
-    int id{-1};
-    std::filesystem::path path{};
-    Extras extras{};
+    std::uint64_t uid = uid_next();
+    int id = -1;
+    std::filesystem::path path;
+    Extras extras = {};
 
     bool operator==(const Library&) const = default;
   };
 
   struct Null
   {
-    std::uint64_t uid{uid_next()};
-    int id{-1};
-    std::string name{};
-    bool isShowRect{};
-    Extras extras{};
+    std::uint64_t uid = uid_next();
+    int id = -1;
+    std::string name;
+    bool isShowRect = false;
+    Extras extras = {};
 
     bool operator==(const Null&) const = default;
   };
 
   struct Event
   {
-    std::uint64_t uid{uid_next()};
-    int id{-1};
-    std::string name{};
-    Extras extras{};
+    std::uint64_t uid = uid_next();
+    int id = -1;
+    std::string name;
+    Extras extras = {};
 
     bool operator==(const Event&) const = default;
   };
 
   struct Sound
   {
-    std::uint64_t uid{uid_next()};
-    int id{-1};
-    std::filesystem::path path{};
-    Extras extras{};
+    std::uint64_t uid = uid_next();
+    int id = -1;
+    std::filesystem::path path;
+    Extras extras = {};
 
     bool operator==(const Sound&) const = default;
   };
 
   struct Info
   {
-    std::string createdBy{"robot"};
-    std::string createdOn{};
-    int fps{30};
-    int version{};
-    bool isIsaacIgnored{}; // last saved with Ignore and Save: nothing the game can't show worked around; editor-only
-    Extras extras{};
+    std::string createdBy = "robot";
+    std::string createdOn;
+    int fps = 30;
+    int version = 0;
+    bool isIsaacIgnored = false; // last saved with Ignore and Save: nothing the game can't show worked around; editor-only
+    Extras extras = {};
 
     bool operator==(const Info&) const = default;
   };
 
   struct Content
   {
-    std::vector<Spritesheet> spritesheets{};
-    std::vector<Shader> shaders{};
-    std::vector<Layer> layers{};
-    std::vector<Null> nulls{};
-    std::vector<Event> events{};
-    std::vector<Sound> sounds{};
-    std::vector<Library> libraries{};
+    std::vector<Spritesheet> spritesheets;
+    std::vector<Shader> shaders;
+    std::vector<Layer> layers;
+    std::vector<Null> nulls;
+    std::vector<Event> events;
+    std::vector<Sound> sounds;
+    std::vector<Library> libraries;
     std::vector<ElementType> layout{ElementType::SPRITESHEETS, ElementType::SHADERS, ElementType::LAYERS,
                                     ElementType::NULLS, ElementType::EVENTS};
-    Extras extras{};
-    std::vector<std::pair<ElementType, Extras>> containerExtras{};
+    Extras extras = {};
+    std::vector<std::pair<ElementType, Extras>> containerExtras;
 
     bool operator==(const Content&) const = default;
   };
 
   struct Animations
   {
-    std::string defaultAnimation{};
-    std::vector<AnimationEntry> entries{};
-    Extras extras{};
+    std::string defaultAnimation;
+    std::vector<AnimationEntry> entries;
+    Extras extras = {};
 
     bool operator==(const Animations&) const = default;
   };
@@ -300,8 +300,8 @@
 
   template <class Items> int item_next_id_get(const Items& items)
   {
-    int id{-1};
-    for (const auto& item : items)
+    int id = -1;
+    for (auto& item : items)
       id = std::max(id, item.id);
     return id + 1;
   }
@@ -352,12 +352,12 @@
   class Model
   {
   public:
-    Info info{};
-    Content content{};
-    Animations animations{};
-    std::vector<ElementType> layout{ElementType::INFO, ElementType::CONTENT, ElementType::ANIMATIONS};
-    Extras extras{};
-    bool isValid{true};
+    Info info = {};
+    Content content = {};
+    Animations animations = {};
+    std::vector<ElementType> layout = {ElementType::INFO, ElementType::CONTENT, ElementType::ANIMATIONS};
+    Extras extras = {};
+    bool isValid = true;
 
     int animations_count_get() const;
     const Animation* animation_get(int) const;
@@ -390,12 +390,12 @@
   public:
     struct Location
     {
-      Reference reference{};
-      ElementType type{};
+      Reference reference = {};
+      ElementType type = {};
     };
 
   private:
-    std::unordered_map<std::uint64_t, Location> locations{};
+    std::unordered_map<std::uint64_t, Location> locations;
 
   public:
     UidIndex() = default;

@@ -57,7 +57,7 @@
         if (auto sound = item_get(sounds, id)) directory_open(dialog, document, sound->path);
       };
 
-      Actions actions{};
+      Actions actions = {};
       actions.add(ACTION_PLAY, isOne, [&]() { play(*selection.begin()); }, STRING_UNDEFINED, -1);
       actions.add(ACTION_OPEN_DIRECTORY, isOne, [&]() { open(*selection.begin()); });
       actions.add(ACTION_ADD, {}, [&]() { dialog.file_open(Dialog::SOUND_OPEN, true); }, TOOLTIP_SOUND_ADD);

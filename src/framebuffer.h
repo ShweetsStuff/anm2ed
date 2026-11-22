@@ -13,12 +13,12 @@
       OVERLAY,
     };
 
-    GLuint fbo{};
-    GLuint rbo{};
-    GLuint texture{};
+    GLuint fbo = 0;
+    GLuint rbo = 0;
+    GLuint texture = 0;
     glm::vec2 size{};
     glm::vec2 previousSize{};
-    GLint filter{GL_LINEAR}; // how the texture is sampled when drawn scaled; takes effect on the next resize
+    GLint filter = GL_LINEAR; // how the texture is sampled when drawn scaled; takes effect on the next resize
 
     Framebuffer();
     ~Framebuffer();

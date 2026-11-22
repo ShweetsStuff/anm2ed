@@ -199,7 +199,7 @@ using namespace glm;
   // A copy of a block of the image (transparent where it falls outside).
   Image Image::region_get(glm::ivec2 min, glm::ivec2 regionSize) const
   {
-    Image region{};
+    Image region = {};
     region.size = regionSize;
     region.pixels.assign((std::size_t)regionSize.x * regionSize.y * IMAGE_CHANNELS, 0);
     pixels_copy(*this, min, region, {}, regionSize);
@@ -209,11 +209,11 @@ using namespace glm;
   // Base64 of bytes, for an image embedded in an SVG.
   static std::string base64_get(const std::vector<uint8_t>& bytes)
   {
-    std::string text{};
+    std::string text;
     for (std::size_t i = 0; i < bytes.size(); i += BASE64_GROUP_BYTES)
     {
       auto count = std::min(BASE64_GROUP_BYTES, bytes.size() - i);
-      std::uint32_t value{};
+      std::uint32_t value = 0;
       for (std::size_t j = 0; j < BASE64_GROUP_BYTES; ++j)
         value = value << BYTE_BITS | (j < count ? bytes[i + j] : 0u);
       for (std::size_t j = 0; j <= BASE64_GROUP_BYTES; ++j)
@@ -238,7 +238,7 @@ using namespace glm;
   {
     if (!image.is_vector())
     {
-      std::vector<uint8_t> png{};
+      std::vector<uint8_t> png;
       stbi_write_png_to_func(
           [](void* context, void* data, int count)
           {
@@ -254,13 +254,13 @@ using namespace glm;
       return;
     }
 
-    pugi::xml_document source{};
+    pugi::xml_document source;
     source.load_string(image.svg->c_str());
     auto sourceRoot = source.document_element();
     if (!sourceRoot) return;
 
     // Every id in the drawing gets the prefix, and so does every reference to one (href="#id", url(#id)).
-    std::set<std::string> ids{};
+    std::set<std::string> ids;
     auto elements_each = [](pugi::xml_node element, auto&& callback, auto&& self) -> void
     {
       callback(element);
@@ -332,12 +332,12 @@ using namespace glm;
     {
       std::vector<uint8_t> pixels((std::size_t)size.x * size.y * IMAGE_CHANNELS, 0);
       Image composed(pixels.data(), size);
-      for (const auto& part : parts)
+      for (auto& part : parts)
         composed.paste(part.image->region_get(part.source, part.size), part.destination);
       return composed;
     }
 
-    pugi::xml_document document{};
+    pugi::xml_document document;
     auto root = document.append_child("svg");
     root.append_attribute("xmlns") = SVG_NAMESPACE;
     root.append_attribute("xmlns:xlink") = XLINK_NAMESPACE;
@@ -346,8 +346,8 @@ using namespace glm;
     root.append_attribute("viewBox") = std::format("0 0 {} {}", size.x, size.y).c_str();
     auto defs = root.append_child("defs");
 
-    std::vector<const Image*> sources{};
-    for (const auto& part : parts)
+    std::vector<const Image*> sources;
+    for (auto& part : parts)
     {
       auto source = std::ranges::find(sources, part.image);
       if (source == sources.end())
@@ -369,7 +369,7 @@ using namespace glm;
       use.append_attribute("height") = unitSize.y;
     }
 
-    std::ostringstream text{};
+    std::ostringstream text;
     document.save(text, SVG_INDENT, pugi::format_indent | pugi::format_no_declaration);
     return svg_render(std::make_shared<std::string>(text.str()), 1.0f);
   }

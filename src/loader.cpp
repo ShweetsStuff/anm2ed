@@ -44,7 +44,7 @@
     uint32_t count = htonl(static_cast<uint32_t>(paths.size()));
     if (!socket.send(&count, sizeof(count))) return false;
 
-    for (const auto& path : paths)
+    for (auto& path : paths)
     {
       uint32_t length = htonl(static_cast<uint32_t>(path.size()));
       if (!socket.send(&length, sizeof(length))) return false;
@@ -56,7 +56,7 @@
 
   static std::vector<std::string> socket_paths_receive(Socket& socket)
   {
-    uint32_t count{};
+    uint32_t count = 0;
     if (!socket.receive(&count, sizeof(count))) return {};
     count = ntohl(count);
     if (count > SOCKET_MAX_PATHS) return {};
@@ -66,7 +66,7 @@
 
     for (uint32_t i = 0; i < count; ++i)
     {
-      uint32_t length{};
+      uint32_t length = 0;
       if (!socket.receive(&length, sizeof(length))) return {};
       length = ntohl(length);
       if (length > SOCKET_MAX_PATH_LENGTH) return {};
@@ -272,7 +272,7 @@
                 for (auto& path : paths)
                 {
                   if (path.empty()) continue;
-                  SDL_Event event{};
+                  SDL_Event event = {};
                   event.type = SDL_EVENT_USER;
                   event.user.code = 0;
                   event.user.data1 = SDL_strdup(path.c_str());

@@ -15,8 +15,8 @@
 
   struct UniformAlias
   {
-    UniformBinding binding{};
-    const char* name{};
+    UniformBinding binding = {};
+    const char* name = nullptr;
   };
 
 #define RESOURCE_SHADER_UNIFORM_ALIASES                                                                                \
@@ -52,7 +52,7 @@
   static std::string shader_text_replace(std::string string, std::string_view from, std::string_view to)
   {
     if (from.empty()) return string;
-    std::size_t position{};
+    std::size_t position = 0;
     while ((position = string.find(from, position)) != std::string::npos)
     {
       string.replace(position, from.size(), to.data(), to.size());
@@ -65,7 +65,7 @@
   {
     if (from.empty()) return string;
 
-    std::size_t position{};
+    std::size_t position = 0;
     while ((position = string.find(from, position)) != std::string::npos)
     {
       auto after = position + from.size();
@@ -84,8 +84,8 @@
 
   static std::string shader_space_collapse(std::string_view string)
   {
-    std::string out{};
-    bool isSpace{};
+    std::string out;
+    bool isSpace = false;
     for (auto character : string)
     {
       if (std::isspace((unsigned char)character))
@@ -103,7 +103,7 @@
 
   static std::string shader_trim_get(std::string_view line)
   {
-    std::size_t begin{};
+    std::size_t begin = 0;
     while (begin < line.size() && std::isspace((unsigned char)line[begin]))
       ++begin;
 
@@ -116,7 +116,7 @@
 
   static bool is_shader_word_present(std::string_view string, std::string_view word)
   {
-    std::size_t position{};
+    std::size_t position = 0;
     while ((position = string.find(word, position)) != std::string_view::npos)
     {
       auto after = position + word.size();
@@ -177,7 +177,7 @@
 
   UniformBinding uniform_binding_auto_get(std::string_view name, UniformValueType type)
   {
-    for (const auto& alias : UNIFORM_ALIASES)
+    for (auto& alias : UNIFORM_ALIASES)
       if (name == alias.name && is_uniform_binding_valid(alias.binding, type)) return alias.binding;
     if (type == UNIFORM_VALUE_SAMPLER2D) return UNIFORM_BINDING_MAIN_TEXTURE;
     if (is_uniform_value_editable(type)) return UNIFORM_BINDING_MANUAL;
@@ -186,21 +186,21 @@
 
   UniformBinding uniform_binding_get(std::string_view value)
   {
-    for (const auto& info : UNIFORM_BINDING_INFOS)
+    for (auto& info : UNIFORM_BINDING_INFOS)
       if (value == info.value) return info.binding;
     return UNIFORM_BINDING_IGNORE;
   }
 
   std::string_view uniform_binding_value_get(UniformBinding binding)
   {
-    for (const auto& info : UNIFORM_BINDING_INFOS)
+    for (auto& info : UNIFORM_BINDING_INFOS)
       if (binding == info.binding) return info.value;
     return UNIFORM_BINDING_INFOS[0].value;
   }
 
   std::string_view uniform_binding_label_get(UniformBinding binding)
   {
-    for (const auto& info : UNIFORM_BINDING_INFOS)
+    for (auto& info : UNIFORM_BINDING_INFOS)
       if (binding == info.binding) return info.label;
     return UNIFORM_BINDING_INFOS[0].label;
   }
@@ -391,26 +391,26 @@
 
   static std::vector<ShaderUniform> uniforms_get(GLuint id)
   {
-    GLint count{};
-    GLint maxLength{};
+    GLint count = 0;
+    GLint maxLength = 0;
     glGetProgramiv(id, GL_ACTIVE_UNIFORMS, &count);
     glGetProgramiv(id, GL_ACTIVE_UNIFORM_MAX_LENGTH, &maxLength);
 
-    std::vector<ShaderUniform> uniforms{};
+    std::vector<ShaderUniform> uniforms;
     if (count <= 0 || maxLength <= 0) return uniforms;
 
     std::string name((std::size_t)maxLength, '\0');
     for (GLint index = 0; index < count; ++index)
     {
-      GLsizei length{};
-      GLint size{};
-      GLenum type{};
+      GLsizei length = 0;
+      GLint size = 0;
+      GLenum type = 0;
       glGetActiveUniform(id, (GLuint)index, maxLength, &length, &size, &type, name.data());
 
       auto uniformName = uniform_name_clean_get(std::string(name.data(), (std::size_t)length));
       auto valueType = uniform_value_type_get(type);
 
-      ShaderUniform uniform{};
+      ShaderUniform uniform = {};
       uniform.name = uniformName;
       uniform.location = glGetUniformLocation(id, uniformName.c_str());
       uniform.glType = type;
@@ -432,8 +432,8 @@
     auto normalized = shader_text_replace(std::string(source), "\r\n", "\n");
     normalized = shader_text_replace(std::move(normalized), "\r", "\n");
 
-    std::string body{};
-    std::size_t position{};
+    std::string body;
+    std::size_t position = 0;
     while (position <= normalized.size())
     {
       auto end = normalized.find('\n', position);
@@ -454,19 +454,19 @@
 
   ShaderCompileResult shader_compile(const char* vertex, const char* fragment)
   {
-    ShaderCompileResult result{};
+    ShaderCompileResult result = {};
     result.id = glCreateProgram();
 
     auto compile = [&](const GLuint& id, const char* text, const char* label)
     {
-      int isCompile{};
+      int isCompile = 0;
       glShaderSource(id, 1, &text, nullptr);
       glCompileShader(id);
       glGetShaderiv(id, GL_COMPILE_STATUS, &isCompile);
 
       if (!isCompile)
       {
-        GLint length{};
+        GLint length = 0;
         glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length);
         if (length <= 0) length = 1;
         std::string compileLog((std::size_t)length, '\0');
@@ -488,7 +488,7 @@
       glAttachShader(result.id, vertexHandle);
       glAttachShader(result.id, fragmentHandle);
 
-      for (const auto& alias : ATTRIBUTE_ALIASES)
+      for (auto& alias : ATTRIBUTE_ALIASES)
         glBindAttribLocation(result.id, alias.index, alias.name);
 
       glLinkProgram(result.id);
@@ -498,7 +498,7 @@
       result.isLinked = isLinked == GL_TRUE;
       if (!result.isLinked)
       {
-        GLint length{};
+        GLint length = 0;
         glGetProgramiv(result.id, GL_INFO_LOG_LENGTH, &length);
         if (length <= 0) length = 1;
         std::string linkLog((std::size_t)length, '\0');

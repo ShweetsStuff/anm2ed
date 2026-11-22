@@ -56,7 +56,7 @@
         { return mouse.x >= min.x && mouse.x < max.x && mouse.y >= min.y && mouse.y < max.y; };
         auto isGroupHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) &&
                               is_mouse_in_rect(mousePos, groupButtonMin, groupButtonMax);
-        bool isGroupTooltipDelayed{};
+        bool isGroupTooltipDelayed = false;
         if (isGroupHovered)
         {
           auto& imguiStyle = ImGui::GetStyle();
@@ -556,13 +556,13 @@
             item_child(row, index);
           };
 
-          int index{};
+          int index = 0;
           item_child_row({.type = NONE}, index++);
           if (animation)
-            for (const auto& row : timeline_item_rows_get())
+            for (auto& row : timeline_item_rows_get())
             {
               item_child_row(row, index++);
-              for (const auto& peek : peek_rows_get(row))
+              for (auto& peek : peek_rows_get(row))
               {
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);

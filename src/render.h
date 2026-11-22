@@ -57,8 +57,8 @@ struct SDL_GLContextState;
 
   struct SpritesheetLayout
   {
-    int rows{};
-    int columns{};
+    int rows = 0;
+    int columns = 0;
   };
 
   inline int frame_count_get(int start, int end) { return std::max(end - start + 1, 1); }
@@ -119,8 +119,8 @@ struct SDL_GLContextState;
   // An OpenGL context with no visible window, for drawing animations outside the editor (the CLI, render tests).
   class HeadlessGL
   {
-    SDL_Window* window{};
-    SDL_GLContextState* context{};
+    SDL_Window* window = nullptr;
+    SDL_GLContextState* context = nullptr;
 
   public:
     HeadlessGL();
@@ -138,19 +138,19 @@ struct SDL_GLContextState;
 
   struct RecorderOptions
   {
-    RenderType type{};
-    std::filesystem::path path{};
-    std::filesystem::path format{};
-    std::filesystem::path ffmpegPath{};
-    int start{};
-    int end{};
-    int animationFps{1};
-    int fps{1};
-    int rows{};
-    int columns{};
-    bool isSound{};
-    bool isIsolated{};
-    bool isBounded{};
+    RenderType type = {};
+    std::filesystem::path path;
+    std::filesystem::path format;
+    std::filesystem::path ffmpegPath;
+    int start = 0;
+    int end = 0;
+    int animationFps = 1;
+    int fps = 1;
+    int rows = 0;
+    int columns = 0;
+    bool isSound = false;
+    bool isIsolated = false;
+    bool isBounded = false;
   };
 
   // A render in progress: which animation times to capture, the frames captured so far (written to disk) and the
@@ -158,9 +158,9 @@ struct SDL_GLContextState;
   class Recorder
   {
   public:
-    RecorderOptions options{};
-    int index{};
-    int count{};
+    RecorderOptions options = {};
+    int index = 0;
+    int count = 0;
 
     bool start(const RecorderOptions&);
     bool is_done() const;
@@ -171,10 +171,10 @@ struct SDL_GLContextState;
     void cancel();
 
   private:
-    std::filesystem::path directory{};
-    std::vector<std::filesystem::path> frames{};
-    std::vector<std::vector<const AudioData*>> sounds{};
-    int soundTime{-1};
+    std::filesystem::path directory;
+    std::vector<std::filesystem::path> frames;
+    std::vector<std::vector<const AudioData*>> sounds;
+    int soundTime = -1;
   };
 
   // Records a whole animation with these options (bounded and isolated), each frame drawn as animation_frame_render

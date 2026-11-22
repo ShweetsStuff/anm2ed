@@ -86,7 +86,7 @@ using namespace glm;
     ImGui::PopItemWidth();
     if (!isColor) return;
 
-    ImVec4 buttonColor{0.0f, 0.0f, 0.0f, 1.0f};
+    ImVec4 buttonColor = {0.0f, 0.0f, 0.0f, 1.0f};
     for (int i = 0; i < count; ++i)
       if (*row.isEnabled[i]) (&buttonColor.x)[i] = glm::clamp(row.values[i], 0.0f, 1.0f);
     ImGui::SameLine();
@@ -141,8 +141,8 @@ using namespace glm;
       auto layer = is_layer(reference) ? item_get(document.model.content.layers, reference.itemID) : nullptr;
       return layer && layer->is_animation() ? layer : nullptr;
     };
-    std::set<std::string> childAnimations{};
-    bool isChildPropertyAvailable{};
+    std::set<std::string> childAnimations;
+    bool isChildPropertyAvailable = false;
     auto child_layer_add = [&](const Layer* layer)
     {
       if (!layer || !layer->is_animation()) return;
@@ -151,10 +151,10 @@ using namespace glm;
         childAnimations.insert(name);
     };
     if (isFramesDestination || isItemsDestination)
-      for (const auto& reference : isFramesDestination ? selectedFrameReferences : selectedItemReferences)
+      for (auto& reference : isFramesDestination ? selectedFrameReferences : selectedItemReferences)
         child_layer_add(animation_layer_get(reference));
     else if (settings.changeIsLayers)
-      for (const auto& layer : document.model.content.layers)
+      for (auto& layer : document.model.content.layers)
         child_layer_add(&layer);
 
     ComponentRow componentRows[] = {
@@ -212,8 +212,8 @@ using namespace glm;
       ImGui::PopID();
     };
 
-    std::vector<int> interpolationIds{};
-    std::vector<std::string> interpolationLabels{};
+    std::vector<int> interpolationIds;
+    std::vector<std::string> interpolationLabels;
     for (int i = 0; i < (int)std::size(INTERPOLATION_LABELS); ++i)
     {
       interpolationIds.push_back(i);
@@ -270,8 +270,8 @@ using namespace glm;
       ImGui::EndDisabled();
       ImGui::PopID();
 
-      std::vector<int> modeIds{};
-      std::vector<std::string> modeLabels{};
+      std::vector<int> modeIds;
+      std::vector<std::string> modeLabels;
       for (int i = 0; i < (int)std::size(CHILD_MODE_LABELS); ++i)
       {
         modeIds.push_back(i);
@@ -324,7 +324,7 @@ using namespace glm;
            [=, queuedAnimations = std::set<int>(animations.begin(), animations.end()), isRoot = settings.changeIsRoot,
             isLayers = settings.changeIsLayers, isNulls = settings.changeIsNulls](Manager&, Document& document)
            {
-             ChangeTargets targets{.isRoot = isRoot, .isLayers = isLayers, .isNulls = isNulls};
+             ChangeTargets targets = {.isRoot = isRoot, .isLayers = isLayers, .isNulls = isNulls};
              if (isFramesDestination)
                targets.references = {selectedFrameReferences.begin(), selectedFrameReferences.end()};
              else if (isItemsDestination)

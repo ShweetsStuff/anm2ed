@@ -29,7 +29,7 @@
   {
     auto animation = model.animation_get(animationIndex);
     if (!animation) return;
-    std::vector<std::pair<int, int>> tracks{};
+    std::vector<std::pair<int, int>> tracks;
     tracks_each(animation->layers,
                 [&](const Track& track, const TrackGroup* group)
                 {
@@ -48,7 +48,7 @@
   Uids regions_generate(Model& model, const std::set<int>& animationIndices, const std::set<Reference>& frames,
                         const std::string& format, RegionFrameMapping mapping)
   {
-    std::unordered_map<int, int> regionNumbers{};
+    std::unordered_map<int, int> regionNumbers;
     auto frame_apply = [&](Frame& frame, int spritesheetId)
     {
       auto& regions = item_get(model.content.spritesheets, spritesheetId)->regions;
@@ -86,7 +86,7 @@
                         [&](Frame& frame, int spritesheetId)
                         {
                           if (frame.regionId != -1) return;
-                          for (const auto& region : item_get(model.content.spritesheets, spritesheetId)->regions)
+                          for (auto& region : item_get(model.content.spritesheets, spritesheetId)->regions)
                             if (is_region_matched(region, frame))
                             {
                               frame.regionId = region.id;
@@ -131,8 +131,8 @@
     { std::erase_if(items, [&](const auto& item) { return ids.contains(item.id); }); };
     auto layer_ids_get = [&](auto&& is_removed)
     {
-      std::set<int> layerIds{};
-      for (const auto& layer : content.layers)
+      std::set<int> layerIds;
+      for (auto& layer : content.layers)
         if (is_removed(layer)) layerIds.insert(layer.id);
       return layerIds;
     };
@@ -239,7 +239,7 @@
   // Appends grid frames to each layer track (optionally making a region per frame) and fits the animation length.
   Uids animation_grid_generate(Model& model, const std::vector<Reference>& tracks, const GridOptions& options)
   {
-    Uids uids{};
+    Uids uids = {};
     for (auto reference : tracks)
     {
       if (!model.track_get(reference)) continue;
@@ -273,8 +273,8 @@
   // given animations.
   Uids frames_change_apply(Model& model, const ChangeTargets& targets, FrameChange change, ChangeType type)
   {
-    std::map<Reference, std::set<int>> frames{};
-    std::set<Reference> wholeTracks{};
+    std::map<Reference, std::set<int>> frames;
+    std::set<Reference> wholeTracks;
     for (auto reference : targets.references)
     {
       auto index = std::exchange(reference.frameIndex, -1);
@@ -288,7 +288,7 @@
     };
     auto whole_apply = [&](Track& track)
     {
-      std::set<int> indices{};
+      std::set<int> indices;
       for (int i = 0; i < (int)track.frames.size(); ++i)
         indices.insert(i);
       frames_change(track, change, track.type, type, indices, is_animation_layer(track));
@@ -315,17 +315,17 @@
   bool file_merge(Model& model, const std::filesystem::path& path, const std::filesystem::path& directory,
                   FileMergePreset preset)
   {
-    Model source{};
+    Model source = {};
     if (!model_load(source, path) || !source.isValid) return false;
 
     auto isAppendAsNew = preset == FILE_MERGE_PRESET_APPEND_AS_NEW;
-    std::map<ElementType, std::unordered_map<int, int>> remaps{};
+    std::map<ElementType, std::unordered_map<int, int>> remaps;
     auto& content = model.content;
 
     auto path_remap = [&](const std::filesystem::path& original)
     {
       if (directory.empty() || original.empty()) return original;
-      std::error_code ec{};
+      std::error_code ec;
       auto absolute =
           original.is_absolute() ? original : std::filesystem::weakly_canonical(path.parent_path() / original, ec);
       if (ec) absolute = path.parent_path() / original;
@@ -429,7 +429,7 @@
 
     auto entries_remap = [&](std::vector<TrackEntry>& entries, ElementType type)
     {
-      std::vector<TrackEntry> result{};
+      std::vector<TrackEntry> result;
       auto track_keep = [&](Track& track)
       {
         track.id = id_remap(type, track.id);
@@ -469,7 +469,7 @@
       return -1;
     };
 
-    std::string defaultAnimationName{};
+    std::string defaultAnimationName;
     for (auto [index, incoming] : source.animations_get())
     {
       auto processed = animation_build(*incoming);

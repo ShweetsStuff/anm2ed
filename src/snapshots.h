@@ -34,8 +34,8 @@
   // One undoable edit: the state before and after it; undo/redo restore only the fields the edit changed.
   struct SnapshotStep
   {
-    Snapshot before{};
-    Snapshot after{};
+    Snapshot before = {};
+    Snapshot after = {};
   };
 
   class SnapshotStack
@@ -58,11 +58,11 @@
   class Snapshots
   {
   public:
-    SnapshotStack undoStack{};
-    SnapshotStack redoStack{};
-    Snapshot current{};
-    std::optional<Snapshot> pending{};
-    std::optional<Reference> pendingFocus{};
+    SnapshotStack undoStack = {};
+    SnapshotStack redoStack = {};
+    Snapshot current = {};
+    std::optional<Snapshot> pending;
+    std::optional<Reference> pendingFocus;
 
     void push(const std::string&);
     void commit();

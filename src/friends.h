@@ -4,9 +4,9 @@
 
   struct FriendInfo
   {
-    const char* name{};
-    const Embed* png{};
-    const Embed* anm2{};
+    const char* name = nullptr;
+    const Embed* png = nullptr;
+    const Embed* anm2 = nullptr;
   };
 
 #define FRIENDS_LIST                                                                                                   \

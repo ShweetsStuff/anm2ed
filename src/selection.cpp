@@ -3,7 +3,7 @@
   std::set<Reference> selection_references_get(const Selection& selection, const UidIndex& index,
                                                SelectionKind kind)
   {
-    std::set<Reference> references{};
+    std::set<Reference> references;
     if (auto uids = selection.uids.find(kind); uids != selection.uids.end())
       for (auto uid : uids->second)
         if (auto reference = index.reference_get(uid)) references.insert(*reference);
@@ -41,10 +41,10 @@
   static std::vector<std::pair<int, std::uint64_t>> content_keys_get(const Selection& selection, const Model& model,
                                                               SelectionKind kind)
   {
-    std::vector<std::pair<int, std::uint64_t>> keys{};
+    std::vector<std::pair<int, std::uint64_t>> keys;
     auto add = [&](const auto& items)
     {
-      for (const auto& item : items)
+      for (auto& item : items)
         keys.emplace_back(item.id, item.uid);
     };
     auto& content = model.content;
@@ -64,7 +64,7 @@
 
   std::set<int> selection_ids_get(const Selection& selection, const Model& model, SelectionKind kind)
   {
-    std::set<int> ids{};
+    std::set<int> ids;
     auto uids = selection.uids.find(kind);
     if (uids == selection.uids.end()) return ids;
     for (auto [id, uid] : content_keys_get(selection, model, kind))

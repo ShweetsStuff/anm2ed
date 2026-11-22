@@ -7,11 +7,11 @@
 
   struct TextureEntry
   {
-    GLuint id{};
-    bool isUsed{};
+    GLuint id = 0;
+    bool isUsed = false;
   };
 
-  static std::unordered_map<std::uint64_t, TextureEntry> entries{};
+  static std::unordered_map<std::uint64_t, TextureEntry> entries;
 
   GLuint texture_id_get(const Image& image)
   {

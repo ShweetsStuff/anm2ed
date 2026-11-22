@@ -169,9 +169,9 @@
   // game's copy when it differs from the document (animation layers flattened).
   struct Options
   {
-    bool isJson{};           // the editor's own JSON document instead
-    bool isPixelBaked{true}; // what the game can't draw is baked into a spritesheet beside the file
-    const Model* gameModel{};
+    bool isJson = false;           // the editor's own JSON document instead
+    bool isPixelBaked = true; // what the game can't draw is baked into a spritesheet beside the file
+    const Model* gameModel = nullptr;
   };
 
 #define FRAME_CHANGE_SCALARS                                                                                           \
@@ -200,33 +200,33 @@
 
   struct FrameChange
   {
-    std::optional<int> regionId{};
+    std::optional<int> regionId;
 #define X(name, member, isLayerOnly, isColor, isEnabled, value) std::optional<float> name{};
     FRAME_CHANGE_SCALARS
 #undef X
-    std::optional<int> duration{};
-    std::optional<int> depth{};
-    std::optional<int> shaderId{};
-    std::optional<bool> isVisible{};
-    std::optional<Interpolation> interpolation{};
-    std::optional<bool> isFlipX{};
-    std::optional<bool> isFlipY{};
+    std::optional<int> duration;
+    std::optional<int> depth;
+    std::optional<int> shaderId;
+    std::optional<bool> isVisible;
+    std::optional<Interpolation> interpolation;
+    std::optional<bool> isFlipX;
+    std::optional<bool> isFlipY;
     // An animation layer's child; a spritesheet layer's frames keep theirs.
-    std::optional<std::string> childAnimation{};
-    std::optional<ChildMode> childMode{};
-    std::optional<int> childStart{};
-    std::optional<bool> isChildStartRandom{};
-    std::optional<bool> isChildRestart{};
+    std::optional<std::string> childAnimation;
+    std::optional<ChildMode> childMode;
+    std::optional<int> childStart;
+    std::optional<bool> isChildStartRandom;
+    std::optional<bool> isChildRestart;
   };
 
   struct Reference
   {
-    int animationIndex{-1};
-    int itemType{(int)ItemType::NONE};
-    int itemID{-1};
-    int frameIndex{-1};
-    int groupType{(int)ItemType::NONE};
-    int groupId{-1};
+    int animationIndex = -1;
+    int itemType = (int)ItemType::NONE;
+    int itemID = -1;
+    int frameIndex = -1;
+    int groupType = (int)ItemType::NONE;
+    int groupId = -1;
 
     auto operator<=>(const Reference&) const = default;
   };
@@ -234,9 +234,9 @@
   // A Reference expressed by runtime uids, so it survives inserts, deletes and moves.
   struct Handle
   {
-    std::uint64_t animation{};
-    std::uint64_t item{};
-    std::uint64_t frame{};
+    std::uint64_t animation = 0;
+    std::uint64_t item = 0;
+    std::uint64_t frame = 0;
 
     auto operator<=>(const Handle&) const = default;
   };

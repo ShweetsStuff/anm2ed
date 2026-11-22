@@ -36,7 +36,7 @@
   static void depths_bridge(Model& model)
   {
     auto& content = model.content;
-    std::map<std::pair<int, int>, int> copyIds{};
+    std::map<std::pair<int, int>, int> copyIds;
     auto copy_id_get = [&](int layerId, int depth)
     {
       auto [it, isNew] = copyIds.try_emplace({layerId, depth});
@@ -57,7 +57,7 @@
       if (!isUsed) continue;
       auto& animation = *model.animation_edit(i);
 
-      std::vector<Track> tracks{};
+      std::vector<Track> tracks;
       for (auto& entry : animation.layers)
         if (auto track = std::get_if<Track>(&entry))
           tracks.push_back(std::move(*track));
@@ -73,7 +73,7 @@
         }
 
       // Each track's place in drawing order: (its position + depth, depth), kept in position order when equal.
-      std::vector<std::pair<std::pair<int, int>, Track>> placed{};
+      std::vector<std::pair<std::pair<int, int>, Track>> placed;
       auto shown_set = [](Track& track, int depth)
       {
         for (auto& frame : track.frames)
@@ -85,8 +85,8 @@
       for (int position = 0; position < (int)tracks.size(); ++position)
       {
         auto& track = tracks[position];
-        std::set<int> depths{};
-        for (const auto& frame : track.frames)
+        std::set<int> depths;
+        for (auto& frame : track.frames)
           if (frame.depth != 0) depths.insert(frame.depth);
         for (auto depth : depths)
         {

@@ -28,35 +28,35 @@
 
   struct CardImage
   {
-    const Image* texture{};
+    const Image* texture = nullptr;
     glm::vec2 size{};
     glm::vec2 uvMin{};
     glm::vec2 uvMax{1.0f};
-    bool isValid{};
+    bool isValid = false;
   };
 
   // What a list panel remembers between frames.
   struct PanelState
   {
-    int newId{-1};
-    int scrollId{-1};
-    int renameId{-1};
-    std::string renameText{};
-    RenameState renameState{RENAME_SELECTABLE};
-    std::vector<int> keys{};
-    std::vector<int> dragIds{};
-    MultiSelectStorage selection{};
-    ImVec2 tooltipPadding{};
-    ImVec2 tooltipSpacing{};
-    PopupHelper removePopup{PopupHelper(LABEL_REMOVE_IN_USE, POPUP_SMALL_NO_HEIGHT)};
+    int newId = -1;
+    int scrollId = -1;
+    int renameId = -1;
+    std::string renameText;
+    RenameState renameState = RENAME_SELECTABLE;
+    std::vector<int> keys;
+    std::vector<int> dragIds;
+    MultiSelectStorage selection = {};
+    ImVec2 tooltipPadding;
+    ImVec2 tooltipSpacing;
+    PopupHelper removePopup = PopupHelper(LABEL_REMOVE_IN_USE, POPUP_SMALL_NO_HEIGHT);
     // A removal waiting on its confirmation, since what it removes is in use.
     struct Removal
     {
-      ElementType type{};
-      SelectionKind kind{};
-      std::set<int> ids{};
-      int spritesheetId{-1};
-      std::vector<std::string> lines{};
+      ElementType type = {};
+      SelectionKind kind = {};
+      std::set<int> ids;
+      int spritesheetId = -1;
+      std::vector<std::string> lines;
     } removal{};
   };
 
@@ -86,8 +86,8 @@
     std::function<void(int)> select{};
     std::function<void(int)> activate{};
     std::function<bool(int, int)> drag_drop_update{};
-    int cardLines{};
-    bool isFocusItalic{};
+    int cardLines = 0;
+    bool isFocusItalic = false;
   };
 
   enum class PopupButton
@@ -116,38 +116,38 @@
 
   struct SpritesheetsPanel
   {
-    PanelState state{};
-    PopupHelper mergePopup{PopupHelper(LABEL_SPRITESHEETS_MERGE_POPUP, POPUP_SMALL_NO_HEIGHT)};
-    PopupHelper packPopup{PopupHelper(LABEL_SPRITESHEETS_PACK_POPUP, POPUP_SMALL_NO_HEIGHT)};
-    PopupHelper overwritePopup{PopupHelper(LABEL_TASKBAR_OVERWRITE_FILE, POPUP_SMALL_NO_HEIGHT)};
-    std::set<int> mergeIds{};
-    std::set<int> saveIds{};
-    int packId{-1};
+    PanelState state = {};
+    PopupHelper mergePopup = PopupHelper(LABEL_SPRITESHEETS_MERGE_POPUP, POPUP_SMALL_NO_HEIGHT);
+    PopupHelper packPopup = PopupHelper(LABEL_SPRITESHEETS_PACK_POPUP, POPUP_SMALL_NO_HEIGHT);
+    PopupHelper overwritePopup = PopupHelper(LABEL_TASKBAR_OVERWRITE_FILE, POPUP_SMALL_NO_HEIGHT);
+    std::set<int> mergeIds;
+    std::set<int> saveIds;
+    int packId = -1;
   };
 
   struct RegionsPanel
   {
-    PanelState state{};
-    PopupHelper propertiesPopup{PopupHelper(LABEL_REGION_PROPERTIES, POPUP_SMALL_NO_HEIGHT)};
-    PopupHelper exportPopup{PopupHelper(LABEL_EXPORT_REGION, POPUP_SMALL_NO_HEIGHT)};
-    Region editRegion{};
-    int editId{-1};
-    int exportId{-1};
+    PanelState state = {};
+    PopupHelper propertiesPopup = PopupHelper(LABEL_REGION_PROPERTIES, POPUP_SMALL_NO_HEIGHT);
+    PopupHelper exportPopup = PopupHelper(LABEL_EXPORT_REGION, POPUP_SMALL_NO_HEIGHT);
+    Region editRegion = {};
+    int editId = -1;
+    int exportId = -1;
   };
 
   struct AnimationsPanel
   {
-    PanelState state{};
-    PopupHelper mergePopup{PopupHelper(LABEL_ANIMATIONS_MERGE_POPUP)};
-    MultiSelectStorage mergeSelection{};
-    std::vector<int> mergeKeys{};
-    int mergeReference{-1};
+    PanelState state = {};
+    PopupHelper mergePopup = PopupHelper(LABEL_ANIMATIONS_MERGE_POPUP);
+    MultiSelectStorage mergeSelection = {};
+    std::vector<int> mergeKeys;
+    int mergeReference = -1;
   };
 
   struct FramePropertiesPanel
   {
-    ChangeAllFrameProperties changeAllFrameProperties{};
-    bool isBatchMode{};
+    ChangeAllFrameProperties changeAllFrameProperties = {};
+    bool isBatchMode = false;
   };
 
   class Taskbar;
@@ -174,15 +174,15 @@
 
   template <class Items> std::vector<int> item_ids_get(const Items& items)
   {
-    std::vector<int> ids{};
-    for (const auto& item : items)
+    std::vector<int> ids;
+    for (auto& item : items)
       ids.push_back(item.id);
     return ids;
   }
 
   template <class Items> void items_copy(Clipboard& clipboard, const Items& items, const std::set<int>& ids)
   {
-    std::string text{};
+    std::string text;
     for (auto id : ids)
       if (auto item = item_get(items, id)) text += item_to_string(*item);
     if (!text.empty()) clipboard.set(text);
@@ -197,7 +197,7 @@
     command_push(panel,
                  [&state, kind, edit, failToast, text, items_get](Document& document)
                  {
-                   std::string errorString{};
+                   std::string errorString;
                    auto pasted = items_from_string<Item>(text, &errorString);
                    if (pasted.empty()) return toast_log(Level::ERROR, failToast, errorString);
                    document.edit_apply(edit,

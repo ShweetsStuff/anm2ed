@@ -19,7 +19,7 @@
 
   class Font
   {
-    ImFont* pointer{};
+    ImFont* pointer = nullptr;
 
   public:
     Font();

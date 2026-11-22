@@ -903,7 +903,7 @@
   class Localizer
   {
   public:
-    Language language{ENGLISH};
+    Language language = ENGLISH;
 
     inline const char* get(StringType type, Language setLanguage = (Language)-1) const
     {

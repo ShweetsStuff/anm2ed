@@ -9,17 +9,17 @@
   // What the game's copy of a save can't keep as it is: how many of each.
   struct IsaacIssues
   {
-    int easedFrames{};
-    int groupTransforms{};
-    int skewFrames{};
-    int shaderFrames{};
-    int depthFrames{};
-    int alphaOffsetFrames{};
-    int blurFrames{};
-    int triggerSounds{};
-    int extraEvents{};
-    int animationLayers{};
-    int vectorSpritesheets{};
+    int easedFrames = 0;
+    int groupTransforms = 0;
+    int skewFrames = 0;
+    int shaderFrames = 0;
+    int depthFrames = 0;
+    int alphaOffsetFrames = 0;
+    int blurFrames = 0;
+    int triggerSounds = 0;
+    int extraEvents = 0;
+    int animationLayers = 0;
+    int vectorSpritesheets = 0;
 
     bool operator==(const IsaacIssues&) const = default;
   };

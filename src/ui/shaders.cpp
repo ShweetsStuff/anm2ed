@@ -158,7 +158,7 @@
     ImGui::SetNextItemWidth(ImGui::GetFrameHeight() * 5.0f);
     if (!ImGui::BeginCombo("##Component Binding", bindingLabel.data())) return false;
 
-    bool isChanged{};
+    bool isChanged = false;
     constexpr UniformBinding bindings[] = {UNIFORM_BINDING_MANUAL,
                                                              UNIFORM_BINDING_PLAYBACK_TIME};
     for (auto binding : bindings)
@@ -178,7 +178,7 @@
 
   static bool shader_uniform_components_update(ShaderUniform& uniform)
   {
-    bool isChanged{};
+    bool isChanged = false;
     constexpr const char* labels[] = {"X", "Y", "Z", "W"};
     auto componentCount = UNIFORM_VALUE_TYPE_INFOS[uniform.valueType].componentCount;
 
@@ -297,7 +297,7 @@
         propertiesPopup.open();
       };
 
-      Actions actions{};
+      Actions actions = {};
       actions.add(
           ACTION_ADD, {},
           [&]()
@@ -305,7 +305,7 @@
             command_push(panel,
                          [&state](Document& document)
                          {
-                           int id{};
+                           int id = 0;
                            document.edit_apply(EDIT_ADD_SHADER,
                                                [&](Model& model)
                                                {

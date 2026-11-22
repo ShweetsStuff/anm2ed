@@ -8,15 +8,15 @@
 
   std::set<int> animation_group_ids_get(const Model& model)
   {
-    std::set<int> ids{};
-    for (const auto& entry : model.animations.entries)
+    std::set<int> ids;
+    for (auto& entry : model.animations.entries)
       if (auto group = std::get_if<AnimationGroup>(&entry)) ids.insert(group->id);
     return ids;
   }
 
   std::set<int> animation_group_indices_get(const Model& model, int groupId)
   {
-    std::set<int> indices{};
+    std::set<int> indices;
     for (int i = 0; i < model.animations_count_get(); ++i)
       if (model.animation_group_id_get(i) == groupId) indices.insert(i);
     return indices;
@@ -25,14 +25,14 @@
   // Animations and whole groups taken out of the list, remembering the order they had.
   struct AnimationsTaken
   {
-    std::vector<AnimationPointer> animations{};
-    std::vector<AnimationGroup> groups{};
+    std::vector<AnimationPointer> animations;
+    std::vector<AnimationGroup> groups;
   };
 
   static AnimationsTaken animations_take(Model& model, const std::set<int>& indices, const std::set<int>& groupIds)
   {
-    AnimationsTaken taken{};
-    int index{};
+    AnimationsTaken taken = {};
+    int index = 0;
     std::erase_if(model.animations.entries,
                   [&](AnimationEntry& entry)
                   {
@@ -64,9 +64,9 @@
   // Where an animation with this uid sits: its top-level entry, and its group (or nullptr) and position there.
   struct AnimationPlace
   {
-    int entry{-1};
-    AnimationGroup* group{};
-    int position{-1};
+    int entry = -1;
+    AnimationGroup* group = nullptr;
+    int position = -1;
   };
 
   static AnimationPlace animation_place_get(Model& model, std::uint64_t uid)
@@ -133,18 +133,18 @@
   // An empty copy of a track list: same tracks and groups, no frames.
   static std::vector<TrackEntry> track_entries_shell_get(const std::vector<TrackEntry>& entries)
   {
-    std::vector<TrackEntry> shell{};
+    std::vector<TrackEntry> shell;
     auto track_shell_get = [](const Track& track)
     { return Track{.type = track.type, .id = track.id, .isVisible = track.isVisible}; };
-    for (const auto& entry : entries)
+    for (auto& entry : entries)
       if (auto track = std::get_if<Track>(&entry))
         shell.emplace_back(track_shell_get(*track));
       else
       {
-        const auto& group = std::get<TrackGroup>(entry);
+        auto& group = std::get<TrackGroup>(entry);
         TrackGroup copy{
             .id = group.id, .name = group.name, .isExpanded = group.isExpanded, .isVisible = group.isVisible};
-        for (const auto& groupTrack : group.tracks)
+        for (auto& groupTrack : group.tracks)
           copy.tracks.push_back(track_shell_get(groupTrack));
         shell.emplace_back(std::move(copy));
       }
@@ -154,7 +154,7 @@
   // Adds an animation with the same (empty) tracks as the template animation.
   Uids animation_add(Model& model, int index, int groupId, int templateIndex, const std::string& name)
   {
-    Animation animation{.name = name};
+    Animation animation = {.name = name};
     if (auto source = model.animation_get(templateIndex))
     {
       animation.layers = track_entries_shell_get(source->layers);
@@ -187,8 +187,8 @@
     auto taken = animations_take(model, indices, groupIds);
     if (taken.animations.empty() && taken.groups.empty()) return {};
 
-    Uids uids{};
-    for (const auto& animation : taken.animations)
+    Uids uids = {};
+    for (auto& animation : taken.animations)
       uids.push_back(animation->uid);
 
     auto& entries = model.animations.entries;
@@ -250,9 +250,9 @@
 
     auto existingGroupIds = animation_group_ids_get(model);
     auto nextGroupId = existingGroupIds.empty() ? 0 : *existingGroupIds.rbegin() + 1;
-    Uids uids{};
-    std::vector<AnimationPointer> loose{};
-    std::vector<AnimationEntry> placed{};
+    Uids uids = {};
+    std::vector<AnimationPointer> loose;
+    std::vector<AnimationEntry> placed;
     for (auto& entry : entries)
       if (auto animation = std::get_if<AnimationPointer>(&entry))
       {
@@ -265,7 +265,7 @@
         auto& group = std::get<AnimationGroup>(entry);
         group.id = nextGroupId++;
         groupIds.insert(group.id);
-        for (const auto& animation : group.animations)
+        for (auto& animation : group.animations)
           uids.push_back(animation->uid);
         placed.push_back(std::move(entry));
       }
@@ -285,8 +285,8 @@
 
   static void track_merge(Track& destination, const Track& source, Merge type)
   {
-    std::vector<Frame> frames{};
-    for (const auto& frame : source.frames)
+    std::vector<Frame> frames;
+    for (auto& frame : source.frames)
       frames.push_back(frame_clone(frame));
     switch (type)
     {
@@ -310,15 +310,15 @@
   static void track_entries_merge(std::vector<TrackEntry>& destination, const std::vector<TrackEntry>& source,
                            Merge type)
   {
-    std::map<int, int> groupRemap{};
-    std::set<int> matchedGroupIds{};
-    int nextGroupId{};
+    std::map<int, int> groupRemap;
+    std::set<int> matchedGroupIds;
+    int nextGroupId = 0;
     groups_each(destination, [&](const TrackGroup& group) { nextGroupId = std::max(nextGroupId, group.id + 1); });
 
     groups_each(source,
                 [&](const TrackGroup& sourceGroup)
                 {
-                  TrackGroup* matched{};
+                  TrackGroup* matched = nullptr;
                   groups_each(destination,
                               [&](TrackGroup& group)
                               {
@@ -345,14 +345,14 @@
     tracks_each(source,
                 [&](const Track& sourceTrack, const TrackGroup* sourceGroup)
                 {
-                  TrackGroup* group{};
+                  TrackGroup* group = nullptr;
                   if (sourceGroup)
                     groups_each(destination,
                                 [&](TrackGroup& candidate)
                                 {
                                   if (candidate.id == groupRemap[sourceGroup->id]) group = &candidate;
                                 });
-                  Track* existing{};
+                  Track* existing = nullptr;
                   if (group)
                   {
                     for (auto& track : group->tracks)

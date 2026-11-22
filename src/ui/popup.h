@@ -28,14 +28,14 @@
   class PopupHelper
   {
   public:
-    StringType labelId{};
-    PopupType type{};
-    PopupPosition position{};
-    int id{};
-    bool isOpen{};
-    bool isTriggered{};
-    bool isJustOpened{};
-    mutable std::string labelText{};
+    StringType labelId = {};
+    PopupType type = {};
+    PopupPosition position = {};
+    int id = 0;
+    bool isOpen = false;
+    bool isTriggered = false;
+    bool isJustOpened = false;
+    mutable std::string labelText;
     static int nextId;
 
     PopupHelper(StringType, PopupType = POPUP_NORMAL, PopupPosition = POPUP_CENTER);

@@ -19,7 +19,7 @@
 
   bool ItemProperties::update(Manager& manager, Settings& settings, Document& document, Reference& reference)
   {
-    bool isAdded{};
+    bool isAdded = false;
     auto& model = document.model;
     auto animation = model.animation_get(reference.animationIndex);
     auto unused_items_get = [&](int type)
@@ -177,7 +177,7 @@
 
         manager.command_push({manager.selected, [=](Manager&, Document& document)
                               {
-                                int addId{-1};
+                                int addId = -1;
                                 document.edit_apply(EDIT_ADD_ITEM,
                                                     [&](Model& model)
                                                     {

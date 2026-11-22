@@ -12,21 +12,21 @@
   class Dockspace
   {
     AnimationPreview animationPreview;
-    bool isCanvasFocused{};
-    float reloadTime{};
-    AnimationsPanel animations{};
-    RegionsPanel regions{};
-    PanelState events{};
-    FramePropertiesPanel frameProperties{};
-    PanelState layers{};
-    PanelState nulls{};
-    ShadersPanel shaders{};
+    bool isCanvasFocused = false;
+    float reloadTime = 0;
+    AnimationsPanel animations = {};
+    RegionsPanel regions = {};
+    PanelState events = {};
+    FramePropertiesPanel frameProperties = {};
+    PanelState layers = {};
+    PanelState nulls = {};
+    ShadersPanel shaders = {};
     SpritesheetEditor spritesheetEditor;
-    SpritesheetsPanel spritesheets{};
-    PanelState sounds{};
-    PanelState libraries{};
+    SpritesheetsPanel spritesheets = {};
+    PanelState sounds = {};
+    PanelState libraries = {};
     Timeline timeline;
-    PopupHelper toolsColorEditPopup{PopupHelper(LABEL_TOOLS_COLOR_EDIT_POPUP, POPUP_TO_CONTENT, POPUP_BY_ITEM)};
+    PopupHelper toolsColorEditPopup = PopupHelper(LABEL_TOOLS_COLOR_EDIT_POPUP, POPUP_TO_CONTENT, POPUP_BY_ITEM);
     AutosaveRestore autosaveRestore;
 
   public:

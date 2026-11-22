@@ -28,7 +28,7 @@ TEST_CASE("root transforms fold into layer draws")
   auto plain = animation_draws_get(anm2, animation, {});
   auto rooted = animation_draws_get(anm2, animation, {.isRootTransform = true});
   REQUIRE(plain.size() == rooted.size());
-  bool isAnyMoved{};
+  bool isAnyMoved = false;
   for (int i = 0; i < (int)plain.size(); ++i)
     isAnyMoved |= plain[i].type == DrawType::LAYER && plain[i].parent != rooted[i].parent;
   CHECK(isAnyMoved);
@@ -39,8 +39,8 @@ TEST_CASE("a layer frame's depth moves it among the layers for that frame only")
   auto anm2 = model_load(file_load(TEST_DIR / "render" / "spin.anm2"));
   auto layer_ids_get = [&](float time)
   {
-    std::vector<int> ids{};
-    for (const auto& draw : animation_draws_get(anm2, *anm2.animation_get(0), {.time = time}))
+    std::vector<int> ids;
+    for (auto& draw : animation_draws_get(anm2, *anm2.animation_get(0), {.time = time}))
       if (draw.type == DrawType::LAYER) ids.push_back(draw.id);
     return ids;
   };
@@ -60,8 +60,8 @@ TEST_CASE("a layer frame's blur reaches its child's draws and stays out of the g
 {
   auto anm2 = model_load(file_load(TEST_DIR / "render" / "nested.anm2"));
   anm2.frame_edit({0, LAYER, 1, 0})->blur = 6.0f;
-  bool isAnyChild{};
-  for (const auto& draw : animation_draws_get(anm2, *anm2.animation_get(0), {}))
+  bool isAnyChild = false;
+  for (auto& draw : animation_draws_get(anm2, *anm2.animation_get(0), {}))
     if (draw.type == DrawType::LAYER && draw.id == 1)
     {
       isAnyChild = true;
@@ -79,11 +79,11 @@ TEST_CASE("an animation layer draws its child animation, from this file or a lib
 {
   auto anm2 = model_load(file_load(TEST_DIR / "render" / "nested.anm2"));
   auto spin = model_load(file_load(TEST_DIR / "render" / "spin.anm2"));
-  DrawOptions options{.library_get = [&](const Model&, int id) { return id == 0 ? &spin : nullptr; }};
+  DrawOptions options = {.library_get = [&](const Model&, int id) { return id == 0 ? &spin : nullptr; }};
   auto red_position_get = [&](int layerId)
   {
     std::optional<glm::vec2> position{};
-    for (const auto& draw : animation_draws_get(anm2, *anm2.animation_get(0), options))
+    for (auto& draw : animation_draws_get(anm2, *anm2.animation_get(0), options))
       if (draw.type == DrawType::LAYER && draw.id == layerId && draw.frame.crop == glm::vec2())
         position = glm::vec2(draw.parent * glm::vec4(draw.frame.position, 0.0f, 1.0f));
     return position;
@@ -143,8 +143,8 @@ TEST_CASE("child animations fire their triggers as they reach them")
   auto library_get = [&](const Model&, int id) { return id == 0 ? &spin : nullptr; };
   auto sources_get = [&](int time)
   {
-    std::vector<const Model*> sources{};
-    for (const auto& fire : animation_triggers_get(anm2, *anm2.animation_get(0), time, library_get))
+    std::vector<const Model*> sources;
+    for (auto& fire : animation_triggers_get(anm2, *anm2.animation_get(0), time, library_get))
       sources.push_back(fire.source);
     return sources;
   };
@@ -171,7 +171,7 @@ TEST_CASE("flattening animation layers bakes their children into plain layers th
   auto points_get = [&](const Model& model, const LibraryGet& get, float time)
   {
     std::vector<glm::vec2> points{};
-    for (const auto& draw :
+    for (auto& draw :
          animation_draws_get(model, *model.animation_get(0), {.time = time, .library_get = get}))
       if (draw.type == DrawType::LAYER)
         points.push_back(glm::round(glm::vec2(draw.parent * draw_quad_model_get(draw) * glm::vec4(1, 1, 0, 1))));
@@ -223,7 +223,7 @@ TEST_CASE("the game's copy stands in for depth and alpha offsets")
   auto draws_get = [](const Model& model, float time)
   {
     std::vector<std::pair<glm::vec2, glm::vec2>> draws{};
-    for (const auto& draw : animation_draws_get(model, *model.animation_get(0), {.time = time}))
+    for (auto& draw : animation_draws_get(model, *model.animation_get(0), {.time = time}))
       if (draw.type == DrawType::LAYER && draw.frame.isVisible)
         draws.emplace_back(draw.frame.crop, draw.frame.position);
     return draws;

@@ -74,39 +74,39 @@
   // track or group root belongs to.
   struct TimelineRow
   {
-    int documentIndex{-1};
-    int animationIndex{-1};
-    int type{NONE};
-    int id{-1};
-    int index{-1};
-    int groupType{NONE};
-    int groupId{-1};
-    int depth{};
-    bool isGroup{};
+    int documentIndex = -1;
+    int animationIndex = -1;
+    int type = NONE;
+    int id = -1;
+    int index = -1;
+    int groupType = NONE;
+    int groupId = -1;
+    int depth = 0;
+    bool isGroup = false;
 
     auto operator<=>(const TimelineRow&) const = default;
   };
 
   struct FrameMoveDrag
   {
-    int animationIndex{-1};
-    int duration{1};
-    std::vector<Reference> references{};
-    bool isActive{};
+    int animationIndex = -1;
+    int duration = 1;
+    std::vector<Reference> references;
+    bool isActive = false;
   };
 
   // What the timeline last put on the clipboard: frames of a type, or one property of a frame.
   struct FrameClipboard
   {
-    std::string text{};
-    int itemType{NONE};
-    int property{-1};
+    std::string text;
+    int itemType = NONE;
+    int property = -1;
   };
 
   struct FrameDurationDrag
   {
-    Reference reference{};
-    int duration{1};
+    Reference reference = {};
+    int duration = 1;
   };
 
   enum class BakeIntoOtherFramesTarget
@@ -117,57 +117,57 @@
 
   struct TimelineState
   {
-    bool isDragging{};
-    bool isRulerHovered{};
-    FrameClipboard frameClipboard{};
-    int markerTime{};
-    bool isWindowHovered{};
-    bool isHorizontalScroll{};
-    ItemProperties itemProperties{};
-    PopupHelper bakePopup{PopupHelper(LABEL_TIMELINE_BAKE_POPUP, POPUP_SMALL_NO_HEIGHT)};
-    PopupHelper bakeIntoOtherFramesPopup{PopupHelper(LABEL_BAKE_INTO_OTHER_FRAMES, POPUP_SMALL_NO_HEIGHT)};
-    PopupHelper makeManyRegionsPopup{PopupHelper(LABEL_MAKE_MANY_REGIONS, POPUP_SMALL_NO_HEIGHT)};
-    BakeIntoOtherFramesTarget bakeIntoOtherFramesTarget{BakeIntoOtherFramesTarget::CURRENT_SELECTION};
-    bool isBakeIntoOtherFramesLayers{true};
-    bool isBakeIntoOtherFramesNulls{true};
-    bool isMakeManyRegionsMapFrames{true};
-    std::set<Reference> makeManyRegionReferences{};
-    int hoveredTime{};
-    bool isFrameBoxPending{};
-    bool isFrameBoxSelecting{};
-    bool isFrameBoxAdditive{};
-    ImVec2 frameBoxStart{};
-    ImVec2 frameBoxEnd{};
-    std::set<Reference> frameBoxSelection{};
-    std::optional<TimelineRow> rowSelectionAnchor{};
-    PopupHelper groupPropertiesPopup{PopupHelper(LABEL_GROUP_PROPERTIES, POPUP_SMALL_NO_HEIGHT)};
-    std::string groupName{};
-    int groupAnimationIndex{-1};
-    int groupType{NONE};
-    int groupId{-1};
-    Reference draggedFrameReference{};
-    bool isDraggedFrameActive{};
-    int draggedFrameType{};
-    int draggedFrameStart{-1};
-    int draggedFrameStartDuration{-1};
-    std::vector<FrameDurationDrag> draggedFrameStartDurations{};
-    float draggedFrameStartMouseX{};
-    float draggedFrameWidth{};
-    bool isDraggedFrameSnapshot{};
-    FrameMoveDrag frameMoveDrag{};
+    bool isDragging = false;
+    bool isRulerHovered = false;
+    FrameClipboard frameClipboard = {};
+    int markerTime = 0;
+    bool isWindowHovered = false;
+    bool isHorizontalScroll = false;
+    ItemProperties itemProperties = {};
+    PopupHelper bakePopup = PopupHelper(LABEL_TIMELINE_BAKE_POPUP, POPUP_SMALL_NO_HEIGHT);
+    PopupHelper bakeIntoOtherFramesPopup = PopupHelper(LABEL_BAKE_INTO_OTHER_FRAMES, POPUP_SMALL_NO_HEIGHT);
+    PopupHelper makeManyRegionsPopup = PopupHelper(LABEL_MAKE_MANY_REGIONS, POPUP_SMALL_NO_HEIGHT);
+    BakeIntoOtherFramesTarget bakeIntoOtherFramesTarget = BakeIntoOtherFramesTarget::CURRENT_SELECTION;
+    bool isBakeIntoOtherFramesLayers = true;
+    bool isBakeIntoOtherFramesNulls = true;
+    bool isMakeManyRegionsMapFrames = true;
+    std::set<Reference> makeManyRegionReferences;
+    int hoveredTime = 0;
+    bool isFrameBoxPending = false;
+    bool isFrameBoxSelecting = false;
+    bool isFrameBoxAdditive = false;
+    ImVec2 frameBoxStart;
+    ImVec2 frameBoxEnd;
+    std::set<Reference> frameBoxSelection;
+    std::optional<TimelineRow> rowSelectionAnchor;
+    PopupHelper groupPropertiesPopup = PopupHelper(LABEL_GROUP_PROPERTIES, POPUP_SMALL_NO_HEIGHT);
+    std::string groupName;
+    int groupAnimationIndex = -1;
+    int groupType = NONE;
+    int groupId = -1;
+    Reference draggedFrameReference = {};
+    bool isDraggedFrameActive = false;
+    int draggedFrameType = 0;
+    int draggedFrameStart = -1;
+    int draggedFrameStartDuration = -1;
+    std::vector<FrameDurationDrag> draggedFrameStartDurations;
+    float draggedFrameStartMouseX = 0;
+    float draggedFrameWidth = 0;
+    bool isDraggedFrameSnapshot = false;
+    FrameMoveDrag frameMoveDrag = {};
     // The tab a held shorten/extend chord is editing (0 when released), so a held chord starts one undo entry per document.
     std::uint64_t resizeChordTabIds[2]{};
-    std::optional<Reference> frameSelectionAnchor{};
-    int animationLengthEditIndex{-1};
-    std::vector<TimelineRow> rowDragReferences{};
-    std::set<std::uint64_t> expandedLayerTracks{}; // animation layer tracks (by uid) showing their child's tracks
+    std::optional<Reference> frameSelectionAnchor;
+    int animationLengthEditIndex = -1;
+    std::vector<TimelineRow> rowDragReferences;
+    std::set<std::uint64_t> expandedLayerTracks; // animation layer tracks (by uid) showing their child's tracks
     glm::vec2 scroll{};
-    ImGuiStyle style{};
+    ImGuiStyle style = {};
   };
 
   class Timeline
   {
-    std::unique_ptr<TimelineContext> context{};
+    std::unique_ptr<TimelineContext> context;
 
   public:
     Timeline();

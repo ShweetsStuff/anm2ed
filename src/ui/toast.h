@@ -10,8 +10,8 @@
   class Toast
   {
   public:
-    std::string message{};
-    float lifetime{};
+    std::string message;
+    float lifetime = 0;
 
     Toast(const std::string&);
   };
@@ -19,7 +19,7 @@
   class Toasts
   {
   public:
-    std::vector<Toast> toasts{};
+    std::vector<Toast> toasts;
 
     void update();
     void push(const std::string&);

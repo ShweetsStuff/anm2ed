@@ -18,7 +18,7 @@
   // A block of an image placed at `destination`, for composing images.
   struct ImagePart
   {
-    const Image* image{};
+    const Image* image = nullptr;
     glm::ivec2 source{};
     glm::ivec2 size{};
     glm::ivec2 destination{};
@@ -30,11 +30,11 @@
   {
   public:
     glm::ivec2 size{};
-    std::vector<uint8_t> pixels{};
-    bool isLinear{};
-    std::uint64_t uid{};
-    std::shared_ptr<const std::string> svg{};
-    float scale{1.0f};
+    std::vector<uint8_t> pixels;
+    bool isLinear = false;
+    std::uint64_t uid = 0;
+    std::shared_ptr<const std::string> svg;
+    float scale = 1.0f;
 
     Image() = default;
     Image(const uint8_t*, glm::ivec2, bool = false);

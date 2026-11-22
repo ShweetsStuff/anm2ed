@@ -3,9 +3,9 @@
   class Playback
   {
   public:
-    float time{};
-    bool isPlaying{};
-    bool isFinished{};
+    float time = 0;
+    bool isPlaying = false;
+    bool isFinished = false;
 
     void toggle();
     void timing_reset();
@@ -15,5 +15,5 @@
     void increment(int);
 
   private:
-    float tickAccumulator{};
+    float tickAccumulator = 0;
   };

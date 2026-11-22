@@ -76,7 +76,7 @@
             auto spritesheetID = layer->spritesheetId;
             if (!::item_get(document.model.content.spritesheets, spritesheetID)) return;
 
-            Region region{.crop = frame->crop, .size = frame->size, .pivot = frame->pivot};
+            Region region = {.crop = frame->crop, .size = frame->size, .pivot = frame->pivot};
 
             document.focused_id_set(SelectionKind::SPRITESHEETS, spritesheetID);
             settingsPtr->windowIsRegions = true;
@@ -106,7 +106,7 @@
     bool isMakeManyRegions = selectedRegionFrames.size() > 1;
     auto selectedRootFrames = selected_root_frame_references_get();
     bool isMakeRegion = is_region_makeable(reference);
-    Actions actions{};
+    Actions actions = {};
     actions_undo_redo_add(actions, manager, document);
     actions.separator();
     actions.add({.label = playback.isPlaying ? LABEL_PAUSE : LABEL_PLAY,
@@ -162,7 +162,7 @@
     auto properties_get = [&](int itemType, std::function<bool(FrameProperty)> is_property_enabled,
                               std::function<void(FrameProperty)> property_run)
     {
-      Action properties{.label = LABEL_PROPERTY};
+      Action properties = {.label = LABEL_PROPERTY};
       for (int i = 0; i < (int)FrameProperty::COUNT; ++i)
       {
         auto property = (FrameProperty)i;
@@ -273,8 +273,8 @@
     auto selectedRows = selected_row_references_get();
     auto selectedGroupableItems = item_references_groupable_get();
     auto copyFrames = copy_frame_references_get();
-    TimelineRow selectedGroupRow{};
-    const TrackGroup* selectedGroup{};
+    TimelineRow selectedGroupRow = {};
+    const TrackGroup* selectedGroup = nullptr;
     if (selectedRows.size() == 1 && selectedRows.front().isGroup)
     {
       auto row = selectedRows.front();
@@ -294,7 +294,7 @@
         ImGui::IsMouseClicked(ImGuiMouseButton_Right))
       ImGui::OpenPopup("##Items Context Menu");
 
-    Actions actions{};
+    Actions actions = {};
     actions_undo_redo_add(actions, manager, document);
     actions.separator();
     actions.add(

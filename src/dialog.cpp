@@ -101,7 +101,7 @@
   void Dialog::file_explorer_open(const std::filesystem::path& path)
   {
     if (path.empty()) return;
-    std::error_code ec{};
+    std::error_code ec;
     auto absolutePath = std::filesystem::absolute(path, ec);
     auto isFile = std::filesystem::is_regular_file(absolutePath, ec);
 #ifdef _WIN32

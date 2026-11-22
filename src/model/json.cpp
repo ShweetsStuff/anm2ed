@@ -27,7 +27,7 @@ using namespace simdjson;
   constexpr int HOURS_HALF_DAY = 12;
   constexpr int DATE_FIELDS = 6;
   constexpr int DATE_MERIDIEM_SIZE = 3;
-  const std::vector<Region> REGIONS_NONE{};
+  const std::vector<Region> REGIONS_NONE;
 
   bool is_json(std::string_view text)
   {
@@ -91,15 +91,15 @@ using namespace simdjson;
 
     struct Scope
     {
-      bool isInline{};
-      bool isJoinable{true};
-      std::size_t start{};
-      bool isEmpty{true};
+      bool isInline = false;
+      bool isJoinable = true;
+      std::size_t start = 0;
+      bool isEmpty = true;
     };
 
     const Model& model;
-    std::string text{};
-    std::vector<Scope> scopes{};
+    std::string text;
+    std::vector<Scope> scopes;
 
     void separate()
     {
@@ -119,7 +119,7 @@ using namespace simdjson;
     // Line breaks become nothing, or a space after a comma.
     void join(const Scope& scope)
     {
-      std::string joined{};
+      std::string joined;
       for (auto i = scope.start; i < text.size(); ++i)
         if (text[i] != '\n')
           joined += text[i];
@@ -217,7 +217,7 @@ using namespace simdjson;
 
     template <class Items> void references(std::string_view name, const std::vector<int>& ids, const Items& items)
     {
-      std::vector<int> indices{};
+      std::vector<int> indices;
       for (auto id : ids)
         if (auto index = index_get(items, id); index != -1) indices.push_back(index);
       field(name, indices, {});
@@ -249,7 +249,7 @@ using namespace simdjson;
       if (items.empty()) return;
       key(name);
       open('[', false, isJoinable);
-      for (const auto& item : items)
+      for (auto& item : items)
       {
         separate();
         open('{', isInline);
@@ -264,7 +264,7 @@ using namespace simdjson;
       if (items.empty()) return;
       key(name);
       open('[', false, false);
-      for (const auto& item : items)
+      for (auto& item : items)
       {
         separate();
         value(get(item));
@@ -276,7 +276,7 @@ using namespace simdjson;
   // Each returns what it expected when the value is the wrong kind (and leaves the value as it was).
   static std::string_view value_read(dom::element element, bool& value)
   {
-    bool read{};
+    bool read = false;
     if (element.get(read)) return "true or false";
     value = read;
     return {};
@@ -286,7 +286,7 @@ using namespace simdjson;
     requires std::is_same_v<T, int> || std::is_same_v<T, float>
   std::string_view value_read(dom::element element, T& value)
   {
-    double read{};
+    double read = 0;
     if (element.get(read)) return "a number";
     value = (T)read;
     return {};
@@ -294,7 +294,7 @@ using namespace simdjson;
 
   static std::string_view value_read(dom::element element, std::string& value)
   {
-    std::string_view read{};
+    std::string_view read;
     if (element.get(read)) return "a string";
     value = read;
     return {};
@@ -302,7 +302,7 @@ using namespace simdjson;
 
   static std::string_view value_read(dom::element element, std::filesystem::path& value)
   {
-    std::string read{};
+    std::string read;
     auto expected = value_read(element, read);
     if (expected.empty()) value = path_from_utf8(read);
     return expected;
@@ -312,10 +312,10 @@ using namespace simdjson;
   std::string_view value_read(dom::element element, glm::vec<L, T, Q>& value)
   {
     static const auto EXPECTED = std::format("an array of {} numbers", L);
-    dom::array array{};
+    dom::array array;
     if (element.get(array) || array.size() != L) return EXPECTED;
     auto read = value;
-    int i{};
+    int i = 0;
     for (auto item : array)
       if (!value_read(item, read[i++]).empty()) return EXPECTED;
     value = read;
@@ -324,9 +324,9 @@ using namespace simdjson;
 
   template <class T> static std::string_view value_read(dom::element element, std::vector<T>& value)
   {
-    dom::array array{};
+    dom::array array;
     if (element.get(array)) return "an array";
-    std::vector<T> read{};
+    std::vector<T> read;
     for (auto item : array)
       if (auto expected = value_read(item, read.emplace_back()); !expected.empty()) return expected;
     value = std::move(read);
@@ -340,11 +340,11 @@ using namespace simdjson;
     static constexpr bool IS_READING = true;
 
     const Model& model;
-    std::vector<std::string>* issues{};
-    std::string path{};
-    dom::object fields{};
-    std::set<std::string_view> used{};
-    bool isKeyed{}; // its keys are names rather than fields
+    std::vector<std::string>* issues = nullptr;
+    std::string path;
+    dom::object fields;
+    std::set<std::string_view> used;
+    bool isKeyed = false; // its keys are names rather than fields
 
     void issue_add(std::string_view name, std::string_view message)
     {
@@ -359,13 +359,13 @@ using namespace simdjson;
 
     bool has(std::string_view name)
     {
-      dom::element element{};
+      dom::element element;
       return element_get(name, element);
     }
 
     template <class T> bool field(std::string_view name, T& value, const std::type_identity_t<T>& = {})
     {
-      dom::element element{};
+      dom::element element;
       if (!element_get(name, element)) return false;
       if (auto expected = value_read(element, value); !expected.empty())
         issue_add(name, std::format("expected {}", expected));
@@ -399,7 +399,7 @@ using namespace simdjson;
     template <class E, std::size_t N>
     void choice(std::string_view name, E& value, const std::string_view (&names)[N], E)
     {
-      std::string read{};
+      std::string read;
       if (!field(name, read)) return;
       auto it = std::ranges::find(names, read);
       if (read.empty() || it == std::end(names))
@@ -418,7 +418,7 @@ using namespace simdjson;
     // Reads `element` as an object at `childPath` (ending in '.'), then notes the keys it never asked for.
     template <class Fn> void object_each(dom::element element, std::string childPath, Fn&& fn)
     {
-      JsonReader reader{model, issues, std::move(childPath)};
+      JsonReader reader = {model, issues, std::move(childPath)};
       if (element.get(reader.fields))
       {
         issues->push_back(std::format("{}: expected an object", reader.path.substr(0, reader.path.size() - 1)));
@@ -430,13 +430,13 @@ using namespace simdjson;
 
     template <class Fn> void object(std::string_view name, Fn&& fn, bool, bool = false)
     {
-      dom::element element{};
+      dom::element element;
       if (element_get(name, element)) object_each(element, std::format("{}{}.", path, name), fn);
     }
 
     bool array_get(std::string_view name, dom::array& array)
     {
-      dom::element element{};
+      dom::element element;
       if (!element_get(name, element)) return false;
       if (!element.get(array)) return true;
       issue_add(name, "expected an array");
@@ -445,7 +445,7 @@ using namespace simdjson;
 
     template <class T, class Fn> void list(std::string_view name, std::vector<T>& items, Fn&& fn, bool, bool = true)
     {
-      dom::array array{};
+      dom::array array;
       if (!array_get(name, array)) return;
       items.clear();
       for (auto element : array)
@@ -460,7 +460,7 @@ using namespace simdjson;
 
     template <class T, class Get> void values(std::string_view name, std::vector<T>& items, Get&& get)
     {
-      dom::array array{};
+      dom::array array;
       if (!array_get(name, array)) return;
       items.clear();
       for (auto element : array)
@@ -477,7 +477,7 @@ using namespace simdjson;
 
   template <class Io, class F> static void frame_io(Io& io, F& frame, ItemType type, const std::vector<Region>& regions)
   {
-    static const Frame FRAME_DEFAULT{};
+    static const Frame FRAME_DEFAULT = {};
     auto& content = io.model.content;
     if (type == ItemType::TRIGGER)
     {
@@ -573,7 +573,7 @@ using namespace simdjson;
         false);
     if constexpr (Io::IS_READING)
     {
-      int id{};
+      int id = 0;
       groups_each(entries, [&](TrackGroup& group) { group.id = id++; });
     }
   }
@@ -595,8 +595,8 @@ using namespace simdjson;
   // Animation names are unique document-wide (default names one); a group's only among the top-level keys.
   static void animations_write(JsonWriter& io, const Model& model)
   {
-    std::set<std::string> animationNames{};
-    std::set<std::string> keys{};
+    std::set<std::string> animationNames;
+    std::set<std::string> keys;
     auto name_unique_get = [](const std::string& name, std::initializer_list<std::set<std::string>*> sets)
     {
       auto candidate = name;
@@ -617,7 +617,7 @@ using namespace simdjson;
         "animations",
         [&](JsonWriter&)
         {
-          for (const auto& entry : model.animations.entries)
+          for (auto& entry : model.animations.entries)
           {
             if (auto animation = std::get_if<std::shared_ptr<const Animation>>(&entry))
             {
@@ -635,7 +635,7 @@ using namespace simdjson;
                       "animations",
                       [&](JsonWriter&)
                       {
-                        for (const auto& animation : group.animations)
+                        for (auto& animation : group.animations)
                           animation_write(*animation, false);
                       },
                       false);
@@ -650,11 +650,11 @@ using namespace simdjson;
   {
     auto animation_read = [&](std::string_view name, JsonReader& animationIo)
     {
-      Animation animation{.name = std::string(name), .root = {.type = ItemType::ROOT}};
+      Animation animation = {.name = std::string(name), .root = {.type = ItemType::ROOT}};
       animation_io(animationIo, animation);
       return std::make_shared<const Animation>(std::move(animation));
     };
-    int groupId{};
+    int groupId = 0;
     io.object(
         "animations",
         [&](JsonReader& animationsIo)
@@ -669,7 +669,7 @@ using namespace simdjson;
                                model.animations.entries.emplace_back(animation_read(name, entryIo));
                                return;
                              }
-                             AnimationGroup group{.id = groupId++, .name = std::string(name)};
+                             AnimationGroup group = {.id = groupId++, .name = std::string(name)};
                              entryIo.field("expanded", group.isExpanded);
                              entryIo.field("visible", group.isVisible);
                              entryIo.object(
@@ -792,11 +792,11 @@ using namespace simdjson;
   // Fails only when the text isn't a JSON object; anything it couldn't read is listed in `errorString`.
   bool model_from_json(Model& model, std::string_view text, std::string* errorString)
   {
-    dom::parser parser{};
+    dom::parser parser;
     padded_string json(text);
-    dom::element root{};
-    std::vector<std::string> issues{};
-    JsonReader io{model, &issues};
+    dom::element root;
+    std::vector<std::string> issues;
+    JsonReader io = {model, &issues};
     auto error = parser.parse(json).get(root);
     if (!error) error = root.get(io.fields);
     if (error)

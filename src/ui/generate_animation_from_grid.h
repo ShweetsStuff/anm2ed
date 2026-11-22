@@ -8,10 +8,10 @@
 
   class GenerateAnimationFromGrid : public Canvas
   {
-    float time{};
+    float time = 0;
 
   public:
-    bool isEnd{};
+    bool isEnd = false;
 
     GenerateAnimationFromGrid();
     void update(Manager&, Document&, Resources&, Settings&);

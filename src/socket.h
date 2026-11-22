@@ -25,16 +25,16 @@ constexpr socket_handle SOCKET_INVALID = -1;
 
   struct SocketAddress
   {
-    std::string host{};
-    unsigned short port{};
+    std::string host;
+    unsigned short port = {};
   };
 
   class Socket
   {
   private:
     socket_handle handle;
-    SocketRole role{};
-    int lastError{};
+    SocketRole role = {};
+    int lastError = 0;
 
   public:
     Socket();

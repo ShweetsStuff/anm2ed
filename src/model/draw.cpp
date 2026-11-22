@@ -35,7 +35,7 @@
   static std::vector<std::pair<int, float>> draw_times_get(const Animation& animation, const Track& track,
                                                     const DrawOptions& options)
   {
-    std::vector<std::pair<int, float>> times{};
+    std::vector<std::pair<int, float>> times;
     for (int i = 0; i < (int)options.samples.size(); ++i)
     {
       auto& sample = options.samples[i];
@@ -67,9 +67,9 @@
   // playing then loops the child, stops it at its end, or holds its own start frame.
   float child_time_get(const Track& track, float time, int length, int seed)
   {
-    float start{};
-    float clockStart{};
-    float clockOffset{};
+    float start = 0;
+    float clockStart = 0;
+    float clockOffset = 0;
     for (int i = 0; i < (int)track.frames.size(); ++i)
     {
       auto& frame = track.frames[i];
@@ -138,7 +138,7 @@
   std::vector<TriggerFire> animation_triggers_get(const Model& model, const Animation& animation, int time,
                                                   const LibraryGet& library_get)
   {
-    std::vector<TriggerFire> fires{};
+    std::vector<TriggerFire> fires;
     std::vector<const Animation*> playing{&animation};
     animation_triggers_add(fires, model, animation, time, library_get, playing);
     return fires;
@@ -168,11 +168,11 @@
   static std::vector<Draw> animation_draws_get(const Model& model, const Animation& animation, const DrawOptions& options,
                                         std::vector<const Animation*>& playing)
   {
-    std::vector<Draw> draws{};
+    std::vector<Draw> draws;
     // Each layer draw's place in the drawing order: its track's position among the layers plus its frame's depth; a
     // moved layer lands past the one already at that place (below it when moved down, above it when moved up).
-    std::vector<std::pair<int, int>> layerOrders{};
-    int layerOrder{};
+    std::vector<std::pair<int, int>> layerOrders;
+    int layerOrder = 0;
     auto parent_get = [&](float time, const TrackGroup* group)
     {
       glm::mat4 parent(1.0f);
@@ -249,7 +249,7 @@
         if (track.isVisible && isFound) track_draws_add(track, drawType, track.id, NONE, group);
         if (type == LAYER) ++layerOrder;
       };
-      for (const auto& entry : *entries)
+      for (auto& entry : *entries)
       {
         if (auto track = std::get_if<Track>(&entry))
         {
@@ -259,18 +259,18 @@
         auto& group = std::get<TrackGroup>(entry);
         if (!group.isVisible) continue;
         if (group.root.isVisible) track_draws_add(group.root, DrawType::GROUP_ROOT, group.id, type, &group);
-        for (const auto& groupTrack : group.tracks)
+        for (auto& groupTrack : group.tracks)
           track_add(groupTrack, &group);
       }
     }
 
     // Layers draw one after another, so reordering them by depth only moves them among each other.
-    std::vector<std::size_t> layerIndices{};
+    std::vector<std::size_t> layerIndices;
     for (std::size_t i = 0; i < draws.size(); ++i)
       if (draws[i].type == DrawType::LAYER) layerIndices.push_back(i);
     auto sorted = layerIndices;
     std::ranges::stable_sort(sorted, {}, [&](std::size_t i) { return layerOrders[i]; });
-    std::vector<Draw> layerDraws{};
+    std::vector<Draw> layerDraws;
     for (auto i : sorted)
       layerDraws.push_back(draws[i]);
     for (std::size_t i = 0; i < layerIndices.size(); ++i)

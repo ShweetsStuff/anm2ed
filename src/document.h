@@ -26,76 +26,76 @@
   // Ids and labels for a combo box of content items.
   struct Choices
   {
-    std::vector<int> ids{};
-    std::vector<std::string> labels{};
+    std::vector<int> ids;
+    std::vector<std::string> labels;
   };
 
   // A linked .anm2, loaded read-only: its document, its spritesheets' images and its sounds.
   struct LibraryData
   {
-    Model model{};
-    std::map<int, Image> images{};
-    std::map<int, AudioData> sounds{};
-    std::filesystem::file_time_type writeTime{};
+    Model model = {};
+    std::map<int, Image> images;
+    std::map<int, AudioData> sounds;
+    std::filesystem::file_time_type writeTime;
   };
 
   // A step into an animation layer's child: the parent's tab, animation, time and layer track it was taken from,
   // and the animation it led to (in this tab, or a library's).
   struct ChildStep
   {
-    std::uint64_t tabId{};
-    int animationIndex{-1};
-    float frameTime{};
-    Reference layer{};
-    std::string animationName{};
-    std::string layerName{};
-    int childAnimationIndex{-1};
+    std::uint64_t tabId = 0;
+    int animationIndex = -1;
+    float frameTime = 0;
+    Reference layer = {};
+    std::string animationName;
+    std::string layerName;
+    int childAnimationIndex = -1;
   };
 
   struct DocumentData
   {
-    std::filesystem::path path{};
-    uint64_t tabId{};
-    Snapshots snapshots{};
-    AssetStore assets{};
-    std::map<int, Image> textureDrafts{};
-    int changeAllFramePropertiesRegionId{-1};
-    int changeAllFramePropertiesShaderId{-1};
+    std::filesystem::path path;
+    uint64_t tabId = 0;
+    Snapshots snapshots = {};
+    AssetStore assets = {};
+    std::map<int, Image> textureDrafts;
+    int changeAllFramePropertiesRegionId = -1;
+    int changeAllFramePropertiesShaderId = -1;
 
-    float previewZoom{200};
+    float previewZoom = 200;
     glm::vec2 previewPan{};
     glm::vec2 editorPan{};
-    float editorZoom{200};
-    int overlayIndex{-1};
-    uint64_t overlayDocumentId{};
+    float editorZoom = 200;
+    int overlayIndex = -1;
+    uint64_t overlayDocumentId = 0;
 
-    uint64_t hash{};
-    uint64_t saveHash{};
-    uint64_t autosaveHash{};
-    double lastAutosaveTime{};
-    bool isValid{true};
-    bool isOpen{true};
-    bool isForceDirty{false};
-    bool isVectorKept{};
+    uint64_t hash = 0;
+    uint64_t saveHash = 0;
+    uint64_t autosaveHash = 0;
+    double lastAutosaveTime = 0;
+    bool isValid = true;
+    bool isOpen = true;
+    bool isForceDirty = false;
+    bool isVectorKept = false;
     std::vector<ChildStep>
         childSteps{}; // the steps that led to the animation being edited (the breadcrumb) // asked this session to keep SVG spritesheets in a Rebirth document
-    std::unordered_map<int, uint64_t> spritesheetHashes{};
-    std::unordered_map<int, uint64_t> spritesheetSaveHashes{};
-    std::unordered_map<int, uint64_t> spritesheetAutosaveHashes{};
-    std::unordered_map<int, std::filesystem::path> texturePaths{};
-    std::unordered_map<int, std::filesystem::file_time_type> textureWriteTimes{};
-    std::unordered_map<int, std::filesystem::path> soundPaths{};
-    std::map<int, std::filesystem::path> shaderVertexPaths{};
-    std::map<int, std::filesystem::path> shaderFragmentPaths{};
-    std::map<int, ShaderProgram> shaders{};
+    std::unordered_map<int, uint64_t> spritesheetHashes;
+    std::unordered_map<int, uint64_t> spritesheetSaveHashes;
+    std::unordered_map<int, uint64_t> spritesheetAutosaveHashes;
+    std::unordered_map<int, std::filesystem::path> texturePaths;
+    std::unordered_map<int, std::filesystem::file_time_type> textureWriteTimes;
+    std::unordered_map<int, std::filesystem::path> soundPaths;
+    std::map<int, std::filesystem::path> shaderVertexPaths;
+    std::map<int, std::filesystem::path> shaderFragmentPaths;
+    std::map<int, ShaderProgram> shaders;
     // Libraries by absolute path, and what each (document, library id) points at (nullptr is this document).
-    std::map<std::filesystem::path, LibraryData> libraries{};
-    std::map<std::pair<const Model*, int>, const LibraryData*> libraryLinks{};
-    std::uint64_t librariesRevision{}; // counts library loads, for anything drawn from them
+    std::map<std::filesystem::path, LibraryData> libraries;
+    std::map<std::pair<const Model*, int>, const LibraryData*> libraryLinks;
+    std::uint64_t librariesRevision = 0; // counts library loads, for anything drawn from them
     // Vector spritesheets drawn again for zooms past 100%, by (image uid, power-of-two level).
-    mutable std::map<std::pair<std::uint64_t, int>, Image> vectorImages{};
-    bool isAnimationPreviewSet{false};
-    bool isSpritesheetEditorSet{false};
+    mutable std::map<std::pair<std::uint64_t, int>, Image> vectorImages;
+    bool isAnimationPreviewSet = false;
+    bool isSpritesheetEditorSet = false;
   };
 
   class Document : public DocumentData
@@ -120,8 +120,8 @@
     SNAPSHOT_STEP_STATE_FIELDS
 #undef X
     std::string& message = current.message;
-    EditTarget editTarget{EditTarget::NONE};
-    UidIndex index{};
+    EditTarget editTarget = EditTarget::NONE;
+    UidIndex index = {};
 
     Document(const std::filesystem::path&, bool = false, std::string* = nullptr);
     Document(const Document&) = delete;

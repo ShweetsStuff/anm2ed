@@ -55,7 +55,7 @@
 
   static void action_items_menu_draw(std::vector<Action>& items, Settings& settings)
   {
-    bool isPreviousSeparator{};
+    bool isPreviousSeparator = false;
     for (auto& action : items)
     {
       if (action.isSeparator)

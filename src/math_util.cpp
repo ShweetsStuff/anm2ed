@@ -23,7 +23,7 @@ using namespace glm;
 
   const char* float_format_get(float value)
   {
-    static std::string formatString{};
+    static std::string formatString;
     int decimalCount = float_decimals_needed(value);
     formatString = (decimalCount == 0) ? "%.0f" : ("%." + std::to_string(decimalCount) + "f");
     return formatString.c_str();
@@ -31,7 +31,7 @@ using namespace glm;
 
   const char* vec2_format_get(const vec2& value)
   {
-    static std::string formatString{};
+    static std::string formatString;
     int decimalCountX = float_decimals_needed(value.x);
     int decimalCountY = float_decimals_needed(value.y);
     int decimalCount = (decimalCountX > decimalCountY) ? decimalCountX : decimalCountY;

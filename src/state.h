@@ -14,8 +14,8 @@
     void render(SDL_Window*&, Settings&);
 
   public:
-    bool isQuit{};
-    bool isQuitting{};
+    bool isQuit = false;
+    bool isQuitting = false;
     Manager manager;
     Resources resources;
     Dialog dialog;
@@ -25,12 +25,12 @@
     Documents documents;
     Dockspace dockspace;
 
-    uint64_t previousTick{};
-    uint64_t previousUpdate{};
-    double tickAccumulatorMs{};
-    bool wasRecording{};
-    std::vector<std::filesystem::path> spritesheetDropPaths{};
-    std::vector<std::filesystem::path> soundDropPaths{};
+    uint64_t previousTick = 0;
+    uint64_t previousUpdate = 0;
+    double tickAccumulatorMs = 0;
+    bool wasRecording = false;
+    std::vector<std::filesystem::path> spritesheetDropPaths;
+    std::vector<std::filesystem::path> soundDropPaths;
 
     State(SDL_Window*&, Settings& settings, std::vector<std::string>&);
 

@@ -46,7 +46,7 @@
     v.insert(v.begin() + insertPos, std::make_move_iterator(moveItems.begin()),
              std::make_move_iterator(moveItems.end()));
 
-    std::set<int> moveIndices{};
+    std::set<int> moveIndices;
     for (int i = 0; i < (int)moveItems.size(); i++)
       moveIndices.insert(insertPos + i);
 

@@ -26,9 +26,9 @@
   // so nothing here is repaired by index; the UI reads it as References through a UidIndex.
   struct Selection
   {
-    std::map<SelectionKind, std::set<std::uint64_t>> uids{};
-    Handle focus{};
-    std::map<SelectionKind, std::uint64_t> focuses{};
+    std::map<SelectionKind, std::set<std::uint64_t>> uids;
+    Handle focus = {};
+    std::map<SelectionKind, std::uint64_t> focuses;
 
     bool operator==(const Selection&) const = default;
   };

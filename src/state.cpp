@@ -22,7 +22,7 @@
   {
     dialog = Dialog(window);
 
-    for (const auto& argument : arguments)
+    for (auto& argument : arguments)
       manager.open(path_from_utf8(argument));
 
     manager.settings_apply(settings);
@@ -40,7 +40,7 @@
     SDL_GetWindowSize(window, &settings.windowSize.x, &settings.windowSize.y);
     SDL_GetWindowPosition(window, &settings.windowPosition.x, &settings.windowPosition.y);
 
-    SDL_Event event{};
+    SDL_Event event = {};
 
     while (SDL_PollEvent(&event))
     {
@@ -56,7 +56,7 @@
     dockspace.update(taskbar, documents, manager, settings, resources, dialog, clipboard);
     */
 
-    SDL_Event event{};
+    SDL_Event event = {};
 
     while (SDL_PollEvent(&event))
     {
@@ -181,7 +181,7 @@
 
     if (!dockspace.is_canvas_focused_get())
     {
-      float uiScaleDelta{};
+      float uiScaleDelta = 0;
       if (shortcut(manager.chords[SHORTCUT_ZOOM_IN], SCOPE_GLOBAL)) uiScaleDelta += UI_SCALE_STEP;
       if (shortcut(manager.chords[SHORTCUT_ZOOM_OUT], SCOPE_GLOBAL)) uiScaleDelta -= UI_SCALE_STEP;
       if (uiScaleDelta != 0.0f)

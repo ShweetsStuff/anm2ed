@@ -49,9 +49,9 @@ options:
 
   struct Arguments
   {
-    std::string command{};
-    std::filesystem::path file{};
-    std::map<std::string, std::string> options{};
+    std::string command;
+    std::filesystem::path file;
+    std::map<std::string, std::string> options;
 
     std::optional<std::string> get(const std::string& name) const
     {
@@ -78,7 +78,7 @@ options:
   {
     if (argc < 3) return {};
     // Absolute, so a bare file name still has a folder for the paths in it.
-    Arguments arguments{.command = argv[1], .file = std::filesystem::absolute(path_from_utf8(argv[2]))};
+    Arguments arguments = {.command = argv[1], .file = std::filesystem::absolute(path_from_utf8(argv[2]))};
     for (int i = 3; i < argc; ++i)
     {
       std::string name = argv[i];
@@ -95,7 +95,7 @@ options:
   {
     auto text = arguments.get("background").value_or("transparent");
     if (text.starts_with('#')) text.erase(0, 1);
-    unsigned value{};
+    unsigned value = 0;
     if (text.size() != HEX_RGB_LENGTH ||
         std::from_chars(text.data(), text.data() + text.size(), value, HEX_BASE).ec != std::errc{})
       return {};
@@ -118,7 +118,7 @@ options:
   {
     auto animations = model.animations_get();
     auto name = arguments.get("animation").value_or(model.animations.defaultAnimation);
-    int index{-1};
+    int index = -1;
     if (std::from_chars(name.data(), name.data() + name.size(), index).ec == std::errc{} && index >= 0 &&
         index < (int)animations.size())
       return animations[index];
@@ -130,8 +130,8 @@ options:
 
   static int info_print(const Arguments& arguments)
   {
-    Model model{};
-    std::string error{};
+    Model model = {};
+    std::string error;
     if (!model_load(model, arguments.file, &error))
     {
       std::println(stderr, "could not load {}: {}", path_to_utf8(arguments.file), error);
@@ -154,26 +154,26 @@ options:
 
     WorkingDirectory workingDirectory(arguments.file.parent_path());
     std::println("spritesheets:");
-    for (const auto& spritesheet : content.spritesheets)
+    for (auto& spritesheet : content.spritesheets)
     {
       auto image = Image(path_case_insensitive_find(spritesheet.path));
       auto status = image.is_valid() ? std::format("{}x{}", image.size.x, image.size.y) : std::string("missing");
       std::println("  #{} {} ({}), {} regions", spritesheet.id, path_to_utf8(spritesheet.path), status,
                    spritesheet.regions.size());
     }
-    for (const auto& library : content.libraries)
+    for (auto& library : content.libraries)
       std::println("library #{} {}", library.id, path_to_utf8(library.path));
-    for (const auto& layer : content.layers)
+    for (auto& layer : content.layers)
       if (layer.is_animation())
         std::println("layer #{} {} (animation {}, library #{})", layer.id, layer.name, layer.animation,
                      layer.libraryId);
       else
         std::println("layer #{} {} (spritesheet #{})", layer.id, layer.name, layer.spritesheetId);
-    for (const auto& null : content.nulls)
+    for (auto& null : content.nulls)
       std::println("null #{} {}", null.id, null.name);
-    for (const auto& event : content.events)
+    for (auto& event : content.events)
       std::println("event #{} {}", event.id, event.name);
-    for (const auto& sound : content.sounds)
+    for (auto& sound : content.sounds)
       std::println("sound #{} {}", sound.id, path_to_utf8(sound.path));
 
     auto issues = isaac_issues_get(model);
@@ -195,14 +195,14 @@ options:
       return 2;
     }
 
-    HeadlessGL gl{};
+    HeadlessGL gl = {};
     if (!gl.is_valid())
     {
       std::println(stderr, "could not create an OpenGL 3.3 context");
       return 1;
     }
 
-    std::string error{};
+    std::string error;
     Document document(arguments.file, false, &error);
     if (!document.is_valid())
     {
@@ -229,7 +229,7 @@ options:
                                             isRootTransform);
     };
     auto outPath = path_from_utf8(*out);
-    std::error_code ec{};
+    std::error_code ec;
     std::filesystem::create_directories(type_is_folder(arguments) ? outPath : outPath.parent_path(), ec);
 
     if (arguments.command == "frame")
@@ -296,9 +296,9 @@ options:
       return 2;
     }
     // The game's copy bakes what it can't draw with OpenGL (and the document's shaders compile only with it).
-    std::optional<HeadlessGL> gl{};
+    std::optional<HeadlessGL> gl;
     if (format == "xml") gl.emplace();
-    std::string error{};
+    std::string error;
     Document document(arguments.file, false, &error);
     auto fileUtf8 = path_to_utf8(arguments.file);
     if (!document.is_valid())
@@ -308,7 +308,7 @@ options:
     }
     if (!error.empty()) std::println(stderr, "{}:\n{}", fileUtf8, error);
     auto out = std::filesystem::absolute(arguments.get("out").transform(path_from_utf8).value_or(arguments.file));
-    Options options{};
+    Options options = {};
     options.isJson = format == "json";
     if (document.save(out, &error, options)) return 0;
     std::println(stderr, "could not write {}: {}", path_to_utf8(out), error);

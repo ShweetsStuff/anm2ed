@@ -165,7 +165,7 @@ using namespace glm;
       return;
     }
 
-    for (const auto& uniform : shader.uniforms)
+    for (auto& uniform : shader.uniforms)
     {
       if (uniform.location == -1) continue;
 
@@ -279,7 +279,7 @@ using namespace glm;
   {
     auto blurred = draw;
     auto& frame = blurred.frame;
-    TextureBlur blur{.region = vec4(frame.crop, frame.crop + frame.size) / vec4(textureSize, textureSize)};
+    TextureBlur blur = {.region = vec4(frame.crop, frame.crop + frame.size) / vec4(textureSize, textureSize)};
     if (frame.blur > 0.0f && frame.size.x > 0.0f && frame.size.y > 0.0f)
     {
       auto canvasArea = std::abs(glm::determinant(glm::mat2(draw.parent * draw_quad_model_get(draw))));
@@ -300,7 +300,7 @@ using namespace glm;
                              const std::function<const Image*(const Draw&)>& image_get,
                              const std::function<ShaderProgram*(int)>& shader_get) const
   {
-    for (const auto& draw : animation_draws_get(model, animation, options))
+    for (auto& draw : animation_draws_get(model, animation, options))
     {
       if (draw.type != DrawType::LAYER) continue;
       auto& frame = draw.frame;
@@ -342,7 +342,7 @@ using namespace glm;
     if (zoom > ZOOM_LEVELS.back()) return ZOOM_LEVELS.back();
 
     auto levelCount = (int)ZOOM_LEVELS.size();
-    int levelIndex{};
+    int levelIndex = 0;
     if (levelDelta > 0)
     {
       auto it = std::upper_bound(ZOOM_LEVELS.begin(), ZOOM_LEVELS.end(), zoom);

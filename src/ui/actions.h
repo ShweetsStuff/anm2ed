@@ -49,8 +49,8 @@
 
   struct ActionInfo
   {
-    StringType label{};
-    int shortcut{-1};
+    StringType label = {};
+    int shortcut = -1;
   };
 
   constexpr ActionInfo ACTION_INFOS[] = {
@@ -61,19 +61,19 @@
 
   struct Action
   {
-    ActionType type{};
-    StringType label{STRING_UNDEFINED};
-    StringType tooltip{STRING_UNDEFINED};
-    int shortcut{-1};
-    bool isSeparator{};
+    ActionType type = {};
+    StringType label = STRING_UNDEFINED;
+    StringType tooltip = STRING_UNDEFINED;
+    int shortcut = -1;
+    bool isSeparator = false;
     std::function<bool()> isEnabled{};
     std::function<void()> run{};
-    std::vector<Action> children{}; // a submenu, in menus
+    std::vector<Action> children; // a submenu, in menus
   };
 
   struct Actions
   {
-    std::vector<Action> items{};
+    std::vector<Action> items;
 
     void add(Action);
     void add(ActionType, std::function<bool()>, std::function<void()>, StringType = STRING_UNDEFINED,

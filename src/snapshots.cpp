@@ -25,7 +25,7 @@
 
   static void step_apply(Snapshot& current, const SnapshotStep& step, bool isUndo)
   {
-    const auto& target = isUndo ? step.before : step.after;
+    auto& target = isUndo ? step.before : step.after;
 #define X(type, name)                                                                                                  \
   if (!is_value_equal(step.before.name, step.after.name)) current.name = target.name;
     SNAPSHOT_STEP_STATE_FIELDS
@@ -86,7 +86,7 @@
   {
     if (pendingFocus) selection_follow(current, *std::exchange(pendingFocus, std::nullopt));
     if (!pending) return;
-    SnapshotStep step{std::move(*std::exchange(pending, std::nullopt)), current};
+    SnapshotStep step = {std::move(*std::exchange(pending, std::nullopt)), current};
     if (is_step_empty(step)) return;
     undoStack.push(std::move(step));
     redoStack.clear();

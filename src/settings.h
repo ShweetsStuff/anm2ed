@@ -321,7 +321,7 @@
     SETTINGS_MEMBERS SETTINGS_SHORTCUTS SETTINGS_WINDOWS
 #undef X
 
-        bool isDefault{};
+        bool isDefault = false;
 
     Settings() = default;
 

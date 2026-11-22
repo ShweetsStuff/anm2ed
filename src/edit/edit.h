@@ -19,18 +19,18 @@
 
   struct RowTarget
   {
-    bool isGroup{};
-    int type{NONE};
-    int id{-1};
-    int groupId{-1};
+    bool isGroup = false;
+    int type = NONE;
+    int id = -1;
+    int groupId = -1;
   };
 
   struct RootBakeOptions
   {
-    bool isRoundScale{};
-    bool isRoundRotation{};
-    bool isMatchRootInterpolation{};
-    bool isUseRootPivot{};
+    bool isRoundScale = false;
+    bool isRoundRotation = false;
+    bool isMatchRootInterpolation = false;
+    bool isUseRootPivot = false;
   };
 
   struct GridOptions
@@ -38,28 +38,28 @@
     glm::ivec2 start{};
     glm::ivec2 size{};
     glm::vec2 pivot{};
-    int columns{};
-    int count{};
-    int delay{};
-    bool isMakeRegions{};
-    std::string regionNameFormat{};
+    int columns = 0;
+    int count = 0;
+    int delay = 0;
+    bool isMakeRegions = false;
+    std::string regionNameFormat;
   };
 
   struct ChangeTargets
   {
-    std::set<Reference> references{};
-    std::set<int> animations{};
-    bool isRoot{};
-    bool isLayers{};
-    bool isNulls{};
+    std::set<Reference> references;
+    std::set<int> animations;
+    bool isRoot = false;
+    bool isLayers = false;
+    bool isNulls = false;
   };
 
   struct AnimationTarget
   {
-    int animationIndex{-1};
-    int groupId{-1};
-    bool isAfter{};
-    bool isInto{};
+    int animationIndex = -1;
+    int groupId = -1;
+    bool isAfter = false;
+    bool isInto = false;
   };
 
   // Frame properties that can be copied on their own.

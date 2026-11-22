@@ -8,12 +8,12 @@
     static void callback(void*, MIX_Mixer*, const SDL_AudioSpec*, float*, int);
 
   public:
-    std::vector<float> stream{};
-    SDL_AudioSpec spec{};
-    int callbackSamples{};
-    Uint64 captureStartCounter{};
-    Uint64 firstCallbackCounter{};
-    bool isFirstCallbackCaptured{};
+    std::vector<float> stream;
+    SDL_AudioSpec spec = {};
+    int callbackSamples = 0;
+    Uint64 captureStartCounter = 0;
+    Uint64 firstCallbackCounter = 0;
+    bool isFirstCallbackCaptured = false;
 
     AudioStream(MIX_Mixer*);
   };

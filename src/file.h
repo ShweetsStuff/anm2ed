@@ -17,7 +17,7 @@
     explicit operator bool() const;
 
   private:
-    FILE* handle{};
+    FILE* handle = nullptr;
   };
 
     bool file_text_load(const std::filesystem::path&, std::string*, const char* mode = "rb");

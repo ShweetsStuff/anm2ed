@@ -12,7 +12,7 @@ constexpr int UNDO_LIMIT = 1000;
 static std::vector<Reference> references_all_get(const Model& anm2, bool isFrames)
 {
   UidIndex index(anm2);
-  std::vector<Reference> result{};
+  std::vector<Reference> result;
   auto add = [&](std::uint64_t uid)
   {
     auto reference = index.reference_get(uid);
@@ -24,7 +24,7 @@ static std::vector<Reference> references_all_get(const Model& anm2, bool isFrame
                                  [&](const Track& track)
                                  {
                                    add(track.uid);
-                                   for (const auto& frame : track.frames)
+                                   for (auto& frame : track.frames)
                                      add(frame.uid);
                                  });
   return result;
@@ -81,7 +81,7 @@ TEST_CASE("undo and redo restore every state of a random edit walk")
        {"02_items.anm2", "03a_groups_nested.anm2", "04_group_root_transform.anm2", "07_special_interpolation.anm2"})
   {
     INFO("fixture: ", name);
-    Snapshots snapshots{};
+    Snapshots snapshots = {};
     snapshots.current.model = model_load(file_load(CORPUS_DIR / name));
     std::mt19937 random(WALK_SEED);
 
@@ -113,7 +113,7 @@ TEST_CASE("undo and redo restore every state of a random edit walk")
 
 TEST_CASE("selection follows its frame through an edit and its undo")
 {
-  Snapshots snapshots{};
+  Snapshots snapshots = {};
   auto& current = snapshots.current;
   current.model = model_load(file_load(CORPUS_DIR / "02_items.anm2"));
   selection_focus_set(current.selection, current.model, {0, LAYER, 0, 1});

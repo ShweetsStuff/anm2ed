@@ -27,9 +27,9 @@
 
     struct SessionFile
     {
-      std::filesystem::path path{};
-      std::filesystem::file_time_type time{};
-      std::uintmax_t size{};
+      std::filesystem::path path;
+      std::filesystem::file_time_type time;
+      std::uintmax_t size = 0;
     };
 
     static std::uint32_t process_id_get()
@@ -50,15 +50,15 @@
     static std::vector<SessionFile> session_files_get(const std::filesystem::path& directory,
                                                const std::filesystem::path& currentPath)
     {
-      std::vector<SessionFile> files{};
-      std::error_code ec{};
+      std::vector<SessionFile> files;
+      std::error_code ec;
       if (!std::filesystem::is_directory(directory, ec)) return files;
 
       for (std::filesystem::directory_iterator it(directory, ec), end{}; !ec && it != end; it.increment(ec))
       {
         auto path = it->path();
         if (path == currentPath || path.extension() != ".log") continue;
-        std::error_code fileEc{};
+        std::error_code fileEc;
         if (!std::filesystem::is_regular_file(path, fileEc)) continue;
 
         auto size = std::filesystem::file_size(path, fileEc);
@@ -78,7 +78,7 @@
 
     static void session_file_remove(const SessionFile& file, std::uintmax_t& totalSize)
     {
-      std::error_code ec{};
+      std::error_code ec;
       std::filesystem::remove(file.path, ec);
       if (!ec && totalSize >= file.size) totalSize -= file.size;
     }
@@ -89,8 +89,8 @@
       std::sort(files.begin(), files.end(),
                 [](const SessionFile& left, const SessionFile& right) { return left.time > right.time; });
 
-      std::uintmax_t totalSize{};
-      for (const auto& file : files)
+      std::uintmax_t totalSize = 0;
+      for (auto& file : files)
         totalSize += file.size;
 
       while (files.size() >= SESSION_LIMIT)
@@ -114,7 +114,7 @@
       auto legacyPath = directory / "log.txt";
       if (legacyPath == currentPath) return;
 
-      std::error_code ec{};
+      std::error_code ec;
       std::filesystem::remove(legacyPath, ec);
     }
 
@@ -168,11 +168,11 @@
 
   void Logger::stderr_pump()
   {
-    std::string pending{};
-    std::array<char, 512> buffer{};
+    std::string pending;
+    std::array<char, 512> buffer = {};
     while (isStderrRedirecting)
     {
-      int readBytes{};
+      int readBytes = 0;
 #if _WIN32
       readBytes = _read(stderrPipeReadFd, buffer.data(), (unsigned int)buffer.size());
 #else
@@ -182,7 +182,7 @@
 
       pending.append(buffer.data(), (std::size_t)readBytes);
 
-      std::size_t lineEnd{};
+      std::size_t lineEnd = 0;
       while ((lineEnd = pending.find('\n')) != std::string::npos)
       {
         auto line = pending.substr(0, lineEnd);
@@ -266,7 +266,7 @@
     isLogLimitReached = false;
     if (!logPath.empty())
     {
-      std::error_code ec{};
+      std::error_code ec;
       auto directory = logPath.parent_path();
       if (!directory.empty()) std::filesystem::create_directories(directory, ec);
       legacy_log_remove(logPath);

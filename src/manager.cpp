@@ -22,7 +22,7 @@
   {
     auto parent = path.parent_path();
     if (parent.empty()) return;
-    std::error_code ec{};
+    std::error_code ec;
     std::filesystem::create_directories(parent, ec);
     if (ec) logger.warning(std::format("Could not create directory for {}: {}", path_to_utf8(path), ec.message()));
   }
@@ -31,14 +31,14 @@
   {
     if (path.empty()) return;
 
-    std::error_code ec{};
+    std::error_code ec;
     std::filesystem::remove(path, ec);
     if (ec) logger.warning(std::format("Could not remove autosave file {}: {}", path_to_utf8(path), ec.message()));
   }
 
   static std::vector<std::filesystem::path> path_list_load(const std::filesystem::path& path, std::string_view name)
   {
-    std::string fileData{};
+    std::string fileData;
     if (!file_text_load(path, &fileData, "rb"))
     {
       logger.warning(std::format("Could not load {} from: {}. Skipping...", name, path_to_utf8(path)));
@@ -46,7 +46,7 @@
     }
     logger.info(std::format("Loading {} from: {}", name, path_to_utf8(path)));
 
-    std::vector<std::filesystem::path> result{};
+    std::vector<std::filesystem::path> result;
     std::istringstream file(fileData);
     for (std::string line{}; std::getline(file, line);)
     {
@@ -61,7 +61,7 @@
                       std::string_view name)
   {
     ensure_parent_directory_exists(path);
-    std::ostringstream file{};
+    std::ostringstream file;
     for (auto& entry : entries)
       file << path_to_utf8(entry) << '\n';
     if (!file_text_save(path, file.str(), "wb"))
@@ -130,7 +130,7 @@
 
   Document* Manager::open(const std::filesystem::path& path, bool isNew, bool isRecent)
   {
-    std::string errorString{};
+    std::string errorString;
     documents.emplace_back(path, isNew, &errorString);
     auto pathString = path_to_utf8(path);
 
@@ -160,15 +160,15 @@
   {
     if (auto document = get(index); document)
     {
-      std::string errorString{};
-      const auto previousAutosavePath = document->autosave_path_get();
+      std::string errorString;
+      auto previousAutosavePath = document->autosave_path_get();
       auto savePath = !path.empty() ? path : document->path;
       savePath.replace_extension(".anm2");
       ensure_parent_directory_exists(savePath);
 
       if (!document->save(savePath, &errorString, saveOptions)) return false;
 
-      const auto autosavePath = document->autosave_path_get();
+      auto autosavePath = document->autosave_path_get();
       autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), previousAutosavePath),
                           autosaveFiles.end());
       if (autosavePath != previousAutosavePath)
@@ -187,7 +187,7 @@
 
   void Manager::autosave(Document& document)
   {
-    std::string errorString{};
+    std::string errorString;
     auto autosavePath = document.autosave_path_get();
     if (!document.autosave(&errorString, saveOptions)) return;
 
@@ -265,7 +265,7 @@
   {
     for (int i = 0; i < (int)documents.size(); ++i)
     {
-      std::error_code ec{};
+      std::error_code ec;
       if (std::filesystem::equivalent(documents[i].path, path, ec)) return i;
     }
     return -1;
@@ -382,7 +382,7 @@
 
     std::vector<std::filesystem::path> ordered;
     ordered.reserve(orderedEntries.size());
-    for (const auto& [pathString, _] : orderedEntries)
+    for (auto& [pathString, _] : orderedEntries)
       ordered.emplace_back(path_from_utf8(pathString));
     return ordered;
   }
@@ -390,7 +390,7 @@
   void Manager::recent_file_add(const std::filesystem::path& path)
   {
     if (path.empty()) return;
-    std::error_code ec{};
+    std::error_code ec;
     if (!std::filesystem::exists(path, ec))
     {
       logger.warning(std::format("Skipping missing recent file: {}", path_to_utf8(path)));
@@ -409,7 +409,7 @@
     auto loaded = path_list_load(recent_files_path_get(), "recent files");
     for (auto it = loaded.rbegin(); it != loaded.rend(); ++it)
     {
-      std::error_code ec{};
+      std::error_code ec;
       if (std::filesystem::exists(*it, ec))
         recentFiles[path_to_utf8(*it)] = ++recentFilesCounter;
       else

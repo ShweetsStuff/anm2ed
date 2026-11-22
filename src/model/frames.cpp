@@ -23,7 +23,7 @@
   {
     auto total = std::max(original.duration, FRAME_DURATION_MIN);
     interval = std::max(interval, FRAME_DURATION_MIN);
-    std::vector<Frame> frames{};
+    std::vector<Frame> frames;
     for (int duration = 0; duration < total; duration += interval)
     {
       auto& baked = frames.emplace_back(duration == 0 ? original : frame_clone(original));
@@ -68,7 +68,7 @@
     auto trackLength = track_length_get(track);
     if (trackLength <= 0) return;
     auto length = std::max({trackLength, track_length_get(root), frameNum, FRAME_DURATION_MIN});
-    std::vector<Frame> frames{};
+    std::vector<Frame> frames;
     for (int time = 0; time < length; ++time)
     {
       auto& frame = frames.emplace_back(frame_generate(track, (float)time));
@@ -83,21 +83,21 @@
   // returned only on its exact frame; otherwise the result is invisible.
   Frame frame_generate(const Track& track, float time)
   {
-    Frame frame{};
+    Frame frame = {};
     frame.isVisible = false;
     if (track.frames.empty()) return frame;
     time = std::max(time, 0.0f);
 
     if (track.type == ItemType::TRIGGER)
     {
-      for (const auto& trigger : track.frames)
+      for (auto& trigger : track.frames)
         if ((int)time == trigger.atFrame) return trigger;
       return frame;
     }
 
-    const Frame* next{};
-    int durationCurrent{};
-    int durationNext{};
+    const Frame* next = nullptr;
+    int durationCurrent = 0;
+    int durationNext = 0;
     for (int i = 0; i < (int)track.frames.size(); ++i)
     {
       frame = track.frames[i];
@@ -129,7 +129,7 @@
     if (track.frames.empty()) return -1;
     if (time <= 0.0f) return 0;
 
-    float duration{};
+    float duration = 0;
     for (int i = 0; i < (int)track.frames.size(); ++i)
     {
       duration += track.frames[i].duration;
@@ -142,7 +142,7 @@
   {
     if (index < 0 || index >= (int)track.frames.size()) return 0.0f;
     if (track.type == ItemType::TRIGGER) return (float)track.frames[index].atFrame;
-    float time{};
+    float time = 0;
     for (int i = 0; i < index; ++i)
       time += track.frames[i].duration;
     return time;
@@ -237,10 +237,10 @@
     constexpr glm::ivec2 CORNERS[4] = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
     glm::vec2 min{std::numeric_limits<float>::infinity()};
     glm::vec2 max{-std::numeric_limits<float>::infinity()};
-    bool isAny{};
+    bool isAny = false;
 
     for (float time = 0.0f; time < (float)animation.frameNum; time += 1.0f)
-      for (const auto& draw : animation_draws_get(
+      for (auto& draw : animation_draws_get(
                model, animation, {.time = time, .isRootTransform = isRootTransform, .library_get = library_get}))
       {
         if (draw.type != DrawType::LAYER || draw.frame.size == glm::vec2()) continue;

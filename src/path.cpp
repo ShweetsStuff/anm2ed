@@ -96,7 +96,7 @@
     if (path.empty()) return path;
     if (!path.is_absolute()) return path;
 
-    std::error_code ec{};
+    std::error_code ec;
     auto relative = std::filesystem::relative(path, ec);
     if (!ec) return relative;
     return path;
@@ -107,7 +107,7 @@
     if (path.empty()) return path;
     if (base.empty() || !path.is_absolute()) return path;
 
-    std::error_code ec{};
+    std::error_code ec;
     auto relative = std::filesystem::relative(path, base, ec);
     if (!ec) return relative;
     return path;
@@ -128,7 +128,7 @@
     if (is_path_exist(handledPath)) return handledPath;
 
     auto resolvedPath = handledPath.root_path();
-    for (const auto& part : handledPath.relative_path())
+    for (auto& part : handledPath.relative_path())
     {
       auto candidate = resolvedPath / part;
       if (is_path_exist(candidate))
@@ -138,13 +138,13 @@
       }
 
       auto parent = resolvedPath.empty() ? std::filesystem::path(".") : resolvedPath;
-      std::error_code ec{};
-      bool isFound{};
+      std::error_code ec;
+      bool isFound = false;
       if (std::filesystem::is_directory(parent, ec))
       {
         auto partLower = path_to_lower(part);
         std::filesystem::directory_iterator it(parent, ec);
-        std::filesystem::directory_iterator end{};
+        std::filesystem::directory_iterator end = {};
         for (; !ec && it != end; it.increment(ec))
           if (path_to_lower(it->path().filename()) == partLower)
           {

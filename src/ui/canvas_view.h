@@ -18,21 +18,21 @@
   {
     glm::vec2 arrow{};
     glm::vec2 mouseDelta{};
-    float wheel{};
-    float step{};
-    bool isArrowBegin{};
-    bool isArrowDown{};
-    bool isArrowEnd{};
-    bool isLeftClicked{};
-    bool isLeftDown{};
-    bool isLeftReleased{};
-    bool isRightClicked{};
-    bool isRightDown{};
-    bool isRightReleased{};
-    bool isMiddleDown{};
-    bool isZoomIn{};
-    bool isZoomOut{};
-    bool isMod{};
+    float wheel = 0;
+    float step = 0;
+    bool isArrowBegin = false;
+    bool isArrowDown = false;
+    bool isArrowEnd = false;
+    bool isLeftClicked = false;
+    bool isLeftDown = false;
+    bool isLeftReleased = false;
+    bool isRightClicked = false;
+    bool isRightDown = false;
+    bool isRightReleased = false;
+    bool isMiddleDown = false;
+    bool isZoomIn = false;
+    bool isZoomOut = false;
+    bool isMod = false;
   };
 
   CanvasInput canvas_input_get(Manager&, bool);
@@ -50,10 +50,10 @@
     glm::vec2 mousePos{};
     glm::vec2 checkerPan{};
     glm::vec2 checkerSyncPan{};
-    float checkerSyncZoom{};
-    bool isCheckerPanInitialized{};
-    bool hasPendingZoomPanAdjust{};
-    bool isFocused{};
+    float checkerSyncZoom = 0;
+    bool isCheckerPanInitialized = false;
+    bool hasPendingZoomPanAdjust = false;
+    bool isFocused = false;
 
     void checker_pan_reset(float, glm::vec2);
     void checker_pan_sync(float, glm::vec2);

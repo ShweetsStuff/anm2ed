@@ -43,8 +43,8 @@
 
   inline std::vector<std::filesystem::path> fixtures_get()
   {
-    std::vector<std::filesystem::path> fixtures{};
-    for (const auto& entry : std::filesystem::directory_iterator(CORPUS_DIR))
+    std::vector<std::filesystem::path> fixtures;
+    for (auto& entry : std::filesystem::directory_iterator(CORPUS_DIR))
       if (entry.path().extension() == ".anm2") fixtures.push_back(entry.path());
     std::ranges::sort(fixtures);
     return fixtures;
@@ -52,7 +52,7 @@
 
   inline Model model_load(const std::string& text)
   {
-    Model model{};
+    Model model = {};
     REQUIRE(model_load_string(model, text));
     return model;
   }
@@ -60,14 +60,14 @@
   // Every serialization and merge the editor can produce for a document; goldens lock each one down.
   inline std::vector<Variant> variants_get(const Model& model)
   {
-    std::vector<Variant> variants{};
+    std::vector<Variant> variants;
     for (auto [name, flags] : PRESETS)
       variants.emplace_back(name, model_serialize(model, flags));
     variants.emplace_back("save", model_to_string(model));
     for (auto [name, type] : MERGES)
     {
       auto merged = model;
-      std::set<int> sources{0, 1, 2};
+      std::set<int> sources = {0, 1, 2};
       animations_merge(merged, 0, sources, type, type == MERGE_PREPEND || type == MERGE_REPLACE,
                              {});
       variants.emplace_back(name, model_serialize(merged, SERIALIZE_ANM2ED_DEFAULT));

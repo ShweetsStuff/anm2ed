@@ -4,11 +4,11 @@
 
   class Configure
   {
-    Settings temporary{};
-    int selectedShortcut{-1};
+    Settings temporary = {};
+    int selectedShortcut = -1;
 
   public:
-    bool isSet{};
+    bool isSet = false;
 
     void reset(Settings&);
     void update(Manager&, Settings&);

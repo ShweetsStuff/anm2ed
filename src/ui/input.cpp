@@ -54,8 +54,8 @@ using namespace glm;
   bool combo_id_mapped(const std::string& label, int* id, const std::vector<int>& ids,
                        const std::vector<std::string>& labelStrings)
   {
-    std::vector<const char*> labels{};
-    for (const auto& labelString : labelStrings)
+    std::vector<const char*> labels;
+    for (auto& labelString : labelStrings)
       labels.push_back(labelString.c_str());
     if (!id) return false;
 
@@ -81,8 +81,8 @@ using namespace glm;
   EditState drag_float_persistent(const char* label, float* value, float speed, float min, float max,
                                          const char* format, ImGuiSliderFlags flags)
   {
-    static bool isEditing{};
-    static float start{NAN};
+    static bool isEditing = false;
+    static float start = NAN;
     auto persistent = value ? *value : 0;
 
     ImGui::DragFloat(label, &persistent, speed, min, max, format, flags);
@@ -112,7 +112,7 @@ using namespace glm;
   EditState drag_float2_persistent(const char* label, vec2* value, float speed, float min, float max,
                                           const char* format, ImGuiSliderFlags flags)
   {
-    static bool isEditing{};
+    static bool isEditing = false;
     static vec2 start{NAN};
     auto persistent = value ? *value : vec2();
 
@@ -142,7 +142,7 @@ using namespace glm;
 
   EditState color_edit4_persistent(const char* label, vec4* value, ImGuiColorEditFlags flags)
   {
-    static bool isEditing{};
+    static bool isEditing = false;
     static vec4 start{NAN};
     auto persistent = value ? *value : vec4();
 

@@ -21,7 +21,7 @@ static Track& layer_track_get(Model& model, int animationIndex, int layerId)
 
 static int groups_named_count(const Animation& animation, std::string_view name)
 {
-  int count{};
+  int count = 0;
   for (const auto* entries : {&animation.layers, &animation.nulls})
     groups_each(*entries, [&](const TrackGroup& group) { count += group.name == name; });
   return count;
@@ -85,7 +85,7 @@ TEST_CASE("frames_change")
   for (auto [name, type] : CHANGES)
   {
     auto model = fixture_load("02_items.anm2");
-    FrameChange change{.cropX = 2.0f, .positionY = 4.0f, .scaleX = 50.0f, .rotation = 90.0f, .tintR = 0.5f};
+    FrameChange change = {.cropX = 2.0f, .positionY = 4.0f, .scaleX = 50.0f, .rotation = 90.0f, .tintR = 0.5f};
     change.duration = 3;
     change.interpolation = Interpolation::EASE_IN;
     change.isFlipX = true;
@@ -101,8 +101,8 @@ TEST_CASE("frame_bake and frame_mix")
   frame_bake(layer_track_get(model, 0, 0), 3, 1, false, true);
   operation_check("frame_bake", model);
 
-  Frame from{};
-  Frame to{};
+  Frame from = {};
+  Frame to = {};
   to.position = {10.0f, -20.0f};
   to.skew = {30.0f, 0.0f};
   to.rotation = 90.0f;
@@ -145,7 +145,7 @@ TEST_CASE("edit layer operations")
     std::size_t uidCount;
   };
 
-  const Reference head{0, LAYER, 0};
+  const Reference head = {0, LAYER, 0};
   const Case CASES[] = {
       {"frame_insert", "02_items.anm2",
        [&](Model& anm2) { return frame_insert(anm2, {0, LAYER, 0, 0}, 0); }, 1},
@@ -195,7 +195,7 @@ TEST_CASE("edit layer operations")
       {"animations_paste", "02_items.anm2",
        [&](Model& anm2)
        {
-         std::set<int> groupIds{};
+         std::set<int> groupIds;
          auto text = animation_to_string(*anm2.animation_get(1));
          return animations_paste(anm2, text, 0, -1, groupIds, nullptr);
        },
@@ -217,7 +217,7 @@ TEST_CASE("edit layer operations")
       {"frames_change_apply", "02_items.anm2",
        [&](Model& anm2)
        {
-         FrameChange change{.positionX = 3.0f, .rotation = 10.0f};
+         FrameChange change = {.positionX = 3.0f, .rotation = 10.0f};
          return frames_change_apply(
              anm2, {.references = {{0, LAYER, 0, 1}, {0, NULL_, 0}}, .animations = {1}, .isRoot = true}, change,
              ChangeType::ADD);
@@ -227,7 +227,7 @@ TEST_CASE("edit layer operations")
        [&](Model& anm2) { return animations_merge(anm2, 0, {1}, MERGE_APPEND, true, {0}); }, 1},
   };
 
-  for (const auto& entry : CASES)
+  for (auto& entry : CASES)
   {
     INFO("operation: ", std::string(entry.name));
     auto anm2 = fixture_load(entry.fixture);
@@ -303,7 +303,7 @@ TEST_CASE("markers stay in the editor's copy and bound playback")
   CHECK(reloaded.animation_get(0)->startMarker == 2);
   CHECK(reloaded.animation_get(0)->endMarker == 5);
 
-  Playback playback{};
+  Playback playback = {};
   playback.isPlaying = true;
   playback.tick(10, 2, 6, true, 0.1f);
   CHECK(playback.time == doctest::Approx(3.0f));
@@ -325,9 +325,9 @@ TEST_CASE("isaac_issues_get counts what the game's copy changes")
 TEST_CASE("frames_property_set copies one property to the frames that have it")
 {
   auto model = fixture_load("02_items.anm2");
-  Frame source{.crop = {7, 8}, .position = {3, 4}};
-  Reference layer{0, LAYER, 0, 0};
-  Reference null{0, NULL_, 0, 0};
+  Frame source = {.crop = {7, 8}, .position = {3, 4}};
+  Reference layer = {0, LAYER, 0, 0};
+  Reference null = {0, NULL_, 0, 0};
   REQUIRE(model.frame_get(layer));
   REQUIRE(model.frame_get(null));
   auto nullCrop = model.frame_get(null)->crop;
@@ -367,8 +367,8 @@ TEST_CASE("frames_split splits every selected frame that spans the time")
 TEST_CASE("change all frame properties changes layer depth only")
 {
   auto model = fixture_load("02_items.anm2");
-  Reference layer{0, LAYER, 0, 0};
-  Reference null{0, NULL_, 0, 0};
+  Reference layer = {0, LAYER, 0, 0};
+  Reference null = {0, NULL_, 0, 0};
   frames_change_apply(model, {.references = {layer, null}}, {.depth = 2}, ChangeType::ADD);
   frames_change_apply(model, {.references = {layer, null}}, {.depth = 1}, ChangeType::SUBTRACT);
   CHECK(model.frame_get(layer)->depth == 1);
@@ -378,8 +378,8 @@ TEST_CASE("change all frame properties changes layer depth only")
 TEST_CASE("change all frame properties blurs layers and changes only animation layers' children")
 {
   auto model = model_load(file_load(TEST_DIR / "render" / "nested.anm2"));
-  Reference animationLayer{0, LAYER, 1, 0};
-  Reference spritesheetLayer{1, LAYER, 2, 0};
+  Reference animationLayer = {0, LAYER, 1, 0};
+  Reference spritesheetLayer = {1, LAYER, 2, 0};
   REQUIRE(model.frame_get(spritesheetLayer));
   frames_change_apply(model, {.references = {animationLayer, spritesheetLayer}},
                             {.blur = 8.0f, .childAnimation = "Spin", .childMode = ChildMode::ONCE, .childStart = 3},
@@ -489,7 +489,7 @@ TEST_CASE("content_remove takes what refers to an item with it")
   { content_remove(model, type, ids, spritesheetId, library_get, path_keep); };
   auto tracks_count = [](const Model& model, int layerId)
   {
-    int count{};
+    int count = 0;
     for (auto [index, animation] : model.animations_get())
       tracks_each(animation->layers, [&](const Track& track, auto*) { count += track.id == layerId; });
     return count;

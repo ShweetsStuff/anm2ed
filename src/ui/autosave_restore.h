@@ -5,9 +5,9 @@
 
   class AutosaveRestore
   {
-    PopupHelper popup{PopupHelper(LABEL_WELCOME_RESTORE_POPUP, POPUP_SMALL_NO_HEIGHT)};
-    bool isInitialized{};
-    bool isRestoreAvailable{};
+    PopupHelper popup = PopupHelper(LABEL_WELCOME_RESTORE_POPUP, POPUP_SMALL_NO_HEIGHT);
+    bool isInitialized = false;
+    bool isRestoreAvailable = false;
 
   public:
     void update(Manager&);

@@ -2,7 +2,7 @@
 
 TEST_CASE("per-fixture invariants")
 {
-  for (const auto& fixture : fixtures_get())
+  for (auto& fixture : fixtures_get())
   {
     INFO("fixture: ", fixture.filename().string());
     invariants_check(model_load(file_load(fixture)));
@@ -28,7 +28,7 @@ TEST_CASE("saved text escapes what it holds, and reads back the same")
 
 TEST_CASE("saves leave out default colors, which read back the same")
 {
-  for (const auto& fixture : fixtures_get())
+  for (auto& fixture : fixtures_get())
   {
     INFO("fixture: ", fixture.string());
     auto model = model_load(file_load(fixture));
@@ -41,7 +41,7 @@ TEST_CASE("saves leave out default colors, which read back the same")
 
 TEST_CASE("JSON documents read back as the editor's copy")
 {
-  for (const auto& fixture : fixtures_get())
+  for (auto& fixture : fixtures_get())
   {
     INFO("fixture: ", fixture.string());
     auto model = model_load(file_load(fixture));
@@ -113,8 +113,8 @@ TEST_CASE("JSON that can't be read is reported by where it is, and the rest stil
   auto text = R"({ "colour": 1, "info": { "fps": "fast" },
     "layers": [ { "name": "a", "sheet": 4 } ],
     "animations": { "Idle": { "length": 3, "root": [ { "pos": [1], "ease": "bouncy", "delay": 3 } ] } } })";
-  Model model{};
-  std::string issues{};
+  Model model = {};
+  std::string issues;
   REQUIRE(model_load_string(model, text, &issues));
   CHECK(model.animation_get(0)->frameNum == 3);
   CHECK(model.animation_get(0)->root.frames[0].duration == 3);
@@ -130,8 +130,8 @@ TEST_CASE("JSON layers can name a library listed after them in the file")
 {
   auto text = R"({ "layers": [ { "name": "shadow", "library": 0, "animation": "Small" } ],
     "libraries": [ "shared/shadows.anm2" ] })";
-  Model model{};
-  std::string issues{};
+  Model model = {};
+  std::string issues;
   REQUIRE(model_load_string(model, text, &issues));
   CHECK(issues.empty());
   CHECK(model.content.layers[0].libraryId == 0);

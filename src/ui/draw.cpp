@@ -9,8 +9,8 @@
 
   struct CheckerStart
   {
-    float position{};
-    long long index{};
+    float position = 0;
+    long long index = {};
   };
 
   static CheckerStart checker_start(float minCoord, float offset, float step)

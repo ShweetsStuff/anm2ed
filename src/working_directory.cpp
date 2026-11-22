@@ -7,7 +7,7 @@
 
   WorkingDirectory::WorkingDirectory(const std::filesystem::path& path, Type type)
   {
-    std::error_code ec{};
+    std::error_code ec;
     previous = std::filesystem::current_path(ec);
     if (ec)
     {
@@ -37,7 +37,7 @@
   {
     if (previous.empty()) return;
 
-    std::error_code ec{};
+    std::error_code ec;
     std::filesystem::current_path(previous, ec);
     if (ec)
       logger.warning(

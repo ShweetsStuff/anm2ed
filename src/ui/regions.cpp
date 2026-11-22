@@ -28,11 +28,11 @@ using namespace glm;
 
   struct RegionExportOptions
   {
-    int spritesheetId{-1};
-    int regionId{-1};
-    std::filesystem::path path{};
-    bool isMakeSpritesheet{};
-    bool isRemoveCurrent{};
+    int spritesheetId = -1;
+    int regionId = -1;
+    std::filesystem::path path;
+    bool isMakeSpritesheet = false;
+    bool isRemoveCurrent = false;
   };
 
   static void region_pivot_apply(Region& region)
@@ -133,7 +133,7 @@ using namespace glm;
       if (options.isMakeSpritesheet)
       {
         auto& spritesheets = document.model.content.spritesheets;
-        Spritesheet exported{.id = item_next_id_get(spritesheets), .path = outputPath};
+        Spritesheet exported = {.id = item_next_id_get(spritesheets), .path = outputPath};
 
         auto exportedRegion = sourceRegion;
         exportedRegion.uid = uid_next();
@@ -184,7 +184,7 @@ using namespace glm;
       auto isAfter = is_drop_after(cardMin, cardMax);
       drop_line_draw(ImGui::GetForegroundDrawList(), cardMin, cardMax, isAfter);
 
-      std::vector<int> indices{};
+      std::vector<int> indices;
       auto payloadIds = (const int*)payload->Data;
       for (int i = 0; i < payload->DataSize / (int)sizeof(int); i++)
         if (auto keyIndex = vector_index_find(state.keys, payloadIds[i]); keyIndex != -1) indices.push_back(keyIndex);
@@ -406,7 +406,7 @@ using namespace glm;
         auto selection = document.selected_ids_get(SelectionKind::REGIONS);
         auto isOne = [selection]() { return selection.size() == 1; };
 
-        Actions actions{};
+        Actions actions = {};
         actions.add(ACTION_PROPERTIES, isOne, [&]() { region_properties_open(regions, document, *selection.begin()); });
         actions.add(ACTION_ADD, {}, [&]() { region_properties_open(regions, document, -1); }, TOOLTIP_ADD_REGION);
         content_remove_action_add(actions, panel, ElementType::REGION, SelectionKind::REGIONS, spritesheetId);
@@ -453,7 +453,7 @@ using namespace glm;
                     };
                     if (!spritesheet_regions_get()) return;
                     auto nextId = item_next_id_get(*spritesheet_regions_get());
-                    std::string errorString{};
+                    std::string errorString;
                     document.edit_apply(
                         EDIT_PASTE_REGIONS, [&](Model& model)
                         { return regions_paste(model, spritesheetId, text, insertIndex, &errorString); });

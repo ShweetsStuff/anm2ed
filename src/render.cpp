@@ -46,10 +46,10 @@
     std::filesystem::remove(ffmpegTempPath, ffmpegTempError);
 #endif
 
-    std::filesystem::path audioPath{};
-    std::string audioInputArguments{};
-    std::string audioOutputArguments{"-an"};
-    std::string command{};
+    std::filesystem::path audioPath;
+    std::string audioInputArguments;
+    std::string audioOutputArguments = "-an";
+    std::string command;
     auto temporaryDirectory = framePaths.front().parent_path();
     if (temporaryDirectory.empty()) temporaryDirectory = std::filesystem::temp_directory_path();
 
@@ -202,7 +202,7 @@
   // PNG sequences go straight to their folder; other outputs collect frames in a temporary folder beside the output.
   static std::filesystem::path frames_directory_create(const RecorderOptions& options)
   {
-    std::error_code ec{};
+    std::error_code ec;
     if (options.type == RENDER_PNGS)
     {
       std::filesystem::create_directories(options.path, ec);
@@ -258,9 +258,9 @@
     auto channels = std::max(mixSpec.channels, 1);
     auto framesPerStep = (double)std::max(mixSpec.freq, 1) / (double)fps;
     auto accumulator = 0.0;
-    std::vector<float> buffer{};
+    std::vector<float> buffer;
     auto isGenerated = true;
-    for (const auto& sounds : frameSounds)
+    for (auto& sounds : frameSounds)
     {
       for (auto sound : sounds)
         audio_play(*sound, false, mixer);
@@ -315,7 +315,7 @@
                                               float scale, glm::vec4 background, bool isRootTransform)
   {
     canvas.size_set(glm::vec2(glm::max(glm::ivec2(glm::ceil(glm::vec2(bounds.z, bounds.w) * scale)), glm::ivec2(1))));
-    float zoom{};
+    float zoom = 0;
     glm::vec2 pan{};
     canvas.set_to_rect(zoom, pan, bounds);
     canvas.bind();
@@ -380,7 +380,7 @@
         toast_log(Level::ERROR, TOAST_SPRITESHEET_EMPTY);
       else
       {
-        Image sheet{};
+        Image sheet = {};
         sheet.size = first.size * glm::ivec2(layout.columns, layout.rows);
         sheet.pixels.resize((std::size_t)sheet.size.x * sheet.size.y * IMAGE_CHANNELS);
         for (int i = 0; i < (int)frames.size() && i < layout.rows * layout.columns; ++i)
@@ -410,7 +410,7 @@
   // Stops; the temporary frame folder is removed (a PNG sequence's own folder is kept).
   void Recorder::cancel()
   {
-    std::error_code ec{};
+    std::error_code ec;
     if (options.type != RENDER_PNGS && !directory.empty()) std::filesystem::remove_all(directory, ec);
     directory.clear();
     frames.clear();
@@ -424,7 +424,7 @@
   {
     auto options = recorderOptions;
     options.isIsolated = options.isBounded = true;
-    Recorder recorder{};
+    Recorder recorder = {};
     if (!recorder.start(options)) return false;
     while (!recorder.is_done())
     {
@@ -464,7 +464,7 @@
     auto size = glm::ivec2(high - low);
 
     canvas.size_set(glm::vec2(size));
-    float zoom{};
+    float zoom = 0;
     glm::vec2 pan{};
     canvas.set_to_rect(zoom, pan, glm::vec4(low, glm::vec2(size)));
     canvas.bind();
@@ -492,7 +492,7 @@
     auto is_skewed = [](const Track& root)
     { return std::ranges::any_of(root.frames, [](const Frame& frame) { return frame.skew != glm::vec2(); }); };
 
-    std::vector<int> indices{};
+    std::vector<int> indices;
     for (int i = 0; i < game.animations_count_get(); ++i)
     {
       auto& animation = *game.animation_get(i);
@@ -512,8 +512,8 @@
     auto& content = game.content;
     auto spritesheetId = item_next_id_get(content.spritesheets);
 
-    std::vector<Image> images{};
-    std::map<std::size_t, std::vector<int>> imageHashes{};
+    std::vector<Image> images;
+    std::map<std::size_t, std::vector<int>> imageHashes;
     auto image_index_get = [&](Image image)
     {
       auto hash =
@@ -524,7 +524,7 @@
       images.push_back(std::move(image));
       return (int)images.size() - 1;
     };
-    std::map<int, int> bakedLayerIds{};
+    std::map<int, int> bakedLayerIds;
     auto baked_layer_id_get = [&](int layerId)
     {
       auto [it, isNew] = bakedLayerIds.try_emplace(layerId);
@@ -561,9 +561,9 @@
         auto isForced = isRootFolded || groupRoot;
         auto layer = item_get(content.layers, track.id);
         if (!layer || (!isForced && std::ranges::none_of(track.frames, is_baked))) return {};
-        Track plain{track};
+        Track plain = track;
         plain.frames.clear();
-        Track baked{.type = ItemType::LAYER, .id = -1, .isVisible = track.isVisible};
+        Track baked = {.type = ItemType::LAYER, .id = -1, .isVisible = track.isVisible};
         auto isBaked = false;
         auto length = std::max(track_length_get(track), animation.frameNum);
         for (int time = 0; time < length; ++time)
@@ -622,7 +622,7 @@
         return baked;
       };
 
-      std::vector<TrackEntry> entries{};
+      std::vector<TrackEntry> entries;
       for (auto& entry : animation.layers)
         if (auto track = std::get_if<Track>(&entry))
         {
@@ -634,7 +634,7 @@
         {
           auto group = std::get<TrackGroup>(entry);
           auto isGroupFolded = is_skewed(group.root);
-          std::vector<Track> tracks{};
+          std::vector<Track> tracks;
           for (auto& groupTrack : group.tracks)
           {
             auto baked = track_bake(groupTrack, isGroupFolded ? &group.root : nullptr);
@@ -667,12 +667,12 @@
     if (images.empty()) return;
 
     std::vector<glm::ivec2> sizes{};
-    for (const auto& image : images)
+    for (auto& image : images)
       sizes.push_back(image.size);
     glm::ivec2 packedSize{};
     std::vector<glm::ivec2> positions{};
     rects_pack(sizes, packedSize, positions);
-    std::vector<ImagePart> parts{};
+    std::vector<ImagePart> parts;
     for (int i = 0; i < (int)images.size(); ++i)
       parts.push_back({.image = &images[i], .size = images[i].size, .destination = positions[i]});
     if (!Image::compose(parts, packedSize, false).write_png(path))
@@ -681,7 +681,7 @@
       toast_log(Level::WARNING, TOAST_BAKE_LARGE, pathUtf8, packedSize.x, packedSize.y, BAKED_SIZE_MAX);
     content.spritesheets.push_back({.id = spritesheetId, .path = path.filename()});
 
-    std::set<int> bakedIds{};
+    std::set<int> bakedIds;
     for (auto [layerId, bakedId] : bakedLayerIds)
       bakedIds.insert(bakedId);
     for (auto index : indices)

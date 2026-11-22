@@ -388,7 +388,7 @@ using namespace glm;
             ImGui::PopFont();
             auto originLabel = localize.get(region->origin == Origin::TOP_LEFT ? LABEL_REGION_ORIGIN_TOP_LEFT
                                                                                : LABEL_REGION_ORIGIN_CENTER);
-            for (const auto& line :
+            for (auto& line :
                  {localize_format(FORMAT_ID, hoveredRegionId),
                   localize_format(FORMAT_CROP, region->crop.x, region->crop.y),
                   localize_format(FORMAT_SIZE, region->size.x, region->size.y),

@@ -114,7 +114,7 @@
       auto result = popup_buttons_draw(manager, localize.get(edit.id == -1 ? BASIC_ADD : BASIC_CONFIRM));
       if (result == PopupButton::CONFIRM)
       {
-        Item item{};
+        Item item = {};
         if constexpr (std::is_same_v<Item, Layer>)
           item = item_edit_layer_get(edit);
         else
@@ -174,7 +174,7 @@
     auto& layers = document.model.content.layers;
     if (ImGui::Begin(localize.get(LABEL_LAYERS_WINDOW), &settings.windowIsLayers))
     {
-      Actions actions{};
+      Actions actions = {};
       track_items_actions_add<Layer>(actions, panel, SelectionKind::LAYERS, ElementType::LAYER_ELEMENT,
                                             TOOLTIP_ADD_LAYER, EDIT_PASTE_LAYERS, TOAST_DESERIALIZE_LAYERS_FAILED,
                                             layers_get);
@@ -209,7 +209,7 @@
     auto& nulls = document.model.content.nulls;
     if (ImGui::Begin(localize.get(LABEL_NULLS_WINDOW), &settings.windowIsNulls))
     {
-      Actions actions{};
+      Actions actions = {};
       track_items_actions_add<Null>(actions, panel, SelectionKind::NULLS, ElementType::NULL_ELEMENT,
                                            TOOLTIP_ADD_NULL, EDIT_PASTE_NULLS, TOAST_DESERIALIZE_NULLS_FAILED,
                                            nulls_get);
@@ -243,7 +243,7 @@
     if (ImGui::Begin(localize.get(LABEL_EVENTS_WINDOW), &settings.windowIsEvents))
     {
       auto selection = document.selected_ids_get(SelectionKind::EVENTS);
-      Actions actions{};
+      Actions actions = {};
       actions.add(
           ACTION_RENAME, [selection]() { return selection.size() == 1; },
           [&state, selection]() { state.newId = *selection.begin(); });
@@ -255,7 +255,7 @@
             command_push(panel,
                          [&state](Document& document)
                          {
-                           int id{};
+                           int id = 0;
                            document.edit_apply(EDIT_ADD_EVENT,
                                                [&](Model& model)
                                                {

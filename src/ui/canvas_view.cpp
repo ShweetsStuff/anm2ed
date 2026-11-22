@@ -82,7 +82,7 @@ using namespace glm;
   void tooltip_lines_draw(std::initializer_list<std::string> lines)
   {
     if (!ImGui::BeginTooltip()) return;
-    for (const auto& line : lines)
+    for (auto& line : lines)
       ImGui::TextUnformatted(line.c_str());
     ImGui::EndTooltip();
   }
@@ -184,7 +184,7 @@ using namespace glm;
     auto zoom_center_step = [&](int levelDelta)
     { zoom_step(zoom, pan, position_translate(zoom, pan, size * 0.5f), levelDelta); };
 
-    Actions actions{};
+    Actions actions = {};
     actions_undo_redo_add(actions, manager, document);
     actions.separator();
     actions.add(ACTION_CENTER_VIEW, []() { return true; }, center);

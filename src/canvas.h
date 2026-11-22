@@ -16,7 +16,7 @@
   // A box blur `radius` texels wide each way over the texture's `region` (UV min, max); outside it is clear.
   struct TextureBlur
   {
-    float radius{};
+    float radius = 0;
     glm::vec4 region{};
   };
 
@@ -53,15 +53,15 @@
     static constexpr auto BORDER_DASH_OFFSET = 0.0f;
     static constexpr auto PIVOT_COLOR = COLOR_PINK;
 
-    GLuint axisVAO{};
-    GLuint axisVBO{};
-    GLuint rectVAO{};
-    GLuint rectVBO{};
-    GLuint gridVAO{};
-    GLuint gridVBO{};
-    GLuint textureVAO{};
-    GLuint textureVBO{};
-    GLuint textureEBO{};
+    GLuint axisVAO = 0;
+    GLuint axisVBO = 0;
+    GLuint rectVAO = 0;
+    GLuint rectVBO = 0;
+    GLuint gridVAO = 0;
+    GLuint gridVBO = 0;
+    GLuint textureVAO = 0;
+    GLuint textureVBO = 0;
+    GLuint textureEBO = 0;
 
     Canvas();
     Canvas(glm::vec2);

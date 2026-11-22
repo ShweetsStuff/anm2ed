@@ -231,7 +231,7 @@
         if (auto spritesheet = spritesheet_get(document, id)) directory_open(dialog, document, spritesheet->path);
       };
 
-      Actions actions{};
+      Actions actions = {};
       actions.add(ACTION_OPEN_DIRECTORY, isOne, [&]() { open(*selection.begin()); });
       actions.add(ACTION_SET_FILE_PATH, isOne, [&]() { dialog.file_save(Dialog::SPRITESHEET_PATH_SET); });
       actions.add(ACTION_ADD, {}, [&]() { dialog.file_open(Dialog::SPRITESHEET_OPEN, true); }, TOOLTIP_ADD_SPRITESHEET);

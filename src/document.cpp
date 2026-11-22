@@ -40,7 +40,7 @@ using namespace glm;
   static std::filesystem::path absolute_path_get(const std::filesystem::path& directory, const std::filesystem::path& path)
   {
     WorkingDirectory workingDirectory(directory);
-    std::error_code ec{};
+    std::error_code ec;
     auto absolutePath = std::filesystem::weakly_canonical(directory / path_case_insensitive_find(path), ec);
     return ec ? directory / path : absolutePath;
   }
@@ -48,22 +48,22 @@ using namespace glm;
   static void library_load(const std::filesystem::path& path, LibraryData& library)
   {
     library = {};
-    std::string errorString{};
+    std::string errorString;
     model_load(library.model, path, &errorString);
     // Why it couldn't load, or what a JSON library couldn't read.
     if (!errorString.empty()) toast_log(Level::WARNING, TOAST_LIBRARY_ISSUES, path_to_utf8(path), errorString);
-    std::error_code ec{};
+    std::error_code ec;
     library.writeTime = std::filesystem::last_write_time(path, ec);
     WorkingDirectory workingDirectory(path.parent_path());
-    for (const auto& spritesheet : library.model.content.spritesheets)
+    for (auto& spritesheet : library.model.content.spritesheets)
       library.images.emplace(spritesheet.id, Image(path_case_insensitive_find(spritesheet.path)));
-    for (const auto& sound : library.model.content.sounds)
+    for (auto& sound : library.model.content.sounds)
       library.sounds.emplace(sound.id, AudioData(path_case_insensitive_find(sound.path)));
   }
 
   static uint64_t document_tab_id_next()
   {
-    static uint64_t next{1};
+    static uint64_t next = 1;
     return next++;
   }
 
@@ -91,8 +91,8 @@ using namespace glm;
   static std::string shader_source_lines_get(std::string_view label, std::string_view source)
   {
     std::string output = std::format("\n{}:\n", label);
-    int lineNumber{1};
-    std::size_t position{};
+    int lineNumber = 1;
+    std::size_t position = 0;
     while (position <= source.size())
     {
       auto end = source.find('\n', position);
@@ -142,7 +142,7 @@ using namespace glm;
   void resources_sync(Document& document, const Items& items, std::map<int, std::uint64_t>& keys,
                       std::unordered_map<int, std::filesystem::path>& paths, Load&& load)
   {
-    std::set<int> validIds{};
+    std::set<int> validIds;
     WorkingDirectory workingDirectory(document.directory_get());
     for (auto& element : items)
     {
@@ -228,7 +228,7 @@ using namespace glm;
   {
     return [this](const Model& source, const std::filesystem::path& spritesheetPath)
     {
-      for (const auto& [libraryPath, library] : libraries)
+      for (auto& [libraryPath, library] : libraries)
         if (&library.model == &source)
           return path_backslash_replace(
               path_make_relative(absolute_path_get(libraryPath.parent_path(), spritesheetPath),
@@ -241,7 +241,7 @@ using namespace glm;
   // can't show worked around.
   bool Document::file_write(const std::filesystem::path& path, std::string* errorString, Options options)
   {
-    std::optional<Model> game{};
+    std::optional<Model> game;
     if (!options.isJson)
     {
       game = animation_layers_flatten(model, library_resolver_get(), spritesheet_path_resolver_get());
@@ -340,8 +340,8 @@ using namespace glm;
       return shader_erase();
     }
 
-    std::string vertexSource{};
-    std::string fragmentSource{};
+    std::string vertexSource;
+    std::string fragmentSource;
     auto isVertexLoaded = shader_source_load(*this, shaderElement->vertex, vertexSource, LABEL_VERTEX, status,
                                                        TEXTURE_COMPATIBILITY_VERTEX);
     auto isFragmentLoaded =
@@ -359,7 +359,7 @@ using namespace glm;
     }
     if (!result.isLinked || !result.id) return shader_erase();
 
-    ShaderProgram runtime{};
+    ShaderProgram runtime = {};
     runtime.id = result.id;
     runtime.uniforms = std::move(result.uniforms);
     if (uniform_configs_trim(*shaderElement, runtime.uniforms)) hash_set();
@@ -380,7 +380,7 @@ using namespace glm;
                              [&](int id, const std::filesystem::path& path)
                              { sound_set(id, AudioData(path)); });
 
-    std::set<int> validShaderIds{};
+    std::set<int> validShaderIds;
     WorkingDirectory workingDirectory(directory_get());
     for (auto& shaderElement : model.content.shaders)
     {
@@ -407,11 +407,11 @@ using namespace glm;
     std::erase_if(shaderFragmentPaths, is_invalid);
 
     // Vector images drawn from spritesheet images no longer in use are dropped.
-    std::set<std::uint64_t> imageUids{};
-    for (const auto& spritesheet : model.content.spritesheets)
+    std::set<std::uint64_t> imageUids;
+    for (auto& spritesheet : model.content.spritesheets)
       if (auto image = texture_get(spritesheet.id)) imageUids.insert(image->uid);
-    for (const auto& [path, library] : libraries)
-      for (const auto& [id, image] : library.images)
+    for (auto& [path, library] : libraries)
+      for (auto& [id, image] : library.images)
         imageUids.insert(image.uid);
     std::erase_if(vectorImages, [&](const auto& pair) { return !imageUids.contains(pair.first.first); });
   }
@@ -454,7 +454,7 @@ using namespace glm;
   {
     auto library = libraryId == -1 ? nullptr : library_get(model, libraryId);
     auto source = libraryId == -1 ? &model : library ? &library->model : nullptr;
-    std::vector<std::string> names{};
+    std::vector<std::string> names;
     if (source)
       for (auto [index, animation] : source->animations_get())
         names.push_back(animation->name);
@@ -464,9 +464,9 @@ using namespace glm;
   // A layer draw's spritesheet image, at `scale` (see vector_image_get).
   const Image* Document::draw_image_get(const Draw& draw, float scale) const
   {
-    const Image* image{};
+    const Image* image = nullptr;
     if (!draw.source || draw.source == &model) image = texture_get(draw.spritesheetId);
-    for (const auto& [path, library] : libraries)
+    for (auto& [path, library] : libraries)
       if (&library.model == draw.source)
         if (auto found = library.images.find(draw.spritesheetId); found != library.images.end()) image = &found->second;
     return vector_image_get(image, scale);
@@ -490,14 +490,14 @@ using namespace glm;
   void Document::libraries_sync()
   {
     libraryLinks.clear();
-    std::set<std::filesystem::path> reached{};
+    std::set<std::filesystem::path> reached;
     std::vector<std::pair<const Model*, std::filesystem::path>> pending{
         {&model, std::filesystem::absolute(directory_get())}};
     while (!pending.empty())
     {
       auto [from, directory] = pending.back();
       pending.pop_back();
-      for (const auto& library : from->content.libraries)
+      for (auto& library : from->content.libraries)
       {
         auto path = absolute_path_get(directory, library.path);
         auto [it, isNew] = libraries.try_emplace(path);
@@ -516,10 +516,10 @@ using namespace glm;
   // Reloads the libraries whose file changed on disk; true when any did.
   bool Document::libraries_reload()
   {
-    bool isReloaded{};
+    bool isReloaded = false;
     for (auto& [path, library] : libraries)
     {
-      std::error_code ec{};
+      std::error_code ec;
       auto time = std::filesystem::last_write_time(path, ec);
       if (ec || time == library.writeTime) continue;
       library_load(path, library);
@@ -566,11 +566,11 @@ using namespace glm;
   // Every sound that may be playing: this document's and its libraries'.
   std::vector<const AudioData*> Document::sounds_get() const
   {
-    std::vector<const AudioData*> result{};
-    for (const auto& [id, key] : sounds)
+    std::vector<const AudioData*> result;
+    for (auto& [id, key] : sounds)
       if (auto sound = sound_get(id)) result.push_back(sound);
-    for (const auto& [path, library] : libraries)
-      for (const auto& [id, sound] : library.sounds)
+    for (auto& [path, library] : libraries)
+      for (auto& [id, sound] : library.sounds)
         result.push_back(&sound);
     return result;
   }
@@ -580,8 +580,8 @@ using namespace glm;
   std::vector<const AudioData*> Document::trigger_sounds_get(const Animation& animation, int time,
                                                                        int index) const
   {
-    std::vector<const AudioData*> result{};
-    for (const auto& [source, trigger, layerId] :
+    std::vector<const AudioData*> result;
+    for (auto& [source, trigger, layerId] :
          animation_triggers_get(model, animation, time, library_resolver_get()))
     {
       if (trigger.soundIds.empty()) continue;
@@ -589,9 +589,9 @@ using namespace glm;
       auto soundIndex = std::min(
           index >= 0 ? (std::size_t)index % count : (std::size_t)random_in_range(0.0f, (float)count), count - 1);
       auto soundId = trigger.soundIds[soundIndex];
-      const AudioData* sound{};
+      const AudioData* sound = nullptr;
       if (source == &model) sound = sound_get(soundId);
-      for (const auto& [path, library] : libraries)
+      for (auto& [path, library] : libraries)
         if (&library.model == source)
           if (auto found = library.sounds.find(soundId); found != library.sounds.end()) sound = &found->second;
       if (sound) result.push_back(sound);
@@ -652,7 +652,7 @@ using namespace glm;
 
   void Document::spritesheet_hashes_sync()
   {
-    std::set<int> validIds{};
+    std::set<int> validIds;
     for (auto& spritesheet : model.content.spritesheets)
     {
       validIds.insert(spritesheet.id);
@@ -693,7 +693,7 @@ using namespace glm;
   std::vector<Reference> Document::references_get(const Uids& uids) const
   {
     UidIndex index(model);
-    std::vector<Reference> references{};
+    std::vector<Reference> references;
     for (auto uid : uids)
       if (auto reference = index.reference_get(uid)) references.push_back(*reference);
     return references;
@@ -713,8 +713,8 @@ using namespace glm;
   // Spritesheets with unsaved pixel edits that their autosave copy doesn't have yet.
   std::set<int> Document::spritesheets_autosave_dirty_get()
   {
-    std::set<int> ids{};
-    for (const auto& spritesheet : model.content.spritesheets)
+    std::set<int> ids;
+    for (auto& spritesheet : model.content.spritesheets)
     {
       auto id = spritesheet.id;
       auto autosaveHash = spritesheetAutosaveHashes.find(id);
@@ -728,7 +728,7 @@ using namespace glm;
   // After a crash, autosaved spritesheets come back as unsaved edits; their files are left as they are.
   void Document::spritesheets_autosave_restore()
   {
-    for (const auto& spritesheet : model.content.spritesheets)
+    for (auto& spritesheet : model.content.spritesheets)
     {
       auto path = spritesheet_autosave_path_get(spritesheet);
       if (!is_path_exist(path)) continue;
@@ -738,8 +738,8 @@ using namespace glm;
 
   void Document::spritesheets_autosave_clear()
   {
-    std::error_code ec{};
-    for (const auto& spritesheet : model.content.spritesheets)
+    std::error_code ec;
+    for (auto& spritesheet : model.content.spritesheets)
       std::filesystem::remove(spritesheet_autosave_path_get(spritesheet), ec);
     spritesheetAutosaveHashes.clear();
   }
@@ -761,7 +761,7 @@ using namespace glm;
     spritesheets_changed_get();
     if (auto spritesheet = item_get(model.content.spritesheets, id))
     {
-      std::error_code ec{};
+      std::error_code ec;
       std::filesystem::remove(spritesheet_autosave_path_get(*spritesheet), ec);
     }
     spritesheetAutosaveHashes.erase(id);
@@ -770,11 +770,11 @@ using namespace glm;
   // Spritesheets whose file changed on disk since it was last loaded or saved; ones with unsaved edits are left alone.
   std::set<int> Document::spritesheets_changed_get()
   {
-    std::set<int> ids{};
+    std::set<int> ids;
     WorkingDirectory workingDirectory(directory_get());
-    for (const auto& spritesheet : model.content.spritesheets)
+    for (auto& spritesheet : model.content.spritesheets)
     {
-      std::error_code ec{};
+      std::error_code ec;
       auto time = std::filesystem::last_write_time(path_case_insensitive_find(spritesheet.path), ec);
       if (ec) continue;
       auto [it, isNew] = textureWriteTimes.try_emplace(spritesheet.id, time);
@@ -803,7 +803,7 @@ using namespace glm;
   // Rasterizes SVG spritesheets: each is written as a PNG beside it (as drawn now), and points at the PNG.
   void Document::spritesheets_vector_convert(const std::set<int>& ids)
   {
-    std::set<int> converted{};
+    std::set<int> converted;
     edit_apply(EDIT_CONVERT_SVG_SPRITESHEETS,
                [&](Model& model)
                {
@@ -890,7 +890,7 @@ using namespace glm;
   // Combo entries for a content kind (regions are those of layer `layerId`'s spritesheet); all but spritesheets start with None.
   Choices Document::choices_get(SelectionKind kind, int layerId) const
   {
-    Choices choices{};
+    Choices choices = {};
     if (kind != SelectionKind::SPRITESHEETS)
     {
       choices.ids.push_back(-1);
@@ -898,7 +898,7 @@ using namespace glm;
     }
     auto add = [&](const auto& items, auto&& label_get)
     {
-      for (const auto& item : items)
+      for (auto& item : items)
       {
         choices.ids.push_back(item.id);
         choices.labels.push_back(label_get(item));
@@ -1014,7 +1014,7 @@ using namespace glm;
 
   std::set<int> Document::animations_selected_get() const
   {
-    std::set<int> indices{};
+    std::set<int> indices;
     for (auto reference : selected_get(SelectionKind::ANIMATIONS))
       indices.insert(reference.animationIndex);
     return indices;
@@ -1022,7 +1022,7 @@ using namespace glm;
 
   void Document::animations_selected_set(const std::set<int>& indices)
   {
-    std::set<Reference> references{};
+    std::set<Reference> references;
     for (auto index : indices)
       references.insert({index});
     selected_set(SelectionKind::ANIMATIONS, references);
@@ -1030,7 +1030,7 @@ using namespace glm;
 
   std::set<Reference> Document::item_frame_references_get(Reference itemReference) const
   {
-    std::set<Reference> result{};
+    std::set<Reference> result;
     itemReference.frameIndex = -1;
     auto item = itemReference.itemType == NONE ? nullptr : model.track_get(itemReference);
     for (int frameIndex = 0; item && frameIndex < (int)item->frames.size(); ++frameIndex)
@@ -1047,7 +1047,7 @@ using namespace glm;
     if (auto reference = reference_get(); selectedItems.empty() && reference.itemType != NONE)
       selectedItems.insert(item_reference_get(reference));
 
-    std::set<Reference> result{};
+    std::set<Reference> result;
     for (auto itemReference : selectedItems)
       result.merge(item_frame_references_get(itemReference));
     return result;
@@ -1066,7 +1066,7 @@ using namespace glm;
   void Document::frame_references_set(std::set<Reference> frameReferences)
   {
     std::erase_if(frameReferences, [&](const Reference& frame) { return !model.frame_get(frame); });
-    std::set<Reference> tracks{};
+    std::set<Reference> tracks;
     for (auto frame : frameReferences)
       tracks.insert(item_reference_get(frame));
     selected_set(SelectionKind::FRAMES, frameReferences);
@@ -1088,7 +1088,7 @@ using namespace glm;
     if (selectedReferences.empty() && reference.itemType != NONE)
       selectedReferences.insert(item_reference_get(reference));
 
-    std::vector<Reference> result{};
+    std::vector<Reference> result;
     for (auto itemReference : selectedReferences)
     {
       if (itemReference.itemType != LAYER) return {};
@@ -1102,11 +1102,11 @@ using namespace glm;
     auto& items = model.content.spritesheets;
     auto directory = directory_get();
 
-    std::vector<std::pair<std::filesystem::path, Image>> loaded{};
+    std::vector<std::pair<std::filesystem::path, Image>> loaded;
     for (auto& path : paths)
     {
       auto storagePath = path_backslash_handle(path);
-      std::optional<WorkingDirectory> workingDirectory{};
+      std::optional<WorkingDirectory> workingDirectory;
       if (!storagePath.is_absolute()) workingDirectory.emplace(directory);
       auto texture = Image(path_case_insensitive_find(storagePath));
       if (!texture.is_valid())
@@ -1120,7 +1120,7 @@ using namespace glm;
 
     edit_begin(EDIT_ADD_SPRITESHEET);
 
-    std::set<int> added{};
+    std::set<int> added;
     for (auto& [relativePath, texture] : loaded)
     {
       auto& element =
@@ -1143,7 +1143,7 @@ using namespace glm;
 
     edit_begin(EDIT_ADD_SOUND);
 
-    std::set<int> added{};
+    std::set<int> added;
     for (auto& path : paths)
     {
       if (path.empty()) continue;
@@ -1163,7 +1163,7 @@ using namespace glm;
 
   void Document::libraries_add(const std::vector<std::filesystem::path>& paths)
   {
-    std::set<int> added{};
+    std::set<int> added;
     edit_apply(
         EDIT_ADD_LIBRARY,
         [&](Model& model)

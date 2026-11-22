@@ -10,7 +10,7 @@
 
 TEST_CASE("Image png round trip and uid tracking")
 {
-  const std::vector<uint8_t> pixels{255, 0, 0, 255, 0, 255, 0, 128, 0, 0, 255, 0, 10, 20, 30, 40};
+  const std::vector<uint8_t> pixels = {255, 0, 0, 255, 0, 255, 0, 128, 0, 0, 255, 0, 10, 20, 30, 40};
   Image image(pixels.data(), {2, 2});
   REQUIRE(image.is_valid());
 
@@ -45,8 +45,8 @@ TEST_CASE("AudioData holds file bytes")
 
 TEST_CASE("AssetStore keys assets by content")
 {
-  AssetStore store{};
-  const std::vector<uint8_t> pixels{1, 2, 3, 4};
+  AssetStore store = {};
+  const std::vector<uint8_t> pixels = {1, 2, 3, 4};
   auto key = store.image_add(Image(pixels.data(), {1, 1}));
   CHECK(key != 0);
   CHECK(store.image_add(Image(pixels.data(), {1, 1})) == key);
@@ -91,7 +91,7 @@ TEST_CASE("SVG spritesheets compose into SVGs that draw the same")
   CHECK(swapped.pixel_read({1.0f, 1.0f}) == glm::vec4());
 
   // A PNG part is embedded as an image, pixel for pixel; composing the result again still works.
-  const std::vector<uint8_t> pixels{255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255};
+  const std::vector<uint8_t> pixels = {255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255};
   Image raster(pixels.data(), {2, 2});
   auto mixed = Image::compose({{&swapped, {}, swapped.size, {}}, {&raster, {}, raster.size, {32, 0}}}, {34, 16}, true);
   REQUIRE(mixed.is_vector());
@@ -123,8 +123,8 @@ TEST_CASE("Embedded resources load")
   for (auto& info : FRIENDS)
   {
     INFO("friend: ", info.name);
-    Model model{};
-    std::string errorString{};
+    Model model = {};
+    std::string errorString;
     CHECK(model_load_string(model, std::string_view((const char*)info.anm2->data, info.anm2->size), &errorString));
     CHECK(model.animations_count_get() > 0);
     CHECK(Image(info.png->data, info.png->size).is_valid());

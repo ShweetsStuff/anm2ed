@@ -134,9 +134,9 @@ using namespace glm;
   // A read-only row under an expanded animation layer: one track of the child animation it plays.
   struct PeekRow
   {
-    const Model* source{};
-    const Animation* child{};
-    const Track* track{};
+    const Model* source = nullptr;
+    const Animation* child = nullptr;
+    const Track* track = nullptr;
   };
 
   Reference row_item_reference_get(const TimelineRow&);
@@ -152,32 +152,32 @@ using namespace glm;
     Model& model;
     Playback& playback;
     Reference reference;
-    const Animation* animation{};
-    float rowFrameChildHeight{};
-    bool isLightTheme{};
-    bool isTextPushed{};
+    const Animation* animation = nullptr;
+    float rowFrameChildHeight = 0;
+    bool isLightTheme = false;
+    bool isTextPushed = false;
 
-    ImVec4 iconTintDefault{};
-    ImVec4 itemIconTint{};
-    ImVec4 frameBorderColor{};
-    ImVec4 frameBorderColorReferenced{};
-    ImVec4 frameMultipleOverlayColor{};
-    ImVec4 textMultipleColor{};
-    ImVec4 playheadLineColor{};
-    ImVec4 playheadIconTint{};
-    ImVec4 timelineBackgroundColor{};
-    ImVec4 timelinePlayheadRectColor{};
-    ImVec4 timelineTickColor{};
-    ImVec4 itemTextColor{};
-    std::optional<int> frameSplitTimeAtCursor{};
+    ImVec4 iconTintDefault;
+    ImVec4 itemIconTint;
+    ImVec4 frameBorderColor;
+    ImVec4 frameBorderColorReferenced;
+    ImVec4 frameMultipleOverlayColor;
+    ImVec4 textMultipleColor;
+    ImVec4 playheadLineColor;
+    ImVec4 playheadIconTint;
+    ImVec4 timelineBackgroundColor;
+    ImVec4 timelinePlayheadRectColor;
+    ImVec4 timelineTickColor;
+    ImVec4 itemTextColor;
+    std::optional<int> frameSplitTimeAtCursor;
 
-    std::optional<Reference> frameMoveDropTarget{};
-    float playheadLineCenterX{};
-    float playheadLineTopY{};
-    bool isPlayheadLineSet{};
-    ImVec2 frameBoxClipMin{};
-    ImVec2 frameBoxClipMax{};
-    bool isFrameBoxClipSet{};
+    std::optional<Reference> frameMoveDropTarget;
+    float playheadLineCenterX = 0;
+    float playheadLineTopY = 0;
+    bool isPlayheadLineSet = false;
+    ImVec2 frameBoxClipMin;
+    ImVec2 frameBoxClipMax;
+    bool isFrameBoxClipSet = false;
 
     const Track* item_get(int type, int id = -1, int groupType = NONE, int groupId = -1);
     const Frame* frame_get();

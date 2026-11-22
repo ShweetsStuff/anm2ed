@@ -9,10 +9,10 @@
 
   struct Rect
   {
-    int x{};
-    int y{};
-    int w{};
-    int h{};
+    int x = 0;
+    int y = 0;
+    int w = 0;
+    int h = 0;
   };
 
   static bool is_rect_intersecting(const Rect& a, const Rect& b)
@@ -27,7 +27,7 @@
 
   static void free_rects_split(std::vector<Rect>& freeRects, const Rect& used)
   {
-    std::vector<Rect> next{};
+    std::vector<Rect> next;
     next.reserve(freeRects.size() * 2);
     for (auto& free : freeRects)
     {
@@ -74,7 +74,7 @@
   {
     int bestShort = std::numeric_limits<int>::max();
     int bestLong = std::numeric_limits<int>::max();
-    bool isFound{};
+    bool isFound = false;
     for (auto& free : freeRects)
     {
       if (size.x > free.w || size.y > free.h) continue;
@@ -98,7 +98,7 @@
 
     glm::ivec2 maxSize{};
     glm::ivec2 sumSize{};
-    std::int64_t totalArea{};
+    std::int64_t totalArea = 0;
     for (auto& size : sizes)
     {
       maxSize = glm::max(maxSize, size);
@@ -116,7 +116,7 @@
     {
       std::vector<glm::ivec2> candidate(sizes.size());
       glm::ivec2 used{};
-      bool isValid{};
+      bool isValid = false;
       for (int height = std::max(maxSize.y, (int)std::ceil((double)totalArea / width)); height <= sumSize.y && !isValid;
            ++height)
       {
@@ -125,7 +125,7 @@
         isValid = true;
         for (int i = 0; i < (int)sizes.size() && isValid; ++i)
         {
-          Rect rect{};
+          Rect rect = {};
           isValid = rect_insert(freeRects, sizes[i], rect);
           candidate[i] = {rect.x, rect.y};
           used = glm::max(used, glm::ivec2(rect.x + rect.w, rect.y + rect.h));

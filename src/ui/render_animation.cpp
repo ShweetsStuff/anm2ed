@@ -39,8 +39,8 @@
     {
       if (auto item = document.model.track_get(reference))
       {
-        int duration{};
-        int frameIndex{};
+        int duration = 0;
+        int frameIndex = 0;
         for (auto& frame : item->frames)
         {
           if (frameIndex == frameReferences.begin()->frameIndex) manager.recordingStart = duration;
@@ -99,7 +99,7 @@
 
     auto widgetSize = widget_size_with_row_get(2);
 
-    Dialog::Type dialogType{Dialog::NONE};
+    Dialog::Type dialogType = Dialog::NONE;
     switch (type)
     {
       case RENDER_PNGS:

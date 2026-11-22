@@ -15,7 +15,7 @@
   AudioData::AudioData(const std::filesystem::path& path)
   {
     std::ifstream file(path, std::ios::binary);
-    std::vector<unsigned char> data{std::istreambuf_iterator<char>(file), {}};
+    std::vector<unsigned char> data = {std::istreambuf_iterator<char>(file), {}};
     *this = AudioData(data.data(), data.size());
   }
 

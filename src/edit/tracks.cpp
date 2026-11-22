@@ -38,9 +38,9 @@
     auto entries = track_entries_edit(model, animationIndex, type);
     if (!entries) return {};
 
-    int nextId{};
+    int nextId = 0;
     groups_each(*entries, [&](const TrackGroup& group) { nextId = std::max(nextId, group.id + 1); });
-    TrackGroup group{.id = nextId, .name = name};
+    TrackGroup group = {.id = nextId, .name = name};
 
     auto insertIndex = -1;
     for (int i = 0; i < (int)entries->size(); ++i)
@@ -68,8 +68,8 @@
     auto entries = track_entries_edit(model, animationIndex, type);
     if (!entries) return {};
 
-    std::vector<Track> movedTracks{};
-    std::vector<TrackEntry> movedGroups{};
+    std::vector<Track> movedTracks;
+    std::vector<TrackEntry> movedGroups;
     std::erase_if(*entries,
                   [&](TrackEntry& entry)
                   {
@@ -138,7 +138,7 @@
       movedTracks.clear();
     }
 
-    std::vector<TrackEntry> topMoved{};
+    std::vector<TrackEntry> topMoved;
     for (auto& track : movedTracks)
       topMoved.emplace_back(std::move(track));
     topMoved.insert(topMoved.end(), std::make_move_iterator(movedGroups.begin()),

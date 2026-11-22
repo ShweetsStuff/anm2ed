@@ -9,7 +9,7 @@
   {
     glm::vec2 previousMousePos{};
     glm::vec2 cropAnchor{};
-    int hoveredRegionId{-1};
+    int hoveredRegionId = -1;
 
   public:
     void update(Manager&, Settings&, Resources&);

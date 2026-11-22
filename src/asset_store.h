@@ -10,8 +10,8 @@
   // entries live until the document closes so any step can be restored.
   class AssetStore
   {
-    std::unordered_map<std::uint64_t, Image> images{};
-    std::unordered_map<std::uint64_t, AudioData> audio{};
+    std::unordered_map<std::uint64_t, Image> images;
+    std::unordered_map<std::uint64_t, AudioData> audio;
 
   public:
     std::uint64_t image_add(Image);

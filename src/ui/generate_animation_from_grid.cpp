@@ -89,7 +89,7 @@ using namespace glm;
         auto sourceTexture = layer ? document.texture_get(layer->spritesheetId) : nullptr;
         if (sourceTexture && sourceTexture->is_valid())
         {
-          Track previewTrack{};
+          Track previewTrack = {};
           frames_generate_from_grid(previewTrack, startPosition, size, pivot, columns, count, delay);
 
           auto length = std::max(track_length_get(previewTrack), FRAME_DURATION_MIN);

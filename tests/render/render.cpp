@@ -36,7 +36,7 @@ static void golden_image_check(const std::string& name)
   Image golden(goldenPath);
   REQUIRE(golden.is_valid());
   REQUIRE(actual.size == golden.size);
-  int mismatches{};
+  int mismatches = 0;
   for (std::size_t i = 0; i < actual.pixels.size(); ++i)
     mismatches += std::abs((int)actual.pixels[i] - (int)golden.pixels[i]) > CHANNEL_TOLERANCE;
   CHECK((double)mismatches / (double)actual.pixels.size() <= MISMATCH_RATIO_MAX);
@@ -44,11 +44,11 @@ static void golden_image_check(const std::string& name)
 
 struct RenderFixture
 {
-  HeadlessGL gl{};
-  std::optional<Document> document{};
-  std::optional<ShaderProgram> shader{};
-  std::optional<Canvas> canvas{};
-  const Animation* animation{};
+  HeadlessGL gl = {};
+  std::optional<Document> document;
+  std::optional<ShaderProgram> shader;
+  std::optional<Canvas> canvas;
+  const Animation* animation = nullptr;
   glm::vec4 bounds{};
 
   explicit RenderFixture(const char* file)
@@ -255,7 +255,7 @@ TEST_CASE("a Rebirth save flattens animation layers for the game")
 // The game's copy draws what the editor does: skew, blur and a skewed root baked into a spritesheet beside the save.
 TEST_CASE("the game's copy bakes skew and blur into a spritesheet that draws the same")
 {
-  HeadlessGL gl{};
+  HeadlessGL gl = {};
   if (!gl.is_valid()) return;
   auto directory = std::filesystem::temp_directory_path() / "anm2ed_bake";
   std::filesystem::remove_all(directory);
@@ -278,7 +278,7 @@ TEST_CASE("the game's copy bakes skew and blur into a spritesheet that draws the
   REQUIRE(document.is_valid());
   REQUIRE(document.save(directory / "saved.anm2"));
   CHECK(std::filesystem::exists(directory / "saved.baked.png"));
-  std::string saved{};
+  std::string saved;
   {
     std::ifstream file(directory / "saved.anm2");
     saved.assign(std::istreambuf_iterator<char>(file), {});
@@ -310,7 +310,7 @@ TEST_CASE("the game's copy bakes skew and blur into a spritesheet that draws the
                                                    1.0f, glm::vec4(0.0f), true);
       REQUIRE(actual.size() == expected.size());
       CHECK(std::ranges::any_of(expected, [](uint8_t channel) { return channel != 0; }));
-      int mismatches{};
+      int mismatches = 0;
       for (std::size_t i = 0; i < actual.size(); ++i)
         mismatches += std::abs((int)actual[i] - (int)expected[i]) > CHANNEL_TOLERANCE;
       CHECK((double)mismatches / (double)actual.size() <= MISMATCH_RATIO_MAX);

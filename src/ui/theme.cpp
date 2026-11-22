@@ -2,19 +2,19 @@
 
 #include <imgui/imgui.h>
 
-  constexpr ImVec4 COLOR_LIGHT_BUTTON{0.98f, 0.98f, 0.98f, 1.0f};
-  constexpr ImVec4 COLOR_LIGHT_TITLE_BG{0.78f, 0.78f, 0.78f, 1.0f};
-  constexpr ImVec4 COLOR_LIGHT_TITLE_BG_ACTIVE{0.64f, 0.64f, 0.64f, 1.0f};
-  constexpr ImVec4 COLOR_LIGHT_TITLE_BG_COLLAPSED{0.74f, 0.74f, 0.74f, 1.0f};
-  constexpr ImVec4 COLOR_LIGHT_TABLE_HEADER{0.78f, 0.78f, 0.78f, 1.0f};
-  constexpr ImVec4 COLOR_LIGHT_TAB{0.74f, 0.74f, 0.74f, 1.0f};
-  constexpr ImVec4 COLOR_LIGHT_TAB_HOVERED{0.82f, 0.82f, 0.82f, 1.0f};
-  constexpr ImVec4 COLOR_LIGHT_TAB_SELECTED{0.92f, 0.92f, 0.92f, 1.0f};
-  constexpr ImVec4 COLOR_LIGHT_TAB_DIMMED{0.70f, 0.70f, 0.70f, 1.0f};
-  constexpr ImVec4 COLOR_LIGHT_TAB_DIMMED_SELECTED{0.86f, 0.86f, 0.86f, 1.0f};
-  constexpr ImVec4 COLOR_LIGHT_TAB_OVERLINE{0.55f, 0.55f, 0.55f, 1.0f};
-  constexpr ImVec4 COLOR_LIGHT_TAB_DIMMED_OVERLINE{0.50f, 0.50f, 0.50f, 1.0f};
-  constexpr ImVec4 COLOR_LIGHT_CHECK_MARK{0.0f, 0.0f, 0.0f, 1.0f};
+  constexpr ImVec4 COLOR_LIGHT_BUTTON = {0.98f, 0.98f, 0.98f, 1.0f};
+  constexpr ImVec4 COLOR_LIGHT_TITLE_BG = {0.78f, 0.78f, 0.78f, 1.0f};
+  constexpr ImVec4 COLOR_LIGHT_TITLE_BG_ACTIVE = {0.64f, 0.64f, 0.64f, 1.0f};
+  constexpr ImVec4 COLOR_LIGHT_TITLE_BG_COLLAPSED = {0.74f, 0.74f, 0.74f, 1.0f};
+  constexpr ImVec4 COLOR_LIGHT_TABLE_HEADER = {0.78f, 0.78f, 0.78f, 1.0f};
+  constexpr ImVec4 COLOR_LIGHT_TAB = {0.74f, 0.74f, 0.74f, 1.0f};
+  constexpr ImVec4 COLOR_LIGHT_TAB_HOVERED = {0.82f, 0.82f, 0.82f, 1.0f};
+  constexpr ImVec4 COLOR_LIGHT_TAB_SELECTED = {0.92f, 0.92f, 0.92f, 1.0f};
+  constexpr ImVec4 COLOR_LIGHT_TAB_DIMMED = {0.70f, 0.70f, 0.70f, 1.0f};
+  constexpr ImVec4 COLOR_LIGHT_TAB_DIMMED_SELECTED = {0.86f, 0.86f, 0.86f, 1.0f};
+  constexpr ImVec4 COLOR_LIGHT_TAB_OVERLINE = {0.55f, 0.55f, 0.55f, 1.0f};
+  constexpr ImVec4 COLOR_LIGHT_TAB_DIMMED_OVERLINE = {0.50f, 0.50f, 0.50f, 1.0f};
+  constexpr ImVec4 COLOR_LIGHT_CHECK_MARK = {0.0f, 0.0f, 0.0f, 1.0f};
   constexpr auto FRAME_BORDER_SIZE = 1.0f;
 
   void theme_set(Theme theme)

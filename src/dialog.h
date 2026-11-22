@@ -79,11 +79,11 @@
 
 #undef DIALOG_LIST
 
-    SDL_Window* window{};
-    std::filesystem::path path{};
-    std::vector<std::filesystem::path> paths{};
-    Type type{NONE};
-    int selectedFilter{-1};
+    SDL_Window* window = nullptr;
+    std::filesystem::path path;
+    std::vector<std::filesystem::path> paths;
+    Type type = NONE;
+    int selectedFilter = -1;
 
     Dialog() = default;
     Dialog(SDL_Window*);

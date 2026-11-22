@@ -9,8 +9,8 @@
 
   class ItemProperties
   {
-    PopupHelper popup{PopupHelper(LABEL_TIMELINE_PROPERTIES_POPUP, POPUP_SMALL_NO_HEIGHT)};
-    Manager::ItemEdit edit{};
+    PopupHelper popup = PopupHelper(LABEL_TIMELINE_PROPERTIES_POPUP, POPUP_SMALL_NO_HEIGHT);
+    Manager::ItemEdit edit = {};
 
     void reset();
 

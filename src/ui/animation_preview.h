@@ -15,24 +15,24 @@
   {
     MIX_Mixer* mixer = MIX_CreateMixerDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
     AudioStream audioStream = AudioStream(mixer);
-    bool wasPlaybackPlaying{};
-    int soundFrame{-1};
-    bool isMoveDragging{};
+    bool wasPlaybackPlaying = false;
+    int soundFrame = -1;
+    bool isMoveDragging = false;
     glm::vec2 moveOffset{};
     glm::vec2 nullRectScaleAnchor{};
-    Recorder recorder{};
+    Recorder recorder = {};
     glm::vec2 recordSize{};
     glm::vec2 recordPan{};
-    float recordZoom{};
+    float recordZoom = 0;
 
     // Where each item's pivot is at every frame of the animation, kept until the document or view changes.
     struct PivotPath
     {
-      Draw item{};
+      Draw item = {};
       std::vector<glm::vec2> points{};
     };
-    std::vector<PivotPath> pivotPaths{};
-    std::tuple<std::uint64_t, std::uint64_t, int, bool> pivotPathsKey{};
+    std::vector<PivotPath> pivotPaths;
+    std::tuple<std::uint64_t, std::uint64_t, int, bool> pivotPathsKey;
 
     void recording_start(Manager&, Settings&, Document&, const Animation*);
     void recording_stop(Manager&, Document&);

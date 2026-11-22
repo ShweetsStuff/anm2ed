@@ -28,7 +28,7 @@
 
   bool TimelineContext::is_frames_reverse_available(std::set<Reference> selectedFrames)
   {
-    std::map<Reference, int> counts{};
+    std::map<Reference, int> counts;
     std::erase_if(selectedFrames, is_trigger_reference);
     for (auto frameReference : selectedFrames)
     {
@@ -67,7 +67,7 @@
       const Document& targetDocument, const Animation& targetAnimation, BakeIntoOtherFramesTarget target,
       bool isLayers, bool isNulls)
   {
-    std::set<Reference> result{};
+    std::set<Reference> result;
     auto animationIndex = targetDocument.reference_get().animationIndex;
     if (target == BakeIntoOtherFramesTarget::CURRENT_SELECTION)
     {
@@ -121,8 +121,8 @@
 
   void TimelineContext::item_remove()
   {
-    std::map<int, std::set<int>> ids{};
-    std::map<int, std::set<int>> groupIds{};
+    std::map<int, std::set<int>> ids;
+    std::map<int, std::set<int>> groupIds;
     for (auto row : selected_row_references_get())
       if (row.type == LAYER || row.type == NULL_) (row.isGroup ? groupIds : ids)[row.type].insert(row.id);
     if (!animation || (ids.empty() && groupIds.empty())) return;
@@ -144,11 +144,11 @@
                   { return itemReference.itemType != LAYER && itemReference.itemType != NULL_; });
     if (selectedItems.empty()) return std::vector<Reference>{};
     auto itemType = selectedItems.begin()->itemType;
-    for (const auto& itemReference : selectedItems)
+    for (auto& itemReference : selectedItems)
       if (itemReference.itemType != itemType) return std::vector<Reference>{};
 
-    std::vector<Reference> result{};
-    for (const auto& row : timeline_item_rows_get())
+    std::vector<Reference> result;
+    for (auto& row : timeline_item_rows_get())
     {
       if (row.isGroup || row.type != itemType) continue;
       auto itemReference = item_reference_get(row.type, row.id, NONE, -1);
@@ -163,7 +163,7 @@
   {
     auto targetReferences = item_references_groupable_get();
     if (targetReferences.empty()) return;
-    std::set<int> ids{};
+    std::set<int> ids;
     for (auto itemReference : targetReferences)
       ids.insert(itemReference.itemID);
     edit_push(
@@ -192,18 +192,18 @@
         targetRow.type != TRIGGER)
       return;
 
-    std::set<int> ids{};
-    std::set<int> groupIds{};
-    for (const auto& row : draggedRows)
+    std::set<int> ids;
+    std::set<int> groupIds;
+    for (auto& row : draggedRows)
       (row.isGroup ? groupIds : ids).insert(row.id);
     RowTarget target{targetRow.isGroup, targetRow.type, targetRow.id,
                            targetRow.type == ROOT ? -1 : targetRow.groupId};
     auto animationIndex = reference.animationIndex;
-    std::set<Reference> tracks{};
-    std::set<Reference> groups{};
-    for (const auto& row : draggedRows)
+    std::set<Reference> tracks;
+    std::set<Reference> groups;
+    for (auto& row : draggedRows)
       (row.isGroup ? groups : tracks).insert(row_selection_reference_get(row));
-    Selection moved{};
+    Selection moved = {};
     selection_references_set(moved, model, SelectionKind::TRACKS, tracks);
     selection_references_set(moved, model, SelectionKind::GROUPS, groups);
     if (!tracks.empty()) selection_focus_set(moved, model, *tracks.begin());
@@ -238,7 +238,7 @@
   {
     if (!animation || selectedFrames.empty()) return;
 
-    std::string clipboardString{};
+    std::string clipboardString;
     for (auto frameReference : selectedFrames)
     {
       auto frame = model.frame_get(frameReference);

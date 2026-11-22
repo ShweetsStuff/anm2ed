@@ -82,7 +82,7 @@ using namespace glm;
       auto events = document.choices_get(SelectionKind::EVENTS);
       auto sounds = document.choices_get(SelectionKind::SOUNDS);
       auto shaders = document.choices_get(SelectionKind::SHADERS);
-      std::vector<const char*> interpolationLabels{};
+      std::vector<const char*> interpolationLabels;
       for (auto label : INTERPOLATION_LABELS)
         interpolationLabels.push_back(localize.get(label));
 
@@ -201,7 +201,7 @@ using namespace glm;
                                displayFrame.size == frame->size && displayFrame.pivot == frame->pivot;
             for (auto& field : VEC2_FIELDS)
             {
-              const auto& source = field.isRegionField ? displayFrame : useFrame;
+              auto& source = field.isRegionField ? displayFrame : useFrame;
               auto value = frame ? source.*field.member : vec2();
               // An animation layer's pivot is where its child's origin goes; it has no crop or size.
               ImGui::BeginDisabled(field.isRegionField && (type == ROOT || type == NULL_ || isRegionSet ||
@@ -352,7 +352,7 @@ using namespace glm;
                   combo_string_mapped(localize.get(LABEL_ANIMATION), &useFrame.childAnimation, values, labels);
               ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHILD_ANIMATION));
 
-              std::vector<const char*> modeLabels{};
+              std::vector<const char*> modeLabels;
               for (auto label : CHILD_MODE_LABELS)
                 modeLabels.push_back(localize.get(label));
               auto mode = (int)useFrame.childMode;

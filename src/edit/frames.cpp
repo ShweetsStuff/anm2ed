@@ -9,7 +9,7 @@
 
   std::map<Reference, std::set<int>> frames_by_track_get(const std::set<Reference>& frames)
   {
-    std::map<Reference, std::set<int>> result{};
+    std::map<Reference, std::set<int>> result;
     for (auto frame : frames)
     {
       auto index = std::exchange(frame.frameIndex, -1);
@@ -20,7 +20,7 @@
 
   static Uids frames_uids_get(const Track& track, int start, int count)
   {
-    Uids uids{};
+    Uids uids = {};
     for (int i = std::max(start, 0); i < std::min(start + count, (int)track.frames.size()); ++i)
       uids.push_back(track.frames[i].uid);
     return uids;
@@ -34,7 +34,7 @@
     if (track->type == ItemType::TRIGGER)
     {
       if (std::ranges::any_of(track->frames, [&](const Frame& trigger) { return trigger.atFrame == time; })) return {};
-      Frame trigger{};
+      Frame trigger = {};
       trigger.atFrame = time;
       track->frames.push_back(trigger);
       frames_sort_by_at_frame(*track);
@@ -62,15 +62,15 @@
 
   Uids frames_duplicate(Model& model, const std::set<Reference>& frames, Reference focus)
   {
-    Uids uids{};
-    std::uint64_t focusUid{};
+    Uids uids = {};
+    std::uint64_t focusUid = 0;
     for (auto& [trackReference, indices] : frames_by_track_get(frames))
     {
       auto track = model.track_edit(trackReference);
       if (!track) continue;
 
-      std::vector<Frame> copies{};
-      int lastIndex{-1};
+      std::vector<Frame> copies;
+      int lastIndex = -1;
       for (auto index : indices)
       {
         if (index < 0 || index >= (int)track->frames.size()) continue;
@@ -82,7 +82,7 @@
       }
       if (copies.empty()) continue;
 
-      for (const auto& copy : copies)
+      for (auto& copy : copies)
         uids.push_back(copy.uid);
       track->frames.insert(track->frames.begin() + lastIndex + 1, copies.begin(), copies.end());
     }
@@ -100,7 +100,7 @@
       auto track = model.track_edit(trackReference);
       if (!track || indices.size() < 2) continue;
 
-      std::vector<Frame> reversed{};
+      std::vector<Frame> reversed;
       for (auto it = indices.rbegin(); it != indices.rend(); ++it)
         if (*it >= 0 && *it < (int)track->frames.size())
         {
@@ -116,13 +116,13 @@
   Uids frames_bake(Model& model, const std::set<Reference>& frames, int interval, bool isRoundScale,
                    bool isRoundRotation)
   {
-    Uids uids{};
+    Uids uids = {};
     for (auto& [trackReference, indices] : frames_by_track_get(frames))
     {
       auto track = model.track_edit(trackReference);
       if (!track) continue;
 
-      int inserted{};
+      int inserted = 0;
       for (auto originalIndex : indices)
       {
         auto index = originalIndex + inserted;
@@ -163,7 +163,7 @@
   // Splits each of the frames that spans the time (last first, so earlier references stay valid).
   Uids frames_split(Model& model, const std::set<Reference>& references, int time)
   {
-    Uids uids{};
+    Uids uids = {};
     for (auto it = references.rbegin(); it != references.rend(); ++it)
       std::ranges::copy(frame_split(model, *it, time), std::back_inserter(uids));
     return uids;
@@ -178,12 +178,12 @@
     auto targetUid = targetTrack->uid;
     insertIndex = std::clamp(insertIndex, 0, (int)targetTrack->frames.size());
 
-    std::vector<Frame> moved{};
+    std::vector<Frame> moved;
     for (auto& [trackReference, indices] : frames_by_track_get(frames))
     {
       auto track = model.track_edit(trackReference);
       if (!track) continue;
-      std::vector<Frame> trackMoved{};
+      std::vector<Frame> trackMoved;
       for (auto it = indices.rbegin(); it != indices.rend(); ++it)
       {
         if (*it < 0 || *it >= (int)track->frames.size()) continue;
@@ -290,7 +290,7 @@
   Uids frames_property_set(Model& model, const std::set<Reference>& references, FrameProperty property,
                            const Frame& source)
   {
-    Uids uids{};
+    Uids uids = {};
     for (auto reference : references)
       if (is_frame_property_valid(property, (ItemType)reference.itemType))
         if (auto frame = model.frame_edit(reference))
@@ -315,7 +315,7 @@
     auto trigger = model.frame_edit(reference);
     if (!trigger) return {};
     trigger->atFrame = atFrame;
-    for (const auto& other : model.track_get(reference)->frames)
+    for (auto& other : model.track_get(reference)->frames)
       if (&other != trigger && other.atFrame == trigger->atFrame) trigger->atFrame--;
     return {};
   }
@@ -351,7 +351,7 @@
         frame.regionId = -1;
 
     auto& track = *model.track_edit(reference);
-    Uids uids{};
+    Uids uids = {};
     if (track.type != ItemType::TRIGGER)
     {
       track.frames.insert(track.frames.begin() + insertIndex, frames.begin(), frames.end());
@@ -383,7 +383,7 @@
     if (!rootTrack) return {};
     auto root = *rootTrack;
 
-    std::vector<std::pair<int, int>> spans{};
+    std::vector<std::pair<int, int>> spans;
     for (auto index : rootIndices)
       if (index >= 0 && index < (int)root.frames.size())
       {
@@ -413,13 +413,13 @@
       }
     }
 
-    Uids uids{};
-    std::vector<Frame> rewritten{};
-    int defaultDuration{};
+    Uids uids = {};
+    std::vector<Frame> rewritten;
+    int defaultDuration = 0;
     auto default_push = [&]()
     {
       if (defaultDuration <= 0) return;
-      Frame frame{};
+      Frame frame = {};
       frame.duration = std::max(defaultDuration, FRAME_DURATION_MIN);
       uids.push_back(frame.uid);
       rewritten.push_back(frame);

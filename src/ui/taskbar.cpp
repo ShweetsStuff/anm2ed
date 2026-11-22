@@ -42,7 +42,7 @@ using namespace glm;
     auto* document = manager.get(index);
     if (!document) return false;
 
-    PendingSave request{.index = index, .path = path};
+    PendingSave request = {.index = index, .path = path};
     if (isQueued)
     {
       // Rebirth can't load SVG spritesheets: offer to convert them (the request waits in isaacSave either way).
@@ -261,7 +261,7 @@ using namespace glm;
         auto widgetSize = widget_size_with_row_get(2);
         if (ImGui::Button(localize.get(LABEL_GENERATE), widgetSize))
         {
-          std::set<int> animationIndices{};
+          std::set<int> animationIndices;
           if (generateRegionsTarget == GENERATE_REGIONS_TARGET_ALL)
           {
             for (int i = 0; i < document->model.animations_count_get(); ++i)

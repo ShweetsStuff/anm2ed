@@ -125,7 +125,7 @@ using namespace glm;
     if (isInvalid) ImGui::PushStyleColor(ImGuiCol_Text, CARD_TINT_INVALID);
     if (arrowKey == key) ImGui::SetKeyboardFocusHere();
 
-    bool isActivated{};
+    bool isActivated = false;
     if (rows.rename)
     {
       if (state.newId == key)
@@ -247,7 +247,7 @@ using namespace glm;
     auto arrowKey = list_select_begin(panel, selection, focus, rows, keys);
     for (int i = 0; i < (int)keys.size(); ++i)
     {
-      bool isBreak{};
+      bool isBreak = false;
       if (isCards)
         card_draw(panel, selection, focus, rows, keys[i], i, arrowKey, isBreak);
       else
@@ -274,7 +274,7 @@ using namespace glm;
                                             int spritesheetId)
   {
     auto& content = model.content;
-    std::vector<std::string> lines{};
+    std::vector<std::string> lines;
     auto names_add = [&](const auto& items, auto&& name_get)
     {
       for (auto id : ids)
@@ -288,8 +288,8 @@ using namespace glm;
     };
     auto layers_add = [&](StringType format, auto&& is_removed)
     {
-      std::set<int> layerIds{};
-      for (const auto& layer : content.layers)
+      std::set<int> layerIds;
+      for (auto& layer : content.layers)
         if (is_removed(layer))
         {
           layerIds.insert(layer.id);
@@ -319,9 +319,9 @@ using namespace glm;
           names_add(content.sounds, path_get);
         count_add(FORMAT_REMOVE_TRIGGER_USES, uses);
         // Triggers whose every event and sound goes.
-        int emptied{};
+        int emptied = 0;
         for (auto [index, animation] : model.animations_get())
-          for (const auto& trigger : animation->triggers.frames)
+          for (auto& trigger : animation->triggers.frames)
           {
             auto& own = isEvent ? trigger.eventIds : trigger.soundIds;
             auto& other = isEvent ? trigger.soundIds : trigger.eventIds;
@@ -432,17 +432,17 @@ using namespace glm;
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlappedByWindow) &&
         ImGui::IsMouseReleased(ImGuiMouseButton_Right))
       ImGui::OpenPopup(CONTEXT_MENU_LABEL);
-    Actions menu{};
+    Actions menu = {};
     actions_undo_redo_add(menu, manager, document);
     menu.separator();
     menu.items.insert(menu.items.end(), actions.items.begin(), actions.items.end());
     actions_popup_draw(CONTEXT_MENU_LABEL, menu, settings);
 
     auto& buttons = footerActions ? *footerActions : actions;
-    for (const auto& row : footer)
+    for (auto& row : footer)
     {
       auto widgetSize = widget_size_with_row_get((int)row.size());
-      bool isSameLine{};
+      bool isSameLine = false;
       for (auto type : row)
         if (auto action = std::ranges::find(buttons.items, type, &Action::type); action != buttons.items.end())
           action_button_draw(*action, manager, settings, widgetSize, isSameLine);
@@ -488,7 +488,7 @@ using namespace glm;
   void directory_open(Dialog& dialog, Document& document, const std::filesystem::path& path)
   {
     if (path.empty()) return;
-    std::error_code ec{};
+    std::error_code ec;
     auto absolutePath = std::filesystem::weakly_canonical(document.directory_get() / path, ec);
     if (ec) absolutePath = document.directory_get() / path;
     auto target = std::filesystem::is_regular_file(absolutePath, ec) || std::filesystem::is_directory(absolutePath, ec)

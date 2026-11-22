@@ -8,9 +8,9 @@
   class MultiSelectStorage : public std::set<int>
   {
   public:
-    ImGuiSelectionExternalStorage internal{};
-    ImGuiMultiSelectIO* io{};
-    std::vector<int>* indexMap{};
+    ImGuiSelectionExternalStorage internal = {};
+    ImGuiMultiSelectIO* io = nullptr;
+    std::vector<int>* indexMap = nullptr;
 
     using std::set<int>::set;
     using std::set<int>::operator=;

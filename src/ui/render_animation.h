@@ -8,7 +8,7 @@
   {
 
   public:
-    bool isEnd{};
+    bool isEnd = false;
 
     void range_to_frames_set(Manager&, Document&);
     void range_to_animation_set(Manager&, Document&);

@@ -32,14 +32,14 @@
 
   struct ToolInfo
   {
-    ImGuiMouseCursor cursor{ImGuiMouseCursor_None};
-    Icon icon{};
-    ShortcutType shortcut{};
+    ImGuiMouseCursor cursor = ImGuiMouseCursor_None;
+    Icon icon = {};
+    ShortcutType shortcut = {};
     ToolArea areaType;
-    const char* label{};
-    StringType tooltip{};
-    bool isFrameRequired{};
-    bool isSpritesheetRequired{};
+    const char* label = nullptr;
+    StringType tooltip = {};
+    bool isFrameRequired = false;
+    bool isSpritesheetRequired = false;
   };
 
   constexpr ToolInfo TOOLS[] = {

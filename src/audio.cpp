@@ -8,10 +8,10 @@
 
   struct AudioEntry
   {
-    MIX_Audio* audio{};
-    std::vector<MIX_Track*> tracks{}; // one per overlapping play, reused once finished
+    MIX_Audio* audio = nullptr;
+    std::vector<MIX_Track*> tracks; // one per overlapping play, reused once finished
     std::atomic<float> squares[2]{};
-    std::atomic<int> sampleCount{};
+    std::atomic<int> sampleCount = {};
   };
 
   // Sums the squares of the left/right samples the track plays, for its levels.
@@ -28,7 +28,7 @@
     entry->sampleCount += samples / channels;
   }
 
-  static std::unordered_map<std::uint64_t, AudioEntry> entries{};
+  static std::unordered_map<std::uint64_t, AudioEntry> entries;
 
   static MIX_Mixer* audio_mixer_get()
   {

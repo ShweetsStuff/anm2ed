@@ -48,7 +48,7 @@
     { return layer.is_animation() && (layerIds.empty() || layerIds.contains(layer.id)); };
     if (std::ranges::none_of(content.layers, is_flattened)) return model;
 
-    std::map<std::pair<const Model*, int>, int> spritesheetIds{};
+    std::map<std::pair<const Model*, int>, int> spritesheetIds;
     auto spritesheet_id_get = [&](const Model* source, int id)
     {
       if (source == &model) return id;
@@ -62,7 +62,7 @@
     };
 
     // (animation layer, source, source layer) -> the plain layer standing in for it.
-    std::map<std::tuple<int, const Model*, int>, int> plainIds{};
+    std::map<std::tuple<int, const Model*, int>, int> plainIds;
     auto layer_id_get = [&](const Draw& draw)
     {
       auto [it, isNew] = plainIds.try_emplace({draw.id, draw.source, draw.sourceId});
@@ -84,10 +84,10 @@
       {
         auto layer = item_get(content.layers, track.id);
         if (!layer || !is_flattened(*layer)) return std::vector{track};
-        std::map<int, std::vector<Frame>> frames{};
-        std::vector<int> order{};
+        std::map<int, std::vector<Frame>> frames;
+        std::vector<int> order;
         for (int time = 0; time < source.frameNum; ++time)
-          for (const auto& draw : animation_draws_get(model, source, {.time = (float)time, .library_get = library_get}))
+          for (auto& draw : animation_draws_get(model, source, {.time = (float)time, .library_get = library_get}))
           {
             if (draw.type != DrawType::LAYER || draw.id != track.id || draw.frame.size == glm::vec2()) continue;
             auto id = layer_id_get(draw);
@@ -95,7 +95,7 @@
             if (isNew) order.push_back(id);
             it->second[time] = draw_frame_bake(draw);
           }
-        std::vector<Track> tracks{};
+        std::vector<Track> tracks;
         for (auto id : order)
         {
           auto& baked = tracks.emplace_back(Track{.type = ItemType::LAYER, .id = id, .isVisible = track.isVisible});
@@ -108,7 +108,7 @@
         return tracks;
       };
 
-      std::vector<TrackEntry> entries{};
+      std::vector<TrackEntry> entries;
       for (auto& entry : source.layers)
         if (auto track = std::get_if<Track>(&entry))
           for (auto& flat : tracks_flatten(*track))
@@ -127,8 +127,8 @@
       auto triggers = source.triggers;
       for (int time = 0; time < source.frameNum; ++time)
       {
-        std::vector<int> eventIds{};
-        for (const auto& fire : animation_triggers_get(model, source, time, library_get))
+        std::vector<int> eventIds;
+        for (auto& fire : animation_triggers_get(model, source, time, library_get))
         {
           auto layer = item_get(content.layers, fire.layerId);
           if (!layer || !is_flattened(*layer)) continue;

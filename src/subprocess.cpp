@@ -54,7 +54,7 @@
 
   std::string Process::output_get_and_close()
   {
-    std::string output{};
+    std::string output;
     if (!pipe) return {};
 
     char buffer[256];

@@ -193,7 +193,7 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
       isDefault = true;
     }
 
-    std::string fileData{};
+    std::string fileData;
     if (!file_text_load(path, &fileData, "rb"))
     {
       logger.error(std::format("Failed to open settings file: {}", pathUtf8));
@@ -201,7 +201,7 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
     }
     std::istringstream file(fileData);
 
-    std::string line{};
+    std::string line;
 
     auto stream_assign = [](auto& dest, std::istringstream& ss) { ss >> dest; };
 
@@ -283,7 +283,7 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
   std::string Settings::imgui_data_load(const std::filesystem::path& path)
   {
     auto pathUtf8 = path_to_utf8(path);
-    std::string fileData{};
+    std::string fileData;
     if (!file_text_load(path, &fileData, "rb"))
     {
       logger.error(
@@ -292,7 +292,7 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
     }
     std::istringstream file(fileData);
 
-    std::string line{};
+    std::string line;
     std::ostringstream dataStream;
     bool isImGuiSection = false;
     bool isContent = false;
@@ -330,7 +330,7 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
   {
     auto pathUtf8 = path_to_utf8(path);
     logger.info(std::format("Saving settings to: {}", pathUtf8));
-    std::ostringstream file{};
+    std::ostringstream file;
 
     file << "[Settings]\n";
 

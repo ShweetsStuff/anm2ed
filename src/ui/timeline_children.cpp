@@ -7,7 +7,7 @@
   // The child animation's tracks (root, layers top-down, nulls, triggers) when an animation layer row is expanded.
   std::vector<PeekRow> TimelineContext::peek_rows_get(const TimelineRow& row)
   {
-    std::vector<PeekRow> rows{};
+    std::vector<PeekRow> rows;
     if (row.isGroup || row.type != LAYER) return rows;
     auto track = item_get(LAYER, row.id, row.groupType, row.groupId);
     auto layer = ::item_get(model.content.layers, row.id);
@@ -20,7 +20,7 @@
       if (settings.timelineIsShowUnused || !childTrack.frames.empty()) rows.push_back({source, child, &childTrack});
     };
     row_add(child->root);
-    std::vector<const Track*> layers{};
+    std::vector<const Track*> layers;
     tracks_each(child->layers, [&](const Track& childTrack, auto*) { layers.push_back(&childTrack); });
     for (auto it = layers.rbegin(); it != layers.rend(); ++it)
       row_add(**it);
@@ -107,8 +107,8 @@
                            ImGui::GetColorU32(iconTintDefault));
       };
 
-      int runStart{};
-      int runKey{-1};
+      int runStart = 0;
+      int runKey = -1;
       for (int time = 0; time <= animation->frameNum; ++time)
       {
         auto key = time < animation->frameNum && track && layer ? key_get(time) : -1;

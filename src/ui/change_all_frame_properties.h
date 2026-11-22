@@ -11,7 +11,7 @@
   class ChangeAllFrameProperties
   {
   public:
-    bool isChanged{};
+    bool isChanged = false;
 
     void update(Manager&, Document&, Settings&, bool = false);
   };
