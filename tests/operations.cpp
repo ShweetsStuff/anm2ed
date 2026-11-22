@@ -1,8 +1,8 @@
-#include "common.hpp"
+#include "common.h"
 
-#include "model/frames.hpp"
-#include "playback.hpp"
-#include "util/pack.hpp"
+#include "model/frames.h"
+#include "playback.h"
+#include "pack.h"
 
 using namespace anm2ed;
 using namespace anm2ed::test;

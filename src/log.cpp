@@ -1,4 +1,4 @@
-#include "log.hpp"
+#include "log.h"
 
 #include <algorithm>
 #include <array>
@@ -8,10 +8,10 @@
 #include <print>
 #include <vector>
 
-#include "file.hpp"
-#include "path.hpp"
-#include "strings.hpp"
-#include "time.hpp"
+#include "file.h"
+#include "path.h"
+#include "localization.h"
+#include "timestamp.h"
 
 #if _WIN32
   #include <fcntl.h>

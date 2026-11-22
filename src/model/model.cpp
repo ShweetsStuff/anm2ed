@@ -1,10 +1,10 @@
-#include "model.hpp"
+#include "model/model.h"
 
 #include <algorithm>
 #include <unordered_set>
 
-#include "image.hpp"
-#include "path.hpp"
+#include "image.h"
+#include "path.h"
 
 using namespace anm2ed::util;
 

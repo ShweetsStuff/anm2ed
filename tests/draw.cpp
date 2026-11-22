@@ -1,8 +1,8 @@
-#include "common.hpp"
+#include "common.h"
 
-#include "math.hpp"
-#include "model/draw.hpp"
-#include "model/frames.hpp"
+#include "math_util.h"
+#include "model/draw.h"
+#include "model/frames.h"
 
 using namespace anm2ed;
 using namespace anm2ed::test;

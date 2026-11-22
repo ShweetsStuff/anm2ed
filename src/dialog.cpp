@@ -1,12 +1,12 @@
-#include "dialog.hpp"
+#include "dialog.h"
 
 #ifdef _WIN32
   #include <windows.h>
 #elif __unix__
 #else
-  #include "log.hpp"
-  #include "strings.hpp"
-  #include "toast.hpp"
+  #include "log.h"
+  #include "localization.h"
+  #include "ui/toast.h"
 #endif
 
 #include <cctype>
@@ -14,7 +14,7 @@
 #include <cstring>
 #include <format>
 
-#include "path.hpp"
+#include "path.h"
 
 using namespace anm2ed::util;
 

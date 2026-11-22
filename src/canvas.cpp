@@ -1,12 +1,12 @@
-#include "canvas.hpp"
+#include "canvas.h"
 
 #include <algorithm>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "math.hpp"
-#include "texture.hpp"
+#include "math_util.h"
+#include "texture.h"
 
 using namespace glm;
 using namespace anm2ed::resource;

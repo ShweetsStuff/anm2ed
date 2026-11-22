@@ -1,4 +1,4 @@
-#include "xml.hpp"
+#include "model/xml.h"
 
 #include <algorithm>
 #include <charconv>
@@ -12,12 +12,12 @@
 
 #include <pugixml/src/pugixml.hpp>
 
-#include "file.hpp"
-#include "frames.hpp"
-#include "json.hpp"
-#include "math.hpp"
-#include "path.hpp"
-#include "time.hpp"
+#include "file.h"
+#include "model/frames.h"
+#include "model/json.h"
+#include "math_util.h"
+#include "path.h"
+#include "timestamp.h"
 
 using namespace anm2ed::util;
 

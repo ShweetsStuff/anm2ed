@@ -1,4 +1,4 @@
-#include "loader.hpp"
+#include "loader.h"
 
 #include <cerrno>
 #include <cstdint>
@@ -10,15 +10,15 @@
 
 #include <SDL3_mixer/SDL_mixer.h>
 
-#include "log.hpp"
-#include "sdl.hpp"
-#include "texture.hpp"
+#include "log.h"
+#include "sdl.h"
+#include "texture.h"
 
-#include "snapshots.hpp"
-#include "socket.hpp"
+#include "snapshots.h"
+#include "socket.h"
 
-#include "util/imgui/theme.hpp"
-#include "util/math.hpp"
+#include "ui/theme.h"
+#include "math_util.h"
 
 #ifdef _WIN32
   #include <windows.h>

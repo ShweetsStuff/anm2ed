@@ -1,8 +1,8 @@
-#include "cli.hpp"
-#include "loader.hpp"
-#include "log.hpp"
-#include "sdl.hpp"
-#include "state.hpp"
+#include "cli.h"
+#include "loader.h"
+#include "log.h"
+#include "sdl.h"
+#include "state.h"
 
 #ifdef _WIN32
   #define SDL_MAIN_HANDLED

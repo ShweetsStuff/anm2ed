@@ -1,12 +1,12 @@
-#include "common.hpp"
+#include "common.h"
 
-#include "asset_store.hpp"
-#include "audio_data.hpp"
-#include "font.hpp"
-#include "friends.hpp"
-#include "icon.hpp"
-#include "image.hpp"
-#include "model/xml.hpp"
+#include "asset_store.h"
+#include "audio_data.h"
+#include "font.h"
+#include "friends.h"
+#include "icon.h"
+#include "image.h"
+#include "model/xml.h"
 
 using namespace anm2ed;
 using namespace anm2ed::resource;

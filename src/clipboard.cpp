@@ -1,4 +1,4 @@
-#include "clipboard.hpp"
+#include "clipboard.h"
 
 #include <SDL3/SDL_clipboard.h>
 #include <SDL3/SDL_stdinc.h>

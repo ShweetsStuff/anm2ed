@@ -1,4 +1,4 @@
-#include "edit.hpp"
+#include "edit/edit.h"
 
 using namespace anm2ed::model;
 

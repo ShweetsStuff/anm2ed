@@ -1,8 +1,8 @@
-#include "resources.hpp"
+#include "resources.h"
 
 #include <ranges>
 
-#include "log.hpp"
+#include "log.h"
 
 using namespace anm2ed::resource;
 

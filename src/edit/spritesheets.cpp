@@ -1,13 +1,13 @@
-#include "edit.hpp"
+#include "edit/edit.h"
 
 #include <algorithm>
 #include <format>
 #include <limits>
 #include <unordered_map>
 
-#include "model/frames.hpp"
-#include "pack.hpp"
-#include "path.hpp"
+#include "model/frames.h"
+#include "pack.h"
+#include "path.h"
 
 using namespace anm2ed::model;
 using namespace anm2ed::resource;

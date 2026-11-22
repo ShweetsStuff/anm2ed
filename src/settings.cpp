@@ -1,13 +1,13 @@
-#include "settings.hpp"
+#include "settings.h"
 
 #include <algorithm>
 #include <sstream>
 #include <tuple>
 
-#include "file.hpp"
-#include "log.hpp"
-#include "math.hpp"
-#include "path.hpp"
+#include "file.h"
+#include "log.h"
+#include "math_util.h"
+#include "path.h"
 
 using namespace anm2ed::util;
 using namespace glm;

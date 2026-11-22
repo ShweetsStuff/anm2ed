@@ -1,4 +1,4 @@
-#include "cli.hpp"
+#include "cli.h"
 
 #include <algorithm>
 #include <charconv>
@@ -9,15 +9,15 @@
 #include <print>
 #include <string>
 
-#include "canvas.hpp"
-#include "document.hpp"
-#include "image.hpp"
-#include "model/xml.hpp"
-#include "path.hpp"
-#include "render.hpp"
-#include "sdl.hpp"
-#include "settings.hpp"
-#include "working_directory.hpp"
+#include "canvas.h"
+#include "document.h"
+#include "image.h"
+#include "model/xml.h"
+#include "path.h"
+#include "render.h"
+#include "sdl.h"
+#include "settings.h"
+#include "working_directory.h"
 
 using namespace anm2ed::util;
 

@@ -1,10 +1,10 @@
-#include "edit.hpp"
+#include "edit/edit.h"
 
 #include <format>
 #include <unordered_map>
 
-#include "model/frames.hpp"
-#include "model/xml.hpp"
+#include "model/frames.h"
+#include "model/xml.h"
 
 using namespace anm2ed::model;
 

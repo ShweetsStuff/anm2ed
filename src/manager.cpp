@@ -1,20 +1,20 @@
-#include "manager.hpp"
+#include "manager.h"
 
 #include <algorithm>
 #include <unordered_set>
 
 #include <format>
 
-#include "file.hpp"
-#include "log.hpp"
-#include "model/draw.hpp"
-#include "model/frames.hpp"
-#include "path.hpp"
-#include "sdl.hpp"
-#include "strings.hpp"
-#include "toast.hpp"
-#include "util/imgui/shortcut.hpp"
-#include "vector.hpp"
+#include "file.h"
+#include "log.h"
+#include "model/draw.h"
+#include "model/frames.h"
+#include "path.h"
+#include "sdl.h"
+#include "localization.h"
+#include "ui/toast.h"
+#include "ui/shortcut.h"
+#include "vector.h"
 
 using namespace anm2ed::types;
 using namespace anm2ed::util;

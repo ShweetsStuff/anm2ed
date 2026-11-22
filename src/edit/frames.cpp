@@ -1,11 +1,11 @@
-#include "edit.hpp"
+#include "edit/edit.h"
 
 #include <algorithm>
 #include <utility>
 
-#include "math.hpp"
-#include "model/frames.hpp"
-#include "model/xml.hpp"
+#include "math_util.h"
+#include "model/frames.h"
+#include "model/xml.h"
 
 using namespace anm2ed::util;
 using namespace anm2ed::model;

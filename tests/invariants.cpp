@@ -1,4 +1,4 @@
-#include "common.hpp"
+#include "common.h"
 
 using namespace anm2ed;
 using namespace anm2ed::test;

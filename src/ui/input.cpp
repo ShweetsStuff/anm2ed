@@ -1,0 +1,211 @@
+#include "ui/input.h"
+
+#include <algorithm>
+#include <climits>
+#include <cmath>
+#include <numeric>
+
+#include <glm/gtc/type_ptr.hpp>
+
+#include "path.h"
+
+using namespace anm2ed::types;
+using namespace anm2ed::util;
+using namespace glm;
+
+namespace anm2ed::imgui
+{
+  int input_text_callback(ImGuiInputTextCallbackData* data)
+  {
+    if (data->EventFlag == ImGuiInputTextFlags_CallbackResize)
+    {
+      auto* string = (std::string*)(data->UserData);
+      string->resize(data->BufTextLen);
+      data->Buf = string->data();
+    }
+    return 0;
+  }
+
+  bool input_text_string(const char* label, std::string* string, ImGuiInputTextFlags flags)
+  {
+    flags |= ImGuiInputTextFlags_CallbackResize;
+    return ImGui::InputText(label, string->data(), string->capacity() + 1, flags, input_text_callback, string);
+  }
+
+  bool input_text_path(const char* label, std::filesystem::path* path, ImGuiInputTextFlags flags)
+  {
+    if (!path) return false;
+
+    auto pathUtf8 = path::to_utf8(*path);
+    auto edited = input_text_string(label, &pathUtf8, flags);
+    if (edited) *path = path::from_utf8(pathUtf8);
+
+    return edited;
+  }
+
+  // A combo over `values` shown as `labels`.
+  bool combo_string_mapped(const std::string& label, std::string* value, const std::vector<std::string>& values,
+                           const std::vector<std::string>& labels)
+  {
+    std::vector<int> ids(values.size());
+    std::iota(ids.begin(), ids.end(), 0);
+    auto index = (int)std::distance(values.begin(), std::ranges::find(values, *value));
+    if (!combo_id_mapped(label, &index, ids, labels) || index < 0) return false;
+    *value = values[index];
+    return true;
+  }
+
+  bool combo_id_mapped(const std::string& label, int* id, const std::vector<int>& ids,
+                       const std::vector<std::string>& labelStrings)
+  {
+    std::vector<const char*> labels{};
+    for (const auto& labelString : labelStrings)
+      labels.push_back(labelString.c_str());
+    if (!id) return false;
+
+    int index = -1;
+    if (!ids.empty())
+    {
+      auto it = std::find(ids.begin(), ids.end(), *id);
+      if (it != ids.end()) index = (int)std::distance(ids.begin(), it);
+    }
+
+    bool isActivated = ImGui::Combo(label.c_str(), &index, labels.data(), (int)labels.size());
+    if (isActivated)
+    {
+      if (index >= 0 && index < (int)ids.size())
+        *id = ids[index];
+      else
+        *id = -1;
+    }
+
+    return isActivated;
+  }
+
+  edit_state::Type drag_float_persistent(const char* label, float* value, float speed, float min, float max,
+                                         const char* format, ImGuiSliderFlags flags)
+  {
+    static bool isEditing{};
+    static float start{NAN};
+    auto persistent = value ? *value : 0;
+
+    ImGui::DragFloat(label, &persistent, speed, min, max, format, flags);
+    if (!value) return edit_state::NONE;
+    if (ImGui::IsItemActivated() && persistent != start)
+    {
+      isEditing = true;
+      start = *value;
+      return edit_state::START;
+    }
+    else if (ImGui::IsItemDeactivatedAfterEdit())
+    {
+      isEditing = false;
+      *value = persistent;
+      start = NAN;
+      return edit_state::END;
+    }
+    else if (isEditing)
+    {
+      *value = persistent;
+      return edit_state::DURING;
+    }
+
+    return edit_state::NONE;
+  }
+
+  edit_state::Type drag_float2_persistent(const char* label, vec2* value, float speed, float min, float max,
+                                          const char* format, ImGuiSliderFlags flags)
+  {
+    static bool isEditing{};
+    static vec2 start{NAN};
+    auto persistent = value ? *value : vec2();
+
+    ImGui::DragFloat2(label, value_ptr(persistent), speed, min, max, format, flags);
+    if (!value) return edit_state::NONE;
+    if (ImGui::IsItemActivated() && persistent != start)
+    {
+      isEditing = true;
+      start = *value;
+      return edit_state::START;
+    }
+    else if (ImGui::IsItemDeactivatedAfterEdit())
+    {
+      isEditing = false;
+      *value = persistent;
+      start = vec2{NAN};
+      return edit_state::END;
+    }
+    else if (isEditing)
+    {
+      *value = persistent;
+      return edit_state::DURING;
+    }
+
+    return edit_state::NONE;
+  }
+
+  edit_state::Type color_edit4_persistent(const char* label, vec4* value, ImGuiColorEditFlags flags)
+  {
+    static bool isEditing{};
+    static vec4 start{NAN};
+    auto persistent = value ? *value : vec4();
+
+    ImGui::ColorEdit4(label, value_ptr(persistent), flags);
+    if (!value) return edit_state::NONE;
+    if (ImGui::IsItemActivated() && persistent != start)
+    {
+      isEditing = true;
+      start = *value;
+      return edit_state::START;
+    }
+    else if (ImGui::IsItemDeactivatedAfterEdit())
+    {
+      isEditing = false;
+      *value = persistent;
+      start = vec4{NAN};
+      return edit_state::END;
+    }
+    else if (isEditing)
+    {
+      *value = persistent;
+      return edit_state::DURING;
+    }
+
+    return edit_state::NONE;
+  }
+
+  bool radio_button_icon(const char* label, int* value, int buttonValue, ImTextureID texture, ImVec2 size, ImVec4 tint)
+  {
+    bool isSelected = value && *value == buttonValue;
+    if (isSelected) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+
+    bool isActivated = ImGui::ImageButton(label, texture, size, ImVec2(0, 0), ImVec2(1, 1), ImVec4(0, 0, 0, 0), tint);
+
+    if (isSelected) ImGui::PopStyleColor();
+    if (isActivated && value) *value = buttonValue;
+    return isActivated;
+  }
+
+  bool input_int_range(const char* label, int& value, int min, int max, int step, int stepFast,
+                       ImGuiInputTextFlags flags)
+  {
+    auto isActivated = ImGui::InputInt(label, &value, step, stepFast, flags);
+    value = glm::clamp(value, min, max);
+    return isActivated;
+  }
+
+  bool input_int2_range(const char* label, ivec2& value, ivec2 min, ivec2 max, ImGuiInputTextFlags flags)
+  {
+    auto isActivated = ImGui::InputInt2(label, value_ptr(value), flags);
+    value = glm::clamp(value, min, max);
+    return isActivated;
+  }
+
+  bool input_float_range(const char* label, float& value, float min, float max, float step, float stepFast,
+                         const char* format, ImGuiInputTextFlags flags)
+  {
+    auto isActivated = ImGui::InputFloat(label, &value, step, stepFast, format, flags);
+    value = glm::clamp(value, min, max);
+    return isActivated;
+  }
+}

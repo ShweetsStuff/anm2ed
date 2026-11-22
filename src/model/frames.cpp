@@ -1,10 +1,10 @@
-#include "frames.hpp"
+#include "model/frames.h"
 
 #include <algorithm>
 #include <limits>
 
-#include "draw.hpp"
-#include "math.hpp"
+#include "model/draw.h"
+#include "math_util.h"
 
 using namespace anm2ed::util;
 

@@ -1,4 +1,4 @@
-#include "state.hpp"
+#include "state.h"
 
 #include <algorithm>
 
@@ -7,13 +7,13 @@
 #include <imgui/backends/imgui_impl_opengl3.h>
 #include <imgui/backends/imgui_impl_sdl3.h>
 
-#include "log.hpp"
-#include "math.hpp"
-#include "path.hpp"
-#include "strings.hpp"
-#include "texture.hpp"
-#include "toast.hpp"
-#include "util/imgui/shortcut.hpp"
+#include "log.h"
+#include "math_util.h"
+#include "path.h"
+#include "localization.h"
+#include "texture.h"
+#include "ui/toast.h"
+#include "ui/shortcut.h"
 
 using namespace anm2ed::imgui;
 using namespace anm2ed::util;

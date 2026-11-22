@@ -8,10 +8,10 @@
 #include <format>
 #include <fstream>
 
-#include "canvas.hpp"
-#include "document.hpp"
-#include "image.hpp"
-#include "render.hpp"
+#include "canvas.h"
+#include "document.h"
+#include "image.h"
+#include "render.h"
 
 using namespace anm2ed;
 

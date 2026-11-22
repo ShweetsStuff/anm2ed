@@ -1,4 +1,4 @@
-#include "document.hpp"
+#include "document.h"
 
 #include <algorithm>
 #include <cmath>
@@ -15,18 +15,18 @@
 
 #include <SDL3/SDL_video.h>
 
-#include "file.hpp"
-#include "log.hpp"
-#include "manager.hpp"
-#include "math.hpp"
-#include "model/frames.hpp"
-#include "model/xml.hpp"
-#include "pack.hpp"
-#include "path.hpp"
-#include "render.hpp"
-#include "strings.hpp"
-#include "toast.hpp"
-#include "working_directory.hpp"
+#include "file.h"
+#include "log.h"
+#include "manager.h"
+#include "math_util.h"
+#include "model/frames.h"
+#include "model/xml.h"
+#include "pack.h"
+#include "path.h"
+#include "render.h"
+#include "localization.h"
+#include "ui/toast.h"
+#include "working_directory.h"
 
 using namespace anm2ed::imgui;
 using namespace anm2ed::types;

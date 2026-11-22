@@ -1,9 +1,9 @@
-#include "common.hpp"
+#include "common.h"
 
 #include <random>
 
-#include "edit/edit.hpp"
-#include "snapshots.hpp"
+#include "edit/edit.h"
+#include "snapshots.h"
 
 using namespace anm2ed;
 using namespace anm2ed::test;

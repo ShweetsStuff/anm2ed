@@ -61,15 +61,15 @@ add_custom_command(
 
 # The core: the model, edits, undo and file formats, with no window or OpenGL. The tests link it alone.
 file(GLOB CORE_SOURCES CONFIGURE_DEPENDS src/edit/*.cpp src/model/*.cpp)
-foreach(FILE log resource/image resource/audio_data resource/asset_store util/file util/path util/math util/time
-        util/working_directory util/pack util/imgui/multiselect snapshots playback selection)
+foreach(FILE log image audio_data asset_store file path math_util timestamp working_directory pack ui/multiselect
+        snapshots playback selection)
     list(APPEND CORE_SOURCES src/${FILE}.cpp)
 endforeach()
 add_library(anm2ed_core STATIC ${CORE_SOURCES} external/pugixml/src/pugixml.cpp external/imgui/imgui.cpp
             external/imgui/imgui_draw.cpp external/imgui/imgui_widgets.cpp external/imgui/imgui_tables.cpp
             ${CMAKE_BINARY_DIR}/embed/embed.c)
 target_include_directories(anm2ed_core PUBLIC include external external/imgui external/glm external/stb src
-                           src/imgui src/resource src/util ${CMAKE_BINARY_DIR}/embed)
+                           ${CMAKE_BINARY_DIR}/embed)
 target_link_libraries(anm2ed_core PUBLIC lunasvg simdjson SDL3::Headers)
 target_compile_definitions(anm2ed_core PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS
                            $<$<CONFIG:Debug>:IMGUI_DEBUG_PARANOID> $<$<BOOL:${WIN32}>:NOMINMAX>)

@@ -1,0 +1,125 @@
+#pragma once
+
+#include <filesystem>
+#include <functional>
+#include <map>
+#include <string>
+#include <vector>
+
+#include <imgui/imgui.h>
+
+#include "document.h"
+#include "settings.h"
+#include "localization.h"
+#include "ui/popup.h"
+
+namespace anm2ed
+{
+  constexpr auto FILE_LABEL_FORMAT = "{} [{}]";
+
+  class Manager;
+
+  struct Command
+  {
+    int documentIndex{-1};
+    std::function<void(Manager&, Document&)> run{};
+    std::function<void(Manager&)> runManager{};
+  };
+
+  class Manager
+  {
+    std::filesystem::path recent_files_path_get();
+    std::filesystem::path autosave_path_get();
+    void selection_history_push(int);
+    void selection_history_cleanup(int removedIndex);
+    void recent_files_trim();
+
+  public:
+    std::vector<Document> documents{};
+    std::vector<Command> commands{};
+    std::map<std::string, std::size_t, std::less<>> recentFiles{};
+    std::size_t recentFilesCounter{};
+    std::vector<std::filesystem::path> autosaveFiles{};
+
+    int selected{-1};
+    int pendingSelected{-1};
+
+    bool isRecording{};
+    bool isRecordingStart{};
+    int recordingStart{};
+    int recordingEnd{};
+    bool isRecordingRange{};
+    bool isAbleToRecord{};
+
+    ImGuiKeyChord chords[SHORTCUT_COUNT]{};
+    Options saveOptions{};
+
+    std::vector<std::filesystem::path> anm2DragDropPaths{};
+    bool isAnm2DragDrop{};
+    int anm2DragDropMergePreset{FILE_MERGE_PRESET_MERGE_BY_NAME};
+    imgui::PopupHelper anm2DragDropPopup{
+        imgui::PopupHelper(LABEL_MANAGER_ANM2_DRAG_DROP, imgui::POPUP_NORMAL, imgui::POPUP_BY_CURSOR)};
+    imgui::PopupHelper anm2DragDropMergePopup{
+        imgui::PopupHelper(LABEL_DOCUMENTS_MERGE_INTO_CURRENT, imgui::POPUP_SMALL_NO_HEIGHT)};
+
+    std::filesystem::path spritesheetDragDropPath{};
+    bool isSpritesheetDragDrop{};
+
+    struct ItemEdit
+    {
+      int id{-1};
+      std::string name{};
+      int spritesheetId{};
+      bool isShowRect{};
+      bool isAnimation{};
+      int libraryId{-1};
+      std::string animation{};
+    } itemEdit{};
+    imgui::PopupHelper itemPropertiesPopups[2]{
+        imgui::PopupHelper(LABEL_MANAGER_LAYER_PROPERTIES, imgui::POPUP_SMALL_NO_HEIGHT),
+        imgui::PopupHelper(LABEL_MANAGER_NULL_PROPERTIES, imgui::POPUP_SMALL_NO_HEIGHT)};
+
+    model::Region makeRegion{};
+    int makeRegionSpritesheetId{-1};
+    bool isMakeRegionRequested{};
+
+    imgui::PopupHelper progressPopup{
+        imgui::PopupHelper(LABEL_MANAGER_RENDERING_PROGRESS, imgui::POPUP_SMALL_NO_HEIGHT)};
+
+    std::vector<int> selectionHistory{};
+
+    Manager();
+    ~Manager();
+
+    Document* get(int = -1);
+    void command_push(Command);
+    void commands_run();
+    Document* open(const std::filesystem::path&, bool = false, bool = true);
+    void new_(const std::filesystem::path&);
+    bool save(int, const std::filesystem::path& = {});
+    bool save(const std::filesystem::path& = {});
+    void autosave(Document&);
+    void autosave_file_clear(int);
+    void set(int);
+    void close(int);
+    void item_properties_open(ElementType, int = -1);
+    int tab_index_get(std::uint64_t) const;
+    int path_index_get(const std::filesystem::path&) const;
+    void tab_select(int);
+    void child_step_in(int, Reference);
+    void child_step_out(int, int);
+
+    void recent_files_load();
+    void recent_files_write();
+    void recent_files_clear();
+    void recent_file_add(const std::filesystem::path&);
+    std::vector<std::filesystem::path> recent_files_ordered() const;
+
+    void autosave_files_load();
+    void autosave_files_open();
+    void autosave_files_write();
+    void autosave_files_clear(bool removeFiles = false);
+
+    void settings_apply(Settings&);
+  };
+}

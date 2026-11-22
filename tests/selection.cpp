@@ -1,7 +1,7 @@
-#include "common.hpp"
+#include "common.h"
 
-#include "edit/edit.hpp"
-#include "selection.hpp"
+#include "edit/edit.h"
+#include "selection.h"
 
 using namespace anm2ed;
 using namespace anm2ed::test;

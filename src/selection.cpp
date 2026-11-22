@@ -1,4 +1,4 @@
-#include "selection.hpp"
+#include "selection.h"
 
 namespace anm2ed
 {

@@ -1,6 +1,6 @@
-#include "edit.hpp"
+#include "edit/edit.h"
 
-#include "model/xml.hpp"
+#include "model/xml.h"
 
 using namespace anm2ed::model;
 

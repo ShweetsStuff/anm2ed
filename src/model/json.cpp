@@ -1,4 +1,4 @@
-#include "json.hpp"
+#include "model/json.h"
 
 #include <algorithm>
 #include <charconv>
@@ -8,9 +8,9 @@
 
 #include <simdjson/singleheader/simdjson.h>
 
-#include "math.hpp"
-#include "path.hpp"
-#include "xml.hpp"
+#include "math_util.h"
+#include "path.h"
+#include "model/xml.h"
 
 using namespace simdjson;
 using namespace anm2ed::util;
