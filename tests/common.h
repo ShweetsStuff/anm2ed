@@ -16,10 +16,8 @@ inline const std::filesystem::path TEST_DIR = ANM2ED_TEST_DIR;
 inline const std::filesystem::path CORPUS_DIR = TEST_DIR / "corpus";
 inline const std::filesystem::path GOLDEN_DIR = TEST_DIR / "golden";
 
-inline constexpr std::pair<const char*, Flags> PRESETS[] = {{"default", SERIALIZE_DEFAULT},
-                                                            {"editor", SERIALIZE_EDITOR_DEFAULT},
-                                                            {"isaac", SERIALIZE_ISAAC_DEFAULT},
-                                                            {"anm2ed", SERIALIZE_ANM2ED_DEFAULT}};
+inline constexpr std::pair<const char*, SaveMode> MODES[] = {
+    {"game", SAVE_GAME}, {"editor", SAVE_EDITOR}, {"clipboard", SAVE_CLIPBOARD}};
 inline constexpr std::pair<const char*, Merge> MERGES[] = {{"merge_prepend", MERGE_PREPEND},
                                                            {"merge_append", MERGE_APPEND},
                                                            {"merge_replace", MERGE_REPLACE},
@@ -65,15 +63,15 @@ inline Model model_load(const std::string& text)
 inline std::vector<Variant> variants_get(const Model& model)
 {
     std::vector<Variant> variants;
-    for (auto [name, flags] : PRESETS)
-        variants.emplace_back(name, model_serialize(model, flags));
+    for (auto [name, mode] : MODES)
+        variants.emplace_back(name, model_serialize(model, mode));
     variants.emplace_back("save", model_to_string(model));
     for (auto [name, type] : MERGES)
     {
         auto merged = model;
         std::set<int> sources = {0, 1, 2};
         animations_merge(merged, 0, sources, type, type == MERGE_PREPEND || type == MERGE_REPLACE, {});
-        variants.emplace_back(name, model_serialize(merged, SERIALIZE_ANM2ED_DEFAULT));
+        variants.emplace_back(name, model_serialize(merged, SAVE_EDITOR));
     }
     return variants;
 }
@@ -102,7 +100,7 @@ inline void invariants_check(const Model& model)
 
     // Loading only the game's view and re-saving it for the game must not change it.
     auto game = game_document_get(model_to_string(model));
-    CHECK(model_serialize(model_load(game), SERIALIZE_ISAAC_DEFAULT | SERIALIZE_PURGE_DEFAULT_COLORS) == game);
+    CHECK(model_serialize(model_load(game), SAVE_GAME) == game);
 }
 
 // Compares against a stored golden. ANM2ED_UPDATE_GOLDEN (or a missing golden when isBootstrap) rewrites it.

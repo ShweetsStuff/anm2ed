@@ -108,7 +108,7 @@ TEST_CASE("an animation layer draws its child animation, from this file or a lib
     options.library_get = {};
     CHECK_FALSE(red_position_get(0));
 
-    auto text = model_serialize(anm2, SERIALIZE_ANM2ED_DEFAULT);
+    auto text = model_serialize(anm2, SAVE_EDITOR);
     CHECK(model_hash(model_load(text)) == model_hash(anm2));
     CHECK(isaac_issues_get(anm2).animationLayers == 3);
     CHECK(game_document_get(model_to_string(anm2)).find(" Animation=\"") == std::string::npos);

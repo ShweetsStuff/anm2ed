@@ -51,8 +51,8 @@ TEST_CASE("JSON documents read back as the editor's copy")
         // Unknown XML, element order, dangling references and repeated animation names are not kept.
         auto isQuirky = fixture.filename() == "09_legacy_quirks.anm2" || fixture.filename() == "11_unknown.anm2";
         if (!isQuirky)
-            CHECK(model_serialize(reloaded, SERIALIZE_ANM2ED_DEFAULT) ==
-                  model_serialize(model, SERIALIZE_ANM2ED_DEFAULT));
+            CHECK(model_serialize(reloaded, SAVE_EDITOR) ==
+                  model_serialize(model, SAVE_EDITOR));
     }
 }
 
@@ -69,7 +69,7 @@ TEST_CASE("JSON groups don't renumber an animation sharing their name")
 {
     auto model = model_load(file_load(CORPUS_DIR / "01_minimal.anm2"));
     auto animation = std::get<std::shared_ptr<const Animation>>(model.animations.entries.front());
-    model.animations.entries = {AnimationGroup{.name = animation->name, .animations = {animation}}};
+    model.animations.entries = {AnimationGroup{.name = animation->name, .items = {animation}}};
     auto reloaded = model_load(model_to_json(model));
     REQUIRE(reloaded.animations_count_get() == 1);
     CHECK(reloaded.animation_get(0)->name == animation->name);

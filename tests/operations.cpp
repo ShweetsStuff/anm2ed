@@ -11,7 +11,7 @@ static Model fixture_load(const char* name)
 
 static void operation_check(const char* name, const Model& model)
 {
-    golden_check(GOLDEN_DIR / std::format("operation.{}.xml", name), model_serialize(model, SERIALIZE_ANM2ED_DEFAULT));
+    golden_check(GOLDEN_DIR / std::format("operation.{}.xml", name), model_serialize(model, SAVE_EDITOR));
 }
 
 static Track& layer_track_get(Model& model, int animationIndex, int layerId)
@@ -485,7 +485,7 @@ TEST_CASE("content_remove takes what refers to an item with it")
     auto tracks_count = [](const Model& model, int layerId) {
         int count = 0;
         for (auto [index, animation] : model.animations_get())
-            tracks_each(animation->layers, [&](const Track& track, auto*) { count += track.id == layerId; });
+            items_each(animation->layers, [&](const Track& track, auto*) { count += track.id == layerId; });
         return count;
     };
 

@@ -63,7 +63,6 @@ constexpr std::pair<char, std::string_view> ENTITIES[] = {
     {'&', "&amp;"}, {'<', "&lt;"}, {'>', "&gt;"}, {'"', "&quot;"}, {'\'', "&apos;"}};
 constexpr std::uint64_t HASH_OFFSET = 14695981039346656037ull;
 constexpr std::uint64_t HASH_PRIME = 1099511628211ull;
-constexpr Flags CLIPBOARD_FLAGS = SERIALIZE_EDITOR_DEFAULT;
 
 static const char* tag_get(ElementType type)
 {
@@ -872,14 +871,14 @@ static Model model_read(pugi::xml_node element)
 
 struct Writer
 {
-    Flags flags = {};
+    SaveMode mode = SAVE_GAME;
     const Model* model = nullptr;
     std::map<int, int> shaderIds;
     std::map<int, int> layerIds;
     std::map<int, std::map<int, int>> regionIds;
 
     // With a model, a whole document is written: shader, layer and region ids are renumbered by position.
-    Writer(Flags flags, const Model* model = nullptr) : flags(flags), model(model)
+    Writer(SaveMode mode, const Model* model = nullptr) : mode(mode), model(model)
     {
         if (!model)
             return;
@@ -895,9 +894,10 @@ struct Writer
                     regionIds[spritesheet.id][spritesheet.regions[i].id] = i;
     }
 
-    bool is(Flag flag) const
+    // Groups, regions, sounds and the editor's own attributes are written in all but the game's copy.
+    bool is_extended() const
     {
-        return has_flag(flags, flag);
+        return mode != SAVE_GAME;
     }
 };
 
@@ -1178,7 +1178,7 @@ static void interpolation_add(Sink& sink, const char* name, Interpolation interp
 
 static bool is_group_id_written(const Writer& writer)
 {
-    return writer.is(SERIALIZE_GROUPS) && !writer.is(SERIALIZE_NESTED_GROUPS);
+    return writer.mode == SAVE_CLIPBOARD;
 }
 
 static bool is_special_interpolation(Interpolation interpolation)
@@ -1212,14 +1212,7 @@ static Frame frame_normalize(const Writer& writer, Frame frame, const Track* lay
     return frame;
 }
 
-// A frame baked into single steps for the game records, on its first step, how to read them back as one.
-struct FrameBake
-{
-    Interpolation interpolation = {};
-    int delay = 0;
-};
-
-static void frame_write(Sink& sink, const Writer& writer, const Frame& frame, ItemType type, FrameBake bake = {})
+static void frame_write(Sink& sink, const Writer& writer, const Frame& frame, ItemType type)
 {
     if (type == ItemType::TRIGGER)
     {
@@ -1229,7 +1222,7 @@ static void frame_write(Sink& sink, const Writer& writer, const Frame& frame, It
         sink.attribute("AtFrame", frame.atFrame);
         extras_write(sink, frame.extras);
         Children children = {sink, frame.extras};
-        if (writer.is(SERIALIZE_EXTENSIONS))
+        if (writer.is_extended())
             for (auto eventId : frame.eventIds | std::views::drop(1))
             {
                 children.add();
@@ -1237,7 +1230,7 @@ static void frame_write(Sink& sink, const Writer& writer, const Frame& frame, It
                 sink.attribute("Id", eventId);
                 sink.close();
             }
-        if (writer.is(SERIALIZE_SOUNDS))
+        if (writer.is_extended())
             for (auto soundId : frame.soundIds)
                 if (soundId != -1)
                 {
@@ -1252,10 +1245,10 @@ static void frame_write(Sink& sink, const Writer& writer, const Frame& frame, It
     sink.open(tag_get(ElementType::FRAME));
     if (type == ItemType::LAYER)
     {
-        auto isRegion = writer.is(SERIALIZE_REGIONS) && frame.regionId != -1;
+        auto isRegion = writer.is_extended() && frame.regionId != -1;
         if (isRegion)
             sink.attribute("RegionId", frame.regionId);
-        if (writer.is(SERIALIZE_REDUNDANT_FRAME_REGION_VALUES) || !isRegion)
+        if (writer.mode == SAVE_CLIPBOARD || !isRegion)
         {
             sink.attribute("XPivot", frame.pivot.x);
             sink.attribute("YPivot", frame.pivot.y);
@@ -1271,25 +1264,25 @@ static void frame_write(Sink& sink, const Writer& writer, const Frame& frame, It
     sink.attribute("Visible", frame.isVisible);
     sink.attribute("XScale", frame.scale.x);
     sink.attribute("YScale", frame.scale.y);
-    if (writer.is(SERIALIZE_EXTENSIONS))
+    if (writer.is_extended())
     {
         sink.attribute("SkewX", frame.skew.x);
         sink.attribute("SkewY", frame.skew.y);
     }
-    auto isPurged = writer.is(SERIALIZE_PURGE_DEFAULT_COLORS);
+    auto isPurged = writer.mode != SAVE_CLIPBOARD;
     for (int i = 0; i < (int)std::size(TINT_ATTRIBUTES); ++i)
         if (auto tint = float_to_uint8(frame.tint[i]); !isPurged || tint != float_to_uint8(1.0f))
             sink.attribute(TINT_ATTRIBUTES[i], tint);
     for (int i = 0; i < (int)std::size(OFFSET_ATTRIBUTES); ++i)
         if (auto offset = float_to_uint8(frame.colorOffset[i]); !isPurged || offset != 0)
             sink.attribute(OFFSET_ATTRIBUTES[i], offset);
-    if (writer.is(SERIALIZE_EXTENSIONS) && float_to_uint8(frame.colorOffset.a) != 0)
+    if (writer.is_extended() && float_to_uint8(frame.colorOffset.a) != 0)
         sink.attribute("AlphaOffset", float_to_uint8(frame.colorOffset.a));
     sink.attribute("Rotation", frame.rotation);
     interpolation_add(sink, "Interpolated", frame.interpolation);
-    if (writer.is(SERIALIZE_EXTENSIONS) && frame.shaderId != -1)
+    if (writer.is_extended() && frame.shaderId != -1)
         sink.attribute("ShaderId", frame.shaderId);
-    if (writer.is(SERIALIZE_EXTENSIONS) && type == ItemType::LAYER)
+    if (writer.is_extended() && type == ItemType::LAYER)
     {
         if (frame.depth != 0)
             sink.attribute("Depth", frame.depth);
@@ -1307,11 +1300,6 @@ static void frame_write(Sink& sink, const Writer& writer, const Frame& frame, It
             sink.attribute("Restart", frame.isChildRestart);
     }
     extras_attributes_write(sink, frame.extras);
-    if (bake.delay > 0)
-    {
-        sink.attribute("BakeInterpolation", INTERPOLATION_VALUES[(int)bake.interpolation]);
-        sink.attribute("BakeDelay", bake.delay);
-    }
     sink.text_add(frame.extras.text);
     element_close(sink, frame.extras);
 }
@@ -1338,22 +1326,8 @@ static void track_write(Sink& sink, const Writer& writer, const Track& track, in
     for (int i = 0; i < (int)track.frames.size(); ++i)
     {
         auto frame = frame_normalize(writer, track.frames[i], layerTrack);
-        if (!writer.is(SERIALIZE_BAKE_SPECIAL_INTERPOLATED_FRAMES) || track.type == ItemType::TRIGGER ||
-            !is_special_interpolation(frame.interpolation))
-        {
-            children.add();
-            frame_write(sink, writer, frame, track.type);
-            continue;
-        }
-        // Written for the game as single-step frames. The first records how to read them back as one.
-        auto baked = frame_bake_split(frame, i + 1 < (int)track.frames.size() ? track.frames[i + 1] : frame,
-                                      FRAME_DURATION_MIN, false, false);
-        for (int bakeIndex = 0; bakeIndex < (int)baked.size(); ++bakeIndex)
-        {
-            children.add();
-            frame_write(sink, writer, baked[bakeIndex], track.type,
-                        bakeIndex == 0 ? FrameBake{frame.interpolation, (int)baked.size()} : FrameBake{});
-        }
+        children.add();
+        frame_write(sink, writer, frame, track.type);
     }
     children.close();
 }
@@ -1365,7 +1339,7 @@ void group_write(Sink& sink, const Writer& writer, const Group& group, std::opti
                  const std::function<void()>& members = {})
 {
     sink.open(tag_get(ElementType::GROUP));
-    if (!writer.is(SERIALIZE_NESTED_GROUPS))
+    if (writer.mode != SAVE_EDITOR)
         sink.attribute("Id", group.id);
     sink.attribute("Name", group.name);
     sink.attribute("IsExpanded", group.isExpanded);
@@ -1411,9 +1385,9 @@ static void container_write(Sink& sink, const Writer& writer, std::vector<Contai
                         sink.node(node);
                     }});
 
-    auto isGroups = writer.is(SERIALIZE_GROUPS);
+    auto isGroups = writer.is_extended();
     std::map<int, std::vector<ContainerChild>> grouped;
-    if (isGroups && writer.is(SERIALIZE_NESTED_GROUPS))
+    if (writer.mode == SAVE_EDITOR)
     {
         std::set<int> groupIds;
         for (auto& child : flat)
@@ -1426,7 +1400,7 @@ static void container_write(Sink& sink, const Writer& writer, std::vector<Contai
             flat, [&](const ContainerChild& child) { return !child.ownGroupId && groupIds.contains(child.groupId); });
     }
 
-    auto isExtracted = groupsType != ElementType::UNKNOWN && isGroups && !writer.is(SERIALIZE_NESTED_GROUPS);
+    auto isExtracted = groupsType != ElementType::UNKNOWN && writer.mode == SAVE_CLIPBOARD;
     std::vector<int> extracted;
     for (int i = 0; i < (int)flat.size(); ++i)
     {
@@ -1517,7 +1491,7 @@ IsaacIssues isaac_issues_get(const Model& model)
 // back), and interpolation flattened into single-step frames.
 static Animation animation_bake(const Writer& writer, Animation animation)
 {
-    if (writer.is(SERIALIZE_BAKE_GROUP_FRAMES))
+    if (writer.mode == SAVE_GAME)
         for (auto* entries : {&animation.layers, &animation.nulls})
             groups_each(*entries, [&](TrackGroup& group) {
                 if (std::ranges::all_of(group.root.frames, is_frame_transform_default))
@@ -1538,7 +1512,7 @@ static Animation animation_bake(const Writer& writer, Animation animation)
                                 {1, std::move(backup.root)});
             });
 
-    if (writer.is(SERIALIZE_FLATTEN_SPECIAL_INTERPOLATED_FRAMES))
+    if (writer.mode == SAVE_GAME)
         animation_tracks_each(animation, [](Track& track) {
             if (track.type == ItemType::TRIGGER)
                 return;
@@ -1561,8 +1535,7 @@ static std::vector<ElementType> layout_get(std::vector<ElementType> layout,
 
 static void animation_write(Sink& sink, const Writer& writer, const Animation& source, int groupId = -1)
 {
-    auto isBaked = writer.model &&
-                   (writer.is(SERIALIZE_BAKE_GROUP_FRAMES) || writer.is(SERIALIZE_FLATTEN_SPECIAL_INTERPOLATED_FRAMES));
+    auto isBaked = writer.model && writer.mode == SAVE_GAME;
     auto baked = isBaked ? std::optional(animation_bake(writer, source)) : std::nullopt;
     auto& animation = baked ? *baked : source;
 
@@ -1570,7 +1543,7 @@ static void animation_write(Sink& sink, const Writer& writer, const Animation& s
     sink.attribute("Name", animation.name);
     sink.attribute("FrameNum", animation.frameNum);
     sink.attribute("Loop", animation.isLoop);
-    if (writer.is(SERIALIZE_EXTENSIONS))
+    if (writer.is_extended())
         for (auto [name, marker] :
              {std::pair{"StartMarker", animation.startMarker}, {"EndMarker", animation.endMarker}})
             if (marker != -1)
@@ -1645,7 +1618,7 @@ static void item_write(Sink& sink, const Writer& writer, const Spritesheet& spri
     path_add(sink, "Path", spritesheet.path);
     extras_write(sink, spritesheet.extras);
     Children children = {sink, spritesheet.extras};
-    if (writer.is(SERIALIZE_REGIONS))
+    if (writer.is_extended())
         for (int i = 0; i < (int)spritesheet.regions.size(); ++i)
         {
             children.add();
@@ -1699,7 +1672,7 @@ static void item_write(Sink& sink, const Writer& writer, const Layer& layer, int
     sink.attribute("Id", id);
     sink.attribute("Name", layer.name);
     sink.attribute("SpritesheetId", layer.spritesheetId);
-    if (writer.is(SERIALIZE_EXTENSIONS) && layer.is_animation())
+    if (writer.is_extended() && layer.is_animation())
     {
         if (layer.libraryId != -1)
             sink.attribute("Library", layer.libraryId);
@@ -1798,13 +1771,13 @@ static void content_write(Sink& sink, const Writer& writer, const Content& conte
         auto extras = container_extras_get(content, type);
         // Optional containers are left out when the flags drop them or they are empty (their place still counts for
         // where unknown children go).
-        if (type == ElementType::SHADERS && writer.is(SERIALIZE_EXTENSIONS) &&
+        if (type == ElementType::SHADERS && writer.is_extended() &&
             (!content.shaders.empty() || !extras.children.empty()))
             items_write(sink, writer, content.shaders, type, extras);
-        if (type == ElementType::SOUNDS && writer.is(SERIALIZE_SOUNDS) &&
+        if (type == ElementType::SOUNDS && writer.is_extended() &&
             (!content.sounds.empty() || !extras.children.empty()))
             items_write(sink, writer, content.sounds, type, extras);
-        if (type == ElementType::LIBRARIES && writer.is(SERIALIZE_EXTENSIONS) &&
+        if (type == ElementType::LIBRARIES && writer.is_extended() &&
             (!content.libraries.empty() || !extras.children.empty()))
             items_write(sink, writer, content.libraries, type, extras);
         if (type == ElementType::SPRITESHEETS)
@@ -1820,14 +1793,14 @@ static void content_write(Sink& sink, const Writer& writer, const Content& conte
 }
 
 // A whole document. `inner` writes anything after its children (the SourceDocument copy) and `tag` renames it.
-static void model_write(Sink& sink, const Model& model, Flags flags, const std::function<void()>& inner = {},
+static void model_write(Sink& sink, const Model& model, SaveMode mode, const std::function<void()>& inner = {},
                         std::string_view tag = {})
 {
-    Writer writer(flags, &model);
+    Writer writer(mode, &model);
     sink.open(tag.empty() ? tag_get(ElementType::ANIMATED_ACTOR) : tag);
     extras_write(sink, model.extras);
     Children children = {sink, model.extras};
-    auto isIgnored = writer.is(SERIALIZE_EXTENSIONS) && model.info.isIsaacIgnored;
+    auto isIgnored = writer.is_extended() && model.info.isIsaacIgnored;
     auto isInfo = model.info.fps != Info{}.fps || model.info.createdBy != Info{}.createdBy || isIgnored;
     for (auto type : layout_get(model.layout, {{ElementType::INFO, isInfo},
                                                {ElementType::CONTENT, true},
@@ -1860,11 +1833,8 @@ static void model_write(Sink& sink, const Model& model, Flags flags, const std::
 // or color offsets of 0, which readers assume.
 static void document_write(Sink& sink, const Model& model, Options options)
 {
-    model_write(sink, options.gameModel ? *options.gameModel : model,
-                SERIALIZE_ISAAC_DEFAULT | SERIALIZE_PURGE_DEFAULT_COLORS, [&]() {
-                    model_write(sink, model, SERIALIZE_ANM2ED_DEFAULT | SERIALIZE_PURGE_DEFAULT_COLORS, {},
-                                SOURCE_DOCUMENT_TAG);
-                });
+    model_write(sink, options.gameModel ? *options.gameModel : model, SAVE_GAME,
+                [&]() { model_write(sink, model, SAVE_EDITOR, {}, SOURCE_DOCUMENT_TAG); });
 }
 
 // The text of whatever `write` sends to a sink.
@@ -1960,32 +1930,32 @@ std::string model_to_string(const Model& model, Options options)
     return text_get([&](Sink& sink) { document_write(sink, model, options); });
 }
 
-std::string model_serialize(const Model& model, Flags flags)
+std::string model_serialize(const Model& model, SaveMode mode)
 {
-    return text_get([&](Sink& sink) { model_write(sink, model, flags); });
+    return text_get([&](Sink& sink) { model_write(sink, model, mode); });
 }
 
 // The hash of what the editor would save, so it changes exactly when a save would.
 std::uint64_t model_hash(const Model& model)
 {
     Sink sink = {.mode = Sink::HASH};
-    model_write(sink, model, SERIALIZE_ANM2ED_DEFAULT);
+    model_write(sink, model, SAVE_EDITOR);
     return sink.hash;
 }
 
 std::string frame_to_string(const Frame& frame, ItemType type)
 {
-    return text_get([&](Sink& sink) { frame_write(sink, Writer(CLIPBOARD_FLAGS), frame, type); });
+    return text_get([&](Sink& sink) { frame_write(sink, Writer(SAVE_CLIPBOARD), frame, type); });
 }
 
 std::string animation_to_string(const Animation& animation, int groupId)
 {
-    return text_get([&](Sink& sink) { animation_write(sink, Writer(CLIPBOARD_FLAGS), animation, groupId); });
+    return text_get([&](Sink& sink) { animation_write(sink, Writer(SAVE_CLIPBOARD), animation, groupId); });
 }
 
 std::string animation_group_to_string(const AnimationGroup& group)
 {
-    return text_get([&](Sink& sink) { group_write(sink, Writer(CLIPBOARD_FLAGS), group); });
+    return text_get([&](Sink& sink) { group_write(sink, Writer(SAVE_CLIPBOARD), group); });
 }
 
 std::vector<Frame> frames_from_string(const std::string& text, ItemType type, std::string* errorString)
@@ -2016,7 +1986,7 @@ std::vector<AnimationEntry> animations_from_string(const std::string& text, std:
 
 template <class Item> static std::string item_to_string(const Item& item)
 {
-    return text_get([&](Sink& sink) { item_write(sink, Writer(CLIPBOARD_FLAGS), item, item.id); });
+    return text_get([&](Sink& sink) { item_write(sink, Writer(SAVE_CLIPBOARD), item, item.id); });
 }
 
 template <class Item> static std::vector<Item> items_from_string(const std::string& text, std::string* errorString)

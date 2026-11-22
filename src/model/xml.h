@@ -31,7 +31,7 @@ bool model_load(Model&, const std::filesystem::path&, std::string* = nullptr);
 bool model_load_string(Model&, std::string_view, std::string* = nullptr);
 bool model_save(const Model&, const std::filesystem::path&, std::string* = nullptr, Options = {});
 std::string model_to_string(const Model&, Options = {});
-std::string model_serialize(const Model&, Flags);
+std::string model_serialize(const Model&, SaveMode);
 std::uint64_t model_hash(const Model&);
 
 std::string frame_to_string(const Frame&, ItemType);
