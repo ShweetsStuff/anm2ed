@@ -9,7 +9,7 @@
 constexpr unsigned RANDOM_MULTIPLIER_A = 73856093u;
 constexpr unsigned RANDOM_MULTIPLIER_B = 19349663u;
 
-glm::mat4 draw_quad_model_get(const Draw& draw)
+Mat4 draw_quad_model_get(const Draw& draw)
 {
     auto& frame = draw.frame;
     return quad_model_get(frame.size, frame.position, frame.pivot, percent_to_unit(frame.scale), frame.rotation,
@@ -17,9 +17,9 @@ glm::mat4 draw_quad_model_get(const Draw& draw)
 }
 
 // Where an animation layer's frame puts its child: the frame's transform, with its pivot as the child's origin.
-glm::mat4 frame_child_model_get(const Frame& frame)
+Mat4 frame_child_model_get(const Frame& frame)
 {
-    return quad_model_get(glm::vec2(1.0f), frame.position, frame.pivot, percent_to_unit(frame.scale), frame.rotation,
+    return quad_model_get(Vec2(1.0f), frame.position, frame.pivot, percent_to_unit(frame.scale), frame.rotation,
                           percent_to_unit(frame.skew));
 }
 
@@ -27,8 +27,8 @@ glm::mat4 frame_child_model_get(const Frame& frame)
 float draw_scale_get(const Draw& draw)
 {
     auto model = draw.parent * draw_quad_model_get(draw);
-    auto size = glm::max(draw.frame.size, glm::vec2(1.0f));
-    return std::max(glm::length(glm::vec2(model[0])) / size.x, glm::length(glm::vec2(model[1])) / size.y);
+    auto size = vec_max(draw.frame.size, Vec2(1.0f));
+    return std::max(vec_length(Vec2(model[0])) / size.x, vec_length(Vec2(model[1])) / size.y);
 }
 
 // When an item is drawn: now, and for each sample its time if the track has a frame there.
@@ -151,14 +151,13 @@ std::vector<TriggerFire> animation_triggers_get(const Model& model, const Animat
 }
 
 // Where an animation layer track (`layerId`) puts its child at a time, in the animation's space.
-std::optional<glm::mat4> layer_child_transform_get(const Animation& animation, int layerId, float time,
-                                                   bool isRootTransform)
+std::optional<Mat4> layer_child_transform_get(const Animation& animation, int layerId, float time, bool isRootTransform)
 {
-    std::optional<glm::mat4> transform{};
+    std::optional<Mat4> transform{};
     tracks_each(animation.layers, [&](const Track& track, const TrackGroup* group) {
         if (track.id != layerId || transform)
             return;
-        glm::mat4 parent(1.0f);
+        Mat4 parent(1.0f);
         if (isRootTransform)
         {
             parent *= frame_parent_model_get(frame_generate(animation.root, time));
@@ -180,7 +179,7 @@ static std::vector<Draw> animation_draws_get(const Model& model, const Animation
     std::vector<std::pair<int, int>> layerOrders;
     int layerOrder = 0;
     auto parent_get = [&](float time, const TrackGroup* group) {
-        glm::mat4 parent(1.0f);
+        Mat4 parent(1.0f);
         if (!options.isRootTransform)
             return parent;
         parent *= frame_parent_model_get(frame_generate(animation.root, time));
@@ -190,7 +189,7 @@ static std::vector<Draw> animation_draws_get(const Model& model, const Animation
     };
     // An animation layer's child animation, placed by the layer's frame (its pivot is the child's origin).
     auto child_draws_add = [&](const Track& track, const Layer& layer, int sample, float time, const Frame& frame,
-                               const glm::mat4& parent) {
+                               const Mat4& parent) {
         auto [childModel, childAnimation] = child_get(model, layer, frame, options.library_get);
         if (!childAnimation || std::ranges::contains(playing, childAnimation))
             return;

@@ -97,7 +97,7 @@ static std::optional<Arguments> arguments_get(int argc, const char** argv)
 }
 
 // RRGGBB (opaque) or "transparent".
-static glm::vec4 background_get(const Arguments& arguments)
+static Vec4 background_get(const Arguments& arguments)
 {
     auto text = arguments.get("background").value_or("transparent");
     if (text.starts_with('#'))
@@ -228,7 +228,7 @@ static int draw_run(const Arguments& arguments)
 
     auto& textureInfo = SHADERS[SHADER_TEXTURE];
     ShaderProgram shader(textureInfo.vertex, textureInfo.fragment);
-    Canvas canvas(glm::vec2(1.0f));
+    Canvas canvas(Vec2(1.0f));
     auto isRootTransform = !arguments.is("no-root-transform");
     auto bounds = animation_bounds_get(document, *animation, isRootTransform);
     auto scale = arguments.number_get("scale", SCALE_DEFAULT);
@@ -245,7 +245,7 @@ static int draw_run(const Arguments& arguments)
     {
         auto pixels = frame_render(arguments.number_get("time", 0.0f));
         pixels_unpremultiply(pixels);
-        if (!Image::write_pixels_png(outPath, glm::ivec2(canvas.size), pixels.data()))
+        if (!Image::write_pixels_png(outPath, IVec2(canvas.size), pixels.data()))
         {
             std::println(stderr, "could not write {}", *out);
             return 1;

@@ -1,13 +1,11 @@
 #include "ui/panel.h"
 
-#include <glm/gtc/type_ptr.hpp>
+#include "vec.h"
 
 #include "localization.h"
 #include "ui/input.h"
 #include "ui/layout.h"
 #include "ui/shortcut.h"
-
-using namespace glm;
 
 constexpr auto FRAMES_MAX = 100;
 
@@ -22,12 +20,12 @@ void onionskin_update(Manager& manager, Settings& settings)
 
     if (ImGui::Begin(localize.get(LABEL_ONIONSKIN_WINDOW), &settings.windowIsOnionskin))
     {
-        auto configure_widgets = [&](const char* separator, int& frames, vec3& color) {
+        auto configure_widgets = [&](const char* separator, int& frames, Vec3& color) {
             ImGui::PushID(separator);
             ImGui::SeparatorText(separator);
             input_int_range(localize.get(BASIC_FRAMES), frames, 0, FRAMES_MAX);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ONIONSKIN_FRAMES));
-            ImGui::ColorEdit3(localize.get(BASIC_COLOR), value_ptr(color));
+            ImGui::ColorEdit3(localize.get(BASIC_COLOR), values_get(color));
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ONIONSKIN_COLOR));
             ImGui::PopID();
         };

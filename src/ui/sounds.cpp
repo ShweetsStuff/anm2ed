@@ -103,8 +103,7 @@ void sounds_update(Panel& panel)
                               auto audio = document.sound_get(id);
                               auto isValid = audio && audio->is_valid();
                               auto& texture = resources.icons[isValid ? ICON_SOUND : ICON_NONE];
-                              return CardImage{
-                                  .texture = &texture, .size = glm::vec2(texture.size), .isValid = isValid};
+                              return CardImage{.texture = &texture, .size = Vec2(texture.size), .isValid = isValid};
                           },
                       .select =
                           [&](int id) {

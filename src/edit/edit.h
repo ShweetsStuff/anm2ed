@@ -35,9 +35,9 @@ struct RootBakeOptions
 
 struct GridOptions
 {
-    glm::ivec2 start{};
-    glm::ivec2 size{};
-    glm::vec2 pivot{};
+    IVec2 start{};
+    IVec2 size{};
+    Vec2 pivot{};
     int columns = 0;
     int count = 0;
     int delay = 0;

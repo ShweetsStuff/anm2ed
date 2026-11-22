@@ -19,7 +19,7 @@ TEST_CASE("draw lists put the root first and each item's onion samples before it
     auto layerDraws = std::ranges::count_if(
         draws, [](const Draw& draw) { return draw.type == DrawType::LAYER && draw.sample == -1; });
     CHECK(layerDraws > 0);
-    CHECK(animation_rect(anm2, animation, true) != glm::vec4(-1.0f));
+    CHECK(animation_rect(anm2, animation, true) != Vec4(-1.0f));
 }
 
 TEST_CASE("root transforms fold into layer draws")
@@ -82,27 +82,27 @@ TEST_CASE("an animation layer draws its child animation, from this file or a lib
     auto spin = model_load(file_load(TEST_DIR / "render" / "spin.anm2"));
     DrawOptions options = {.library_get = [&](const Model&, int id) { return id == 0 ? &spin : nullptr; }};
     auto red_position_get = [&](int layerId) {
-        std::optional<glm::vec2> position{};
+        std::optional<Vec2> position{};
         for (auto& draw : animation_draws_get(anm2, *anm2.animation_get(0), options))
-            if (draw.type == DrawType::LAYER && draw.id == layerId && draw.frame.crop == glm::vec2())
-                position = glm::vec2(draw.parent * glm::vec4(draw.frame.position, 0.0f, 1.0f));
+            if (draw.type == DrawType::LAYER && draw.id == layerId && draw.frame.crop == Vec2())
+                position = Vec2(draw.parent * Vec4(draw.frame.position, 0.0f, 1.0f));
         return position;
     };
 
     // The library's red square, half size at (40, 0), starts on its fifth frame (at x 16).
-    CHECK(red_position_get(0) == glm::vec2(48.0f, 0.0f));
+    CHECK(red_position_get(0) == Vec2(48.0f, 0.0f));
     // This file's Inner holds its first frame however far the parent plays.
     options.time = 1.0f;
-    CHECK(red_position_get(1) == glm::vec2(-40.0f, 0.0f));
+    CHECK(red_position_get(1) == Vec2(-40.0f, 0.0f));
     // An animation never draws inside itself.
     CHECK_FALSE(red_position_get(3));
 
     // Once stops on the child's last frame. Loop wraps around it.
     options.time = 6.0f;
     anm2.frame_edit({0, LAYER, 1, 0})->childMode = ChildMode::ONCE;
-    CHECK(red_position_get(1) == glm::vec2(-40.0f, 10.0f));
+    CHECK(red_position_get(1) == Vec2(-40.0f, 10.0f));
     anm2.frame_edit({0, LAYER, 1, 0})->childMode = ChildMode::LOOP;
-    CHECK(red_position_get(1) == glm::vec2(-40.0f, 0.0f));
+    CHECK(red_position_get(1) == Vec2(-40.0f, 0.0f));
 
     // Without the library loaded, its layer draws nothing.
     options.library_get = {};
@@ -172,12 +172,11 @@ TEST_CASE("flattening animation layers bakes their children into plain layers th
 
     // Every frame, the plain layers draw where the animation layers' children did.
     auto points_get = [&](const Model& model, const LibraryGet& get, float time) {
-        std::vector<glm::vec2> points{};
+        std::vector<Vec2> points{};
         for (auto& draw : animation_draws_get(model, *model.animation_get(0), {.time = time, .library_get = get}))
             if (draw.type == DrawType::LAYER)
-                points.push_back(
-                    glm::round(glm::vec2(draw.parent * draw_quad_model_get(draw) * glm::vec4(1, 1, 0, 1))));
-        std::ranges::sort(points, [](glm::vec2 a, glm::vec2 b) { return std::tie(a.x, a.y) < std::tie(b.x, b.y); });
+                points.push_back(vec_round(Vec2(draw.parent * draw_quad_model_get(draw) * Vec4(1, 1, 0, 1))));
+        std::ranges::sort(points, [](Vec2 a, Vec2 b) { return std::tie(a.x, a.y) < std::tie(b.x, b.y); });
         return points;
     };
     for (float time = 0.0f; time < 8.0f; time += 1.0f)
@@ -205,7 +204,7 @@ TEST_CASE("an animation layer's child sits where the layer's frame puts it")
     auto anm2 = model_load(file_load(TEST_DIR / "render" / "nested.anm2"));
     auto placement = layer_child_transform_get(*anm2.animation_get(0), 0, 0.0f, true);
     REQUIRE(placement);
-    CHECK(glm::vec2(*placement * glm::vec4(16.0f, 0.0f, 0.0f, 1.0f)) == glm::vec2(48.0f, 0.0f));
+    CHECK(Vec2(*placement * Vec4(16.0f, 0.0f, 0.0f, 1.0f)) == Vec2(48.0f, 0.0f));
     CHECK_FALSE(layer_child_transform_get(*anm2.animation_get(0), 99, 0.0f, true));
 }
 
@@ -223,7 +222,7 @@ TEST_CASE("the game's copy stands in for depth and alpha offsets")
 
     // Every frame, the same crops draw in the same order and places, with no depth left.
     auto draws_get = [](const Model& model, float time) {
-        std::vector<std::pair<glm::vec2, glm::vec2>> draws{};
+        std::vector<std::pair<Vec2, Vec2>> draws{};
         for (auto& draw : animation_draws_get(model, *model.animation_get(0), {.time = time}))
             if (draw.type == DrawType::LAYER && draw.frame.isVisible)
                 draws.emplace_back(draw.frame.crop, draw.frame.position);

@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <format>
 
-#include <glm/gtc/type_ptr.hpp>
+#include "vec.h"
 
 #include "math_util.h"
 #include "path.h"
@@ -12,8 +12,6 @@
 #include "ui/layout.h"
 #include "vector.h"
 #include "working_directory.h"
-
-using namespace glm;
 
 constexpr int REGION_CARD_LINES = 2;
 constexpr int REGION_POPUP_ROWS = 5;
@@ -82,8 +80,8 @@ static CardImage region_image_get(Document& document, Resources& resources, cons
         return {.texture = &resources.icons[ICON_NONE], .size = region.size};
     return {.texture = texture,
             .size = region.size,
-            .uvMin = region.crop / vec2(texture->size),
-            .uvMax = (region.crop + region.size) / vec2(texture->size),
+            .uvMin = region.crop / Vec2(texture->size),
+            .uvMax = (region.crop + region.size) / Vec2(texture->size),
             .isValid = true};
 }
 
@@ -99,8 +97,8 @@ static bool region_export(Document& document, const RegionExportOptions& options
     auto spritesheet = item_get(document.model.content.spritesheets, options.spritesheetId);
     auto region = spritesheet ? item_get(spritesheet->regions, options.regionId) : nullptr;
     auto texture = document.texture_get(options.spritesheetId);
-    auto minPoint = region ? ivec2(glm::min(region->crop, region->crop + region->size)) : ivec2();
-    auto exportSize = region ? ivec2(glm::max(region->crop, region->crop + region->size)) - minPoint : ivec2();
+    auto minPoint = region ? IVec2(vec_min(region->crop, region->crop + region->size)) : IVec2();
+    auto exportSize = region ? IVec2(vec_max(region->crop, region->crop + region->size)) - minPoint : IVec2();
     if (!region || !texture || !texture->is_valid() || exportSize.x <= 0 || exportSize.y <= 0)
     {
         toast_log(Level::ERROR, TOAST_EXPORT_REGION_FAILED, region ? region->name : std::string(), pathString);
@@ -144,7 +142,7 @@ static bool region_export(Document& document, const RegionExportOptions& options
             exportedRegion.uid = uid_next();
             exportedRegion.id = 0;
             exportedRegion.crop = {};
-            exportedRegion.size = vec2(exportSize);
+            exportedRegion.size = Vec2(exportSize);
             region_pivot_apply(exportedRegion);
             exported.regions.push_back(exportedRegion);
             spritesheets.push_back(exported);
@@ -268,12 +266,12 @@ static void region_properties_popup_update(Panel& panel, RegionsPanel& regions)
             ImGui::SetKeyboardFocusHere();
         input_text_string(localize.get(BASIC_NAME), &region.name);
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ITEM_NAME));
-        ImGui::DragFloat2(localize.get(BASIC_CROP), value_ptr(region.crop), DRAG_SPEED, 0.0f, 0.0f,
+        ImGui::DragFloat2(localize.get(BASIC_CROP), values_get(region.crop), DRAG_SPEED, 0.0f, 0.0f,
                           vec2_format_get(region.crop));
-        ImGui::DragFloat2(localize.get(BASIC_SIZE), value_ptr(region.size), DRAG_SPEED, 0.0f, 0.0f,
+        ImGui::DragFloat2(localize.get(BASIC_SIZE), values_get(region.size), DRAG_SPEED, 0.0f, 0.0f,
                           vec2_format_get(region.size));
         ImGui::BeginDisabled(region.origin != Origin::CUSTOM);
-        ImGui::DragFloat2(localize.get(BASIC_PIVOT), value_ptr(region.pivot), DRAG_SPEED, 0.0f, 0.0f,
+        ImGui::DragFloat2(localize.get(BASIC_PIVOT), values_get(region.pivot), DRAG_SPEED, 0.0f, 0.0f,
                           vec2_format_get(region.pivot));
         ImGui::EndDisabled();
 

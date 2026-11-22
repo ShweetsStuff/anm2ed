@@ -1,14 +1,12 @@
 #include "ui/canvas_view.h"
 
-#include <glm/gtc/type_ptr.hpp>
+#include "vec.h"
 
 #include "ui/actions.h"
 #include "edit/edit.h"
 #include "ui/input.h"
 #include "ui/layout.h"
 #include "ui/shortcut.h"
-
-using namespace glm;
 
 CanvasInput canvas_input_get(Manager& manager, bool isFocused)
 {
@@ -23,7 +21,7 @@ CanvasInput canvas_input_get(Manager& manager, bool isFocused)
     auto isMod = ImGui::IsKeyDown(ImGuiMod_Shift);
     return {.arrow = {key_axis_get(ImGuiKey_LeftArrow, ImGuiKey_RightArrow),
                       key_axis_get(ImGuiKey_UpArrow, ImGuiKey_DownArrow)},
-            .mouseDelta = vec2(ivec2(to_vec2(io.MouseDelta))),
+            .mouseDelta = Vec2(IVec2(to_vec2(io.MouseDelta))),
             .wheel = io.MouseWheel,
             .step = (float)(isMod ? STEP_FAST : STEP),
             .isArrowBegin = is_any([](ImGuiKey key) { return ImGui::IsKeyPressed(key, false); }),
@@ -65,10 +63,10 @@ void frames_change_push(Manager& manager, const std::set<Reference>& frames, Fra
 }
 
 // The rectangle spanned by two corners, grown outward to the grid when snapping, in whole pixels.
-std::pair<vec2, vec2> rect_snap(vec2 corner, vec2 otherCorner, bool isSnap, ivec2 gridSize, ivec2 gridOffset)
+std::pair<Vec2, Vec2> rect_snap(Vec2 corner, Vec2 otherCorner, bool isSnap, IVec2 gridSize, IVec2 gridOffset)
 {
-    auto minPoint = glm::min(corner, otherCorner);
-    auto maxPoint = glm::max(corner, otherCorner);
+    auto minPoint = vec_min(corner, otherCorner);
+    auto maxPoint = vec_max(corner, otherCorner);
     for (int axis = 0; axis < 2 && isSnap; ++axis)
     {
         if (gridSize[axis] == 0)
@@ -78,7 +76,7 @@ std::pair<vec2, vec2> rect_snap(vec2 corner, vec2 otherCorner, bool isSnap, ivec
         minPoint[axis] = std::floor((minPoint[axis] - offset) / size) * size + offset;
         maxPoint[axis] = std::ceil((maxPoint[axis] - offset) / size) * size + offset;
     }
-    return {vec2(ivec2(minPoint)), vec2(ivec2(maxPoint))};
+    return {Vec2(IVec2(minPoint)), Vec2(IVec2(maxPoint))};
 }
 
 void tooltip_lines_draw(std::initializer_list<std::string> lines)
@@ -111,7 +109,7 @@ void tool_cursor_update(Tool type, ToolArea area, bool isFrameAvailable, bool is
     tooltip_lines_draw({localize.get(hint)});
 }
 
-CanvasView::CanvasView() : Canvas(vec2())
+CanvasView::CanvasView() : Canvas(Vec2())
 {}
 
 bool CanvasView::is_focused_get() const
@@ -119,7 +117,7 @@ bool CanvasView::is_focused_get() const
     return isFocused;
 }
 
-void CanvasView::checker_pan_reset(float zoom, vec2 pan)
+void CanvasView::checker_pan_reset(float zoom, Vec2 pan)
 {
     checkerPan = pan;
     checkerSyncPan = pan;
@@ -128,7 +126,7 @@ void CanvasView::checker_pan_reset(float zoom, vec2 pan)
     hasPendingZoomPanAdjust = false;
 }
 
-void CanvasView::checker_pan_sync(float zoom, vec2 pan)
+void CanvasView::checker_pan_sync(float zoom, Vec2 pan)
 {
     if (!isCheckerPanInitialized)
         return checker_pan_reset(zoom, pan);
@@ -144,7 +142,7 @@ void CanvasView::checker_pan_sync(float zoom, vec2 pan)
         hasPendingZoomPanAdjust = false;
 }
 
-void CanvasView::zoom_step(float& zoom, vec2& pan, vec2 focus, int levelDelta)
+void CanvasView::zoom_step(float& zoom, Vec2& pan, Vec2 focus, int levelDelta)
 {
     auto previousZoom = zoom;
     zoom_level_adjust(zoom, pan, focus, levelDelta);
@@ -152,7 +150,7 @@ void CanvasView::zoom_step(float& zoom, vec2& pan, vec2 focus, int levelDelta)
         hasPendingZoomPanAdjust = true;
 }
 
-void CanvasView::grid_child_draw(ImVec2 childSize, bool& isGrid, vec4& gridColor, ivec2& gridSize, ivec2& gridOffset,
+void CanvasView::grid_child_draw(ImVec2 childSize, bool& isGrid, Vec4& gridColor, IVec2& gridSize, IVec2& gridOffset,
                                  bool* isGridSnap)
 {
     if (ImGui::BeginChild("##Grid Child", childSize, true, ImGuiWindowFlags_HorizontalScrollbar))
@@ -166,12 +164,12 @@ void CanvasView::grid_child_draw(ImVec2 childSize, bool& isGrid, vec4& gridColor
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_SNAP));
         }
         ImGui::SameLine();
-        ImGui::ColorEdit4(localize.get(BASIC_COLOR), value_ptr(gridColor), ImGuiColorEditFlags_NoInputs);
+        ImGui::ColorEdit4(localize.get(BASIC_COLOR), values_get(gridColor), ImGuiColorEditFlags_NoInputs);
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_COLOR));
 
-        input_int2_range(localize.get(BASIC_SIZE), gridSize, ivec2(GRID_SIZE_MIN), ivec2(GRID_SIZE_MAX));
+        input_int2_range(localize.get(BASIC_SIZE), gridSize, IVec2(GRID_SIZE_MIN), IVec2(GRID_SIZE_MAX));
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_SIZE));
-        input_int2_range(localize.get(BASIC_OFFSET), gridOffset, ivec2(GRID_OFFSET_MIN), ivec2(GRID_OFFSET_MAX));
+        input_int2_range(localize.get(BASIC_OFFSET), gridOffset, IVec2(GRID_OFFSET_MIN), IVec2(GRID_OFFSET_MAX));
         ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_OFFSET));
     }
     ImGui::EndChild();
@@ -193,7 +191,7 @@ void CanvasView::view_buttons_draw(Manager& manager, Settings& settings, const s
 }
 
 void CanvasView::view_context_menu_draw(const char* label, Manager& manager, Settings& settings, Document& document,
-                                        float& zoom, vec2& pan, const std::function<void()>& center,
+                                        float& zoom, Vec2& pan, const std::function<void()>& center,
                                         const std::function<void()>& fit, bool isFitEnabled)
 {
     auto zoom_center_step = [&](int levelDelta) {

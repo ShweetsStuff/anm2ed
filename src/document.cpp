@@ -28,8 +28,6 @@
 #include "ui/toast.h"
 #include "working_directory.h"
 
-using namespace glm;
-
 constexpr std::string_view BAKED_EXTENSION = ".baked.png";
 constexpr std::string_view AUTOSAVE_EXTENSION = ".autosave";
 constexpr int VECTOR_LEVEL_MAX = 3;

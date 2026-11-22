@@ -18,8 +18,6 @@
 #include "ui/layout.h"
 #include "ui/shortcut.h"
 
-using namespace glm;
-
 constexpr auto GENERATE_REGIONS_TARGET_SELECTION = 0;
 constexpr auto GENERATE_REGIONS_TARGET_ALL = 1;
 

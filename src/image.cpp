@@ -36,8 +36,6 @@
 #include "path.h"
 #include "uid.h"
 
-using namespace glm;
-
 constexpr std::size_t BASE64_GROUP_BYTES = 3;
 constexpr int BASE64_DIGIT_BITS = 6;
 constexpr std::uint32_t BASE64_DIGIT_MASK = 0x3F;
@@ -66,9 +64,9 @@ bool Image::is_vector() const
     return svg != nullptr;
 }
 
-glm::vec2 Image::unit_size_get() const
+Vec2 Image::unit_size_get() const
 {
-    return glm::vec2(size) / scale;
+    return Vec2(size) / scale;
 }
 
 // Closes the hairline seams an SVG's anti-aliasing leaves where two shapes meet: a partly covered pixel with opaque
@@ -76,20 +74,19 @@ glm::vec2 Image::unit_size_get() const
 // Outer edges, with transparency on one side, keep their anti-aliasing.
 static void seams_fill(Image& image)
 {
-    constexpr glm::ivec2 AXES[] = {{1, 0}, {0, 1}, {1, 1}, {1, -1}};
+    constexpr IVec2 AXES[] = {{1, 0}, {0, 1}, {1, 1}, {1, -1}};
     // Coverage as drawn (filling only ever raises it, and only on partly covered pixels, whose colors no check reads).
     std::vector<uint8_t> alphas((std::size_t)image.size.x * image.size.y);
     for (std::size_t i = 0; i < alphas.size(); ++i)
         alphas[i] = image.pixels[i * IMAGE_CHANNELS + ALPHA];
-    auto index_get = [&](glm::ivec2 point) {
+    auto index_get = [&](IVec2 point) {
         return (std::size_t)point.y * image.size.x + point.x;
     };
-    auto opaque_get = [&](glm::ivec2 point, glm::ivec2 step) -> const uint8_t* {
+    auto opaque_get = [&](IVec2 point, IVec2 step) -> const uint8_t* {
         for (int reach = 1; reach <= SEAM_REACH; ++reach)
         {
             auto neighbor = point + step * reach;
-            if (glm::any(glm::lessThan(neighbor, glm::ivec2(0))) ||
-                glm::any(glm::greaterThanEqual(neighbor, image.size)))
+            if (!is_within(neighbor, IVec2(0), image.size))
                 return nullptr;
             if (alphas[index_get(neighbor)] >= SEAM_OPAQUE_ALPHA)
                 return image.pixels.data() + index_get(neighbor) * IMAGE_CHANNELS;
@@ -126,7 +123,7 @@ static Image svg_render(std::shared_ptr<const std::string> svg, float scale)
     auto document = svg ? lunasvg::Document::loadFromData(*svg) : nullptr;
     if (!document || document->width() <= 0.0f)
         return {};
-    auto size = glm::max(ivec2(glm::ceil(vec2(document->width(), document->height()) * scale)), ivec2(1));
+    auto size = vec_max(IVec2(vec_ceil(Vec2(document->width(), document->height()) * scale)), IVec2(1));
     auto bitmap = document->renderToBitmap(size.x, size.y);
     if (bitmap.isNull())
         return {};
@@ -148,7 +145,7 @@ size_t Image::pixel_size_get() const
     return size.x * size.y * IMAGE_CHANNELS;
 }
 
-Image::Image(const uint8_t* data, ivec2 size, bool isLinear) : isLinear(isLinear)
+Image::Image(const uint8_t* data, IVec2 size, bool isLinear) : isLinear(isLinear)
 {
     if (!data || size.x <= 0 || size.y <= 0)
         return;
@@ -189,7 +186,7 @@ bool Image::write_png(const std::filesystem::path& path) const
     return write_pixels_png(path, size, pixels.empty() ? nullptr : pixels.data());
 }
 
-bool Image::write_pixels_png(const std::filesystem::path& path, ivec2 size, const uint8_t* data)
+bool Image::write_pixels_png(const std::filesystem::path& path, IVec2 size, const uint8_t* data)
 {
     if (!data || size.x <= 0 || size.y <= 0)
         return false;
@@ -207,15 +204,14 @@ bool Image::write_pixels_png(const std::filesystem::path& path, ivec2 size, cons
 }
 
 // Copies a size-sized block between images. Pixels outside either image are skipped.
-static void pixels_copy(const Image& from, glm::ivec2 fromMin, Image& to, glm::ivec2 toMin, glm::ivec2 size)
+static void pixels_copy(const Image& from, IVec2 fromMin, Image& to, IVec2 toMin, IVec2 size)
 {
     for (int y = 0; y < size.y; ++y)
         for (int x = 0; x < size.x; ++x)
         {
-            auto source = fromMin + glm::ivec2(x, y);
-            auto target = toMin + glm::ivec2(x, y);
-            if (glm::any(glm::lessThan(source, glm::ivec2(0))) || glm::any(glm::greaterThanEqual(source, from.size)) ||
-                glm::any(glm::lessThan(target, glm::ivec2(0))) || glm::any(glm::greaterThanEqual(target, to.size)))
+            auto source = fromMin + IVec2(x, y);
+            auto target = toMin + IVec2(x, y);
+            if (!is_within(source, IVec2(0), from.size) || !is_within(target, IVec2(0), to.size))
                 continue;
             std::copy_n(from.pixels.data() + ((std::size_t)source.y * from.size.x + source.x) * IMAGE_CHANNELS,
                         IMAGE_CHANNELS,
@@ -223,13 +219,13 @@ static void pixels_copy(const Image& from, glm::ivec2 fromMin, Image& to, glm::i
         }
 }
 
-void Image::paste(const Image& source, glm::ivec2 position)
+void Image::paste(const Image& source, IVec2 position)
 {
     pixels_copy(source, {}, *this, position, source.size);
 }
 
 // A copy of a block of the image (transparent where it falls outside).
-Image Image::region_get(glm::ivec2 min, glm::ivec2 regionSize) const
+Image Image::region_get(IVec2 min, IVec2 regionSize) const
 {
     Image region = {};
     region.size = regionSize;
@@ -361,7 +357,7 @@ static void svg_definition_add(pugi::xml_node root, pugi::xml_node defs, const I
 
 // Parts of images placed into one image of `size`: an SVG when `isVector` (each part a clipped view of its image's
 // drawing, or of an embedded PNG), otherwise pixels.
-Image Image::compose(const std::vector<ImagePart>& parts, glm::ivec2 size, bool isVector)
+Image Image::compose(const std::vector<ImagePart>& parts, IVec2 size, bool isVector)
 {
     if (!isVector)
     {
@@ -417,44 +413,44 @@ bool Image::write(const std::filesystem::path& path) const
     return write_png(path);
 }
 
-vec4 Image::pixel_read(vec2 position) const
+Vec4 Image::pixel_read(Vec2 position) const
 {
     if (pixels.size() < IMAGE_CHANNELS || size.x <= 0 || size.y <= 0)
-        return vec4(0.0f);
+        return Vec4(0.0f);
 
-    int x = glm::clamp((int)(position.x), 0, size.x - 1);
-    int y = glm::clamp((int)(position.y), 0, size.y - 1);
+    int x = vec_clamp((int)(position.x), 0, size.x - 1);
+    int y = vec_clamp((int)(position.y), 0, size.y - 1);
 
     auto index = ((size_t)(y) * (size_t)(size.x) + (size_t)(x)) * IMAGE_CHANNELS;
     if (index + IMAGE_CHANNELS > pixels.size())
-        return vec4(0.0f);
+        return Vec4(0.0f);
 
-    vec4 color{uint8_to_float(pixels[index + 0]), uint8_to_float(pixels[index + 1]), uint8_to_float(pixels[index + 2]),
+    Vec4 color{uint8_to_float(pixels[index + 0]), uint8_to_float(pixels[index + 1]), uint8_to_float(pixels[index + 2]),
                uint8_to_float(pixels[index + 3])};
 
     if (color.a <= 0.0f)
-        color = vec4(0.0f);
+        color = Vec4(0.0f);
     return color;
 }
 
-void Image::pixel_set(ivec2 position, vec4 color)
+void Image::pixel_set(IVec2 position, Vec4 color)
 {
     if (position.x < 0 || position.y < 0 || position.x >= size.x || position.y >= size.y)
         return;
 
-    uint8 rgba8[4] = {(uint8)float_to_uint8(color.r), (uint8)float_to_uint8(color.g), (uint8)float_to_uint8(color.b),
-                      (uint8)float_to_uint8(color.a)};
+    uint8_t rgba[4] = {(uint8_t)float_to_uint8(color.r), (uint8_t)float_to_uint8(color.g),
+                       (uint8_t)float_to_uint8(color.b), (uint8_t)float_to_uint8(color.a)};
 
     if (pixels.size() != pixel_size_get())
         return;
     size_t idx = (position.y * size.x + position.x) * IMAGE_CHANNELS;
-    memcpy(&pixels[idx], rgba8, 4);
+    memcpy(&pixels[idx], rgba, 4);
     uid = uid_next();
 }
 
-void Image::pixel_line(ivec2 start, ivec2 end, vec4 color)
+void Image::pixel_line(IVec2 start, IVec2 end, Vec4 color)
 {
-    auto plot = [&](ivec2 pos) {
+    auto plot = [&](IVec2 pos) {
         pixel_set(pos, color);
     };
 

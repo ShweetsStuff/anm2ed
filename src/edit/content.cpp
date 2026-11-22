@@ -20,8 +20,8 @@ std::string region_name_get(const std::string& format, int number)
 
 static bool is_region_matched(const Region& region, const Frame& frame)
 {
-    return glm::ivec2(region.crop) == glm::ivec2(frame.crop) && glm::ivec2(region.size) == glm::ivec2(frame.size) &&
-           glm::ivec2(region.pivot) == glm::ivec2(frame.pivot);
+    return IVec2(region.crop) == IVec2(frame.crop) && IVec2(region.size) == IVec2(frame.size) &&
+           IVec2(region.pivot) == IVec2(frame.pivot);
 }
 
 // Every frame of every layer track whose layer has a spritesheet, with that spritesheet's id.

@@ -12,8 +12,6 @@
 #include "ui/input.h"
 #include "ui/layout.h"
 
-using namespace glm;
-
 constexpr int TRIGGER_EVENTS_ROWS = 3;
 
 struct Vec2Field
@@ -21,7 +19,7 @@ struct Vec2Field
     StringType label;
     StringType tooltip;
     StringType edit;
-    vec2 Frame::* member;
+    Vec2 Frame::* member;
     bool isRegionField;
 };
 
@@ -209,13 +207,13 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                     for (auto& field : VEC2_FIELDS)
                     {
                         auto& source = field.isRegionField ? displayFrame : useFrame;
-                        auto value = frame ? source.*field.member : vec2();
+                        auto value = frame ? source.*field.member : Vec2();
                         // An animation layer's pivot is where its child's origin goes. It has no crop or size.
                         ImGui::BeginDisabled(field.isRegionField &&
                                              (type == ROOT || type == NULL_ || isRegionSet ||
                                               (isAnimationLayer && field.member != &Frame::pivot)));
                         auto state = drag_float2_persistent(localize.get(field.label),
-                                                            frame ? &value : &dummy_value<vec2>(), DRAG_SPEED, 0.0f,
+                                                            frame ? &value : &dummy_value<Vec2>(), DRAG_SPEED, 0.0f,
                                                             0.0f, frame ? vec2_format_get(source.*field.member) : "");
                         frame_edit(state, field.edit,
                                    [value, member = field.member](Document&, Frame& frame, Track*, const Reference&) {
@@ -262,7 +260,7 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                     ImGui::EndDisabled();
 
                     auto tintEdit =
-                        color_edit4_persistent(localize.get(BASIC_TINT), frame ? &useFrame.tint : &dummy_value<vec4>());
+                        color_edit4_persistent(localize.get(BASIC_TINT), frame ? &useFrame.tint : &dummy_value<Vec4>());
                     frame_edit(tintEdit, EDIT_FRAME_TINT,
                                [tint = useFrame.tint](Document&, Frame& frame, Track*, const Reference&) {
                                    frame.tint = tint;
@@ -270,7 +268,7 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                     ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TINT));
 
                     auto colorOffsetEdit = color_edit4_persistent(localize.get(BASIC_COLOR_OFFSET),
-                                                                  frame ? &useFrame.colorOffset : &dummy_value<vec4>());
+                                                                  frame ? &useFrame.colorOffset : &dummy_value<Vec4>());
                     frame_edit(colorOffsetEdit, EDIT_FRAME_COLOR_OFFSET,
                                [colorOffset = useFrame.colorOffset](Document&, Frame& frame, Track*, const Reference&) {
                                    frame.colorOffset = colorOffset;
@@ -419,6 +417,6 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
     dummy_value<float>() = 0;
     dummy_value<int>() = 0;
     dummy_value<bool>() = 0;
-    dummy_value<vec2>() = vec2();
-    dummy_value<vec4>() = vec4();
+    dummy_value<Vec2>() = Vec2();
+    dummy_value<Vec4>() = Vec4();
 }

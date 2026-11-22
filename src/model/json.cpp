@@ -41,12 +41,12 @@ template <class Items> static int index_get(const Items& items, int id)
     return it == items.end() ? -1 : (int)(it - items.begin());
 }
 
-static glm::ivec4 color_to_bytes(const glm::vec4& color)
+static IVec4 color_to_bytes(const Vec4& color)
 {
     return {float_to_uint8(color.r), float_to_uint8(color.g), float_to_uint8(color.b), float_to_uint8(color.a)};
 }
 
-static glm::vec4 color_from_bytes(const glm::ivec4& bytes)
+static Vec4 color_from_bytes(const IVec4& bytes)
 {
     return {uint8_to_float(bytes.r), uint8_to_float(bytes.g), uint8_to_float(bytes.b), uint8_to_float(bytes.a)};
 }
@@ -207,9 +207,9 @@ struct JsonWriter
         close(']');
     }
 
-    template <int L, class T, glm::qualifier Q> void value(const glm::vec<L, T, Q>& value)
+    template <Vector V> void value(const V& value)
     {
-        array(value, L);
+        array(value, V::SIZE);
     }
     template <class T> void value(const std::vector<T>& value)
     {
@@ -344,11 +344,11 @@ static std::string_view value_read(dom::element element, std::filesystem::path& 
     return expected;
 }
 
-template <int L, class T, glm::qualifier Q> std::string_view value_read(dom::element element, glm::vec<L, T, Q>& value)
+template <Vector V> std::string_view value_read(dom::element element, V& value)
 {
-    static const auto EXPECTED = std::format("an array of {} numbers", L);
+    static const auto EXPECTED = std::format("an array of {} numbers", V::SIZE);
     dom::array array;
-    if (element.get(array) || array.size() != L)
+    if (element.get(array) || array.size() != V::SIZE)
         return EXPECTED;
     auto read = value;
     int i = 0;
@@ -637,8 +637,8 @@ template <class Io, class A> static void animation_io(Io& io, A& animation)
 {
     io.field("length", animation.frameNum, 1);
     io.field("loop", animation.isLoop, true);
-    glm::ivec2 markers{animation.startMarker, animation.endMarker};
-    io.field("markers", markers, glm::ivec2{-1});
+    IVec2 markers{animation.startMarker, animation.endMarker};
+    io.field("markers", markers, IVec2{-1});
     if constexpr (Io::IS_READING)
         std::tie(animation.startMarker, animation.endMarker) = std::tie(markers.x, markers.y);
     frames_io(io, "root", animation.root.frames, ItemType::ROOT);

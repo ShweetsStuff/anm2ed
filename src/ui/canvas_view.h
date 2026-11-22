@@ -16,8 +16,8 @@
 // One frame of canvas input. `arrow` is the arrow keys pressed this frame (with key repeat), x right and y down.
 struct CanvasInput
 {
-    glm::vec2 arrow{};
-    glm::vec2 mouseDelta{};
+    Vec2 arrow{};
+    Vec2 mouseDelta{};
     float wheel = 0;
     float step = 0;
     bool isArrowBegin = false;
@@ -40,27 +40,27 @@ bool is_canvas_hovered(ImVec2, ImVec2);
 void edit_begin_push(Manager&, StringType);
 void document_change_push(Manager&);
 void frames_change_push(Manager&, const std::set<Reference>&, FrameChange, ChangeType = ChangeType::ADJUST);
-std::pair<glm::vec2, glm::vec2> rect_snap(glm::vec2, glm::vec2, bool, glm::ivec2, glm::ivec2);
+std::pair<Vec2, Vec2> rect_snap(Vec2, Vec2, bool, IVec2, IVec2);
 void tooltip_lines_draw(std::initializer_list<std::string>);
 void tool_cursor_update(Tool, ToolArea, bool, bool, bool, StringType);
 
 class CanvasView : public Canvas
 {
 protected:
-    glm::vec2 mousePos{};
-    glm::vec2 checkerPan{};
-    glm::vec2 checkerSyncPan{};
+    Vec2 mousePos{};
+    Vec2 checkerPan{};
+    Vec2 checkerSyncPan{};
     float checkerSyncZoom = 0;
     bool isCheckerPanInitialized = false;
     bool hasPendingZoomPanAdjust = false;
     bool isFocused = false;
 
-    void checker_pan_reset(float, glm::vec2);
-    void checker_pan_sync(float, glm::vec2);
-    void zoom_step(float&, glm::vec2&, glm::vec2, int);
-    void grid_child_draw(ImVec2, bool&, glm::vec4&, glm::ivec2&, glm::ivec2&, bool* = nullptr);
+    void checker_pan_reset(float, Vec2);
+    void checker_pan_sync(float, Vec2);
+    void zoom_step(float&, Vec2&, Vec2, int);
+    void grid_child_draw(ImVec2, bool&, Vec4&, IVec2&, IVec2&, bool* = nullptr);
     void view_buttons_draw(Manager&, Settings&, const std::function<void()>&, const std::function<void()>&);
-    void view_context_menu_draw(const char*, Manager&, Settings&, Document&, float&, glm::vec2&,
+    void view_context_menu_draw(const char*, Manager&, Settings&, Document&, float&, Vec2&,
                                 const std::function<void()>&, const std::function<void()>&, bool);
 
 public:

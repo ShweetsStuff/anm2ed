@@ -15,18 +15,18 @@ class AnimationPreview : public CanvasView
     bool wasPlaybackPlaying = false;
     int soundFrame = -1;
     bool isMoveDragging = false;
-    glm::vec2 moveOffset{};
-    glm::vec2 nullRectScaleAnchor{};
+    Vec2 moveOffset{};
+    Vec2 nullRectScaleAnchor{};
     Recorder recorder = {};
-    glm::vec2 recordSize{};
-    glm::vec2 recordPan{};
+    Vec2 recordSize{};
+    Vec2 recordPan{};
     float recordZoom = 0;
 
     // Where each item's pivot is at every frame of the animation, kept until the document or view changes.
     struct PivotPath
     {
         Draw item = {};
-        std::vector<glm::vec2> points{};
+        std::vector<Vec2> points{};
     };
     std::vector<PivotPath> pivotPaths;
     std::tuple<std::uint64_t, std::uint64_t, int, bool> pivotPathsKey;

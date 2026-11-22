@@ -12,15 +12,15 @@
 static Frame draw_frame_bake(const Draw& draw)
 {
     auto frame = draw.frame;
-    auto size = glm::max(frame.size, glm::vec2(1.0f));
+    auto size = vec_max(frame.size, Vec2(1.0f));
     auto model = draw.parent * draw_quad_model_get(draw);
-    auto column0 = glm::vec2(model[0]) / size.x;
-    auto column1 = glm::vec2(model[1]) / size.y;
-    auto scaleX = glm::length(column0);
+    auto column0 = Vec2(model[0]) / size.x;
+    auto column1 = Vec2(model[1]) / size.y;
+    auto scaleX = vec_length(column0);
     auto determinant = column0.x * column1.y - column0.y * column1.x;
-    frame.position = glm::vec2(model * glm::vec4(frame.pivot / size, 0.0f, 1.0f));
-    frame.scale = unit_to_percent(glm::vec2(scaleX, scaleX > 0.0f ? determinant / scaleX : 0.0f));
-    frame.rotation = glm::degrees(std::atan2(column0.y, column0.x));
+    frame.position = Vec2(model * Vec4(frame.pivot / size, 0.0f, 1.0f));
+    frame.scale = unit_to_percent(Vec2(scaleX, scaleX > 0.0f ? determinant / scaleX : 0.0f));
+    frame.rotation = degrees(std::atan2(column0.y, column0.x));
     frame.skew = {};
     frame.depth = 0;
     frame.regionId = -1;
@@ -92,7 +92,7 @@ Model animation_layers_flatten(Model model, const LibraryGet& library_get, const
             for (int time = 0; time < source.frameNum; ++time)
                 for (auto& draw : animation_draws_get(model, source, {.time = (float)time, .library_get = library_get}))
                 {
-                    if (draw.type != DrawType::LAYER || draw.id != track.id || draw.frame.size == glm::vec2())
+                    if (draw.type != DrawType::LAYER || draw.id != track.id || draw.frame.size == Vec2())
                         continue;
                     auto id = layer_id_get(draw);
                     auto [it, isNew] = frames.try_emplace(id, source.frameNum, Frame{.isVisible = false});

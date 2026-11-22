@@ -248,8 +248,8 @@ void TimelineContext::shortcuts_update()
         if (auto item = selected_item_get(); item && !item->frames.empty())
         {
             auto frameReference = reference;
-            frameReference.frameIndex = glm::clamp(reference.frameIndex + (int)isNextFrame - (int)isPreviousFrame, 0,
-                                                   (int)item->frames.size() - 1);
+            frameReference.frameIndex = vec_clamp(reference.frameIndex + (int)isNextFrame - (int)isPreviousFrame, 0,
+                                                  (int)item->frames.size() - 1);
             reference_set(frameReference);
             document.frame_focus_select();
             document.frameTime = frame_time_from_index_get(*item, reference.frameIndex);

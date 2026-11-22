@@ -109,27 +109,27 @@ TEST_CASE("frame_bake and frame_mix")
     to.rotation = 90.0f;
     to.tint = {0.0f, 1.0f, 1.0f, 0.5f};
     frame_mix(from, to, 0.5f);
-    CHECK(from.position == glm::vec2(5.0f, -10.0f));
-    CHECK(from.skew == glm::vec2(15.0f, 0.0f));
+    CHECK(from.position == Vec2(5.0f, -10.0f));
+    CHECK(from.skew == Vec2(15.0f, 0.0f));
     CHECK(from.rotation == doctest::Approx(45.0f));
     CHECK(from.tint.a == doctest::Approx(0.75f));
 }
 
 TEST_CASE("rects_pack fits every rect without overlap")
 {
-    std::vector<glm::ivec2> sizes{{16, 16}, {32, 8}, {8, 32}, {5, 7}, {64, 1}, {1, 1}};
-    glm::ivec2 size{};
-    std::vector<glm::ivec2> positions{};
+    std::vector<IVec2> sizes{{16, 16}, {32, 8}, {8, 32}, {5, 7}, {64, 1}, {1, 1}};
+    IVec2 size{};
+    std::vector<IVec2> positions{};
     REQUIRE(rects_pack(sizes, size, positions));
     REQUIRE(positions.size() == sizes.size());
     for (std::size_t i = 0; i < sizes.size(); ++i)
     {
-        CHECK(glm::all(glm::greaterThanEqual(positions[i], glm::ivec2(0))));
-        CHECK(glm::all(glm::lessThanEqual(positions[i] + sizes[i], size)));
+        CHECK(is_all_less_equal(IVec2(0), positions[i]));
+        CHECK(is_all_less_equal(positions[i] + sizes[i], size));
         for (std::size_t j = i + 1; j < sizes.size(); ++j)
         {
-            auto isSeparate = glm::any(glm::lessThanEqual(positions[i] + sizes[i], positions[j])) ||
-                              glm::any(glm::lessThanEqual(positions[j] + sizes[j], positions[i]));
+            auto isSeparate = is_any_less_equal(positions[i] + sizes[i], positions[j]) ||
+                              is_any_less_equal(positions[j] + sizes[j], positions[i]);
             CHECK(isSeparate);
         }
     }
@@ -234,7 +234,7 @@ TEST_CASE("edit layer operations")
 
 TEST_CASE("spritesheet pixel edits")
 {
-    auto image_make = [](glm::ivec2 size, std::vector<glm::ivec2> opaque = {}) {
+    auto image_make = [](IVec2 size, std::vector<IVec2> opaque = {}) {
         std::vector<uint8_t> pixels((std::size_t)size.x * size.y * IMAGE_CHANNELS, 0);
         for (auto point : opaque)
             std::fill_n(pixels.begin() + ((std::size_t)point.y * size.x + point.x) * IMAGE_CHANNELS, IMAGE_CHANNELS,
@@ -249,9 +249,9 @@ TEST_CASE("spritesheet pixel edits")
         auto model = fixture_load("05_regions.anm2");
         CHECK(regions_trim(model, 0, {0, 1}, sheet));
         auto region = item_get(model.content.spritesheets[0].regions, 0);
-        CHECK(region->crop == glm::vec2(4, 6));
-        CHECK(region->size == glm::vec2(1, 1));
-        CHECK(region->pivot == glm::vec2(-1, -1));
+        CHECK(region->crop == Vec2(4, 6));
+        CHECK(region->size == Vec2(1, 1));
+        CHECK(region->pivot == Vec2(-1, -1));
     }
 
     SUBCASE("spritesheet_pack returns an image holding every region")
@@ -261,7 +261,7 @@ TEST_CASE("spritesheet pixel edits")
         REQUIRE(packed);
         CHECK(packed->is_valid());
         for (auto& region : model.content.spritesheets[0].regions)
-            CHECK(glm::all(glm::lessThanEqual(glm::ivec2(region.crop + region.size), packed->size)));
+            CHECK(is_all_less_equal(IVec2(region.crop + region.size), packed->size));
     }
 
     SUBCASE("spritesheets_merge appends images and moves layers onto the base sheet")
@@ -272,7 +272,7 @@ TEST_CASE("spritesheet pixel edits")
         };
         auto merged = spritesheets_merge(model, {0, 1}, image_get, true, true, false, Origin::TOP_LEFT);
         REQUIRE(merged);
-        CHECK(merged->size == glm::ivec2(80, 64));
+        CHECK(merged->size == IVec2(80, 64));
         CHECK(model.content.spritesheets.size() == 1);
         CHECK(item_get(model.content.layers, 1)->spritesheetId == 0);
         operation_check("spritesheets_merge", model);
@@ -287,7 +287,7 @@ TEST_CASE("markers stay in the editor's copy and bound playback")
     animation->frameNum = 10;
     animation->startMarker = 2;
     animation->endMarker = 5;
-    CHECK(animation_play_range_get(*animation) == glm::ivec2(2, 6));
+    CHECK(animation_play_range_get(*animation) == IVec2(2, 6));
 
     auto text = model_to_string(model);
     CHECK(game_document_get(text).find("Marker") == std::string::npos);
@@ -325,11 +325,11 @@ TEST_CASE("frames_property_set copies one property to the frames that have it")
     auto nullCrop = model.frame_get(null)->crop;
 
     frames_property_set(model, {layer, null}, FrameProperty::POSITION, source);
-    CHECK(model.frame_get(layer)->position == glm::vec2(3, 4));
-    CHECK(model.frame_get(null)->position == glm::vec2(3, 4));
+    CHECK(model.frame_get(layer)->position == Vec2(3, 4));
+    CHECK(model.frame_get(null)->position == Vec2(3, 4));
 
     frames_property_set(model, {layer, null}, FrameProperty::CROP, source);
-    CHECK(model.frame_get(layer)->crop == glm::vec2(7, 8));
+    CHECK(model.frame_get(layer)->crop == Vec2(7, 8));
     CHECK(model.frame_get(null)->crop == nullCrop);
 
     CHECK_FALSE(is_frame_property_valid(FrameProperty::EVENT, ItemType::LAYER));
@@ -418,7 +418,7 @@ TEST_CASE("skew reads from the old Shear attributes too")
 {
     auto frames = frames_from_string(R"(<Frame ShearX="5" ShearY="6"/><Frame SkewX="7" ShearX="9"/>)", ItemType::NULL_);
     REQUIRE(frames.size() == 2);
-    CHECK(frames[0].skew == glm::vec2(5, 6));
+    CHECK(frames[0].skew == Vec2(5, 6));
     CHECK(frames[1].skew.x == 7);
     CHECK(frames[0].extras.attributes.empty());
 }
@@ -445,10 +445,10 @@ TEST_CASE("SVG spritesheets pack and merge into SVGs")
     auto packed = spritesheet_pack(model, 0, vector, 1);
     REQUIRE(packed);
     CHECK(packed->is_vector());
-    for (auto [id, original] : {std::pair{0, glm::vec2(8, 8)}, std::pair{1, glm::vec2(24, 8)}})
+    for (auto [id, original] : {std::pair{0, Vec2(8, 8)}, std::pair{1, Vec2(24, 8)}})
     {
         auto region = item_get(model.content.spritesheets.front().regions, id);
-        CHECK(packed->pixel_read(region->crop + glm::vec2(8, 8)) == vector.pixel_read(original));
+        CHECK(packed->pixel_read(region->crop + Vec2(8, 8)) == vector.pixel_read(original));
     }
 
     // A PNG sheet merged after an SVG one: the result is an SVG holding the PNG. A PNG first takes the .svg name.
@@ -463,7 +463,7 @@ TEST_CASE("SVG spritesheets pack and merge into SVGs")
     auto merged = spritesheets_merge(mixed, {0, 1}, image_get, true, false, false, Origin::TOP_LEFT);
     REQUIRE(merged);
     CHECK(merged->is_vector());
-    CHECK(merged->size == glm::ivec2(36, 16));
+    CHECK(merged->size == IVec2(36, 16));
     CHECK(merged->pixel_read({33, 1}) == raster.pixel_read({1, 1}));
     CHECK(mixed.content.spritesheets.front().path == "vector.svg");
 

@@ -2,7 +2,7 @@
 
 #include <format>
 
-#include <glm/gtc/type_ptr.hpp>
+#include "vec.h"
 
 #include <algorithm>
 #include <ranges>
@@ -13,8 +13,6 @@
 #include "math_util.h"
 #include "ui/input.h"
 #include "ui/layout.h"
-
-using namespace glm;
 
 constexpr int CHANGE_TYPE_COUNT = 5;
 constexpr const char* COLOR_COMPONENT_FORMATS[] = {"R:%d", "G:%d", "B:%d", "A:%d"};
@@ -91,7 +89,7 @@ static void components_draw(const ComponentRow& row, bool isColor)
     ImVec4 buttonColor = {0.0f, 0.0f, 0.0f, 1.0f};
     for (int i = 0; i < count; ++i)
         if (*row.isEnabled[i])
-            (&buttonColor.x)[i] = glm::clamp(row.values[i], 0.0f, 1.0f);
+            (&buttonColor.x)[i] = vec_clamp(row.values[i], 0.0f, 1.0f);
     ImGui::SameLine();
     ImGui::ColorButton(label, buttonColor);
     ImGui::SameLine();
@@ -162,26 +160,26 @@ void ChangeAllFrameProperties::update(Manager& manager, Document& document, Sett
             child_layer_add(&layer);
 
     ComponentRow componentRows[] = {
-        {BASIC_CROP, {&settings.changeIsCropX, &settings.changeIsCropY}, value_ptr(settings.changeCrop), true},
-        {BASIC_SIZE, {&settings.changeIsSizeX, &settings.changeIsSizeY}, value_ptr(settings.changeSize), true},
+        {BASIC_CROP, {&settings.changeIsCropX, &settings.changeIsCropY}, values_get(settings.changeCrop), true},
+        {BASIC_SIZE, {&settings.changeIsSizeX, &settings.changeIsSizeY}, values_get(settings.changeSize), true},
         {BASIC_POSITION,
          {&settings.changeIsPositionX, &settings.changeIsPositionY},
-         value_ptr(settings.changePosition),
+         values_get(settings.changePosition),
          false},
-        {BASIC_PIVOT, {&settings.changeIsPivotX, &settings.changeIsPivotY}, value_ptr(settings.changePivot), true},
-        {BASIC_SCALE, {&settings.changeIsScaleX, &settings.changeIsScaleY}, value_ptr(settings.changeScale), false},
-        {BASIC_SKEW, {&settings.changeIsSkewX, &settings.changeIsSkewY}, value_ptr(settings.changeSkew), false},
+        {BASIC_PIVOT, {&settings.changeIsPivotX, &settings.changeIsPivotY}, values_get(settings.changePivot), true},
+        {BASIC_SCALE, {&settings.changeIsScaleX, &settings.changeIsScaleY}, values_get(settings.changeScale), false},
+        {BASIC_SKEW, {&settings.changeIsSkewX, &settings.changeIsSkewY}, values_get(settings.changeSkew), false},
         {BASIC_ROTATION, {&settings.changeIsRotation}, &settings.changeRotation, false},
         {BASIC_BLUR, {&settings.changeIsBlur}, &settings.changeBlur, true}};
     ComponentRow colorRows[] = {
         {BASIC_TINT,
          {&settings.changeIsTintR, &settings.changeIsTintG, &settings.changeIsTintB, &settings.changeIsTintA},
-         value_ptr(settings.changeTint),
+         values_get(settings.changeTint),
          false},
         {BASIC_COLOR_OFFSET,
          {&settings.changeIsColorOffsetR, &settings.changeIsColorOffsetG, &settings.changeIsColorOffsetB,
           &settings.changeIsColorOffsetA},
-         value_ptr(settings.changeColorOffset),
+         values_get(settings.changeColorOffset),
          false}};
 
     auto rows_draw = [&](std::span<ComponentRow> rows, bool isColor) {

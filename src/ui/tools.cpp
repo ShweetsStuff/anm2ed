@@ -1,15 +1,13 @@
 
 #include "ui/panel.h"
 
-#include <glm/gtc/type_ptr.hpp>
+#include "vec.h"
 
 #include "localization.h"
 #include "tool.h"
 #include "types.h"
 #include "ui/layout.h"
 #include "ui/shortcut.h"
-
-using namespace glm;
 
 void tools_update(Manager& manager, Settings& settings, Resources& resources, PopupHelper& colorEditPopup)
 {
@@ -20,7 +18,7 @@ void tools_update(Manager& manager, Settings& settings, Resources& resources, Po
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(2, 2));
 
         auto availableWidth = ImGui::GetContentRegionAvail().x;
-        auto size = vec2(ImGui::GetTextLineHeightWithSpacing() * 1.5f);
+        auto size = Vec2(ImGui::GetTextLineHeightWithSpacing() * 1.5f);
         auto usedWidth = ImGui::GetStyle().WindowPadding.x;
 
         auto tool_use = [&](Tool type) {
@@ -98,7 +96,7 @@ void tools_update(Manager& manager, Settings& settings, Resources& resources, Po
 
         if (ImGui::BeginPopup(colorEditPopup.label()))
         {
-            ImGui::ColorPicker4(colorEditPopup.label(), value_ptr(settings.toolColor));
+            ImGui::ColorPicker4(colorEditPopup.label(), values_get(settings.toolColor));
             ImGui::EndPopup();
         }
     }

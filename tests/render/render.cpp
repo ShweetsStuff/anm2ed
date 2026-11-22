@@ -23,7 +23,7 @@ const std::filesystem::path OUTPUT_DIR = ANM2ED_RENDER_DIR;
 constexpr int CHANNEL_TOLERANCE = 8;
 constexpr double MISMATCH_RATIO_MAX = 0.01;
 constexpr float SCALE = 3.0f;
-constexpr glm::vec4 BACKGROUND = {0.2f, 0.2f, 0.2f, 1.0f};
+constexpr Vec4 BACKGROUND = {0.2f, 0.2f, 0.2f, 1.0f};
 
 // Different OpenGL implementations round a little differently: a few pixels may differ, each only slightly.
 static void golden_image_check(const std::string& name)
@@ -53,7 +53,7 @@ struct RenderFixture
     std::optional<ShaderProgram> shader;
     std::optional<Canvas> canvas;
     const Animation* animation = nullptr;
-    glm::vec4 bounds{};
+    Vec4 bounds{};
 
     explicit RenderFixture(const char* file)
     {
@@ -63,7 +63,7 @@ struct RenderFixture
         document.emplace(RENDER_TEST_DIR / file, false);
         auto& info = SHADERS[SHADER_TEXTURE];
         shader.emplace(info.vertex, info.fragment);
-        canvas.emplace(glm::vec2(1.0f));
+        canvas.emplace(Vec2(1.0f));
         animation = document->model.animation_get(0);
         bounds = animation_bounds_get(*document, *animation, true);
     }
@@ -76,9 +76,9 @@ struct RenderFixture
         return pixels;
     }
 
-    glm::u8vec4 pixel_get(const std::vector<uint8_t>& pixels, glm::vec2 point)
+    TVec4<uint8_t> pixel_get(const std::vector<uint8_t>& pixels, Vec2 point)
     {
-        auto position = glm::ivec2((point - glm::vec2(bounds.x, bounds.y)) * SCALE);
+        auto position = IVec2((point - Vec2(bounds.x, bounds.y)) * SCALE);
         auto index = ((std::size_t)position.y * (std::size_t)canvas->size.x + (std::size_t)position.x) * 4;
         return {pixels[index], pixels[index + 1], pixels[index + 2], pixels[index + 3]};
     }
@@ -106,7 +106,7 @@ TEST_CASE("frames draw where the animation puts them")
     CHECK(blue.b > blue.r + 40);
 
     auto framePath = OUTPUT_DIR / "spin_frame_0.png";
-    REQUIRE(Image::write_pixels_png(framePath, glm::ivec2(fixture.canvas->size), pixels.data()));
+    REQUIRE(Image::write_pixels_png(framePath, IVec2(fixture.canvas->size), pixels.data()));
     golden_image_check("spin_frame_0.png");
 }
 
@@ -129,7 +129,7 @@ TEST_CASE("a recorded spritesheet holds every frame")
                              fixture.bounds, SCALE, BACKGROUND, true));
     Image sheet(options.path);
     auto layout = spritesheet_layout_get(0, 0, fixture.animation->frameNum);
-    CHECK(sheet.size == glm::ivec2(fixture.canvas->size) * glm::ivec2(layout.columns, layout.rows));
+    CHECK(sheet.size == IVec2(fixture.canvas->size) * IVec2(layout.columns, layout.rows));
     golden_image_check("spin_sheet.png");
 }
 
@@ -146,15 +146,14 @@ TEST_CASE("animation layers draw their child animations")
     // The library's red square at half size starts on its fifth frame, centered at (48, 0). This file's Inner holds its
     // red square at (-40, 0).
     auto pixels = fixture.frame_get(0.0f);
-    for (auto point : {glm::vec2(48.0f, 0.0f), glm::vec2(-40.0f, 0.0f)})
+    for (auto point : {Vec2(48.0f, 0.0f), Vec2(-40.0f, 0.0f)})
     {
         auto red = fixture.pixel_get(pixels, point);
         CHECK(red.r > 200);
         CHECK(red.g < 80);
     }
 
-    REQUIRE(
-        Image::write_pixels_png(OUTPUT_DIR / "nested_frame_0.png", glm::ivec2(fixture.canvas->size), pixels.data()));
+    REQUIRE(Image::write_pixels_png(OUTPUT_DIR / "nested_frame_0.png", IVec2(fixture.canvas->size), pixels.data()));
     golden_image_check("nested_frame_0.png");
 }
 
@@ -170,7 +169,7 @@ TEST_CASE("a blurred layer spreads past its crop like Flash's blur filter")
 
     // The red square (16 x 16 at (-16, 0)) sharp leaves the canvas clear 2 above its top edge and solid 1 inside it. An
     // 8 pixel box spreads a third of it out and takes as much from inside.
-    constexpr glm::vec2 OUTSIDE{-20.0f, -10.0f}, INSIDE{-20.0f, -7.0f};
+    constexpr Vec2 OUTSIDE{-20.0f, -10.0f}, INSIDE{-20.0f, -7.0f};
     auto sharp = fixture.frame_get(0.0f);
     fixture.document->model.frame_edit({0, LAYER, 0, 0})->blur = 8.0f;
     fixture.animation = fixture.document->model.animation_get(0);
@@ -178,8 +177,7 @@ TEST_CASE("a blurred layer spreads past its crop like Flash's blur filter")
     CHECK(fixture.pixel_get(blurred, OUTSIDE).r > fixture.pixel_get(sharp, OUTSIDE).r + 40);
     CHECK(fixture.pixel_get(blurred, INSIDE).r + 40 < fixture.pixel_get(sharp, INSIDE).r);
 
-    REQUIRE(Image::write_pixels_png(OUTPUT_DIR / "spin_blur_frame_0.png", glm::ivec2(fixture.canvas->size),
-                                    blurred.data()));
+    REQUIRE(Image::write_pixels_png(OUTPUT_DIR / "spin_blur_frame_0.png", IVec2(fixture.canvas->size), blurred.data()));
 }
 
 TEST_CASE("SVG spritesheets draw sharp at any scale")
@@ -200,8 +198,7 @@ TEST_CASE("SVG spritesheets draw sharp at any scale")
     CHECK(inside.r > 200);
     CHECK(outside.r < 80);
 
-    REQUIRE(
-        Image::write_pixels_png(OUTPUT_DIR / "vector_frame_0.png", glm::ivec2(fixture.canvas->size), pixels.data()));
+    REQUIRE(Image::write_pixels_png(OUTPUT_DIR / "vector_frame_0.png", IVec2(fixture.canvas->size), pixels.data()));
     golden_image_check("vector_frame_0.png");
 }
 
@@ -299,7 +296,7 @@ TEST_CASE("the game's copy bakes skew and blur into a spritesheet that draws the
 
     auto& info = SHADERS[SHADER_TEXTURE];
     ShaderProgram shader(info.vertex, info.fragment);
-    Canvas canvas(glm::vec2(1.0f));
+    Canvas canvas(Vec2(1.0f));
     for (int index = 0; index < document.model.animations_count_get(); ++index)
     {
         auto& animation = *document.model.animation_get(index);
@@ -307,14 +304,14 @@ TEST_CASE("the game's copy bakes skew and blur into a spritesheet that draws the
         INFO("animation: ", animation.name);
         // On whole pixels, so the baked images land on the pixels they were drawn on.
         auto bounds = animation_bounds_get(document, animation, true);
-        bounds = glm::vec4(glm::floor(glm::vec2(bounds)) - 8.0f, glm::ceil(glm::vec2(bounds.z, bounds.w)) + 16.0f);
+        bounds = Vec4(vec_floor(Vec2(bounds)) - 8.0f, vec_ceil(Vec2(bounds.z, bounds.w)) + 16.0f);
         for (int time = 0; time < animation.frameNum; ++time)
         {
             INFO("time: ", time);
             auto expected = animation_frame_render(canvas, shader, document, animation, (float)time, bounds, 1.0f,
-                                                   glm::vec4(0.0f), true);
+                                                   Vec4(0.0f), true);
             auto actual = animation_frame_render(canvas, shader, gameDocument, gameAnimation, (float)time, bounds, 1.0f,
-                                                 glm::vec4(0.0f), true);
+                                                 Vec4(0.0f), true);
             REQUIRE(actual.size() == expected.size());
             CHECK(std::ranges::any_of(expected, [](uint8_t channel) { return channel != 0; }));
             int mismatches = 0;
@@ -344,8 +341,9 @@ TEST_CASE("audio decodes and mixes")
 
     constexpr int FREQUENCY = 22050;
     constexpr int FRAMES = 100;
-    std::vector<unsigned char> wav = {'R', 'I', 'F', 'F', 0, 0, 0, 0, 'W', 'A', 'V', 'E', 'f', 'm', 't', ' ', 16, 0, 0, 0,
-                                      1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 16, 0, 'd', 'a', 't', 'a', 0, 0, 0, 0};
+    std::vector<unsigned char> wav = {'R', 'I', 'F', 'F', 0,  0, 0,   0,   'W', 'A', 'V', 'E', 'f', 'm', 't',
+                                      ' ', 16,  0,   0,   0,  1, 0,   1,   0,   0,   0,   0,   0,   0,   0,
+                                      0,   0,   2,   0,   16, 0, 'd', 'a', 't', 'a', 0,   0,   0,   0};
     auto put = [&](int offset, std::uint32_t value, int size) {
         for (int i = 0; i < size; ++i)
             wav[offset + i] = (unsigned char)(value >> (i * 8));

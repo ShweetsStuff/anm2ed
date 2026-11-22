@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-#include <glm/common.hpp>
+#include "vec.h"
 
 void Playback::toggle()
 {
@@ -20,7 +20,7 @@ void Playback::timing_reset()
 
 void Playback::clamp(int length)
 {
-    time = glm::clamp(time, 0.0f, (float)length - 1.0f);
+    time = vec_clamp(time, 0.0f, (float)length - 1.0f);
 }
 
 // Plays the frames [start, end). A playhead outside them starts at start.

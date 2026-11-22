@@ -54,10 +54,12 @@ static std::vector<float> samples_decode(const AudioData& data)
         int channels = 0;
         int frequency = 0;
         short* decoded = nullptr;
-        auto frames = stb_vorbis_decode_memory(data.bytes.data(), (int)data.bytes.size(), &channels, &frequency, &decoded);
+        auto frames =
+            stb_vorbis_decode_memory(data.bytes.data(), (int)data.bytes.size(), &channels, &frequency, &decoded);
         if (frames <= 0)
             return {};
-        auto samples = samples_convert({SDL_AUDIO_S16, channels, frequency}, decoded, frames * channels * sizeof(short));
+        auto samples =
+            samples_convert({SDL_AUDIO_S16, channels, frequency}, decoded, frames * channels * sizeof(short));
         free(decoded);
         return samples;
     }
@@ -84,9 +86,8 @@ static AudioSound* sound_get(const AudioData& data)
 
 static SDL_AudioDeviceID device_get()
 {
-    static SDL_AudioDeviceID device = SDL_InitSubSystem(SDL_INIT_AUDIO)
-                                          ? SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &AUDIO_SPEC)
-                                          : 0;
+    static SDL_AudioDeviceID device =
+        SDL_InitSubSystem(SDL_INIT_AUDIO) ? SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &AUDIO_SPEC) : 0;
     return device;
 }
 
@@ -177,7 +178,7 @@ bool is_audio_playing(const AudioData& data)
 }
 
 // The left/right loudness (RMS, 0-1) of what the sound played since the last call.
-glm::vec2 audio_levels_get(const AudioData& data)
+Vec2 audio_levels_get(const AudioData& data)
 {
     auto it = sounds.find(data.uid);
     if (it == sounds.end())

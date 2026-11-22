@@ -347,7 +347,7 @@ void shaders_update(Panel& panel, ShadersPanel& shaders)
         auto image_get = [&](int id) {
             auto isValid = document.shader_get(id) != nullptr;
             auto& image = resources.icons[isValid ? ICON_SHADER : ICON_NONE];
-            return CardImage{.texture = &image, .size = glm::vec2(image.size), .isValid = isValid};
+            return CardImage{.texture = &image, .size = Vec2(image.size), .isValid = isValid};
         };
         ListRows rows{.label_get =
                           [&](int id) {

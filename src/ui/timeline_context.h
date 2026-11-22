@@ -26,11 +26,9 @@
 #include "vector.h"
 #include "ui/panel.h"
 
-using namespace glm;
-
 constexpr auto WIDTH_MULTIPLIER = 1.25f;
 
-constexpr auto COLOR_HIDDEN_MULTIPLIER = vec4(0.5f, 0.5f, 0.5f, 1.000f);
+constexpr auto COLOR_HIDDEN_MULTIPLIER = Vec4(0.5f, 0.5f, 0.5f, 1.000f);
 constexpr auto FRAME_BORDER_COLOR_DARK = ImVec4(1.0f, 1.0f, 1.0f, 0.15f);
 constexpr auto FRAME_BORDER_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 0.25f);
 constexpr auto FRAME_BORDER_COLOR_REFERENCED_DARK = ImVec4(1.0f, 1.0f, 1.0f, 0.50f);
@@ -64,36 +62,36 @@ enum class DropZone
     AFTER
 };
 
-constexpr glm::vec4 FRAME_COLOR_LIGHT_BASE[] = {{0.80f, 0.80f, 0.80f, 1.0f},
-                                                {0.5216f, 0.7333f, 1.0f, 1.0f},
-                                                {1.0f, 0.9961f, 0.5882f, 1.0f},
-                                                {0.6157f, 1.0f, 0.5882f, 1.0f},
-                                                {1.0f, 0.5882f, 0.8314f, 1.0f}};
-constexpr glm::vec4 FRAME_COLOR_LIGHT_ACTIVE[] = {{0.74f, 0.74f, 0.74f, 1.0f},
-                                                  {0.0980f, 0.3765f, 0.6431f, 1.0f},
-                                                  {1.0f, 0.5255f, 0.3333f, 1.0f},
-                                                  {0.3686f, 0.5765f, 0.2353f, 1.0f},
-                                                  {0.6118f, 0.2039f, 0.2745f, 1.0f}};
-constexpr glm::vec4 FRAME_COLOR_LIGHT_HOVERED[] = {{0.84f, 0.84f, 0.84f, 1.0f},
-                                                   {0.0752f, 0.2887f, 0.4931f, 1.0f},
-                                                   {0.85f, 0.4467f, 0.2833f, 1.0f},
-                                                   {0.2727f, 0.4265f, 0.1741f, 1.0f},
-                                                   {0.4618f, 0.1539f, 0.2072f, 1.0f}};
-constexpr glm::vec4 ITEM_COLOR_LIGHT_BASE[] = {{0.3059f, 0.3255f, 0.5412f, 1.0f},
-                                               {0.3333f, 0.5725f, 0.8392f, 1.0f},
-                                               {1.0f, 0.5412f, 0.3412f, 1.0f},
-                                               {0.5255f, 0.8471f, 0.4588f, 1.0f},
-                                               {0.7961f, 0.3882f, 0.5412f, 1.0f}};
-constexpr glm::vec4 ITEM_COLOR_LIGHT_ACTIVE[] = {{0.3459f, 0.3655f, 0.5812f, 1.0f},
-                                                 {0.3733f, 0.6125f, 0.8792f, 1.0f},
-                                                 {0.9106f, 0.4949f, 0.2753f, 1.0f},
-                                                 {0.5655f, 0.8871f, 0.4988f, 1.0f},
-                                                 {0.8361f, 0.4282f, 0.5812f, 1.0f}};
-constexpr glm::vec4 ITEM_COLOR_LIGHT_SELECTED[] = {{0.74f, 0.74f, 0.74f, 1.0f},
-                                                   {0.2039f, 0.4549f, 0.7176f, 1.0f},
-                                                   {0.8745f, 0.4392f, 0.2275f, 1.0f},
-                                                   {0.3765f, 0.6784f, 0.2980f, 1.0f},
-                                                   {0.6353f, 0.2235f, 0.3647f, 1.0f}};
+constexpr Vec4 FRAME_COLOR_LIGHT_BASE[] = {{0.80f, 0.80f, 0.80f, 1.0f},
+                                           {0.5216f, 0.7333f, 1.0f, 1.0f},
+                                           {1.0f, 0.9961f, 0.5882f, 1.0f},
+                                           {0.6157f, 1.0f, 0.5882f, 1.0f},
+                                           {1.0f, 0.5882f, 0.8314f, 1.0f}};
+constexpr Vec4 FRAME_COLOR_LIGHT_ACTIVE[] = {{0.74f, 0.74f, 0.74f, 1.0f},
+                                             {0.0980f, 0.3765f, 0.6431f, 1.0f},
+                                             {1.0f, 0.5255f, 0.3333f, 1.0f},
+                                             {0.3686f, 0.5765f, 0.2353f, 1.0f},
+                                             {0.6118f, 0.2039f, 0.2745f, 1.0f}};
+constexpr Vec4 FRAME_COLOR_LIGHT_HOVERED[] = {{0.84f, 0.84f, 0.84f, 1.0f},
+                                              {0.0752f, 0.2887f, 0.4931f, 1.0f},
+                                              {0.85f, 0.4467f, 0.2833f, 1.0f},
+                                              {0.2727f, 0.4265f, 0.1741f, 1.0f},
+                                              {0.4618f, 0.1539f, 0.2072f, 1.0f}};
+constexpr Vec4 ITEM_COLOR_LIGHT_BASE[] = {{0.3059f, 0.3255f, 0.5412f, 1.0f},
+                                          {0.3333f, 0.5725f, 0.8392f, 1.0f},
+                                          {1.0f, 0.5412f, 0.3412f, 1.0f},
+                                          {0.5255f, 0.8471f, 0.4588f, 1.0f},
+                                          {0.7961f, 0.3882f, 0.5412f, 1.0f}};
+constexpr Vec4 ITEM_COLOR_LIGHT_ACTIVE[] = {{0.3459f, 0.3655f, 0.5812f, 1.0f},
+                                            {0.3733f, 0.6125f, 0.8792f, 1.0f},
+                                            {0.9106f, 0.4949f, 0.2753f, 1.0f},
+                                            {0.5655f, 0.8871f, 0.4988f, 1.0f},
+                                            {0.8361f, 0.4282f, 0.5812f, 1.0f}};
+constexpr Vec4 ITEM_COLOR_LIGHT_SELECTED[] = {{0.74f, 0.74f, 0.74f, 1.0f},
+                                              {0.2039f, 0.4549f, 0.7176f, 1.0f},
+                                              {0.8745f, 0.4392f, 0.2275f, 1.0f},
+                                              {0.3765f, 0.6784f, 0.2980f, 1.0f},
+                                              {0.6353f, 0.2235f, 0.3647f, 1.0f}};
 
 constexpr auto MARKER_ALPHA = 0.5f;
 constexpr auto MARKER_OUTSIDE_COLOR = IM_COL32(0, 0, 0, 96);
@@ -114,8 +112,8 @@ enum TimelineColor
 
 struct TimelineColorSet
 {
-    const glm::vec4* light;
-    const glm::vec4* dark;
+    const Vec4* light;
+    const Vec4* dark;
 };
 
 inline const TimelineColorSet TIMELINE_COLORS[] = {{FRAME_COLOR_LIGHT_BASE, TYPE_COLOR},
@@ -187,7 +185,7 @@ struct TimelineContext : TimelineState
     const TrackGroup* track_group_get(int type, int groupId);
     bool is_track_group_visible(int type, int groupId);
     const TrackGroup* row_group_get(const TimelineRow& row);
-    glm::vec4 color_get(TimelineColor, int);
+    Vec4 color_get(TimelineColor, int);
     std::set<Reference> drag_frame_references_get(const Reference&);
     // Queues an edit on the document. Its result is selected (frames by default).
     template <class Operation>

@@ -26,11 +26,11 @@ TEST_CASE("Image png round trip and uid tracking")
     CHECK(copy.uid == image.uid);
     copy.pixel_set({1, 1}, {1.0f, 1.0f, 1.0f, 1.0f});
     CHECK(copy.uid != image.uid);
-    CHECK(copy.pixel_read({1, 1}) == glm::vec4(1.0f));
+    CHECK(copy.pixel_read({1, 1}) == Vec4(1.0f));
 
     auto merged = Image::compose({{&image, {}, image.size, {}}, {&loaded, {}, loaded.size, {image.size.x, 0}}},
                                  {image.size.x * 2, image.size.y}, false);
-    CHECK(merged.size == glm::ivec2(4, 2));
+    CHECK(merged.size == IVec2(4, 2));
     CHECK(merged.pixel_read({2, 0}) == image.pixel_read({0, 0}));
 }
 
@@ -66,13 +66,13 @@ TEST_CASE("an SVG spritesheet loads in SVG units and draws again at any scale")
     Image image(TEST_DIR / "render" / "vector.svg");
     REQUIRE(image.is_valid());
     CHECK(image.is_vector());
-    CHECK(image.size == glm::ivec2(32, 16));
+    CHECK(image.size == IVec2(32, 16));
     auto red = image.pixel_read({8.0f, 8.0f});
     CHECK(red.r > 0.8f);
     CHECK(red.b < 0.2f);
 
     auto large = image.vector_render(4.0f);
-    CHECK(large.size == glm::ivec2(128, 64));
+    CHECK(large.size == IVec2(128, 64));
     CHECK(large.unit_size_get() == image.unit_size_get());
     CHECK(large.uid != image.uid);
 }
@@ -88,7 +88,7 @@ TEST_CASE("SVG spritesheets compose into SVGs that draw the same")
     REQUIRE(swapped.is_vector());
     CHECK(swapped.size == vector.size);
     CHECK(swapped.pixel_read({24.0f, 8.0f}) == vector.pixel_read({8.0f, 8.0f}));
-    CHECK(swapped.pixel_read({1.0f, 1.0f}) == glm::vec4());
+    CHECK(swapped.pixel_read({1.0f, 1.0f}) == Vec4());
 
     // A PNG part is embedded as an image, pixel for pixel. Composing the result again still works.
     const std::vector<uint8_t> pixels = {255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255};
@@ -115,7 +115,7 @@ TEST_CASE("an SVG's shapes meet without a seam")
     REQUIRE(image.is_vector());
     auto seam = image.pixel_read({10.0f, 2.0f});
     CHECK(seam.a == 1.0f);
-    CHECK(glm::distance(glm::vec3(seam), glm::vec3(image.pixel_read({5.0f, 2.0f}))) < 2.0f / 255.0f);
+    CHECK(vec_distance(Vec3(seam), Vec3(image.pixel_read({5.0f, 2.0f}))) < 2.0f / 255.0f);
     CHECK(image.pixel_read({20.0f, 2.0f}).a < 1.0f);
 }
 

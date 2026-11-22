@@ -1,10 +1,8 @@
 #include "math_util.h"
 
 #include <ctime>
-#include <glm/ext/matrix_transform.hpp>
+#include "vec.h"
 #include <string>
-
-using namespace glm;
 
 constexpr auto FLOAT_FORMAT_MAX_DECIMALS = 7;
 constexpr auto FLOAT_FORMAT_EPSILON = 1e-7f;
@@ -30,7 +28,7 @@ const char* float_format_get(float value)
     return formatString.c_str();
 }
 
-const char* vec2_format_get(const vec2& value)
+const char* vec2_format_get(const Vec2& value)
 {
     static std::string formatString;
     int decimalCountX = float_decimals_needed(value.x);
@@ -40,48 +38,48 @@ const char* vec2_format_get(const vec2& value)
     return formatString.c_str();
 }
 
-static mat4 skew_get(vec2 skew)
+static Mat4 skew_get(Vec2 skew)
 {
-    mat4 result(1.0f);
+    Mat4 result(1.0f);
     result[1][0] = skew.x;
     result[0][1] = skew.y;
     return result;
 }
 
-mat4 quad_model_get(vec2 size, vec2 position, vec2 pivot, vec2 scale, float rotation, vec2 skew)
+Mat4 quad_model_get(Vec2 size, Vec2 position, Vec2 pivot, Vec2 scale, float rotation, Vec2 skew)
 {
-    vec2 scaleAbsolute = glm::abs(scale);
-    vec2 scaleSign = glm::sign(scale);
-    vec2 pivotScaled = pivot * scaleAbsolute;
-    vec2 sizeScaled = size * scaleAbsolute;
+    Vec2 scaleAbsolute = vec_abs(scale);
+    Vec2 scaleSign = vec_sign(scale);
+    Vec2 pivotScaled = pivot * scaleAbsolute;
+    Vec2 sizeScaled = size * scaleAbsolute;
     float handedness = (scaleSign.x * scaleSign.y) < 0.0f ? -1.0f : 1.0f;
 
-    mat4 model(1.0f);
-    model = glm::translate(model, vec3(position - pivotScaled, 0.0f));
-    model = glm::translate(model, vec3(pivotScaled, 0.0f));
-    model = glm::scale(model, vec3(scaleSign, 1.0f));
-    model = glm::rotate(model, glm::radians(rotation) * handedness, vec3(0, 0, 1));
+    Mat4 model(1.0f);
+    model = mat4_translate(model, Vec3(position - pivotScaled, 0.0f));
+    model = mat4_translate(model, Vec3(pivotScaled, 0.0f));
+    model = mat4_scale(model, Vec3(scaleSign, 1.0f));
+    model = mat4_rotate(model, radians(rotation) * handedness);
     model *= skew_get(skew);
-    model = glm::translate(model, vec3(-pivotScaled, 0.0f));
-    model = glm::scale(model, vec3(sizeScaled, 1.0f));
+    model = mat4_translate(model, Vec3(-pivotScaled, 0.0f));
+    model = mat4_scale(model, Vec3(sizeScaled, 1.0f));
     return model;
 }
 
-mat4 quad_model_parent_get(vec2 position, vec2 pivot, vec2 scale, float rotation, vec2 skew)
+Mat4 quad_model_parent_get(Vec2 position, Vec2 pivot, Vec2 scale, float rotation, Vec2 skew)
 {
-    vec2 scaleSign = glm::sign(scale);
-    vec2 scaleAbsolute = glm::abs(scale);
+    Vec2 scaleSign = vec_sign(scale);
+    Vec2 scaleAbsolute = vec_abs(scale);
     float handedness = (scaleSign.x * scaleSign.y) < 0.0f ? -1.0f : 1.0f;
 
-    mat4 local(1.0f);
-    local = glm::translate(local, vec3(pivot, 0.0f));
-    local = glm::scale(local, vec3(scaleSign, 1.0f));
-    local = glm::rotate(local, glm::radians(rotation) * handedness, vec3(0, 0, 1));
+    Mat4 local(1.0f);
+    local = mat4_translate(local, Vec3(pivot, 0.0f));
+    local = mat4_scale(local, Vec3(scaleSign, 1.0f));
+    local = mat4_rotate(local, radians(rotation) * handedness);
     local *= skew_get(skew);
-    local = glm::translate(local, vec3(-pivot, 0.0f));
-    local = glm::scale(local, vec3(scaleAbsolute, 1.0f));
+    local = mat4_translate(local, Vec3(-pivot, 0.0f));
+    local = mat4_scale(local, Vec3(scaleAbsolute, 1.0f));
 
-    return glm::translate(mat4(1.0f), vec3(position, 0.0f)) * local;
+    return mat4_translate(Mat4(1.0f), Vec3(position, 0.0f)) * local;
 }
 
 float random_unit_get()

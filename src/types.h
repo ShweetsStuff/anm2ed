@@ -1,6 +1,6 @@
 #pragma once
 
-#include <glm/glm.hpp>
+#include "vec.h"
 
 enum ShortcutScope
 {
@@ -45,14 +45,12 @@ enum EditState
     EDIT_STATE_COMPLETE
 };
 
-using namespace glm;
-
-constexpr auto COLOR_WHITE = vec4(1.0);
-constexpr auto COLOR_BLACK = vec4(0.0, 0.0, 0.0, 1.0);
-constexpr auto COLOR_RED = vec4(1.0, 0.0, 0.0, 1.0);
-constexpr auto COLOR_GREEN = vec4(0.0, 1.0, 0.0, 1.0);
-constexpr auto COLOR_BLUE = vec4(0.0, 0.0, 1.0, 1.0);
-constexpr auto COLOR_PINK = vec4(1.0, 0.0, 1.0, 1.0);
+constexpr auto COLOR_WHITE = Vec4(1.0);
+constexpr auto COLOR_BLACK = Vec4(0.0, 0.0, 0.0, 1.0);
+constexpr auto COLOR_RED = Vec4(1.0, 0.0, 0.0, 1.0);
+constexpr auto COLOR_GREEN = Vec4(0.0, 1.0, 0.0, 1.0);
+constexpr auto COLOR_BLUE = Vec4(0.0, 0.0, 1.0, 1.0);
+constexpr auto COLOR_PINK = Vec4(1.0, 0.0, 1.0, 1.0);
 
 enum class OnionskinMode
 {

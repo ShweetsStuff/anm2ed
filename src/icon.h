@@ -1,11 +1,11 @@
 #pragma once
 #include "embed.h"
-#include <glm/ext/vector_int2.hpp>
+#include "vec.h"
 
-constexpr auto ICON_SIZE_SMALL = glm::ivec2(64, 64);
-constexpr auto ICON_SIZE_NORMAL = glm::ivec2(128, 128);
-constexpr auto ICON_SIZE_LARGE = glm::ivec2(256, 256);
-constexpr auto ICON_SIZE_HUGE = glm::ivec2(512, 512);
+constexpr auto ICON_SIZE_SMALL = IVec2(64, 64);
+constexpr auto ICON_SIZE_NORMAL = IVec2(128, 128);
+constexpr auto ICON_SIZE_LARGE = IVec2(256, 256);
+constexpr auto ICON_SIZE_HUGE = IVec2(512, 512);
 
 #define SVG_LIST                                                                                                       \
     X(ICON_NONE, &ICON_NONE_SVG, ICON_SIZE_SMALL)                                                                      \
@@ -66,7 +66,7 @@ enum Icon
 struct IconInfo
 {
     const Embed* svg = nullptr;
-    glm::ivec2 size{};
+    IVec2 size{};
 };
 
 constexpr IconInfo ICONS[ICON_COUNT] = {

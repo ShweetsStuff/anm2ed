@@ -9,8 +9,6 @@
 #include "ui/layout.h"
 #include "ui/shortcut.h"
 
-using namespace glm;
-
 constexpr float SCROLL_CENTER = 0.5f;
 constexpr std::size_t REMOVE_LINES_MAX = 10;
 constexpr float TOOLTIP_PADDING_MULTIPLIER = 4.0f;
@@ -484,8 +482,8 @@ void tooltip_name_draw(Resources& resources, const std::string& name)
 void tooltip_image_draw(const CardImage& image, const std::function<void()>& info_draw)
 {
     auto maxPreviewSize = to_vec2(ImGui::GetMainViewport()->Size) * PREVIEW_VIEWPORT_FRACTION;
-    auto previewSize = glm::max(image.size, vec2(1.0f));
-    previewSize *= glm::min(1.0f, glm::min(maxPreviewSize.x / previewSize.x, maxPreviewSize.y / previewSize.y));
+    auto previewSize = vec_max(image.size, Vec2(1.0f));
+    previewSize *= vec_min(1.0f, vec_min(maxPreviewSize.x / previewSize.x, maxPreviewSize.y / previewSize.y));
 
     auto childFlags = ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY;
     auto noScrollFlags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;

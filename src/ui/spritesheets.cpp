@@ -122,7 +122,7 @@ static void spritesheets_merge_popup_update(Panel& panel, SpritesheetsPanel& spr
         return popup.end();
 
     settings.mergeSpritesheetsRegionOrigin =
-        glm::clamp(settings.mergeSpritesheetsRegionOrigin, 0, (int)std::size(MERGE_REGION_ORIGINS) - 1);
+        vec_clamp(settings.mergeSpritesheetsRegionOrigin, 0, (int)std::size(MERGE_REGION_ORIGINS) - 1);
     if (ImGui::BeginChild("##Merge Spritesheets Options", child_size_get(MERGE_OPTIONS_ROWS), ImGuiChildFlags_Borders))
     {
         ImGui::SeparatorText(localize.get(LABEL_REGION_PROPERTIES_ORIGIN));
@@ -300,7 +300,7 @@ void spritesheets_update(Panel& panel, SpritesheetsPanel& spritesheets)
             auto texture = document.texture_get(id);
             auto isValid = texture && texture->is_valid();
             auto& image = isValid ? *texture : resources.icons[ICON_NONE];
-            return CardImage{.texture = &image, .size = glm::vec2(image.size), .isValid = isValid};
+            return CardImage{.texture = &image, .size = Vec2(image.size), .isValid = isValid};
         };
         ListRows rows{
             .label_get =

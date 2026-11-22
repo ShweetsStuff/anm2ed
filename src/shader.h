@@ -1,7 +1,7 @@
 #pragma once
 
 #include "gl.h"
-#include <glm/glm.hpp>
+#include "vec.h"
 
 #include <array>
 #include <string>
@@ -364,7 +364,7 @@ struct ShaderUniform
     GLint size = 0;
     UniformValueType valueType = UNIFORM_VALUE_UNKNOWN;
     UniformBinding binding = UNIFORM_BINDING_IGNORE;
-    glm::vec4 value{};
+    Vec4 value{};
     int intValue = 0;
     std::array<Component, 4> components = {};
 };

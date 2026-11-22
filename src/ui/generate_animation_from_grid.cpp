@@ -1,6 +1,6 @@
 #include "ui/generate_animation_from_grid.h"
 
-#include <glm/gtc/type_ptr.hpp>
+#include "vec.h"
 
 #include "math_util.h"
 #include "model/frames.h"
@@ -11,9 +11,7 @@
 #include <algorithm>
 #include <format>
 
-using namespace glm;
-
-GenerateAnimationFromGrid::GenerateAnimationFromGrid() : Canvas(vec2())
+GenerateAnimationFromGrid::GenerateAnimationFromGrid() : Canvas(Vec2())
 {}
 
 void GenerateAnimationFromGrid::update(Manager& manager, Document& document, Resources& resources, Settings& settings)
@@ -43,9 +41,9 @@ void GenerateAnimationFromGrid::update(Manager& manager, Document& document, Res
 
     if (ImGui::BeginChild("##Options Child", childSize, ImGuiChildFlags_Borders))
     {
-        ImGui::InputInt2(localize.get(LABEL_GENERATE_START_POSITION), value_ptr(startPosition));
-        ImGui::InputInt2(localize.get(LABEL_GENERATE_FRAME_SIZE), value_ptr(size));
-        ImGui::InputFloat2(localize.get(BASIC_PIVOT), value_ptr(pivot), vec2_format_get(pivot));
+        ImGui::InputInt2(localize.get(LABEL_GENERATE_START_POSITION), values_get(startPosition));
+        ImGui::InputInt2(localize.get(LABEL_GENERATE_FRAME_SIZE), values_get(size));
+        ImGui::InputFloat2(localize.get(BASIC_PIVOT), values_get(pivot), vec2_format_get(pivot));
         ImGui::InputInt(localize.get(LABEL_GENERATE_ROWS), &rows, STEP, STEP_FAST);
         ImGui::InputInt(localize.get(LABEL_GENERATE_COLUMNS), &columns, STEP, STEP_FAST);
 
@@ -82,7 +80,7 @@ void GenerateAnimationFromGrid::update(Manager& manager, Document& document, Res
         size_set(to_vec2(previewSize));
         bind();
         viewport_set();
-        clear(isTransparent ? vec4(0) : vec4(backgroundColor, 1.0f));
+        clear(isTransparent ? Vec4(0) : Vec4(backgroundColor, 1.0f));
 
         if (!layerReferences.empty())
         {
@@ -96,13 +94,13 @@ void GenerateAnimationFromGrid::update(Manager& manager, Document& document, Res
                 auto length = std::max(track_length_get(previewTrack), FRAME_DURATION_MIN);
                 auto sampleTime = std::min(time * (float)length, (float)length - 0.001f);
                 auto frame = frame_generate(previewTrack, sampleTime);
-                auto textureSize = vec2(sourceTexture->size);
+                auto textureSize = Vec2(sourceTexture->size);
 
                 if (textureSize.x > 0.0f && textureSize.y > 0.0f && frame.size.x > 0.0f && frame.size.y > 0.0f)
                 {
                     auto uvMin = frame.crop / textureSize;
                     auto uvMax = (frame.crop + frame.size) / textureSize;
-                    mat4 transform = transform_get(zoom) * quad_model_get(frame.size, frame.position, frame.pivot,
+                    Mat4 transform = transform_get(zoom) * quad_model_get(frame.size, frame.position, frame.pivot,
                                                                           percent_to_unit(frame.scale), frame.rotation,
                                                                           percent_to_unit(frame.skew));
                     auto vertices = uv_vertices_get(uvMin, uvMax);

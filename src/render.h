@@ -7,7 +7,7 @@
 
 #include "audio_data.h"
 #include "audio.h"
-#include <glm/glm.hpp>
+#include "vec.h"
 
 struct SDL_Window;
 struct SDL_GLContextState;
@@ -132,10 +132,10 @@ public:
 };
 
 // The area an animation covers over all its frames (or a default one when it draws nothing).
-glm::vec4 animation_bounds_get(const Document&, const Animation&, bool);
+Vec4 animation_bounds_get(const Document&, const Animation&, bool);
 // One frame drawn over `bounds` at `scale`, as premultiplied RGBA rows from the top.
-std::vector<uint8_t> animation_frame_render(Canvas&, ShaderProgram&, Document&, const Animation&, float, glm::vec4,
-                                            float, glm::vec4, bool);
+std::vector<uint8_t> animation_frame_render(Canvas&, ShaderProgram&, Document&, const Animation&, float, Vec4, float,
+                                            Vec4, bool);
 void pixels_unpremultiply(std::vector<uint8_t>&);
 void frames_bake(Document&, Model&, const std::filesystem::path&);
 
@@ -169,7 +169,7 @@ public:
     bool is_done() const;
     float time_get() const;
     bool is_sound_frame() const;
-    bool frame_capture(std::vector<uint8_t>, glm::ivec2, std::vector<const AudioData*> = {});
+    bool frame_capture(std::vector<uint8_t>, IVec2, std::vector<const AudioData*> = {});
     void finish();
     void cancel();
 
@@ -182,8 +182,8 @@ private:
 
 // Records a whole animation with these options (bounded and isolated), each frame drawn as animation_frame_render
 // draws it. False when a frame or the output can't be written.
-bool animation_record(const RecorderOptions&, Canvas&, ShaderProgram&, Document&, const Animation&, glm::vec4, float,
-                      glm::vec4, bool);
+bool animation_record(const RecorderOptions&, Canvas&, ShaderProgram&, Document&, const Animation&, Vec4, float, Vec4,
+                      bool);
 
 std::filesystem::path ffmpeg_log_path();
 bool animation_render(const std::filesystem::path&, const std::filesystem::path&,

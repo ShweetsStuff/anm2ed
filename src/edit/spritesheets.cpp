@@ -23,10 +23,10 @@ bool regions_trim(Model& model, int spritesheetId, const std::set<int>& ids, con
         if (!region)
             continue;
 
-        auto minPoint = glm::max(glm::ivec2(glm::min(region->crop, region->crop + region->size)), glm::ivec2(0));
-        auto maxPoint = glm::min(glm::ivec2(glm::max(region->crop, region->crop + region->size)), source.size);
-        auto contentMin = glm::ivec2(std::numeric_limits<int>::max());
-        auto contentMax = glm::ivec2(std::numeric_limits<int>::min());
+        auto minPoint = vec_max(IVec2(vec_min(region->crop, region->crop + region->size)), IVec2(0));
+        auto maxPoint = vec_min(IVec2(vec_max(region->crop, region->crop + region->size)), source.size);
+        auto contentMin = IVec2(std::numeric_limits<int>::max());
+        auto contentMax = IVec2(std::numeric_limits<int>::min());
 
         for (int y = minPoint.y; y < maxPoint.y; ++y)
             for (int x = minPoint.x; x < maxPoint.x; ++x)
@@ -37,15 +37,15 @@ bool regions_trim(Model& model, int spritesheetId, const std::set<int>& ids, con
                 if (std::all_of(source.pixels.begin() + index, source.pixels.begin() + index + IMAGE_CHANNELS,
                                 [](auto channel) { return channel == 0; }))
                     continue;
-                contentMin = glm::min(contentMin, glm::ivec2(x, y));
-                contentMax = glm::max(contentMax, glm::ivec2(x, y));
+                contentMin = vec_min(contentMin, IVec2(x, y));
+                contentMax = vec_max(contentMax, IVec2(x, y));
             }
 
         if (contentMin.x == std::numeric_limits<int>::max())
             continue;
 
-        auto newCrop = glm::vec2(contentMin);
-        auto newSize = glm::vec2(contentMax - contentMin + 1);
+        auto newCrop = Vec2(contentMin);
+        auto newSize = Vec2(contentMax - contentMin + 1);
         if (region->crop == newCrop && region->size == newSize)
             continue;
 
@@ -69,8 +69,8 @@ std::optional<Image> spritesheet_pack(Model& model, int id, const Image& sheet, 
     struct PackItem
     {
         int regionId = -1;
-        glm::ivec2 source{};
-        glm::ivec2 size{};
+        IVec2 source{};
+        IVec2 size{};
     };
 
     auto spritesheet = item_get(model.content.spritesheets, id);
@@ -81,9 +81,9 @@ std::optional<Image> spritesheet_pack(Model& model, int id, const Image& sheet, 
     std::vector<PackItem> items;
     for (auto& region : spritesheet->regions)
     {
-        auto minPoint = glm::ivec2(glm::min(region.crop, region.crop + region.size));
-        auto maxPoint = glm::ivec2(glm::max(region.crop, region.crop + region.size));
-        items.push_back({region.id, minPoint, glm::max(maxPoint - minPoint, glm::ivec2(1))});
+        auto minPoint = IVec2(vec_min(region.crop, region.crop + region.size));
+        auto maxPoint = IVec2(vec_max(region.crop, region.crop + region.size));
+        items.push_back({region.id, minPoint, vec_max(maxPoint - minPoint, IVec2(1))});
     }
 
     std::sort(items.begin(), items.end(), [](const PackItem& a, const PackItem& b) {
@@ -92,12 +92,12 @@ std::optional<Image> spritesheet_pack(Model& model, int id, const Image& sheet, 
         return areaA != areaB ? areaA > areaB : a.regionId < b.regionId;
     });
 
-    std::vector<glm::ivec2> sizes{};
+    std::vector<IVec2> sizes{};
     for (auto& item : items)
         sizes.push_back(item.size + padding * 2);
 
-    glm::ivec2 packedSize{};
-    std::vector<glm::ivec2> positions{};
+    IVec2 packedSize{};
+    std::vector<IVec2> positions{};
     if (!rects_pack(sizes, packedSize, positions) || packedSize.x <= 0 || packedSize.y <= 0)
         return {};
 
@@ -128,7 +128,7 @@ std::optional<Image> spritesheets_merge(Model& model, const std::set<int>& ids, 
     std::vector<ImagePart> parts{{image_get(baseId), {}, mergedSize, {}}};
     std::unordered_map<int, std::unordered_map<int, int>> regionIdMap;
 
-    auto location_region_add = [&](int sourceId, glm::ivec2 crop, glm::ivec2 size) {
+    auto location_region_add = [&](int sourceId, IVec2 crop, IVec2 size) {
         auto source = item_get(model.content.spritesheets, sourceId);
         Region region = {};
         region.id = item_next_id_get(base->regions);
@@ -136,7 +136,7 @@ std::optional<Image> spritesheets_merge(Model& model, const std::set<int>& ids, 
         region.name = stem.empty() ? std::format("#{}", sourceId) : stem;
         region.crop = crop;
         region.size = size;
-        region.pivot = origin == Origin::CENTER ? glm::vec2(size) * 0.5f : glm::vec2();
+        region.pivot = origin == Origin::CENTER ? Vec2(size) * 0.5f : Vec2();
         region.origin = origin;
         base->regions.push_back(region);
     };
@@ -148,10 +148,9 @@ std::optional<Image> spritesheets_merge(Model& model, const std::set<int>& ids, 
         if (id == baseId)
             continue;
         auto texture = image_get(id);
-        auto offset = isAppendRight ? glm::ivec2(mergedSize.x, 0) : glm::ivec2(0, mergedSize.y);
-        mergedSize = isAppendRight
-                         ? glm::ivec2(mergedSize.x + texture->size.x, std::max(mergedSize.y, texture->size.y))
-                         : glm::ivec2(std::max(mergedSize.x, texture->size.x), mergedSize.y + texture->size.y);
+        auto offset = isAppendRight ? IVec2(mergedSize.x, 0) : IVec2(0, mergedSize.y);
+        mergedSize = isAppendRight ? IVec2(mergedSize.x + texture->size.x, std::max(mergedSize.y, texture->size.y))
+                                   : IVec2(std::max(mergedSize.x, texture->size.x), mergedSize.y + texture->size.y);
         parts.push_back({texture, {}, texture->size, offset});
         if (!isMakeRegions)
             continue;

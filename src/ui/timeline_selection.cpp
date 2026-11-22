@@ -33,7 +33,7 @@ const Track* TimelineContext::selected_item_get()
     return document.model.track_get(reference);
 }
 
-glm::vec4 TimelineContext::color_get(TimelineColor color, int type)
+Vec4 TimelineContext::color_get(TimelineColor color, int type)
 {
     auto& colors = TIMELINE_COLORS[color];
     return isLightTheme ? colors.light[std::clamp(type, 0, TRIGGER)] : colors.dark[type];

@@ -130,9 +130,9 @@ void TimelineContext::frame_child(const TimelineRow& row, int& index, float widt
     if (frameSize.x > 0.0f && ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
     {
         auto mouseX = ImGui::GetIO().MousePos.x - cursorScreenPos.x;
-        frameSplitTimeAtCursor = glm::max(0, (int)std::floor(mouseX / frameSize.x));
+        frameSplitTimeAtCursor = vec_max(0, (int)std::floor(mouseX / frameSize.x));
     }
-    auto border = glm::max(0.5f, ImGui::GetStyle().FrameBorderSize * 0.5f);
+    auto border = vec_max(0.5f, ImGui::GetStyle().FrameBorderSize * 0.5f);
     auto borderLineLength = frameSize.y / 5;
     auto frameMin = std::max(0, (int)std::floor(scroll.x / frameSize.x) - 1);
     auto frameMax = std::min(FRAME_NUM_MAX, (int)std::ceil((scroll.x + clipMax.x) / frameSize.x) + 1);
@@ -340,7 +340,7 @@ void TimelineContext::frame_child(const TimelineRow& row, int& index, float widt
                 if (mousePos.x >= rowMin.x && mousePos.x < rowMax.x && mousePos.y >= rowMin.y && mousePos.y < rowMax.y)
                 {
                     auto mouseX = mousePos.x - cursorScreenPos.x;
-                    auto targetTime = glm::max(0.0f, mouseX / frameSize.x);
+                    auto targetTime = vec_max(0.0f, mouseX / frameSize.x);
                     int dropIndex = (int)item->frames.size();
                     float dropFrameTime = 0;
                     float frameTime = 0;
@@ -376,7 +376,7 @@ void TimelineContext::frame_child(const TimelineRow& row, int& index, float widt
                         Reference{reference.animationIndex, type, id, dropIndex, row.groupType, row.groupId};
 
                     auto dropX = cursorScreenPos.x + dropFrameTime * frameSize.x;
-                    auto previewWidth = glm::max(frameSize.x, (float)frameMoveDrag.duration * frameSize.x);
+                    auto previewWidth = vec_max(frameSize.x, (float)frameMoveDrag.duration * frameSize.x);
                     frameMovePreviewMin = ImVec2(dropX, cursorScreenPos.y);
                     frameMovePreviewMax = ImVec2(dropX + previewWidth, cursorScreenPos.y + frameSize.y);
                     isFrameMovePreview = true;
@@ -398,7 +398,7 @@ void TimelineContext::frame_child(const TimelineRow& row, int& index, float widt
                     frameTime = frame.atFrame;
 
                 auto buttonSize =
-                    type == TRIGGER ? frameSize : to_imvec2(vec2(frameSize.x * frame.duration, frameSize.y));
+                    type == TRIGGER ? frameSize : to_imvec2(Vec2(frameSize.x * frame.duration, frameSize.y));
                 auto frameStart = type == TRIGGER ? frame.atFrame : frameTime;
                 auto frameEnd = type == TRIGGER ? frameStart + 1.0f : frameStart + frame.duration;
                 if (frameEnd <= (float)frameMin || frameStart >= (float)frameMax)
@@ -507,7 +507,7 @@ void TimelineContext::frame_child(const TimelineRow& row, int& index, float widt
                         for (auto selectedReference : selectedReferences)
                             if (auto selectedFrame = document.model.frame_get(selectedReference))
                                 dragDuration += selectedFrame->duration;
-                        dragDuration = glm::max(1, dragDuration);
+                        dragDuration = vec_max(1, dragDuration);
 
                         frameMoveDrag = {.animationIndex = reference.animationIndex,
                                          .duration = dragDuration,
@@ -595,7 +595,7 @@ void TimelineContext::frame_drag_update()
         auto targetReference = draggedFrameReference;
         if (draggedFrameType == TRIGGER)
         {
-            auto atFrame = glm::clamp(
+            auto atFrame = vec_clamp(
                 hoveredTime, 0, settings.playbackIsClamp && animation ? animation->frameNum - 1 : FRAME_NUM_MAX - 1);
             command_push(
                 [=](Manager&, Document& document) { trigger_at_frame_set(document.model, targetReference, atFrame); });

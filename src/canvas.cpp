@@ -1,14 +1,10 @@
 #include "canvas.h"
 
 #include <algorithm>
-#include <glm/ext/matrix_clip_space.hpp>
-#include <glm/ext/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
+#include "vec.h"
 
 #include "math_util.h"
 #include "texture.h"
-
-using namespace glm;
 
 static void canvas_blend_premultiplied_set()
 {
@@ -40,14 +36,14 @@ static void vertex_array_make(GLuint& vao, GLuint& vbo, const void* data, GLsize
     {
         gl.EnableVertexAttribArray(index);
         gl.VertexAttribPointer(index++, attributeSize, GL_FLOAT, GL_FALSE, stride * sizeof(float),
-                              (void*)(offset * sizeof(float)));
+                               (void*)(offset * sizeof(float)));
         offset += attributeSize;
     }
 }
 
 Canvas::Canvas() = default;
 
-Canvas::Canvas(vec2 size)
+Canvas::Canvas(Vec2 size)
 {
     Framebuffer::size_set(size);
     vertex_array_make(axisVAO, axisVBO, AXIS_VERTICES, sizeof(AXIS_VERTICES), GL_STATIC_DRAW, {2});
@@ -70,28 +66,28 @@ Canvas::~Canvas()
         gl.DeleteBuffers(1, &buffer);
 }
 
-mat4 Canvas::transform_get(float zoom, vec2 pan) const
+Mat4 Canvas::transform_get(float zoom, Vec2 pan) const
 {
     auto zoomFactor = percent_to_unit(zoom);
-    auto projection = glm::ortho(0.0f, (float)size.x, 0.0f, (float)size.y, -1.0f, 1.0f);
-    auto view = mat4{1.0f};
+    auto projection = mat4_ortho(0.0f, (float)size.x, 0.0f, (float)size.y, -1.0f, 1.0f);
+    auto view = Mat4{1.0f};
 
-    view = glm::translate(view, vec3((size * 0.5f) + pan, 0.0f));
-    view = glm::scale(view, vec3(zoomFactor, zoomFactor, 1.0f));
+    view = mat4_translate(view, Vec3((size * 0.5f) + pan, 0.0f));
+    view = mat4_scale(view, Vec3(zoomFactor, zoomFactor, 1.0f));
 
     return projection * view;
 }
 
-void Canvas::axes_render(ShaderProgram& shader, float zoom, vec2 pan, vec4 color) const
+void Canvas::axes_render(ShaderProgram& shader, float zoom, Vec2 pan, Vec4 color) const
 {
     canvas_blend_premultiplied_set();
 
-    auto originNDC = transform_get(zoom, pan) * vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    auto originNDC = transform_get(zoom, pan) * Vec4(0.0f, 0.0f, 0.0f, 1.0f);
     originNDC /= originNDC.w;
 
     gl.UseProgram(shader.id);
 
-    gl.Uniform4fv(gl.GetUniformLocation(shader.id, UNIFORM_COLOR), 1, value_ptr(color));
+    gl.Uniform4fv(gl.GetUniformLocation(shader.id, UNIFORM_COLOR), 1, values_get(color));
     gl.Uniform2f(gl.GetUniformLocation(shader.id, UNIFORM_ORIGIN_NDC), originNDC.x, originNDC.y);
 
     gl.BindVertexArray(axisVAO);
@@ -107,15 +103,15 @@ void Canvas::axes_render(ShaderProgram& shader, float zoom, vec2 pan, vec4 color
     canvas_blend_straight_set();
 }
 
-void Canvas::grid_render(ShaderProgram& shader, float zoom, vec2 pan, ivec2 size, ivec2 offset, vec4 color) const
+void Canvas::grid_render(ShaderProgram& shader, float zoom, Vec2 pan, IVec2 size, IVec2 offset, Vec4 color) const
 {
     canvas_blend_premultiplied_set();
 
-    auto transform = glm::inverse(transform_get(zoom, pan));
+    auto transform = mat4_inverse(transform_get(zoom, pan));
 
     gl.UseProgram(shader.id);
 
-    gl.UniformMatrix4fv(gl.GetUniformLocation(shader.id, UNIFORM_TRANSFORM), 1, GL_FALSE, value_ptr(transform));
+    gl.UniformMatrix4fv(gl.GetUniformLocation(shader.id, UNIFORM_TRANSFORM), 1, GL_FALSE, values_get(transform));
     gl.Uniform2f(gl.GetUniformLocation(shader.id, UNIFORM_SIZE), (float)size.x, (float)size.y);
     gl.Uniform2f(gl.GetUniformLocation(shader.id, UNIFORM_OFFSET), (float)offset.x, (float)offset.y);
     gl.Uniform4f(gl.GetUniformLocation(shader.id, UNIFORM_COLOR), color.r, color.g, color.b, color.a);
@@ -128,42 +124,42 @@ void Canvas::grid_render(ShaderProgram& shader, float zoom, vec2 pan, ivec2 size
     canvas_blend_straight_set();
 }
 
-static void texture_uniform_set(const ShaderUniform& uniform, vec4 value)
+static void texture_uniform_set(const ShaderUniform& uniform, Vec4 value)
 {
     if (uniform.valueType == UNIFORM_VALUE_INT || uniform.valueType == UNIFORM_VALUE_SAMPLER2D)
         return gl.Uniform1i(uniform.location, uniform.intValue);
     switch (UNIFORM_VALUE_TYPE_INFOS[uniform.valueType].componentCount)
     {
         case 2:
-            return gl.Uniform2fv(uniform.location, 1, value_ptr(value));
+            return gl.Uniform2fv(uniform.location, 1, values_get(value));
         case 3:
-            return gl.Uniform3fv(uniform.location, 1, value_ptr(value));
+            return gl.Uniform3fv(uniform.location, 1, values_get(value));
         case 4:
-            return gl.Uniform4fv(uniform.location, 1, value_ptr(value));
+            return gl.Uniform4fv(uniform.location, 1, values_get(value));
         default:
             if (uniform.valueType == UNIFORM_VALUE_FLOAT)
                 gl.Uniform1f(uniform.location, value.x);
     }
 }
 
-static vec4 texture_uniform_components_get(const ShaderUniform& uniform, float playbackTime)
+static Vec4 texture_uniform_components_get(const ShaderUniform& uniform, float playbackTime)
 {
-    vec4 result{};
+    Vec4 result{};
     for (int i = 0; i < (int)uniform.components.size(); ++i)
         result[i] =
             uniform.components[i].binding == UNIFORM_BINDING_PLAYBACK_TIME ? playbackTime : uniform.components[i].value;
     return result;
 }
 
-static void texture_uniforms_set(ShaderProgram& shader, mat4 transform, vec4 tint, vec4 colorOffset, vec2 textureSize,
+static void texture_uniforms_set(ShaderProgram& shader, Mat4 transform, Vec4 tint, Vec4 colorOffset, Vec2 textureSize,
                                  float playbackTime)
 {
     if (shader.uniforms.empty())
     {
         gl.Uniform1i(gl.GetUniformLocation(shader.id, UNIFORM_TEXTURE), 0);
-        gl.Uniform4fv(gl.GetUniformLocation(shader.id, UNIFORM_COLOR_OFFSET), 1, value_ptr(colorOffset));
-        gl.Uniform4fv(gl.GetUniformLocation(shader.id, UNIFORM_TINT), 1, value_ptr(tint));
-        gl.UniformMatrix4fv(gl.GetUniformLocation(shader.id, UNIFORM_TRANSFORM), 1, GL_FALSE, value_ptr(transform));
+        gl.Uniform4fv(gl.GetUniformLocation(shader.id, UNIFORM_COLOR_OFFSET), 1, values_get(colorOffset));
+        gl.Uniform4fv(gl.GetUniformLocation(shader.id, UNIFORM_TINT), 1, values_get(tint));
+        gl.UniformMatrix4fv(gl.GetUniformLocation(shader.id, UNIFORM_TRANSFORM), 1, GL_FALSE, values_get(transform));
         return;
     }
 
@@ -179,7 +175,7 @@ static void texture_uniforms_set(ShaderProgram& shader, mat4 transform, vec4 tin
                 break;
             case UNIFORM_BINDING_TRANSFORM:
                 if (uniform.valueType == UNIFORM_VALUE_MAT4)
-                    gl.UniformMatrix4fv(uniform.location, 1, GL_FALSE, value_ptr(transform));
+                    gl.UniformMatrix4fv(uniform.location, 1, GL_FALSE, values_get(transform));
                 break;
             case UNIFORM_BINDING_FRAME_TINT:
                 texture_uniform_set(uniform, tint);
@@ -188,10 +184,10 @@ static void texture_uniforms_set(ShaderProgram& shader, mat4 transform, vec4 tin
                 texture_uniform_set(uniform, colorOffset);
                 break;
             case UNIFORM_BINDING_TEXTURE_SIZE:
-                texture_uniform_set(uniform, vec4(textureSize, 0.0f, 0.0f));
+                texture_uniform_set(uniform, Vec4(textureSize, 0.0f, 0.0f));
                 break;
             case UNIFORM_BINDING_PLAYBACK_TIME:
-                texture_uniform_set(uniform, vec4(playbackTime));
+                texture_uniform_set(uniform, Vec4(playbackTime));
                 break;
             case UNIFORM_BINDING_COMPONENTS:
                 texture_uniform_set(uniform, texture_uniform_components_get(uniform, playbackTime));
@@ -205,8 +201,8 @@ static void texture_uniforms_set(ShaderProgram& shader, mat4 transform, vec4 tin
     }
 }
 
-void Canvas::texture_render(ShaderProgram& shader, GLuint texture, mat4 transform, vec4 tint, vec4 colorOffset,
-                            float* vertices, vec2 textureSize, float playbackTime, TextureBlur blur) const
+void Canvas::texture_render(ShaderProgram& shader, GLuint texture, Mat4 transform, Vec4 tint, Vec4 colorOffset,
+                            float* vertices, Vec2 textureSize, float playbackTime, TextureBlur blur) const
 {
     canvas_blend_premultiplied_set();
 
@@ -215,10 +211,10 @@ void Canvas::texture_render(ShaderProgram& shader, GLuint texture, mat4 transfor
     texture_uniforms_set(shader, transform, tint, colorOffset, textureSize, playbackTime);
     // The editor's own texture shader blurs. A custom shader without these uniforms ignores them.
     gl.Uniform1f(gl.GetUniformLocation(shader.id, UNIFORM_BLUR), blur.radius);
-    gl.Uniform4fv(gl.GetUniformLocation(shader.id, UNIFORM_REGION), 1, value_ptr(blur.region));
+    gl.Uniform4fv(gl.GetUniformLocation(shader.id, UNIFORM_REGION), 1, values_get(blur.region));
     gl.Uniform2fv(gl.GetUniformLocation(shader.id, UNIFORM_TEXEL), 1,
-                 value_ptr(textureSize.x > 0 && textureSize.y > 0 ? 1.0f / textureSize : vec2()));
-    gl.VertexAttrib4fv(2, value_ptr(tint));
+                  values_get(textureSize.x > 0 && textureSize.y > 0 ? 1.0f / textureSize : Vec2()));
+    gl.VertexAttrib4fv(2, values_get(tint));
 
     gl.BindVertexArray(textureVAO);
 
@@ -238,14 +234,14 @@ void Canvas::texture_render(ShaderProgram& shader, GLuint texture, mat4 transfor
     canvas_blend_straight_set();
 }
 
-static void rect_begin(ShaderProgram& shader, const mat4& transform, const mat4& model, vec4 color)
+static void rect_begin(ShaderProgram& shader, const Mat4& transform, const Mat4& model, Vec4 color)
 {
     canvas_blend_premultiplied_set();
     gl.UseProgram(shader.id);
-    gl.UniformMatrix4fv(gl.GetUniformLocation(shader.id, UNIFORM_TRANSFORM), 1, GL_FALSE, value_ptr(transform));
+    gl.UniformMatrix4fv(gl.GetUniformLocation(shader.id, UNIFORM_TRANSFORM), 1, GL_FALSE, values_get(transform));
     if (auto location = gl.GetUniformLocation(shader.id, UNIFORM_MODEL); location != -1)
-        gl.UniformMatrix4fv(location, 1, GL_FALSE, value_ptr(model));
-    gl.Uniform4fv(gl.GetUniformLocation(shader.id, UNIFORM_COLOR), 1, value_ptr(color));
+        gl.UniformMatrix4fv(location, 1, GL_FALSE, values_get(model));
+    gl.Uniform4fv(gl.GetUniformLocation(shader.id, UNIFORM_COLOR), 1, values_get(color));
 }
 
 static void rect_end(GLuint vao, GLenum mode, int count = 4)
@@ -257,16 +253,16 @@ static void rect_end(GLuint vao, GLenum mode, int count = 4)
     canvas_blend_straight_set();
 }
 
-void Canvas::dashed_render(ShaderProgram& shader, const mat4& transform, const mat4& model, vec4 color,
+void Canvas::dashed_render(ShaderProgram& shader, const Mat4& transform, const Mat4& model, Vec4 color,
                            float dashLength, float dashGap, float dashOffset, GLenum mode, int count) const
 {
     rect_begin(shader, transform, model, color);
 
-    auto origin = model * vec4(0.0f, 0.0f, 0.0f, 1.0f);
-    for (auto [name, axis] : {std::pair{UNIFORM_AXIS_X, vec4(1.0f, 0.0f, 0.0f, 1.0f)},
-                              std::pair{UNIFORM_AXIS_Y, vec4(0.0f, 1.0f, 0.0f, 1.0f)}})
+    auto origin = model * Vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    for (auto [name, axis] : {std::pair{UNIFORM_AXIS_X, Vec4(1.0f, 0.0f, 0.0f, 1.0f)},
+                              std::pair{UNIFORM_AXIS_Y, Vec4(0.0f, 1.0f, 0.0f, 1.0f)}})
         if (auto location = gl.GetUniformLocation(shader.id, name); location != -1)
-            gl.Uniform2fv(location, 1, value_ptr(vec2(model * axis - origin)));
+            gl.Uniform2fv(location, 1, values_get(Vec2(model * axis - origin)));
     for (auto [name, value] : {std::pair{UNIFORM_DASH_LENGTH, dashLength}, std::pair{UNIFORM_DASH_GAP, dashGap},
                                std::pair{UNIFORM_DASH_OFFSET, dashOffset}})
         if (auto location = gl.GetUniformLocation(shader.id, name); location != -1)
@@ -277,15 +273,16 @@ void Canvas::dashed_render(ShaderProgram& shader, const mat4& transform, const m
 
 // A layer draw's crop of its spritesheet. A blurred one (Flash's BlurFilter: a box `blur` canvas pixels wide) grows by
 // the box's reach, in texels at the draw's scale, and averages its crop over it.
-void Canvas::layer_render(ShaderProgram& shader, GLuint texture, vec2 textureSize, const mat4& transform,
-                          const Draw& draw, vec4 tint, vec4 colorOffset) const
+void Canvas::layer_render(ShaderProgram& shader, GLuint texture, Vec2 textureSize, const Mat4& transform,
+                          const Draw& draw, Vec4 tint, Vec4 colorOffset) const
 {
     auto blurred = draw;
     auto& frame = blurred.frame;
-    TextureBlur blur = {.region = vec4(frame.crop, frame.crop + frame.size) / vec4(textureSize, textureSize)};
+    TextureBlur blur = {.region = Vec4(frame.crop, frame.crop + frame.size) / Vec4(textureSize, textureSize)};
     if (frame.blur > 0.0f && frame.size.x > 0.0f && frame.size.y > 0.0f)
     {
-        auto canvasArea = std::abs(glm::determinant(glm::mat2(draw.parent * draw_quad_model_get(draw))));
+        auto matrix = draw.parent * draw_quad_model_get(draw);
+        auto canvasArea = std::abs(matrix[0][0] * matrix[1][1] - matrix[1][0] * matrix[0][1]);
         auto canvasPerTexel = std::sqrt(canvasArea / (frame.size.x * frame.size.y));
         blur.radius = canvasPerTexel > 0.0f ? std::round(frame.blur * 0.5f / canvasPerTexel) : 0.0f;
         frame.crop -= blur.radius;
@@ -299,7 +296,7 @@ void Canvas::layer_render(ShaderProgram& shader, GLuint texture, vec2 textureSiz
 
 // An animation's layers alone (no markers or helpers). Spritesheet images are looked up by draw, custom shaders by id.
 void Canvas::layers_render(ShaderProgram& shader, const Model& model, const Animation& animation,
-                           const DrawOptions& options, const mat4& transform,
+                           const DrawOptions& options, const Mat4& transform,
                            const std::function<const Image*(const Draw&)>& image_get,
                            const std::function<ShaderProgram*(int)>& shader_get) const
 {
@@ -309,7 +306,7 @@ void Canvas::layers_render(ShaderProgram& shader, const Model& model, const Anim
             continue;
         auto& frame = draw.frame;
         auto image = image_get(draw);
-        if (!image || !image->is_valid() || frame.size == vec2())
+        if (!image || !image->is_valid() || frame.size == Vec2())
             continue;
         auto customShader = shader_get ? shader_get(frame.shaderId) : nullptr;
         layer_render(customShader ? *customShader : shader, texture_id_get(*image), image->unit_size_get(), transform,
@@ -317,24 +314,24 @@ void Canvas::layers_render(ShaderProgram& shader, const Model& model, const Anim
     }
 }
 
-void Canvas::rect_render(ShaderProgram& shader, const mat4& transform, const mat4& model, vec4 color, float dashLength,
+void Canvas::rect_render(ShaderProgram& shader, const Mat4& transform, const Mat4& model, Vec4 color, float dashLength,
                          float dashGap, float dashOffset) const
 {
     dashed_render(shader, transform, model, color, dashLength, dashGap, dashOffset, GL_LINE_LOOP, RECT_VERTEX_COUNT);
 }
 
 // A line from start to end: the bottom edge of a rectangle laid along it.
-void Canvas::line_render(ShaderProgram& shader, const mat4& transform, vec2 start, vec2 end, vec4 color,
+void Canvas::line_render(ShaderProgram& shader, const Mat4& transform, Vec2 start, Vec2 end, Vec4 color,
                          float dashLength, float dashGap, float dashOffset) const
 {
     auto direction = end - start;
-    auto normal = glm::length(direction) > 0.0f ? glm::normalize(vec2(-direction.y, direction.x)) : vec2(0.0f, 1.0f);
-    auto model = mat4(vec4(direction, 0.0f, 0.0f), vec4(normal, 0.0f, 0.0f), vec4(0.0f, 0.0f, 1.0f, 0.0f),
-                      vec4(start, 0.0f, 1.0f));
+    auto normal = vec_length(direction) > 0.0f ? vec_normalize(Vec2(-direction.y, direction.x)) : Vec2(0.0f, 1.0f);
+    auto model = Mat4(Vec4(direction, 0.0f, 0.0f), Vec4(normal, 0.0f, 0.0f), Vec4(0.0f, 0.0f, 1.0f, 0.0f),
+                      Vec4(start, 0.0f, 1.0f));
     dashed_render(shader, transform, model, color, dashLength, dashGap, dashOffset, GL_LINES, LINE_VERTEX_COUNT);
 }
 
-void Canvas::rect_fill_render(ShaderProgram& shader, const mat4& transform, const mat4& model, vec4 color) const
+void Canvas::rect_fill_render(ShaderProgram& shader, const Mat4& transform, const Mat4& model, Vec4 color) const
 {
     rect_begin(shader, transform, model, color);
     rect_end(rectVAO, GL_TRIANGLE_FAN);
@@ -365,7 +362,7 @@ float Canvas::zoom_level_get(float zoom, int levelDelta) const
     return ZOOM_LEVELS[std::clamp(levelIndex, 0, levelCount - 1)];
 }
 
-void Canvas::zoom_level_adjust(float& zoom, vec2& pan, vec2 focus, int levelDelta) const
+void Canvas::zoom_level_adjust(float& zoom, Vec2& pan, Vec2 focus, int levelDelta) const
 {
     auto zoomFactor = percent_to_unit(zoom);
     float newZoom = zoom_level_get(zoom, levelDelta);
@@ -377,23 +374,23 @@ void Canvas::zoom_level_adjust(float& zoom, vec2& pan, vec2 focus, int levelDelt
     }
 }
 
-vec2 Canvas::position_translate(float& zoom, vec2& pan, vec2 position) const
+Vec2 Canvas::position_translate(float& zoom, Vec2& pan, Vec2 position) const
 {
     auto zoomFactor = percent_to_unit(zoom);
     return (position - pan - (size * 0.5f)) / zoomFactor;
 }
 
-void Canvas::set_to_rect(float& zoom, vec2& pan, vec4 rect) const
+void Canvas::set_to_rect(float& zoom, Vec2& pan, Vec4 rect) const
 {
-    if (rect != vec4(-1.0f) && (rect.z > 0 && rect.w > 0))
+    if (rect != Vec4(-1.0f) && (rect.z > 0 && rect.w > 0))
     {
-        f32 scaleX = size.x / rect.z;
-        f32 scaleY = size.y / rect.w;
-        f32 fitScale = std::min(scaleX, scaleY);
+        float scaleX = size.x / rect.z;
+        float scaleY = size.y / rect.w;
+        float fitScale = std::min(scaleX, scaleY);
 
         zoom = unit_to_percent(fitScale);
 
-        vec2 rectCenter = {rect.x + rect.z * 0.5f, rect.y + rect.w * 0.5f};
+        Vec2 rectCenter = {rect.x + rect.z * 0.5f, rect.y + rect.w * 0.5f};
         pan = -rectCenter * fitScale;
     }
 }

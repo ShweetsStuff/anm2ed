@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <string>
 
-#include <glm/glm.hpp>
+#include "vec.h"
 
 #include "model/common.h"
 #include "render.h"
@@ -38,12 +38,12 @@ constexpr auto RENDER_SCALE_STEP = 25.0f;
     X(FLOAT, float)                                                                                                    \
     X(STRING, std::string)                                                                                             \
     X(PATH, std::filesystem::path)                                                                                     \
-    X(IVEC2, glm::ivec2)                                                                                               \
-    X(IVEC2_WH, glm::ivec2)                                                                                            \
-    X(VEC2, glm::vec2)                                                                                                 \
-    X(VEC2_WH, glm::vec2)                                                                                              \
-    X(VEC3, glm::vec3)                                                                                                 \
-    X(VEC4, glm::vec4)
+    X(IVEC2, IVec2)                                                                                                    \
+    X(IVEC2_WH, IVec2)                                                                                                 \
+    X(VEC2, Vec2)                                                                                                      \
+    X(VEC2_WH, Vec2)                                                                                                   \
+    X(VEC3, Vec3)                                                                                                      \
+    X(VEC4, Vec4)
 
 #define X(name, type) using TYPE_##name = type;
 SETTINGS_TYPES
@@ -52,7 +52,7 @@ SETTINGS_TYPES
 #define SETTINGS_MEMBERS                                                                                               \
     /* Symbol / Name / String / Type / Default */                                                                      \
     X(WINDOW_SIZE, windowSize, STRING_UNDEFINED, IVEC2_WH, {1200, 720})                                                \
-    X(WINDOW_POSITION, windowPosition, STRING_UNDEFINED, IVEC2, glm::ivec2())                                          \
+    X(WINDOW_POSITION, windowPosition, STRING_UNDEFINED, IVEC2, IVec2())                                               \
     X(IS_VSYNC, isVsync, STRING_UNDEFINED, BOOL, true)                                                                 \
     X(IS_DETACHABLE_WINDOWS, isDetachableWindows, STRING_UNDEFINED, BOOL, true)                                        \
     X(UI_SCALE, uiScale, STRING_UNDEFINED, FLOAT, 100.0f)                                                              \

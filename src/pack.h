@@ -2,6 +2,6 @@
 
 #include <vector>
 
-#include <glm/glm.hpp>
+#include "vec.h"
 
-bool rects_pack(const std::vector<glm::ivec2>&, glm::ivec2&, std::vector<glm::ivec2>&);
+bool rects_pack(const std::vector<IVec2>&, IVec2&, std::vector<IVec2>&);

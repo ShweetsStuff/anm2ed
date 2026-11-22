@@ -5,7 +5,7 @@
 #include <set>
 #include <utility>
 
-#include <glm/gtc/type_ptr.hpp>
+#include "vec.h"
 
 #include "ui/actions.h"
 #include "imgui_internal.h"
@@ -18,8 +18,6 @@
 #include "ui/input.h"
 #include "ui/layout.h"
 #include "ui/shortcut.h"
-
-using namespace glm;
 
 void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& resources)
 {
@@ -83,7 +81,7 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
 
             view_buttons_draw(manager, settings, center_view, fit_view);
 
-            auto mousePosInt = ivec2(mousePos);
+            auto mousePosInt = IVec2(mousePos);
             ImGui::TextUnformatted(
                 std::vformat(localize.get(FORMAT_POSITION_SPACED), std::make_format_args(mousePosInt.x, mousePosInt.y))
                     .c_str());
@@ -100,7 +98,7 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
             {
                 ImGui::BeginDisabled(isTransparent);
                 {
-                    ImGui::ColorEdit3(localize.get(LABEL_BACKGROUND_COLOR), value_ptr(backgroundColor),
+                    ImGui::ColorEdit3(localize.get(LABEL_BACKGROUND_COLOR), values_get(backgroundColor),
                                       ImGuiColorEditFlags_NoInputs);
                     ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BACKGROUND_COLOR));
                 }
@@ -140,8 +138,8 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
             auto isDuring = isMouseDown || input.isArrowDown;
             auto isEnd = input.isLeftReleased || input.isRightReleased || input.isArrowEnd;
             auto arrow = input.arrow * input.step;
-            auto gridArrow = isGridSnap ? arrow * vec2(gridSize) : arrow;
-            auto isArrow = arrow != vec2();
+            auto gridArrow = isGridSnap ? arrow * Vec2(gridSize) : arrow;
+            auto isArrow = arrow != Vec2();
 
             auto selectedFrameReferences = document.frame_references_get();
             std::erase_if(selectedFrameReferences,
@@ -158,8 +156,8 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
             previousMousePos = mousePos;
             mousePos = position_translate(zoom, pan, to_ivec2(ImGui::GetMousePos()) - to_ivec2(cursorScreenPos));
 
-            auto pivot_snap = [&](vec2 value, vec2 current) {
-                return isGridSnap ? vec2(ivec2(value)) : glm::floor(value) + (current - glm::floor(current));
+            auto pivot_snap = [&](Vec2 value, Vec2 current) {
+                return isGridSnap ? Vec2(IVec2(value)) : vec_floor(value) + (current - vec_floor(current));
             };
             // Region edits apply to the given regions of the edited spritesheet when the command runs.
             auto regions_update = [&](std::set<int> ids, std::function<void(Region&)> update) {
@@ -171,7 +169,7 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
                                  update(*region);
                      }});
             };
-            auto region_pivot_update = [&](std::function<vec2(vec2)> pivot_get) {
+            auto region_pivot_update = [&](std::function<Vec2(Vec2)> pivot_get) {
                 regions_update({regionReference}, [=](Region& region) {
                     region.origin = Origin::CUSTOM;
                     region.pivot = pivot_get(region.pivot);
@@ -193,10 +191,9 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
             if (useTool == TOOL_PAN && spritesheet && texture && texture->is_valid())
                 for (auto& region : spritesheet->regions)
                 {
-                    auto minPoint = glm::min(region.crop, region.crop + region.size);
-                    auto maxPoint = glm::max(region.crop, region.crop + region.size);
-                    if (glm::all(glm::greaterThanEqual(mousePos, minPoint)) &&
-                        glm::all(glm::lessThanEqual(mousePos, maxPoint)))
+                    auto minPoint = vec_min(region.crop, region.crop + region.size);
+                    auto maxPoint = vec_max(region.crop, region.crop + region.size);
+                    if (is_all_less_equal(minPoint, mousePos) && is_all_less_equal(mousePos, maxPoint))
                     {
                         hoveredRegionId = region.id;
                         break;
@@ -256,10 +253,10 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
                     edit_begin_push(manager, EDIT_REGION_MOVE);
                 if (isMouseDown)
                     region_pivot_update(
-                        [pivot = pivot_snap(mousePos - region->crop, region->pivot)](vec2) { return pivot; });
+                        [pivot = pivot_snap(mousePos - region->crop, region->pivot)](Vec2) { return pivot; });
                 if (isArrow)
                     region_pivot_update(
-                        [=, this](vec2 pivot) { return isGridSnap ? vec2(ivec2(pivot + arrow)) : pivot + arrow; });
+                        [=, this](Vec2 pivot) { return isGridSnap ? Vec2(IVec2(pivot + arrow)) : pivot + arrow; });
                 if (isDuring)
                     tooltip_lines_draw({localize_format(FORMAT_PIVOT, region->pivot.x, region->pivot.y)});
                 if (isEnd)
@@ -287,7 +284,7 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
             {
                 if (isBegin)
                     edit_begin_push(manager, isRegionCrop ? EDIT_REGION_CROP : EDIT_FRAME_CROP);
-                auto rect_set = [&](vec2 crop, vec2 cropSize) {
+                auto rect_set = [&](Vec2 crop, Vec2 cropSize) {
                     if (isRegionCrop)
                         regions_update(regionSelection, [=](Region& region) {
                             region.crop = crop;
@@ -303,9 +300,9 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
                 if (isMouseClicked)
                 {
                     cropAnchor = mousePos;
-                    auto crop = vec2(ivec2(cropAnchor));
+                    auto crop = Vec2(IVec2(cropAnchor));
                     if (isRegionCrop)
-                        rect_set(crop, vec2());
+                        rect_set(crop, Vec2());
                     else
                         frames_change({.regionId = -1, .cropX = crop.x, .cropY = crop.y});
                 }
@@ -316,8 +313,8 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
                 }
                 if (isArrow && isRegionCrop)
                     regions_update(regionSelection, [=](Region& region) {
-                        region.crop = vec2(ivec2(region.crop + gridArrow));
-                        region.size = vec2(ivec2(region.size));
+                        region.crop = Vec2(IVec2(region.crop + gridArrow));
+                        region.size = Vec2(IVec2(region.size));
                     });
                 else if (isArrow)
                     frames_change({.regionId = -1, .cropX = gridArrow.x, .cropY = gridArrow.y}, ChangeType::ADD);
@@ -348,8 +345,8 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
                                           }});
 
                 auto shown = isRegionCrop ? region_get(*regionSelection.begin()) : nullptr;
-                auto crop = shown ? shown->crop : frame ? frame->crop : vec2();
-                auto cropSize = shown ? shown->size : frame ? frame->size : vec2();
+                auto crop = shown ? shown->crop : frame ? frame->crop : Vec2();
+                auto cropSize = shown ? shown->size : frame ? frame->size : Vec2();
                 if (isDuring && (shown || !isRegionCrop))
                     tooltip_lines_draw({localize_format(FORMAT_CROP, crop.x, crop.y),
                                         localize_format(FORMAT_SIZE, cropSize.x, cropSize.y)});
@@ -370,8 +367,8 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
                     edit_begin_push(manager, useTool == TOOL_DRAW ? EDIT_DRAW : EDIT_ERASE);
                 if (isMouseDown)
                     manager.command_push(
-                        {manager.selected, [start = ivec2(previousMousePos), end = ivec2(mousePos),
-                                            color = useTool == TOOL_DRAW ? toolColor : vec4(),
+                        {manager.selected, [start = IVec2(previousMousePos), end = IVec2(mousePos),
+                                            color = useTool == TOOL_DRAW ? toolColor : Vec4(),
                                             spritesheetId = referenceSpritesheet](Manager&, Document& document) {
                              if (auto texture = document.texture_edit(spritesheetId))
                                  texture->pixel_line(start, end, color);
@@ -390,7 +387,7 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
                 {
                     ImGui::ColorButton("##Color Picker Button", to_imvec4(toolColor));
                     ImGui::SameLine();
-                    auto rgba8 = glm::clamp(ivec4(toolColor * 255.0f + 0.5f), ivec4(0), ivec4(255));
+                    auto rgba8 = vec_clamp(IVec4(toolColor * 255.0f + 0.5f), IVec4(0), IVec4(255));
                     ImGui::TextUnformatted(
                         std::format("#{:02X}{:02X}{:02X}{:02X}", rgba8.r, rgba8.g, rgba8.b, rgba8.a).c_str());
                     ImGui::SameLine();
@@ -419,14 +416,14 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
 
             if (input.wheel != 0 || input.isZoomIn || input.isZoomOut)
             {
-                auto focus = input.wheel != 0 ? vec2(mousePos) : texture ? vec2(texture->size) / 2.0f : vec2();
+                auto focus = input.wheel != 0 ? Vec2(mousePos) : texture ? Vec2(texture->size) / 2.0f : Vec2();
                 zoom_step(zoom, pan, focus, (input.wheel > 0 || input.isZoomIn) ? ZOOM_LEVEL_STEP : -ZOOM_LEVEL_STEP);
             }
         }
 
         bind();
         viewport_set();
-        clear(isTransparent ? vec4(0) : vec4(backgroundColor, 1.0f));
+        clear(isTransparent ? Vec4(0) : Vec4(backgroundColor, 1.0f));
 
         auto frame = model.frame_get(reference);
 
@@ -457,7 +454,7 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
                 {
                     auto cropModel = quad_model_get(region->size, region->crop);
                     auto cropTransform = transform * cropModel;
-                    rect_fill_render(shaderLine, cropTransform, cropModel, vec4(1.0f, 1.0f, 1.0f, 0.5f));
+                    rect_fill_render(shaderLine, cropTransform, cropModel, Vec4(1.0f, 1.0f, 1.0f, 0.5f));
                 }
             }
 
@@ -480,7 +477,7 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
                 highlightedRegionId = regionReference;
             }
 
-            auto draw_region_rect = [&](const Region& region, vec4 regionColor) {
+            auto draw_region_rect = [&](const Region& region, Vec4 regionColor) {
                 auto cropModel = quad_model_get(region.size, region.crop);
                 auto cropTransform = transform * cropModel;
                 rect_render(dashedShader, cropTransform, cropModel, regionColor, BORDER_DASH_LENGTH, BORDER_DASH_GAP,
@@ -530,7 +527,7 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
         if (isTransparent)
             render_checker_background(drawList, min, max, -size * 0.5f - checkerPan, CHECKER_SIZE);
         else
-            drawList->AddRectFilled(min, max, ImGui::GetColorU32(to_imvec4(vec4(backgroundColor, 1.0f))));
+            drawList->AddRectFilled(min, max, ImGui::GetColorU32(to_imvec4(Vec4(backgroundColor, 1.0f))));
         image_premultiplied_draw(this->texture, to_imvec2(size));
     }
 

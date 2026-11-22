@@ -31,7 +31,7 @@ public:
         float stretch = 1.0f;
         int effect = 0;
         int trailAlpha = 255;
-        glm::vec2 levels{};
+        Vec2 levels{};
         float gradientHeight = 0;
         ImU32 gradientColor = 0;
     };
@@ -54,7 +54,7 @@ public:
         Model model = {};
         std::unique_ptr<Canvas> canvas;
         std::unordered_map<int, Image> textures;
-        glm::vec4 rect{-1.0f};
+        Vec4 rect{-1.0f};
         float time = 0;
         float fps = 30.0f;
         bool isLoaded = false;

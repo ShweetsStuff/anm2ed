@@ -4,7 +4,7 @@
 #include <functional>
 
 #include "gl.h"
-#include <glm/glm.hpp>
+#include "vec.h"
 
 #include "framebuffer.h"
 #include "image.h"
@@ -17,7 +17,7 @@
 struct TextureBlur
 {
     float radius = 0;
-    glm::vec4 region{};
+    Vec4 region{};
 };
 
 class Canvas : public Framebuffer
@@ -25,7 +25,7 @@ class Canvas : public Framebuffer
 public:
     static constexpr float TEXTURE_VERTICES[] = {0, 0, 0.0f, 0.0f, 1, 0, 1.0f, 0.0f,
                                                  1, 1, 1.0f, 1.0f, 0, 1, 0.0f, 1.0f};
-    static constexpr auto PIVOT_SIZE = glm::vec2(8, 8);
+    static constexpr auto PIVOT_SIZE = Vec2(8, 8);
     static constexpr auto ZOOM_MIN = 1.0f;
     static constexpr auto ZOOM_MAX = 2000.0f;
     static constexpr auto DASH_LENGTH = 4.0f;
@@ -64,27 +64,25 @@ public:
     GLuint textureEBO = 0;
 
     Canvas();
-    Canvas(glm::vec2);
+    Canvas(Vec2);
     ~Canvas();
-    glm::mat4 transform_get(float = 100.0f, glm::vec2 = {}) const;
-    void axes_render(ShaderProgram&, float, glm::vec2, glm::vec4 = glm::vec4(1.0f)) const;
-    void grid_render(ShaderProgram&, float, glm::vec2, glm::ivec2 = glm::ivec2(32, 32), glm::ivec2 = {},
-                     glm::vec4 = glm::vec4(1.0f)) const;
-    void texture_render(ShaderProgram&, GLuint, glm::mat4 = {1.0f}, glm::vec4 = glm::vec4(1.0f), glm::vec4 = {},
-                        float* = (float*)TEXTURE_VERTICES, glm::vec2 = {}, float = 0.0f, TextureBlur = {}) const;
-    void layer_render(ShaderProgram&, GLuint, glm::vec2, const glm::mat4&, const Draw&, glm::vec4, glm::vec4) const;
-    void rect_fill_render(ShaderProgram&, const glm::mat4&, const glm::mat4&, glm::vec4 = glm::vec4(1.0f)) const;
-    void layers_render(ShaderProgram&, const Model&, const Animation&, const DrawOptions&, const glm::mat4&,
+    Mat4 transform_get(float = 100.0f, Vec2 = {}) const;
+    void axes_render(ShaderProgram&, float, Vec2, Vec4 = Vec4(1.0f)) const;
+    void grid_render(ShaderProgram&, float, Vec2, IVec2 = IVec2(32, 32), IVec2 = {}, Vec4 = Vec4(1.0f)) const;
+    void texture_render(ShaderProgram&, GLuint, Mat4 = Mat4(1.0f), Vec4 = Vec4(1.0f), Vec4 = {},
+                        float* = (float*)TEXTURE_VERTICES, Vec2 = {}, float = 0.0f, TextureBlur = {}) const;
+    void layer_render(ShaderProgram&, GLuint, Vec2, const Mat4&, const Draw&, Vec4, Vec4) const;
+    void rect_fill_render(ShaderProgram&, const Mat4&, const Mat4&, Vec4 = Vec4(1.0f)) const;
+    void layers_render(ShaderProgram&, const Model&, const Animation&, const DrawOptions&, const Mat4&,
                        const std::function<const Image*(const Draw&)>&,
                        const std::function<ShaderProgram*(int)>& = {}) const;
-    void dashed_render(ShaderProgram&, const glm::mat4&, const glm::mat4&, glm::vec4, float, float, float, GLenum,
-                       int) const;
-    void rect_render(ShaderProgram&, const glm::mat4&, const glm::mat4&, glm::vec4 = glm::vec4(1.0f),
-                     float dashLength = DASH_LENGTH, float dashGap = DASH_GAP, float dashOffset = DASH_OFFSET) const;
-    void line_render(ShaderProgram&, const glm::mat4&, glm::vec2, glm::vec2, glm::vec4 = glm::vec4(1.0f),
-                     float dashLength = DASH_LENGTH, float dashGap = DASH_GAP, float dashOffset = DASH_OFFSET) const;
+    void dashed_render(ShaderProgram&, const Mat4&, const Mat4&, Vec4, float, float, float, GLenum, int) const;
+    void rect_render(ShaderProgram&, const Mat4&, const Mat4&, Vec4 = Vec4(1.0f), float dashLength = DASH_LENGTH,
+                     float dashGap = DASH_GAP, float dashOffset = DASH_OFFSET) const;
+    void line_render(ShaderProgram&, const Mat4&, Vec2, Vec2, Vec4 = Vec4(1.0f), float dashLength = DASH_LENGTH,
+                     float dashGap = DASH_GAP, float dashOffset = DASH_OFFSET) const;
     float zoom_level_get(float, int) const;
-    void zoom_level_adjust(float&, glm::vec2&, glm::vec2, int) const;
-    glm::vec2 position_translate(float&, glm::vec2&, glm::vec2) const;
-    void set_to_rect(float& zoom, glm::vec2& pan, glm::vec4 rect) const;
+    void zoom_level_adjust(float&, Vec2&, Vec2, int) const;
+    Vec2 position_translate(float&, Vec2&, Vec2) const;
+    void set_to_rect(float& zoom, Vec2& pan, Vec4 rect) const;
 };

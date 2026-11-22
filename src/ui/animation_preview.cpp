@@ -12,7 +12,7 @@
 #include <system_error>
 #include <vector>
 
-#include <glm/gtc/type_ptr.hpp>
+#include "vec.h"
 
 #include "ui/actions.h"
 #include "log.h"
@@ -30,13 +30,11 @@
 #include "ui/shortcut.h"
 #include "ui/timeline.h"
 
-using namespace glm;
-
-constexpr auto NULL_RECT_COLOR = vec4(0.0f, 0.0f, 1.0f, 0.90f);
-constexpr auto SELECTED_LAYER_BORDER_COLOR = vec4(1.0f, 0.1059f, 0.5882f, 1.0f);
-constexpr auto TARGET_SIZE = vec2(32, 32);
+constexpr auto NULL_RECT_COLOR = Vec4(0.0f, 0.0f, 1.0f, 0.90f);
+constexpr auto SELECTED_LAYER_BORDER_COLOR = Vec4(1.0f, 0.1059f, 0.5882f, 1.0f);
+constexpr auto TARGET_SIZE = Vec2(32, 32);
 constexpr auto PARENT_DIM_ALPHA = 0.65f; // how much a stepped-into child's parent fades
-constexpr auto POINT_SIZE = vec2(4, 4);
+constexpr auto POINT_SIZE = Vec2(4, 4);
 constexpr auto TRIGGER_TEXT_COLOR_DARK = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
 constexpr auto TRIGGER_TEXT_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 0.5f);
 struct OverlayAnimationOption
@@ -95,22 +93,22 @@ static Document* overlay_animation_document_get(Manager& manager, const Document
     return nullptr;
 }
 
-static std::optional<vec4> animation_rects_merge(std::optional<vec4> rect, vec4 next)
+static std::optional<Vec4> animation_rects_merge(std::optional<Vec4> rect, Vec4 next)
 {
-    if (next == vec4(-1.0f))
+    if (next == Vec4(-1.0f))
         return rect;
     if (!rect)
         return next;
 
-    auto minPoint = glm::min(vec2(rect->x, rect->y), vec2(next.x, next.y));
-    auto maxPoint = glm::max(vec2(rect->x + rect->z, rect->y + rect->w), vec2(next.x + next.z, next.y + next.w));
-    return vec4(minPoint, maxPoint - minPoint);
+    auto minPoint = vec_min(Vec2(rect->x, rect->y), Vec2(next.x, next.y));
+    auto maxPoint = vec_max(Vec2(rect->x + rect->z, rect->y + rect->w), Vec2(next.x + next.z, next.y + next.w));
+    return Vec4(minPoint, maxPoint - minPoint);
 }
 
-static std::optional<vec4> animation_render_rect_get(Manager& manager, Document& document, const Animation* animation,
+static std::optional<Vec4> animation_render_rect_get(Manager& manager, Document& document, const Animation* animation,
                                                      bool isRootTransform)
 {
-    std::optional<vec4> rect{};
+    std::optional<Vec4> rect{};
 
     if (animation)
         rect = animation_rects_merge(
@@ -223,7 +221,7 @@ void AnimationPreview::recording_start(Manager& manager, Settings& settings, Doc
         recordPan = document.previewPan;
         if (auto rect = animation_render_rect_get(manager, document, animation, settings.previewIsRootTransform))
         {
-            recordSize = glm::vec2(rect->z, rect->w) * percent_to_unit(settings.renderScale);
+            recordSize = Vec2(rect->z, rect->w) * percent_to_unit(settings.renderScale);
             auto previousSize = size;
             size = recordSize;
             set_to_rect(recordZoom, recordPan, *rect);
@@ -280,7 +278,7 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
     auto& shaderTexture = resources.shaders[SHADER_TEXTURE];
     auto& shaderDashed = resources.shaders[SHADER_DASHED];
     auto center_view = [&]() {
-        pan = vec2();
+        pan = Vec2();
     };
 
     auto fit_view = [&]() {
@@ -310,7 +308,7 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
             view_buttons_draw(manager, settings, center_view, fit_view);
 
             auto readoutSize = ImVec2(row_widget_width_get(2), ImGui::GetTextLineHeightWithSpacing());
-            auto mousePosInt = ivec2(mousePos);
+            auto mousePosInt = IVec2(mousePos);
             auto positionText =
                 std::vformat(localize.get(FORMAT_POSITION_SPACED), std::make_format_args(mousePosInt.x, mousePosInt.y));
             if (ImGui::BeginChild("##Position Readout", readoutSize, false, ImGuiWindowFlags_NoScrollbar))
@@ -323,7 +321,7 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
 
             ImGui::SameLine();
 
-            auto sizeInt = ivec2(size);
+            auto sizeInt = IVec2(size);
             auto sizeText = std::vformat(localize.get(FORMAT_SIZE_SPACED), std::make_format_args(sizeInt.x, sizeInt.y));
             if (ImGui::BeginChild("##Size Readout", readoutSize, false, ImGuiWindowFlags_NoScrollbar))
             {
@@ -341,7 +339,7 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
         {
             ImGui::BeginDisabled(isTransparent);
             {
-                ImGui::ColorEdit3(localize.get(LABEL_BACKGROUND_COLOR), value_ptr(backgroundColor),
+                ImGui::ColorEdit3(localize.get(LABEL_BACKGROUND_COLOR), values_get(backgroundColor),
                                   ImGuiColorEditFlags_NoInputs);
                 ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BACKGROUND_COLOR));
             }
@@ -350,7 +348,7 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
             ImGui::Checkbox(localize.get(LABEL_AXES), &isAxes);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_AXES));
             ImGui::SameLine();
-            ImGui::ColorEdit4(localize.get(BASIC_COLOR), value_ptr(axesColor), ImGuiColorEditFlags_NoInputs);
+            ImGui::ColorEdit4(localize.get(BASIC_COLOR), values_get(axesColor), ImGuiColorEditFlags_NoInputs);
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_AXES_COLOR));
 
             auto overlayOptions = overlay_animation_options_get(manager);
@@ -371,8 +369,8 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
             }
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OVERLAY));
 
-            overlayDrawOrder = glm::clamp(overlayDrawOrder, (int)OVERLAY_OVER, (int)OVERLAY_UNDER);
-            overlayTransparency = glm::clamp(overlayTransparency, 0.0f, 100.0f);
+            overlayDrawOrder = vec_clamp(overlayDrawOrder, (int)OVERLAY_OVER, (int)OVERLAY_UNDER);
+            overlayTransparency = vec_clamp(overlayTransparency, 0.0f, 100.0f);
             auto orderIconSize = icon_size_get();
             auto orderButtonWidth = orderIconSize.x + ImGui::GetStyle().FramePadding.x * 2.0f;
             auto alphaWidth = std::max(ImGui::GetContentRegionAvail().x - (orderButtonWidth * 2.0f) -
@@ -383,7 +381,7 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
             ImGui::DragFloat("##Overlay Alpha", &overlayTransparency, DRAG_SPEED, 0, 100, "%.0f%%");
             ImGui::PopItemWidth();
             ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OVERLAY_ALPHA));
-            overlayTransparency = glm::clamp(overlayTransparency, 0.0f, 100.0f);
+            overlayTransparency = vec_clamp(overlayTransparency, 0.0f, 100.0f);
 
             ImGui::SameLine();
             radio_button_icon("##Overlay Over", &overlayDrawOrder, OVERLAY_OVER, resources.icon_id_get(ICON_OVER),
@@ -451,11 +449,11 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
         else
         {
             auto nextSize = to_vec2(ImGui::GetContentRegionAvail());
-            bool isCanvasResized = ivec2(nextSize) != ivec2(size);
+            bool isCanvasResized = IVec2(nextSize) != IVec2(size);
             size_set(nextSize);
             if (isCanvasResized && ImGui::IsMouseDragging(ImGuiMouseButton_Left))
             {
-                auto resizeSizeInt = ivec2(size);
+                auto resizeSizeInt = IVec2(size);
                 auto resizeSizeText = std::vformat(localize.get(FORMAT_SIZE_SPACED),
                                                    std::make_format_args(resizeSizeInt.x, resizeSizeInt.y));
                 ImGui::SetTooltip("%s", resizeSizeText.c_str());
@@ -505,14 +503,14 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
             auto isDuring = isToolDown || input.isArrowDown;
             auto isEnd = isToolReleased || input.isArrowEnd;
             auto arrow = input.arrow * input.step;
-            auto isArrow = arrow != vec2();
+            auto isArrow = arrow != Vec2();
 
             // Changes apply to every selected frame. Absolute values are applied as the difference from the edited
             // frame.
             auto frames_change = [&](FrameChange change, ChangeType type = ChangeType::ADD) {
                 frames_change_push(manager, selectedFrameReferences, change, type);
             };
-            auto null_rect_set = [&](vec2 minPoint, vec2 maxPoint) {
+            auto null_rect_set = [&](Vec2 minPoint, Vec2 maxPoint) {
                 auto rectSize = maxPoint - minPoint;
                 frames_change({.positionX = minPoint.x + rectSize.x * 0.5f - frame->position.x,
                                .positionY = minPoint.y + rectSize.y * 0.5f - frame->position.y,
@@ -535,13 +533,13 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
                 if (isToolClicked)
                 {
                     auto origin = isSelectedNullRect ? null_rect_top_left(*frame) : frame->position;
-                    moveOffset = settings.inputIsMoveToolSnapToMouse ? vec2() : mousePos - origin;
+                    moveOffset = settings.inputIsMoveToolSnapToMouse ? Vec2() : mousePos - origin;
                     isMoveDragging = true;
                 }
                 if (isToolDown && isMoveDragging)
                 {
                     auto position =
-                        vec2(ivec2(mousePos - moveOffset + (isSelectedNullRect ? frame->scale * 0.5f : vec2())));
+                        Vec2(IVec2(mousePos - moveOffset + (isSelectedNullRect ? frame->scale * 0.5f : Vec2())));
                     frames_change(
                         {.positionX = position.x - frame->position.x, .positionY = position.y - frame->position.y});
                 }
@@ -600,7 +598,7 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
                     edit_begin_push(manager, EDIT_FRAME_ROTATION);
                 if (isToolDown)
                     frames_change({.rotation = input.mouseDelta.x});
-                if (auto turn = glm::sign(input.arrow.x - input.arrow.y); turn != 0.0f)
+                if (auto turn = vec_sign(input.arrow.x - input.arrow.y); turn != 0.0f)
                     frames_change({.rotation = turn * input.step});
                 if (isDuring)
                     tooltip_lines_draw({localize_format(FORMAT_ROTATION, frame->rotation)});
@@ -628,13 +626,13 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
             }
 
             if (input.wheel != 0 || input.isZoomIn || input.isZoomOut)
-                zoom_step(zoom, pan, vec2(mousePos),
+                zoom_step(zoom, pan, Vec2(mousePos),
                           (input.wheel > 0 || input.isZoomIn) ? ZOOM_LEVEL_STEP : -ZOOM_LEVEL_STEP);
         }
 
         bind();
         viewport_set();
-        clear(isViewTransparent ? vec4(0) : vec4(backgroundColor, 1.0f));
+        clear(isViewTransparent ? Vec4(0) : Vec4(backgroundColor, 1.0f));
 
         if (isAxes && !isIsolated)
             axes_render(shaderAxes, viewZoom, viewPan, axesColor);
@@ -647,9 +645,9 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
         DrawOptions drawOptions{.time = frameTime,
                                 .isRootTransform = isRootTransform,
                                 .isIndexSampled = settings.onionskinMode == (int)OnionskinMode::INDEX};
-        std::vector<vec3> sampleColors{};
+        std::vector<Vec3> sampleColors{};
         std::vector<float> sampleAlphas;
-        auto samples_add = [&](int count, int direction, vec3 color) {
+        auto samples_add = [&](int count, int direction, Vec3 color) {
             for (int i = 1; i <= count; ++i)
             {
                 drawOptions.samples.push_back({.timeOffset = (float)(direction * i), .indexOffset = direction * i});
@@ -694,7 +692,7 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
         // parent around a stepped-into child is drawn in the child's space (`scene`), its layers only, without the
         // animation layer playing the child (`skipLayerId`).
         auto render = [&](Document& sampleDocument, const Animation& sampleAnimation, float alphaOffset,
-                          const DrawOptions& options, const mat4& scene = mat4(1.0f), int skipLayerId = -1) {
+                          const DrawOptions& options, const Mat4& scene = Mat4(1.0f), int skipLayerId = -1) {
             auto isActiveDocument = &sampleDocument == &document && skipLayerId == -1;
             auto isParent = skipLayerId != -1;
             auto& sampleModel = sampleDocument.model;
@@ -708,12 +706,12 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
                 auto isOnion = draw.sample != -1;
                 if (isOnion && isOnlySelected && !(isActiveDocument && is_draw_selected(draw)))
                     continue;
-                auto sampleColor = isOnion ? sampleColors[draw.sample] : vec3();
+                auto sampleColor = isOnion ? sampleColors[draw.sample] : Vec3();
                 auto sampleAlpha = isOnion ? sampleAlphas[draw.sample] : 0.0f;
-                auto onionColor = vec4(sampleColor, 1.0f - sampleAlpha);
+                auto onionColor = Vec4(sampleColor, 1.0f - sampleAlpha);
                 auto& frame = draw.frame;
                 auto transform = baseTransform * scene * draw.parent;
-                auto marker_model_get = [&](vec2 markerSize) {
+                auto marker_model_get = [&](Vec2 markerSize) {
                     return quad_model_get(markerSize, frame.position, markerSize * 0.5f, percent_to_unit(frame.scale),
                                           frame.rotation, percent_to_unit(frame.skew));
                 };
@@ -725,7 +723,7 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
                     auto isSelected = isActiveDocument && draw.type == DrawType::GROUP_ROOT &&
                                       referenceItemType == ItemType::ROOT && reference.groupType == draw.groupType &&
                                       reference.groupId == draw.id;
-                    auto color = isOnion                       ? vec4(sampleColor, sampleAlpha)
+                    auto color = isOnion                       ? Vec4(sampleColor, sampleAlpha)
                                  : draw.type == DrawType::ROOT ? COLOR_GREEN
                                  : isSelected                  ? COLOR_RED
                                                                : ROOT_COLOR;
@@ -748,7 +746,7 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
                     auto customShader = sampleDocument.shader_get(frame.shaderId);
                     layer_render(customShader ? *customShader : shaderTexture, texture_id_get(*layerTexture),
                                  textureSize, baseTransform * scene, draw, tint,
-                                 frame.colorOffset + vec4(sampleColor, 0.0f));
+                                 frame.colorOffset + Vec4(sampleColor, 0.0f));
                     if (isParent)
                         continue;
 
@@ -772,7 +770,7 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
                                    transform * marker_model_get(markerSize), color);
                     if (!isShowRect)
                         continue;
-                    auto rectModel = quad_model_get(frame.scale, frame.position, frame.scale * 0.5f, vec2(1.0f),
+                    auto rectModel = quad_model_get(frame.scale, frame.position, frame.scale * 0.5f, Vec2(1.0f),
                                                     frame.rotation, percent_to_unit(frame.skew));
                     rect_render(shaderLine, transform * rectModel, rectModel, color);
                 }
@@ -800,9 +798,9 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
                 auto placement = parentAnimation ? layer_child_transform_get(*parentAnimation, step.layer.itemID,
                                                                              step.frameTime, isRootTransform)
                                                  : std::nullopt;
-                if (placement && glm::determinant(*placement) != 0.0f)
+                if (placement && mat4_determinant(*placement) != 0.0f)
                     render(*parentDocument, *parentAnimation, PARENT_DIM_ALPHA,
-                           {.time = step.frameTime, .isRootTransform = isRootTransform}, glm::inverse(*placement),
+                           {.time = step.frameTime, .isRootTransform = isRootTransform}, mat4_inverse(*placement),
                            step.layer.itemID);
             }
 
@@ -832,7 +830,7 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
                             });
                             if (path == pivotPaths.end())
                                 path = pivotPaths.insert(pivotPaths.end(), {.item = draw});
-                            path->points.push_back(vec2(draw.parent * vec4(draw.frame.position, 0.0f, 1.0f)));
+                            path->points.push_back(Vec2(draw.parent * Vec4(draw.frame.position, 0.0f, 1.0f)));
                         }
                 }
 

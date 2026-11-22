@@ -40,15 +40,15 @@ struct Extras
 struct Frame
 {
     std::uint64_t uid = uid_next();
-    glm::vec2 crop{};
-    glm::vec2 size{};
-    glm::vec2 pivot{};
-    glm::vec2 position{};
-    glm::vec2 scale{100.0f, 100.0f};
-    glm::vec2 skew{};
+    Vec2 crop{};
+    Vec2 size{};
+    Vec2 pivot{};
+    Vec2 position{};
+    Vec2 scale{100.0f, 100.0f};
+    Vec2 skew{};
     float rotation = 0;
-    glm::vec4 tint{COLOR_WHITE};
-    glm::vec4 colorOffset{};
+    Vec4 tint{COLOR_WHITE};
+    Vec4 colorOffset{};
     int duration = 1;
     bool isVisible = true;
     Interpolation interpolation = Interpolation::NONE;
@@ -140,9 +140,9 @@ struct Region
     std::uint64_t uid = uid_next();
     int id = -1;
     std::string name;
-    glm::vec2 crop{};
-    glm::vec2 size{};
-    glm::vec2 pivot{};
+    Vec2 crop{};
+    Vec2 size{};
+    Vec2 pivot{};
     Origin origin = Origin::CUSTOM;
     Extras extras = {};
 
@@ -416,7 +416,7 @@ std::set<int> spritesheets_vector_used_get(const Model&);
 int track_frames_count_get(const Track&);
 int track_length_get(const Track&);
 int animation_length_get(const Animation&);
-glm::ivec2 animation_play_range_get(const Animation&);
+IVec2 animation_play_range_get(const Animation&);
 const Track* animation_track_get(const Animation&, int, int, int = NONE, int = -1);
 Track* animation_track_get(Animation&, int, int, int = NONE, int = -1);
 TrackGroup* animation_track_group_get(Animation&, int, int);

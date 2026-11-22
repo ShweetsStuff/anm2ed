@@ -33,7 +33,7 @@ GLuint texture_id_get(const Image& image)
     gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
     gl.PixelStorei(GL_UNPACK_ALIGNMENT, 1);
     gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.size.x, image.size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-                 image.pixels.data());
+                  image.pixels.data());
     gl.BindTexture(GL_TEXTURE_2D, 0);
     return entry.id;
 }
@@ -48,7 +48,7 @@ void texture_garbage_collect()
     });
 }
 
-Image texture_svg_load(const char* data, size_t length, glm::ivec2 size)
+Image texture_svg_load(const char* data, size_t length, IVec2 size)
 {
     auto document = data ? lunasvg::Document::loadFromData(data, length) : nullptr;
     if (!document)

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <glm/vec2.hpp>
+#include "vec.h"
 #include <vector>
 
 #include "audio_data.h"
@@ -19,7 +19,7 @@ enum AudioPlayMode
 void audio_play(const AudioData&, AudioPlayMode = AUDIO_ONCE);
 void audio_stop(const AudioData&);
 bool is_audio_playing(const AudioData&);
-glm::vec2 audio_levels_get(const AudioData&);
+Vec2 audio_levels_get(const AudioData&);
 
 // Each frame's sounds started on that frame and mixed at `fps`, as interleaved stereo floats.
 std::vector<float> audio_mix(const std::vector<std::vector<const AudioData*>>&, int fps);

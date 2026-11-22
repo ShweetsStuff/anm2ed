@@ -775,8 +775,8 @@ template <class Items> static void ids_repair(Items& items)
 
 static bool is_region_matched(const Region& region, const Frame& frame)
 {
-    return glm::ivec2(region.crop) == glm::ivec2(frame.crop) && glm::ivec2(region.size) == glm::ivec2(frame.size) &&
-           glm::ivec2(region.pivot) == glm::ivec2(frame.pivot);
+    return IVec2(region.crop) == IVec2(frame.crop) && IVec2(region.size) == IVec2(frame.size) &&
+           IVec2(region.pivot) == IVec2(frame.pivot);
 }
 
 // Loaded documents get unique content ids, frames lose dangling shader ids, and layer frames point at the region
@@ -1503,7 +1503,7 @@ IsaacIssues isaac_issues_get(const Model& model)
             for (auto& frame : track.frames)
             {
                 issues.easedFrames += track.type != ItemType::TRIGGER && is_special_interpolation(frame.interpolation);
-                issues.skewFrames += frame.skew != glm::vec2();
+                issues.skewFrames += frame.skew != Vec2();
                 issues.shaderFrames += frame.shaderId != -1;
                 issues.depthFrames += track.type == ItemType::LAYER && frame.depth != 0;
                 issues.alphaOffsetFrames += float_to_uint8(frame.colorOffset.a) != 0;

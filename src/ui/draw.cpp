@@ -66,7 +66,7 @@ void image_premultiplied_draw(ImDrawList* drawList, ImTextureID texture, ImVec2 
     drawList->AddCallback(ImDrawCallback_ResetRenderState, nullptr);
 }
 
-void render_checker_background(ImDrawList* drawList, ImVec2 min, ImVec2 max, glm::vec2 offset, float step)
+void render_checker_background(ImDrawList* drawList, ImVec2 min, ImVec2 max, Vec2 offset, float step)
 {
     if (!drawList || step <= 0.0f)
         return;
@@ -77,16 +77,16 @@ void render_checker_background(ImDrawList* drawList, ImVec2 min, ImVec2 max, glm
     auto [startY, rowIndex] = checker_start(min.y, offset.y, step);
     for (float y = startY; y < max.y; y += step, ++rowIndex)
     {
-        float y1 = glm::max(y, min.y);
-        float y2 = glm::min(y + step, max.y);
+        float y1 = vec_max(y, min.y);
+        float y2 = vec_min(y + step, max.y);
         if (y2 <= y1)
             continue;
 
         auto [startX, columnIndex] = checker_start(min.x, offset.x, step);
         for (float x = startX; x < max.x; x += step, ++columnIndex)
         {
-            float x1 = glm::max(x, min.x);
-            float x2 = glm::min(x + step, max.x);
+            float x1 = vec_max(x, min.x);
+            float x2 = vec_min(x + step, max.x);
             if (x2 <= x1)
                 continue;
 

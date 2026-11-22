@@ -46,7 +46,7 @@ struct Draw
     int sample = -1;
     float time = 0;
     Frame frame = {};
-    glm::mat4 parent{1.0f};
+    Mat4 parent{1.0f};
     const Model* source = nullptr;
     int spritesheetId = -1;
     int sourceId = -1; // the layer of `source` drawn (a child's, for an animation layer's draws)
@@ -60,11 +60,11 @@ struct TriggerFire
     int layerId = -1; // the animation's layer whose child fired it. -1 for the animation's own
 };
 
-glm::mat4 draw_quad_model_get(const Draw&);
-glm::mat4 frame_child_model_get(const Frame&);
+Mat4 draw_quad_model_get(const Draw&);
+Mat4 frame_child_model_get(const Frame&);
 std::pair<const Model*, const Animation*> child_get(const Model&, const Layer&, const Frame&, const LibraryGet&);
 float child_time_get(const Track&, float, int, int);
-std::optional<glm::mat4> layer_child_transform_get(const Animation&, int, float, bool);
+std::optional<Mat4> layer_child_transform_get(const Animation&, int, float, bool);
 float draw_scale_get(const Draw&);
 std::vector<Draw> animation_draws_get(const Model&, const Animation&, const DrawOptions&);
 std::vector<TriggerFire> animation_triggers_get(const Model&, const Animation&, int, const LibraryGet& = {});

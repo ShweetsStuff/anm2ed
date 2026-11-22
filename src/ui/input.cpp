@@ -5,11 +5,9 @@
 #include <cmath>
 #include <numeric>
 
-#include <glm/gtc/type_ptr.hpp>
+#include "vec.h"
 
 #include "path.h"
-
-using namespace glm;
 
 int input_text_callback(ImGuiInputTextCallbackData* data)
 {
@@ -115,14 +113,14 @@ EditState drag_float_persistent(const char* label, float* value, float speed, fl
     return EDIT_STATE_NONE;
 }
 
-EditState drag_float2_persistent(const char* label, vec2* value, float speed, float min, float max, const char* format,
+EditState drag_float2_persistent(const char* label, Vec2* value, float speed, float min, float max, const char* format,
                                  ImGuiSliderFlags flags)
 {
     static bool isEditing = false;
-    static vec2 start{NAN};
-    auto persistent = value ? *value : vec2();
+    static Vec2 start{NAN};
+    auto persistent = value ? *value : Vec2();
 
-    ImGui::DragFloat2(label, value_ptr(persistent), speed, min, max, format, flags);
+    ImGui::DragFloat2(label, values_get(persistent), speed, min, max, format, flags);
     if (!value)
         return EDIT_STATE_NONE;
     if (ImGui::IsItemActivated() && persistent != start)
@@ -135,7 +133,7 @@ EditState drag_float2_persistent(const char* label, vec2* value, float speed, fl
     {
         isEditing = false;
         *value = persistent;
-        start = vec2{NAN};
+        start = Vec2{NAN};
         return EDIT_STATE_END;
     }
     else if (isEditing)
@@ -147,13 +145,13 @@ EditState drag_float2_persistent(const char* label, vec2* value, float speed, fl
     return EDIT_STATE_NONE;
 }
 
-EditState color_edit4_persistent(const char* label, vec4* value, ImGuiColorEditFlags flags)
+EditState color_edit4_persistent(const char* label, Vec4* value, ImGuiColorEditFlags flags)
 {
     static bool isEditing = false;
-    static vec4 start{NAN};
-    auto persistent = value ? *value : vec4();
+    static Vec4 start{NAN};
+    auto persistent = value ? *value : Vec4();
 
-    ImGui::ColorEdit4(label, value_ptr(persistent), flags);
+    ImGui::ColorEdit4(label, values_get(persistent), flags);
     if (!value)
         return EDIT_STATE_NONE;
     if (ImGui::IsItemActivated() && persistent != start)
@@ -166,7 +164,7 @@ EditState color_edit4_persistent(const char* label, vec4* value, ImGuiColorEditF
     {
         isEditing = false;
         *value = persistent;
-        start = vec4{NAN};
+        start = Vec4{NAN};
         return EDIT_STATE_END;
     }
     else if (isEditing)
@@ -196,14 +194,14 @@ bool radio_button_icon(const char* label, int* value, int buttonValue, ImTexture
 bool input_int_range(const char* label, int& value, int min, int max, int step, int stepFast, ImGuiInputTextFlags flags)
 {
     auto isActivated = ImGui::InputInt(label, &value, step, stepFast, flags);
-    value = glm::clamp(value, min, max);
+    value = vec_clamp(value, min, max);
     return isActivated;
 }
 
-bool input_int2_range(const char* label, ivec2& value, ivec2 min, ivec2 max, ImGuiInputTextFlags flags)
+bool input_int2_range(const char* label, IVec2& value, IVec2 min, IVec2 max, ImGuiInputTextFlags flags)
 {
-    auto isActivated = ImGui::InputInt2(label, value_ptr(value), flags);
-    value = glm::clamp(value, min, max);
+    auto isActivated = ImGui::InputInt2(label, values_get(value), flags);
+    value = vec_clamp(value, min, max);
     return isActivated;
 }
 
@@ -211,6 +209,6 @@ bool input_float_range(const char* label, float& value, float min, float max, fl
                        const char* format, ImGuiInputTextFlags flags)
 {
     auto isActivated = ImGui::InputFloat(label, &value, step, stepFast, format, flags);
-    value = glm::clamp(value, min, max);
+    value = vec_clamp(value, min, max);
     return isActivated;
 }

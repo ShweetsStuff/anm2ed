@@ -19,8 +19,6 @@
 #include "localization.h"
 #include "ui/draw.h"
 
-using namespace glm;
-
 // The credits roll, after the original editor's About box: lengths are its pixels (for 14 px text), at its 30 Hz.
 enum RollEffect
 {
@@ -117,10 +115,6 @@ static constexpr About::Credit CREDITS[] = {
     {"https://github.com/simdjson/simdjson"},
     {"License: Apache-2.0 or MIT"},
     {""},
-    {"glm"},
-    {"https://github.com/g-truc/glm"},
-    {"License: MIT"},
-    {""},
     {"lunasvg"},
     {"https://github.com/sammycage/lunasvg"},
     {"License: MIT"},
@@ -171,13 +165,13 @@ static void friend_state_load(About::FriendState& state, const FriendInfo& info)
 {
     if (!state.canvas)
     {
-        state.canvas = std::make_unique<Canvas>(vec2(1.0f, 1.0f));
+        state.canvas = std::make_unique<Canvas>(Vec2(1.0f, 1.0f));
         state.canvas->filter = GL_NEAREST;
     }
 
     state.model = Model{};
     state.textures.clear();
-    state.rect = vec4(-1.0f);
+    state.rect = Vec4(-1.0f);
     state.time = 0.0f;
     state.fps = 30.0f;
     state.isLoaded = false;
@@ -203,7 +197,7 @@ static void friend_state_load(About::FriendState& state, const FriendInfo& info)
     }
 
     state.rect = animation_rect(state.model, *animation, true);
-    state.isLoaded = state.rect != vec4(-1.0f) && !state.textures.empty();
+    state.isLoaded = state.rect != Vec4(-1.0f) && !state.textures.empty();
 }
 
 static void friend_state_tick(About::FriendState& state, float delta)
@@ -229,7 +223,7 @@ static ImVec2 friend_size_get(const About::FriendState& state, float height)
 }
 
 // The animation's bounds with some room around them.
-static vec4 friend_rect_get(const About::FriendState& state)
+static Vec4 friend_rect_get(const About::FriendState& state)
 {
     auto rect = state.rect;
     auto padding = std::max(2.0f, std::max(rect.z, rect.w) * FRIEND_PADDING_RATIO);
@@ -243,10 +237,10 @@ static void friend_canvas_draw(About::FriendState& state, Resources& resources)
         return;
 
     auto rect = friend_rect_get(state);
-    state.canvas->size_set(glm::max(vec2(rect.z, rect.w), vec2(1.0f)));
+    state.canvas->size_set(vec_max(Vec2(rect.z, rect.w), Vec2(1.0f)));
     state.canvas->bind();
     state.canvas->viewport_set();
-    state.canvas->clear(vec4(0.0f));
+    state.canvas->clear(Vec4(0.0f));
 
     auto animation = friend_animation_get(state);
     if (!animation)
@@ -256,7 +250,7 @@ static void friend_canvas_draw(About::FriendState& state, Resources& resources)
     }
 
     float zoom = 100.0f;
-    vec2 pan{};
+    Vec2 pan{};
     state.canvas->set_to_rect(zoom, pan, rect);
 
     state.canvas->layers_render(resources.shaders[SHADER_TEXTURE], state.model, *animation,

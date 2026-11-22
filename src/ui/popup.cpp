@@ -68,7 +68,7 @@ void PopupHelper::trigger()
     switch (position)
     {
         case POPUP_CENTER:
-            ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_None, to_imvec2(glm::vec2(0.5f)));
+            ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_None, to_imvec2(Vec2(0.5f)));
             if (POPUP_IS_HEIGHT_SET[type])
                 ImGui::SetNextWindowSize(to_imvec2(to_vec2(viewport->Size) * POPUP_MULTIPLIERS[type]));
             else

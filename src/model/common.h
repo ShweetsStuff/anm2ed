@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <optional>
 
-#include <glm/glm.hpp>
+#include "vec.h"
 
 #include "types.h"
 
@@ -247,7 +247,7 @@ struct Handle
 
 inline float interpolation_factor(Interpolation interpolation, float value)
 {
-    value = glm::clamp(value, 0.0f, 1.0f);
+    value = vec_clamp(value, 0.0f, 1.0f);
     if (interpolation == Interpolation::LINEAR)
         return value;
     if (interpolation == Interpolation::EASE_IN)

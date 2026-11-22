@@ -70,7 +70,7 @@ static void free_rects_prune(std::vector<Rect>& freeRects)
     }
 }
 
-static bool rect_insert(std::vector<Rect>& freeRects, glm::ivec2 size, Rect& result)
+static bool rect_insert(std::vector<Rect>& freeRects, IVec2 size, Rect& result)
 {
     int bestShort = std::numeric_limits<int>::max();
     int bestLong = std::numeric_limits<int>::max();
@@ -95,17 +95,17 @@ static bool rect_insert(std::vector<Rect>& freeRects, glm::ivec2 size, Rect& res
     return true;
 }
 
-bool rects_pack(const std::vector<glm::ivec2>& sizes, glm::ivec2& packedSize, std::vector<glm::ivec2>& positions)
+bool rects_pack(const std::vector<IVec2>& sizes, IVec2& packedSize, std::vector<IVec2>& positions)
 {
     if (sizes.empty())
         return false;
 
-    glm::ivec2 maxSize{};
-    glm::ivec2 sumSize{};
+    IVec2 maxSize{};
+    IVec2 sumSize{};
     std::int64_t totalArea = 0;
     for (auto& size : sizes)
     {
-        maxSize = glm::max(maxSize, size);
+        maxSize = vec_max(maxSize, size);
         sumSize += size;
         totalArea += (std::int64_t)size.x * size.y;
     }
@@ -119,8 +119,8 @@ bool rects_pack(const std::vector<glm::ivec2>& sizes, glm::ivec2& packedSize, st
 
     for (int width = maxSize.x; width <= endWidth; width += step)
     {
-        std::vector<glm::ivec2> candidate(sizes.size());
-        glm::ivec2 used{};
+        std::vector<IVec2> candidate(sizes.size());
+        IVec2 used{};
         bool isValid = false;
         for (int height = std::max(maxSize.y, (int)std::ceil((double)totalArea / width));
              height <= sumSize.y && !isValid; ++height)
@@ -133,7 +133,7 @@ bool rects_pack(const std::vector<glm::ivec2>& sizes, glm::ivec2& packedSize, st
                 Rect rect = {};
                 isValid = rect_insert(freeRects, sizes[i], rect);
                 candidate[i] = {rect.x, rect.y};
-                used = glm::max(used, glm::ivec2(rect.x + rect.w, rect.y + rect.h));
+                used = vec_max(used, IVec2(rect.x + rect.w, rect.y + rect.h));
             }
         }
         if (!isValid)

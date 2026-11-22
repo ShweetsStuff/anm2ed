@@ -7,8 +7,8 @@
 
 class SpritesheetEditor : public CanvasView
 {
-    glm::vec2 previousMousePos{};
-    glm::vec2 cropAnchor{};
+    Vec2 previousMousePos{};
+    Vec2 cropAnchor{};
     int hoveredRegionId = -1;
 
 public:

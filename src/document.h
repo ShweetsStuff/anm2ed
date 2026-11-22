@@ -16,7 +16,7 @@
 #include "snapshots.h"
 #include "localization.h"
 
-#include <glm/glm.hpp>
+#include "vec.h"
 
 #include "shader.h"
 
@@ -63,8 +63,8 @@ struct DocumentData
     int changeAllFramePropertiesShaderId = -1;
 
     float previewZoom = 200;
-    glm::vec2 previewPan{};
-    glm::vec2 editorPan{};
+    Vec2 previewPan{};
+    Vec2 editorPan{};
     float editorZoom = 200;
     int overlayIndex = -1;
     uint64_t overlayDocumentId = 0;

@@ -9,19 +9,11 @@
 #include "math_util.h"
 #include "path.h"
 
-using namespace glm;
-
 constexpr std::string_view SETTINGS_SHEAR = "Shear";
 
 constexpr const char* COMPONENT_SUFFIXES_XY[] = {"X", "Y"};
 constexpr const char* COMPONENT_SUFFIXES_WH[] = {"W", "H"};
 constexpr const char* COMPONENT_SUFFIXES_RGBA[] = {"R", "G", "B", "A"};
-
-template <class T>
-concept GlmVector = requires(T value) {
-    T::length();
-    value[0];
-};
 
 static const char* const* component_suffixes_get(std::string_view type)
 {
@@ -237,10 +229,10 @@ Settings::Settings(const std::filesystem::path& path)
     auto entry_load = [&](const std::string& key, std::istringstream& ss, const std::string& name, auto& value,
                           std::string_view type) {
         using T = std::decay_t<decltype(value)>;
-        if constexpr (GlmVector<T>)
+        if constexpr (Vector<T>)
         {
             auto suffixes = component_suffixes_get(type);
-            for (int i = 0; i < T::length(); ++i)
+            for (int i = 0; i < T::SIZE; ++i)
                 if (key == name + suffixes[i])
                 {
                     stream_assign(value[i], ss);
@@ -356,10 +348,10 @@ void Settings::save(const std::filesystem::path& path, const std::string& imguiD
     auto entry_save = [&](const std::string& name, const auto& value, const std::string_view type) {
         using T = std::decay_t<decltype(value)>;
 
-        if constexpr (GlmVector<T>)
+        if constexpr (Vector<T>)
         {
             auto suffixes = component_suffixes_get(type);
-            for (int i = 0; i < T::length(); ++i)
+            for (int i = 0; i < T::SIZE; ++i)
                 value_save(name + suffixes[i], value[i]);
         }
         else

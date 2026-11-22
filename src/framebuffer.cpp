@@ -2,8 +2,6 @@
 
 #include "texture.h"
 
-using namespace glm;
-
 Framebuffer::Framebuffer()
 {
     gl.GenFramebuffers(1, &fbo);
@@ -49,7 +47,7 @@ void Framebuffer::resize_check()
     }
 }
 
-void Framebuffer::size_set(vec2 size)
+void Framebuffer::size_set(Vec2 size)
 {
     previousSize = this->size;
     this->size = size;
@@ -70,7 +68,7 @@ std::vector<uint8_t> Framebuffer::pixels_get() const
     return pixels;
 }
 
-void Framebuffer::clear(vec4 color) const
+void Framebuffer::clear(Vec4 color) const
 {
     gl.Enable(GL_BLEND);
     gl.ClearColor(color.r, color.g, color.b, color.a);

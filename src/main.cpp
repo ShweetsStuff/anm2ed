@@ -31,7 +31,7 @@ constexpr auto IDLE_UPDATE_INTERVAL_MS = 1000 / 20;
 // How long after the last input the window still counts as busy.
 constexpr auto IDLE_DELAY_MS = 1000;
 constexpr auto TICK_DELTA_MAX_MS = 250;
-constexpr auto WINDOW_4K_SIZE = glm::ivec2(3840, 2160);
+constexpr auto WINDOW_4K_SIZE = IVec2(3840, 2160);
 constexpr auto UI_SCALE_4K_DEFAULT = 150.0f;
 constexpr auto WINDOW_DEFAULT_SIZE_MULTIPLIER = 0.90f;
 constexpr auto GL_VERSION_MAJOR = 3;
@@ -312,8 +312,8 @@ static void frame_update(App& app, Editor& editor)
     document_shortcuts_update(editor.manager);
     editor.taskbar.update(editor.manager, settings, editor.resources, editor.dialog, app.isQuitting);
     editor.documents.update(editor.taskbar, editor.manager, settings, editor.resources, app.isQuitting);
-    editor.dockspace.update(editor.taskbar, editor.documents, editor.manager, settings, editor.resources,
-                            editor.dialog, editor.clipboard);
+    editor.dockspace.update(editor.taskbar, editor.documents, editor.manager, settings, editor.resources, editor.dialog,
+                            editor.clipboard);
     ui_scale_update(app, editor);
     toasts.update();
     editor.manager.commands_run();
@@ -348,11 +348,10 @@ static void frame_render(App& app)
 // Idle: no input for a while, nothing playing or recording, no toast fading, no text being typed, no About box.
 static bool is_idle(App& app, Editor& editor)
 {
-    if (SDL_GetTicks() - app.inputTime < IDLE_DELAY_MS || ImGui::GetIO().WantTextInput ||
-        editor.manager.isRecording || !toasts.toasts.empty() || editor.taskbar.aboutPopup.isOpen)
+    if (SDL_GetTicks() - app.inputTime < IDLE_DELAY_MS || ImGui::GetIO().WantTextInput || editor.manager.isRecording ||
+        !toasts.toasts.empty() || editor.taskbar.aboutPopup.isOpen)
         return false;
-    return std::ranges::none_of(editor.manager.documents,
-                                [](auto& document) { return document.playback.isPlaying; });
+    return std::ranges::none_of(editor.manager.documents, [](auto& document) { return document.playback.isPlaying; });
 }
 
 // Draws at most every UPDATE_INTERVAL_MS, and ticks playback at the playback tick rate in between.

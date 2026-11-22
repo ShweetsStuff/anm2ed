@@ -29,9 +29,9 @@ using Footer = std::vector<std::vector<ActionType>>;
 struct CardImage
 {
     const Image* texture = nullptr;
-    glm::vec2 size{};
-    glm::vec2 uvMin{};
-    glm::vec2 uvMax{1.0f};
+    Vec2 size{};
+    Vec2 uvMin{};
+    Vec2 uvMax{1.0f};
     bool isValid = false;
 };
 

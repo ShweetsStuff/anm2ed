@@ -178,7 +178,7 @@ bool animation_render(const std::filesystem::path& ffmpegPath, const std::filesy
 }
 
 constexpr int TEMP_DIRECTORY_ATTEMPTS = 1000;
-constexpr glm::vec4 BOUNDS_DEFAULT = {-32.0f, -32.0f, 64.0f, 64.0f};
+constexpr Vec4 BOUNDS_DEFAULT = {-32.0f, -32.0f, 64.0f, 64.0f};
 constexpr int ALPHA_OPAQUE = 255;
 constexpr float CHANNEL_MAX = 255.0f;
 
@@ -239,7 +239,7 @@ void pixels_unpremultiply(std::vector<uint8_t>& pixels)
             pixels[index + channel] =
                 alpha == 0
                     ? 0
-                    : (uint8_t)glm::clamp(std::round(pixels[index + channel] * CHANNEL_MAX / alpha), 0.0f, CHANNEL_MAX);
+                    : (uint8_t)vec_clamp(std::round(pixels[index + channel] * CHANNEL_MAX / alpha), 0.0f, CHANNEL_MAX);
     }
 }
 
@@ -278,23 +278,23 @@ bool HeadlessGL::is_valid() const
     return context != nullptr;
 }
 
-glm::vec4 animation_bounds_get(const Document& document, const Animation& animation, bool isRootTransform)
+Vec4 animation_bounds_get(const Document& document, const Animation& animation, bool isRootTransform)
 {
     auto bounds = animation_rect(document.model, animation, isRootTransform, document.library_resolver_get());
-    return bounds != glm::vec4(-1.0f) ? bounds : BOUNDS_DEFAULT;
+    return bounds != Vec4(-1.0f) ? bounds : BOUNDS_DEFAULT;
 }
 
 std::vector<uint8_t> animation_frame_render(Canvas& canvas, ShaderProgram& shader, Document& document,
-                                            const Animation& animation, float time, glm::vec4 bounds, float scale,
-                                            glm::vec4 background, bool isRootTransform)
+                                            const Animation& animation, float time, Vec4 bounds, float scale,
+                                            Vec4 background, bool isRootTransform)
 {
-    canvas.size_set(glm::vec2(glm::max(glm::ivec2(glm::ceil(glm::vec2(bounds.z, bounds.w) * scale)), glm::ivec2(1))));
+    canvas.size_set(Vec2(vec_max(IVec2(vec_ceil(Vec2(bounds.z, bounds.w) * scale)), IVec2(1))));
     float zoom = 0;
-    glm::vec2 pan{};
+    Vec2 pan{};
     canvas.set_to_rect(zoom, pan, bounds);
     canvas.bind();
     canvas.viewport_set();
-    canvas.clear(glm::vec4(glm::vec3(background) * background.a, background.a));
+    canvas.clear(Vec4(Vec3(background) * background.a, background.a));
     canvas.layers_render(
         shader, document.model, animation,
         {.time = time, .isRootTransform = isRootTransform, .library_get = document.library_resolver_get()},
@@ -334,7 +334,7 @@ bool Recorder::is_sound_frame() const
     return (int)std::floor(time_get()) != soundTime;
 }
 
-bool Recorder::frame_capture(std::vector<uint8_t> pixels, glm::ivec2 size, std::vector<const AudioData*> frameSounds)
+bool Recorder::frame_capture(std::vector<uint8_t> pixels, IVec2 size, std::vector<const AudioData*> frameSounds)
 {
     soundTime = (int)std::floor(time_get());
     sounds.push_back(std::move(frameSounds));
@@ -365,11 +365,11 @@ void Recorder::finish()
         else
         {
             Image sheet = {};
-            sheet.size = first.size * glm::ivec2(layout.columns, layout.rows);
+            sheet.size = first.size * IVec2(layout.columns, layout.rows);
             sheet.pixels.resize((std::size_t)sheet.size.x * sheet.size.y * IMAGE_CHANNELS);
             for (int i = 0; i < (int)frames.size() && i < layout.rows * layout.columns; ++i)
                 if (auto frame = Image(frames[i]); frame.size == first.size)
-                    sheet.paste(frame, first.size * glm::ivec2(i % layout.columns, i / layout.columns));
+                    sheet.paste(frame, first.size * IVec2(i % layout.columns, i / layout.columns));
             auto isSaved = sheet.write_png(options.path);
             toast_log(isSaved ? Level::INFO : Level::ERROR,
                       isSaved ? TOAST_EXPORT_SPRITESHEET : TOAST_EXPORT_SPRITESHEET_FAILED, pathString);
@@ -399,8 +399,7 @@ void Recorder::cancel()
 }
 
 bool animation_record(const RecorderOptions& recorderOptions, Canvas& canvas, ShaderProgram& shader, Document& document,
-                      const Animation& animation, glm::vec4 bounds, float scale, glm::vec4 background,
-                      bool isRootTransform)
+                      const Animation& animation, Vec4 bounds, float scale, Vec4 background, bool isRootTransform)
 {
     auto options = recorderOptions;
     options.isIsolated = options.isBounded = true;
@@ -411,7 +410,7 @@ bool animation_record(const RecorderOptions& recorderOptions, Canvas& canvas, Sh
     {
         auto pixels = animation_frame_render(canvas, shader, document, animation, recorder.time_get(), bounds, scale,
                                              background, isRootTransform);
-        if (recorder.frame_capture(std::move(pixels), glm::ivec2(canvas.size)))
+        if (recorder.frame_capture(std::move(pixels), IVec2(canvas.size)))
             continue;
         recorder.cancel();
         return false;
@@ -425,37 +424,37 @@ constexpr int BAKED_SIZE_MAX = 4096;
 
 // A layer draw alone at canvas pixels, cut to what it can cover (its blur's reach too): its image (straight alpha) and
 // the canvas position of the image's top-left. Its tint and color offset go into the pixels only when `isColored`.
-static std::optional<std::pair<Image, glm::vec2>> draw_bake(Canvas& canvas, ShaderProgram& shader, Document& document,
-                                                            const Draw& draw, bool isColored)
+static std::optional<std::pair<Image, Vec2>> draw_bake(Canvas& canvas, ShaderProgram& shader, Document& document,
+                                                       const Draw& draw, bool isColored)
 {
     auto image = document.draw_image_get(draw, draw_scale_get(draw));
-    if (!image || !image->is_valid() || draw.frame.size == glm::vec2())
+    if (!image || !image->is_valid() || draw.frame.size == Vec2())
         return {};
     auto quad = draw.parent * draw_quad_model_get(draw);
-    glm::vec2 low{std::numeric_limits<float>::max()};
-    glm::vec2 high{std::numeric_limits<float>::lowest()};
-    for (auto corner : {glm::vec2(0.0f), glm::vec2(1.0f, 0.0f), glm::vec2(0.0f, 1.0f), glm::vec2(1.0f)})
+    Vec2 low{std::numeric_limits<float>::max()};
+    Vec2 high{std::numeric_limits<float>::lowest()};
+    for (auto corner : {Vec2(0.0f), Vec2(1.0f, 0.0f), Vec2(0.0f, 1.0f), Vec2(1.0f)})
     {
-        auto point = glm::vec2(quad * glm::vec4(corner, 0.0f, 1.0f));
-        low = glm::min(low, point);
-        high = glm::max(high, point);
+        auto point = Vec2(quad * Vec4(corner, 0.0f, 1.0f));
+        low = vec_min(low, point);
+        high = vec_max(high, point);
     }
     auto reach = draw.frame.blur + BAKE_MARGIN;
-    low = glm::floor(low - reach);
-    high = glm::ceil(high + reach);
-    auto size = glm::ivec2(high - low);
+    low = vec_floor(low - reach);
+    high = vec_ceil(high + reach);
+    auto size = IVec2(high - low);
 
-    canvas.size_set(glm::vec2(size));
+    canvas.size_set(Vec2(size));
     float zoom = 0;
-    glm::vec2 pan{};
-    canvas.set_to_rect(zoom, pan, glm::vec4(low, glm::vec2(size)));
+    Vec2 pan{};
+    canvas.set_to_rect(zoom, pan, Vec4(low, Vec2(size)));
     canvas.bind();
     canvas.viewport_set();
-    canvas.clear(glm::vec4(0.0f));
+    canvas.clear(Vec4(0.0f));
     auto custom = document.shader_get(draw.frame.shaderId);
     canvas.layer_render(custom ? *custom : shader, texture_id_get(*image), image->unit_size_get(),
-                        canvas.transform_get(zoom, pan), draw, isColored ? draw.frame.tint : glm::vec4(1.0f),
-                        isColored ? draw.frame.colorOffset : glm::vec4(0.0f));
+                        canvas.transform_get(zoom, pan), draw, isColored ? draw.frame.tint : Vec4(1.0f),
+                        isColored ? draw.frame.colorOffset : Vec4(0.0f));
     auto pixels = canvas.pixels_get();
     canvas.unbind();
     pixels_unpremultiply(pixels);
@@ -471,10 +470,10 @@ void frames_bake(Document& document, Model& result, const std::filesystem::path&
 {
     auto game = result;
     auto is_baked = [](const Frame& frame) {
-        return frame.skew != glm::vec2() || frame.blur > 0.0f || frame.shaderId != -1;
+        return frame.skew != Vec2() || frame.blur > 0.0f || frame.shaderId != -1;
     };
     auto is_skewed = [](const Track& root) {
-        return std::ranges::any_of(root.frames, [](const Frame& frame) { return frame.skew != glm::vec2(); });
+        return std::ranges::any_of(root.frames, [](const Frame& frame) { return frame.skew != Vec2(); });
     };
 
     std::vector<int> indices;
@@ -496,7 +495,7 @@ void frames_bake(Document& document, Model& result, const std::filesystem::path&
 
     auto& textureInfo = SHADERS[SHADER_TEXTURE];
     ShaderProgram shader(textureInfo.vertex, textureInfo.fragment);
-    Canvas canvas(glm::vec2(1.0f));
+    Canvas canvas(Vec2(1.0f));
     auto& content = game.content;
     auto spritesheetId = item_next_id_get(content.spritesheets);
 
@@ -557,7 +556,7 @@ void frames_bake(Document& document, Model& result, const std::filesystem::path&
             for (int time = 0; time < length; ++time)
             {
                 auto frame = frame_generate(track, (float)time);
-                std::optional<std::pair<Image, glm::vec2>> bakedImage{};
+                std::optional<std::pair<Image, Vec2>> bakedImage{};
                 Draw draw{.type = DrawType::LAYER,
                           .id = track.id,
                           .time = (float)time,
@@ -587,11 +586,11 @@ void frames_bake(Document& document, Model& result, const std::filesystem::path&
                 auto step = draw.frame;
                 if (step.shaderId != -1)
                 {
-                    step.tint = glm::vec4(1.0f);
+                    step.tint = Vec4(1.0f);
                     step.colorOffset = {};
                 }
                 step.crop = {};
-                step.size = glm::vec2(bakedImage->first.size);
+                step.size = Vec2(bakedImage->first.size);
                 step.pivot = {};
                 step.position = bakedImage->second;
                 step.scale = Frame{}.scale;
@@ -660,11 +659,11 @@ void frames_bake(Document& document, Model& result, const std::filesystem::path&
     if (images.empty())
         return;
 
-    std::vector<glm::ivec2> sizes{};
+    std::vector<IVec2> sizes{};
     for (auto& image : images)
         sizes.push_back(image.size);
-    glm::ivec2 packedSize{};
-    std::vector<glm::ivec2> positions{};
+    IVec2 packedSize{};
+    std::vector<IVec2> positions{};
     rects_pack(sizes, packedSize, positions);
     std::vector<ImagePart> parts;
     for (int i = 0; i < (int)images.size(); ++i)
@@ -685,7 +684,7 @@ void frames_bake(Document& document, Model& result, const std::filesystem::path&
             for (auto& frame : track.frames)
                 if (frame.regionId != -1)
                 {
-                    frame.crop = glm::vec2(positions[frame.regionId]);
+                    frame.crop = Vec2(positions[frame.regionId]);
                     frame.regionId = -1;
                 }
         });

@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include <glm/glm.hpp>
+#include "vec.h"
 
 constexpr auto IMAGE_CHANNELS = 4;
 constexpr auto SVG_EXTENSION = "svg";
@@ -19,9 +19,9 @@ class Image;
 struct ImagePart
 {
     const Image* image = nullptr;
-    glm::ivec2 source{};
-    glm::ivec2 size{};
-    glm::ivec2 destination{};
+    IVec2 source{};
+    IVec2 size{};
+    IVec2 destination{};
 };
 
 // CPU-side RGBA pixels. uid changes whenever the pixels do, so GPU copies can be cached by it. A vector image keeps
@@ -29,7 +29,7 @@ struct ImagePart
 class Image
 {
 public:
-    glm::ivec2 size{};
+    IVec2 size{};
     std::vector<uint8_t> pixels;
     bool isLinear = false;
     std::uint64_t uid = 0;
@@ -37,22 +37,22 @@ public:
     float scale = 1.0f;
 
     Image() = default;
-    Image(const uint8_t*, glm::ivec2, bool = false);
+    Image(const uint8_t*, IVec2, bool = false);
     Image(const unsigned char*, size_t);
     Image(const std::filesystem::path&);
 
     bool is_valid() const;
     bool is_vector() const;
-    glm::vec2 unit_size_get() const;
+    Vec2 unit_size_get() const;
     Image vector_render(float) const;
     size_t pixel_size_get() const;
     bool write_png(const std::filesystem::path&) const;
-    static bool write_pixels_png(const std::filesystem::path&, glm::ivec2, const uint8_t*);
+    static bool write_pixels_png(const std::filesystem::path&, IVec2, const uint8_t*);
     bool write(const std::filesystem::path&) const;
-    static Image compose(const std::vector<ImagePart>&, glm::ivec2, bool);
-    void paste(const Image&, glm::ivec2);
-    Image region_get(glm::ivec2, glm::ivec2) const;
-    glm::vec4 pixel_read(glm::vec2) const;
-    void pixel_set(glm::ivec2, glm::vec4);
-    void pixel_line(glm::ivec2, glm::ivec2, glm::vec4);
+    static Image compose(const std::vector<ImagePart>&, IVec2, bool);
+    void paste(const Image&, IVec2);
+    Image region_get(IVec2, IVec2) const;
+    Vec4 pixel_read(Vec2) const;
+    void pixel_set(IVec2, Vec4);
+    void pixel_line(IVec2, IVec2, Vec4);
 };
