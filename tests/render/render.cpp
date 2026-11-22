@@ -8,7 +8,9 @@
 #include <format>
 #include <fstream>
 
+#include "audio.h"
 #include "canvas.h"
+#include "embed.h"
 #include "document.h"
 #include "image.h"
 #include "render.h"
@@ -328,4 +330,37 @@ TEST_CASE("the game's copy bakes skew and blur into a spritesheet that draws the
     CHECK(std::string(std::istreambuf_iterator<char>(ignored), {}).find("(baked)") == std::string::npos);
     if (!std::getenv("ANM2ED_KEEP"))
         std::filesystem::remove_all(directory);
+}
+
+// Sounds decode from WAV and Ogg Vorbis, and a render's audio starts each one on its frame.
+TEST_CASE("audio decodes and mixes")
+{
+    AudioData music(MUSIC_ABOUT_OGG.data, MUSIC_ABOUT_OGG.size);
+    auto musicMix = audio_mix({{&music}}, 30);
+    CHECK(musicMix.size() > (std::size_t)AUDIO_FREQUENCY * AUDIO_CHANNELS);
+    CHECK(std::ranges::any_of(musicMix, [](float sample) { return sample != 0.0f; }));
+
+    constexpr int FREQUENCY = 22050;
+    constexpr int FRAMES = 100;
+    std::vector<unsigned char> wav = {'R', 'I', 'F', 'F', 0, 0, 0, 0, 'W', 'A', 'V', 'E', 'f', 'm', 't', ' ', 16, 0, 0, 0,
+                                      1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 16, 0, 'd', 'a', 't', 'a', 0, 0, 0, 0};
+    auto put = [&](int offset, std::uint32_t value, int size) {
+        for (int i = 0; i < size; ++i)
+            wav[offset + i] = (unsigned char)(value >> (i * 8));
+    };
+    put(24, FREQUENCY, 4);
+    put(28, FREQUENCY * 2, 4);
+    put(40, FRAMES * 2, 4);
+    for (int i = 0; i < FRAMES; ++i)
+    {
+        wav.push_back(0);
+        wav.push_back(0x40);
+    }
+    put(4, (std::uint32_t)wav.size() - 8, 4);
+    AudioData sound(wav.data(), wav.size());
+    auto mix = audio_mix({{}, {&sound}}, 30);
+    auto start = (std::size_t)(AUDIO_FREQUENCY / 30) * AUDIO_CHANNELS;
+    REQUIRE(mix.size() > start + 2);
+    CHECK(mix[start - 2] == 0.0f);
+    CHECK(mix[start + 2] == doctest::Approx(0.5f).epsilon(0.05));
 }

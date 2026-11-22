@@ -3,7 +3,6 @@
 #include <tuple>
 #include <vector>
 
-#include "audio_stream.h"
 #include "ui/canvas_view.h"
 #include "manager.h"
 #include "model/draw.h"
@@ -13,8 +12,6 @@
 
 class AnimationPreview : public CanvasView
 {
-    MIX_Mixer* mixer = MIX_CreateMixerDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
-    AudioStream audioStream = AudioStream(mixer);
     bool wasPlaybackPlaying = false;
     int soundFrame = -1;
     bool isMoveDragging = false;

@@ -134,14 +134,14 @@ void AnimationPreview::tick(Manager& manager, Settings& settings, float deltaSec
 
     auto stop_all_sounds = [&]() {
         for (auto sound : document.sounds_get())
-            audio_stop(*sound, mixer);
+            audio_stop(*sound);
     };
 
     if (manager.isRecording)
     {
         if (recorder.is_done())
         {
-            recorder.finish(document, audioStream);
+            recorder.finish();
             recording_stop(manager, document);
         }
         stop_all_sounds();
@@ -177,7 +177,7 @@ void AnimationPreview::tick(Manager& manager, Settings& settings, float deltaSec
                 if (manager.isRecording || !isSound)
                     continue;
                 for (auto sound : document.trigger_sounds_get(*animation, soundFrame))
-                    audio_play(*sound, false, mixer);
+                    audio_play(*sound);
             }
 
             frameTime = playback.time;

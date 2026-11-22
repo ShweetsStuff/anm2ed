@@ -1,5 +1,7 @@
 #include "render.h"
 
+#include <SDL3/SDL.h>
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -29,7 +31,7 @@
 #include "ui/toast.h"
 
 bool animation_render(const std::filesystem::path& ffmpegPath, const std::filesystem::path& path,
-                      const std::vector<std::filesystem::path>& framePaths, AudioStream& audioStream, RenderType type,
+                      const std::vector<std::filesystem::path>& framePaths, const std::vector<float>& audio, RenderType type,
                       int fps)
 {
     if (framePaths.empty() || ffmpegPath.empty() || path.empty())
@@ -63,26 +65,24 @@ bool animation_render(const std::filesystem::path& ffmpegPath, const std::filesy
         }
     };
 
-    if (type != RENDER_GIF && !audioStream.stream.empty() && audioStream.spec.freq > 0 && audioStream.spec.channels > 0)
+    if (type != RENDER_GIF && !audio.empty())
     {
         auto tempFilenameUtf8 =
             std::format("anm2ed_audio_{}_{}.f32", std::hash<std::string>{}(pathString), SDL_GetTicks());
         audioPath = temporaryDirectory / path_from_utf8(tempFilenameUtf8);
 
-        auto data = (const char*)audioStream.stream.data();
-        auto byteCount = audioStream.stream.size() * sizeof(float);
+        auto data = (const char*)audio.data();
+        auto byteCount = audio.size() * sizeof(float);
         if (file_text_save(audioPath, std::string_view(data, byteCount), "wb"))
         {
-            auto sampleRate = std::max(audioStream.spec.freq, 1);
-            auto channels = std::max(audioStream.spec.channels, 1);
-            auto audioDurationFilter = std::string{};
+                                    auto audioDurationFilter = std::string{};
             auto frameCount = (double)std::max((int)framePaths.size(), 1);
             auto expectedDurationSeconds = frameCount / (double)fps;
             if (expectedDurationSeconds > 0.0)
                 audioDurationFilter += std::format("apad,atrim=duration={:.9f}", expectedDurationSeconds);
 
             audioInputArguments =
-                std::format("-f f32le -ar {0} -ac {1} -i \"{2}\"", sampleRate, channels, path_to_utf8(audioPath));
+                std::format("-f f32le -ar {0} -ac {1} -i \"{2}\"", AUDIO_FREQUENCY, AUDIO_CHANNELS, path_to_utf8(audioPath));
 
             switch (type)
             {
@@ -248,50 +248,6 @@ void pixels_unpremultiply(std::vector<uint8_t>& pixels)
     }
 }
 
-static void sounds_detach(const Document& document, MIX_Mixer* mixer)
-{
-    for (auto sound : document.sounds_get())
-        audio_track_detach(*sound, mixer);
-}
-
-// Mixes each frame's trigger sounds into one stream at the render frame rate.
-static bool audio_stream_generate(AudioStream& audioStream, const Document& document,
-                                  const std::vector<std::vector<const AudioData*>>& frameSounds, int fps)
-{
-    audioStream.stream.clear();
-    if (frameSounds.empty() || fps <= 0)
-        return true;
-
-    SDL_AudioSpec mixSpec = audioStream.spec;
-    mixSpec.format = SDL_AUDIO_F32;
-    auto mixer = MIX_CreateMixer(&mixSpec);
-    if (!mixer)
-        return false;
-
-    auto channels = std::max(mixSpec.channels, 1);
-    auto framesPerStep = (double)std::max(mixSpec.freq, 1) / (double)fps;
-    auto accumulator = 0.0;
-    std::vector<float> buffer;
-    auto isGenerated = true;
-    for (auto& sounds : frameSounds)
-    {
-        for (auto sound : sounds)
-            audio_play(*sound, false, mixer);
-        accumulator += framesPerStep;
-        auto sampleFrames = std::max((int)std::floor(accumulator), 1);
-        accumulator -= (double)sampleFrames;
-        buffer.resize((std::size_t)sampleFrames * (std::size_t)channels);
-        if (!(isGenerated = MIX_Generate(mixer, buffer.data(), (int)(buffer.size() * sizeof(float)))))
-            break;
-        audioStream.stream.insert(audioStream.stream.end(), buffer.begin(), buffer.end());
-    }
-    sounds_detach(document, mixer);
-    MIX_DestroyMixer(mixer);
-    if (!isGenerated)
-        audioStream.stream.clear();
-    return isGenerated;
-}
-
 HeadlessGL::HeadlessGL()
 {
     if (!SDL_Init(SDL_INIT_VIDEO))
@@ -397,7 +353,7 @@ bool Recorder::frame_capture(std::vector<uint8_t> pixels, glm::ivec2 size, std::
     return true;
 }
 
-void Recorder::finish(const Document& document, AudioStream& audioStream)
+void Recorder::finish()
 {
     auto pathString = path_to_utf8(options.path);
     if (options.type == RENDER_PNGS)
@@ -426,15 +382,9 @@ void Recorder::finish(const Document& document, AudioStream& audioStream)
     }
     else
     {
-        audioStream.stream.clear();
-        if (options.isSound && options.type != RENDER_GIF &&
-            !audio_stream_generate(audioStream, document, sounds, options.fps))
-        {
-            toasts.push(localize.get(TOAST_EXPORT_RENDERED_ANIMATION_FAILED));
-            logger.error("Failed to generate deterministic render audio stream; exporting without audio.");
-        }
+        auto audio = options.isSound && options.type != RENDER_GIF ? audio_mix(sounds, options.fps) : std::vector<float>();
         auto isRendered =
-            animation_render(options.ffmpegPath, options.path, frames, audioStream, options.type, options.fps);
+            animation_render(options.ffmpegPath, options.path, frames, audio, options.type, options.fps);
         toast_log(isRendered ? Level::INFO : Level::ERROR,
                   isRendered ? TOAST_EXPORT_RENDERED_ANIMATION : TOAST_EXPORT_RENDERED_ANIMATION_FAILED, pathString);
     }
@@ -471,8 +421,7 @@ bool animation_record(const RecorderOptions& recorderOptions, Canvas& canvas, Sh
         recorder.cancel();
         return false;
     }
-    AudioStream audioStream(nullptr);
-    recorder.finish(document, audioStream);
+    recorder.finish();
     return is_path_exist(options.path);
 }
 

@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "audio_data.h"
-#include "audio_stream.h"
+#include "audio.h"
 #include <glm/glm.hpp>
 
 struct SDL_Window;
@@ -170,7 +170,7 @@ public:
     float time_get() const;
     bool is_sound_frame() const;
     bool frame_capture(std::vector<uint8_t>, glm::ivec2, std::vector<const AudioData*> = {});
-    void finish(const Document&, AudioStream&);
+    void finish();
     void cancel();
 
 private:
@@ -187,4 +187,4 @@ bool animation_record(const RecorderOptions&, Canvas&, ShaderProgram&, Document&
 
 std::filesystem::path ffmpeg_log_path();
 bool animation_render(const std::filesystem::path&, const std::filesystem::path&,
-                      const std::vector<std::filesystem::path>&, AudioStream&, RenderType, int);
+                      const std::vector<std::filesystem::path>&, const std::vector<float>&, RenderType, int);

@@ -105,9 +105,9 @@ static constexpr About::Credit CREDITS[] = {
     {"https://github.com/libsdl-org/SDL"},
     {"License: zlib"},
     {""},
-    {"SDL_mixer"},
-    {"https://github.com/libsdl-org/SDL_mixer"},
-    {"License: zlib"},
+    {"stb"},
+    {"https://github.com/nothings/stb"},
+    {"License: MIT or public domain"},
     {""},
     {"pugixml"},
     {"https://github.com/zeux/pugixml"},
@@ -468,7 +468,7 @@ static void roll_draw(About& about, Resources& resources, ImVec2 min, ImVec2 siz
 
 void About::reset(Resources& resources)
 {
-    audio_play(resources.music_track(), true);
+    audio_play(resources.music_track(), AUDIO_LOOP);
     roll = {};
 
     for (int i = 0; i < FRIEND_COUNT; ++i)

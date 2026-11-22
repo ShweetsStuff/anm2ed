@@ -8,7 +8,6 @@
 #include <imgui/backends/imgui_impl_opengl3.h>
 #include <imgui/backends/imgui_impl_sdl3.h>
 
-#include <SDL3_mixer/SDL_mixer.h>
 
 #include "log.h"
 #include "sdl.h"
@@ -177,10 +176,6 @@ Loader::Loader(int argc, const char** argv)
             logger.warning("Failed to detect primary display for UI scaling.");
     }
 
-    if (!MIX_Init())
-        logger.warning(std::format("Could not initialize SDL_mixer! {}", SDL_GetError()));
-    else
-        logger.info("Initialized SDL_mixer");
 
     SDL_SetStringProperty(windowProperties, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "Anm2Ed");
     SDL_SetNumberProperty(windowProperties, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, settings.windowSize.x);
@@ -335,7 +330,6 @@ Loader::~Loader()
         ImGui::DestroyContext();
     }
 
-    MIX_Quit();
 
     if (SDL_WasInit(0))
     {

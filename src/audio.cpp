@@ -1,120 +1,213 @@
 #include "audio.h"
 
+#include <SDL3/SDL.h>
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <cstring>
+#include <memory>
 #include <unordered_map>
-#include <vector>
 
-struct AudioEntry
+#define STB_VORBIS_HEADER_ONLY
+#include <stb_vorbis.c>
+
+constexpr SDL_AudioSpec AUDIO_SPEC = {SDL_AUDIO_F32, AUDIO_CHANNELS, AUDIO_FREQUENCY};
+constexpr int FRAME_SIZE = AUDIO_CHANNELS * sizeof(float);
+
+// One play of a sound. The audio thread feeds its stream from `position`, wrapping around when it loops.
+struct AudioVoice
 {
-    MIX_Audio* audio = nullptr;
-    std::vector<MIX_Track*> tracks; // one per overlapping play, reused once finished
-    std::atomic<float> squares[2]{};
-    std::atomic<int> sampleCount = {};
+    struct AudioSound* sound = nullptr;
+    SDL_AudioStream* stream = nullptr;
+    std::atomic<std::size_t> position = 0;
+    std::atomic<bool> isLoop = false;
 };
 
-// Sums the squares of the left/right samples the track plays, for its levels.
-static void SDLCALL levels_update(void* userdata, MIX_Track*, const SDL_AudioSpec* spec, float* pcm, int samples)
+// A decoded sound, its voices (one per overlapping play, reused once finished) and the loudness they played.
+struct AudioSound
 {
-    auto entry = (AudioEntry*)userdata;
-    auto channels = std::max(spec->channels, 1);
-    float squares[2]{};
-    for (int i = 0; i < samples; ++i)
-        squares[std::min(i % channels, 1)] += pcm[i] * pcm[i];
-    if (channels == 1)
-        squares[1] = squares[0];
-    for (int channel = 0; channel < 2; ++channel)
-        entry->squares[channel] += squares[channel];
-    entry->sampleCount += samples / channels;
+    std::vector<float> samples;
+    std::vector<std::unique_ptr<AudioVoice>> voices;
+    std::atomic<float> squares[AUDIO_CHANNELS] = {};
+    std::atomic<int> frameCount = 0;
+};
+
+static std::unordered_map<std::uint64_t, AudioSound> sounds;
+
+// Converts audio in `spec` to AUDIO_SPEC.
+static std::vector<float> samples_convert(const SDL_AudioSpec& spec, const void* data, int size)
+{
+    Uint8* converted = nullptr;
+    int convertedSize = 0;
+    if (!SDL_ConvertAudioSamples(&spec, (const Uint8*)data, size, &AUDIO_SPEC, &converted, &convertedSize))
+        return {};
+    std::vector<float> samples(convertedSize / sizeof(float));
+    std::memcpy(samples.data(), converted, samples.size() * sizeof(float));
+    SDL_free(converted);
+    return samples;
 }
 
-static std::unordered_map<std::uint64_t, AudioEntry> entries;
-
-static MIX_Mixer* audio_mixer_get()
+static std::vector<float> samples_decode(const AudioData& data)
 {
-    static auto mixer = MIX_CreateMixerDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
-    return mixer;
+    if (data.bytes.size() >= 4 && std::memcmp(data.bytes.data(), "OggS", 4) == 0)
+    {
+        int channels = 0;
+        int frequency = 0;
+        short* decoded = nullptr;
+        auto frames = stb_vorbis_decode_memory(data.bytes.data(), (int)data.bytes.size(), &channels, &frequency, &decoded);
+        if (frames <= 0)
+            return {};
+        auto samples = samples_convert({SDL_AUDIO_S16, channels, frequency}, decoded, frames * channels * sizeof(short));
+        free(decoded);
+        return samples;
+    }
+
+    SDL_AudioSpec spec = {};
+    Uint8* decoded = nullptr;
+    Uint32 size = 0;
+    if (!SDL_LoadWAV_IO(SDL_IOFromConstMem(data.bytes.data(), data.bytes.size()), true, &spec, &decoded, &size))
+        return {};
+    auto samples = samples_convert(spec, decoded, (int)size);
+    SDL_free(decoded);
+    return samples;
 }
 
-static AudioEntry* entry_get(const AudioData& data)
+static AudioSound* sound_get(const AudioData& data)
 {
     if (!data.is_valid())
         return nullptr;
-    auto [it, isNew] = entries.try_emplace(data.uid);
+    auto [it, isNew] = sounds.try_emplace(data.uid);
     if (isNew)
-        if (auto io = SDL_IOFromConstMem(data.bytes.data(), data.bytes.size()))
-            it->second.audio = MIX_LoadAudio_IO(audio_mixer_get(), io, true, true);
-    return it->second.audio ? &it->second : nullptr;
+        it->second.samples = samples_decode(data);
+    return it->second.samples.empty() ? nullptr : &it->second;
 }
 
-static bool is_on_mixer(MIX_Track* track, MIX_Mixer* mixer)
+static SDL_AudioDeviceID device_get()
 {
-    return !mixer || MIX_GetTrackMixer(track) == mixer;
+    static SDL_AudioDeviceID device = SDL_InitSubSystem(SDL_INIT_AUDIO)
+                                          ? SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &AUDIO_SPEC)
+                                          : 0;
+    return device;
 }
 
-// A sound can play over itself: while a track is still playing it, another track takes the new play.
-void audio_play(const AudioData& data, bool isLoop, MIX_Mixer* mixer)
+// Runs on the audio thread: gives the stream what it asks for, and adds it to the sound's loudness.
+static void SDLCALL voice_feed(void* userdata, SDL_AudioStream* stream, int amount, int)
 {
-    auto entry = entry_get(data);
-    auto targetMixer = mixer ? mixer : audio_mixer_get();
-    if (!entry || !targetMixer)
-        return;
-
-    auto free = std::ranges::find_if(
-        entry->tracks, [&](MIX_Track* track) { return is_on_mixer(track, targetMixer) && !MIX_TrackPlaying(track); });
-    auto track = free != entry->tracks.end() ? *free : MIX_CreateTrack(targetMixer);
-    if (!track)
-        return;
-    if (free == entry->tracks.end())
+    auto voice = (AudioVoice*)userdata;
+    auto& samples = voice->sound->samples;
+    auto frames = (std::size_t)amount / FRAME_SIZE;
+    auto position = voice->position.load();
+    float squares[AUDIO_CHANNELS] = {};
+    std::size_t fed = 0;
+    while (fed < frames)
     {
-        entry->tracks.push_back(track);
-        MIX_SetTrackCookedCallback(track, levels_update, entry);
-        MIX_SetTrackAudio(track, entry->audio);
+        if (position * AUDIO_CHANNELS >= samples.size())
+        {
+            if (!voice->isLoop)
+                break;
+            position = 0;
+        }
+        auto count = std::min(frames - fed, samples.size() / AUDIO_CHANNELS - position);
+        auto start = samples.data() + position * AUDIO_CHANNELS;
+        for (std::size_t i = 0; i < count * AUDIO_CHANNELS; ++i)
+            squares[i % AUDIO_CHANNELS] += start[i] * start[i];
+        SDL_PutAudioStreamData(stream, start, (int)(count * FRAME_SIZE));
+        position += count;
+        fed += count;
+    }
+    voice->position = position;
+    for (int channel = 0; channel < AUDIO_CHANNELS; ++channel)
+        voice->sound->squares[channel] += squares[channel];
+    voice->sound->frameCount += (int)fed;
+}
+
+static bool is_voice_playing(AudioVoice& voice)
+{
+    return voice.isLoop || voice.position * AUDIO_CHANNELS < voice.sound->samples.size() ||
+           SDL_GetAudioStreamQueued(voice.stream) > 0;
+}
+
+// A sound can play over itself: while a voice is still playing it, another voice takes the new play.
+void audio_play(const AudioData& data, AudioPlayMode mode)
+{
+    auto sound = sound_get(data);
+    if (!sound || !device_get())
+        return;
+
+    auto free = std::ranges::find_if(sound->voices, [](auto& voice) { return !is_voice_playing(*voice); });
+    AudioVoice* voice = nullptr;
+    if (free != sound->voices.end())
+        voice = free->get();
+    else
+    {
+        voice = sound->voices.emplace_back(std::make_unique<AudioVoice>()).get();
+        voice->sound = sound;
+        voice->stream = SDL_CreateAudioStream(&AUDIO_SPEC, &AUDIO_SPEC);
+        SDL_SetAudioStreamGetCallback(voice->stream, voice_feed, voice);
+        SDL_BindAudioStream(device_get(), voice->stream);
     }
 
-    SDL_PropertiesID options = isLoop ? SDL_CreateProperties() : 0;
-    if (options)
-        SDL_SetNumberProperty(options, MIX_PROP_PLAY_LOOPS_NUMBER, -1);
-    MIX_PlayTrack(track, options);
-    if (options)
-        SDL_DestroyProperties(options);
+    SDL_LockAudioStream(voice->stream);
+    SDL_ClearAudioStream(voice->stream);
+    voice->position = 0;
+    voice->isLoop = mode == AUDIO_LOOP;
+    SDL_UnlockAudioStream(voice->stream);
 }
 
-void audio_stop(const AudioData& data, MIX_Mixer* mixer)
+void audio_stop(const AudioData& data)
 {
-    if (auto it = entries.find(data.uid); it != entries.end())
-        for (auto track : it->second.tracks)
-            if (is_on_mixer(track, mixer))
-                MIX_StopTrack(track, 0);
-}
-
-void audio_track_detach(const AudioData& data, MIX_Mixer* mixer)
-{
-    auto it = entries.find(data.uid);
-    if (it == entries.end())
+    auto it = sounds.find(data.uid);
+    if (it == sounds.end())
         return;
-    std::erase_if(it->second.tracks, [&](MIX_Track* track) {
-        if (!is_on_mixer(track, mixer))
-            return false;
-        MIX_DestroyTrack(track);
-        return true;
-    });
+    for (auto& voice : it->second.voices)
+    {
+        SDL_LockAudioStream(voice->stream);
+        voice->isLoop = false;
+        voice->position = it->second.samples.size() / AUDIO_CHANNELS;
+        SDL_ClearAudioStream(voice->stream);
+        SDL_UnlockAudioStream(voice->stream);
+    }
 }
 
 bool is_audio_playing(const AudioData& data)
 {
-    auto it = entries.find(data.uid);
-    return it != entries.end() && std::ranges::any_of(it->second.tracks, MIX_TrackPlaying);
+    auto it = sounds.find(data.uid);
+    return it != sounds.end() &&
+           std::ranges::any_of(it->second.voices, [](auto& voice) { return is_voice_playing(*voice); });
 }
 
-// The left/right loudness (RMS, 0-1) of what the track played since the last call.
+// The left/right loudness (RMS, 0-1) of what the sound played since the last call.
 glm::vec2 audio_levels_get(const AudioData& data)
 {
-    auto it = entries.find(data.uid);
-    if (it == entries.end())
+    auto it = sounds.find(data.uid);
+    if (it == sounds.end())
         return {};
-    auto& entry = it->second;
-    auto count = (float)std::max(entry.sampleCount.exchange(0), 1);
-    return {std::sqrt(entry.squares[0].exchange(0.0f) / count), std::sqrt(entry.squares[1].exchange(0.0f) / count)};
+    auto& sound = it->second;
+    auto count = (float)std::max(sound.frameCount.exchange(0), 1);
+    return {std::sqrt(sound.squares[0].exchange(0.0f) / count), std::sqrt(sound.squares[1].exchange(0.0f) / count)};
+}
+
+std::vector<float> audio_mix(const std::vector<std::vector<const AudioData*>>& frameSounds, int fps)
+{
+    std::vector<float> mix;
+    if (fps <= 0)
+        return mix;
+    auto framesPerStep = (double)AUDIO_FREQUENCY / fps;
+    for (std::size_t step = 0; step < frameSounds.size(); ++step)
+    {
+        auto start = (std::size_t)std::floor(step * framesPerStep) * AUDIO_CHANNELS;
+        mix.resize(std::max(mix.size(), (std::size_t)std::floor((step + 1) * framesPerStep) * AUDIO_CHANNELS));
+        for (auto data : frameSounds[step])
+        {
+            auto sound = sound_get(*data);
+            if (!sound)
+                continue;
+            mix.resize(std::max(mix.size(), start + sound->samples.size()));
+            for (std::size_t i = 0; i < sound->samples.size(); ++i)
+                mix[start + i] += sound->samples[i];
+        }
+    }
+    for (auto& sample : mix)
+        sample = std::clamp(sample, -1.0f, 1.0f);
+    return mix;
 }

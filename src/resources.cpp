@@ -55,7 +55,7 @@ AudioData& Resources::music_track()
 {
     if (!isMusicLoaded)
     {
-        music = AudioData(MUSIC_ABOUT_OPUS.data, MUSIC_ABOUT_OPUS.size);
+        music = AudioData(MUSIC_ABOUT_OGG.data, MUSIC_ABOUT_OGG.size);
         isMusicLoaded = true;
     }
     return music;

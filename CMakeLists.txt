@@ -25,6 +25,7 @@ if(MSVC)
 endif()
 
 # SDL: static, with only video (OpenGL), audio, events, clipboard and file dialogs.
+# Its audio plays WAV and, through stb_vorbis, Ogg Vorbis.
 set(SDL_SHARED OFF CACHE BOOL "" FORCE)
 set(SDL_STATIC ON CACHE BOOL "" FORCE)
 foreach(OPTION TEST_LIBRARY EXAMPLES RENDER GPU VULKAN OPENGLES CAMERA HAPTIC JOYSTICK HIDAPI SENSOR POWER TRAY
@@ -32,16 +33,6 @@ foreach(OPTION TEST_LIBRARY EXAMPLES RENDER GPU VULKAN OPENGLES CAMERA HAPTIC JO
     set(SDL_${OPTION} OFF CACHE BOOL "" FORCE)
 endforeach()
 add_subdirectory(external/SDL EXCLUDE_FROM_ALL)
-
-# SDL_mixer: WAV, Vorbis and Opus only.
-foreach(OPTION DEPS_SHARED AIFF AU FLAC_LIBFLAC FLAC_DRFLAC GME MOD_XMP MP3_DRMP3 MP3_MPG123 MIDI_FLUIDSYNTH
-        MIDI_TIMIDITY VOC VORBIS_VORBISFILE VORBIS_TREMOR WAVPACK TEST INSTALL)
-    set(SDLMIXER_${OPTION} OFF CACHE BOOL "" FORCE)
-endforeach()
-foreach(OPTION OPUS VORBIS_STB WAVE)
-    set(SDLMIXER_${OPTION} ON CACHE BOOL "" FORCE)
-endforeach()
-add_subdirectory(external/SDL_mixer EXCLUDE_FROM_ALL)
 
 set(LUNASVG_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory(external/lunasvg EXCLUDE_FROM_ALL)
@@ -77,7 +68,8 @@ target_compile_definitions(anm2ed_core PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 # The editor: the core with its window, OpenGL and interface. The render tests link it too.
 file(GLOB_RECURSE APP_SOURCES CONFIGURE_DEPENDS src/*.cpp)
 list(REMOVE_ITEM APP_SOURCES ${CORE_SOURCES} ${CMAKE_SOURCE_DIR}/src/main.cpp)
-add_library(anm2ed_app STATIC ${APP_SOURCES} include/glad/glad.cpp external/imgui/backends/imgui_impl_sdl3.cpp
+set_source_files_properties(external/stb/stb_vorbis.c PROPERTIES COMPILE_OPTIONS -w)
+add_library(anm2ed_app STATIC ${APP_SOURCES} external/stb/stb_vorbis.c include/glad/glad.cpp external/imgui/backends/imgui_impl_sdl3.cpp
             external/imgui/backends/imgui_impl_opengl3.cpp)
 if(WIN32)
     set(PLATFORM_LIBRARIES opengl32 ws2_32 bcrypt imm32 version winmm shell32 ole32 advapi32 gdi32 user32 setupapi
@@ -85,7 +77,7 @@ if(WIN32)
 else()
     set(PLATFORM_LIBRARIES GL)
 endif()
-target_link_libraries(anm2ed_app PUBLIC anm2ed_core SDL3::SDL3-static SDL3_mixer::SDL3_mixer ${PLATFORM_LIBRARIES})
+target_link_libraries(anm2ed_app PUBLIC anm2ed_core SDL3::SDL3-static ${PLATFORM_LIBRARIES})
 
 add_executable(anm2ed src/main.cpp $<$<BOOL:${WIN32}>:anm2ed.rc>)
 target_link_libraries(anm2ed PRIVATE anm2ed_app)
