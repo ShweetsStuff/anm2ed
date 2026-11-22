@@ -15,58 +15,28 @@
 #include "localization.h"
 #include "ui/popup.h"
 
-inline const Vec4 ROOT_COLOR = Vec4(0.140f, 0.310f, 0.560f, 1.000f);
-inline const Vec4 ROOT_COLOR_ACTIVE = Vec4(0.240f, 0.520f, 0.880f, 1.000f);
-inline const Vec4 ROOT_COLOR_HOVERED = Vec4(0.320f, 0.640f, 1.000f, 1.000f);
+constexpr Vec4 ROOT_COLOR = Vec4(0.140f, 0.310f, 0.560f, 1.000f);
 
-inline const Vec4 LAYER_COLOR = Vec4(0.640f, 0.320f, 0.110f, 1.000f);
-inline const Vec4 LAYER_COLOR_ACTIVE = Vec4(0.840f, 0.450f, 0.170f, 1.000f);
-inline const Vec4 LAYER_COLOR_HOVERED = Vec4(0.960f, 0.560f, 0.240f, 1.000f);
-
-inline const Vec4 NULL_COLOR = Vec4(0.140f, 0.430f, 0.200f, 1.000f);
-inline const Vec4 NULL_COLOR_ACTIVE = Vec4(0.250f, 0.650f, 0.350f, 1.000f);
-inline const Vec4 NULL_COLOR_HOVERED = Vec4(0.350f, 0.800f, 0.480f, 1.000f);
-
-inline const Vec4 TRIGGER_COLOR = Vec4(0.620f, 0.150f, 0.260f, 1.000f);
-inline const Vec4 TRIGGER_COLOR_ACTIVE = Vec4(0.820f, 0.250f, 0.380f, 1.000f);
-inline const Vec4 TRIGGER_COLOR_HOVERED = Vec4(0.950f, 0.330f, 0.490f, 1.000f);
-
-#define ANM2_ITEM_TYPES                                                                                                \
-    X(NONE, STRING_UNDEFINED, ICON_NONE, Vec4(), Vec4(), Vec4())                                                       \
-    X(ROOT, BASIC_ROOT, ICON_ROOT, ROOT_COLOR, ROOT_COLOR_ACTIVE, ROOT_COLOR_HOVERED)                                  \
-    X(LAYER, BASIC_LAYER_ANIMATION, ICON_LAYER, LAYER_COLOR, LAYER_COLOR_ACTIVE, LAYER_COLOR_HOVERED)                  \
-    X(NULL_, BASIC_NULL_ANIMATION, ICON_NULL, NULL_COLOR, NULL_COLOR_ACTIVE, NULL_COLOR_HOVERED)                       \
-    X(TRIGGER, BASIC_TRIGGERS, ICON_TRIGGERS, TRIGGER_COLOR, TRIGGER_COLOR_ACTIVE, TRIGGER_COLOR_HOVERED)
-
-constexpr StringType TYPE_STRINGS[] = {
-#define X(symbol, string, icon, color, colorActive, colorHovered) string,
-    ANM2_ITEM_TYPES
-#undef X
+// How each item type shows in the timeline: its name, icon, and color (normal, active and hovered).
+struct ItemTypeStyle
+{
+    StringType label;
+    Icon icon;
+    Vec4 colors[3];
 };
 
-constexpr Icon TYPE_ICONS[] = {
-#define X(symbol, string, icon, color, colorActive, colorHovered) icon,
-    ANM2_ITEM_TYPES
-#undef X
-};
-
-inline const Vec4 TYPE_COLOR[] = {
-#define X(symbol, string, icon, color, colorActive, colorHovered) color,
-    ANM2_ITEM_TYPES
-#undef X
-};
-
-inline const Vec4 TYPE_COLOR_ACTIVE[] = {
-#define X(symbol, string, icon, color, colorActive, colorHovered) colorActive,
-    ANM2_ITEM_TYPES
-#undef X
-};
-
-inline const Vec4 TYPE_COLOR_HOVERED[] = {
-#define X(symbol, string, icon, color, colorActive, colorHovered) colorHovered,
-    ANM2_ITEM_TYPES
-#undef X
-};
+constexpr ItemTypeStyle ITEM_TYPE_STYLES[] = {
+    {STRING_UNDEFINED, ICON_NONE, {}},
+    {BASIC_ROOT, ICON_ROOT, {ROOT_COLOR, {0.240f, 0.520f, 0.880f, 1.000f}, {0.320f, 0.640f, 1.000f, 1.000f}}},
+    {BASIC_LAYER_ANIMATION,
+     ICON_LAYER,
+     {{0.640f, 0.320f, 0.110f, 1.000f}, {0.840f, 0.450f, 0.170f, 1.000f}, {0.960f, 0.560f, 0.240f, 1.000f}}},
+    {BASIC_NULL_ANIMATION,
+     ICON_NULL,
+     {{0.140f, 0.430f, 0.200f, 1.000f}, {0.250f, 0.650f, 0.350f, 1.000f}, {0.350f, 0.800f, 0.480f, 1.000f}}},
+    {BASIC_TRIGGERS,
+     ICON_TRIGGERS,
+     {{0.620f, 0.150f, 0.260f, 1.000f}, {0.820f, 0.250f, 0.380f, 1.000f}, {0.950f, 0.330f, 0.490f, 1.000f}}}};
 
 struct TimelineContext;
 

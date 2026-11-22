@@ -164,19 +164,19 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
         {
             auto layer = ::item_get(model.content.layers, id);
             if (!layer)
-                return localize.get(TYPE_STRINGS[type]);
+                return localize.get(ITEM_TYPE_STYLES[type].label);
             return layer_label_get(*layer);
         }
         if (type == NULL_)
         {
             auto null = ::item_get(model.content.nulls, id);
             if (!null)
-                return localize.get(TYPE_STRINGS[type]);
+                return localize.get(ITEM_TYPE_STYLES[type].label);
             return localize_format(FORMAT_NULL, id, null->name);
         }
-        return localize.get(TYPE_STRINGS[type]);
+        return localize.get(ITEM_TYPE_STYLES[type].label);
     }();
-    auto icon = TYPE_ICONS[type];
+    auto icon = ITEM_TYPE_STYLES[type].icon;
     auto iconTintCurrent = isLightTheme && type == NONE ? ImVec4(1.0f, 1.0f, 1.0f, 1.0f) : itemIconTint;
     auto colorVec = color_get(isItemSelected && type != NONE ? COLOR_ITEM_SELECTED : COLOR_ITEM_BASE, type);
     auto color = to_imvec4(colorVec);

@@ -36,7 +36,7 @@ const Track* TimelineContext::selected_item_get()
 Vec4 TimelineContext::color_get(TimelineColor color, int type)
 {
     auto& colors = TIMELINE_COLORS[color];
-    return isLightTheme ? colors.light[std::clamp(type, 0, TRIGGER)] : colors.dark[type];
+    return isLightTheme ? colors.light[std::clamp(type, 0, TRIGGER)] : ITEM_TYPE_STYLES[type].colors[colors.dark];
 }
 
 std::set<Reference> TimelineContext::drag_frame_references_get(const Reference& frameReference)

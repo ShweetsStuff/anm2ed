@@ -105,18 +105,16 @@ enum TimelineColor
     COLOR_ITEM_SELECTED
 };
 
+// A timeline color's light theme colors by item type, and which of an item type's colors it is in the dark theme.
 struct TimelineColorSet
 {
     const Vec4* light;
-    const Vec4* dark;
+    int dark;
 };
 
-inline const TimelineColorSet TIMELINE_COLORS[] = {{FRAME_COLOR_LIGHT_BASE, TYPE_COLOR},
-                                                   {FRAME_COLOR_LIGHT_ACTIVE, TYPE_COLOR_ACTIVE},
-                                                   {FRAME_COLOR_LIGHT_HOVERED, TYPE_COLOR_HOVERED},
-                                                   {ITEM_COLOR_LIGHT_BASE, TYPE_COLOR},
-                                                   {ITEM_COLOR_LIGHT_ACTIVE, TYPE_COLOR_ACTIVE},
-                                                   {ITEM_COLOR_LIGHT_SELECTED, TYPE_COLOR_ACTIVE}};
+constexpr TimelineColorSet TIMELINE_COLORS[] = {{FRAME_COLOR_LIGHT_BASE, 0},    {FRAME_COLOR_LIGHT_ACTIVE, 1},
+                                                {FRAME_COLOR_LIGHT_HOVERED, 2}, {ITEM_COLOR_LIGHT_BASE, 0},
+                                                {ITEM_COLOR_LIGHT_ACTIVE, 1},   {ITEM_COLOR_LIGHT_SELECTED, 1}};
 
 inline bool is_trigger_reference(const Reference& reference)
 {

@@ -42,7 +42,7 @@ void TimelineContext::child_step_in(const TimelineRow& row)
 void TimelineContext::peek_item_child(const TimelineRow& row, const PeekRow& peek, int index)
 {
     auto type = (int)peek.track->type;
-    auto label = std::string(localize.get(TYPE_STRINGS[type]));
+    auto label = std::string(localize.get(ITEM_TYPE_STYLES[type].label));
     if (type == LAYER)
         if (auto layer = ::item_get(peek.source->content.layers, peek.track->id))
             label = layer_label_get(*layer);
@@ -59,7 +59,7 @@ void TimelineContext::peek_item_child(const TimelineRow& row, const PeekRow& pee
     {
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (float)(row.depth + 1) * ImGui::GetTextLineHeightWithSpacing());
         ImGui::BeginDisabled();
-        ImGui::Image(resources.icon_id_get(TYPE_ICONS[type]), icon_size_get());
+        ImGui::Image(resources.icon_id_get(ITEM_TYPE_STYLES[type].icon), icon_size_get());
         ImGui::SameLine();
         ImGui::TextUnformatted(label.c_str());
         ImGui::EndDisabled();
