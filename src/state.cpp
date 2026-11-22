@@ -209,8 +209,8 @@ void State::update(SDL_Window*& window, Settings& settings)
 
 void State::render(SDL_Window*& window, Settings& settings)
 {
-    glViewport(0, 0, settings.windowSize.x, settings.windowSize.y);
-    glClear(GL_COLOR_BUFFER_BIT);
+    gl.Viewport(0, 0, settings.windowSize.x, settings.windowSize.y);
+    gl.Clear(GL_COLOR_BUFFER_BIT);
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

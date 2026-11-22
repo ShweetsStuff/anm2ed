@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-#include <glad/glad.h>
+#include "gl.h"
 
 constexpr ImU32 DROP_LINE_COLOR = IM_COL32(255, 255, 0, 255);
 constexpr float DROP_LINE_THICKNESS = 2.0f;
@@ -46,7 +46,7 @@ void drop_line_draw(ImDrawList* drawList, ImVec2 min, ImVec2 max, bool isAfter)
 
 static void image_premultiplied_blend_set(const ImDrawList*, const ImDrawCmd*)
 {
-    glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+    gl.BlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 void image_premultiplied_draw(ImTextureID texture, ImVec2 size)

@@ -25,16 +25,16 @@ GLuint texture_id_get(const Image& image)
         return entry.id;
 
     auto filter = image.isLinear ? GL_LINEAR : GL_NEAREST;
-    glGenTextures(1, &entry.id);
-    glBindTexture(GL_TEXTURE_2D, entry.id);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.size.x, image.size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+    gl.GenTextures(1, &entry.id);
+    gl.BindTexture(GL_TEXTURE_2D, entry.id);
+    gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
+    gl.TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
+    gl.PixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    gl.TexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.size.x, image.size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE,
                  image.pixels.data());
-    glBindTexture(GL_TEXTURE_2D, 0);
+    gl.BindTexture(GL_TEXTURE_2D, 0);
     return entry.id;
 }
 
@@ -43,7 +43,7 @@ void texture_garbage_collect()
     std::erase_if(entries, [](auto& pair) {
         auto& entry = pair.second;
         if (!entry.isUsed)
-            glDeleteTextures(1, &entry.id);
+            gl.DeleteTextures(1, &entry.id);
         return !std::exchange(entry.isUsed, false);
     });
 }

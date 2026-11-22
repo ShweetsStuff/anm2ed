@@ -430,8 +430,8 @@ static std::vector<ShaderUniform> uniforms_get(GLuint id)
 {
     GLint count = 0;
     GLint maxLength = 0;
-    glGetProgramiv(id, GL_ACTIVE_UNIFORMS, &count);
-    glGetProgramiv(id, GL_ACTIVE_UNIFORM_MAX_LENGTH, &maxLength);
+    gl.GetProgramiv(id, GL_ACTIVE_UNIFORMS, &count);
+    gl.GetProgramiv(id, GL_ACTIVE_UNIFORM_MAX_LENGTH, &maxLength);
 
     std::vector<ShaderUniform> uniforms;
     if (count <= 0 || maxLength <= 0)
@@ -443,14 +443,14 @@ static std::vector<ShaderUniform> uniforms_get(GLuint id)
         GLsizei length = 0;
         GLint size = 0;
         GLenum type = 0;
-        glGetActiveUniform(id, (GLuint)index, maxLength, &length, &size, &type, name.data());
+        gl.GetActiveUniform(id, (GLuint)index, maxLength, &length, &size, &type, name.data());
 
         auto uniformName = uniform_name_clean_get(std::string(name.data(), (std::size_t)length));
         auto valueType = uniform_value_type_get(type);
 
         ShaderUniform uniform = {};
         uniform.name = uniformName;
-        uniform.location = glGetUniformLocation(id, uniformName.c_str());
+        uniform.location = gl.GetUniformLocation(id, uniformName.c_str());
         uniform.glType = type;
         uniform.size = size;
         uniform.valueType = valueType;
@@ -501,67 +501,67 @@ std::string gles_vertex_convert(std::string_view source)
 ShaderCompileResult shader_compile(const char* vertex, const char* fragment)
 {
     ShaderCompileResult result = {};
-    result.id = glCreateProgram();
+    result.id = gl.CreateProgram();
 
     auto compile = [&](const GLuint& id, const char* text, const char* label) {
         int isCompile = 0;
-        glShaderSource(id, 1, &text, nullptr);
-        glCompileShader(id);
-        glGetShaderiv(id, GL_COMPILE_STATUS, &isCompile);
+        gl.ShaderSource(id, 1, &text, nullptr);
+        gl.CompileShader(id);
+        gl.GetShaderiv(id, GL_COMPILE_STATUS, &isCompile);
 
         if (!isCompile)
         {
             GLint length = 0;
-            glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length);
+            gl.GetShaderiv(id, GL_INFO_LOG_LENGTH, &length);
             if (length <= 0)
                 length = 1;
             std::string compileLog((std::size_t)length, '\0');
-            glGetShaderInfoLog(id, length, nullptr, compileLog.data());
+            gl.GetShaderInfoLog(id, length, nullptr, compileLog.data());
             result.output += std::format("{} shader compile log:\n{}\n", label, compileLog.c_str());
             return false;
         }
         return true;
     };
 
-    auto vertexHandle = glCreateShader(GL_VERTEX_SHADER);
-    auto fragmentHandle = glCreateShader(GL_FRAGMENT_SHADER);
+    auto vertexHandle = gl.CreateShader(GL_VERTEX_SHADER);
+    auto fragmentHandle = gl.CreateShader(GL_FRAGMENT_SHADER);
 
     auto isVertexCompiled = compile(vertexHandle, vertex, "Vertex");
     auto isFragmentCompiled = compile(fragmentHandle, fragment, "Fragment");
     result.isCompiled = isVertexCompiled && isFragmentCompiled;
     if (result.isCompiled)
     {
-        glAttachShader(result.id, vertexHandle);
-        glAttachShader(result.id, fragmentHandle);
+        gl.AttachShader(result.id, vertexHandle);
+        gl.AttachShader(result.id, fragmentHandle);
 
         for (auto& alias : ATTRIBUTE_ALIASES)
-            glBindAttribLocation(result.id, alias.index, alias.name);
+            gl.BindAttribLocation(result.id, alias.index, alias.name);
 
-        glLinkProgram(result.id);
+        gl.LinkProgram(result.id);
 
         auto isLinked = GL_FALSE;
-        glGetProgramiv(result.id, GL_LINK_STATUS, &isLinked);
+        gl.GetProgramiv(result.id, GL_LINK_STATUS, &isLinked);
         result.isLinked = isLinked == GL_TRUE;
         if (!result.isLinked)
         {
             GLint length = 0;
-            glGetProgramiv(result.id, GL_INFO_LOG_LENGTH, &length);
+            gl.GetProgramiv(result.id, GL_INFO_LOG_LENGTH, &length);
             if (length <= 0)
                 length = 1;
             std::string linkLog((std::size_t)length, '\0');
-            glGetProgramInfoLog(result.id, length, nullptr, linkLog.data());
+            gl.GetProgramInfoLog(result.id, length, nullptr, linkLog.data());
             result.output += std::format("Shader link log:\n{}\n", linkLog.c_str());
         }
         else
             result.uniforms = uniforms_get(result.id);
     }
 
-    glDeleteShader(vertexHandle);
-    glDeleteShader(fragmentHandle);
+    gl.DeleteShader(vertexHandle);
+    gl.DeleteShader(fragmentHandle);
 
     if (!result.isLinked)
     {
-        glDeleteProgram(result.id);
+        gl.DeleteProgram(result.id);
         result.id = 0;
     }
 
@@ -589,7 +589,7 @@ ShaderProgram& ShaderProgram::operator=(ShaderProgram&& other) noexcept
     if (this != &other)
     {
         if (is_valid())
-            glDeleteProgram(id);
+            gl.DeleteProgram(id);
         id = other.id;
         uniforms = std::move(other.uniforms);
         other.id = 0;
@@ -600,7 +600,7 @@ ShaderProgram& ShaderProgram::operator=(ShaderProgram&& other) noexcept
 ShaderProgram::~ShaderProgram()
 {
     if (is_valid())
-        glDeleteProgram(id);
+        gl.DeleteProgram(id);
 }
 
 bool ShaderProgram::is_valid() const

@@ -59,7 +59,7 @@ endforeach()
 add_library(anm2ed_core STATIC ${CORE_SOURCES} external/pugixml/src/pugixml.cpp external/imgui/imgui.cpp
             external/imgui/imgui_draw.cpp external/imgui/imgui_widgets.cpp external/imgui/imgui_tables.cpp
             ${CMAKE_BINARY_DIR}/embed/embed.c)
-target_include_directories(anm2ed_core PUBLIC include external external/imgui external/glm external/stb src
+target_include_directories(anm2ed_core PUBLIC external external/imgui external/glm external/stb src
                            ${CMAKE_BINARY_DIR}/embed)
 target_link_libraries(anm2ed_core PUBLIC lunasvg simdjson SDL3::Headers)
 target_compile_definitions(anm2ed_core PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS
@@ -69,7 +69,7 @@ target_compile_definitions(anm2ed_core PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 file(GLOB_RECURSE APP_SOURCES CONFIGURE_DEPENDS src/*.cpp)
 list(REMOVE_ITEM APP_SOURCES ${CORE_SOURCES} ${CMAKE_SOURCE_DIR}/src/main.cpp)
 set_source_files_properties(external/stb/stb_vorbis.c PROPERTIES COMPILE_OPTIONS -w)
-add_library(anm2ed_app STATIC ${APP_SOURCES} external/stb/stb_vorbis.c include/glad/glad.cpp external/imgui/backends/imgui_impl_sdl3.cpp
+add_library(anm2ed_app STATIC ${APP_SOURCES} external/stb/stb_vorbis.c external/imgui/backends/imgui_impl_sdl3.cpp
             external/imgui/backends/imgui_impl_opengl3.cpp)
 if(WIN32)
     set(PLATFORM_LIBRARIES opengl32 ws2_32 bcrypt imm32 version winmm shell32 ole32 advapi32 gdi32 user32 setupapi

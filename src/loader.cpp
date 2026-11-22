@@ -213,20 +213,20 @@ Loader::Loader(int argc, const char** argv)
         return;
     }
 
-    if (!gladLoadGLLoader((GLADloadproc)(SDL_GL_GetProcAddress)))
+    if (!gl_load())
     {
         logger.fatal(std::format("Could not initialize OpenGL!"));
         isError = true;
         return;
     }
 
-    logger.info(std::format("Initialized OpenGL {}", (const char*)glGetString(GL_VERSION)));
+    logger.info(std::format("Initialized OpenGL {}", (const char*)gl.GetString(GL_VERSION)));
 
-    glEnable(GL_BLEND);
-    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-    glLineWidth(2.0f);
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_LINE_SMOOTH);
+    gl.Enable(GL_BLEND);
+    gl.BlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+    gl.LineWidth(2.0f);
+    gl.Disable(GL_DEPTH_TEST);
+    gl.Disable(GL_LINE_SMOOTH);
 
     random_seed_set();
 

@@ -16,7 +16,7 @@
 
 #include <SDL3/SDL_timer.h>
 #include <SDL3/SDL_video.h>
-#include <glad/glad.h>
+#include "gl.h"
 
 #include "audio.h"
 #include "canvas.h"
@@ -258,15 +258,15 @@ HeadlessGL::HeadlessGL()
     window = SDL_CreateWindow("anm2ed", 1, 1, SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN);
     if (window)
         context = SDL_GL_CreateContext(window);
-    if (!context || !gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress))
+    if (!context || !gl_load())
     {
         if (context)
             SDL_GL_DestroyContext(context);
         context = nullptr;
         return;
     }
-    glEnable(GL_BLEND);
-    glDisable(GL_DEPTH_TEST);
+    gl.Enable(GL_BLEND);
+    gl.Disable(GL_DEPTH_TEST);
 }
 
 HeadlessGL::~HeadlessGL()
