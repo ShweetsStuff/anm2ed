@@ -163,10 +163,10 @@ void Configure::update(Manager& manager, Settings& settings)
                             if (ImGui::IsKeyDown(ImGuiMod_Super))
                                 chord |= ImGuiMod_Super;
 
-                            for (auto& entry : KEY_MAP)
+                            for (int index = ImGuiKey_Tab; index <= ImGuiKey_KeypadEqual; ++index)
                             {
-                                auto key = entry.second;
-                                if (ImGui::IsKeyPressed(key))
+                                auto key = (ImGuiKey)index;
+                                if (is_shortcut_key(key) && ImGui::IsKeyPressed(key))
                                 {
                                     chord |= key;
                                     *settingString = chord_to_string(chord);
