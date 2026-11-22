@@ -68,45 +68,7 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
                 imguiStyle.HoverDelayNormal = previousTooltipDelay;
             }
 
-            if (ImGui::BeginDragDropSource(DRAG_DROP_SOURCE_FLAGS))
-            {
-                rowDragReferences = row_drag_references_get(row);
-                ImGui::SetDragDropPayload("Timeline Row Drag Drop", rowDragReferences.data(),
-                                          (int)rowDragReferences.size() * (int)sizeof(TimelineRow));
-                ImGui::EndDragDropSource();
-            }
-
-            if (ImGui::BeginDragDropTarget())
-            {
-                if (auto payload = ImGui::AcceptDragDropPayload("Timeline Row Drag Drop",
-                                                                ImGuiDragDropFlags_AcceptBeforeDelivery |
-                                                                    ImGuiDragDropFlags_AcceptNoDrawDefaultRect))
-                {
-                    auto groupDropThird = (groupButtonMax.y - groupButtonMin.y) / 3.0f;
-                    auto dropZone = DropZone::BEFORE;
-                    if (mousePos.y >= groupButtonMax.y - groupDropThird)
-                        dropZone = DropZone::AFTER;
-                    else if (mousePos.y >= groupButtonMin.y + groupDropThird)
-                        dropZone = DropZone::INSIDE;
-                    auto isDropAfter = dropZone != DropZone::BEFORE;
-                    auto payloadRows = (TimelineRow*)payload->Data;
-                    auto payloadCount = payload->DataSize / sizeof(TimelineRow);
-                    std::vector<TimelineRow> draggedRows(payloadRows, payloadRows + payloadCount);
-                    auto isDropIntoGroup = dropZone == DropZone::INSIDE && (row.type == LAYER || row.type == NULL_);
-                    for (auto draggedRow : draggedRows)
-                        if (draggedRow.isGroup || draggedRow.type != row.type)
-                            isDropIntoGroup = false;
-
-                    if (isDropIntoGroup)
-                        drop_box_draw(ImGui::GetWindowDrawList(), groupChildMin, groupChildMax);
-                    else
-                        drop_line_draw(ImGui::GetWindowDrawList(), groupChildMin, groupChildMax, isDropAfter);
-
-                    if (payload->IsDelivery())
-                        rows_move_to_row(draggedRows, row, isDropAfter, isDropIntoGroup);
-                }
-                ImGui::EndDragDropTarget();
-            }
+            row_drag_drop(row, groupButtonMin, groupButtonMax, groupChildMin, groupChildMax);
 
             ImGui::SetCursorPos(cursorPos);
             auto folderIcon = group->isExpanded ? ICON_FOLDER_OPEN : ICON_FOLDER;
@@ -244,33 +206,7 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
             auto isItemButtonHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
 
             if (type == LAYER || type == NULL_)
-            {
-                if (ImGui::BeginDragDropSource(DRAG_DROP_SOURCE_FLAGS))
-                {
-                    rowDragReferences = row_drag_references_get(row);
-                    ImGui::SetDragDropPayload("Timeline Row Drag Drop", rowDragReferences.data(),
-                                              (int)rowDragReferences.size() * (int)sizeof(TimelineRow));
-                    ImGui::EndDragDropSource();
-                }
-
-                if (ImGui::BeginDragDropTarget())
-                {
-                    if (auto payload = ImGui::AcceptDragDropPayload("Timeline Row Drag Drop",
-                                                                    ImGuiDragDropFlags_AcceptBeforeDelivery |
-                                                                        ImGuiDragDropFlags_AcceptNoDrawDefaultRect))
-                    {
-                        auto isDropAfter = is_drop_after(itemButtonMin, itemButtonMax);
-                        drop_line_draw(ImGui::GetWindowDrawList(), itemChildMin, itemChildMax, isDropAfter);
-
-                        auto payloadRows = (TimelineRow*)payload->Data;
-                        auto payloadCount = payload->DataSize / sizeof(TimelineRow);
-                        std::vector<TimelineRow> draggedRows(payloadRows, payloadRows + payloadCount);
-                        if (payload->IsDelivery())
-                            rows_move_to_row(draggedRows, row, isDropAfter, false);
-                    }
-                    ImGui::EndDragDropTarget();
-                }
-            }
+                row_drag_drop(row, itemButtonMin, itemButtonMax, itemChildMin, itemChildMax);
 
             auto animationLayer = type == LAYER ? ::item_get(model.content.layers, id) : nullptr;
             if (animationLayer && !animationLayer->is_animation())
@@ -614,4 +550,39 @@ void TimelineContext::items_child()
         ImGui::PopStyleVar();
     }
     ImGui::EndChild();
+}
+
+// Lets a row be dragged, and dragged rows land before or after it, or into it when it is a group of their kind.
+void TimelineContext::row_drag_drop(const TimelineRow& row, ImVec2 buttonMin, ImVec2 buttonMax, ImVec2 childMin,
+                                    ImVec2 childMax)
+{
+    if (ImGui::BeginDragDropSource(DRAG_DROP_SOURCE_FLAGS))
+    {
+        rowDragReferences = row_drag_references_get(row);
+        ImGui::SetDragDropPayload(ROW_DRAG_DROP, rowDragReferences.data(),
+                                  (int)rowDragReferences.size() * (int)sizeof(TimelineRow));
+        ImGui::EndDragDropSource();
+    }
+    if (!ImGui::BeginDragDropTarget())
+        return;
+    if (auto payload = ImGui::AcceptDragDropPayload(ROW_DRAG_DROP, ImGuiDragDropFlags_AcceptBeforeDelivery |
+                                                                       ImGuiDragDropFlags_AcceptNoDrawDefaultRect))
+    {
+        auto rows = (TimelineRow*)payload->Data;
+        std::vector<TimelineRow> draggedRows(rows, rows + payload->DataSize / sizeof(TimelineRow));
+        auto zone = row.isGroup ? drop_zone_get(buttonMin, buttonMax)
+                                : (is_drop_after(buttonMin, buttonMax) ? DROP_AFTER : DROP_BEFORE);
+        auto isDropAfter = zone != DROP_BEFORE;
+        auto isDropIntoGroup = zone == DROP_INSIDE && (row.type == LAYER || row.type == NULL_) &&
+                               std::ranges::none_of(draggedRows, [&](const TimelineRow& dragged) {
+                                   return dragged.isGroup || dragged.type != row.type;
+                               });
+        if (isDropIntoGroup)
+            drop_box_draw(ImGui::GetWindowDrawList(), childMin, childMax);
+        else
+            drop_line_draw(ImGui::GetWindowDrawList(), childMin, childMax, isDropAfter);
+        if (payload->IsDelivery())
+            rows_move_to_row(draggedRows, row, isDropAfter, isDropIntoGroup);
+    }
+    ImGui::EndDragDropTarget();
 }

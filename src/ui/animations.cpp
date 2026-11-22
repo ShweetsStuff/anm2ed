@@ -10,7 +10,6 @@
 #include "ui/tree.h"
 
 constexpr const char* ANIMATION_DRAG_DROP = "Animation Drag Drop";
-constexpr float DROP_ZONE_FRACTION = 1.0f / 3.0f;
 constexpr int MERGE_OPTIONS_ROWS = 2;
 constexpr float MERGE_OPTIONS_HALF = 0.5f;
 constexpr int MERGE_POPUP_CHILD_COUNT = 3;
@@ -31,13 +30,6 @@ constexpr bool is_group_key(int key)
 {
     return key <= -GROUP_KEY_OFFSET;
 }
-
-enum class AnimationDropZone
-{
-    BEFORE,
-    INSIDE,
-    AFTER
-};
 
 struct AnimationDragDropItem
 {
@@ -247,17 +239,6 @@ static int animations_merge(Document& document, const AnimationMergeOptions& opt
     return merged;
 }
 
-static AnimationDropZone animation_drop_zone_get(ImVec2 min, ImVec2 max)
-{
-    auto zoneHeight = (max.y - min.y) * DROP_ZONE_FRACTION;
-    auto mouseY = ImGui::GetIO().MousePos.y;
-    if (mouseY < min.y + zoneHeight)
-        return AnimationDropZone::BEFORE;
-    if (mouseY >= max.y - zoneHeight)
-        return AnimationDropZone::AFTER;
-    return AnimationDropZone::INSIDE;
-}
-
 static void animation_move_command_push(const Panel& panel, std::vector<AnimationDragDropItem> items,
                                         AnimationTarget target)
 {
@@ -318,19 +299,18 @@ static bool animation_group_drag_drop_update(const Panel& panel, int groupId, Im
     auto isDelivered = false;
     if (!items.empty())
     {
-        auto dropZone = animation_drop_zone_get(itemMin, itemMax);
+        auto dropZone = drop_zone_get(itemMin, itemMax);
         auto isGroupDragged = std::ranges::any_of(items, &AnimationDragDropItem::isGroup);
-        auto isDropIntoGroup = dropZone == AnimationDropZone::INSIDE && !isGroupDragged;
+        auto isDropIntoGroup = dropZone == DROP_INSIDE && !isGroupDragged;
         if (isDropIntoGroup)
             drop_box_draw(ImGui::GetWindowDrawList(), itemMin, itemMax);
         else
-            drop_line_draw(ImGui::GetWindowDrawList(), itemMin, itemMax, dropZone != AnimationDropZone::BEFORE);
+            drop_line_draw(ImGui::GetWindowDrawList(), itemMin, itemMax, dropZone != DROP_BEFORE);
 
         isDelivered = ImGui::GetDragDropPayload()->IsDelivery();
         if (isDelivered)
             animation_move_command_push(
-                panel, items,
-                {.groupId = groupId, .isAfter = dropZone != AnimationDropZone::BEFORE, .isInto = isDropIntoGroup});
+                panel, items, {.groupId = groupId, .isAfter = dropZone != DROP_BEFORE, .isInto = isDropIntoGroup});
     }
     ImGui::EndDragDropTarget();
     return isDelivered;

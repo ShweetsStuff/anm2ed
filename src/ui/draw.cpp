@@ -26,6 +26,16 @@ bool is_drop_after(ImVec2 min, ImVec2 max)
     return ImGui::GetIO().MousePos.y >= (min.y + max.y) * 0.5f;
 }
 
+// Where the mouse is over a row: its top third before it, its bottom third after it, between them inside.
+DropZone drop_zone_get(ImVec2 min, ImVec2 max)
+{
+    auto third = (max.y - min.y) / 3.0f;
+    auto mouseY = ImGui::GetIO().MousePos.y;
+    if (mouseY < min.y + third)
+        return DROP_BEFORE;
+    return mouseY >= max.y - third ? DROP_AFTER : DROP_INSIDE;
+}
+
 void drop_box_draw(ImDrawList* drawList, ImVec2 min, ImVec2 max)
 {
     if (!drawList)

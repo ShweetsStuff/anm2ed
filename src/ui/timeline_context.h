@@ -55,12 +55,7 @@ constexpr auto TIMELINE_TICK_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
 constexpr auto TIMELINE_CHILD_BG_COLOR_LIGHT = ImVec4(0.5490f, 0.5490f, 0.5882f, 1.0f);
 constexpr auto TIMELINE_TEXT_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
 
-enum class DropZone
-{
-    BEFORE,
-    INSIDE,
-    AFTER
-};
+constexpr auto ROW_DRAG_DROP = "Timeline Row Drag Drop";
 
 constexpr Vec4 FRAME_COLOR_LIGHT_BASE[] = {{0.80f, 0.80f, 0.80f, 1.0f},
                                            {0.5216f, 0.7333f, 1.0f, 1.0f},
@@ -230,6 +225,7 @@ struct TimelineContext : TimelineState
     void reference_set_adjacent_item(int direction);
     std::vector<TimelineRow> selected_row_references_get();
     std::vector<TimelineRow> row_drag_references_get(const TimelineRow& row);
+    void row_drag_drop(const TimelineRow&, ImVec2, ImVec2, ImVec2, ImVec2);
     void item_remove();
     std::vector<Reference> item_references_groupable_get();
     void item_group();
