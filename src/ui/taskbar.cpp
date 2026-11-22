@@ -1,4 +1,5 @@
 #include "ui/taskbar.h"
+#include "ui/panel.h"
 
 #include <filesystem>
 #include <format>
@@ -256,8 +257,8 @@ void Taskbar::update(Manager& manager, Settings& settings, Resources& resources,
             input_text_string(localize.get(LABEL_FORMAT), &settings.generateRegionNameFormat);
             ImGui::Checkbox(localize.get(LABEL_MAP_FRAMES_TO_REGIONS), &isGenerateRegionsMapFrames);
 
-            auto widgetSize = widget_size_with_row_get(2);
-            if (ImGui::Button(localize.get(LABEL_GENERATE), widgetSize))
+            auto result = popup_buttons_draw(manager, {.confirm = LABEL_GENERATE});
+            if (result == PopupButton::CONFIRM)
             {
                 std::set<int> animationIndices;
                 if (generateRegionsTarget == GENERATE_REGIONS_TARGET_ALL)
@@ -284,12 +285,8 @@ void Taskbar::update(Manager& manager, Settings& settings, Resources& resources,
                                                                       queuedMapping);
                                           });
                                       }});
-                generateRegionsPopup.close();
             }
-
-            ImGui::SameLine();
-
-            if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize))
+            if (result != PopupButton::NONE)
                 generateRegionsPopup.close();
         }
         ImGui::EndPopup();
