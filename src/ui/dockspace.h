@@ -9,8 +9,8 @@
 #include "ui/spritesheet_editor.h"
 #include "ui/timeline.h"
 
-  class Dockspace
-  {
+class Dockspace
+{
     AnimationPreview animationPreview;
     bool isCanvasFocused = false;
     float reloadTime = 0;
@@ -29,8 +29,8 @@
     PopupHelper toolsColorEditPopup = PopupHelper(LABEL_TOOLS_COLOR_EDIT_POPUP, POPUP_TO_CONTENT, POPUP_BY_ITEM);
     AutosaveRestore autosaveRestore;
 
-  public:
+public:
     bool is_canvas_focused_get() const;
     void tick(Manager&, Settings&, float);
     void update(Taskbar&, Documents&, Manager&, Settings&, Resources&, Dialog&, Clipboard&);
-  };
+};

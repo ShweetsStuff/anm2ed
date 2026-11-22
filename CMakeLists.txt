@@ -98,7 +98,7 @@ endif()
 
 if(NOT MSVC)
     foreach(TARGET anm2ed_core anm2ed_app anm2ed)
-        target_compile_options(${TARGET} PRIVATE -Wall -Wextra -Wpedantic)
+        target_compile_options(${TARGET} PRIVATE -Wall -Wextra -Wpedantic -Wno-missing-field-initializers)
     endforeach()
 endif()
 

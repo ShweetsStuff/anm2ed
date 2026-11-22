@@ -9,41 +9,41 @@
 #include <thread>
 
 #if defined(INFO)
-  #undef INFO
+#undef INFO
 #endif
 #if defined(WARNING)
-  #undef WARNING
+#undef WARNING
 #endif
 #if defined(ERROR)
-  #undef ERROR
+#undef ERROR
 #endif
 #if defined(FATAL)
-  #undef FATAL
+#undef FATAL
 #endif
 
 #define LEVELS                                                                                                         \
-  X(INFO, "[INFO]")                                                                                                    \
-  X(WARNING, "[WARNING]")                                                                                              \
-  X(ERROR, "[ERROR]")                                                                                                  \
-  X(FATAL, "[FATAL]")                                                                                                  \
-  X(COMMAND, "[COMMAND]")
+    X(INFO, "[INFO]")                                                                                                  \
+    X(WARNING, "[WARNING]")                                                                                            \
+    X(ERROR, "[ERROR]")                                                                                                \
+    X(FATAL, "[FATAL]")                                                                                                \
+    X(COMMAND, "[COMMAND]")
 
-  enum Level
-  {
+enum Level
+{
 #define X(symbol, string) symbol,
     LEVELS
 #undef X
-  };
+};
 
-  constexpr std::string_view LEVEL_STRINGS[] = {
+constexpr std::string_view LEVEL_STRINGS[] = {
 #define X(symbol, string) string,
-      LEVELS
+    LEVELS
 #undef X
-  };
+};
 #undef LEVELS
 
-  class Logger
-  {
+class Logger
+{
     std::filesystem::path logPath;
     std::uintmax_t logSize = 0;
     std::mutex mutex;
@@ -58,7 +58,7 @@
     void stderr_redirect_stop();
     void stderr_pump();
 
-  public:
+public:
     std::filesystem::path path() const;
     void session_open(const std::filesystem::path&);
     void write_raw(const std::string&);
@@ -71,8 +71,8 @@
     void open(const std::filesystem::path&);
     Logger();
     ~Logger();
-  };
+};
 
-  int log_exceptions(const std::function<int()>&);
+int log_exceptions(const std::function<int()>&);
 
 extern Logger logger;

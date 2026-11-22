@@ -10,11 +10,11 @@
 #include "settings.h"
 #include "socket.h"
 
-  class Loader
-  {
+class Loader
+{
     std::filesystem::path settings_path();
 
-  public:
+public:
     Socket socket = {};
     std::thread socketThread;
     std::atomic_bool isSocketRunning = {};
@@ -27,4 +27,4 @@
 
     Loader(int, const char**);
     ~Loader();
-  };
+};

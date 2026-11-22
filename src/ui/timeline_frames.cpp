@@ -1,99 +1,106 @@
 #include "ui/timeline_context.h"
 
-  // Moves the dragged frames to `target`'s track, before its frame index.
-  void TimelineContext::frames_move_to(Reference target)
-  {
-    if (!frameMoveDrag.isActive || !animation || frameMoveDrag.animationIndex != reference.animationIndex) return;
-    if (target.itemType == TRIGGER) return;
+// Moves the dragged frames to `target`'s track, before its frame index.
+void TimelineContext::frames_move_to(Reference target)
+{
+    if (!frameMoveDrag.isActive || !animation || frameMoveDrag.animationIndex != reference.animationIndex)
+        return;
+    if (target.itemType == TRIGGER)
+        return;
 
     auto frames = std::set<Reference>(frameMoveDrag.references.begin(), frameMoveDrag.references.end());
     std::erase_if(frames, [](const Reference& frame) { return frame.itemType == TRIGGER || frame.frameIndex < 0; });
-    if (frames.empty()) return;
+    if (frames.empty())
+        return;
 
     auto insertIndex = std::exchange(target.frameIndex, -1);
     edit_push(
-        EDIT_MOVE_FRAMES, [frames, target, insertIndex](Model& model)
-        { return frames_move(model, frames, target, insertIndex); },
-        [=, this](Document& document, const Uids& uids)
-        {
-          document.frames_select(uids);
-          if (target.itemType == LAYER)
-            if (auto layer = ::item_get(document.model.content.layers, target.itemID))
-              document.focused_id_set(SelectionKind::SPRITESHEETS, layer->spritesheetId);
+        EDIT_MOVE_FRAMES,
+        [frames, target, insertIndex](Model& model) { return frames_move(model, frames, target, insertIndex); },
+        [=, this](Document& document, const Uids& uids) {
+            document.frames_select(uids);
+            if (target.itemType == LAYER)
+                if (auto layer = ::item_get(document.model.content.layers, target.itemID))
+                    document.focused_id_set(SelectionKind::SPRITESHEETS, layer->spritesheetId);
         });
-  }
+}
 
-  ImVec2 TimelineContext::frame_box_content_point_get()
-  {
+ImVec2 TimelineContext::frame_box_content_point_get()
+{
     auto mousePos = ImGui::GetIO().MousePos;
     return ImVec2(mousePos.x + scroll.x - frameBoxClipMin.x, mousePos.y + scroll.y - frameBoxClipMin.y);
-  }
+}
 
-  ImVec2 TimelineContext::frame_box_screen_point_get(ImVec2 point)
-  {
+ImVec2 TimelineContext::frame_box_screen_point_get(ImVec2 point)
+{
     return ImVec2(point.x - scroll.x + frameBoxClipMin.x, point.y - scroll.y + frameBoxClipMin.y);
-  }
+}
 
-  void TimelineContext::frame_overlay_draw(ImDrawList* drawList, ImVec2 clipMin, ImVec2 clipMax)
-  {
+void TimelineContext::frame_overlay_draw(ImDrawList* drawList, ImVec2 clipMin, ImVec2 clipMax)
+{
     if (isFrameBoxSelecting && isFrameBoxClipSet)
     {
-      auto boxContentMin = ImVec2(std::min(frameBoxStart.x, frameBoxEnd.x), std::min(frameBoxStart.y, frameBoxEnd.y));
-      auto boxContentMax = ImVec2(std::max(frameBoxStart.x, frameBoxEnd.x), std::max(frameBoxStart.y, frameBoxEnd.y));
-      auto boxMin = frame_box_screen_point_get(boxContentMin);
-      auto boxMax = frame_box_screen_point_get(boxContentMax);
-      auto boxClipMin = clipMin;
-      if (isPlayheadLineSet) boxClipMin.y = std::max(boxClipMin.y, playheadLineTopY);
-      drawList->PushClipRect(boxClipMin, clipMax, true);
-      drawList->AddRectFilled(boxMin, boxMax, ImGui::GetColorU32(ImGuiCol_DragDropTargetBg));
-      drawList->AddRect(boxMin, boxMax, ImGui::GetColorU32(ImGuiCol_DragDropTarget));
-      drawList->PopClipRect();
+        auto boxContentMin = ImVec2(std::min(frameBoxStart.x, frameBoxEnd.x), std::min(frameBoxStart.y, frameBoxEnd.y));
+        auto boxContentMax = ImVec2(std::max(frameBoxStart.x, frameBoxEnd.x), std::max(frameBoxStart.y, frameBoxEnd.y));
+        auto boxMin = frame_box_screen_point_get(boxContentMin);
+        auto boxMax = frame_box_screen_point_get(boxContentMax);
+        auto boxClipMin = clipMin;
+        if (isPlayheadLineSet)
+            boxClipMin.y = std::max(boxClipMin.y, playheadLineTopY);
+        drawList->PushClipRect(boxClipMin, clipMax, true);
+        drawList->AddRectFilled(boxMin, boxMax, ImGui::GetColorU32(ImGuiCol_DragDropTargetBg));
+        drawList->AddRect(boxMin, boxMax, ImGui::GetColorU32(ImGuiCol_DragDropTarget));
+        drawList->PopClipRect();
     }
 
     if (isPlayheadLineSet)
     {
-      auto lineTopY = std::max(clipMin.y, playheadLineTopY);
-      if (clipMax.y > lineTopY)
-      {
-        auto linePos = ImVec2(playheadLineCenterX - (PLAYHEAD_LINE_THICKNESS * 0.5f), lineTopY);
-        auto lineSize = ImVec2(PLAYHEAD_LINE_THICKNESS * 0.5f, clipMax.y - lineTopY);
-        drawList->PushClipRect(clipMin, clipMax, true);
-        drawList->AddRectFilled(linePos, ImVec2(linePos.x + lineSize.x, linePos.y + lineSize.y),
-                                ImGui::GetColorU32(playheadLineColor));
-        drawList->PopClipRect();
-      }
+        auto lineTopY = std::max(clipMin.y, playheadLineTopY);
+        if (clipMax.y > lineTopY)
+        {
+            auto linePos = ImVec2(playheadLineCenterX - (PLAYHEAD_LINE_THICKNESS * 0.5f), lineTopY);
+            auto lineSize = ImVec2(PLAYHEAD_LINE_THICKNESS * 0.5f, clipMax.y - lineTopY);
+            drawList->PushClipRect(clipMin, clipMax, true);
+            drawList->AddRectFilled(linePos, ImVec2(linePos.x + lineSize.x, linePos.y + lineSize.y),
+                                    ImGui::GetColorU32(playheadLineColor));
+            drawList->PopClipRect();
+        }
     }
-  }
+}
 
-  void TimelineContext::frame_child(const TimelineRow& row, int& index, float width)
-  {
+void TimelineContext::frame_child(const TimelineRow& row, int& index, float width)
+{
     auto type = row.type;
     auto id = row.id;
-    auto row_reference_make = [&](int frameIndex = -1)
-    { return Reference{reference.animationIndex, type, id, frameIndex, row.groupType, row.groupId}; };
+    auto row_reference_make = [&](int frameIndex = -1) {
+        return Reference{reference.animationIndex, type, id, frameIndex, row.groupType, row.groupId};
+    };
     auto childSize = ImVec2(width, rowFrameChildHeight);
     if (row.isGroup)
     {
-      auto group = row_group_get(row);
-      if (!group) return;
+        auto group = row_group_get(row);
+        if (!group)
+            return;
 
-      ImGui::PushID(index);
-      ImGui::BeginChild("##Frames Group Child", childSize, ImGuiChildFlags_None,
-                        ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoScrollbar);
-      ImGui::EndChild();
-      index++;
-      ImGui::PopID();
-      return;
+        ImGui::PushID(index);
+        ImGui::BeginChild("##Frames Group Child", childSize, ImGuiChildFlags_None,
+                          ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoScrollbar);
+        ImGui::EndChild();
+        index++;
+        ImGui::PopID();
+        return;
     }
 
     auto item = item_get(type, id, row.groupType, row.groupId);
-    if (type != NONE && !item) return;
+    if (type != NONE && !item)
+        return;
 
     auto isVisible = item ? item->isVisible && is_track_group_visible(type, row.groupId) : false;
     if (item && type == ROOT && row.groupId != -1)
-      isVisible = item->isVisible && is_track_group_visible(row.groupType, row.groupId);
+        isVisible = item->isVisible && is_track_group_visible(row.groupType, row.groupId);
     auto& isOnlyShowLayers = settings.timelineIsOnlyShowLayers;
-    if (isOnlyShowLayers && type != LAYER) isVisible = false;
+    if (isOnlyShowLayers && type != LAYER)
+        isVisible = false;
 
     auto colorVec = color_get(COLOR_FRAME_BASE, type);
     auto colorActiveVec = color_get(COLOR_FRAME_ACTIVE, type);
@@ -109,7 +116,8 @@
 
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2());
     bool isDefaultChild = type == NONE;
-    if (isLightTheme && isDefaultChild) ImGui::PushStyleColor(ImGuiCol_ChildBg, TIMELINE_CHILD_BG_COLOR_LIGHT);
+    if (isLightTheme && isDefaultChild)
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, TIMELINE_CHILD_BG_COLOR_LIGHT);
 
     bool isFramesChildVisible = ImGui::BeginChild("##Frames Child", childSize, ImGuiChildFlags_Borders);
     auto drawList = ImGui::GetWindowDrawList();
@@ -121,8 +129,8 @@
     auto cursorScreenPos = ImGui::GetCursorScreenPos();
     if (frameSize.x > 0.0f && ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
     {
-      auto mouseX = ImGui::GetIO().MousePos.x - cursorScreenPos.x;
-      frameSplitTimeAtCursor = glm::max(0, (int)std::floor(mouseX / frameSize.x));
+        auto mouseX = ImGui::GetIO().MousePos.x - cursorScreenPos.x;
+        frameSplitTimeAtCursor = glm::max(0, (int)std::floor(mouseX / frameSize.x));
     }
     auto border = glm::max(0.5f, ImGui::GetStyle().FrameBorderSize * 0.5f);
     auto borderLineLength = frameSize.y / 5;
@@ -131,419 +139,444 @@
 
     if (isFrameBoxSelecting && isFrameBoxClipSet && type != NONE && animation && item)
     {
-      auto boxMin = ImVec2(std::min(frameBoxStart.x, frameBoxEnd.x), std::min(frameBoxStart.y, frameBoxEnd.y));
-      auto boxMax = ImVec2(std::max(frameBoxStart.x, frameBoxEnd.x), std::max(frameBoxStart.y, frameBoxEnd.y));
-      auto rowMinY = cursorScreenPos.y + scroll.y - frameBoxClipMin.y;
-      auto rowMaxY = rowMinY + childSize.y;
-      float selectionFrameTime = 0;
-      int frameIndex = 0;
-      for (auto& frame : item->frames)
-      {
-        auto frameReference = row_reference_make(frameIndex);
-        auto frameStart = type == TRIGGER ? frame.atFrame : selectionFrameTime;
-        auto frameEnd = type == TRIGGER ? frameStart + 1.0f : frameStart + frame.duration;
-        auto frameContentMin = ImVec2(frameStart * frameSize.x, rowMinY);
-        auto frameContentMax = ImVec2(frameEnd * frameSize.x, rowMaxY);
-        if (frameContentMin.x <= boxMax.x && frameContentMax.x >= boxMin.x && frameContentMin.y <= boxMax.y &&
-            frameContentMax.y >= boxMin.y)
-          frameBoxSelection.insert(frameReference);
-        if (type != TRIGGER) selectionFrameTime += frame.duration;
-        ++frameIndex;
-      }
+        auto boxMin = ImVec2(std::min(frameBoxStart.x, frameBoxEnd.x), std::min(frameBoxStart.y, frameBoxEnd.y));
+        auto boxMax = ImVec2(std::max(frameBoxStart.x, frameBoxEnd.x), std::max(frameBoxStart.y, frameBoxEnd.y));
+        auto rowMinY = cursorScreenPos.y + scroll.y - frameBoxClipMin.y;
+        auto rowMaxY = rowMinY + childSize.y;
+        float selectionFrameTime = 0;
+        int frameIndex = 0;
+        for (auto& frame : item->frames)
+        {
+            auto frameReference = row_reference_make(frameIndex);
+            auto frameStart = type == TRIGGER ? frame.atFrame : selectionFrameTime;
+            auto frameEnd = type == TRIGGER ? frameStart + 1.0f : frameStart + frame.duration;
+            auto frameContentMin = ImVec2(frameStart * frameSize.x, rowMinY);
+            auto frameContentMax = ImVec2(frameEnd * frameSize.x, rowMaxY);
+            if (frameContentMin.x <= boxMax.x && frameContentMax.x >= boxMin.x && frameContentMin.y <= boxMax.y &&
+                frameContentMax.y >= boxMin.y)
+                frameBoxSelection.insert(frameReference);
+            if (type != TRIGGER)
+                selectionFrameTime += frame.duration;
+            ++frameIndex;
+        }
     }
 
     if (isFramesChildVisible)
     {
-      if (type == NONE)
-      {
-        if (length > 0)
+        if (type == NONE)
         {
-          if (isLightTheme)
-          {
-            auto totalMax = ImVec2(cursorScreenPos.x + framesSize.x, cursorScreenPos.y + framesSize.y);
-            drawList->AddRectFilled(cursorScreenPos, totalMax, ImGui::GetColorU32(timelineBackgroundColor));
-            float animationWidth = std::min(framesSize.x, frameSize.x * (float)length);
-            drawList->AddRectFilled(cursorScreenPos,
-                                    ImVec2(cursorScreenPos.x + animationWidth, cursorScreenPos.y + framesSize.y),
-                                    ImGui::GetColorU32(timelinePlayheadRectColor));
-          }
-          else
-          {
-            drawList->AddRectFilled(cursorScreenPos,
-                                    ImVec2(cursorScreenPos.x + framesSize.x, cursorScreenPos.y + framesSize.y),
-                                    ImGui::GetColorU32(ImGui::GetStyleColorVec4(ImGuiCol_Header)));
-          }
+            if (length > 0)
+            {
+                if (isLightTheme)
+                {
+                    auto totalMax = ImVec2(cursorScreenPos.x + framesSize.x, cursorScreenPos.y + framesSize.y);
+                    drawList->AddRectFilled(cursorScreenPos, totalMax, ImGui::GetColorU32(timelineBackgroundColor));
+                    float animationWidth = std::min(framesSize.x, frameSize.x * (float)length);
+                    drawList->AddRectFilled(
+                        cursorScreenPos, ImVec2(cursorScreenPos.x + animationWidth, cursorScreenPos.y + framesSize.y),
+                        ImGui::GetColorU32(timelinePlayheadRectColor));
+                }
+                else
+                {
+                    drawList->AddRectFilled(cursorScreenPos,
+                                            ImVec2(cursorScreenPos.x + framesSize.x, cursorScreenPos.y + framesSize.y),
+                                            ImGui::GetColorU32(ImGui::GetStyleColorVec4(ImGuiCol_Header)));
+                }
+            }
+
+            for (int i = frameMin; i < frameMax; i++)
+            {
+                auto frameScreenPos = ImVec2(cursorScreenPos.x + frameSize.x * (float)i, cursorScreenPos.y);
+
+                drawList->AddRect(frameScreenPos,
+                                  ImVec2(frameScreenPos.x + border, frameScreenPos.y + borderLineLength),
+                                  ImGui::GetColorU32(timelineTickColor), 0, 0, 0.5f);
+
+                drawList->AddRect(ImVec2(frameScreenPos.x, frameScreenPos.y + frameSize.y - borderLineLength),
+                                  ImVec2(frameScreenPos.x + border, frameScreenPos.y + frameSize.y),
+                                  ImGui::GetColorU32(timelineTickColor), 0, 0, 0.5);
+
+                if (i % FRAME_MULTIPLE == 0)
+                {
+                    auto string = std::to_string(i);
+                    auto textSize = ImGui::CalcTextSize(string.c_str());
+                    auto textPos = ImVec2(frameScreenPos.x + (frameSize.x - textSize.x) / 2,
+                                          frameScreenPos.y + (frameSize.y - textSize.y) / 2);
+
+                    drawList->AddRectFilled(frameScreenPos,
+                                            ImVec2(frameScreenPos.x + frameSize.x, frameScreenPos.y + frameSize.y),
+                                            ImGui::GetColorU32(frameMultipleOverlayColor));
+
+                    drawList->AddText(textPos, ImGui::GetColorU32(textMultipleColor), string.c_str());
+                }
+            }
+
+            if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) &&
+                ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+            {
+                playback_stop();
+                isDragging = true;
+            }
+
+            auto childPos = ImGui::GetWindowPos();
+            auto mousePos = ImGui::GetIO().MousePos;
+            auto localMousePos = ImVec2(mousePos.x - childPos.x, mousePos.y - childPos.y);
+            hoveredTime = floorf(localMousePos.x / frameSize.x);
+
+            if (isDragging)
+            {
+                playback.time = hoveredTime;
+                playback.clamp(settings.playbackIsClamp ? length : FRAME_NUM_MAX);
+                document.frameTime = playback.time;
+            }
+
+            if (!playback.isPlaying)
+                playback.clamp(settings.playbackIsClamp ? length : FRAME_NUM_MAX);
+
+            if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+                isDragging = false;
+
+            // Markers show as faded playheads, with the numbers outside the range they set darkened.
+            if (length > 0 && animation)
+            {
+                auto x_get = [&](int time) {
+                    return cursorScreenPos.x + frameSize.x * (float)time;
+                };
+                auto range = animation_play_range_get(*animation);
+                auto bottom = cursorScreenPos.y + frameSize.y;
+                if (animation->startMarker != -1)
+                    drawList->AddRectFilled(cursorScreenPos, ImVec2(x_get(range.x), bottom), MARKER_OUTSIDE_COLOR);
+                if (animation->endMarker != -1)
+                    drawList->AddRectFilled(ImVec2(x_get(range.y), cursorScreenPos.y),
+                                            ImVec2(cursorScreenPos.x + framesSize.x, bottom), MARKER_OUTSIDE_COLOR);
+                auto markerTint = playheadIconTint;
+                markerTint.w *= MARKER_ALPHA;
+                for (auto marker : {animation->startMarker, animation->endMarker})
+                    if (marker != -1)
+                        drawList->AddImage((ImTextureID)(intptr_t)resources.icon_id_get(ICON_PLAYHEAD),
+                                           ImVec2(x_get(marker), cursorScreenPos.y),
+                                           ImVec2(x_get(marker) + frameSize.x, bottom), ImVec2(0, 0), ImVec2(1, 1),
+                                           ImGui::GetColorU32(markerTint));
+            }
+
+            isRulerHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
+            if (isRulerHovered && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+                markerTime = hoveredTime;
+            Actions markerActions = {};
+            auto isAnimation = [&]() {
+                return animation != nullptr;
+            };
+            markerActions.add({.label = LABEL_ADD_START_MARKER,
+                               .shortcut = SHORTCUT_START_MARKER,
+                               .isEnabled = isAnimation,
+                               .run = [&]() { marker_set(true, markerTime); }});
+            markerActions.add({.label = LABEL_ADD_END_MARKER,
+                               .shortcut = SHORTCUT_END_MARKER,
+                               .isEnabled = isAnimation,
+                               .run = [&]() { marker_set(false, markerTime); }});
+            markerActions.separator();
+            markerActions.add(
+                {.label = LABEL_REMOVE_MARKERS,
+                 .shortcut = -1,
+                 .isEnabled =
+                     [&]() { return animation && (animation->startMarker != -1 || animation->endMarker != -1); },
+                 .run = [&]() { markers_remove(); }});
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
+            actions_context_window_draw("##Marker Menu", markerActions, settings);
+            ImGui::PopStyleVar(2);
+
+            if (length > 0)
+            {
+                ImGui::SetCursorPos(ImVec2(cursorPos.x + frameSize.x * floorf(playback.time), cursorPos.y));
+                ImGui::Image(resources.icon_id_get(ICON_PLAYHEAD), frameSize);
+                auto playheadMin = ImGui::GetItemRectMin();
+                auto playheadMax = ImGui::GetItemRectMax();
+                playheadLineCenterX = (playheadMin.x + playheadMax.x) * 0.5f;
+                playheadLineTopY = playheadMax.y;
+                isPlayheadLineSet = true;
+                overlay_icon(resources.icon_id_get(ICON_PLAYHEAD), playheadIconTint, true);
+            }
         }
-
-        for (int i = frameMin; i < frameMax; i++)
+        else if (animation)
         {
-          auto frameScreenPos = ImVec2(cursorScreenPos.x + frameSize.x * (float)i, cursorScreenPos.y);
-
-          drawList->AddRect(frameScreenPos, ImVec2(frameScreenPos.x + border, frameScreenPos.y + borderLineLength),
-                            ImGui::GetColorU32(timelineTickColor), 0, 0, 0.5f);
-
-          drawList->AddRect(ImVec2(frameScreenPos.x, frameScreenPos.y + frameSize.y - borderLineLength),
-                            ImVec2(frameScreenPos.x + border, frameScreenPos.y + frameSize.y),
-                            ImGui::GetColorU32(timelineTickColor), 0, 0, 0.5);
-
-          if (i % FRAME_MULTIPLE == 0)
-          {
-            auto string = std::to_string(i);
-            auto textSize = ImGui::CalcTextSize(string.c_str());
-            auto textPos = ImVec2(frameScreenPos.x + (frameSize.x - textSize.x) / 2,
-                                  frameScreenPos.y + (frameSize.y - textSize.y) / 2);
-
-            drawList->AddRectFilled(frameScreenPos,
-                                    ImVec2(frameScreenPos.x + frameSize.x, frameScreenPos.y + frameSize.y),
-                                    ImGui::GetColorU32(frameMultipleOverlayColor));
-
-            drawList->AddText(textPos, ImGui::GetColorU32(textMultipleColor), string.c_str());
-          }
-        }
-
-        if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) &&
-            ImGui::IsMouseClicked(ImGuiMouseButton_Left))
-        {
-          playback_stop();
-          isDragging = true;
-        }
-
-        auto childPos = ImGui::GetWindowPos();
-        auto mousePos = ImGui::GetIO().MousePos;
-        auto localMousePos = ImVec2(mousePos.x - childPos.x, mousePos.y - childPos.y);
-        hoveredTime = floorf(localMousePos.x / frameSize.x);
-
-        if (isDragging)
-        {
-          playback.time = hoveredTime;
-          playback.clamp(settings.playbackIsClamp ? length : FRAME_NUM_MAX);
-          document.frameTime = playback.time;
-        }
-
-        if (!playback.isPlaying) playback.clamp(settings.playbackIsClamp ? length : FRAME_NUM_MAX);
-
-        if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) isDragging = false;
-
-        // Markers show as faded playheads, with the numbers outside the range they set darkened.
-        if (length > 0 && animation)
-        {
-          auto x_get = [&](int time) { return cursorScreenPos.x + frameSize.x * (float)time; };
-          auto range = animation_play_range_get(*animation);
-          auto bottom = cursorScreenPos.y + frameSize.y;
-          if (animation->startMarker != -1)
-            drawList->AddRectFilled(cursorScreenPos, ImVec2(x_get(range.x), bottom), MARKER_OUTSIDE_COLOR);
-          if (animation->endMarker != -1)
-            drawList->AddRectFilled(ImVec2(x_get(range.y), cursorScreenPos.y),
-                                    ImVec2(cursorScreenPos.x + framesSize.x, bottom), MARKER_OUTSIDE_COLOR);
-          auto markerTint = playheadIconTint;
-          markerTint.w *= MARKER_ALPHA;
-          for (auto marker : {animation->startMarker, animation->endMarker})
-            if (marker != -1)
-              drawList->AddImage((ImTextureID)(intptr_t)resources.icon_id_get(ICON_PLAYHEAD),
-                                 ImVec2(x_get(marker), cursorScreenPos.y), ImVec2(x_get(marker) + frameSize.x, bottom),
-                                 ImVec2(0, 0), ImVec2(1, 1), ImGui::GetColorU32(markerTint));
-        }
-
-        isRulerHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
-        if (isRulerHovered && ImGui::IsMouseReleased(ImGuiMouseButton_Right)) markerTime = hoveredTime;
-        Actions markerActions = {};
-        auto isAnimation = [&]() { return animation != nullptr; };
-        markerActions.add({.label = LABEL_ADD_START_MARKER,
-                           .shortcut = SHORTCUT_START_MARKER,
-                           .isEnabled = isAnimation,
-                           .run = [&]() { marker_set(true, markerTime); }});
-        markerActions.add({.label = LABEL_ADD_END_MARKER,
-                           .shortcut = SHORTCUT_END_MARKER,
-                           .isEnabled = isAnimation,
-                           .run = [&]() { marker_set(false, markerTime); }});
-        markerActions.separator();
-        markerActions.add(
-            {.label = LABEL_REMOVE_MARKERS,
-             .shortcut = -1,
-             .isEnabled = [&]() { return animation && (animation->startMarker != -1 || animation->endMarker != -1); },
-             .run = [&]() { markers_remove(); }});
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing);
-        actions_context_window_draw("##Marker Menu", markerActions, settings);
-        ImGui::PopStyleVar(2);
-
-        if (length > 0)
-        {
-          ImGui::SetCursorPos(ImVec2(cursorPos.x + frameSize.x * floorf(playback.time), cursorPos.y));
-          ImGui::Image(resources.icon_id_get(ICON_PLAYHEAD), frameSize);
-          auto playheadMin = ImGui::GetItemRectMin();
-          auto playheadMax = ImGui::GetItemRectMax();
-          playheadLineCenterX = (playheadMin.x + playheadMax.x) * 0.5f;
-          playheadLineTopY = playheadMax.y;
-          isPlayheadLineSet = true;
-          overlay_icon(resources.icon_id_get(ICON_PLAYHEAD), playheadIconTint, true);
-        }
-      }
-      else if (animation)
-      {
-        float frameTime = 0;
-
-        for (int i = frameMin; i < frameMax; i++)
-        {
-          auto frameScreenPos = ImVec2(cursorScreenPos.x + frameSize.x * (float)i, cursorScreenPos.y);
-          auto frameRectMax = ImVec2(frameScreenPos.x + frameSize.x, frameScreenPos.y + frameSize.y);
-
-          drawList->AddRect(frameScreenPos, frameRectMax, ImGui::GetColorU32(frameBorderColor));
-
-          if (i % FRAME_MULTIPLE == 0)
-            drawList->AddRectFilled(frameScreenPos, frameRectMax, ImGui::GetColorU32(frameMultipleOverlayColor));
-        }
-
-        if (!frameMoveDrag.isActive && !ImGui::IsKeyDown(ImGuiMod_Shift) &&
-            ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) &&
-            ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGui::IsAnyItemHovered())
-        {
-          isFrameBoxPending = true;
-          isFrameBoxAdditive = ImGui::IsKeyDown(ImGuiMod_Ctrl);
-          frameBoxStart = frame_box_content_point_get();
-          frameBoxEnd = frameBoxStart;
-          frameBoxSelection.clear();
-        }
-
-        bool isFrameMovePreview = false;
-        ImVec2 frameMovePreviewMin;
-        ImVec2 frameMovePreviewMax;
-        bool isFrameMoveHoveredFrame = false;
-        ImVec2 frameMoveHoveredFrameMin;
-        ImVec2 frameMoveHoveredFrameMax;
-
-        if (frameMoveDrag.isActive && type != TRIGGER)
-        {
-          auto mousePos = ImGui::GetIO().MousePos;
-          auto rowMin = cursorScreenPos;
-          auto rowMax = ImVec2(cursorScreenPos.x + width, cursorScreenPos.y + frameSize.y);
-          if (mousePos.x >= rowMin.x && mousePos.x < rowMax.x && mousePos.y >= rowMin.y && mousePos.y < rowMax.y)
-          {
-            auto mouseX = mousePos.x - cursorScreenPos.x;
-            auto targetTime = glm::max(0.0f, mouseX / frameSize.x);
-            int dropIndex = (int)item->frames.size();
-            float dropFrameTime = 0;
             float frameTime = 0;
-            int frameIndex = 0;
 
-            for (auto& frame : item->frames)
+            for (int i = frameMin; i < frameMax; i++)
             {
-              auto frameStart = frameTime;
-              auto frameEnd = frameStart + frame.duration;
-              if (!isFrameMoveHoveredFrame && targetTime >= frameStart && targetTime < frameEnd)
-              {
-                isFrameMoveHoveredFrame = true;
-                frameMoveHoveredFrameMin = ImVec2(cursorScreenPos.x + frameStart * frameSize.x, cursorScreenPos.y);
-                frameMoveHoveredFrameMax =
-                    ImVec2(cursorScreenPos.x + frameEnd * frameSize.x, cursorScreenPos.y + frameSize.y);
-              }
+                auto frameScreenPos = ImVec2(cursorScreenPos.x + frameSize.x * (float)i, cursorScreenPos.y);
+                auto frameRectMax = ImVec2(frameScreenPos.x + frameSize.x, frameScreenPos.y + frameSize.y);
 
-              auto midpoint = frameStart + ((float)frame.duration * 0.5f);
-              if (targetTime < midpoint)
-              {
-                dropIndex = frameIndex;
-                dropFrameTime = frameStart;
-                break;
-              }
+                drawList->AddRect(frameScreenPos, frameRectMax, ImGui::GetColorU32(frameBorderColor));
 
-              frameTime = frameEnd;
-              dropFrameTime = frameTime;
-              ++frameIndex;
+                if (i % FRAME_MULTIPLE == 0)
+                    drawList->AddRectFilled(frameScreenPos, frameRectMax,
+                                            ImGui::GetColorU32(frameMultipleOverlayColor));
             }
 
-            frameMoveDropTarget = Reference{reference.animationIndex, type, id, dropIndex, row.groupType, row.groupId};
-
-            auto dropX = cursorScreenPos.x + dropFrameTime * frameSize.x;
-            auto previewWidth = glm::max(frameSize.x, (float)frameMoveDrag.duration * frameSize.x);
-            frameMovePreviewMin = ImVec2(dropX, cursorScreenPos.y);
-            frameMovePreviewMax = ImVec2(dropX + previewWidth, cursorScreenPos.y + frameSize.y);
-            isFrameMovePreview = true;
-          }
-        }
-
-        auto& selectedFrames = document.selection.uids[SelectionKind::FRAMES];
-        for (int frameIndex = 0; frameIndex < (int)item->frames.size(); ++frameIndex)
-        {
-          auto& frame = item->frames[frameIndex];
-          ImGui::PushID(frameIndex);
-
-          auto frameReference = row_reference_make(frameIndex);
-          auto isFrameVisible = isVisible && frame.isVisible;
-          auto isReferenced = reference == frameReference;
-          auto isSelected = selectedFrames.contains(frame.uid);
-
-          if (type == TRIGGER) frameTime = frame.atFrame;
-
-          auto buttonSize = type == TRIGGER ? frameSize : to_imvec2(vec2(frameSize.x * frame.duration, frameSize.y));
-          auto frameStart = type == TRIGGER ? frame.atFrame : frameTime;
-          auto frameEnd = type == TRIGGER ? frameStart + 1.0f : frameStart + frame.duration;
-          if (frameEnd <= (float)frameMin || frameStart >= (float)frameMax)
-          {
-            if (type != TRIGGER) frameTime += frame.duration;
-            ImGui::PopID();
-            continue;
-          }
-          auto buttonPos = ImVec2(cursorPos.x + (frameTime * frameSize.x), cursorPos.y);
-
-          ImGui::SetCursorPos(buttonPos);
-
-          auto buttonScreenPos = ImGui::GetCursorScreenPos();
-          auto fillColor =
-              isSelected ? (isFrameVisible ? colorActive : colorActiveHidden) : (isFrameVisible ? color : colorHidden);
-          drawList->AddRectFilled(buttonScreenPos,
-                                  ImVec2(buttonScreenPos.x + buttonSize.x, buttonScreenPos.y + buttonSize.y),
-                                  ImGui::GetColorU32(fillColor), FRAME_ROUNDING);
-
-          ImGui::PushStyleColor(ImGuiCol_Header, isFrameVisible ? colorActive : colorActiveHidden);
-          ImGui::PushStyleColor(ImGuiCol_HeaderActive, isFrameVisible ? colorActive : colorActiveHidden);
-          ImGui::PushStyleColor(ImGuiCol_HeaderHovered, isFrameVisible ? colorHovered : colorHoveredHidden);
-          ImGui::PushStyleColor(ImGuiCol_NavCursor, isFrameVisible ? colorHovered : colorHoveredHidden);
-
-          ImGui::SetNextItemAllowOverlap();
-          ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, FRAME_ROUNDING);
-          ImGui::SetNextItemSelectionUserData(frameIndex);
-          if (ImGui::Selectable("##Frame Button", isSelected, ImGuiSelectableFlags_None, buttonSize))
-          {
-            if (type == LAYER)
-              if (auto layer = ::item_get(model.content.layers, id))
-                document.focused_id_set(SelectionKind::SPRITESHEETS, layer->spritesheetId);
-
-            if (type != TRIGGER)
+            if (!frameMoveDrag.isActive && !ImGui::IsKeyDown(ImGuiMod_Shift) &&
+                ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) &&
+                ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGui::IsAnyItemHovered())
             {
-              if (ImGui::IsKeyDown(ImGuiMod_Alt))
-              {
-                auto targetReference = frameReference;
-                edit_push(EDIT_FRAME_INTERPOLATION,
-                          [=](Model& model)
-                          {
-                            if (auto frame = model.frame_edit(targetReference))
-                              frame->interpolation = frame->interpolation == Interpolation::NONE ? Interpolation::LINEAR
-                                                                                                 : Interpolation::NONE;
-                          });
-              }
-
-              document.frameTime = frameTime;
+                isFrameBoxPending = true;
+                isFrameBoxAdditive = ImGui::IsKeyDown(ImGuiMod_Ctrl);
+                frameBoxStart = frame_box_content_point_get();
+                frameBoxEnd = frameBoxStart;
+                frameBoxSelection.clear();
             }
 
-            auto isCtrlDown = ImGui::IsKeyDown(ImGuiMod_Ctrl);
-            auto isShiftDown = ImGui::IsKeyDown(ImGuiMod_Shift);
-            if (isShiftDown)
-            {
-              auto isRangeSelected = document.frames_range_select(frameSelectionAnchor.value_or(frameReference),
-                                                                  frameReference, isCtrlDown);
-              if (!isRangeSelected) document.frame_select(frameReference);
-              if (!frameSelectionAnchor || !isRangeSelected) frameSelectionAnchor = frameReference;
-            }
-            else
-            {
-              isCtrlDown ? document.frame_toggle(frameReference) : document.frame_select(frameReference);
-              frameSelectionAnchor = frameReference;
-            }
-            reference_set(frameReference);
-            isReferenced = true;
-            document.selected_clear(SelectionKind::REGIONS);
-          }
-          ImGui::PopStyleVar();
+            bool isFrameMovePreview = false;
+            ImVec2 frameMovePreviewMin;
+            ImVec2 frameMovePreviewMax;
+            bool isFrameMoveHoveredFrame = false;
+            ImVec2 frameMoveHoveredFrameMin;
+            ImVec2 frameMoveHoveredFrameMax;
 
-          ImGui::PopStyleColor(4);
-
-          if (!isDraggedFrameActive && ImGui::IsItemHovered() && ImGui::IsMouseDown(ImGuiMouseButton_Left))
-          {
-            if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
+            if (frameMoveDrag.isActive && type != TRIGGER)
             {
-              if (type == TRIGGER || ImGui::IsKeyDown(ImGuiMod_Ctrl))
-              {
-                isDraggedFrameActive = true;
-                draggedFrameReference = frameReference;
-                draggedFrameType = type;
-                draggedFrameStart = hoveredTime;
-                if (type != TRIGGER) draggedFrameStartDuration = frame.duration;
-                draggedFrameStartDurations.clear();
+                auto mousePos = ImGui::GetIO().MousePos;
+                auto rowMin = cursorScreenPos;
+                auto rowMax = ImVec2(cursorScreenPos.x + width, cursorScreenPos.y + frameSize.y);
+                if (mousePos.x >= rowMin.x && mousePos.x < rowMax.x && mousePos.y >= rowMin.y && mousePos.y < rowMax.y)
+                {
+                    auto mouseX = mousePos.x - cursorScreenPos.x;
+                    auto targetTime = glm::max(0.0f, mouseX / frameSize.x);
+                    int dropIndex = (int)item->frames.size();
+                    float dropFrameTime = 0;
+                    float frameTime = 0;
+                    int frameIndex = 0;
+
+                    for (auto& frame : item->frames)
+                    {
+                        auto frameStart = frameTime;
+                        auto frameEnd = frameStart + frame.duration;
+                        if (!isFrameMoveHoveredFrame && targetTime >= frameStart && targetTime < frameEnd)
+                        {
+                            isFrameMoveHoveredFrame = true;
+                            frameMoveHoveredFrameMin =
+                                ImVec2(cursorScreenPos.x + frameStart * frameSize.x, cursorScreenPos.y);
+                            frameMoveHoveredFrameMax =
+                                ImVec2(cursorScreenPos.x + frameEnd * frameSize.x, cursorScreenPos.y + frameSize.y);
+                        }
+
+                        auto midpoint = frameStart + ((float)frame.duration * 0.5f);
+                        if (targetTime < midpoint)
+                        {
+                            dropIndex = frameIndex;
+                            dropFrameTime = frameStart;
+                            break;
+                        }
+
+                        frameTime = frameEnd;
+                        dropFrameTime = frameTime;
+                        ++frameIndex;
+                    }
+
+                    frameMoveDropTarget =
+                        Reference{reference.animationIndex, type, id, dropIndex, row.groupType, row.groupId};
+
+                    auto dropX = cursorScreenPos.x + dropFrameTime * frameSize.x;
+                    auto previewWidth = glm::max(frameSize.x, (float)frameMoveDrag.duration * frameSize.x);
+                    frameMovePreviewMin = ImVec2(dropX, cursorScreenPos.y);
+                    frameMovePreviewMax = ImVec2(dropX + previewWidth, cursorScreenPos.y + frameSize.y);
+                    isFrameMovePreview = true;
+                }
+            }
+
+            auto& selectedFrames = document.selection.uids[SelectionKind::FRAMES];
+            for (int frameIndex = 0; frameIndex < (int)item->frames.size(); ++frameIndex)
+            {
+                auto& frame = item->frames[frameIndex];
+                ImGui::PushID(frameIndex);
+
+                auto frameReference = row_reference_make(frameIndex);
+                auto isFrameVisible = isVisible && frame.isVisible;
+                auto isReferenced = reference == frameReference;
+                auto isSelected = selectedFrames.contains(frame.uid);
+
+                if (type == TRIGGER)
+                    frameTime = frame.atFrame;
+
+                auto buttonSize =
+                    type == TRIGGER ? frameSize : to_imvec2(vec2(frameSize.x * frame.duration, frameSize.y));
+                auto frameStart = type == TRIGGER ? frame.atFrame : frameTime;
+                auto frameEnd = type == TRIGGER ? frameStart + 1.0f : frameStart + frame.duration;
+                if (frameEnd <= (float)frameMin || frameStart >= (float)frameMax)
+                {
+                    if (type != TRIGGER)
+                        frameTime += frame.duration;
+                    ImGui::PopID();
+                    continue;
+                }
+                auto buttonPos = ImVec2(cursorPos.x + (frameTime * frameSize.x), cursorPos.y);
+
+                ImGui::SetCursorPos(buttonPos);
+
+                auto buttonScreenPos = ImGui::GetCursorScreenPos();
+                auto fillColor = isSelected ? (isFrameVisible ? colorActive : colorActiveHidden)
+                                            : (isFrameVisible ? color : colorHidden);
+                drawList->AddRectFilled(buttonScreenPos,
+                                        ImVec2(buttonScreenPos.x + buttonSize.x, buttonScreenPos.y + buttonSize.y),
+                                        ImGui::GetColorU32(fillColor), FRAME_ROUNDING);
+
+                ImGui::PushStyleColor(ImGuiCol_Header, isFrameVisible ? colorActive : colorActiveHidden);
+                ImGui::PushStyleColor(ImGuiCol_HeaderActive, isFrameVisible ? colorActive : colorActiveHidden);
+                ImGui::PushStyleColor(ImGuiCol_HeaderHovered, isFrameVisible ? colorHovered : colorHoveredHidden);
+                ImGui::PushStyleColor(ImGuiCol_NavCursor, isFrameVisible ? colorHovered : colorHoveredHidden);
+
+                ImGui::SetNextItemAllowOverlap();
+                ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, FRAME_ROUNDING);
+                ImGui::SetNextItemSelectionUserData(frameIndex);
+                if (ImGui::Selectable("##Frame Button", isSelected, ImGuiSelectableFlags_None, buttonSize))
+                {
+                    if (type == LAYER)
+                        if (auto layer = ::item_get(model.content.layers, id))
+                            document.focused_id_set(SelectionKind::SPRITESHEETS, layer->spritesheetId);
+
+                    if (type != TRIGGER)
+                    {
+                        if (ImGui::IsKeyDown(ImGuiMod_Alt))
+                        {
+                            auto targetReference = frameReference;
+                            edit_push(EDIT_FRAME_INTERPOLATION, [=](Model& model) {
+                                if (auto frame = model.frame_edit(targetReference))
+                                    frame->interpolation = frame->interpolation == Interpolation::NONE
+                                                               ? Interpolation::LINEAR
+                                                               : Interpolation::NONE;
+                            });
+                        }
+
+                        document.frameTime = frameTime;
+                    }
+
+                    auto isCtrlDown = ImGui::IsKeyDown(ImGuiMod_Ctrl);
+                    auto isShiftDown = ImGui::IsKeyDown(ImGuiMod_Shift);
+                    if (isShiftDown)
+                    {
+                        auto isRangeSelected = document.frames_range_select(
+                            frameSelectionAnchor.value_or(frameReference), frameReference, isCtrlDown);
+                        if (!isRangeSelected)
+                            document.frame_select(frameReference);
+                        if (!frameSelectionAnchor || !isRangeSelected)
+                            frameSelectionAnchor = frameReference;
+                    }
+                    else
+                    {
+                        isCtrlDown ? document.frame_toggle(frameReference) : document.frame_select(frameReference);
+                        frameSelectionAnchor = frameReference;
+                    }
+                    reference_set(frameReference);
+                    isReferenced = true;
+                    document.selected_clear(SelectionKind::REGIONS);
+                }
+                ImGui::PopStyleVar();
+
+                ImGui::PopStyleColor(4);
+
+                if (!isDraggedFrameActive && ImGui::IsItemHovered() && ImGui::IsMouseDown(ImGuiMouseButton_Left))
+                {
+                    if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
+                    {
+                        if (type == TRIGGER || ImGui::IsKeyDown(ImGuiMod_Ctrl))
+                        {
+                            isDraggedFrameActive = true;
+                            draggedFrameReference = frameReference;
+                            draggedFrameType = type;
+                            draggedFrameStart = hoveredTime;
+                            if (type != TRIGGER)
+                                draggedFrameStartDuration = frame.duration;
+                            draggedFrameStartDurations.clear();
+                            if (type != TRIGGER)
+                                for (auto selectedReference : drag_frame_references_get(frameReference))
+                                    if (auto selectedFrame = document.model.frame_get(selectedReference))
+                                        draggedFrameStartDurations.push_back(
+                                            {selectedReference, selectedFrame->duration});
+                            draggedFrameStartMouseX = ImGui::GetIO().MousePos.x;
+                            draggedFrameWidth = frameSize.x;
+                        }
+                    }
+                }
+
                 if (type != TRIGGER)
-                  for (auto selectedReference : drag_frame_references_get(frameReference))
-                    if (auto selectedFrame = document.model.frame_get(selectedReference))
-                      draggedFrameStartDurations.push_back({selectedReference, selectedFrame->duration});
-                draggedFrameStartMouseX = ImGui::GetIO().MousePos.x;
-                draggedFrameWidth = frameSize.x;
-              }
-            }
-          }
+                {
+                    if (!isDraggedFrameActive && !frameMoveDrag.isActive && ImGui::IsItemActive() &&
+                        ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+                    {
+                        auto selectedReferences = drag_frame_references_get(frameReference);
+                        int dragDuration = 0;
+                        for (auto selectedReference : selectedReferences)
+                            if (auto selectedFrame = document.model.frame_get(selectedReference))
+                                dragDuration += selectedFrame->duration;
+                        dragDuration = glm::max(1, dragDuration);
 
-          if (type != TRIGGER)
-          {
-            if (!isDraggedFrameActive && !frameMoveDrag.isActive && ImGui::IsItemActive() &&
-                ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+                        frameMoveDrag = {.animationIndex = reference.animationIndex,
+                                         .duration = dragDuration,
+                                         .references = {selectedReferences.begin(), selectedReferences.end()},
+                                         .isActive = true};
+                    }
+                }
+
+                auto rectMin = ImGui::GetItemRectMin();
+                auto rectMax = ImGui::GetItemRectMax();
+                auto borderColor = isReferenced ? frameBorderColorReferenced : frameBorderColor;
+                auto borderThickness = isReferenced ? FRAME_BORDER_THICKNESS_REFERENCED : FRAME_BORDER_THICKNESS;
+                drawList->AddRect(rectMin, rectMax, ImGui::GetColorU32(borderColor), FRAME_ROUNDING, 0,
+                                  borderThickness);
+
+                auto icon = type == TRIGGER ? ICON_TRIGGER : INTERPOLATION_ICONS[(int)frame.interpolation];
+                auto iconPos = ImVec2(cursorPos.x + (frameTime * frameSize.x),
+                                      cursorPos.y + (frameSize.y / 2) - (icon_size_get().y / 2));
+                ImGui::SetCursorPos(iconPos);
+                ImGui::Image(resources.icon_id_get(icon), icon_size_get());
+                overlay_icon(resources.icon_id_get(icon), iconTintDefault, false);
+
+                if (type != TRIGGER)
+                    frameTime += frame.duration;
+
+                ImGui::PopID();
+            }
+
+            if (isFrameMovePreview)
             {
-              auto selectedReferences = drag_frame_references_get(frameReference);
-              int dragDuration = 0;
-              for (auto selectedReference : selectedReferences)
-                if (auto selectedFrame = document.model.frame_get(selectedReference))
-                  dragDuration += selectedFrame->duration;
-              dragDuration = glm::max(1, dragDuration);
-
-              frameMoveDrag = {.animationIndex = reference.animationIndex,
-                               .duration = dragDuration,
-                               .references = {selectedReferences.begin(), selectedReferences.end()},
-                               .isActive = true};
+                drawList->AddRectFilled(frameMovePreviewMin, frameMovePreviewMax,
+                                        ImGui::GetColorU32(ImGuiCol_DragDropTargetBg), FRAME_ROUNDING);
+                drawList->AddRect(frameMovePreviewMin, frameMovePreviewMax, ImGui::GetColorU32(ImGuiCol_DragDropTarget),
+                                  FRAME_ROUNDING, 0, ImGui::GetStyle().DragDropTargetBorderSize);
             }
-          }
 
-          auto rectMin = ImGui::GetItemRectMin();
-          auto rectMax = ImGui::GetItemRectMax();
-          auto borderColor = isReferenced ? frameBorderColorReferenced : frameBorderColor;
-          auto borderThickness = isReferenced ? FRAME_BORDER_THICKNESS_REFERENCED : FRAME_BORDER_THICKNESS;
-          drawList->AddRect(rectMin, rectMax, ImGui::GetColorU32(borderColor), FRAME_ROUNDING, 0, borderThickness);
+            if (isFrameMoveHoveredFrame)
+                drawList->AddRect(frameMoveHoveredFrameMin, frameMoveHoveredFrameMax,
+                                  ImGui::GetColorU32(ImGuiCol_DragDropTarget), FRAME_ROUNDING, 0,
+                                  ImGui::GetStyle().DragDropTargetBorderSize * 1.5f);
 
-          auto icon = type == TRIGGER ? ICON_TRIGGER : INTERPOLATION_ICONS[(int)frame.interpolation];
-          auto iconPos = ImVec2(cursorPos.x + (frameTime * frameSize.x),
-                                cursorPos.y + (frameSize.y / 2) - (icon_size_get().y / 2));
-          ImGui::SetCursorPos(iconPos);
-          ImGui::Image(resources.icon_id_get(icon), icon_size_get());
-          overlay_icon(resources.icon_id_get(icon), iconTintDefault, false);
-
-          if (type != TRIGGER) frameTime += frame.duration;
-
-          ImGui::PopID();
+            if (!isFrameBoxSelecting && !frameMoveDrag.isActive && !isDraggedFrameActive && ImGui::IsWindowHovered() &&
+                (ImGui::IsMouseReleased(ImGuiMouseButton_Left) || ImGui::IsMouseReleased(ImGuiMouseButton_Right)) &&
+                !ImGui::IsAnyItemHovered())
+                row_selection_set(row);
         }
-
-        if (isFrameMovePreview)
-        {
-          drawList->AddRectFilled(frameMovePreviewMin, frameMovePreviewMax,
-                                  ImGui::GetColorU32(ImGuiCol_DragDropTargetBg), FRAME_ROUNDING);
-          drawList->AddRect(frameMovePreviewMin, frameMovePreviewMax, ImGui::GetColorU32(ImGuiCol_DragDropTarget),
-                            FRAME_ROUNDING, 0, ImGui::GetStyle().DragDropTargetBorderSize);
-        }
-
-        if (isFrameMoveHoveredFrame)
-          drawList->AddRect(frameMoveHoveredFrameMin, frameMoveHoveredFrameMax,
-                            ImGui::GetColorU32(ImGuiCol_DragDropTarget), FRAME_ROUNDING, 0,
-                            ImGui::GetStyle().DragDropTargetBorderSize * 1.5f);
-
-        if (!isFrameBoxSelecting && !frameMoveDrag.isActive && !isDraggedFrameActive && ImGui::IsWindowHovered() &&
-            (ImGui::IsMouseReleased(ImGuiMouseButton_Left) || ImGui::IsMouseReleased(ImGuiMouseButton_Right)) &&
-            !ImGui::IsAnyItemHovered())
-          row_selection_set(row);
-      }
     }
 
     ImGui::EndChild();
-    if (isLightTheme && isDefaultChild) ImGui::PopStyleColor();
+    if (isLightTheme && isDefaultChild)
+        ImGui::PopStyleColor();
     ImGui::PopStyleVar();
 
     index++;
     ImGui::PopID();
-  }
+}
 
-  // Frame drags, once per frame after the rows: dropping moved frames, and resizing frames (or moving a trigger).
-  void TimelineContext::frame_drag_update()
-  {
+// Frame drags, once per frame after the rows: dropping moved frames, and resizing frames (or moving a trigger).
+void TimelineContext::frame_drag_update()
+{
     if (frameMoveDrag.isActive && ImGui::IsMouseReleased(ImGuiMouseButton_Left))
     {
-      if (frameMoveDropTarget) frames_move_to(*frameMoveDropTarget);
-      frameMoveDrag = {};
+        if (frameMoveDropTarget)
+            frames_move_to(*frameMoveDropTarget);
+        frameMoveDrag = {};
     }
 
-    if (!isDraggedFrameActive) return;
+    if (!isDraggedFrameActive)
+        return;
     ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
     auto durationDelta =
         draggedFrameWidth > 0.0f
@@ -553,55 +586,55 @@
 
     if (!isDraggedFrameSnapshot && isDraggedFrameChanged)
     {
-      isDraggedFrameSnapshot = true;
-      edit_begin_push(draggedFrameType == TRIGGER ? EDIT_TRIGGER_AT_FRAME : EDIT_FRAME_DURATION);
+        isDraggedFrameSnapshot = true;
+        edit_begin_push(draggedFrameType == TRIGGER ? EDIT_TRIGGER_AT_FRAME : EDIT_FRAME_DURATION);
     }
 
     if (isDraggedFrameSnapshot)
     {
-      auto targetReference = draggedFrameReference;
-      if (draggedFrameType == TRIGGER)
-      {
-        auto atFrame = glm::clamp(hoveredTime, 0,
-                                  settings.playbackIsClamp && animation ? animation->frameNum - 1 : FRAME_NUM_MAX - 1);
-        command_push([=](Manager&, Document& document)
-                     { trigger_at_frame_set(document.model, targetReference, atFrame); });
-      }
-      else
-      {
-        std::map<Reference, int> durations;
-        if (draggedFrameStartDurations.empty()) durations[targetReference] = draggedFrameStartDuration + durationDelta;
-        for (auto frameDuration : draggedFrameStartDurations)
-          durations[frameDuration.reference] = frameDuration.duration + durationDelta;
-        command_push([=](Manager&, Document& document) { frame_durations_set(document.model, durations); });
-      }
+        auto targetReference = draggedFrameReference;
+        if (draggedFrameType == TRIGGER)
+        {
+            auto atFrame = glm::clamp(
+                hoveredTime, 0, settings.playbackIsClamp && animation ? animation->frameNum - 1 : FRAME_NUM_MAX - 1);
+            command_push(
+                [=](Manager&, Document& document) { trigger_at_frame_set(document.model, targetReference, atFrame); });
+        }
+        else
+        {
+            std::map<Reference, int> durations;
+            if (draggedFrameStartDurations.empty())
+                durations[targetReference] = draggedFrameStartDuration + durationDelta;
+            for (auto frameDuration : draggedFrameStartDurations)
+                durations[frameDuration.reference] = frameDuration.duration + durationDelta;
+            command_push([=](Manager&, Document& document) { frame_durations_set(document.model, durations); });
+        }
     }
 
     if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
     {
-      auto targetReference = draggedFrameReference;
-      auto targetType = draggedFrameType;
-      command_push(
-          [=, this](Manager&, Document& document)
-          {
+        auto targetReference = draggedFrameReference;
+        auto targetType = draggedFrameType;
+        command_push([=, this](Manager&, Document& document) {
             auto item = document.model.track_edit(targetReference);
-            if (targetType == TRIGGER && item) frames_sort_by_at_frame(*item);
+            if (targetType == TRIGGER && item)
+                frames_sort_by_at_frame(*item);
             document.change();
-          });
-      isDraggedFrameActive = false;
-      draggedFrameReference = {};
-      draggedFrameType = NONE;
-      draggedFrameStart = -1;
-      draggedFrameStartDuration = -1;
-      draggedFrameStartDurations.clear();
-      draggedFrameStartMouseX = 0.0f;
-      draggedFrameWidth = 0.0f;
-      isDraggedFrameSnapshot = false;
+        });
+        isDraggedFrameActive = false;
+        draggedFrameReference = {};
+        draggedFrameType = NONE;
+        draggedFrameStart = -1;
+        draggedFrameStartDuration = -1;
+        draggedFrameStartDurations.clear();
+        draggedFrameStartMouseX = 0.0f;
+        draggedFrameWidth = 0.0f;
+        isDraggedFrameSnapshot = false;
     }
-  }
+}
 
-  void TimelineContext::frames_child()
-  {
+void TimelineContext::frames_child()
+{
     auto cursorPos = ImGui::GetCursorPos();
     ImGui::SetCursorPos(ImVec2(cursorPos.x + ITEM_CHILD_WIDTH, cursorPos.y));
 
@@ -609,311 +642,310 @@
 
     if (ImGui::BeginChild("##Frames Child", framesChildSize, ImGuiChildFlags_Borders))
     {
-      auto viewListChildSize =
-          ImVec2(ImGui::GetContentRegionAvail().x,
-                 ImGui::GetContentRegionAvail().y - ImGui::GetTextLineHeightWithSpacing() - style.ItemSpacing.y * 2);
+        auto viewListChildSize =
+            ImVec2(ImGui::GetContentRegionAvail().x,
+                   ImGui::GetContentRegionAvail().y - ImGui::GetTextLineHeightWithSpacing() - style.ItemSpacing.y * 2);
 
-      auto animationsLength = [&]()
-      {
-        int length = 0;
-        for (auto [index, item] : model.animations_get())
-          length = std::max(length, animation_length_get(*item));
-        return length;
-      }();
-      auto childWidth = animationsLength * ImGui::GetTextLineHeight();
-      if (animation && animation->frameNum > animationsLength)
-        childWidth = animation->frameNum * ImGui::GetTextLineHeight();
-      childWidth = std::max(childWidth, ImGui::GetContentRegionAvail().x);
+        auto animationsLength = [&]() {
+            int length = 0;
+            for (auto [index, item] : model.animations_get())
+                length = std::max(length, animation_length_get(*item));
+            return length;
+        }();
+        auto childWidth = animationsLength * ImGui::GetTextLineHeight();
+        if (animation && animation->frameNum > animationsLength)
+            childWidth = animation->frameNum * ImGui::GetTextLineHeight();
+        childWidth = std::max(childWidth, ImGui::GetContentRegionAvail().x);
 
-      childWidth *= WIDTH_MULTIPLIER;
+        childWidth *= WIDTH_MULTIPLIER;
 
-      ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2());
-      if (ImGui::BeginChild("##Frames List Child", viewListChildSize, true, ImGuiWindowFlags_HorizontalScrollbar))
-      {
-        playheadLineCenterX = 0.0f;
-        playheadLineTopY = 0.0f;
-        isPlayheadLineSet = false;
-        isFrameBoxClipSet = false;
-        if (animation && ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_A, ImGuiInputFlags_RouteFocused))
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2());
+        if (ImGui::BeginChild("##Frames List Child", viewListChildSize, true, ImGuiWindowFlags_HorizontalScrollbar))
         {
-          group_selection_reset_for(document);
-          document.frame_references_set(document.selected_item_frame_references_get());
-        }
-
-        if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
-            ImGui::Shortcut(ImGuiKey_Escape, ImGuiInputFlags_RouteFocused))
-        {
-          if (!document.selection.uids[SelectionKind::FRAMES].empty())
-          {
-            reference_set(item_reference_from_frame_get(reference));
-            document.frame_references_clear();
-          }
-          else if (reference.itemType != NONE || reference.itemID != -1)
-            group_selection_reset_for(document);
-          document.focus_clear();
-        }
-
-        ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2());
-        if (ImGui::BeginTable("##Frames List Table", 1,
-                              ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY))
-        {
-          ImGuiWindow* window = ImGui::GetCurrentWindow();
-          window->Flags |= ImGuiWindowFlags_NoScrollWithMouse;
-
-          scroll.x = ImGui::GetScrollX();
-          scroll.y = ImGui::GetScrollY();
-
-          isHorizontalScroll = window->ScrollbarX;
-
-          if (isWindowHovered)
-          {
-            auto& io = ImGui::GetIO();
-            auto lineHeight = ImGui::GetTextLineHeightWithSpacing() * 2;
-
-            scroll.x -= io.MouseWheelH * lineHeight;
-            scroll.y -= io.MouseWheel * lineHeight;
-          }
-
-          ImGui::SetScrollX(scroll.x);
-          ImGui::SetScrollY(scroll.y);
-
-          auto frameBoxDrawList = ImGui::GetWindowDrawList();
-          frameBoxClipMin = frameBoxDrawList->GetClipRectMin();
-          frameBoxClipMax = frameBoxDrawList->GetClipRectMax();
-          isFrameBoxClipSet = true;
-          if (isFrameBoxPending || isFrameBoxSelecting)
-          {
-            auto& io = ImGui::GetIO();
-            auto threshold = ImGui::GetTextLineHeightWithSpacing() * 0.125f;
-            frameBoxEnd = frame_box_content_point_get();
-            auto distance = ImVec2(frameBoxEnd.x - frameBoxStart.x, frameBoxEnd.y - frameBoxStart.y);
-            if (isFrameBoxPending && distance.x * distance.x + distance.y * distance.y >= threshold * threshold)
+            playheadLineCenterX = 0.0f;
+            playheadLineTopY = 0.0f;
+            isPlayheadLineSet = false;
+            isFrameBoxClipSet = false;
+            if (animation && ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_A, ImGuiInputFlags_RouteFocused))
             {
-              isFrameBoxPending = false;
-              isFrameBoxSelecting = true;
+                group_selection_reset_for(document);
+                document.frame_references_set(document.selected_item_frame_references_get());
             }
-            auto edgeSize = ImGui::GetTextLineHeightWithSpacing();
-            auto scrollStep = edgeSize * 0.5f;
-            if (isFrameBoxSelecting)
+
+            if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
+                ImGui::Shortcut(ImGuiKey_Escape, ImGuiInputFlags_RouteFocused))
             {
-              if (io.MousePos.x < frameBoxClipMin.x + edgeSize)
-                scroll.x -= scrollStep;
-              else if (io.MousePos.x > frameBoxClipMax.x - edgeSize)
-                scroll.x += scrollStep;
-              if (io.MousePos.y < frameBoxClipMin.y + edgeSize)
-                scroll.y -= scrollStep;
-              else if (io.MousePos.y > frameBoxClipMax.y - edgeSize)
-                scroll.y += scrollStep;
-              ImGui::SetScrollX(scroll.x);
-              ImGui::SetScrollY(scroll.y);
-              frameBoxEnd = frame_box_content_point_get();
-              frameBoxSelection.clear();
+                if (!document.selection.uids[SelectionKind::FRAMES].empty())
+                {
+                    reference_set(item_reference_from_frame_get(reference));
+                    document.frame_references_clear();
+                }
+                else if (reference.itemType != NONE || reference.itemID != -1)
+                    group_selection_reset_for(document);
+                document.focus_clear();
             }
-          }
 
-          int index = 0;
-
-          ImGui::TableSetupScrollFreeze(0, 1);
-          ImGui::TableSetupColumn("##Frames");
-
-          auto frames_child_row = [&](const TimelineRow& row)
-          {
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            frame_child(row, index, childWidth);
-          };
-
-          frames_child_row({.type = NONE});
-
-          if (animation)
-          {
-            ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 2.0f);
-
-            for (auto& row : timeline_item_rows_get())
+            ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2());
+            if (ImGui::BeginTable("##Frames List Table", 1,
+                                  ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY))
             {
-              frames_child_row(row);
-              for (auto& peek : peek_rows_get(row))
-              {
-                ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0);
-                peek_frame_child(row, peek, index, childWidth);
-              }
+                ImGuiWindow* window = ImGui::GetCurrentWindow();
+                window->Flags |= ImGuiWindowFlags_NoScrollWithMouse;
+
+                scroll.x = ImGui::GetScrollX();
+                scroll.y = ImGui::GetScrollY();
+
+                isHorizontalScroll = window->ScrollbarX;
+
+                if (isWindowHovered)
+                {
+                    auto& io = ImGui::GetIO();
+                    auto lineHeight = ImGui::GetTextLineHeightWithSpacing() * 2;
+
+                    scroll.x -= io.MouseWheelH * lineHeight;
+                    scroll.y -= io.MouseWheel * lineHeight;
+                }
+
+                ImGui::SetScrollX(scroll.x);
+                ImGui::SetScrollY(scroll.y);
+
+                auto frameBoxDrawList = ImGui::GetWindowDrawList();
+                frameBoxClipMin = frameBoxDrawList->GetClipRectMin();
+                frameBoxClipMax = frameBoxDrawList->GetClipRectMax();
+                isFrameBoxClipSet = true;
+                if (isFrameBoxPending || isFrameBoxSelecting)
+                {
+                    auto& io = ImGui::GetIO();
+                    auto threshold = ImGui::GetTextLineHeightWithSpacing() * 0.125f;
+                    frameBoxEnd = frame_box_content_point_get();
+                    auto distance = ImVec2(frameBoxEnd.x - frameBoxStart.x, frameBoxEnd.y - frameBoxStart.y);
+                    if (isFrameBoxPending && distance.x * distance.x + distance.y * distance.y >= threshold * threshold)
+                    {
+                        isFrameBoxPending = false;
+                        isFrameBoxSelecting = true;
+                    }
+                    auto edgeSize = ImGui::GetTextLineHeightWithSpacing();
+                    auto scrollStep = edgeSize * 0.5f;
+                    if (isFrameBoxSelecting)
+                    {
+                        if (io.MousePos.x < frameBoxClipMin.x + edgeSize)
+                            scroll.x -= scrollStep;
+                        else if (io.MousePos.x > frameBoxClipMax.x - edgeSize)
+                            scroll.x += scrollStep;
+                        if (io.MousePos.y < frameBoxClipMin.y + edgeSize)
+                            scroll.y -= scrollStep;
+                        else if (io.MousePos.y > frameBoxClipMax.y - edgeSize)
+                            scroll.y += scrollStep;
+                        ImGui::SetScrollX(scroll.x);
+                        ImGui::SetScrollY(scroll.y);
+                        frameBoxEnd = frame_box_content_point_get();
+                        frameBoxSelection.clear();
+                    }
+                }
+
+                int index = 0;
+
+                ImGui::TableSetupScrollFreeze(0, 1);
+                ImGui::TableSetupColumn("##Frames");
+
+                auto frames_child_row = [&](const TimelineRow& row) {
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    frame_child(row, index, childWidth);
+                };
+
+                frames_child_row({.type = NONE});
+
+                if (animation)
+                {
+                    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 2.0f);
+
+                    for (auto& row : timeline_item_rows_get())
+                    {
+                        frames_child_row(row);
+                        for (auto& peek : peek_rows_get(row))
+                        {
+                            ImGui::TableNextRow();
+                            ImGui::TableSetColumnIndex(0);
+                            peek_frame_child(row, peek, index, childWidth);
+                        }
+                    }
+
+                    ImGui::PopStyleVar();
+                }
+                ImGui::EndTable();
+            }
+
+            frame_drag_update();
+            context_menu();
+
+            if (isFrameBoxClipSet)
+            {
+                auto overlayCursor = ImGui::GetCursorScreenPos();
+                auto overlayPos = ImGui::GetWindowPos();
+                auto overlaySize = ImGui::GetWindowSize();
+                ImGui::SetCursorScreenPos(overlayPos);
+                if (ImGui::BeginChild("##Frames Overlay Child", overlaySize, ImGuiChildFlags_None,
+                                      ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoBackground |
+                                          ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse |
+                                          ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoNavInputs))
+                    frame_overlay_draw(ImGui::GetWindowDrawList(), frameBoxClipMin, frameBoxClipMax);
+                ImGui::EndChild();
+                ImGui::SetCursorScreenPos(overlayCursor);
+            }
+
+            if (isFrameBoxPending || isFrameBoxSelecting)
+            {
+                if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+                {
+                    if (isFrameBoxSelecting)
+                    {
+                        group_selection_reset_for(document);
+                        if (isFrameBoxAdditive)
+                        {
+                            auto selectedFrames = document.frame_references_get(Document::FrameReferenceFallback::NONE);
+                            selectedFrames.insert(frameBoxSelection.begin(), frameBoxSelection.end());
+                            document.frame_references_set(std::move(selectedFrames));
+                        }
+                        else
+                            document.frame_references_set(frameBoxSelection);
+                    }
+                    isFrameBoxPending = false;
+                    isFrameBoxSelecting = false;
+                    frameBoxSelection.clear();
+                }
             }
 
             ImGui::PopStyleVar();
-          }
-          ImGui::EndTable();
         }
-
-        frame_drag_update();
-        context_menu();
-
-        if (isFrameBoxClipSet)
-        {
-          auto overlayCursor = ImGui::GetCursorScreenPos();
-          auto overlayPos = ImGui::GetWindowPos();
-          auto overlaySize = ImGui::GetWindowSize();
-          ImGui::SetCursorScreenPos(overlayPos);
-          if (ImGui::BeginChild("##Frames Overlay Child", overlaySize, ImGuiChildFlags_None,
-                                ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoBackground |
-                                    ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse |
-                                    ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoNavInputs))
-            frame_overlay_draw(ImGui::GetWindowDrawList(), frameBoxClipMin, frameBoxClipMax);
-          ImGui::EndChild();
-          ImGui::SetCursorScreenPos(overlayCursor);
-        }
-
-        if (isFrameBoxPending || isFrameBoxSelecting)
-        {
-          if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
-          {
-            if (isFrameBoxSelecting)
-            {
-              group_selection_reset_for(document);
-              if (isFrameBoxAdditive)
-              {
-                auto selectedFrames = document.frame_references_get(Document::FrameReferenceFallback::NONE);
-                selectedFrames.insert(frameBoxSelection.begin(), frameBoxSelection.end());
-                document.frame_references_set(std::move(selectedFrames));
-              }
-              else
-                document.frame_references_set(frameBoxSelection);
-            }
-            isFrameBoxPending = false;
-            isFrameBoxSelecting = false;
-            frameBoxSelection.clear();
-          }
-        }
-
+        ImGui::EndChild();
         ImGui::PopStyleVar();
-      }
-      ImGui::EndChild();
-      ImGui::PopStyleVar();
 
-      ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, style.WindowPadding);
 
-      ImGui::SetCursorPos(
-          ImVec2(ImGui::GetStyle().WindowPadding.x, ImGui::GetCursorPos().y + ImGui::GetStyle().ItemSpacing.y));
+        ImGui::SetCursorPos(
+            ImVec2(ImGui::GetStyle().WindowPadding.x, ImGui::GetCursorPos().y + ImGui::GetStyle().ItemSpacing.y));
 
-      auto widgetSize = widget_size_with_row_get(10);
+        auto widgetSize = widget_size_with_row_get(10);
 
-      ImGui::BeginDisabled(!animation);
-      {
-        auto label = playback.isPlaying ? localize.get(LABEL_PAUSE) : localize.get(LABEL_PLAY);
-        auto tooltip =
-            playback.isPlaying ? localize.get(TOOLTIP_PAUSE_ANIMATION) : localize.get(TOOLTIP_PLAY_ANIMATION);
-
-        shortcut(manager.chords[SHORTCUT_PLAY_PAUSE]);
-        if (ImGui::Button(label, widgetSize)) playback.toggle();
-        set_item_tooltip_shortcut(tooltip, settings.shortcutPlayPause);
-
-        ImGui::SameLine();
-
-        auto item = selected_item_get();
-        auto selectedFrames = document.frame_references_get(Document::FrameReferenceFallback::NONE);
-        auto selectedBakeFrames = selectedFrames;
-        std::erase_if(selectedBakeFrames, is_trigger_reference);
-
-        ImGui::BeginDisabled(!item);
+        ImGui::BeginDisabled(!animation);
         {
-          shortcut(manager.chords[SHORTCUT_INSERT_FRAME]);
-          if (ImGui::Button(localize.get(LABEL_INSERT), widgetSize)) frame_insert();
-          set_item_tooltip_shortcut(localize.get(TOOLTIP_INSERT_FRAME), settings.shortcutInsertFrame);
+            auto label = playback.isPlaying ? localize.get(LABEL_PAUSE) : localize.get(LABEL_PLAY);
+            auto tooltip =
+                playback.isPlaying ? localize.get(TOOLTIP_PAUSE_ANIMATION) : localize.get(TOOLTIP_PLAY_ANIMATION);
 
-          ImGui::SameLine();
-
-          ImGui::BeginDisabled(selectedFrames.empty());
-          {
-            shortcut(manager.chords[SHORTCUT_REMOVE]);
-            if (ImGui::Button(localize.get(LABEL_DELETE), widgetSize)) frames_delete_action();
-            set_item_tooltip_shortcut(localize.get(TOOLTIP_DELETE_FRAMES), settings.shortcutRemove);
+            shortcut(manager.chords[SHORTCUT_PLAY_PAUSE]);
+            if (ImGui::Button(label, widgetSize))
+                playback.toggle();
+            set_item_tooltip_shortcut(tooltip, settings.shortcutPlayPause);
 
             ImGui::SameLine();
 
-            ImGui::BeginDisabled(selectedBakeFrames.empty());
-            if (ImGui::Button(localize.get(LABEL_BAKE), widgetSize)) bakePopup.open();
-            set_item_tooltip_shortcut(localize.get(TOOLTIP_BAKE_FRAMES), settings.shortcutBake);
+            auto item = selected_item_get();
+            auto selectedFrames = document.frame_references_get(Document::FrameReferenceFallback::NONE);
+            auto selectedBakeFrames = selectedFrames;
+            std::erase_if(selectedBakeFrames, is_trigger_reference);
+
+            ImGui::BeginDisabled(!item);
+            {
+                shortcut(manager.chords[SHORTCUT_INSERT_FRAME]);
+                if (ImGui::Button(localize.get(LABEL_INSERT), widgetSize))
+                    frame_insert();
+                set_item_tooltip_shortcut(localize.get(TOOLTIP_INSERT_FRAME), settings.shortcutInsertFrame);
+
+                ImGui::SameLine();
+
+                ImGui::BeginDisabled(selectedFrames.empty());
+                {
+                    shortcut(manager.chords[SHORTCUT_REMOVE]);
+                    if (ImGui::Button(localize.get(LABEL_DELETE), widgetSize))
+                        frames_delete_action();
+                    set_item_tooltip_shortcut(localize.get(TOOLTIP_DELETE_FRAMES), settings.shortcutRemove);
+
+                    ImGui::SameLine();
+
+                    ImGui::BeginDisabled(selectedBakeFrames.empty());
+                    if (ImGui::Button(localize.get(LABEL_BAKE), widgetSize))
+                        bakePopup.open();
+                    set_item_tooltip_shortcut(localize.get(TOOLTIP_BAKE_FRAMES), settings.shortcutBake);
+                    ImGui::EndDisabled();
+                }
+                ImGui::EndDisabled();
+            }
             ImGui::EndDisabled();
-          }
-          ImGui::EndDisabled();
+
+            ImGui::SameLine();
+
+            ImGui::BeginDisabled(!animation || animation->frameNum == animation_length_get(*animation));
+            shortcut(manager.chords[SHORTCUT_FIT]);
+            if (ImGui::Button(localize.get(LABEL_FIT_ANIMATION_LENGTH), widgetSize))
+                fit_animation_length();
+            set_item_tooltip_shortcut(localize.get(TOOLTIP_FIT_ANIMATION_LENGTH), settings.shortcutFit);
+            ImGui::EndDisabled();
+
+            ImGui::SameLine();
+
+            auto frameNum = animation ? animation->frameNum : dummy_value<int>();
+            auto currentAnimationIndex = reference.animationIndex;
+            ImGui::SetNextItemWidth(widgetSize.x);
+            auto isLengthChanged =
+                input_int_range(localize.get(LABEL_ANIMATION_LENGTH), frameNum, FRAME_NUM_MIN, FRAME_NUM_MAX, STEP,
+                                STEP_FAST, !animation ? ImGuiInputTextFlags_DisplayEmptyRefVal : 0);
+            if (ImGui::IsItemActivated())
+                animationLengthEditIndex = currentAnimationIndex;
+            if (isLengthChanged && animation)
+            {
+                auto animationIndex = animationLengthEditIndex != -1 ? animationLengthEditIndex : currentAnimationIndex;
+                edit_push(EDIT_ANIMATION_LENGTH, [=](Model& model) {
+                    if (auto animation = model.animation_edit(animationIndex))
+                        animation->frameNum = frameNum;
+                });
+            }
+            if (ImGui::IsItemDeactivated())
+                animationLengthEditIndex = -1;
+            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ANIMATION_LENGTH));
+
+            ImGui::SameLine();
+
+            auto isLoop = animation ? animation->isLoop : dummy_value<bool>();
+            ImGui::SetNextItemWidth(widgetSize.x);
+            if (ImGui::Checkbox(localize.get(LABEL_LOOP), &isLoop) && animation)
+            {
+                auto animationIndex = reference.animationIndex;
+                edit_push(EDIT_LOOP, [=](Model& model) {
+                    if (auto animation = model.animation_edit(animationIndex))
+                        animation->isLoop = isLoop;
+                });
+            }
+            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LOOP_ANIMATION));
         }
         ImGui::EndDisabled();
 
         ImGui::SameLine();
 
-        ImGui::BeginDisabled(!animation || animation->frameNum == animation_length_get(*animation));
-        shortcut(manager.chords[SHORTCUT_FIT]);
-        if (ImGui::Button(localize.get(LABEL_FIT_ANIMATION_LENGTH), widgetSize)) fit_animation_length();
-        set_item_tooltip_shortcut(localize.get(TOOLTIP_FIT_ANIMATION_LENGTH), settings.shortcutFit);
-        ImGui::EndDisabled();
+        auto fps = model.info.fps;
+        ImGui::SetNextItemWidth(widgetSize.x);
+        if (input_int_range(localize.get(LABEL_FPS), fps, FPS_MIN, FPS_MAX))
+            edit_push(EDIT_FPS, [=](Model& model) { model.info.fps = fps; });
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FPS));
 
         ImGui::SameLine();
 
-        auto frameNum = animation ? animation->frameNum : dummy_value<int>();
-        auto currentAnimationIndex = reference.animationIndex;
+        auto createdBy = model.info.createdBy;
         ImGui::SetNextItemWidth(widgetSize.x);
-        auto isLengthChanged =
-            input_int_range(localize.get(LABEL_ANIMATION_LENGTH), frameNum, FRAME_NUM_MIN, FRAME_NUM_MAX, STEP,
-                            STEP_FAST, !animation ? ImGuiInputTextFlags_DisplayEmptyRefVal : 0);
-        if (ImGui::IsItemActivated()) animationLengthEditIndex = currentAnimationIndex;
-        if (isLengthChanged && animation)
-        {
-          auto animationIndex = animationLengthEditIndex != -1 ? animationLengthEditIndex : currentAnimationIndex;
-          edit_push(EDIT_ANIMATION_LENGTH,
-                    [=](Model& model)
-                    {
-                      if (auto animation = model.animation_edit(animationIndex)) animation->frameNum = frameNum;
-                    });
-        }
-        if (ImGui::IsItemDeactivated()) animationLengthEditIndex = -1;
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ANIMATION_LENGTH));
+        if (input_text_string(localize.get(LABEL_AUTHOR), &createdBy))
+            edit_push(EDIT_AUTHOR, [=](Model& model) { model.info.createdBy = createdBy; });
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_AUTHOR));
 
         ImGui::SameLine();
 
-        auto isLoop = animation ? animation->isLoop : dummy_value<bool>();
         ImGui::SetNextItemWidth(widgetSize.x);
-        if (ImGui::Checkbox(localize.get(LABEL_LOOP), &isLoop) && animation)
-        {
-          auto animationIndex = reference.animationIndex;
-          edit_push(EDIT_LOOP,
-                    [=](Model& model)
-                    {
-                      if (auto animation = model.animation_edit(animationIndex)) animation->isLoop = isLoop;
-                    });
-        }
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LOOP_ANIMATION));
-      }
-      ImGui::EndDisabled();
+        ImGui::Checkbox(localize.get(LABEL_SOUND), &settings.timelineIsSound);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SOUND));
 
-      ImGui::SameLine();
-
-      auto fps = model.info.fps;
-      ImGui::SetNextItemWidth(widgetSize.x);
-      if (input_int_range(localize.get(LABEL_FPS), fps, FPS_MIN, FPS_MAX))
-      {
-        edit_push(EDIT_FPS, [=](Model& model) { model.info.fps = fps; });
-      }
-      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FPS));
-
-      ImGui::SameLine();
-
-      auto createdBy = model.info.createdBy;
-      ImGui::SetNextItemWidth(widgetSize.x);
-      if (input_text_string(localize.get(LABEL_AUTHOR), &createdBy))
-      {
-        edit_push(EDIT_AUTHOR, [=](Model& model) { model.info.createdBy = createdBy; });
-      }
-      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_AUTHOR));
-
-      ImGui::SameLine();
-
-      ImGui::SetNextItemWidth(widgetSize.x);
-      ImGui::Checkbox(localize.get(LABEL_SOUND), &settings.timelineIsSound);
-      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SOUND));
-
-      ImGui::PopStyleVar();
+        ImGui::PopStyleVar();
     }
     ImGui::EndChild();
 
     ImGui::SetCursorPos(cursorPos);
-  }
+}

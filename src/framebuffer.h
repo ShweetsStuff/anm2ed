@@ -3,14 +3,14 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 
-  class Framebuffer
-  {
-  public:
+class Framebuffer
+{
+public:
     enum class Type
     {
-      UNDERLAY,
-      LAYER,
-      OVERLAY,
+        UNDERLAY,
+        LAYER,
+        OVERLAY,
     };
 
     GLuint fbo = 0;
@@ -18,7 +18,7 @@
     GLuint texture = 0;
     glm::vec2 size{};
     glm::vec2 previousSize{};
-    GLint filter = GL_LINEAR; // how the texture is sampled when drawn scaled; takes effect on the next resize
+    GLint filter = GL_LINEAR; // how the texture is sampled when drawn scaled. Takes effect on the next resize
 
     Framebuffer();
     ~Framebuffer();
@@ -32,4 +32,4 @@
     bool is_valid() const;
     void bind() const;
     void unbind() const;
-  };
+};

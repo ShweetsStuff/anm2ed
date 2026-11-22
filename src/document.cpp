@@ -30,166 +30,175 @@
 
 using namespace glm;
 
-  constexpr std::string_view BAKED_EXTENSION = ".baked.png";
-  constexpr std::string_view AUTOSAVE_EXTENSION = ".autosave";
-  constexpr int VECTOR_LEVEL_MAX = 3;
-  constexpr int VECTOR_SIZE_MAX = 8192;
-  constexpr std::uint64_t HASH_COMBINE_CONSTANT = 0x9e3779b97f4a7c15ULL;
+constexpr std::string_view BAKED_EXTENSION = ".baked.png";
+constexpr std::string_view AUTOSAVE_EXTENSION = ".autosave";
+constexpr int VECTOR_LEVEL_MAX = 3;
+constexpr int VECTOR_SIZE_MAX = 8192;
+constexpr std::uint64_t HASH_COMBINE_CONSTANT = 0x9e3779b97f4a7c15ULL;
 
-  // A path written in a document in `directory`, as an absolute path.
-  static std::filesystem::path absolute_path_get(const std::filesystem::path& directory, const std::filesystem::path& path)
-  {
+// A path written in a document in `directory`, as an absolute path.
+static std::filesystem::path absolute_path_get(const std::filesystem::path& directory,
+                                               const std::filesystem::path& path)
+{
     WorkingDirectory workingDirectory(directory);
     std::error_code ec;
     auto absolutePath = std::filesystem::weakly_canonical(directory / path_case_insensitive_find(path), ec);
     return ec ? directory / path : absolutePath;
-  }
+}
 
-  static void library_load(const std::filesystem::path& path, LibraryData& library)
-  {
+static void library_load(const std::filesystem::path& path, LibraryData& library)
+{
     library = {};
     std::string errorString;
     model_load(library.model, path, &errorString);
     // Why it couldn't load, or what a JSON library couldn't read.
-    if (!errorString.empty()) toast_log(Level::WARNING, TOAST_LIBRARY_ISSUES, path_to_utf8(path), errorString);
+    if (!errorString.empty())
+        toast_log(Level::WARNING, TOAST_LIBRARY_ISSUES, path_to_utf8(path), errorString);
     std::error_code ec;
     library.writeTime = std::filesystem::last_write_time(path, ec);
     WorkingDirectory workingDirectory(path.parent_path());
     for (auto& spritesheet : library.model.content.spritesheets)
-      library.images.emplace(spritesheet.id, Image(path_case_insensitive_find(spritesheet.path)));
+        library.images.emplace(spritesheet.id, Image(path_case_insensitive_find(spritesheet.path)));
     for (auto& sound : library.model.content.sounds)
-      library.sounds.emplace(sound.id, AudioData(path_case_insensitive_find(sound.path)));
-  }
+        library.sounds.emplace(sound.id, AudioData(path_case_insensitive_find(sound.path)));
+}
 
-  static uint64_t document_tab_id_next()
-  {
+static uint64_t document_tab_id_next()
+{
     static uint64_t next = 1;
     return next++;
-  }
+}
 
-  static std::filesystem::path shader_absolute_path_get(Document& document, const std::filesystem::path& path)
-  {
+static std::filesystem::path shader_absolute_path_get(Document& document, const std::filesystem::path& path)
+{
     auto loadPath = path_backslash_handle(path);
-    if (loadPath.empty() || loadPath.is_absolute()) return loadPath;
+    if (loadPath.empty() || loadPath.is_absolute())
+        return loadPath;
     return document.directory_get() / loadPath;
-  }
+}
 
-  static void shader_status_append(const ShaderCompileResult& result, std::string* status)
-  {
-    if (!status) return;
+static void shader_status_append(const ShaderCompileResult& result, std::string* status)
+{
+    if (!status)
+        return;
 
     *status += localize.get(result.isCompiled ? LABEL_SHADER_COMPILE_SUCCEEDED : LABEL_SHADER_COMPILE_FAILED);
     *status += "\n";
     if (result.isCompiled)
     {
-      *status += localize.get(result.isLinked ? LABEL_SHADER_LINK_SUCCEEDED : LABEL_SHADER_LINK_FAILED);
-      *status += "\n";
+        *status += localize.get(result.isLinked ? LABEL_SHADER_LINK_SUCCEEDED : LABEL_SHADER_LINK_FAILED);
+        *status += "\n";
     }
-    if (!result.output.empty()) *status += result.output;
-  }
+    if (!result.output.empty())
+        *status += result.output;
+}
 
-  static std::string shader_source_lines_get(std::string_view label, std::string_view source)
-  {
+static std::string shader_source_lines_get(std::string_view label, std::string_view source)
+{
     std::string output = std::format("\n{}:\n", label);
     int lineNumber = 1;
     std::size_t position = 0;
     while (position <= source.size())
     {
-      auto end = source.find('\n', position);
-      auto isEnd = end == std::string_view::npos;
-      output += std::format("{:4}: {}\n", lineNumber++,
-                            source.substr(position, isEnd ? std::string_view::npos : end - position));
-      if (isEnd) break;
-      position = end + 1;
+        auto end = source.find('\n', position);
+        auto isEnd = end == std::string_view::npos;
+        output += std::format("{:4}: {}\n", lineNumber++,
+                              source.substr(position, isEnd ? std::string_view::npos : end - position));
+        if (isEnd)
+            break;
+        position = end + 1;
     }
     return output;
-  }
+}
 
-  static void shader_status_format_append(std::string* status, StringType format, StringType argument)
-  {
-    if (!status) return;
+static void shader_status_format_append(std::string* status, StringType format, StringType argument)
+{
+    if (!status)
+        return;
     auto argumentString = std::string(localize.get(argument));
     *status += std::vformat(localize.get(format), std::make_format_args(argumentString)) + "\n";
-  }
+}
 
-  static bool shader_source_load(Document& document, const std::filesystem::path& shaderPath, std::string& source,
-                          StringType label, std::string* status, const char* fallback = nullptr)
-  {
+static bool shader_source_load(Document& document, const std::filesystem::path& shaderPath, std::string& source,
+                               StringType label, std::string* status, const char* fallback = nullptr)
+{
     if (shaderPath.empty() && !fallback)
     {
-      shader_status_format_append(status, LABEL_SHADER_PATH_EMPTY, label);
-      return false;
+        shader_status_format_append(status, LABEL_SHADER_PATH_EMPTY, label);
+        return false;
     }
     if (shaderPath.empty())
     {
-      source = fallback;
-      return true;
+        source = fallback;
+        return true;
     }
 
     auto absolute = path_case_insensitive_find(shader_absolute_path_get(document, shaderPath));
-    if (file_text_load(absolute, &source)) return true;
+    if (file_text_load(absolute, &source))
+        return true;
 
     if (status)
     {
-      auto pathString = path_to_utf8(shaderPath);
-      *status += std::vformat(localize.get(LABEL_SHADER_READ_FAILED), std::make_format_args(pathString)) + "\n";
+        auto pathString = path_to_utf8(shaderPath);
+        *status += std::vformat(localize.get(LABEL_SHADER_READ_FAILED), std::make_format_args(pathString)) + "\n";
     }
     return false;
-  }
+}
 
-  // Loads assets for elements that are new or whose path changed, and forgets those of removed elements.
-  template <class Items, class Load>
-  void resources_sync(Document& document, const Items& items, std::map<int, std::uint64_t>& keys,
-                      std::unordered_map<int, std::filesystem::path>& paths, Load&& load)
-  {
+// Loads assets for elements that are new or whose path changed, and forgets those of removed elements.
+template <class Items, class Load>
+void resources_sync(Document& document, const Items& items, std::map<int, std::uint64_t>& keys,
+                    std::unordered_map<int, std::filesystem::path>& paths, Load&& load)
+{
     std::set<int> validIds;
     WorkingDirectory workingDirectory(document.directory_get());
     for (auto& element : items)
     {
-      validIds.insert(element.id);
-      auto path = paths.find(element.id);
-      if (!keys.contains(element.id) || path == paths.end() || path->second != element.path)
-      {
-        load(element.id, path_case_insensitive_find(element.path));
-        paths[element.id] = element.path;
-      }
+        validIds.insert(element.id);
+        auto path = paths.find(element.id);
+        if (!keys.contains(element.id) || path == paths.end() || path->second != element.path)
+        {
+            load(element.id, path_case_insensitive_find(element.path));
+            paths[element.id] = element.path;
+        }
     }
 
     std::erase_if(keys, [&](const auto& pair) { return !validIds.contains(pair.first); });
     std::erase_if(paths, [&](const auto& pair) { return !validIds.contains(pair.first); });
-  }
+}
 
-  // A spritesheet is dirty when its path or image asset differs from what was last saved.
-  static uint64_t spritesheet_hash_get(const Spritesheet& spritesheet, std::uint64_t imageKey)
-  {
+// A spritesheet is dirty when its path or image asset differs from what was last saved.
+static uint64_t spritesheet_hash_get(const Spritesheet& spritesheet, std::uint64_t imageKey)
+{
     auto seed = std::hash<std::string>{}(path_to_utf8(spritesheet.path));
     return seed ^ (imageKey + HASH_COMBINE_CONSTANT + (seed << 6) + (seed >> 2));
-  }
+}
 
-  static Reference item_reference_get(Reference reference)
-  {
+static Reference item_reference_get(Reference reference)
+{
     reference.frameIndex = -1;
     return reference;
-  }
+}
 
-  static void frame_time_sync(Document& document)
-  {
+static void frame_time_sync(Document& document)
+{
     auto reference = document.reference_get();
     auto item = document.model.track_get(reference);
     auto frameIndex = reference.frameIndex;
     document.frameTime = item && frameIndex >= 0 ? frame_time_from_index_get(*item, frameIndex) : 0.0f;
-  }
+}
 
-  Document::Document(const std::filesystem::path& path, bool isNew, std::string* errorString)
-  {
+Document::Document(const std::filesystem::path& path, bool isNew, std::string* errorString)
+{
     tabId = document_tab_id_next();
     model = model_make();
-    if (!isNew) model_load(model, path, errorString);
+    if (!isNew)
+        model_load(model, path, errorString);
     if (isNew ? !save(path, errorString) : !model.isValid)
     {
-      isValid = false;
-      this->path.clear();
-      return;
+        isValid = false;
+        this->path.clear();
+        return;
     }
 
     this->path = path;
@@ -197,156 +206,161 @@ using namespace glm;
     model.uids_repair();
     clean();
     change();
-  }
+}
 
-  Document::Document(Document&& other) noexcept : DocumentData(std::move(other)), editTarget(other.editTarget) {}
+Document::Document(Document&& other) noexcept : DocumentData(std::move(other)), editTarget(other.editTarget)
+{}
 
-  Document& Document::operator=(Document&& other) noexcept
-  {
-    if (this != &other) this->~Document();
+Document& Document::operator=(Document&& other) noexcept
+{
+    if (this != &other)
+        this->~Document();
     new (this) Document(std::move(other));
     return *this;
-  }
+}
 
-  bool Document::save(const std::filesystem::path& path, std::string* errorString, Options options)
-  {
+bool Document::save(const std::filesystem::path& path, std::string* errorString, Options options)
+{
     auto absolutePath = !path.empty() ? path : this->path;
     auto absolutePathUtf8 = path_to_utf8(absolutePath);
     if (file_write(absolutePath, errorString, options))
     {
-      this->path = absolutePath;
-      toast_log(Level::INFO, TOAST_SAVE_DOCUMENT, absolutePathUtf8);
-      clean();
-      return true;
+        this->path = absolutePath;
+        toast_log(Level::INFO, TOAST_SAVE_DOCUMENT, absolutePathUtf8);
+        clean();
+        return true;
     }
-    if (errorString) toast_log(Level::ERROR, TOAST_SAVE_DOCUMENT_FAILED, absolutePathUtf8, *errorString);
+    if (errorString)
+        toast_log(Level::ERROR, TOAST_SAVE_DOCUMENT_FAILED, absolutePathUtf8, *errorString);
     return false;
-  }
+}
 
-  // A library's spritesheet path, made relative to this document (for flattening its animation layers).
-  SpritesheetPathGet Document::spritesheet_path_resolver_get() const
-  {
-    return [this](const Model& source, const std::filesystem::path& spritesheetPath)
-    {
-      for (auto& [libraryPath, library] : libraries)
-        if (&library.model == &source)
-          return path_backslash_replace(
-              path_make_relative(absolute_path_get(libraryPath.parent_path(), spritesheetPath),
-                                  std::filesystem::absolute(directory_get())));
-      return spritesheetPath;
+// A library's spritesheet path, made relative to this document (for flattening its animation layers).
+SpritesheetPathGet Document::spritesheet_path_resolver_get() const
+{
+    return [this](const Model& source, const std::filesystem::path& spritesheetPath) {
+        for (auto& [libraryPath, library] : libraries)
+            if (&library.model == &source)
+                return path_backslash_replace(
+                    path_make_relative(absolute_path_get(libraryPath.parent_path(), spritesheetPath),
+                                       std::filesystem::absolute(directory_get())));
+        return spritesheetPath;
     };
-  }
+}
 
-  // Writes the document; the game's copy has its animation layers flattened into plain layers, and what else the game
-  // can't show worked around.
-  bool Document::file_write(const std::filesystem::path& path, std::string* errorString, Options options)
-  {
+// Writes the document. The game's copy has its animation layers flattened into plain layers, and what else the game
+// can't show worked around.
+bool Document::file_write(const std::filesystem::path& path, std::string* errorString, Options options)
+{
     std::optional<Model> game;
     if (!options.isJson)
     {
-      game = animation_layers_flatten(model, library_resolver_get(), spritesheet_path_resolver_get());
-      if (!model.info.isIsaacIgnored)
-      {
-        auto bakedPath = path;
-        if (options.isPixelBaked)
-          frames_bake(*this, *game, bakedPath.replace_extension(BAKED_EXTENSION));
-        game = isaac_bridge(std::move(*game));
-      }
+        game = animation_layers_flatten(model, library_resolver_get(), spritesheet_path_resolver_get());
+        if (!model.info.isIsaacIgnored)
+        {
+            auto bakedPath = path;
+            if (options.isPixelBaked)
+                frames_bake(*this, *game, bakedPath.replace_extension(BAKED_EXTENSION));
+            game = isaac_bridge(std::move(*game));
+        }
     }
     options.gameModel = game ? &*game : nullptr;
     return model_save(model, path, errorString, options);
-  }
+}
 
-  std::filesystem::path Document::autosave_path_get()
-  {
-    return directory_get() /
-           path_from_utf8("." + path_to_utf8(filename_get()) + std::string(AUTOSAVE_EXTENSION));
-  }
+std::filesystem::path Document::autosave_path_get()
+{
+    return directory_get() / path_from_utf8("." + path_to_utf8(filename_get()) + std::string(AUTOSAVE_EXTENSION));
+}
 
-  std::filesystem::path Document::path_from_autosave_get(const std::filesystem::path& path)
-  {
+std::filesystem::path Document::path_from_autosave_get(const std::filesystem::path& path)
+{
     auto fileName = path_to_utf8(path.filename());
-    if (fileName.starts_with('.')) fileName.erase(fileName.begin());
+    if (fileName.starts_with('.'))
+        fileName.erase(fileName.begin());
     if (fileName.ends_with(AUTOSAVE_EXTENSION))
-      fileName.erase(fileName.size() - AUTOSAVE_EXTENSION.size());
+        fileName.erase(fileName.size() - AUTOSAVE_EXTENSION.size());
     return path.parent_path() / std::filesystem::path(std::u8string(fileName.begin(), fileName.end()));
-  }
+}
 
-  bool Document::autosave(std::string* errorString, Options options)
-  {
+bool Document::autosave(std::string* errorString, Options options)
+{
     auto autosavePath = autosave_path_get();
     auto autosavePathUtf8 = path_to_utf8(autosavePath);
     // An autosave is read back from the editor's copy, so the game's needs no baked spritesheet.
     options.isPixelBaked = false;
     if (file_write(autosavePath, errorString, options))
     {
-      for (auto id : spritesheets_autosave_dirty_get())
-      {
-        auto spritesheet = item_get(model.content.spritesheets, id);
-        auto texture = texture_get(id);
-        if (texture && texture->write(spritesheet_autosave_path_get(*spritesheet)))
-          spritesheetAutosaveHashes[id] = spritesheetHashes.at(id);
-      }
-      autosaveHash = hash;
-      lastAutosaveTime = 0.0f;
-      toast_log(Level::INFO, TOAST_AUTOSAVING);
-      logger.info(std::format("Autosaved document to: {}", autosavePathUtf8));
-      return true;
+        for (auto id : spritesheets_autosave_dirty_get())
+        {
+            auto spritesheet = item_get(model.content.spritesheets, id);
+            auto texture = texture_get(id);
+            if (texture && texture->write(spritesheet_autosave_path_get(*spritesheet)))
+                spritesheetAutosaveHashes[id] = spritesheetHashes.at(id);
+        }
+        autosaveHash = hash;
+        lastAutosaveTime = 0.0f;
+        toast_log(Level::INFO, TOAST_AUTOSAVING);
+        logger.info(std::format("Autosaved document to: {}", autosavePathUtf8));
+        return true;
     }
-    if (errorString) toast_log(Level::ERROR, TOAST_AUTOSAVE_FAILED, autosavePathUtf8, *errorString);
+    if (errorString)
+        toast_log(Level::ERROR, TOAST_AUTOSAVE_FAILED, autosavePathUtf8, *errorString);
     return false;
-  }
+}
 
-  void Document::texture_change(int id)
-  {
-    if (texture_get(id) && item_get(model.content.spritesheets, id)) change();
-  }
+void Document::texture_change(int id)
+{
+    if (texture_get(id) && item_get(model.content.spritesheets, id))
+        change();
+}
 
-  bool Document::texture_reload(int id)
-  {
+bool Document::texture_reload(int id)
+{
     auto spritesheet = item_get(model.content.spritesheets, id);
-    if (!spritesheet) return false;
+    if (!spritesheet)
+        return false;
     WorkingDirectory workingDirectory(directory_get());
     texture_set(id, Image(path_case_insensitive_find(spritesheet->path)));
     texturePaths[id] = spritesheet->path;
     return true;
-  }
+}
 
-  bool Document::sound_reload(int id)
-  {
+bool Document::sound_reload(int id)
+{
     auto sound = item_get(model.content.sounds, id);
-    if (!sound) return false;
+    if (!sound)
+        return false;
     WorkingDirectory workingDirectory(directory_get());
     sound_set(id, AudioData(path_case_insensitive_find(sound->path)));
     soundPaths[id] = sound->path;
     return true;
-  }
+}
 
-  bool Document::shader_reload(int shaderId, std::string* status)
-  {
-    auto shader_erase = [&]()
-    {
-      shaders.erase(shaderId);
-      shaderVertexPaths.erase(shaderId);
-      shaderFragmentPaths.erase(shaderId);
-      return false;
+bool Document::shader_reload(int shaderId, std::string* status)
+{
+    auto shader_erase = [&]() {
+        shaders.erase(shaderId);
+        shaderVertexPaths.erase(shaderId);
+        shaderFragmentPaths.erase(shaderId);
+        return false;
     };
 
     // Without an OpenGL context (as the command line converts), there is nothing to compile it with.
     auto shaderElement = SDL_GL_GetCurrentContext() ? item_get(model.content.shaders, shaderId) : nullptr;
     if (!shaderElement)
     {
-      shader_status_format_append(status, LABEL_SHADER_PATH_EMPTY, LABEL_FRAGMENT);
-      return shader_erase();
+        shader_status_format_append(status, LABEL_SHADER_PATH_EMPTY, LABEL_FRAGMENT);
+        return shader_erase();
     }
 
     std::string vertexSource;
     std::string fragmentSource;
     auto isVertexLoaded = shader_source_load(*this, shaderElement->vertex, vertexSource, LABEL_VERTEX, status,
-                                                       TEXTURE_COMPATIBILITY_VERTEX);
-    auto isFragmentLoaded =
-        shader_source_load(*this, shaderElement->fragment, fragmentSource, LABEL_FRAGMENT, status);
-    if (!isVertexLoaded || !isFragmentLoaded) return shader_erase();
+                                             TEXTURE_COMPATIBILITY_VERTEX);
+    auto isFragmentLoaded = shader_source_load(*this, shaderElement->fragment, fragmentSource, LABEL_FRAGMENT, status);
+    if (!isVertexLoaded || !isFragmentLoaded)
+        return shader_erase();
 
     auto vertex = gles_vertex_convert(vertexSource);
     auto fragment = gles_fragment_convert(fragmentSource);
@@ -354,54 +368,56 @@ using namespace glm;
     shader_status_append(result, status);
     if (status && (!result.isCompiled || !result.isLinked))
     {
-      *status += shader_source_lines_get("Converted vertex shader", vertex);
-      *status += shader_source_lines_get("Converted fragment shader", fragment);
+        *status += shader_source_lines_get("Converted vertex shader", vertex);
+        *status += shader_source_lines_get("Converted fragment shader", fragment);
     }
-    if (!result.isLinked || !result.id) return shader_erase();
+    if (!result.isLinked || !result.id)
+        return shader_erase();
 
     ShaderProgram runtime = {};
     runtime.id = result.id;
     runtime.uniforms = std::move(result.uniforms);
-    if (uniform_configs_trim(*shaderElement, runtime.uniforms)) hash_set();
+    if (uniform_configs_trim(*shaderElement, runtime.uniforms))
+        hash_set();
     uniform_configs_apply(*shaderElement, runtime.uniforms);
     shaders[shaderId] = std::move(runtime);
     shaderVertexPaths[shaderId] = shaderElement->vertex;
     shaderFragmentPaths[shaderId] = shaderElement->fragment;
     return true;
-  }
+}
 
-  void Document::assets_sync()
-  {
+void Document::assets_sync()
+{
     libraries_sync();
     resources_sync(*this, model.content.spritesheets, textures, texturePaths,
-                             [&](int id, const std::filesystem::path& path)
-                             { texture_set(id, Image(path)); });
+                   [&](int id, const std::filesystem::path& path) { texture_set(id, Image(path)); });
     resources_sync(*this, model.content.sounds, sounds, soundPaths,
-                             [&](int id, const std::filesystem::path& path)
-                             { sound_set(id, AudioData(path)); });
+                   [&](int id, const std::filesystem::path& path) { sound_set(id, AudioData(path)); });
 
     std::set<int> validShaderIds;
     WorkingDirectory workingDirectory(directory_get());
     for (auto& shaderElement : model.content.shaders)
     {
-      auto id = shaderElement.id;
-      validShaderIds.insert(id);
-      auto isReload = !shaders.contains(id) || !shaderVertexPaths.contains(id) || !shaderFragmentPaths.contains(id) ||
-                      shaderVertexPaths.at(id) != shaderElement.vertex ||
-                      shaderFragmentPaths.at(id) != shaderElement.fragment;
-      if (shaderElement.fragment.empty())
-      {
-        shaders.erase(id);
-        shaderVertexPaths.erase(id);
-        shaderFragmentPaths.erase(id);
-      }
-      else if (isReload)
-        shader_reload(id);
-      else if (auto shader = shader_get(id))
-        uniform_configs_apply(shaderElement, shader->uniforms);
+        auto id = shaderElement.id;
+        validShaderIds.insert(id);
+        auto isReload = !shaders.contains(id) || !shaderVertexPaths.contains(id) || !shaderFragmentPaths.contains(id) ||
+                        shaderVertexPaths.at(id) != shaderElement.vertex ||
+                        shaderFragmentPaths.at(id) != shaderElement.fragment;
+        if (shaderElement.fragment.empty())
+        {
+            shaders.erase(id);
+            shaderVertexPaths.erase(id);
+            shaderFragmentPaths.erase(id);
+        }
+        else if (isReload)
+            shader_reload(id);
+        else if (auto shader = shader_get(id))
+            uniform_configs_apply(shaderElement, shader->uniforms);
     }
 
-    auto is_invalid = [&](const auto& pair) { return !validShaderIds.contains(pair.first); };
+    auto is_invalid = [&](const auto& pair) {
+        return !validShaderIds.contains(pair.first);
+    };
     std::erase_if(shaders, is_invalid);
     std::erase_if(shaderVertexPaths, is_invalid);
     std::erase_if(shaderFragmentPaths, is_invalid);
@@ -409,798 +425,884 @@ using namespace glm;
     // Vector images drawn from spritesheet images no longer in use are dropped.
     std::set<std::uint64_t> imageUids;
     for (auto& spritesheet : model.content.spritesheets)
-      if (auto image = texture_get(spritesheet.id)) imageUids.insert(image->uid);
+        if (auto image = texture_get(spritesheet.id))
+            imageUids.insert(image->uid);
     for (auto& [path, library] : libraries)
-      for (auto& [id, image] : library.images)
-        imageUids.insert(image.uid);
+        for (auto& [id, image] : library.images)
+            imageUids.insert(image.uid);
     std::erase_if(vectorImages, [&](const auto& pair) { return !imageUids.contains(pair.first.first); });
-  }
+}
 
-  std::filesystem::path Document::library_path_get(int id) const
-  {
+std::filesystem::path Document::library_path_get(int id) const
+{
     auto library = item_get(model.content.libraries, id);
     return library ? absolute_path_get(std::filesystem::absolute(directory_get()), library->path)
                    : std::filesystem::path{};
-  }
+}
 
-  // A library of this document (or of a copy of it) or of one of its libraries.
-  const LibraryData* Document::library_get(const Model& from, int id) const
-  {
+// A library of this document (or of a copy of it) or of one of its libraries.
+const LibraryData* Document::library_get(const Model& from, int id) const
+{
     auto isLibrary = std::ranges::any_of(libraries, [&](const auto& pair) { return &pair.second.model == &from; });
     auto link = libraryLinks.find({isLibrary ? &from : nullptr, id});
     return link == libraryLinks.end() ? nullptr : link->second;
-  }
+}
 
-  LibraryGet Document::library_resolver_get() const
-  {
-    return [this](const Model& from, int id)
-    {
-      auto library = library_get(from, id);
-      return library ? &library->model : nullptr;
+LibraryGet Document::library_resolver_get() const
+{
+    return [this](const Model& from, int id) {
+        auto library = library_get(from, id);
+        return library ? &library->model : nullptr;
     };
-  }
+}
 
-  // An animation layer whose animation isn't there; a library that didn't load leaves the question open (false).
-  bool Document::is_layer_animation_missing(const Layer& layer) const
-  {
-    if (!layer.is_animation()) return false;
+// An animation layer whose animation isn't there. A library that didn't load leaves the question open (false).
+bool Document::is_layer_animation_missing(const Layer& layer) const
+{
+    if (!layer.is_animation())
+        return false;
     auto library = layer.libraryId == -1 ? nullptr : library_get(model, layer.libraryId);
     auto source = layer.libraryId == -1 ? &model : library && library->model.isValid ? &library->model : nullptr;
     return source && !source->animation_named_get(layer.animation);
-  }
+}
 
-  // The animation names of library `libraryId`, or of this document at -1.
-  std::vector<std::string> Document::animation_names_get(int libraryId) const
-  {
+// The animation names of library `libraryId`, or of this document at -1.
+std::vector<std::string> Document::animation_names_get(int libraryId) const
+{
     auto library = libraryId == -1 ? nullptr : library_get(model, libraryId);
     auto source = libraryId == -1 ? &model : library ? &library->model : nullptr;
     std::vector<std::string> names;
     if (source)
-      for (auto [index, animation] : source->animations_get())
-        names.push_back(animation->name);
+        for (auto [index, animation] : source->animations_get())
+            names.push_back(animation->name);
     return names;
-  }
+}
 
-  // A layer draw's spritesheet image, at `scale` (see vector_image_get).
-  const Image* Document::draw_image_get(const Draw& draw, float scale) const
-  {
+// A layer draw's spritesheet image, at `scale` (see vector_image_get).
+const Image* Document::draw_image_get(const Draw& draw, float scale) const
+{
     const Image* image = nullptr;
-    if (!draw.source || draw.source == &model) image = texture_get(draw.spritesheetId);
+    if (!draw.source || draw.source == &model)
+        image = texture_get(draw.spritesheetId);
     for (auto& [path, library] : libraries)
-      if (&library.model == draw.source)
-        if (auto found = library.images.find(draw.spritesheetId); found != library.images.end()) image = &found->second;
+        if (&library.model == draw.source)
+            if (auto found = library.images.find(draw.spritesheetId); found != library.images.end())
+                image = &found->second;
     return vector_image_get(image, scale);
-  }
+}
 
-  // A vector image drawn again (cached) for when `scale` screen pixels show each of its pixels; others as they are.
-  const Image* Document::vector_image_get(const Image* image, float scale) const
-  {
-    if (!image || !image->is_vector() || scale <= 1.0f) return image;
+// A vector image drawn again (cached) for when `scale` screen pixels show each of its pixels. Others as they are.
+const Image* Document::vector_image_get(const Image* image, float scale) const
+{
+    if (!image || !image->is_vector() || scale <= 1.0f)
+        return image;
 
     auto level = std::min((int)std::ceil(std::log2(scale)), VECTOR_LEVEL_MAX);
     while (level > 0 && std::max(image->size.x, image->size.y) << level > VECTOR_SIZE_MAX)
-      --level;
-    if (level == 0) return image;
+        --level;
+    if (level == 0)
+        return image;
     auto [it, isNew] = vectorImages.try_emplace({image->uid, level});
-    if (isNew) it->second = image->vector_render(image->scale * (float)(1 << level));
+    if (isNew)
+        it->second = image->vector_render(image->scale * (float)(1 << level));
     return &it->second;
-  }
+}
 
-  // Loads every library this document reaches (libraries' own libraries too) and forgets the ones it no longer does.
-  void Document::libraries_sync()
-  {
+// Loads every library this document reaches (libraries' own libraries too) and forgets the ones it no longer does.
+void Document::libraries_sync()
+{
     libraryLinks.clear();
     std::set<std::filesystem::path> reached;
     std::vector<std::pair<const Model*, std::filesystem::path>> pending{
         {&model, std::filesystem::absolute(directory_get())}};
     while (!pending.empty())
     {
-      auto [from, directory] = pending.back();
-      pending.pop_back();
-      for (auto& library : from->content.libraries)
-      {
-        auto path = absolute_path_get(directory, library.path);
-        auto [it, isNew] = libraries.try_emplace(path);
-        if (isNew)
+        auto [from, directory] = pending.back();
+        pending.pop_back();
+        for (auto& library : from->content.libraries)
         {
-          library_load(path, it->second);
-          ++librariesRevision;
+            auto path = absolute_path_get(directory, library.path);
+            auto [it, isNew] = libraries.try_emplace(path);
+            if (isNew)
+            {
+                library_load(path, it->second);
+                ++librariesRevision;
+            }
+            libraryLinks[{from == &model ? nullptr : from, library.id}] = &it->second;
+            if (reached.insert(path).second)
+                pending.emplace_back(&it->second.model, path.parent_path());
         }
-        libraryLinks[{from == &model ? nullptr : from, library.id}] = &it->second;
-        if (reached.insert(path).second) pending.emplace_back(&it->second.model, path.parent_path());
-      }
     }
     std::erase_if(libraries, [&](const auto& pair) { return !reached.contains(pair.first); });
-  }
+}
 
-  // Reloads the libraries whose file changed on disk; true when any did.
-  bool Document::libraries_reload()
-  {
+// Reloads the libraries whose file changed on disk. True when any did.
+bool Document::libraries_reload()
+{
     bool isReloaded = false;
     for (auto& [path, library] : libraries)
     {
-      std::error_code ec;
-      auto time = std::filesystem::last_write_time(path, ec);
-      if (ec || time == library.writeTime) continue;
-      library_load(path, library);
-      ++librariesRevision;
-      isReloaded = true;
+        std::error_code ec;
+        auto time = std::filesystem::last_write_time(path, ec);
+        if (ec || time == library.writeTime)
+            continue;
+        library_load(path, library);
+        ++librariesRevision;
+        isReloaded = true;
     }
-    if (isReloaded) assets_sync();
+    if (isReloaded)
+        assets_sync();
     return isReloaded;
-  }
+}
 
-  void Document::library_reload(int id)
-  {
+void Document::library_reload(int id)
+{
     libraries.erase(library_path_get(id));
     libraries_sync();
-  }
+}
 
-  const Image* Document::texture_get(int id) const
-  {
-    if (auto draft = textureDrafts.find(id); draft != textureDrafts.end()) return &draft->second;
+const Image* Document::texture_get(int id) const
+{
+    if (auto draft = textureDrafts.find(id); draft != textureDrafts.end())
+        return &draft->second;
     auto key = textures.find(id);
     return key == textures.end() ? nullptr : assets.image_get(key->second);
-  }
+}
 
-  // A private copy of the spritesheet's image to draw on; it becomes a new asset on the next change().
-  Image* Document::texture_edit(int id)
-  {
+// A private copy of the spritesheet's image to draw on. It becomes a new asset on the next change().
+Image* Document::texture_edit(int id)
+{
     auto texture = texture_get(id);
-    if (!texture || texture->is_vector()) return nullptr;
+    if (!texture || texture->is_vector())
+        return nullptr;
     return &textureDrafts.try_emplace(id, *texture).first->second;
-  }
+}
 
-  void Document::texture_set(int id, Image image)
-  {
+void Document::texture_set(int id, Image image)
+{
     textureDrafts.erase(id);
     textures[id] = assets.image_add(std::move(image));
-  }
+}
 
-  const AudioData* Document::sound_get(int id) const
-  {
+const AudioData* Document::sound_get(int id) const
+{
     auto key = sounds.find(id);
     return key == sounds.end() ? nullptr : assets.audio_get(key->second);
-  }
+}
 
-  // Every sound that may be playing: this document's and its libraries'.
-  std::vector<const AudioData*> Document::sounds_get() const
-  {
+// Every sound that may be playing: this document's and its libraries'.
+std::vector<const AudioData*> Document::sounds_get() const
+{
     std::vector<const AudioData*> result;
     for (auto& [id, key] : sounds)
-      if (auto sound = sound_get(id)) result.push_back(sound);
+        if (auto sound = sound_get(id))
+            result.push_back(sound);
     for (auto& [path, library] : libraries)
-      for (auto& [id, sound] : library.sounds)
-        result.push_back(&sound);
+        for (auto& [id, sound] : library.sounds)
+            result.push_back(&sound);
     return result;
-  }
+}
 
-  // The sounds triggers play on an animation's frame, its children's included: one of each trigger's sounds, at random
-  // (or picked by `index` for repeatable renders).
-  std::vector<const AudioData*> Document::trigger_sounds_get(const Animation& animation, int time,
-                                                                       int index) const
-  {
+// The sounds triggers play on an animation's frame, its children's included: one of each trigger's sounds, at random
+// (or picked by `index` for repeatable renders).
+std::vector<const AudioData*> Document::trigger_sounds_get(const Animation& animation, int time, int index) const
+{
     std::vector<const AudioData*> result;
-    for (auto& [source, trigger, layerId] :
-         animation_triggers_get(model, animation, time, library_resolver_get()))
+    for (auto& [source, trigger, layerId] : animation_triggers_get(model, animation, time, library_resolver_get()))
     {
-      if (trigger.soundIds.empty()) continue;
-      auto count = trigger.soundIds.size();
-      auto soundIndex = std::min(
-          index >= 0 ? (std::size_t)index % count : (std::size_t)random_in_range(0.0f, (float)count), count - 1);
-      auto soundId = trigger.soundIds[soundIndex];
-      const AudioData* sound = nullptr;
-      if (source == &model) sound = sound_get(soundId);
-      for (auto& [path, library] : libraries)
-        if (&library.model == source)
-          if (auto found = library.sounds.find(soundId); found != library.sounds.end()) sound = &found->second;
-      if (sound) result.push_back(sound);
+        if (trigger.soundIds.empty())
+            continue;
+        auto count = trigger.soundIds.size();
+        auto soundIndex = std::min(
+            index >= 0 ? (std::size_t)index % count : (std::size_t)random_in_range(0.0f, (float)count), count - 1);
+        auto soundId = trigger.soundIds[soundIndex];
+        const AudioData* sound = nullptr;
+        if (source == &model)
+            sound = sound_get(soundId);
+        for (auto& [path, library] : libraries)
+            if (&library.model == source)
+                if (auto found = library.sounds.find(soundId); found != library.sounds.end())
+                    sound = &found->second;
+        if (sound)
+            result.push_back(sound);
     }
     return result;
-  }
+}
 
-  void Document::sound_set(int id, AudioData data) { sounds[id] = assets.audio_add(std::move(data)); }
+void Document::sound_set(int id, AudioData data)
+{
+    sounds[id] = assets.audio_add(std::move(data));
+}
 
-  ShaderProgram* Document::shader_get(int shaderId)
-  {
+ShaderProgram* Document::shader_get(int shaderId)
+{
     auto it = shaders.find(shaderId);
     return it == shaders.end() || !it->second.is_valid() ? nullptr : &it->second;
-  }
+}
 
-  bool Document::regions_trim(int spritesheetId, const std::set<int>& ids)
-  {
+bool Document::regions_trim(int spritesheetId, const std::set<int>& ids)
+{
     auto texture = texture_get(spritesheetId);
     return texture && ::regions_trim(model, spritesheetId, ids, *texture);
-  }
+}
 
-  bool Document::spritesheet_pack(int id, int padding)
-  {
+bool Document::spritesheet_pack(int id, int padding)
+{
     auto texture = texture_get(id);
     auto packed = texture ? ::spritesheet_pack(model, id, *texture, padding) : std::nullopt;
-    if (!packed) return false;
+    if (!packed)
+        return false;
     texture_set(id, std::move(*packed));
     assets_sync();
     return true;
-  }
+}
 
-  bool Document::spritesheets_merge(const std::set<int>& ids, bool isAppendRight, bool isMakeRegions,
-                                    bool isMakePrimaryRegion, Origin origin)
-  {
+bool Document::spritesheets_merge(const std::set<int>& ids, bool isAppendRight, bool isMakeRegions,
+                                  bool isMakePrimaryRegion, Origin origin)
+{
     auto merged = ::spritesheets_merge(
         model, ids, [this](int id) { return texture_get(id); }, isAppendRight, isMakeRegions, isMakePrimaryRegion,
         origin);
-    if (!merged) return false;
+    if (!merged)
+        return false;
     texture_set(*ids.begin(), std::move(*merged));
-    // The merged sheet may now be an SVG (or a PNG) under a new name; it is written when saved.
+    // The merged sheet may now be an SVG (or a PNG) under a new name. It is written when saved.
     texturePaths[*ids.begin()] = item_get(model.content.spritesheets, *ids.begin())->path;
     for (auto id : ids)
-      if (id != *ids.begin()) textures.erase(id);
+        if (id != *ids.begin())
+            textures.erase(id);
     assets_sync();
     return true;
-  }
+}
 
-  void Document::hash_set() { hash = model_hash(model); }
+void Document::hash_set()
+{
+    hash = model_hash(model);
+}
 
-  void Document::clean()
-  {
+void Document::clean()
+{
     assets_sync();
     saveHash = model_hash(model);
     hash = saveHash;
     lastAutosaveTime = 0.0f;
     isForceDirty = false;
-  }
+}
 
-  void Document::spritesheet_hashes_sync()
-  {
+void Document::spritesheet_hashes_sync()
+{
     std::set<int> validIds;
     for (auto& spritesheet : model.content.spritesheets)
     {
-      validIds.insert(spritesheet.id);
-      auto currentHash = spritesheet_hash_get(
-          spritesheet, textures.contains(spritesheet.id) ? textures.at(spritesheet.id) : 0);
-      spritesheetHashes[spritesheet.id] = currentHash;
-      spritesheetSaveHashes.try_emplace(spritesheet.id, currentHash);
+        validIds.insert(spritesheet.id);
+        auto currentHash =
+            spritesheet_hash_get(spritesheet, textures.contains(spritesheet.id) ? textures.at(spritesheet.id) : 0);
+        spritesheetHashes[spritesheet.id] = currentHash;
+        spritesheetSaveHashes.try_emplace(spritesheet.id, currentHash);
     }
 
-    auto is_invalid = [&](const auto& pair) { return !validIds.contains(pair.first); };
+    auto is_invalid = [&](const auto& pair) {
+        return !validIds.contains(pair.first);
+    };
     std::erase_if(spritesheetHashes, is_invalid);
     std::erase_if(spritesheetSaveHashes, is_invalid);
-  }
+}
 
-  // Commits the pending edit and rebuilds everything derived from the model.
-  void Document::change()
-  {
+// Commits the pending edit and rebuilds everything derived from the model.
+void Document::change()
+{
     for (auto& [id, draft] : std::exchange(textureDrafts, {}))
-      textures[id] = assets.image_add(std::move(draft));
+        textures[id] = assets.image_add(std::move(draft));
     hash_set();
     assets_sync();
 
     spritesheet_hashes_sync();
     snapshots.commit();
     index = UidIndex(model);
-  }
+}
 
-  void Document::edit_begin(StringType label) { snapshots.push(localize.get(label)); }
+void Document::edit_begin(StringType label)
+{
+    snapshots.push(localize.get(label));
+}
 
-  Uids Document::edit_run(StringType label, const std::function<Uids(Model&)>& operation)
-  {
+Uids Document::edit_run(StringType label, const std::function<Uids(Model&)>& operation)
+{
     edit_begin(label);
     auto uids = operation(model);
     change();
     return uids;
-  }
+}
 
-  std::vector<Reference> Document::references_get(const Uids& uids) const
-  {
+std::vector<Reference> Document::references_get(const Uids& uids) const
+{
     UidIndex index(model);
     std::vector<Reference> references;
     for (auto uid : uids)
-      if (auto reference = index.reference_get(uid)) references.push_back(*reference);
+        if (auto reference = index.reference_get(uid))
+            references.push_back(*reference);
     return references;
-  }
+}
 
-  bool Document::is_dirty() const { return hash != saveHash; }
-  bool Document::is_autosave_dirty() { return hash != autosaveHash || !spritesheets_autosave_dirty_get().empty(); }
+bool Document::is_dirty() const
+{
+    return hash != saveHash;
+}
 
-  // Edited spritesheets are autosaved as a hidden copy beside their file: .<name>.png.autosave.
-  std::filesystem::path Document::spritesheet_autosave_path_get(const Spritesheet& spritesheet)
-  {
+bool Document::is_autosave_dirty()
+{
+    return hash != autosaveHash || !spritesheets_autosave_dirty_get().empty();
+}
+
+// Edited spritesheets are autosaved as a hidden copy beside their file: .<name>.png.autosave.
+std::filesystem::path Document::spritesheet_autosave_path_get(const Spritesheet& spritesheet)
+{
     auto path = directory_get() / spritesheet.path;
-    return path.parent_path() /
-           path_from_utf8("." + path_to_utf8(path.filename()) + std::string(AUTOSAVE_EXTENSION));
-  }
+    return path.parent_path() / path_from_utf8("." + path_to_utf8(path.filename()) + std::string(AUTOSAVE_EXTENSION));
+}
 
-  // Spritesheets with unsaved pixel edits that their autosave copy doesn't have yet.
-  std::set<int> Document::spritesheets_autosave_dirty_get()
-  {
+// Spritesheets with unsaved pixel edits that their autosave copy doesn't have yet.
+std::set<int> Document::spritesheets_autosave_dirty_get()
+{
     std::set<int> ids;
     for (auto& spritesheet : model.content.spritesheets)
     {
-      auto id = spritesheet.id;
-      auto autosaveHash = spritesheetAutosaveHashes.find(id);
-      if (spritesheet_is_dirty(id) &&
-          (autosaveHash == spritesheetAutosaveHashes.end() || autosaveHash->second != spritesheetHashes.at(id)))
-        ids.insert(id);
+        auto id = spritesheet.id;
+        auto autosaveHash = spritesheetAutosaveHashes.find(id);
+        if (spritesheet_is_dirty(id) &&
+            (autosaveHash == spritesheetAutosaveHashes.end() || autosaveHash->second != spritesheetHashes.at(id)))
+            ids.insert(id);
     }
     return ids;
-  }
+}
 
-  // After a crash, autosaved spritesheets come back as unsaved edits; their files are left as they are.
-  void Document::spritesheets_autosave_restore()
-  {
+// After a crash, autosaved spritesheets come back as unsaved edits. Their files are left as they are.
+void Document::spritesheets_autosave_restore()
+{
     for (auto& spritesheet : model.content.spritesheets)
     {
-      auto path = spritesheet_autosave_path_get(spritesheet);
-      if (!is_path_exist(path)) continue;
-      if (auto image = Image(path); image.is_valid()) texture_set(spritesheet.id, std::move(image));
+        auto path = spritesheet_autosave_path_get(spritesheet);
+        if (!is_path_exist(path))
+            continue;
+        if (auto image = Image(path); image.is_valid())
+            texture_set(spritesheet.id, std::move(image));
     }
-  }
+}
 
-  void Document::spritesheets_autosave_clear()
-  {
+void Document::spritesheets_autosave_clear()
+{
     std::error_code ec;
     for (auto& spritesheet : model.content.spritesheets)
-      std::filesystem::remove(spritesheet_autosave_path_get(spritesheet), ec);
+        std::filesystem::remove(spritesheet_autosave_path_get(spritesheet), ec);
     spritesheetAutosaveHashes.clear();
-  }
+}
 
-  void Document::spritesheet_hash_update(int id)
-  {
+void Document::spritesheet_hash_update(int id)
+{
     auto spritesheet = item_get(model.content.spritesheets, id);
-    if (!spritesheet) return;
+    if (!spritesheet)
+        return;
     assets_sync();
     spritesheetHashes[id] = spritesheet_hash_get(*spritesheet, textures.contains(id) ? textures.at(id) : 0);
-  }
+}
 
-  // The spritesheet matches its file (just saved or reloaded); its file's time is remembered to notice later changes.
-  void Document::spritesheet_hash_set_saved(int id)
-  {
+// The spritesheet matches its file (just saved or reloaded). Its file's time is remembered to notice later changes.
+void Document::spritesheet_hash_set_saved(int id)
+{
     spritesheet_hash_update(id);
-    if (spritesheetHashes.contains(id)) spritesheetSaveHashes[id] = spritesheetHashes[id];
+    if (spritesheetHashes.contains(id))
+        spritesheetSaveHashes[id] = spritesheetHashes[id];
     textureWriteTimes.erase(id);
     spritesheets_changed_get();
     if (auto spritesheet = item_get(model.content.spritesheets, id))
     {
-      std::error_code ec;
-      std::filesystem::remove(spritesheet_autosave_path_get(*spritesheet), ec);
+        std::error_code ec;
+        std::filesystem::remove(spritesheet_autosave_path_get(*spritesheet), ec);
     }
     spritesheetAutosaveHashes.erase(id);
-  }
+}
 
-  // Spritesheets whose file changed on disk since it was last loaded or saved; ones with unsaved edits are left alone.
-  std::set<int> Document::spritesheets_changed_get()
-  {
+// Spritesheets whose file changed on disk since it was last loaded or saved. Ones with unsaved edits are left alone.
+std::set<int> Document::spritesheets_changed_get()
+{
     std::set<int> ids;
     WorkingDirectory workingDirectory(directory_get());
     for (auto& spritesheet : model.content.spritesheets)
     {
-      std::error_code ec;
-      auto time = std::filesystem::last_write_time(path_case_insensitive_find(spritesheet.path), ec);
-      if (ec) continue;
-      auto [it, isNew] = textureWriteTimes.try_emplace(spritesheet.id, time);
-      if (!isNew && it->second != time && !spritesheet_is_dirty(spritesheet.id)) ids.insert(spritesheet.id);
+        std::error_code ec;
+        auto time = std::filesystem::last_write_time(path_case_insensitive_find(spritesheet.path), ec);
+        if (ec)
+            continue;
+        auto [it, isNew] = textureWriteTimes.try_emplace(spritesheet.id, time);
+        if (!isNew && it->second != time && !spritesheet_is_dirty(spritesheet.id))
+            ids.insert(spritesheet.id);
     }
     return ids;
-  }
+}
 
-  // Reloads spritesheets from their files as one undoable edit.
-  void Document::spritesheets_reload(const std::set<int>& ids)
-  {
-    edit_apply(EDIT_RELOAD_SPRITESHEETS,
-               [&](Model&)
-               {
-                 for (auto id : ids)
-                   texture_reload(id);
-               });
+// Reloads spritesheets from their files as one undoable edit.
+void Document::spritesheets_reload(const std::set<int>& ids)
+{
+    edit_apply(EDIT_RELOAD_SPRITESHEETS, [&](Model&) {
+        for (auto id : ids)
+            texture_reload(id);
+    });
     for (auto id : ids)
-      if (auto spritesheet = item_get(model.content.spritesheets, id))
-      {
-        spritesheet_hash_set_saved(id);
-        toast_log(Level::INFO, TOAST_RELOAD_SPRITESHEET, id, path_to_utf8(spritesheet->path));
-      }
-  }
+        if (auto spritesheet = item_get(model.content.spritesheets, id))
+        {
+            spritesheet_hash_set_saved(id);
+            toast_log(Level::INFO, TOAST_RELOAD_SPRITESHEET, id, path_to_utf8(spritesheet->path));
+        }
+}
 
-  // Rasterizes SVG spritesheets: each is written as a PNG beside it (as drawn now), and points at the PNG.
-  void Document::spritesheets_vector_convert(const std::set<int>& ids)
-  {
+// Rasterizes SVG spritesheets: each is written as a PNG beside it (as drawn now), and points at the PNG.
+void Document::spritesheets_vector_convert(const std::set<int>& ids)
+{
     std::set<int> converted;
-    edit_apply(EDIT_CONVERT_SVG_SPRITESHEETS,
-               [&](Model& model)
-               {
-                 for (auto id : ids)
-                 {
-                   auto spritesheet = item_get(model.content.spritesheets, id);
-                   auto texture = texture_get(id);
-                   if (!spritesheet || !texture || !texture->is_vector()) continue;
-                   auto pngPath =
-                       std::filesystem::path(spritesheet->path).replace_extension(PNG_EXTENSION);
-                   auto pathString = path_to_utf8(pngPath);
-                   if (!texture->write_png(std::filesystem::absolute(directory_get()) / pngPath))
-                   {
-                     toast_log(Level::ERROR, TOAST_SAVE_SPRITESHEET_FAILED, id, pathString);
-                     continue;
-                   }
-                   spritesheet->path = pngPath;
-                   texture_reload(id);
-                   converted.insert(id);
-                   toast_log(Level::INFO, TOAST_CONVERT_SVG_SPRITESHEET, id, pathString);
-                 }
-               });
+    edit_apply(EDIT_CONVERT_SVG_SPRITESHEETS, [&](Model& model) {
+        for (auto id : ids)
+        {
+            auto spritesheet = item_get(model.content.spritesheets, id);
+            auto texture = texture_get(id);
+            if (!spritesheet || !texture || !texture->is_vector())
+                continue;
+            auto pngPath = std::filesystem::path(spritesheet->path).replace_extension(PNG_EXTENSION);
+            auto pathString = path_to_utf8(pngPath);
+            if (!texture->write_png(std::filesystem::absolute(directory_get()) / pngPath))
+            {
+                toast_log(Level::ERROR, TOAST_SAVE_SPRITESHEET_FAILED, id, pathString);
+                continue;
+            }
+            spritesheet->path = pngPath;
+            texture_reload(id);
+            converted.insert(id);
+            toast_log(Level::INFO, TOAST_CONVERT_SVG_SPRITESHEET, id, pathString);
+        }
+    });
     for (auto id : converted)
-      spritesheet_hash_set_saved(id);
-  }
+        spritesheet_hash_set_saved(id);
+}
 
-  bool Document::spritesheet_is_dirty(int id)
-  {
-    if (!item_get(model.content.spritesheets, id)) return false;
-    if (!spritesheetHashes.contains(id)) spritesheet_hash_update(id);
+bool Document::spritesheet_is_dirty(int id)
+{
+    if (!item_get(model.content.spritesheets, id))
+        return false;
+    if (!spritesheetHashes.contains(id))
+        spritesheet_hash_update(id);
     auto saveIt = spritesheetSaveHashes.find(id);
     return saveIt != spritesheetSaveHashes.end() && spritesheetHashes.at(id) != saveIt->second;
-  }
+}
 
-  bool Document::spritesheet_any_dirty()
-  {
-    return std::ranges::any_of(model.content.spritesheets, [&](const Spritesheet& spritesheet)
-                               { return spritesheet_is_dirty(spritesheet.id); });
-  }
+bool Document::spritesheet_any_dirty()
+{
+    return std::ranges::any_of(model.content.spritesheets,
+                               [&](const Spritesheet& spritesheet) { return spritesheet_is_dirty(spritesheet.id); });
+}
 
-  std::filesystem::path Document::directory_get() const { return path.parent_path(); }
-  std::filesystem::path Document::filename_get() const { return path.filename(); }
-  bool Document::is_valid() const { return isValid && !path.empty(); }
+std::filesystem::path Document::directory_get() const
+{
+    return path.parent_path();
+}
 
-  void Document::command_run(Manager& manager, Command& command)
-  {
-    if (command.run) command.run(manager, *this);
-  }
+std::filesystem::path Document::filename_get() const
+{
+    return path.filename();
+}
 
-  Reference Document::reference_get() const { return selection_focus_get(selection, index); }
+bool Document::is_valid() const
+{
+    return isValid && !path.empty();
+}
 
-  void Document::reference_set(Reference reference) { selection_focus_set(selection, model, reference); }
+void Document::command_run(Manager& manager, Command& command)
+{
+    if (command.run)
+        command.run(manager, *this);
+}
 
-  std::set<Reference> Document::selected_get(SelectionKind kind) const
-  {
+Reference Document::reference_get() const
+{
+    return selection_focus_get(selection, index);
+}
+
+void Document::reference_set(Reference reference)
+{
+    selection_focus_set(selection, model, reference);
+}
+
+std::set<Reference> Document::selected_get(SelectionKind kind) const
+{
     return selection_references_get(selection, index, kind);
-  }
+}
 
-  void Document::selected_set(SelectionKind kind, const std::set<Reference>& references)
-  {
+void Document::selected_set(SelectionKind kind, const std::set<Reference>& references)
+{
     selection_references_set(selection, model, kind, references);
-  }
+}
 
-  std::set<int> Document::selected_ids_get(SelectionKind kind) const
-  {
+std::set<int> Document::selected_ids_get(SelectionKind kind) const
+{
     return selection_ids_get(selection, model, kind);
-  }
+}
 
-  void Document::selected_ids_set(SelectionKind kind, const std::set<int>& ids)
-  {
+void Document::selected_ids_set(SelectionKind kind, const std::set<int>& ids)
+{
     selection_ids_set(selection, model, kind, ids);
-  }
+}
 
-  int Document::focused_id_get(SelectionKind kind) const { return selection_focus_id_get(selection, model, kind); }
+int Document::focused_id_get(SelectionKind kind) const
+{
+    return selection_focus_id_get(selection, model, kind);
+}
 
-  void Document::focused_id_set(SelectionKind kind, int id) { selection_focus_id_set(selection, model, kind, id); }
+void Document::focused_id_set(SelectionKind kind, int id)
+{
+    selection_focus_id_set(selection, model, kind, id);
+}
 
-  void Document::selected_clear(SelectionKind kind)
-  {
+void Document::selected_clear(SelectionKind kind)
+{
     selection.uids.erase(kind);
     selection.focuses.erase(kind);
-  }
+}
 
-  // Combo entries for a content kind (regions are those of layer `layerId`'s spritesheet); all but spritesheets start with None.
-  Choices Document::choices_get(SelectionKind kind, int layerId) const
-  {
+// Combo entries for a content kind (regions are those of layer `layerId`'s spritesheet). All but spritesheets start
+// with None.
+Choices Document::choices_get(SelectionKind kind, int layerId) const
+{
     Choices choices = {};
     if (kind != SelectionKind::SPRITESHEETS)
     {
-      choices.ids.push_back(-1);
-      choices.labels.emplace_back(localize.get(BASIC_NONE));
+        choices.ids.push_back(-1);
+        choices.labels.emplace_back(localize.get(BASIC_NONE));
     }
-    auto add = [&](const auto& items, auto&& label_get)
-    {
-      for (auto& item : items)
-      {
-        choices.ids.push_back(item.id);
-        choices.labels.push_back(label_get(item));
-      }
+    auto add = [&](const auto& items, auto&& label_get) {
+        for (auto& item : items)
+        {
+            choices.ids.push_back(item.id);
+            choices.labels.push_back(label_get(item));
+        }
     };
-    auto name_get = [](const auto& item) { return item.name; };
-    auto path_label_get = [](StringType format)
-    {
-      return [format](const auto& item)
-      {
-        auto pathString = path_to_utf8(item.path);
-        return std::vformat(localize.get(format), std::make_format_args(item.id, pathString));
-      };
+    auto name_get = [](const auto& item) {
+        return item.name;
+    };
+    auto path_label_get = [](StringType format) {
+        return [format](const auto& item) {
+            auto pathString = path_to_utf8(item.path);
+            return std::vformat(localize.get(format), std::make_format_args(item.id, pathString));
+        };
     };
     auto& content = model.content;
-    if (kind == SelectionKind::SPRITESHEETS) add(content.spritesheets, path_label_get(FORMAT_SPRITESHEET));
-    if (kind == SelectionKind::SOUNDS) add(content.sounds, path_label_get(FORMAT_SOUND));
-    if (kind == SelectionKind::LIBRARIES) add(content.libraries, path_label_get(FORMAT_SOUND));
-    if (kind == SelectionKind::EVENTS) add(content.events, name_get);
-    if (kind == SelectionKind::SHADERS) add(content.shaders, name_get);
+    if (kind == SelectionKind::SPRITESHEETS)
+        add(content.spritesheets, path_label_get(FORMAT_SPRITESHEET));
+    if (kind == SelectionKind::SOUNDS)
+        add(content.sounds, path_label_get(FORMAT_SOUND));
+    if (kind == SelectionKind::LIBRARIES)
+        add(content.libraries, path_label_get(FORMAT_SOUND));
+    if (kind == SelectionKind::EVENTS)
+        add(content.events, name_get);
+    if (kind == SelectionKind::SHADERS)
+        add(content.shaders, name_get);
     if (kind == SelectionKind::REGIONS)
-      if (auto spritesheet = model.layer_spritesheet_get(layerId)) add(spritesheet->regions, name_get);
+        if (auto spritesheet = model.layer_spritesheet_get(layerId))
+            add(spritesheet->regions, name_get);
     return choices;
-  }
+}
 
-  // Selects the frames an edit returned and moves the playhead to the first.
-  void Document::frames_select(const Uids& uids)
-  {
+// Selects the frames an edit returned and moves the playhead to the first.
+void Document::frames_select(const Uids& uids)
+{
     auto references = references_get(uids);
-    if (references.empty()) return;
+    if (references.empty())
+        return;
     auto focus = references.front();
     editTarget = EditTarget::FRAME;
     frame_references_set({references.begin(), references.end()});
     reference_set(focus);
     if (auto item = model.track_get(focus); item && focus.itemType != TRIGGER)
-      frameTime = frame_time_from_index_get(*item, focus.frameIndex);
-  }
+        frameTime = frame_time_from_index_get(*item, focus.frameIndex);
+}
 
-  void Document::frame_select(Reference frameReference)
-  {
+void Document::frame_select(Reference frameReference)
+{
     selection.uids[SelectionKind::GROUPS].clear();
     editTarget = EditTarget::FRAME;
     frame_references_set({frameReference});
     reference_set(frameReference);
-  }
+}
 
-  void Document::frame_toggle(Reference frameReference)
-  {
+void Document::frame_toggle(Reference frameReference)
+{
     selection.uids[SelectionKind::GROUPS].clear();
     editTarget = EditTarget::FRAME;
     auto frames = frame_references_get(FrameReferenceFallback::NONE);
     if (!frames.contains(frameReference))
-      frames.insert(frameReference);
+        frames.insert(frameReference);
     else if (frames.size() > 1)
-      frames.erase(frameReference);
+        frames.erase(frameReference);
     frame_references_set(frames);
     reference_set(frameReference);
-  }
+}
 
-  // Selects frames first..last of one track (added to the selection when additive).
-  bool Document::frames_range_select(Reference firstReference, Reference lastReference, bool isAdditive)
-  {
+// Selects frames first..last of one track (added to the selection when additive).
+bool Document::frames_range_select(Reference firstReference, Reference lastReference, bool isAdditive)
+{
     selection.uids[SelectionKind::GROUPS].clear();
     editTarget = EditTarget::FRAME;
-    if (item_reference_get(firstReference) != item_reference_get(lastReference) ||
-        firstReference.frameIndex < 0 || lastReference.frameIndex < 0)
-      return false;
+    if (item_reference_get(firstReference) != item_reference_get(lastReference) || firstReference.frameIndex < 0 ||
+        lastReference.frameIndex < 0)
+        return false;
 
     auto item = model.track_get(lastReference);
     if (!item || std::max(firstReference.frameIndex, lastReference.frameIndex) >= track_frames_count_get(*item))
-      return false;
+        return false;
 
     auto [firstIndex, lastIndex] = std::minmax(firstReference.frameIndex, lastReference.frameIndex);
     auto selectedFrames = isAdditive ? frame_references_get(FrameReferenceFallback::NONE) : std::set<Reference>{};
     for (int i = firstIndex; i <= lastIndex; ++i)
     {
-      auto frameReference = lastReference;
-      frameReference.frameIndex = i;
-      selectedFrames.insert(frameReference);
+        auto frameReference = lastReference;
+        frameReference.frameIndex = i;
+        selectedFrames.insert(frameReference);
     }
 
     frame_references_set(selectedFrames);
     reference_set(lastReference);
     return true;
-  }
+}
 
-  void Document::frame_focus_select()
-  {
+void Document::frame_focus_select()
+{
     auto targetReference = reference_get();
-    if (targetReference.frameIndex < 0) return frame_references_clear();
+    if (targetReference.frameIndex < 0)
+        return frame_references_clear();
     editTarget = EditTarget::FRAME;
     frame_references_set({targetReference});
-  }
+}
 
-  void Document::focus_clear()
-  {
+void Document::focus_clear()
+{
     reference_set({reference_get().animationIndex});
     frame_references_clear();
     selection.uids[SelectionKind::TRACKS].clear();
-  }
+}
 
-  // Selects a track (its layer's spritesheet becomes the focused one).
-  void Document::track_select(Reference itemReference)
-  {
+// Selects a track (its layer's spritesheet becomes the focused one).
+void Document::track_select(Reference itemReference)
+{
     itemReference.frameIndex = -1;
     if (itemReference.itemType == LAYER)
-      if (auto layer = item_get(model.content.layers, itemReference.itemID))
-        focused_id_set(SelectionKind::SPRITESHEETS, layer->spritesheetId);
+        if (auto layer = item_get(model.content.layers, itemReference.itemID))
+            focused_id_set(SelectionKind::SPRITESHEETS, layer->spritesheetId);
     reference_set(itemReference);
     frame_references_clear();
     selected_set(SelectionKind::TRACKS, {itemReference});
-  }
+}
 
-  std::set<int> Document::animations_selected_get() const
-  {
+std::set<int> Document::animations_selected_get() const
+{
     std::set<int> indices;
     for (auto reference : selected_get(SelectionKind::ANIMATIONS))
-      indices.insert(reference.animationIndex);
+        indices.insert(reference.animationIndex);
     return indices;
-  }
+}
 
-  void Document::animations_selected_set(const std::set<int>& indices)
-  {
+void Document::animations_selected_set(const std::set<int>& indices)
+{
     std::set<Reference> references;
     for (auto index : indices)
-      references.insert({index});
+        references.insert({index});
     selected_set(SelectionKind::ANIMATIONS, references);
-  }
+}
 
-  std::set<Reference> Document::item_frame_references_get(Reference itemReference) const
-  {
+std::set<Reference> Document::item_frame_references_get(Reference itemReference) const
+{
     std::set<Reference> result;
     itemReference.frameIndex = -1;
     auto item = itemReference.itemType == NONE ? nullptr : model.track_get(itemReference);
     for (int frameIndex = 0; item && frameIndex < (int)item->frames.size(); ++frameIndex)
     {
-      itemReference.frameIndex = frameIndex;
-      result.insert(itemReference);
+        itemReference.frameIndex = frameIndex;
+        result.insert(itemReference);
     }
     return result;
-  }
+}
 
-  std::set<Reference> Document::selected_item_frame_references_get() const
-  {
+std::set<Reference> Document::selected_item_frame_references_get() const
+{
     auto selectedItems = selected_get(SelectionKind::TRACKS);
     if (auto reference = reference_get(); selectedItems.empty() && reference.itemType != NONE)
-      selectedItems.insert(item_reference_get(reference));
+        selectedItems.insert(item_reference_get(reference));
 
     std::set<Reference> result;
     for (auto itemReference : selectedItems)
-      result.merge(item_frame_references_get(itemReference));
+        result.merge(item_frame_references_get(itemReference));
     return result;
-  }
+}
 
-  std::set<Reference> Document::frame_references_get(FrameReferenceFallback fallback) const
-  {
+std::set<Reference> Document::frame_references_get(FrameReferenceFallback fallback) const
+{
     auto result = selected_get(SelectionKind::FRAMES);
     auto reference = reference_get();
     if (result.empty() && fallback == FrameReferenceFallback::CURRENT && reference.frameIndex >= 0)
-      result.insert(reference);
+        result.insert(reference);
     return result;
-  }
+}
 
-  // Selects frames together with their tracks; the focus moves to the first frame unless it is already selected.
-  void Document::frame_references_set(std::set<Reference> frameReferences)
-  {
+// Selects frames together with their tracks. The focus moves to the first frame unless it is already selected.
+void Document::frame_references_set(std::set<Reference> frameReferences)
+{
     std::erase_if(frameReferences, [&](const Reference& frame) { return !model.frame_get(frame); });
     std::set<Reference> tracks;
     for (auto frame : frameReferences)
-      tracks.insert(item_reference_get(frame));
+        tracks.insert(item_reference_get(frame));
     selected_set(SelectionKind::FRAMES, frameReferences);
     selected_set(SelectionKind::TRACKS, tracks);
-    if (!frameReferences.empty() && !frameReferences.contains(reference_get())) reference_set(*frameReferences.begin());
+    if (!frameReferences.empty() && !frameReferences.contains(reference_get()))
+        reference_set(*frameReferences.begin());
 
     // The spritesheet editor follows the first selected layer frame's spritesheet.
     for (auto frame : frameReferences)
-      if (auto spritesheet = frame.itemType == LAYER ? model.layer_spritesheet_get(frame.itemID) : nullptr)
-        return focused_id_set(SelectionKind::SPRITESHEETS, spritesheet->id);
-  }
+        if (auto spritesheet = frame.itemType == LAYER ? model.layer_spritesheet_get(frame.itemID) : nullptr)
+            return focused_id_set(SelectionKind::SPRITESHEETS, spritesheet->id);
+}
 
-  void Document::frame_references_clear() { selection.uids[SelectionKind::FRAMES].clear(); }
+void Document::frame_references_clear()
+{
+    selection.uids[SelectionKind::FRAMES].clear();
+}
 
-  std::vector<Reference> Document::layer_references_get()
-  {
+std::vector<Reference> Document::layer_references_get()
+{
     auto reference = reference_get();
     std::set<Reference> selectedReferences = selected_get(SelectionKind::TRACKS);
     if (selectedReferences.empty() && reference.itemType != NONE)
-      selectedReferences.insert(item_reference_get(reference));
+        selectedReferences.insert(item_reference_get(reference));
 
     std::vector<Reference> result;
     for (auto itemReference : selectedReferences)
     {
-      if (itemReference.itemType != LAYER) return {};
-      result.push_back(itemReference);
+        if (itemReference.itemType != LAYER)
+            return {};
+        result.push_back(itemReference);
     }
     return result;
-  }
+}
 
-  void Document::spritesheets_add(const std::vector<std::filesystem::path>& paths)
-  {
+void Document::spritesheets_add(const std::vector<std::filesystem::path>& paths)
+{
     auto& items = model.content.spritesheets;
     auto directory = directory_get();
 
     std::vector<std::pair<std::filesystem::path, Image>> loaded;
     for (auto& path : paths)
     {
-      auto storagePath = path_backslash_handle(path);
-      std::optional<WorkingDirectory> workingDirectory;
-      if (!storagePath.is_absolute()) workingDirectory.emplace(directory);
-      auto texture = Image(path_case_insensitive_find(storagePath));
-      if (!texture.is_valid())
-      {
-        toast_log(Level::ERROR, TOAST_SPRITESHEET_INIT_FAILED, path_to_utf8(path));
-        continue;
-      }
-      loaded.emplace_back(path_backslash_replace(path_make_relative(storagePath, directory)), std::move(texture));
+        auto storagePath = path_backslash_handle(path);
+        std::optional<WorkingDirectory> workingDirectory;
+        if (!storagePath.is_absolute())
+            workingDirectory.emplace(directory);
+        auto texture = Image(path_case_insensitive_find(storagePath));
+        if (!texture.is_valid())
+        {
+            toast_log(Level::ERROR, TOAST_SPRITESHEET_INIT_FAILED, path_to_utf8(path));
+            continue;
+        }
+        loaded.emplace_back(path_backslash_replace(path_make_relative(storagePath, directory)), std::move(texture));
     }
-    if (loaded.empty()) return;
+    if (loaded.empty())
+        return;
 
     edit_begin(EDIT_ADD_SPRITESHEET);
 
     std::set<int> added;
     for (auto& [relativePath, texture] : loaded)
     {
-      auto& element =
-          items.emplace_back(Spritesheet{.id = item_next_id_get(items), .path = relativePath});
-      texture_set(element.id, std::move(texture));
-      texturePaths[element.id] = element.path;
-      added.insert(element.id);
-      spritesheet_hash_set_saved(element.id);
-      toast_log(Level::INFO, TOAST_SPRITESHEET_INITIALIZED, element.id, path_to_utf8(element.path));
+        auto& element = items.emplace_back(Spritesheet{.id = item_next_id_get(items), .path = relativePath});
+        texture_set(element.id, std::move(texture));
+        texturePaths[element.id] = element.path;
+        added.insert(element.id);
+        spritesheet_hash_set_saved(element.id);
+        toast_log(Level::INFO, TOAST_SPRITESHEET_INITIALIZED, element.id, path_to_utf8(element.path));
     }
     selected_ids_set(SelectionKind::SPRITESHEETS, added);
     focused_id_set(SelectionKind::SPRITESHEETS, *added.rbegin());
     change();
-  }
+}
 
-  void Document::sounds_add(const std::vector<std::filesystem::path>& paths)
-  {
+void Document::sounds_add(const std::vector<std::filesystem::path>& paths)
+{
     auto& items = model.content.sounds;
-    if (std::ranges::all_of(paths, [](const auto& path) { return path.empty(); })) return;
+    if (std::ranges::all_of(paths, [](const auto& path) { return path.empty(); }))
+        return;
 
     edit_begin(EDIT_ADD_SOUND);
 
     std::set<int> added;
     for (auto& path : paths)
     {
-      if (path.empty()) continue;
-      auto& element = items.emplace_back(Sound{
-          .id = item_next_id_get(items),
-          .path = path_backslash_replace(path_make_relative(path_backslash_handle(path), directory_get()))});
-      WorkingDirectory workingDirectory(directory_get());
-      sound_set(element.id, AudioData(path_case_insensitive_find(element.path)));
-      soundPaths[element.id] = element.path;
-      added.insert(element.id);
-      toast_log(Level::INFO, TOAST_SOUND_INITIALIZED, element.id, path_to_utf8(element.path));
+        if (path.empty())
+            continue;
+        auto& element = items.emplace_back(
+            Sound{.id = item_next_id_get(items),
+                  .path = path_backslash_replace(path_make_relative(path_backslash_handle(path), directory_get()))});
+        WorkingDirectory workingDirectory(directory_get());
+        sound_set(element.id, AudioData(path_case_insensitive_find(element.path)));
+        soundPaths[element.id] = element.path;
+        added.insert(element.id);
+        toast_log(Level::INFO, TOAST_SOUND_INITIALIZED, element.id, path_to_utf8(element.path));
     }
     selected_ids_set(SelectionKind::SOUNDS, added);
     focused_id_set(SelectionKind::SOUNDS, *added.rbegin());
     change();
-  }
+}
 
-  void Document::libraries_add(const std::vector<std::filesystem::path>& paths)
-  {
+void Document::libraries_add(const std::vector<std::filesystem::path>& paths)
+{
     std::set<int> added;
-    edit_apply(
-        EDIT_ADD_LIBRARY,
-        [&](Model& model)
-        {
-          auto& libraries = model.content.libraries;
-          for (auto& path : paths)
+    edit_apply(EDIT_ADD_LIBRARY, [&](Model& model) {
+        auto& libraries = model.content.libraries;
+        for (auto& path : paths)
             if (!path.empty())
             {
-              auto& library = libraries.emplace_back(Library{
-                  .id = item_next_id_get(libraries),
-                  .path = path_backslash_replace(path_make_relative(path_backslash_handle(path), directory_get()))});
-              added.insert(library.id);
+                auto& library = libraries.emplace_back(Library{
+                    .id = item_next_id_get(libraries),
+                    .path = path_backslash_replace(path_make_relative(path_backslash_handle(path), directory_get()))});
+                added.insert(library.id);
             }
-        });
-    if (added.empty()) return;
+    });
+    if (added.empty())
+        return;
     for (auto id : added)
-      toast_log(Level::INFO, TOAST_LIBRARY_INITIALIZED, id,
-                path_to_utf8(item_get(model.content.libraries, id)->path));
+        toast_log(Level::INFO, TOAST_LIBRARY_INITIALIZED, id,
+                  path_to_utf8(item_get(model.content.libraries, id)->path));
     selected_ids_set(SelectionKind::LIBRARIES, added);
     focused_id_set(SelectionKind::LIBRARIES, *added.rbegin());
-  }
+}
 
-  void Document::undo()
-  {
-    if (!snapshots.undo()) return;
+void Document::undo()
+{
+    if (!snapshots.undo())
+        return;
     frame_time_sync(*this);
     toast_log(Level::INFO, TOAST_UNDO, message);
     change();
-  }
+}
 
-  void Document::redo()
-  {
-    if (!snapshots.redo()) return;
+void Document::redo()
+{
+    if (!snapshots.redo())
+        return;
     frame_time_sync(*this);
     toast_log(Level::INFO, TOAST_REDO, message);
     change();
-  }
+}
 
-  bool Document::is_able_to_undo() { return !snapshots.undoStack.is_empty(); }
-  bool Document::is_able_to_redo() { return !snapshots.redoStack.is_empty(); }
+bool Document::is_able_to_undo()
+{
+    return !snapshots.undoStack.is_empty();
+}
+
+bool Document::is_able_to_redo()
+{
+    return !snapshots.redoStack.is_empty();
+}

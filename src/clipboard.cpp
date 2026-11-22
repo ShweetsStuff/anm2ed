@@ -3,17 +3,26 @@
 #include <SDL3/SDL_clipboard.h>
 #include <SDL3/SDL_stdinc.h>
 
-  Clipboard::Clipboard() { set(""); }
+Clipboard::Clipboard()
+{
+    set("");
+}
 
-  std::string Clipboard::get()
-  {
+std::string Clipboard::get()
+{
     auto text = SDL_GetClipboardText();
     auto string = std::string(text);
     SDL_free(text);
 
     return string;
-  }
+}
 
-  bool Clipboard::is_empty() { return !SDL_HasClipboardText(); }
+bool Clipboard::is_empty()
+{
+    return !SDL_HasClipboardText();
+}
 
-  void Clipboard::set(const std::string& string) { SDL_SetClipboardText(string.c_str()); }
+void Clipboard::set(const std::string& string)
+{
+    SDL_SetClipboardText(string.c_str());
+}

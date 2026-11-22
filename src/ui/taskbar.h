@@ -16,13 +16,13 @@
 #include "ui/generate_animation_from_grid.h"
 #include "ui/render_animation.h"
 
-  class Taskbar
-  {
+class Taskbar
+{
     struct PendingSave
     {
-      int index = -1;
-      std::filesystem::path path;
-      bool isQueued = false;
+        int index = -1;
+        std::filesystem::path path;
+        bool isQueued = false;
     };
 
     ChangeAllFrameProperties changeAllFrameProperties = {};
@@ -52,9 +52,9 @@
     void save_enqueue(Manager&, const PendingSave&);
     bool save_request(Manager&, Settings&, int = -1, const std::filesystem::path& = {}, bool = false);
 
-  public:
+public:
     float height = 0;
 
     void update(Manager&, Settings&, Resources&, Dialog&, bool&);
     bool save_manual(Manager&, Settings&, int = -1, const std::filesystem::path& = {});
-  };
+};

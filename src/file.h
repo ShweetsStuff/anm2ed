@@ -4,9 +4,9 @@
 #include <string>
 #include <string_view>
 
-  class File
-  {
-  public:
+class File
+{
+public:
     File() = default;
     File(const std::filesystem::path&, const char* mode);
     ~File();
@@ -16,9 +16,9 @@
     FILE* get() const;
     explicit operator bool() const;
 
-  private:
+private:
     FILE* handle = nullptr;
-  };
+};
 
-    bool file_text_load(const std::filesystem::path&, std::string*, const char* mode = "rb");
-    bool file_text_save(const std::filesystem::path&, std::string_view, const char* mode = "wb");
+bool file_text_load(const std::filesystem::path&, std::string*, const char* mode = "rb");
+bool file_text_save(const std::filesystem::path&, std::string_view, const char* mode = "wb");

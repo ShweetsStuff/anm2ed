@@ -13,16 +13,16 @@
 
 #include "types.h"
 
-  // A box blur `radius` texels wide each way over the texture's `region` (UV min, max); outside it is clear.
-  struct TextureBlur
-  {
+// A box blur `radius` texels wide each way over the texture's `region` (UV min, max). Outside it is clear.
+struct TextureBlur
+{
     float radius = 0;
     glm::vec4 region{};
-  };
+};
 
-  class Canvas : public Framebuffer
-  {
-  public:
+class Canvas : public Framebuffer
+{
+public:
     static constexpr float TEXTURE_VERTICES[] = {0, 0, 0.0f, 0.0f, 1, 0, 1.0f, 0.0f,
                                                  1, 1, 1.0f, 1.0f, 0, 1, 0.0f, 1.0f};
     static constexpr auto PIVOT_SIZE = glm::vec2(8, 8);
@@ -72,11 +72,10 @@
                      glm::vec4 = glm::vec4(1.0f)) const;
     void texture_render(ShaderProgram&, GLuint, glm::mat4 = {1.0f}, glm::vec4 = glm::vec4(1.0f), glm::vec4 = {},
                         float* = (float*)TEXTURE_VERTICES, glm::vec2 = {}, float = 0.0f, TextureBlur = {}) const;
-    void layer_render(ShaderProgram&, GLuint, glm::vec2, const glm::mat4&, const Draw&, glm::vec4,
-                      glm::vec4) const;
+    void layer_render(ShaderProgram&, GLuint, glm::vec2, const glm::mat4&, const Draw&, glm::vec4, glm::vec4) const;
     void rect_fill_render(ShaderProgram&, const glm::mat4&, const glm::mat4&, glm::vec4 = glm::vec4(1.0f)) const;
-    void layers_render(ShaderProgram&, const Model&, const Animation&, const DrawOptions&,
-                       const glm::mat4&, const std::function<const Image*(const Draw&)>&,
+    void layers_render(ShaderProgram&, const Model&, const Animation&, const DrawOptions&, const glm::mat4&,
+                       const std::function<const Image*(const Draw&)>&,
                        const std::function<ShaderProgram*(int)>& = {}) const;
     void dashed_render(ShaderProgram&, const glm::mat4&, const glm::mat4&, glm::vec4, float, float, float, GLenum,
                        int) const;
@@ -88,4 +87,4 @@
     void zoom_level_adjust(float&, glm::vec2&, glm::vec2, int) const;
     glm::vec2 position_translate(float&, glm::vec2&, glm::vec2) const;
     void set_to_rect(float& zoom, glm::vec2& pan, glm::vec4 rect) const;
-  };
+};

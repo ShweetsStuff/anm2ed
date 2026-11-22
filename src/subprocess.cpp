@@ -1,28 +1,36 @@
 #include "subprocess.h"
 
 #ifdef WIN32
-  #include <string>
-  #include <windows.h>
+#include <string>
+#include <windows.h>
 #endif
 
 #ifdef WIN32
-  std::wstring utf8_to_wstring(const char* text)
-  {
-    if (!text) return {};
+std::wstring utf8_to_wstring(const char* text)
+{
+    if (!text)
+        return {};
     auto sizeRequired = MultiByteToWideChar(CP_UTF8, 0, text, -1, nullptr, 0);
-    if (sizeRequired <= 0) return {};
+    if (sizeRequired <= 0)
+        return {};
     std::wstring wide(static_cast<std::size_t>(sizeRequired - 1), L'\0');
     MultiByteToWideChar(CP_UTF8, 0, text, -1, wide.data(), sizeRequired);
     return wide;
-  }
+}
 #endif
 
-  Process::Process(const char* command, const char* mode) { open(command, mode); }
+Process::Process(const char* command, const char* mode)
+{
+    open(command, mode);
+}
 
-  Process::~Process() { close(); }
+Process::~Process()
+{
+    close();
+}
 
-  bool Process::open(const char* command, const char* mode)
-  {
+bool Process::open(const char* command, const char* mode)
+{
     close();
 
 #ifdef WIN32
@@ -33,39 +41,46 @@
     pipe = popen(command, mode);
 #endif
     return pipe != nullptr;
-  }
+}
 
-  int Process::close()
-  {
+int Process::close()
+{
     if (pipe)
     {
 #ifdef WIN32
-      auto result = _pclose(pipe);
+        auto result = _pclose(pipe);
 #else
-      auto result = pclose(pipe);
+        auto result = pclose(pipe);
 #endif
-      pipe = nullptr;
+        pipe = nullptr;
 
-      return result;
+        return result;
     }
 
     return -1;
-  }
+}
 
-  std::string Process::output_get_and_close()
-  {
+std::string Process::output_get_and_close()
+{
     std::string output;
-    if (!pipe) return {};
+    if (!pipe)
+        return {};
 
     char buffer[256];
     while (fgets(buffer, sizeof(buffer), pipe))
-      output += buffer;
+        output += buffer;
 
     close();
 
     return output;
-  }
+}
 
-  FILE* Process::get() const { return pipe; }
+FILE* Process::get() const
+{
+    return pipe;
+}
 
-  Process::operator bool() const { return pipe != nullptr; }
+Process::operator bool() const
+{
+    return pipe != nullptr;
+}

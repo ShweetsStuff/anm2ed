@@ -8,15 +8,15 @@
 #include <string_view>
 #include <vector>
 
-  struct Shader;
+struct Shader;
 
-  struct ShaderInfo
-  {
+struct ShaderInfo
+{
     const char* vertex;
     const char* fragment;
-  };
+};
 
-  inline constexpr auto VERTEX = R"(
+inline constexpr auto VERTEX = R"(
   #version 330 core
   layout (location = 0) in vec2 i_position;
   layout (location = 1) in vec2 i_uv;
@@ -29,7 +29,7 @@
   }
   )";
 
-  inline constexpr auto TEXTURE_COMPATIBILITY_VERTEX = R"(
+inline constexpr auto TEXTURE_COMPATIBILITY_VERTEX = R"(
   #version 330 core
   layout (location = 0) in vec2 i_position;
   layout (location = 1) in vec2 i_uv;
@@ -47,7 +47,7 @@
   }
   )";
 
-  inline constexpr auto AXIS_VERTEX = R"(
+inline constexpr auto AXIS_VERTEX = R"(
   #version 330 core
   layout (location = 0) in vec2 i_position; // full screen line segment: -1..1
   uniform vec2 u_origin_ndc; // world origin in NDC
@@ -63,7 +63,7 @@
   }
   )";
 
-  inline constexpr auto FRAGMENT = R"(
+inline constexpr auto FRAGMENT = R"(
   #version 330 core
   out vec4 o_fragColor;
   uniform vec4 u_color;
@@ -73,9 +73,9 @@
   }
   )";
 
-  // u_blur > 0: Flash's low-quality BlurFilter, a box of 2 * u_blur + 1 texels averaged (premultiplied) over the
-  // u_region crop, clear outside it; a wide box steps over texels so a fragment reads at most BLUR_SAMPLES per axis.
-  inline constexpr auto TEXTURE_FRAGMENT = R"(
+// u_blur > 0: Flash's low-quality BlurFilter, a box of 2 * u_blur + 1 texels averaged (premultiplied) over the
+// u_region crop, clear outside it. A wide box steps over texels so a fragment reads at most BLUR_SAMPLES per axis.
+inline constexpr auto TEXTURE_FRAGMENT = R"(
   #version 330 core
   in vec2 i_uv_out;
   uniform sampler2D u_texture;
@@ -118,7 +118,7 @@
   }
   )";
 
-  inline constexpr auto GRID_VERTEX = R"(
+inline constexpr auto GRID_VERTEX = R"(
   #version 330 core
   layout (location = 0) in vec2 i_position;
   layout (location = 1) in vec2 i_uv;
@@ -132,7 +132,7 @@
   }
   )";
 
-  inline constexpr auto GRID_FRAGMENT = R"(
+inline constexpr auto GRID_FRAGMENT = R"(
   #version 330 core
   in vec2 i_uv_out;
 
@@ -165,7 +165,7 @@
   }
   )";
 
-  inline constexpr auto DASHED_VERTEX = R"(
+inline constexpr auto DASHED_VERTEX = R"(
   #version 330 core
   layout (location = 0) in vec2 i_position;
 
@@ -180,7 +180,7 @@
   }
   )";
 
-  inline constexpr auto DASHED_FRAGMENT = R"(
+inline constexpr auto DASHED_FRAGMENT = R"(
   #version 330 core
   in vec2 v_local;
 
@@ -238,124 +238,124 @@
   }
   )";
 
-  constexpr auto UNIFORM_AXIS = "u_axis";
-  constexpr auto UNIFORM_COLOR = "u_color";
-  constexpr auto UNIFORM_TRANSFORM = "u_transform";
-  constexpr auto UNIFORM_TINT = "u_tint";
-  constexpr auto UNIFORM_COLOR_OFFSET = "u_color_offset";
-  constexpr auto UNIFORM_OFFSET = "u_offset";
-  constexpr auto UNIFORM_ORIGIN_NDC = "u_origin_ndc";
-  constexpr auto UNIFORM_SIZE = "u_size";
-  constexpr auto UNIFORM_MODEL = "u_model";
-  constexpr auto UNIFORM_RECT_SIZE = "u_rect_size";
-  constexpr auto UNIFORM_TEXTURE = "u_texture";
-  constexpr auto UNIFORM_AXIS_X = "u_axis_x";
-  constexpr auto UNIFORM_AXIS_Y = "u_axis_y";
-  constexpr auto UNIFORM_DASH_LENGTH = "u_dash_length";
-  constexpr auto UNIFORM_DASH_GAP = "u_dash_gap";
-  constexpr auto UNIFORM_DASH_OFFSET = "u_dash_offset";
-  constexpr auto UNIFORM_BLUR = "u_blur";
-  constexpr auto UNIFORM_REGION = "u_region";
-  constexpr auto UNIFORM_TEXEL = "u_texel";
+constexpr auto UNIFORM_AXIS = "u_axis";
+constexpr auto UNIFORM_COLOR = "u_color";
+constexpr auto UNIFORM_TRANSFORM = "u_transform";
+constexpr auto UNIFORM_TINT = "u_tint";
+constexpr auto UNIFORM_COLOR_OFFSET = "u_color_offset";
+constexpr auto UNIFORM_OFFSET = "u_offset";
+constexpr auto UNIFORM_ORIGIN_NDC = "u_origin_ndc";
+constexpr auto UNIFORM_SIZE = "u_size";
+constexpr auto UNIFORM_MODEL = "u_model";
+constexpr auto UNIFORM_RECT_SIZE = "u_rect_size";
+constexpr auto UNIFORM_TEXTURE = "u_texture";
+constexpr auto UNIFORM_AXIS_X = "u_axis_x";
+constexpr auto UNIFORM_AXIS_Y = "u_axis_y";
+constexpr auto UNIFORM_DASH_LENGTH = "u_dash_length";
+constexpr auto UNIFORM_DASH_GAP = "u_dash_gap";
+constexpr auto UNIFORM_DASH_OFFSET = "u_dash_offset";
+constexpr auto UNIFORM_BLUR = "u_blur";
+constexpr auto UNIFORM_REGION = "u_region";
+constexpr auto UNIFORM_TEXEL = "u_texel";
 
 #define RESOURCE_SHADER_ATTRIBUTE_ALIASES                                                                              \
-  X(0, "i_position")                                                                                                   \
-  X(0, "a_position")                                                                                                   \
-  X(0, "Position")                                                                                                     \
-  X(0, "Position0")                                                                                                    \
-  X(1, "i_uv")                                                                                                         \
-  X(1, "a_uv")                                                                                                         \
-  X(1, "TexCoord")                                                                                                     \
-  X(1, "TexCoord0")                                                                                                    \
-  X(1, "TextureCoord")                                                                                                 \
-  X(1, "UV")                                                                                                           \
-  X(1, "UV0")                                                                                                          \
-  X(2, "i_color")                                                                                                      \
-  X(2, "a_color")                                                                                                      \
-  X(2, "Color")                                                                                                        \
-  X(2, "Color0")
+    X(0, "i_position")                                                                                                 \
+    X(0, "a_position")                                                                                                 \
+    X(0, "Position")                                                                                                   \
+    X(0, "Position0")                                                                                                  \
+    X(1, "i_uv")                                                                                                       \
+    X(1, "a_uv")                                                                                                       \
+    X(1, "TexCoord")                                                                                                   \
+    X(1, "TexCoord0")                                                                                                  \
+    X(1, "TextureCoord")                                                                                               \
+    X(1, "UV")                                                                                                         \
+    X(1, "UV0")                                                                                                        \
+    X(2, "i_color")                                                                                                    \
+    X(2, "a_color")                                                                                                    \
+    X(2, "Color")                                                                                                      \
+    X(2, "Color0")
 
-  struct AttributeAlias
-  {
+struct AttributeAlias
+{
     GLuint index = 0;
     const char* name = nullptr;
-  };
+};
 
-  inline constexpr AttributeAlias ATTRIBUTE_ALIASES[] = {
+inline constexpr AttributeAlias ATTRIBUTE_ALIASES[] = {
 #define X(index, name) {index, name},
-      RESOURCE_SHADER_ATTRIBUTE_ALIASES
+    RESOURCE_SHADER_ATTRIBUTE_ALIASES
 #undef X
-  };
+};
 
 #define RESOURCE_SHADER_UNIFORM_BINDINGS                                                                               \
-  X(IGNORE, "Ignore", "Ignore")                                                                                        \
-  X(MAIN_TEXTURE, "MainTexture", "Main Texture")                                                                       \
-  X(TRANSFORM, "Transform", "Transform")                                                                               \
-  X(FRAME_TINT, "FrameTint", "Frame Tint")                                                                             \
-  X(COLOR_OFFSET, "ColorOffset", "Color Offset")                                                                       \
-  X(TEXTURE_SIZE, "TextureSize", "Texture Size")                                                                       \
-  X(PLAYBACK_TIME, "PlaybackTime", "Playback Time")                                                                    \
-  X(COMPONENTS, "Components", "Per Component")                                                                         \
-  X(MANUAL, "Manual", "Manual")
+    X(IGNORE, "Ignore", "Ignore")                                                                                      \
+    X(MAIN_TEXTURE, "MainTexture", "Main Texture")                                                                     \
+    X(TRANSFORM, "Transform", "Transform")                                                                             \
+    X(FRAME_TINT, "FrameTint", "Frame Tint")                                                                           \
+    X(COLOR_OFFSET, "ColorOffset", "Color Offset")                                                                     \
+    X(TEXTURE_SIZE, "TextureSize", "Texture Size")                                                                     \
+    X(PLAYBACK_TIME, "PlaybackTime", "Playback Time")                                                                  \
+    X(COMPONENTS, "Components", "Per Component")                                                                       \
+    X(MANUAL, "Manual", "Manual")
 
-  enum UniformBinding
-  {
+enum UniformBinding
+{
 #define X(symbol, value, label) UNIFORM_BINDING_##symbol,
     RESOURCE_SHADER_UNIFORM_BINDINGS
 #undef X
         UNIFORM_BINDING_COUNT
-  };
+};
 
-  struct UniformBindingInfo
-  {
+struct UniformBindingInfo
+{
     UniformBinding binding = {};
     const char* value = nullptr;
     const char* label = nullptr;
-  };
+};
 
-  inline constexpr UniformBindingInfo UNIFORM_BINDING_INFOS[] = {
+inline constexpr UniformBindingInfo UNIFORM_BINDING_INFOS[] = {
 #define X(symbol, value, label) {UNIFORM_BINDING_##symbol, value, label},
-      RESOURCE_SHADER_UNIFORM_BINDINGS
+    RESOURCE_SHADER_UNIFORM_BINDINGS
 #undef X
-  };
+};
 
 #define RESOURCE_SHADER_UNIFORM_VALUE_TYPES                                                                            \
-  X(UNKNOWN, "Unknown", 0)                                                                                             \
-  X(FLOAT, "Float", 0)                                                                                                 \
-  X(INT, "Int", 0)                                                                                                     \
-  X(VEC2, "Vec2", 2)                                                                                                   \
-  X(VEC3, "Vec3", 3)                                                                                                   \
-  X(VEC4, "Vec4", 4)                                                                                                   \
-  X(MAT4, "Mat4", 0)                                                                                                   \
-  X(SAMPLER2D, "Sampler2D", 0)
+    X(UNKNOWN, "Unknown", 0)                                                                                           \
+    X(FLOAT, "Float", 0)                                                                                               \
+    X(INT, "Int", 0)                                                                                                   \
+    X(VEC2, "Vec2", 2)                                                                                                 \
+    X(VEC3, "Vec3", 3)                                                                                                 \
+    X(VEC4, "Vec4", 4)                                                                                                 \
+    X(MAT4, "Mat4", 0)                                                                                                 \
+    X(SAMPLER2D, "Sampler2D", 0)
 
-  enum UniformValueType
-  {
+enum UniformValueType
+{
 #define X(symbol, label, componentCount) UNIFORM_VALUE_##symbol,
     RESOURCE_SHADER_UNIFORM_VALUE_TYPES
 #undef X
         UNIFORM_VALUE_COUNT
-  };
+};
 
-  struct UniformValueTypeInfo
-  {
+struct UniformValueTypeInfo
+{
     UniformValueType type = {};
     const char* label = nullptr;
     int componentCount = 0;
-  };
+};
 
-  inline constexpr UniformValueTypeInfo UNIFORM_VALUE_TYPE_INFOS[] = {
+inline constexpr UniformValueTypeInfo UNIFORM_VALUE_TYPE_INFOS[] = {
 #define X(symbol, label, componentCount) {UNIFORM_VALUE_##symbol, label, componentCount},
-      RESOURCE_SHADER_UNIFORM_VALUE_TYPES
+    RESOURCE_SHADER_UNIFORM_VALUE_TYPES
 #undef X
-  };
+};
 
-  struct ShaderUniform
-  {
+struct ShaderUniform
+{
     struct Component
     {
-      UniformBinding binding = UNIFORM_BINDING_MANUAL;
-      float value = 0;
+        UniformBinding binding = UNIFORM_BINDING_MANUAL;
+        float value = 0;
     };
 
     std::string name;
@@ -367,62 +367,62 @@
     glm::vec4 value{};
     int intValue = 0;
     std::array<Component, 4> components = {};
-  };
+};
 
-  enum ShaderStage
-  {
+enum ShaderStage
+{
     SHADER_STAGE_VERTEX,
     SHADER_STAGE_FRAGMENT
-  };
+};
 
-  enum ShaderType
-  {
+enum ShaderType
+{
     SHADER_LINE,
     SHADER_DASHED,
     SHADER_TEXTURE,
     SHADER_AXIS,
     SHADER_GRID,
     SHADER_COUNT
-  };
+};
 
-  const ShaderInfo SHADERS[SHADER_COUNT] = {{VERTEX, FRAGMENT},
-                               {DASHED_VERTEX, DASHED_FRAGMENT},
-                               {VERTEX, TEXTURE_FRAGMENT},
-                               {AXIS_VERTEX, FRAGMENT},
-                               {GRID_VERTEX, GRID_FRAGMENT}};
+const ShaderInfo SHADERS[SHADER_COUNT] = {{VERTEX, FRAGMENT},
+                                          {DASHED_VERTEX, DASHED_FRAGMENT},
+                                          {VERTEX, TEXTURE_FRAGMENT},
+                                          {AXIS_VERTEX, FRAGMENT},
+                                          {GRID_VERTEX, GRID_FRAGMENT}};
 
-  UniformBinding uniform_binding_auto_get(std::string_view, UniformValueType);
-  void uniform_configs_apply(const Shader&, std::vector<ShaderUniform>&);
-  bool uniform_configs_trim(Shader&, const std::vector<ShaderUniform>&);
-  void uniform_config_save(Shader&, const ShaderUniform&);
-  UniformBinding uniform_binding_get(std::string_view);
-  std::string_view uniform_binding_value_get(UniformBinding);
-  std::string_view uniform_binding_label_get(UniformBinding);
-  UniformValueType uniform_value_type_get(GLenum);
-  std::string_view uniform_value_type_label_get(UniformValueType);
-  bool is_uniform_value_editable(UniformValueType);
-  bool is_uniform_value_vector(UniformValueType);
-  bool is_uniform_binding_valid(UniformBinding, UniformValueType);
-  void uniform_value_parse(ShaderUniform&, std::string_view);
-  std::string uniform_value_string_get(const ShaderUniform&);
-  std::string gles_convert(std::string_view, ShaderStage);
-  std::string gles_fragment_convert(std::string_view);
-  std::string gles_vertex_convert(std::string_view);
+UniformBinding uniform_binding_auto_get(std::string_view, UniformValueType);
+void uniform_configs_apply(const Shader&, std::vector<ShaderUniform>&);
+bool uniform_configs_trim(Shader&, const std::vector<ShaderUniform>&);
+void uniform_config_save(Shader&, const ShaderUniform&);
+UniformBinding uniform_binding_get(std::string_view);
+std::string_view uniform_binding_value_get(UniformBinding);
+std::string_view uniform_binding_label_get(UniformBinding);
+UniformValueType uniform_value_type_get(GLenum);
+std::string_view uniform_value_type_label_get(UniformValueType);
+bool is_uniform_value_editable(UniformValueType);
+bool is_uniform_value_vector(UniformValueType);
+bool is_uniform_binding_valid(UniformBinding, UniformValueType);
+void uniform_value_parse(ShaderUniform&, std::string_view);
+std::string uniform_value_string_get(const ShaderUniform&);
+std::string gles_convert(std::string_view, ShaderStage);
+std::string gles_fragment_convert(std::string_view);
+std::string gles_vertex_convert(std::string_view);
 
-  struct ShaderCompileResult
-  {
+struct ShaderCompileResult
+{
     GLuint id = 0;
     std::string output;
     std::vector<ShaderUniform> uniforms;
     bool isCompiled = false;
     bool isLinked = false;
-  };
+};
 
-  ShaderCompileResult shader_compile(const char*, const char*);
+ShaderCompileResult shader_compile(const char*, const char*);
 
-  class ShaderProgram
-  {
-  public:
+class ShaderProgram
+{
+public:
     GLuint id = 0;
     std::vector<ShaderUniform> uniforms;
 
@@ -432,4 +432,4 @@
     ShaderProgram& operator=(ShaderProgram&&) noexcept;
     ~ShaderProgram();
     bool is_valid() const;
-  };
+};

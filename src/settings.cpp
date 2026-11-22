@@ -11,26 +11,28 @@
 
 using namespace glm;
 
-  constexpr std::string_view SETTINGS_SHEAR = "Shear";
+constexpr std::string_view SETTINGS_SHEAR = "Shear";
 
-  constexpr const char* COMPONENT_SUFFIXES_XY[] = {"X", "Y"};
-  constexpr const char* COMPONENT_SUFFIXES_WH[] = {"W", "H"};
-  constexpr const char* COMPONENT_SUFFIXES_RGBA[] = {"R", "G", "B", "A"};
+constexpr const char* COMPONENT_SUFFIXES_XY[] = {"X", "Y"};
+constexpr const char* COMPONENT_SUFFIXES_WH[] = {"W", "H"};
+constexpr const char* COMPONENT_SUFFIXES_RGBA[] = {"R", "G", "B", "A"};
 
-  template <class T>
-  concept GlmVector = requires(T value) {
+template <class T>
+concept GlmVector = requires(T value) {
     T::length();
     value[0];
-  };
+};
 
-  static const char* const* component_suffixes_get(std::string_view type)
-  {
-    if (type.ends_with("_WH")) return COMPONENT_SUFFIXES_WH;
-    if (type.starts_with("VEC3") || type.starts_with("VEC4")) return COMPONENT_SUFFIXES_RGBA;
+static const char* const* component_suffixes_get(std::string_view type)
+{
+    if (type.ends_with("_WH"))
+        return COMPONENT_SUFFIXES_WH;
+    if (type.starts_with("VEC3") || type.starts_with("VEC4"))
+        return COMPONENT_SUFFIXES_RGBA;
     return COMPONENT_SUFFIXES_XY;
-  }
+}
 
-  constexpr auto IMGUI_DEFAULT = R"(
+constexpr auto IMGUI_DEFAULT = R"(
 [Window][##DockSpace]
 Pos=0,54
 Size=1918,1007
@@ -181,114 +183,118 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
   
 )";
 
-  Settings::Settings(const std::filesystem::path& path)
-  {
+Settings::Settings(const std::filesystem::path& path)
+{
     auto pathUtf8 = path_to_utf8(path);
     if (is_path_exist(path))
-      logger.info(std::format("Using settings from: {}", pathUtf8));
+        logger.info(std::format("Using settings from: {}", pathUtf8));
     else
     {
-      logger.warning("Settings file does not exist; using default");
-      save(path, IMGUI_DEFAULT);
-      isDefault = true;
+        logger.warning("Settings file does not exist; using default");
+        save(path, IMGUI_DEFAULT);
+        isDefault = true;
     }
 
     std::string fileData;
     if (!file_text_load(path, &fileData, "rb"))
     {
-      logger.error(std::format("Failed to open settings file: {}", pathUtf8));
-      return;
+        logger.error(std::format("Failed to open settings file: {}", pathUtf8));
+        return;
     }
     std::istringstream file(fileData);
 
     std::string line;
 
-    auto stream_assign = [](auto& dest, std::istringstream& ss) { ss >> dest; };
-
-    auto value_set = [&](auto& dest, std::istringstream& ss)
-    {
-      using T = std::decay_t<decltype(dest)>;
-
-      if constexpr (std::is_same_v<T, bool>)
-      {
-        std::string val;
-        stream_assign(val, ss);
-        dest = (val == "true" || val == "1");
-      }
-      else if constexpr (std::is_same_v<T, std::string>)
-      {
-        std::getline(ss, dest);
-      }
-      else if constexpr (std::is_same_v<T, std::filesystem::path>)
-      {
-        std::string value;
-        std::getline(ss, value);
-        dest = path_from_utf8(value);
-      }
-      else
-      {
-        stream_assign(dest, ss);
-      }
+    auto stream_assign = [](auto& dest, std::istringstream& ss) {
+        ss >> dest;
     };
 
-    auto entry_load =
-        [&](const std::string& key, std::istringstream& ss, const std::string& name, auto& value, std::string_view type)
-    {
-      using T = std::decay_t<decltype(value)>;
-      if constexpr (GlmVector<T>)
-      {
-        auto suffixes = component_suffixes_get(type);
-        for (int i = 0; i < T::length(); ++i)
-          if (key == name + suffixes[i])
-          {
-            stream_assign(value[i], ss);
-            return true;
-          }
-      }
-      else if (key == name)
-      {
-        value_set(value, ss);
-        return true;
-      }
+    auto value_set = [&](auto& dest, std::istringstream& ss) {
+        using T = std::decay_t<decltype(dest)>;
 
-      return false;
+        if constexpr (std::is_same_v<T, bool>)
+        {
+            std::string val;
+            stream_assign(val, ss);
+            dest = (val == "true" || val == "1");
+        }
+        else if constexpr (std::is_same_v<T, std::string>)
+        {
+            std::getline(ss, dest);
+        }
+        else if constexpr (std::is_same_v<T, std::filesystem::path>)
+        {
+            std::string value;
+            std::getline(ss, value);
+            dest = path_from_utf8(value);
+        }
+        else
+        {
+            stream_assign(dest, ss);
+        }
+    };
+
+    auto entry_load = [&](const std::string& key, std::istringstream& ss, const std::string& name, auto& value,
+                          std::string_view type) {
+        using T = std::decay_t<decltype(value)>;
+        if constexpr (GlmVector<T>)
+        {
+            auto suffixes = component_suffixes_get(type);
+            for (int i = 0; i < T::length(); ++i)
+                if (key == name + suffixes[i])
+                {
+                    stream_assign(value[i], ss);
+                    return true;
+                }
+        }
+        else if (key == name)
+        {
+            value_set(value, ss);
+            return true;
+        }
+
+        return false;
     };
 
     while (std::getline(file, line))
     {
-      if (line == "[Settings]" || line.empty()) continue;
-      if (line == "# Dear ImGui") break;
+        if (line == "[Settings]" || line.empty())
+            continue;
+        if (line == "# Dear ImGui")
+            break;
 
-      auto eq = line.find('=');
-      if (eq == std::string::npos) continue;
+        auto eq = line.find('=');
+        if (eq == std::string::npos)
+            continue;
 
-      auto key = line.substr(0, eq);
-      // Skew settings were once named for shear.
-      if (auto legacy = key.find(SETTINGS_SHEAR); legacy != std::string::npos)
-        key.replace(legacy, SETTINGS_SHEAR.size(), "Skew");
-      std::istringstream ss(line.substr(eq + 1));
+        auto key = line.substr(0, eq);
+        // Skew settings were once named for shear.
+        if (auto legacy = key.find(SETTINGS_SHEAR); legacy != std::string::npos)
+            key.replace(legacy, SETTINGS_SHEAR.size(), "Skew");
+        std::istringstream ss(line.substr(eq + 1));
 
 #define X(symbol, name, string, type, ...)                                                                             \
-  if (entry_load(key, ss, #name, name, #type)) continue;
-      SETTINGS_MEMBERS SETTINGS_SHORTCUTS SETTINGS_WINDOWS
+    if (entry_load(key, ss, #name, name, #type))                                                                       \
+        continue;
+        SETTINGS_MEMBERS SETTINGS_SHORTCUTS SETTINGS_WINDOWS
 #undef X
     }
 
-    // Scales were once saved as multipliers; a value below the minimum percent is one, and is converted.
+    // Scales were once saved as multipliers. A value below the minimum percent is one, and is converted.
     for (auto [scale, min, max] : {std::tuple{&uiScale, UI_SCALE_MIN, UI_SCALE_MAX},
                                    std::tuple{&renderScale, RENDER_SCALE_MIN, RENDER_SCALE_MAX}})
-      *scale = std::clamp(*scale < min ? unit_to_percent(*scale) : *scale, min, max);
-  }
+        *scale = std::clamp(*scale < min ? unit_to_percent(*scale) : *scale, min, max);
+}
 
-  std::string Settings::imgui_data_load(const std::filesystem::path& path)
-  {
+std::string Settings::imgui_data_load(const std::filesystem::path& path)
+{
     auto pathUtf8 = path_to_utf8(path);
     std::string fileData;
     if (!file_text_load(path, &fileData, "rb"))
     {
-      logger.error(
-          std::format("Failed to open settings file for Dear ImGui data: {}; using Dear ImGui defaults", pathUtf8));
-      return {};
+        logger.error(
+            std::format("Failed to open settings file for Dear ImGui data: {}; using Dear ImGui defaults", pathUtf8));
+        return {};
     }
     std::istringstream file(fileData);
 
@@ -299,64 +305,65 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
 
     while (std::getline(file, line))
     {
-      if (!isImGuiSection)
-      {
-        if (line == "# Dear ImGui") isImGuiSection = true;
-        continue;
-      }
+        if (!isImGuiSection)
+        {
+            if (line == "# Dear ImGui")
+                isImGuiSection = true;
+            continue;
+        }
 
-      if (isContent) dataStream << "\n";
-      dataStream << line;
-      isContent = true;
+        if (isContent)
+            dataStream << "\n";
+        dataStream << line;
+        isContent = true;
     }
 
     if (!isImGuiSection)
     {
-      logger.warning(
-          std::format("Dear ImGui section missing from settings file: {}; using Dear ImGui defaults", pathUtf8));
-      return {};
+        logger.warning(
+            std::format("Dear ImGui section missing from settings file: {}; using Dear ImGui defaults", pathUtf8));
+        return {};
     }
 
     if (!isContent)
     {
-      logger.warning(std::format("Dear ImGui section empty in settings file: {}; using Dear ImGui defaults", pathUtf8));
-      return {};
+        logger.warning(
+            std::format("Dear ImGui section empty in settings file: {}; using Dear ImGui defaults", pathUtf8));
+        return {};
     }
 
     return dataStream.str();
-  }
+}
 
-  void Settings::save(const std::filesystem::path& path, const std::string& imguiData)
-  {
+void Settings::save(const std::filesystem::path& path, const std::string& imguiData)
+{
     auto pathUtf8 = path_to_utf8(path);
     logger.info(std::format("Saving settings to: {}", pathUtf8));
     std::ostringstream file;
 
     file << "[Settings]\n";
 
-    auto value_save = [&](const std::string& key, const auto& value)
-    {
-      using T = std::decay_t<decltype(value)>;
+    auto value_save = [&](const std::string& key, const auto& value) {
+        using T = std::decay_t<decltype(value)>;
 
-      if constexpr (std::is_same_v<T, bool>)
-        file << key << "=" << (value ? "true" : "false") << "\n";
-      else if constexpr (std::is_same_v<T, std::filesystem::path>)
-        file << key << "=" << path_to_utf8(value) << "\n";
-      else
-        file << key << "=" << value << "\n";
+        if constexpr (std::is_same_v<T, bool>)
+            file << key << "=" << (value ? "true" : "false") << "\n";
+        else if constexpr (std::is_same_v<T, std::filesystem::path>)
+            file << key << "=" << path_to_utf8(value) << "\n";
+        else
+            file << key << "=" << value << "\n";
     };
-    auto entry_save = [&](const std::string& name, const auto& value, const std::string_view type)
-    {
-      using T = std::decay_t<decltype(value)>;
+    auto entry_save = [&](const std::string& name, const auto& value, const std::string_view type) {
+        using T = std::decay_t<decltype(value)>;
 
-      if constexpr (GlmVector<T>)
-      {
-        auto suffixes = component_suffixes_get(type);
-        for (int i = 0; i < T::length(); ++i)
-          value_save(name + suffixes[i], value[i]);
-      }
-      else
-        value_save(name, value);
+        if constexpr (GlmVector<T>)
+        {
+            auto suffixes = component_suffixes_get(type);
+            for (int i = 0; i < T::length(); ++i)
+                value_save(name + suffixes[i], value[i]);
+        }
+        else
+            value_save(name, value);
     };
 
 #define X(symbol, name, string, type, ...) entry_save(#name, name, #type);
@@ -369,13 +376,13 @@ DockSpace                 ID=0x123F8F08 Window=0x6D581B32 Pos=8,62 Size=1902,991
 
     if (file.fail())
     {
-      logger.error(std::format("Failed while writing settings file: {}", pathUtf8));
-      return;
+        logger.error(std::format("Failed while writing settings file: {}", pathUtf8));
+        return;
     }
     if (!file_text_save(path, file.str(), "wb"))
     {
-      logger.error(std::format("Failed to save settings file: {}", pathUtf8));
-      return;
+        logger.error(std::format("Failed to save settings file: {}", pathUtf8));
+        return;
     }
     logger.info(std::format("Saved settings to: {}", pathUtf8));
-  }
+}

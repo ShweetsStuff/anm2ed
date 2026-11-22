@@ -9,26 +9,26 @@
 
 #include <glm/glm.hpp>
 
-  constexpr auto IMAGE_CHANNELS = 4;
-  constexpr auto SVG_EXTENSION = "svg";
-  constexpr auto PNG_EXTENSION = "png";
+constexpr auto IMAGE_CHANNELS = 4;
+constexpr auto SVG_EXTENSION = "svg";
+constexpr auto PNG_EXTENSION = "png";
 
-  class Image;
+class Image;
 
-  // A block of an image placed at `destination`, for composing images.
-  struct ImagePart
-  {
+// A block of an image placed at `destination`, for composing images.
+struct ImagePart
+{
     const Image* image = nullptr;
     glm::ivec2 source{};
     glm::ivec2 size{};
     glm::ivec2 destination{};
-  };
+};
 
-  // CPU-side RGBA pixels. uid changes whenever the pixels do, so GPU copies can be cached by it. A vector image keeps
-  // its SVG and is drawn at `scale` pixels per SVG unit; it can be drawn again at any scale, and isn't edited.
-  class Image
-  {
-  public:
+// CPU-side RGBA pixels. uid changes whenever the pixels do, so GPU copies can be cached by it. A vector image keeps
+// its SVG and is drawn at `scale` pixels per SVG unit. It can be drawn again at any scale, and isn't edited.
+class Image
+{
+public:
     glm::ivec2 size{};
     std::vector<uint8_t> pixels;
     bool isLinear = false;
@@ -55,4 +55,4 @@
     glm::vec4 pixel_read(glm::vec2) const;
     void pixel_set(glm::ivec2, glm::vec4);
     void pixel_line(glm::ivec2, glm::ivec2, glm::vec4);
-  };
+};

@@ -15,65 +15,65 @@
 #include "localization.h"
 #include "ui/popup.h"
 
-  inline const glm::vec4 ROOT_COLOR = glm::vec4(0.140f, 0.310f, 0.560f, 1.000f);
-  inline const glm::vec4 ROOT_COLOR_ACTIVE = glm::vec4(0.240f, 0.520f, 0.880f, 1.000f);
-  inline const glm::vec4 ROOT_COLOR_HOVERED = glm::vec4(0.320f, 0.640f, 1.000f, 1.000f);
+inline const glm::vec4 ROOT_COLOR = glm::vec4(0.140f, 0.310f, 0.560f, 1.000f);
+inline const glm::vec4 ROOT_COLOR_ACTIVE = glm::vec4(0.240f, 0.520f, 0.880f, 1.000f);
+inline const glm::vec4 ROOT_COLOR_HOVERED = glm::vec4(0.320f, 0.640f, 1.000f, 1.000f);
 
-  inline const glm::vec4 LAYER_COLOR = glm::vec4(0.640f, 0.320f, 0.110f, 1.000f);
-  inline const glm::vec4 LAYER_COLOR_ACTIVE = glm::vec4(0.840f, 0.450f, 0.170f, 1.000f);
-  inline const glm::vec4 LAYER_COLOR_HOVERED = glm::vec4(0.960f, 0.560f, 0.240f, 1.000f);
+inline const glm::vec4 LAYER_COLOR = glm::vec4(0.640f, 0.320f, 0.110f, 1.000f);
+inline const glm::vec4 LAYER_COLOR_ACTIVE = glm::vec4(0.840f, 0.450f, 0.170f, 1.000f);
+inline const glm::vec4 LAYER_COLOR_HOVERED = glm::vec4(0.960f, 0.560f, 0.240f, 1.000f);
 
-  inline const glm::vec4 NULL_COLOR = glm::vec4(0.140f, 0.430f, 0.200f, 1.000f);
-  inline const glm::vec4 NULL_COLOR_ACTIVE = glm::vec4(0.250f, 0.650f, 0.350f, 1.000f);
-  inline const glm::vec4 NULL_COLOR_HOVERED = glm::vec4(0.350f, 0.800f, 0.480f, 1.000f);
+inline const glm::vec4 NULL_COLOR = glm::vec4(0.140f, 0.430f, 0.200f, 1.000f);
+inline const glm::vec4 NULL_COLOR_ACTIVE = glm::vec4(0.250f, 0.650f, 0.350f, 1.000f);
+inline const glm::vec4 NULL_COLOR_HOVERED = glm::vec4(0.350f, 0.800f, 0.480f, 1.000f);
 
-  inline const glm::vec4 TRIGGER_COLOR = glm::vec4(0.620f, 0.150f, 0.260f, 1.000f);
-  inline const glm::vec4 TRIGGER_COLOR_ACTIVE = glm::vec4(0.820f, 0.250f, 0.380f, 1.000f);
-  inline const glm::vec4 TRIGGER_COLOR_HOVERED = glm::vec4(0.950f, 0.330f, 0.490f, 1.000f);
+inline const glm::vec4 TRIGGER_COLOR = glm::vec4(0.620f, 0.150f, 0.260f, 1.000f);
+inline const glm::vec4 TRIGGER_COLOR_ACTIVE = glm::vec4(0.820f, 0.250f, 0.380f, 1.000f);
+inline const glm::vec4 TRIGGER_COLOR_HOVERED = glm::vec4(0.950f, 0.330f, 0.490f, 1.000f);
 
 #define ANM2_ITEM_TYPES                                                                                                \
-  X(NONE, STRING_UNDEFINED, ICON_NONE, glm::vec4(), glm::vec4(), glm::vec4())                               \
-  X(ROOT, BASIC_ROOT, ICON_ROOT, ROOT_COLOR, ROOT_COLOR_ACTIVE, ROOT_COLOR_HOVERED)                         \
-  X(LAYER, BASIC_LAYER_ANIMATION, ICON_LAYER, LAYER_COLOR, LAYER_COLOR_ACTIVE, LAYER_COLOR_HOVERED)         \
-  X(NULL_, BASIC_NULL_ANIMATION, ICON_NULL, NULL_COLOR, NULL_COLOR_ACTIVE, NULL_COLOR_HOVERED)             \
-  X(TRIGGER, BASIC_TRIGGERS, ICON_TRIGGERS, TRIGGER_COLOR, TRIGGER_COLOR_ACTIVE, TRIGGER_COLOR_HOVERED)
+    X(NONE, STRING_UNDEFINED, ICON_NONE, glm::vec4(), glm::vec4(), glm::vec4())                                        \
+    X(ROOT, BASIC_ROOT, ICON_ROOT, ROOT_COLOR, ROOT_COLOR_ACTIVE, ROOT_COLOR_HOVERED)                                  \
+    X(LAYER, BASIC_LAYER_ANIMATION, ICON_LAYER, LAYER_COLOR, LAYER_COLOR_ACTIVE, LAYER_COLOR_HOVERED)                  \
+    X(NULL_, BASIC_NULL_ANIMATION, ICON_NULL, NULL_COLOR, NULL_COLOR_ACTIVE, NULL_COLOR_HOVERED)                       \
+    X(TRIGGER, BASIC_TRIGGERS, ICON_TRIGGERS, TRIGGER_COLOR, TRIGGER_COLOR_ACTIVE, TRIGGER_COLOR_HOVERED)
 
-  constexpr StringType TYPE_STRINGS[] = {
+constexpr StringType TYPE_STRINGS[] = {
 #define X(symbol, string, icon, color, colorActive, colorHovered) string,
-      ANM2_ITEM_TYPES
+    ANM2_ITEM_TYPES
 #undef X
-  };
+};
 
-  constexpr Icon TYPE_ICONS[] = {
+constexpr Icon TYPE_ICONS[] = {
 #define X(symbol, string, icon, color, colorActive, colorHovered) icon,
-      ANM2_ITEM_TYPES
+    ANM2_ITEM_TYPES
 #undef X
-  };
+};
 
-  inline const glm::vec4 TYPE_COLOR[] = {
+inline const glm::vec4 TYPE_COLOR[] = {
 #define X(symbol, string, icon, color, colorActive, colorHovered) color,
-      ANM2_ITEM_TYPES
+    ANM2_ITEM_TYPES
 #undef X
-  };
+};
 
-  inline const glm::vec4 TYPE_COLOR_ACTIVE[] = {
+inline const glm::vec4 TYPE_COLOR_ACTIVE[] = {
 #define X(symbol, string, icon, color, colorActive, colorHovered) colorActive,
-      ANM2_ITEM_TYPES
+    ANM2_ITEM_TYPES
 #undef X
-  };
+};
 
-  inline const glm::vec4 TYPE_COLOR_HOVERED[] = {
+inline const glm::vec4 TYPE_COLOR_HOVERED[] = {
 #define X(symbol, string, icon, color, colorActive, colorHovered) colorHovered,
-      ANM2_ITEM_TYPES
+    ANM2_ITEM_TYPES
 #undef X
-  };
+};
 
-  struct TimelineContext;
+struct TimelineContext;
 
-  // A timeline row: a track (in a group or not), a group, or a group's root. groupType/groupId name the group a
-  // track or group root belongs to.
-  struct TimelineRow
-  {
+// A timeline row: a track (in a group or not), a group, or a group's root. groupType/groupId name the group a
+// track or group root belongs to.
+struct TimelineRow
+{
     int documentIndex = -1;
     int animationIndex = -1;
     int type = NONE;
@@ -85,38 +85,38 @@
     bool isGroup = false;
 
     auto operator<=>(const TimelineRow&) const = default;
-  };
+};
 
-  struct FrameMoveDrag
-  {
+struct FrameMoveDrag
+{
     int animationIndex = -1;
     int duration = 1;
     std::vector<Reference> references;
     bool isActive = false;
-  };
+};
 
-  // What the timeline last put on the clipboard: frames of a type, or one property of a frame.
-  struct FrameClipboard
-  {
+// What the timeline last put on the clipboard: frames of a type, or one property of a frame.
+struct FrameClipboard
+{
     std::string text;
     int itemType = NONE;
     int property = -1;
-  };
+};
 
-  struct FrameDurationDrag
-  {
+struct FrameDurationDrag
+{
     Reference reference = {};
     int duration = 1;
-  };
+};
 
-  enum class BakeIntoOtherFramesTarget
-  {
+enum class BakeIntoOtherFramesTarget
+{
     CURRENT_SELECTION,
     ALL
-  };
+};
 
-  struct TimelineState
-  {
+struct TimelineState
+{
     bool isDragging = false;
     bool isRulerHovered = false;
     FrameClipboard frameClipboard = {};
@@ -155,7 +155,8 @@
     float draggedFrameWidth = 0;
     bool isDraggedFrameSnapshot = false;
     FrameMoveDrag frameMoveDrag = {};
-    // The tab a held shorten/extend chord is editing (0 when released), so a held chord starts one undo entry per document.
+    // The tab a held shorten/extend chord is editing (0 when released), so a held chord starts one undo entry per
+    // document.
     std::uint64_t resizeChordTabIds[2]{};
     std::optional<Reference> frameSelectionAnchor;
     int animationLengthEditIndex = -1;
@@ -163,14 +164,14 @@
     std::set<std::uint64_t> expandedLayerTracks; // animation layer tracks (by uid) showing their child's tracks
     glm::vec2 scroll{};
     ImGuiStyle style = {};
-  };
+};
 
-  class Timeline
-  {
+class Timeline
+{
     std::unique_ptr<TimelineContext> context;
 
-  public:
+public:
     Timeline();
     ~Timeline();
     void update(Manager&, Settings&, Resources&, Clipboard&);
-  };
+};

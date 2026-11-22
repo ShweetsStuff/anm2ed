@@ -3,12 +3,12 @@
 #include "manager.h"
 #include "localization.h"
 
-  class AutosaveRestore
-  {
+class AutosaveRestore
+{
     PopupHelper popup = PopupHelper(LABEL_WELCOME_RESTORE_POPUP, POPUP_SMALL_NO_HEIGHT);
     bool isInitialized = false;
     bool isRestoreAvailable = false;
 
-  public:
+public:
     void update(Manager&);
-  };
+};

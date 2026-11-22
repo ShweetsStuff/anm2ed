@@ -1,8 +1,8 @@
 #include "ui/tree.h"
 
-  TreeNodeInputTextResult tree_node_input_text(const std::string& label, const std::string& id, std::string& text,
-                                               bool isSelected, ImGuiTreeNodeFlags flags, RenameState& state)
-  {
+TreeNodeInputTextResult tree_node_input_text(const std::string& label, const std::string& id, std::string& text,
+                                             bool isSelected, ImGuiTreeNodeFlags flags, RenameState& state)
+{
     TreeNodeInputTextResult result = {};
     auto& editID = selectable_input_text_id();
     auto isRename = editID == id;
@@ -10,20 +10,20 @@
 
     if (!isRename)
     {
-      result.isOpen = ImGui::TreeNodeEx(id.c_str(), treeFlags, "%s", label.c_str());
-      result.isClicked =
-          ImGui::IsItemClicked(ImGuiMouseButton_Left) || ImGui::IsItemClicked(ImGuiMouseButton_Right);
-      result.isActivated = result.isClicked;
+        result.isOpen = ImGui::TreeNodeEx(id.c_str(), treeFlags, "%s", label.c_str());
+        result.isClicked = ImGui::IsItemClicked(ImGuiMouseButton_Left) || ImGui::IsItemClicked(ImGuiMouseButton_Right);
+        result.isActivated = result.isClicked;
 
-      if (state == RENAME_FORCE_EDIT || (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)))
-      {
-        state = RENAME_BEGIN;
-        editID = id;
-        result.isActivated = true;
-        result.isRenameStarted = true;
-      }
+        if (state == RENAME_FORCE_EDIT ||
+            (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)))
+        {
+            state = RENAME_BEGIN;
+            editID = id;
+            result.isActivated = true;
+            result.isRenameStarted = true;
+        }
 
-      return result;
+        return result;
     }
 
     result.isOpen = ImGui::TreeNodeEx(id.c_str(), treeFlags, "%s", "");
@@ -35,4 +35,4 @@
     result.isActivated = input_text_rename_update(text, state, width);
     result.isRenameFinished = state == RENAME_FINISHED;
     return result;
-  }
+}

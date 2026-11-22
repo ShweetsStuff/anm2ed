@@ -4,25 +4,26 @@
 // ANM2ED_CORPUS_BASELINE (default ~/.cache/anm2ed/corpus) and compared on every later run. Nothing here is committed.
 TEST_CASE("local corpus matches baselines" * doctest::skip(!is_env_set("ANM2ED_CORPUS")))
 {
-  auto baseline = is_env_set("ANM2ED_CORPUS_BASELINE")
-                      ? std::filesystem::path(std::getenv("ANM2ED_CORPUS_BASELINE"))
-                      : std::filesystem::path(std::getenv("HOME")) / ".cache/anm2ed/corpus";
-  std::istringstream list(file_load(std::getenv("ANM2ED_CORPUS")));
-  std::string line;
-  while (std::getline(list, line))
-  {
-    if (line.empty()) continue;
-    INFO("file: ", line);
-    auto key = std::format("{:016x}", std::hash<std::string>{}(line));
-    Model anm2 = {};
-    std::string error;
-    if (!model_load(anm2, line, &error))
+    auto baseline = is_env_set("ANM2ED_CORPUS_BASELINE")
+                        ? std::filesystem::path(std::getenv("ANM2ED_CORPUS_BASELINE"))
+                        : std::filesystem::path(std::getenv("HOME")) / ".cache/anm2ed/corpus";
+    std::istringstream list(file_load(std::getenv("ANM2ED_CORPUS")));
+    std::string line;
+    while (std::getline(list, line))
     {
-      golden_check(baseline / (key + ".error.txt"), error, true);
-      continue;
+        if (line.empty())
+            continue;
+        INFO("file: ", line);
+        auto key = std::format("{:016x}", std::hash<std::string>{}(line));
+        Model anm2 = {};
+        std::string error;
+        if (!model_load(anm2, line, &error))
+        {
+            golden_check(baseline / (key + ".error.txt"), error, true);
+            continue;
+        }
+        for (auto& [name, text] : variants_get(anm2))
+            golden_check(baseline / std::format("{}.{}.xml", key, name), text, true);
+        invariants_check(anm2);
     }
-    for (auto& [name, text] : variants_get(anm2))
-      golden_check(baseline / std::format("{}.{}.xml", key, name), text, true);
-    invariants_check(anm2);
-  }
 }

@@ -1,8 +1,8 @@
 #pragma once
 
-  class Playback
-  {
-  public:
+class Playback
+{
+public:
     float time = 0;
     bool isPlaying = false;
     bool isFinished = false;
@@ -14,6 +14,6 @@
     void decrement(int);
     void increment(int);
 
-  private:
+private:
     float tickAccumulator = 0;
-  };
+};

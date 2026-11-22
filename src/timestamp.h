@@ -2,6 +2,6 @@
 
 #include <string>
 
-  constexpr auto SECOND_MINUTES = 60;
+constexpr auto SECOND_MINUTES = 60;
 
-  std::string timestamp_get(const char*);
+std::string timestamp_get(const char*);

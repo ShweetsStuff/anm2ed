@@ -2,9 +2,9 @@
 
 #include <string>
 
-  class Process
-  {
-  public:
+class Process
+{
+public:
     Process() = default;
     Process(const char*, const char*);
     ~Process();
@@ -16,6 +16,6 @@
 
     std::string output_get_and_close();
 
-  private:
+private:
     FILE* pipe = nullptr;
-  };
+};

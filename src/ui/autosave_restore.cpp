@@ -5,52 +5,53 @@
 #include "path.h"
 #include "ui/layout.h"
 
-  void AutosaveRestore::update(Manager& manager)
-  {
+void AutosaveRestore::update(Manager& manager)
+{
     if (!isInitialized)
     {
-      isInitialized = true;
-      isRestoreAvailable = !manager.autosaveFiles.empty();
-      if (isRestoreAvailable) popup.open();
+        isInitialized = true;
+        isRestoreAvailable = !manager.autosaveFiles.empty();
+        if (isRestoreAvailable)
+            popup.open();
     }
 
     popup.trigger();
 
     if (isRestoreAvailable && ImGui::BeginPopupModal(popup.label(), &popup.isOpen, ImGuiWindowFlags_NoResize))
     {
-      ImGui::TextUnformatted(localize.get(LABEL_RESTORE_AUTOSAVES_PROMPT));
+        ImGui::TextUnformatted(localize.get(LABEL_RESTORE_AUTOSAVES_PROMPT));
 
-      auto childSize = child_size_get(5);
+        auto childSize = child_size_get(5);
 
-      if (ImGui::BeginChild("##Restore Files Child", childSize, ImGuiChildFlags_Borders,
-                            ImGuiWindowFlags_HorizontalScrollbar))
-      {
-        for (auto& file : manager.autosaveFiles)
+        if (ImGui::BeginChild("##Restore Files Child", childSize, ImGuiChildFlags_Borders,
+                              ImGuiWindowFlags_HorizontalScrollbar))
         {
-          auto label = std::format(FILE_LABEL_FORMAT, path_to_utf8(file.filename()), path_to_utf8(file));
-          ImGui::TextUnformatted(label.c_str());
+            for (auto& file : manager.autosaveFiles)
+            {
+                auto label = std::format(FILE_LABEL_FORMAT, path_to_utf8(file.filename()), path_to_utf8(file));
+                ImGui::TextUnformatted(label.c_str());
+            }
         }
-      }
-      ImGui::EndChild();
+        ImGui::EndChild();
 
-      auto widgetSize = widget_size_with_row_get(2);
+        auto widgetSize = widget_size_with_row_get(2);
 
-      if (ImGui::Button(localize.get(BASIC_YES), widgetSize))
-      {
-        manager.autosave_files_open();
-        isRestoreAvailable = false;
-        popup.close();
-      }
+        if (ImGui::Button(localize.get(BASIC_YES), widgetSize))
+        {
+            manager.autosave_files_open();
+            isRestoreAvailable = false;
+            popup.close();
+        }
 
-      ImGui::SameLine();
+        ImGui::SameLine();
 
-      if (ImGui::Button(localize.get(BASIC_NO), widgetSize))
-      {
-        manager.autosave_files_clear(true);
-        isRestoreAvailable = false;
-        popup.close();
-      }
+        if (ImGui::Button(localize.get(BASIC_NO), widgetSize))
+        {
+            manager.autosave_files_clear(true);
+            isRestoreAvailable = false;
+            popup.close();
+        }
 
-      ImGui::EndPopup();
+        ImGui::EndPopup();
     }
-  }
+}

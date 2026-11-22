@@ -14,31 +14,31 @@
 #include "model/common.h"
 #include "uid.h"
 
-// The typed document model. XML exists only in model/xml.cpp; everything else edits and reads these structs.
-  // An XML element the editor does not understand, kept verbatim so it survives a save.
-  struct XmlNode
-  {
+// The typed document model. XML exists only in model/xml.cpp. Everything else edits and reads these structs.
+// An XML element the editor does not understand, kept verbatim so it survives a save.
+struct XmlNode
+{
     std::string tag;
     std::vector<std::pair<std::string, std::string>> attributes;
     std::string text;
     std::vector<XmlNode> children;
 
     bool operator==(const XmlNode&) const = default;
-  };
+};
 
-  // Unknown XML attached to a known node: attributes, text, and unknown children with the child index they had.
-  struct Extras
-  {
+// Unknown XML attached to a known node: attributes, text, and unknown children with the child index they had.
+struct Extras
+{
     std::vector<std::pair<std::string, std::string>> attributes;
     std::string text;
     std::vector<std::pair<int, XmlNode>> children;
 
     bool operator==(const Extras&) const = default;
-  };
+};
 
-  // A keyframe; on a triggers track the same struct is a trigger (atFrame, eventIds, soundIds).
-  struct Frame
-  {
+// A keyframe. On a triggers track the same struct is a trigger (atFrame, eventIds, soundIds).
+struct Frame
+{
     std::uint64_t uid = uid_next();
     glm::vec2 crop{};
     glm::vec2 size{};
@@ -54,9 +54,9 @@
     Interpolation interpolation = Interpolation::NONE;
     int regionId = -1;
     int shaderId = -1;
-    int depth = 0;  // a layer frame draws this many layers above (or below) its place in the timeline; editor-only
-    float blur = 0; // Flash's BlurFilter at quality 1: one box blur this many canvas pixels wide; editor-only
-    // On an animation layer: the child animation (empty for the layer's own) and how it plays; editor-only.
+    int depth = 0;  // a layer frame draws this many layers above (or below) its place in the timeline. Editor-only
+    float blur = 0; // Flash's BlurFilter at quality 1: one box blur this many canvas pixels wide. Editor-only
+    // On an animation layer: the child animation (empty for the layer's own) and how it plays. Editor-only.
     std::string childAnimation;
     ChildMode childMode = ChildMode::LOOP;
     int childStart = 0;
@@ -68,10 +68,10 @@
     Extras extras = {};
 
     bool operator==(const Frame&) const = default;
-  };
+};
 
-  struct Track
-  {
+struct Track
+{
     std::uint64_t uid = uid_next();
     ItemType type = ItemType::LAYER;
     int id = -1;
@@ -80,10 +80,10 @@
     Extras extras = {};
 
     bool operator==(const Track&) const = default;
-  };
+};
 
-  struct TrackGroup
-  {
+struct TrackGroup
+{
     std::uint64_t uid = uid_next();
     int id = -1;
     std::string name;
@@ -94,17 +94,17 @@
     Extras extras = {};
 
     bool operator==(const TrackGroup&) const = default;
-  };
+};
 
-  using TrackEntry = std::variant<Track, TrackGroup>;
+using TrackEntry = std::variant<Track, TrackGroup>;
 
-  struct Animation
-  {
+struct Animation
+{
     std::uint64_t uid = uid_next();
     std::string name;
     int frameNum = 1;
     bool isLoop = true;
-    // Playback stays between these frames (inclusive) when set; -1 for none. Saved only in the editor's copy.
+    // Playback stays between these frames (inclusive) when set. -1 for none. Saved only in the editor's copy.
     int startMarker = -1;
     int endMarker = -1;
     Track root = {.type = ItemType::ROOT, .frames = {Frame{}}};
@@ -118,10 +118,10 @@
     Extras nullsExtras = {};
 
     bool operator==(const Animation&) const = default;
-  };
+};
 
-  struct AnimationGroup
-  {
+struct AnimationGroup
+{
     std::uint64_t uid = uid_next();
     int id = -1;
     std::string name;
@@ -131,12 +131,12 @@
     Extras extras = {};
 
     bool operator==(const AnimationGroup&) const = default;
-  };
+};
 
-  using AnimationEntry = std::variant<std::shared_ptr<const Animation>, AnimationGroup>;
+using AnimationEntry = std::variant<std::shared_ptr<const Animation>, AnimationGroup>;
 
-  struct Region
-  {
+struct Region
+{
     std::uint64_t uid = uid_next();
     int id = -1;
     std::string name;
@@ -147,10 +147,10 @@
     Extras extras = {};
 
     bool operator==(const Region&) const = default;
-  };
+};
 
-  struct Spritesheet
-  {
+struct Spritesheet
+{
     std::uint64_t uid = uid_next();
     int id = -1;
     std::filesystem::path path;
@@ -158,20 +158,20 @@
     Extras extras = {};
 
     bool operator==(const Spritesheet&) const = default;
-  };
+};
 
-  struct Component
-  {
+struct Component
+{
     int index = -1;
     std::string binding;
     std::string value;
     Extras extras = {};
 
     bool operator==(const Component&) const = default;
-  };
+};
 
-  struct Uniform
-  {
+struct Uniform
+{
     std::string name;
     std::string binding;
     std::string value;
@@ -179,10 +179,10 @@
     Extras extras = {};
 
     bool operator==(const Uniform&) const = default;
-  };
+};
 
-  struct Shader
-  {
+struct Shader
+{
     std::uint64_t uid = uid_next();
     int id = -1;
     std::string name;
@@ -192,10 +192,10 @@
     Extras extras = {};
 
     bool operator==(const Shader&) const = default;
-  };
+};
 
-  struct Layer
-  {
+struct Layer
+{
     std::uint64_t uid = uid_next();
     int id = -1;
     std::string name;
@@ -206,23 +206,26 @@
     std::string animation;
     Extras extras = {};
 
-    bool is_animation() const { return !animation.empty(); }
+    bool is_animation() const
+    {
+        return !animation.empty();
+    }
     bool operator==(const Layer&) const = default;
-  };
+};
 
-  // Another .anm2 whose animations this one's layers can play.
-  struct Library
-  {
+// Another .anm2 whose animations this one's layers can play.
+struct Library
+{
     std::uint64_t uid = uid_next();
     int id = -1;
     std::filesystem::path path;
     Extras extras = {};
 
     bool operator==(const Library&) const = default;
-  };
+};
 
-  struct Null
-  {
+struct Null
+{
     std::uint64_t uid = uid_next();
     int id = -1;
     std::string name;
@@ -230,42 +233,43 @@
     Extras extras = {};
 
     bool operator==(const Null&) const = default;
-  };
+};
 
-  struct Event
-  {
+struct Event
+{
     std::uint64_t uid = uid_next();
     int id = -1;
     std::string name;
     Extras extras = {};
 
     bool operator==(const Event&) const = default;
-  };
+};
 
-  struct Sound
-  {
+struct Sound
+{
     std::uint64_t uid = uid_next();
     int id = -1;
     std::filesystem::path path;
     Extras extras = {};
 
     bool operator==(const Sound&) const = default;
-  };
+};
 
-  struct Info
-  {
+struct Info
+{
     std::string createdBy = "robot";
     std::string createdOn;
     int fps = 30;
     int version = 0;
-    bool isIsaacIgnored = false; // last saved with Ignore and Save: nothing the game can't show worked around; editor-only
+    bool isIsaacIgnored =
+        false; // last saved with Ignore and Save: nothing the game can't show worked around. Editor-only
     Extras extras = {};
 
     bool operator==(const Info&) const = default;
-  };
+};
 
-  struct Content
-  {
+struct Content
+{
     std::vector<Spritesheet> spritesheets;
     std::vector<Shader> shaders;
     std::vector<Layer> layers;
@@ -279,79 +283,81 @@
     std::vector<std::pair<ElementType, Extras>> containerExtras;
 
     bool operator==(const Content&) const = default;
-  };
+};
 
-  struct Animations
-  {
+struct Animations
+{
     std::string defaultAnimation;
     std::vector<AnimationEntry> entries;
     Extras extras = {};
 
     bool operator==(const Animations&) const = default;
-  };
+};
 
-  // Content item lookup by file id (layers, nulls, events, sounds, spritesheets, shaders, regions).
-  template <class Items> auto item_get(Items& items, int id) -> decltype(&items.front())
-  {
+// Content item lookup by file id (layers, nulls, events, sounds, spritesheets, shaders, regions).
+template <class Items> auto item_get(Items& items, int id) -> decltype(&items.front())
+{
     for (auto& item : items)
-      if (item.id == id) return &item;
+        if (item.id == id)
+            return &item;
     return nullptr;
-  }
+}
 
-  template <class Items> int item_next_id_get(const Items& items)
-  {
+template <class Items> int item_next_id_get(const Items& items)
+{
     int id = -1;
     for (auto& item : items)
-      id = std::max(id, item.id);
+        id = std::max(id, item.id);
     return id + 1;
-  }
+}
 
-  // Tracks of one kind (layer or null) in order, including those inside groups; callback(track, group or nullptr).
-  template <class Entries, class Callback> void tracks_each(Entries& entries, Callback&& callback)
-  {
+// Tracks of one kind (layer or null) in order, including those inside groups. Callback(track, group or nullptr).
+template <class Entries, class Callback> void tracks_each(Entries& entries, Callback&& callback)
+{
     for (auto& entry : entries)
-      if (auto track = std::get_if<Track>(&entry))
-        callback(*track, static_cast<decltype(&std::get<TrackGroup>(entry))>(nullptr));
-      else
-      {
-        auto& group = std::get<TrackGroup>(entry);
-        for (auto& groupTrack : group.tracks)
-          callback(groupTrack, &group);
-      }
-  }
-
-  template <class Entries, class Callback> void groups_each(Entries& entries, Callback&& callback)
-  {
-    for (auto& entry : entries)
-      if (auto group = std::get_if<TrackGroup>(&entry)) callback(*group);
-  }
-
-  // Every track of an animation (root, group roots, layers, nulls, triggers).
-  template <class A, class Callback> void animation_tracks_each(A& animation, Callback&& callback)
-  {
-    callback(animation.root);
-    for (auto* entries : {&animation.layers, &animation.nulls})
-      for (auto& entry : *entries)
         if (auto track = std::get_if<Track>(&entry))
-          callback(*track);
+            callback(*track, static_cast<decltype(&std::get<TrackGroup>(entry))>(nullptr));
         else
         {
-          auto& group = std::get<TrackGroup>(entry);
-          callback(group.root);
-          for (auto& groupTrack : group.tracks)
-            callback(groupTrack);
+            auto& group = std::get<TrackGroup>(entry);
+            for (auto& groupTrack : group.tracks)
+                callback(groupTrack, &group);
         }
+}
+
+template <class Entries, class Callback> void groups_each(Entries& entries, Callback&& callback)
+{
+    for (auto& entry : entries)
+        if (auto group = std::get_if<TrackGroup>(&entry))
+            callback(*group);
+}
+
+// Every track of an animation (root, group roots, layers, nulls, triggers).
+template <class A, class Callback> void animation_tracks_each(A& animation, Callback&& callback)
+{
+    callback(animation.root);
+    for (auto* entries : {&animation.layers, &animation.nulls})
+        for (auto& entry : *entries)
+            if (auto track = std::get_if<Track>(&entry))
+                callback(*track);
+            else
+            {
+                auto& group = std::get<TrackGroup>(entry);
+                callback(group.root);
+                for (auto& groupTrack : group.tracks)
+                    callback(groupTrack);
+            }
     callback(animation.triggers);
-  }
+}
 
-  template <class A> auto& animation_entries_get(A& animation, int itemType)
-  {
+template <class A> auto& animation_entries_get(A& animation, int itemType)
+{
     return itemType == NULL_ ? animation.nulls : animation.layers;
-  }
+}
 
-  class Model
-  {
-  public:
+class Model
+{
+public:
     Info info = {};
     Content content = {};
     Animations animations = {};
@@ -382,39 +388,39 @@
     std::uint64_t uid_get(Reference, bool = false) const;
     Handle handle_get(Reference, bool = false) const;
     void uids_repair();
-  };
+};
 
-  // uid -> where that element is now (as a Reference) and what it is, built in one walk of the animations.
-  class UidIndex
-  {
-  public:
+// uid -> where that element is now (as a Reference) and what it is, built in one walk of the animations.
+class UidIndex
+{
+public:
     struct Location
     {
-      Reference reference = {};
-      ElementType type = {};
+        Reference reference = {};
+        ElementType type = {};
     };
 
-  private:
+private:
     std::unordered_map<std::uint64_t, Location> locations;
 
-  public:
+public:
     UidIndex() = default;
     explicit UidIndex(const Model&);
     bool contains(std::uint64_t) const;
     std::optional<Reference> reference_get(std::uint64_t) const;
     ElementType type_get(std::uint64_t) const;
-  };
+};
 
-  bool is_model_equal(const Model&, const Model&);
-  std::set<int> spritesheets_vector_used_get(const Model&);
-  int track_frames_count_get(const Track&);
-  int track_length_get(const Track&);
-  int animation_length_get(const Animation&);
-  glm::ivec2 animation_play_range_get(const Animation&);
-  const Track* animation_track_get(const Animation&, int, int, int = NONE, int = -1);
-  Track* animation_track_get(Animation&, int, int, int = NONE, int = -1);
-  TrackGroup* animation_track_group_get(Animation&, int, int);
-  const TrackGroup* animation_track_group_get(const Animation&, int, int);
-  Animation animation_clone(Animation);
-  Frame frame_clone(Frame);
-  Track track_clone(Track);
+bool is_model_equal(const Model&, const Model&);
+std::set<int> spritesheets_vector_used_get(const Model&);
+int track_frames_count_get(const Track&);
+int track_length_get(const Track&);
+int animation_length_get(const Animation&);
+glm::ivec2 animation_play_range_get(const Animation&);
+const Track* animation_track_get(const Animation&, int, int, int = NONE, int = -1);
+Track* animation_track_get(Animation&, int, int, int = NONE, int = -1);
+TrackGroup* animation_track_group_get(Animation&, int, int);
+const TrackGroup* animation_track_group_get(const Animation&, int, int);
+Animation animation_clone(Animation);
+Frame frame_clone(Frame);
+Track track_clone(Track);

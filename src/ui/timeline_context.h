@@ -28,122 +28,124 @@
 
 using namespace glm;
 
-  constexpr auto WIDTH_MULTIPLIER = 1.25f;
+constexpr auto WIDTH_MULTIPLIER = 1.25f;
 
-  constexpr auto COLOR_HIDDEN_MULTIPLIER = vec4(0.5f, 0.5f, 0.5f, 1.000f);
-  constexpr auto FRAME_BORDER_COLOR_DARK = ImVec4(1.0f, 1.0f, 1.0f, 0.15f);
-  constexpr auto FRAME_BORDER_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 0.25f);
-  constexpr auto FRAME_BORDER_COLOR_REFERENCED_DARK = ImVec4(1.0f, 1.0f, 1.0f, 0.50f);
-  constexpr auto FRAME_BORDER_COLOR_REFERENCED_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 0.60f);
-  constexpr auto FRAME_BORDER_THICKNESS = 1.0f;
-  constexpr auto FRAME_BORDER_THICKNESS_REFERENCED = 2.0f;
-  constexpr auto FRAME_MULTIPLE_OVERLAY_COLOR_DARK = ImVec4(1.0f, 1.0f, 1.0f, 0.05f);
-  constexpr auto FRAME_MULTIPLE_OVERLAY_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 0.1f);
-  constexpr auto FRAME_ROUNDING = 3.0f;
-  constexpr auto ICON_TINT_DEFAULT_DARK = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-  constexpr auto ICON_TINT_DEFAULT_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
-  constexpr auto ITEM_TEXT_COLOR_DARK = to_imvec4(COLOR_WHITE);
-  constexpr auto ITEM_TEXT_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
-  constexpr auto PLAYHEAD_ICON_TINT_LIGHT = ImVec4(0.3922f, 0.7843f, 0.5882f, 1.0f);
-  constexpr auto PLAYHEAD_LINE_COLOR_DARK = to_imvec4(COLOR_WHITE);
-  constexpr auto PLAYHEAD_LINE_COLOR_LIGHT = ImVec4(0.1961f, 0.5882f, 0.3922f, 1.0f);
-  constexpr auto PLAYHEAD_LINE_THICKNESS = 4.0f;
-  constexpr auto TEXT_MULTIPLE_COLOR_DARK = to_imvec4(COLOR_WHITE);
-  constexpr auto TEXT_MULTIPLE_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
-  constexpr auto TIMELINE_BACKGROUND_COLOR_LIGHT = ImVec4(0.5490f, 0.5490f, 0.5882f, 1.0f);
-  constexpr auto TIMELINE_PLAYHEAD_RECT_COLOR_DARK = ImVec4(0.60f, 0.45f, 0.30f, 1.0f);
-  constexpr auto TIMELINE_PLAYHEAD_RECT_COLOR_LIGHT = ImVec4(0.8353f, 0.8353f, 0.7294f, 1.0f);
-  constexpr auto TIMELINE_TICK_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
-  constexpr auto TIMELINE_CHILD_BG_COLOR_LIGHT = ImVec4(0.5490f, 0.5490f, 0.5882f, 1.0f);
-  constexpr auto TIMELINE_TEXT_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+constexpr auto COLOR_HIDDEN_MULTIPLIER = vec4(0.5f, 0.5f, 0.5f, 1.000f);
+constexpr auto FRAME_BORDER_COLOR_DARK = ImVec4(1.0f, 1.0f, 1.0f, 0.15f);
+constexpr auto FRAME_BORDER_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 0.25f);
+constexpr auto FRAME_BORDER_COLOR_REFERENCED_DARK = ImVec4(1.0f, 1.0f, 1.0f, 0.50f);
+constexpr auto FRAME_BORDER_COLOR_REFERENCED_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 0.60f);
+constexpr auto FRAME_BORDER_THICKNESS = 1.0f;
+constexpr auto FRAME_BORDER_THICKNESS_REFERENCED = 2.0f;
+constexpr auto FRAME_MULTIPLE_OVERLAY_COLOR_DARK = ImVec4(1.0f, 1.0f, 1.0f, 0.05f);
+constexpr auto FRAME_MULTIPLE_OVERLAY_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 0.1f);
+constexpr auto FRAME_ROUNDING = 3.0f;
+constexpr auto ICON_TINT_DEFAULT_DARK = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+constexpr auto ICON_TINT_DEFAULT_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+constexpr auto ITEM_TEXT_COLOR_DARK = to_imvec4(COLOR_WHITE);
+constexpr auto ITEM_TEXT_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+constexpr auto PLAYHEAD_ICON_TINT_LIGHT = ImVec4(0.3922f, 0.7843f, 0.5882f, 1.0f);
+constexpr auto PLAYHEAD_LINE_COLOR_DARK = to_imvec4(COLOR_WHITE);
+constexpr auto PLAYHEAD_LINE_COLOR_LIGHT = ImVec4(0.1961f, 0.5882f, 0.3922f, 1.0f);
+constexpr auto PLAYHEAD_LINE_THICKNESS = 4.0f;
+constexpr auto TEXT_MULTIPLE_COLOR_DARK = to_imvec4(COLOR_WHITE);
+constexpr auto TEXT_MULTIPLE_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+constexpr auto TIMELINE_BACKGROUND_COLOR_LIGHT = ImVec4(0.5490f, 0.5490f, 0.5882f, 1.0f);
+constexpr auto TIMELINE_PLAYHEAD_RECT_COLOR_DARK = ImVec4(0.60f, 0.45f, 0.30f, 1.0f);
+constexpr auto TIMELINE_PLAYHEAD_RECT_COLOR_LIGHT = ImVec4(0.8353f, 0.8353f, 0.7294f, 1.0f);
+constexpr auto TIMELINE_TICK_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+constexpr auto TIMELINE_CHILD_BG_COLOR_LIGHT = ImVec4(0.5490f, 0.5490f, 0.5882f, 1.0f);
+constexpr auto TIMELINE_TEXT_COLOR_LIGHT = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
 
-  enum class DropZone
-  {
+enum class DropZone
+{
     BEFORE,
     INSIDE,
     AFTER
-  };
+};
 
-  constexpr glm::vec4 FRAME_COLOR_LIGHT_BASE[] = {{0.80f, 0.80f, 0.80f, 1.0f},
-                                                  {0.5216f, 0.7333f, 1.0f, 1.0f},
-                                                  {1.0f, 0.9961f, 0.5882f, 1.0f},
-                                                  {0.6157f, 1.0f, 0.5882f, 1.0f},
-                                                  {1.0f, 0.5882f, 0.8314f, 1.0f}};
-  constexpr glm::vec4 FRAME_COLOR_LIGHT_ACTIVE[] = {{0.74f, 0.74f, 0.74f, 1.0f},
-                                                    {0.0980f, 0.3765f, 0.6431f, 1.0f},
-                                                    {1.0f, 0.5255f, 0.3333f, 1.0f},
-                                                    {0.3686f, 0.5765f, 0.2353f, 1.0f},
-                                                    {0.6118f, 0.2039f, 0.2745f, 1.0f}};
-  constexpr glm::vec4 FRAME_COLOR_LIGHT_HOVERED[] = {{0.84f, 0.84f, 0.84f, 1.0f},
-                                                     {0.0752f, 0.2887f, 0.4931f, 1.0f},
-                                                     {0.85f, 0.4467f, 0.2833f, 1.0f},
-                                                     {0.2727f, 0.4265f, 0.1741f, 1.0f},
-                                                     {0.4618f, 0.1539f, 0.2072f, 1.0f}};
-  constexpr glm::vec4 ITEM_COLOR_LIGHT_BASE[] = {{0.3059f, 0.3255f, 0.5412f, 1.0f},
-                                                 {0.3333f, 0.5725f, 0.8392f, 1.0f},
-                                                 {1.0f, 0.5412f, 0.3412f, 1.0f},
-                                                 {0.5255f, 0.8471f, 0.4588f, 1.0f},
-                                                 {0.7961f, 0.3882f, 0.5412f, 1.0f}};
-  constexpr glm::vec4 ITEM_COLOR_LIGHT_ACTIVE[] = {{0.3459f, 0.3655f, 0.5812f, 1.0f},
-                                                   {0.3733f, 0.6125f, 0.8792f, 1.0f},
-                                                   {0.9106f, 0.4949f, 0.2753f, 1.0f},
-                                                   {0.5655f, 0.8871f, 0.4988f, 1.0f},
-                                                   {0.8361f, 0.4282f, 0.5812f, 1.0f}};
-  constexpr glm::vec4 ITEM_COLOR_LIGHT_SELECTED[] = {{0.74f, 0.74f, 0.74f, 1.0f},
-                                                     {0.2039f, 0.4549f, 0.7176f, 1.0f},
-                                                     {0.8745f, 0.4392f, 0.2275f, 1.0f},
-                                                     {0.3765f, 0.6784f, 0.2980f, 1.0f},
-                                                     {0.6353f, 0.2235f, 0.3647f, 1.0f}};
+constexpr glm::vec4 FRAME_COLOR_LIGHT_BASE[] = {{0.80f, 0.80f, 0.80f, 1.0f},
+                                                {0.5216f, 0.7333f, 1.0f, 1.0f},
+                                                {1.0f, 0.9961f, 0.5882f, 1.0f},
+                                                {0.6157f, 1.0f, 0.5882f, 1.0f},
+                                                {1.0f, 0.5882f, 0.8314f, 1.0f}};
+constexpr glm::vec4 FRAME_COLOR_LIGHT_ACTIVE[] = {{0.74f, 0.74f, 0.74f, 1.0f},
+                                                  {0.0980f, 0.3765f, 0.6431f, 1.0f},
+                                                  {1.0f, 0.5255f, 0.3333f, 1.0f},
+                                                  {0.3686f, 0.5765f, 0.2353f, 1.0f},
+                                                  {0.6118f, 0.2039f, 0.2745f, 1.0f}};
+constexpr glm::vec4 FRAME_COLOR_LIGHT_HOVERED[] = {{0.84f, 0.84f, 0.84f, 1.0f},
+                                                   {0.0752f, 0.2887f, 0.4931f, 1.0f},
+                                                   {0.85f, 0.4467f, 0.2833f, 1.0f},
+                                                   {0.2727f, 0.4265f, 0.1741f, 1.0f},
+                                                   {0.4618f, 0.1539f, 0.2072f, 1.0f}};
+constexpr glm::vec4 ITEM_COLOR_LIGHT_BASE[] = {{0.3059f, 0.3255f, 0.5412f, 1.0f},
+                                               {0.3333f, 0.5725f, 0.8392f, 1.0f},
+                                               {1.0f, 0.5412f, 0.3412f, 1.0f},
+                                               {0.5255f, 0.8471f, 0.4588f, 1.0f},
+                                               {0.7961f, 0.3882f, 0.5412f, 1.0f}};
+constexpr glm::vec4 ITEM_COLOR_LIGHT_ACTIVE[] = {{0.3459f, 0.3655f, 0.5812f, 1.0f},
+                                                 {0.3733f, 0.6125f, 0.8792f, 1.0f},
+                                                 {0.9106f, 0.4949f, 0.2753f, 1.0f},
+                                                 {0.5655f, 0.8871f, 0.4988f, 1.0f},
+                                                 {0.8361f, 0.4282f, 0.5812f, 1.0f}};
+constexpr glm::vec4 ITEM_COLOR_LIGHT_SELECTED[] = {{0.74f, 0.74f, 0.74f, 1.0f},
+                                                   {0.2039f, 0.4549f, 0.7176f, 1.0f},
+                                                   {0.8745f, 0.4392f, 0.2275f, 1.0f},
+                                                   {0.3765f, 0.6784f, 0.2980f, 1.0f},
+                                                   {0.6353f, 0.2235f, 0.3647f, 1.0f}};
 
-  constexpr auto MARKER_ALPHA = 0.5f;
-  constexpr auto MARKER_OUTSIDE_COLOR = IM_COL32(0, 0, 0, 96);
-  constexpr auto FRAME_MULTIPLE = 5;
-  constexpr auto FRAME_TOOLTIP_HOVER_DELAY = 0.75f;
+constexpr auto MARKER_ALPHA = 0.5f;
+constexpr auto MARKER_OUTSIDE_COLOR = IM_COL32(0, 0, 0, 96);
+constexpr auto FRAME_MULTIPLE = 5;
+constexpr auto FRAME_TOOLTIP_HOVER_DELAY = 0.75f;
 
 #define ITEM_CHILD_WIDTH ImGui::GetTextLineHeightWithSpacing() * 12.5
 
-  enum TimelineColor
-  {
+enum TimelineColor
+{
     COLOR_FRAME_BASE,
     COLOR_FRAME_ACTIVE,
     COLOR_FRAME_HOVERED,
     COLOR_ITEM_BASE,
     COLOR_ITEM_ACTIVE,
     COLOR_ITEM_SELECTED
-  };
+};
 
-  struct TimelineColorSet
-  {
+struct TimelineColorSet
+{
     const glm::vec4* light;
     const glm::vec4* dark;
-  };
+};
 
-  inline const TimelineColorSet TIMELINE_COLORS[] = {{FRAME_COLOR_LIGHT_BASE, TYPE_COLOR},
-                                                     {FRAME_COLOR_LIGHT_ACTIVE, TYPE_COLOR_ACTIVE},
-                                                     {FRAME_COLOR_LIGHT_HOVERED, TYPE_COLOR_HOVERED},
-                                                     {ITEM_COLOR_LIGHT_BASE, TYPE_COLOR},
-                                                     {ITEM_COLOR_LIGHT_ACTIVE, TYPE_COLOR_ACTIVE},
-                                                     {ITEM_COLOR_LIGHT_SELECTED, TYPE_COLOR_ACTIVE}};
+inline const TimelineColorSet TIMELINE_COLORS[] = {{FRAME_COLOR_LIGHT_BASE, TYPE_COLOR},
+                                                   {FRAME_COLOR_LIGHT_ACTIVE, TYPE_COLOR_ACTIVE},
+                                                   {FRAME_COLOR_LIGHT_HOVERED, TYPE_COLOR_HOVERED},
+                                                   {ITEM_COLOR_LIGHT_BASE, TYPE_COLOR},
+                                                   {ITEM_COLOR_LIGHT_ACTIVE, TYPE_COLOR_ACTIVE},
+                                                   {ITEM_COLOR_LIGHT_SELECTED, TYPE_COLOR_ACTIVE}};
 
-  inline bool is_trigger_reference(const Reference& reference) { return reference.itemType == TRIGGER; }
+inline bool is_trigger_reference(const Reference& reference)
+{
+    return reference.itemType == TRIGGER;
+}
 
-  constexpr Icon INTERPOLATION_ICONS[] = {ICON_UNINTERPOLATED, ICON_INTERPOLATED,
-                                                          ICON_EASE_IN, ICON_EASE_OUT,
-                                                          ICON_EASE_IN_OUT};
+constexpr Icon INTERPOLATION_ICONS[] = {ICON_UNINTERPOLATED, ICON_INTERPOLATED, ICON_EASE_IN, ICON_EASE_OUT,
+                                        ICON_EASE_IN_OUT};
 
-  // A read-only row under an expanded animation layer: one track of the child animation it plays.
-  struct PeekRow
-  {
+// A read-only row under an expanded animation layer: one track of the child animation it plays.
+struct PeekRow
+{
     const Model* source = nullptr;
     const Animation* child = nullptr;
     const Track* track = nullptr;
-  };
+};
 
-  Reference row_item_reference_get(const TimelineRow&);
-  Reference row_selection_reference_get(const TimelineRow&);
+Reference row_item_reference_get(const TimelineRow&);
+Reference row_selection_reference_get(const TimelineRow&);
 
-  struct TimelineContext : TimelineState
-  {
+struct TimelineContext : TimelineState
+{
     Manager& manager;
     Settings& settings;
     Resources& resources;
@@ -187,16 +189,14 @@ using namespace glm;
     const TrackGroup* row_group_get(const TimelineRow& row);
     glm::vec4 color_get(TimelineColor, int);
     std::set<Reference> drag_frame_references_get(const Reference&);
-    // Queues an edit on the document; its result is selected (frames by default).
+    // Queues an edit on the document. Its result is selected (frames by default).
     template <class Operation>
     void edit_push(StringType label, Operation operation, std::function<void(Document&, const Uids&)> select = {})
     {
-      command_push(
-          [=, this](Manager&, Document& document) mutable
-          {
+        command_push([=, this](Manager&, Document& document) mutable {
             auto uids = document.edit_apply(label, operation);
             select ? select(document, uids) : document.frames_select(uids);
-          });
+        });
     }
     void edit_begin_push(StringType);
     void reference_set(Reference);
@@ -277,4 +277,4 @@ using namespace glm;
     void popups_update();
     void shortcuts_update();
     void draw();
-  };
+};

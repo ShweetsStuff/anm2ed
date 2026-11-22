@@ -5,9 +5,9 @@
 
 #include <imgui/imgui.h>
 
-  class MultiSelectStorage : public std::set<int>
-  {
-  public:
+class MultiSelectStorage : public std::set<int>
+{
+public:
     ImGuiSelectionExternalStorage internal = {};
     ImGuiMultiSelectIO* io = nullptr;
     std::vector<int>* indexMap = nullptr;
@@ -28,6 +28,6 @@
     void finish();
     void set_index_map(std::vector<int>*);
     int resolve_index(int) const;
-  };
+};
 
-  void external_storage_set(ImGuiSelectionExternalStorage*, int, bool);
+void external_storage_set(ImGuiSelectionExternalStorage*, int, bool);

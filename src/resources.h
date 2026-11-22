@@ -8,9 +8,9 @@
 #include "shader.h"
 #include "texture.h"
 
-  class Resources
-  {
-  public:
+class Resources
+{
+public:
     Font fonts[FONT_COUNT]{};
     Image icons[ICON_COUNT]{};
     ShaderProgram shaders[SHADER_COUNT]{};
@@ -21,6 +21,6 @@
     AudioData& music_track();
     AudioData* music_track_if_loaded();
 
-  private:
+private:
     bool isMusicLoaded = false;
-  };
+};

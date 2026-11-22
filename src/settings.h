@@ -12,311 +12,311 @@
 #include "ui/theme.h"
 
 #ifdef _WIN32
-  constexpr auto FFMPEG_PATH_DEFAULT = "C:\\ffmpeg\\bin\\ffmpeg.exe";
+constexpr auto FFMPEG_PATH_DEFAULT = "C:\\ffmpeg\\bin\\ffmpeg.exe";
 #else
-  constexpr auto FFMPEG_PATH_DEFAULT = "/usr/bin/ffmpeg";
+constexpr auto FFMPEG_PATH_DEFAULT = "/usr/bin/ffmpeg";
 #endif
 
 #ifdef _WIN32
-  constexpr auto OUTPUT_PATH_DEFAULT = ".\\output.gif";
+constexpr auto OUTPUT_PATH_DEFAULT = ".\\output.gif";
 #else
-  constexpr auto OUTPUT_PATH_DEFAULT = "./output.gif";
+constexpr auto OUTPUT_PATH_DEFAULT = "./output.gif";
 #endif
 
-  constexpr auto AUTO_RELOAD_INTERVAL = 3.0f; // seconds between checks of spritesheet and library files
-  // Scales are percents.
-  constexpr auto UI_SCALE_MIN = 50.0f;
-  constexpr auto UI_SCALE_MAX = 200.0f;
-  constexpr auto UI_SCALE_STEP = 25.0f;
-  constexpr auto RENDER_SCALE_MIN = 25.0f;
-  constexpr auto RENDER_SCALE_MAX = 1000.0f;
-  constexpr auto RENDER_SCALE_STEP = 25.0f;
+constexpr auto AUTO_RELOAD_INTERVAL = 3.0f; // seconds between checks of spritesheet and library files
+// Scales are percents.
+constexpr auto UI_SCALE_MIN = 50.0f;
+constexpr auto UI_SCALE_MAX = 200.0f;
+constexpr auto UI_SCALE_STEP = 25.0f;
+constexpr auto RENDER_SCALE_MIN = 25.0f;
+constexpr auto RENDER_SCALE_MAX = 1000.0f;
+constexpr auto RENDER_SCALE_STEP = 25.0f;
 
 #define SETTINGS_TYPES                                                                                                 \
-  X(INT, int)                                                                                                          \
-  X(BOOL, bool)                                                                                                        \
-  X(FLOAT, float)                                                                                                      \
-  X(STRING, std::string)                                                                                               \
-  X(PATH, std::filesystem::path)                                                                                       \
-  X(IVEC2, glm::ivec2)                                                                                                 \
-  X(IVEC2_WH, glm::ivec2)                                                                                              \
-  X(VEC2, glm::vec2)                                                                                                   \
-  X(VEC2_WH, glm::vec2)                                                                                                \
-  X(VEC3, glm::vec3)                                                                                                   \
-  X(VEC4, glm::vec4)
+    X(INT, int)                                                                                                        \
+    X(BOOL, bool)                                                                                                      \
+    X(FLOAT, float)                                                                                                    \
+    X(STRING, std::string)                                                                                             \
+    X(PATH, std::filesystem::path)                                                                                     \
+    X(IVEC2, glm::ivec2)                                                                                               \
+    X(IVEC2_WH, glm::ivec2)                                                                                            \
+    X(VEC2, glm::vec2)                                                                                                 \
+    X(VEC2_WH, glm::vec2)                                                                                              \
+    X(VEC3, glm::vec3)                                                                                                 \
+    X(VEC4, glm::vec4)
 
 #define X(name, type) using TYPE_##name = type;
-  SETTINGS_TYPES
+SETTINGS_TYPES
 #undef X
 
 #define SETTINGS_MEMBERS                                                                                               \
-  /* Symbol / Name / String / Type / Default */                                                                        \
-  X(WINDOW_SIZE, windowSize, STRING_UNDEFINED, IVEC2_WH, {1200, 720})                                                  \
-  X(WINDOW_POSITION, windowPosition, STRING_UNDEFINED, IVEC2, glm::ivec2())                                            \
-  X(IS_VSYNC, isVsync, STRING_UNDEFINED, BOOL, true)                                                                   \
-  X(IS_DETACHABLE_WINDOWS, isDetachableWindows, STRING_UNDEFINED, BOOL, true)                                          \
-  X(UI_SCALE, uiScale, STRING_UNDEFINED, FLOAT, 100.0f)                                                                \
-  X(THEME, theme, STRING_UNDEFINED, INT, THEME_DARK)                                                           \
-  X(LANGUAGE, language, STRING_UNDEFINED, INT, ENGLISH)                                                                \
+    /* Symbol / Name / String / Type / Default */                                                                      \
+    X(WINDOW_SIZE, windowSize, STRING_UNDEFINED, IVEC2_WH, {1200, 720})                                                \
+    X(WINDOW_POSITION, windowPosition, STRING_UNDEFINED, IVEC2, glm::ivec2())                                          \
+    X(IS_VSYNC, isVsync, STRING_UNDEFINED, BOOL, true)                                                                 \
+    X(IS_DETACHABLE_WINDOWS, isDetachableWindows, STRING_UNDEFINED, BOOL, true)                                        \
+    X(UI_SCALE, uiScale, STRING_UNDEFINED, FLOAT, 100.0f)                                                              \
+    X(THEME, theme, STRING_UNDEFINED, INT, THEME_DARK)                                                                 \
+    X(LANGUAGE, language, STRING_UNDEFINED, INT, ENGLISH)                                                              \
                                                                                                                        \
-  X(FILE_IS_AUTOSAVE, fileIsAutosave, STRING_UNDEFINED, BOOL, true)                                                    \
-  X(FILE_IS_WARN_OVERWRITE, fileIsWarnOverwrite, STRING_UNDEFINED, BOOL, true)                                         \
-  X(FILE_IS_WARN_ISAAC, fileIsWarnIsaac, STRING_UNDEFINED, BOOL, true)                                                 \
-  X(FILE_IS_AUTO_RELOAD_RESOURCES, fileIsAutoReloadResources, STRING_UNDEFINED, BOOL, true)                            \
-  X(FILE_IS_JSON, fileIsJson, STRING_UNDEFINED, BOOL, false)                                                            \
-  X(FILE_SNAPSHOT_STACK_SIZE, fileSnapshotStackSize, STRING_UNDEFINED, INT, 50)                                        \
+    X(FILE_IS_AUTOSAVE, fileIsAutosave, STRING_UNDEFINED, BOOL, true)                                                  \
+    X(FILE_IS_WARN_OVERWRITE, fileIsWarnOverwrite, STRING_UNDEFINED, BOOL, true)                                       \
+    X(FILE_IS_WARN_ISAAC, fileIsWarnIsaac, STRING_UNDEFINED, BOOL, true)                                               \
+    X(FILE_IS_AUTO_RELOAD_RESOURCES, fileIsAutoReloadResources, STRING_UNDEFINED, BOOL, true)                          \
+    X(FILE_IS_JSON, fileIsJson, STRING_UNDEFINED, BOOL, false)                                                         \
+    X(FILE_SNAPSHOT_STACK_SIZE, fileSnapshotStackSize, STRING_UNDEFINED, INT, 50)                                      \
                                                                                                                        \
-  X(KEYBOARD_REPEAT_DELAY, keyboardRepeatDelay, STRING_UNDEFINED, FLOAT, 0.300f)                                       \
-  X(KEYBOARD_REPEAT_RATE, keyboardRepeatRate, STRING_UNDEFINED, FLOAT, 0.050f)                                         \
+    X(KEYBOARD_REPEAT_DELAY, keyboardRepeatDelay, STRING_UNDEFINED, FLOAT, 0.300f)                                     \
+    X(KEYBOARD_REPEAT_RATE, keyboardRepeatRate, STRING_UNDEFINED, FLOAT, 0.050f)                                       \
                                                                                                                        \
-  X(INPUT_IS_MOVE_TOOL_SNAP_TO_MOUSE, inputIsMoveToolSnapToMouse, STRING_UNDEFINED, BOOL, false)                       \
+    X(INPUT_IS_MOVE_TOOL_SNAP_TO_MOUSE, inputIsMoveToolSnapToMouse, STRING_UNDEFINED, BOOL, false)                     \
                                                                                                                        \
-  X(PLAYBACK_IS_LOOP, playbackIsLoop, STRING_UNDEFINED, BOOL, true)                                                    \
-  X(PLAYBACK_IS_CLAMP, playbackIsClamp, STRING_UNDEFINED, BOOL, true)                                                  \
-  X(PLAYBACK_TICK_RATE, playbackTickRate, STRING_UNDEFINED, INT, 30)                                                   \
+    X(PLAYBACK_IS_LOOP, playbackIsLoop, STRING_UNDEFINED, BOOL, true)                                                  \
+    X(PLAYBACK_IS_CLAMP, playbackIsClamp, STRING_UNDEFINED, BOOL, true)                                                \
+    X(PLAYBACK_TICK_RATE, playbackTickRate, STRING_UNDEFINED, INT, 30)                                                 \
                                                                                                                        \
-  X(CHANGE_IS_CROP_X, changeIsCropX, STRING_UNDEFINED, BOOL, false)                                                    \
-  X(CHANGE_IS_CROP_Y, changeIsCropY, STRING_UNDEFINED, BOOL, false)                                                    \
-  X(CHANGE_IS_SIZE_X, changeIsSizeX, STRING_UNDEFINED, BOOL, false)                                                    \
-  X(CHANGE_IS_SIZE_Y, changeIsSizeY, STRING_UNDEFINED, BOOL, false)                                                    \
-  X(CHANGE_IS_POSITION_X, changeIsPositionX, STRING_UNDEFINED, BOOL, false)                                            \
-  X(CHANGE_IS_POSITION_Y, changeIsPositionY, STRING_UNDEFINED, BOOL, false)                                            \
-  X(CHANGE_IS_PIVOT_X, changeIsPivotX, STRING_UNDEFINED, BOOL, false)                                                  \
-  X(CHANGE_IS_PIVOT_Y, changeIsPivotY, STRING_UNDEFINED, BOOL, false)                                                  \
-  X(CHANGE_IS_SCALE_X, changeIsScaleX, STRING_UNDEFINED, BOOL, false)                                                  \
-  X(CHANGE_IS_SCALE_Y, changeIsScaleY, STRING_UNDEFINED, BOOL, false)                                                  \
-  X(CHANGE_IS_SKEW_X, changeIsSkewX, STRING_UNDEFINED, BOOL, false)                                                    \
-  X(CHANGE_IS_SKEW_Y, changeIsSkewY, STRING_UNDEFINED, BOOL, false)                                                    \
-  X(CHANGE_IS_ROTATION, changeIsRotation, STRING_UNDEFINED, BOOL, false)                                               \
-  X(CHANGE_IS_DURATION, changeIsDuration, STRING_UNDEFINED, BOOL, false)                                               \
-  X(CHANGE_IS_DEPTH, changeIsDepth, STRING_UNDEFINED, BOOL, false)                                                     \
-  X(CHANGE_IS_BLUR, changeIsBlur, STRING_UNDEFINED, BOOL, false)                                                       \
-  X(CHANGE_IS_CHILD_ANIMATION, changeIsChildAnimation, STRING_UNDEFINED, BOOL, false)                                  \
-  X(CHANGE_IS_CHILD_MODE, changeIsChildMode, STRING_UNDEFINED, BOOL, false)                                            \
-  X(CHANGE_IS_CHILD_START, changeIsChildStart, STRING_UNDEFINED, BOOL, false)                                          \
-  X(CHANGE_IS_CHILD_START_RANDOM_SET, changeIsChildStartRandomSet, STRING_UNDEFINED, BOOL, false)                      \
-  X(CHANGE_IS_CHILD_RESTART_SET, changeIsChildRestartSet, STRING_UNDEFINED, BOOL, false)                               \
-  X(CHANGE_IS_TINT_R, changeIsTintR, STRING_UNDEFINED, BOOL, false)                                                    \
-  X(CHANGE_IS_TINT_G, changeIsTintG, STRING_UNDEFINED, BOOL, false)                                                    \
-  X(CHANGE_IS_TINT_B, changeIsTintB, STRING_UNDEFINED, BOOL, false)                                                    \
-  X(CHANGE_IS_TINT_A, changeIsTintA, STRING_UNDEFINED, BOOL, false)                                                    \
-  X(CHANGE_IS_COLOR_OFFSET_R, changeIsColorOffsetR, STRING_UNDEFINED, BOOL, false)                                     \
-  X(CHANGE_IS_COLOR_OFFSET_G, changeIsColorOffsetG, STRING_UNDEFINED, BOOL, false)                                     \
-  X(CHANGE_IS_COLOR_OFFSET_B, changeIsColorOffsetB, STRING_UNDEFINED, BOOL, false)                                     \
-  X(CHANGE_IS_COLOR_OFFSET_A, changeIsColorOffsetA, STRING_UNDEFINED, BOOL, false)                                     \
-  X(CHANGE_IS_VISIBLE_SET, changeIsVisibleSet, STRING_UNDEFINED, BOOL, false)                                          \
-  X(CHANGE_IS_INTERPOLATION_SET, changeIsInterpolationSet, STRING_UNDEFINED, BOOL, false)                              \
-  X(CHANGE_IS_FLIP_X_SET, changeIsFlipXSet, STRING_UNDEFINED, BOOL, false)                                             \
-  X(CHANGE_IS_FLIP_Y_SET, changeIsFlipYSet, STRING_UNDEFINED, BOOL, false)                                             \
-  X(CHANGE_IS_REGION, changeIsRegion, STRING_UNDEFINED, BOOL, false)                                                   \
-  X(CHANGE_IS_SHADER, changeIsShader, STRING_UNDEFINED, BOOL, false)                                                   \
-  X(CHANGE_CROP, changeCrop, STRING_UNDEFINED, VEC2, {})                                                               \
-  X(CHANGE_SIZE, changeSize, STRING_UNDEFINED, VEC2, {})                                                               \
-  X(CHANGE_POSITION, changePosition, STRING_UNDEFINED, VEC2, {})                                                       \
-  X(CHANGE_PIVOT, changePivot, STRING_UNDEFINED, VEC2, {})                                                             \
-  X(CHANGE_SCALE, changeScale, STRING_UNDEFINED, VEC2, {})                                                             \
-  X(CHANGE_SKEW, changeSkew, STRING_UNDEFINED, VEC2, {})                                                               \
-  X(CHANGE_ROTATION, changeRotation, STRING_UNDEFINED, FLOAT, 0.0f)                                                    \
-  X(CHANGE_DURATION, changeDuration, STRING_UNDEFINED, INT, 0)                                                         \
-  X(CHANGE_DEPTH, changeDepth, STRING_UNDEFINED, INT, 0)                                                               \
-  X(CHANGE_BLUR, changeBlur, STRING_UNDEFINED, FLOAT, 0.0f)                                                            \
-  X(CHANGE_CHILD_ANIMATION, changeChildAnimation, STRING_UNDEFINED, STRING, "")                                        \
-  X(CHANGE_CHILD_MODE, changeChildMode, STRING_UNDEFINED, INT, 0)                                                      \
-  X(CHANGE_CHILD_START, changeChildStart, STRING_UNDEFINED, INT, 0)                                                    \
-  X(CHANGE_IS_CHILD_START_RANDOM, changeIsChildStartRandom, STRING_UNDEFINED, BOOL, false)                             \
-  X(CHANGE_IS_CHILD_RESTART, changeIsChildRestart, STRING_UNDEFINED, BOOL, false)                                      \
-  X(CHANGE_TINT, changeTint, STRING_UNDEFINED, VEC4, {})                                                               \
-  X(CHANGE_COLOR_OFFSET, changeColorOffset, STRING_UNDEFINED, VEC4, {})                                                \
-  X(CHANGE_REGION_ID, changeRegionId, STRING_UNDEFINED, INT, -1)                                                       \
-  X(CHANGE_IS_VISIBLE, changeIsVisible, STRING_UNDEFINED, BOOL, false)                                                 \
-  X(CHANGE_INTERPOLATION, changeInterpolation, STRING_UNDEFINED, INT, 0)                                               \
-  X(CHANGE_IS_FLIP_X, changeIsFlipX, STRING_UNDEFINED, BOOL, false)                                                    \
-  X(CHANGE_IS_FLIP_Y, changeIsFlipY, STRING_UNDEFINED, BOOL, false)                                                    \
-  X(CHANGE_DESTINATION, changeDestination, STRING_UNDEFINED, INT, 0)                                                   \
-  X(CHANGE_IS_ROOT, changeIsRoot, STRING_UNDEFINED, BOOL, true)                                                        \
-  X(CHANGE_IS_LAYERS, changeIsLayers, STRING_UNDEFINED, BOOL, true)                                                    \
-  X(CHANGE_IS_NULLS, changeIsNulls, STRING_UNDEFINED, BOOL, true)                                                      \
+    X(CHANGE_IS_CROP_X, changeIsCropX, STRING_UNDEFINED, BOOL, false)                                                  \
+    X(CHANGE_IS_CROP_Y, changeIsCropY, STRING_UNDEFINED, BOOL, false)                                                  \
+    X(CHANGE_IS_SIZE_X, changeIsSizeX, STRING_UNDEFINED, BOOL, false)                                                  \
+    X(CHANGE_IS_SIZE_Y, changeIsSizeY, STRING_UNDEFINED, BOOL, false)                                                  \
+    X(CHANGE_IS_POSITION_X, changeIsPositionX, STRING_UNDEFINED, BOOL, false)                                          \
+    X(CHANGE_IS_POSITION_Y, changeIsPositionY, STRING_UNDEFINED, BOOL, false)                                          \
+    X(CHANGE_IS_PIVOT_X, changeIsPivotX, STRING_UNDEFINED, BOOL, false)                                                \
+    X(CHANGE_IS_PIVOT_Y, changeIsPivotY, STRING_UNDEFINED, BOOL, false)                                                \
+    X(CHANGE_IS_SCALE_X, changeIsScaleX, STRING_UNDEFINED, BOOL, false)                                                \
+    X(CHANGE_IS_SCALE_Y, changeIsScaleY, STRING_UNDEFINED, BOOL, false)                                                \
+    X(CHANGE_IS_SKEW_X, changeIsSkewX, STRING_UNDEFINED, BOOL, false)                                                  \
+    X(CHANGE_IS_SKEW_Y, changeIsSkewY, STRING_UNDEFINED, BOOL, false)                                                  \
+    X(CHANGE_IS_ROTATION, changeIsRotation, STRING_UNDEFINED, BOOL, false)                                             \
+    X(CHANGE_IS_DURATION, changeIsDuration, STRING_UNDEFINED, BOOL, false)                                             \
+    X(CHANGE_IS_DEPTH, changeIsDepth, STRING_UNDEFINED, BOOL, false)                                                   \
+    X(CHANGE_IS_BLUR, changeIsBlur, STRING_UNDEFINED, BOOL, false)                                                     \
+    X(CHANGE_IS_CHILD_ANIMATION, changeIsChildAnimation, STRING_UNDEFINED, BOOL, false)                                \
+    X(CHANGE_IS_CHILD_MODE, changeIsChildMode, STRING_UNDEFINED, BOOL, false)                                          \
+    X(CHANGE_IS_CHILD_START, changeIsChildStart, STRING_UNDEFINED, BOOL, false)                                        \
+    X(CHANGE_IS_CHILD_START_RANDOM_SET, changeIsChildStartRandomSet, STRING_UNDEFINED, BOOL, false)                    \
+    X(CHANGE_IS_CHILD_RESTART_SET, changeIsChildRestartSet, STRING_UNDEFINED, BOOL, false)                             \
+    X(CHANGE_IS_TINT_R, changeIsTintR, STRING_UNDEFINED, BOOL, false)                                                  \
+    X(CHANGE_IS_TINT_G, changeIsTintG, STRING_UNDEFINED, BOOL, false)                                                  \
+    X(CHANGE_IS_TINT_B, changeIsTintB, STRING_UNDEFINED, BOOL, false)                                                  \
+    X(CHANGE_IS_TINT_A, changeIsTintA, STRING_UNDEFINED, BOOL, false)                                                  \
+    X(CHANGE_IS_COLOR_OFFSET_R, changeIsColorOffsetR, STRING_UNDEFINED, BOOL, false)                                   \
+    X(CHANGE_IS_COLOR_OFFSET_G, changeIsColorOffsetG, STRING_UNDEFINED, BOOL, false)                                   \
+    X(CHANGE_IS_COLOR_OFFSET_B, changeIsColorOffsetB, STRING_UNDEFINED, BOOL, false)                                   \
+    X(CHANGE_IS_COLOR_OFFSET_A, changeIsColorOffsetA, STRING_UNDEFINED, BOOL, false)                                   \
+    X(CHANGE_IS_VISIBLE_SET, changeIsVisibleSet, STRING_UNDEFINED, BOOL, false)                                        \
+    X(CHANGE_IS_INTERPOLATION_SET, changeIsInterpolationSet, STRING_UNDEFINED, BOOL, false)                            \
+    X(CHANGE_IS_FLIP_X_SET, changeIsFlipXSet, STRING_UNDEFINED, BOOL, false)                                           \
+    X(CHANGE_IS_FLIP_Y_SET, changeIsFlipYSet, STRING_UNDEFINED, BOOL, false)                                           \
+    X(CHANGE_IS_REGION, changeIsRegion, STRING_UNDEFINED, BOOL, false)                                                 \
+    X(CHANGE_IS_SHADER, changeIsShader, STRING_UNDEFINED, BOOL, false)                                                 \
+    X(CHANGE_CROP, changeCrop, STRING_UNDEFINED, VEC2, {})                                                             \
+    X(CHANGE_SIZE, changeSize, STRING_UNDEFINED, VEC2, {})                                                             \
+    X(CHANGE_POSITION, changePosition, STRING_UNDEFINED, VEC2, {})                                                     \
+    X(CHANGE_PIVOT, changePivot, STRING_UNDEFINED, VEC2, {})                                                           \
+    X(CHANGE_SCALE, changeScale, STRING_UNDEFINED, VEC2, {})                                                           \
+    X(CHANGE_SKEW, changeSkew, STRING_UNDEFINED, VEC2, {})                                                             \
+    X(CHANGE_ROTATION, changeRotation, STRING_UNDEFINED, FLOAT, 0.0f)                                                  \
+    X(CHANGE_DURATION, changeDuration, STRING_UNDEFINED, INT, 0)                                                       \
+    X(CHANGE_DEPTH, changeDepth, STRING_UNDEFINED, INT, 0)                                                             \
+    X(CHANGE_BLUR, changeBlur, STRING_UNDEFINED, FLOAT, 0.0f)                                                          \
+    X(CHANGE_CHILD_ANIMATION, changeChildAnimation, STRING_UNDEFINED, STRING, "")                                      \
+    X(CHANGE_CHILD_MODE, changeChildMode, STRING_UNDEFINED, INT, 0)                                                    \
+    X(CHANGE_CHILD_START, changeChildStart, STRING_UNDEFINED, INT, 0)                                                  \
+    X(CHANGE_IS_CHILD_START_RANDOM, changeIsChildStartRandom, STRING_UNDEFINED, BOOL, false)                           \
+    X(CHANGE_IS_CHILD_RESTART, changeIsChildRestart, STRING_UNDEFINED, BOOL, false)                                    \
+    X(CHANGE_TINT, changeTint, STRING_UNDEFINED, VEC4, {})                                                             \
+    X(CHANGE_COLOR_OFFSET, changeColorOffset, STRING_UNDEFINED, VEC4, {})                                              \
+    X(CHANGE_REGION_ID, changeRegionId, STRING_UNDEFINED, INT, -1)                                                     \
+    X(CHANGE_IS_VISIBLE, changeIsVisible, STRING_UNDEFINED, BOOL, false)                                               \
+    X(CHANGE_INTERPOLATION, changeInterpolation, STRING_UNDEFINED, INT, 0)                                             \
+    X(CHANGE_IS_FLIP_X, changeIsFlipX, STRING_UNDEFINED, BOOL, false)                                                  \
+    X(CHANGE_IS_FLIP_Y, changeIsFlipY, STRING_UNDEFINED, BOOL, false)                                                  \
+    X(CHANGE_DESTINATION, changeDestination, STRING_UNDEFINED, INT, 0)                                                 \
+    X(CHANGE_IS_ROOT, changeIsRoot, STRING_UNDEFINED, BOOL, true)                                                      \
+    X(CHANGE_IS_LAYERS, changeIsLayers, STRING_UNDEFINED, BOOL, true)                                                  \
+    X(CHANGE_IS_NULLS, changeIsNulls, STRING_UNDEFINED, BOOL, true)                                                    \
                                                                                                                        \
-  X(SCALE_VALUE, scaleValue, STRING_UNDEFINED, FLOAT, 1.0f)                                                            \
+    X(SCALE_VALUE, scaleValue, STRING_UNDEFINED, FLOAT, 1.0f)                                                          \
                                                                                                                        \
-  X(PREVIEW_IS_AXES, previewIsAxes, STRING_UNDEFINED, BOOL, true)                                                      \
-  X(PREVIEW_IS_GRID, previewIsGrid, STRING_UNDEFINED, BOOL, true)                                                      \
-  X(PREVIEW_IS_ROOT_TRANSFORM, previewIsRootTransform, STRING_UNDEFINED, BOOL, true)                                   \
-  X(PREVIEW_IS_PIVOTS, previewIsPivots, STRING_UNDEFINED, BOOL, false)                                                 \
-  X(PREVIEW_IS_BORDER, previewIsBorder, STRING_UNDEFINED, BOOL, false)                                                 \
-  X(PREVIEW_IS_ALT_ICONS, previewIsAltIcons, STRING_UNDEFINED, BOOL, false)                                            \
-  X(PREVIEW_IS_TRANSPARENT, animationPreviewTransparent, STRING_UNDEFINED, BOOL, false)                                \
-  X(PREVIEW_OVERLAY_TRANSPARENCY, previewOverlayTransparency, STRING_UNDEFINED, FLOAT, 100.0f)                         \
-  X(PREVIEW_OVERLAY_DRAW_ORDER, previewOverlayDrawOrder, STRING_UNDEFINED, INT, OVERLAY_OVER)       \
-  X(PREVIEW_START_ZOOM, previewStartZoom, STRING_UNDEFINED, FLOAT, 200.0f)                                             \
-  X(PREVIEW_GRID_SIZE, previewGridSize, STRING_UNDEFINED, IVEC2, {32, 32})                                             \
-  X(PREVIEW_GRID_OFFSET, previewGridOffset, STRING_UNDEFINED, IVEC2, {})                                               \
-  X(PREVIEW_GRID_COLOR, previewGridColor, STRING_UNDEFINED, VEC4, {1.0f, 1.0f, 1.0f, 0.125f})                          \
-  X(PREVIEW_AXES_COLOR, previewAxesColor, STRING_UNDEFINED, VEC4, {1.0f, 1.0f, 1.0f, 0.125f})                          \
-  X(PREVIEW_BACKGROUND_COLOR, previewBackgroundColor, STRING_UNDEFINED, VEC3, {0.113f, 0.184f, 0.286f})                \
+    X(PREVIEW_IS_AXES, previewIsAxes, STRING_UNDEFINED, BOOL, true)                                                    \
+    X(PREVIEW_IS_GRID, previewIsGrid, STRING_UNDEFINED, BOOL, true)                                                    \
+    X(PREVIEW_IS_ROOT_TRANSFORM, previewIsRootTransform, STRING_UNDEFINED, BOOL, true)                                 \
+    X(PREVIEW_IS_PIVOTS, previewIsPivots, STRING_UNDEFINED, BOOL, false)                                               \
+    X(PREVIEW_IS_BORDER, previewIsBorder, STRING_UNDEFINED, BOOL, false)                                               \
+    X(PREVIEW_IS_ALT_ICONS, previewIsAltIcons, STRING_UNDEFINED, BOOL, false)                                          \
+    X(PREVIEW_IS_TRANSPARENT, animationPreviewTransparent, STRING_UNDEFINED, BOOL, false)                              \
+    X(PREVIEW_OVERLAY_TRANSPARENCY, previewOverlayTransparency, STRING_UNDEFINED, FLOAT, 100.0f)                       \
+    X(PREVIEW_OVERLAY_DRAW_ORDER, previewOverlayDrawOrder, STRING_UNDEFINED, INT, OVERLAY_OVER)                        \
+    X(PREVIEW_START_ZOOM, previewStartZoom, STRING_UNDEFINED, FLOAT, 200.0f)                                           \
+    X(PREVIEW_GRID_SIZE, previewGridSize, STRING_UNDEFINED, IVEC2, {32, 32})                                           \
+    X(PREVIEW_GRID_OFFSET, previewGridOffset, STRING_UNDEFINED, IVEC2, {})                                             \
+    X(PREVIEW_GRID_COLOR, previewGridColor, STRING_UNDEFINED, VEC4, {1.0f, 1.0f, 1.0f, 0.125f})                        \
+    X(PREVIEW_AXES_COLOR, previewAxesColor, STRING_UNDEFINED, VEC4, {1.0f, 1.0f, 1.0f, 0.125f})                        \
+    X(PREVIEW_BACKGROUND_COLOR, previewBackgroundColor, STRING_UNDEFINED, VEC3, {0.113f, 0.184f, 0.286f})              \
                                                                                                                        \
-  X(PROPERTIES_IS_ROUND, propertiesIsRound, STRING_UNDEFINED, BOOL, false)                                             \
+    X(PROPERTIES_IS_ROUND, propertiesIsRound, STRING_UNDEFINED, BOOL, false)                                           \
                                                                                                                        \
-  X(GENERATE_START_POSITION, generateStartPosition, STRING_UNDEFINED, IVEC2, {})                                       \
-  X(GENERATE_SIZE, generateSize, STRING_UNDEFINED, IVEC2, {64, 64})                                                    \
-  X(GENERATE_PIVOT, generatePivot, STRING_UNDEFINED, VEC2, {32, 32})                                                   \
-  X(GENERATE_ROWS, generateRows, STRING_UNDEFINED, INT, 4)                                                             \
-  X(GENERATE_COLUMNS, generateColumns, STRING_UNDEFINED, INT, 4)                                                       \
-  X(GENERATE_COUNT, generateCount, STRING_UNDEFINED, INT, 16)                                                          \
-  X(GENERATE_DURATION, generateDuration, STRING_UNDEFINED, INT, 1)                                                     \
-  X(GENERATE_IS_MAKE_REGIONS, generateIsMakeRegions, STRING_UNDEFINED, BOOL, false)                                    \
-  X(GENERATE_REGION_NAME_FORMAT, generateRegionNameFormat, STRING_UNDEFINED, STRING, "Frame {}")                       \
-  X(GENERATE_ZOOM, generateZoom, STRING_UNDEFINED, FLOAT, 100.0f)                                                      \
+    X(GENERATE_START_POSITION, generateStartPosition, STRING_UNDEFINED, IVEC2, {})                                     \
+    X(GENERATE_SIZE, generateSize, STRING_UNDEFINED, IVEC2, {64, 64})                                                  \
+    X(GENERATE_PIVOT, generatePivot, STRING_UNDEFINED, VEC2, {32, 32})                                                 \
+    X(GENERATE_ROWS, generateRows, STRING_UNDEFINED, INT, 4)                                                           \
+    X(GENERATE_COLUMNS, generateColumns, STRING_UNDEFINED, INT, 4)                                                     \
+    X(GENERATE_COUNT, generateCount, STRING_UNDEFINED, INT, 16)                                                        \
+    X(GENERATE_DURATION, generateDuration, STRING_UNDEFINED, INT, 1)                                                   \
+    X(GENERATE_IS_MAKE_REGIONS, generateIsMakeRegions, STRING_UNDEFINED, BOOL, false)                                  \
+    X(GENERATE_REGION_NAME_FORMAT, generateRegionNameFormat, STRING_UNDEFINED, STRING, "Frame {}")                     \
+    X(GENERATE_ZOOM, generateZoom, STRING_UNDEFINED, FLOAT, 100.0f)                                                    \
                                                                                                                        \
-  X(EDITOR_IS_GRID, editorIsGrid, STRING_UNDEFINED, BOOL, true)                                                        \
-  X(EDITOR_IS_GRID_SNAP, editorIsGridSnap, STRING_UNDEFINED, BOOL, true)                                               \
-  X(EDITOR_IS_BORDER, editorIsBorder, STRING_UNDEFINED, BOOL, true)                                                    \
-  X(EDITOR_IS_TRANSPARENT, editorIsTransparent, STRING_UNDEFINED, BOOL, true)                                          \
-  X(EDITOR_START_ZOOM, editorStartZoom, STRING_UNDEFINED, FLOAT, 200.0f)                                               \
-  X(EDITOR_SIZE, editorSize, STRING_UNDEFINED, IVEC2_WH, {1200, 600})                                                  \
-  X(EDITOR_GRID_SIZE, editorGridSize, STRING_UNDEFINED, IVEC2, {32, 32})                                               \
-  X(EDITOR_GRID_OFFSET, editorGridOffset, STRING_UNDEFINED, IVEC2, {32, 32})                                           \
-  X(EDITOR_GRID_COLOR, editorGridColor, STRING_UNDEFINED, VEC4, {1.0, 1.0, 1.0, 0.125})                                \
-  X(EDITOR_BACKGROUND_COLOR, editorBackgroundColor, STRING_UNDEFINED, VEC3, {0.113, 0.184, 0.286})                     \
+    X(EDITOR_IS_GRID, editorIsGrid, STRING_UNDEFINED, BOOL, true)                                                      \
+    X(EDITOR_IS_GRID_SNAP, editorIsGridSnap, STRING_UNDEFINED, BOOL, true)                                             \
+    X(EDITOR_IS_BORDER, editorIsBorder, STRING_UNDEFINED, BOOL, true)                                                  \
+    X(EDITOR_IS_TRANSPARENT, editorIsTransparent, STRING_UNDEFINED, BOOL, true)                                        \
+    X(EDITOR_START_ZOOM, editorStartZoom, STRING_UNDEFINED, FLOAT, 200.0f)                                             \
+    X(EDITOR_SIZE, editorSize, STRING_UNDEFINED, IVEC2_WH, {1200, 600})                                                \
+    X(EDITOR_GRID_SIZE, editorGridSize, STRING_UNDEFINED, IVEC2, {32, 32})                                             \
+    X(EDITOR_GRID_OFFSET, editorGridOffset, STRING_UNDEFINED, IVEC2, {32, 32})                                         \
+    X(EDITOR_GRID_COLOR, editorGridColor, STRING_UNDEFINED, VEC4, {1.0, 1.0, 1.0, 0.125})                              \
+    X(EDITOR_BACKGROUND_COLOR, editorBackgroundColor, STRING_UNDEFINED, VEC3, {0.113, 0.184, 0.286})                   \
                                                                                                                        \
-  X(MERGE_TYPE, mergeType, STRING_UNDEFINED, INT, 0)                                                                   \
-  X(MERGE_IS_DELETE_ANIMATIONS_AFTER, mergeIsDeleteAnimationsAfter, STRING_UNDEFINED, BOOL, false)                     \
-  X(MERGE_SPRITESHEETS_ORIGIN, mergeSpritesheetsOrigin, STRING_UNDEFINED, INT, APPEND_RIGHT)                           \
-  X(MERGE_SPRITESHEETS_IS_MAKE_REGIONS, mergeSpritesheetsIsMakeRegions, STRING_UNDEFINED, BOOL, true)                  \
-  X(MERGE_SPRITESHEETS_IS_MAKE_PRIMARY_REGION, mergeSpritesheetsIsMakePrimaryRegion, STRING_UNDEFINED, BOOL, true)     \
-  X(MERGE_SPRITESHEETS_REGION_ORIGIN, mergeSpritesheetsRegionOrigin, STRING_UNDEFINED, INT, 0)                         \
-  X(PACK_PADDING, packPadding, STRING_UNDEFINED, INT, 1)                                                               \
-  X(EXPORT_REGION_PATH, exportRegionPath, STRING_UNDEFINED, PATH, "./region.png")                                      \
-  X(EXPORT_REGION_IS_MAKE_SPRITESHEET, isExportRegionMakeSpritesheet, STRING_UNDEFINED, BOOL, true)                    \
-  X(EXPORT_REGION_IS_REMOVE_CURRENT, isExportRegionRemoveCurrent, STRING_UNDEFINED, BOOL, true)                        \
+    X(MERGE_TYPE, mergeType, STRING_UNDEFINED, INT, 0)                                                                 \
+    X(MERGE_IS_DELETE_ANIMATIONS_AFTER, mergeIsDeleteAnimationsAfter, STRING_UNDEFINED, BOOL, false)                   \
+    X(MERGE_SPRITESHEETS_ORIGIN, mergeSpritesheetsOrigin, STRING_UNDEFINED, INT, APPEND_RIGHT)                         \
+    X(MERGE_SPRITESHEETS_IS_MAKE_REGIONS, mergeSpritesheetsIsMakeRegions, STRING_UNDEFINED, BOOL, true)                \
+    X(MERGE_SPRITESHEETS_IS_MAKE_PRIMARY_REGION, mergeSpritesheetsIsMakePrimaryRegion, STRING_UNDEFINED, BOOL, true)   \
+    X(MERGE_SPRITESHEETS_REGION_ORIGIN, mergeSpritesheetsRegionOrigin, STRING_UNDEFINED, INT, 0)                       \
+    X(PACK_PADDING, packPadding, STRING_UNDEFINED, INT, 1)                                                             \
+    X(EXPORT_REGION_PATH, exportRegionPath, STRING_UNDEFINED, PATH, "./region.png")                                    \
+    X(EXPORT_REGION_IS_MAKE_SPRITESHEET, isExportRegionMakeSpritesheet, STRING_UNDEFINED, BOOL, true)                  \
+    X(EXPORT_REGION_IS_REMOVE_CURRENT, isExportRegionRemoveCurrent, STRING_UNDEFINED, BOOL, true)                      \
                                                                                                                        \
-  X(BAKE_INTERVAL, bakeInterval, STRING_UNDEFINED, INT, 1)                                                             \
-  X(BAKE_IS_ROUND_SCALE, bakeIsRoundScale, STRING_UNDEFINED, BOOL, true)                                               \
-  X(BAKE_IS_ROUND_ROTATION, bakeIsRoundRotation, STRING_UNDEFINED, BOOL, true)                                         \
-  X(BAKE_IS_MATCH_ROOT_INTERPOLATION, bakeIsMatchRootInterpolation, STRING_UNDEFINED, BOOL, false)                     \
-  X(BAKE_IS_USE_ROOT_PIVOT, bakeIsUseRootPivot, STRING_UNDEFINED, BOOL, true)                                          \
+    X(BAKE_INTERVAL, bakeInterval, STRING_UNDEFINED, INT, 1)                                                           \
+    X(BAKE_IS_ROUND_SCALE, bakeIsRoundScale, STRING_UNDEFINED, BOOL, true)                                             \
+    X(BAKE_IS_ROUND_ROTATION, bakeIsRoundRotation, STRING_UNDEFINED, BOOL, true)                                       \
+    X(BAKE_IS_MATCH_ROOT_INTERPOLATION, bakeIsMatchRootInterpolation, STRING_UNDEFINED, BOOL, false)                   \
+    X(BAKE_IS_USE_ROOT_PIVOT, bakeIsUseRootPivot, STRING_UNDEFINED, BOOL, true)                                        \
                                                                                                                        \
-  X(TIMELINE_ADD_ITEM_TYPE, timelineAddItemType, STRING_UNDEFINED, INT, LAYER)                                         \
-  X(TIMELINE_ADD_ITEM_DESTINATION, timelineAddItemDestination, STRING_UNDEFINED, INT, DESTINATION_ALL)         \
-  X(TIMELINE_ADD_ITEM_SOURCE, timelineAddItemSource, STRING_UNDEFINED, INT, SOURCE_NEW)                        \
-  X(TIMELINE_IS_SHOW_UNUSED, timelineIsShowUnused, STRING_UNDEFINED, BOOL, true)                                       \
-  X(TIMELINE_IS_ONLY_SHOW_LAYERS, timelineIsOnlyShowLayers, STRING_UNDEFINED, BOOL, false)                             \
-  X(TIMELINE_IS_SOUND, timelineIsSound, STRING_UNDEFINED, BOOL, true)                                                  \
+    X(TIMELINE_ADD_ITEM_TYPE, timelineAddItemType, STRING_UNDEFINED, INT, LAYER)                                       \
+    X(TIMELINE_ADD_ITEM_DESTINATION, timelineAddItemDestination, STRING_UNDEFINED, INT, DESTINATION_ALL)               \
+    X(TIMELINE_ADD_ITEM_SOURCE, timelineAddItemSource, STRING_UNDEFINED, INT, SOURCE_NEW)                              \
+    X(TIMELINE_IS_SHOW_UNUSED, timelineIsShowUnused, STRING_UNDEFINED, BOOL, true)                                     \
+    X(TIMELINE_IS_ONLY_SHOW_LAYERS, timelineIsOnlyShowLayers, STRING_UNDEFINED, BOOL, false)                           \
+    X(TIMELINE_IS_SOUND, timelineIsSound, STRING_UNDEFINED, BOOL, true)                                                \
                                                                                                                        \
-  X(ONIONSKIN_IS_ENABLED, onionskinIsEnabled, STRING_UNDEFINED, BOOL, false)                                           \
-  X(ONIONSKIN_BEFORE_COUNT, onionskinBeforeCount, STRING_UNDEFINED, INT, 0)                                            \
-  X(ONIONSKIN_AFTER_COUNT, onionskinAfterCount, STRING_UNDEFINED, INT, 0)                                              \
-  X(ONIONSKIN_BEFORE_COLOR, onionskinBeforeColor, STRING_UNDEFINED, VEC3, COLOR_RED)                           \
-  X(ONIONSKIN_AFTER_COLOR, onionskinAfterColor, STRING_UNDEFINED, VEC3, COLOR_BLUE)                            \
-  X(ONIONSKIN_MODE, onionskinMode, STRING_UNDEFINED, INT, (int)OnionskinMode::TIME)                             \
-  X(ONIONSKIN_IS_PIVOT_PATH, onionskinIsPivotPath, STRING_UNDEFINED, BOOL, false)                                      \
-  X(ONIONSKIN_IS_ONLY_SELECTED, onionskinIsOnlySelected, STRING_UNDEFINED, BOOL, false)                                \
+    X(ONIONSKIN_IS_ENABLED, onionskinIsEnabled, STRING_UNDEFINED, BOOL, false)                                         \
+    X(ONIONSKIN_BEFORE_COUNT, onionskinBeforeCount, STRING_UNDEFINED, INT, 0)                                          \
+    X(ONIONSKIN_AFTER_COUNT, onionskinAfterCount, STRING_UNDEFINED, INT, 0)                                            \
+    X(ONIONSKIN_BEFORE_COLOR, onionskinBeforeColor, STRING_UNDEFINED, VEC3, COLOR_RED)                                 \
+    X(ONIONSKIN_AFTER_COLOR, onionskinAfterColor, STRING_UNDEFINED, VEC3, COLOR_BLUE)                                  \
+    X(ONIONSKIN_MODE, onionskinMode, STRING_UNDEFINED, INT, (int)OnionskinMode::TIME)                                  \
+    X(ONIONSKIN_IS_PIVOT_PATH, onionskinIsPivotPath, STRING_UNDEFINED, BOOL, false)                                    \
+    X(ONIONSKIN_IS_ONLY_SELECTED, onionskinIsOnlySelected, STRING_UNDEFINED, BOOL, false)                              \
                                                                                                                        \
-  X(TOOL, tool, STRING_UNDEFINED, INT, 0)                                                                              \
-  X(TOOL_COLOR, toolColor, STRING_UNDEFINED, VEC4, {1.0, 1.0, 1.0, 1.0})                                               \
+    X(TOOL, tool, STRING_UNDEFINED, INT, 0)                                                                            \
+    X(TOOL_COLOR, toolColor, STRING_UNDEFINED, VEC4, {1.0, 1.0, 1.0, 1.0})                                             \
                                                                                                                        \
-  X(RENDER_TYPE, renderType, STRING_UNDEFINED, INT, RENDER_GIF)                                                       \
-  X(RENDER_PATH, renderPath, STRING_UNDEFINED, PATH, OUTPUT_PATH_DEFAULT)                                              \
-  X(RENDER_ROWS, renderRows, STRING_UNDEFINED, INT, 0)                                                                 \
-  X(RENDER_COLUMNS, renderColumns, STRING_UNDEFINED, INT, 0)                                                           \
-  X(RENDER_FORMAT, renderFormat, STRING_UNDEFINED, PATH, "{}.png")                                                     \
-  X(RENDER_IS_USE_ANIMATION_BOUNDS, renderIsUseAnimationBounds, STRING_UNDEFINED, BOOL, true)                          \
-  X(RENDER_IS_USE_ISOLATED_ANIMATION, renderIsUseIsolatedAnimation, STRING_UNDEFINED, BOOL, false)                     \
-  X(RENDER_SCALE, renderScale, STRING_UNDEFINED, FLOAT, 100.0f)                                                        \
-  X(RENDER_FPS_MODE, renderFpsMode, STRING_UNDEFINED, INT, FPS_ANIMATION)                                      \
-  X(RENDER_FFMPEG_PATH, renderFFmpegPath, STRING_UNDEFINED, PATH, FFMPEG_PATH_DEFAULT)
+    X(RENDER_TYPE, renderType, STRING_UNDEFINED, INT, RENDER_GIF)                                                      \
+    X(RENDER_PATH, renderPath, STRING_UNDEFINED, PATH, OUTPUT_PATH_DEFAULT)                                            \
+    X(RENDER_ROWS, renderRows, STRING_UNDEFINED, INT, 0)                                                               \
+    X(RENDER_COLUMNS, renderColumns, STRING_UNDEFINED, INT, 0)                                                         \
+    X(RENDER_FORMAT, renderFormat, STRING_UNDEFINED, PATH, "{}.png")                                                   \
+    X(RENDER_IS_USE_ANIMATION_BOUNDS, renderIsUseAnimationBounds, STRING_UNDEFINED, BOOL, true)                        \
+    X(RENDER_IS_USE_ISOLATED_ANIMATION, renderIsUseIsolatedAnimation, STRING_UNDEFINED, BOOL, false)                   \
+    X(RENDER_SCALE, renderScale, STRING_UNDEFINED, FLOAT, 100.0f)                                                      \
+    X(RENDER_FPS_MODE, renderFpsMode, STRING_UNDEFINED, INT, FPS_ANIMATION)                                            \
+    X(RENDER_FFMPEG_PATH, renderFFmpegPath, STRING_UNDEFINED, PATH, FFMPEG_PATH_DEFAULT)
 
 #define SETTINGS_SHORTCUTS                                                                                             \
-  /* Symbol / Name / String / Type / Default */                                                                        \
-  /* File */                                                                                                           \
-  X(SHORTCUT_NEW, shortcutNew, SHORTCUT_STRING_NEW, STRING, "Ctrl+N")                                                  \
-  X(SHORTCUT_OPEN, shortcutOpen, SHORTCUT_STRING_OPEN, STRING, "Ctrl+O")                                               \
-  X(SHORTCUT_CLOSE, shortcutClose, SHORTCUT_STRING_CLOSE, STRING, "Ctrl+W")                                            \
-  X(SHORTCUT_SAVE, shortcutSave, SHORTCUT_STRING_SAVE, STRING, "Ctrl+S")                                               \
-  X(SHORTCUT_SAVE_AS, shortcutSaveAs, SHORTCUT_STRING_SAVE_AS, STRING, "Ctrl+Shift+S")                                 \
-  X(SHORTCUT_EXIT, shortcutExit, SHORTCUT_STRING_EXIT, STRING, "Alt+F4")                                               \
-  /* Edit */                                                                                                           \
-  X(SHORTCUT_UNDO, shortcutUndo, SHORTCUT_STRING_UNDO, STRING, "Ctrl+Z")                                               \
-  X(SHORTCUT_REDO, shortcutRedo, SHORTCUT_STRING_REDO, STRING, "Ctrl+Y")                                               \
-  X(SHORTCUT_CUT, shortcutCut, SHORTCUT_STRING_CUT, STRING, "Ctrl+X")                                                  \
-  X(SHORTCUT_COPY, shortcutCopy, SHORTCUT_STRING_COPY, STRING, "Ctrl+C")                                               \
-  X(SHORTCUT_PASTE, shortcutPaste, SHORTCUT_STRING_PASTE, STRING, "Ctrl+V")                                            \
-  X(SHORTCUT_DUPLICATE, shortcutDuplicate, SHORTCUT_STRING_DUPLICATE, STRING, "Ctrl+J")                                \
-  X(SHORTCUT_ADD, shortcutAdd, SHORTCUT_STRING_ADD, STRING, "Insert")                                                  \
-  X(SHORTCUT_REMOVE, shortcutRemove, SHORTCUT_STRING_REMOVE, STRING, "Delete")                                         \
-  X(SHORTCUT_RENAME, shortcutRename, SHORTCUT_STRING_RENAME, STRING, "F2")                                             \
-  X(SHORTCUT_DEFAULT, shortcutDefault, SHORTCUT_STRING_DEFAULT, STRING, "Home")                                        \
-  X(SHORTCUT_MERGE, shortcutMerge, SHORTCUT_STRING_MERGE, STRING, "Ctrl+E")                                            \
-  X(SHORTCUT_GROUP, shortcutGroup, SHORTCUT_STRING_GROUP, STRING, "Ctrl+G")                                            \
-  X(SHORTCUT_CONFIRM, shortcutConfirm, SHORTCUT_STRING_CONFIRM, STRING, "Enter")                                       \
-  X(SHORTCUT_CANCEL, shortcutCancel, SHORTCUT_STRING_CANCEL, STRING, "Escape")                                         \
-  /* Tools */                                                                                                          \
-  X(SHORTCUT_PAN, shortcutPan, SHORTCUT_STRING_PAN, STRING, "P")                                                       \
-  X(SHORTCUT_MOVE, shortcutMove, SHORTCUT_STRING_MOVE, STRING, "V")                                                    \
-  X(SHORTCUT_ROTATE, shortcutRotate, SHORTCUT_STRING_ROTATE, STRING, "R")                                              \
-  X(SHORTCUT_SCALE, shortcutScale, SHORTCUT_STRING_SCALE, STRING, "S")                                                 \
-  X(SHORTCUT_SKEW, shortcutSkew, SHORTCUT_STRING_SKEW, STRING, "H")                                                    \
-  X(SHORTCUT_CROP, shortcutCrop, SHORTCUT_STRING_CROP, STRING, "C")                                                    \
-  X(SHORTCUT_DRAW, shortcutDraw, SHORTCUT_STRING_DRAW, STRING, "B")                                                    \
-  X(SHORTCUT_ERASE, shortcutErase, SHORTCUT_STRING_ERASE, STRING, "E")                                                 \
-  X(SHORTCUT_COLOR_PICKER, shortcutColorPicker, SHORTCUT_STRING_COLOR_PICKER, STRING, "I")                             \
-  X(SHORTCUT_COLOR, shortcutColor, SHORTCUT_STRING_COLOR, STRING, "X")                                                 \
-  /* View */                                                                                                           \
-  X(SHORTCUT_CENTER_VIEW, shortcutCenterView, SHORTCUT_STRING_CENTER_VIEW, STRING, "Home")                             \
-  X(SHORTCUT_FIT, shortcutFit, SHORTCUT_STRING_FIT, STRING, "F")                                                       \
-  X(SHORTCUT_ZOOM_IN, shortcutZoomIn, SHORTCUT_STRING_ZOOM_IN, STRING, "Ctrl+Equal")                                   \
-  X(SHORTCUT_ZOOM_OUT, shortcutZoomOut, SHORTCUT_STRING_ZOOM_OUT, STRING, "Ctrl+Minus")                                \
-  /* Timeline / Playback */                                                                                            \
-  X(SHORTCUT_BAKE, shortcutBake, SHORTCUT_STRING_BAKE, STRING, "Ctrl+B")                                               \
-  X(SHORTCUT_SPLIT, shortcutSplit, SHORTCUT_STRING_SPLIT, STRING, "Ctrl+P")                                            \
-  X(SHORTCUT_PLAY_PAUSE, shortcutPlayPause, SHORTCUT_STRING_PLAY_PAUSE, STRING, "Space")                               \
-  X(SHORTCUT_MOVE_PLAYHEAD_BACK, shortcutMovePlayheadBack, SHORTCUT_STRING_PLAYHEAD_BACK, STRING, "Comma")             \
-  X(SHORTCUT_MOVE_PLAYHEAD_FORWARD, shortcutMovePlayheadForward, SHORTCUT_STRING_PLAYHEAD_FORWARD, STRING, "Period")   \
-  X(SHORTCUT_SHORTEN_FRAME, shortcutShortenFrame, SHORTCUT_STRING_SHORTEN_FRAME, STRING, "F4")                         \
-  X(SHORTCUT_EXTEND_FRAME, shortcutExtendFrame, SHORTCUT_STRING_EXTEND_FRAME, STRING, "F5")                            \
-  X(SHORTCUT_INSERT_FRAME, shortcutInsertFrame, SHORTCUT_STRING_INSERT_FRAME, STRING, "F6")                            \
-  X(SHORTCUT_PREVIOUS_FRAME, shortcutPreviousFrame, SHORTCUT_STRING_PREVIOUS_FRAME, STRING, "F7")                      \
-  X(SHORTCUT_NEXT_FRAME, shortcutNextFrame, SHORTCUT_STRING_NEXT_FRAME, STRING, "F8")                                  \
-  /* Item */                                                                                                           \
-  X(SHORTCUT_START_MARKER, shortcutStartMarker, SHORTCUT_STRING_START_MARKER, STRING, "Shift+Comma")                   \
-  X(SHORTCUT_END_MARKER, shortcutEndMarker, SHORTCUT_STRING_END_MARKER, STRING, "Shift+Period")                        \
-  X(SHORTCUT_PREVIOUS_ITEM, shortcutPreviousItem, SHORTCUT_STRING_PREVIOUS_ITEM, STRING, "Shift+F7")                   \
-  X(SHORTCUT_NEXT_ITEM, shortcutNextItem, SHORTCUT_STRING_NEXT_ITEM, STRING, "Shift+F8")                               \
-  /* Animation */                                                                                                      \
-  X(SHORTCUT_PREVIOUS_ANIMATION, shortcutPreviousAnimation, SHORTCUT_STRING_PREVIOUS_ANIMATION, STRING, "F9")          \
-  X(SHORTCUT_NEXT_ANIMATION, shortcutNextAnimation, SHORTCUT_STRING_NEXT_ANIMATION, STRING, "F10")                     \
-  /* Toggles */                                                                                                        \
-  X(SHORTCUT_ONIONSKIN, shortcutOnionskin, SHORTCUT_STRING_ONIONSKIN, STRING, "O")
+    /* Symbol / Name / String / Type / Default */                                                                      \
+    /* File */                                                                                                         \
+    X(SHORTCUT_NEW, shortcutNew, SHORTCUT_STRING_NEW, STRING, "Ctrl+N")                                                \
+    X(SHORTCUT_OPEN, shortcutOpen, SHORTCUT_STRING_OPEN, STRING, "Ctrl+O")                                             \
+    X(SHORTCUT_CLOSE, shortcutClose, SHORTCUT_STRING_CLOSE, STRING, "Ctrl+W")                                          \
+    X(SHORTCUT_SAVE, shortcutSave, SHORTCUT_STRING_SAVE, STRING, "Ctrl+S")                                             \
+    X(SHORTCUT_SAVE_AS, shortcutSaveAs, SHORTCUT_STRING_SAVE_AS, STRING, "Ctrl+Shift+S")                               \
+    X(SHORTCUT_EXIT, shortcutExit, SHORTCUT_STRING_EXIT, STRING, "Alt+F4")                                             \
+    /* Edit */                                                                                                         \
+    X(SHORTCUT_UNDO, shortcutUndo, SHORTCUT_STRING_UNDO, STRING, "Ctrl+Z")                                             \
+    X(SHORTCUT_REDO, shortcutRedo, SHORTCUT_STRING_REDO, STRING, "Ctrl+Y")                                             \
+    X(SHORTCUT_CUT, shortcutCut, SHORTCUT_STRING_CUT, STRING, "Ctrl+X")                                                \
+    X(SHORTCUT_COPY, shortcutCopy, SHORTCUT_STRING_COPY, STRING, "Ctrl+C")                                             \
+    X(SHORTCUT_PASTE, shortcutPaste, SHORTCUT_STRING_PASTE, STRING, "Ctrl+V")                                          \
+    X(SHORTCUT_DUPLICATE, shortcutDuplicate, SHORTCUT_STRING_DUPLICATE, STRING, "Ctrl+J")                              \
+    X(SHORTCUT_ADD, shortcutAdd, SHORTCUT_STRING_ADD, STRING, "Insert")                                                \
+    X(SHORTCUT_REMOVE, shortcutRemove, SHORTCUT_STRING_REMOVE, STRING, "Delete")                                       \
+    X(SHORTCUT_RENAME, shortcutRename, SHORTCUT_STRING_RENAME, STRING, "F2")                                           \
+    X(SHORTCUT_DEFAULT, shortcutDefault, SHORTCUT_STRING_DEFAULT, STRING, "Home")                                      \
+    X(SHORTCUT_MERGE, shortcutMerge, SHORTCUT_STRING_MERGE, STRING, "Ctrl+E")                                          \
+    X(SHORTCUT_GROUP, shortcutGroup, SHORTCUT_STRING_GROUP, STRING, "Ctrl+G")                                          \
+    X(SHORTCUT_CONFIRM, shortcutConfirm, SHORTCUT_STRING_CONFIRM, STRING, "Enter")                                     \
+    X(SHORTCUT_CANCEL, shortcutCancel, SHORTCUT_STRING_CANCEL, STRING, "Escape")                                       \
+    /* Tools */                                                                                                        \
+    X(SHORTCUT_PAN, shortcutPan, SHORTCUT_STRING_PAN, STRING, "P")                                                     \
+    X(SHORTCUT_MOVE, shortcutMove, SHORTCUT_STRING_MOVE, STRING, "V")                                                  \
+    X(SHORTCUT_ROTATE, shortcutRotate, SHORTCUT_STRING_ROTATE, STRING, "R")                                            \
+    X(SHORTCUT_SCALE, shortcutScale, SHORTCUT_STRING_SCALE, STRING, "S")                                               \
+    X(SHORTCUT_SKEW, shortcutSkew, SHORTCUT_STRING_SKEW, STRING, "H")                                                  \
+    X(SHORTCUT_CROP, shortcutCrop, SHORTCUT_STRING_CROP, STRING, "C")                                                  \
+    X(SHORTCUT_DRAW, shortcutDraw, SHORTCUT_STRING_DRAW, STRING, "B")                                                  \
+    X(SHORTCUT_ERASE, shortcutErase, SHORTCUT_STRING_ERASE, STRING, "E")                                               \
+    X(SHORTCUT_COLOR_PICKER, shortcutColorPicker, SHORTCUT_STRING_COLOR_PICKER, STRING, "I")                           \
+    X(SHORTCUT_COLOR, shortcutColor, SHORTCUT_STRING_COLOR, STRING, "X")                                               \
+    /* View */                                                                                                         \
+    X(SHORTCUT_CENTER_VIEW, shortcutCenterView, SHORTCUT_STRING_CENTER_VIEW, STRING, "Home")                           \
+    X(SHORTCUT_FIT, shortcutFit, SHORTCUT_STRING_FIT, STRING, "F")                                                     \
+    X(SHORTCUT_ZOOM_IN, shortcutZoomIn, SHORTCUT_STRING_ZOOM_IN, STRING, "Ctrl+Equal")                                 \
+    X(SHORTCUT_ZOOM_OUT, shortcutZoomOut, SHORTCUT_STRING_ZOOM_OUT, STRING, "Ctrl+Minus")                              \
+    /* Timeline / Playback */                                                                                          \
+    X(SHORTCUT_BAKE, shortcutBake, SHORTCUT_STRING_BAKE, STRING, "Ctrl+B")                                             \
+    X(SHORTCUT_SPLIT, shortcutSplit, SHORTCUT_STRING_SPLIT, STRING, "Ctrl+P")                                          \
+    X(SHORTCUT_PLAY_PAUSE, shortcutPlayPause, SHORTCUT_STRING_PLAY_PAUSE, STRING, "Space")                             \
+    X(SHORTCUT_MOVE_PLAYHEAD_BACK, shortcutMovePlayheadBack, SHORTCUT_STRING_PLAYHEAD_BACK, STRING, "Comma")           \
+    X(SHORTCUT_MOVE_PLAYHEAD_FORWARD, shortcutMovePlayheadForward, SHORTCUT_STRING_PLAYHEAD_FORWARD, STRING, "Period") \
+    X(SHORTCUT_SHORTEN_FRAME, shortcutShortenFrame, SHORTCUT_STRING_SHORTEN_FRAME, STRING, "F4")                       \
+    X(SHORTCUT_EXTEND_FRAME, shortcutExtendFrame, SHORTCUT_STRING_EXTEND_FRAME, STRING, "F5")                          \
+    X(SHORTCUT_INSERT_FRAME, shortcutInsertFrame, SHORTCUT_STRING_INSERT_FRAME, STRING, "F6")                          \
+    X(SHORTCUT_PREVIOUS_FRAME, shortcutPreviousFrame, SHORTCUT_STRING_PREVIOUS_FRAME, STRING, "F7")                    \
+    X(SHORTCUT_NEXT_FRAME, shortcutNextFrame, SHORTCUT_STRING_NEXT_FRAME, STRING, "F8")                                \
+    /* Item */                                                                                                         \
+    X(SHORTCUT_START_MARKER, shortcutStartMarker, SHORTCUT_STRING_START_MARKER, STRING, "Shift+Comma")                 \
+    X(SHORTCUT_END_MARKER, shortcutEndMarker, SHORTCUT_STRING_END_MARKER, STRING, "Shift+Period")                      \
+    X(SHORTCUT_PREVIOUS_ITEM, shortcutPreviousItem, SHORTCUT_STRING_PREVIOUS_ITEM, STRING, "Shift+F7")                 \
+    X(SHORTCUT_NEXT_ITEM, shortcutNextItem, SHORTCUT_STRING_NEXT_ITEM, STRING, "Shift+F8")                             \
+    /* Animation */                                                                                                    \
+    X(SHORTCUT_PREVIOUS_ANIMATION, shortcutPreviousAnimation, SHORTCUT_STRING_PREVIOUS_ANIMATION, STRING, "F9")        \
+    X(SHORTCUT_NEXT_ANIMATION, shortcutNextAnimation, SHORTCUT_STRING_NEXT_ANIMATION, STRING, "F10")                   \
+    /* Toggles */                                                                                                      \
+    X(SHORTCUT_ONIONSKIN, shortcutOnionskin, SHORTCUT_STRING_ONIONSKIN, STRING, "O")
 
 #define SETTINGS_WINDOWS                                                                                               \
-  /* Symbol / Name / String / Type / Default */                                                                        \
-  X(WINDOW_ANIMATIONS, windowIsAnimations, LABEL_ANIMATIONS_WINDOW, BOOL, true)                                        \
-  X(WINDOW_ANIMATION_PREVIEW, windowIsAnimationPreview, LABEL_ANIMATION_PREVIEW_WINDOW, BOOL, true)                    \
-  X(WINDOW_REGIONS, windowIsRegions, LABEL_REGIONS_WINDOW, BOOL, true)                                                 \
-  X(WINDOW_EVENTS, windowIsEvents, LABEL_EVENTS_WINDOW, BOOL, true)                                                    \
-  X(WINDOW_FRAME_PROPERTIES, windowIsFrameProperties, LABEL_FRAME_PROPERTIES_WINDOW, BOOL, true)                       \
-  X(WINDOW_LAYERS, windowIsLayers, LABEL_LAYERS_WINDOW, BOOL, true)                                                    \
-  X(WINDOW_LIBRARIES, windowIsLibraries, LABEL_LIBRARIES_WINDOW, BOOL, true)                                           \
-  X(WINDOW_NULLS, windowIsNulls, LABEL_NULLS_WINDOW, BOOL, true)                                                       \
-  X(WINDOW_ONIONSKIN, windowIsOnionskin, LABEL_ONIONSKIN_WINDOW, BOOL, true)                                           \
-  X(WINDOW_PREVIEW, windowIsSpritesheets, LABEL_SPRITESHEETS_WINDOW, BOOL, true)                                       \
-  X(WINDOW_SHADERS, windowIsShaders, LABEL_SHADERS_WINDOW, BOOL, true)                                                 \
-  X(WINDOW_SOUNDS, windowIsSounds, LABEL_SOUNDS_WINDOW, BOOL, true)                                                    \
-  X(WINDOW_SPRITESHEET_EDITOR, windowIsSpritesheetEditor, LABEL_SPRITESHEET_EDITOR_WINDOW, BOOL, true)                 \
-  X(WINDOW_TIMELINE, windowIsTimeline, LABEL_TIMELINE_WINDOW, BOOL, true)                                              \
-  X(WINDOW_TOOLS, windowIsTools, LABEL_TOOLS_WINDOW, BOOL, true)
+    /* Symbol / Name / String / Type / Default */                                                                      \
+    X(WINDOW_ANIMATIONS, windowIsAnimations, LABEL_ANIMATIONS_WINDOW, BOOL, true)                                      \
+    X(WINDOW_ANIMATION_PREVIEW, windowIsAnimationPreview, LABEL_ANIMATION_PREVIEW_WINDOW, BOOL, true)                  \
+    X(WINDOW_REGIONS, windowIsRegions, LABEL_REGIONS_WINDOW, BOOL, true)                                               \
+    X(WINDOW_EVENTS, windowIsEvents, LABEL_EVENTS_WINDOW, BOOL, true)                                                  \
+    X(WINDOW_FRAME_PROPERTIES, windowIsFrameProperties, LABEL_FRAME_PROPERTIES_WINDOW, BOOL, true)                     \
+    X(WINDOW_LAYERS, windowIsLayers, LABEL_LAYERS_WINDOW, BOOL, true)                                                  \
+    X(WINDOW_LIBRARIES, windowIsLibraries, LABEL_LIBRARIES_WINDOW, BOOL, true)                                         \
+    X(WINDOW_NULLS, windowIsNulls, LABEL_NULLS_WINDOW, BOOL, true)                                                     \
+    X(WINDOW_ONIONSKIN, windowIsOnionskin, LABEL_ONIONSKIN_WINDOW, BOOL, true)                                         \
+    X(WINDOW_PREVIEW, windowIsSpritesheets, LABEL_SPRITESHEETS_WINDOW, BOOL, true)                                     \
+    X(WINDOW_SHADERS, windowIsShaders, LABEL_SHADERS_WINDOW, BOOL, true)                                               \
+    X(WINDOW_SOUNDS, windowIsSounds, LABEL_SOUNDS_WINDOW, BOOL, true)                                                  \
+    X(WINDOW_SPRITESHEET_EDITOR, windowIsSpritesheetEditor, LABEL_SPRITESHEET_EDITOR_WINDOW, BOOL, true)               \
+    X(WINDOW_TIMELINE, windowIsTimeline, LABEL_TIMELINE_WINDOW, BOOL, true)                                            \
+    X(WINDOW_TOOLS, windowIsTools, LABEL_TOOLS_WINDOW, BOOL, true)
 
-  enum ShortcutType
-  {
+enum ShortcutType
+{
 #define X(symbol, name, string, type, ...) symbol,
     SETTINGS_SHORTCUTS
 #undef X
         SHORTCUT_COUNT
-  };
+};
 
-  class Settings
-  {
-  public:
+class Settings
+{
+public:
 #define X(symbol, name, string, type, ...) TYPE_##type name = __VA_ARGS__;
     SETTINGS_MEMBERS SETTINGS_SHORTCUTS SETTINGS_WINDOWS
 #undef X
@@ -328,38 +328,38 @@
     Settings(const std::filesystem::path&);
     void save(const std::filesystem::path&, const std::string&);
     static std::string imgui_data_load(const std::filesystem::path&);
-  };
+};
 
-  constexpr StringType SHORTCUT_STRING_TYPES[] = {
+constexpr StringType SHORTCUT_STRING_TYPES[] = {
 #define X(symbol, name, stringType, type, ...) stringType,
-      SETTINGS_SHORTCUTS
+    SETTINGS_SHORTCUTS
 #undef X
-  };
+};
 
-  using ShortcutMember = std::string Settings::*;
-  constexpr ShortcutMember SHORTCUT_MEMBERS[] = {
+using ShortcutMember = std::string Settings::*;
+constexpr ShortcutMember SHORTCUT_MEMBERS[] = {
 #define X(symbol, name, string, type, ...) &Settings::name,
-      SETTINGS_SHORTCUTS
+    SETTINGS_SHORTCUTS
 #undef X
-  };
+};
 
-  enum WindowType
-  {
+enum WindowType
+{
 #define X(symbol, name, string, type, ...) symbol,
     SETTINGS_WINDOWS
 #undef X
         WINDOW_COUNT
-  };
+};
 
-  constexpr StringType WINDOW_STRING_TYPES[] = {
+constexpr StringType WINDOW_STRING_TYPES[] = {
 #define X(symbol, name, stringType, type, ...) stringType,
-      SETTINGS_WINDOWS
+    SETTINGS_WINDOWS
 #undef X
-  };
+};
 
-  using WindowMember = bool Settings::*;
-  static constexpr WindowMember WINDOW_MEMBERS[] = {
+using WindowMember = bool Settings::*;
+static constexpr WindowMember WINDOW_MEMBERS[] = {
 #define X(symbol, name, string, type, ...) &Settings::name,
-      SETTINGS_WINDOWS
+    SETTINGS_WINDOWS
 #undef X
-  };
+};

@@ -11,107 +11,115 @@
 
 using namespace glm;
 
-  constexpr float SCROLL_CENTER = 0.5f;
-  constexpr std::size_t REMOVE_LINES_MAX = 10;
-  constexpr float TOOLTIP_PADDING_MULTIPLIER = 4.0f;
-  constexpr float PREVIEW_VIEWPORT_FRACTION = 0.5f;
-  constexpr const char* CONTEXT_MENU_LABEL = "##Context Menu";
+constexpr float SCROLL_CENTER = 0.5f;
+constexpr std::size_t REMOVE_LINES_MAX = 10;
+constexpr float TOOLTIP_PADDING_MULTIPLIER = 4.0f;
+constexpr float PREVIEW_VIEWPORT_FRACTION = 0.5f;
+constexpr const char* CONTEXT_MENU_LABEL = "##Context Menu";
 
-  bool is_drag_drop_active() { return ImGui::GetDragDropPayload() != nullptr; }
+bool is_drag_drop_active()
+{
+    return ImGui::GetDragDropPayload() != nullptr;
+}
 
-  void command_push(const Panel& panel, std::function<void(Document&)> run)
-  {
+void command_push(const Panel& panel, std::function<void(Document&)> run)
+{
     panel.manager.command_push(
         {panel.manager.selected, [run = std::move(run)](Manager&, Document& document) { run(document); }});
-  }
+}
 
-  static void row_select(std::set<int>&, int& focus, const ListRows& rows, int key)
-  {
+static void row_select(std::set<int>&, int& focus, const ListRows& rows, int key)
+{
     focus = key;
-    if (rows.select) rows.select(key);
-  }
+    if (rows.select)
+        rows.select(key);
+}
 
-  static void row_scroll_update(PanelState& state, int key, int arrowKey)
-  {
-    if ((state.newId != key && state.scrollId != key && arrowKey != key) || is_drag_drop_active()) return;
+static void row_scroll_update(PanelState& state, int key, int arrowKey)
+{
+    if ((state.newId != key && state.scrollId != key && arrowKey != key) || is_drag_drop_active())
+        return;
     ImGui::SetScrollHereY(SCROLL_CENTER);
-    if (state.scrollId == key) state.scrollId = -1;
-  }
+    if (state.scrollId == key)
+        state.scrollId = -1;
+}
 
-  // Tooltips keep the window's padding and spacing, which card lists zero out for themselves.
-  bool tooltip_begin(const PanelState& state, bool isItem)
-  {
+// Tooltips keep the window's padding and spacing, which card lists zero out for themselves.
+bool tooltip_begin(const PanelState& state, bool isItem)
+{
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, state.tooltipPadding);
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, state.tooltipSpacing);
-    if (isItem ? ImGui::BeginItemTooltip() : ImGui::BeginTooltip()) return true;
+    if (isItem ? ImGui::BeginItemTooltip() : ImGui::BeginTooltip())
+        return true;
     ImGui::PopStyleVar(2);
     return false;
-  }
+}
 
-  void tooltip_end()
-  {
+void tooltip_end()
+{
     ImGui::EndTooltip();
     ImGui::PopStyleVar(2);
-  }
+}
 
-  static void row_tooltip_update(const PanelState& state, const ListRows& rows, int key)
-  {
-    if (!rows.tooltip_draw || !tooltip_begin(state)) return;
+static void row_tooltip_update(const PanelState& state, const ListRows& rows, int key)
+{
+    if (!rows.tooltip_draw || !tooltip_begin(state))
+        return;
     rows.tooltip_draw(key);
     tooltip_end();
-  }
+}
 
-  // Arrow keys move a single selection through the keys.
-  static int arrow_key_get(const std::vector<int>& keys, const std::set<int>& selection, int focus)
-  {
+// Arrow keys move a single selection through the keys.
+static int arrow_key_get(const std::vector<int>& keys, const std::set<int>& selection, int focus)
+{
     if (keys.empty() || !ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) ||
         !(ImGui::IsKeyPressed(ImGuiKey_UpArrow, true) || ImGui::IsKeyPressed(ImGuiKey_DownArrow, true)))
-      return -1;
+        return -1;
     auto current = focus == -1 && !selection.empty() ? *selection.begin() : focus;
     auto it = std::ranges::find(keys, current);
     auto index = it == keys.end() ? 0 : (int)std::distance(keys.begin(), it);
     auto delta = ImGui::IsKeyPressed(ImGuiKey_UpArrow, true) ? -1 : 1;
     return keys[std::clamp(index + delta, 0, (int)keys.size() - 1)];
-  }
+}
 
-  // Multi-select over `keys` (row index -> key); returns the key the arrow keys moved to, or -1.
-  int list_select_begin(Panel& panel, std::set<int>& selection, int& focus, const ListRows& rows,
-                        const std::vector<int>& arrowKeys)
-  {
+// Multi-select over `keys` (row index -> key). Returns the key the arrow keys moved to, or -1.
+int list_select_begin(Panel& panel, std::set<int>& selection, int& focus, const ListRows& rows,
+                      const std::vector<int>& arrowKeys)
+{
     auto& storage = panel.state.selection;
     storage = selection;
     storage.set_index_map(&panel.state.keys);
     storage.start(panel.state.keys.size());
     selection = storage;
     if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_A, ImGuiInputFlags_RouteFocused))
-      selection = storage = std::set<int>(panel.state.keys.begin(), panel.state.keys.end());
+        selection = storage = std::set<int>(panel.state.keys.begin(), panel.state.keys.end());
     if (ImGui::Shortcut(ImGuiKey_Escape, ImGuiInputFlags_RouteFocused))
     {
-      storage.clear();
-      selection.clear();
-      row_select(selection, focus, rows, -1);
+        storage.clear();
+        selection.clear();
+        row_select(selection, focus, rows, -1);
     }
     return arrow_key_get(arrowKeys, selection, focus);
-  }
+}
 
-  void list_select_end(Panel& panel, std::set<int>& selection, int& focus, const ListRows& rows, int arrowKey)
-  {
+void list_select_end(Panel& panel, std::set<int>& selection, int& focus, const ListRows& rows, int arrowKey)
+{
     auto& storage = panel.state.selection;
     storage.finish();
     storage.set_index_map(nullptr);
     selection = storage;
     if (arrowKey != -1)
     {
-      selection = {arrowKey};
-      row_select(selection, focus, rows, arrowKey);
+        selection = {arrowKey};
+        row_select(selection, focus, rows, arrowKey);
     }
     if (shortcut(panel.manager.chords[SHORTCUT_CONFIRM], SCOPE_FOCUSED) && selection.size() == 1 && rows.activate)
-      rows.activate(*selection.begin());
-  }
+        rows.activate(*selection.begin());
+}
 
-  bool row_draw(Panel& panel, std::set<int>& selection, int& focus, const ListRows& rows, int key, int index,
-                int arrowKey)
-  {
+bool row_draw(Panel& panel, std::set<int>& selection, int& focus, const ListRows& rows, int key, int index,
+              int arrowKey)
+{
     auto& state = panel.state;
     auto isSelected = selection.contains(key) || arrowKey == key;
     auto isFocused = rows.isFocusItalic && (focus == key || arrowKey == key);
@@ -121,317 +129,333 @@ using namespace glm;
     auto isInvalid = rows.is_invalid && rows.is_invalid(key);
     ImGui::PushID(key);
     ImGui::SetNextItemSelectionUserData(index);
-    if (font != FONT_REGULAR) ImGui::PushFont(panel.resources.fonts[font].get(), FONT_SIZE);
-    if (isInvalid) ImGui::PushStyleColor(ImGuiCol_Text, CARD_TINT_INVALID);
-    if (arrowKey == key) ImGui::SetKeyboardFocusHere();
+    if (font != FONT_REGULAR)
+        ImGui::PushFont(panel.resources.fonts[font].get(), FONT_SIZE);
+    if (isInvalid)
+        ImGui::PushStyleColor(ImGuiCol_Text, CARD_TINT_INVALID);
+    if (arrowKey == key)
+        ImGui::SetKeyboardFocusHere();
 
     bool isActivated = false;
     if (rows.rename)
     {
-      if (state.newId == key)
-      {
-        state.renameState = RENAME_FORCE_EDIT;
-        state.newId = -1;
-      }
-      auto isRenaming = state.renameId == key;
-      auto name = rows.name_get(key);
-      auto renameLabel = std::format("###Document #{} Row #{}", panel.manager.selected, key);
-      isActivated = selectable_input_text(label, renameLabel, isRenaming ? state.renameText : name, isSelected,
-                                          ImGuiSelectableFlags_None, state.renameState);
-      if (isActivated && state.renameState == RENAME_BEGIN)
-      {
-        state.renameId = key;
-        state.renameText = name;
-      }
-      else if (isActivated && state.renameState == RENAME_FINISHED)
-      {
-        if (isRenaming && state.renameText != name) rows.rename(key, state.renameText);
-        state.renameId = -1;
-        state.renameText.clear();
-      }
+        if (state.newId == key)
+        {
+            state.renameState = RENAME_FORCE_EDIT;
+            state.newId = -1;
+        }
+        auto isRenaming = state.renameId == key;
+        auto name = rows.name_get(key);
+        auto renameLabel = std::format("###Document #{} Row #{}", panel.manager.selected, key);
+        isActivated = selectable_input_text(label, renameLabel, isRenaming ? state.renameText : name, isSelected,
+                                            ImGuiSelectableFlags_None, state.renameState);
+        if (isActivated && state.renameState == RENAME_BEGIN)
+        {
+            state.renameId = key;
+            state.renameText = name;
+        }
+        else if (isActivated && state.renameState == RENAME_FINISHED)
+        {
+            if (isRenaming && state.renameText != name)
+                rows.rename(key, state.renameText);
+            state.renameId = -1;
+            state.renameText.clear();
+        }
     }
     else
-      isActivated = ImGui::Selectable(label.c_str(), isSelected);
+        isActivated = ImGui::Selectable(label.c_str(), isSelected);
 
     if (isActivated || ImGui::IsItemClicked(ImGuiMouseButton_Left) || ImGui::IsItemClicked(ImGuiMouseButton_Right))
-      row_select(selection, focus, rows, key);
-    if (isInvalid) ImGui::PopStyleColor();
-    if (font != FONT_REGULAR) ImGui::PopFont();
+        row_select(selection, focus, rows, key);
+    if (isInvalid)
+        ImGui::PopStyleColor();
+    if (font != FONT_REGULAR)
+        ImGui::PopFont();
     row_scroll_update(state, key, arrowKey);
-    if (state.newId == key) state.newId = -1;
+    if (state.newId == key)
+        state.newId = -1;
 
     if (rows.activate && ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-      rows.activate(key);
+        rows.activate(key);
 
     auto isBreak = rows.drag_drop_update && rows.drag_drop_update(key, index);
     row_tooltip_update(panel.state, rows, key);
     ImGui::PopID();
     return isBreak;
-  }
+}
 
-  static void card_draw(Panel& panel, std::set<int>& selection, int& focus, const ListRows& rows, int key, int index,
-                 int arrowKey, bool& isBreak)
-  {
+static void card_draw(Panel& panel, std::set<int>& selection, int& focus, const ListRows& rows, int key, int index,
+                      int arrowKey, bool& isBreak)
+{
     auto cardSize = ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetTextLineHeightWithSpacing() * rows.cardLines);
     auto style = ImGui::GetStyle();
 
     ImGui::PushID(key);
     if (arrowKey == key)
     {
-      auto targetTop = ImGui::GetCursorPosY();
-      if (targetTop < ImGui::GetScrollY())
-        ImGui::SetScrollY(targetTop);
-      else if (targetTop + cardSize.y > ImGui::GetScrollY() + ImGui::GetWindowHeight())
-        ImGui::SetScrollY(targetTop + cardSize.y - ImGui::GetWindowHeight());
-      ImGui::SetNextWindowFocus();
+        auto targetTop = ImGui::GetCursorPosY();
+        if (targetTop < ImGui::GetScrollY())
+            ImGui::SetScrollY(targetTop);
+        else if (targetTop + cardSize.y > ImGui::GetScrollY() + ImGui::GetWindowHeight())
+            ImGui::SetScrollY(targetTop + cardSize.y - ImGui::GetWindowHeight());
+        ImGui::SetNextWindowFocus();
     }
 
     if (ImGui::BeginChild("##Card Child", cardSize, ImGuiChildFlags_Borders))
     {
-      auto cursorPos = ImGui::GetCursorPos();
-      auto isSelected = selection.contains(key) || arrowKey == key;
-      auto isFocused = key == focus || arrowKey == key;
-      auto image = rows.image_get(key);
-      auto label = rows.label_get(key);
+        auto cursorPos = ImGui::GetCursorPos();
+        auto isSelected = selection.contains(key) || arrowKey == key;
+        auto isFocused = key == focus || arrowKey == key;
+        auto image = rows.image_get(key);
+        auto label = rows.label_get(key);
 
-      ImGui::SetNextItemSelectionUserData(index);
-      ImGui::SetNextItemStorageID(key);
-      if (arrowKey == key) ImGui::SetKeyboardFocusHere();
-      if (ImGui::Selectable("##Card Selectable", isSelected, 0, cardSize) ||
-          ImGui::IsItemClicked(ImGuiMouseButton_Left) || ImGui::IsItemClicked(ImGuiMouseButton_Right))
-        row_select(selection, focus, rows, key);
-      if (rows.activate && ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-        rows.activate(key);
+        ImGui::SetNextItemSelectionUserData(index);
+        ImGui::SetNextItemStorageID(key);
+        if (arrowKey == key)
+            ImGui::SetKeyboardFocusHere();
+        if (ImGui::Selectable("##Card Selectable", isSelected, 0, cardSize) ||
+            ImGui::IsItemClicked(ImGuiMouseButton_Left) || ImGui::IsItemClicked(ImGuiMouseButton_Right))
+            row_select(selection, focus, rows, key);
+        if (rows.activate && ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+            rows.activate(key);
 
-      if (rows.tooltip_draw && ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip) &&
-          !ImGui::IsMouseDragging(ImGuiMouseButton_Left))
-      {
-        ImGui::SetNextWindowSize(ImVec2(ImGui::CalcTextSize(label.c_str()).x + panel.state.tooltipSpacing.x +
-                                            panel.state.tooltipPadding.x * TOOLTIP_PADDING_MULTIPLIER,
-                                        0),
-                                 ImGuiCond_Appearing);
-        row_tooltip_update(panel.state, rows, key);
-      }
+        if (rows.tooltip_draw && ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip) &&
+            !ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+        {
+            ImGui::SetNextWindowSize(ImVec2(ImGui::CalcTextSize(label.c_str()).x + panel.state.tooltipSpacing.x +
+                                                panel.state.tooltipPadding.x * TOOLTIP_PADDING_MULTIPLIER,
+                                            0),
+                                     ImGuiCond_Appearing);
+            row_tooltip_update(panel.state, rows, key);
+        }
 
-      isBreak = rows.drag_drop_update && rows.drag_drop_update(key, index);
+        isBreak = rows.drag_drop_update && rows.drag_drop_update(key, index);
 
-      auto aspectRatio = image.size.y != 0.0f ? image.size.x / image.size.y : 1.0f;
-      auto imageSize = ImVec2(cardSize.y, cardSize.y);
-      if (imageSize.x / imageSize.y > aspectRatio)
-        imageSize.x = imageSize.y * aspectRatio;
-      else
-        imageSize.y = imageSize.x / aspectRatio;
-      ImGui::SetCursorPos(cursorPos);
-      ImGui::ImageWithBg(texture_id_get(*image.texture), imageSize, to_imvec2(image.uvMin),
-                         to_imvec2(image.uvMax), ImVec4(), image.isValid ? CARD_TINT_VALID : CARD_TINT_INVALID);
+        auto aspectRatio = image.size.y != 0.0f ? image.size.x / image.size.y : 1.0f;
+        auto imageSize = ImVec2(cardSize.y, cardSize.y);
+        if (imageSize.x / imageSize.y > aspectRatio)
+            imageSize.x = imageSize.y * aspectRatio;
+        else
+            imageSize.y = imageSize.x / aspectRatio;
+        ImGui::SetCursorPos(cursorPos);
+        ImGui::ImageWithBg(texture_id_get(*image.texture), imageSize, to_imvec2(image.uvMin), to_imvec2(image.uvMax),
+                           ImVec4(), image.isValid ? CARD_TINT_VALID : CARD_TINT_INVALID);
 
-      ImGui::SetCursorPos(
-          ImVec2(cardSize.y + style.ItemSpacing.x, cardSize.y - cardSize.y / 2 - ImGui::GetTextLineHeight() / 2));
-      if (isFocused) ImGui::PushFont(panel.resources.fonts[FONT_ITALICS].get(), FONT_SIZE);
-      ImGui::TextUnformatted(label.c_str());
-      if (isFocused) ImGui::PopFont();
+        ImGui::SetCursorPos(
+            ImVec2(cardSize.y + style.ItemSpacing.x, cardSize.y - cardSize.y / 2 - ImGui::GetTextLineHeight() / 2));
+        if (isFocused)
+            ImGui::PushFont(panel.resources.fonts[FONT_ITALICS].get(), FONT_SIZE);
+        ImGui::TextUnformatted(label.c_str());
+        if (isFocused)
+            ImGui::PopFont();
     }
     ImGui::EndChild();
 
     row_scroll_update(panel.state, key, -1);
-    if (panel.state.newId == key) panel.state.newId = -1;
+    if (panel.state.newId == key)
+        panel.state.newId = -1;
     ImGui::PopID();
-  }
+}
 
-  // A selectable list (or cards) of keys; `selection` and `focus` are read and written.
-  void list_draw(Panel& panel, const std::vector<int>& keys, std::set<int>& selection, int& focus, const ListRows& rows)
-  {
+// A selectable list (or cards) of keys. `selection` and `focus` are read and written.
+void list_draw(Panel& panel, const std::vector<int>& keys, std::set<int>& selection, int& focus, const ListRows& rows)
+{
     panel.state.keys = keys;
     auto isCards = rows.image_get != nullptr;
-    if (isCards) ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2());
+    if (isCards)
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2());
     auto arrowKey = list_select_begin(panel, selection, focus, rows, keys);
     for (int i = 0; i < (int)keys.size(); ++i)
     {
-      bool isBreak = false;
-      if (isCards)
-        card_draw(panel, selection, focus, rows, keys[i], i, arrowKey, isBreak);
-      else
-        isBreak = row_draw(panel, selection, focus, rows, keys[i], i, arrowKey);
-      if (isBreak) break;
+        bool isBreak = false;
+        if (isCards)
+            card_draw(panel, selection, focus, rows, keys[i], i, arrowKey, isBreak);
+        else
+            isBreak = row_draw(panel, selection, focus, rows, keys[i], i, arrowKey);
+        if (isBreak)
+            break;
     }
-    if (isCards) ImGui::PopStyleVar();
+    if (isCards)
+        ImGui::PopStyleVar();
     list_select_end(panel, selection, focus, rows, arrowKey);
-  }
+}
 
-  void content_list_draw(Panel& panel, SelectionKind kind, const std::vector<int>& keys, const ListRows& rows)
-  {
+void content_list_draw(Panel& panel, SelectionKind kind, const std::vector<int>& keys, const ListRows& rows)
+{
     auto& document = panel.document;
     auto selection = document.selected_ids_get(kind);
     auto focus = document.focused_id_get(kind);
     list_draw(panel, keys, selection, focus, rows);
     document.selected_ids_set(kind, selection);
     document.focused_id_set(kind, focus);
-  }
+}
 
-  // The list in a bordered child with its context menu and shortcuts, then the footer buttons.
-  // The confirmation's lines: the items by name, then what goes with them.
-  static std::vector<std::string> remove_lines_get(const Model& model, ElementType type, const std::set<int>& ids,
-                                            int spritesheetId)
-  {
+// The list in a bordered child with its context menu and shortcuts, then the footer buttons.
+// The confirmation's lines: the items by name, then what goes with them.
+static std::vector<std::string> remove_lines_get(const Model& model, ElementType type, const std::set<int>& ids,
+                                                 int spritesheetId)
+{
     auto& content = model.content;
     std::vector<std::string> lines;
-    auto names_add = [&](const auto& items, auto&& name_get)
-    {
-      for (auto id : ids)
-        if (auto item = item_get(items, id)) lines.push_back(std::format("\"{}\"", name_get(*item)));
+    auto names_add = [&](const auto& items, auto&& name_get) {
+        for (auto id : ids)
+            if (auto item = item_get(items, id))
+                lines.push_back(std::format("\"{}\"", name_get(*item)));
     };
-    auto name_get = [](const auto& item) { return item.name; };
-    auto path_get = [](const auto& item) { return path_to_utf8(item.path); };
-    auto count_add = [&](StringType format, int count)
-    {
-      if (count > 0) lines.push_back(localize_format(format, count));
+    auto name_get = [](const auto& item) {
+        return item.name;
     };
-    auto layers_add = [&](StringType format, auto&& is_removed)
-    {
-      std::set<int> layerIds;
-      for (auto& layer : content.layers)
-        if (is_removed(layer))
-        {
-          layerIds.insert(layer.id);
-          lines.push_back(localize_format(format, layer.name));
-        }
-      return layerIds;
+    auto path_get = [](const auto& item) {
+        return path_to_utf8(item.path);
+    };
+    auto count_add = [&](StringType format, int count) {
+        if (count > 0)
+            lines.push_back(localize_format(format, count));
+    };
+    auto layers_add = [&](StringType format, auto&& is_removed) {
+        std::set<int> layerIds;
+        for (auto& layer : content.layers)
+            if (is_removed(layer))
+            {
+                layerIds.insert(layer.id);
+                lines.push_back(localize_format(format, layer.name));
+            }
+        return layerIds;
     };
     auto uses = model.uses_count(type, ids, spritesheetId);
 
     switch (type)
     {
-      case ElementType::LAYER_ELEMENT:
-        names_add(content.layers, name_get);
-        count_add(FORMAT_REMOVE_TRACKS, uses);
-        break;
-      case ElementType::NULL_ELEMENT:
-        names_add(content.nulls, name_get);
-        count_add(FORMAT_REMOVE_TRACKS, uses);
-        break;
-      case ElementType::EVENT_ELEMENT:
-      case ElementType::SOUND_ELEMENT:
-      {
-        auto isEvent = type == ElementType::EVENT_ELEMENT;
-        if (isEvent)
-          names_add(content.events, name_get);
-        else
-          names_add(content.sounds, path_get);
-        count_add(FORMAT_REMOVE_TRIGGER_USES, uses);
-        // Triggers whose every event and sound goes.
-        int emptied = 0;
-        for (auto [index, animation] : model.animations_get())
-          for (auto& trigger : animation->triggers.frames)
-          {
-            auto& own = isEvent ? trigger.eventIds : trigger.soundIds;
-            auto& other = isEvent ? trigger.soundIds : trigger.eventIds;
-            emptied +=
-                other.empty() && !own.empty() && std::ranges::all_of(own, [&](int id) { return ids.contains(id); });
-          }
-        count_add(FORMAT_REMOVE_TRIGGERS_EMPTY, emptied);
-        break;
-      }
-      case ElementType::SHADER:
-        names_add(content.shaders, name_get);
-        count_add(FORMAT_REMOVE_SHADER_USES, uses);
-        break;
-      case ElementType::REGION:
-        if (auto spritesheet = item_get(content.spritesheets, spritesheetId))
-          names_add(spritesheet->regions, name_get);
-        count_add(FORMAT_REMOVE_REGION_USES, uses);
-        break;
-      case ElementType::SPRITESHEET:
-      {
-        names_add(content.spritesheets, path_get);
-        auto layerIds = layers_add(FORMAT_REMOVE_LAYER, [&](const Layer& layer)
-                                   { return !layer.is_animation() && ids.contains(layer.spritesheetId); });
-        count_add(FORMAT_REMOVE_TRACKS, model.uses_count(ElementType::LAYER_ELEMENT, layerIds));
-        break;
-      }
-      default:
-        names_add(content.libraries, path_get);
-        layers_add(FORMAT_REMOVE_FLATTENED_LAYER,
-                   [&](const Layer& layer) { return ids.contains(layer.libraryId); });
-        break;
+        case ElementType::LAYER_ELEMENT:
+            names_add(content.layers, name_get);
+            count_add(FORMAT_REMOVE_TRACKS, uses);
+            break;
+        case ElementType::NULL_ELEMENT:
+            names_add(content.nulls, name_get);
+            count_add(FORMAT_REMOVE_TRACKS, uses);
+            break;
+        case ElementType::EVENT_ELEMENT:
+        case ElementType::SOUND_ELEMENT:
+        {
+            auto isEvent = type == ElementType::EVENT_ELEMENT;
+            if (isEvent)
+                names_add(content.events, name_get);
+            else
+                names_add(content.sounds, path_get);
+            count_add(FORMAT_REMOVE_TRIGGER_USES, uses);
+            // Triggers whose every event and sound goes.
+            int emptied = 0;
+            for (auto [index, animation] : model.animations_get())
+                for (auto& trigger : animation->triggers.frames)
+                {
+                    auto& own = isEvent ? trigger.eventIds : trigger.soundIds;
+                    auto& other = isEvent ? trigger.soundIds : trigger.eventIds;
+                    emptied += other.empty() && !own.empty() &&
+                               std::ranges::all_of(own, [&](int id) { return ids.contains(id); });
+                }
+            count_add(FORMAT_REMOVE_TRIGGERS_EMPTY, emptied);
+            break;
+        }
+        case ElementType::SHADER:
+            names_add(content.shaders, name_get);
+            count_add(FORMAT_REMOVE_SHADER_USES, uses);
+            break;
+        case ElementType::REGION:
+            if (auto spritesheet = item_get(content.spritesheets, spritesheetId))
+                names_add(spritesheet->regions, name_get);
+            count_add(FORMAT_REMOVE_REGION_USES, uses);
+            break;
+        case ElementType::SPRITESHEET:
+        {
+            names_add(content.spritesheets, path_get);
+            auto layerIds = layers_add(FORMAT_REMOVE_LAYER, [&](const Layer& layer) {
+                return !layer.is_animation() && ids.contains(layer.spritesheetId);
+            });
+            count_add(FORMAT_REMOVE_TRACKS, model.uses_count(ElementType::LAYER_ELEMENT, layerIds));
+            break;
+        }
+        default:
+            names_add(content.libraries, path_get);
+            layers_add(FORMAT_REMOVE_FLATTENED_LAYER,
+                       [&](const Layer& layer) { return ids.contains(layer.libraryId); });
+            break;
     }
     return lines;
-  }
+}
 
-  static void content_remove_apply(Panel& panel)
-  {
-    command_push(panel,
-                 [removal = panel.state.removal](Document& document)
-                 {
-                   document.edit_apply(EDIT_REMOVE_ITEMS,
-                                       [&](Model& model)
-                                       {
-                                         return content_remove(
-                                             model, removal.type, removal.ids, removal.spritesheetId,
-                                             document.library_resolver_get(), document.spritesheet_path_resolver_get());
-                                       });
-                   document.selected_clear(removal.kind);
-                 });
-  }
+static void content_remove_apply(Panel& panel)
+{
+    command_push(panel, [removal = panel.state.removal](Document& document) {
+        document.edit_apply(EDIT_REMOVE_ITEMS, [&](Model& model) {
+            return content_remove(model, removal.type, removal.ids, removal.spritesheetId,
+                                  document.library_resolver_get(), document.spritesheet_path_resolver_get());
+        });
+        document.selected_clear(removal.kind);
+    });
+}
 
-  // Removes the selected content items; when anything uses them, it asks first, saying what goes with them.
-  void content_remove_action_add(Actions& actions, Panel& panel, ElementType type, SelectionKind kind,
-                                 int spritesheetId)
-  {
+// Removes the selected content items. When anything uses them, it asks first, saying what goes with them.
+void content_remove_action_add(Actions& actions, Panel& panel, ElementType type, SelectionKind kind, int spritesheetId)
+{
     auto selection = panel.document.selected_ids_get(kind);
     actions.add(
         ACTION_REMOVE, [selection]() { return !selection.empty(); },
-        [&panel, type, kind, selection, spritesheetId]()
-        {
-          auto& model = panel.document.model;
-          panel.state.removal = {type, kind, selection, spritesheetId,
-                                 remove_lines_get(model, type, selection, spritesheetId)};
-          if (model.uses_count(type, selection, spritesheetId) > 0)
-            panel.state.removePopup.open();
-          else
-            content_remove_apply(panel);
+        [&panel, type, kind, selection, spritesheetId]() {
+            auto& model = panel.document.model;
+            panel.state.removal = {type, kind, selection, spritesheetId,
+                                   remove_lines_get(model, type, selection, spritesheetId)};
+            if (model.uses_count(type, selection, spritesheetId) > 0)
+                panel.state.removePopup.open();
+            else
+                content_remove_apply(panel);
         },
         TOOLTIP_REMOVE_CONTENT);
-  }
+}
 
-  static void content_remove_popup_draw(Panel& panel)
-  {
+static void content_remove_popup_draw(Panel& panel)
+{
     auto& popup = panel.state.removePopup;
     popup.trigger();
-    if (!ImGui::BeginPopupModal(popup.label(), &popup.isOpen, ImGuiWindowFlags_NoResize)) return popup.end();
+    if (!ImGui::BeginPopupModal(popup.label(), &popup.isOpen, ImGuiWindowFlags_NoResize))
+        return popup.end();
     auto& removal = panel.state.removal;
     ImGui::TextUnformatted(localize.get(TEXT_REMOVE_LIST));
     auto& lines = removal.lines;
     for (std::size_t i = 0; i < std::min(lines.size(), REMOVE_LINES_MAX); ++i)
-      ImGui::BulletText("%s", lines[i].c_str());
+        ImGui::BulletText("%s", lines[i].c_str());
     if (lines.size() > REMOVE_LINES_MAX)
-      ImGui::BulletText("%s", localize_format(FORMAT_REMOVE_MORE, (int)(lines.size() - REMOVE_LINES_MAX)).c_str());
+        ImGui::BulletText("%s", localize_format(FORMAT_REMOVE_MORE, (int)(lines.size() - REMOVE_LINES_MAX)).c_str());
     ImGui::Spacing();
     ImGui::TextUnformatted(localize.get(TEXT_REMOVE_CONFIRM));
     auto result = popup_buttons_draw(panel.manager, localize.get(BASIC_REMOVE));
-    if (result == PopupButton::CONFIRM) content_remove_apply(panel);
-    if (result != PopupButton::NONE) popup.close();
+    if (result == PopupButton::CONFIRM)
+        content_remove_apply(panel);
+    if (result != PopupButton::NONE)
+        popup.close();
     ImGui::EndPopup();
     popup.end();
-  }
+}
 
-  void list_panel_draw(Panel& panel, Actions& actions, const Footer& footer, const std::function<void()>& list,
-                       bool isCards, Actions* footerActions)
-  {
+void list_panel_draw(Panel& panel, Actions& actions, const Footer& footer, const std::function<void()>& list,
+                     bool isCards, Actions* footerActions)
+{
     auto& [manager, settings, resources, dialog, clipboard, document, state] = panel;
     state.tooltipPadding = ImGui::GetStyle().WindowPadding;
     state.tooltipSpacing = ImGui::GetStyle().ItemSpacing;
-    if (isCards) ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2());
+    if (isCards)
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2());
     if (ImGui::BeginChild("##List Child", size_without_footer_get((int)footer.size()), ImGuiChildFlags_Borders))
     {
-      list();
-      actions_shortcuts_update(actions, manager);
+        list();
+        actions_shortcuts_update(actions, manager);
     }
     ImGui::EndChild();
-    if (isCards) ImGui::PopStyleVar();
+    if (isCards)
+        ImGui::PopStyleVar();
 
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlappedByWindow) &&
         ImGui::IsMouseReleased(ImGuiMouseButton_Right))
-      ImGui::OpenPopup(CONTEXT_MENU_LABEL);
+        ImGui::OpenPopup(CONTEXT_MENU_LABEL);
     Actions menu = {};
     actions_undo_redo_add(menu, manager, document);
     menu.separator();
@@ -441,24 +465,24 @@ using namespace glm;
     auto& buttons = footerActions ? *footerActions : actions;
     for (auto& row : footer)
     {
-      auto widgetSize = widget_size_with_row_get((int)row.size());
-      bool isSameLine = false;
-      for (auto type : row)
-        if (auto action = std::ranges::find(buttons.items, type, &Action::type); action != buttons.items.end())
-          action_button_draw(*action, manager, settings, widgetSize, isSameLine);
+        auto widgetSize = widget_size_with_row_get((int)row.size());
+        bool isSameLine = false;
+        for (auto type : row)
+            if (auto action = std::ranges::find(buttons.items, type, &Action::type); action != buttons.items.end())
+                action_button_draw(*action, manager, settings, widgetSize, isSameLine);
     }
     content_remove_popup_draw(panel);
-  }
+}
 
-  void tooltip_name_draw(Resources& resources, const std::string& name)
-  {
+void tooltip_name_draw(Resources& resources, const std::string& name)
+{
     ImGui::PushFont(resources.fonts[FONT_BOLD].get(), FONT_SIZE);
     ImGui::TextUnformatted(name.c_str());
     ImGui::PopFont();
-  }
+}
 
-  void tooltip_image_draw(const CardImage& image, const std::function<void()>& info_draw)
-  {
+void tooltip_image_draw(const CardImage& image, const std::function<void()>& info_draw)
+{
     auto maxPreviewSize = to_vec2(ImGui::GetMainViewport()->Size) * PREVIEW_VIEWPORT_FRACTION;
     auto previewSize = glm::max(image.size, vec2(1.0f));
     previewSize *= glm::min(1.0f, glm::min(maxPreviewSize.x / previewSize.x, maxPreviewSize.y / previewSize.y));
@@ -467,50 +491,54 @@ using namespace glm;
     auto noScrollFlags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2());
     if (ImGui::BeginChild("##Tooltip Image Child", to_imvec2(previewSize), childFlags, noScrollFlags))
-      ImGui::ImageWithBg(texture_id_get(*image.texture), to_imvec2(previewSize), to_imvec2(image.uvMin),
-                         to_imvec2(image.uvMax), ImVec4(), image.isValid ? CARD_TINT_VALID : CARD_TINT_INVALID);
+        ImGui::ImageWithBg(texture_id_get(*image.texture), to_imvec2(previewSize), to_imvec2(image.uvMin),
+                           to_imvec2(image.uvMax), ImVec4(), image.isValid ? CARD_TINT_VALID : CARD_TINT_INVALID);
     ImGui::EndChild();
     ImGui::PopStyleVar();
 
     ImGui::SameLine();
     if (ImGui::BeginChild("##Tooltip Info Child", ImVec2(), ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY,
                           noScrollFlags))
-      info_draw();
+        info_draw();
     ImGui::EndChild();
-  }
+}
 
-  std::filesystem::path asset_path_get(Document& document, const std::filesystem::path& path)
-  {
+std::filesystem::path asset_path_get(Document& document, const std::filesystem::path& path)
+{
     return path_backslash_replace(path_make_relative(path_backslash_handle(path), document.directory_get()));
-  }
+}
 
-  // Shows a resource's file selected in the file manager (or the nearest folder there is, when it's missing).
-  void directory_open(Dialog& dialog, Document& document, const std::filesystem::path& path)
-  {
-    if (path.empty()) return;
+// Shows a resource's file selected in the file manager (or the nearest folder there is, when it's missing).
+void directory_open(Dialog& dialog, Document& document, const std::filesystem::path& path)
+{
+    if (path.empty())
+        return;
     std::error_code ec;
     auto absolutePath = std::filesystem::weakly_canonical(document.directory_get() / path, ec);
-    if (ec) absolutePath = document.directory_get() / path;
+    if (ec)
+        absolutePath = document.directory_get() / path;
     auto target = std::filesystem::is_regular_file(absolutePath, ec) || std::filesystem::is_directory(absolutePath, ec)
                       ? absolutePath
                   : std::filesystem::is_directory(absolutePath.parent_path()) ? absolutePath.parent_path()
                                                                               : document.directory_get();
     dialog.file_explorer_open(target);
-  }
+}
 
-  PopupButton popup_buttons_draw(Manager& manager, const char* confirmLabel, bool isConfirmEnabled,
-                                 StringType cancelLabel)
-  {
+PopupButton popup_buttons_draw(Manager& manager, const char* confirmLabel, bool isConfirmEnabled,
+                               StringType cancelLabel)
+{
     auto widgetSize = widget_size_with_row_get(2);
     auto result = PopupButton::NONE;
 
     ImGui::BeginDisabled(!isConfirmEnabled);
     shortcut(manager.chords[SHORTCUT_CONFIRM]);
-    if (ImGui::Button(confirmLabel, widgetSize)) result = PopupButton::CONFIRM;
+    if (ImGui::Button(confirmLabel, widgetSize))
+        result = PopupButton::CONFIRM;
     ImGui::EndDisabled();
 
     ImGui::SameLine();
     shortcut(manager.chords[SHORTCUT_CANCEL]);
-    if (ImGui::Button(localize.get(cancelLabel), widgetSize)) result = PopupButton::CANCEL;
+    if (ImGui::Button(localize.get(cancelLabel), widgetSize))
+        result = PopupButton::CANCEL;
     return result;
-  }
+}

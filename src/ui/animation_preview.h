@@ -11,8 +11,8 @@
 #include "resources.h"
 #include "settings.h"
 
-  class AnimationPreview : public CanvasView
-  {
+class AnimationPreview : public CanvasView
+{
     MIX_Mixer* mixer = MIX_CreateMixerDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
     AudioStream audioStream = AudioStream(mixer);
     bool wasPlaybackPlaying = false;
@@ -28,8 +28,8 @@
     // Where each item's pivot is at every frame of the animation, kept until the document or view changes.
     struct PivotPath
     {
-      Draw item = {};
-      std::vector<glm::vec2> points{};
+        Draw item = {};
+        std::vector<glm::vec2> points{};
     };
     std::vector<PivotPath> pivotPaths;
     std::tuple<std::uint64_t, std::uint64_t, int, bool> pivotPathsKey;
@@ -37,7 +37,7 @@
     void recording_start(Manager&, Settings&, Document&, const Animation*);
     void recording_stop(Manager&, Document&);
 
-  public:
+public:
     void tick(Manager&, Settings&, float);
     void update(Manager&, Settings&, Resources&);
-  };
+};

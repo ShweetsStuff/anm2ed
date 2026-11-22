@@ -5,12 +5,12 @@
 #include "resources.h"
 #include "settings.h"
 
-  class SpritesheetEditor : public CanvasView
-  {
+class SpritesheetEditor : public CanvasView
+{
     glm::vec2 previousMousePos{};
     glm::vec2 cropAnchor{};
     int hoveredRegionId = -1;
 
-  public:
+public:
     void update(Manager&, Settings&, Resources&);
-  };
+};

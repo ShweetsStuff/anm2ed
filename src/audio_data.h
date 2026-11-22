@@ -5,9 +5,9 @@
 #include <filesystem>
 #include <vector>
 
-  // Encoded audio file bytes. uid identifies the bytes so playback state can be cached by it.
-  struct AudioData
-  {
+// Encoded audio file bytes. uid identifies the bytes so playback state can be cached by it.
+struct AudioData
+{
     std::vector<unsigned char> bytes;
     std::uint64_t uid = 0;
 
@@ -16,4 +16,4 @@
     AudioData(const std::filesystem::path&);
 
     bool is_valid() const;
-  };
+};

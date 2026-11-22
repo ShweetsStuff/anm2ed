@@ -16,33 +16,37 @@
 #include "ui/shortcut.h"
 #include "vector.h"
 
-  constexpr std::size_t RECENT_LIMIT = 10;
+constexpr std::size_t RECENT_LIMIT = 10;
 
-  static void ensure_parent_directory_exists(const std::filesystem::path& path)
-  {
+static void ensure_parent_directory_exists(const std::filesystem::path& path)
+{
     auto parent = path.parent_path();
-    if (parent.empty()) return;
+    if (parent.empty())
+        return;
     std::error_code ec;
     std::filesystem::create_directories(parent, ec);
-    if (ec) logger.warning(std::format("Could not create directory for {}: {}", path_to_utf8(path), ec.message()));
-  }
+    if (ec)
+        logger.warning(std::format("Could not create directory for {}: {}", path_to_utf8(path), ec.message()));
+}
 
-  static void autosave_file_remove(const std::filesystem::path& path)
-  {
-    if (path.empty()) return;
+static void autosave_file_remove(const std::filesystem::path& path)
+{
+    if (path.empty())
+        return;
 
     std::error_code ec;
     std::filesystem::remove(path, ec);
-    if (ec) logger.warning(std::format("Could not remove autosave file {}: {}", path_to_utf8(path), ec.message()));
-  }
+    if (ec)
+        logger.warning(std::format("Could not remove autosave file {}: {}", path_to_utf8(path), ec.message()));
+}
 
-  static std::vector<std::filesystem::path> path_list_load(const std::filesystem::path& path, std::string_view name)
-  {
+static std::vector<std::filesystem::path> path_list_load(const std::filesystem::path& path, std::string_view name)
+{
     std::string fileData;
     if (!file_text_load(path, &fileData, "rb"))
     {
-      logger.warning(std::format("Could not load {} from: {}. Skipping...", name, path_to_utf8(path)));
-      return {};
+        logger.warning(std::format("Could not load {} from: {}. Skipping...", name, path_to_utf8(path)));
+        return {};
     }
     logger.info(std::format("Loading {} from: {}", name, path_to_utf8(path)));
 
@@ -50,86 +54,102 @@
     std::istringstream file(fileData);
     for (std::string line{}; std::getline(file, line);)
     {
-      if (!line.empty() && line.back() == '\r') line.pop_back();
-      auto entry = path_from_utf8(line);
-      if (!line.empty() && std::ranges::find(result, entry) == result.end()) result.push_back(entry);
+        if (!line.empty() && line.back() == '\r')
+            line.pop_back();
+        auto entry = path_from_utf8(line);
+        if (!line.empty() && std::ranges::find(result, entry) == result.end())
+            result.push_back(entry);
     }
     return result;
-  }
+}
 
-  static void path_list_save(const std::filesystem::path& path, const std::vector<std::filesystem::path>& entries,
-                      std::string_view name)
-  {
+static void path_list_save(const std::filesystem::path& path, const std::vector<std::filesystem::path>& entries,
+                           std::string_view name)
+{
     ensure_parent_directory_exists(path);
     std::ostringstream file;
     for (auto& entry : entries)
-      file << path_to_utf8(entry) << '\n';
+        file << path_to_utf8(entry) << '\n';
     if (!file_text_save(path, file.str(), "wb"))
-      logger.warning(std::format("Could not write {} to: {}. Skipping...", name, path_to_utf8(path)));
-  }
+        logger.warning(std::format("Could not write {} to: {}. Skipping...", name, path_to_utf8(path)));
+}
 
-  void Manager::selection_history_push(int index)
-  {
-    if (index < 0 || index >= (int)documents.size()) return;
+void Manager::selection_history_push(int index)
+{
+    if (index < 0 || index >= (int)documents.size())
+        return;
     selectionHistory.erase(std::remove(selectionHistory.begin(), selectionHistory.end(), index),
                            selectionHistory.end());
     selectionHistory.push_back(index);
-  }
+}
 
-  void Manager::selection_history_cleanup(int removedIndex)
-  {
+void Manager::selection_history_cleanup(int removedIndex)
+{
     if (removedIndex >= 0)
     {
-      for (auto& entry : selectionHistory)
-      {
-        if (entry == removedIndex)
-          entry = -1;
-        else if (entry > removedIndex)
-          --entry;
-      }
+        for (auto& entry : selectionHistory)
+            if (entry == removedIndex)
+                entry = -1;
+            else if (entry > removedIndex)
+                --entry;
     }
 
     selectionHistory.erase(std::remove_if(selectionHistory.begin(), selectionHistory.end(),
                                           [&](int idx) { return idx < 0 || idx >= (int)documents.size(); }),
                            selectionHistory.end());
-    if (documents.empty()) selectionHistory.clear();
-  }
+    if (documents.empty())
+        selectionHistory.clear();
+}
 
-  std::filesystem::path Manager::recent_files_path_get() { return preferences_directory_get() / "recent.txt"; }
-  std::filesystem::path Manager::autosave_path_get() { return preferences_directory_get() / "autosave.txt"; }
+std::filesystem::path Manager::recent_files_path_get()
+{
+    return preferences_directory_get() / "recent.txt";
+}
 
-  Manager::Manager()
-  {
+std::filesystem::path Manager::autosave_path_get()
+{
+    return preferences_directory_get() / "autosave.txt";
+}
+
+Manager::Manager()
+{
     recent_files_load();
     autosave_files_load();
-  }
+}
 
-  Document* Manager::get(int index) { return vector_find(documents, index > -1 ? index : selected); }
+Document* Manager::get(int index)
+{
+    return vector_find(documents, index > -1 ? index : selected);
+}
 
-  void Manager::command_push(Command command)
-  {
-    if (command.documentIndex == -1) command.documentIndex = selected;
+void Manager::command_push(Command command)
+{
+    if (command.documentIndex == -1)
+        command.documentIndex = selected;
     commands.push_back(std::move(command));
-  }
+}
 
-  void Manager::commands_run()
-  {
+void Manager::commands_run()
+{
     auto queued = std::move(commands);
     commands.clear();
 
     for (auto& command : queued)
     {
-      if (command.runManager) continue;
+        if (command.runManager)
+            continue;
 
-      if (auto document = get(command.documentIndex); document) document->command_run(*this, command);
+        if (auto document = get(command.documentIndex); document)
+            document->command_run(*this, command);
     }
 
     for (auto& command : queued)
-      if (command.runManager) command.runManager(*this);
-  }
+        if (command.runManager)
+            command.runManager(*this);
+}
 
-  Document* Manager::open(const std::filesystem::path& path, bool isNew, bool isRecent)
-  {
+Document* Manager::open(const std::filesystem::path& path, bool isNew, bool isRecent)
+{
     std::string errorString;
     documents.emplace_back(path, isNew, &errorString);
     auto pathString = path_to_utf8(path);
@@ -137,160 +157,179 @@
     auto& document = documents.back();
     if (!document.is_valid())
     {
-      documents.pop_back();
-      toast_log(Level::ERROR, TOAST_OPEN_DOCUMENT_FAILED, pathString, errorString);
-      return nullptr;
+        documents.pop_back();
+        toast_log(Level::ERROR, TOAST_OPEN_DOCUMENT_FAILED, pathString, errorString);
+        return nullptr;
     }
 
-    if (isRecent) recent_file_add(path);
+    if (isRecent)
+        recent_file_add(path);
 
     selected = (int)documents.size() - 1;
     pendingSelected = selected;
     selection_history_push(selected);
     toast_log(Level::INFO, TOAST_OPEN_DOCUMENT, pathString);
     // A JSON document that opened lists what it couldn't read.
-    if (!errorString.empty()) toast_log(Level::WARNING, TOAST_OPEN_DOCUMENT_ISSUES, pathString, errorString);
+    if (!errorString.empty())
+        toast_log(Level::WARNING, TOAST_OPEN_DOCUMENT_ISSUES, pathString, errorString);
 
     return &document;
-  }
+}
 
-  void Manager::new_(const std::filesystem::path& path) { open(path, true, true); }
+void Manager::new_(const std::filesystem::path& path)
+{
+    open(path, true, true);
+}
 
-  bool Manager::save(int index, const std::filesystem::path& path)
-  {
+bool Manager::save(int index, const std::filesystem::path& path)
+{
     if (auto document = get(index); document)
     {
-      std::string errorString;
-      auto previousAutosavePath = document->autosave_path_get();
-      auto savePath = !path.empty() ? path : document->path;
-      savePath.replace_extension(".anm2");
-      ensure_parent_directory_exists(savePath);
+        std::string errorString;
+        auto previousAutosavePath = document->autosave_path_get();
+        auto savePath = !path.empty() ? path : document->path;
+        savePath.replace_extension(".anm2");
+        ensure_parent_directory_exists(savePath);
 
-      if (!document->save(savePath, &errorString, saveOptions)) return false;
+        if (!document->save(savePath, &errorString, saveOptions))
+            return false;
 
-      auto autosavePath = document->autosave_path_get();
-      autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), previousAutosavePath),
-                          autosaveFiles.end());
-      if (autosavePath != previousAutosavePath)
-        autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), autosavePath), autosaveFiles.end());
-      autosave_file_remove(previousAutosavePath);
-      autosave_file_remove(autosavePath);
-      autosave_files_write();
-      recent_file_add(document->path);
-      return true;
+        auto autosavePath = document->autosave_path_get();
+        autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), previousAutosavePath),
+                            autosaveFiles.end());
+        if (autosavePath != previousAutosavePath)
+            autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), autosavePath),
+                                autosaveFiles.end());
+        autosave_file_remove(previousAutosavePath);
+        autosave_file_remove(autosavePath);
+        autosave_files_write();
+        recent_file_add(document->path);
+        return true;
     }
 
     return false;
-  }
+}
 
-  bool Manager::save(const std::filesystem::path& path) { return save(selected, path); }
+bool Manager::save(const std::filesystem::path& path)
+{
+    return save(selected, path);
+}
 
-  void Manager::autosave(Document& document)
-  {
+void Manager::autosave(Document& document)
+{
     std::string errorString;
     auto autosavePath = document.autosave_path_get();
-    if (!document.autosave(&errorString, saveOptions)) return;
+    if (!document.autosave(&errorString, saveOptions))
+        return;
 
     autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), autosavePath), autosaveFiles.end());
     autosaveFiles.insert(autosaveFiles.begin(), autosavePath);
 
     autosave_files_write();
-  }
+}
 
-  void Manager::autosave_file_clear(int index)
-  {
+void Manager::autosave_file_clear(int index)
+{
     auto document = get(index);
-    if (!document) return;
+    if (!document)
+        return;
 
     auto autosavePath = document->autosave_path_get();
     autosaveFiles.erase(std::remove(autosaveFiles.begin(), autosaveFiles.end(), autosavePath), autosaveFiles.end());
     autosave_file_remove(autosavePath);
     document->spritesheets_autosave_clear();
     autosave_files_write();
-  }
+}
 
-  void Manager::close(int index)
-  {
-    if (!is_vector_in_bounds(documents, index)) return;
+void Manager::close(int index)
+{
+    if (!is_vector_in_bounds(documents, index))
+        return;
 
     documents.erase(documents.begin() + index);
     selection_history_cleanup(index);
 
     if (documents.empty())
     {
-      selected = -1;
-      pendingSelected = -1;
-      return;
+        selected = -1;
+        pendingSelected = -1;
+        return;
     }
 
     if (!selectionHistory.empty())
     {
-      selected = selectionHistory.back();
-      selectionHistory.pop_back();
+        selected = selectionHistory.back();
+        selectionHistory.pop_back();
     }
     else if (selected >= index)
-      selected = std::max(0, selected - 1);
+        selected = std::max(0, selected - 1);
 
     selected = std::clamp(selected, 0, (int)documents.size() - 1);
     pendingSelected = selected;
 
-    if (selected >= 0 && selected < (int)documents.size()) documents[selected].change();
-  }
+    if (selected >= 0 && selected < (int)documents.size())
+        documents[selected].change();
+}
 
-  void Manager::set(int index)
-  {
+void Manager::set(int index)
+{
     if (documents.empty())
     {
-      selected = -1;
-      pendingSelected = -1;
-      return;
+        selected = -1;
+        pendingSelected = -1;
+        return;
     }
 
     index = std::clamp(index, 0, (int)documents.size() - 1);
     selected = index;
     selection_history_push(selected);
 
-    if (auto document = get()) document->change();
-  }
+    if (auto document = get())
+        document->change();
+}
 
-  int Manager::tab_index_get(std::uint64_t tabId) const
-  {
+int Manager::tab_index_get(std::uint64_t tabId) const
+{
     for (int i = 0; i < (int)documents.size(); ++i)
-      if (documents[i].tabId == tabId) return i;
+        if (documents[i].tabId == tabId)
+            return i;
     return -1;
-  }
+}
 
-  // The open document saved at `path`, or -1.
-  int Manager::path_index_get(const std::filesystem::path& path) const
-  {
+// The open document saved at `path`, or -1.
+int Manager::path_index_get(const std::filesystem::path& path) const
+{
     for (int i = 0; i < (int)documents.size(); ++i)
     {
-      std::error_code ec;
-      if (std::filesystem::equivalent(documents[i].path, path, ec)) return i;
+        std::error_code ec;
+        if (std::filesystem::equivalent(documents[i].path, path, ec))
+            return i;
     }
     return -1;
-  }
+}
 
-  // Switches to a document's tab.
-  void Manager::tab_select(int index)
-  {
+// Switches to a document's tab.
+void Manager::tab_select(int index)
+{
     pendingSelected = index;
     set(index);
-  }
+}
 
-  // Edits the child of an animation layer track: its animation in this tab, or in its library's tab (opened if need
-  // be), at the time the parent plays it now. The step is remembered, so the breadcrumb can lead back.
-  void Manager::child_step_in(int index, Reference layerTrack)
-  {
+// Edits the child of an animation layer track: its animation in this tab, or in its library's tab (opened if need
+// be), at the time the parent plays it now. The step is remembered, so the breadcrumb can lead back.
+void Manager::child_step_in(int index, Reference layerTrack)
+{
     auto parent = get(index);
     auto animation = parent ? parent->model.animation_get(layerTrack.animationIndex) : nullptr;
     auto track = parent ? parent->model.track_get(layerTrack) : nullptr;
     auto layer = parent ? item_get(parent->model.content.layers, layerTrack.itemID) : nullptr;
-    if (!animation || !track || !layer || !layer->is_animation()) return;
+    if (!animation || !track || !layer || !layer->is_animation())
+        return;
     auto time = parent->frameTime > -1 && !parent->playback.isPlaying ? parent->frameTime : parent->playback.time;
     auto [childModel, childAnimation] =
         child_get(parent->model, *layer, frame_generate(*track, time), parent->library_resolver_get());
-    if (!childAnimation) return;
+    if (!childAnimation)
+        return;
 
     auto steps = parent->childSteps;
     steps.push_back({.tabId = parent->tabId,
@@ -305,35 +344,40 @@
     auto targetIndex = index;
     if (childModel != &parent->model)
     {
-      auto path = parent->library_path_get(layer->libraryId);
-      targetIndex = path_index_get(path);
-      if (targetIndex == -1)
-      {
-        if (!open(path)) return;
-        targetIndex = (int)documents.size() - 1;
-      }
+        auto path = parent->library_path_get(layer->libraryId);
+        targetIndex = path_index_get(path);
+        if (targetIndex == -1)
+        {
+            if (!open(path))
+                return;
+            targetIndex = (int)documents.size() - 1;
+        }
     }
 
     auto& target = documents[targetIndex];
     for (auto [childIndex, candidate] : target.model.animations_get())
-      if (candidate->name == childName) steps.back().childAnimationIndex = childIndex;
+        if (candidate->name == childName)
+            steps.back().childAnimationIndex = childIndex;
     target.childSteps = steps;
     target.reference_set({steps.back().childAnimationIndex});
     target.frame_references_clear();
     target.frameTime = target.playback.time = childTime;
     tab_select(targetIndex);
-  }
+}
 
-  // Goes back to where step `stepIndex` of a document's breadcrumb was taken, keeping the steps before it.
-  void Manager::child_step_out(int index, int stepIndex)
-  {
+// Goes back to where step `stepIndex` of a document's breadcrumb was taken, keeping the steps before it.
+void Manager::child_step_out(int index, int stepIndex)
+{
     auto document = get(index);
-    if (!document || stepIndex < 0 || stepIndex >= (int)document->childSteps.size()) return;
+    if (!document || stepIndex < 0 || stepIndex >= (int)document->childSteps.size())
+        return;
     auto steps = document->childSteps;
     auto step = steps[stepIndex];
     auto targetIndex = tab_index_get(step.tabId);
-    if (targetIndex == -1) return;
-    if (targetIndex != index) document->childSteps.clear();
+    if (targetIndex == -1)
+        return;
+    if (targetIndex != index)
+        document->childSteps.clear();
 
     auto& target = documents[targetIndex];
     target.childSteps.assign(steps.begin(), steps.begin() + stepIndex);
@@ -341,17 +385,19 @@
     target.frame_references_clear();
     target.frameTime = target.playback.time = step.frameTime;
     tab_select(targetIndex);
-  }
+}
 
-  void Manager::item_properties_open(ElementType type, int id)
-  {
+void Manager::item_properties_open(ElementType type, int id)
+{
     auto document = get();
-    if (!document || (type != ElementType::LAYER_ELEMENT && type != ElementType::NULL_ELEMENT)) return;
+    if (!document || (type != ElementType::LAYER_ELEMENT && type != ElementType::NULL_ELEMENT))
+        return;
     auto isLayer = type == ElementType::LAYER_ELEMENT;
     auto& content = document->model.content;
     auto layer = isLayer ? item_get(content.layers, id) : nullptr;
     auto null = isLayer ? nullptr : item_get(content.nulls, id);
-    if (id != -1 && !layer && !null) return;
+    if (id != -1 && !layer && !null)
+        return;
     itemEdit = layer  ? ItemEdit{.id = id,
                                  .name = layer->name,
                                  .spritesheetId = layer->spritesheetId,
@@ -361,21 +407,22 @@
                : null ? ItemEdit{.id = id, .name = null->name, .isShowRect = null->isShowRect}
                       : ItemEdit{};
     itemPropertiesPopups[isLayer ? 0 : 1].open();
-  }
+}
 
-  void Manager::recent_files_trim()
-  {
+void Manager::recent_files_trim()
+{
     while (recentFiles.size() > RECENT_LIMIT)
     {
-      auto oldest = std::min_element(recentFiles.begin(), recentFiles.end(),
-                                     [](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
-      if (oldest == recentFiles.end()) break;
-      recentFiles.erase(oldest);
+        auto oldest = std::min_element(recentFiles.begin(), recentFiles.end(),
+                                       [](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
+        if (oldest == recentFiles.end())
+            break;
+        recentFiles.erase(oldest);
     }
-  }
+}
 
-  std::vector<std::filesystem::path> Manager::recent_files_ordered() const
-  {
+std::vector<std::filesystem::path> Manager::recent_files_ordered() const
+{
     std::vector<std::pair<std::string, std::size_t>> orderedEntries(recentFiles.begin(), recentFiles.end());
     std::sort(orderedEntries.begin(), orderedEntries.end(),
               [](const auto& lhs, const auto& rhs) { return lhs.second > rhs.second; });
@@ -383,91 +430,96 @@
     std::vector<std::filesystem::path> ordered;
     ordered.reserve(orderedEntries.size());
     for (auto& [pathString, _] : orderedEntries)
-      ordered.emplace_back(path_from_utf8(pathString));
+        ordered.emplace_back(path_from_utf8(pathString));
     return ordered;
-  }
+}
 
-  void Manager::recent_file_add(const std::filesystem::path& path)
-  {
-    if (path.empty()) return;
+void Manager::recent_file_add(const std::filesystem::path& path)
+{
+    if (path.empty())
+        return;
     std::error_code ec;
     if (!std::filesystem::exists(path, ec))
     {
-      logger.warning(std::format("Skipping missing recent file: {}", path_to_utf8(path)));
-      return;
+        logger.warning(std::format("Skipping missing recent file: {}", path_to_utf8(path)));
+        return;
     }
 
     recentFiles[path_to_utf8(path)] = ++recentFilesCounter;
     recent_files_trim();
     recent_files_write();
-  }
+}
 
-  void Manager::recent_files_load()
-  {
+void Manager::recent_files_load()
+{
     recentFiles.clear();
     recentFilesCounter = 0;
     auto loaded = path_list_load(recent_files_path_get(), "recent files");
     for (auto it = loaded.rbegin(); it != loaded.rend(); ++it)
     {
-      std::error_code ec;
-      if (std::filesystem::exists(*it, ec))
-        recentFiles[path_to_utf8(*it)] = ++recentFilesCounter;
-      else
-        logger.warning(std::format("Skipping missing recent file: {}", path_to_utf8(*it)));
+        std::error_code ec;
+        if (std::filesystem::exists(*it, ec))
+            recentFiles[path_to_utf8(*it)] = ++recentFilesCounter;
+        else
+            logger.warning(std::format("Skipping missing recent file: {}", path_to_utf8(*it)));
     }
     recent_files_trim();
-  }
+}
 
-  void Manager::recent_files_write()
-  {
+void Manager::recent_files_write()
+{
     path_list_save(recent_files_path_get(), recent_files_ordered(), "recent files");
-  }
+}
 
-  void Manager::recent_files_clear()
-  {
+void Manager::recent_files_clear()
+{
     recentFiles.clear();
     recentFilesCounter = 0;
     recent_files_write();
-  }
+}
 
-  void Manager::autosave_files_open()
-  {
+void Manager::autosave_files_open()
+{
     for (auto& path : autosaveFiles)
     {
-      if (auto document = open(path, false, false))
-      {
-        document->isForceDirty = true;
-        document->path = document->path_from_autosave_get(path);
-        document->spritesheets_autosave_restore();
-        document->change();
-      }
+        if (auto document = open(path, false, false))
+        {
+            document->isForceDirty = true;
+            document->path = document->path_from_autosave_get(path);
+            document->spritesheets_autosave_restore();
+            document->change();
+        }
     }
-  }
+}
 
-  void Manager::autosave_files_load()
-  {
+void Manager::autosave_files_load()
+{
     for (auto& entry : path_list_load(autosave_path_get(), "autosave files"))
-      if (std::ranges::find(autosaveFiles, entry) == autosaveFiles.end()) autosaveFiles.push_back(entry);
-  }
+        if (std::ranges::find(autosaveFiles, entry) == autosaveFiles.end())
+            autosaveFiles.push_back(entry);
+}
 
-  void Manager::autosave_files_write() { path_list_save(autosave_path_get(), autosaveFiles, "autosave files"); }
+void Manager::autosave_files_write()
+{
+    path_list_save(autosave_path_get(), autosaveFiles, "autosave files");
+}
 
-  void Manager::autosave_files_clear(bool removeFiles)
-  {
+void Manager::autosave_files_clear(bool removeFiles)
+{
     if (removeFiles)
-      for (auto& path : autosaveFiles)
-        autosave_file_remove(path);
+        for (auto& path : autosaveFiles)
+            autosave_file_remove(path);
 
     autosaveFiles.clear();
     autosave_files_write();
-  }
+}
 
-  // What the manager keeps from the settings: shortcuts, and how documents save.
-  void Manager::settings_apply(Settings& settings)
-  {
+// What the manager keeps from the settings: shortcuts, and how documents save.
+void Manager::settings_apply(Settings& settings)
+{
     saveOptions = {.isJson = settings.fileIsJson};
     for (int i = 0; i < SHORTCUT_COUNT; i++)
-      chords[i] = string_to_chord(settings.*SHORTCUT_MEMBERS[i]);
-  }
+        chords[i] = string_to_chord(settings.*SHORTCUT_MEMBERS[i]);
+}
 
-  Manager::~Manager() = default;
+Manager::~Manager() = default;

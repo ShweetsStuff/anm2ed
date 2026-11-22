@@ -2,14 +2,14 @@
 
 #include "manager.h"
 
-  class Configure
-  {
+class Configure
+{
     Settings temporary = {};
     int selectedShortcut = -1;
 
-  public:
+public:
     bool isSet = false;
 
     void reset(Settings&);
     void update(Manager&, Settings&);
-  };
+};

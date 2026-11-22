@@ -6,49 +6,50 @@
 
 using namespace glm;
 
-  constexpr auto FLOAT_FORMAT_MAX_DECIMALS = 7;
-  constexpr auto FLOAT_FORMAT_EPSILON = 1e-7f;
-  constexpr float FLOAT_FORMAT_POW10[] = {1.f, 10.f, 100.f, 1000.f, 10000.f, 100000.f, 1000000.f, 10000000.f};
+constexpr auto FLOAT_FORMAT_MAX_DECIMALS = 7;
+constexpr auto FLOAT_FORMAT_EPSILON = 1e-7f;
+constexpr float FLOAT_FORMAT_POW10[] = {1.f, 10.f, 100.f, 1000.f, 10000.f, 100000.f, 1000000.f, 10000000.f};
 
-  int float_decimals_needed(float value)
-  {
+int float_decimals_needed(float value)
+{
     for (int decimalCount = 0; decimalCount <= FLOAT_FORMAT_MAX_DECIMALS; ++decimalCount)
     {
-      auto scale = FLOAT_FORMAT_POW10[decimalCount];
-      auto rounded = roundf(value * scale) / scale;
-      if (fabsf(value - rounded) < FLOAT_FORMAT_EPSILON) return decimalCount;
+        auto scale = FLOAT_FORMAT_POW10[decimalCount];
+        auto rounded = roundf(value * scale) / scale;
+        if (fabsf(value - rounded) < FLOAT_FORMAT_EPSILON)
+            return decimalCount;
     }
     return FLOAT_FORMAT_MAX_DECIMALS;
-  }
+}
 
-  const char* float_format_get(float value)
-  {
+const char* float_format_get(float value)
+{
     static std::string formatString;
     int decimalCount = float_decimals_needed(value);
     formatString = (decimalCount == 0) ? "%.0f" : ("%." + std::to_string(decimalCount) + "f");
     return formatString.c_str();
-  }
+}
 
-  const char* vec2_format_get(const vec2& value)
-  {
+const char* vec2_format_get(const vec2& value)
+{
     static std::string formatString;
     int decimalCountX = float_decimals_needed(value.x);
     int decimalCountY = float_decimals_needed(value.y);
     int decimalCount = (decimalCountX > decimalCountY) ? decimalCountX : decimalCountY;
     formatString = (decimalCount == 0) ? "%.0f" : ("%." + std::to_string(decimalCount) + "f");
     return formatString.c_str();
-  }
+}
 
-  static mat4 skew_get(vec2 skew)
-  {
+static mat4 skew_get(vec2 skew)
+{
     mat4 result(1.0f);
     result[1][0] = skew.x;
     result[0][1] = skew.y;
     return result;
-  }
+}
 
-  mat4 quad_model_get(vec2 size, vec2 position, vec2 pivot, vec2 scale, float rotation, vec2 skew)
-  {
+mat4 quad_model_get(vec2 size, vec2 position, vec2 pivot, vec2 scale, float rotation, vec2 skew)
+{
     vec2 scaleAbsolute = glm::abs(scale);
     vec2 scaleSign = glm::sign(scale);
     vec2 pivotScaled = pivot * scaleAbsolute;
@@ -64,10 +65,10 @@ using namespace glm;
     model = glm::translate(model, vec3(-pivotScaled, 0.0f));
     model = glm::scale(model, vec3(sizeScaled, 1.0f));
     return model;
-  }
+}
 
-  mat4 quad_model_parent_get(vec2 position, vec2 pivot, vec2 scale, float rotation, vec2 skew)
-  {
+mat4 quad_model_parent_get(vec2 position, vec2 pivot, vec2 scale, float rotation, vec2 skew)
+{
     vec2 scaleSign = glm::sign(scale);
     vec2 scaleAbsolute = glm::abs(scale);
     float handedness = (scaleSign.x * scaleSign.y) < 0.0f ? -1.0f : 1.0f;
@@ -81,8 +82,19 @@ using namespace glm;
     local = glm::scale(local, vec3(scaleAbsolute, 1.0f));
 
     return glm::translate(mat4(1.0f), vec3(position, 0.0f)) * local;
-  }
+}
 
-  float random_unit_get() { return (float)rand() / RAND_MAX; }
-  float random_in_range(float min, float max) { return min + random_unit_get() * (max - min); }
-  void random_seed_set() { srand(std::time(nullptr)); }
+float random_unit_get()
+{
+    return (float)rand() / RAND_MAX;
+}
+
+float random_in_range(float min, float max)
+{
+    return min + random_unit_get() * (max - min);
+}
+
+void random_seed_set()
+{
+    srand(std::time(nullptr));
+}

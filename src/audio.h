@@ -5,9 +5,9 @@
 
 #include "audio_data.h"
 
-// Playback of AudioData; decoded audio and tracks are cached per AudioData uid.
-  void audio_play(const AudioData&, bool = false, MIX_Mixer* = nullptr);
-  void audio_stop(const AudioData&, MIX_Mixer* = nullptr);
-  void audio_track_detach(const AudioData&, MIX_Mixer* = nullptr);
-  bool is_audio_playing(const AudioData&);
-  glm::vec2 audio_levels_get(const AudioData&);
+// Playback of AudioData. Decoded audio and tracks are cached per AudioData uid.
+void audio_play(const AudioData&, bool = false, MIX_Mixer* = nullptr);
+void audio_stop(const AudioData&, MIX_Mixer* = nullptr);
+void audio_track_detach(const AudioData&, MIX_Mixer* = nullptr);
+bool is_audio_playing(const AudioData&);
+glm::vec2 audio_levels_get(const AudioData&);

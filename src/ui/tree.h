@@ -6,14 +6,14 @@
 
 #include "ui/selectable.h"
 
-  struct TreeNodeInputTextResult
-  {
+struct TreeNodeInputTextResult
+{
     bool isOpen = false;
     bool isActivated = false;
     bool isClicked = false;
     bool isRenameStarted = false;
     bool isRenameFinished = false;
-  };
+};
 
-  TreeNodeInputTextResult tree_node_input_text(const std::string&, const std::string&, std::string&, bool,
-                                               ImGuiTreeNodeFlags, RenameState&);
+TreeNodeInputTextResult tree_node_input_text(const std::string&, const std::string&, std::string&, bool,
+                                             ImGuiTreeNodeFlags, RenameState&);

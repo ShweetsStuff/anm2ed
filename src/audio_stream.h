@@ -3,11 +3,11 @@
 #include <SDL3_mixer/SDL_mixer.h>
 #include <vector>
 
-  class AudioStream
-  {
+class AudioStream
+{
     static void callback(void*, MIX_Mixer*, const SDL_AudioSpec*, float*, int);
 
-  public:
+public:
     std::vector<float> stream;
     SDL_AudioSpec spec = {};
     int callbackSamples = 0;
@@ -16,4 +16,4 @@
     bool isFirstCallbackCaptured = false;
 
     AudioStream(MIX_Mixer*);
-  };
+};

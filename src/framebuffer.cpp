@@ -4,25 +4,26 @@
 
 using namespace glm;
 
-  Framebuffer::Framebuffer()
-  {
+Framebuffer::Framebuffer()
+{
     glGenFramebuffers(1, &fbo);
     glGenRenderbuffers(1, &rbo);
     glGenTextures(1, &texture);
     set();
-  }
+}
 
-  Framebuffer::~Framebuffer()
-  {
-    if (!is_valid()) return;
+Framebuffer::~Framebuffer()
+{
+    if (!is_valid())
+        return;
 
     glDeleteFramebuffers(1, &fbo);
     glDeleteRenderbuffers(1, &rbo);
     glDeleteTextures(1, &texture);
-  }
+}
 
-  void Framebuffer::set()
-  {
+void Framebuffer::set()
+{
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
     glBindTexture(GL_TEXTURE_2D, texture);
@@ -37,26 +38,26 @@ using namespace glm;
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  }
+}
 
-  void Framebuffer::resize_check()
-  {
+void Framebuffer::resize_check()
+{
     if (size != previousSize)
     {
-      set();
-      previousSize = size;
+        set();
+        previousSize = size;
     }
-  }
+}
 
-  void Framebuffer::size_set(vec2 size)
-  {
+void Framebuffer::size_set(vec2 size)
+{
     previousSize = this->size;
     this->size = size;
     resize_check();
-  }
+}
 
-  std::vector<uint8_t> Framebuffer::pixels_get() const
-  {
+std::vector<uint8_t> Framebuffer::pixels_get() const
+{
     auto count = size.x * size.y * IMAGE_CHANNELS;
     std::vector<uint8_t> pixels(count);
 
@@ -67,18 +68,34 @@ using namespace glm;
     glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 
     return pixels;
-  }
+}
 
-  void Framebuffer::clear(vec4 color) const
-  {
+void Framebuffer::clear(vec4 color) const
+{
     glEnable(GL_BLEND);
     glClearColor(color.r, color.g, color.b, color.a);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    if (color.a <= 0.0f) glDisable(GL_BLEND);
-  }
+    if (color.a <= 0.0f)
+        glDisable(GL_BLEND);
+}
 
-  bool Framebuffer::is_valid() const { return fbo != 0; }
-  void Framebuffer::viewport_set() const { glViewport(0, 0, size.x, size.y); }
-  void Framebuffer::bind() const { glBindFramebuffer(GL_FRAMEBUFFER, fbo); }
-  void Framebuffer::unbind() const { glBindFramebuffer(GL_FRAMEBUFFER, 0); }
+bool Framebuffer::is_valid() const
+{
+    return fbo != 0;
+}
+
+void Framebuffer::viewport_set() const
+{
+    glViewport(0, 0, size.x, size.y);
+}
+
+void Framebuffer::bind() const
+{
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+}
+
+void Framebuffer::unbind() const
+{
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}

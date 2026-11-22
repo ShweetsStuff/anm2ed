@@ -7,13 +7,13 @@
 
 #include "ui/dockspace.h"
 
-  class State
-  {
+class State
+{
     void tick(Settings&, float);
     void update(SDL_Window*&, Settings&);
     void render(SDL_Window*&, Settings&);
 
-  public:
+public:
     bool isQuit = false;
     bool isQuitting = false;
     Manager manager;
@@ -35,4 +35,4 @@
     State(SDL_Window*&, Settings& settings, std::vector<std::string>&);
 
     void loop(SDL_Window*&, Settings&);
-  };
+};

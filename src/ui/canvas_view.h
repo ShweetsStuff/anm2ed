@@ -13,9 +13,9 @@
 #include "settings.h"
 #include "tool.h"
 
-  // One frame of canvas input. `arrow` is the arrow keys pressed this frame (with key repeat), x right and y down.
-  struct CanvasInput
-  {
+// One frame of canvas input. `arrow` is the arrow keys pressed this frame (with key repeat), x right and y down.
+struct CanvasInput
+{
     glm::vec2 arrow{};
     glm::vec2 mouseDelta{};
     float wheel = 0;
@@ -33,20 +33,20 @@
     bool isZoomIn = false;
     bool isZoomOut = false;
     bool isMod = false;
-  };
+};
 
-  CanvasInput canvas_input_get(Manager&, bool);
-  bool is_canvas_hovered(ImVec2, ImVec2);
-  void edit_begin_push(Manager&, StringType);
-  void document_change_push(Manager&);
-  void frames_change_push(Manager&, const std::set<Reference>&, FrameChange, ChangeType = ChangeType::ADJUST);
-  std::pair<glm::vec2, glm::vec2> rect_snap(glm::vec2, glm::vec2, bool, glm::ivec2, glm::ivec2);
-  void tooltip_lines_draw(std::initializer_list<std::string>);
-  void tool_cursor_update(Tool, ToolArea, bool, bool, bool, StringType);
+CanvasInput canvas_input_get(Manager&, bool);
+bool is_canvas_hovered(ImVec2, ImVec2);
+void edit_begin_push(Manager&, StringType);
+void document_change_push(Manager&);
+void frames_change_push(Manager&, const std::set<Reference>&, FrameChange, ChangeType = ChangeType::ADJUST);
+std::pair<glm::vec2, glm::vec2> rect_snap(glm::vec2, glm::vec2, bool, glm::ivec2, glm::ivec2);
+void tooltip_lines_draw(std::initializer_list<std::string>);
+void tool_cursor_update(Tool, ToolArea, bool, bool, bool, StringType);
 
-  class CanvasView : public Canvas
-  {
-  protected:
+class CanvasView : public Canvas
+{
+protected:
     glm::vec2 mousePos{};
     glm::vec2 checkerPan{};
     glm::vec2 checkerSyncPan{};
@@ -63,7 +63,7 @@
     void view_context_menu_draw(const char*, Manager&, Settings&, Document&, float&, glm::vec2&,
                                 const std::function<void()>&, const std::function<void()>&, bool);
 
-  public:
+public:
     CanvasView();
     bool is_focused_get() const;
-  };
+};

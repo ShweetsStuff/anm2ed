@@ -16,48 +16,48 @@
 
 using namespace glm;
 
-  constexpr int CHANGE_TYPE_COUNT = 5;
-  constexpr const char* COLOR_COMPONENT_FORMATS[] = {"R:%d", "G:%d", "B:%d", "A:%d"};
+constexpr int CHANGE_TYPE_COUNT = 5;
+constexpr const char* COLOR_COMPONENT_FORMATS[] = {"R:%d", "G:%d", "B:%d", "A:%d"};
 
-  enum ChangeDestination
-  {
+enum ChangeDestination
+{
     CHANGE_DESTINATION_FRAMES,
     CHANGE_DESTINATION_ANIMATIONS,
     CHANGE_DESTINATION_ITEMS,
-  };
+};
 
-  struct ChangeButton
-  {
+struct ChangeButton
+{
     const char* symbol;
     StringType label;
     StringType tooltip;
     ChangeType type;
-  };
+};
 
-  constexpr ChangeButton CHANGE_BUTTONS[CHANGE_TYPE_COUNT] = {
-      {"=", LABEL_ADJUST, TOOLTIP_ADJUST, ChangeType::ADJUST},
-      {"+", BASIC_ADD, TOOLTIP_ADD_VALUES, ChangeType::ADD},
-      {"-", LABEL_SUBTRACT, TOOLTIP_SUBTRACT_VALUES, ChangeType::SUBTRACT},
-      {"\u00D7", LABEL_MULTIPLY, TOOLTIP_MULTIPLY_VALUES, ChangeType::MULTIPLY},
-      {"\u00F7", LABEL_DIVIDE, TOOLTIP_DIVIDE_VALUES, ChangeType::DIVIDE}};
+constexpr ChangeButton CHANGE_BUTTONS[CHANGE_TYPE_COUNT] = {
+    {"=", LABEL_ADJUST, TOOLTIP_ADJUST, ChangeType::ADJUST},
+    {"+", BASIC_ADD, TOOLTIP_ADD_VALUES, ChangeType::ADD},
+    {"-", LABEL_SUBTRACT, TOOLTIP_SUBTRACT_VALUES, ChangeType::SUBTRACT},
+    {"\u00D7", LABEL_MULTIPLY, TOOLTIP_MULTIPLY_VALUES, ChangeType::MULTIPLY},
+    {"\u00F7", LABEL_DIVIDE, TOOLTIP_DIVIDE_VALUES, ChangeType::DIVIDE}};
 
-  struct ComponentRow
-  {
+struct ComponentRow
+{
     StringType label;
     std::vector<bool*> isEnabled;
     float* values;
     bool isLayerOnly;
-  };
+};
 
-  static void property_toggle_begin(bool& isEnabled)
-  {
+static void property_toggle_begin(bool& isEnabled)
+{
     ImGui::Checkbox("##Is Enabled", &isEnabled);
     ImGui::SameLine();
     ImGui::BeginDisabled(!isEnabled);
-  }
+}
 
-  static void components_draw(const ComponentRow& row, bool isColor)
-  {
+static void components_draw(const ComponentRow& row, bool isColor)
+{
     auto count = (int)row.isEnabled.size();
     auto label = localize.get(row.label);
     auto& style = ImGui::GetStyle();
@@ -68,35 +68,38 @@ using namespace glm;
     ImGui::PushItemWidth(width);
     for (int i = 0; i < count; ++i)
     {
-      ImGui::PushID(i);
-      if (i > 0) ImGui::SameLine();
-      property_toggle_begin(*row.isEnabled[i]);
-      auto valueLabel = !isColor && i == count - 1 ? label : "##Value";
-      if (isColor)
-      {
-        auto value = float_to_uint8(row.values[i]);
-        if (ImGui::DragInt(valueLabel, &value, DRAG_SPEED, 0, 0, COLOR_COMPONENT_FORMATS[i]))
-          row.values[i] = uint8_to_float(value);
-      }
-      else
-        ImGui::DragFloat(valueLabel, &row.values[i], DRAG_SPEED, 0.0f, 0.0f, float_format_get(row.values[i]));
-      ImGui::EndDisabled();
-      ImGui::PopID();
+        ImGui::PushID(i);
+        if (i > 0)
+            ImGui::SameLine();
+        property_toggle_begin(*row.isEnabled[i]);
+        auto valueLabel = !isColor && i == count - 1 ? label : "##Value";
+        if (isColor)
+        {
+            auto value = float_to_uint8(row.values[i]);
+            if (ImGui::DragInt(valueLabel, &value, DRAG_SPEED, 0, 0, COLOR_COMPONENT_FORMATS[i]))
+                row.values[i] = uint8_to_float(value);
+        }
+        else
+            ImGui::DragFloat(valueLabel, &row.values[i], DRAG_SPEED, 0.0f, 0.0f, float_format_get(row.values[i]));
+        ImGui::EndDisabled();
+        ImGui::PopID();
     }
     ImGui::PopItemWidth();
-    if (!isColor) return;
+    if (!isColor)
+        return;
 
     ImVec4 buttonColor = {0.0f, 0.0f, 0.0f, 1.0f};
     for (int i = 0; i < count; ++i)
-      if (*row.isEnabled[i]) (&buttonColor.x)[i] = glm::clamp(row.values[i], 0.0f, 1.0f);
+        if (*row.isEnabled[i])
+            (&buttonColor.x)[i] = glm::clamp(row.values[i], 0.0f, 1.0f);
     ImGui::SameLine();
     ImGui::ColorButton(label, buttonColor);
     ImGui::SameLine();
     ImGui::TextUnformatted(label);
-  }
+}
 
-  void ChangeAllFrameProperties::update(Manager& manager, Document& document, Settings& settings, bool isFromWizard)
-  {
+void ChangeAllFrameProperties::update(Manager& manager, Document& document, Settings& settings, bool isFromWizard)
+{
     isChanged = false;
 
     auto animations = document.animations_selected_get();
@@ -109,8 +112,8 @@ using namespace glm;
     auto selectedItemReferences = document.selected_get(SelectionKind::TRACKS);
     if (auto reference = document.reference_get(); selectedItemReferences.empty() && reference.itemType != NONE)
     {
-      reference.frameIndex = -1;
-      selectedItemReferences.insert(reference);
+        reference.frameIndex = -1;
+        selectedItemReferences.insert(reference);
     }
     std::erase_if(selectedItemReferences, [](const Reference& reference) { return reference.itemType == TRIGGER; });
 
@@ -119,43 +122,44 @@ using namespace glm;
     bool isSelectedAnimationsAvailable = !animations.empty();
     if (isFromWizard)
     {
-      if (destination == CHANGE_DESTINATION_FRAMES && !isSelectedFramesAvailable)
-        destination = isSelectedItemsAvailable ? CHANGE_DESTINATION_ITEMS : CHANGE_DESTINATION_ANIMATIONS;
-      if (destination == CHANGE_DESTINATION_ITEMS && !isSelectedItemsAvailable)
-        destination = isSelectedFramesAvailable ? CHANGE_DESTINATION_FRAMES : CHANGE_DESTINATION_ANIMATIONS;
-      if (destination == CHANGE_DESTINATION_ANIMATIONS && !isSelectedAnimationsAvailable && isSelectedItemsAvailable)
-        destination = CHANGE_DESTINATION_ITEMS;
-      if (destination == CHANGE_DESTINATION_ANIMATIONS && !isSelectedAnimationsAvailable && isSelectedFramesAvailable)
-        destination = CHANGE_DESTINATION_FRAMES;
+        if (destination == CHANGE_DESTINATION_FRAMES && !isSelectedFramesAvailable)
+            destination = isSelectedItemsAvailable ? CHANGE_DESTINATION_ITEMS : CHANGE_DESTINATION_ANIMATIONS;
+        if (destination == CHANGE_DESTINATION_ITEMS && !isSelectedItemsAvailable)
+            destination = isSelectedFramesAvailable ? CHANGE_DESTINATION_FRAMES : CHANGE_DESTINATION_ANIMATIONS;
+        if (destination == CHANGE_DESTINATION_ANIMATIONS && !isSelectedAnimationsAvailable && isSelectedItemsAvailable)
+            destination = CHANGE_DESTINATION_ITEMS;
+        if (destination == CHANGE_DESTINATION_ANIMATIONS && !isSelectedAnimationsAvailable && isSelectedFramesAvailable)
+            destination = CHANGE_DESTINATION_FRAMES;
     }
     bool isFramesDestination = !isFromWizard || destination == CHANGE_DESTINATION_FRAMES;
     bool isItemsDestination = isFromWizard && destination == CHANGE_DESTINATION_ITEMS;
 
-    auto is_layer = [](const Reference& reference) { return reference.itemType == LAYER; };
+    auto is_layer = [](const Reference& reference) {
+        return reference.itemType == LAYER;
+    };
     auto isLayerPropertyAvailable = isFramesDestination  ? std::ranges::any_of(selectedFrameReferences, is_layer)
                                     : isItemsDestination ? std::ranges::any_of(selectedItemReferences, is_layer)
                                                          : settings.changeIsLayers;
-    // Child properties reach animation layers only; their choices are every such layer's animations.
-    auto animation_layer_get = [&](const Reference& reference) -> const Layer*
-    {
-      auto layer = is_layer(reference) ? item_get(document.model.content.layers, reference.itemID) : nullptr;
-      return layer && layer->is_animation() ? layer : nullptr;
+    // Child properties reach animation layers only. Their choices are every such layer's animations.
+    auto animation_layer_get = [&](const Reference& reference) -> const Layer* {
+        auto layer = is_layer(reference) ? item_get(document.model.content.layers, reference.itemID) : nullptr;
+        return layer && layer->is_animation() ? layer : nullptr;
     };
     std::set<std::string> childAnimations;
     bool isChildPropertyAvailable = false;
-    auto child_layer_add = [&](const Layer* layer)
-    {
-      if (!layer || !layer->is_animation()) return;
-      isChildPropertyAvailable = true;
-      for (auto& name : document.animation_names_get(layer->libraryId))
-        childAnimations.insert(name);
+    auto child_layer_add = [&](const Layer* layer) {
+        if (!layer || !layer->is_animation())
+            return;
+        isChildPropertyAvailable = true;
+        for (auto& name : document.animation_names_get(layer->libraryId))
+            childAnimations.insert(name);
     };
     if (isFramesDestination || isItemsDestination)
-      for (auto& reference : isFramesDestination ? selectedFrameReferences : selectedItemReferences)
-        child_layer_add(animation_layer_get(reference));
+        for (auto& reference : isFramesDestination ? selectedFrameReferences : selectedItemReferences)
+            child_layer_add(animation_layer_get(reference));
     else if (settings.changeIsLayers)
-      for (auto& layer : document.model.content.layers)
-        child_layer_add(&layer);
+        for (auto& layer : document.model.content.layers)
+            child_layer_add(&layer);
 
     ComponentRow componentRows[] = {
         {BASIC_CROP, {&settings.changeIsCropX, &settings.changeIsCropY}, value_ptr(settings.changeCrop), true},
@@ -180,49 +184,48 @@ using namespace glm;
          value_ptr(settings.changeColorOffset),
          false}};
 
-    auto rows_draw = [&](std::span<ComponentRow> rows, bool isColor)
-    {
-      for (auto& row : rows)
-      {
-        ImGui::PushID(row.label);
-        ImGui::BeginDisabled(row.isLayerOnly && !isLayerPropertyAvailable);
-        components_draw(row, isColor);
-        ImGui::EndDisabled();
-        ImGui::PopID();
-      }
+    auto rows_draw = [&](std::span<ComponentRow> rows, bool isColor) {
+        for (auto& row : rows)
+        {
+            ImGui::PushID(row.label);
+            ImGui::BeginDisabled(row.isLayerOnly && !isLayerPropertyAvailable);
+            components_draw(row, isColor);
+            ImGui::EndDisabled();
+            ImGui::PopID();
+        }
     };
 
     auto combo_draw = [&](const char* id, StringType label, bool& isEnabled, int& value, const std::vector<int>& ids,
-                          const std::vector<std::string>& labels)
-    {
-      ImGui::PushID(id);
-      if (std::ranges::find(ids, value) == ids.end()) value = ids.front();
-      property_toggle_begin(isEnabled);
-      combo_id_mapped(localize.get(label), &value, ids, labels);
-      ImGui::EndDisabled();
-      ImGui::PopID();
+                          const std::vector<std::string>& labels) {
+        ImGui::PushID(id);
+        if (std::ranges::find(ids, value) == ids.end())
+            value = ids.front();
+        property_toggle_begin(isEnabled);
+        combo_id_mapped(localize.get(label), &value, ids, labels);
+        ImGui::EndDisabled();
+        ImGui::PopID();
     };
 
-    auto bool_draw = [&](const char* id, StringType label, bool& isEnabled, bool& value)
-    {
-      ImGui::PushID(id);
-      property_toggle_begin(isEnabled);
-      ImGui::Checkbox(localize.get(label), &value);
-      ImGui::EndDisabled();
-      ImGui::PopID();
+    auto bool_draw = [&](const char* id, StringType label, bool& isEnabled, bool& value) {
+        ImGui::PushID(id);
+        property_toggle_begin(isEnabled);
+        ImGui::Checkbox(localize.get(label), &value);
+        ImGui::EndDisabled();
+        ImGui::PopID();
     };
 
     std::vector<int> interpolationIds;
     std::vector<std::string> interpolationLabels;
     for (int i = 0; i < (int)std::size(INTERPOLATION_LABELS); ++i)
     {
-      interpolationIds.push_back(i);
-      interpolationLabels.push_back(localize.get(INTERPOLATION_LABELS[i]));
+        interpolationIds.push_back(i);
+        interpolationLabels.push_back(localize.get(INTERPOLATION_LABELS[i]));
     }
     auto regions = document.choices_get(
         SelectionKind::REGIONS, document.reference_get().itemType == LAYER ? document.reference_get().itemID : -1);
     auto shaders = document.choices_get(SelectionKind::SHADERS);
-    if (!isLayerPropertyAvailable) regionId = shaderId = -1;
+    if (!isLayerPropertyAvailable)
+        regionId = shaderId = -1;
 
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImGui::GetStyle().ItemInnerSpacing);
     rows_draw(componentRows, false);
@@ -259,128 +262,143 @@ using namespace glm;
     ImGui::SeparatorText(localize.get(LABEL_CHILD));
     ImGui::BeginDisabled(!isChildPropertyAvailable);
     {
-      std::vector<std::string> values{std::string{}};
-      std::vector<std::string> labels{localize.get(TEXT_LAYER_ANIMATION)};
-      values.insert(values.end(), childAnimations.begin(), childAnimations.end());
-      labels.insert(labels.end(), childAnimations.begin(), childAnimations.end());
-      ImGui::PushID("Child Animation");
-      property_toggle_begin(settings.changeIsChildAnimation);
-      combo_string_mapped(localize.get(LABEL_ANIMATION), &settings.changeChildAnimation, values, labels);
-      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHILD_ANIMATION));
-      ImGui::EndDisabled();
-      ImGui::PopID();
+        std::vector<std::string> values{std::string{}};
+        std::vector<std::string> labels{localize.get(TEXT_LAYER_ANIMATION)};
+        values.insert(values.end(), childAnimations.begin(), childAnimations.end());
+        labels.insert(labels.end(), childAnimations.begin(), childAnimations.end());
+        ImGui::PushID("Child Animation");
+        property_toggle_begin(settings.changeIsChildAnimation);
+        combo_string_mapped(localize.get(LABEL_ANIMATION), &settings.changeChildAnimation, values, labels);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHILD_ANIMATION));
+        ImGui::EndDisabled();
+        ImGui::PopID();
 
-      std::vector<int> modeIds;
-      std::vector<std::string> modeLabels;
-      for (int i = 0; i < (int)std::size(CHILD_MODE_LABELS); ++i)
-      {
-        modeIds.push_back(i);
-        modeLabels.push_back(localize.get(CHILD_MODE_LABELS[i]));
-      }
-      combo_draw("Child Mode", BASIC_MODE, settings.changeIsChildMode, settings.changeChildMode, modeIds, modeLabels);
+        std::vector<int> modeIds;
+        std::vector<std::string> modeLabels;
+        for (int i = 0; i < (int)std::size(CHILD_MODE_LABELS); ++i)
+        {
+            modeIds.push_back(i);
+            modeLabels.push_back(localize.get(CHILD_MODE_LABELS[i]));
+        }
+        combo_draw("Child Mode", BASIC_MODE, settings.changeIsChildMode, settings.changeChildMode, modeIds, modeLabels);
 
-      ImGui::PushID("Child Start");
-      property_toggle_begin(settings.changeIsChildStart);
-      input_int_range(localize.get(LABEL_START_FRAME), settings.changeChildStart, 0, FRAME_NUM_MAX, STEP, STEP_FAST);
-      ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHILD_START));
-      ImGui::EndDisabled();
-      ImGui::PopID();
+        ImGui::PushID("Child Start");
+        property_toggle_begin(settings.changeIsChildStart);
+        input_int_range(localize.get(LABEL_START_FRAME), settings.changeChildStart, 0, FRAME_NUM_MAX, STEP, STEP_FAST);
+        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHILD_START));
+        ImGui::EndDisabled();
+        ImGui::PopID();
 
-      bool_draw("Child Random", LABEL_RANDOM, settings.changeIsChildStartRandomSet, settings.changeIsChildStartRandom);
-      ImGui::SameLine();
-      bool_draw("Child Restart", LABEL_RESTART, settings.changeIsChildRestartSet, settings.changeIsChildRestart);
+        bool_draw("Child Random", LABEL_RANDOM, settings.changeIsChildStartRandomSet,
+                  settings.changeIsChildStartRandom);
+        ImGui::SameLine();
+        bool_draw("Child Restart", LABEL_RESTART, settings.changeIsChildRestartSet, settings.changeIsChildRestart);
     }
     ImGui::EndDisabled();
     ImGui::PopStyleVar();
 
-    auto frame_change = [&](ChangeType changeType)
-    {
-      auto isColorScaled = changeType == ChangeType::MULTIPLY || changeType == ChangeType::DIVIDE;
-      FrameChange frameChange;
+    auto frame_change = [&](ChangeType changeType) {
+        auto isColorScaled = changeType == ChangeType::MULTIPLY || changeType == ChangeType::DIVIDE;
+        FrameChange frameChange;
 #define X(name, member, isLayerOnly, isColor, isEnabled, value)                                                        \
-  if (settings.isEnabled)                                                                                              \
-    frameChange.name = isColor && isColorScaled ? (float)float_to_uint8(settings.value) : settings.value;
-      FRAME_CHANGE_SCALARS
+    if (settings.isEnabled)                                                                                            \
+        frameChange.name = isColor && isColorScaled ? (float)float_to_uint8(settings.value) : settings.value;
+        FRAME_CHANGE_SCALARS
 #undef X
-      if (settings.changeIsDuration) frameChange.duration = settings.changeDuration;
-      if (settings.changeIsDepth) frameChange.depth = settings.changeDepth;
-      if (settings.changeIsRegion) frameChange.regionId = regionId;
-      if (settings.changeIsShader) frameChange.shaderId = shaderId;
-      if (settings.changeIsVisibleSet) frameChange.isVisible = settings.changeIsVisible;
-      if (settings.changeIsInterpolationSet) frameChange.interpolation = (Interpolation)settings.changeInterpolation;
-      if (settings.changeIsFlipXSet) frameChange.isFlipX = settings.changeIsFlipX;
-      if (settings.changeIsFlipYSet) frameChange.isFlipY = settings.changeIsFlipY;
-      if (isChildPropertyAvailable)
-      {
-        if (settings.changeIsChildAnimation) frameChange.childAnimation = settings.changeChildAnimation;
-        if (settings.changeIsChildMode) frameChange.childMode = (ChildMode)settings.changeChildMode;
-        if (settings.changeIsChildStart) frameChange.childStart = settings.changeChildStart;
-        if (settings.changeIsChildStartRandomSet) frameChange.isChildStartRandom = settings.changeIsChildStartRandom;
-        if (settings.changeIsChildRestartSet) frameChange.isChildRestart = settings.changeIsChildRestart;
-      }
+        if (settings.changeIsDuration)
+            frameChange.duration = settings.changeDuration;
+        if (settings.changeIsDepth)
+            frameChange.depth = settings.changeDepth;
+        if (settings.changeIsRegion)
+            frameChange.regionId = regionId;
+        if (settings.changeIsShader)
+            frameChange.shaderId = shaderId;
+        if (settings.changeIsVisibleSet)
+            frameChange.isVisible = settings.changeIsVisible;
+        if (settings.changeIsInterpolationSet)
+            frameChange.interpolation = (Interpolation)settings.changeInterpolation;
+        if (settings.changeIsFlipXSet)
+            frameChange.isFlipX = settings.changeIsFlipX;
+        if (settings.changeIsFlipYSet)
+            frameChange.isFlipY = settings.changeIsFlipY;
+        if (isChildPropertyAvailable)
+        {
+            if (settings.changeIsChildAnimation)
+                frameChange.childAnimation = settings.changeChildAnimation;
+            if (settings.changeIsChildMode)
+                frameChange.childMode = (ChildMode)settings.changeChildMode;
+            if (settings.changeIsChildStart)
+                frameChange.childStart = settings.changeChildStart;
+            if (settings.changeIsChildStartRandomSet)
+                frameChange.isChildStartRandom = settings.changeIsChildStartRandom;
+            if (settings.changeIsChildRestartSet)
+                frameChange.isChildRestart = settings.changeIsChildRestart;
+        }
 
-      manager.command_push(
-          {manager.selected,
-           [=, queuedAnimations = std::set<int>(animations.begin(), animations.end()), isRoot = settings.changeIsRoot,
-            isLayers = settings.changeIsLayers, isNulls = settings.changeIsNulls](Manager&, Document& document)
-           {
-             ChangeTargets targets = {.isRoot = isRoot, .isLayers = isLayers, .isNulls = isNulls};
-             if (isFramesDestination)
-               targets.references = {selectedFrameReferences.begin(), selectedFrameReferences.end()};
-             else if (isItemsDestination)
-               targets.references = {selectedItemReferences.begin(), selectedItemReferences.end()};
-             else
-               targets.animations = queuedAnimations;
-             document.edit_apply(EDIT_CHANGE_FRAME_PROPERTIES, [&](Model& model)
-                                 { return frames_change_apply(model, targets, frameChange, changeType); });
-           }});
-      isChanged = true;
+        manager.command_push(
+            {manager.selected,
+             [=, queuedAnimations = std::set<int>(animations.begin(), animations.end()), isRoot = settings.changeIsRoot,
+              isLayers = settings.changeIsLayers, isNulls = settings.changeIsNulls](Manager&, Document& document) {
+                 ChangeTargets targets = {.isRoot = isRoot, .isLayers = isLayers, .isNulls = isNulls};
+                 if (isFramesDestination)
+                     targets.references = {selectedFrameReferences.begin(), selectedFrameReferences.end()};
+                 else if (isItemsDestination)
+                     targets.references = {selectedItemReferences.begin(), selectedItemReferences.end()};
+                 else
+                     targets.animations = queuedAnimations;
+                 document.edit_apply(EDIT_CHANGE_FRAME_PROPERTIES, [&](Model& model) {
+                     return frames_change_apply(model, targets, frameChange, changeType);
+                 });
+             }});
+        isChanged = true;
     };
 
     ImGui::Separator();
 
     if (isFromWizard)
     {
-      ImGui::SeparatorText(localize.get(LABEL_DESTINATION));
-      struct DestinationOption
-      {
-        StringType label;
-        StringType tooltip;
-        ChangeDestination value;
-        bool isAvailable;
-      };
-      DestinationOption destinationOptions[] = {
-          {BASIC_FRAMES, TOOLTIP_CHANGE_ALL_DESTINATION_FRAMES, CHANGE_DESTINATION_FRAMES, isSelectedFramesAvailable},
-          {LABEL_ITEMS, TOOLTIP_CHANGE_ALL_DESTINATION_ITEMS, CHANGE_DESTINATION_ITEMS, isSelectedItemsAvailable},
-          {LABEL_ANIMATIONS_CHILD, TOOLTIP_CHANGE_ALL_DESTINATION_ANIMATIONS, CHANGE_DESTINATION_ANIMATIONS,
-           isSelectedAnimationsAvailable}};
-      for (auto& option : destinationOptions)
-      {
-        if (option.value != CHANGE_DESTINATION_FRAMES) ImGui::SameLine();
-        ImGui::BeginDisabled(!option.isAvailable);
-        ImGui::RadioButton(localize.get(option.label), &destination, option.value);
-        ImGui::SetItemTooltip("%s", localize.get(option.tooltip));
-        ImGui::EndDisabled();
-      }
+        ImGui::SeparatorText(localize.get(LABEL_DESTINATION));
+        struct DestinationOption
+        {
+            StringType label;
+            StringType tooltip;
+            ChangeDestination value;
+            bool isAvailable;
+        };
+        DestinationOption destinationOptions[] = {
+            {BASIC_FRAMES, TOOLTIP_CHANGE_ALL_DESTINATION_FRAMES, CHANGE_DESTINATION_FRAMES, isSelectedFramesAvailable},
+            {LABEL_ITEMS, TOOLTIP_CHANGE_ALL_DESTINATION_ITEMS, CHANGE_DESTINATION_ITEMS, isSelectedItemsAvailable},
+            {LABEL_ANIMATIONS_CHILD, TOOLTIP_CHANGE_ALL_DESTINATION_ANIMATIONS, CHANGE_DESTINATION_ANIMATIONS,
+             isSelectedAnimationsAvailable}};
+        for (auto& option : destinationOptions)
+        {
+            if (option.value != CHANGE_DESTINATION_FRAMES)
+                ImGui::SameLine();
+            ImGui::BeginDisabled(!option.isAvailable);
+            ImGui::RadioButton(localize.get(option.label), &destination, option.value);
+            ImGui::SetItemTooltip("%s", localize.get(option.tooltip));
+            ImGui::EndDisabled();
+        }
 
-      struct TargetOption
-      {
-        StringType label;
-        StringType tooltip;
-        bool& value;
-      };
-      TargetOption targetOptions[] = {{LABEL_ROOT, TOOLTIP_CHANGE_ALL_ROOT, settings.changeIsRoot},
-                                      {LABEL_LAYERS, TOOLTIP_CHANGE_ALL_LAYERS, settings.changeIsLayers},
-                                      {LABEL_NULLS, TOOLTIP_CHANGE_ALL_NULLS, settings.changeIsNulls}};
-      ImGui::BeginDisabled(isFramesDestination || isItemsDestination);
-      for (auto& option : targetOptions)
-      {
-        if (&option != targetOptions) ImGui::SameLine();
-        ImGui::Checkbox(localize.get(option.label), &option.value);
-        ImGui::SetItemTooltip("%s", localize.get(option.tooltip));
-      }
-      ImGui::EndDisabled();
-      ImGui::Separator();
+        struct TargetOption
+        {
+            StringType label;
+            StringType tooltip;
+            bool& value;
+        };
+        TargetOption targetOptions[] = {{LABEL_ROOT, TOOLTIP_CHANGE_ALL_ROOT, settings.changeIsRoot},
+                                        {LABEL_LAYERS, TOOLTIP_CHANGE_ALL_LAYERS, settings.changeIsLayers},
+                                        {LABEL_NULLS, TOOLTIP_CHANGE_ALL_NULLS, settings.changeIsNulls}};
+        ImGui::BeginDisabled(isFramesDestination || isItemsDestination);
+        for (auto& option : targetOptions)
+        {
+            if (&option != targetOptions)
+                ImGui::SameLine();
+            ImGui::Checkbox(localize.get(option.label), &option.value);
+            ImGui::SetItemTooltip("%s", localize.get(option.tooltip));
+        }
+        ImGui::EndDisabled();
+        ImGui::Separator();
     }
 
     bool isAnyProperty =
@@ -404,10 +422,11 @@ using namespace glm;
     ImGui::BeginDisabled(!isAnyProperty || !isDestinationValid);
     for (auto& button : CHANGE_BUTTONS)
     {
-      if (&button != CHANGE_BUTTONS) ImGui::SameLine();
-      if (ImGui::Button(std::format("{} {}", button.symbol, localize.get(button.label)).c_str(), rowWidgetSize))
-        frame_change(button.type);
-      ImGui::SetItemTooltip("%s", localize.get(button.tooltip));
+        if (&button != CHANGE_BUTTONS)
+            ImGui::SameLine();
+        if (ImGui::Button(std::format("{} {}", button.symbol, localize.get(button.label)).c_str(), rowWidgetSize))
+            frame_change(button.type);
+        ImGui::SetItemTooltip("%s", localize.get(button.tooltip));
     }
     ImGui::EndDisabled();
-  }
+}

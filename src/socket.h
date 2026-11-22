@@ -4,39 +4,39 @@
 #include <string>
 
 #ifdef _WIN32
-  #include <winsock2.h>
-  #include <ws2tcpip.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
 using socket_handle = SOCKET;
 constexpr socket_handle SOCKET_INVALID = INVALID_SOCKET;
 #else
-  #include <arpa/inet.h>
-  #include <netinet/in.h>
-  #include <sys/socket.h>
-  #include <unistd.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
 using socket_handle = int;
 constexpr socket_handle SOCKET_INVALID = -1;
 #endif
 
-  enum SocketRole
-  {
+enum SocketRole
+{
     SERVER,
     CLIENT
-  };
+};
 
-  struct SocketAddress
-  {
+struct SocketAddress
+{
     std::string host;
     unsigned short port = {};
-  };
+};
 
-  class Socket
-  {
-  private:
+class Socket
+{
+private:
     socket_handle handle;
     SocketRole role = {};
     int lastError = 0;
 
-  public:
+public:
     Socket();
     ~Socket();
 
@@ -57,4 +57,4 @@ constexpr socket_handle SOCKET_INVALID = -1;
     void close();
     bool is_valid() const;
     int last_error() const;
-  };
+};

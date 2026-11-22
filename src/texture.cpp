@@ -5,22 +5,24 @@
 #include <unordered_map>
 #include <utility>
 
-  struct TextureEntry
-  {
+struct TextureEntry
+{
     GLuint id = 0;
     bool isUsed = false;
-  };
+};
 
-  static std::unordered_map<std::uint64_t, TextureEntry> entries;
+static std::unordered_map<std::uint64_t, TextureEntry> entries;
 
-  GLuint texture_id_get(const Image& image)
-  {
-    if (!image.is_valid()) return 0;
+GLuint texture_id_get(const Image& image)
+{
+    if (!image.is_valid())
+        return 0;
 
     auto [it, isNew] = entries.try_emplace(image.uid);
     auto& entry = it->second;
     entry.isUsed = true;
-    if (!isNew) return entry.id;
+    if (!isNew)
+        return entry.id;
 
     auto filter = image.isLinear ? GL_LINEAR : GL_NEAREST;
     glGenTextures(1, &entry.id);
@@ -34,24 +36,25 @@
                  image.pixels.data());
     glBindTexture(GL_TEXTURE_2D, 0);
     return entry.id;
-  }
+}
 
-  void texture_garbage_collect()
-  {
-    std::erase_if(entries,
-                  [](auto& pair)
-                  {
-                    auto& entry = pair.second;
-                    if (!entry.isUsed) glDeleteTextures(1, &entry.id);
-                    return !std::exchange(entry.isUsed, false);
-                  });
-  }
+void texture_garbage_collect()
+{
+    std::erase_if(entries, [](auto& pair) {
+        auto& entry = pair.second;
+        if (!entry.isUsed)
+            glDeleteTextures(1, &entry.id);
+        return !std::exchange(entry.isUsed, false);
+    });
+}
 
-  Image texture_svg_load(const char* data, size_t length, glm::ivec2 size)
-  {
+Image texture_svg_load(const char* data, size_t length, glm::ivec2 size)
+{
     auto document = data ? lunasvg::Document::loadFromData(data, length) : nullptr;
-    if (!document) return {};
+    if (!document)
+        return {};
     auto bitmap = document->renderToBitmap(size.x, size.y, 0);
-    if (bitmap.width() == 0 || bitmap.height() == 0) return {};
+    if (bitmap.width() == 0 || bitmap.height() == 0)
+        return {};
     return Image(bitmap.data(), size, true);
-  }
+}

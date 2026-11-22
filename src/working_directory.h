@@ -2,17 +2,17 @@
 
 #include <filesystem>
 
-  class WorkingDirectory
-  {
-  public:
+class WorkingDirectory
+{
+public:
     enum Type
     {
-      FILE,
-      DIRECTORY
+        FILE,
+        DIRECTORY
     };
 
     std::filesystem::path previous;
 
     WorkingDirectory(const std::filesystem::path&, Type type = DIRECTORY);
     ~WorkingDirectory();
-  };
+};

@@ -6,13 +6,13 @@
 #include "resources.h"
 #include "settings.h"
 
-  class GenerateAnimationFromGrid : public Canvas
-  {
+class GenerateAnimationFromGrid : public Canvas
+{
     float time = 0;
 
-  public:
+public:
     bool isEnd = false;
 
     GenerateAnimationFromGrid();
     void update(Manager&, Document&, Resources&, Settings&);
-  };
+};

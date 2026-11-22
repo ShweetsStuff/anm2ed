@@ -21,109 +21,120 @@
 #include "math_util.h"
 
 #ifdef _WIN32
-  #include <windows.h>
+#include <windows.h>
 #endif
 
-  constexpr auto WINDOW_4K_SIZE = glm::ivec2(3840, 2160);
-  constexpr auto UI_SCALE_4K_DEFAULT = 150.0f;
-  constexpr auto WINDOW_DEFAULT_SIZE_MULTIPLIER = 0.90f;
+constexpr auto WINDOW_4K_SIZE = glm::ivec2(3840, 2160);
+constexpr auto UI_SCALE_4K_DEFAULT = 150.0f;
+constexpr auto WINDOW_DEFAULT_SIZE_MULTIPLIER = 0.90f;
 
-  constexpr auto SOCKET_ADDRESS = "127.0.0.1";
-  constexpr auto SOCKET_PORT = 11414;
-  constexpr uint32_t SOCKET_MAX_PATHS = 128;
-  constexpr uint32_t SOCKET_MAX_PATH_LENGTH = 32768;
+constexpr auto SOCKET_ADDRESS = "127.0.0.1";
+constexpr auto SOCKET_PORT = 11414;
+constexpr uint32_t SOCKET_MAX_PATHS = 128;
+constexpr uint32_t SOCKET_MAX_PATH_LENGTH = 32768;
 
 #ifdef _WIN32
-  constexpr int SOCKET_ERROR_ADDRESS_IN_USE = WSAEADDRINUSE;
+constexpr int SOCKET_ERROR_ADDRESS_IN_USE = WSAEADDRINUSE;
 #else
-  constexpr int SOCKET_ERROR_ADDRESS_IN_USE = EADDRINUSE;
+constexpr int SOCKET_ERROR_ADDRESS_IN_USE = EADDRINUSE;
 #endif
 
-  static bool socket_paths_send(Socket& socket, const std::vector<std::string>& paths)
-  {
+static bool socket_paths_send(Socket& socket, const std::vector<std::string>& paths)
+{
     uint32_t count = htonl(static_cast<uint32_t>(paths.size()));
-    if (!socket.send(&count, sizeof(count))) return false;
+    if (!socket.send(&count, sizeof(count)))
+        return false;
 
     for (auto& path : paths)
     {
-      uint32_t length = htonl(static_cast<uint32_t>(path.size()));
-      if (!socket.send(&length, sizeof(length))) return false;
-      if (!path.empty() && !socket.send(path.data(), path.size())) return false;
+        uint32_t length = htonl(static_cast<uint32_t>(path.size()));
+        if (!socket.send(&length, sizeof(length)))
+            return false;
+        if (!path.empty() && !socket.send(path.data(), path.size()))
+            return false;
     }
 
     return true;
-  }
+}
 
-  static std::vector<std::string> socket_paths_receive(Socket& socket)
-  {
+static std::vector<std::string> socket_paths_receive(Socket& socket)
+{
     uint32_t count = 0;
-    if (!socket.receive(&count, sizeof(count))) return {};
+    if (!socket.receive(&count, sizeof(count)))
+        return {};
     count = ntohl(count);
-    if (count > SOCKET_MAX_PATHS) return {};
+    if (count > SOCKET_MAX_PATHS)
+        return {};
 
     std::vector<std::string> paths;
     paths.reserve(count);
 
     for (uint32_t i = 0; i < count; ++i)
     {
-      uint32_t length = 0;
-      if (!socket.receive(&length, sizeof(length))) return {};
-      length = ntohl(length);
-      if (length > SOCKET_MAX_PATH_LENGTH) return {};
+        uint32_t length = 0;
+        if (!socket.receive(&length, sizeof(length)))
+            return {};
+        length = ntohl(length);
+        if (length > SOCKET_MAX_PATH_LENGTH)
+            return {};
 
-      std::string path(length, '\0');
-      if (length > 0 && !socket.receive(path.data(), length)) return {};
-      paths.emplace_back(std::move(path));
+        std::string path(length, '\0');
+        if (length > 0 && !socket.receive(path.data(), length))
+            return {};
+        paths.emplace_back(std::move(path));
     }
 
     return paths;
-  }
+}
 
-  std::filesystem::path Loader::settings_path() { return preferences_directory_get() / "settings.ini"; }
+std::filesystem::path Loader::settings_path()
+{
+    return preferences_directory_get() / "settings.ini";
+}
 
-  Loader::Loader(int argc, const char** argv)
-  {
+Loader::Loader(int argc, const char** argv)
+{
     for (int i = 1; i < argc; i++)
-      arguments.emplace_back(argv[i]);
+        arguments.emplace_back(argv[i]);
 
     Socket testSocket;
     if (!testSocket.open(SERVER))
-      logger.warning(std::format("Failed to open socket; single instancing will not work."));
+        logger.warning(std::format("Failed to open socket; single instancing will not work."));
 
     if (testSocket.bind({SOCKET_ADDRESS, SOCKET_PORT}))
     {
-      socket = std::move(testSocket);
+        socket = std::move(testSocket);
 
-      if (!socket.listen())
-        logger.warning("Could not listen on socket; single instancing disabled.");
-      else
-      {
-        isSocketThread = true;
-        logger.info(std::format("Opened socket at {}:{}", SOCKET_ADDRESS, SOCKET_PORT));
-      }
+        if (!socket.listen())
+            logger.warning("Could not listen on socket; single instancing disabled.");
+        else
+        {
+            isSocketThread = true;
+            logger.info(std::format("Opened socket at {}:{}", SOCKET_ADDRESS, SOCKET_PORT));
+        }
     }
     else
     {
-      if (testSocket.last_error() != SOCKET_ERROR_ADDRESS_IN_USE)
-      {
-        logger.fatal(std::format("Failed to bind single-instance socket (error {}).", testSocket.last_error()));
+        if (testSocket.last_error() != SOCKET_ERROR_ADDRESS_IN_USE)
+        {
+            logger.fatal(std::format("Failed to bind single-instance socket (error {}).", testSocket.last_error()));
+            isError = true;
+            return;
+        }
+
+        logger.info(std::format("Existing instance of program exists; passing arguments..."));
+        Socket clientSocket;
+        if (!clientSocket.open(CLIENT))
+            logger.warning("Could not open client socket to forward arguments.");
+        else if (!clientSocket.connect({SOCKET_ADDRESS, SOCKET_PORT}))
+            logger.warning("Could not connect to existing instance.");
+        else if (!socket_paths_send(clientSocket, arguments))
+            logger.warning("Failed to transfer arguments to existing instance.");
+        else
+            logger.info("Sent arguments to existing instance. Exiting.");
+
         isError = true;
         return;
-      }
-
-      logger.info(std::format("Existing instance of program exists; passing arguments..."));
-      Socket clientSocket;
-      if (!clientSocket.open(CLIENT))
-        logger.warning("Could not open client socket to forward arguments.");
-      else if (!clientSocket.connect({SOCKET_ADDRESS, SOCKET_PORT}))
-        logger.warning("Could not connect to existing instance.");
-      else if (!socket_paths_send(clientSocket, arguments))
-        logger.warning("Failed to transfer arguments to existing instance.");
-      else
-        logger.info("Sent arguments to existing instance. Exiting.");
-
-      isError = true;
-      return;
     }
 
     settings = Settings(settings_path());
@@ -132,9 +143,9 @@
 
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
-      logger.fatal(std::format("Could not initialize SDL! {}", SDL_GetError()));
-      isError = true;
-      return;
+        logger.fatal(std::format("Could not initialize SDL! {}", SDL_GetError()));
+        isError = true;
+        return;
     }
 
     logger.info("Initialized SDL");
@@ -143,32 +154,33 @@
 
     if (windowProperties == 0)
     {
-      logger.fatal(std::format("Could not initialize window properties! {}", SDL_GetError()));
-      isError = true;
-      return;
+        logger.fatal(std::format("Could not initialize window properties! {}", SDL_GetError()));
+        isError = true;
+        return;
     }
 
     if (settings.isDefault)
     {
-      if (auto display = SDL_GetPrimaryDisplay(); display != 0)
-      {
-        if (auto mode = SDL_GetCurrentDisplayMode(display))
+        if (auto display = SDL_GetPrimaryDisplay(); display != 0)
         {
-          if (mode->w >= WINDOW_4K_SIZE.x || mode->h >= WINDOW_4K_SIZE.y) settings.uiScale = UI_SCALE_4K_DEFAULT;
-          settings.windowSize.x = mode->w * WINDOW_DEFAULT_SIZE_MULTIPLIER;
-          settings.windowSize.y = mode->h * WINDOW_DEFAULT_SIZE_MULTIPLIER;
+            if (auto mode = SDL_GetCurrentDisplayMode(display))
+            {
+                if (mode->w >= WINDOW_4K_SIZE.x || mode->h >= WINDOW_4K_SIZE.y)
+                    settings.uiScale = UI_SCALE_4K_DEFAULT;
+                settings.windowSize.x = mode->w * WINDOW_DEFAULT_SIZE_MULTIPLIER;
+                settings.windowSize.y = mode->h * WINDOW_DEFAULT_SIZE_MULTIPLIER;
+            }
+            else
+                logger.warning(std::format("Failed to query primary display mode: {}", SDL_GetError()));
         }
         else
-          logger.warning(std::format("Failed to query primary display mode: {}", SDL_GetError()));
-      }
-      else
-        logger.warning("Failed to detect primary display for UI scaling.");
+            logger.warning("Failed to detect primary display for UI scaling.");
     }
 
     if (!MIX_Init())
-      logger.warning(std::format("Could not initialize SDL_mixer! {}", SDL_GetError()));
+        logger.warning(std::format("Could not initialize SDL_mixer! {}", SDL_GetError()));
     else
-      logger.info("Initialized SDL_mixer");
+        logger.info("Initialized SDL_mixer");
 
     SDL_SetStringProperty(windowProperties, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "Anm2Ed");
     SDL_SetNumberProperty(windowProperties, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, settings.windowSize.x);
@@ -188,9 +200,9 @@
 
     if (!window)
     {
-      logger.fatal(std::format("Could not initialize window! {}", SDL_GetError()));
-      isError = true;
-      return;
+        logger.fatal(std::format("Could not initialize window! {}", SDL_GetError()));
+        isError = true;
+        return;
     }
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -201,16 +213,16 @@
 
     if (!glContext)
     {
-      logger.fatal(std::format("Could not initialize OpenGL context! {}", SDL_GetError()));
-      isError = true;
-      return;
+        logger.fatal(std::format("Could not initialize OpenGL context! {}", SDL_GetError()));
+        isError = true;
+        return;
     }
 
     if (!gladLoadGLLoader((GLADloadproc)(SDL_GL_GetProcAddress)))
     {
-      logger.fatal(std::format("Could not initialize OpenGL!"));
-      isError = true;
-      return;
+        logger.fatal(std::format("Could not initialize OpenGL!"));
+        isError = true;
+        return;
     }
 
     logger.info(std::format("Initialized OpenGL {}", (const char*)glGetString(GL_VERSION)));
@@ -226,9 +238,9 @@
     IMGUI_CHECKVERSION();
     if (!ImGui::CreateContext())
     {
-      logger.fatal("Could not initialize Dear ImGui!");
-      isError = true;
-      return;
+        logger.fatal("Could not initialize Dear ImGui!");
+        isError = true;
+        return;
     }
 
     logger.info("Initialized Dear ImGui");
@@ -241,7 +253,8 @@
     ImGuiIO& io = ImGui::GetIO();
     io.IniFilename = nullptr;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    if (settings.isDetachableWindows) io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+    if (settings.isDetachableWindows)
+        io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.KeyRepeatDelay = settings.keyboardRepeatDelay;
     io.KeyRepeatRate = settings.keyboardRepeatRate;
@@ -249,84 +262,85 @@
     io.ConfigWindowsMoveFromTitleBarOnly = true;
 
     if (auto imguiData = Settings::imgui_data_load(settings_path()); !imguiData.empty())
-      ImGui::LoadIniSettingsFromMemory(imguiData.c_str(), imguiData.size());
+        ImGui::LoadIniSettingsFromMemory(imguiData.c_str(), imguiData.size());
 
     if (isSocketThread)
     {
-      isSocketRunning = true;
-      socketThread = std::thread(
-          [this]()
-          {
+        isSocketRunning = true;
+        socketThread = std::thread([this]() {
             while (isSocketRunning)
             {
-              try
-              {
-                auto client = socket.accept();
-                if (!client.is_valid())
+                try
                 {
-                  if (!isSocketRunning) break;
-                  continue;
-                }
+                    auto client = socket.accept();
+                    if (!client.is_valid())
+                    {
+                        if (!isSocketRunning)
+                            break;
+                        continue;
+                    }
 
-                auto paths = socket_paths_receive(client);
-                for (auto& path : paths)
-                {
-                  if (path.empty()) continue;
-                  SDL_Event event = {};
-                  event.type = SDL_EVENT_USER;
-                  event.user.code = 0;
-                  event.user.data1 = SDL_strdup(path.c_str());
-                  event.user.data2 = nullptr;
-                  event.user.windowID = 0;
-                  SDL_PushEvent(&event);
+                    auto paths = socket_paths_receive(client);
+                    for (auto& path : paths)
+                    {
+                        if (path.empty())
+                            continue;
+                        SDL_Event event = {};
+                        event.type = SDL_EVENT_USER;
+                        event.user.code = 0;
+                        event.user.data1 = SDL_strdup(path.c_str());
+                        event.user.data2 = nullptr;
+                        event.user.windowID = 0;
+                        SDL_PushEvent(&event);
+                    }
                 }
-              }
-              catch (const std::exception& ex)
-              {
-                logger.error(std::format("Socket thread error: {}", ex.what()));
-              }
-              catch (...)
-              {
-                logger.error("Socket thread error: unknown exception");
-              }
+                catch (const std::exception& ex)
+                {
+                    logger.error(std::format("Socket thread error: {}", ex.what()));
+                }
+                catch (...)
+                {
+                    logger.error("Socket thread error: unknown exception");
+                }
             }
-          });
+        });
     }
-  }
+}
 
-  Loader::~Loader()
-  {
+Loader::~Loader()
+{
     if (isSocketThread)
     {
-      isSocketRunning = false;
+        isSocketRunning = false;
 
-      if (socket.is_valid())
-      {
-        Socket wakeSocket;
-        if (wakeSocket.open(CLIENT) && wakeSocket.connect({SOCKET_ADDRESS, SOCKET_PORT}))
-          socket_paths_send(wakeSocket, {});
-      }
+        if (socket.is_valid())
+        {
+            Socket wakeSocket;
+            if (wakeSocket.open(CLIENT) && wakeSocket.connect({SOCKET_ADDRESS, SOCKET_PORT}))
+                socket_paths_send(wakeSocket, {});
+        }
 
-      socket.close();
-      if (socketThread.joinable()) socketThread.join();
+        socket.close();
+        if (socketThread.joinable())
+            socketThread.join();
     }
 
     if (ImGui::GetCurrentContext())
     {
-      settings.save(settings_path(), ImGui::SaveIniSettingsToMemory(nullptr));
-      texture_garbage_collect();
+        settings.save(settings_path(), ImGui::SaveIniSettingsToMemory(nullptr));
+        texture_garbage_collect();
 
-      ImGui_ImplSDL3_Shutdown();
-      ImGui_ImplOpenGL3_Shutdown();
-      ImGui::DestroyContext();
+        ImGui_ImplSDL3_Shutdown();
+        ImGui_ImplOpenGL3_Shutdown();
+        ImGui::DestroyContext();
     }
 
     MIX_Quit();
 
     if (SDL_WasInit(0))
     {
-      SDL_GL_DestroyContext(glContext);
-      SDL_DestroyWindow(window);
-      SDL_Quit();
+        SDL_GL_DestroyContext(glContext);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
     }
-  }
+}

@@ -5,32 +5,32 @@
 
 #include <SDL3/SDL.h>
 
-  class Dialog
-  {
-  public:
+class Dialog
+{
+public:
 #if defined(_WIN32)
-  #define EXECUTABLE_FILTER {"Executable", "exe"}
+#define EXECUTABLE_FILTER {"Executable", "exe"}
 #else
-  #define EXECUTABLE_FILTER {"Executable", "*"}
+#define EXECUTABLE_FILTER {"Executable", "*"}
 #endif
 
 #define FILTER_LIST                                                                                                    \
-  X(NO_FILTER, {})                                                                                                     \
-  X(ANM2, {"Anm2 file", "anm2;xml"})                                                                                   \
-  X(PNG, {"PNG image", "png;PNG"})                                                                                     \
-  X(SPRITESHEET, {"PNG or SVG image", "png;PNG;svg;SVG"})                                                              \
-  X(SHADER, {"Shader file", "fs;vs;FS;VS"})                                                                            \
-  X(SOUND, {"WAV file;OGG file", "wav;ogg"})                                                                           \
-  X(GIF, {"GIF image", "gif"})                                                                                         \
-  X(WEBM, {"WebM video", "webm"})                                                                                      \
-  X(OGV, {"OGV video", "ogv"})                                                                                         \
-  X(MP4, {"MP4 video", "MP4"})                                                                                         \
-  X(EXECUTABLE, EXECUTABLE_FILTER)
+    X(NO_FILTER, {})                                                                                                   \
+    X(ANM2, {"Anm2 file", "anm2;xml"})                                                                                 \
+    X(PNG, {"PNG image", "png;PNG"})                                                                                   \
+    X(SPRITESHEET, {"PNG or SVG image", "png;PNG;svg;SVG"})                                                            \
+    X(SHADER, {"Shader file", "fs;vs;FS;VS"})                                                                          \
+    X(SOUND, {"WAV file;OGG file", "wav;ogg"})                                                                         \
+    X(GIF, {"GIF image", "gif"})                                                                                       \
+    X(WEBM, {"WebM video", "webm"})                                                                                    \
+    X(OGV, {"OGV video", "ogv"})                                                                                       \
+    X(MP4, {"MP4 video", "MP4"})                                                                                       \
+    X(EXECUTABLE, EXECUTABLE_FILTER)
 
     enum Filter
     {
 #define X(symbol, ...) symbol,
-      FILTER_LIST
+        FILTER_LIST
 #undef X
     };
 
@@ -43,31 +43,31 @@
 #undef FILTER_LIST
 
 #define DIALOG_LIST                                                                                                    \
-  X(NONE, NO_FILTER)                                                                                                   \
-  X(ANM2_CREATE, ANM2)                                                                                                 \
-  X(ANM2_OPEN, ANM2)                                                                                                   \
-  X(ANM2_SAVE, ANM2)                                                                                                   \
-  X(SOUND_OPEN, SOUND)                                                                                                 \
-  X(LIBRARY_OPEN, ANM2)                                                                                                \
-  X(SOUND_REPLACE, SOUND)                                                                                              \
-  X(SPRITESHEET_OPEN, SPRITESHEET)                                                                                     \
-  X(SPRITESHEET_REPLACE, SPRITESHEET)                                                                                  \
-  X(SPRITESHEET_PATH_SET, PNG)                                                                                         \
-  X(SHADER_FRAGMENT_PATH_SET, SHADER)                                                                                   \
-  X(SHADER_VERTEX_PATH_SET, SHADER)                                                                                     \
-  X(FFMPEG_PATH_SET, EXECUTABLE)                                                                                       \
-  X(PNG_DIRECTORY_SET, NO_FILTER)                                                                                      \
-  X(PNG_PATH_SET, PNG)                                                                                                 \
-  X(REGION_EXPORT_PATH_SET, PNG)                                                                                       \
-  X(GIF_PATH_SET, GIF)                                                                                                 \
-  X(WEBM_PATH_SET, WEBM)                                                                                               \
-  X(OGV_PATH_SET, OGV)                                                                                                 \
-  X(MP4_PATH_SET, MP4)
+    X(NONE, NO_FILTER)                                                                                                 \
+    X(ANM2_CREATE, ANM2)                                                                                               \
+    X(ANM2_OPEN, ANM2)                                                                                                 \
+    X(ANM2_SAVE, ANM2)                                                                                                 \
+    X(SOUND_OPEN, SOUND)                                                                                               \
+    X(LIBRARY_OPEN, ANM2)                                                                                              \
+    X(SOUND_REPLACE, SOUND)                                                                                            \
+    X(SPRITESHEET_OPEN, SPRITESHEET)                                                                                   \
+    X(SPRITESHEET_REPLACE, SPRITESHEET)                                                                                \
+    X(SPRITESHEET_PATH_SET, PNG)                                                                                       \
+    X(SHADER_FRAGMENT_PATH_SET, SHADER)                                                                                \
+    X(SHADER_VERTEX_PATH_SET, SHADER)                                                                                  \
+    X(FFMPEG_PATH_SET, EXECUTABLE)                                                                                     \
+    X(PNG_DIRECTORY_SET, NO_FILTER)                                                                                    \
+    X(PNG_PATH_SET, PNG)                                                                                               \
+    X(REGION_EXPORT_PATH_SET, PNG)                                                                                     \
+    X(GIF_PATH_SET, GIF)                                                                                               \
+    X(WEBM_PATH_SET, WEBM)                                                                                             \
+    X(OGV_PATH_SET, OGV)                                                                                               \
+    X(MP4_PATH_SET, MP4)
 
     enum Type
     {
 #define X(symbol, filter) symbol,
-      DIALOG_LIST
+        DIALOG_LIST
 #undef X
     };
 
@@ -93,4 +93,4 @@
     bool is_selected(Type type) const;
     void reset();
     void file_explorer_open(const std::filesystem::path&);
-  };
+};
