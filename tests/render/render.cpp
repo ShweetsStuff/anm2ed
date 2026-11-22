@@ -1,6 +1,7 @@
 // Animations drawn by the editor's OpenGL renderer, compared with golden PNGs (ANM2ED_UPDATE_GOLDEN=1 rewrites them).
 // Every render is also written to ANM2ED_RENDER_DIR (build/renders) so it can be looked at. Skipped without OpenGL.
 
+#include <SDL3/SDL.h>
 #include <doctest.h>
 
 #include <algorithm>
@@ -13,6 +14,7 @@
 #include "embed.h"
 #include "document.h"
 #include "image.h"
+#include "instance.h"
 #include "render.h"
 
 const std::filesystem::path RENDER_TEST_DIR = std::filesystem::path(ANM2ED_TEST_DIR) / "render";
@@ -363,4 +365,24 @@ TEST_CASE("audio decodes and mixes")
     REQUIRE(mix.size() > start + 2);
     CHECK(mix[start - 2] == 0.0f);
     CHECK(mix[start + 2] == doctest::Approx(0.5f).epsilon(0.05));
+}
+
+// A second editor hands its paths to the first and is told it was heard. Skipped when the port is already taken.
+TEST_CASE("a second instance hands its paths to the first")
+{
+    if (!SDL_Init(SDL_INIT_EVENTS))
+        return;
+    if (instance_start({}) != INSTANCE_FIRST)
+        return;
+    CHECK(instance_start({"a.anm2", "b.anm2"}) == INSTANCE_FORWARDED);
+    std::vector<std::string> paths;
+    SDL_Event event = {};
+    for (int attempt = 0; attempt < 100 && paths.size() < 2; ++attempt)
+        if (SDL_WaitEventTimeout(&event, 10) && event.type == SDL_EVENT_USER)
+        {
+            paths.emplace_back((const char*)event.user.data1);
+            SDL_free(event.user.data1);
+        }
+    instance_stop();
+    CHECK(paths == std::vector<std::string>{"a.anm2", "b.anm2"});
 }
