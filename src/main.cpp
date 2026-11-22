@@ -26,6 +26,10 @@
 #endif
 
 constexpr auto UPDATE_INTERVAL_MS = 1000 / 120;
+// While nothing moves, the window redraws this often instead, and sooner on any input.
+constexpr auto IDLE_UPDATE_INTERVAL_MS = 1000 / 20;
+// How long after the last input the window still counts as busy.
+constexpr auto IDLE_DELAY_MS = 1000;
 constexpr auto TICK_DELTA_MAX_MS = 250;
 constexpr auto WINDOW_4K_SIZE = glm::ivec2(3840, 2160);
 constexpr auto UI_SCALE_4K_DEFAULT = 150.0f;
@@ -45,9 +49,11 @@ struct App
     Settings settings;
     std::vector<std::filesystem::path> spritesheetDropPaths;
     std::vector<std::filesystem::path> soundDropPaths;
+    Uint64 inputTime = 0;
     Uint64 previousTick = 0;
     Uint64 previousUpdate = 0;
     double tickAccumulatorMs = 0;
+    bool isIdle = false;
     bool isQuit = false;
     bool isQuitting = false;
     bool isRecording = false;
@@ -223,6 +229,7 @@ static void events_poll(App& app, Editor& editor)
     while (SDL_PollEvent(&event))
     {
         ImGui_ImplSDL3_ProcessEvent(&event);
+        app.inputTime = SDL_GetTicks();
         switch (event.type)
         {
             case SDL_EVENT_DROP_BEGIN:
@@ -338,7 +345,18 @@ static void frame_render(App& app)
     SDL_GL_SetSwapInterval(app.settings.isVsync);
 }
 
+// Idle: no input for a while, nothing playing or recording, no toast fading, no text being typed, no About box.
+static bool is_idle(App& app, Editor& editor)
+{
+    if (SDL_GetTicks() - app.inputTime < IDLE_DELAY_MS || ImGui::GetIO().WantTextInput ||
+        editor.manager.isRecording || !toasts.toasts.empty() || editor.taskbar.aboutPopup.isOpen)
+        return false;
+    return std::ranges::none_of(editor.manager.documents,
+                                [](auto& document) { return document.playback.isPlaying; });
+}
+
 // Draws at most every UPDATE_INTERVAL_MS, and ticks playback at the playback tick rate in between.
+// Idle, it draws every IDLE_UPDATE_INTERVAL_MS, sleeping until then unless an event comes.
 static void loop_step(App& app, Editor& editor)
 {
     auto now = SDL_GetTicks();
@@ -356,20 +374,27 @@ static void loop_step(App& app, Editor& editor)
     app.tickAccumulatorMs += (double)std::min<Uint64>(now - app.previousTick, TICK_DELTA_MAX_MS);
     app.previousTick = now;
 
-    if (now - app.previousUpdate >= UPDATE_INTERVAL_MS)
+    if (now - app.previousUpdate >= (Uint64)(app.isIdle ? IDLE_UPDATE_INTERVAL_MS : UPDATE_INTERVAL_MS))
     {
         frame_update(app, editor);
         frame_render(app);
         app.previousUpdate = now;
+        app.isIdle = is_idle(app, editor);
     }
 
-    if (app.tickAccumulatorMs >= tickIntervalMs)
+    // Busy, one tick a pass keeps recording in step with drawing. Idle, the ticks only move timers along.
+    while (app.tickAccumulatorMs >= tickIntervalMs)
     {
         editor.dockspace.tick(editor.manager, app.settings, (float)(tickIntervalMs / 1000.0));
         app.tickAccumulatorMs -= tickIntervalMs;
+        if (!app.isIdle)
+            break;
     }
 
-    SDL_Delay(1);
+    if (!app.isIdle)
+        SDL_Delay(1);
+    else if (SDL_WaitEventTimeout(nullptr, IDLE_UPDATE_INTERVAL_MS))
+        app.isIdle = false;
 }
 
 static int editor_run(int argc, char* argv[])

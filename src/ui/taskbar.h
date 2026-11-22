@@ -42,7 +42,6 @@ class Taskbar
     PopupHelper vectorPopup = PopupHelper(LABEL_CONVERT_SVG_POPUP, POPUP_SMALL_NO_HEIGHT);
     PopupHelper renderPopup = PopupHelper(LABEL_TASKBAR_RENDER_ANIMATION, POPUP_SMALL_NO_HEIGHT);
     PopupHelper configurePopup = PopupHelper(LABEL_TASKBAR_CONFIGURE);
-    PopupHelper aboutPopup = PopupHelper(LABEL_TASKBAR_ABOUT);
     Settings editSettings = {};
     int generateRegionsTarget = 0;
     bool isGenerateRegionsMapFrames = true;
@@ -53,6 +52,7 @@ class Taskbar
     bool save_request(Manager&, Settings&, int = -1, const std::filesystem::path& = {}, bool = false);
 
 public:
+    PopupHelper aboutPopup = PopupHelper(LABEL_TASKBAR_ABOUT);
     float height = 0;
 
     void update(Manager&, Settings&, Resources&, Dialog&, bool&);
