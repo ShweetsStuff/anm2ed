@@ -63,29 +63,40 @@ struct AnimationTarget
 };
 
 // Frame properties that can be copied on their own.
+// Each frame property: the tracks that have it (all but triggers, layers only, or triggers only) and what copying it
+// takes from a source frame.
+#define FRAME_PROPERTIES(X)                                                                                            \
+    X(POSITION, FRAMES, target.position = source.position)                                                             \
+    X(SCALE, FRAMES, target.scale = source.scale)                                                                      \
+    X(ROTATION, FRAMES, target.rotation = source.rotation)                                                             \
+    X(SKEW, FRAMES, target.skew = source.skew)                                                                         \
+    X(PIVOT, LAYERS, target.pivot = source.pivot)                                                                      \
+    X(CROP, LAYERS, target.crop = source.crop)                                                                         \
+    X(SIZE, LAYERS, target.size = source.size)                                                                         \
+    X(REGION, LAYERS, target.regionId = source.regionId; target.crop = source.crop; target.size = source.size;         \
+      target.pivot = source.pivot)                                                                                     \
+    X(TINT, FRAMES, target.tint = source.tint)                                                                         \
+    X(COLOR_OFFSET, FRAMES, target.colorOffset = source.colorOffset)                                                   \
+    X(VISIBLE, FRAMES, target.isVisible = source.isVisible)                                                            \
+    X(INTERPOLATION, FRAMES, target.interpolation = source.interpolation)                                              \
+    X(DURATION, FRAMES, target.duration = source.duration)                                                             \
+    X(SHADER, LAYERS, target.shaderId = source.shaderId)                                                               \
+    X(DEPTH, LAYERS, target.depth = source.depth)                                                                      \
+    X(BLUR, LAYERS, target.blur = source.blur)                                                                         \
+    X(CHILD, LAYERS, target.childAnimation = source.childAnimation; target.childMode = source.childMode;               \
+      target.childStart = source.childStart; target.isChildStartRandom = source.isChildStartRandom;                    \
+      target.isChildRestart = source.isChildRestart)                                                                   \
+    X(EVENT, TRIGGERS, target.eventIds = source.eventIds)                                                              \
+    X(SOUNDS, TRIGGERS, target.soundIds = source.soundIds)
+
 enum class FrameProperty
 {
-    POSITION,
-    SCALE,
-    ROTATION,
-    SKEW,
-    PIVOT,
-    CROP,
-    SIZE,
-    REGION,
-    TINT,
-    COLOR_OFFSET,
-    VISIBLE,
-    INTERPOLATION,
-    DURATION,
-    SHADER,
-    DEPTH,
-    BLUR,
-    CHILD,
-    EVENT,
-    SOUNDS,
-    COUNT
+#define X(property, tracks, ...) property,
+    FRAME_PROPERTIES(X)
+#undef X
+        COUNT
 };
+
 
 bool is_frame_property_valid(FrameProperty, ItemType);
 void frame_property_copy(Frame&, const Frame&, FrameProperty);

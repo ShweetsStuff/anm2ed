@@ -218,85 +218,33 @@ Uids frames_move(Model& model, const std::set<Reference>& frames, Reference targ
 // Triggers have an event and sounds. Layer frames add a pivot, crop, size, region and shader to the others' transform.
 bool is_frame_property_valid(FrameProperty property, ItemType type)
 {
+    enum Tracks
+    {
+        FRAMES,
+        LAYERS,
+        TRIGGERS
+    };
+    constexpr Tracks TRACKS[] = {
+#define X(property, tracks, ...) tracks,
+        FRAME_PROPERTIES(X)
+#undef X
+    };
+    auto tracks = TRACKS[(int)property];
     if (type == ItemType::TRIGGER)
-        return property == FrameProperty::EVENT || property == FrameProperty::SOUNDS;
-    if (property == FrameProperty::EVENT || property == FrameProperty::SOUNDS)
-        return false;
-    auto isLayerOnly = property == FrameProperty::PIVOT || property == FrameProperty::CROP ||
-                       property == FrameProperty::SIZE || property == FrameProperty::REGION ||
-                       property == FrameProperty::SHADER || property == FrameProperty::DEPTH ||
-                       property == FrameProperty::BLUR || property == FrameProperty::CHILD;
-    return type == ItemType::LAYER || !isLayerOnly;
+        return tracks == TRIGGERS;
+    return tracks == FRAMES || (tracks == LAYERS && type == ItemType::LAYER);
 }
 
 void frame_property_copy(Frame& target, const Frame& source, FrameProperty property)
 {
     switch (property)
     {
-        case FrameProperty::POSITION:
-            target.position = source.position;
-            break;
-        case FrameProperty::SCALE:
-            target.scale = source.scale;
-            break;
-        case FrameProperty::ROTATION:
-            target.rotation = source.rotation;
-            break;
-        case FrameProperty::SKEW:
-            target.skew = source.skew;
-            break;
-        case FrameProperty::PIVOT:
-            target.pivot = source.pivot;
-            break;
-        case FrameProperty::CROP:
-            target.crop = source.crop;
-            break;
-        case FrameProperty::SIZE:
-            target.size = source.size;
-            break;
-        case FrameProperty::REGION:
-            target.regionId = source.regionId;
-            target.crop = source.crop;
-            target.size = source.size;
-            target.pivot = source.pivot;
-            break;
-        case FrameProperty::TINT:
-            target.tint = source.tint;
-            break;
-        case FrameProperty::COLOR_OFFSET:
-            target.colorOffset = source.colorOffset;
-            break;
-        case FrameProperty::VISIBLE:
-            target.isVisible = source.isVisible;
-            break;
-        case FrameProperty::INTERPOLATION:
-            target.interpolation = source.interpolation;
-            break;
-        case FrameProperty::DURATION:
-            target.duration = source.duration;
-            break;
-        case FrameProperty::SHADER:
-            target.shaderId = source.shaderId;
-            break;
-        case FrameProperty::DEPTH:
-            target.depth = source.depth;
-            break;
-        case FrameProperty::BLUR:
-            target.blur = source.blur;
-            break;
-        case FrameProperty::CHILD:
-            target.childAnimation = source.childAnimation;
-            target.childMode = source.childMode;
-            target.childStart = source.childStart;
-            target.isChildStartRandom = source.isChildStartRandom;
-            target.isChildRestart = source.isChildRestart;
-            break;
-        case FrameProperty::EVENT:
-            target.eventIds = source.eventIds;
-            break;
-        case FrameProperty::SOUNDS:
-            target.soundIds = source.soundIds;
-            break;
+#define X(property, tracks, ...)                                                                                       \
+    case FrameProperty::property:                                                                                      \
+        __VA_ARGS__;                                                                                                   \
+        break;
+        FRAME_PROPERTIES(X)
+#undef X
         default:
             break;
     }
