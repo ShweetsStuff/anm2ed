@@ -481,7 +481,7 @@ void frames_bake(Document& document, Model& result, const std::filesystem::path&
     {
         auto& animation = *game.animation_get(i);
         auto isNeeded = is_skewed(animation.root);
-        tracks_each(animation.layers, [&](const Track& track, const TrackGroup* group) {
+        items_each(animation.layers, [&](const Track& track, const TrackGroup* group) {
             isNeeded |= (group && is_skewed(group->root)) || std::ranges::any_of(track.frames, is_baked);
         });
         if (isNeeded)
@@ -610,50 +610,28 @@ void frames_bake(Document& document, Model& result, const std::filesystem::path&
             return baked;
         };
 
-        std::vector<TrackEntry> entries;
-        for (auto& entry : animation.layers)
-            if (auto track = std::get_if<Track>(&entry))
-            {
-                auto baked = track_bake(*track, nullptr);
-                entries.emplace_back(std::move(*track));
-                if (baked)
-                    entries.emplace_back(std::move(*baked));
-            }
-            else
-            {
-                auto group = std::get<TrackGroup>(entry);
-                auto isGroupFolded = is_skewed(group.root);
-                std::vector<Track> tracks;
-                for (auto& groupTrack : group.tracks)
-                {
-                    auto baked = track_bake(groupTrack, isGroupFolded ? &group.root : nullptr);
-                    tracks.push_back(std::move(groupTrack));
-                    if (baked)
-                        tracks.push_back(std::move(*baked));
-                }
-                group.tracks = std::move(tracks);
-                if (isGroupFolded)
-                    group.root = TrackGroup{}.root;
-                entries.emplace_back(std::move(group));
-            }
-        animation.layers = std::move(entries);
+        // Each layer track is followed by its baked copy, if any. A skewed group root is folded into its tracks' bakes.
+        animation.layers = entries_expand(std::move(animation.layers), [&](Track& track, TrackGroup* group) {
+            auto baked = track_bake(track, group && is_skewed(group->root) ? &group->root : nullptr);
+            std::vector<Track> tracks = {std::move(track)};
+            if (baked)
+                tracks.push_back(std::move(*baked));
+            return tracks;
+        });
+        groups_each(animation.layers, [&](TrackGroup& group) {
+            if (is_skewed(group.root))
+                group.root = TrackGroup{}.root;
+        });
 
         // A folded root's transform goes into the nulls too (their group roots first), and the root becomes plain.
         if (!isRootFolded)
             continue;
-        for (auto& entry : animation.nulls)
-            if (auto track = std::get_if<Track>(&entry))
-                track_group_root_bake(*track, animation.root, animation.frameNum);
-            else
-            {
-                auto& group = std::get<TrackGroup>(entry);
-                for (auto& groupTrack : group.tracks)
-                {
-                    track_group_root_bake(groupTrack, group.root, animation.frameNum);
-                    track_group_root_bake(groupTrack, animation.root, animation.frameNum);
-                }
-                group.root = TrackGroup{}.root;
-            }
+        items_each(animation.nulls, [&](Track& track, TrackGroup* group) {
+            if (group)
+                track_group_root_bake(track, group->root, animation.frameNum);
+            track_group_root_bake(track, animation.root, animation.frameNum);
+        });
+        groups_each(animation.nulls, [](TrackGroup& group) { group.root = TrackGroup{}.root; });
         animation.root = Animation{}.root;
     }
     if (images.empty())
@@ -678,7 +656,7 @@ void frames_bake(Document& document, Model& result, const std::filesystem::path&
     for (auto [layerId, bakedId] : bakedLayerIds)
         bakedIds.insert(bakedId);
     for (auto index : indices)
-        tracks_each(game.animation_edit(index)->layers, [&](Track& track, auto*) {
+        items_each(game.animation_edit(index)->layers, [&](Track& track, auto*) {
             if (!bakedIds.contains(track.id))
                 return;
             for (auto& frame : track.frames)

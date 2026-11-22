@@ -153,8 +153,8 @@ std::vector<TimelineRow> TimelineContext::timeline_item_rows_get()
             if (!group.isExpanded)
                 continue;
             rows.push_back({.type = ROOT, .groupType = type, .groupId = group.id, .depth = 1});
-            for (auto trackIndex : order_get((int)group.tracks.size(), isReversed))
-                if (auto& track = group.tracks[trackIndex]; is_track_shown(track))
+            for (auto trackIndex : order_get((int)group.items.size(), isReversed))
+                if (auto& track = group.items[trackIndex]; is_track_shown(track))
                     rows.push_back({.type = type,
                                     .id = track.id,
                                     .index = trackIndex,

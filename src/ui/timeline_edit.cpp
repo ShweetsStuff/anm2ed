@@ -88,7 +88,7 @@ std::set<Reference> TimelineContext::item_references_for_bake_into_other_frames_
     {
         if (!(itemType == LAYER ? isLayers : isNulls))
             continue;
-        tracks_each(animation_entries_get(targetAnimation, itemType), [&](const Track& track, const TrackGroup* group) {
+        items_each(animation_entries_get(targetAnimation, itemType), [&](const Track& track, const TrackGroup* group) {
             result.insert(
                 Reference{animationIndex, itemType, track.id, -1, group ? itemType : NONE, group ? group->id : -1});
         });

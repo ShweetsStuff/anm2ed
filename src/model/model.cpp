@@ -6,47 +6,21 @@
 #include "image.h"
 #include "path.h"
 
-// The slot holding the animation at a flat index (animations inside groups count in order), or nullptr.
-template <class Entries>
-static auto animation_slot_get(Entries& entries, int index) -> decltype(&std::get<0>(entries[0]))
-{
-    if (index < 0)
-        return nullptr;
-    for (auto& entry : entries)
-    {
-        if (auto animation = std::get_if<std::shared_ptr<const Animation>>(&entry))
-        {
-            if (index-- == 0)
-                return animation;
-            continue;
-        }
-        auto& group = std::get<AnimationGroup>(entry);
-        if (index < (int)group.animations.size())
-            return &group.animations[index];
-        index -= (int)group.animations.size();
-    }
-    return nullptr;
-}
-
 int Model::animations_count_get() const
 {
-    int count = 0;
-    for (auto& entry : animations.entries)
-        count +=
-            std::holds_alternative<AnimationGroup>(entry) ? (int)std::get<AnimationGroup>(entry).animations.size() : 1;
-    return count;
+    return items_count(animations.entries);
 }
 
 const Animation* Model::animation_get(int index) const
 {
-    auto slot = animation_slot_get(animations.entries, index);
+    auto slot = item_place_get(animations.entries, index).item;
     return slot ? slot->get() : nullptr;
 }
 
 // Copy-on-write: an animation shared with undo history is cloned before it is changed.
 Animation* Model::animation_edit(int index)
 {
-    auto slot = animation_slot_get(animations.entries, index);
+    auto slot = item_place_get(animations.entries, index).item;
     if (!slot || !*slot)
         return nullptr;
     if (slot->use_count() > 1)
@@ -70,36 +44,14 @@ std::vector<std::pair<int, const Animation*>> Model::animations_get() const
     return result;
 }
 
-template <class Self> static auto animation_group_find(Self& self, int index)
-{
-    using Group = std::conditional_t<std::is_const_v<Self>, const AnimationGroup, AnimationGroup>;
-    Group* result = nullptr;
-    if (index < 0)
-        return result;
-    for (auto& entry : self.animations.entries)
-    {
-        if (std::holds_alternative<std::shared_ptr<const Animation>>(entry))
-        {
-            if (index-- == 0)
-                return result;
-            continue;
-        }
-        auto& group = std::get<AnimationGroup>(entry);
-        if (index < (int)group.animations.size())
-            return &group;
-        index -= (int)group.animations.size();
-    }
-    return result;
-}
-
 const AnimationGroup* Model::animation_group_get(int index) const
 {
-    return animation_group_find(*this, index);
+    return item_place_get(animations.entries, index).group;
 }
 
 AnimationGroup* Model::animation_group_edit(int index)
 {
-    return animation_group_find(*this, index);
+    return item_place_get(animations.entries, index).group;
 }
 
 int Model::animation_group_id_get(int index) const
@@ -111,14 +63,9 @@ int Model::animation_group_id_get(int index) const
 template <class A> static auto animation_track_group_find(A& animation, int groupType, int groupId)
 {
     using Group = std::conditional_t<std::is_const_v<A>, const TrackGroup, TrackGroup>;
-    Group* result = nullptr;
     if (groupId < 0 || (groupType != LAYER && groupType != NULL_))
-        return result;
-    groups_each(animation_entries_get(animation, groupType), [&](auto& group) {
-        if (!result && group.id == groupId)
-            result = &group;
-    });
-    return result;
+        return (Group*)nullptr;
+    return group_find(animation_entries_get(animation, groupType), groupId);
 }
 
 TrackGroup* animation_track_group_get(Animation& animation, int groupType, int groupId)
@@ -150,7 +97,7 @@ template <class A> static auto animation_track_find(A& animation, int itemType, 
     if (itemType != LAYER && itemType != NULL_)
         return result;
 
-    tracks_each(animation_entries_get(animation, itemType), [&](auto& track, auto* group) {
+    items_each(animation_entries_get(animation, itemType), [&](auto& track, auto* group) {
         if (result || track.id != id)
             return;
         if (isGrouped && (!group || group->id != groupId))
@@ -265,8 +212,8 @@ void references_each(const Model& model, ElementType type, int spritesheetId, co
     }
     auto animation_references_each = [&](const Animation& animation) {
         if (type == ElementType::LAYER_ELEMENT || type == ElementType::NULL_ELEMENT)
-            tracks_each(type == ElementType::LAYER_ELEMENT ? animation.layers : animation.nulls,
-                        [&](const Track& track, auto*) { callback(track.id); });
+            items_each(type == ElementType::LAYER_ELEMENT ? animation.layers : animation.nulls,
+                       [&](const Track& track, auto*) { callback(track.id); });
         if (type == ElementType::EVENT_ELEMENT || type == ElementType::SOUND_ELEMENT)
             for (auto& trigger : animation.triggers.frames)
                 for (auto id : type == ElementType::EVENT_ELEMENT ? trigger.eventIds : trigger.soundIds)
@@ -277,7 +224,7 @@ void references_each(const Model& model, ElementType type, int spritesheetId, co
                     callback(frame.shaderId);
             });
         if (type == ElementType::REGION)
-            tracks_each(animation.layers, [&](const Track& track, auto*) {
+            items_each(animation.layers, [&](const Track& track, auto*) {
                 auto layer = item_get(content.layers, track.id);
                 if (!layer || layer->spritesheetId != spritesheetId)
                     return;
@@ -387,9 +334,7 @@ void Model::uids_repair()
         seen = std::move(seenBefore);
         animation_uids_each(*animation_edit(i), repair);
     }
-    for (auto& entry : animations.entries)
-        if (auto group = std::get_if<AnimationGroup>(&entry))
-            repair(group->uid);
+    groups_each(animations.entries, [&](AnimationGroup& group) { repair(group.uid); });
     for (auto& spritesheet : content.spritesheets)
     {
         repair(spritesheet.uid);
@@ -492,17 +437,16 @@ UidIndex::UidIndex(const Model& model)
         track_locations_add(locations, animation->root, {index, ROOT});
         track_locations_add(locations, animation->triggers, {index, TRIGGER});
         for (auto type : {LAYER, NULL_})
-            for (auto& entry : animation_entries_get(*animation, type))
-                if (auto track = std::get_if<Track>(&entry))
-                    track_locations_add(locations, *track, {index, type, track->id});
-                else
-                {
-                    auto& group = std::get<TrackGroup>(entry);
+            entries_walk(
+                animation_entries_get(*animation, type),
+                [&](const Track& track, const TrackGroup* group) {
+                    track_locations_add(locations, track,
+                                        {index, type, track.id, -1, group ? type : NONE, group ? group->id : -1});
+                },
+                [&](const TrackGroup& group) {
                     locations[group.uid] = {{index, type, group.id}, ElementType::GROUP};
                     track_locations_add(locations, group.root, {index, ROOT, -1, -1, type, group.id});
-                    for (auto& groupTrack : group.tracks)
-                        track_locations_add(locations, groupTrack, {index, type, groupTrack.id, -1, type, group.id});
-                }
+                });
     }
 }
 
@@ -552,10 +496,10 @@ bool is_model_equal(const Model& left, const Model& right)
         auto& groupB = std::get<AnimationGroup>(b);
         if (groupA.uid != groupB.uid || groupA.id != groupB.id || groupA.name != groupB.name ||
             groupA.isExpanded != groupB.isExpanded || groupA.isVisible != groupB.isVisible ||
-            groupA.extras != groupB.extras || groupA.animations.size() != groupB.animations.size())
+            groupA.extras != groupB.extras || groupA.items.size() != groupB.items.size())
             return false;
-        for (std::size_t j = 0; j < groupA.animations.size(); ++j)
-            if (!is_animation_equal(groupA.animations[j], groupB.animations[j]))
+        for (std::size_t j = 0; j < groupA.items.size(); ++j)
+            if (!is_animation_equal(groupA.items[j], groupB.items[j]))
                 return false;
     }
     return true;

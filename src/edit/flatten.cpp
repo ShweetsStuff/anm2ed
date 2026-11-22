@@ -114,20 +114,7 @@ Model animation_layers_flatten(Model model, const LibraryGet& library_get, const
             return tracks;
         };
 
-        std::vector<TrackEntry> entries;
-        for (auto& entry : source.layers)
-            if (auto track = std::get_if<Track>(&entry))
-                for (auto& flat : tracks_flatten(*track))
-                    entries.emplace_back(std::move(flat));
-            else
-            {
-                auto group = std::get<TrackGroup>(entry);
-                group.tracks.clear();
-                for (auto& groupTrack : std::get<TrackGroup>(entry).tracks)
-                    for (auto& flat : tracks_flatten(groupTrack))
-                        group.tracks.push_back(std::move(flat));
-                entries.emplace_back(std::move(group));
-            }
+        auto entries = entries_expand(source.layers, [&](const Track& track, auto*) { return tracks_flatten(track); });
         // The flattened children's triggers join the animation's own, on the frames they fire (their events found by
         // name).
         auto triggers = source.triggers;

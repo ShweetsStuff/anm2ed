@@ -155,8 +155,8 @@ static int info_print(const Arguments& arguments)
     for (auto [index, animation] : model.animations_get())
     {
         int layers{}, nulls{};
-        tracks_each(animation->layers, [&](const Track&, auto*) { ++layers; });
-        tracks_each(animation->nulls, [&](const Track&, auto*) { ++nulls; });
+        items_each(animation->layers, [&](const Track&, auto*) { ++layers; });
+        items_each(animation->nulls, [&](const Track&, auto*) { ++nulls; });
         std::println("  [{}] {}: {} frames{}, {} layer tracks, {} null tracks, {} triggers", index, animation->name,
                      animation->frameNum, animation->isLoop ? ", loops" : "", layers, nulls,
                      animation->triggers.frames.size());

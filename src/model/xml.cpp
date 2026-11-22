@@ -359,12 +359,12 @@ using AnimationItem = ContainerItem<std::shared_ptr<const Animation>, AnimationG
 
 static auto& group_children_get(TrackGroup& group)
 {
-    return group.tracks;
+    return group.items;
 }
 
 static auto& group_children_get(AnimationGroup& group)
 {
-    return group.animations;
+    return group.items;
 }
 
 // Groups become entries followed by their children: nested children move out after their group, and a child joins a
@@ -807,7 +807,7 @@ void model_repair(Model& model)
                 if (frame.shaderId != -1 && !item_get(content.shaders, frame.shaderId))
                     frame.shaderId = -1;
         });
-        tracks_each(animation.layers, [&](Track& track, auto*) {
+        items_each(animation.layers, [&](Track& track, auto*) {
             auto layer = item_get(content.layers, track.id);
             auto spritesheet = layer ? item_get(content.spritesheets, layer->spritesheetId) : nullptr;
             if (!spritesheet)
@@ -1465,16 +1465,12 @@ static void track_entries_write(Sink& sink, const Writer& writer, const std::vec
                                   const std::function<void()>&) { track_write(sink, writer, track, groupId); },
             .groupId = groupId};
     };
-    for (auto& entry : entries)
-        if (auto track = std::get_if<Track>(&entry))
-            flat.push_back(track_child_make(*track, -1));
-        else
-        {
-            auto& group = std::get<TrackGroup>(entry);
-            flat.push_back(group_child_make(sink, writer, group));
-            for (auto& groupTrack : group.tracks)
-                flat.push_back(track_child_make(groupTrack, group.id));
-        }
+    entries_walk(
+        entries,
+        [&](const Track& track, const TrackGroup* group) {
+            flat.push_back(track_child_make(track, group ? group->id : -1));
+        },
+        [&](const TrackGroup& group) { flat.push_back(group_child_make(sink, writer, group)); });
     sink.open(tag_get(type));
     container_write(sink, writer, std::move(flat), extras,
                     type == ElementType::LAYER_ANIMATIONS ? ElementType::LAYER_ANIMATION_GROUPS
@@ -1529,7 +1525,7 @@ static Animation animation_bake(const Writer& writer, Animation animation)
                 Sink backup = {.mode = Sink::TREE};
                 backup.open(FRAME_RESTORE_TAG);
                 track_write(backup, writer, group.root);
-                for (auto& track : group.tracks)
+                for (auto& track : group.items)
                 {
                     track_write(backup, writer, track, group.id, true);
                     track_group_root_bake(track, group.root, animation.frameNum);
@@ -1611,16 +1607,12 @@ static void animations_write(Sink& sink, const Writer& writer, const Animations&
                                   const std::function<void()>&) { animation_write(sink, writer, animation, groupId); },
             .groupId = groupId};
     };
-    for (auto& entry : animations.entries)
-        if (auto animation = std::get_if<std::shared_ptr<const Animation>>(&entry))
-            flat.push_back(animation_child_make(**animation, -1));
-        else
-        {
-            auto& group = std::get<AnimationGroup>(entry);
-            flat.push_back(group_child_make(sink, writer, group));
-            for (auto& groupAnimation : group.animations)
-                flat.push_back(animation_child_make(*groupAnimation, group.id));
-        }
+    entries_walk(
+        animations.entries,
+        [&](const std::shared_ptr<const Animation>& animation, const AnimationGroup* group) {
+            flat.push_back(animation_child_make(*animation, group ? group->id : -1));
+        },
+        [&](const AnimationGroup& group) { flat.push_back(group_child_make(sink, writer, group)); });
     sink.open(tag_get(ElementType::ANIMATIONS));
     sink.attribute("DefaultAnimation", animations.defaultAnimation);
     container_write(sink, writer, std::move(flat), animations.extras);

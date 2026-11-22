@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "model/common.h"
+#include "model/group.h"
 #include "uid.h"
 
 // The typed document model. XML exists only in model/xml.cpp. Everything else edits and reads these structs.
@@ -90,7 +91,7 @@ struct TrackGroup
     bool isExpanded = true;
     bool isVisible = true;
     Track root = {.type = ItemType::ROOT, .frames = {Frame{}}};
-    std::vector<Track> tracks;
+    std::vector<Track> items;
     Extras extras = {};
 
     bool operator==(const TrackGroup&) const = default;
@@ -127,7 +128,7 @@ struct AnimationGroup
     std::string name;
     bool isExpanded = true;
     bool isVisible = true;
-    std::vector<std::shared_ptr<const Animation>> animations;
+    std::vector<std::shared_ptr<const Animation>> items;
     Extras extras = {};
 
     bool operator==(const AnimationGroup&) const = default;
@@ -311,27 +312,6 @@ template <class Items> int item_next_id_get(const Items& items)
     return id + 1;
 }
 
-// Tracks of one kind (layer or null) in order, including those inside groups. Callback(track, group or nullptr).
-template <class Entries, class Callback> void tracks_each(Entries& entries, Callback&& callback)
-{
-    for (auto& entry : entries)
-        if (auto track = std::get_if<Track>(&entry))
-            callback(*track, static_cast<decltype(&std::get<TrackGroup>(entry))>(nullptr));
-        else
-        {
-            auto& group = std::get<TrackGroup>(entry);
-            for (auto& groupTrack : group.tracks)
-                callback(groupTrack, &group);
-        }
-}
-
-template <class Entries, class Callback> void groups_each(Entries& entries, Callback&& callback)
-{
-    for (auto& entry : entries)
-        if (auto group = std::get_if<TrackGroup>(&entry))
-            callback(*group);
-}
-
 // Every track of an animation (root, group roots, layers, nulls, triggers).
 template <class A, class Callback> void animation_tracks_each(A& animation, Callback&& callback)
 {
@@ -344,7 +324,7 @@ template <class A, class Callback> void animation_tracks_each(A& animation, Call
             {
                 auto& group = std::get<TrackGroup>(entry);
                 callback(group.root);
-                for (auto& groupTrack : group.tracks)
+                for (auto& groupTrack : group.items)
                     callback(groupTrack);
             }
     callback(animation.triggers);

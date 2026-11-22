@@ -159,7 +159,7 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
                 ImGui::TextUnformatted(label.c_str());
                 ImGui::PopFont();
                 ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_ID), std::make_format_args(group->id)).c_str());
-                auto groupItemsCount = (int)group->tracks.size();
+                auto groupItemsCount = (int)group->items.size();
                 ImGui::TextUnformatted(
                     std::vformat(localize.get(FORMAT_ITEMS_COUNT), std::make_format_args(groupItemsCount)).c_str());
                 ImGui::EndTooltip();

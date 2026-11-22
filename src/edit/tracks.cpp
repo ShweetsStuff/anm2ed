@@ -12,24 +12,12 @@ Uids items_remove(Model& model, int animationIndex, const std::map<int, std::set
                   const std::map<int, std::set<int>>& groupIds)
 {
     for (auto type : {LAYER, NULL_})
-    {
-        auto typeIds = ids.contains(type) ? ids.at(type) : std::set<int>{};
-        auto typeGroupIds = groupIds.contains(type) ? groupIds.at(type) : std::set<int>{};
-        if (typeIds.empty() && typeGroupIds.empty())
-            continue;
-        auto entries = track_entries_edit(model, animationIndex, type);
-        if (!entries)
-            continue;
-
-        std::erase_if(*entries, [&](TrackEntry& entry) {
-            if (auto group = std::get_if<TrackGroup>(&entry))
-            {
-                std::erase_if(group->tracks, [&](const Track& track) { return typeIds.contains(track.id); });
-                return typeGroupIds.contains(group->id);
-            }
-            return typeIds.contains(std::get<Track>(entry).id);
-        });
-    }
+        if (auto entries = track_entries_edit(model, animationIndex, type))
+        {
+            auto typeIds = ids.contains(type) ? ids.at(type) : std::set<int>{};
+            auto typeGroupIds = groupIds.contains(type) ? groupIds.at(type) : std::set<int>{};
+            entries_take(*entries, [&](Track& track) { return typeIds.contains(track.id); }, typeGroupIds);
+        }
     return {};
 }
 
@@ -39,27 +27,10 @@ Uids items_group(Model& model, int animationIndex, int type, const std::set<int>
     auto entries = track_entries_edit(model, animationIndex, type);
     if (!entries)
         return {};
-
-    int nextId = 0;
-    groups_each(*entries, [&](const TrackGroup& group) { nextId = std::max(nextId, group.id + 1); });
-    TrackGroup group = {.id = nextId, .name = name};
-
-    auto insertIndex = -1;
-    for (int i = 0; i < (int)entries->size(); ++i)
-    {
-        auto track = std::get_if<Track>(&(*entries)[i]);
-        if (!track || !ids.contains(track->id))
-            continue;
-        if (insertIndex == -1)
-            insertIndex = i;
-        group.tracks.push_back(std::move(*track));
-        entries->erase(entries->begin() + i--);
-    }
-    if (insertIndex == -1)
-        return {};
-
+    TrackGroup group = {.id = group_next_id(*entries), .name = name};
     auto uid = group.uid;
-    entries->insert(entries->begin() + insertIndex, std::move(group));
+    if (!entries_wrap(*entries, [&](Track& track) { return ids.contains(track.id); }, std::move(group)))
+        return {};
     return {uid};
 }
 
@@ -68,55 +39,22 @@ Uids items_group(Model& model, int animationIndex, int type, const std::set<int>
 Uids items_move(Model& model, int animationIndex, int type, const std::set<int>& ids, const std::set<int>& groupIds,
                 RowTarget target, bool isDropAfter, bool isDropIntoGroup)
 {
-    if (target.groupId != -1 && groupIds.contains(target.groupId))
-        return {};
-    if (target.isGroup && groupIds.contains(target.id))
+    if ((target.groupId != -1 && groupIds.contains(target.groupId)) || (target.isGroup && groupIds.contains(target.id)))
         return {};
     auto entries = track_entries_edit(model, animationIndex, type);
     if (!entries)
         return {};
-
-    std::vector<Track> movedTracks;
-    std::vector<TrackEntry> movedGroups;
-    std::erase_if(*entries, [&](TrackEntry& entry) {
-        if (auto group = std::get_if<TrackGroup>(&entry))
-        {
-            if (groupIds.contains(group->id))
-            {
-                movedGroups.push_back(std::move(entry));
-                return true;
-            }
-            std::erase_if(group->tracks, [&](Track& track) {
-                if (!ids.contains(track.id))
-                    return false;
-                movedTracks.push_back(std::move(track));
-                return true;
-            });
-            return false;
-        }
-        auto& track = std::get<Track>(entry);
-        if (!ids.contains(track.id))
-            return false;
-        movedTracks.push_back(std::move(track));
-        return true;
-    });
-    if (movedTracks.empty() && movedGroups.empty())
+    auto taken = entries_take(*entries, [&](Track& track) { return ids.contains(track.id); }, groupIds);
+    if (taken.items.empty() && taken.groups.empty())
         return {};
 
-    auto isAfter = type == LAYER ? !isDropAfter : isDropAfter;
-    auto group_find = [&](int groupId) {
-        return std::ranges::find_if(*entries, [&](const TrackEntry& entry) {
-            auto group = std::get_if<TrackGroup>(&entry);
-            return group && group->id == groupId;
-        });
-    };
     // Where top-level items go: beside the target row, or beside the group that holds it.
+    auto isAfter = type == LAYER ? !isDropAfter : isDropAfter;
     auto topIndex = (int)entries->size();
     if (target.isGroup || target.groupId != -1)
     {
-        auto group = group_find(target.isGroup ? target.id : target.groupId);
-        if (group != entries->end())
-            topIndex = (int)(group - entries->begin()) + isAfter;
+        if (auto index = group_entry_get(*entries, target.isGroup ? target.id : target.groupId); index != -1)
+            topIndex = index + isAfter;
     }
     else if (target.type == type)
     {
@@ -128,28 +66,20 @@ Uids items_move(Model& model, int animationIndex, int type, const std::set<int>&
             topIndex = (int)(track - entries->begin()) + isAfter;
     }
 
+    // Into a group header lands just under it on screen. Beside a grouped track lands beside it.
     auto intoGroupId = target.isGroup && isDropIntoGroup ? target.id : !target.isGroup ? target.groupId : -1;
-    auto intoGroup = intoGroupId == -1 ? entries->end() : group_find(intoGroupId);
-    if (intoGroup != entries->end())
+    if (auto group = group_find(*entries, intoGroupId))
     {
-        // Into a group header lands just under it on screen. Beside a grouped track lands beside it.
-        auto& tracks = std::get<TrackGroup>(*intoGroup).tracks;
+        auto& tracks = group->items;
         auto beside = std::ranges::find_if(tracks, [&](const Track& track) { return track.id == target.id; });
         auto position = target.isGroup           ? (type == LAYER ? tracks.end() : tracks.begin())
                         : beside != tracks.end() ? beside + isAfter
                                                  : tracks.end();
-        tracks.insert(position, std::make_move_iterator(movedTracks.begin()),
-                      std::make_move_iterator(movedTracks.end()));
-        movedTracks.clear();
+        tracks.insert(position, std::make_move_iterator(taken.items.begin()),
+                      std::make_move_iterator(taken.items.end()));
+        taken.items.clear();
     }
-
-    std::vector<TrackEntry> topMoved;
-    for (auto& track : movedTracks)
-        topMoved.emplace_back(std::move(track));
-    topMoved.insert(topMoved.end(), std::make_move_iterator(movedGroups.begin()),
-                    std::make_move_iterator(movedGroups.end()));
-    entries->insert(entries->begin() + std::clamp(topIndex, 0, (int)entries->size()),
-                    std::make_move_iterator(topMoved.begin()), std::make_move_iterator(topMoved.end()));
+    entries_insert(*entries, topIndex, std::move(taken));
     return {};
 }
 

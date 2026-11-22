@@ -176,7 +176,7 @@ std::optional<Image> spritesheets_merge(Model& model, const std::set<int>& ids, 
         }
 
     for (int i = 0; i < model.animations_count_get(); ++i)
-        tracks_each(model.animation_edit(i)->layers, [&](Track& track, auto*) {
+        items_each(model.animation_edit(i)->layers, [&](Track& track, auto*) {
             auto before = layerSpritesheetBefore.find(track.id);
             if (before == layerSpritesheetBefore.end() || before->second == baseId)
                 return;

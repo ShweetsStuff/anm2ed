@@ -56,26 +56,22 @@ static void depths_bridge(Model& model)
     for (int i = 0; i < model.animations_count_get(); ++i)
     {
         auto isUsed = false;
-        tracks_each(model.animation_get(i)->layers,
-                    [&](const Track& track, auto*) { isUsed |= std::ranges::any_of(track.frames, is_depth); });
+        items_each(model.animation_get(i)->layers,
+                   [&](const Track& track, auto*) { isUsed |= std::ranges::any_of(track.frames, is_depth); });
         if (!isUsed)
             continue;
         auto& animation = *model.animation_edit(i);
 
+        // Groups dissolve, their roots and visibility baked into their tracks.
         std::vector<Track> tracks;
-        for (auto& entry : animation.layers)
-            if (auto track = std::get_if<Track>(&entry))
-                tracks.push_back(std::move(*track));
-            else
+        items_each(animation.layers, [&](Track& track, TrackGroup* group) {
+            if (group)
             {
-                auto& group = std::get<TrackGroup>(entry);
-                for (auto& groupTrack : group.tracks)
-                {
-                    track_group_root_bake(groupTrack, group.root, animation.frameNum);
-                    groupTrack.isVisible = groupTrack.isVisible && group.isVisible;
-                    tracks.push_back(std::move(groupTrack));
-                }
+                track_group_root_bake(track, group->root, animation.frameNum);
+                track.isVisible = track.isVisible && group->isVisible;
             }
+            tracks.push_back(std::move(track));
+        });
 
         // Each track's place in drawing order: (its position + depth, depth), kept in position order when equal.
         std::vector<std::pair<std::pair<int, int>, Track>> placed;

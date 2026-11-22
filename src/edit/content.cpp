@@ -31,7 +31,7 @@ template <class Callback> static void layer_frames_each(Model& model, int animat
     if (!animation)
         return;
     std::vector<std::pair<int, int>> tracks;
-    tracks_each(animation->layers, [&](const Track& track, const TrackGroup* group) {
+    items_each(animation->layers, [&](const Track& track, const TrackGroup* group) {
         if (model.layer_spritesheet_get(track.id))
             tracks.emplace_back(track.id, group ? group->id : -1);
     });
@@ -195,7 +195,7 @@ Uids content_remove(Model& model, ElementType type, const std::set<int>& ids, in
             break;
         case ElementType::REGION:
             animations_edit([&](Animation& animation, int) {
-                tracks_each(animation.layers, [&](Track& track, auto*) {
+                items_each(animation.layers, [&](Track& track, auto*) {
                     auto layer = item_get(content.layers, track.id);
                     if (!layer || layer->spritesheetId != spritesheetId)
                         return;
@@ -299,9 +299,9 @@ Uids frames_change_apply(Model& model, const ChangeTargets& targets, FrameChange
         if (targets.isRoot)
             whole_apply(animation->root);
         if (targets.isLayers)
-            tracks_each(animation->layers, [&](Track& track, auto*) { whole_apply(track); });
+            items_each(animation->layers, [&](Track& track, auto*) { whole_apply(track); });
         if (targets.isNulls)
-            tracks_each(animation->nulls, [&](Track& track, auto*) { whole_apply(track); });
+            items_each(animation->nulls, [&](Track& track, auto*) { whole_apply(track); });
     }
     return {};
 }
@@ -421,28 +421,15 @@ bool file_merge(Model& model, const std::filesystem::path& path, const std::file
         }
     };
 
+    // Tracks follow their item's new id, and go with an item that didn't come along.
     auto entries_remap = [&](std::vector<TrackEntry>& entries, ElementType type) {
-        std::vector<TrackEntry> result;
-        auto track_keep = [&](Track& track) {
+        entries_remove(entries, [&](Track& track) {
             track.id = id_remap(type, track.id);
             if (track.id < 0)
-                return false;
+                return true;
             track_remap(track);
-            return true;
-        };
-        for (auto& entry : entries)
-            if (auto track = std::get_if<Track>(&entry))
-            {
-                if (track_keep(*track))
-                    result.push_back(std::move(entry));
-            }
-            else
-            {
-                auto& group = std::get<TrackGroup>(entry);
-                std::erase_if(group.tracks, [&](Track& groupTrack) { return !track_keep(groupTrack); });
-                result.push_back(std::move(entry));
-            }
-        entries = std::move(result);
+            return false;
+        });
     };
 
     auto animation_build = [&](const Animation& incoming) {
@@ -500,16 +487,14 @@ bool file_merge(Model& model, const std::filesystem::path& path, const std::file
         for (auto [targetEntries, sourceEntries] :
              {std::pair{&target.layers, &processed.layers}, std::pair{&target.nulls, &processed.nulls}})
         {
-            auto nextGroupId = 0;
-            groups_each(*targetEntries,
-                        [&](const TrackGroup& group) { nextGroupId = std::max(nextGroupId, group.id + 1); });
+            auto nextGroupId = group_next_id(*targetEntries);
             for (auto& entry : *sourceEntries)
             {
                 if (auto group = std::get_if<TrackGroup>(&entry))
                 {
                     auto copy = *group;
                     copy.id = nextGroupId++;
-                    std::erase_if(copy.tracks, [&](const Track& track) {
+                    std::erase_if(copy.items, [&](const Track& track) {
                         auto existing = animation_track_get(target, (int)track.type, track.id);
                         if (existing && !track.frames.empty())
                             *existing = track;

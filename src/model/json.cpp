@@ -619,7 +619,7 @@ static void entries_io(Io& io, std::string_view name, Entries& entries, ItemType
                         entryIo.field("visible", item.isVisible, true);
                         frames_io(entryIo, "root", item.root.frames, ItemType::ROOT);
                         entryIo.list(
-                            name, item.tracks, [&](auto& trackIo, auto& track) { track_io(trackIo, track, type); },
+                            name, item.items, [&](auto& trackIo, auto& track) { track_io(trackIo, track, type); },
                             false);
                     }
                 },
@@ -686,7 +686,7 @@ static void animations_write(JsonWriter& io, const Model& model)
                         io.object(
                             "animations",
                             [&](JsonWriter&) {
-                                for (auto& animation : group.animations)
+                                for (auto& animation : group.items)
                                     animation_write(*animation, false);
                             },
                             false);
@@ -726,7 +726,7 @@ static void animations_read(JsonReader& io, Model& model)
                             for (auto [memberName, member] : membersIo.fields)
                                 io.object_each(member, std::format("{}{}.", membersIo.path, memberName),
                                                [&](JsonReader& animationIo) {
-                                                   group.animations.push_back(animation_read(memberName, animationIo));
+                                                   group.items.push_back(animation_read(memberName, animationIo));
                                                });
                         },
                         false);

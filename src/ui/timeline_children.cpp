@@ -24,10 +24,10 @@ std::vector<PeekRow> TimelineContext::peek_rows_get(const TimelineRow& row)
     };
     row_add(child->root);
     std::vector<const Track*> layers;
-    tracks_each(child->layers, [&](const Track& childTrack, auto*) { layers.push_back(&childTrack); });
+    items_each(child->layers, [&](const Track& childTrack, auto*) { layers.push_back(&childTrack); });
     for (auto it = layers.rbegin(); it != layers.rend(); ++it)
         row_add(**it);
-    tracks_each(child->nulls, [&](const Track& childTrack, auto*) { row_add(childTrack); });
+    items_each(child->nulls, [&](const Track& childTrack, auto*) { row_add(childTrack); });
     row_add(child->triggers);
     return rows;
 }

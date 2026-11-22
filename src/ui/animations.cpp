@@ -66,7 +66,7 @@ template <class Callback> static void animation_entries_each(const Model& model,
         {
             auto& group = std::get<AnimationGroup>(entry);
             callback(index, (const Animation*)nullptr, &group);
-            index += (int)group.animations.size();
+            index += (int)group.items.size();
         }
 }
 
@@ -439,7 +439,7 @@ static bool animation_group_draw(Panel& panel, std::set<int>& selection, std::se
 
     if (tree.isOpen)
     {
-        for (int i = 0; i < (int)group.animations.size() && !isRowsDone; ++i)
+        for (int i = 0; i < (int)group.items.size() && !isRowsDone; ++i)
             isRowsDone = row_draw(panel, selection, focus, rows, firstIndex + i, firstIndex + i, arrowKey);
         ImGui::TreePop();
     }
@@ -472,13 +472,13 @@ static void animations_merge_popup_update(Panel& panel, AnimationsPanel& animati
     animation_entries_each(document.model, [&](int index, const Animation* animation, const AnimationGroup* group) {
         if (animation)
             return candidate_animation_push(*animation, index, false);
-        auto isReferenceOnly = group->animations.size() == 1 && index == mergeReference;
-        if (group->animations.empty() || isReferenceOnly)
+        auto isReferenceOnly = group->items.size() == 1 && index == mergeReference;
+        if (group->items.empty() || isReferenceOnly)
             return;
         candidates.push_back(
             {group_key_get(group->id), group->name.empty() ? std::string(localize.get(TEXT_NEW_GROUP)) : group->name});
-        for (int i = 0; i < (int)group->animations.size(); ++i)
-            candidate_animation_push(*group->animations[i], index + i, true);
+        for (int i = 0; i < (int)group->items.size(); ++i)
+            candidate_animation_push(*group->items[i], index + i, true);
     });
 
     auto footerSize = footer_size_get();
@@ -751,7 +751,7 @@ void animations_update(Panel& panel, AnimationsPanel& animations)
                     if (animation)
                         visibleKeys.push_back(index);
                     if (group && group->isExpanded)
-                        for (int i = 0; i < (int)group->animations.size(); ++i)
+                        for (int i = 0; i < (int)group->items.size(); ++i)
                             visibleKeys.push_back(index + i);
                 });
 

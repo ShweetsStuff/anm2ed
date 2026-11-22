@@ -116,7 +116,7 @@ static void animation_triggers_add(std::vector<TriggerFire>& fires, const Model&
             fires.push_back({&model, std::move(trigger), layerId});
 
     // A child fires the trigger of each frame it reaches: when its frame (or animation) changes from the parent's last.
-    tracks_each(animation.layers, [&](const Track& track, const TrackGroup* group) {
+    items_each(animation.layers, [&](const Track& track, const TrackGroup* group) {
         auto layer = item_get(model.content.layers, track.id);
         if (!layer || !layer->is_animation() || !track.isVisible || (group && !group->isVisible))
             return;
@@ -154,7 +154,7 @@ std::vector<TriggerFire> animation_triggers_get(const Model& model, const Animat
 std::optional<Mat4> layer_child_transform_get(const Animation& animation, int layerId, float time, bool isRootTransform)
 {
     std::optional<Mat4> transform{};
-    tracks_each(animation.layers, [&](const Track& track, const TrackGroup* group) {
+    items_each(animation.layers, [&](const Track& track, const TrackGroup* group) {
         if (track.id != layerId || transform)
             return;
         Mat4 parent(1.0f);
@@ -272,7 +272,7 @@ static std::vector<Draw> animation_draws_get(const Model& model, const Animation
                 continue;
             if (group.root.isVisible)
                 track_draws_add(group.root, DrawType::GROUP_ROOT, group.id, type, &group);
-            for (auto& groupTrack : group.tracks)
+            for (auto& groupTrack : group.items)
                 track_add(groupTrack, &group);
         }
     }
