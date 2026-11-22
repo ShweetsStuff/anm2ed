@@ -5,6 +5,8 @@
 #include "vec.h"
 #include <imgui/imgui.h>
 
+#include "localization.h"
+
 constexpr ImVec2 to_imvec2(const Vec2& v) noexcept
 {
     return {v.x, v.y};
@@ -45,3 +47,8 @@ ImVec2 size_without_footer_get(int = 1);
 ImVec2 child_size_get(int = 1);
 ImVec2 icon_size_get();
 void set_item_tooltip_shortcut(const char*, const std::string& = {});
+
+inline void tooltip_set(StringType type)
+{
+    ImGui::SetItemTooltip("%s", localize.get(type));
+}

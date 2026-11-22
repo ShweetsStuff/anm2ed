@@ -1,4 +1,5 @@
 #include "ui/timeline_context.h"
+#include "ui/layout.h"
 
 // Moves the dragged frames to `target`'s track, before its frame index.
 void TimelineContext::frames_move_to(Reference target)
@@ -903,7 +904,7 @@ void TimelineContext::frames_child()
             }
             if (ImGui::IsItemDeactivated())
                 animationLengthEditIndex = -1;
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ANIMATION_LENGTH));
+            tooltip_set(TOOLTIP_ANIMATION_LENGTH);
 
             ImGui::SameLine();
 
@@ -917,7 +918,7 @@ void TimelineContext::frames_child()
                         animation->isLoop = isLoop;
                 });
             }
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LOOP_ANIMATION));
+            tooltip_set(TOOLTIP_LOOP_ANIMATION);
         }
         ImGui::EndDisabled();
 
@@ -927,7 +928,7 @@ void TimelineContext::frames_child()
         ImGui::SetNextItemWidth(widgetSize.x);
         if (input_int_range(localize.get(LABEL_FPS), fps, FPS_MIN, FPS_MAX))
             edit_push(EDIT_FPS, [=](Model& model) { model.info.fps = fps; });
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FPS));
+        tooltip_set(TOOLTIP_FPS);
 
         ImGui::SameLine();
 
@@ -935,13 +936,13 @@ void TimelineContext::frames_child()
         ImGui::SetNextItemWidth(widgetSize.x);
         if (input_text_string(localize.get(LABEL_AUTHOR), &createdBy))
             edit_push(EDIT_AUTHOR, [=](Model& model) { model.info.createdBy = createdBy; });
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_AUTHOR));
+        tooltip_set(TOOLTIP_AUTHOR);
 
         ImGui::SameLine();
 
         ImGui::SetNextItemWidth(widgetSize.x);
         ImGui::Checkbox(localize.get(LABEL_SOUND), &settings.timelineIsSound);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SOUND));
+        tooltip_set(TOOLTIP_SOUND);
 
         ImGui::PopStyleVar();
     }

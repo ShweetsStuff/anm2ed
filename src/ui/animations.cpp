@@ -455,8 +455,7 @@ static void animations_merge_popup_update(Panel& panel, AnimationsPanel& animati
     auto& mergeSelection = animations.mergeSelection;
     auto mergeReference = animations.mergeReference;
 
-    popup.trigger();
-    if (!ImGui::BeginPopupModal(popup.label(), &popup.isOpen, ImGuiWindowFlags_NoResize))
+    if (!popup.begin())
         return popup.end();
 
     struct AnimationMergeCandidate
@@ -686,57 +685,54 @@ void animations_update(Panel& panel, AnimationsPanel& animations)
                 animations.mergePopup.open();
             };
 
-        ListRows rows{
-            .label_get = [&](int index) { return model.animation_get(index)->name; },
-            .name_get = [&](int index) { return model.animation_get(index)->name; },
-            .rename =
-                [&](int index, const std::string& name) {
-                    command_push(panel, [index, name](Document& document) {
-                        document.edit_apply(SNAPSHOT_RENAME_ANIMATION, [&](Model& model) {
-                            auto animation = model.animation_edit(index);
-                            if (!animation)
-                                return;
-                            if (model.animations_count_get() == 1)
-                                model.animations.defaultAnimation = name;
-                            animation->name = name;
-                        });
-                    });
-                },
-            .font_get =
-                [&](int index) {
-                    auto animation = model.animation_get(index);
-                    auto isDefault = animation && model.animations.defaultAnimation == animation->name;
-                    auto isFocused = document.reference_get().animationIndex == index;
-                    return isDefault && isFocused ? FONT_BOLD_ITALICS
-                           : isDefault            ? FONT_BOLD
-                           : isFocused            ? FONT_ITALICS
-                                                  : FONT_REGULAR;
-                },
-            .tooltip_draw =
-                [&](int index) {
-                    auto& animation = *model.animation_get(index);
-                    tooltip_name_draw(resources, animation.name);
-                    if (model.animations.defaultAnimation == animation.name)
-                    {
-                        ImGui::PushFont(resources.fonts[FONT_ITALICS], FONT_SIZE);
-                        ImGui::TextUnformatted(localize.get(BASIC_DEFAULT));
-                        ImGui::PopFont();
-                    }
-                    ImGui::TextUnformatted(
-                        std::vformat(localize.get(FORMAT_LENGTH), std::make_format_args(animation.frameNum)).c_str());
-                    auto loopLabel = localize.get(animation.isLoop ? BASIC_YES : BASIC_NO);
-                    ImGui::TextUnformatted(
-                        std::vformat(localize.get(FORMAT_LOOP), std::make_format_args(loopLabel)).c_str());
-                },
-            .select =
-                [&](int index) {
-                    auto& io = ImGui::GetIO();
-                    if (!io.KeyCtrl && !io.KeyShift)
-                        groupSelection.clear();
-                    document.reference_set({index});
-                    document.frame_references_clear();
-                },
-            .drag_drop_update = [&](int index, int) { return animation_row_drag_drop_update(panel, index); }};
+        ListRows rows{.label_get = [&](int index) { return model.animation_get(index)->name; },
+                      .name_get = [&](int index) { return model.animation_get(index)->name; },
+                      .rename =
+                          [&](int index, const std::string& name) {
+                              command_push(panel, [index, name](Document& document) {
+                                  document.edit_apply(SNAPSHOT_RENAME_ANIMATION, [&](Model& model) {
+                                      auto animation = model.animation_edit(index);
+                                      if (!animation)
+                                          return;
+                                      if (model.animations_count_get() == 1)
+                                          model.animations.defaultAnimation = name;
+                                      animation->name = name;
+                                  });
+                              });
+                          },
+                      .font_get =
+                          [&](int index) {
+                              auto animation = model.animation_get(index);
+                              auto isDefault = animation && model.animations.defaultAnimation == animation->name;
+                              auto isFocused = document.reference_get().animationIndex == index;
+                              return isDefault && isFocused ? FONT_BOLD_ITALICS
+                                     : isDefault            ? FONT_BOLD
+                                     : isFocused            ? FONT_ITALICS
+                                                            : FONT_REGULAR;
+                          },
+                      .tooltip_draw =
+                          [&](int index) {
+                              auto& animation = *model.animation_get(index);
+                              tooltip_name_draw(resources, animation.name);
+                              if (model.animations.defaultAnimation == animation.name)
+                              {
+                                  ImGui::PushFont(resources.fonts[FONT_ITALICS], FONT_SIZE);
+                                  ImGui::TextUnformatted(localize.get(BASIC_DEFAULT));
+                                  ImGui::PopFont();
+                              }
+                              ImGui::TextUnformatted(localize_format(FORMAT_LENGTH, animation.frameNum).c_str());
+                              auto loopLabel = localize.get(animation.isLoop ? BASIC_YES : BASIC_NO);
+                              ImGui::TextUnformatted(localize_format(FORMAT_LOOP, loopLabel).c_str());
+                          },
+                      .select =
+                          [&](int index) {
+                              auto& io = ImGui::GetIO();
+                              if (!io.KeyCtrl && !io.KeyShift)
+                                  groupSelection.clear();
+                              document.reference_set({index});
+                              document.frame_references_clear();
+                          },
+                      .drag_drop_update = [&](int index, int) { return animation_row_drag_drop_update(panel, index); }};
 
         list_panel_draw(
             panel, actions, {{ACTION_ADD, ACTION_DUPLICATE, ACTION_MERGE, ACTION_REMOVE, ACTION_DEFAULT}},

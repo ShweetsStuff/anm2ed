@@ -1,4 +1,5 @@
 #include "ui/timeline_context.h"
+#include "ui/layout.h"
 
 constexpr StringType FRAME_PROPERTY_LABELS[] = {
     BASIC_POSITION, BASIC_SCALE, BASIC_ROTATION,     BASIC_SKEW,    BASIC_PIVOT,        BASIC_CROP,     BASIC_SIZE,
@@ -239,9 +240,7 @@ void TimelineContext::group_properties_open(const TimelineRow& row, const TrackG
 
 void TimelineContext::group_properties_update()
 {
-    groupPropertiesPopup.trigger();
-
-    if (ImGui::BeginPopupModal(groupPropertiesPopup.label(), &groupPropertiesPopup.isOpen, ImGuiWindowFlags_NoResize))
+    if (groupPropertiesPopup.begin())
     {
         auto childSize = child_size_get(1);
         if (ImGui::BeginChild("##Group Properties Child", childSize, ImGuiChildFlags_Borders))
@@ -249,7 +248,7 @@ void TimelineContext::group_properties_update()
             if (groupPropertiesPopup.isJustOpened)
                 ImGui::SetKeyboardFocusHere();
             input_text_string(localize.get(BASIC_NAME), &groupName);
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ITEM_NAME));
+            tooltip_set(TOOLTIP_ITEM_NAME);
         }
         ImGui::EndChild();
 

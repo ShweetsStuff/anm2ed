@@ -114,7 +114,7 @@ static void shader_status_format_append(std::string* status, StringType format, 
     if (!status)
         return;
     auto argumentString = std::string(localize.get(argument));
-    *status += std::vformat(localize.get(format), std::make_format_args(argumentString)) + "\n";
+    *status += localize_format(format, argumentString) + "\n";
 }
 
 static bool shader_source_load(Document& document, const std::filesystem::path& shaderPath, std::string& source,
@@ -138,7 +138,7 @@ static bool shader_source_load(Document& document, const std::filesystem::path& 
     if (status)
     {
         auto pathString = path_to_utf8(shaderPath);
-        *status += std::vformat(localize.get(LABEL_SHADER_READ_FAILED), std::make_format_args(pathString)) + "\n";
+        *status += localize_format(LABEL_SHADER_READ_FAILED, pathString) + "\n";
     }
     return false;
 }
@@ -976,7 +976,7 @@ Choices Document::choices_get(SelectionKind kind, int layerId) const
     auto path_label_get = [](StringType format) {
         return [format](const auto& item) {
             auto pathString = path_to_utf8(item.path);
-            return std::vformat(localize.get(format), std::make_format_args(item.id, pathString));
+            return localize_format(format, item.id, pathString);
         };
     };
     auto& content = model.content;

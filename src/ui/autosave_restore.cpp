@@ -15,9 +15,7 @@ void AutosaveRestore::update(Manager& manager)
             popup.open();
     }
 
-    popup.trigger();
-
-    if (isRestoreAvailable && ImGui::BeginPopupModal(popup.label(), &popup.isOpen, ImGuiWindowFlags_NoResize))
+    if (isRestoreAvailable && popup.begin())
     {
         ImGui::TextUnformatted(localize.get(LABEL_RESTORE_AUTOSAVES_PROMPT));
 

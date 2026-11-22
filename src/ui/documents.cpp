@@ -201,9 +201,7 @@ void Documents::update(Taskbar& taskbar, Manager& manager, Settings& settings, R
                 auto isRequested = i == manager.pendingSelected;
                 auto font = isDocumentDirty ? FONT_ITALICS : FONT_REGULAR;
                 auto filename = path_to_utf8(document.filename_get());
-                auto string = isDocumentDirty
-                                  ? std::vformat(localize.get(FORMAT_NOT_SAVED), std::make_format_args(filename))
-                                  : filename;
+                auto string = isDocumentDirty ? localize_format(FORMAT_NOT_SAVED, filename) : filename;
                 auto label = std::format("{}###Document{}", string, document.tabId);
                 auto imguiId = ImGui::GetCurrentWindow()->GetID(label.c_str());
                 documentTabs.push_back({imguiId, document.tabId});
@@ -266,9 +264,7 @@ void Documents::update(Taskbar& taskbar, Manager& manager, Settings& settings, R
             ImGui::EndTabBar();
         }
 
-        closePopup.trigger();
-
-        if (ImGui::BeginPopupModal(closePopup.label(), &closePopup.isOpen, ImGuiWindowFlags_NoResize))
+        if (closePopup.begin())
         {
             if (closeDocumentIndex >= 0 && closeDocumentIndex < (int)manager.documents.size())
             {
@@ -281,7 +277,7 @@ void Documents::update(Taskbar& taskbar, Manager& manager, Settings& settings, R
                     isDocumentDirty && isSpritesheetDirty
                         ? LABEL_DOCUMENT_AND_SPRITESHEETS_MODIFIED_PROMPT
                         : (isDocumentDirty ? LABEL_DOCUMENT_MODIFIED_PROMPT : LABEL_SPRITESHEETS_MODIFIED_PROMPT);
-                auto prompt = std::vformat(localize.get(promptLabel), std::make_format_args(filename));
+                auto prompt = localize_format(promptLabel, filename);
                 ImGui::TextUnformatted(prompt.c_str());
 
                 auto widgetSize = widget_size_with_row_get(3);
@@ -374,10 +370,7 @@ void Documents::update(Taskbar& taskbar, Manager& manager, Settings& settings, R
             drag_drop_reset();
         else if (manager.anm2DragDropMergePopup.is_open())
         {
-            manager.anm2DragDropMergePopup.trigger();
-
-            if (ImGui::BeginPopupModal(manager.anm2DragDropMergePopup.label(), &manager.anm2DragDropMergePopup.isOpen,
-                                       ImGuiWindowFlags_NoResize))
+            if (manager.anm2DragDropMergePopup.begin())
             {
                 auto document = manager.get();
                 manager.anm2DragDropMergePreset =
@@ -388,7 +381,7 @@ void Documents::update(Taskbar& taskbar, Manager& manager, Settings& settings, R
                     ImGui::PushID(preset);
                     ImGui::RadioButton(localize.get(ANM2_DRAG_DROP_MERGE_PRESET_LABELS[preset]),
                                        &manager.anm2DragDropMergePreset, preset);
-                    ImGui::SetItemTooltip("%s", localize.get(ANM2_DRAG_DROP_MERGE_PRESET_TOOLTIPS[preset]));
+                    tooltip_set(ANM2_DRAG_DROP_MERGE_PRESET_TOOLTIPS[preset]);
                     ImGui::PopID();
                 }
 
@@ -459,7 +452,7 @@ void Documents::update(Taskbar& taskbar, Manager& manager, Settings& settings, R
                          }});
                     drag_drop_reset();
                 }
-                ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LIBRARY_ADD));
+                tooltip_set(TOOLTIP_LIBRARY_ADD);
 
                 ImGui::Separator();
 

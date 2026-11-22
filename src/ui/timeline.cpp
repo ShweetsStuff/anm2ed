@@ -1,4 +1,5 @@
 #include "ui/timeline_context.h"
+#include "ui/layout.h"
 
 Timeline::Timeline() = default;
 Timeline::~Timeline() = default;
@@ -64,8 +65,7 @@ void TimelineContext::draw()
 
 void TimelineContext::popups_update()
 {
-    makeManyRegionsPopup.trigger();
-    if (ImGui::BeginPopupModal(makeManyRegionsPopup.label(), &makeManyRegionsPopup.isOpen, ImGuiWindowFlags_NoResize))
+    if (makeManyRegionsPopup.begin())
     {
         input_text_string(localize.get(LABEL_FORMAT), &settings.generateRegionNameFormat);
         ImGui::Checkbox(localize.get(LABEL_MAP_FRAMES_TO_REGIONS), &isMakeManyRegionsMapFrames);
@@ -83,9 +83,7 @@ void TimelineContext::popups_update()
     }
     makeManyRegionsPopup.end();
 
-    bakePopup.trigger();
-
-    if (ImGui::BeginPopupModal(bakePopup.label(), &bakePopup.isOpen, ImGuiWindowFlags_NoResize))
+    if (bakePopup.begin())
     {
         auto& interval = settings.bakeInterval;
         auto& isRoundRotation = settings.bakeIsRoundRotation;
@@ -95,13 +93,13 @@ void TimelineContext::popups_update()
 
         input_int_range(localize.get(LABEL_INTERVAL), interval, FRAME_DURATION_MIN,
                         frame ? frame->duration : FRAME_DURATION_MIN);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_INTERVAL));
+        tooltip_set(TOOLTIP_INTERVAL);
 
         ImGui::Checkbox(localize.get(LABEL_ROUND_ROTATION), &isRoundRotation);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ROUND_ROTATION));
+        tooltip_set(TOOLTIP_ROUND_ROTATION);
 
         ImGui::Checkbox(localize.get(LABEL_ROUND_SCALE), &isRoundScale);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ROUND_SCALE));
+        tooltip_set(TOOLTIP_ROUND_SCALE);
 
         auto widgetSize = widget_size_with_row_get(2);
 
@@ -111,22 +109,19 @@ void TimelineContext::popups_update()
             frames_bake();
             bakePopup.close();
         }
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BAKE_FRAMES_OPTIONS));
+        tooltip_set(TOOLTIP_BAKE_FRAMES_OPTIONS);
 
         ImGui::SameLine();
 
         shortcut(manager.chords[SHORTCUT_CANCEL]);
         if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize))
             bakePopup.close();
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CANCEL_BAKE_FRAMES));
+        tooltip_set(TOOLTIP_CANCEL_BAKE_FRAMES);
 
         ImGui::EndPopup();
     }
 
-    bakeIntoOtherFramesPopup.trigger();
-
-    if (ImGui::BeginPopupModal(bakeIntoOtherFramesPopup.label(), &bakeIntoOtherFramesPopup.isOpen,
-                               ImGuiWindowFlags_NoResize))
+    if (bakeIntoOtherFramesPopup.begin())
     {
         auto& isRoundRotation = settings.bakeIsRoundRotation;
         auto& isRoundScale = settings.bakeIsRoundScale;
@@ -135,10 +130,10 @@ void TimelineContext::popups_update()
         int target = (int)bakeIntoOtherFramesTarget;
         ImGui::RadioButton(localize.get(LABEL_CURRENT_SELECTION), &target,
                            (int)BakeIntoOtherFramesTarget::CURRENT_SELECTION);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BAKE_INTO_OTHER_FRAMES_CURRENT_SELECTION));
+        tooltip_set(TOOLTIP_BAKE_INTO_OTHER_FRAMES_CURRENT_SELECTION);
         ImGui::SameLine();
         ImGui::RadioButton(localize.get(LABEL_ALL), &target, (int)BakeIntoOtherFramesTarget::ALL);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BAKE_INTO_OTHER_FRAMES_ALL));
+        tooltip_set(TOOLTIP_BAKE_INTO_OTHER_FRAMES_ALL);
         bakeIntoOtherFramesTarget = (BakeIntoOtherFramesTarget)target;
 
         auto isCurrentSelection = bakeIntoOtherFramesTarget == BakeIntoOtherFramesTarget::CURRENT_SELECTION;
@@ -149,16 +144,16 @@ void TimelineContext::popups_update()
         ImGui::EndDisabled();
 
         ImGui::Checkbox(localize.get(LABEL_ROUND_ROTATION), &isRoundRotation);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ROUND_ROTATION));
+        tooltip_set(TOOLTIP_ROUND_ROTATION);
 
         ImGui::Checkbox(localize.get(LABEL_ROUND_SCALE), &isRoundScale);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ROUND_SCALE));
+        tooltip_set(TOOLTIP_ROUND_SCALE);
 
         ImGui::Checkbox(localize.get(LABEL_BAKE_MATCH_ROOT_INTERPOLATION), &isMatchRootInterpolation);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BAKE_MATCH_ROOT_INTERPOLATION));
+        tooltip_set(TOOLTIP_BAKE_MATCH_ROOT_INTERPOLATION);
 
         ImGui::Checkbox(localize.get(LABEL_BAKE_USE_ROOT_PIVOT), &isUseRootPivot);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BAKE_USE_ROOT_PIVOT));
+        tooltip_set(TOOLTIP_BAKE_USE_ROOT_PIVOT);
 
         auto widgetSize = widget_size_with_row_get(2);
 
@@ -176,7 +171,7 @@ void TimelineContext::popups_update()
         shortcut(manager.chords[SHORTCUT_CANCEL]);
         if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize))
             bakeIntoOtherFramesPopup.close();
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CANCEL_BAKE_FRAMES));
+        tooltip_set(TOOLTIP_CANCEL_BAKE_FRAMES);
 
         ImGui::EndPopup();
     }

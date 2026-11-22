@@ -100,7 +100,7 @@ static void action_items_menu_draw(std::vector<Action>& items, Settings& setting
         if (ImGui::MenuItem(localize.get(action.label), shortcutLabel, false, is_action_enabled(action)) && action.run)
             action.run();
         if (action.tooltip != STRING_UNDEFINED && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-            ImGui::SetItemTooltip("%s", localize.get(action.tooltip));
+            tooltip_set(action.tooltip);
     }
 }
 
@@ -161,7 +161,7 @@ void action_button_draw(Action& action, Manager& manager, Settings& settings, Im
     {
         auto shortcutText = action_shortcut_text_get(action, settings);
         if (shortcutText.empty())
-            ImGui::SetItemTooltip("%s", localize.get(action.tooltip));
+            tooltip_set(action.tooltip);
         else
             set_item_tooltip_shortcut(localize.get(action.tooltip), shortcutText);
     }

@@ -132,7 +132,7 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                                        document.frame_references_set({reference});
                                    });
                     }
-                    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TRIGGER_AT_FRAME));
+                    tooltip_set(TOOLTIP_TRIGGER_AT_FRAME);
 
                     if (ImGui::Checkbox(localize.get(BASIC_VISIBLE),
                                         frame ? &useFrame.isVisible : &dummy_value<bool>()) &&
@@ -144,7 +144,7 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                                        frame.isVisible = isVisible;
                                    });
                     }
-                    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TRIGGER_VISIBILITY));
+                    tooltip_set(TOOLTIP_TRIGGER_VISIBILITY);
 
                     // A trigger's events or sounds: a combo for each, then Add and Remove (the last).
                     auto trigger_ids_draw = [&](StringType label, std::vector<int> Frame::* member,
@@ -164,7 +164,7 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                                                    if (index < (frame.*member).size())
                                                        (frame.*member)[index] = id;
                                                });
-                                ImGui::SetItemTooltip("%s", localize.get(tooltip));
+                                tooltip_set(tooltip);
                                 ImGui::PopID();
                             }
                         ImGui::EndChild();
@@ -175,7 +175,7 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                                        [member](Document&, Frame& frame, Track*, const Reference&) {
                                            (frame.*member).push_back(-1);
                                        });
-                        ImGui::SetItemTooltip("%s", localize.get(addTooltip));
+                        tooltip_set(addTooltip);
                         ImGui::SameLine();
                         ImGui::BeginDisabled((useFrame.*member).empty());
                         if (ImGui::Button(localize.get(BASIC_REMOVE), widgetSize) && frame)
@@ -184,7 +184,7 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                                            if (!(frame.*member).empty())
                                                (frame.*member).pop_back();
                                        });
-                        ImGui::SetItemTooltip("%s", localize.get(removeTooltip));
+                        tooltip_set(removeTooltip);
                         ImGui::EndDisabled();
                         ImGui::PopID();
                     };
@@ -219,7 +219,7 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                                    [value, member = field.member](Document&, Frame& frame, Track*, const Reference&) {
                                        frame.*member = value;
                                    });
-                        ImGui::SetItemTooltip("%s", localize.get(field.tooltip));
+                        tooltip_set(field.tooltip);
                         ImGui::EndDisabled();
                     }
 
@@ -230,7 +230,7 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                                [rotation = useFrame.rotation](Document&, Frame& frame, Track*, const Reference&) {
                                    frame.rotation = rotation;
                                });
-                    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ROTATION));
+                    tooltip_set(TOOLTIP_ROTATION);
 
                     if (input_int_range(localize.get(BASIC_DURATION), frame ? useFrame.duration : dummy_value<int>(),
                                         frame ? FRAME_DURATION_MIN : 0, FRAME_DURATION_MAX, STEP, STEP_FAST,
@@ -243,7 +243,7 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                                        frame.duration = duration;
                                    });
                     }
-                    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_DURATION));
+                    tooltip_set(TOOLTIP_DURATION);
 
                     ImGui::BeginDisabled(type != LAYER);
                     if (input_int_range(localize.get(BASIC_DEPTH),
@@ -256,7 +256,7 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                         frame_edit(EDIT_STATE_COMPLETE, EDIT_FRAME_DEPTH,
                                    [depth](Document&, Frame& frame, Track*, const Reference&) { frame.depth = depth; });
                     }
-                    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_DEPTH));
+                    tooltip_set(TOOLTIP_DEPTH);
                     ImGui::EndDisabled();
 
                     auto tintEdit =
@@ -265,7 +265,7 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                                [tint = useFrame.tint](Document&, Frame& frame, Track*, const Reference&) {
                                    frame.tint = tint;
                                });
-                    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TINT));
+                    tooltip_set(TOOLTIP_TINT);
 
                     auto colorOffsetEdit = color_edit4_persistent(localize.get(BASIC_COLOR_OFFSET),
                                                                   frame ? &useFrame.colorOffset : &dummy_value<Vec4>());
@@ -273,7 +273,7 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                                [colorOffset = useFrame.colorOffset](Document&, Frame& frame, Track*, const Reference&) {
                                    frame.colorOffset = colorOffset;
                                });
-                    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_COLOR_OFFSET));
+                    tooltip_set(TOOLTIP_COLOR_OFFSET);
 
                     ImGui::BeginDisabled(type != LAYER);
                     auto blurEdit = drag_float_persistent(
@@ -283,7 +283,7 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                                [blur = useFrame.blur](Document&, Frame& frame, Track*, const Reference&) {
                                    frame.blur = std::clamp(blur, 0.0f, FRAME_BLUR_MAX);
                                });
-                    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BLUR));
+                    tooltip_set(TOOLTIP_BLUR);
                     ImGui::EndDisabled();
 
                     ImGui::BeginDisabled(type != LAYER || isAnimationLayer);
@@ -302,7 +302,7 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                                        frame.pivot = effectiveFrame.pivot;
                                    });
                     }
-                    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_REGION));
+                    tooltip_set(TOOLTIP_REGION);
                     ImGui::EndDisabled();
 
                     auto interpolationValue = frame ? static_cast<int>(useFrame.interpolation) : dummy_value<int>();
@@ -313,7 +313,7 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                                    [interpolationValue](Document&, Frame& frame, Track*, const Reference&) {
                                        frame.interpolation = static_cast<Interpolation>(interpolationValue);
                                    });
-                    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FRAME_INTERPOLATION));
+                    tooltip_set(TOOLTIP_FRAME_INTERPOLATION);
 
                     ImGui::BeginDisabled(type != LAYER || isAnimationLayer);
                     if (combo_id_mapped(localize.get(BASIC_SHADER),
@@ -327,7 +327,7 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                                        frame.shaderId = shaderId;
                                    });
                     }
-                    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FRAME_SHADER));
+                    tooltip_set(TOOLTIP_FRAME_SHADER);
                     ImGui::EndDisabled();
 
                     if (ImGui::Checkbox(localize.get(BASIC_VISIBLE),
@@ -340,7 +340,7 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                                        frame.isVisible = isVisible;
                                    });
                     }
-                    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FRAME_VISIBILITY));
+                    tooltip_set(TOOLTIP_FRAME_VISIBILITY);
 
                     auto widgetSize = widget_size_with_row_get(2);
 
@@ -356,7 +356,7 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                                            if (isPositionFlipped)
                                                frame.position[axis] = -frame.position[axis];
                                        });
-                        ImGui::SetItemTooltip("%s", localize.get(FLIP_BUTTONS[axis].tooltip));
+                        tooltip_set(FLIP_BUTTONS[axis].tooltip);
                     }
 
                     if (isAnimationLayer && frame)
@@ -368,7 +368,7 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                         labels.insert(labels.begin(), localize.get(TEXT_LAYER_ANIMATION));
                         bool isChildChanged = combo_string_mapped(localize.get(LABEL_ANIMATION),
                                                                   &useFrame.childAnimation, values, labels);
-                        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHILD_ANIMATION));
+                        tooltip_set(TOOLTIP_CHILD_ANIMATION);
 
                         std::vector<const char*> modeLabels;
                         for (auto label : CHILD_MODE_LABELS)
@@ -379,19 +379,19 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                             useFrame.childMode = (ChildMode)mode;
                             isChildChanged = true;
                         }
-                        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHILD_MODE));
+                        tooltip_set(TOOLTIP_CHILD_MODE);
 
                         ImGui::BeginDisabled(useFrame.isChildStartRandom);
                         isChildChanged |= input_int_range(localize.get(LABEL_START_FRAME), useFrame.childStart, 0,
                                                           FRAME_NUM_MAX, STEP, STEP_FAST);
-                        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHILD_START));
+                        tooltip_set(TOOLTIP_CHILD_START);
                         ImGui::EndDisabled();
 
                         isChildChanged |= ImGui::Checkbox(localize.get(LABEL_RANDOM), &useFrame.isChildStartRandom);
-                        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHILD_START_RANDOM));
+                        tooltip_set(TOOLTIP_CHILD_START_RANDOM);
                         ImGui::SameLine();
                         isChildChanged |= ImGui::Checkbox(localize.get(LABEL_RESTART), &useFrame.isChildRestart);
-                        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHILD_RESTART));
+                        tooltip_set(TOOLTIP_CHILD_RESTART);
 
                         if (isChildChanged)
                             frame_edit(EDIT_STATE_COMPLETE, EDIT_FRAME_CHILD,

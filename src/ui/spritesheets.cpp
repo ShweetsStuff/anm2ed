@@ -117,8 +117,7 @@ static void spritesheets_merge_popup_update(Panel& panel, SpritesheetsPanel& spr
 {
     auto& [manager, settings, resources, dialog, clipboard, document, state] = panel;
     auto& popup = spritesheets.mergePopup;
-    popup.trigger();
-    if (!ImGui::BeginPopupModal(popup.label(), &popup.isOpen, ImGuiWindowFlags_NoResize))
+    if (!popup.begin())
         return popup.end();
 
     settings.mergeSpritesheetsRegionOrigin =
@@ -128,20 +127,20 @@ static void spritesheets_merge_popup_update(Panel& panel, SpritesheetsPanel& spr
         ImGui::SeparatorText(localize.get(LABEL_REGION_PROPERTIES_ORIGIN));
         ImGui::RadioButton(localize.get(LABEL_MERGE_SPRITESHEETS_APPEND_BOTTOM), &settings.mergeSpritesheetsOrigin,
                            APPEND_BOTTOM);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_MERGE_SPRITESHEETS_BOTTOM_LEFT));
+        tooltip_set(TOOLTIP_MERGE_SPRITESHEETS_BOTTOM_LEFT);
         ImGui::SameLine();
         ImGui::RadioButton(localize.get(LABEL_MERGE_SPRITESHEETS_APPEND_RIGHT), &settings.mergeSpritesheetsOrigin,
                            APPEND_RIGHT);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_MERGE_SPRITESHEETS_TOP_RIGHT));
+        tooltip_set(TOOLTIP_MERGE_SPRITESHEETS_TOP_RIGHT);
 
         ImGui::SeparatorText(localize.get(LABEL_OPTIONS));
         ImGui::Checkbox(localize.get(LABEL_MERGE_MAKE_SPRITESHEET_REGIONS), &settings.mergeSpritesheetsIsMakeRegions);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_MERGE_MAKE_SPRITESHEET_REGIONS));
+        tooltip_set(TOOLTIP_MERGE_MAKE_SPRITESHEET_REGIONS);
 
         ImGui::BeginDisabled(!settings.mergeSpritesheetsIsMakeRegions);
         ImGui::Checkbox(localize.get(LABEL_MERGE_MAKE_PRIMARY_SPRITESHEET_REGION),
                         &settings.mergeSpritesheetsIsMakePrimaryRegion);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_MERGE_MAKE_PRIMARY_SPRITESHEET_REGION));
+        tooltip_set(TOOLTIP_MERGE_MAKE_PRIMARY_SPRITESHEET_REGION);
         const char* regionOriginOptions[] = {localize.get(LABEL_REGION_ORIGIN_TOP_LEFT),
                                              localize.get(LABEL_REGION_ORIGIN_CENTER)};
         ImGui::Combo(localize.get(LABEL_REGION_PROPERTIES_ORIGIN), &settings.mergeSpritesheetsRegionOrigin,
@@ -180,8 +179,7 @@ static void spritesheets_pack_popup_update(Panel& panel, SpritesheetsPanel& spri
 {
     auto& [manager, settings, resources, dialog, clipboard, document, state] = panel;
     auto& popup = spritesheets.packPopup;
-    popup.trigger();
-    if (!ImGui::BeginPopupModal(popup.label(), &popup.isOpen, ImGuiWindowFlags_NoResize))
+    if (!popup.begin())
         return popup.end();
 
     settings.packPadding = std::max(0, settings.packPadding);
@@ -206,8 +204,7 @@ static void spritesheets_pack_popup_update(Panel& panel, SpritesheetsPanel& spri
 static void spritesheets_overwrite_popup_update(Panel& panel, SpritesheetsPanel& spritesheets)
 {
     auto& popup = spritesheets.overwritePopup;
-    popup.trigger();
-    if (!ImGui::BeginPopupModal(popup.label(), &popup.isOpen, ImGuiWindowFlags_NoResize))
+    if (!popup.begin())
         return popup.end();
 
     ImGui::TextUnformatted(localize.get(LABEL_OVERWRITE_CONFIRMATION));
@@ -302,40 +299,38 @@ void spritesheets_update(Panel& panel, SpritesheetsPanel& spritesheets)
             auto& image = isValid ? *texture : resources.icons[ICON_NONE];
             return CardImage{.texture = &image, .size = Vec2(image.size), .isValid = isValid};
         };
-        ListRows rows{
-            .label_get =
-                [&](int id) {
-                    auto pathString = path_to_utf8(spritesheet_get(document, id)->path);
-                    auto label = std::vformat(localize.get(FORMAT_SPRITESHEET), std::make_format_args(id, pathString));
-                    return document.spritesheet_is_dirty(id)
-                               ? std::vformat(localize.get(FORMAT_SPRITESHEET_NOT_SAVED), std::make_format_args(label))
-                               : label;
-                },
-            .tooltip_draw =
-                [&](int id) {
-                    auto image = image_get(id);
-                    tooltip_image_draw(image, [&]() {
-                        tooltip_name_draw(resources, path_to_utf8(spritesheet_get(document, id)->path));
-                        ImGui::TextUnformatted(
-                            std::vformat(localize.get(FORMAT_ID), std::make_format_args(id)).c_str());
-                        if (image.isValid)
-                            ImGui::TextUnformatted(
-                                std::vformat(localize.get(FORMAT_TEXTURE_SIZE),
-                                             std::make_format_args(image.texture->size.x, image.texture->size.y))
-                                    .c_str());
-                        else
-                            ImGui::TextUnformatted(localize.get(TOOLTIP_SPRITESHEET_INVALID));
-                        ImGui::TextUnformatted(localize.get(TEXT_OPEN_DIRECTORY));
-                    });
-                },
-            .image_get = image_get,
-            .select =
-                [&](int) {
-                    document.editTarget = Document::EditTarget::SPRITESHEET;
-                    document.selected_clear(SelectionKind::REGIONS);
-                },
-            .activate = open,
-            .cardLines = SPRITESHEET_CARD_LINES};
+        ListRows rows{.label_get =
+                          [&](int id) {
+                              auto pathString = path_to_utf8(spritesheet_get(document, id)->path);
+                              auto label = localize_format(FORMAT_SPRITESHEET, id, pathString);
+                              return document.spritesheet_is_dirty(id)
+                                         ? localize_format(FORMAT_SPRITESHEET_NOT_SAVED, label)
+                                         : label;
+                          },
+                      .tooltip_draw =
+                          [&](int id) {
+                              auto image = image_get(id);
+                              tooltip_image_draw(image, [&]() {
+                                  tooltip_name_draw(resources, path_to_utf8(spritesheet_get(document, id)->path));
+                                  ImGui::TextUnformatted(localize_format(FORMAT_ID, id).c_str());
+                                  if (image.isValid)
+                                      ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_TEXTURE_SIZE),
+                                                                          std::make_format_args(image.texture->size.x,
+                                                                                                image.texture->size.y))
+                                                                 .c_str());
+                                  else
+                                      ImGui::TextUnformatted(localize.get(TOOLTIP_SPRITESHEET_INVALID));
+                                  ImGui::TextUnformatted(localize.get(TEXT_OPEN_DIRECTORY));
+                              });
+                          },
+                      .image_get = image_get,
+                      .select =
+                          [&](int) {
+                              document.editTarget = Document::EditTarget::SPRITESHEET;
+                              document.selected_clear(SelectionKind::REGIONS);
+                          },
+                      .activate = open,
+                      .cardLines = SPRITESHEET_CARD_LINES};
         list_panel_draw(
             panel, actions, {{ACTION_ADD, ACTION_RELOAD, ACTION_REPLACE}, {ACTION_REMOVE, ACTION_SAVE}},
             [&]() { content_list_draw(panel, SelectionKind::SPRITESHEETS, item_ids_get(items), rows); }, true);

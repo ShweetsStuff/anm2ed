@@ -156,21 +156,21 @@ void CanvasView::grid_child_draw(ImVec2 childSize, bool& isGrid, Vec4& gridColor
     if (ImGui::BeginChild("##Grid Child", childSize, true, ImGuiWindowFlags_HorizontalScrollbar))
     {
         ImGui::Checkbox(localize.get(BASIC_GRID), &isGrid);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_VISIBILITY));
+        tooltip_set(TOOLTIP_GRID_VISIBILITY);
         if (isGridSnap)
         {
             ImGui::SameLine();
             ImGui::Checkbox(localize.get(LABEL_SNAP), isGridSnap);
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_SNAP));
+            tooltip_set(TOOLTIP_GRID_SNAP);
         }
         ImGui::SameLine();
         ImGui::ColorEdit4(localize.get(BASIC_COLOR), values_get(gridColor), ImGuiColorEditFlags_NoInputs);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_COLOR));
+        tooltip_set(TOOLTIP_GRID_COLOR);
 
         input_int2_range(localize.get(BASIC_SIZE), gridSize, IVec2(GRID_SIZE_MIN), IVec2(GRID_SIZE_MAX));
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_SIZE));
+        tooltip_set(TOOLTIP_GRID_SIZE);
         input_int2_range(localize.get(BASIC_OFFSET), gridOffset, IVec2(GRID_OFFSET_MIN), IVec2(GRID_OFFSET_MAX));
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_GRID_OFFSET));
+        tooltip_set(TOOLTIP_GRID_OFFSET);
     }
     ImGui::EndChild();
 }

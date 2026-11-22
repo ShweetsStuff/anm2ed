@@ -27,7 +27,7 @@ static auto& events_get(Model& model)
 static void item_tooltip_draw(Resources& resources, const std::string& name, int id)
 {
     tooltip_name_draw(resources, name);
-    ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_ID), std::make_format_args(id)).c_str());
+    ImGui::TextUnformatted(localize_format(FORMAT_ID, id).c_str());
 }
 
 // "#id name", then what the layer shows: its spritesheet or its animation.
@@ -36,7 +36,7 @@ std::string layer_label_get(const Layer& layer)
     if (layer.is_animation())
         return std::vformat(localize.get(FORMAT_LAYER_ANIMATION),
                             std::make_format_args(layer.id, layer.name, layer.animation));
-    return std::vformat(localize.get(FORMAT_LAYER), std::make_format_args(layer.id, layer.name, layer.spritesheetId));
+    return localize_format(FORMAT_LAYER, layer.id, layer.name, layer.spritesheetId);
 }
 
 // Tooltip lines for what a layer shows: its spritesheet, or its animation and the library it's from.
@@ -79,7 +79,7 @@ void layer_source_draw(Document& document, Manager::ItemEdit& layer)
             ImGui::SameLine();
         if (ImGui::RadioButton(localize.get(label), layer.isAnimation == isAnimation))
             layer.isAnimation = isAnimation;
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_SOURCE));
+        tooltip_set(TOOLTIP_LAYER_SOURCE);
     }
     ImGui::PopID();
     ImGui::Separator();
@@ -88,19 +88,19 @@ void layer_source_draw(Document& document, Manager::ItemEdit& layer)
     {
         auto spritesheets = document.choices_get(SelectionKind::SPRITESHEETS);
         combo_id_mapped(localize.get(LABEL_SPRITESHEET), &layer.spritesheetId, spritesheets.ids, spritesheets.labels);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_SPRITESHEET));
+        tooltip_set(TOOLTIP_LAYER_SPRITESHEET);
         return;
     }
 
     auto libraries = document.choices_get(SelectionKind::LIBRARIES);
     libraries.labels.front() = localize.get(TEXT_SELF);
     combo_id_mapped(localize.get(LABEL_LIBRARY), &layer.libraryId, libraries.ids, libraries.labels);
-    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_LIBRARY));
+    tooltip_set(TOOLTIP_LAYER_LIBRARY);
     auto names = document.animation_names_get(layer.libraryId);
     if (layer.animation.empty() && !names.empty())
         layer.animation = names.front();
     combo_string_mapped(localize.get(LABEL_ANIMATION), &layer.animation, names, names);
-    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_ANIMATION));
+    tooltip_set(TOOLTIP_LAYER_ANIMATION);
 }
 
 // The layer/null properties popup: adds a new item (id -1) or replaces the edited one, then selects it.
@@ -112,15 +112,14 @@ void item_properties_update(Panel& panel, int popupIndex, int rows, SelectionKin
     auto& popup = manager.itemPropertiesPopups[popupIndex];
     auto& edit = manager.itemEdit;
 
-    popup.trigger();
-    if (ImGui::BeginPopupModal(popup.label(), &popup.isOpen, ImGuiWindowFlags_NoResize))
+    if (popup.begin())
     {
         if (ImGui::BeginChild("##Child", child_size_get(rows), ImGuiChildFlags_Borders))
         {
             if (popup.isJustOpened)
                 ImGui::SetKeyboardFocusHere();
             input_text_string(localize.get(BASIC_NAME), &edit.name);
-            ImGui::SetItemTooltip("%s", localize.get(nameTooltip));
+            tooltip_set(nameTooltip);
             fields_draw(edit);
         }
         ImGui::EndChild();
@@ -223,7 +222,7 @@ void nulls_update(Panel& panel)
         ListRows rows{.label_get =
                           [&](int id) {
                               auto name = item_get(nulls, id)->name;
-                              return std::vformat(localize.get(FORMAT_NULL), std::make_format_args(id, name));
+                              return localize_format(FORMAT_NULL, id, name);
                           },
                       .tooltip_draw = [&](int id) { item_tooltip_draw(resources, item_get(nulls, id)->name, id); },
                       .activate = [&](int id) { manager.item_properties_open(ElementType::NULL_ELEMENT, id); },
@@ -236,7 +235,7 @@ void nulls_update(Panel& panel)
     item_properties_update<Null>(panel, 1, NULL_PROPERTIES_ROWS, SelectionKind::NULLS, TOOLTIP_NULL_NAME, EDIT_ADD_NULL,
                                  EDIT_SET_NULL_PROPERTIES, nulls_get, [](Manager::ItemEdit& null) {
                                      ImGui::Checkbox(localize.get(LABEL_RECT), &null.isShowRect);
-                                     ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_NULL_RECT));
+                                     tooltip_set(TOOLTIP_NULL_RECT);
                                  });
 }
 

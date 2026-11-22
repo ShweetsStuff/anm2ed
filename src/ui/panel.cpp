@@ -413,8 +413,7 @@ void content_remove_action_add(Actions& actions, Panel& panel, ElementType type,
 static void content_remove_popup_draw(Panel& panel)
 {
     auto& popup = panel.state.removePopup;
-    popup.trigger();
-    if (!ImGui::BeginPopupModal(popup.label(), &popup.isOpen, ImGuiWindowFlags_NoResize))
+    if (!popup.begin())
         return popup.end();
     auto& removal = panel.state.removal;
     ImGui::TextUnformatted(localize.get(TEXT_REMOVE_LIST));

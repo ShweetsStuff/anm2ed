@@ -158,10 +158,9 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
                 ImGui::PushFont(resources.fonts[FONT_BOLD], FONT_SIZE);
                 ImGui::TextUnformatted(label.c_str());
                 ImGui::PopFont();
-                ImGui::TextUnformatted(std::vformat(localize.get(FORMAT_ID), std::make_format_args(group->id)).c_str());
+                ImGui::TextUnformatted(localize_format(FORMAT_ID, group->id).c_str());
                 auto groupItemsCount = (int)group->items.size();
-                ImGui::TextUnformatted(
-                    std::vformat(localize.get(FORMAT_ITEMS_COUNT), std::make_format_args(groupItemsCount)).c_str());
+                ImGui::TextUnformatted(localize_format(FORMAT_ITEMS_COUNT, groupItemsCount).c_str());
                 ImGui::EndTooltip();
             }
             if (isIconHovered && ImGui::IsMouseReleased(ImGuiMouseButton_Left) &&
@@ -211,7 +210,7 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
             auto null = ::item_get(model.content.nulls, id);
             if (!null)
                 return localize.get(TYPE_STRINGS[type]);
-            return std::vformat(localize.get(FORMAT_NULL), std::make_format_args(id, null->name));
+            return localize_format(FORMAT_NULL, id, null->name);
         }
         return localize.get(TYPE_STRINGS[type]);
     }();
@@ -311,16 +310,10 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
                             ImGui::TextUnformatted(localize.get(BASIC_ROOT));
                             ImGui::PopFont();
 
-                            ImGui::TextUnformatted(
-                                std::vformat(localize.get(FORMAT_VISIBLE), std::make_format_args(visibleLabel))
-                                    .c_str());
+                            ImGui::TextUnformatted(localize_format(FORMAT_VISIBLE, visibleLabel).c_str());
                             auto transformLabel = yesNoLabel(settings.previewIsRootTransform);
-                            ImGui::TextUnformatted(
-                                std::vformat(localize.get(FORMAT_TRANSFORM), std::make_format_args(transformLabel))
-                                    .c_str());
-                            ImGui::TextUnformatted(
-                                std::vformat(localize.get(FORMAT_FRAMES_COUNT), std::make_format_args(framesCount))
-                                    .c_str());
+                            ImGui::TextUnformatted(localize_format(FORMAT_TRANSFORM, transformLabel).c_str());
+                            ImGui::TextUnformatted(localize_format(FORMAT_FRAMES_COUNT, framesCount).c_str());
                             break;
                         }
                         case LAYER:
@@ -332,15 +325,10 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
                             ImGui::TextUnformatted(layer->name.c_str());
                             ImGui::PopFont();
 
-                            ImGui::TextUnformatted(
-                                std::vformat(localize.get(FORMAT_ID), std::make_format_args(id)).c_str());
+                            ImGui::TextUnformatted(localize_format(FORMAT_ID, id).c_str());
                             layer_source_tooltip_draw(document, *layer);
-                            ImGui::TextUnformatted(
-                                std::vformat(localize.get(FORMAT_VISIBLE), std::make_format_args(visibleLabel))
-                                    .c_str());
-                            ImGui::TextUnformatted(
-                                std::vformat(localize.get(FORMAT_FRAMES_COUNT), std::make_format_args(framesCount))
-                                    .c_str());
+                            ImGui::TextUnformatted(localize_format(FORMAT_VISIBLE, visibleLabel).c_str());
+                            ImGui::TextUnformatted(localize_format(FORMAT_FRAMES_COUNT, framesCount).c_str());
                             break;
                         }
                         case NULL_:
@@ -353,16 +341,10 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
                             ImGui::PopFont();
 
                             auto rectLabel = yesNoLabel(nullInfo->isShowRect);
-                            ImGui::TextUnformatted(
-                                std::vformat(localize.get(FORMAT_ID), std::make_format_args(id)).c_str());
-                            ImGui::TextUnformatted(
-                                std::vformat(localize.get(FORMAT_RECT), std::make_format_args(rectLabel)).c_str());
-                            ImGui::TextUnformatted(
-                                std::vformat(localize.get(FORMAT_VISIBLE), std::make_format_args(visibleLabel))
-                                    .c_str());
-                            ImGui::TextUnformatted(
-                                std::vformat(localize.get(FORMAT_FRAMES_COUNT), std::make_format_args(framesCount))
-                                    .c_str());
+                            ImGui::TextUnformatted(localize_format(FORMAT_ID, id).c_str());
+                            ImGui::TextUnformatted(localize_format(FORMAT_RECT, rectLabel).c_str());
+                            ImGui::TextUnformatted(localize_format(FORMAT_VISIBLE, visibleLabel).c_str());
+                            ImGui::TextUnformatted(localize_format(FORMAT_FRAMES_COUNT, framesCount).c_str());
                             break;
                         }
                         case TRIGGER:
@@ -371,12 +353,8 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
                             ImGui::TextUnformatted(localize.get(BASIC_TRIGGERS));
                             ImGui::PopFont();
 
-                            ImGui::TextUnformatted(
-                                std::vformat(localize.get(FORMAT_VISIBLE), std::make_format_args(visibleLabel))
-                                    .c_str());
-                            ImGui::TextUnformatted(
-                                std::vformat(localize.get(FORMAT_TRIGGERS_COUNT), std::make_format_args(framesCount))
-                                    .c_str());
+                            ImGui::TextUnformatted(localize_format(FORMAT_VISIBLE, visibleLabel).c_str());
+                            ImGui::TextUnformatted(localize_format(FORMAT_TRIGGERS_COUNT, framesCount).c_str());
                             break;
                         }
                         default:

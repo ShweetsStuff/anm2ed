@@ -130,7 +130,7 @@ void RenderAnimation::update(Manager& manager, Document& document, Resources& re
         dialog.file_open(Dialog::FFMPEG_PATH_SET);
     ImGui::SameLine();
     input_text_path(localize.get(LABEL_FFMPEG_PATH), &ffmpegPath);
-    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FFMPEG_PATH));
+    tooltip_set(TOOLTIP_FFMPEG_PATH);
 
     if (dialog.is_selected(Dialog::FFMPEG_PATH_SET))
     {
@@ -149,7 +149,7 @@ void RenderAnimation::update(Manager& manager, Document& document, Resources& re
     ImGui::SameLine();
     auto pathLabel = type == RENDER_PNGS ? LABEL_OUTPUT_DIRECTORY : LABEL_OUTPUT_PATH;
     input_text_path(localize.get(pathLabel), &path);
-    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OUTPUT_PATH));
+    tooltip_set(TOOLTIP_OUTPUT_PATH);
 
     if (dialog.is_selected(dialogType))
     {
@@ -160,7 +160,7 @@ void RenderAnimation::update(Manager& manager, Document& document, Resources& re
     if (ImGui::Combo(localize.get(LABEL_TYPE), &type, RENDER_STRINGS, RENDER_COUNT))
         path.replace_extension(RENDER_EXTENSIONS[type]);
 
-    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_RENDER_TYPE));
+    tooltip_set(TOOLTIP_RENDER_TYPE);
 
     if (type == RENDER_PNGS || type == RENDER_SPRITESHEET)
         ImGui::Separator();
@@ -168,21 +168,21 @@ void RenderAnimation::update(Manager& manager, Document& document, Resources& re
     if (type == RENDER_PNGS)
     {
         input_text_path(localize.get(LABEL_FORMAT), &format);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_FORMAT));
+        tooltip_set(TOOLTIP_FORMAT);
     }
     else if (type == RENDER_SPRITESHEET)
     {
         input_int_range(localize.get(LABEL_GENERATE_ROWS), rows, 1, renderFrameNum);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ROWS));
+        tooltip_set(TOOLTIP_ROWS);
 
         input_int_range(localize.get(LABEL_GENERATE_COLUMNS), columns, 1, renderFrameNum);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_COLUMNS));
+        tooltip_set(TOOLTIP_COLUMNS);
     }
 
     ImGui::Separator();
 
     ImGui::Checkbox(localize.get(LABEL_CUSTOM_RANGE), &isRange);
-    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CUSTOM_RANGE));
+    tooltip_set(TOOLTIP_CUSTOM_RANGE);
 
     ImGui::SameLine();
 
@@ -190,21 +190,21 @@ void RenderAnimation::update(Manager& manager, Document& document, Resources& re
                          reference.itemType == TRIGGER);
     if (ImGui::Button(localize.get(LABEL_TO_SELECTED_FRAMES)))
         range_to_frames_set(manager, document);
-    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TO_SELECTED_FRAMES));
+    tooltip_set(TOOLTIP_TO_SELECTED_FRAMES);
     ImGui::EndDisabled();
 
     ImGui::SameLine();
 
     if (ImGui::Button(localize.get(LABEL_TO_ANIMATION_RANGE)))
         range_to_animation_set(manager, document);
-    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TO_ANIMATION_RANGE));
+    tooltip_set(TOOLTIP_TO_ANIMATION_RANGE);
 
     ImGui::BeginDisabled(!isRange);
     {
         input_int_range(localize.get(LABEL_START), start, 0, frameMax);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_START));
+        tooltip_set(TOOLTIP_START);
         input_int_range(localize.get(LABEL_END), end, start, frameMax);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_END));
+        tooltip_set(TOOLTIP_END);
     }
     ImGui::EndDisabled();
     renderFrameNum = render_frame_count_get();
@@ -219,18 +219,18 @@ void RenderAnimation::update(Manager& manager, Document& document, Resources& re
     ImGui::Separator();
 
     ImGui::Checkbox(localize.get(LABEL_USE_ANIMATION_BOUNDS), &isUseAnimationBounds);
-    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_USE_ANIMATION_BOUNDS));
+    tooltip_set(TOOLTIP_USE_ANIMATION_BOUNDS);
 
     ImGui::SameLine();
 
     ImGui::Checkbox(localize.get(LABEL_USE_ISOLATED_ANIMATION), &isUseIsolatedAnimation);
-    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_USE_ISOLATED_ANIMATION));
+    tooltip_set(TOOLTIP_USE_ISOLATED_ANIMATION);
 
     ImGui::BeginDisabled(!isUseAnimationBounds);
     {
         input_float_range(localize.get(BASIC_SCALE), scale, RENDER_SCALE_MIN, RENDER_SCALE_MAX, RENDER_SCALE_STEP,
                           RENDER_SCALE_STEP, "%.0f%%");
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SCALE_OUTPUT));
+        tooltip_set(TOOLTIP_SCALE_OUTPUT);
     }
     ImGui::EndDisabled();
 
@@ -238,7 +238,7 @@ void RenderAnimation::update(Manager& manager, Document& document, Resources& re
 
     const char* renderFpsOptions[] = {localize.get(LABEL_ANIMATION_FPS), localize.get(LABEL_PLAYBACK_RATE)};
     ImGui::Combo(localize.get(LABEL_RENDER_FPS), &renderFpsMode, renderFpsOptions, IM_ARRAYSIZE(renderFpsOptions));
-    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_RENDER_FPS));
+    tooltip_set(TOOLTIP_RENDER_FPS);
 
     renderFps = fps_get(renderFpsMode, animationFps, settings.playbackTickRate);
     renderFrameNum = render_frame_count_get();
@@ -252,7 +252,7 @@ void RenderAnimation::update(Manager& manager, Document& document, Resources& re
     ImGui::Separator();
 
     ImGui::Checkbox(localize.get(LABEL_SOUND), &settings.timelineIsSound);
-    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SOUND));
+    tooltip_set(TOOLTIP_SOUND);
 
     ImGui::Separator();
 
@@ -362,7 +362,7 @@ void RenderAnimation::update(Manager& manager, Document& document, Resources& re
         isEnd = true;
     }
 
-    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_RENDER_BUTTON));
+    tooltip_set(TOOLTIP_RENDER_BUTTON);
 
     ImGui::SameLine();
 

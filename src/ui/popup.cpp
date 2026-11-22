@@ -73,6 +73,14 @@ void PopupHelper::trigger()
     }
 }
 
+// Opens the popup when triggered, and begins it as a fixed-size modal. True while it shows: end it with
+// ImGui::EndPopup().
+bool PopupHelper::begin()
+{
+    trigger();
+    return ImGui::BeginPopupModal(label(), &isOpen, ImGuiWindowFlags_NoResize);
+}
+
 void PopupHelper::end()
 {
     isJustOpened = false;

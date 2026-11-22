@@ -332,8 +332,7 @@ void shaders_update(Panel& panel, ShadersPanel& shaders)
                     if (auto shader = shader_element_get(document, id))
                     {
                         document.shader_reload(id, &status);
-                        toasts.push(
-                            std::vformat(localize.get(TOAST_RELOAD_SHADER), std::make_format_args(id, shader->name)));
+                        toasts.push(localize_format(TOAST_RELOAD_SHADER, id, shader->name));
                     }
             },
             TOOLTIP_RELOAD_SHADERS);
@@ -346,7 +345,7 @@ void shaders_update(Panel& panel, ShadersPanel& shaders)
         ListRows rows{.label_get =
                           [&](int id) {
                               auto name = shader_element_get(document, id)->name;
-                              return std::vformat(localize.get(FORMAT_SHADER), std::make_format_args(id, name));
+                              return localize_format(FORMAT_SHADER, id, name);
                           },
                       .tooltip_draw =
                           [&](int id) {
@@ -368,8 +367,7 @@ void shaders_update(Panel& panel, ShadersPanel& shaders)
             panel, actions, {{ACTION_ADD, ACTION_REMOVE, ACTION_RELOAD}},
             [&]() { content_list_draw(panel, SelectionKind::SHADERS, item_ids_get(items), rows); }, true);
 
-        propertiesPopup.trigger();
-        if (ImGui::BeginPopupModal(propertiesPopup.label(), &propertiesPopup.isOpen, ImGuiWindowFlags_NoResize))
+        if (propertiesPopup.begin())
         {
             auto shader = shader_element_get(document, popupShaderId);
             if (!shader)
@@ -432,7 +430,7 @@ void shaders_update(Panel& panel, ShadersPanel& shaders)
                 document.shader_reload(shader->id, &status);
                 propertiesPopup.close();
             }
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_RELOAD_SHADERS));
+            tooltip_set(TOOLTIP_RELOAD_SHADERS);
             ImGui::SameLine();
             if (ImGui::Button(localize.get(BASIC_CANCEL), popupWidgetSize))
                 propertiesPopup.close();

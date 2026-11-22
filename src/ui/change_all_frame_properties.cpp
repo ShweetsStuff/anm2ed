@@ -238,7 +238,7 @@ void ChangeAllFrameProperties::update(Manager& manager, Document& document, Sett
     property_toggle_begin(settings.changeIsDepth);
     input_int_range(localize.get(BASIC_DEPTH), settings.changeDepth, -FRAME_DEPTH_MAX, FRAME_DEPTH_MAX, STEP,
                     STEP_FAST);
-    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_DEPTH));
+    tooltip_set(TOOLTIP_DEPTH);
     ImGui::EndDisabled();
     ImGui::PopID();
     ImGui::EndDisabled();
@@ -267,7 +267,7 @@ void ChangeAllFrameProperties::update(Manager& manager, Document& document, Sett
         ImGui::PushID("Child Animation");
         property_toggle_begin(settings.changeIsChildAnimation);
         combo_string_mapped(localize.get(LABEL_ANIMATION), &settings.changeChildAnimation, values, labels);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHILD_ANIMATION));
+        tooltip_set(TOOLTIP_CHILD_ANIMATION);
         ImGui::EndDisabled();
         ImGui::PopID();
 
@@ -283,7 +283,7 @@ void ChangeAllFrameProperties::update(Manager& manager, Document& document, Sett
         ImGui::PushID("Child Start");
         property_toggle_begin(settings.changeIsChildStart);
         input_int_range(localize.get(LABEL_START_FRAME), settings.changeChildStart, 0, FRAME_NUM_MAX, STEP, STEP_FAST);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHILD_START));
+        tooltip_set(TOOLTIP_CHILD_START);
         ImGui::EndDisabled();
         ImGui::PopID();
 
@@ -374,7 +374,7 @@ void ChangeAllFrameProperties::update(Manager& manager, Document& document, Sett
                 ImGui::SameLine();
             ImGui::BeginDisabled(!option.isAvailable);
             ImGui::RadioButton(localize.get(option.label), &destination, option.value);
-            ImGui::SetItemTooltip("%s", localize.get(option.tooltip));
+            tooltip_set(option.tooltip);
             ImGui::EndDisabled();
         }
 
@@ -393,7 +393,7 @@ void ChangeAllFrameProperties::update(Manager& manager, Document& document, Sett
             if (&option != targetOptions)
                 ImGui::SameLine();
             ImGui::Checkbox(localize.get(option.label), &option.value);
-            ImGui::SetItemTooltip("%s", localize.get(option.tooltip));
+            tooltip_set(option.tooltip);
         }
         ImGui::EndDisabled();
         ImGui::Separator();
@@ -424,7 +424,7 @@ void ChangeAllFrameProperties::update(Manager& manager, Document& document, Sett
             ImGui::SameLine();
         if (ImGui::Button(std::format("{} {}", button.symbol, localize.get(button.label)).c_str(), rowWidgetSize))
             frame_change(button.type);
-        ImGui::SetItemTooltip("%s", localize.get(button.tooltip));
+        tooltip_set(button.tooltip);
     }
     ImGui::EndDisabled();
 }

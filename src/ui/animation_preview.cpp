@@ -301,14 +301,13 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
         if (ImGui::BeginChild("##View Child", childSize, true, ImGuiWindowFlags_HorizontalScrollbar))
         {
             ImGui::InputFloat(localize.get(BASIC_ZOOM), &zoom, 0.0f, 0.0f, "%.0f%%");
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_PREVIEW_ZOOM));
+            tooltip_set(TOOLTIP_PREVIEW_ZOOM);
 
             view_buttons_draw(manager, settings, center_view, fit_view);
 
             auto readoutSize = ImVec2(row_widget_width_get(2), ImGui::GetTextLineHeightWithSpacing());
             auto mousePosInt = IVec2(mousePos);
-            auto positionText =
-                std::vformat(localize.get(FORMAT_POSITION_SPACED), std::make_format_args(mousePosInt.x, mousePosInt.y));
+            auto positionText = localize_format(FORMAT_POSITION_SPACED, mousePosInt.x, mousePosInt.y);
             if (ImGui::BeginChild("##Position Readout", readoutSize, false, ImGuiWindowFlags_NoScrollbar))
             {
                 ImGui::TextUnformatted(positionText.c_str());
@@ -320,7 +319,7 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
             ImGui::SameLine();
 
             auto sizeInt = IVec2(size);
-            auto sizeText = std::vformat(localize.get(FORMAT_SIZE_SPACED), std::make_format_args(sizeInt.x, sizeInt.y));
+            auto sizeText = localize_format(FORMAT_SIZE_SPACED, sizeInt.x, sizeInt.y);
             if (ImGui::BeginChild("##Size Readout", readoutSize, false, ImGuiWindowFlags_NoScrollbar))
             {
                 ImGui::TextUnformatted(sizeText.c_str());
@@ -339,15 +338,15 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
             {
                 ImGui::ColorEdit3(localize.get(LABEL_BACKGROUND_COLOR), values_get(backgroundColor),
                                   ImGuiColorEditFlags_NoInputs);
-                ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BACKGROUND_COLOR));
+                tooltip_set(TOOLTIP_BACKGROUND_COLOR);
             }
             ImGui::EndDisabled();
             ImGui::SameLine();
             ImGui::Checkbox(localize.get(LABEL_AXES), &isAxes);
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_AXES));
+            tooltip_set(TOOLTIP_AXES);
             ImGui::SameLine();
             ImGui::ColorEdit4(localize.get(BASIC_COLOR), values_get(axesColor), ImGuiColorEditFlags_NoInputs);
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_AXES_COLOR));
+            tooltip_set(TOOLTIP_AXES_COLOR);
 
             auto overlayOptions = overlay_animation_options_get(manager);
             auto overlayLabels = overlay_animation_option_labels_get(overlayOptions);
@@ -365,7 +364,7 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
                 overlayIndex = option.animationIndex;
                 overlayDocumentId = overlayIndex == -1 ? 0 : option.documentId;
             }
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OVERLAY));
+            tooltip_set(TOOLTIP_OVERLAY);
 
             overlayDrawOrder = vec_clamp(overlayDrawOrder, (int)OVERLAY_OVER, (int)OVERLAY_UNDER);
             overlayTransparency = vec_clamp(overlayTransparency, 0.0f, 100.0f);
@@ -378,18 +377,18 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
             ImGui::PushItemWidth(alphaWidth);
             ImGui::DragFloat("##Overlay Alpha", &overlayTransparency, DRAG_SPEED, 0, 100, "%.0f%%");
             ImGui::PopItemWidth();
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OVERLAY_ALPHA));
+            tooltip_set(TOOLTIP_OVERLAY_ALPHA);
             overlayTransparency = vec_clamp(overlayTransparency, 0.0f, 100.0f);
 
             ImGui::SameLine();
             radio_button_icon("##Overlay Over", &overlayDrawOrder, OVERLAY_OVER, resources.icon_id_get(ICON_OVER),
                               orderIconSize, overlayIconTint);
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OVERLAY_OVER));
+            tooltip_set(TOOLTIP_OVERLAY_OVER);
 
             ImGui::SameLine();
             radio_button_icon("##Overlay Under", &overlayDrawOrder, OVERLAY_UNDER, resources.icon_id_get(ICON_UNDER),
                               orderIconSize, overlayIconTint);
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OVERLAY_UNDER));
+            tooltip_set(TOOLTIP_OVERLAY_UNDER);
         }
         ImGui::EndChild();
 
@@ -402,11 +401,11 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
             if (ImGui::BeginChild("##Helpers Child 1", helpersChildSize))
             {
                 ImGui::Checkbox(localize.get(LABEL_ROOT_TRANSFORM), &isRootTransform);
-                ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ROOT_TRANSFORM));
+                tooltip_set(TOOLTIP_ROOT_TRANSFORM);
                 ImGui::Checkbox(localize.get(LABEL_PIVOTS), &isPivots);
-                ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_PIVOTS));
+                tooltip_set(TOOLTIP_PIVOTS);
                 ImGui::Checkbox(localize.get(LABEL_TRANSPARENT), &isTransparent);
-                ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_PREVIEW_TRANSPARENT));
+                tooltip_set(TOOLTIP_PREVIEW_TRANSPARENT);
             }
             ImGui::EndChild();
 
@@ -415,9 +414,9 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
             if (ImGui::BeginChild("##Helpers Child 2", helpersChildSize))
             {
                 ImGui::Checkbox(localize.get(LABEL_ALT_ICONS), &isAltIcons);
-                ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ALT_ICONS));
+                tooltip_set(TOOLTIP_ALT_ICONS);
                 ImGui::Checkbox(localize.get(LABEL_BORDER), &isBorder);
-                ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BORDER));
+                tooltip_set(TOOLTIP_BORDER);
             }
             ImGui::EndChild();
         }
@@ -899,9 +898,7 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
         view_context_menu_draw("##Animation Preview Context Menu", manager, settings, document, zoom, pan, center_view,
                                fit_view, animation != nullptr);
 
-    manager.progressPopup.trigger();
-
-    if (ImGui::BeginPopupModal(manager.progressPopup.label(), &manager.progressPopup.isOpen, ImGuiWindowFlags_NoResize))
+    if (manager.progressPopup.begin())
     {
         ImGui::ProgressBar(recorder.count > 0 ? (float)recorder.index / (float)recorder.count : 0.0f);
         ImGui::TextUnformatted(localize.get(TEXT_RECORDING_PROGRESS));

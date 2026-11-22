@@ -1,4 +1,5 @@
 #include "ui/timeline_context.h"
+#include "ui/layout.h"
 
 // Animation layers in the timeline: their child's tracks under them (read only, timed as the parent plays them),
 // stepping into the child, and the breadcrumb back out.
@@ -64,7 +65,7 @@ void TimelineContext::peek_item_child(const TimelineRow& row, const PeekRow& pee
         ImGui::EndDisabled();
         if (ImGui::IsWindowHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
             child_step_in(row);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CHILD_TRACK));
+        tooltip_set(TOOLTIP_CHILD_TRACK);
     }
     ImGui::EndChild();
     ImGui::PopStyleVar(2);
@@ -153,7 +154,7 @@ void TimelineContext::breadcrumb_draw()
             manager.command_push({.runManager = [index = manager.selected, stepIndex](Manager& manager) {
                 manager.child_step_out(index, stepIndex);
             }});
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_STEP_OUT));
+        tooltip_set(TOOLTIP_STEP_OUT);
         ImGui::PopID();
         ImGui::SameLine();
         ImGui::TextUnformatted(BREADCRUMB_SEPARATOR);

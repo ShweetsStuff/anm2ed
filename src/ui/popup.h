@@ -42,6 +42,7 @@ public:
     bool is_open();
     void open();
     void trigger();
+    bool begin();
     void end();
     void close();
 };

@@ -158,11 +158,11 @@ void Taskbar::update(Manager& manager, Settings& settings, Resources& resources,
             if (ImGui::MenuItem(localize.get(LABEL_TASKBAR_GENERATE_ANIMATION_FROM_GRID), nullptr, false,
                                 isGenerateAnimationFromGridAvailable))
                 generatePopup.open();
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_WIZARD_GENERATE_ANIMATION_FROM_GRID));
+            tooltip_set(TOOLTIP_WIZARD_GENERATE_ANIMATION_FROM_GRID);
 
             if (ImGui::MenuItem(localize.get(LABEL_TASKBAR_GENERATE_REGIONS_FROM_ANIMATIONS), nullptr, false, document))
                 generateRegionsPopup.open();
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_WIZARD_GENERATE_REGIONS_FROM_ANIMATIONS));
+            tooltip_set(TOOLTIP_WIZARD_GENERATE_REGIONS_FROM_ANIMATIONS);
 
             if (ImGui::MenuItem(localize.get(LABEL_SCAN_AND_SET_REGIONS), nullptr, false, document && hasRegions))
             {
@@ -172,7 +172,7 @@ void Taskbar::update(Manager& manager, Settings& settings, Resources& resources,
                                       }});
                 toast_log(Level::INFO, TOAST_SCAN_AND_SET_REGIONS);
             }
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_WIZARD_SCAN_AND_SET_REGIONS));
+            tooltip_set(TOOLTIP_WIZARD_SCAN_AND_SET_REGIONS);
 
             ImGui::Separator();
 
@@ -182,14 +182,14 @@ void Taskbar::update(Manager& manager, Settings& settings, Resources& resources,
             if (ImGui::MenuItem(localize.get(LABEL_CHANGE_ALL_FRAME_PROPERTIES), nullptr, false,
                                 isChangeAllFramesAvailable || isChangeAllAnimationsAvailable))
                 changePopup.open();
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_WIZARD_CHANGE_ALL_FRAME_PROPERTIES));
+            tooltip_set(TOOLTIP_WIZARD_CHANGE_ALL_FRAME_PROPERTIES);
 
             ImGui::Separator();
 
             if (ImGui::MenuItem(localize.get(LABEL_TASKBAR_RENDER_ANIMATION), nullptr, false,
                                 animation && manager.isAbleToRecord))
                 renderPopup.open();
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_WIZARD_RENDER_ANIMATION));
+            tooltip_set(TOOLTIP_WIZARD_RENDER_ANIMATION);
 
             ImGui::EndMenu();
         }
@@ -197,10 +197,10 @@ void Taskbar::update(Manager& manager, Settings& settings, Resources& resources,
         if (ImGui::BeginMenu(localize.get(LABEL_PLAYBACK_MENU)))
         {
             ImGui::MenuItem(localize.get(LABEL_PLAYBACK_ALWAYS_LOOP), nullptr, &settings.playbackIsLoop);
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_PLAYBACK_ALWAYS_LOOP));
+            tooltip_set(TOOLTIP_PLAYBACK_ALWAYS_LOOP);
 
             ImGui::MenuItem(localize.get(LABEL_CLAMP), nullptr, &settings.playbackIsClamp);
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_PLAYBACK_CLAMP));
+            tooltip_set(TOOLTIP_PLAYBACK_CLAMP);
 
             ImGui::EndMenu();
         }
@@ -233,9 +233,7 @@ void Taskbar::update(Manager& manager, Settings& settings, Resources& resources,
         ImGui::EndMainMenuBar();
     }
 
-    generatePopup.trigger();
-
-    if (ImGui::BeginPopupModal(generatePopup.label(), &generatePopup.isOpen, ImGuiWindowFlags_NoResize))
+    if (generatePopup.begin())
     {
         if (document)
         {
@@ -246,8 +244,7 @@ void Taskbar::update(Manager& manager, Settings& settings, Resources& resources,
         ImGui::EndPopup();
     }
 
-    generateRegionsPopup.trigger();
-    if (ImGui::BeginPopupModal(generateRegionsPopup.label(), &generateRegionsPopup.isOpen, ImGuiWindowFlags_NoResize))
+    if (generateRegionsPopup.begin())
     {
         if (document)
         {
@@ -299,9 +296,7 @@ void Taskbar::update(Manager& manager, Settings& settings, Resources& resources,
     }
     generateRegionsPopup.end();
 
-    changePopup.trigger();
-
-    if (ImGui::BeginPopupModal(changePopup.label(), &changePopup.isOpen, ImGuiWindowFlags_NoResize))
+    if (changePopup.begin())
     {
         if (document)
         {
@@ -312,8 +307,7 @@ void Taskbar::update(Manager& manager, Settings& settings, Resources& resources,
         ImGui::EndPopup();
     }
 
-    configurePopup.trigger();
-    if (ImGui::BeginPopupModal(configurePopup.label(), &configurePopup.isOpen, ImGuiWindowFlags_NoResize))
+    if (configurePopup.begin())
     {
         if (configurePopup.isJustOpened)
             configure.reset(settings);
@@ -324,8 +318,7 @@ void Taskbar::update(Manager& manager, Settings& settings, Resources& resources,
     }
     configurePopup.end();
 
-    renderPopup.trigger();
-    if (ImGui::BeginPopupModal(renderPopup.label(), &renderPopup.isOpen, ImGuiWindowFlags_NoResize))
+    if (renderPopup.begin())
     {
         if (document)
         {
@@ -339,8 +332,7 @@ void Taskbar::update(Manager& manager, Settings& settings, Resources& resources,
     }
     renderPopup.end();
 
-    aboutPopup.trigger();
-    if (ImGui::BeginPopupModal(aboutPopup.label(), &aboutPopup.isOpen, ImGuiWindowFlags_NoResize))
+    if (aboutPopup.begin())
     {
         if (aboutPopup.isJustOpened)
             about.reset(resources);
@@ -352,9 +344,7 @@ void Taskbar::update(Manager& manager, Settings& settings, Resources& resources,
         if (is_audio_playing(*music) && !aboutPopup.isOpen)
             audio_stop(*music);
 
-    overwritePopup.trigger();
-
-    if (ImGui::BeginPopupModal(overwritePopup.label(), &overwritePopup.isOpen, ImGuiWindowFlags_NoResize))
+    if (overwritePopup.begin())
     {
         ImGui::TextUnformatted(localize.get(LABEL_OVERWRITE_CONFIRMATION));
 
@@ -376,8 +366,7 @@ void Taskbar::update(Manager& manager, Settings& settings, Resources& resources,
 
     aboutPopup.end();
 
-    vectorPopup.trigger();
-    if (ImGui::BeginPopupModal(vectorPopup.label(), &vectorPopup.isOpen, ImGuiWindowFlags_NoResize))
+    if (vectorPopup.begin())
     {
         ImGui::TextWrapped("%s", localize.get(TEXT_CONVERT_SVG));
         auto widgetSize = widget_size_with_row_get(2);
@@ -400,8 +389,7 @@ void Taskbar::update(Manager& manager, Settings& settings, Resources& resources,
     }
     vectorPopup.end();
 
-    isaacPopup.trigger();
-    if (ImGui::BeginPopupModal(isaacPopup.label(), &isaacPopup.isOpen, ImGuiWindowFlags_NoResize))
+    if (isaacPopup.begin())
     {
         if (settings.fileIsJson)
             ImGui::TextWrapped("%s", localize.get(TEXT_ISAAC_JSON));

@@ -77,14 +77,12 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
         if (ImGui::BeginChild("##View Child", childSize, true, ImGuiWindowFlags_HorizontalScrollbar))
         {
             ImGui::InputFloat(localize.get(BASIC_ZOOM), &zoom, 0.0f, 0.0f, "%.0f%%");
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_EDITOR_ZOOM));
+            tooltip_set(TOOLTIP_EDITOR_ZOOM);
 
             view_buttons_draw(manager, settings, center_view, fit_view);
 
             auto mousePosInt = IVec2(mousePos);
-            ImGui::TextUnformatted(
-                std::vformat(localize.get(FORMAT_POSITION_SPACED), std::make_format_args(mousePosInt.x, mousePosInt.y))
-                    .c_str());
+            ImGui::TextUnformatted(localize_format(FORMAT_POSITION_SPACED, mousePosInt.x, mousePosInt.y).c_str());
         }
         ImGui::EndChild();
 
@@ -100,12 +98,12 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
                 {
                     ImGui::ColorEdit3(localize.get(LABEL_BACKGROUND_COLOR), values_get(backgroundColor),
                                       ImGuiColorEditFlags_NoInputs);
-                    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_BACKGROUND_COLOR));
+                    tooltip_set(TOOLTIP_BACKGROUND_COLOR);
                 }
                 ImGui::EndDisabled();
 
                 ImGui::Checkbox(localize.get(LABEL_BORDER), &isBorder);
-                ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_SPRITESHEET_BORDER));
+                tooltip_set(TOOLTIP_SPRITESHEET_BORDER);
             }
             ImGui::EndChild();
 
@@ -114,7 +112,7 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
             if (ImGui::BeginChild("##Background Child 2", subChildSize))
             {
                 ImGui::Checkbox(localize.get(LABEL_TRANSPARENT), &isTransparent);
-                ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_TRANSPARENT));
+                tooltip_set(TOOLTIP_TRANSPARENT);
             }
 
             ImGui::EndChild();

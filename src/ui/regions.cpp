@@ -255,8 +255,7 @@ static void region_properties_open(RegionsPanel& regions, Document& document, in
 static void region_properties_popup_update(Panel& panel, RegionsPanel& regions)
 {
     auto& popup = regions.propertiesPopup;
-    popup.trigger();
-    if (!ImGui::BeginPopupModal(popup.label(), &popup.isOpen, ImGuiWindowFlags_NoResize))
+    if (!popup.begin())
         return popup.end();
 
     auto& region = regions.editRegion;
@@ -265,7 +264,7 @@ static void region_properties_popup_update(Panel& panel, RegionsPanel& regions)
         if (popup.isJustOpened)
             ImGui::SetKeyboardFocusHere();
         input_text_string(localize.get(BASIC_NAME), &region.name);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ITEM_NAME));
+        tooltip_set(TOOLTIP_ITEM_NAME);
         ImGui::DragFloat2(localize.get(BASIC_CROP), values_get(region.crop), DRAG_SPEED, 0.0f, 0.0f,
                           vec2_format_get(region.crop));
         ImGui::DragFloat2(localize.get(BASIC_SIZE), values_get(region.size), DRAG_SPEED, 0.0f, 0.0f,
@@ -282,7 +281,7 @@ static void region_properties_popup_update(Panel& panel, RegionsPanel& regions)
         if (ImGui::Combo(localize.get(LABEL_REGION_PROPERTIES_ORIGIN), &originIndex, originOptions,
                          (int)std::size(originOptions)))
             region.origin = ORIGIN_COMBO_ORDER[originIndex];
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_REGION_PROPERTIES_ORIGIN));
+        tooltip_set(TOOLTIP_REGION_PROPERTIES_ORIGIN);
         region_pivot_apply(region);
     }
     ImGui::EndChild();
@@ -333,8 +332,7 @@ static void region_export_popup_update(Panel& panel, RegionsPanel& regions)
     auto region = spritesheet ? item_get(spritesheet->regions, regions.exportId) : nullptr;
     auto& popup = regions.exportPopup;
 
-    popup.trigger();
-    if (!ImGui::BeginPopupModal(popup.label(), &popup.isOpen, ImGuiWindowFlags_NoResize))
+    if (!popup.begin())
         return popup.end();
 
     if (!region)
@@ -358,11 +356,11 @@ static void region_export_popup_update(Panel& panel, RegionsPanel& regions)
             dialog.file_save(Dialog::REGION_EXPORT_PATH_SET, settings.exportRegionPath);
         ImGui::SameLine();
         input_text_path(localize.get(LABEL_OUTPUT_PATH), &settings.exportRegionPath);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_OUTPUT_PATH));
+        tooltip_set(TOOLTIP_OUTPUT_PATH);
         ImGui::Checkbox(localize.get(LABEL_EXPORT_MAKE_SPRITESHEET), &settings.isExportRegionMakeSpritesheet);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_EXPORT_MAKE_SPRITESHEET));
+        tooltip_set(TOOLTIP_EXPORT_MAKE_SPRITESHEET);
         ImGui::Checkbox(localize.get(LABEL_EXPORT_REMOVE_CURRENT_REGION), &settings.isExportRegionRemoveCurrent);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_EXPORT_REMOVE_CURRENT_REGION));
+        tooltip_set(TOOLTIP_EXPORT_REMOVE_CURRENT_REGION);
     }
     ImGui::EndChild();
 
@@ -486,7 +484,7 @@ void regions_update(Panel& panel, RegionsPanel& regions)
                                 (region.origin == Origin::CUSTOM
                                      ? std::vformat(localize.get(FORMAT_PIVOT),
                                                     std::make_format_args(region.pivot.x, region.pivot.y))
-                                     : std::vformat(localize.get(FORMAT_ORIGIN), std::make_format_args(originLabel)))
+                                     : localize_format(FORMAT_ORIGIN, originLabel))
                                     .c_str());
                         });
                     },

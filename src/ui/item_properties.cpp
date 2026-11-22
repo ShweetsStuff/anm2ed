@@ -31,9 +31,7 @@ bool ItemProperties::update(Manager& manager, Settings& settings, Document& docu
                    : std::set<int>{};
     };
 
-    popup.trigger();
-
-    if (ImGui::BeginPopupModal(popup.label(), &popup.isOpen, ImGuiWindowFlags_NoResize))
+    if (popup.begin())
     {
         auto close = [&]() {
             reset();
@@ -60,11 +58,11 @@ bool ItemProperties::update(Manager& manager, Settings& settings, Document& docu
             spaced_pair(
                 [&]() {
                     ImGui::RadioButton(localize.get(LABEL_LAYER), &type, LAYER);
-                    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_LAYER_TYPE));
+                    tooltip_set(TOOLTIP_LAYER_TYPE);
                 },
                 [&]() {
                     ImGui::RadioButton(localize.get(LABEL_NULL), &type, NULL_);
-                    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_NULL_TYPE));
+                    tooltip_set(TOOLTIP_NULL_TYPE);
                 });
 
             ImGui::SeparatorText(localize.get(LABEL_SOURCE));
@@ -73,7 +71,7 @@ bool ItemProperties::update(Manager& manager, Settings& settings, Document& docu
             spaced_pair(
                 [&]() {
                     ImGui::RadioButton(localize.get(LABEL_NEW), &source, SOURCE_NEW);
-                    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_NEW_ITEM));
+                    tooltip_set(TOOLTIP_NEW_ITEM);
                 },
                 [&]() {
                     ImGui::BeginDisabled(!isUnusedItems);
@@ -88,11 +86,11 @@ bool ItemProperties::update(Manager& manager, Settings& settings, Document& docu
             spaced_pair(
                 [&]() {
                     ImGui::RadioButton(localize.get(LABEL_ALL_ANIMATIONS), &destination, DESTINATION_ALL);
-                    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ITEM_ALL_ANIMATIONS));
+                    tooltip_set(TOOLTIP_ITEM_ALL_ANIMATIONS);
                 },
                 [&]() {
                     ImGui::RadioButton(localize.get(LABEL_THIS_ANIMATION), &destination, DESTINATION_THIS);
-                    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ITEM_THIS_ANIMATION));
+                    tooltip_set(TOOLTIP_ITEM_THIS_ANIMATION);
                 });
 
             if (source == SOURCE_NEW)
@@ -100,13 +98,13 @@ bool ItemProperties::update(Manager& manager, Settings& settings, Document& docu
                 ImGui::SeparatorText(localize.get(LABEL_OPTIONS));
 
                 input_text_string(localize.get(BASIC_NAME), &edit.name);
-                ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ITEM_NAME));
+                tooltip_set(TOOLTIP_ITEM_NAME);
                 if (type == LAYER)
                     layer_source_draw(document, edit);
                 else if (type == NULL_)
                 {
                     ImGui::Checkbox(localize.get(LABEL_RECT), &edit.isShowRect);
-                    ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_NULL_RECT));
+                    tooltip_set(TOOLTIP_NULL_RECT);
                 }
             }
             else if (animation)
@@ -138,8 +136,7 @@ bool ItemProperties::update(Manager& manager, Settings& settings, Document& docu
                         {
                             if (auto null = item_get(model.content.nulls, id))
                             {
-                                auto label =
-                                    std::vformat(localize.get(FORMAT_NULL), std::make_format_args(id, null->name));
+                                auto label = localize_format(FORMAT_NULL, id, null->name);
                                 if (ImGui::Selectable(label.c_str(), isSelected))
                                     edit.id = id;
                             }
@@ -191,14 +188,14 @@ bool ItemProperties::update(Manager& manager, Settings& settings, Document& docu
             close();
         }
         ImGui::EndDisabled();
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ADD_ITEM));
+        tooltip_set(TOOLTIP_ADD_ITEM);
 
         ImGui::SameLine();
 
         shortcut(manager.chords[SHORTCUT_CANCEL]);
         if (ImGui::Button(localize.get(BASIC_CANCEL), widgetSize))
             close();
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_CANCEL_ADD_ITEM));
+        tooltip_set(TOOLTIP_CANCEL_ADD_ITEM);
 
         ImGui::EndPopup();
     }

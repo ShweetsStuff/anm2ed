@@ -24,9 +24,9 @@ void onionskin_update(Manager& manager, Settings& settings)
             ImGui::PushID(separator);
             ImGui::SeparatorText(separator);
             input_int_range(localize.get(BASIC_FRAMES), frames, 0, FRAMES_MAX);
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ONIONSKIN_FRAMES));
+            tooltip_set(TOOLTIP_ONIONSKIN_FRAMES);
             ImGui::ColorEdit3(localize.get(BASIC_COLOR), values_get(color));
-            ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ONIONSKIN_COLOR));
+            tooltip_set(TOOLTIP_ONIONSKIN_COLOR);
             ImGui::PopID();
         };
 
@@ -37,17 +37,17 @@ void onionskin_update(Manager& manager, Settings& settings)
         configure_widgets(localize.get(BASIC_AFTER), afterCount, afterColor);
         ImGui::SeparatorText(localize.get(BASIC_MODE));
         ImGui::RadioButton(localize.get(BASIC_TIME), &mode, (int)OnionskinMode::TIME);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ONIONSKIN_TIME));
+        tooltip_set(TOOLTIP_ONIONSKIN_TIME);
         ImGui::SameLine();
         ImGui::RadioButton(localize.get(BASIC_INDEX), &mode, (int)OnionskinMode::INDEX);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ONIONSKIN_INDEX));
+        tooltip_set(TOOLTIP_ONIONSKIN_INDEX);
 
         ImGui::SeparatorText(localize.get(LABEL_OPTIONS));
         ImGui::Checkbox(localize.get(LABEL_PIVOT_PATH), &settings.onionskinIsPivotPath);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_PIVOT_PATH));
+        tooltip_set(TOOLTIP_PIVOT_PATH);
         ImGui::SameLine();
         ImGui::Checkbox(localize.get(LABEL_ONLY_SELECTED_ITEM), &settings.onionskinIsOnlySelected);
-        ImGui::SetItemTooltip("%s", localize.get(TOOLTIP_ONLY_SELECTED_ITEM));
+        tooltip_set(TOOLTIP_ONLY_SELECTED_ITEM);
     }
     ImGui::End();
 
