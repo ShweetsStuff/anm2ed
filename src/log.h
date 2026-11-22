@@ -1,12 +1,11 @@
 #pragma once
 
-#include <cstdint>
+#include <cstdio>
 #include <filesystem>
 #include <functional>
 #include <mutex>
 #include <string>
 #include <string_view>
-#include <thread>
 
 #if defined(INFO)
 #undef INFO
@@ -42,34 +41,23 @@ constexpr std::string_view LEVEL_STRINGS[] = {
 };
 #undef LEVELS
 
+// Writes to stdout and, once a session is open, to its own file in the preferences' logs folder.
+// The last SESSION_LIMIT sessions' files are kept.
 class Logger
 {
     std::filesystem::path logPath;
-    std::uintmax_t logSize = 0;
+    std::FILE* file = nullptr;
     std::mutex mutex;
-    std::thread stderrThread;
-    bool isStderrRedirecting = false;
-    bool isLogLimitReached = false;
-    int stderrPipeReadFd = -1;
-    int stderrPipeWriteFd = -1;
-    int stderrOriginalFd = -1;
-
-    void stderr_redirect_start();
-    void stderr_redirect_stop();
-    void stderr_pump();
 
 public:
-    std::filesystem::path path() const;
+    std::filesystem::path path();
     void session_open(const std::filesystem::path&);
-    void write_raw(const std::string&);
-    void write(const Level, const std::string&);
+    void write(Level, const std::string&);
     void info(const std::string&);
     void warning(const std::string&);
     void error(const std::string&);
     void fatal(const std::string&);
     void command(const std::string&);
-    void open(const std::filesystem::path&);
-    Logger();
     ~Logger();
 };
 

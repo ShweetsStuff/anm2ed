@@ -31,8 +31,8 @@
 #include "ui/toast.h"
 
 bool animation_render(const std::filesystem::path& ffmpegPath, const std::filesystem::path& path,
-                      const std::vector<std::filesystem::path>& framePaths, const std::vector<float>& audio, RenderType type,
-                      int fps)
+                      const std::vector<std::filesystem::path>& framePaths, const std::vector<float>& audio,
+                      RenderType type, int fps)
 {
     if (framePaths.empty() || ffmpegPath.empty() || path.empty())
         return false;
@@ -40,14 +40,6 @@ bool animation_render(const std::filesystem::path& ffmpegPath, const std::filesy
 
     auto pathString = path_to_utf8(path);
     auto ffmpegPathString = path_to_utf8(ffmpegPath);
-    auto loggerPath = logger.path();
-    auto loggerPathString = path_to_utf8(loggerPath);
-#if _WIN32
-    auto ffmpegTempPath = loggerPath.parent_path() / "ffmpeg_log.temp.txt";
-    auto ffmpegTempPathString = path_to_utf8(ffmpegTempPath);
-    std::error_code ffmpegTempError;
-    std::filesystem::remove(ffmpegTempPath, ffmpegTempError);
-#endif
 
     std::filesystem::path audioPath;
     std::string audioInputArguments;
@@ -75,14 +67,14 @@ bool animation_render(const std::filesystem::path& ffmpegPath, const std::filesy
         auto byteCount = audio.size() * sizeof(float);
         if (file_text_save(audioPath, std::string_view(data, byteCount), "wb"))
         {
-                                    auto audioDurationFilter = std::string{};
+            auto audioDurationFilter = std::string{};
             auto frameCount = (double)std::max((int)framePaths.size(), 1);
             auto expectedDurationSeconds = frameCount / (double)fps;
             if (expectedDurationSeconds > 0.0)
                 audioDurationFilter += std::format("apad,atrim=duration={:.9f}", expectedDurationSeconds);
 
-            audioInputArguments =
-                std::format("-f f32le -ar {0} -ac {1} -i \"{2}\"", AUDIO_FREQUENCY, AUDIO_CHANNELS, path_to_utf8(audioPath));
+            audioInputArguments = std::format("-f f32le -ar {0} -ac {1} -i \"{2}\"", AUDIO_FREQUENCY, AUDIO_CHANNELS,
+                                              path_to_utf8(audioPath));
 
             switch (type)
             {
@@ -111,8 +103,8 @@ bool animation_render(const std::filesystem::path& ffmpegPath, const std::filesy
 
     auto framePattern = temporaryDirectory / path_from_utf8("frame_%06d.png");
     auto framePatternString = path_to_utf8(framePattern);
-    command =
-        std::format("\"{0}\" -y -framerate {1} -start_number 0 -i \"{2}\"", ffmpegPathString, fps, framePatternString);
+    command = std::format("\"{0}\" -y -hide_banner -loglevel warning -framerate {1} -start_number 0 -i \"{2}\"",
+                          ffmpegPathString, fps, framePatternString);
 
     if (!audioInputArguments.empty())
         command += " " + audioInputArguments;
@@ -152,6 +144,9 @@ bool animation_render(const std::filesystem::path& ffmpegPath, const std::filesy
         }
     }
 
+    // FFmpeg's warnings and errors go to the end of the log.
+    if (auto logPath = logger.path(); !logPath.empty())
+        command += std::format(" 2>> \"{}\"", path_to_utf8(logPath));
 #if _WIN32
     command = "\"" + command + "\"";
 #endif
@@ -382,9 +377,9 @@ void Recorder::finish()
     }
     else
     {
-        auto audio = options.isSound && options.type != RENDER_GIF ? audio_mix(sounds, options.fps) : std::vector<float>();
-        auto isRendered =
-            animation_render(options.ffmpegPath, options.path, frames, audio, options.type, options.fps);
+        auto audio =
+            options.isSound && options.type != RENDER_GIF ? audio_mix(sounds, options.fps) : std::vector<float>();
+        auto isRendered = animation_render(options.ffmpegPath, options.path, frames, audio, options.type, options.fps);
         toast_log(isRendered ? Level::INFO : Level::ERROR,
                   isRendered ? TOAST_EXPORT_RENDERED_ANIMATION : TOAST_EXPORT_RENDERED_ANIMATION_FAILED, pathString);
     }
