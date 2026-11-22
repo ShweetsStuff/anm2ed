@@ -58,4 +58,3 @@ enum class OnionskinMode
     INDEX
 };
 
-constexpr auto ID_NONE = -1;

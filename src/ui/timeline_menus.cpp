@@ -38,7 +38,6 @@ void TimelineContext::playback_stop()
 {
     playback.isPlaying = false;
     playback.isFinished = false;
-    playback.timing_reset();
 }
 
 void TimelineContext::context_menu()

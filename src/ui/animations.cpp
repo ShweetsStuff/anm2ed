@@ -625,14 +625,12 @@ void animations_update(Panel& panel, AnimationsPanel& animations)
                 auto targets = animation_groupable_indices_get(document);
                 command_push(panel,
                              [&state, targets = std::set<int>(targets.begin(), targets.end())](Document& document) {
-                                 auto groupIds = animation_group_ids_get(document.model);
-                                 auto groupId = groupIds.empty() ? 0 : *groupIds.rbegin() + 1;
+                                 auto groupId = group_next_id(document.model.animations.entries);
                                  document.edit_apply(EDIT_GROUP_ITEMS, [&](Model& model) {
-                                     auto uids = animations_group(model, targets, localize.get(TEXT_NEW_GROUP));
+                                     animations_group(model, targets, localize.get(TEXT_NEW_GROUP));
                                      animations_selection_set(document, targets, {groupId});
                                      document.reference_set({*targets.begin()});
                                      state.scrollId = *targets.begin();
-                                     return uids;
                                  });
                              });
             });

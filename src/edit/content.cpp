@@ -39,7 +39,7 @@ template <class Callback> static void layer_frames_each(Model& model, int animat
 }
 
 // Makes a region for each distinct crop/size/pivot among the frames (and points frames at them when mapping is SET).
-Uids regions_generate(Model& model, const std::set<int>& animationIndices, const std::set<Reference>& frames,
+void regions_generate(Model& model, const std::set<int>& animationIndices, const std::set<Reference>& frames,
                       const std::string& format, RegionFrameMapping mapping)
 {
     std::unordered_map<int, int> regionNumbers;
@@ -66,11 +66,10 @@ Uids regions_generate(Model& model, const std::set<int>& animationIndices, const
         if (spritesheet && source && source->regionId == -1)
             frame_apply(*model.frame_edit(reference), spritesheet->id);
     }
-    return {};
 }
 
 // Points frames without a region at a region of their spritesheet with the same crop/size/pivot.
-Uids regions_scan(Model& model)
+void regions_scan(Model& model)
 {
     for (int i = 0; i < model.animations_count_get(); ++i)
         layer_frames_each(model, i, [&](Frame& frame, int spritesheetId) {
@@ -79,17 +78,15 @@ Uids regions_scan(Model& model)
             if (auto match = region_matched_get(item_get(model.content.spritesheets, spritesheetId)->regions, frame))
                 frame.regionId = match->id;
         });
-    return {};
 }
 
 // Copies each layer frame's region crop/size/pivot onto it. Frames pointing at a missing region lose it.
-Uids region_frames_sync(Model& model)
+void region_frames_sync(Model& model)
 {
     for (int i = 0; i < model.animations_count_get(); ++i)
         layer_frames_each(model, i, [&](Frame& frame, int spritesheetId) {
             frame_region_apply(frame, item_get(model.content.spritesheets, spritesheetId)->regions);
         });
-    return {};
 }
 
 // Clears frame references to the spritesheet's unused regions, then removes them.
@@ -97,7 +94,7 @@ Uids region_frames_sync(Model& model)
 // in every animation, an event or sound from its triggers (dropping those left with neither), a shader from its
 // frames (which go back to the default), a region from its frames (which keep its crop, size and pivot), a
 // spritesheet's plain layers, and a library's layers, flattened into plain ones.
-Uids content_remove(Model& model, ElementType type, const std::set<int>& ids, int spritesheetId,
+void content_remove(Model& model, ElementType type, const std::set<int>& ids, int spritesheetId,
                     const LibraryGet& library_get, const SpritesheetPathGet& path_get)
 {
     auto& content = model.content;
@@ -186,21 +183,19 @@ Uids content_remove(Model& model, ElementType type, const std::set<int>& ids, in
         default:
             break;
     }
-    return {};
 }
 
 // Pastes regions into a spritesheet at a position. They get fresh ids after the existing ones.
-Uids regions_paste(Model& model, int spritesheetId, const std::string& text, int insertIndex, std::string* errorString)
+void regions_paste(Model& model, int spritesheetId, const std::string& text, int insertIndex, std::string* errorString)
 {
     auto spritesheet = item_get(model.content.spritesheets, spritesheetId);
     if (!spritesheet)
-        return {};
+        return;
     auto regions = items_from_string<Region>(text, errorString);
     for (auto& region : regions)
         region.id = item_next_id_get(spritesheet->regions) + (int)(&region - regions.data());
     insertIndex = std::clamp(insertIndex, 0, (int)spritesheet->regions.size());
     spritesheet->regions.insert(spritesheet->regions.begin() + insertIndex, regions.begin(), regions.end());
-    return {};
 }
 
 // Appends grid frames to each layer track (optionally making a region per frame) and fits the animation length.

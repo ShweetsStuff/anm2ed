@@ -94,39 +94,39 @@ Uids frames_property_set(Model&, const std::set<Reference>&, FrameProperty, cons
 std::map<Reference, std::set<int>> frames_by_track_get(const std::set<Reference>&);
 
 Uids frame_insert(Model&, Reference, int);
-Uids frames_delete(Model&, const std::set<Reference>&);
+void frames_delete(Model&, const std::set<Reference>&);
 Uids frames_duplicate(Model&, const std::set<Reference>&, Reference);
-Uids frames_reverse(Model&, const std::set<Reference>&);
+void frames_reverse(Model&, const std::set<Reference>&);
 Uids frames_bake(Model&, const std::set<Reference>&, int, bool, bool);
 Uids frame_split(Model&, Reference, int);
 Uids frames_split(Model&, const std::set<Reference>&, int);
 Uids frames_move(Model&, const std::set<Reference>&, Reference, int);
-Uids frame_durations_set(Model&, const std::map<Reference, int>&);
-Uids trigger_at_frame_set(Model&, Reference, int);
+void frame_durations_set(Model&, const std::map<Reference, int>&);
+void trigger_at_frame_set(Model&, Reference, int);
 Uids frames_paste(Model&, Reference, const std::set<Reference>&, const std::string&, int, std::string*);
 Uids root_bake_into(Model&, const std::set<Reference>&, const std::set<Reference>&, RootBakeOptions);
 
-Uids items_remove(Model&, int, const std::map<int, std::set<int>>&, const std::map<int, std::set<int>>&);
+void items_remove(Model&, int, const std::map<int, std::set<int>>&, const std::map<int, std::set<int>>&);
 Uids items_group(Model&, int, int, const std::set<int>&, const std::string&);
-Uids items_move(Model&, int, int, const std::set<int>&, const std::set<int>&, RowTarget, bool, bool);
-Uids animation_length_fit(Model&, int);
+void items_move(Model&, int, int, const std::set<int>&, const std::set<int>&, RowTarget, bool, bool);
+void animation_length_fit(Model&, int);
 int item_add(Model&, ItemType, int, int, Layer, Null, int, Destination);
 
 std::set<int> animation_group_ids_get(const Model&);
 std::set<int> animation_group_indices_get(const Model&, int);
 void animation_groups_remove(Model&, const std::set<int>&);
 Uids animation_add(Model&, int, int, int, const std::string&);
-Uids animations_remove(Model&, const std::set<int>&, const std::set<int>&);
+void animations_remove(Model&, const std::set<int>&, const std::set<int>&);
 Uids animations_move(Model&, const std::set<int>&, const std::set<int>&, AnimationTarget);
-Uids animations_group(Model&, const std::set<int>&, const std::string&);
+void animations_group(Model&, const std::set<int>&, const std::string&);
 Uids animations_paste(Model&, const std::string&, int, int, std::set<int>&, std::string*);
 Uids animations_merge(Model&, int, std::set<int>, Merge, bool, const std::set<int>&);
 
 std::string region_name_get(const std::string&, int);
-Uids regions_generate(Model&, const std::set<int>&, const std::set<Reference>&, const std::string&, RegionFrameMapping);
-Uids regions_scan(Model&);
-Uids region_frames_sync(Model&);
-Uids regions_paste(Model&, int, const std::string&, int, std::string*);
+void regions_generate(Model&, const std::set<int>&, const std::set<Reference>&, const std::string&, RegionFrameMapping);
+void regions_scan(Model&);
+void region_frames_sync(Model&);
+void regions_paste(Model&, int, const std::string&, int, std::string*);
 Uids animation_grid_generate(Model&, const std::vector<Reference>&, const GridOptions&);
 Uids frames_change_apply(Model&, const ChangeTargets&, FrameChange, ChangeType);
 bool regions_trim(Model&, int, const std::set<int>&, const Image&);
@@ -136,6 +136,6 @@ std::optional<Image> spritesheets_merge(Model&, const std::set<int>&, const Imag
 // Where a spritesheet path of a document (this one, or a library) points, from this document.
 using SpritesheetPathGet = std::function<std::filesystem::path(const Model&, const std::filesystem::path&)>;
 Model animation_layers_flatten(Model, const LibraryGet&, const SpritesheetPathGet&, const std::set<int>& = {});
-Uids content_remove(Model&, ElementType, const std::set<int>&, int, const LibraryGet&, const SpritesheetPathGet&);
+void content_remove(Model&, ElementType, const std::set<int>&, int, const LibraryGet&, const SpritesheetPathGet&);
 Model isaac_bridge(Model);
 bool file_merge(Model&, const std::filesystem::path&, const std::filesystem::path&, FileMergePreset);

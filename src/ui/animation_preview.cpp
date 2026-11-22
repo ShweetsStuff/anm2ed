@@ -156,7 +156,6 @@ void AnimationPreview::tick(Manager& manager, Settings& settings, float deltaSec
         {
             playback.isPlaying = false;
             playback.isFinished = false;
-            playback.timing_reset();
         }
         else
         {
@@ -237,7 +236,6 @@ void AnimationPreview::recording_start(Manager& manager, Settings& settings, Doc
         return recording_stop(manager, document);
     }
     document.playback.isPlaying = true;
-    document.playback.timing_reset();
     document.playback.time = recorder.time_get();
     document.frameTime = document.playback.time;
 }

@@ -53,14 +53,13 @@ Uids frame_insert(Model& model, Reference reference, int time)
     return {frame.uid};
 }
 
-Uids frames_delete(Model& model, const std::set<Reference>& frames)
+void frames_delete(Model& model, const std::set<Reference>& frames)
 {
     for (auto& [trackReference, indices] : frames_by_track_get(frames))
         if (auto track = model.track_edit(trackReference))
             for (auto it = indices.rbegin(); it != indices.rend(); ++it)
                 if (*it >= 0 && *it < (int)track->frames.size())
                     track->frames.erase(track->frames.begin() + *it);
-    return {};
 }
 
 Uids frames_duplicate(Model& model, const std::set<Reference>& frames, Reference focus)
@@ -100,7 +99,7 @@ Uids frames_duplicate(Model& model, const std::set<Reference>& frames, Reference
 }
 
 // Reverses the selected frames of each track as one block placed where the first of them was.
-Uids frames_reverse(Model& model, const std::set<Reference>& frames)
+void frames_reverse(Model& model, const std::set<Reference>& frames)
 {
     for (auto& [trackReference, indices] : frames_by_track_get(frames))
     {
@@ -118,7 +117,6 @@ Uids frames_reverse(Model& model, const std::set<Reference>& frames)
         auto index = std::min(*indices.begin(), (int)track->frames.size());
         track->frames.insert(track->frames.begin() + index, reversed.begin(), reversed.end());
     }
-    return {};
 }
 
 Uids frames_bake(Model& model, const std::set<Reference>& frames, int interval, bool isRoundScale, bool isRoundRotation)
@@ -319,25 +317,23 @@ Uids frames_property_set(Model& model, const std::set<Reference>& references, Fr
     return uids;
 }
 
-Uids frame_durations_set(Model& model, const std::map<Reference, int>& durations)
+void frame_durations_set(Model& model, const std::map<Reference, int>& durations)
 {
     for (auto [reference, duration] : durations)
         if (auto frame = model.frame_edit(reference))
             frame->duration = std::clamp(duration, FRAME_DURATION_MIN, FRAME_DURATION_MAX);
-    return {};
 }
 
 // Places a trigger at a frame, stepping it back past any other trigger already there.
-Uids trigger_at_frame_set(Model& model, Reference reference, int atFrame)
+void trigger_at_frame_set(Model& model, Reference reference, int atFrame)
 {
     auto trigger = model.frame_edit(reference);
     if (!trigger)
-        return {};
+        return;
     trigger->atFrame = atFrame;
     for (auto& other : model.track_get(reference)->frames)
         if (&other != trigger && other.atFrame == trigger->atFrame)
             trigger->atFrame--;
-    return {};
 }
 
 // Pastes clipboard frames after the track's selected frames (or its current frame). Triggers go at `time`, stepping

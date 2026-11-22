@@ -375,30 +375,20 @@ public:
     Frame frame_effective(int, const Frame&) const;
     std::set<int> unused_get(ElementType, const Animation* = nullptr) const;
     int uses_count(ElementType, const std::set<int>&, int = -1, const Animation* = nullptr) const;
-    std::uint64_t uid_get(Reference, bool = false) const;
     Handle handle_get(Reference, bool = false) const;
     void uids_repair();
 };
 
-// uid -> where that element is now (as a Reference) and what it is, built in one walk of the animations.
+// uid -> where that element is now, as a Reference, built in one walk of the animations.
 class UidIndex
 {
-public:
-    struct Location
-    {
-        Reference reference = {};
-        ElementType type = {};
-    };
-
-private:
-    std::unordered_map<std::uint64_t, Location> locations;
+    std::unordered_map<std::uint64_t, Reference> locations;
 
 public:
     UidIndex() = default;
     explicit UidIndex(const Model&);
     bool contains(std::uint64_t) const;
     std::optional<Reference> reference_get(std::uint64_t) const;
-    ElementType type_get(std::uint64_t) const;
 };
 
 bool is_model_equal(const Model&, const Model&);
@@ -408,7 +398,6 @@ Vec2 region_pivot_get(const Region&);
 void frame_region_rect_set(Frame&, const Region&);
 void frame_region_apply(Frame&, const std::vector<Region>&);
 std::set<int> spritesheets_vector_used_get(const Model&);
-int track_frames_count_get(const Track&);
 int track_length_get(const Track&);
 int animation_length_get(const Animation&);
 IVec2 animation_play_range_get(const Animation&);

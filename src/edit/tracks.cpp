@@ -8,7 +8,7 @@ static std::vector<TrackEntry>* track_entries_edit(Model& model, int animationIn
     return animation ? &animation_entries_get(*animation, type) : nullptr;
 }
 
-Uids items_remove(Model& model, int animationIndex, const std::map<int, std::set<int>>& ids,
+void items_remove(Model& model, int animationIndex, const std::map<int, std::set<int>>& ids,
                   const std::map<int, std::set<int>>& groupIds)
 {
     for (auto type : {LAYER, NULL_})
@@ -18,7 +18,6 @@ Uids items_remove(Model& model, int animationIndex, const std::map<int, std::set
             auto typeGroupIds = groupIds.contains(type) ? groupIds.at(type) : std::set<int>{};
             entries_take(*entries, [&](Track& track) { return typeIds.contains(track.id); }, typeGroupIds);
         }
-    return {};
 }
 
 // Wraps ungrouped tracks in a new group placed where the first of them was.
@@ -36,17 +35,17 @@ Uids items_group(Model& model, int animationIndex, int type, const std::set<int>
 
 // Moves tracks and whole groups next to (or into) a target row. Layers are listed bottom-up, so for them "after" on
 // screen is "before" in the file.
-Uids items_move(Model& model, int animationIndex, int type, const std::set<int>& ids, const std::set<int>& groupIds,
+void items_move(Model& model, int animationIndex, int type, const std::set<int>& ids, const std::set<int>& groupIds,
                 RowTarget target, bool isDropAfter, bool isDropIntoGroup)
 {
     if ((target.groupId != -1 && groupIds.contains(target.groupId)) || (target.isGroup && groupIds.contains(target.id)))
-        return {};
+        return;
     auto entries = track_entries_edit(model, animationIndex, type);
     if (!entries)
-        return {};
+        return;
     auto taken = entries_take(*entries, [&](Track& track) { return ids.contains(track.id); }, groupIds);
     if (taken.items.empty() && taken.groups.empty())
-        return {};
+        return;
 
     // Where top-level items go: beside the target row, or beside the group that holds it.
     auto isAfter = type == LAYER ? !isDropAfter : isDropAfter;
@@ -80,14 +79,12 @@ Uids items_move(Model& model, int animationIndex, int type, const std::set<int>&
         taken.items.clear();
     }
     entries_insert(*entries, topIndex, std::move(taken));
-    return {};
 }
 
-Uids animation_length_fit(Model& model, int animationIndex)
+void animation_length_fit(Model& model, int animationIndex)
 {
     if (auto animation = model.animation_edit(animationIndex))
         animation->frameNum = animation_length_get(*animation);
-    return {};
 }
 
 // Adds a layer or null (or updates the one with the item's id) and gives it a track in one or every animation.

@@ -114,11 +114,10 @@ Uids animation_add(Model& model, int index, int groupId, int templateIndex, cons
     return {uid};
 }
 
-Uids animations_remove(Model& model, const std::set<int>& indices, const std::set<int>& groupIds)
+void animations_remove(Model& model, const std::set<int>& indices, const std::set<int>& groupIds)
 {
     animations_take(model, indices, {});
     animation_groups_remove(model, groupIds);
-    return {};
 }
 
 // Moves animations and whole groups beside a target animation or group. Animations dropped on their own join the
@@ -176,17 +175,16 @@ Uids animations_move(Model& model, const std::set<int>& indices, const std::set<
 }
 
 // Gathers animations into a new group placed where the first of them was.
-Uids animations_group(Model& model, const std::set<int>& indices, const std::string& name)
+void animations_group(Model& model, const std::set<int>& indices, const std::string& name)
 {
     auto first = indices.empty() ? nullptr : model.animation_get(*indices.begin());
     if (!first)
-        return {};
+        return;
     auto& entries = model.animations.entries;
     auto entry = animation_place_get(model, first->uid).entry;
     AnimationGroup group = {
         .id = group_next_id(entries), .name = name, .items = animations_take(model, indices, {}).items};
     entries.insert(entries.begin() + std::clamp(entry, 0, (int)entries.size()), std::move(group));
-    return {};
 }
 
 // Pastes clipboard animations (and groups, which get new ids) before the animation at `start`. Lone animations join

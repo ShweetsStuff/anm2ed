@@ -1052,7 +1052,7 @@ bool Document::frames_range_select(Reference firstReference, Reference lastRefer
         return false;
 
     auto item = model.track_get(lastReference);
-    if (!item || std::max(firstReference.frameIndex, lastReference.frameIndex) >= track_frames_count_get(*item))
+    if (!item || std::max(firstReference.frameIndex, lastReference.frameIndex) >= (int)item->frames.size())
         return false;
 
     auto [firstIndex, lastIndex] = std::minmax(firstReference.frameIndex, lastReference.frameIndex);

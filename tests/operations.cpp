@@ -151,12 +151,20 @@ TEST_CASE("edit layer operations")
         {"frame_insert", "02_items.anm2", [&](Model& anm2) { return frame_insert(anm2, {0, LAYER, 0, 0}, 0); }, 1},
         {"trigger_insert", "02_items.anm2", [&](Model& anm2) { return frame_insert(anm2, {0, TRIGGER, -1, 0}, 2); }, 1},
         {"frames_delete", "02_items.anm2",
-         [&](Model& anm2) { return frames_delete(anm2, {{0, LAYER, 0, 0}, {0, ROOT, -1, 1}}); }, 0},
+         [&](Model& anm2) {
+             frames_delete(anm2, {{0, LAYER, 0, 0}, {0, ROOT, -1, 1}});
+             return Uids{};
+         },
+         0},
         {"frames_duplicate", "02_items.anm2",
          [&](Model& anm2) { return frames_duplicate(anm2, {{0, LAYER, 0, 0}, {0, LAYER, 0, 1}}, {0, LAYER, 0, 1}); },
          2},
         {"frames_reverse", "07_special_interpolation.anm2",
-         [&](Model& anm2) { return frames_reverse(anm2, {{0, LAYER, 0, 0}, {0, LAYER, 0, 2}}); }, 0},
+         [&](Model& anm2) {
+             frames_reverse(anm2, {{0, LAYER, 0, 0}, {0, LAYER, 0, 2}});
+             return Uids{};
+         },
+         0},
         {"frames_bake", "07_special_interpolation.anm2",
          [&](Model& anm2) { return frames_bake(anm2, {{0, LAYER, 0, 0}, {0, LAYER, 0, 1}}, 2, true, false); }, 5},
         {"frame_split", "02_items.anm2", [&](Model& anm2) { return frame_split(anm2, {0, LAYER, 1, 0}, 2); }, 1},
@@ -178,16 +186,33 @@ TEST_CASE("edit layer operations")
         {"items_group", "03b_groups_legacy_flat.anm2",
          [&](Model& anm2) { return items_group(anm2, 0, LAYER, {2}, "New"); }, 1},
         {"items_move", "03b_groups_legacy_flat.anm2",
-         [&](Model& anm2) { return items_move(anm2, 0, LAYER, {2}, {}, {true, LAYER, 0, -1}, false, true); }, 0},
+         [&](Model& anm2) {
+             items_move(anm2, 0, LAYER, {2}, {}, {true, LAYER, 0, -1}, false, true);
+             return Uids{};
+         },
+         0},
         {"items_remove", "03b_groups_legacy_flat.anm2",
-         [&](Model& anm2) { return items_remove(anm2, 0, {{LAYER, {2}}}, {{NULL_, {3}}}); }, 0},
+         [&](Model& anm2) {
+             items_remove(anm2, 0, {{LAYER, {2}}}, {{NULL_, {3}}});
+             return Uids{};
+         },
+         0},
         {"animation_add", "03a_groups_nested.anm2", [&](Model& anm2) { return animation_add(anm2, 1, 0, 0, "Added"); },
          1},
-        {"animations_remove", "03a_groups_nested.anm2", [&](Model& anm2) { return animations_remove(anm2, {1}, {0}); },
+        {"animations_remove", "03a_groups_nested.anm2",
+         [&](Model& anm2) {
+             animations_remove(anm2, {1}, {0});
+             return Uids{};
+         },
          0},
         {"animations_move", "02_items.anm2",
          [&](Model& anm2) { return animations_move(anm2, {0}, {}, {.animationIndex = 1, .isAfter = true}); }, 1},
-        {"animations_group", "02_items.anm2", [&](Model& anm2) { return animations_group(anm2, {0, 1}, "Group"); }, 0},
+        {"animations_group", "02_items.anm2",
+         [&](Model& anm2) {
+             animations_group(anm2, {0, 1}, "Group");
+             return Uids{};
+         },
+         0},
         {"animations_paste", "02_items.anm2",
          [&](Model& anm2) {
              std::set<int> groupIds;
@@ -198,7 +223,8 @@ TEST_CASE("edit layer operations")
         {"regions_paste", "05_regions.anm2",
          [&](Model& anm2) {
              auto region = item_get(item_get(anm2.content.spritesheets, 0)->regions, 1);
-             return regions_paste(anm2, 0, item_to_string(*region), 1, nullptr);
+             regions_paste(anm2, 0, item_to_string(*region), 1, nullptr);
+             return Uids{};
          },
          0},
         {"animation_grid_generate", "05_regions.anm2",

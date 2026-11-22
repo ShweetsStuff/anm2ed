@@ -301,7 +301,7 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
                         return value ? localize.get(BASIC_YES) : localize.get(BASIC_NO);
                     };
                     auto visibleLabel = yesNoLabel(isVisible);
-                    auto framesCount = item ? track_frames_count_get(*item) : 0;
+                    auto framesCount = item ? (int)item->frames.size() : 0;
 
                     switch (type)
                     {

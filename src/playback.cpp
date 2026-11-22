@@ -10,12 +10,6 @@ void Playback::toggle()
         time = 0.0f;
     isFinished = false;
     isPlaying = !isPlaying;
-    timing_reset();
-}
-
-void Playback::timing_reset()
-{
-    tickAccumulator = 0.0f;
 }
 
 void Playback::clamp(int length)
@@ -48,7 +42,6 @@ void Playback::tick(int fps, int start, int end, bool isLoop, float deltaSeconds
         time = (float)end - 1.0f;
         isPlaying = false;
         isFinished = true;
-        timing_reset();
     }
 }
 
@@ -56,12 +49,10 @@ void Playback::decrement(int length)
 {
     --time;
     clamp(length);
-    timing_reset();
 }
 
 void Playback::increment(int length)
 {
     ++time;
     clamp(length);
-    timing_reset();
 }

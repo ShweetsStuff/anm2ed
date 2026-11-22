@@ -333,12 +333,6 @@ Handle Model::handle_get(Reference reference, bool isGroup) const
     return handle;
 }
 
-std::uint64_t Model::uid_get(Reference reference, bool isGroup) const
-{
-    auto handle = handle_get(reference, isGroup);
-    return handle.frame ? handle.frame : handle.item ? handle.item : handle.animation;
-}
-
 template <class Callback> static void animation_uids_each(Animation& animation, Callback&& callback)
 {
     callback(animation.uid);
@@ -403,11 +397,6 @@ std::set<int> spritesheets_vector_used_get(const Model& model)
     return ids;
 }
 
-int track_frames_count_get(const Track& track)
-{
-    return (int)track.frames.size();
-}
-
 int track_length_get(const Track& track)
 {
     int length = 0;
@@ -452,17 +441,14 @@ Animation animation_clone(Animation animation)
     return animation;
 }
 
-static void track_locations_add(std::unordered_map<std::uint64_t, UidIndex::Location>& locations, const Track& track,
+static void track_locations_add(std::unordered_map<std::uint64_t, Reference>& locations, const Track& track,
                                 Reference reference)
 {
-    constexpr ElementType TRACK_TYPES[] = {ElementType::UNKNOWN, ElementType::ROOT_ANIMATION,
-                                           ElementType::LAYER_ANIMATION, ElementType::NULL_ANIMATION,
-                                           ElementType::TRIGGERS};
-    locations[track.uid] = {reference, TRACK_TYPES[(int)track.type]};
+    locations[track.uid] = reference;
     for (auto& frame : track.frames)
     {
         ++reference.frameIndex;
-        locations[frame.uid] = {reference, track.type == ItemType::TRIGGER ? ElementType::TRIGGER : ElementType::FRAME};
+        locations[frame.uid] = reference;
     }
 }
 
@@ -470,7 +456,7 @@ UidIndex::UidIndex(const Model& model)
 {
     for (auto [index, animation] : model.animations_get())
     {
-        locations[animation->uid] = {{index}, ElementType::ANIMATION};
+        locations[animation->uid] = {index};
         track_locations_add(locations, animation->root, {index, ROOT});
         track_locations_add(locations, animation->triggers, {index, TRIGGER});
         for (auto type : {LAYER, NULL_})
@@ -481,7 +467,7 @@ UidIndex::UidIndex(const Model& model)
                                         {index, type, track.id, -1, group ? type : NONE, group ? group->id : -1});
                 },
                 [&](const TrackGroup& group) {
-                    locations[group.uid] = {{index, type, group.id}, ElementType::GROUP};
+                    locations[group.uid] = {index, type, group.id};
                     track_locations_add(locations, group.root, {index, ROOT, -1, -1, type, group.id});
                 });
     }
@@ -495,13 +481,7 @@ bool UidIndex::contains(std::uint64_t uid) const
 std::optional<Reference> UidIndex::reference_get(std::uint64_t uid) const
 {
     auto it = locations.find(uid);
-    return it == locations.end() ? std::nullopt : std::optional<Reference>(it->second.reference);
-}
-
-ElementType UidIndex::type_get(std::uint64_t uid) const
-{
-    auto it = locations.find(uid);
-    return it == locations.end() ? ElementType::UNKNOWN : it->second.type;
+    return it == locations.end() ? std::nullopt : std::optional<Reference>(it->second);
 }
 
 // Equality by value. Animations shared with another model compare by pointer first.
