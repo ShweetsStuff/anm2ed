@@ -307,22 +307,8 @@ void shaders_update(Panel& panel, ShadersPanel& shaders)
         };
 
         Actions actions = {};
-        actions.add(
-            ACTION_ADD, {},
-            [&]() {
-                command_push(panel, [&state](Document& document) {
-                    int id = 0;
-                    document.edit_apply(EDIT_ADD_SHADER, [&](Model& model) {
-                        auto& shaders = model.content.shaders;
-                        id = item_next_id_get(shaders);
-                        shaders.push_back({.id = id, .name = localize.get(TEXT_NEW_SHADER)});
-                    });
-                    document.selected_ids_set(SelectionKind::SHADERS, {id});
-                    document.focused_id_set(SelectionKind::SHADERS, id);
-                    state.newId = id;
-                });
-            },
-            TOOLTIP_ADD_SHADER);
+        named_item_add_action_add(actions, panel, SelectionKind::SHADERS, &Content::shaders, EDIT_ADD_SHADER,
+                                  TEXT_NEW_SHADER, TOOLTIP_ADD_SHADER);
         content_remove_action_add(actions, panel, ElementType::SHADER, SelectionKind::SHADERS);
         actions.add(
             ACTION_RELOAD, [selection]() { return !selection.empty(); },

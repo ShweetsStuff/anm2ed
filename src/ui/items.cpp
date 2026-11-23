@@ -236,23 +236,8 @@ void events_update(Panel& panel)
         actions.add(
             ACTION_RENAME, [selection]() { return selection.size() == 1; },
             [&state, selection]() { state.newId = *selection.begin(); });
-        actions.add(
-            ACTION_ADD, {},
-            [&panel]() {
-                auto& state = panel.state;
-                command_push(panel, [&state](Document& document) {
-                    int id = 0;
-                    document.edit_apply(EDIT_ADD_EVENT, [&](Model& model) {
-                        auto& events = model.content.events;
-                        id = item_next_id_get(events);
-                        events.push_back({.id = id, .name = localize.get(TEXT_NEW_EVENT)});
-                    });
-                    document.selected_ids_set(SelectionKind::EVENTS, {id});
-                    document.focused_id_set(SelectionKind::EVENTS, id);
-                    state.newId = id;
-                });
-            },
-            TOOLTIP_ADD_EVENT);
+        named_item_add_action_add(actions, panel, SelectionKind::EVENTS, &Content::events, EDIT_ADD_EVENT,
+                                  TEXT_NEW_EVENT, TOOLTIP_ADD_EVENT);
         content_remove_action_add(actions, panel, ElementType::EVENT_ELEMENT, SelectionKind::EVENTS);
         items_clipboard_actions_add<Event>(actions, panel, SelectionKind::EVENTS, EDIT_PASTE_EVENTS,
                                            TOAST_DESERIALIZE_EVENTS_FAILED, &Content::events);

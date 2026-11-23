@@ -227,6 +227,29 @@ void items_paste(const Panel& panel, SelectionKind kind, StringType edit, String
     });
 }
 
+// An Add action making a named item (an event or a shader), selected and ready to rename.
+template <class Item>
+void named_item_add_action_add(Actions& actions, Panel& panel, SelectionKind kind, ContentList<Item> list,
+                               StringType edit, StringType name, StringType tooltip)
+{
+    actions.add(
+        ACTION_ADD, {},
+        [&panel, kind, list, edit, name]() {
+            command_push(panel, [&state = panel.state, kind, list, edit, name](Document& document) {
+                int id = 0;
+                document.edit_apply(edit, [&](Model& model) {
+                    auto& items = model.content.*list;
+                    id = item_next_id_get(items);
+                    items.push_back({.id = id, .name = localize.get(name)});
+                });
+                document.selected_ids_set(kind, {id});
+                document.focused_id_set(kind, id);
+                state.newId = id;
+            });
+        },
+        tooltip);
+}
+
 // Copy and paste for a content list, after a separator.
 template <class Item>
 void items_clipboard_actions_add(Actions& actions, Panel& panel, SelectionKind kind, StringType pasteEdit,
