@@ -27,20 +27,7 @@ static bool is_spritesheet_regions(Document& document, int id)
 static void spritesheets_save(Document& document, const std::set<int>& ids)
 {
     for (auto id : ids)
-    {
-        auto spritesheet = spritesheet_get(document, id);
-        auto texture = document.texture_get(id);
-        if (!spritesheet || !texture)
-            continue;
-        auto pathString = path_to_utf8(spritesheet->path);
-        WorkingDirectory workingDirectory(document.directory_get());
-        path_ensure_directory(spritesheet->path.parent_path());
-        auto isSaved = texture->write(spritesheet->path);
-        if (isSaved)
-            document.spritesheet_hash_set_saved(id);
-        toast_log(isSaved ? Level::INFO : Level::ERROR,
-                  isSaved ? TOAST_SAVE_SPRITESHEET : TOAST_SAVE_SPRITESHEET_FAILED, id, pathString);
-    }
+        document.spritesheet_save(id);
 }
 
 // Points a spritesheet at a new file: replacing loads it, setting the path writes the current texture there.

@@ -1291,3 +1291,19 @@ bool Document::is_able_to_redo()
 {
     return !snapshots.redoStack.is_empty();
 }
+
+// Writes a spritesheet's image to its file, beside the document, and says how it went.
+void Document::spritesheet_save(int id)
+{
+    auto spritesheet = item_get(model.content.spritesheets, id);
+    auto texture = texture_get(id);
+    if (!spritesheet || !texture)
+        return;
+    auto path = directory_get() / spritesheet->path;
+    path_ensure_directory(path.parent_path());
+    auto isSaved = texture->write(path);
+    if (isSaved)
+        spritesheet_hash_set_saved(id);
+    toast_log(isSaved ? Level::INFO : Level::ERROR, isSaved ? TOAST_SAVE_SPRITESHEET : TOAST_SAVE_SPRITESHEET_FAILED,
+              id, path_to_utf8(spritesheet->path));
+}

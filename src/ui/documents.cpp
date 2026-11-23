@@ -296,25 +296,8 @@ void Documents::update(Taskbar& taskbar, Manager& manager, Settings& settings, R
                     {
                         if (isSpritesheetDirty)
                             for (auto& spritesheet : closeDocument.model.content.spritesheets)
-                            {
-                                auto id = spritesheet.id;
-                                auto texture = closeDocument.texture_get(id);
-                                if (texture && closeDocument.spritesheet_is_dirty(id))
-                                {
-                                    auto pathString = path_to_utf8(spritesheet.path);
-                                    auto savePath = closeDocument.directory_get() / spritesheet.path;
-                                    path_ensure_directory(savePath.parent_path());
-                                    if (texture->write(savePath))
-                                    {
-                                        closeDocument.spritesheet_hash_set_saved(id);
-                                        toast_log(Level::INFO, TOAST_SAVE_SPRITESHEET, id, pathString);
-                                    }
-                                    else
-                                    {
-                                        toast_log(Level::ERROR, TOAST_SAVE_SPRITESHEET_FAILED, id, pathString);
-                                    }
-                                }
-                            }
+                                if (closeDocument.spritesheet_is_dirty(spritesheet.id))
+                                    closeDocument.spritesheet_save(spritesheet.id);
                         auto index = closeDocumentIndex;
                         manager.command_push({.runManager = [index](Manager& manager) { manager.close(index); }});
                         close();

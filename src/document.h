@@ -187,6 +187,7 @@ public:
     void command_run(Manager&, Command&);
     void spritesheet_hash_update(int);
     void spritesheet_hash_set_saved(int);
+    void spritesheet_save(int);
     bool spritesheet_is_dirty(int);
     bool spritesheet_any_dirty();
     void spritesheet_hashes_sync();
