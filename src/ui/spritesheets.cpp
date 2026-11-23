@@ -13,11 +13,6 @@ constexpr int PADDING_MAX = 100;
 // The merge region origin setting indexes this (top-left or center).
 constexpr Origin MERGE_REGION_ORIGINS[] = {Origin::TOP_LEFT, Origin::CENTER};
 
-static auto& spritesheets_get(Model& model)
-{
-    return model.content.spritesheets;
-}
-
 static const Spritesheet* spritesheet_get(Document& document, int id)
 {
     return item_get(document.model.content.spritesheets, id);
@@ -292,7 +287,7 @@ void spritesheets_update(Panel& panel, SpritesheetsPanel& spritesheets)
             },
             TOOLTIP_SAVE_SPRITESHEETS);
         items_clipboard_actions_add<Spritesheet>(actions, panel, SelectionKind::SPRITESHEETS, EDIT_PASTE_SPRITESHEETS,
-                                                 TOAST_DESERIALIZE_SPRITESHEETS_FAILED, spritesheets_get);
+                                                 TOAST_DESERIALIZE_SPRITESHEETS_FAILED, &Content::spritesheets);
 
         auto image_get = [&](int id) {
             auto texture = document.texture_get(id);

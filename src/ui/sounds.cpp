@@ -6,11 +6,6 @@
 
 constexpr int SOUND_CARD_LINES = 2;
 
-static auto& sounds_get(Model& model)
-{
-    return model.content.sounds;
-}
-
 void sounds_update(Panel& panel)
 {
     auto& [manager, settings, resources, dialog, clipboard, document, state] = panel;
@@ -78,7 +73,7 @@ void sounds_update(Panel& panel)
             TOOLTIP_RELOAD_SOUNDS);
         actions.add(ACTION_REPLACE, isOne, [&]() { dialog.file_open(Dialog::SOUND_REPLACE); }, TOOLTIP_REPLACE_SOUND);
         items_clipboard_actions_add<Sound>(actions, panel, SelectionKind::SOUNDS, EDIT_PASTE_SOUNDS,
-                                           TOAST_SOUNDS_DESERIALIZE_ERROR, sounds_get);
+                                           TOAST_SOUNDS_DESERIALIZE_ERROR, &Content::sounds);
 
         ListRows rows{.label_get =
                           [&](int id) {

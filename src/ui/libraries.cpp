@@ -6,11 +6,6 @@
 
 constexpr int LIBRARY_CARD_LINES = 2;
 
-static auto& libraries_get(Model& model)
-{
-    return model.content.libraries;
-}
-
 void libraries_update(Panel& panel)
 {
     auto& [manager, settings, resources, dialog, clipboard, document, state] = panel;
@@ -63,7 +58,7 @@ void libraries_update(Panel& panel)
             },
             TOOLTIP_RELOAD_LIBRARIES);
         items_clipboard_actions_add<Library>(actions, panel, SelectionKind::LIBRARIES, EDIT_PASTE_LIBRARIES,
-                                             TOAST_DESERIALIZE_LIBRARIES_FAILED, libraries_get);
+                                             TOAST_DESERIALIZE_LIBRARIES_FAILED, &Content::libraries);
 
         ListRows rows{.label_get =
                           [&](int id) {

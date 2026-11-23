@@ -180,6 +180,9 @@ void onionskin_update(Manager&, Settings&);
 void tools_update(Manager&, Settings&, Resources&, PopupHelper&);
 void welcome_update(Manager&, Resources&, Dialog&, Taskbar&, Documents&);
 
+// One of a document's content lists, as a member of Content.
+template <class Item> using ContentList = std::vector<Item> Content::*;
+
 template <class Items> std::vector<int> item_ids_get(const Items& items)
 {
     std::vector<int> ids;
@@ -199,25 +202,25 @@ template <class Items> void items_copy(Clipboard& clipboard, const Items& items,
 }
 
 // Pastes clipboard items into a content list with fresh ids and selects the last one.
-template <class Item, class ItemsGet>
-void items_paste(const Panel& panel, SelectionKind kind, StringType edit, StringType failToast, ItemsGet items_get)
+template <class Item>
+void items_paste(const Panel& panel, SelectionKind kind, StringType edit, StringType failToast, ContentList<Item> list)
 {
     auto text = panel.clipboard.get();
     auto& state = panel.state;
-    command_push(panel, [&state, kind, edit, failToast, text, items_get](Document& document) {
+    command_push(panel, [&state, kind, edit, failToast, text, list](Document& document) {
         std::string errorString;
         auto pasted = items_from_string<Item>(text, &errorString);
         if (pasted.empty())
             return toast_log(Level::ERROR, failToast, errorString);
         document.edit_apply(edit, [&](Model& model) {
-            auto& items = items_get(model);
+            auto& items = (model.content.*list);
             for (auto& item : pasted)
             {
                 item.id = item_next_id_get(items);
                 items.push_back(std::move(item));
             }
         });
-        auto id = items_get(document.model).back().id;
+        auto id = (document.model.content.*list).back().id;
         document.selected_ids_set(kind, {id});
         document.focused_id_set(kind, id);
         state.newId = id;
@@ -225,18 +228,16 @@ void items_paste(const Panel& panel, SelectionKind kind, StringType edit, String
 }
 
 // Copy and paste for a content list, after a separator.
-template <class Item, class ItemsGet>
+template <class Item>
 void items_clipboard_actions_add(Actions& actions, Panel& panel, SelectionKind kind, StringType pasteEdit,
-                                 StringType failToast, ItemsGet items_get)
+                                 StringType failToast, ContentList<Item> list)
 {
     auto selection = panel.document.selected_ids_get(kind);
     actions.separator();
     actions.add(
         ACTION_COPY, [selection]() { return !selection.empty(); },
-        [&panel, selection, items_get]() { items_copy(panel.clipboard, items_get(panel.document.model), selection); });
+        [&panel, selection, list]() { items_copy(panel.clipboard, (panel.document.model.content.*list), selection); });
     actions.add(
         ACTION_PASTE, [&panel]() { return !panel.clipboard.is_empty(); },
-        [&panel, kind, pasteEdit, failToast, items_get]() {
-            items_paste<Item>(panel, kind, pasteEdit, failToast, items_get);
-        });
+        [&panel, kind, pasteEdit, failToast, list]() { items_paste<Item>(panel, kind, pasteEdit, failToast, list); });
 }

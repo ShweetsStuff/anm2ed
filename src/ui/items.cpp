@@ -9,21 +9,6 @@
 constexpr int NULL_PROPERTIES_ROWS = 2;
 constexpr int LAYER_PROPERTIES_ROWS = 6;
 
-static auto& layers_get(Model& model)
-{
-    return model.content.layers;
-}
-
-static auto& nulls_get(Model& model)
-{
-    return model.content.nulls;
-}
-
-static auto& events_get(Model& model)
-{
-    return model.content.events;
-}
-
 static void item_tooltip_draw(Resources& resources, const std::string& name, int id)
 {
     tooltip_name_draw(resources, name);
@@ -104,9 +89,10 @@ void layer_source_draw(Document& document, Manager::ItemEdit& layer)
 }
 
 // The layer/null properties popup: adds a new item (id -1) or replaces the edited one, then selects it.
-template <class Item, class ItemsGet, class FieldsDraw>
+template <class Item, class FieldsDraw>
 void item_properties_update(Panel& panel, int popupIndex, int rows, SelectionKind kind, StringType nameTooltip,
-                            StringType addEdit, StringType propertiesEdit, ItemsGet items_get, FieldsDraw&& fields_draw)
+                            StringType addEdit, StringType propertiesEdit, ContentList<Item> list,
+                            FieldsDraw&& fields_draw)
 {
     auto& manager = panel.manager;
     auto& popup = manager.itemPropertiesPopups[popupIndex];
@@ -133,29 +119,28 @@ void item_properties_update(Panel& panel, int popupIndex, int rows, SelectionKin
             else
                 item = item_edit_null_get(edit);
             auto& state = panel.state;
-            command_push(panel,
-                         [&state, item, id = edit.id, kind, addEdit, propertiesEdit, items_get](Document& document) {
-                             auto changedId = id;
-                             document.edit_apply(id == -1 ? addEdit : propertiesEdit, [&](Model& model) {
-                                 auto& items = items_get(model);
-                                 if (auto target = item_get(items, id))
-                                 {
-                                     auto uid = target->uid;
-                                     *target = item;
-                                     target->uid = uid;
-                                     target->id = id;
-                                     return;
-                                 }
-                                 if (id != -1)
-                                     return;
-                                 changedId = item_next_id_get(items);
-                                 items.push_back(item);
-                                 items.back().id = changedId;
-                                 state.newId = changedId;
-                             });
-                             document.selected_ids_set(kind, {changedId});
-                             document.focused_id_set(kind, changedId);
-                         });
+            command_push(panel, [&state, item, id = edit.id, kind, addEdit, propertiesEdit, list](Document& document) {
+                auto changedId = id;
+                document.edit_apply(id == -1 ? addEdit : propertiesEdit, [&](Model& model) {
+                    auto& items = (model.content.*list);
+                    if (auto target = item_get(items, id))
+                    {
+                        auto uid = target->uid;
+                        *target = item;
+                        target->uid = uid;
+                        target->id = id;
+                        return;
+                    }
+                    if (id != -1)
+                        return;
+                    changedId = item_next_id_get(items);
+                    items.push_back(item);
+                    items.back().id = changedId;
+                    state.newId = changedId;
+                });
+                document.selected_ids_set(kind, {changedId});
+                document.focused_id_set(kind, changedId);
+            });
         }
         if (result != PopupButton::NONE)
             popup.close();
@@ -165,9 +150,10 @@ void item_properties_update(Panel& panel, int popupIndex, int rows, SelectionKin
 }
 
 // Layers and nulls: properties popup, add, remove unused, copy and paste.
-template <class Item, class ItemsGet>
+template <class Item>
 void track_items_actions_add(Actions& actions, Panel& panel, SelectionKind kind, ElementType type,
-                             StringType addTooltip, StringType pasteEdit, StringType pasteFailToast, ItemsGet items_get)
+                             StringType addTooltip, StringType pasteEdit, StringType pasteFailToast,
+                             ContentList<Item> list)
 {
     auto selection = panel.document.selected_ids_get(kind);
     auto& manager = panel.manager;
@@ -176,7 +162,7 @@ void track_items_actions_add(Actions& actions, Panel& panel, SelectionKind kind,
         [&manager, type, selection]() { manager.item_properties_open(type, *selection.begin()); });
     actions.add(ACTION_ADD, {}, [&manager, type]() { manager.item_properties_open(type, -1); }, addTooltip);
     content_remove_action_add(actions, panel, type, kind);
-    items_clipboard_actions_add<Item>(actions, panel, kind, pasteEdit, pasteFailToast, items_get);
+    items_clipboard_actions_add<Item>(actions, panel, kind, pasteEdit, pasteFailToast, list);
 }
 
 void layers_update(Panel& panel)
@@ -188,7 +174,7 @@ void layers_update(Panel& panel)
         Actions actions = {};
         track_items_actions_add<Layer>(actions, panel, SelectionKind::LAYERS, ElementType::LAYER_ELEMENT,
                                        TOOLTIP_ADD_LAYER, EDIT_PASTE_LAYERS, TOAST_DESERIALIZE_LAYERS_FAILED,
-                                       layers_get);
+                                       &Content::layers);
         ListRows rows{.label_get = [&](int id) { return layer_label_get(*item_get(layers, id)); },
                       .is_invalid = [&](int id) { return document.is_layer_animation_missing(*item_get(layers, id)); },
                       .tooltip_draw =
@@ -204,7 +190,8 @@ void layers_update(Panel& panel)
     ImGui::End();
 
     item_properties_update<Layer>(panel, 0, LAYER_PROPERTIES_ROWS, SelectionKind::LAYERS, TOOLTIP_ITEM_NAME,
-                                  EDIT_ADD_LAYER, EDIT_SET_LAYER_PROPERTIES, layers_get, [&](Manager::ItemEdit& layer) {
+                                  EDIT_ADD_LAYER, EDIT_SET_LAYER_PROPERTIES, &Content::layers,
+                                  [&](Manager::ItemEdit& layer) {
                                       ImGui::SeparatorText(localize.get(LABEL_LAYER_SOURCE));
                                       layer_source_draw(document, layer);
                                   });
@@ -218,7 +205,7 @@ void nulls_update(Panel& panel)
     {
         Actions actions = {};
         track_items_actions_add<Null>(actions, panel, SelectionKind::NULLS, ElementType::NULL_ELEMENT, TOOLTIP_ADD_NULL,
-                                      EDIT_PASTE_NULLS, TOAST_DESERIALIZE_NULLS_FAILED, nulls_get);
+                                      EDIT_PASTE_NULLS, TOAST_DESERIALIZE_NULLS_FAILED, &Content::nulls);
         ListRows rows{.label_get =
                           [&](int id) {
                               auto name = item_get(nulls, id)->name;
@@ -233,7 +220,7 @@ void nulls_update(Panel& panel)
     ImGui::End();
 
     item_properties_update<Null>(panel, 1, NULL_PROPERTIES_ROWS, SelectionKind::NULLS, TOOLTIP_NULL_NAME, EDIT_ADD_NULL,
-                                 EDIT_SET_NULL_PROPERTIES, nulls_get, [](Manager::ItemEdit& null) {
+                                 EDIT_SET_NULL_PROPERTIES, &Content::nulls, [](Manager::ItemEdit& null) {
                                      checkbox_draw(LABEL_RECT, null.isShowRect, TOOLTIP_NULL_RECT);
                                  });
 }
@@ -268,7 +255,7 @@ void events_update(Panel& panel)
             TOOLTIP_ADD_EVENT);
         content_remove_action_add(actions, panel, ElementType::EVENT_ELEMENT, SelectionKind::EVENTS);
         items_clipboard_actions_add<Event>(actions, panel, SelectionKind::EVENTS, EDIT_PASTE_EVENTS,
-                                           TOAST_DESERIALIZE_EVENTS_FAILED, events_get);
+                                           TOAST_DESERIALIZE_EVENTS_FAILED, &Content::events);
         ListRows rows{.label_get = [&](int id) { return item_get(events, id)->name; },
                       .name_get = [&](int id) { return item_get(events, id)->name; },
                       .rename =
