@@ -143,7 +143,7 @@ bool row_draw(Panel& panel, std::set<int>& selection, int& focus, const ListRows
             state.newId = -1;
         }
         auto isRenaming = state.renameId == key;
-        auto name = rows.name_get(key);
+        auto name = rows.label_get(key);
         auto renameLabel = std::format("###Document #{} Row #{}", panel.manager.selected, key);
         isActivated = selectable_input_text(label, renameLabel, isRenaming ? state.renameText : name, isSelected,
                                             ImGuiSelectableFlags_None, state.renameState);

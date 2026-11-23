@@ -668,7 +668,6 @@ void animations_update(Panel& panel, AnimationsPanel& animations)
             };
 
         ListRows rows{.label_get = [&](int index) { return model.animation_get(index)->name; },
-                      .name_get = [&](int index) { return model.animation_get(index)->name; },
                       .rename =
                           [&](int index, const std::string& name) {
                               command_push(panel, [index, name](Document& document) {

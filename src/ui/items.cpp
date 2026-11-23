@@ -242,7 +242,6 @@ void events_update(Panel& panel)
         items_clipboard_actions_add<Event>(actions, panel, SelectionKind::EVENTS, EDIT_PASTE_EVENTS,
                                            TOAST_DESERIALIZE_EVENTS_FAILED, &Content::events);
         ListRows rows{.label_get = [&](int id) { return item_get(events, id)->name; },
-                      .name_get = [&](int id) { return item_get(events, id)->name; },
                       .rename =
                           [&](int id, const std::string& name) {
                               command_push(panel, [id, name](Document& document) {

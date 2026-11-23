@@ -77,7 +77,6 @@ struct Panel
 struct ListRows
 {
     std::function<std::string(int)> label_get{};
-    std::function<std::string(int)> name_get{};
     std::function<void(int, const std::string&)> rename{};
     std::function<bool(int)> is_invalid{};
     std::function<FontStyle(int)> font_get{};
