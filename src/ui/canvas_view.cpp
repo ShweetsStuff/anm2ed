@@ -155,8 +155,7 @@ void CanvasView::grid_child_draw(ImVec2 childSize, bool& isGrid, Vec4& gridColor
 {
     if (ImGui::BeginChild("##Grid Child", childSize, true, ImGuiWindowFlags_HorizontalScrollbar))
     {
-        ImGui::Checkbox(localize.get(BASIC_GRID), &isGrid);
-        tooltip_set(TOOLTIP_GRID_VISIBILITY);
+        checkbox_draw(BASIC_GRID, isGrid, TOOLTIP_GRID_VISIBILITY);
         if (isGridSnap)
         {
             ImGui::SameLine();

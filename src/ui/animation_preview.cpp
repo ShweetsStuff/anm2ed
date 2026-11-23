@@ -342,8 +342,7 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
             }
             ImGui::EndDisabled();
             ImGui::SameLine();
-            ImGui::Checkbox(localize.get(LABEL_AXES), &isAxes);
-            tooltip_set(TOOLTIP_AXES);
+            checkbox_draw(LABEL_AXES, isAxes, TOOLTIP_AXES);
             ImGui::SameLine();
             ImGui::ColorEdit4(localize.get(BASIC_COLOR), values_get(axesColor), ImGuiColorEditFlags_NoInputs);
             tooltip_set(TOOLTIP_AXES_COLOR);
@@ -400,12 +399,9 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
 
             if (ImGui::BeginChild("##Helpers Child 1", helpersChildSize))
             {
-                ImGui::Checkbox(localize.get(LABEL_ROOT_TRANSFORM), &isRootTransform);
-                tooltip_set(TOOLTIP_ROOT_TRANSFORM);
-                ImGui::Checkbox(localize.get(LABEL_PIVOTS), &isPivots);
-                tooltip_set(TOOLTIP_PIVOTS);
-                ImGui::Checkbox(localize.get(LABEL_TRANSPARENT), &isTransparent);
-                tooltip_set(TOOLTIP_PREVIEW_TRANSPARENT);
+                checkbox_draw(LABEL_ROOT_TRANSFORM, isRootTransform, TOOLTIP_ROOT_TRANSFORM);
+                checkbox_draw(LABEL_PIVOTS, isPivots, TOOLTIP_PIVOTS);
+                checkbox_draw(LABEL_TRANSPARENT, isTransparent, TOOLTIP_PREVIEW_TRANSPARENT);
             }
             ImGui::EndChild();
 
@@ -413,10 +409,8 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
 
             if (ImGui::BeginChild("##Helpers Child 2", helpersChildSize))
             {
-                ImGui::Checkbox(localize.get(LABEL_ALT_ICONS), &isAltIcons);
-                tooltip_set(TOOLTIP_ALT_ICONS);
-                ImGui::Checkbox(localize.get(LABEL_BORDER), &isBorder);
-                tooltip_set(TOOLTIP_BORDER);
+                checkbox_draw(LABEL_ALT_ICONS, isAltIcons, TOOLTIP_ALT_ICONS);
+                checkbox_draw(LABEL_BORDER, isBorder, TOOLTIP_BORDER);
             }
             ImGui::EndChild();
         }

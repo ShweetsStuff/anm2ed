@@ -55,42 +55,27 @@ bool ItemProperties::update(Manager& manager, Settings& settings, Document& docu
 
             ImGui::SeparatorText(localize.get(LABEL_TYPE));
 
-            spaced_pair(
-                [&]() {
-                    ImGui::RadioButton(localize.get(LABEL_LAYER), &type, LAYER);
-                    tooltip_set(TOOLTIP_LAYER_TYPE);
-                },
-                [&]() {
-                    ImGui::RadioButton(localize.get(LABEL_NULL), &type, NULL_);
-                    tooltip_set(TOOLTIP_NULL_TYPE);
-                });
+            spaced_pair([&]() { radio_draw(LABEL_LAYER, type, LAYER, TOOLTIP_LAYER_TYPE); },
+                        [&]() { radio_draw(LABEL_NULL, type, NULL_, TOOLTIP_NULL_TYPE); });
 
             ImGui::SeparatorText(localize.get(LABEL_SOURCE));
 
             auto isUnusedItems = animation && !unused_items_get(type).empty();
-            spaced_pair(
-                [&]() {
-                    ImGui::RadioButton(localize.get(LABEL_NEW), &source, SOURCE_NEW);
-                    tooltip_set(TOOLTIP_NEW_ITEM);
-                },
-                [&]() {
-                    ImGui::BeginDisabled(!isUnusedItems);
-                    ImGui::RadioButton(localize.get(LABEL_EXISTING), &source, SOURCE_EXISTING);
-                    ImGui::EndDisabled();
-                    ImGui::SetItemTooltip("%s", isUnusedItems ? localize.get(TOOLTIP_USE_EXISTING_ITEM)
-                                                              : localize.get(TOOLTIP_NO_UNUSED_ITEMS));
-                });
+            spaced_pair([&]() { radio_draw(LABEL_NEW, source, SOURCE_NEW, TOOLTIP_NEW_ITEM); },
+                        [&]() {
+                            ImGui::BeginDisabled(!isUnusedItems);
+                            ImGui::RadioButton(localize.get(LABEL_EXISTING), &source, SOURCE_EXISTING);
+                            ImGui::EndDisabled();
+                            ImGui::SetItemTooltip("%s", isUnusedItems ? localize.get(TOOLTIP_USE_EXISTING_ITEM)
+                                                                      : localize.get(TOOLTIP_NO_UNUSED_ITEMS));
+                        });
 
             ImGui::SeparatorText(localize.get(LABEL_DESTINATION));
 
             spaced_pair(
+                [&]() { radio_draw(LABEL_ALL_ANIMATIONS, destination, DESTINATION_ALL, TOOLTIP_ITEM_ALL_ANIMATIONS); },
                 [&]() {
-                    ImGui::RadioButton(localize.get(LABEL_ALL_ANIMATIONS), &destination, DESTINATION_ALL);
-                    tooltip_set(TOOLTIP_ITEM_ALL_ANIMATIONS);
-                },
-                [&]() {
-                    ImGui::RadioButton(localize.get(LABEL_THIS_ANIMATION), &destination, DESTINATION_THIS);
-                    tooltip_set(TOOLTIP_ITEM_THIS_ANIMATION);
+                    radio_draw(LABEL_THIS_ANIMATION, destination, DESTINATION_THIS, TOOLTIP_ITEM_THIS_ANIMATION);
                 });
 
             if (source == SOURCE_NEW)
@@ -102,10 +87,7 @@ bool ItemProperties::update(Manager& manager, Settings& settings, Document& docu
                 if (type == LAYER)
                     layer_source_draw(document, edit);
                 else if (type == NULL_)
-                {
-                    ImGui::Checkbox(localize.get(LABEL_RECT), &edit.isShowRect);
-                    tooltip_set(TOOLTIP_NULL_RECT);
-                }
+                    checkbox_draw(LABEL_RECT, edit.isShowRect, TOOLTIP_NULL_RECT);
             }
             else if (animation)
             {

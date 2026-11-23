@@ -28,11 +28,9 @@ void Configure::update(Manager& manager, Settings& settings)
                 input_float_range(localize.get(LABEL_UI_SCALE), temporary.uiScale, UI_SCALE_MIN, UI_SCALE_MAX,
                                   UI_SCALE_STEP, UI_SCALE_STEP, "%.0f%%");
                 tooltip_set(TOOLTIP_UI_SCALE);
-                ImGui::Checkbox(localize.get(LABEL_VSYNC), &temporary.isVsync);
-                tooltip_set(TOOLTIP_VSYNC);
+                checkbox_draw(LABEL_VSYNC, temporary.isVsync, TOOLTIP_VSYNC);
                 ImGui::SameLine();
-                ImGui::Checkbox(localize.get(LABEL_DETACHABLE_WINDOWS), &temporary.isDetachableWindows);
-                tooltip_set(TOOLTIP_DETACHABLE_WINDOWS);
+                checkbox_draw(LABEL_DETACHABLE_WINDOWS, temporary.isDetachableWindows, TOOLTIP_DETACHABLE_WINDOWS);
 
                 ImGui::SeparatorText(localize.get(LABEL_PLAYBACK_MENU));
                 ImGui::RadioButton("30 Hz", &temporary.playbackTickRate, 30);
@@ -64,13 +62,11 @@ void Configure::update(Manager& manager, Settings& settings)
             {
                 ImGui::SeparatorText(localize.get(LABEL_AUTOSAVE));
 
-                ImGui::Checkbox(localize.get(BASIC_ENABLED), &temporary.fileIsAutosave);
-                tooltip_set(TOOLTIP_AUTOSAVE_ENABLED);
+                checkbox_draw(BASIC_ENABLED, temporary.fileIsAutosave, TOOLTIP_AUTOSAVE_ENABLED);
 
                 ImGui::SeparatorText(localize.get(LABEL_AUTO_RESOURCE_RELOAD));
                 ImGui::PushID(LABEL_AUTO_RESOURCE_RELOAD);
-                ImGui::Checkbox(localize.get(BASIC_ENABLED), &temporary.fileIsAutoReloadResources);
-                tooltip_set(TOOLTIP_AUTO_RESOURCE_RELOAD);
+                checkbox_draw(BASIC_ENABLED, temporary.fileIsAutoReloadResources, TOOLTIP_AUTO_RESOURCE_RELOAD);
                 ImGui::PopID();
 
                 ImGui::SeparatorText(localize.get(LABEL_SNAPSHOTS));
@@ -78,15 +74,13 @@ void Configure::update(Manager& manager, Settings& settings)
                 tooltip_set(TOOLTIP_STACK_SIZE);
 
                 ImGui::SeparatorText(localize.get(LABEL_OPTIONS));
-                ImGui::Checkbox(localize.get(LABEL_OVERWRITE_WARNING), &temporary.fileIsWarnOverwrite);
-                tooltip_set(TOOLTIP_OVERWRITE_WARNING);
+                checkbox_draw(LABEL_OVERWRITE_WARNING, temporary.fileIsWarnOverwrite, TOOLTIP_OVERWRITE_WARNING);
                 ImGui::SameLine();
-                ImGui::Checkbox(localize.get(LABEL_ISAAC_COMPATIBILITY_WARNING), &temporary.fileIsWarnIsaac);
-                tooltip_set(TOOLTIP_ISAAC_COMPATIBILITY_WARNING);
+                checkbox_draw(LABEL_ISAAC_COMPATIBILITY_WARNING, temporary.fileIsWarnIsaac,
+                              TOOLTIP_ISAAC_COMPATIBILITY_WARNING);
 
                 ImGui::SeparatorText(localize.get(LABEL_SERIALIZATION));
-                ImGui::Checkbox(localize.get(LABEL_SAVE_AS_JSON), &temporary.fileIsJson);
-                tooltip_set(TOOLTIP_SAVE_AS_JSON);
+                checkbox_draw(LABEL_SAVE_AS_JSON, temporary.fileIsJson, TOOLTIP_SAVE_AS_JSON);
             }
             ImGui::EndChild();
 
@@ -109,8 +103,7 @@ void Configure::update(Manager& manager, Settings& settings)
 
                 ImGui::SeparatorText(localize.get(LABEL_TOOL));
 
-                ImGui::Checkbox(localize.get(LABEL_MOVE_TOOL_SNAP), &temporary.inputIsMoveToolSnapToMouse);
-                tooltip_set(TOOLTIP_MOVE_TOOL_SNAP);
+                checkbox_draw(LABEL_MOVE_TOOL_SNAP, temporary.inputIsMoveToolSnapToMouse, TOOLTIP_MOVE_TOOL_SNAP);
             }
             ImGui::EndChild();
 

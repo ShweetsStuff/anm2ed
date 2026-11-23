@@ -1,4 +1,5 @@
 #include "ui/input.h"
+#include "ui/layout.h"
 
 #include <algorithm>
 #include <climits>
@@ -166,4 +167,21 @@ bool input_float_range(const char* label, float& value, float min, float max, fl
     auto isActivated = ImGui::InputFloat(label, &value, step, stepFast, format, flags);
     value = vec_clamp(value, min, max);
     return isActivated;
+}
+
+// A localized checkbox or radio button, with its tooltip.
+bool checkbox_draw(StringType label, bool& value, StringType tooltip)
+{
+    auto isChanged = ImGui::Checkbox(localize.get(label), &value);
+    if (tooltip != STRING_UNDEFINED)
+        tooltip_set(tooltip);
+    return isChanged;
+}
+
+bool radio_draw(StringType label, int& value, int buttonValue, StringType tooltip)
+{
+    auto isChanged = ImGui::RadioButton(localize.get(label), &value, buttonValue);
+    if (tooltip != STRING_UNDEFINED)
+        tooltip_set(tooltip);
+    return isChanged;
 }

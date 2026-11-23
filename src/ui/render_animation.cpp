@@ -160,8 +160,7 @@ void RenderAnimation::update(Manager& manager, Document& document, Resources& re
 
     ImGui::Separator();
 
-    ImGui::Checkbox(localize.get(LABEL_CUSTOM_RANGE), &isRange);
-    tooltip_set(TOOLTIP_CUSTOM_RANGE);
+    checkbox_draw(LABEL_CUSTOM_RANGE, isRange, TOOLTIP_CUSTOM_RANGE);
 
     ImGui::SameLine();
 
@@ -197,13 +196,11 @@ void RenderAnimation::update(Manager& manager, Document& document, Resources& re
 
     ImGui::Separator();
 
-    ImGui::Checkbox(localize.get(LABEL_USE_ANIMATION_BOUNDS), &isUseAnimationBounds);
-    tooltip_set(TOOLTIP_USE_ANIMATION_BOUNDS);
+    checkbox_draw(LABEL_USE_ANIMATION_BOUNDS, isUseAnimationBounds, TOOLTIP_USE_ANIMATION_BOUNDS);
 
     ImGui::SameLine();
 
-    ImGui::Checkbox(localize.get(LABEL_USE_ISOLATED_ANIMATION), &isUseIsolatedAnimation);
-    tooltip_set(TOOLTIP_USE_ISOLATED_ANIMATION);
+    checkbox_draw(LABEL_USE_ISOLATED_ANIMATION, isUseIsolatedAnimation, TOOLTIP_USE_ISOLATED_ANIMATION);
 
     ImGui::BeginDisabled(!isUseAnimationBounds);
     {
@@ -230,8 +227,7 @@ void RenderAnimation::update(Manager& manager, Document& document, Resources& re
 
     ImGui::Separator();
 
-    ImGui::Checkbox(localize.get(LABEL_SOUND), &settings.timelineIsSound);
-    tooltip_set(TOOLTIP_SOUND);
+    checkbox_draw(LABEL_SOUND, settings.timelineIsSound, TOOLTIP_SOUND);
 
     ImGui::Separator();
 

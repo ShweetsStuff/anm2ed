@@ -1,4 +1,5 @@
 #include "ui/timeline_context.h"
+#include "ui/input.h"
 #include "ui/layout.h"
 
 // Moves the dragged frames to `target`'s track, before its frame index.
@@ -941,8 +942,7 @@ void TimelineContext::frames_child()
         ImGui::SameLine();
 
         ImGui::SetNextItemWidth(widgetSize.x);
-        ImGui::Checkbox(localize.get(LABEL_SOUND), &settings.timelineIsSound);
-        tooltip_set(TOOLTIP_SOUND);
+        checkbox_draw(LABEL_SOUND, settings.timelineIsSound, TOOLTIP_SOUND);
 
         ImGui::PopStyleVar();
     }

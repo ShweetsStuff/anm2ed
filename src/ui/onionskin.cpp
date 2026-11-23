@@ -36,18 +36,14 @@ void onionskin_update(Manager& manager, Settings& settings)
         configure_widgets(localize.get(BASIC_BEFORE), beforeCount, beforeColor);
         configure_widgets(localize.get(BASIC_AFTER), afterCount, afterColor);
         ImGui::SeparatorText(localize.get(BASIC_MODE));
-        ImGui::RadioButton(localize.get(BASIC_TIME), &mode, (int)OnionskinMode::TIME);
-        tooltip_set(TOOLTIP_ONIONSKIN_TIME);
+        radio_draw(BASIC_TIME, mode, (int)OnionskinMode::TIME, TOOLTIP_ONIONSKIN_TIME);
         ImGui::SameLine();
-        ImGui::RadioButton(localize.get(BASIC_INDEX), &mode, (int)OnionskinMode::INDEX);
-        tooltip_set(TOOLTIP_ONIONSKIN_INDEX);
+        radio_draw(BASIC_INDEX, mode, (int)OnionskinMode::INDEX, TOOLTIP_ONIONSKIN_INDEX);
 
         ImGui::SeparatorText(localize.get(LABEL_OPTIONS));
-        ImGui::Checkbox(localize.get(LABEL_PIVOT_PATH), &settings.onionskinIsPivotPath);
-        tooltip_set(TOOLTIP_PIVOT_PATH);
+        checkbox_draw(LABEL_PIVOT_PATH, settings.onionskinIsPivotPath, TOOLTIP_PIVOT_PATH);
         ImGui::SameLine();
-        ImGui::Checkbox(localize.get(LABEL_ONLY_SELECTED_ITEM), &settings.onionskinIsOnlySelected);
-        tooltip_set(TOOLTIP_ONLY_SELECTED_ITEM);
+        checkbox_draw(LABEL_ONLY_SELECTED_ITEM, settings.onionskinIsOnlySelected, TOOLTIP_ONLY_SELECTED_ITEM);
     }
     ImGui::End();
 

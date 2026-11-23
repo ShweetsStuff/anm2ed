@@ -102,18 +102,14 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
                 }
                 ImGui::EndDisabled();
 
-                ImGui::Checkbox(localize.get(LABEL_BORDER), &isBorder);
-                tooltip_set(TOOLTIP_SPRITESHEET_BORDER);
+                checkbox_draw(LABEL_BORDER, isBorder, TOOLTIP_SPRITESHEET_BORDER);
             }
             ImGui::EndChild();
 
             ImGui::SameLine();
 
             if (ImGui::BeginChild("##Background Child 2", subChildSize))
-            {
-                ImGui::Checkbox(localize.get(LABEL_TRANSPARENT), &isTransparent);
-                tooltip_set(TOOLTIP_TRANSPARENT);
-            }
+                checkbox_draw(LABEL_TRANSPARENT, isTransparent, TOOLTIP_TRANSPARENT);
 
             ImGui::EndChild();
         }

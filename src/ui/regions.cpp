@@ -357,10 +357,10 @@ static void region_export_popup_update(Panel& panel, RegionsPanel& regions)
         ImGui::SameLine();
         input_text_path(localize.get(LABEL_OUTPUT_PATH), &settings.exportRegionPath);
         tooltip_set(TOOLTIP_OUTPUT_PATH);
-        ImGui::Checkbox(localize.get(LABEL_EXPORT_MAKE_SPRITESHEET), &settings.isExportRegionMakeSpritesheet);
-        tooltip_set(TOOLTIP_EXPORT_MAKE_SPRITESHEET);
-        ImGui::Checkbox(localize.get(LABEL_EXPORT_REMOVE_CURRENT_REGION), &settings.isExportRegionRemoveCurrent);
-        tooltip_set(TOOLTIP_EXPORT_REMOVE_CURRENT_REGION);
+        checkbox_draw(LABEL_EXPORT_MAKE_SPRITESHEET, settings.isExportRegionMakeSpritesheet,
+                      TOOLTIP_EXPORT_MAKE_SPRITESHEET);
+        checkbox_draw(LABEL_EXPORT_REMOVE_CURRENT_REGION, settings.isExportRegionRemoveCurrent,
+                      TOOLTIP_EXPORT_REMOVE_CURRENT_REGION);
     }
     ImGui::EndChild();
 

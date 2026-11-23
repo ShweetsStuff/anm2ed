@@ -1,4 +1,5 @@
 #include "ui/timeline_context.h"
+#include "ui/input.h"
 #include "ui/layout.h"
 
 Timeline::Timeline() = default;
@@ -95,11 +96,9 @@ void TimelineContext::popups_update()
                         frame ? frame->duration : FRAME_DURATION_MIN);
         tooltip_set(TOOLTIP_INTERVAL);
 
-        ImGui::Checkbox(localize.get(LABEL_ROUND_ROTATION), &isRoundRotation);
-        tooltip_set(TOOLTIP_ROUND_ROTATION);
+        checkbox_draw(LABEL_ROUND_ROTATION, isRoundRotation, TOOLTIP_ROUND_ROTATION);
 
-        ImGui::Checkbox(localize.get(LABEL_ROUND_SCALE), &isRoundScale);
-        tooltip_set(TOOLTIP_ROUND_SCALE);
+        checkbox_draw(LABEL_ROUND_SCALE, isRoundScale, TOOLTIP_ROUND_SCALE);
 
         auto result = popup_buttons_draw(manager, {.confirm = LABEL_BAKE,
                                                    .confirmTooltip = TOOLTIP_BAKE_FRAMES_OPTIONS,
@@ -123,8 +122,7 @@ void TimelineContext::popups_update()
                            (int)BakeIntoOtherFramesTarget::CURRENT_SELECTION);
         tooltip_set(TOOLTIP_BAKE_INTO_OTHER_FRAMES_CURRENT_SELECTION);
         ImGui::SameLine();
-        ImGui::RadioButton(localize.get(LABEL_ALL), &target, (int)BakeIntoOtherFramesTarget::ALL);
-        tooltip_set(TOOLTIP_BAKE_INTO_OTHER_FRAMES_ALL);
+        radio_draw(LABEL_ALL, target, (int)BakeIntoOtherFramesTarget::ALL, TOOLTIP_BAKE_INTO_OTHER_FRAMES_ALL);
         bakeIntoOtherFramesTarget = (BakeIntoOtherFramesTarget)target;
 
         auto isCurrentSelection = bakeIntoOtherFramesTarget == BakeIntoOtherFramesTarget::CURRENT_SELECTION;
@@ -134,17 +132,14 @@ void TimelineContext::popups_update()
         ImGui::Checkbox(localize.get(LABEL_NULLS), &isBakeIntoOtherFramesNulls);
         ImGui::EndDisabled();
 
-        ImGui::Checkbox(localize.get(LABEL_ROUND_ROTATION), &isRoundRotation);
-        tooltip_set(TOOLTIP_ROUND_ROTATION);
+        checkbox_draw(LABEL_ROUND_ROTATION, isRoundRotation, TOOLTIP_ROUND_ROTATION);
 
-        ImGui::Checkbox(localize.get(LABEL_ROUND_SCALE), &isRoundScale);
-        tooltip_set(TOOLTIP_ROUND_SCALE);
+        checkbox_draw(LABEL_ROUND_SCALE, isRoundScale, TOOLTIP_ROUND_SCALE);
 
-        ImGui::Checkbox(localize.get(LABEL_BAKE_MATCH_ROOT_INTERPOLATION), &isMatchRootInterpolation);
-        tooltip_set(TOOLTIP_BAKE_MATCH_ROOT_INTERPOLATION);
+        checkbox_draw(LABEL_BAKE_MATCH_ROOT_INTERPOLATION, isMatchRootInterpolation,
+                      TOOLTIP_BAKE_MATCH_ROOT_INTERPOLATION);
 
-        ImGui::Checkbox(localize.get(LABEL_BAKE_USE_ROOT_PIVOT), &isUseRootPivot);
-        tooltip_set(TOOLTIP_BAKE_USE_ROOT_PIVOT);
+        checkbox_draw(LABEL_BAKE_USE_ROOT_PIVOT, isUseRootPivot, TOOLTIP_BAKE_USE_ROOT_PIVOT);
 
         auto result = popup_buttons_draw(manager, {.confirm = LABEL_BAKE,
                                                    .cancelTooltip = TOOLTIP_CANCEL_BAKE_FRAMES,

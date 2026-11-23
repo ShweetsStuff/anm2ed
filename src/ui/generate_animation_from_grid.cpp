@@ -51,8 +51,7 @@ void GenerateAnimationFromGrid::update(Manager& manager, Document& document, Res
 
         ImGui::InputInt(localize.get(BASIC_DURATION), &delay, STEP, STEP_FAST);
         ImGui::Separator();
-        ImGui::Checkbox(localize.get(LABEL_GENERATE_MAKE_REGIONS), &isMakeRegions);
-        tooltip_set(TOOLTIP_GENERATE_MAKE_REGIONS);
+        checkbox_draw(LABEL_GENERATE_MAKE_REGIONS, isMakeRegions, TOOLTIP_GENERATE_MAKE_REGIONS);
         ImGui::BeginDisabled(!isMakeRegions);
         input_text_string(localize.get(LABEL_FORMAT), &regionNameFormat);
         tooltip_set(TOOLTIP_GENERATE_REGION_NAME_FORMAT);

@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "localization.h"
 #include "vec.h"
 #include <imgui/imgui.h>
 
@@ -26,6 +27,8 @@ EditState drag_float_persistent(const char*, float*, float = DRAG_SPEED, float =
 EditState drag_float2_persistent(const char*, Vec2*, float = DRAG_SPEED, float = {}, float = {}, const char* = "%.3f",
                                  ImGuiSliderFlags = 0);
 EditState color_edit4_persistent(const char*, Vec4*, ImGuiColorEditFlags = 0);
+bool checkbox_draw(StringType, bool&, StringType = STRING_UNDEFINED);
+bool radio_draw(StringType, int&, int, StringType = STRING_UNDEFINED);
 bool radio_button_icon(const char*, int*, int, ImTextureID, ImVec2, ImVec4 = ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
 bool combo_id_mapped(const std::string&, int*, const std::vector<int>&, const std::vector<std::string>&);
 bool combo_string_mapped(const std::string&, std::string*, const std::vector<std::string>&,

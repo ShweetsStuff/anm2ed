@@ -134,8 +134,8 @@ static void spritesheets_merge_popup_update(Panel& panel, SpritesheetsPanel& spr
         tooltip_set(TOOLTIP_MERGE_SPRITESHEETS_TOP_RIGHT);
 
         ImGui::SeparatorText(localize.get(LABEL_OPTIONS));
-        ImGui::Checkbox(localize.get(LABEL_MERGE_MAKE_SPRITESHEET_REGIONS), &settings.mergeSpritesheetsIsMakeRegions);
-        tooltip_set(TOOLTIP_MERGE_MAKE_SPRITESHEET_REGIONS);
+        checkbox_draw(LABEL_MERGE_MAKE_SPRITESHEET_REGIONS, settings.mergeSpritesheetsIsMakeRegions,
+                      TOOLTIP_MERGE_MAKE_SPRITESHEET_REGIONS);
 
         ImGui::BeginDisabled(!settings.mergeSpritesheetsIsMakeRegions);
         ImGui::Checkbox(localize.get(LABEL_MERGE_MAKE_PRIMARY_SPRITESHEET_REGION),

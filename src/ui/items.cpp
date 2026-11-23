@@ -234,8 +234,7 @@ void nulls_update(Panel& panel)
 
     item_properties_update<Null>(panel, 1, NULL_PROPERTIES_ROWS, SelectionKind::NULLS, TOOLTIP_NULL_NAME, EDIT_ADD_NULL,
                                  EDIT_SET_NULL_PROPERTIES, nulls_get, [](Manager::ItemEdit& null) {
-                                     ImGui::Checkbox(localize.get(LABEL_RECT), &null.isShowRect);
-                                     tooltip_set(TOOLTIP_NULL_RECT);
+                                     checkbox_draw(LABEL_RECT, null.isShowRect, TOOLTIP_NULL_RECT);
                                  });
 }
 
