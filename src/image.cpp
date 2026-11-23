@@ -142,7 +142,7 @@ Image Image::vector_render(float scale) const
 
 size_t Image::pixel_size_get() const
 {
-    return size.x * size.y * IMAGE_CHANNELS;
+    return (size_t)size.x * (size_t)size.y * IMAGE_CHANNELS;
 }
 
 Image::Image(const uint8_t* data, IVec2 size, bool isLinear) : isLinear(isLinear)
@@ -191,16 +191,12 @@ bool Image::write_pixels_png(const std::filesystem::path& path, IVec2 size, cons
     if (!data || size.x <= 0 || size.y <= 0)
         return false;
 
-    File file(path, "wb");
-    if (auto handle = file.get())
-    {
-        auto write_func = [](void* context, void* bytes, int count) {
-            fwrite(bytes, 1, count, static_cast<FILE*>(context));
-        };
-        return stbi_write_png_to_func(write_func, handle, size.x, size.y, IMAGE_CHANNELS, data,
-                                      size.x * IMAGE_CHANNELS) != 0;
-    }
-    return false;
+    std::string png;
+    auto write_func = [](void* context, void* bytes, int count) {
+        ((std::string*)context)->append((char*)bytes, count);
+    };
+    return stbi_write_png_to_func(write_func, &png, size.x, size.y, IMAGE_CHANNELS, data, size.x * IMAGE_CHANNELS) &&
+           file_text_save(path, png);
 }
 
 // Copies a size-sized block between images. Pixels outside either image are skipped.

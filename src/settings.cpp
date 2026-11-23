@@ -322,7 +322,7 @@ void Settings::save(const std::filesystem::path& path, const std::string& imguiD
         logger.error(std::format("Failed while writing settings file: {}", pathUtf8));
         return;
     }
-    if (!file_text_save(path, file.str(), "wb"))
+    if (!file_text_save(path, file.str()))
     {
         logger.error(std::format("Failed to save settings file: {}", pathUtf8));
         return;

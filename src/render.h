@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
+#include <map>
 #include <vector>
 
 #include "audio_data.h"
@@ -170,13 +171,16 @@ public:
     float time_get() const;
     bool is_sound_frame() const;
     bool frame_capture(std::vector<uint8_t>, IVec2, std::vector<const AudioData*> = {});
-    void finish();
+    // False when the output couldn't be made.
+    bool finish();
     void cancel();
 
 private:
     std::filesystem::path directory;
     std::vector<std::filesystem::path> frames;
+    // Each frame's trigger sounds, pointing into soundCopies (by uid), so they outlive a reload during the render.
     std::vector<std::vector<const AudioData*>> sounds;
+    std::map<std::uint64_t, AudioData> soundCopies;
     int soundTime = -1;
 };
 

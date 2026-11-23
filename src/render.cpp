@@ -65,7 +65,7 @@ bool animation_render(const std::filesystem::path& ffmpegPath, const std::filesy
 
         auto data = (const char*)audio.data();
         auto byteCount = audio.size() * sizeof(float);
-        if (file_text_save(audioPath, std::string_view(data, byteCount), "wb"))
+        if (file_text_save(audioPath, std::string_view(data, byteCount)))
         {
             auto audioDurationFilter = std::string{};
             auto frameCount = (double)std::max((int)framePaths.size(), 1);
@@ -187,9 +187,13 @@ static std::filesystem::path frame_filename_get(const std::filesystem::path& for
     auto fallback = path_from_utf8(std::format("frame_{:06}.png", index));
     if (type != RENDER_PNGS)
         return fallback;
+    // A format without a placeholder numbers its frames after its name.
+    auto formatUtf8 = path_to_utf8(format);
+    if (formatUtf8.find('{') == std::string::npos)
+        formatUtf8 = path_to_utf8(format.stem()) + "_{:06}" + path_to_utf8(format.extension());
     try
     {
-        auto filename = path_from_utf8(std::vformat(path_to_utf8(format), std::make_format_args(index))).filename();
+        auto filename = path_from_utf8(std::vformat(formatUtf8, std::make_format_args(index))).filename();
         if (filename.empty())
             return fallback;
         if (filename.extension().empty())
@@ -313,6 +317,7 @@ bool Recorder::start(const RecorderOptions& recorderOptions)
     count = frame_count_get(options.start, options.end, options.animationFps, options.fps);
     frames.clear();
     sounds.clear();
+    soundCopies.clear();
     soundTime = -1;
     directory = frames_directory_create(options);
     return !directory.empty();
@@ -337,6 +342,8 @@ bool Recorder::is_sound_frame() const
 bool Recorder::frame_capture(std::vector<uint8_t> pixels, IVec2 size, std::vector<const AudioData*> frameSounds)
 {
     soundTime = (int)std::floor(time_get());
+    for (auto& sound : frameSounds)
+        sound = &soundCopies.try_emplace(sound->uid, *sound).first->second;
     sounds.push_back(std::move(frameSounds));
     if (options.isIsolated || options.isBounded)
         pixels_unpremultiply(pixels);
@@ -348,12 +355,13 @@ bool Recorder::frame_capture(std::vector<uint8_t> pixels, IVec2 size, std::vecto
     return true;
 }
 
-void Recorder::finish()
+bool Recorder::finish()
 {
     auto pathString = path_to_utf8(options.path);
+    auto isFinished = !frames.empty();
     if (options.type == RENDER_PNGS)
-        toast_log(frames.empty() ? Level::ERROR : Level::INFO,
-                  frames.empty() ? TOAST_EXPORT_RENDERED_FRAMES_FAILED : TOAST_EXPORT_RENDERED_FRAMES, pathString);
+        toast_log(isFinished ? Level::INFO : Level::ERROR,
+                  isFinished ? TOAST_EXPORT_RENDERED_FRAMES : TOAST_EXPORT_RENDERED_FRAMES_FAILED, pathString);
     else if (options.type == RENDER_SPRITESHEET)
     {
         auto layout = spritesheet_layout_get(options.rows, options.columns, (int)frames.size());
@@ -361,7 +369,10 @@ void Recorder::finish()
         if (frames.empty())
             toast_log(Level::WARNING, TOAST_SPRITESHEET_NO_FRAMES);
         else if (!first.is_valid())
+        {
+            isFinished = false;
             toast_log(Level::ERROR, TOAST_SPRITESHEET_EMPTY);
+        }
         else
         {
             Image sheet = {};
@@ -370,20 +381,21 @@ void Recorder::finish()
             for (int i = 0; i < (int)frames.size() && i < layout.rows * layout.columns; ++i)
                 if (auto frame = Image(frames[i]); frame.size == first.size)
                     sheet.paste(frame, first.size * IVec2(i % layout.columns, i / layout.columns));
-            auto isSaved = sheet.write_png(options.path);
-            toast_log(isSaved ? Level::INFO : Level::ERROR,
-                      isSaved ? TOAST_EXPORT_SPRITESHEET : TOAST_EXPORT_SPRITESHEET_FAILED, pathString);
+            isFinished = sheet.write_png(options.path);
+            toast_log(isFinished ? Level::INFO : Level::ERROR,
+                      isFinished ? TOAST_EXPORT_SPRITESHEET : TOAST_EXPORT_SPRITESHEET_FAILED, pathString);
         }
     }
     else
     {
         auto audio =
             options.isSound && options.type != RENDER_GIF ? audio_mix(sounds, options.fps) : std::vector<float>();
-        auto isRendered = animation_render(options.ffmpegPath, options.path, frames, audio, options.type, options.fps);
-        toast_log(isRendered ? Level::INFO : Level::ERROR,
-                  isRendered ? TOAST_EXPORT_RENDERED_ANIMATION : TOAST_EXPORT_RENDERED_ANIMATION_FAILED, pathString);
+        isFinished = animation_render(options.ffmpegPath, options.path, frames, audio, options.type, options.fps);
+        toast_log(isFinished ? Level::INFO : Level::ERROR,
+                  isFinished ? TOAST_EXPORT_RENDERED_ANIMATION : TOAST_EXPORT_RENDERED_ANIMATION_FAILED, pathString);
     }
     cancel();
+    return isFinished;
 }
 
 // Stops. The temporary frame folder is removed (a PNG sequence's own folder is kept).
@@ -395,6 +407,7 @@ void Recorder::cancel()
     directory.clear();
     frames.clear();
     sounds.clear();
+    soundCopies.clear();
     index = count = 0;
 }
 
@@ -415,8 +428,7 @@ bool animation_record(const RecorderOptions& recorderOptions, Canvas& canvas, Sh
         recorder.cancel();
         return false;
     }
-    recorder.finish();
-    return is_path_exist(options.path);
+    return recorder.finish();
 }
 
 constexpr float BAKE_MARGIN = 1.0f;

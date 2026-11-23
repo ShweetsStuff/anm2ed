@@ -21,4 +21,5 @@ private:
 };
 
 bool file_text_load(const std::filesystem::path&, std::string*, const char* mode = "rb");
-bool file_text_save(const std::filesystem::path&, std::string_view, const char* mode = "wb");
+// Written to a temporary file beside it, then renamed over it: a failed or cut-short write leaves the old file whole.
+bool file_text_save(const std::filesystem::path&, std::string_view);

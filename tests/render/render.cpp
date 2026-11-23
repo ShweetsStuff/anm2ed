@@ -6,7 +6,6 @@
 
 #include <algorithm>
 #include <cstdlib>
-#include <format>
 #include <fstream>
 
 #include "audio.h"
@@ -131,6 +130,31 @@ TEST_CASE("a recorded spritesheet holds every frame")
     auto layout = spritesheet_layout_get(0, 0, fixture.animation->frameNum);
     CHECK(sheet.size == IVec2(fixture.canvas->size) * IVec2(layout.columns, layout.rows));
     golden_image_check("spin_sheet.png");
+}
+
+TEST_CASE("a PNG sequence without a placeholder numbers each frame")
+{
+    RenderFixture fixture("spin.anm2");
+    if (!fixture.gl.is_valid())
+    {
+        MESSAGE("skipped: no OpenGL context");
+        return;
+    }
+
+    auto directory = OUTPUT_DIR / "spin_sequence";
+    std::filesystem::remove_all(directory);
+    RecorderOptions options{.type = RENDER_PNGS,
+                            .path = directory,
+                            .format = "spin.png",
+                            .start = 0,
+                            .end = fixture.animation->frameNum - 1,
+                            .animationFps = fixture.document->model.info.fps,
+                            .fps = fixture.document->model.info.fps};
+    REQUIRE(animation_record(options, *fixture.canvas, *fixture.shader, *fixture.document, *fixture.animation,
+                             fixture.bounds, SCALE, BACKGROUND, true));
+    auto count = std::ranges::distance(std::filesystem::directory_iterator(directory));
+    CHECK(count == fixture.animation->frameNum);
+    CHECK(std::filesystem::exists(directory / "spin_000000.png"));
 }
 
 TEST_CASE("animation layers draw their child animations")

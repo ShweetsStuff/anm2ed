@@ -2,6 +2,7 @@
 
 #include "asset_store.h"
 #include "audio_data.h"
+#include "file.h"
 #include "font.h"
 #include "friends.h"
 #include "icon.h"
@@ -134,4 +135,19 @@ TEST_CASE("Embedded resources load")
         CHECK(std::string_view((const char*)icon.svg->data, icon.svg->size).starts_with("<svg"));
     for (auto& font : FONTS)
         CHECK(font->size > 0);
+}
+
+TEST_CASE("a save replaces its file whole, or leaves it as it was")
+{
+    auto path = std::filesystem::temp_directory_path() / "anm2ed_save_test.txt";
+    auto text = std::string{};
+    REQUIRE(file_text_save(path, "first"));
+    CHECK(file_text_save(path, "second"));
+    CHECK(file_text_load(path, &text));
+    CHECK(text == "second");
+    CHECK_FALSE(file_text_save(path / "inside_a_file.txt", "third"));
+    CHECK(file_text_load(path, &text));
+    CHECK(text == "second");
+    CHECK_FALSE(std::filesystem::exists(path.string() + ".tmp"));
+    std::filesystem::remove(path);
 }

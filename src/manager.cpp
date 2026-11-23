@@ -70,7 +70,7 @@ static void path_list_save(const std::filesystem::path& path, const std::vector<
     std::ostringstream file;
     for (auto& entry : entries)
         file << path_to_utf8(entry) << '\n';
-    if (!file_text_save(path, file.str(), "wb"))
+    if (!file_text_save(path, file.str()))
         logger.warning(std::format("Could not write {} to: {}. Skipping...", name, path_to_utf8(path)));
 }
 

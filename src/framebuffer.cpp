@@ -29,7 +29,6 @@ void Framebuffer::set()
 
     gl.FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 
-
     gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
@@ -43,7 +42,7 @@ void Framebuffer::size_set(Vec2 size)
 
 std::vector<uint8_t> Framebuffer::pixels_get() const
 {
-    auto count = size.x * size.y * IMAGE_CHANNELS;
+    auto count = (std::size_t)size.x * (std::size_t)size.y * IMAGE_CHANNELS;
     std::vector<uint8_t> pixels(count);
 
     gl.ReadBuffer(GL_COLOR_ATTACHMENT0);

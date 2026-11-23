@@ -2,6 +2,8 @@
 
 #include <array>
 
+constexpr std::string_view TEMPORARY_EXTENSION = ".tmp";
+
 File::File(const std::filesystem::path& path, const char* mode)
 {
     open(path, mode);
@@ -73,11 +75,17 @@ bool file_text_load(const std::filesystem::path& path, std::string* output, cons
     }
 }
 
-bool file_text_save(const std::filesystem::path& path, std::string_view data, const char* mode)
+bool file_text_save(const std::filesystem::path& path, std::string_view data)
 {
-    File file(path, mode);
-    if (!file)
-        return false;
-
-    return std::fwrite(data.data(), 1, data.size(), file.get()) == data.size();
+    auto temporaryPath = path;
+    temporaryPath += TEMPORARY_EXTENSION;
+    File file(temporaryPath, "wb");
+    auto isWritten = file && std::fwrite(data.data(), 1, data.size(), file.get()) == data.size();
+    isWritten = file.close() == 0 && isWritten;
+    std::error_code error;
+    if (isWritten)
+        std::filesystem::rename(temporaryPath, path, error);
+    if (!isWritten || error)
+        std::filesystem::remove(temporaryPath, error);
+    return isWritten && !error;
 }

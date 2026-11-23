@@ -1837,15 +1837,7 @@ bool model_load_string(Model& model, std::string_view text, std::string* errorSt
 
 bool model_save(const Model& model, const std::filesystem::path& path, std::string* errorString, Options options)
 {
-    auto text = model_to_string(model, options);
-    File file(path, "wb");
-    if (!file)
-    {
-        if (errorString)
-            *errorString = "File permissions.";
-        return false;
-    }
-    if (std::fwrite(text.data(), 1, text.size(), file.get()) == text.size())
+    if (file_text_save(path, model_to_string(model, options)))
         return true;
     if (errorString)
         *errorString = "Could not write the file.";
