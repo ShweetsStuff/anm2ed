@@ -981,9 +981,9 @@ Choices Document::choices_get(SelectionKind kind, int layerId) const
     if (kind == SelectionKind::SPRITESHEETS)
         add(content.spritesheets, path_label_get(FORMAT_SPRITESHEET));
     if (kind == SelectionKind::SOUNDS)
-        add(content.sounds, path_label_get(FORMAT_SOUND));
+        add(content.sounds, path_label_get(FORMAT_ID_PATH));
     if (kind == SelectionKind::LIBRARIES)
-        add(content.libraries, path_label_get(FORMAT_SOUND));
+        add(content.libraries, path_label_get(FORMAT_ID_PATH));
     if (kind == SelectionKind::EVENTS)
         add(content.events, name_get);
     if (kind == SelectionKind::SHADERS)

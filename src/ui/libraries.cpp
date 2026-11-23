@@ -68,7 +68,7 @@ void libraries_update(Panel& panel)
         ListRows rows{.label_get =
                           [&](int id) {
                               auto pathString = path_to_utf8(item_get(libraries, id)->path);
-                              return localize_format(FORMAT_SOUND, id, pathString);
+                              return localize_format(FORMAT_ID_PATH, id, pathString);
                           },
                       .tooltip_draw =
                           [&](int id) {

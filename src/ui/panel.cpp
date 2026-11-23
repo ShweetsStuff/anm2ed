@@ -26,7 +26,7 @@ void command_push(const Panel& panel, std::function<void(Document&)> run)
         {panel.manager.selected, [run = std::move(run)](Manager&, Document& document) { run(document); }});
 }
 
-static void row_select(std::set<int>&, int& focus, const ListRows& rows, int key)
+static void row_select(int& focus, const ListRows& rows, int key)
 {
     focus = key;
     if (rows.select)
@@ -95,7 +95,7 @@ int list_select_begin(Panel& panel, std::set<int>& selection, int& focus, const 
     {
         storage.clear();
         selection.clear();
-        row_select(selection, focus, rows, -1);
+        row_select(focus, rows, -1);
     }
     return arrow_key_get(arrowKeys, selection, focus);
 }
@@ -109,7 +109,7 @@ void list_select_end(Panel& panel, std::set<int>& selection, int& focus, const L
     if (arrowKey != -1)
     {
         selection = {arrowKey};
-        row_select(selection, focus, rows, arrowKey);
+        row_select(focus, rows, arrowKey);
     }
     if (shortcut(panel.manager.chords[SHORTCUT_CONFIRM], SCOPE_FOCUSED) && selection.size() == 1 && rows.activate)
         rows.activate(*selection.begin());
@@ -164,7 +164,7 @@ bool row_draw(Panel& panel, std::set<int>& selection, int& focus, const ListRows
         isActivated = ImGui::Selectable(label.c_str(), isSelected);
 
     if (isActivated || ImGui::IsItemClicked(ImGuiMouseButton_Left) || ImGui::IsItemClicked(ImGuiMouseButton_Right))
-        row_select(selection, focus, rows, key);
+        row_select(focus, rows, key);
     if (isInvalid)
         ImGui::PopStyleColor();
     if (font != FONT_REGULAR)
@@ -213,7 +213,7 @@ static void card_draw(Panel& panel, std::set<int>& selection, int& focus, const 
             ImGui::SetKeyboardFocusHere();
         if (ImGui::Selectable("##Card Selectable", isSelected, 0, cardSize) ||
             ImGui::IsItemClicked(ImGuiMouseButton_Left) || ImGui::IsItemClicked(ImGuiMouseButton_Right))
-            row_select(selection, focus, rows, key);
+            row_select(focus, rows, key);
         if (rows.activate && ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
             rows.activate(key);
 
