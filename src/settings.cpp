@@ -252,8 +252,12 @@ Settings::Settings(const std::filesystem::path& path)
     {
         if (line == "[Settings]" || line.empty())
             continue;
+        // The rest of the file is Dear ImGui's own settings (window layout).
         if (line == "# Dear ImGui")
+        {
+            std::getline(file, imguiData, '\0');
             break;
+        }
 
         auto eq = line.find('=');
         if (eq == std::string::npos)
@@ -276,55 +280,6 @@ Settings::Settings(const std::filesystem::path& path)
     for (auto [scale, min, max] : {std::tuple{&uiScale, UI_SCALE_MIN, UI_SCALE_MAX},
                                    std::tuple{&renderScale, RENDER_SCALE_MIN, RENDER_SCALE_MAX}})
         *scale = std::clamp(*scale < min ? unit_to_percent(*scale) : *scale, min, max);
-}
-
-std::string Settings::imgui_data_load(const std::filesystem::path& path)
-{
-    auto pathUtf8 = path_to_utf8(path);
-    std::string fileData;
-    if (!file_text_load(path, &fileData, "rb"))
-    {
-        logger.error(
-            std::format("Failed to open settings file for Dear ImGui data: {}; using Dear ImGui defaults", pathUtf8));
-        return {};
-    }
-    std::istringstream file(fileData);
-
-    std::string line;
-    std::ostringstream dataStream;
-    bool isImGuiSection = false;
-    bool isContent = false;
-
-    while (std::getline(file, line))
-    {
-        if (!isImGuiSection)
-        {
-            if (line == "# Dear ImGui")
-                isImGuiSection = true;
-            continue;
-        }
-
-        if (isContent)
-            dataStream << "\n";
-        dataStream << line;
-        isContent = true;
-    }
-
-    if (!isImGuiSection)
-    {
-        logger.warning(
-            std::format("Dear ImGui section missing from settings file: {}; using Dear ImGui defaults", pathUtf8));
-        return {};
-    }
-
-    if (!isContent)
-    {
-        logger.warning(
-            std::format("Dear ImGui section empty in settings file: {}; using Dear ImGui defaults", pathUtf8));
-        return {};
-    }
-
-    return dataStream.str();
 }
 
 void Settings::save(const std::filesystem::path& path, const std::string& imguiData)

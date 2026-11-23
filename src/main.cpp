@@ -158,8 +158,8 @@ static bool window_open(App& app)
     io.KeyRepeatRate = settings.keyboardRepeatRate;
     io.ConfigWindowsMoveFromTitleBarOnly = true;
     ImGui::GetStyle().FontScaleMain = percent_to_unit(settings.uiScale);
-    if (auto imguiData = Settings::imgui_data_load(settings_path_get()); !imguiData.empty())
-        ImGui::LoadIniSettingsFromMemory(imguiData.c_str(), imguiData.size());
+    if (!settings.imguiData.empty())
+        ImGui::LoadIniSettingsFromMemory(settings.imguiData.c_str(), settings.imguiData.size());
     return true;
 }
 

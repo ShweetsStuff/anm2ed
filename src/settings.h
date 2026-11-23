@@ -321,13 +321,13 @@ public:
     SETTINGS_MEMBERS SETTINGS_SHORTCUTS SETTINGS_WINDOWS
 #undef X
 
-        bool isDefault = false;
+        std::string imguiData;
+    bool isDefault = false;
 
     Settings() = default;
 
     Settings(const std::filesystem::path&);
     void save(const std::filesystem::path&, const std::string&);
-    static std::string imgui_data_load(const std::filesystem::path&);
 };
 
 constexpr StringType SHORTCUT_STRING_TYPES[] = {
