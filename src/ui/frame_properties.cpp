@@ -78,6 +78,11 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                          document.change();
                  }});
         };
+        // Sets one field of the edited frames to `value`.
+        auto field_edit = [&](EditState state, StringType message, auto Frame::* member, auto value) {
+            frame_edit(state, message,
+                       [member, value](Document&, Frame& frame, Track*, const Reference&) { frame.*member = value; });
+        };
 
         auto regions = document.choices_get(SelectionKind::REGIONS, type == LAYER ? reference.itemID : -1);
         auto events = document.choices_get(SelectionKind::EVENTS);
@@ -137,13 +142,7 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                     if (ImGui::Checkbox(localize.get(BASIC_VISIBLE),
                                         frame ? &useFrame.isVisible : &dummy_value<bool>()) &&
                         frame)
-                    {
-                        auto isVisible = useFrame.isVisible;
-                        frame_edit(EDIT_STATE_COMPLETE, EDIT_TRIGGER_VISIBILITY,
-                                   [isVisible](Document&, Frame& frame, Track*, const Reference&) {
-                                       frame.isVisible = isVisible;
-                                   });
-                    }
+                        field_edit(EDIT_STATE_COMPLETE, EDIT_TRIGGER_VISIBILITY, &Frame::isVisible, useFrame.isVisible);
                     tooltip_set(TOOLTIP_TRIGGER_VISIBILITY);
 
                     // A trigger's events or sounds: a combo for each, then Add and Remove (the last).
@@ -215,10 +214,7 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                         auto state = drag_float2_persistent(localize.get(field.label),
                                                             frame ? &value : &dummy_value<Vec2>(), DRAG_SPEED, 0.0f,
                                                             0.0f, frame ? vec2_format_get(source.*field.member) : "");
-                        frame_edit(state, field.edit,
-                                   [value, member = field.member](Document&, Frame& frame, Track*, const Reference&) {
-                                       frame.*member = value;
-                                   });
+                        field_edit(state, field.edit, field.member, value);
                         tooltip_set(field.tooltip);
                         ImGui::EndDisabled();
                     }
@@ -226,23 +222,14 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                     auto rotationEdit = drag_float_persistent(
                         localize.get(BASIC_ROTATION), frame ? &useFrame.rotation : &dummy_value<float>(), DRAG_SPEED,
                         0.0f, 0.0f, frame ? float_format_get(frame->rotation) : "");
-                    frame_edit(rotationEdit, EDIT_FRAME_ROTATION,
-                               [rotation = useFrame.rotation](Document&, Frame& frame, Track*, const Reference&) {
-                                   frame.rotation = rotation;
-                               });
+                    field_edit(rotationEdit, EDIT_FRAME_ROTATION, &Frame::rotation, useFrame.rotation);
                     tooltip_set(TOOLTIP_ROTATION);
 
                     if (input_int_range(localize.get(BASIC_DURATION), frame ? useFrame.duration : dummy_value<int>(),
                                         frame ? FRAME_DURATION_MIN : 0, FRAME_DURATION_MAX, STEP, STEP_FAST,
                                         !frame ? ImGuiInputTextFlags_DisplayEmptyRefVal : 0) &&
                         frame)
-                    {
-                        auto duration = useFrame.duration;
-                        frame_edit(EDIT_STATE_COMPLETE, EDIT_FRAME_DURATION,
-                                   [duration](Document&, Frame& frame, Track*, const Reference&) {
-                                       frame.duration = duration;
-                                   });
-                    }
+                        field_edit(EDIT_STATE_COMPLETE, EDIT_FRAME_DURATION, &Frame::duration, useFrame.duration);
                     tooltip_set(TOOLTIP_DURATION);
 
                     ImGui::BeginDisabled(type != LAYER);
@@ -251,28 +238,18 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                                         FRAME_DEPTH_MAX, STEP, STEP_FAST,
                                         !frame ? ImGuiInputTextFlags_DisplayEmptyRefVal : 0) &&
                         frame)
-                    {
-                        auto depth = useFrame.depth;
-                        frame_edit(EDIT_STATE_COMPLETE, EDIT_FRAME_DEPTH,
-                                   [depth](Document&, Frame& frame, Track*, const Reference&) { frame.depth = depth; });
-                    }
+                        field_edit(EDIT_STATE_COMPLETE, EDIT_FRAME_DEPTH, &Frame::depth, useFrame.depth);
                     tooltip_set(TOOLTIP_DEPTH);
                     ImGui::EndDisabled();
 
                     auto tintEdit =
                         color_edit4_persistent(localize.get(BASIC_TINT), frame ? &useFrame.tint : &dummy_value<Vec4>());
-                    frame_edit(tintEdit, EDIT_FRAME_TINT,
-                               [tint = useFrame.tint](Document&, Frame& frame, Track*, const Reference&) {
-                                   frame.tint = tint;
-                               });
+                    field_edit(tintEdit, EDIT_FRAME_TINT, &Frame::tint, useFrame.tint);
                     tooltip_set(TOOLTIP_TINT);
 
                     auto colorOffsetEdit = color_edit4_persistent(localize.get(BASIC_COLOR_OFFSET),
                                                                   frame ? &useFrame.colorOffset : &dummy_value<Vec4>());
-                    frame_edit(colorOffsetEdit, EDIT_FRAME_COLOR_OFFSET,
-                               [colorOffset = useFrame.colorOffset](Document&, Frame& frame, Track*, const Reference&) {
-                                   frame.colorOffset = colorOffset;
-                               });
+                    field_edit(colorOffsetEdit, EDIT_FRAME_COLOR_OFFSET, &Frame::colorOffset, useFrame.colorOffset);
                     tooltip_set(TOOLTIP_COLOR_OFFSET);
 
                     ImGui::BeginDisabled(type != LAYER);
@@ -320,26 +297,14 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
                                         frame ? &useFrame.shaderId : &dummy_value_negative<int>(), shaders.ids,
                                         shaders.labels) &&
                         frame)
-                    {
-                        auto shaderId = useFrame.shaderId;
-                        frame_edit(EDIT_STATE_COMPLETE, EDIT_FRAME_SHADER,
-                                   [shaderId](Document&, Frame& frame, Track*, const Reference&) {
-                                       frame.shaderId = shaderId;
-                                   });
-                    }
+                        field_edit(EDIT_STATE_COMPLETE, EDIT_FRAME_SHADER, &Frame::shaderId, useFrame.shaderId);
                     tooltip_set(TOOLTIP_FRAME_SHADER);
                     ImGui::EndDisabled();
 
                     if (ImGui::Checkbox(localize.get(BASIC_VISIBLE),
                                         frame ? &useFrame.isVisible : &dummy_value<bool>()) &&
                         frame)
-                    {
-                        auto isVisible = useFrame.isVisible;
-                        frame_edit(EDIT_STATE_COMPLETE, EDIT_FRAME_VISIBILITY,
-                                   [isVisible](Document&, Frame& frame, Track*, const Reference&) {
-                                       frame.isVisible = isVisible;
-                                   });
-                    }
+                        field_edit(EDIT_STATE_COMPLETE, EDIT_FRAME_VISIBILITY, &Frame::isVisible, useFrame.isVisible);
                     tooltip_set(TOOLTIP_FRAME_VISIBILITY);
 
                     auto widgetSize = widget_size_with_row_get(2);
