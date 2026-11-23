@@ -97,8 +97,7 @@ void sounds_update(Panel& panel)
                           [&](int id) {
                               auto audio = document.sound_get(id);
                               auto isValid = audio && audio->is_valid();
-                              auto& texture = resources.icons[isValid ? ICON_SOUND : ICON_NONE];
-                              return CardImage{.texture = &texture, .size = Vec2(texture.size), .isValid = isValid};
+                              return icon_card_get(resources, ICON_SOUND, isValid);
                           },
                       .select =
                           [&](int id) {

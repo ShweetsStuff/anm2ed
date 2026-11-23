@@ -470,28 +470,23 @@ void TimelineContext::frame_child(const TimelineRow& row, int& index, float widt
 
                 ImGui::PopStyleColor(4);
 
-                if (!isDraggedFrameActive && ImGui::IsItemHovered() && ImGui::IsMouseDown(ImGuiMouseButton_Left))
+                if (!isDraggedFrameActive && ImGui::IsItemHovered() && ImGui::IsMouseDown(ImGuiMouseButton_Left) &&
+                    (type == TRIGGER || ImGui::IsKeyDown(ImGuiMod_Ctrl)))
                 {
-                    if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
+                    isDraggedFrameActive = true;
+                    draggedFrameReference = frameReference;
+                    draggedFrameType = type;
+                    draggedFrameStart = hoveredTime;
+                    draggedFrameStartDurations.clear();
+                    if (type != TRIGGER)
                     {
-                        if (type == TRIGGER || ImGui::IsKeyDown(ImGuiMod_Ctrl))
-                        {
-                            isDraggedFrameActive = true;
-                            draggedFrameReference = frameReference;
-                            draggedFrameType = type;
-                            draggedFrameStart = hoveredTime;
-                            if (type != TRIGGER)
-                                draggedFrameStartDuration = frame.duration;
-                            draggedFrameStartDurations.clear();
-                            if (type != TRIGGER)
-                                for (auto selectedReference : drag_frame_references_get(frameReference))
-                                    if (auto selectedFrame = document.model.frame_get(selectedReference))
-                                        draggedFrameStartDurations.push_back(
-                                            {selectedReference, selectedFrame->duration});
-                            draggedFrameStartMouseX = ImGui::GetIO().MousePos.x;
-                            draggedFrameWidth = frameSize.x;
-                        }
+                        draggedFrameStartDuration = frame.duration;
+                        for (auto selectedReference : drag_frame_references_get(frameReference))
+                            if (auto selectedFrame = document.model.frame_get(selectedReference))
+                                draggedFrameStartDurations.push_back({selectedReference, selectedFrame->duration});
                     }
+                    draggedFrameStartMouseX = ImGui::GetIO().MousePos.x;
+                    draggedFrameWidth = frameSize.x;
                 }
 
                 if (type != TRIGGER)

@@ -108,6 +108,13 @@ bool tooltip_begin(const PanelState&, bool = true);
 void tooltip_end();
 void tooltip_name_draw(Resources&, const std::string&);
 void tooltip_image_draw(const CardImage&, const std::function<void()>&);
+
+// A card showing `icon` for a valid item, and the none icon for one that isn't.
+inline CardImage icon_card_get(Resources& resources, Icon icon, bool isValid)
+{
+    auto& texture = resources.icons[isValid ? icon : ICON_NONE];
+    return {.texture = &texture, .size = Vec2(texture.size), .isValid = isValid};
+}
 void directory_open(Dialog&, Document&, const std::filesystem::path&);
 std::filesystem::path asset_path_get(Document&, const std::filesystem::path&);
 // The confirm and cancel buttons that end a popup, side by side, on the confirm and cancel shortcuts.

@@ -92,8 +92,7 @@ void libraries_update(Panel& panel)
                           [&](int id) {
                               auto loaded = loaded_get(id);
                               auto isValid = loaded && loaded->model.isValid;
-                              auto& texture = resources.icons[isValid ? ICON_ANIMATION : ICON_NONE];
-                              return CardImage{.texture = &texture, .size = Vec2(texture.size), .isValid = isValid};
+                              return icon_card_get(resources, ICON_ANIMATION, isValid);
                           },
                       .activate = open,
                       .cardLines = LIBRARY_CARD_LINES};
