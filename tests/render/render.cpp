@@ -365,7 +365,8 @@ TEST_CASE("audio decodes and mixes")
     CHECK(mix[start + 2] == doctest::Approx(0.5f).epsilon(0.05));
 }
 
-// A second editor hands its paths to the first and is told it was heard. Skipped when the port is already taken.
+// A second editor hands its paths to the first, which has them queued once it answers, and wakes its event loop.
+// Skipped when the port is already taken.
 TEST_CASE("a second instance hands its paths to the first")
 {
     if (!SDL_Init(SDL_INIT_EVENTS))
@@ -373,14 +374,11 @@ TEST_CASE("a second instance hands its paths to the first")
     if (instance_start({}) != INSTANCE_FIRST)
         return;
     CHECK(instance_start({"a.anm2", "b.anm2"}) == INSTANCE_FORWARDED);
-    std::vector<std::string> paths;
+    CHECK(instance_paths_take() == std::vector<std::string>{"a.anm2", "b.anm2"});
+    CHECK_FALSE(instance_paths_take());
     SDL_Event event = {};
-    for (int attempt = 0; attempt < 100 && paths.size() < 2; ++attempt)
-        if (SDL_WaitEventTimeout(&event, 10) && event.type == SDL_EVENT_USER)
-        {
-            paths.emplace_back((const char*)event.user.data1);
-            SDL_free(event.user.data1);
-        }
+    CHECK((SDL_WaitEventTimeout(&event, 1000) && event.type == SDL_EVENT_USER));
+    CHECK(instance_start({}) == INSTANCE_FORWARDED);
+    CHECK(instance_paths_take() == std::vector<std::string>{});
     instance_stop();
-    CHECK(paths == std::vector<std::string>{"a.anm2", "b.anm2"});
 }

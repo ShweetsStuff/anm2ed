@@ -84,10 +84,12 @@ static AudioSound* sound_get(const AudioData& data)
     return it->second.samples.empty() ? nullptr : &it->second;
 }
 
+// Opened on the first play. A failed open is tried again on the next, for a device that shows up later.
 static SDL_AudioDeviceID device_get()
 {
-    static SDL_AudioDeviceID device =
-        SDL_InitSubSystem(SDL_INIT_AUDIO) ? SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &AUDIO_SPEC) : 0;
+    static SDL_AudioDeviceID device = 0;
+    if (!device && SDL_InitSubSystem(SDL_INIT_AUDIO))
+        device = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &AUDIO_SPEC);
     return device;
 }
 
@@ -141,9 +143,12 @@ void audio_play(const AudioData& data, AudioPlayMode mode)
         voice = free->get();
     else
     {
+        auto stream = SDL_CreateAudioStream(&AUDIO_SPEC, &AUDIO_SPEC);
+        if (!stream)
+            return;
         voice = sound->voices.emplace_back(std::make_unique<AudioVoice>()).get();
         voice->sound = sound;
-        voice->stream = SDL_CreateAudioStream(&AUDIO_SPEC, &AUDIO_SPEC);
+        voice->stream = stream;
         SDL_SetAudioStreamGetCallback(voice->stream, voice_feed, voice);
         SDL_BindAudioStream(device_get(), voice->stream);
     }

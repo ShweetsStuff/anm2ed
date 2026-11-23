@@ -5,6 +5,7 @@
 #include <imgui/backends/imgui_impl_opengl3.h>
 #include <imgui/backends/imgui_impl_sdl3.h>
 #include <imgui/imgui_internal.h>
+#include <span>
 
 #include "cli.h"
 #include "gl.h"
@@ -243,18 +244,6 @@ static void events_poll(App& app, Editor& editor)
             case SDL_EVENT_DROP_COMPLETE:
                 file_drop_complete(app, editor);
                 break;
-            // A path handed over by another instance (see instance.h).
-            case SDL_EVENT_USER:
-            {
-                auto path = path_from_utf8((const char*)event.user.data1);
-                SDL_free(event.user.data1);
-                if (is_path_extension(path, "anm2"))
-                {
-                    editor.manager.open(path);
-                    SDL_FlashWindow(app.window, SDL_FLASH_UNTIL_FOCUSED);
-                }
-                break;
-            }
             case SDL_EVENT_QUIT:
                 app.isQuitting = true;
                 break;
@@ -266,6 +255,15 @@ static void events_poll(App& app, Editor& editor)
             default:
                 break;
         }
+    }
+
+    // Paths handed over by another instance (see instance.h).
+    if (auto paths = instance_paths_take())
+    {
+        for (auto& path : *paths)
+            if (is_path_extension(path_from_utf8(path), "anm2"))
+                editor.manager.open(path_from_utf8(path));
+        SDL_FlashWindow(app.window, SDL_FLASH_UNTIL_FOCUSED);
     }
 }
 
@@ -396,20 +394,23 @@ static void loop_step(App& app, Editor& editor)
         app.isIdle = false;
 }
 
+// Paths are made absolute, so a running instance (with its own working directory) can open them.
 static int editor_run(int argc, char* argv[])
 {
-    std::vector<std::string> arguments(argv + 1, argv + argc);
-    switch (instance_start(arguments))
+    std::vector<std::string> arguments;
+    for (auto argument : std::span(argv + 1, argv + argc))
     {
-        case INSTANCE_FORWARDED:
-            logger.info("Handed the arguments to the running instance.");
-            return EXIT_SUCCESS;
-        case INSTANCE_ALONE:
-            logger.warning("Another program holds the single-instance port. Running without it.");
-            break;
-        default:
-            break;
+        std::error_code error;
+        auto path = std::filesystem::absolute(path_from_utf8(argument), error);
+        arguments.push_back(error ? argument : path_to_utf8(path));
     }
+    auto role = instance_start(arguments);
+    if (role == INSTANCE_FORWARDED)
+        return EXIT_SUCCESS;
+
+    logger.session_open(preferences_directory_get());
+    if (role == INSTANCE_ALONE)
+        logger.warning("Another program holds the single-instance port. Running without it.");
 
     App app;
     auto isOpen = window_open(app);
@@ -423,7 +424,6 @@ static int editor_run(int argc, char* argv[])
         while (!app.isQuit)
             loop_step(app, editor);
     }
-    instance_stop();
     window_close(app);
     return isOpen ? EXIT_SUCCESS : EXIT_FAILURE;
 }
@@ -443,6 +443,7 @@ int main(int argc, char* argv[])
         return cli_run(argc, (const char**)argv);
     }
 
-    logger.session_open(preferences_directory_get());
-    return log_exceptions([&] { return editor_run(argc, argv); });
+    auto result = log_exceptions([&] { return editor_run(argc, argv); });
+    instance_stop();
+    return result;
 }

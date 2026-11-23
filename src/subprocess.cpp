@@ -1,11 +1,11 @@
 #include "subprocess.h"
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <string>
 #include <windows.h>
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
 std::wstring utf8_to_wstring(const char* text)
 {
     if (!text)
@@ -33,7 +33,7 @@ bool Process::open(const char* command, const char* mode)
 {
     close();
 
-#ifdef WIN32
+#ifdef _WIN32
     auto wideCommand = utf8_to_wstring(command);
     auto wideMode = utf8_to_wstring(mode);
     pipe = _wpopen(wideCommand.c_str(), wideMode.c_str());
@@ -47,7 +47,7 @@ int Process::close()
 {
     if (pipe)
     {
-#ifdef WIN32
+#ifdef _WIN32
         auto result = _pclose(pipe);
 #else
         auto result = pclose(pipe);

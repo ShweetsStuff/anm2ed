@@ -7,6 +7,8 @@ class Process
 public:
     Process() = default;
     Process(const char*, const char*);
+    Process(const Process&) = delete;
+    Process& operator=(const Process&) = delete;
     ~Process();
 
     bool open(const char*, const char*);
