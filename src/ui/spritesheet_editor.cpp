@@ -250,7 +250,7 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
                         [pivot = pivot_snap(mousePos - region->crop, region->pivot)](Vec2) { return pivot; });
                 if (isArrow)
                     region_pivot_update(
-                        [=, this](Vec2 pivot) { return isGridSnap ? Vec2(IVec2(pivot + arrow)) : pivot + arrow; });
+                        [=](Vec2 pivot) { return isGridSnap ? Vec2(IVec2(pivot + arrow)) : pivot + arrow; });
                 if (isDuring)
                     tooltip_lines_draw({localize_format(FORMAT_PIVOT, region->pivot.x, region->pivot.y)});
                 if (isEnd)
@@ -315,14 +315,14 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
 
                 // Arrow nudges are snapped (and the rectangle normalized) when the command runs, after the nudge.
                 if (isDuring && !isMouseDown && isRegionCrop)
-                    regions_update(regionSelection, [=, this](Region& region) {
+                    regions_update(regionSelection, [=](Region& region) {
                         auto [minPoint, maxPoint] =
                             rect_snap(region.crop, region.crop + region.size, isGridSnap, gridSize, gridOffset);
                         region.crop = minPoint;
                         region.size = maxPoint - minPoint;
                     });
                 else if (isDuring && !isMouseDown)
-                    manager.command_push({manager.selected, [=, this](Manager&, Document& document) {
+                    manager.command_push({manager.selected, [=](Manager&, Document& document) {
                                               auto source = document.model.frame_get(editReference);
                                               if (!source)
                                                   return;
@@ -455,19 +455,13 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
                 frame && reference.itemID > -1 && layer && layer->spritesheetId == referenceSpritesheet;
 
             int highlightedRegionId = -1;
-            if (document.editTarget == Document::EditTarget::REGION && regionReference != -1 &&
-                region_get(regionReference))
-            {
+            auto isRegionReferenced = regionReference != -1 && region_get(regionReference);
+            if (document.editTarget == Document::EditTarget::REGION && isRegionReferenced)
                 highlightedRegionId = regionReference;
-            }
             else if (isReferenceLayerOnSpritesheet && frame->regionId != -1 && region_get(frame->regionId))
-            {
                 highlightedRegionId = frame->regionId;
-            }
-            else if (regionReference != -1 && region_get(regionReference))
-            {
+            else if (isRegionReferenced)
                 highlightedRegionId = regionReference;
-            }
 
             auto draw_region_rect = [&](const Region& region, Vec4 regionColor) {
                 auto cropModel = quad_model_get(region.size, region.crop);

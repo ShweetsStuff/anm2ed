@@ -77,7 +77,7 @@ void Taskbar::update(Manager& manager, Settings& settings, Resources& resources,
     auto animation = document ? document->model.animation_get(document->reference_get().animationIndex) : nullptr;
     auto layerReferences = document ? document->layer_references_get() : std::vector<Reference>{};
     bool isGenerateAnimationFromGridAvailable = !layerReferences.empty();
-    bool hasRegions =
+    bool isRegions =
         document && std::ranges::any_of(document->model.content.spritesheets,
                                         [](const auto& spritesheet) { return !spritesheet.regions.empty(); });
 
@@ -165,7 +165,7 @@ void Taskbar::update(Manager& manager, Settings& settings, Resources& resources,
                 generateRegionsPopup.open();
             tooltip_set(TOOLTIP_WIZARD_GENERATE_REGIONS_FROM_ANIMATIONS);
 
-            if (ImGui::MenuItem(localize.get(LABEL_SCAN_AND_SET_REGIONS), nullptr, false, document && hasRegions))
+            if (ImGui::MenuItem(localize.get(LABEL_SCAN_AND_SET_REGIONS), nullptr, false, document && isRegions))
             {
                 manager.command_push({manager.selected, [](Manager&, Document& document) {
                                           document.edit_apply(EDIT_SCAN_AND_SET_REGIONS,

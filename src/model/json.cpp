@@ -308,10 +308,10 @@ struct JsonWriter
 // Each returns what it expected when the value is the wrong kind (and leaves the value as it was).
 static std::string_view value_read(dom::element element, bool& value)
 {
-    bool read = false;
-    if (element.get(read))
+    bool isTrue = false;
+    if (element.get(isTrue))
         return "true or false";
-    value = read;
+    value = isTrue;
     return {};
 }
 

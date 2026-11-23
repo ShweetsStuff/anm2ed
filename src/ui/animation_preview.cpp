@@ -143,7 +143,7 @@ void AnimationPreview::tick(Manager& manager, Settings& settings, float deltaSec
             recording_stop(manager, document);
         }
         stop_all_sounds();
-        wasPlaybackPlaying = false;
+        isPlaybackPlayingBefore = false;
         return;
     }
 
@@ -161,7 +161,7 @@ void AnimationPreview::tick(Manager& manager, Settings& settings, float deltaSec
         {
             auto fps = std::max(model.info.fps, 1);
             auto range = animation_play_range_get(*animation);
-            if (!wasPlaybackPlaying)
+            if (!isPlaybackPlayingBefore)
                 soundFrame = (int)std::floor(playback.time) - 1;
             auto isLoop = (animation->isLoop || settings.playbackIsLoop) && !manager.isRecording;
             playback.tick(fps, range.x, range.y, isLoop ? PLAYBACK_LOOP : PLAYBACK_ONCE, deltaSeconds);
@@ -181,9 +181,9 @@ void AnimationPreview::tick(Manager& manager, Settings& settings, float deltaSec
         }
     }
 
-    if (wasPlaybackPlaying && !playback.isPlaying)
+    if (isPlaybackPlayingBefore && !playback.isPlaying)
         stop_all_sounds();
-    wasPlaybackPlaying = playback.isPlaying;
+    isPlaybackPlayingBefore = playback.isPlaying;
 }
 
 void AnimationPreview::recording_stop(Manager& manager, Document& document)

@@ -211,9 +211,7 @@ Settings::Settings(const std::filesystem::path& path)
             dest = (val == "true" || val == "1");
         }
         else if constexpr (std::is_same_v<T, std::string>)
-        {
             std::getline(ss, dest);
-        }
         else if constexpr (std::is_same_v<T, std::filesystem::path>)
         {
             std::string value;
@@ -221,9 +219,7 @@ Settings::Settings(const std::filesystem::path& path)
             dest = path_from_utf8(value);
         }
         else
-        {
             stream_assign(dest, ss);
-        }
     };
 
     auto entry_load = [&](const std::string& key, std::istringstream& ss, const std::string& name, auto& value,

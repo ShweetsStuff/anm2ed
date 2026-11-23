@@ -123,7 +123,7 @@ void CanvasView::checker_pan_reset(float zoom, Vec2 pan)
     checkerSyncPan = pan;
     checkerSyncZoom = zoom;
     isCheckerPanInitialized = true;
-    hasPendingZoomPanAdjust = false;
+    isZoomPanAdjustPending = false;
 }
 
 void CanvasView::checker_pan_sync(float zoom, Vec2 pan)
@@ -133,13 +133,13 @@ void CanvasView::checker_pan_sync(float zoom, Vec2 pan)
     if (pan == checkerSyncPan && zoom == checkerSyncZoom)
         return;
 
-    auto isPanDeltaIgnored = hasPendingZoomPanAdjust && zoom != checkerSyncZoom;
+    auto isPanDeltaIgnored = isZoomPanAdjustPending && zoom != checkerSyncZoom;
     if (!isPanDeltaIgnored)
         checkerPan += pan - checkerSyncPan;
     checkerSyncPan = pan;
     checkerSyncZoom = zoom;
     if (isPanDeltaIgnored)
-        hasPendingZoomPanAdjust = false;
+        isZoomPanAdjustPending = false;
 }
 
 void CanvasView::zoom_step(float& zoom, Vec2& pan, Vec2 focus, int levelDelta)
@@ -147,7 +147,7 @@ void CanvasView::zoom_step(float& zoom, Vec2& pan, Vec2 focus, int levelDelta)
     auto previousZoom = zoom;
     zoom_level_adjust(zoom, pan, focus, levelDelta);
     if (zoom != previousZoom)
-        hasPendingZoomPanAdjust = true;
+        isZoomPanAdjustPending = true;
 }
 
 void CanvasView::grid_child_draw(ImVec2 childSize, bool& isGrid, Vec4& gridColor, IVec2& gridSize, IVec2& gridOffset,

@@ -24,4 +24,3 @@ public:
     int resolve_index(int) const;
 };
 
-void external_storage_set(ImGuiSelectionExternalStorage*, int, bool);

@@ -199,7 +199,7 @@ void TimelineContext::shortcuts_update()
         {
             if (resizeChordTabIds[i] != document.tabId)
                 edit_begin_push(resize.edit);
-            command_push([=, this](Manager&, Document& document) {
+            command_push([=](Manager&, Document& document) {
                 for (auto frameReference : selectedFrames)
                     if (auto frame = document.model.frame_edit(frameReference))
                         frame->duration =

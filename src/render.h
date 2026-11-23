@@ -185,6 +185,5 @@ private:
 bool animation_record(const RecorderOptions&, Canvas&, ShaderProgram&, Document&, const Animation&, Vec4, float, Vec4,
                       bool);
 
-std::filesystem::path ffmpeg_log_path();
 bool animation_render(const std::filesystem::path&, const std::filesystem::path&,
                       const std::vector<std::filesystem::path>&, const std::vector<float>&, RenderType, int);

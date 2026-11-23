@@ -56,7 +56,6 @@ constexpr std::size_t VALUE_BUFFER_SIZE = 64;
 constexpr int FLOAT_DIGITS = 8;
 constexpr int DOUBLE_DIGITS = 17;
 constexpr double FLOAT_WHOLE_MAX = 1e8;
-constexpr std::size_t FRAME_ATTRIBUTES_MAX = 27;
 constexpr std::string_view INDENT = "    ";
 constexpr int TEXT_ENTITY_COUNT = 3;
 constexpr std::pair<char, std::string_view> ENTITIES[] = {
@@ -1914,12 +1913,12 @@ std::vector<AnimationEntry> animations_from_string(const std::string& text, std:
     return entries;
 }
 
-template <class Item> static std::string item_to_string(const Item& item)
+template <class Item> std::string item_to_string(const Item& item)
 {
     return text_get([&](Sink& sink) { element_write(sink, Writer(SAVE_CLIPBOARD), item, item.id); });
 }
 
-template <class Item> static std::vector<Item> items_from_string(const std::string& text, std::string* errorString)
+template <class Item> std::vector<Item> items_from_string(const std::string& text, std::string* errorString)
 {
     pugi::xml_document document;
     if (!document_parse(document, text, errorString))

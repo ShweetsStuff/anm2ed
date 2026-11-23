@@ -1,14 +1,14 @@
 #include "ui/multiselect.h"
 
-void external_storage_set(ImGuiSelectionExternalStorage* self, int id, bool isSelected)
+static void external_storage_set(ImGuiSelectionExternalStorage* self, int id, bool isSelected)
 {
-    auto* storage = static_cast<MultiSelectStorage*>(self->UserData);
-    auto value = storage ? storage->resolve_index(id) : id;
+    auto& storage = *(MultiSelectStorage*)self->UserData;
+    auto value = storage.resolve_index(id);
     if (isSelected)
-        storage->insert(value);
+        storage.insert(value);
     else
-        storage->erase(value);
-};
+        storage.erase(value);
+}
 
 MultiSelectStorage::MultiSelectStorage()
 {

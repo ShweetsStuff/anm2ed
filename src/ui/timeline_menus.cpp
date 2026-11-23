@@ -75,7 +75,7 @@ void TimelineContext::context_menu()
             return;
 
         auto settingsPtr = &settings;
-        command_push([=, this](Manager& manager, Document& document) {
+        command_push([=](Manager& manager, Document& document) {
             auto frame = document.model.frame_get(targetReference);
             if (!frame || frame->regionId != -1)
                 return;
@@ -127,20 +127,20 @@ void TimelineContext::context_menu()
                  .shortcut = SHORTCUT_INSERT_FRAME,
                  .isEnabled = [&]() { return item; },
                  .run = [&]() { frame_insert(); }});
-    actions.add(ACTION_DUPLICATE, [=, this]() { return !selectedBakeFrames.empty(); }, [&]() { frames_duplicate(); });
+    actions.add(ACTION_DUPLICATE, [=]() { return !selectedBakeFrames.empty(); }, [&]() { frames_duplicate(); });
     actions.add({.label = LABEL_SPLIT,
                  .shortcut = SHORTCUT_SPLIT,
-                 .isEnabled = [=, this]() { return !selectedBakeFrames.empty(); },
+                 .isEnabled = [=]() { return !selectedBakeFrames.empty(); },
                  .run = [&]() { frame_split(); }});
-    actions.add(ACTION_REVERSE, [=, this]() { return isReverseFrames; }, [&]() { frames_reverse(); });
+    actions.add(ACTION_REVERSE, [=]() { return isReverseFrames; }, [&]() { frames_reverse(); });
     actions.separator();
     actions.add({.label = LABEL_BAKE,
                  .shortcut = SHORTCUT_BAKE,
-                 .isEnabled = [=, this]() { return !selectedBakeFrames.empty(); },
+                 .isEnabled = [=]() { return !selectedBakeFrames.empty(); },
                  .run = [&]() { frames_bake(); }});
     actions.add({.label = LABEL_BAKE_INTO_OTHER_FRAMES,
                  .shortcut = -1,
-                 .isEnabled = [=, this]() { return !selectedRootFrames.empty(); },
+                 .isEnabled = [=]() { return !selectedRootFrames.empty(); },
                  .run = [&]() { bakeIntoOtherFramesPopup.open(); }});
     actions.add({.label = LABEL_FIT_ANIMATION_LENGTH,
                  .shortcut = SHORTCUT_FIT,
@@ -149,7 +149,7 @@ void TimelineContext::context_menu()
     actions.separator();
     actions.add({.label = isMakeManyRegions ? LABEL_MAKE_MANY_REGIONS : LABEL_MAKE_REGION,
                  .shortcut = -1,
-                 .isEnabled = [=, this]() { return isMakeManyRegions || isMakeRegion; },
+                 .isEnabled = [=]() { return isMakeManyRegions || isMakeRegion; },
                  .run =
                      [&]() {
                          if (!isMakeManyRegions)
@@ -160,7 +160,7 @@ void TimelineContext::context_menu()
     actions.separator();
     actions.add({.label = LABEL_DELETE,
                  .shortcut = SHORTCUT_REMOVE,
-                 .isEnabled = [=, this]() { return !selectedFrames.empty(); },
+                 .isEnabled = [=]() { return !selectedFrames.empty(); },
                  .run = [&]() { frames_delete_action(); }});
     actions.separator();
     // Cut, copy and paste each open onto the whole frame, or one property of it.
@@ -199,10 +199,10 @@ void TimelineContext::context_menu()
         return sourceFrame != nullptr;
     };
     clipboard_menu_add(
-        ACTION_CUT, [=, this]() { return !selectedFrames.empty(); }, [this]() { cut(); },
+        ACTION_CUT, [=]() { return !selectedFrames.empty(); }, [this]() { cut(); },
         properties_get(sourceType, is_source, [this](FrameProperty property) { property_cut(property); }));
     clipboard_menu_add(
-        ACTION_COPY, [=, this]() { return !copyFrames.empty(); }, [this]() { copy(); },
+        ACTION_COPY, [=]() { return !copyFrames.empty(); }, [this]() { copy(); },
         properties_get(sourceType, is_source, [this](FrameProperty property) { property_copy(property); }));
     // Only one property is ever on the clipboard, so pasting one is a single item.
     auto clipboardProperty = (FrameProperty)frameClipboard.property;
@@ -317,11 +317,11 @@ void TimelineContext::item_context_menu()
                 item_base_properties_open(type, id);
         });
     actions.add(ACTION_ADD, [&]() { return animation; }, [&]() { itemProperties.open(); });
-    actions.add(ACTION_REMOVE, [=, this]() { return isRemoveAvailable; }, [&]() { item_remove(); });
-    actions.add(ACTION_GROUP, [=, this]() { return !selectedGroupableItems.empty(); }, [&]() { item_group(); });
+    actions.add(ACTION_REMOVE, [=]() { return isRemoveAvailable; }, [&]() { item_remove(); });
+    actions.add(ACTION_GROUP, [=]() { return !selectedGroupableItems.empty(); }, [&]() { item_group(); });
     actions.separator();
-    actions.add(ACTION_CUT, [=, this]() { return !copyFrames.empty() && isRemoveAvailable; }, item_cut);
-    actions.add(ACTION_COPY, [=, this]() { return !copyFrames.empty(); }, [this]() { copy(); });
+    actions.add(ACTION_CUT, [=]() { return !copyFrames.empty() && isRemoveAvailable; }, item_cut);
+    actions.add(ACTION_COPY, [=]() { return !copyFrames.empty(); }, [this]() { copy(); });
     actions.add(ACTION_PASTE, [&]() { return item && !clipboard.is_empty(); }, [this]() { paste(); });
     if (shortcut(manager.chords[SHORTCUT_CUT], SCOPE_FOCUSED) && !copyFrames.empty() && isRemoveAvailable)
         item_cut();

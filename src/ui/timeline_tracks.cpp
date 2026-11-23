@@ -203,11 +203,11 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
                                                        ImGuiHoveredFlags_AllowWhenDisabled |
                                                        ImGuiHoveredFlags_NoSharedDelay;
                 imguiStyle.HoverDelayNormal = FRAME_TOOLTIP_HOVER_DELAY;
-                bool showItemTooltip = ImGui::BeginItemTooltip();
+                bool isItemTooltipShown = ImGui::BeginItemTooltip();
                 imguiStyle.HoverFlagsForTooltipMouse = previousTooltipFlags;
                 imguiStyle.HoverDelayNormal = previousTooltipDelay;
 
-                if (showItemTooltip)
+                if (isItemTooltipShown)
                 {
                     auto yesNoLabel = [&](bool value) {
                         return value ? localize.get(BASIC_YES) : localize.get(BASIC_NO);

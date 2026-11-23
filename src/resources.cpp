@@ -67,7 +67,7 @@ Resources::Resources()
 
     for (auto [i, shaderInfo] : std::views::enumerate(SHADERS))
         shaders[i] = ShaderProgram(shaderInfo.vertex, shaderInfo.fragment);
-};
+}
 
 GLuint Resources::icon_id_get(int icon)
 {

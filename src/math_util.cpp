@@ -84,7 +84,7 @@ Mat4 quad_model_parent_get(Vec2 position, Vec2 pivot, Vec2 scale, float rotation
 
 float random_unit_get()
 {
-    return (float)rand() / RAND_MAX;
+    return (float)rand() / (float)RAND_MAX;
 }
 
 float random_in_range(float min, float max)

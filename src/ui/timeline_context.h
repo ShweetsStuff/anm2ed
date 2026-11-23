@@ -208,7 +208,7 @@ struct TimelineContext : TimelineState
     template <class Operation>
     void edit_push(StringType label, Operation operation, std::function<void(Document&, const Uids&)> select = {})
     {
-        command_push([=, this](Manager&, Document& document) mutable {
+        command_push([=](Manager&, Document& document) mutable {
             auto uids = document.edit_apply(label, operation);
             select ? select(document, uids) : document.frames_select(uids);
         });

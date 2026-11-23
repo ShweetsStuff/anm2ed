@@ -16,7 +16,7 @@ void TimelineContext::frames_delete_action()
         return;
     edit_push(
         EDIT_DELETE_FRAMES, [=](Model& model) { return frames_delete(model, selectedFrames); },
-        [this](Document& document, const Uids&) { document.frame_focus_select(); });
+        [](Document& document, const Uids&) { document.frame_focus_select(); });
 }
 
 void TimelineContext::frames_duplicate()
@@ -190,7 +190,7 @@ void TimelineContext::item_group()
          name = std::string(localize.get(TEXT_NEW_GROUP))](Model& model) {
             return items_group(model, animationIndex, type, ids, name);
         },
-        [=, this](Document& document, const Uids& uids) {
+        [=](Document& document, const Uids& uids) {
             if (uids.empty())
                 return;
             document.selected_set(SelectionKind::TRACKS, {targetReferences.begin(), targetReferences.end()});
@@ -233,7 +233,7 @@ void TimelineContext::rows_move_to_row(std::vector<TimelineRow> draggedRows, Tim
     edit_push(
         EDIT_MOVE_ITEMS,
         [=](Model& model) { return items_move(model, animationIndex, targetType, ids, groupIds, target, zone); },
-        [=, this](Document& document, const Uids&) {
+        [=](Document& document, const Uids&) {
             document.selection.uids[SelectionKind::TRACKS] = moved.uids.at(SelectionKind::TRACKS);
             document.selection.uids[SelectionKind::GROUPS] = moved.uids.at(SelectionKind::GROUPS);
             if (tracks.empty())
@@ -289,7 +289,7 @@ void TimelineContext::cut()
     frame_references_copy(selectedFrames);
     edit_push(
         EDIT_CUT_FRAMES, [=](Model& model) { return frames_delete(model, selectedFrames); },
-        [this](Document& document, const Uids&) { document.frame_focus_select(); });
+        [](Document& document, const Uids&) { document.frame_focus_select(); });
 }
 
 void TimelineContext::paste()
@@ -311,7 +311,7 @@ void TimelineContext::paste()
          time = hoveredTime](Model& model) {
             return frames_paste(model, targetReference, selectedFrames, text, time, errorString.get());
         },
-        [=, this](Document& document, const Uids& uids) {
+        [=](Document& document, const Uids& uids) {
             if (errorString->empty())
                 return document.frames_select(uids);
             toasts.push(std::format("{} {}", localize.get(TOAST_DESERIALIZE_FRAMES_FAILED), *errorString));

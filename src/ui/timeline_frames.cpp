@@ -19,7 +19,7 @@ void TimelineContext::frames_move_to(Reference target)
     edit_push(
         EDIT_MOVE_FRAMES,
         [frames, target, insertIndex](Model& model) { return frames_move(model, frames, target, insertIndex); },
-        [=, this](Document& document, const Uids& uids) {
+        [=](Document& document, const Uids& uids) {
             document.frames_select(uids);
             if (target.itemType == LAYER)
                 if (auto layer = ::item_get(document.model.content.layers, target.itemID))
@@ -607,7 +607,7 @@ void TimelineContext::frame_drag_update()
     {
         auto targetReference = draggedFrameReference;
         auto targetType = draggedFrameType;
-        command_push([=, this](Manager&, Document& document) {
+        command_push([=](Manager&, Document& document) {
             auto item = document.model.track_edit(targetReference);
             if (targetType == TRIGGER && item)
                 frames_sort_by_at_frame(*item);

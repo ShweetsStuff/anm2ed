@@ -12,7 +12,7 @@
 
 class AnimationPreview : public CanvasView
 {
-    bool wasPlaybackPlaying = false;
+    bool isPlaybackPlayingBefore = false;
     int soundFrame = -1;
     bool isMoveDragging = false;
     Vec2 moveOffset{};

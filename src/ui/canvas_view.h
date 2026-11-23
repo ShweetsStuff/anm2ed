@@ -52,7 +52,7 @@ protected:
     Vec2 checkerSyncPan{};
     float checkerSyncZoom = 0;
     bool isCheckerPanInitialized = false;
-    bool hasPendingZoomPanAdjust = false;
+    bool isZoomPanAdjustPending = false;
     bool isFocused = false;
 
     void checker_pan_reset(float, Vec2);

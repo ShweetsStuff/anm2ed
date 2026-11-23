@@ -124,7 +124,7 @@ void Documents::update(Taskbar& taskbar, Manager& manager, Settings& settings, R
     auto viewport = ImGui::GetMainViewport();
     auto windowHeight = ImGui::GetFrameHeightWithSpacing();
     bool isLightTheme = settings.theme == THEME_LIGHT;
-    bool pushedStyle = false;
+    bool isStylePushed = false;
 
     ImGui::SetNextWindowViewport(viewport->ID);
     ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + taskbar.height));
@@ -132,7 +132,7 @@ void Documents::update(Taskbar& taskbar, Manager& manager, Settings& settings, R
     if (isLightTheme)
     {
         ImGui::PushStyleColor(ImGuiCol_WindowBg, ImGui::GetStyleColorVec4(ImGuiCol_TitleBgActive));
-        pushedStyle = true;
+        isStylePushed = true;
     }
 
     for (auto i = 0; i < (int)manager.documents.size(); ++i)
@@ -336,7 +336,7 @@ void Documents::update(Taskbar& taskbar, Manager& manager, Settings& settings, R
     }
 
     ImGui::End();
-    if (pushedStyle)
+    if (isStylePushed)
         ImGui::PopStyleColor();
 
     if (manager.isAnm2DragDrop)
