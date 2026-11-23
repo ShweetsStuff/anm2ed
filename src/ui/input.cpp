@@ -81,14 +81,12 @@ bool combo_id_mapped(const std::string& label, int* id, const std::vector<int>& 
     return isActivated;
 }
 
-EditState drag_float_persistent(const char* label, float* value, float speed, float min, float max, const char* format,
-                                ImGuiSliderFlags flags)
+// Follows an edit made on a copy of `value`: it starts on activation (when the copy differs), ends once deactivated
+// after an edit, and is under way in between, writing the copy back. Each value type keeps its own state.
+template <class T> static EditState persistent_state_get(T* value, T persistent)
 {
     static bool isEditing = false;
-    static float start = NAN;
-    auto persistent = value ? *value : 0;
-
-    ImGui::DragFloat(label, &persistent, speed, min, max, format, flags);
+    static T start = T(NAN);
     if (!value)
         return EDIT_STATE_NONE;
     if (ImGui::IsItemActivated() && persistent != start)
@@ -97,83 +95,40 @@ EditState drag_float_persistent(const char* label, float* value, float speed, fl
         start = *value;
         return EDIT_STATE_START;
     }
-    else if (ImGui::IsItemDeactivatedAfterEdit())
+    if (ImGui::IsItemDeactivatedAfterEdit())
     {
         isEditing = false;
         *value = persistent;
-        start = NAN;
+        start = T(NAN);
         return EDIT_STATE_END;
     }
-    else if (isEditing)
-    {
-        *value = persistent;
-        return EDIT_STATE_DURING;
-    }
+    if (!isEditing)
+        return EDIT_STATE_NONE;
+    *value = persistent;
+    return EDIT_STATE_DURING;
+}
 
-    return EDIT_STATE_NONE;
+EditState drag_float_persistent(const char* label, float* value, float speed, float min, float max, const char* format,
+                                ImGuiSliderFlags flags)
+{
+    auto persistent = value ? *value : 0;
+    ImGui::DragFloat(label, &persistent, speed, min, max, format, flags);
+    return persistent_state_get(value, persistent);
 }
 
 EditState drag_float2_persistent(const char* label, Vec2* value, float speed, float min, float max, const char* format,
                                  ImGuiSliderFlags flags)
 {
-    static bool isEditing = false;
-    static Vec2 start{NAN};
     auto persistent = value ? *value : Vec2();
-
     ImGui::DragFloat2(label, values_get(persistent), speed, min, max, format, flags);
-    if (!value)
-        return EDIT_STATE_NONE;
-    if (ImGui::IsItemActivated() && persistent != start)
-    {
-        isEditing = true;
-        start = *value;
-        return EDIT_STATE_START;
-    }
-    else if (ImGui::IsItemDeactivatedAfterEdit())
-    {
-        isEditing = false;
-        *value = persistent;
-        start = Vec2{NAN};
-        return EDIT_STATE_END;
-    }
-    else if (isEditing)
-    {
-        *value = persistent;
-        return EDIT_STATE_DURING;
-    }
-
-    return EDIT_STATE_NONE;
+    return persistent_state_get(value, persistent);
 }
 
 EditState color_edit4_persistent(const char* label, Vec4* value, ImGuiColorEditFlags flags)
 {
-    static bool isEditing = false;
-    static Vec4 start{NAN};
     auto persistent = value ? *value : Vec4();
-
     ImGui::ColorEdit4(label, values_get(persistent), flags);
-    if (!value)
-        return EDIT_STATE_NONE;
-    if (ImGui::IsItemActivated() && persistent != start)
-    {
-        isEditing = true;
-        start = *value;
-        return EDIT_STATE_START;
-    }
-    else if (ImGui::IsItemDeactivatedAfterEdit())
-    {
-        isEditing = false;
-        *value = persistent;
-        start = Vec4{NAN};
-        return EDIT_STATE_END;
-    }
-    else if (isEditing)
-    {
-        *value = persistent;
-        return EDIT_STATE_DURING;
-    }
-
-    return EDIT_STATE_NONE;
+    return persistent_state_get(value, persistent);
 }
 
 bool radio_button_icon(const char* label, int* value, int buttonValue, ImTextureID texture, ImVec2 size, ImVec4 tint)

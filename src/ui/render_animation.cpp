@@ -100,31 +100,10 @@ void RenderAnimation::update(Manager& manager, Document& document, Resources& re
 
     auto widgetSize = widget_size_with_row_get(2);
 
-    Dialog::Type dialogType = Dialog::NONE;
-    switch (type)
-    {
-        case RENDER_PNGS:
-            dialogType = Dialog::PNG_DIRECTORY_SET;
-            break;
-        case RENDER_SPRITESHEET:
-            dialogType = Dialog::PNG_PATH_SET;
-            break;
-        case RENDER_GIF:
-            dialogType = Dialog::GIF_PATH_SET;
-            break;
-        case RENDER_WEBM:
-            dialogType = Dialog::WEBM_PATH_SET;
-            break;
-        case RENDER_OGV:
-            dialogType = Dialog::OGV_PATH_SET;
-            break;
-        case RENDER_MP4:
-            dialogType = Dialog::MP4_PATH_SET;
-            break;
-        default:
-            dialogType = Dialog::NONE;
-            break;
-    }
+    constexpr Dialog::Type RENDER_DIALOGS[] = {Dialog::PNG_DIRECTORY_SET, Dialog::PNG_PATH_SET, Dialog::GIF_PATH_SET,
+                                               Dialog::WEBM_PATH_SET,     Dialog::OGV_PATH_SET, Dialog::MP4_PATH_SET};
+    static_assert(std::size(RENDER_DIALOGS) == RENDER_COUNT);
+    auto dialogType = type >= 0 && type < RENDER_COUNT ? RENDER_DIALOGS[type] : Dialog::NONE;
 
     if (ImGui::ImageButton("##FFmpeg Path Set", resources.icon_id_get(ICON_FOLDER), icon_size_get()))
         dialog.file_open(Dialog::FFMPEG_PATH_SET);
@@ -261,96 +240,41 @@ void RenderAnimation::update(Manager& manager, Document& document, Resources& re
     {
         path.replace_extension(RENDER_EXTENSIONS[type]);
 
+        // A render needs a path, and what its type takes: a file name format and a folder, a grid, or FFmpeg.
         auto render_is_valid = [&]() {
-            auto ffmpeg_is_valid = [&]() {
+            auto fail = [](StringType toast) {
+                toast_log(Level::ERROR, toast);
+                return false;
+            };
+            auto is_ffmpeg_valid = [&]() {
                 if (!is_path_executable(ffmpegPath))
                     return false;
-
                 auto testCommand = std::string("\"") + path_to_utf8(ffmpegPath) + "\" -version";
                 Process process(testCommand.c_str(), "r");
-                auto result = process.output_get_and_close();
-
-                if (!result.contains("ffmpeg version"))
-                    return false;
-
-                return true;
+                return process.output_get_and_close().contains("ffmpeg version");
             };
 
-            auto ffmpeg_valid_check = [&]() {
-                if (!ffmpeg_is_valid())
-                {
-                    toast_log(Level::ERROR, TOAST_INVALID_FFMPEG);
-                    return false;
-                }
-                return true;
-            };
-
-            auto png_format_valid_check = [&]() {
-                auto formatString = path_to_utf8(format);
-                if (!formatString.contains("{}"))
-                {
-                    toast_log(Level::ERROR, TOAST_PNG_FORMAT_INVALID);
-                    return false;
-                }
-                return true;
-            };
-
-            auto path_valid_check = [&]() {
-                if (path.empty())
-                {
-                    toast_log(Level::ERROR, TOAST_RENDER_PATH_EMPTY);
-                    return false;
-                }
-                return true;
-            };
-
-            auto png_directory_valid_check = [&]() {
-                if (!path_ensure_directory(path))
-                {
-                    toast_log(Level::ERROR, TOAST_PNG_DIRECTORY_INVALID);
-                    return false;
-                }
-                return true;
-            };
-
-            auto spritesheet_valid_check = [&]() {
-                if (rows <= 0 && columns <= 0)
-                {
-                    toast_log(Level::ERROR, TOAST_RENDER_PATH_EMPTY);
-                    return false;
-                }
-                return true;
-            };
-
-            if (!path_valid_check())
-                return false;
-
+            if (path.empty())
+                return fail(TOAST_RENDER_PATH_EMPTY);
             switch (type)
             {
                 case RENDER_PNGS:
-                    if (!png_format_valid_check())
-                        return false;
-                    if (!png_directory_valid_check())
-                        return false;
+                    if (!path_to_utf8(format).contains("{}"))
+                        return fail(TOAST_PNG_FORMAT_INVALID);
+                    if (!path_ensure_directory(path))
+                        return fail(TOAST_PNG_DIRECTORY_INVALID);
                     format.replace_extension(RENDER_EXTENSIONS[RENDER_SPRITESHEET]);
-                    break;
+                    return true;
                 case RENDER_SPRITESHEET:
-                    if (!spritesheet_valid_check())
-                        return false;
-                    break;
+                    return rows > 0 || columns > 0 || fail(TOAST_RENDER_PATH_EMPTY);
                 case RENDER_GIF:
                 case RENDER_WEBM:
                 case RENDER_OGV:
                 case RENDER_MP4:
-                    if (!ffmpeg_valid_check())
-                        return false;
-                    break;
+                    return is_ffmpeg_valid() || fail(TOAST_INVALID_FFMPEG);
                 default:
                     return false;
-                    break;
             }
-
-            return true;
         };
 
         if (render_is_valid())
