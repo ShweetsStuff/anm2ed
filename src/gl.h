@@ -9,7 +9,6 @@
     X(BindAttribLocation)                                                                                              \
     X(BindBuffer)                                                                                                      \
     X(BindFramebuffer)                                                                                                 \
-    X(BindRenderbuffer)                                                                                                \
     X(BindTexture)                                                                                                     \
     X(BindVertexArray)                                                                                                 \
     X(BlendFuncSeparate)                                                                                               \
@@ -22,7 +21,6 @@
     X(DeleteBuffers)                                                                                                   \
     X(DeleteFramebuffers)                                                                                              \
     X(DeleteProgram)                                                                                                   \
-    X(DeleteRenderbuffers)                                                                                             \
     X(DeleteShader)                                                                                                    \
     X(DeleteTextures)                                                                                                  \
     X(DeleteVertexArrays)                                                                                              \
@@ -31,11 +29,9 @@
     X(DrawElements)                                                                                                    \
     X(Enable)                                                                                                          \
     X(EnableVertexAttribArray)                                                                                         \
-    X(FramebufferRenderbuffer)                                                                                         \
     X(FramebufferTexture2D)                                                                                            \
     X(GenBuffers)                                                                                                      \
     X(GenFramebuffers)                                                                                                 \
-    X(GenRenderbuffers)                                                                                                \
     X(GenTextures)                                                                                                     \
     X(GenVertexArrays)                                                                                                 \
     X(GetActiveUniform)                                                                                                \
@@ -50,7 +46,6 @@
     X(PixelStorei)                                                                                                     \
     X(ReadBuffer)                                                                                                      \
     X(ReadPixels)                                                                                                      \
-    X(RenderbufferStorage)                                                                                             \
     X(ShaderSource)                                                                                                    \
     X(TexImage2D)                                                                                                      \
     X(TexParameteri)                                                                                                   \

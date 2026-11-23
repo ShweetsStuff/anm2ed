@@ -5,7 +5,6 @@
 Framebuffer::Framebuffer()
 {
     gl.GenFramebuffers(1, &fbo);
-    gl.GenRenderbuffers(1, &rbo);
     gl.GenTextures(1, &texture);
     set();
 }
@@ -16,7 +15,6 @@ Framebuffer::~Framebuffer()
         return;
 
     gl.DeleteFramebuffers(1, &fbo);
-    gl.DeleteRenderbuffers(1, &rbo);
     gl.DeleteTextures(1, &texture);
 }
 
@@ -31,27 +29,16 @@ void Framebuffer::set()
 
     gl.FramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 
-    gl.BindRenderbuffer(GL_RENDERBUFFER, rbo);
-    gl.RenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, size.x, size.y);
-    gl.FramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
 
     gl.BindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void Framebuffer::resize_check()
-{
-    if (size != previousSize)
-    {
-        set();
-        previousSize = size;
-    }
-}
-
 void Framebuffer::size_set(Vec2 size)
 {
-    previousSize = this->size;
+    if (size == this->size)
+        return;
     this->size = size;
-    resize_check();
+    set();
 }
 
 std::vector<uint8_t> Framebuffer::pixels_get() const
@@ -72,7 +59,7 @@ void Framebuffer::clear(Vec4 color) const
 {
     gl.Enable(GL_BLEND);
     gl.ClearColor(color.r, color.g, color.b, color.a);
-    gl.Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    gl.Clear(GL_COLOR_BUFFER_BIT);
 
     if (color.a <= 0.0f)
         gl.Disable(GL_BLEND);
