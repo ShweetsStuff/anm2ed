@@ -1,4 +1,5 @@
 #include "ui/timeline_context.h"
+#include "ui/layout.h"
 
 void TimelineContext::item_child(const TimelineRow& row, int index)
 {
@@ -50,12 +51,8 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
             ImGui::InvisibleButton("##Group Button", itemSize);
             auto groupButtonMin = ImGui::GetItemRectMin();
             auto groupButtonMax = ImGui::GetItemRectMax();
-            auto mousePos = ImGui::GetIO().MousePos;
-            auto is_mouse_in_rect = [](ImVec2 mouse, ImVec2 min, ImVec2 max) {
-                return mouse.x >= min.x && mouse.x < max.x && mouse.y >= min.y && mouse.y < max.y;
-            };
             auto isGroupHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) &&
-                                  is_mouse_in_rect(mousePos, groupButtonMin, groupButtonMax);
+                                  is_mouse_in(groupButtonMin, groupButtonMax);
             bool isGroupTooltipDelayed = false;
             if (isGroupHovered)
             {
@@ -111,15 +108,12 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
             ImGui::PopStyleVar(2);
             ImGui::PopStyleColor(3);
 
-            auto isIconHovered = isGroupHovered && is_mouse_in_rect(mousePos, iconMin, iconMax);
-            auto isVisibleButtonHovered =
-                isGroupHovered && is_mouse_in_rect(mousePos, visibleButtonMin, visibleButtonMax);
+            auto isIconHovered = isGroupHovered && is_mouse_in(iconMin, iconMax);
+            auto isVisibleButtonHovered = isGroupHovered && is_mouse_in(visibleButtonMin, visibleButtonMax);
             if (isGroupTooltipDelayed && !isVisibleButtonHovered)
             {
                 ImGui::BeginTooltip();
-                ImGui::PushFont(resources.fonts[FONT_BOLD], FONT_SIZE);
-                ImGui::TextUnformatted(label.c_str());
-                ImGui::PopFont();
+                text_bold_draw(resources.fonts[FONT_BOLD], label.c_str());
                 ImGui::TextUnformatted(localize_format(FORMAT_ID, group->id).c_str());
                 auto groupItemsCount = (int)group->items.size();
                 ImGui::TextUnformatted(localize_format(FORMAT_ITEMS_COUNT, groupItemsCount).c_str());
@@ -242,9 +236,7 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
                     {
                         case ROOT:
                         {
-                            ImGui::PushFont(resources.fonts[FONT_BOLD], FONT_SIZE);
-                            ImGui::TextUnformatted(localize.get(BASIC_ROOT));
-                            ImGui::PopFont();
+                            text_bold_draw(resources.fonts[FONT_BOLD], localize.get(BASIC_ROOT));
 
                             ImGui::TextUnformatted(localize_format(FORMAT_VISIBLE, visibleLabel).c_str());
                             auto transformLabel = yesNoLabel(settings.previewIsRootTransform);
@@ -257,9 +249,7 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
                             auto layer = ::item_get(model.content.layers, id);
                             if (!layer)
                                 break;
-                            ImGui::PushFont(resources.fonts[FONT_BOLD], FONT_SIZE);
-                            ImGui::TextUnformatted(layer->name.c_str());
-                            ImGui::PopFont();
+                            text_bold_draw(resources.fonts[FONT_BOLD], layer->name.c_str());
 
                             ImGui::TextUnformatted(localize_format(FORMAT_ID, id).c_str());
                             layer_source_tooltip_draw(document, *layer);
@@ -272,9 +262,7 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
                             auto nullInfo = ::item_get(model.content.nulls, id);
                             if (!nullInfo)
                                 break;
-                            ImGui::PushFont(resources.fonts[FONT_BOLD], FONT_SIZE);
-                            ImGui::TextUnformatted(nullInfo->name.c_str());
-                            ImGui::PopFont();
+                            text_bold_draw(resources.fonts[FONT_BOLD], nullInfo->name.c_str());
 
                             auto rectLabel = yesNoLabel(nullInfo->isShowRect);
                             ImGui::TextUnformatted(localize_format(FORMAT_ID, id).c_str());
@@ -285,9 +273,7 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
                         }
                         case TRIGGER:
                         {
-                            ImGui::PushFont(resources.fonts[FONT_BOLD], FONT_SIZE);
-                            ImGui::TextUnformatted(localize.get(BASIC_TRIGGERS));
-                            ImGui::PopFont();
+                            text_bold_draw(resources.fonts[FONT_BOLD], localize.get(BASIC_TRIGGERS));
 
                             ImGui::TextUnformatted(localize_format(FORMAT_VISIBLE, visibleLabel).c_str());
                             ImGui::TextUnformatted(localize_format(FORMAT_TRIGGERS_COUNT, framesCount).c_str());
@@ -310,11 +296,9 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
             if (animationLayer)
                 icon = isExpanded ? ICON_FOLDER_OPEN : ICON_FOLDER;
             ImGui::Image(resources.icon_id_get(icon), icon_size_get());
-            auto mousePos = ImGui::GetIO().MousePos;
             auto iconMin = ImGui::GetItemRectMin();
             auto iconMax = ImGui::GetItemRectMax();
-            auto isIconHovered =
-                mousePos.x >= iconMin.x && mousePos.x < iconMax.x && mousePos.y >= iconMin.y && mousePos.y < iconMax.y;
+            auto isIconHovered = is_mouse_in(iconMin, iconMax);
             if (animationLayer && isItemButtonHovered && isIconHovered &&
                 ImGui::IsMouseReleased(ImGuiMouseButton_Left) &&
                 !ImGui::IsMouseDragPastThreshold(ImGuiMouseButton_Left))

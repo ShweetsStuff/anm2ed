@@ -338,7 +338,7 @@ void TimelineContext::frame_child(const TimelineRow& row, int& index, float widt
                 auto mousePos = ImGui::GetIO().MousePos;
                 auto rowMin = cursorScreenPos;
                 auto rowMax = ImVec2(cursorScreenPos.x + width, cursorScreenPos.y + frameSize.y);
-                if (mousePos.x >= rowMin.x && mousePos.x < rowMax.x && mousePos.y >= rowMin.y && mousePos.y < rowMax.y)
+                if (is_mouse_in(rowMin, rowMax))
                 {
                     auto mouseX = mousePos.x - cursorScreenPos.x;
                     auto targetTime = vec_max(0.0f, mouseX / frameSize.x);

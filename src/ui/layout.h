@@ -6,6 +6,7 @@
 #include "vec.h"
 #include <imgui/imgui.h>
 
+#include "font.h"
 #include "localization.h"
 
 constexpr ImVec2 to_imvec2(const Vec2& v) noexcept
@@ -61,4 +62,17 @@ inline void main_area_next_set(float top)
     ImGui::SetNextWindowViewport(viewport->ID);
     ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + top));
     ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, std::max(viewport->Size.y - top, 1.0f)));
+}
+
+// Whether the mouse is in [min, max).
+inline bool is_mouse_in(ImVec2 min, ImVec2 max)
+{
+    return is_within(to_vec2(ImGui::GetIO().MousePos), to_vec2(min), to_vec2(max));
+}
+
+inline void text_bold_draw(ImFont* font, const char* text)
+{
+    ImGui::PushFont(font, FONT_SIZE);
+    ImGui::TextUnformatted(text);
+    ImGui::PopFont();
 }

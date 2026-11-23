@@ -397,9 +397,7 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
             if (tool == TOOL_PAN && hoveredRegionId != -1 && spritesheet)
                 if (auto region = region_get(hoveredRegionId); region && ImGui::BeginTooltip())
                 {
-                    ImGui::PushFont(resources.fonts[FONT_BOLD], FONT_SIZE);
-                    ImGui::TextUnformatted(region->name.c_str());
-                    ImGui::PopFont();
+                    text_bold_draw(resources.fonts[FONT_BOLD], region->name.c_str());
                     auto originLabel = localize.get(region->origin == Origin::TOP_LEFT ? LABEL_REGION_ORIGIN_TOP_LEFT
                                                                                        : LABEL_REGION_ORIGIN_CENTER);
                     for (auto& line : {localize_format(FORMAT_ID, hoveredRegionId),

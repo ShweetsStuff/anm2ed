@@ -473,9 +473,7 @@ void list_panel_draw(Panel& panel, Actions& actions, const Footer& footer, const
 
 void tooltip_name_draw(Resources& resources, const std::string& name)
 {
-    ImGui::PushFont(resources.fonts[FONT_BOLD], FONT_SIZE);
-    ImGui::TextUnformatted(name.c_str());
-    ImGui::PopFont();
+    text_bold_draw(resources.fonts[FONT_BOLD], name.c_str());
 }
 
 void tooltip_image_draw(const CardImage& image, const std::function<void()>& info_draw)
