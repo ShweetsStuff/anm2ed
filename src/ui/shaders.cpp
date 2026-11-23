@@ -351,7 +351,7 @@ void shaders_update(Panel& panel, ShadersPanel& shaders)
                       .cardLines = SHADER_CARD_LINES};
         list_panel_draw(
             panel, actions, {{ACTION_ADD, ACTION_REMOVE, ACTION_RELOAD}},
-            [&]() { content_list_draw(panel, SelectionKind::SHADERS, item_ids_get(items), rows); }, true);
+            [&]() { content_list_draw(panel, SelectionKind::SHADERS, item_ids_get(items), rows); }, LIST_CARDS);
 
         if (propertiesPopup.begin())
         {

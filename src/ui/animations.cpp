@@ -745,7 +745,7 @@ void animations_update(Panel& panel, AnimationsPanel& animations)
                 list_select_end(panel, selection, focus, rows, arrowKey);
                 animations_selection_set(document, selection, groupSelection);
             },
-            false, &footerActions);
+            LIST_ROWS, &footerActions);
     }
     ImGui::End();
 

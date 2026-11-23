@@ -43,11 +43,11 @@ static void row_scroll_update(PanelState& state, int key, int arrowKey)
 }
 
 // Tooltips keep the window's padding and spacing, which card lists zero out for themselves.
-bool tooltip_begin(const PanelState& state, bool isItem)
+bool tooltip_begin(const PanelState& state, TooltipAnchor anchor)
 {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, state.tooltipPadding);
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, state.tooltipSpacing);
-    if (isItem ? ImGui::BeginItemTooltip() : ImGui::BeginTooltip())
+    if (anchor == TOOLTIP_ITEM ? ImGui::BeginItemTooltip() : ImGui::BeginTooltip())
         return true;
     ImGui::PopStyleVar(2);
     return false;
@@ -434,8 +434,9 @@ static void content_remove_popup_draw(Panel& panel)
 }
 
 void list_panel_draw(Panel& panel, Actions& actions, const Footer& footer, const std::function<void()>& list,
-                     bool isCards, Actions* footerActions)
+                     ListLayout layout, Actions* footerActions)
 {
+    auto isCards = layout == LIST_CARDS;
     auto& [manager, settings, resources, dialog, clipboard, document, state] = panel;
     state.tooltipPadding = ImGui::GetStyle().WindowPadding;
     state.tooltipSpacing = ImGui::GetStyle().ItemSpacing;

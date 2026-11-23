@@ -233,7 +233,7 @@ static void region_drag_tooltip_update(Panel& panel)
 
     auto mousePos = ImGui::GetIO().MousePos;
     ImGui::SetNextWindowPos(ImVec2(mousePos.x + DRAG_TOOLTIP_OFFSET.x, mousePos.y + DRAG_TOOLTIP_OFFSET.y));
-    if (!tooltip_begin(state, false))
+    if (!tooltip_begin(state, TOOLTIP_MOUSE))
         return;
     for (auto regionId : state.dragIds)
         if (auto region = item_get(spritesheet->regions, regionId))
@@ -505,7 +505,7 @@ void regions_update(Panel& panel, RegionsPanel& regions)
                     content_list_draw(panel, SelectionKind::REGIONS, item_ids_get(spritesheet->regions), rows);
                     region_drag_tooltip_update(panel);
                 },
-                true);
+                LIST_CARDS);
         }
     }
     ImGui::End();

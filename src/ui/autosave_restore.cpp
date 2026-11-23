@@ -45,7 +45,7 @@ void AutosaveRestore::update(Manager& manager)
 
         if (ImGui::Button(localize.get(BASIC_NO), widgetSize))
         {
-            manager.autosave_files_clear(true);
+            manager.autosave_files_clear();
             isRestoreAvailable = false;
             popup.close();
         }

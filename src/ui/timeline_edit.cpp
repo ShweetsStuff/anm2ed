@@ -320,8 +320,9 @@ void TimelineContext::paste()
 }
 
 // Sets the animation's start or end marker at a time, moving the other one if it would end up on the wrong side.
-void TimelineContext::marker_set(bool isStart, int time)
+void TimelineContext::marker_set(MarkerType type, int time)
 {
+    auto isStart = type == MARKER_START;
     if (!animation)
         return;
     edit_push(isStart ? EDIT_START_MARKER : EDIT_END_MARKER,

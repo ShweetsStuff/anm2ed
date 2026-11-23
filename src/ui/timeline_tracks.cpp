@@ -72,7 +72,7 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
             ImGui::Image(resources.icon_id_get(folderIcon), icon_size_get());
             auto iconMin = ImGui::GetItemRectMin();
             auto iconMax = ImGui::GetItemRectMax();
-            overlay_icon(resources.icon_id_get(folderIcon), itemIconTint, false);
+            overlay_icon(resources.icon_id_get(folderIcon), itemIconTint);
             ImGui::SameLine();
 
             ImGui::PushStyleColor(ImGuiCol_Text, itemTextColor);
@@ -291,7 +291,7 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
                 else
                     expandedLayerTracks.insert(item->uid);
             }
-            overlay_icon(resources.icon_id_get(icon), iconTintCurrent, false);
+            overlay_icon(resources.icon_id_get(icon), iconTintCurrent);
             ImGui::SameLine();
             if (isReferenced)
                 ImGui::PushFont(resources.fonts[FONT_ITALICS], FONT_SIZE);
@@ -533,7 +533,7 @@ bool TimelineContext::row_toggle_draw(ImVec2 itemSize, int slot, const RowToggle
         ImVec2(itemSize.x - lineHeight * slot - ImGui::GetStyle().ItemSpacing.x, (itemSize.y - lineHeight) / 2));
     auto texture = resources.icon_id_get(toggle.isOn ? toggle.on : toggle.off);
     auto isClicked = ImGui::ImageButton(toggle.id, texture, icon_size_get());
-    overlay_icon(texture, tint, false);
+    overlay_icon(texture, tint);
     tooltip_set(toggle.isOn ? toggle.onTooltip : toggle.offTooltip);
     ImGui::PopStyleVar(2);
     ImGui::PopStyleColor(3);

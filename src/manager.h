@@ -111,7 +111,7 @@ public:
     void autosave_files_load();
     void autosave_files_open();
     void autosave_files_write();
-    void autosave_files_clear(bool removeFiles = false);
+    void autosave_files_clear();
 
     void settings_apply(Settings&);
 };

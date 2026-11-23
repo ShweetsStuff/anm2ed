@@ -162,9 +162,9 @@ void TimelineContext::shortcuts_update()
     if (shortcut(manager.chords[SHORTCUT_PLAY_PAUSE], SCOPE_GLOBAL))
         playback.toggle();
     if (shortcut(manager.chords[SHORTCUT_START_MARKER], SCOPE_GLOBAL))
-        marker_set(true, (int)playback.time);
+        marker_set(MARKER_START, (int)playback.time);
     if (shortcut(manager.chords[SHORTCUT_END_MARKER], SCOPE_GLOBAL))
-        marker_set(false, (int)playback.time);
+        marker_set(MARKER_END, (int)playback.time);
 
     if (shortcut(manager.chords[SHORTCUT_MOVE_PLAYHEAD_BACK], SCOPE_GLOBAL))
     {

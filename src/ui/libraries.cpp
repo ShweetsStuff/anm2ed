@@ -98,7 +98,7 @@ void libraries_update(Panel& panel)
                       .cardLines = LIBRARY_CARD_LINES};
         list_panel_draw(
             panel, actions, {{ACTION_ADD, ACTION_REMOVE, ACTION_RELOAD, ACTION_OPEN}},
-            [&]() { content_list_draw(panel, SelectionKind::LIBRARIES, item_ids_get(libraries), rows); }, true);
+            [&]() { content_list_draw(panel, SelectionKind::LIBRARIES, item_ids_get(libraries), rows); }, LIST_CARDS);
     }
     ImGui::End();
 }

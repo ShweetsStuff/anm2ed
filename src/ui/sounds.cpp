@@ -108,7 +108,7 @@ void sounds_update(Panel& panel)
                       .cardLines = SOUND_CARD_LINES};
         list_panel_draw(
             panel, actions, {{ACTION_ADD, ACTION_REMOVE, ACTION_RELOAD, ACTION_REPLACE}},
-            [&]() { content_list_draw(panel, SelectionKind::SOUNDS, item_ids_get(sounds), rows); }, true);
+            [&]() { content_list_draw(panel, SelectionKind::SOUNDS, item_ids_get(sounds), rows); }, LIST_CARDS);
     }
     ImGui::End();
 }

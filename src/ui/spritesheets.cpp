@@ -316,7 +316,7 @@ void spritesheets_update(Panel& panel, SpritesheetsPanel& spritesheets)
                       .cardLines = SPRITESHEET_CARD_LINES};
         list_panel_draw(
             panel, actions, {{ACTION_ADD, ACTION_RELOAD, ACTION_REPLACE}, {ACTION_REMOVE, ACTION_SAVE}},
-            [&]() { content_list_draw(panel, SelectionKind::SPRITESHEETS, item_ids_get(items), rows); }, true);
+            [&]() { content_list_draw(panel, SelectionKind::SPRITESHEETS, item_ids_get(items), rows); }, LIST_CARDS);
     }
     ImGui::End();
 

@@ -124,6 +124,19 @@ inline bool is_trigger_reference(const Reference& reference)
 constexpr Icon INTERPOLATION_ICONS[] = {ICON_UNINTERPOLATED, ICON_INTERPOLATED, ICON_EASE_IN, ICON_EASE_OUT,
                                         ICON_EASE_IN_OUT};
 
+enum MarkerType
+{
+    MARKER_START,
+    MARKER_END
+};
+
+// When an icon gets its tint drawn over it: only in the light theme, or always.
+enum IconOverlay
+{
+    OVERLAY_LIGHT_THEME,
+    OVERLAY_ALWAYS
+};
+
 // An icon button that shows whether something is on.
 struct RowToggle
 {
@@ -209,7 +222,7 @@ struct TimelineContext : TimelineState
     std::set<Reference> item_references_for_current_get();
     std::set<Reference> copy_frame_references_get();
     void command_push(std::function<void(Manager&, Document&)> run);
-    void overlay_icon(GLuint textureId, ImVec4 tint, bool isForced = false);
+    void overlay_icon(GLuint textureId, ImVec4 tint, IconOverlay = OVERLAY_LIGHT_THEME);
     void playback_stop();
     void frame_insert();
     void frames_delete_action();
@@ -242,7 +255,7 @@ struct TimelineContext : TimelineState
     void item_group();
     void rows_move_to_row(std::vector<TimelineRow> draggedRows, TimelineRow targetRow, DropZone zone);
     void fit_animation_length();
-    void marker_set(bool, int);
+    void marker_set(MarkerType, int);
     void markers_remove();
     void frame_references_copy(const std::set<Reference>& selectedFrames);
     void copy();

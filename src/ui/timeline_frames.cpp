@@ -266,11 +266,11 @@ void TimelineContext::frame_child(const TimelineRow& row, int& index, float widt
             markerActions.add({.label = LABEL_ADD_START_MARKER,
                                .shortcut = SHORTCUT_START_MARKER,
                                .isEnabled = isAnimation,
-                               .run = [&]() { marker_set(true, markerTime); }});
+                               .run = [&]() { marker_set(MARKER_START, markerTime); }});
             markerActions.add({.label = LABEL_ADD_END_MARKER,
                                .shortcut = SHORTCUT_END_MARKER,
                                .isEnabled = isAnimation,
-                               .run = [&]() { marker_set(false, markerTime); }});
+                               .run = [&]() { marker_set(MARKER_END, markerTime); }});
             markerActions.separator();
             markerActions.add(
                 {.label = LABEL_REMOVE_MARKERS,
@@ -292,7 +292,7 @@ void TimelineContext::frame_child(const TimelineRow& row, int& index, float widt
                 playheadLineCenterX = (playheadMin.x + playheadMax.x) * 0.5f;
                 playheadLineTopY = playheadMax.y;
                 isPlayheadLineSet = true;
-                overlay_icon(resources.icon_id_get(ICON_PLAYHEAD), playheadIconTint, true);
+                overlay_icon(resources.icon_id_get(ICON_PLAYHEAD), playheadIconTint, OVERLAY_ALWAYS);
             }
         }
         else if (animation)
@@ -520,7 +520,7 @@ void TimelineContext::frame_child(const TimelineRow& row, int& index, float widt
                                       cursorPos.y + (frameSize.y / 2) - (icon_size_get().y / 2));
                 ImGui::SetCursorPos(iconPos);
                 ImGui::Image(resources.icon_id_get(icon), icon_size_get());
-                overlay_icon(resources.icon_id_get(icon), iconTintDefault, false);
+                overlay_icon(resources.icon_id_get(icon), iconTintDefault);
 
                 if (type != TRIGGER)
                     frameTime += frame.duration;

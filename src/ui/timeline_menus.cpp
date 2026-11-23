@@ -25,9 +25,9 @@ void TimelineContext::frame_begin()
     itemTextColor = isLightTheme ? ITEM_TEXT_COLOR_LIGHT : ITEM_TEXT_COLOR_DARK;
 }
 
-void TimelineContext::overlay_icon(GLuint textureId, ImVec4 tint, bool isForced)
+void TimelineContext::overlay_icon(GLuint textureId, ImVec4 tint, IconOverlay overlay)
 {
-    if (!isForced && !isLightTheme)
+    if (overlay == OVERLAY_LIGHT_THEME && !isLightTheme)
         return;
     auto min = ImGui::GetItemRectMin();
     auto max = ImGui::GetItemRectMax();

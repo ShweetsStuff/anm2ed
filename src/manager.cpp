@@ -499,11 +499,10 @@ void Manager::autosave_files_write()
     path_list_save(autosave_path_get(), autosaveFiles, "autosave files");
 }
 
-void Manager::autosave_files_clear(bool removeFiles)
+void Manager::autosave_files_clear()
 {
-    if (removeFiles)
-        for (auto& path : autosaveFiles)
-            autosave_file_remove(path);
+    for (auto& path : autosaveFiles)
+        autosave_file_remove(path);
 
     autosaveFiles.clear();
     autosave_files_write();
