@@ -1,6 +1,8 @@
 #pragma once
 
 #include "vec.h"
+#include <cstdint>
+#include <set>
 #include <vector>
 
 #include "audio_data.h"
@@ -18,6 +20,8 @@ enum AudioPlayMode
 // Each play is a stream on one shared device, opened on the first play, which mixes them.
 void audio_play(const AudioData&, AudioPlayMode = AUDIO_ONCE);
 void audio_stop(const AudioData&);
+// Lets go of decoded sounds whose uids aren't in this set, once they stop playing.
+void audio_prune(const std::set<std::uint64_t>&);
 bool is_audio_playing(const AudioData&);
 Vec2 audio_levels_get(const AudioData&);
 

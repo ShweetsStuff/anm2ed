@@ -379,13 +379,12 @@ static void loop_step(App& app, Editor& editor)
         app.isIdle = is_idle(app, editor);
     }
 
-    // Busy, one tick a pass keeps recording in step with drawing. Idle, the ticks only move timers along.
+    // Ticks catch up with the time passed, so slow drawing doesn't slow playback. A recording takes its time from the
+    // recorder as it draws.
     while (app.tickAccumulatorMs >= tickIntervalMs)
     {
         editor.dockspace.tick(editor.manager, app.settings, (float)(tickIntervalMs / 1000.0));
         app.tickAccumulatorMs -= tickIntervalMs;
-        if (!app.isIdle)
-            break;
     }
 
     if (!app.isIdle)

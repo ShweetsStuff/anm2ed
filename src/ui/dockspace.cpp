@@ -12,13 +12,20 @@ void Dockspace::tick(Manager& manager, Settings& settings, float deltaSeconds)
         if (settings.windowIsAnimationPreview)
             animationPreview.tick(manager, settings, deltaSeconds);
 
-    // Spritesheets and libraries changed on disk are picked up every few seconds.
-    if (!settings.fileIsAutoReloadResources)
-        return;
+    // Every few seconds, decoded audio no document holds is let go, and spritesheets and libraries changed on disk are
+    // picked up.
     reloadTime += deltaSeconds;
     if (reloadTime < AUTO_RELOAD_INTERVAL)
         return;
     reloadTime = 0.0f;
+    std::set<std::uint64_t> soundUids;
+    for (auto& document : manager.documents)
+        for (auto sound : document.sounds_get())
+            soundUids.insert(sound->uid);
+    audio_prune(soundUids);
+
+    if (!settings.fileIsAutoReloadResources)
+        return;
     for (auto& document : manager.documents)
     {
         document.libraries_reload();

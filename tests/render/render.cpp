@@ -389,6 +389,10 @@ TEST_CASE("audio decodes and mixes")
     REQUIRE(mix.size() > start + 2);
     CHECK(mix[start - 2] == 0.0f);
     CHECK(mix[start + 2] == doctest::Approx(0.5f).epsilon(0.05));
+
+    // A sound let go of decodes again when it's next needed.
+    audio_prune({});
+    CHECK(audio_mix({{}, {&sound}}, 30) == mix);
 }
 
 // A second editor hands its paths to the first, which has them queued once it answers, and wakes its event loop.

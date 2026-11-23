@@ -175,6 +175,19 @@ void audio_stop(const AudioData& data)
     }
 }
 
+void audio_prune(const std::set<std::uint64_t>& uids)
+{
+    std::erase_if(sounds, [&](auto& entry) {
+        auto& [uid, sound] = entry;
+        if (uids.contains(uid) ||
+            std::ranges::any_of(sound.voices, [](auto& voice) { return is_voice_playing(*voice); }))
+            return false;
+        for (auto& voice : sound.voices)
+            SDL_DestroyAudioStream(voice->stream);
+        return true;
+    });
+}
+
 bool is_audio_playing(const AudioData& data)
 {
     auto it = sounds.find(data.uid);
