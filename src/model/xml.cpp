@@ -28,7 +28,7 @@ constexpr std::string_view ELEMENT_TAGS[] = {
 constexpr std::string_view INTERPOLATION_VALUES[] = {"", "", "EaseIn", "EaseOut", "EaseInOut"};
 constexpr std::string_view ORIGIN_VALUES[] = {"", "TopLeft", "Center"};
 constexpr std::string_view CHILD_MODE_VALUES[] = {"Loop", "Once", "Hold"};
-constexpr std::string_view CHILD_START_RANDOM = "Random";
+constexpr std::string_view CHILD_START_VALUES[] = {"", "Random"};
 constexpr const char* TINT_ATTRIBUTES[] = {"RedTint", "GreenTint", "BlueTint", "AlphaTint"};
 constexpr const char* OFFSET_ATTRIBUTES[] = {"RedOffset", "GreenOffset", "BlueOffset"};
 // Attributes the editor reads (or older builds wrote, like ExtendedVersion). Any other attribute is kept verbatim as
@@ -136,12 +136,6 @@ static std::string string_get(pugi::xml_node element, const char* name, std::str
     if (auto attribute = attribute_get(element, name))
         value = attribute;
     return value;
-}
-
-static std::filesystem::path path_get(pugi::xml_node element, const char* name)
-{
-    auto attribute = attribute_get(element, name);
-    return attribute ? path_from_utf8(attribute) : std::filesystem::path{};
 }
 
 static float color_get(pugi::xml_node element, const char* name, float value)
@@ -252,602 +246,7 @@ static void extras_child_add(Extras& extras, pugi::xml_node child, int position)
     extras.children.emplace_back(position, node_read(child));
 }
 
-static Frame frame_read(pugi::xml_node element)
-{
-    Frame frame = {};
-    frame.crop = {float_get(element, "XCrop"), float_get(element, "YCrop")};
-    frame.size = {float_get(element, "Width"), float_get(element, "Height")};
-    frame.pivot = {float_get(element, "XPivot"), float_get(element, "YPivot")};
-    frame.position = {float_get(element, "XPosition"), float_get(element, "YPosition")};
-    frame.scale = {float_get(element, "XScale", frame.scale.x), float_get(element, "YScale", frame.scale.y)};
-    // Skew was once called shear.
-    frame.skew = {float_get(element, "SkewX", float_get(element, "ShearX")),
-                  float_get(element, "SkewY", float_get(element, "ShearY"))};
-    frame.rotation = float_get(element, "Rotation");
-    for (int i = 0; i < (int)std::size(TINT_ATTRIBUTES); ++i)
-        frame.tint[i] = color_get(element, TINT_ATTRIBUTES[i], frame.tint[i]);
-    for (int i = 0; i < (int)std::size(OFFSET_ATTRIBUTES); ++i)
-        frame.colorOffset[i] = color_get(element, OFFSET_ATTRIBUTES[i], frame.colorOffset[i]);
-    frame.colorOffset.a = color_get(element, "AlphaOffset", frame.colorOffset.a);
-    frame.duration = int_get(element, "Delay", frame.duration);
-    frame.isVisible = bool_get(element, "Visible", frame.isVisible);
-    frame.interpolation = interpolation_read(element, "Interpolated");
-    frame.regionId = int_get(element, "RegionId");
-    frame.shaderId = int_get(element, "ShaderId");
-    frame.depth = int_get(element, "Depth", 0);
-    frame.blur = float_get(element, "Blur");
-    frame.childAnimation = string_get(element, "ChildAnimation");
-    auto childMode = std::ranges::find(CHILD_MODE_VALUES, string_get(element, "ChildMode"));
-    if (childMode != std::end(CHILD_MODE_VALUES))
-        frame.childMode = (ChildMode)(childMode - std::begin(CHILD_MODE_VALUES));
-    frame.isChildStartRandom = string_get(element, "ChildStart") == CHILD_START_RANDOM;
-    frame.childStart = int_get(element, "ChildStart", 0);
-    frame.isChildRestart = bool_get(element, "Restart", false);
-    frame.atFrame = int_get(element, "AtFrame");
-    frame.extras = extras_read(element);
-    if (type_get(element) != ElementType::TRIGGER)
-        return frame;
-
-    // A trigger's first event is its EventId and any others are <Event Id> children. Its sounds are <Sound Id> children
-    // (older files name one with a SoundId attribute instead).
-    auto ids_read = [&](std::vector<int>& ids, const char* attribute, ElementType type) {
-        children_each(element, [&](pugi::xml_node child, ElementType childType, int) {
-            if (childType == type)
-                ids.push_back(int_get(child, "Id"));
-        });
-        if (auto id = int_get(element, attribute); id != -1 && !std::ranges::contains(ids, id))
-            ids.insert(ids.begin(), id);
-        std::erase(ids, -1);
-    };
-    ids_read(frame.eventIds, "EventId", ElementType::EVENT_ELEMENT);
-    ids_read(frame.soundIds, "SoundId", ElementType::SOUND_ELEMENT);
-    return frame;
-}
-
-static Track track_read(pugi::xml_node element, ItemType type)
-{
-    Track track = {.type = type, .isVisible = bool_get(element, "Visible", true), .extras = extras_read(element)};
-    if (type == ItemType::LAYER)
-        track.id = int_get(element, "LayerId");
-    if (type == ItemType::NULL_)
-        track.id = int_get(element, "NullId");
-    auto frameType = type == ItemType::TRIGGER ? ElementType::TRIGGER : ElementType::FRAME;
-    for (auto child = element_first(element); child;)
-    {
-        auto childType = type_get(child);
-        // A frame written baked (BakeInterpolation/BakeDelay) is read back as the one interpolated frame it came from.
-        if (auto delay = int_get(child, "BakeDelay", 0);
-            childType == ElementType::FRAME && attribute_get(child, "BakeInterpolation") && delay >= FRAME_DURATION_MIN)
-        {
-            auto frame = frame_read(child);
-            frame.interpolation = interpolation_read(child, "BakeInterpolation");
-            frame.duration = delay;
-            if (frameType == ElementType::FRAME)
-                track.frames.push_back(std::move(frame));
-            for (int i = 0; child && i < delay; ++i)
-                child = element_next(child);
-            continue;
-        }
-        if (childType == frameType)
-            track.frames.push_back(frame_read(child));
-        child = element_next(child);
-    }
-    return track;
-}
-
-// A container's children before groups are resolved: a child (with the group it names), a group (with any children
-// nested in it), or unknown XML.
-template <class Child, class GroupType> struct ContainerItem
-{
-    using Group = GroupType;
-
-    std::optional<Child> child;
-    std::optional<Group> group;
-    std::optional<XmlNode> node;
-    int groupId = -1;
-    int index = -1;
-    std::vector<Child> children;
-    std::optional<Track> root;
-    std::optional<Track> backupRoot;
-    std::vector<Track> backupTracks;
-    bool isBackup = false;
-};
-
-using TrackItem = ContainerItem<Track, TrackGroup>;
-using AnimationItem = ContainerItem<std::shared_ptr<const Animation>, AnimationGroup>;
-
-static auto& group_children_get(TrackGroup& group)
-{
-    return group.items;
-}
-
-static auto& group_children_get(AnimationGroup& group)
-{
-    return group.items;
-}
-
-// Groups become entries followed by their children: nested children move out after their group, and a child joins a
-// group seen before it. Unknown XML becomes extras at its position.
-template <class Entry, class Item> static std::vector<Entry> entries_build(std::vector<Item> items, Extras& extras)
-{
-    int nextGroupId = 0;
-    for (auto& item : items)
-        if (item.group)
-            nextGroupId = std::max(nextGroupId, item.group->id + 1);
-
-    std::vector<Item> flat;
-    for (auto& item : items)
-    {
-        if (!item.group)
-        {
-            flat.push_back(std::move(item));
-            continue;
-        }
-        if (item.group->id < 0)
-            item.group->id = nextGroupId++;
-        auto groupId = item.group->id;
-        auto children = std::move(item.children);
-        flat.push_back(std::move(item));
-        for (auto& child : children)
-            flat.push_back({.child = std::move(child), .groupId = groupId});
-    }
-
-    std::vector<Entry> entries;
-    std::map<int, std::size_t> groupEntries;
-    for (int i = 0; i < (int)flat.size(); ++i)
-    {
-        auto& item = flat[i];
-        if (item.node)
-            extras.children.emplace_back(i, std::move(*item.node));
-        else if (item.group)
-        {
-            groupEntries[item.group->id] = entries.size();
-            entries.emplace_back(std::move(*item.group));
-        }
-        else if (auto group = groupEntries.find(item.groupId); group != groupEntries.end())
-            group_children_get(std::get<typename Item::Group>(entries[group->second]))
-                .push_back(std::move(*item.child));
-        else
-            entries.emplace_back(std::move(*item.child));
-    }
-    return entries;
-}
-
-static TrackItem track_group_item_read(pugi::xml_node element, ItemType type)
-{
-    TrackItem item{.group = TrackGroup{.id = int_get(element, "Id"),
-                                       .name = string_get(element, "Name"),
-                                       .isExpanded = bool_get(element, "IsExpanded", true),
-                                       .isVisible = bool_get(element, "Visible", true),
-                                       .extras = extras_read(element)},
-                   .index = int_get(element, "Index")};
-    auto trackType = track_element_type_get(type);
-    children_each(element, [&](pugi::xml_node child, ElementType childType, int) {
-        if (childType == ElementType::ROOT_ANIMATION && !item.root)
-            item.root = track_read(child, ItemType::ROOT);
-        else if (childType == trackType)
-            item.children.push_back(track_read(child, type));
-        else if (child.name() == FRAME_RESTORE_TAG && !item.isBackup)
-        {
-            item.isBackup = true;
-            children_each(child, [&](pugi::xml_node backup, ElementType backupType, int) {
-                if (backupType == ElementType::ROOT_ANIMATION && !item.backupRoot)
-                    item.backupRoot = track_read(backup, ItemType::ROOT);
-                else if (backupType == trackType)
-                    item.backupTracks.push_back(track_read(backup, type));
-            });
-        }
-    });
-    return item;
-}
-
-static std::vector<TrackItem> track_items_read(pugi::xml_node container, ItemType type)
-{
-    std::vector<TrackItem> items;
-    children_each(container, [&](pugi::xml_node child, ElementType childType, int) {
-        if (childType == ElementType::GROUP)
-            items.push_back(track_group_item_read(child, type));
-        else if (childType == track_element_type_get(type))
-            items.push_back({.child = track_read(child, type), .groupId = int_get(child, "GroupId")});
-        else
-            items.push_back({.node = node_read(child)});
-    });
-    return items;
-}
-
-// Track groups as any version wrote them: legacy *AnimationGroups metadata is placed back at its Index, and a group
-// whose tracks were written baked (FrameRestore) gets its original root and tracks back.
-static std::vector<TrackEntry> track_entries_build(std::vector<TrackItem> items, std::vector<TrackItem> legacyGroups,
-                                                   Extras& extras)
-{
-    if (!legacyGroups.empty())
-    {
-        std::set<int> legacyIds;
-        for (auto& item : legacyGroups)
-            if (item.group->id >= 0)
-                legacyIds.insert(item.group->id);
-        std::erase_if(items, [&](const TrackItem& item) { return item.group && legacyIds.contains(item.group->id); });
-        std::ranges::stable_sort(legacyGroups, [](const TrackItem& left, const TrackItem& right) {
-            if (left.index == -1 || right.index == -1)
-                return left.index != -1;
-            return left.index < right.index;
-        });
-        for (auto& legacy : legacyGroups)
-        {
-            auto first = std::ranges::find_if(
-                items, [&](const TrackItem& item) { return item.child && item.groupId == legacy.group->id; });
-            auto position =
-                legacy.index >= 0 ? std::min(legacy.index, (int)items.size()) : (int)(first - items.begin());
-            items.insert(items.begin() + position, std::move(legacy));
-        }
-    }
-
-    std::set<int> restoredIds;
-    for (auto& item : items)
-        if (item.group && item.group->id >= 0 && item.isBackup && (item.backupRoot || !item.backupTracks.empty()))
-        {
-            if (item.backupRoot)
-                item.root = item.backupRoot;
-            item.children = std::move(item.backupTracks);
-            restoredIds.insert(item.group->id);
-        }
-    std::erase_if(items, [&](const TrackItem& item) { return item.child && restoredIds.contains(item.groupId); });
-
-    for (auto& item : items)
-        if (item.group)
-            item.group->root = item.root.value_or(TrackGroup{}.root);
-    return entries_build<TrackEntry>(std::move(items), extras);
-}
-
-static Animation animation_read(pugi::xml_node element)
-{
-    Animation animation{.name = string_get(element, "Name"),
-                        .frameNum = int_get(element, "FrameNum", 1),
-                        .isLoop = bool_get(element, "Loop", true),
-                        .startMarker = int_get(element, "StartMarker"),
-                        .endMarker = int_get(element, "EndMarker"),
-                        .root = {.type = ItemType::ROOT},
-                        .layout = {},
-                        .extras = extras_read(element)};
-    std::map<ElementType, std::vector<TrackItem>> items;
-    std::map<ElementType, std::vector<TrackItem>> legacyGroups;
-    std::set<ElementType> legacyRead;
-    int skipped = 0;
-    children_each(element, [&](pugi::xml_node child, ElementType type, int position) {
-        if (type == ElementType::LAYER_ANIMATION_GROUPS || type == ElementType::NULL_ANIMATION_GROUPS)
-        {
-            auto isLayers = type == ElementType::LAYER_ANIMATION_GROUPS;
-            auto container = isLayers ? ElementType::LAYER_ANIMATIONS : ElementType::NULL_ANIMATIONS;
-            if (legacyRead.insert(type).second)
-                children_each(child, [&](pugi::xml_node group, ElementType groupType, int) {
-                    if (groupType == ElementType::GROUP)
-                        legacyGroups[container].push_back(
-                            track_group_item_read(group, isLayers ? ItemType::LAYER : ItemType::NULL_));
-                });
-            ++skipped;
-            return;
-        }
-
-        auto isKnown = type == ElementType::ROOT_ANIMATION || type == ElementType::LAYER_ANIMATIONS ||
-                       type == ElementType::NULL_ANIMATIONS || type == ElementType::TRIGGERS;
-        if (!isKnown || std::ranges::contains(animation.layout, type))
-            return extras_child_add(animation.extras, child, position - skipped);
-
-        animation.layout.push_back(type);
-        if (type == ElementType::ROOT_ANIMATION)
-            animation.root = track_read(child, ItemType::ROOT);
-        if (type == ElementType::TRIGGERS)
-            animation.triggers = track_read(child, ItemType::TRIGGER);
-        if (type == ElementType::LAYER_ANIMATIONS)
-        {
-            items[type] = track_items_read(child, ItemType::LAYER);
-            animation.layersExtras = extras_read(child);
-        }
-        if (type == ElementType::NULL_ANIMATIONS)
-        {
-            items[type] = track_items_read(child, ItemType::NULL_);
-            animation.nullsExtras = extras_read(child);
-        }
-    });
-
-    for (auto [type, entries, extras] :
-         {std::tuple{ElementType::LAYER_ANIMATIONS, &animation.layers, &animation.layersExtras},
-          std::tuple{ElementType::NULL_ANIMATIONS, &animation.nulls, &animation.nullsExtras}})
-    {
-        if (!legacyGroups[type].empty() && !std::ranges::contains(animation.layout, type))
-            animation.layout.push_back(type);
-        if (std::ranges::contains(animation.layout, type))
-            *entries = track_entries_build(std::move(items[type]), std::move(legacyGroups[type]), *extras);
-    }
-    return animation;
-}
-
-static std::vector<AnimationEntry> animation_entries_read(pugi::xml_node parent, Extras& extras)
-{
-    std::vector<AnimationItem> items;
-    children_each(parent, [&](pugi::xml_node child, ElementType type, int) {
-        if (type == ElementType::GROUP)
-        {
-            AnimationItem item{.group = AnimationGroup{.id = int_get(child, "Id"),
-                                                       .name = string_get(child, "Name"),
-                                                       .isExpanded = bool_get(child, "IsExpanded", true),
-                                                       .isVisible = bool_get(child, "Visible", true),
-                                                       .extras = extras_read(child)}};
-            children_each(child, [&](pugi::xml_node animation, ElementType animationType, int) {
-                if (animationType == ElementType::ANIMATION)
-                    item.children.push_back(std::make_shared<const Animation>(animation_read(animation)));
-            });
-            items.push_back(std::move(item));
-        }
-        else if (type == ElementType::ANIMATION)
-            items.push_back({.child = std::make_shared<const Animation>(animation_read(child)),
-                             .groupId = int_get(child, "GroupId")});
-        else
-            items.push_back({.node = node_read(child)});
-    });
-    return entries_build<AnimationEntry>(std::move(items), extras);
-}
-
-static Region region_read(pugi::xml_node element)
-{
-    Region region{.id = int_get(element, "Id"),
-                  .name = string_get(element, "Name"),
-                  .crop = {float_get(element, "XCrop"), float_get(element, "YCrop")},
-                  .size = {float_get(element, "Width"), float_get(element, "Height")},
-                  .pivot = {float_get(element, "XPivot"), float_get(element, "YPivot")},
-                  .extras = extras_read(element)};
-    if (auto origin = attribute_get(element, "Origin"))
-        for (std::size_t i = 0; i < std::size(ORIGIN_VALUES); ++i)
-            if (!ORIGIN_VALUES[i].empty() && ORIGIN_VALUES[i] == origin)
-                region.origin = (Origin)i;
-    region.pivot = region_pivot_get(region);
-    return region;
-}
-
-static Spritesheet spritesheet_read(pugi::xml_node element)
-{
-    Spritesheet spritesheet{
-        .id = int_get(element, "Id"), .path = path_get(element, "Path"), .extras = extras_read(element)};
-    children_each(element, [&](pugi::xml_node child, ElementType type, int position) {
-        if (type == ElementType::REGION)
-            spritesheet.regions.push_back(region_read(child));
-        else
-            extras_child_add(spritesheet.extras, child, position);
-    });
-    return spritesheet;
-}
-
-static Shader shader_read(pugi::xml_node element)
-{
-    Shader shader{.id = int_get(element, "Id"),
-                  .name = string_get(element, "Name"),
-                  .vertex = path_get(element, "Vertex"),
-                  .fragment = path_get(element, "Fragment"),
-                  .extras = extras_read(element)};
-    children_each(element, [&](pugi::xml_node child, ElementType type, int position) {
-        if (type != ElementType::UNIFORM)
-            return extras_child_add(shader.extras, child, position);
-        Uniform uniform{.name = string_get(child, "Name"),
-                        .binding = string_get(child, "Binding"),
-                        .value = string_get(child, "Value"),
-                        .extras = extras_read(child)};
-        children_each(child, [&](pugi::xml_node component, ElementType componentType, int componentPosition) {
-            if (componentType != ElementType::COMPONENT)
-                return extras_child_add(uniform.extras, component, componentPosition);
-            uniform.components.push_back({.index = int_get(component, "Index"),
-                                          .binding = string_get(component, "Binding"),
-                                          .value = string_get(component, "Value"),
-                                          .extras = extras_read(component)});
-        });
-        shader.uniforms.push_back(std::move(uniform));
-    });
-    return shader;
-}
-
-template <class Item> static Item item_read(pugi::xml_node);
-template <> Spritesheet item_read(pugi::xml_node element)
-{
-    return spritesheet_read(element);
-}
-
-template <> Region item_read(pugi::xml_node element)
-{
-    return region_read(element);
-}
-
-template <> Shader item_read(pugi::xml_node element)
-{
-    return shader_read(element);
-}
-
-template <> Layer item_read(pugi::xml_node element)
-{
-    return {.id = int_get(element, "Id"),
-            .name = string_get(element, "Name"),
-            .spritesheetId = int_get(element, "SpritesheetId", 0),
-            .libraryId = int_get(element, "Library"),
-            .animation = string_get(element, "Animation"),
-            .extras = extras_read(element)};
-}
-
-template <> Null item_read(pugi::xml_node element)
-{
-    return {.id = int_get(element, "Id"),
-            .name = string_get(element, "Name"),
-            .isShowRect = bool_get(element, "ShowRect", false),
-            .extras = extras_read(element)};
-}
-
-template <> Event item_read(pugi::xml_node element)
-{
-    return {.id = int_get(element, "Id"), .name = string_get(element, "Name"), .extras = extras_read(element)};
-}
-
-template <> Sound item_read(pugi::xml_node element)
-{
-    return {.id = int_get(element, "Id"), .path = path_get(element, "Path"), .extras = extras_read(element)};
-}
-
-template <> Library item_read(pugi::xml_node element)
-{
-    return {.id = int_get(element, "Id"), .path = path_get(element, "Path"), .extras = extras_read(element)};
-}
-
-template <class Item> constexpr ElementType ITEM_TYPE{};
-template <> constexpr ElementType ITEM_TYPE<Spritesheet>{ElementType::SPRITESHEET};
-template <> constexpr ElementType ITEM_TYPE<Region>{ElementType::REGION};
-template <> constexpr ElementType ITEM_TYPE<Shader>{ElementType::SHADER};
-template <> constexpr ElementType ITEM_TYPE<Layer>{ElementType::LAYER_ELEMENT};
-template <> constexpr ElementType ITEM_TYPE<Null>{ElementType::NULL_ELEMENT};
-template <> constexpr ElementType ITEM_TYPE<Event>{ElementType::EVENT_ELEMENT};
-template <> constexpr ElementType ITEM_TYPE<Sound>{ElementType::SOUND_ELEMENT};
-template <> constexpr ElementType ITEM_TYPE<Library>{ElementType::LIBRARY};
-
-template <class Item> static std::vector<Item> items_read(pugi::xml_node container, Content& content, ElementType type)
-{
-    std::vector<Item> items;
-    auto extras = extras_read(container);
-    children_each(container, [&](pugi::xml_node child, ElementType childType, int position) {
-        if (childType == ITEM_TYPE<Item>)
-            items.push_back(item_read<Item>(child));
-        else
-            extras_child_add(extras, child, position);
-    });
-    if (extras != Extras{})
-        content.containerExtras.emplace_back(type, std::move(extras));
-    return items;
-}
-
-static Content content_read(pugi::xml_node element)
-{
-    Content content = {.layout = {}, .extras = extras_read(element)};
-    children_each(element, [&](pugi::xml_node child, ElementType type, int position) {
-        if (child.name() == LEGACY_GROUPS_TAG)
-            return;
-        auto isKnown = type == ElementType::SPRITESHEETS || type == ElementType::SHADERS ||
-                       type == ElementType::LAYERS || type == ElementType::NULLS || type == ElementType::EVENTS ||
-                       type == ElementType::SOUNDS || type == ElementType::LIBRARIES;
-        if (!isKnown || std::ranges::contains(content.layout, type))
-            return extras_child_add(content.extras, child, position);
-        content.layout.push_back(type);
-        if (type == ElementType::SPRITESHEETS)
-            content.spritesheets = items_read<Spritesheet>(child, content, type);
-        if (type == ElementType::SHADERS)
-            content.shaders = items_read<Shader>(child, content, type);
-        if (type == ElementType::LAYERS)
-            content.layers = items_read<Layer>(child, content, type);
-        if (type == ElementType::NULLS)
-            content.nulls = items_read<Null>(child, content, type);
-        if (type == ElementType::EVENTS)
-            content.events = items_read<Event>(child, content, type);
-        if (type == ElementType::SOUNDS)
-            content.sounds = items_read<Sound>(child, content, type);
-        if (type == ElementType::LIBRARIES)
-            content.libraries = items_read<Library>(child, content, type);
-    });
-    return content;
-}
-
-// Gives every item a unique, non-negative id. The first holder of a duplicated id keeps it.
-template <class Items> static void ids_repair(Items& items)
-{
-    std::set<int> usedIds;
-    for (auto& item : items)
-        if (item.id >= 0)
-            usedIds.insert(item.id);
-    std::set<int> keptIds;
-    int nextId = 0;
-    for (auto& item : items)
-    {
-        if (item.id >= 0 && keptIds.insert(item.id).second)
-            continue;
-        while (usedIds.contains(nextId))
-            ++nextId;
-        item.id = nextId;
-        usedIds.insert(nextId);
-        keptIds.insert(nextId);
-    }
-}
-
-// Loaded documents get unique content ids, frames lose dangling shader ids, and layer frames point at the region
-// matching their rectangle and take that region's rectangle.
-void model_repair(Model& model)
-{
-    auto& content = model.content;
-    ids_repair(content.spritesheets);
-    ids_repair(content.shaders);
-    ids_repair(content.layers);
-    ids_repair(content.nulls);
-    ids_repair(content.events);
-    ids_repair(content.sounds);
-    ids_repair(content.libraries);
-    for (auto& spritesheet : content.spritesheets)
-        ids_repair(spritesheet.regions);
-    for (auto& shader : content.shaders)
-        if (shader.name.empty())
-            shader.name = SHADER_NAME_DEFAULT;
-
-    for (int i = 0; i < model.animations_count_get(); ++i)
-    {
-        auto& animation = *model.animation_edit(i);
-        animation_tracks_each(animation, [&](Track& track) {
-            if (track.type == ItemType::TRIGGER)
-                return;
-            for (auto& frame : track.frames)
-                if (frame.shaderId != -1 && !item_get(content.shaders, frame.shaderId))
-                    frame.shaderId = -1;
-        });
-        items_each(animation.layers, [&](Track& track, auto*) {
-            auto layer = item_get(content.layers, track.id);
-            auto spritesheet = layer ? item_get(content.spritesheets, layer->spritesheetId) : nullptr;
-            if (!spritesheet)
-                return;
-            for (auto& frame : track.frames)
-            {
-                auto region = item_get(spritesheet->regions, frame.regionId);
-                if (auto match = region_matched_get(spritesheet->regions, frame);
-                    match && (!region || !is_region_matched(*region, frame)))
-                    frame.regionId = match->id;
-                frame_region_apply(frame, spritesheet->regions);
-            }
-        });
-    }
-}
-
-static Model model_read(pugi::xml_node element)
-{
-    Model model = {.layout = {}, .extras = extras_read(element)};
-    children_each(element, [&](pugi::xml_node child, ElementType type, int position) {
-        auto isKnown = type == ElementType::INFO || type == ElementType::CONTENT || type == ElementType::ANIMATIONS;
-        if (!isKnown || std::ranges::contains(model.layout, type))
-            return extras_child_add(model.extras, child, position);
-        model.layout.push_back(type);
-        if (type == ElementType::INFO)
-        {
-            model.info = {.createdBy = string_get(child, "CreatedBy", Info{}.createdBy),
-                          .createdOn = string_get(child, "CreatedOn"),
-                          .fps = int_get(child, "Fps", Info{}.fps),
-                          .version = int_get(child, "Version", 0),
-                          .isIsaacIgnored = bool_get(child, "IsaacIgnored", false),
-                          .extras = extras_read(child)};
-            children_each(child, [&](pugi::xml_node infoChild, ElementType, int infoPosition) {
-                extras_child_add(model.info.extras, infoChild, infoPosition);
-            });
-        }
-        if (type == ElementType::CONTENT)
-            model.content = content_read(child);
-        if (type == ElementType::ANIMATIONS)
-        {
-            model.animations.defaultAnimation = string_get(child, "DefaultAnimation");
-            model.animations.extras = extras_read(child);
-            model.animations.entries = animation_entries_read(child, model.animations.extras);
-        }
-    });
-    model_repair(model);
-    return model;
-}
-
-// Writing: the model goes straight to a Sink in the shape a set of flags asks for, as text, a hash or an XmlNode tree.
+// Writing: the model goes straight to a Sink in the shape its SaveMode asks for, as text, a hash or an XmlNode tree.
 
 struct Writer
 {
@@ -1137,33 +536,854 @@ struct Children
     }
 };
 
-static void element_close(Sink& sink, const Extras& extras)
-{
-    Children{sink, extras}.close();
-}
-
-static void path_add(Sink& sink, const char* name, const std::filesystem::path& value)
-{
-    if (!value.empty())
-        sink.attribute(name, path_to_utf8(value));
-}
-
-static void interpolation_add(Sink& sink, const char* name, Interpolation interpolation)
-{
-    if (interpolation == Interpolation::NONE || interpolation == Interpolation::LINEAR)
-        sink.attribute(name, interpolation == Interpolation::LINEAR);
-    else
-        sink.attribute(name, INTERPOLATION_VALUES[(int)interpolation]);
-}
-
-static bool is_group_id_written(const Writer& writer)
-{
-    return writer.mode == SAVE_CLIPBOARD;
-}
-
 static bool is_special_interpolation(Interpolation interpolation)
 {
     return interpolation != Interpolation::NONE && interpolation != Interpolation::LINEAR;
+}
+
+// Reading and writing share one description of each element (its *_io function), run by an XmlReader or an XmlWriter.
+// The reader reads every attribute, whatever the writer leaves out (`isWritten`), and keeps a field's default when its
+// attribute is missing.
+
+template <class Item> constexpr ElementType ITEM_TYPE{};
+template <> constexpr ElementType ITEM_TYPE<Spritesheet>{ElementType::SPRITESHEET};
+template <> constexpr ElementType ITEM_TYPE<Region>{ElementType::REGION};
+template <> constexpr ElementType ITEM_TYPE<Shader>{ElementType::SHADER};
+template <> constexpr ElementType ITEM_TYPE<Uniform>{ElementType::UNIFORM};
+template <> constexpr ElementType ITEM_TYPE<Component>{ElementType::COMPONENT};
+template <> constexpr ElementType ITEM_TYPE<Layer>{ElementType::LAYER_ELEMENT};
+template <> constexpr ElementType ITEM_TYPE<Null>{ElementType::NULL_ELEMENT};
+template <> constexpr ElementType ITEM_TYPE<Event>{ElementType::EVENT_ELEMENT};
+template <> constexpr ElementType ITEM_TYPE<Sound>{ElementType::SOUND_ELEMENT};
+template <> constexpr ElementType ITEM_TYPE<Library>{ElementType::LIBRARY};
+
+// A whole document renumbers shader, layer and region ids by position.
+template <class Item>
+constexpr bool IS_RENUMBERED =
+    std::is_same_v<Item, Shader> || std::is_same_v<Item, Layer> || std::is_same_v<Item, Region>;
+
+// An io function takes its item as written (const) or read.
+template <class T, class Base>
+concept Is = std::same_as<std::remove_const_t<T>, Base>;
+
+template <class Item> static Item element_read(pugi::xml_node element);
+template <class Item> static void element_write(Sink& sink, const Writer& writer, const Item& item, int id = -1);
+
+// Children that no list takes are kept as extras when the element closes.
+struct XmlReader
+{
+    static constexpr bool IS_READING = true;
+    static constexpr SaveMode mode = SAVE_CLIPBOARD;
+
+    pugi::xml_node element;
+    Extras* extrasRead = nullptr;
+    std::vector<ElementType> taken;
+
+    bool is_extended()
+    {
+        return true;
+    }
+
+    template <class T> void attribute(const char* name, T& value, bool = true)
+    {
+        if constexpr (std::is_same_v<T, bool>)
+            value = bool_get(element, name, value);
+        else if constexpr (std::is_same_v<T, int>)
+            value = int_get(element, name, value);
+        else if constexpr (std::is_same_v<T, float>)
+            value = float_get(element, name, value);
+        else if constexpr (std::is_same_v<T, std::filesystem::path>)
+        {
+            if (auto text = attribute_get(element, name))
+                value = path_from_utf8(text);
+        }
+        else
+            value = string_get(element, name, value);
+    }
+
+    void id(const char* name, int& value)
+    {
+        attribute(name, value);
+    }
+
+    void color(const char* name, float& value, bool = true)
+    {
+        value = color_get(element, name, value);
+    }
+
+    template <class T, std::size_t N>
+    void choice(const char* name, T& value, const std::string_view (&values)[N], bool = true)
+    {
+        if (auto text = attribute_get(element, name))
+            for (std::size_t i = 0; i < N; ++i)
+                if (!values[i].empty() && values[i] == text)
+                    value = (T)i;
+    }
+
+    void interpolation(const char* name, Interpolation& value, bool = true)
+    {
+        value = interpolation_read(element, name);
+    }
+
+    void extras(Extras& extras)
+    {
+        extras = extras_read(element);
+        extrasRead = &extras;
+    }
+
+    template <class Item> void list(std::vector<Item>& items, bool = true)
+    {
+        taken.push_back(ITEM_TYPE<Item>);
+        children_each(element, [&](pugi::xml_node child, ElementType type, int) {
+            if (type == ITEM_TYPE<Item>)
+                items.push_back(element_read<Item>(child));
+        });
+    }
+
+    // Ids as <Type Id> children, with `first` (from an attribute) first.
+    void ids(ElementType type, std::vector<int>& ids, int first, bool = true)
+    {
+        taken.push_back(type);
+        children_each(element, [&](pugi::xml_node child, ElementType childType, int) {
+            if (childType == type)
+                ids.push_back(int_get(child, "Id"));
+        });
+        if (first != -1 && !std::ranges::contains(ids, first))
+            ids.insert(ids.begin(), first);
+        std::erase(ids, -1);
+    }
+
+    void close()
+    {
+        children_each(element, [&](pugi::xml_node child, ElementType type, int position) {
+            if (!std::ranges::contains(taken, type))
+                extras_child_add(*extrasRead, child, position);
+        });
+    }
+};
+
+// Opens its element on construction. Lists go between the element's unknown children.
+struct XmlWriter
+{
+    static constexpr bool IS_READING = false;
+
+    Sink& sink;
+    const Writer& writer;
+    Children children;
+    SaveMode mode;
+    int idWritten;
+
+    XmlWriter(Sink& sink, const Writer& writer, ElementType type, const Extras& extras, int id = -1)
+        : sink(sink), writer(writer), children{sink, extras}, mode(writer.mode), idWritten(id)
+    {
+        sink.open(tag_get(type));
+    }
+
+    bool is_extended()
+    {
+        return writer.is_extended();
+    }
+
+    // Paths are only written when set.
+    template <class T> void attribute(const char* name, const T& value, bool isWritten = true)
+    {
+        if constexpr (std::is_same_v<T, std::filesystem::path>)
+        {
+            if (isWritten && !value.empty())
+                sink.attribute(name, path_to_utf8(value));
+        }
+        else if (isWritten)
+            sink.attribute(name, value);
+    }
+
+    void id(const char* name, int)
+    {
+        sink.attribute(name, idWritten);
+    }
+
+    void color(const char* name, float value, bool isWritten = true)
+    {
+        if (isWritten)
+            sink.attribute(name, float_to_uint8(value));
+    }
+
+    template <class T, std::size_t N>
+    void choice(const char* name, T value, const std::string_view (&values)[N], bool isWritten = true)
+    {
+        if (isWritten)
+            sink.attribute(name, values[(int)value]);
+    }
+
+    void interpolation(const char* name, Interpolation value, bool isWritten = true)
+    {
+        if (isWritten && is_special_interpolation(value))
+            sink.attribute(name, INTERPOLATION_VALUES[(int)value]);
+        else if (isWritten)
+            sink.attribute(name, value == Interpolation::LINEAR);
+    }
+
+    void extras(const Extras& extras)
+    {
+        extras_write(sink, extras);
+    }
+
+    template <class Item> void list(const std::vector<Item>& items, bool isWritten = true)
+    {
+        for (int i = 0; isWritten && i < (int)items.size(); ++i)
+        {
+            children.add();
+            if constexpr (requires { items[i].id; })
+                element_write(sink, writer, items[i], writer.model && IS_RENUMBERED<Item> ? i : items[i].id);
+            else
+                element_write(sink, writer, items[i]);
+        }
+    }
+
+    void ids(ElementType type, const std::vector<int>& ids, int first, bool isWritten)
+    {
+        for (int i = 0; isWritten && i < (int)ids.size(); ++i)
+            if (ids[i] != -1 && (i > 0 || ids[i] != first))
+            {
+                children.add();
+                sink.open(tag_get(type));
+                sink.attribute("Id", ids[i]);
+                sink.close();
+            }
+    }
+
+    void close()
+    {
+        children.close();
+    }
+};
+
+static void vec_io(auto& io, const char* xName, const char* yName, auto& value, bool isWritten = true)
+{
+    io.attribute(xName, value.x, isWritten);
+    io.attribute(yName, value.y, isWritten);
+}
+
+// A frame, or a trigger on a triggers track. A layer frame on a region writes the region in place of its rectangle,
+// and the game's copy leaves out the editor's own parts. A trigger's first event is its EventId and any others are
+// <Event Id> children. Its sounds are <Sound Id> children (older files name one with a SoundId attribute instead).
+static void frame_io(auto& io, auto& frame, ItemType type)
+{
+    auto isExtended = io.is_extended();
+    auto isTrigger = type == ItemType::TRIGGER;
+    auto isLayer = type == ItemType::LAYER;
+    auto isRegion = isExtended && frame.regionId != -1;
+    auto isRect = isLayer && (io.mode == SAVE_CLIPBOARD || !isRegion);
+    auto isPurged = io.mode != SAVE_CLIPBOARD;
+    auto isChild = isExtended && isLayer;
+    auto eventId = frame.eventIds.empty() ? -1 : frame.eventIds.front();
+    auto soundId = -1;
+
+    io.attribute("EventId", eventId, isTrigger && !frame.eventIds.empty());
+    io.attribute("SoundId", soundId, false);
+    io.attribute("AtFrame", frame.atFrame, isTrigger);
+    io.attribute("RegionId", frame.regionId, isLayer && isRegion);
+    vec_io(io, "XPivot", "YPivot", frame.pivot, isRect);
+    vec_io(io, "XCrop", "YCrop", frame.crop, isRect);
+    vec_io(io, "Width", "Height", frame.size, isRect);
+    vec_io(io, "XPosition", "YPosition", frame.position, !isTrigger);
+    io.attribute("Delay", frame.duration, !isTrigger);
+    io.attribute("Visible", frame.isVisible, !isTrigger);
+    vec_io(io, "XScale", "YScale", frame.scale, !isTrigger);
+    // Skew was once called shear.
+    vec_io(io, "ShearX", "ShearY", frame.skew, false);
+    vec_io(io, "SkewX", "SkewY", frame.skew, !isTrigger && isExtended);
+    for (int i = 0; i < (int)std::size(TINT_ATTRIBUTES); ++i)
+        io.color(TINT_ATTRIBUTES[i], frame.tint[i],
+                 !isTrigger && (!isPurged || float_to_uint8(frame.tint[i]) != float_to_uint8(1.0f)));
+    for (int i = 0; i < (int)std::size(OFFSET_ATTRIBUTES); ++i)
+        io.color(OFFSET_ATTRIBUTES[i], frame.colorOffset[i],
+                 !isTrigger && (!isPurged || float_to_uint8(frame.colorOffset[i]) != 0));
+    io.color("AlphaOffset", frame.colorOffset.a, !isTrigger && isExtended && float_to_uint8(frame.colorOffset.a) != 0);
+    io.attribute("Rotation", frame.rotation, !isTrigger);
+    io.interpolation("Interpolated", frame.interpolation, !isTrigger);
+    io.attribute("ShaderId", frame.shaderId, !isTrigger && isExtended && frame.shaderId != -1);
+    io.attribute("Depth", frame.depth, isChild && frame.depth != 0);
+    io.attribute("Blur", frame.blur, isChild && frame.blur != 0.0f);
+    io.attribute("ChildAnimation", frame.childAnimation, isChild && !frame.childAnimation.empty());
+    io.choice("ChildMode", frame.childMode, CHILD_MODE_VALUES, isChild && frame.childMode != ChildMode::LOOP);
+    io.choice("ChildStart", frame.isChildStartRandom, CHILD_START_VALUES, isChild && frame.isChildStartRandom);
+    io.attribute("ChildStart", frame.childStart, isChild && !frame.isChildStartRandom && frame.childStart != 0);
+    io.attribute("Restart", frame.isChildRestart, isChild && frame.isChildRestart);
+    io.extras(frame.extras);
+    io.ids(ElementType::EVENT_ELEMENT, frame.eventIds, eventId, isTrigger && isExtended);
+    io.ids(ElementType::SOUND_ELEMENT, frame.soundIds, soundId, isTrigger && isExtended);
+}
+
+// Layer and null tracks name their item, and a grouped one names its group in the clipboard.
+static void track_io(auto& io, auto& track, int& groupId)
+{
+    auto isItem = track.type == ItemType::LAYER || track.type == ItemType::NULL_;
+    if (isItem)
+        io.id(track.type == ItemType::LAYER ? "LayerId" : "NullId", track.id);
+    io.attribute("Visible", track.isVisible, isItem);
+    io.attribute("GroupId", groupId, isItem && groupId != -1 && io.mode == SAVE_CLIPBOARD);
+    io.extras(track.extras);
+}
+
+// `index` is the group's position, when groups are written apart from their container.
+static void group_io(auto& io, auto& group, int& index)
+{
+    io.attribute("Id", group.id, io.mode != SAVE_EDITOR);
+    io.attribute("Name", group.name);
+    io.attribute("IsExpanded", group.isExpanded);
+    io.attribute("Visible", group.isVisible);
+    io.attribute("Index", index, index != -1);
+    io.extras(group.extras);
+}
+
+// Markers are the editor's own, and a grouped animation names its group in the clipboard.
+static void animation_io(auto& io, auto& animation, int& groupId)
+{
+    io.attribute("Name", animation.name);
+    io.attribute("FrameNum", animation.frameNum);
+    io.attribute("Loop", animation.isLoop);
+    io.attribute("StartMarker", animation.startMarker, io.is_extended() && animation.startMarker != -1);
+    io.attribute("EndMarker", animation.endMarker, io.is_extended() && animation.endMarker != -1);
+    io.attribute("GroupId", groupId, groupId != -1 && io.mode == SAVE_CLIPBOARD);
+    io.extras(animation.extras);
+}
+
+static void info_io(auto& io, auto& info)
+{
+    io.attribute("CreatedBy", info.createdBy);
+    io.attribute("CreatedOn", info.createdOn);
+    io.attribute("Fps", info.fps);
+    io.attribute("Version", info.version);
+    io.attribute("IsaacIgnored", info.isIsaacIgnored, io.is_extended() && info.isIsaacIgnored);
+    io.extras(info.extras);
+}
+
+// A region with an origin writes it in place of its pivot.
+static void item_io(auto& io, Is<Region> auto& region)
+{
+    io.id("Id", region.id);
+    io.attribute("Name", region.name);
+    vec_io(io, "XCrop", "YCrop", region.crop);
+    vec_io(io, "Width", "Height", region.size);
+    io.choice("Origin", region.origin, ORIGIN_VALUES, region.origin != Origin::CUSTOM);
+    vec_io(io, "XPivot", "YPivot", region.pivot, region.origin == Origin::CUSTOM);
+    io.extras(region.extras);
+    if constexpr (std::remove_reference_t<decltype(io)>::IS_READING)
+        region.pivot = region_pivot_get(region);
+}
+
+static void item_io(auto& io, Is<Spritesheet> auto& spritesheet)
+{
+    io.id("Id", spritesheet.id);
+    io.attribute("Path", spritesheet.path);
+    io.extras(spritesheet.extras);
+    io.list(spritesheet.regions, io.is_extended());
+}
+
+static void item_io(auto& io, Is<Component> auto& component)
+{
+    io.attribute("Index", component.index);
+    io.attribute("Binding", component.binding, !component.binding.empty());
+    io.attribute("Value", component.value, !component.value.empty());
+    io.extras(component.extras);
+}
+
+static void item_io(auto& io, Is<Uniform> auto& uniform)
+{
+    io.attribute("Name", uniform.name);
+    io.attribute("Binding", uniform.binding, !uniform.binding.empty());
+    io.attribute("Value", uniform.value, !uniform.value.empty());
+    io.extras(uniform.extras);
+    io.list(uniform.components);
+}
+
+static void item_io(auto& io, Is<Shader> auto& shader)
+{
+    io.id("Id", shader.id);
+    io.attribute("Name", shader.name);
+    io.attribute("Vertex", shader.vertex);
+    io.attribute("Fragment", shader.fragment);
+    io.extras(shader.extras);
+    io.list(shader.uniforms);
+}
+
+// An animation layer's library and animation are the editor's own.
+static void item_io(auto& io, Is<Layer> auto& layer)
+{
+    auto isAnimation = io.is_extended() && layer.is_animation();
+    io.id("Id", layer.id);
+    io.attribute("Name", layer.name);
+    io.attribute("SpritesheetId", layer.spritesheetId);
+    io.attribute("Library", layer.libraryId, isAnimation && layer.libraryId != -1);
+    io.attribute("Animation", layer.animation, isAnimation);
+    io.extras(layer.extras);
+}
+
+static void item_io(auto& io, Is<Null> auto& null)
+{
+    io.id("Id", null.id);
+    io.attribute("Name", null.name);
+    io.attribute("ShowRect", null.isShowRect, null.isShowRect);
+    io.extras(null.extras);
+}
+
+static void item_io(auto& io, Is<Event> auto& event)
+{
+    io.id("Id", event.id);
+    io.attribute("Name", event.name);
+    io.extras(event.extras);
+}
+
+template <class Io, class Item>
+    requires Is<Item, Sound> || Is<Item, Library>
+static void item_io(Io& io, Item& item)
+{
+    io.id("Id", item.id);
+    io.attribute("Path", item.path);
+    io.extras(item.extras);
+}
+
+template <class Item> static Item element_read(pugi::xml_node element)
+{
+    Item item = {};
+    XmlReader io{element};
+    item_io(io, item);
+    io.close();
+    return item;
+}
+
+template <class Item> static void element_write(Sink& sink, const Writer& writer, const Item& item, int id)
+{
+    XmlWriter io(sink, writer, ITEM_TYPE<Item>, item.extras, id);
+    item_io(io, item);
+    io.close();
+}
+
+static Frame frame_read(pugi::xml_node element, ItemType type)
+{
+    Frame frame = {};
+    XmlReader io{element};
+    frame_io(io, frame, type);
+    io.close();
+    return frame;
+}
+
+static void frame_write(Sink& sink, const Writer& writer, const Frame& frame, ItemType type)
+{
+    XmlWriter io(sink, writer, type == ItemType::TRIGGER ? ElementType::TRIGGER : ElementType::FRAME, frame.extras);
+    frame_io(io, frame, type);
+    io.close();
+}
+
+static Track track_read(pugi::xml_node element, ItemType type)
+{
+    Track track = {.type = type};
+    auto groupId = -1;
+    XmlReader io{element, {}, {ElementType::FRAME, ElementType::TRIGGER}};
+    track_io(io, track, groupId);
+    auto frameType = type == ItemType::TRIGGER ? ElementType::TRIGGER : ElementType::FRAME;
+    for (auto child = element_first(element); child;)
+    {
+        auto childType = type_get(child);
+        // A frame written baked (BakeInterpolation/BakeDelay) is read back as the one interpolated frame it came from.
+        if (auto delay = int_get(child, "BakeDelay", 0);
+            childType == ElementType::FRAME && attribute_get(child, "BakeInterpolation") && delay >= FRAME_DURATION_MIN)
+        {
+            auto frame = frame_read(child, type);
+            frame.interpolation = interpolation_read(child, "BakeInterpolation");
+            frame.duration = delay;
+            if (frameType == ElementType::FRAME)
+                track.frames.push_back(std::move(frame));
+            for (int i = 0; child && i < delay; ++i)
+                child = element_next(child);
+            continue;
+        }
+        if (childType == frameType)
+            track.frames.push_back(frame_read(child, type));
+        child = element_next(child);
+    }
+    io.close();
+    return track;
+}
+
+// A container's children before groups are resolved: a child (with the group it names), a group (with any children
+// nested in it), or unknown XML.
+template <class Child, class GroupType> struct ContainerItem
+{
+    using Group = GroupType;
+
+    std::optional<Child> child;
+    std::optional<Group> group;
+    std::optional<XmlNode> node;
+    int groupId = -1;
+    int index = -1;
+    std::vector<Child> children;
+    std::optional<Track> root;
+    std::optional<Track> backupRoot;
+    std::vector<Track> backupTracks;
+    bool isBackup = false;
+};
+
+using TrackItem = ContainerItem<Track, TrackGroup>;
+using AnimationItem = ContainerItem<std::shared_ptr<const Animation>, AnimationGroup>;
+
+static auto& group_children_get(TrackGroup& group)
+{
+    return group.items;
+}
+
+static auto& group_children_get(AnimationGroup& group)
+{
+    return group.items;
+}
+
+// Groups become entries followed by their children: nested children move out after their group, and a child joins a
+// group seen before it. Unknown XML becomes extras at its position.
+template <class Entry, class Item> static std::vector<Entry> entries_build(std::vector<Item> items, Extras& extras)
+{
+    int nextGroupId = 0;
+    for (auto& item : items)
+        if (item.group)
+            nextGroupId = std::max(nextGroupId, item.group->id + 1);
+
+    std::vector<Item> flat;
+    for (auto& item : items)
+    {
+        if (!item.group)
+        {
+            flat.push_back(std::move(item));
+            continue;
+        }
+        if (item.group->id < 0)
+            item.group->id = nextGroupId++;
+        auto groupId = item.group->id;
+        auto children = std::move(item.children);
+        flat.push_back(std::move(item));
+        for (auto& child : children)
+            flat.push_back({.child = std::move(child), .groupId = groupId});
+    }
+
+    std::vector<Entry> entries;
+    std::map<int, std::size_t> groupEntries;
+    for (int i = 0; i < (int)flat.size(); ++i)
+    {
+        auto& item = flat[i];
+        if (item.node)
+            extras.children.emplace_back(i, std::move(*item.node));
+        else if (item.group)
+        {
+            groupEntries[item.group->id] = entries.size();
+            entries.emplace_back(std::move(*item.group));
+        }
+        else if (auto group = groupEntries.find(item.groupId); group != groupEntries.end())
+            group_children_get(std::get<typename Item::Group>(entries[group->second]))
+                .push_back(std::move(*item.child));
+        else
+            entries.emplace_back(std::move(*item.child));
+    }
+    return entries;
+}
+
+static TrackItem track_group_item_read(pugi::xml_node element, ItemType type)
+{
+    TrackItem item{.group = TrackGroup{}};
+    XmlReader io{element};
+    group_io(io, *item.group, item.index);
+    auto trackType = track_element_type_get(type);
+    children_each(element, [&](pugi::xml_node child, ElementType childType, int) {
+        if (childType == ElementType::ROOT_ANIMATION && !item.root)
+            item.root = track_read(child, ItemType::ROOT);
+        else if (childType == trackType)
+            item.children.push_back(track_read(child, type));
+        else if (child.name() == FRAME_RESTORE_TAG && !item.isBackup)
+        {
+            item.isBackup = true;
+            children_each(child, [&](pugi::xml_node backup, ElementType backupType, int) {
+                if (backupType == ElementType::ROOT_ANIMATION && !item.backupRoot)
+                    item.backupRoot = track_read(backup, ItemType::ROOT);
+                else if (backupType == trackType)
+                    item.backupTracks.push_back(track_read(backup, type));
+            });
+        }
+    });
+    return item;
+}
+
+static std::vector<TrackItem> track_items_read(pugi::xml_node container, ItemType type)
+{
+    std::vector<TrackItem> items;
+    children_each(container, [&](pugi::xml_node child, ElementType childType, int) {
+        if (childType == ElementType::GROUP)
+            items.push_back(track_group_item_read(child, type));
+        else if (childType == track_element_type_get(type))
+            items.push_back({.child = track_read(child, type), .groupId = int_get(child, "GroupId")});
+        else
+            items.push_back({.node = node_read(child)});
+    });
+    return items;
+}
+
+// Track groups as any version wrote them: legacy *AnimationGroups metadata is placed back at its Index, and a group
+// whose tracks were written baked (FrameRestore) gets its original root and tracks back.
+static std::vector<TrackEntry> track_entries_build(std::vector<TrackItem> items, std::vector<TrackItem> legacyGroups,
+                                                   Extras& extras)
+{
+    if (!legacyGroups.empty())
+    {
+        std::set<int> legacyIds;
+        for (auto& item : legacyGroups)
+            if (item.group->id >= 0)
+                legacyIds.insert(item.group->id);
+        std::erase_if(items, [&](const TrackItem& item) { return item.group && legacyIds.contains(item.group->id); });
+        std::ranges::stable_sort(legacyGroups, [](const TrackItem& left, const TrackItem& right) {
+            if (left.index == -1 || right.index == -1)
+                return left.index != -1;
+            return left.index < right.index;
+        });
+        for (auto& legacy : legacyGroups)
+        {
+            auto first = std::ranges::find_if(
+                items, [&](const TrackItem& item) { return item.child && item.groupId == legacy.group->id; });
+            auto position =
+                legacy.index >= 0 ? std::min(legacy.index, (int)items.size()) : (int)(first - items.begin());
+            items.insert(items.begin() + position, std::move(legacy));
+        }
+    }
+
+    std::set<int> restoredIds;
+    for (auto& item : items)
+        if (item.group && item.group->id >= 0 && item.isBackup && (item.backupRoot || !item.backupTracks.empty()))
+        {
+            if (item.backupRoot)
+                item.root = item.backupRoot;
+            item.children = std::move(item.backupTracks);
+            restoredIds.insert(item.group->id);
+        }
+    std::erase_if(items, [&](const TrackItem& item) { return item.child && restoredIds.contains(item.groupId); });
+
+    for (auto& item : items)
+        if (item.group)
+            item.group->root = item.root.value_or(TrackGroup{}.root);
+    return entries_build<TrackEntry>(std::move(items), extras);
+}
+
+static Animation animation_read(pugi::xml_node element)
+{
+    Animation animation{.root = {.type = ItemType::ROOT}, .layout = {}};
+    auto groupId = -1;
+    XmlReader io{element};
+    animation_io(io, animation, groupId);
+    std::map<ElementType, std::vector<TrackItem>> items;
+    std::map<ElementType, std::vector<TrackItem>> legacyGroups;
+    std::set<ElementType> legacyRead;
+    int skipped = 0;
+    children_each(element, [&](pugi::xml_node child, ElementType type, int position) {
+        if (type == ElementType::LAYER_ANIMATION_GROUPS || type == ElementType::NULL_ANIMATION_GROUPS)
+        {
+            auto isLayers = type == ElementType::LAYER_ANIMATION_GROUPS;
+            auto container = isLayers ? ElementType::LAYER_ANIMATIONS : ElementType::NULL_ANIMATIONS;
+            if (legacyRead.insert(type).second)
+                children_each(child, [&](pugi::xml_node group, ElementType groupType, int) {
+                    if (groupType == ElementType::GROUP)
+                        legacyGroups[container].push_back(
+                            track_group_item_read(group, isLayers ? ItemType::LAYER : ItemType::NULL_));
+                });
+            ++skipped;
+            return;
+        }
+
+        auto isKnown = type == ElementType::ROOT_ANIMATION || type == ElementType::LAYER_ANIMATIONS ||
+                       type == ElementType::NULL_ANIMATIONS || type == ElementType::TRIGGERS;
+        if (!isKnown || std::ranges::contains(animation.layout, type))
+            return extras_child_add(animation.extras, child, position - skipped);
+
+        animation.layout.push_back(type);
+        if (type == ElementType::ROOT_ANIMATION)
+            animation.root = track_read(child, ItemType::ROOT);
+        if (type == ElementType::TRIGGERS)
+            animation.triggers = track_read(child, ItemType::TRIGGER);
+        if (type == ElementType::LAYER_ANIMATIONS)
+        {
+            items[type] = track_items_read(child, ItemType::LAYER);
+            animation.layersExtras = extras_read(child);
+        }
+        if (type == ElementType::NULL_ANIMATIONS)
+        {
+            items[type] = track_items_read(child, ItemType::NULL_);
+            animation.nullsExtras = extras_read(child);
+        }
+    });
+
+    for (auto [type, entries, extras] :
+         {std::tuple{ElementType::LAYER_ANIMATIONS, &animation.layers, &animation.layersExtras},
+          std::tuple{ElementType::NULL_ANIMATIONS, &animation.nulls, &animation.nullsExtras}})
+    {
+        if (!legacyGroups[type].empty() && !std::ranges::contains(animation.layout, type))
+            animation.layout.push_back(type);
+        if (std::ranges::contains(animation.layout, type))
+            *entries = track_entries_build(std::move(items[type]), std::move(legacyGroups[type]), *extras);
+    }
+    return animation;
+}
+
+static std::vector<AnimationEntry> animation_entries_read(pugi::xml_node parent, Extras& extras)
+{
+    std::vector<AnimationItem> items;
+    children_each(parent, [&](pugi::xml_node child, ElementType type, int) {
+        if (type == ElementType::GROUP)
+        {
+            AnimationItem item{.group = AnimationGroup{}};
+            XmlReader io{child};
+            group_io(io, *item.group, item.index);
+            children_each(child, [&](pugi::xml_node animation, ElementType animationType, int) {
+                if (animationType == ElementType::ANIMATION)
+                    item.children.push_back(std::make_shared<const Animation>(animation_read(animation)));
+            });
+            items.push_back(std::move(item));
+        }
+        else if (type == ElementType::ANIMATION)
+            items.push_back({.child = std::make_shared<const Animation>(animation_read(child)),
+                             .groupId = int_get(child, "GroupId")});
+        else
+            items.push_back({.node = node_read(child)});
+    });
+    return entries_build<AnimationEntry>(std::move(items), extras);
+}
+
+template <class Item> static std::vector<Item> items_read(pugi::xml_node container, Content& content, ElementType type)
+{
+    std::vector<Item> items;
+    Extras extras = {};
+    XmlReader io{container};
+    io.extras(extras);
+    io.list(items);
+    io.close();
+    if (extras != Extras{})
+        content.containerExtras.emplace_back(type, std::move(extras));
+    return items;
+}
+
+static Content content_read(pugi::xml_node element)
+{
+    Content content = {.layout = {}, .extras = extras_read(element)};
+    children_each(element, [&](pugi::xml_node child, ElementType type, int position) {
+        if (child.name() == LEGACY_GROUPS_TAG)
+            return;
+        auto isKnown = type == ElementType::SPRITESHEETS || type == ElementType::SHADERS ||
+                       type == ElementType::LAYERS || type == ElementType::NULLS || type == ElementType::EVENTS ||
+                       type == ElementType::SOUNDS || type == ElementType::LIBRARIES;
+        if (!isKnown || std::ranges::contains(content.layout, type))
+            return extras_child_add(content.extras, child, position);
+        content.layout.push_back(type);
+        if (type == ElementType::SPRITESHEETS)
+            content.spritesheets = items_read<Spritesheet>(child, content, type);
+        if (type == ElementType::SHADERS)
+            content.shaders = items_read<Shader>(child, content, type);
+        if (type == ElementType::LAYERS)
+            content.layers = items_read<Layer>(child, content, type);
+        if (type == ElementType::NULLS)
+            content.nulls = items_read<Null>(child, content, type);
+        if (type == ElementType::EVENTS)
+            content.events = items_read<Event>(child, content, type);
+        if (type == ElementType::SOUNDS)
+            content.sounds = items_read<Sound>(child, content, type);
+        if (type == ElementType::LIBRARIES)
+            content.libraries = items_read<Library>(child, content, type);
+    });
+    return content;
+}
+
+// Gives every item a unique, non-negative id. The first holder of a duplicated id keeps it.
+template <class Items> static void ids_repair(Items& items)
+{
+    std::set<int> usedIds;
+    for (auto& item : items)
+        if (item.id >= 0)
+            usedIds.insert(item.id);
+    std::set<int> keptIds;
+    int nextId = 0;
+    for (auto& item : items)
+    {
+        if (item.id >= 0 && keptIds.insert(item.id).second)
+            continue;
+        while (usedIds.contains(nextId))
+            ++nextId;
+        item.id = nextId;
+        usedIds.insert(nextId);
+        keptIds.insert(nextId);
+    }
+}
+
+// Loaded documents get unique content ids, frames lose dangling shader ids, and layer frames point at the region
+// matching their rectangle and take that region's rectangle.
+void model_repair(Model& model)
+{
+    auto& content = model.content;
+    ids_repair(content.spritesheets);
+    ids_repair(content.shaders);
+    ids_repair(content.layers);
+    ids_repair(content.nulls);
+    ids_repair(content.events);
+    ids_repair(content.sounds);
+    ids_repair(content.libraries);
+    for (auto& spritesheet : content.spritesheets)
+        ids_repair(spritesheet.regions);
+    for (auto& shader : content.shaders)
+        if (shader.name.empty())
+            shader.name = SHADER_NAME_DEFAULT;
+
+    for (int i = 0; i < model.animations_count_get(); ++i)
+    {
+        auto& animation = *model.animation_edit(i);
+        animation_tracks_each(animation, [&](Track& track) {
+            if (track.type == ItemType::TRIGGER)
+                return;
+            for (auto& frame : track.frames)
+                if (frame.shaderId != -1 && !item_get(content.shaders, frame.shaderId))
+                    frame.shaderId = -1;
+        });
+        items_each(animation.layers, [&](Track& track, auto*) {
+            auto layer = item_get(content.layers, track.id);
+            auto spritesheet = layer ? item_get(content.spritesheets, layer->spritesheetId) : nullptr;
+            if (!spritesheet)
+                return;
+            for (auto& frame : track.frames)
+            {
+                auto region = item_get(spritesheet->regions, frame.regionId);
+                if (auto match = region_matched_get(spritesheet->regions, frame);
+                    match && (!region || !is_region_matched(*region, frame)))
+                    frame.regionId = match->id;
+                frame_region_apply(frame, spritesheet->regions);
+            }
+        });
+    }
+}
+
+static Model model_read(pugi::xml_node element)
+{
+    Model model = {.layout = {}, .extras = extras_read(element)};
+    children_each(element, [&](pugi::xml_node child, ElementType type, int position) {
+        auto isKnown = type == ElementType::INFO || type == ElementType::CONTENT || type == ElementType::ANIMATIONS;
+        if (!isKnown || std::ranges::contains(model.layout, type))
+            return extras_child_add(model.extras, child, position);
+        model.layout.push_back(type);
+        if (type == ElementType::INFO)
+        {
+            XmlReader io{child};
+            info_io(io, model.info);
+            io.close();
+        }
+        if (type == ElementType::CONTENT)
+            model.content = content_read(child);
+        if (type == ElementType::ANIMATIONS)
+        {
+            model.animations.defaultAnimation = string_get(child, "DefaultAnimation");
+            model.animations.extras = extras_read(child);
+            model.animations.entries = animation_entries_read(child, model.animations.extras);
+        }
+    });
+    model_repair(model);
+    return model;
 }
 
 // A whole document's frames use renumbered shader and region ids. A layer frame on a region takes its rectangle.
@@ -1189,148 +1409,39 @@ static Frame frame_normalize(const Writer& writer, Frame frame, const Track* lay
     return frame;
 }
 
-static void frame_write(Sink& sink, const Writer& writer, const Frame& frame, ItemType type)
-{
-    if (type == ItemType::TRIGGER)
-    {
-        sink.open(tag_get(ElementType::TRIGGER));
-        if (!frame.eventIds.empty())
-            sink.attribute("EventId", frame.eventIds.front());
-        sink.attribute("AtFrame", frame.atFrame);
-        extras_write(sink, frame.extras);
-        Children children = {sink, frame.extras};
-        if (writer.is_extended())
-            for (auto eventId : frame.eventIds | std::views::drop(1))
-            {
-                children.add();
-                sink.open(tag_get(ElementType::EVENT_ELEMENT));
-                sink.attribute("Id", eventId);
-                sink.close();
-            }
-        if (writer.is_extended())
-            for (auto soundId : frame.soundIds)
-                if (soundId != -1)
-                {
-                    children.add();
-                    sink.open(tag_get(ElementType::SOUND_ELEMENT));
-                    sink.attribute("Id", soundId);
-                    sink.close();
-                }
-        return children.close();
-    }
-
-    sink.open(tag_get(ElementType::FRAME));
-    if (type == ItemType::LAYER)
-    {
-        auto isRegion = writer.is_extended() && frame.regionId != -1;
-        if (isRegion)
-            sink.attribute("RegionId", frame.regionId);
-        if (writer.mode == SAVE_CLIPBOARD || !isRegion)
-        {
-            sink.attribute("XPivot", frame.pivot.x);
-            sink.attribute("YPivot", frame.pivot.y);
-            sink.attribute("XCrop", frame.crop.x);
-            sink.attribute("YCrop", frame.crop.y);
-            sink.attribute("Width", frame.size.x);
-            sink.attribute("Height", frame.size.y);
-        }
-    }
-    sink.attribute("XPosition", frame.position.x);
-    sink.attribute("YPosition", frame.position.y);
-    sink.attribute("Delay", frame.duration);
-    sink.attribute("Visible", frame.isVisible);
-    sink.attribute("XScale", frame.scale.x);
-    sink.attribute("YScale", frame.scale.y);
-    if (writer.is_extended())
-    {
-        sink.attribute("SkewX", frame.skew.x);
-        sink.attribute("SkewY", frame.skew.y);
-    }
-    auto isPurged = writer.mode != SAVE_CLIPBOARD;
-    for (int i = 0; i < (int)std::size(TINT_ATTRIBUTES); ++i)
-        if (auto tint = float_to_uint8(frame.tint[i]); !isPurged || tint != float_to_uint8(1.0f))
-            sink.attribute(TINT_ATTRIBUTES[i], tint);
-    for (int i = 0; i < (int)std::size(OFFSET_ATTRIBUTES); ++i)
-        if (auto offset = float_to_uint8(frame.colorOffset[i]); !isPurged || offset != 0)
-            sink.attribute(OFFSET_ATTRIBUTES[i], offset);
-    if (writer.is_extended() && float_to_uint8(frame.colorOffset.a) != 0)
-        sink.attribute("AlphaOffset", float_to_uint8(frame.colorOffset.a));
-    sink.attribute("Rotation", frame.rotation);
-    interpolation_add(sink, "Interpolated", frame.interpolation);
-    if (writer.is_extended() && frame.shaderId != -1)
-        sink.attribute("ShaderId", frame.shaderId);
-    if (writer.is_extended() && type == ItemType::LAYER)
-    {
-        if (frame.depth != 0)
-            sink.attribute("Depth", frame.depth);
-        if (frame.blur != 0.0f)
-            sink.attribute("Blur", frame.blur);
-        if (!frame.childAnimation.empty())
-            sink.attribute("ChildAnimation", frame.childAnimation);
-        if (frame.childMode != ChildMode::LOOP)
-            sink.attribute("ChildMode", CHILD_MODE_VALUES[(int)frame.childMode]);
-        if (frame.isChildStartRandom)
-            sink.attribute("ChildStart", CHILD_START_RANDOM);
-        else if (frame.childStart != 0)
-            sink.attribute("ChildStart", frame.childStart);
-        if (frame.isChildRestart)
-            sink.attribute("Restart", frame.isChildRestart);
-    }
-    extras_attributes_write(sink, frame.extras);
-    sink.text_add(frame.extras.text);
-    element_close(sink, frame.extras);
-}
-
 // A backup (FrameRestore) track keeps its frames' region ids as they are.
 static void track_write(Sink& sink, const Writer& writer, const Track& track, int groupId = -1, bool isBackup = false)
 {
-    sink.open(tag_get(track_element_type_get(track.type)));
-    if (track.type == ItemType::LAYER || track.type == ItemType::NULL_)
-    {
-        auto id = track.id;
-        if (track.type == ItemType::LAYER && writer.model)
-            if (auto it = writer.layerIds.find(id); it != writer.layerIds.end())
-                id = it->second;
-        sink.attribute(track.type == ItemType::LAYER ? "LayerId" : "NullId", id);
-        sink.attribute("Visible", track.isVisible);
-        if (groupId != -1 && is_group_id_written(writer))
-            sink.attribute("GroupId", groupId);
-    }
-    extras_write(sink, track.extras);
+    auto id = track.id;
+    if (track.type == ItemType::LAYER && writer.model)
+        if (auto it = writer.layerIds.find(id); it != writer.layerIds.end())
+            id = it->second;
+    XmlWriter io(sink, writer, track_element_type_get(track.type), track.extras, id);
+    track_io(io, track, groupId);
 
-    Children children = {sink, track.extras};
     auto layerTrack = track.type == ItemType::LAYER && !isBackup ? &track : nullptr;
-    for (int i = 0; i < (int)track.frames.size(); ++i)
+    for (auto& frame : track.frames)
     {
-        auto frame = frame_normalize(writer, track.frames[i], layerTrack);
-        children.add();
-        frame_write(sink, writer, frame, track.type);
+        io.children.add();
+        frame_write(sink, writer, frame_normalize(writer, frame, layerTrack), track.type);
     }
-    children.close();
+    io.close();
 }
 
 // A group. `index` records its position when groups are written apart from their container, and `members` writes
 // the children nested into it.
 template <class Group>
-void group_write(Sink& sink, const Writer& writer, const Group& group, std::optional<int> index = {},
+void group_write(Sink& sink, const Writer& writer, const Group& group, int index = -1,
                  const std::function<void()>& members = {})
 {
-    sink.open(tag_get(ElementType::GROUP));
-    if (writer.mode != SAVE_EDITOR)
-        sink.attribute("Id", group.id);
-    sink.attribute("Name", group.name);
-    sink.attribute("IsExpanded", group.isExpanded);
-    sink.attribute("Visible", group.isVisible);
-    if (index)
-        sink.attribute("Index", *index);
-    extras_write(sink, group.extras);
-    Children children = {sink, group.extras};
+    XmlWriter io(sink, writer, ElementType::GROUP, group.extras);
+    group_io(io, group, index);
     if constexpr (requires { group.root; })
     {
-        children.add();
+        io.children.add();
         track_write(sink, writer, group.root);
     }
-    children.flush();
+    io.children.flush();
     if (members)
         members();
     sink.close();
@@ -1338,19 +1449,19 @@ void group_write(Sink& sink, const Writer& writer, const Group& group, std::opti
 
 struct ContainerChild
 {
-    std::function<void(std::optional<int>, const std::function<void()>&)> write{};
+    std::function<void(int, const std::function<void()>&)> write{};
     int groupId = -1;
     std::optional<int> ownGroupId;
 };
 
 template <class Group> static ContainerChild group_child_make(Sink& sink, const Writer& writer, const Group& group)
 {
-    return {.write = [&](std::optional<int> index,
+    return {.write = [&](int index,
                          const std::function<void()>& members) { group_write(sink, writer, group, index, members); },
             .ownGroupId = group.id};
 }
 
-// Children are laid out flat (a group, then its children) and reshaped for the flags: nested into their groups, or,
+// Children are laid out flat (a group, then its children) and reshaped for the mode: nested into their groups, or,
 // in a track container, moved to a *AnimationGroups sibling (`groupsType`) that records each group's position.
 static void container_write(Sink& sink, const Writer& writer, std::vector<ContainerChild> flat, const Extras& extras,
                             ElementType groupsType = ElementType::UNKNOWN)
@@ -1358,9 +1469,7 @@ static void container_write(Sink& sink, const Writer& writer, std::vector<Contai
     extras_write(sink, extras);
     for (auto& [index, node] : extras.children)
         flat.insert(flat.begin() + std::min(index, (int)flat.size()),
-                    ContainerChild{.write = [&sink, &node](std::optional<int>, const std::function<void()>&) {
-                        sink.node(node);
-                    }});
+                    ContainerChild{.write = [&sink, &node](int, const std::function<void()>&) { sink.node(node); }});
 
     auto isGroups = writer.is_extended();
     std::map<int, std::vector<ContainerChild>> grouped;
@@ -1390,10 +1499,10 @@ static void container_write(Sink& sink, const Writer& writer, std::vector<Contai
             continue;
         }
         auto members = child.ownGroupId ? grouped.find(*child.ownGroupId) : grouped.end();
-        child.write({}, [&]() {
+        child.write(-1, [&]() {
             if (members != grouped.end())
                 for (auto& member : members->second)
-                    member.write({}, {});
+                    member.write(-1, {});
         });
     }
     sink.close();
@@ -1412,8 +1521,7 @@ static void track_entries_write(Sink& sink, const Writer& writer, const std::vec
     std::vector<ContainerChild> flat;
     auto track_child_make = [&](const Track& track, int groupId) {
         return ContainerChild{
-            .write = [&, groupId](std::optional<int>,
-                                  const std::function<void()>&) { track_write(sink, writer, track, groupId); },
+            .write = [&, groupId](int, const std::function<void()>&) { track_write(sink, writer, track, groupId); },
             .groupId = groupId};
     };
     entries_walk(
@@ -1516,26 +1624,14 @@ static void animation_write(Sink& sink, const Writer& writer, const Animation& s
     auto baked = isBaked ? std::optional(animation_bake(writer, source)) : std::nullopt;
     auto& animation = baked ? *baked : source;
 
-    sink.open(tag_get(ElementType::ANIMATION));
-    sink.attribute("Name", animation.name);
-    sink.attribute("FrameNum", animation.frameNum);
-    sink.attribute("Loop", animation.isLoop);
-    if (writer.is_extended())
-        for (auto [name, marker] :
-             {std::pair{"StartMarker", animation.startMarker}, {"EndMarker", animation.endMarker}})
-            if (marker != -1)
-                sink.attribute(name, marker);
-    if (groupId != -1 && is_group_id_written(writer))
-        sink.attribute("GroupId", groupId);
-    extras_write(sink, animation.extras);
-
-    Children children = {sink, animation.extras};
+    XmlWriter io(sink, writer, ElementType::ANIMATION, animation.extras);
+    animation_io(io, animation, groupId);
     for (auto type : layout_get(animation.layout, {{ElementType::ROOT_ANIMATION, !animation.root.frames.empty()},
                                                    {ElementType::LAYER_ANIMATIONS, !animation.layers.empty()},
                                                    {ElementType::NULL_ANIMATIONS, !animation.nulls.empty()},
                                                    {ElementType::TRIGGERS, !animation.triggers.frames.empty()}}))
     {
-        children.add();
+        io.children.add();
         if (type == ElementType::ROOT_ANIMATION)
             track_write(sink, writer, animation.root);
         if (type == ElementType::TRIGGERS)
@@ -1545,7 +1641,7 @@ static void animation_write(Sink& sink, const Writer& writer, const Animation& s
         if (type == ElementType::NULL_ANIMATIONS)
             track_entries_write(sink, writer, animation.nulls, type, animation.nullsExtras);
     }
-    children.close();
+    io.close();
 }
 
 static void animations_write(Sink& sink, const Writer& writer, const Animations& animations)
@@ -1553,7 +1649,7 @@ static void animations_write(Sink& sink, const Writer& writer, const Animations&
     std::vector<ContainerChild> flat;
     auto animation_child_make = [&](const Animation& animation, int groupId) {
         return ContainerChild{
-            .write = [&, groupId](std::optional<int>,
+            .write = [&, groupId](int,
                                   const std::function<void()>&) { animation_write(sink, writer, animation, groupId); },
             .groupId = groupId};
     };
@@ -1566,137 +1662,6 @@ static void animations_write(Sink& sink, const Writer& writer, const Animations&
     sink.open(tag_get(ElementType::ANIMATIONS));
     sink.attribute("DefaultAnimation", animations.defaultAnimation);
     container_write(sink, writer, std::move(flat), animations.extras);
-}
-
-static void item_write(Sink& sink, const Writer&, const Region& region, int id)
-{
-    sink.open(tag_get(ElementType::REGION));
-    sink.attribute("Id", id);
-    sink.attribute("Name", region.name);
-    sink.attribute("XCrop", region.crop.x);
-    sink.attribute("YCrop", region.crop.y);
-    sink.attribute("Width", region.size.x);
-    sink.attribute("Height", region.size.y);
-    if (region.origin != Origin::CUSTOM)
-        sink.attribute("Origin", ORIGIN_VALUES[(int)region.origin]);
-    else
-    {
-        sink.attribute("XPivot", region.pivot.x);
-        sink.attribute("YPivot", region.pivot.y);
-    }
-    extras_write(sink, region.extras);
-    element_close(sink, region.extras);
-}
-
-static void item_write(Sink& sink, const Writer& writer, const Spritesheet& spritesheet, int id)
-{
-    sink.open(tag_get(ElementType::SPRITESHEET));
-    sink.attribute("Id", id);
-    path_add(sink, "Path", spritesheet.path);
-    extras_write(sink, spritesheet.extras);
-    Children children = {sink, spritesheet.extras};
-    if (writer.is_extended())
-        for (int i = 0; i < (int)spritesheet.regions.size(); ++i)
-        {
-            children.add();
-            item_write(sink, writer, spritesheet.regions[i], writer.model ? i : spritesheet.regions[i].id);
-        }
-    children.close();
-}
-
-static void binding_value_add(Sink& sink, const std::string& binding, const std::string& value)
-{
-    if (!binding.empty())
-        sink.attribute("Binding", binding);
-    if (!value.empty())
-        sink.attribute("Value", value);
-}
-
-static void item_write(Sink& sink, const Writer&, const Shader& shader, int id)
-{
-    sink.open(tag_get(ElementType::SHADER));
-    sink.attribute("Id", id);
-    sink.attribute("Name", shader.name);
-    path_add(sink, "Vertex", shader.vertex);
-    path_add(sink, "Fragment", shader.fragment);
-    extras_write(sink, shader.extras);
-    Children children = {sink, shader.extras};
-    for (auto& uniform : shader.uniforms)
-    {
-        children.add();
-        sink.open(tag_get(ElementType::UNIFORM));
-        sink.attribute("Name", uniform.name);
-        binding_value_add(sink, uniform.binding, uniform.value);
-        extras_write(sink, uniform.extras);
-        Children components = {sink, uniform.extras};
-        for (auto& component : uniform.components)
-        {
-            components.add();
-            sink.open(tag_get(ElementType::COMPONENT));
-            sink.attribute("Index", component.index);
-            binding_value_add(sink, component.binding, component.value);
-            extras_write(sink, component.extras);
-            element_close(sink, component.extras);
-        }
-        components.close();
-    }
-    children.close();
-}
-
-static void item_write(Sink& sink, const Writer& writer, const Layer& layer, int id)
-{
-    sink.open(tag_get(ElementType::LAYER_ELEMENT));
-    sink.attribute("Id", id);
-    sink.attribute("Name", layer.name);
-    sink.attribute("SpritesheetId", layer.spritesheetId);
-    if (writer.is_extended() && layer.is_animation())
-    {
-        if (layer.libraryId != -1)
-            sink.attribute("Library", layer.libraryId);
-        sink.attribute("Animation", layer.animation);
-    }
-    extras_write(sink, layer.extras);
-    element_close(sink, layer.extras);
-}
-
-static void item_write(Sink& sink, const Writer&, const Null& null, int id)
-{
-    sink.open(tag_get(ElementType::NULL_ELEMENT));
-    sink.attribute("Id", id);
-    sink.attribute("Name", null.name);
-    if (null.isShowRect)
-        sink.attribute("ShowRect", null.isShowRect);
-    extras_write(sink, null.extras);
-    element_close(sink, null.extras);
-}
-
-static void item_write(Sink& sink, const Writer&, const Event& event, int id)
-{
-    sink.open(tag_get(ElementType::EVENT_ELEMENT));
-    sink.attribute("Id", id);
-    sink.attribute("Name", event.name);
-    extras_write(sink, event.extras);
-    element_close(sink, event.extras);
-}
-
-// Sounds and libraries are a path.
-template <class Item> static void item_path_write(Sink& sink, const Item& item, ElementType type, int id)
-{
-    sink.open(tag_get(type));
-    sink.attribute("Id", id);
-    path_add(sink, "Path", item.path);
-    extras_write(sink, item.extras);
-    element_close(sink, item.extras);
-}
-
-static void item_write(Sink& sink, const Writer&, const Sound& sound, int id)
-{
-    item_path_write(sink, sound, ElementType::SOUND_ELEMENT, id);
-}
-
-static void item_write(Sink& sink, const Writer&, const Library& library, int id)
-{
-    item_path_write(sink, library, ElementType::LIBRARY, id);
 }
 
 // A content container's unknown XML (a file may repeat a container. Its parts are merged in order).
@@ -1719,16 +1684,10 @@ template <class Item>
 void items_write(Sink& sink, const Writer& writer, const std::vector<Item>& items, ElementType type,
                  const Extras& extras)
 {
-    sink.open(tag_get(type));
-    extras_write(sink, extras);
-    Children children = {sink, extras};
-    auto isRenumbered = writer.model && (type == ElementType::LAYERS || type == ElementType::SHADERS);
-    for (int i = 0; i < (int)items.size(); ++i)
-    {
-        children.add();
-        item_write(sink, writer, items[i], isRenumbered ? i : items[i].id);
-    }
-    children.close();
+    XmlWriter io(sink, writer, type, extras);
+    io.extras(extras);
+    io.list(items);
+    io.close();
 }
 
 static void content_write(Sink& sink, const Writer& writer, const Content& content)
@@ -1746,7 +1705,7 @@ static void content_write(Sink& sink, const Writer& writer, const Content& conte
     {
         children.add();
         auto extras = container_extras_get(content, type);
-        // Optional containers are left out when the flags drop them or they are empty (their place still counts for
+        // Optional containers are left out when the mode drops them or they are empty (their place still counts for
         // where unknown children go).
         if (type == ElementType::SHADERS && writer.is_extended() &&
             (!content.shaders.empty() || !extras.children.empty()))
@@ -1790,15 +1749,9 @@ static void model_write(Sink& sink, const Model& model, SaveMode mode, const std
             animations_write(sink, writer, model.animations);
         if (type != ElementType::INFO)
             continue;
-        sink.open(tag_get(ElementType::INFO));
-        sink.attribute("CreatedBy", model.info.createdBy);
-        sink.attribute("CreatedOn", model.info.createdOn);
-        sink.attribute("Fps", model.info.fps);
-        sink.attribute("Version", model.info.version);
-        if (isIgnored)
-            sink.attribute("IsaacIgnored", true);
-        extras_write(sink, model.info.extras);
-        element_close(sink, model.info.extras);
+        XmlWriter io(sink, writer, ElementType::INFO, model.info.extras);
+        info_io(io, model.info);
+        io.close();
     }
     children.flush();
     if (inner)
@@ -1943,7 +1896,7 @@ std::vector<Frame> frames_from_string(const std::string& text, ItemType type, st
     auto tag = tag_get(type == ItemType::TRIGGER ? ElementType::TRIGGER : ElementType::FRAME);
     std::vector<Frame> frames;
     for (auto element : document.children(tag))
-        frames.push_back(frame_read(element));
+        frames.push_back(frame_read(element, type));
     if (frames.empty() && errorString)
         *errorString = std::format("No valid {}(s).", tag);
     return frames;
@@ -1963,7 +1916,7 @@ std::vector<AnimationEntry> animations_from_string(const std::string& text, std:
 
 template <class Item> static std::string item_to_string(const Item& item)
 {
-    return text_get([&](Sink& sink) { item_write(sink, Writer(SAVE_CLIPBOARD), item, item.id); });
+    return text_get([&](Sink& sink) { element_write(sink, Writer(SAVE_CLIPBOARD), item, item.id); });
 }
 
 template <class Item> static std::vector<Item> items_from_string(const std::string& text, std::string* errorString)
@@ -1975,7 +1928,7 @@ template <class Item> static std::vector<Item> items_from_string(const std::stri
     std::vector<Item> items;
     for (auto element : document.children(tag))
     {
-        auto item = item_read<Item>(element);
+        auto item = element_read<Item>(element);
         if constexpr (requires { item.path; })
             item.path = path_backslash_handle(item.path);
         items.push_back(std::move(item));

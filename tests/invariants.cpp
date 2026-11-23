@@ -26,6 +26,17 @@ TEST_CASE("saved text escapes what it holds, and reads back the same")
     CHECK(note->second == model.extras.children.back().second);
 }
 
+TEST_CASE("unknown children of items, frames and triggers survive a save")
+{
+    auto text = R"(<AnimatedActor><Content><Spritesheets/><Layers><Layer Id="0" Name="a" SpritesheetId="0"><Note A="1"/>
+        </Layer></Layers><Nulls/><Events/></Content><Animations DefaultAnimation="x"><Animation Name="x" FrameNum="1"
+        Loop="true"><RootAnimation><Frame Delay="1"><Note B="2"/></Frame></RootAnimation><Triggers><Trigger AtFrame="0">
+        <Note C="3"/></Trigger></Triggers></Animation></Animations></AnimatedActor>)";
+    auto saved = model_serialize(model_load(text), SAVE_EDITOR);
+    for (auto note : {"<Note A=\"1\"/>", "<Note B=\"2\"/>", "<Note C=\"3\"/>"})
+        CHECK(saved.find(note) != std::string::npos);
+}
+
 TEST_CASE("saves leave out default colors, which read back the same")
 {
     for (auto& fixture : fixtures_get())
