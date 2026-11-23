@@ -1,14 +1,31 @@
 #include "asset_store.h"
 
+#include <bit>
+#include <cstring>
 #include <span>
 
-constexpr std::uint64_t FNV_OFFSET = 14695981039346656037ull;
-constexpr std::uint64_t FNV_PRIME = 1099511628211ull;
+constexpr std::uint64_t HASH_SEED = 14695981039346656037ull;
+constexpr std::uint64_t HASH_SPREAD = 0x9E3779B97F4A7C15ull;
+constexpr std::uint64_t HASH_MIX = 0x94D049BB133111EBull;
+constexpr int HASH_ROTATION = 27;
 
-static std::uint64_t bytes_hash(std::span<const std::uint8_t> bytes, std::uint64_t hash = FNV_OFFSET)
+// Hashes eight bytes a step (the tail one at a time), each mixed by a multiply and a rotation. Hashes stay within a
+// session, so they only have to tell contents apart.
+static std::uint64_t bytes_hash(std::span<const std::uint8_t> bytes, std::uint64_t hash = HASH_SEED)
 {
-    for (auto byte : bytes)
-        hash = (hash ^ byte) * FNV_PRIME;
+    auto step = [&](std::uint64_t word) {
+        hash = std::rotl(hash ^ (word * HASH_SPREAD), HASH_ROTATION) * HASH_MIX;
+    };
+    std::size_t i = 0;
+    for (; i + sizeof(std::uint64_t) <= bytes.size(); i += sizeof(std::uint64_t))
+    {
+        std::uint64_t word = 0;
+        std::memcpy(&word, bytes.data() + i, sizeof(word));
+        step(word);
+    }
+    for (; i < bytes.size(); ++i)
+        step(bytes[i]);
+    step(bytes.size());
     return hash;
 }
 
