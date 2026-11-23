@@ -9,6 +9,8 @@
 #include <fstream>
 
 #include "audio.h"
+#include "file.h"
+#include "settings.h"
 #include "canvas.h"
 #include "embed.h"
 #include "document.h"
@@ -405,4 +407,15 @@ TEST_CASE("a second instance hands its paths to the first")
     CHECK(instance_start({}) == INSTANCE_FORWARDED);
     CHECK(instance_paths_take() == std::vector<std::string>{});
     instance_stop();
+}
+
+TEST_CASE("hand-edited settings out of an enum's range load as their defaults")
+{
+    auto path = std::filesystem::temp_directory_path() / "anm2ed_settings_test.ini";
+    REQUIRE(file_text_save(path, "[Settings]\ntool=99\nrenderType=-3\ntheme=1\n"));
+    Settings settings(path);
+    CHECK(settings.tool == Settings{}.tool);
+    CHECK(settings.renderType == Settings{}.renderType);
+    CHECK(settings.theme == 1);
+    std::filesystem::remove(path);
 }

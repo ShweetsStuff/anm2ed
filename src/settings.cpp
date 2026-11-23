@@ -8,6 +8,23 @@
 #include "log.h"
 #include "math_util.h"
 #include "path.h"
+#include "tool.h"
+
+// Settings holding an enum value, with how many values it has.
+constexpr std::pair<int Settings::*, int> SETTINGS_ENUM_COUNTS[] = {
+    {&Settings::theme, THEME_COUNT},
+    {&Settings::language, LANGUAGE_COUNT},
+    {&Settings::tool, TOOL_COUNT},
+    {&Settings::renderType, RENDER_COUNT},
+    {&Settings::renderFpsMode, FPS_COUNT},
+    {&Settings::changeInterpolation, (int)Interpolation::COUNT},
+    {&Settings::changeChildMode, (int)ChildMode::COUNT},
+    {&Settings::timelineAddItemType, (int)ItemType::COUNT},
+    {&Settings::timelineAddItemDestination, DESTINATION_THIS + 1},
+    {&Settings::timelineAddItemSource, SOURCE_EXISTING + 1},
+    {&Settings::previewOverlayDrawOrder, OVERLAY_UNDER + 1},
+    {&Settings::mergeType, MERGE_IGNORE + 1},
+    {&Settings::onionskinMode, (int)OnionskinMode::INDEX + 1}};
 
 constexpr std::string_view SETTINGS_SHEAR = "Shear";
 
@@ -276,6 +293,12 @@ Settings::Settings(const std::filesystem::path& path)
     for (auto [scale, min, max] : {std::tuple{&uiScale, UI_SCALE_MIN, UI_SCALE_MAX},
                                    std::tuple{&renderScale, RENDER_SCALE_MIN, RENDER_SCALE_MAX}})
         *scale = std::clamp(*scale < min ? unit_to_percent(*scale) : *scale, min, max);
+
+    // An enum value out of range (from a hand-edited file) goes back to its default.
+    Settings defaults = {};
+    for (auto [member, count] : SETTINGS_ENUM_COUNTS)
+        if (this->*member < 0 || this->*member >= count)
+            this->*member = defaults.*member;
 }
 
 void Settings::save(const std::filesystem::path& path, const std::string& imguiData)
