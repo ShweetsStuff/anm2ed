@@ -97,12 +97,7 @@ void TimelineContext::frame_child(const TimelineRow& row, int& index, float widt
     if (type != NONE && !item)
         return;
 
-    auto isVisible = item ? item->isVisible && is_track_group_visible(type, row.groupId) : false;
-    if (item && type == ROOT && row.groupId != -1)
-        isVisible = item->isVisible && is_track_group_visible(row.groupType, row.groupId);
-    auto& isOnlyShowLayers = settings.timelineIsOnlyShowLayers;
-    if (isOnlyShowLayers && type != LAYER)
-        isVisible = false;
+    auto isVisible = is_row_visible(row, item);
 
     auto colorVec = color_get(COLOR_FRAME_BASE, type);
     auto colorActiveVec = color_get(COLOR_FRAME_ACTIVE, type);

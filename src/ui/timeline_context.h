@@ -227,6 +227,7 @@ struct TimelineContext : TimelineState
     void frame_split();
     std::vector<TimelineRow> timeline_item_rows_get();
     bool is_row_selected(const TimelineRow& row);
+    bool is_row_visible(const TimelineRow&, const Track*);
     void row_selection_clear();
     void row_selection_insert(const TimelineRow& row);
     bool is_row_reference_selected(const TimelineRow& row);

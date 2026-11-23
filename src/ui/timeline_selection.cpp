@@ -331,3 +331,12 @@ std::vector<TimelineRow> TimelineContext::row_drag_references_get(const Timeline
         rows = {clicked};
     return rows;
 }
+
+// Whether a row's track shows: it and its group are visible, and only layers show when asked.
+bool TimelineContext::is_row_visible(const TimelineRow& row, const Track* item)
+{
+    if (!item || (settings.timelineIsOnlyShowLayers && row.type != LAYER))
+        return false;
+    auto groupType = row.type == ROOT && row.groupId != -1 ? row.groupType : row.type;
+    return item->isVisible && is_track_group_visible(groupType, row.groupId);
+}

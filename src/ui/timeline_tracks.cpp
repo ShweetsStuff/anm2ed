@@ -132,12 +132,7 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
         return;
     }
     auto isItemVisible = item ? item->isVisible : false;
-    auto isVisible = item ? item->isVisible && is_track_group_visible(type, row.groupId) : false;
-    if (item && type == ROOT && row.groupId != -1)
-        isVisible = item->isVisible && is_track_group_visible(row.groupType, row.groupId);
-    auto& isOnlyShowLayers = settings.timelineIsOnlyShowLayers;
-    if (isOnlyShowLayers && type != LAYER)
-        isVisible = false;
+    auto isVisible = is_row_visible(row, item);
     auto isReferenced = is_same_item(reference, row_reference_make());
     auto isItemSelected = is_row_selected(row);
 
