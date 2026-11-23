@@ -124,6 +124,17 @@ inline bool is_trigger_reference(const Reference& reference)
 constexpr Icon INTERPOLATION_ICONS[] = {ICON_UNINTERPOLATED, ICON_INTERPOLATED, ICON_EASE_IN, ICON_EASE_OUT,
                                         ICON_EASE_IN_OUT};
 
+// An icon button that shows whether something is on.
+struct RowToggle
+{
+    const char* id;
+    bool isOn;
+    Icon on;
+    Icon off;
+    StringType onTooltip;
+    StringType offTooltip;
+};
+
 // A read-only row under an expanded animation layer: one track of the child animation it plays.
 struct PeekRow
 {
@@ -224,6 +235,7 @@ struct TimelineContext : TimelineState
     std::vector<TimelineRow> selected_row_references_get();
     std::vector<TimelineRow> row_drag_references_get(const TimelineRow& row);
     void row_drag_drop(const TimelineRow&, ImVec2, ImVec2, ImVec2, ImVec2);
+    bool row_toggle_draw(ImVec2, int, const RowToggle&, ImVec4);
     void item_remove();
     std::vector<Reference> item_references_groupable_get();
     void item_group();

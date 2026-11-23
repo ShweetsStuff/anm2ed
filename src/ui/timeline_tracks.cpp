@@ -79,17 +79,10 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
             ImGui::TextUnformatted(label.c_str());
             ImGui::PopStyleColor();
 
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4());
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4());
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4());
-            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2());
-            ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
-
-            ImGui::SetCursorPos(
-                ImVec2(itemSize.x - ImGui::GetTextLineHeightWithSpacing() - ImGui::GetStyle().ItemSpacing.x,
-                       (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
-            int visibleIcon = isGroupVisible ? ICON_VISIBLE : ICON_INVISIBLE;
-            if (ImGui::ImageButton("##Group Visible Toggle", resources.icon_id_get(visibleIcon), icon_size_get()))
+            if (row_toggle_draw(itemSize, 1,
+                                {"##Group Visible Toggle", isGroupVisible, ICON_VISIBLE, ICON_INVISIBLE,
+                                 TOOLTIP_ITEM_VISIBILITY_SHOWN, TOOLTIP_ITEM_VISIBILITY_HIDDEN},
+                                itemIconTint))
             {
                 auto targetAnimationIndex = reference.animationIndex;
                 auto targetType = type;
@@ -102,11 +95,6 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
             }
             auto visibleButtonMin = ImGui::GetItemRectMin();
             auto visibleButtonMax = ImGui::GetItemRectMax();
-            overlay_icon(resources.icon_id_get(visibleIcon), itemIconTint, false);
-            ImGui::SetItemTooltip("%s", isGroupVisible ? localize.get(TOOLTIP_ITEM_VISIBILITY_SHOWN)
-                                                       : localize.get(TOOLTIP_ITEM_VISIBILITY_HIDDEN));
-            ImGui::PopStyleVar(2);
-            ImGui::PopStyleColor(3);
 
             auto isIconHovered = isGroupHovered && is_mouse_in(iconMin, iconMax);
             auto isVisibleButtonHovered = isGroupHovered && is_mouse_in(visibleButtonMin, visibleButtonMax);
@@ -318,17 +306,10 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
             if (isReferenced)
                 ImGui::PopFont();
 
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4());
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4());
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4());
-            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2());
-            ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
-
-            ImGui::SetCursorPos(
-                ImVec2(itemSize.x - ImGui::GetTextLineHeightWithSpacing() - ImGui::GetStyle().ItemSpacing.x,
-                       (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
-            int visibleIcon = isItemVisible ? ICON_VISIBLE : ICON_INVISIBLE;
-            if (ImGui::ImageButton("##Visible Toggle", resources.icon_id_get(visibleIcon), icon_size_get()))
+            if (row_toggle_draw(itemSize, 1,
+                                {"##Visible Toggle", isItemVisible, ICON_VISIBLE, ICON_INVISIBLE,
+                                 TOOLTIP_ITEM_VISIBILITY_SHOWN, TOOLTIP_ITEM_VISIBILITY_HIDDEN},
+                                iconTintCurrent))
             {
                 auto animationIndex = reference.animationIndex;
                 auto targetType = type;
@@ -341,20 +322,15 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
                         item->isVisible = !item->isVisible;
                 });
             }
-            overlay_icon(resources.icon_id_get(visibleIcon), iconTintCurrent, false);
-            ImGui::SetItemTooltip("%s", isItemVisible ? localize.get(TOOLTIP_ITEM_VISIBILITY_SHOWN)
-                                                      : localize.get(TOOLTIP_ITEM_VISIBILITY_HIDDEN));
 
             if (type == NULL_)
             {
                 if (auto null = ::item_get(model.content.nulls, id))
                 {
-                    auto& isShowRect = null->isShowRect;
-                    auto rectIcon = isShowRect ? ICON_SHOW_RECT : ICON_HIDE_RECT;
-                    ImGui::SetCursorPos(ImVec2(itemSize.x - (ImGui::GetTextLineHeightWithSpacing() * 2) -
-                                                   ImGui::GetStyle().ItemSpacing.x,
-                                               (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
-                    if (ImGui::ImageButton("##Rect Toggle", resources.icon_id_get(rectIcon), icon_size_get()))
+                    if (row_toggle_draw(itemSize, 2,
+                                        {"##Rect Toggle", null->isShowRect, ICON_SHOW_RECT, ICON_HIDE_RECT,
+                                         TOOLTIP_NULL_RECT_SHOWN, TOOLTIP_NULL_RECT_HIDDEN},
+                                        iconTintCurrent))
                     {
                         auto nullID = id;
                         edit_push(EDIT_TOGGLE_NULL_RECT, [=](Model& model) {
@@ -362,47 +338,24 @@ void TimelineContext::item_child(const TimelineRow& row, int index)
                                 null->isShowRect = !null->isShowRect;
                         });
                     }
-                    overlay_icon(resources.icon_id_get(rectIcon), iconTintCurrent, false);
-                    ImGui::SetItemTooltip("%s", isShowRect ? localize.get(TOOLTIP_NULL_RECT_SHOWN)
-                                                           : localize.get(TOOLTIP_NULL_RECT_HIDDEN));
                 }
             }
-
-            ImGui::PopStyleVar(2);
-            ImGui::PopStyleColor(3);
         }
         else
         {
             auto cursorPos = ImGui::GetCursorPos();
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4());
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4());
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4());
-            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2());
-            ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
-            ImGui::SetCursorPos(
-                ImVec2(itemSize.x - ImGui::GetTextLineHeightWithSpacing() - ImGui::GetStyle().ItemSpacing.x,
-                       (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
-
             auto& isShowUnused = settings.timelineIsShowUnused;
-            auto unusedIcon = isShowUnused ? ICON_SHOW_UNUSED : ICON_HIDE_UNUSED;
-            if (ImGui::ImageButton("##Unused Toggle", resources.icon_id_get(unusedIcon), icon_size_get()))
+            if (row_toggle_draw(itemSize, 1,
+                                {"##Unused Toggle", isShowUnused, ICON_SHOW_UNUSED, ICON_HIDE_UNUSED,
+                                 TOOLTIP_UNUSED_ITEMS_SHOWN, TOOLTIP_UNUSED_ITEMS_HIDDEN},
+                                iconTintCurrent))
                 isShowUnused = !isShowUnused;
-            overlay_icon(resources.icon_id_get(unusedIcon), iconTintCurrent, false);
-            ImGui::SetItemTooltip("%s", isShowUnused ? localize.get(TOOLTIP_UNUSED_ITEMS_SHOWN)
-                                                     : localize.get(TOOLTIP_UNUSED_ITEMS_HIDDEN));
-
-            auto& showLayersOnly = settings.timelineIsOnlyShowLayers;
-            auto layersIcon = showLayersOnly ? ICON_SHOW_LAYERS : ICON_HIDE_LAYERS;
-            ImGui::SetCursorPos(
-                ImVec2(itemSize.x - (ImGui::GetTextLineHeightWithSpacing() * 2) - ImGui::GetStyle().ItemSpacing.x,
-                       (itemSize.y - ImGui::GetTextLineHeightWithSpacing()) / 2));
-            if (ImGui::ImageButton("##Layers Toggle", resources.icon_id_get(layersIcon), icon_size_get()))
-                showLayersOnly = !showLayersOnly;
-            overlay_icon(resources.icon_id_get(layersIcon), iconTintCurrent, false);
-            ImGui::SetItemTooltip("%s", showLayersOnly ? localize.get(TOOLTIP_ONLY_LAYERS_VISIBLE)
-                                                       : localize.get(TOOLTIP_ALL_ITEMS_VISIBLE));
-            ImGui::PopStyleVar(2);
-            ImGui::PopStyleColor(3);
+            auto& isOnlyLayers = settings.timelineIsOnlyShowLayers;
+            if (row_toggle_draw(itemSize, 2,
+                                {"##Layers Toggle", isOnlyLayers, ICON_SHOW_LAYERS, ICON_HIDE_LAYERS,
+                                 TOOLTIP_ONLY_LAYERS_VISIBLE, TOOLTIP_ALL_ITEMS_VISIBLE},
+                                iconTintCurrent))
+                isOnlyLayers = !isOnlyLayers;
 
             ImGui::SetCursorPos(cursorPos);
 
@@ -569,4 +522,25 @@ void TimelineContext::row_drag_drop(const TimelineRow& row, ImVec2 buttonMin, Im
             rows_move_to_row(draggedRows, row, isDropIntoGroup ? DROP_INSIDE : isDropAfter ? DROP_AFTER : DROP_BEFORE);
     }
     ImGui::EndDragDropTarget();
+}
+
+// An icon button at a row's right edge (slot 1 rightmost), drawn flat, showing the icon and tooltip for whether it is
+// on. True when clicked. Its rectangle stays the last item's.
+bool TimelineContext::row_toggle_draw(ImVec2 itemSize, int slot, const RowToggle& toggle, ImVec4 tint)
+{
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4());
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4());
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4());
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2());
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
+    auto lineHeight = ImGui::GetTextLineHeightWithSpacing();
+    ImGui::SetCursorPos(
+        ImVec2(itemSize.x - lineHeight * slot - ImGui::GetStyle().ItemSpacing.x, (itemSize.y - lineHeight) / 2));
+    auto texture = resources.icon_id_get(toggle.isOn ? toggle.on : toggle.off);
+    auto isClicked = ImGui::ImageButton(toggle.id, texture, icon_size_get());
+    overlay_icon(texture, tint, false);
+    tooltip_set(toggle.isOn ? toggle.onTooltip : toggle.offTooltip);
+    ImGui::PopStyleVar(2);
+    ImGui::PopStyleColor(3);
+    return isClicked;
 }
