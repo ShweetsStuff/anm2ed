@@ -96,6 +96,25 @@ static void components_draw(const ComponentRow& row, bool isColor)
     ImGui::TextUnformatted(label);
 }
 
+// The optional properties: the setting that turns each on, its FrameChange field, and the value it takes.
+#define FRAME_CHANGE_OPTIONALS(X)                                                                                      \
+    X(changeIsDuration, duration, settings.changeDuration)                                                             \
+    X(changeIsDepth, depth, settings.changeDepth)                                                                      \
+    X(changeIsRegion, regionId, regionId)                                                                              \
+    X(changeIsShader, shaderId, shaderId)                                                                              \
+    X(changeIsVisibleSet, isVisible, settings.changeIsVisible)                                                         \
+    X(changeIsInterpolationSet, interpolation, (Interpolation)settings.changeInterpolation)                            \
+    X(changeIsFlipXSet, isFlipX, settings.changeIsFlipX)                                                               \
+    X(changeIsFlipYSet, isFlipY, settings.changeIsFlipY)
+
+// An animation layer's child properties, offered only when an animation layer is changed.
+#define FRAME_CHANGE_CHILD_OPTIONALS(X)                                                                                \
+    X(changeIsChildAnimation, childAnimation, settings.changeChildAnimation)                                           \
+    X(changeIsChildMode, childMode, (ChildMode)settings.changeChildMode)                                               \
+    X(changeIsChildStart, childStart, settings.changeChildStart)                                                       \
+    X(changeIsChildStartRandomSet, isChildStartRandom, settings.changeIsChildStartRandom)                              \
+    X(changeIsChildRestartSet, isChildRestart, settings.changeIsChildRestart)
+
 bool frame_properties_change_draw(Manager& manager, Document& document, Settings& settings, ChangeHost host)
 {
     auto isChanged = false;
@@ -303,35 +322,13 @@ bool frame_properties_change_draw(Manager& manager, Document& document, Settings
         frameChange.name = isColor && isColorScaled ? (float)float_to_uint8(settings.value) : settings.value;
         FRAME_CHANGE_SCALARS
 #undef X
-        if (settings.changeIsDuration)
-            frameChange.duration = settings.changeDuration;
-        if (settings.changeIsDepth)
-            frameChange.depth = settings.changeDepth;
-        if (settings.changeIsRegion)
-            frameChange.regionId = regionId;
-        if (settings.changeIsShader)
-            frameChange.shaderId = shaderId;
-        if (settings.changeIsVisibleSet)
-            frameChange.isVisible = settings.changeIsVisible;
-        if (settings.changeIsInterpolationSet)
-            frameChange.interpolation = (Interpolation)settings.changeInterpolation;
-        if (settings.changeIsFlipXSet)
-            frameChange.isFlipX = settings.changeIsFlipX;
-        if (settings.changeIsFlipYSet)
-            frameChange.isFlipY = settings.changeIsFlipY;
+#define X(isSet, field, value)                                                                                         \
+    if (settings.isSet)                                                                                                \
+        frameChange.field = value;
+        FRAME_CHANGE_OPTIONALS(X)
         if (isChildPropertyAvailable)
-        {
-            if (settings.changeIsChildAnimation)
-                frameChange.childAnimation = settings.changeChildAnimation;
-            if (settings.changeIsChildMode)
-                frameChange.childMode = (ChildMode)settings.changeChildMode;
-            if (settings.changeIsChildStart)
-                frameChange.childStart = settings.changeChildStart;
-            if (settings.changeIsChildStartRandomSet)
-                frameChange.isChildStartRandom = settings.changeIsChildStartRandom;
-            if (settings.changeIsChildRestartSet)
-                frameChange.isChildRestart = settings.changeIsChildRestart;
-        }
+            FRAME_CHANGE_CHILD_OPTIONALS(X)
+#undef X
 
         manager.command_push(
             {manager.selected,
@@ -399,15 +396,12 @@ bool frame_properties_change_draw(Manager& manager, Document& document, Settings
         ImGui::Separator();
     }
 
-    bool isAnyProperty =
-        settings.changeIsDuration || settings.changeIsDepth || settings.changeIsRegion || settings.changeIsShader ||
-        settings.changeIsVisibleSet || settings.changeIsInterpolationSet || settings.changeIsFlipXSet ||
-        settings.changeIsFlipYSet ||
-        (isChildPropertyAvailable &&
-         (settings.changeIsChildAnimation || settings.changeIsChildMode || settings.changeIsChildStart ||
-          settings.changeIsChildStartRandomSet || settings.changeIsChildRestartSet))
+#define X(isSet, field, value) || settings.isSet
+    bool isAnyProperty = false FRAME_CHANGE_OPTIONALS(X) ||
+                         (isChildPropertyAvailable && (false FRAME_CHANGE_CHILD_OPTIONALS(X)))
+#undef X
 #define X(name, member, isLayerOnly, isColor, isEnabled, value) || settings.isEnabled
-            FRAME_CHANGE_SCALARS
+                             FRAME_CHANGE_SCALARS
 #undef X
         ;
     bool isDestinationValid = isFramesDestination ? isSelectedFramesAvailable
