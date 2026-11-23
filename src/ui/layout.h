@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <string>
 
 #include "vec.h"
@@ -51,4 +52,13 @@ void set_item_tooltip_shortcut(const char*, const std::string& = {});
 inline void tooltip_set(StringType type)
 {
     ImGui::SetItemTooltip("%s", localize.get(type));
+}
+
+// The next window fills the main viewport below `top`.
+inline void main_area_next_set(float top)
+{
+    auto viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowViewport(viewport->ID);
+    ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + top));
+    ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, std::max(viewport->Size.y - top, 1.0f)));
 }

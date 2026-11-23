@@ -12,14 +12,7 @@
 
 void welcome_update(Manager& manager, Resources& resources, Dialog& dialog, Taskbar& taskbar, Documents& documents)
 {
-    auto viewport = ImGui::GetMainViewport();
-    auto windowHeight = viewport->Size.y - taskbar.height - documents.height;
-    if (windowHeight < 1.0f)
-        windowHeight = 1.0f;
-
-    ImGui::SetNextWindowViewport(viewport->ID);
-    ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + taskbar.height + documents.height));
-    ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, windowHeight));
+    main_area_next_set(taskbar.height + documents.height);
 
     if (ImGui::Begin(localize.get(LABEL_WELCOME_WINDOW), nullptr,
                      ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
