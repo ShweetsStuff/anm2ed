@@ -18,6 +18,7 @@
 
 enum Language
 {
+    LANGUAGE_CURRENT = -1,
 #define X(symbol, label, selector) symbol,
     LANGUAGES(X)
 #undef X
@@ -866,9 +867,9 @@ class Localizer
 public:
     Language language = ENGLISH;
 
-    inline const char* get(StringType type, Language setLanguage = (Language)-1) const
+    inline const char* get(StringType type, Language setLanguage = LANGUAGE_CURRENT) const
     {
-        auto useLanguage = (int)setLanguage == -1 ? language : setLanguage;
+        auto useLanguage = setLanguage == LANGUAGE_CURRENT ? language : setLanguage;
         if (useLanguage < 0 || useLanguage >= LANGUAGE_COUNT || type < 0 || type >= STRING_TYPE_COUNT)
             return "undefined";
         return LANGUAGE_STRING_COLLECTIONS[useLanguage][type];
