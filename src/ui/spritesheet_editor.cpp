@@ -431,7 +431,7 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
             if (baseTexture && baseTexture->is_valid())
                 texture_render(shaderTexture,
                                texture_id_get(*document.vector_image_get(baseTexture, percent_to_unit(zoom))),
-                               spritesheetTransform);
+                               {.transform = spritesheetTransform});
 
             if (isGrid)
                 grid_render(shaderGrid, zoom, pan, gridSize, gridOffset, gridColor);
@@ -477,7 +477,8 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
 
                 auto pivotTransform =
                     transform * quad_model_get(PIVOT_SIZE, region.crop + region.pivot, PIVOT_SIZE * 0.5f);
-                texture_render(shaderTexture, resources.icon_id_get(ICON_PIVOT), pivotTransform, COLOR_WHITE);
+                texture_render(shaderTexture, resources.icon_id_get(ICON_PIVOT),
+                               {.transform = pivotTransform, .tint = COLOR_WHITE});
             }
 
             if (highlightedRegionId != -1)
@@ -488,7 +489,8 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
 
                     auto pivotTransform =
                         transform * quad_model_get(PIVOT_SIZE, region->crop + region->pivot, PIVOT_SIZE * 0.5f);
-                    texture_render(shaderTexture, resources.icon_id_get(ICON_PIVOT), pivotTransform, PIVOT_COLOR);
+                    texture_render(shaderTexture, resources.icon_id_get(ICON_PIVOT),
+                                   {.transform = pivotTransform, .tint = PIVOT_COLOR});
                 }
             }
 
@@ -501,7 +503,8 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
 
                 auto pivotTransform =
                     transform * quad_model_get(PIVOT_SIZE, frame->crop + frame->pivot, PIVOT_SIZE * 0.5f);
-                texture_render(shaderTexture, resources.icon_id_get(ICON_PIVOT), pivotTransform, PIVOT_COLOR);
+                texture_render(shaderTexture, resources.icon_id_get(ICON_PIVOT),
+                               {.transform = pivotTransform, .tint = PIVOT_COLOR});
             }
         }
 

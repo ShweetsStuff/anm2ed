@@ -720,7 +720,7 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
                                                                : ROOT_COLOR;
                     auto markerModel = isRootTransform ? quad_model_get(TARGET_SIZE, {}, TARGET_SIZE * 0.5f)
                                                        : marker_model_get(TARGET_SIZE);
-                    texture_render(shaderTexture, targetIcon, transform * markerModel, color);
+                    texture_render(shaderTexture, targetIcon, {.transform = transform * markerModel, .tint = color});
                 }
                 else if (draw.type == DrawType::LAYER)
                 {
@@ -748,7 +748,7 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
                         rect_render(shaderLine, layerTransform, layerModel, color);
                     if (isPivots && !isIsolated)
                         texture_render(shaderTexture, resources.icon_id_get(ICON_PIVOT),
-                                       transform * marker_model_get(PIVOT_SIZE), color);
+                                       {.transform = transform * marker_model_get(PIVOT_SIZE), .tint = color});
                 }
                 else if (!isViewOnlyLayers)
                 {
@@ -758,7 +758,7 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
                     auto color = isOnion ? onionColor : isSelected ? COLOR_RED : NULL_RECT_COLOR;
                     auto markerSize = isShowRect ? POINT_SIZE : TARGET_SIZE;
                     texture_render(shaderTexture, isShowRect ? resources.icon_id_get(ICON_POINT) : targetIcon,
-                                   transform * marker_model_get(markerSize), color);
+                                   {.transform = transform * marker_model_get(markerSize), .tint = color});
                     if (!isShowRect)
                         continue;
                     auto rectModel = quad_model_get(frame.scale, frame.position, frame.scale * 0.5f, Vec2(1.0f),
@@ -834,9 +834,10 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
                     {
                         if (i > 0)
                             line_render(shaderDashed, baseTransform, path.points[i - 1], path.points[i], COLOR_RED);
-                        texture_render(shaderTexture, pointIcon,
-                                       baseTransform * quad_model_get(POINT_SIZE, path.points[i], POINT_SIZE * 0.5f),
-                                       COLOR_RED);
+                        texture_render(
+                            shaderTexture, pointIcon,
+                            {.transform = baseTransform * quad_model_get(POINT_SIZE, path.points[i], POINT_SIZE * 0.5f),
+                             .tint = COLOR_RED});
                     }
                 }
             }

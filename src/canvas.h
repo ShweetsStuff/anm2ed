@@ -38,6 +38,19 @@ enum DashedShape
     DASHED_LINE
 };
 
+// How a texture is drawn: placed by `transform`, colored, over `vertices` (the whole texture when null), with what a
+// layer's shader reads (its texture size and playback time) and its blur.
+struct TextureDraw
+{
+    Mat4 transform = Mat4(1.0f);
+    Vec4 tint = Vec4(1.0f);
+    Vec4 colorOffset{};
+    const float* vertices = nullptr;
+    Vec2 textureSize{};
+    float time = 0;
+    TextureBlur blur = {};
+};
+
 class Canvas : public Framebuffer
 {
 public:
@@ -82,8 +95,7 @@ public:
     Mat4 transform_get(float = 100.0f, Vec2 = {}) const;
     void axes_render(ShaderProgram&, float, Vec2, Vec4 = Vec4(1.0f)) const;
     void grid_render(ShaderProgram&, float, Vec2, IVec2 = IVec2(32, 32), IVec2 = {}, Vec4 = Vec4(1.0f)) const;
-    void texture_render(ShaderProgram&, GLuint, Mat4 = Mat4(1.0f), Vec4 = Vec4(1.0f), Vec4 = {},
-                        float* = (float*)TEXTURE_VERTICES, Vec2 = {}, float = 0.0f, TextureBlur = {}) const;
+    void texture_render(ShaderProgram&, GLuint, const TextureDraw&) const;
     void layer_render(ShaderProgram&, GLuint, Vec2, const Mat4&, const Draw&, Vec4, Vec4) const;
     void rect_fill_render(ShaderProgram&, const Mat4&, const Mat4&, Vec4 = Vec4(1.0f)) const;
     void layers_render(ShaderProgram&, const Model&, const Animation&, const DrawOptions&, const Mat4&,

@@ -201,9 +201,9 @@ static void texture_uniforms_set(ShaderProgram& shader, Mat4 transform, Vec4 tin
     }
 }
 
-void Canvas::texture_render(ShaderProgram& shader, GLuint texture, Mat4 transform, Vec4 tint, Vec4 colorOffset,
-                            float* vertices, Vec2 textureSize, float playbackTime, TextureBlur blur) const
+void Canvas::texture_render(ShaderProgram& shader, GLuint texture, const TextureDraw& draw) const
 {
+    auto& [transform, tint, colorOffset, vertices, textureSize, playbackTime, blur] = draw;
     canvas_blend_premultiplied_set();
 
     gl.UseProgram(shader.id);
@@ -219,7 +219,7 @@ void Canvas::texture_render(ShaderProgram& shader, GLuint texture, Mat4 transfor
     gl.BindVertexArray(textureVAO);
 
     gl.BindBuffer(GL_ARRAY_BUFFER, textureVBO);
-    gl.BufferData(GL_ARRAY_BUFFER, sizeof(TEXTURE_VERTICES), vertices, GL_DYNAMIC_DRAW);
+    gl.BufferData(GL_ARRAY_BUFFER, sizeof(TEXTURE_VERTICES), vertices ? vertices : TEXTURE_VERTICES, GL_DYNAMIC_DRAW);
 
     gl.ActiveTexture(GL_TEXTURE0);
     gl.BindTexture(GL_TEXTURE_2D, texture);
@@ -293,8 +293,14 @@ void Canvas::layer_render(ShaderProgram& shader, GLuint texture, Vec2 textureSiz
         frame.pivot += blur.radius;
     }
     auto vertices = uv_vertices_get(frame.crop / textureSize, (frame.crop + frame.size) / textureSize);
-    texture_render(shader, texture, transform * blurred.parent * draw_quad_model_get(blurred), tint, colorOffset,
-                   vertices.data(), textureSize, draw.time, blur);
+    texture_render(shader, texture,
+                   {.transform = transform * blurred.parent * draw_quad_model_get(blurred),
+                    .tint = tint,
+                    .colorOffset = colorOffset,
+                    .vertices = vertices.data(),
+                    .textureSize = textureSize,
+                    .time = draw.time,
+                    .blur = blur});
 }
 
 // An animation's layers alone (no markers or helpers). Spritesheet images are looked up by draw, custom shaders by id.

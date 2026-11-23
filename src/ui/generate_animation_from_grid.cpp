@@ -104,8 +104,11 @@ void GenerateAnimationFromGrid::update(Manager& manager, Document& document, Res
                                                                           percent_to_unit(frame.skew));
                     auto vertices = uv_vertices_get(uvMin, uvMax);
 
-                    texture_render(shaderTexture, texture_id_get(*sourceTexture), transform, frame.tint,
-                                   frame.colorOffset, vertices.data());
+                    texture_render(shaderTexture, texture_id_get(*sourceTexture),
+                                   {.transform = transform,
+                                    .tint = frame.tint,
+                                    .colorOffset = frame.colorOffset,
+                                    .vertices = vertices.data()});
                 }
             }
         }
