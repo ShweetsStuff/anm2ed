@@ -42,7 +42,7 @@ constexpr FlipButton FLIP_BUTTONS[] = {{LABEL_FLIP_X, EDIT_FRAME_FLIP_X, TOOLTIP
 
 void frame_properties_update(Manager& manager, Settings& settings, FramePropertiesPanel& panel)
 {
-    auto& [changeAllFrameProperties, isBatchMode] = panel;
+    auto& isBatchMode = panel.isBatchMode;
     auto& document = *manager.get();
     auto frameSelectionCount = document.frame_references_get(Document::FrameReferenceFallback::NONE).size();
     if (frameSelectionCount == 0 && document.reference_get().frameIndex >= 0)
@@ -100,7 +100,7 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
 
         if (isSingleFrameBatchMode)
         {
-            changeAllFrameProperties.update(manager, document, settings);
+            frame_properties_change_draw(manager, document, settings, CHANGE_IN_WINDOW);
             mode_selector_draw();
         }
         else if (!isMultiFrameSelection)
@@ -409,7 +409,7 @@ void frame_properties_update(Manager& manager, Settings& settings, FrameProperti
             mode_selector_draw();
         }
         else
-            changeAllFrameProperties.update(manager, document, settings);
+            frame_properties_change_draw(manager, document, settings, CHANGE_IN_WINDOW);
     }
     ImGui::End();
 

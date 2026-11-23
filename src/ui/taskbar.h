@@ -25,7 +25,6 @@ class Taskbar
         bool isQueued = false;
     };
 
-    ChangeAllFrameProperties changeAllFrameProperties = {};
     About about = {};
     Configure configure = {};
     GenerateAnimationFromGrid generateAnimationFromGrid = {};

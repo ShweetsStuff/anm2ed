@@ -96,9 +96,10 @@ static void components_draw(const ComponentRow& row, bool isColor)
     ImGui::TextUnformatted(label);
 }
 
-void ChangeAllFrameProperties::update(Manager& manager, Document& document, Settings& settings, bool isFromWizard)
+bool frame_properties_change_draw(Manager& manager, Document& document, Settings& settings, ChangeHost host)
 {
-    isChanged = false;
+    auto isChanged = false;
+    auto isFromWizard = host == CHANGE_IN_WIZARD;
 
     auto animations = document.animations_selected_get();
     auto& destination = settings.changeDestination;
@@ -427,4 +428,5 @@ void ChangeAllFrameProperties::update(Manager& manager, Document& document, Sett
         tooltip_set(button.tooltip);
     }
     ImGui::EndDisabled();
+    return isChanged;
 }

@@ -156,7 +156,6 @@ struct AnimationsPanel
 
 struct FramePropertiesPanel
 {
-    ChangeAllFrameProperties changeAllFrameProperties = {};
     bool isBatchMode = false;
 };
 

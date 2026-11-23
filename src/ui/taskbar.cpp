@@ -297,8 +297,7 @@ void Taskbar::update(Manager& manager, Settings& settings, Resources& resources,
     {
         if (document)
         {
-            changeAllFrameProperties.update(manager, *document, settings, true);
-            if (changeAllFrameProperties.isChanged)
+            if (frame_properties_change_draw(manager, *document, settings, CHANGE_IN_WIZARD))
                 changePopup.close();
         }
         ImGui::EndPopup();

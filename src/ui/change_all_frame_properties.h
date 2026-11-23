@@ -8,10 +8,13 @@ inline constexpr StringType INTERPOLATION_LABELS[] = {BASIC_NONE, BASIC_LINEAR, 
                                                       BASIC_EASE_IN_OUT};
 inline constexpr StringType CHILD_MODE_LABELS[] = {LABEL_LOOP, LABEL_ONCE, LABEL_HOLD};
 
-class ChangeAllFrameProperties
+// Where the frame property changes are drawn: in the Frame Properties window (applied to the selected frames), or in
+// the Change All Frame Properties wizard (applied to chosen frames or items).
+enum ChangeHost
 {
-public:
-    bool isChanged = false;
-
-    void update(Manager&, Document&, Settings&, bool = false);
+    CHANGE_IN_WINDOW,
+    CHANGE_IN_WIZARD
 };
+
+// Draws the property changes. True on the frame they were applied.
+bool frame_properties_change_draw(Manager&, Document&, Settings&, ChangeHost);
