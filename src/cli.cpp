@@ -230,20 +230,21 @@ static int draw_run(const Arguments& arguments)
     ShaderProgram shader(textureInfo.vertex, textureInfo.fragment);
     Canvas canvas(Vec2(1.0f));
     auto isRootTransform = !arguments.is("no-root-transform");
-    auto bounds = animation_bounds_get(document, *animation, isRootTransform);
-    auto scale = arguments.number_get("scale", SCALE_DEFAULT);
-    auto background = background_get(arguments);
-    auto frame_render = [&](float time) {
-        return animation_frame_render(canvas, shader, document, *animation, time, bounds, scale, background,
-                                      isRootTransform);
-    };
+    FrameRender render{.canvas = canvas,
+                       .shader = shader,
+                       .document = document,
+                       .animation = *animation,
+                       .bounds = animation_bounds_get(document, *animation, isRootTransform),
+                       .background = background_get(arguments),
+                       .scale = arguments.number_get("scale", SCALE_DEFAULT),
+                       .isRootTransform = isRootTransform};
     auto outPath = path_from_utf8(*out);
     std::error_code ec;
     std::filesystem::create_directories(type_is_folder(arguments) ? outPath : outPath.parent_path(), ec);
 
     if (arguments.command == "frame")
     {
-        auto pixels = frame_render(arguments.number_get("time", 0.0f));
+        auto pixels = animation_frame_render(render, arguments.number_get("time", 0.0f));
         pixels_unpremultiply(pixels);
         if (!Image::write_pixels_png(outPath, IVec2(canvas.size), pixels.data()))
         {
@@ -278,7 +279,7 @@ static int draw_run(const Arguments& arguments)
                             .rows = arguments.number_get("rows", 0),
                             .columns = arguments.number_get("columns", 0)};
     auto count = frame_count_get(options.start, options.end, options.animationFps, options.fps);
-    if (!animation_record(options, canvas, shader, document, *animation, bounds, scale, background, isRootTransform))
+    if (!animation_record(options, render))
     {
         std::println(stderr, "could not write {} (FFmpeg: {})", *out, path_to_utf8(options.ffmpegPath));
         return 1;

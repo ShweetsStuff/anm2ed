@@ -889,8 +889,9 @@ void AnimationPreview::update(Manager& manager, Settings& settings, Resources& r
     }
 
     if (tool == TOOL_PAN)
-        view_context_menu_draw("##Animation Preview Context Menu", manager, settings, document, zoom, pan, center_view,
-                               fit_view, animation != nullptr);
+        view_context_menu_draw(
+            "##Animation Preview Context Menu", manager, settings, document,
+            {.zoom = zoom, .pan = pan, .center = center_view, .fit = fit_view, .isFitEnabled = animation != nullptr});
 
     if (manager.progressPopup.begin())
     {

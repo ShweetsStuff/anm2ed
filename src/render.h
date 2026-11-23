@@ -134,9 +134,21 @@ public:
 
 // The area an animation covers over all its frames (or a default one when it draws nothing).
 Vec4 animation_bounds_get(const Document&, const Animation&, bool);
-// One frame drawn over `bounds` at `scale`, as premultiplied RGBA rows from the top.
-std::vector<uint8_t> animation_frame_render(Canvas&, ShaderProgram&, Document&, const Animation&, float, Vec4, float,
-                                            Vec4, bool);
+// How a render draws an animation's frames: onto `canvas` through `shader`, over `bounds` at `scale`, on `background`.
+struct FrameRender
+{
+    Canvas& canvas;
+    ShaderProgram& shader;
+    Document& document;
+    const Animation& animation;
+    Vec4 bounds{};
+    Vec4 background{};
+    float scale = 1.0f;
+    bool isRootTransform = true;
+};
+
+// The frame at `time`, as premultiplied RGBA rows from the top.
+std::vector<uint8_t> animation_frame_render(const FrameRender&, float time);
 void pixels_unpremultiply(std::vector<uint8_t>&);
 void frames_bake(Document&, Model&, const std::filesystem::path&);
 
@@ -186,8 +198,7 @@ private:
 
 // Records a whole animation with these options (bounded and isolated), each frame drawn as animation_frame_render
 // draws it. False when a frame or the output can't be written.
-bool animation_record(const RecorderOptions&, Canvas&, ShaderProgram&, Document&, const Animation&, Vec4, float, Vec4,
-                      bool);
+bool animation_record(const RecorderOptions&, const FrameRender&);
 
 bool animation_render(const std::filesystem::path&, const std::filesystem::path&,
                       const std::vector<std::filesystem::path>&, const std::vector<float>&, RenderType, int);

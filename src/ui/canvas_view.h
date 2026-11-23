@@ -44,6 +44,16 @@ std::pair<Vec2, Vec2> rect_snap(Vec2, Vec2, bool, IVec2, IVec2);
 void tooltip_lines_draw(std::initializer_list<std::string>);
 void tool_cursor_update(Tool, ToolArea, bool, bool, bool, StringType);
 
+// A canvas view's camera, and how it centers and fits what it shows.
+struct ViewCamera
+{
+    float& zoom;
+    Vec2& pan;
+    std::function<void()> center;
+    std::function<void()> fit;
+    bool isFitEnabled = false;
+};
+
 class CanvasView : public Canvas
 {
 protected:
@@ -60,8 +70,7 @@ protected:
     void zoom_step(float&, Vec2&, Vec2, int);
     void grid_child_draw(ImVec2, bool&, Vec4&, IVec2&, IVec2&, bool* = nullptr);
     void view_buttons_draw(Manager&, Settings&, const std::function<void()>&, const std::function<void()>&);
-    void view_context_menu_draw(const char*, Manager&, Settings&, Document&, float&, Vec2&,
-                                const std::function<void()>&, const std::function<void()>&, bool);
+    void view_context_menu_draw(const char*, Manager&, Settings&, Document&, const ViewCamera&);
 
 public:
     CanvasView();

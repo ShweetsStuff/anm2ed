@@ -437,8 +437,7 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
                 grid_render(shaderGrid, zoom, pan, gridSize, gridOffset, gridColor);
 
             if (isBorder)
-                rect_render(dashedShader, spritesheetTransform, spritesheetModel, COLOR_WHITE, BORDER_DASH_LENGTH,
-                            BORDER_DASH_GAP, BORDER_DASH_OFFSET);
+                rect_render(dashedShader, spritesheetTransform, spritesheetModel, COLOR_WHITE, BORDER_DASH);
 
             if (hoveredRegionId != -1)
             {
@@ -466,8 +465,7 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
             auto draw_region_rect = [&](const Region& region, Vec4 regionColor) {
                 auto cropModel = quad_model_get(region.size, region.crop);
                 auto cropTransform = transform * cropModel;
-                rect_render(dashedShader, cropTransform, cropModel, regionColor, BORDER_DASH_LENGTH, BORDER_DASH_GAP,
-                            BORDER_DASH_OFFSET);
+                rect_render(dashedShader, cropTransform, cropModel, regionColor, BORDER_DASH);
             };
 
             for (auto& region : spritesheet->regions)
@@ -518,8 +516,13 @@ void SpritesheetEditor::update(Manager& manager, Settings& settings, Resources& 
     }
 
     if (tool == TOOL_PAN)
-        view_context_menu_draw("##Spritesheet Editor Context Menu", manager, settings, document, zoom, pan, center_view,
-                               fit_view, (baseTexture && baseTexture->is_valid()) || (texture && texture->is_valid()));
+        view_context_menu_draw(
+            "##Spritesheet Editor Context Menu", manager, settings, document,
+            {.zoom = zoom,
+             .pan = pan,
+             .center = center_view,
+             .fit = fit_view,
+             .isFitEnabled = (baseTexture && baseTexture->is_valid()) || (texture && texture->is_valid())});
 
     if (!document.isSpritesheetEditorSet)
     {

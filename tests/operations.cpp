@@ -57,8 +57,11 @@ TEST_CASE("file_merge presets")
 TEST_CASE("item_add")
 {
     auto model = fixture_load("02_items.anm2");
-    CHECK(item_add(model, ItemType::LAYER, 0, -1, {.name = "added", .spritesheetId = 1}, {}, 1, DESTINATION_ALL) == 2);
-    CHECK(item_add(model, ItemType::NULL_, 1, -1, {}, {.name = "thisOnly"}, -1, DESTINATION_THIS) == 2);
+    CHECK(item_add(model, {.insertBeforeId = 1, .layer = {.name = "added", .spritesheetId = 1}}) == 2);
+    CHECK(item_add(model, {.type = ItemType::NULL_,
+                           .animationIndex = 1,
+                           .destination = DESTINATION_THIS,
+                           .null = {.name = "thisOnly"}}) == 2);
     operation_check("item_add", model);
 }
 
@@ -190,7 +193,7 @@ TEST_CASE("edit layer operations")
          [&](Model& anm2) { return items_group(anm2, 0, LAYER, {2}, "New"); }, 1},
         {"items_move", "03b_groups_legacy_flat.anm2",
          [&](Model& anm2) {
-             items_move(anm2, 0, LAYER, {2}, {}, {true, LAYER, 0, -1}, DROP_INSIDE);
+             items_move(anm2, {.type = LAYER, .ids = {2}, .target = {true, LAYER, 0, -1}, .zone = DROP_INSIDE});
              return Uids{};
          },
          0},

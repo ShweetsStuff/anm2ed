@@ -138,33 +138,29 @@ bool ItemProperties::update(Manager& manager, Settings& settings, Document& docu
                                                    .isConfirmEnabled = source != SOURCE_EXISTING || edit.id != -1});
         if (result == PopupButton::CONFIRM)
         {
-            auto queuedType = type;
-            auto queuedDestination = destination;
-            auto queuedAnimationIndex = reference.animationIndex;
-            auto queuedInsertBeforeID = reference.itemType == LAYER && type == LAYER ? reference.itemID : -1;
-            auto queuedAddItemID = source == SOURCE_NEW ? -1 : edit.id;
-            auto queuedLayer = item_edit_layer_get(edit);
-            auto queuedNull = item_edit_null_get(edit);
+            ItemAdd add = {.type = (ItemType)type,
+                           .animationIndex = reference.animationIndex,
+                           .id = source == SOURCE_NEW ? -1 : edit.id,
+                           .insertBeforeId = reference.itemType == LAYER && type == LAYER ? reference.itemID : -1,
+                           .destination = (Destination)destination,
+                           .layer = item_edit_layer_get(edit),
+                           .null = item_edit_null_get(edit)};
 
-            manager.command_push({manager.selected, [=](Manager&, Document& document) {
-                                      int addId = -1;
-                                      document.edit_apply(EDIT_ADD_ITEM, [&](Model& model) {
-                                          addId = item_add(model, (ItemType)queuedType, queuedAnimationIndex,
-                                                           queuedAddItemID, queuedLayer, queuedNull,
-                                                           queuedInsertBeforeID, (Destination)queuedDestination);
-                                      });
+            manager.command_push(
+                {manager.selected, [=](Manager&, Document& document) {
+                     int addId = -1;
+                     document.edit_apply(EDIT_ADD_ITEM, [&](Model& model) { addId = item_add(model, add); });
 
-                                      if (addId != -1)
-                                      {
-                                          document.reference_set({queuedAnimationIndex, (int)queuedType, addId});
-                                          document.selected_set(SelectionKind::TRACKS, {document.reference_get()});
-                                          document.frame_references_clear();
-                                          if (queuedType == LAYER)
-                                              if (auto layer = item_get(document.model.content.layers, addId))
-                                                  document.focused_id_set(SelectionKind::SPRITESHEETS,
-                                                                          layer->spritesheetId);
-                                      }
-                                  }});
+                     if (addId != -1)
+                     {
+                         document.reference_set({add.animationIndex, (int)add.type, addId});
+                         document.selected_set(SelectionKind::TRACKS, {document.reference_get()});
+                         document.frame_references_clear();
+                         if (add.type == ItemType::LAYER)
+                             if (auto layer = item_get(document.model.content.layers, addId))
+                                 document.focused_id_set(SelectionKind::SPRITESHEETS, layer->spritesheetId);
+                     }
+                 }});
 
             isAdded = true;
         }

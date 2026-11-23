@@ -232,7 +232,14 @@ void TimelineContext::rows_move_to_row(std::vector<TimelineRow> draggedRows, Tim
 
     edit_push(
         EDIT_MOVE_ITEMS,
-        [=](Model& model) { return items_move(model, animationIndex, targetType, ids, groupIds, target, zone); },
+        [=](Model& model) {
+            return items_move(model, {.animationIndex = animationIndex,
+                                      .type = targetType,
+                                      .ids = ids,
+                                      .groupIds = groupIds,
+                                      .target = target,
+                                      .zone = zone});
+        },
         [=](Document& document, const Uids&) {
             document.selection.uids[SelectionKind::TRACKS] = moved.uids.at(SelectionKind::TRACKS);
             document.selection.uids[SelectionKind::GROUPS] = moved.uids.at(SelectionKind::GROUPS);

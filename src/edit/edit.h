@@ -26,6 +26,30 @@ struct RowTarget
     int groupId = -1;
 };
 
+// Tracks and whole groups (of one type, in one animation) moved next to, or into, a target row.
+struct ItemsMove
+{
+    int animationIndex = 0;
+    int type = NONE;
+    std::set<int> ids;
+    std::set<int> groupIds;
+    RowTarget target = {};
+    DropZone zone = DROP_BEFORE;
+};
+
+// A layer or null added (a new one, from `layer` or `null`, at id -1) with a track in one animation or all of them,
+// placed before track `insertBeforeId` (at the end, at -1).
+struct ItemAdd
+{
+    ItemType type = ItemType::LAYER;
+    int animationIndex = 0;
+    int id = -1;
+    int insertBeforeId = -1;
+    Destination destination = DESTINATION_ALL;
+    Layer layer = {};
+    Null null = {};
+};
+
 struct GridOptions
 {
     IVec2 start{};
@@ -111,9 +135,9 @@ Uids root_bake_into(Model&, const std::set<Reference>&, const std::set<Reference
 
 void items_remove(Model&, int, const std::map<int, std::set<int>>&, const std::map<int, std::set<int>>&);
 Uids items_group(Model&, int, int, const std::set<int>&, const std::string&);
-void items_move(Model&, int, int, const std::set<int>&, const std::set<int>&, RowTarget, DropZone);
+void items_move(Model&, const ItemsMove&);
 void animation_length_fit(Model&, int);
-int item_add(Model&, ItemType, int, int, Layer, Null, int, Destination);
+int item_add(Model&, ItemAdd);
 
 std::set<int> animation_group_ids_get(const Model&);
 std::set<int> animation_group_indices_get(const Model&, int);

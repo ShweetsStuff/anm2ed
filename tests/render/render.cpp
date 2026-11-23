@@ -71,10 +71,20 @@ struct RenderFixture
 
     std::vector<uint8_t> frame_get(float time)
     {
-        auto pixels =
-            animation_frame_render(*canvas, *shader, *document, *animation, time, bounds, SCALE, BACKGROUND, true);
+        auto pixels = animation_frame_render(render_get(), time);
         pixels_unpremultiply(pixels);
         return pixels;
+    }
+
+    FrameRender render_get()
+    {
+        return {.canvas = *canvas,
+                .shader = *shader,
+                .document = *document,
+                .animation = *animation,
+                .bounds = bounds,
+                .background = BACKGROUND,
+                .scale = SCALE};
     }
 
     TVec4<uint8_t> pixel_get(const std::vector<uint8_t>& pixels, Vec2 point)
@@ -126,8 +136,7 @@ TEST_CASE("a recorded spritesheet holds every frame")
                             .end = fixture.animation->frameNum - 1,
                             .animationFps = fixture.document->model.info.fps,
                             .fps = fixture.document->model.info.fps};
-    REQUIRE(animation_record(options, *fixture.canvas, *fixture.shader, *fixture.document, *fixture.animation,
-                             fixture.bounds, SCALE, BACKGROUND, true));
+    REQUIRE(animation_record(options, fixture.render_get()));
     Image sheet(options.path);
     auto layout = spritesheet_layout_get(0, 0, fixture.animation->frameNum);
     CHECK(sheet.size == IVec2(fixture.canvas->size) * IVec2(layout.columns, layout.rows));
@@ -152,8 +161,7 @@ TEST_CASE("a PNG sequence without a placeholder numbers each frame")
                             .end = fixture.animation->frameNum - 1,
                             .animationFps = fixture.document->model.info.fps,
                             .fps = fixture.document->model.info.fps};
-    REQUIRE(animation_record(options, *fixture.canvas, *fixture.shader, *fixture.document, *fixture.animation,
-                             fixture.bounds, SCALE, BACKGROUND, true));
+    REQUIRE(animation_record(options, fixture.render_get()));
     auto count = std::ranges::distance(std::filesystem::directory_iterator(directory));
     CHECK(count == fixture.animation->frameNum);
     CHECK(std::filesystem::exists(directory / "spin_000000.png"));
@@ -334,10 +342,15 @@ TEST_CASE("the game's copy bakes skew and blur into a spritesheet that draws the
         for (int time = 0; time < animation.frameNum; ++time)
         {
             INFO("time: ", time);
-            auto expected = animation_frame_render(canvas, shader, document, animation, (float)time, bounds, 1.0f,
-                                                   Vec4(0.0f), true);
-            auto actual = animation_frame_render(canvas, shader, gameDocument, gameAnimation, (float)time, bounds, 1.0f,
-                                                 Vec4(0.0f), true);
+            auto expected = animation_frame_render(
+                {.canvas = canvas, .shader = shader, .document = document, .animation = animation, .bounds = bounds},
+                (float)time);
+            auto actual = animation_frame_render({.canvas = canvas,
+                                                  .shader = shader,
+                                                  .document = gameDocument,
+                                                  .animation = gameAnimation,
+                                                  .bounds = bounds},
+                                                 (float)time);
             REQUIRE(actual.size() == expected.size());
             CHECK(std::ranges::any_of(expected, [](uint8_t channel) { return channel != 0; }));
             int mismatches = 0;

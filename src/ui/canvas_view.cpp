@@ -190,9 +190,9 @@ void CanvasView::view_buttons_draw(Manager& manager, Settings& settings, const s
 }
 
 void CanvasView::view_context_menu_draw(const char* label, Manager& manager, Settings& settings, Document& document,
-                                        float& zoom, Vec2& pan, const std::function<void()>& center,
-                                        const std::function<void()>& fit, bool isFitEnabled)
+                                        const ViewCamera& camera)
 {
+    auto& [zoom, pan, center, fit, isFitEnabled] = camera;
     auto zoom_center_step = [&](int levelDelta) {
         zoom_step(zoom, pan, position_translate(zoom, pan, size * 0.5f), levelDelta);
     };
@@ -201,7 +201,7 @@ void CanvasView::view_context_menu_draw(const char* label, Manager& manager, Set
     actions_undo_redo_add(actions, manager, document);
     actions.separator();
     actions.add(ACTION_CENTER_VIEW, []() { return true; }, center);
-    actions.add(ACTION_FIT_VIEW, [isFitEnabled]() { return isFitEnabled; }, fit);
+    actions.add(ACTION_FIT_VIEW, [&isFitEnabled]() { return isFitEnabled; }, fit);
     actions.separator();
     actions.add(ACTION_ZOOM_IN, []() { return true; }, [&]() { zoom_center_step(ZOOM_LEVEL_STEP); });
     actions.add(ACTION_ZOOM_OUT, []() { return true; }, [&]() { zoom_center_step(-ZOOM_LEVEL_STEP); });

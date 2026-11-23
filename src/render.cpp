@@ -288,10 +288,9 @@ Vec4 animation_bounds_get(const Document& document, const Animation& animation, 
     return bounds != Vec4(-1.0f) ? bounds : BOUNDS_DEFAULT;
 }
 
-std::vector<uint8_t> animation_frame_render(Canvas& canvas, ShaderProgram& shader, Document& document,
-                                            const Animation& animation, float time, Vec4 bounds, float scale,
-                                            Vec4 background, bool isRootTransform)
+std::vector<uint8_t> animation_frame_render(const FrameRender& render, float time)
 {
+    auto& [canvas, shader, document, animation, bounds, background, scale, isRootTransform] = render;
     canvas.size_set(Vec2(vec_max(IVec2(vec_ceil(Vec2(bounds.z, bounds.w) * scale)), IVec2(1))));
     float zoom = 0;
     Vec2 pan{};
@@ -411,8 +410,7 @@ void Recorder::cancel()
     index = count = 0;
 }
 
-bool animation_record(const RecorderOptions& recorderOptions, Canvas& canvas, ShaderProgram& shader, Document& document,
-                      const Animation& animation, Vec4 bounds, float scale, Vec4 background, bool isRootTransform)
+bool animation_record(const RecorderOptions& recorderOptions, const FrameRender& render)
 {
     auto options = recorderOptions;
     options.isIsolated = options.isBounded = true;
@@ -421,9 +419,8 @@ bool animation_record(const RecorderOptions& recorderOptions, Canvas& canvas, Sh
         return false;
     while (!recorder.is_done())
     {
-        auto pixels = animation_frame_render(canvas, shader, document, animation, recorder.time_get(), bounds, scale,
-                                             background, isRootTransform);
-        if (recorder.frame_capture(std::move(pixels), IVec2(canvas.size)))
+        auto pixels = animation_frame_render(render, recorder.time_get());
+        if (recorder.frame_capture(std::move(pixels), IVec2(render.canvas.size)))
             continue;
         recorder.cancel();
         return false;

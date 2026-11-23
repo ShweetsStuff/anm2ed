@@ -20,6 +20,24 @@ struct TextureBlur
     Vec4 region{};
 };
 
+constexpr float DASH_LENGTH = 4.0f;
+constexpr float DASH_GAP = 1.0f;
+constexpr float DASH_OFFSET = 1.0f;
+
+// A dashed outline's pattern, in canvas pixels.
+struct Dash
+{
+    float length = DASH_LENGTH;
+    float gap = DASH_GAP;
+    float offset = DASH_OFFSET;
+};
+
+enum DashedShape
+{
+    DASHED_RECT,
+    DASHED_LINE
+};
+
 class Canvas : public Framebuffer
 {
 public:
@@ -28,9 +46,6 @@ public:
     static constexpr auto PIVOT_SIZE = Vec2(8, 8);
     static constexpr auto ZOOM_MIN = 1.0f;
     static constexpr auto ZOOM_MAX = 2000.0f;
-    static constexpr auto DASH_LENGTH = 4.0f;
-    static constexpr auto DASH_GAP = 1.0f;
-    static constexpr auto DASH_OFFSET = 1.0f;
     static constexpr auto STEP = 1.0f;
     static constexpr auto STEP_FAST = 5.0f;
     static constexpr auto ZOOM_LEVEL_STEP = 1;
@@ -48,9 +63,7 @@ public:
     static constexpr int RECT_VERTEX_COUNT = 4;
     static constexpr int LINE_VERTEX_COUNT = 2;
     static constexpr GLuint TEXTURE_INDICES[] = {0, 1, 2, 2, 3, 0};
-    static constexpr auto BORDER_DASH_LENGTH = 1.0f;
-    static constexpr auto BORDER_DASH_GAP = 0.5f;
-    static constexpr auto BORDER_DASH_OFFSET = 0.0f;
+    static constexpr Dash BORDER_DASH = {.length = 1.0f, .gap = 0.5f, .offset = 0.0f};
     static constexpr auto PIVOT_COLOR = COLOR_PINK;
 
     GLuint axisVAO = 0;
@@ -76,11 +89,9 @@ public:
     void layers_render(ShaderProgram&, const Model&, const Animation&, const DrawOptions&, const Mat4&,
                        const std::function<const Image*(const Draw&)>&,
                        const std::function<ShaderProgram*(int)>& = {}) const;
-    void dashed_render(ShaderProgram&, const Mat4&, const Mat4&, Vec4, float, float, float, GLenum, int) const;
-    void rect_render(ShaderProgram&, const Mat4&, const Mat4&, Vec4 = Vec4(1.0f), float dashLength = DASH_LENGTH,
-                     float dashGap = DASH_GAP, float dashOffset = DASH_OFFSET) const;
-    void line_render(ShaderProgram&, const Mat4&, Vec2, Vec2, Vec4 = Vec4(1.0f), float dashLength = DASH_LENGTH,
-                     float dashGap = DASH_GAP, float dashOffset = DASH_OFFSET) const;
+    void dashed_render(ShaderProgram&, const Mat4&, const Mat4&, Vec4, Dash, DashedShape) const;
+    void rect_render(ShaderProgram&, const Mat4&, const Mat4&, Vec4 = Vec4(1.0f), Dash = {}) const;
+    void line_render(ShaderProgram&, const Mat4&, Vec2, Vec2, Vec4 = Vec4(1.0f), Dash = {}) const;
     float zoom_level_get(float, int) const;
     void zoom_level_adjust(float&, Vec2&, Vec2, int) const;
     Vec2 position_translate(float&, Vec2&, Vec2) const;

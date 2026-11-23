@@ -253,8 +253,8 @@ static void rect_end(GLuint vao, GLenum mode, int count = 4)
     canvas_blend_straight_set();
 }
 
-void Canvas::dashed_render(ShaderProgram& shader, const Mat4& transform, const Mat4& model, Vec4 color,
-                           float dashLength, float dashGap, float dashOffset, GLenum mode, int count) const
+void Canvas::dashed_render(ShaderProgram& shader, const Mat4& transform, const Mat4& model, Vec4 color, Dash dash,
+                           DashedShape shape) const
 {
     rect_begin(shader, transform, model, color);
 
@@ -263,12 +263,15 @@ void Canvas::dashed_render(ShaderProgram& shader, const Mat4& transform, const M
                               std::pair{UNIFORM_AXIS_Y, Vec4(0.0f, 1.0f, 0.0f, 1.0f)}})
         if (auto location = gl.GetUniformLocation(shader.id, name); location != -1)
             gl.Uniform2fv(location, 1, values_get(Vec2(model * axis - origin)));
-    for (auto [name, value] : {std::pair{UNIFORM_DASH_LENGTH, dashLength}, std::pair{UNIFORM_DASH_GAP, dashGap},
-                               std::pair{UNIFORM_DASH_OFFSET, dashOffset}})
+    for (auto [name, value] : {std::pair{UNIFORM_DASH_LENGTH, dash.length}, std::pair{UNIFORM_DASH_GAP, dash.gap},
+                               std::pair{UNIFORM_DASH_OFFSET, dash.offset}})
         if (auto location = gl.GetUniformLocation(shader.id, name); location != -1)
             gl.Uniform1f(location, value);
 
-    rect_end(rectVAO, mode, count);
+    if (shape == DASHED_RECT)
+        rect_end(rectVAO, GL_LINE_LOOP, RECT_VERTEX_COUNT);
+    else
+        rect_end(rectVAO, GL_LINES, LINE_VERTEX_COUNT);
 }
 
 // A layer draw's crop of its spritesheet. A blurred one (Flash's BlurFilter: a box `blur` canvas pixels wide) grows by
@@ -314,21 +317,20 @@ void Canvas::layers_render(ShaderProgram& shader, const Model& model, const Anim
     }
 }
 
-void Canvas::rect_render(ShaderProgram& shader, const Mat4& transform, const Mat4& model, Vec4 color, float dashLength,
-                         float dashGap, float dashOffset) const
+void Canvas::rect_render(ShaderProgram& shader, const Mat4& transform, const Mat4& model, Vec4 color, Dash dash) const
 {
-    dashed_render(shader, transform, model, color, dashLength, dashGap, dashOffset, GL_LINE_LOOP, RECT_VERTEX_COUNT);
+    dashed_render(shader, transform, model, color, dash, DASHED_RECT);
 }
 
 // A line from start to end: the bottom edge of a rectangle laid along it.
 void Canvas::line_render(ShaderProgram& shader, const Mat4& transform, Vec2 start, Vec2 end, Vec4 color,
-                         float dashLength, float dashGap, float dashOffset) const
+                         Dash dash) const
 {
     auto direction = end - start;
     auto normal = vec_length(direction) > 0.0f ? vec_normalize(Vec2(-direction.y, direction.x)) : Vec2(0.0f, 1.0f);
     auto model = Mat4(Vec4(direction, 0.0f, 0.0f), Vec4(normal, 0.0f, 0.0f), Vec4(0.0f, 0.0f, 1.0f, 0.0f),
                       Vec4(start, 0.0f, 1.0f));
-    dashed_render(shader, transform, model, color, dashLength, dashGap, dashOffset, GL_LINES, LINE_VERTEX_COUNT);
+    dashed_render(shader, transform, model, color, dash, DASHED_LINE);
 }
 
 void Canvas::rect_fill_render(ShaderProgram& shader, const Mat4& transform, const Mat4& model, Vec4 color) const

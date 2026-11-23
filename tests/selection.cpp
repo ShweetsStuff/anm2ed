@@ -81,7 +81,8 @@ TEST_CASE("track and group selection follow regrouping")
     selection_references_set(selection, anm2, SelectionKind::TRACKS, {{0, LAYER, 0, -1, LAYER, groupId}});
     selection_references_set(selection, anm2, SelectionKind::GROUPS, {{0, LAYER, groupId}});
 
-    selection_edit(anm2, selection, [&] { items_move(anm2, 0, LAYER, {0}, {}, {false, LAYER, 2, -1}, DROP_BEFORE); });
+    selection_edit(anm2, selection,
+                   [&] { items_move(anm2, {.type = LAYER, .ids = {0}, .target = {false, LAYER, 2, -1}}); });
 
     UidIndex index(anm2);
     CHECK(selection_references_get(selection, index, SelectionKind::TRACKS) == std::set<Reference>{{0, LAYER, 0}});

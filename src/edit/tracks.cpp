@@ -35,9 +35,9 @@ Uids items_group(Model& model, int animationIndex, int type, const std::set<int>
 
 // Moves tracks and whole groups next to (or into) a target row. Layers are listed bottom-up, so for them "after" on
 // screen is "before" in the file.
-void items_move(Model& model, int animationIndex, int type, const std::set<int>& ids, const std::set<int>& groupIds,
-                RowTarget target, DropZone zone)
+void items_move(Model& model, const ItemsMove& move)
 {
+    auto& [animationIndex, type, ids, groupIds, target, zone] = move;
     auto isDropAfter = zone != DROP_BEFORE;
     auto isDropIntoGroup = zone == DROP_INSIDE;
     if ((target.groupId != -1 && groupIds.contains(target.groupId)) || (target.isGroup && groupIds.contains(target.id)))
@@ -89,11 +89,10 @@ void animation_length_fit(Model& model, int animationIndex)
         animation->frameNum = animation_length_get(*animation);
 }
 
-// Adds a layer or null (or updates the one with the item's id) and gives it a track in one or every animation.
-// Adds track `id` (a new item, from `layer` or `null`, at -1) to an animation or all of them.
-int item_add(Model& model, ItemType type, int animationIndex, int id, Layer layer, Null null, int insertBeforeId,
-             Destination destination)
+// Adds a layer or null (or reuses the one with the id) and gives it a track in one or every animation.
+int item_add(Model& model, ItemAdd add)
 {
+    auto& [type, animationIndex, id, insertBeforeId, destination, layer, null] = add;
     auto& content = model.content;
     auto item_insert = [&](auto& items, auto item) {
         if (id == -1)
@@ -112,7 +111,7 @@ int item_add(Model& model, ItemType type, int animationIndex, int id, Layer laye
     else
         return -1;
 
-    auto add = [&](int index) {
+    auto track_add = [&](int index) {
         if (model.track_get({index, (int)type, id}))
             return;
         auto& entries = animation_entries_get(*model.animation_edit(index), (int)type);
@@ -125,8 +124,8 @@ int item_add(Model& model, ItemType type, int animationIndex, int id, Layer laye
 
     if (destination == DESTINATION_ALL)
         for (int i = 0; i < model.animations_count_get(); ++i)
-            add(i);
+            track_add(i);
     else if (model.animation_get(animationIndex))
-        add(animationIndex);
+        track_add(animationIndex);
     return id;
 }
