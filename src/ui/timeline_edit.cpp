@@ -21,8 +21,7 @@ void TimelineContext::frames_delete_action()
 
 void TimelineContext::frames_duplicate()
 {
-    auto selectedFrames = document.frame_references_get(Document::FrameReferenceFallback::NONE);
-    std::erase_if(selectedFrames, is_trigger_reference);
+    auto selectedFrames = document.keyframe_references_get();
     if (selectedFrames.empty())
         return;
     edit_push(EDIT_DUPLICATE_FRAMES,
@@ -43,8 +42,7 @@ bool TimelineContext::is_frames_reverse_available(std::set<Reference> selectedFr
 
 void TimelineContext::frames_reverse()
 {
-    auto selectedFrames = document.frame_references_get(Document::FrameReferenceFallback::NONE);
-    std::erase_if(selectedFrames, is_trigger_reference);
+    auto selectedFrames = document.keyframe_references_get();
     if (!is_frames_reverse_available(selectedFrames))
         return;
     edit_push(EDIT_REVERSE_FRAMES, [=](Model& model) { return ::frames_reverse(model, selectedFrames); });
@@ -52,8 +50,7 @@ void TimelineContext::frames_reverse()
 
 void TimelineContext::frames_bake()
 {
-    auto selectedFrames = document.frame_references_get(Document::FrameReferenceFallback::NONE);
-    std::erase_if(selectedFrames, is_trigger_reference);
+    auto selectedFrames = document.keyframe_references_get();
     if (selectedFrames.empty())
         return;
     edit_push(EDIT_BAKE_FRAMES, [=, interval = settings.bakeInterval, isRoundScale = settings.bakeIsRoundScale,
@@ -122,8 +119,7 @@ void TimelineContext::bake_into_other_frames()
 
 void TimelineContext::frame_split()
 {
-    auto selectedFrames = document.frame_references_get(Document::FrameReferenceFallback::NONE);
-    std::erase_if(selectedFrames, is_trigger_reference);
+    auto selectedFrames = document.keyframe_references_get();
     if (selectedFrames.empty())
         return;
     auto time = frameSplitTimeAtCursor.value_or((int)std::floor(playback.time));

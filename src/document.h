@@ -220,6 +220,7 @@ public:
     std::set<Reference> item_frame_references_get(Reference) const;
     std::set<Reference> selected_item_frame_references_get() const;
     std::set<Reference> frame_references_get(FrameReferenceFallback = FrameReferenceFallback::CURRENT) const;
+    std::set<Reference> keyframe_references_get() const;
     void frame_references_set(std::set<Reference>);
     void frame_references_clear();
     std::vector<Reference> layer_references_get();

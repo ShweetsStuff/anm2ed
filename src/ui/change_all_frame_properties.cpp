@@ -106,8 +106,7 @@ bool frame_properties_change_draw(Manager& manager, Document& document, Settings
     auto& regionId = document.changeAllFramePropertiesRegionId;
     auto& shaderId = document.changeAllFramePropertiesShaderId;
 
-    auto selectedFrameReferences = document.frame_references_get(Document::FrameReferenceFallback::NONE);
-    std::erase_if(selectedFrameReferences, [](const Reference& reference) { return reference.itemType == TRIGGER; });
+    auto selectedFrameReferences = document.keyframe_references_get();
     auto selectedItemReferences = document.selected_get(SelectionKind::TRACKS);
     if (auto reference = document.reference_get(); selectedItemReferences.empty() && reference.itemType != NONE)
     {

@@ -1307,3 +1307,11 @@ void Document::spritesheet_save(int id)
     toast_log(isSaved ? Level::INFO : Level::ERROR, isSaved ? TOAST_SAVE_SPRITESHEET : TOAST_SAVE_SPRITESHEET_FAILED,
               id, path_to_utf8(spritesheet->path));
 }
+
+// The selected frames, without triggers.
+std::set<Reference> Document::keyframe_references_get() const
+{
+    auto references = frame_references_get(FrameReferenceFallback::NONE);
+    std::erase_if(references, [](const Reference& reference) { return reference.itemType == TRIGGER; });
+    return references;
+}
