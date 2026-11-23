@@ -118,11 +118,13 @@ void content_remove(Model& model, ElementType type, const std::set<int>& ids, in
     switch (type)
     {
         case ElementType::LIBRARY:
-            model = animation_layers_flatten(
-                std::move(model), library_get, path_get,
-                layer_ids_get([&](const Layer& layer) { return ids.contains(layer.libraryId); }));
+        {
+            // Found before the model moves into the call.
+            auto layerIds = layer_ids_get([&](const Layer& layer) { return ids.contains(layer.libraryId); });
+            model = animation_layers_flatten(std::move(model), library_get, path_get, layerIds);
             items_erase(content.libraries);
             break;
+        }
         case ElementType::SPRITESHEET:
             content_remove(model, ElementType::LAYER_ELEMENT, layer_ids_get([&](const Layer& layer) {
                                return !layer.is_animation() && ids.contains(layer.spritesheetId);
